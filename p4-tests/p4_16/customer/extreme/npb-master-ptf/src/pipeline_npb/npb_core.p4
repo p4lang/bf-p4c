@@ -53,7 +53,10 @@ control IngressControl(
 #ifdef DTEL_ENABLE
 	IngressDtel(DTEL_SELECTOR_TABLE_SIZE, DTEL_MAX_MEMBERS_PER_GROUP, DTEL_GROUP_TABLE_SIZE) dtel;
 #endif
-	IngressHdrStackCounters(INSTANCE_DEPLOYMENT_PARAMS) ingress_hdr_stack_counters;
+	IngressHdrCntrsTransport(INSTANCE_DEPLOYMENT_PARAMS) ingress_hdr_cntrs_transport;
+	IngressHdrCntrsOuter(INSTANCE_DEPLOYMENT_PARAMS) ingress_hdr_cntrs_outer;
+	IngressHdrCntrsInner(INSTANCE_DEPLOYMENT_PARAMS) ingress_hdr_cntrs_inner;
+	IngressHdrCntrsMisc(INSTANCE_DEPLOYMENT_PARAMS) ingress_hdr_cntrs_misc;
 	Npb_Ing_Top(INSTANCE_DEPLOYMENT_PARAMS) npb_ing_top;
 
 	// ---------------------------------------------------------------------
@@ -95,7 +98,10 @@ control IngressControl(
 		if(INGRESS_ENABLE == true) {
 
 #ifdef ING_HDR_STACK_COUNTERS
-			ingress_hdr_stack_counters.apply(hdr);
+		    ingress_hdr_cntrs_transport.apply(hdr.transport);
+		    ingress_hdr_cntrs_outer.apply(hdr.outer);
+		    ingress_hdr_cntrs_inner.apply(hdr.inner);
+		    ingress_hdr_cntrs_misc.apply(hdr);
 #endif  /* ING_HDR_STACK_COUNTERS */
 
 //			unicast.apply(hdr.transport, ig_md);

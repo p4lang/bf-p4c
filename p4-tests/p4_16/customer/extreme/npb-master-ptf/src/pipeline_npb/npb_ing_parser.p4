@@ -895,32 +895,62 @@ parser IngressParser(
     state parse_transport_mpls_0 {
         ig_md.lkp_0.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
         ig_md.lkp_0.tunnel_id = pkt.lookahead<bit<32>>();
-        pkt.extract(hdr.transport.mpls[0]);
-        transition select(hdr.transport.mpls[0].bos) {
+        pkt.extract(hdr.transport.mpls_0);
+        transition select(hdr.transport.mpls_0.bos) {
             0: parse_transport_mpls_1;
             1: parse_outer_ethernet;
         }
     }
     state parse_transport_mpls_1 {
         ig_md.lkp_0.tunnel_id = pkt.lookahead<bit<32>>();
-        pkt.extract(hdr.transport.mpls[1]);
-        transition select(hdr.transport.mpls[1].bos) {
-            0: parse_transport_mpls_2;
+        pkt.extract(hdr.transport.mpls_1);
+        transition select(hdr.transport.mpls_1.bos) {
+            0: construct_transport_mpls_2;
             1: parse_outer_ethernet;
+        }
+    }
+    state construct_transport_mpls_2 {
+        transition select(MPLS_DEPTH_TRANSPORT) {
+            1: parse_transport_mpls_unsupported; // unsupported param value
+            2: parse_transport_mpls_unsupported;
+            default: parse_transport_mpls_2;
         }
     }
     state parse_transport_mpls_2 {
         ig_md.lkp_0.tunnel_id = pkt.lookahead<bit<32>>();
-        pkt.extract(hdr.transport.mpls[2]);
-        transition select(hdr.transport.mpls[2].bos) {
+        pkt.extract(hdr.transport.mpls_2);
+        transition select(hdr.transport.mpls_2.bos) {
             0: parse_transport_mpls_3;
             1: parse_outer_ethernet;
         }
     }
     state parse_transport_mpls_3 {
         ig_md.lkp_0.tunnel_id = pkt.lookahead<bit<32>>();
-        pkt.extract(hdr.transport.mpls[3]);
-        transition select(hdr.transport.mpls[3].bos) {
+        pkt.extract(hdr.transport.mpls_3);
+        transition select(hdr.transport.mpls_3.bos) {
+            0: construct_transport_mpls_4;
+            1: parse_outer_ethernet;
+        }
+    }
+    state construct_transport_mpls_4 {
+        transition select(MPLS_DEPTH_TRANSPORT) {
+            3: parse_transport_mpls_unsupported; // unsupported param value
+            4: parse_transport_mpls_unsupported;
+            default: parse_transport_mpls_4;
+        }
+    }
+    state parse_transport_mpls_4 {
+        ig_md.lkp_0.tunnel_id = pkt.lookahead<bit<32>>();
+        pkt.extract(hdr.transport.mpls_4);
+        transition select(hdr.transport.mpls_4.bos) {
+            0: parse_transport_mpls_5;
+            1: parse_outer_ethernet;
+        }
+    }
+    state parse_transport_mpls_5 {
+        ig_md.lkp_0.tunnel_id = pkt.lookahead<bit<32>>();
+        pkt.extract(hdr.transport.mpls_5);
+        transition select(hdr.transport.mpls_5.bos) {
             0: parse_transport_mpls_unsupported;
             1: parse_outer_ethernet;
         }
@@ -930,7 +960,6 @@ parser IngressParser(
         ig_md.lkp_0.tunnel_id = 0;
         transition accept;
     }
-
 
 
     ///////////////////////////////////////////////////////////////////////////
@@ -972,7 +1001,7 @@ parser IngressParser(
     state parse_transport_geneve_qualified {    
         pkt.extract(hdr.transport.geneve);
         ig_md.lkp_0.tunnel_type = SWITCH_TUNNEL_TYPE_GENEVE;
-        ig_md.lkp_0.tunnel_id = (bit<switch_tunnel_id_width>)hdr.outer.geneve.vni;
+        ig_md.lkp_0.tunnel_id = (bit<switch_tunnel_id_width>)hdr.transport.geneve.vni;
 
         transition select(hdr.transport.geneve.proto_type) {
             ETHERTYPE_ENET: parse_outer_ethernet;
@@ -1671,83 +1700,411 @@ parser IngressParser(
     }        
     state construct_outer_mpls {
         transition select(OUTER_EoMPLS_ENABLE, OUTER_EoMPLS_PWCW_ENABLE, OUTER_IPoMPLS_ENABLE) {
-            (true,      _,     _): parse_outer_eompls;
-            (false,  true, false): parse_outer_eompls_pwcw;
-            (false, false,  true): parse_outer_ipompls;
-            (false,  true,  true): parse_outer_eompls_pwcw_ipompls;
+            //(true,      _,     _): parse_outer_eompls;
+            //(false,  true, false): parse_outer_eompls_pwcw;
+            //(false, false,  true): parse_outer_ipompls;
+            //(false,  true,  true): parse_outer_eompls_pwcw_ipompls;
+            (true,      _,     _): parse_outer_eompls_0;
+            (false,  true, false): parse_outer_eompls_pwcw_0;
+            (false, false,  true): parse_outer_ipompls_0;
+            (false,  true,  true): parse_outer_eompls_pwcw_ipompls_0;
             default: reject;
         }
     }
 
     //-------------------------------------------------------------------------
-    state parse_outer_eompls {
+    // state parse_outer_eompls {
+    // 
+    //     ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+    //     ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();    
+    // 
+    //     pkt.extract(hdr.outer.mpls.next);
+    //     transition select(hdr.outer.mpls.last.bos) {
+    //         0: parse_outer_eompls;
+    //         1: parse_inner_ethernet;
+    //     }
+    // }
 
+    state parse_outer_eompls_0 {
         ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
         ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();    
-
-        pkt.extract(hdr.outer.mpls.next);
-        transition select(hdr.outer.mpls.last.bos) {
-            0: parse_outer_eompls;
+        pkt.extract(hdr.outer.mpls_0);
+        transition select(hdr.outer.mpls_0.bos) {
+            0: parse_outer_eompls_1;
             1: parse_inner_ethernet;
         }
     }
-
-    //-------------------------------------------------------------------------
-    state parse_outer_eompls_pwcw {
-
+    state parse_outer_eompls_1 {
         ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
         ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();    
-    
-    	pkt.extract(hdr.outer.mpls.next);
-        transition select(hdr.outer.mpls.last.bos, pkt.lookahead<bit<4>>()) {
-            (0, _): parse_outer_eompls_pwcw;
-            (1, 0): parse_outer_eompls_pwcw_extract_pwcw;
-            //default: parse_inner_ethernet;
-            default: accept; // todo: unexpected - flag this as error?
+        pkt.extract(hdr.outer.mpls_1);
+        transition select(hdr.outer.mpls_1.bos) {
+            0: construct_outer_eompls_2;
+            1: parse_inner_ethernet;
         }
     }
+    state construct_outer_eompls_2 {
+        transition select(MPLS_DEPTH_OUTER) {
+            1: parse_outer_mpls_unsupported; // unsupported param value
+            2: parse_outer_mpls_unsupported;
+            default: parse_outer_eompls_2;
+        }
+    }
+    state parse_outer_eompls_2 {
+        ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+        ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();    
+        pkt.extract(hdr.outer.mpls_2);
+        transition select(hdr.outer.mpls_2.bos) {
+            0: parse_outer_eompls_3;
+            1: parse_inner_ethernet;
+        }
+    }
+    state parse_outer_eompls_3 {
+        ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+        ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();    
+        pkt.extract(hdr.outer.mpls_3);
+        transition select(hdr.outer.mpls_3.bos) {
+            // 0: construct_outer_eompls_4;
+            0: parse_outer_mpls_unsupported;
+            1: parse_inner_ethernet;
+        }
+    }
+    // state construct_outer_eompls_4 {
+    //     transition select(MPLS_DEPTH_OUTER) {
+    //         3: parse_outer_mpls_unsupported; // unsupported param value
+    //         4: parse_outer_mpls_unsupported;
+    //         default: parse_outer_eompls_4;
+    //     }
+    // }
+    // state parse_outer_eompls_4 {
+    //     ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+    //     ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();    
+    //     pkt.extract(hdr.outer.mpls_4);
+    //     transition select(hdr.outer.mpls_4.bos) {
+    //         0: parse_outer_eompls_5;
+    //         1: parse_inner_ethernet;
+    //     }
+    // }
+    // state parse_outer_eompls_5 {
+    //     ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+    //     ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();    
+    //     pkt.extract(hdr.outer.mpls_5);
+    //     transition select(hdr.outer.mpls_5.bos) {
+    //         0: parse_outer_mpls_unsupported;
+    //         1: parse_inner_ethernet;
+    //     }
+    // }
+
+    
+    //-------------------------------------------------------------------------
+    // state parse_outer_eompls_pwcw {
+    // 
+    //     ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+    //     ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();    
+    // 
+    // 	pkt.extract(hdr.outer.mpls.next);
+    //     transition select(hdr.outer.mpls.last.bos, pkt.lookahead<bit<4>>()) {
+    //         (0, _): parse_outer_eompls_pwcw;
+    //         (1, 0): parse_outer_eompls_pwcw_extract_pwcw;
+    //         //default: parse_inner_ethernet;
+    //         default: accept; // todo: unexpected - flag this as error?
+    //     }
+    // }
+
+    state parse_outer_eompls_pwcw_0 {
+        ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+        ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();    
+    	pkt.extract(hdr.outer.mpls_0);
+        transition select(hdr.outer.mpls_0.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): parse_outer_eompls_pwcw_1;
+            (1, 0): parse_outer_eompls_pwcw_extract_pwcw;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }
+    state parse_outer_eompls_pwcw_1 {
+        ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+        ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();    
+    	pkt.extract(hdr.outer.mpls_1);
+        transition select(hdr.outer.mpls_1.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): construct_outer_eompls_pwcw_2;
+            (1, 0): parse_outer_eompls_pwcw_extract_pwcw;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }
+    state construct_outer_eompls_pwcw_2 {
+        transition select(MPLS_DEPTH_OUTER) {
+            1: parse_outer_mpls_unsupported; // unsupported param value
+            2: parse_outer_mpls_unsupported;
+            default: parse_outer_eompls_pwcw_2;
+        }
+    }    
+    state parse_outer_eompls_pwcw_2 {
+        ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+        ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();    
+    	pkt.extract(hdr.outer.mpls_2);
+        transition select(hdr.outer.mpls_2.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): parse_outer_eompls_pwcw_3;
+            (1, 0): parse_outer_eompls_pwcw_extract_pwcw;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }
+    state parse_outer_eompls_pwcw_3 {
+        ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+        ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();    
+    	pkt.extract(hdr.outer.mpls_3);
+        transition select(hdr.outer.mpls_3.bos, pkt.lookahead<bit<4>>()) {
+            // (0, _): construct_outer_eompls_pwcw_4;
+            (0, _): parse_outer_mpls_unsupported;
+            (1, 0): parse_outer_eompls_pwcw_extract_pwcw;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }
+    // state construct_outer_eompls_pwcw_4 {
+    //     transition select(MPLS_DEPTH_OUTER) {
+    //         3: parse_outer_mpls_unsupported; // unsupported param value
+    //         4: parse_outer_mpls_unsupported;
+    //         default: parse_outer_eompls_pwcw_4;
+    //     }
+    // }
+    // state parse_outer_eompls_pwcw_4 {
+    //     ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+    //     ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();    
+    // 	pkt.extract(hdr.outer.mpls_4);
+    //     transition select(hdr.outer.mpls_4.bos, pkt.lookahead<bit<4>>()) {
+    //         (0, _): parse_outer_eompls_pwcw_5;
+    //         (1, 0): parse_outer_eompls_pwcw_extract_pwcw;
+    //         default: reject; // todo: unexpected - flag this as error?
+    //     }
+    // }
+    // state parse_outer_eompls_pwcw_5 {
+    //     ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+    //     ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();    
+    // 	pkt.extract(hdr.outer.mpls_5);
+    //     transition select(hdr.outer.mpls_5.bos, pkt.lookahead<bit<4>>()) {
+    //         (0, _): parse_outer_mpls_unsupported;
+    //         (1, 0): parse_outer_eompls_pwcw_extract_pwcw;
+    //         default: reject; // todo: unexpected - flag this as error?
+    //     }
+    // }
     state parse_outer_eompls_pwcw_extract_pwcw {
         pkt.extract(hdr.outer.mpls_pw_cw); 
         transition parse_inner_ethernet;
     }
 
-    //-------------------------------------------------------------------------
-    state parse_outer_ipompls {
 
+    //-------------------------------------------------------------------------
+    // state parse_outer_ipompls {
+    // 
+    //     ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+    //     ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();    
+    // 
+    // 	pkt.extract(hdr.outer.mpls.next);
+    //     transition select(hdr.outer.mpls.last.bos, pkt.lookahead<bit<4>>()) {
+    //         (0, _): parse_outer_ipompls;
+    //         (1, 4): parse_inner_ipv4;
+    //         (1, 6): construct_inner_ipv6;
+    //         default: accept; // todo: unexpected - flag this as error?
+    //     }
+    // }
+
+    state parse_outer_ipompls_0 {
         ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
         ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();    
-    
-    	pkt.extract(hdr.outer.mpls.next);
-        transition select(hdr.outer.mpls.last.bos, pkt.lookahead<bit<4>>()) {
-            (0, _): parse_outer_ipompls;
+    	pkt.extract(hdr.outer.mpls_0);
+        transition select(hdr.outer.mpls_0.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): parse_outer_ipompls_1;
             (1, 4): parse_inner_ipv4;
             (1, 6): construct_inner_ipv6;
-            default: accept; // todo: unexpected - flag this as error?
+            default: reject; // todo: unexpected - flag this as error?
         }
-    }    
-    
-    //-------------------------------------------------------------------------
-    state parse_outer_eompls_pwcw_ipompls {
-
+    }
+    state parse_outer_ipompls_1 {
         ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
         ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();    
+    	pkt.extract(hdr.outer.mpls_1);
+        transition select(hdr.outer.mpls_1.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): construct_outer_ipompls_2;
+            (1, 4): parse_inner_ipv4;
+            (1, 6): construct_inner_ipv6;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }
+    state construct_outer_ipompls_2 {
+        transition select(MPLS_DEPTH_OUTER) {
+            1: parse_outer_mpls_unsupported; // unsupported param value
+            2: parse_outer_mpls_unsupported;
+            default: parse_outer_ipompls_2;
+        }
+    }
+    state parse_outer_ipompls_2 {
+        ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+        ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();    
+    	pkt.extract(hdr.outer.mpls_2);
+        transition select(hdr.outer.mpls_2.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): parse_outer_ipompls_3;
+            (1, 4): parse_inner_ipv4;
+            (1, 6): construct_inner_ipv6;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }
+    state parse_outer_ipompls_3 {
+        ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+        ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();    
+    	pkt.extract(hdr.outer.mpls_3);
+        transition select(hdr.outer.mpls_3.bos, pkt.lookahead<bit<4>>()) {
+            // (0, _): construct_outer_ipompls_4;
+            (0, _): parse_outer_mpls_unsupported;
+            (1, 4): parse_inner_ipv4;
+            (1, 6): construct_inner_ipv6;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }
+    // state construct_outer_ipompls_4 {
+    //     transition select(MPLS_DEPTH_OUTER) {
+    //         3: parse_outer_mpls_unsupported; // unsupported param value
+    //         4: parse_outer_mpls_unsupported;
+    //         default: parse_outer_ipompls_4;
+    //     }
+    // }
+    // state parse_outer_ipompls_4 {
+    //     ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+    //     ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();    
+    // 	pkt.extract(hdr.outer.mpls_4);
+    //     transition select(hdr.outer.mpls_4.bos, pkt.lookahead<bit<4>>()) {
+    //         (0, _): parse_outer_ipompls_5;
+    //         (1, 4): parse_inner_ipv4;
+    //         (1, 6): construct_inner_ipv6;
+    //         default: reject; // todo: unexpected - flag this as error?
+    //     }
+    // }
+    // state parse_outer_ipompls_5 {
+    //     ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+    //     ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();    
+    // 	pkt.extract(hdr.outer.mpls_5);
+    //     transition select(hdr.outer.mpls_5.bos, pkt.lookahead<bit<4>>()) {
+    //         (0, _): parse_outer_mpls_unsupported;
+    //         (1, 4): parse_inner_ipv4;
+    //         (1, 6): construct_inner_ipv6;
+    //         default: reject; // todo: unexpected - flag this as error?
+    //     }
+    // }
+
     
-    	pkt.extract(hdr.outer.mpls.next);
-        transition select(hdr.outer.mpls.last.bos, pkt.lookahead<bit<4>>()) {
-            (0, _): parse_outer_eompls_pwcw_ipompls;
+    //-------------------------------------------------------------------------
+    // state parse_outer_eompls_pwcw_ipompls {
+    // 
+    //     ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+    //     ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();    
+    // 
+    // 	pkt.extract(hdr.outer.mpls.next);
+    //     transition select(hdr.outer.mpls.last.bos, pkt.lookahead<bit<4>>()) {
+    //         (0, _): parse_outer_eompls_pwcw_ipompls;
+    //         (1, 4): parse_inner_ipv4;
+    //         (1, 6): construct_inner_ipv6;
+    //         (1, 0): parse_outer_eompls_pwcw_ipompls_extract_pwcw;
+    //         //default: parse_inner_ethernet;
+    //         default: accept; // todo: unexpected - flag this as error?
+    //     }
+    // }
+    
+    state parse_outer_eompls_pwcw_ipompls_0 {
+        ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+        ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();    
+    	pkt.extract(hdr.outer.mpls_0);
+        transition select(hdr.outer.mpls_0.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): parse_outer_eompls_pwcw_ipompls_1;
             (1, 4): parse_inner_ipv4;
             (1, 6): construct_inner_ipv6;
             (1, 0): parse_outer_eompls_pwcw_ipompls_extract_pwcw;
-            //default: parse_inner_ethernet;
-            default: accept; // todo: unexpected - flag this as error?
+            default: reject; // todo: unexpected - flag this as error?
         }
     }
+    state parse_outer_eompls_pwcw_ipompls_1 {
+        ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+        ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();    
+    	pkt.extract(hdr.outer.mpls_1);
+        transition select(hdr.outer.mpls_1.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): construct_outer_eompls_pwcw_ipompls_2;
+            (1, 4): parse_inner_ipv4;
+            (1, 6): construct_inner_ipv6;
+            (1, 0): parse_outer_eompls_pwcw_ipompls_extract_pwcw;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }
+    state construct_outer_eompls_pwcw_ipompls_2 {
+        transition select(MPLS_DEPTH_OUTER) {
+            1: parse_outer_mpls_unsupported; // unsupported param value
+            2: parse_outer_mpls_unsupported;
+            default: parse_outer_eompls_pwcw_ipompls_2;
+        }
+    }
+    state parse_outer_eompls_pwcw_ipompls_2 {
+        ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+        ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();    
+    	pkt.extract(hdr.outer.mpls_2);
+        transition select(hdr.outer.mpls_2.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): parse_outer_eompls_pwcw_ipompls_3;
+            (1, 4): parse_inner_ipv4;
+            (1, 6): construct_inner_ipv6;
+            (1, 0): parse_outer_eompls_pwcw_ipompls_extract_pwcw;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }
+    state parse_outer_eompls_pwcw_ipompls_3 {
+        ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+        ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();    
+    	pkt.extract(hdr.outer.mpls_3);
+        transition select(hdr.outer.mpls_3.bos, pkt.lookahead<bit<4>>()) {
+            // (0, _): construct_outer_eompls_pwcw_ipompls_4;
+            (0, _): parse_outer_mpls_unsupported;
+            (1, 4): parse_inner_ipv4;
+            (1, 6): construct_inner_ipv6;
+            (1, 0): parse_outer_eompls_pwcw_ipompls_extract_pwcw;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }
+    // state construct_outer_eompls_pwcw_ipompls_4 {
+    //     transition select(MPLS_DEPTH_OUTER) {
+    //         3: parse_outer_mpls_unsupported; // unsupported param value
+    //         4: parse_outer_mpls_unsupported;
+    //         default: parse_outer_eompls_pwcw_ipompls_4;
+    //     }
+    // }
+    // state parse_outer_eompls_pwcw_ipompls_4 {
+    //     ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+    //     ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();    
+    // 	pkt.extract(hdr.outer.mpls_4);
+    //     transition select(hdr.outer.mpls_4.bos, pkt.lookahead<bit<4>>()) {
+    //         (0, _): parse_outer_eompls_pwcw_ipompls_5;
+    //         (1, 4): parse_inner_ipv4;
+    //         (1, 6): construct_inner_ipv6;
+    //         (1, 0): parse_outer_eompls_pwcw_ipompls_extract_pwcw;
+    //         default: reject; // todo: unexpected - flag this as error?
+    //     }
+    // }
+    // state parse_outer_eompls_pwcw_ipompls_5 {
+    //     ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+    //     ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();    
+    // 	pkt.extract(hdr.outer.mpls_5);
+    //     transition select(hdr.outer.mpls_5.bos, pkt.lookahead<bit<4>>()) {
+    //         (0, _): parse_outer_mpls_unsupported;
+    //         (1, 4): parse_inner_ipv4;
+    //         (1, 6): construct_inner_ipv6;
+    //         (1, 0): parse_outer_eompls_pwcw_ipompls_extract_pwcw;
+    //         default: reject; // todo: unexpected - flag this as error?
+    //     }
+    // }
     state parse_outer_eompls_pwcw_ipompls_extract_pwcw {
         pkt.extract(hdr.outer.mpls_pw_cw); 
         transition  parse_inner_ethernet;
     }
-    
 
+    state parse_outer_mpls_unsupported {
+        ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+        ig_md.lkp_1.tunnel_id = 0;
+        transition reject;
+    }
+    
     ///////////////////////////////////////////////////////////////////////////
     // Tunnels - Outer
     ///////////////////////////////////////////////////////////////////////////

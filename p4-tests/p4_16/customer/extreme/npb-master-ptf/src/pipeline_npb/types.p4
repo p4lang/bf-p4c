@@ -62,9 +62,7 @@
 #define NSH_PROTOCOLS_EXP1 0xFE
 #define NSH_PROTOCOLS_EXP2 0xFF
 
-#define VLAN_DEPTH 2
-//#define MPLS_DEPTH 3
-#define MPLS_DEPTH 4
+#define VLAN_DEPTH_OUTER 2 // doesn't change everything
 
 // ----------------------------------------------------------------------------
 // Common types
@@ -1122,7 +1120,13 @@ struct switch_header_transport_t {
     vlan_tag_h[1] vlan_tag;
     nsh_type1_h nsh_type1;
     nsh_type1_internal_h nsh_type1_internal;
-    mpls_h[MPLS_DEPTH] mpls;
+    //mpls_h[MPLS_DEPTH_TRANSPORT] mpls;
+    mpls_h mpls_0;
+    mpls_h mpls_1;
+    mpls_h mpls_2;
+    mpls_h mpls_3;
+    mpls_h mpls_4;
+    mpls_h mpls_5;
 
     ipv4_h ipv4;
     ipv6_h ipv6;
@@ -1160,8 +1164,14 @@ struct switch_header_outer_t {
     ethernet_h ethernet;
     e_tag_h e_tag;
     vn_tag_h vn_tag;
-    vlan_tag_h[VLAN_DEPTH] vlan_tag;
-    mpls_h[MPLS_DEPTH] mpls;
+    vlan_tag_h[VLAN_DEPTH_OUTER] vlan_tag;
+    //mpls_h[MPLS_DEPTH_OUTER] mpls;
+    mpls_h mpls_0;
+    mpls_h mpls_1;
+    mpls_h mpls_2;
+    mpls_h mpls_3;
+    // mpls_h mpls_4;
+    // mpls_h mpls_5;
     mpls_pw_cw_h mpls_pw_cw;
 
     ipv4_h ipv4;

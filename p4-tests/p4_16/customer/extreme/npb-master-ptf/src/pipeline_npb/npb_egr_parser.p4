@@ -473,15 +473,15 @@ parser EgressParser(
 #endif
     }
 
-    ///////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     // Transport Layer 2 (L2-U)
-    ///////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     // NSH
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
     state parse_transport_ethernet {
         pkt.extract(hdr.transport.ethernet);
@@ -539,29 +539,29 @@ parser EgressParser(
     }
 
 
-    ///////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     // "Outer" Headers / Stack
-    ///////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     // Layer2 - Outer (ETH)
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
     // todo: Can we implement scope0/1 as single sub-parser, w/ parameters
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // Scope 0
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     
     state parse_outer_ethernet_scope0 {
         pkt.extract(hdr.outer.ethernet);
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.mac_src_addr = hdr.outer.ethernet.src_addr;
         eg_md.lkp_1.mac_dst_addr = hdr.outer.ethernet.dst_addr;
         eg_md.lkp_1.mac_type     = hdr.outer.ethernet.ether_type;
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
-
+#endif
         transition select(hdr.outer.ethernet.ether_type) {
             ETHERTYPE_BR : parse_outer_br_scope0;
             ETHERTYPE_VN : parse_outer_vn_scope0;
@@ -583,10 +583,11 @@ parser EgressParser(
 
     state extract_outer_br_scope0 {
 	    pkt.extract(hdr.outer.e_tag);
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.mac_type = hdr.outer.e_tag.ether_type;        
         //eg_md.lkp_1.pcp = hdr.outer.e_tag.pcp;  // do not populate w/ e-tag
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#endif
         transition select(hdr.outer.e_tag.ether_type) {
             ETHERTYPE_VLAN : parse_outer_vlan_scope0;
             ETHERTYPE_QINQ : parse_outer_vlan_scope0;
@@ -597,7 +598,6 @@ parser EgressParser(
         }
     }
 
-
     state parse_outer_vn_scope0 {
         transition select(OUTER_VNTAG_ENABLE) {
             true: extract_outer_vn_scope0;
@@ -607,9 +607,10 @@ parser EgressParser(
 
     state extract_outer_vn_scope0 {
 	    pkt.extract(hdr.outer.vn_tag);
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.mac_type = hdr.outer.vn_tag.ether_type;
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#endif
         transition select(hdr.outer.vn_tag.ether_type) {
             ETHERTYPE_VLAN : parse_outer_vlan_scope0;
             ETHERTYPE_QINQ : parse_outer_vlan_scope0;
@@ -624,7 +625,8 @@ parser EgressParser(
     state parse_outer_vlan_scope0 {
 	    pkt.extract(hdr.outer.vlan_tag.next);
 
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.pcp = hdr.outer.vlan_tag.last.pcp;
   #ifdef SF_2_L2_VLAN_ID_ENABLE
 		eg_md.lkp_1.vid = hdr.outer.vlan_tag.last.vid;
@@ -636,8 +638,7 @@ parser EgressParser(
         //eg_md.lkp_1.tunnel_id[11:0] = hdr.outer.vlan_tag.last.vid;
         //eg_md.lkp_1.tunnel_id = (bit<switch_tunnel_id_width>)hdr.outer.vlan_tag.last.vid;
   #endif
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
-    
+#endif
         transition select(hdr.outer.vlan_tag.last.ether_type) {
             ETHERTYPE_VLAN : parse_outer_vlan_scope0;
             ETHERTYPE_MPLS : construct_outer_mpls_scope0;
@@ -649,20 +650,20 @@ parser EgressParser(
     
     
     // todo: Can we implement scope0/1 as single sub-parser, w/ parameters
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // Scope 1
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     
     state parse_outer_ethernet_scope1 {
         pkt.extract(hdr.outer.ethernet);
 
 // populate for L3-tunnel case (where there's no L2 present)
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.mac_src_addr = hdr.outer.ethernet.src_addr;
         eg_md.lkp_1.mac_dst_addr = hdr.outer.ethernet.dst_addr;
         eg_md.lkp_1.mac_type     = hdr.outer.ethernet.ether_type;
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
-
+#endif
         transition select(hdr.outer.ethernet.ether_type) {
             ETHERTYPE_BR : parse_outer_br_scope1;
             ETHERTYPE_VN : parse_outer_vn_scope1;
@@ -686,10 +687,10 @@ parser EgressParser(
 	    pkt.extract(hdr.outer.e_tag);
 
 // populate for L3-tunnel case (where there's no L2 present)
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.mac_type = hdr.outer.e_tag.ether_type;        
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
-        
+#endif  
         transition select(hdr.outer.e_tag.ether_type) {
             ETHERTYPE_VLAN : parse_outer_vlan_scope1;
             ETHERTYPE_QINQ : parse_outer_vlan_scope1;
@@ -712,10 +713,10 @@ parser EgressParser(
 	    pkt.extract(hdr.outer.vn_tag);
 
 // populate for L3-tunnel case (where there's no L2 present)
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.mac_type = hdr.outer.vn_tag.ether_type;
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
-        
+#endif        
         transition select(hdr.outer.vn_tag.ether_type) {
             ETHERTYPE_VLAN : parse_outer_vlan_scope1;
             ETHERTYPE_QINQ : parse_outer_vlan_scope1;
@@ -731,7 +732,8 @@ parser EgressParser(
 	    pkt.extract(hdr.outer.vlan_tag.next);
 
 // populate for L3-tunnel case (where there's no L2 present)
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.pcp = hdr.outer.vlan_tag.last.pcp;
   #ifdef SF_2_L2_VLAN_ID_ENABLE
 		eg_md.lkp_1.vid = hdr.outer.vlan_tag.last.vid;
@@ -743,7 +745,7 @@ parser EgressParser(
         //eg_md.lkp_1.tunnel_id[11:0] = hdr.outer.vlan_tag.last.vid;
         //eg_md.lkp_1.tunnel_id = (bit<switch_tunnel_id_width>)hdr.outer.vlan_tag.last.vid;
   #endif
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#endif
         
         transition select(hdr.outer.vlan_tag.last.ether_type) {
             ETHERTYPE_VLAN : parse_outer_vlan_scope1;
@@ -755,18 +757,19 @@ parser EgressParser(
     }
 
     
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     // Layer 3 - Outer
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // Scope 0
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     
     state parse_outer_ipv4_scope0 {
         pkt.extract(hdr.outer.ipv4);
         protocol_outer = hdr.outer.ipv4.protocol;
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         // todo: should the lkp struct be set only if no frag and options?
 //      eg_md.lkp_1.ip_type       = SWITCH_IP_TYPE_IPV4;
         eg_md.lkp_1.ip_proto      = hdr.outer.ipv4.protocol;
@@ -775,7 +778,7 @@ parser EgressParser(
         eg_md.lkp_1.ip_src_addr_v4= hdr.outer.ipv4.src_addr;
         eg_md.lkp_1.ip_dst_addr_v4= hdr.outer.ipv4.dst_addr;
         eg_md.lkp_1.ip_len        = hdr.outer.ipv4.total_len;
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#endif
 
         // Flag packet (to be sent to host) if it's a frag or has options.
         transition select(
@@ -800,14 +803,15 @@ parser EgressParser(
     state parse_outer_ipv6_scope0 {
         pkt.extract(hdr.outer.ipv6);
         protocol_outer = hdr.outer.ipv6.next_hdr;
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
 //      eg_md.lkp_1.ip_type       = SWITCH_IP_TYPE_IPV6;
         eg_md.lkp_1.ip_proto      = hdr.outer.ipv6.next_hdr;
-        //eg_md.lkp_1.ip_tos        = hdr.outer.ipv6.tos; // not byte-aligned so set in mau
+        //eg_md.lkp_1.ip_tos        = hdr.outer.ipv6.tos; // not byte-aligned - set in mau
         eg_md.lkp_1.ip_src_addr   = hdr.outer.ipv6.src_addr;
         eg_md.lkp_1.ip_dst_addr   = hdr.outer.ipv6.dst_addr;
         eg_md.lkp_1.ip_len        = hdr.outer.ipv6.payload_len;
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#endif
 
         transition branch_outer_l3_protocol_scope0;
         // transition select(hdr.outer.ipv6.next_hdr) {
@@ -831,9 +835,9 @@ parser EgressParser(
     }
     
 
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // Scope 1
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     
     state parse_outer_ipv4_scope1 {
         pkt.extract(hdr.outer.ipv4);
@@ -878,30 +882,31 @@ parser EgressParser(
 //     // We're simply over-loading L4-port info for policy via lookahead.    
 //     state parse_outer_icmp_igmp_overload_scope0 {
 // #ifdef PARSER_L4_PORT_OVERLOAD   
-// #if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+// #if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+//     defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
 //         eg_md.lkp_1.l4_src_port = pkt.lookahead<bit<16>>();
-// #endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+// #endif
 // #endif // PARSER_L4_PORT_OVERLOAD
 //         transition accept;
 //     }
 
     
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     // Layer 4 - Outer
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // User Datagram Protocol (UDP) - Outer
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
 
     state parse_outer_udp_scope0 {
         pkt.extract(hdr.outer.udp);
         
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.l4_src_port = hdr.outer.udp.src_port;
         eg_md.lkp_1.l4_dst_port = hdr.outer.udp.dst_port;  
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
-
+#endif
         transition select(hdr.outer.udp.src_port, hdr.outer.udp.dst_port) {
             (_, UDP_PORT_GENV): construct_outer_geneve_scope0;
             (_, UDP_PORT_VXLAN): construct_outer_vxlan_scope0;
@@ -930,17 +935,18 @@ parser EgressParser(
         }
     }
             
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // Transmission Control Protocol (TCP) - Outer
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
 
     state parse_outer_tcp_scope0 {
         pkt.extract(hdr.outer.tcp);
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.l4_src_port = hdr.outer.tcp.src_port;
         eg_md.lkp_1.l4_dst_port = hdr.outer.tcp.dst_port;
         eg_md.lkp_1.tcp_flags   = hdr.outer.tcp.flags;
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#endif
         transition accept;
     }
 
@@ -948,10 +954,10 @@ parser EgressParser(
         pkt.extract(hdr.outer.tcp);
         transition accept;
     }
-            
-    //-------------------------------------------------------------------------
+    
+    //--------------------------------------------------------------------------
     // Stream Control Transmission Protocol (SCTP) - Outer
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
 
     state parse_outer_sctp_scope0 {
         pkt.extract(hdr.outer.sctp);
@@ -967,13 +973,13 @@ parser EgressParser(
         transition accept;
     }
 
-    ///////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     // Layer X - Outer
-    ///////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // Multi-Protocol Label Switching (MPLS) - Outer
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // Due to chip resource constraints, we're only supporting certain MPLS
     // modes via heuristic parsing (aka: "first nibble hack").
     //
@@ -983,7 +989,7 @@ parser EgressParser(
     //   IPoMPLS      (via OUTER_IPoMPLS_ENABLE parameter)
     //
     // EoMPLS assumes ethernet follows bos (no pw_cw).
-    // EoMPLS-PWCW assumes pw_cw follows bos.
+    // EoMPLS-PWCW assumes pw_cw follows bos (and ethernet follows pw_cw).
     // IPoMPLS assumes v4 or v6 header follows bos.
     //
     // Valid parameter combinations are as follows:
@@ -998,6 +1004,9 @@ parser EgressParser(
     //
     // For all MPLS enabled combinations above, the user can add MPLS-over-GRE
     // support via parameter OUTER_MPLSoGRE_ENABLE
+    //
+    // For all MPLS enabled combinations above, the user can select between
+    // 2, 4, or 6 supported labels (depth).
 
     state construct_outer_mplsogre_scope0 {
         transition select(OUTER_MPLSoGRE_ENABLE) {
@@ -1006,94 +1015,437 @@ parser EgressParser(
         }
     }
     state construct_outer_mpls_scope0 {
-        transition select(OUTER_EoMPLS_ENABLE, OUTER_EoMPLS_PWCW_ENABLE, OUTER_IPoMPLS_ENABLE) {
-            (true,      _,     _): parse_outer_eompls_scope0;
-            (false,  true, false): parse_outer_eompls_pwcw_scope0;
-            (false, false,  true): parse_outer_ipompls_scope0;
-            (false,  true,  true): parse_outer_eompls_pwcw_ipompls_scope0;
+    transition select(
+        OUTER_EoMPLS_ENABLE,
+        OUTER_EoMPLS_PWCW_ENABLE,
+        OUTER_IPoMPLS_ENABLE) {
+            //(true,      _,     _): parse_outer_eompls_scope0;
+            //(false,  true, false): parse_outer_eompls_pwcw_scope0;
+            //(false, false,  true): parse_outer_ipompls_scope0;
+            //(false,  true,  true): parse_outer_eompls_pwcw_ipompls_scope0;
+            (true,      _,     _): parse_outer_eompls_0_scope0;
+            (false,  true, false): parse_outer_eompls_pwcw_0_scope0;
+            (false, false,  true): parse_outer_ipompls_0_scope0;
+            (false,  true,  true): parse_outer_eompls_pwcw_ipompls_0_scope0;
             default: reject;
         }
     }
 
-    //-------------------------------------------------------------------------
-    state parse_outer_eompls_scope0 {
-
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+    //--------------------------------------------------------------------------
+    state parse_outer_eompls_0_scope0 {
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
         eg_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
-    
-        pkt.extract(hdr.outer.mpls.next);
-        transition select(hdr.outer.mpls.last.bos) {
-            0: parse_outer_eompls_scope0;
+#endif
+        pkt.extract(hdr.outer.mpls_0);
+        transition select(hdr.outer.mpls_0.bos) {
+            0: parse_outer_eompls_1_scope0;
             1: parse_inner_ethernet_scope0;
         }
     }
-
-    //-------------------------------------------------------------------------
-    state parse_outer_eompls_pwcw_scope0 {
-
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+    state parse_outer_eompls_1_scope0 {
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
         eg_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
-
-        pkt.extract(hdr.outer.mpls.next);
-        transition select(hdr.outer.mpls.last.bos, pkt.lookahead<bit<4>>()) {
-            (0, _): parse_outer_eompls_pwcw_scope0;
-            (1, 0): parse_outer_eompls_pwcw_extract_pwcw_scope0;
-            //default: parse_inner_ethernet_scope0;
-            default: accept; // todo: unexpected - flag this as error?
+#endif
+        pkt.extract(hdr.outer.mpls_1);
+        transition select(hdr.outer.mpls_1.bos) {
+            0: construct_outer_eompls_2_scope0;
+            1: parse_inner_ethernet_scope0;
         }
     }
+    state construct_outer_eompls_2_scope0 {
+        transition select(MPLS_DEPTH_OUTER) {
+            1: parse_outer_mpls_unsupported_scope0; // unsupported param value
+            2: parse_outer_mpls_unsupported_scope0;
+            default: parse_outer_eompls_2_scope0;
+        }
+    }
+    state parse_outer_eompls_2_scope0 {
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+        eg_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();
+#endif
+        pkt.extract(hdr.outer.mpls_2);
+        transition select(hdr.outer.mpls_2.bos) {
+            0: parse_outer_eompls_3_scope0;
+            1: parse_inner_ethernet_scope0;
+        }
+    }
+    state parse_outer_eompls_3_scope0 {
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+        eg_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();
+#endif
+        pkt.extract(hdr.outer.mpls_3);
+        transition select(hdr.outer.mpls_3.bos) {
+            //0: construct_outer_eompls_4_scope0;
+            0: parse_outer_mpls_unsupported_scope0;
+            1: parse_inner_ethernet_scope0;
+        }
+    }
+//     state construct_outer_eompls_4_scope0 {
+//         transition select(MPLS_DEPTH_OUTER) {
+//             3: parse_outer_mpls_unsupported_scope0; // unsupported param value
+//             4: parse_outer_mpls_unsupported_scope0;
+//             default: parse_outer_eompls_4_scope0;
+//         }
+//     }
+//     state parse_outer_eompls_4_scope0 {
+// #if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+//     defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+//         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+//         eg_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();
+// #endif
+//         pkt.extract(hdr.outer.mpls_4);
+//         transition select(hdr.outer.mpls_4.bos) {
+//             0: parse_outer_eompls_5_scope0;
+//             1: parse_inner_ethernet_scope0;
+//         }
+//     }
+//     state parse_outer_eompls_5_scope0 {
+// #if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+//     defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+//         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+//         eg_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();
+// #endif
+//         pkt.extract(hdr.outer.mpls_5);
+//         transition select(hdr.outer.mpls_5.bos) {
+//             0: parse_outer_mpls_unsupported_scope0;
+//             1: parse_inner_ethernet_scope0;
+//         }
+//     }
+
+    //-------------------------------------------------------------------------
+    state parse_outer_eompls_pwcw_0_scope0 {
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+        eg_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();
+#endif
+        pkt.extract(hdr.outer.mpls_0);
+        transition select(hdr.outer.mpls_0.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): parse_outer_eompls_pwcw_1_scope0;
+            (1, 0): parse_outer_eompls_pwcw_extract_pwcw_scope0;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }
+    state parse_outer_eompls_pwcw_1_scope0 {
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+        eg_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();
+#endif
+        pkt.extract(hdr.outer.mpls_1);
+        transition select(hdr.outer.mpls_1.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): construct_outer_eompls_pwcw_2_scope0;
+            (1, 0): parse_outer_eompls_pwcw_extract_pwcw_scope0;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }
+    state construct_outer_eompls_pwcw_2_scope0 {
+        transition select(MPLS_DEPTH_OUTER) {
+            1: parse_outer_mpls_unsupported_scope0; // unsupported param value
+            2: parse_outer_mpls_unsupported_scope0;
+            default: parse_outer_eompls_pwcw_2_scope0;
+        }
+    }
+    state parse_outer_eompls_pwcw_2_scope0 {
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+        eg_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();
+#endif
+        pkt.extract(hdr.outer.mpls_2);
+        transition select(hdr.outer.mpls_2.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): parse_outer_eompls_pwcw_3_scope0;
+            (1, 0): parse_outer_eompls_pwcw_extract_pwcw_scope0;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }
+    state parse_outer_eompls_pwcw_3_scope0 {
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+        eg_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();
+#endif
+        pkt.extract(hdr.outer.mpls_3);
+        transition select(hdr.outer.mpls_3.bos, pkt.lookahead<bit<4>>()) {
+            // (0, _): construct_outer_eompls_pwcw_4_scope0;
+            (0, _): parse_outer_mpls_unsupported_scope0;
+            (1, 0): parse_outer_eompls_pwcw_extract_pwcw_scope0;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }
+//     state construct_outer_eompls_pwcw_4_scope0 {
+//         transition select(MPLS_DEPTH_OUTER) {
+//             1: parse_outer_mpls_unsupported_scope0; // unsupported param value
+//             2: parse_outer_mpls_unsupported_scope0;
+//             default: parse_outer_eompls_pwcw_4_scope0;
+//         }
+//     }
+//     state parse_outer_eompls_pwcw_4_scope0 {
+// #if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+//     defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+//         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+//         eg_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();
+// #endif
+//         pkt.extract(hdr.outer.mpls_4);
+//         transition select(hdr.outer.mpls_4.bos, pkt.lookahead<bit<4>>()) {
+//             (0, _): parse_outer_eompls_pwcw_5_scope0;
+//             (1, 0): parse_outer_eompls_pwcw_extract_pwcw_scope0;
+//             default: reject; // todo: unexpected - flag this as error?
+//         }
+//     }
+//     state parse_outer_eompls_pwcw_5_scope0 {
+// #if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+//     defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+//         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+//         eg_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();
+// #endif
+//         pkt.extract(hdr.outer.mpls_5);
+//         transition select(hdr.outer.mpls_5.bos, pkt.lookahead<bit<4>>()) {
+//             (0, _): parse_outer_mpls_unsupported_scope0;
+//             (1, 0): parse_outer_eompls_pwcw_extract_pwcw_scope0;
+//             default: reject; // todo: unexpected - flag this as error?
+//         }
+//     }
     state parse_outer_eompls_pwcw_extract_pwcw_scope0 {
         pkt.extract(hdr.outer.mpls_pw_cw); 
         transition parse_inner_ethernet_scope0;
     }
 
-    //-------------------------------------------------------------------------
-    state parse_outer_ipompls_scope0 {
 
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+    //--------------------------------------------------------------------------
+    state parse_outer_ipompls_0_scope0 {
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
         eg_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
-    
-        pkt.extract(hdr.outer.mpls.next);
-        transition select(hdr.outer.mpls.last.bos, pkt.lookahead<bit<4>>()) {
-            (0, _): parse_outer_ipompls_scope0;
+#endif    
+        pkt.extract(hdr.outer.mpls_0);
+        transition select(hdr.outer.mpls_0.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): parse_outer_ipompls_1_scope0;
             (1, 4): parse_inner_ipv4_scope0;
             (1, 6): construct_inner_ipv6_scope0;
-            default: accept; // todo: unexpected - flag this as error?
+            default: reject; // todo: unexpected - flag this as error?
         }
     }
-
-    //-------------------------------------------------------------------------
-    state parse_outer_eompls_pwcw_ipompls_scope0 {
-
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+    state parse_outer_ipompls_1_scope0 {
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
         eg_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#endif
+        pkt.extract(hdr.outer.mpls_1);
+        transition select(hdr.outer.mpls_1.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): construct_outer_ipompls_2_scope0;
+            (1, 4): parse_inner_ipv4_scope0;
+            (1, 6): construct_inner_ipv6_scope0;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }
+    state construct_outer_ipompls_2_scope0 {
+        transition select(MPLS_DEPTH_OUTER) {
+            1: parse_outer_mpls_unsupported_scope0; // unsupported param value
+            2: parse_outer_mpls_unsupported_scope0;
+            default: parse_outer_ipompls_2_scope0;
+        }
+    }
+    state parse_outer_ipompls_2_scope0 {
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+        eg_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();
+#endif    
+        pkt.extract(hdr.outer.mpls_2);
+        transition select(hdr.outer.mpls_2.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): parse_outer_ipompls_3_scope0;
+            (1, 4): parse_inner_ipv4_scope0;
+            (1, 6): construct_inner_ipv6_scope0;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }
+    state parse_outer_ipompls_3_scope0 {
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+        eg_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();
+#endif
+        pkt.extract(hdr.outer.mpls_3);
+        transition select(hdr.outer.mpls_3.bos, pkt.lookahead<bit<4>>()) {
+            // (0, _): construct_outer_ipompls_4_scope0;
+            (0, _): parse_outer_mpls_unsupported_scope0;
+            (1, 4): parse_inner_ipv4_scope0;
+            (1, 6): construct_inner_ipv6_scope0;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }
+//     state construct_outer_ipompls_4_scope0 {
+//         transition select(MPLS_DEPTH_OUTER) {
+//             3: parse_outer_mpls_unsupported_scope0; // unsupported param value
+//             4: parse_outer_mpls_unsupported_scope0;
+//             default: parse_outer_ipompls_4_scope0;
+//         }
+//     }
+//     state parse_outer_ipompls_4_scope0 {
+// #if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+//     defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+//         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+//         eg_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();
+// #endif    
+//         pkt.extract(hdr.outer.mpls_4);
+//         transition select(hdr.outer.mpls_4.bos, pkt.lookahead<bit<4>>()) {
+//             (0, _): parse_outer_ipompls_5_scope0;
+//             (1, 4): parse_inner_ipv4_scope0;
+//             (1, 6): construct_inner_ipv6_scope0;
+//             default: reject; // todo: unexpected - flag this as error?
+//         }
+//     }
+//     state parse_outer_ipompls_5_scope0 {
+// #if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+//     defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+//         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+//         eg_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();
+// #endif
+//         pkt.extract(hdr.outer.mpls_5);
+//         transition select(hdr.outer.mpls_5.bos, pkt.lookahead<bit<4>>()) {
+//             (0, _): parse_outer_mpls_unsupported_scope0;
+//             (1, 4): parse_inner_ipv4_scope0;
+//             (1, 6): construct_inner_ipv6_scope0;
+//             default: reject; // todo: unexpected - flag this as error?
+//         }
+//     }
 
-        pkt.extract(hdr.outer.mpls.next);
-        transition select(hdr.outer.mpls.last.bos, pkt.lookahead<bit<4>>()) {
-            (0, _): parse_outer_eompls_pwcw_ipompls_scope0;
+
+    //--------------------------------------------------------------------------
+    state parse_outer_eompls_pwcw_ipompls_0_scope0 {
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+        eg_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();
+#endif
+        pkt.extract(hdr.outer.mpls_0);
+        transition select(hdr.outer.mpls_0.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): parse_outer_eompls_pwcw_ipompls_1_scope0;
             (1, 4): parse_inner_ipv4_scope0;
             (1, 6): construct_inner_ipv6_scope0;
             (1, 0): parse_outer_eompls_pwcw_ipompls_extract_pwcw_scope0;
-            //default: parse_inner_ethernet_scope0;
-            default: accept; // todo: unexpected - flag this as error?
+            default: reject; // todo: unexpected - flag this as error?
         }
     }
+    state parse_outer_eompls_pwcw_ipompls_1_scope0 {
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+        eg_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();
+#endif
+        pkt.extract(hdr.outer.mpls_1);
+        transition select(hdr.outer.mpls_1.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): construct_outer_eompls_pwcw_ipompls_2_scope0;
+            (1, 4): parse_inner_ipv4_scope0;
+            (1, 6): construct_inner_ipv6_scope0;
+            (1, 0): parse_outer_eompls_pwcw_ipompls_extract_pwcw_scope0;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }
+    state construct_outer_eompls_pwcw_ipompls_2_scope0 {
+        transition select(MPLS_DEPTH_OUTER) {
+            1: parse_outer_mpls_unsupported_scope0; // unsupported param value
+            2: parse_outer_mpls_unsupported_scope0;
+            default: parse_outer_eompls_pwcw_ipompls_2_scope0;
+        }
+    }
+    state parse_outer_eompls_pwcw_ipompls_2_scope0 {
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+        eg_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();
+#endif
+        pkt.extract(hdr.outer.mpls_2);
+        transition select(hdr.outer.mpls_2.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): parse_outer_eompls_pwcw_ipompls_3_scope0;
+            (1, 4): parse_inner_ipv4_scope0;
+            (1, 6): construct_inner_ipv6_scope0;
+            (1, 0): parse_outer_eompls_pwcw_ipompls_extract_pwcw_scope0;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }
+    state parse_outer_eompls_pwcw_ipompls_3_scope0 {
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+        eg_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();
+#endif
+        pkt.extract(hdr.outer.mpls_3);
+        transition select(hdr.outer.mpls_3.bos, pkt.lookahead<bit<4>>()) {
+            // (0, _): construct_outer_eompls_pwcw_ipompls_4_scope0;
+            (0, _): parse_outer_mpls_unsupported_scope0;
+            (1, 4): parse_inner_ipv4_scope0;
+            (1, 6): construct_inner_ipv6_scope0;
+            (1, 0): parse_outer_eompls_pwcw_ipompls_extract_pwcw_scope0;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }
+//     state construct_outer_eompls_pwcw_ipompls_4_scope0 {
+//         transition select(MPLS_DEPTH_OUTER) {
+//             3: parse_outer_mpls_unsupported_scope0; // unsupported param value
+//             4: parse_outer_mpls_unsupported_scope0;
+//             default: parse_outer_eompls_pwcw_ipompls_4_scope0;
+//         }
+//     }
+//     state parse_outer_eompls_pwcw_ipompls_4_scope0 {
+// #if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+//     defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+//         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+//         eg_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();
+// #endif
+//         pkt.extract(hdr.outer.mpls_4);
+//         transition select(hdr.outer.mpls_4.bos, pkt.lookahead<bit<4>>()) {
+//             (0, _): parse_outer_eompls_pwcw_ipompls_5_scope0;
+//             (1, 4): parse_inner_ipv4_scope0;
+//             (1, 6): construct_inner_ipv6_scope0;
+//             (1, 0): parse_outer_eompls_pwcw_ipompls_extract_pwcw_scope0;
+//             default: reject; // todo: unexpected - flag this as error?
+//         }
+//     }
+//     state parse_outer_eompls_pwcw_ipompls_5_scope0 {
+// #if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+//     defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+//         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
+//         eg_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>();
+// #endif
+//         pkt.extract(hdr.outer.mpls_5);
+//         transition select(hdr.outer.mpls_5.bos, pkt.lookahead<bit<4>>()) {
+//             (0, _): parse_outer_mpls_unsupported_scope0;
+//             (1, 4): parse_inner_ipv4_scope0;
+//             (1, 6): construct_inner_ipv6_scope0;
+//             (1, 0): parse_outer_eompls_pwcw_ipompls_extract_pwcw_scope0;
+//             default: reject; // todo: unexpected - flag this as error?
+//         }
+//     }
     state parse_outer_eompls_pwcw_ipompls_extract_pwcw_scope0 {
         pkt.extract(hdr.outer.mpls_pw_cw); 
         transition parse_inner_ethernet_scope0;
     }
 
+    state parse_outer_mpls_unsupported_scope0 {
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)    
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+        eg_md.lkp_1.tunnel_id = 0;
+#endif    
+        transition reject;
+    }
+    
 
-    //-------------------------------------------------------------------------
-    //-------------------------------------------------------------------------
+
+    //--------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     state construct_outer_mplsogre_scope1 {
         transition select(OUTER_MPLSoGRE_ENABLE) {
             true: construct_outer_mpls_scope1;
@@ -1101,88 +1453,408 @@ parser EgressParser(
         }
     }
     state construct_outer_mpls_scope1 {
-        transition select(OUTER_EoMPLS_ENABLE, OUTER_EoMPLS_PWCW_ENABLE, OUTER_IPoMPLS_ENABLE) {
-            (true,      _,     _): parse_outer_eompls_scope1;
-            (false,  true, false): parse_outer_eompls_pwcw_scope1;
-            (false, false,  true): parse_outer_ipompls_scope1;
-            (false,  true,  true): parse_outer_eompls_pwcw_ipompls_scope1;
+        transition select(
+          OUTER_EoMPLS_ENABLE,
+          OUTER_EoMPLS_PWCW_ENABLE,
+          OUTER_IPoMPLS_ENABLE) {
+            // (true,      _,     _): parse_outer_eompls_scope1;
+            // (false,  true, false): parse_outer_eompls_pwcw_scope1;
+            // (false, false,  true): parse_outer_ipompls_scope1;
+            // (false,  true,  true): parse_outer_eompls_pwcw_ipompls_scope1;
+            (true,      _,     _): parse_outer_eompls_0_scope1;
+            (false,  true, false): parse_outer_eompls_pwcw_0_scope1;
+            (false, false,  true): parse_outer_ipompls_0_scope1;
+            (false,  true,  true): parse_outer_eompls_pwcw_ipompls_0_scope1;
             default: reject;
         }
     }
 
-    //-------------------------------------------------------------------------
-    state parse_outer_eompls_scope1 {
-
-        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS; // note: inner here means "current scope - 1"
-    
-        pkt.extract(hdr.outer.mpls.next);
-        transition select(hdr.outer.mpls.last.bos) {
-            0: parse_outer_eompls_scope1;
+    //--------------------------------------------------------------------------
+    // state parse_outer_eompls_scope1 {
+    //     // note: inner here means "current scope - 1"
+    //     eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS;
+    //     pkt.extract(hdr.outer.mpls.next);
+    //     transition select(hdr.outer.mpls.last.bos) {
+    //         0: parse_outer_eompls_scope1;
+    //         1: parse_inner_ethernet_scope1;
+    //     }
+    // }
+    state parse_outer_eompls_0_scope1 {
+        // note: inner here means "current scope - 1"
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS;
+        pkt.extract(hdr.outer.mpls_0);
+        transition select(hdr.outer.mpls_0.bos) {
+            0: parse_outer_eompls_1_scope1;
             1: parse_inner_ethernet_scope1;
         }
     }
+    state parse_outer_eompls_1_scope1 {
+        // note: inner here means "current scope - 1"
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS;
+        pkt.extract(hdr.outer.mpls_1);
+        transition select(hdr.outer.mpls_1.bos) {
+            0: construct_outer_eompls_2_scope1;
+            1: parse_inner_ethernet_scope1;
+        }
+    }
+    state construct_outer_eompls_2_scope1 {
+        transition select(MPLS_DEPTH_OUTER) {
+            1: parse_outer_mpls_unsupported_scope1; // unsupported param value
+            2: parse_outer_mpls_unsupported_scope1;
+            default: parse_outer_eompls_2_scope1;
+        }
+    }
+    state parse_outer_eompls_2_scope1 {
+        // note: inner here means "current scope - 1"
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS;
+        pkt.extract(hdr.outer.mpls_2);
+        transition select(hdr.outer.mpls_2.bos) {
+            0: parse_outer_eompls_3_scope1;
+            1: parse_inner_ethernet_scope1;
+        }
+    }
+    state parse_outer_eompls_3_scope1 {
+        // note: inner here means "current scope - 1"
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS;
+        pkt.extract(hdr.outer.mpls_3);
+        transition select(hdr.outer.mpls_3.bos) {
+            // 0: construct_outer_eompls_4_scope1;
+            0: parse_outer_mpls_unsupported_scope1;
+            1: parse_inner_ethernet_scope1;
+        }
+    }
+//     state construct_outer_eompls_4_scope1 {
+//         transition select(MPLS_DEPTH_OUTER) {
+//             3: parse_outer_mpls_unsupported_scope1; // unsupported param value
+//             4: parse_outer_mpls_unsupported_scope1;
+//             default: parse_outer_eompls_4_scope1;
+//         }
+//     }
+//     state parse_outer_eompls_4_scope1 {
+//         // note: inner here means "current scope - 1"
+//         eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS;
+//         pkt.extract(hdr.outer.mpls_4);
+//         transition select(hdr.outer.mpls_4.bos) {
+//             0: parse_outer_eompls_5_scope1;
+//             1: parse_inner_ethernet_scope1;
+//         }
+//     }
+//     state parse_outer_eompls_5_scope1 {
+//         // note: inner here means "current scope - 1"
+//         eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS;
+//         pkt.extract(hdr.outer.mpls_5);
+//         transition select(hdr.outer.mpls_5.bos) {
+//             0: parse_outer_mpls_unsupported_scope1;
+//             1: parse_inner_ethernet_scope1;
+//         }
+//     }
 
-    //-------------------------------------------------------------------------
-    state parse_outer_eompls_pwcw_scope1 {
 
-        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS; // note: inner here means "current scope - 1"
-    
-        pkt.extract(hdr.outer.mpls.next);
-        transition select(hdr.outer.mpls.last.bos, pkt.lookahead<bit<4>>()) {
-            (0, _): parse_outer_eompls_pwcw_scope1;
+    //--------------------------------------------------------------------------
+    // state parse_outer_eompls_pwcw_scope1 {
+    //     // note: inner here means "current scope - 1"
+    //     eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS;
+    //     pkt.extract(hdr.outer.mpls.next);
+    //     transition select(hdr.outer.mpls.last.bos, pkt.lookahead<bit<4>>()) {
+    //         (0, _): parse_outer_eompls_pwcw_scope1;
+    //         (1, 0): parse_outer_eompls_pwcw_extract_pwcw_scope1;
+    //         default: reject; // todo: unexpected - flag this as error?
+    //     }
+    // }    
+    state parse_outer_eompls_pwcw_0_scope1 {
+        // note: inner here means "current scope - 1"
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS;
+        pkt.extract(hdr.outer.mpls_0);
+        transition select(hdr.outer.mpls_0.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): parse_outer_eompls_pwcw_1_scope1;
             (1, 0): parse_outer_eompls_pwcw_extract_pwcw_scope1;
-            //default: parse_inner_ethernet_scope1;
-            default: accept; // todo: unexpected - flag this as error?
+            default: reject; // todo: unexpected - flag this as error?
         }
     }    
+    state parse_outer_eompls_pwcw_1_scope1 {
+        // note: inner here means "current scope - 1"
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS;
+        pkt.extract(hdr.outer.mpls_1);
+        transition select(hdr.outer.mpls_1.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): construct_outer_eompls_pwcw_2_scope1;
+            (1, 0): parse_outer_eompls_pwcw_extract_pwcw_scope1;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }    
+    state construct_outer_eompls_pwcw_2_scope1 {
+        transition select(MPLS_DEPTH_OUTER) {
+            1: parse_outer_mpls_unsupported_scope1; // unsupported param value
+            2: parse_outer_mpls_unsupported_scope1;
+            default: parse_outer_eompls_pwcw_2_scope1;
+        }
+    }
+    state parse_outer_eompls_pwcw_2_scope1 {
+        // note: inner here means "current scope - 1"
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS;
+        pkt.extract(hdr.outer.mpls_2);
+        transition select(hdr.outer.mpls_2.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): parse_outer_eompls_pwcw_3_scope1;
+            (1, 0): parse_outer_eompls_pwcw_extract_pwcw_scope1;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }    
+    state parse_outer_eompls_pwcw_3_scope1 {
+        // note: inner here means "current scope - 1"
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS;
+        pkt.extract(hdr.outer.mpls_3);
+        transition select(hdr.outer.mpls_3.bos, pkt.lookahead<bit<4>>()) {
+            // (0, _): construct_outer_eompls_pwcw_4_scope1;
+            (0, _): parse_outer_mpls_unsupported_scope1;
+            (1, 0): parse_outer_eompls_pwcw_extract_pwcw_scope1;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }    
+//     state construct_outer_eompls_pwcw_4_scope1 {
+//         transition select(MPLS_DEPTH_OUTER) {
+//             3: parse_outer_mpls_unsupported_scope1; // unsupported param value
+//             4: parse_outer_mpls_unsupported_scope1;
+//             default: parse_outer_eompls_pwcw_4_scope1;
+//         }
+//     }
+//     state parse_outer_eompls_pwcw_4_scope1 {
+//         // note: inner here means "current scope - 1"
+//         eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS;
+//         pkt.extract(hdr.outer.mpls_4);
+//         transition select(hdr.outer.mpls_4.bos, pkt.lookahead<bit<4>>()) {
+//             (0, _): parse_outer_eompls_pwcw_5_scope1;
+//             (1, 0): parse_outer_eompls_pwcw_extract_pwcw_scope1;
+//             default: reject; // todo: unexpected - flag this as error?
+//         }
+//     }    
+//     state parse_outer_eompls_pwcw_5_scope1 {
+//         // note: inner here means "current scope - 1"
+//         eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS;
+//         pkt.extract(hdr.outer.mpls_5);
+//         transition select(hdr.outer.mpls_5.bos, pkt.lookahead<bit<4>>()) {
+//             (0, _): parse_outer_mpls_unsupported_scope1;
+//             (1, 0): parse_outer_eompls_pwcw_extract_pwcw_scope1;
+//             default: reject; // todo: unexpected - flag this as error?
+//         }
+//     }
     state parse_outer_eompls_pwcw_extract_pwcw_scope1 {
         pkt.extract(hdr.outer.mpls_pw_cw); 
         transition parse_inner_ethernet_scope1;
     }
 
-    //-------------------------------------------------------------------------
-    state parse_outer_ipompls_scope1 {
 
-        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS; // note: inner here means "current scope - 1"
-    
-        pkt.extract(hdr.outer.mpls.next);
-        transition select(hdr.outer.mpls.last.bos, pkt.lookahead<bit<4>>()) {
-            (0, _): parse_outer_ipompls_scope1;
+    //--------------------------------------------------------------------------
+    // state parse_outer_ipompls_scope1 {
+    //     // note: inner here means "current scope - 1"
+    //     eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS;
+    //     pkt.extract(hdr.outer.mpls.next);
+    //     transition select(hdr.outer.mpls.last.bos, pkt.lookahead<bit<4>>()) {
+    //         (0, _): parse_outer_ipompls_scope1;
+    //         (1, 4): parse_inner_ipv4_scope1;
+    //         (1, 6): construct_inner_ipv6_scope1;
+    //         default: reject; // todo: unexpected - flag this as error?
+    //     }
+    // }
+    state parse_outer_ipompls_0_scope1 {
+        // note: inner here means "current scope - 1"
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS;
+        pkt.extract(hdr.outer.mpls_0);
+        transition select(hdr.outer.mpls_0.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): parse_outer_ipompls_1_scope1;
             (1, 4): parse_inner_ipv4_scope1;
             (1, 6): construct_inner_ipv6_scope1;
-            default: accept; // todo: unexpected - flag this as error?
+            default: reject; // todo: unexpected - flag this as error?
         }
     }
+    state parse_outer_ipompls_1_scope1 {
+        // note: inner here means "current scope - 1"
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS;
+        pkt.extract(hdr.outer.mpls_1);
+        transition select(hdr.outer.mpls_1.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): construct_outer_ipompls_2_scope1;
+            (1, 4): parse_inner_ipv4_scope1;
+            (1, 6): construct_inner_ipv6_scope1;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }
+    state construct_outer_ipompls_2_scope1 {
+        transition select(MPLS_DEPTH_OUTER) {
+            1: parse_outer_mpls_unsupported_scope1; // unsupported param value
+            2: parse_outer_mpls_unsupported_scope1;
+            default: parse_outer_ipompls_2_scope1;
+        }
+    }
+    state parse_outer_ipompls_2_scope1 {
+        // note: inner here means "current scope - 1"
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS;
+        pkt.extract(hdr.outer.mpls_2);
+        transition select(hdr.outer.mpls_2.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): parse_outer_ipompls_3_scope1;
+            (1, 4): parse_inner_ipv4_scope1;
+            (1, 6): construct_inner_ipv6_scope1;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }
+    state parse_outer_ipompls_3_scope1 {
+        // note: inner here means "current scope - 1"
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS;
+        pkt.extract(hdr.outer.mpls_3);
+        transition select(hdr.outer.mpls_3.bos, pkt.lookahead<bit<4>>()) {
+            // (0, _): construct_outer_ipompls_4_scope1;
+            (0, _): parse_outer_mpls_unsupported_scope1;
+            (1, 4): parse_inner_ipv4_scope1;
+            (1, 6): construct_inner_ipv6_scope1;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }
+//     state construct_outer_ipompls_4_scope1 {
+//         transition select(MPLS_DEPTH_OUTER) {
+//             1: parse_outer_mpls_unsupported_scope1; // unsupported param value
+//             2: parse_outer_mpls_unsupported_scope1;
+//             default: parse_outer_ipompls_4_scope1;
+//         }
+//     }
+//     state parse_outer_ipompls_4_scope1 {
+//         // note: inner here means "current scope - 1"
+//         eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS;
+//         pkt.extract(hdr.outer.mpls_4);
+//         transition select(hdr.outer.mpls_4.bos, pkt.lookahead<bit<4>>()) {
+//             (0, _): parse_outer_ipompls_5_scope1;
+//             (1, 4): parse_inner_ipv4_scope1;
+//             (1, 6): construct_inner_ipv6_scope1;
+//             default: reject; // todo: unexpected - flag this as error?
+//         }
+//     }
+//     state parse_outer_ipompls_5_scope1 {
+//         // note: inner here means "current scope - 1"
+//         eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS;
+//         pkt.extract(hdr.outer.mpls_5);
+//         transition select(hdr.outer.mpls_5.bos, pkt.lookahead<bit<4>>()) {
+//             (0, _): parse_outer_mpls_unsupported_scope1;
+//             (1, 4): parse_inner_ipv4_scope1;
+//             (1, 6): construct_inner_ipv6_scope1;
+//             default: reject; // todo: unexpected - flag this as error?
+//         }
+//     }
 
-    //-------------------------------------------------------------------------
-    state parse_outer_eompls_pwcw_ipompls_scope1 {
-
-        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS; // note: inner here means "current scope - 1"
-    
-        pkt.extract(hdr.outer.mpls.next);
-        transition select(hdr.outer.mpls.last.bos, pkt.lookahead<bit<4>>()) {
-            (0, _): parse_outer_eompls_pwcw_ipompls_scope1;
+    //--------------------------------------------------------------------------
+    // state parse_outer_eompls_pwcw_ipompls_scope1 {
+    //     // note: inner here means "current scope - 1"
+    //     eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS;
+    //     pkt.extract(hdr.outer.mpls.next);
+    //     transition select(hdr.outer.mpls.last.bos, pkt.lookahead<bit<4>>()) {
+    //         (0, _): parse_outer_eompls_pwcw_ipompls_scope1;
+    //         (1, 4): parse_inner_ipv4_scope1;
+    //         (1, 6): construct_inner_ipv6_scope1;
+    //         (1, 0): parse_outer_eompls_pwcw_ipompls_extract_pwcw_scope1;
+    //         default: reject; // todo: unexpected - flag this as error?
+    //     }
+    // }
+    state parse_outer_eompls_pwcw_ipompls_0_scope1 {
+        // note: inner here means "current scope - 1"
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS;
+        pkt.extract(hdr.outer.mpls_0);
+        transition select(hdr.outer.mpls_0.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): parse_outer_eompls_pwcw_ipompls_1_scope1;
             (1, 4): parse_inner_ipv4_scope1;
             (1, 6): construct_inner_ipv6_scope1;
             (1, 0): parse_outer_eompls_pwcw_ipompls_extract_pwcw_scope1;
-            //default: parse_inner_ethernet_scope1;
-            default: accept; // todo: unexpected - flag this as error?
+            default: reject; // todo: unexpected - flag this as error?
         }
     }
+    state parse_outer_eompls_pwcw_ipompls_1_scope1 {
+        // note: inner here means "current scope - 1"
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS;
+        pkt.extract(hdr.outer.mpls_1);
+        transition select(hdr.outer.mpls_1.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): construct_outer_eompls_pwcw_ipompls_2_scope1;
+            (1, 4): parse_inner_ipv4_scope1;
+            (1, 6): construct_inner_ipv6_scope1;
+            (1, 0): parse_outer_eompls_pwcw_ipompls_extract_pwcw_scope1;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }
+    state construct_outer_eompls_pwcw_ipompls_2_scope1 {
+        transition select(MPLS_DEPTH_OUTER) {
+            1: parse_outer_mpls_unsupported_scope1; // unsupported param value
+            2: parse_outer_mpls_unsupported_scope1;
+            default: parse_outer_eompls_pwcw_ipompls_2_scope1;
+        }
+    }
+    state parse_outer_eompls_pwcw_ipompls_2_scope1 {
+        // note: inner here means "current scope - 1"
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS;
+        pkt.extract(hdr.outer.mpls_2);
+        transition select(hdr.outer.mpls_2.bos, pkt.lookahead<bit<4>>()) {
+            (0, _): parse_outer_eompls_pwcw_ipompls_3_scope1;
+            (1, 4): parse_inner_ipv4_scope1;
+            (1, 6): construct_inner_ipv6_scope1;
+            (1, 0): parse_outer_eompls_pwcw_ipompls_extract_pwcw_scope1;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }
+    state parse_outer_eompls_pwcw_ipompls_3_scope1 {
+        // note: inner here means "current scope - 1"
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS;
+        pkt.extract(hdr.outer.mpls_3);
+        transition select(hdr.outer.mpls_3.bos, pkt.lookahead<bit<4>>()) {
+            // (0, _): construct_outer_eompls_pwcw_ipompls_4_scope1;
+            (0, _): parse_outer_mpls_unsupported_scope1;
+            (1, 4): parse_inner_ipv4_scope1;
+            (1, 6): construct_inner_ipv6_scope1;
+            (1, 0): parse_outer_eompls_pwcw_ipompls_extract_pwcw_scope1;
+            default: reject; // todo: unexpected - flag this as error?
+        }
+    }
+//     state construct_outer_eompls_pwcw_ipompls_4_scope1 {
+//         transition select(MPLS_DEPTH_OUTER) {
+//             1: parse_outer_mpls_unsupported_scope1; // unsupported param value
+//             2: parse_outer_mpls_unsupported_scope1;
+//             default: parse_outer_eompls_pwcw_ipompls_4_scope1;
+//         }
+//     }
+//     state parse_outer_eompls_pwcw_ipompls_4_scope1 {
+//         // note: inner here means "current scope - 1"
+//         eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS;
+//         pkt.extract(hdr.outer.mpls_4);
+//         transition select(hdr.outer.mpls_4.bos, pkt.lookahead<bit<4>>()) {
+//             (0, _): parse_outer_eompls_pwcw_ipompls_5_scope1;
+//             (1, 4): parse_inner_ipv4_scope1;
+//             (1, 6): construct_inner_ipv6_scope1;
+//             (1, 0): parse_outer_eompls_pwcw_ipompls_extract_pwcw_scope1;
+//             default: reject; // todo: unexpected - flag this as error?
+//         }
+//     }
+//     state parse_outer_eompls_pwcw_ipompls_5_scope1 {
+//         // note: inner here means "current scope - 1"
+//         eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_MPLS;
+//         pkt.extract(hdr.outer.mpls_5);
+//         transition select(hdr.outer.mpls_5.bos, pkt.lookahead<bit<4>>()) {
+//             (0, _): parse_outer_mpls_unsupported_scope1;
+//             (1, 4): parse_inner_ipv4_scope1;
+//             (1, 6): construct_inner_ipv6_scope1;
+//             (1, 0): parse_outer_eompls_pwcw_ipompls_extract_pwcw_scope1;
+//             default: reject; // todo: unexpected - flag this as error?
+//         }
+//     }
     state parse_outer_eompls_pwcw_ipompls_extract_pwcw_scope1 {
         pkt.extract(hdr.outer.mpls_pw_cw); 
         transition parse_inner_ethernet_scope1;
     }
 
+    state parse_outer_mpls_unsupported_scope1 {
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+        eg_md.lkp_1.tunnel_id = 0;
+        transition reject;
+    }
     
 
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     // Tunnels - Outer
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // Generic Network Virtualization Encapsulation (GENEVE) - Outer
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
 
     state construct_outer_geneve_scope0 {
         transition select(OUTER_GENEVE_ENABLE) {
@@ -1193,11 +1865,10 @@ parser EgressParser(
 
     state qualify_outer_geneve_scope0 {
         geneve_h snoop_geneve = pkt.lookahead<geneve_h>();
-
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)   
-
+#endif
         transition select(
             snoop_geneve.ver,
             snoop_geneve.opt_len,
@@ -1215,11 +1886,11 @@ parser EgressParser(
 
     state parse_outer_geneve_qualified_scope0 {
         pkt.extract(hdr.outer.geneve);
-
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GENEVE;
         eg_md.lkp_1.tunnel_id = (bit<switch_tunnel_id_width>)hdr.outer.geneve.vni;
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#endif
     
         transition select(hdr.outer.geneve.proto_type) {
             ETHERTYPE_ENET: parse_inner_ethernet_scope0;
@@ -1239,7 +1910,8 @@ parser EgressParser(
 
     state qualify_outer_geneve_scope1 {
         geneve_h snoop_geneve = pkt.lookahead<geneve_h>();
-        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED; // note: inner here means "current scope - 1"
+        // note: inner here means "current scope - 1"
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
 
         transition select(
             snoop_geneve.ver,
@@ -1258,7 +1930,8 @@ parser EgressParser(
 
     state parse_outer_geneve_qualified_scope1 {
         pkt.extract(hdr.outer.geneve);
-        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_GENEVE; // note: inner here means "current scope - 1"
+        // note: inner here means "current scope - 1"
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_GENEVE;
         transition select(hdr.outer.geneve.proto_type) {
             ETHERTYPE_ENET: parse_inner_ethernet_scope1;
             ETHERTYPE_IPV4: parse_inner_ipv4_scope1;
@@ -1268,9 +1941,9 @@ parser EgressParser(
     }
 
 
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // Virtual Extensible Local Area Network (VXLAN) - Outer
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
 
     state construct_outer_vxlan_scope0 {
         transition select(OUTER_VXLAN_ENABLE) {
@@ -1281,10 +1954,11 @@ parser EgressParser(
 
     state parse_outer_vxlan_scope0 {
         pkt.extract(hdr.outer.vxlan);
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_VXLAN;
         eg_md.lkp_1.tunnel_id = (bit<switch_tunnel_id_width>)hdr.outer.vxlan.vni;
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#endif
         transition parse_inner_ethernet_scope0;
     }
 
@@ -1297,14 +1971,15 @@ parser EgressParser(
 
     state parse_outer_vxlan_scope1 {
         pkt.extract(hdr.outer.vxlan);
-        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_VXLAN; // note: inner here means "current scope - 1"
+        // note: inner here means "current scope - 1"
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_VXLAN;
         transition parse_inner_ethernet_scope1;
     }
 
             
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // Internet Protocol (IP) - Outer
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
 
     state construct_outer_ipinip_set_tunnel_scope0 {
         transition select(OUTER_IPINIP_ENABLE) {    
@@ -1313,10 +1988,11 @@ parser EgressParser(
         }
     }
     state parse_outer_ipinip_set_tunnel_scope0 {
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_IPINIP;
         eg_md.lkp_1.tunnel_id = 0;
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#endif
         transition parse_inner_ipv4_scope0;
     }
 
@@ -1327,10 +2003,11 @@ parser EgressParser(
         }
     }    
     state parse_outer_ipv6inip_set_tunnel_scope0 {
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_IPINIP;
         eg_md.lkp_1.tunnel_id = 0;
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#endif
         transition construct_inner_ipv6_scope0;
     }
 
@@ -1341,7 +2018,8 @@ parser EgressParser(
         }
     }
     state parse_outer_ipinip_set_tunnel_scope1 {
-        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_IPINIP; // note: inner here means "current scope - 1"
+        // note: inner here means "current scope - 1"
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_IPINIP;
         transition parse_inner_ipv4_scope1;
     }
 
@@ -1352,14 +2030,15 @@ parser EgressParser(
         }
     }
     state parse_outer_ipv6inip_set_tunnel_scope1 {
-        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_IPINIP; // note: inner here means "current scope - 1"
+        // note: inner here means "current scope - 1"
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_IPINIP;
         transition construct_inner_ipv6_scope1;
     }
 
 
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // Generic Routing Encapsulation (GRE) - Outer
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
 
     state construct_outer_gre_scope0 {
         transition select(OUTER_GRE_ENABLE) {    
@@ -1370,10 +2049,10 @@ parser EgressParser(
 
     state parse_outer_gre_scope0 {    
         gre_h snoop_gre = pkt.lookahead<gre_h>();
-
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#endif
 
         transition select(
             snoop_gre.C,
@@ -1403,7 +2082,8 @@ parser EgressParser(
 
     state parse_outer_gre_scope1 {    
         gre_h snoop_gre = pkt.lookahead<gre_h>();
-        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED; // note: inner here means "current scope - 1"
+        // note: inner here means "current scope - 1"
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
 
         transition select(
             snoop_gre.C,
@@ -1427,10 +2107,11 @@ parser EgressParser(
         
     state parse_outer_gre_qualified_scope0 {    
         pkt.extract(hdr.outer.gre);
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GRE;
         eg_md.lkp_1.tunnel_id = 0;
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#endif
 
         transition select(
             hdr.outer.gre.C,
@@ -1452,7 +2133,8 @@ parser EgressParser(
 
     state parse_outer_gre_qualified_scope1 {    
         pkt.extract(hdr.outer.gre);
-        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_GRE; // note: inner here means "current scope - 1"
+        // note: inner here means "current scope - 1"
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_GRE;
 
         transition select(
             hdr.outer.gre.C,
@@ -1495,9 +2177,9 @@ parser EgressParser(
     }
 
     
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // Network Virtualization using GRE (NVGRE) - (aka: L2 GRE) - Outer
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
 
     state construct_outer_nvgre_scope0 {
         transition select(OUTER_NVGRE_ENABLE) {
@@ -1509,10 +2191,11 @@ parser EgressParser(
     state parse_outer_nvgre_scope0 {
     	pkt.extract(hdr.outer.nvgre);
         eg_md.tunnel_1.nvgre_flow_id = hdr.outer.nvgre.flow_id; //todo: ingress-only in switch
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_NVGRE;
         eg_md.lkp_1.tunnel_id = (bit<switch_tunnel_id_width>)hdr.outer.nvgre.vsid;
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#endif
     	transition parse_inner_ethernet_scope0;
     }
 
@@ -1527,33 +2210,35 @@ parser EgressParser(
     state parse_outer_nvgre_scope1 {
     	pkt.extract(hdr.outer.nvgre);
         eg_md.tunnel_1.nvgre_flow_id = hdr.outer.nvgre.flow_id; //todo: ingress-only in switch
-        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_NVGRE; // note: inner here means "current scope - 1"
+        // note: inner here means "current scope - 1"
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_NVGRE;
     	transition parse_inner_ethernet_scope1;
     }
 
 
-//     //-------------------------------------------------------------------------
+//     //--------------------------------------------------------------------------
 //     // Encapsulating Security Payload (ESP) - Outer
-//     //-------------------------------------------------------------------------
+//     //--------------------------------------------------------------------------
 //     
 //     state parse_outer_esp_overload_scope0 {
 // #ifdef PARSER_L4_PORT_OVERLOAD   
-// #if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+// #if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+//     defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
 //          eg_md.lkp_1.l4_src_port = pkt.lookahead<esp_h>().spi_hi;
 //          eg_md.lkp_1.l4_dst_port = pkt.lookahead<esp_h>().spi_lo;
-// #endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+// #endif
 // #endif // PARSER_L4_PORT_OVERLOAD
 //         transition accept;
 //     }
 
 
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // GPRS (General Packet Radio Service) Tunneling Protocol (GTP) - Outer
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // Based on pseudo code from Glenn (see email from 03/11/2019):
 
     // GTP-C
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // Simply set tunnel type and ID for policy via lookahead (no extraction).
 
     state construct_outer_gtp_c_scope0 {
@@ -1565,9 +2250,10 @@ parser EgressParser(
 
     state parse_outer_gtp_c_scope0 {
 
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#endif
             
         transition select(
             pkt.lookahead<gtp_v2_base_h>().version,
@@ -1579,10 +2265,11 @@ parser EgressParser(
     }
 
     state parse_outer_gtp_c_qualified_scope0 {
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GTPC;
         eg_md.lkp_1.tunnel_id = pkt.lookahead<gtp_v2_base_h>().teid;
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#endif
     	transition accept;
     }
 
@@ -1594,7 +2281,8 @@ parser EgressParser(
     }
 
     state parse_outer_gtp_c_scope1 {
-        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED; // note: inner here means "current scope - 1"
+        // note: inner here means "current scope - 1"
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
             
         transition select(
             pkt.lookahead<gtp_v2_base_h>().version,
@@ -1606,13 +2294,14 @@ parser EgressParser(
     }
 
     state parse_outer_gtp_c_qualified_scope1 {
-        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_GTPC; // note: inner here means "current scope - 1"
+        // note: inner here means "current scope - 1"
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_GTPC; 
     	transition accept;
     }
 
 
     // GTP-U
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // Only supports optional header for sequence-number
     // Does not support parsing (TLV) extension headers
 
@@ -1624,11 +2313,10 @@ parser EgressParser(
     }
 
     state parse_outer_gtp_u_scope0 {
-
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)            
-            
+#endif
         gtp_v1_base_h snoop_gtp_v1_base = pkt.lookahead<gtp_v1_base_h>();
         transition select(
             snoop_gtp_v1_base.version,
@@ -1645,10 +2333,11 @@ parser EgressParser(
 
     state parse_outer_gtp_u_qualified_scope0 {
         pkt.extract(hdr.outer.gtp_v1_base);
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GTPU;
         eg_md.lkp_1.tunnel_id = hdr.outer.gtp_v1_base.teid;
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#endif
         transition select(pkt.lookahead<bit<4>>()) {
             4: parse_inner_ipv4_scope0;
             6: construct_inner_ipv6_scope0;
@@ -1659,10 +2348,11 @@ parser EgressParser(
     state parse_outer_gtp_u_with_optional_qualified_scope0 {
         pkt.extract(hdr.outer.gtp_v1_base);
         pkt.extract(hdr.outer.gtp_v1_optional);
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_GTPU;
         eg_md.lkp_1.tunnel_id = hdr.outer.gtp_v1_base.teid;
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#endif
         transition select(
             hdr.outer.gtp_v1_base.E,
             pkt.lookahead<bit<4>>()) {
@@ -1681,7 +2371,8 @@ parser EgressParser(
 
     state parse_outer_gtp_u_scope1 {
         gtp_v1_base_h snoop_gtp_v1_base = pkt.lookahead<gtp_v1_base_h>();
-        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED; // note: inner here means "current scope - 1"
+        // note: inner here means "current scope - 1"
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED; 
             
         transition select(
             snoop_gtp_v1_base.version,
@@ -1698,7 +2389,8 @@ parser EgressParser(
 
     state parse_outer_gtp_u_qualified_scope1 {
         pkt.extract(hdr.outer.gtp_v1_base);
-        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_GTPU; // note: inner here means "current scope - 1"
+        // note: inner here means "current scope - 1"    
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_GTPU;
         transition select(pkt.lookahead<bit<4>>()) {
             4: parse_inner_ipv4_scope1;
             6: construct_inner_ipv6_scope1;
@@ -1709,7 +2401,8 @@ parser EgressParser(
     state parse_outer_gtp_u_with_optional_qualified_scope1 {
         pkt.extract(hdr.outer.gtp_v1_base);
         pkt.extract(hdr.outer.gtp_v1_optional);
-        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_GTPU; // note: inner here means "current scope - 1"
+        // note: inner here means "current scope - 1"
+        eg_md.lkp_1.tunnel_inner_type = SWITCH_TUNNEL_TYPE_GTPU;
         transition select(
             hdr.outer.gtp_v1_base.E,
             pkt.lookahead<bit<4>>()) {
@@ -1720,19 +2413,19 @@ parser EgressParser(
     }    
     
 
-    ///////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     // "Inner" Headers / Stack
-    ///////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     // Layer 2 (ETH-T) - Inner
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // Scope 0
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
             
     state parse_inner_ethernet_scope0 {
         pkt.extract(hdr.inner.ethernet);
@@ -1753,9 +2446,9 @@ parser EgressParser(
         }
     }
 
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // Scope 1
-    //-------------------------------------------------------------------------            
+    //--------------------------------------------------------------------------            
 
     state parse_inner_ethernet_scope1 {
         pkt.extract(hdr.inner.ethernet);
@@ -1797,13 +2490,13 @@ parser EgressParser(
 
             
 
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     // Layer 3 - Inner
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // Scope 0
-    //-------------------------------------------------------------------------            
+    //--------------------------------------------------------------------------            
 
     // For scope0 inner parsing, l2 and v4 or v6 is all that's needed downstream.
         
@@ -1824,9 +2517,9 @@ parser EgressParser(
     }
     
             
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // Scope 1
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
 
     state parse_inner_ipv4_scope1 {
         pkt.extract(hdr.inner.ipv4);
@@ -1871,7 +2564,7 @@ parser EgressParser(
 
         //eg_md.lkp_1.ip_type       = SWITCH_IP_TYPE_IPV6;
         eg_md.lkp_1.ip_proto      = hdr.inner.ipv6.next_hdr;
-        //eg_md.lkp_1.ip_tos        = hdr.inner.ipv6.tos; // not byte-aligned so set in mau
+        //eg_md.lkp_1.ip_tos        = hdr.inner.ipv6.tos; // not byte-aligned - set in mau
         eg_md.lkp_1.ip_src_addr   = hdr.inner.ipv6.src_addr;
         eg_md.lkp_1.ip_dst_addr   = hdr.inner.ipv6.dst_addr;
         eg_md.lkp_1.ip_len        = hdr.inner.ipv6.payload_len;
@@ -1906,13 +2599,13 @@ parser EgressParser(
 //     }
     
             
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     // Inner Layer 4 - Inner
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // Scope 1
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
 
     state parse_inner_udp_scope1 {
         pkt.extract(hdr.inner.udp);
@@ -1949,13 +2642,13 @@ parser EgressParser(
 
 
             
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     // Tunnels - Inner
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // Internet Protocol (IP) - Inner
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     
     state construct_inner_ipinip_set_tunnel_scope1 {
         transition select(INNER_IPINIP_ENABLE) {    
@@ -1964,10 +2657,11 @@ parser EgressParser(
         }
     }
     state parse_inner_ipinip_set_tunnel_scope1 {
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_IPINIP;
         eg_md.lkp_1.tunnel_id = 0;
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#endif
         transition parse_inner_inner_ipv4;
     }
 
@@ -1978,17 +2672,18 @@ parser EgressParser(
         }
     }           
     state parse_inner_ipv6inip_set_tunnel_scope1 {
-#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_IPINIP;
         eg_md.lkp_1.tunnel_id = 0;
-#endif // defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+#endif
         transition construct_inner_inner_ipv6;
     }
 
 
-//     //-------------------------------------------------------------------------
+//     //--------------------------------------------------------------------------
 //     // Encapsulating Security Payload (ESP) - Inner
-//     //-------------------------------------------------------------------------
+//     //--------------------------------------------------------------------------
 //      
 //     state parse_inner_esp_overload_scope1 {
 // #ifdef PARSER_L4_PORT_OVERLOAD   
@@ -1999,9 +2694,9 @@ parser EgressParser(
 //     }
 
 
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // Generic Routing Encapsulation (GRE) - Inner
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
 
     state construct_inner_gre_scope1 {
         transition select(INNER_GRE_ENABLE) {    
@@ -2063,13 +2758,13 @@ parser EgressParser(
     }
         
 
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // GPRS (General Packet Radio Service) Tunneling Protocol (GTP) - Inner
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // Based on pseudo code from Glenn (see email from 03/11/2019):
 
     // GTP-C
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // Simply set tunnel type and ID for policy via lookahead (no extraction).
 
     state construct_inner_gtp_c_scope1 {
@@ -2099,7 +2794,7 @@ parser EgressParser(
 
 
     // GTP-U
-    //-------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // Only supports optional header for sequence-number
     // Does not support parsing (TLV) extension headers
 
@@ -2153,11 +2848,11 @@ parser EgressParser(
     }    
     
 
-    ///////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     // "Inner Inner" Headers / Stack
-    ///////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
     state parse_inner_inner_ipv4 {
 	    hdr.inner_inner.ipv4.setValid();

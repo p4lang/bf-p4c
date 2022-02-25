@@ -252,7 +252,17 @@ control EgressDeparser(
         pkt.emit(hdr.outer.vlan_tag);
 
         if(OUTER_EoMPLS_ENABLE || OUTER_EoMPLS_PWCW_ENABLE || OUTER_IPoMPLS_ENABLE) {
-            pkt.emit(hdr.outer.mpls);
+            pkt.emit(hdr.outer.mpls_0);
+            pkt.emit(hdr.outer.mpls_1);
+            //if(MPLS_DEPTH_OUTER == 4 || MPLS_DEPTH_OUTER == 6) {
+            if(MPLS_DEPTH_OUTER == 4) {
+                pkt.emit(hdr.outer.mpls_2);
+                pkt.emit(hdr.outer.mpls_3);
+            }
+            // if(MPLS_DEPTH_OUTER == 6) {
+            //     pkt.emit(hdr.outer.mpls_4);
+            //     pkt.emit(hdr.outer.mpls_5);
+            // }
         }
         if(OUTER_EoMPLS_PWCW_ENABLE) {
             pkt.emit(hdr.outer.mpls_pw_cw);

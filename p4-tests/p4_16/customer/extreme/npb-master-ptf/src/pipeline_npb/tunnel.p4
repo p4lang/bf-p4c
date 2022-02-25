@@ -1203,20 +1203,21 @@ control TunnelDecapOuter(
 	action decap_l34() {
 		// ----- l2.5 -----
 		if((OUTER_EoMPLS_ENABLE) || (OUTER_EoMPLS_PWCW_ENABLE) || (OUTER_IPoMPLS_ENABLE)) {
-			hdr_1.mpls[0].setInvalid();
-  #if MPLS_DEPTH > 1
-			hdr_1.mpls[1].setInvalid();
-  #endif
-  #if MPLS_DEPTH > 2
-			hdr_1.mpls[2].setInvalid();
-  #endif
-  #if MPLS_DEPTH > 3
-			hdr_1.mpls[3].setInvalid();
-  #endif
+			hdr_1.mpls_0.setInvalid();
+			hdr_1.mpls_1.setInvalid();
+            // if(MPLS_DEPTH_OUTER == 4 || MPLS_DEPTH_OUTER == 6) {
+            if(MPLS_DEPTH_OUTER == 4) {
+			    hdr_1.mpls_2.setInvalid();
+			    hdr_1.mpls_3.setInvalid();
+		    }
+            // if(MPLS_DEPTH_OUTER == 6) {
+			//     hdr_1.mpls_4.setInvalid();
+			//     hdr_1.mpls_5.setInvalid();
+            // }
 		}
-#ifdef EoMPLS_PWCW_ENABLE
-		hdr_1.mpls_pw_cw.setInvalid();
-#endif // EoMPLS_PWCW_ENABLE
+        if(OUTER_EoMPLS_PWCW_ENABLE) {
+		    hdr_1.mpls_pw_cw.setInvalid();
+		}
 
 		// ----- l3 -----
 		hdr_1.ipv4.setInvalid();
@@ -2608,20 +2609,21 @@ control TunnelEncap(
 
 		// ----- l2.5 -----
 		if((OUTER_EoMPLS_ENABLE) || (OUTER_EoMPLS_PWCW_ENABLE) || (OUTER_IPoMPLS_ENABLE)) {
-			hdr_1.mpls[0].setInvalid();
-  #if MPLS_DEPTH > 1
-			hdr_1.mpls[1].setInvalid();
-  #endif
-  #if MPLS_DEPTH > 2
-			hdr_1.mpls[2].setInvalid();
-  #endif
-  #if MPLS_DEPTH > 3
-			hdr_1.mpls[3].setInvalid();
-  #endif
+			hdr_1.mpls_0.setInvalid();
+			hdr_1.mpls_1.setInvalid();
+            // if(MPLS_DEPTH_OUTER == 4 || MPLS_DEPTH_OUTER == 6) {
+            if(MPLS_DEPTH_OUTER == 4) {
+			    hdr_1.mpls_2.setInvalid();
+			    hdr_1.mpls_3.setInvalid();
+		    }
+            // if(MPLS_DEPTH_OUTER == 6) {
+			//     hdr_1.mpls_4.setInvalid();
+			//     hdr_1.mpls_5.setInvalid();
+            // }
 		}
-#ifdef EoMPLS_PWCW_ENABLE
-		hdr_1.mpls_pw_cw.setInvalid();
-#endif // EoMPLS_PWCW_ENABLE
+        if(OUTER_EoMPLS_PWCW_ENABLE) {
+		    hdr_1.mpls_pw_cw.setInvalid();
+		}
 	}
 
 	action decap_l2_inner() {
