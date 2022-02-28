@@ -180,8 +180,8 @@ header_type ingress_intrinsic_metadata_for_tm_t {
 
         // ---------------------
 
-        _pad5 : 7;
-        level2_exclusion_id : 9;        // exclusion id for multicast
+        _pad5 : 6;
+        level2_exclusion_id : 10;        // exclusion id for multicast
                                         // replication-tree level2. used for
                                         // pruning.
 
