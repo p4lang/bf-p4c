@@ -631,8 +631,8 @@ def main():
             return wait()
         except TimeoutError:
             error("Timed out while waiting for switchd to be ready")
-            logerr_switchd_log()
-            logerr_model_log()
+            switchd_log_to_err()
+            model_log_to_err()
             return False
         return True
 

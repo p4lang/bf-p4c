@@ -723,7 +723,7 @@
             "declaration": {
                 "file": "tna_multicast.p4",
                 "line": 142,
-                "column": 69
+                "column": 78
             },
             "symbol_type": "Parameter_Type_Bits"
         },
@@ -739,7 +739,7 @@
             "declaration": {
                 "file": "tna_multicast.p4",
                 "line": 142,
-                "column": 83
+                "column": 92
             },
             "symbol_type": "Parameter_Type_Bits"
         },
@@ -755,7 +755,7 @@
             "declaration": {
                 "file": "tna_multicast.p4",
                 "line": 142,
-                "column": 98
+                "column": 107
             },
             "symbol_type": "Parameter_Type_Bits"
         },
@@ -787,7 +787,7 @@
             "declaration": {
                 "file": "tna_multicast.p4",
                 "line": 142,
-                "column": 56
+                "column": 65
             },
             "symbol_type": "Parameter_Type_Bits"
         },
