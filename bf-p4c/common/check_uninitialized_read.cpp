@@ -30,7 +30,10 @@ bool CheckUninitializedRead::copackedFieldExtracted(const FieldDefUse::locpair& 
         auto write = PHV::FieldUse(PHV::FieldUse::WRITE);
         for (auto &other : phv.get_slices_in_container(c, PHV::AllocContext::PARSER, &write)) {
             if (other.field() == sl.field()) continue;
-            if (phv.isFieldMutex(other.field(), sl.field())) continue;
+            if (sl.isLiveRangeDisjoint(other)) continue;
+            if (phv.isFieldMutex(other.field(), sl.field()) ||
+                phv.isMetadataMutex(other.field(), sl.field()))
+                continue;
 
             if (Device::currentDevice() == Device::JBAY
 #ifdef HAVE_CLOUDBREAK
