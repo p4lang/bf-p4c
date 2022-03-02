@@ -2014,6 +2014,7 @@ bool ActionAnalysis::ContainerAction::verify_overwritten(const PHV::Container co
     for (const FieldAction& fa : field_actions) {
         le_bitrange dst_bits;
         auto dst_f = phv.field(fa.write.expr, &dst_bits);
+        CHECK_NULL(dst_f);
         switch (fa.container_write_type()) {
             case ActionAnalysis::FieldAction::ALL_BITS:
                 preserved_bits.clear();

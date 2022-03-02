@@ -104,10 +104,14 @@ void TrivialAlloc::do_alloc(const FieldGroup& group, Regs *use) {
 }
 
 void TrivialAlloc::postorder(const IR::BFN::AliasMember *alias) {
-    aliasSrcs[phv.field(alias->source)->id] = 1;
+    auto field = phv.field(alias->source);
+    CHECK_NULL(field);
+    aliasSrcs[field->id] = 1;
 }
 void TrivialAlloc::postorder(const IR::BFN::AliasSlice *alias) {
-    aliasSrcs[phv.field(alias->source)->id] = 1;
+    auto field = phv.field(alias->source);
+    CHECK_NULL(field);
+    aliasSrcs[field->id] = 1;
 }
 
 bool TrivialAlloc::preorder(const IR::BFN::Pipe *) {
@@ -139,7 +143,7 @@ void TrivialAlloc::postorder(const IR::BFN::Pipe *pipe) {
                 } else if (field.size % 8U != 0 && field.offset > 0) {
                     while (group.size % 8U != 0) {
                         auto* mfield = phv.field(group.back().id + 1);
-                        if (mfield->gress != group.gress)
+                        if (!mfield || mfield->gress != group.gress)
                             break;
                         group.push_back(*mfield);
                         assert(!mfield->metadata);

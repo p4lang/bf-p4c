@@ -2002,6 +2002,7 @@ void Parser::print_all_paths() {
         }
         vstates.erase(s->name);
     };
-    visit_states(states.begin()->second, "");
+    if (states.size() > 0)
+        visit_states(states.begin()->second, "");
 }
 

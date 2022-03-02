@@ -263,7 +263,7 @@ int TableFieldPackOptimization::getFieldSlicePackScore(const PHV::AllocSlice &sl
  */
 int TableFieldPackOptimization::getPackScore(const ordered_set<PHV::AllocSlice> &parent,
                                              const ordered_set<PHV::AllocSlice> &slices) const {
-    if (parent.size() + slices.size() <= 1)
+    if (parent.size() + slices.size() <= 1 || slices.size() == 0)
         return 0;
 
     const PHV::Container container = slices.begin()->container();

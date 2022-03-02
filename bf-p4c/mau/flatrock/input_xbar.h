@@ -80,8 +80,8 @@ class IXBar : public ::IXBar {
     std::multimap<PHV::Container, Loc>          ternary_fields;
     std::multimap<PHV::Container, Loc>          xcmp_fields;
 
-    BFN::Alloc1D<cstring, EXACT_MATCH_UNITS>    exact_hash_use;    // 1:1 mapping between hash
-    unsigned                                    exact_hash_inuse;  // and exact match units
+    BFN::Alloc1D<cstring, EXACT_MATCH_UNITS>    exact_hash_use;         // 1:1 mapping between hash
+    unsigned                                    exact_hash_inuse = 0;   // and exact match units
 
     // FIXME -- figure out some way to refactor these `find_alloc` routines together
     void find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
