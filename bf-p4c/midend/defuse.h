@@ -94,6 +94,7 @@ class ComputeDefUse : public Inspector, public ControlFlowVisitor, public P4Writ
     bool preorder(const IR::P4Action *) override;
     bool preorder(const IR::P4Parser *) override;
     bool preorder(const IR::ParserState *) override;
+    void loop_revisit(const IR::ParserState *) override;
     void postorder(const IR::ParserState *) override;
     bool preorder(const IR::Type *) override { return false; }
     bool preorder(const IR::Annotations *) override { return false; }
@@ -109,7 +110,7 @@ class ComputeDefUse : public Inspector, public ControlFlowVisitor, public P4Writ
  public:
     ComputeDefUse() : ResolutionContext(true),
                       cached_locs(*new std::set<loc_t>), defuse(*new defuse_t) {
-        visitDagOnce = false; joinFlows = true; }
+        joinFlows = true; }
     void clear() {
         cached_locs.clear();
         def_info.clear();

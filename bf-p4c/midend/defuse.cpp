@@ -39,29 +39,40 @@ void ComputeDefUse::def_info_t::flow_merge(def_info_t &a) {
     slices_sanity();
 }
 
-class ComputeDefUse::SetupJoinPoints : public Inspector, public P4::ResolutionContext {
-    std::map<const IR::Node *, std::pair<ControlFlowVisitor *, int>> &join_points;
+class ComputeDefUse::SetupJoinPoints : public ControlFlowVisitor::SetupJoinPoints,
+                                       public P4::ResolutionContext {
     bool preorder(const IR::ParserState *n) override {
-        return ++join_points[n].second == 1; }
+        LOG6("SetupJoinPoints(ParserState " << n->name << ")" << IndentCtl::indent);
+        return true; }
+    void revisit(const IR::ParserState *n) override {
+        ++join_points[n].second;
+        LOG6("SetupJoinPoints::revisit(ParserState " << n->name << ") [" <<
+             join_points[n].second << "]"); }
+    void loop_revisit(const IR::ParserState *n) override {
+        LOG6("  * loop into " << n->name); }
+    void postorder(const IR::ParserState *) override {
+        LOG6_UNINDENT; }
+    void revisit(const IR::Node *) override { }
     bool preorder(const IR::PathExpression *pe) override {
         if (pe->type->is<IR::Type_State>()) {
             auto *d = resolveUnique(pe->path->name, P4::ResolutionType::Any);
             BUG_CHECK(d, "failed to resolve %s", pe);
             auto ps = d->to<IR::ParserState>();
             BUG_CHECK(ps, "%s is not a parser state", d);
-            if (!isInContext(ps))
-                visit(ps, "transition"); }
+            visit(ps, "transition"); }
         return false; }
     bool preorder(const IR::P4Parser *p) override {
+        LOG6("SetupJoinPoints(P4Parser " << p->name << ")" << IndentCtl::indent);
         if (auto start = p->states.getDeclaration<IR::ParserState>("start"))
             visit(start, "start");
+        LOG6_UNINDENT;
         return false; }
     bool preorder(const IR::P4Control *) override { return false; }
     bool preorder(const IR::Type *) override { return false; }
 
  public:
-    explicit SetupJoinPoints(decltype(join_points) &fjp) : join_points(fjp) {
-        visitDagOnce = false; }
+    explicit SetupJoinPoints(decltype(join_points) &fjp)
+    : ControlFlowVisitor::SetupJoinPoints(fjp) { }
 };
 
 void ComputeDefUse::init_join_flows(const IR::Node *root) {
@@ -72,6 +83,8 @@ void ComputeDefUse::init_join_flows(const IR::Node *root) {
     root->apply(SetupJoinPoints(*flow_join_points));
     for (auto it = flow_join_points->begin(); it != flow_join_points->end(); ) {
         if (it->second.second > 1) {
+            LOG6("init_join_flows " << it->first->to<IR::ParserState>()->name <<
+                 " = " << it->second.second);
             ++it;
         } else {
             it = flow_join_points->erase(it); } }
@@ -217,6 +230,9 @@ bool ComputeDefUse::preorder(const IR::P4Parser *p) {
 bool ComputeDefUse::preorder(const IR::ParserState *p) {
     LOG5("ComputeDefUse(ParserState " << p->name << ")" << IndentCtl::indent);
     return true;
+}
+void ComputeDefUse::loop_revisit(const IR::ParserState *p) {
+    LOG5("  * loop into " << p->name);
 }
 void ComputeDefUse::postorder(const IR::ParserState *) {
     LOG5_UNINDENT;
@@ -423,6 +439,8 @@ bool ComputeDefUse::preorder(const IR::PathExpression *pe) {
         BUG_CHECK(ps, "%s is not a parser state", d);
         if (!isInContext(ps))
             visit(ps, "transition");
+        else
+            LOG5("  * not visiting " << ps->name << " to avoid loop!");
         return false; }
     if (state == SKIPPING) return false;
     auto *d = resolveUnique(pe->path->name, P4::ResolutionType::Any);

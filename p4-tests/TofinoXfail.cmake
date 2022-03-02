@@ -2063,4 +2063,3 @@ p4c_add_xfail_reason("tofino"
   "Conditions in an action must be simple comparisons of an action data parameter"
   testdata/p4_16_samples/psa-dpdk-flatten-local-struct.p4
 )
-
