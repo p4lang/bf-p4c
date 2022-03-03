@@ -66,8 +66,8 @@ TofinoPipeTestCase::create(const std::string& source) {
         std::cerr << "Midend failed" << std::endl;
         return boost::none;
     }
-    if (::diagnosticCount() > 0) {
-        std::cerr << "Encountered " << ::diagnosticCount()
+    if (::errorCount() > 0) {
+        std::cerr << "Encountered " << ::errorCount()
                   << " errors while executing midend" << std::endl;
         return boost::none;
     }
@@ -84,8 +84,8 @@ TofinoPipeTestCase::create(const std::string& source) {
         std::cerr << "extract_maupipe failed" << std::endl;
         return boost::none;
     }
-    if (::diagnosticCount() > 0) {
-        std::cerr << "Encountered " << ::diagnosticCount()
+    if (::errorCount() > 0) {
+        std::cerr << "Encountered " << ::errorCount()
                   << " errors while executing extract_maupipe" << std::endl;
         return boost::none;
     }

@@ -40,11 +40,10 @@ class EliminateTuples final : public PassManager {
     EliminateTuples(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
             P4::TypeChecking* typeChecking = nullptr,
             P4::TypeInference* typeInference = nullptr) {
-        auto repl = new P4::ReplacementMap(refMap, typeMap);
         if (!typeChecking)
             typeChecking = new P4::TypeChecking(refMap, typeMap);
         passes.push_back(typeChecking);
-        passes.push_back(new P4::DoReplaceTuples(repl));
+        passes.push_back(new P4::DoReplaceTuples(refMap, typeMap));
         // Save any HashListExpressions
         auto shle = new SaveHashListExpression();
         passes.push_back(shle);

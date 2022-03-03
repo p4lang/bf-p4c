@@ -20,7 +20,7 @@ extern T max<T>(in T t1, in T t2);
 extern T min<T>(in T t1, in T t2);
 
 extern RegisterAction<T, I, U> {
-    RegisterAction(register<T __REG_INDEX_ARG(I)> reg);
+    RegisterAction(register<_ __REG_INDEX_ARG(_)> reg);
     U execute(in I index);
     U execute_log(); /* execute at an index that increments each time */
     @synchronous(execute, execute_log)
@@ -30,7 +30,7 @@ extern RegisterAction<T, I, U> {
 }
 
 extern DirectRegisterAction<T, U> {
-    DirectRegisterAction(register<T __REG_INDEX_ARG(_)> reg);
+    DirectRegisterAction(register<_ __REG_INDEX_ARG(_)> reg);
     U execute();
     @synchronous(execute)
     abstract void apply(inout T value, @optional out U rv);

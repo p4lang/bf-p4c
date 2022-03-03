@@ -11,11 +11,6 @@
 #include "frontends/p4/fromv1.0/converters.h"
 #include "lib/error.h"
 
-// TODO(MichalKekely): Probably better to actually expose the original
-//          FindRecirculated and inherit from it, which will allow
-//          to just rewrite the postorder function. Also it might
-//          allow us to check which pass is the one we are looking
-//          for better.
 // This is a simple update of the original convertor that just allows
 // recirculate to have parameter of action param/68, that we allow.
 // In the original p4c converter the pass FindRecirculated does not allow this.
@@ -24,8 +19,11 @@ class FindRecirculatedAllowingPort : public Inspector {
     P4V1::ProgramStructure* structure;
 
     void add(const IR::Primitive* primitive, unsigned operand) {
-        if (primitive->operands.size() <= operand)
+        if (primitive->operands.size() <= operand) {
+            // not enough arguments, do nothing.
+            // resubmit and recirculate have optional arguments
             return;
+        }
         auto expression = primitive->operands.at(operand);
         if (!expression->is<IR::PathExpression>()) {
             ::error("%1%: expected a field list", expression);
@@ -64,10 +62,16 @@ class FindRecirculatedAllowingPort : public Inspector {
 class ConverterAllowingRecirculate : public P4V1::Converter {
  public:
     ConverterAllowingRecirculate() : P4V1::Converter() {
-        // At least some sanity check if the P4V1::Converter didn't change
-        BUG_CHECK(passes.size() == 14, "Expected different passes in P4V1::Converter");
-        // Replace 7th pass, which should be the FindRecirculated
-        passes[6] = new FindRecirculatedAllowingPort(structure);
+        bool found = false;
+        for (unsigned i = 0; i < passes.size(); i++) {
+            // Replace FindRecirculated with our version
+            if (dynamic_cast<P4V1::FindRecirculated*>(passes[i])) {
+                found = true;
+                LOG3("Replacing FindRecirculated (" << i << ") with AllowingPort version.");
+                passes[i] = new FindRecirculatedAllowingPort(structure);
+            }
+        }
+        BUG_CHECK(found == true, "Expected different passes in P4V1::Converter");
     }
 };
 

@@ -173,7 +173,7 @@ Pipeline(ParserI(),
          IngressP(),
          DeparserI(),
          ParserE(),
-         EgressP<>(),
+         EgressP(),
          DeparserE()) pipe;
 
 Switch(pipe) main;

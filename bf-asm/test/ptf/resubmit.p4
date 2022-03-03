@@ -55,9 +55,6 @@ field_list resubmit_fields {
     test_metadata.field_C;
 }
 
-field_list resubmit_fields_empty {
-}
-
 action nop() {
 
 }
@@ -75,7 +72,7 @@ action do_resubmit() {
 #if defined(BMV2TOFINO)
     resubmit_no_fields();
 #else
-    resubmit(resubmit_fields_empty);
+    resubmit();
 #endif
 }
 

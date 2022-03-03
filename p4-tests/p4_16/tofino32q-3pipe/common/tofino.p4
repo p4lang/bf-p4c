@@ -615,7 +615,7 @@ extern RegisterParam<T> {
 // This is implemented using an experimental feature in p4c and subject to
 // change. See https://github.com/p4lang/p4-spec/issues/561
 extern RegisterAction<T, I, U> {
-    RegisterAction(Register<T, I> reg);
+    RegisterAction(Register<_, _> reg);
 
     // Abstract method that needs to be implemented when RegisterAction is
     // instantiated.

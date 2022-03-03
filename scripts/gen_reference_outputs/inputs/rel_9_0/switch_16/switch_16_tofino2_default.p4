@@ -986,7 +986,7 @@ extern DirectRegisterAction4<T, U1, U2, U3, U4> {
 }
 
 extern RegisterAction<T, H, U> {
-    RegisterAction(Register<T, H> reg);
+    RegisterAction(Register<_, _> reg);
     U execute(@optional in H index, @optional out U rv2,
               @optional out U rv3, @optional out U rv4);
 
@@ -1019,7 +1019,7 @@ extern RegisterAction<T, H, U> {
     bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
 }
 extern RegisterAction2<T, H, U1, U2> {
-    RegisterAction2(Register<T, H> reg);
+    RegisterAction2(Register<_, _> reg);
     U1 execute(in H index, out U2 rv2);
 
     U1 execute_log(out U2 rv2);
@@ -1046,7 +1046,7 @@ extern RegisterAction2<T, H, U1, U2> {
     bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
 }
 extern RegisterAction3<T, H, U1, U2, U3> {
-    RegisterAction3(Register<T, H> reg);
+    RegisterAction3(Register<_, _> reg);
     U1 execute(in H index, out U2 rv2, out U3 rv3);
 
     U1 execute_log(out U2 rv2, out U3 rv3);
@@ -1073,7 +1073,7 @@ extern RegisterAction3<T, H, U1, U2, U3> {
     bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
 }
 extern RegisterAction4<T, H, U1, U2, U3, U4> {
-    RegisterAction4(Register<T, H> reg);
+    RegisterAction4(Register<_, _> reg);
     U1 execute(in H index, out U2 rv2, out U3 rv3, out U4 rv4);
 
     U1 execute_log(out U2 rv2, out U3 rv3, out U4 rv4);

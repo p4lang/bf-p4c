@@ -297,7 +297,7 @@ extern RegisterParam<T> {
 }
 
 extern RegisterAction<T, I, U> {
-    RegisterAction(Register<T, I> reg);
+    RegisterAction(Register<_, _> reg);
     abstract void apply(inout T value, @optional out U rv);
     U execute(in I index);
     U execute_log();

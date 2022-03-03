@@ -15,7 +15,7 @@ TEST(AttachedInfo, BuildSplitMaps) {
             void write(in I index, in T value);
         }
         extern RegisterAction<T, I, U> {
-            RegisterAction(Register<T, I> reg);
+            RegisterAction(Register<_, _> reg);
             U execute(in I index);
             U execute_log();
             @synchronous(execute, execute_log)

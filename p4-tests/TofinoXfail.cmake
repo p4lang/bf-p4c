@@ -2057,3 +2057,12 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue2905-bmv2.p4
 )
 
+# p4c update 02/2022
+p4c_add_xfail_reason("tofino"
+  "error: Inferred incompatible container alignments for field"
+  testdata/p4_16_samples/bool_to_bit_cast.p4
+)
+p4c_add_xfail_reason("tofino"
+  "error: Verify statement not supported"
+  testdata/p4_16_samples/psa-dpdk-errorcode-2.p4
+)

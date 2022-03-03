@@ -835,7 +835,7 @@ extern MathUnit<T> {
 // This is implemented using an experimental feature in p4c and subject to
 // change. See https://github.com/p4lang/p4-spec/issues/561
 extern RegisterAction<T, I, U> {
-    RegisterAction(Register<T, I> reg);
+    RegisterAction(Register<_, _> reg);
 
     U execute(in I index); /* {
         U rv;
