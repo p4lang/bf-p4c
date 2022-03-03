@@ -2066,3 +2066,9 @@ p4c_add_xfail_reason("tofino"
   "error: Verify statement not supported"
   testdata/p4_16_samples/psa-dpdk-errorcode-2.p4
 )
+
+# p4c update 03/03/2022 (new test)
+p4c_add_xfail_reason("tofino"
+  "error: PHV allocation was not successful"
+  testdata/p4_16_samples/structure-valued-expr-ok-1-bmv2.p4
+)
