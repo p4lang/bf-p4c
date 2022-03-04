@@ -3,6 +3,7 @@
 #include "gtest/gtest.h"
 
 #include "bf-p4c/device.h"
+#include "bf-p4c/ir/bitrange.h"
 #include "lib/bitvec.h"
 #include "test/gtest/helpers.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
@@ -134,6 +135,39 @@ TEST_F(TofinoField, foreach_byte) {
     });
 }
 
+TEST_F(TofinoField, byteAlignedRangeInBits) {
+    // Make a field.
+    auto* f = new PHV::Field();
+    f->offset = 0;
+    f->size = 1;
+
+    EXPECT_EQ(f->byteAlignedRangeInBits(), le_bitrange(StartLen(0, 8)));
+
+    f->offset = 0;
+    f->size = 2;
+
+    EXPECT_EQ(f->byteAlignedRangeInBits(), le_bitrange(StartLen(0, 8)));
+
+    f->offset = 0;
+    f->size = 4;
+
+    EXPECT_EQ(f->byteAlignedRangeInBits(), le_bitrange(StartLen(0, 8)));
+
+    f->offset = 4;
+    f->size = 1;
+
+    EXPECT_EQ(f->byteAlignedRangeInBits(), le_bitrange(StartLen(0, 8)));
+
+    f->offset = 4;
+    f->size = 3;
+
+    EXPECT_EQ(f->byteAlignedRangeInBits(), le_bitrange(StartLen(0, 8)));
+
+    f->offset = 4;
+    f->size = 4;
+
+    EXPECT_EQ(f->byteAlignedRangeInBits(), le_bitrange(StartLen(0, 8)));
+}
 
 class TofinoFieldSlice : public TofinoBackendTest {};
 

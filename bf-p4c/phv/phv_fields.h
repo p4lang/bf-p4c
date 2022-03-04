@@ -769,9 +769,9 @@ class Field : public LiftLess<Field> {
     /// Returns a range of bits in the header that captures the byte aligned offset of this field
     /// within its header.
     le_bitrange byteAlignedRangeInBits() const {
-        int left_limit = 8 * (offset / 8);
-        int right_limit = 8 * ROUNDUP(offset + size - 1, 8);
-        return StartLen(left_limit, right_limit - left_limit);
+        int start = 8 * (offset / 8);
+        int len = (8 * ROUNDUP(offset + size, 8)) - start;
+        return StartLen(start, len);
     }
 
     /// Utility functions to get field allocation status
@@ -883,9 +883,9 @@ class FieldSlice : public AbstractField, public LiftCompare<FieldSlice> {
     /// E.g. Suppose a field f is at offset 10 within its header type and its size is 12 bits. The
     /// byte aligned range for f[0:7] will be [8, 24].
     le_bitrange byteAlignedRangeInBits() const {
-        int left_limit = 8 * ((field_i->offset + range_i.lo) / 8);
-        int right_limit = 8 * ROUNDUP(field_i->offset + range_i.hi - 1, 8);
-        return StartLen(left_limit, right_limit - left_limit);
+        int start = 8 * ((field_i->offset + range_i.lo) / 8);
+        int len = (8 * ROUNDUP(field_i->offset + range_i.hi + 1, 8)) - start;
+        return StartLen(start, len);
     }
 
     cstring shortString() const {
