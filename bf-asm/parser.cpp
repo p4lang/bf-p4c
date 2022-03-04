@@ -34,11 +34,14 @@ class AsmParser : public Section {
     void process();
     void output(json::map &);
     void init_port_use(bitvec& port_use, const value_t &arg);
-    static AsmParser& get_parser() { return singleton_object; }
     AsmParser();
     ~AsmParser() {}
  public:
+    static AsmParser& get_parser() { return singleton_object; }
     static AsmParser    singleton_object;
+
+    // For gtest
+    std::vector<Parser *> test_get_parser(gress_t gress);
 } AsmParser::singleton_object;
 
 AsmParser::AsmParser() : Section("parser") {
@@ -170,6 +173,12 @@ void AsmParser::output(json::map &ctxt_json) {
                 parser[gress][0]->output_legacy(ctxt_json);
         }
     }
+}
+
+std::vector<Parser *> AsmParser::test_get_parser(gress_t gress) {
+    if ((gress == INGRESS) || (gress == EGRESS))
+        return parser[gress];
+    return std::vector<Parser*>();
 }
 
 std::map<gress_t, std::map<std::string, std::vector<Parser::State::Match::Clot *>>> Parser::clots;
@@ -429,14 +438,48 @@ void Parser::process() {
         Phv::setuse(EGRESS, phv_use[EGRESS]); }
 }
 
+int Parser::get_header_stack_size_from_valid_bits(std::vector<State::Match::Set*> sets) {
+    // Find Set operation that holds the stack valid bits, then
+    // find the largest value of "$<value>.$valid".
+    for (const auto * set : sets) {
+        auto reg = Phv::reg(set->where.name());
+        if (reg) {
+            auto aliases = Phv::aliases(reg, 0);
+            if (std::find_if(aliases.begin(), aliases.end(), [](const std::string &s) {
+                return s.find(".$stkvalid") != std::string::npos;}) != aliases.end()) {
+                int stack_size = 0;
+                while (std::find_if(aliases.begin(), aliases.end(),
+                                    [&stack_size](const std::string &s) {
+                        return s.find("$" + std::to_string(stack_size) + ".$valid") !=
+                               std::string::npos;}) != aliases.end())
+                    stack_size++;
+                return stack_size;
+            }
+        }
+    }
+    return 0;
+}
+
 int Parser::get_prsr_max_dph() {
     int prsr_dph_max = 0;
+    int parser_depth_max_bits = parser_depth_max_bytes*8;
     std::function<void(const State*, int)> traverse_state;
-    std::set<const State*> visited;
-    traverse_state = [&traverse_state, &prsr_dph_max, &visited](const State *s, int bits_shifted) {
+    std::map<const State*, std::pair<int, int>> visited;  // pair: first=bits_shifted
+                                                          //       second=recurse count
+    traverse_state = [&, this](const State *s, int bits_shifted) {
         if (!s) return;
-        if (visited.count(s)) return;
-        visited.insert(s);
+        // Keep track of states visited along with the parser depth at time of visit
+        // and the number of times the state was called recursively.  Return if current
+        // bits_shifted value is smaller or equal to the largest value seen so far,
+        // or if the state was called enough times to fill the header stack if one
+        // is used.
+        if (visited.count(s) && (visited.at(s).first >= bits_shifted)) {
+            LOG5(" State : " << s->name << " --> largest depth : " << visited[s].first
+                      << " >= current depth : " << bits_shifted << " --> Ignore.");
+            return;
+        }
+        visited[s].first = bits_shifted;
+        visited[s].second++;
         for (const auto *m : s->match) {
             auto local_bits_shifted = bits_shifted + (m->shift * 8) - m->intr_md_bits;
             std::string next_name = m->next ? m->next->name : std::string("END");
@@ -444,18 +487,49 @@ int Parser::get_prsr_max_dph() {
                     << next_name << " | Bits: " << bits_shifted
                     << ", shift : " << m->shift * 8 << ", intr_md_bits : " << m->intr_md_bits
                     << ", Total Bits : " << local_bits_shifted);
-            if (m->next) {
-                for (auto n : m->next.ptr)
-                    traverse_state(n, local_bits_shifted);
-            } else {
-                prsr_dph_max = std::max(prsr_dph_max, local_bits_shifted);
+            // Look for non-unrolled loops that save in header stacks.  In that case, use
+            // header stack size to limit parser depth calculation.
+            if (m->offset_inc) {
+                // One of the Set operations will set the header stack entries $valid bits.
+                // Get stack size information from these valid bits.
+                int stack_size = get_header_stack_size_from_valid_bits(m->set);
+                LOG5(" State : stack_size = " << stack_size << ", visited count = "
+                     << visited[s].second);
+                // Do not go beyond header stack size to find parser depth.
+                if (visited[s].second > stack_size) {
+                    LOG5(" State : reached end of header stack, size = " << stack_size);
+                    continue;
+                }
+            }
+
+            if  (local_bits_shifted < parser_depth_max_bits)
+                if (m->next) {
+                    for (auto n : m->next.ptr)
+                        traverse_state(n, local_bits_shifted);
+                } else {
+                    prsr_dph_max = std::max(prsr_dph_max, local_bits_shifted);
+                } else {
+                    LOG5(" State : " << s->name << " --> " << m->match << " --> "
+                         << next_name << " | Reached " << parser_depth_max_bits
+                         << " bits, maximum supported by target.");
+                prsr_dph_max = parser_depth_max_bits;
+            }
+
+            // If the current match is a default or catch-all transition, then
+            // break out of the loop as any following transitions will never
+            // be taken.
+            uint64_t mask = bitMask(s->key.width);
+            if ((m->match.word0 & m->match.word1 & mask) == mask) {
+                LOG5(" State : catch-all transition, break out of loop.");
+                break;
             }
         }
+        visited[s].second--;
     };
     traverse_state(get_start_state(), 0);
-    prsr_dph_max = (prsr_dph_max + 8) - (prsr_dph_max % 8);
+    prsr_dph_max = (prsr_dph_max + 0x7) & ~0x7;
     prsr_dph_max /= 8;
-    prsr_dph_max = (prsr_dph_max + 16) - (prsr_dph_max % 16);
+    prsr_dph_max = (prsr_dph_max + 0xf) & ~0xf;
     prsr_dph_max /= 16;
 
     return prsr_dph_max;
@@ -2006,3 +2080,7 @@ void Parser::print_all_paths() {
         visit_states(states.begin()->second, "");
 }
 
+// For gtest.
+std::vector<Parser *> test_get_parser(gress_t gress) {
+    return AsmParser::get_parser().test_get_parser(gress);
+}

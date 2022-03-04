@@ -301,7 +301,12 @@ class Parser {
     RateLimit                           rate_limit;
 
     Parser(bitvec (&phv_use)[2], gress_t gr, int idx)
-    : gress(gr), parser_no(idx), phv_use(phv_use) {}
+    : gress(gr), parser_no(idx), phv_use(phv_use) {
+        if (gress == INGRESS)
+            parser_depth_max_bytes = Target::PARSER_DEPTH_MAX_BYTES_INGRESS();
+        else
+            parser_depth_max_bytes = Target::PARSER_DEPTH_MAX_BYTES_EGRESS();
+    }
 
     template<class REGS> void gen_configuration_cache(REGS &, json::vector &cfg_cache);
     static int clot_maxlen(gress_t gress, unsigned tag) {
@@ -337,7 +342,7 @@ class Parser {
     // Store parser names to their handles. Used by phase0 match tables to link
     // parser handle
     static std::map<std::string, unsigned>     parser_handles;
-    static const unsigned get_parser_handle(std::string phase0Table) {
+    static unsigned get_parser_handle(std::string phase0Table) {
         for (auto p : Parser::parser_handles) {
             auto parser_name = p.first;
             if (phase0Table.find(parser_name) != std::string::npos)
@@ -359,6 +364,7 @@ class Parser {
     }
 
     int get_prsr_max_dph();
+    int get_header_stack_size_from_valid_bits(std::vector<State::Match::Set*> sets);
 
     // Debug
     void print_all_paths();
@@ -367,6 +373,9 @@ class Parser {
     template<class REGS> void mark_unused_output_map(REGS &, void *, unsigned);
     void define_state(gress_t gress, pair_t &kv);
     void output_default_ports(json::vector& vec, bitvec port_use);
+    int parser_depth_max_bytes;
 };
+
+std::vector<Parser *> test_get_parser(gress_t gress);
 
 #endif /* BF_ASM_PARSER_H_ */

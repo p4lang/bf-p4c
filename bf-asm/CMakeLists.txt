@@ -322,8 +322,14 @@ if (ENABLE_GTESTS)
   target_compile_definitions(bfas_lib PRIVATE BUILDING_FOR_GTEST)  # removes main()
   target_link_libraries (bfas_lib PRIVATE ${BFASM_LIBS} ${BFASM_LIB_DEPS})
 
-  # The component's unit-tests are #included in gtestasm.cpp.
-  add_executable (gtestasm gtest/gtestasm.cpp)
+  set(BFAS_GTEST_SOURCES
+    gtest/gtestasm.cpp
+    gtest/depositfield.cpp
+    gtest/asm-types.cpp
+    gtest/mirror.cpp
+    gtest/parser-test.cpp
+    )
+  add_executable (gtestasm ${BFAS_GTEST_SOURCES})
   include_directories(
     ${BFN_P4C_SOURCE_DIR}/p4c/test/frameworks/gtest/googletest/include
   )

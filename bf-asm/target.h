@@ -86,6 +86,8 @@
     M(bool, OUTPUT_STAGE_EXTENSION_PRIVATE) \
     M(int, PARSER_CHECKSUM_UNITS) \
     M(bool, PARSER_EXTRACT_BYTES) \
+    M(int, PARSER_DEPTH_MAX_BYTES_INGRESS) \
+    M(int, PARSER_DEPTH_MAX_BYTES_EGRESS) \
     M(int, PHASE0_FORMAT_WIDTH) \
     M(int, STATEFUL_ALU_ADDR_WIDTH) \
     M(int, STATEFUL_ALU_CONST_MASK) \
@@ -195,6 +197,8 @@ class Target::Tofino : public Target {
     enum {
         PARSER_CHECKSUM_UNITS = 2,
         PARSER_EXTRACT_BYTES = false,
+        PARSER_DEPTH_MAX_BYTES_INGRESS = (((1<<10)-1)*16),
+        PARSER_DEPTH_MAX_BYTES_EGRESS = (((1<<10)-1)*16),
         MATCH_BYTE_16BIT_PAIRS = true,
         NUM_MAU_STAGES_PRIVATE = 12,
         ACTION_INSTRUCTION_MAP_WIDTH = 7,
@@ -315,6 +319,8 @@ class Target::JBay : public Target {
     enum {
         PARSER_CHECKSUM_UNITS = 5,
         PARSER_EXTRACT_BYTES = true,
+        PARSER_DEPTH_MAX_BYTES_INGRESS = (((1<<10)-1)*16),
+        PARSER_DEPTH_MAX_BYTES_EGRESS = (32*16),
         MATCH_BYTE_16BIT_PAIRS = false,
 #ifdef EMU_OVERRIDE_STAGE_COUNT
         NUM_MAU_STAGES_PRIVATE = EMU_OVERRIDE_STAGE_COUNT,
@@ -490,6 +496,8 @@ class Target::Cloudbreak : public Target {
     enum {
         PARSER_CHECKSUM_UNITS = 5,
         PARSER_EXTRACT_BYTES = true,
+        PARSER_DEPTH_MAX_BYTES_INGRESS = (((1<<10)-1)*16),
+        PARSER_DEPTH_MAX_BYTES_EGRESS = (32*16),
         MATCH_BYTE_16BIT_PAIRS = false,
 #ifdef EMU_OVERRIDE_STAGE_COUNT
         NUM_MAU_STAGES_PRIVATE = EMU_OVERRIDE_STAGE_COUNT,
@@ -602,6 +610,8 @@ class Target::Flatrock : public Target {
     enum {
         PARSER_CHECKSUM_UNITS = 0,
         PARSER_EXTRACT_BYTES = true,
+        PARSER_DEPTH_MAX_BYTES_INGRESS = (((1<<10)-1)*16),
+        PARSER_DEPTH_MAX_BYTES_EGRESS = (32*16),
         MATCH_BYTE_16BIT_PAIRS = false,
 #ifdef EMU_OVERRIDE_STAGE_COUNT
         NUM_MAU_STAGES_PRIVATE = EMU_OVERRIDE_STAGE_COUNT,

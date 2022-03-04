@@ -213,6 +213,11 @@ class Phv : public Section {
     static const Register *reg(int idx)
         { BUG_CHECK(idx >= 0 && size_t(idx) < phv.regs.size()); return phv.regs[idx]; }
 
+    static const Register *reg(std::string name) {
+        for (auto &reg : phv.regs) if (reg->name == name) return reg;
+        return nullptr;
+    }
+
     // Return the number registers
     static int num_regs() { return phv.regs.size(); }
 
