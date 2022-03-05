@@ -1227,7 +1227,7 @@ bool Memories::allocate_all_exact(unsigned column_mask) {
         // Currently stashes are only used for atomic modify (of entries) within
         // the RAM. Since JBAY HW has a way to deal with this (by introducing a
         // bubble) stashes are not required. We disable it for now.
-        std::map<table_alloc*, int> table_alloc_ram_widths;
+        ordered_map<table_alloc*, int> table_alloc_ram_widths;
         for (auto *ta : exact_tables) {
             for (auto u_id : ta->allocation_units()) {
                 auto &alloc = (*ta->memuse)[u_id];
