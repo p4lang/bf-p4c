@@ -155,6 +155,7 @@ using DefaultPortMap = std::map<int, std::vector<int>>;
 /** \ingroup ArchTranslation */
 class ParseTna : public Inspector {
     const IR::PackageBlock*   mainBlock = nullptr;
+
  public:
     ParseTna() { }
 

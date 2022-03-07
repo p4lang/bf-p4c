@@ -17,11 +17,19 @@ ArchTranslation::ArchTranslation(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
             passes.push_back(new BFN::TnaArchTranslation(refMap, typeMap, options));
         }
         if (Device::currentDevice() == Device::JBAY) {
-            LOG1("WARNING: TNA architecture is not supported on a Tofino2 device."
+            ::warning("TNA architecture is not supported on a Tofino2 device."
                  "The compilation may produce wrong binary."
                  "Consider invoking the compiler with --arch t2na.");
             passes.push_back(new BFN::T2naArchTranslation(refMap, typeMap, options));
         }
+#if HAVE_FLATROCK
+        if (Device::currentDevice() == Device::FLATROCK) {
+            ::warning("TNA architecture is not supported on a Tofino5 device."
+                 "The compilation may produce wrong binary."
+                 "Consider invoking the compiler with --arch t5na.");
+            passes.push_back(new BFN::T5naArchTranslation(refMap, typeMap, options));
+        }
+#endif  /* HAVE_FLATROCK */
     } else if (options.arch == "t2na") {
         if (Device::currentDevice() == Device::JBAY) {
             passes.push_back(new BFN::T2naArchTranslation(refMap, typeMap, options));

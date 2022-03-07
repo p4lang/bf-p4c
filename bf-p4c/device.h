@@ -77,6 +77,7 @@ class Device {
     static bool hasGhostThread() { return Device::get().getHasGhostThread(); }
     static bool threadsSharePipe(gress_t a, gress_t b) {
         return Device::get().getThreadsSharePipe(a, b); }
+    static bool hasMirrorIOSelect() { return Device::get().getHasMirrorIOSelect(); }
 
  protected:
     explicit Device(cstring name) : name_(name) {}
@@ -114,6 +115,7 @@ class Device {
     virtual bool getHasImplicitPHVValidBit() const = 0;
     virtual bool getHasGhostThread() const = 0;
     virtual bool getThreadsSharePipe(gress_t a, gress_t b) const = 0;
+    virtual bool getHasMirrorIOSelect() const = 0;
 
  private:
     static Device* instance_;
@@ -169,7 +171,8 @@ class TofinoDevice : public Device {
     bool getHasEgressParser() const override { return true; }
     bool getHasImplicitPHVValidBit() const override { return true; }
     bool getHasGhostThread() const override { return false; };
-    bool getThreadsSharePipe(gress_t, gress_t) const { return true; }
+    bool getThreadsSharePipe(gress_t, gress_t) const override { return true; }
+    bool getHasMirrorIOSelect() const override { return false; }
 };
 
 class JBayDevice : public Device {
@@ -220,7 +223,8 @@ class JBayDevice : public Device {
     bool getHasEgressParser() const override { return true; }
     bool getHasImplicitPHVValidBit() const override { return false; }
     bool getHasGhostThread() const override { return true; };
-    bool getThreadsSharePipe(gress_t, gress_t) const { return true; }
+    bool getThreadsSharePipe(gress_t, gress_t) const override { return true; }
+    bool getHasMirrorIOSelect() const override { return true; }
 };
 
 /// Tofino2 variants. The only difference between them is the number of
@@ -301,7 +305,8 @@ class CloudbreakDevice : public Device {
     bool getHasEgressParser() const override { return true; }
     bool getHasImplicitPHVValidBit() const override { return false; }
     bool getHasGhostThread() const override { return true; };
-    bool getThreadsSharePipe(gress_t, gress_t) const { return true; }
+    bool getThreadsSharePipe(gress_t, gress_t) const override { return true; }
+    bool getHasMirrorIOSelect() const override { return true; }
 };
 #endif /* HAVE_CLOUDBREAK */
 
@@ -357,6 +362,7 @@ class FlatrockDevice : public Device {
     bool getThreadsSharePipe(gress_t a, gress_t b) const {
         // just check bottom bit, as ingress/ghost share a pipe
         return (a&1) == (b&1); }
+    bool getHasMirrorIOSelect() const override { return false; }
 };
 #endif /* HAVE_FLATROCK */
 

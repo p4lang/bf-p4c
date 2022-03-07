@@ -28,7 +28,7 @@ class InitializeMirrorIOSelect : public PassManager {
  public:
     InitializeMirrorIOSelect(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
         addPasses({
-            new PassIf([this]() { return Device::currentDevice() != Device::TOFINO; }, {
+            new PassIf([]() { return Device::hasMirrorIOSelect(); }, {
                 new DoInitializeMirrorIOSelect(),
                 new P4::ClearTypeMap(typeMap),
                 new P4::ResolveReferences(refMap),

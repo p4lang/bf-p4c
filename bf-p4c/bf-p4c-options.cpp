@@ -371,6 +371,11 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
   #endif /* HAVE_CLOUDBREAK */
   #if HAVE_FLATROCK
         {"tofino5", "v1model"},
+  #if BAREFOOT_INTERNAL
+        {"tofino5", "tna"},
+        {"tofino5", "t2na"},
+        {"tofino5", "t3na"},
+  #endif /* BAREFOOT_INTERNAL */
         {"tofino5", "t5na"},
   #endif /* HAVE_FLATROCK */
     };
