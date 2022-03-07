@@ -31,12 +31,16 @@ generate:
       regs.mau_addrmap.h: [ decl ]
       regs.mau_addrmap.cpp: [ defn, -Iregs.mau_addrmap.h ]
       rewrite:
-        ppu_em_hu_rspec:
-          em_bytehash_extrf: [ scan_chain, em_bytehash, [40, 12], em_bytehash_scansel ]
-          em_bytehash_scansel: [ delete ]
-        ppu_apx_rspec:
-          apx_bytehash_extrf: [ scan_chain, apx_bytehash, [64, 8], apx_bytehash_scansel ]
-          apx_bytehash_scansel: [ delete ]
+        minput_byte_pwr_erf:
+          minput_byte_pwr_scan: [ scan_chain, minput_byte_pwr, [6] ]
+        minput_word_pwr_erf:
+          minput_word_pwr_scan: [ scan_chain, minput_word_pwr, [6] ]
+        #ppu_em_hu_rspec:
+        #  em_bytehash_extrf: [ scan_chain, em_bytehash, [40, 12], em_bytehash_scansel ]
+        #  em_bytehash_scansel: [ delete ]
+        #ppu_apx_rspec:
+        #  apx_bytehash_extrf: [ scan_chain, apx_bytehash, [64, 8], apx_bytehash_scansel ]
+        #  apx_bytehash_scansel: [ delete ]
     # no parser/deparser in csr yet?  Some stuff in fpp_rspec; is it enough?
 
 ignore:

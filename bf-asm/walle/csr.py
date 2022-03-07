@@ -305,9 +305,9 @@ class csr_composite_object (csr_object):
             if len(child.fields) == 1:
                 child.fields = copy.copy(child.fields)
                 child.fields[0].name = rewrite[1]
-            #import pdb; pdb.set_trace()
+            # import pdb; pdb.set_trace()
             for ch in self.children():
-                if ch.name == rewrite[3]:
+                if len(rewrite) > 3 and ch.name == rewrite[3]:
                     child.sel_offset = ch.offset
                     desc_hdr = ch.name + ':\n'
                     if hasattr(ch, 'description') and ch.description:
@@ -1715,10 +1715,12 @@ class reg(csr_composite_object):
 
     def __str__(self):
         f = "("
+        sep = ""
         for x in self.fields:
-            f += "%s, " % str(x.name)
+            f += sep + str(x)
+            sep = ", "
         f += ")"
-        return "%s has fields %s" % (self.name, f)
+        return "reg %s fields:%s" % (self.name, f)
 
     def get_reset_value(self):
         rv = 0
@@ -1998,7 +2000,18 @@ class scanset_reg(reg):
         else:
             self.fields = [fields]
 
+    def __str__(self):
+        f = "("
+        sep = ""
+        for x in self.fields:
+            f += sep + str(x)
+            sep = ", "
+        f += ")"
+        return "scanset %s%s fields:%s" % (self.name, str(self.count), f)
+
+
     def output_binary(self, outfile, args, indent, address_unit, width_unit):
+        #import pdb; pdb.set_trace()
         name = self.name
         if name in args.cpp_reserved:
             name += '_'
@@ -2007,11 +2020,20 @@ class scanset_reg(reg):
         if args.enable_disable:
             outfile.write("%sif (!%s.disabled()) {\n" % (indent, name))
             indent += '  '
+        if not hasattr(self, 'sel_offset'):
+            if args.enable_disable:
+                outfile.write("%sif (!%s.disabled()) {\n" % (indent, name))
+                indent += '  '
+            outfile.write("%sout << binout::tag('S') << binout::byte8(0)" % indent +
+                          " << binout::byte4(0)\n%s    " % indent +
+                          " << binout::byte8(a + 0x%x)" % (self.offset//address_unit) +
+                          " << binout::byte4(32) << binout::byte4(%d);\n" %
+                          (product(self.count) * self.width // width_unit))
         for idx_num, idx in enumerate(self.count):
             outfile.write('%sfor (int j%d = 0; j%d < %d; j%d++) { \n' %
                           (indent, idx_num, idx_num, idx, idx_num))
             name = name + "[j%d]" % idx_num
-            if idx_num == 0:
+            if hasattr(self, 'sel_offset') and idx_num == 0:
                 if args.enable_disable:
                     outfile.write("%sif (!%s.disabled()) {\n" % (indent, name))
                     indent += '  '
@@ -2051,6 +2073,9 @@ class field(csr_object):
         self.msb = msb
         self.lsb = lsb
 
+    def __str__(self):
+        return "%s[%d:%d]" % (self.name, self.msb, self.lsb)
+
     def generate_template(self, inject_size):
         if inject_size:
             return self.replicate(self.msb-self.lsb+1)
@@ -2088,9 +2113,6 @@ class field(csr_object):
                 outfile.write("widereg<%d>" % size)
             else:
                 outfile.write("ubits<%d>" % size)
-
-    def __str__(self):
-        return "name = %s  count = %s  msb = %s  lsb = %s  default = %s  parent = %s" % (str(self.name), str(self.count), str(self.msb), str(self.lsb), str(self.default), str(self.parent))
 
     def print_as_text(self, indent):
         print("%sfield %s%s: [%d:%d]%s" % (

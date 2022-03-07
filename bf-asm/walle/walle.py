@@ -157,12 +157,12 @@ def parse_template_args(args, params):
 
     if not hasattr(args, 'cpp_reserved'):
         args.cpp_reserved = set([
-            "asm", "auto", "break", "case", "catch", "char", "class", "const", "continue",
+            "and", "asm", "auto", "break", "case", "catch", "char", "class", "const", "continue",
             "default", "delete", "do", "double", "else", "enum", "extern", "float", "for",
-            "friend", "goto", "if", "inline", "int", "long", "new", "operator", "private",
-            "protected", "public", "register", "return", "short", "signed", "sizeof",
-            "static", "struct", "switch", "template", "this", "throw", "try", "typedef",
-            "union", "unsigned", "virtual", "void", "volatile", "while" ])
+            "friend", "goto", "if", "inline", "int", "long", "new", "not", "or", "operator",
+            "private", "protected", "public", "register", "return", "short", "signed", "sizeof",
+            "static", "struct", "switch", "template", "this", "throw", "try", "typedef", "union",
+            "unsigned", "virtual", "void", "volatile", "while", "xor" ])
     for opt in options:
         if options[opt][0] is not None:
             if hasattr(args, opt):

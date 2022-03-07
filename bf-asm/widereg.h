@@ -35,7 +35,7 @@ struct widereg_base {
     bool disabled() const { return disabled_; }
     bool disable_if_unmodified() { return write ? false : (disabled_ = true); }
     bool disable_if_zero() const { return value.empty() && !write; }
-    bool disable_if_reset_value() { return value == reset_value ? disabled_ = true : false; }
+    bool disable_if_reset_value() { return value == reset_value ? (disabled_ = true) : false; }
     bool disable() const {
         if (write) {
             LOG1("ERROR: Disabling modified register in " << this);
