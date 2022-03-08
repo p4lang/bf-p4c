@@ -584,9 +584,17 @@ void emit_parser_registers(const Target::Cloudbreak::top_level_regs *regs, std::
 #if HAVE_FLATROCK
 #include "gen/flatrock/memories.ftr_mem.h"
 #include "gen/flatrock/memories.pipe_addrmap.h"
+#include "gen/flatrock/memories.ingress_parser.h"
+#include "gen/flatrock/memories.ingress_deparser.h"
+#include "gen/flatrock/memories.egress_parser.h"
+#include "gen/flatrock/memories.egress_deparser.h"
 #include "gen/flatrock/regs.ftr_reg.h"
 #include "gen/flatrock/regs.pipe_addrmap.h"
 #include "gen/flatrock/regs.mau_addrmap.h"
+#include "gen/flatrock/regs.ingress_parser.h"
+#include "gen/flatrock/regs.ingress_deparser.h"
+#include "gen/flatrock/regs.egress_parser.h"
+#include "gen/flatrock/regs.egress_deparser.h"
 
 class Target::Flatrock : public Target {
  public:
@@ -606,11 +614,20 @@ class Target::Flatrock : public Target {
         ::Flatrock::regs_pipe                           reg_pipe;
     };
 
-    // parser/deparser regs are currently in the pipe regs directly rather
-    // using a register_reference<> to a separate object.
-    typedef ::Flatrock::regs_pipe::_prsr                parser_regs;
+    struct                              parser_regs {
+        ::Flatrock::memories_ingress_parser             imem;
+        ::Flatrock::memories_egress_parser              emem;
+        ::Flatrock::regs_ingress_parser                 ingress;
+        ::Flatrock::regs_egress_parser                  egress;
+    };
     typedef ::Flatrock::regs_match_action_stage_        mau_regs;
-    typedef ::Flatrock::regs_pipe::_dprsr               deparser_regs;
+    struct                              deparser_regs {
+        ::Flatrock::memories_ingress_deparser           imem;
+        ::Flatrock::memories_egress_deparser            emem;
+        ::Flatrock::regs_ingress_deparser               ingress;
+        ::Flatrock::regs_egress_deparser                egress;
+    };
+
     enum {
         PARSER_CHECKSUM_UNITS = 0,
         PARSER_EXTRACT_BYTES = true,

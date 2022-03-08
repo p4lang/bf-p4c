@@ -1,9 +1,17 @@
 set (GEN_FLATROCK
   memories.ftr_mem
   memories.pipe_addrmap
+  memories.ingress_parser
+  memories.ingress_deparser
+  memories.egress_parser
+  memories.egress_deparser
   regs.ftr_reg
   regs.mau_addrmap
   regs.pipe_addrmap
+  regs.ingress_parser
+  regs.ingress_deparser
+  regs.egress_parser
+  regs.egress_deparser
   )
 
 foreach(f IN LISTS GEN_FLATROCK)

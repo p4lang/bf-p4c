@@ -40,7 +40,7 @@ void fill_string(int idx, int seq, ITER begin, ITER end, const pov_map_t &pov_ma
 template<> void Deparser::write_config(Target::Flatrock::deparser_regs &regs) {
     unsigned i = 0;
     pov_map_t pov_map;
-    auto &phvxb = regs.dprsr_phvxb_rspec;
+    auto &phvxb = regs.egress.dprsr_phvxb_rspec;
     for (auto &ent : pov_order[EGRESS]) {
         pov_map.emplace(&ent->reg, i*8);
         for (unsigned j = 0; j < ent->reg.size/8; ++j) {
@@ -58,6 +58,7 @@ template<> void Deparser::write_config(Target::Flatrock::deparser_regs &regs) {
     auto next = dictionary[EGRESS].begin();
     unsigned max_bytes = 32;
     int seq = 0;
+    auto &strings = regs.egress.dprsr_sd_rspec;
     for (auto it = next; it != dictionary[EGRESS].end(); it = next) {
         int entries = 1;
         unsigned bytes = it->what->size();
@@ -72,9 +73,9 @@ template<> void Deparser::write_config(Target::Flatrock::deparser_regs &regs) {
         i->en[i->use] = 1;
         i->sel[i->use] = 0;
         switch (i->len) {
-        case 8: fill_string(i->use*4, seq, it, next, pov_map, regs.dprsr_sd_rspec.str8); break;
-        case 16: fill_string(i->use*4, seq, it, next, pov_map, regs.dprsr_sd_rspec.str16); break;
-        case 32: fill_string(i->use*4, seq, it, next, pov_map, regs.dprsr_sd_rspec.str32); break;
+        case 8: fill_string(i->use*4, seq, it, next, pov_map, strings.str8); break;
+        case 16: fill_string(i->use*4, seq, it, next, pov_map, strings.str16); break;
+        case 32: fill_string(i->use*4, seq, it, next, pov_map, strings.str32); break;
         default: BUG("bad size"); }
         ++seq;
         ++i->use;

@@ -16,7 +16,25 @@ generate:
     fpp_mem_rspec:  # pipes
       args: [ name=memories.pipe, widereg ]
       memories.pipe_addrmap.h: [ decl ]
-      memories.pipe_addrmap.cpp: [ defn, -Imemories.pipe_addrmap.h ]
+      memories.pipe_addrmap.cpp: [ defn, -Imemories.pipe_addrmap.h,
+          -Imemories.ingress_parser.h, -Imemories.ingress_deparser.h,
+          -Imemories.egress_parser.h, -Imemories.egress_deparser.h ]
+    prsr_mem_rspec: # parser
+      args: [ name=memories.ingress_parser ]
+      memories.ingress_parser.h: [ decl ]
+      memories.ingress_parser.cpp: [ defn, -Imemories.ingress_parser.h ]
+    pprsr_mem_rspec: # pseudo-parser
+      args: [ name=memories.egress_parser ]
+      memories.egress_parser.h: [ decl ]
+      memories.egress_parser.cpp: [ defn, -Imemories.egress_parser.h ]
+    mdp_mem_rspec: # metadata packer
+      args: [ name=memories.ingress_deparser ]
+      memories.ingress_deparser.h: [ decl ]
+      memories.ingress_deparser.cpp: [ defn, -Imemories.ingress_deparser.h ]
+    dprsr_mem_rspec: # deparser
+      args: [ name=memories.egress_deparser ]
+      memories.egress_deparser.h: [ decl ]
+      memories.egress_deparser.cpp: [ defn, -Imemories.egress_deparser.h ]
   regs:
     tfc_reg:
       args: [ name=regs.top ]
@@ -25,7 +43,9 @@ generate:
     fpp_rspec:  # pipe
       args: [ name=regs.pipe, widereg ]
       regs.pipe_addrmap.h: [ decl ]
-      regs.pipe_addrmap.cpp: [ defn, -Iregs.pipe_addrmap.h, -Iregs.mau_addrmap.h ]
+      regs.pipe_addrmap.cpp: [ defn, -Iregs.pipe_addrmap.h, -Iregs.mau_addrmap.h,
+          -Iregs.ingress_parser.h, -Iregs.ingress_deparser.h,
+          -Iregs.egress_parser.h, -Iregs.egress_deparser.h ]
     ppu_rspec:  # mau
       args: [ name=regs.match_action_stage.%02x ]
       regs.mau_addrmap.h: [ decl ]
@@ -42,6 +62,22 @@ generate:
         #  apx_bytehash_extrf: [ scan_chain, apx_bytehash, [64, 8], apx_bytehash_scansel ]
         #  apx_bytehash_scansel: [ delete ]
     # no parser/deparser in csr yet?  Some stuff in fpp_rspec; is it enough?
+    prsr_rspec: # parser
+      args: [ name=regs.ingress_parser ]
+      regs.ingress_parser.h: [ decl ]
+      regs.ingress_parser.cpp: [ defn, -Iregs.ingress_parser.h ]
+    pprsr_rspec: # pseudo-parser
+      args: [ name=regs.egress_parser ]
+      regs.egress_parser.h: [ decl ]
+      regs.egress_parser.cpp: [ defn, -Iregs.egress_parser.h ]
+    mdp_rspec: # metadata packer
+      args: [ name=regs.ingress_deparser ]
+      regs.ingress_deparser.h: [ decl ]
+      regs.ingress_deparser.cpp: [ defn, -Iregs.ingress_deparser.h ]
+    dprsr_rspec: # deparser
+      args: [ name=regs.egress_deparser ]
+      regs.egress_deparser.h: [ decl ]
+      regs.egress_deparser.cpp: [ defn, -Iregs.egress_deparser.h ]
 
 ignore:
   memories:
@@ -50,10 +86,16 @@ ignore:
     # fpp_mem_rspec
     # prsr_mem_rspec
     # pprsr_mem_rspec
-    - dprsr_mem_rspec
+    # dprsr_mem_rspec
     - ppu_pack_mem_rspec
-    - mdp_mem_rspec
+    # mdp_mem_rspec
   regs:
     # tfc_reg
     - dvsl_addrmap
     # fpp / fpp_rspec
+    - pbus_rspec
+    - prsr_pbus_regs_rspec
+    - pbus_station_regs_rspec
+    - mdp_pbus_regs_rspec
+    - pprsr_pbus_regs_rspec
+    - dprsr_pbus_regs_rspec
