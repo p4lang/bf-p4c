@@ -94,6 +94,7 @@ set (P4_14_EXCLUDE_FILES "parser_dc_full\\.p4" "sai_p4\\.p4"
                             "action_bus1\\.p4"            # max depth limit
                             "06-FullTPHV1\\.p4"           # max depth limit
                             "07-FullTPHV2\\.p4"           # max depth limit
+                            "mau_test_neg_test\\.p4"      # disable power check
                             )
 set (P4_14_SAMPLES "${P4TESTDATA}/p4_14_samples/*.p4")
 bfn_find_tests("${P4_14_SAMPLES}" p4_14_samples EXCLUDE "${P4_14_EXCLUDE_FILES}")
@@ -101,13 +102,16 @@ bfn_find_tests("${P4_14_SAMPLES}" p4_14_samples EXCLUDE "${P4_14_EXCLUDE_FILES}"
 set (P4_14_CUSTOMER "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/customer/*/*.p4")
 bfn_find_tests("${P4_14_CUSTOMER}" p4_14_customer EXCLUDE "${P4_14_EXCLUDE_FILES}")
 
+set (P4_14_COMPILE_ONLY "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/compile_only/*.p4")
+bfn_find_tests("${P4_14_COMPILE_ONLY}" p4_14_compile_only EXCLUDE "${P4_14_EXCLUDE_FILES}")
+
 set (TOFINO_V1_TEST_SUITES
   ${p4_14_samples}
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/*.p4
   # p4_14_samples
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/bf_p4c_samples/*.p4
   # compile_only
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/compile_only/*.p4
+  ${p4_14_compile_only}
   # p4smith regression tests
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/compile_only/p4smith_regression/*.p4
   # customer
@@ -201,6 +205,8 @@ set (TOFINO_TNA_TEST_SUITES
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${TOFINO_TNA_TEST_SUITES}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
 p4c_add_test_label("tofino" "need_scapy" "extensions/p4_tests/p4_16/ptf/options_invalid.p4")
 p4c_add_test_label("tofino" "need_scapy" "extensions/p4_tests/p4_16/ptf/inner_checksum.p4")
+
+p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base\;p414_nightly" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/compile_only/mau_test_neg_test.p4" "-Xp4c=--disable-power-check")
 
 # p4_16/compile_only/p4c-4064.p4
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/p4c-4064.p4" "-Xp4c=--disable-power-check")

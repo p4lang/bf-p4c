@@ -84,3 +84,8 @@ p4c_add_xfail_reason("tofino"
   "table .* and table .* cannot share .*"
   testdata/p4_16_samples/issue2844-enum.p4
   )
+
+p4c_add_xfail_reason("tofino"
+  "error: constant value .* too large for stateful alu"
+  extensions/p4_tests/p4_14/compile_only/mau_test_neg_test.p4
+)

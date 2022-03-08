@@ -488,14 +488,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/mariano_0.p4
 )
 
-# P4C-3019
-# temporary bug in p4c, should be resolved with next p4c update
-p4c_add_xfail_reason("tofino"
-    #"error.*Power worst case estimated budget.*exceeded by.*"
-  "Function type 'resubmit_preserving_field_list' does not match invocation type '<Method call>'"
-  extensions/p4_tests/p4_14/compile_only/mau_test_neg_test.p4
-)
-
 p4c_add_xfail_reason("tofino"
   "Action .* must be rewritten, because it requires too many sources"
   extensions/p4_tests/p4_14/compile_only/14-MultipleActionsInAContainer.p4
@@ -2031,13 +2023,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "AssertionError: Expected packet was not received on device"
   p4c_4158
-)
-
-# needs switchd and/or compiler fix, more details in
-# https://github.com/intel-restricted/networking.switching.barefoot.bf-p4c-compilers/pull/5617#issuecomment-999475972
-p4c_add_xfail_reason("tofino"
-  "Timed out while waiting for switchd to be ready"
-  t2na_static_entry
 )
 
 p4c_add_xfail_reason("tofino"
