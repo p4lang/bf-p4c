@@ -36,10 +36,8 @@ bfrt_template="""
         {
             "chip_family": "",
             "instance": 0,
-            "pcie_sysfs_prefix":
-                "/sys/devices/pci0000:00/0000:00:03.0/0000:05:00.0",
-            "sds_fw_path":
-                "share/tofino_sds_fw/avago/firmware"
+            "pcie_sysfs_prefix": "/sys/devices/pci0000:00/0000:00:03.0/0000:05:00.0",
+            "sds_fw_path": "share/tofino_sds_fw/avago/firmware"
         }
     ],
     "p4_devices": [
@@ -64,7 +62,8 @@ def get_parser():
                         choices=['BF-RT', 'PD', 'P4Runtime'], default='BF-RT',
                         type=str, action='store', required=True)
     parser.add_argument('--device', help='Target device',
-#                        choices=['tofino', 'tofino2', 'tofino2h', 'tofino2m', 'tofino2u'],
+#                        choices=['tofino', 'tofino2', 'tofino2h', 'tofino2m', 'tofino2u',
+#                        'tofino3'],
                         default='tofino', type=str, action='store', required=True)
     parser.add_argument('--name', help='Name of P4 program',
                         type=str, action='store', required=True)
@@ -85,12 +84,32 @@ def get_parser():
                         type=str, required=True)
     return parser
 
+def get_tofino3_subdev_list():
+    return [
+        {
+            "subdev_instance" : 0,
+            "pcie_sysfs_prefix": "/sys/devices/pci0000:00/0000:00:03.0/0000:05:00.0",
+            "cdev_name": "/dev/bf0s0"
+        },
+        {
+            "subdev_instance" : 1,
+            "pcie_sysfs_prefix": "/sys/devices/pci0000:00/0000:00:03.0/0000:06:00.0",
+            "cdev_name": "/dev/bf0s1"
+        }
+    ]
+
 def gen_bfrt_conf(args):
-    MAX_PIPES = 4  # For now this is safe enough
+    if 'tofino3' == args.device:
+        MAX_PIPES = 8
+    else:
+        # 'tofino', 'tofino2', 'tofino2h', 'tofino2m', 'tofino2u'
+        MAX_PIPES = 4
     base_conf = json.loads(bfrt_template)
     # assume one chip
     chip = base_conf["chip_list"][0]
     chip["chip_family"] = args.device
+    if 'tofino3' == args.device:
+        chip["subdev_list"] = get_tofino3_subdev_list()
     # only support one device
     p4_device = base_conf["p4_devices"][0]
     # only support one program
@@ -121,6 +140,8 @@ def gen_pd_conf(args):
     # assume one chip
     chip = base_conf["chip_list"][0]
     chip["chip_family"] = args.device
+    if 'tofino3' == args.device:
+        chip["subdev_list"] = get_tofino3_subdev_list()
     p4_info = base_conf["p4_program_list"][0]
     p4_info["program-name"] = args.name
     # libpath = os.path.join(args.outputdir, 'lib', args.device+'pd', args.name)
