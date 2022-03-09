@@ -80,6 +80,7 @@ template<class T> struct ptrless {
 
 uint64_t bitMask(unsigned size);
 
-int parity(unsigned v);
+int parity(uint32_t v);
+int parity_2b(uint32_t v);  // two-bit parity (parity of pairs in the word)
 
 #endif /* BF_ASM_MISC_H_ */

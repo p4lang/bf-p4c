@@ -76,11 +76,19 @@ uint64_t bitMask(unsigned size) {
     return (UINT64_C(1) << size) - 1;
 }
 
-int parity(unsigned v) {
+int parity(uint32_t v) {
     v ^= v >> 16;
     v ^= v >> 8;
     v ^= v >> 4;
     v ^= v >> 2;
     v ^= v >> 1;
     return v&1;
+}
+
+int parity_2b(uint32_t v) {
+    v ^= v >> 16;
+    v ^= v >> 8;
+    v ^= v >> 4;
+    v ^= v >> 2;
+    return v&3;
 }

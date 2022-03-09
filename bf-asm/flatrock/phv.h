@@ -6,12 +6,13 @@
 class Target::Flatrock::Phv : public Target::Phv {
     friend class ::Phv;
     struct Register : public ::Phv::Register {
-        // 'uid' will be the flatrock PHE address of the first (lowest) byte of the PHE.
+        short   byte;
+        // 'byte' will be the flatrock PHE address of the first (lowest) byte of the PHE.
         // see https://wiki.ith.intel.com/display/ITS51T/Frame+Processing+Pipeline#FrameProcessingPipeline-PHVNumbering    (NOLINT)
-        int parser_id() const override { return uid; }
+        int parser_id() const override { return byte; }
         int mau_id() const override { return uid; }
-        int ixbar_id() const override { return uid; }
-        int deparser_id() const override { return uid; }
+        int ixbar_id() const override { return byte; }
+        int deparser_id() const override { return byte; }
     };
     void init_regs(::Phv &phv) override;
     target_t type() const override { return FLATROCK; }

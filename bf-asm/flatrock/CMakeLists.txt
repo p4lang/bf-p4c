@@ -22,7 +22,15 @@ set_source_files_properties(
   PROPERTIES GENERATED TRUE)
 
 set (BFAS_FLATROCK_SRCS
+  flatrock/instruction.cpp
   flatrock/input_xbar.cpp
+  flatrock/ternary_match.cpp
+  PARENT_SCOPE
+  )
+
+set (BFAS_FLATROCK_HEADERS
+  flatrock/input_xbar.h
+  flatrock/ternary_match.h
   PARENT_SCOPE
   )
 

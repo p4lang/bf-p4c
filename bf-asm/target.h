@@ -74,6 +74,7 @@
     M(bool, GATEWAY_SINGLE_XBAR_GROUP) \
     M(bool, HAS_MPR) \
     M(int, INSTR_SRC2_BITS) \
+    M(int, IMEM_COLORS) \
     M(int, LONG_BRANCH_TAGS) \
     M(int, MATCH_BYTE_16BIT_PAIRS) \
     M(int, MAU_BASE_DELAY) \
@@ -212,6 +213,7 @@ class Target::Tofino : public Target {
         GATEWAY_SINGLE_XBAR_GROUP = true,
         SUPPORT_TRUE_EOP = 0,
         INSTR_SRC2_BITS = 4,
+        IMEM_COLORS = 2,
         LONG_BRANCH_TAGS = 0,
         MAU_BASE_DELAY = 20,
         MAU_BASE_PREDICATION_DELAY = 11,
@@ -345,6 +347,7 @@ class Target::JBay : public Target {
         GATEWAY_SINGLE_XBAR_GROUP = true,
         SUPPORT_TRUE_EOP = 1,
         INSTR_SRC2_BITS = 5,
+        IMEM_COLORS = 2,
         LONG_BRANCH_TAGS = 8,
         MAU_BASE_DELAY = 23,
         MAU_BASE_PREDICATION_DELAY = 13,
@@ -521,6 +524,7 @@ class Target::Cloudbreak : public Target {
         GATEWAY_PAYLOAD_GROUPS = 5,
         GATEWAY_SINGLE_XBAR_GROUP = true,
         INSTR_SRC2_BITS = 5,
+        IMEM_COLORS = 2,
         LONG_BRANCH_TAGS = 8,
         MAU_BASE_DELAY = 23,
         MAU_BASE_PREDICATION_DELAY = 13,
@@ -632,6 +636,7 @@ class Target::Flatrock : public Target {
         GATEWAY_PAYLOAD_GROUPS = 4,
         GATEWAY_SINGLE_XBAR_GROUP = false,
         INSTR_SRC2_BITS = 0,
+        IMEM_COLORS = 4,
         LONG_BRANCH_TAGS = 32,
         MAU_BASE_DELAY = 23,
         MAU_BASE_PREDICATION_DELAY = 13,

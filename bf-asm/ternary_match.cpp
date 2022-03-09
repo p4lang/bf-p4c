@@ -6,6 +6,7 @@
 #include "range.h"
 #include "stage.h"
 #include "tables.h"
+#include "flatrock/ternary_match.h"
 
 Table::Format::Field *TernaryMatchTable::lookup_field(const std::string &n,
          const std::string &act) const {
@@ -395,11 +396,6 @@ static void set_tcam_mode_logical_table(ubits<4> &reg, int tcam_id, int logical_
 static void set_tcam_mode_logical_table(ubits<8> &reg, int tcam_id, int logical_id) {
     reg |= 1U << tcam_id; }
 
-#if HAVE_FLATROCK
-template<> void TernaryMatchTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
-    error(lineno, "%s:%d: Flatrock ternary match not implemented yet!", __FILE__, __LINE__);
-}
-#endif  /* HAVE_FLATROCK */
 template<class REGS> void TernaryMatchTable::write_regs_vt(REGS &regs) {
     LOG1("### Ternary match table " << name() << " write_regs " << loc());
     MatchTable::write_regs(regs, 1, indirect);
@@ -1083,11 +1079,6 @@ void TernaryIndirectTable::pass3() {
     if (action_bus) action_bus->pass3(this);
 }
 
-#if HAVE_FLATROCK
-template<> void TernaryIndirectTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
-    error(lineno, "%s:%d: Flatrock ternary indirect not implemented yet!", __FILE__, __LINE__);
-}
-#endif  /* HAVE_FLATROCK */
 template<class REGS> void TernaryIndirectTable::write_regs_vt(REGS &regs) {
     LOG1("### Ternary indirect table " << name() << " write_regs");
     int tcam_id = match_table->tcam_id;

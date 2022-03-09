@@ -216,10 +216,21 @@ set (CPPLINT_FILES
   ${REFLOW_SOURCES}
   ${MKSIZE_SOURCES}
   ${BFAS_COMMON_SOURCES}
+  ${BFAS_TOFINO_SRCS}
+  ${BFAS_JBAY_SRCS}
+  ${BFAS_CLOUDBREAK_SRCS}
+  ${BFAS_FLATROCK_SRCS}
   ${BFAS_UTIL_HEADERS}
   ${BFAS_COMMON_HEADERS}
+  ${BFAS_TOFINO_HEADERS}
+  ${BFAS_JBAY_HEADERS}
+  ${BFAS_CLOUDBREAK_HEADERS}
+  ${BFAS_FLATROCK_HEADERS}
   )
 list(REMOVE_ITEM CPPLINT_FILES vector.c)
+# FIXME -- somehow unified generated files end up in the list.  This FILTER should remove
+# them but requires cmake 3.6 or later  !?#!cmake
+#list(FILTER CPPLINT_FILES EXCLUDE REGEX /unified_)
 
 add_custom_command(OUTPUT lex-yaml.c
   COMMAND ${FLEX_EXECUTABLE} -t ${CMAKE_CURRENT_SOURCE_DIR}/lex-yaml.l > lex-yaml.c
@@ -292,7 +303,7 @@ add_custom_target(check-sanity
   ./runtests *.p4)
 
 set (CPPLINT_CMD ${BFN_P4C_SOURCE_DIR}/p4c/tools/cpplint.py)
-set (CPPLINT_ARGS --root=${BFASM_SOURCE_DIR} --extensions=h,hpp,cpp,ypp,l)
+set (CPPLINT_ARGS --root=${BFASM_SOURCE_DIR}/.. --extensions=h,hpp,cpp,ypp,l)
 add_custom_target(cpplint-asm
   COMMAND ${CPPLINT_CMD} ${CPPLINT_ARGS} ${CPPLINT_FILES}
   WORKING_DIRECTORY ${BFASM_SOURCE_DIR}

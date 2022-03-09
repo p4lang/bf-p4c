@@ -581,7 +581,8 @@ struct VLIWInstruction : Instruction {
 #include "cloudbreak/instruction.cpp"                           // NOLINT(build/include)
 #endif  /* HAVE_CLOUDBREAK */
 #if HAVE_FLATROCK
-#include "flatrock/instruction.cpp"                             // NOLINT(build/include)
+void VLIWInstruction::write_regs(Target::Flatrock::mau_regs &, Table *, Table::Actions::Action *) {
+    BUG("wrong instruction class for Flatrock"); }
 #endif  /* HAVE_FLATROCK */
 
 struct AluOP : VLIWInstruction {
@@ -599,10 +600,12 @@ struct AluOP : VLIWInstruction {
         : Instruction::Decode(n, targ), name(n), opcode(opc),
           swap_args(flgs & Commutative ? this : 0),
           ignoresSrc1(flgs & IgnoreSrc1), ignoresSrc2(flgs & IgnoreSrc2)  {}
-        Decode(const char *n, std::set<target_t> targ, unsigned opc, int flgs = 0)
+        Decode(const char *n, std::set<target_t> targ, unsigned opc, int flgs = 0,
+               const char *alias_name = 0)
         : Instruction::Decode(n, targ), name(n), opcode(opc),
           swap_args(flgs & Commutative ? this : 0),
-          ignoresSrc1(flgs & IgnoreSrc1), ignoresSrc2(flgs & IgnoreSrc2)  {}
+          ignoresSrc1(flgs & IgnoreSrc1), ignoresSrc2(flgs & IgnoreSrc2)  {
+            if (alias_name) alias(alias_name); }
         Decode(const char *n, unsigned opc, int flgs, Decode *sw, const char *alias_name = 0)
         : Instruction::Decode(n), name(n), opcode(opc), swap_args(sw),
           ignoresSrc1(flgs & IgnoreSrc1), ignoresSrc2(flgs & IgnoreSrc2) {
@@ -619,6 +622,12 @@ struct AluOP : VLIWInstruction {
         Decode(const char *n, std::set<target_t> targ, unsigned opc, Decode *sw,
                const char *alias_name = 0)
         : Instruction::Decode(n, targ), name(n), opcode(opc), swap_args(sw) {
+            if (sw && !sw->swap_args) sw->swap_args = this;
+            if (alias_name) alias(alias_name); }
+        Decode(const char *n, std::set<target_t> targ, unsigned opc, int flgs, Decode *sw,
+               const char *alias_name = 0)
+        : Instruction::Decode(n, targ), name(n), opcode(opc), swap_args(sw),
+          ignoresSrc1(flgs & IgnoreSrc1), ignoresSrc2(flgs & IgnoreSrc2) {
             if (sw && !sw->swap_args) sw->swap_args = this;
             if (alias_name) alias(alias_name); }
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
@@ -774,7 +783,7 @@ bool AluOP::equiv(Instruction *a_) {
 
 struct LoadConst : VLIWInstruction {
     struct Decode : Instruction::Decode {
-        explicit Decode(const char *n) : Instruction::Decode(n) {}
+        Decode(const char *n, std::set<target_t> targ) : Instruction::Decode(n, targ) {}
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                             const VECTOR(value_t) &op) const override;
     };
@@ -1170,7 +1179,7 @@ bool DepositField::equiv(Instruction *a_) {
 struct Set : VLIWInstruction {
     struct Decode : Instruction::Decode {
         std::string name;
-        explicit Decode(const char *n) : Instruction::Decode(n), name(n) {}
+        Decode(const char *n, std::set<target_t> targ) : Instruction::Decode(n, targ), name(n) {}
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                             const VECTOR(value_t) &op) const override;
     };
@@ -1319,8 +1328,8 @@ struct ShiftOP : VLIWInstruction {
         unsigned opcode;
         bool use_src1;
         const Decode *swap_args;
-        Decode(const char *n, unsigned opc, bool funnel = false)
-        : Instruction::Decode(n), name(n), opcode(opc), use_src1(funnel) {}
+        Decode(const char *n, std::set<target_t> targ, unsigned opc, bool funnel = false)
+        : Instruction::Decode(n, targ), name(n), opcode(opc), use_src1(funnel) {}
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                             const VECTOR(value_t) &op) const override;
     } *opc;
@@ -1400,44 +1409,53 @@ bool ShiftOP::equiv(Instruction *a_) {
     }
 }
 
+static std::set<target_t>   tofino123 = std::set<target_t>({TOFINO,
+#if HAVE_JBAY
+    JBAY,
+#endif
+#if HAVE_CLOUDBREAK
+    CLOUDBREAK,
+#endif
+});
+
 // lifted from MAU uArch 15.1.6
 // If the operation is commutative operand swap is enabled
-//                                   OPNAME       OPCODE
-static AluOP::Decode     opADD      ("add",       0x23e,  AluOP::Commutative),                      // NOLINT
-                         opADDC     ("addc",      0x2be,  AluOP::Commutative),                      // NOLINT
-                         opSUB      ("sub",       0x33e),                                           // NOLINT
-                         opSUBC     ("subc",      0x3be),                                           // NOLINT
-                         opSADDU    ("saddu",     0x03e,  AluOP::Commutative),                      // NOLINT
-                         opSADDS    ("sadds",     0x07e,  AluOP::Commutative),                      // NOLINT
-                         opSSUBU    ("ssubu",     0x0be),                                           // NOLINT
-                         opSSUBS    ("ssubs",     0x0fe),                                           // NOLINT
-                         opMINU     ("minu",      0x13e,  AluOP::Commutative),                      // NOLINT
-                         opMINS     ("mins",      0x17e,  AluOP::Commutative),                      // NOLINT
-                         opMAXU     ("maxu",      0x1be,  AluOP::Commutative),                      // NOLINT
-                         opMAXS     ("maxs",      0x1fe,  AluOP::Commutative),                      // NOLINT
-                         opSETZ     ("setz",      0x01e,  AluOP::Commutative+AluOP::IgnoreSrcs),    // NOLINT
-                         opNOR      ("nor",       0x05e,  AluOP::Commutative),                      // NOLINT
-                         opANDCA    ("andca",     0x09e),                                           // NOLINT
-                         opANDCB    ("andcb",     0x11e,  &opANDCA),                                // NOLINT
-                         opNOTB     ("notb",      0x15e,  AluOP::IgnoreSrc1,  "not"),               // NOLINT
-                         opNOTA     ("nota",      0x0de,  AluOP::IgnoreSrc2,  &opNOTB),             // NOLINT
-                         opXOR      ("xor",       0x19e,  AluOP::Commutative),                      // NOLINT
-                         opNAND     ("nand",      0x1de,  AluOP::Commutative),                      // NOLINT
-                         opAND      ("and",       0x21e,  AluOP::Commutative),                      // NOLINT
-                         opXNOR     ("xnor",      0x25e,  AluOP::Commutative),                      // NOLINT
-                         opB        ("alu_b",     0x29e,  AluOP::IgnoreSrc1),                       // NOLINT
-                         opORCA     ("orca",      0x2de),                                           // NOLINT
-                         opA        ("alu_a",     0x31e,  AluOP::IgnoreSrc2,  &opB),                // NOLINT
-                         opORCB     ("orcb",      0x35e,  &opORCA),                                 // NOLINT
-                         opOR       ("or",        0x39e,  AluOP::Commutative),                      // NOLINT
-                         opSETHI    ("sethi",     0x3de,  AluOP::Commutative+AluOP::IgnoreSrcs);    // NOLINT
-static LoadConst::Decode opLoadConst("load-const");                                                 // NOLINT
-static Set::Decode       opSet      ("set");                                                        // NOLINT
-static NulOP::Decode     opNoop     ("noop",        0x0);                                           // NOLINT
-static ShiftOP::Decode   opSHL      ("shl",        0x0c,       false),                              // NOLINT
-                         opSHRS     ("shrs",       0x1c,       false),                              // NOLINT
-                         opSHRU     ("shru",       0x14,       false),                              // NOLINT
-                         opFUNSHIFT ("funnel-shift",0x4,       true);                               // NOLINT
+//                                   OPNAME              OPCODE
+static AluOP::Decode     opADD      ("add",   tofino123, 0x23e,  AluOP::Commutative),               // NOLINT
+                         opADDC     ("addc",  tofino123, 0x2be,  AluOP::Commutative),               // NOLINT
+                         opSUB      ("sub",   tofino123, 0x33e),                                    // NOLINT
+                         opSUBC     ("subc",  tofino123, 0x3be),                                    // NOLINT
+                         opSADDU    ("saddu", tofino123, 0x03e,  AluOP::Commutative),               // NOLINT
+                         opSADDS    ("sadds", tofino123, 0x07e,  AluOP::Commutative),               // NOLINT
+                         opSSUBU    ("ssubu", tofino123, 0x0be),                                    // NOLINT
+                         opSSUBS    ("ssubs", tofino123, 0x0fe),                                    // NOLINT
+                         opMINU     ("minu",  tofino123, 0x13e,  AluOP::Commutative),               // NOLINT
+                         opMINS     ("mins",  tofino123, 0x17e,  AluOP::Commutative),               // NOLINT
+                         opMAXU     ("maxu",  tofino123, 0x1be,  AluOP::Commutative),               // NOLINT
+                         opMAXS     ("maxs",  tofino123, 0x1fe,  AluOP::Commutative),               // NOLINT
+                         opSETZ     ("setz",  tofino123, 0x01e,  AluOP::Commutative+AluOP::IgnoreSrcs), // NOLINT
+                         opNOR      ("nor",   tofino123, 0x05e,  AluOP::Commutative),               // NOLINT
+                         opANDCA    ("andca", tofino123, 0x09e),                                    // NOLINT
+                         opANDCB    ("andcb", tofino123, 0x11e,  &opANDCA),                         // NOLINT
+                         opNOTB     ("notb",  tofino123, 0x15e,  AluOP::IgnoreSrc1,  "not"),        // NOLINT
+                         opNOTA     ("nota",  tofino123, 0x0de,  AluOP::IgnoreSrc2,  &opNOTB),      // NOLINT
+                         opXOR      ("xor",   tofino123, 0x19e,  AluOP::Commutative),               // NOLINT
+                         opNAND     ("nand",  tofino123, 0x1de,  AluOP::Commutative),               // NOLINT
+                         opAND      ("and",   tofino123, 0x21e,  AluOP::Commutative),               // NOLINT
+                         opXNOR     ("xnor",  tofino123, 0x25e,  AluOP::Commutative),               // NOLINT
+                         opB        ("alu_b", tofino123, 0x29e,  AluOP::IgnoreSrc1),                // NOLINT
+                         opORCA     ("orca",  tofino123, 0x2de),                                    // NOLINT
+                         opA        ("alu_a", tofino123, 0x31e,  AluOP::IgnoreSrc2,  &opB),         // NOLINT
+                         opORCB     ("orcb",  tofino123, 0x35e,  &opORCA),                          // NOLINT
+                         opOR       ("or",    tofino123, 0x39e,  AluOP::Commutative),               // NOLINT
+                         opSETHI    ("sethi", tofino123, 0x3de,  AluOP::Commutative+AluOP::IgnoreSrcs); // NOLINT
+static LoadConst::Decode opLoadConst("load-const", tofino123);                                      // NOLINT
+static Set::Decode       opSet      ("set", tofino123);                                             // NOLINT
+static NulOP::Decode     opNoop     ("noop",  tofino123, 0x0);                                      // NOLINT
+static ShiftOP::Decode   opSHL      ("shl",   tofino123, 0x0c,       false),                        // NOLINT
+                         opSHRS     ("shrs",  tofino123, 0x1c,       false),                        // NOLINT
+                         opSHRU     ("shru",  tofino123, 0x14,       false),                        // NOLINT
+                         opFUNSHIFT ("funnel-shift",tofino123,0x4,   true);                         // NOLINT
 static DepositField::Decode opDepositField;
 static ByteRotateMerge::Decode opByteRotateMerge;
 
