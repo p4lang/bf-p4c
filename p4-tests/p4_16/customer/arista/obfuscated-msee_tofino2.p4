@@ -1399,7 +1399,7 @@ control Crown(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrins
     @name(".Potosi") action Potosi() {
         Peoria.Masontown.Brainard = (bit<1>)1w1;
     }
-    @disable_atomic_modify(1) @name(".Mulvane") table Mulvane {
+    @placement_priority(- 50) @disable_atomic_modify(1) @name(".Mulvane") table Mulvane {
         actions = {
             Vanoss();
             Potosi();

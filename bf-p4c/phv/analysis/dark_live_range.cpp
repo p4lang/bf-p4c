@@ -76,8 +76,6 @@ Visitor::profile_t DarkLiveRange::init_apply(const IR::Node* root) {
     doNotInitTables.clear();
     non_dark_refs.clear();
     BUG_CHECK(dg.finalized, "Dependence graph is not populated.");
-    LOG_DEBUG3("Printing dependency graph");
-    LOG_DEBUG3(dg);
     // For each use of the field, parser implies stage `dg.max_min_stage + 2`, deparser implies
     // stage `dg.max_min_stage + 1` (12 for Tofino), and a table implies the corresponding
     // dg.min_stage.
@@ -174,20 +172,20 @@ void DarkLiveRange::setFieldLiveMap(const PHV::Field* f) {
             use_unit->to<IR::BFN::GhostParser>()) {
             // Ignore parser use if field is marked as not parsed.
             if (notParsedFields.count(f)) {
-                LOG_DEBUG4(TAB1 "Ignoring field " << f << " use in parser");
+                LOG_DEBUG4(TAB1 "  Ignoring field " << f << " use in parser");
                 continue;
             }
-            LOG_DEBUG4(TAB1 "Used in parser.");
+            LOG_DEBUG4(TAB1 "  Used in parser.");
             livemap.addAccess(f, PARSER, READ, use_unit, false);
         } else if (use_unit->is<IR::BFN::Deparser>()) {
             // Ignore deparser use if field is marked as not deparsed.
             if (notDeparsedFields.count(f)) continue;
-            LOG_DEBUG4(TAB1 "Used in deparser.");
+            LOG_DEBUG4(TAB1 "  Used in deparser.");
             livemap.addAccess(f, DEPARSER, READ, use_unit, false);
         } else if (use_unit->is<IR::MAU::Table>()) {
             const auto* t = use_unit->to<IR::MAU::Table>();
             int use_stage = dg.min_stage(t);
-            LOG_DEBUG4(TAB1 "Used in stage " << use_stage << " in table " << t->name);
+            LOG_DEBUG4(TAB1 "  Used in stage " << use_stage << " in table " << t->name);
             livemap.addAccess(f, use_stage, READ, use_unit, !defuse.hasNonDarkContext(use));
             if (!defuse.hasNonDarkContext(use)) LOG_DEBUG4("\t\tCan use in a dark container.");
         } else {
@@ -202,7 +200,7 @@ void DarkLiveRange::setFieldLiveMap(const PHV::Field* f) {
         // compiler-inserted parser initialization.
         if (noInitFields.count(f)) {
             if (def.second->is<ImplicitParserInit>()) {
-                LOG_DEBUG4("Ignoring def of field " << f << " with uninitialized read and def in "
+                LOG_DEBUG4("  Ignoring def of field " << f << " with uninitialized read and def in "
                            "parser state " << DBPrint::Brief << def_unit);
                 continue;
             }
@@ -212,24 +210,24 @@ void DarkLiveRange::setFieldLiveMap(const PHV::Field* f) {
         if (def_unit->is<IR::BFN::ParserState>() || def_unit->is<IR::BFN::Parser>() ||
             def_unit->to<IR::BFN::GhostParser>()) {
             if (def.second->is<ImplicitParserInit>()) {
-                LOG_DEBUG4(TAB2 "Ignoring implicit parser init.");
+                LOG_DEBUG4(TAB2 "  Ignoring implicit parser init.");
                 continue;
             }
-            if (notParsedFields.count(f))
-                LOG_DEBUG4(TAB2 "Ignoring because field set to not parsed");
-            if (!notParsedFields.count(f) && !(f->bridged && f->gress == INGRESS)) {
-                LOG_DEBUG4(TAB1 "Field defined in parser.");
+            if (notParsedFields.count(f)) {
+                LOG_DEBUG4(TAB2 "  Ignoring because field set to not parsed");
+            } else {
+                LOG_DEBUG4(TAB1 "  Field defined in parser.");
                 livemap.addAccess(f, PARSER, WRITE, def_unit, false);
                 continue;
             }
         } else if (def_unit->is<IR::BFN::Deparser>()) {
             if (notDeparsedFields.count(f)) continue;
-            LOG_DEBUG4(TAB1 "Defined in deparser.");
+            LOG_DEBUG4(TAB1 "  Defined in deparser.");
             livemap.addAccess(f, DEPARSER, WRITE, def_unit, false);
         } else if (def_unit->is<IR::MAU::Table>()) {
             const auto* t = def_unit->to<IR::MAU::Table>();
             int def_stage = dg.min_stage(t);
-            LOG_DEBUG4(TAB1 "Defined in stage " << def_stage << " in table " << t->name);
+            LOG_DEBUG4(TAB1 "  Defined in stage " << def_stage << " in table " << t->name);
             livemap.addAccess(f, def_stage, WRITE, def_unit,
                     !non_dark_refs[def]);
             if (!non_dark_refs[def]) LOG_DEBUG4(TAB2 "Can use in a dark container");
@@ -957,32 +955,6 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
         // move the existing contents of container c to a dark container.
         ++idx;
         lastField = &info;
-    }
-
-    // XXX(yumin): fix dark Init nodes: NOP should not overwrite parser read.
-    // it should be fixed somewhere right above.
-    // XXX(alex): The issue is related with aliased fields for which the defuse analysis
-    //            regarding parser state references is not correct. In particular
-    //            an aliased field is reported to have implicit parser def rather explicit
-    //            ones and thus its liverange does not start from the parser.
-    //            This probably happens during the pass Alias which replaces the alias sources
-    //            with the alias destinations and screws the parser references.
-    //            So leaving this hack until Alias is fixed.
-    for (auto& entry : rv) {
-        if (!entry.isNOP()) continue;
-        auto *new_fld = entry.getDestinationSlice().field();
-        const auto& new_earliest = entry.getDestinationSlice().getEarliestLiveness();
-        if (new_earliest.first != 0) continue;
-        const auto new_slice = PHV::FieldSlice(new_fld,
-                                               entry.getDestinationSlice().field_slice());
-        for (const auto& slice : fields) {
-            const auto prev_slice = PHV::FieldSlice(slice.field(), slice.field_slice());
-            const auto prev_earliest = slice.getEarliestLiveness();
-            if (new_slice == prev_slice && new_earliest > prev_earliest) {
-                entry.setDestinationEarliestLiveness(prev_earliest);
-                LOG_DEBUG5(TAB1 "Updating earliest liverange for darkinit " << entry);
-            }
-        }
     }
 
     return rv;

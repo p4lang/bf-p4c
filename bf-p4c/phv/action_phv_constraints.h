@@ -1080,7 +1080,7 @@ class ActionPhvConstraints : public Inspector {
      */
     ActionSources getActionSources(
             const IR::MAU::Action* act, const PHV::Container& c,
-            std::vector<PHV::AllocSlice>& new_slices,
+            ordered_set<PHV::AllocSlice>& new_slices,
             const PHV::Allocation& alloc) const;
 
     /** Checks whether packing @p slices into a container will violate MAU action constraints for

@@ -3108,7 +3108,7 @@ control Upalco(inout Dacono Baker, inout Empire Glenoma, in egress_intrinsic_met
         const default_action = Alnwick(32w0, 32w0);
         size = 65536;
     }
-    @use_hash_action(1) @disable_atomic_modify(1) @stage(1) @name(".Fosston") table Fosston {
+    @use_hash_action(1) @disable_atomic_modify(1) @name(".Fosston") table Fosston {
         actions = {
             Alnwick();
         }
@@ -9035,7 +9035,7 @@ control Mizpah(inout Dacono Baker, inout Empire Glenoma, in ingress_intrinsic_me
         const default_action = Flippen();
         size = 157696;
     }
-    @idletime_precision(1) @immediate(0) @disable_atomic_modify(1) @placement_priority(".Belfalls") @name(".Laclede") table Laclede {
+    @idletime_precision(1) @immediate(0) @disable_atomic_modify(1) @name(".Laclede") table Laclede {
         actions = {
             @tableonly Weathers();
             @defaultonly Flippen();

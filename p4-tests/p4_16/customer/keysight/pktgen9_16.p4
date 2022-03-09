@@ -289,6 +289,8 @@ struct header_t {
 @pa_container_size("ingress", "ig_md.rx_packet_timestamp.lower", 32)
 @pa_container_size("ingress", "ig_md.rx_packet_timestamp.upper", 32)
 @pa_container_size("ingress", "ig_md.pgid_pipe_port_index", 16)
+// Adding this temporarily until P4C-4350 is fixed
+@pa_no_overlay("ingress", "ig_md.lat_to_mem")
 
 # 51 "../pktgen9/pktgen9_16.p4" 2
 # 1 "../pktgen9/bank_select.p4" 1

@@ -4054,6 +4054,8 @@ control process_tx_instrum(inout header_t hdr, inout egress_metadata_t eg_md, in
 
   @pa_no_overlay("egress","hdr.outer_ipv4.srcAddr")
   @pa_no_overlay("egress","hdr.outer_ipv4.dstAddr")
+  // Adding this temporarily until P4C-4350 is fixed
+  @pa_no_overlay("ingress", "ig_md.lat_to_mem")
 
 
 control process_udf_vlist_mac_ip(inout header_t hdr, in egress_intrinsic_metadata_t eg_intr_md, inout egress_metadata_t eg_md) {

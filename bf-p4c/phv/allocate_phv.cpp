@@ -2119,7 +2119,7 @@ bool CoreAllocation::try_metadata_overlay(
     boost::optional<ordered_set<PHV::AllocSlice>> &allocedSlices,
     const PHV::AllocSlice &slice,
     boost::optional<PHV::Allocation::LiveRangeShrinkingMap> &initNodes,
-    std::vector<PHV::AllocSlice> &new_candidate_slices,
+    ordered_set<PHV::AllocSlice> &new_candidate_slices,
     ordered_set<PHV::AllocSlice> &metaInitSlices,
     PHV::Allocation::LiveRangeShrinkingMap &initActions,
     PHV::Transaction &perContainerAlloc,
@@ -2192,7 +2192,7 @@ bool CoreAllocation::try_dark_overlay(
     PHV::Transaction &perContainerAlloc,
     const PHV::Container& c,
     std::vector<PHV::AllocSlice> &candidate_slices,
-    std::vector<PHV::AllocSlice> &new_candidate_slices,
+    ordered_set<PHV::AllocSlice> &new_candidate_slices,
     bool &new_overlay_container,
     ordered_set<PHV::AllocSlice> &metaInitSlices,
     const PHV::ContainerGroup& group,
@@ -2258,7 +2258,7 @@ bool CoreAllocation::check_metadata_and_dark_overlay(
     const PHV::Container& c,
     std::vector<PHV::AllocSlice> &complex_overlay_slices,
     std::vector<PHV::AllocSlice> &candidate_slices,
-    std::vector<PHV::AllocSlice> &new_candidate_slices,
+    ordered_set<PHV::AllocSlice> &new_candidate_slices,
     PHV::Transaction &perContainerAlloc,
     ordered_map<const PHV::AllocSlice, OverlayInfo> &overlay_info,
     boost::optional<PHV::Allocation::LiveRangeShrinkingMap> &initNodes,
@@ -2446,18 +2446,17 @@ bool CoreAllocation::find_previous_allocation(
     // Set previous_container to the container provided as part of start_positions, if any.
     LOG_FEATURE("alloc_progress", 5, "\nTrying to allocate slices at container indices:");
     for (auto& slice : slices) {
-        if (LOGGING(5)) {
-            LOG_DEBUG5(TAB1 << start_positions.at(slice).bitPosition << ": " << slice);
-            if (start_positions.at(slice).container)
-                LOG_DEBUG5(TAB2 "(Required container: "
-                           << *(start_positions.at(slice).container) << ")");
-        }
+        LOG_FEATURE("alloc_progress", 5, TAB1 << start_positions.at(slice).bitPosition << ": " <<
+                    slice);
+        if (start_positions.at(slice).container)
+            LOG_FEATURE("alloc_progress", 5, TAB2 "(Required container: "
+                        << *(start_positions.at(slice).container) << ")");
         if (start_positions.at(slice).container) {
             PHV::Container slice_prev_cont = *(start_positions.at(slice).container);
             if (previous_container == PHV::Container()) {
                 previous_container = slice_prev_cont;
             } else if (previous_container != slice_prev_cont) {
-                LOG5("mixed previous containers for one slice list: "
+                LOG_FEATURE("alloc_progress", 5, "mixed previous containers for one slice list: "
                      << previous_container << " and " << slice_prev_cont);
                 return false;
             }
@@ -2637,7 +2636,7 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
         // Check that there's space.
         // Results of metadata initialization. This is a map of field to the initialization actions
         // determined by FindInitializationNode methods.
-        std::vector<PHV::AllocSlice> new_candidate_slices;
+        ordered_set<PHV::AllocSlice> new_candidate_slices;
         boost::optional<PHV::Allocation::LiveRangeShrinkingMap> initNodes = boost::none;
         boost::optional<ordered_set<PHV::AllocSlice>> allocedSlices = boost::none;
         // The metadata slices that require initialization after live range shrinking.
@@ -2685,13 +2684,13 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
                 control_flow_overlay, physical_liverange_overlay, metadataOverlay, darkOverlay};
             /// 1. no overlapped slice.
             if (alloced_slices.empty()) {
-                new_candidate_slices.push_back(slice);
+                new_candidate_slices.insert(slice);
                 continue;
             }
             /// 2. directly overlaid.
             if (control_flow_overlay || physical_liverange_overlay) {
                 LOG_DEBUG5(TAB1 "Can overlay " << slice << " on " << alloced_slices);
-                new_candidate_slices.push_back(slice);
+                new_candidate_slices.insert(slice);
                 continue;
             }
             complex_overlay_slices.push_back(slice);
@@ -2703,11 +2702,9 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
 
         if ((new_candidate_slices.size() > 0) ||
             (new_overlay_container && (metaInitSlices.size() > 0))) {
-            candidate_slices = new_candidate_slices;
-            if (new_overlay_container) {
-                for (auto& sl : metaInitSlices)
-                    candidate_slices.push_back(sl);
-            }
+            candidate_slices.clear();
+            for (auto sl : new_candidate_slices)
+                candidate_slices.push_back(sl);
         }
 
         if (LOGGING(5) && metaInitSlices.size() > 0) {
@@ -2865,7 +2862,7 @@ bool CoreAllocation::generateNewAllocSlices(
         const PHV::AllocSlice& origSlice,
         const ordered_set<PHV::AllocSlice>& alloced_slices,
         PHV::DarkInitMap& slices,
-        std::vector<PHV::AllocSlice>& new_candidate_slices,
+        ordered_set<PHV::AllocSlice>& new_candidate_slices,
         PHV::Transaction& alloc_attempt,
         const PHV::Allocation::MutuallyLiveSlices& container_state) const {
     std::vector<PHV::AllocSlice> initializedAllocSlices;
@@ -2925,11 +2922,14 @@ bool CoreAllocation::generateNewAllocSlices(
     LOG_DEBUG5(TAB2 "Original candidate slice: " << origSlice);
     bool foundAnyNewSliceForThisOrigSlice = false;
     PHV::Container dstCntr = origSlice.container();
-    std::vector<PHV::AllocSlice> new_container_state(container_state.begin(),
-                                                     container_state.end());
+    ordered_set<PHV::AllocSlice> new_container_state;
+    new_container_state.insert(container_state.begin(), container_state.end());
     for (auto sl : new_candidate_slices)
         if (sl.container() == dstCntr)
-            new_container_state.push_back(sl);
+            new_container_state.insert(sl);
+    LOG_DEBUG5("  New Container State:");
+    for (auto sl : new_container_state) LOG_DEBUG5(TAB1 << sl);
+
     // Create mapping from sources of writes to bitranges for each stage
     std::map<int, std::map<PHV::Container, bitvec> > perStageSources2Ranges;
     for (auto& newSlice : initializedAllocSlices) {
@@ -2955,11 +2955,8 @@ bool CoreAllocation::generateNewAllocSlices(
             }
         }
 
-        if (!origSlice.representsSameFieldSlice(newSlice)) continue;
-        LOG_DEBUG5(TAB2 "Found new slice: " << newSlice);
-
-        perStageSources2Ranges[initStg][srcCntr].setrange(cBits.lo,
-                                                          cBits.size());
+        if (!origSlice.representsSameFieldSlice(newSlice))
+            LOG_DEBUG5(TAB2 "Found new slice: " << newSlice);
 
         if (new_container_state.size() > 1) {
             for (auto mls : new_container_state) {
@@ -3088,7 +3085,7 @@ bool CoreAllocation::generateNewAllocSlices(
     }
 
     if (!foundAnyNewSliceForThisOrigSlice) rv.push_back(origSlice);
-    for (auto& slice : rv) new_candidate_slices.push_back(slice);
+    for (auto& slice : rv) new_candidate_slices.insert(slice);
     LOG_DEBUG5(TAB2 "New candidate slices:");
     for (auto& slice : new_candidate_slices) LOG_DEBUG5(TAB3 << slice);
     ordered_set<PHV::AllocSlice> toBeRemovedFromAlloc;
@@ -3119,6 +3116,14 @@ bool CoreAllocation::generateNewAllocSlices(
         }
         if (!foundAnyNewSliceForThisAllocatedSlice)
             LOG_DEBUG5(TAB4 "Did not find any new slice. So stick with the existing one.");
+    }
+
+    // Check if new_candidate_slices contains slice that are to be removed
+    for (auto rmv_sl : toBeRemovedFromAlloc) {
+        if (new_candidate_slices.count(rmv_sl)) {
+            new_candidate_slices.erase(rmv_sl);
+            LOG_DEBUG5(TAB3 "Removed " << rmv_sl << " from new_candidate_slices");
+        }
     }
     alloc_attempt.removeAllocatedSlice(toBeRemovedFromAlloc);
     for (auto& slice : toBeAddedToAlloc) {
@@ -5216,7 +5221,7 @@ BruteForceAllocationStrategy::tryVariousSlicing(
             return false;
         }
         if (LOGGING(4)) {
-            LOG_DEBUG4("Slicing attempt: " << n_tried);
+            LOG_FEATURE("alloc_process", 4, "Slicing attempt: " << n_tried);
             for (auto* sc : slicing)
                 LOG_DEBUG4(sc);
         }

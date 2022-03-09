@@ -204,10 +204,6 @@ int ComputeDarkInitialization::ARA_table_id = 0;
 
 bool ComputeDarkInitialization::use_same_containers(PHV::AllocSlice alloc_sl,
                                                     IR::MAU::Table *&ara_tbl) {
-    // If dest/src containers match we will provide the ARA table;
-    // So the ARA table expected to be nullptr
-    // BUG_CHECK(ara_tbl == nullptr, "Provided ARA table %1%", ara_tbl->name);
-
     bool share_both_containers = false;
     auto dst_cntr = alloc_sl.container();
     bool has_src = !(!alloc_sl.getInitPrimitive().getSourceSlice());
@@ -218,7 +214,7 @@ bool ComputeDarkInitialization::use_same_containers(PHV::AllocSlice alloc_sl,
         LOG4("\tCurrent AllocSlice source container: " << src_cntr);
 
     for (auto drkInit : darkInitToARA) {
-        LOG4("\t Container sharing checks with ARA " << drkInit.second->name);
+        LOG4("\t Check container sharing with ARA " << drkInit.second->name);
 
         // Handle dependences between spills/writebacks of different
         // fields to/from the same containers
@@ -258,7 +254,7 @@ bool ComputeDarkInitialization::use_same_containers(PHV::AllocSlice alloc_sl,
     return share_both_containers;
 }
 
-void ComputeDarkInitialization::createAlwaysRunTable(const PHV::AllocSlice& alloc_sl) {
+void ComputeDarkInitialization::createAlwaysRunTable(PHV::AllocSlice& alloc_sl) {
     std::set<UniqueId> prior_tables;
     std::set<UniqueId> post_tables;
     bool use_existing_ara = false;
@@ -267,7 +263,8 @@ void ComputeDarkInitialization::createAlwaysRunTable(const PHV::AllocSlice& allo
     IR::MAU::Action *act = nullptr;
     cstring act_name;
     gress_t ara_gress = alloc_sl.field()->gress;
-    auto prev_sl = alloc_sl.getInitPrimitive().getSourceSlice();
+    auto &init_prim = alloc_sl.getInitPrimitive();
+    auto *prev_sl = init_prim.getSourceSlice();
     std::pair<std::set<UniqueId>, std::set<UniqueId>> constraints;
 
     // 1A. Check if multiple primitives need to be added into the same ARA table
@@ -276,9 +273,9 @@ void ComputeDarkInitialization::createAlwaysRunTable(const PHV::AllocSlice& allo
     // ---
     LOG4("\t ARA for slice: " <<  alloc_sl);
 
-    LOG4("\tPrior ARAs:" << alloc_sl.getInitPrimitive().getARApriorPrims().size());
+    LOG4("\tPrior ARAs:" << init_prim.getARApriorPrims().size());
 
-    for (auto *priorARA : alloc_sl.getInitPrimitive().getARApriorPrims()) {
+    for (auto *priorARA : init_prim.getARApriorPrims()) {
         LOG4("\t\t " << *priorARA);
 
         if (darkInitToARA.count(*priorARA)) {
@@ -290,11 +287,11 @@ void ComputeDarkInitialization::createAlwaysRunTable(const PHV::AllocSlice& allo
         }
     }
 
-    LOG4("\tPost ARAs:" << alloc_sl.getInitPrimitive().getARApostPrims().size());
-    BUG_CHECK(alloc_sl.getInitPrimitive().getARApostPrims().size() < 2,
+    LOG4("\tPost ARAs:" << init_prim.getARApostPrims().size());
+    BUG_CHECK(init_prim.getARApostPrims().size() < 2,
               "More than one post prims?");
 
-    for (auto *postARA : alloc_sl.getInitPrimitive().getARApostPrims()) {
+    for (auto *postARA : init_prim.getARApostPrims()) {
         LOG4("\t\t " << *postARA);
 
         if (darkInitToARA.count(*postARA)) {
@@ -348,21 +345,42 @@ void ComputeDarkInitialization::createAlwaysRunTable(const PHV::AllocSlice& allo
         BUG_CHECK(ara_tbl, "AlwaysRun Table not set ...?");
         int stg = *(PhvInfo::minStages(ara_tbl).begin());
 
+        // Previous ARA stage matches with earliest minStage of this slice
         if (stg == alloc_sl.getEarliestLiveness().first) {
             use_existing_ara = true;
+        // Previous ARA stage satisfies min-stage constraints of this slice
         } else if (alloc_sl.getInitPrimitive().getSourceSlice() &&
                    (prior_max_stage <= stg) && (stg <= post_min_stage)) {
             // Need to update the liveranges of the affected slices
-            LOG4("\t AllocSlice " << alloc_sl << " will  have its liverange updated ...");
+            LOG4("\t AllocSlice " << alloc_sl << " may  have its liverange updated ...");
+
+            use_existing_ara = true;
+            // Update earliest stage of this slice
+            alloc_sl.setEarliestLiveness(std::make_pair(stg,
+                                         alloc_sl.getEarliestLiveness().second));
 
             if (prev_sl) {
                 LOG4("\t Source AllocSlice " << *prev_sl <<
-                     " will  have its liverange updated ...");
+                     " may  have its liverange updated ...");
+                PHV::Field* p_f = phv.field(prev_sl->field()->id);
+                // Find AllocSlice of previously overlaid field
+                // and update its liverange according to the new
+                // minStage of the ARA
+                for (auto& p_sl : p_f->get_alloc()) {
+                    if (p_sl.same_alloc_fieldslice(*prev_sl) &&
+                        p_sl.getEarliestLiveness().first == prev_sl->getEarliestLiveness().first &&
+                        p_sl.getLatestLiveness().first == prev_sl->getLatestLiveness().first) {
+                        auto p_stAcc = std::make_pair(stg, p_sl.getLatestLiveness().second);
+                        p_sl.setLatestLiveness(p_stAcc);
+                        init_prim.setSourceLatestLiveness(p_stAcc);
+                        alloc_sl.setInitPrimitive(&init_prim);
+                        LOG4("   ... updated source AllocSlice: " << p_sl);
+                        LOG4("   ... and primitive in : " << alloc_sl);
+                        break;
+                    }
+                }
             }
-
-            use_existing_ara = true;
-            BUG_CHECK(0, "Need to update liveranges");
-        } else if (!alloc_sl.getInitPrimitive().getSourceSlice()) {
+        } else if (!init_prim.getSourceSlice()) {
             // Zero-inits shouldn't always be combined since they may occur at different stages
             LOG4("\tRestoring previous ARA table");
             ara_tbl = prev_ara_tbl;
@@ -461,8 +479,8 @@ void ComputeDarkInitialization::end_apply() {
     // P4C-3079 is filed to modify the program to not reuire these pragmas.
     bool forcedPlacement = BackendOptions().forced_placement;
 
-    for (const auto& f : phv) {
-        for (const auto& slice : f.get_alloc()) {
+    for (auto& f : phv) {
+        for (auto& slice : f.get_alloc()) {
             // Ignore NOP initializations
             if (slice.getInitPrimitive().isNOP()) continue;
 

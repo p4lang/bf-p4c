@@ -1859,24 +1859,24 @@ const bit<32> DTEL_SELECTOR_TABLE_SIZE_PIPELINE_NPB_DEDUP_DTEL_A_CHTR = 256;
 // These pragmas are needed to fit design
 // -----------------------------------------------------------------------------
 
-@pa_atomic("ingress" , "ig_md.lkp_1.ip_type")
+// @pa_atomic("ingress" , "ig_md.lkp_1.ip_type")
 
 
 
 
 //@pa_atomic("egress" , "eg_md.bypass")
-@pa_container_size("egress", "eg_md.flags.bypass_egress", 8)
-@pa_solitary("egress" , "eg_md.lkp_1.ip_flags")
-@pa_container_size("egress" , "protocol_outer_0" , 8)
-@pa_container_size("egress" , "protocol_inner_0" , 8)
-@pa_container_size("egress" , "eg_md.lkp_1.tcp_flags", 8)
+// @pa_container_size("egress", "eg_md.flags.bypass_egress", 8)
+// @pa_solitary("egress" , "eg_md.lkp_1.ip_flags")
+// @pa_container_size("egress" , "protocol_outer_0" , 8)
+// @pa_container_size("egress" , "protocol_inner_0" , 8)
+// @pa_container_size("egress" , "eg_md.lkp_1.tcp_flags", 8)
 
 //Needed to fit design w/ SDE v9.8.0-pr10582 (see case 00675487)
-@pa_container_size("ingress", "ig_intr_md_for_tm.level2_mcast_hash", 16)
-@pa_container_size("ingress", "ig_intr_md_for_tm.level2_exclusion_id", 16)
-@pa_container_size("ingress", "ig_intr_md_for_tm.rid", 16)
-@pa_container_size("ingress", "ig_intr_md_for_dprsr.mtu_trunc_len", 16)
-@pa_container_size("egress", "eg_intr_md_for_dprsr.mtu_trunc_len", 16)
+// @pa_container_size("ingress", "ig_intr_md_for_tm.level2_mcast_hash", 16)
+// @pa_container_size("ingress", "ig_intr_md_for_tm.level2_exclusion_id", 16)
+// @pa_container_size("ingress", "ig_intr_md_for_tm.rid", 16)
+// @pa_container_size("ingress", "ig_intr_md_for_dprsr.mtu_trunc_len", 16)
+// @pa_container_size("egress", "eg_intr_md_for_dprsr.mtu_trunc_len", 16)
 # 12 "src/p4src_includes.p4" 2
 # 1 "src/./pipeline_npb_dedup_dtel_A/headers.p4" 1
 
@@ -3588,8 +3588,8 @@ struct switch_port_metadata_t {
 // Ingress Metadata
 // --------------------------------------------------------------------------------
 
-@pa_container_size("ingress", "ig_md.mirror.src", 8)
-@pa_container_size("ingress", "ig_md.mirror.type", 8)
+// @pa_container_size("ingress", "ig_md.mirror.src", 8)
+// @pa_container_size("ingress", "ig_md.mirror.type", 8)
 //@pa_container_size("ingress", "smac_src_move", 16)
 @pa_alias("ingress", "ig_md.egress_port", "ig_intr_md_for_tm.ucast_egress_port")
 
@@ -3657,10 +3657,10 @@ struct switch_ingress_metadata_t {
 // Egress Metadata
 // --------------------------------------------------------------------------------
 
-@pa_container_size("egress", "eg_md.mirror.src", 8)
-@pa_container_size("egress", "eg_md.mirror.type", 8)
+// @pa_container_size("egress", "eg_md.mirror.src", 8)
+// @pa_container_size("egress", "eg_md.mirror.type", 8)
 
-@pa_container_size("egress", "hdr.dtel_drop_report.drop_reason", 8)
+// @pa_container_size("egress", "hdr.dtel_drop_report.drop_reason", 8)
 @pa_mutually_exclusive("egress", "hdr.dtel.timestamp", "hdr.erspan_type3.timestamp")
 
 

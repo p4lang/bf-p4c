@@ -3703,7 +3703,7 @@ ordered_map<const PHV::Field*, int> ActionPhvConstraints::compute_sources_first_
 
 ActionPhvConstraints::ActionSources ActionPhvConstraints::getActionSources(
         const IR::MAU::Action* act, const PHV::Container& c,
-        std::vector<PHV::AllocSlice>& new_slices,
+        ordered_set<PHV::AllocSlice>& new_slices,
         const PHV::Allocation& alloc) const {
     ActionSources rv;
 
