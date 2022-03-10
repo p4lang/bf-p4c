@@ -2057,3 +2057,10 @@ p4c_add_xfail_reason("tofino"
   "error: PHV allocation was not successful"
   testdata/p4_16_samples/structure-valued-expr-ok-1-bmv2.p4
 )
+
+# p4c update (new test)
+p4c_add_xfail_reason("tofino"
+  "Conditions in an action must be simple comparisons of an action data parameter"
+  testdata/p4_16_samples/psa-dpdk-flatten-local-struct.p4
+)
+
