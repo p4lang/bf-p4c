@@ -1128,12 +1128,46 @@ struct MergeLoweredParserStates : public ParserTransform {
                                       ClotInfo &c)
         : parser_info(pi), computed(computed), clot(c) { }
 
+    // Compares all fields in two LoweredParserMatch objects
+    // except for the match values.  Essentially returns if both
+    // LoweredParserMatch do the same things when matching.
+    //
+    // Equivalent to IR::BFN::LoweredParserMatch::operator==(IR::BFN::LoweredParserMatch const & a)
+    // but considering the loop fields and with the value fields masked off.
+    bool
+    compare_match_operations(const IR::BFN::LoweredParserMatch*a,
+                             const IR::BFN::LoweredParserMatch*b) {
+        return a->shift == b->shift &&
+               a->hdrLenIncFinalAmt == b->hdrLenIncFinalAmt &&
+               a->extracts == b->extracts &&
+               a->saves == b->saves &&
+               a->scratches == b->scratches &&
+               a->checksums == b->checksums &&
+               a->counters == b->counters &&
+               a->priority == b->priority &&
+               a->bufferRequired == b->bufferRequired &&
+               a->next == b->next &&
+               a->offsetInc == b->offsetInc &&
+               a->loop == b->loop;
+    }
+
     const IR::BFN::LoweredParserMatch*
     get_unconditional_match(const IR::BFN::LoweredParserState* state) {
+        if (state->transitions.size() == 0)
+            return nullptr;
+
         if (state->select->regs.empty() && state->select->counters.empty())
             return state->transitions[0];
 
-        return nullptr;
+        // Detect if all transitions acutally do the same thing and branch/loop to
+        // the same state.  That represents another type of unconditional match.
+        auto first_transition = state->transitions[0];
+        for (auto &transition : state->transitions) {
+            if (!compare_match_operations(first_transition, transition))
+                return nullptr;
+        }
+
+        return state->transitions[0];
     }
 
     struct RightShiftPacketRVal : public Modifier {
@@ -1162,10 +1196,11 @@ struct MergeLoweredParserStates : public ParserTransform {
         if (a->offsetInc && b->offsetInc)
             return false;
 
-        if (!a->extracts.empty() || !a->saves.empty() ||
-            !a->checksums.empty() || !a->counters.empty()) {
+        if ((!a->extracts.empty() || !a->saves.empty() ||
+             !a->checksums.empty() || !a->counters.empty()) &&
+            (!b->extracts.empty() || !b->saves.empty() ||
+             !b->checksums.empty() || !b->counters.empty()))
             return false;
-        }
 
         if (int(a->shift + b->shift) > Device::pardeSpec().byteInputBufferSize())
             return false;
@@ -1241,7 +1276,7 @@ struct MergeLoweredParserStates : public ParserTransform {
             return match;
         }
 
-        if (match->next) {
+        while (match->next) {
             // Attempt merging states if the next state is not loopback
             // and not a compiler-generated stall state.
             std::string next_name(match->next->name.c_str());
@@ -1259,11 +1294,12 @@ struct MergeLoweredParserStates : public ParserTransform {
                             clot.merge_parser_states(state->thread(), state->name,
                                                      match->next->name);
                         do_merge(match, next);
+                        continue;
                     }
                 }
             }
+            break;
         }
-
         return match;
     }
 };

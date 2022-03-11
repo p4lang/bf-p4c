@@ -13,8 +13,20 @@
 
 namespace Test {
 
+/*
+ * Verify that compiler-generated stall parser states are not merged during
+ * the MergeLoweredParserStates pass.
+ *
+ * These are the states that contain the following in their name:
+ *
+ *          $stall_
+ *          $ctr_stall_
+ *          $oob_stall_
+ *          $hdr_len_stop_stall_
+ */
+TEST(ParserStateMergeTest, DoNotMergeStallStates) {
 // P4 program
-static std::string p4_prog() { return R"(
+const char * p4_prog = R"(
 header ethernet_t {
     bit<48> dst_addr;
     bit<48> src_addr;
@@ -184,21 +196,8 @@ Pipeline(
     EgressDeparser()) pipe;
 
 Switch(pipe) main;)";
-}
 
-/*
- * Verify that compiler-generated stall parser states are not merged during
- * the MergeLoweredParserStates pass.
- *
- * These are the states that contain the following in their name:
- *
- *          $stall_
- *          $ctr_stall_
- *          $oob_stall_
- *          $hdr_len_stop_stall_
- */
-TEST(ParserStateMergeTest, DoNotMergeStallStates) {
-    auto blk = TestCode(TestCode::Hdr::Tofino1arch, p4_prog());
+    auto blk = TestCode(TestCode::Hdr::Tofino1arch, p4_prog);
     blk.flags(Match::TrimWhiteSpace | Match::TrimAnnotations);
 
     // TestCode disables min depth limits by default. Re-enable.
@@ -221,6 +220,129 @@ TEST(ParserStateMergeTest, DoNotMergeStallStates) {
 
     res = blk.match(TestCode::CodeBlock::ParserEAsm,
             Match::CheckList{"parser egress: start", "`.*`", "parse_h3.$oob_stall_0:"});
+    EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count << "\n'"
+                             << blk.extract_code(TestCode::CodeBlock::ParserEAsm) << "'\n";
+}
+
+/*
+ * P4C-4281: state parse_seg_list could mistakenly be merged because
+ *           the loop created along with state parse_segment was
+ *           overlooked in the code.  This test makes sure this
+ *           is not the case.
+ */
+TEST(ParserStateMergeTest, ConsiderLoopInMergeDecision) {
+const char *p4_prog = R"(
+header segment_t {
+    bit<128> sid;
+}
+
+struct metadata {
+}
+
+struct headers {
+    segment_t[10]  seg_list;
+}
+
+parser ParserI(packet_in packet,
+                         out headers hdr,
+                         out metadata meta,
+                         out ingress_intrinsic_metadata_t ig_intr_md) {
+    ParserCounter() pctr;
+
+    state start {
+        packet.extract(ig_intr_md);
+        packet.advance(PORT_METADATA_SIZE);
+        pctr.set(8w4);
+        transition parse_segments;
+    }
+
+    state parse_seg_list {
+        transition select(pctr.is_zero()) {
+            true: accept;
+            false: parse_segments;
+        }
+    }
+
+    @dont_unroll
+    state parse_segments {
+        packet.extract(hdr.seg_list.next);
+        pctr.decrement(1);
+        transition parse_seg_list;
+    }
+}
+
+parser ParserE(packet_in packet,
+                        out headers hdr,
+                        out metadata meta,
+                        out egress_intrinsic_metadata_t eg_intr_md) {
+    state start {
+        packet.extract(eg_intr_md);
+        transition accept;
+    }
+}
+
+control IngressP(
+        inout headers hdr,
+        inout metadata meta,
+        in ingress_intrinsic_metadata_t ig_intr_md,
+        in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md,
+        inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
+        inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
+    apply {
+            ig_intr_tm_md.ucast_egress_port = 2;
+    }
+}
+
+control DeparserI(packet_out packet,
+                  inout headers hdr,
+                  in metadata meta,
+                  in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr) {
+    apply {
+        packet.emit(hdr.seg_list);
+    }
+}
+
+control EgressP(
+        inout headers hdr,
+        inout metadata meta,
+        in egress_intrinsic_metadata_t eg_intr_md,
+        in egress_intrinsic_metadata_from_parser_t eg_intr_prsr_md,
+        inout egress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
+        inout egress_intrinsic_metadata_for_output_port_t eg_intr_oport_md) {
+    apply { }
+}
+
+control DeparserE(packet_out packet,
+                           inout headers hdr,
+                           in metadata meta,
+                           in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr) {
+    apply { }
+}
+
+Pipeline(ParserI(),
+         IngressP(),
+         DeparserI(),
+         ParserE(),
+         EgressP(),
+         DeparserE()) pipe;
+
+Switch(pipe) main;
+
+)";
+
+    auto blk = TestCode(TestCode::Hdr::Tofino1arch, p4_prog);
+    blk.flags(Match::TrimWhiteSpace | Match::TrimAnnotations);
+
+    // TestCode disables min depth limits by default. Re-enable.
+    BackendOptions().disable_parse_min_depth_limit = false;
+
+    EXPECT_TRUE(blk.CreateBackend());
+    EXPECT_TRUE(blk.apply_pass(TestCode::Pass::FullBackend));
+
+    // Check that state parse_seg_list is still present in the output file.
+    auto res =
+        blk.match(TestCode::CodeBlock::ParserIAsm,
+            Match::CheckList{"parser ingress: start", "`.*`", "parse_seg_list:"});
     EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count << "\n'"
                              << blk.extract_code(TestCode::CodeBlock::ParserEAsm) << "'\n";
 }
