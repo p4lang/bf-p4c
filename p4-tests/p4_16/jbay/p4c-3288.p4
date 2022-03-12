@@ -86,9 +86,6 @@ typedef bit<32> ipv4_addr_t;
 typedef bit<128> ipv6_addr_t;
 typedef bit<12> vlan_id_t;
 
-@pa_container_size("ingress", "hdr.ethernet.src_addr", 16, 32)
-@pa_container_size("ingress", "hdr.ethernet.dst_addr", 16, 32)
-@pa_container_size("ingress", "hdr.ethernet.$valid", 16)
 header ethernet_h {
     mac_addr_t dst_addr;
     mac_addr_t src_addr;
@@ -1417,9 +1414,6 @@ struct switch_port_metadata_t {
 
 @pa_auto_init_metadata
 
-@pa_container_size("ingress", "ig_md.mirror.src", 8)
-@pa_container_size("ingress", "ig_md.mirror.type", 8)
-@pa_container_size("ingress", "smac_src_move", 16)
 @pa_alias("ingress", "ig_md.egress_port", "ig_intr_md_for_tm.ucast_egress_port")
 
 
@@ -1482,8 +1476,6 @@ struct switch_ingress_metadata_t {
 }
 
 // Egress metadata
-@pa_container_size("egress", "eg_md.mirror.src", 8)
-@pa_container_size("egress", "eg_md.mirror.type", 8)
 
 @pa_container_size("egress", "hdr.dtel_drop_report.drop_reason", 8)
 @pa_mutually_exclusive("egress", "hdr.dtel.timestamp", "hdr.erspan_type3.timestamp")

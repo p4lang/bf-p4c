@@ -20,6 +20,7 @@ class CollectNonDarkUses : public MauInspector {
     profile_t init_apply(const IR::Node* root) override;
     bool preorder(const IR::MAU::Table*) override;
     bool preorder(const IR::Expression *) override;
+    bool preorder(const IR::MAU::Action*) override;
     bool contextNeedsIXBar();
 
  public:

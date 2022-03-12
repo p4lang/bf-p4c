@@ -67,9 +67,19 @@ bitvec compute_dest_live_bv(const PhvUse& uses, const PHV::Allocation& alloc,
         // Add this additional check here to avoid compiler bug.
         // We can remove this after we fix this bug.
         // To reproduce, remove these checks and rerun CI tests.
-        if (action && ((initActions.count(field) && initActions.at(field).count(action)) ||
-                       alloc.getMetadataInits(action).count(field))) {
-            dest_live.setrange(slice.container_slice().lo, slice.container_slice().size());
+        if (action) {
+            if ((initActions.count(field) && initActions.at(field).count(action)) ||
+                alloc.getMetadataInits(action).count(field)) {
+                dest_live.setrange(slice.container_slice().lo, slice.container_slice().size());
+            } else {
+                const auto& dark_prim = slice.getInitPrimitive();
+                if (!dark_prim.isAlwaysRunActionPrim()) {
+                    if (dark_prim.getInitPoints().count(action)) {
+                        dest_live.setrange(slice.container_slice().lo,
+                                           slice.container_slice().size());
+                    }
+                }
+            }
         }
     }
     return dest_live;

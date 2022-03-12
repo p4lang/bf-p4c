@@ -1218,8 +1218,13 @@ Instruction *Set::pass1(Table *tbl, Table::Actions::Action *act) {
         if (dest->reg.type == Phv::Register::DARK) {
             error(dest.lineno, "can't set dark phv to a constant");
             return this; }
-        int minconst = Target::MINIMUM_INSTR_CONSTANT();
-        if (k->value < minconst || k->value >= 8)
+        int minsignconst = Target::MINIMUM_INSTR_CONSTANT();
+        // Translate large value with negative value, e.g. 0xFFFE -> -2 on 16-bit PHV
+        int64_t maxvalue = 1LL << dest->reg.size;
+        int64_t delta = k->value - maxvalue;
+        if (delta >= minsignconst)
+            k->value = delta;
+        if (k->value < minsignconst || k->value >= 8)
             return (new LoadConst(lineno, dest, k->value))->pass1(tbl, act); }
     slot = dest->reg.mau_id();
     tbl->stage->action_set[tbl->gress][dest->reg.uid] = true;

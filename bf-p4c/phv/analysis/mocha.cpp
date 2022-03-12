@@ -35,10 +35,19 @@ void CollectMochaCandidates::populateMembers(
             fieldsNotWrittenForMocha[write->id] = true;
         }
         for (auto& readSrc : fieldAction.reads) {
+            // This is not an hardware limitation but because mocha container don't have the
+            // capability to rotate action data this lead to inefficient SRAM packing.
             if (readSrc.type == ActionAnalysis::ActionParam::ACTIONDATA ||
-                    readSrc.type == ActionAnalysis::ActionParam::CONSTANT) {
-                LOG5("\t  Field written by action data/constant: " << write);
-                fieldsNotWrittenForMocha[write->id] = true;
+                readSrc.type == ActionAnalysis::ActionParam::CONSTANT) {
+                auto annot = tbl->match_table->getAnnotations();
+                if (auto s = annot->getSingle("use_hash_action")) {
+                    auto pragma_val = s->expr.at(0)->to<IR::Constant>()->asInt();
+                    if (pragma_val == 1) {
+                        LOG5("\t  Field written by action data/constant through hash_action: " <<
+                             write);
+                        fieldsNotWrittenForMocha[write->id] = true;
+                    }
+                }
             }
             if (readSrc.speciality != ActionAnalysis::ActionParam::NO_SPECIAL) {
                 LOG5("\t  Field written by speciality: " << write);

@@ -38,6 +38,10 @@ void AddAliasAllocation::addAllocation(
         aliasSource->add_alloc(new_slice);
         phv.add_container_to_field_entry(alloc.container(), aliasSource);
     });
+    phv.metadata_mutex()[aliasSource->id] |= phv.metadata_mutex()[aliasDest->id];
+    phv.metadata_mutex()(aliasSource->id, aliasSource->id) = false;
+    if (phv.metadata_mutex()(aliasDest->id, aliasSource->id))
+        phv.metadata_mutex()(aliasSource->id, aliasDest->id) = true;
 
     aliasDest->aliasSource = aliasSource;
 }

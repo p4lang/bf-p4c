@@ -767,7 +767,7 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
     safe_vector<int> alu_rows;
     safe_vector<char> logical_bus;
     bool logical = mem.type >= Memories::Use::COUNTER;
-    bool have_bus = true;
+    bool have_bus = false;
     bool have_mapcol = mem.is_twoport();
     bool have_col = false;
     bool have_word = mem.type == Memories::Use::ACTIONDATA;
@@ -787,9 +787,7 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
             int logical_row = 2*r.row + (r.col[0] >= Memories::LEFT_SIDE_COLUMNS);
             row.push_back(logical_row);
             have_col = true;
-            if (r.bus < 0) {
-                have_bus = false;
-            } else {
+            if (r.bus >= 0) {
                 switch (r.bus) {
                     case 0 /*ACTION*/:
                         logical_bus.push_back('A');
@@ -805,6 +803,7 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
                         logical_bus.push_back('X');
                         break;
                 }
+                have_bus = true;
                 // Only provide VPN for the Counter/Meter and ActionData case until validated on
                 // the other type of logical memory type.
                 if (mem.type == Memories::Use::COUNTER || mem.type == Memories::Use::METER)
@@ -813,7 +812,7 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
         } else {
             row.push_back(r.row);
             bus.push_back(r.bus);
-            if (r.bus < 0) have_bus = false;
+            if (r.bus >= 0) have_bus = true;
             if (separate_bus)
                 result_bus.push_back(r.result_bus);
             if (r.col.size() > 0) have_col = true;

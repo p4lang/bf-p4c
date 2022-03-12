@@ -615,7 +615,7 @@ bitvec PhvInfo::bits_allocated(
                 noMutex = noMutex && !dark_overlay;
 
             LOG3("\t\t For field " << field->name << "  mutex control:" << mutually_exclusive <<
-                 " meta:" << meta_overlay << " dark:" << dark_overlay);
+                 " meta:" << meta_overlay << " dark:" << dark_overlay << " is_alias:" << is_alias);
 
             if (noMutex) {
                 ret_bitvec.setrange(bits.lo, bits.size());

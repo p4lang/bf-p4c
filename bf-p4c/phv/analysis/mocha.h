@@ -9,11 +9,10 @@
   * in mocha containers by setting the `is_mocha_candidate()` property of the corresponding
   * PHV::Field object to true.
   * Here are the generic rules for mocha containers:
-  * 1. Mocha containers can only have PHVs as their sources (no action data/constant).
-  * 2. Mocha containers can be used as sources for any ALU operation writing normal PHVs.
-  * 3. Mocha containers can be used on the input crossbar.
-  * 4. Mocha containers cannot be written using nonset operations.
-  * 5. Set operations on mocha containers can only operate on entire containers (so restrictions on
+  * 1. Mocha containers can be used as sources for any ALU operation writing normal PHVs.
+  * 2. Mocha containers can be used on the input crossbar.
+  * 3. Mocha containers cannot be written using nonset operations.
+  * 4. Set operations on mocha containers can only operate on entire containers (so restrictions on
   *    packing).
   */
 class CollectMochaCandidates : public Inspector {

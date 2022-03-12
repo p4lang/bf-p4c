@@ -8,6 +8,15 @@
 
 @pa_auto_init_metadata
 @pa_parser_group_monogress
+@pa_container_type("ingress" , "Peoria.Amboy.Kalaloch" , "normal")
+@pa_container_type("ingress" , "Peoria.ElMirage.Kalaloch" , "normal")
+@pa_container_type("ingress" , "Peoria.ElMirage.Ovett" , "normal")
+@pa_container_type("ingress" , "Peoria.Amboy.Ovett" , "normal")
+@pa_container_type("ingress" , "Peoria.Baudette.Ovett" , "normal")
+@pa_container_type("ingress" , "Peoria.Yerington.Darien" , "normal")
+@pa_container_type("ingress" , "Peoria.Belmore.Wauconda" , "normal")
+@pa_container_type("ingress" , "Peoria.Belmore.LaConner" , "normal")
+@pa_container_type("ingress" , "Peoria.Baudette.Murphy" , "normal")
 @pa_mutually_exclusive("egress" , "Peoria.Belmore.Kendrick" , "Wanamassa.Knights.Kendrick")
 @pa_mutually_exclusive("egress" , "Wanamassa.Knights.Kendrick" , "Peoria.Belmore.Kendrick")
 @pa_container_size("ingress" , "Peoria.Masontown.Lapoint" , 32)
@@ -1101,7 +1110,8 @@ struct Martelle {
 @pa_mutually_exclusive("egress" , "Wanamassa.Dushore" , "Wanamassa.Orting")
 @pa_mutually_exclusive("egress" , "Wanamassa.Campton" , "Wanamassa.Harriet")
 @pa_mutually_exclusive("egress" , "Wanamassa.Campton" , "Wanamassa.Orting")
-@pa_mutually_exclusive("egress" , "Wanamassa.Knights" , "Wanamassa.Basco" , "Wanamassa.Gamaliel")
+@pa_mutually_exclusive("egress" , "Wanamassa.Knights" , "Wanamassa.Basco")
+@pa_mutually_exclusive("egress" , "Wanamassa.Basco" , "Wanamassa.Gamaliel")
 @pa_mutually_exclusive("egress" , "Wanamassa.Dushore" , "Wanamassa.Knights")
 @pa_mutually_exclusive("egress" , "Wanamassa.Knights" , "Wanamassa.Basco")
 @pa_mutually_exclusive("egress" , "Wanamassa.Knights" , "Wanamassa.Harriet")

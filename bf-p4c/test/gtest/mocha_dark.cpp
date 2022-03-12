@@ -173,7 +173,7 @@ apply {
     EXPECT_EQ(h1f4->is_mocha_candidate(), true);
     EXPECT_EQ(h1p0->is_mocha_candidate(), true);
     EXPECT_EQ(m1f1->is_mocha_candidate(), true);
-    EXPECT_EQ(m1f2->is_mocha_candidate(), false);
+    EXPECT_EQ(m1f2->is_mocha_candidate(), true);
     EXPECT_EQ(m1f3->is_mocha_candidate(), true);
     EXPECT_EQ(m1f4->is_mocha_candidate(), true);
 

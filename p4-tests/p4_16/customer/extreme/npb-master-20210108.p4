@@ -311,15 +311,6 @@ typedef bit<12> vlan_id_t;
 // Layer2 Headers
 //////////////////////////////////////////////////////////////
 /*
-@pa_container_size("ingress", "hdr.transport.ethernet.src_addr", 16, 32)
-@pa_container_size("ingress", "hdr.transport.ethernet.dst_addr", 16, 32)
-@pa_container_size("ingress", "hdr.transport.ethernet.$valid", 16)
-@pa_container_size("ingress", "hdr.outer.ethernet.src_addr", 16, 32)
-@pa_container_size("ingress", "hdr.outer.ethernet.dst_addr", 16, 32)
-@pa_container_size("ingress", "hdr.outer.ethernet.$valid", 16)
-@pa_container_size("ingress", "hdr.inner.ethernet.src_addr", 16, 32)
-@pa_container_size("ingress", "hdr.inner.ethernet.dst_addr", 16, 32)
-@pa_container_size("ingress", "hdr.inner.ethernet.$valid", 16)
 */
 header ethernet_h {
     mac_addr_t dst_addr;
@@ -1691,15 +1682,6 @@ struct switch_port_metadata_t {
 @pa_atomic("ingress", "ig_md.lkp_2.ip_type")
 @pa_atomic("egress", "eg_md.bypass")
 @pa_solitary("egress", "eg_md.lkp_1.ip_flags")
-@pa_container_size("ingress", "ig_intr_md_for_tm.level2_mcast_hash", 16)
-@pa_container_size("ingress", "ig_intr_md_for_tm.level2_exclusion_id", 16)
-@pa_container_size("ingress", "ig_intr_md_for_tm.rid", 16)
-@pa_container_size("ingress", "ig_intr_md_for_dprsr.mtu_trunc_len", 16)
-@pa_container_size("egress", "eg_intr_md_for_dprsr.mtu_trunc_len", 16)
-@pa_container_size("egress", "protocol_outer_0", 8)
-@pa_container_size("egress", "protocol_inner_0", 8)
-@pa_container_size("egress", "eg_md.lkp_1.tcp_flags", 8)
-@pa_container_type("egress", "hdr.cpu.reason_code", "normal")
 
 // --------------------------------------------------------------------------------
 // Ingress Metadata

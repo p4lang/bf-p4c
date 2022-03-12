@@ -91,11 +91,6 @@ p4c_add_xfail_reason("tofino3"
 p4c_add_xfail_reason("tofino3"
   "This action requires hash, which can only be done through the hit pathway"
   #testdata/p4_14_samples/acl1.p4
-)
-
-#bf-rt has problems with dleft hash?
-p4c_add_xfail_reason("tofino3"
-  "'DLEFT_HASH'"
   extensions/p4_tests/p4_16/jbay/hwlearn4.p4
 )
 

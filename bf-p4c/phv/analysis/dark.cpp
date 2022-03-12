@@ -38,6 +38,28 @@ bool CollectNonDarkUses::preorder(const IR::Expression *e) {
     return true;
 }
 
+bool CollectNonDarkUses::preorder(const IR::MAU::Action* act) {
+    auto* tbl = findContext<IR::MAU::Table>();
+    ActionAnalysis aa(phv, false, false, tbl);
+    ActionAnalysis::FieldActionsMap fieldActionsMap;
+    aa.set_field_actions_map(&fieldActionsMap);
+    act->apply(aa);
+    for (auto& fieldAction : Values(fieldActionsMap)) {
+        const PHV::Field* field = phv.field(fieldAction.write.expr);
+        BUG_CHECK(field, "Action %1% does not have a write?", fieldAction.write.expr);
+        // Mocha support Action Data and Constant source, Dark do not support it.
+        if (fieldAction.name == "set") {
+            for (auto& readSrc : fieldAction.reads) {
+                if (readSrc.type == ActionAnalysis::ActionParam::ACTIONDATA ||
+                    readSrc.type == ActionAnalysis::ActionParam::CONSTANT) {
+                    nonDarkMauUses[field->id] = true;
+                }
+            }
+        }
+    }
+    return true;
+}
+
 bool CollectNonDarkUses::hasNonDarkUse(const PHV::Field* f) const {
     return nonDarkMauUses[f->id];
 }
