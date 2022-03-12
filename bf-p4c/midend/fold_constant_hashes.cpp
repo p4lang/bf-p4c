@@ -150,7 +150,7 @@ hash_seed_t FoldConstantHashes::DoFoldConstantHashes::computeHash(
     int total_input_bits = 0;
 
     safe_vector<ixbar_input_t> hash_inputs;
-    for (auto *comp : hash_list->components) {
+    for (auto *comp : boost::adaptors::reverse(hash_list->components)) {
         const auto *comp_expr = comp->to<IR::Constant>();
         ixbar_input_t hash_input;
         hash_input.type = ixbar_input_type::tCONST;
@@ -198,7 +198,7 @@ hash_seed_t FoldConstantHashes::DoFoldConstantHashes::computeHash(
     int total_input_bits = 0;
 
     safe_vector<ixbar_input_t> hash_inputs;
-    for (auto *comp : hash_list->components) {
+    for (auto *comp : boost::adaptors::reverse(hash_list->components)) {
         const auto *comp_expr = comp->expression->to<IR::Constant>();
         ixbar_input_t hash_input;
         hash_input.type = ixbar_input_type::tCONST;

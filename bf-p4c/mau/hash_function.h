@@ -11,7 +11,7 @@ struct HashFunction {
     enum { IDENTITY, CSUM, XOR, CRC, RANDOM }
                         type = IDENTITY;
     bool                msb = false;      // pull msbs for slice
-    bool                extend = false;
+    bool                extend = false;   // If not otherwise specified, extend is true for crc
     bool                reverse = false;  // crc reverse bits
     int                 size = 0;
     uint64_t            poly = 0;         // crc polynomial in koopman form (poly-1)/2

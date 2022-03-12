@@ -179,18 +179,12 @@ const IR::Expression *IR::MAU::HashFunction::convertHashAlgorithmBFN(Util::Sourc
             ERROR_CHECK(!extension_set, "%s: Extension set multiple times in algorithm %s",
                     srcInfo, algorithm.name);
             extend = true;
-            extension_set = false;
+            extension_set = true;
             alg_name = alg_name.substr(0, pos) + alg_name.substr(pos + 7);
         } else {
             break;
         }
     }
-
-
-    auto args = new IR::Vector<IR::Argument>({
-        new IR::Argument(new IR::BoolLiteral(msb)),
-        new IR::Argument(new IR::BoolLiteral(extend))
-    });
 
     if (alg_name == "xor16" || alg_name == "csum16" || alg_name == "csum16_udp") {
         if (on_hash_matrix)
@@ -231,14 +225,25 @@ const IR::Expression *IR::MAU::HashFunction::convertHashAlgorithmBFN(Util::Sourc
         return nullptr;
     }
 
+    auto args = new IR::Vector<IR::Argument>({
+        new IR::Argument(new IR::BoolLiteral(msb)),
+    });
+
     if (crc_algorithm_set) {
+        // Extend is true by default for CRC.
+        if (!extension_set) {
+            extend = true;
+        }
         big_int poly = hash_alg.poly, init = hash_alg.init, final_xor = hash_alg.final_xor;
         auto typeT = IR::Type::Bits::get(hash_alg.hash_bit_width);
+        args->push_back(new IR::Argument(new IR::BoolLiteral(extend)));
         args->push_back(new IR::Argument(new IR::Constant(typeT, poly)));
         args->push_back(new IR::Argument(new IR::Constant(typeT, init)));
         args->push_back(new IR::Argument(new IR::Constant(typeT, final_xor)));
         args->push_back(new IR::Argument(new IR::BoolLiteral(hash_alg.reverse)));
         mc_name = "crc_poly";
+    } else {
+        args->push_back(new IR::Argument(new IR::BoolLiteral(extend)));
     }
 
     if (on_hash_matrix)
@@ -500,7 +505,8 @@ void IR::MAU::HashFunction::toJSON(JSONGenerator &json) const {
          << json.indent << "\"reverse\": " << reverse << ",\n"
          << json.indent << "\"poly\": " << poly << ",\n"
          << json.indent << "\"init\": " << init << ",\n"
-         << json.indent << "\"xor\": " << final_xor;
+         << json.indent << "\"xor\": " << final_xor << ",\n"
+         << json.indent << "\"extend\": " << extend;
 }
 
 void IR::MAU::HashFunction::build_algorithm_t(bfn_hash_algorithm_ *alg) const {
@@ -521,6 +527,7 @@ void IR::MAU::HashFunction::build_algorithm_t(bfn_hash_algorithm_ *alg) const {
     alg->poly = (poly << 1) | 1;
     alg->init = init;
     alg->final_xor = final_xor;
+    alg->extend = extend;
 }
 
 IR::MAU::HashFunction *IR::MAU::HashFunction::fromJSON(JSONLoader &json) {
@@ -535,5 +542,6 @@ IR::MAU::HashFunction *IR::MAU::HashFunction::fromJSON(JSONLoader &json) {
     json.load("poly", rv->poly);
     json.load("init", rv->init);
     json.load("xor", rv->final_xor);
+    json.load("extend", rv->extend);
     return rv;
 }
