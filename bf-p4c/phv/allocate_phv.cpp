@@ -3882,9 +3882,29 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
         LOG_DEBUG4("Skipping CLOT-allocated super cluster: " << sc);
     }
 
+    // only run byte packing in --alt-phv-alloc
+    if (BFNContext::get().options().alt_phv_alloc == true) {
+        auto trivial_strategy_for_smart_byte_packing =
+            new TrivialAllocStrategy(utils_i, core_alloc_i, phv_i, pipeId);
+
+        auto alloc_func =
+                [&](const PHV::Allocation &alloc, std::list<PHV::SuperCluster *> & clusters){
+                    return trivial_strategy_for_smart_byte_packing->allocate(alloc, clusters, true);
+                };
+        auto packed_cluster_groups = get_packed_cluster_group(
+            cluster_groups,
+            utils_i.tablePackOpt,
+            phv_i,
+            alloc_func,
+            alloc);
+
+        cluster_groups = packed_cluster_groups;
+    }
+
     if (utils_i.settings.trivial_alloc) {
         auto trivial_strategy = new TrivialAllocStrategy(utils_i, core_alloc_i, phv_i, pipeId);
-        auto unallocated = trivial_strategy->allocate(alloc, cluster_groups);
+
+        auto unallocated = trivial_strategy->allocate(alloc, cluster_groups, false);
         auto unallocated_list =
             std::list<const PHV::SuperCluster*>(unallocated.begin(), unallocated.end());
         if (!unallocated.empty()) {
@@ -3892,6 +3912,7 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
             formatAndThrowError(alloc, unallocated_list);
             formatAndThrowUnsat(unallocated_list);
         }
+
         return root;
     }
 
@@ -5642,8 +5663,10 @@ std::list<PHV::ContainerGroup*> TrivialAllocStrategy::make_container_groups_merg
 }
 
 ordered_set<const PHV::SuperCluster*> TrivialAllocStrategy::allocate(
-    const PHV::Allocation& alloc, const std::list<PHV::SuperCluster*>& clusters_input) {
-    LOG1("Run TrivialAllocStrategy");
+    const PHV::Allocation& alloc,
+    const std::list<PHV::SuperCluster*>& clusters_input,
+    bool dry_run) {
+    if (!dry_run) LOG1("Run TrivialAllocStrategy");
     auto container_groups = make_container_groups_merged_by_size();
     std::list<PHV::SuperCluster*> clusters =
         remove_singleton_slicelist_metadata(clusters_input);
@@ -5661,8 +5684,10 @@ ordered_set<const PHV::SuperCluster*> TrivialAllocStrategy::allocate(
     PhvStatus phv_status;
     auto empty_alloc = alloc.makeTransaction();
     for (auto* sc : clusters) {
-        LOG_DEBUG4("TRYING to allocate " << sc);
-        history << "Allocating: \n" << sc;
+        if (!dry_run) {
+            LOG_DEBUG4("TRYING to allocate " << sc);
+            history << "Allocating: \n" << sc;
+        }
         int n_tried = 0;
         bool allocated = false;
         ordered_set<const PHV::SuperCluster*> unallocatable;
@@ -5670,34 +5695,36 @@ ordered_set<const PHV::SuperCluster*> TrivialAllocStrategy::allocate(
         slicing_ctx->set_minimal_packing_mode(true);
         slicing_ctx->iterate([&](std::list<PHV::SuperCluster*> sliced) {
             n_tried++;
-            if (LOGGING(4)) {
+            if (LOGGING(4) && !dry_run) {
                 LOG_DEBUG4("Slicing attempt: " << n_tried);
                 for (auto* sc : sliced) LOG_DEBUG4(sc);
             }
             PartialAllocResult sliced_alloc_rst =
                 alloc_clusters(empty_alloc, phv_status, container_groups, sliced);
             if (sliced_alloc_rst.ok) {
-                LOG4("Successfully Allocated");
-                history << "Successfully Allocated\n";
-                history << "By slicing into the following superclusters:\n";
-                for (auto* sc : sliced) {
-                    history << sc << "\n";
-                }
-                history << "Allocation Decisions: \n";
-                for (const auto& s : sliced_alloc_rst.alloc_slices) {
-                    history << "allocate: " << s.container() << "[" << s.container_slice().lo << ":"
-                            << s.container_slice().hi << "] <- "
-                            << PHV::FieldSlice(s.field(), s.field_slice()) << "\n";
-                }
                 phv_status = sliced_alloc_rst.phv_status;
                 allocated = true;
-                bind_alloc_slices(sliced_alloc_rst.alloc_slices);
+                if (!dry_run) {
+                    LOG4("Successfully Allocated");
+                    history << "Successfully Allocated\n";
+                    history << "By slicing into the following superclusters:\n";
+                    for (auto* sc : sliced) {
+                        history << sc << "\n";
+                    }
+                    history << "Allocation Decisions: \n";
+                    for (const auto& s : sliced_alloc_rst.alloc_slices) {
+                        history << "allocate: " << s.container() << "[" << s.container_slice().lo <<
+                            ":"<< s.container_slice().hi << "] <- " <<
+                            PHV::FieldSlice(s.field(), s.field_slice()) << "\n";
+                    }
+                    bind_alloc_slices(sliced_alloc_rst.alloc_slices);
+                }
                 return false;
             } else {
                 unallocatable = sliced_alloc_rst.unallocated;
-                LOG_FEATURE("alloc_progress", 4, "Failed to Allocate: " << sc->uid);
+                if (!dry_run) LOG_FEATURE("alloc_progress", 4, "Failed to Allocate: " << sc->uid);
                 if (sliced_alloc_rst.cannot_allocate != nullptr) {
-                    LOG3("Found cannot_allocate slice list: " <<
+                    if (!dry_run) LOG3("Found cannot_allocate slice list: " <<
                          sliced_alloc_rst.cannot_allocate);
                     slicing_ctx->invalidate(sliced_alloc_rst.cannot_allocate);
                 }
@@ -5705,31 +5732,35 @@ ordered_set<const PHV::SuperCluster*> TrivialAllocStrategy::allocate(
             return n_tried < max_slicing_try;
         });
         if (!allocated) {
-            history << "Allocation Failed: " << "different slicing tried: " << n_tried << "\n";
+            if (!dry_run) {
+                history << "Allocation Failed: " << "different slicing tried: " << n_tried << "\n";
+                print_or_throw_slicing_error(utils_i, sc, n_tried);
+            }
             unallocated_clusters.insert(unallocatable.begin(), unallocatable.end());
-            print_or_throw_slicing_error(utils_i, sc, n_tried);
             break;
         }
     }
-
-    PHV::AllocUtils::sort_and_merge_alloc_slices(phv_i);
-    if (unallocated_clusters.empty()) {
-        LOG_FEATURE("alloc_progress", 1, "Trivial Allocation Successfully Allocated All Clusters.");
-        phv_i.set_done(true);
-    } else {
-        history << unallocated_clusters.size() << " unallocated clusters:";
-        for (const auto* sc : unallocated_clusters) {
-            ::error("Failed to do trivial allocation on this super cluster: %1%",
-                    cstring::to_cstring(sc));
-            history << sc << "\n";
+    if (!dry_run) {
+        PHV::AllocUtils::sort_and_merge_alloc_slices(phv_i);
+        if (unallocated_clusters.empty()) {
+            LOG_FEATURE("alloc_progress", 1,
+                "Trivial Allocation Successfully Allocated All Clusters.");
+            phv_i.set_done(true);
+        } else {
+            history << unallocated_clusters.size() << " unallocated clusters:";
+            for (const auto* sc : unallocated_clusters) {
+                ::error("Failed to do trivial allocation on this super cluster: %1%",
+                        cstring::to_cstring(sc));
+                history << sc << "\n";
+            }
         }
-    }
 
-    // print out history logs
-    auto logfile = createFileLog(pipe_id_i, "phv_trivial_allocation_history_", 1);
-    LOG1("Trivial Allocation history");
-    LOG1(history.str());
-    Logging::FileLog::close(logfile);
+        // print out history logs
+        auto logfile = createFileLog(pipe_id_i, "phv_trivial_allocation_history_", 1);
+        LOG1("Trivial Allocation history");
+        LOG1(history.str());
+        Logging::FileLog::close(logfile);
+    }
 
     return unallocated_clusters;
 }

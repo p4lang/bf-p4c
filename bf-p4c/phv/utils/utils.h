@@ -876,6 +876,10 @@ class AlignedCluster : public ClusterStats {
      *          or boost::none otherwise.
      */
     boost::optional<SliceResult<AlignedCluster>> slice(int pos) const;
+
+    /// @returns The kind of PHV container representing the minimum requirements for all
+    /// slices in this container.
+    PHV::Kind kind() { return kind_i; }
 };
 
 /** A rotational cluster holds groups of clusters that must be placed in the

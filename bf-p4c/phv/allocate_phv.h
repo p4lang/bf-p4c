@@ -29,6 +29,7 @@
 #include "bf-p4c/phv/utils/utils.h"
 #include "lib/bitvec.h"
 #include "lib/symbitmatrix.h"
+#include "smart_fieldslice_packing.h"
 
 namespace PHV {
 
@@ -864,7 +865,8 @@ class TrivialAllocStrategy {
 
     // @returns spliced SuperClusters that cannot be allocated.
     ordered_set<const PHV::SuperCluster*> allocate(const PHV::Allocation& alloc,
-                                                   const std::list<PHV::SuperCluster*>& clusters);
+                                                   const std::list<PHV::SuperCluster*>& clusters,
+                                                   bool dry_run = false);
 };
 
 /** Given constraints gathered from compilation thus far, allocate fields to
