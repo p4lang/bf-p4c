@@ -174,6 +174,11 @@ while IFS= read -r -d '' -u 9 path ; do
     fi
   fi
 
+  # if file says it is a bash script, believe it.
+  if [[ -z "${fileType}" && "$(file -b "${path}")" =~ 'Bourne-Again shell script' ]] ; then
+      fileType=sh
+  fi
+
   # If we haven't classified the file yet, ignore if `file` says we have a
   # binary file.
   if [[ -z "${fileType}" && ! "$(file -b "${path}")" =~ 'ASCII text' ]] ; then
