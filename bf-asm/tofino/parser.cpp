@@ -1184,6 +1184,7 @@ void pad_nodes_extracts(Parser* parser, Target::Tofino::parser_regs &regs, int n
     if (cache[match] >= node_count && node_count > 0) {
         LOG5(" Using cached state(match) : " << match->state->name
                 << "(" << match->match << ") -> node count " << cache[match]);
+        visited.erase(match->state);
         return;
     }
     cache[match] = node_count;
