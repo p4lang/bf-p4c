@@ -115,10 +115,19 @@ control SwitchIngress(
 
     Hash<bit<32>>(HashAlgorithm_t.CRC16) hash1;
 
-    apply {
+    action a1() {
         h.h.a = hash1.get({h.eth_hdr.dst_addr, h.eth_hdr.src_addr, h.eth_hdr.eth_type});
         // We also need to explicitly set the output port.
         ig_tm_md.ucast_egress_port = 8;
+    }
+    table t1 {
+        key = { h.h.a : exact; }
+        actions = { a1; }
+        size = 1024;
+    }
+
+    apply {
+        t1.apply();
     }
 }
 
