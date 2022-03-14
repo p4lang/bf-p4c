@@ -87,7 +87,8 @@ inline void warning(int lineno, const char *fmt, ...) {
 #endif  /* BAREFOOT_INTERNAL */
 }
 
-void bug(const char *, int, const char * = 0, ...) __attribute__((format(printf, 3, 4)));
+void bug(const char *, int, const char * = 0, ...)
+__attribute__((format(printf, 3, 4))) __attribute__((noreturn));
 inline void bug(const char* fname, int lineno, const char *fmt, ...) {
 #ifdef NDEBUG
     fprintf(stderr, "Assembler BUG");

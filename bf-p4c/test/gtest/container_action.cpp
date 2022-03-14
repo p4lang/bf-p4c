@@ -177,7 +177,7 @@ class ContainerAction: public BackendTest {
     try {                                                   \
         auto rv = analyze_container_actions();              \
         ASSERT_FALSE(rv.error);                             \
-    } catch (const Util::CompilerUnimplemented e) {         \
+    } catch (const Util::CompilerUnimplemented &e) {         \
         ASSERT_THAT(e.what(), testing::HasSubstr(err_msg)); \
     }
 

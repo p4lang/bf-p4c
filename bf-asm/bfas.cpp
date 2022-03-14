@@ -476,7 +476,9 @@ std::string toString(target_t target) {
 #if HAVE_FLATROCK
         case TOFINO5: return "Tofino5";
 #endif  /* HAVE_FLATROCK */
-        default: BUG("Unexpected target value: 0x%x", target);
+        default:
+            BUG("Unexpected target value: 0x%x", target);
+            return "";
     }
 }
 
