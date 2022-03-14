@@ -27,7 +27,7 @@ std::ostream& operator<<(std::ostream& out, const IR::BFN::Phase0* p0) {
         out << ++indent << "ig_intr_md.ingress_port:";
     else
         out << ++indent << p0->keyName << ".ingress_port: ";
-    out << "{ type: exact, size: 9 }" << std::endl;
+    out << "{ type: exact, size: " << Device::portBitWidth() << " }" << std::endl;
 
     // The phase 0 type defines the format of the phase 0 data (the static
     // per-port metadata, in other words). The driver exposes a table-like
