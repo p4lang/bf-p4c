@@ -8,6 +8,7 @@
 #include "misc.h"
 #include "power_ctl.h"
 #include "stage.h"
+#include "tables.h"
 #include "range.h"
 
 // template specialization declarations
@@ -65,6 +66,7 @@ const char *InputXbar::group_type(Group::type_t t) const {
 }
 
 void InputXbar::parse_group(Table *t, Group gr, const value_t &value) {
+    BUG_CHECK(gr.index >= 0, "invalid group");
     auto &group = groups[gr];
     if (value.type == tVEC) {
         for (auto &reg : value.vec)
@@ -313,6 +315,13 @@ int InputXbar::tcam_word_group(int idx) {
     return -1;
 }
 
+const std::map<int, HashCol>& InputXbar::get_hash_table(unsigned id) {
+    for (auto &ht : hash_tables)
+        if (ht.first == id) return ht.second;
+    warning(lineno, "Hash Table for index %d does not exist in table %s", id, table->name());
+    return empty_hash_table;
+}
+
 bool InputXbar::conflict(const std::vector<Input> &a, const std::vector<Input> &b) {
     for (auto &i1 : a) {
         if (i1.lo < 0) continue;
@@ -529,7 +538,7 @@ void InputXbar::pass1() {
         auto &use = table->stage->ixbar_use;
         for (InputXbar *other : use[group.first]) {
             if (other->groups.count(group.first) &&
-                conflict(other->groups[group.first], group.second)) {
+                conflict(other->groups.at(group.first), group.second)) {
                 error(lineno, "Input xbar group %d conflict in stage %d", group.first.index,
                       table->stage->stageno);
                 warning(other->lineno, "conflicting group definition here"); } }
@@ -607,7 +616,7 @@ void InputXbar::GroupSet::dbprint(std::ostream &out) const {
     std::map<unsigned, InputXbar::Input *> byte_use;
     for (InputXbar *ixbar : use) {
         if (ixbar->groups.count(group)) {
-            for (auto &i : ixbar->groups[group]) {
+            for (auto &i : ixbar->groups.at(group)) {
                 if (i.lo < 0) continue;
                 for (int byte = i.lo/8; byte <= i.hi/8; byte++)
                     byte_use[byte] = &i;
@@ -637,7 +646,7 @@ void InputXbar::pass2() {
             if (bytes_in_use == 0)
                 for (InputXbar *other : table->stage->ixbar_use[group.first])
                     if (other->groups.count(group.first))
-                        add_use(bytes_in_use, other->groups[group.first]);
+                        add_use(bytes_in_use, other->groups.at(group.first));
             int need = input.what->hi/8U - input.what->lo/8U + 1;
             unsigned mask = (1U << need)-1;
             int max = (group_size(group.first.type)+7)/8 - need;
@@ -840,10 +849,10 @@ template void InputXbar::write_regs(Target::JBay::mau_regs &);
 template void InputXbar::write_regs(Target::Cloudbreak::mau_regs &);
 #endif  /* HAVE_CLOUDBREAK */
 
-InputXbar::Input *InputXbar::find(Phv::Slice sl, Group grp) {
+InputXbar::Input *InputXbar::find(Phv::Slice sl, Group grp, Group *found) {
     InputXbar::Input *rv = nullptr;
     if (groups.count(grp)) {
-        for (auto &in : groups[grp]) {
+        for (auto &in : groups.at(grp)) {
             if (in.lo < 0) continue;
             if (in.what->reg.uid != sl.reg.uid) continue;
             if (in.what->lo/8U > sl.lo/8U) continue;
@@ -851,8 +860,15 @@ InputXbar::Input *InputXbar::find(Phv::Slice sl, Group grp) {
             rv = &in;
             if (in.what->lo > sl.lo) continue;
             if (in.what->hi < sl.hi) continue;
+            if (found) *found = grp;
             return &in;
         }
+    } else if (grp.index == -1) {
+        for (auto &g : Keys(groups)) {
+            if (g.type != grp.type) continue;
+            if ((rv = find(sl, g))) {
+                if (found) *found = g;
+                return rv; } }
     }
     return rv;
 }
@@ -860,14 +876,18 @@ InputXbar::Input *InputXbar::find(Phv::Slice sl, Group grp) {
 std::vector<InputXbar::Input *> InputXbar::find_all(Phv::Slice sl, Group grp) {
     std::vector<InputXbar::Input *> rv;
     if (groups.count(grp)) {
-        for (auto &in : groups[grp]) {
+        for (auto &in : groups.at(grp)) {
             if (in.lo < 0) continue;
             if (in.what->reg.uid != sl.reg.uid) continue;
             if (in.what->lo/8U > sl.lo/8U) continue;
             if (in.what->hi/8U < sl.hi/8U) continue;
             rv.push_back(&in);
         }
-    }
+    } else if (grp.index == -1) {
+        for (auto &g : Keys(groups)) {
+            if (g.type != grp.type) continue;
+            auto tmp = find_all(sl, g);
+            rv.insert(rv.end(), tmp.begin(), tmp.end()); } }
     return rv;
 }
 

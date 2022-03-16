@@ -809,6 +809,8 @@ void IXBar::update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc) {
         update(name + "$proxy_hash", *rsrc->proxy_hash_ixbar);
     if (rsrc->gateway_ixbar)
         update(name + "$gw", *rsrc->gateway_ixbar);
+    if (rsrc->action_ixbar)
+        update(name + "$act", *rsrc->action_ixbar);
     if (rsrc->match_ixbar)
         update(name, *rsrc->match_ixbar);
     int index = 0;
@@ -829,4 +831,48 @@ IXBar *IXBar::create() {
         return new Flatrock::IXBar();
 #endif
     return new Tofino::IXBar();
+}
+
+void IXBar::add_names(cstring n, std::map<cstring, char> &names) {
+    if (n && !names.count(n)) {
+        if (names.size() >= 52)
+            names.emplace(n, '?');
+        else if (names.size() >= 26)
+            names.emplace(n, 'a' + names.size() - 26);
+        else
+            names.emplace(n, 'A' + names.size()); }
+}
+void IXBar::add_names(const std::pair<PHV::Container, int>& c, std::map<cstring, char> &names) {
+    add_names(c.first ? c.first.toString() : cstring(), names); }
+void IXBar::add_names(PHV::Container c, std::map<cstring, char> &names) {
+    add_names(c ? c.toString() : cstring(), names); }
+
+void IXBar::sort_names(std::map<cstring, char> &names) {
+    char a = 'A' - 1;
+    for (auto &n : names) {
+        n.second = ++a;
+        if (a == 'Z') a = 'a' - 1;
+        if (a == 'z') a = '0' - 1;
+        if (a == '9' || a == '?') a = '?' - 1; }
+}
+
+void IXBar::write_one(std::ostream &out, const std::pair<cstring, int> &f,
+                      std::map<cstring, char> &fields) {
+    if (f.first) {
+        out << fields.at(f.first) << hex(f.second/8);
+    } else {
+        out << ".."; }
+}
+void IXBar::write_one(std::ostream &out, cstring n, std::map<cstring, char> &names) {
+    if (n) {
+        out << names.at(n);
+    } else {
+        out << '.'; }
+}
+void IXBar::write_one(std::ostream &out, const std::pair<PHV::Container, int> &f,
+                      std::map<cstring, char> &fields) {
+    write_one(out, std::make_pair(f.first ? f.first.toString() : cstring(), f.second), fields);
+}
+void IXBar::write_one(std::ostream &out, PHV::Container f, std::map<cstring, char> &fields) {
+    write_one(out, std::make_pair(f ? f.toString() : cstring(), 0), fields);
 }

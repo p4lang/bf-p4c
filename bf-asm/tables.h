@@ -16,6 +16,7 @@
 #include "bitvec.h"
 #include "constants.h"
 #include "hash_dist.h"
+#include "input_xbar.h"
 #include "json.h"
 #include "map.h"
 #include "ordered_map.h"
@@ -699,7 +700,9 @@ class Table {
         return format ? format->find_field_lineno(field) : -1; }
     virtual void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn)
         { if (format) format->apply_to_field(n, fn); }
-    int find_on_ixbar(Phv::Slice sl, int group);
+    int find_on_ixbar(Phv::Slice sl, InputXbar::Group group, InputXbar::Group *found = nullptr);
+    int find_on_ixbar(Phv::Slice sl, int group) {
+        return find_on_ixbar(sl, InputXbar::Group(InputXbar::Group::EXACT, group)); }
     virtual HashDistribution *find_hash_dist(int unit);
     virtual int find_on_actionbus(const ActionBusSource &src, int lo, int hi,
             int size, int pos = -1);

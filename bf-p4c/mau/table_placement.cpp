@@ -2465,9 +2465,9 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
     LOG2("  try_place_table returning " << rv->entries << " of " << rv->name <<
          " in stage " << rv->stage <<
          (rv->need_more_match ? " (need more match)" : rv->need_more ? " (need more)" : ""));
-    LOG5(IndentCtl::indent << IndentCtl::indent << "    " <<
-         rv->resources <<
-         IndentCtl::unindent << IndentCtl::unindent);
+    // LOG5(IndentCtl::indent << IndentCtl::indent << "    " <<
+    //     rv->resources <<
+    //     IndentCtl::unindent << IndentCtl::unindent);
 
     if (!rv->table->created_during_tp) {
         if (!rv->need_more_match) {

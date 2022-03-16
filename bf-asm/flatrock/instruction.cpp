@@ -30,6 +30,10 @@ struct operand {
          * @param tbl table containing the action with the instruction with this operand
          * @param slot PHV container this operand is associated with */
         virtual void pass1(Table *tbl, int slot) {}
+        /** pass2 called as part of pass2 processing of stage
+         * @param tbl table containing the action with the instruction with this operand
+         * @param slot PHV container this operand is associated with */
+        virtual void pass2(Table *tbl, int slot) {}
     } *op;
     struct Const : Base {
         int64_t value;
@@ -41,7 +45,7 @@ struct operand {
         Const *clone() override { return new Const(*this); }
         int bits(int) override { return value & 0xff; }
         void pass1(Table *tbl, int slot) override {
-            if (::Phv::reg(slot)->size != 0)
+            if (::Phv::reg(slot)->size != 8)
                 error(lineno, "Constant literals only useable on 8-bit PHEs");
             if (value > 255 || value < -128)
                 error(lineno, "Constant value %" PRId64 " out of range", value); }
@@ -59,7 +63,7 @@ struct operand {
             } else { return false; } }
         Phv *clone() override { return new Phv(*this); }
         int bits(int) override {
-            error(lineno, "Flatrock PHE copy to action data bus not implemented yet");
+            error(lineno, "Flatrock action data bus regs not implemented yet");
             return 0; }
         bool check() override {
             if (!reg.check()) return false;
@@ -67,8 +71,17 @@ struct operand {
                 error(reg.lineno, "%s not accessable in mau", reg->reg.name);
                 return false; }
             return true; }
-        void pass1(Table *tbl, int slot) override {
+        void pass1(Table *tbl, int) override {
             tbl->stage->action_use[tbl->gress][reg->reg.uid] = true; }
+        void pass2(Table *tbl, int slot) override {
+            InputXbar::Group grp(InputXbar::Group::XCMP, -1);
+            int byte = tbl->find_on_ixbar(*reg, grp, &grp);
+            if (byte < 0) {
+                error(reg.lineno, "%s not available on the xcmp ixbar", reg.name());
+                return; }
+            ActionBusSource abs(grp, byte);
+            if (tbl->find_on_actionbus(abs, reg->lo, reg->hi, ::Phv::reg(slot)->size) < 0)
+                tbl->need_on_actionbus(abs, reg->lo, reg->hi, ::Phv::reg(slot)->size); }
         void dbprint(std::ostream &out) const override { out << reg; }
         bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) override {
             fn(*reg);
@@ -433,7 +446,7 @@ struct PhvWrite : VLIWInstruction {
          opc(op), dest(tbl->gress, tbl->stage->stageno + 1, d), src(tbl, act, s) {}
     std::string name() { return "set"; }
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
-    void pass2(Table *tbl, Table::Actions::Action *) {}
+    void pass2(Table *tbl, Table::Actions::Action *) { src->pass2(tbl, slot); }
     bool equiv(Instruction *a_);
     bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) { return src->phvRead(fn); }
     void dbprint(std::ostream &out) const {

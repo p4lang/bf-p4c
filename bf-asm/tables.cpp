@@ -2293,21 +2293,25 @@ void Table::need_on_actionbus(const ActionBusSource &src, int lo, int hi, int si
     action_bus->need_alloc(this, src, lo, hi, size);
 }
 
-int Table::find_on_ixbar(Phv::Slice sl, int group) {
+int Table::find_on_ixbar(Phv::Slice sl, InputXbar::Group group, InputXbar::Group *found) {
     if (input_xbar) {
-        if (auto *i = input_xbar->find_exact(sl, group)) {
+        if (auto *i = input_xbar->find(sl, group, found)) {
             unsigned bit = (i->lo + sl.lo - i->what->lo);
             BUG_CHECK(bit < 128);
-            return bit/8;
-        }
-    }
-    for (auto *in : stage->ixbar_use[InputXbar::Group(InputXbar::Group::EXACT, group)]) {
-        if (auto *i = in->find_exact(sl, group)) {
-            unsigned bit = (i->lo + sl.lo - i->what->lo);
-            BUG_CHECK(bit < 128);
-            return bit/8;
-        }
-    }
+            return bit/8; } }
+    if (group.index >= 0) {
+        for (auto *in : stage->ixbar_use[group]) {
+            if (auto *i = in->find(sl, group)) {
+                unsigned bit = (i->lo + sl.lo - i->what->lo);
+                BUG_CHECK(bit < 128);
+                return bit/8; } }
+    } else {
+        for (auto &g : Keys(stage->ixbar_use)) {
+            if (g.type != group.type) continue;
+            int t;
+            if ((t = find_on_ixbar(sl, g)) >= 0) {
+                if (found) *found = g;
+                return t; } } }
     return -1;
 }
 

@@ -16,6 +16,7 @@ struct TableResourceAlloc {
     // make sense to eventually move to IXBar::Use, and even potentially
     // ActionFormat::Use/ActionDataBus::Use for the different types of allocations
     autoclone_ptr<IXBar::Use>           match_ixbar, gateway_ixbar, proxy_hash_ixbar,
+                                        action_ixbar,
                                         selector_ixbar, salu_ixbar, meter_ixbar;
     safe_vector<IXBar::HashDistUse>     hash_dists;
     TableFormat::Use                    table_format;

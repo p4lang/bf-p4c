@@ -4,13 +4,23 @@
 
 namespace Flatrock {
 
+int IXBar::Use::slot_size(int group) const {
+    switch (type) {
+    case TERNARY_MATCH:
+    case GATEWAY:
+        return 8;
+    default:
+        return group ? 32 : 8;
+    }
+}
+
 void IXBar::Use::gather_bytes(const PhvInfo &phv, std::map<int, std::map<int, Slice>> &sort,
                               const IR::MAU::Table *tbl) const {
     PHV::FieldUse f_use(PHV::FieldUse::READ);
     for (auto &b : use) {
         BUG_CHECK(b.loc.allocated(), "Byte not allocated by assembly");
         // exact grp 1 is by 32-bits words; the rest are 8 bit bytes
-        int size = type == EXACT_MATCH && b.loc.group == 1 ? 32 : 8;
+        int size = slot_size(b.loc.group);
         for (auto &fi : b.field_bytes) {
             auto field = phv.field(fi.get_use_name());
             CHECK_NULL(field);
@@ -44,7 +54,6 @@ void IXBar::Use::gather_bytes(const PhvInfo &phv, std::map<int, std::map<int, Sl
 void IXBar::Use::emit_ixbar_asm(const PhvInfo &phv, std::ostream &out, indent_t indent,
                                 const TableMatch *, const IR::MAU::Table *tbl) const {
     std::map<int, std::map<int, Slice>> sort;
-    gather_bytes(phv, sort, tbl);
     cstring group_type;
     cstring (*index)(int i) = [](int)->cstring { return ""; };
     switch (type) {
@@ -67,9 +76,11 @@ void IXBar::Use::emit_ixbar_asm(const PhvInfo &phv, std::ostream &out, indent_t 
     case PROXY_HASH:
         BUG("PROXY_HASH not supported");
     default:
-        group_type = "action";
+        group_type = "xcmp";
+        index = [](int i)->cstring { return i ? " word" : " byte"; };
         break;
     }
+    gather_bytes(phv, sort, tbl);
     for (auto &group : sort)
         out << indent << group_type << index(group.first) << ": " << group.second << std::endl;
     if (exact_unit >= 0)

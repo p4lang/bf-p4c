@@ -1,4 +1,5 @@
 #include "input_xbar.h"
+#include "tables.h"
 
 int Flatrock::InputXbar::group_max_index(Group::type_t t) const {
     switch (t) {
@@ -14,11 +15,13 @@ int Flatrock::InputXbar::group_max_index(Group::type_t t) const {
 InputXbar::Group Flatrock::InputXbar::group_name(bool tern, const value_t &key) const {
     if (key.type == tSTR) {
         if (key == "gateway") return Group(Group::GATEWAY, 0);
-        if (key == "xcmp") return Group(Group::XCMP, 0);
     } else if (key.type == tCMD && key.vec.size == 2) {
         if (key[0] == "exact") {
             if (key[1] == "byte") return Group(Group::EXACT, 0);
             if (key[1] == "word") return Group(Group::EXACT, 1);
+        } else if (key[0] == "xcmp") {
+            if (key[1] == "byte") return Group(Group::XCMP, 0);
+            if (key[1] == "word") return Group(Group::XCMP, 1);
         } else if (key[0] == "ternary" && CHECKTYPE(key[1], tINT)) {
             return Group(Group::TERNARY, key[1].i); } }
     return Group(Group::INVALID, 0);
@@ -82,9 +85,16 @@ template<> void InputXbar::write_regs(Target::Flatrock::mau_regs &regs) {
             for (auto &input : group.second)
                 gw_key_cfg.vgd[input.lo/8U] = input.what->reg.ixbar_id();
             break; }
-        case Group::XCMP:
-            error(lineno, "%s:%d: Flatrock xcmp ixbar not implemented yet!", __FILE__, __LINE__);
-            break;
+        case Group::XCMP: {
+            auto &xcmp_key_cfg = regs.ppu_minput_rspec.rf.minput_xcmp_xb_key[0];
+            if (group.first.index) {
+                for (auto &input : group.second)
+                    xcmp_key_cfg.key32[input.lo/32U] = input.what->reg.ixbar_id()/4U;
+            } else {
+                for (auto &input : group.second)
+                    xcmp_key_cfg.key8[input.lo/8U] = input.what->reg.ixbar_id();
+            }
+            break; }
         default:
             BUG("invalid InputXbar::Group::Type(%d)", group.first.type);
         }

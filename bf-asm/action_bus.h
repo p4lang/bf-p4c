@@ -7,7 +7,7 @@
 static struct MeterBus_t {} MeterBus;
 struct ActionBusSource {
     enum { None, Field, HashDist, HashDistPair, RandomGen, TableOutput, TableColor, TableAddress,
-           NameRef, ColorRef, AddressRef }
+           Ealu, XcmpData, NameRef, ColorRef, AddressRef }
                                                     type;
     union {
         Table::Format::Field                        *field;
@@ -18,6 +18,9 @@ struct ActionBusSource {
         Table                                       *table;
         Table::Ref                                  *name_ref;
         RandomNumberGen                             rng;
+        struct {
+            short                                   xcmp_group, xcmp_byte;
+        };
     };
     ActionBusSource() : type(None) { field = nullptr; }
     ActionBusSource(Table::Format::Field *f) : type(Field) {  // NOLINT(runtime/explicit)
@@ -57,12 +60,25 @@ struct ActionBusSource {
     ActionBusSource(RandomNumberGen r) : type(RandomGen) {  // NOLINT(runtime/explicit)
         field = nullptr; rng = r;
     }
+    ActionBusSource(InputXbar::Group grp, int byte) : type(XcmpData) {
+        BUG_CHECK(grp.type == InputXbar::Group::XCMP, "Not xcmp ixbar");
+        field = nullptr;
+        xcmp_group = grp.index;
+        xcmp_byte = byte; }
     bool operator==(const ActionBusSource &a) const {
+        if (type == XcmpData)
+            return a.type == XcmpData && xcmp_group == a.xcmp_group && xcmp_byte == a.xcmp_byte;
         if (type == HashDistPair && hd2 != a.hd2) return false;
         return type == a.type && field == a.field; }
     bool operator<(const ActionBusSource &a) const {
-        return type == a.type ? type == HashDistPair && hd1 == a.hd1
-                              ? hd2 < a.hd2 : field < a.field : type < a.type; }
+        if (type != a.type) return type < a.type;
+        switch (type) {
+        case HashDistPair:
+            return hd1 == a.hd1 ? hd2 < a.hd2 : hd1 < a.hd1;
+        case XcmpData:
+            return xcmp_group == a.xcmp_group ? xcmp_byte < a.xcmp_byte : xcmp_group < a.xcmp_group;
+        default:
+            return field < a.field; } }
     std::string name(Table *tbl) const;
     std::string toString(Table *tbl) const;
 };

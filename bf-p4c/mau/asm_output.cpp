@@ -2647,6 +2647,9 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
         if (tbl->layout.atcam)
             emit_atcam_match(out, indent, tbl);
     }
+    if (tbl->resources->action_ixbar)
+        emit_ixbar(out, indent, tbl->resources->action_ixbar.get(), nullptr, nullptr, nullptr,
+                   nullptr, tbl, false);
     emit_indirect_res_context_json(out, indent, tbl);
     emit_user_annotation_context_json(out, indent, tbl->match_table);
 

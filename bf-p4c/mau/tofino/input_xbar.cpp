@@ -4319,61 +4319,6 @@ void IXBar::verify_hash_matrix() const {
     }
 }
 
-static void add_names(cstring n, std::map<cstring, char> &names) {
-    if (n && !names.count(n)) {
-        if (names.size() >= 52)
-            names.emplace(n, '?');
-        else if (names.size() >= 26)
-            names.emplace(n, 'a' + names.size() - 26);
-        else
-            names.emplace(n, 'A' + names.size()); }
-}
-static void add_names(const std::pair<PHV::Container, int>& c, std::map<cstring, char> &names) {
-    add_names(c.first ? c.first.toString() : cstring(), names); }
-template<class T>
-static void add_names(const T &n, std::map<cstring, char> &names) {
-    for (auto &a : n) add_names(a, names); }
-// FIXME -- should not be needed, but Alloc2D is missing begin/end
-template<class T, int R, int C>
-static void add_names(const BFN::Alloc2D<T, R, C> &n, std::map<cstring, char> &names) {
-    for (int r = 0; r < R; r++) add_names(n[r], names); }
-// FIXME -- should not be needed, but Alloc1D is missing const begin/end
-template<class T, int S>
-static void add_names(const BFN::Alloc1D<T, S> &n, std::map<cstring, char> &names) {
-    for (int i = 0; i < S; i++) add_names(n[i], names); }
-
-static void sort_names(std::map<cstring, char> &names) {
-    char a = 'A' - 1;
-    for (auto &n : names) {
-        n.second = ++a;
-        if (a == 'Z') a = 'a' - 1;
-        if (a == 'z') a = '0' - 1;
-        if (a == '9' || a == '?') a = '?' - 1; }
-}
-
-static void write_one(std::ostream &out, const std::pair<cstring, int> &f,
-                      std::map<cstring, char> &fields) {
-    if (f.first) {
-        out << fields.at(f.first) << hex(f.second/8);
-    } else {
-        out << ".."; }
-}
-static void write_one(std::ostream &out, cstring n, std::map<cstring, char> &names) {
-    if (n) {
-        out << names.at(n);
-    } else {
-        out << '.'; }
-}
-static void write_one(std::ostream &out, const std::pair<PHV::Container, int> &f,
-                      std::map<cstring, char> &fields) {
-    write_one(out, std::make_pair(f.first ? f.first.toString() : cstring(), f.second), fields);
-}
-
-template<class T>
-static void write_group(std::ostream &out, const T &grp, std::map<cstring, char> &fields) {
-    for (auto &a : grp) write_one(out, a, fields);
-}
-
 /* IXBarPrinter in .gdbinit should match this */
 void IXBar::dbprint(std::ostream &out) const {
     std::map<cstring, std::set<cstring>> field_users_names;

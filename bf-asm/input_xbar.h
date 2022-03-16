@@ -4,10 +4,11 @@
 #include <fstream>
 
 #include "constants.h"
-#include "tables.h"
 #include "phv.h"
 #include "ordered_map.h"
 #include "hashexpr.h"
+
+class Table;
 
 struct HashCol {
     int                     lineno = -1;
@@ -33,10 +34,10 @@ inline std::ostream &operator<<(std::ostream &out, HashCol &col) {
 class InputXbar {
  public:
     struct Group {
-        unsigned short                          index;
+        short                                   index;
         enum type_t { INVALID, EXACT, TERNARY, BYTE, GATEWAY, XCMP }
                                                 type;
-        Group(Group::type_t t, unsigned i) : index(i), type(t) {}
+        Group(Group::type_t t, int i) : index(i), type(t) {}
         explicit operator bool() const { return type != INVALID; }
         bool operator==(const Group &a) const { return type == a.type && index == a.index; }
         bool operator<(const Group &a) const {
@@ -137,11 +138,7 @@ class InputXbar {
     int tcam_byte_group(int n);
     int tcam_word_group(int n);
     std::map<unsigned, std::map<int, HashCol>>& get_hash_tables() { return hash_tables; }
-    const std::map<int, HashCol>& get_hash_table(unsigned id = 0) {
-        for (auto &ht : hash_tables)
-            if (ht.first == id) return ht.second;
-        warning(lineno, "Hash Table for index %d does not exist in table %s", id, table->name());
-        return empty_hash_table; }
+    const std::map<int, HashCol>& get_hash_table(unsigned id = 0);
     Phv::Ref get_hashtable_bit(unsigned id, unsigned bit) const {
         return get_group_bit(Group(Group::EXACT, id/2), bit + 64*(id & 0x1)); }
     Phv::Ref get_group_bit(Group grp, unsigned bit) const {
@@ -221,7 +218,7 @@ class InputXbar {
     all_iter begin() const { return all_iter(groups.begin(), groups.end()); }
     all_iter end() const { return all_iter(groups.end(), groups.end()); }
 
-    Input *find(Phv::Slice sl, Group grp);
+    Input *find(Phv::Slice sl, Group grp, Group *found = nullptr);
     Input *find_exact(Phv::Slice sl, int group) { return find(sl, Group(Group::EXACT, group)); }
 
     std::vector<Input *> find_all(Phv::Slice sl, Group grp);

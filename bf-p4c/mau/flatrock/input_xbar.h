@@ -49,6 +49,7 @@ class IXBar : public ::IXBar {
         void update_resources(int, BFN::Resources::StageResources &) const;
 
      private:
+        int slot_size(int group) const;
         void gather_bytes(const PhvInfo &phv, std::map<int, std::map<int, Slice>> &sort,
                           const IR::MAU::Table *tbl) const;
     };
@@ -83,6 +84,9 @@ class IXBar : public ::IXBar {
     BFN::Alloc1D<cstring, EXACT_MATCH_UNITS>    exact_hash_use;         // 1:1 mapping between hash
     unsigned                                    exact_hash_inuse = 0;   // and exact match units
 
+    // map from container to tables that use those fields (mostly for dbprint)
+    std::map<PHV::Container, std::set<cstring>>        field_users;
+
     // FIXME -- figure out some way to refactor these `find_alloc` routines together
     void find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                     safe_vector<IXBar::Use::Byte *> &alloced,
@@ -106,11 +110,14 @@ class IXBar : public ::IXBar {
                          safe_vector<IXBar::Use::Byte *> &alloced);
 
     bool allocGateway(const IR::MAU::Table *, const PhvInfo &, Use &, const LayoutOption *);
-    Use *setupMatchAlloc(const IR::MAU::Table *, const PhvInfo &, ContByteConversion &);
-    bool allocExact(const IR::MAU::Table *, const PhvInfo &, TableResourceAlloc &,
+    void setupMatchAlloc(const IR::MAU::Table *, const PhvInfo &, ContByteConversion &, Use &);
+    void setupActionAlloc(const IR::MAU::Table *, const PhvInfo &, ContByteConversion &, Use &);
+    bool allocExact(const IR::MAU::Table *, const PhvInfo &, Use &,
                     const LayoutOption *, const ActionData::Format::Use *);
-    bool allocTernary(const IR::MAU::Table *, const PhvInfo &, TableResourceAlloc &,
+    bool allocTernary(const IR::MAU::Table *, const PhvInfo &, Use &,
                       const LayoutOption *, const ActionData::Format::Use *);
+    class GetActionUse;
+    bool allocActions(const IR::MAU::Table *, const PhvInfo &, Use &);
     bool allocSelector(const IR::MAU::Selector *, const IR::MAU::Table *, const PhvInfo &,
                        Use &, cstring);
     bool allocStateful(const IR::MAU::StatefulAlu *, const IR::MAU::Table *, const PhvInfo &,

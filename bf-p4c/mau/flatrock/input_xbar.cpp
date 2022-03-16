@@ -246,12 +246,12 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     return true;
 }
 
-IXBar::Use *IXBar::setupMatchAlloc(const IR::MAU::Table *tbl, const PhvInfo &phv,
-                                   ContByteConversion &map_alloc) {
+void IXBar::setupMatchAlloc(const IR::MAU::Table *tbl, const PhvInfo &phv,
+                                   ContByteConversion &map_alloc, Use &alloc) {
     std::map<cstring, bitvec> fields_needed;
     KeyInfo ki;
     ki.is_atcam = tbl->layout.atcam;
-    Use *alloc = new Use();
+    alloc.clear();
 
     // For overlapping keys of different types where one type is "range", the
     // range key takes precedence to correctly set up dirtcam bits
@@ -269,17 +269,58 @@ IXBar::Use *IXBar::setupMatchAlloc(const IR::MAU::Table *tbl, const PhvInfo &phv
         }
         validKeys[idx] = ixbar_read;
     }
-    if (validKeys.empty()) return alloc;
+    if (validKeys.empty()) return;
 
     for (auto vkey : validKeys) {
         safe_vector<const IR::Expression *> field_list_order;
         FieldManagement(&map_alloc, field_list_order, vkey.second, &fields_needed,
-                        phv, ki, tbl);
-    }
+                        phv, ki, tbl); }
 
-    create_alloc(map_alloc, *alloc);
-    LOG3("need " << alloc->use.size() << " bytes for table " << tbl->name);
-    return alloc;
+    create_alloc(map_alloc, alloc);
+    LOG3("need " << alloc.use.size() << " bytes for table " << tbl->name);
+}
+
+class IXBar::GetActionUse : public Inspector {
+    const IR::MAU::Table *tbl;
+    const PhvInfo &phv;
+    ContByteConversion &map_alloc;
+    std::map<cstring, bitvec> &fields_needed;
+    bool preorder(const IR::MAU::Instruction *inst) {
+        bool inPhvWrite = (inst->name == "or" || inst->name == "andc");
+        for (unsigned i = 1; i < inst->operands.size(); ++i) {
+            if (inPhvWrite && i == 1 && equiv(inst->operands[0], inst->operands[i]))
+                continue;
+            visit(inst->operands[i]); }
+        return false; }
+    bool preorder(const IR::Expression *e) {
+        le_bitrange bits = { };
+        auto *finfo = phv.field(e, &bits);
+        BUG_CHECK(finfo, "operand not a phv ref: %s", e);
+        bitvec field_bits(bits.lo, bits.hi - bits.lo + 1);
+        if (fields_needed[finfo->name].contains(field_bits)) return false;  // already present
+        fields_needed[finfo->name] |= field_bits;
+        add_use(map_alloc, finfo, phv, tbl, phv.get_alias_name(e), &bits);
+        return false; }
+    bool preorder(const IR::Constant *) { return false; }
+    bool preorder(const IR::MAU::ActionArg *) { return false; }
+    bool preorder(const IR::Annotation *) { return false; }
+
+ public:
+    GetActionUse(const IR::MAU::Table *tbl, const PhvInfo &phv, ContByteConversion &map_alloc,
+                 std::map<cstring, bitvec> &fields_needed)
+    : tbl(tbl), phv(phv), map_alloc(map_alloc), fields_needed(fields_needed) {}
+};
+
+// Action sources are needed in the xcmp ixbar so they can be sourced by ALUs
+void IXBar::setupActionAlloc(const IR::MAU::Table *tbl, const PhvInfo &phv,
+                                    ContByteConversion &map_alloc, Use &alloc) {
+    std::map<cstring, bitvec> fields_needed;
+    GetActionUse gau(tbl, phv, map_alloc, fields_needed);
+    for (auto *act : Values(tbl->actions))
+        act->apply(gau);
+    alloc.clear();
+    create_alloc(map_alloc, alloc);
+    LOG3("need " << alloc.use.size() << " bytes for actions in table " << tbl->name);
 }
 
 bool IXBar::exact_find_hash(Use &alloc, const LayoutOption *lo) {
@@ -302,44 +343,50 @@ bool IXBar::exact_find_hash(Use &alloc, const LayoutOption *lo) {
     return true;
 }
 
-bool IXBar::allocExact(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResourceAlloc &alloc,
+bool IXBar::allocExact(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
                        const LayoutOption *lo, const ActionData::Format::Use *af) {
-    if (tbl->match_key.empty()) return true;
     LOG1("IXBar::allocExact(" << tbl->name << ")");
-    BUG_CHECK(!alloc.match_ixbar, "match ixbar already allocated?");
     ContByteConversion map_alloc;
-    Use *ixbar = setupMatchAlloc(tbl, phv, map_alloc);
-    alloc.match_ixbar.reset(ixbar);
-    if (!ixbar->use.empty()) {
+    setupMatchAlloc(tbl, phv, map_alloc, alloc);
+    if (!alloc.use.empty()) {
         safe_vector<IXBar::Use::Byte *> xbar_alloced;  // FIXME -- not needed?
-        if (!exact_find_hash(*ixbar, lo) ||
-            !exact_find_alloc(ixbar->use, xbar_alloced, ixbar->exact_unit)) {
-            alloc.match_ixbar.reset();
+        if (!exact_find_hash(alloc, lo) ||
+            !exact_find_alloc(alloc.use, xbar_alloced, alloc.exact_unit)) {
             return false; }
-        ixbar->type = Use::EXACT_MATCH;
-        ixbar->used_by = tbl->name;
-        update(tbl->name, *ixbar); }
+        alloc.type = Use::EXACT_MATCH;
+        alloc.used_by = tbl->name;
+        update(tbl->name, alloc); }
     if (lo || af) return true;
     return true;
 }
 
-bool IXBar::allocTernary(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResourceAlloc &alloc,
+bool IXBar::allocTernary(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
                          const LayoutOption *lo, const ActionData::Format::Use *af) {
-    if (tbl->match_key.empty()) return true;
     LOG1("IXBar::allocTernary(" << tbl->name << ")");
-    BUG_CHECK(!alloc.match_ixbar, "match ixbar already allocated?");
     ContByteConversion map_alloc;
-    Use *ixbar = setupMatchAlloc(tbl, phv, map_alloc);
-    alloc.match_ixbar.reset(ixbar);
-    if (!ixbar->use.empty()) {
+    setupMatchAlloc(tbl, phv, map_alloc, alloc);
+    if (!alloc.use.empty()) {
         safe_vector<IXBar::Use::Byte *> xbar_alloced;  // FIXME -- not needed?
-        if (!ternary_find_alloc(ixbar->use, xbar_alloced)) {
-            alloc.match_ixbar.reset();
+        if (!ternary_find_alloc(alloc.use, xbar_alloced)) {
             return false; }
-        ixbar->type = Use::TERNARY_MATCH;
-        ixbar->used_by = tbl->name;
-        update(tbl->name, *ixbar); }
+        alloc.type = Use::TERNARY_MATCH;
+        alloc.used_by = tbl->name;
+        update(tbl->name, alloc); }
     if (lo || af) return true;
+    return true;
+}
+
+bool IXBar::allocActions(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc) {
+    LOG1("IXBar::allocActions(" << tbl->name << ")");
+    ContByteConversion map_alloc;
+    setupActionAlloc(tbl, phv, map_alloc, alloc);
+    if (!alloc.use.empty()) {
+        safe_vector<IXBar::Use::Byte *> xbar_alloced;  // FIXME -- not needed?
+        if (!xcmp_find_alloc(alloc.use, xbar_alloced)) {
+            return false; }
+        alloc.type = Use::ACTION;
+        alloc.used_by = tbl->name;
+        update(tbl->name + "$act", alloc); }
     return true;
 }
 
@@ -376,15 +423,22 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
         BUG("flatrock ATCAM todo");
     } else if (tbl->layout.proxy_hash) {
         BUG("flatrock proxy hash todo");
-    } else {
+    } else if (!tbl->match_key.empty()) {
+        BUG_CHECK(!alloc.match_ixbar, "match ixbar already allocated?");
         if (tbl->layout.ternary) {
-            if (!allocTernary(tbl, phv, alloc, lo, af))
-                return false;
+            if (!allocTernary(tbl, phv, getUse(alloc.match_ixbar), lo, af)) {
+                alloc.clear_ixbar();
+                return false; }
         } else {
-            if (!allocExact(tbl, phv, alloc, lo, af))
-                return false;
+            if (!allocExact(tbl, phv, getUse(alloc.match_ixbar), lo, af)) {
+                alloc.clear_ixbar();
+                return false; }
         }
     }
+
+    if (!tbl->actions.empty() && !allocActions(tbl, phv, getUse(alloc.action_ixbar))) {
+        alloc.clear_ixbar();
+        return false; }
 
     for (auto back_at : tbl->attached) {
          auto at_mem = back_at->attached;
@@ -409,9 +463,11 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
     return true;
 }
 
-void IXBar::update(cstring /* table_name */, const ::IXBar::Use &use_) {
+void IXBar::update(cstring table_name, const ::IXBar::Use &use_) {
     auto &use = dynamic_cast<const Use &>(use_);
     if (use.empty()) return;
+    for (auto &byte : use.use)
+        field_users[byte.container].insert(table_name);
     switch (use.type) {
     case Use::EXACT_MATCH:
         for (auto &byte : use.use) {
@@ -440,6 +496,7 @@ void IXBar::update(cstring /* table_name */, const ::IXBar::Use &use_) {
     case Use::TRIE_MATCH:
         // FIXME -- trie needs input both via ternary xbar and xcmp xbar?  How do we
         // track which is which in and IXBar::Use?
+    case Use::ACTION:
     case Use::PROXY_HASH:
     case Use::SELECTOR:
     case Use::METER:
@@ -482,7 +539,50 @@ void IXBar::add_collisions() {
 void IXBar::verify_hash_matrix() const {
 }
 
-void IXBar::dbprint(std::ostream &) const {
+void IXBar::dbprint(std::ostream &out) const {
+    std::map<cstring, std::set<cstring>> field_users_names;
+    for (const auto& kv : field_users) {
+        field_users_names[kv.first.toString()] = kv.second;
+    }
+    std::map<cstring, char>     fields;
+    add_names(exact_byte_use, fields);
+    add_names(exact_word_use, fields);
+    add_names(gateway_use, fields);
+    add_names(ternary_use, fields);
+    add_names(xcmp_byte_use, fields);
+    add_names(xcmp_word_use, fields);
+    sort_names(fields);
+    out << "ew e bytes    ternary ixbar                  gw   x wds  x bytes" << Log::endl;
+    for (int r = 0; r < 5; r++) {
+        write_one(out, exact_word_use[r], fields);
+        out << ' ';
+        for (auto c = 0; c < EXACT_BYTES; c += 5)
+            write_one(out, exact_byte_use[c+r], fields);
+        out << ' ';
+        for (auto c = 0; c < TERNARY_GROUPS; ++c)
+            write_one(out, ternary_use[c][r], fields);
+        if (r < 4) {  // onlye 4 rows for gw/xcmp
+            out << ' ';
+            for (auto c = 0; c < GATEWAY_VEC_BYTES; c += 4)
+                write_one(out, gateway_use[c+r], fields);
+            out << ' ';
+            for (auto c = 0; c < XCMP_WORDS; c += 4)
+                write_one(out, xcmp_word_use[c+r], fields);
+            out << ' ';
+            for (auto c = 0; c < XCMP_BYTES; c += 4)
+                write_one(out, xcmp_byte_use[c+r], fields); }
+        out << Log::endl; }
+    for (auto &f : fields) {
+        out << "   " << f.second << " " << f.first;
+        const char *sep = " (";
+        if (field_users_names.count(f.first)) {
+            for (auto t : field_users_names.at(f.first)) {
+                out << sep << t;
+                sep = ", "; } }
+        if (*sep == ',') out << ')';
+        out << Log::endl; }
+
+    // TODO -- hash functions
 }
 
 }  // namespace Flatrock

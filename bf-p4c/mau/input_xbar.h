@@ -6,6 +6,7 @@
 #include <random>
 #include <unordered_set>
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/common/alloc.h"
 #include "bf-p4c/lib/autoclone.h"
 #include "bf-p4c/lib/dyn_vector.h"
 #include "bf-p4c/mau/attached_entries.h"
@@ -197,7 +198,7 @@ struct IXBar {
         virtual bool is_parity_enabled() const = 0;
 
         // FIXME: Could be better created initialized through a constructor
-        enum type_t { EXACT_MATCH, ATCAM_MATCH, TERNARY_MATCH, TRIE_MATCH, GATEWAY,
+        enum type_t { EXACT_MATCH, ATCAM_MATCH, TERNARY_MATCH, TRIE_MATCH, GATEWAY, ACTION,
                       PROXY_HASH, SELECTOR, METER, STATEFUL_ALU, HASH_DIST, TYPES }
             type = TYPES;
 
@@ -528,6 +529,33 @@ struct IXBar {
     virtual ~IXBar() {}
 
     static IXBar *create();
+
+ protected:
+    // helper functions for dbprint
+    static void add_names(cstring n, std::map<cstring, char> &names);
+    static void add_names(const std::pair<PHV::Container, int>& c, std::map<cstring, char> &names);
+    static void add_names(PHV::Container c, std::map<cstring, char> &names);
+    template<class T>
+    static void add_names(const T &n, std::map<cstring, char> &names) {
+        for (auto &a : n) add_names(a, names); }
+    // FIXME -- should not be needed, but Alloc2D is missing begin/end
+    template<class T, int R, int C>
+    static void add_names(const BFN::Alloc2D<T, R, C> &n, std::map<cstring, char> &names) {
+        for (int r = 0; r < R; r++) add_names(n[r], names); }
+    // FIXME -- should not be needed, but Alloc1D is missing const begin/end
+    template<class T, int S>
+    static void add_names(const BFN::Alloc1D<T, S> &n, std::map<cstring, char> &names) {
+        for (int i = 0; i < S; i++) add_names(n[i], names); }
+    static void sort_names(std::map<cstring, char> &names);
+    static void write_one(std::ostream &out, const std::pair<cstring, int> &f,
+                          std::map<cstring, char> &fields);
+    static void write_one(std::ostream &out, cstring n, std::map<cstring, char> &names);
+    static void write_one(std::ostream &out, const std::pair<PHV::Container, int> &f,
+                          std::map<cstring, char> &fields);
+    static void write_one(std::ostream &out, PHV::Container f, std::map<cstring, char> &fields);
+    template<class T>
+    static void write_group(std::ostream &out, const T &grp, std::map<cstring, char> &fields) {
+        for (auto &a : grp) write_one(out, a, fields); }
 };
 
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Loc &l) {
