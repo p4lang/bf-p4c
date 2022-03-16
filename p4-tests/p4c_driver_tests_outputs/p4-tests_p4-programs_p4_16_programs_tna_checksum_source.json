@@ -5,27 +5,11 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 249,
+                    "line": 250,
                     "column": 37
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.ipv4_checksum",
-            "declaration": {
-                "file": "tna_checksum.p4",
-                "line": 240,
-                "column": 16
-            },
-            "symbol_type": "Declaration_Instance_Type_Extern"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_checksum.p4",
-                    "line": 263,
-                    "column": 32
-                }
-            ],
-            "symbol_name": "SwitchIngressDeparser.tcp_checksum",
             "declaration": {
                 "file": "tna_checksum.p4",
                 "line": 241,
@@ -37,14 +21,30 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 270,
+                    "line": 264,
+                    "column": 32
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.tcp_checksum",
+            "declaration": {
+                "file": "tna_checksum.p4",
+                "line": 242,
+                "column": 16
+            },
+            "symbol_type": "Declaration_Instance_Type_Extern"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_checksum.p4",
+                    "line": 271,
                     "column": 32
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.udp_checksum",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 242,
+                "line": 243,
                 "column": 16
             },
             "symbol_type": "Declaration_Instance_Type_Extern"
@@ -152,20 +152,20 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 203,
+                    "line": 204,
                     "column": 9,
-                    "end_line": 205
+                    "end_line": 206
                 },
                 {
                     "file": "tna_checksum.p4",
-                    "line": 203,
+                    "line": 204,
                     "column": 20,
-                    "end_line": 204
+                    "end_line": 205
                 }
             ],
             "symbol_name": "NoAction",
             "declaration": {
-                "file": "/home/ubuntu/bf-p4c-compilers2/build/p4c/p4include/core.p4",
+                "file": "/bfn/bf-p4c-compilers/build/p4c/p4include/core.p4",
                 "line": 70,
                 "column": 8
             },
@@ -175,7 +175,7 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 189,
+                    "line": 190,
                     "column": 13
                 }
             ],
@@ -191,7 +191,7 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 192,
+                    "line": 193,
                     "column": 13
                 }
             ],
@@ -207,7 +207,7 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 190,
+                    "line": 191,
                     "column": 13
                 }
             ],
@@ -223,12 +223,12 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 191,
+                    "line": 192,
                     "column": 13
                 },
                 {
                     "file": "tna_checksum.p4",
-                    "line": 217,
+                    "line": 218,
                     "column": 13
                 }
             ],
@@ -244,12 +244,12 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 183,
+                    "line": 184,
                     "column": 13
                 },
                 {
                     "file": "tna_checksum.p4",
-                    "line": 195,
+                    "line": 196,
                     "column": 26
                 }
             ],
@@ -265,14 +265,14 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 204,
+                    "line": 205,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress.set_output_port",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 198,
+                "line": 199,
                 "column": 12
             },
             "symbol_type": "P4Action"
@@ -281,7 +281,7 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 184,
+                    "line": 185,
                     "column": 13
                 }
             ],
@@ -297,7 +297,7 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 186,
+                    "line": 187,
                     "column": 13
                 }
             ],
@@ -313,7 +313,7 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 188,
+                    "line": 189,
                     "column": 13
                 }
             ],
@@ -329,7 +329,7 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 185,
+                    "line": 186,
                     "column": 13
                 }
             ],
@@ -345,7 +345,7 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 187,
+                    "line": 188,
                     "column": 13
                 }
             ],
@@ -361,14 +361,14 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 212,
+                    "line": 213,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.output_port",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 202,
+                "line": 203,
                 "column": 11
             },
             "symbol_type": "P4Table"
@@ -377,14 +377,14 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 210,
+                    "line": 211,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.translate",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 180,
+                "line": 181,
                 "column": 11
             },
             "symbol_type": "P4Table"
@@ -394,27 +394,27 @@
             "symbol_name": "tbl_checksum_upd_udp",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 217,
+                "line": 218,
                 "column": 13
             },
             "symbol_type": "P4Table"
         },
         {
             "references": [],
-            "symbol_name": "tbl_tna_checksum222",
+            "symbol_name": "tbl_tna_checksum223",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 222,
+                "line": 223,
                 "column": 35
             },
             "symbol_type": "P4Table"
         },
         {
             "references": [],
-            "symbol_name": "tbl_tna_checksum226",
+            "symbol_name": "tbl_tna_checksum227",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 226,
+                "line": 227,
                 "column": 32
             },
             "symbol_type": "P4Table"
@@ -497,7 +497,7 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 222,
+                    "line": 223,
                     "column": 13
                 }
             ],
@@ -528,7 +528,7 @@
                 },
                 {
                     "file": "tna_checksum.p4",
-                    "line": 181,
+                    "line": 182,
                     "column": 17
                 }
             ],
@@ -565,7 +565,7 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 216,
+                    "line": 217,
                     "column": 13
                 }
             ],
@@ -602,7 +602,7 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 221,
+                    "line": 222,
                     "column": 13
                 }
             ],
@@ -655,7 +655,7 @@
                 },
                 {
                     "file": "tna_checksum.p4",
-                    "line": 216,
+                    "line": 217,
                     "column": 38
                 }
             ],
@@ -671,7 +671,7 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 226,
+                    "line": 227,
                     "column": 9
                 }
             ],
@@ -687,7 +687,7 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 199,
+                    "line": 200,
                     "column": 9
                 }
             ],
@@ -703,14 +703,14 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 199,
+                    "line": 200,
                     "column": 38
                 }
             ],
             "symbol_name": "SwitchIngress.set_output_port.port_id",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 198,
+                "line": 199,
                 "column": 37
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -928,7 +928,7 @@
             "symbol_name": "SwitchIngressDeparser.hdr.ethernet",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 234,
+                "line": 235,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -944,161 +944,7 @@
             "symbol_name": "SwitchIngressDeparser.hdr.ipv4",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 234,
-                "column": 46
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_checksum.p4",
-                    "line": 252,
-                    "column": 18
-                }
-            ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.diffserv",
-            "declaration": {
-                "file": "tna_checksum.p4",
-                "line": 234,
-                "column": 46
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_checksum.p4",
-                    "line": 260,
-                    "column": 18
-                }
-            ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.dst_addr",
-            "declaration": {
-                "file": "tna_checksum.p4",
-                "line": 234,
-                "column": 46
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_checksum.p4",
-                    "line": 255,
-                    "column": 18
-                }
-            ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.flags",
-            "declaration": {
-                "file": "tna_checksum.p4",
-                "line": 234,
-                "column": 46
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_checksum.p4",
-                    "line": 256,
-                    "column": 18
-                }
-            ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.frag_offset",
-            "declaration": {
-                "file": "tna_checksum.p4",
-                "line": 234,
-                "column": 46
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_checksum.p4",
-                    "line": 249,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.hdr_checksum",
-            "declaration": {
-                "file": "tna_checksum.p4",
-                "line": 234,
-                "column": 46
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_checksum.p4",
-                    "line": 254,
-                    "column": 18
-                }
-            ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.identification",
-            "declaration": {
-                "file": "tna_checksum.p4",
-                "line": 234,
-                "column": 46
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_checksum.p4",
-                    "line": 251,
-                    "column": 18
-                }
-            ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.ihl",
-            "declaration": {
-                "file": "tna_checksum.p4",
-                "line": 234,
-                "column": 46
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_checksum.p4",
-                    "line": 258,
-                    "column": 18
-                }
-            ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.protocol",
-            "declaration": {
-                "file": "tna_checksum.p4",
-                "line": 234,
-                "column": 46
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_checksum.p4",
-                    "line": 259,
-                    "column": 18
-                },
-                {
-                    "file": "tna_checksum.p4",
-                    "line": 264,
-                    "column": 17
-                },
-                {
-                    "file": "tna_checksum.p4",
-                    "line": 271,
-                    "column": 17
-                }
-            ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.src_addr",
-            "declaration": {
-                "file": "tna_checksum.p4",
-                "line": 234,
+                "line": 235,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1111,10 +957,42 @@
                     "column": 18
                 }
             ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.total_len",
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.diffserv",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 234,
+                "line": 235,
+                "column": 46
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_checksum.p4",
+                    "line": 261,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.dst_addr",
+            "declaration": {
+                "file": "tna_checksum.p4",
+                "line": 235,
+                "column": 46
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_checksum.p4",
+                    "line": 256,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.flags",
+            "declaration": {
+                "file": "tna_checksum.p4",
+                "line": 235,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1127,10 +1005,10 @@
                     "column": 18
                 }
             ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.ttl",
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.frag_offset",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 234,
+                "line": 235,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1140,13 +1018,135 @@
                 {
                     "file": "tna_checksum.p4",
                     "line": 250,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.hdr_checksum",
+            "declaration": {
+                "file": "tna_checksum.p4",
+                "line": 235,
+                "column": 46
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_checksum.p4",
+                    "line": 255,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.identification",
+            "declaration": {
+                "file": "tna_checksum.p4",
+                "line": 235,
+                "column": 46
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_checksum.p4",
+                    "line": 252,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.ihl",
+            "declaration": {
+                "file": "tna_checksum.p4",
+                "line": 235,
+                "column": 46
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_checksum.p4",
+                    "line": 259,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.protocol",
+            "declaration": {
+                "file": "tna_checksum.p4",
+                "line": 235,
+                "column": 46
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_checksum.p4",
+                    "line": 260,
+                    "column": 18
+                },
+                {
+                    "file": "tna_checksum.p4",
+                    "line": 265,
+                    "column": 17
+                },
+                {
+                    "file": "tna_checksum.p4",
+                    "line": 272,
+                    "column": 17
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.src_addr",
+            "declaration": {
+                "file": "tna_checksum.p4",
+                "line": 235,
+                "column": 46
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_checksum.p4",
+                    "line": 254,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.total_len",
+            "declaration": {
+                "file": "tna_checksum.p4",
+                "line": 235,
+                "column": 46
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_checksum.p4",
+                    "line": 258,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.ttl",
+            "declaration": {
+                "file": "tna_checksum.p4",
+                "line": 235,
+                "column": 46
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_checksum.p4",
+                    "line": 251,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.ipv4.version",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 234,
+                "line": 235,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1162,7 +1162,7 @@
             "symbol_name": "SwitchIngressDeparser.hdr.ipv6",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 234,
+                "line": 235,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1178,7 +1178,7 @@
             "symbol_name": "SwitchIngressDeparser.hdr.tcp",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 234,
+                "line": 235,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1187,14 +1187,14 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 263,
+                    "line": 264,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.tcp.checksum",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 234,
+                "line": 235,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1203,14 +1203,14 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 265,
+                    "line": 266,
                     "column": 17
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.tcp.src_port",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 234,
+                "line": 235,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1226,7 +1226,7 @@
             "symbol_name": "SwitchIngressDeparser.hdr.udp",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 234,
+                "line": 235,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1235,14 +1235,14 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 270,
+                    "line": 271,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.udp.checksum",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 234,
+                "line": 235,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1251,14 +1251,14 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 272,
+                    "line": 273,
                     "column": 17
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.udp.src_port",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 234,
+                "line": 235,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1274,7 +1274,7 @@
             "symbol_name": "SwitchIngressDeparser.hdr.vlan_tag",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 234,
+                "line": 235,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1283,14 +1283,14 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 266,
+                    "line": 267,
                     "column": 17
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.ig_md.checksum_tcp_tmp",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 235,
+                "line": 236,
                 "column": 45
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1299,14 +1299,14 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 273,
+                    "line": 274,
                     "column": 17
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.ig_md.checksum_udp_tmp",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 235,
+                "line": 236,
                 "column": 45
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1315,14 +1315,14 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 248,
+                    "line": 249,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.ig_md.checksum_upd_ipv4",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 235,
+                "line": 236,
                 "column": 45
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1331,14 +1331,14 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 262,
+                    "line": 263,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.ig_md.checksum_upd_tcp",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 235,
+                "line": 236,
                 "column": 45
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1347,14 +1347,14 @@
             "references": [
                 {
                     "file": "tna_checksum.p4",
-                    "line": 269,
+                    "line": 270,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.ig_md.checksum_upd_udp",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 235,
+                "line": 236,
                 "column": 45
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1370,7 +1370,7 @@
             "symbol_name": "SwitchIngressDeparser.pkt",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 233,
+                "line": 234,
                 "column": 42
             },
             "symbol_type": "Parameter_Type_Extern"
@@ -1883,7 +1883,7 @@
             "symbol_name": "cond-1",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 216,
+                "line": 217,
                 "column": 9
             },
             "symbol_type": "IfStatement"
@@ -1893,7 +1893,7 @@
             "symbol_name": "cond-2",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 221,
+                "line": 222,
                 "column": 9
             },
             "symbol_type": "IfStatement"
@@ -1903,7 +1903,7 @@
             "symbol_name": "cond-3",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 216,
+                "line": 217,
                 "column": 9
             },
             "symbol_type": "IfStatement"
@@ -1913,11 +1913,11 @@
             "symbol_name": "cond-4",
             "declaration": {
                 "file": "tna_checksum.p4",
-                "line": 221,
+                "line": 222,
                 "column": 9
             },
             "symbol_type": "IfStatement"
         }
     ],
-    "source_root": "/home/ubuntu/bf-p4c-compilers2/p4-tests/p4-programs/p4_16_programs/tna_checksum"
+    "source_root": "/bfn/bf-p4c-compilers/p4-tests/p4-programs/p4_16_programs/tna_checksum"
 }

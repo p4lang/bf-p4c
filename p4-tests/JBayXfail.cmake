@@ -194,7 +194,6 @@ if (PTF_REQUIREMENTS_MET)
 p4c_add_xfail_reason("tofino2"
   "AssertionError: Expected packet was not received on device .*, port .*"
   extensions/p4_tests/p4_16/ptf/ingress_checksum.p4
-  p4c_3043
   extensions/p4_tests/p4_14/ptf/easy_no_match.p4
   tor.p4
 )
@@ -513,3 +512,10 @@ p4c_add_xfail_reason("tofino2"
   "error: Multiple matches in .* matcher"
   testdata/p4_14_samples/copy_to_cpu.p4
 )
+
+# Tracked in P4C-3328
+p4c_add_xfail_reason("tofino2"
+  "Metadata initialization analysis incorrect. Live ranges between .* and .* overlap"
+  p4c_3043
+)
+
