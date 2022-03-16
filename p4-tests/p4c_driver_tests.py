@@ -30,6 +30,7 @@ test_matrix = {
             '!pipe/logs/phv_allocation_history_0.log' ]),  # no phv alloc logs produced
 
     # Preprocessor only
+    # Expected output is that no output folder will be created
     'p4_preprocessor_only': (['-I', p4_16_includes_dir, '-E', p4_16_default, '-o', 'p4_preprocessor_only'], None, None),
 
     # Default program name

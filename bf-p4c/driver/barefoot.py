@@ -360,7 +360,7 @@ class BarefootBackend(BackendDriver):
         basepath = "{}/{}".format(output_dir, self.program_name)
 
         # Make precleaner delete artifacts from previous builds if
-        # enabled and there is a folder to cleanup
+        # enabled and there is a folder to cleanup.
         # It deletes everything in the output folder
         if not opts.skip_precleaner and os.path.isdir(output_dir):
             self.configPrecleaner(opts, output_dir)

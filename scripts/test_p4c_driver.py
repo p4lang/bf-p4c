@@ -169,6 +169,9 @@ class Test:
         """
         if self._verbose: print("Source file:", args.source_file)
 
+        if args.preprocessor_only and args.output_directory and os.path.isdir(args.output_directory):
+            raise TestError("ERROR: Output folder exists (and should not)")
+
         if args.output_directory is None:
             file_name, ext = os.path.splitext(os.path.basename(args.source_file))
             outdir = file_name + "." + args.target
