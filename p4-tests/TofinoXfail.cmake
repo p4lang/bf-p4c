@@ -206,10 +206,6 @@ p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1458-a.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1797-1.p4
-  extensions/p4_tests/p4_16/customer/arista/p4c-2143.p4
-  extensions/p4_tests/p4_16/customer/arista/p4c-2189.p4
-  extensions/p4_tests/p4_16/customer/arista/p4c-2191.p4
-  extensions/p4_tests/p4_16/customer/arista/p4c-2378.p4
   # extensions/p4_tests/p4-programs/internal_p4_14/netcache/netcache.p4
   extensions/p4_tests/p4_16/compile_only/p4c-3417.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-282/case1864.p4
@@ -245,8 +241,6 @@ p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages|./p4c TIMEOUT"
   ../glass/testsuite/p4_tests/mau/COMPILER-362/icmp_typecode.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-243/comp243.p4
-  extensions/p4_tests/p4_16/customer/arista/p4c-2012.p4
-  extensions/p4_tests/p4_16/customer/arista/p4c-2257.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -298,11 +292,6 @@ p4c_add_xfail_reason("tofino"
   "error: Use of uninitialized parser value"
   testdata/p4_16_samples/issue692-bmv2.p4
   testdata/p4_16_samples/parser-if.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "error.*Field is extracted in the parser into multiple containers"
-  extensions/p4_tests/p4_16/customer/arista/p4c-1494.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -800,8 +789,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error.*This program violates action constraints imposed by Tofino.|./p4c TIMEOUT"
-# Investigate this
-  extensions/p4_tests/p4_16/customer/arista/p4c-1652.p4
 # Negative tests for violation of action constraints.
   extensions/p4_tests/p4_14/compile_only/action_conflict_1.p4
   extensions/p4_tests/p4_14/compile_only/action_conflict_3.p4
@@ -827,11 +814,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "The table .* with no key cannot have the action .*"
   ../glass/testsuite/p4_tests/phv/COMPILER-961/jk_msdc.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "PHV allocation was not successful"
-  extensions/p4_tests/p4_14/customer/arista/p4c-2661.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1098,13 +1080,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/COMPILER-970/comp_970.p4
   )
 
-# Failed after bridged packing, fix with a follow-up PR
-p4c_add_xfail_reason("tofino"
-  "Fields involved in the same MAU operations have conflicting PARDE alignment requirements"
-  extensions/p4_tests/p4_16/customer/arista/p4c-2226.p4
-  extensions/p4_tests/p4_16/customer/arista/p4c-2178.p4
-)
-
 # P4C-1396
 p4c_add_xfail_reason("tofino"
   "Incompatible types bit<1> and bool"
@@ -1116,16 +1091,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/noviflow/P4C-1984/p4c_1984_2.p4
   ../glass/testsuite/p4_tests/noviflow/P4C-1984/p4c_1984_3.p4
   ../glass/testsuite/p4_tests/noviflow/P4C-1984/p4c_1984_4.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "tofino supports up to 12 stages, using 13|./p4c TIMEOUT"
-  extensions/p4_tests/p4_16/customer/arista/p4c-2058.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "No PHV allocation for field used as a POV bit in the deparser|./p4c TIMEOUT"
-  extensions/p4_tests/p4_16/customer/arista/p4c-2077.p4
   )
 
 # Valid XFAIL
@@ -1426,12 +1391,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/keysight/COMPILER-1049/case7268.p4
 )
 
-# P4C-2076
-p4c_add_xfail_reason("tofino"
-  "error: : Currently the field .* in action .* is assigned in a way too complex for the compiler to currently handle."
-  extensions/p4_tests/p4_16/customer/arista/p4c-2076.p4
-)
-
 # P4C-2132
 p4c_add_xfail_reason("tofino"
   "deparser checksum unit 2 used in both ingress and egress"
@@ -1692,19 +1651,6 @@ p4c_add_xfail_reason("tofino"
   "Saturating arithmetic operators may not exceed maximum PHV container width"
   extensions/p4_tests/p4_16/compile_only/p4c-2694.p4
 )
-
-# Enable in a subsequent PR for nightly regressions for deprecated Arista profiles
-# # P4C-2817
-# p4c_add_xfail_reason("tofino"
-#   "error: tofino supports up to 12 stages, using .*"
-#   extensions/p4_tests/p4_16/customer/arista/deprecated/obfuscated-ref-qinq.p4
-# )
-
-# # P4C-2614
-# p4c_add_xfail_reason("tofino"
-#   "error: syntax error, unexpected '.'"
-#   extensions/p4_tests/p4_16/customer/arista/deprecated/obfuscated-ref-nat-static_2.p4
-# )
 
 p4c_add_xfail_reason("tofino"
   "table.*is applied in multiple places"

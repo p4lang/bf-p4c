@@ -26,8 +26,6 @@
 @pa_container_size("egress" , "Wanamassa.PeaRidge.Charco" , 32)
 @pa_container_size("ingress" , "Wanamassa.PeaRidge.Chugwater" , 32)
 @pa_container_size("ingress" , "Wanamassa.PeaRidge.Charco" , 32)
-@pa_container_size("ingress" , "Peoria.Masontown.Naruna" , 8)
-@pa_container_size("ingress" , "Wanamassa.Neponset.Kremlin" , 8)
 @pa_atomic("ingress" , "Peoria.Masontown.Jenners")
 @pa_atomic("ingress" , "Peoria.Gambrills.Minto")
 @pa_mutually_exclusive("ingress" , "Peoria.Masontown.RockPort" , "Peoria.Gambrills.Eastwood")
@@ -66,9 +64,12 @@
 @pa_container_size("egress" , "Wanamassa.Moultrie.Chugwater" , 32)
 @pa_container_size("ingress" , "Wanamassa.Moultrie.Charco" , 32)
 @pa_container_size("ingress" , "Wanamassa.Moultrie.Chugwater" , 32)
-@pa_mutually_exclusive("egress" , "Wanamassa.Basco.Charco" , "Peoria.Belmore.Corydon")
-@pa_mutually_exclusive("egress" , "Wanamassa.Gamaliel.Tenino" , "Peoria.Belmore.Corydon")
-@pa_mutually_exclusive("egress" , "Wanamassa.Gamaliel.Pridgen" , "Peoria.Belmore.Heuvelton")
+@pa_mutually_exclusive("egress" , "Wanamassa.Basco" , "Peoria.Belmore.Corydon")
+@pa_mutually_exclusive("egress" , "Wanamassa.Gamaliel" , "Peoria.Belmore.Corydon")
+@pa_mutually_exclusive("egress" , "Wanamassa.Dushore" , "Wanamassa.Harriet")
+@pa_mutually_exclusive("egress" , "Wanamassa.Hitterdal" , "Wanamassa.Harriet")
+@pa_mutually_exclusive("egress" , "Wanamassa.Dushore" , "Wanamassa.Orting")
+@pa_mutually_exclusive("egress" , "Wanamassa.Hitterdal" , "Wanamassa.Orting")
 @pa_mutually_exclusive("egress" , "Wanamassa.Humeston.McBride" , "Peoria.Belmore.Peebles")
 @pa_mutually_exclusive("egress" , "Wanamassa.Humeston.Mackville" , "Peoria.Belmore.Miranda")
 @pa_atomic("ingress" , "Peoria.Belmore.Tornillo")
@@ -93,13 +94,6 @@
 @pa_atomic("egress" , "Wanamassa.Alstown.Wallula")
 @pa_solitary("pipe_b" , "ingress" , "Wanamassa.Alstown.$valid")
 @pa_atomic("pipe_a" , "ingress" , "Peoria.Masontown.Whitewood")
-@pa_container_size("pipe_a" , "ingress" , "Peoria.Millhaven.Komatke" , 32)
-@pa_mutually_exclusive("egress" , "Wanamassa.Dushore" , "Wanamassa.Harriet")
-@pa_mutually_exclusive("egress" , "Wanamassa.Dushore" , "Wanamassa.Orting")
-@pa_mutually_exclusive("egress" , "Wanamassa.Dushore" , "Wanamassa.Thawville")
-@pa_mutually_exclusive("egress" , "Wanamassa.Hitterdal" , "Wanamassa.Harriet")
-@pa_mutually_exclusive("egress" , "Wanamassa.Hitterdal" , "Wanamassa.Orting")
-@pa_mutually_exclusive("egress" , "Wanamassa.Hitterdal" , "Wanamassa.Thawville")
 @pa_mutually_exclusive("pipe_a" , "ingress" , "Peoria.Newhalem.Stennett" , "Peoria.Millhaven.Komatke")
 @pa_mutually_exclusive("pipe_a" , "ingress" , "Peoria.Newhalem.Stennett" , "Peoria.Millhaven.Quinault")
 @pa_mutually_exclusive("pipe_a" , "ingress" , "Peoria.Newhalem.Stennett" , "Peoria.Millhaven.Minturn")
@@ -1090,8 +1084,7 @@ struct Martelle {
 @pa_mutually_exclusive("egress" , "Wanamassa.Dushore" , "Wanamassa.Orting")
 @pa_mutually_exclusive("egress" , "Wanamassa.Hitterdal" , "Wanamassa.Harriet")
 @pa_mutually_exclusive("egress" , "Wanamassa.Hitterdal" , "Wanamassa.Orting")
-@pa_mutually_exclusive("egress" , "Wanamassa.Knights" , "Wanamassa.Basco")
-@pa_mutually_exclusive("egress" , "Wanamassa.Basco" , "Wanamassa.Gamaliel")
+@pa_mutually_exclusive("egress" , "Wanamassa.Knights" , "Wanamassa.Basco" , "Wanamassa.Gamaliel")
 @pa_mutually_exclusive("egress" , "Wanamassa.Dushore" , "Wanamassa.Knights")
 @pa_mutually_exclusive("egress" , "Wanamassa.Knights" , "Wanamassa.Basco")
 @pa_mutually_exclusive("egress" , "Wanamassa.Knights" , "Wanamassa.Harriet")
@@ -2637,19 +2630,29 @@ control OldTown(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intri
 
 control Brownson(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intrinsic_metadata_t Crump, in egress_intrinsic_metadata_from_parser_t Nighthawk, inout egress_intrinsic_metadata_for_deparser_t Tullytown, inout egress_intrinsic_metadata_for_output_port_t Heaton) {
     @name(".Punaluu") action Punaluu() {
-        Peoria.Belmore.Wauconda = (bit<3>)3w0;
-        Peoria.Belmore.LaConner = (bit<3>)3w3;
     }
     @name(".Linville") action Linville(bit<8> Kelliher) {
-        Peoria.Belmore.Kendrick = Kelliher;
-        Peoria.Belmore.Coalwood = (bit<1>)1w1;
-        Peoria.Belmore.Wauconda = (bit<3>)3w0;
-        Peoria.Belmore.LaConner = (bit<3>)3w2;
-        Peoria.Belmore.Townville = (bit<1>)1w0;
+        Wanamassa.Knights.Irvine = (bit<2>)2w0;
+        Wanamassa.Knights.Cogar = (bit<1>)1w0;
+        Wanamassa.Knights.Antlers = (bit<13>)13w0;
+        Wanamassa.Knights.Kendrick = Kelliher;
+        Wanamassa.Knights.Solomon = (bit<2>)2w0;
+        Wanamassa.Knights.Garcia = (bit<3>)3w0;
+        Wanamassa.Knights.Coalwood = (bit<1>)1w1;
+        Wanamassa.Knights.Beasley = (bit<1>)1w0;
+        Wanamassa.Knights.Gorman = (bit<1>)1w0;
+        Wanamassa.Knights.Ouachita = (bit<3>)3w0;
+        Wanamassa.Knights.Pilar = (bit<13>)13w0;
+        Wanamassa.Knights.Allegan = (bit<16>)16w0;
+        Wanamassa.Knights.Clarion = (bit<16>)16w0xc000;
     }
     @name(".Hopeton") action Hopeton(bit<32> Bernstein, bit<32> Kingman, bit<8> Naruna, bit<6> Denhoff, bit<16> Lyman, bit<12> Malinta, bit<24> Mackville, bit<24> McBride) {
-        Peoria.Belmore.Wauconda = (bit<3>)3w0;
-        Peoria.Belmore.LaConner = (bit<3>)3w4;
+        Wanamassa.Humeston.setValid();
+        Wanamassa.Humeston.Mackville = Mackville;
+        Wanamassa.Humeston.McBride = McBride;
+        Wanamassa.Armagh.setValid();
+        Wanamassa.Armagh.Clarion = 16w0x800;
+        Peoria.Belmore.Malinta = Malinta;
         Wanamassa.Basco.setValid();
         Wanamassa.Basco.Galloway = (bit<4>)4w0x4;
         Wanamassa.Basco.Ankeny = (bit<4>)4w0x5;
@@ -2668,10 +2671,6 @@ control Brownson(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intri
         Wanamassa.Dushore.setValid();
         Wanamassa.Dushore.Onava = (bit<16>)16w0;
         Wanamassa.Dushore.Colona = Lyman;
-        Peoria.Belmore.Malinta = Malinta;
-        Peoria.Belmore.Mackville = Mackville;
-        Peoria.Belmore.McBride = McBride;
-        Peoria.Belmore.Townville = (bit<1>)1w0;
     }
     @ternary(1) @disable_atomic_modify(1) @name(".BirchRun") table BirchRun {
         actions = {
@@ -2971,7 +2970,7 @@ control Onamia(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrin
     @name(".Brule") action Brule(bit<5> Hayfield) {
         Peoria.Sequim.Hayfield = Hayfield;
     }
-    @name(".Durant") Meter<bit<32>>(32w32, MeterType_t.BYTES) Durant;
+    @name(".Durant") Meter<bit<32>>(32w32, MeterType_t.PACKETS) Durant;
     @name(".Kingsdale") action Kingsdale(bit<32> Hayfield) {
         Brule((bit<5>)Hayfield);
         Peoria.Sequim.Calabash = (bit<1>)Durant.execute(Hayfield, Peoria.Sequim.Johnstown, 32w0);
@@ -3554,9 +3553,6 @@ control Norridge(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intri
 }
 
 control Sanborn(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intrinsic_metadata_t Crump, in egress_intrinsic_metadata_from_parser_t Nighthawk, inout egress_intrinsic_metadata_for_deparser_t Tullytown, inout egress_intrinsic_metadata_for_output_port_t Heaton) {
-    @name(".Hookdale") action Hookdale() {
-        ;
-    }
     @name(".BigWater") action BigWater(bit<16> Saxis) {
         Peoria.Crump.Avondale = Peoria.Crump.Avondale + Saxis;
     }
@@ -3573,23 +3569,6 @@ control Sanborn(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intrin
         Peoria.Belmore.Corydon = Peoria.Belmore.Heuvelton;
         Peoria.Belmore.LaLuz = LaLuz;
         Kerby(Glenmora, Saxis, Langford);
-    }
-    @name(".Ivanpah") action Ivanpah(bit<2> Irvine) {
-        Peoria.Belmore.LaConner = (bit<3>)3w2;
-        Peoria.Belmore.Irvine = Irvine;
-        Peoria.Belmore.Hueytown = (bit<1>)1w0;
-        Wanamassa.Knights.Ouachita = (bit<3>)3w0;
-        Wanamassa.Knights.Solomon = (bit<2>)2w0;
-        Wanamassa.Knights.Garcia = (bit<3>)3w0;
-        Wanamassa.Knights.Coalwood = (bit<1>)1w0;
-        Wanamassa.Knights.Beasley = (bit<1>)1w0;
-        Wanamassa.Knights.Gorman = (bit<1>)1w1;
-    }
-    @name(".Kevil") action Kevil(bit<6> Newland, bit<10> Waumandee, bit<4> Nowlin, bit<12> Sully) {
-        Wanamassa.Knights.Armona = Newland;
-        Wanamassa.Knights.Dunstable = Waumandee;
-        Wanamassa.Knights.Madawaska = Nowlin;
-        Wanamassa.Knights.Hampton = Sully;
     }
     @name(".Ragley") action Ragley(bit<24> Dunkerton, bit<24> Gunder) {
         Wanamassa.Humeston.Mackville = Peoria.Belmore.Mackville;
@@ -3620,30 +3599,8 @@ control Sanborn(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intrin
     @name(".Hooksett") action Hooksett() {
         Ragley(Wanamassa.Bratt.Toklat, Wanamassa.Bratt.Bledsoe);
     }
-    @name(".Rolla") action Rolla(bit<8> Kendrick) {
-        Wanamassa.Knights.Coalwood = Peoria.Belmore.Coalwood;
-        Wanamassa.Knights.Kendrick = Kendrick;
-        Wanamassa.Knights.Antlers = Peoria.Masontown.Blencoe;
-        Wanamassa.Knights.Irvine = Peoria.Belmore.Irvine;
-        Wanamassa.Knights.Cogar = Peoria.Belmore.Hueytown;
-        Wanamassa.Knights.Pilar = Peoria.Masontown.Etter;
-        Wanamassa.Knights.Allegan = (bit<16>)16w0;
-        Wanamassa.Knights.Clarion = (bit<16>)16w0xc000;
-    }
-    @name(".Brookwood") action Brookwood() {
-        Rolla(Peoria.Belmore.Kendrick);
-    }
     @name(".Granville") action Granville() {
         Maury();
-    }
-    @name(".Council") action Council(bit<24> Dunkerton, bit<24> Gunder) {
-        Wanamassa.Humeston.setValid();
-        Wanamassa.Armagh.setValid();
-        Wanamassa.Humeston.Mackville = Peoria.Belmore.Mackville;
-        Wanamassa.Humeston.McBride = Peoria.Belmore.McBride;
-        Wanamassa.Humeston.Toklat = Dunkerton;
-        Wanamassa.Humeston.Bledsoe = Gunder;
-        Wanamassa.Armagh.Clarion = 16w0x800;
     }
     @name(".Calamine") Random<bit<16>>() Calamine;
     @name(".Doyline") action Doyline(bit<16> Belcourt, bit<16> Moorman, bit<32> Bernstein, bit<8> Lowes) {
@@ -3666,9 +3623,6 @@ control Sanborn(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intrin
     }
     @name(".Parmelee") action Parmelee(bit<8> Naruna) {
         Wanamassa.Pinetop.Thayne = Wanamassa.Pinetop.Thayne + Naruna;
-    }
-    @name(".Comunas") action Comunas(bit<8> Kendrick) {
-        Rolla(Kendrick);
     }
     @name(".Bedrock") action Bedrock(bit<16> Lordstown, bit<16> Silvertip, bit<24> Toklat, bit<24> Bledsoe, bit<24> Dunkerton, bit<24> Gunder, bit<16> Thatcher) {
         Wanamassa.Bratt.Mackville = Peoria.Belmore.Mackville;
@@ -3793,40 +3747,12 @@ control Sanborn(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intrin
         requires_versioning = false;
         const default_action = NoAction();
     }
-    @ternary(1) @disable_atomic_modify(1) @name(".Walland") table Walland {
-        actions = {
-            Ivanpah();
-            Hookdale();
-        }
-        key = {
-            Crump.egress_port      : exact @name("Crump.Blitchton") ;
-            Peoria.Westville.Aldan : exact @name("Westville.Aldan") ;
-            Peoria.Belmore.Pinole  : exact @name("Belmore.Pinole") ;
-            Peoria.Belmore.Wauconda: exact @name("Belmore.Wauconda") ;
-        }
-        const default_action = Hookdale();
-        size = 128;
-    }
-    @disable_atomic_modify(1) @name(".Melrose") table Melrose {
-        actions = {
-            Kevil();
-            @defaultonly NoAction();
-        }
-        key = {
-            Peoria.Belmore.Ronan: exact @name("Belmore.Ronan") ;
-        }
-        size = 512;
-        default_action = NoAction();
-    }
     @disable_atomic_modify(1) @name(".Angeles") table Angeles {
         actions = {
             Ashburn();
             Estrella();
             Hooksett();
-            Brookwood();
             Granville();
-            Council();
-            Comunas();
             RoseBud();
             OldMinto();
             Unionvale();
@@ -3862,15 +3788,7 @@ control Sanborn(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intrin
         const default_action = NoAction();
     }
     apply {
-        switch (Walland.apply().action_run) {
-            Hookdale: {
-                Mantee.apply();
-            }
-        }
-
-        if (Wanamassa.Knights.isValid()) {
-            Melrose.apply();
-        }
+        Mantee.apply();
         if (Peoria.Belmore.Townville == 1w0 && Peoria.Belmore.Wauconda == 3w0 && Peoria.Belmore.LaConner == 3w0) {
             Ammon.apply();
         }
@@ -14068,7 +13986,7 @@ control NewRoads(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intr
     @name(".Lansdale") action Lansdale() {
         Peoria.Newhalem.McGonigle = Peoria.Millhaven.Salix;
     }
-    @disable_atomic_modify(1) @name(".Rardin") table Rardin {
+    @pa_mutually_exclusive("ingress" , "Peoria.Newhalem.Stennett" , "Peoria.Millhaven.Salix") @disable_atomic_modify(1) @name(".Rardin") table Rardin {
         actions = {
             Laney();
             McClusky();
@@ -15086,6 +15004,58 @@ parser Lenapah(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out 
 }
 
 control Stratton(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intrinsic_metadata_t Crump, in egress_intrinsic_metadata_from_parser_t Nighthawk, inout egress_intrinsic_metadata_for_deparser_t Tullytown, inout egress_intrinsic_metadata_for_output_port_t Heaton) {
+    @name(".Ivanpah") action Ivanpah(bit<2> Irvine) {
+        Wanamassa.Knights.Irvine = Irvine;
+        Wanamassa.Knights.Cogar = (bit<1>)1w0;
+        Wanamassa.Knights.Antlers = Peoria.Masontown.Blencoe;
+        Wanamassa.Knights.Kendrick = Peoria.Belmore.Kendrick;
+        Wanamassa.Knights.Solomon = (bit<2>)2w0;
+        Wanamassa.Knights.Garcia = (bit<3>)3w0;
+        Wanamassa.Knights.Coalwood = (bit<1>)1w0;
+        Wanamassa.Knights.Beasley = (bit<1>)1w0;
+        Wanamassa.Knights.Gorman = (bit<1>)1w1;
+        Wanamassa.Knights.Ouachita = (bit<3>)3w0;
+        Wanamassa.Knights.Pilar = Peoria.Masontown.Etter;
+        Wanamassa.Knights.Allegan = (bit<16>)16w0;
+        Wanamassa.Knights.Clarion = (bit<16>)16w0xc000;
+    }
+    @name(".Portville") action Portville(bit<24> Langhorne, bit<24> Comobabi) {
+        Wanamassa.Humeston.Toklat = Langhorne;
+        Wanamassa.Humeston.Bledsoe = Comobabi;
+    }
+    @name(".Kevil") action Kevil(bit<6> Newland, bit<10> Waumandee, bit<4> Nowlin, bit<12> Sully) {
+        Wanamassa.Knights.Armona = Newland;
+        Wanamassa.Knights.Dunstable = Waumandee;
+        Wanamassa.Knights.Madawaska = Nowlin;
+        Wanamassa.Knights.Hampton = Sully;
+    }
+    @disable_atomic_modify(1) @name(".Walland") table Walland {
+        actions = {
+            @tableonly Ivanpah();
+            @defaultonly Portville();
+            @defaultonly NoAction();
+        }
+        key = {
+            Crump.egress_port           : exact @name("Crump.Blitchton") ;
+            Peoria.Westville.Aldan      : exact @name("Westville.Aldan") ;
+            Peoria.Belmore.Pinole       : exact @name("Belmore.Pinole") ;
+            Peoria.Belmore.Wauconda     : exact @name("Belmore.Wauconda") ;
+            Wanamassa.Humeston.isValid(): exact @name("Humeston") ;
+        }
+        size = 128;
+        default_action = NoAction();
+    }
+    @disable_atomic_modify(1) @name(".Melrose") table Melrose {
+        actions = {
+            Kevil();
+            @defaultonly NoAction();
+        }
+        key = {
+            Peoria.Belmore.Ronan: exact @name("Belmore.Ronan") ;
+        }
+        size = 512;
+        default_action = NoAction();
+    }
     @name(".Toxey") action Toxey() {
         Wanamassa.Warba.setInvalid();
     }
@@ -15218,60 +15188,68 @@ control Stratton(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intri
     @name(".Corbin") Jarreau() Corbin;
     @name(".Schaller") Moorpark() Schaller;
     apply {
-        {
-        }
-        {
-            Schofield.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
-            Craigtown.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
-            if (Wanamassa.Longwood.isValid() == true) {
-                Penalosa.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
-                Panola.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
-                Bruce.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
-                Denning.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
-                Tarlton.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
-                Wauseon.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
-                if (Crump.egress_rid == 16w0 && !Wanamassa.Knights.isValid()) {
-                    Gracewood.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
-                }
-                Woodville.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
-                Rippon.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
-                Cowan.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
-                Berwyn.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
-                Hercules.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
-                Lenwood.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
-                Sawpit.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
-            } else {
-                Beaman.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+        Craigtown.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+        if (!Wanamassa.Knights.isValid() && Wanamassa.Longwood.isValid()) {
+            {
             }
+            Schofield.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+            Penalosa.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+            Panola.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+            Bruce.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+            Denning.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+            Tarlton.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+            Wauseon.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+            if (Crump.egress_rid == 16w0) {
+                Gracewood.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+            }
+            Snowflake.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+            Woodville.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+            Rippon.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+            Cowan.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+            Berwyn.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+            Hercules.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+            Lenwood.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+            Sawpit.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
             Seaford.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
             Brave.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
-            if (Wanamassa.Longwood.isValid() == true && !Wanamassa.Knights.isValid()) {
-                Snowflake.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
-                Donna.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
-                if (Wanamassa.Pinetop.isValid()) {
-                    Schaller.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
-                } else if (Wanamassa.Moultrie.isValid()) {
-                    Corbin.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
-                }
-                if (Peoria.Belmore.Wauconda != 3w2 && Peoria.Belmore.Orrick == 1w0) {
-                    Pueblo.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
-                }
-                Wegdahl.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
-                Challenge.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
-                Stanwood.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
-                Hanamaulu.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
-                Westland.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
-                Cross.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+            Donna.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+            if (Wanamassa.Pinetop.isValid()) {
+                Schaller.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+            } else if (Wanamassa.Moultrie.isValid()) {
+                Corbin.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
             }
-            if (!Wanamassa.Knights.isValid() && Peoria.Belmore.Wauconda != 3w2 && Peoria.Belmore.LaConner != 3w3) {
+            if (Peoria.Belmore.Wauconda != 3w2 && Peoria.Belmore.Orrick == 1w0) {
+                Pueblo.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+            }
+            Wegdahl.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+            Challenge.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+            Stanwood.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+            Hanamaulu.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+            Westland.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+            Cross.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+            Compton.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+            VanHorn.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+            if (Peoria.Belmore.Wauconda != 3w2) {
                 Weslaco.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
             }
-            if (Wanamassa.Warba.isValid()) {
-                Isleta.apply();
+        } else {
+            if (Wanamassa.Longwood.isValid() == false) {
+                Beaman.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+                if (Wanamassa.Humeston.isValid()) {
+                    Walland.apply();
+                }
+            } else {
+                Walland.apply();
+            }
+            if (Wanamassa.Knights.isValid()) {
+                Melrose.apply();
+            } else if (Wanamassa.Dushore.isValid()) {
+                Weslaco.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
             }
         }
-        Compton.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
-        VanHorn.apply(Wanamassa, Peoria, Crump, Nighthawk, Tullytown, Heaton);
+        if (Wanamassa.Warba.isValid()) {
+            Isleta.apply();
+        }
     }
 }
 
@@ -15405,8 +15383,8 @@ parser Asherton(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out
         Peoria.Yerington.Charco = Wanamassa.Pinetop.Charco;
         Peoria.Yerington.Chugwater = Wanamassa.Pinetop.Chugwater;
         transition select(Wanamassa.Pinetop.Algoa) {
-            8w17: Portville;
-            8w6: Nanakuli;
+            8w17: Nanakuli;
+            8w6: Campton;
             default: accept;
         }
     }
@@ -15418,7 +15396,7 @@ parser Asherton(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out
         Peoria.Masontown.Montross = Wanamassa.Milano.Montross;
         transition accept;
     }
-    state Portville {
+    state Nanakuli {
         Doral.extract<Knierim>(Wanamassa.Milano);
         Doral.extract<Caroleen>(Wanamassa.Dacono);
         Doral.extract<Belfair>(Wanamassa.Pineville);
@@ -15435,7 +15413,7 @@ parser Asherton(packet_in Doral, out Lookeba Wanamassa, out Martelle Peoria, out
         Peoria.Masontown.Montross = Wanamassa.Milano.Montross;
         transition accept;
     }
-    state Nanakuli {
+    state Campton {
         Peoria.Gambrills.Placedo = (bit<3>)3w6;
         Doral.extract<Knierim>(Wanamassa.Milano);
         Doral.extract<DonaAna>(Wanamassa.Biggers);
@@ -15499,7 +15477,7 @@ control Lilydale(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intr
         Haena(Tornillo, Janney);
         Peoria.Belmore.LaConner = (bit<3>)3w5;
     }
-    @name(".Campton") action Campton(bit<21> Tornillo, bit<32> Janney) {
+    @name(".LaPlata") action LaPlata(bit<21> Tornillo, bit<32> Janney) {
         Haena(Tornillo, Janney);
         Peoria.Belmore.LaConner = (bit<3>)3w7;
     }
@@ -15509,7 +15487,7 @@ control Lilydale(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intr
     @disable_atomic_modify(1) @name(".Perma") table Perma {
         actions = {
             Hooven();
-            Campton();
+            LaPlata();
             @defaultonly NoAction();
         }
         key = {

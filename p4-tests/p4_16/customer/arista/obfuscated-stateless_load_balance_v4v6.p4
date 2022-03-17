@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_STATELESS_LOAD_BALANCE_V4V6=1 -Ibf_arista_switch_stateless_load_balance_v4v6/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_stateless_load_balance_v4v6 --bf-rt-schema bf_arista_switch_stateless_load_balance_v4v6/context/bf-rt.json
-// p4c 9.7.2 (SHA: 14435aa)
+// p4c 9.9.0 (SHA: 9730738)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -529,17 +529,6 @@ header Denning {
     bit<16> Snowflake;
 }
 
-header Needham {
-    bit<3>  Kamas;
-    bit<5>  Norco;
-    bit<2>  Sandpoint;
-    bit<6>  Beasley;
-    bit<8>  Bassett;
-    bit<8>  Perkasie;
-    bit<32> Tusayan;
-    bit<32> Nicolaus;
-}
-
 header Gomez {
     bit<7>   Placida;
     PortId_t Tallassee;
@@ -762,20 +751,20 @@ struct Oilmont {
 }
 
 struct Renick {
-    bit<32> Dowell;
-    bit<32> Glendevey;
-    bit<32> Pajaros;
-    bit<6>  Grannis;
-    bit<6>  Wauconda;
-    bit<16> Richvale;
+    bit<32>       Dowell;
+    bit<32>       Glendevey;
+    bit<32>       Pajaros;
+    bit<6>        Grannis;
+    bit<6>        Wauconda;
+    Ipv4PartIdx_t Richvale;
 }
 
 struct SomesBar {
-    bit<128> Dowell;
-    bit<128> Glendevey;
-    bit<8>   Riner;
-    bit<6>   Grannis;
-    bit<16>  Richvale;
+    bit<128>      Dowell;
+    bit<128>      Glendevey;
+    bit<8>        Riner;
+    bit<6>        Grannis;
+    Ipv6PartIdx_t Richvale;
 }
 
 struct Vergennes {
@@ -974,12 +963,6 @@ struct Millston {
     bit<32> Lawai;
 }
 
-struct Caborn {
-    bit<1> Goodrich;
-    bit<1> Laramie;
-    bit<1> Pinebluff;
-}
-
 struct McCracken {
     Bradner   LaMoille;
     Latham    Guion;
@@ -1026,7 +1009,6 @@ struct McCracken {
     bool      Duncombe;
     bit<1>    Jigger;
     bit<8>    Lovilia;
-    Caborn    Fentress;
 }
 
 @pa_mutually_exclusive("egress" , "Jayton.Westville" , "Jayton.Mather")
@@ -1053,7 +1035,7 @@ struct McCracken {
     Cowan      Ironside;
     Denning    Ellicott;
     Naruna     Empire;
-    Carlsbad   Molino;
+    Carlsbad   Needham;
     Hampton    Daisytown;
     Bonney     Balmorhea;
     Antlers    Earling;
@@ -1415,11 +1397,11 @@ parser Knights(packet_in Humeston, out Westbury Jayton, out McCracken Millstone,
             default: Wanamassa;
         }
     }
-    state Ossineke {
-        Humeston.extract<Carlsbad>(Jayton.Molino);
-        Millstone.Guion.Craigtown = Jayton.Molino.Contact[31:24];
-        Millstone.Guion.Clyde = Jayton.Molino.Contact[23:8];
-        Millstone.Guion.Clarion = Jayton.Molino.Contact[7:0];
+    state Kamas {
+        Humeston.extract<Carlsbad>(Jayton.Needham);
+        Millstone.Guion.Craigtown = Jayton.Needham.Contact[31:24];
+        Millstone.Guion.Clyde = Jayton.Needham.Contact[23:8];
+        Millstone.Guion.Clarion = Jayton.Needham.Contact[7:0];
         transition select(Jayton.Empire.Weyauwega) {
             default: accept;
         }
@@ -1434,7 +1416,7 @@ parser Knights(packet_in Humeston, out Westbury Jayton, out McCracken Millstone,
         Millstone.Guion.Guadalupe = (bit<3>)3w2;
         Humeston.extract<Naruna>(Jayton.Empire);
         transition select(Jayton.Empire.Richlawn, Jayton.Empire.Weyauwega) {
-            (16w0x2000, 16w0 &&& 16w0): Ossineke;
+            (16w0x2000, 16w0 &&& 16w0): Kamas;
             (16w0, 16w0x800): Sunbury;
             (16w0, 16w0x86dd): Sedan;
             default: accept;
@@ -2365,10 +2347,10 @@ control Penzance(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
     @name(".Dwight") action Dwight(bit<32> Wellton) {
         Kingsgate(Wellton);
     }
-    @name(".Elmsford") action Elmsford(bit<7> Cropper, Ipv6PartIdx_t Bridgton, bit<8> Miranda, bit<32> Peebles) {
+    @name(".Elmsford") action Elmsford(bit<7> Cropper, bit<16> Bridgton, bit<8> Miranda, bit<32> Peebles) {
         Millstone.Corvallis.Miranda = (NextHopTable_t)Miranda;
         Millstone.Corvallis.Chispa = Cropper;
-        Millstone.Perma.Bridgton = Bridgton;
+        Millstone.Perma.Bridgton = (Ipv6PartIdx_t)Bridgton;
         Millstone.Corvallis.Peebles = (bit<14>)Peebles;
     }
     @idletime_precision(1) @force_immediate(1) @ways(4) @disable_atomic_modify(1) @name(".RedLake") table RedLake {
@@ -2647,7 +2629,7 @@ control Luttrell(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
         ElkMills(Kaaawa);
         Wolverine(Wentworth, Tornillo, Satolah);
     }
-    @name(".Meridean") action Meridean() {
+    @name(".Norco") action Norco() {
         Millstone.Guion.Dandridge = Millstone.Elkville.FortHunt;
     }
     @name(".Danbury") action Danbury(bit<12> Barnsboro, bit<32> Wentworth, bit<5> Tornillo, bit<4> Satolah, bit<16> Kaaawa, bit<1> Onycha) {
@@ -2661,7 +2643,7 @@ control Luttrell(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
         ElkMills(Kaaawa);
         Wolverine(Wentworth, Tornillo, Satolah);
     }
-    @name(".Tinaja") action Tinaja() {
+    @name(".Sandpoint") action Sandpoint() {
         Millstone.Guion.Dandridge = (bit<12>)Jayton.Ekron[0].Chevak;
     }
     @name(".Chatom") action Chatom(bit<1> Caroleen, bit<32> Wentworth, bit<5> Tornillo, bit<4> Satolah, bit<12> Cecilton) {
@@ -2710,12 +2692,12 @@ control Luttrell(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
     @ways(1) @disable_atomic_modify(1) @name(".Quijotoa") table Quijotoa {
         actions = {
             Bostic();
-            @defaultonly Meridean();
+            @defaultonly Norco();
         }
         key = {
             Millstone.Elkville.FortHunt & 12w0xfff: exact @name("Elkville.FortHunt") ;
         }
-        const default_action = Meridean();
+        const default_action = Norco();
         size = 4096;
     }
     @disable_atomic_modify(1) @name(".Frontenac") table Frontenac {
@@ -2733,12 +2715,12 @@ control Luttrell(inout Westbury Jayton, inout McCracken Millstone, in ingress_in
     @ways(1) @disable_atomic_modify(1) @name(".Gilman") table Gilman {
         actions = {
             Monse();
-            @defaultonly Tinaja();
+            @defaultonly Sandpoint();
         }
         key = {
             Jayton.Ekron[0].Chevak: exact @name("Ekron[0].Chevak") ;
         }
-        const default_action = Tinaja();
+        const default_action = Sandpoint();
         size = 4096;
     }
     @disable_atomic_modify(1) @name(".Kalaloch") table Kalaloch {
@@ -4035,6 +4017,10 @@ control Bedrock(inout Westbury Jayton, inout McCracken Millstone, in egress_intr
         Millstone.Mickleton.Dassel = Dassel;
         Millstone.Mickleton.Traverse = (bit<2>)2w0;
         Jayton.Mather.Mellott = (bit<4>)4w0;
+        Jayton.Mather.Suwannee = (bit<2>)2w0;
+        Jayton.Mather.Dugger = (bit<3>)3w0;
+        Jayton.Mather.Laurelton = (bit<1>)1w0;
+        Jayton.Mather.Ronda = (bit<1>)1w0;
         Jayton.Mather.Alderson = (bit<1>)1w0;
     }
     @name(".Bigspring") action Bigspring(bit<2> Dassel) {
@@ -5149,22 +5135,22 @@ control Naguabo(inout Westbury Jayton, inout McCracken Millstone, in ingress_int
         Millstone.Corvallis.Peebles = (bit<14>)Peebles;
     }
     @name(".Camden") action Camden(bit<16> Boyle, bit<32> Peebles) {
-        Millstone.Nuyaka.Richvale = Boyle;
+        Millstone.Nuyaka.Richvale = (Ipv6PartIdx_t)Boyle;
         Millstone.Corvallis.Miranda = (bit<2>)2w0;
         Millstone.Corvallis.Peebles = (bit<14>)Peebles;
     }
     @name(".Careywood") action Careywood(bit<16> Boyle, bit<32> Peebles) {
-        Millstone.Nuyaka.Richvale = Boyle;
+        Millstone.Nuyaka.Richvale = (Ipv6PartIdx_t)Boyle;
         Millstone.Corvallis.Miranda = (bit<2>)2w1;
         Millstone.Corvallis.Peebles = (bit<14>)Peebles;
     }
     @name(".Ackerly") action Ackerly(bit<16> Boyle, bit<32> Peebles) {
-        Millstone.Nuyaka.Richvale = Boyle;
+        Millstone.Nuyaka.Richvale = (Ipv6PartIdx_t)Boyle;
         Millstone.Corvallis.Miranda = (bit<2>)2w2;
         Millstone.Corvallis.Peebles = (bit<14>)Peebles;
     }
     @name(".Noyack") action Noyack(bit<16> Boyle, bit<32> Peebles) {
-        Millstone.Nuyaka.Richvale = Boyle;
+        Millstone.Nuyaka.Richvale = (Ipv6PartIdx_t)Boyle;
         Millstone.Corvallis.Miranda = (bit<2>)2w3;
         Millstone.Corvallis.Peebles = (bit<14>)Peebles;
     }

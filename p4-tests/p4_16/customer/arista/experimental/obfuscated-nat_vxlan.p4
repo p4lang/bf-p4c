@@ -368,9 +368,9 @@ struct Lathrop {
     @flexible 
     bit<1>  Chloride;
     @flexible 
-    bit<4>  Garibaldi;
+    bit<1>  Garibaldi;
     @flexible 
-    bit<7>  Weinert;
+    bit<1>  Weinert;
     @flexible 
     bit<1>  Cornell;
     @flexible 
@@ -793,8 +793,8 @@ struct Ackley {
     bit<8>  Comfrey;
     bit<1>  Maddock;
     bit<1>  Sublett;
-    bit<7>  Wisdom;
-    bit<4>  Cutten;
+    bit<1>  Wisdom;
+    bit<1>  Cutten;
     bit<4>  Lewiston;
     bit<16> Lamona;
     bit<32> Naubinway;
@@ -2541,7 +2541,7 @@ control Blakeman(inout Wabbaseka Kempton, inout Nooksack GunnCity, in egress_int
         Mondovi();
         Kempton.Ravinia.McBride = GunnCity.Frederika.McBride;
     }
-    @disable_atomic_modify(1) @stage(5) @placement_priority(1) @name(".Govan") table Govan {
+    @disable_atomic_modify(1) @name(".Govan") table Govan {
         actions = {
             Melder();
             FourTown();
@@ -2679,7 +2679,7 @@ control Agawam(inout Wabbaseka Kempton, inout Nooksack GunnCity, in egress_intri
         Berlin(2w0, 16w0, 4w0, 12w0);
         Kempton.Geistown.Oriskany[11:0] = (bit<12>)12w0;
     }
-    @disable_atomic_modify(1) @stage(7) @placement_priority(1) @name(".Scotland") table Scotland {
+    @disable_atomic_modify(1) @name(".Scotland") table Scotland {
         actions = {
             Astatula();
             Brinson();
@@ -2809,19 +2809,29 @@ control Onamia(inout Wabbaseka Kempton, inout Nooksack GunnCity, in ingress_intr
 
 control Ocilla(inout Wabbaseka Kempton, inout Nooksack GunnCity, in egress_intrinsic_metadata_t Monrovia, in egress_intrinsic_metadata_from_parser_t Bernard, inout egress_intrinsic_metadata_for_deparser_t Owanka, inout egress_intrinsic_metadata_for_output_port_t Natalia) {
     @name(".Shelby") action Shelby() {
-        GunnCity.Neponset.Aldan = (bit<3>)3w0;
-        GunnCity.Neponset.McAllen = (bit<3>)3w3;
     }
     @name(".Chambers") action Chambers(bit<8> Ardenvoir) {
-        GunnCity.Neponset.Comfrey = Ardenvoir;
-        GunnCity.Neponset.Dennison = (bit<1>)1w1;
-        GunnCity.Neponset.Aldan = (bit<3>)3w0;
-        GunnCity.Neponset.McAllen = (bit<3>)3w2;
-        GunnCity.Neponset.Mausdale = (bit<1>)1w0;
+        Kempton.Geistown.Turkey = (bit<2>)2w0;
+        Kempton.Geistown.Riner = (bit<2>)2w0;
+        Kempton.Geistown.Palmhurst = (bit<12>)12w0;
+        Kempton.Geistown.Comfrey = Ardenvoir;
+        Kempton.Geistown.Kalida = (bit<2>)2w0;
+        Kempton.Geistown.Wallula = (bit<3>)3w0;
+        Kempton.Geistown.Dennison = (bit<1>)1w1;
+        Kempton.Geistown.Fairhaven = (bit<1>)1w0;
+        Kempton.Geistown.Woodfield = (bit<1>)1w0;
+        Kempton.Geistown.LasVegas = (bit<4>)4w0;
+        Kempton.Geistown.Westboro = (bit<12>)12w0;
+        Kempton.Geistown.Newfane = (bit<16>)16w0;
+        Kempton.Geistown.Oriskany = (bit<16>)16w0xc000;
     }
     @name(".Clinchco") action Clinchco(bit<32> Snook, bit<32> OjoFeliz, bit<8> Bonney, bit<6> McBride, bit<16> Havertown, bit<12> Solomon, bit<24> Burrel, bit<24> Petrey) {
-        GunnCity.Neponset.Aldan = (bit<3>)3w0;
-        GunnCity.Neponset.McAllen = (bit<3>)3w4;
+        Kempton.Brady.setValid();
+        Kempton.Brady.Burrel = Burrel;
+        Kempton.Brady.Petrey = Petrey;
+        Kempton.Emden.setValid();
+        Kempton.Emden.Oriskany = 16w0x800;
+        GunnCity.Neponset.Solomon = Solomon;
         Kempton.Skillman.setValid();
         Kempton.Skillman.Loris = (bit<4>)4w0x4;
         Kempton.Skillman.Mackville = (bit<4>)4w0x5;
@@ -2840,10 +2850,6 @@ control Ocilla(inout Wabbaseka Kempton, inout Nooksack GunnCity, in egress_intri
         Kempton.Olcott.setValid();
         Kempton.Olcott.CruzBay = (bit<16>)16w0;
         Kempton.Olcott.Brinklow = Havertown;
-        GunnCity.Neponset.Solomon = Solomon;
-        GunnCity.Neponset.Burrel = Burrel;
-        GunnCity.Neponset.Petrey = Petrey;
-        GunnCity.Neponset.Mausdale = (bit<1>)1w0;
     }
     @ternary(1) @disable_atomic_modify(1) @name(".Napanoch") table Napanoch {
         actions = {
@@ -2868,7 +2874,7 @@ control Pearcy(inout Wabbaseka Kempton, inout Nooksack GunnCity, in egress_intri
     @name(".Ghent") action Ghent(bit<10> Gamaliel) {
         GunnCity.Funston.Freeny = Gamaliel;
     }
-    @disable_atomic_modify(1) @stage(3) @name(".Protivin") table Protivin {
+    @disable_atomic_modify(1) @name(".Protivin") table Protivin {
         actions = {
             Ghent();
         }
@@ -3200,9 +3206,6 @@ control Maury(inout Wabbaseka Kempton, inout Nooksack GunnCity, in egress_intrin
 }
 
 control Amsterdam(inout Wabbaseka Kempton, inout Nooksack GunnCity, in egress_intrinsic_metadata_t Monrovia, in egress_intrinsic_metadata_from_parser_t Bernard, inout egress_intrinsic_metadata_for_deparser_t Owanka, inout egress_intrinsic_metadata_for_output_port_t Natalia) {
-    @name(".BigPoint") action BigPoint() {
-        ;
-    }
     @name(".Gwynn") action Gwynn(bit<16> Rolla) {
         GunnCity.Monrovia.Vichy = GunnCity.Monrovia.Vichy + Rolla;
     }
@@ -3219,28 +3222,6 @@ control Amsterdam(inout Wabbaseka Kempton, inout Nooksack GunnCity, in egress_in
         GunnCity.Neponset.Quinault = GunnCity.Neponset.Komatke;
         GunnCity.Neponset.Edwards = Edwards;
         Brookwood(Kapalua, Rolla, Granville);
-    }
-    @name(".Belcourt") action Belcourt(bit<2> Turkey) {
-        GunnCity.Neponset.McAllen = (bit<3>)3w2;
-        GunnCity.Neponset.Turkey = Turkey;
-        GunnCity.Neponset.Murphy = (bit<2>)2w0;
-        Kempton.Geistown.LasVegas = (bit<4>)4w0;
-        Kempton.Geistown.Kalida = (bit<2>)2w0;
-        Kempton.Geistown.Wallula = (bit<3>)3w0;
-        Kempton.Geistown.Dennison = (bit<1>)1w0;
-        Kempton.Geistown.Fairhaven = (bit<1>)1w0;
-        Kempton.Geistown.Woodfield = (bit<1>)1w0;
-    }
-    @name(".Moorman") action Moorman(bit<2> Turkey) {
-        Belcourt(Turkey);
-        Kempton.Westoak.Burrel = (bit<24>)24w0xbfbfbf;
-        Kempton.Westoak.Petrey = (bit<24>)24w0xbfbfbf;
-    }
-    @name(".Parmelee") action Parmelee(bit<6> Bagwell, bit<10> Wright, bit<4> Stone, bit<12> Milltown) {
-        Kempton.Geistown.Dowell = Bagwell;
-        Kempton.Geistown.Glendevey = Wright;
-        Kempton.Geistown.Littleton = Stone;
-        Kempton.Geistown.Killen = Milltown;
     }
     @name(".TinCity") action TinCity(bit<24> Comunas, bit<24> Alcoma) {
         Kempton.Brady.Burrel = GunnCity.Neponset.Burrel;
@@ -3269,30 +3250,8 @@ control Amsterdam(inout Wabbaseka Kempton, inout Nooksack GunnCity, in egress_in
     @name(".Silvertip") action Silvertip() {
         TinCity(Kempton.Westoak.Aguilita, Kempton.Westoak.Harbor);
     }
-    @name(".Thatcher") action Thatcher(bit<8> Comfrey) {
-        Kempton.Geistown.Dennison = GunnCity.Neponset.Dennison;
-        Kempton.Geistown.Comfrey = Comfrey;
-        Kempton.Geistown.Palmhurst = GunnCity.Swifton.IttaBena;
-        Kempton.Geistown.Turkey = GunnCity.Neponset.Turkey;
-        Kempton.Geistown.Riner = GunnCity.Neponset.Murphy;
-        Kempton.Geistown.Westboro = GunnCity.Swifton.DeGraff;
-        Kempton.Geistown.Newfane = (bit<16>)16w0;
-        Kempton.Geistown.Oriskany = (bit<16>)16w0xc000;
-    }
-    @name(".Archer") action Archer() {
-        Thatcher(GunnCity.Neponset.Comfrey);
-    }
     @name(".Virginia") action Virginia() {
         Kilbourne();
-    }
-    @name(".Cornish") action Cornish(bit<24> Comunas, bit<24> Alcoma) {
-        Kempton.Brady.setValid();
-        Kempton.Emden.setValid();
-        Kempton.Brady.Burrel = GunnCity.Neponset.Burrel;
-        Kempton.Brady.Petrey = GunnCity.Neponset.Petrey;
-        Kempton.Brady.Aguilita = Comunas;
-        Kempton.Brady.Harbor = Alcoma;
-        Kempton.Emden.Oriskany = 16w0x800;
     }
     @name(".Hatchel") action Hatchel() {
         Owanka.drop_ctl = (bit<3>)3w7;
@@ -3314,40 +3273,12 @@ control Amsterdam(inout Wabbaseka Kempton, inout Nooksack GunnCity, in egress_in
         requires_versioning = false;
         const default_action = NoAction();
     }
-    @ternary(1) @disable_atomic_modify(1) @name(".Pelican") table Pelican {
-        actions = {
-            Belcourt();
-            Moorman();
-            BigPoint();
-        }
-        key = {
-            Monrovia.egress_port    : exact @name("Monrovia.AquaPark") ;
-            GunnCity.Kinde.Buckhorn : exact @name("Kinde.Buckhorn") ;
-            GunnCity.Neponset.Bessie: exact @name("Neponset.Bessie") ;
-            GunnCity.Neponset.Aldan : exact @name("Neponset.Aldan") ;
-        }
-        const default_action = BigPoint();
-        size = 128;
-    }
-    @disable_atomic_modify(1) @name(".Unionvale") table Unionvale {
-        actions = {
-            Parmelee();
-            @defaultonly NoAction();
-        }
-        key = {
-            GunnCity.Neponset.Uintah: exact @name("Neponset.Uintah") ;
-        }
-        size = 512;
-        default_action = NoAction();
-    }
-    @disable_atomic_modify(1) @stage(5) @placement_priority(1) @name(".Bigspring") table Bigspring {
+    @disable_atomic_modify(1) @name(".Bigspring") table Bigspring {
         actions = {
             Bluff();
             Bedrock();
             Silvertip();
-            Archer();
             Virginia();
-            Cornish();
             Kilbourne();
         }
         key = {
@@ -3375,15 +3306,7 @@ control Amsterdam(inout Wabbaseka Kempton, inout Nooksack GunnCity, in egress_in
         const default_action = NoAction();
     }
     apply {
-        switch (Pelican.apply().action_run) {
-            BigPoint: {
-                Dougherty.apply();
-            }
-        }
-
-        if (Kempton.Geistown.isValid()) {
-            Unionvale.apply();
-        }
+        Dougherty.apply();
         if (GunnCity.Neponset.Mausdale == 1w0 && GunnCity.Neponset.Aldan == 3w0 && GunnCity.Neponset.McAllen == 3w0) {
             Advance.apply();
         }
@@ -4278,7 +4201,7 @@ control DuPont(inout Wabbaseka Kempton, inout Nooksack GunnCity, in egress_intri
         Gilman = Telegraph.get<tuple<bit<9>, bit<5>>>({ Monrovia.egress_port, Monrovia.egress_qid[4:0] });
         Shauck.count((bit<12>)Gilman);
     }
-    @disable_atomic_modify(1) @stage(4) @name(".Parole") table Parole {
+    @disable_atomic_modify(1) @name(".Parole") table Parole {
         actions = {
             Veradale();
         }
@@ -4353,14 +4276,14 @@ control Tocito(inout Wabbaseka Kempton, inout Nooksack GunnCity, in egress_intri
         Gilman = Covington.get<tuple<bit<9>, bit<12>>>({ Monrovia.egress_port, (bit<12>)GunnCity.Neponset.Basalt });
         GunnCity.Mayflower.HillTop = DelRey.execute((bit<32>)Gilman);
     }
-    @disable_atomic_modify(1) @stage(5) @placement_priority(1) @name(".Cisne") table Cisne {
+    @disable_atomic_modify(1) @name(".Cisne") table Cisne {
         actions = {
             Robinette();
         }
         default_action = Robinette();
         size = 1;
     }
-    @disable_atomic_modify(1) @stage(5) @placement_priority(1) @name(".Perryton") table Perryton {
+    @disable_atomic_modify(1) @name(".Perryton") table Perryton {
         actions = {
             TonkaBay();
         }
@@ -4478,7 +4401,7 @@ control Stamford(inout Wabbaseka Kempton, inout Nooksack GunnCity, in egress_int
         GunnCity.Halltown.Balmorhea = Balmorhea;
         GunnCity.Neponset.Savery = (bit<3>)3w0;
     }
-    @ternary(1) @disable_atomic_modify(1) @stage(3) @name(".Pierson") table Pierson {
+    @ternary(1) @disable_atomic_modify(1) @name(".Pierson") table Pierson {
         actions = {
             Tampa();
         }
@@ -4502,7 +4425,7 @@ control Piedmont(inout Wabbaseka Kempton, inout Nooksack GunnCity, in egress_int
         Camino.count();
         GunnCity.Neponset.Savery = Fairland;
     }
-    @ignore_table_dependency(".Daguao") @ignore_table_dependency(".Bigspring") @disable_atomic_modify(1) @stage(5) @placement_priority(1) @name(".Flomaton") table Flomaton {
+    @ignore_table_dependency(".Daguao") @ignore_table_dependency(".Bigspring") @disable_atomic_modify(1) @name(".Flomaton") table Flomaton {
         key = {
             GunnCity.Halltown.Balmorhea: ternary @name("Halltown.Balmorhea") ;
             Kempton.Volens.Bicknell    : ternary @name("Volens.Bicknell") ;
@@ -4533,7 +4456,7 @@ control LaHabra(inout Wabbaseka Kempton, inout Nooksack GunnCity, in egress_intr
         Marvin.count();
         GunnCity.Neponset.Savery = Fairland;
     }
-    @ignore_table_dependency(".Flomaton") @ignore_table_dependency("Bigspring") @disable_atomic_modify(1) @stage(7) @name(".Daguao") table Daguao {
+    @ignore_table_dependency(".Flomaton") @ignore_table_dependency("Bigspring") @disable_atomic_modify(1) @name(".Daguao") table Daguao {
         key = {
             GunnCity.Halltown.Balmorhea: ternary @name("Halltown.Balmorhea") ;
             Kempton.Ravinia.Bicknell   : ternary @name("Ravinia.Bicknell") ;
@@ -4692,6 +4615,8 @@ control Finlayson(inout Wabbaseka Kempton, inout Nooksack GunnCity, in ingress_i
             Kempton.Ruffin.setValid();
             Kempton.Ruffin.Rains = GunnCity.Wagener.Bledsoe;
         }
+        Kempton.Clearmont.Tallassee = (bit<8>)8w0x8;
+        Kempton.Clearmont.setValid();
     }
     @name(".Lovett") action Lovett() {
         PortId_t Glendevey;
@@ -5386,7 +5311,7 @@ control Penrose(inout Wabbaseka Kempton, inout Nooksack GunnCity, in ingress_int
         }
 
     }
-    @disable_atomic_modify(1) @stage(4) @placement_priority(1) @name(".Oakford") table Oakford {
+    @pa_mutually_exclusive("ingress" , "GunnCity.Cotter.BealCity" , "GunnCity.Bronwood.Dozier") @disable_atomic_modify(1) @stage(4) @placement_priority(1) @name(".Oakford") table Oakford {
         actions = {
             Almont();
             SandCity();
@@ -5716,10 +5641,6 @@ control Penrose(inout Wabbaseka Kempton, inout Nooksack GunnCity, in ingress_int
         Kaplan.apply(Kempton, GunnCity, Callao, Oneonta, Sneads, Wagener);
         Patchogue.apply(Kempton, GunnCity, Callao, Oneonta, Sneads, Wagener);
         Lakefield.apply(Kempton, GunnCity, Callao, Oneonta, Sneads, Wagener);
-        {
-            Kempton.Clearmont.Tallassee = (bit<8>)8w0x8;
-            Kempton.Clearmont.setValid();
-        }
     }
 }
 
@@ -5939,6 +5860,64 @@ parser Conda(packet_in Calverton, out Wabbaseka Kempton, out Nooksack GunnCity, 
 }
 
 control Stratton(inout Wabbaseka Kempton, inout Nooksack GunnCity, in egress_intrinsic_metadata_t Monrovia, in egress_intrinsic_metadata_from_parser_t Bernard, inout egress_intrinsic_metadata_for_deparser_t Owanka, inout egress_intrinsic_metadata_for_output_port_t Natalia) {
+    @name(".Belcourt") action Belcourt(bit<2> Turkey) {
+        Kempton.Geistown.Turkey = Turkey;
+        Kempton.Geistown.Riner = (bit<2>)2w0;
+        Kempton.Geistown.Palmhurst = GunnCity.Swifton.IttaBena;
+        Kempton.Geistown.Comfrey = GunnCity.Neponset.Comfrey;
+        Kempton.Geistown.Kalida = (bit<2>)2w0;
+        Kempton.Geistown.Wallula = (bit<3>)3w0;
+        Kempton.Geistown.Dennison = (bit<1>)1w0;
+        Kempton.Geistown.Fairhaven = (bit<1>)1w0;
+        Kempton.Geistown.Woodfield = (bit<1>)1w0;
+        Kempton.Geistown.LasVegas = (bit<4>)4w0;
+        Kempton.Geistown.Westboro = GunnCity.Swifton.DeGraff;
+        Kempton.Geistown.Newfane = (bit<16>)16w0;
+        Kempton.Geistown.Oriskany = (bit<16>)16w0xc000;
+    }
+    @name(".Moorman") action Moorman(bit<2> Turkey) {
+        Belcourt(Turkey);
+        Kempton.Westoak.Burrel = (bit<24>)24w0xbfbfbf;
+        Kempton.Westoak.Petrey = (bit<24>)24w0xbfbfbf;
+    }
+    @name(".McFaddin") action McFaddin(bit<24> Jigger, bit<24> Villanova) {
+        Kempton.Brady.Aguilita = Jigger;
+        Kempton.Brady.Harbor = Villanova;
+    }
+    @name(".Parmelee") action Parmelee(bit<6> Bagwell, bit<10> Wright, bit<4> Stone, bit<12> Milltown) {
+        Kempton.Geistown.Dowell = Bagwell;
+        Kempton.Geistown.Glendevey = Wright;
+        Kempton.Geistown.Littleton = Stone;
+        Kempton.Geistown.Killen = Milltown;
+    }
+    @disable_atomic_modify(1) @name(".Pelican") table Pelican {
+        actions = {
+            @tableonly Belcourt();
+            @tableonly Moorman();
+            @defaultonly McFaddin();
+            @defaultonly NoAction();
+        }
+        key = {
+            Monrovia.egress_port    : exact @name("Monrovia.AquaPark") ;
+            GunnCity.Kinde.Buckhorn : exact @name("Kinde.Buckhorn") ;
+            GunnCity.Neponset.Bessie: exact @name("Neponset.Bessie") ;
+            GunnCity.Neponset.Aldan : exact @name("Neponset.Aldan") ;
+            Kempton.Brady.isValid() : exact @name("Brady") ;
+        }
+        size = 128;
+        default_action = NoAction();
+    }
+    @disable_atomic_modify(1) @name(".Unionvale") table Unionvale {
+        actions = {
+            Parmelee();
+            @defaultonly NoAction();
+        }
+        key = {
+            GunnCity.Neponset.Uintah: exact @name("Neponset.Uintah") ;
+        }
+        size = 512;
+        default_action = NoAction();
+    }
     @name(".Vincent") RushCity() Vincent;
     @name(".Cowan") Medart() Cowan;
     @name(".Wegdahl") Herring() Wegdahl;
@@ -5974,61 +5953,67 @@ control Stratton(inout Wabbaseka Kempton, inout Nooksack GunnCity, in egress_int
     @name(".Perma") Piedmont() Perma;
     @name(".Campbell") LaHabra() Campbell;
     apply {
-        {
-        }
-        {
-            Loyalton.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-            Cassadaga.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-            if (Kempton.Ruffin.isValid() == true) {
-                Hooven.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-                Chispa.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-                Seaford.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-                Denning.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-                Pueblo.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-                Gracewood.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-                if (Monrovia.egress_rid == 16w0 && !Kempton.Geistown.isValid()) {
-                    Compton.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-                }
-                Geismar.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-                Vincent.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-                Cowan.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-                Challenge.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-                Panola.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-                Haena.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-                Craigtown.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-            } else {
-                Schofield.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+        Cassadaga.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+        if (!Kempton.Geistown.isValid() && Kempton.Ruffin.isValid()) {
+            {
             }
+            Loyalton.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+            Hooven.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+            Chispa.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+            Seaford.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+            Denning.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+            Pueblo.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+            Gracewood.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+            if (Monrovia.egress_rid == 16w0) {
+                Compton.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+            }
+            Berwyn.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+            Geismar.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+            Vincent.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+            Cowan.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+            Challenge.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+            Panola.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+            Haena.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+            Craigtown.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
             Weslaco.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
             Woodville.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-            if (Kempton.Ruffin.isValid() == true && !Kempton.Geistown.isValid()) {
-                Berwyn.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-                Torrance.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-                if (Kempton.Ravinia.isValid()) {
-                    Campbell.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-                }
-                if (Kempton.Volens.isValid()) {
-                    Perma.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-                }
-                if (GunnCity.Neponset.Aldan != 3w2 && GunnCity.Neponset.Pachuta == 1w0) {
-                    Beaman.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-                }
-                Wegdahl.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-                Stanwood.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-                Bridgton.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-                Lilydale.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-                Snowflake.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+            Torrance.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+            if (Kempton.Ravinia.isValid()) {
+                Campbell.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
             }
-            if (!Kempton.Geistown.isValid() && GunnCity.Neponset.Aldan != 3w2 && GunnCity.Neponset.McAllen != 3w3) {
+            if (Kempton.Volens.isValid()) {
+                Perma.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+            }
+            if (GunnCity.Neponset.Aldan != 3w2 && GunnCity.Neponset.Pachuta == 1w0) {
+                Beaman.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+            }
+            Wegdahl.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+            Stanwood.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+            Bridgton.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+            Lilydale.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+            Snowflake.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+            Janney.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+            Penalosa.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+            if (GunnCity.Neponset.Aldan != 3w2) {
+                Lasara.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+            }
+        } else {
+            if (Kempton.Ruffin.isValid() == false) {
+                Schofield.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+                if (Kempton.Brady.isValid()) {
+                    Pelican.apply();
+                }
+            } else {
+                Pelican.apply();
+            }
+            if (Kempton.Geistown.isValid()) {
+                Unionvale.apply();
+                Asherton.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+                Cross.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
+            } else if (Kempton.Olcott.isValid()) {
                 Lasara.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
             }
         }
-        Janney.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-        if (Kempton.Geistown.isValid()) {
-            Asherton.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-            Cross.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
-        }
-        Penalosa.apply(Kempton, GunnCity, Monrovia, Bernard, Owanka, Natalia);
     }
 }
 
@@ -6312,14 +6297,14 @@ control Almond(inout Wabbaseka Kempton, inout Nooksack GunnCity, in ingress_intr
     @name(".Crumstown") action Crumstown(bit<32> Salitpa) {
         Roxobel(Salitpa);
     }
-    @name(".McFaddin") action McFaddin() {
+    @name(".Mishawaka") action Mishawaka() {
     }
     @name(".Waimalu") action Waimalu(bit<5> Mickleton, Ipv4PartIdx_t Mentone, bit<8> Thaxton, bit<32> Lawai) {
         GunnCity.Hillside.Thaxton = (NextHopTable_t)Thaxton;
         GunnCity.Hillside.McCracken = Mickleton;
         GunnCity.Thurmond.Mentone = Mentone;
         GunnCity.Hillside.Lawai = (bit<15>)Lawai;
-        McFaddin();
+        Mishawaka();
     }
     @name(".Quamba") action Quamba(bit<32> Lawai) {
         GunnCity.Hillside.Thaxton = (bit<2>)2w0;

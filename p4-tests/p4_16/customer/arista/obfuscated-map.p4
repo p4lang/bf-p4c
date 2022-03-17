@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MAP=1 -Ibf_arista_switch_map/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_map --bf-rt-schema bf_arista_switch_map/context/bf-rt.json
-// p4c 9.7.2 (SHA: 14435aa)
+// p4c 9.9.0 (SHA: 9730738)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -481,17 +481,6 @@ header Neuse {
     bit<64> Fairchild;
 }
 
-header Chispa {
-    bit<3>  Asherton;
-    bit<5>  Bridgton;
-    bit<2>  Torrance;
-    bit<6>  Bonney;
-    bit<8>  Lilydale;
-    bit<8>  Haena;
-    bit<32> Janney;
-    bit<32> Hooven;
-}
-
 header Cataract {
     bit<7>   Alvwood;
     PortId_t Antlers;
@@ -686,20 +675,20 @@ struct Barrow {
 }
 
 struct Bonduel {
-    bit<32> Littleton;
-    bit<32> Killen;
-    bit<32> Sardinia;
-    bit<6>  Rains;
-    bit<6>  Kaaawa;
-    bit<16> Gause;
+    bit<32>       Littleton;
+    bit<32>       Killen;
+    bit<32>       Sardinia;
+    bit<6>        Rains;
+    bit<6>        Kaaawa;
+    Ipv4PartIdx_t Gause;
 }
 
 struct Norland {
-    bit<128> Littleton;
-    bit<128> Killen;
-    bit<8>   Comfrey;
-    bit<6>   Rains;
-    bit<16>  Gause;
+    bit<128>      Littleton;
+    bit<128>      Killen;
+    bit<8>        Comfrey;
+    bit<6>        Rains;
+    Ipv6PartIdx_t Gause;
 }
 
 struct Pathfork {
@@ -922,12 +911,6 @@ struct Rainelle {
     bit<32> Sopris;
 }
 
-struct Loyalton {
-    bit<1> Geismar;
-    bit<1> Lasara;
-    bit<1> Perma;
-}
-
 struct Thaxton {
     DonaAna   Lawai;
     Luzerne   McCracken;
@@ -976,7 +959,6 @@ struct Thaxton {
     bool      Forman;
     bit<1>    Paradise;
     bit<8>    Conda;
-    Loyalton  Campbell;
 }
 
 @pa_mutually_exclusive("egress" , "Twain.Masontown" , "Twain.Westbury")
@@ -994,7 +976,7 @@ struct Thaxton {
     Helton      Millhaven;
     Turkey      Newhalem;
     Galloway    Westville;
-    Weslaco     Navarro;
+    Weslaco     Chispa;
     Irvine      Baudette;
     Loris       Ekron;
     Solomon     Swisshome;
@@ -1245,11 +1227,11 @@ parser Covert(packet_in Ekwok, out Gastonia Twain, out Thaxton Boonsboro, out in
             default: Garrison;
         }
     }
-    state Edgemont {
-        Ekwok.extract<Weslaco>(Twain.Navarro);
-        Boonsboro.McCracken.Separ = Twain.Navarro.Cassadaga[31:24];
-        Boonsboro.McCracken.Clyde = Twain.Navarro.Cassadaga[23:8];
-        Boonsboro.McCracken.Clarion = Twain.Navarro.Cassadaga[7:0];
+    state Asherton {
+        Ekwok.extract<Weslaco>(Twain.Chispa);
+        Boonsboro.McCracken.Separ = Twain.Chispa.Cassadaga[31:24];
+        Boonsboro.McCracken.Clyde = Twain.Chispa.Cassadaga[23:8];
+        Boonsboro.McCracken.Clarion = Twain.Chispa.Cassadaga[7:0];
         transition select(Twain.Westville.Welcome) {
             default: accept;
         }
@@ -1264,7 +1246,7 @@ parser Covert(packet_in Ekwok, out Gastonia Twain, out Thaxton Boonsboro, out in
         Boonsboro.McCracken.Kremlin = (bit<3>)3w2;
         Ekwok.extract<Galloway>(Twain.Westville);
         transition select(Twain.Westville.Stanwood, Twain.Westville.Welcome) {
-            (16w0x2000, 16w0 &&& 16w0): Edgemont;
+            (16w0x2000, 16w0 &&& 16w0): Asherton;
             (16w0, 16w0x800): Thawville;
             (16w0, 16w0x86dd): Milano;
             default: accept;
@@ -1884,7 +1866,7 @@ control Fishers(inout Gastonia Twain, inout Thaxton Boonsboro, in ingress_intrin
         Tularosa(Orrick);
         Coryville(Bellamy, Foster, Raiford);
     }
-    @name(".Woodston") action Woodston() {
+    @name(".Bridgton") action Bridgton() {
         Boonsboro.McCracken.Devers = Boonsboro.Mentone.Subiaco;
     }
     @name(".Moosic") action Moosic(bit<12> Noyack, bit<32> Bellamy, bit<8> Foster, bit<4> Raiford, bit<16> Orrick, bit<1> Soledad) {
@@ -1898,7 +1880,7 @@ control Fishers(inout Gastonia Twain, inout Thaxton Boonsboro, in ingress_intrin
         Tularosa(Orrick);
         Coryville(Bellamy, Foster, Raiford);
     }
-    @name(".Neshoba") action Neshoba() {
+    @name(".Torrance") action Torrance() {
         Boonsboro.McCracken.Devers = (bit<12>)Twain.Yerington[0].Eldred;
     }
     @disable_atomic_modify(1) @name(".Nason") table Nason {
@@ -1937,12 +1919,12 @@ control Fishers(inout Gastonia Twain, inout Thaxton Boonsboro, in ingress_intrin
     @ways(1) @disable_atomic_modify(1) @name(".Kempton") table Kempton {
         actions = {
             Uniopolis();
-            @defaultonly Woodston();
+            @defaultonly Bridgton();
         }
         key = {
             Boonsboro.Mentone.Subiaco & 12w0xfff: exact @name("Mentone.Subiaco") ;
         }
-        const default_action = Woodston();
+        const default_action = Bridgton();
         size = 4096;
     }
     @disable_atomic_modify(1) @name(".GunnCity") table GunnCity {
@@ -1960,12 +1942,12 @@ control Fishers(inout Gastonia Twain, inout Thaxton Boonsboro, in ingress_intrin
     @ways(1) @disable_atomic_modify(1) @name(".Oneonta") table Oneonta {
         actions = {
             Ossining();
-            @defaultonly Neshoba();
+            @defaultonly Torrance();
         }
         key = {
             Twain.Yerington[0].Eldred: exact @name("Yerington[0].Eldred") ;
         }
-        const default_action = Neshoba();
+        const default_action = Torrance();
         size = 4096;
     }
     apply {
@@ -3224,6 +3206,10 @@ control Farner(inout Gastonia Twain, inout Thaxton Boonsboro, in egress_intrinsi
         Boonsboro.ElkNeck.Loring = Loring;
         Boonsboro.ElkNeck.Grassflat = (bit<2>)2w0;
         Twain.Westbury.Lakefield = (bit<4>)4w0;
+        Twain.Westbury.Laurelton = (bit<2>)2w0;
+        Twain.Westbury.Ronda = (bit<3>)3w0;
+        Twain.Westbury.LaPalma = (bit<1>)1w0;
+        Twain.Westbury.Idalia = (bit<1>)1w0;
         Twain.Westbury.Horsehead = (bit<1>)1w0;
     }
     @name(".Brownson") action Brownson(bit<2> Loring) {

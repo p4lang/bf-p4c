@@ -79,7 +79,6 @@
 @pa_no_init("ingress" , "Glenoma.Balmorhea.Havana")
 @pa_no_init("ingress" , "Glenoma.Picabo.Cuprum")
 @pa_no_init("egress" , "Glenoma.Circle.Cuprum")
-@pa_parser_group_monogress
 @pa_no_init("egress" , "Glenoma.Crannell.Grassflat")
 @pa_no_init("ingress" , "Glenoma.Balmorhea.Spindale")
 @pa_container_size("pipe_b" , "ingress" , "Glenoma.Twain.Knoke" , 8)
@@ -90,6 +89,7 @@
 @pa_atomic("egress" , "Baker.McFaddin.Idalia")
 @pa_solitary("pipe_b" , "ingress" , "Baker.McFaddin.$valid")
 @pa_atomic("pipe_a" , "ingress" , "Glenoma.Balmorhea.DeGraff")
+@pa_mutually_exclusive("egress" , "Glenoma.Crannell.SomesBar" , "Glenoma.Crannell.Manilla")
 @pa_container_size("pipe_a" , "egress" , "Baker.Kinde.Boerne" , 16)
 @pa_container_size("pipe_a" , "ingress" , "Glenoma.Aniak.Burwell" , 32)
 @pa_mutually_exclusive("ingress" , "Glenoma.Dushore.Moose" , "Glenoma.Udall.Norma")
@@ -163,8 +163,6 @@
 @pa_alias("egress" , "Baker.McFaddin.Cecilton" , "Glenoma.Nevis.GlenAvon")
 @pa_alias("egress" , "Baker.McFaddin.Albemarle" , "Glenoma.Balmorhea.Adona")
 @pa_alias("egress" , "Baker.McFaddin.Topanga" , "Glenoma.Lindsborg.RossFork")
-@pa_alias("egress" , "Baker.Pineville.Weinert" , "Glenoma.Crannell.LaLuz")
-@pa_alias("egress" , "Baker.Pineville.Garibaldi" , "Glenoma.Crannell.Garibaldi")
 @pa_alias("egress" , "Baker.Pettigrew.$valid" , "Glenoma.Crannell.SomesBar")
 @pa_alias("egress" , "Baker.Quamba.$valid" , "Glenoma.HighRock.Mickleton")
 @pa_alias("egress" , "Glenoma.Circle.LaUnion" , "Glenoma.Circle.Stilwell") header Bayshore {
@@ -1084,11 +1082,7 @@ struct Empire {
 @pa_mutually_exclusive("egress" , "Baker.Kinde" , "Baker.Pineville")
 @pa_mutually_exclusive("egress" , "Baker.Pineville" , "Baker.Swifton")
 @pa_mutually_exclusive("egress" , "Baker.Pineville" , "Baker.Cotter")
-@pa_mutually_exclusive("egress" , "Baker.Pineville" , "Baker.PeaRidge")
-@pa_mutually_exclusive("egress" , "Baker.Casnovia.OakCity" , "Baker.Sedan.Suttle")
-@pa_mutually_exclusive("egress" , "Baker.Casnovia.OakCity" , "Baker.Sedan.Galloway")
-@pa_mutually_exclusive("egress" , "Baker.Casnovia.Boerne" , "Baker.Sedan.Suttle")
-@pa_mutually_exclusive("egress" , "Baker.Casnovia.Boerne" , "Baker.Sedan.Galloway") struct Dacono {
+@pa_mutually_exclusive("egress" , "Baker.Pineville" , "Baker.PeaRidge") struct Dacono {
     Hackett   Biggers;
     Ocoee     McFaddin;
     Fayette   Jigger;
@@ -2593,19 +2587,29 @@ control Liberal(inout Dacono Baker, inout Empire Glenoma, in ingress_intrinsic_m
 
 control Stone(inout Dacono Baker, inout Empire Glenoma, in egress_intrinsic_metadata_t Basco, in egress_intrinsic_metadata_from_parser_t Bethune, inout egress_intrinsic_metadata_for_deparser_t PawCreek, inout egress_intrinsic_metadata_for_output_port_t Cornwall) {
     @name(".Milltown") action Milltown() {
-        Glenoma.Crannell.Pajaros = (bit<3>)3w0;
-        Glenoma.Crannell.Lugert = (bit<3>)3w3;
     }
     @name(".TinCity") action TinCity(bit<8> Comunas) {
-        Glenoma.Crannell.Noyes = Comunas;
-        Glenoma.Crannell.StarLake = (bit<1>)1w1;
-        Glenoma.Crannell.Pajaros = (bit<3>)3w0;
-        Glenoma.Crannell.Lugert = (bit<3>)3w2;
-        Glenoma.Crannell.Monahans = (bit<1>)1w0;
+        Baker.Pineville.Garibaldi = (bit<2>)2w0;
+        Baker.Pineville.Weinert = (bit<2>)2w0;
+        Baker.Pineville.Cornell = (bit<12>)12w0;
+        Baker.Pineville.Noyes = Comunas;
+        Baker.Pineville.Helton = (bit<2>)2w0;
+        Baker.Pineville.Grannis = (bit<3>)3w0;
+        Baker.Pineville.StarLake = (bit<1>)1w1;
+        Baker.Pineville.Rains = (bit<1>)1w0;
+        Baker.Pineville.SoapLake = (bit<1>)1w0;
+        Baker.Pineville.Linden = (bit<4>)4w0;
+        Baker.Pineville.Conner = (bit<12>)12w0;
+        Baker.Pineville.Ledoux = (bit<16>)16w0;
+        Baker.Pineville.Bowden = (bit<16>)16w0xc000;
     }
     @name(".Alcoma") action Alcoma(bit<32> Kilbourne, bit<32> Bluff, bit<8> Fairhaven, bit<6> Newfane, bit<16> Bedrock, bit<12> Palmhurst, bit<24> Quogue, bit<24> Findlay) {
-        Glenoma.Crannell.Pajaros = (bit<3>)3w0;
-        Glenoma.Crannell.Lugert = (bit<3>)3w4;
+        Baker.Nooksack.setValid();
+        Baker.Nooksack.Quogue = Quogue;
+        Baker.Nooksack.Findlay = Findlay;
+        Baker.Courtdale.setValid();
+        Baker.Courtdale.Bowden = 16w0x800;
+        Glenoma.Crannell.Palmhurst = Palmhurst;
         Baker.Swifton.setValid();
         Baker.Swifton.LasVegas = (bit<4>)4w0x4;
         Baker.Swifton.Westboro = (bit<4>)4w0x5;
@@ -2624,10 +2628,6 @@ control Stone(inout Dacono Baker, inout Empire Glenoma, in egress_intrinsic_meta
         Baker.Kinde.setValid();
         Baker.Kinde.OakCity = (bit<16>)16w0;
         Baker.Kinde.Boerne = Bedrock;
-        Glenoma.Crannell.Palmhurst = Palmhurst;
-        Glenoma.Crannell.Quogue = Quogue;
-        Glenoma.Crannell.Findlay = Findlay;
-        Glenoma.Crannell.Monahans = (bit<1>)1w0;
     }
     @ternary(1) @disable_atomic_modify(1) @name(".Silvertip") table Silvertip {
         actions = {
@@ -2927,7 +2927,7 @@ control Wells(inout Dacono Baker, inout Empire Glenoma, in ingress_intrinsic_met
     @name(".Edinburgh") action Edinburgh(bit<5> Provencal) {
         Glenoma.Talco.Provencal = Provencal;
     }
-    @name(".Chalco") Meter<bit<32>>(32w32, MeterType_t.BYTES) Chalco;
+    @name(".Chalco") Meter<bit<32>>(32w32, MeterType_t.PACKETS) Chalco;
     @name(".Twichell") action Twichell(bit<32> Provencal) {
         Edinburgh((bit<5>)Provencal);
         Glenoma.Talco.Bergton = (bit<1>)Chalco.execute(Provencal);
@@ -3461,7 +3461,7 @@ control Claypool(inout Dacono Baker, inout Empire Glenoma, in egress_intrinsic_m
         Baker.Wanamassa[0].Turkey = Glenoma.Talco.Shirley;
         Baker.Wanamassa[0].Riner = Glenoma.Talco.Riner;
     }
-    @ways(2) @disable_atomic_modify(1) @ternary(1) @name(".Bodcaw") table Bodcaw {
+    @ways(2) @disable_atomic_modify(1) @name(".Bodcaw") table Bodcaw {
         actions = {
             Mapleton();
             Manville();
@@ -3480,9 +3480,6 @@ control Claypool(inout Dacono Baker, inout Empire Glenoma, in egress_intrinsic_m
 }
 
 control Weimar(inout Dacono Baker, inout Empire Glenoma, in egress_intrinsic_metadata_t Basco, in egress_intrinsic_metadata_from_parser_t Bethune, inout egress_intrinsic_metadata_for_deparser_t PawCreek, inout egress_intrinsic_metadata_for_output_port_t Cornwall) {
-    @name(".Flippen") action Flippen() {
-        ;
-    }
     @name(".Eunice") action Eunice(bit<16> Watters) {
         Glenoma.Basco.Lathrop = Glenoma.Basco.Lathrop + Watters;
     }
@@ -3499,23 +3496,6 @@ control Weimar(inout Dacono Baker, inout Empire Glenoma, in egress_intrinsic_met
         Glenoma.Crannell.Corydon = Glenoma.Crannell.Heuvelton;
         Glenoma.Crannell.Townville = Townville;
         BigPark(Galloway, Watters, Burmester);
-    }
-    @name(".Dresden") action Dresden(bit<2> Garibaldi) {
-        Glenoma.Crannell.Lugert = (bit<3>)3w2;
-        Glenoma.Crannell.Garibaldi = Garibaldi;
-        Glenoma.Crannell.LaLuz = (bit<2>)2w0;
-        Baker.Pineville.Linden = (bit<4>)4w0;
-        Baker.Pineville.Helton = (bit<2>)2w0;
-        Baker.Pineville.Grannis = (bit<3>)3w0;
-        Baker.Pineville.StarLake = (bit<1>)1w0;
-        Baker.Pineville.Rains = (bit<1>)1w0;
-        Baker.Pineville.SoapLake = (bit<1>)1w0;
-    }
-    @name(".Lorane") action Lorane(bit<6> Dundalk, bit<10> Bellville, bit<4> DeerPark, bit<12> Boyes) {
-        Baker.Pineville.Chevak = Dundalk;
-        Baker.Pineville.Mendocino = Bellville;
-        Baker.Pineville.Eldred = DeerPark;
-        Baker.Pineville.Chloride = Boyes;
     }
     @name(".Renfroe") action Renfroe(bit<24> McCallum, bit<24> Waucousta) {
         Baker.Nooksack.Quogue = Glenoma.Crannell.Quogue;
@@ -3546,30 +3526,8 @@ control Weimar(inout Dacono Baker, inout Empire Glenoma, in egress_intrinsic_met
     @name(".Kinard") action Kinard() {
         Renfroe(Baker.Hillside.Harbor, Baker.Hillside.IttaBena);
     }
-    @name(".Pendleton") action Pendleton(bit<8> Noyes) {
-        Baker.Pineville.StarLake = Glenoma.Crannell.StarLake;
-        Baker.Pineville.Noyes = Noyes;
-        Baker.Pineville.Cornell = Glenoma.Balmorhea.Adona;
-        Baker.Pineville.Garibaldi = Glenoma.Crannell.Garibaldi;
-        Baker.Pineville.Weinert = Glenoma.Crannell.LaLuz;
-        Baker.Pineville.Conner = Glenoma.Balmorhea.Sledge;
-        Baker.Pineville.Ledoux = (bit<16>)16w0;
-        Baker.Pineville.Bowden = (bit<16>)16w0xc000;
-    }
-    @name(".Turney") action Turney() {
-        Pendleton(Glenoma.Crannell.Noyes);
-    }
     @name(".Sodaville") action Sodaville() {
         Selvin();
-    }
-    @name(".Fittstown") action Fittstown(bit<24> McCallum, bit<24> Waucousta) {
-        Baker.Nooksack.setValid();
-        Baker.Courtdale.setValid();
-        Baker.Nooksack.Quogue = Glenoma.Crannell.Quogue;
-        Baker.Nooksack.Findlay = Glenoma.Crannell.Findlay;
-        Baker.Nooksack.Harbor = McCallum;
-        Baker.Nooksack.IttaBena = Waucousta;
-        Baker.Courtdale.Bowden = 16w0x800;
     }
     @name(".English") Random<bit<16>>() English;
     @name(".Rotonda") action Rotonda(bit<16> Newcomb, bit<16> Macungie, bit<32> Kilbourne, bit<8> Tallassee) {
@@ -3592,9 +3550,6 @@ control Weimar(inout Dacono Baker, inout Empire Glenoma, in egress_intrinsic_met
     }
     @name(".Kiron") action Kiron(bit<8> Fairhaven) {
         Baker.Sunbury.Commack = Baker.Sunbury.Commack + Fairhaven;
-    }
-    @name(".DewyRose") action DewyRose(bit<8> Noyes) {
-        Pendleton(Noyes);
     }
     @name(".Minetto") action Minetto(bit<16> Teigen, bit<16> August, bit<24> Harbor, bit<24> IttaBena, bit<24> McCallum, bit<24> Waucousta, bit<16> Kinston) {
         Baker.Hillside.Quogue = Glenoma.Crannell.Quogue;
@@ -3700,40 +3655,12 @@ control Weimar(inout Dacono Baker, inout Empire Glenoma, in egress_intrinsic_met
         requires_versioning = false;
         const default_action = NoAction();
     }
-    @ternary(1) @disable_atomic_modify(1) @name(".Shauck") table Shauck {
-        actions = {
-            Dresden();
-            Flippen();
-        }
-        key = {
-            Basco.egress_port         : exact @name("Basco.Vichy") ;
-            Glenoma.Lindsborg.RossFork: exact @name("Lindsborg.RossFork") ;
-            Glenoma.Crannell.Pinole   : exact @name("Crannell.Pinole") ;
-            Glenoma.Crannell.Pajaros  : exact @name("Crannell.Pajaros") ;
-        }
-        const default_action = Flippen();
-        size = 128;
-    }
-    @disable_atomic_modify(1) @name(".Telegraph") table Telegraph {
-        actions = {
-            Lorane();
-            @defaultonly NoAction();
-        }
-        key = {
-            Glenoma.Crannell.Blitchton: exact @name("Crannell.Blitchton") ;
-        }
-        size = 512;
-        default_action = NoAction();
-    }
     @disable_atomic_modify(1) @name(".Veradale") table Veradale {
         actions = {
             Terry();
             Nipton();
             Kinard();
-            Turney();
             Sodaville();
-            Fittstown();
-            DewyRose();
             Chandalar();
             Bosco();
             Haworth();
@@ -3768,15 +3695,7 @@ control Weimar(inout Dacono Baker, inout Empire Glenoma, in egress_intrinsic_met
         const default_action = NoAction();
     }
     apply {
-        switch (Shauck.apply().action_run) {
-            Flippen: {
-                DuPont.apply();
-            }
-        }
-
-        if (Baker.Pineville.isValid()) {
-            Telegraph.apply();
-        }
+        DuPont.apply();
         if (Glenoma.Crannell.Monahans == 1w0 && Glenoma.Crannell.Pajaros == 3w0 && Glenoma.Crannell.Lugert == 3w0) {
             Parole.apply();
         }
@@ -4253,7 +4172,7 @@ control Stout(inout Dacono Baker, inout Empire Glenoma, in ingress_intrinsic_met
         const default_action = Flippen();
         size = 512;
     }
-    @disable_atomic_modify(1) @disable_atomic_modify(1) @ways(3) @name(".Dedham") table Dedham {
+    @disable_atomic_modify(1) @disable_atomic_modify(1) @ways(2) @pack(4) @name(".Dedham") table Dedham {
         actions = {
             @tableonly Calverton();
             @defaultonly NoAction();
@@ -4672,7 +4591,7 @@ control Poynette(inout Dacono Baker, inout Empire Glenoma, in egress_intrinsic_m
         Farner = Chunchula.get<tuple<bit<9>, bit<5>>>({ Basco.egress_port, Basco.egress_qid[4:0] });
         Wyanet.count((bit<12>)Farner);
     }
-    @disable_atomic_modify(1) @name(".ElJebel") table ElJebel {
+    @disable_atomic_modify(1) @stage(0) @name(".ElJebel") table ElJebel {
         actions = {
             Darden();
         }
@@ -4899,7 +4818,7 @@ control Alberta(inout Dacono Baker, inout Empire Glenoma, in ingress_intrinsic_m
         Glenoma.Lookeba.Antlers = Glenoma.Earling.Antlers;
         Glenoma.Lookeba.Kendrick = Glenoma.Earling.Kendrick;
     }
-    @disable_atomic_modify(1) @use_hash_action(0) @ways(1) @name(".Tolley") table Tolley {
+    @disable_atomic_modify(1) @name(".Tolley") table Tolley {
         actions = {
             Lakefield();
         }
@@ -5208,7 +5127,7 @@ control Powhatan(inout Dacono Baker, inout Empire Glenoma, in egress_intrinsic_m
         Laramie();
         Pinebluff.count();
     }
-    @disable_atomic_modify(1) @name(".Molino") table Molino {
+    @stage(8) @disable_atomic_modify(1) @name(".Molino") table Molino {
         actions = {
             Fentress();
             @defaultonly NoAction();
@@ -8763,7 +8682,7 @@ control Mizpah(inout Dacono Baker, inout Empire Glenoma, in ingress_intrinsic_me
     @name(".Harney") action Harney() {
         Glenoma.Nevis.Maumee = Glenoma.Aniak.Belgrade;
     }
-    @disable_atomic_modify(1) @name(".Gracewood") table Gracewood {
+    @pa_mutually_exclusive("ingress" , "Glenoma.Nevis.GlenAvon" , "Glenoma.Aniak.Belgrade") @disable_atomic_modify(1) @name(".Gracewood") table Gracewood {
         actions = {
             Alvwood();
             Glenpool();
@@ -9809,6 +9728,58 @@ parser Hooksett(packet_in Tofte, out Dacono Baker, out Empire Glenoma, out egres
 }
 
 control RoseBud(inout Dacono Baker, inout Empire Glenoma, in egress_intrinsic_metadata_t Basco, in egress_intrinsic_metadata_from_parser_t Bethune, inout egress_intrinsic_metadata_for_deparser_t PawCreek, inout egress_intrinsic_metadata_for_output_port_t Cornwall) {
+    @name(".Dresden") action Dresden(bit<2> Garibaldi) {
+        Baker.Pineville.Garibaldi = Garibaldi;
+        Baker.Pineville.Weinert = (bit<2>)2w0;
+        Baker.Pineville.Cornell = Glenoma.Balmorhea.Adona;
+        Baker.Pineville.Noyes = Glenoma.Crannell.Noyes;
+        Baker.Pineville.Helton = (bit<2>)2w0;
+        Baker.Pineville.Grannis = (bit<3>)3w0;
+        Baker.Pineville.StarLake = (bit<1>)1w0;
+        Baker.Pineville.Rains = (bit<1>)1w0;
+        Baker.Pineville.SoapLake = (bit<1>)1w0;
+        Baker.Pineville.Linden = (bit<4>)4w0;
+        Baker.Pineville.Conner = Glenoma.Balmorhea.Sledge;
+        Baker.Pineville.Ledoux = (bit<16>)16w0;
+        Baker.Pineville.Bowden = (bit<16>)16w0xc000;
+    }
+    @name(".Ossipee") action Ossipee(bit<24> Harrison, bit<24> Cidra) {
+        Baker.Nooksack.Harbor = Harrison;
+        Baker.Nooksack.IttaBena = Cidra;
+    }
+    @name(".Lorane") action Lorane(bit<6> Dundalk, bit<10> Bellville, bit<4> DeerPark, bit<12> Boyes) {
+        Baker.Pineville.Chevak = Dundalk;
+        Baker.Pineville.Mendocino = Bellville;
+        Baker.Pineville.Eldred = DeerPark;
+        Baker.Pineville.Chloride = Boyes;
+    }
+    @disable_atomic_modify(1) @name(".Shauck") table Shauck {
+        actions = {
+            @tableonly Dresden();
+            @defaultonly Ossipee();
+            @defaultonly NoAction();
+        }
+        key = {
+            Basco.egress_port         : exact @name("Basco.Vichy") ;
+            Glenoma.Lindsborg.RossFork: exact @name("Lindsborg.RossFork") ;
+            Glenoma.Crannell.Pinole   : exact @name("Crannell.Pinole") ;
+            Glenoma.Crannell.Pajaros  : exact @name("Crannell.Pajaros") ;
+            Baker.Nooksack.isValid()  : exact @name("Nooksack") ;
+        }
+        size = 128;
+        default_action = NoAction();
+    }
+    @disable_atomic_modify(1) @name(".Telegraph") table Telegraph {
+        actions = {
+            Lorane();
+            @defaultonly NoAction();
+        }
+        key = {
+            Glenoma.Crannell.Blitchton: exact @name("Crannell.Blitchton") ;
+        }
+        size = 512;
+        default_action = NoAction();
+    }
     @name(".Indrio") action Indrio() {
         Baker.Correo.setInvalid();
     }
@@ -9941,61 +9912,69 @@ control RoseBud(inout Dacono Baker, inout Empire Glenoma, in egress_intrinsic_me
     @name(".Berne") Needham() Berne;
     @name(".Boutte") Bassett() Boutte;
     apply {
-        {
-        }
-        {
-            McKibben.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-            Amboy.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-            if (Baker.Biggers.isValid() == true) {
-                Oxnard.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-                Wiota.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-                Millett.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-                Ardara.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-                Rixford.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-                OldMinto.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-                if (Basco.egress_rid == 16w0 && !Baker.Pineville.isValid()) {
-                    Karluk.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-                }
-                Murdock.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-                LoneJack.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-                LaMonte.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-                Eureka.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-                Overton.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-                Tatum.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-                Thistle.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-            } else {
-                Kealia.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+        Amboy.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+        if (!Baker.Pineville.isValid() && Baker.Biggers.isValid()) {
+            {
             }
+            McKibben.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+            Oxnard.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+            Wiota.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+            Millett.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+            Ardara.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+            Rixford.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+            OldMinto.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+            if (Basco.egress_rid == 16w0) {
+                Karluk.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+            }
+            Crumstown.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+            Murdock.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+            LoneJack.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+            LaMonte.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+            Eureka.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+            Overton.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+            Tatum.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+            Thistle.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
             ElMirage.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
             BelAir.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-            if (Baker.Biggers.isValid() == true && !Baker.Pineville.isValid()) {
-                Crumstown.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-                Whitetail.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-                if (Baker.Sunbury.isValid()) {
-                    Boutte.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-                }
-                if (Baker.Flaherty.isValid()) {
-                    Berne.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-                }
-                if (Glenoma.Crannell.Pajaros != 3w2 && Glenoma.Crannell.Grassflat == 1w0) {
-                    LaPointe.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-                }
-                Roxobel.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-                Newberg.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-                Coalton.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-                Minneota.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-                Paoli.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-                Herod.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+            Whitetail.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+            if (Baker.Sunbury.isValid()) {
+                Boutte.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
             }
-            if (!Baker.Pineville.isValid() && Glenoma.Crannell.Pajaros != 3w2 && Glenoma.Crannell.Lugert != 3w3) {
+            if (Baker.Flaherty.isValid()) {
+                Berne.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+            }
+            if (Glenoma.Crannell.Pajaros != 3w2 && Glenoma.Crannell.Grassflat == 1w0) {
+                LaPointe.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+            }
+            Roxobel.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+            Newberg.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+            Coalton.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+            Minneota.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+            Paoli.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+            Herod.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+            Croft.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+            Bothwell.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+            if (Glenoma.Crannell.Pajaros != 3w2) {
                 Cavalier.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
             }
-            if (Baker.Correo.isValid()) {
-                Harvard.apply();
+        } else {
+            if (Baker.Biggers.isValid() == false) {
+                Kealia.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+                if (Baker.Nooksack.isValid()) {
+                    Shauck.apply();
+                }
+            } else {
+                Shauck.apply();
+            }
+            if (Baker.Pineville.isValid()) {
+                Telegraph.apply();
+            } else if (Baker.Kinde.isValid()) {
+                Cavalier.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
             }
         }
-        Croft.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
-        Bothwell.apply(Baker, Glenoma, Basco, Bethune, PawCreek, Cornwall);
+        if (Baker.Correo.isValid()) {
+            Harvard.apply();
+        }
     }
 }
 
@@ -10129,8 +10108,8 @@ parser Cogar(packet_in Tofte, out Dacono Baker, out Empire Glenoma, out ingress_
         Glenoma.Udall.Kendrick = Baker.Sunbury.Kendrick;
         Glenoma.Udall.Antlers = Baker.Sunbury.Antlers;
         transition select(Baker.Sunbury.Beasley) {
-            8w17: Ossipee;
-            8w6: Powers;
+            8w17: Powers;
+            8w6: Moorpark;
             default: accept;
         }
     }
@@ -10142,7 +10121,7 @@ parser Cogar(packet_in Tofte, out Dacono Baker, out Empire Glenoma, out ingress_
         Glenoma.Balmorhea.Suttle = Baker.Sedan.Suttle;
         transition accept;
     }
-    state Ossipee {
+    state Powers {
         Tofte.extract<Naruna>(Baker.Sedan);
         Tofte.extract<Welcome>(Baker.Almota);
         Tofte.extract<Lowes>(Baker.Hookdale);
@@ -10159,7 +10138,7 @@ parser Cogar(packet_in Tofte, out Dacono Baker, out Empire Glenoma, out ingress_
         Glenoma.Balmorhea.Suttle = Baker.Sedan.Suttle;
         transition accept;
     }
-    state Powers {
+    state Moorpark {
         Glenoma.Daisytown.Soledad = (bit<3>)3w6;
         Tofte.extract<Naruna>(Baker.Sedan);
         Tofte.extract<Ankeny>(Baker.Lemont);

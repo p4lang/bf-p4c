@@ -52,7 +52,6 @@
 @pa_container_size("ingress" , "ig_intr_md_for_tm.ingress_cos" , 8)
 @pa_container_size("ingress" , "ig_intr_md_for_tm.qid" , 8)
 @pa_container_size("ingress" , "Wagener.Mayflower.Daphne" , 16)
-@pa_container_size("egress" , "Wagener.Wanamassa.$valid" , 16)
 @pa_atomic("ingress" , "Monrovia.Hallwood.Oriskany")
 @pa_atomic("ingress" , "Monrovia.Empire.McAllen")
 @pa_container_size("ingress" , "Monrovia.Nevis.Newfolden" , 16)
@@ -1517,7 +1516,7 @@ control Tenstrike(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_in
     @name(".Luning") action Luning() {
         Monrovia.Nevis.Ackley = (bit<1>)1w0;
     }
-    @disable_atomic_modify(1) @placement_priority(2) @name(".Flippen") table Flippen {
+    @disable_atomic_modify(1) @name(".Flippen") table Flippen {
         actions = {
             Midas();
             Kapowsin();
@@ -1535,7 +1534,7 @@ control Tenstrike(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_in
         counters = Mattapex;
         requires_versioning = false;
     }
-    @disable_atomic_modify(1) @ways(2) @placement_priority(2) @name(".Cadwell") table Cadwell {
+    @disable_atomic_modify(1) @ways(2) @name(".Cadwell") table Cadwell {
         actions = {
             Crown();
             Aguila();
@@ -1548,7 +1547,7 @@ control Tenstrike(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_in
         const default_action = Aguila();
         size = 4096;
     }
-    @disable_atomic_modify(1) @placement_priority(1) @name(".Boring") table Boring {
+    @disable_atomic_modify(1) @name(".Boring") table Boring {
         actions = {
             Castle();
             Vanoss();
@@ -1563,7 +1562,7 @@ control Tenstrike(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_in
         size = 49152;
         idle_timeout = true;
     }
-    @disable_atomic_modify(1) @ways(3) @placement_priority(2) @name(".Nucla") table Nucla {
+    @disable_atomic_modify(1) @ways(3) @name(".Nucla") table Nucla {
         actions = {
             Mulvane();
             @defaultonly NoAction();
@@ -1576,7 +1575,7 @@ control Tenstrike(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_in
         size = 2048;
         const default_action = NoAction();
     }
-    @disable_atomic_modify(1) @placement_priority(2) @placement_priority(".Casselman") @name(".Tillson") table Tillson {
+    @disable_atomic_modify(1) @name(".Tillson") table Tillson {
         actions = {
             Luning();
             Mulvane();
@@ -1963,7 +1962,7 @@ control McIntyre(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_int
         size = 98304;
         idle_timeout = true;
     }
-    @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @stage(3) @name(".Camargo") table Camargo {
+    @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @name(".Camargo") table Camargo {
         actions = {
             @tableonly Skene();
             @tableonly Seabrook();
@@ -2873,14 +2872,14 @@ control Chilson(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_intr
     @name(".BigFork") action BigFork() {
         Monrovia.Earling.Amenia = Ironia.get<tuple<bit<128>, bit<128>, bit<20>, bit<8>, bit<9>>>({ Wagener.Wanamassa.Tallassee, Wagener.Wanamassa.Irvine, Wagener.Wanamassa.Kendrick, Wagener.Wanamassa.Garcia, Monrovia.Longwood.Grabill });
     }
-    @disable_atomic_modify(1) @stage(2) @name(".Kenvil") table Kenvil {
+    @disable_atomic_modify(1) @name(".Kenvil") table Kenvil {
         actions = {
             Kosmos();
         }
         default_action = Kosmos();
         size = 1;
     }
-    @disable_atomic_modify(1) @stage(2) @name(".Rhine") table Rhine {
+    @disable_atomic_modify(1) @name(".Rhine") table Rhine {
         actions = {
             BigFork();
         }
@@ -3709,19 +3708,29 @@ control Ashburn(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_intr
 
 control Granville(inout Pinetop Wagener, inout Swisshome Monrovia, in egress_intrinsic_metadata_t Knights, in egress_intrinsic_metadata_from_parser_t Waseca, inout egress_intrinsic_metadata_for_deparser_t Haugen, inout egress_intrinsic_metadata_for_output_port_t Goldsmith) {
     @name(".Council") action Council() {
-        Monrovia.Balmorhea.Satolah = (bit<3>)3w0;
-        Monrovia.Balmorhea.Pittsboro = (bit<3>)3w3;
     }
     @name(".Capitola") action Capitola(bit<8> Liberal) {
-        Monrovia.Balmorhea.Weinert = Liberal;
-        Monrovia.Balmorhea.Helton = (bit<1>)1w1;
-        Monrovia.Balmorhea.Satolah = (bit<3>)3w0;
-        Monrovia.Balmorhea.Pittsboro = (bit<3>)3w2;
-        Monrovia.Balmorhea.Hueytown = (bit<1>)1w0;
+        Wagener.Milano.Eldred = (bit<2>)2w0;
+        Wagener.Milano.Chloride = (bit<2>)2w0;
+        Wagener.Milano.Garibaldi = (bit<12>)12w0;
+        Wagener.Milano.Weinert = Liberal;
+        Wagener.Milano.Cornell = (bit<2>)2w0;
+        Wagener.Milano.Noyes = (bit<3>)3w0;
+        Wagener.Milano.Helton = (bit<1>)1w1;
+        Wagener.Milano.Grannis = (bit<1>)1w0;
+        Wagener.Milano.StarLake = (bit<1>)1w0;
+        Wagener.Milano.Rains = (bit<4>)4w0;
+        Wagener.Milano.SoapLake = (bit<12>)12w0;
+        Wagener.Milano.Linden = (bit<16>)16w0;
+        Wagener.Milano.Oriskany = (bit<16>)16w0xc000;
     }
     @name(".Doyline") action Doyline(bit<32> Belcourt, bit<32> Moorman, bit<8> Wallula, bit<6> LasVegas, bit<16> Parmelee, bit<12> Turkey, bit<24> Ledoux, bit<24> Steger) {
-        Monrovia.Balmorhea.Satolah = (bit<3>)3w0;
-        Monrovia.Balmorhea.Pittsboro = (bit<3>)3w4;
+        Wagener.Dacono.setValid();
+        Wagener.Dacono.Ledoux = Ledoux;
+        Wagener.Dacono.Steger = Steger;
+        Wagener.Biggers.setValid();
+        Wagener.Biggers.Oriskany = 16w0x800;
+        Monrovia.Balmorhea.Turkey = Turkey;
         Wagener.Pineville.setValid();
         Wagener.Pineville.Fairhaven = (bit<4>)4w0x4;
         Wagener.Pineville.Woodfield = (bit<4>)4w0x5;
@@ -3740,10 +3749,6 @@ control Granville(inout Pinetop Wagener, inout Swisshome Monrovia, in egress_int
         Wagener.Neponset.setValid();
         Wagener.Neponset.CruzBay = (bit<16>)16w0;
         Wagener.Neponset.ElVerano = Parmelee;
-        Monrovia.Balmorhea.Turkey = Turkey;
-        Monrovia.Balmorhea.Ledoux = Ledoux;
-        Monrovia.Balmorhea.Steger = Steger;
-        Monrovia.Balmorhea.Hueytown = (bit<1>)1w0;
     }
     @ternary(1) @disable_atomic_modify(1) @name(".Bagwell") table Bagwell {
         actions = {
@@ -4084,7 +4089,7 @@ control Dundee(inout Pinetop Wagener, inout Swisshome Monrovia, in egress_intrin
     @name(".Ontonagon") action Ontonagon() {
         Monrovia.Balmorhea.Miranda = (bit<1>)1w0x1;
     }
-    @use_hash_action(1) @disable_atomic_modify(1) @stage(0) @name(".Ickesburg") table Ickesburg {
+    @use_hash_action(1) @disable_atomic_modify(1) @name(".Ickesburg") table Ickesburg {
         actions = {
             RedBay();
         }
@@ -4094,7 +4099,7 @@ control Dundee(inout Pinetop Wagener, inout Swisshome Monrovia, in egress_intrin
         const default_action = RedBay(32w0, 32w0);
         size = 65536;
     }
-    @use_hash_action(1) @disable_atomic_modify(1) @stage(1) @name(".Tulalip") table Tulalip {
+    @use_hash_action(1) @disable_atomic_modify(1) @name(".Tulalip") table Tulalip {
         actions = {
             RedBay();
         }
@@ -4164,7 +4169,7 @@ control Nordland(inout Pinetop Wagener, inout Swisshome Monrovia, in egress_intr
         Monrovia.Balmorhea.Pittsboro = Pittsboro;
         Monrovia.Balmorhea.Wauconda = (bit<32>)32w0x0;
     }
-    @disable_atomic_modify(1) @name(".Canton") table Canton {
+    @disable_atomic_modify(1) @stage(7) @name(".Canton") table Canton {
         actions = {
             Ripley();
             Quamba();
@@ -4264,9 +4269,6 @@ control GlenDean(inout Pinetop Wagener, inout Swisshome Monrovia, in egress_intr
 }
 
 control Elysburg(inout Pinetop Wagener, inout Swisshome Monrovia, in egress_intrinsic_metadata_t Knights, in egress_intrinsic_metadata_from_parser_t Waseca, inout egress_intrinsic_metadata_for_deparser_t Haugen, inout egress_intrinsic_metadata_for_output_port_t Goldsmith) {
-    @name(".Aguila") action Aguila() {
-        ;
-    }
     @name(".FlatLick") action FlatLick(bit<16> LaMarque) {
         Monrovia.Knights.Vichy = Monrovia.Knights.Vichy + LaMarque;
     }
@@ -4283,28 +4285,6 @@ control Elysburg(inout Pinetop Wagener, inout Swisshome Monrovia, in egress_intr
         Monrovia.Balmorhea.Monahans = Monrovia.Balmorhea.Pinole;
         Monrovia.Balmorhea.FortHunt = FortHunt;
         Charters(Naruna, LaMarque, Kinter);
-    }
-    @name(".Manville") action Manville(bit<2> Eldred) {
-        Monrovia.Balmorhea.Pittsboro = (bit<3>)3w2;
-        Monrovia.Balmorhea.Eldred = Eldred;
-        Monrovia.Balmorhea.Pierceton = (bit<2>)2w0;
-        Wagener.Milano.Rains = (bit<4>)4w0;
-        Wagener.Milano.Cornell = (bit<2>)2w0;
-        Wagener.Milano.Noyes = (bit<3>)3w0;
-        Wagener.Milano.Helton = (bit<1>)1w0;
-        Wagener.Milano.Grannis = (bit<1>)1w0;
-        Wagener.Milano.StarLake = (bit<1>)1w0;
-    }
-    @name(".Bodcaw") action Bodcaw(bit<2> Eldred) {
-        Manville(Eldred);
-        Wagener.Bronwood.Ledoux = (bit<24>)24w0xbfbfbf;
-        Wagener.Bronwood.Steger = (bit<24>)24w0xbfbfbf;
-    }
-    @name(".Weimar") action Weimar(bit<6> BigPark, bit<10> Watters, bit<4> Burmester, bit<12> Petrolia) {
-        Wagener.Milano.Allison = BigPark;
-        Wagener.Milano.Spearman = Watters;
-        Wagener.Milano.Chevak = Burmester;
-        Wagener.Milano.Mendocino = Petrolia;
     }
     @name(".Aguada") action Aguada(bit<24> Brush, bit<24> Ceiba) {
         Wagener.Dacono.Ledoux = Monrovia.Balmorhea.Ledoux;
@@ -4335,30 +4315,8 @@ control Elysburg(inout Pinetop Wagener, inout Swisshome Monrovia, in egress_intr
     @name(".Bellville") action Bellville() {
         Aguada(Wagener.Bronwood.Aguilita, Wagener.Bronwood.Harbor);
     }
-    @name(".Boyes") action Boyes(bit<8> Weinert) {
-        Wagener.Milano.Helton = Monrovia.Balmorhea.Helton;
-        Wagener.Milano.Weinert = Weinert;
-        Wagener.Milano.Garibaldi = Monrovia.Hallwood.IttaBena;
-        Wagener.Milano.Eldred = Monrovia.Balmorhea.Eldred;
-        Wagener.Milano.Chloride = Monrovia.Balmorhea.Pierceton;
-        Wagener.Milano.SoapLake = Monrovia.Hallwood.Wartburg;
-        Wagener.Milano.Linden = (bit<16>)16w0;
-        Wagener.Milano.Oriskany = (bit<16>)16w0xc000;
-    }
-    @name(".Renfroe") action Renfroe() {
-        Boyes(Monrovia.Balmorhea.Weinert);
-    }
     @name(".McCallum") action McCallum() {
         Dresden();
-    }
-    @name(".Waucousta") action Waucousta(bit<24> Brush, bit<24> Ceiba) {
-        Wagener.Dacono.setValid();
-        Wagener.Biggers.setValid();
-        Wagener.Dacono.Ledoux = Monrovia.Balmorhea.Ledoux;
-        Wagener.Dacono.Steger = Monrovia.Balmorhea.Steger;
-        Wagener.Dacono.Aguilita = Brush;
-        Wagener.Dacono.Harbor = Ceiba;
-        Wagener.Biggers.Oriskany = 16w0x800;
     }
     @name(".Selvin") Random<bit<16>>() Selvin;
     @name(".Terry") action Terry(bit<16> Nipton, bit<16> Kinard, bit<32> Belcourt, bit<8> Madawaska) {
@@ -4381,9 +4339,6 @@ control Elysburg(inout Pinetop Wagener, inout Swisshome Monrovia, in egress_intr
     }
     @name(".Kahaluu") action Kahaluu(bit<8> Wallula) {
         Wagener.Wanamassa.Coalwood = Wagener.Wanamassa.Coalwood + Wallula;
-    }
-    @name(".Pendleton") action Pendleton(bit<8> Weinert) {
-        Boyes(Weinert);
     }
     @name(".Turney") action Turney(bit<16> Powderly, bit<16> Sodaville, bit<24> Aguilita, bit<24> Harbor, bit<24> Brush, bit<24> Ceiba, bit<16> Fittstown) {
         Wagener.Bronwood.Ledoux = Monrovia.Balmorhea.Ledoux;
@@ -4490,41 +4445,12 @@ control Elysburg(inout Pinetop Wagener, inout Swisshome Monrovia, in egress_intr
         requires_versioning = false;
         const default_action = NoAction();
     }
-    @ternary(1) @disable_atomic_modify(1) @name(".Haworth") table Haworth {
-        actions = {
-            Manville();
-            Bodcaw();
-            Aguila();
-        }
-        key = {
-            Knights.egress_port       : exact @name("Knights.AquaPark") ;
-            Monrovia.Crannell.Juneau  : exact @name("Crannell.Juneau") ;
-            Monrovia.Balmorhea.LaLuz  : exact @name("Balmorhea.LaLuz") ;
-            Monrovia.Balmorhea.Satolah: exact @name("Balmorhea.Satolah") ;
-        }
-        const default_action = Aguila();
-        size = 128;
-    }
-    @disable_atomic_modify(1) @name(".BigArm") table BigArm {
-        actions = {
-            Weimar();
-            @defaultonly NoAction();
-        }
-        key = {
-            Monrovia.Balmorhea.Uintah: exact @name("Balmorhea.Uintah") ;
-        }
-        size = 512;
-        default_action = NoAction();
-    }
     @disable_atomic_modify(1) @name(".Talkeetna") table Talkeetna {
         actions = {
             Lorane();
             Dundalk();
             Bellville();
-            Renfroe();
             McCallum();
-            Waucousta();
-            Pendleton();
             English();
             Rotonda();
             Minetto();
@@ -4558,15 +4484,7 @@ control Elysburg(inout Pinetop Wagener, inout Swisshome Monrovia, in egress_intr
         const default_action = NoAction();
     }
     apply {
-        switch (Haworth.apply().action_run) {
-            Aguila: {
-                Stovall.apply();
-            }
-        }
-
-        if (Wagener.Milano.isValid()) {
-            BigArm.apply();
-        }
+        Stovall.apply();
         if (Monrovia.Balmorhea.Hueytown == 1w0 && Monrovia.Balmorhea.Satolah == 3w0 && Monrovia.Balmorhea.Pittsboro == 3w0) {
             Gorum.apply();
         }
@@ -4942,7 +4860,7 @@ control Hodges(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_intri
     @name(".Finlayson") action Finlayson() {
         Monrovia.Hallwood.Quinhagak = (bit<1>)1w1;
     }
-    @disable_atomic_modify(1) @placement_priority(1) @name(".Burnett") table Burnett {
+    @disable_atomic_modify(1) @name(".Burnett") table Burnett {
         actions = {
             Northboro();
             Naguabo();
@@ -4955,7 +4873,7 @@ control Hodges(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_intri
         size = 4096;
         requires_versioning = false;
     }
-    @disable_atomic_modify(1) @placement_priority(1) @name(".Asher") table Asher {
+    @disable_atomic_modify(1) @name(".Asher") table Asher {
         actions = {
             Clarinda();
             Naguabo();
@@ -4968,7 +4886,7 @@ control Hodges(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_intri
         size = 512;
         requires_versioning = false;
     }
-    @disable_atomic_modify(1) @placement_priority(1) @name(".Casselman") table Casselman {
+    @disable_atomic_modify(1) @name(".Casselman") table Casselman {
         actions = {
             Arion();
             Finlayson();
@@ -4981,7 +4899,7 @@ control Hodges(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_intri
         requires_versioning = false;
         const default_action = NoAction();
     }
-    @disable_atomic_modify(1) @placement_priority(1) @name(".Lovett") table Lovett {
+    @disable_atomic_modify(1) @name(".Lovett") table Lovett {
         actions = {
             Arion();
             Finlayson();
@@ -5024,7 +4942,7 @@ control Chamois(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_intr
     @name(".Millican") action Millican(bit<16> Waterford) {
         Monrovia.Boonsboro.Bicknell = Waterford;
     }
-    @disable_atomic_modify(1) @placement_priority(1) @name(".Decorah") table Decorah {
+    @disable_atomic_modify(1) @name(".Decorah") table Decorah {
         actions = {
             Cruso();
             @defaultonly NoAction();
@@ -5035,7 +4953,7 @@ control Chamois(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_intr
         size = 1024;
         const default_action = NoAction();
     }
-    @disable_atomic_modify(1) @placement_priority(1) @name(".Waretown") table Waretown {
+    @disable_atomic_modify(1) @name(".Waretown") table Waretown {
         actions = {
             Rembrandt();
             Aguila();
@@ -5047,7 +4965,7 @@ control Chamois(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_intr
         const default_action = Aguila();
         size = 512;
     }
-    @disable_atomic_modify(1) @disable_atomic_modify(1) @placement_priority(1) @name(".Moxley") table Moxley {
+    @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Moxley") table Moxley {
         actions = {
             @tableonly Valmont();
             @defaultonly NoAction();
@@ -5059,7 +4977,7 @@ control Chamois(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_intr
         size = 8192;
         const default_action = NoAction();
     }
-    @disable_atomic_modify(1) @placement_priority(1) @name(".Stout") table Stout {
+    @disable_atomic_modify(1) @name(".Stout") table Stout {
         actions = {
             Millican();
             @defaultonly NoAction();
@@ -5109,7 +5027,7 @@ control Chamois(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_intr
     }
     @name(".Calverton") action Calverton() {
     }
-    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @placement_priority(".Gowanda" , ".Vananda") @name(".Longport") table Longport {
+    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Longport") table Longport {
         key = {
             Monrovia.Boonsboro.LaMoille: exact @name("Boonsboro.LaMoille") ;
             Monrovia.Talco.Tallassee   : exact @name("Talco.Tallassee") ;
@@ -5146,7 +5064,7 @@ control Deferiet(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_int
         Monrovia.Talco.Whitten = Monrovia.Boonsboro.Whitten & Whitten;
         Monrovia.Talco.Guion = Monrovia.Boonsboro.Guion & Guion;
     }
-    @disable_atomic_modify(1) @stage(2) @name(".Dedham") table Dedham {
+    @disable_atomic_modify(1) @name(".Dedham") table Dedham {
         key = {
             Monrovia.Boonsboro.LaMoille: exact @name("Boonsboro.LaMoille") ;
         }
@@ -5378,7 +5296,7 @@ control Corder(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_intri
         Monrovia.Talco.Whitten = Monrovia.Boonsboro.Whitten & Whitten;
         Monrovia.Talco.Guion = Monrovia.Boonsboro.Guion & Guion;
     }
-    @disable_atomic_modify(1) @placement_priority(".Stovall") @name(".Varna") table Varna {
+    @disable_atomic_modify(1) @name(".Varna") table Varna {
         key = {
             Monrovia.Boonsboro.LaMoille: exact @name("Boonsboro.LaMoille") ;
         }
@@ -5541,7 +5459,7 @@ control Wyanet(inout Pinetop Wagener, inout Swisshome Monrovia, in egress_intrin
         PellCity = ElJebel.get<tuple<bit<9>, bit<12>>>({ Knights.egress_port, (bit<12>)Monrovia.Balmorhea.Lugert });
         Monrovia.Wyndmoor.Maddock = Penrose.execute((bit<32>)PellCity);
     }
-    @disable_atomic_modify(1) @stage(9) @name(".Almont") table Almont {
+    @disable_atomic_modify(1) @name(".Almont") table Almont {
         actions = {
             McCartys();
         }
@@ -5632,7 +5550,7 @@ control Laney(inout Pinetop Wagener, inout Swisshome Monrovia, in egress_intrins
         McClusky.count();
         ;
     }
-    @disable_atomic_modify(1) @placement_priority(".SandCity" , ".Almont") @name(".Conklin") table Conklin {
+    @disable_atomic_modify(1) @name(".Conklin") table Conklin {
         actions = {
             Anniston();
         }
@@ -6018,7 +5936,7 @@ control Blakeslee(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_in
         }
 
     }
-    @disable_atomic_modify(1) @name(".Stratton") table Stratton {
+    @pa_mutually_exclusive("ingress" , "Monrovia.Udall.Hayfield" , "Monrovia.Earling.Freeny") @disable_atomic_modify(1) @name(".Stratton") table Stratton {
         actions = {
             Sheyenne();
             Kaplan();
@@ -6245,6 +6163,64 @@ control Blakeslee(inout Pinetop Wagener, inout Swisshome Monrovia, in ingress_in
 }
 
 control Rendville(inout Pinetop Wagener, inout Swisshome Monrovia, in egress_intrinsic_metadata_t Knights, in egress_intrinsic_metadata_from_parser_t Waseca, inout egress_intrinsic_metadata_for_deparser_t Haugen, inout egress_intrinsic_metadata_for_output_port_t Goldsmith) {
+    @name(".Manville") action Manville(bit<2> Eldred) {
+        Wagener.Milano.Eldred = Eldred;
+        Wagener.Milano.Chloride = (bit<2>)2w0;
+        Wagener.Milano.Garibaldi = Monrovia.Hallwood.IttaBena;
+        Wagener.Milano.Weinert = Monrovia.Balmorhea.Weinert;
+        Wagener.Milano.Cornell = (bit<2>)2w0;
+        Wagener.Milano.Noyes = (bit<3>)3w0;
+        Wagener.Milano.Helton = (bit<1>)1w0;
+        Wagener.Milano.Grannis = (bit<1>)1w0;
+        Wagener.Milano.StarLake = (bit<1>)1w0;
+        Wagener.Milano.Rains = (bit<4>)4w0;
+        Wagener.Milano.SoapLake = Monrovia.Hallwood.Wartburg;
+        Wagener.Milano.Linden = (bit<16>)16w0;
+        Wagener.Milano.Oriskany = (bit<16>)16w0xc000;
+    }
+    @name(".Bodcaw") action Bodcaw(bit<2> Eldred) {
+        Manville(Eldred);
+        Wagener.Bronwood.Ledoux = (bit<24>)24w0xbfbfbf;
+        Wagener.Bronwood.Steger = (bit<24>)24w0xbfbfbf;
+    }
+    @name(".Fairborn") action Fairborn(bit<24> Alnwick, bit<24> Osakis) {
+        Wagener.Dacono.Aguilita = Alnwick;
+        Wagener.Dacono.Harbor = Osakis;
+    }
+    @name(".Weimar") action Weimar(bit<6> BigPark, bit<10> Watters, bit<4> Burmester, bit<12> Petrolia) {
+        Wagener.Milano.Allison = BigPark;
+        Wagener.Milano.Spearman = Watters;
+        Wagener.Milano.Chevak = Burmester;
+        Wagener.Milano.Mendocino = Petrolia;
+    }
+    @disable_atomic_modify(1) @ternary(1) @name(".Haworth") table Haworth {
+        actions = {
+            @tableonly Manville();
+            @tableonly Bodcaw();
+            @defaultonly Fairborn();
+            @defaultonly NoAction();
+        }
+        key = {
+            Knights.egress_port       : exact @name("Knights.AquaPark") ;
+            Monrovia.Crannell.Juneau  : exact @name("Crannell.Juneau") ;
+            Monrovia.Balmorhea.LaLuz  : exact @name("Balmorhea.LaLuz") ;
+            Monrovia.Balmorhea.Satolah: exact @name("Balmorhea.Satolah") ;
+            Wagener.Dacono.isValid()  : exact @name("Dacono") ;
+        }
+        size = 128;
+        default_action = NoAction();
+    }
+    @disable_atomic_modify(1) @name(".BigArm") table BigArm {
+        actions = {
+            Weimar();
+            @defaultonly NoAction();
+        }
+        key = {
+            Monrovia.Balmorhea.Uintah: exact @name("Balmorhea.Uintah") ;
+        }
+        size = 512;
+        default_action = NoAction();
+    }
     @name(".Saltair") Gurdon() Saltair;
     @name(".Tahuya") TinCity() Tahuya;
     @name(".Reidville") Silvertip() Reidville;
@@ -6276,51 +6252,59 @@ control Rendville(inout Pinetop Wagener, inout Swisshome Monrovia, in egress_int
     @name(".Wiota") Corum() Wiota;
     @name(".Minneota") GlenDean() Minneota;
     apply {
-        {
-        }
-        {
-            ElMirage.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
-            Millett.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
-            if (Wagener.Garrison.isValid() == true) {
-                Newberg.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
-                Thistle.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
-                LoneJack.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
-                Higgston.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
-                Trotwood.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
-                if (Knights.egress_rid == 16w0 && !Wagener.Milano.isValid()) {
-                    Ardara.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
-                }
-                Amboy.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
-                Saltair.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
-                Tahuya.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
-                Baidland.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
-                Roxobel.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
-                Kealia.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
-                LaMonte.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
-            } else {
-                Rixford.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
+        Millett.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
+        if (!Wagener.Milano.isValid() && Wagener.Garrison.isValid()) {
+            {
             }
+            ElMirage.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
+            Newberg.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
+            Thistle.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
+            LoneJack.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
+            Higgston.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
+            Trotwood.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
+            if (Knights.egress_rid == 16w0) {
+                Ardara.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
+            }
+            Columbus.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
+            Amboy.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
+            Saltair.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
+            Tahuya.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
+            Baidland.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
+            Roxobel.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
+            Kealia.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
+            LaMonte.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
             Eureka.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
             Crumstown.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
-            if (Wagener.Garrison.isValid() == true && !Wagener.Milano.isValid()) {
-                Columbus.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
-                Karluk.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
-                if (Monrovia.Balmorhea.Satolah != 3w2 && Monrovia.Balmorhea.Madera == 1w0) {
-                    Elmsford.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
-                }
-                Reidville.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
-                LaPointe.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
-                Wiota.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
-                Overton.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
-                Bothwell.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
-                Arredondo.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
+            Karluk.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
+            if (Monrovia.Balmorhea.Satolah != 3w2 && Monrovia.Balmorhea.Madera == 1w0) {
+                Elmsford.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
             }
-            if (!Wagener.Milano.isValid() && Monrovia.Balmorhea.Satolah != 3w2 && Monrovia.Balmorhea.Pittsboro != 3w3) {
+            Reidville.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
+            LaPointe.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
+            Wiota.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
+            Overton.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
+            Bothwell.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
+            Arredondo.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
+            BelAir.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
+            Herod.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
+            if (Monrovia.Balmorhea.Satolah != 3w2) {
+                Minneota.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
+            }
+        } else {
+            if (Wagener.Garrison.isValid() == false) {
+                Rixford.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
+                if (Wagener.Dacono.isValid()) {
+                    Haworth.apply();
+                }
+            } else {
+                Haworth.apply();
+            }
+            if (Wagener.Milano.isValid()) {
+                BigArm.apply();
+            } else if (Wagener.Neponset.isValid()) {
                 Minneota.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
             }
         }
-        BelAir.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
-        Herod.apply(Wagener, Monrovia, Knights, Waseca, Haugen, Goldsmith);
     }
 }
 

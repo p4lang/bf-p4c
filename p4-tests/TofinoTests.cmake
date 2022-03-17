@@ -55,6 +55,21 @@ set (P16_TNA_ARISTA_FILES
   "obfuscated-vxlan_evpn_scale.p4"
 )
 
+# Arista profiles
+set (P16_TNA_ARISTA_EXP_FILES
+  "obfuscated-baremetal.p4"
+  "obfuscated-default.p4"
+  "obfuscated-map.p4"
+  "obfuscated-media.p4"
+  "obfuscated-nat.p4"
+  "obfuscated-nat_scale.p4"
+  "obfuscated-nat_static.p4"
+  "obfuscated-nat_vxlan.p4"
+  "obfuscated-small_scale_test.p4"
+  "obfuscated-stateless_load_balance_v4v6.p4"
+  "obfuscated-vxlan_evpn_scale.p4"
+)
+
 # digest_tna.p4 is used for another test (digest-std-p4runtime) with different args
 set (P16_TNA_EXCLUDE_FILES "digest_tna\\.p4" "p4c-1323-b\\.p4" "p4c-2143\\.p4"
     "p4c-2191\\.p4" "p4c-2398\\.p4" "p4c-2032\\.p4" "p4c-2030\\.p4"
@@ -62,7 +77,7 @@ set (P16_TNA_EXCLUDE_FILES "digest_tna\\.p4" "p4c-1323-b\\.p4" "p4c-2143\\.p4"
     "p4c-3241\\.p4" "p4c-3139\\.p4" "p4c-3254\\.p4" "p4c-3255\\.p4" "p4c-2423\\.p4"
     "p4c-2534\\.p4" "p4c-3678-leaf\\.p4" "p4c-2722\\.p4" "p4c-3920-b\\.p4" "p4c_3926\\.p4"
     "p4c_4158\\.p4" "p4c-4064\\.p4" "forensics\\.p4")
-set (P16_TNA_EXCLUDE_FILES "${P16_TNA_EXCLUDE_FILES}" "${P16_TNA_ARISTA_FILES}")
+set (P16_TNA_EXCLUDE_FILES "${P16_TNA_EXCLUDE_FILES}" "${P16_TNA_ARISTA_FILES}" "${P16_TNA_ARISTA_EXP_FILES}")
 set (P16_TNA_FOR_TOFINO
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/errors/*.p4"
@@ -211,26 +226,9 @@ p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base\;p41
 # p4_16/compile_only/p4c-4064.p4
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/p4c-4064.p4" "-Xp4c=--disable-power-check")
 
-# p4_16/customer/arista/p4c-2143.p4
-p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2143.p4" "-Xp4c=--disable-power-check")
-
 # p4_16/customer/ruijie/p4c-2992.p4
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/ruijie/p4c-2992.p4" "-Xp4c=--disable-power-check -to 1800")
 set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/ruijie/p4c-2992.p4" PROPERTIES TIMEOUT 1800)
-
-# p4_16/customer/arista/p4c-2191.p4
-p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2191.p4" "-to 1200")
-set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/arista/p4c-2191.p4" PROPERTIES TIMEOUT 1200)
-
-# p4_16/customer/arista/p4c-2534.p4
-p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2534.p4" "-Xp4c=--disable-power-check -to 2400")
-set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/arista/p4c-2534.p4" PROPERTIES TIMEOUT 2400)
-
-# Arista profiles
-p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2032.p4" "-to 2400")
-set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/arista/p4c-2032.p4" PROPERTIES TIMEOUT 1200)
-p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2030.p4" "-to 2400")
-set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/arista/p4c-2030.p4" PROPERTIES TIMEOUT 1200)
 
 # Disable power check on these Arista profiles
 # P4C-3039
@@ -239,6 +237,14 @@ set (P16_TNA_ARISTA_SET_MAX_POWER_FILES
   "obfuscated-nat_scale.p4"
   "obfuscated-nat_static.p4"
   "obfuscated-nat_scale-2021-11-16.p4"
+  "obfuscated-nat_vxlan.p4"
+  "obfuscated-media.p4"
+)
+
+set (P16_TNA_ARISTA_EXP_SET_MAX_POWER_FILES
+  "obfuscated-nat.p4"
+  "obfuscated-nat_scale.p4"
+  "obfuscated-nat_static.p4"
   "obfuscated-nat_vxlan.p4"
   "obfuscated-media.p4"
 )
@@ -256,6 +262,19 @@ foreach (t IN LISTS P16_TNA_ARISTA_FILES)
   p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/${t}")
 endforeach()
 set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/arista/obfuscated-media.p4" PROPERTIES TIMEOUT 3200)
+
+# p4_16/customer/arista/experimental/obfuscated-*.p4
+foreach (t IN LISTS P16_TNA_ARISTA_EXP_FILES)
+  if (${t} IN_LIST P16_TNA_ARISTA_EXP_SET_MAX_POWER_FILES)
+      set (POWER_CHECK_ARG "-Xp4c=\"--set-max-power 62.0\"")
+  else()
+      set (POWER_CHECK_ARG "-Xp4c=\"--disable-power-check\"")
+  endif()
+  p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/experimental/${t}" "-to 2400 ${POWER_CHECK_ARG}")
+  set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/arista/experimental/${t}" PROPERTIES TIMEOUT 2400)
+  p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/experimental/${t}")
+endforeach()
+set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/arista/experimental/obfuscated-media.p4" PROPERTIES TIMEOUT 3200)
 
 # p4_16/customer/extreme/p4c-1323-b.p4 needs a longer timeout.
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1323-b.p4" "-to 1200")
@@ -325,12 +344,6 @@ p4c_add_bf_backend_tests("tofino" "tofino" "psa" "base" "${TOFINO_PSA_TEST_SUITE
 # Add labels for tests to be run as MUST PASS in Jenkins
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_14/customer/rdp/case9757.p4")
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_14/customer/ruijie/p4c-2250.p4")
-p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/p4c-1214.p4")
-p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/p4c-1813.p4")
-p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/p4c-2030.p4")
-p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/p4c-2032.p4")
-# p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/p4c-2143.p4")
-# p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/p4c-2191.p4")
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/extreme/p4c-1562-1.p4")
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b1.p4")
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/extreme/p4c-1809-1.p4")
@@ -358,8 +371,6 @@ set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/kaloom/p4c-1832.
 # to go over all the possible strategy + optimization
 p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base\;p414_nightly" "${P4TESTDATA}/p4_14_samples/08-FullTPHV3.p4" "-to 1200")
 set_tests_properties("tofino/testdata/p4_14_samples/08-FullTPHV3.p4" PROPERTIES TIMEOUT 1200)
-p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base\;p414_nightly" "extensions/p4_tests/p4_14/customer/arista/p4c-2661.p4" "-to 1200")
-set_tests_properties("tofino/extensions/p4_tests/p4_14/customer/arista/p4c-2661.p4" PROPERTIES TIMEOUT 1200)
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
@@ -1235,16 +1246,6 @@ set (NON_PR
   # CUST_MUSS_PASS (run on Jenkins)
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/customer/rdp/case9757.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/customer/ruijie/p4c-2250.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-1214.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-1813.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2012.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2030.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2032.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2143.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2178.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2189.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2191.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2370.p4
   # Obfuscated arista p4s
   "${NON_PR_ARISTA}"
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1562-1.p4
@@ -1267,15 +1268,7 @@ set (NON_PR
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/compile_only/04-FullPHV3.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/compile_only/conditional_constraints_infinite_loop.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/compile_only/test_config_101_switch_msdc.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/customer/arista/p4c-1814.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/p4c-1757-neg.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-1494.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-1652.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2058.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2076.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2077.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2257.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2378.p4
   # Other XFails in Glass repo to run in nightly
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-562/case3005.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-576/case3042.p4

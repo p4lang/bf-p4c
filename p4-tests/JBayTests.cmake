@@ -164,6 +164,8 @@ p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base\;JENKINS_PART1" "${CMAKE_
 set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/arista/obfuscated-msee_tofino2.p4" PROPERTIES TIMEOUT 3600)
 p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base\;JENKINS_PART1" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/obfuscated-msee_tofino2_lkg.p4" "-to 1200")
 set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/arista/obfuscated-msee_tofino2_lkg.p4" PROPERTIES TIMEOUT 1200)
+p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base\;JENKINS_PART1" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/experimental/obfuscated-msee_tofino2.p4" "-to 3600 -Xp4c=--disable-power-check")
+set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/arista/experimental/obfuscated-msee_tofino2.p4" PROPERTIES TIMEOUT 3600)
 
 p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base\;JENKINS_PART1" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/ruijie/p4c-4127.p4" "-to 2400")
 set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/ruijie/p4c-4127.p4" PROPERTIES TIMEOUT 2400)
@@ -174,9 +176,14 @@ p4c_add_test_label("tofino2" "CUST_MUST_PASS"
 p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base\;JENKINS_PART1" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/obfuscated-p416_baremetal_tofino2.p4" "-to 4800 -Xp4c=\"--set-max-power 62.0\"")
 set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/arista/obfuscated-p416_baremetal_tofino2.p4" PROPERTIES TIMEOUT 4800)
 p4c_add_test_label("tofino2" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/obfuscated-p416_baremetal_tofino2.p4")
+p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base\;JENKINS_PART1" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/experimental/obfuscated-p416_baremetal_tofino2.p4" "-to 4800 -Xp4c=\"--set-max-power 62.0\"")
+set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/arista/experimental/obfuscated-p416_baremetal_tofino2.p4" PROPERTIES TIMEOUT 4800)
+p4c_add_test_label("tofino2" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/experimental/obfuscated-p416_baremetal_tofino2.p4")
 
 p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base\;JENKINS_PART1" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/obfuscated-ddos_tofino2.p4" "-to 3600 -Xp4c=--disable-power-check")
 set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/arista/obfuscated-ddos_tofino2.p4" PROPERTIES TIMEOUT 3600)
+p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base\;JENKINS_PART1" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/experimental/obfuscated-ddos_tofino2.p4" "-to 3600 -Xp4c=--disable-power-check")
+set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/arista/experimental/obfuscated-ddos_tofino2.p4" PROPERTIES TIMEOUT 3600)
 
 # longer timeout
 p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base\;JENKINS_PART1" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-2641.p4" "-to 2400")

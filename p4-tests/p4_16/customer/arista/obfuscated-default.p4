@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_DEFAULT=1 -Ibf_arista_switch_default/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'  --target tofino-tna --o bf_arista_switch_default --bf-rt-schema bf_arista_switch_default/context/bf-rt.json
-// p4c 9.7.2 (SHA: 14435aa)
+// p4c 9.9.0 (SHA: 9730738)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -635,17 +635,6 @@ header Geismar {
     bit<32> Campbell;
 }
 
-header Boquet {
-    bit<3>  Quealy;
-    bit<5>  Huffman;
-    bit<2>  Eastover;
-    bit<6>  Coalwood;
-    bit<8>  Iraan;
-    bit<8>  Verdigris;
-    bit<32> Elihu;
-    bit<32> Cypress;
-}
-
 header Sahuarita {
     bit<7>   Melrude;
     PortId_t Hampton;
@@ -860,20 +849,20 @@ struct Ayden {
 }
 
 struct Gause {
-    bit<32> Findlay;
-    bit<32> Dowell;
-    bit<32> Norland;
-    bit<6>  Helton;
-    bit<6>  Pathfork;
-    bit<16> Tombstone;
+    bit<32>       Findlay;
+    bit<32>       Dowell;
+    bit<32>       Norland;
+    bit<6>        Helton;
+    bit<6>        Pathfork;
+    Ipv4PartIdx_t Tombstone;
 }
 
 struct Subiaco {
-    bit<128> Findlay;
-    bit<128> Dowell;
-    bit<8>   Turkey;
-    bit<6>   Helton;
-    bit<16>  Tombstone;
+    bit<128>      Findlay;
+    bit<128>      Dowell;
+    bit<8>        Turkey;
+    bit<6>        Helton;
+    Ipv6PartIdx_t Tombstone;
 }
 
 struct Marcus {
@@ -1078,12 +1067,6 @@ struct Broadwell {
     bit<32> Ramos;
 }
 
-struct Telocaset {
-    bit<1> Sabana;
-    bit<1> Trego;
-    bit<1> Manistee;
-}
-
 struct Provencal {
     Knierim   Bergton;
     Caroleen  Cassa;
@@ -1132,7 +1115,6 @@ struct Provencal {
     bool      Kekoskee;
     bit<1>    Dovray;
     bit<8>    Belfast;
-    Telocaset Penitas;
 }
 
 @pa_mutually_exclusive("egress" , "Crannell.Livonia" , "Crannell.Greenland")
@@ -1164,7 +1146,7 @@ struct Provencal {
     Weinert    Makawao;
     Glendevey  Mather;
     Bicknell   Martelle;
-    Pinta      Leflore;
+    Pinta      Boquet;
     Madawaska  Gambrills;
     Commack    Masontown;
     Irvine     Wesson;
@@ -1415,11 +1397,11 @@ parser Boonsboro(packet_in Talco, out Toluca Crannell, out Provencal Aniak, out 
             default: Bratt;
         }
     }
-    state Brashear {
-        Talco.extract<Pinta>(Crannell.Leflore);
-        Aniak.Cassa.Neshoba = Crannell.Leflore.Needles[31:24];
-        Aniak.Cassa.Clyde = Crannell.Leflore.Needles[23:8];
-        Aniak.Cassa.Clarion = Crannell.Leflore.Needles[7:0];
+    state Quealy {
+        Talco.extract<Pinta>(Crannell.Boquet);
+        Aniak.Cassa.Neshoba = Crannell.Boquet.Needles[31:24];
+        Aniak.Cassa.Clyde = Crannell.Boquet.Needles[23:8];
+        Aniak.Cassa.Clarion = Crannell.Boquet.Needles[7:0];
         transition select(Crannell.Martelle.Joslin) {
             default: accept;
         }
@@ -1434,7 +1416,7 @@ parser Boonsboro(packet_in Talco, out Toluca Crannell, out Provencal Aniak, out 
         Aniak.Cassa.Laxon = (bit<3>)3w2;
         Talco.extract<Bicknell>(Crannell.Martelle);
         transition select(Crannell.Martelle.Sagamore, Crannell.Martelle.Joslin) {
-            (16w0x2000, 16w0 &&& 16w0): Brashear;
+            (16w0x2000, 16w0 &&& 16w0): Quealy;
             (16w0, 16w0x800): Milano;
             (16w0, 16w0x86dd): Biggers;
             default: accept;
@@ -1902,11 +1884,14 @@ control Wabbaseka(inout Toluca Crannell, inout Provencal Aniak, in ingress_intri
     @name(".Swanlake") action Swanlake(bit<32> Wauconda) {
         Sandpoint(Wauconda);
     }
+    @name(".Huffman") action Huffman() {
+    }
     @name(".LaMonte") action LaMonte(bit<5> Wardville, Ipv4PartIdx_t Cleator, bit<8> Renick, bit<32> Pajaros) {
         Aniak.Dateland.Renick = (NextHopTable_t)Renick;
         Aniak.Dateland.Chubbuck = Wardville;
         Aniak.Wharton.Cleator = Cleator;
         Aniak.Dateland.Pajaros = (bit<16>)Pajaros;
+        Huffman();
     }
     @idletime_precision(1) @force_immediate(1) @ways(4) @disable_atomic_modify(1) @name(".Westoak") table Westoak {
         actions = {
@@ -1973,10 +1958,10 @@ control Starkey(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrins
     @name(".Swanlake") action Swanlake(bit<32> Wauconda) {
         Sandpoint(Wauconda);
     }
-    @name(".Ardara") action Ardara(bit<7> Wardville, Ipv6PartIdx_t Cleator, bit<8> Renick, bit<32> Pajaros) {
+    @name(".Ardara") action Ardara(bit<7> Wardville, bit<16> Cleator, bit<8> Renick, bit<32> Pajaros) {
         Aniak.Dateland.Renick = (NextHopTable_t)Renick;
         Aniak.Dateland.Hagerman = Wardville;
-        Aniak.Rendville.Cleator = Cleator;
+        Aniak.Rendville.Cleator = (Ipv6PartIdx_t)Cleator;
         Aniak.Dateland.Pajaros = (bit<16>)Pajaros;
     }
     @idletime_precision(1) @force_immediate(1) @ways(4) @disable_atomic_modify(1) @name(".RockHill") table RockHill {
@@ -2077,22 +2062,22 @@ control Ponder(inout Toluca Crannell, inout Provencal Aniak, in ingress_intrinsi
         Aniak.Dateland.Pajaros = (bit<16>)Pajaros;
     }
     @name(".Bassett") action Bassett(bit<16> Lindy, bit<32> Pajaros) {
-        Aniak.Buckhorn.Tombstone = Lindy;
+        Aniak.Buckhorn.Tombstone = (Ipv6PartIdx_t)Lindy;
         Aniak.Dateland.Renick = (bit<2>)2w0;
         Aniak.Dateland.Pajaros = (bit<16>)Pajaros;
     }
     @name(".Perkasie") action Perkasie(bit<16> Lindy, bit<32> Pajaros) {
-        Aniak.Buckhorn.Tombstone = Lindy;
+        Aniak.Buckhorn.Tombstone = (Ipv6PartIdx_t)Lindy;
         Aniak.Dateland.Renick = (bit<2>)2w1;
         Aniak.Dateland.Pajaros = (bit<16>)Pajaros;
     }
     @name(".Philip") action Philip(bit<16> Lindy, bit<32> Pajaros) {
-        Aniak.Buckhorn.Tombstone = Lindy;
+        Aniak.Buckhorn.Tombstone = (Ipv6PartIdx_t)Lindy;
         Aniak.Dateland.Renick = (bit<2>)2w2;
         Aniak.Dateland.Pajaros = (bit<16>)Pajaros;
     }
     @name(".Levasy") action Levasy(bit<16> Lindy, bit<32> Pajaros) {
-        Aniak.Buckhorn.Tombstone = Lindy;
+        Aniak.Buckhorn.Tombstone = (Ipv6PartIdx_t)Lindy;
         Aniak.Dateland.Renick = (bit<2>)2w3;
         Aniak.Dateland.Pajaros = (bit<16>)Pajaros;
     }
@@ -2451,7 +2436,7 @@ control Tenstrike(inout Toluca Crannell, inout Provencal Aniak, in ingress_intri
         Mogadore(Lapoint);
         Lattimore(Cheyenne, Bonduel, Sardinia);
     }
-    @name(".Otsego") action Otsego() {
+    @name(".Eastover") action Eastover() {
         Aniak.Cassa.Lordstown = Aniak.HillTop.Ericsburg;
     }
     @name(".Pimento") action Pimento(bit<12> Flippen, bit<32> Cheyenne, bit<8> Bonduel, bit<4> Sardinia, bit<16> Lapoint, bit<1> Randall) {
@@ -2465,7 +2450,7 @@ control Tenstrike(inout Toluca Crannell, inout Provencal Aniak, in ingress_intri
         Mogadore(Lapoint);
         Lattimore(Cheyenne, Bonduel, Sardinia);
     }
-    @name(".Ewing") action Ewing() {
+    @name(".Iraan") action Iraan() {
         Aniak.Cassa.Lordstown = (bit<12>)Crannell.Hillsview[0].Spearman;
     }
     @disable_atomic_modify(1) @name(".SanPablo") table SanPablo {
@@ -2532,12 +2517,12 @@ control Tenstrike(inout Toluca Crannell, inout Provencal Aniak, in ingress_intri
     @ways(1) @disable_atomic_modify(1) @name(".Kellner") table Kellner {
         actions = {
             Westview();
-            @defaultonly Otsego();
+            @defaultonly Eastover();
         }
         key = {
             Aniak.HillTop.Ericsburg & 12w0xfff: exact @name("HillTop.Ericsburg") ;
         }
-        const default_action = Otsego();
+        const default_action = Eastover();
         size = 4096;
     }
     @disable_atomic_modify(1) @name(".Hagaman") table Hagaman {
@@ -2555,12 +2540,12 @@ control Tenstrike(inout Toluca Crannell, inout Provencal Aniak, in ingress_intri
     @ways(1) @disable_atomic_modify(1) @name(".McKenney") table McKenney {
         actions = {
             Campo();
-            @defaultonly Ewing();
+            @defaultonly Iraan();
         }
         key = {
             Crannell.Hillsview[0].Spearman: exact @name("Hillsview[0].Spearman") ;
         }
-        const default_action = Ewing();
+        const default_action = Iraan();
         size = 4096;
     }
     apply {
@@ -3932,7 +3917,7 @@ control Chambers(inout Toluca Crannell, inout Provencal Aniak, in egress_intrins
         const default_action = Ardenvoir(24w0, 24w0, 12w0);
         size = 256;
     }
-    @name(".Helen") action Helen() {
+    @name(".Verdigris") action Verdigris() {
         Aniak.Rainelle.Seagrove = Aniak.Rainelle.Ivyland;
     }
     @name(".Nerstrand") action Nerstrand(bit<32> Ocilla, bit<24> Horton, bit<24> Lacona, bit<12> OjoFeliz, bit<3> Quinhagak) {
@@ -3944,12 +3929,12 @@ control Chambers(inout Toluca Crannell, inout Provencal Aniak, in egress_intrins
     @disable_atomic_modify(1) @ways(1) @name(".Tillicum") table Tillicum {
         actions = {
             Nerstrand();
-            @defaultonly Helen();
+            @defaultonly Verdigris();
         }
         key = {
             Wildorado.egress_rid: exact @name("Wildorado.egress_rid") ;
         }
-        const default_action = Helen();
+        const default_action = Verdigris();
         size = 4096;
     }
     apply {
@@ -4032,6 +4017,10 @@ control Goldsmith(inout Toluca Crannell, inout Provencal Aniak, in egress_intrin
         Aniak.Rainelle.Norwood = Norwood;
         Aniak.Rainelle.Wetonka = (bit<2>)2w0;
         Crannell.Livonia.Needham = (bit<4>)4w0;
+        Crannell.Livonia.Loring = (bit<2>)2w0;
+        Crannell.Livonia.Suwannee = (bit<3>)3w0;
+        Crannell.Livonia.Dugger = (bit<1>)1w0;
+        Crannell.Livonia.Laurelton = (bit<1>)1w0;
         Crannell.Livonia.Contact = (bit<1>)1w0;
     }
     @name(".Cornwall") action Cornwall(bit<2> Norwood) {
