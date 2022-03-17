@@ -65,20 +65,23 @@ template<> void InputXbar::write_regs(Target::Flatrock::mau_regs &regs) {
     for (auto &group : groups) {
         switch (group.first.type) {
         case Group::EXACT: {
-            auto &em_key_cfg = regs.ppu_minput_rspec.rf.minput_em_xb_key[0];
+            auto &em_key_cfg = regs.ppu_minput_rspec.minput_em_xb_key_erf;
             if (group.first.index) {
+                auto &key32 = em_key_cfg.minput_em_xb_key32[0];
                 for (auto &input : group.second)
-                    em_key_cfg.key32[input.lo/32U] = input.what->reg.ixbar_id()/4U;
+                    key32[input.lo/32U].key32 = input.what->reg.ixbar_id()/4U;
             } else {
+                auto &key8 = em_key_cfg.minput_em_xb_key8[0];
                 for (auto &input : group.second)
-                    em_key_cfg.key8[input.lo/8U] = input.what->reg.ixbar_id();
+                    key8[input.lo/8U].key8 = input.what->reg.ixbar_id();
             }
             break; }
         case Group::TERNARY: {
-            auto &scm_key_cfg = regs.ppu_minput_rspec.rf.minput_scm_xb_key[0];
+            auto &scm_key_cfg = regs.ppu_minput_rspec.minput_scm_xb_key_erf;
+            auto &key8 = scm_key_cfg.minput_scm_xb_key8[0];
             int base = group.first.index * 5;  // first byte for the group
             for (auto &input : group.second)
-                scm_key_cfg.key8[base + input.lo/8U] = input.what->reg.ixbar_id();
+                key8[base + input.lo/8U].key8 = input.what->reg.ixbar_id();
             break; }
         case Group::GATEWAY: {
             auto &gw_key_cfg = regs.ppu_minput_rspec.rf.minput_gw_xb_vdg;
@@ -86,13 +89,15 @@ template<> void InputXbar::write_regs(Target::Flatrock::mau_regs &regs) {
                 gw_key_cfg.vgd[input.lo/8U] = input.what->reg.ixbar_id();
             break; }
         case Group::XCMP: {
-            auto &xcmp_key_cfg = regs.ppu_minput_rspec.rf.minput_xcmp_xb_key[0];
+            auto &xcmp_key_cfg = regs.ppu_minput_rspec.minput_xcmp_xb_key_erf;
             if (group.first.index) {
+                auto &key32 = xcmp_key_cfg.minput_xcmp_xb_key32[0];
                 for (auto &input : group.second)
-                    xcmp_key_cfg.key32[input.lo/32U] = input.what->reg.ixbar_id()/4U;
+                    key32[input.lo/32U].key32 = input.what->reg.ixbar_id()/4U;
             } else {
+                auto &key8 = xcmp_key_cfg.minput_xcmp_xb_key8[0];
                 for (auto &input : group.second)
-                    xcmp_key_cfg.key8[input.lo/8U] = input.what->reg.ixbar_id();
+                    key8[input.lo/8U].key8 = input.what->reg.ixbar_id();
             }
             break; }
         default:
