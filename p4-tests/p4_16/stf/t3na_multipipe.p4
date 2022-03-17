@@ -22,6 +22,7 @@ struct custom_header_t {
     data8_h  hg;
     data16_h hh;
     data16_h action_tag;
+    data32_h ingress_tag;
 }
 
 struct custom_metadata_t { }
@@ -127,8 +128,12 @@ control SwitchIngress_a(
     }
 
     apply {
+        hdr.ingress_tag.setValid();
+        hdr.ingress_tag.value = 0x00000001;
         if (hdr.ha.isValid()) {
             send_table.apply();
+        } else {
+            send(0);
         }
         if (hdr.hc.isValid()) {
             encap_tag_table.apply();
@@ -143,6 +148,7 @@ control SwitchIngressDeparser_a(
         in ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md) {
 
     apply {
+        pkt.emit(hdr.ingress_tag);
         pkt.emit(hdr.action_tag);
         pkt.emit(hdr.ha);
         pkt.emit(hdr.hb);
@@ -256,8 +262,12 @@ control SwitchIngress_b(
     }
 
     apply {
+        hdr.ingress_tag.setValid();
+        hdr.ingress_tag.value = 0x00000010;
         if (hdr.hb.isValid()) {
             send_table.apply();
+        } else {
+            send(0);
         }
         if (hdr.ha.isValid()) {
             encap_tag_table.apply();
@@ -272,6 +282,7 @@ control SwitchIngressDeparser_b(
         in ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md) {
 
     apply {
+        pkt.emit(hdr.ingress_tag);
         pkt.emit(hdr.action_tag);
         pkt.emit(hdr.ha);
         pkt.emit(hdr.hb);
@@ -385,8 +396,12 @@ control SwitchIngress_c(
     }
 
     apply {
+        hdr.ingress_tag.setValid();
+        hdr.ingress_tag.value = 0x00000100;
         if (hdr.hc.isValid()) {
             send_table.apply();
+        } else {
+            send(0);
         }
         if (hdr.hb.isValid()) {
             encap_tag_table.apply();
@@ -401,6 +416,7 @@ control SwitchIngressDeparser_c(
         in ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md) {
 
     apply {
+        pkt.emit(hdr.ingress_tag);
         pkt.emit(hdr.action_tag);
         pkt.emit(hdr.ha);
         pkt.emit(hdr.hb);
@@ -514,8 +530,12 @@ control SwitchIngress_d(
     }
 
     apply {
+        hdr.ingress_tag.setValid();
+        hdr.ingress_tag.value = 0x00001000;
         if (hdr.hd.isValid()) {
             send_table.apply();
+        } else {
+            send(0);
         }
         if (hdr.hb.isValid()) {
             encap_tag_table.apply();
@@ -530,6 +550,7 @@ control SwitchIngressDeparser_d(
         in ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md) {
 
     apply {
+        pkt.emit(hdr.ingress_tag);
         pkt.emit(hdr.action_tag);
         pkt.emit(hdr.ha);
         pkt.emit(hdr.hb);
@@ -643,8 +664,12 @@ control SwitchIngress_e(
     }
 
     apply {
+        hdr.ingress_tag.setValid();
+        hdr.ingress_tag.value = 0x00010000;
         if (hdr.he.isValid()) {
             send_table.apply();
+        } else {
+            send(0);
         }
         if (hdr.hb.isValid()) {
             encap_tag_table.apply();
@@ -659,6 +684,7 @@ control SwitchIngressDeparser_e(
         in ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md) {
 
     apply {
+        pkt.emit(hdr.ingress_tag);
         pkt.emit(hdr.action_tag);
         pkt.emit(hdr.ha);
         pkt.emit(hdr.hb);
@@ -772,8 +798,12 @@ control SwitchIngress_f(
     }
 
     apply {
+        hdr.ingress_tag.setValid();
+        hdr.ingress_tag.value = 0x00100000;
         if (hdr.hf.isValid()) {
             send_table.apply();
+        } else {
+            send(0);
         }
         if (hdr.hc.isValid()) {
             encap_tag_table.apply();
@@ -788,6 +818,7 @@ control SwitchIngressDeparser_f(
         in ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md) {
 
     apply {
+        pkt.emit(hdr.ingress_tag);
         pkt.emit(hdr.action_tag);
         pkt.emit(hdr.ha);
         pkt.emit(hdr.hb);
@@ -901,8 +932,12 @@ control SwitchIngress_g(
     }
 
     apply {
+        hdr.ingress_tag.setValid();
+        hdr.ingress_tag.value = 0x01000000;
         if (hdr.hg.isValid()) {
             send_table.apply();
+        } else {
+            send(0);
         }
         if (hdr.hb.isValid()) {
             encap_tag_table.apply();
@@ -917,6 +952,7 @@ control SwitchIngressDeparser_g(
         in ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md) {
 
     apply {
+        pkt.emit(hdr.ingress_tag);
         pkt.emit(hdr.action_tag);
         pkt.emit(hdr.ha);
         pkt.emit(hdr.hb);
@@ -1030,8 +1066,12 @@ control SwitchIngress_h(
     }
 
     apply {
+        hdr.ingress_tag.setValid();
+        hdr.ingress_tag.value = 0x10000000;
         if (hdr.hh.isValid()) {
             send_table.apply();
+        } else {
+            send(0);
         }
         if (hdr.hc.isValid()) {
             encap_tag_table.apply();
@@ -1046,6 +1086,7 @@ control SwitchIngressDeparser_h(
         in ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md) {
 
     apply {
+        pkt.emit(hdr.ingress_tag);
         pkt.emit(hdr.action_tag);
         pkt.emit(hdr.ha);
         pkt.emit(hdr.hb);

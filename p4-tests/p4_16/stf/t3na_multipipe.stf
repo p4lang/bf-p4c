@@ -1,0 +1,231 @@
+# pipeline_profile_a
+# Valid port numbers (even in range): 0 - 70
+
+add SwitchIngress_a.send_table      ha.value:0x12       send(port:12)
+add SwitchIngress_a.send_table      ha.value:0x02       send(port:2)
+add SwitchIngress_a.encap_tag_table hc.value:0x11223344 encap_tag(tag:0xbeef)
+
+#       port  ha  payload
+packet  0     12  34 56
+#       port  ingress_tag  ha  payload
+expect  12    00 00 00 01  12  34 56
+
+#       port  ha  hc           payload
+packet  2     02  11 22 33 44  34 56
+#       port  ingress_tag  action_tag  ha  hc           payload
+expect  2     00 00 00 01  be ef       02  11 22 33 44  34 56
+
+#       port  ha  hc           payload
+packet  4     02  12 22 33 44  34 56
+#       port  ingress_tag  ha  hc           payload
+expect  2     00 00 00 01  02  12 22 33 44  34 56
+
+#       port  ha  hb     payload
+packet  70    01  12 aa  34 56
+#       port  ingress_tag  ha  hb     payload
+expect  0     00 00 00 01  01  12 aa  34 56
+
+wait
+
+# pipeline_profile_b
+# Valid port numbers (even in range): 128 - 198
+
+add SwitchIngress_b.send_table      hb.value:0x0014 send(port:14)
+add SwitchIngress_b.send_table      hb.value:0x0001 send(port:4)
+add SwitchIngress_b.encap_tag_table ha.value:0x11   encap_tag(tag:0xdead)
+
+#       port  hb     payload
+packet  128   00 14  34 56
+#       port  ingress_tag  hb     payload
+expect  14    00 00 00 10  00 14  34 56
+
+#       port  hb     ha  payload
+packet  130   00 01  11  34 56
+#       port  ingress_tag  action_tag  ha  hb     payload
+expect  4     00 00 00 10  de ad       11  00 01  34 56
+
+#       port  hb     ha  payload
+packet  132   00 01  12  34 56
+#       port  ingress_tag  ha  hb     payload
+expect  4     00 00 00 10  12  00 01  34 56
+
+#       port  hb     hc           payload
+packet  198   00 02  aa bb cc dd  34 56
+#       port  ingress_tag  hb     hc           payload
+expect  0     00 00 00 10  00 02  aa bb cc dd  34 56
+
+wait
+
+# pipeline_profile_c
+# Valid port numbers (even in range): 256 - 326
+
+add SwitchIngress_c.send_table      hc.value:0xaabbccdd send(port:16)
+add SwitchIngress_c.send_table      hc.value:0x00000002 send(port:6)
+add SwitchIngress_c.encap_tag_table hb.value:0x1122     encap_tag(tag:0xabba)
+
+#       port  hc           payload
+packet  256   aa bb cc dd  34 56
+#       port  ingress_tag  hc           payload
+expect  16    00 00 01 00  aa bb cc dd  34 56
+
+#       port  hc           hb     payload
+packet  258   00 00 00 02  11 22  34 56
+#       port  ingress_tag  action_tag  hb     hc           payload
+expect  6     00 00 01 00  ab ba       11 22  00 00 00 02  34 56
+
+#       port  hc           hb     payload
+packet  260   00 00 00 02  11 23  34 56
+#       port  ingress_tag  hb     hb           payload
+expect  6     00 00 01 00  11 23  00 00 00 02  34 56
+
+#       port  hc           ha  payload
+packet  326   00 00 00 01  aa  34 56
+#       port  ingress_tag  ha  hc           payload
+expect  0     00 00 01 00  aa  00 00 00 01  34 56
+
+wait
+
+# pipeline_profile_d
+# Valid port numbers (even in range): 384 - 454
+
+add SwitchIngress_d.send_table      hd.value:0x18   send(port:18)
+add SwitchIngress_d.send_table      hd.value:0x02   send(port:8)
+add SwitchIngress_d.encap_tag_table hb.value:0x3344 encap_tag(tag:0xcddc)
+
+#       port  hd  payload
+packet  384   18  34 56
+#       port  ingress_tag  hd  payload
+expect  18    00 00 10 00  18  34 56
+
+#       port  hd  hb     payload
+packet  386   02  33 44  34 56
+#       port  ingress_tag  action_tag  hb     hd  payload
+expect  8     00 00 10 00  cd dc       33 44  02  34 56
+
+#       port  hd  hb     payload
+packet  388   02  34 44  34 56
+#       port  ingress_tag  hb     hd  payload
+expect  8     00 00 10 00  34 44  02  34 56
+
+#       port  hd  ha  payload
+packet  454   01  aa  34 56
+#       port  ingress_tag  ha  hd  payload
+expect  0     00 00 10 00  aa  01  34 56
+
+wait
+
+# pipeline_profile_e
+# Valid port numbers (even in range): 512 - 582
+
+add SwitchIngress_e.send_table      he.value:0x0030 send(port:30)
+add SwitchIngress_e.send_table      he.value:0x0002 send(port:532)
+add SwitchIngress_e.encap_tag_table hb.value:0x5566 encap_tag(tag:0x5665)
+
+#       port  he     payload
+packet  512   00 30  34 56
+#       port  ingress_tag  he     payload
+expect  30    00 01 00 00  00 30  34 56
+
+#       port  he     hb     payload
+packet  514   00 02  55 66  34 56
+#       port  ingress_tag  action_tag  hb     he     payload
+expect  532   00 01 00 00  56 65       55 66  00 02  34 56
+
+#       port  he     hb     payload
+packet  514   00 02  56 66  34 56
+#       port  ingress_tag  hb     he     payload
+expect  532   00 01 00 00  56 66  00 02  34 56
+
+#       port  he     ha  payload
+packet  582   00 01  aa  34 56
+#       port  ingress_tag  ha  he     payload
+expect  0     00 01 00 00  aa  00 01  34 56
+
+wait
+
+# pipeline_profile_f
+# Valid port numbers (even in range): 640 - 710
+
+add SwitchIngress_f.send_table      hf.value:0x00000032 send(port:32)
+add SwitchIngress_f.send_table      hf.value:0x00000003 send(port:534)
+add SwitchIngress_f.encap_tag_table hc.value:0x778899aa encap_tag(tag:0x7887)
+
+#       port  hf           payload
+packet  640   00 00 00 32  34 56
+#       port  ingress_tag  hf           payload
+expect  32    00 10 00 00  00 00 00 32  34 56
+
+#       port  hf           hc           payload
+packet  642   00 00 00 03  77 88 99 aa  34 56
+#       port  ingress_tag  action_tag  hc           hf           payload
+expect  534   00 10 00 00  78 87       77 88 99 aa  00 00 00 03  34 56
+
+#       port  hf           hc           payload
+packet  644   00 00 00 03  78 88 99 aa  34 56
+#       port  ingress_tag  hc           hf           payload
+expect  534   00 10 00 00  78 88 99 aa  00 00 00 03  34 56
+
+#       port  hf           ha  payload
+packet  710   00 00 00 01  aa  34 56
+#       port  ingress_tag  ha  hf           payload
+expect  0     00 10 00 00  aa  00 00 00 01  34 56
+
+wait
+
+# pipeline_profile_g
+# Valid port numbers (even in range): 768 - 838
+
+add SwitchIngress_g.send_table      hg.value:0x34   send(port:34)
+add SwitchIngress_g.send_table      hg.value:0x02   send(port:536)
+add SwitchIngress_g.encap_tag_table hb.value:0x5678 encap_tag(tag:0x6758)
+
+#       port  hg  payload
+packet  768   34  34 56
+#       port  ingress_tag  hg  payload
+expect  34    01 00 00 00  34  34 56
+
+#       port  hg  hb     payload
+packet  770   02  56 78  34 56
+#       port  ingress_tag  action_tag  hb     hg  payload
+expect  536   01 00 00 00  67 58       56 78  02  34 56
+
+#       port  hg  hb     payload
+packet  772   02  57 78  34 56
+#       port  ingress_tag  hb     hg  payload
+expect  536   01 00 00 00  57 78  02  34 56
+
+#       port  hg  ha  payload
+packet  838   01  aa  34 56
+#       port  ingress_tag  ha  hg  payload
+expect  0     01 00 00 00  aa  01  34 56
+
+wait
+
+# pipeline_profile_h
+# Valid port numbers (even in range): 896 - 966
+
+add SwitchIngress_h.send_table      hh.value:0x0036     send(port:36)
+add SwitchIngress_h.send_table      hh.value:0x0003     send(port:538)
+add SwitchIngress_h.encap_tag_table hc.value:0x56789abc encap_tag(tag:0x579b)
+
+#       port  hh     payload
+packet  896   00 36  34 56
+#       port  ingress_tag  hh     payload
+expect  36    10 00 00 00  00 36  34 56
+
+#       port  hh     hc           payload
+packet  898   00 03  56 78 9a bc  34 56
+#       port  ingress_tag  action_tag  hc           hh     payload
+expect  538   10 00 00 00  57 9b       56 78 9a bc  00 03  34 56
+
+#       port  hh     hc           payload
+packet  900   00 03  57 78 9a bc  34 56
+#       port  ingress_tag  hc           hh     payload
+expect  538   10 00 00 00  57 78 9a bc  00 03  34 56
+
+#       port  hh     ha  payload
+packet  966   00 01  aa  34 56
+#       port  ingress_tag  ha  hh     payload
+expect  0     10 00 00 00  aa  00 01  34 56
+
+wait
