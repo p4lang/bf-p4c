@@ -17,7 +17,7 @@ show_help () {
     echo >&2 "   --build-dir <dir>      build in <dir> rather than ./build"
     echo >&2 "   --build-type <type>    DEBUG RELEASE or RelWithDebInfo"
     echo >&2 "   --p4c-cpp-flags <x>    add <x> to CPPFLAGS for p4c build"
-    echo >&2 "   --small-config         only builds the compiler and testing"
+    echo >&2 "   --small-config         only builds: (1) the compiler, (2) testing EXCEPT for the gtest-based tests"
     echo >&2 "   --minimal-config       disable most build targets other than the compiler"
     echo >&2 "   --disable-unified      disable unified build"
     echo >&2 "   --cmake-gen <gen>      see 'cmake -h' for list of generators"
