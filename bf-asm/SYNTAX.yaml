@@ -30,7 +30,106 @@
 #   <operand>    ::= <phv-location> | <field> | <constant>
 #                  | hash_dist <unit> [ <lo>..<hi> ]
 #                  | rng <unit> [ <lo>..<hi> ]
+#   Specific for Tofino 5:
+#   <metadata-select> ::= <constant> | 'logical_port_number' | 'port_metadata' <constant>
+#                         | 'incoming_metadata' <constant> | 'timestamp' <constant>
+#                         | 'counter' <constant>
+#                         specifies source of a byte of metadata
+#                         'constant' -> 8b
+#                         'port_metadata' -> constant is 4b (index to port_metadata table)
+#                         'incoming_metadata' -> constant is 3b (index to MD8)
+#                         'timestamp' -> constant is 3b
+#                         'counter' -> constant is 3b (index of debug counter)
 #
+#   <hdr-id-name> ::= <constant> | <name>
+#
+#   <other-source> ::= 'constant' <constant> | 'pov_flags' <constant> | 'pov_state' <constant>
+#                      | 'checksum_and_error' | 'udf0' <constant> | 'udf1' <constant>
+#                      | 'udf2' <constant> | 'udf3' <constant> | 'ghost' <constant>
+#                      | 'tm' <constant> | 'bridge' <constant> | 'none'
+#                      checksum_and_error, udf, and ghost are valid only in parser
+#                      tm_emeta and bridge are valid only in pseudo parser
+#                      'constant' -> constant is 8b
+#                      'pov_flags' and 'pov_state' -> constant is 3b
+#                      'udf0..3' -> constant is 3b
+#                      'ghost' -> constant is 2b
+#                      'tm' -> constant is 5b
+#                      'bridge' -> constant is 6b
+#
+#   <other8-sources> ::= <other-source> <other-source> <other-source> <other-source>
+#
+#   <packet8-sources> ::= 'packet8' <hdr-id-name>
+#                                   <register> 'offset' <constant>
+#                                   [<register> 'offset' <constant>
+#                                   [<register> 'offset' <constant>
+#                                   [<register> 'offset' <constant>]]]
+#                         constants are 8b
+#
+#   <phe8-sources> ::= <packet8-source> | <other8-source>
+#
+#   <packet16-sources> ::= 'packet16' <hdr-id-name>
+#                                     <register> 'msb_offset' <constant> ['swap']
+#                                     [<register> 'msb_offset' <constant> ['swap']]
+#                          constants are 8b
+#
+#   <phe16-sources> ::= <packet16-sources> | <other8-sources>
+#
+#   <packet32-source> ::= 'packet32' <hdr-id-name>
+#                                    <register> 'msb_offset' <constant>
+#                                    ['reverse'] ['reverse-words']
+#                         specifies 1x PHE32 source, constant is 8b
+#                         only one of 'reverse' ({B3, B2, B1, B0} -> {B0, B1, B2, B3}) and
+#                         'reverse-words' ({B3, B2, B1, B0} -> {B2, B3, B0, B1}) can be used
+#
+#   <phe32-source> ::= <packet32-source> | <other8-sources>
+#
+#   <phe-any-source> ::= <phe8-sources> | <phe16-sources> | <phe32-source>
+#
+#   <phe-source> ::= <phe-any-source> <phe-any-source>
+#                    specifies a PHE source pair
+#
+# <sub-state>        ::= 'state' '[' <range> ']'
+# <w2-mask-lshift>   ::= '(' '(' 'w2' '&' <constant> ')' '<<' <constant> ')'
+# <w2-mask-rshift>   ::= '(' '(' 'w2' '&' <constant> ')' '>>' <constant> ')'
+#
+# <ptr-simple-op>    ::= <constant> | 'w2' '+' <constant> | <sub-state> | <sub-state> '<<' '2'
+# <ptr-complex-op>   ::= <w2-mask-lshift> '+' '(' <constant> '<<' '2' ')' | <w2-mask-rshift> '+' '(' <constant> '<<' '2' ')' ['rounded4']
+#     rounded4 = rounds up the nearest multiple of 4 in the opcode 6.
+# <alu0-instruction> ::= 'noop' | 'ptr' '+=' <ptr-simple-op> | 'ptr' '+=' <ptr-complex-op>
+#     immXs = X-bit immediate signed constant
+#     immXu = X-bit immediate unsigned constant
+#     opcode 0: ptr += imm8s; special case imm8s == 0: nop
+#     opcode 1: ptr += w2[7:0] + imm8u
+#     opcode 2: ptr += state[MSB:LSB], MSB&LSB -> 2/4/8/16-bit state sub-field
+#     opcode 3: ptr += (state[MSB:LSB] << 2), MSB&LSB -> 2/4/8/16-bit state sub-field
+#     opcode 4: ptr += ((w2[7:0] & imm8u) << imm2u) + (imm2u << 2)
+#     opcode 5: ptr += ((w2[7:0] & imm8u) >> imm2u) + (imm2u << 2)
+#     opcode 6: ptr += ((w2[7:0] & imm8u) >> imm2u) + (imm2u << 2)
+#               if ((w2[7:0] & imm8u) >> imm2u) != 0, then + 4 - ((w2[7:0] & imm8u) >> imm2u)
+#
+# <state-simple-op>  ::= '>>=' | '<<=' | '+=' | '='
+# <state-comlex-base-op> ::= '+=' | '-='
+# <state-comlex-op>  ::= <w2-mask-lshift> '+' '(' <constant> '<<' '2' ')' | <w2-mask-rshift> '+' '(' <constant> '<<' '2' ')'
+# <alu1-instruction> ::= <sub-state> <state-simple-op> <constant> | <sub-state> <state-comlex-base-op> <state-complex-op> ['rounded4']
+#     rounded4 = rounds up the nearest multiple of 4 in the opcodes 6 and 7.
+#     immXs = X-bit immediate signed constant
+#     immXu = X-bit immediate unsigned constant
+#     opcode 0: state[MSB:LSB] >>= imm4u, MSB&LSB -> 2/4/8/16-bit state sub-field
+#     opcode 1: state[MSB:LSB] <<= imm4u, MSB&LSB -> 2/4/8/16-bit state sub-field
+#     opcode 2: state[MSB:LSB] += imm8s, MSB&LSB -> 2/4/8/16-bit state sub-field
+#     opcode 3: state[MSB:LSB] = imm8s, MSB&LSB -> 2/4/8/16-bit state sub-field
+#     opcode 4, shift_dir = 0: state[MSB:LSB] += ((w2[7:0] & imm8u) << imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
+#     opcode 4, shift_dir = 1: state[MSB:LSB] += ((w2[7:0] & imm8u) >> imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
+#     opcode 5, shift_dir = 0: state[MSB:LSB] -= ((w2[7:0] & imm8u) << imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
+#     opcode 5, shift_dir = 1: state[MSB:LSB] -= ((w2[7:0] & imm8u) >> imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
+#     opcode 6, shift_dir = 0: state[MSB:LSB] += ((w2[7:0] & imm8u) << imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
+#                              if ((w2[7:0] & imm8u) << imm2u) != 0, then + 4 - ((w2[7:0] & imm8u) << imm2u)
+#     opcode 6, shift_dir = 1: state[MSB:LSB] += ((w2[7:0] & imm8u) >> imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
+#                              if ((w2[7:0] & imm8u) >> imm2u) != 0, then + 4 - ((w2[7:0] & imm8u) >> imm2u)
+#     opcode 7, shift_dir = 0: state[MSB:LSB] -= ((w2[7:0] & imm8u) << imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
+#                              if ((w2[7:0] & imm8u) << imm2u) != 0, then + 4 - ((w2[7:0] & imm8u) << imm2u)
+#     opcode 7, shift_dir = 1: state[MSB:LSB] -= ((w2[7:0] & imm8u) >> imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
+#                              if ((w2[7:0] & imm8u) >> imm2u) != 0, then + 4 - ((w2[7:0] & imm8u) >> imm2u)
 phv [<thread>]:
     # Defines PHV alias names for registers.  <thread> is 'ingress', 'ghost' or
     # 'egress' and is optional.  If present, aliases are defined only for
@@ -54,8 +153,37 @@ phv [<thread>]:
             # any keys/vector/values here are converted to json and output into
             # the context.json phv_allocation.records info for field <name>
             # verbatim
+hdr:
+    # Information related to hdr_ids (header names and compressed
+    # header sequence and length encoding in bridge metadata)
+    # Specific for Tofino 5, shared among parser (parser ingress),
+    # metadata packer (deparser ingress), pseudo parser (parser egress),
+    # and deparser (deparser egress)
+    map:
+        # Mapping of hdr_ids to header names
+        <constant>: <name>
+            # constant is hdr_id, name can be used as substitution for hdr_id
+            # e.g. 0: md32, 1: ethernet, 2: ipv4, ...
+    seq:
+        # Compressed header sequence encoding in bridge metadata
+        <constant>: [ <hdr-id-name>, ... ]
+            # constant is 8b sequence number; 255 is reserved for
+            # escape value to specify explicit list of all headers
+            # e.g. 0: ethernet, ipv4
+    seq_pos: <constant>
+        # Byte location of compressed header sequence number in bridge metadata
+    len:
+        # Compressed header length encoding in bridge metadata
+        <hdr-id-name>: base_len <constant> num_comp_bits <constant> scale <constant>
+            # base_len is 8b, num_comp_bits 3b, scale 2b
+            # e.g. ipv4: base_len 20 num_comp_bits 4 scale 5 (20B + N * 4B; N < 10)
+    len_pos: <constant>
+        # Byte location of compressed header length information in bridge metadata
+    off_pos: <constant>
+        # Byte location of the offset of the first header in bridge metadata
 parser [<thread>] [<port_use>, ...]:
     # Defines a parser.  <thread> must be 'ingress' or 'egress'
+    # For Tofino 5, parser egress is pseudo parser.
     # <port_use> can have numerical values, such as range, int, vector of range and int.
     # <port_use> can also have symbolic values, such as "ALL", "CPU", "PCIE", "UNUSED"
     # "CPU" and "PCIE" are symbolic names that the corresponding numeric values are device-specific.
@@ -173,6 +301,92 @@ parser [<thread>] [<port_use>, ...]:
         # (tm_status_phv.pipe_mask in tofino2)
     parse_depth_checks_disabled: true | false
         # Parse depth checks disabled
+    # Specific for Tofino 5 parser (parser ingress):
+    port_metadata:
+        # specifies port metadata for each logical port number
+        <constant>: <vector>
+            # constant is logical port number, vector is port metadata (15B)
+    profile <constant> [port <match-constant>] [inband_metadata <match-constant>]:
+        # specifies a parser profile, constant represents the TCAM&SRAM index
+        # if the logical port number (2'b0 ++ 6b) or inband metadata (8B) match is omitted,
+        # it is treated as *
+        initial_state: <constant>
+            # specifies initial state (80b)
+        initial_flags: <constant>
+            # specifies initial flags (64b)
+        initial_ptr: <constant>
+            # specifies initial pointer (8b)
+        initial_w0_offset: <constant>
+            # specifies initial W0 offset (8b)
+        initial_w1_offset: <constant>
+            # specifies initial W1 offset (8b)
+        initial_w2_offset: <constant>
+            # specifies initial W2 offset (8b)
+        initial_alu0_instruction: <alu0-instruction>
+            # specifies initial instruction for ALU0 (15b)
+        initial_alu1_instruction: <alu1-instruction>
+            # specifies initial instruction for ALU1 (19b)
+        metadata_select: '[', <metadata-select>, ... ']'
+            # specifies source of each of 32B of MD32 metadata
+    analyzer:
+        state_map:
+            <name>: <match-constant>
+                # specifies match values for states (64b)
+                # e.g. parse_ipv4: 0x**************02
+                # e.g. parse_tcp: 0x**************04
+        stage <constant> [<name>]:
+            # constant is stage number
+            # if name is present, it is looked up in state_map and all rules match the state
+            # only one of stage name and rule state match can be present
+            # e.g. stage 0 parse_ipv4
+            rule <constant> [state <match-constant>] [w0 <match-constant>] [w1 <match-constant>]:
+                # constant is explicit rule index; it also specifies the rule priority
+                # when more rules match (lower value is higher priority)
+                # if state match constant is ommited, it is derived from the state name at stage
+                # if it is missing, it is treated as *
+                # if w0 or w1 match constant is ommited, it is treated as *
+                # e.g. rule 0 w0 17  # state is matched based on `stage 0 parse_ipv4' above
+                # e.g. rule 0 w0 17 state 0x************02  # 17 is for TCP; 02 is for parse_ipv4 (see state_map)
+                next_state: <match-constant> | <name>
+                    # specifies state for the next stage (80b)
+                    # e.g. next_state: 0x**************04
+                    # e.g. next_state: parse_tcp
+                next_skip_extractions: <bool>
+                    # skips Wx extractions in the next stage (bool)
+                next_w0_offset: <constant>
+                    # specifies W0 offset for the next stage (8b)
+                    # e.g. next_w0_offset: 2  # TCP destination port
+                next_w1_offset: <constant>
+                    # specifies W1 offset for the next stage (8b)
+                next_w2_offset: <constant>
+                    # specifies W2 offset for the next stage (8b)
+                next_alu0_instruction: <alu0-instruction>
+                    # specifies instruction for ALU0 for the next stage (15b)
+                next_alu1_instruction: <alu1-instruction>
+                    # specifies instruction for ALU1 for the next stage (19b)
+                push_hdr_id: <hdr-id-name> <constant>
+                    # specifies header ID (8b) or name and offset (8b) to be pushed to ana_hdr_ptrs
+                    # if name is specified, it is looked up in hdr_id_map
+                    # 0xff for header ID is reserved for invalid
+                    # offset is relative to pointer
+                    # e.g. push_hdr_id: ipv4 0
+                # TODO update flags, update csum enable
+    phv_builder:
+        group <constant>:
+            # specifies extract groups
+            pov_select: '[', <constant>, <constant>, <constant>, <constant>, ']'
+                # specifies which POV bytes are used to address the TCAM & SRAM
+            extract <constant>:
+                # specifies extracts
+                match: <match-constant>
+                    # match constant is 4B
+                source: <phe-source>
+                    # specifies a PHE source pair
+    # Specific for Tofino 5 pseudo parser (parser egress):
+    pov_flags_pos: <constant>
+        # specifies start position of POV flags in bridge metadata (6b)
+    pov_state_pos: <constant>
+        # specifies start position of POV state in bridge metadata (6b)
 stage <constant> <thread>:
     # Defines a single stage of the MAU.  The order of the tables within the
     # stage is the logical table ordering, so order matters
@@ -862,6 +1076,7 @@ stage <constant> <thread>:
         <int>: <int>  # Resolved incoming long branch tag ID to activation bit map
 deparser <thread>:
     # Defines a deparser.  <thread> must be 'ingress' or 'egress'
+    # For Tofino 5, deparser ingress is metadata packer.
     dictionary:
         # ordered list of phv locations to write out as the output deparser
         - <phv-location> : <bit-location>
@@ -943,6 +1158,48 @@ deparser <thread>:
     capture_tx_ts: <phv-location> [ ':' <pov-bit> ]
     coal: <phv-location> [ ':' <pov-bit> ]
     ecos: <phv-location> [ ':' <pov-bit> ]
+    # Specific for Tofino 5 metadata packer (deparser ingress):
+    # Very little needed for trivial profile
+    #
+    # Data needed:
+    #   vld_vec
+    #   dflt_vec
+    #
+    # vld_vec: -- Do we need explicit config
+    # dflt_vec:-- Do we need explicit config
+    # New elements
+    copy_to_cpu_cos: <phv-location> [ ':' <pov-bit> ] # or c2c_cos
+    copy_to_cpu_qid: <phv-location> [ ':' <pov-bit> ] # or c2c_qid
+    mirr_bitmap: <phv-location> [ ':' <pov-bit> ]
+    # Ingress pipe -> TM fields
+    #  - tableid (1b) -- ???
+    #  - mcid1 - Multicast Group ID 1
+    #  - mcid2 - Multicast Group ID 2
+    #  - hash1 - Hash for L1 (is the the same as hash_lag_ecmp_mcast_<int>?)
+    #  - hash2 - Hash for L2 (is the the same as hash_lag_ecmp_mcast_<int>?)
+    # Specific for Tofino 5 deparser (deparser egress):
+    # Trivial profile: no major changes needed.
+    #
+    # TBD for future profiles:
+    #  - mirror cfg
+    #  - content memory details
+    #  - checksum
+    packet_body_offset:
+        # TODO: Needed? Maybe just use a fixed header type for PBO?
+        # Packet body offset
+        # Payload body offset is:
+        #   base_offset (unsigned) + const_offset (signed) + var_offset (unsigned).
+        hdr: <name> | <constant>
+            # Header name or ID to use for base offset location
+        offset: <constant>
+            # Constant (signed) offset to add to the base offset
+            # Default: 0
+        var_start: <constant>
+            # POV start bit for variable offset
+            # Default: 0
+        var_len: <constant>
+            # POV length for variable offset
+            # Default: 0
 flexible_headers:
     # Lists the headers that were re-packed by the compiler because
     # they were marked flexible. See context.json schema 'flexible_headers' node
