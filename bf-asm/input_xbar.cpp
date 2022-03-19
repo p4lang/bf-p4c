@@ -230,10 +230,8 @@ void InputXbar::input(Table *t, bool tern, const VECTOR(pair_t) &data) {
         if ((kv.key.type == tSTR) && (kv.key == "random_seed")) {
             random_seed = kv.value.i;
             continue; }
-        if (kv.key.type == tCMD && kv.key.vec.size == 2 &&
-            kv.key[0] == "exact" && kv.key[1] == "unit") {
-            // FIXME -- do something with this -- generate a hash for this unit?
-            // or maybe the compiler should be generating a random hash here?
+        if (kv.key.type == tCMD && kv.key.vec.size == 2 && kv.key[1] == "unit" &&
+            parse_unit(t, kv)) {
             continue; }
         if (auto grp = group_name(tern, kv.key)) {
             if (grp.index >= group_max_index(grp.type)) {

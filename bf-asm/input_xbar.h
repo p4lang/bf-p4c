@@ -80,6 +80,7 @@ class InputXbar {
     void parse_group(Table *t, Group gr, const value_t &value);
     void parse_hash_group(HashGrp &hash_group, const value_t &value);
     void parse_hash_table(Table *t, unsigned index, const value_t &value);
+    virtual bool parse_unit(Table *t, const pair_t &kv) { return false; }
     void setup_hash(std::map<int, HashCol> &, int id, gress_t, int stage, value_t &,
                     int lineno, int lo, int hi);
     struct TcamUseCache {
@@ -114,6 +115,9 @@ class InputXbar {
     void pass1();
     void pass2();
     template<class REGS> void write_regs(REGS &regs);
+#if HAVE_FLATROCK
+    virtual void write_regs_v(Target::Flatrock::mau_regs &regs) { BUG(); }
+#endif
     template<class REGS> void write_galois_matrix(REGS &regs,
             int id, const std::map<int, HashCol> &mat);
     bool have_exact() const {

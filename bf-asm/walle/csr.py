@@ -305,19 +305,31 @@ class csr_composite_object (csr_object):
             if len(child.fields) == 1:
                 child.fields = copy.copy(child.fields)
                 child.fields[0].name = rewrite[1]
-            # import pdb; pdb.set_trace()
-            for ch in self.children():
-                if len(rewrite) > 3 and ch.name == rewrite[3]:
-                    child.sel_offset = ch.offset
-                    desc_hdr = ch.name + ':\n'
-                    if hasattr(ch, 'description') and ch.description:
-                        child.description = (child.description + desc_hdr +
-                                             indent_comment('  ', ch.description))
-                        desc_hdr = ''
-                    if (len(ch.fields) == 1 and hasattr(ch.fields[0], 'description') and
-                        ch.fields[0].description):
-                        child.description = (child.description + desc_hdr +
-                                             indent_comment('  ', ch.fields[0].description))
+            if len(rewrite) > 3:
+                #import pdb; pdb.set_trace()
+                def find_scan_sel(obj, name, offset):
+                    desc = ''
+                    for ch in obj.children():
+                        pfx = len(ch.name)+1
+                        if ch.name+"." == name[:pfx]:
+                            return find_scan_sel(ch, name[pfx:], offset + ch.offset)
+                        if ch.name == name:
+                            offset = offset + ch.offset
+                            desc_hdr = ch.name + ':\n'
+                            if hasattr(ch, 'description') and ch.description:
+                                desc = (desc + desc_hdr + indent_comment('  ', ch.description))
+                                desc_hdr = ''
+                            if (len(ch.fields) == 1 and hasattr(ch.fields[0], 'description') and
+                                ch.fields[0].description):
+                                desc = (desc + desc_hdr +
+                                        indent_comment('  ', ch.fields[0].description))
+                            return offset, desc
+                    return None, None
+                offset, desc = find_scan_sel(self, rewrite[3], 0)
+                if offset is None:
+                    raise CsrException("No "+rewrite[3]+" in "+self.name+" for scan selector")
+                child.sel_offset = offset
+                child.description = child.description + desc
             return child
         else:
             raise CsrException("unknown rewrite '%s' for %s.%s" %

@@ -528,18 +528,18 @@ void PhvWrite::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl,
         bits = imem.imem8[slot].phvwr_imem8[iaddr];
         break;
     case 16:
-        imem.imem16[slot-128].phvwr_imem16[iaddr].color = color;
-        imem.imem16[slot-128].phvwr_imem16[iaddr].addr = src->bits(slot);
-        imem.imem16[slot-128].phvwr_imem16[iaddr].merge_dest = merge_dest;
-        imem.imem16[slot-128].phvwr_imem16[iaddr].opcode = opc->opcode;
-        bits = imem.imem16[slot-128].phvwr_imem16[iaddr];
+        imem.imem16[slot-160].phvwr_imem16[iaddr].color = color;
+        imem.imem16[slot-160].phvwr_imem16[iaddr].addr = src->bits(slot);
+        imem.imem16[slot-160].phvwr_imem16[iaddr].merge_dest = merge_dest;
+        imem.imem16[slot-160].phvwr_imem16[iaddr].opcode = opc->opcode;
+        bits = imem.imem16[slot-160].phvwr_imem16[iaddr];
         break;
     case 32:
-        imem.imem32[slot-160].phvwr_imem32[iaddr].color = color;
-        imem.imem32[slot-160].phvwr_imem32[iaddr].addr = src->bits(slot);
-        imem.imem32[slot-160].phvwr_imem32[iaddr].merge_dest = merge_dest;
-        imem.imem32[slot-160].phvwr_imem32[iaddr].opcode = opc->opcode;
-        bits = imem.imem32[slot-160].phvwr_imem32[iaddr];
+        imem.imem32[slot-200].phvwr_imem32[iaddr].color = color;
+        imem.imem32[slot-200].phvwr_imem32[iaddr].addr = src->bits(slot);
+        imem.imem32[slot-200].phvwr_imem32[iaddr].merge_dest = merge_dest;
+        imem.imem32[slot-200].phvwr_imem32[iaddr].opcode = opc->opcode;
+        bits = imem.imem32[slot-200].phvwr_imem32[iaddr];
         break;
     default:
         BUG(); }

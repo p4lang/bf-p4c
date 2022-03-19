@@ -759,6 +759,7 @@ class Table {
     virtual void set_pred();
     bool choose_logical_id(const slist<Table *> *work = nullptr);
     virtual int hit_next_size() const { return hit_next.size(); }
+    virtual int get_tcam_id() const { BUG("%s not a TCAM table", name()); }
 
     const std::vector<const p4_param*>
     find_p4_params(std::string s, std::string t = "", int start_bit = -1, int width = -1) const {
@@ -1295,6 +1296,7 @@ public:
         auto def_action_params = indirect ? indirect->get_default_action_parameters() : nullptr;
         return def_action_params; }
     bitvec compute_reachable_tables() override;
+    int get_tcam_id() const { return tcam_id; }
 
  private:
     template<class REGS> void tcam_table_map(REGS &regs, int row, int col);
@@ -1378,6 +1380,7 @@ public:
     bool needs_next() const override { return true; }
     void determine_word_and_result_bus() override;
     bitvec compute_reachable_tables() override;
+    int get_tcam_id() const { return match_table->tcam_id; }
 )
 
 DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,

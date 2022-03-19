@@ -51,10 +51,16 @@ generate:
       regs.mau_addrmap.h: [ decl ]
       regs.mau_addrmap.cpp: [ defn, -Iregs.mau_addrmap.h ]
       rewrite:
-        minput_byte_pwr_erf:
-          minput_byte_pwr_scan: [ scan_chain, minput_byte_pwr, [6] ]
-        minput_word_pwr_erf:
-          minput_word_pwr_scan: [ scan_chain, minput_word_pwr, [6] ]
+        ppu_minput_rspec:
+          minput_byte_pwr_erf: [ scan_chain, minput_byte_pwr, [8, 7], rf.minput_phe_pwr_scnsl ]
+          minput_word_pwr_erf: [ scan_chain, minput_word_pwr, [2, 3], rf.minput_word_pwr_scnsl ]
+        rf:
+          minput_phe_pwr_scnsl: [ delete ]
+          minput_word_pwr_scnsl: [ delete ]
+        #minput_byte_pwr_erf:
+        #  minput_phe_pwr_scan: [ scan_chain, minput_byte_pwr, [7] ]
+        #minput_word_pwr_erf:
+        #  minput_word_pwr_scan: [ scan_chain, minput_word_pwr, [3] ]
         #ppu_em_hu_rspec:
         #  em_bytehash_extrf: [ scan_chain, em_bytehash, [40, 12], em_bytehash_scansel ]
         #  em_bytehash_scansel: [ delete ]
