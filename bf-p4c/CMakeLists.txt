@@ -150,6 +150,7 @@ set (BF_P4C_MIDEND_SRCS
   midend/annotate_with_in_hash.cpp
   midend/check_design_pattern.cpp
   midend/check_header_alignment.cpp
+  midend/check_register_actions.cpp
   midend/check_unsupported.cpp
   midend/copy_block_pragmas.cpp
   midend/copy_header.cpp
@@ -184,6 +185,7 @@ set (BF_P4C_BACKEND_MIDEND_HDRS
   midend/blockmap.h
   midend/check_design_pattern.h
   midend/check_header_alignment.h
+  midend/check_register_actions.h
   midend/check_unsupported.h
   midend/copy_block_pragmas.h
   midend/copy_header.h

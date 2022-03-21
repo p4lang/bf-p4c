@@ -89,3 +89,8 @@ p4c_add_xfail_reason("tofino"
   "error: constant value .* too large for stateful alu"
   extensions/p4_tests/p4_14/compile_only/mau_test_neg_test.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "error: RegisterAction do_sth does not match the type of register it uses"
+  extensions/p4_tests/p4_16/errors/p4c-4270.p4
+)

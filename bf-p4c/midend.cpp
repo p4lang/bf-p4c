@@ -126,6 +126,7 @@
 #include "bf-p4c/midend/check_header_alignment.h"
 #include "bf-p4c/midend/check_unsupported.h"
 #include "bf-p4c/midend/check_design_pattern.h"
+#include "bf-p4c/midend/check_register_actions.h"
 #include "bf-p4c/midend/copy_block_pragmas.h"
 #include "bf-p4c/midend/copy_header.h"
 #include "bf-p4c/midend/elim_cast.h"
@@ -433,6 +434,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         (options.egress_intr_md_opt) ?
             new RewriteEgressIntrinsicMetadataHeader(&refMap, &typeMap) : nullptr,
         new DesugarVarbitExtract(&refMap, &typeMap),
+        new CheckRegisterActions(&typeMap),
         new PingPongGeneration(&refMap, &typeMap),
         new RegisterReadWrite(&refMap, &typeMap, typeChecking),
         new BFN::AnnotateWithInHash(&refMap, &typeMap, typeChecking),
