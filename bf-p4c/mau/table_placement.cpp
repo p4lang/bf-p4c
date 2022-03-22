@@ -2693,7 +2693,9 @@ DecidePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed 
                     if (tbl == pl->table) {
                         parents.insert(gw_match_grp ? gw_match_grp : pl->group);
                     } else if (pl->is_placed(tbl)) {
-                        BUG_CHECK(!gw_match_grp, "Failure attaching gateway to table");
+                        // Commented out this BUG_CHECK on P4C-4278. After analysis, inserting a
+                        // parent already placed with a different group should be supported.
+                        // BUG_CHECK(!gw_match_grp, "Failure attaching gateway to table");
                         parents.insert(pl->find_group(tbl));
                     } else {
                         // Basically when placing t1, which is a parent of t3, do not begin
