@@ -1809,6 +1809,13 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-example-dpdk-meter1.p4
   testdata/p4_16_samples/psa-example-dpdk-meter.p4
   testdata/p4_16_samples/psa-example-dpdk-externs.p4
+  testdata/p4_16_samples/psa-example-dpdk-byte-alignment_1.p4
+  testdata/p4_16_samples/psa-example-dpdk-byte-alignment_2.p4
+  testdata/p4_16_samples/psa-example-dpdk-byte-alignment_3.p4
+  testdata/p4_16_samples/psa-example-dpdk-byte-alignment_5.p4
+  testdata/p4_16_samples/psa-example-dpdk-byte-alignment_6.p4
+  testdata/p4_16_samples/psa-example-dpdk-byte-alignment_7.p4
+  testdata/p4_16_samples/psa-example-dpdk-byte-alignment_8.p4
 )
 
 # P4C-3765
@@ -1878,6 +1885,7 @@ p4c_add_xfail_reason("tofino"
   "extern Checksum does not have method matching this call"
   testdata/p4_16_samples/internet_checksum1-bmv2.p4
   testdata/p4_16_samples/psa-example-parser-checksum.p4
+  testdata/p4_16_samples/psa-example-dpdk-byte-alignment_4.p4
 )
 
 # P4C-2985 - tests added to p4c do not compile for tofino
