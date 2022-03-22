@@ -7,6 +7,12 @@
 #include "hashexpr.h"
 #include "hex.h"
 
+// template specialization declarations
+#include "tofino/gateway.h"
+#include "jbay/gateway.h"
+#include "cloudbreak/gateway.h"
+#include "flatrock/gateway.h"
+
 static struct {
     unsigned         units, bits, half_shift, mask, half_mask;
 } range_match_info[] = { { 0, 0, 0, 0, 0 }, { 6, 4, 2, 0xf, 0x3 }, { 3, 8, 8, 0xffff, 0xff } };
@@ -636,14 +642,6 @@ template<class REGS> void enable_gateway_payload_exact_shift_ovr(REGS &regs, int
     regs.rams.match.merge.gateway_payload_exact_shift_ovr[bus/8] |= 1U << bus % 8;
 }
 
-#include "tofino/gateway.cpp"                   // NOLINT(build/include)
-#if HAVE_JBAY
-#include "jbay/gateway.cpp"                     // NOLINT(build/include)
-#endif  /* HAVE_JBAY */
-#if HAVE_CLOUDBREAK
-#include "cloudbreak/gateway.cpp"               // NOLINT(build/include)
-#endif  /* HAVE_CLOUDBREAK */
-
 template<class REGS>
 void GatewayTable::payload_write_regs(REGS &regs, int row, int type, int bus) {
     auto &merge = regs.rams.match.merge;
@@ -790,14 +788,8 @@ void GatewayTable::payload_write_regs(REGS &regs, int row, int type, int bus) {
             merge.exact_match_phys_result_delay[row/4U] |= 1U << (row%4U * 2 + bus); }
 }
 
-
 template<class REGS> void GatewayTable::standalone_write_regs(REGS &regs) { }
 
-#if HAVE_FLATROCK
-template<> void GatewayTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
-    error(lineno, "%s:%d: Flatrock gateway not implemented yet!", __FILE__, __LINE__);
-}
-#endif  /* HAVE_FLATROCK */
 template<class REGS>
 void GatewayTable::write_regs_vt(REGS &regs) {
     LOG1("### Gateway table " << name() << " write_regs " << loc());

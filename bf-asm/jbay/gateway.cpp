@@ -1,4 +1,6 @@
-/* gateway template specializations for jbay -- #included directly in gateway.cpp */
+#include "gateway.h"
+
+#include <stage.h>
 
 template<> void GatewayTable::write_next_table_regs(Target::JBay::mau_regs &regs) {
     auto &merge = regs.rams.match.merge;
@@ -31,9 +33,10 @@ template<> void GatewayTable::write_next_table_regs(Target::JBay::mau_regs &regs
             merge.pred_map_glob[logical_id][i].pred_map_long_brch |= n.long_branch_tags();
             ++i; }
         // is this needed?  The model complains if we leave the unused slots as 0
-        while(i < NEXT_TABLE_SUCCESSOR_TABLE_DEPTH)
+        while (i < NEXT_TABLE_SUCCESSOR_TABLE_DEPTH)
             merge.pred_map_loca[logical_id][i++].pred_map_loca_next_table = 0x1ff; }
 }
+template void GatewayTable::write_next_table_regs(Target::JBay::mau_regs &regs);
 
 template<> void GatewayTable::standalone_write_regs(Target::JBay::mau_regs &regs) {
     // FIXME -- factor this with JBay MatchTable::write_regs
@@ -65,3 +68,4 @@ template<> void GatewayTable::standalone_write_regs(Target::JBay::mau_regs &regs
                                 ~merge.logical_table_thread[0].logical_table_thread_ingress &
                                 ~merge.pred_ghost_thread;
 }
+template void GatewayTable::standalone_write_regs(Target::JBay::mau_regs &regs);

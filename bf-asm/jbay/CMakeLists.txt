@@ -28,8 +28,15 @@ set_source_files_properties(
   PROPERTIES GENERATED TRUE)
 
 set (BFAS_JBAY_SRCS
+  jbay/gateway.cpp
   jbay/input_xbar.cpp
   jbay/parser.cpp
+  PARENT_SCOPE
+  )
+
+set (BFAS_JBAY_HEADERS
+  jbay/gateway.h
+  jbay/input_xbar.h
   PARENT_SCOPE
   )
 

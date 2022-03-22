@@ -182,6 +182,8 @@ struct IXBar {
         }
 
         std::string visualization_detail() const;
+        // get the FieldSlice object corresponding to this
+        PHV::FieldSlice field_slice(const PhvInfo &phv) const;
     };
 
     enum byte_type_t { NO_BYTE_TYPE, ATCAM, PARTITION_INDEX, RANGE };
@@ -198,6 +200,7 @@ struct IXBar {
         virtual bool is_parity_enabled() const = 0;
 
         // FIXME: Could be better created initialized through a constructor
+        // DANGER: .gdbinit should match up with this
         enum type_t { EXACT_MATCH, ATCAM_MATCH, TERNARY_MATCH, TRIE_MATCH, GATEWAY, ACTION,
                       PROXY_HASH, SELECTOR, METER, STATEFUL_ALU, HASH_DIST, TYPES }
             type = TYPES;

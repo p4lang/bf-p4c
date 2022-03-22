@@ -16,6 +16,8 @@ const Device::GatewaySpec &TofinoDevice::getGatewaySpec() const {
         /* .SupportXor = */     true,
         /* .SupportRange = */   true,
         /* .ExactShifts = */    1,
+        /* .ByteSwizzle = */    true,
+        /* .XorByteSlots = */   0xf0,
     };
     return spec; }
 #if HAVE_JBAY
@@ -28,6 +30,8 @@ const Device::GatewaySpec &JBayDevice::getGatewaySpec() const {
         /* .SupportXor = */     true,
         /* .SupportRange = */   true,
         /* .ExactShifts = */    5,
+        /* .ByteSwizzle = */    true,
+        /* .XorByteSlots = */   0xf0,
     };
     return spec; }
 #endif
@@ -41,19 +45,23 @@ const Device::GatewaySpec &CloudbreakDevice::getGatewaySpec() const {
         /* .SupportXor = */     true,
         /* .SupportRange = */   true,
         /* .ExactShifts = */    5,
+        /* .ByteSwizzle = */    true,
+        /* .XorByteSlots = */   0xf0,
     };
     return spec; }
 #endif
 #if HAVE_FLATROCK
 const Device::GatewaySpec &FlatrockDevice::getGatewaySpec() const {
     static const Device::GatewaySpec spec = {
-        /* .PhvBytes = */       8,
+        /* .PhvBytes = */       13,     // 8 vector + 5 fixed
         /* .HashBits = */       0,
-        /* .PredicateBits = */  0,  // gone?
+        /* .PredicateBits = */  0,      // gone?
         /* .MaxRows = */        24,
         /* .SupportXor = */     true,
         /* .SupportRange = */   false,
         /* .ExactShifts = */    1,
+        /* .ByteSwizzle = */    false,
+        /* .XorByteSlots = */   0xf0,
     };
     return spec;
 }
@@ -756,8 +764,10 @@ void CollectGatewayFields::postorder(const IR::Literal *) {
 }
 
 bool CollectGatewayFields::compute_offsets() {
+    if (info.empty()) return true;
     LOG5("CollectGatewayFields::compute_offsets" << DBPrint::Brief);
     LOG7(*this);
+    auto &gws = Device::gatewaySpec();
     bytes = bits = 0;
     std::vector<decltype(info)::value_type *> sort_by_size;
     for (auto &field : info) {
@@ -769,6 +779,42 @@ bool CollectGatewayFields::compute_offsets() {
                   return a->first.size() > b->first.size(); });
     std::map<std::pair<PHV::Container, unsigned>, int>       alloc_bytes;
     PHV::FieldUse use_read(PHV::FieldUse::READ);
+
+    if (!gws.ByteSwizzle && ixbar) {
+        // can't byteswizzle on this target, so every field must be allocated to a fixed
+        // spot based on the ixbar
+        for (auto &byte : ixbar->use) {
+            auto alloc_byte = std::make_pair(byte.container, byte.lo/8U);
+            // FIXME -- for Flatrock, can access either group 0 or 1, so need to give them
+            // different byte addresses in the match.  This should be more flexible to support
+            // other schemes too
+            int b = byte.loc.group*8 + byte.loc.byte;
+            alloc_bytes[alloc_byte] = b;
+            if (b >= bytes) bytes = b+1; }
+        // another odd problem -- xors can generally only go one way (can xor bytes 4-7 into
+        // bytes 0-3, but not the reverse on flatrock), so we need to make sure that the
+        // xor_with is going in the right direction for how ixbar allocated things.  So we
+        // look for cases that are wrong and try reversing them.  If that also doesn't
+        // work, fail.
+        for (auto &i : this->info) {
+            if (i.second.xor_with.empty()) continue;  // no xor so ok
+            bool can_xor = true;
+            i.first.foreach_byte(tbl, &use_read, [&](const PHV::AllocSlice &sl) {
+                int b = alloc_bytes.at(sl.container_byte());
+                if (!((gws.XorByteSlots >> b) & 1))
+                    can_xor = false; });
+            if (can_xor) continue;   // can xor, so ok
+            can_xor = true;
+            for (auto &xor_with : i.second.xor_with) {
+                xor_with.foreach_byte(tbl, &use_read, [&](const PHV::AllocSlice &sl) {
+                int b = alloc_bytes.at(sl.container_byte());
+                if (!((gws.XorByteSlots >> b) & 1))
+                    can_xor = false; }); }
+            if (!can_xor) return false;  // reverse fails, so fail
+            for (auto &xor_with : i.second.xor_with)
+                this->info.at(xor_with).xor_with.insert(i.first);
+            i.second.xor_with.clear(); } }
+
     for (auto &i : this->info) {
         auto &field = i.first;
         auto &info = i.second;
@@ -776,7 +822,7 @@ bool CollectGatewayFields::compute_offsets() {
             auto &with = this->info[xor_with];
             int shift = field.range().lo - xor_with.range().lo;
             xor_with.foreach_byte(tbl, &use_read, [&](const PHV::AllocSlice &sl) {
-                auto alloc_byte = std::make_pair(sl.container(), sl.container_slice().lo/8U);
+                auto alloc_byte = sl.container_byte();
                 bool duplicate = alloc_bytes.count(alloc_byte);
                 auto bit = (duplicate ? alloc_bytes.at(alloc_byte) : bytes) * 8U +
                            sl.container_slice().lo % 8U;
@@ -804,7 +850,7 @@ bool CollectGatewayFields::compute_offsets() {
         if (!info.need_range && !info.const_eq) continue;
         int size = field.is_unallocated() ? (field.size() + 7)/8U : field.container_bytes();
         bitvec field_bits(field.range().lo, field.size());  // bits of the field needed
-        if (ixbar && Device::gatewaySpec().HashBits > 0) {
+        if (auto ixbar = dynamic_cast<const Tofino::IXBar::Use *>(this->ixbar)) {
             for (auto &f : ixbar->bit_use) {
                 if (f.field == field.field()->name && field.range().overlaps(f.lo, f.hi())) {
                     // Portions of the field could be in the hash vs in the search bus, and
@@ -820,7 +866,7 @@ bool CollectGatewayFields::compute_offsets() {
                     if (f.bit + b.hi - f.lo >= bits)
                         bits = f.bit + b.hi - f.lo + 1; } }
             if (field_bits.empty()) continue; }
-        if ((bytes+size > Device::gatewaySpec().PhvBytes && size == 1) || info.need_range) {
+        if ((bytes+size > gws.PhvBytes && size == 1) || info.need_range) {
             BUG_CHECK(field_bits.ffz(field.range().lo) == size_t(field.range().hi + 1),
                       "field only partly in hash needed all in hash");
             info.offsets.emplace_back(bits + 32, field.range());
@@ -851,7 +897,7 @@ bool CollectGatewayFields::compute_offsets() {
                      [](const need_alloc_t &a, const need_alloc_t &b) {
                              return a.slice.width() > b.slice.width(); });
     for (need_alloc_t &n : need_alloc) {
-        if (bytes < Device::gatewaySpec().PhvBytes) {
+        if (bytes < gws.PhvBytes) {
             auto bit = (bytes * 8U) + (n.slice.container_slice().lo % 8U);
             n.info->offsets.emplace_back(bit, n.slice.field_slice());
             LOG5("  byte " << bytes << ' ' << *n.field << ' ' << n.slice);
@@ -862,8 +908,8 @@ bool CollectGatewayFields::compute_offsets() {
             bits += n.slice.width(); } }
 
     LOG6("CollectGatewayFields::compute_offsets finished" << *this << DBPrint::Reset);
-    if (bytes > Device::gatewaySpec().PhvBytes) return false;
-    if (bits > Device::gatewaySpec().HashBits) return false;
+    if (bytes > gws.PhvBytes) return false;
+    if (bits > gws.HashBits) return false;
     return bits <= IXBar::get_hash_single_bits();
 }
 
@@ -997,9 +1043,12 @@ void GatewayRangeMatch::postorder(IR::MAU::Table *tbl) {
 bool CheckGatewayExpr::preorder(const IR::MAU::Table *tbl) {
     CollectGatewayFields collect(phv);
     tbl->apply(collect);
-    if (!collect.compute_offsets())
-        error("%s: condition too complex, limit of 4 bytes + %d  bits of PHV input exceeded",
-              tbl->srcInfo, IXBar::get_hash_single_bits());
+    if (!collect.compute_offsets()) {
+        char tmp[32] = { 0 };
+        if (Device::gatewaySpec().HashBits > 0)
+            snprintf(tmp, sizeof tmp, " + %d bits", IXBar::get_hash_single_bits());
+        error("%s: condition too complex, limit of %d bytes%s of PHV input exceeded",
+              tbl->srcInfo, Device::gatewaySpec().PhvBytes, tmp); }
     return true;
 }
 
@@ -1064,13 +1113,15 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
         uint64_t val = cmplmask & mask;
         mask &= andmask & ~ormask;
         mask <<= match_field.range().lo;
-        auto &field_info = fields.info.at({field, bits});
-        auto &match_info = fields.info.at(match_field);
-        LOG4("  match_info = " << match_info << ", mask=0x" << hex(mask) << " shift=" << shift);
-        LOG4("  xor_match_info = " << field_info);
-        auto it = field_info.xor_offsets.begin();
-        auto end = field_info.xor_offsets.end();
-        for (auto &off : match_info.offsets) {
+        auto *field_info = &fields.info.at({field, bits});
+        auto *match_info = &fields.info.at(match_field);
+        if (match_info->offsets.empty() && !match_info->xor_offsets.empty())
+            std::swap(field_info, match_info);
+        LOG4("  match_info = " << *match_info << ", mask=0x" << hex(mask) << " shift=" << shift);
+        LOG4("  xor_match_info = " << *field_info);
+        auto it = field_info->xor_offsets.begin();
+        auto end = field_info->xor_offsets.end();
+        for (auto &off : match_info->offsets) {
             while (it != end && it->first < off.first) ++it;
             if (it == end) break;
             if (off.first < it->first) continue;

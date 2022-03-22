@@ -28,8 +28,15 @@ add_custom_command(OUTPUT ${GEN_TOFINO_HDRS} ${GEN_TOFINO_SRCS}
   COMMENT "Generating cpp code for tofino from tofino/chip.schema")
 
 set (BFAS_TOFINO_SRCS
+  tofino/gateway.cpp
   tofino/input_xbar.cpp
   tofino/parser.cpp
+  PARENT_SCOPE
+  )
+
+set (BFAS_TOFINO_HEADERS
+  tofino/gateway.h
+  tofino/input_xbar.h
   PARENT_SCOPE
   )
 

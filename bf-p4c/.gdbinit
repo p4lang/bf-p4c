@@ -476,8 +476,8 @@ class IXBarUseBytePrinter(object):
 
 class IXBarUsePrinter(object):
     "Print an IXBar::Use object"
-    use_types = [ "Exact", "ATCam", "Ternary", "Trie", "Gateway", "ProxyHash", "Selector",
-                  "Meter", "StatefulAlu", "HashDist" ]
+    use_types = [ "Exact", "ATCam", "Ternary", "Trie", "Gateway", "Action",
+        "ProxyHash", "Selector", "Meter", "StatefulAlu", "HashDist" ]
     hash_dist_use_types = [ "CounterAdr", "MeterAdr", "MeterAdrAndImmed", "ActionAdr",
                             "Immed", "PreColor", "HashMod" ]
     def __init__(self, val):
@@ -501,16 +501,17 @@ class IXBarUsePrinter(object):
                 if type_tag >= 0 and type_tag < len(self.hash_dist_use_types):
                     rv += "/" + self.hash_dist_use_types[type_tag]
             rv += self.use_array(self.val['use'], '   ')
-            for i in range(0, vec_size(self.val['hash_table_inputs'])):
-                hti = vec_at(self.val['hash_table_inputs'], i)
-                if hti != 0:
-                    rv += "\n   hash_group[%d]: " % i
-                    j = 0
-                    while hti > 0:
-                        if hti % 2 != 0:
-                            rv += "%d " % j
-                        j += 1
-                        hti /= 2
+            if any(field.name == 'hash_table_inputs' for field in self.val.type.fields()):
+                for i in range(0, vec_size(self.val['hash_table_inputs'])):
+                    hti = vec_at(self.val['hash_table_inputs'], i)
+                    if hti != 0:
+                        rv += "\n   hash_group[%d]: " % i
+                        j = 0
+                        while hti > 0:
+                            if hti % 2 != 0:
+                                rv += "%d " % j
+                            j += 1
+                            hti /= 2
             if any(field.name == 'bit_use' for field in self.val.type.fields()):
                 for i in range(0, vec_size(self.val['bit_use'])):
                     rv += "\n   bit_use[" + str(i) +"]: "
@@ -541,7 +542,7 @@ class IXBarUsePrinter(object):
                     rv += " group=" + str(hdh['group'])
                     rv += " gm_bits=" + str(hdh['galois_matrix_bits'])
                     rv += " algorithm=" + str(hdh['algorithm'])
-            if type_tag == 8 and any(field.name == 'salu_input_source' for field in self.val.type.fields()):
+            if type_tag == 9 and any(field.name == 'salu_input_source' for field in self.val.type.fields()):
                 sis = self.val['salu_input_source']
                 rv += "\n   data_bytemask=%x hash_bytemask=%x" % (
                             sis['data_bytemask'], sis['hash_bytemask'])
@@ -571,6 +572,25 @@ class PHVContainerPrinter(object):
             return "<invalid PHV::Container>"
         rv = self.container_kinds[tk] + self.container_sizes[ts] + str(self.val['index_'])
         return rv;
+
+class PHVFieldSlicePrinter(object):
+    "Print a PHV::FieldSlice object"
+    def __init__(self, val):
+        self.val = val
+    def to_string(self):
+        field = self.val['field_i']
+        lo = self.val['range_i']['lo']
+        hi = self.val['range_i']['hi']
+        if field == 0:
+            return "<invalid>"
+        rv = str(field['name']['str'])
+        if lo > 0 or hi != -1:
+            rv += '['
+            if hi != -1: rv += str(hi)
+            rv += ':'
+            if lo != -1: rv += str(lo)
+            rv += ']'
+        return rv
 
 class SlicePrinter(object):
     "Print a Slice object"
@@ -649,6 +669,8 @@ def bfp4c_pp(val):
         return PHVBitPrinter(val)
     if val.type.tag == 'PHV::Container':
         return PHVContainerPrinter(val)
+    if val.type.tag == 'PHV::FieldSlice':
+        return PHVFieldSlicePrinter(val)
     if val.type.tag == 'Slice':
         return SlicePrinter(val)
     if val.type.tag == 'UniqueId':

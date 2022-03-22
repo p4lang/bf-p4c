@@ -170,6 +170,9 @@ class AllocSlice {
     DarkInitPrimitive& getInitPrimitive() { return init_i; }
     const StageAndAccess& getEarliestLiveness() const { return min_stage_i; }
     const StageAndAccess& getLatestLiveness() const { return max_stage_i; }
+    std::pair<Container, unsigned> container_byte() const {
+        BUG_CHECK(container_bit_lo_i%8U + width_i <= 8U, "%s is not in one container byte", *this);
+        return std::make_pair(container_i, container_bit_lo_i/8U); }
 
     bool hasInitPrimitive() const;
 

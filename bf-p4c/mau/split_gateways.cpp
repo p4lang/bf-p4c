@@ -70,7 +70,7 @@ const IR::MAU::Table *SplitComplexGateways::preorder(IR::MAU::Table *tbl) {
         BUG("Must run SplitComplexGateways before attaching gateways to match tables");
     CollectGatewayFields collect(phv);
     tbl->apply(collect);
-    if (collect.compute_offsets() && tbl->gateway_rows.size() <= 5)
+    if (collect.compute_offsets() && tbl->gateway_rows.size() <= Device::gatewaySpec().MaxRows + 1)
         return tbl;
     LOG1("Trying to split gateway " << tbl->name << tbl->gateway_rows << collect);
     for (unsigned i = tbl->gateway_rows.size() - 2; i > 0; --i) {

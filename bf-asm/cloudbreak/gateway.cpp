@@ -1,4 +1,6 @@
-/* gateway template specializations for cloudbreak -- #included directly in gateway.cpp */
+#include "gateway.h"
+
+#include <stage.h>
 
 // FIXME -- factor better with JBay code
 template<> void GatewayTable::write_next_table_regs(Target::Cloudbreak::mau_regs &regs) {
@@ -32,9 +34,10 @@ template<> void GatewayTable::write_next_table_regs(Target::Cloudbreak::mau_regs
             merge.pred_map_glob[logical_id][i].pred_map_long_brch |= n.long_branch_tags();
             ++i; }
         // is this needed?  The model complains if we leave the unused slots as 0
-        while(i < NEXT_TABLE_SUCCESSOR_TABLE_DEPTH)
+        while (i < NEXT_TABLE_SUCCESSOR_TABLE_DEPTH)
             merge.pred_map_loca[logical_id][i++].pred_map_loca_next_table = 0x1ff; }
 }
+template void GatewayTable::write_next_table_regs(Target::Cloudbreak::mau_regs &regs);
 
 template<> void GatewayTable::standalone_write_regs(Target::Cloudbreak::mau_regs &regs) {
     // FIXME -- factor this with Cloudbreak MatchTable::write_regs
@@ -66,3 +69,4 @@ template<> void GatewayTable::standalone_write_regs(Target::Cloudbreak::mau_regs
                                 ~merge.logical_table_thread[0].logical_table_thread_ingress &
                                 ~merge.pred_ghost_thread;
 }
+template void GatewayTable::standalone_write_regs(Target::Cloudbreak::mau_regs &regs);

@@ -283,6 +283,13 @@ std::string IXBar::FieldInfo::visualization_detail() const {
     return rv;
 }
 
+PHV::FieldSlice IXBar::FieldInfo::field_slice(const PhvInfo &phv) const {
+    le_bitrange bits(lo, hi);
+    auto finfo = phv.field(field);
+    BUG_CHECK(finfo, "%s is not a field?", field);
+    return PHV::FieldSlice(finfo, bits);
+}
+
 /** Visualization Details on what bits are used within a particular byte are used within a
  *  table.  Unused bits are printed out as unused
  */

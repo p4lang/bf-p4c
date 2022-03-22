@@ -22,6 +22,8 @@ struct Device::GatewaySpec {
     bool        SupportXor;
     bool        SupportRange;
     int         ExactShifts;
+    bool        ByteSwizzle;
+    unsigned    XorByteSlots;
 };
 
 class CanonGatewayExpr : public MauTransform {
@@ -66,7 +68,7 @@ class CanonGatewayExpr : public MauTransform {
 
 class CollectGatewayFields : public Inspector {
     const PhvInfo               &phv;
-    const Tofino::IXBar::Use    *ixbar = nullptr;
+    const IXBar::Use            *ixbar = nullptr;
     const IR::MAU::Table        *tbl = nullptr;
     unsigned            row_limit = ~0U;   // FIXME -- needed?  only use by SplitComplexGateways
     PHV::FieldSlice     xor_match;
@@ -87,7 +89,7 @@ class CollectGatewayFields : public Inspector {
     bool                                          need_range = false;
     int                                           bytes = 0, bits = 0;
     explicit CollectGatewayFields(const PhvInfo &phv, const IXBar::Use *ix = nullptr)
-    : phv(phv), ixbar(dynamic_cast<const Tofino::IXBar::Use *>(ix)) {}
+    : phv(phv), ixbar(ix) {}
     CollectGatewayFields(const PhvInfo &phv, unsigned rl) : phv(phv), row_limit(rl) {}
     bool compute_offsets();
     friend std::ostream &operator<<(std::ostream &, const info_t &);
@@ -99,8 +101,8 @@ class CollectMatchFieldsAsGateway : public CollectGatewayFields {
     bool preorder(const IR::MAU::Table *tbl) override;
 
  public:
-    explicit CollectMatchFieldsAsGateway(const PhvInfo &phv)
-    : CollectGatewayFields(phv), fail(false) {}
+    explicit CollectMatchFieldsAsGateway(const PhvInfo &phv, const IXBar::Use *ixb = nullptr)
+    : CollectGatewayFields(phv, ixb), fail(false) {}
     explicit operator bool() { return !fail; }
 };
 

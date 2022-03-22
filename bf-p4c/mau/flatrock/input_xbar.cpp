@@ -193,12 +193,14 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
                        const LayoutOption *lo) {
     if (tbl->gateway_rows.empty()) return true;
     LOG1("IXBar::allocGateway(" << tbl->name << ")");
+    alloc.type = Use::GATEWAY;
+    alloc.used_by = tbl->build_gateway_name();
     CollectGatewayFields *collect;
 
     if (lo && lo->layout.gateway_match) {
-        collect = new CollectMatchFieldsAsGateway(phv);
+        collect = new CollectMatchFieldsAsGateway(phv, &alloc);
     } else {
-        collect = new CollectGatewayFields(phv);
+        collect = new CollectGatewayFields(phv, &alloc);
     }
 
     tbl->apply(*collect);
@@ -240,9 +242,8 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
         LOG3("collect.compute_offsets failed?");
         return false; }
 
-    alloc.type = Use::GATEWAY;
-    alloc.used_by = tbl->build_gateway_name();  // FIXME -- two different, inconsistent names
-    update(tbl->name + "$gw", alloc);           // here?  Comes from tofino/input_xbar.cpp org
+    // FIXME -- different, inconsistent name from alloc.used_by here?
+    update(tbl->name + "$gw", alloc);   //  Comes from tofino/input_xbar.cpp org
     return true;
 }
 

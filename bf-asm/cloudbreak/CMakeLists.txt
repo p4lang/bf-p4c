@@ -28,8 +28,15 @@ set_source_files_properties(
   PROPERTIES GENERATED TRUE)
 
 set (BFAS_CLOUDBREAK_SRCS
+  cloudbreak/gateway.cpp
   cloudbreak/input_xbar.cpp
   cloudbreak/parser.cpp
+  PARENT_SCOPE
+  )
+
+set (BFAS_CLOUDBREAK_HEADERS
+  cloudbreak/gateway.h
+  cloudbreak/input_xbar.h
   PARENT_SCOPE
   )
 

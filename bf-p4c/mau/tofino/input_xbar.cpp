@@ -2211,11 +2211,13 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     int hash_bus_bits = 0;
     bool xor_required = false;
     CollectGatewayFields *collect;
+    alloc.type = Use::GATEWAY;
+    alloc.used_by = tbl->build_gateway_name();
 
     if (lo && lo->layout.gateway_match) {
-        collect = new CollectMatchFieldsAsGateway(phv);
+        collect = new CollectMatchFieldsAsGateway(phv, &alloc);
     } else {
-        collect = new CollectGatewayFields(phv);
+        collect = new CollectGatewayFields(phv, &alloc);
     }
 
     tbl->apply(*collect);
@@ -2277,9 +2279,6 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
         if (xor_required)
             alloc.gw_search_bus_bytes += GATEWAY_SEARCH_BYTES;
     }
-
-    alloc.type = Use::GATEWAY;
-    alloc.used_by = tbl->build_gateway_name();
 
     if (collect->bits > 0) {
         // Per use hash table information vs. potential shared across the hash function
