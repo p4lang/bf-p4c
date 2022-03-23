@@ -1134,7 +1134,7 @@ AllocScore ScoreContext::make_score(
         alloc, phv, clot, uses, f_ps, cp, tp_opt, packing_opportunities_i, bitmasks);
 }
 
-
+// Check if all slices are mutually exclusive with field
 /* static */
 bool CoreAllocation::can_overlay(
         const SymBitMatrix& mutex,
@@ -1144,6 +1144,17 @@ bool CoreAllocation::can_overlay(
         if (!mutex(f->id, slice.field()->id))
             return false;
     return true;
+}
+
+// Check if there is at least one mutually exclusive slice in container
+bool CoreAllocation::some_overlay(
+    const SymBitMatrix& mutex,
+    const PHV::Field* f,
+    const ordered_set<PHV::AllocSlice>& slices) {
+    for (const auto& slice : slices)
+        if (mutex(f->id, slice.field()->id))
+            return true;
+    return false;
 }
 
 bool CoreAllocation::can_physical_liverange_overlay(
@@ -1159,6 +1170,16 @@ bool CoreAllocation::can_physical_liverange_overlay(
         }
     }
     return true;
+}
+
+bool CoreAllocation::hasARAinits(ordered_set<PHV::AllocSlice> slices) const {
+    for (auto sl : slices) {
+        if (sl.getInitPrimitive().isAlwaysRunActionPrim()) {
+            LOG_DEBUG5(TAB2 ".. some AllocSlices have ARA inits");
+            return true;
+        }
+    }
+    return false;
 }
 
 bool CoreAllocation::satisfies_constraints(
@@ -1734,6 +1755,7 @@ bool CoreAllocation::hasCrossingLiveranges(std::vector<PHV::AllocSlice> candidat
 // then turn off ARA initializations; instead use regular table inits
 bool CoreAllocation::checkDarkOverlay(const std::vector<PHV::AllocSlice>& candidate_slices,
                                       const PHV::Transaction& alloc) const {
+    bool canUseARA = true;
     bitvec cntr_bits;
 
     for (const auto& sl : candidate_slices) {
@@ -1741,9 +1763,12 @@ bool CoreAllocation::checkDarkOverlay(const std::vector<PHV::AllocSlice>& candid
 
         // Find slices that can be dark overlaid
         if (can_overlay(utils_i.phv.dark_mutex(), sl.field(), alloced_slices)) {
-            // Skip the ones that can also be meta and parser overlaid
-            if (can_overlay(utils_i.phv.metadata_mutex(), sl.field(), alloced_slices) ||
-                can_overlay(utils_i.mutex(), sl.field(), alloced_slices)) continue;
+            // Disable use of ARA if container contains mutually exclusive slices
+            if (some_overlay(utils_i.mutex(), sl.field(), alloced_slices)) {
+                canUseARA = false;
+                LOG_FEATURE("alloc_progress", 5, " ... cannot use ARA due to mutex overlay!");
+                break;
+            }
 
             // *ALEX* TODO: Could add checks for liveranges if initializations
             //              may happen at different stages
@@ -1754,7 +1779,8 @@ bool CoreAllocation::checkDarkOverlay(const std::vector<PHV::AllocSlice>& candid
         }
     }
 
-    return cntr_bits.is_contiguous();
+    canUseARA = canUseARA && cntr_bits.is_contiguous();
+    return canUseARA;
 }
 
 PHV::Transaction CoreAllocation::make_speculated_alloc(
@@ -2208,15 +2234,40 @@ bool CoreAllocation::try_dark_overlay(
             perContainerAlloc.slicesByLiveness(c, candidate_slices);
         // Actual slices in the container, after accounting for metadata overlay.
         PHV::Allocation::MutuallyLiveSlices actual_cntr_state;
+        PHV::Allocation::MutuallyLiveSlices actual_cntr_state2;
         for (auto& field_slice : container_state) {
-            bool sliceOverlaysAllCandidates = true;
+            LOG_DEBUG5("   Container Slice: " << field_slice);
             for (auto& candidate_slice : candidate_slices) {
+                LOG_DEBUG5(TAB2 " A. overlap check for slices " << field_slice <<
+                           " and " << candidate_slice);
                 if (!utils_i.phv.metadata_mutex()(field_slice.field()->id,
-                                                    candidate_slice.field()->id))
-                    sliceOverlaysAllCandidates = false;
+                                                  candidate_slice.field()->id)) {
+                    actual_cntr_state.insert(field_slice);
+                    break;
+                }
             }
-            if (sliceOverlaysAllCandidates) continue;
-            actual_cntr_state.insert(field_slice);
+
+            // Add to container state allocated fields that overlap with existing fields
+            // overlaid with candidate fields
+            for (auto& alloc_slice : alloced_slices) {
+                LOG_DEBUG5(TAB2 " B. overlap check for slices " << field_slice <<
+                           " and " << alloc_slice);
+                if (alloc_slice != field_slice &&
+                    !utils_i.phv.field_mutex()(field_slice.field()->id,
+                                              alloc_slice.field()->id) &&
+                    !utils_i.phv.metadata_mutex()(field_slice.field()->id,
+                                                  alloc_slice.field()->id)) {
+                    actual_cntr_state2.insert(field_slice);
+                    break;
+                }
+            }
+        }
+
+        for (auto c_sl : actual_cntr_state2) {
+            if (!actual_cntr_state.count(c_sl)) {
+                LOG_DEBUG5("  Slice " << c_sl << " not found in actual_cntr_state");
+                actual_cntr_state.insert(c_sl);
+            }
         }
 
         auto darkInitNodes = utils_i.dark_init.findInitializationNodes(
@@ -2274,7 +2325,7 @@ bool CoreAllocation::check_metadata_and_dark_overlay(
     // information about the initialization required and allocated slices for later
     // constraint verification.
     std::vector<PHV::AllocSlice> dark_slices;
-    for (const auto& slice : complex_overlay_slices){
+    for (const auto& slice : complex_overlay_slices) {
         const auto& alloced_slices =
             perContainerAlloc.slices(slice.container(), slice.container_slice());
         bool metadataOverlay = overlay_info.at(slice).metadata_overlay;
@@ -2664,8 +2715,11 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
             const auto& alloced_slices =
                 perContainerAlloc.slices(slice.container(), slice.container_slice());
 
+            // For mutually exclusive overlay take into account use of
+            // ARA initialized slices -- ARA initializations break mutex property
             const bool control_flow_overlay =
-                can_overlay(utils_i.mutex(), slice.field(), alloced_slices);
+                can_overlay(utils_i.mutex(), slice.field(), alloced_slices) &&
+                !hasARAinits(alloced_slices);
             const bool physical_liverange_overlay =
                 utils_i.settings.physical_liverange_overlay &&
                 can_physical_liverange_overlay(slice, alloced_slices);
@@ -2783,7 +2837,8 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
                 } else {
                     this_alloc.allocate(slice, nullptr, singleGressParserGroups); }
             } else if (!is_referenced && !slice.field()->isGhostField()) {
-                LOG_DEBUG5("NOT ALLOCATING unreferenced field: " << slice); } }
+                LOG_FEATURE("alloc_progress", 5, "NOT ALLOCATING unreferenced field: " << slice);
+            } }
 
         // Add metadata initialization information for previous allocated slices. As more and more
         // slices get allocated, the initialization actions for already allocated slices in the
@@ -2933,6 +2988,7 @@ bool CoreAllocation::generateNewAllocSlices(
     // Create mapping from sources of writes to bitranges for each stage
     std::map<int, std::map<PHV::Container, bitvec> > perStageSources2Ranges;
     for (auto& newSlice : initializedAllocSlices) {
+        LOG_DEBUG6(TAB2 " newSlice: " << newSlice);
         // Init stage of newSlice
         int initStg = newSlice.getEarliestLiveness().first;
         // srcCntr is not set for zeroInits and NOPs
@@ -2947,10 +3003,10 @@ bool CoreAllocation::generateNewAllocSlices(
             perStageSources2Ranges[initStg][srcCntr].setrange(cBits.lo, cBits.size());
 
             if (srcCntr == PHV::Container()) {
-                LOG_DEBUG6(TAB2 "Adding bits " << cBits << " for stage " << initStg
+                LOG_DEBUG6(TAB2 "  Adding bits " << cBits << " for stage " << initStg
                            << " from zero init");
             } else {
-                LOG_DEBUG6(TAB2 "Adding bits " << cBits << " for stage " << initStg
+                LOG_DEBUG6(TAB2 "  Adding bits " << cBits << " for stage " << initStg
                            << " from source container " << srcCntr);
             }
         }
@@ -2960,6 +3016,7 @@ bool CoreAllocation::generateNewAllocSlices(
 
         if (new_container_state.size() > 1) {
             for (auto mls : new_container_state) {
+                LOG_DEBUG6(TAB3 "mlsSlice: " << mls);
                 le_bitrange mlsBits = mls.container_slice();
 
                 // If mls is overlaid with origSlice then skip mls

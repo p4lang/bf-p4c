@@ -313,7 +313,7 @@ boost::optional<DarkLiveRange::ReadWritePair> DarkLiveRange::getFieldsLiveAtStag
                 // *ALEX* This will reject overlays with packed fields that have
                 // READs in the same stage. We should add the capability
                 // to overlay with packed fields that have smae-stage READs
-                LOG_DEBUG4("Slices " << readField << " and " << sl << " already read in stage "
+                LOG_DEBUG4("Slices " << readField << " and " << sl << " both read in stage "
                            << ((stage == DEPARSER) ? "deparser" : std::to_string(stage)));
                 return boost::none;
             }
@@ -368,7 +368,7 @@ bool DarkLiveRange::validateLiveness(const OrderedFieldSummary& rv) const {
 }
 
 boost::optional<DarkLiveRange::OrderedFieldSummary> DarkLiveRange::produceFieldsInOrder(
-        const ordered_set<PHV::AllocSlice>& slices) const {
+    const ordered_set<PHV::AllocSlice>& slices, bool &onlyReadRefs) const {
     LOG_DEBUG5("Producing slices in order : " << slices);
     OrderedFieldSummary rv;
 
@@ -407,6 +407,8 @@ boost::optional<DarkLiveRange::OrderedFieldSummary> DarkLiveRange::produceFields
                     ++itr;
             }
 
+            // Slices have also write references
+            onlyReadRefs = false;
             auto& writeAccess = livemap.at(fieldsLiveAtStage->second->field(), i, WRITE);
             if (lastField != fieldsLiveAtStage->second) {
                 lastField = fieldsLiveAtStage->second;
@@ -480,9 +482,6 @@ boost::optional<DarkLiveRange::OrderedFieldSummary> DarkLiveRange::produceFields
     }
     LOG_DEBUG5(TAB1 "Number of updated with parser-only alloc slices sorted by liveness: "
                << rv2.size());
-    BUG_CHECK(rv2.size() > 1, "After accounting for parsed-only fields the number of"
-              " overlaid fields is less than 2...? ");
-
     return rv2;
 }
 
@@ -557,6 +556,57 @@ bool DarkLiveRange::isGroupDominatorEarlierThanFirstUseOfCurrentField(
     return true;
 }
 
+// @fields contains the candidate slice as well as the already
+//         allocated slices that will be overlaid with the candidate slice
+// @onlyReadCandidates is a flag that is set when the AllocSlices in @fields
+//         have only read references
+// @return is set to true if:
+//         there are write references for AllocSlices in @fields or
+//         in slices allocated to bits which will not be involved in the overlay
+bool DarkLiveRange::nonOverlaidWrites(
+    const ordered_set<PHV::AllocSlice>& fields,
+    const PHV::Transaction& alloc,
+    const PHV::Container c,
+    bool onlyReadCandidates) const {
+    bool rv = false;
+    boost::optional<le_bitrange> overlay_range = boost::none;
+
+    // if the AllocSlices in @fields are taking the entire container then
+    // there are no non-overlaid writes, i.e. all slices should be
+    // contained in @fields
+    for (auto f_slc : fields) {
+        if (!overlay_range) {
+            overlay_range = f_slc.container_slice();
+        } else {
+            *overlay_range |= f_slc.container_slice();
+        }
+    }
+
+    LOG_DEBUG5(TAB1 "Overlaid slices range: " << *overlay_range);
+
+    if (overlay_range->size() == c.size())
+        return rv;
+
+    // Check if there are more allocated slices than included in @fields
+    auto alloc_slices = alloc.slices(c);
+
+    // Examine allocated slices not included in @fields
+    bool onlyReadAlloc = true;
+    ordered_set<PHV::AllocSlice> non_overlap_slices;
+    for (auto alloc_slc : alloc_slices) {
+        // Only consider allocated slices in container bitrange not
+        // entailed in overlay_range
+        if (overlay_range->overlaps(alloc_slc.container_slice())) continue;
+        non_overlap_slices.insert(alloc_slc);
+    }
+    auto allocInOrder = produceFieldsInOrder(non_overlap_slices, onlyReadAlloc);
+
+    if (!(onlyReadCandidates && onlyReadAlloc))
+        rv = true;
+
+    return rv;
+}
+
 boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
         const PHV::ContainerGroup& group,
         const PHV::Container& c,
@@ -575,8 +625,17 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
     // for initialization in this scheme (unlike metadata initialization).
     // question: what if multiple slices are alive at the same stage? it can happen when dark
     // overlay mixes with parser overlay and metadata overlay due to live range shrinking.
-    auto fieldsInOrder = produceFieldsInOrder(fields);
+    bool onlyReadCandidates = true;
+    auto fieldsInOrder = produceFieldsInOrder(fields, onlyReadCandidates);
     if (!fieldsInOrder) return boost::none;
+
+    // For mocha containers check whether there are writes in
+    // non-overlaid container slices; We should not allow overlays then
+    if (c.is(PHV::Kind::mocha) && nonOverlaidWrites(fields, alloc, c, onlyReadCandidates)) {
+        LOG_FEATURE("alloc_progress", 5, TAB2 "Cannot overlay because container is mocha "
+            " and there are writes in non-overlaid container slices");
+        return boost::none;
+    }
 
     const OrderedFieldInfo* lastField = nullptr;
     unsigned idx = 0;
@@ -1349,7 +1408,6 @@ DarkLiveRange::generateInitForLastStageAlwaysInit(
     BUG("Did not find allocation for slice %1% in a dark container", field.field);
     return boost::none;
 }
-
 
 boost::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForCurrentFieldFromDark(
         const PHV::Container& c,

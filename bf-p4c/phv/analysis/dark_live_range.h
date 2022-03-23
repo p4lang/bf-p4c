@@ -246,7 +246,8 @@ class DarkLiveRange : public Inspector {
     void setFieldLiveMap(const PHV::Field* f);
 
     boost::optional<OrderedFieldSummary> produceFieldsInOrder(
-            const ordered_set<PHV::AllocSlice>& fields) const;
+        const ordered_set<PHV::AllocSlice>& fields,
+        bool &onlyReadRefs) const;
 
     boost::optional<ReadWritePair> getFieldsLiveAtStage(
             const ordered_set<PHV::AllocSlice>& fields,
@@ -341,6 +342,12 @@ class DarkLiveRange : public Inspector {
             const ordered_set<const IR::BFN::Unit*>& doms,
             const IR::MAU::Table* groupDominator) const;
 
+    bool nonOverlaidWrites(
+        const ordered_set<PHV::AllocSlice>& fields,
+        const PHV::Transaction& alloc,
+        const PHV::Container c,
+        bool onlyReadCandidates) const;
+
     boost::optional<PHV::DarkInitEntry> generateInitForLastStageAlwaysInit(
             const OrderedFieldInfo& field,
             const OrderedFieldInfo* previousField,
@@ -402,7 +409,12 @@ class DarkOverlay : public PassManager {
             const PHV::AllocSlice& slice,
             const PHV::Transaction& alloc,
             bool canUseARA) const {
-        if (!suitableForDarkOverlay(slice)) return boost::none;
+        if (!suitableForDarkOverlay(slice)) {
+            LOG_FEATURE("alloc_progress", 5, TAB2 "Dark overlay candidate " << slice <<
+                        " not a good fit for container " << slice.container());
+            return boost::none;
+        }
+
         ordered_set<PHV::AllocSlice> fields;
         PHV::Container c;
         for (auto& sl : alloced) {

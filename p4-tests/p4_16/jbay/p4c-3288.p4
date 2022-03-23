@@ -2138,7 +2138,7 @@ control LOU(inout switch_ingress_metadata_t ig_md) {
     }
 
 
-    @stage(1)
+    // @stage(1)
 
     @entries_with_ranges(table_size)
     table l4_dst_port {
@@ -2156,7 +2156,7 @@ control LOU(inout switch_ingress_metadata_t ig_md) {
     }
 
 
-    @stage(1)
+    // @stage(1)
 
     @entries_with_ranges(table_size)
     table l4_src_port {
@@ -8715,27 +8715,27 @@ const ping_pong_t ping_pong_ghost_write = 1;
 // ---------------------------------------------------------------------------
 
 // Ghost thread: queue depth value
-@stage(SFC_QUEUE_REG_STAGE_QD)
+// @stage(SFC_QUEUE_REG_STAGE_QD)
 Register<bit<32>, sfc_queue_idx_t>(SFC_QUEUE_IDX_SIZE) sfc_reg_qd_ping;
-@stage(SFC_QUEUE_REG_STAGE_QD)
+// @stage(SFC_QUEUE_REG_STAGE_QD)
 Register<bit<32>, sfc_queue_idx_t>(SFC_QUEUE_IDX_SIZE) sfc_reg_qd_pong;
 
 // Ghost thread: buffer pool memory utilization
-@stage(SFC_QUEUE_REG_STAGE_BP)
+// @stage(SFC_QUEUE_REG_STAGE_BP)
 Register<bit<32>, sfc_buffer_pool_idx_t>(SFC_BUFFER_IDX_SIZE) sfc_reg_bpmu_ping;
-@stage(SFC_QUEUE_REG_STAGE_BP)
+// @stage(SFC_QUEUE_REG_STAGE_BP)
 Register<bit<32>, sfc_buffer_pool_idx_t>(SFC_BUFFER_IDX_SIZE) sfc_reg_bpmu_pong;
 
 // Ghost thread: per-queue message counter
-@stage(SFC_QUEUE_REG_STAGE_CNT)
+// @stage(SFC_QUEUE_REG_STAGE_CNT)
 Register<bit<32>, sfc_queue_idx_t>(SFC_QUEUE_IDX_SIZE) sfc_ping_ghost_cnt_reg;
-@stage(SFC_QUEUE_REG_STAGE_CNT)
+// @stage(SFC_QUEUE_REG_STAGE_CNT)
 Register<bit<32>, sfc_queue_idx_t>(SFC_QUEUE_IDX_SIZE) sfc_pong_ghost_cnt_reg;
 
 // Ghost thread: total messages counter
-@stage(SFC_QUEUE_REG_STAGE_CNT)
+// @stage(SFC_QUEUE_REG_STAGE_CNT)
 Register<bit<32>, bit<1>>(2) sfc_ping_ghost_total_cnt_reg;
-@stage(SFC_QUEUE_REG_STAGE_CNT)
+// @stage(SFC_QUEUE_REG_STAGE_CNT)
 Register<bit<32>, bit<1>>(2) sfc_pong_ghost_total_cnt_reg;
 
 
@@ -8821,7 +8821,7 @@ control GhostThreadGhostWriteQueueBpUtilization(in ghost_metadata_t g_md) {
         qd_delta = qd_write_pong.execute(g_md.queue_register_idx);
     }
 
-    @stage(SFC_QUEUE_REG_STAGE_QD)
+    // @stage(SFC_QUEUE_REG_STAGE_QD)
     table tbl_qd_write_ping {
         key = { }
         actions = {
@@ -8831,7 +8831,7 @@ control GhostThreadGhostWriteQueueBpUtilization(in ghost_metadata_t g_md) {
         size = 1;
     }
 
-    @stage(SFC_QUEUE_REG_STAGE_QD)
+    // @stage(SFC_QUEUE_REG_STAGE_QD)
     table tbl_qd_write_pong {
         key = { }
         actions = {
@@ -8861,7 +8861,7 @@ control GhostThreadGhostWriteQueueBpUtilization(in ghost_metadata_t g_md) {
         bpmu_write_pong.execute(g_md.buffer_pool_idx);
     }
 
-    @stage(SFC_QUEUE_REG_STAGE_BP)
+    // @stage(SFC_QUEUE_REG_STAGE_BP)
     table tbl_bpmu_write_ping {
         key = { }
         actions = {
@@ -8871,7 +8871,7 @@ control GhostThreadGhostWriteQueueBpUtilization(in ghost_metadata_t g_md) {
         size = 1;
     }
 
-    @stage(SFC_QUEUE_REG_STAGE_BP)
+    // @stage(SFC_QUEUE_REG_STAGE_BP)
     table tbl_bpmu_write_pong {
         key = { }
         actions = {
@@ -8915,7 +8915,7 @@ control GhostThreadWriteGhostMessageCounter(in ghost_metadata_t g_md) {
        pong_ghost_cnt_write.execute(g_md.queue_register_idx);
    }
 
-   @stage(SFC_QUEUE_REG_STAGE_CNT)
+   // @stage(SFC_QUEUE_REG_STAGE_CNT)
    table tbl_ping_ghost_cnt_write {
        key = { }
        actions = {
@@ -8925,7 +8925,7 @@ control GhostThreadWriteGhostMessageCounter(in ghost_metadata_t g_md) {
        size = 1;
    }
 
-   @stage(SFC_QUEUE_REG_STAGE_CNT)
+   // @stage(SFC_QUEUE_REG_STAGE_CNT)
    table tbl_pong_ghost_cnt_write {
        key = { }
        actions = {
@@ -8948,7 +8948,7 @@ control GhostThreadWriteGhostMessageCounter(in ghost_metadata_t g_md) {
        pong_ghost_total_cnt_write.execute(0);
    }
 
-   @stage(SFC_QUEUE_REG_STAGE_CNT)
+   // @stage(SFC_QUEUE_REG_STAGE_CNT)
    table tbl_ping_ghost_total_cnt_write {
        key = {
 //           g_intr_md.isValid() : exact;
@@ -8960,7 +8960,7 @@ control GhostThreadWriteGhostMessageCounter(in ghost_metadata_t g_md) {
        size = 1;
    }
 
-   @stage(SFC_QUEUE_REG_STAGE_CNT)
+   // @stage(SFC_QUEUE_REG_STAGE_CNT)
    table tbl_pong_ghost_total_cnt_write {
        key = {
 //           g_intr_md.isValid() : exact;
@@ -9006,7 +9006,7 @@ control IngressThreadReadGhostQueueBpUtilization(inout switch_sfc_metadata_t sfc
         sfc.qlength = (buffer_memory_t)qd_read_pong.execute(sfc.queue_register_idx);
     }
 
-    @stage(SFC_QUEUE_REG_STAGE_QD)
+    // @stage(SFC_QUEUE_REG_STAGE_QD)
     table tbl_qd_read_ping {
         key = {}
         actions = {
@@ -9016,7 +9016,7 @@ control IngressThreadReadGhostQueueBpUtilization(inout switch_sfc_metadata_t sfc
         size = 1;
     }
 
-    @stage(SFC_QUEUE_REG_STAGE_QD)
+    // @stage(SFC_QUEUE_REG_STAGE_QD)
     table tbl_qd_read_pong {
         key = {}
         actions = {
@@ -9040,7 +9040,7 @@ control IngressThreadReadGhostQueueBpUtilization(inout switch_sfc_metadata_t sfc
         sfc.buffer_pool_usage = (buffer_memory_t)bpmu_read_pong.execute(sfc.buffer_pool_idx);
     }
 
-    @stage(SFC_QUEUE_REG_STAGE_BP)
+    // @stage(SFC_QUEUE_REG_STAGE_BP)
     table tbl_bpmu_read_ping {
         key = {}
         actions = {
@@ -9050,7 +9050,7 @@ control IngressThreadReadGhostQueueBpUtilization(inout switch_sfc_metadata_t sfc
         size = 1;
     }
 
-    @stage(SFC_QUEUE_REG_STAGE_BP)
+    // @stage(SFC_QUEUE_REG_STAGE_BP)
     table tbl_bpmu_read_pong {
         key = {}
         actions = {
@@ -9094,7 +9094,7 @@ control IngressThreadReadGhostMessageCounter(inout switch_sfc_metadata_t sfc) {
         sfc.ghost_pkt_cnt_queue = pong_ghost_cnt_read.execute(sfc.queue_register_idx);
     }
 
-    @stage(SFC_QUEUE_REG_STAGE_CNT)
+    // @stage(SFC_QUEUE_REG_STAGE_CNT)
     table tbl_ping_ghost_cnt_read {
         key = {}
         actions = {
@@ -9104,7 +9104,7 @@ control IngressThreadReadGhostMessageCounter(inout switch_sfc_metadata_t sfc) {
         size = 1;
     }
 
-    @stage(SFC_QUEUE_REG_STAGE_CNT)
+    // @stage(SFC_QUEUE_REG_STAGE_CNT)
     table tbl_pong_ghost_cnt_read {
         key = {}
         actions = {
@@ -9130,7 +9130,7 @@ control IngressThreadReadGhostMessageCounter(inout switch_sfc_metadata_t sfc) {
         sfc.ghost_pkt_cnt_total = pong_ghost_total_cnt_read.execute(0);
     }
 
-    @stage(SFC_QUEUE_REG_STAGE_CNT)
+    // @stage(SFC_QUEUE_REG_STAGE_CNT)
     table tbl_ping_ghost_total_cnt_read {
         // Yes, the match key is useless. However, if it is removed, the compile will complain
         // about an inintelligible issue, so I should stay for now.
@@ -9144,7 +9144,7 @@ control IngressThreadReadGhostMessageCounter(inout switch_sfc_metadata_t sfc) {
         size = 1;
     }
 
-    @stage(SFC_QUEUE_REG_STAGE_CNT)
+    // @stage(SFC_QUEUE_REG_STAGE_CNT)
     table tbl_pong_ghost_total_cnt_read {
         // Yes, the match key is useless. However, if it is removed, the compiler will complain
         // about an inintelligible issue, so I should stay for now.

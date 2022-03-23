@@ -5443,7 +5443,7 @@ control Yemassee(inout Dacono Baker, inout Empire Glenoma, in ingress_intrinsic_
     @name(".Caliente") action Caliente() {
         Glenoma.Earling.Basalt = Qulin.get<tuple<bit<2>, bit<30>>>({ Glenoma.Twain.Knoke[9:8], Glenoma.Earling.Kendrick[31:2] });
     }
-    @hidden @stage(0) @disable_atomic_modify(1) @name(".Padroni") table Padroni {
+    @hidden @disable_atomic_modify(1) @name(".Padroni") table Padroni {
         actions = {
             Caliente();
         }

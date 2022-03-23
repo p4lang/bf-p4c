@@ -82,12 +82,14 @@ format_alloc_slice(const PHV::AllocSlice& slice) {
 std::vector<std::string> getPrinterSliceRow(const PHV::AllocSlice &slice,
     const boost::optional<gress_t> &gress, bool first, bool hardwired = false) {
     auto formatted = format_alloc_slice(slice);
+    std::string is_ara("");
+    if (slice.getInitPrimitive().isAlwaysRunActionPrim()) is_ara += " ARA";
 
     return {
         first ? std::string(slice.container().toString()) : "",
         first ? (std::string(toSymbol(*gress)) + (hardwired ? "-HW" : "")) : "",
         formatted.first,
-        std::string(slice.field()->name + formatted.second)
+        std::string(slice.field()->name + formatted.second + is_ara)
     };
 }
 

@@ -4591,7 +4591,7 @@ control Poynette(inout Dacono Baker, inout Empire Glenoma, in egress_intrinsic_m
         Farner = Chunchula.get<tuple<bit<9>, bit<5>>>({ Basco.egress_port, Basco.egress_qid[4:0] });
         Wyanet.count((bit<12>)Farner);
     }
-    @disable_atomic_modify(1) @stage(0) @name(".ElJebel") table ElJebel {
+    @disable_atomic_modify(1) @name(".ElJebel") table ElJebel {
         actions = {
             Darden();
         }
@@ -5127,7 +5127,7 @@ control Powhatan(inout Dacono Baker, inout Empire Glenoma, in egress_intrinsic_m
         Laramie();
         Pinebluff.count();
     }
-    @stage(8) @disable_atomic_modify(1) @name(".Molino") table Molino {
+    @disable_atomic_modify(1) @name(".Molino") table Molino {
         actions = {
             Fentress();
             @defaultonly NoAction();
@@ -9753,7 +9753,7 @@ control RoseBud(inout Dacono Baker, inout Empire Glenoma, in egress_intrinsic_me
         Baker.Pineville.Eldred = DeerPark;
         Baker.Pineville.Chloride = Boyes;
     }
-    @disable_atomic_modify(1) @name(".Shauck") table Shauck {
+    @disable_atomic_modify(1) @placement_priority(- 10) @name(".Shauck") table Shauck {
         actions = {
             @tableonly Dresden();
             @defaultonly Ossipee();

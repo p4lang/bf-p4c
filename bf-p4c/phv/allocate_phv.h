@@ -453,10 +453,19 @@ class CoreAllocation {
             const PHV::Field* f,
             const ordered_set<PHV::AllocSlice>& slices);
 
+    /// @returns true if @p f can overlay at least one field in @p slices.
+    static bool some_overlay(
+            const SymBitMatrix& mutually_exclusive_field_ids,
+            const PHV::Field* f,
+            const ordered_set<PHV::AllocSlice>& slices);
+
     /// @returns true if @p slice can overlay all fields in @p allocated in terms
     /// of physical liveranges.
     bool can_physical_liverange_overlay(const PHV::AllocSlice& slice,
                                         const ordered_set<PHV::AllocSlice>& allocated) const;
+
+    /// @look for ARA inits in set of slices
+    bool hasARAinits(ordered_set<PHV::AllocSlice> slices) const;
 
     /// @returns true if slice list<-->container constraints are satisfied.
     bool satisfies_constraints(std::vector<PHV::AllocSlice> slices,

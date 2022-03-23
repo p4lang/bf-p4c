@@ -652,6 +652,7 @@ FindInitializationNode::findInitializationNodes(
     idx = 0;
     const PHV::Field* lastField = nullptr;
     static PHV::Allocation::ActionSet emptySet;
+    std::map<int, bool> fieldIsDarkInit;
 
     // For each metadata field that shares containers based on live ranges with other metadata:
     for (const auto* f : fieldsInOrder) {
@@ -664,6 +665,10 @@ FindInitializationNode::findInitializationNodes(
             ss << " " << g->name;
         LOG_DEBUG3(ss.str());
 
+        // Flag set for fields that are dark initialized
+        int dark_init_stage = -1;
+        PHV::AllocSlice* dark_slice = nullptr;
+
         // Set of dominator nodes for field f. These will also be the prime candidates for metadata
         // initialization, so these should not contain any gateways.
         ordered_set<const IR::BFN::Unit*> f_dominators;
@@ -673,14 +678,27 @@ FindInitializationNode::findInitializationNodes(
                   f->name);
         ordered_set<const IR::BFN::Unit*> alreadyInitializedUnits;
         for (auto& slice : field_to_slices.at(f)) {
+            LOG_DEBUG5(TAB1 "Checking slice " << slice << "  dark_init_stage=" << dark_init_stage);
             auto metaInitPoints = alloc.getInitPoints(slice);
             // ALEX: This is only accounting for the metadata init
             // points. Lets account for dark initialization points also.
             // *ALEX*: We are still missing the AlwaysRunAction inits.
             PHV::Allocation::ActionSet darkInitPoints;
             if (slice.hasInitPrimitive()) {
+                LOG_DEBUG5(TAB2 "... is marked darkInit:" << fieldIsDarkInit.count(f->id));
+                if (!fieldIsDarkInit[f->id] ||
+                    (dark_init_stage > slice.getEarliestLiveness().first)) {
+                    dark_init_stage = slice.getEarliestLiveness().first;
+                    dark_slice = new PHV::AllocSlice(slice);
+                }
+
+                if (slice.getInitPrimitive().isAlwaysRunActionPrim())
+                    fieldIsDarkInit[f->id] = true;
+
                 LOG_DEBUG5(TAB2 "Slice " << slice << " has darkInitPrim with "
-                           << slice.getInitPrimitive().getInitPoints().size() << " actions");
+                           << slice.getInitPrimitive().getInitPoints().size() <<
+                           " actions.  isAlwaysRun = " <<
+                           slice.getInitPrimitive().isAlwaysRunActionPrim());
 
                 darkInitPoints.insert(slice.getInitPrimitive().getInitPoints().begin(),
                                       slice.getInitPrimitive().getInitPoints().end());
@@ -873,6 +891,28 @@ FindInitializationNode::findInitializationNodes(
             LOG_DEBUG3(TAB2 "Only some strict dominators write to the field " << f->name);
         }
 
+        // if the slice of f contains ARA dark initializations then there
+        // is no need to add further inits
+        if (fieldIsDarkInit[f->id]) {
+            LOG_DEBUG3(TAB2 "ARA dark init field: " << f->name << "  with previous field:" <<
+                       lastField->name);
+
+            if (!fieldIsDarkInit[lastField->id] &&
+                dark_init_stage < livemap.at(lastField->id).second) {
+                LOG_DEBUG3(TAB2 "Failed: Dark init of field " << f->name << " (" <<
+                           dark_init_stage << ") overlaps with liverange of previous field " <<
+                           lastField->name << " (" << livemap.at(lastField->id).first << "-" <<
+                           livemap.at(lastField->id).second << ")");
+                return boost::none;
+            }
+
+            LOG_DEBUG3(TAB1 "No need to initialize dark-initialized field: " << f);
+            seenFields.insert(f);
+            lastField = f;
+            initPoints[f] = emptySet;
+            continue;
+        }
+
         // Calculate the stage where the previously used field was last used. Initialization can be
         // done in any stage between that identified stage and the stage in which the group
         // dominator is.
@@ -985,10 +1025,22 @@ FindInitializationNode::findInitializationNodes(
             LOG_DEBUG3(TAB2 "Initialization action: " << act->name);
         initPoints[f] = *initializationCandidates;
         seenFields.insert(f);
-        lastField = f;
+        // Check if liverange of corresponding slice is needed
+        for (auto& slice : alloced) {
+            if (slice.hasInitPrimitive() && !slice.getInitPrimitive().isAlwaysRunActionPrim()) {
+                if (dark_slice && (slice == *dark_slice)) {
+                    if (dark_slice->getEarliestLiveness().first > dg.min_stage(groupDominator)) {
+                        dark_slice->setEarliestLiveness(std::make_pair(dg.min_stage(groupDominator),
+                                                  PHV::FieldUse(PHV::FieldUse::WRITE)));
+                        LOG_DEBUG4(TAB2 "  Setting earliest liverange for slice " << *dark_slice);
+                    }
+                }
+            }
+        }
 
         LOG_DEBUG3(TAB2 "Need to insert dependencies from uses of " << lastField->name
                    << " to initialization of " << f->name);
+        lastField = f;
     }
     return initPoints;
 }
