@@ -116,6 +116,50 @@ TEST(action_constraint_solver, two_field_assign_src2_ne_dest) {
                 HasSubstr("destination H1 will be corrupted because src2 H2 is not equal to dest"));
 }
 
+TEST(action_constraint_solver, three_field_assign_one_unallocated) {
+    // allocation:
+    // action: { x = a, y = b, z = c };
+    // H1[0:11]  (x) <= H2[0:11]      (a)
+    // H1[12:13] (y) <= *unallocated* (b)
+    // H1[14:14] (z) <= H3[0]         (c)
+    // is okay because we may allocate b to H2[12:13].
+    // and there is no other live bits in H1.
+    auto solver = ActionMoveSolver();
+    solver.set_container_spec("H1", 16, bitvec(0, 15));
+    solver.set_container_spec("H2", 16, bitvec());
+    solver.set_container_spec("H3", 16, bitvec());
+    solver.add_assign(make_container_operand("H1", FromTo(0, 11)),
+                      make_container_operand("H2", FromTo(0, 11)));
+    solver.add_assign(make_container_operand("H1", FromTo(14, 14)),
+                      make_container_operand("H3", FromTo(0, 0)));
+    solver.add_src_unallocated_assign("H1", FromTo(12, 13));
+    auto rst = solver.solve();
+    EXPECT_TRUE(rst.ok());
+}
+
+TEST(action_constraint_solver, three_field_assign_one_unallocated_with_other_live_bits) {
+    // allocation:
+    // action: { x = a, y = b, z = c };
+    // H1[0:11]  (x) <= H2[0:11]      (a)
+    // H1[12:13] (y) <= *unallocated* (b)
+    // H1[14:14] (z) <= H3[0]         (c)
+    // is not okay H1[15:15] will be overwritten.
+    auto solver = ActionMoveSolver();
+    solver.set_container_spec("H1", 16, bitvec(0, 16));
+    solver.set_container_spec("H2", 16, bitvec());
+    solver.set_container_spec("H3", 16, bitvec());
+    solver.add_assign(make_container_operand("H1", FromTo(0, 11)),
+                      make_container_operand("H2", FromTo(0, 11)));
+    solver.add_assign(make_container_operand("H1", FromTo(14, 14)),
+                      make_container_operand("H3", FromTo(0, 0)));
+    solver.add_src_unallocated_assign("H1", FromTo(12, 13));
+    auto rst = solver.solve();
+    ASSERT_FALSE(rst.ok());
+    EXPECT_EQ(ErrorCode::deposit_src2_must_be_dest, rst.err->code);
+    EXPECT_THAT(rst.err->msg.c_str(),
+                HasSubstr("destination H1 will be corrupted because src2 H2 is not equal to dest"));
+}
+
 TEST(action_constraint_solver, two_field_assign_dest_no_live_bits) {
     // src2 is H2, not same as dest, dest DOES NOT have other fields, shifted by 1.
     auto solver = ActionMoveSolver();

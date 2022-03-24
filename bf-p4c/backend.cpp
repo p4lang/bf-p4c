@@ -100,7 +100,6 @@
 #include "bf-p4c/phv/dump_table_flow_graph.h"
 #include "bf-p4c/phv/finalize_stage_allocation.h"
 #include "bf-p4c/phv/phv_analysis.h"
-#include "bf-p4c/phv/trivial_alloc.h"
 
 namespace BFN {
 

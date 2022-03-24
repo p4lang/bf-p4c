@@ -788,14 +788,23 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
+  "error.*This program violates action constraints imposed by Tofino.|CANNOT_PACK_CANDIDATES"
+  extensions/p4_tests/p4_16/compile_only/multi-constraint.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error.*This program violates action constraints imposed by Tofino.|./p4c TIMEOUT|NO_SLICING_FOUND"
+  # Negative tests for violation of action constraints.
+  extensions/p4_tests/p4_16/customer/kaloom/p4c-1299.p4
+)
+
+p4c_add_xfail_reason("tofino"
   "error.*This program violates action constraints imposed by Tofino.|./p4c TIMEOUT"
 # Negative tests for violation of action constraints.
   extensions/p4_tests/p4_14/compile_only/action_conflict_1.p4
   extensions/p4_tests/p4_14/compile_only/action_conflict_3.p4
   extensions/p4_tests/p4_14/compile_only/action_conflict_7.p4
-  extensions/p4_tests/p4_16/customer/kaloom/p4c-1299.p4
   extensions/p4_tests/p4_16/customer/noviflow/p4c-1288.p4
-  extensions/p4_tests/p4_16/compile_only/multi-constraint.p4
   ../glass/testsuite/p4_tests/fujitsu/COMPILER-1141/static_acl_tun_tel.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-968/comp_968.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_with_nop.p4
@@ -803,12 +812,20 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
+  "This program violates action constraints imposed by Tofino|CANNOT_PACK_CANDIDATES"
+  extensions/p4_tests/p4_16/ptf/int_transit.p4 # CANNOT_PACK_CANDIDATES
+)
+
+p4c_add_xfail_reason("tofino"
+  "This program violates action constraints imposed by Tofino|NO_SLICING_FOUND"
+  testdata/p4_16_samples/strength3.p4 # NO_SLICING_FOUND
+  testdata/p4_16_samples/strength6.p4 # NO_SLICING_FOUND
+  testdata/p4_16_samples/issue1713-bmv2.p4 # NO_SLICING_FOUND
+)
+
+p4c_add_xfail_reason("tofino"
   "This program violates action constraints imposed by Tofino"
   extensions/p4_tests/p4_14/customer/arista/obfuscated-1.p4
-  extensions/p4_tests/p4_16/ptf/int_transit.p4
-  testdata/p4_16_samples/strength3.p4
-  testdata/p4_16_samples/strength6.p4
-  testdata/p4_16_samples/issue1713-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -832,7 +849,7 @@ p4c_add_xfail_reason("tofino"
 # P4C-1371
 # Errors because pa_container_size pragmas used in these tests cannot be satisfy all constraints.
 p4c_add_xfail_reason("tofino"
-  "Cannot find a slicing to satisfy @pa_container_size"
+  "Cannot find a slicing to satisfy @pa_container_size|NO_SLICING_FOUND"
   extensions/p4_tests/p4_14/customer/arista/p4c-1814.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-1114/case8156.p4
   ../glass/testsuite/p4_tests/phv/test_config_593_reduce_extraction_bandwidth_32.p4
@@ -1164,7 +1181,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue2392-bmv2.p4
 )
 p4c_add_xfail_reason("tofino"
-  "PHV allocation was not successful"
+  "PHV allocation was not successful|NO_VALID_SC_ALLOC_ALIGNMENT"
   testdata/p4_16_samples/issue1025-bmv2.p4
 )
 
@@ -1444,7 +1461,7 @@ p4c_add_xfail_reason("tofino"
 # P4C-2091
 # Expected failure (negative test)
 p4c_add_xfail_reason("tofino"
-  "error.*PHV allocation was not successful"
+  "error.*PHV allocation was not successful|CANNOT_PACK_CANDIDATES"
   extensions/p4_tests/p4_16/compile_only/p4c-2091.p4
 )
 
@@ -1696,6 +1713,12 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-end-of-ingress-test-bmv2.p4
 )
 
+p4c_add_xfail_reason("tofino"
+  "invalid SuperCluster was formed|NO_SLICING_FOUND"
+  # Expected to fail, until we have better user-facing messages.
+  extensions/p4_tests/p4_16/stf/cast_widening_add.p4
+)
+
 # digest fields related failures or expected to fail.
 p4c_add_xfail_reason("tofino"
   "invalid SuperCluster was formed"
@@ -1705,9 +1728,6 @@ p4c_add_xfail_reason("tofino"
   # Expected to fail, which means that constraint conflicts are being correctly detected.
   extensions/p4_tests/p4_14/compile_only/01-FlexCounter.p4
   extensions/p4_tests/p4_14/compile_only/03-VlanProfile.p4
-
-  # Expected to fail, until we have better user-facing messages.
-  extensions/p4_tests/p4_16/stf/cast_widening_add.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1766,7 +1786,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "warning: AssignmentStatement: Padding fields do not need to be explicitly set.* Tofino does not support action data/constant with rotated PHV source at the same time"
+  "warning: AssignmentStatement: Padding fields do not need to be explicitly set.* Tofino does not support action data/constant with rotated PHV source at the same time|CANNOT_PACK_CANDIDATES"
   extensions/p4_tests/p4_16/compile_only/p4c-3453.p4
 )
 

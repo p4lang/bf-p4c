@@ -1,6 +1,7 @@
 #include <deque>
 #include <iostream>
 #include <numeric>
+#include <boost/optional/optional.hpp>
 #include <boost/optional/optional_io.hpp>
 #include "bf-p4c/common/table_printer.h"
 #include "bf-p4c/ir/bitrange.h"
@@ -227,6 +228,22 @@ void PHV::Allocation::setDeparserGroupGress(PHV::Container c, GressAssignment de
     status.deparserGroupGress = deparserGroupGress;
     container_status_i[c] = status;
 }
+
+PHV::Allocation::MutuallyLiveSlices PHV::Allocation::liverange_overlapped_slices(
+        const PHV::Container c, const std::vector<AllocSlice>& slices) const {
+    PHV::Allocation::MutuallyLiveSlices rs;
+    for (auto& allocated : this->slices(c)) {
+        if (std::any_of(slices.begin(), slices.end(), [&](const AllocSlice& sl) {
+                // not mutex and have overlapped live range.
+                return !phv_i->field_mutex()(allocated.field()->id, sl.field()->id) &&
+                       !allocated.isLiveRangeDisjoint(sl);
+            })) {
+            rs.insert(allocated);
+        }
+    }
+    return rs;
+}
+
 
 PHV::Allocation::MutuallyLiveSlices
 PHV::Allocation::slicesByLiveness(const PHV::Container c, const AllocSlice& sl) const {
@@ -1494,6 +1511,11 @@ ordered_set<PHV::FieldSlice> PHV::SuperCluster::slices() const {
     return rst;
 }
 
+bool PHV::SuperCluster::is_deparser_zero_candidate() const {
+    return all_of_fieldslices(
+        [](const PHV::FieldSlice& fs) { return fs.field()->is_deparser_zero_candidate(); });
+}
+
 /// @returns true if all slices lists and slices are smaller than 32b and no
 /// slice list contains more than one slice per aligned cluster.
 /// XXX(cole): Also check that slice lists with exact_container requirements
@@ -1504,26 +1526,60 @@ bool PHV::SuperCluster::is_well_formed(const SuperCluster* sc, PHV::Error* err) 
     err->set(PHV::ErrorCode::unknown);
     std::map<int, const PHV::SuperCluster::SliceList*> exact_list_sizes;
     int widest = 0;
-
-    // Check that slice lists do not contain slices from the same
-    // AlignedCluster.
     for (auto* list : sc->slice_lists()) {
+        // // TODO(yumin): marking solitary and isClearOnWrite for multiple-write field
+        // // is the hack we use today. Seeing different fields with solitary constraints,
+        // // in one slice list is pretty weird. Here we hack it to allow this case.
+        // // check solitary constraints for all slice list.
+        // auto solitary_field = boost::make_optional<const PHV::Field*>(false, nullptr);
+        // bool all_clear_on_write_solitary = true;
+        // for (const auto& sl : *list) {
+        //     if (sl.field()->is_solitary()) {
+        //         solitary_field = sl.field();
+        //         all_clear_on_write_solitary &=
+        //             sl.field()->getSolitaryConstraint().isClearOnWrite();
+        //     }
+        // }
+        // if (solitary_field && !all_clear_on_write_solitary) {
+        //     // except for one solitary field, others need all to be padding fields.
+        //     for (const auto& sl : *list) {
+        //         if (!sl.field()->padding && sl.field() != *solitary_field) {
+        //             *err << "multiple different solitary fields in one slice list: " << list;
+        //             return false;
+        //         }
+        //     }
+        // }
         ordered_set<const PHV::AlignedCluster*> seen;
         int size = 0;
-        bool has_exact_containers = false;
+        bool has_exact_containers_or_deparsed = false;
         for (auto& slice : *list) {
             if (slice.field()->deparsed_bottom_bits() && slice.range().lo == 0 && size != 0) {
-                *err << "slice at offset " << size << " has deparsed_bottom_bits: "
-                       << slice;
-                return false; }
-            has_exact_containers |= slice.field()->exact_containers();
+                *err << "slice at offset " << size << " has deparsed_bottom_bits: " << slice;
+                return false;
+            }
+            has_exact_containers_or_deparsed |=
+                slice.field()->exact_containers() || slice.field()->deparsed();
             size += slice.size();
+            // Check that slice lists do not contain slices from the same
+            // AlignedCluster.
             auto* cluster = &sc->aligned_cluster(slice);
             if (seen.find(cluster) != seen.end()) {
                 *err << "but slice list has two slices from the same aligned cluster: \n";
                 *err << list;
-                return false; }
-            seen.insert(cluster); }
+                return false;
+            }
+            seen.insert(cluster);
+        }
+        if (has_exact_containers_or_deparsed) {
+            const auto is_deparsed_or_digested = [](const PHV::FieldSlice& fs) {
+                const auto* f = fs.field();
+                return (f->deparsed() || f->exact_containers() || f->is_digest());
+            };
+            if (!std::all_of(list->begin(), list->end(), is_deparsed_or_digested)) {
+                *err << "Mix of deparsed/not deparsed fields cannot be placed together: " << list;
+                return false;
+            }
+        }
         // XXX(yumin): a slice list like below: actually requires > 8 bit container because
         // 6(the alignment constraint) + 6 (the size of the field) = 12 > 8.
         // [ ingress::Cassa.Dairyland.Osterdock<6> ^6 ^bit[0..9] meta [0:5] ]
@@ -1533,11 +1589,12 @@ bool PHV::SuperCluster::is_well_formed(const SuperCluster* sc, PHV::Error* err) 
             widest = std::max(widest, size);
         }
 
-        if (has_exact_containers)
-            exact_list_sizes[size] = list;
+        if (has_exact_containers_or_deparsed) exact_list_sizes[size] = list;
         if (size > int(PHV::Size::b32)) {
             *err << "    ...but 32 < " << list << "\n";
-            return false; } }
+            return false;
+        }
+    }
 
     // Check the widths of slices in RotationalClusters, which could be wider
     // than fields in slice lists in the case of non-uniform operand widths.

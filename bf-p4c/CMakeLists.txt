@@ -583,7 +583,6 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/phv_spec.cpp
   phv/smart_fieldslice_packing.cpp
   phv/table_phv_constraints.cpp
-  phv/trivial_alloc.cpp
   phv/validate_allocation.cpp
   phv/analysis/critical_path_clusters.cpp
   phv/analysis/dark_live_range.cpp
@@ -620,6 +619,11 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/utils/utils.cpp
   phv/utils/liverange_opti_utils.cpp
   phv/fieldslice_live_range.cpp
+  phv/v2/allocator_base.cpp
+  phv/v2/phv_allocator_v2.cpp
+  phv/v2/trivial_allocator.cpp
+  phv/v2/tx_score.cpp
+  phv/v2/utils_v2.cpp
   )
 if (ENABLE_JBAY)
   list (APPEND BF_P4C_BACKEND_PHV_SRCS
@@ -661,7 +665,6 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/phv_spec.h
   phv/smart_fieldslice_packing.h
   phv/table_phv_constraints.h
-  phv/trivial_alloc.h
   phv/validate_allocation.h
   phv/analysis/critical_path_clusters.h
   phv/analysis/dark_live_range.h
@@ -701,6 +704,11 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/utils/utils.h
   phv/utils/liverange_opti_utils.h
   phv/fieldslice_live_range.h
+  phv/v2/allocator_base.h
+  phv/v2/phv_allocator_v2.h
+  phv/v2/trivial_allocator.h
+  phv/v2/tx_score.h
+  phv/v2/utils_v2.h
   )
 if (ENABLE_JBAY)
   list (APPEND BF_P4C_BACKEND_PHV_HDRS

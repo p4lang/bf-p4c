@@ -1803,19 +1803,26 @@ bool ActionPhvConstraints::generate_conditional_constraints_for_bitwise_op(
         } else {
             if (sameAsSource != destSameAsSource) {
                 LOG6("\t\t\t\tCannot generate conditional constraints for bitwise operations.");
-                return false; } } }
+                return false;
+            }
+        }
+    }
     if (destSameAsSource) {
-        LOG6("\t\t\t\tDo not need to generate conditional constraints for bitwise operations, "
-             "as the sources are the same as destination.");
-        return true; }
+        LOG6(
+            "\t\t\t\tDo not need to generate conditional constraints for bitwise operations, "
+            "as the sources are the same as destination.");
+        return true;
+    }
+    if (copacking_constraints == nullptr) return true;
     LOG6("\t\t\t\t\tPrinting source set for bitwise operation");
     for (auto& slice : sources) {
         LOG6("\t\t\t\t\t  " << slice);
         for (auto& slice1 : sources) {
             if (slice == slice1) continue;
-            LOG6("\t\t\t\t\t\tInserting " << slice1 << " into copacking_constraints for " <<
-                    slice);
-            copacking_constraints->at(action).makeUnion(slice, slice1); } }
+            LOG6("\t\t\t\t\t\tInserting " << slice1 << " into copacking_constraints for " << slice);
+            copacking_constraints->at(action).makeUnion(slice, slice1);
+        }
+    }
     return true;
 }
 
@@ -1971,6 +1978,100 @@ ActionPhvConstraints::PackingConstraints ActionPhvConstraints::make_initial_copa
         }
     }
     return packing_constraints;
+}
+
+CanPackV2ReturnType ActionPhvConstraints::check_bitwise_and_basic_move_constraints(
+    const ordered_set<const IR::MAU::Action*>& actions,
+    const PHV::Allocation::MutuallyLiveSlices& container_state,
+    const ActionPropertyMap* action_props) const {
+    for (const auto* action : actions) {
+        LOG5("\t\t\tNeed to check container sources now for action " << action->name);
+        const int stage = *stages(action, container_state.front().isPhysicalStageBased()).begin();
+        PHV::Allocation::MutuallyLiveSlices container_state_of_action;
+        for (const auto& slice : container_state) {
+            if (slice.isLiveAt(stage, PHV::FieldUse(PHV::FieldUse::WRITE))) {
+                container_state_of_action.insert(slice);
+            }
+        }
+        auto& prop = action_props->at(action);
+        const auto& op_type = prop.op_type;
+        if (op_type == OperandInfo::WHOLE_CONTAINER || op_type == OperandInfo::MIXED)
+            return {CanPackErrorCode::MIXED_OPERAND,
+                    "mixed operation type in action " + action->externalName()};
+
+        if (op_type == OperandInfo::WHOLE_CONTAINER_SAME_FIELD) {
+            if (!are_adjacent_field_slices(container_state_of_action)) {
+                return {CanPackErrorCode::NONE_ADJACENT_FIELD, ""};
+            } else {
+                LOG5("\t\t\t\tMultiple slices involved in whole container operation are adjacent");
+            }
+        }
+
+        if (op_type == OperandInfo::BITWISE) LOG5("\t\t\t\tDetected bitwise operations");
+
+        // If there is an action data or constant source, are all slices in the proposed packing
+        // written using action data or constant sources.
+        const auto all_or_none_ad_constant_sources =
+            prop.use_ad ? all_or_none_constant_sources(container_state_of_action, action, {})
+                        : NO_AD_CONSTANT;
+
+        // If the action requires combining a speciality action data with a non-speciality action
+        // data, we return false because the compiler currently does not support such packing.
+        if (all_or_none_ad_constant_sources == COMPLEX_AD_PACKING_REQ)
+            return {CanPackErrorCode::COMPLEX_AD_PACKING, ""};
+
+        // If the action involves a bitwise operation for the proposed packing in container c, and
+        // only some of the field slices are written using action data or constant sources, then
+        // this packing is not valid.
+        if (op_type == OperandInfo::BITWISE && !all_or_none_ad_constant_sources)
+            return {CanPackErrorCode::BITWISE_MIXED_AD, ""};
+
+        // mocha container can only have one source.
+        if (container_state.front().container().is(PHV::Kind::mocha) &&
+            all_or_none_ad_constant_sources == SOME_AD_CONSTANT) {
+            return {CanPackErrorCode::TF2_MORE_THAN_ONE_SOURCE, ""};
+        }
+
+        // If no PHV containers, then packing is valid
+        if (prop.num_sources == 0) continue;
+
+        // If source fields have already been allocated and number of sources greater than 2, then
+        // packing is not possible (TOO_MANY_SOURCES)
+        if (prop.sources.num_allocated > 2) {
+            LOG5("\t\t\t\tAction " << action->name << " uses more than two PHV sources.");
+            return {CanPackErrorCode::MORE_THAN_TWO_SOURCES, ""};
+        }
+
+        // num_source_containers == 2 if execution gets here
+        // If source fields have already been allocated and there are two PHV sources in addition to
+        // an action data/constant source then packing is not possible (TOO_MANY_SOURCES)
+        if (prop.sources.num_allocated == 2 && prop.use_ad) {
+            LOG5("\t\t\t\tAction " << action->name
+                                   << " uses action data/constant in addition to "
+                                      "two PHV sources");
+            return {CanPackErrorCode::TWO_SOURCES_AND_CONSTANT, ""};
+        }
+
+        // Check the validity of packing for move operations, and generate intermediate structures
+        // that will be used to create conditional constraints.
+        if (op_type == OperandInfo::MOVE) {
+            // solver will handle all move-based checks.
+            continue;
+        } else if (op_type == OperandInfo::BITWISE) {
+            // Check the validity of bitwise operations and generate intermediate structures that
+            // will be used to create conditional constraints.
+            // At this point, we have already checked (in container_type_operation) that every
+            // single slice in the proposed packing has already been written by the same bitwise
+            // operation (for this action).
+            if (!check_and_generate_constraints_for_bitwise_op_with_unallocated_sources(
+                        action, container_state, prop.sources, nullptr))
+                return {CanPackErrorCode::BITWISE_AND_UNALLOCATED_SOURCE, ""};
+        } else if (op_type != OperandInfo::WHOLE_CONTAINER_SAME_FIELD &&
+                   op_type != OperandInfo::PART_OF_CONTAINER) {
+            BUG("Operation type other than BITWISE and MOVE encountered.");
+        }
+    }
+    return {CanPackErrorCode::NO_ERROR, ""};
 }
 
 CanPackErrorCode ActionPhvConstraints::check_and_generate_constraints_for_bitwise_or_move(
@@ -2499,14 +2600,14 @@ CanPackReturnType ActionPhvConstraints::can_pack(
         }
         auto move_err = check_move_constraints(
                 alloc, action, slices, container_state, c, initActions);
-        if (move_err != CanPackErrorCode::NO_ERROR) {
-            return std::make_tuple(move_err, boost::none);
+        if (move_err.first != CanPackErrorCode::NO_ERROR) {
+            return std::make_tuple(move_err.first, boost::none);
         }
     }
     // check from source side.
     auto read_move_err = check_move_constraints_from_read(alloc, slices, initActions);
-    if (read_move_err != CanPackErrorCode::NO_ERROR) {
-        return std::make_tuple(read_move_err, boost::none);
+    if (read_move_err.first != CanPackErrorCode::NO_ERROR) {
+        return std::make_tuple(read_move_err.first, boost::none);
     }
 
     // depending on ^check_and_generate_constraints_for_bitwise_or_move.
@@ -2557,6 +2658,96 @@ CanPackReturnType ActionPhvConstraints::can_pack(
     return check_and_generate_conditional_constraints(
             alloc, slices, container_state, copacking_set, req_container);
 }
+
+CanPackV2ReturnType ActionPhvConstraints::can_pack_v2(
+        const PHV::Allocation& alloc,
+        const std::vector<PHV::AllocSlice>& candidates) const {
+    // Allocating zero slices always succeeds...
+    if (candidates.size() == 0) return {CanPackErrorCode::NO_ERROR, ""};
+
+    // no action will be applied on TPHV container.
+    const PHV::Container c = candidates.front().container();
+    if (c.type().kind() == PHV::Kind::tagalong) {
+        return {CanPackErrorCode::NO_ERROR, ""};
+    }
+
+    /// TODO(yumin): checks inherited from legacy code does not have detailed error message.
+    /// For example, pack_conflicts_present, stateful_destinations_constraints_violated and ...
+
+    if (LOGGING(6)) constraint_tracker.print_field_ordering(candidates);
+
+    ordered_set<PHV::AllocSlice> container_state =
+        alloc.liverange_overlapped_slices(c, candidates);
+
+    // Check if table placement induced any no pack constraints on fields that are candidates for
+    // packing. If yes, packing not possible.
+    if (pack_conflicts_present(container_state, candidates))
+        return {CanPackErrorCode::PACK_CONSTRAINT_PRESENT, ""};
+
+    // Create after-allocation container state.
+    for (const auto& sl : candidates) {
+        container_state.insert(sl);
+    }
+
+    // Check if any of the fields are stateful ALU writes and check the data bus alignment
+    // constraints.
+    if (stateful_destinations_constraints_violated(container_state))
+        return {CanPackErrorCode::STATEFUL_DEST_CONSTRAINT, ""};
+
+    // TODO(yumin): we should be able to remove this part by simply disable bit-masked-set
+    // instruction if slice has speciality read.
+    // check speciality read and bitmask set not in same container.
+    if (check_speciality_read_and_bitmask(container_state, {})) {
+        LOG5(
+            "\t\tThis packing requires a bitmasked-set instruction for a slice that reads "
+            "special action data. Therefore, this packing is not possible.");
+        return {CanPackErrorCode::BITMASK_CONSTRAINT, ""};
+    }
+
+    // xxx(Deep): This function checks if any field that gets its value from METER_ALU, HASH_DIST,
+    // RANDOM, or METER_COLOR is being packed with other fields written in the same action.
+    if (!check_speciality_packing(container_state))
+        return {CanPackErrorCode::SPECIALTY_DATA, ""};
+
+    const bool mocha_or_dark = c.is(PHV::Kind::dark) || c.is(PHV::Kind::mocha);
+    const auto actions = make_writing_action_set(alloc, container_state, {});
+    auto action_props = make_action_container_properties(
+            alloc, actions, container_state, {}, mocha_or_dark);
+
+    // check bitwise instructions.
+    CanPackV2ReturnType err =
+        check_bitwise_and_basic_move_constraints(
+                actions, container_state, &action_props);
+    if (err.first != CanPackErrorCode::NO_ERROR) {
+        return err;
+    }
+
+    // we use solver to check move-based actions as a safe net to ensure
+    // we don't create invalid packing.
+    for (const auto* action : actions) {
+        if (action_props.at(action).op_type != OperandInfo::MOVE) {
+            LOG3("skip non-move action on container " << c << ": " << action->name);
+            continue;
+        }
+        auto move_err = check_move_constraints(
+                alloc, action, candidates, container_state, c, {});
+        if (move_err.first != CanPackErrorCode::NO_ERROR) {
+            std::stringstream ss;
+            ss << "In action " << action->externalName()
+               << ", allocation candidate is used as instruction destination, move "
+               << "instruction constraints will be violated: " << move_err.second;
+            return {move_err.first, ss.str()};
+        }
+    }
+    // check from source side.
+    auto read_move_err = check_move_constraints_from_read(alloc, candidates, {});
+    if (read_move_err.first != CanPackErrorCode::NO_ERROR) {
+        return read_move_err;
+    }
+
+    return {CanPackErrorCode::NO_ERROR, ""};
+}
+
 
 bool ActionPhvConstraints::creates_container_conflicts(
         const PHV::Allocation::MutuallyLiveSlices& container_state,
@@ -3758,48 +3949,141 @@ ActionPhvConstraints::ActionSources ActionPhvConstraints::getActionSources(
     return rv;
 }
 
-CanPackErrorCode ActionPhvConstraints::check_read_action_move_constraints(
-    const PHV::Allocation& alloc, const std::vector<PHV::AllocSlice>& slices,
+CanPackV2ReturnType ActionPhvConstraints::check_read_action_move_constraints(
+    const PHV::Allocation& alloc,
+    const std::vector<PHV::AllocSlice>& candidates,
     const IR::MAU::Action* action,
     const PHV::Allocation::LiveRangeShrinkingMap& initActions) const {
-    const auto action_stages = stages(action, slices.front().isPhysicalStageBased());
+    const auto action_stages = stages(action, candidates.front().isPhysicalStageBased());
     const auto use = PHV::FieldUse(PHV::FieldUse::WRITE);
     for (const auto& stage : action_stages) {
         // Gather all containers read from any newly allocated slice.
-        ordered_set<PHV::Container> write_containers;
-        for (const auto& slice : slices) {
+        ordered_map<PHV::Container, ordered_set<PHV::AllocSlice>> container_write_slices;
+        for (const auto& slice : candidates) {
             for (const auto& write : constraint_tracker.destinations(slice, action)) {
                 // if destination has been allocated, save their containers.
-                for (const auto& writeSlice :
+                for (const auto& write_sl :
                      alloc.slices(write.field(), write.range(), stage, use)) {
-                    if (writeSlice.container()) write_containers.emplace(writeSlice.container());
+                    container_write_slices[write_sl.container()].insert(write_sl);
                 }
-                // if destination was not allocated but was in slice lists and their alignment
-                // is fixed, we can make pseudo allocation to run early checks.
             }
         }
         // Walk through the destination containers one-by-one and check their validity
-        for (const auto& c : write_containers) {
-            const auto& live_slices = alloc.slices(c, stage, use);
-            auto op_type = container_operation_type(action, live_slices, {});
-            if (op_type != OperandInfo::MOVE) {
-                LOG3("skip non-move-based container destination here");
-                continue;
+        for (const auto& kv : container_write_slices) {
+            const auto& c = kv.first;
+            const auto& write_slices = kv.second;
+            const auto is_all_mutex = [&](const PHV::AllocSlice& sl) {
+                for (const auto& write_sl : write_slices) {
+                    if (!phv.field_mutex()(write_sl.field()->id, sl.field()->id) &&
+                        !write_sl.isLiveRangeDisjoint(sl)) {
+                        return false;
+                    }
+                }
+                return true;
+            };
+
+            ordered_set<PHV::AllocSlice> live_slices;
+            for (const auto& sl : alloc.slices(c, stage, use)) {
+                if (is_all_mutex(sl)) continue;
+                live_slices.insert(sl);
             }
-            auto err = check_move_constraints(alloc, action, slices, live_slices, c, initActions);
-            if (err != CanPackErrorCode::NO_ERROR) {
-                return err;
+            auto op_type = container_operation_type(action, live_slices, {});
+            if (op_type == OperandInfo::MOVE) {
+                auto err =
+                    check_move_constraints(
+                            alloc, action, candidates, live_slices, c, initActions);
+                if (err.first != CanPackErrorCode::NO_ERROR) {
+                    return err;
+                }
             }
         }
     }
-    return CanPackErrorCode::NO_ERROR;
+    return {CanPackErrorCode::NO_ERROR, ""};
 }
 
-CanPackErrorCode ActionPhvConstraints::check_move_constraints_from_read(
-    const PHV::Allocation& alloc, const std::vector<PHV::AllocSlice>& slices,
+CanPackV2ReturnType ActionPhvConstraints::check_read_action_num_source_constraints(
+    const PHV::Allocation& alloc,
+    const std::vector<PHV::AllocSlice>& candidates,
+    const IR::MAU::Action* action) const {
+    for (const int stage : stages(action, candidates.front().isPhysicalStageBased())) {
+        // Gather all containers written by any of the slices in candidates
+        //
+        // A destination field won't be checked _in this function_ if it's not placed yet.
+        // However, an unplaced destination field _will_ be checked in can_pack when they are
+        // finally placed. In that case, can_pack looks at all the writes into that container.
+        ordered_set<PHV::Container> dests;
+        const auto use = PHV::FieldUse(PHV::FieldUse::WRITE);
+        for (auto slice : candidates)
+            for (auto write : constraint_tracker.destinations(slice, action))
+                for (auto writeSlice : alloc.slices(write.field(), write.range(), stage, use))
+                    if (writeSlice.container()) dests.emplace(writeSlice.container());
+
+        // Walk through the destination containers one-by-one and check their validity
+        for (const auto dest : dests) {
+            const bool mocha_or_dark = dest.is(PHV::Kind::mocha) || dest.is(PHV::Kind::dark);
+            size_t num_adc = 0;
+            ordered_set<PHV::Container> all_source_containers;
+            for (auto sl : alloc.slices(dest, stage, use)) {
+                LOG5("\tWrite to " << sl.field()->name << " " << sl.field_slice() << " "
+                                   << sl.container());
+                for (const auto operand : constraint_tracker.sources(sl, action)) {
+                    if (operand.ad || operand.constant) {
+                        LOG6("\t\t\t\t" << operand << " is action data/constant source");
+                        num_adc = 1;
+                        continue;
+                    }
+                    const PHV::Field* src_field = operand.phv_used->field();
+                    le_bitrange src_field_range = operand.phv_used->range();
+                    ordered_set<PHV::Container> src_containers;
+                    ordered_set<PHV::AllocSlice> src_alloc = alloc.slices(
+                        src_field, src_field_range, stage, PHV::FieldUse(PHV::FieldUse::READ));
+                    for (auto source : candidates) {
+                        if (source.field() == src_field &&
+                            source.field_slice().overlaps(src_field_range) &&
+                            source.isLiveAt(stage, PHV::FieldUse(PHV::FieldUse::READ))) {
+                            src_alloc.insert(source);
+                        }
+                    }
+
+                    for (auto source_slice : src_alloc) {
+                        src_containers.insert(source_slice.container());
+                        LOG5("\t\t\t\t\tSource slice for " << sl << " : " << source_slice);
+                    }
+
+                    if (src_containers.size() == 0) {
+                        LOG1("\t\t\t\tSource " << *(operand.phv_used)
+                                               << " has not been allocated yet.");
+                    } else {
+                        all_source_containers.insert(src_containers.begin(), src_containers.end());
+                    }
+                }
+            }
+
+            size_t total_sources = num_adc + all_source_containers.size();
+            if (total_sources > 2) {
+                std::stringstream ss;
+                ss << "Action " << action->name
+                   << " uses more than two PHV sources to write to container " << dest << ".";
+                LOG5("\t\t\t\t" << ss.str());
+                return {CanPackErrorCode::MORE_THAN_TWO_SOURCES, ss.str()};
+            } else if (mocha_or_dark && total_sources > 1) {
+                std::stringstream ss;
+                ss << "Action " << action->name
+                   << " uses more than one PHV sources to write to container " << dest << ".";
+                LOG5("\t\t\t\tAction " << ss.str());
+                return {CanPackErrorCode::TF2_MORE_THAN_ONE_SOURCE, ss.str()};
+            }
+        }
+    }
+
+    return {CanPackErrorCode::NO_ERROR, ""};
+}
+
+CanPackV2ReturnType ActionPhvConstraints::check_move_constraints_from_read(
+    const PHV::Allocation& alloc, const std::vector<PHV::AllocSlice>& candidates,
     const PHV::Allocation::LiveRangeShrinkingMap& initActions) const {
     ordered_set<const IR::MAU::Action*> verified;
-    for (const auto& slice : slices) {
+    for (const auto& slice : candidates) {
         for (const auto& action : constraint_tracker.read_in(slice)) {
             if (verified.count(action)) {
                 continue;
@@ -3807,12 +4091,25 @@ CanPackErrorCode ActionPhvConstraints::check_move_constraints_from_read(
             verified.insert(action);
             LOG5("\t\t\tCheck action " << action->name << " because its source "
                                        << slice.field()->name << " is being allocated.");
-            CanPackErrorCode err = check_read_action_move_constraints(
-                    alloc, slices, action, initActions);
-            if (err != CanPackErrorCode::NO_ERROR) return err;
+            // check move-based instruction constraints
+            auto err = check_read_action_move_constraints(
+                    alloc, candidates, action, initActions);
+            if (err.first != CanPackErrorCode::NO_ERROR) {
+                std::stringstream ss;
+                ss << "In action " << action->externalName()
+                   << ", allocation candidate is used as source operand, move "
+                      "instruction constraints will be violated: "
+                   << err.second;
+                return {err.first, ss.str()};
+            }
+            // check other constraints.
+            err = check_read_action_num_source_constraints(alloc, candidates, action);
+            if (err.first != CanPackErrorCode::NO_ERROR) {
+                return err;
+            }
         }
     }
-    return CanPackErrorCode::NO_ERROR;
+    return {CanPackErrorCode::NO_ERROR, ""};
 }
 
 CanPackErrorCode ActionPhvConstraints::check_ara_move_constraints(
@@ -3891,7 +4188,7 @@ CanPackErrorCode ActionPhvConstraints::check_ara_move_constraints(
     return CanPackErrorCode::NO_ERROR;
 }
 
-CanPackErrorCode ActionPhvConstraints::check_move_constraints(
+CanPackV2ReturnType ActionPhvConstraints::check_move_constraints(
     const PHV::Allocation& alloc, const IR::MAU::Action* action,
     const std::vector<PHV::AllocSlice>& slices,
     const PHV::Allocation::MutuallyLiveSlices& container_state, const PHV::Container& c,
@@ -3972,7 +4269,7 @@ CanPackErrorCode ActionPhvConstraints::check_move_constraints(
         } else {
             const auto src_phv = getSourcePHVSlice(alloc, slices, slice, action, stage);
             if (!src_phv) {
-                // src might have not been allocatd yet.
+                solver->add_src_unallocated_assign(dest.container, dest.range);
                 return;
             }
             const auto src_container = (*src_phv).container();
@@ -4014,7 +4311,7 @@ CanPackErrorCode ActionPhvConstraints::check_move_constraints(
         auto rst = solver->solve();
         if (!rst.ok()) {
             LOG2("Solver Error Reason: " << rst.err->msg);
-            return CanPackErrorCode::CONSTRAINT_CHECKER_FALIED;
+            return {CanPackErrorCode::CONSTRAINT_CHECKER_FALIED, rst.err->msg};
         }
         if (LOGGING(4)) {
             LOG4("instructions: ");
@@ -4024,7 +4321,7 @@ CanPackErrorCode ActionPhvConstraints::check_move_constraints(
         }
     }
 
-    return CanPackErrorCode::NO_ERROR;
+    return {CanPackErrorCode::NO_ERROR, ""};
 }
 
 std::ostream &operator<<(std::ostream &out, const ActionPhvConstraints::ClassifiedSource& src) {

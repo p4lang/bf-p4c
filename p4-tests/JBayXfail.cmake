@@ -297,7 +297,7 @@ p4c_add_xfail_reason("tofino2"
 # P4C-2091
 # Expected failure (negative test)
 p4c_add_xfail_reason("tofino2"
-  "error.*PHV allocation was not successful"
+  "error.*PHV allocation was not successful|CANNOT_PACK_CANDIDATES"
   extensions/p4_tests/p4_16/compile_only/p4c-2091.p4
 )
 
@@ -402,7 +402,7 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "error: Cannot find a slicing to satisfy @pa_container_size"
+  "error: Cannot find a slicing to satisfy @pa_container_size|NO_SLICING_FOUND"
   extensions/p4_tests/p4_16/compile_only/ssub_illegal_pack.p4
 )
 
@@ -438,7 +438,7 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "warning: AssignmentStatement: Padding fields do not need to be explicitly set.* Tofino2 does not support action data/constant with rotated PHV source at the same time"
+  "warning: AssignmentStatement: Padding fields do not need to be explicitly set.* Tofino2 does not support action data/constant with rotated PHV source at the same time|CANNOT_PACK_CANDIDATES"
   extensions/p4_tests/p4_16/compile_only/p4c-3453.p4
 )
 

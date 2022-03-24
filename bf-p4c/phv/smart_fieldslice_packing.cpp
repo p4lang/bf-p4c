@@ -205,9 +205,8 @@ namespace PHV {
 std::list<PHV::SuperCluster*> get_packed_cluster_group(
     const std::list<PHV::SuperCluster*> &cluster_groups,
     const TableFieldPackOptimization &table_pack_opt,
-    PhvInfo &phv_i,
-    AllocVerifier verifier,
-    const PHV::Allocation& alloc) {
+    const AllocVerifier& can_be_allocated,
+    PhvInfo &phv_i) {
     const auto pack_choices = get_smart_packing_candidates(cluster_groups, table_pack_opt);
     // create a map from super cluster to a set of fieldslice as the result of packing. If
     // fieldslice is included in a supercluster, create the mapping. Also create the reverse mapping
@@ -251,10 +250,7 @@ std::list<PHV::SuperCluster*> get_packed_cluster_group(
         current_cluster_groups->push_back(merged_sc);
 
         // try allocate this super cluster.
-        std::list<PHV::SuperCluster *> single_cluster({merged_sc});
-        auto unallocated = verifier(alloc.makeTransaction(), single_cluster);
-
-        if (!unallocated.empty()) {
+        if (!can_be_allocated(merged_sc)) {
             // if allocation failed, roll back
             current_cluster_groups = new std::list<PHV::SuperCluster*>(*original_cluster_groups);
             // set field aligment to boost::none, and since the alignment of fieldslices in

@@ -7,8 +7,8 @@
 
 namespace PHV {
 
-using AllocVerifier = std::function<ordered_set<const PHV::SuperCluster*>(
-        const PHV::Allocation&, std::list<PHV::SuperCluster*>&)>;
+/// A allocation verify that returns true if the super cluster can be allocated to @p alloc.
+using AllocVerifier = std::function<bool(const PHV::SuperCluster *)>;
 
 /// @returns a list of new super cluster after smart byte packing. Note that this list of super
 /// cluster is verified by trivial allocation, so it can always pass the trivial allocation.
@@ -20,10 +20,9 @@ using AllocVerifier = std::function<ordered_set<const PHV::SuperCluster*>(
 /// packed in one slice list.
 std::list<PHV::SuperCluster*> get_packed_cluster_group(
     const std::list<PHV::SuperCluster*> &cluster_groups,
-    const TableFieldPackOptimization &tablePackOpt,
-    PhvInfo &phv_i,
-    AllocVerifier verifier,
-    const PHV::Allocation& alloc);
+    const TableFieldPackOptimization &table_pack_opt,
+    const AllocVerifier& can_be_allocated,
+    PhvInfo &phv_i);
 
 }  // namespace PHV
 

@@ -354,6 +354,11 @@ class Allocation {
     virtual MutuallyLiveSlices slicesByLiveness(const PHV::Container c,
                                                 std::vector<AllocSlice>& slices) const;
 
+    /// @returns a set of allocated slices that will live at the some stage in container @p c with
+    /// any of the candidate slice in @p slices, i.e., not mutex and liverange not disjoint.
+    virtual MutuallyLiveSlices liverange_overlapped_slices(
+        const PHV::Container c, const std::vector<AllocSlice>& slices) const;
+
     /// @returns all slices allocated for @p f that include any part of @p range in
     /// the field portion of the allocated slice.  May be empty (if @p f is not
     /// allocated) or contain slices that do not fully cover all bits of @p f (if
@@ -1157,6 +1162,9 @@ class SuperCluster : public ClusterStats {
             if (!func(kv.first)) return false; }
         return true;
     }
+
+    /// @returns true if all field slices are deparser_zero_candidate.
+    bool is_deparser_zero_candidate() const;
 
     /// @returns true if no structural constraints prevent this super cluster
     /// from fitting.

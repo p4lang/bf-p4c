@@ -24,6 +24,7 @@
 #include "bf-p4c/phv/utils/utils.h"
 #include "bf-p4c/common/pragma/all_pragmas.h"
 #include "bf-p4c/logging/event_logger.h"
+#include "bf-p4c/phv/v2/trivial_allocator.h"
 #include "lib/error.h"
 #include "lib/exceptions.h"
 #include "lib/log.h"
@@ -333,23 +334,6 @@ bool less_fragment_alloc_score_is_better(const AllocScore& left, const AllocScor
     return rst.first;
 }
 
-// trivial_alloc_score_is_better prefers minimal packing of fieldslices.
-bool trivial_alloc_score_is_better(const AllocScore& left, const AllocScore& right) {
-    AllocScore delta = left - right;
-    auto weighted_delta = weighted_sum(delta);
-    std::vector<AllocScoreCmpCond> conds;
-    conds = {
-            {n_overlay_bits, weighted_delta[n_overlay_bits], false},
-            {n_inc_containers, weighted_delta[n_inc_containers], true},
-            {n_packing_bits, weighted_delta[n_packing_bits], false},
-        };
-    auto rst = prioritized_cmp(conds);
-    if (rst.second != "equal") {
-        LOG_DEBUG6("left-hand-side score is better because: " << rst.second);
-    }
-    return rst.first;
-}
-
 /// @returns a new slice list where any adjacent slices of the same field with
 /// contiguous little Endian ranges are merged into one slice, eg f[0:3], f[4:7]
 /// become f[0:7].
@@ -386,72 +370,6 @@ PHV::ConcreteAllocation make_concrete_allocation(const PhvInfo& phv, const PhvUs
     return PHV::ConcreteAllocation(phv, uses);
 }
 
-/// Remove unreferenced clusters from @p cluster_groups_input. For example, a singleton
-/// super cluster with only one padding field.
-std::list<PHV::SuperCluster*> remove_unreferenced_clusters(
-    const PhvUse& uses, const std::list<PHV::SuperCluster*>& cluster_groups_input) {
-    std::list<PHV::SuperCluster*> cluster_groups_filtered;
-    for (auto* sc : cluster_groups_input) {
-        if (sc->all_of_fieldslices([&](const PHV::FieldSlice& fs) {
-                return !uses.is_allocation_required(fs.field());
-            })) {
-            continue;
-        }
-        cluster_groups_filtered.push_back(sc);
-    }
-    return cluster_groups_filtered;
-}
-
-/// remove singleton metadata slice list. This was introduced because some metadata fields are
-/// placed in a supercluster but they should not be.
-std::list<PHV::SuperCluster*> remove_singleton_slicelist_metadata(
-    const std::list<PHV::SuperCluster*>& cluster_groups) {
-    std::list<PHV::SuperCluster*> rst;
-    for (auto* super_cluster : cluster_groups) {
-        // Supercluster has more than one slice list.
-        if (super_cluster->slice_lists().size() != 1) {
-            rst.push_back(super_cluster);
-            continue; }
-        auto* slice_list = super_cluster->slice_lists().front();
-        // The slice list has more than one fieldslice.
-        if (slice_list->size() != 1) {
-            rst.push_back(super_cluster);
-            continue; }
-        // The fieldslice is pov, or not metadata. Nor does supercluster is singleton.
-        // XXX(yumin): These comments are vague, I assume that it was trying to find
-        // super clusters that have
-        // (1) only one slice list
-        // (2) only one field in the slice list.
-        // (3) only one field in the rotational cluster.
-        // (4) no special constraints on the field.
-        // and these super clusters does not need to have the field in a slice list because
-        // the alignment searched for fields in slice lists is less than fields that are not.
-        // TODO(yumin): we should fix this in make_clusters and remote this function.
-        auto fs = slice_list->front();
-        if (fs.size() != int(super_cluster->aggregate_size())
-            || !fs.field()->metadata
-            || fs.field()->exact_containers()
-            || fs.field()->pov
-            || fs.field()->is_checksummed()
-            || fs.field()->deparsed_bottom_bits()
-            || fs.field()->is_marshaled()) {
-            rst.push_back(super_cluster);
-            continue; }
-
-        ordered_set<PHV::SuperCluster::SliceList*> empty;
-        PHV::SuperCluster* new_cluster =
-            new PHV::SuperCluster(super_cluster->clusters(), empty);
-        rst.push_back(new_cluster);
-        LOG_DEBUG5("Replacing singleton " << super_cluster << " with " << new_cluster);
-    }
-    return rst;
-}
-
-bool is_deparser_zero_sc(const PHV::SuperCluster* sc) {
-    return sc->all_of_fieldslices(
-        [&](const PHV::FieldSlice& fs) { return fs.field()->is_deparser_zero_candidate(); });
-}
-
 /// remove superclusters with deparser zero fields.
 /// deparsed-zero clusters will be appended to @p deparser_zero_superclusters, and returned
 /// value will be (@p cluster_groups) minus deparsed-zero clusters.
@@ -460,7 +378,7 @@ std::list<PHV::SuperCluster*> remove_deparser_zero_superclusters(
     std::list<PHV::SuperCluster*>& deparser_zero_superclusters) {
     std::list<PHV::SuperCluster*> rst;
     for (auto* sc : cluster_groups) {
-        if (is_deparser_zero_sc(sc)) {
+        if (sc->is_deparser_zero_candidate()) {
             LOG_DEBUG4(TAB2 "Removing deparser zero supercluster from unallocated superclusters");
             deparser_zero_superclusters.push_back(sc);
             continue;
@@ -735,7 +653,8 @@ std::vector<PHV::AllocSlice> make_alloc_slices_with_physical_liverange(
 
 }  // namespace
 
-PHV::Slicing::IteratorInterface* PHV::AllocUtils::make_slicing_ctx(PHV::SuperCluster* sc) const {
+PHV::Slicing::IteratorInterface* PHV::AllocUtils::make_slicing_ctx(
+    const PHV::SuperCluster* sc) const {
     return new PHV::Slicing::ItrContext(phv, sc, pragmas.pa_container_sizes().field_to_layout(),
                                         *packing_validator,
                                         boost::bind(&AllocUtils::has_pack_conflict, this, _1, _2),
@@ -778,6 +697,96 @@ bool PHV::AllocUtils::can_physical_liverange_be_overlaid(
         }
     }
     return pragmas.pa_no_overlay().can_overlay(a.field(), b.field()) && a.isLiveRangeDisjoint(b);
+}
+
+bool PHV::AllocUtils::is_clot_allocated(const ClotInfo& clots, const PHV::SuperCluster& sc) {
+    // If the device doesn't support CLOTs, then don't bother checking.
+    if (Device::numClots() == 0) return false;
+
+    // In JBay, a clot-candidate field may sometimes be allocated to a PHV
+    // container, eg. if it is adjacent to a field that must be packed into a
+    // larger container, in which case the clot candidate would be used as
+    // padding.
+
+    // Check slice lists.
+    bool needPhvAllocation = std::any_of(sc.slice_lists().begin(), sc.slice_lists().end(),
+        [&](const PHV::SuperCluster::SliceList* slices) {
+            return std::any_of(slices->begin(), slices->end(),
+                [&](const PHV::FieldSlice& slice) { return !clots.fully_allocated(slice); });
+        });
+
+    // Check rotational clusters.
+    needPhvAllocation |= std::any_of(sc.clusters().begin(), sc.clusters().end(),
+        [&](const PHV::RotationalCluster* cluster) {
+            return std::any_of(cluster->slices().begin(), cluster->slices().end(),
+                [&](const PHV::FieldSlice& slice) { return !clots.fully_allocated(slice); });
+        });
+
+    return !needPhvAllocation;
+}
+
+std::list<PHV::SuperCluster*> PHV::AllocUtils::remove_singleton_metadata_slicelist(
+    const std::list<PHV::SuperCluster*>& cluster_groups) {
+    std::list<PHV::SuperCluster*> rst;
+    for (auto* super_cluster : cluster_groups) {
+        // Supercluster has more than one slice list.
+        if (super_cluster->slice_lists().size() != 1) {
+            rst.push_back(super_cluster);
+            continue; }
+        auto* slice_list = super_cluster->slice_lists().front();
+        // The slice list has more than one fieldslice.
+        if (slice_list->size() != 1) {
+            rst.push_back(super_cluster);
+            continue; }
+        // The fieldslice is pov, or not metadata. Nor does supercluster is singleton.
+        // XXX(yumin): These comments are vague, I assume that it was trying to find
+        // super clusters that have
+        // (1) only one slice list
+        // (2) only one field in the slice list.
+        // (3) only one field in the rotational cluster.
+        // (4) no special constraints on the field.
+        // and these super clusters does not need to have the field in a slice list because
+        // the alignment searched for fields in slice lists is less than fields that are not.
+        auto fs = slice_list->front();
+        if (fs.size() != int(super_cluster->aggregate_size())
+            || !fs.field()->metadata
+            || fs.field()->exact_containers()
+            || fs.field()->pov
+            || fs.field()->is_checksummed()
+            || fs.field()->deparsed_bottom_bits()
+            || fs.field()->is_marshaled()) {
+            rst.push_back(super_cluster);
+            continue; }
+
+        ordered_set<PHV::SuperCluster::SliceList*> empty;
+        PHV::SuperCluster* new_cluster =
+            new PHV::SuperCluster(super_cluster->clusters(), empty);
+        rst.push_back(new_cluster);
+        LOG_DEBUG5("Replacing singleton " << super_cluster << " with " << new_cluster);
+    }
+    return rst;
+}
+
+std::list<PHV::SuperCluster*> PHV::AllocUtils::remove_unref_clusters(
+    const PhvUse& uses, const std::list<PHV::SuperCluster*>& cluster_groups_input) {
+    std::list<PHV::SuperCluster*> cluster_groups_filtered;
+    for (auto* sc : cluster_groups_input) {
+        if (sc->all_of_fieldslices([&](const PHV::FieldSlice& fs) {
+                return !uses.is_allocation_required(fs.field());
+            })) {
+            continue;
+        }
+        cluster_groups_filtered.push_back(sc);
+    }
+    return cluster_groups_filtered;
+}
+
+std::list<PHV::SuperCluster*> PHV::AllocUtils::remove_clot_allocated_clusters(
+    const ClotInfo& clot, std::list<PHV::SuperCluster*> clusters) {
+    std::remove_if(clusters.begin(), clusters.end(), [&](const PHV::SuperCluster* sc) {
+        return AllocUtils::is_clot_allocated(clot, *sc);
+    });
+    return clusters;
 }
 
 const std::vector<MetricName> AllocScore::g_general_metrics = {
@@ -1208,6 +1217,12 @@ bool CoreAllocation::satisfies_constraints(
         std::vector<PHV::AllocSlice> slices,
         const PHV::Allocation& alloc) const {
     if (slices.size() == 0) return true;
+    // not exceeding container bound.
+    for (const auto& slice : slices) {
+        if (slice.container_slice().hi > int(slice.container().size()) - 1) {
+            return false;
+        }
+    }
 
     // pa_container_type constraint check
     auto& pa_ct = utils_i.pragmas.pa_container_type();
@@ -1783,94 +1798,6 @@ bool CoreAllocation::checkDarkOverlay(const std::vector<PHV::AllocSlice>& candid
     return canUseARA;
 }
 
-PHV::Transaction CoreAllocation::make_speculated_alloc(
-    const PHV::Transaction& alloc,
-    const PHV::SuperCluster& sc,
-    const std::vector<PHV::AllocSlice>& candidates,
-    const PHV::Container& candidates_cont) const {
-    // enabled only for trivial alloc mode.
-    if (!utils_i.settings.trivial_alloc) return alloc;
-    if (candidates.empty()) return alloc;
-    const auto gress = candidates.front().field()->gress;
-    // returns true when the field slice has been allocated, or allocation is proposed.
-    const auto is_allocated = [&](const PHV::FieldSlice fs) {
-        const auto* f = fs.field();
-        for (const auto& alloc_slice : alloc.getStatus(f)) {
-            if (alloc_slice.field_slice() == fs.range()) {
-                return true;
-            }
-        }
-        for (const auto& alloc_slice : candidates) {
-            if (f == alloc_slice.field() && alloc_slice.field_slice() == fs.range()) {
-                return true;
-            }
-        }
-        return false;
-    };
-    ordered_set<PHV::Container> empty_containers;
-    for (const auto& group : Device::phvSpec().mauGroups(candidates_cont.type().size())) {
-        for (const auto cid : group) {
-            const PHV::Container c = Device::phvSpec().idToContainer(cid);
-            if (c.type().kind() != PHV::Kind::normal) continue;
-            if ((gress == INGRESS && Device::phvSpec().egressOnly()[cid]) ||
-                (gress == EGRESS && Device::phvSpec().ingressOnly()[cid])) {
-                continue;
-            }
-            if (alloc.parserGroupGress(c) && *alloc.parserGroupGress(c) != gress) continue;
-            if (alloc.deparserGroupGress(c) && *alloc.deparserGroupGress(c) != gress) continue;
-            const auto EMPTY = PHV::Allocation::ContainerAllocStatus::EMPTY;
-            if (!alloc.getStatus(c) || alloc.getStatus(c)->alloc_status == EMPTY) {
-                empty_containers.insert(c);
-            }
-        }
-    }
-    empty_containers.erase(candidates_cont);
-
-    bool pseudo_slice_added = false;
-    std::stringstream ss;
-    auto speculated_tx = alloc.makeTransaction();
-    for (const auto* sl : sc.slice_lists()) {
-        // skip allocated slice list.
-        if (is_allocated(sl->front())) continue;
-        // cannot find empty containers to safely generate pseudo allocation.
-        if (empty_containers.empty()) return speculated_tx;
-        // we can only guess allocation when there is only one possible
-        // starting position, because of the size of slice list and alignment.
-        const int total_bits = PHV::SuperCluster::slice_list_total_bits(*sl);
-        const int alignment = sl->front().alignment() ? sl->front().alignment()->align : 0;
-        if (total_bits < int(candidates_cont.size())) {
-            // no bit-in-byte alignment constraint
-            if (!sl->front().alignment()) continue;
-            // with bit-in-byte but has multiple stating positions.
-            if (alignment + total_bits + 8 <= int(candidates_cont.size())) continue;
-        }
-        PHV::Container c = empty_containers.front();
-        empty_containers.erase(c);
-        // make pseudo allocation.
-        std::vector<PHV::AllocSlice> speculated_alloc_slices;
-        int offset = alignment;
-        for (const auto& fs : *sl) {
-            PHV::AllocSlice alloc_slice =
-                PHV::AllocSlice(fs.field(), c, fs.range(), StartLen(offset, fs.size()));
-            speculated_alloc_slices.emplace_back(alloc_slice);
-            offset += fs.size();
-        }
-        if (utils_i.settings.physical_liverange_overlay && utils_i.settings.no_code_change) {
-            speculated_alloc_slices = make_alloc_slices_with_physical_liverange(
-                utils_i.clot, utils_i.physical_liverange_db, speculated_alloc_slices);
-        }
-        pseudo_slice_added = true;
-        for (const auto& alloc_slice : speculated_alloc_slices) {
-            speculated_tx.allocate(alloc_slice);
-            ss << "pseudo allocate: " << alloc_slice << "\n";
-        }
-    }
-    if (pseudo_slice_added) {
-        LOG5("CanPack validation pseudo alloc:\n" << ss.str());
-    }
-    return speculated_tx;
-}
-
 bool CoreAllocation::try_pack_slice_list(
     std::vector<PHV::AllocSlice> &candidate_slices,
     PHV::Transaction &perContainerAlloc,
@@ -1946,11 +1873,9 @@ bool CoreAllocation::try_pack_slice_list(
         for (auto& slice : candidate_slices) LOG_DEBUG6(TAB2 << slice);
     }
 
-    // use speculated alloc to enable more can pack verification of action reads.
-    const auto speculated_alloc =
-        make_speculated_alloc(perContainerAlloc, super_cluster, candidate_slices, c);
+    // can_pack verification.
     std::tie(canPackErrorCode, action_constraints) = utils_i.actions.can_pack(
-        speculated_alloc, candidate_slices, actual_container_state, initActions);
+        perContainerAlloc, candidate_slices, actual_container_state, initActions);
 
     bool creates_new_container_conflicts =
         utils_i.actions.creates_container_conflicts(actual_container_state, initActions,
@@ -3193,31 +3118,6 @@ bool CoreAllocation::generateNewAllocSlices(
     return true;
 }
 
-static bool isClotSuperCluster(const ClotInfo& clots, const PHV::SuperCluster& sc) {
-    // If the device doesn't support CLOTs, then don't bother checking.
-    if (Device::numClots() == 0) return false;
-
-    // In JBay, a clot-candidate field may sometimes be allocated to a PHV
-    // container, eg. if it is adjacent to a field that must be packed into a
-    // larger container, in which case the clot candidate would be used as
-    // padding.
-
-    // Check slice lists.
-    bool needPhvAllocation = std::any_of(sc.slice_lists().begin(), sc.slice_lists().end(),
-        [&](const PHV::SuperCluster::SliceList* slices) {
-            return std::any_of(slices->begin(), slices->end(),
-                [&](const PHV::FieldSlice& slice) { return !clots.fully_allocated(slice); });
-        });
-
-    // Check rotational clusters.
-    needPhvAllocation |= std::any_of(sc.clusters().begin(), sc.clusters().end(),
-        [&](const PHV::RotationalCluster* cluster) {
-            return std::any_of(cluster->slices().begin(), cluster->slices().end(),
-                [&](const PHV::FieldSlice& slice) { return !clots.fully_allocated(slice); });
-        });
-
-    return !needPhvAllocation;
-}
 
 std::vector<AllocAlignment> CoreAllocation::build_alignments(
     int max_n,
@@ -3477,7 +3377,7 @@ boost::optional<PHV::Transaction> CoreAllocation::try_alloc(
         PHV::SuperCluster& super_cluster,
         int max_alignment_tries,
         const ScoreContext& score_ctx) const {
-    if (isClotSuperCluster(utils_i.clot, super_cluster)) {
+    if (PHV::AllocUtils::is_clot_allocated(utils_i.clot, super_cluster)) {
         LOG_DEBUG5("Skipping CLOT-allocated super cluster: " << super_cluster);
         return alloc.makeTransaction(); }
 
@@ -3771,7 +3671,8 @@ static void log_device_stats() {
 // Those can locally redirect LOG* macros to another file which
 // will share path and suffix number with phv_allocation_*.log
 // To restore original logging behaviour, call Logging::FileLog::close on the object.
-static Logging::FileLog *createFileLog(int pipeId, const cstring &prefix, int loglevel) {
+Logging::FileLog* PHV::AllocUtils::createFileLog(
+        int pipeId, const cstring& prefix, int loglevel) {
     if (!LOGGING(loglevel)) return nullptr;
 
     auto filename = Logging::PassManager::getNewLogFileName(prefix);
@@ -3900,16 +3801,10 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
     LOG_DEBUG1("--- BEGIN PHV ALLOCATION ----------------------------------------------------");
     root = root_->to<IR::BFN::Pipe>();
     BUG_CHECK(root, "IR root is not a BFN::Pipe: %s", root_);
-    Device::phvSpec().applyGlobalPragmas(root->global_pragmas);
     log_device_stats();
 
-    // Check if pragma pa_parser_group_monogress is contained in the p4 program
-    //   and set singleGressParserGroups in CoreAllocation
-    for (auto* anno : root->global_pragmas) {
-        if (anno->name.name == PragmaParserGroupMonogress::name) {
-            core_alloc_i.set_single_gress_parser_group();
-            LOG_DEBUG4(TAB1 "FOUND pa_parser_group_monogress pragma");
-        }
+    if (utils_i.settings.single_gress_parser_group) {
+        core_alloc_i.set_single_gress_parser_group();
     }
 
     int pipeId = root->id;
@@ -3932,7 +3827,7 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
     // Remove super clusters that are entirely allocated to CLOTs.
     ordered_set<PHV::SuperCluster*> to_remove;
     for (auto* sc : cluster_groups)
-        if (isClotSuperCluster(utils_i.clot, *sc))
+        if (PHV::AllocUtils::is_clot_allocated(utils_i.clot, *sc))
             to_remove.insert(sc);
     for (auto* sc : to_remove) {
         cluster_groups.remove(sc);
@@ -3941,35 +3836,23 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
 
     // only run byte packing in --alt-phv-alloc
     if (BFNContext::get().options().alt_phv_alloc == true) {
-        auto trivial_strategy_for_smart_byte_packing =
-            new TrivialAllocStrategy(utils_i, core_alloc_i, phv_i, pipeId);
-
-        auto alloc_func =
-                [&](const PHV::Allocation &alloc, std::list<PHV::SuperCluster *> & clusters){
-                    return trivial_strategy_for_smart_byte_packing->allocate(alloc, clusters, true);
-                };
-        auto packed_cluster_groups = get_packed_cluster_group(
-            cluster_groups,
-            utils_i.tablePackOpt,
-            phv_i,
-            alloc_func,
-            alloc);
+        auto trivial_allocator = new PHV::v2::TrivialAllocator(utils_i, phv_i, pipeId);
+        const auto alloc_verifier = [&](const PHV::SuperCluster* sc) {
+            return trivial_allocator->can_be_allocated(alloc.makeTransaction(), sc);
+        };
+        auto packed_cluster_groups =
+            get_packed_cluster_group(
+                    cluster_groups, utils_i.tablePackOpt, alloc_verifier, phv_i);
 
         cluster_groups = packed_cluster_groups;
     }
 
     if (utils_i.settings.trivial_alloc) {
-        auto trivial_strategy = new TrivialAllocStrategy(utils_i, core_alloc_i, phv_i, pipeId);
-
-        auto unallocated = trivial_strategy->allocate(alloc, cluster_groups, false);
-        auto unallocated_list =
-            std::list<const PHV::SuperCluster*>(unallocated.begin(), unallocated.end());
-        if (!unallocated.empty()) {
-            diagnoseFailures(unallocated_list);
-            formatAndThrowError(alloc, unallocated_list);
-            formatAndThrowUnsat(unallocated_list);
+        auto trivial_allocator = new PHV::v2::TrivialAllocator(utils_i, phv_i, pipeId);
+        bool ok = trivial_allocator->allocate(cluster_groups);
+        if (!ok) {
+            LOG1("Trivial allocation failed.");
         }
-
         return root;
     }
 
@@ -4004,7 +3887,7 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
 
     // Redirect all following LOG*s into summary file
     // Print summaries
-    auto logfile = createFileLog(pipeId, "phv_allocation_summary_", 1);
+    auto logfile = PHV::AllocUtils::createFileLog(pipeId, "phv_allocation_summary_", 1);
     if (result.status == AllocResultCode::SUCCESS) {
         LOG_DEBUG1("PHV ALLOCATION SUCCESSFUL");
         LOG1(alloc);  // Not emitting to EventLog on purpose
@@ -4379,7 +4262,7 @@ BruteForceAllocationStrategy::allocDeparserZeroSuperclusters(
 boost::optional<PHV::Transaction> CoreAllocation::try_deparser_zero_alloc(
         const PHV::Allocation& alloc, PHV::SuperCluster& cluster, PhvInfo& phv) const {
     auto alloc_attempt = alloc.makeTransaction();
-    if (isClotSuperCluster(utils_i.clot, cluster)) {
+    if (PHV::AllocUtils::is_clot_allocated(utils_i.clot, cluster)) {
         LOG_DEBUG4(TAB1 "Skipping CLOT-allocated super cluster: " << cluster);
         return alloc_attempt; }
     for (auto* sl : cluster.slice_lists()) {
@@ -4586,13 +4469,13 @@ BruteForceAllocationStrategy::tryAllocationFailuresFirst(
     const ordered_set<const PHV::Field*>& failures) {
     // remove singleton un_referenced fields
     std::list<PHV::SuperCluster*> cluster_groups =
-        remove_unreferenced_clusters(utils_i.uses, cluster_groups_input);
+        PHV::AllocUtils::remove_unref_clusters(utils_i.uses, cluster_groups_input);
 
     // remove singleton metadata slice list
     // TODO(yumin): This was introduced because some metadata fields are placed
     // in supercluster but it should not. If this does not happen anymore, we should
     // remove this.
-    cluster_groups = remove_singleton_slicelist_metadata(cluster_groups);
+    cluster_groups = PHV::AllocUtils::remove_singleton_metadata_slicelist(cluster_groups);
 
     // slice and then sort clusters.
     std::list<const PHV::SuperCluster*> unsliceable;
@@ -5447,7 +5330,7 @@ BruteForceAllocationStrategy::allocLoop(
     for (auto cluster_group : allocated)
         cluster_groups.remove(cluster_group);
 
-    auto logfile = createFileLog(pipe_id_i, "phv_allocation_history_", 1);
+    auto logfile = PHV::AllocUtils::createFileLog(pipe_id_i, "phv_allocation_history_", 1);
     LOG1("Allocation history of config " << config_i.name);
     LOG1(alloc_history.str());
     Logging::FileLog::close(logfile);
@@ -5578,7 +5461,7 @@ const IR::Node* IncrementalPHVAllocation::apply_visitor(const IR::Node* root, co
         PHV::AllocUtils::sort_and_merge_alloc_slices(phv_i);
     }
 
-    auto logfile = createFileLog(pipeId, "phv_allocation_incremental_summary_", 1);
+    auto logfile = PHV::AllocUtils::createFileLog(pipeId, "phv_allocation_incremental_summary_", 1);
     if (result.status == AllocResultCode::SUCCESS) {
         LOG1("PHV ALLOCATION SUCCESSFUL");
         LOG2(alloc);
@@ -5599,225 +5482,4 @@ const IR::Node* IncrementalPHVAllocation::apply_visitor(const IR::Node* root, co
     Logging::FileLog::close(logfile);
 
     return root;
-}
-
-TrivialAllocStrategy::PhvStatus::PhvStatus() {
-    for (const auto& s : {PHV::Size::b8, PHV::Size::b16, PHV::Size::b32}) {
-        next_container_idx[s] = 0;
-    }
-}
-
-PHV::Container TrivialAllocStrategy::PhvStatus::next_container(PHV::Size s) const {
-    BUG_CHECK(next_container_idx.count(s), "cannot find next container for this size: %1%", s);
-    return PHV::Container(PHV::Type(PHV::Kind::normal, s), unsigned(next_container_idx.at(s)));
-}
-
-void TrivialAllocStrategy::PhvStatus::inc_next_container(PHV::Size s) {
-    BUG_CHECK(next_container_idx.count(s), "cannot find next container for this size: %1%", s);
-    next_container_idx[s]++;
-}
-
-TrivialAllocStrategy::TrivialAllocStrategy(const PHV::AllocUtils& utils, const CoreAllocation& core,
-                                           PhvInfo& phv, int pipe_id)
-    : utils_i(utils), core_i(core), phv_i(phv), pipe_id_i(pipe_id) {}
-
-std::vector<PHV::AllocSlice> TrivialAllocStrategy::gen_alloc_slices_from_tx(
-    const PHV::Transaction& tx, PhvStatus& phv_status) const {
-    std::vector<PHV::AllocSlice> rst;
-    for (const auto& container_status : tx.getTransactionStatus()) {
-        const auto& original_container = container_status.first;
-        const auto& alloc_status = container_status.second;
-        if (alloc_status.slices.empty()) {
-            continue;
-        }
-        PHV::Container c = phv_status.next_container(original_container.type().size());
-        phv_status.inc_next_container(original_container.type().size());
-        for (const PHV::AllocSlice& slice : alloc_status.slices) {
-            auto* field = phv_i.field(slice.field()->id);
-            rst.push_back(PHV::AllocSlice(field, c, slice.field_slice().lo,
-                                          slice.container_slice().lo,
-                                          slice.container_slice().size(), {}));
-        }
-    }
-    return rst;
-}
-
-void TrivialAllocStrategy::bind_alloc_slices(const std::vector<PHV::AllocSlice>& slices) {
-    for (const auto& slice : slices) {
-        auto* field = phv_i.field(slice.field()->id);
-        field->add_alloc(slice);
-        phv_i.add_container_to_field_entry(slice.container(), field);
-    }
-}
-
-TrivialAllocStrategy::PartialAllocResult TrivialAllocStrategy::alloc_clusters(
-    PHV::Transaction& rst,
-    PhvStatus phv_status,
-    const std::list<PHV::ContainerGroup*>& container_groups,
-    const std::list<PHV::SuperCluster*>& clusters) const {
-    // we cannot use stop at first here because allocator might pack two fields in one
-    // container at first. We need to use score to select allocation without packing, if exists.
-    ScoreContext score_ctx("trivial", false, trivial_alloc_score_is_better);
-    std::vector<PHV::AllocSlice> alloc_slices;
-    auto empty_alloc = rst.makeTransaction();
-    for (auto* sc : clusters) {
-        LOG_FEATURE("alloc_progress", 5, "trying to allocate sliced cluster: " << sc);
-        // try deparser zero allocation.
-        if (is_deparser_zero_sc(sc)) {
-            if (auto partial_alloc = core_i.try_deparser_zero_alloc(empty_alloc, *sc, phv_i)) {
-                for (const auto& s : gen_alloc_slices_from_tx(*partial_alloc, phv_status)) {
-                    alloc_slices.push_back(s);
-                }
-                LOG5("deparser zero allocated: " << sc);
-                continue;
-            }
-        }
-        // try normal allocation.
-        bool allocated = false;
-        for (const auto containers : container_groups) {
-            LOG_FEATURE("alloc_progress", 5, "\nTrying container group: " << containers);
-            auto partial_alloc = core_i.try_alloc(empty_alloc, *containers, *sc, 5, score_ctx);
-            if (partial_alloc) {
-                for (const auto& s : gen_alloc_slices_from_tx(*partial_alloc, phv_status)) {
-                    alloc_slices.push_back(s);
-                }
-                allocated = true;
-                LOG_FEATURE("alloc_progress", 5, "normally allocated: " << sc);
-                break;
-            }
-        }
-        if (!allocated) {
-            LOG_FEATURE("alloc_progress", 5, "Failed to allocate sliced cluster: " << sc);
-            auto failing_sl = core_i.find_first_unallocated_slicelist(
-                    empty_alloc, container_groups, *sc);
-            if (failing_sl) {
-                LOG_FEATURE("alloc_progress", 5, "Impossible to allocate slice list found: " <<
-                            *failing_sl);
-                return PartialAllocResult(false, {}, PhvStatus(), *failing_sl, {sc});
-            } else {
-                LOG_FEATURE("alloc_progress", 5, "Even if all slice lists can be allocated");
-                return PartialAllocResult(false, {}, PhvStatus(), nullptr, {sc});
-            }
-        }
-    }
-    return PartialAllocResult(true, alloc_slices, phv_status, nullptr, {});
-}
-
-std::list<PHV::ContainerGroup*> TrivialAllocStrategy::make_container_groups_merged_by_size() const {
-    std::list<PHV::ContainerGroup*> rv;
-
-    // merge container groups of the same size to one group.
-    const PhvSpec& phvSpec = Device::phvSpec();
-    for (const PHV::Size s : phvSpec.containerSizes()) {
-        bitvec containers;
-        for (auto group : phvSpec.mauGroups(s)) {
-            containers |= group;
-        }
-        // Create group.
-        rv.emplace_back(new PHV::ContainerGroup(s, containers));
-    }
-    return rv;
-}
-
-ordered_set<const PHV::SuperCluster*> TrivialAllocStrategy::allocate(
-    const PHV::Allocation& alloc,
-    const std::list<PHV::SuperCluster*>& clusters_input,
-    bool dry_run) {
-    if (!dry_run) LOG1("Run TrivialAllocStrategy");
-    auto container_groups = make_container_groups_merged_by_size();
-    std::list<PHV::SuperCluster*> clusters =
-        remove_singleton_slicelist_metadata(clusters_input);
-
-    // remove singleton unreferenced fields
-    clusters = remove_unreferenced_clusters(utils_i.uses, clusters);
-
-    // XXX(yumin): seems okay to ignore strided headers in trivial alloc.
-    // create strided clusters
-    // clusters = create_strided_clusters(utils_i.strided_headers, clusters);
-
-    const int max_slicing_try = 256;
-    ordered_set<const PHV::SuperCluster*> unallocated_clusters;
-    std::stringstream history;
-    PhvStatus phv_status;
-    auto empty_alloc = alloc.makeTransaction();
-    for (auto* sc : clusters) {
-        if (!dry_run) {
-            LOG_DEBUG4("TRYING to allocate " << sc);
-            history << "Allocating: \n" << sc;
-        }
-        int n_tried = 0;
-        bool allocated = false;
-        ordered_set<const PHV::SuperCluster*> unallocatable;
-        auto slicing_ctx = utils_i.make_slicing_ctx(sc);
-        slicing_ctx->set_minimal_packing_mode(true);
-        slicing_ctx->iterate([&](std::list<PHV::SuperCluster*> sliced) {
-            n_tried++;
-            if (LOGGING(4) && !dry_run) {
-                LOG_DEBUG4("Slicing attempt: " << n_tried);
-                for (auto* sc : sliced) LOG_DEBUG4(sc);
-            }
-            PartialAllocResult sliced_alloc_rst =
-                alloc_clusters(empty_alloc, phv_status, container_groups, sliced);
-            if (sliced_alloc_rst.ok) {
-                phv_status = sliced_alloc_rst.phv_status;
-                allocated = true;
-                if (!dry_run) {
-                    LOG4("Successfully Allocated");
-                    history << "Successfully Allocated\n";
-                    history << "By slicing into the following superclusters:\n";
-                    for (auto* sc : sliced) {
-                        history << sc << "\n";
-                    }
-                    history << "Allocation Decisions: \n";
-                    for (const auto& s : sliced_alloc_rst.alloc_slices) {
-                        history << "allocate: " << s.container() << "[" << s.container_slice().lo <<
-                            ":"<< s.container_slice().hi << "] <- " <<
-                            PHV::FieldSlice(s.field(), s.field_slice()) << "\n";
-                    }
-                    bind_alloc_slices(sliced_alloc_rst.alloc_slices);
-                }
-                return false;
-            } else {
-                unallocatable = sliced_alloc_rst.unallocated;
-                if (!dry_run) LOG_FEATURE("alloc_progress", 4, "Failed to Allocate: " << sc->uid);
-                if (sliced_alloc_rst.cannot_allocate != nullptr) {
-                    if (!dry_run) LOG3("Found cannot_allocate slice list: " <<
-                         sliced_alloc_rst.cannot_allocate);
-                    slicing_ctx->invalidate(sliced_alloc_rst.cannot_allocate);
-                }
-            }
-            return n_tried < max_slicing_try;
-        });
-        if (!allocated) {
-            if (!dry_run) {
-                history << "Allocation Failed: " << "different slicing tried: " << n_tried << "\n";
-                print_or_throw_slicing_error(utils_i, sc, n_tried);
-            }
-            unallocated_clusters.insert(unallocatable.begin(), unallocatable.end());
-            break;
-        }
-    }
-    if (!dry_run) {
-        PHV::AllocUtils::sort_and_merge_alloc_slices(phv_i);
-        if (unallocated_clusters.empty()) {
-            LOG_FEATURE("alloc_progress", 1,
-                "Trivial Allocation Successfully Allocated All Clusters.");
-            phv_i.set_done(true);
-        } else {
-            history << unallocated_clusters.size() << " unallocated clusters:";
-            for (const auto* sc : unallocated_clusters) {
-                ::error("Failed to do trivial allocation on this super cluster: %1%",
-                        cstring::to_cstring(sc));
-                history << sc << "\n";
-            }
-        }
-
-        // print out history logs
-        auto logfile = createFileLog(pipe_id_i, "phv_trivial_allocation_history_", 1);
-        LOG1("Trivial Allocation history");
-        LOG1(history.str());
-        Logging::FileLog::close(logfile);
-    }
-
-    return unallocated_clusters;
 }

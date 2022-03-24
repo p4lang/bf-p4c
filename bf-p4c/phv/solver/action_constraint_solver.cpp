@@ -5,6 +5,7 @@
 #include <unordered_set>
 #include <boost/format/format_fwd.hpp>
 #include "bf-p4c/ir/bitrange.h"
+#include "lib/bitvec.h"
 #include "lib/exceptions.h"
 #include "lib/log.h"
 #include "lib/ordered_set.h"
@@ -111,13 +112,14 @@ void assign_input_bug_check(const ordered_map<ContainerID, ContainerSpec>& specs
 /// return the first container bit that are live but not set for by assigns. A non-none return
 /// value means that the bit@i is corrupted because of the whole container set instruction.
 boost::optional<int> invalid_whole_container_set(const std::vector<Assign>& assigns,
-                                                 const bitvec& live, const int container_sz) {
+                                                 const ContainerSpec& c,
+                                                 const bitvec& src_unallocated_bits) {
     bitvec set_bits;
     for (const auto& assign : assigns) {
         set_bits.setrange(assign.dst.range.lo, assign.dst.range.size());
     }
-    for (int i = 0; i < container_sz; i++) {
-        if (live[i] && !set_bits[i]) {
+    for (int i = 0; i < c.size; i++) {
+        if (c.live[i] && !src_unallocated_bits[i] && !set_bits[i]) {
             return i;
         }
     }
@@ -175,7 +177,7 @@ Result ActionSolverBase::try_container_set(const ContainerID dest,
     // does not write other live bits.
     const auto& assigns = source_classified.get_src(1);
     auto invalid_write_bit =
-        invalid_whole_container_set(assigns, specs_i.at(dest).live, specs_i.at(dest).size);
+        invalid_whole_container_set(assigns, specs_i.at(dest), src_unallocated_bits.at(dest));
     if (invalid_write_bit) {
         std::stringstream ss;
         ss << "whole container write on destination " << dest
@@ -201,9 +203,24 @@ void ActionSolverBase::add_assign(const Operand& dst, Operand src) {
     dest_assigns_i[dst.container][offset].push_back(assign);
 }
 
+void ActionSolverBase::add_src_unallocated_assign(const ContainerID& c, const le_bitrange& range) {
+    BUG_CHECK(specs_i.count(c), "unknown container %1%", c);
+    for (int i = range.lo; i <= range.hi; i++) {
+        BUG_CHECK(
+            specs_i.at(c).live[i],
+            "container %1%'s %2%th bit is not claimed live, but was set by an unallocated source",
+            c, i);
+    }
+    LOG5("Solver add source unallocated range on container " << c << ": " << range);
+    src_unallocated_bits[c].setrange(range.lo, range.size());
+}
+
 void ActionSolverBase::set_container_spec(ContainerID id, int size, bitvec live) {
     BUG_CHECK(size <= 32, "container larger than 32-bit is not supported");
     specs_i[id] = ContainerSpec{size, live};
+    if (!src_unallocated_bits.count(id)) {
+        src_unallocated_bits[id] = bitvec();
+    }
 }
 
 boost::optional<Error> ActionSolverBase::validate_input() const {
@@ -236,6 +253,7 @@ boost::optional<Error> ActionMoveSolver::dest_meet_expectation(
     // For live bits, they must be either
     // (1) unchanged.
     // (2) set by a correct bit from one of the source.
+    // (3) have unallocated source.
     // checking (2) here:
     bitvec set_bits;
     for (const auto& assigns : {std::make_pair(src1, bv_src1), std::make_pair(src2, bv_src2)}) {
@@ -251,6 +269,9 @@ boost::optional<Error> ActionMoveSolver::dest_meet_expectation(
             }
         }
     }
+
+    // mark all set by unallocated source bits are set_bits.
+    set_bits |= src_unallocated_bits.at(dest);
 
     // Any bit that is live (occupied by some non-mutex fields) and not set,
     // it cannot be changed. The only possible case that it will not be changed is
@@ -463,8 +484,7 @@ Result ActionMoveSolver::try_byte_rotate_merge(
     for (const auto& offset_assigns : assigns) {
         const int& offset = offset_assigns.first;
         if (offset % 8 != 0) {
-            ss << "dest " << dest << " has non-byte-shiftable source: " << offset_assigns.first
-               << ", " << offset_assigns.second;
+            ss << "dest " << dest << " has non-byte-shiftable source offset: " << offset;
             return Result(Error(ErrorCode::non_rot_aligned_and_non_byte_shiftable, ss.str()));
         }
     }
@@ -506,8 +526,7 @@ Result ActionMoveSolver::try_bitmasked_set(
     const ContainerID dest, const RotateClassifiedAssigns& assigns) const {
     std::stringstream err_msg;
     if (assigns.size() > 1 || !assigns.count(0)) {
-        err_msg << "container " << dest
-                << " has unaligned aligned sources, impossible for bitmasked-set";
+        err_msg << "container " << dest << " has unaligned aligned sources";
         return Result(Error(ErrorCode::too_many_unaligned_sources, err_msg.str()));
     }
     const auto source_classified = classify_by_sources(assigns.begin()->second);
@@ -576,7 +595,7 @@ Result ActionMoveSolver::solve() const {
         // try deposit-field, most common.
         rst = try_deposit_field(dest, offset_assigns);
         if (!rst.ok()) {
-            ss << "cannot be synthesized by deposit-field: " << rst.err->msg << ";\n";
+            ss << "1. cannot be synthesized by deposit-field: " << rst.err->msg << ";";
             // prefer to return deposit-field error code because it's more common.
             code = rst.err->code;
         } else {
@@ -587,7 +606,7 @@ Result ActionMoveSolver::solve() const {
         // then byte rotate merge for rare cases.
         rst = try_byte_rotate_merge(dest, offset_assigns);
         if (!rst.ok()) {
-            ss << "cannot be synthesized by byte-rotate-merge: " << rst.err->msg << ";\n";
+            ss << " 2. cannot be synthesized by byte-rotate-merge: " << rst.err->msg << ";";
         } else {
             instructions.push_back(rst.instructions.front());
             LOG5("synthesized with byte-rotate-merge: " << rst.instructions.front()->to_cstring());
@@ -597,7 +616,7 @@ Result ActionMoveSolver::solve() const {
         if (enable_bitmasked_set_i) {
             rst = try_bitmasked_set(dest, offset_assigns);
             if (!rst.ok()) {
-                ss << "cannot be synthesized by bitmasked-set: " << rst.err->msg << ";\n";
+                ss << " 3. cannot be synthesized by bitmasked-set: " << rst.err->msg << ";";
             } else {
                 LOG5("synthesized with bitmasked-set: " << rst.instructions.front()->to_cstring());
                 continue;

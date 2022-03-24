@@ -59,6 +59,9 @@ std::ostream &operator<<(std::ostream &out, const CanPackErrorCode& info);
 using CanPackReturnType = std::tuple<CanPackErrorCode,
       boost::optional<PHV::Allocation::ConditionalConstraints>>;
 
+/// CanPackV2ReturnType has both an error code and detailed error messages for debugging.
+using CanPackV2ReturnType = std::pair<CanPackErrorCode, cstring>;
+
 /** This class is meant to gather action information as well as provide information to PHV analysis
   * through function calls. Methods in AllocatePHV query the information contained in class members
   * here to determine constraints on packing induced by MAU actions.
@@ -924,6 +927,18 @@ class ActionPhvConstraints : public Inspector {
             const PHV::Allocation::MutuallyLiveSlices& original_container_state,
             const PHV::Allocation::LiveRangeShrinkingMap& initActions) const;
 
+    /// returns an eroor when any action constraint of @p actions are violated if
+    /// the destination container has slices in @p container_state.
+    CanPackV2ReturnType check_bitwise_and_basic_move_constraints(
+        const ordered_set<const IR::MAU::Action*>& actions,
+        const PHV::Allocation::MutuallyLiveSlices& container_state,
+        const ActionPropertyMap* action_props) const;
+
+    /// can_pack_v2 checks whether allocating @p slices will violate any action constraints.
+    CanPackV2ReturnType can_pack_v2(
+            const PHV::Allocation& alloc,
+            const std::vector<PHV::AllocSlice>& slices) const;
+
     /** @returns true if this packing would create container conflicts because of metadata
       * initialization issues.
       */
@@ -1089,7 +1104,7 @@ class ActionPhvConstraints : public Inspector {
      *  (1) mocha container can only be written in whole by ad/constant/container.
      *  (2) dark container can only be written in while by container.
      */
-    CanPackErrorCode check_move_constraints(
+    CanPackV2ReturnType check_move_constraints(
         const PHV::Allocation& alloc, const IR::MAU::Action* action,
         const std::vector<PHV::AllocSlice>& slices,
         const PHV::Allocation::MutuallyLiveSlices& container_state, const PHV::Container& c,
@@ -1111,18 +1126,28 @@ class ActionPhvConstraints : public Inspector {
         const PHV::Allocation::MutuallyLiveSlices& container_state, const PHV::Container& c,
         const PHV::Allocation::LiveRangeShrinkingMap& initActions) const;
 
-    /** Check action move constraints when a source slice is allocated in @p slices.
-     *  It will iterate over all actions that has read any in @p slices and run move constraint
-     *  checker on its destination container, with fields during the action.
-     */
-    CanPackErrorCode check_move_constraints_from_read(
-        const PHV::Allocation& alloc, const std::vector<PHV::AllocSlice>& slices,
+    /// Check action move constraints when a source slice is allocated in @p slices.
+    /// It will iterate over all actions that has read any in @p slices and run move constraint
+    /// checker on its destination container, with fields during the action.
+    CanPackV2ReturnType check_move_constraints_from_read(
+        const PHV::Allocation& alloc,
+        const std::vector<PHV::AllocSlice>& candidates,
         const PHV::Allocation::LiveRangeShrinkingMap& initActions) const;
 
-    CanPackErrorCode check_read_action_move_constraints(
-    const PHV::Allocation& alloc, const std::vector<PHV::AllocSlice>& slices,
+    /// Use action constraint solver to check move-based instruction constraints from
+    /// reader-side, i.e., @p candidates are sources of instructions.
+    CanPackV2ReturnType check_read_action_move_constraints(
+    const PHV::Allocation& alloc,
+    const std::vector<PHV::AllocSlice>& candidates,
     const IR::MAU::Action* action,
     const PHV::Allocation::LiveRangeShrinkingMap& initActions) const;
+
+    /// @returns error if the number of sources is more than allowed for in @p action, when we
+    /// allocate sources @p candidates to @p alloc.
+    CanPackV2ReturnType check_read_action_num_source_constraints(
+        const PHV::Allocation& alloc,
+        const std::vector<PHV::AllocSlice>& candidates,
+        const IR::MAU::Action* action) const;
 };
 
 std::ostream &

@@ -43,6 +43,7 @@ struct AllocSetting {
     bool no_code_change = false;              // true if disable metadata and dark init.
     bool physical_liverange_overlay = false;  // true if allow physical liverange overlay.
     bool limit_tmp_creation = false;          // true if intermediate tmp value are limited.
+    bool single_gress_parser_group = false;   // true if PragmaParserGroupMonogress enabled.
 };
 
 /// AllocUtils is a collection of const references to misc passes that PHV allocation depends on.
@@ -141,7 +142,7 @@ struct AllocUtils {
     }
 
     // @returns a slicing iterator.
-    PHV::Slicing::IteratorInterface* make_slicing_ctx(PHV::SuperCluster* sc) const;
+    PHV::Slicing::IteratorInterface* make_slicing_ctx(const PHV::SuperCluster* sc) const;
 
     // @returns true if @p a and @p b can be overlaid,
     // because of their physical live ranges are disjoint and both fieldslices are
@@ -150,6 +151,9 @@ struct AllocUtils {
     // (2) not in pa_no_overlay.
     bool can_physical_liverange_be_overlaid(const PHV::AllocSlice& a,
                                             const PHV::AllocSlice& b) const;
+
+    /// @returns true if super cluster is fully allocated to clot.
+    static bool is_clot_allocated(const ClotInfo& clots, const PHV::SuperCluster& sc);
 
     /// @returns the container groups available on this Device. All fieldslices in
     /// a cluster must be allocated to the same container group.
@@ -167,12 +171,32 @@ struct AllocUtils {
     /// phv alloc info is sorted in field bit order, msb first.
     static void sort_and_merge_alloc_slices(PhvInfo& phv);
 
+    /// remove singleton metadata slice list. This was introduced because some metadata fields are
+    /// placed in a slice list, but they do not need to be. Removing them from slice list allows
+    /// allocator to try more possible starting positions.
+    /// TODO(yumin): we should fix this in make_clusters and remove this function.
+    static std::list<PHV::SuperCluster*> remove_singleton_metadata_slicelist(
+            const std::list<PHV::SuperCluster*>& cluster_groups);
+
+    /// Remove unreferenced clusters from @p cluster_groups_input. For example, a singleton
+    /// super cluster with only one padding field.
+    static std::list<PHV::SuperCluster*> remove_unref_clusters(
+        const PhvUse& uses, const std::list<PHV::SuperCluster*>& cluster_groups_input);
+
+    /// @returns super clusters with fully-clotted clusters removed from @p clusters.
+    static std::list<PHV::SuperCluster*> remove_clot_allocated_clusters(
+            const ClotInfo& clot, std::list<PHV::SuperCluster*> clusters);
+
     /// Update table references of AllocSlices by using the FieldDefUse data
     /// Table references will be used to replace the static min_stage_i/max_stage_i
     /// for determining the AllocSlice liverange in both min-stage and placed-table domain
     static bool update_refs(AllocSlice& slc, const PhvInfo& p, const FieldDefUse::LocPairSet& refs,
                             FieldUse fuse);
     static void update_slice_refs(PhvInfo& phv, const FieldDefUse& defuse);
+
+    /// @returns a FileLog and rewrite LOG& macro to the returned file log.
+    /// To restore log stream, close the file log.
+    static Logging::FileLog *createFileLog(int pipeId, const cstring &prefix, int loglevel);
 };
 
 }  // namespace PHV
@@ -813,69 +837,6 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
         const std::list<PHV::ContainerGroup*>& container_groups) const;
 
     friend class BruteForceOptimizationStrategy;
-};
-
-/// TrivialAllocStrategy will try to allocate every minimally packed clusters to
-/// a emtpy PHV and fields in a container to a new container while ignoring container
-/// ingress constraint.
-class TrivialAllocStrategy {
-    /// PhvStatus bookkeeper for containers.
-    class PhvStatus {
-        std::unordered_map<PHV::Size, int> next_container_idx;
-     public:
-        PhvStatus();
-        PHV::Container next_container(PHV::Size) const;
-        void inc_next_container(PHV::Size);
-    };
-    const PHV::AllocUtils& utils_i;
-    const CoreAllocation& core_i;
-    PhvInfo& phv_i;
-    const int pipe_id_i;  /// used for logging purposes
-
-    struct PartialAllocResult {
-        bool ok = false;
-        std::vector<PHV::AllocSlice> alloc_slices;
-        PhvStatus phv_status;
-        const PHV::SuperCluster::SliceList* cannot_allocate = nullptr;
-        ordered_set<const PHV::SuperCluster*> unallocated;
-        PartialAllocResult(bool ok, std::vector<PHV::AllocSlice> alloc_slices,
-                           PhvStatus phv_status,
-                           const PHV::SuperCluster::SliceList* cannot_allocate,
-                           ordered_set<const PHV::SuperCluster*> unallocated)
-            : ok(ok),
-              alloc_slices(alloc_slices),
-              phv_status(phv_status),
-              cannot_allocate(cannot_allocate),
-              unallocated(unallocated) {}
-    };
-
-    // return a list of container groups that same-size groups are merged into one group.
-    std::list<PHV::ContainerGroup*> make_container_groups_merged_by_size() const;
-
-    // gen_alloc_slices_from_tx extract allocation results from tx and generate allocation of
-    // fieldslices to *new* phv containers. New phv containers are requested from @p phv_status
-    // and phv_status will be updated.
-    std::vector<PHV::AllocSlice> gen_alloc_slices_from_tx(const PHV::Transaction& tx,
-                                                          PhvStatus& phv_status) const;
-
-    // gen_alloc_slices_from_tx extract allocation results from tx and generate allocation of
-    // fieldslices to *new* phv containers. New phv containers are requested from @p phv_status
-    // and phv_status will be updated.
-    void bind_alloc_slices(const std::vector<PHV::AllocSlice>& slices);
-
-    PartialAllocResult alloc_clusters(PHV::Transaction& rst,
-                                      PhvStatus phv_status,
-                                      const std::list<PHV::ContainerGroup*>& container_groups,
-                                      const std::list<PHV::SuperCluster*>& clusters) const;
-
- public:
-    TrivialAllocStrategy(const PHV::AllocUtils& utils, const CoreAllocation& core, PhvInfo& phv,
-                         int pipe_id);
-
-    // @returns spliced SuperClusters that cannot be allocated.
-    ordered_set<const PHV::SuperCluster*> allocate(const PHV::Allocation& alloc,
-                                                   const std::list<PHV::SuperCluster*>& clusters,
-                                                   bool dry_run = false);
 };
 
 /** Given constraints gathered from compilation thus far, allocate fields to

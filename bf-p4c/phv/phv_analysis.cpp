@@ -2,6 +2,7 @@
 
 #include <initializer_list>
 
+#include "bf-p4c/common/pragma/all_pragmas.h"
 #include "bf-p4c/phv/add_initialization.h"
 #include "bf-p4c/phv/cluster_phv_operations.h"
 #include "bf-p4c/phv/mau_backtracker.h"
@@ -22,6 +23,31 @@
 #include "ir/visitor.h"
 
 class PhvInfo;
+
+/// collect and apply PHV-related global pragmas.
+class ApplyGlobalPragmas : public Visitor {
+ private:
+    PHV::AllocSetting &settings_i;
+
+ protected:
+    const IR::Node *apply_visitor(const IR::Node *root_, const char *) override {
+        BUG_CHECK(root_->is<IR::BFN::Pipe>(), "IR root is not a BFN::Pipe: %s", root_);
+        const auto *root = root_->to<IR::BFN::Pipe>();
+        // phv container pragma
+        Device::phvSpec().applyGlobalPragmas(root->global_pragmas);
+        // single parser gress pragma
+        // Check if pragma pa_parser_group_monogress is contained in the p4 program
+        for (auto *anno : root->global_pragmas) {
+            if (anno->name.name == PragmaParserGroupMonogress::name) {
+                settings_i.single_gress_parser_group = true;
+            }
+        }
+        return root;
+    }
+
+ public:
+    explicit ApplyGlobalPragmas(PHV::AllocSetting& settings): settings_i(settings){}
+};
 
 PHV_AnalysisPass::PHV_AnalysisPass(
         const BFN_Options &options,
@@ -125,6 +151,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             // Determine parser constant extract constraints, to be run before Clustering.
             Device::currentDevice() == Device::TOFINO ? new TofinoParserConstantExtract(phv) :
                 nullptr,
+            new ApplyGlobalPragmas(settings),
             &table_ids,
             &strided_headers,
             &parser_info,

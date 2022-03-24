@@ -429,11 +429,7 @@ Result validate_slicelist_for_action(
     // for destination, set a dummy liveness bitvec first. After adding all assignments,
     // we will update the container liveness using dest_live.
     // dest_live is a loose liveness bitvec for destination that assumes that all other
-    // fieldslices, that is not written in this action, will be dead. Also, for slices
-    // with unknown source allocation, we will mark them as dead as well, because source
-    // might be packed with one of the destination later.
-    // XXX(yumin): this might allow some invalid cases
-    // pass, but it should be rare and it is better than overly constrained.
+    // fieldslices, that is not written in this action, will be dead.
     bitvec dest_live;
     solver.set_container_spec(dest, dest_cont_size, bitvec(0, dest_cont_size));
 
@@ -448,6 +444,7 @@ Result validate_slicelist_for_action(
         if (sources.size() > 1 || sources.front().t != SourceOp::OpType::move) {
             continue;
         }
+        dest_live.setrange(dest_offset + prop.fs_offset.at(fs), fs.size());
         const auto dest_operand = solver::make_container_operand(
             dest, StartLen(dest_offset + prop.fs_offset.at(fs), fs.size()));
         const auto& src = sources.front();
@@ -455,7 +452,6 @@ Result validate_slicelist_for_action(
         if (src.ad_or_const) {
             LOG5("adding const assignment");
             solver.add_assign(dest_operand, solver::make_ad_or_const_operand());
-            dest_live.setrange(dest_offset + prop.fs_offset.at(fs), fs.size());
         } else {
             const auto& src_fs = *src.phv_src;
             const auto src_alloc = prop.find_allocation(src_fs);
@@ -466,6 +462,7 @@ Result validate_slicelist_for_action(
             // floating range is large than 0, by iterating combinations of them, we do not,
             // because the time complexity will become nonlinear.
             if (!src_alloc) {
+                solver.add_src_unallocated_assign(dest_operand.container, dest_operand.range);
                 continue;
             }
             const auto src_operand = solver::make_container_operand(
@@ -474,7 +471,6 @@ Result validate_slicelist_for_action(
                 solver.set_container_spec(src_alloc->first, dest_cont_size, bitvec());
             }
             solver.add_assign(dest_operand, src_operand);
-            dest_live.setrange(dest_offset + prop.fs_offset.at(fs), fs.size());
             LOG5("adding phv assignment from " << src_operand << " to " << dest_operand);
         }
     }
