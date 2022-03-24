@@ -29,6 +29,7 @@ add_custom_command(OUTPUT ${GEN_TOFINO_HDRS} ${GEN_TOFINO_SRCS}
 
 set (BFAS_TOFINO_SRCS
   tofino/input_xbar.cpp
+  tofino/parser.cpp
   PARENT_SCOPE
   )
 

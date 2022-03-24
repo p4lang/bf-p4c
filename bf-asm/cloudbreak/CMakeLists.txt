@@ -29,6 +29,7 @@ set_source_files_properties(
 
 set (BFAS_CLOUDBREAK_SRCS
   cloudbreak/input_xbar.cpp
+  cloudbreak/parser.cpp
   PARENT_SCOPE
   )
 

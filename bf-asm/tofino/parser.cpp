@@ -1,4 +1,4 @@
-/* parser template specializations for tofino -- #included directly in top-level parser.cpp */
+#include "parser-tofino-jbay-cloudbreak.h"
 
 #include <initializer_list>
 #include <set>
@@ -7,8 +7,8 @@
 #include <string>
 #include <sstream>
 
-#include "ordered_set.h"
-
+#include "top_level.h"
+#include "target.h"
 #include "misc.h"
 
 // ----------------------------------------------------------------------------
@@ -1308,7 +1308,7 @@ void handle_narrow_to_wide_constraint(Parser* parser, Target::Tofino::parser_reg
 
 template<>
 void Parser::write_config(Target::Tofino::parser_regs &regs, json::map &ctxt_json,
-                          bool single_parser) {
+        bool single_parser) {
     /// remove after 8.7 release
     if (single_parser) {
         for (auto st : all) {

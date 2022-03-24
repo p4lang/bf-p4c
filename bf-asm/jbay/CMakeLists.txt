@@ -29,6 +29,7 @@ set_source_files_properties(
 
 set (BFAS_JBAY_SRCS
   jbay/input_xbar.cpp
+  jbay/parser.cpp
   PARENT_SCOPE
   )
 

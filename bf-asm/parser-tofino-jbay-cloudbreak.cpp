@@ -1,51 +1,25 @@
+#include "parser-tofino-jbay-cloudbreak.h"
+
 #include <config.h>
 
 #include "algorithm.h"
 #include "constants.h"
-#include "parser.h"
 #include "phv.h"
 #include "range.h"
 #include "stage.h"
 #include "target.h"
+#include "ordered_set.h"
 #include "top_level.h"
 #include "vector.h"
 #include "misc.h"
 
-#include "tofino/parser.cpp"            // NOLINT(build/include) tofino template specializations
-#if HAVE_JBAY
-#include "jbay/parser.cpp"              // NOLINT(build/include) jbay template specializations
-#endif  /* HAVE_JBAY */
-#if HAVE_CLOUDBREAK
-#include "cloudbreak/parser.cpp"        // NOLINT(build/include) cloudbreak template specializations
-#endif  /* HAVE_CLOUDBREAK */
-#if HAVE_FLATROCK
-#include "flatrock/parser.cpp"          // NOLINT(build/include) flatrock template specializations
+/* Dummy specializations so that all specializations are covered */
+#ifdef HAVE_FLATROCK
+template<>
+void Parser::RateLimit::write_config(::Flatrock::regs_pipe &regs, gress_t gress) {}
+template<>
+void Parser::gen_configuration_cache(Target::Flatrock::parser_regs&, json::vector&) {}
 #endif  /* HAVE_FLATROCK */
-
-class AsmParser : public Section {
-    std::vector<Parser*> parser[2];     // INGRESS, EGRESS
-    bitvec               phv_use[2];    // ingress/egress only
-    std::vector<Phv::Ref> ghost_parser;  // the ghost "parser" extracts 32-bit value. This 32-bit
-                                         // can be from a single 32-bit container or multiple
-                                         // smaller one.
-    unsigned ghost_pipe_mask = 0xf;  // only set for JBAY
-    void start(int lineno, VECTOR(value_t) args);
-    void input(VECTOR(value_t) args, value_t data);
-    void process();
-    void output(json::map &);
-    void init_port_use(bitvec& port_use, const value_t &arg);
-    AsmParser();
-    ~AsmParser() {}
- public:
-    static AsmParser& get_parser() { return singleton_object; }
-    static AsmParser    singleton_object;
-
-    // For gtest
-    std::vector<Parser *> test_get_parser(gress_t gress);
-} AsmParser::singleton_object;
-
-AsmParser::AsmParser() : Section("parser") {
-}
 
 void AsmParser::init_port_use(bitvec& port_use, const value_t &arg) {
     if (arg.type == tVEC) {
@@ -545,6 +519,19 @@ void Parser::output_default_ports(json::vector& vec, bitvec port_use) {
 
 std::map<std::string, unsigned> Parser::parser_handles;
 
+void Parser::write_config(RegisterSetBase &regs, json::map &json, bool legacy) {
+    if (auto *tofino_regs = dynamic_cast<Target::Tofino::parser_regs *>(&regs))
+        write_config(*tofino_regs, json, legacy);
+#ifdef HAVE_JBAY
+    else if (auto *jbay_regs = dynamic_cast<Target::JBay::parser_regs *>(&regs))
+        write_config(*jbay_regs, json, legacy);
+#endif  /* HAVE_JBAY */
+#ifdef HAVE_CLOUDBREAK
+    else if (auto *cloudbreak_regs = dynamic_cast<Target::Cloudbreak::parser_regs *>(&regs))
+        write_config(*cloudbreak_regs, json, legacy);
+#endif  /* HAVE_CLOUDBREAK */
+}
+
 // output context.json format with multiple parser support
 void Parser::output(json::map& ctxt_json) {
     json::vector& cjson = ctxt_json["parsers"][gress ? "egress" : "ingress"];
@@ -569,7 +556,7 @@ void Parser::output(json::map& ctxt_json) {
         json::vector default_ports;
         output_default_ports(default_ports, port_use);
         parser_ctxt_json["default_parser_id"] = std::move(default_ports);
-        write_config(*regs, parser_ctxt_json, false);
+        write_config(dynamic_cast<RegisterSetBase &>(*regs), parser_ctxt_json, false);
         // FIXME -- rate limit config regs are per-pipe, not per parser, so if more than
         // one parser wants to set different rate limits, there will be a problem
         if (rate_limit)
@@ -590,7 +577,7 @@ void Parser::output_legacy(json::map& ctxt_json) {
         auto *regs = new TARGET::parser_regs;
         declare_registers(regs);
         parser_handle = next_handle();
-        write_config(*regs, ctxt_json["parser"], true);
+        write_config(dynamic_cast<RegisterSetBase &>(*regs), ctxt_json["parser"], true);
         if (rate_limit)
             rate_limit.write_config(TopLevel::regs<TARGET>()->reg_pipe, gress);
         gen_configuration_cache(*regs, ctxt_json["configuration_cache"]);
@@ -743,24 +730,6 @@ void Parser::Checksum::pass2(Parser *parser) {
             }
         }
     }
-}
-
-template<class ROW>
-void Parser::Checksum::write_tofino_row_config(ROW &row) {
-    row.add = add;
-    if (dest) row.dst = dest->reg.parser_id();
-    else if (tag >= 0) row.dst = tag;
-    row.dst_bit_hdr_end_pos = dst_bit_hdr_end_pos;
-    row.hdr_end = end;
-    int rsh = 0;
-    for (auto &el : row.mask)
-         el = (mask >> rsh++) & 1;
-    row.shr = shift;
-    row.start = start;
-    rsh = 0;
-    for (auto &el : row.swap)
-         el = (swap >> rsh++) & 1;
-    row.type = type;
 }
 
 Parser::CounterInit::CounterInit(gress_t gress, pair_t data)
@@ -1785,61 +1754,6 @@ void Parser::State::pass2(Parser *pa) {
 
 /********* output *********/
 
-template <class REGS>
-void Parser::PriorityUpdate::write_config(REGS &action_row) {
-    if (offset >= 0) {
-        action_row.pri_upd_type = 1;
-        action_row.pri_upd_src = offset;
-        action_row.pri_upd_en_shr = shift;
-        action_row.pri_upd_val_mask = mask;
-    } else {
-        action_row.pri_upd_type = 0;
-        action_row.pri_upd_en_shr = 1;
-        action_row.pri_upd_val_mask = mask;
-    }
-}
-
-template <class REGS>
-void Parser::State::Match::write_config(REGS &regs, Parser *pa, State *state,
-                                        Match *def, json::map &ctxt_json) {
-    int row, count = 0;
-    do {
-        if ((row = --pa->tcam_row_use) < 0) {
-            if (row == -1)
-                error(state->lineno, "Ran out of tcam space in %sgress parser",
-                      state->gress ? "e" : "in");
-            return; }
-        ctxt_json["tcam_rows"].to<json::vector>().push_back(row);
-        write_row_config(regs, pa, state, row, def, ctxt_json);
-        pa->match_to_row[this] = row;
-    } while (++count < value_set_size);
-}
-
-template<class REGS>
-void Parser::State::Match::write_config(REGS &regs, json::vector &vec) {
-    int select_statement_bit = 0;
-    for (auto f : field_mapping) {
-        json::map container_cjson;
-        container_cjson["container_width"] = Parser::match_key_size(f.container_id.c_str());
-
-        int container_hardware_id = Parser::match_key_loc(f.container_id.c_str());
-        container_cjson["container_hardware_id"] = container_hardware_id;
-
-        container_cjson["mask"] = (1 << (f.hi - f.lo + 1)) - 1;
-        json::vector field_mapping_cjson;
-        for (auto i = f.lo; i <= f.hi; i++) {
-            json::map field_map;
-            field_map["register_bit"] = i;
-            field_map["field_name"] = f.where.name();
-            field_map["start_bit"] = i;
-            field_map["select_statement_bit"] = select_statement_bit++;
-            field_mapping_cjson.push_back(field_map.clone());
-        }
-        container_cjson["field_mapping"] = field_mapping_cjson.clone();
-        vec.push_back(container_cjson.clone());
-    }
-}
-
 /** Extractor config tracking and register config code
  * Different tofino models have very different ways in which their parser extractors are
  * managed, but all are common in that there are multiple extractions that can happen in
@@ -1869,104 +1783,6 @@ void Parser::State::Match::write_config(REGS &regs, json::vector &vec) {
  * method.
  */
 
-template <class REGS>
-void Parser::State::Match::write_saves(REGS &regs, Match* def, void *output_map,
-        int& max_off, unsigned& used, int csum_8b, int csum_16b) {
-    if (offset_inc) for (auto s : save) s->flags |= OFFSET;
-    for (auto s : save)
-        max_off = std::max(max_off,
-                           s->write_output_config(regs, output_map, used, csum_8b, csum_16b));
-    if (def) for (auto &s : def->save)
-        max_off = std::max(max_off,
-                           s->write_output_config(regs, output_map, used, csum_8b, csum_16b));
-}
-
-template <class REGS>
-void Parser::State::Match::write_sets(REGS &regs, Match* def, void *output_map, unsigned& used,
-        int csum_8b, int csum_16b) {
-    if (offset_inc) for (auto s : set) s->flags |= ROTATE;
-    for (auto s : set) s->write_output_config(regs, output_map, used, csum_8b, csum_16b);
-    if (def)
-        for (auto s : def->set) s->write_output_config(regs, output_map, used, csum_8b, csum_16b);
-}
-
-template <class REGS>
-void Parser::State::Match::write_common_row_config(REGS &regs, Parser *pa, State *state, int row,
-                                                   Match *def, json::map &ctxt_json) {
-    int max_off = -1;
-    write_lookup_config(regs, state, row);
-
-    auto &ea_row = regs.memory[state->gress].ml_ea_row[row];
-    if (ctr_instr || ctr_load || ctr_imm_amt || ctr_stack_pop || options.target == CLOUDBREAK) {
-        write_counter_config(ea_row);
-    } else if (def) {
-        def->write_counter_config(ea_row);
-    }
-    if (shift)
-        max_off = std::max(max_off, int(ea_row.shift_amt = shift) - 1);
-    else if (def)
-        max_off = std::max(max_off, int(ea_row.shift_amt = def->shift) - 1);
-    max_off = std::max(max_off, write_load_config(regs, pa, state, row));
-    if (auto &next = (!this->next && def) ? def->next : this->next) {
-        std::vector<State *> prev;
-        for (auto n : next) {
-            max_off = std::max(max_off, n->write_lookup_config(regs, pa, state, row, prev));
-            prev.push_back(n); }
-        const match_t &n = next.pattern ? next.pattern : next->stateno;
-        ea_row.nxt_state = n.word1;
-        ea_row.nxt_state_mask = ~(n.word0 & n.word1) & PARSER_STATE_MASK;
-    } else {
-        ea_row.done = 1;
-    }
-
-    auto &action_row = regs.memory[state->gress].po_action_row[row];
-    for (auto &c : csum) {
-        action_row.csum_en[c.unit] = 1;
-        action_row.csum_addr[c.unit] = c.addr; }
-    if (offset_inc || offset_rst) {
-        action_row.dst_offset_inc = offset_inc;
-        action_row.dst_offset_rst = offset_rst;
-    } else if (def) {
-        action_row.dst_offset_inc = def->offset_inc;
-        action_row.dst_offset_rst = def->offset_rst; }
-    if (priority)
-        priority.write_config(action_row);
-    if (hdr_len_inc_stop)
-        hdr_len_inc_stop.write_config(action_row);
-
-    void *output_map = pa->setup_phv_output_map(regs, state->gress, row);
-    unsigned used = 0;
-    int csum_8b = 0;
-    int csum_16b = 0;
-    for (auto &c : csum) {
-        c.write_output_config(regs, pa, this, output_map, used);
-        if (c.type == 0 && c.dest) {
-            if (c.dest->reg.size == 8)
-                ++csum_8b;
-            else if (c.dest->reg.size == 16)
-                ++csum_16b;
-        }
-    }
-
-    if (options.target == TOFINO) {
-        write_saves(regs, def, output_map, max_off, used, csum_8b, csum_16b);
-        write_sets(regs, def, output_map, used, csum_8b, csum_16b);
-    } else {
-        write_sets(regs, def, output_map, used, 0, 0);
-        write_saves(regs, def, output_map, max_off, used, 0, 0);
-    }
-
-    int clot_unit = 0;
-    for (auto *c : clots) c->write_config(action_row, clot_unit++);
-    if (def) for (auto *c : def->clots) c->write_config(action_row, clot_unit++);
-    pa->mark_unused_output_map(regs, output_map, used);
-
-    if (buf_req < 0) {
-        buf_req = max_off + 1;
-        BUG_CHECK(buf_req <= 32); }
-    ea_row.buf_req = buf_req;
-}
-
 std::set<Parser::State::Match*>
 Parser::State::Match::get_all_preds() {
     std::set<Parser::State::Match*> visited;
@@ -1991,41 +1807,117 @@ Parser::State::Match::get_all_preds_impl(std::set<Parser::State::Match*>& visite
     return rv;
 }
 
-template <class REGS>
-void Parser::State::Match::write_row_config(REGS &regs, Parser *pa, State *state, int row,
-                                            Match *def, json::map &ctxt_json) {
-    write_common_row_config(regs, pa, state, row, def, ctxt_json);
+/* If the bitvec contains one of a pair of 8-bit PHVs, add the other, as they need
+ * to be owened together in the parser ingress/egress ownership */
+bitvec expand_parser_groups(bitvec phvs) {
+    for (int i : phvs)
+        if (Phv::reg(i)->size == 8)
+            phvs[i^1] = 1;
+    return phvs;
 }
 
-template <class REGS>
-void Parser::State::MatchKey::write_config(REGS &, json::vector &) {
-    // FIXME -- TBD -- probably needs to be different for tofino/jbay, so there will be
-    // FIXME -- template specializations for this in those files
+/* remove PHVs from the bitvec which are not accessable in the parser
+ * FIXME -- should just have a static const bitvec of the valid ones and & with it */
+bitvec remove_nonparser(bitvec phvs) {
+    for (int i : phvs)
+        if (Phv::reg(i)->parser_id() < 0)
+            phvs[i] = 0;
+    return phvs;
 }
 
-template <class REGS>
-void Parser::State::write_config(REGS &regs, Parser *pa, json::vector &ctxt_json) {
-    LOG2(gress << " state " << name << " (" << stateno << ')');
-    for (auto i : match) {
-        bool uses_pvs = false;
-        json::map state_cjson;
-        state_cjson["parser_name"] = name;
-        i->write_config(regs, state_cjson["match_registers"]);
-        if (i->value_set_size > 0) uses_pvs = true;
-        i->write_config(regs, pa, this, def, state_cjson);
-        state_cjson["uses_pvs"] = uses_pvs;
-        if (def) def->write_config(regs, pa, this, 0, state_cjson);
-        if (uses_pvs) {
-            state_cjson["pvs_name"] = i->value_set_name;
-            if (i->value_set_handle < 0)
-                error(lineno, "Invalid handle for parser value set %s", i->value_set_name.c_str());
-            auto pvs_handle_full = i->value_set_handle;
-            state_cjson["pvs_handle"] = pvs_handle_full;
+void setup_jbay_ownership(bitvec phv_use[2],
+                          checked_array<128, ubits<1>> &left,
+                          checked_array<128, ubits<1>> &right,
+                          checked_array<256, ubits<1>> &main_i,
+                          checked_array<256, ubits<1>> &main_e) {
+    for (int i : phv_use[EGRESS]) {
+        if (Phv::reg(i)->size == 8) {
+            if (phv_use[INGRESS][i^1])
+                error(0, "Can't use %s in ingress and %s in egress in Tofino2 parser",
+                    Phv::reg(i^1)->name, Phv::reg(i)->name); } }
+
+    std::set<unsigned> left_egress_owner_ids, right_egress_owner_ids;
+    std::set<unsigned> all_egress_owner_ids;
+
+    for (int i : phv_use[EGRESS]) {
+        auto id = Phv::reg(i)->parser_id();
+        if (id < 0)
+            error(0, "Can't access %s in parser", Phv::reg(i)->name);
+        else if (id < 128)
+            left_egress_owner_ids.insert(id);
+        else
+            right_egress_owner_ids.insert(id-128);
+
+        all_egress_owner_ids.insert(id);
+
+        if (Phv::reg(i)->size == 32) {
+            if (++id < 128)
+                left_egress_owner_ids.insert(id);
+            else
+                right_egress_owner_ids.insert(id-128);
+
+            all_egress_owner_ids.insert(id);
         }
-        for (auto idx : MatchIter(stateno)) {
-            state_cjson["parser_state_id"] = idx;
-            ctxt_json.push_back(state_cjson.clone());
+    }
+
+    for (auto id : left_egress_owner_ids)  left[id] = 1;
+    for (auto id : right_egress_owner_ids) right[id] = 1;
+    for (auto id : all_egress_owner_ids)   main_i[id] = main_e[id] = 1;
+}
+
+void setup_jbay_clear_on_write(bitvec phv_allow_clear_on_write,
+                               checked_array<128, ubits<1>> &left,
+                               checked_array<128, ubits<1>> &right,
+                               checked_array<256, ubits<1>> &main_i,
+                               checked_array<256, ubits<1>> &main_e) {
+    for (int i : phv_allow_clear_on_write) {
+        auto id = Phv::reg(i)->parser_id();
+
+        if (id < 0)
+            error(0, "Can't access %s in parser", Phv::reg(i)->name);
+        else if (id < 128)
+            left[id] = 1;
+        else
+            right[id-128] = 1;
+
+        main_i[id] = main_e[id] = 1;
+
+        if (Phv::reg(i)->size == 32) {
+            if (++id < 128)
+                left[id] = 1;
+            else
+                right[id-128] = 1;
+
+            main_i[id] = main_e[id] = 1;
         }
+    }
+}
+
+void setup_jbay_no_multi_write(bitvec phv_allow_bitwise_or,
+                               bitvec phv_allow_clear_on_write,
+                               checked_array<256, ubits<1>> &nmw_i,
+                               checked_array<256, ubits<1>> &nmw_e) {
+    std::set<unsigned> allow_multi_write_ids;
+
+    for (int i : phv_allow_bitwise_or) {
+        auto id = Phv::reg(i)->parser_id();
+        allow_multi_write_ids.insert(id);
+
+        if (Phv::reg(i)->size == 32)
+            allow_multi_write_ids.insert(++id);
+    }
+
+    for (int i : phv_allow_clear_on_write) {
+        auto id = Phv::reg(i)->parser_id();
+        allow_multi_write_ids.insert(id);
+
+        if (Phv::reg(i)->size == 32)
+            allow_multi_write_ids.insert(++id);
+    }
+
+    for (int i = 0; i < 256; i++) {
+        if (!allow_multi_write_ids.count(i))
+           nmw_i[i] = nmw_e[i] = 1;
     }
 }
 
@@ -2078,9 +1970,4 @@ void Parser::print_all_paths() {
     };
     if (states.size() > 0)
         visit_states(states.begin()->second, "");
-}
-
-// For gtest.
-std::vector<Parser *> test_get_parser(gress_t gress) {
-    return AsmParser::get_parser().test_get_parser(gress);
 }

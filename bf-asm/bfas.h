@@ -57,6 +57,10 @@ extern std::string asmfile_name;
 extern std::string asmfile_dir;
 extern std::unique_ptr<std::ostream> gfm_out;
 
+class BaseAsmParser;
+extern BaseAsmParser *asm_parser;
+void createSingleAsmParser();
+
 std::string toString(target_t target);
 std::ostream& operator<<(std::ostream& out, target_t target);
 

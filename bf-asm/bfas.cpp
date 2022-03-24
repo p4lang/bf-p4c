@@ -13,6 +13,7 @@
 #include "../bf-p4c/version.h"  // for BF_P4C_VERSION
 #include "misc.h"
 #include "version.h"
+#include "parser-tofino-jbay-cloudbreak.h"
 
 #define MAJOR_VERSION   1
 #define MINOR_VERSION   0
@@ -76,6 +77,14 @@ extern char *program_name;
  * about format of parser and table handles.
  */
 unsigned unique_table_offset = 0;
+
+BaseAsmParser *asm_parser = nullptr;
+
+// Create target-specific section for parser
+void createSingleAsmParser() {
+    if (asm_parser != nullptr) return;
+    asm_parser = new AsmParser;
+}
 
 std::unique_ptr<std::ostream> open_output(const char *name, ...) {
     char namebuf[1024], *p = namebuf, *end = namebuf + sizeof(namebuf);
@@ -401,6 +410,8 @@ int main(int ac, char **av) {
                 Target::OVERRIDE_NUM_MAU_STAGES(options.num_stages_override);
             }
 
+            createSingleAsmParser();
+
             if (!srcfiles++) firstsrc = av[i];
             error_count += asm_parse_file(av[i], fp);
             if (error_count > 0) return 1;
@@ -536,6 +547,7 @@ class Version : public Section {
                             options.target = old;
                             error(kv.value.lineno, "Inconsistent target %s (previously set to %s)",
                                   kv.value.s, Target::name()); }
+                        createSingleAsmParser();
                     } else {
                         error(kv.value.lineno, "Invalid target %s", value_desc(kv.value));
                     }

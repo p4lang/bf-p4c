@@ -130,7 +130,7 @@ set (BFAS_COMMON_SOURCES
   meter.cpp
   misc.cpp
   p4_table.cpp
-  parser.cpp
+  parser-tofino-jbay-cloudbreak.cpp
   phase0.cpp
   phv.cpp
   primitives.cpp
@@ -176,6 +176,7 @@ SET (BFAS_COMMON_HEADERS
   misc.h
   p4_table.h
   parser.h
+  parser-tofino-jbay-cloudbreak.h
   phv.h
   power_ctl.h
   register_reference.h

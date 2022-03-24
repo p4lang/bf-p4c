@@ -1,4 +1,7 @@
-/* parser template specializations for cloudbreak -- #included directly in top-level parser.cpp */
+#include "parser-tofino-jbay-cloudbreak.h"
+#include "top_level.h"
+#include "stage.h"
+
 template <> void Parser::Checksum::write_config(Target::Cloudbreak::parser_regs &regs,
         Parser *parser) {
     if (unit == 0) write_row_config(regs.memory[gress].po_csum_ctrl_0_row[addr]);
@@ -445,7 +448,8 @@ template<> void Parser::State::Match::write_row_config(Target::Cloudbreak::parse
     ea_row.action_ram_en = en_gen.get_ram_enable();
 }
 
-template<> void Parser::write_config(Target::Cloudbreak::parser_regs &regs, json::map &ctxt_json,
+template<>
+void Parser::write_config(Target::Cloudbreak::parser_regs &regs, json::map &ctxt_json,
         bool single_parser) {
     if (single_parser) {
         for (auto st : all)

@@ -353,6 +353,23 @@ class SrcInfo {
     explicit SrcInfo(int l) : lineno(l) {}
 };
 
+struct RegisterSetBase {
+    virtual ~RegisterSetBase() = default;
+};
+
+struct ParserRegisterSet : public RegisterSetBase {};
+
+class Parsable {
+ public:
+    /// parsing the section: data is the entire map/sequence of elements
+    virtual void input(VECTOR(value_t) args, value_t data) = 0;
+};
+
+class Configurable {
+ public:
+    virtual void write_config(RegisterSetBase &regs, json::map &json, bool legacy = true) = 0;
+};
+
 #endif /* __cplusplus */
 
 #endif /* BF_ASM_ASM_TYPES_H_ */

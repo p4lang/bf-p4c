@@ -1,6 +1,6 @@
 #include "stage.h"
 #include "tables.h"
-#include "parser.h"
+#include "parser-tofino-jbay-cloudbreak.h"
 
 DEFINE_TABLE_TYPE(Phase0MatchTable)
 

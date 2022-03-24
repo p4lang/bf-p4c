@@ -2,7 +2,7 @@
 
 #include "constants.h"
 #include "deparser.h"
-#include "parser.h"
+#include "parser-tofino-jbay-cloudbreak.h"
 #include "phv.h"
 #include "range.h"
 #include "target.h"

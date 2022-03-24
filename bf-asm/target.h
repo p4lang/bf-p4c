@@ -4,6 +4,7 @@
 #include <config.h>
 #include "bfas.h"
 #include "map.h"
+#include "asm-types.h"
 
 /** FOR_ALL_TARGETS -- metamacro that expands a macro for each defined target
  *  FOR_ALL_REGISTER_SETS -- metamacro that expands for each distinct register set;
@@ -175,7 +176,7 @@ class Target::Tofino : public Target {
         std::map<unsigned, ::Tofino::regs_all_parser_egress*>   parser_egress;
         ::Tofino::regs_all_parse_merge                          parser_merge;
     };
-    struct                                          parser_regs {
+    struct                                          parser_regs : public ParserRegisterSet {
         typedef ::Tofino::memories_all_parser_          _memory;
         typedef ::Tofino::regs_all_parser_ingress       _ingress;
         typedef ::Tofino::regs_all_parser_egress        _egress;
@@ -302,7 +303,7 @@ class Target::JBay : public Target {
         std::map<unsigned, ::JBay::regs_parser_main_*>   parser_main[2];
         ::JBay::regs_parse_merge                         parser_merge;
     };
-    struct                                          parser_regs {
+    struct                                          parser_regs : public ParserRegisterSet {
         typedef ::JBay::memories_parser_                _memory;
         typedef ::JBay::regs_parser_ingress             _ingress;  // [9]
         typedef ::JBay::regs_parser_egress              _egress;   // [9]
@@ -480,7 +481,7 @@ class Target::Cloudbreak : public Target {
         std::map<unsigned, ::Cloudbreak::regs_parser_main_*>   parser_main[2];
         ::Cloudbreak::regs_parse_merge                         parser_merge;
     };
-    struct                                          parser_regs {
+    struct                                          parser_regs : public ParserRegisterSet {
         typedef ::Cloudbreak::memories_parser_                _memory;
         typedef ::Cloudbreak::regs_parser_ingress             _ingress;  // [9]
         typedef ::Cloudbreak::regs_parser_egress              _egress;   // [9]
@@ -613,8 +614,7 @@ class Target::Flatrock : public Target {
         ::Flatrock::regs_top                            reg_top;
         ::Flatrock::regs_pipe                           reg_pipe;
     };
-
-    struct                              parser_regs {
+    struct                              parser_regs : public ParserRegisterSet {
         ::Flatrock::memories_ingress_parser             imem;
         ::Flatrock::memories_egress_parser              emem;
         ::Flatrock::regs_ingress_parser                 ingress;

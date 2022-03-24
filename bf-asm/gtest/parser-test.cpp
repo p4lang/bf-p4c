@@ -1,5 +1,6 @@
-#include "parser.h"
+#include "parser-tofino-jbay-cloudbreak.h"
 #include "gtest/gtest.h"
+#include "bfas.h"
 
 namespace {
 
@@ -432,8 +433,10 @@ parser egress:
     options.target = NO_TARGET;
     Phv::test_clear();
 
+    createSingleAsmParser();
+    AsmParser *asm_parser = dynamic_cast<AsmParser *>(::asm_parser);
     asm_parse_string(parser_str);
-    std::vector<Parser*> parser_vector = test_get_parser(EGRESS);
+    std::vector<Parser*> parser_vector = asm_parser->test_get_parser(EGRESS);
     EXPECT_GT(parser_vector.size(), 0);
     Parser *parser = parser_vector.back();
     parser->process();
@@ -572,8 +575,10 @@ parser egress:
     options.target = NO_TARGET;
     Phv::test_clear();
 
+    createSingleAsmParser();
+    AsmParser *asm_parser = dynamic_cast<AsmParser *>(::asm_parser);
     asm_parse_string(parser_str);
-    std::vector<Parser*> parser_vector = test_get_parser(EGRESS);
+    std::vector<Parser*> parser_vector = asm_parser->test_get_parser(EGRESS);
     EXPECT_GT(parser_vector.size(), 0);
     Parser *parser = parser_vector.back();
     parser->process();
@@ -864,8 +869,10 @@ parser egress:
     options.target = NO_TARGET;
     Phv::test_clear();
 
+    createSingleAsmParser();
+    AsmParser *asm_parser = dynamic_cast<AsmParser *>(::asm_parser);
     asm_parse_string(parser_str);
-    std::vector<Parser*> parser_vector = test_get_parser(EGRESS);
+    std::vector<Parser*> parser_vector = asm_parser->test_get_parser(EGRESS);
     EXPECT_GT(parser_vector.size(), 0);
     Parser *parser = parser_vector.back();
     parser->process();
@@ -1018,8 +1025,10 @@ parser egress:
     options.target = NO_TARGET;
     Phv::test_clear();
 
+    createSingleAsmParser();
+    AsmParser *asm_parser = dynamic_cast<AsmParser *>(::asm_parser);
     asm_parse_string(parser_str);
-    std::vector<Parser*> parser_vector = test_get_parser(EGRESS);
+    std::vector<Parser*> parser_vector = asm_parser->test_get_parser(EGRESS);
     EXPECT_GT(parser_vector.size(), 0);
     Parser *parser = parser_vector.back();
     parser->process();

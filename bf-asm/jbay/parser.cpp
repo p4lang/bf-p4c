@@ -1,12 +1,6 @@
-/* parser template specializations for jbay -- #included directly in top-level parser.cpp */
-
-template<class ROW>
-void Parser::Checksum::write_row_config(ROW &row) {
-    write_tofino_row_config(row);
-    int rsh = 0;
-    for (auto &el : row.mul_2)
-        el = (mul_2 >> rsh++) & 1;
-}
+#include "parser-tofino-jbay-cloudbreak.h"
+#include "top_level.h"
+#include "stage.h"
 
 template <> void Parser::Checksum::write_config(Target::JBay::parser_regs &regs, Parser *parser) {
     if (unit == 0) write_row_config(regs.memory[gress].po_csum_ctrl_0_row[addr]);
@@ -45,21 +39,6 @@ template <> void Parser::CounterInit::write_config(Target::JBay::parser_regs &re
     ctr_init_ram.rotate = rot;
     ctr_init_ram.max = max;
     ctr_init_ram.src = src;
-}
-
-// generic for jbay or cloudbreak (tofino1 is specialized)
-template <class REGS> void Parser::RateLimit::write_config(REGS &regs, gress_t gress) {
-    if (gress == INGRESS) {
-        auto &ctrl = regs.pardereg.pgstnreg.parbreg.left.i_phv_rate_ctrl;
-        ctrl.inc = inc;
-        ctrl.interval = interval;
-        ctrl.max = max;
-    } else if (gress == EGRESS) {
-        auto &ctrl = regs.pardereg.pgstnreg.parbreg.right.e_phv_rate_ctrl;
-        ctrl.inc = inc;
-        ctrl.interval = interval;
-        ctrl.max = max;
-    }
 }
 
 template<> void Parser::State::Match::write_lookup_config(Target::JBay::parser_regs &regs,
@@ -229,120 +208,6 @@ static void write_output_const_slot(
     used |= tmpused & ~SAVE_ONLY_USED_SLOTS;
 }
 
-/* If the bitvec contains one of a pair of 8-bit PHVs, add the other, as they need
- * to be owened together in the parser ingress/egress ownership */
-static bitvec expand_parser_groups(bitvec phvs) {
-    for (int i : phvs)
-        if (Phv::reg(i)->size == 8)
-            phvs[i^1] = 1;
-    return phvs;
-}
-
-/* remove PHVs from the bitvec which are not accessable in the parser
- * FIXME -- should just have a static const bitvec of the valid ones and & with it */
-static bitvec remove_nonparser(bitvec phvs) {
-    for (int i : phvs)
-        if (Phv::reg(i)->parser_id() < 0)
-            phvs[i] = 0;
-    return phvs;
-}
-
-static void setup_jbay_ownership(bitvec phv_use[2],
-                                 checked_array<128, ubits<1>> &left,
-                                 checked_array<128, ubits<1>> &right,
-                                 checked_array<256, ubits<1>> &main_i,
-                                 checked_array<256, ubits<1>> &main_e) {
-    for (int i : phv_use[EGRESS]) {
-        if (Phv::reg(i)->size == 8) {
-            if (phv_use[INGRESS][i^1])
-                error(0, "Can't use %s in ingress and %s in egress in Tofino2 parser",
-                    Phv::reg(i^1)->name, Phv::reg(i)->name); } }
-
-    std::set<unsigned> left_egress_owner_ids, right_egress_owner_ids;
-    std::set<unsigned> all_egress_owner_ids;
-
-    for (int i : phv_use[EGRESS]) {
-        auto id = Phv::reg(i)->parser_id();
-        if (id < 0)
-            error(0, "Can't access %s in parser", Phv::reg(i)->name);
-        else if (id < 128)
-            left_egress_owner_ids.insert(id);
-        else
-            right_egress_owner_ids.insert(id-128);
-
-        all_egress_owner_ids.insert(id);
-
-        if (Phv::reg(i)->size == 32) {
-            if (++id < 128)
-                left_egress_owner_ids.insert(id);
-            else
-                right_egress_owner_ids.insert(id-128);
-
-            all_egress_owner_ids.insert(id);
-        }
-    }
-
-    for (auto id : left_egress_owner_ids)  left[id] = 1;
-    for (auto id : right_egress_owner_ids) right[id] = 1;
-    for (auto id : all_egress_owner_ids)   main_i[id] = main_e[id] = 1;
-}
-
-static void setup_jbay_clear_on_write(bitvec phv_allow_clear_on_write,
-                                      checked_array<128, ubits<1>> &left,
-                                      checked_array<128, ubits<1>> &right,
-                                      checked_array<256, ubits<1>> &main_i,
-                                      checked_array<256, ubits<1>> &main_e) {
-    for (int i : phv_allow_clear_on_write) {
-        auto id = Phv::reg(i)->parser_id();
-
-        if (id < 0)
-            error(0, "Can't access %s in parser", Phv::reg(i)->name);
-        else if (id < 128)
-            left[id] = 1;
-        else
-            right[id-128] = 1;
-
-        main_i[id] = main_e[id] = 1;
-
-        if (Phv::reg(i)->size == 32) {
-            if (++id < 128)
-                left[id] = 1;
-            else
-                right[id-128] = 1;
-
-            main_i[id] = main_e[id] = 1;
-        }
-    }
-}
-
-static void setup_jbay_no_multi_write(bitvec phv_allow_bitwise_or,
-                                      bitvec phv_allow_clear_on_write,
-                                      checked_array<256, ubits<1>> &nmw_i,
-                                      checked_array<256, ubits<1>> &nmw_e) {
-    std::set<unsigned> allow_multi_write_ids;
-
-    for (int i : phv_allow_bitwise_or) {
-        auto id = Phv::reg(i)->parser_id();
-        allow_multi_write_ids.insert(id);
-
-        if (Phv::reg(i)->size == 32)
-            allow_multi_write_ids.insert(++id);
-    }
-
-    for (int i : phv_allow_clear_on_write) {
-        auto id = Phv::reg(i)->parser_id();
-        allow_multi_write_ids.insert(id);
-
-        if (Phv::reg(i)->size == 32)
-            allow_multi_write_ids.insert(++id);
-    }
-
-    for (int i = 0; i < 256; i++) {
-        if (!allow_multi_write_ids.count(i))
-           nmw_i[i] = nmw_e[i] = 1;
-    }
-}
-
 template <> void Parser::State::Match::Set::write_output_config(Target::JBay::parser_regs &regs,
             void *_row, unsigned &used, int, int) const {
     Target::JBay::parser_regs::_memory::_po_action_row *row =
@@ -444,8 +309,9 @@ void jbay2717_workaround(Parser* parser, Target::JBay::parser_regs &regs) {
     }
 }
 
-template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map &ctxt_json,
-                                                                        bool single_parser) {
+template<>
+void Parser::write_config(Target::JBay::parser_regs &regs, json::map &ctxt_json,
+        bool single_parser) {
     if (single_parser) {
         for (auto st : all)
             st->write_config(regs, this, ctxt_json[st->gress == EGRESS ? "egress" : "ingress"]);
