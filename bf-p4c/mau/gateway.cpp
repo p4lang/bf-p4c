@@ -777,19 +777,18 @@ bool CollectGatewayFields::compute_offsets() {
     std::sort(sort_by_size.begin(), sort_by_size.end(),
               [](decltype(info)::value_type *a, decltype(info)::value_type *b) -> bool {
                   return a->first.size() > b->first.size(); });
-    std::map<std::pair<PHV::Container, unsigned>, int>       alloc_bytes;
+    std::map<std::pair<PHV::Container, int>, int>       alloc_bytes;
     PHV::FieldUse use_read(PHV::FieldUse::READ);
 
     if (!gws.ByteSwizzle && ixbar) {
         // can't byteswizzle on this target, so every field must be allocated to a fixed
         // spot based on the ixbar
         for (auto &byte : ixbar->use) {
-            auto alloc_byte = std::make_pair(byte.container, byte.lo/8U);
             // FIXME -- for Flatrock, can access either group 0 or 1, so need to give them
             // different byte addresses in the match.  This should be more flexible to support
             // other schemes too
             int b = byte.loc.group*8 + byte.loc.byte;
-            alloc_bytes[alloc_byte] = b;
+            alloc_bytes[byte] = b;
             if (b >= bytes) bytes = b+1; }
         // another odd problem -- xors can generally only go one way (can xor bytes 4-7 into
         // bytes 0-3, but not the reverse on flatrock), so we need to make sure that the
@@ -878,7 +877,7 @@ bool CollectGatewayFields::compute_offsets() {
                 if (size_t(field_bits.ffs(sl.field_slice().lo)) > size_t(sl.field_slice().hi)) {
                     LOG5(sl << " already done via hash");
                     return; }
-                auto alloc_byte = std::make_pair(sl.container(), sl.container_slice().lo/8U);
+                auto alloc_byte = sl.container_byte();
                 if (alloc_bytes.count(alloc_byte)) {
                     auto bit = alloc_bytes.at(alloc_byte) * 8U + sl.container_slice().lo % 8U;
                     info.offsets.emplace_back(bit, sl.field_slice());
