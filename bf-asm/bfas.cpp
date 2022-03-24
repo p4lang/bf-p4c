@@ -14,6 +14,9 @@
 #include "misc.h"
 #include "version.h"
 #include "parser-tofino-jbay-cloudbreak.h"
+#ifdef HAVE_FLATROCK
+#include "flatrock/parser.h"
+#endif  /* HAVE_FLATROCK */
 
 #define MAJOR_VERSION   1
 #define MINOR_VERSION   0
@@ -83,7 +86,12 @@ BaseAsmParser *asm_parser = nullptr;
 // Create target-specific section for parser
 void createSingleAsmParser() {
     if (asm_parser != nullptr) return;
-    asm_parser = new AsmParser;
+#ifdef HAVE_FLATROCK
+    if (options.target == Target::Flatrock::tag)
+        asm_parser = new FlatrockAsmParser;
+    else
+#endif  /* HAVE_FLATROCK */
+        asm_parser = new AsmParser;
 }
 
 std::unique_ptr<std::ostream> open_output(const char *name, ...) {

@@ -14,11 +14,6 @@ set (FLATROCK_XFAIL_TESTS
   )
 
 p4c_add_xfail_reason("tofino5"
-  "Invalid match key half"
-  extensions/p4_tests/p4_16/flatrock/tf5_template.p4
-  )
-
-p4c_add_xfail_reason("tofino5"
   "Flatrock .* not implemented yet"
   extensions/p4_tests/p4_16/flatrock/direct1.p4
   )
@@ -46,6 +41,7 @@ p4c_add_xfail_reason("tofino5"
 # invalid assembly code
 p4c_add_xfail_reason("tofino5"
   "Invalid slice of 7 bit field immediate"
+  extensions/p4_tests/p4_16/flatrock/tf5_template.p4
   extensions/p4_tests/p4_16/flatrock/t5na_bridged_md.p4
   )
 
@@ -60,10 +56,6 @@ p4c_add_xfail_reason("tofino5"
   "Flatrock .* not implemented yet"
   extensions/p4_tests/p4_16/flatrock/pac_trivial.p4
   extensions/p4_tests/p4_16/flatrock/pac_single_hdr.p4
-  )
-
-p4c_add_xfail_reason("tofino5"
-  "Invalid match key half"
   extensions/p4_tests/p4_16/flatrock/pac_unbal_reconverge.p4
   )
 

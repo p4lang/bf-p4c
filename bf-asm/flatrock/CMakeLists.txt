@@ -32,12 +32,16 @@ set_source_files_properties(
 set (BFAS_FLATROCK_SRCS
   flatrock/instruction.cpp
   flatrock/input_xbar.cpp
+  flatrock/parser.cpp
+  flatrock/pseudo_parser.cpp
   flatrock/ternary_match.cpp
   PARENT_SCOPE
   )
 
 set (BFAS_FLATROCK_HEADERS
   flatrock/input_xbar.h
+  flatrock/parser.h
+  flatrock/pseudo_parser.h
   flatrock/ternary_match.h
   PARENT_SCOPE
   )
