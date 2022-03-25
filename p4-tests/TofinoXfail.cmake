@@ -1798,6 +1798,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "partly placed: table .*"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/utes_0.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  ".*error: Table placement cannot make any more progress.*"
   testdata/p4_16_samples/psa-register-read-write-2-bmv2.p4
 )
 

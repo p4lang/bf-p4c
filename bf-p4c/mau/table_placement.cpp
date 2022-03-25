@@ -2159,8 +2159,16 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
                 rv->stage_advance_log = "container conflict with table " + p->table->name;
             } else {
                 for (auto ctbl : tables_with_shared) {
-                    // FIXME -- once we can put shared attached tables in different stages, we
-                    // probably don't want to do this any more...
+                    // Validate all physical dependency of shared table and make sure they are all
+                    // cleared before setting the position in the next stage
+                    auto &pre_tbls = deps.happens_phys_after_map[ctbl];
+                    for (auto pre_tbl : pre_tbls) {
+                        if (!rv->is_placed(pre_tbl)) {
+                            LOG2("  - dependency between " << pre_tbl->name << " and " <<
+                                 ctbl->name << " requiring more than one stage");
+                            return false;
+                        }
+                    }
                     if (deps.happens_phys_before(p->table, ctbl)) {
                         rv->stage++;
                         LOG2("  - dependency between " << p->table->name << " and " <<
