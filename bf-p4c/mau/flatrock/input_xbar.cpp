@@ -80,15 +80,19 @@ void IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                        safe_vector<IXBar::Use::Byte *> &alloced,
                        std::multimap<PHV::Container, Loc> &fields,
                        BFN::Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use,
-                       bool allow_word) {
+                       bool allow_word, const xor_map_t *xor_map) {
     // for gateways, 'allow_word' allows use of the fixed bytes as they are set up
     // as group 1 (no actual word inputs to gateway)
     for (auto &byte : alloc_use) {
         for (auto &l : ValuesForKey(fields, byte.container)) {
             if (l.group == 0 && byte_use[l.byte].second == byte.lo) {
+                if (xor_map && xor_map->count(byte) &&
+                    byte_use[4^l.byte].first && byte_use[4^l.byte] != xor_map->at(byte))
+                    continue;
                 byte.loc = Loc(0, l.byte);
                 break; }
             if (allow_word && (byte.flags & IXBar::Use::NeedXor) == 0 && l.group == 1) {
+                if (xor_map && xor_map->count(byte)) continue;
                 byte.loc = l;
                 break; } }
         if (!byte.loc)
@@ -96,20 +100,33 @@ void IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
 }
 
 bool IXBar::do_alloc(safe_vector<IXBar::Use::Byte *> &to_alloc,
-                     BFN::Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use) {
+                     BFN::Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use,
+                     const xor_map_t *xor_map) {
     // Find the free byte slots
     bitvec byte_free;
     int i = 0;
     for (auto &b : byte_use) {
         if (!b.first) byte_free[i] = 1;
         ++i; }
+    bitvec pair_free = (byte_free >> 4) & byte_free;
     for (auto *byte : to_alloc) {
         BUG_CHECK(byte->lo % 8U == 0, "misaligned byte for ixbar %s", *byte);
         byte->search_bus = 0;  // not relevant for flatrock
-        int i = find_free_byte(byte_free, byte);
+        int i = -1;
+        if (xor_map && xor_map->count(*byte)) {
+            for (i = GATEWAY_VEC_BYTES-1; i >= 0; --i) {
+                if (byte_use[i^4] == xor_map->at(*byte)) {
+                    if (!byte_free[i]) return false;
+                    break; } }
+            if (i < 0)
+                i = find_free_byte(pair_free, byte);
+        } else {
+            i = find_free_byte(byte_free, byte); }
         if (i < 0) return false;
         byte_free[i] = 0;
-        byte->loc = Loc(0, i); }
+        pair_free[i&3] = 0;
+        byte->loc = Loc(0, i);
+        byte_use[i] = *byte; }
     return true;
 }
 
@@ -152,9 +169,11 @@ bool IXBar::do_alloc(safe_vector<IXBar::Use::Byte *> &to_alloc,
 }
 
 bool IXBar::gateway_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
-                               safe_vector<IXBar::Use::Byte *> &alloced) {
-    find_alloc(alloc_use, alloced, gateway_fields, gateway_use, true);
-    return do_alloc(alloced, gateway_use);
+                               safe_vector<IXBar::Use::Byte *> &alloced,
+                               const xor_map_t &xor_map) {
+    const xor_map_t *xmap = xor_map.empty() ? nullptr : &xor_map;
+    find_alloc(alloc_use, alloced, gateway_fields, gateway_use, true, xmap);
+    return do_alloc(alloced, gateway_use, xmap);
 }
 
 bool IXBar::exact_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
@@ -207,6 +226,8 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     if (collect->info.empty()) return true;
 
     ContByteConversion map_alloc;
+    xor_map_t   xor_map;
+    PHV::FieldUse use_read(PHV::FieldUse::READ);
 
     for (auto &info : collect->info) {
         int flags = 0;
@@ -214,12 +235,25 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
             error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%sTofino5 does not support "
                   "range comparisons in a condition", tbl->srcInfo);
             return false; }
-        // if a field is not used in range match and
-        // the field is not used to compare with a constant,
-        // then it is used to compare with another field,
-        // therefore requires XOR operation.
-        if (!info.second.const_eq)
-            flags |= IXBar::Use::NeedXor;
+        if (!info.second.xor_with.empty()) {
+            flags |= IXBar::Use::NeedXor;  // not needed?  xor_map used instead
+            std::vector<std::pair<PHV::Container, int>>  bytes;
+            info.first.foreach_byte(tbl, &use_read, [&](const PHV::AllocSlice &sl) {
+                bytes.push_back(sl.container_byte()); });
+            bool err = false;
+            for (auto &with : info.second.xor_with) {
+                auto it = bytes.begin();
+                with.foreach_byte(tbl, &use_read, [&](const PHV::AllocSlice &sl) {
+                    if (it == bytes.end() || xor_map.count(*it) ||
+                        xor_map.count(sl.container_byte())) {
+                        error("%scomplex comparison not supported", tbl->srcInfo);
+                        err = true;
+                        return; }
+                    xor_map[*it] = sl.container_byte();
+                    xor_map[sl.container_byte()] = *it;
+                    ++it; });
+                if (err) return false; } }
+
         cstring aliasSourceName;
         if (collect->info_to_uses.count(&info.second)) {
             LOG5("Found gateway alias source name");
@@ -234,7 +268,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     }
     safe_vector<IXBar::Use::Byte *> xbar_alloced;  // FIXME -- not needed?
     create_alloc(map_alloc, alloc);
-    if (!gateway_find_alloc(alloc.use, xbar_alloced)) {
+    if (!gateway_find_alloc(alloc.use, xbar_alloced, xor_map)) {
         alloc.clear();
         return false; }
     if (!collect->compute_offsets()) {

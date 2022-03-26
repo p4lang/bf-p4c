@@ -87,19 +87,24 @@ class IXBar : public ::IXBar {
     // map from container to tables that use those fields (mostly for dbprint)
     std::map<PHV::Container, std::set<cstring>>        field_users;
 
+    // pairs of container bytes that need to be xor'd to do a gateway match
+    typedef std::map<std::pair<PHV::Container, int>, std::pair<PHV::Container, int>> xor_map_t;
+
     // FIXME -- figure out some way to refactor these `find_alloc` routines together
     void find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                     safe_vector<IXBar::Use::Byte *> &alloced,
                     std::multimap<PHV::Container, Loc> &fields,
                     BFN::Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use,
-                    bool allow_word);
+                    bool allow_word, const xor_map_t *xor_map = nullptr);
     bool do_alloc(safe_vector<IXBar::Use::Byte *> &alloced,
-                  BFN::Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use);
+                  BFN::Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use,
+                  const xor_map_t *xor_map = nullptr);
     bool do_alloc(safe_vector<IXBar::Use::Byte *> &alloced,
                   BFN::Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use,
                   BFN::Alloc1Dbase<PHV::Container> &word_use);
     bool gateway_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
-                            safe_vector<IXBar::Use::Byte *> &alloced);
+                            safe_vector<IXBar::Use::Byte *> &alloced,
+                            const xor_map_t &xor_map);
     bool exact_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                           safe_vector<IXBar::Use::Byte *> &alloced,
                           int exact_unit);
