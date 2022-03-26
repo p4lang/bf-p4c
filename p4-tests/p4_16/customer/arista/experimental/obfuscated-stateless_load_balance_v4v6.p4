@@ -7,6 +7,7 @@
 #include <tofino1_arch.p4>
 
 @pa_auto_init_metadata
+@pa_container_size("ingress", "Millstone.Guion.Wilmore", 16)  // table fitting hack
 @pa_container_size("ingress" , "Jayton.Makawao.Floyd" , 8)
 @pa_container_size("ingress" , "Jayton.Sequim.Rains" , 16)
 @pa_container_size("ingress" , "Millstone.ElkNeck.Grannis" , 16)
