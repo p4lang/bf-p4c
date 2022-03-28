@@ -44,6 +44,7 @@ set (P16_JNA_EXCLUDE_PATTERNS
   "p4c-2490\\.p4"
   "p4c-4127\\.p4"
   "p4c-3288\\.p4"
+  "mirror_constants\\.p4"
 )
 set (P16_JNA_FOR_JBAY "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4"
                       "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*/*.p4"
@@ -158,6 +159,13 @@ p4c_add_test_label("tofino2" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/custome
 p4c_add_test_label("tofino2" "JENKINS_PART1" "extensions/p4_tests/p4_16/customer/extreme/npb-master-20210301.p4")
 p4c_add_test_label("tofino2" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/extreme/npb-folded-pipe.p4")
 p4c_add_test_label("tofino2" "JENKINS_PART1" "extensions/p4_tests/p4_16/customer/extreme/npb-folded-pipe.p4")
+
+# PTF tests with different parameters
+p4c_add_ptf_test_with_ptfdir ("tofino2" "mirror_constants"
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/mirror_constants.p4"
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 2000"
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/mirror_constants.ptf")
+bfn_needs_scapy("tofino2" "mirror_constants")
 
 # Arista profiles need a longer timeout
 p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base\;JENKINS_PART1" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/obfuscated-msee_tofino2.p4" "-to 3600 -Xp4c=--disable-power-check")

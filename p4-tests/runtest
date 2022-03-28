@@ -850,7 +850,7 @@ if $run_bfrt; then
 
         result_file="$testout/build_result.txt"
         mkdir -p $testout/$name
-        if [ -d "$ptftestdir" ] && [ -r "$result_file" ] && [ "$(cat "$result_file")" = "0" ]; then
+        if [ -d "$ptftestdir" ] && [ -r "$result_file" ] && [ "$result_file" -nt "$file" ] && [ "$(cat "$result_file")" = "0" ]; then
             echo "Using existing P4 build in $testout/build/." \
                  "Remove $result_file and rerun to recompile the program."
         else
@@ -868,7 +868,7 @@ if $run_bfrt; then
 
         if [ "$p4_version" == "p4-16" ]; then
             conf_args="--name $name --device $device --testdir $testout --installdir $testout/$name --pipe ${pipes}"
-            model_logs_option=""
+            model_logs_option="--enable-model-logging"
             echo "gen_config_opts: ./p4c-gen-bfrt-conf $conf_args"
             run ./p4c-gen-bfrt-conf $conf_args
 
