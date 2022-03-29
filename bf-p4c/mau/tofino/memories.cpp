@@ -2216,8 +2216,8 @@ void Memories::swbox_bus_meters_counters() {
                     // The same spare VPN value would be used for both spare bank.
                     vpn_spare = meter_group->vpn_spare = depth - 1;
                     synth_bus_users.insert(meter_group);
-                    depth -= ((max_half_ram_depth) - 1);
-                    entries -= (max_half_ram_depth * SRAM_DEPTH);
+                    depth -= (max_half_ram_depth - 1);
+                    entries -= ((max_half_ram_depth - 1) * SRAM_DEPTH);
                 }
 
                 auto *meter_group = new SRAM_group(ta, depth, 0, SRAM_group::METER);
