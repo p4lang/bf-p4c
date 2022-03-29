@@ -632,6 +632,7 @@ extern bit<32> sizeInBytes<H>(in H h);
 
 /// Counter
 /// Indexed counter with `size’ independent counter values.
+@noWarn("unused")
 extern Counter<W, I> {
     /// Constructor
     /// @type_param W : width of the counter value.
@@ -647,6 +648,7 @@ extern Counter<W, I> {
 }
 
 /// DirectCounter
+@noWarn("unused")
 extern DirectCounter<W> {
     DirectCounter(CounterType_t type, @optional bool true_egress_accounting);
     void count(@optional in bit<32> adjust_byte_count);
@@ -830,6 +832,7 @@ extern DirectRegisterAction4<T, U1, U2, U3, U4> {
     bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
 }
 
+@noWarn("unused")
 extern RegisterAction<T, H, U> {
     RegisterAction(Register<_, _> reg);
     U execute(@optional in H index, @optional out U rv2,

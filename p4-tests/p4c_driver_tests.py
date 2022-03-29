@@ -166,10 +166,10 @@ test_matrix = {
     'disable_warnings': (['--target', 'tofino', '--arch', 'tna', '-I', p4_16_path, tna_program,
                           '--Wdisable', '-o', 'wdisable'], None, None),
     'warnings_to_errors': (['--target', 'tofino', '--arch', 'tna', '-I', p4_16_path, tna_program, '--Werror', '-o', 'werror'],
-                            "error: 'W' is unused", None),
+                            "error: out parameter 'ig_md' may be uninitialized when 'SwitchIngressParser' terminates", None),
     # Following test checks whether compiler can deal with comma separated list of values
-    'some_warnings_to_errors': (['--target', 'tofino', '--arch', 'tna', '-I', p4_16_path, tna_program, '--Werror=uninitialized_out_param,unused'],
-                            "error: 'W' is unused", None),
+    'some_warnings_to_errors': (['--target', 'tofino', '--arch', 'tna', '-I', p4_16_path, tna_program, '--Werror=unused,uninitialized_out_param'],
+                            "error: out parameter 'ig_md' may be uninitialized when 'SwitchIngressParser' terminates", None),
     # Test checks if --help-warnings does not crash with new warning types
     'help_warnings': (['--help-warnings'], None, None, None, None, "These are supported warning types for --Werror and --Wdisable:"),
 

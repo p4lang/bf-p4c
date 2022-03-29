@@ -259,7 +259,7 @@ p4c_add_xfail_reason("tofino2"
 
 # Not being tracked by JBay regression yet
 p4c_add_xfail_reason("tofino2"
-  "Field key is not a member of structure header pktgen_recirc_header_t"
+  "Field key is not a member of header pktgen_recirc_header_t"
   extensions/p4_tests/p4-programs/programs/stful/stful.p4
 )
 
@@ -273,7 +273,7 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "Field .* is not a member of structure header .*"
+  "Field .* is not a member of header .*"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1802.p4
 )
 

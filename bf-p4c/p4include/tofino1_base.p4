@@ -531,6 +531,7 @@ extern bit<32> sizeInBytes<H>(in H h);
 
 /// Counter
 /// Indexed counter with `size’ independent counter values.
+@noWarn("unused")
 extern Counter<W, I> {
     /// Constructor
     /// @type_param W : width of the counter value.
@@ -546,6 +547,7 @@ extern Counter<W, I> {
 }
 
 /// DirectCounter
+@noWarn("unused")
 extern DirectCounter<W> {
     DirectCounter(CounterType_t type);
     void count(@optional in bit<32> adjust_byte_count);
@@ -659,6 +661,7 @@ extern MathUnit<T> {
 
 // This is implemented using an experimental feature in p4c and subject to
 // change. See https://github.com/p4lang/p4-spec/issues/561
+@noWarn("unused")
 extern RegisterAction<T, I, U> {
     RegisterAction(Register<_, _> reg);
 

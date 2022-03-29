@@ -19,6 +19,7 @@ extern math_unit<T, U> {
 extern T max<T>(in T t1, in T t2);
 extern T min<T>(in T t1, in T t2);
 
+@noWarn("unused")
 extern RegisterAction<T, I, U> {
     RegisterAction(register<_ __REG_INDEX_ARG(_)> reg);
     U execute(in I index);

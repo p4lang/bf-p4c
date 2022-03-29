@@ -29,27 +29,17 @@ TEST_F(ErrorReporterTest, ErrorHelperPlainFormatsCorrectly) {
 TEST_F(ErrorReporterTest, WarnigsConformToExpectedFormat) {
     // NOTE: Warnings are formatted exactly the same as errors
 
-    const std::string EXPECTED_WARN_0 = ROOT_DIR + R"(/bf-p4c/p4include/tofino1_base.p4(534): [--Wwarn=unused] warning: 'W' is unused
-extern Counter<W, I> {
-               ^
-)";
-
-    const std::string EXPECTED_WARN_1 = ROOT_DIR + R"(/bf-p4c/p4include/tofino1_base.p4(549): [--Wwarn=unused] warning: 'W' is unused
-extern DirectCounter<W> {
-                     ^
-)";
-
-    const std::string EXPECTED_WARN_2 = ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(200): [--Wwarn=unused] warning: 'val_undefined' is unused
+    const std::string EXPECTED_WARN_0 = ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(200): [--Wwarn=unused] warning: 'val_undefined' is unused
     action do_global_action(in bool make_zero, out bool val_undefined) {
                                                         ^^^^^^^^^^^^^
 )";
 
-    const std::string EXPECTED_WARN_3 = ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(202): [--Wwarn=uninitialized_use] warning: tmp may be uninitialized
+    const std::string EXPECTED_WARN_1 = ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(202): [--Wwarn=uninitialized_use] warning: tmp may be uninitialized
         tmp = tmp * (make_zero ? 16w0 : 16w1);
               ^^^
 )";
 
-    const std::string EXPECTED_WARN_4 = ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(200): [--Wwarn=uninitialized_out_param] warning: out parameter 'val_undefined' may be uninitialized when 'do_global_action' terminates
+    const std::string EXPECTED_WARN_2 = ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(200): [--Wwarn=uninitialized_out_param] warning: out parameter 'val_undefined' may be uninitialized when 'do_global_action' terminates
     action do_global_action(in bool make_zero, out bool val_undefined) {
                                                         ^^^^^^^^^^^^^
 )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(200)
@@ -57,13 +47,13 @@ extern DirectCounter<W> {
            ^^^^^^^^^^^^^^^^
 )";
 
-    const std::string EXPECTED_WARN_5 = R"(warning: No size defined for table 'TABLE_NAME', setting default size to 512
+    const std::string EXPECTED_WARN_3 = R"(warning: No size defined for table 'TABLE_NAME', setting default size to 512
 )";
 
     const std::string EXPECTED_WARNINGS = EXPECTED_WARN_0 + EXPECTED_WARN_1 + EXPECTED_WARN_2 +
-                                          EXPECTED_WARN_3 + EXPECTED_WARN_4 + EXPECTED_WARN_5;
+                                          EXPECTED_WARN_3;
 
-    // Running frontend on this code should emit EXPECTED_WARN_1 and 2
+    // Running frontend on this code should emit EXPECTED_WARN_0, 1, 2 and 3
     auto CODE = R"(
     header ethernet_t {
         bit<48> src_addr;

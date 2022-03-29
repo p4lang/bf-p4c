@@ -1840,6 +1840,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-example-dpdk-byte-alignment_6.p4
   testdata/p4_16_samples/psa-example-dpdk-byte-alignment_7.p4
   testdata/p4_16_samples/psa-example-dpdk-byte-alignment_8.p4
+  testdata/p4_16_samples/psa-example-dpdk-byte-alignment_9.p4
 )
 
 # P4C-3765
