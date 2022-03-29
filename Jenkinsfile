@@ -529,7 +529,14 @@ node ('compiler-travis') {
                         )
                     },
 
-
+                    // Benchmarks
+                    /*'Compile time benchmark' : {
+                        build job: 'bf-p4c-compilers-performance-bench',
+                        parameters: [
+                            string(name: "BFP4C_DOCKER_IMAGE",
+                                   value: "${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag}")
+                        ]
+                    }*/
                 )
             }
 

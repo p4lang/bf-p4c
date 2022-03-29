@@ -229,6 +229,9 @@ if [[ "${BUILD_FOR}" != 'jenkins-final' ]] ; then
   # Dependencies for testing.
   apt-get install -y net-tools
 
+  # Dependencies for benchmarks
+  apt-get install -y time
+
   # Upgrade to pip==20.3.4 - newer versions don't support python3.5
   pip3 install --upgrade pip==20.3.4
   # Install python3 packages

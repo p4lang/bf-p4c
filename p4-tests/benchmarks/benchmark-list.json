@@ -1,0 +1,21 @@
+{
+    "arista-default": {
+        "path": "../p4_16/customer/arista/obfuscated-default.p4",
+        "description": "Arista default profile",
+        "args": ["-Xp4c=--disable-power-check"]
+    },
+    "extreme-npb": {
+        "path": "../p4_16/customer/extreme/npb-master-20210301.p4",
+        "description": "Extreme npb profile",
+        "args": ["--target", "tofino2", "-Xp4c=--disable-power-check"]
+    },
+    "switch16": {
+        "path": "../p4_16/switch_16/p4src/switch-tofino2/switch_tofino2_y7.p4",
+        "description": "Switch16",
+        "args": [
+            "--target", "tofino2", 
+            "-Xp4c=--disable-power-check", 
+            "-I", "./../p4_16/switch_16/p4src/shared/"
+        ]
+    }
+}
