@@ -349,8 +349,8 @@ def cpu_model(
 	# modify ethernet header (convert tuple to list, modify, convert list to tuple)
 	eth_hdr_1_list = list(eth_hdr_1)
 	eth_hdr_1_list_da = list(eth_hdr_1_list[0])                # \
-	eth_hdr_1_list_da[0] = chr(ord(eth_hdr_1_list_da[0]) + 1)  #  | convert da string to list, increment first byte, convert da list to string
-	eth_hdr_1_list[0] = ''.join(eth_hdr_1_list_da)             # /
+	eth_hdr_1_list_da[0] = eth_hdr_1_list_da[0] + 1  #  | convert da string to list, increment first byte, convert da list to string
+	eth_hdr_1_list[0] = bytes(eth_hdr_1_list_da)             # /
 	eth_hdr_2 = tuple(eth_hdr_1_list)
 
 	# modify cpu header (convert tuple to list, modify, convert list to tuple)

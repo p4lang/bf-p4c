@@ -108,7 +108,7 @@ class TestGroup1(pd_base_tests.ThriftInterfaceDataPlane):
         egress_port  = self.swports[test_param_get("egress_port", 0)]
         hi_thresh    = test_param_get("hi_thresh", 10) # See program
         lo_thresh    = test_param_get("lo_thresh", 10) # See program          
-        payload      = test_param_get("payload",   ("A"*64)),
+        payload      = test_param_get("payload",   "A"*64)
         
         print("\n")
         print("Test Run:")

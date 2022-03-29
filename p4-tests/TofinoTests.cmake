@@ -146,10 +146,10 @@ set (TOFINO_V1_TEST_SUITES
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/parde/*/*.p4
   )
 p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base\;p414_nightly" "${TOFINO_V1_TEST_SUITES}")
-p4c_add_test_label("tofino" "p414_nightly_need_python2" "extensions/p4_tests/p4_14/ptf/inner_checksum.p4")
-p4c_add_test_label("tofino" "p414_nightly_need_python2" "extensions/p4_tests/p4_14/ptf/p4c_1962.p4")
-p4c_add_test_label("tofino" "p414_nightly_need_python2" "extensions/p4_tests/p4_14/ptf/p4c_3029.p4")
-p4c_add_test_label("tofino" "p414_nightly_need_python2" "extensions/p4_tests/p4_14/ptf/p4c2662.p4")
+p4c_add_test_label("tofino" "p414_nightly" "extensions/p4_tests/p4_14/ptf/inner_checksum.p4")
+p4c_add_test_label("tofino" "p414_nightly" "extensions/p4_tests/p4_14/ptf/p4c_1962.p4")
+p4c_add_test_label("tofino" "p414_nightly" "extensions/p4_tests/p4_14/ptf/p4c_3029.p4")
+p4c_add_test_label("tofino" "p414_nightly" "extensions/p4_tests/p4_14/ptf/p4c2662.p4")
 
 p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base\;p414_nightly" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/customer/ruijie/p4c-2250.p4" "-to 2400")
 set_tests_properties("tofino/extensions/p4_tests/p4_14/customer/ruijie/p4c-2250.p4" PROPERTIES TIMEOUT 2400)
@@ -218,8 +218,8 @@ set (TOFINO_TNA_TEST_SUITES
   ${p16_tna_tests}
   )
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${TOFINO_TNA_TEST_SUITES}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
-p4c_add_test_label("tofino" "need_scapy" "extensions/p4_tests/p4_16/ptf/options_invalid.p4")
-p4c_add_test_label("tofino" "need_scapy" "extensions/p4_tests/p4_16/ptf/inner_checksum.p4")
+bfn_needs_scapy("tofino" "extensions/p4_tests/p4_16/ptf/options_invalid.p4")
+bfn_needs_scapy("tofino" "extensions/p4_tests/p4_16/ptf/inner_checksum.p4")
 
 p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base\;p414_nightly" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/compile_only/mau_test_neg_test.p4" "-Xp4c=--disable-power-check")
 
@@ -810,7 +810,7 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "miss_clause" ${CMAKE_CURRENT_SOURCE_DIR}
 p4c_add_ptf_test_with_ptfdir ("tofino" "brig_569"
     ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/BRIG-569/brig_569.p4
     "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/BRIG-569/brig_569.ptf")
-p4c_add_test_label("tofino" "need_scapy" "brig_569")
+bfn_needs_scapy("tofino" "brig_569")
 
 p4c_add_ptf_test_with_ptfdir ("tofino" "case6684" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/BRIG-847/case6684.p4
     "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/BRIG-847/case6684.ptf")
@@ -820,7 +820,7 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "p4c-2229" ${CMAKE_CURRENT_SOURCE_DIR}/p4
 
 p4c_add_ptf_test_with_ptfdir ("tofino" "simple_l3_checksum" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/COMPILER-1008/simple_l3_checksum.p4
     "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/COMPILER-1008/simple_l3_checksum.ptf")
-p4c_add_test_label("tofino" "need_scapy" "simple_l3_checksum")
+bfn_needs_scapy("tofino" "simple_l3_checksum")
 
 p4c_add_ptf_test_with_ptfdir ("tofino" "basic_switching" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/COMPILER-980/basic_switching.p4
      "${testExtraArgs} -pd -Xp4c=\"--disable-parse-min-depth-limit\""
@@ -831,7 +831,7 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "case6738" ${CMAKE_CURRENT_SOURCE_DIR}/p4
 
 p4c_add_ptf_test_with_ptfdir ("tofino" "simple_l3_mirror" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/BRIG-879/simple_l3_mirror.p4
      "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/BRIG-879/simple_l3_mirror.ptf")
-p4c_add_test_label("tofino" "need_scapy" "simple_l3_mirror")
+bfn_needs_scapy("tofino" "simple_l3_mirror")
 
 p4c_add_ptf_test_with_ptfdir ("tofino" "p4c_737" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/p4c-737/oinked_0.p4
      "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/p4c-737/oinked_0.ptf")
@@ -869,7 +869,7 @@ foreach(t IN LISTS ba101_tests)
   endif()
   p4c_add_test_label("tofino" "BA-101" ba101_${testname})
   p4c_add_test_label("tofino" "p414_nightly" ba101_${testname})
-  p4c_add_test_label("tofino" "p414_nightly_need_python2" ba101_${testname})
+  p4c_add_test_label("tofino" "p414_nightly" ba101_${testname})
 endforeach()
 
 set (BA102_TESTS_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ba-102/labs/*/solution/p4src/*.p4")
@@ -891,11 +891,11 @@ foreach(t IN LISTS ba102_tests)
 endforeach()
 p4c_add_test_label("tofino" "UNSTABLE" "ba102_simple_wred")
 p4c_add_test_label("tofino" "UNSTABLE" "ba102_simple_lpf")
-p4c_add_test_label("tofino" "need_scapy" "ba102_simple_l3_mirror")
-p4c_add_test_label("tofino" "need_scapy" "ba102_simple_l3_mpls")
-p4c_add_test_label("tofino" "need_scapy" "ba102_simple_l3_arping")
-p4c_add_test_label("tofino" "need_scapy" "ba102_simple_wred")
-p4c_add_test_label("tofino" "need_scapy" "ba102_simple_lpf")
+bfn_needs_scapy("tofino" "ba102_simple_l3_mirror")
+bfn_needs_scapy("tofino" "ba102_simple_l3_mpls")
+bfn_needs_scapy("tofino" "ba102_simple_l3_arping")
+bfn_needs_scapy("tofino" "ba102_simple_wred")
+bfn_needs_scapy("tofino" "ba102_simple_lpf")
 
 # p4testgen ptf tests for p4factory programs
 p4c_add_ptf_test_with_ptfdir ("tofino" "p4testgen_emulation" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/p4testgen_regression/emulation.p4
@@ -988,8 +988,8 @@ set (P4FACTORY_INTERNAL_PROGRAMS_PATH "extensions/p4_tests/p4-programs/internal_
 bfn_add_p4factory_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "smoketest_programs_internal\;p414_nightly" P4F_PTF_TESTS_INTERNAL)
 bfn_set_p4_build_flag("tofino" "${P4FACTORY_INTERNAL_PROGRAMS_PATH}/power/power.p4" "-Xp4c=\"--no-power-check\"")
 bfn_set_pd_build_flag("tofino" "${P4FACTORY_INTERNAL_PROGRAMS_PATH}/ecc/ecc.p4" "--gen-md-pd --load-unavailable-resources ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/ecc/resource_fail.rf")
-p4c_add_test_label("tofino" "p414_nightly_need_python2" "${P4FACTORY_INTERNAL_PROGRAMS_PATH}/ecc/ecc.p4")
-p4c_add_test_label("tofino" "p414_nightly_need_python2" "${P4FACTORY_INTERNAL_PROGRAMS_PATH}/mau_test/mau_test.p4")
+p4c_add_test_label("tofino" "p414_nightly" "${P4FACTORY_INTERNAL_PROGRAMS_PATH}/ecc/ecc.p4")
+p4c_add_test_label("tofino" "p414_nightly" "${P4FACTORY_INTERNAL_PROGRAMS_PATH}/mau_test/mau_test.p4")
 
 # for all other p4factory internal tests, add them as compile only.
 set (P4F_INTERNAL_COMPILE_ONLY)
@@ -1109,7 +1109,6 @@ foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS_INTERNAL)
     bfn_set_ptf_ports_json_file("tofino" "p4_16_programs_internal_${t}" ${ports_json})
   endif()
 endforeach()
-p4c_add_test_label("tofino" "need_python2" "p4_16_programs_internal_tna_multi_prsr_programs_multi_pipes")
 
  set_tests_properties("tofino/p4_16_programs_internal_misc1" PROPERTIES TIMEOUT 900)
  set_tests_properties("tofino/p4_16_programs_internal_tna_pvs_multi_states" PROPERTIES TIMEOUT 900)
@@ -1150,7 +1149,7 @@ p4c_add_ptf_test_with_ptfdir (
     "${testExtraArgs} -target tofino -arch tna -bfrt -to 2000 -Xp4c=\"--disable-parse-max-depth-limit\""
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2249")
 set_tests_properties("tofino/p4c_2249" PROPERTIES TIMEOUT 2000)
-p4c_add_test_label("tofino" "need_scapy" "p4c_2249")
+bfn_needs_scapy("tofino" "p4c_2249")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c_3005" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_3005/p4c3005.p4"
@@ -1178,7 +1177,7 @@ p4c_add_ptf_test_with_ptfdir (
 p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c-3876" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3876/p4c_3876.p4"
     "${testExtraArgs} -target tofino -arch tna -bfrt -to 2000 -Xp4c=--disable-parse-min-depth-limit" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3876")
-p4c_add_test_label("tofino" "need_scapy" "p4c-3876")
+bfn_needs_scapy("tofino" "p4c-3876")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c_3343" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-3343.ptf/p4c_3343.p4"

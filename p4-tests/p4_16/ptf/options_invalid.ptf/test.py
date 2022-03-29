@@ -12,7 +12,7 @@ logger = logging.getLogger('options_invalid')
 logger.addHandler(logging.StreamHandler())
 
 def create_payload(length, start=0):
-    return "".join([chr(x % 256) for x in range(start, start+length)])
+    return bytes([x % 256 for x in range(start, start+length)])
 
 def create_ipv4_options(ipv4_opt):
     print("Creating IPv4 Options", repr(ipv4_opt))

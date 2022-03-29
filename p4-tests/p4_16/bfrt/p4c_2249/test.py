@@ -30,7 +30,7 @@ import re
 import time
 #from pprint import pprint
 
-import nsh
+from scapy.contrib import nsh
 
 from ptf import config
 from ptf.thriftutils import *
@@ -365,11 +365,11 @@ class NpbNshDecapTest(BfRuntimeTest):
 
         pkt = \
                 testutils.simple_eth_packet(pktlen=14, eth_src=smac, eth_dst=dmac, eth_type=0x894f) / \
-                nsh.NSH(MDType=2, NextProto=3, NSP=spi, NSI=si, TTL=63, ContextHeaders=[ \
-                        nsh.NSHTLV(Metadata=[ \
+                nsh.NSH(mdtype=2, nextproto=3, spi=spi, si=si, ttl=63, vlch=[ \
+                        nsh.NSHTLV(metadata=[ \
 #                               nsh.Metadata(value=(sf_bitmask_remote<<24)|(tenant_id<<8)|(flow_type)), \
-                                nsh.Metadata(value=(sf_bitmask_remote<<24)|(0<<8)|(0)), \
-                                nsh.Metadata(value=0)  \
+#                               nsh.Metadata(value=(sf_bitmask_remote<<24)|(0<<8)|(0)), \
+#                               nsh.Metadata(value=0)  \
                         ]) \
                 ]) / \
                 exp_pkt

@@ -302,7 +302,7 @@ node ('compiler-travis') {
 
                         echo 'Running remaining customer must passes that are excluded in Travis jobs'
                         runInDocker(
-                            ctestParallelLevel: 2,
+                            ctestParallelLevel: 1,
                             "ctest -R '^tofino/' -L 'CUST_MUST_PASS' -E 'arista'"
                         )
                     },
@@ -354,12 +354,12 @@ node ('compiler-travis') {
                         echo 'Running tofino part 1 tests'
                         runInDocker(
                             extraArgs: '--privileged',
-                            ctestParallelLevel: 4,
+                            ctestParallelLevel: 8,
                             '''
                                 ctest \
                                     -R '^tofino/' \
                                     -E 'smoketest|/programs|/internal_p4_14|p4testgen|tofino/switch_|c2_COMPILER|c2/COMPILER|p4_16_programs|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|ptf/digest.p4|digest-std-p4runtime' \
-                                    -LE 'UNSTABLE|GTS_WEEKLY|NON_PR_TOFINO|p414_nightly|need_scapy|need_python2'
+                                    -LE 'UNSTABLE|GTS_WEEKLY|NON_PR_TOFINO|p414_nightly'
                             '''
                         )
                     },
@@ -373,7 +373,7 @@ node ('compiler-travis') {
                                 ctest \
                                     -R '^tofino/(.*programs|.*internal_p4_14)' \
                                     -E 'TestRealData|_basic_ipv4|_stful|_meters|_hash_driven|_dkm|_exm_smoke_test|_exm_direct_|_exm_direct_1_|p4_16_programs_tna_exact_match|p4_16_programs_tna_meter_lpf_wred|perf_test_alpm|entry_read_from_hw' \
-                                    -LE 'UNSTABLE|p414_nightly|need_scapy|need_python2'
+                                    -LE 'UNSTABLE|p414_nightly'
                             '''
                         )
                     },
@@ -396,7 +396,7 @@ node ('compiler-travis') {
                                     -R '^tofino2|gtest' \
                                     -L 'JENKINS_PART1|gtest' \
                                     -E 'ignore_test_|smoketest|p4_16_programs_tna_exact_match|p4_16_programs_tna_meter_lpf_wred|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|/dkm/|entry_read_from_hw|/p4_14/stf/decaf_9.*|ptf/digest.p4|npb-master-ptf' \
-                                    -LE 'UNSTABLE|need_scapy|need_python2'
+                                    -LE 'UNSTABLE'
                             '''
                         )
                     },
@@ -411,7 +411,7 @@ node ('compiler-travis') {
                                     -R '^tofino2' \
                                     -L 'JENKINS_PART2' \
                                     -E 'ignore_test_|smoketest|p4_16_programs_tna_exact_match|p4_16_programs_tna_meter_lpf_wred|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|/dkm/|entry_read_from_hw|/p4_14/stf/decaf_9.*|ptf/digest.p4|3174' \
-                                    -LE 'UNSTABLE|need_scapy|need_python2'
+                                    -LE 'UNSTABLE'
                             '''
                         )
                     },
@@ -431,14 +431,6 @@ node ('compiler-travis') {
                             extraArgs: '--privileged',
                             ctestParallelLevel: 2,
                             "ctest -R '^tofino5' -LE 'ptf'"
-                        )
-                    },
-
-                    "Travis - python2 & scapy": {
-                        runInDocker(
-                            extraArgs: '--privileged -e PKTPY=False',
-                            workingDir: '/bfn/bf-p4c-compilers/scripts/run_custom_tests',
-                            "./run_with_python2.sh \"ctest -L 'need_scapy|need_python2' -LE 'UNSTABLE|p414_nightly'\""
                         )
                     },
 

@@ -141,7 +141,7 @@ class TestGroup1(pd_base_tests.ThriftInterfaceDataPlane):
 ############################################################################
 
 def create_payload(length, start=0):
-    return "".join([chr(x % 256) for x in range(start, start+length)])
+    return bytes([x % 256 for x in range(start, start+length)])
 
 class L2_IPv4_TCP_Good(TestGroup1):
     #
@@ -201,7 +201,7 @@ class L2_IPv4_TCP_Good(TestGroup1):
                                      tcp_sport=sport,
                                      tcp_dport=dport,
                                      pktlen=pkt_len)
-        exp_pkt = Ether(str(test_pkt))
+        exp_pkt = test_pkt
 
         send_packet(self, test_port, test_pkt)
         print("Expecting the packet to be forwarded to port %d" % test_port)

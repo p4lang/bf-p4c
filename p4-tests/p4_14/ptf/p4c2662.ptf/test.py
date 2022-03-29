@@ -19,8 +19,11 @@ import pdb
 import pd_base_tests
 
 from ptf import config
+from ptf.packet import *
+from ptf.mask import *
 from ptf.testutils import *
 from ptf.thriftutils import *
+from p4testutils.misc_utils import mask_set_do_not_care_packet
 
 # Change the line below, using the name of your program
 from p4c2662.p4_pd_rpc.ttypes import *
@@ -265,11 +268,14 @@ class Test1(TestBase):
                                     ip_ihl=5)
             send_packet(self, ingress_port, pkt)
 
-            exp_pkt = Ether(str(pkt))
+            exp_pkt = pkt
             exp_pkt[IP].dst = str(ip_address(reg_val))
+            mask = Mask(exp_pkt)
+            mask_set_do_not_care_packet(mask, IP, "chksum")
+            mask_set_do_not_care_packet(mask, TCP, "chksum")
 
             print("Expecting the packet on port %d with value %d" %
                   (egress_port, reg_val))
-            verify_packet(self, exp_pkt, egress_port)
+            verify_packet(self, mask, egress_port)
             print("Packet received of port %d" % egress_port)
             reg_val = math_unit.compute(reg_val)

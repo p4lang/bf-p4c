@@ -647,7 +647,7 @@ class IPv4ToCpuIng(IngMirrorCpuGroup):
         exp_pkt[ToCpu].mirror_session = self.mirror_id
 
         if pktlen + encap_len > self.egress_max_len:
-            exp_pkt = Ether(str(exp_pkt)[0:self.egress_max_len])
+            exp_pkt = Ether(bytes(exp_pkt)[0:self.egress_max_len])
         exp_pkt[ToCpu].pkt_length     = 0 # We do not know it for ingress mirroring
 
         # Mask out the timestamps -- we do not know what they will be
@@ -737,7 +737,7 @@ class IPv4ToCpuEgr(EgrMirrorCpuGroup):
         # exp_pkt[ToCpu].pkt_length is tricky, since it depends on whether
         # the packet was truncated or not
         if pktlen + encap_len > self.egress_max_len:
-            exp_pkt = Ether(str(exp_pkt)[0:self.egress_max_len])
+            exp_pkt = Ether(bytes(exp_pkt)[0:self.egress_max_len])
         exp_pkt[ToCpu].pkt_length = len(send_pkt) + 4
 
         # Mask out the timestamps -- we do not know what they will be

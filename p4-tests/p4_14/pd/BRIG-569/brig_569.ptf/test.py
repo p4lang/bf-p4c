@@ -440,7 +440,7 @@ class MirrorTestCpu2(TestGroupMirror):
             ToCpu(mirror_type="Ingress",
                   ingress_port=ingress_port,
                   pkt_length=cpu_pkt_len+4) /
-                  str(pkt)[0:cpu_pkt_len])
+                  bytes(pkt)[0:cpu_pkt_len])
 
         print("Expecting mirrored packet with 'to_cpu' header on port %d" % cpu_port)
         verify_packet(self, cpu_pkt, cpu_port)

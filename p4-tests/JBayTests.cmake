@@ -84,11 +84,9 @@ set (JBAY_V1_TEST_SUITES_P416
   )
 
 p4c_add_bf_backend_tests("tofino2" "jbay" "${JBAY_P414_TEST_ARCH}" "base\;JENKINS_PART1" "${JBAY_V1_TEST_SUITES_P414}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
-p4c_add_test_label("tofino2" "need_scapy" "extensions/p4_tests/p4_14/ptf/p4c_3029.p4")
-p4c_add_test_label("tofino2" "need_scapy" "extensions/p4_tests/p4_14/ptf/inner_checksum.p4")
-p4c_add_test_label("tofino2" "need_scapy" "extensions/p4_tests/p4_14/ptf/p4c2662.p4")
-p4c_add_test_label("tofino2" "need_scapy" "extensions/p4_tests/p4_14/ptf/inner_checksum_l4.p4")
-p4c_add_test_label("tofino2" "need_python2" "extensions/p4_tests/p4_14/ptf/p4c_1962.p4")
+bfn_needs_scapy("tofino2" "extensions/p4_tests/p4_14/ptf/p4c_3029.p4")
+bfn_needs_scapy("tofino2" "extensions/p4_tests/p4_14/ptf/inner_checksum.p4")
+bfn_needs_scapy("tofino2" "extensions/p4_tests/p4_14/ptf/inner_checksum_l4.p4")
 p4c_add_bf_backend_tests("tofino2" "jbay" "v1model" "base\;JENKINS_PART1" "${JBAY_V1_TEST_SUITES_P416}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
 
 # P4C-2985
@@ -108,10 +106,10 @@ set (JBAY_JNA_TEST_SUITES
 p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base\;JENKINS_PART1" "${JBAY_JNA_TEST_SUITES}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
 p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base\;JENKINS_PART1" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/jbay/p4c-3288.p4" "-to 1200")
 set_tests_properties("tofino2/extensions/p4_tests/p4_16/jbay/p4c-3288.p4" PROPERTIES TIMEOUT 1200)
-p4c_add_test_label("tofino2" "need_scapy" "extensions/p4_tests/p4_16/ptf/inner_checksum_payload_offset.p4")
-p4c_add_test_label("tofino2" "need_scapy" "extensions/p4_tests/p4_16/ptf/options_invalid.p4")
-p4c_add_test_label("tofino2" "need_scapy" "extensions/p4_tests/p4_16/ptf/inner_checksum.p4")
-p4c_add_test_label("tofino2" "need_scapy" "extensions/p4_tests/p4_16/ptf/large_indirect_count.p4")
+bfn_needs_scapy("tofino2" "extensions/p4_tests/p4_16/ptf/inner_checksum_payload_offset.p4")
+bfn_needs_scapy("tofino2" "extensions/p4_tests/p4_16/ptf/options_invalid.p4")
+bfn_needs_scapy("tofino2" "extensions/p4_tests/p4_16/ptf/inner_checksum.p4")
+bfn_needs_scapy("tofino2" "extensions/p4_tests/p4_16/ptf/large_indirect_count.p4")
 
 # longer timeout
 p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base\;JENKINS_PART1" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-GA.p4" "-to 4800")
@@ -263,7 +261,7 @@ p4c_add_ptf_test_with_ptfdir (
     "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 2400 " "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3033")
 set_tests_properties("tofino2/p4c-3033" PROPERTIES TIMEOUT 2400)
 p4c_add_test_label("tofino2" "JENKINS_PART1" "p4c-3033")
-p4c_add_test_label("tofino2" "need_scapy" "p4c-3033")
+bfn_needs_scapy("tofino2" "p4c-3033")
 p4c_add_test_label("tofino2" "UNSTABLE" "p4c-3033")
 
 p4c_add_ptf_test_with_ptfdir (
@@ -285,7 +283,7 @@ p4c_add_ptf_test_with_ptfdir (
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3570")
 set_tests_properties("tofino2/p4c-3570" PROPERTIES TIMEOUT 1200)
 p4c_add_test_label("tofino2" "JENKINS_PART2" "p4c-3570")
-p4c_add_test_label("tofino2" "need_scapy" "p4c-3570")
+bfn_needs_scapy("tofino2" "p4c-3570")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c-3479" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3479/p4c_3479.p4"
@@ -300,7 +298,7 @@ p4c_add_ptf_test_with_ptfdir (
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3876")
 set_tests_properties("tofino2/p4c-3876" PROPERTIES TIMEOUT 1200)
 p4c_add_test_label("tofino2" "JENKINS_PART2" "p4c-3876")
-p4c_add_test_label("tofino2" "need_scapy" "p4c-3876")
+bfn_needs_scapy("tofino2" "p4c-3876")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "npb-master-ptf"

@@ -74,6 +74,6 @@ class InnerLayerTest_IPv4_encap_udp(P4RuntimeTest):
 
          # exp_pkt[UDP].sport = 0x440
         print('sending udp packet')
-        testutils.send_packet(self, ingress_port, str(vxlan_pkt))
+        testutils.send_packet(self, ingress_port, vxlan_pkt)
         print('receiving vxlan_udp packet with option')
         testutils.verify_packets(self, exp_vxlan_pkt, [egress_port])
