@@ -58,9 +58,11 @@ class PingPongGeneration : public PassManager {
 
     // Local maps for storing information
     typedef std::unordered_map<const IR::Declaration_Instance *,
-        const IR::Declaration_Instance *> RegisterToRegisterActionMap;
+                               std::set<const IR::Declaration_Instance *>>
+            RegisterToRegisterActionMap;
     typedef std::unordered_map<const IR::Declaration_Instance *,
-        const IR::P4Action *> RegisterToP4ActionMap;
+                               std::set<const IR::P4Action *>>
+            RegisterToP4ActionMap;
     typedef std::unordered_map<const IR::P4Action *,
         const IR::Declaration_Instance *> P4ActionToRegisterMap;
     typedef std::unordered_map<const IR::P4Action *,

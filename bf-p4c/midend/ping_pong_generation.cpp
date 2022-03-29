@@ -86,16 +86,18 @@ class PingPongGeneration::P4ActionChanger: public PingPongGeneration::Declaratio
      * Update path to register action
      */
     IR::Node *postorder(IR::Path* path) {
-        // Check for "execute" member
+        // Check for "execute"/"count"
+        // as we want to try and change all ocurences of register/counter/meter invocations
         auto member = findContext<IR::Member>();
-        if (!member || member->member != "execute")
+        if (!member || (member->member != "execute" && member->member != "count"))
             return path;
         // Clone and update new path
         return self.appendPingPongSuffix(path, names_to_change);
     }
 
  public:
-    explicit P4ActionChanger(PingPongGeneration &self, std::set<cstring> &names_to_change) :
+    explicit P4ActionChanger(PingPongGeneration &self,
+                             std::set<cstring> &names_to_change) :
         DeclarationChanger(self, names_to_change) {}
 };
 
@@ -109,12 +111,16 @@ class PingPongGeneration::P4TableChanger: public PingPongGeneration::Declaration
      * Update path to p4 action
      */
     IR::Node *postorder(IR::Path* path) {
-        // Check for "default_action" property
+        // Check for "default_action"/"counters"/"meters"/"registers" property
+        // as we want to try and change one of those properties
         auto prop = findContext<IR::Property>();
         // Check for ActionListElement
+        // as we also want to change regular actions
         auto ale = findContext<IR::ActionListElement>();
         // If neither is correct, stop
-        if (!prop || prop->name != "default_action")
+        if (!prop ||
+            (prop->name != "default_action" && prop->name != "counters" &&
+             prop->name != "registers" && prop->name != "meters"))
             if (!ale)
                 return path;
         // Clone and update new path
@@ -122,7 +128,8 @@ class PingPongGeneration::P4TableChanger: public PingPongGeneration::Declaration
     }
 
  public:
-    explicit P4TableChanger(PingPongGeneration &self, std::set<cstring> &names_to_change) :
+    explicit P4TableChanger(PingPongGeneration &self,
+                            std::set<cstring> &names_to_change) :
          DeclarationChanger(self, names_to_change) {}
 };
 
@@ -134,7 +141,7 @@ class PingPongGeneration::ApplyMCSChanger: public Transform {
     PingPongGeneration &self;
     const cstring orig_table_name;
     const IR::P4Table* dupl_table;
-    const cstring orig_action_name;
+    std::set<cstring> orig_action_names;
 
     /**
      * Explicit visits to "type" member variables
@@ -172,7 +179,10 @@ class PingPongGeneration::ApplyMCSChanger: public Transform {
      * Update path to p4 table
      */
     IR::Node *postorder(IR::Path* path) {
-        std::set<cstring> names_to_change = { orig_table_name, orig_action_name };
+        std::set<cstring> names_to_change;
+        names_to_change.insert(orig_action_names.begin(),
+                               orig_action_names.end());
+        names_to_change.insert(orig_table_name);
         // Clone and update new path
         return self.appendPingPongSuffix(path, names_to_change);
     }
@@ -181,9 +191,9 @@ class PingPongGeneration::ApplyMCSChanger: public Transform {
     explicit ApplyMCSChanger(PingPongGeneration &self,
                              const cstring& orig_table_name,
                              const IR::P4Table* dupl_table,
-                             const cstring& orig_action_name) :
+                             std::set<cstring>& orig_action_names) :
          self(self), orig_table_name(orig_table_name),
-         dupl_table(dupl_table), orig_action_name(orig_action_name) {}
+         dupl_table(dupl_table), orig_action_names(orig_action_names) {}
 };
 
 /**
@@ -244,10 +254,9 @@ inline IR::Path* PingPongGeneration::appendPingPongSuffix(IR::Path* path,
  * @sa P4ActionChanger
  * @sa P4TableChanger
  */
-inline void PingPongGeneration::duplicateNodeDeclaration(
-                                        const IR::Declaration* node,
-                                        IR::BFN::TnaControl* gress,
-                                        std::set<cstring>& names_to_change) {
+inline void PingPongGeneration::duplicateNodeDeclaration(const IR::Declaration* node,
+                                                         IR::BFN::TnaControl* gress,
+                                                         std::set<cstring>& names_to_change) {
     // Create new duplicate node and apply changes via visitors
     const IR::Node* changed_new_node = node;
     auto new_name = IR::ID(node->name + ID_PING_PONG_SUFFIX);
@@ -280,6 +289,7 @@ inline void PingPongGeneration::duplicateNodeDeclaration(
     } else {
         return;
     }
+    LOG3("[PPG::GPPMD] Created duplicate declaration: " << new_name);
     // Add it into gress declarations (right next to the original one)
     gress->controlLocals.insert(
         std::find(gress->controlLocals.begin(), gress->controlLocals.end(), node),
@@ -297,7 +307,7 @@ bool PingPongGeneration::GetAllRegisters::preorder(const IR::MethodCallExpressio
     if (!mi)
         return false;
     auto em = mi->to<P4::ExternMethod>();
-    if (!em || em->originalExternType->name != "RegisterAction")
+    if (!em || !em->originalExternType->name.name.startsWith("RegisterAction"))
         return false;
     auto ra_decl = mi->object->to<IR::Declaration_Instance>();
     if (!ra_decl || ra_decl->arguments->size() < 1 ||
@@ -319,21 +329,29 @@ bool PingPongGeneration::GetAllRegisters::preorder(const IR::MethodCallExpressio
     if (!p4_action)
         return false;
 
-    // Check if it already exists
-    if (self.registerToRegisterAction[gress_index].count(r_decl)) {
-        // There should only be one to one mapping, this is not ping-pong
-        self.registerToRegisterAction[gress_index][r_decl] = nullptr;
-        self.registerToP4Action[gress_index][r_decl] = nullptr;
+    // Check if this action doesn't work with multiple registers
+    if (self.p4ActionToRegister[gress_index].count(p4_action)) {
+        // Invalidate this action and everything attached to it
+        LOG4("[PPG::GAR] Invalidating P4 action " << p4_action->name <<
+             " that uses multiple registers.");
+        if (auto other_reg = self.p4ActionToRegister[gress_index][p4_action]) {
+            self.registerToRegisterAction[gress_index][other_reg].clear();
+            self.registerToP4Action[gress_index][other_reg].clear();
+        }
+        self.registerToRegisterAction[gress_index][r_decl].clear();
+        self.registerToP4Action[gress_index][r_decl].clear();
         self.p4ActionToRegister[gress_index][p4_action] = nullptr;
-        // Will never be valid
-        self.registerToValid[r_decl] = false;
     } else {
-        self.registerToRegisterAction[gress_index][r_decl] = ra_decl;
-        self.registerToP4Action[gress_index][r_decl] = p4_action;
+        // Add the register action
+        LOG4("[PPG::GAR] adding register with declaration: " << r_decl->name <<
+            "; register action declaration: " << ra_decl->name <<
+            "; p4 action: " << p4_action->name);
+        self.registerToRegisterAction[gress_index][r_decl].insert(ra_decl);
+        self.registerToP4Action[gress_index][r_decl].insert(p4_action);
         self.p4ActionToRegister[gress_index][p4_action] = r_decl;
-        // Not yet valid
-        self.registerToValid[r_decl] = false;
     }
+    // Not yet valid
+    self.registerToValid[r_decl] = false;
     return false;
 }
 
@@ -378,29 +396,49 @@ bool PingPongGeneration::AddAllTables::preorder(const IR::ActionListElement* ale
     if (!reg)
         return false;
 
-    // Check if we already have a table for it
-    if (self.p4ActionToP4Table[gress_index].count(p4_action)) {
+    // Check if we already have a table for the action/register or
+    // register for the table
+    if (self.p4ActionToP4Table[gress_index].count(p4_action) ||
+        (self.p4TableToRegister[gress_index].count(p4_table) &&
+         self.p4TableToRegister[gress_index][p4_table] != reg)) {
         // There should only be one to one mapping, this is not ping-pong
-        // Invalidate it
-        self.registerToRegisterAction[gress_index][reg] = nullptr;
-        self.registerToP4Action[gress_index][reg] = nullptr;
+        // Invalidate any other register that might not satisfy this
+        const IR::Declaration_Instance *other_reg = nullptr;
+        if (self.p4TableToRegister[gress_index].count(p4_table))
+            other_reg = self.p4TableToRegister[gress_index][p4_table];
+        if (other_reg && other_reg != reg) {
+            LOG3("[PPG::AAT] Register " << other_reg->name <<
+                " does not have 1-1 mapping to P4 tables => not a ping-pong");
+            self.registerToValid[other_reg] = false;
+        }
+        // Invalidate the register
+        LOG3("[PPG::AAT] Register " << reg->name <<
+             " does not have 1-1 mapping to P4 tables => not a ping-pong");
+        self.registerToRegisterAction[gress_index][reg].clear();
+        self.registerToP4Action[gress_index][reg].clear();
         self.p4ActionToRegister[gress_index][p4_action] = nullptr;
         self.p4ActionToP4Table[gress_index][p4_action] = nullptr;
         self.p4TableToRegister[gress_index][p4_table] = nullptr;
         self.registerToValid[reg] = false;
     } else {
+        LOG4("[PPG::AAT] found table for register " << reg->name <<
+             "; p4 action: " << p4_action->name <<
+             "; p4 table: " << p4_table->name);
         self.p4ActionToP4Table[gress_index][p4_action] = p4_table;
         self.p4TableToRegister[gress_index][p4_table] = reg;
         // Invalidate it if it is used in egress (reg is the only
         // thing shared by the gresses)
-        if (self.registerToP4Action[EGRESS].count(reg))
+        if (self.registerToP4Action[EGRESS].count(reg)) {
+            LOG3("[PPG::AAT] Register: " << reg->name << " used in egress => invalidating.");
             self.registerToValid[reg] = false;
         // Validate the register if we already have ingress, ghost and no egress
-        else if (self.registerToP4Action[INGRESS].count(reg)
-                 && self.registerToP4Action[INGRESS][reg] != nullptr
+        } else if (self.registerToP4Action[INGRESS].count(reg)
+                 && !self.registerToP4Action[INGRESS][reg].empty()
                  && self.registerToP4Action[GHOST].count(reg)
-                 && self.registerToP4Action[GHOST][reg] != nullptr)
+                 && !self.registerToP4Action[GHOST][reg].empty()) {
+            LOG3("[PPG::AAT] Register: " << reg->name << " seems to be valid for PPG.");
             self.registerToValid[reg] = true;
+        }
     }
 
     return false;
@@ -421,15 +459,17 @@ bool PingPongGeneration::CheckPingPongTables::preorder(const IR::Parameter* para
         return false;
     // Parameter name is the name of ghost metadata
     self.ghost_meta_name[gress->thread] = param->name;
+    LOG5("[PPG::CPPT] Found ghost md name: " << param->name << " for gress: " << gress->thread);
     return false;
 }
-// Find if fhost metadata is used
+// Find if ghost metadata is used
 bool PingPongGeneration::CheckPingPongTables::preorder(const IR::Type_Header* th) {
     // We are interested in ghost metadata only
     if (th->name != GMD_STRUCTURE_NAME)
         return false;
     // Store them
     self.ghost_meta_struct = th;
+    LOG5("[PPG::CPPT] Found ghost metadata structure: " << th);
     return false;
 }
 
@@ -481,6 +521,7 @@ bool PingPongGeneration::CheckPingPongTables::preorder(const IR::PathExpression*
     if_stmt->condition->apply(findPingPongField);
     // If it was found invalidate this for ping pong generation
     if (findPingPongField.found) {
+        LOG3("[PPG::CPPT] Found ping pong mechanism for: " << reg->name << " => invalidating.");
         self.registerToValid[reg] = false;
     }
 
@@ -504,6 +545,7 @@ IR::Node *PingPongGeneration::GeneratePingPongMechanismDeclarations::preorder(IR
                                 reg->type,
                                 reg->arguments,
                                 reg->initializer);
+            LOG3("[PPG::GPPMD] Created duplicate register: " << new_reg->name);
             // Place it into the P4Program's objects
             prog->objects.insert(std::find(prog->objects.begin(), prog->objects.end(), reg),
                                  new_reg);
@@ -526,21 +568,64 @@ IR::Node *PingPongGeneration::GeneratePingPongMechanismDeclarations::preorder(
         auto reg = r.first;
         bool valid = r.second;
         if (valid && reg) {
-            auto reg_action = self.registerToRegisterAction[gress_index][reg];
-            auto p4_action = self.registerToP4Action[gress_index][reg];
-            auto p4_table = self.p4ActionToP4Table[gress_index][p4_action];
-            if (!reg_action || !p4_action || !p4_table)
+            if (!self.registerToRegisterAction[gress_index].count(reg) ||
+                !self.registerToP4Action[gress_index].count(reg))
                 continue;
+            auto reg_actions = self.registerToRegisterAction[gress_index][reg];
+            auto p4_actions = self.registerToP4Action[gress_index][reg];
+            if (p4_actions.empty())
+                continue;
+            auto p4_action = *p4_actions.begin();
+            auto p4_table = self.p4ActionToP4Table[gress_index][p4_action];
+            if (!p4_table)
+                continue;
+            // We need to duplicate any attached direct resources as well as they cannot
+            // be attached to two tables (the original one and the duplicated table)
+            std::vector<const IR::Declaration_Instance*> direct_res;
+            if (auto props = p4_table->properties) {
+                for (auto prop : props->properties) {
+                    if (prop->name == "counters" || prop->name == "registers" ||
+                        prop->name == "meters") {
+                        auto val = prop->value->to<IR::ExpressionValue>();
+                        if (!val) continue;
+                        auto pe = val->expression->to<IR::PathExpression>();
+                        if (!pe) continue;
+                        auto res_dec = self.refMap->getDeclaration(pe->path);
+                        if (!res_dec) continue;
+                        auto res_decl = res_dec->to<IR::Declaration_Instance>();
+                        if (!res_decl) continue;
+                        direct_res.push_back(res_decl);
+                        LOG4("[PPG::GPPMD] found direct resource " << res_decl->name <<
+                            " for p4 table: " << p4_table->name);
+                    }
+                }
+            }
             // Create a vector of names that are worked on
-            std::set<cstring> names_to_change = { reg->name, reg_action->name, p4_action->name,
+            std::set<cstring> names_to_change = { reg->name,
                                                   p4_table->name, reg->name.originalName,
-                                                  reg_action->name.originalName,
-                                                  p4_action->name.originalName,
                                                   p4_table->name.originalName };
-            // Create duplicate register action
-            self.duplicateNodeDeclaration(reg_action, gress, names_to_change);
-            // Create duplicate P4 Action
-            self.duplicateNodeDeclaration(p4_action, gress, names_to_change);
+            for (auto res : direct_res) {
+                names_to_change.insert(res->name);
+                names_to_change.insert(res->name.originalName);
+            }
+            for (auto reg_action : reg_actions) {
+                names_to_change.insert(reg_action->name);
+                names_to_change.insert(reg_action->name.originalName);
+            }
+            for (auto p4_action : p4_actions) {
+                names_to_change.insert(p4_action->name);
+                names_to_change.insert(p4_action->name.originalName);
+            }
+            for (auto res : direct_res) {
+                // Create duplicate direct resoures
+                self.duplicateNodeDeclaration(res, gress, names_to_change);
+            }
+            for (auto reg_action : reg_actions)
+                // Create duplicate register action
+                self.duplicateNodeDeclaration(reg_action, gress, names_to_change);
+            for (auto p4_action : p4_actions)
+                // Create duplicate P4 Action
+                self.duplicateNodeDeclaration(p4_action, gress, names_to_change);
             // Create duplicate P4 Table
             self.duplicateNodeDeclaration(p4_table, gress, names_to_change);
         }
@@ -588,13 +673,14 @@ IR::Node *PingPongGeneration::GeneratePingPongMechanism::postorder(IR::MethodCal
     // Get the action for this table
     if (!self.registerToP4Action[gress_index].count(reg))
         return mcs;
-    auto p4_action = self.registerToP4Action[gress_index][reg];
-    if (!p4_action)
-        return mcs;
+    std::set<cstring> p4_actions_names;
+    auto p4_actions = self.registerToP4Action[gress_index][reg];
+    for (auto p4_action : p4_actions)
+        p4_actions_names.insert(p4_action->name);
 
     // Update the mcs
     auto new_mcs = mcs->apply(
-                        ApplyMCSChanger(self, p4_table->name, duplicate_table, p4_action->name))
+                        ApplyMCSChanger(self, p4_table->name, duplicate_table, p4_actions_names))
                    ->to<IR::MethodCallStatement>();
 
     // Check existence of ghost metadata
@@ -611,6 +697,7 @@ IR::Node *PingPongGeneration::GeneratePingPongMechanism::postorder(IR::MethodCal
                                IR::ID(PING_PONG_FIELD_NAME));
     // Right expression - 0 or 1 based on if this is ingress or ghost
     auto right = new IR::Constant(IR::Type::Bits::get(1), (gress_index == INGRESS) ? 0 : 1);
+    LOG3("[PPG::GPPM] Created ping-pong if statement.");
     // Return new if statement
     return new IR::IfStatement(new IR::Equ(IR::Type_Boolean::get(), left, right), mcs, new_mcs);
 }
