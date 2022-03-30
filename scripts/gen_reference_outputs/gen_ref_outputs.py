@@ -52,7 +52,7 @@ def get_test_list(tests_csv, out_dir, ts):
 def prep_test_line(mTest, p4c):
     # Check target and arch - generate test_line for Glass only for tofino, p4-14, v1model
     if p4c.name is 'Glass':
-        if 'tofino2' in mTest.target or 'p4-16' in mTest.language or 'tna' in mTest.arch:
+        if 'tofino2' in mTest.target or 'tofino3' in mTest.target or 'p4-16' in mTest.language or 'tna' in mTest.arch:
             return p4c
     # Check skip_opt - generate test_line only if not skipped
     if mTest.skip_opt and p4c.name in mTest.skip_opt:

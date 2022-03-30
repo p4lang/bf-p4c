@@ -102,7 +102,7 @@ def extract_info(m_info):
     json_info = []
     json_dumps = m_info['Metrics_json']
     for dump in json_dumps:
-        if 'tofino2' in dump['target']:
+        if 'tofino2' in dump['target'] or 'tofino3' in dump['target']:
             json_obj = metrics.Tofino2Metrics()
         else:
             json_obj = metrics.TofinoMetrics()
