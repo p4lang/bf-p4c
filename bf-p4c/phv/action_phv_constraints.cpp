@@ -2522,30 +2522,8 @@ CanPackReturnType ActionPhvConstraints::can_pack(
         return std::make_tuple(CanPackErrorCode::PACK_CONSTRAINT_PRESENT, boost::none);
 
     // Create candidate packing
-    {
-        // P4C-3893: Assume that initially we have f1 => B1, and when we allocate f2 to B2 and
-        // decide to dark swap f1 to DB1 for stages [3, 10], we will have
-        // f1 => B1, @stage [0 ,2]
-        // f1 => DB1, @stage [3 ,10]
-        // f1 => B1, @stage [11 ,19]
-        // The problem here is that, we will see f1 => B1 @stage [0, 19] in the @p slices.
-        // To reproduce this issue: comment out filtering part and
-        // run p4_16/compile_only/p4c-3528.p4 on Tofino2.
-        ordered_map<PHV::FieldSlice, const PHV::AllocSlice*> fs_seen;
-        for (const auto& slice : container_state) {
-            fs_seen[PHV::FieldSlice(slice.field(), slice.field_slice())] = &slice;
-        }
-        for (const auto& slice : slices) {
-            // do not add duplicated slices that their liveranges has been updated
-            // by dark swap.
-            const auto fs =PHV::FieldSlice(slice.field(), slice.field_slice());
-            if (fs_seen.count(fs) &&
-                fs_seen.at(fs)->getEarliestLiveness() >= slice.getEarliestLiveness() &&
-                fs_seen.at(fs)->getLatestLiveness() <= slice.getLatestLiveness()) {
-                continue;
-            }
-            container_state.insert(slice);
-        }
+    for (const auto& slice : slices) {
+        container_state.insert(slice);
     }
 
     // Check if any of the fields are stateful ALU writes and check the data bus alignment
