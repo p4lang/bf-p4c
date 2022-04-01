@@ -184,8 +184,11 @@ if (ENABLE_DOXYGEN)
       VERBATIM)
 
     add_custom_target(doc-install
-      # Place a symlink to the generated documentation to the /var/www/html directory
-      COMMAND ln -fs ${CMAKE_CURRENT_BINARY_DIR}/html /var/www/html/bf-p4c-compilers
+      # Place a symlink to the generated documentation to the /var/www/html
+      # directory use cmake's create_symlink which must exist always and
+      # overrides the target (`ls -sf` creates a link as bf-p4c-compiles/html if
+      # bf-p4c-compiles already exists)
+      COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/html /var/www/html/bf-p4c-compilers
       COMMENT "Installing Doxygen documentation"
       VERBATIM)
   else()
