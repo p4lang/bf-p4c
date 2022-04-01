@@ -537,7 +537,7 @@ class Table {
 
  public:
     const char *name() const { return name_.c_str(); }
-    const char *p4_name() const { if (p4_table) { return p4_table->p4_name(); } return ""; }
+    const char *p4_name() const { if (p4_table) { return p4_table->p4_name(); } return nullptr; }
     unsigned p4_size() const { if (p4_table) { return p4_table->p4_size(); } return 0; }
     unsigned handle() const { if (p4_table) { return p4_table->get_handle(); } return -1; }
     std::string action_profile() const {

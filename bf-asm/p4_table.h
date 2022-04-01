@@ -47,7 +47,7 @@ class P4Table {
     static P4Table *get(type t, VECTOR(pair_t) &d);
     static P4Table *alloc(type t, Table *tbl);
     void check(Table *tbl);
-    const char *p4_name() const { return name.empty() ? 0 : name.c_str(); }
+    const char *p4_name() const { return name.empty() ? nullptr : name.c_str(); }
     unsigned get_handle() { return handle; }
     unsigned p4_size() { return size; }
     std::string p4_stage_table_type() { return stage_table_type; }

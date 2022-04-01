@@ -2137,8 +2137,13 @@ void Table::Actions::add_action_format(const Table *table, json::map &tbl) const
 
         json::vector &next_tables = action_format_per_action["next_tables"] = json::vector();
         for (auto n : act.next_table_ref) {
+            auto nP4Name = n->p4_name();
+            // Gateway next tables dont have a p4 Name
+            if (nP4Name == nullptr) {
+                nP4Name = n.name.c_str();
+            }
             next_tables.push_back(json::map {
-                    { "next_table_name", json::string(n->p4_name()) },
+                    { "next_table_name", json::string(nP4Name) },
                     { "next_table_logical_id", json::number(n->logical_id) },
                     { "next_table_stage_no", json::number(n->stage->stageno) }
             });
