@@ -255,6 +255,17 @@ bool FindFlowGraph::preorder(const IR::MAU::Table *t) {
     return true;
 }
 
+bool FindFlowGraph::preorder(const IR::MAU::Action *act) {
+    // Add deparser edges for exit actions (those that terminate MAU processing)
+    if (act->exitAction) {
+        if (auto *t = findContext<IR::MAU::Table>()) {
+            LOG3("Parent : " << t->name << " --> " << act->name << " --> DEPARSER");
+            fg.add_edge(t, nullptr, act->name);
+        }
+    }
+    return true;
+}
+
 void FindFlowGraph::end_apply() {
     // Find the source node (i.e., the node with no incoming edges), and make sure there is only
     // one. As we do this, also populate tableToVertexIndex.

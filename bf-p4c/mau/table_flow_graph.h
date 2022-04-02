@@ -357,6 +357,7 @@ class FindFlowGraph : public MauInspector {
     Visitor::profile_t init_apply(const IR::Node* node) override;
     bool preorder(const IR::MAU::TableSeq*) override;
     bool preorder(const IR::MAU::Table *) override;
+    bool preorder(const IR::MAU::Action *) override;
     void end_apply() override;
 
  public:
