@@ -266,7 +266,7 @@ set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/arista/obfuscate
 # p4_16/customer/arista/experimental/obfuscated-*.p4
 foreach (t IN LISTS P16_TNA_ARISTA_EXP_FILES)
   if (${t} IN_LIST P16_TNA_ARISTA_EXP_SET_MAX_POWER_FILES)
-      set (POWER_CHECK_ARG "-Xp4c=\"--set-max-power 62.0\"")
+      set (POWER_CHECK_ARG "-Xp4c=\"--set-max-power 65.0 --traffic-limit 95.0 --excludeBackendPasses=ResetInvalidatedChecksumHeaders\"")
   else()
       set (POWER_CHECK_ARG "-Xp4c=\"--disable-power-check\"")
   endif()
