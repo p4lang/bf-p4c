@@ -146,6 +146,7 @@
 #include "bf-p4c/midend/simplify_key_policy.h"
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/logging/source_info_logging.h"
+#include "bf-p4c/midend/remove_select_booleans.h"
 
 namespace BFN {
 
@@ -392,7 +393,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new SimplifyEmitArgs(&refMap, &typeMap),
         new P4::NestedStructs(&refMap, &typeMap, typeChecking),
         new P4::SimplifySelectList(&refMap, &typeMap, typeChecking),
-        new P4::RemoveSelectBooleans(&refMap, &typeMap, typeChecking),
+        new BFN::RemoveSelectBooleans(&refMap, &typeMap),
         new P4::Predication(&refMap),
         new P4::MoveDeclarations(),  // more may have been introduced
         new P4::ConstantFolding(&refMap, &typeMap, true, typeChecking),
