@@ -2356,18 +2356,20 @@ void MauAsmOutput::emit_atcam_match(std::ostream &out, indent_t indent,
           tbl->layout.atcam_subset_width << std::endl;
         out << indent << "shift_granularity: " <<
           tbl->layout.shift_granularity << std::endl;
-        out << indent << "context_json: " << std::endl;
-        out << indent+1 << "excluded_field_msb_bits: " << "[" << std::endl;
-        std::string sep = "";
-        for (auto v : tbl->layout.excluded_field_msb_bits) {
-            out << sep;
-            if (sep == "") sep = ", ";
-            out << indent+2 << "{ ";
-            out << "field_name : " << v.first << ",";
-            out << "msb_bits_excluded: " << v.second;
-            out << "}";
+        if (!tbl->layout.excluded_field_msb_bits.empty()) {
+            out << indent << "context_json: " << std::endl;
+            out << indent+1 << "excluded_field_msb_bits: " << "[" << std::endl;
+            std::string sep = "";
+            for (auto v : tbl->layout.excluded_field_msb_bits) {
+                out << sep;
+                if (sep == "") sep = ", ";
+                out << indent+2 << "{ ";
+                out << "field_name : " << v.first << ",";
+                out << "msb_bits_excluded: " << v.second;
+                out << "}";
+            }
+            out << indent+1 << "]" << std::endl;
         }
-        out << indent+1 << "]" << std::endl;
     }
     for (auto ixr : tbl->match_key) {
         if (ixr->partition_index) {
