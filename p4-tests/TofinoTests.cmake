@@ -1044,6 +1044,7 @@ set (P4FACTORY_P4_16_PROGRAMS_INTERNAL
   misc1
   tna_pvs_multi_states
   tna_multi_prsr_programs_multi_pipes
+  mirror
   )
 
 ## Internal P4-16 Programs - compile-only

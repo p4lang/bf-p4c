@@ -1909,15 +1909,14 @@ class CollectPardeConstraints : public Inspector {
                 for (auto resubmit_field_expr : fieldList->sources) {
                     PHV::Field* resubmit_field = phv.field(resubmit_field_expr->field);
                     if (resubmit_field) {
+                        resubmit_field->set_exact_containers(true);
                         // XXX(yumin): P4C-1870, an edge case for resubmit fields,
                         // that if they are in a 8-byte-long
                         // resubmit field list, then they must take the whole container.
                         if (resubmit_field->metadata || total_bits == 64) {
-                            resubmit_field->set_exact_containers(true);
                             resubmit_field->set_is_marshaled(true);
                             LOG3("\t\t" << resubmit_field);
                         } else if (resubmit_field->padding) {
-                            resubmit_field->set_exact_containers(true);
                             resubmit_field->set_deparsed(true);
                             LOG3("\t\t" << resubmit_field);
                         }
