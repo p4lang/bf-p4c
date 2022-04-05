@@ -32,6 +32,7 @@ bool MauBacktracker::backtrack(trigger &trig) {
             internalTables.clear();
             for (auto entry : t->internalTableAlloc)
                 internalTables[entry.first] = entry.second;
+            mergedGateways = t->mergedGateways;
             LOG4("Inserted tables size: " << tables.size());
         } else {
             LOG4("IgnorePackConflicts is true, no table placement inserted.");
@@ -52,8 +53,8 @@ const IR::Node *MauBacktracker::apply_visitor(const IR::Node* root, const char *
         LOG4("  Clearing all logging");
         tables.clear();
         prevRoundTables.clear(); }
-    if (LOGGING(4) && numInvoked != 1)
-        printTableAlloc();
+    if (numInvoked != 1)
+        LOG4(printTableAlloc());
     return root;
 }
 
@@ -93,16 +94,21 @@ MauBacktracker::inSameStage(
     return rs;
 }
 
-void MauBacktracker::printTableAlloc() const {
-    if (!LOGGING(3)) return;
-    LOG4("Printing Table Placement Before PHV Allocation Pass");
-    LOG4("Stage | Table Name");
+std::string MauBacktracker::printTableAlloc() const {
+    std::stringstream talloc;
+    // if (!LOGGING(3)) return;
+    talloc << "Printing Table Placement Before PHV Allocation Pass" << std::endl;
+    talloc << "Stage | Logical Id | Table Name" << std::endl;
     for (auto tbl : tables) {
         for (int logical_id : tbl.second) {
             int st = logical_id / NUM_LOGICAL_TABLES_PER_STAGE;
-            LOG4(boost::format("%5d") % st << " | " << tbl.first);
+            int id = logical_id % NUM_LOGICAL_TABLES_PER_STAGE;
+            talloc << boost::format("%5d")  % st << " | "
+                   << boost::format("%10d") % id << " | "
+                   << tbl.first << std::endl;
         }
     }
+    return talloc.str();
 }
 
 bool MauBacktracker::hasTablePlacement() const {

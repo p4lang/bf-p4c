@@ -53,18 +53,29 @@
 #include "bf-p4c/common/table_printer.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/logging/filelog.h"
+#include "bf-p4c/mau/memories.h"
 #include "bf-p4c/mau/resource_estimate.h"
 #include "bf-p4c/mau/table_placement.h"
 #include "bf-p4c/ir/gress.h"
 
 #include "lib/hex.h"
 #include "lib/map.h"
-#include "lib/safe_vector.h"
 
-const char *state_name[] = {
-    "INITIAL",           "NOCC_TRY1", "REDO_PHV1", "NOCC_TRY2",   "REDO_PHV2",
-    "FINAL_PLACEMENT",   "FAILURE",   "SUCCESS",   "ALT_INITIAL", "ALT_RETRY_ENHANCED_TP",
-    "ALT_FINALIZE_TABLE"};
+static std::vector<cstring> state_name = {
+    "INITIAL",
+    "NOCC_TRY1",
+    "REDO_PHV1",
+    "NOCC_TRY2",
+    "REDO_PHV2",
+    "FINAL_PLACEMENT",
+    "FAILURE",
+    "SUCCESS",
+    "ALT_INITIAL",
+    "ALT_RETRY_ENHANCED_TP",
+    "ALT_FINALIZE_TABLE_SAME_ORDER",
+    "ALT_FINALIZE_TABLE",
+    "FINAL"  // Should never reach this state
+};
 
 void TableSummary::FinalizePlacement() {
     state = BFNContext::get().options().alt_phv_alloc ? ALT_FINALIZE_TABLE : FINAL_PLACEMENT;
@@ -110,13 +121,14 @@ Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
     no_errors_before_summary = placementErrorCount() == 0;
     ++numInvoked;
     for (auto gress : { INGRESS, EGRESS }) max_stages[gress] = -1;
+    placedTables.clear();
     LOG1("Table allocation done " << numInvoked << " time(s), state = " <<
-         state_name[state]);
+         getActualStateStr());
     return rv;
 }
 
 void TableSummary::generateIxbarBytesInfo() {
-    LOG3("Generating All Input XBar Usages - STATE : " << state_name[state]);
+    LOG3("Generating All Input XBar Usages - STATE : " << getActualStateStr());
     for (auto &f : phv.get_all_fields()) {
         le_bitrange bits(0, f.second.size - 1);
         f.second.foreach_alloc(bits, [&](const PHV::AllocSlice& sl) {
@@ -138,16 +150,23 @@ void TableSummary::generateIxbarBytesInfo() {
     }
 }
 
+void TableSummary::printPlacedTables() const {
+    for (auto &pt : placedTables)
+        LOG5(pt.second->dumpStr() << "\n");
+}
+
 void TableSummary::end_apply() {
     // Generate Input XBar Bytes per Field Slice per stage
     generateIxbarBytesInfo();
     printAllIxbarUsages();
     printTablePlacement();
     LOG2(*this);
+    printPlacedTables();
     Logging::FileLog::close(tsLog);
 }
 
 bool TableSummary::preorder(const IR::MAU::Table *t) {
+    LOG5("TableSummary preorder on table : " << t->name << " with gw : " << t->gateway_name);
     TableSummary::addTablePtr(t);
     if (t->is_always_run_action()) {
         if (t->stage() == -1 && no_errors_before_summary)
@@ -174,7 +193,7 @@ bool TableSummary::preorder(const IR::MAU::Table *t) {
     tableNames[t->name] = getTableName(t);
     tableINames[t->name] = getTableIName(t);
     if (t->gateway_name) {
-        mergedGateways[t->name] = t->gateway_name;
+        mergedGateways[t->name] = std::make_pair(t->gateway_name, t->gateway_result_tag);
         tableNames[t->gateway_name] = t->gateway_name;
         tableINames[t->gateway_name] = t->gateway_name;
     }
@@ -194,6 +213,29 @@ bool TableSummary::preorder(const IR::MAU::Table *t) {
         addPlacementWarnError(BaseCompileContext::get().errorReporter().format_message(
                 "The stage specified for %s is %d, but we could not place it until stage %d",
                 t, t->get_provided_stage(), t->stage())); }
+
+    // Create / Update a PlacedTable Object
+    bool pTMerge = false;
+    for (auto &pt : Values(placedTables)) {
+        // For ALPM's / DLEFT tables which can be split within the same stage
+        // consolidate the entries into a single placed table object TP in the
+        // next round will do the split during TransformTables (break_up_atcam /
+        // dleft)
+        // However split gateway tables should not be merged as these are split
+        // through SplitComplexGateways earlier during Table Alloc, hence TP
+        // should see the split gateways as is
+        if ((pt->internalTableName == getTableIName(t))
+            && (pt->stage == t->stage())
+            && (!t->is_a_gateway_table_only())) {
+            pt->add(t);
+            pTMerge = true;
+            LOG5("\tMerging with PlacedTable : " << pt->internalTableName);
+            break;
+        }
+    }
+    if (!pTMerge)
+        placedTables[*t->global_id()] = new PlacedTable(t);
+
     return true;
 }
 
@@ -280,8 +322,8 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
             // of the gateway is always in the earliest stage into which the P4 table has been split
             int minStage = std::accumulate(stages.begin(), stages.end(),
                     (maxStage + 1) * NUM_LOGICAL_TABLES_PER_STAGE, min);
-            tableAlloc[tableNames[entry.second]].insert(minStage);
-            internalTableAlloc[tableINames[entry.second]].insert(minStage);
+            tableAlloc[tableNames[entry.second.first]].insert(minStage);
+            internalTableAlloc[tableINames[entry.second.first]].insert(minStage);
         } else {
             ::warning("Source of merged gateway does not have stage allocated"); } }
 
@@ -300,8 +342,9 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
         case ALT_INITIAL: {
             // table placement succeeded, backtrack to run actual PHV allocation.
             if (!criticalPlacementFailure && maxStage <= deviceStages) {
-                state = ALT_FINALIZE_TABLE;
-                throw PHVTrigger::failure(tableAlloc, internalTableAlloc, firstRoundFit);
+                state = ALT_FINALIZE_TABLE_SAME_ORDER;
+                throw PHVTrigger::failure(tableAlloc, internalTableAlloc,
+                                            mergedGateways, firstRoundFit);
             } else {
                 if (maxStage > deviceStages) {
                     // retry with table backtrack and resource-based allocation enabled.
@@ -318,12 +361,21 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
         case ALT_RETRY_ENHANCED_TP: {
             // table placement succeeded, backtrack to run actual PHV allocation.
             if (!criticalPlacementFailure && maxStage <= deviceStages) {
-                state = ALT_FINALIZE_TABLE;
-                throw PHVTrigger::failure(tableAlloc, internalTableAlloc, firstRoundFit);
+                state = ALT_FINALIZE_TABLE_SAME_ORDER;
+                throw PHVTrigger::failure(tableAlloc, internalTableAlloc,
+                                            mergedGateways, firstRoundFit);
             } else {
                 state = FAILURE;
             }
             break;
+        }
+        case ALT_FINALIZE_TABLE_SAME_ORDER: {
+            if (!criticalPlacementFailure && maxStage <= deviceStages) {
+                state = SUCCESS;
+            } else {
+                state = ALT_FINALIZE_TABLE;
+                throw RerunTablePlacementTrigger::failure(false);
+            }
         }
         case ALT_FINALIZE_TABLE: {
             if (!criticalPlacementFailure && maxStage <= deviceStages) {
@@ -334,7 +386,7 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
             break;
         }
         default:
-            BUG("incorrect current state when alt_phv_alloc is enabled: %1%", state_name[state]);
+            BUG("incorrect current state when alt_phv_alloc is enabled: %1%", getActualStateStr());
         }
         if (state == FAILURE) {
             print_table_placement_errors();
@@ -391,10 +443,12 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
             if (state == REDO_PHV2 && maxStage == deviceStages) {
                 LOG1("Invoking table placement without metadata initialization because container "
                      "second conflict-free table placement required " << maxStage << " stages.");
-                throw PHVTrigger::failure(tableAlloc, internalTableAlloc, firstRoundFit,
+                throw PHVTrigger::failure(tableAlloc, internalTableAlloc,
+                                            mergedGateways, firstRoundFit,
                     false /* ignorePackConflicts */, true /* metaInitDisable */);
             } else {
-                throw PHVTrigger::failure(tableAlloc, internalTableAlloc, firstRoundFit);
+                throw PHVTrigger::failure(tableAlloc, internalTableAlloc,
+                                            mergedGateways, firstRoundFit);
             }
         } else {
             // If there is not table placement failure and the number of stages without container
@@ -405,7 +459,7 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
             LOG1("Invoking table placement without metadata initialization because container "
                  "conflict-free table placement required " << maxStage << " stages.");
             state = state == NOCC_TRY1 ? REDO_PHV1 : REDO_PHV2;
-            throw PHVTrigger::failure(tableAlloc, internalTableAlloc, firstRoundFit,
+            throw PHVTrigger::failure(tableAlloc, internalTableAlloc, mergedGateways, firstRoundFit,
                     false /* ignorePackConflicts */, true /* metaInitDisable */);
         }
 
@@ -433,7 +487,7 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
         return;
 
     default:
-        BUG("TableSummary state %s (pass %d) not handled", state_name[state], numInvoked);
+        BUG("TableSummary state %s (pass %d) not handled", getActualStateStr(), numInvoked);
     }
 }
 
@@ -498,7 +552,7 @@ std::map<int, int> TableSummary::findBytesOnIxbar(const PHV::FieldSlice &slice) 
 // Usages are determined on each stage the field slice is valid
 void TableSummary::printAllIxbarUsages(const PhvInfo *phv_i) const {
     if (!LOGGING(3)) return;
-    LOG3("Printing All Input XBar Usages - STATE : " << state_name[state]);
+    LOG3("Printing All Input XBar Usages - STATE : " << getActualStateStr());
     if (!phv_i) phv_i = &phv;
     std::stringstream ss;
     std::vector<std::string> header;
@@ -542,6 +596,12 @@ void TableSummary::printAllIxbarUsages(const PhvInfo *phv_i) const {
     LOG3(ss.str());
 }
 
+cstring TableSummary::getActualStateStr() const {
+    BUG_CHECK((state >= INITIAL && state < FINAL),
+            "Placement in an invalid state");
+    return state_name.at(state);
+}
+
 std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
     TablePrinter tp(out, {"Stage", "Logical ID", "Gress", "Name", "Ixbar Bytes", "Match Bits",
                           "Gateway", "Action Data Bytes"},
@@ -575,4 +635,74 @@ std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
     }
 
     return out;
+}
+
+void TableSummary::PlacedTable::add(const IR::MAU::Table *t) {
+    if (!t) return;
+    if (!t->resources) return;
+    if (t->resources->memuse.count(t->unique_id()) == 0) return;  // BUG_CHECK?
+    auto mem = t->resources->memuse.at(t->unique_id());
+    if (t->ways.size() > 0) {
+    auto match_groups = t->ways[0].match_groups;
+        for (auto mem_way : mem.ways) {
+            entries += match_groups * mem.ways.size() * Memories::SRAM_DEPTH;
+            LOG3("Adding entries to table : " << t->name << ", match_groups: " << match_groups
+                    << ", mem.ways: " << mem.ways);
+        }
+    }
+    for (auto &ba : t->attached) {
+        auto att = ba->attached;
+        auto memName = att->name;
+        auto attEntries = att->size;
+        // If table is direct same entries as match table
+        attached_entries[memName] += attEntries;
+    }
+}
+
+TableSummary::PlacedTable::PlacedTable(const IR::MAU::Table *t) {
+    BUG_CHECK(t, "PlacedTable called with no valid table");
+    LOG5("Populating PlacedTable for Table : " << t->name);
+
+    tableName = getTableName(t);
+    internalTableName = t->is_a_gateway_table_only() ? t->name : getTableIName(t);
+
+    if (t->gateway_name) {
+        gatewayName = t->gateway_name;
+        gatewayMergeCond = t->gateway_result_tag;
+    }
+
+    stage = t->stage();
+    logicalId = *t->logical_id;
+    entries = t->layout.entries;
+    // TBD: Fix layout to have the correct entries and ways for all table types
+    // This should ideally happen in TP possibly during TransformTables pass
+    // Do we need to do anything different for DLEFT for entries calculation
+    // here?
+    if (t->layout.atcam) {
+        auto mem = t->resources->memuse.at(t->unique_id());
+        auto match_groups = t->ways[0].match_groups;
+        for (auto mem_way : mem.ways) {
+            entries += match_groups * mem.ways.size() * Memories::SRAM_DEPTH;
+        }
+    }
+
+    for (auto &ba : t->attached) {
+        auto att = ba->attached;
+        auto memName = att->name;
+        auto attEntries = att->size;
+        // If table is direct same entries as match table
+        attached_entries[memName] = attEntries;
+    }
+}
+
+cstring TableSummary::PlacedTable::dumpStr() {
+    std::stringstream dumpStr;
+    dumpStr << "Placed Table : " << tableName << "(" << internalTableName << ")\n";
+    dumpStr << "\tstage: " << stage << ", logicalId: " << logicalId;
+    dumpStr << ", entries: " << entries << "\n";
+    if (gatewayName)
+        dumpStr << "\tgateway: " << gatewayName << "(" << gatewayMergeCond << ")";
+    for (auto att : attached_entries)
+        dumpStr << "\tAttached Table : " << att.first << ", entries : " << att.second << "\n";
+    return dumpStr.str();
 }

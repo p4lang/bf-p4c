@@ -11,11 +11,13 @@
 #include "bf-p4c/mau/table_placement.h"
 #include "bf-p4c/mau/ixbar_expr.h"
 #include "bf-p4c/mau/remove_noop_gateway.h"
+#include "bf-p4c/phv/mau_backtracker.h"
 
 int TableAllocPass::table_placement_round = 1;
 
 TableAllocPass::TableAllocPass(const BFN_Options& options, PhvInfo& phv, DependencyGraph &deps,
-                               TableSummary &summary, Util::JsonObject* jsonGraph)
+                               TableSummary &summary, Util::JsonObject* jsonGraph,
+                               MauBacktracker &mau_backtracker)
     : Logging::PassManager("table_placement_"), lc(phv, att_info),
       siaa(mutex, ignore, action_mutex, lc), att_info(phv), options(options) {
         addPasses({
@@ -36,7 +38,8 @@ TableAllocPass::TableAllocPass(const BFN_Options& options, PhvInfo& phv, Depende
             &action_mutex,
             &siaa,
             new DumpPipe("Before TablePlacement"),
-            new TablePlacement(options, deps, mutex, phv, lc, siaa, att_info, summary),
+            new TablePlacement(options, deps, mutex, phv, lc,
+                                siaa, att_info, summary, mau_backtracker),
             new DumpPipe("After TablePlacement"),
             new CheckTableNameDuplicate,
             new TableFindSeqDependencies(phv),  // not needed?

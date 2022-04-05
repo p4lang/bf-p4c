@@ -355,6 +355,7 @@ bool IR::MAU::Table::operator==(const IR::MAU::Table &a) const {
     return name == a.name &&
            gress == a.gress &&
            gateway_cond == a.gateway_cond &&
+           gateway_result_tag == a.gateway_result_tag &&
            stage_ == a.stage_ &&
            logical_id == a.logical_id &&
            gateway_rows == a.gateway_rows &&

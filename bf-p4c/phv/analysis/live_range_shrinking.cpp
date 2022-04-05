@@ -10,7 +10,7 @@ Visitor::profile_t FindInitializationNode::init_apply(const IR::Node* root) {
     maxStages = -1;
     doNotInitActions.clear();
     doNotInitActions.clear();
-    tableAlloc.printTableAlloc();
+    LOG_DEBUG3(tableAlloc.printTableAlloc());
     return Inspector::init_apply(root);
 }
 

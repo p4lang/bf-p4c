@@ -20,10 +20,19 @@ class MauBacktracker : public Backtrack {
     /// Map of table names to stage from a previous round without container conflicts.
     ordered_map<cstring, ordered_set<int>> prevRoundTables;
 
+    /// Table Order for 2nd TP round in alt phv alloc
+    ordered_map<int, ordered_set<ordered_set<cstring> > > table_order;
+
     /// Store a map of internal table names to stage, used as reference by the second round of
     /// PHV allocation (after a backtrack exception has been thrown by TableSummary). Only used
     /// on stage() function with internal == true.
+    /// Also used in 2nd round of Alt PHV Alloc Table Placement
     ordered_map<cstring, ordered_set<int>> internalTables;
+
+    /// Store a map of internal table names to merged condition tables with the
+    /// gateway tag, used as reference by the second round of Alt PHV Alloc
+    /// Table Placement
+    ordered_map<cstring, std::pair<cstring, cstring>> mergedGateways;
 
     // true if a valid table placement is stored in tables. NOTE: we need this variable instead
     // of just using !tables.empty() because for program with no table, an empty alloc is valid.
@@ -65,7 +74,7 @@ class MauBacktracker : public Backtrack {
     ordered_set<int> inSameStage(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const;
 
     /// Prints the table allocation received by MauBacktracker by means of the backtrack trigger
-    void printTableAlloc() const;
+    std::string printTableAlloc() const;
 
     /// @returns true if the MauBacktracker class has any information about table placement (found
     /// in the tables map
@@ -88,6 +97,14 @@ class MauBacktracker : public Backtrack {
 
     /// @returns the Table Summary pointer
     const TableSummary* get_table_summary() const { return table_summary; };
+
+    /// @returns tables structure
+    const ordered_map<cstring, ordered_set<int>>&
+        getInternalTablesInfo() const { return internalTables; }
+
+    /// @returns merged gateways structure
+    const ordered_map<cstring, std::pair<cstring, cstring>>&
+        getMergedGatewaysInfo() const { return mergedGateways; }
 
     /// Clear the MauBacktracker state.
     /// Only use when backtracking to a point where everything should be reset.

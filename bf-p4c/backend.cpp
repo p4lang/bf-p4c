@@ -145,7 +145,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
     defuse(phv),
     decaf(phv, uses, defuse, deps),
     table_summary(pipe_id, deps, phv),
-    table_alloc(options, phv, deps, table_summary, &jsonGraph),
+    table_alloc(options, phv, deps, table_summary, &jsonGraph, mau_backtracker),
     mau_backtracker(&table_summary) {
     BUG_CHECK(pipe_id >= 0, "Invalid pipe id in backend : %d", pipe_id);
     flexibleLogging = new LogFlexiblePacking(phv);
@@ -286,7 +286,8 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
             // run trivial alloc for the first time
             new PassIf(
                 [this]() {
-                    return table_summary.getActualState() == TableSummary::ALT_INITIAL;
+                    auto actualState = table_summary.getActualState();
+                    return actualState == TableSummary::ALT_INITIAL;
                 },
                 {
                     [=]() {
@@ -298,7 +299,8 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
             // run actual PHV allocation
             new PassIf(
                 [this]() {
-                    return table_summary.getActualState() == TableSummary::ALT_FINALIZE_TABLE;
+                    auto actualState = table_summary.getActualState();
+                    return actualState == TableSummary::ALT_FINALIZE_TABLE_SAME_ORDER;
                 },
                 {
                     [=]() {

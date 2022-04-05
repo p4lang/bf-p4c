@@ -17,17 +17,20 @@ struct PHVTrigger {
     struct failure : public Backtrack::trigger {
         ordered_map<cstring, ordered_set<int>> tableAlloc;
         ordered_map<cstring, ordered_set<int>> internalTableAlloc;
+        ordered_map<cstring, std::pair<cstring, cstring>> mergedGateways;
         bool metaInitDisable;
         bool ignorePackConflicts;
         bool firstRoundFit;
         explicit failure(
                 ordered_map<cstring, ordered_set<int>> tables,
                 ordered_map<cstring, ordered_set<int>> internalTables,
+                ordered_map<cstring, std::pair<cstring, cstring>> mergedGateways,
                 bool fit,
                 bool pack = false,
                 bool meta = false)
             : trigger(OTHER), tableAlloc(tables), internalTableAlloc(internalTables),
-              metaInitDisable(meta), ignorePackConflicts(pack), firstRoundFit(fit) { }
+              mergedGateways(mergedGateways), metaInitDisable(meta),
+              ignorePackConflicts(pack), firstRoundFit(fit) { }
     };
 };
 
@@ -68,17 +71,23 @@ struct RerunTablePlacementTrigger {
  * In the alternative PHV allocation, AKA table placement first allocation, the workflow is
  * different.
  *
- *  ALT_INITIAL --->  ALT_FINALIZE_TABLE  --->  SUCCESS or FAILURE
- *       \                    ^
- *    (failed)                |
- *       \                    |
- *       |------------> ALT_TRY_ENHANCED_TP
- *                            \
- *                         (failed)
- *                            \
- *                            \--> FAILURE
+ *                  SUCCESS
+ * ALT_INITIAL --------------------->  ALT_FINALIZE_TABLE_SAME_ORDER ------------> SUCCESS
+ * (Trivial alloc)            ^   (with order suggested by previous round)
+ * ( + Default TP)            |                          |
+ *    |                       |                          |
+ *    |                       |                      (FAILURE)
+ * (FAILURE)              (SUCCESS)                      |
+ *    |                       |                          V
+ *    |                       |                   ALT_FINALIZE_TABLE --> SUCCESS / FAILURE
+ *    .------------> ALT_RETRY_ENHANCED_TP        ( Default TP
+ *                   (Default TP + backtracki      + backtracking
+ *                     ( + resource-based)         + resource-based)
+ *                            |
+ *                            |
+ *                            .--> FAILURE
  *
- ************************/
+ ******************************************************************************************/
 
 class TableSummary: public MauInspector {
  public:
@@ -94,7 +103,30 @@ class TableSummary: public MauInspector {
         SUCCESS,
         ALT_INITIAL,
         ALT_RETRY_ENHANCED_TP,
+        ALT_FINALIZE_TABLE_SAME_ORDER,
         ALT_FINALIZE_TABLE,
+        FINAL,  // always keep as last state for bounds checking
+    };
+
+    // This struct represents a placed table and its relevant info as necessary
+    // for future table placement / phv allocation rounds. It can / should be
+    // extended to add more info as required
+    // TBD: Some of the info overlaps with other maps which should be eventually
+    // depecrated to use the consolidated struct below
+    struct PlacedTable {
+        cstring tableName;
+        cstring internalTableName;
+        cstring gatewayName;
+        cstring gatewayMergeCond;
+        int stage;
+        unsigned logicalId;
+        int entries;
+
+        ordered_map<cstring, int> attached_entries;
+
+        explicit PlacedTable(const IR::MAU::Table *t);
+        void add(const IR::MAU::Table *t);
+        cstring dumpStr();
     };
 
  private:
@@ -132,14 +164,17 @@ class TableSummary: public MauInspector {
     /// table placement constraints to PHV allocation. This mapping table have a better granularity
     /// to properly map the stage of a match table using various internal construct.
     ordered_map<cstring, ordered_set<int>> internalTableAlloc;
-    /// Map of table name to the name of the gateway merged with it
-    ordered_map<cstring, cstring> mergedGateways;
+    /// Map of table name to the name of the gateway and condition merged with it
+    ordered_map<cstring, std::pair<cstring, cstring>> mergedGateways;
     /// Map of table names to the external names used for communicating table placement information
     ordered_map<cstring, cstring> tableNames;
     /// Map of table names to the internal names used for communicating table placement information
     ordered_map<cstring, cstring> tableINames;
     /// Map of table name to the IR pointer of the table
     static ordered_map<cstring, std::set<const IR::MAU::Table*>> tblName2IRptr;
+
+    // Map of Global ID (Stage + Logical Id) -> Placed Table
+    std::map<int, PlacedTable*> placedTables;
 
     // Map of Global ID -> Table
     std::map<int, const IR::MAU::Table *> order;
@@ -233,8 +268,11 @@ class TableSummary: public MauInspector {
     void resetPlacement();
     state_t getActualState() const { return state; }
     void setPrevState() { state = prev_state; }
+    cstring getActualStateStr() const;
     void setAllStagesResources(const StageUseEstimate use) { allStages = use; }
     StageUseEstimate getAllStagesResources() const { return allStages; }
+
+    std::map<int, PlacedTable*>& getPlacedTables() { return placedTables; }
 
     // Returns a map of stage and bytes used on ixbar in that stage
     // e.g. field f1 -
@@ -253,6 +291,7 @@ class TableSummary: public MauInspector {
     // }
     std::map<int, int> findBytesOnIxbar(const PHV::FieldSlice &slice) const;
     void printAllIxbarUsages(const PhvInfo *phv = nullptr) const;
+    void printPlacedTables() const;
 
     friend std::ostream &operator<<(std::ostream &out, const TableSummary &ts);
 };

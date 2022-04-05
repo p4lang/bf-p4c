@@ -3872,14 +3872,15 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
     } else {
         bool firstRoundFit = mau_i.didFirstRoundFit();
         if (firstRoundFit) {
-            // Empty table allocation to be sent because the first round of PHV allocation should be
-            // redone.
+            // Empty table allocation and merged gateways to be sent because the
+            // first round of PHV allocation should be redone.
             ordered_map<cstring, ordered_set<int>> tables;
+            ordered_map<cstring, std::pair<cstring, cstring>> mergedGateways;
             LOG_DEBUG1("This round of PHV Allocation did not fit. However, the first round of PHV "
                        "allocation did. Therefore, falling back onto the first round of PHV "
                        "allocation.");
-            throw PHVTrigger::failure(tables, tables, firstRoundFit, true /* ignorePackConflicts */,
-                                      false /* metaInitDisable */);
+            throw PHVTrigger::failure(tables, tables, mergedGateways, firstRoundFit,
+                                    true /* ignorePackConflicts */, false /* metaInitDisable */);
         }
         PHV::AllocUtils::bind_slices(alloc, phv_i);
         PHV::AllocUtils::sort_and_merge_alloc_slices(phv_i);

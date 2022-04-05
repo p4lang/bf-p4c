@@ -11,6 +11,7 @@
 #include "bf-p4c/lib/error_type.h"
 #include "bf-p4c/logging/manifest.h"
 #include "bf-p4c/mau/action_data_bus.h"
+#include "bf-p4c/mau/attached_entries.h"
 #include "bf-p4c/mau/field_use.h"
 #include "bf-p4c/mau/input_xbar.h"
 #include "bf-p4c/mau/instruction_memory.h"
@@ -1442,6 +1443,14 @@ bool TablePlacement::shrink_estimate(Placed *next, int &srams_left, int &tcams_l
     if (next->table->is_a_gateway_table_only() || next->table->match_key.empty())
         return false;
 
+    // No shrinking estimates for alt table placement round. This will happen
+    // mostly because the phv allocation does not allow fitting the same no. of
+    // entries as previous round. For now, we exit and continue with the default
+    // placement round.
+    if (summary.getActualState() == summary.ALT_FINALIZE_TABLE_SAME_ORDER)
+        return false;
+
+    LOG2("Shrinking estimate on table " << next->name << " for min entries: " << min_entries);
     bool done_shrink = false;
     for (auto *ba : next->table->attached) {
         auto *att = ba->attached;
@@ -1602,6 +1611,7 @@ bool TablePlacement::try_alloc_ixbar(Placed *next) {
 }
 
 bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_stage) {
+    LOG5("Trying to allocate mem for " << next->name);
     std::unique_ptr<Memories> current_mem(Memories::create());
     // This is to guarantee for Tofino to have at least a table per gress within a stage, as
     // a path is required from the parser
@@ -1676,7 +1686,7 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
     verify_mem->update(next->resources.memuse);
     LOG7(IndentCtl::indent << IndentCtl::indent);
     LOG7(*verify_mem << IndentCtl::unindent << IndentCtl::unindent);
-
+    LOG5("\t Allocating mem successful");
     return true;
 }
 
@@ -2109,6 +2119,8 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
     std::set<const IR::MAU::AttachedMemory *> need_defer;
     for (auto *p = rv->prev; p; p = p->prev) {
         if (p->name == rv->name) {
+            LOG1("To place table : " << rv->name << ", entries: " << rv->entries
+                    << ", to place entries: " << p->entries);
             if (p->need_more == false) {
                 BUG(" - can't place %s it's already done", rv->name);
                 return false; }
@@ -2239,13 +2251,14 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
  */
 safe_vector<TablePlacement::Placed *>
     TablePlacement::try_place_table(const IR::MAU::Table *t, const Placed *done,
-        const StageUseEstimate &current, GatewayMergeChoices& gmc) {
+        const StageUseEstimate &current, GatewayMergeChoices& gmc,
+        const TableSummary::PlacedTable *pt) {
     LOG1("try_place_table(" << t->name << ", stage=" << (done ? done->stage : 0) << ")" <<
          IndentCtl::indent);
     safe_vector<Placed *> rv_vec;
     // Place and save a placement, as a lambda
     auto try_place = [&](Placed* rv) {
-                         if ((rv = try_place_table(rv, current)))
+                         if ((rv = try_place_table(rv, current, pt)))
                              rv_vec.push_back(rv);
                      };
 
@@ -2260,7 +2273,7 @@ safe_vector<TablePlacement::Placed *>
         for (auto mc : gmc) {
             auto *rv = new Placed(*this, t, done);
             // Merge
-            LOG1("  Merging with match table " << mc.first->name);
+            LOG1("  Merging with match table " << mc.first->name << " and tag " << mc.second);
             rv->gateway_merge(mc.first, mc.second);
             // Get a placement
             try_place(rv);
@@ -2272,10 +2285,46 @@ safe_vector<TablePlacement::Placed *>
 
 
 TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
-        const StageUseEstimate &current) {
+        const StageUseEstimate &current, const TableSummary::PlacedTable *pt) {
     int furthest_stage = (rv->prev == nullptr) ? 0 : rv->prev->stage + 1;
     if (!initial_stage_and_entries(rv, furthest_stage)) {
         return nullptr;
+    }
+
+    int needed_entries = rv->entries;
+    attached_entries_t initial_attached_entries = rv->attached_entries;
+
+    // Setup stage and entries for Alt Table Placement Round
+    if ((summary.getActualState() == summary.ALT_FINALIZE_TABLE_SAME_ORDER) && pt) {
+        furthest_stage = pt->stage;
+        rv->entries = pt->entries;
+        rv->stage = pt->stage;
+        // If container conflicts skip being accounted for in first TP round
+        // exit this round. This round follows placement in round 1 with the
+        // assumption that all dependencies are considered. Ideally this should
+        // be figured out by trivial alloc so previous round does not generate
+        // an invalid allocation. The check below will simply exit but a
+        // BUG_CHECK here might help identify the skipped conflicts to improve
+        // trivial alloc. Jira - P4C-4401 to fix trivial alloc
+        for (auto *p = rv->prev; p; p = p->prev) {
+            if (deps.container_conflict(p->table, rv->table)
+                    && p->stage == rv->stage
+                    && p->name != rv->name) {
+                error("Table placement for same ordering will exit as an "
+                    "unallocated container conflict has been detected causing tables "
+                    "%s and %s being placed in same stage %d", p->name, rv->name,
+                    rv->stage);
+                return nullptr;
+            }
+        }
+        for (auto &batt : rv->table->attached) {
+            for (auto ptAtt : pt->attached_entries) {
+                if (batt->attached->name == ptAtt.first) {
+                    rv->attached_entries.emplace(batt->attached, ptAtt.second);
+                    break;
+                }
+            }
+        }
     }
 
     const Placed *done = rv->prev;
@@ -2300,13 +2349,15 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
         rv->placed |= rv->prev->placed;
         BUG_CHECK(rv->match_placed == rv->prev->match_placed, "match_placed out of date?"); }
 
-    int needed_entries = rv->entries;
+    // int needed_entries = rv->entries;
     int initial_entries = rv->requested_stage_entries > 0 ? rv->requested_stage_entries :
         rv->entries;
-    attached_entries_t initial_attached_entries = rv->attached_entries;
+    // attached_entries_t initial_attached_entries = rv->attached_entries;
     int initial_stage_split = rv->stage_split;
 
     LOG3("  Initial stage is " << rv->stage << ", initial entries is " << rv->entries);
+    LOG4("    furthest stage : " << furthest_stage << ", initial att entires : "
+            << initial_attached_entries);
     BUG_CHECK(rv->stage < 100, "too many stages");
 
     auto *min_placed = new Placed(*rv);
@@ -2605,10 +2656,15 @@ const TablePlacement::Placed *TablePlacement::add_starter_pistols(const Placed *
 
 const TablePlacement::Placed *
 DecidePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *pl) {
-    LOG1("placing " << pl->entries << " entries of " << pl->name << (pl->gw ? " (with gw " : "") <<
-         (pl->gw ? pl->gw->name : "") << (pl->gw ? ")" : "") << " in stage " << pl->stage << "(" <<
-         hex(pl->logical_id) << ") " << pl->use.format_type <<
-         (pl->need_more_match ? " (need more match)" : pl->need_more ? " (need more)" : ""));
+    if (LOGGING(1)) {
+        auto gw_log_str = pl->gw ?
+            " (with gw " + pl->gw->name + ", result tag " + pl->gw_result_tag + ")" : "";
+        auto need_more_match_str = pl->need_more_match ?
+            " (need more match)" : pl->need_more ? " (need more)" : "";
+        LOG1("placing " << pl->entries << " entries of " << pl->name << gw_log_str
+                << " in stage " << pl->stage << "(" << hex(pl->logical_id) << ") "
+                << pl->use.format_type << need_more_match_str);
+    }
 
     if (pl->table) {
         int dep_chain = self.deps.stage_info[pl->table].dep_stages_control_anti;
@@ -3056,8 +3112,8 @@ bool DecidePlacement::gateway_thread_can_start(const IR::MAU::Table *tbl, const 
         return true;
     if (!tbl->uses_gateway())
         return true;
-    // The gateway merge constraints are checked in an early function.  This is for unmergeable
-    // gateways.
+    // The gateway merge constraints are checked in an early function.  This is
+    // for unmergeable gateways.
     auto gmc = self.gateway_merge_choices(tbl);
     if (gmc.size() > 0)
         return true;
@@ -3110,6 +3166,9 @@ void DecidePlacement::initForPipe(const IR::BFN::Pipe *pipe,
                 // retry table placement with resource-based allocation and backtracking ON.
                 resource_mode = true;
                 MaxBacktracksPerPipe = 32;
+                break;
+            case TableSummary::ALT_FINALIZE_TABLE_SAME_ORDER:
+                MaxBacktracksPerPipe = -1;
                 break;
             case TableSummary::ALT_FINALIZE_TABLE:
                 // final round, enable both resource-based allocation and backtracking.
@@ -3296,13 +3355,14 @@ DecidePlacement::find_backtrack_point(const Placed *best, int offset, bool local
     return boost::none;
 }
 
-bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
-    LOG_FEATURE("stage_advance", 2, "Stage advance " <<
-        (self.ignoreContainerConflicts ? "" : "not ") << "ignoring container conflicts");
-    LOG1("table placement starting " << pipe->name);
+const DecidePlacement::Placed*
+DecidePlacement::default_table_placement(const IR::BFN::Pipe *pipe) {
+    LOG1("Table placement starting on " << pipe->name << " with DEFAULT PLACEMENT approach");
+
     LOG3(TableTree("ingress", pipe->thread[INGRESS].mau) <<
          TableTree("egress", pipe->thread[EGRESS].mau) <<
          TableTree("ghost", pipe->ghost_thread.ghost_mau) );
+
     ordered_set<const GroupPlace *>     work;  // queue with random-access lookup
     const Placed *placed = nullptr;
     BacktrackPlacement *start_flow = nullptr;
@@ -3317,6 +3377,7 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
     Backfill backfill(*this);
     ResourceBasedAlloc res_based_alloc(*this, work, partly_placed, placed);
     FinalPlacement final_placement(*this, work, partly_placed, placed);
+
     while (true) {
         // Empty work means that all the tables are actually placed. Save it as a complete
         // placement for future comparison.
@@ -3364,9 +3425,7 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
             int idx = -1;
             bool done = true;
             bitvec seq_placed;
-            for (auto t : grp->seq->tables) {
-                LOG3("  Group table: " << t->name);
-            }
+
             bool first_not_yet_placed = true;
             for (auto t : grp->seq->tables) {
                 ++idx;
@@ -3476,7 +3535,9 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
                 LOG5("      removing " << (*it)->seq->clone_id << " from work list (c)");
                 it = work.erase(it);
             } else {
-                it++; } }
+                it++;
+            }
+        }
         if (work.empty()) continue;
         if (trial.empty()) {
             if (errorCount() == 0) {
@@ -3710,6 +3771,22 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
     final_placement.select_best_final_placement();
     LOG1("Table placement placed " << count(placed) << " tables in " <<
          (placed ? placed->stage+1 : 0) << " stages");
+    return placed;
+}
+
+bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
+    LOG_FEATURE("stage_advance", 2, "Stage advance " <<
+        (self.ignoreContainerConflicts ? "" : "not ") << "ignoring container conflicts");
+    bool alt_finalize_table_same_order =
+        (self.summary.getActualState() == self.summary.ALT_FINALIZE_TABLE_SAME_ORDER);
+
+    const Placed *placed = nullptr;
+    if (alt_finalize_table_same_order) {
+        placed = alt_table_placement(pipe);
+    } else {
+        placed = default_table_placement(pipe);
+    }
+
     if (placed) {
         LOG_FEATURE("stage_advance", 2,
                     "Stage " << placed->stage << IndentCtl::indent << Log::endl <<
@@ -3728,7 +3805,7 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
         BUG_CHECK(p->name == p->table->name, "table name mismatch %s != %s", p->name,
                   p->table->name);
         BUG_CHECK(p->need_more || self.table_placed.count(p->name) == 0,
-                  "Table %s placed more than once?", p->name);
+              "Table %s placed more than once?", p->name);
         self.table_placed.emplace_hint(self.table_placed.find(p->name), p->name, p);
         if (p->gw) {
             LOG2("  Gateway " << p->gw->name << " is also logical id 0x" << hex(p->logical_id));
@@ -3737,6 +3814,119 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
             self.table_placed.emplace_hint(self.table_placed.find(p->gw->name), p->gw->name, p); } }
     LOG1("Finished table placement decisions " << pipe->name);
     return false;
+}
+
+const DecidePlacement::Placed*
+DecidePlacement::alt_table_placement(const IR::BFN::Pipe *pipe) {
+    LOG1("Table placement starting on " << pipe->name << " with ALT PLACEMENT approach");
+    LOG3(TableTree("ingress", pipe->thread[INGRESS].mau) <<
+         TableTree("egress", pipe->thread[EGRESS].mau) <<
+         TableTree("ghost", pipe->ghost_thread.ghost_mau) );
+    const Placed *placed = nullptr;
+
+    LOG5("Table Summary Contents: " << self.summary.getActualStateStr());
+    LOG5(self.summary);
+    LOG5("Mau Backtracker Contents: ");
+    self.mau_backtracker.printTableAlloc();
+    LOG3("Alt Table Final Ordering: ");
+    for (auto &pts : self.summary.getPlacedTables()) {
+        LOG3("Global ID : " << pts.first << " " << pts.second->dumpStr());
+    }
+
+    for (auto &pt : self.summary.getPlacedTables()) {
+        auto alt_stage_to_place = pt.second->stage;
+
+        TablePlacement::GatewayMergeChoices gmc;
+        StageUseEstimate current = get_current_stage_use(placed);
+        auto ptName = pt.second->internalTableName;
+        const auto alt_table_to_place = self.getTblByName(ptName);
+        bool is_starter_pistol_table = false;
+        if (!alt_table_to_place) {
+            is_starter_pistol_table = (ptName.startsWith("$") &&
+                ptName.endsWith("_starter_pistol"));
+        }
+
+        const IR::MAU::Table* alt_cond_to_place = nullptr;
+        const IR::MAU::Table* alt_try_place_table = nullptr;
+        if (pt.second->gatewayName) {
+            alt_cond_to_place = self.getTblByName(pt.second->gatewayName);
+            gmc[alt_table_to_place] = pt.second->gatewayMergeCond;
+        }
+        if (alt_cond_to_place) {
+            alt_try_place_table = alt_cond_to_place;
+        } else {
+            alt_try_place_table = alt_table_to_place;
+        }
+
+        if (!alt_try_place_table && !is_starter_pistol_table) {
+            ::warning("Cannot find table called %s(%s) during alt table placement round",
+                    pt.second->tableName, pt.second->internalTableName);
+            continue;
+        }
+
+        // Setup starter pistol table if required
+        if (is_starter_pistol_table) {
+            LOG1("Adding starter pistol : " << ptName);
+            safe_vector<const Placed *> trials;  // empty trials
+            placed = self.add_starter_pistols(placed, trials, current);
+            continue;
+        }
+
+        // Skip repeated ATCAM tables within same stage as they are already
+        // placed during first ATCAM try_place_table() call.
+        // NOTE: This can possibly be skipped being added to the PlacedTable
+        // array in Table Summary however that would not give a complete
+        // picture of how the previous round allocation occurred, instead we
+        // skip it here. The reasoning is Table Summary should not have any
+        // filtering logic since the info can be useful elsewhere.
+        if (placed && placed->placed[self.uid(alt_try_place_table)]
+                && alt_try_place_table->layout.atcam) continue;
+
+        auto pl_vec = self.try_place_table(alt_try_place_table,
+                                            placed, current, gmc, pt.second);
+        LOG1("    Pl vector: " << pl_vec);
+        if (pl_vec.size() == 0) {
+            LOG3("Alt placement cannot place table " << alt_try_place_table->name);
+            return nullptr;
+        }
+
+        // Update placed object with new placed table
+        placed = pl_vec[0];
+        BUG_CHECK(placed->table,
+                "Alt placement has no table present for placed object");
+
+        // NOTE: A BUG_CHECK enabled here would enforce a hard table
+        // ordering approach where the 2nd round of Table Placement __has__
+        // to follow the first round during ALT_PHV_ALLOC.
+        //
+        // However, we make this a warning to allow flexibility in table
+        // placement and let it explore alternate placements while trying to
+        // hint at table ordering.
+        //
+        // We eventually might want to move this warning to a log message
+        // when alt table placement is more robust. This warning is
+        // currently for informational purposes only to identify places
+        // where table placement deviates from expected based on previous
+        // round and not that useful to end user.
+        if (alt_stage_to_place != placed->stage) {
+            ::warning(BFN::ErrorType::WARN_TABLE_PLACEMENT,
+                "Alt Table Placement: Placed table %s(%s) in stage %d expected placement "
+                "in stage from previous round - %d\n Placement will continue.",
+                placed->name, placed->table->name, placed->stage, alt_stage_to_place);
+        }
+        if (LOGGING(1)) {
+            auto gw_log_str = placed->gw ?
+                " (with gw " + placed->gw->name + ", result tag "
+                             + placed->gw_result_tag + ")" : "";
+            auto need_more_match_str = placed->need_more_match ?
+                " (need more match)" : placed->need_more ? " (need more)" : "";
+            LOG1("placing " << placed->entries << " entries of " << placed->name << gw_log_str
+                    << " in stage " << placed->stage << "(" << hex(placed->logical_id) << ") "
+                    << placed->use.format_type << need_more_match_str);
+        }
+    }
+    LOG1("Alt placement finished all table placement decisions on pipe " << pipe->name);
+    return placed;
 }
 
 void TablePlacement::reject_placement(const Placed *of, choice_t reason, const Placed *better) {
@@ -4090,6 +4280,7 @@ void TransformTables::merge_match_and_gateway(IR::MAU::Table *tbl,
     LOG3("folding gateway " << tbl->name << " onto " << match->name);
 
     tbl->gateway_name = tbl->name;
+    tbl->gateway_result_tag = placed->gw_result_tag;
     tbl->name = match->name;
     tbl->srcInfo = match->srcInfo;
     for (auto &gw : tbl->gateway_rows)
@@ -4112,20 +4303,23 @@ void TransformTables::merge_match_and_gateway(IR::MAU::Table *tbl,
     // Remove the conditional sequence under the branch
     auto *seq = tbl->next.at(placed->gw_result_tag)->clone();
     tbl->next.erase(placed->gw_result_tag);
+    bool cond_seq_found = false;
     if (seq->tables.size() != 1) {
-        bool found = false;
         for (auto it = seq->tables.begin(); it != seq->tables.end(); it++) {
             if (*it == match) {
                 seq->tables.erase(it);
-                found = true;
+                cond_seq_found = true;
                 break;
             }
         }
-        BUG_CHECK(found, "failed to find match table");
     } else {
-        BUG_CHECK(seq->tables[0] == match, "Only a single match table in the problem");
+        if (seq->tables[0] == match)
+            cond_seq_found = true;
         seq = 0;
     }
+    BUG_CHECK(cond_seq_found,
+        "failed to find match table %s in next sequence of table %s",
+        match->name, tbl->name);
 
     // Add all of the tables in the same sequence (i.e. t1 and t3) to all of the branches
     for (auto &next : match->next) {
@@ -5133,9 +5327,10 @@ void dump(const ordered_set<const DecidePlacement::GroupPlace *> &work) {
 TablePlacement::TablePlacement(const BFN_Options &opt, DependencyGraph &d,
                                const TablesMutuallyExclusive &m, PhvInfo &p,
                                LayoutChoices &l, const SharedIndirectAttachedAnalysis &s,
-                               SplitAttachedInfo &sia, TableSummary &summary_)
+                               SplitAttachedInfo &sia, TableSummary &summary_,
+                               MauBacktracker &mau_backtracker)
     : options(opt), deps(d), mutex(m), phv(p), lc(l), siaa(s), ddm(ntp, con_paths, d),
-      att_info(sia), summary(summary_) {
+      att_info(sia), summary(summary_), mau_backtracker(mau_backtracker) {
     addPasses({
         &ntp,
         &con_paths,

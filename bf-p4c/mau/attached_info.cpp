@@ -620,3 +620,19 @@ bool operator>(const attached_entries_t &a, const attached_entries_t &b) {
         if (ae.second.entries > b.at(ae.first).entries) return true;
     return false;
 }
+
+std::ostream& operator<<(std::ostream &out, const attached_entries_element_t &att_elem) {
+    out << " { " << att_elem.entries
+        << ", need more: " << (att_elem.need_more ? "Y" : "N")
+        << ", first stage: " << (att_elem.first_stage ? "Y" : "N");
+    out << " } ";
+    return out;
+}
+
+std::ostream& operator<<(std::ostream &out, const attached_entries_t &att_entries) {
+    out << "Attached entries : [ ";
+    for (const auto &a : att_entries)
+        out << " ( Memory: " << a.first->toString() << " -> " << a.second << " )";
+    out << " ] ";
+    return out;
+}

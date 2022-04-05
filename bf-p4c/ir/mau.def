@@ -23,16 +23,19 @@ class Table : BFN::Unit, IAnnotated  {
     // FIXME -- (which compares everything) but that causes random crashes due to bugs elsewhere
     cstring                                     name;
     gress_t                                     gress;
-    cstring                                     gateway_name;                   // ignored for ==?
+    cstring                                     gateway_name;
     cstring                                     gateway_cond;
+    // Post table placement this stores the tag with which the gateway was
+    // merged with the match table
+    cstring                                     gateway_result_tag;
     /// The stage to which this table is assigned, if any.
     boost::optional<unsigned>                   stage_ = boost::none;
     /// The logical ID within the stage to which this table is assigned.
     boost::optional<unsigned>                   logical_id = boost::none;
     // The split within the stage for an atcam/dleft table
-    int                                         stage_split = -1;               // ignored for ==?
-    int                                         logical_split = -1;             // ignored for ==?
-    int                                         logical_tables_in_stage = -1;   // ignored for ==?
+    int                                         stage_split = -1;
+    int                                         logical_split = -1;
+    int                                         logical_tables_in_stage = -1;
     /**
      * each gateway_row is an expression for a single row of the gateway,
      * with the string being a tag to run in 'next' for next table, or null
@@ -56,7 +59,7 @@ class Table : BFN::Unit, IAnnotated  {
      *     of the action
      */
     std::map<cstring, std::pair<cstring, std::vector<Constant>>> gateway_payload;
-    
+
     // For now we are keeping the keys even for gateway inhibited tables
     // (only for populating context.json, due to current driver needs)
     inline Vector<TableKey>                     gateway_constant_entries_key;
@@ -70,16 +73,16 @@ class Table : BFN::Unit, IAnnotated  {
     inline ordered_map<cstring, TableSeq>       next;
     inline Vector<TableKey>                     match_key;
     // Symmetric key information here, as the selector key is on the match table
-    LTBitMatrix                                 sel_symmetric_keys = {};        // ignored for ==?
-    int                                         random_seed = -1;               // ignored for ==?
-    bool                                        dynamic_key_masks = false;      // ignored for ==?
-    NullOK EntriesList                          entries_list;                   // ignored for ==?
+    LTBitMatrix                                 sel_symmetric_keys = {};
+    int                                         random_seed = -1;
+    bool                                        dynamic_key_masks = false;
+    NullOK EntriesList                          entries_list;
     // Indicates whether this is a "starter pistol" table generated during table placement.
-    bool                                        created_during_tp = false;      // ignored for ==?
+    bool                                        created_during_tp = false;
     // Flag to indicate the table is compiler generated. This flag is passed on
     // the assembly and context json as 'p4_hidden' to disable PD API generation
     // on this table
-    bool                                        is_compiler_generated = false;  // ignored for ==?
+    bool                                        is_compiler_generated = false;
     // true, if we insert initialization to/from dark containers in this table. In that case, we
     // cannot split these tables.
     bool                                        has_dark_init = false;

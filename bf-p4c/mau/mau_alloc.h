@@ -10,6 +10,7 @@
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/mau/table_mutex.h"
 #include "bf-p4c/mau/table_layout.h"
+#include "bf-p4c/phv/mau_backtracker.h"
 
 class TableSummary;
 
@@ -26,7 +27,8 @@ class TableAllocPass : public Logging::PassManager {
  public:
     static int table_placement_round;
     TableAllocPass(const BFN_Options& options, PhvInfo& phv,
-                    DependencyGraph &deps, TableSummary &, Util::JsonObject*);
+                    DependencyGraph &deps, TableSummary &, Util::JsonObject*,
+                    MauBacktracker &mau_backtracker);
 };
 
 

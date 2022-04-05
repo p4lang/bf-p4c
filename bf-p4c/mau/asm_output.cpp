@@ -2632,6 +2632,8 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
     if (!tbl->conditional_gateway_only()) {
         emit_table_context_json(out, indent, tbl);
         if (!tbl->layout.no_match_miss_path()) {
+            BUG_CHECK(tbl->resources->memuse.count(unique_id) > 0,
+                    "No resource named %s found on table %s", unique_id, tbl->name);
             emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
             const IXBar::Use *proxy_ixbar = tbl->layout.proxy_hash ?
                                             tbl->resources->proxy_hash_ixbar.get() : nullptr;

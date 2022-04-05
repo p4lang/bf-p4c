@@ -17,6 +17,7 @@
 #include "bf-p4c/backend.h"
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/resource_estimate.h"
+#include "bf-p4c/mau/table_summary.h"
 
 struct DependencyGraph;
 class TablesMutuallyExclusive;
@@ -39,6 +40,7 @@ class TablePlacement : public PassManager {
     DynamicDependencyMetrics ddm;
     SplitAttachedInfo &att_info;
     TableSummary &summary;
+    MauBacktracker &mau_backtracker;
 
     struct Placed;
     struct RewriteForSplitAttached;
@@ -71,13 +73,22 @@ class TablePlacement : public PassManager {
     std::map<const IR::MAU::TableSeq *, struct TableSeqInfo> seqInfo;
     std::map<const IR::MAU::AttachedMemory *, ordered_set<const IR::MAU::Table *>> attached_to;
     int uid(const IR::MAU::Table *t) { return tblInfo.at(t).uid; }
-    int uid(cstring t) { return tblByName.at(t)->uid; }
-    int uid(const IR::MAU::TableSeq *t) { return seqInfo.at(t).uid; }
+    int uid(cstring t) {
+        if (tblByName.count(t) == 0) return -1;
+        return tblByName.at(t)->uid; }
+    int uid(const IR::MAU::TableSeq *t) {
+        if (seqInfo.count(t) == 0) return -1;
+        return seqInfo.at(t).uid; }
+    const IR::MAU::Table * getTblByName(cstring t) {
+        if (auto *ti = get(tblByName, t)) { return ti->table; }
+        LOG5("No tbl info found for table : " << t);
+        return nullptr;}
     class SetupInfo;
 
     TablePlacement(const BFN_Options &, DependencyGraph &,
                    const TablesMutuallyExclusive &, PhvInfo &, LayoutChoices &,
-                   const SharedIndirectAttachedAnalysis &, SplitAttachedInfo &, TableSummary &);
+                   const SharedIndirectAttachedAnalysis &, SplitAttachedInfo &, TableSummary &,
+                   MauBacktracker &);
 
     struct FinalRerunTablePlacementTrigger : public Backtrack::trigger {
         bool limit_tmp_creation;
@@ -144,9 +155,11 @@ class TablePlacement : public PassManager {
     bool try_alloc_all(Placed *next, std::vector<Placed *> whole_stage, const char *what,
         bool no_memory = false);
     bool initial_stage_and_entries(TablePlacement::Placed *rv, int &furthest_stage);
-    Placed *try_place_table(Placed *rv, const StageUseEstimate &current);
-    safe_vector<Placed *> try_place_table(const IR::MAU::Table *t, const Placed *done,
-        const StageUseEstimate &current, GatewayMergeChoices &gmc);
+    Placed *try_place_table(Placed *rv, const StageUseEstimate &current,
+                            const TableSummary::PlacedTable *pt = nullptr);
+    safe_vector<Placed *>
+    try_place_table(const IR::MAU::Table *t, const Placed *done, const StageUseEstimate &current,
+                    GatewayMergeChoices &gmc, const TableSummary::PlacedTable *pt = nullptr);
 
     friend std::ostream &operator<<(std::ostream &out, choice_t choice);
 
@@ -210,6 +223,8 @@ class DecidePlacement : public MauInspector {
     const Placed *place_table(ordered_set<const GroupPlace *>&work, const Placed *pl);
     template <class... Args> void error(Args... args) { self.error(args...); }
     int errorCount() const { return self.errorCount(); }
+    const Placed* alt_table_placement(const IR::BFN::Pipe *pipe);
+    const Placed* default_table_placement(const IR::BFN::Pipe *pipe);
 };
 
 class TransformTables : public MauTransform {
