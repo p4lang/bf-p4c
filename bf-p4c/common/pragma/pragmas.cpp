@@ -111,6 +111,15 @@ const char *PragmaAutoInitMetadata::help =
     "always enabled for P4_14. Initialization of individual fields can be disabled by using the "
     "pa_no_init annotation.";
 
+const char *PragmaQuickPhvAlloc::name = "pa_quick_phv_alloc";
+const char *PragmaQuickPhvAlloc::description =
+    "Reduce PHV allocation search space for faster compilation.";
+const char *PragmaQuickPhvAlloc::help = "@pragma pa_quick_phv_alloc\n"
+    "\n"
+    "Specifies that the compiler should reduce the search space for possible PHV allocation to "
+    "reduce the time it takes to do a PHV allocation. This might affect the PHV allocation results "
+    "and may even result in PHV allocation being unsuccessful.";
+
 const char *PragmaParserGroupMonogress::name = "pa_parser_group_monogress";
 const char *PragmaParserGroupMonogress::description =
     "Enforce single gress in even/odd Byte Containers.";

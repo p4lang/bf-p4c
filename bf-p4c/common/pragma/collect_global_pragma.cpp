@@ -8,6 +8,7 @@ CollectGlobalPragma::g_global_pragma_names = new std::vector<cstring>{
     PragmaAlias::name,
     PragmaAtomic::name,
     PragmaAutoInitMetadata::name,
+    PragmaQuickPhvAlloc::name,
     PragmaParserGroupMonogress::name,
     PragmaContainerSize::name,
     PragmaContainerType::name,

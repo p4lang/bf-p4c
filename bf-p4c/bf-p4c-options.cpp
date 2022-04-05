@@ -274,7 +274,14 @@ BFN_Options::BFN_Options() {
             "Values 1 and 2 incrementally relax PHV initialization in later MAU stages in order "
             "to relax PHV Allocation in earlier MAU stages; this may affect table placement");
     registerOption("--quick-phv-alloc", nullptr,
-        [this](const char *) { quick_phv_alloc = true; return true; },
+        [this](const char *) {
+            quick_phv_alloc = true;
+            ::warning(ErrorType::WARN_DEPRECATED,
+                "The --quick-phv-alloc command-line option is deprecated and will be "
+                "removed in a future release. Please modify your P4 source to use the "
+                "%s annotation instead.",
+                PragmaQuickPhvAlloc::name);
+            return true; },
          "Reduce PHV allocation search space for faster compilation");
 #if BAREFOOT_INTERNAL
     registerOption("--alt-phv-alloc", nullptr,
@@ -569,6 +576,8 @@ BFNOptionPragmaParser::tryToParse(const IR::Annotation* annotation) {
     auto pragmaName = annotation->name.name;
     if (pragmaName == "command_line")
         return parseCompilerOption(annotation);
+    if (pragmaName == "pa_quick_phv_alloc")
+        BFNContext::get().options().quick_phv_alloc = true;
     if (pragmaName == "gfm_parity_enable")
         BFNContext::get().options().disable_gfm_parity = false;
     return P4COptionPragmaParser::tryToParse(annotation);
