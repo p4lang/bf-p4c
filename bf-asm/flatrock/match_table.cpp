@@ -5,5 +5,6 @@ template<> void MatchTable::write_next_table_regs(Target::Flatrock::mau_regs &re
 }
 
 template<> void MatchTable::write_regs(Target::Flatrock::mau_regs &regs, int type, Table *result) {
-    if (input_xbar) input_xbar->write_regs(regs);
+    for (auto &ixb : input_xbar)
+        ixb->write_regs(regs);
 }

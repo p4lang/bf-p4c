@@ -31,6 +31,19 @@ inline std::ostream &operator<<(std::ostream &out, HashCol &col) {
     return out;
 }
 
+struct DynamicIXbar {
+    int                                         bit;
+    std::vector<std::pair<Phv::Ref, match_t>>   match_phv;
+    match_t                                     match;
+
+    DynamicIXbar() = default;
+    DynamicIXbar(const DynamicIXbar &) = default;
+    DynamicIXbar(DynamicIXbar &&) = default;
+    DynamicIXbar &operator=(const DynamicIXbar &) = default;
+    DynamicIXbar &operator=(DynamicIXbar &&) = default;
+    DynamicIXbar(const Table *, const pair_t &);
+};
+
 class InputXbar {
  public:
     struct Group {
@@ -110,8 +123,9 @@ class InputXbar {
  public:
     const int   lineno;
     int random_seed = -1;
-    static std::unique_ptr<InputXbar> create(Table *table, int lineno = -1);
-    static std::unique_ptr<InputXbar> create(Table *table, bool tern, const VECTOR(pair_t) &data);
+    static std::unique_ptr<InputXbar> create(Table *table, const value_t *key = nullptr);
+    static std::unique_ptr<InputXbar> create(Table *table, bool tern, const value_t &key,
+                                             const VECTOR(pair_t) &data);
     void pass1();
     void pass2();
     template<class REGS> void write_regs(REGS &regs);

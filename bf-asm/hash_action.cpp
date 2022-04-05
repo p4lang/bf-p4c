@@ -56,8 +56,8 @@ void HashActionTable::pass2() {
     else if (layout[0].result_bus < 0)
         layout[0].result_bus = layout[0].bus;
     determine_word_and_result_bus();
-    if (input_xbar)
-        input_xbar->pass2();
+    for (auto &ixb : input_xbar)
+        ixb->pass2();
     if (actions) actions->pass2(this);
     if (action_bus) action_bus->pass2(this);
     if (gateway) gateway->pass2();
@@ -129,8 +129,9 @@ void HashActionTable::write_regs_vt(REGS &regs) {
 void HashActionTable::add_hash_functions(json::map &stage_tbl) const {
     json::vector &hash_functions = stage_tbl["hash_functions"] = json::vector();
 
-    if (!input_xbar) return;
-    auto &ht = input_xbar->get_hash_tables();
+    if (input_xbar.empty()) return;
+    BUG_CHECK(input_xbar.size() == 1, "%s does not have one input xbar", name());
+    auto &ht = input_xbar[0]->get_hash_tables();
     if (ht.size() == 0) return;
 
     int hash_bit_index = 0;
@@ -142,7 +143,7 @@ void HashActionTable::add_hash_functions(json::map &stage_tbl) const {
             // Check if the param bit is used in hash function before adding to
             // json. E.g. The param can have a mask which will exclude some bits
             // to not be a part of the hash function
-            if (!input_xbar->is_p4_param_bit_in_hash(p4_param.name, i)) continue;
+            if (!input_xbar[0]->is_p4_param_bit_in_hash(p4_param.name, i)) continue;
 
             json::map hash_bit;
             hash_bit["hash_bit"] = hash_bit_index;

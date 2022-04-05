@@ -268,7 +268,8 @@ bool SRamMatchTable::verify_match_key() {
             error(phv_ref.lineno, "%s not accessable in mau", phv_ref->reg.name); }
     auto match_format = format->field("match");
     if (match_format && match.empty()) {
-        for (auto ixbar_element : *input_xbar) {
+        BUG_CHECK(input_xbar.size() == 1, "%s does not have one input xbar", name());
+        for (auto ixbar_element : *input_xbar[0]) {
             match.emplace_back(new Phv::Ref(ixbar_element.second.what));
         }
     }
@@ -335,7 +336,8 @@ std::unique_ptr<json::map>
  * in the Way JSON, as this is how a single way knows which hash function to use for its lookup
  */
 void SRamMatchTable::add_hash_functions(json::map &stage_tbl) const {
-    auto &ht = input_xbar->get_hash_tables();
+    BUG_CHECK(input_xbar.size() == 1, "%s does not have one input xbar", name());
+    auto &ht = input_xbar[0]->get_hash_tables();
     if (ht.size() == 0)
         return;
     // Output cjson node only if hash tables present
@@ -369,11 +371,11 @@ void SRamMatchTable::add_hash_functions(json::map &stage_tbl) const {
                                              = json::vector();
         json::vector &ghost_bits_info = hash_function["ghost_bit_info"] = json::vector();
             // Get the hash group data
-        auto *hash_group = input_xbar->get_hash_group(hash_group_no);
+        auto *hash_group = input_xbar[0]->get_hash_group(hash_group_no);
         if (hash_group) {
             // Process only hash tables used per hash group
             for (unsigned hash_table_id : bitvec(hash_group->tables)) {
-                auto hash_table = input_xbar->get_hash_table(hash_table_id);
+                auto hash_table = input_xbar[0]->get_hash_table(hash_table_id);
                 gen_hash_bits(hash_table, hash_table_id, hash_bits, hash_group_no, entry.second);
             }
             gen_ghost_bits(hash_group_no, ghost_bits_to_hash_bits, ghost_bits_info);
@@ -448,10 +450,11 @@ static int find_in_ixbar(Table *table, std::vector<Phv::Ref> &match) {
         bool ok = true;
         for (auto &r : match) {
             LOG3("  looking for " << r);
-            if (!table->input_xbar->find_exact(*r, group)) {
-                LOG3("   -- not found");
-                ok = false;
-                break; } }
+            for (auto &ixb : table->input_xbar) {
+                if (!ixb->find_exact(*r, group)) {
+                    LOG3("   -- not found");
+                    ok = false;
+                    break; } } }
         if (ok) {
             LOG3(" success");
             return group; } }
@@ -597,8 +600,8 @@ void SRamMatchTable::common_sram_checks() {
     if (!action.set() && !actions)
         error(lineno, "Table %s has neither action table nor immediate actions", name());
     if (actions && !action_bus) action_bus.reset(new ActionBus());
-    if (!input_xbar)
-        input_xbar = InputXbar::create(this);
+    if (input_xbar.empty())
+        input_xbar.emplace_back(InputXbar::create(this));
 }
 
 void SRamMatchTable::pass1() {

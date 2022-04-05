@@ -70,6 +70,8 @@
     M(int, DEPARSER_MAX_FD_ENTRIES) \
     M(int, DEPARSER_MAX_POV_BYTES) \
     M(int, DEPARSER_MAX_POV_PER_USE) \
+    M(int, DYNAMIC_CONFIG) \
+    M(int, DYNAMIC_CONFIG_INPUT_BITS) \
     M(int, END_OF_PIPE) \
     M(int, GATEWAY_PAYLOAD_GROUPS) \
     M(bool, GATEWAY_SINGLE_XBAR_GROUP) \
@@ -209,6 +211,8 @@ class Target::Tofino : public Target {
         DEPARSER_MAX_POV_BYTES = 32,
         DEPARSER_MAX_POV_PER_USE = 1,
         DEPARSER_MAX_FD_ENTRIES = 192,
+        DYNAMIC_CONFIG = 0,
+        DYNAMIC_CONFIG_INPUT_BITS = 0,
         END_OF_PIPE = 0xff,
         GATEWAY_PAYLOAD_GROUPS = 1,
         GATEWAY_SINGLE_XBAR_GROUP = true,
@@ -343,6 +347,8 @@ class Target::JBay : public Target {
         DEPARSER_CLOTS_PER_GROUP = 4,
         DEPARSER_TOTAL_CHUNKS = DEPARSER_CHUNK_GROUPS * DEPARSER_CHUNKS_PER_GROUP,
         DEPARSER_MAX_FD_ENTRIES = DEPARSER_TOTAL_CHUNKS,
+        DYNAMIC_CONFIG = 0,
+        DYNAMIC_CONFIG_INPUT_BITS = 0,
         END_OF_PIPE = 0x1ff,
         GATEWAY_PAYLOAD_GROUPS = 5,
         GATEWAY_SINGLE_XBAR_GROUP = true,
@@ -521,6 +527,8 @@ class Target::Cloudbreak : public Target {
         DEPARSER_CLOTS_PER_GROUP = 4,
         DEPARSER_TOTAL_CHUNKS = DEPARSER_CHUNK_GROUPS * DEPARSER_CHUNKS_PER_GROUP,
         DEPARSER_MAX_FD_ENTRIES = DEPARSER_TOTAL_CHUNKS,
+        DYNAMIC_CONFIG = 0,
+        DYNAMIC_CONFIG_INPUT_BITS = 0,
         END_OF_PIPE = 0x1ff,
         GATEWAY_PAYLOAD_GROUPS = 5,
         GATEWAY_SINGLE_XBAR_GROUP = true,
@@ -649,6 +657,8 @@ class Target::Flatrock : public Target {
         DEPARSER_MAX_POV_PER_USE = 2,
         DEPARSER_CLOTS_PER_GROUP = 0,
         DEPARSER_MAX_FD_ENTRIES = 256,  // actuall up to 32 "strings", each up to 16 bytes
+        DYNAMIC_CONFIG = 2,
+        DYNAMIC_CONFIG_INPUT_BITS = 8,
         END_OF_PIPE = 0xfff,
         GATEWAY_PAYLOAD_GROUPS = 4,
         GATEWAY_SINGLE_XBAR_GROUP = false,

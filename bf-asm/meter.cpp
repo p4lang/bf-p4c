@@ -22,7 +22,7 @@ void MeterTable::setup(VECTOR(pair_t) &data) {
         if (common_setup(kv, data, P4Table::Meter)) {
         } else if (kv.key == "input_xbar") {
             if (CHECKTYPE(kv.value, tMAP))
-                input_xbar = InputXbar::create(this, false, kv.value.map);
+                input_xbar.emplace_back(InputXbar::create(this, false, kv.key, kv.value.map));
         } else if (kv.key == "color_aware") {
             if (kv.value == "per_flow")
                 color_aware = color_aware_per_flow_enable = true;
@@ -172,7 +172,8 @@ void MeterTable::pass1() {
     stage->table_use[timing_thread(gress)] |= Stage::USE_METER;
     if (type == LPF || type == RED)
         stage->table_use[timing_thread(gress)] |= Stage::USE_METER_LPF_RED;
-    if (input_xbar) input_xbar->pass1();
+    for (auto &ixb : input_xbar)
+        ixb->pass1();
     for (auto &hd : hash_dist)
         hd.pass1(this, HashDistribution::OTHER, false);
     int prev_row = -1;
@@ -192,7 +193,8 @@ void MeterTable::pass1() {
 
 void MeterTable::pass2() {
     LOG1("### Meter table " << name() << " pass2 " << loc());
-    if (input_xbar) input_xbar->pass2();
+    for (auto &ixb : input_xbar)
+        ixb->pass2();
 
     for (auto match_table : get_match_tables()) {
         for (auto &hd : match_table->hash_dist) {
@@ -433,7 +435,7 @@ void MeterTable::write_regs_home_row(REGS &regs, unsigned row) {
     meter_sweep_ctl.meter_sweep_remove_hole_pos = 0;  // FIXME -- see CSR?
     meter_sweep_ctl.meter_sweep_remove_hole_en = 0;  // FIXME
     meter_sweep_ctl.meter_sweep_interval = sweep_interval + profile;
-    if (input_xbar) {
+    for (auto &ixb : input_xbar) {
         auto &vh_adr_xbar = regs.rams.array.row[row].vh_adr_xbar;
         auto &data_ctl = regs.rams.array.row[row].vh_xbar[side].stateful_meter_alu_data_ctl;
         // FIXME: Currently in the compiler, the data headed to the meter alu/stateful alu
@@ -441,20 +443,20 @@ void MeterTable::write_regs_home_row(REGS &regs, unsigned row) {
         // currenlty safe for them to be mutually exclusive.  If the compiler was to
         // allocate fields to both, this would have to interpret the information
         // correctly
-        auto hashdata_bytemask = bitmask2bytemask(input_xbar->hash_group_bituse());
+        auto hashdata_bytemask = bitmask2bytemask(ixb->hash_group_bituse());
         if (hashdata_bytemask != 0U) {
             vh_adr_xbar.alu_hashdata_bytemask.alu_hashdata_bytemask_right =
             hashdata_bytemask;
             setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[2 + side],
-                         input_xbar->hash_group());
+                         ixb->hash_group());
         } else {
             // FIXME: Need to be some validation between Tofino and JBay if the input
             // xbar is valid for these meters.
-            bitvec bytemask = input_xbar->bytemask();
+            bitvec bytemask = ixb->bytemask();
             bytemask >>= bytemask.min().index();
             unsigned u_bytemask = bytemask.getrange(0, bytemask.max().index() + 1);
             data_ctl.stateful_meter_alu_data_bytemask = u_bytemask;
-            data_ctl.stateful_meter_alu_data_xbar_ctl = 8 | input_xbar->match_group();
+            data_ctl.stateful_meter_alu_data_xbar_ctl = 8 | ixb->match_group();
         }
     }
     if (output_used) {
@@ -613,7 +615,8 @@ void MeterTable::write_mapram_color_regs(REGS &regs, bool &push_on_overflow) {
 template<class REGS>
 void MeterTable::write_regs_vt(REGS &regs) {
     LOG1("### Meter table " << name() << " write_regs " << loc());
-    if (input_xbar) input_xbar->write_regs(regs);
+    for (auto &ixb : input_xbar)
+        ixb->write_regs(regs);
     Layout *home = nullptr;
     bool push_on_overflow = false;
     auto &map_alu =  regs.rams.map_alu;

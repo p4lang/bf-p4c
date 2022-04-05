@@ -134,7 +134,8 @@ void ExactMatchTable::determine_ghost_bits() {
 
     int way_index = 0;
     for (auto way : ways) {
-        auto *hash_group = input_xbar->get_hash_group(way.group);
+        BUG_CHECK(input_xbar.size() == 1, "%s does not have one input xbar", name());
+        auto *hash_group = input_xbar[0]->get_hash_group(way.group);
         BUG_CHECK(hash_group != nullptr);
 
         // key is the field name/field bit that is the ghost bit
@@ -157,7 +158,7 @@ void ExactMatchTable::determine_ghost_bits() {
                 // xor each other out, and cancel the hash out.  This check
                 // should be done on all hash bits
                 if (ghost_bit_impact[key].getbit(hash_bit)) {
-                    error(input_xbar->lineno, "Ghost bit %s:%d appears multiple times "
+                    error(input_xbar[0]->lineno, "Ghost bit %s:%d appears multiple times "
                           "in the same hash col %d", key.first.c_str(), key.second,
                           way_index);
                     return;
@@ -168,7 +169,7 @@ void ExactMatchTable::determine_ghost_bits() {
 
         // Calculate the ghost bit per hash way
         for (unsigned hash_table_id : bitvec(hash_group->tables)) {
-            auto &hash_table = input_xbar->get_hash_table(hash_table_id);
+            auto &hash_table = input_xbar[0]->get_hash_table(hash_table_id);
             for (auto hash_bit : way.select_bits()) {
                 if (hash_table.count(hash_bit) == 0)
                     continue;
@@ -178,7 +179,7 @@ void ExactMatchTable::determine_ghost_bits() {
                         check_ref(ref, hash_bit);
                 } else {
                     for (const auto &input_bit : hash_col.data)
-                        if (auto ref = input_xbar->get_hashtable_bit(hash_table_id, input_bit))
+                        if (auto ref = input_xbar[0]->get_hashtable_bit(hash_table_id, input_bit))
                             check_ref(ref, hash_bit);
                 }
             }
@@ -187,7 +188,7 @@ void ExactMatchTable::determine_ghost_bits() {
         // Verify that each ghost bit appears in the hash function
         for (auto gb : ghost_bits) {
             if (ghost_bit_impact.find(gb) == ghost_bit_impact.end()) {
-                error(input_xbar->lineno, "Ghost bit %s:%d does not appear on the hash function "
+                error(input_xbar[0]->lineno, "Ghost bit %s:%d does not appear on the hash function "
                       "for way %d", gb.first.c_str(), gb.second, way_index);
                 return;
             }
@@ -198,7 +199,7 @@ void ExactMatchTable::determine_ghost_bits() {
         bitvec total_use;
         for (auto gbi : ghost_bit_impact) {
             if (!(total_use & gbi.second).empty())
-                error(input_xbar->lineno, "The ghost bits are not linear independent on way %d",
+                error(input_xbar[0]->lineno, "The ghost bits are not linear independent on way %d",
                       way_index);
             total_use |= gbi.second;
         }
@@ -214,7 +215,8 @@ void ExactMatchTable::determine_ghost_bits() {
 void ExactMatchTable::pass2() {
     LOG1("### Exact match table " << name() << " pass2 " << loc());
     if (logical_id < 0) choose_logical_id();
-    input_xbar->pass2();
+    for (auto &ixb : input_xbar)
+        ixb->pass2();
     setup_word_ixbar_group();
     if (actions) actions->pass2(this);
     if (action_bus) action_bus->pass2(this);

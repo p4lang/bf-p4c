@@ -406,8 +406,17 @@ stage <constant> <thread>:
             # for wide tables, specify which word of the wide word is in each row of the table
         vpns: <vector>
             # vpn values to use for rams
-        input_xbar:
+        dyanamic_config:
+            # (Flatrock only) dynamic config setup for table
+            <int> : <match-constant>
+            <int> : { <slice> : <match-constant>
+                # defines the match for one specific dconfig bit.  Match may be a single
+                # match for the entire width (40 bits on flatrock) or matches against specific
+                # named slices of those PHVs.  Other bits are implicitly don't-care
+        input_xbar [ <int> | <match-constant> ]:
             # Input xbar config for this table
+            # (Flatrock only) optional int or specifies a specific two-bit pattern from the
+            # dynamic_config that this input_xbar config applies for.
             <group-name>: <phv-location> | '[' <phv_location>, ... ']' |
                 { <int>: <phv_location> | <int>..<int>: <phv_location>,... }
             [<type>] group <constant>: ...  # tofino 1/2/3 group names

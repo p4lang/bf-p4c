@@ -11,7 +11,7 @@ void SelectionTable::setup(VECTOR(pair_t) &data) {
     for (auto &kv : MapIterChecked(data, true)) {
         if (kv.key == "input_xbar") {
             if (CHECKTYPE(kv.value, tMAP))
-                input_xbar = InputXbar::create(this, false, kv.value.map);
+                input_xbar.emplace_back(InputXbar::create(this, false, kv.key, kv.value.map));
         } else if (kv.key == "mode") {
             mode_lineno = kv.value.lineno;
             if (CHECKTYPEPM(kv.value, tCMD, kv.value.vec.size == 2 && kv.value[1].type == tINT,
@@ -81,7 +81,8 @@ void SelectionTable::pass1() {
     alloc_maprams();
     std::sort(layout.begin(), layout.end(),
               [](const Layout &a, const Layout &b)->bool { return a.row > b.row; });
-    if (input_xbar) input_xbar->pass1();
+    for (auto &ixb : input_xbar)
+        ixb->pass1();
     if (param < 0 || param > (resilient_hash ? 7 : 2))
         error(mode_lineno, "Invalid %s hash param %d",
               resilient_hash ? "resilient" : "fair", param);
@@ -116,11 +117,11 @@ void SelectionTable::pass1() {
 
 void SelectionTable::pass2() {
     LOG1("### Selection table " << name() << " pass2 " << loc());
-    if (input_xbar) {
-        input_xbar->pass2();
-        if (selection_hash < 0 && (selection_hash = input_xbar->hash_group()) < 0)
-            error(lineno, "No selection_hash in selector table %s", name());
-    } else {
+    for (auto &ixb : input_xbar) {
+        ixb->pass2();
+        if (selection_hash < 0 && (selection_hash = ixb->hash_group()) < 0)
+            error(lineno, "No selection_hash in selector table %s", name()); }
+    if (input_xbar.empty()) {
         error(lineno, "No input xbar in selector table %s", name()); }
 }
 
@@ -279,13 +280,15 @@ template<> void SelectionTable::write_regs_vt(Target::Flatrock::mau_regs &regs) 
 template<class REGS>
 void SelectionTable::write_regs_vt(REGS &regs) {
     LOG1("### Selection table " << name() << " write_regs " << loc());
-    if (input_xbar) input_xbar->write_regs(regs);
+    for (auto &ixb : input_xbar)
+        ixb->write_regs(regs);
     Layout *home = &layout[0];
     bool push_on_overflow = false;
     auto &map_alu =  regs.rams.map_alu;
     DataSwitchboxSetup<REGS> swbox(regs, this);
     int minvpn, maxvpn;
     layout_vpn_bounds(minvpn, maxvpn, true);
+    BUG_CHECK(input_xbar.size() == 1, "%s does not have one input xbar", name());
     for (Layout &logical_row : layout) {
         unsigned row = logical_row.row/2U;
         unsigned side = logical_row.row&1;   /* 0 == left  1 == right */
@@ -308,7 +311,7 @@ void SelectionTable::write_regs_vt(REGS &regs) {
                     vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[SELECTOR_VHXBAR_HASH_BUS_INDEX],
                     selection_hash);
             vh_adr_xbar.alu_hashdata_bytemask.alu_hashdata_bytemask_right =
-                bitmask2bytemask(input_xbar->hash_group_bituse());
+                bitmask2bytemask(input_xbar[0]->hash_group_bituse());
             map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_base = minvpn;
             map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_limit = maxvpn;
         } else {

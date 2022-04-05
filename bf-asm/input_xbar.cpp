@@ -17,6 +17,22 @@
 #include "cloudbreak/input_xbar.h"
 #include "flatrock/input_xbar.h"
 
+DynamicIXbar::DynamicIXbar(const Table *tbl, const pair_t &data) {
+    if (CHECKTYPE(data.key, tINT)) {
+        bit = data.key.i;
+        if (bit < 0 || bit >= Target::DYNAMIC_CONFIG_INPUT_BITS())
+            error(data.key.lineno, "Invalid dynamic config bit %d", bit); }
+    if (CHECKTYPE2(data.value, tMAP, tMATCH)) {
+        if (data.value.type == tMAP) {
+            for (auto &kv : data.value.map)
+                if (CHECKTYPE(kv.value, tMATCH))
+                    match_phv.emplace_back(Phv::Ref(tbl->gress, tbl->stage->stageno, data.key),
+                                           data.value.m);
+        } else {
+            match = data.value.m; }
+    }
+}
+
 int InputXbar::group_max_index(Group::type_t t) const {
     switch (t) {
     case Group::EXACT:   return EXACT_XBAR_GROUPS;
@@ -260,16 +276,19 @@ void InputXbar::input(Table *t, bool tern, const VECTOR(pair_t) &data) {
     }
 }
 
-std::unique_ptr<InputXbar> InputXbar::create(Table *table, int lineno) {
+std::unique_ptr<InputXbar> InputXbar::create(Table *table, const value_t *key) {
 #ifdef HAVE_FLATROCK
     if (options.target == TOFINO5)
-        return std::unique_ptr<InputXbar>(new Flatrock::InputXbar(table, lineno));
+        return std::unique_ptr<InputXbar>(new Flatrock::InputXbar(table, key));
 #endif /* HAVE_FLATROCK */
-    return std::unique_ptr<InputXbar>(new InputXbar(table, lineno));
+    if (key && key->type != tSTR)
+        error(key->lineno, "%s does not support dynamic key mux", Target::name());
+    return std::unique_ptr<InputXbar>(new InputXbar(table, key ? key->lineno : -1));
 }
 
-std::unique_ptr<InputXbar> InputXbar::create(Table *table, bool tern, const VECTOR(pair_t) &data) {
-    auto rv = create(table, data[0].key.lineno);
+std::unique_ptr<InputXbar> InputXbar::create(Table *table, bool tern, const value_t &key,
+                                             const VECTOR(pair_t) &data) {
+    auto rv = create(table, &key);
     rv->input(table, tern, data);
     return rv;
 }
@@ -469,7 +488,9 @@ void InputXbar::check_input(InputXbar::Group group, Input &input, TcamUseCache &
             error(input.what.lineno, "%s misaligned on input_xbar", input.what.name());
             break; }
         auto *tbl = table->stage->tcam_ixbar_input[in_byte];
-        if (tbl) tbl->input_xbar->tcam_update_use(use);
+        if (tbl) {
+            BUG_CHECK(tbl->input_xbar.size() == 1, "%s does not have one input xbar", tbl->name());
+            tbl->input_xbar[0]->tcam_update_use(use); }
         if (use.tcam_use.count(in_byte)) {
             if (use.tcam_use.at(in_byte).first.what->reg != input.what->reg ||
                 use.tcam_use.at(in_byte).second != phv_byte) {

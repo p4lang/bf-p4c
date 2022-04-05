@@ -112,7 +112,7 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
             gw_unit = kv.value.i;
         } else if (kv.key == "input_xbar") {
             if (CHECKTYPE(kv.value, tMAP))
-                input_xbar = InputXbar::create(this, false, kv.value.map);
+                input_xbar.emplace_back(InputXbar::create(this, false, kv.key, kv.value.map));
         } else if (kv.key == "format") {
             if (CHECKTYPEPM(kv.value, tMAP, kv.value.map.size > 0, "non-empty map"))
                 format.reset(new Format(this, kv.value.map));
@@ -219,8 +219,9 @@ static void check_match_key(Table *tbl, std::vector<GatewayTable::MatchKey> &vec
         if (vec[i].offset + vec[i].val->size() > max) {
             error(vec[i].val.lineno, "Gateway %s key too big", name);
             break; }
-        if (vec[i].offset >= 32 && tbl->input_xbar) {
-            auto hash = tbl->input_xbar->hash_column(vec[i].offset + 8);
+        if (vec[i].offset >= 32 && !tbl->input_xbar.empty()) {
+            BUG_CHECK(tbl->input_xbar.size() == 1, "%s does not have one input xbar", tbl->name());
+            auto hash = tbl->input_xbar[0]->hash_column(vec[i].offset + 8);
             if (hash.size() != 1 || hash[0]->bit || !hash[0]->fn ||
                 !hash[0]->fn->match_phvref(vec[i].val))
                 error(vec[i].val.lineno, "Gateway %s key %s not in matching hash column", name,
@@ -397,10 +398,10 @@ void GatewayTable::pass1() {
                   gw_unit, old->name());
         else
             stage->gw_unit_use[layout[0].row][gw_unit] = this; }
-    if (input_xbar) {
-        input_xbar->pass1();
-        if (Target::GATEWAY_SINGLE_XBAR_GROUP() && input_xbar->match_group() < 0)
-            error(input_xbar->lineno, "Gateway match keys must be in a single ixbar group"); }
+    for (auto &ixb : input_xbar) {
+        ixb->pass1();
+        if (Target::GATEWAY_SINGLE_XBAR_GROUP() && ixb->match_group() < 0)
+            error(ixb->lineno, "Gateway match keys must be in a single ixbar group"); }
     check_match_key(this, match, "match", 44);
     check_match_key(this, xor_match, "xor", 32);
     std::sort(match.begin(), match.end());
@@ -528,7 +529,8 @@ void GatewayTable::pass2() {
         if (layout[1].result_bus < 0) {
             error(lineno, "No result bus available for gateway payload of table %s on row %d",
                   name(), layout[1].row); } }
-    if (input_xbar) input_xbar->pass2();
+    for (auto &ixb : input_xbar)
+        ixb->pass2();
     need_next_map_lut = miss.next.need_next_map_lut();
     for (auto &e : table)
         need_next_map_lut |= e.next.need_next_map_lut();
@@ -547,7 +549,8 @@ void GatewayTable::pass3() {
     if (layout[0].bus >= 0) {
         auto *tbl = stage->sram_search_bus_use[layout[0].row][layout[0].bus];
         // Sharing with an exact match -- make sure it is ok
-        if (tbl && input_xbar) {
+        if (!tbl) return;
+        for (auto &ixb : input_xbar) {
             auto *sram_tbl = tbl->to<SRamMatchTable>();
             BUG_CHECK(sram_tbl, "%s is not an SRamMatch table even though it is using a "
                       "search bus?", tbl->name());
@@ -562,13 +565,13 @@ void GatewayTable::pass3() {
                     break; } }
             BUG_CHECK(way, "%s claims to use search bus %d.%d, but we can't find it in the layout",
                       sram_tbl->name(), layout[0].row, layout[0].bus);
-            if (input_xbar->hash_group() >= 0 && sram_tbl->ways[way->way].group >= 0 &&
-                input_xbar->hash_group() != sram_tbl->ways[way->way].group) {
+            if (ixb->hash_group() >= 0 && sram_tbl->ways[way->way].group >= 0 &&
+                ixb->hash_group() != sram_tbl->ways[way->way].group) {
                 error(layout[0].lineno, "%s sharing search bus %d.%d with %s, but wants a "
                       "different hash group", name(), layout[0].row, layout[0].bus, tbl->name());
             }
-            if (input_xbar->match_group() >= 0 && sram_tbl->word_ixbar_group[way->word] >= 0 &&
-                input_xbar->match_group() != sram_tbl->word_ixbar_group[way->word]) {
+            if (ixb->match_group() >= 0 && sram_tbl->word_ixbar_group[way->word] >= 0 &&
+                ixb->match_group() != sram_tbl->word_ixbar_group[way->word]) {
                 error(layout[0].lineno, "%s sharing search bus %d.%d with %s, but wants a "
                       "different match group", name(), layout[0].row, layout[0].bus, tbl->name());
             }
@@ -799,13 +802,13 @@ template<class REGS>
 void GatewayTable::write_regs_vt(REGS &regs) {
     LOG1("### Gateway table " << name() << " write_regs " << loc());
     auto &row = layout[0];
-    if (input_xbar) {
+    for (auto &ixb : input_xbar) {
         // FIXME -- if there's no ixbar in the gateway, we should look for a group with
         // all the match/xor values across all the exact match groups in the stage and use
         // that.  See P4C-2171
-        input_xbar->write_regs(regs);
-        if (!setup_vh_xbar(regs, this, row, 0, match, input_xbar->match_group()) ||
-            !setup_vh_xbar(regs, this, row, 4, xor_match, input_xbar->match_group()))
+        ixb->write_regs(regs);
+        if (!setup_vh_xbar(regs, this, row, 0, match, ixb->match_group()) ||
+            !setup_vh_xbar(regs, this, row, 4, xor_match, ixb->match_group()))
             return; }
     auto &row_reg = regs.rams.array.row[row.row];
     auto &gw_reg = row_reg.gateway_table[gw_unit];
@@ -817,13 +820,14 @@ void GatewayTable::write_regs_vt(REGS &regs) {
         BUG_CHECK(row.bus == 1);
         gw_reg.gateway_table_ctl.gateway_table_input_data1_select = 1;
         gw_reg.gateway_table_ctl.gateway_table_input_hash1_select = 1; }
-    if (input_xbar && input_xbar->hash_group() >= 0)
-        setup_muxctl(row_reg.vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[row.bus],
-                     input_xbar->hash_group());
-    if (input_xbar && input_xbar->match_group() >= 0) {
-        auto &vh_xbar_ctl = row_reg.vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl;
-        setup_muxctl(vh_xbar_ctl, input_xbar->match_group());
-        /* vh_xbar_ctl.exactmatch_row_vh_xbar_thread = gress; */ }
+    for (auto &ixb : input_xbar) {
+        if (ixb->hash_group() >= 0)
+            setup_muxctl(row_reg.vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[row.bus],
+                         ixb->hash_group());
+        if (ixb->match_group() >= 0) {
+            auto &vh_xbar_ctl = row_reg.vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl;
+            setup_muxctl(vh_xbar_ctl, ixb->match_group());
+            /* vh_xbar_ctl.exactmatch_row_vh_xbar_thread = gress; */ } }
     gw_reg.gateway_table_ctl.gateway_table_logical_table = logical_id;
     gw_reg.gateway_table_ctl.gateway_table_thread = timing_thread(gress);
     for (auto &r : xor_match)

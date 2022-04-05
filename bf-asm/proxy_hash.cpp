@@ -70,7 +70,8 @@ void ProxyHashMatchTable::setup_word_ixbar_group() {
 
 void ProxyHashMatchTable::pass2() {
     LOG1("### Proxy Hash match table " << name() << " pass2 " << loc());
-    input_xbar->pass2();
+    for (auto &ixb : input_xbar)
+        ixb->pass2();
     setup_word_ixbar_group();
 
     if (actions) actions->pass2(this);
@@ -116,10 +117,11 @@ void ProxyHashMatchTable::add_proxy_hash_function(json::map &stage_tbl) const {
 
     json::map &proxy_hash_function = stage_tbl["proxy_hash_function"] = json::map();
     json::vector &hash_bits = proxy_hash_function["hash_bits"] = json::vector();
-    auto *hash_group = input_xbar->get_hash_group(proxy_hash_group);
+    BUG_CHECK(input_xbar.size() == 1, "%s does not have one input xbar", name());
+    auto *hash_group = input_xbar[0]->get_hash_group(proxy_hash_group);
     if (hash_group) {
         for (unsigned hash_table_id : bitvec(hash_group->tables)) {
-            auto hash_table = input_xbar->get_hash_table(hash_table_id);
+            auto hash_table = input_xbar[0]->get_hash_table(hash_table_id);
             gen_hash_bits(hash_table, hash_table_id, hash_bits, proxy_hash_group, hash_matrix_use);
         }
         proxy_hash_function["hash_function_number"] = proxy_hash_group;

@@ -36,7 +36,7 @@ void StatefulTable::setup(VECTOR(pair_t) &data) {
                                 initial_value_hi = v.value.i; } } }
         } else if (kv.key == "input_xbar") {
             if (CHECKTYPE(kv.value, tMAP))
-                input_xbar = InputXbar::create(this, false, kv.value.map);
+                input_xbar.emplace_back(InputXbar::create(this, false, kv.key, kv.value.map));
         } else if (kv.key == "data_bytemask") {
             if (CHECKTYPE(kv.value, tINT))
                 data_bytemask = kv.value.i;
@@ -179,7 +179,8 @@ void StatefulTable::pass1() {
     stage->table_use[timing_thread(gress)] |= Stage::USE_STATEFUL;
     for (auto &hd : hash_dist)
         hd.pass1(this, HashDistribution::OTHER, false);
-    if (input_xbar) input_xbar->pass1();
+    for (auto &ixb : input_xbar)
+        ixb->pass1();
     int prev_row = -1;
     for (auto &row : layout) {
         if (prev_row >= 0)
@@ -262,7 +263,8 @@ int StatefulTable::get_const(int lineno, int64_t v) {
 
 void StatefulTable::pass2() {
     LOG1("### Stateful table " << name() << " pass2 " << loc());
-    if (input_xbar) input_xbar->pass2();
+    for (auto &ixb : input_xbar)
+        ixb->pass2();
     if (actions)
         actions->stateful_pass2(this);
     if (stateful_counter_mode) {
@@ -274,15 +276,16 @@ void StatefulTable::pass2() {
             if (logvpn_min < min || logvpn_max > max)
                 error(logvpn_lineno, "log_vpn out of range (%d..%d)", min, max); } }
 
-    if (input_xbar) {
+    for (auto &ixb : input_xbar) {
         if (!data_bytemask && !hash_bytemask) {
-            hash_bytemask = bitmask2bytemask(input_xbar->hash_group_bituse()) & phv_byte_mask;
+            hash_bytemask = bitmask2bytemask(ixb->hash_group_bituse()) & phv_byte_mask;
             // should we also mask off bits not set in the ixbar of this table?
             // as long as the compiler explicitly zeroes everything in the hash
             // that needs to be zero, it should be ok.
             data_bytemask = phv_byte_mask & ~hash_bytemask;
         }
-    } else {
+    }
+    if (input_xbar.empty()) {
         if (data_bytemask || hash_bytemask) {
             error(lineno, "No input_xbar in %s, but %s is present", name(),
                   data_bytemask ? "data_bytemask" : "hash_bytemask");
@@ -445,7 +448,8 @@ template<class REGS> void StatefulTable::write_regs_vt(REGS &regs) {
     // FIXME -- factor common Synth2Port::write_regs
     // FIXME -- factor common CounterTable::write_regs
     // FIXME -- factor common MeterTable::write_regs
-    if (input_xbar) input_xbar->write_regs(regs);
+    for (auto &ixb : input_xbar)
+        ixb->write_regs(regs);
     Layout *home = &layout[0];
     bool push_on_overflow = false;
     auto &map_alu =  regs.rams.map_alu;
@@ -475,15 +479,15 @@ template<class REGS> void StatefulTable::write_regs_vt(REGS &regs) {
             if (&logical_row == home) {
                 auto &vh_adr_xbar = regs.rams.array.row[row].vh_adr_xbar;
                 auto &data_ctl = regs.rams.array.row[row].vh_xbar[side].stateful_meter_alu_data_ctl;
-                if (input_xbar) {
+                for (auto &ixb : input_xbar) {
                     if (hash_bytemask != 0U) {
                         vh_adr_xbar.alu_hashdata_bytemask.alu_hashdata_bytemask_right =
                             hash_bytemask;
                         setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[2 + side],
-                                     input_xbar->hash_group()); }
+                                     ixb->hash_group()); }
                     if (data_bytemask != 0) {
                         data_ctl.stateful_meter_alu_data_bytemask = data_bytemask;
-                        data_ctl.stateful_meter_alu_data_xbar_ctl = 8 | input_xbar->match_group();
+                        data_ctl.stateful_meter_alu_data_xbar_ctl = 8 | ixb->match_group();
                     }
                 }
                 map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_base = minvpn;

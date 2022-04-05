@@ -20,15 +20,23 @@ Table::Format::Field *MatchTable::lookup_field(const std::string &n, const std::
 void MatchTable::common_init_setup(const VECTOR(pair_t) &data, bool ternary, P4Table::type p4type) {
     Table::common_init_setup(data, ternary, p4type);
     setup_logical_id();
-    if (auto *ixbar = get(data, "input_xbar")) {
-        if (CHECKTYPESIZE(*ixbar, tMAP))
-            input_xbar = InputXbar::create(this, ternary, ixbar->map); }
+    if (Target::DYNAMIC_CONFIG())
+        if (auto *dconfig = get(data, "dynamic_config"))
+            if (CHECKTYPESIZE(*dconfig, tMAP))
+                for (auto &kv : dconfig->map)
+                    dynamic_config.emplace_back(this, kv);
+    for (auto &kv : data)
+        if (kv.key == "input_xbar" && CHECKTYPESIZE(kv.value, tMAP))
+            input_xbar.emplace_back(InputXbar::create(this, ternary, kv.key, kv.value.map));
 }
 
 bool MatchTable::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p4type) {
     if (Table::common_setup(kv, data, p4type)) {
         return true; }
     if (kv.key == "input_xbar" || kv.key == "hash_dist") {
+        /* done in common_init_setup */
+        return true; }
+    if (kv.key == "dynamic_config" && Target::DYNAMIC_CONFIG()) {
         /* done in common_init_setup */
         return true; }
     if (kv.key == "always_run") {
@@ -183,7 +191,8 @@ void MatchTable::pass1() {
     if (idletime) {
         idletime->logical_id = logical_id;
         idletime->pass1(); }
-    if (input_xbar) input_xbar->pass1();
+    for (auto &ixb : input_xbar)
+        ixb->pass1();
     for (auto &hd : hash_dist)
         hd.pass1(this, HashDistribution::OTHER, false);
     if (gateway) {
@@ -452,7 +461,8 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
     // else if (result->default_action_parameters.size() > 0)
     //     merge.mau_immediate_data_miss_value[logical_id] = result->default_action_parameters[0];
 
-    if (input_xbar) input_xbar->write_regs(regs);
+    for (auto &ixb : input_xbar)
+        ixb->write_regs(regs);
 
     if (gress == EGRESS)
         regs.cfg_regs.mau_cfg_lt_thread |= 1U << logical_id;
@@ -516,9 +526,10 @@ void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
         if (!hash_bit_added)
             bits_to_xor = &(hash_bit["bits_to_xor"] = json::vector());
         hash_bit["hash_bit"] = col.first;
-        hash_bit["seed"] = input_xbar->get_seed_bit(hash_group_no, col.first);
+        BUG_CHECK(input_xbar.size() == 1, "%s does not have one input xbar", name());
+        hash_bit["seed"] = input_xbar[0]->get_seed_bit(hash_group_no, col.first);
         for (const auto &bit : col.second.data) {
-            if (auto ref = input_xbar->get_hashtable_bit(hash_table_id, bit)) {
+            if (auto ref = input_xbar[0]->get_hashtable_bit(hash_table_id, bit)) {
                 std::string field_name, global_name;
                 field_name = ref.name();
 
@@ -534,7 +545,7 @@ void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
                 } else if (p && !p->key_name.empty()) {
                     field_name = p->key_name;
                 }
-                // FIXME: input_xbar->get_group_bit(input_xbar->get_group() col.first);
+                // FIXME: input_xbar[0]->get_group_bit(input_xbar[0]->get_group() col.first);
 
                 bits_to_xor->push_back(json::map{
                     {"field_bit", json::number(field_bit)},
@@ -565,8 +576,9 @@ void MatchTable::add_hash_functions(json::map &stage_tbl) const {
     // hash_action table
     bitvec hash_matrix_req;
     hash_matrix_req.setrange(0, EXACT_HASH_GROUP_SIZE);
-    if (!p4_params_list.empty() && input_xbar) {
-        auto ht = input_xbar->get_hash_tables();
+    if (!p4_params_list.empty() && !input_xbar.empty()) {
+        BUG_CHECK(input_xbar.size() == 1, "%s does not have one input xbar", name());
+        auto ht = input_xbar[0]->get_hash_tables();
         if (ht.size() > 0) {
             // Merge all bits to xor across multiple hash ways in single
             // json::vector for each hash bit

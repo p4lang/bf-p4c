@@ -1,6 +1,24 @@
 #include "input_xbar.h"
 #include "tables.h"
 
+Flatrock::InputXbar::InputXbar(Table *table, const value_t *key)
+: ::InputXbar(table, key ? key->lineno : -1) {
+    uint64_t limit = 1ULL << Target::DYNAMIC_CONFIG();
+    if (!key || key->type != tCMD || key->vec.size <= 1) {
+        dconfig.setrange(0, limit);  // default dconfig -- program all 4
+    } else if (CHECKTYPE2(key->vec[1], tINT, tMATCH)) {
+        if (key->vec[1].type == tINT) {
+            if (key->vec[1].i < 0 || key->vec[1].i >= limit)
+                error(key->vec[1].lineno, "%" PRId64 " invalid dynamic config mask", key->vec[1].i);
+            else
+                dconfig[key->vec[1].i] = 1;
+        } else {
+            for (uint64_t i = 0; i < limit; ++i)
+                if (key->vec[1].m.matches(i)) dconfig[i] = 1;
+        }
+    }
+}
+
 int Flatrock::InputXbar::group_max_index(Group::type_t t) const {
     switch (t) {
     case Group::EXACT:   return 2;
@@ -117,7 +135,6 @@ template<class REG> static void set_bit(REG &reg, unsigned bit) {
 
 void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
     LOG1("### Input xbar " << table->name() << " write_regs " << table->loc());
-    bitvec dconfig(0, 4);  // default dconfig -- program all 4
     auto &minput = regs.ppu_minput_rspec;
     for (auto &group : groups) {
         switch (group.first.type) {

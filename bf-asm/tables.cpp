@@ -2299,8 +2299,8 @@ void Table::need_on_actionbus(const ActionBusSource &src, int lo, int hi, int si
 }
 
 int Table::find_on_ixbar(Phv::Slice sl, InputXbar::Group group, InputXbar::Group *found) {
-    if (input_xbar) {
-        if (auto *i = input_xbar->find(sl, group, found)) {
+    for (auto &ixb : input_xbar) {
+        if (auto *i = ixb->find(sl, group, found)) {
             unsigned bit = (i->lo + sl.lo - i->what->lo);
             BUG_CHECK(bit < 128);
             return bit/8; } }

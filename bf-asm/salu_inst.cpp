@@ -69,11 +69,12 @@ struct operand {
         void pass1(StatefulTable *tbl) override {
             if (!reg.check()) return;
             int size = tbl->format->begin()->second.size/8;
-            if (!tbl->input_xbar) {
+            if (tbl->input_xbar.empty()) {
                 error(lineno, "No input xbar for salu instruction operand for phv");
                 return;
             }
-            int byte = tbl->find_on_ixbar(*reg, tbl->input_xbar->match_group());
+            BUG_CHECK(tbl->input_xbar.size() == 1, "%s does not have one input xbar", tbl->name());
+            int byte = tbl->find_on_ixbar(*reg, tbl->input_xbar[0]->match_group());
             int base = options.target == TOFINO ? 8 : 0;
             if (byte < 0)
                 error(lineno, "Can't find %s on the input xbar", reg.name());
@@ -87,7 +88,7 @@ struct operand {
                 tbl->phv_byte_mask |= ((1U << (reg->size() + 7)/8U) - 1) << (byte - base); }
         int phv_index(StatefulTable *tbl) override {
             int base = options.target == TOFINO ? 8 : 0;
-            return tbl->find_on_ixbar(*reg, tbl->input_xbar->match_group()) > base; }
+            return tbl->find_on_ixbar(*reg, tbl->input_xbar[0]->match_group()) > base; }
         bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) override {
             fn(*reg);
             return true; }

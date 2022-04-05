@@ -288,7 +288,8 @@ void AlgTcamMatchTable::find_tcam_match() {
 void AlgTcamMatchTable::pass2() {
     LOG1("### ATCAM match table " << name() << " pass2 " << loc());
     if (logical_id < 0) choose_logical_id();
-    input_xbar->pass2();
+    for (auto &ixb : input_xbar)
+        ixb->pass2();
     setup_word_ixbar_group();
     ixbar_subgroup.resize(word_ixbar_group.size());
     ixbar_mask.resize(word_ixbar_group.size());
@@ -299,7 +300,8 @@ void AlgTcamMatchTable::pass2() {
             // Word with no match data, only version/valid; used for direct lookup
             // tables -- can it happen with an atcam table?
             continue; }
-        bitvec ixbar_use = input_xbar->hash_group_bituse(word_ixbar_group[i]);
+        BUG_CHECK(input_xbar.size() == 1, "%s does not have one input xbar", name());
+        bitvec ixbar_use = input_xbar[0]->hash_group_bituse(word_ixbar_group[i]);
         // Which 10-bit address group to use for this word -- use the lowest one with
         // a bit set in the hash group.  Can it be different for different words?
         ixbar_subgroup[i] = ixbar_use.min().index() / EXACT_HASH_ADR_BITS;

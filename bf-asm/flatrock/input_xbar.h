@@ -11,6 +11,7 @@ namespace Flatrock {
 class InputXbar : public ::InputXbar {
     enum { XMU_UNITS = 8 };
 
+    bitvec      dconfig;
     bitvec      xmu_units;
 
     friend class ::InputXbar;
@@ -20,7 +21,7 @@ class InputXbar : public ::InputXbar {
     int group_size(Group::type_t t) const override;
     bool parse_unit(Table *t, const pair_t &kv) override;
 
-    InputXbar(Table *table, int lineno) : ::InputXbar(table, lineno) {}
+    InputXbar(Table *table, const value_t *key);
     void write_regs_v(Target::Flatrock::mau_regs &regs) override;
 };
 
