@@ -94,3 +94,9 @@ p4c_add_xfail_reason("tofino"
   "error: RegisterAction do_sth does not match the type of register it uses"
   extensions/p4_tests/p4_16/errors/p4c-4270.p4
 )
+
+# P4C-1390 - sample_e2e is not supported by the TNA
+p4c_add_xfail_reason("tofino"
+  "error: (Primitive sample4 is not supported by the backend)|(sample_e2e primitive is not currently supported by the TNA architecture)"
+  ../glass/testsuite/p4_tests/parde/test_start_coalesced_state.p4
+  )

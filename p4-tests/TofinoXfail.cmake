@@ -1083,12 +1083,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/test_config_319_sym_hash_neg_test_5.p4
 )
 
-# P4C-1390
-p4c_add_xfail_reason("tofino"
-  "expected a field list"
-  ../glass/testsuite/p4_tests/parde/test_start_coalesced_state.p4
-  )
-
 # P4C-1393
 p4c_add_xfail_reason("tofino"
   "error.*This program violates action constraints imposed by Tofino."

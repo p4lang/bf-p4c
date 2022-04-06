@@ -345,29 +345,70 @@ CONVERT_PRIMITIVE(generate_digest, 1) {
 }
 
 CONVERT_PRIMITIVE(sample_e2e) {
-    if (primitive->operands.size() < 2 || primitive->operands.size() > 3) return nullptr;
+    /* -- the primitive has 3 arguments:
+     *    1) (mandatory) mirror session id
+     *    2) (mandatory) coalescing length
+     *    3) (optional) coalescing header */
+    if (primitive->operands.size() < 2 || primitive->operands.size() > 3)
+        return nullptr;
+
+    /* -- add includes which imports the sample3 and sample4 directives */
     if (use_v1model())
         structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
+
     ExpressionConverter conv(structure);
-    auto session = conv.convert(primitive->operands.at(0));
-    auto length = conv.convert(primitive->operands.at(1));
 
-    auto args = new IR::Vector<IR::Argument>();
-    auto enumref = new IR::TypeNameExpression(
-        new IR::Type_Name(new IR::Path(structure->v1model.clone.cloneType.Id())));
-    auto kindarg = new IR::Member(enumref, structure->v1model.clone.cloneType.e2e.Id());
+    /* -- the P4-14 sample_e2e primitive is converted to non-oficial primitives
+     *    sample3 or sample4:
+     *       extern void sample3(in CloneType type, in bit<32> session, in bit<32> length);
+     *       extern void sample4<T>(in CloneType type, in bit<32> session, in bit<32> length, in T data);
+     *
+     *    Construct their argument list now. */
+    auto args(new IR::Vector<IR::Argument>());
+
+    /* -- always clone type egress-to-egress */
+    auto enumref(new IR::TypeNameExpression(
+        new IR::Type_Name(new IR::Path(structure->v1model.clone.cloneType.Id()))));
+    auto kindarg(new IR::Member(enumref, structure->v1model.clone.cloneType.e2e.Id()));
     args->push_back(new IR::Argument(kindarg));
-    args->push_back(new IR::Argument(new IR::Cast(primitive->operands.at(0)->srcInfo,
-                                                  structure->v1model.clone.sessionType, session)));
-    args->push_back(new IR::Argument(length));
-    if (primitive->operands.size() == 3) {
-        auto list = structure->convertFieldList(primitive->operands.at(2));
-        if (list != nullptr)
-            args->push_back(new IR::Argument(list)); }
 
-    auto fn = IR::ID(primitive->srcInfo, args->size() == 4 ? "sample4" : "sample3");
-    return new IR::MethodCallStatement(new IR::MethodCallExpression(fn.srcInfo,
-                        new IR::PathExpression(fn), args));
+    /* -- get the session id directly from sample_e2e arguments */
+    auto session(conv.convert(primitive->operands.at(0)));
+    args->push_back(
+        new IR::Argument(
+            new IR::Cast(
+                primitive->operands.at(0)->srcInfo,
+                structure->v1model.clone.sessionType,
+                session)));
+
+    /* -- coalescing length is in bytes or it's in words if the argument is
+     *    an action parameter. */
+    auto length(conv.convert(primitive->operands.at(1)));
+    args->push_back(new IR::Argument(length));
+
+    IR::ID fn;
+    if (primitive->operands.size() == 3) {
+        /* -- Handle the optional coalescing header. The header may be a field list
+         *    or it may be a header. */
+        auto coalesce_hdr(primitive->operands.at(2));
+        if (coalesce_hdr->is<IR::ConcreteHeaderRef>()) {
+            args->push_back(new IR::Argument(conv.convert(coalesce_hdr)));
+        } else {
+            auto field_list(structure->convertFieldList(primitive->operands.at(2)));
+            if (field_list != nullptr)
+                args->push_back(new IR::Argument(field_list));
+        }
+
+        fn = IR::ID(primitive->srcInfo, "sample4");
+    } else {
+        fn = IR::ID(primitive->srcInfo, "sample3");
+    }
+
+    return new IR::MethodCallStatement(
+        new IR::MethodCallExpression(
+            fn.srcInfo,
+            new IR::PathExpression(fn),
+            args));
 }
 
 CONVERT_PRIMITIVE(swap) {

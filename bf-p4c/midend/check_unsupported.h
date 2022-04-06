@@ -17,6 +17,7 @@ namespace BFN {
  * \brief Check for unsupported features in the backend compiler.
  */
 class CheckUnsupported final : public Inspector {
+    bool preorder(const IR::PathExpression* path_expression) override;
     void postorder(const IR::P4Table *) override;
 
  public:

@@ -121,6 +121,11 @@ fi
 
 mkdir -p ${builddir}
 pushd ${builddir}
+( cat <<EOF
+#/bin/bash
+# CMake recofnfiguration script. Run it in the build directory if content of
+# CMakeLists has changed but there is no intention to change configuration.
+
 cmake ${mydir} -DCMAKE_BUILD_TYPE=${buildtype}\
       ${cmakeGen:+"-G${cmakeGen}"} \
       ${ENABLED_COMPONENTS} \
@@ -128,15 +133,19 @@ cmake ${mydir} -DCMAKE_BUILD_TYPE=${buildtype}\
       -DENABLE_GMP=OFF \
       -DCMAKE_EXPORT_COMPILE_COMMANDS=1\
       -DP4C_CPP_FLAGS="$P4C_CPP_FLAGS" $otherArgs
-if [[ `uname -s` == "Linux" ]]; then
-    linux_distro=$(cat /etc/os-release | grep -e "^NAME" | cut -f 2 -d '=' | tr -d "\"")
-    linux_version=$(cat /etc/os-release | grep -e "^VERSION_ID" | cut -f 2 -d '=' | tr -d "\"")
-    if [[ $linux_distro == "Fedora" && $linux_version == "18" ]]; then
+if [[ \`uname -s\` == "Linux" ]]; then
+    linux_distro=\$(cat /etc/os-release | grep -e "^NAME" | cut -f 2 -d '=' | tr -d "\"")
+    linux_version=\$(cat /etc/os-release | grep -e "^VERSION_ID" | cut -f 2 -d '=' | tr -d "\"")
+    if [[ \$linux_distro == "Fedora" && \$linux_version == "18" ]]; then
         # For some peculiar reason, Fedora 18 refuses to see the GC_print_stats symbol
         # even though cmake detects it. So we disabe it explicitly.
         sed -e 's/HAVE_GC_PRINT_STATS 1/HAVE_GC_PRINT_STATS 0/' -i"" p4c/config.h
     fi
 fi
+EOF
+) > reconfigure
+chmod +x reconfigure
+./reconfigure
 popd # builddir
 
 if [ "$RUN_BOOTSTRAP_PTF" == "yes" ]; then

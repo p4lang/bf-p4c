@@ -589,28 +589,16 @@ CONVERT_PRIMITIVE(execute_meter_from_hash_with_or, 1) {
 }
 
 CONVERT_PRIMITIVE(sample_e2e, 1) {
-    if (!using_tna_arch()) return nullptr;
-    if (primitive->operands.size() != 3 && primitive->operands.size() != 2)
-        return nullptr;
-    ExpressionConverter conv(structure);
-    auto session = conv.convert(primitive->operands.at(0));
-    auto metadata = new IR::PathExpression("eg_intr_md_for_dprsr");
-    auto args = new IR::Vector<IR::Argument>();
-    args->push_back(new IR::Argument(session));
-    auto block = new IR::BlockStatement;
-    if (primitive->operands.size() == 3) {
-        auto list = structure->convertFieldList(primitive->operands.at(2));
-        args->push_back(new IR::Argument(list));
+    /* -- avoid compiler warnings */
+    (void)structure;
+    (void)primitive;
+
+    if (using_tna_arch()) {
+        ::error(
+            ErrorType::ERR_UNSUPPORTED,
+            "sample_e2e primitive is not currently supported by the TNA architecture");
     }
-    auto mirrorIdx = new IR::Member(metadata, "mirror_type");
-    block->components.push_back(new IR::AssignmentStatement(mirrorIdx, session));
-
-    auto length = conv.convert(primitive->operands.at(1));
-    auto coalesce_length = new IR::Member(metadata, "coalesce_length");
-    block->components.push_back(new IR::AssignmentStatement(coalesce_length, length));
-
-    // fix field list
-    return block;
+    return nullptr;
 }
 
 }  // namespace P4V1
