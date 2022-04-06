@@ -17,23 +17,48 @@ bool CheckUninitializedRead::preorder(const IR::BFN::Digest* digest) {
     return false;
 }
 
-bool CheckUninitializedRead::copackedFieldExtracted(const FieldDefUse::locpair& use) {
+bool CheckUninitializedRead::preorder(const IR::Expression* e) {
+    if (isWrite()) {
+        if (auto state = findContext<IR::BFN::ParserState>()) {
+            state_extracts[state].insert(e);
+            parser_inits[phv.field(e)].insert(e);
+        }
+    }
+    return false;
+}
+
+bool CheckUninitializedRead::preorder(const IR::BFN::ParserZeroInit* pzi) {
+    parser_inits[phv.field(pzi->field->field)].insert(pzi->field->field);
+    return true;
+}
+
+bool CheckUninitializedRead::copackedFieldExtractedSeparately(const FieldDefUse::locpair& use) {
     // Walk through the slices corresponding to the use
     auto read = PHV::FieldUse(PHV::FieldUse::READ);
     const auto &allocs = phv.get_alloc(use.second, PHV::AllocContext::of_unit(use.first), &read);
     for (const auto &sl : allocs) {
+        // Skip this field if it's not a parser init
+        if (!std::any_of(parser_inits[sl.field()].begin(), parser_inits[sl.field()].end(),
+                         [this, sl](const IR::Expression *e) {
+                             le_bitrange bits;
+                             this->phv.field(e, &bits);
+                             return bits.overlaps(sl.field_slice());
+                         }))
+            continue;
+
         auto c = sl.container();
+
+        // Dark containers are not extracted
+        // Tagalong containers are only populated via extraction
         if (c.is(PHV::Kind::dark) || c.is(PHV::Kind::tagalong)) continue;
 
-        // Walk through all slices in the container that are written in the parser and see if
-        // any are not mutually exclusive and are extracted from the packet.
+        // Check for any other slice in the container that is extracted in the parser, where the
+        // source is packet data and is a _not_ mutually exclusive.
         auto write = PHV::FieldUse(PHV::FieldUse::WRITE);
         for (auto &other : phv.get_slices_in_container(c, PHV::AllocContext::PARSER, &write)) {
             if (other.field() == sl.field()) continue;
             if (sl.isLiveRangeDisjoint(other)) continue;
-            if (phv.isFieldMutex(other.field(), sl.field()) ||
-                phv.isMetadataMutex(other.field(), sl.field()))
-                continue;
+            if (phv.isFieldMutex(other.field(), sl.field())) continue;
 
             if (Device::currentDevice() == Device::JBAY
 #ifdef HAVE_CLOUDBREAK
@@ -45,7 +70,39 @@ bool CheckUninitializedRead::copackedFieldExtracted(const FieldDefUse::locpair& 
                     continue;
             }
 
-            if (uses.is_extracted_from_pkt(other.field())) return true;
+            if (uses.is_extracted_from_pkt(other.field())) {
+                std::set<const IR::BFN::ParserState *> seenStates;
+                for (const auto &otherDef : defuse.getAllDefs(other.field()->id)) {
+                    if (const auto *state = otherDef.first->to<IR::BFN::ParserState>()) {
+                        if (seenStates.count(state)) continue;
+
+                        const auto *oExp = otherDef.second;
+                        if (oExp->is<ImplicitParserInit>()) continue;
+
+                        le_bitrange oBits;
+                        phv.field(oExp, &oBits);
+                        if (oBits.overlaps(other.field_slice())) {
+                            seenStates.insert(state);
+
+                            bitvec slBits;
+                            slBits.setrange(sl.field_slice().lo,
+                                            sl.field_slice().hi - sl.field_slice().lo + 1);
+
+                            bitvec extBits;
+                            for (const auto *exp : state_extracts[state]) {
+                                le_bitrange bits;
+                                const auto *f = phv.field(exp, &bits);
+                                if (f == sl.field()) {
+                                    extBits.setrange(bits.lo, bits.hi - bits.lo + 1);
+                                }
+                            }
+
+                            extBits &= slBits;
+                            if (extBits != slBits) return true;
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -107,7 +164,7 @@ void CheckUninitializedRead::end_apply() {
             // If any other fields are packed in the same container(s) as this one, and if any of
             // those fields are extracted from packet data, then make sure we don't have an
             // ImplicitParerInit, otherwise the packet extract will corrupt this field.
-            bool pkt_extract = copackedFieldExtracted(use);
+            bool pkt_extract = copackedFieldExtractedSeparately(use);
             const auto &defs_of_use = defuse.getDefs(use);
             bool uninit = defs_of_use.empty();
             if (!uninit) {
