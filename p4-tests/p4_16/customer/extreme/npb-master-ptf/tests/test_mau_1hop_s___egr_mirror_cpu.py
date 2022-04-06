@@ -68,7 +68,8 @@ class test(BfRuntimeTest):
 
 			ig_port = ig_swports[ig_pipe][1]
 			eg_port = eg_swports[1]
-			ig_port2 = ig_swports[ig_pipe][0]
+#			ig_port2 = ig_swports[ig_pipe][0]
+			ig_port2 = ig_swports[0      ][0]
 			eg_port2 = eg_swports[0]
 
 			# -----------------------

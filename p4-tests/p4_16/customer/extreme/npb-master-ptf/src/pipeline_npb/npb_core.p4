@@ -95,27 +95,26 @@ control IngressControl(
 
 		ingress_port_mapping.apply(hdr, ig_md, ig_intr_md_for_tm, ig_intr_md_for_dprsr);
 
-		if(INGRESS_ENABLE == true) {
-
 #ifdef ING_HDR_STACK_COUNTERS
-		    ingress_hdr_cntrs_transport.apply(hdr.transport);
-		    ingress_hdr_cntrs_outer.apply(hdr.outer);
-		    ingress_hdr_cntrs_inner.apply(hdr.inner);
-		    ingress_hdr_cntrs_misc.apply(hdr);
+		ingress_hdr_cntrs_transport.apply(hdr.transport);
+		ingress_hdr_cntrs_outer.apply(hdr.outer);
+		ingress_hdr_cntrs_inner.apply(hdr.inner);
+		ingress_hdr_cntrs_misc.apply(hdr);
 #endif  /* ING_HDR_STACK_COUNTERS */
 
-//			unicast.apply(hdr.transport, ig_md);
+//		unicast.apply(hdr.transport, ig_md);
 
 #ifdef BRIDGING_ENABLE
-			// the new parser puts bridging in outer
-			dmac.apply(ig_md.lkp_1.mac_dst_addr,    ig_md.lkp_1, ig_md, hdr);
+		// the new parser puts bridging in outer
+		dmac.apply(ig_md.lkp_1.mac_dst_addr,    ig_md.lkp_1, ig_md, hdr);
 #endif // BRIDGING ENABLE
 
-//			if((hdr.transport.ethernet.isValid() == false) && (ig_md.nsh_md.l2_fwd_en == true)) {
-			if((ig_md.flags.transport_valid      == false) && (ig_md.nsh_md.l2_fwd_en == true)) {
-				// ----- Bridging Path -----
-			} else {
-				// ----- NPB Path -----
+//		if((hdr.transport.ethernet.isValid() == false) && (ig_md.nsh_md.l2_fwd_en == true)) {
+		if((ig_md.flags.transport_valid      == false) && (ig_md.nsh_md.l2_fwd_en == true)) {
+			// ----- Bridging Path -----
+		} else {
+			// ----- NPB Path -----
+			if(INGRESS_ENABLE == true) {
 				npb_ing_top.apply (
 					hdr.transport,
 					ig_md.tunnel_0,
@@ -132,82 +131,64 @@ control IngressControl(
 					ig_intr_md_for_dprsr,
 					ig_intr_md_for_tm
 				);
-#ifdef BRIDGING_ENABLE
 			}
-#endif // BRIDGING ENABLE
+		}
 
-			ingress_mirror_meter.apply(ig_md);
+		ingress_mirror_meter.apply(ig_md);
 
 #ifdef LAG_HASH_MASKING_ENABLE
-			// if lag hash masking enabled, move this before the hash
-			nexthop.apply(ig_md);
+		// if lag hash masking enabled, move this before the hash
+		nexthop.apply(ig_md);
   #ifdef SEPARATE_NEXTHOP_AND_OUTER_NEXTHOP_ENABLE
-			outer_fib.apply(ig_md);
+		outer_fib.apply(ig_md);
   #endif
 #endif
-			HashMask.apply(ig_md.lkp_1, ig_md.nsh_md.lag_hash_mask_en);
+		HashMask.apply(ig_md.lkp_1, ig_md.nsh_md.lag_hash_mask_en);
 
 #ifdef RESILIENT_ECMP_HASH_ENABLE
-			if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_NONE) {
-				compute_non_ip_hash0_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
-			} else if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_IPV4) {
-				compute_ipv4_hash0_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
-			} else {
-				compute_ipv6_hash0_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
-			}
+		if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_NONE) {
+			compute_non_ip_hash0_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
+		} else if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_IPV4) {
+			compute_ipv4_hash0_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
+		} else {
+			compute_ipv6_hash0_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
+		}
 
-			if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_NONE) {
-				compute_non_ip_hash1_symmetric.apply(ig_md.lkp_1, ig_md.hash[63:32]);
-			} else if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_IPV4) {
-				compute_ipv4_hash1_symmetric.apply(ig_md.lkp_1, ig_md.hash[63:32]);
-			} else {
-				compute_ipv6_hash1_symmetric.apply(ig_md.lkp_1, ig_md.hash[63:32]);
-			}
+		if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_NONE) {
+			compute_non_ip_hash1_symmetric.apply(ig_md.lkp_1, ig_md.hash[63:32]);
+		} else if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_IPV4) {
+			compute_ipv4_hash1_symmetric.apply(ig_md.lkp_1, ig_md.hash[63:32]);
+		} else {
+			compute_ipv6_hash1_symmetric.apply(ig_md.lkp_1, ig_md.hash[63:32]);
+		}
 #else
-			if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_NONE) {
-				non_ip_hash_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
-			} else if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_IPV4) {
-				ipv4_hash_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
-			} else {
-				ipv6_hash_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
-			}
+		if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_NONE) {
+			non_ip_hash_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
+		} else if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_IPV4) {
+			ipv4_hash_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
+		} else {
+			ipv6_hash_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
+		}
 #endif
 
 #ifndef LAG_HASH_MASKING_ENABLE
-			// this code should be removed if lag hash masking ever fits
-			nexthop.apply(ig_md);
+		// this code should be removed if lag hash masking ever fits
+		nexthop.apply(ig_md);
   #ifdef SEPARATE_NEXTHOP_AND_OUTER_NEXTHOP_ENABLE
-			outer_fib.apply(ig_md);
+		outer_fib.apply(ig_md);
   #endif
 #endif
 
 //#ifdef LAG_HASH_IN_NSH_HDR_ENABLE
-//			hdr.transport.nsh_type1.lag_hash = ig_md.hash[switch_hash_width-1:switch_hash_width/2];
+//		hdr.transport.nsh_type1.lag_hash = ig_md.hash[switch_hash_width-1:switch_hash_width/2];
 //#endif
 
-//			if (ig_md.egress_port_lag_index == SWITCH_FLOOD) {
-//				flood.apply(ig_md);
-//			} else {
-//				lag.apply(ig_md.lkp_1, ig_md, ig_md.hash[31:16], ig_intr_md_for_tm.ucast_egress_port);
-				lag.apply(ig_md.lkp_1, ig_md, ig_md.hash, ig_intr_md_for_tm.ucast_egress_port);
-//			}
-
-		} else { // INGRESS ENABLE
-			// NECESSARY STUFF JUST TO GET A VALID PACKET TO EGRESS
-
-			// set egress port
-			ig_intr_md_for_tm.ucast_egress_port = ig_md.port; // by default, set ingress port equal to egress port -- for testing
-//			ig_intr_md_for_dprsr.drop_ctl = 0x1; // drop packet
-
-			// add internal nsh header
-			ig_md.nsh_md.ttl = 0;
-			ig_md.nsh_md.scope = 1;
-			ig_md.nsh_md.end_of_path = true;
-
-			hdr.transport.nsh_type1_internal.setValid(); // by default, egress parser expects this header -- for testing
-			hdr.transport.nsh_type1_internal.ttl = ig_md.nsh_md.ttl; // by default, egress parser expects this header -- for testing
-			hdr.transport.nsh_type1_internal.scope = ig_md.nsh_md.scope; // by default, egress parser expects this header -- for testing
-		} // INGRESS ENABLE
+//		if (ig_md.egress_port_lag_index == SWITCH_FLOOD) {
+//			flood.apply(ig_md);
+//		} else {
+//			lag.apply(ig_md.lkp_1, ig_md, ig_md.hash[31:16], ig_intr_md_for_tm.ucast_egress_port);
+			lag.apply(ig_md.lkp_1, ig_md, ig_md.hash, ig_intr_md_for_tm.ucast_egress_port);
+//		}
 
 		// -----------------------------------------------------
 

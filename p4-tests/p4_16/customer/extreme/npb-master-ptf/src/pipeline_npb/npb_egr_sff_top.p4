@@ -220,7 +220,7 @@ control Npb_Egr_Sff_Top (
 #else
                 timestamp = 0
 #endif
-		};
+			};
 	}
 
     table npb_egr_sff_final {

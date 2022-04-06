@@ -159,7 +159,7 @@ def npb_validate_ipv4_del(self, target):
 cpu_port_static_port_list = []
 
 def cpu_port_add(self, target, ig_pipe, port):
-	#We don't loop on Ingress pipe here as CPU port is only in pipe 0
+
 	for i in range(len(port)):
 
 		if(port[i] not in cpu_port_static_port_list): # barefoot allows duplicate writes to parser tables for some reason (bug?), so we have to disallow them here....
@@ -225,8 +225,15 @@ def cpu_port_del(self, target, ig_pipe, port):
 # rmac (npb vs bridge)
 
 def npb_tunnel_rmac_add(self, target, ig_pipe, dst_addr):
+	# for our all-to-one program, need to edit the path to this table
+	if(p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top'):
+		ig_pipes2 = ig_pipes.copy()
+		ig_pipes2.insert(0, 0)
+	else:
+		ig_pipes2 = ig_pipes.copy()
+
 	try:
-		for ig_pipe2 in ig_pipes:
+		for ig_pipe2 in ig_pipes2:
 			if(PipelineParams.BRIDGING_ENABLE == True):
 #				table = self.bfrt_info.table_get('%s.rmac.rmac' % ictl_s[ig_pipe2])
 #				table.entry_add(
@@ -260,8 +267,15 @@ def npb_tunnel_rmac_add(self, target, ig_pipe, dst_addr):
 		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 1.")
 
 def npb_tunnel_rmac_del(self, target, ig_pipe, dst_addr):
+	# for our all-to-one program, need to edit the path to this table
+	if(p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top'):
+		ig_pipes2 = ig_pipes.copy()
+		ig_pipes2.insert(0, 0)
+	else:
+		ig_pipes2 = ig_pipes.copy()
+
 	try:
-		for ig_pipe2 in ig_pipes:
+		for ig_pipe2 in ig_pipes2:
 			if(PipelineParams.BRIDGING_ENABLE == True):
 #				table = self.bfrt_info.table_get('%s.rmac.rmac' % ictl_s[ig_pipe2])
 #				table.entry_del(
@@ -293,84 +307,92 @@ def npb_tunnel_rmac_del(self, target, ig_pipe, dst_addr):
 ########################################
 
 def npb_ing_port_add(self, target, ig_pipe, port, port_lag_ptr, bridging_enable, sap, vpn, spi, si, si_predec):
+	# for our all-to-one program, need to edit the path to this table
+	if(p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top'):
+		ig_pipes2 = ig_pipes.copy()
+		ig_pipes2.insert(0, 0)
+	else:
+		ig_pipes2 = ig_pipes.copy()
+
 	for i in range(len(port)):
 
 		try:
+			for ig_pipe2 in ig_pipes2:
 
-			if(PipelineParams.CPU_HDR_CONTAINS_EG_PORT == False):
-				table = self.bfrt_info.table_get('%s.$PORT_METADATA' % iprsr_s[ig_pipe])
-				table.entry_add(
-					target,
-					[table.make_key(
-					[gc.KeyTuple('ig_intr_md.ingress_port',                   port[i])],
-					)],
-					[table.make_data(
-						[gc.DataTuple('port_lag_index',                           port_lag_ptr),
-						 gc.DataTuple('l2_fwd_en',                                bridging_enable)],
-						None
-					)]
-				)
+				if(PipelineParams.CPU_HDR_CONTAINS_EG_PORT == False):
+					table = self.bfrt_info.table_get('%s.$PORT_METADATA' % iprsr_s[ig_pipe2])
+					table.entry_add(
+						target,
+						[table.make_key(
+						[gc.KeyTuple('ig_intr_md.ingress_port',                   port[i])],
+						)],
+						[table.make_data(
+							[gc.DataTuple('port_lag_index',                           port_lag_ptr),
+							 gc.DataTuple('l2_fwd_en',                                bridging_enable)],
+							None
+						)]
+					)
 
-				########################################
+					########################################
 
-				# insert both versions (cpu and non-cpu):
+					# insert both versions (cpu and non-cpu):
 
-				table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % ictl_s[ig_pipe])
-				table.entry_add(
-					target,
-					[table.make_key(
-						[gc.KeyTuple('ig_md.port',                                port[i]),
-						 gc.KeyTuple('hdr.cpu.$valid',                            0)],
-					)],
-					[table.make_data(
-						[],
-						'%s.ingress_port_mapping.set_port_properties' % ictl_s[ig_pipe]
-					)]
-				)
+					table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % ictl_s[ig_pipe2])
+					table.entry_add(
+						target,
+						[table.make_key(
+							[gc.KeyTuple('ig_md.port',                                port[i]),
+							 gc.KeyTuple('hdr.cpu.$valid',                            0)],
+						)],
+						[table.make_data(
+							[],
+							'%s.ingress_port_mapping.set_port_properties' % ictl_s[ig_pipe2]
+						)]
+					)
 
-				table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % ictl_s[ig_pipe])
-				table.entry_add(
-					target,
-					[table.make_key(
-						[gc.KeyTuple('ig_md.port',                                port[i]),
-						 gc.KeyTuple('hdr.cpu.$valid',                            1)],
-					)],
-					[table.make_data(
-						[gc.DataTuple('port_lag_index',                           port_lag_ptr),
-						 gc.DataTuple('l2_fwd_en',                                bridging_enable)],
-						'%s.ingress_port_mapping.set_cpu_port_properties' % ictl_s[ig_pipe]
-					)]
-				)
+					table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % ictl_s[ig_pipe2])
+					table.entry_add(
+						target,
+						[table.make_key(
+							[gc.KeyTuple('ig_md.port',                                port[i]),
+							 gc.KeyTuple('hdr.cpu.$valid',                            1)],
+						)],
+						[table.make_data(
+							[gc.DataTuple('port_lag_index',                           port_lag_ptr),
+							 gc.DataTuple('l2_fwd_en',                                bridging_enable)],
+							'%s.ingress_port_mapping.set_cpu_port_properties' % ictl_s[ig_pipe2]
+						)]
+					)
 
-			else:
-				# insert both versions (cpu and non-cpu):
-				table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % ictl_s[ig_pipe])
-				table.entry_add(
-					target,
-					[table.make_key(
-						[gc.KeyTuple('ig_md.port',                                port[i]),
-						 gc.KeyTuple('hdr.cpu.$valid',                            0)],
-					)],
-					[table.make_data(
-						[gc.DataTuple('port_lag_index',                           port_lag_ptr)],
-#						 gc.DataTuple('l2_fwd_en',                                bridging_enable)],
-						'%s.ingress_port_mapping.set_port_properties' % ictl_s[ig_pipe]
-					)]
-				)
+				else:
+					# insert both versions (cpu and non-cpu):
+					table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % ictl_s[ig_pipe2])
+					table.entry_add(
+						target,
+						[table.make_key(
+							[gc.KeyTuple('ig_md.port',                                port[i]),
+							 gc.KeyTuple('hdr.cpu.$valid',                            0)],
+						)],
+						[table.make_data(
+							[gc.DataTuple('port_lag_index',                           port_lag_ptr)],
+#							 gc.DataTuple('l2_fwd_en',                                bridging_enable)],
+							'%s.ingress_port_mapping.set_port_properties' % ictl_s[ig_pipe2]
+						)]
+					)
 
-				table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % ictl_s[ig_pipe])
-				table.entry_add(
-					target,
-					[table.make_key(
-						[gc.KeyTuple('ig_md.port',                                port[i]),
-						 gc.KeyTuple('hdr.cpu.$valid',                            1)],
-					)],
-					[table.make_data(
-						[gc.DataTuple('port_lag_index',                           port_lag_ptr)],
-#						 gc.DataTuple('l2_fwd_en',                                bridging_enable)],
-						'%s.ingress_port_mapping.set_cpu_port_properties' % ictl_s[ig_pipe]
-					)]
-				)
+					table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % ictl_s[ig_pipe2])
+					table.entry_add(
+						target,
+						[table.make_key(
+							[gc.KeyTuple('ig_md.port',                                port[i]),
+							 gc.KeyTuple('hdr.cpu.$valid',                            1)],
+						)],
+						[table.make_data(
+							[gc.DataTuple('port_lag_index',                           port_lag_ptr)],
+#							 gc.DataTuple('l2_fwd_en',                                bridging_enable)],
+							'%s.ingress_port_mapping.set_cpu_port_properties' % ictl_s[ig_pipe2]
+						)]
+					)
 
 		except:
 			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 2a.")
@@ -422,64 +444,71 @@ def npb_ing_port_add(self, target, ig_pipe, port, port_lag_ptr, bridging_enable,
 			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 2b.")
 
 def npb_ing_port_del(self, target, ig_pipe, port, port_lag_ptr):
+	# for our all-to-one program, need to edit the path to this table
+	if(p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top'):
+		ig_pipes2 = ig_pipes.copy()
+		ig_pipes2.insert(0, 0)
+	else:
+		ig_pipes2 = ig_pipes.copy()
 
 	for i in range(len(port)):
 
 		try:
+			for ig_pipe2 in ig_pipes2:
 
-			if(PipelineParams.CPU_HDR_CONTAINS_EG_PORT == False):
+				if(PipelineParams.CPU_HDR_CONTAINS_EG_PORT == False):
 
-				table = self.bfrt_info.table_get('%s.$PORT_METADATA' % iprsr_s[ig_pipe])
-				table.entry_del(
-					target,
-					[table.make_key(
-						[gc.KeyTuple('ig_intr_md.ingress_port',                   port[i])],
-					)]
-				)
+					table = self.bfrt_info.table_get('%s.$PORT_METADATA' % iprsr_s[ig_pipe2])
+					table.entry_del(
+						target,
+						[table.make_key(
+							[gc.KeyTuple('ig_intr_md.ingress_port',                   port[i])],
+						)]
+					)
 
-				########################################
+					########################################
 
-				# delete both versions (cpu and non-cpu):
+					# delete both versions (cpu and non-cpu):
 
-				table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % ictl_s[ig_pipe])
-				table.entry_del(
-					target,
-					[table.make_key(
-						[gc.KeyTuple('ig_md.port',                                port[i]),
-						 gc.KeyTuple('hdr.cpu.$valid',                            0)],
-					)]
-				)
+					table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % ictl_s[ig_pipe2])
+					table.entry_del(
+						target,
+						[table.make_key(
+							[gc.KeyTuple('ig_md.port',                                port[i]),
+							 gc.KeyTuple('hdr.cpu.$valid',                            0)],
+						)]
+					)
 
-				table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % ictl_s[ig_pipe])
-				table.entry_del(
-					target,
-					[table.make_key(
-						[gc.KeyTuple('ig_md.port',                                port[i]),
-						 gc.KeyTuple('hdr.cpu.$valid',                            1)],
-					)]
-				)
+					table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % ictl_s[ig_pipe2])
+					table.entry_del(
+						target,
+						[table.make_key(
+							[gc.KeyTuple('ig_md.port',                                port[i]),
+							 gc.KeyTuple('hdr.cpu.$valid',                            1)],
+						)]
+					)
 
-			else:
+				else:
 
-				# delete both versions (cpu and non-cpu):
+					# delete both versions (cpu and non-cpu):
 
-				table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % ictl_s[ig_pipe])
-				table.entry_del(
-					target,
-					[table.make_key(
-						[gc.KeyTuple('ig_md.port',                                port[i]),
-						 gc.KeyTuple('hdr.cpu.$valid',                            0)],
-					)]
-				)
+					table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % ictl_s[ig_pipe2])
+					table.entry_del(
+						target,
+						[table.make_key(
+							[gc.KeyTuple('ig_md.port',                                port[i]),
+							 gc.KeyTuple('hdr.cpu.$valid',                            0)],
+						)]
+					)
 
-				table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % ictl_s[ig_pipe])
-				table.entry_del(
-					target,
-					[table.make_key(
-						[gc.KeyTuple('ig_md.port',                                port[i]),
-						 gc.KeyTuple('hdr.cpu.$valid',                            1)],
-					)]
-				)
+					table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % ictl_s[ig_pipe2])
+					table.entry_del(
+						target,
+						[table.make_key(
+							[gc.KeyTuple('ig_md.port',                                port[i]),
+							 gc.KeyTuple('hdr.cpu.$valid',                            1)],
+						)]
+					)
 
 			########################################
 
@@ -521,7 +550,14 @@ def npb_ing_port_del(self, target, ig_pipe, port, port_lag_ptr):
 ########################################
 
 def npb_ing_port_mirror_add(self, target, ig_pipe, port, session_id):
-	for ig_pipe2 in ig_pipes:
+	# for our all-to-one program, need to edit the path to this table
+	if(p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top'):
+		ig_pipes2 = ig_pipes.copy()
+		ig_pipes2.insert(0, 0)
+	else:
+		ig_pipes2 = ig_pipes.copy()
+
+	for ig_pipe2 in ig_pipes2:
 		table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mirror.port_mirror' % ictl_s[ig_pipe2])
 		table.entry_add(
 			target,
@@ -535,7 +571,14 @@ def npb_ing_port_mirror_add(self, target, ig_pipe, port, session_id):
 		)
 
 def npb_ing_port_mirror_del(self, target, ig_pipe, port):
-	for ig_pipe2 in ig_pipes:
+	# for our all-to-one program, need to edit the path to this table
+	if(p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top'):
+		ig_pipes2 = ig_pipes.copy()
+		ig_pipes2.insert(0, 0)
+	else:
+		ig_pipes2 = ig_pipes.copy()
+
+	for ig_pipe2 in ig_pipes2:
 		table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mirror.port_mirror' % ictl_s[ig_pipe2])
 		table.entry_del(
 			target,
@@ -547,8 +590,15 @@ def npb_ing_port_mirror_del(self, target, ig_pipe, port):
 ########################################
 
 def npb_port_vlan_to_bd_add(self, target, ig_pipe, port_lag_index, vid_valid, vid_valid_mask, vid, vid_mask, member_ptr, bd):
+		# for our all-to-one program, need to edit the path to this table
+		if(p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top'):
+			ig_pipes2 = ig_pipes.copy()
+			ig_pipes2.insert(0, 0)
+		else:
+			ig_pipes2 = ig_pipes.copy()
+
 		try:
-			for ig_pipe2 in ig_pipes:
+			for ig_pipe2 in ig_pipes2:
 				# bottom
 				table = self.bfrt_info.table_get('%s.ingress_port_mapping.bd_action_profile' % ictl_s[ig_pipe2])
 				table.entry_add(
@@ -567,7 +617,7 @@ def npb_port_vlan_to_bd_add(self, target, ig_pipe, port_lag_index, vid_valid, vi
 			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 3.")
 
 		try:
-			for ig_pipe2 in ig_pipes:
+			for ig_pipe2 in ig_pipes2:
 				# top
 				table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_vlan_to_bd_mapping' % ictl_s[ig_pipe2])
 				table.entry_add(
@@ -589,9 +639,15 @@ def npb_port_vlan_to_bd_add(self, target, ig_pipe, port_lag_index, vid_valid, vi
 			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 3.")
 
 def npb_port_vlan_to_bd_del(self, target, ig_pipe, port_lag_index, vid_valid, vid_valid_mask, vid, vid_mask, member_ptr):
+		# for our all-to-one program, need to edit the path to this table
+		if(p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top'):
+			ig_pipes2 = ig_pipes.copy()
+			ig_pipes2.insert(0, 0)
+		else:
+			ig_pipes2 = ig_pipes.copy()
 
 		try:
-			for ig_pipe2 in ig_pipes:
+			for ig_pipe2 in ig_pipes2:
 				# top
 				table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_vlan_to_bd_mapping' % ictl_s[ig_pipe2])
 				table.entry_del(
@@ -609,7 +665,7 @@ def npb_port_vlan_to_bd_del(self, target, ig_pipe, port_lag_index, vid_valid, vi
 			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 4.")
 
 		try:
-			for ig_pipe2 in ig_pipes:
+			for ig_pipe2 in ig_pipes2:
 				# bottom
 				table = self.bfrt_info.table_get('%s.ingress_port_mapping.bd_action_profile' % ictl_s[ig_pipe2])
 				table.entry_del(
@@ -625,9 +681,15 @@ def npb_port_vlan_to_bd_del(self, target, ig_pipe, port_lag_index, vid_valid, vi
 ########################################
 
 def npb_vlan_to_bd_add(self, target, ig_pipe, vid, member_ptr, bd):
+		# for our all-to-one program, need to edit the path to this table
+		if(p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top'):
+			ig_pipes2 = ig_pipes.copy()
+			ig_pipes2.insert(0, 0)
+		else:
+			ig_pipes2 = ig_pipes.copy()
 
 		try:
-			for ig_pipe2 in ig_pipes:
+			for ig_pipe2 in ig_pipes2:
 				# bottom
 				table = self.bfrt_info.table_get('%s.ingress_port_mapping.bd_action_profile' % ictl_s[ig_pipe2])
 				table.entry_add(
@@ -646,7 +708,7 @@ def npb_vlan_to_bd_add(self, target, ig_pipe, vid, member_ptr, bd):
 			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 5.")
 
 		try:
-			for ig_pipe2 in ig_pipes:
+			for ig_pipe2 in ig_pipes2:
 				# top
 				table = self.bfrt_info.table_get('%s.ingress_port_mapping.vlan_to_bd_mapping' % ictl_s[ig_pipe2])
 				table.entry_add(
@@ -665,9 +727,15 @@ def npb_vlan_to_bd_add(self, target, ig_pipe, vid, member_ptr, bd):
 			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 5.")
 
 def npb_vlan_to_bd_del(self, target, ig_pipe, vid, member_ptr):
+		# for our all-to-one program, need to edit the path to this table
+		if(p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top'):
+			ig_pipes2 = ig_pipes.copy()
+			ig_pipes2.insert(0, 0)
+		else:
+			ig_pipes2 = ig_pipes.copy()
 
 		try:
-			for ig_pipe2 in ig_pipes:
+			for ig_pipe2 in ig_pipes2:
 				# top
 				table = self.bfrt_info.table_get('%s.ingress_port_mapping.vlan_to_bd_mapping' % ictl_s[ig_pipe2])
 				table.entry_del(
@@ -682,7 +750,7 @@ def npb_vlan_to_bd_del(self, target, ig_pipe, vid, member_ptr):
 			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 6.")
 
 		try:
-			for ig_pipe2 in ig_pipes:
+			for ig_pipe2 in ig_pipes2:
 				# bottom
 				table = self.bfrt_info.table_get('%s.ingress_port_mapping.bd_action_profile' % ictl_s[ig_pipe2])
 				table.entry_del(
@@ -700,8 +768,15 @@ def npb_vlan_to_bd_del(self, target, ig_pipe, vid, member_ptr):
 # dmac (bridge)
 
 def npb_tunnel_dmac_add(self, target, ig_pipe, ig_port_lag_ptr, ethertype, ethertype_mask, vid_isValid, vid_isValid_mask, vid, vid_mask, dst_addr, dst_addr_mask, eg_port_lag_ptr):
+		# for our all-to-one program, need to edit the path to this table
+		if(p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top'):
+			ig_pipes2 = ig_pipes.copy()
+			ig_pipes2.insert(0, 0)
+		else:
+			ig_pipes2 = ig_pipes.copy()
+
 		if(PipelineParams.BRIDGING_ENABLE == True):
-			for ig_pipe2 in ig_pipes:
+			for ig_pipe2 in ig_pipes2:
 				table = self.bfrt_info.table_get('%s.dmac.dmac' % ictl_s[ig_pipe2])
 				table.entry_add(
 					target,
@@ -719,8 +794,15 @@ def npb_tunnel_dmac_add(self, target, ig_pipe, ig_port_lag_ptr, ethertype, ether
 				)
 
 def npb_tunnel_dmac_del(self, target, ig_pipe, ig_port_lag_ptr, ethertype, ethertype_mask, vid_isValid, vid_isValid_mask, vid, vid_mask, dst_addr, dst_addr_mask):
+		# for our all-to-one program, need to edit the path to this table
+		if(p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top'):
+			ig_pipes2 = ig_pipes.copy()
+			ig_pipes2.insert(0, 0)
+		else:
+			ig_pipes2 = ig_pipes.copy()
+
 		if(PipelineParams.BRIDGING_ENABLE == True):
-			for ig_pipe2 in ig_pipes:
+			for ig_pipe2 in ig_pipes2:
 				table = self.bfrt_info.table_get('%s.dmac.dmac' % ictl_s[ig_pipe2])
 				table.entry_del(
 					target,
@@ -2128,10 +2210,15 @@ def npb_npb_sf1_action_sel_del(self, target, ig_pipe, spi, si):
 ########################################
 
 def npb_nexthop_add(self, target, ig_pipe, nexthop_ptr, bd, port_lag_ptr):
-		#print("pPIPES1", ig_pipes)
+		# for our all-to-one program, need to edit the path to this table
+		if(p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top'):
+			ig_pipes2 = ig_pipes.copy()
+			ig_pipes2.insert(0, 0)
+		else:
+			ig_pipes2 = ig_pipes.copy()
+
 		try:
-			#print("pPIPES2", ig_pipes)
-			for ig_pipe2 in ig_pipes:
+			for ig_pipe2 in ig_pipes2:
 				table = self.bfrt_info.table_get('%s.nexthop.nexthop' % ictl_s[ig_pipe2])
 				table.entry_add(
 					target,
@@ -2186,9 +2273,16 @@ def npb_nexthop_tunnel_encap_part2_add(self, target, ig_pipe, nexthop_ptr, tun_t
 			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 11b.")
 
 def npb_nexthop_tunnel_encap_add(self, target, ig_pipe, nexthop_ptr, bd, tunnel_ptr, tun_type):
+		# for our all-to-one program, need to edit the path to this table
+		if(p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top'):
+			ig_pipes2 = ig_pipes.copy()
+			ig_pipes2.insert(0, 0)
+		else:
+			ig_pipes2 = ig_pipes.copy()
+
 		try:
 
-			for ig_pipe2 in ig_pipes:
+			for ig_pipe2 in ig_pipes2:
 				table = self.bfrt_info.table_get('%s.nexthop.nexthop' % ictl_s[ig_pipe2])
 				table.entry_add(
 					target,
@@ -2230,10 +2324,16 @@ def npb_nexthop_part2_del(self, target, ig_pipe, nexthop_ptr):
 			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 11d.")
 
 def npb_nexthop_del(self, target, ig_pipe, nexthop_ptr):
+		# for our all-to-one program, need to edit the path to this table
+		if(p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top'):
+			ig_pipes2 = ig_pipes.copy()
+			ig_pipes2.insert(0, 0)
+		else:
+			ig_pipes2 = ig_pipes.copy()
 
 		try:
 
-			for ig_pipe2 in ig_pipes:
+			for ig_pipe2 in ig_pipes2:
 				table = self.bfrt_info.table_get('%s.nexthop.nexthop' % ictl_s[ig_pipe2])
 				table.entry_del(
 					target,
@@ -2254,8 +2354,14 @@ def npb_nexthop_del(self, target, ig_pipe, nexthop_ptr):
 ########################################
 
 def npb_tunnel_encap_nexthop_add(self, target, ig_pipe, tunnel_ptr, port_lag_ptr, outer_nexthop_ptr):
+		# for our all-to-one program, need to edit the path to this table
+		if(p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top'):
+			ig_pipes2 = ig_pipes.copy()
+			ig_pipes2.insert(0, 0)
+		else:
+			ig_pipes2 = ig_pipes.copy()
 
-		for ig_pipe2 in ig_pipes:
+		for ig_pipe2 in ig_pipes2:
 			table = self.bfrt_info.table_get('%s.outer_fib.fib' % ictl_s[ig_pipe2])
 			table.entry_add(
 				target,
@@ -2274,8 +2380,14 @@ def npb_tunnel_encap_nexthop_add(self, target, ig_pipe, tunnel_ptr, port_lag_ptr
 		# ---------------------------
 
 def npb_tunnel_encap_nexthop_del(self, target, ig_pipe, tunnel_ptr):
+		# for our all-to-one program, need to edit the path to this table
+		if(p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top'):
+			ig_pipes2 = ig_pipes.copy()
+			ig_pipes2.insert(0, 0)
+		else:
+			ig_pipes2 = ig_pipes.copy()
 
-		for ig_pipe2 in ig_pipes:
+		for ig_pipe2 in ig_pipes2:
 			table = self.bfrt_info.table_get('%s.outer_fib.fib' % ictl_s[ig_pipe2])
 			table.entry_del(
 				target,
@@ -2291,62 +2403,71 @@ def npb_tunnel_encap_nexthop_del(self, target, ig_pipe, tunnel_ptr):
 ########################################
 
 def npb_lag_single_add(self, target, ig_pipe, port_lag_ptr, port_lag_member_ptr, port):
+		# for our all-to-one program, need to edit the path to this table
+		if(p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top'):
+			ig_pipes2 = ig_pipes.copy()
+			ig_pipes2.insert(0, 0)
+		else:
+			ig_pipes2 = ig_pipes.copy()
 
 		try:
-			for ig_pipe2 in ig_pipes:
-				# bottom
-#				table = self.bfrt_info.table_get('%s.lag.lag_selector' % ictl_s[ig_pipe2])
-				table = self.bfrt_info.table_get('%s.lag.lag_action_profile' % ictl_s[ig_pipe2])
-				table.entry_add(
-					target,
-					[table.make_key(
-						[gc.KeyTuple('$ACTION_MEMBER_ID',                port_lag_member_ptr)],
-					)],
-					[table.make_data(
-						[gc.DataTuple('port',                            port)],
-						'%s.lag.set_lag_port' % ictl_s[ig_pipe2]
-					)]
-				)		
+			# bottom
+#			table = self.bfrt_info.table_get('%s.lag.lag_selector' % ictl_s[ig_pipe])
+			table = self.bfrt_info.table_get('%s.lag.lag_action_profile' % ictl_s[ig_pipe])
+			table.entry_add(
+				target,
+				[table.make_key(
+					[gc.KeyTuple('$ACTION_MEMBER_ID',                port_lag_member_ptr)],
+				)],
+				[table.make_data(
+					[gc.DataTuple('port',                            port)],
+					'%s.lag.set_lag_port' % ictl_s[ig_pipe]
+				)]
+			)		
 
-				# top
-				table = self.bfrt_info.table_get('%s.lag.lag' % ictl_s[ig_pipe2])
-				table.entry_add(
-					target,
-					[table.make_key(
-						[gc.KeyTuple('port_lag_index',                   port_lag_ptr)],
-					)],
-					[table.make_data(
-						[gc.DataTuple('$ACTION_MEMBER_ID',               port_lag_member_ptr)],
-						None
-					)]
-				)
+			# top
+			table = self.bfrt_info.table_get('%s.lag.lag' % ictl_s[ig_pipe])
+			table.entry_add(
+				target,
+				[table.make_key(
+					[gc.KeyTuple('port_lag_index',                   port_lag_ptr)],
+				)],
+				[table.make_data(
+					[gc.DataTuple('$ACTION_MEMBER_ID',               port_lag_member_ptr)],
+					None
+				)]
+			)
 
 		except:
 			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 12.")
 
 def npb_lag_single_del(self, target, ig_pipe, port_lag_ptr, port_lag_member_ptr):
+		# for our all-to-one program, need to edit the path to this table
+		if(p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top'):
+			ig_pipes2 = ig_pipes.copy()
+			ig_pipes2.insert(0, 0)
+		else:
+			ig_pipes2 = ig_pipes.copy()
 
 		try:
+			# top
+			table = self.bfrt_info.table_get('%s.lag.lag' % ictl_s[ig_pipe])
+			table.entry_del(
+				target,
+				[table.make_key(
+					[gc.KeyTuple('port_lag_index',                   port_lag_ptr)],
+				)]
+			)
 
-			for ig_pipe2 in ig_pipes:
-				# top
-				table = self.bfrt_info.table_get('%s.lag.lag' % ictl_s[ig_pipe2])
-				table.entry_del(
-					target,
-					[table.make_key(
-						[gc.KeyTuple('port_lag_index',                   port_lag_ptr)],
-					)]
-				)
-
-				# bottom
-#				table = self.bfrt_info.table_get('%s.lag.lag_selector' % ictl_s[ig_pipe2])
-				table = self.bfrt_info.table_get('%s.lag.lag_action_profile' % ictl_s[ig_pipe2])
-				table.entry_del(
-					target,
-					[table.make_key(
-						[gc.KeyTuple('$ACTION_MEMBER_ID',                port_lag_member_ptr)],
-					)],
-				)
+			# bottom
+#			table = self.bfrt_info.table_get('%s.lag.lag_selector' % ictl_s[ig_pipe])
+			table = self.bfrt_info.table_get('%s.lag.lag_action_profile' % ictl_s[ig_pipe])
+			table.entry_del(
+				target,
+				[table.make_key(
+					[gc.KeyTuple('$ACTION_MEMBER_ID',                port_lag_member_ptr)],
+				)],
+			)
 
 		except:
 			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 12.")
@@ -2354,6 +2475,13 @@ def npb_lag_single_del(self, target, ig_pipe, port_lag_ptr, port_lag_member_ptr)
 ########################################
 
 def npb_lag_multi_add(self, target, ig_pipe, port_lag_ptr, port_lag_group_ptr, port_lag_member_ptr, port):
+		# for our all-to-one program, need to edit the path to this table
+		if(p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top'):
+			ig_pipes2 = ig_pipes.copy()
+			ig_pipes2.insert(0, 0)
+		else:
+			ig_pipes2 = ig_pipes.copy()
+
 		port_lag_member_ptr_list = []
 		port_lag_member_sts_list = []
 
@@ -2407,6 +2535,13 @@ def npb_lag_multi_add(self, target, ig_pipe, port_lag_ptr, port_lag_group_ptr, p
 		)
 
 def npb_lag_multi_del(self, target, ig_pipe, port_lag_ptr, port_lag_group_ptr, port_lag_member_ptr, port):
+		# for our all-to-one program, need to edit the path to this table
+		if(p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top'):
+			ig_pipes2 = ig_pipes.copy()
+			ig_pipes2.insert(0, 0)
+		else:
+			ig_pipes2 = ig_pipes.copy()
+
 		port_lag_member_ptr_list = []
 
 		for i in range(0, len(port)):
@@ -2795,9 +2930,16 @@ def npb_mult_rid_unique_del(self, target, ig_pipe, rid):
 # egr sf #2: action select
 
 def npb_npb_sf2_action_sel_add(self, target, ig_pipe, spi, si, bitmask, dsap):
+
+	# for our folded program, need to edit the path to this table
+	if(p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top'):
+		ectl_F_ = ectl_F.replace("_A_0", "_B_0")
+	else:
+		ectl_F_ = ectl_F
+
 	try:
 
-		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_action_sel' % ectl_F)
+		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_action_sel' % ectl_F_)
 		table.entry_add(
 			target,
 			[table.make_key(
@@ -2806,16 +2948,23 @@ def npb_npb_sf2_action_sel_add(self, target, ig_pipe, spi, si, bitmask, dsap):
 			)],
 			[table.make_data(
 				[gc.DataTuple('dsap',                            dsap)],
-				'%s.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_action_sel_hit' % ectl_F,
+				'%s.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_action_sel_hit' % ectl_F_
 			)]
 		)
 	except:
 		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 14.")
 
 def npb_npb_sf2_action_sel_del(self, target, ig_pipe, spi, si):
+
+	# for our the folded program, need to edit the path to this table
+	if(p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top'):
+		ectl_F_ = ectl_F.replace("_A_0", "_B_0")
+	else:
+		ectl_F_ = ectl_F
+
 	try:
 
-		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_action_sel' % ectl_F)
+		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_action_sel' % ectl_F_)
 		table.entry_del(
 			target,
 			[table.make_key(
@@ -2832,7 +2981,14 @@ def npb_npb_sf2_action_sel_del(self, target, ig_pipe, spi, si):
 
 def npb_npb_sf2_len_rng_add(self, target, ig_pipe, l3_len_lo, l3_len_hi, l3_len_rng):
 
-		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_ip_len_rng' % ectl_F)
+	# for our folded program, need to edit the path to this table
+	if(p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top'):
+		ectl_F_ = ectl_F.replace("_A_0", "_B_0")
+	else:
+		ectl_F_ = ectl_F
+
+	try:
+		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_ip_len_rng' % ectl_F_)
 		table.entry_add(
 			target,
 			[table.make_key(
@@ -2840,19 +2996,30 @@ def npb_npb_sf2_len_rng_add(self, target, ig_pipe, l3_len_lo, l3_len_hi, l3_len_
 			)],
 			[table.make_data(
 				[gc.DataTuple('rng_bitmask',                        l3_len_rng)],
-				'%s.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_ip_len_rng_hit' % ectl_F
+				'%s.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_ip_len_rng_hit' % ectl_F_
 			)]
 		)
+	except:
+		pass
 
 def npb_npb_sf2_len_rng_del(self, target, ig_pipe, l3_len_lo, l3_len_hi):
 
-		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_ip_len_rng' % ectl_F)
+	# for our folded program, need to edit the path to this table
+	if(p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top'):
+		ectl_F_ = ectl_F.replace("_A_0", "_B_0")
+	else:
+		ectl_F_ = ectl_F
+
+	try:
+		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_ip_len_rng' % ectl_F_)
 		table.entry_del(
 			target,
 			[table.make_key(
 				[gc.KeyTuple('ip_len',                              low=l3_len_lo, high=l3_len_hi)],
 			)],
 		)
+	except:
+		pass
 
 ########################################
 
@@ -2860,7 +3027,14 @@ def npb_npb_sf2_len_rng_del(self, target, ig_pipe, l3_len_lo, l3_len_hi):
 
 def npb_npb_sf2_l4_src_port_rng_add(self, target, ig_pipe, l3_len_lo, l3_len_hi, l3_len_rng):
 
-		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_l4_src_port_rng' % ectl_F)
+	# for our folded program, need to edit the path to this table
+	if(p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top'):
+		ectl_F_ = ectl_F.replace("_A_0", "_B_0")
+	else:
+		ectl_F_ = ectl_F
+
+	try:
+		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_l4_src_port_rng' % ectl_F_)
 		table.entry_add(
 			target,
 			[table.make_key(
@@ -2868,19 +3042,30 @@ def npb_npb_sf2_l4_src_port_rng_add(self, target, ig_pipe, l3_len_lo, l3_len_hi,
 			)],
 			[table.make_data(
 				[gc.DataTuple('rng_bitmask',                        l3_len_rng)],
-				'%s.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_l4_src_port_rng_hit' % ectl_F
+				'%s.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_l4_src_port_rng_hit' % ectl_F_
 			)]
 		)
+	except:
+		pass
 
 def npb_npb_sf2_l4_src_port_rng_del(self, target, ig_pipe, l3_len_lo, l3_len_hi):
 
-		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_l4_src_port_rng' % ectl_F)
+	# for our folded program, need to edit the path to this table
+	if(p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top'):
+		ectl_F_ = ectl_F.replace("_A_0", "_B_0")
+	else:
+		ectl_F_ = ectl_F
+
+	try:
+		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_l4_src_port_rng' % ectl_F_)
 		table.entry_del(
 			target,
 			[table.make_key(
 				[gc.KeyTuple('l4_src_port',                         low=l3_len_lo, high=l3_len_hi)],
 			)],
 		)
+	except:
+		pass
 
 ########################################
 
@@ -2888,7 +3073,14 @@ def npb_npb_sf2_l4_src_port_rng_del(self, target, ig_pipe, l3_len_lo, l3_len_hi)
 
 def npb_npb_sf2_l4_dst_port_rng_add(self, target, ig_pipe, l3_len_lo, l3_len_hi, l3_len_rng):
 
-		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_l4_dst_port_rng' % ectl_F)
+	# for our folded program, need to edit the path to this table
+	if(p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top'):
+		ectl_F_ = ectl_F.replace("_A_0", "_B_0")
+	else:
+		ectl_F_ = ectl_F
+
+	try:
+		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_l4_dst_port_rng' % ectl_F_)
 		table.entry_add(
 			target,
 			[table.make_key(
@@ -2896,23 +3088,34 @@ def npb_npb_sf2_l4_dst_port_rng_add(self, target, ig_pipe, l3_len_lo, l3_len_hi,
 			)],
 			[table.make_data(
 				[gc.DataTuple('rng_bitmask',                        l3_len_rng)],
-				'%s.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_l4_dst_port_rng_hit' % ectl_F
+				'%s.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_l4_dst_port_rng_hit' % ectl_F_
 			)]
 		)
+	except:
+		pass
 
 def npb_npb_sf2_l4_dst_port_rng_del(self, target, ig_pipe, l3_len_lo, l3_len_hi):
 
-		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_l4_dst_port_rng' % ectl_F)
+	# for our folded program, need to edit the path to this table
+	if(p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top'):
+		ectl_F_ = ectl_F.replace("_A_0", "_B_0")
+	else:
+		ectl_F_ = ectl_F
+
+	try:
+		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_l4_dst_port_rng' % ectl_F_)
 		table.entry_del(
 			target,
 			[table.make_key(
 				[gc.KeyTuple('l4_dst_port',                         low=l3_len_lo, high=l3_len_hi)],
 			)],
 		)
+	except:
+		pass
 
 ########################################
 
-# ing sf #2: policy l2
+# egr sf #2: policy l2
 
 def npb_npb_sf2_policy_l2_add(self, target, ig_pipe,
 		dsap            = 0, dsap_mask           = 0x03ff,
@@ -2933,7 +3136,14 @@ def npb_npb_sf2_policy_l2_add(self, target, ig_pipe,
 		cpu_reason_code = 0
 		):
 
-		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_mac_acl.acl' % ectl_F)
+	# for our folded program, need to edit the path to this table
+	if(p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top'):
+		ectl_F_ = ectl_F.replace("_A_0", "_B_0")
+	else:
+		ectl_F_ = ectl_F
+
+	try:
+		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_mac_acl.acl' % ectl_F_)
 		table.entry_add(
 			target,
 			[table.make_key(
@@ -2958,9 +3168,11 @@ def npb_npb_sf2_policy_l2_add(self, target, ig_pipe,
 				 gc.DataTuple('mirror_enable',                   mirror_enable),
 				 gc.DataTuple('mirror_session_id',               mirror_id),
 				 gc.DataTuple('cpu_reason_code',                 cpu_reason_code)],
-				'%s.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_mac_acl.hit' % ectl_F
+				'%s.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_mac_acl.hit' % ectl_F_
 			)]
 		)
+	except:
+		pass
 
 def npb_npb_sf2_policy_l2_del(self, target, ig_pipe,
 		dsap            = 0, dsap_mask           = 0x03ff,
@@ -2968,7 +3180,14 @@ def npb_npb_sf2_policy_l2_del(self, target, ig_pipe,
 		tun_type        = 0, tun_type_mask       = 0
 		):
 
-		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_mac_acl.acl' % ectl_F)
+	# for our folded program, need to edit the path to this table
+	if(p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top'):
+		ectl_F_ = ectl_F.replace("_A_0", "_B_0")
+	else:
+		ectl_F_ = ectl_F
+
+	try:
+		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_mac_acl.acl' % ectl_F_)
 
 		# read counter
 		resp = table.entry_get(
@@ -2984,7 +3203,7 @@ def npb_npb_sf2_policy_l2_del(self, target, ig_pipe,
 			table.make_data(
 				[gc.DataTuple("$COUNTER_SPEC_BYTES"),
 				 gc.DataTuple("$COUNTER_SPEC_PKTS")],
-				'%s.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_mac_acl.hit' % ectl_F,
+				'%s.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_mac_acl.hit' % ectl_F_,
 				get=True
 			)
 		)
@@ -3006,10 +3225,12 @@ def npb_npb_sf2_policy_l2_del(self, target, ig_pipe,
 				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask)],
 			)],
 		)
+	except:
+		pass
 
 ########################################
 
-# ing sf #2: policy l3 v4
+# egr sf #2: policy l3 v4
 
 def npb_npb_sf2_policy_l34_v4_add(self, target, ig_pipe,
 		dsap            = 0, dsap_mask           = 0x03ff,
@@ -3036,7 +3257,14 @@ def npb_npb_sf2_policy_l34_v4_add(self, target, ig_pipe,
 		cpu_reason_code = 0
 		):
 
-		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_ipv4_acl.acl' % ectl_F)
+	# for our folded program, need to edit the path to this table
+	if(p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top'):
+		ectl_F_ = ectl_F.replace("_A_0", "_B_0")
+	else:
+		ectl_F_ = ectl_F
+
+	try:
+		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_ipv4_acl.acl' % ectl_F_)
 		table.entry_add(
 			target,
 			[table.make_key(
@@ -3067,9 +3295,11 @@ def npb_npb_sf2_policy_l34_v4_add(self, target, ig_pipe,
 				 gc.DataTuple('mirror_enable',                   mirror_enable),
 				 gc.DataTuple('mirror_session_id',               mirror_id),
 				 gc.DataTuple('cpu_reason_code',                 cpu_reason_code)],
-				'%s.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_ipv4_acl.hit' % ectl_F
+				'%s.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_ipv4_acl.hit' % ectl_F_
 			)]
 		)
+	except:
+		pass
 
 def npb_npb_sf2_policy_l34_v4_del(self, target, ig_pipe,
 		dsap            = 0, dsap_mask           = 0x03ff,
@@ -3083,7 +3313,14 @@ def npb_npb_sf2_policy_l34_v4_del(self, target, ig_pipe,
 		tun_type        = 0, tun_type_mask       = 0
 		):
 
-		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_ipv4_acl.acl' % ectl_F)
+	# for our folded program, need to edit the path to this table
+	if(p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top'):
+		ectl_F_ = ectl_F.replace("_A_0", "_B_0")
+	else:
+		ectl_F_ = ectl_F
+
+	try:
+		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_ipv4_acl.acl' % ectl_F_)
 		# read counter
 		resp = table.entry_get(
 			target,
@@ -3104,7 +3341,7 @@ def npb_npb_sf2_policy_l34_v4_del(self, target, ig_pipe,
 			table.make_data(
 				[gc.DataTuple("$COUNTER_SPEC_BYTES"),
 				 gc.DataTuple("$COUNTER_SPEC_PKTS")],
-				'%s.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_ipv4_acl.hit' % ectl_F,
+				'%s.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_ipv4_acl.hit' % ectl_F_,
 				get=True
 			)
 		)
@@ -3132,10 +3369,12 @@ def npb_npb_sf2_policy_l34_v4_del(self, target, ig_pipe,
 				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask)],
 			)],
 		)
+	except:
+		pass
 
 ########################################
 
-# ing sf #2: policy l3 v6
+# egr sf #2: policy l3 v6
 
 def npb_npb_sf2_policy_l34_v6_add(self, target, ig_pipe,
 		dsap            = 0, dsap_mask           = 0x03ff,
@@ -3162,7 +3401,14 @@ def npb_npb_sf2_policy_l34_v6_add(self, target, ig_pipe,
 		cpu_reason_code = 0
 		):
 
-		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_ipv6_acl.acl' % ectl_F)
+	# for our folded program, need to edit the path to this table
+	if(p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top'):
+		ectl_F_ = ectl_F.replace("_A_0", "_B_0")
+	else:
+		ectl_F_ = ectl_F
+
+	try:
+		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_ipv6_acl.acl' % ectl_F_)
 		table.entry_add(
 			target,
 			[table.make_key(
@@ -3193,9 +3439,11 @@ def npb_npb_sf2_policy_l34_v6_add(self, target, ig_pipe,
 				 gc.DataTuple('mirror_enable',                   mirror_enable),
 				 gc.DataTuple('mirror_session_id',               mirror_id),
 				 gc.DataTuple('cpu_reason_code',                 cpu_reason_code)],
-				'%s.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_ipv6_acl.hit' % ectl_F
+				'%s.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_ipv6_acl.hit' % ectl_F_
 			)]
 		)
+	except:
+		pass
 
 def npb_npb_sf2_policy_l34_v6_del(self, target, ig_pipe,
 		dsap            = 0, dsap_mask           = 0x03ff,
@@ -3209,7 +3457,14 @@ def npb_npb_sf2_policy_l34_v6_del(self, target, ig_pipe,
 		tun_type        = 0, tun_type_mask       = 0
 		):
 
-		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_ipv6_acl.acl' % ectl_F)
+	# for our folded program, need to edit the path to this table
+	if(p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top'):
+		ectl_F_ = ectl_F.replace("_A_0", "_B_0")
+	else:
+		ectl_F_ = ectl_F
+
+	try:
+		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_ipv6_acl.acl' % ectl_F_)
 
 		# read counter
 		resp = table.entry_get(
@@ -3231,7 +3486,7 @@ def npb_npb_sf2_policy_l34_v6_del(self, target, ig_pipe,
 			table.make_data(
 				[gc.DataTuple("$COUNTER_SPEC_BYTES"),
 				 gc.DataTuple("$COUNTER_SPEC_PKTS")],
-				'%s.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_ipv6_acl.hit' % ectl_F,
+				'%s.npb_egr_top.npb_egr_sf_proxy_top.acl.egress_ipv6_acl.hit' % ectl_F_,
 				get=True
 			)
 		)
@@ -3259,6 +3514,8 @@ def npb_npb_sf2_policy_l34_v6_del(self, target, ig_pipe,
 				 gc.KeyTuple('lkp.tunnel_type',                  tun_type,       tun_type_mask)],
 			)],
 		)
+	except:
+		pass
 
 ########################################
 
@@ -3268,7 +3525,14 @@ def npb_npb_sf2_policy_hdr_edit_add(self, target, ig_pipe,
 		vid = 0
 		):
 
-		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.npb_egr_sf_proxy_hdr_edit.bd_to_vlan_mapping' % ectl_F)
+	# for our folded program, need to edit the path to this table
+	if(p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top'):
+		ectl_F_ = ectl_F.replace("_A_0", "_B_0")
+	else:
+		ectl_F_ = ectl_F
+
+	try:
+		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.npb_egr_sf_proxy_hdr_edit.bd_to_vlan_mapping' % ectl_F_)
 		table.entry_add(
 			target,
 			[table.make_key(
@@ -3277,22 +3541,32 @@ def npb_npb_sf2_policy_hdr_edit_add(self, target, ig_pipe,
 			[table.make_data(
 				[gc.DataTuple('pcp',                             pcp),
 				 gc.DataTuple('vid',                             vid)],
-				'%s.npb_egr_top.npb_egr_sf_proxy_top.npb_egr_sf_proxy_hdr_edit.set_vlan_tagged' % ectl_F
+				'%s.npb_egr_top.npb_egr_sf_proxy_top.npb_egr_sf_proxy_hdr_edit.set_vlan_tagged' % ectl_F_
 			)]
 		)
+	except:
+		pass
 
 def npb_npb_sf2_policy_hdr_edit_del(self, target, ig_pipe,
 		bd  = 0
 		):
 
-		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.npb_egr_sf_proxy_hdr_edit.bd_to_vlan_mapping' % ectl_F)
+	# for our folded program, need to edit the path to this table
+	if(p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top'):
+		ectl_F_ = ectl_F.replace("_A_0", "_B_0")
+	else:
+		ectl_F_ = ectl_F
+
+	try:
+		table = self.bfrt_info.table_get('%s.npb_egr_top.npb_egr_sf_proxy_top.npb_egr_sf_proxy_hdr_edit.bd_to_vlan_mapping' % ectl_F_)
 		table.entry_del(
 			target,
 			[table.make_key(
 				[gc.KeyTuple('bd',                               bd)],
 			)],
 		)
-
+	except:
+		pass
 
 ########################################
 
@@ -4320,7 +4594,7 @@ def dtel_config_init_add(self, target, ig_pipe,
 		action_ = "%s.dtel_config.mirror_switch_local" %(ectl)
 	else:
 		action_ = "NoAction"
-	dtel_config_mirror_add(self, self.target,
+	dtel_config_mirror_add(self, self.target, ig_pipe,
 		pkt_src           = PktSrc.BRIDGED.value,                                      pkt_src_mask           = 0xff, # 0xff
 		report_type       = DtelReportType.FLOW.value | DtelReportType.SUPPRESS.value, report_type_mask       = 0xff, # 0xff
 		flow_report_flag  = 0,                                                         flow_report_flag_mask  = 0x0,  # 0x3
@@ -4337,7 +4611,7 @@ def dtel_config_init_add(self, target, ig_pipe,
 		action_ = "%s.dtel_config.mirror_switch_local" %(ectl)
 	else:
 		action_ = "NoAction"
-	dtel_config_mirror_add(self, self.target,
+	dtel_config_mirror_add(self, self.target, ig_pipe,
 		pkt_src           = PktSrc.BRIDGED.value,                                      pkt_src_mask           = 0xff, # 0xff
 		report_type       = DtelReportType.FLOW.value,                                 report_type_mask       = 0xff, # 0xff
 		flow_report_flag  = 0,                                                         flow_report_flag_mask  = 0x3,  # 0x3
@@ -4354,7 +4628,7 @@ def dtel_config_init_add(self, target, ig_pipe,
 		action_ = "%s.dtel_config.mirror_switch_local" %(ectl)
 	else:
 		action_ = "NoAction"
-	dtel_config_mirror_add(self, self.target,
+	dtel_config_mirror_add(self, self.target, ig_pipe,
 		pkt_src           = PktSrc.BRIDGED.value,                                      pkt_src_mask           = 0xff, # 0xff
 		report_type       = DtelReportType.FLOW.value,                                 report_type_mask       = 0xff, # 0xff
 		flow_report_flag  = 2,                                                         flow_report_flag_mask  = 0x2,  # 0x3
@@ -4369,7 +4643,7 @@ def dtel_config_init_add(self, target, ig_pipe,
 		action_ = "%s.dtel_config.mirror_switch_local_and_set_q_bit" %(ectl)
 	else:
 		action_ = "NoAction"
-	dtel_config_mirror_add(self, self.target,
+	dtel_config_mirror_add(self, self.target, ig_pipe,
 		pkt_src           = PktSrc.BRIDGED.value,                                      pkt_src_mask           = 0xff, # 0xff
 		report_type       = DtelReportType.NONE.value,                                 report_type_mask       = 0x00, # 0xff
 		flow_report_flag  = 0,                                                         flow_report_flag_mask  = 0x0,  # 0x3
@@ -4384,7 +4658,7 @@ def dtel_config_init_add(self, target, ig_pipe,
 		action_ = "%s.dtel_config.mirror_switch_local" %(ectl)
 	else:
 		action_ = "NoAction"
-	dtel_config_mirror_add(self, self.target,
+	dtel_config_mirror_add(self, self.target, ig_pipe,
 		pkt_src           = PktSrc.BRIDGED.value,                                      pkt_src_mask           = 0xff, # 0xff
 		report_type       = DtelReportType.FLOW.value | DtelReportType.SUPPRESS.value, report_type_mask       = 0xff, # 0xff
 		flow_report_flag  = 0,                                                         flow_report_flag_mask  = 0x0,  # 0x3
@@ -4399,7 +4673,7 @@ def dtel_config_init_add(self, target, ig_pipe,
 		action_ = "%s.dtel_config.mirror_switch_local" %(ectl)
 	else:
 		action_ = "NoAction"
-	dtel_config_mirror_add(self, self.target,
+	dtel_config_mirror_add(self, self.target, ig_pipe,
 		pkt_src           = PktSrc.BRIDGED.value,                                      pkt_src_mask           = 0xff, # 0xff
 		report_type       = DtelReportType.FLOW.value,                                 report_type_mask       = 0xff, # 0xff
 		flow_report_flag  = 0,                                                         flow_report_flag_mask  = 0x3,  # 0x3
@@ -4414,7 +4688,7 @@ def dtel_config_init_add(self, target, ig_pipe,
 		action_ = "%s.dtel_config.mirror_switch_local" %(ectl)
 	else:
 		action_ = "NoAction"
-	dtel_config_mirror_add(self, self.target,
+	dtel_config_mirror_add(self, self.target, ig_pipe,
 		pkt_src           = PktSrc.BRIDGED.value,                                      pkt_src_mask           = 0xff, # 0xff
 		report_type       = DtelReportType.FLOW.value,                                 report_type_mask       = 0xff, # 0xff
 		flow_report_flag  = 2,                                                         flow_report_flag_mask  = 0x2,  # 0x3
@@ -4429,7 +4703,7 @@ def dtel_config_init_add(self, target, ig_pipe,
 		action_ = "%s.dtel_config.mirror_switch_local_and_set_q_bit" %(ectl)
 	else:
 		action_ = "NoAction"
-	dtel_config_mirror_add(self, self.target,
+	dtel_config_mirror_add(self, self.target, ig_pipe,
 		pkt_src           = PktSrc.BRIDGED.value,                                      pkt_src_mask           = 0xff, # 0xff
 		report_type       = DtelReportType.NONE.value,                                 report_type_mask       = 0x00, # 0xff
 		flow_report_flag  = 0,                                                         flow_report_flag_mask  = 0x0,  # 0x3
@@ -4451,7 +4725,7 @@ def dtel_config_init_add(self, target, ig_pipe,
 		report_type_ = DtelReportType.QUEUE.value
 	else:
 		report_type_ = DtelReportType.FLOW.value | DtelReportType.QUEUE.value
-	dtel_config_update_add(self, self.target,
+	dtel_config_update_add(self, self.target, ig_pipe,
 		pkt_src           = PktSrc.CLONED_EGRESS.value,                                pkt_src_mask           = 0xff, # 0xff
 		report_type       = DtelReportType.FLOW.value | DtelReportType.QUEUE.value,    report_type_mask       = 0xff, # 0xff
 		flow_report_flag  = 0,                                                         flow_report_flag_mask  = 0x0,  # 0x3
@@ -4464,7 +4738,7 @@ def dtel_config_init_add(self, target, ig_pipe,
 
 	#CE-2 if queue_report is enabled, then update dtel header
 	report_type_ = DtelReportType.QUEUE.value
-	dtel_config_update_add(self, self.target,
+	dtel_config_update_add(self, self.target, ig_pipe,
 		pkt_src           = PktSrc.CLONED_EGRESS.value,                                pkt_src_mask           = 0xff, # 0xff
 		report_type       = DtelReportType.QUEUE.value,                                report_type_mask       = 0xff, # 0xff
 		flow_report_flag  = 0,                                                         flow_report_flag_mask  = 0x0,  # 0x3
@@ -4477,7 +4751,7 @@ def dtel_config_init_add(self, target, ig_pipe,
 
 	#CE-3 if flow_report is enabled, then update dtel header
 	report_type_ = DtelReportType.FLOW.value
-	dtel_config_update_add(self, self.target,
+	dtel_config_update_add(self, self.target, ig_pipe,
 		pkt_src           = PktSrc.CLONED_EGRESS.value,                                pkt_src_mask           = 0xff, # 0xff
 		report_type       = DtelReportType.FLOW.value,                                 report_type_mask       = 0xff, # 0xff
 		flow_report_flag  = 0,                                                         flow_report_flag_mask  = 0x0,  # 0x3
@@ -4495,7 +4769,7 @@ def dtel_config_init_del(self, target
 	#######################################
 
 	#B-1 if flow_report enabled, suppression is ignore, qalert true, mirror
-	dtel_config_del(self, self.target,
+	dtel_config_del(self, self.target, ig_pipe,
 		pkt_src           = PktSrc.BRIDGED.value,                                      pkt_src_mask           = 0xff, # 0xff
 		report_type       = DtelReportType.FLOW.value | DtelReportType.SUPPRESS.value, report_type_mask       = 0xff, # 0xff
 		flow_report_flag  = 0,                                                         flow_report_flag_mask  = 0x0,  # 0x3
@@ -4505,7 +4779,7 @@ def dtel_config_init_del(self, target
 	)
 
 	#B-2 if flow_report enabled, flow flag is 0, qalert true, mirror
-	dtel_config_del(self, self.target,
+	dtel_config_del(self, self.target, ig_pipe,
 		pkt_src           = PktSrc.BRIDGED.value,                                      pkt_src_mask           = 0xff, # 0xff
 		report_type       = DtelReportType.FLOW.value,                                 report_type_mask       = 0xff, # 0xff
 		flow_report_flag  = 0,                                                         flow_report_flag_mask  = 0x3,  # 0x3
@@ -4515,7 +4789,7 @@ def dtel_config_init_del(self, target
 	)
 
 	#B-3 if flow_report enabled, flow flag is 1*, qalert true, mirror
-	dtel_config_del(self, self.target,
+	dtel_config_del(self, self.target, ig_pipe,
 		pkt_src           = PktSrc.BRIDGED.value,                                      pkt_src_mask           = 0xff, # 0xff
 		report_type       = DtelReportType.FLOW.value,                                 report_type_mask       = 0xff, # 0xff
 		flow_report_flag  = 2,                                                         flow_report_flag_mask  = 0x2,  # 0x3
@@ -4525,7 +4799,7 @@ def dtel_config_init_del(self, target
 	)
 
 	#B-4 if qalert is true, mirror
-	dtel_config_del(self, self.target,
+	dtel_config_del(self, self.target, ig_pipe,
 		pkt_src           = PktSrc.BRIDGED.value,                                      pkt_src_mask           = 0xff, # 0xff
 		report_type       = DtelReportType.NONE.value,                                 report_type_mask       = 0x00, # 0xff
 		flow_report_flag  = 0,                                                         flow_report_flag_mask  = 0x0,  # 0x3
@@ -4535,7 +4809,7 @@ def dtel_config_init_del(self, target
 	)
 
 	#B-5 if flow_report is enabled and suppression is ignore, mirror
-	dtel_config_del(self, self.target,
+	dtel_config_del(self, self.target, ig_pipe,
 		pkt_src           = PktSrc.BRIDGED.value,                                      pkt_src_mask           = 0xff, # 0xff
 		report_type       = DtelReportType.FLOW.value | DtelReportType.SUPPRESS.value, report_type_mask       = 0xff, # 0xff
 		flow_report_flag  = 0,                                                         flow_report_flag_mask  = 0x0,  # 0x3
@@ -4545,7 +4819,7 @@ def dtel_config_init_del(self, target
 	)
 
 	#B-6 if flow_report is enabled and flow flag is 0, mirror
-	dtel_config_del(self, self.target,
+	dtel_config_del(self, self.target, ig_pipe,
 		pkt_src           = PktSrc.BRIDGED.value,                                      pkt_src_mask           = 0xff, # 0xff
 		report_type       = DtelReportType.FLOW.value,                                 report_type_mask       = 0xff, # 0xff
 		flow_report_flag  = 0,                                                         flow_report_flag_mask  = 0x3,  # 0x3
@@ -4555,7 +4829,7 @@ def dtel_config_init_del(self, target
 	)
 
 	#B-7 if flow_report is enabled and flow flag is 1*, mirror
-	dtel_config_del(self, self.target,
+	dtel_config_del(self, self.target, ig_pipe,
 		pkt_src           = PktSrc.BRIDGED.value,                                      pkt_src_mask           = 0xff, # 0xff
 		report_type       = DtelReportType.FLOW.value,                                 report_type_mask       = 0xff, # 0xff
 		flow_report_flag  = 2,                                                         flow_report_flag_mask  = 0x2,  # 0x3
@@ -4565,7 +4839,7 @@ def dtel_config_init_del(self, target
 	)
 	'''
 	#B-14 if qalert is true, mirror
-	dtel_config_del(self, self.target,
+	dtel_config_del(self, self.target, ig_pipe,
 		pkt_src           = PktSrc.BRIDGED.value,                                      pkt_src_mask           = 0xff, # 0xff
 		report_type       = DtelReportType.NONE.value,                                 report_type_mask       = 0x00, # 0xff
 		flow_report_flag  = 0,                                                         flow_report_flag_mask  = 0x0,  # 0x3
@@ -4580,7 +4854,7 @@ def dtel_config_init_del(self, target
 	#######################################
 
 	#CE-1 if flow_report && queue_report enabled, update
-	dtel_config_del(self, self.target,
+	dtel_config_del(self, self.target, ig_pipe,
 		pkt_src           = PktSrc.CLONED_EGRESS.value,                                pkt_src_mask           = 0xff, # 0xff
 		report_type       = DtelReportType.FLOW.value | DtelReportType.QUEUE.value,    report_type_mask       = 0xff, # 0xff
 		flow_report_flag  = 0,                                                         flow_report_flag_mask  = 0x0,  # 0x3
@@ -4590,7 +4864,7 @@ def dtel_config_init_del(self, target
 	)
 
 	#CE-2 if queue_report is enabled, then update dtel header
-	dtel_config_del(self, self.target,
+	dtel_config_del(self, self.target, ig_pipe,
 		pkt_src           = PktSrc.CLONED_EGRESS.value,                                pkt_src_mask           = 0xff, # 0xff
 		report_type       = DtelReportType.QUEUE.value,                                report_type_mask       = 0xff, # 0xff
 		flow_report_flag  = 0,                                                         flow_report_flag_mask  = 0x0,  # 0x3
@@ -4600,7 +4874,7 @@ def dtel_config_init_del(self, target
 	)
 
 	#CE-3 if flow_report is enabled, then update dtel header
-	dtel_config_del(self, self.target,
+	dtel_config_del(self, self.target, ig_pipe,
 		pkt_src           = PktSrc.CLONED_EGRESS.value,                                pkt_src_mask           = 0xff, # 0xff
 		report_type       = DtelReportType.FLOW.value,                                 report_type_mask       = 0xff, # 0xff
 		flow_report_flag  = 0,                                                         flow_report_flag_mask  = 0x0,  # 0x3
@@ -4928,6 +5202,10 @@ def npb_nsh_bridge_no_eg_lag_del(self, target, ig_pipe,
 	npb_tunnel_dmac_del       (self, target, ig_pipe, ig_port_lag_ptr, ethertype, ethertype_mask, vid_isValid, vid_isValid_mask, vid, vid_mask, dmac, dmac_mask);
 
 # Egress lag removed if sharing with other flows
+
+#######################################
+# Table Cleanup
+#######################################
 
 # Use Cleanup Method to clear the tables before and after the test starts
 # (the latter is done as a part of tearDown()

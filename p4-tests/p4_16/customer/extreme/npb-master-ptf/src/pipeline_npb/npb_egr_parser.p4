@@ -563,10 +563,10 @@ parser EgressParser(
         eg_md.lkp_1.mac_type     = hdr.outer.ethernet.ether_type;
 #endif
         transition select(hdr.outer.ethernet.ether_type) {
-            ETHERTYPE_BR : parse_outer_br_scope0;
-            ETHERTYPE_VN : parse_outer_vn_scope0;
-            ETHERTYPE_VLAN : parse_outer_vlan_scope0;
-            ETHERTYPE_QINQ : parse_outer_vlan_scope0;
+            ETHERTYPE_BR : construct_outer_br_scope0;
+            ETHERTYPE_VN : construct_outer_vn_scope0;
+            ETHERTYPE_VLAN : parse_outer_vlan_0_scope0;
+            ETHERTYPE_QINQ : parse_outer_vlan_0_scope0;
             ETHERTYPE_MPLS : construct_outer_mpls_scope0;
             ETHERTYPE_IPV4 : parse_outer_ipv4_scope0;
             ETHERTYPE_IPV6 : construct_outer_ipv6_scope0;
@@ -574,14 +574,14 @@ parser EgressParser(
         }
     }
 
-    state parse_outer_br_scope0 {
+    state construct_outer_br_scope0 {
         transition select(OUTER_ETAG_ENABLE) {
-            true: extract_outer_br_scope0;
+            true: parse_outer_br_scope0;
             false: accept;
         }
     }
 
-    state extract_outer_br_scope0 {
+    state parse_outer_br_scope0 {
 	    pkt.extract(hdr.outer.e_tag);
 #if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
     defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
@@ -589,8 +589,8 @@ parser EgressParser(
         //eg_md.lkp_1.pcp = hdr.outer.e_tag.pcp;  // do not populate w/ e-tag
 #endif
         transition select(hdr.outer.e_tag.ether_type) {
-            ETHERTYPE_VLAN : parse_outer_vlan_scope0;
-            ETHERTYPE_QINQ : parse_outer_vlan_scope0;
+            ETHERTYPE_VLAN : parse_outer_vlan_0_scope0;
+            ETHERTYPE_QINQ : parse_outer_vlan_0_scope0;
             ETHERTYPE_MPLS : construct_outer_mpls_scope0;
             ETHERTYPE_IPV4 : parse_outer_ipv4_scope0;
             ETHERTYPE_IPV6 : construct_outer_ipv6_scope0;
@@ -598,22 +598,22 @@ parser EgressParser(
         }
     }
 
-    state parse_outer_vn_scope0 {
+    state construct_outer_vn_scope0 {
         transition select(OUTER_VNTAG_ENABLE) {
-            true: extract_outer_vn_scope0;
+            true: parse_outer_vn_scope0;
             false: accept;
         }
     }
 
-    state extract_outer_vn_scope0 {
+    state parse_outer_vn_scope0 {
 	    pkt.extract(hdr.outer.vn_tag);
 #if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
     defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
         eg_md.lkp_1.mac_type = hdr.outer.vn_tag.ether_type;
 #endif
         transition select(hdr.outer.vn_tag.ether_type) {
-            ETHERTYPE_VLAN : parse_outer_vlan_scope0;
-            ETHERTYPE_QINQ : parse_outer_vlan_scope0;
+            ETHERTYPE_VLAN : parse_outer_vlan_0_scope0;
+            ETHERTYPE_QINQ : parse_outer_vlan_0_scope0;
             ETHERTYPE_MPLS : construct_outer_mpls_scope0;
             ETHERTYPE_IPV4 : parse_outer_ipv4_scope0;
             ETHERTYPE_IPV6 : construct_outer_ipv6_scope0;
@@ -622,16 +622,16 @@ parser EgressParser(
     }
 
 
-    state parse_outer_vlan_scope0 {
-	    pkt.extract(hdr.outer.vlan_tag.next);
+    state parse_outer_vlan_0_scope0 {
+	    pkt.extract(hdr.outer.vlan_tag[0]);
 
 #if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
     defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
-        eg_md.lkp_1.pcp = hdr.outer.vlan_tag.last.pcp;
+        eg_md.lkp_1.pcp = hdr.outer.vlan_tag[0].pcp;
   #ifdef SF_2_L2_VLAN_ID_ENABLE
-		eg_md.lkp_1.vid = hdr.outer.vlan_tag.last.vid;
+		eg_md.lkp_1.vid = hdr.outer.vlan_tag[0].vid;
   #endif
-        eg_md.lkp_1.mac_type = hdr.outer.vlan_tag.last.ether_type;
+        eg_md.lkp_1.mac_type = hdr.outer.vlan_tag[0].ether_type;
 
   #ifndef SF_2_L2_VLAN_ID_ENABLE
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_VLAN;
@@ -639,15 +639,48 @@ parser EgressParser(
         //eg_md.lkp_1.tunnel_id = (bit<switch_tunnel_id_width>)hdr.outer.vlan_tag.last.vid;
   #endif
 #endif
-        transition select(hdr.outer.vlan_tag.last.ether_type) {
-            ETHERTYPE_VLAN : parse_outer_vlan_scope0;
+        transition select(hdr.outer.vlan_tag[0].ether_type) {
+            ETHERTYPE_VLAN : parse_outer_vlan_1_scope0;
             ETHERTYPE_MPLS : construct_outer_mpls_scope0;
             ETHERTYPE_IPV4 : parse_outer_ipv4_scope0;
             ETHERTYPE_IPV6 : construct_outer_ipv6_scope0;
             default : accept;
         }
     }
-    
+
+    state parse_outer_vlan_1_scope0 {
+	    pkt.extract(hdr.outer.vlan_tag[1]);
+
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+        eg_md.lkp_1.pcp = hdr.outer.vlan_tag[1].pcp;
+  #ifdef SF_2_L2_VLAN_ID_ENABLE
+		eg_md.lkp_1.vid = hdr.outer.vlan_tag[1].vid;
+  #endif
+        eg_md.lkp_1.mac_type = hdr.outer.vlan_tag[1].ether_type;
+
+  #ifndef SF_2_L2_VLAN_ID_ENABLE
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_VLAN;
+        //eg_md.lkp_1.tunnel_id[11:0] = hdr.outer.vlan_tag.last.vid;
+        //eg_md.lkp_1.tunnel_id = (bit<switch_tunnel_id_width>)hdr.outer.vlan_tag.last.vid;
+  #endif
+#endif
+        transition select(hdr.outer.vlan_tag[1].ether_type) {
+            ETHERTYPE_VLAN : parse_outer_vlan_unsupported_scope0;
+            ETHERTYPE_MPLS : construct_outer_mpls_scope0;
+            ETHERTYPE_IPV4 : parse_outer_ipv4_scope0;
+            ETHERTYPE_IPV6 : construct_outer_ipv6_scope0;
+            default : accept;
+        }
+    }
+    state parse_outer_vlan_unsupported_scope0 {
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+        eg_md.lkp_1.tunnel_id = 0;
+        transition reject;
+    }
+
+
+
     
     // todo: Can we implement scope0/1 as single sub-parser, w/ parameters
     //--------------------------------------------------------------------------
@@ -665,10 +698,10 @@ parser EgressParser(
         eg_md.lkp_1.mac_type     = hdr.outer.ethernet.ether_type;
 #endif
         transition select(hdr.outer.ethernet.ether_type) {
-            ETHERTYPE_BR : parse_outer_br_scope1;
-            ETHERTYPE_VN : parse_outer_vn_scope1;
-            ETHERTYPE_VLAN : parse_outer_vlan_scope1;
-            ETHERTYPE_QINQ : parse_outer_vlan_scope1;
+            ETHERTYPE_BR : construct_outer_br_scope1;
+            ETHERTYPE_VN : construct_outer_vn_scope1;
+            ETHERTYPE_VLAN : parse_outer_vlan_0_scope1;
+            ETHERTYPE_QINQ : parse_outer_vlan_0_scope1;
             ETHERTYPE_MPLS : construct_outer_mpls_scope1;
             ETHERTYPE_IPV4 : parse_outer_ipv4_scope1;
             ETHERTYPE_IPV6 : construct_outer_ipv6_scope1;
@@ -676,14 +709,14 @@ parser EgressParser(
         }
     }
 
-    state parse_outer_br_scope1 {
+    state construct_outer_br_scope1 {
         transition select(OUTER_ETAG_ENABLE) {
-            true: extract_outer_br_scope1;
+            true: parse_outer_br_scope1;
             false: accept;
         }
     }
 
-    state extract_outer_br_scope1 {
+    state parse_outer_br_scope1 {
 	    pkt.extract(hdr.outer.e_tag);
 
 // populate for L3-tunnel case (where there's no L2 present)
@@ -692,8 +725,8 @@ parser EgressParser(
         eg_md.lkp_1.mac_type = hdr.outer.e_tag.ether_type;        
 #endif  
         transition select(hdr.outer.e_tag.ether_type) {
-            ETHERTYPE_VLAN : parse_outer_vlan_scope1;
-            ETHERTYPE_QINQ : parse_outer_vlan_scope1;
+            ETHERTYPE_VLAN : parse_outer_vlan_0_scope1;
+            ETHERTYPE_QINQ : parse_outer_vlan_0_scope1;
             ETHERTYPE_MPLS : construct_outer_mpls_scope1;
             ETHERTYPE_IPV4 : parse_outer_ipv4_scope1;
             ETHERTYPE_IPV6 : construct_outer_ipv6_scope1;
@@ -702,14 +735,14 @@ parser EgressParser(
     }
 
 
-    state parse_outer_vn_scope1 {
+    state construct_outer_vn_scope1 {
         transition select(OUTER_VNTAG_ENABLE) {
-            true: extract_outer_vn_scope1;
+            true: parse_outer_vn_scope1;
             false: accept;
         }
     }
 
-    state extract_outer_vn_scope1 {
+    state parse_outer_vn_scope1 {
 	    pkt.extract(hdr.outer.vn_tag);
 
 // populate for L3-tunnel case (where there's no L2 present)
@@ -718,8 +751,8 @@ parser EgressParser(
         eg_md.lkp_1.mac_type = hdr.outer.vn_tag.ether_type;
 #endif        
         transition select(hdr.outer.vn_tag.ether_type) {
-            ETHERTYPE_VLAN : parse_outer_vlan_scope1;
-            ETHERTYPE_QINQ : parse_outer_vlan_scope1;
+            ETHERTYPE_VLAN : parse_outer_vlan_0_scope1;
+            ETHERTYPE_QINQ : parse_outer_vlan_0_scope1;
             ETHERTYPE_MPLS : construct_outer_mpls_scope1;
             ETHERTYPE_IPV4 : parse_outer_ipv4_scope1;
             ETHERTYPE_IPV6 : construct_outer_ipv6_scope1;
@@ -728,17 +761,17 @@ parser EgressParser(
     }
 
 
-    state parse_outer_vlan_scope1 {
-	    pkt.extract(hdr.outer.vlan_tag.next);
+    state parse_outer_vlan_0_scope1 {
+	    pkt.extract(hdr.outer.vlan_tag[0]);
 
 // populate for L3-tunnel case (where there's no L2 present)
 #if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
     defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
-        eg_md.lkp_1.pcp = hdr.outer.vlan_tag.last.pcp;
+        eg_md.lkp_1.pcp = hdr.outer.vlan_tag[0].pcp;
   #ifdef SF_2_L2_VLAN_ID_ENABLE
-		eg_md.lkp_1.vid = hdr.outer.vlan_tag.last.vid;
+		eg_md.lkp_1.vid = hdr.outer.vlan_tag[0].vid;
   #endif
-        eg_md.lkp_1.mac_type = hdr.outer.vlan_tag.last.ether_type;
+        eg_md.lkp_1.mac_type = hdr.outer.vlan_tag[0].ether_type;
 
   #ifndef SF_2_L2_VLAN_ID_ENABLE
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_VLAN;
@@ -746,9 +779,8 @@ parser EgressParser(
         //eg_md.lkp_1.tunnel_id = (bit<switch_tunnel_id_width>)hdr.outer.vlan_tag.last.vid;
   #endif
 #endif
-        
-        transition select(hdr.outer.vlan_tag.last.ether_type) {
-            ETHERTYPE_VLAN : parse_outer_vlan_scope1;
+        transition select(hdr.outer.vlan_tag[0].ether_type) {
+            ETHERTYPE_VLAN : parse_outer_vlan_1_scope1;
             ETHERTYPE_MPLS : construct_outer_mpls_scope1;
             ETHERTYPE_IPV4 : parse_outer_ipv4_scope1;
             ETHERTYPE_IPV6 : construct_outer_ipv6_scope1;
@@ -756,10 +788,55 @@ parser EgressParser(
         }
     }
 
+    state parse_outer_vlan_1_scope1 {
+	    pkt.extract(hdr.outer.vlan_tag[1]);
+
+// populate for L3-tunnel case (where there's no L2 present)
+#if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
+    defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
+        eg_md.lkp_1.pcp = hdr.outer.vlan_tag[1].pcp;
+  #ifdef SF_2_L2_VLAN_ID_ENABLE
+		eg_md.lkp_1.vid = hdr.outer.vlan_tag[1].vid;
+  #endif
+        eg_md.lkp_1.mac_type = hdr.outer.vlan_tag[1].ether_type;
+
+  #ifndef SF_2_L2_VLAN_ID_ENABLE
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_VLAN;
+        //eg_md.lkp_1.tunnel_id[11:0] = hdr.outer.vlan_tag.last.vid;
+        //eg_md.lkp_1.tunnel_id = (bit<switch_tunnel_id_width>)hdr.outer.vlan_tag.last.vid;
+  #endif
+#endif
+        transition select(hdr.outer.vlan_tag[1].ether_type) {
+            ETHERTYPE_VLAN : parse_outer_vlan_unsupported_scope1;
+            ETHERTYPE_MPLS : construct_outer_mpls_scope1;
+            ETHERTYPE_IPV4 : parse_outer_ipv4_scope1;
+            ETHERTYPE_IPV6 : construct_outer_ipv6_scope1;
+            default : accept;
+        }
+    }
+    state parse_outer_vlan_unsupported_scope1 {
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+        eg_md.lkp_1.tunnel_id = 0;
+        transition reject;
+    }
+
     
     ////////////////////////////////////////////////////////////////////////////
     // Layer 3 - Outer
     ////////////////////////////////////////////////////////////////////////////
+
+    // todo: currently we're extracting the ip-header, even if it contains
+    //       unsupported ip-options (or frag). is this acceptable, or would it
+    //       be better to extract the ip-header after being fully qualified?
+    //
+    // todo: same question applies to setting lookup metadata fields - would
+    //       it be better to only set these if ip is fully qualified?
+    //
+    // todo: we're currently only setting UNSUPPORTED tunnel-type if we detect
+    //       ipv4 options or frag. we're not attempting to detect IPv6 options
+    //       currently as this would require more tcam resources to qualify
+    //       more protocol field values. is this acceptable, or do we need to
+    //       detect ipv6 options, and set UNSUPPORTED tunnel type?
 
     //--------------------------------------------------------------------------
     // Scope 0
@@ -770,17 +847,14 @@ parser EgressParser(
         protocol_outer = hdr.outer.ipv4.protocol;
 #if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
     defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
-        // todo: should the lkp struct be set only if no frag and options?
-//      eg_md.lkp_1.ip_type       = SWITCH_IP_TYPE_IPV4;
-        eg_md.lkp_1.ip_proto      = hdr.outer.ipv4.protocol;
-        eg_md.lkp_1.ip_tos        = hdr.outer.ipv4.tos;
-        eg_md.lkp_1.ip_flags      = hdr.outer.ipv4.flags;
-        eg_md.lkp_1.ip_src_addr_v4= hdr.outer.ipv4.src_addr;
-        eg_md.lkp_1.ip_dst_addr_v4= hdr.outer.ipv4.dst_addr;
-        eg_md.lkp_1.ip_len        = hdr.outer.ipv4.total_len;
+        //eg_md.lkp_1.ip_type        = SWITCH_IP_TYPE_IPV4;
+        eg_md.lkp_1.ip_proto       = hdr.outer.ipv4.protocol;
+        eg_md.lkp_1.ip_tos         = hdr.outer.ipv4.tos;
+        eg_md.lkp_1.ip_flags       = hdr.outer.ipv4.flags;
+        eg_md.lkp_1.ip_src_addr_v4 = hdr.outer.ipv4.src_addr;
+        eg_md.lkp_1.ip_dst_addr_v4 = hdr.outer.ipv4.dst_addr;
+        eg_md.lkp_1.ip_len         = hdr.outer.ipv4.total_len;
 #endif
-
-        // Flag packet (to be sent to host) if it's a frag or has options.
         transition select(
             hdr.outer.ipv4.ihl,
             hdr.outer.ipv4.frag_offset,
@@ -789,7 +863,7 @@ parser EgressParser(
             //(5, 0, IP_PROTOCOLS_ICMP): parse_outer_icmp_igmp_overload_scope0;
             //(5, 0, IP_PROTOCOLS_IGMP): parse_outer_icmp_igmp_overload_scope0;
             (5, 0, _): branch_outer_l3_protocol_scope0;
-            default: accept;
+            default: parse_outer_ip_unsupported_scope0;
         }
     }
 
@@ -805,14 +879,13 @@ parser EgressParser(
         protocol_outer = hdr.outer.ipv6.next_hdr;
 #if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
     defined(EGRESS_PARSER_POPULATES_LKP_WITH_OUTER)
-//      eg_md.lkp_1.ip_type       = SWITCH_IP_TYPE_IPV6;
-        eg_md.lkp_1.ip_proto      = hdr.outer.ipv6.next_hdr;
-        //eg_md.lkp_1.ip_tos        = hdr.outer.ipv6.tos; // not byte-aligned - set in mau
-        eg_md.lkp_1.ip_src_addr   = hdr.outer.ipv6.src_addr;
-        eg_md.lkp_1.ip_dst_addr   = hdr.outer.ipv6.dst_addr;
-        eg_md.lkp_1.ip_len        = hdr.outer.ipv6.payload_len;
+        //eg_md.lkp_1.ip_type     = SWITCH_IP_TYPE_IPV6;
+        eg_md.lkp_1.ip_proto    = hdr.outer.ipv6.next_hdr;
+        //eg_md.lkp_1.ip_tos      = hdr.outer.ipv6.tos; // not byte-aligned - set in mau
+        eg_md.lkp_1.ip_src_addr = hdr.outer.ipv6.src_addr;
+        eg_md.lkp_1.ip_dst_addr = hdr.outer.ipv6.dst_addr;
+        eg_md.lkp_1.ip_len      = hdr.outer.ipv6.payload_len;
 #endif
-
         transition branch_outer_l3_protocol_scope0;
         // transition select(hdr.outer.ipv6.next_hdr) {
         //     IP_PROTOCOLS_ICMPV6: parse_outer_icmp_igmp_overload_scope0;
@@ -833,7 +906,13 @@ parser EgressParser(
            default: accept;
        }
     }
-    
+
+    state parse_outer_ip_unsupported_scope0 {
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+        eg_md.lkp_1.tunnel_id = 0;
+        transition reject;
+    }
+
 
     //--------------------------------------------------------------------------
     // Scope 1
@@ -842,7 +921,6 @@ parser EgressParser(
     state parse_outer_ipv4_scope1 {
         pkt.extract(hdr.outer.ipv4);
         protocol_outer = hdr.outer.ipv4.protocol;
-        // Flag packet (to be sent to host) if it's a frag or has options.
         transition select(
             hdr.outer.ipv4.ihl,
             hdr.outer.ipv4.frag_offset) {
@@ -939,6 +1017,8 @@ parser EgressParser(
     // Transmission Control Protocol (TCP) - Outer
     //--------------------------------------------------------------------------
 
+    // todo: do we need to flag tcp w/ options as UNSUPPORTED tunnel?
+
     state parse_outer_tcp_scope0 {
         pkt.extract(hdr.outer.tcp);
 #if defined(EGRESS_PARSER_POPULATES_LKP_SCOPED) || \
@@ -947,14 +1027,23 @@ parser EgressParser(
         eg_md.lkp_1.l4_dst_port = hdr.outer.tcp.dst_port;
         eg_md.lkp_1.tcp_flags   = hdr.outer.tcp.flags;
 #endif
-        transition accept;
+        transition select(hdr.outer.tcp.data_offset) {
+            5: accept;
+            default: parse_outer_tcp_unsupported;
+        }
     }
 
     state parse_outer_tcp_scope1 {
         pkt.extract(hdr.outer.tcp);
         transition accept;
     }
-    
+
+    state parse_outer_tcp_unsupported {
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+        eg_md.lkp_1.tunnel_id = 0;
+        transition reject;
+    }
+
     //--------------------------------------------------------------------------
     // Stream Control Transmission Protocol (SCTP) - Outer
     //--------------------------------------------------------------------------
@@ -2103,7 +2192,6 @@ parser EgressParser(
             default: accept;
         }
     }
-
         
     state parse_outer_gre_qualified_scope0 {    
         pkt.extract(hdr.outer.gre);
@@ -2198,7 +2286,6 @@ parser EgressParser(
 #endif
     	transition parse_inner_ethernet_scope0;
     }
-
 
     state construct_outer_nvgre_scope1 {
         transition select(OUTER_NVGRE_ENABLE) {
@@ -2430,20 +2517,23 @@ parser EgressParser(
     state parse_inner_ethernet_scope0 {
         pkt.extract(hdr.inner.ethernet);
         transition select(hdr.inner.ethernet.ether_type) {
-            ETHERTYPE_VLAN : parse_inner_vlan_scope0;
-            ETHERTYPE_IPV4 : parse_inner_ipv4_scope0;
-            ETHERTYPE_IPV6 : construct_inner_ipv6_scope0;
-            default : accept;
+            ETHERTYPE_VLAN: parse_inner_vlan_0_scope0;
+            ETHERTYPE_IPV4: parse_inner_ipv4_scope0;
+            ETHERTYPE_IPV6: construct_inner_ipv6_scope0;
+            default: accept;
         }
     }
-
-    state parse_inner_vlan_scope0 {
+    state parse_inner_vlan_0_scope0 {
         pkt.extract(hdr.inner.vlan_tag[0]);
         transition select(hdr.inner.vlan_tag[0].ether_type) {
-            ETHERTYPE_IPV4 : parse_inner_ipv4_scope0;
-            ETHERTYPE_IPV6 : construct_inner_ipv6_scope0;
-            default : accept;
+            ETHERTYPE_VLAN: parse_inner_vlan_unsupported_scope0;
+            ETHERTYPE_IPV4: parse_inner_ipv4_scope0;
+            ETHERTYPE_IPV6: construct_inner_ipv6_scope0;
+            default: accept;
         }
+    }
+    state parse_inner_vlan_unsupported_scope0 {
+        transition reject;
     }
 
     //--------------------------------------------------------------------------
@@ -2452,7 +2542,6 @@ parser EgressParser(
 
     state parse_inner_ethernet_scope1 {
         pkt.extract(hdr.inner.ethernet);
-        
         eg_md.lkp_1.mac_src_addr = hdr.inner.ethernet.src_addr;
         eg_md.lkp_1.mac_dst_addr = hdr.inner.ethernet.dst_addr;
         eg_md.lkp_1.mac_type = hdr.inner.ethernet.ether_type;
@@ -2460,16 +2549,14 @@ parser EgressParser(
         eg_md.lkp_1.vid = 0;
         
         transition select(hdr.inner.ethernet.ether_type) {
-            ETHERTYPE_VLAN : parse_inner_vlan_scope1;
-            ETHERTYPE_IPV4 : parse_inner_ipv4_scope1;
-            ETHERTYPE_IPV6 : construct_inner_ipv6_scope1;
-            default : accept;
+            ETHERTYPE_VLAN: parse_inner_vlan_0_scope1;
+            ETHERTYPE_IPV4: parse_inner_ipv4_scope1;
+            ETHERTYPE_IPV6: construct_inner_ipv6_scope1;
+            default: accept;
         }
     }
-
-    state parse_inner_vlan_scope1 {
+    state parse_inner_vlan_0_scope1 {
         pkt.extract(hdr.inner.vlan_tag[0]);
-
         eg_md.lkp_1.pcp = hdr.inner.vlan_tag[0].pcp;
 #ifdef SF_2_L2_VLAN_ID_ENABLE
 		eg_md.lkp_1.vid = hdr.inner.vlan_tag[0].vid;
@@ -2480,15 +2567,19 @@ parser EgressParser(
         eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_VLAN;
         //eg_md.lkp_1.tunnel_id = (bit<switch_tunnel_id_width>)hdr.inner.vlan_tag[0].vid;
 #endif
-
         transition select(hdr.inner.vlan_tag[0].ether_type) {
-            ETHERTYPE_IPV4 : parse_inner_ipv4_scope1;
-            ETHERTYPE_IPV6 : construct_inner_ipv6_scope1;
-            default : accept;
+            ETHERTYPE_VLAN: parse_inner_vlan_unsupported_scope1;
+            ETHERTYPE_IPV4: parse_inner_ipv4_scope1;
+            ETHERTYPE_IPV6: construct_inner_ipv6_scope1;
+            default: accept;
         }
     }
-
-            
+    state parse_inner_vlan_unsupported_scope1 {
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+        eg_md.lkp_1.tunnel_id = 0;
+        transition reject;
+    }
+       
 
     ////////////////////////////////////////////////////////////////////////////
     // Layer 3 - Inner
@@ -2521,15 +2612,26 @@ parser EgressParser(
     // Scope 1
     //--------------------------------------------------------------------------
 
+    // todo: currently we're extracting the ip-header, even if it contains
+    //       unsupported ip-options (or frag). is this acceptable, or would it
+    //       be better to extract the ip-header after being fully qualified?
+    //
+    // todo: same question applies to setting lookup metadata fields - would
+    //       it be better to only set these if ip is fully qualified?
+    //
+    // todo: we're currently only setting UNSUPPORTED tunnel-type if we detect
+    //       ipv4 options or frag. we're not attempting to detect IPv6 options
+    //       currently as this would require more tcam resources to qualify
+    //       more protocol field values. is this acceptable, or do we need to
+    //       detect ipv6 options, and set UNSUPPORTED tunnel type?
+
     state parse_inner_ipv4_scope1 {
         pkt.extract(hdr.inner.ipv4);
         protocol_inner = hdr.inner.ipv4.protocol;
 
         // fixup ethertype for ip-n-ip case
-        eg_md.lkp_1.mac_type    = ETHERTYPE_IPV4;
-        
-        // todo: should the lkp struct be set only if no frag and options?
-//      eg_md.lkp_1.ip_type     = SWITCH_IP_TYPE_IPV4;
+        eg_md.lkp_1.mac_type    = ETHERTYPE_IPV4;        
+        //eg_md.lkp_1.ip_type     = SWITCH_IP_TYPE_IPV4;
         eg_md.lkp_1.ip_proto    = hdr.inner.ipv4.protocol;
         eg_md.lkp_1.ip_tos      = hdr.inner.ipv4.tos;
         eg_md.lkp_1.ip_flags    = hdr.inner.ipv4.flags;
@@ -2537,7 +2639,6 @@ parser EgressParser(
         eg_md.lkp_1.ip_dst_addr_v4 = hdr.inner.ipv4.dst_addr;
         eg_md.lkp_1.ip_len      = hdr.inner.ipv4.total_len;
 
-        // Flag packet (to be sent to host) if it's a frag or has options.
         transition select(
             hdr.inner.ipv4.ihl,
             hdr.inner.ipv4.frag_offset,
@@ -2545,7 +2646,7 @@ parser EgressParser(
             //(5, 0, IP_PROTOCOLS_ICMP): parse_inner_icmp_igmp_overload_scope1;
             //(5, 0, IP_PROTOCOLS_IGMP): parse_inner_icmp_igmp_overload_scope1;
             (5, 0, _): branch_inner_l3_protocol_scope1;
-            default : accept;
+            default: parse_inner_ip_unsupported_scope1;
        }
     }
 
@@ -2588,6 +2689,14 @@ parser EgressParser(
         }
     }
     
+    state parse_inner_ip_unsupported_scope1 {
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+        eg_md.lkp_1.tunnel_id = 0;
+        transition reject;
+    }
+
+
+
 
 //     // For ICMP and IGMP, we're not actually extracting the header;
 //     // We're simply over-loading L4-port info for policy via lookahead.    
@@ -2625,12 +2734,21 @@ parser EgressParser(
         }
     }
 
+    // todo: do we need to flag tcp w/ options as UNSUPPORTED tunnel?
     state parse_inner_tcp_scope1 {
         pkt.extract(hdr.inner.tcp);
         eg_md.lkp_1.tcp_flags = hdr.inner.tcp.flags;
         eg_md.lkp_1.l4_src_port = hdr.inner.tcp.src_port;
         eg_md.lkp_1.l4_dst_port = hdr.inner.tcp.dst_port;        
-        transition accept;
+        transition select(hdr.inner.tcp.data_offset) {
+            5: accept;
+            default: parse_inner_tcp_unsupported;
+        }
+    }
+    state parse_inner_tcp_unsupported {
+        eg_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+        eg_md.lkp_1.tunnel_id = 0;
+        transition reject;
     }
 
     state parse_inner_sctp_scope1 {
