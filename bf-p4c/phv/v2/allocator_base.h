@@ -2,12 +2,21 @@
 #define BF_P4C_PHV_V2_ALLOCATOR_BASE_H_
 
 #include "bf-p4c/phv/allocate_phv.h"
+#include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/utils/utils.h"
+#include "bf-p4c/phv/v2/copacker.h"
 #include "bf-p4c/phv/v2/utils_v2.h"
 
 namespace PHV {
 namespace v2 {
+
+struct AllocResultWithPackHint : public AllocResult {
+    ActionSourceCoPackMap action_hints;
+    explicit AllocResultWithPackHint(const AllocError* err) : AllocResult(err) {}
+    AllocResultWithPackHint(const Transaction& tx, const ActionSourceCoPackMap& hints)
+        : AllocResult(tx), action_hints(hints) {}
+};
 
 /// AllocatorBase contains all reusable functions for PHV allocation, mostly 3 categories:
 /// (1) constraint checking functions that their names usually start with is_.
@@ -66,7 +75,8 @@ class AllocatorBase {
                                       const Allocation& alloc,
                                       const SuperCluster* sc,
                                       const std::vector<AllocSlice>& candidates,
-                                      const Container& c) const;
+                                      const Container& c,
+                                      ActionSourceCoPackMap& co_pack_hints) const;
 
     /// Generate pseudo AllocSlices for field slices that have not been allocated, but their
     /// allocation can be speculated upfront: when there is only one valid starting position.
@@ -95,6 +105,11 @@ class AllocatorBase {
     ///   (3) if there were wide_arithmetic slices, if lo(hi), @p c must have even(odd) index. Also
     ///       caller needs to allocate them to adjacent even-odd pair containers.
     ///   (4) if deparsed/exact_container, total number of bits must be equal to the width of @p c.
+    ///   (5) field slices of an aligned cluster, including slices that have already been
+    ///       allocated in @p alloc, and slices to be allcoated in @p fs_starts,
+    ///       must have the same starting index in container. This function, and all the functions
+    ///       this function will invoke, will not check this constraint. Failed to respect this
+    ///       rule will get an action analysis error in later passes.
     /// @returns error in AllocResult if
     ///   (1) not enough space:
     ///      <1> non-mutex bits occupied or has non-mutex solitary field.
@@ -110,7 +125,7 @@ class AllocatorBase {
     ///   (9) fields in @p fs_starts will not violate parser extraction constraints.
     ///   (5) field max container bytes constraints.
     /// NOTE: alloc slices of ignore_alloc field slices will not be generated.
-    AllocResult try_slices_to_container(
+    AllocResultWithPackHint try_slices_to_container(
         const ScoreContext& ctx,
         const Allocation& alloc,
         const FieldSliceAllocStartMap& fs_starts,
@@ -123,11 +138,28 @@ class AllocatorBase {
     ///   (1) AllocSlices that will be generated based on @p fs_starts will not exceed
     ///       the size of width of @p group.
     ///   (2) @p ctx score has been initialized.
-    AllocResult try_slices_to_container_group(
+    AllocResultWithPackHint try_slices_to_container_group(
         const ScoreContext& ctx,
         const Allocation& alloc,
         const FieldSliceAllocStartMap& fs_starts,
         const ContainerGroup& group) const;
+
+    /// A helper function that will call try_slices_to_container if @p c is specified (not
+    /// boost::none). Otherwise, it will call try_slices_to_container_group with @p group.
+    AllocResultWithPackHint try_slices_adapter(const ScoreContext& ctx,
+                                               const Allocation& alloc,
+                                               const FieldSliceAllocStartMap& fs_starts,
+                                               const ContainerGroup& group,
+                                               boost::optional<Container> c) const;
+
+    /// Try to allocate by @p action_hints to @p group. This function will add allocated field
+    /// slices to @p allocated.
+    Transaction try_hints(const ScoreContext& ctx,
+                          const Allocation& alloc,
+                          const ContainerGroup& group,
+                          const ActionSourceCoPackMap& action_hints_map,
+                          ordered_set<PHV::FieldSlice>& allocated,
+                          ScAllocAlignment& hint_enforced_alignments) const;
 
     /// try to allocate a pair of wide_arith slice lists (@p lo, @p hi) to an even-odd
     /// pair of containers in @p group.
@@ -140,19 +172,13 @@ class AllocatorBase {
         const ContainerGroup& group) const;
 
     /// try to allocate @p sc with @p alignment to @p group.
+    /// premise:
+    /// (1) alloc_alignment must have been populated in @p ctx.
     AllocResult try_super_cluster_with_alignment_to_container_group(
         const ScoreContext& ctx,
         const Allocation& alloc,
         const SuperCluster* sc,
-        const ScAllocAlignment& alignment,
         const ContainerGroup& group) const;
-
-    // TODO(yumin): add this function that tries to split and allocate the super cluster to
-    // the set of container groups.
-    // AllocResult try_split_and_alloc_super_cluster(const ScoreContext& ctx,
-    //                                               const Allocation& alloc,
-    //                                               const SuperCluster* sc,
-    //                                               const ContainerGroupsBySize& groups) const;
 
  public:
     explicit AllocatorBase(const AllocUtils& utils): utils_i(utils) {};

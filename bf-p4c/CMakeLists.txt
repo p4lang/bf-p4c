@@ -620,6 +620,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/utils/liverange_opti_utils.cpp
   phv/fieldslice_live_range.cpp
   phv/v2/allocator_base.cpp
+  phv/v2/copacker.cpp
   phv/v2/phv_allocator_v2.cpp
   phv/v2/trivial_allocator.cpp
   phv/v2/tx_score.cpp
@@ -705,6 +706,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/utils/liverange_opti_utils.h
   phv/fieldslice_live_range.h
   phv/v2/allocator_base.h
+  phv/v2/copacker.h
   phv/v2/phv_allocator_v2.h
   phv/v2/trivial_allocator.h
   phv/v2/tx_score.h

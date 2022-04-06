@@ -203,7 +203,7 @@ cstring ScAllocAlignment::pretty_print(cstring prefix, const SuperCluster* sc) c
         new_line = "\n";
         cstring sep = "";
         for (const auto& fs : *sl) {
-            ss << sep << "{" << fs << ", " << slice_starts.at(fs) << "}";
+            ss << sep << "{" << fs.shortString() << ", " << slice_starts.at(fs) << "}";
             sep = ", ";
         }
         ss << "]";

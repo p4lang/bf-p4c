@@ -613,6 +613,84 @@ void ActionPhvConstraints::sort(std::vector<PHV::FieldSlice>& slices) const {
             return l_reads > r_reads; });
 }
 
+void ActionPhvConstraints::dest_first_sort(
+    std::list<const PHV::SuperCluster::SliceList*>& slice_lists) const {
+    ordered_map<const PHV::Field*, std::vector<PHV::FieldSlice>> fields;
+    for (const auto* sl : slice_lists) {
+        for (const auto& fs : *sl) {
+            fields[fs.field()].push_back(fs);
+        }
+    }
+    auto priorities = compute_sources_first_order(fields);
+    ordered_map<const PHV::SuperCluster::SliceList*, int> priority;
+    for (const auto* sl : slice_lists) {
+        for (const auto& fs : *sl) {
+            if (priority.count(sl)) {
+                priority[sl] = std::max(priority[sl], priorities.at(fs.field()));
+            } else {
+                priority[sl] = priorities.at(fs.field());
+            }
+        }
+    }
+
+    ordered_map<const PHV::SuperCluster::SliceList*, int> num_action_write;
+    for (const auto* sl : slice_lists) {
+        for (const auto& fs : *sl) {
+            num_action_write[sl] += this->constraint_tracker.written_in(fs).size();
+        }
+    }
+
+    const auto SliceListComparator = [&](const PHV::SuperCluster::SliceList* l,
+                                         const PHV::SuperCluster::SliceList* r) {
+        // NOTE: wide_arithmetic slice lists are handled differently in the new allocator
+        // so that we do not need to care about their ordering here like before.
+
+        // by topological order first.
+        if (priority.at(l) != priority.at(r)) {
+            return priority.at(l) > priority.at(r);
+        }
+        // by number of actions that write them.
+        if (num_action_write.at(l) != num_action_write.at(r)) {
+            return num_action_write.at(l) > num_action_write.at(r);
+        }
+        //  by lo if same field.
+        const auto& l_front = l->front();
+        const auto& r_front = r->front();
+        if (l_front.field() == r_front.field()) {
+            BUG_CHECK(l_front.range().lo != r_front.range().lo,
+                      "same field slice in different slice lists.");
+            return l_front.range().lo < r_front.range().lo;
+        }
+        return false;
+    };
+    slice_lists.sort(SliceListComparator);
+}
+
+void ActionPhvConstraints::dest_first_sort(std::vector<PHV::FieldSlice>& slices) const {
+    ordered_map<const PHV::Field*, std::vector<PHV::FieldSlice>> fields;
+    for (const auto& fs : slices) {
+        fields[fs.field()].push_back(fs);
+    }
+    auto priorities = compute_sources_first_order(fields);
+    ordered_map<PHV::FieldSlice, int> num_action_write;
+    for (const auto& fs : slices) {
+        num_action_write[fs] += this->constraint_tracker.written_in(fs).size();
+    }
+
+    std::sort(slices.begin(), slices.end(),
+              [&](const PHV::FieldSlice& l, const PHV::FieldSlice& r) {
+                  // by topological order first.
+                  if (priorities.at(l.field()) != priorities.at(r.field())) {
+                      return priorities.at(l.field()) > priorities.at(r.field());
+                  }
+                  // by number of actions that write them.
+                  if (num_action_write.at(l) != num_action_write.at(r)) {
+                      return num_action_write.at(l) > num_action_write.at(r);
+                  }
+                  return false;
+              });
+}
+
 void ActionPhvConstraints::determine_same_byte_fields() {
     ordered_map<const PHV::Field*, le_bitrange> header_bytes;
     for (const auto& f : phv) {
@@ -2692,7 +2770,7 @@ CanPackV2ReturnType ActionPhvConstraints::can_pack_v2(
     auto action_props = make_action_container_properties(
             alloc, actions, container_state, {}, mocha_or_dark);
 
-    // check bitwise instructions.
+    // check basic constraints of bitwise and move.
     CanPackV2ReturnType err =
         check_bitwise_and_basic_move_constraints(
                 actions, container_state, &action_props);

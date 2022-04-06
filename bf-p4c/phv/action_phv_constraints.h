@@ -974,6 +974,21 @@ class ActionPhvConstraints : public Inspector {
       */
     void sort(std::vector<PHV::FieldSlice>& slice_list) const;
 
+    /// sort @p slice_lists by
+    /// 1. a topographical order of their data flow graph, where destinations will be sorted
+    ///    to the front. Strongly-connected-components will be converted to one node. Every
+    ///    slice lists will be represented by the highest priority field (deepest in source to
+    ///    destination flow, i.e., like the `last destination`) of the list.
+    /// 2. number of actions that write to the slice list.
+    /// 3. lo part of the same-field list will be allcoated first.
+    void dest_first_sort(std::list<const PHV::SuperCluster::SliceList*>& slice_list) const;
+
+    /// sort @p slices by
+    /// 1. a topographical order of their data flow graph, where destinations will be sorted
+    ///    to the front. Strongly-connected-components will be converted to one node.
+    /// 2. number of actions that write to the slice list.
+    void dest_first_sort(std::vector<PHV::FieldSlice>& slices) const;
+
     /** @returns the set of fields that are read in action @p act
       */
     ordered_set<const PHV::Field*> actionReads(const IR::MAU::Action* act) const;

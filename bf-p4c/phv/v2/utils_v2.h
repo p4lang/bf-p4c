@@ -63,6 +63,9 @@ enum class ErrorCode {
     WIDE_ARITH_ALLOC_FAILED,
     /// no slicing has been found by slicing iterator.
     NO_SLICING_FOUND,
+    /// when copacker has identified invalid allocation that sources can never be
+    /// packed correctly.
+    INVALID_ALLOC_FOUND_BY_COPACKER,
 };
 
 /// convert @p to string.
@@ -110,13 +113,15 @@ struct AllocResult {
 
 /// ScAllocAlignment is the alignment arrangement for a super cluster based on its alignment
 /// constraints of slice lists.
+/// TODO(yumin): @a slice_starts is redundant, cluster_starts.at(sc->aligned_cluster(fs)) is
+/// equivalent.
 struct ScAllocAlignment {
     /// a slice_alignment maps field slice to start bit location in a container.
     ordered_map<FieldSlice, int> slice_starts;
     /// a cluster_alignment maps aligned cluster to start bit location in a container.
     ordered_map<const AlignedCluster*, int> cluster_starts;
     /// @returns merged alignment constraint if no conflict was found.
-    boost::optional<ScAllocAlignment> merge(const ScAllocAlignment& ohter) const;
+    boost::optional<ScAllocAlignment> merge(const ScAllocAlignment& other) const;
     /// @returns pretty print string for the alignment of @p sc.
     cstring pretty_print(cstring prefix, const SuperCluster* sc) const;
     /// @returns true if there is no alignment scheduled: cluster without slice lists.
@@ -153,6 +158,9 @@ class ScoreContext {
 
     /// slice lists are better to be allocated in this order.
     const std::list<const SuperCluster::SliceList*>* sl_alloc_order_i = {};
+
+    /// decided allocation alignment under current context.
+    const ScAllocAlignment* alloc_alignment_i = nullptr;
 
     /// factory for allocation score.
     const TxScoreMaker* score_i = nullptr;
@@ -200,6 +208,16 @@ class ScoreContext {
             const std::list<const SuperCluster::SliceList*>* order) const {
         auto cloned = *this;
         cloned.sl_alloc_order_i = order;
+        return cloned;
+    }
+
+    const ScAllocAlignment* alloc_alignment() const {
+        BUG_CHECK(alloc_alignment_i, "alloc alignment not added in ctx.");
+        return alloc_alignment_i;
+    }
+    ScoreContext with_alloc_alignment(const ScAllocAlignment* alignment) const {
+        auto cloned = *this;
+        cloned.alloc_alignment_i = alignment;
         return cloned;
     }
 

@@ -31,15 +31,15 @@ class TrivialAllocator {
     ContainerGroupsBySize make_container_groups_merged_by_size() const;
 
 
-    // gen_alloc_slices_from_tx extract allocation results from tx and generate allocation of
-    // fieldslices to *new* phv containers. New phv containers are requested from @p phv_status
-    // and phv_status will be updated.
+    /// gen_alloc_slices_from_tx extract allocation results from tx and generate allocation of
+    /// fieldslices to *new* phv containers. New phv containers are requested from @p phv_status
+    /// and phv_status will be updated.
     std::vector<PHV::AllocSlice> gen_alloc_slices_from_tx(const PHV::Transaction& tx,
                                                           PhvStatus& phv_status) const;
 
-    // gen_alloc_slices_from_tx extract allocation results from tx and generate allocation of
-    // fieldslices to *new* phv containers. New phv containers are requested from @p phv_status
-    // and phv_status will be updated.
+    /// gen_alloc_slices_from_tx extract allocation results from tx and generate allocation of
+    /// fieldslices to *new* phv containers. New phv containers are requested from @p phv_status
+    /// and phv_status will be updated.
     void bind_alloc_slices(const std::vector<PHV::AllocSlice>& slices);
 
  public:
@@ -71,10 +71,19 @@ class TrivialAllocator {
     bool allocate(const std::list<PHV::SuperCluster*>& clusters);
 
     /// @returns true if @p sc can be allocated to @p empty_alloc, assuming there are infinite
-    /// containers. Use this verify whether there is any unsatisfiable constraint in @p sc.
+    /// containers. Use this verify whether there is any unsat constraint in @p sc.
     bool can_be_allocated(const Allocation& empty_alloc,
                           const PHV::SuperCluster* sc,
                           const int max_slicings = 128) const;
+
+    /// @returns a vector of sliced cluster from @p sc with the minimal number of slicing
+    /// (try to maximize packing). This function will try to ensure that all the returned super
+    /// clusters can be allocated, without violating any constraints, by calling can_be_allocated
+    /// to verify before return. However, there can by cases that either we are not lucky enough
+    /// or there are conflicting constraints, the @p sc cannot be split to allocatable clusters.
+    /// In those cases, we will just return the last slicing we found.
+    std::list<SuperCluster*> pre_slice(const Allocation& empty_alloc,
+                                       SuperCluster* sc) const;
 };
 
 }  // namespace v2

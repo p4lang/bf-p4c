@@ -82,6 +82,26 @@ ContainerGroupsBySize TrivialAllocator::make_container_groups_merged_by_size() c
     return rv;
 }
 
+std::list<SuperCluster*> TrivialAllocator::pre_slice(const Allocation& empty_alloc,
+                                                     SuperCluster* sc) const {
+    const int max_pre_slicing_try = 128;
+    int n_pre_slicing_tried = 0;
+    auto pre_slicing_ctx = utils_i.make_slicing_ctx(sc);
+    std::list<PHV::SuperCluster*> rst = {sc};
+    pre_slicing_ctx->iterate([&](std::list<PHV::SuperCluster*> sliced) {
+        rst = std::move(sliced);
+        n_pre_slicing_tried++;
+        for (const auto* sc : rst) {
+            if (!can_be_allocated(empty_alloc, sc)) {
+                return n_pre_slicing_tried < max_pre_slicing_try;
+            }
+        }
+        // found one valid slicing
+        return false;
+    });
+    return rst;
+}
+
 const TrivialAllocator::PartialAllocResult* TrivialAllocator::slice_and_allocate_sc(
     const Allocation& empty_alloc, const PHV::SuperCluster* sc, PhvStatus phv_status,
     const ContainerGroupsBySize& container_groups, const int max_slicings,
@@ -177,25 +197,40 @@ bool TrivialAllocator::allocate(const std::list<PHV::SuperCluster*>& clusters) {
 
     PHV::ConcreteAllocation empty_alloc = PHV::ConcreteAllocation(phv_i, utils_i.uses);
     auto container_groups = make_container_groups_merged_by_size();
-    const int max_slicing_try = 128;
+    const int max_try_alloc_slicing_try = 256;
     std::stringstream history;
     PhvStatus phv_status;
     bool ok = true;
-    for (auto* sc : clusters) {
-        LOG3("Allocating: \n " << sc);
-        history << "Allocating: \n" << sc;
-        auto rst = slice_and_allocate_sc(empty_alloc, sc, phv_status, container_groups,
-                                         max_slicing_try, &history);
-        if (!rst->ok()) {
-            history << "Trivial Allocation Failed because:" << rst->err->str() << "\n";
-            ::error("Trivial allocation failed. Cannot allocate %1%Reason: %2%",
-                    cstring::to_cstring(sc), rst->err->str());
-            ok = false;
-            break;
+    for (auto* unsliced_sc : clusters) {
+        // TODO(yumin): we can integrate pre_slice into this allocation progress by
+        // taking copy of phv status and handle errors correctly. This will save us
+        // some time because the validation process inside pre_slice are basically calling
+        // slice_and_allocate_sc.
+        LOG3("Trying to pre-slice original (unsliced) cluster: " << unsliced_sc);
+        auto pre_sliced = pre_slice(empty_alloc, unsliced_sc);
+        if (LOGGING(3)) {
+            LOG3("Pre-slicing result of super cluster uid " << unsliced_sc->uid << ":");
+            for (const auto* sc : pre_sliced) {
+                LOG3(sc);
+            }
         }
-        phv_status = rst->phv_status;
-        bind_alloc_slices(rst->alloc_slices);
-        LOG3(">>>>>>> Allocation Succeeded: " << sc);
+        for (const auto* sc : pre_sliced) {
+            LOG3("Allocating: \n " << sc);
+            history << "Allocating: \n" << sc;
+            auto rst = slice_and_allocate_sc(empty_alloc, sc, phv_status, container_groups,
+                                             max_try_alloc_slicing_try, &history);
+            if (!rst->ok()) {
+                history << "Trivial Allocation Failed because:" << rst->err->str() << "\n";
+                ::error("Trivial allocation failed. Cannot allocate %1%Reason: %2%",
+                        cstring::to_cstring(sc), rst->err->str());
+                ok = false;
+                break;
+            }
+            phv_status = rst->phv_status;
+            bind_alloc_slices(rst->alloc_slices);
+            LOG3(">>>>>>> pre-sliced cluster allocation Succeeded: " << sc);
+        }
+        if (!ok) break;
     }
 
     if (ok) {
@@ -205,8 +240,6 @@ bool TrivialAllocator::allocate(const std::list<PHV::SuperCluster*>& clusters) {
         phv_i.set_done(true);
     }
 
-    // TODO(yumin): complete history logs to include slicing and result.
-    // print out history logs
     auto logfile = createFileLog(pipe_id_i, "phv_trivial_allocation_history_", 1);
     LOG1("Trivial Allocation history");
     LOG1(history.str());
