@@ -52,6 +52,10 @@ RUN rm -rf /root/.ssh/id_* && \
 
 COPY . /bfn/bf-p4c-compilers/
 
+# Temporary workaround for older p4factory. With next p4factory update, this file should no longer
+# be there.
+RUN rm /etc/apt/apt.conf.d/10-intel-apt.conf
+
 RUN chmod a+x /bfn/bf-p4c-compilers/docker/docker_build.sh
 RUN /bfn/bf-p4c-compilers/docker/docker_build.sh
 
