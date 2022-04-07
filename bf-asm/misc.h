@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "json.h"
+#include "asm-types.h"
 
 template<class T>
 auto setup_muxctl(T &reg, int val) -> decltype((void)reg.enabled_2bit_muxctl_enable) {
@@ -82,5 +83,8 @@ uint64_t bitMask(unsigned size);
 
 int parity(uint32_t v);
 int parity_2b(uint32_t v);  // two-bit parity (parity of pairs in the word)
+
+void check_value(value_t value, int expected);
+void check_range(value_t value, int lo, int hi);
 
 #endif /* BF_ASM_MISC_H_ */

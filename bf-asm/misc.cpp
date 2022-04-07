@@ -92,3 +92,13 @@ int parity_2b(uint32_t v) {
     v ^= v >> 2;
     return v&3;
 }
+
+void check_value(value_t value, int expected) {
+    if (value.i != expected)
+            error(value.lineno, "unexpected value %ld; expected %i", value.i, expected);
+}
+
+void check_range(value_t value, int lo, int hi) {
+    if (value.i < lo || value.i > hi)
+        error(value.lineno, "value %ld out of allowed range <%i; %i>", value.i, lo, hi);
+}

@@ -340,6 +340,7 @@ if (ENABLE_GTESTS)
     gtest/asm-types.cpp
     gtest/mirror.cpp
     gtest/parser-test.cpp
+    gtest/flatrock-parser.cpp
     )
   add_executable (gtestasm ${BFAS_GTEST_SOURCES})
   include_directories(

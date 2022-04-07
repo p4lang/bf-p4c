@@ -695,6 +695,14 @@ class Target::Flatrock : public Target {
         NUM_PIPES = 8,  // TODO what is the correct number here?
         TABLES_REQUIRE_ROW = 0,
         TABLES_REQUIRE_WAYS = false,
+        PARSER_SEQ_POS_MAX_OFFSET = 63,  // Max value for seq_pos
+        PARSER_SEQ_ID_MAX = 254,  // Max value of header sequence ID; 255 reserved for escape value
+        PARSER_LEN_POS_MAX_OFFSET = 63,  // Max value for seq_len
+        PARSER_OFF_POS_MAX_OFFSET = 63,  // Max value for seq_off
+        PARSER_HDR_ID_MAX = 254,  // Max value of hdr_id; 255 is reserved for invalid header
+        PARSER_BASE_LEN_MAX = 255,
+        PARSER_NUM_COMP_BITS_MAX = 15,
+        PARSER_SCALE_MAX = 3,
     };
     static int encodeConst(int src) {
         return src;
