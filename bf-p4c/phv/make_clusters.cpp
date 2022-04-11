@@ -872,9 +872,14 @@ void Clustering::CollectPlaceTogetherConstraints::visit_digest_fieldlist(
 
     auto* fieldslice_list = new std::list<PHV::FieldSlice>();
     for (auto f = fl->sources.rbegin(); f != fl->sources.rend() - skip; f++) {
-        const PHV::Field* field = phv_i.field((*f)->field);
+        le_bitrange fs_range;
+        const PHV::Field* field = phv_i.field((*f)->field, &fs_range);
         for (const auto& slice : self.fields_to_slices_i.at(field)) {
-            fieldslice_list->push_back(slice);
+            if (fs_range.contains(slice.range())) {
+                fieldslice_list->push_back(slice);
+            } else {
+                BUG_CHECK(!fs_range.overlaps(slice.range()), "not fine-sliced field: %1%", field);
+            }
         }
     }
     place_together_i[reason].push_back(fieldslice_list);

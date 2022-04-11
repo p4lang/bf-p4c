@@ -11,10 +11,8 @@ logger.addHandler(logging.StreamHandler())
 class TestPacket(Packet):
     name = "TestPacket "
     fields_desc = [
-        BitField("field1", 255, 8),
-        BitField("field2", 127, 16),
-        BitField("field4", 63, 32),
-        BitField("fixed", 0, 32)
+        BitField("field1", 0, 8),
+        BitField("field2", 0, 8)
     ]
 
 ETHER_TYPE_TEST = 0x309
@@ -27,8 +25,8 @@ class Test_MirrorConstants(TestRuntime):
         self.registerIngressMirrorSession(1, ingress_port, len(Ether()) + 2 * len(TestPacket()) + 1)
 
         in_pkt = Ether()/TestPacket()
-        out_pkt = Ether()/TestPacket(field1 = 9, field2 = 147, field4 = 103, fixed = 144)
-        mirrored_pkt = Ether()/TestPacket(field1 = 1, field2 = 2, field4 = 3, fixed = 91)
+        out_pkt = Ether()/TestPacket(field1 = 10, field2 = 20)
+        mirrored_pkt = Ether()/TestPacket(field1 = 1, field2 = 5)
 
         self.sendPacket(ingress_port, in_pkt)
         self.verifyPacket(ingress_port, out_pkt)

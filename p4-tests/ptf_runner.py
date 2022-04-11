@@ -172,20 +172,26 @@ def update_config(name, grpc_addr, p4info_path, bin_path, cxt_json_path):
         return False
     return True
 
+def append_list_to_environment(varname, items_list):
+    if varname in os.environ:
+        os.environ[varname] += ":"
+    else:
+        os.environ[varname] = ""
+    os.environ[varname] += ':'.join(map(str, items_list))
+
 def run_pi_ptf_tests(PTF, grpc_addr, ptfdir, p4info_path, port_map, stftest,
                   platform, verbose_model_logging, extra_args=[]):
     if verbose_model_logging:
         enable_verbose_model_logging()
 
-    ifaces = []
     # find base_test.py
-    pypath = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'p4testutils')
-    if 'PYTHONPATH' in os.environ:
-        os.environ['PYTHONPATH'] += ":" + pypath
-    else:
-        os.environ['PYTHONPATH'] = pypath
+    pypaths = []
+    pypaths.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'p4testutils'))
+    pypaths.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tools'))
+    append_list_to_environment('PYTHONPATH', pypaths)
     info('PYTHONPATH={}'.format(os.environ['PYTHONPATH']))
 
+    ifaces = []
     for iface_idx, iface_name in list(port_map.items()):
         ifaces.extend(['-i', '{}@{}'.format(iface_idx, iface_name)])
     cmd = ['python3', '-u', PTF] # Unbuffered to make sure that whole error output is captured
@@ -216,26 +222,26 @@ def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform
     if verbose_model_logging:
         enable_verbose_model_logging()
 
-    ifaces = []
-    # find p4ptfutils
-    ptfutils = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'p4testutils')
-    if 'PYTHONPATH' in os.environ:
-        os.environ['PYTHONPATH'] += ":" + ptfutils
-    else:
-        os.environ['PYTHONPATH'] = ptfutils
-    pythondir = 'python{}.{}'.format(sys.version_info.major, sys.version_info.minor)
+    pypaths = []
+    # find test utilities
+    pypaths.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'p4testutils'))
+    pypaths.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tools'))
     # find pd generated python files
+    pythondir = 'python{}.{}'.format(sys.version_info.major, sys.version_info.minor)
     site_pkg = os.path.join('lib', pythondir, 'site-packages')
     # for switchapi
-    os.environ['PYTHONPATH'] += ":" + os.path.join(testdir, site_pkg)
+    pypaths.append(os.path.join(testdir, site_pkg))
     # for pdfixed
-    os.environ['PYTHONPATH'] += ":" + os.path.join(testdir, site_pkg, device+'pd')
-    os.environ['PYTHONPATH'] += ":" + os.path.join(testdir, site_pkg, device)
+    pypaths.append(os.path.join(testdir, site_pkg, device+'pd'))
+    pypaths.append(os.path.join(testdir, site_pkg, device))
     # res_pd_rpc -- bf-drivers still uses tofino to install res_pd_rpc: 'tofino' should be device
-    os.environ['PYTHONPATH'] += ":" + os.path.join(installdir, site_pkg, 'tofino')
-    os.environ['PYTHONPATH'] += ":" + os.path.join(installdir, site_pkg, 'tofino', 'bfrt_grpc')
+    pypaths.append(os.path.join(installdir, site_pkg, 'tofino'))
+    pypaths.append(os.path.join(installdir, site_pkg, 'tofino', 'bfrt_grpc'))
+
+    append_list_to_environment('PYTHONPATH', pypaths)
     info('PYTHONPATH={}'.format(os.environ['PYTHONPATH']))
 
+    ifaces = []
     if port_map_file is None:
         for iface_idx, iface_name in list(port_map.items()):
             ifaces.extend(['-i', '{}@{}'.format(iface_idx, iface_name)])

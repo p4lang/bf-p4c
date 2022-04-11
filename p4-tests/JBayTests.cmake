@@ -44,6 +44,7 @@ set (P16_JNA_EXCLUDE_PATTERNS
   "p4c-2490\\.p4"
   "p4c-4127\\.p4"
   "p4c-3288\\.p4"
+  "p4c_2601\\.p4"
   "mirror_constants\\.p4"
 )
 set (P16_JNA_FOR_JBAY "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4"
@@ -164,6 +165,12 @@ p4c_add_ptf_test_with_ptfdir ("tofino2" "mirror_constants"
     "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 2000"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/mirror_constants.ptf")
 bfn_needs_scapy("tofino2" "mirror_constants")
+
+p4c_add_ptf_test_with_ptfdir (
+    "tofino2" "p4c_2601" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/p4c_2601.p4"
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 2400 --p4runtime-force-std-externs"
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/p4c_2601.ptf")
+bfn_needs_scapy("tofino2" "p4c_2601")
 
 # Arista profiles need a longer timeout
 p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base\;JENKINS_PART1" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/obfuscated-msee_tofino2.p4" "-to 3600 -Xp4c=--disable-power-check")
