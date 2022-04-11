@@ -2,14 +2,16 @@
 
 """git commit decorator
 
-If the name of the current branch contains a JIRA ticket number (e.g.,
-p4c-1234), this script augments the body of the commit message with a stanza
-that assigns JIRA ticket to the commiter.
-
-  p4c-1234 #assign [AUTHOR NAME]
-
-It also adds the JIRA ticket number to the beginning of the commit summary if
+Adds the JIRA ticket number to the beginning of the commit summary if
 it's not there already.
+
+P4C-4432: Disabled the addition of a Jira smart commit command to assign the
+ticket to the commiter. No longer added due to issues with delays between
+pushing a commit and having the commit processed by Jira. The command was of
+the form:
+
+  p4c-1234 #assign [AUTHOR NAME]  ## No longer added (P4C-4432)
+
 """
 
 import os
@@ -148,16 +150,30 @@ You can retrieve your commit message from %s"""
                 (self.project, self.ticket_number, self.summary)]
         result.extend(self.body)
 
-        # This is the stanza for assigning the JIRA ticket.
-        stanza = "%s-%s #assign %s" % \
-              (self.project, self.ticket_number, self.author)
+        # P4C-4432: Disable the assign stanza to prevent unintended ownership
+        # changes.
+        #
+        # Unintended ownership changes often occur because Intel's JIRA
+        # instance can (and often does) take multiple hours to process the
+        # commit message.
+        #
+        # Here's a brief summary of the problem:
+        #   1. Developer submits a fix for a customer bug.
+        #   2. Developer marks the bug as implemented and reassigns the ticket
+        #      to the customer engineer for verification.
+        #   3. Several hours later, the Jira instance processes the message
+        #      and reassigns back to the developer.
 
-        # See if we already have the JIRA stanza.
-        have_stanza = False
-        for line in self.body:
-            have_stanza |= stanza in line
-        if not have_stanza:
-            result.append(stanza)
+        # # This is the stanza for assigning the JIRA ticket.
+        # stanza = "%s-%s #assign %s" % \
+        #       (self.project, self.ticket_number, self.author)
+
+        # # See if we already have the JIRA stanza.
+        # have_stanza = False
+        # for line in self.body:
+        #     have_stanza |= stanza in line
+        # if not have_stanza:
+        #     result.append(stanza)
 
         return "\n".join(result)
 
