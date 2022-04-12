@@ -32,7 +32,7 @@ inline std::ostream &operator<<(std::ostream &out, HashCol &col) {
 }
 
 struct DynamicIXbar {
-    int                                         bit;
+    int                                         bit = -1;
     std::vector<std::pair<Phv::Ref, match_t>>   match_phv;
     match_t                                     match;
 
