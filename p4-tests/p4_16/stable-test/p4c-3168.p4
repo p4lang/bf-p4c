@@ -48,10 +48,10 @@ header udp_t {
     bit<16> checksum;
 }
 
-@flexible
 header resubmit_h {
+    bit<8> _pad1;
     PortId_t port_id; // 9 bits - uses 16 bit container
-    bit<48> _pad2;
+    bit<7> _pad2; // byte alignment
 }
 
 /* Local metadata */
