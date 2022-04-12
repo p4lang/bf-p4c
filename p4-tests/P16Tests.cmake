@@ -187,6 +187,9 @@ p4c_add_xfail_reason("p4"
   extensions/p4_tests/p4_16/compile_only/p4c-2350.p4
   extensions/p4_tests/p4_16/compile_only/p4c-2035-name.p4
   extensions/p4_tests/p4_16/compile_only/p4c-2035-name-neg.p4
+  extensions/p4_tests/p4_16/compile_only/p4c-2450-a.p4
+  extensions/p4_tests/p4_16/compile_only/p4c-2450-b.p4
+  extensions/p4_tests/p4_16/compile_only/p4c-2450-c.p4
   extensions/p4_tests/p4_16/compile_only/atcam_match4.p4
   extensions/p4_tests/p4_16/stf/parser_multi_write_2.p4
   extensions/p4_tests/p4_16/stf/parser_extract_upcast.p4

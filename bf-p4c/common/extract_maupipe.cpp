@@ -1531,6 +1531,22 @@ class GetBackendTables : public MauInspector {
         }
     }
 
+    // precondition: type of origExpr is signed or unsigned fixed-width interger
+    // (i.e. bit<N> or int<N>)
+    IR::Mask *make_mask(const IR::Expression *origExpr, const IR::Expression *left,
+                        const IR::Constant *right) {
+        auto *type = origExpr->type->to<IR::Type_Bits>();
+        BUG_CHECK(type, "Could not extract type of operands of %1%", origExpr);
+
+        if (type->isSigned) {
+            // bitcast to unsigned - & has the same semantics anyway
+            type = IR::Type_Bits::get(type->srcInfo, type->size, false);
+            left = new IR::BFN::ReinterpretCast(left->srcInfo, type, left);
+            right = new IR::Constant(right->srcInfo, type, right->value, right->base, true);
+        }
+        return new IR::Mask(origExpr->srcInfo, type, left, right);
+    }
+
     void setup_tt_match(IR::MAU::Table *tt, const IR::P4Table *table) {
         auto annot = table->getAnnotations();
         // Set compiler generated flag if hidden annotation present
@@ -1554,10 +1570,11 @@ class GetBackendTables : public MauInspector {
             IR::ID match_id(key_elem->matchType->srcInfo, key_elem->matchType->path->name);
             if (auto *b_and = key_expr->to<IR::BAnd>()) {
                 IR::Mask *mask = nullptr;
+
                 if (b_and->left->is<IR::Constant>())
-                    mask = new IR::Mask(b_and->srcInfo, b_and->type, b_and->right, b_and->left);
+                    mask = make_mask(b_and, b_and->right, b_and->left->to<IR::Constant>());
                 else if (b_and->right->is<IR::Constant>())
-                    mask = new IR::Mask(b_and->srcInfo, b_and->type, b_and->left, b_and->right);
+                    mask = make_mask(b_and, b_and->left, b_and->right->to<IR::Constant>());
                 else
                     ::error("%s: mask %s must have a constant operand to be used as a table key",
                              b_and->srcInfo, b_and);

@@ -138,7 +138,9 @@ safe_vector<const IR::Expression *> convertMaskToSlices(const IR::Mask *mask) {
     unsigned zero_pos = 0;
     unsigned one_pos = Util::scan1(value, zero_pos);
     while (one_pos < static_cast<size_t>(expr->type->width_bits())) {
-        zero_pos = Util::scan0(value, one_pos);
+        // clamp at bitwidth to avoid overflow for negative numbers which might
+        // not have any more zeroes in higher bits
+        zero_pos = std::min(unsigned(expr->type->width_bits()), Util::scan0(value, one_pos));
         auto slice = MakeSlice(mask->left, one_pos, zero_pos - 1);
         slice_vector.push_back(slice);
         one_pos = Util::scan1(value, zero_pos);
