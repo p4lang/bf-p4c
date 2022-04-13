@@ -1477,6 +1477,16 @@ bool CoreAllocation::satisfies_constraints(
     PHV::Container c = slice.container();
     auto container_status = alloc.getStatus(c);
 
+    // Check container limitation.
+    if (slice.field()->limited_container_ids()) {
+        const auto& ok_ids = slice.field()->limited_container_ids();
+        if (!ok_ids->getbit(Device::phvSpec().containerToId(slice.container()))) {
+            LOG_DEBUG5(TAB1 "Constraint violation: Container " << c << " is not allowed for  "
+                                                               << f);
+            return false;
+        };
+    }
+
     // Check gress.
     auto containerGress = alloc.gress(c);
     if (containerGress && *containerGress != f->gress) {

@@ -346,6 +346,10 @@ class Field : public LiftLess<Field> {
      **/
     bool            is_marshaled_i = false;
 
+    /// If boost::none, then the field does not have container id limitation. Otherwise, if not
+    /// boost::none, this field can only allocated to container that their ids are true in bitvec.
+    boost::optional<bitvec> limited_container_ids_i = boost::none;
+
     // Maximum field size in the same SuperCluster with no_split constraint.
     // Used by bridged metadata packing to insert padding after the 'no_split'
     // bridged field, if the bridged field is smaller than the related
@@ -489,6 +493,13 @@ class Field : public LiftLess<Field> {
     void set_intrinsic(bool b)                             { intrinsic_i = b; }
     bool is_invalidate_from_arch() const                   { return invalidate_from_arch_i; }
     void set_invalidate_from_arch(bool b)                  { invalidate_from_arch_i = b; }
+
+    void set_limited_container_ids(const boost::optional<bitvec>& ids) {
+        limited_container_ids_i = ids;
+    }
+    const boost::optional<bitvec>& limited_container_ids() const {
+        return limited_container_ids_i;
+    }
 
     // @returns the set of MAU operations on this field.
     const safe_vector<FieldOperation>& operations() const   { return  operations_i; }
