@@ -214,13 +214,15 @@ int parse_match(YYSTYPE *val, const char *s, int bits_per_digit) {
     val->match.word0 = val->match.word1 = 0;
     if (*s == '*' && bits_per_digit == 0) return MATCH;
     unsigned digit = 0, digit_mask = (1U << bits_per_digit) - 1;
+    decltype(val->match.word0) overflow_mask = digit_mask;
+    overflow_mask <<= sizeof(val->match.word0) * 8 - bits_per_digit;
     s--;
     while (*++s) {
         if (*s == '_') continue;
+        if ((val->match.word0 | val->match.word1) & overflow_mask)
+            error(lineno, "integer overflow in match constant");
         val->match.word0 <<= bits_per_digit;
         val->match.word1 <<= bits_per_digit;
-        if ((val->match.word0 | val->match.word1) > INT64_MAX)
-            error(lineno, "integer overflow in match constant");
         switch (*s) {
         case '0': case '1': case '2': case '3': case '4':
         case '5': case '6': case '7': case '8': case '9':
