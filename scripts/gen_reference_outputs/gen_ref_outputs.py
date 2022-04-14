@@ -51,7 +51,7 @@ def get_test_list(tests_csv, out_dir, ts):
 
 def prep_test_line(mTest, p4c):
     # Check target and arch - generate test_line for Glass only for tofino, p4-14, v1model
-    if p4c.name is 'Glass':
+    if p4c.name == 'Glass':
         if 'tofino2' in mTest.target or 'tofino3' in mTest.target or 'p4-16' in mTest.language or 'tna' in mTest.arch:
             return p4c
     # Check skip_opt - generate test_line only if not skipped
@@ -67,7 +67,7 @@ def prep_test_line(mTest, p4c):
     if len(mTest.p4_opts) > 0:
         test_line += '"' + mTest.p4_opts + '", '
     # Add P4C specific compiler options
-    if p4c.name is not 'Glass':
+    if p4c.name != 'Glass':
         test_line += '"--target ' + mTest.target + '", '
         test_line += '"--std ' + mTest.language + '", '
         test_line += '"--arch ' + mTest.arch + '", '
@@ -130,7 +130,7 @@ def process_metrics(tests, metrics_db, metrics_outdir, ts, update, failed):
         test_result = metrics_result
         if test in failed:
             test_result = 'FAIL'
-        if test_result is 'FAIL':
+        if test_result == 'FAIL':
             final_result -= 1
         print(test, test_result)
     return final_result

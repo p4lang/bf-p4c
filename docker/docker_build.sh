@@ -56,9 +56,9 @@ export P4C_DEPS="autoconf \
                  curl \
                  distcc \
                  flex \
-                 g++-6 \
+                 g++-9 \
                  graphviz \
-                 libboost1.67-dev \
+                 libboost1.71-all-dev \
                  libfl-dev \
                  libatomic-ops-dev
                  libgmp-dev \
@@ -74,7 +74,7 @@ export P4C_RUNTIME_DEPS="cpp \
                          libgmpxx4ldbl \
                          libnl-genl-3-dev \
                          libnl-route-3-dev \
-                         libssl1.0.0 \
+                         libssl1.1 \
                          pkg-config \
                          psmisc \
                          sudo \
@@ -107,7 +107,7 @@ export PYTHON3_DEPS="Cython \
 export DEV_PKGS="vim \
                  gdb \
                  telnet \
-                 ninja \
+                 ninja-build \
                  tmux \
                  apache2"
 
@@ -174,17 +174,10 @@ if [[ "${BUILD_FOR}" != 'jenkins-final' ]] ; then
   # Clean up default instance of libboost1.58 from base Ubuntu image.
   apt-get --purge remove -y 'libboost*' || true
 
-  # Configure apt repositories and update apt.
-  add-apt-repository -y ppa:ubuntu-toolchain-r/test
-  add-apt-repository -y ppa:mhier/libboost-latest
   apt-get update
 
   # Install packages.
   apt-get install -y ${P4C_DEPS} ${P4C_RUNTIME_DEPS}
-  update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-5 10
-  update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-6 20
-  update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-5 10
-  update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 20
 
   # Install more packages.
   case "${BUILD_FOR}" in
@@ -212,30 +205,31 @@ if [[ "${BUILD_FOR}" != 'jenkins-final' ]] ; then
   # Download, configure, build, and install Boost if needed.
   WORKDIR /tmp
   if [[ "${BUILD_FOR}" == "release" ]] ; then
-    BOOST='boost_1_67_0'
+    BOOST='boost_1_71_0'
     BOOST_TARBALL="${BOOST}.tar.bz2"
-    wget http://downloads.sourceforge.net/project/boost/boost/1.67.0/"${BOOST_TARBALL}"
+    wget https://boostorg.jfrog.io/artifactory/main/release/1.71.0/source/"$BOOST_TARBALL"
     tar xjf "${BOOST_TARBALL}"
 
     cd "${BOOST}"
     ./bootstrap.sh --prefix=/usr/local
-    ./b2 -$MAKEFLAGS --build-type=minimal variant=release
-    ./b2 install -$MAKEFLAGS --build-type=minimal variant=release
+    ./b2 -$MAKEFLAGS --build-type=minimal variant=release runtime-link=static link=static
+    ./b2 install -$MAKEFLAGS --build-type=minimal variant=release runtime-link=static link=static
 
     cd /tmp
     rm -rf "${BOOST}" "${BOOST_TARBALL}"
   fi
 
-  # Dependencies for testing.
-  apt-get install -y net-tools
-
   # Dependencies for benchmarks
   apt-get install -y time
 
-  # Upgrade to pip==20.3.4 - newer versions don't support python3.5
-  pip3 install --upgrade pip==20.3.4
+  # Dependencies for testing.
+  apt-get install -y net-tools
+
   # Install python3 packages
   pip3 install ${PYTHON3_DEPS}
+
+  # workaround for two mismatched python3 installations in p4factory
+  python3.8 -m pip install --force-reinstall pyinstaller jsonschema packaging jsl
 
   # Copy scripts into ${BFN}.
   {
@@ -300,7 +294,7 @@ if [[ "${BUILD_FOR}" == "jenkins-final" || "${BUILD_FOR}" == "tofino" ]] ; then
   fi
 elif [[ "${BUILD_FOR}" == "release" ]] ; then
   ccache --zero-stats
-  ./scripts/package_p4c_for_tofino.sh --build-dir build
+  ./scripts/package_p4c_for_tofino.sh --build-dir build --enable-cb
 elif [[ "${BUILD_FOR}" == "glass" ]] ; then
   ccache --zero-stats
   ./bootstrap_bfn_compilers.sh \

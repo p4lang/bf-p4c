@@ -618,7 +618,7 @@ def main():
         with open(switchd_log_path) as f:
             error("switchd log:\n----------\n{}\n----------\n".format(f.read()))
 
-    def wait_for_switchd(model_p, switchd_p, status_port, timeout_s=30):
+    def wait_for_switchd(model_p, switchd_p, status_port, timeout_s=60):
         @timeout(timeout_s)
         def wait():
             while True:

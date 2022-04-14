@@ -2,7 +2,7 @@
 ARG DOCKER_PROJECT=amr-registry.caas.intel.com/bxd-sw
 
 # p4factory docker image to use (p4factory:<tag> or p4factory@sha256:<hash>)
-ARG P4FACTORY_IMAGE=p4factory@sha256:7771453615bfd043df7f247d78db99994044705c066a6a88be12972de43f66b3
+ARG P4FACTORY_IMAGE=p4factory@sha256:47bfaad2cae8d459fef3686a77b9bfb16bd4dbb2febbc916820a51a45174392d
 
 FROM ${DOCKER_PROJECT}/${P4FACTORY_IMAGE}
 
@@ -47,14 +47,9 @@ ARG TOFINO_P414_TEST_ARCH_TNA=false
 RUN ln -rs /usr/local/bin/tofinoB0_test_harness /usr/local/bin/tofino_test_harness && \
     ln -rs /usr/local/bin/jbayB0_test_harness /usr/local/bin/jbay_test_harness
 RUN rm -rf /root/.ssh/id_* && \
-    git config --global --remove-section url.ssh://git@github.com/ && \
     git config --global --add https.proxy http://proxy-dmz.intel.com:912
 
 COPY . /bfn/bf-p4c-compilers/
-
-# Temporary workaround for older p4factory. With next p4factory update, this file should no longer
-# be there.
-RUN rm /etc/apt/apt.conf.d/10-intel-apt.conf
 
 RUN chmod a+x /bfn/bf-p4c-compilers/docker/docker_build.sh
 RUN /bfn/bf-p4c-compilers/docker/docker_build.sh

@@ -42,7 +42,7 @@ class Test_IPv4_udp(P4RuntimeTest):
                                                   with_udp_chksum = False)
 
             exp_pkt = copy.deepcopy(udp_pkt)
-            exp_pkt[IP].src = '01.01.01.02'
+            exp_pkt[IP].src = '1.1.1.2'
             print("Sending UDP packet with ipv4 option : %d" % (ipv4_opt))
             testutils.send_packet(self, ingress_port, udp_pkt)
             testutils.verify_packets(self, exp_pkt, [ingress_port])
