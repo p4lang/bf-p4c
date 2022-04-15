@@ -52,7 +52,7 @@ generate:
       regs.mau_addrmap.cpp: [ defn, -Iregs.mau_addrmap.h ]
       rewrite:
         ppu_minput_rspec:
-          minput_byte_pwr_erf: [ scan_chain, minput_byte_pwr, [8, 7], rf.minput_phe_pwr_scnsl ]
+          minput_phe_pwr_erf: [ scan_chain, minput_byte_pwr, [8, 7], rf.minput_phe_pwr_scnsl ]
           minput_word_pwr_erf: [ scan_chain, minput_word_pwr, [2, 3], rf.minput_word_pwr_scnsl ]
         rf:
           minput_phe_pwr_scnsl: [ delete ]

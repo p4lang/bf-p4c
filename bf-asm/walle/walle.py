@@ -150,6 +150,7 @@ def parse_template_args(args, params):
         'namespace': (False, str_arg),
         'reverse_write': (False, bool_arg),
         'rewrite': ({}, no_arg),
+        'rewrite_used': ({}, no_arg),
         'unpack_json': (False, bool_arg),
         'widereg': (False, bool_arg),
         'write_dma': (set(), add_set_arg)

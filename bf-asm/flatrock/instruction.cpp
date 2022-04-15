@@ -421,53 +421,154 @@ auto operand::Named::lookup(Base *&ref) -> Base * {
     return ref;
 }
 
-struct VLIWInstruction : Instruction {
-    // Mostly just a shim to ensure these instructions are only used on Flatrock
-    explicit VLIWInstruction(int l) : Instruction(l) {}
+struct InstructionShim : Instruction {
+    // Just a shim to ensure these instructions are only used on Flatrock
+    explicit InstructionShim(int l) : Instruction(l) {}
     FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
         void write_regs, (mau_regs &, Table *, Table::Actions::Action *), override {
             BUG("Flatrock instruction on %s?", Target::name()); })
 };
 
+struct VLIWInstruction : InstructionShim {
+    explicit VLIWInstruction(int l) : InstructionShim(l) {}
+    virtual uint32_t encode() = 0;
+    void write_regs(Target::Flatrock::mau_regs &, Table *, Table::Actions::Action *) override;
+};
+
 struct PhvWrite : VLIWInstruction {
     struct Decode : Instruction::Decode {
+        enum opcodes { NOOP, SET, ANDC, OR, SETBM=4, LDC=4, DPF=8 };
         std::string name;
         unsigned opcode;
         Decode(const char *n, target_t targ, unsigned op)
         : Instruction::Decode(n, targ), name(n), opcode(op) {}
+        virtual PhvWrite *alloc(Table *tbl, const Table::Actions::Action *act,
+                                const VECTOR(value_t) &op) const;
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                             const VECTOR(value_t) &op) const override;
     } const *opc;
     Phv::Ref    alu_slot;
     Phv::Ref    dest;
     operand     src;
+    static constexpr int MAX_MERGE_DEST = 0;  // no merge dest any more?
     PhvWrite(const Decode *op, Table *tbl, const Table::Actions::Action *act,
              const value_t &d, const value_t &s) : VLIWInstruction(d.lineno),
          opc(op), dest(tbl->gress, tbl->stage->stageno + 1, d), src(tbl, act, s) {}
-    std::string name() { return "set"; }
+    std::string name() { return opc->name; }
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *tbl, Table::Actions::Action *) { src->pass2(tbl, slot); }
     bool equiv(Instruction *a_);
+    uint32_t encode();
     bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) { return src->phvRead(fn); }
     void dbprint(std::ostream &out) const {
         out << "INSTR: set " << dest << ", " << src; }
-    void write_regs(Target::Flatrock::mau_regs &, Table *, Table::Actions::Action *) override;
 };
 
-static PhvWrite::Decode opNoop  ("noop",  FLATROCK, 0),                                 // NOLINT
-                        opSet   ("set",   FLATROCK, 1),                                 // NOLINT
-                        opAndc  ("andc",  FLATROCK, 2),                                 // NOLINT
-                        opOr    ("or",    FLATROCK, 3),                                 // NOLINT
-                        opSetz  ("setz",  FLATROCK, 4),                                 // NOLINT
-                        opSetbm ("setbm", FLATROCK, 5);                                 // NOLINT
+struct Noop : PhvWrite::Decode {
+    Noop(const char *n, target_t targ) : Decode(n, targ, 0) {}
+    Instruction *decode(Table *tbl, const Table::Actions::Action *act,
+                        const VECTOR(value_t) &op) const override;
+};
+
+struct BitmaskSet : PhvWrite {
+    struct Decode : PhvWrite::Decode {
+        Decode(const char *n, target_t targ) : PhvWrite::Decode(n, targ, SETBM) {}
+        Instruction *decode(Table *tbl, const Table::Actions::Action *act,
+                            const VECTOR(value_t) &op) const override;
+    };
+    uint32_t    mask;
+    BitmaskSet(const Decode *op, Table *tbl, const Table::Actions::Action *act, const value_t &d,
+               const value_t &s, int m) : PhvWrite(op, tbl, act, d, s), mask(m) {}
+    BitmaskSet(PhvWrite &wr, int m);
+    uint32_t encode();
+};
+
+struct DepositField : PhvWrite {
+    struct Decode : PhvWrite::Decode {
+        Decode(const char *n, target_t targ) : PhvWrite::Decode(n, targ, DPF) {}
+        PhvWrite *alloc(Table *tbl, const Table::Actions::Action *act,
+                        const VECTOR(value_t) &op) const override;
+    };
+    DepositField(const Decode *op, Table *tbl, const Table::Actions::Action *act,
+                 const value_t &d, const value_t &s) : PhvWrite(op, tbl, act, d, s) {}
+    explicit DepositField(PhvWrite &wr);
+    uint32_t encode();
+};
+
+struct LoadConst : PhvWrite {
+    struct Decode : PhvWrite::Decode {
+        Decode(const char *n, target_t targ) : PhvWrite::Decode(n, targ, LDC) {}
+        PhvWrite *alloc(Table *tbl, const Table::Actions::Action *act,
+                        const VECTOR(value_t) &op) const override;
+    };
+    LoadConst(const Decode *op, Table *tbl, const Table::Actions::Action *act,
+              const value_t &d, const value_t &s) : PhvWrite(op, tbl, act, d, s) {}
+    explicit LoadConst(PhvWrite &wr);
+    Instruction *pass1(Table *tbl, Table::Actions::Action *);
+    uint32_t encode();
+};
+
+static Noop                     opNoop("noop",          FLATROCK);                      // NOLINT
+static PhvWrite::Decode         opSet ("set",           FLATROCK, 1),                   // NOLINT
+                                opAndc("andc",          FLATROCK, 2),                   // NOLINT
+                                opOr  ("or",            FLATROCK, 3);                   // NOLINT
+static BitmaskSet::Decode       opSetm("bitmasked-set", FLATROCK);                      // NOLINT
+static DepositField::Decode     opDpf ("deposit-field", FLATROCK);                      // NOLINT
+static LoadConst::Decode        opLdc ("load-const",    FLATROCK);                      // NOLINT
+
+BitmaskSet::BitmaskSet(PhvWrite &wr, int m) : PhvWrite(wr), mask(m) { opc = &opSetm; }
+DepositField::DepositField(PhvWrite &wr) : PhvWrite(wr) { opc = &opDpf; }
+LoadConst::LoadConst(PhvWrite &wr) : PhvWrite(wr) { opc = &opDpf; }
+
+PhvWrite *PhvWrite::Decode::alloc(Table *tbl, const Table::Actions::Action *act,
+                                  const VECTOR(value_t) &op) const {
+    return new PhvWrite(this, tbl, act, op[op.size-2], op[op.size-1]); }
+PhvWrite *DepositField::Decode::alloc(Table *tbl, const Table::Actions::Action *act,
+                                      const VECTOR(value_t) &op) const {
+    return new DepositField(this, tbl, act, op[op.size-2], op[op.size-1]); }
+PhvWrite *LoadConst::Decode::alloc(Table *tbl, const Table::Actions::Action *act,
+                                   const VECTOR(value_t) &op) const {
+    return new LoadConst(this, tbl, act, op[op.size-2], op[op.size-1]); }
 
 Instruction *PhvWrite::Decode::decode(Table *tbl, const Table::Actions::Action *act,
-                                 const VECTOR(value_t) &op) const {
+                                      const VECTOR(value_t) &op) const {
     if (op.size != 3 && op.size != 4) {
         error(op[0].lineno, "%s requires 2 or 3 operands", op[0].s);
         return 0; }
-    PhvWrite *rv = new PhvWrite(this, tbl, act, op[op.size-2], op[op.size-1]);
+    PhvWrite *rv = alloc(tbl, act, op);
     if (op.size == 3)
+        rv->alu_slot = rv->dest;
+    else
+        rv->alu_slot = Phv::Ref(tbl->gress, tbl->stage->stageno + 1, op[1]);
+    if (!rv->src.valid()) {
+        error(op[2].lineno, "invalid src");
+        delete rv;
+        return 0; }
+    return rv;
+}
+
+Instruction *Noop::decode(Table *tbl, const Table::Actions::Action *act,
+                                 const VECTOR(value_t) &op) const {
+    if (op.size != 2) {
+        error(op[0].lineno, "%s requires 1 operand", op[0].s);
+        return 0; }
+    value_t A0{tSTR, op[1].lineno};
+    A0.s = const_cast<char *>("A0");
+    PhvWrite *rv = new PhvWrite(this, tbl, act, op[1], A0);
+    rv->alu_slot = rv->dest;
+    return rv;
+}
+
+Instruction *BitmaskSet::Decode::decode(Table *tbl, const Table::Actions::Action *act,
+                                        const VECTOR(value_t) &op) const {
+    if (op.size != 4 && op.size != 5) {
+        error(op[0].lineno, "%s requires 3 or 4 operands", op[0].s);
+        return 0; }
+    if (op[op.size-1].type != tINT) {
+        error(op[op.size-1].lineno, "%s mask must be a constant", op[0].s);
+        return 0; }
+    auto *rv = new BitmaskSet(this, tbl, act, op[op.size-3], op[op.size-2], op[op.size-1].i);
+    if (op.size == 4)
         rv->alu_slot = rv->dest;
     else
         rv->alu_slot = Phv::Ref(tbl->gress, tbl->stage->stageno + 1, op[1]);
@@ -487,11 +588,40 @@ Instruction *PhvWrite::pass1(Table *tbl, Table::Actions::Action *act) {
         error(alu_slot.lineno, "%s not accessable in mau", alu_slot->reg.name);
         return this; }
     slot = alu_slot->reg.mau_id();
-    if (static_cast<unsigned>(dest->reg.mau_id() - slot) > 1) {
+    if (static_cast<unsigned>(dest->reg.mau_id() - slot) > MAX_MERGE_DEST) {
         error(lineno, "Can't write to %s using PhvWrite for %s",
               dest->reg.name, alu_slot->reg.name); }
+    int hi = Phv::reg(slot)->size - 1;
+    int maxconst = hi == 7 ? 256 : hi == 15 ? 16 : 8;
+    auto *k = src.to<operand::Const>();
+    // FIXME -- invalid 'set' instructions might be implementable by converting them
+    // to load-const, deposit-field, or bitmasked-set
+    if (opc->opcode == Decode::SET) {
+        // set instruction rewrites -- to bitmasked-set, deposit-field, or load-const if needed
+        if (dest->lo != 0 || dest->hi != hi) {
+            return (new DepositField(*this))->pass1(tbl, act);
+        } else if (hi == 7) {
+            // 8-bit set becomes bitmasked-set
+            return (new BitmaskSet(*this, 0xff))->pass1(tbl, act);
+        } else if (k && (k->value >= maxconst || k->value < -maxconst)) {
+            return (new LoadConst(*this))->pass1(tbl, act);
+        }
+    }
+    if (opc->opcode < 4 && (dest->lo != 0 || dest->hi != hi))
+        error(dest.lineno, "%s can't write to slice of destination", opc->name.c_str());
+    if (k && opc->opcode != Decode::LDC && (k->value >= maxconst || k->value < -maxconst))
+        error(k->lineno, "%" PRId64 " too large for operand of %s", k->value, opc->name.c_str());
     tbl->stage->action_set[tbl->gress][dest->reg.uid] = true;
     src->pass1(tbl, slot);
+    return this;
+}
+Instruction *LoadConst::pass1(Table *tbl, Table::Actions::Action *act) {
+    PhvWrite::pass1(tbl, act);
+    if (auto *k = src.to<operand::Const>()) {
+        if (k->value > 0x3ffff || k->value < 0)
+            error(src->lineno, "constant value %" PRId64 " out of range for load-const", k->value);
+    } else {
+        error(src->lineno, "load-const source is not a constant?"); }
     return this;
 }
 
@@ -503,47 +633,106 @@ bool PhvWrite::equiv(Instruction *a_) {
     }
 }
 
-void PhvWrite::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl,
-                          Table::Actions::Action *act) {
+uint32_t PhvWrite::encode() {
+    uint32_t rv = src->bits(slot);
+    int merge_dest = dest->reg.mau_id() - slot;
+    BUG_CHECK(merge_dest == 0, "merge in PHV write not supported");
+    int is_immed = src.to<operand::Const>() != nullptr;
+    switch (Phv::reg(slot)->size) {
+    case 8:
+        rv |= is_immed << 8;
+        rv |= opc->opcode << 15;
+        break;
+    case 16:
+        rv |= is_immed << 5;
+        rv |= opc->opcode << 15;
+        break;
+    case 32:
+        rv |= is_immed << 4;
+        rv |= opc->opcode << 17;
+        break;
+    default:
+        BUG("invalid register size");
+    }
+    return rv;
+}
+uint32_t BitmaskSet::encode() {
+    uint32_t rv = PhvWrite::encode();
+    BUG_CHECK(Phv::reg(slot)->size == 8, "bitmasked-set not 8 bits");
+    rv |= mask << 9;
+    return rv;
+}
+uint32_t DepositField::encode() {
+    uint32_t rv = PhvWrite::encode();
+    switch (Phv::reg(slot)->size) {
+    case 8:
+        rv |= ((8 - dest->lo) & 7) << 9;
+        rv |= dest->lo << 12;
+        rv |= dest->hi << 15;
+        break;
+    case 16:
+        rv |= ((16 - dest->lo) & 15) << 6;
+        rv |= dest->lo << 10;
+        rv |= dest->hi << 14;
+        break;
+    case 32:
+        rv |= ((32 - dest->lo) & 31) << 5;
+        rv |= dest->lo << 10;
+        rv |= dest->hi << 15;
+        break;
+    default:
+        BUG("invalid register size");
+    }
+    return rv;
+}
+uint32_t LoadConst::encode() {
+    uint32_t rv = src->bits(slot);
+    int merge_dest = dest->reg.mau_id() - slot;
+    BUG_CHECK(merge_dest == 0, "merge in PHV write not supported");
+    switch (Phv::reg(slot)->size) {
+    case 8:
+        rv |= opc->opcode << 15;
+        break;
+    case 16:
+        rv |= opc->opcode << 15;
+        break;
+    case 32:
+        rv |= opc->opcode << 17;
+        break;
+    default:
+        BUG("invalid register size");
+    }
+    return rv;
+}
+
+void VLIWInstruction::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl,
+                                 Table::Actions::Action *act) {
     if (act != tbl->stage->imem_addr_use[tbl->gress][act->addr]) {
         LOG3("skipping " << tbl->name() << '.' << act->name << " as its imem is used by " <<
              tbl->stage->imem_addr_use[tbl->gress][act->addr]->name);
         return; }
     LOG2(this);
-    auto &imem = regs.ppu_phvwr_rspec.imem;
+    auto &imem = regs.ppu_phvwr.imem;
     int iaddr = act->addr / Target::Flatrock::IMEM_COLORS;
     int color = act->addr % Target::Flatrock::IMEM_COLORS;
-    int merge_dest = dest->reg.mau_id() - slot;
-    uint32_t dest_mask = ((1U << dest->hi) << 1) - (1U << dest->lo);
-    uint32_t bits = 0;
+    uint32_t bits = encode();
     BUG_CHECK(slot >= 0);
     switch (Phv::reg(slot)->size) {
     case 8:
         imem.imem8[slot].phvwr_imem8[iaddr].color = color;
-        imem.imem8[slot].phvwr_imem8[iaddr].imm_addr = src->bits(slot);
-        imem.imem8[slot].phvwr_imem8[iaddr].mask = dest_mask;
-        imem.imem8[slot].phvwr_imem8[iaddr].merge_dest = merge_dest;
-        imem.imem8[slot].phvwr_imem8[iaddr].opcode = opc->opcode;
-        imem.imem8[slot].phvwr_imem8[iaddr].sel_imm = src.to<operand::Const>() ? 1 : 0;
-        bits = imem.imem8[slot].phvwr_imem8[iaddr];
+        imem.imem8[slot].phvwr_imem8[iaddr].instr = bits;
         break;
     case 16:
         imem.imem16[slot-160].phvwr_imem16[iaddr].color = color;
-        imem.imem16[slot-160].phvwr_imem16[iaddr].addr = src->bits(slot);
-        imem.imem16[slot-160].phvwr_imem16[iaddr].merge_dest = merge_dest;
-        imem.imem16[slot-160].phvwr_imem16[iaddr].opcode = opc->opcode;
-        bits = imem.imem16[slot-160].phvwr_imem16[iaddr];
+        imem.imem16[slot-160].phvwr_imem16[iaddr].instr = bits;
         break;
     case 32:
         imem.imem32[slot-200].phvwr_imem32[iaddr].color = color;
-        imem.imem32[slot-200].phvwr_imem32[iaddr].addr = src->bits(slot);
-        imem.imem32[slot-200].phvwr_imem32[iaddr].merge_dest = merge_dest;
-        imem.imem32[slot-200].phvwr_imem32[iaddr].opcode = opc->opcode;
-        bits = imem.imem32[slot-200].phvwr_imem32[iaddr];
+        imem.imem32[slot-200].phvwr_imem32[iaddr].instr = bits;
         break;
     default:
         BUG(); }
-    regs.ppu_phvwr_rspec.parity.phvwr_parity[iaddr].parity[color] ^= parity_2b(bits);
+    regs.ppu_phvwr.rf.phvwr_parity[iaddr].parity[color] ^= parity_2b(bits);
 }
 
 }  // end namespace Flatrock

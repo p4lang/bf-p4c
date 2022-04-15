@@ -111,11 +111,12 @@ def format_comment(outfile, indent, text):
     text = text.replace('[list]', '')
     text = text.replace('[/list]', '\n')
     text = text.replace('[*]', '\n    ')
-    text = text.replace('[code]', "'")
-    text = text.replace('[/code]', "'")
+    text = text.replace('[code]', "")
+    text = text.replace('[/code]', "")
     text = text.replace('[italic]', '')
     text = text.replace('[/italic]', '')
     lines = text.splitlines()
+    maxlen = 96
     for line in lines:
         line = line.rstrip()
         pfx = len(line) - len(line.lstrip())
@@ -124,10 +125,17 @@ def format_comment(outfile, indent, text):
             outfile.write("// ")
             outfile.write(' ' * pfx)
             line = line.lstrip()
-            pt = line.rfind(' ', 0, 90-pfx-len(indent))
-            if len(line) + len(indent) + pfx > 90 and pt > 0:
-                outfile.write(line[0:pt])
-                line = line[pt+1:]
+            pt = line.rfind(' ', 0, maxlen-pfx-len(indent))
+            if len(line) + len(indent) + pfx > maxlen:
+                if pt > 0:
+                    outfile.write(line[0:pt])
+                    line = line[pt+1:]
+                else:
+                    # line is longer than maxlen, but has no spaces.  So don't split it or
+                    # subsequent lines (this is probably a wide table with columns)
+                    maxlen = len(line) + len(indent) + pfx
+                    outfile.write(line)
+                    line = ''
             else:
                 outfile.write(line)
                 line = ''
@@ -277,9 +285,12 @@ class csr_composite_object (csr_object):
         """
         if self.name not in args.rewrite:
             return child
+        if self.name not in args.rewrite_used:
+            args.rewrite_used[self.name] = {}
         rewrite = args.rewrite[self.name]
         if child.name not in rewrite:
             return child
+        args.rewrite_used[self.name][child.name] = True
         rewrite = rewrite[child.name]
         if rewrite[0] == 'delete':
             return None
@@ -1585,6 +1596,18 @@ class address_map(csr_composite_object):
         except AttributeError:
             name = self.name
         self.gen_type(outfile, args, schema, '', name, '')
+        all_used = True
+        for obj in args.rewrite:
+            if obj not in args.rewrite_used:
+                sys.stderr.write("Rewrite object %s not found\n" % obj)
+                all_used = False
+            else:
+                for child in args.rewrite[obj]:
+                    if child not in args.rewrite_used[obj]:
+                        sys.stderr.write("Rewrite child %s.%s not found\n" % (obj, child))
+                        all_used = False
+        if not all_used:
+            raise CsrException("Unused rewrite clauses in templates")
 
     def print_as_text(self, indent):
         if self.templatization_behavior != "disabled":

@@ -135,7 +135,7 @@ template<class REG> static void set_bit(REG &reg, unsigned bit) {
 
 void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
     LOG1("### Input xbar " << table->name() << " write_regs " << table->loc());
-    auto &minput = regs.ppu_minput_rspec;
+    auto &minput = regs.ppu_minput;
     for (auto &group : groups) {
         switch (group.first.type) {
         case Group::EXACT: {
@@ -173,7 +173,7 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
         case Group::GATEWAY: {
             auto &gw_key_cfg = minput.rf.minput_gw_xb_vdg;
             for (auto &input : group.second) {
-                gw_key_cfg.vgd[input.lo/8U] = input.what->reg.ixbar_id();
+                gw_key_cfg[input.lo/8U].vgd = input.what->reg.ixbar_id();
                 set_bit(minput.minput_byte_pwr[3],
                         minput_byte_pwr_transpose[input.what->reg.uid]); }
             break; }
