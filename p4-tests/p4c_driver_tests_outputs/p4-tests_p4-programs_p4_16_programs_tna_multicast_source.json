@@ -5,14 +5,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 94,
+                    "line": 93,
                     "column": 33
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.ipv4_checksum",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 91,
+                "line": 90,
                 "column": 16
             },
             "symbol_type": "Declaration_Instance_Type_Extern"
@@ -21,14 +21,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 232,
+                    "line": 231,
                     "column": 8
                 }
             ],
             "symbol_name": "pipe",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 230,
+                "line": 229,
                 "column": 33
             },
             "symbol_type": "Declaration_Instance_Type_Specialized"
@@ -37,44 +37,44 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 129,
+                    "line": 128,
                     "column": 9,
-                    "end_line": 139
+                    "end_line": 138
                 },
                 {
                     "file": "tna_multicast.p4",
-                    "line": 135,
+                    "line": 134,
                     "column": 20,
-                    "end_line": 136
+                    "end_line": 135
                 },
                 {
                     "file": "tna_multicast.p4",
-                    "line": 151,
+                    "line": 150,
                     "column": 9,
-                    "end_line": 159
+                    "end_line": 158
                 },
                 {
                     "file": "tna_multicast.p4",
-                    "line": 155,
+                    "line": 154,
                     "column": 20,
-                    "end_line": 156
+                    "end_line": 155
                 },
                 {
                     "file": "tna_multicast.p4",
-                    "line": 199,
+                    "line": 198,
                     "column": 9,
-                    "end_line": 209
+                    "end_line": 208
                 },
                 {
                     "file": "tna_multicast.p4",
-                    "line": 205,
+                    "line": 204,
                     "column": 20,
-                    "end_line": 206
+                    "end_line": 205
                 }
             ],
             "symbol_name": "NoAction",
             "declaration": {
-                "file": "/home/ubuntu/bf-p4c-compilers2/build/p4c/p4include/core.p4",
+                "file": "/nfs/site/home/cgeoffri/Work/bf-p4c-compilers/build/p4c/p4include/core.p4",
                 "line": 70,
                 "column": 8
             },
@@ -84,19 +84,51 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 184,
+                    "line": 183,
                     "column": 13
                 },
                 {
                     "file": "tna_multicast.p4",
-                    "line": 187,
+                    "line": 186,
                     "column": 32
                 }
             ],
             "symbol_name": "SwitchIngress.flood",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 162,
+                "line": 161,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_multicast.p4",
+                    "line": 181,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.l2_switch",
+            "declaration": {
+                "file": "tna_multicast.p4",
+                "line": 165,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_multicast.p4",
+                    "line": 205,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.mcast_route",
+            "declaration": {
+                "file": "tna_multicast.p4",
+                "line": 190,
                 "column": 12
             },
             "symbol_type": "P4Action"
@@ -109,42 +141,10 @@
                     "column": 13
                 }
             ],
-            "symbol_name": "SwitchIngress.l2_switch",
-            "declaration": {
-                "file": "tna_multicast.p4",
-                "line": 166,
-                "column": 12
-            },
-            "symbol_type": "P4Action"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_multicast.p4",
-                    "line": 206,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress.mcast_route",
-            "declaration": {
-                "file": "tna_multicast.p4",
-                "line": 191,
-                "column": 12
-            },
-            "symbol_type": "P4Action"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_multicast.p4",
-                    "line": 183,
-                    "column": 13
-                }
-            ],
             "symbol_name": "SwitchIngress.route",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 170,
+                "line": 169,
                 "column": 12
             },
             "symbol_type": "P4Action"
@@ -153,14 +153,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 136,
+                    "line": 135,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress.set_ifid",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 122,
+                "line": 121,
                 "column": 12
             },
             "symbol_type": "P4Action"
@@ -169,14 +169,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 156,
+                    "line": 155,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress.set_src_ifid_md",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 142,
+                "line": 141,
                 "column": 12
             },
             "symbol_type": "P4Action"
@@ -185,14 +185,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 215,
+                    "line": 214,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.ing_dmac",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 175,
+                "line": 174,
                 "column": 11
             },
             "symbol_type": "P4Table"
@@ -201,14 +201,30 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 217,
+                    "line": 216,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress.ing_ipv4_mcast",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 198,
+                "line": 197,
+                "column": 11
+            },
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_multicast.p4",
+                    "line": 212,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ing_port",
+            "declaration": {
+                "file": "tna_multicast.p4",
+                "line": 127,
                 "column": 11
             },
             "symbol_type": "P4Table"
@@ -221,36 +237,20 @@
                     "column": 9
                 }
             ],
-            "symbol_name": "SwitchIngress.ing_port",
-            "declaration": {
-                "file": "tna_multicast.p4",
-                "line": 128,
-                "column": 11
-            },
-            "symbol_type": "P4Table"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_multicast.p4",
-                    "line": 214,
-                    "column": 9
-                }
-            ],
             "symbol_name": "SwitchIngress.ing_src_ifid",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 150,
+                "line": 149,
                 "column": 11
             },
             "symbol_type": "P4Table"
         },
         {
             "references": [],
-            "symbol_name": "tbl_tna_multicast221",
+            "symbol_name": "tbl_tna_multicast220",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 221,
+                "line": 220,
                 "column": 32
             },
             "symbol_type": "P4Table"
@@ -259,30 +259,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 178,
+                    "line": 177,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress.hdr.ethernet.dst_addr",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 115,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_multicast.p4",
-                    "line": 202,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress.hdr.ipv4.dst_addr",
-            "declaration": {
-                "file": "tna_multicast.p4",
-                "line": 115,
+                "line": 114,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -295,10 +279,10 @@
                     "column": 13
                 }
             ],
-            "symbol_name": "SwitchIngress.hdr.ipv4.src_addr",
+            "symbol_name": "SwitchIngress.hdr.ipv4.dst_addr",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 115,
+                "line": 114,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -307,51 +291,35 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 195,
+                    "line": 200,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.ipv4.src_addr",
+            "declaration": {
+                "file": "tna_multicast.p4",
+                "line": 114,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_multicast.p4",
+                    "line": 194,
                     "column": 9
                 },
                 {
                     "file": "tna_multicast.p4",
-                    "line": 195,
+                    "line": 194,
                     "column": 24
                 }
             ],
             "symbol_name": "SwitchIngress.hdr.ipv4.ttl",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 115,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_multicast.p4",
-                    "line": 131,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress.hdr.vlan_tag",
-            "declaration": {
-                "file": "tna_multicast.p4",
-                "line": 115,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_multicast.p4",
-                    "line": 132,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress.hdr.vlan_tag.vid",
-            "declaration": {
-                "file": "tna_multicast.p4",
-                "line": 115,
+                "line": 114,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -364,10 +332,42 @@
                     "column": 13
                 }
             ],
+            "symbol_name": "SwitchIngress.hdr.vlan_tag",
+            "declaration": {
+                "file": "tna_multicast.p4",
+                "line": 114,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_multicast.p4",
+                    "line": 131,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.vlan_tag.vid",
+            "declaration": {
+                "file": "tna_multicast.p4",
+                "line": 114,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_multicast.p4",
+                    "line": 129,
+                    "column": 13
+                }
+            ],
             "symbol_name": "SwitchIngress.ig_intr_md.ingress_port",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 117,
+                "line": 116,
                 "column": 41
             },
             "symbol_type": "Parameter_Type_Header"
@@ -376,24 +376,24 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 145,
+                    "line": 144,
                     "column": 9
                 },
                 {
                     "file": "tna_multicast.p4",
-                    "line": 163,
+                    "line": 162,
                     "column": 32
                 },
                 {
                     "file": "tna_multicast.p4",
-                    "line": 177,
+                    "line": 176,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress.ig_md.brid",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 116,
+                "line": 115,
                 "column": 26
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -402,19 +402,40 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 123,
+                    "line": 122,
                     "column": 9
                 },
                 {
                     "file": "tna_multicast.p4",
-                    "line": 152,
+                    "line": 151,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress.ig_md.ifid",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 116,
+                "line": 115,
+                "column": 26
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_multicast.p4",
+                    "line": 170,
+                    "column": 9
+                },
+                {
+                    "file": "tna_multicast.p4",
+                    "line": 215,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_md.l3",
+            "declaration": {
+                "file": "tna_multicast.p4",
+                "line": 115,
                 "column": 26
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -428,35 +449,14 @@
                 },
                 {
                     "file": "tna_multicast.p4",
-                    "line": 216,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress.ig_md.l3",
-            "declaration": {
-                "file": "tna_multicast.p4",
-                "line": 116,
-                "column": 26
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_multicast.p4",
-                    "line": 172,
-                    "column": 9
-                },
-                {
-                    "file": "tna_multicast.p4",
-                    "line": 200,
+                    "line": 199,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress.ig_md.vrf",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 116,
+                "line": 115,
                 "column": 26
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -465,14 +465,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 221,
+                    "line": 220,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.ig_tm_md.bypass_egress",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 120,
+                "line": 119,
                 "column": 51
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -481,14 +481,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 192,
+                    "line": 191,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.ig_tm_md.level1_exclusion_id",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 120,
+                "line": 119,
                 "column": 51
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -497,83 +497,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 146,
+                    "line": 145,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.ig_tm_md.level1_mcast_hash",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 120,
-                "column": 51
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_multicast.p4",
-                    "line": 144,
-                    "column": 9
-                }
-            ],
-            "symbol_name": "SwitchIngress.ig_tm_md.level2_exclusion_id",
-            "declaration": {
-                "file": "tna_multicast.p4",
-                "line": 120,
-                "column": 51
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_multicast.p4",
-                    "line": 147,
-                    "column": 9
-                }
-            ],
-            "symbol_name": "SwitchIngress.ig_tm_md.level2_mcast_hash",
-            "declaration": {
-                "file": "tna_multicast.p4",
-                "line": 120,
-                "column": 51
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_multicast.p4",
-                    "line": 163,
-                    "column": 9
-                },
-                {
-                    "file": "tna_multicast.p4",
-                    "line": 193,
-                    "column": 9
-                }
-            ],
-            "symbol_name": "SwitchIngress.ig_tm_md.mcast_grp_a",
-            "declaration": {
-                "file": "tna_multicast.p4",
-                "line": 120,
-                "column": 51
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_multicast.p4",
-                    "line": 194,
-                    "column": 9
-                }
-            ],
-            "symbol_name": "SwitchIngress.ig_tm_md.mcast_grp_b",
-            "declaration": {
-                "file": "tna_multicast.p4",
-                "line": 120,
+                "line": 119,
                 "column": 51
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -586,10 +517,10 @@
                     "column": 9
                 }
             ],
-            "symbol_name": "SwitchIngress.ig_tm_md.rid",
+            "symbol_name": "SwitchIngress.ig_tm_md.level2_exclusion_id",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 120,
+                "line": 119,
                 "column": 51
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -598,19 +529,88 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 125,
+                    "line": 146,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_tm_md.level2_mcast_hash",
+            "declaration": {
+                "file": "tna_multicast.p4",
+                "line": 119,
+                "column": 51
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_multicast.p4",
+                    "line": 162,
                     "column": 9
                 },
                 {
                     "file": "tna_multicast.p4",
-                    "line": 167,
+                    "line": 192,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_tm_md.mcast_grp_a",
+            "declaration": {
+                "file": "tna_multicast.p4",
+                "line": 119,
+                "column": 51
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_multicast.p4",
+                    "line": 193,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_tm_md.mcast_grp_b",
+            "declaration": {
+                "file": "tna_multicast.p4",
+                "line": 119,
+                "column": 51
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_multicast.p4",
+                    "line": 142,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_tm_md.rid",
+            "declaration": {
+                "file": "tna_multicast.p4",
+                "line": 119,
+                "column": 51
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_multicast.p4",
+                    "line": 124,
+                    "column": 9
+                },
+                {
+                    "file": "tna_multicast.p4",
+                    "line": 166,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.ig_tm_md.ucast_egress_port",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 120,
+                "line": 119,
                 "column": 51
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -619,14 +619,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 167,
+                    "line": 166,
                     "column": 38
                 }
             ],
             "symbol_name": "SwitchIngress.l2_switch.port",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 166,
+                "line": 165,
                 "column": 31
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -635,14 +635,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 193,
+                    "line": 192,
                     "column": 32
                 }
             ],
             "symbol_name": "SwitchIngress.mcast_route.mgid1",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 191,
+                "line": 190,
                 "column": 56
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -651,14 +651,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 194,
+                    "line": 193,
                     "column": 32
                 }
             ],
             "symbol_name": "SwitchIngress.mcast_route.mgid2",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 191,
+                "line": 190,
                 "column": 82
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -667,14 +667,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 192,
+                    "line": 191,
                     "column": 40
                 }
             ],
             "symbol_name": "SwitchIngress.mcast_route.xid",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 191,
+                "line": 190,
                 "column": 32
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -683,14 +683,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 172,
+                    "line": 171,
                     "column": 21
                 }
             ],
             "symbol_name": "SwitchIngress.route.vrf",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 170,
+                "line": 169,
                 "column": 26
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -699,14 +699,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 123,
+                    "line": 122,
                     "column": 22
                 }
             ],
             "symbol_name": "SwitchIngress.set_ifid.ifid",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 122,
+                "line": 121,
                 "column": 29
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -715,15 +715,31 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 145,
+                    "line": 144,
                     "column": 22
                 }
             ],
             "symbol_name": "SwitchIngress.set_src_ifid_md.brid",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 142,
+                "line": 141,
                 "column": 78
+            },
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_multicast.p4",
+                    "line": 145,
+                    "column": 38
+                }
+            ],
+            "symbol_name": "SwitchIngress.set_src_ifid_md.hash1",
+            "declaration": {
+                "file": "tna_multicast.p4",
+                "line": 141,
+                "column": 92
             },
             "symbol_type": "Parameter_Type_Bits"
         },
@@ -735,26 +751,10 @@
                     "column": 38
                 }
             ],
-            "symbol_name": "SwitchIngress.set_src_ifid_md.hash1",
-            "declaration": {
-                "file": "tna_multicast.p4",
-                "line": 142,
-                "column": 92
-            },
-            "symbol_type": "Parameter_Type_Bits"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_multicast.p4",
-                    "line": 147,
-                    "column": 38
-                }
-            ],
             "symbol_name": "SwitchIngress.set_src_ifid_md.hash2",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 142,
+                "line": 141,
                 "column": 107
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -763,14 +763,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 143,
+                    "line": 142,
                     "column": 24
                 }
             ],
             "symbol_name": "SwitchIngress.set_src_ifid_md.rid",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 142,
+                "line": 141,
                 "column": 44
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -779,14 +779,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 144,
+                    "line": 143,
                     "column": 40
                 }
             ],
             "symbol_name": "SwitchIngress.set_src_ifid_md.yid",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 142,
+                "line": 141,
                 "column": 65
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -795,14 +795,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 107,
+                    "line": 106,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.ethernet",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 87,
+                "line": 86,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -811,110 +811,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 107,
+                    "line": 106,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.ipv4",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 87,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_multicast.p4",
-                    "line": 97,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.diffserv",
-            "declaration": {
-                "file": "tna_multicast.p4",
-                "line": 87,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_multicast.p4",
-                    "line": 105,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.dst_addr",
-            "declaration": {
-                "file": "tna_multicast.p4",
-                "line": 87,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_multicast.p4",
-                    "line": 100,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.flags",
-            "declaration": {
-                "file": "tna_multicast.p4",
-                "line": 87,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_multicast.p4",
-                    "line": 101,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.frag_offset",
-            "declaration": {
-                "file": "tna_multicast.p4",
-                "line": 87,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_multicast.p4",
-                    "line": 94,
-                    "column": 9
-                }
-            ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.hdr_checksum",
-            "declaration": {
-                "file": "tna_multicast.p4",
-                "line": 87,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_multicast.p4",
-                    "line": 99,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.identification",
-            "declaration": {
-                "file": "tna_multicast.p4",
-                "line": 87,
+                "line": 86,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -927,26 +831,10 @@
                     "column": 13
                 }
             ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.ihl",
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.diffserv",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 87,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_multicast.p4",
-                    "line": 103,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.protocol",
-            "declaration": {
-                "file": "tna_multicast.p4",
-                "line": 87,
+                "line": 86,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -959,10 +847,58 @@
                     "column": 13
                 }
             ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.src_addr",
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.dst_addr",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 87,
+                "line": 86,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_multicast.p4",
+                    "line": 99,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.flags",
+            "declaration": {
+                "file": "tna_multicast.p4",
+                "line": 86,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_multicast.p4",
+                    "line": 100,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.frag_offset",
+            "declaration": {
+                "file": "tna_multicast.p4",
+                "line": 86,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_multicast.p4",
+                    "line": 93,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.hdr_checksum",
+            "declaration": {
+                "file": "tna_multicast.p4",
+                "line": 86,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -975,26 +911,10 @@
                     "column": 13
                 }
             ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.total_len",
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.identification",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 87,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_multicast.p4",
-                    "line": 102,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.ttl",
-            "declaration": {
-                "file": "tna_multicast.p4",
-                "line": 87,
+                "line": 86,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1007,10 +927,10 @@
                     "column": 13
                 }
             ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.version",
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.ihl",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 87,
+                "line": 86,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1019,14 +939,94 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 107,
+                    "line": 102,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.protocol",
+            "declaration": {
+                "file": "tna_multicast.p4",
+                "line": 86,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_multicast.p4",
+                    "line": 103,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.src_addr",
+            "declaration": {
+                "file": "tna_multicast.p4",
+                "line": 86,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_multicast.p4",
+                    "line": 97,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.total_len",
+            "declaration": {
+                "file": "tna_multicast.p4",
+                "line": 86,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_multicast.p4",
+                    "line": 101,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.ttl",
+            "declaration": {
+                "file": "tna_multicast.p4",
+                "line": 86,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_multicast.p4",
+                    "line": 94,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.version",
+            "declaration": {
+                "file": "tna_multicast.p4",
+                "line": 86,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_multicast.p4",
+                    "line": 106,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.ipv6",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 87,
+                "line": 86,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1035,14 +1035,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 107,
+                    "line": 106,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.tcp",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 87,
+                "line": 86,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1051,14 +1051,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 107,
+                    "line": 106,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.udp",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 87,
+                "line": 86,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1067,14 +1067,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 107,
+                    "line": 106,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.vlan_tag",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 87,
+                "line": 86,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1083,14 +1083,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 107,
+                    "line": 106,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.pkt",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 86,
+                "line": 85,
                 "column": 20
             },
             "symbol_type": "Parameter_Type_Extern"
@@ -1099,14 +1099,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 58,
+                    "line": 57,
                     "column": 21
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.ethernet",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 46,
+                "line": 45,
                 "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1115,14 +1115,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 59,
+                    "line": 58,
                     "column": 27
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.ethernet.ether_type",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 46,
+                "line": 45,
                 "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1131,14 +1131,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 68,
+                    "line": 67,
                     "column": 21
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.ipv4",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 46,
+                "line": 45,
                 "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1147,14 +1147,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 73,
+                    "line": 72,
                     "column": 21
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.vlan_tag",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 46,
+                "line": 45,
                 "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1163,14 +1163,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 74,
+                    "line": 73,
                     "column": 27
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.vlan_tag.ether_type",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 46,
+                "line": 45,
                 "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1179,19 +1179,19 @@
             "references": [
                 {
                     "file": "common/util.p4",
-                    "line": 28,
+                    "line": 27,
                     "column": 21
                 },
                 {
                     "file": "tna_multicast.p4",
-                    "line": 53,
+                    "line": 52,
                     "column": 34
                 }
             ],
             "symbol_name": "SwitchIngressParser.ig_intr_md",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 48,
+                "line": 47,
                 "column": 42
             },
             "symbol_type": "Parameter_Type_Header"
@@ -1200,35 +1200,14 @@
             "references": [
                 {
                     "file": "tna_multicast.p4",
-                    "line": 53,
+                    "line": 52,
                     "column": 34
                 }
             ],
             "symbol_name": "SwitchIngressParser.ig_intr_md.$valid",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 48,
-                "column": 42
-            },
-            "symbol_type": "Parameter_Type_Header"
-        },
-        {
-            "references": [
-                {
-                    "file": "common/util.p4",
-                    "line": 29,
-                    "column": 27
-                },
-                {
-                    "file": "tna_multicast.p4",
-                    "line": 53,
-                    "column": 34
-                }
-            ],
-            "symbol_name": "SwitchIngressParser.ig_intr_md.resubmit_flag",
-            "declaration": {
-                "file": "tna_multicast.p4",
-                "line": 48,
+                "line": 47,
                 "column": 42
             },
             "symbol_type": "Parameter_Type_Header"
@@ -1238,38 +1217,59 @@
                 {
                     "file": "common/util.p4",
                     "line": 28,
+                    "column": 27
+                },
+                {
+                    "file": "tna_multicast.p4",
+                    "line": 52,
+                    "column": 34
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.ig_intr_md.resubmit_flag",
+            "declaration": {
+                "file": "tna_multicast.p4",
+                "line": 47,
+                "column": 42
+            },
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "common/util.p4",
+                    "line": 27,
                     "column": 9
                 },
                 {
                     "file": "common/util.p4",
-                    "line": 41,
+                    "line": 40,
                     "column": 9
                 },
                 {
                     "file": "tna_multicast.p4",
-                    "line": 53,
+                    "line": 52,
                     "column": 29
                 },
                 {
                     "file": "tna_multicast.p4",
-                    "line": 58,
+                    "line": 57,
                     "column": 9
                 },
                 {
                     "file": "tna_multicast.p4",
-                    "line": 68,
+                    "line": 67,
                     "column": 9
                 },
                 {
                     "file": "tna_multicast.p4",
-                    "line": 73,
+                    "line": 72,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngressParser.pkt",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 45,
+                "line": 44,
                 "column": 19
             },
             "symbol_type": "Parameter_Type_Extern"
@@ -1279,7 +1279,7 @@
             "symbol_name": "cond-1",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 216,
+                "line": 215,
                 "column": 9
             },
             "symbol_type": "IfStatement"
@@ -1289,11 +1289,11 @@
             "symbol_name": "cond-2",
             "declaration": {
                 "file": "tna_multicast.p4",
-                "line": 216,
+                "line": 215,
                 "column": 9
             },
             "symbol_type": "IfStatement"
         }
     ],
-    "source_root": "/home/ubuntu/bf-p4c-compilers2/p4-tests/p4-programs/p4_16_programs/tna_multicast"
+    "source_root": "/nfs/site/home/cgeoffri/Work/bf-p4c-compilers/p4-tests/p4-programs/p4_16_programs/tna_multicast"
 }

@@ -2195,14 +2195,23 @@ void Memories::swbox_bus_meters_counters() {
                 // if the meter have to output color.
                 if ((Device::isMemoryCoreSplit()) && (depth > max_half_ram_depth) &&
                     !meter->direct) {
-                    auto *meter_group = new SRAM_group(ta, max_half_ram_depth, 0,
+                    // Align the color mapram VPNs with the meter VPNs. To do that, we have to
+                    // break the table at a multiple of 4. This make sure the same color mapram is
+                    // not part of both half.
+                    int top_half_ram_depth = depth;
+                    while (top_half_ram_depth > max_half_ram_depth)
+                        top_half_ram_depth -= 4;
+
+                    auto *meter_group = new SRAM_group(ta, top_half_ram_depth, 0,
                                                        SRAM_group::METER);
                     meter_group->attached = meter;
                     meter_group->logical_table = u_id.logical_table;
-                    meter_group->vpn_offset = depth - max_half_ram_depth;
+                    meter_group->vpn_offset = depth - top_half_ram_depth;
 
                     if (meter->color_output()) {
-                        meter_group->cm.needed = MAX_METERS_COLOR_MAPRAM_PER_ALU;
+                        meter_group->cm.needed = mems_needed((top_half_ram_depth - 1) * SRAM_DEPTH,
+                                                             SRAM_DEPTH, COLOR_MAPRAM_PER_ROW,
+                                                             false);
                         if (meter->mapram_possible(IR::MAU::ColorMapramAddress::IDLETIME))
                             meter_group->cm.cma = IR::MAU::ColorMapramAddress::IDLETIME;
                         else if (meter->mapram_possible(IR::MAU::ColorMapramAddress::STATS))
@@ -2216,8 +2225,8 @@ void Memories::swbox_bus_meters_counters() {
                     // The same spare VPN value would be used for both spare bank.
                     vpn_spare = meter_group->vpn_spare = depth - 1;
                     synth_bus_users.insert(meter_group);
-                    depth -= (max_half_ram_depth - 1);
-                    entries -= ((max_half_ram_depth - 1) * SRAM_DEPTH);
+                    depth -= (top_half_ram_depth - 1);
+                    entries -= ((top_half_ram_depth - 1) * SRAM_DEPTH);
                 }
 
                 auto *meter_group = new SRAM_group(ta, depth, 0, SRAM_group::METER);
@@ -3235,6 +3244,12 @@ void Memories::fill_color_map_RAM_use(LogicalRowUser &lru, int row) {
         BUG("Color mapram address not appropriately set up");
     }
 
+    int color_vpn;
+    if (!candidate->cm.placed)
+        color_vpn = candidate->vpn_offset / 4;
+    else
+        color_vpn = alloc.color_mapram.back().vpn.back() + 1;
+
     alloc.color_mapram.emplace_back(row, bus);
     alloc.cma = candidate->cm.cma;
     bitvec color_mapram_mask = lru.color_map_RAM_mask();
@@ -3244,6 +3259,7 @@ void Memories::fill_color_map_RAM_use(LogicalRowUser &lru, int row) {
             mapram_use[row][k] = name;
             mapram_inuse[row] |= 1 << k;
             alloc.color_mapram.back().col.push_back(k);
+            alloc.color_mapram.back().vpn.push_back(color_vpn++);
         }
     }
     candidate->cm.placed += color_mapram_mask.popcount();

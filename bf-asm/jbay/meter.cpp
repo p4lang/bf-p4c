@@ -94,6 +94,8 @@ template<typename REGS> void MeterTable::write_alu_vpn_range_2(REGS &regs) {
                 adrdist.mau_meter_alu_vpn_range[home_row/4].meter_vpn_base = min;
                 adrdist.mau_meter_alu_vpn_range[home_row/4].meter_vpn_limit = max;
                 adrdist.mau_meter_alu_vpn_range[home_row/4].meter_vpn_range_check_enable = 1;
+                for (MatchTable *m : match_tables)
+                    adrdist.meter_alu_adr_range_check_icxbar_map[home_row/4] |= 1U << m->logical_id;
                 break;
             }
         }

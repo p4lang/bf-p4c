@@ -31,7 +31,7 @@ void MeterTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "color_maprams") {
             if (CHECKTYPE(kv.value, tMAP)) {
                 setup_layout(color_maprams, kv.value.map, " color_maprams");
-                if (auto *vpn = get(kv.value.map, "vpn"))
+                if (auto *vpn = get(kv.value.map, "vpns"))
                     if (CHECKTYPE(*vpn, tVEC))
                         setup_vpns(color_maprams, &vpn->vec, true);
             }
@@ -363,6 +363,37 @@ void MeterTable::write_regs_home_row(REGS &regs, unsigned row) {
     unsigned side = 1;  // Meter can only be on right side
     int minvpn, maxvpn;
     layout_vpn_bounds(minvpn, maxvpn, true);
+
+    if (home_rows.size() > 1) {
+        int sparevpn;
+        layout_vpn_bounds(minvpn, sparevpn, false);
+        bool block_start = false;
+        bool block_end = false;
+        minvpn = INT_MAX;
+        maxvpn = INT_MIN;
+        for (Layout &logical_row : layout) {
+            // Block Start with the home row and End with the Spare VPN
+            if (logical_row.row/2U == row)
+                block_start = true;
+
+            if (block_start) {
+                for (auto v : logical_row.vpns) {
+                    if (v == sparevpn) {
+                        block_end = true;
+                        break;
+                    }
+
+                    if (v < minvpn) minvpn = v;
+                    if (v > maxvpn) maxvpn = v;
+                }
+            }
+            if (block_end) {
+                BUG_CHECK(minvpn != INT_MAX && maxvpn != INT_MIN);
+                break;
+            }
+        }
+        BUG_CHECK(block_start && block_end);
+    }
 
     int meter_group_index = row/2U;
     auto &meter = map_alu.meter_group[meter_group_index].meter;

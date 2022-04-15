@@ -5,401 +5,6 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 206,
-                    "column": 9
-                },
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 215,
-                    "column": 9
-                },
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 226,
-                    "column": 9
-                },
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 247,
-                    "column": 23
-                },
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 248,
-                    "column": 23
-                },
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 249,
-                    "column": 23
-                }
-            ],
-            "symbol_name": "SwitchIngress.cntr",
-            "declaration": {
-                "file": "tna_resubmit.p4",
-                "line": 194,
-                "column": 55
-            },
-            "symbol_type": "Declaration_Instance_Type_Specialized"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 338,
-                    "column": 13
-                },
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 340,
-                    "column": 13
-                },
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 342,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngressDeparser.resubmit",
-            "declaration": {
-                "file": "tna_resubmit.p4",
-                "line": 334,
-                "column": 16
-            },
-            "symbol_type": "Declaration_Instance_Type_Extern"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 356,
-                    "column": 8
-                }
-            ],
-            "symbol_name": "pipe",
-            "declaration": {
-                "file": "tna_resubmit.p4",
-                "line": 354,
-                "column": 31
-            },
-            "symbol_type": "Declaration_Instance_Type_Specialized"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 241,
-                    "column": 13
-                },
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 243,
-                    "column": 26
-                },
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 262,
-                    "column": 13
-                },
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 264,
-                    "column": 26
-                },
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 276,
-                    "column": 13
-                },
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 278,
-                    "column": 26
-                },
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 292,
-                    "column": 13
-                },
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 294,
-                    "column": 26
-                }
-            ],
-            "symbol_name": "SwitchIngress.drop",
-            "declaration": {
-                "file": "tna_resubmit.p4",
-                "line": 196,
-                "column": 12
-            },
-            "symbol_type": "P4Action"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 240,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress.no_resub",
-            "declaration": {
-                "file": "tna_resubmit.p4",
-                "line": 228,
-                "column": 12
-            },
-            "symbol_type": "P4Action"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 261,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress.okay_a",
-            "declaration": {
-                "file": "tna_resubmit.p4",
-                "line": 247,
-                "column": 12
-            },
-            "symbol_type": "P4Action"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 275,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress.okay_b",
-            "declaration": {
-                "file": "tna_resubmit.p4",
-                "line": 248,
-                "column": 12
-            },
-            "symbol_type": "P4Action"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 291,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress.okay_c",
-            "declaration": {
-                "file": "tna_resubmit.p4",
-                "line": 249,
-                "column": 12
-            },
-            "symbol_type": "P4Action"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 237,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress.resub_a",
-            "declaration": {
-                "file": "tna_resubmit.p4",
-                "line": 197,
-                "column": 12
-            },
-            "symbol_type": "P4Action"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 238,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress.resub_b",
-            "declaration": {
-                "file": "tna_resubmit.p4",
-                "line": 208,
-                "column": 12
-            },
-            "symbol_type": "P4Action"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 239,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress.resub_c",
-            "declaration": {
-                "file": "tna_resubmit.p4",
-                "line": 217,
-                "column": 12
-            },
-            "symbol_type": "P4Action"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 306,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress.pass_one",
-            "declaration": {
-                "file": "tna_resubmit.p4",
-                "line": 230,
-                "column": 11
-            },
-            "symbol_type": "P4Table"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 309,
-                    "column": 17
-                }
-            ],
-            "symbol_name": "SwitchIngress.pass_two_type_a",
-            "declaration": {
-                "file": "tna_resubmit.p4",
-                "line": 251,
-                "column": 11
-            },
-            "symbol_type": "P4Table"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 311,
-                    "column": 17
-                }
-            ],
-            "symbol_name": "SwitchIngress.pass_two_type_b",
-            "declaration": {
-                "file": "tna_resubmit.p4",
-                "line": 267,
-                "column": 11
-            },
-            "symbol_type": "P4Table"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 313,
-                    "column": 17
-                }
-            ],
-            "symbol_name": "SwitchIngress.pass_two_type_c",
-            "declaration": {
-                "file": "tna_resubmit.p4",
-                "line": 281,
-                "column": 11
-            },
-            "symbol_type": "P4Table"
-        },
-        {
-            "references": [],
-            "symbol_name": "tbl_tna_resubmit304",
-            "declaration": {
-                "file": "tna_resubmit.p4",
-                "line": 304,
-                "column": 35,
-                "end_line": 305
-            },
-            "symbol_type": "P4Table"
-        },
-        {
-            "references": [],
-            "symbol_name": "tbl_tna_resubmit316",
-            "declaration": {
-                "file": "tna_resubmit.p4",
-                "line": 316,
-                "column": 38
-            },
-            "symbol_type": "P4Table"
-        },
-        {
-            "references": [],
-            "symbol_name": "tbl_tna_resubmit319",
-            "declaration": {
-                "file": "tna_resubmit.p4",
-                "line": 319,
-                "column": 36,
-                "end_line": 320
-            },
-            "symbol_type": "P4Table"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 304,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress.hdr.ethernet.dst_addr",
-            "declaration": {
-                "file": "tna_resubmit.p4",
-                "line": 187,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 305,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress.hdr.ethernet.src_addr",
-            "declaration": {
-                "file": "tna_resubmit.p4",
-                "line": 187,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 196,
-                    "column": 21
-                },
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 316,
-                    "column": 17
-                }
-            ],
-            "symbol_name": "SwitchIngress.ig_dprsr_md.drop_ctl",
-            "declaration": {
-                "file": "tna_resubmit.p4",
-                "line": 191,
-                "column": 57
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_resubmit.p4",
                     "line": 205,
                     "column": 9
                 },
@@ -412,12 +17,381 @@
                     "file": "tna_resubmit.p4",
                     "line": 225,
                     "column": 9
+                },
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 246,
+                    "column": 23
+                },
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 247,
+                    "column": 23
+                },
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 248,
+                    "column": 23
                 }
             ],
-            "symbol_name": "SwitchIngress.ig_dprsr_md.resubmit_type",
+            "symbol_name": "SwitchIngress.cntr",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 191,
+                "line": 193,
+                "column": 55
+            },
+            "symbol_type": "Declaration_Instance_Type_Specialized"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 337,
+                    "column": 13
+                },
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 339,
+                    "column": 13
+                },
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 341,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.resubmit",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 333,
+                "column": 16
+            },
+            "symbol_type": "Declaration_Instance_Type_Extern"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 355,
+                    "column": 8
+                }
+            ],
+            "symbol_name": "pipe",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 353,
+                "column": 31
+            },
+            "symbol_type": "Declaration_Instance_Type_Specialized"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 240,
+                    "column": 13
+                },
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 242,
+                    "column": 26
+                },
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 261,
+                    "column": 13
+                },
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 263,
+                    "column": 26
+                },
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 275,
+                    "column": 13
+                },
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 277,
+                    "column": 26
+                },
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 291,
+                    "column": 13
+                },
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 293,
+                    "column": 26
+                }
+            ],
+            "symbol_name": "SwitchIngress.drop",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 195,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 239,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.no_resub",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 227,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 260,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.okay_a",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 246,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 274,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.okay_b",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 247,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 290,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.okay_c",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 248,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 236,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.resub_a",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 196,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 237,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.resub_b",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 207,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 238,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.resub_c",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 216,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 305,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.pass_one",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 229,
+                "column": 11
+            },
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 308,
+                    "column": 17
+                }
+            ],
+            "symbol_name": "SwitchIngress.pass_two_type_a",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 250,
+                "column": 11
+            },
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 310,
+                    "column": 17
+                }
+            ],
+            "symbol_name": "SwitchIngress.pass_two_type_b",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 266,
+                "column": 11
+            },
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 312,
+                    "column": 17
+                }
+            ],
+            "symbol_name": "SwitchIngress.pass_two_type_c",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 280,
+                "column": 11
+            },
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [],
+            "symbol_name": "tbl_tna_resubmit303",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 303,
+                "column": 35,
+                "end_line": 304
+            },
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [],
+            "symbol_name": "tbl_tna_resubmit315",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 315,
+                "column": 38
+            },
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [],
+            "symbol_name": "tbl_tna_resubmit318",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 318,
+                "column": 36,
+                "end_line": 319
+            },
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 303,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.ethernet.dst_addr",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 186,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 304,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.ethernet.src_addr",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 186,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 195,
+                    "column": 21
+                },
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 315,
+                    "column": 17
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_dprsr_md.drop_ctl",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 190,
                 "column": 57
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -426,19 +400,45 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 232,
+                    "line": 204,
+                    "column": 9
+                },
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 213,
+                    "column": 9
+                },
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 224,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_dprsr_md.resubmit_type",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 190,
+                "column": 57
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 231,
                     "column": 13
                 },
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 319,
+                    "line": 318,
                     "column": 38
                 }
             ],
             "symbol_name": "SwitchIngress.ig_intr_md.ingress_port",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 189,
+                "line": 188,
                 "column": 41
             },
             "symbol_type": "Parameter_Type_Header"
@@ -447,14 +447,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 299,
+                    "line": 298,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress.ig_intr_md.resubmit_flag",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 189,
+                "line": 188,
                 "column": 41
             },
             "symbol_type": "Parameter_Type_Header"
@@ -463,14 +463,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 320,
+                    "line": 319,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.ig_tm_md.bypass_egress",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 192,
+                "line": 191,
                 "column": 51
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -479,15 +479,36 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 319,
+                    "line": 318,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.ig_tm_md.ucast_egress_port",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 192,
+                "line": 191,
                 "column": 51
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 198,
+                    "column": 9
+                },
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 252,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.md.a.f1",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 187,
+                "column": 26
             },
             "symbol_type": "Parameter_Type_Struct"
         },
@@ -504,10 +525,10 @@
                     "column": 13
                 }
             ],
-            "symbol_name": "SwitchIngress.md.a.f1",
+            "symbol_name": "SwitchIngress.md.a.f2",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 188,
+                "line": 187,
                 "column": 26
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -525,31 +546,10 @@
                     "column": 13
                 }
             ],
-            "symbol_name": "SwitchIngress.md.a.f2",
-            "declaration": {
-                "file": "tna_resubmit.p4",
-                "line": 188,
-                "column": 26
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 201,
-                    "column": 9
-                },
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 255,
-                    "column": 13
-                }
-            ],
             "symbol_name": "SwitchIngress.md.a.f3",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 188,
+                "line": 187,
                 "column": 26
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -558,35 +558,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 198,
+                    "line": 197,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.md.a.type",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 188,
-                "column": 26
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 210,
-                    "column": 9
-                },
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 269,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress.md.b.f1",
-            "declaration": {
-                "file": "tna_resubmit.p4",
-                "line": 188,
+                "line": 187,
                 "column": 26
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -597,12 +576,54 @@
                     "file": "tna_resubmit.p4",
                     "line": 209,
                     "column": 9
+                },
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 268,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.md.b.f1",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 187,
+                "column": 26
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 208,
+                    "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.md.b.type",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 188,
+                "line": 187,
+                "column": 26
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 218,
+                    "column": 9
+                },
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 282,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.md.c.f1",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 187,
                 "column": 26
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -620,10 +641,10 @@
                     "column": 13
                 }
             ],
-            "symbol_name": "SwitchIngress.md.c.f1",
+            "symbol_name": "SwitchIngress.md.c.f2",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 188,
+                "line": 187,
                 "column": 26
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -641,31 +662,10 @@
                     "column": 13
                 }
             ],
-            "symbol_name": "SwitchIngress.md.c.f2",
-            "declaration": {
-                "file": "tna_resubmit.p4",
-                "line": 188,
-                "column": 26
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 221,
-                    "column": 9
-                },
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 285,
-                    "column": 13
-                }
-            ],
             "symbol_name": "SwitchIngress.md.c.f3",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 188,
+                "line": 187,
                 "column": 26
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -674,14 +674,30 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 218,
+                    "line": 217,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.md.c.type",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 188,
+                "line": 187,
+                "column": 26
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 232,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.md.port_md.f1",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 187,
                 "column": 26
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -694,26 +710,10 @@
                     "column": 13
                 }
             ],
-            "symbol_name": "SwitchIngress.md.port_md.f1",
-            "declaration": {
-                "file": "tna_resubmit.p4",
-                "line": 188,
-                "column": 26
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 234,
-                    "column": 13
-                }
-            ],
             "symbol_name": "SwitchIngress.md.port_md.f2",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 188,
+                "line": 187,
                 "column": 26
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -722,27 +722,43 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 308,
+                    "line": 307,
                     "column": 17
                 },
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 310,
+                    "line": 309,
                     "column": 24
                 },
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 312,
+                    "line": 311,
                     "column": 24
                 }
             ],
             "symbol_name": "SwitchIngress.md.resub_type",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 188,
+                "line": 187,
                 "column": 26
             },
             "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 198,
+                    "column": 19
+                }
+            ],
+            "symbol_name": "SwitchIngress.resub_a.f1",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 196,
+                "column": 27
+            },
+            "symbol_type": "Parameter_Type_Bits"
         },
         {
             "references": [
@@ -752,11 +768,11 @@
                     "column": 19
                 }
             ],
-            "symbol_name": "SwitchIngress.resub_a.f1",
+            "symbol_name": "SwitchIngress.resub_a.f2",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 197,
-                "column": 27
+                "line": 196,
+                "column": 39
             },
             "symbol_type": "Parameter_Type_Bits"
         },
@@ -768,26 +784,10 @@
                     "column": 19
                 }
             ],
-            "symbol_name": "SwitchIngress.resub_a.f2",
-            "declaration": {
-                "file": "tna_resubmit.p4",
-                "line": 197,
-                "column": 39
-            },
-            "symbol_type": "Parameter_Type_Bits"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 201,
-                    "column": 19
-                }
-            ],
             "symbol_name": "SwitchIngress.resub_a.f3",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 197,
+                "line": 196,
                 "column": 51
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -796,15 +796,31 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 210,
+                    "line": 209,
                     "column": 19
                 }
             ],
             "symbol_name": "SwitchIngress.resub_b.f1",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 208,
+                "line": 207,
                 "column": 27
+            },
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 218,
+                    "column": 19
+                }
+            ],
+            "symbol_name": "SwitchIngress.resub_c.f1",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 216,
+                "column": 28
             },
             "symbol_type": "Parameter_Type_Bits"
         },
@@ -816,11 +832,11 @@
                     "column": 19
                 }
             ],
-            "symbol_name": "SwitchIngress.resub_c.f1",
+            "symbol_name": "SwitchIngress.resub_c.f2",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 217,
-                "column": 28
+                "line": 216,
+                "column": 40
             },
             "symbol_type": "Parameter_Type_Bits"
         },
@@ -832,26 +848,10 @@
                     "column": 19
                 }
             ],
-            "symbol_name": "SwitchIngress.resub_c.f2",
-            "declaration": {
-                "file": "tna_resubmit.p4",
-                "line": 217,
-                "column": 40
-            },
-            "symbol_type": "Parameter_Type_Bits"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_resubmit.p4",
-                    "line": 221,
-                    "column": 19
-                }
-            ],
             "symbol_name": "SwitchIngress.resub_c.f3",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 217,
+                "line": 216,
                 "column": 52
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -860,14 +860,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 345,
+                    "line": 344,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.ethernet",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 328,
+                "line": 327,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -876,14 +876,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 345,
+                    "line": 344,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.ipv4",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 328,
+                "line": 327,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -892,14 +892,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 345,
+                    "line": 344,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.ipv6",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 328,
+                "line": 327,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -908,14 +908,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 345,
+                    "line": 344,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.tcp",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 328,
+                "line": 327,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -924,14 +924,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 345,
+                    "line": 344,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.udp",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 328,
+                "line": 327,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -940,14 +940,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 345,
+                    "line": 344,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.vlan_tag",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 328,
+                "line": 327,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -956,24 +956,24 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 337,
+                    "line": 336,
                     "column": 13
                 },
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 339,
+                    "line": 338,
                     "column": 20
                 },
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 341,
+                    "line": 340,
                     "column": 20
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.ig_intr_dprsr_md.resubmit_type",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 331,
+                "line": 330,
                 "column": 33
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -982,14 +982,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 338,
+                    "line": 337,
                     "column": 27
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.ig_md.a.f1",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 329,
+                "line": 328,
                 "column": 45
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -998,14 +998,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 338,
+                    "line": 337,
                     "column": 27
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.ig_md.a.f2",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 329,
+                "line": 328,
                 "column": 45
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1014,14 +1014,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 338,
+                    "line": 337,
                     "column": 27
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.ig_md.a.f3",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 329,
+                "line": 328,
                 "column": 45
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1030,14 +1030,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 338,
+                    "line": 337,
                     "column": 27
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.ig_md.a.type",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 329,
+                "line": 328,
                 "column": 45
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1046,14 +1046,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 340,
+                    "line": 339,
                     "column": 27
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.ig_md.b.f1",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 329,
+                "line": 328,
                 "column": 45
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1062,14 +1062,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 340,
+                    "line": 339,
                     "column": 27
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.ig_md.b.padding",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 329,
+                "line": 328,
                 "column": 45
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1078,14 +1078,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 340,
+                    "line": 339,
                     "column": 27
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.ig_md.b.type",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 329,
+                "line": 328,
                 "column": 45
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1094,14 +1094,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 342,
+                    "line": 341,
                     "column": 27
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.ig_md.c.f1",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 329,
+                "line": 328,
                 "column": 45
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1110,14 +1110,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 342,
+                    "line": 341,
                     "column": 27
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.ig_md.c.f2",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 329,
+                "line": 328,
                 "column": 45
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1126,14 +1126,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 342,
+                    "line": 341,
                     "column": 27
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.ig_md.c.f3",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 329,
+                "line": 328,
                 "column": 45
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1142,14 +1142,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 342,
+                    "line": 341,
                     "column": 27
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.ig_md.c.padding",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 329,
+                "line": 328,
                 "column": 45
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1158,14 +1158,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 342,
+                    "line": 341,
                     "column": 27
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.ig_md.c.type",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 329,
+                "line": 328,
                 "column": 45
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1174,14 +1174,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 345,
+                    "line": 344,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.pkt",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 327,
+                "line": 326,
                 "column": 42
             },
             "symbol_type": "Parameter_Type_Extern"
@@ -1190,14 +1190,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 180,
+                    "line": 179,
                     "column": 21
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.ethernet",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 120,
+                "line": 119,
                 "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1206,14 +1206,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 125,
+                    "line": 124,
                     "column": 21
                 }
             ],
             "symbol_name": "SwitchIngressParser.ig_intr_md",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 122,
+                "line": 121,
                 "column": 42
             },
             "symbol_type": "Parameter_Type_Header"
@@ -1222,14 +1222,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 129,
+                    "line": 128,
                     "column": 27
                 }
             ],
             "symbol_name": "SwitchIngressParser.ig_intr_md.resubmit_flag",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 122,
+                "line": 121,
                 "column": 42
             },
             "symbol_type": "Parameter_Type_Header"
@@ -1238,14 +1238,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 157,
+                    "line": 156,
                     "column": 21
                 }
             ],
             "symbol_name": "SwitchIngressParser.md.a",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 121,
+                "line": 120,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1254,14 +1254,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 161,
+                    "line": 160,
                     "column": 21
                 }
             ],
             "symbol_name": "SwitchIngressParser.md.b",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 121,
+                "line": 120,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1270,14 +1270,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 165,
+                    "line": 164,
                     "column": 21
                 }
             ],
             "symbol_name": "SwitchIngressParser.md.c",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 121,
+                "line": 120,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1286,14 +1286,14 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 136,
+                    "line": 135,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngressParser.md.port_md",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 121,
+                "line": 120,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1302,19 +1302,19 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 148,
+                    "line": 147,
                     "column": 9
                 },
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 149,
+                    "line": 148,
                     "column": 27
                 }
             ],
             "symbol_name": "SwitchIngressParser.md.resub_type",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 121,
+                "line": 120,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1323,39 +1323,39 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 125,
+                    "line": 124,
                     "column": 9
                 },
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 148,
+                    "line": 147,
                     "column": 25
                 },
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 157,
+                    "line": 156,
                     "column": 9
                 },
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 161,
+                    "line": 160,
                     "column": 9
                 },
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 165,
+                    "line": 164,
                     "column": 9
                 },
                 {
                     "file": "tna_resubmit.p4",
-                    "line": 180,
+                    "line": 179,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngressParser.pkt",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 119,
+                "line": 118,
                 "column": 19
             },
             "symbol_type": "Parameter_Type_Extern"
@@ -1365,7 +1365,7 @@
             "symbol_name": "cond-1",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 299,
+                "line": 298,
                 "column": 9
             },
             "symbol_type": "IfStatement"
@@ -1375,7 +1375,7 @@
             "symbol_name": "cond-2",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 308,
+                "line": 307,
                 "column": 13
             },
             "symbol_type": "IfStatement"
@@ -1385,7 +1385,7 @@
             "symbol_name": "cond-3",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 310,
+                "line": 309,
                 "column": 20
             },
             "symbol_type": "IfStatement"
@@ -1395,7 +1395,7 @@
             "symbol_name": "cond-4",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 312,
+                "line": 311,
                 "column": 20
             },
             "symbol_type": "IfStatement"
@@ -1405,7 +1405,7 @@
             "symbol_name": "cond-5",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 299,
+                "line": 298,
                 "column": 9
             },
             "symbol_type": "IfStatement"
@@ -1415,7 +1415,7 @@
             "symbol_name": "cond-6",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 308,
+                "line": 307,
                 "column": 13
             },
             "symbol_type": "IfStatement"
@@ -1425,7 +1425,7 @@
             "symbol_name": "cond-7",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 310,
+                "line": 309,
                 "column": 20
             },
             "symbol_type": "IfStatement"
@@ -1435,11 +1435,11 @@
             "symbol_name": "cond-8",
             "declaration": {
                 "file": "tna_resubmit.p4",
-                "line": 312,
+                "line": 311,
                 "column": 20
             },
             "symbol_type": "IfStatement"
         }
     ],
-    "source_root": "/home/ubuntu/bf-p4c-compilers2/p4-tests/p4-programs/p4_16_programs/tna_resubmit"
+    "source_root": "/nfs/site/home/cgeoffri/Work/bf-p4c-compilers/p4-tests/p4-programs/p4_16_programs/tna_resubmit"
 }

@@ -5,14 +5,14 @@
             "references": [
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 150,
+                    "line": 149,
                     "column": 8
                 }
             ],
             "symbol_name": "pipe",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 148,
+                "line": 147,
                 "column": 33
             },
             "symbol_type": "Declaration_Instance_Type_Specialized"
@@ -21,34 +21,34 @@
             "references": [
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 107,
+                    "line": 106,
                     "column": 26
                 },
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 109,
+                    "line": 108,
                     "column": 32
                 },
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 122,
+                    "line": 121,
                     "column": 26
                 },
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 124,
+                    "line": 123,
                     "column": 32
                 },
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 134,
+                    "line": 133,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress.drop",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 88,
+                "line": 87,
                 "column": 12
             },
             "symbol_type": "P4Action"
@@ -57,19 +57,19 @@
             "references": [
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 106,
+                    "line": 105,
                     "column": 13
                 },
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 121,
+                    "line": 120,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress.match",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 92,
+                "line": 91,
                 "column": 12
             },
             "symbol_type": "P4Action"
@@ -78,14 +78,14 @@
             "references": [
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 132,
+                    "line": 131,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress.p",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 112,
+                "line": 111,
                 "column": 11
             },
             "symbol_type": "P4Table"
@@ -94,14 +94,14 @@
             "references": [
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 130,
+                    "line": 129,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress.t",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 97,
+                "line": 96,
                 "column": 11
             },
             "symbol_type": "P4Table"
@@ -111,17 +111,17 @@
             "symbol_name": "tbl_drop",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 134,
+                "line": 133,
                 "column": 13
             },
             "symbol_type": "P4Table"
         },
         {
             "references": [],
-            "symbol_name": "tbl_tna_pktgen138",
+            "symbol_name": "tbl_tna_pktgen137",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 138,
+                "line": 137,
                 "column": 37
             },
             "symbol_type": "P4Table"
@@ -130,46 +130,14 @@
             "references": [
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 131,
+                    "line": 130,
                     "column": 20
                 }
             ],
             "symbol_name": "SwitchIngress.hdr.port_down",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 81,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 115,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress.hdr.port_down.app_id",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 81,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 117,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress.hdr.port_down.packet_id",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 81,
+                "line": 80,
                 "column": 23
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -182,10 +150,10 @@
                     "column": 13
                 }
             ],
-            "symbol_name": "SwitchIngress.hdr.port_down.pipe_id",
+            "symbol_name": "SwitchIngress.hdr.port_down.app_id",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 81,
+                "line": 80,
                 "column": 23
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -198,10 +166,10 @@
                     "column": 13
                 }
             ],
-            "symbol_name": "SwitchIngress.hdr.port_down.port_num",
+            "symbol_name": "SwitchIngress.hdr.port_down.packet_id",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 81,
+                "line": 80,
                 "column": 23
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -210,62 +178,46 @@
             "references": [
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 129,
+                    "line": 113,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.port_down.pipe_id",
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 80,
+                "column": 23
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 115,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.port_down.port_num",
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 80,
+                "column": 23
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 128,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress.hdr.timer",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 81,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 100,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress.hdr.timer.app_id",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 81,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 101,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress.hdr.timer.batch_id",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 81,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 102,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress.hdr.timer.packet_id",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 81,
+                "line": 80,
                 "column": 23
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -278,10 +230,10 @@
                     "column": 13
                 }
             ],
-            "symbol_name": "SwitchIngress.hdr.timer.pipe_id",
+            "symbol_name": "SwitchIngress.hdr.timer.app_id",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 81,
+                "line": 80,
                 "column": 23
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -290,14 +242,62 @@
             "references": [
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 89,
+                    "line": 100,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.timer.batch_id",
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 80,
+                "column": 23
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 101,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.timer.packet_id",
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 80,
+                "column": 23
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 98,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.timer.pipe_id",
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 80,
+                "column": 23
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 88,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.ig_intr_dprsr_md.drop_ctl",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 85,
+                "line": 84,
                 "column": 57
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -306,19 +306,19 @@
             "references": [
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 103,
+                    "line": 102,
                     "column": 13
                 },
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 118,
+                    "line": 117,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress.ig_intr_md.ingress_port",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 83,
+                "line": 82,
                 "column": 41
             },
             "symbol_type": "Parameter_Type_Header"
@@ -327,14 +327,14 @@
             "references": [
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 138,
+                    "line": 137,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.ig_intr_tm_md.bypass_egress",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 86,
+                "line": 85,
                 "column": 51
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -343,14 +343,14 @@
             "references": [
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 93,
+                    "line": 92,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.ig_intr_tm_md.ucast_egress_port",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 86,
+                "line": 85,
                 "column": 51
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -359,14 +359,14 @@
             "references": [
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 93,
+                    "line": 92,
                     "column": 43
                 }
             ],
             "symbol_name": "SwitchIngress.match.port",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 92,
+                "line": 91,
                 "column": 27
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -375,14 +375,14 @@
             "references": [
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 75,
+                    "line": 74,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.port_down",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 70,
+                "line": 69,
                 "column": 23
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -391,14 +391,14 @@
             "references": [
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 75,
+                    "line": 74,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.timer",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 70,
+                "line": 69,
                 "column": 23
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -407,14 +407,14 @@
             "references": [
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 75,
+                    "line": 74,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.pkt",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 69,
+                "line": 68,
                 "column": 20
             },
             "symbol_type": "Parameter_Type_Extern"
@@ -423,14 +423,14 @@
             "references": [
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 62,
+                    "line": 61,
                     "column": 24
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.port_down",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 40,
+                "line": 39,
                 "column": 20
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -439,14 +439,14 @@
             "references": [
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 57,
+                    "line": 56,
                     "column": 24
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.timer",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 40,
+                "line": 39,
                 "column": 20
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -455,14 +455,14 @@
             "references": [
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 45,
+                    "line": 44,
                     "column": 24
                 }
             ],
             "symbol_name": "SwitchIngressParser.ig_intr_md",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 42,
+                "line": 41,
                 "column": 41
             },
             "symbol_type": "Parameter_Type_Header"
@@ -471,34 +471,34 @@
             "references": [
                 {
                     "file": "tna_pktgen.p4",
+                    "line": 44,
+                    "column": 9
+                },
+                {
+                    "file": "tna_pktgen.p4",
                     "line": 45,
                     "column": 9
                 },
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 46,
-                    "column": 9
-                },
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 48,
+                    "line": 47,
                     "column": 51
                 },
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 57,
+                    "line": 56,
                     "column": 9
                 },
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 62,
+                    "line": 61,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngressParser.packet",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 39,
+                "line": 38,
                 "column": 18
             },
             "symbol_type": "Parameter_Type_Extern"
@@ -508,7 +508,7 @@
             "symbol_name": "cond-1",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 129,
+                "line": 128,
                 "column": 9
             },
             "symbol_type": "IfStatement"
@@ -518,7 +518,7 @@
             "symbol_name": "cond-2",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 131,
+                "line": 130,
                 "column": 16
             },
             "symbol_type": "IfStatement"
@@ -528,7 +528,7 @@
             "symbol_name": "cond-3",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 129,
+                "line": 128,
                 "column": 9
             },
             "symbol_type": "IfStatement"
@@ -538,11 +538,11 @@
             "symbol_name": "cond-4",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 131,
+                "line": 130,
                 "column": 16
             },
             "symbol_type": "IfStatement"
         }
     ],
-    "source_root": "/home/ubuntu/bf-p4c-compilers2/p4-tests/p4-programs/p4_16_programs/tna_pktgen"
+    "source_root": "/nfs/site/home/cgeoffri/Work/bf-p4c-compilers/p4-tests/p4-programs/p4_16_programs/tna_pktgen"
 }

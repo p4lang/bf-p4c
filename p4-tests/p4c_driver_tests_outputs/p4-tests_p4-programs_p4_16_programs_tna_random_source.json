@@ -5,14 +5,14 @@
             "references": [
                 {
                     "file": "tna_random.p4",
-                    "line": 99,
+                    "line": 98,
                     "column": 29
                 }
             ],
             "symbol_name": "SwitchIngress.rnd1",
             "declaration": {
                 "file": "tna_random.p4",
-                "line": 94,
+                "line": 93,
                 "column": 23
             },
             "symbol_type": "Declaration_Instance_Type_Specialized"
@@ -21,14 +21,14 @@
             "references": [
                 {
                     "file": "tna_random.p4",
-                    "line": 117,
+                    "line": 116,
                     "column": 8
                 }
             ],
             "symbol_name": "pipe",
             "declaration": {
                 "file": "tna_random.p4",
-                "line": 115,
+                "line": 114,
                 "column": 31
             },
             "symbol_type": "Declaration_Instance_Type_Specialized"
@@ -37,19 +37,19 @@
             "references": [
                 {
                     "file": "common/util.p4",
-                    "line": 64,
+                    "line": 63,
                     "column": 13
                 },
                 {
                     "file": "common/util.p4",
-                    "line": 66,
+                    "line": 65,
                     "column": 32
                 }
             ],
             "symbol_name": "SwitchIngress.bypass_egress.set_bypass_egress",
             "declaration": {
                 "file": "common/util.p4",
-                "line": 58,
+                "line": 57,
                 "column": 12
             },
             "symbol_type": "P4Action"
@@ -58,26 +58,26 @@
             "references": [
                 {
                     "file": "common/util.p4",
-                    "line": 70,
+                    "line": 69,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.bypass_egress.bypass_egress",
             "declaration": {
                 "file": "common/util.p4",
-                "line": 62,
+                "line": 61,
                 "column": 11
             },
             "symbol_type": "P4Table"
         },
         {
             "references": [],
-            "symbol_name": "tbl_tna_random99",
+            "symbol_name": "tbl_tna_random98",
             "declaration": {
                 "file": "tna_random.p4",
-                "line": 99,
+                "line": 98,
                 "column": 27,
-                "end_line": 102
+                "end_line": 101
             },
             "symbol_type": "P4Table"
         },
@@ -85,14 +85,14 @@
             "references": [
                 {
                     "file": "tna_random.p4",
-                    "line": 99,
+                    "line": 98,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.hdr.ipv4.src_addr",
             "declaration": {
                 "file": "tna_random.p4",
-                "line": 84,
+                "line": 83,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -101,14 +101,14 @@
             "references": [
                 {
                     "file": "tna_random.p4",
-                    "line": 102,
+                    "line": 101,
                     "column": 38
                 }
             ],
             "symbol_name": "SwitchIngress.ig_intr_md.ingress_port",
             "declaration": {
                 "file": "tna_random.p4",
-                "line": 86,
+                "line": 85,
                 "column": 41
             },
             "symbol_type": "Parameter_Type_Header"
@@ -117,19 +117,19 @@
             "references": [
                 {
                     "file": "common/util.p4",
-                    "line": 59,
+                    "line": 58,
                     "column": 9
                 },
                 {
                     "file": "tna_random.p4",
-                    "line": 106,
+                    "line": 105,
                     "column": 29
                 }
             ],
             "symbol_name": "SwitchIngress.ig_tm_md.bypass_egress",
             "declaration": {
                 "file": "tna_random.p4",
-                "line": 89,
+                "line": 88,
                 "column": 51
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -138,14 +138,14 @@
             "references": [
                 {
                     "file": "tna_random.p4",
-                    "line": 102,
+                    "line": 101,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.ig_tm_md.ucast_egress_port",
             "declaration": {
                 "file": "tna_random.p4",
-                "line": 89,
+                "line": 88,
                 "column": 51
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -154,14 +154,14 @@
             "references": [
                 {
                     "file": "tna_random.p4",
-                    "line": 79,
+                    "line": 78,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.ethernet",
             "declaration": {
                 "file": "tna_random.p4",
-                "line": 72,
+                "line": 71,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -170,14 +170,14 @@
             "references": [
                 {
                     "file": "tna_random.p4",
-                    "line": 79,
+                    "line": 78,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.ipv4",
             "declaration": {
                 "file": "tna_random.p4",
-                "line": 72,
+                "line": 71,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -186,14 +186,14 @@
             "references": [
                 {
                     "file": "tna_random.p4",
-                    "line": 79,
+                    "line": 78,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.ipv6",
             "declaration": {
                 "file": "tna_random.p4",
-                "line": 72,
+                "line": 71,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -202,14 +202,14 @@
             "references": [
                 {
                     "file": "tna_random.p4",
-                    "line": 79,
+                    "line": 78,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.tcp",
             "declaration": {
                 "file": "tna_random.p4",
-                "line": 72,
+                "line": 71,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -218,14 +218,14 @@
             "references": [
                 {
                     "file": "tna_random.p4",
-                    "line": 79,
+                    "line": 78,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.udp",
             "declaration": {
                 "file": "tna_random.p4",
-                "line": 72,
+                "line": 71,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -234,14 +234,14 @@
             "references": [
                 {
                     "file": "tna_random.p4",
-                    "line": 79,
+                    "line": 78,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.vlan_tag",
             "declaration": {
                 "file": "tna_random.p4",
-                "line": 72,
+                "line": 71,
                 "column": 46
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -250,14 +250,14 @@
             "references": [
                 {
                     "file": "tna_random.p4",
-                    "line": 79,
+                    "line": 78,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.pkt",
             "declaration": {
                 "file": "tna_random.p4",
-                "line": 71,
+                "line": 70,
                 "column": 42
             },
             "symbol_type": "Parameter_Type_Extern"
@@ -266,14 +266,14 @@
             "references": [
                 {
                     "file": "tna_random.p4",
-                    "line": 54,
+                    "line": 53,
                     "column": 21
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.ethernet",
             "declaration": {
                 "file": "tna_random.p4",
-                "line": 42,
+                "line": 41,
                 "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -282,14 +282,14 @@
             "references": [
                 {
                     "file": "tna_random.p4",
-                    "line": 55,
+                    "line": 54,
                     "column": 27
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.ethernet.ether_type",
             "declaration": {
                 "file": "tna_random.p4",
-                "line": 42,
+                "line": 41,
                 "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -298,14 +298,14 @@
             "references": [
                 {
                     "file": "tna_random.p4",
-                    "line": 62,
+                    "line": 61,
                     "column": 21
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.ipv4",
             "declaration": {
                 "file": "tna_random.p4",
-                "line": 42,
+                "line": 41,
                 "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -314,19 +314,19 @@
             "references": [
                 {
                     "file": "common/util.p4",
-                    "line": 28,
+                    "line": 27,
                     "column": 21
                 },
                 {
                     "file": "tna_random.p4",
-                    "line": 49,
+                    "line": 48,
                     "column": 34
                 }
             ],
             "symbol_name": "SwitchIngressParser.ig_intr_md",
             "declaration": {
                 "file": "tna_random.p4",
-                "line": 44,
+                "line": 43,
                 "column": 42
             },
             "symbol_type": "Parameter_Type_Header"
@@ -335,35 +335,14 @@
             "references": [
                 {
                     "file": "tna_random.p4",
-                    "line": 49,
+                    "line": 48,
                     "column": 34
                 }
             ],
             "symbol_name": "SwitchIngressParser.ig_intr_md.$valid",
             "declaration": {
                 "file": "tna_random.p4",
-                "line": 44,
-                "column": 42
-            },
-            "symbol_type": "Parameter_Type_Header"
-        },
-        {
-            "references": [
-                {
-                    "file": "common/util.p4",
-                    "line": 29,
-                    "column": 27
-                },
-                {
-                    "file": "tna_random.p4",
-                    "line": 49,
-                    "column": 34
-                }
-            ],
-            "symbol_name": "SwitchIngressParser.ig_intr_md.resubmit_flag",
-            "declaration": {
-                "file": "tna_random.p4",
-                "line": 44,
+                "line": 43,
                 "column": 42
             },
             "symbol_type": "Parameter_Type_Header"
@@ -373,37 +352,58 @@
                 {
                     "file": "common/util.p4",
                     "line": 28,
+                    "column": 27
+                },
+                {
+                    "file": "tna_random.p4",
+                    "line": 48,
+                    "column": 34
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.ig_intr_md.resubmit_flag",
+            "declaration": {
+                "file": "tna_random.p4",
+                "line": 43,
+                "column": 42
+            },
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "common/util.p4",
+                    "line": 27,
                     "column": 9
                 },
                 {
                     "file": "common/util.p4",
-                    "line": 41,
+                    "line": 40,
                     "column": 9
                 },
                 {
                     "file": "tna_random.p4",
-                    "line": 49,
+                    "line": 48,
                     "column": 29
                 },
                 {
                     "file": "tna_random.p4",
-                    "line": 54,
+                    "line": 53,
                     "column": 9
                 },
                 {
                     "file": "tna_random.p4",
-                    "line": 62,
+                    "line": 61,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngressParser.pkt",
             "declaration": {
                 "file": "tna_random.p4",
-                "line": 41,
+                "line": 40,
                 "column": 19
             },
             "symbol_type": "Parameter_Type_Extern"
         }
     ],
-    "source_root": "/home/ubuntu/bf-p4c-compilers2/p4-tests/p4-programs/p4_16_programs/tna_random"
+    "source_root": "/nfs/site/home/cgeoffri/Work/bf-p4c-compilers/p4-tests/p4-programs/p4_16_programs/tna_random"
 }

@@ -5,14 +5,14 @@
             "references": [
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 146,
+                    "line": 145,
                     "column": 26
                 }
             ],
             "symbol_name": "SwitchIngress.action_profile",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 104,
+                "line": 103,
                 "column": 30
             },
             "symbol_type": "Declaration_Instance_Type_Extern"
@@ -21,19 +21,19 @@
             "references": [
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 165,
+                    "line": 164,
                     "column": 26
                 },
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 178,
+                    "line": 177,
                     "column": 26
                 }
             ],
             "symbol_name": "SwitchIngress.shared_action_profile",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 108,
+                "line": 107,
                 "column": 30
             },
             "symbol_type": "Declaration_Instance_Type_Extern"
@@ -42,14 +42,14 @@
             "references": [
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 78,
+                    "line": 77,
                     "column": 32
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.ipv4_checksum",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 76,
+                "line": 75,
                 "column": 16
             },
             "symbol_type": "Declaration_Instance_Type_Extern"
@@ -58,14 +58,14 @@
             "references": [
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 212,
+                    "line": 211,
                     "column": 8
                 }
             ],
             "symbol_name": "pipe",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 210,
+                "line": 209,
                 "column": 33
             },
             "symbol_type": "Declaration_Instance_Type_Specialized"
@@ -74,21 +74,42 @@
             "references": [
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 135,
+                    "line": 134,
                     "column": 13
                 },
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 188,
+                    "line": 187,
                     "column": 13
                 },
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 191,
+                    "line": 190,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress.vid",
+            "declaration": {
+                "file": "tna_action_profile.p4",
+                "line": 109,
+                "column": 5
+            },
+            "symbol_type": "Declaration_Variable_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_action_profile.p4",
+                    "line": 150,
+                    "column": 13
+                },
+                {
+                    "file": "tna_action_profile.p4",
+                    "line": 184,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.vrf",
             "declaration": {
                 "file": "tna_action_profile.p4",
                 "line": 110,
@@ -100,66 +121,14 @@
             "references": [
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 151,
+                    "line": 139,
                     "column": 13
                 },
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 185,
-                    "column": 9
-                }
-            ],
-            "symbol_name": "SwitchIngress.vrf",
-            "declaration": {
-                "file": "tna_action_profile.p4",
-                "line": 111,
-                "column": 5
-            },
-            "symbol_type": "Declaration_Variable_Type_Bits"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_action_profile.p4",
-                    "line": 140,
-                    "column": 13
-                },
-                {
-                    "file": "tna_action_profile.p4",
-                    "line": 144,
+                    "line": 143,
                     "column": 26
                 },
-                {
-                    "file": "tna_action_profile.p4",
-                    "line": 160,
-                    "column": 13
-                },
-                {
-                    "file": "tna_action_profile.p4",
-                    "line": 164,
-                    "column": 32
-                },
-                {
-                    "file": "tna_action_profile.p4",
-                    "line": 173,
-                    "column": 13
-                },
-                {
-                    "file": "tna_action_profile.p4",
-                    "line": 177,
-                    "column": 32
-                }
-            ],
-            "symbol_name": "NoAction",
-            "declaration": {
-                "file": "/home/ubuntu/bf-p4c-compilers2/build/p4c/p4include/core.p4",
-                "line": 70,
-                "column": 8
-            },
-            "symbol_type": "P4Action"
-        },
-        {
-            "references": [
                 {
                     "file": "tna_action_profile.p4",
                     "line": 159,
@@ -167,15 +136,25 @@
                 },
                 {
                     "file": "tna_action_profile.p4",
+                    "line": 163,
+                    "column": 32
+                },
+                {
+                    "file": "tna_action_profile.p4",
                     "line": 172,
                     "column": 13
+                },
+                {
+                    "file": "tna_action_profile.p4",
+                    "line": 176,
+                    "column": 32
                 }
             ],
-            "symbol_name": "SwitchIngress.send_to_cpu",
+            "symbol_name": "NoAction",
             "declaration": {
-                "file": "tna_action_profile.p4",
-                "line": 128,
-                "column": 12
+                "file": "/nfs/site/home/cgeoffri/Work/bf-p4c-compilers/build/p4c/p4include/core.p4",
+                "line": 70,
+                "column": 8
             },
             "symbol_type": "P4Action"
         },
@@ -192,10 +171,10 @@
                     "column": 13
                 }
             ],
-            "symbol_name": "SwitchIngress.set_nexthop",
+            "symbol_name": "SwitchIngress.send_to_cpu",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 120,
+                "line": 127,
                 "column": 12
             },
             "symbol_type": "P4Action"
@@ -204,14 +183,35 @@
             "references": [
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 139,
+                    "line": 157,
+                    "column": 13
+                },
+                {
+                    "file": "tna_action_profile.p4",
+                    "line": 170,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.set_nexthop",
+            "declaration": {
+                "file": "tna_action_profile.p4",
+                "line": 119,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_action_profile.p4",
+                    "line": 138,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress.set_port",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 115,
+                "line": 114,
                 "column": 12
             },
             "symbol_type": "P4Action"
@@ -220,14 +220,14 @@
             "references": [
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 197,
+                    "line": 196,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress.fallback",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 168,
+                "line": 167,
                 "column": 11
             },
             "symbol_type": "P4Table"
@@ -236,14 +236,14 @@
             "references": [
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 196,
+                    "line": 195,
                     "column": 14
                 }
             ],
             "symbol_name": "SwitchIngress.fib",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 149,
+                "line": 148,
                 "column": 11
             },
             "symbol_type": "P4Table"
@@ -252,74 +252,58 @@
             "references": [
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 194,
+                    "line": 193,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.forward",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 132,
+                "line": 131,
                 "column": 11
             },
             "symbol_type": "P4Table"
         },
         {
             "references": [],
-            "symbol_name": "tbl_tna_action_profile184",
+            "symbol_name": "tbl_tna_action_profile183",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 184,
+                "line": 183,
                 "column": 41,
-                "end_line": 185
+                "end_line": 184
             },
             "symbol_type": "P4Table"
         },
         {
             "references": [],
-            "symbol_name": "tbl_tna_action_profile188",
+            "symbol_name": "tbl_tna_action_profile187",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 188,
+                "line": 187,
                 "column": 17
             },
             "symbol_type": "P4Table"
         },
         {
             "references": [],
-            "symbol_name": "tbl_tna_action_profile191",
+            "symbol_name": "tbl_tna_action_profile190",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 191,
+                "line": 190,
                 "column": 17
             },
             "symbol_type": "P4Table"
         },
         {
             "references": [],
-            "symbol_name": "tbl_tna_action_profile201",
+            "symbol_name": "tbl_tna_action_profile200",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 201,
+                "line": 200,
                 "column": 37
             },
             "symbol_type": "P4Table"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_action_profile.p4",
-                    "line": 123,
-                    "column": 9
-                }
-            ],
-            "symbol_name": "SwitchIngress.hdr.ethernet.dst_addr",
-            "declaration": {
-                "file": "tna_action_profile.p4",
-                "line": 96,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Struct"
         },
         {
             "references": [
@@ -329,10 +313,10 @@
                     "column": 9
                 }
             ],
-            "symbol_name": "SwitchIngress.hdr.ethernet.src_addr",
+            "symbol_name": "SwitchIngress.hdr.ethernet.dst_addr",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 96,
+                "line": 95,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -341,19 +325,35 @@
             "references": [
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 152,
+                    "line": 121,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.ethernet.src_addr",
+            "declaration": {
+                "file": "tna_action_profile.p4",
+                "line": 95,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_action_profile.p4",
+                    "line": 151,
                     "column": 13
                 },
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 169,
+                    "line": 168,
                     "column": 17
                 }
             ],
             "symbol_name": "SwitchIngress.hdr.ipv4.dst_addr",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 96,
+                "line": 95,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -362,19 +362,35 @@
             "references": [
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 124,
+                    "line": 123,
                     "column": 9
                 },
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 124,
+                    "line": 123,
                     "column": 24
                 }
             ],
             "symbol_name": "SwitchIngress.hdr.ipv4.ttl",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 96,
+                "line": 95,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_action_profile.p4",
+                    "line": 186,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.vlan_tag",
+            "declaration": {
+                "file": "tna_action_profile.p4",
+                "line": 95,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -384,29 +400,13 @@
                 {
                     "file": "tna_action_profile.p4",
                     "line": 187,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress.hdr.vlan_tag",
-            "declaration": {
-                "file": "tna_action_profile.p4",
-                "line": 96,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_action_profile.p4",
-                    "line": 188,
                     "column": 19
                 }
             ],
             "symbol_name": "SwitchIngress.hdr.vlan_tag.vid",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 96,
+                "line": 95,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -415,14 +415,14 @@
             "references": [
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 134,
+                    "line": 133,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress.ig_intr_md.ingress_port",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 98,
+                "line": 97,
                 "column": 41
             },
             "symbol_type": "Parameter_Type_Header"
@@ -431,14 +431,14 @@
             "references": [
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 201,
+                    "line": 200,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.ig_intr_tm_md.bypass_egress",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 101,
+                "line": 100,
                 "column": 51
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -447,64 +447,32 @@
             "references": [
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 116,
+                    "line": 115,
                     "column": 9
                 },
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 121,
+                    "line": 120,
                     "column": 9
                 },
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 129,
+                    "line": 128,
                     "column": 9
                 },
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 184,
+                    "line": 183,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.ig_intr_tm_md.ucast_egress_port",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 101,
+                "line": 100,
                 "column": 51
             },
             "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_action_profile.p4",
-                    "line": 123,
-                    "column": 33
-                }
-            ],
-            "symbol_name": "SwitchIngress.set_nexthop.dmac",
-            "declaration": {
-                "file": "tna_action_profile.p4",
-                "line": 120,
-                "column": 61
-            },
-            "symbol_type": "Parameter_Type_Bits"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_action_profile.p4",
-                    "line": 121,
-                    "column": 43
-                }
-            ],
-            "symbol_name": "SwitchIngress.set_nexthop.port",
-            "declaration": {
-                "file": "tna_action_profile.p4",
-                "line": 120,
-                "column": 33
-            },
-            "symbol_type": "Parameter_Type_Bits"
         },
         {
             "references": [
@@ -514,10 +482,42 @@
                     "column": 33
                 }
             ],
+            "symbol_name": "SwitchIngress.set_nexthop.dmac",
+            "declaration": {
+                "file": "tna_action_profile.p4",
+                "line": 119,
+                "column": 61
+            },
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_action_profile.p4",
+                    "line": 120,
+                    "column": 43
+                }
+            ],
+            "symbol_name": "SwitchIngress.set_nexthop.port",
+            "declaration": {
+                "file": "tna_action_profile.p4",
+                "line": 119,
+                "column": 33
+            },
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_action_profile.p4",
+                    "line": 121,
+                    "column": 33
+                }
+            ],
             "symbol_name": "SwitchIngress.set_nexthop.smac",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 120,
+                "line": 119,
                 "column": 47
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -526,14 +526,14 @@
             "references": [
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 116,
+                    "line": 115,
                     "column": 43
                 }
             ],
             "symbol_name": "SwitchIngress.set_port.port",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 115,
+                "line": 114,
                 "column": 30
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -542,14 +542,14 @@
             "references": [
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 91,
+                    "line": 90,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.ethernet",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 72,
+                "line": 71,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -558,110 +558,14 @@
             "references": [
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 91,
+                    "line": 90,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.ipv4",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 72,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_action_profile.p4",
-                    "line": 81,
-                    "column": 18
-                }
-            ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.diffserv",
-            "declaration": {
-                "file": "tna_action_profile.p4",
-                "line": 72,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_action_profile.p4",
-                    "line": 89,
-                    "column": 18
-                }
-            ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.dst_addr",
-            "declaration": {
-                "file": "tna_action_profile.p4",
-                "line": 72,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_action_profile.p4",
-                    "line": 84,
-                    "column": 18
-                }
-            ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.flags",
-            "declaration": {
-                "file": "tna_action_profile.p4",
-                "line": 72,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_action_profile.p4",
-                    "line": 85,
-                    "column": 18
-                }
-            ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.frag_offset",
-            "declaration": {
-                "file": "tna_action_profile.p4",
-                "line": 72,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_action_profile.p4",
-                    "line": 78,
-                    "column": 8
-                }
-            ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.hdr_checksum",
-            "declaration": {
-                "file": "tna_action_profile.p4",
-                "line": 72,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_action_profile.p4",
-                    "line": 83,
-                    "column": 18
-                }
-            ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.identification",
-            "declaration": {
-                "file": "tna_action_profile.p4",
-                "line": 72,
+                "line": 71,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -674,26 +578,10 @@
                     "column": 18
                 }
             ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.ihl",
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.diffserv",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 72,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_action_profile.p4",
-                    "line": 87,
-                    "column": 18
-                }
-            ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.protocol",
-            "declaration": {
-                "file": "tna_action_profile.p4",
-                "line": 72,
+                "line": 71,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -706,10 +594,58 @@
                     "column": 18
                 }
             ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.src_addr",
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.dst_addr",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 72,
+                "line": 71,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_action_profile.p4",
+                    "line": 83,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.flags",
+            "declaration": {
+                "file": "tna_action_profile.p4",
+                "line": 71,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_action_profile.p4",
+                    "line": 84,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.frag_offset",
+            "declaration": {
+                "file": "tna_action_profile.p4",
+                "line": 71,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_action_profile.p4",
+                    "line": 77,
+                    "column": 8
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.hdr_checksum",
+            "declaration": {
+                "file": "tna_action_profile.p4",
+                "line": 71,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -722,26 +658,10 @@
                     "column": 18
                 }
             ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.total_len",
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.identification",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 72,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_action_profile.p4",
-                    "line": 86,
-                    "column": 18
-                }
-            ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.ttl",
-            "declaration": {
-                "file": "tna_action_profile.p4",
-                "line": 72,
+                "line": 71,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -754,10 +674,10 @@
                     "column": 18
                 }
             ],
-            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.version",
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.ihl",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 72,
+                "line": 71,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -766,14 +686,94 @@
             "references": [
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 91,
+                    "line": 86,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.protocol",
+            "declaration": {
+                "file": "tna_action_profile.p4",
+                "line": 71,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_action_profile.p4",
+                    "line": 87,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.src_addr",
+            "declaration": {
+                "file": "tna_action_profile.p4",
+                "line": 71,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_action_profile.p4",
+                    "line": 81,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.total_len",
+            "declaration": {
+                "file": "tna_action_profile.p4",
+                "line": 71,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_action_profile.p4",
+                    "line": 85,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.ttl",
+            "declaration": {
+                "file": "tna_action_profile.p4",
+                "line": 71,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_action_profile.p4",
+                    "line": 78,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4.version",
+            "declaration": {
+                "file": "tna_action_profile.p4",
+                "line": 71,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_action_profile.p4",
+                    "line": 90,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.ipv6",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 72,
+                "line": 71,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -782,14 +782,14 @@
             "references": [
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 91,
+                    "line": 90,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.tcp",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 72,
+                "line": 71,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -798,14 +798,14 @@
             "references": [
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 91,
+                    "line": 90,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.udp",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 72,
+                "line": 71,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -814,14 +814,14 @@
             "references": [
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 91,
+                    "line": 90,
                     "column": 18
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.hdr.vlan_tag",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 72,
+                "line": 71,
                 "column": 24
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -830,14 +830,14 @@
             "references": [
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 91,
+                    "line": 90,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngressDeparser.pkt",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 71,
+                "line": 70,
                 "column": 20
             },
             "symbol_type": "Parameter_Type_Extern"
@@ -846,14 +846,14 @@
             "references": [
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 53,
+                    "line": 52,
                     "column": 21
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.ethernet",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 41,
+                "line": 40,
                 "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -862,14 +862,14 @@
             "references": [
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 54,
+                    "line": 53,
                     "column": 28
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.ethernet.ether_type",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 41,
+                "line": 40,
                 "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -878,14 +878,14 @@
             "references": [
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 61,
+                    "line": 60,
                     "column": 21
                 }
             ],
             "symbol_name": "SwitchIngressParser.hdr.ipv4",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 41,
+                "line": 40,
                 "column": 22
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -894,19 +894,19 @@
             "references": [
                 {
                     "file": "common/util.p4",
-                    "line": 28,
+                    "line": 27,
                     "column": 21
                 },
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 48,
+                    "line": 47,
                     "column": 34
                 }
             ],
             "symbol_name": "SwitchIngressParser.ig_intr_md",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 43,
+                "line": 42,
                 "column": 42
             },
             "symbol_type": "Parameter_Type_Header"
@@ -915,35 +915,14 @@
             "references": [
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 48,
+                    "line": 47,
                     "column": 34
                 }
             ],
             "symbol_name": "SwitchIngressParser.ig_intr_md.$valid",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 43,
-                "column": 42
-            },
-            "symbol_type": "Parameter_Type_Header"
-        },
-        {
-            "references": [
-                {
-                    "file": "common/util.p4",
-                    "line": 29,
-                    "column": 27
-                },
-                {
-                    "file": "tna_action_profile.p4",
-                    "line": 48,
-                    "column": 34
-                }
-            ],
-            "symbol_name": "SwitchIngressParser.ig_intr_md.resubmit_flag",
-            "declaration": {
-                "file": "tna_action_profile.p4",
-                "line": 43,
+                "line": 42,
                 "column": 42
             },
             "symbol_type": "Parameter_Type_Header"
@@ -953,33 +932,54 @@
                 {
                     "file": "common/util.p4",
                     "line": 28,
+                    "column": 27
+                },
+                {
+                    "file": "tna_action_profile.p4",
+                    "line": 47,
+                    "column": 34
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.ig_intr_md.resubmit_flag",
+            "declaration": {
+                "file": "tna_action_profile.p4",
+                "line": 42,
+                "column": 42
+            },
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "common/util.p4",
+                    "line": 27,
                     "column": 9
                 },
                 {
                     "file": "common/util.p4",
-                    "line": 41,
+                    "line": 40,
                     "column": 9
                 },
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 48,
+                    "line": 47,
                     "column": 29
                 },
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 53,
+                    "line": 52,
                     "column": 9
                 },
                 {
                     "file": "tna_action_profile.p4",
-                    "line": 61,
+                    "line": 60,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngressParser.pkt",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 40,
+                "line": 39,
                 "column": 19
             },
             "symbol_type": "Parameter_Type_Extern"
@@ -989,7 +989,7 @@
             "symbol_name": "cond-1",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 187,
+                "line": 186,
                 "column": 9
             },
             "symbol_type": "IfStatement"
@@ -999,11 +999,11 @@
             "symbol_name": "cond-2",
             "declaration": {
                 "file": "tna_action_profile.p4",
-                "line": 187,
+                "line": 186,
                 "column": 9
             },
             "symbol_type": "IfStatement"
         }
     ],
-    "source_root": "/home/ubuntu/bf-p4c-compilers2/p4-tests/p4-programs/p4_16_programs/tna_action_profile"
+    "source_root": "/nfs/site/home/cgeoffri/Work/bf-p4c-compilers/p4-tests/p4-programs/p4_16_programs/tna_action_profile"
 }
