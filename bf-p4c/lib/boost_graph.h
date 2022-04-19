@@ -19,25 +19,20 @@ class Reachability {
  public:
     using Vertex = typename Graph::vertex_descriptor;
 
-    /// Determines whether vertex @p v2 (described by the string @p n2) is reachable from the vertex
-    /// @p v1 (described by the string @p n1).
-    bool canReach(Vertex v1, cstring n1, Vertex v2, cstring n2) {
-        if (forwardsReachableVertices.empty()) recompute();
+    using EdgeSet = typename boost::container_gen<
+                                    typename Graph::vertex_list_selector,
+                                    bitvec>::type;
 
-        BUG_CHECK(forwardsReachableVertices.count(v1), "No reachable nodes entry for %1%", n1);
-        BUG_CHECK(forwardsReachableVertices.count(v2), "No reachable nodes entry for %1%", n2);
+    /// Determines whether vertex @p v2 is reachable from the vertex @p v1.
+    bool canReach(Vertex v1, Vertex v2) {
+        if (forwardsReachableVertices.empty()) recompute();
         return forwardsReachableVertices.at(v1).getbit(v2);
     }
 
-    /// @returns a bitvec representing all vertices that are reachable from @p v1 (described by the
-    /// string @p n1) and can reach @p v2 (described by the string @p n2).
-    bitvec reachableBetween(Vertex v1, cstring n1, Vertex v2, cstring n2) {
+    /// @returns a bitvec representing all vertices that are reachable from @p v1 and
+    /// can reach @p v2.
+    bitvec reachableBetween(Vertex v1, Vertex v2) {
         if (forwardsReachableVertices.empty() || backwardsReachableVertices.empty()) recompute();
-
-        BUG_CHECK(forwardsReachableVertices.count(v1), "No reachable nodes entry for %1%", n1);
-        BUG_CHECK(backwardsReachableVertices.count(v2),
-                  "No backwards-reachable nodes entry for %1%", n2);
-
         return forwardsReachableVertices.at(v1) & backwardsReachableVertices.at(v2);
     }
 
@@ -62,6 +57,9 @@ class Reachability {
     void recompute() {
         forwardsReachableVertices.clear();
         backwardsReachableVertices.clear();
+
+        forwardsReachableVertices.resize(boost::num_vertices(g), bitvec());
+        backwardsReachableVertices.resize(boost::num_vertices(g), bitvec());
 
         // Ensure the reachability matrices have an entry for each vertex.
         typename Graph::vertex_iterator v, v_end;
@@ -98,7 +96,7 @@ class Reachability {
 
     /// Helper for recompute(). If @p reachMatrix indicates that @p src can reach @p mid,
     /// then the entry for @p src is updated with nodes reachable from @p mid.
-    void recompute(std::map<Vertex, bitvec>& reachMatrix, Vertex src, Vertex mid) {
+    void recompute(EdgeSet& reachMatrix, Vertex src, Vertex mid) {
         // If we can't reach mid from src, don't bother going through dsts.
         if (!reachMatrix[src].getbit(mid)) return;
 
@@ -120,11 +118,11 @@ class Reachability {
 
     /// Maps each vertex v to the set of vertices reachable from v. Vertices are not considered
     /// reachable from themselves unless the graph has cycles.
-    std::map<Vertex, bitvec> forwardsReachableVertices;
+    EdgeSet forwardsReachableVertices;
 
     /// Maps each vertex v to the set of vertices that can reach v. Vertices are not considered
     /// reachable from themselves unless the graph has cycles.
-    std::map<Vertex, bitvec> backwardsReachableVertices;
+    EdgeSet backwardsReachableVertices;
 };
 
 #endif /* BF_P4C_LIB_BOOST_GRAPH_H_ */

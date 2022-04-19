@@ -195,7 +195,7 @@ struct FlowGraph {
         if (t1 == nullptr) return false;
         const auto v1 = get_vertex(t1);
         const auto v2 = get_vertex(t2);
-        return reachability.canReach(v1, t1->name, v2, t2->name);
+        return reachability.canReach(v1, v2);
     }
 
     /// @returns the dominator set of the given table. If the IR is well-formed (i.e., the flow

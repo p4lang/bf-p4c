@@ -39,7 +39,7 @@ bool DeparseGraph::canReach(const PHV::Field* f1, const PHV::Field* f2) const {
     auto n1 = fieldToVertex.at(f1);
     auto n2 = fieldToVertex.at(f2);
 
-    return reachability.canReach(n1, f1->name, n2, f2->name);
+    return reachability.canReach(n1, n2);
 }
 
 const std::vector<DeparseGraph::NodeInfo>
@@ -51,7 +51,7 @@ DeparseGraph::nodesBetween(const PHV::Field* f1, const PHV::Field* f2) const {
     auto n2 = fieldToVertex.at(f2);
 
     std::vector<NodeInfo> result;
-    for (auto node : reachability.reachableBetween(n1, f1->name, n2, f2->name)) {
+    for (auto node : reachability.reachableBetween(n1, n2)) {
         result.push_back(g[node]);
     }
 
