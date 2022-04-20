@@ -61,6 +61,9 @@ node ('compiler-travis') {
                 ).trim()
                 echo "Using bf-p4c-compilers:${bf_p4c_compilers_rev}"
                 sh 'git log -1 --stat'
+
+                echo "Initializing bf-p4c-compilers submodules"
+                sh "git submodule update --init --recursive"
             }
 
             stage ('Pull image') {
@@ -88,41 +91,6 @@ node ('compiler-travis') {
             }
 
             if (image_pulled != 'true') {
-
-                stage ('Setup build') {
-                    echo 'Checking out p4factory for reference'
-                    sh 'git clone git@github.com:barefootnetworks/p4factory.git'
-                    dir('p4factory') {
-                        def p4factory_rev = sh (
-                            script: 'git rev-parse HEAD',
-                            returnStdout: true
-                        ).trim()
-                        echo "Using p4factory:${p4factory_rev}"
-                        sh 'git log -1 --stat'
-
-                        // Extract revision of bf-switch submodule used in p4factory
-                        // ! The submodule is not initialized at this point
-                        bf_switch_rev = sh (
-                            script: "git ls-files -s submodules/bf-switch | cut -d' ' -f2",
-                            returnStdout: true
-                        ).trim()
-                    }
-                    sh 'rm -rf p4factory'
-
-                    echo "Initializing bf-p4c-compilers submodules"
-                    sh "git submodule update --init --recursive"
-
-                    //echo "Updating switch_16 submodule to bf-switch:${bf_switch_rev}"
-                    //dir('p4-tests/p4_16/switch_16') {
-                    //    sh """
-                    //        git fetch
-                    //        git checkout ${bf_switch_rev}
-                    //        git submodule update --init --recursive
-                    //        git log -1 --stat
-                    //    """
-                    //}
-                }
-
                 stage ('Build intermediate') {
                     // We want to mount ~/.ccache_bf-p4c-compilers into Docker when we
                     // compile bf-p4c-compilers, but `docker build` doesn't do external
