@@ -2160,8 +2160,13 @@ bool CoreAllocation::try_dark_overlay(
     const PHV::ContainerGroup& group,
     const bool &canDarkInitUseARA) const {
     for (auto& slice : dark_slices) {
-        const auto& alloced_slices =
-            perContainerAlloc.slices(slice.container(), slice.container_slice());
+        ordered_set<PHV::AllocSlice> alloced_slices;
+        // Get all overlaid slices; For mocha/dark containers get all allocated slice as
+        // overlaying is across entire container (i.e. can only write entire container)
+        if (c.is(PHV::Kind::mocha) || c.is(PHV::Kind::dark))
+            alloced_slices = perContainerAlloc.slices(c);
+        else
+            alloced_slices = perContainerAlloc.slices(slice.container(), slice.container_slice());
         LOG_FEATURE("alloc_progress", 5, "    Attempting to overlay " << slice.field() << " on " <<
                     alloced_slices << " by pushing one of them into a dark container.");
 
@@ -5194,7 +5199,7 @@ BruteForceAllocationStrategy::tryVariousSlicing(
             return false;
         }
         if (LOGGING(4)) {
-            LOG_FEATURE("alloc_process", 4, "Slicing attempt: " << n_tried);
+            LOG_FEATURE("alloc_progress", 4, "Slicing attempt: " << n_tried);
             for (auto* sc : slicing)
                 LOG_DEBUG4(sc);
         }
