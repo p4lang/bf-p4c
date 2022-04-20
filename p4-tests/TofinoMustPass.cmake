@@ -113,7 +113,6 @@ set (TOFINO_MUST_PASS_TESTS
   extensions/p4_tests/p4_16/customer/arista/obfuscated-nat.p4
   extensions/p4_tests/p4_16/customer/arista/obfuscated-packet_filter.p4
   extensions/p4_tests/p4_16/customer/arista/obfuscated-small_scale_test.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-stateless_load_balance_v4v6.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1562-1.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b1.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1809-1.p4

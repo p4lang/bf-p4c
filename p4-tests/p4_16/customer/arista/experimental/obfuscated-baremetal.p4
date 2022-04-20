@@ -4229,7 +4229,7 @@ control Petrolia(inout Frederika Westoak, inout WebbCity Lefor, in egress_intrin
         const default_action = Aguada(32w0, 32w0);
         size = 65536;
     }
-    @stage(2) @disable_atomic_modify(1) @name(".DeerPark") table DeerPark {
+    @disable_atomic_modify(1) @name(".DeerPark") table DeerPark {
         actions = {
             Ceiba();
             Lorane();

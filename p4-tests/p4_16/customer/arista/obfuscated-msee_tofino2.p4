@@ -3318,7 +3318,7 @@ control Encinitas(inout Lookeba Wanamassa, inout Martelle Peoria, in egress_intr
         const default_action = Issaquah(32w0, 32w0);
         size = 65536;
     }
-    @disable_atomic_modify(1) @stage(0) @name(".Shivwits") table Shivwits {
+    @disable_atomic_modify(1) @name(".Shivwits") table Shivwits {
         actions = {
             Herald();
             Hilltop();

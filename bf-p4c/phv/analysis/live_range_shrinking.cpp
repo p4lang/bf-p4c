@@ -836,8 +836,12 @@ FindInitializationNode::findInitializationNodes(
             if (!writtenInUnit || readInUnit) return false;
             const auto* t = u->to<IR::MAU::Table>();
             BUG_CHECK(t, "Table object not found for strict dominator unit %1%", u);
-            for (const auto* act : tablesToActions.getActionsForTable(t))
-                if (!actionConstraints.written_in(f, act)) return false;
+            for (const auto* act : tablesToActions.getActionsForTable(t)) {
+                for (auto slc : field_to_slices[f]) {
+                    if ((slc.container() == c) &&
+                        !actionConstraints.written_in(slc, act)) return false;
+                }
+            }
             return true;
         };
         bool allStrictDominatorsWrite = std::all_of(f_dominators.begin(), f_dominators.end(),

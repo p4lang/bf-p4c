@@ -2058,7 +2058,7 @@ control Bellamy(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrins
         size = 98304;
         idle_timeout = true;
     }
-    @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @stage(3) @name(".BelAir") table BelAir {
+    @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @name(".BelAir") table BelAir {
         actions = {
             @tableonly Kealia();
             @tableonly Sahuarita();
@@ -2345,7 +2345,7 @@ control Mattapex(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrin
         default_action = Flippen(32w0);
         size = 2;
     }
-    @atcam_partition_index("Rixford.Elmsford") @atcam_number_partitions(10240) @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @pack(2) @stage(4 , 40960) @stage(5 , 61440) @name(".Murdock") table Murdock {
+    @atcam_partition_index("Rixford.Elmsford") @atcam_number_partitions(10240) @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @pack(2) @name(".Murdock") table Murdock {
         actions = {
             @tableonly Amboy();
             @tableonly Minneota();
@@ -2968,14 +2968,14 @@ control Kotzebue(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrin
     @name(".Burmah") action Burmah() {
         Talco.McCracken.Heuvelton = Amalga.get<tuple<bit<128>, bit<128>, bit<20>, bit<8>, bit<9>>>({ Boonsboro.Millhaven.Findlay, Boonsboro.Millhaven.Dowell, Boonsboro.Millhaven.Littleton, Boonsboro.Millhaven.Turkey, Talco.Toluca.Corinth });
     }
-    @disable_atomic_modify(1) @stage(2) @name(".Leacock") table Leacock {
+    @disable_atomic_modify(1) @name(".Leacock") table Leacock {
         actions = {
             Arial();
         }
         default_action = Arial();
         size = 1;
     }
-    @disable_atomic_modify(1) @stage(2) @name(".WestPark") table WestPark {
+    @disable_atomic_modify(1) @name(".WestPark") table WestPark {
         actions = {
             Burmah();
         }
@@ -3048,14 +3048,14 @@ control Amherst(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrins
         Bellmead = Asharoken.get<tuple<bit<9>, bit<12>>>({ Talco.Toluca.Corinth, Boonsboro.Wesson[0].Spearman });
         Talco.Mickleton.SomesBar = Wardville.execute((bit<32>)Bellmead);
     }
-    @disable_atomic_modify(1) @stage(0) @name(".Ranburne") table Ranburne {
+    @disable_atomic_modify(1) @name(".Ranburne") table Ranburne {
         actions = {
             Weissert();
         }
         default_action = Weissert();
         size = 1;
     }
-    @disable_atomic_modify(1) @stage(0) @name(".Barnsboro") table Barnsboro {
+    @disable_atomic_modify(1) @name(".Barnsboro") table Barnsboro {
         actions = {
             Oregon();
         }
@@ -3364,7 +3364,7 @@ control Lacombe(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrins
         Talco.Mentone.Montague = Montague;
         Talco.Mentone.Loring = Loring;
     }
-    @disable_atomic_modify(1) @stage(2) @name(".Kingsland") table Kingsland {
+    @disable_atomic_modify(1) @name(".Kingsland") table Kingsland {
         actions = {
             Clifton();
         }
@@ -4179,7 +4179,7 @@ control Lackey(inout Sumner Boonsboro, inout Dateland Talco, in egress_intrinsic
     @name(".Ivanpah") action Ivanpah() {
         Talco.Lawai.Standish = (bit<1>)1w0x1;
     }
-    @use_hash_action(1) @disable_atomic_modify(1) @stage(0) @name(".Anaconda") table Anaconda {
+    @use_hash_action(1) @disable_atomic_modify(1) @name(".Anaconda") table Anaconda {
         actions = {
             Trion();
         }
@@ -4189,7 +4189,7 @@ control Lackey(inout Sumner Boonsboro, inout Dateland Talco, in egress_intrinsic
         const default_action = Trion(32w0, 32w0);
         size = 65536;
     }
-    @use_hash_action(1) @disable_atomic_modify(1) @stage(1) @name(".Zeeland") table Zeeland {
+    @use_hash_action(1) @disable_atomic_modify(1) @name(".Zeeland") table Zeeland {
         actions = {
             Trion();
         }
@@ -4199,7 +4199,7 @@ control Lackey(inout Sumner Boonsboro, inout Dateland Talco, in egress_intrinsic
         const default_action = Trion(32w0, 32w0);
         size = 65536;
     }
-    @stage(2) @disable_atomic_modify(1) @name(".Herald") table Herald {
+    @disable_atomic_modify(1) @name(".Herald") table Herald {
         actions = {
             Frederic();
             Ivanpah();
@@ -5047,7 +5047,7 @@ control Kiron(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrinsic
     @name(".Idylside") action Idylside() {
         Talco.Emida.Piperton = (bit<1>)1w1;
     }
-    @disable_atomic_modify(1) @placement_priority(1) @stage(1) @name(".Stovall") table Stovall {
+    @disable_atomic_modify(1) @placement_priority(1) @name(".Stovall") table Stovall {
         actions = {
             Minetto();
             Chandalar();
@@ -5060,7 +5060,7 @@ control Kiron(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrinsic
         size = 4096;
         requires_versioning = false;
     }
-    @disable_atomic_modify(1) @placement_priority(1) @stage(1) @name(".Haworth") table Haworth {
+    @disable_atomic_modify(1) @placement_priority(1) @name(".Haworth") table Haworth {
         actions = {
             Almeria();
             Chandalar();
@@ -5073,7 +5073,7 @@ control Kiron(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrinsic
         size = 512;
         requires_versioning = false;
     }
-    @disable_atomic_modify(1) @placement_priority(1) @stage(1) @name(".BigArm") table BigArm {
+    @disable_atomic_modify(1) @placement_priority(1) @name(".BigArm") table BigArm {
         actions = {
             Burgdorf();
             Idylside();
@@ -5086,7 +5086,7 @@ control Kiron(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrinsic
         requires_versioning = false;
         const default_action = NoAction();
     }
-    @disable_atomic_modify(1) @placement_priority(1) @stage(1) @name(".Talkeetna") table Talkeetna {
+    @disable_atomic_modify(1) @placement_priority(1) @name(".Talkeetna") table Talkeetna {
         actions = {
             Burgdorf();
             Idylside();
@@ -5129,7 +5129,7 @@ control Gorum(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrinsic
     @name(".DuPont") action DuPont(bit<16> August) {
         Talco.Elkville.Hampton = August;
     }
-    @disable_atomic_modify(1) @placement_priority(1) @stage(1) @name(".Shauck") table Shauck {
+    @disable_atomic_modify(1) @placement_priority(1) @name(".Shauck") table Shauck {
         actions = {
             Quivero();
             @defaultonly NoAction();
@@ -5140,7 +5140,7 @@ control Gorum(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrinsic
         size = 1024;
         const default_action = NoAction();
     }
-    @disable_atomic_modify(1) @placement_priority(1) @stage(1) @name(".Telegraph") table Telegraph {
+    @disable_atomic_modify(1) @placement_priority(1) @name(".Telegraph") table Telegraph {
         actions = {
             Eucha();
             Recluse();
@@ -5152,7 +5152,7 @@ control Gorum(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrinsic
         const default_action = Recluse();
         size = 512;
     }
-    @disable_atomic_modify(1) @disable_atomic_modify(1) @placement_priority(1) @stage(1) @name(".Veradale") table Veradale {
+    @disable_atomic_modify(1) @disable_atomic_modify(1) @placement_priority(1) @name(".Veradale") table Veradale {
         actions = {
             @tableonly Skiatook();
             @defaultonly NoAction();
@@ -5164,7 +5164,7 @@ control Gorum(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrinsic
         size = 8192;
         const default_action = NoAction();
     }
-    @disable_atomic_modify(1) @placement_priority(1) @stage(1) @name(".Parole") table Parole {
+    @disable_atomic_modify(1) @placement_priority(1) @name(".Parole") table Parole {
         actions = {
             DuPont();
             @defaultonly NoAction();
@@ -5251,7 +5251,7 @@ control Sanatoga(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrin
         Talco.Corvallis.Coalwood = Talco.Elkville.Coalwood & Coalwood;
         Talco.Corvallis.Sublett = Talco.Elkville.Sublett & Sublett;
     }
-    @disable_atomic_modify(1) @stage(2) @name(".Mulhall") table Mulhall {
+    @disable_atomic_modify(1) @name(".Mulhall") table Mulhall {
         key = {
             Talco.Elkville.Maddock: exact @name("Elkville.Maddock") ;
         }
@@ -5571,7 +5571,7 @@ control Naguabo(inout Sumner Boonsboro, inout Dateland Talco, in egress_intrinsi
         Bellmead = Clarinda.get<tuple<bit<9>, bit<5>>>({ Livonia.egress_port, Livonia.egress_qid[4:0] });
         Browning.count((bit<12>)Bellmead);
     }
-    @disable_atomic_modify(1) @stage(6) @name(".Finlayson") table Finlayson {
+    @disable_atomic_modify(1) @name(".Finlayson") table Finlayson {
         actions = {
             Arion();
         }
@@ -5646,7 +5646,7 @@ control Cruso(inout Sumner Boonsboro, inout Dateland Talco, in egress_intrinsic_
         Bellmead = Valmont.get<tuple<bit<9>, bit<12>>>({ Livonia.egress_port, (bit<12>)Talco.Lawai.Grassflat });
         Talco.NantyGlo.SomesBar = Waretown.execute((bit<32>)Bellmead);
     }
-    @disable_atomic_modify(1) @stage(9) @name(".Stout") table Stout {
+    @disable_atomic_modify(1) @name(".Stout") table Stout {
         actions = {
             Millican();
         }

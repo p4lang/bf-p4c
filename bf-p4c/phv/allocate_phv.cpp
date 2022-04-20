@@ -2133,7 +2133,8 @@ bool CoreAllocation::try_metadata_overlay(
                     metaInitSlices.insert(sl);
 
                     initActions[kv.first].insert(kv.second.begin(), kv.second.end());
-                    LOG6("\t\t\tAdding initActions for field: " << kv.first);
+                    LOG6("\t\t\tAdding " << kv.second.size() << " initActions for field: " <<
+                         kv.first);
                     continue;
                 }
             }

@@ -14,9 +14,9 @@
 @pa_container_size("ingress" , "Lefor.Crump.Wauconda" , 32)
 @pa_container_size("ingress" , "Lefor.Crump.FortHunt" , 32)
 @pa_container_size("egress" , "Westoak.Nephi.Loris" , 32)
-@pa_container_size("egress" , "Westoak.Nephi.Mackville" , 32)
+// @pa_container_size("egress" , "Westoak.Nephi.Mackville" , 32)
 @pa_container_size("ingress" , "Westoak.Nephi.Loris" , 32)
-@pa_container_size("ingress" , "Westoak.Nephi.Mackville" , 32)
+// @pa_container_size("ingress" , "Westoak.Nephi.Mackville" , 32)
 @pa_container_size("ingress" , "Lefor.WebbCity.Dunstable" , 8)
 @pa_container_size("ingress" , "Westoak.Jerico.Fairland" , 8)
 @pa_atomic("ingress" , "Lefor.WebbCity.Onycha")
@@ -37,9 +37,9 @@
 @pa_mutually_exclusive("ingress" , "Lefor.Dushore.Mackville" , "Lefor.Ekwok.Mackville")
 @pa_mutually_exclusive("ingress" , "Lefor.Dushore.Loris" , "Lefor.Ekwok.Mackville")
 @pa_mutually_exclusive("ingress" , "Lefor.Dushore.Mackville" , "Lefor.Ekwok.Loris")
-@pa_no_init("ingress" , "Lefor.Dushore.Loris")
+// @pa_no_init("ingress" , "Lefor.Dushore.Loris")
 @pa_no_init("ingress" , "Lefor.Dushore.Mackville")
-@pa_atomic("ingress" , "Lefor.Dushore.Loris")
+// @pa_atomic("ingress" , "Lefor.Dushore.Loris")
 @pa_atomic("ingress" , "Lefor.Dushore.Mackville")
 @pa_atomic("ingress" , "Lefor.Covert.Wisdom")
 @pa_atomic("ingress" , "Lefor.Ekwok.Wisdom")
@@ -47,7 +47,7 @@
 @pa_atomic("ingress" , "Lefor.WebbCity.Bennet")
 @pa_atomic("ingress" , "Lefor.WebbCity.Harbor")
 @pa_no_init("ingress" , "Lefor.Yorkshire.Welcome")
-@pa_no_init("ingress" , "Lefor.Yorkshire.Hapeville")
+// @pa_no_init("ingress" , "Lefor.Yorkshire.Hapeville")
 @pa_no_init("ingress" , "Lefor.Yorkshire.Loris")
 @pa_no_init("ingress" , "Lefor.Yorkshire.Mackville")
 @pa_atomic("ingress" , "Lefor.Knights.Knierim")
@@ -64,7 +64,7 @@
 @pa_mutually_exclusive("egress" , "Westoak.Casnovia.Palmhurst" , "Lefor.Crump.Montague")
 @pa_atomic("ingress" , "Lefor.Crump.Wauconda")
 @pa_atomic("ingress" , "ig_intr_md_for_dprsr.drop_ctl")
-@pa_container_size("ingress" , "Westoak.Sunbury.Helton" , 32)
+// @pa_container_size("ingress" , "Westoak.Sunbury.Helton" , 32)
 @pa_mutually_exclusive("egress" , "Lefor.Crump.Vergennes" , "Westoak.Hookdale.Teigen")
 @pa_mutually_exclusive("egress" , "Westoak.Almota.Loris" , "Lefor.Crump.Miranda")
 @pa_container_size("ingress" , "Lefor.Ekwok.Loris" , 32)
@@ -87,14 +87,14 @@
 @pa_mutually_exclusive("egress" , "Lefor.Crump.Monahans" , "Lefor.Crump.McCammon")
 @pa_container_size("pipe_a" , "egress" , "Westoak.Recluse.Knierim" , 16)
 @pa_container_size("pipe_a" , "ingress" , "Lefor.Wyndmoor.Grays" , 32)
-@pa_container_type("ingress" , "Lefor.Jayton.Moose" , "normal")
+// @pa_container_type("ingress" , "Lefor.Jayton.Moose" , "normal")
 @pa_container_type("ingress" , "Lefor.Swifton.Moose" , "normal")
 @pa_container_type("ingress" , "Lefor.PeaRidge.Moose" , "normal")
 @pa_container_type("ingress" , "Lefor.Crump.Hueytown" , "normal")
 @pa_container_type("ingress" , "Lefor.Crump.Satolah" , "normal")
 @pa_mutually_exclusive("ingress" , "Lefor.Swifton.Tiburon" , "Lefor.Ekwok.Wisdom")
-@pa_no_overlay("ingress" , "Westoak.Wagener.Mackville")
-@pa_no_overlay("ingress" , "Westoak.Monrovia.Mackville")
+// @pa_no_overlay("ingress" , "Westoak.Wagener.Mackville")
+// @pa_no_overlay("ingress" , "Westoak.Monrovia.Mackville")
 @pa_atomic("ingress" , "Lefor.WebbCity.Bennet")
 @gfm_parity_enable
 @pa_alias("ingress" , "Westoak.Frederika.Eldred" , "Lefor.Crump.Fredonia")
@@ -5143,7 +5143,7 @@ control Albin(inout Peoria Westoak, inout Terral Lefor, in egress_intrinsic_meta
         Elliston();
         Moapa.count();
     }
-    @disable_atomic_modify(1) @stage(8) @name(".Tontogany") table Tontogany {
+    @disable_atomic_modify(1) @name(".Tontogany") table Tontogany {
         actions = {
             Manakin();
             @defaultonly NoAction();

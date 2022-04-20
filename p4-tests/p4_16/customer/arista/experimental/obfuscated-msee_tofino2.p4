@@ -3346,7 +3346,7 @@ control Truro(inout Hillside Olcott, inout Boonsboro Westoak, in egress_intrinsi
         const default_action = Plush(32w0, 32w0);
         size = 65536;
     }
-    @disable_atomic_modify(1) @stage(0) @name(".Ivanpah") table Ivanpah {
+    @disable_atomic_modify(1) @name(".Ivanpah") table Ivanpah {
         actions = {
             Cornwall();
             Langhorne();

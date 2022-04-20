@@ -4290,7 +4290,7 @@ control Watters(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsi
     @name(".Brush") action Brush() {
         Hettinger.Bratt.Quinhagak = (bit<1>)1w1;
     }
-    @ternary(1) @disable_atomic_modify(1) @stage(5) @name(".Ceiba") table Ceiba {
+    @ternary(1) @disable_atomic_modify(1) @name(".Ceiba") table Ceiba {
         actions = {
             Petrolia();
             Aguada();
@@ -5222,7 +5222,7 @@ control LaHoma(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsic
         Lemont.copy_to_cpu = (bit<1>)1w1;
         Hettinger.Moultrie.Rains = (bit<8>)8w26;
     }
-    @ignore_table_dependency(".Sultana") @disable_atomic_modify(1) @stage(10) @name(".Fairchild") table Fairchild {
+    @ignore_table_dependency(".Sultana") @disable_atomic_modify(1) @name(".Fairchild") table Fairchild {
         actions = {
             Albin();
             Folcroft();
@@ -5328,7 +5328,7 @@ control Munday(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic_
         Hettinger.Moultrie.Pettry = Holcut;
         Hettinger.Moultrie.Basalt = (bit<1>)1w1;
     }
-    @disable_atomic_modify(1) @stage(0) @name(".FarrWest") table FarrWest {
+    @disable_atomic_modify(1) @name(".FarrWest") table FarrWest {
         actions = {
             Hecker();
             @defaultonly NoAction();
@@ -5381,7 +5381,7 @@ control Dante(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsic_
     @name(".Eustis") action Eustis() {
         Hettinger.Bratt.LakeLure = (bit<1>)1w1;
     }
-    @disable_atomic_modify(1) @stage(1) @name(".Almont") table Almont {
+    @disable_atomic_modify(1) @name(".Almont") table Almont {
         actions = {
             Wyanet();
             ElJebel();
@@ -5394,7 +5394,7 @@ control Dante(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsic_
         size = 2048;
         requires_versioning = false;
     }
-    @disable_atomic_modify(1) @stage(1) @name(".SandCity") table SandCity {
+    @disable_atomic_modify(1) @name(".SandCity") table SandCity {
         actions = {
             Glouster();
             ElJebel();
@@ -5407,7 +5407,7 @@ control Dante(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsic_
         size = 1024;
         requires_versioning = false;
     }
-    @disable_atomic_modify(1) @stage(1) @name(".Newburgh") table Newburgh {
+    @disable_atomic_modify(1) @name(".Newburgh") table Newburgh {
         actions = {
             Penrose();
             Eustis();
@@ -5420,7 +5420,7 @@ control Dante(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsic_
         requires_versioning = false;
         const default_action = NoAction();
     }
-    @disable_atomic_modify(1) @stage(1) @name(".Baroda") table Baroda {
+    @disable_atomic_modify(1) @name(".Baroda") table Baroda {
         actions = {
             Penrose();
             Eustis();
@@ -5463,7 +5463,7 @@ control Bairoil(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsi
     @name(".Forman") action Forman(bit<16> Chunchula) {
         Hettinger.Swifton.Joslin = Chunchula;
     }
-    @disable_atomic_modify(1) @stage(1) @name(".WestLine") table WestLine {
+    @disable_atomic_modify(1) @name(".WestLine") table WestLine {
         actions = {
             NewRoads();
             @defaultonly NoAction();
@@ -5474,7 +5474,7 @@ control Bairoil(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsi
         size = 1024;
         const default_action = NoAction();
     }
-    @disable_atomic_modify(1) @stage(1) @name(".Lenox") table Lenox {
+    @disable_atomic_modify(1) @name(".Lenox") table Lenox {
         actions = {
             Berrydale();
             Millikin();
@@ -5498,7 +5498,7 @@ control Bairoil(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsi
         size = 8192;
         const default_action = NoAction();
     }
-    @disable_atomic_modify(1) @stage(1) @name(".McClusky") table McClusky {
+    @disable_atomic_modify(1) @name(".McClusky") table McClusky {
         actions = {
             Forman();
             @defaultonly NoAction();
@@ -5780,7 +5780,7 @@ control Kenyon(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsic
     }
     @name(".Humble") action Humble() {
     }
-    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @stage(10) @name(".Sigsbee") table Sigsbee {
+    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Sigsbee") table Sigsbee {
         key = {
             Hettinger.Swifton.Gastonia  : exact @name("Swifton.Gastonia") ;
             Hettinger.PeaRidge.Commack  : exact @name("PeaRidge.Commack") ;
@@ -5905,7 +5905,7 @@ control Alvwood(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic
         Bagwell = Burtrum.get<tuple<bit<9>, bit<5>>>({ Hookdale.egress_port, Hookdale.egress_qid[4:0] });
         Glenpool.count((bit<12>)Bagwell);
     }
-    @disable_atomic_modify(1) @stage(0) @name(".Gonzalez") table Gonzalez {
+    @disable_atomic_modify(1) @name(".Gonzalez") table Gonzalez {
         actions = {
             Blanchard();
         }
@@ -6089,7 +6089,7 @@ control Panola(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic_
         Compton.count();
         Hettinger.Moultrie.Norma = Almedia;
     }
-    @ignore_table_dependency(".Weslaco") @ignore_table_dependency(".Calverton") @disable_atomic_modify(1) @stage(9) @name(".Schofield") table Schofield {
+    @ignore_table_dependency(".Weslaco") @ignore_table_dependency(".Calverton") @disable_atomic_modify(1) @name(".Schofield") table Schofield {
         key = {
             Hettinger.Frederika.Martelle: ternary @name("Frederika.Martelle") ;
             Noyack.Rochert.Commack      : ternary @name("Rochert.Commack") ;
@@ -6120,7 +6120,7 @@ control Woodville(inout Baker Noyack, inout Harriet Hettinger, in egress_intrins
         Stanwood.count();
         Hettinger.Moultrie.Norma = Almedia;
     }
-    @ignore_table_dependency(".Schofield") @ignore_table_dependency("Calverton") @disable_atomic_modify(1) @stage(10) @name(".Weslaco") table Weslaco {
+    @ignore_table_dependency(".Schofield") @ignore_table_dependency("Calverton") @disable_atomic_modify(1) @name(".Weslaco") table Weslaco {
         key = {
             Hettinger.Frederika.Martelle: ternary @name("Frederika.Martelle") ;
             Noyack.Swanlake.Commack     : ternary @name("Swanlake.Commack") ;
