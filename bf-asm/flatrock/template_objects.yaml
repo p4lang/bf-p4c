@@ -97,6 +97,7 @@ ignore:
     # mdp_mem_rspec
   regs:
     # tfc_reg
+    - sbx_addrmap
     - dvsl_addrmap
     # fpp / fpp_rspec
     - pbus_rspec

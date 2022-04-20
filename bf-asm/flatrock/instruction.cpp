@@ -23,6 +23,7 @@ struct operand {
         virtual Base *lookup(Base *&ref) { return this; }
         virtual bool check() { return true; }
         virtual int bits(int slot) = 0;
+        virtual int bit_offset(int slot) = 0;
         virtual void dbprint(std::ostream &) const = 0;
         virtual bool equiv(const Base *) const = 0;
         virtual bool phvRead(std::function<void(const ::Phv::Slice &sl)>) { return false; }
@@ -44,6 +45,7 @@ struct operand {
             } else { return false; } }
         Const *clone() override { return new Const(*this); }
         int bits(int) override { return value & 0xff; }
+        int bit_offset(int) override { return 0; }
         void pass1(Table *tbl, int slot) override {
             if (::Phv::reg(slot)->size != 8)
                 error(lineno, "Constant literals only useable on 8-bit PHEs");
@@ -53,6 +55,7 @@ struct operand {
     };
     struct Phv : Base {
         ::Phv::Ref      reg;
+        ActionBusSource abs;
         Phv(int line, gress_t g, int stage, const value_t &n) : Base(line), reg(g, stage, n) {}
         Phv(int line, gress_t g, int stage, const std::string &n, int l, int h) :
             Base(line), reg(g, stage, line, n, l, h) {}
@@ -62,9 +65,16 @@ struct operand {
                 return reg == a->reg;
             } else { return false; } }
         Phv *clone() override { return new Phv(*this); }
-        int bits(int) override {
-            error(lineno, "Flatrock action data bus regs not implemented yet");
-            return 0; }
+        int bits(int slot) override {
+            BUG_CHECK(abs.type == ActionBusSource::XcmpData, "%s not on xcmp abus", reg.name());
+            unsigned size = ::Phv::reg(slot)->size/8U;  // size in bytes
+            if (abs.xcmp_group == 0) {  // BADB
+                return abs.xcmp_byte/size;
+            } else {  // WADB
+                BUG_CHECK(((abs.xcmp_byte ^ slot) & (7>>size)) == 0,
+                          "%s not aligned for slot %d in wadb", reg.name(), slot);
+                return (32>>size) + abs.xcmp_group*4 - 4 + abs.xcmp_byte/4U; } }
+        int bit_offset(int slot) override { return reg->lo % ::Phv::reg(slot)->size; }
         bool check() override {
             if (!reg.check()) return false;
             if (reg->reg.mau_id() < 0) {
@@ -79,7 +89,9 @@ struct operand {
             if (byte < 0) {
                 error(reg.lineno, "%s not available on the xcmp ixbar", reg.name());
                 return; }
-            ActionBusSource abs(grp, byte);
+            if (reg->hi/8U - reg->lo/8U >= ::Phv::reg(slot)->size/8U)
+                error(reg.lineno, "%s is not entirely in one ADB slot", reg.name());
+            abs = ActionBusSource(grp, byte);
             if (tbl->find_on_actionbus(abs, reg->lo, reg->hi, ::Phv::reg(slot)->size) < 0)
                 tbl->need_on_actionbus(abs, reg->lo, reg->hi, ::Phv::reg(slot)->size); }
         void dbprint(std::ostream &out) const override { out << reg; }
@@ -122,7 +134,9 @@ struct operand {
         Action *clone() override { return new Action(*this); }
         int bits(int slot) override {
             int size = ::Phv::reg(slot)->size;
-            error(lineno, "Flatrock ADB decode not implemented yet"); }
+            error(lineno, "Flatrock ADB decode not implemented yet");
+            return 0; }
+        int bit_offset(int slot) override { return lo % ::Phv::reg(slot)->size; }
         void pass1(Table *tbl, int slot) override {
             if (field) field->flags |= Table::Format::Field::USED_IMMED;
             auto slot_size = ::Phv::reg(slot)->size;
@@ -148,6 +162,7 @@ struct operand {
             } else { return false; } }
         RawAction *clone() override { return new RawAction(*this); }
         int bits(int) override { return index; }
+        int bit_offset(int) override { return 0; }
         void dbprint(std::ostream &out) const override { out << 'A' << index; }
     };
 #if 0
@@ -325,6 +340,7 @@ struct operand {
         Named *clone() override { return new Named(*this); }
         bool check() override { BUG(); return true; }
         int bits(int) override { BUG(); return 0; }
+        int bit_offset(int) override { BUG(); return 0; }
         void pass1(Table *, int) override { BUG(); }
         void dbprint(std::ostream &out) const override {
             out << name;
@@ -461,7 +477,7 @@ struct PhvWrite : VLIWInstruction {
     uint32_t encode();
     bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) { return src->phvRead(fn); }
     void dbprint(std::ostream &out) const {
-        out << "INSTR: set " << dest << ", " << src; }
+        out << "INSTR: " << opc->name << " " << dest << ", " << src; }
 };
 
 struct Noop : PhvWrite::Decode {
@@ -659,24 +675,24 @@ uint32_t PhvWrite::encode() {
 uint32_t BitmaskSet::encode() {
     uint32_t rv = PhvWrite::encode();
     BUG_CHECK(Phv::reg(slot)->size == 8, "bitmasked-set not 8 bits");
-    rv |= mask << 9;
+    rv |= (mask^0xff) << 9;
     return rv;
 }
 uint32_t DepositField::encode() {
     uint32_t rv = PhvWrite::encode();
     switch (Phv::reg(slot)->size) {
     case 8:
-        rv |= ((8 - dest->lo) & 7) << 9;
+        rv |= ((src->bit_offset(slot) - dest->lo) & 7) << 9;
         rv |= dest->lo << 12;
         rv |= dest->hi << 15;
         break;
     case 16:
-        rv |= ((16 - dest->lo) & 15) << 6;
+        rv |= ((src->bit_offset(slot) - dest->lo) & 15) << 6;
         rv |= dest->lo << 10;
         rv |= dest->hi << 14;
         break;
     case 32:
-        rv |= ((32 - dest->lo) & 31) << 5;
+        rv |= ((src->bit_offset(slot) - dest->lo) & 31) << 5;
         rv |= dest->lo << 10;
         rv |= dest->hi << 15;
         break;
