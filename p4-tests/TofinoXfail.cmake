@@ -353,6 +353,8 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/invalid-hdr-warnings5.p4
   testdata/p4_16_samples/invalid-hdr-warnings6.p4
   testdata/p4_16_samples/wrong-warning.p4
+  #p4c update 2022-04-25
+  testdata/p4_16_samples/extract_for_header_union.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -424,6 +426,8 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/arith4-bmv2.p4
   testdata/p4_16_samples/arith5-bmv2.p4
   testdata/p4_16_samples/issue2190.p4
+  # p4c update 2022-04-25
+  testdata/p4_16_samples/psa-dpdk-binary-operations.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1603,14 +1607,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "error: Tofino requires byte-aligned headers, but header .* is not byte-aligned"
-  testdata/p4_16_samples/custom-type-restricted-fields.p4
-  testdata/p4_16_samples/parser-unroll-test3.p4
-  testdata/p4_16_samples/parser-unroll-test4.p4
-  testdata/p4_16_samples/parser-unroll-test5.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "error: .*: action spanning multiple stages"
   testdata/p4_16_samples/nested_if_lvalue_dependencies.p4
   testdata/p4_16_samples/nested_if_else.p4
@@ -1707,6 +1703,9 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-multicast-basic-2-bmv2.p4
   testdata/p4_16_samples/psa-unicast-or-drop-bmv2.p4
   testdata/p4_16_samples/psa-end-of-ingress-test-bmv2.p4
+  # p4c update 2022-04-25
+  testdata/p4_16_samples/psa-dpdk-struct-field.p4
+  testdata/p4_16_samples/psa-dpdk-token-too-big.p4
 )
 
 p4c_add_xfail_reason("tofino"

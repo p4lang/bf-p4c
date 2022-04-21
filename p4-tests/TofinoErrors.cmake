@@ -100,3 +100,14 @@ p4c_add_xfail_reason("tofino"
   "error: (Primitive sample4 is not supported by the backend)|(sample_e2e primitive is not currently supported by the TNA architecture)"
   ../glass/testsuite/p4_tests/parde/test_start_coalesced_state.p4
   )
+
+# Headers that are not byte aligned
+p4c_add_xfail_reason("tofino"
+  "error: Tofino requires byte-aligned headers, but header .* is not byte-aligned"
+  testdata/p4_16_samples/custom-type-restricted-fields.p4
+  testdata/p4_16_samples/parser-unroll-test3.p4
+  testdata/p4_16_samples/parser-unroll-test4.p4
+  testdata/p4_16_samples/parser-unroll-test5.p4
+  # p4c update 2022-04-25
+  testdata/p4_16_samples/issue3225.p4
+)
