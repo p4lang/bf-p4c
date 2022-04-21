@@ -72,6 +72,7 @@ ignoreFilePatterns=(
   '^scripts/pkg-src/src/.*\.patch$'
   '^scripts/run_custom_tests/patches/scapy/.*\.py$'
   '^third_party/'
+  '^ci/' # CI Klocwork Differential Analysis files 
 
   # The only file we ship from Glass seems to be primitives.json, which can't
   # have comments anyway.

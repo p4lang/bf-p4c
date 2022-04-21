@@ -1,0 +1,39 @@
+GITHUB:
+  REPO_URL: "https://github.com/intel-restricted/networking.switching.barefoot.bf-p4c-compilers"                   #[Required] Link to the main directory of project hosted on GitHub
+  GITHUB_API_URL: "https://api.github.com"                                                                         #[Required] API Address of GitHub
+
+PROJECTS:
+  - NAME: "bf-p4c-compilers"
+    PROJECT_SRC_DIR: ""                                                                                            #[Required] Path to the main source directory within project
+    PREBUILD_STAGES:                                                                                               #[Optional] Define if any PREBUILD_SCRIPT is needed
+    - NAME: "Git submodule update"                                                                                 #[Required] Name of the Script
+      WORKDIR: ""                                                                                 #[Optional] Path to the working directory for this script
+      COMMAND: "git submodule update --init --recursive"
+    
+    - NAME: "Copy p4factory artifacts"                                                                                #[Required] Name of the Script
+      WORKDIR: ""                                                                                               # workdir vs root repo                                                                  #[Optional] Path to the working directory for this script
+      COMMAND: "pwd; ls; cp -rf /bf/install ."
+        
+    - NAME: "bootstrap_bfn_compilers"
+      WORKDIR: ""
+      COMMAND: "pwd; ls; ./bootstrap_bfn_compilers.sh --no-ptf --build-dir build --build-type RelWithDebInfo -DCMAKE_INSTALL_PREFIX=$(pwd)/install --minimal-config -DFIXED_LIBDYNHASH=ON -DENABLE_STATIC_LIBS=ON -DENABLE_BAREFOOT_INTERNAL=OFF -DENABLE_FLATROCK=ON"
+      
+    BUILD_STAGE:                                                                                           #[Optional] Path to the working directory for this script, if not defined, the default will be used
+      WORKDIR: "/build"
+      COMMAND: "make -j4"                                                                                          #[Required] Build script that would be injected to the klocwork scan. Please be aware that it will be called from the WORKDIR defined in the same stage.
+    KLOCWORK_PROJECT_NAME: "master__bf-p4c-compilers"                                                                #[Required] Name of the project at Klocwork Server
+    SCAN_ONLY_CHANGED_FILES: True           
+               
+KLOCWORK:
+  SERVER_URL: "http://klocwork-server.igk.intel.com:8080"                                                              #[Required] Address of Klocwork Server that contain project reference
+  KWCIAGENT_DIRECTORY: "/KDA/kwciagent"                                                                              #[Required] Root directory for Klocwork binaries at runner machine
+  SCAN_ONLY_CHANGED_FILES: True                                                                                  #[True|False] Flag to scan whole repository or only the files that have been changed
+  KLOCWORK_LTOKEN: "/root/.klocwork/ltoken"                                                                     #[Optional] Path to Klocwork ltoken that will be used to authenticate to the Klocwork server
+  KWCIAGENT_JOBS_NUMBER: 8
+
+MISC:
+  ROOT_WORKDIR: "/KDA/workspace"                                                                          #[Required] Name of the directory for temporary Klocwork files
+  OS: "Linux"
+  CONSOLE_LOG_LEVEL: "DEBUG"
+         
+       
