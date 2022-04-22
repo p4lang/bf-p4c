@@ -2,6 +2,7 @@
 
 #include "constants.h"
 #include "deparser.h"
+#include "misc.h"
 #include "parser-tofino-jbay-cloudbreak.h"
 #include "phv.h"
 #include "range.h"
@@ -9,6 +10,11 @@
 #include "top_level.h"
 #include "../lib/stringref.h"
 #include "ubits.h"
+// FIXME: Creating a deparser class hierarchy would eliminate the need to include this Flatrock
+// include file here
+#if HAVE_FLATROCK
+#include "flatrock/hdr.h"
+#endif  /* HAVE_FLATROCK */
 
 unsigned Deparser::unique_field_list_handle;
 Deparser Deparser::singleton_object;
@@ -231,6 +237,44 @@ void TARGET##GRESS##NAME##Digest::setregs(Target::TARGET::deparser_regs &regs,  
 
 std::map<std::string, Deparser::Digest::Type *> Deparser::Digest::Type::all[TARGET_INDEX_LIMIT][2];
 
+void Deparser::PacketBodyOffset::input(value_t data) {
+    if (!CHECKTYPE(data, tMAP)) return;
+#if HAVE_FLATROCK
+    for (auto &kv : MapIterChecked(data.map, true)) {
+        if (kv.key == "hdr") {
+            if (CHECKTYPE2(kv.value, tINT, tSTR)) {
+                if (kv.value.type == tINT) {
+                    check_range(kv.value, 0, Target::Flatrock::PARSER_HDR_ID_MAX);
+                    hdr = kv.value.i;
+                } else {
+                    hdr = Hdr::id(data.lineno, kv.value.s);
+                }
+            }
+        } else if (kv.key == "offset") {
+            if (CHECKTYPE(kv.value, tINT)) {
+                check_range(kv.value,
+                            -Target::Flatrock::PARSER_BASE_LEN_MAX,
+                            Target::Flatrock::PARSER_BASE_LEN_MAX);
+                offset = kv.value.i;
+            }
+        } else if (kv.key == "var_off_pos") {
+            if (CHECKTYPE(kv.value, tINT)) {
+                check_range(kv.value, 0, Target::Flatrock::POV_WIDTH - 1);
+                var_start = kv.value.i;
+            }
+        } else if (kv.key == "var_off_len") {
+            if (CHECKTYPE(kv.value, tINT)) {
+                check_range(kv.value, 0, Target::Flatrock::DEPARSER_PBO_VAR_OFFSET_LEN_WIDTH_MAX);
+                var_len = kv.value.i;
+            }
+        } else {
+            error(kv.key.lineno, "unknown item %s in packet_body_offset",
+                    value_desc(kv.key));
+        }
+    }
+#endif  /* HAVE_FLATROCK */
+}
+
 void Deparser::start(int lineno, VECTOR(value_t) args) {
     if (args.size == 0) {
         this->lineno[INGRESS] = this->lineno[EGRESS] = lineno;
@@ -311,6 +355,9 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                         }
                     }
                 }
+            } else if (kv.key == "packet_body_offset") {
+                pbo[gress].lineno = kv.key.lineno;
+                pbo[gress].input(kv.value);
             } else if (auto *itype = ::get(Intrinsic::Type::all[Target::register_set()][gress],
                                            value_desc(&kv.key))) {
                 intrinsics.emplace_back(itype, kv.key.lineno);

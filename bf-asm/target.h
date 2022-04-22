@@ -639,8 +639,8 @@ class Target::Flatrock : public Target {
     enum {
         PARSER_CHECKSUM_UNITS = 0,
         PARSER_EXTRACT_BYTES = true,
-        PARSER_DEPTH_MAX_BYTES_INGRESS = (((1<<10)-1)*16),
-        PARSER_DEPTH_MAX_BYTES_EGRESS = (32*16),
+        PARSER_DEPTH_MAX_BYTES_INGRESS = (((1 << 10) - 1) * 16),
+        PARSER_DEPTH_MAX_BYTES_EGRESS = (32 * 16),
         MATCH_BYTE_16BIT_PAIRS = false,
 #ifdef EMU_OVERRIDE_STAGE_COUNT
         NUM_MAU_STAGES_PRIVATE = EMU_OVERRIDE_STAGE_COUNT,
@@ -699,10 +699,15 @@ class Target::Flatrock : public Target {
         PARSER_SEQ_ID_MAX = 254,  // Max value of header sequence ID; 255 reserved for escape value
         PARSER_LEN_POS_MAX_OFFSET = 63,  // Max value for seq_len
         PARSER_OFF_POS_MAX_OFFSET = 63,  // Max value for seq_off
-        PARSER_HDR_ID_MAX = 254,  // Max value of hdr_id; 255 is reserved for invalid header
+        PARSER_HDR_ID_MAX = 254,         // Max value of hdr_id; 255 is reserved for invalid header
         PARSER_BASE_LEN_MAX = 255,
         PARSER_NUM_COMP_BITS_MAX = 15,
         PARSER_SCALE_MAX = 3,
+        POV_WIDTH = 128,
+        DEPARSER_PBO_VAR_OFFSET_LEN_WIDTH_MAX = 9,  // Payload body offset: maximum length of the
+                                                    // variable offset component. The length
+                                                    // in the config register must be in the range
+                                                    // [0, DEPARSER_PBO_VAR_OFFSET_LEN_MAX].
     };
     static int encodeConst(int src) {
         return src;

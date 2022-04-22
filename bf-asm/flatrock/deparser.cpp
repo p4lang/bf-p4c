@@ -87,6 +87,15 @@ template<> void Deparser::write_config(Target::Flatrock::deparser_regs &regs) {
             max_bytes = (--i)->len; }
     }
 
+    // Configure payload byte offset
+    // FIXME: currently only entry 0
+    phvxb.pbo_cfg.key[0].key_wh = 0xFFFFFFFF;
+    phvxb.pbo_cfg.key[0].key_wl = 0xFFFFFFFF;
+    phvxb.pbo_cfg.data[0].hdr = pbo[EGRESS].hdr;
+    phvxb.pbo_cfg.data[0].offset = pbo[EGRESS].offset;
+    phvxb.pbo_cfg.data[0].var_start = pbo[EGRESS].var_start;
+    phvxb.pbo_cfg.data[0].var_len = pbo[EGRESS].var_len;
+
     if (!intrinsics.empty())
         error(intrinsics.front().lineno, "Flatrock intrinsics not implemented yet!");
     if (!digests.empty())

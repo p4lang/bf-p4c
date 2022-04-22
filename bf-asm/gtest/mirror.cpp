@@ -176,6 +176,8 @@ deparser ingress:
       - H56(0..8)  # bit[8..0]: ingress::Thurmond.Armagh.Moorcroft
 )MIRR_CFG";
 
+    resetTarget();
+
     auto* digest = ::get(Deparser::Digest::Type::all[TOFINO][INGRESS], "mirror");
     ASSERT_NE(digest, nullptr) << "Unable to find the mirror digest";
 

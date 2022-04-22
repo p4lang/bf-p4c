@@ -336,8 +336,9 @@ if (ENABLE_GTESTS)
 
   set(BFAS_GTEST_SOURCES
     gtest/gtestasm.cpp
-    gtest/depositfield.cpp
     gtest/asm-types.cpp
+    gtest/deparser.cpp
+    gtest/depositfield.cpp
     gtest/mirror.cpp
     gtest/parser-test.cpp
     gtest/flatrock-parser.cpp

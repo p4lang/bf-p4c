@@ -1204,11 +1204,11 @@ deparser <thread>:
         offset: <constant>
             # Constant (signed) offset to add to the base offset
             # Default: 0
-        var_start: <constant>
-            # POV start bit for variable offset
+        var_off_pos: <constant>
+            # Variable offset: start bit position in POV
             # Default: 0
-        var_len: <constant>
-            # POV length for variable offset
+        var_off_len: <constant>
+            # Variable offset: length in POV
             # Default: 0
 flexible_headers:
     # Lists the headers that were re-packed by the compiler because

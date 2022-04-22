@@ -98,6 +98,21 @@ class Deparser : public Section {
         bool zeros_as_ones_en = false;
     };
 
+    /**
+     * Packet body offset
+     *
+     * Indicates where the payload starts within a packet relative to a given header
+     */
+    struct PacketBodyOffset {
+        int lineno;
+        int hdr;
+        int offset;
+        int var_start;
+        int var_len;
+
+        void input(value_t data);
+    };
+
     struct FDEntry;
     std::vector<ChecksumVal>            checksum_entries[2][MAX_DEPARSER_CHECKSUM_UNITS];
     FullChecksumUnit                    full_checksum_unit[2][MAX_DEPARSER_CHECKSUM_UNITS];
@@ -108,6 +123,10 @@ class Deparser : public Section {
                  unsigned>              pov[2];
     bitvec                              phv_use[2];
     std::set<int>                       constants[2];
+    PacketBodyOffset                    pbo[2];  // Flatrock only uses the egress element
+                                                 // (elemnent 1). Element 0 is always unused.
+                                                 // The 2-element array is present for
+                                                 // consistency with other fields.
     struct Intrinsic {
         struct Type;
         Type                    *type;

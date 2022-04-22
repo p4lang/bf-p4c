@@ -366,7 +366,11 @@ void declare_registers(const Target::Flatrock::mau_regs *regs, int stage) {
             out << "mau[" << stage << "]";
             regs->emit_fieldname(out, addr, end); });
 }
-void declare_registers(const Target::Flatrock::deparser_regs *) {
+void declare_registers(const Target::Flatrock::deparser_regs *regs) {
+    declare_registers(&regs->egress, sizeof regs->egress,
+        [=](std::ostream &out, const char *addr, const void *end) {
+            out << "deparser.egress.regs";
+            regs->egress.emit_fieldname(out, addr, end); });
 }
 
 void emit_parser_registers(const Target::Flatrock::top_level_regs *regs, std::ostream &out) {
