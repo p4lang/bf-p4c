@@ -1500,8 +1500,10 @@ bool ActionAnalysis::TotalAlignment::is_byte_rotate_merge_src(PHV::Container con
     if (container.is(PHV::Size::b8))
         return false;
     for (size_t i = 0; i < container.size(); i += 8) {
+        if (direct_write_bits.getslice(i, 8).empty())
+            continue;
         bitvec write_bits_per_byte = (direct_write_bits | unused_container_bits).getslice(i, 8);
-        if (write_bits_per_byte.empty() || write_bits_per_byte.popcount() == 8)
+        if (write_bits_per_byte.popcount() == 8)
             continue;
         return false;
     }
@@ -1517,11 +1519,8 @@ bitvec ActionAnalysis::TotalAlignment::brm_src_mask(PHV::Container container) co
     bitvec rv;
     for (size_t i = 0; i < container.size(); i += 8) {
         bitvec write_bits_per_byte = (direct_write_bits | unused_container_bits).getslice(i, 8);
-        BUG_CHECK(write_bits_per_byte.empty() || write_bits_per_byte.popcount() == 8, "Illegal "
-            "call of byte rotate merge src mask");
-        if (write_bits_per_byte.empty())
-            continue;
-        rv.setrange(i, 8);
+        if (write_bits_per_byte.popcount() == 8)
+            rv.setrange(i, 8);
     }
     return rv;
 }
