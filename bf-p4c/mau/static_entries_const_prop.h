@@ -71,6 +71,11 @@ class StaticEntriesConstProp : public MauModifier {
         for (unsigned i = 0; i < instr->operands.size(); i++) {
             if (i == 0) continue;
 
+            // Must be PHV. See bug check number 2 in verify_conditional_set_without_phv()
+            if ((i == 1) && (instr->name == "conditionally-set")) {
+                continue;
+            }
+
             auto op = phv.field(instr->operands[i]);
             if (!op) continue;
 
