@@ -34,6 +34,7 @@ ARG TOFINO_P414_TEST_ARCH_TNA=false
   # Set things up for distcc.
   ENV CC="distcc gcc"
   ENV CXX="distcc g++"
+  ENV DISTCC_IO_TIMEOUT="450"
 
   # Set up Intel proxies.
   ENV http_proxy='http://proxy-dmz.intel.com:911'
