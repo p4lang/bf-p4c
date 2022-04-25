@@ -99,7 +99,7 @@
 #     immXs = X-bit immediate signed constant
 #     immXu = X-bit immediate unsigned constant
 #     opcode 0: ptr += imm8s; special case imm8s == 0: nop
-#     opcode 1: ptr += w2[7:0] + imm8u
+#     opcode 1: ptr += w2[7:0] + imm8s
 #     opcode 2: ptr += state[MSB:LSB], MSB&LSB -> 2/4/8/16-bit state sub-field
 #     opcode 3: ptr += (state[MSB:LSB] << 2), MSB&LSB -> 2/4/8/16-bit state sub-field
 #     opcode 4: ptr += ((w2[7:0] & imm8u) << imm2u) + (imm2u << 2)
@@ -118,18 +118,26 @@
 #     opcode 1: state[MSB:LSB] <<= imm4u, MSB&LSB -> 2/4/8/16-bit state sub-field
 #     opcode 2: state[MSB:LSB] += imm8s, MSB&LSB -> 2/4/8/16-bit state sub-field
 #     opcode 3: state[MSB:LSB] = imm8s, MSB&LSB -> 2/4/8/16-bit state sub-field
-#     opcode 4, shift_dir = 0: state[MSB:LSB] += ((w2[7:0] & imm8u) << imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
-#     opcode 4, shift_dir = 1: state[MSB:LSB] += ((w2[7:0] & imm8u) >> imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
-#     opcode 5, shift_dir = 0: state[MSB:LSB] -= ((w2[7:0] & imm8u) << imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
-#     opcode 5, shift_dir = 1: state[MSB:LSB] -= ((w2[7:0] & imm8u) >> imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
-#     opcode 6, shift_dir = 0: state[MSB:LSB] += ((w2[7:0] & imm8u) << imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
+#     opcode 4, shift_dir = 0: state[MSB:LSB] += ((w2[7:0] & mask_mode(imm4u)) << imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
+#     opcode 4, shift_dir = 1: state[MSB:LSB] += ((w2[7:0] & mask_mode(imm4u)) >> imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
+#     opcode 5, shift_dir = 0: state[MSB:LSB] -= ((w2[7:0] & mask_mode(imm4u)) << imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
+#     opcode 5, shift_dir = 1: state[MSB:LSB] -= ((w2[7:0] & mask_mode(imm4u)) >> imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
+#     opcode 6, shift_dir = 0: state[MSB:LSB] += ((w2[7:0] & mask_mode(imm4u)) << imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
 #                              if ((w2[7:0] & imm8u) << imm2u) != 0, then + 4 - ((w2[7:0] & imm8u) << imm2u)
-#     opcode 6, shift_dir = 1: state[MSB:LSB] += ((w2[7:0] & imm8u) >> imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
+#                              if mask_mode == 0, then each bit is a half-nibble mask
+#                              if mask_mode == 1, then the mask is a full bit mask on the lower bits; upper bits are 0xF
+#     opcode 6, shift_dir = 1: state[MSB:LSB] += ((w2[7:0] & mask_mode(imm4u)) >> imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
 #                              if ((w2[7:0] & imm8u) >> imm2u) != 0, then + 4 - ((w2[7:0] & imm8u) >> imm2u)
-#     opcode 7, shift_dir = 0: state[MSB:LSB] -= ((w2[7:0] & imm8u) << imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
+#                              if mask_mode == 0, then each bit is a half-nibble mask
+#                              if mask_mode == 1, then the mask is a full bit mask on the lower bits; upper bits are 0xF
+#     opcode 7, shift_dir = 0: state[MSB:LSB] -= ((w2[7:0] & mask_mode(imm4u)) << imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
 #                              if ((w2[7:0] & imm8u) << imm2u) != 0, then + 4 - ((w2[7:0] & imm8u) << imm2u)
-#     opcode 7, shift_dir = 1: state[MSB:LSB] -= ((w2[7:0] & imm8u) >> imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
+#                              if mask_mode == 0, then each bit is a half-nibble mask
+#                              if mask_mode == 1, then the mask is a full bit mask on the lower bits; upper bits are 0xF
+#     opcode 7, shift_dir = 1: state[MSB:LSB] -= ((w2[7:0] & mask_mode(imm4u)) >> imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
 #                              if ((w2[7:0] & imm8u) >> imm2u) != 0, then + 4 - ((w2[7:0] & imm8u) >> imm2u)
+#                              if mask_mode == 0, then each bit is a half-nibble mask
+#                              if mask_mode == 1, then the mask is a full bit mask on the lower bits; upper bits are 0xF
 phv [<thread>]:
     # Defines PHV alias names for registers.  <thread> is 'ingress', 'ghost' or
     # 'egress' and is optional.  If present, aliases are defined only for
@@ -303,16 +311,29 @@ parser [<thread>] [<port_use>, ...]:
     parse_depth_checks_disabled: true | false
         # Parse depth checks disabled
     # Specific for Tofino 5 parser (parser ingress):
+    states:
+        <name>: <match-constant>
+            # specifies match values for states (64b)
+            # e.g. parse_ipv4: 0x********_******02
+            # e.g. parse_tcp: 0x********_******04
     port_metadata:
         # specifies port metadata for each logical port number
         <constant>: <vector>
             # constant is logical port number, vector is port metadata (15B)
-    profile <constant> [port <match-constant>] [inband_metadata <match-constant>]:
+    profile <constant>:
         # specifies a parser profile, constant represents the TCAM&SRAM index
+        match_port: <match-constant>
+        match_inband_metadata: <match-constant>
         # if the logical port number (2'b0 ++ 6b) or inband metadata (8B) match is omitted,
         # it is treated as *
-        initial_state: <constant>
+        initial_pktlen: <constant>
+            # specifies the value to adjust the length for AdjustedPacketLength (6b)
+        initial_seglen: <constant>
+            # specifies the value to adjust the length for AdjustedSegLength (6b)
+        initial_state: <constant> | <name>
             # specifies initial state (80b)
+            # if a state name is used, all-match bits are initialized to 0
+            # and upper-most two bytes are set to 0
         initial_flags: <constant>
             # specifies initial flags (64b)
         initial_ptr: <constant>
@@ -327,62 +348,58 @@ parser [<thread>] [<port_use>, ...]:
             # specifies initial instruction for ALU0 (15b)
         initial_alu1_instruction: <alu1-instruction>
             # specifies initial instruction for ALU1 (19b)
-        metadata_select: '[', <metadata-select>, ... ']'
+        metadata_select: [ <metadata-select>, ... ]
             # specifies source of each of 32B of MD32 metadata
-    analyzer:
-        state_map:
-            <name>: <match-constant>
-                # specifies match values for states (64b)
-                # e.g. parse_ipv4: 0x**************02
-                # e.g. parse_tcp: 0x**************04
-        stage <constant> [<name>]:
-            # constant is stage number
-            # if name is present, it is looked up in state_map and all rules match the state
-            # only one of stage name and rule state match can be present
-            # e.g. stage 0 parse_ipv4
-            rule <constant> [state <match-constant>] [w0 <match-constant>] [w1 <match-constant>]:
-                # constant is explicit rule index; it also specifies the rule priority
-                # when more rules match (lower value is higher priority)
-                # if state match constant is ommited, it is derived from the state name at stage
-                # if it is missing, it is treated as *
-                # if w0 or w1 match constant is ommited, it is treated as *
-                # e.g. rule 0 w0 17  # state is matched based on `stage 0 parse_ipv4' above
-                # e.g. rule 0 w0 17 state 0x************02  # 17 is for TCP; 02 is for parse_ipv4 (see state_map)
-                next_state: <match-constant> | <name>
-                    # specifies state for the next stage (80b)
-                    # e.g. next_state: 0x**************04
-                    # e.g. next_state: parse_tcp
-                next_skip_extractions: <bool>
-                    # skips Wx extractions in the next stage (bool)
-                next_w0_offset: <constant>
-                    # specifies W0 offset for the next stage (8b)
-                    # e.g. next_w0_offset: 2  # TCP destination port
-                next_w1_offset: <constant>
-                    # specifies W1 offset for the next stage (8b)
-                next_w2_offset: <constant>
-                    # specifies W2 offset for the next stage (8b)
-                next_alu0_instruction: <alu0-instruction>
-                    # specifies instruction for ALU0 for the next stage (15b)
-                next_alu1_instruction: <alu1-instruction>
-                    # specifies instruction for ALU1 for the next stage (19b)
-                push_hdr_id: <hdr-id-name> <constant>
-                    # specifies header ID (8b) or name and offset (8b) to be pushed to ana_hdr_ptrs
-                    # if name is specified, it is looked up in hdr_id_map
-                    # 0xff for header ID is reserved for invalid
-                    # offset is relative to pointer
-                    # e.g. push_hdr_id: ipv4 0
-                # TODO update flags, update csum enable
-    phv_builder:
-        group <constant>:
-            # specifies extract groups
-            pov_select: '[', <constant>, <constant>, <constant>, <constant>, ']'
-                # specifies which POV bytes are used to address the TCAM & SRAM
-            extract <constant>:
-                # specifies extracts
-                match: <match-constant>
-                    # match constant is 4B
-                source: <phe-source>
-                    # specifies a PHE source pair
+    analyzer_stage <constant> [<name>]:
+        # constant is stage number
+        # if name is present, it is looked up in state_map and all rules match the state
+        # only one of stage name and rule state match can be present
+        # e.g. stage 0 parse_ipv4
+        rule <constant>:
+            # constant is explicit rule index; it also specifies the rule priority
+            # when more rules match (lower value is higher priority)
+            match_state: <match-constant>
+            # if state match constant is ommited, it is derived from the state name at stage
+            # if it is missing, it is treated as *
+            match_w0: <match-constant>
+            match_w1: <match-constant>
+            # if w0 or w1 match constant is ommited, it is treated as *
+            # e.g. rule 0 w0 17  # state is matched based on `stage 0 parse_ipv4' above
+            # e.g. rule 0 w0 17 state 0x************02  # 17 is for TCP; 02 is for parse_ipv4 (see state_map)
+            next_state: <match-constant> | <name>
+                # specifies state for the next stage (80b)
+                # e.g. next_state: 0x**************04
+                # e.g. next_state: parse_tcp
+            next_skip_extractions: <bool>
+                # skips Wx extractions in the next stage (bool)
+            next_w0_offset: <constant>
+                # specifies W0 offset for the next stage (8b)
+                # e.g. next_w0_offset: 2  # TCP destination port
+            next_w1_offset: <constant>
+                # specifies W1 offset for the next stage (8b)
+            next_w2_offset: <constant>
+                # specifies W2 offset for the next stage (8b)
+            next_alu0_instruction: <alu0-instruction>
+                # specifies instruction for ALU0 for the next stage (15b)
+            next_alu1_instruction: <alu1-instruction>
+                # specifies instruction for ALU1 for the next stage (19b)
+            push_hdr_id: <hdr-id-name> <constant>
+                # specifies header ID (8b) or name and offset (8b) to be pushed to ana_hdr_ptrs
+                # if name is specified, it is looked up in hdr -> map
+                # 0xff for header ID is reserved for invalid
+                # offset is relative to pointer
+                # e.g. push_hdr_id: ipv4 0
+            # TODO update flags, update csum enable
+    phv_builder_group <constant>:
+        # specifies extract groups
+        pov_select: [ <constant>, <constant>, <constant>, <constant> ]
+            # specifies which POV bytes are used to address the TCAM & SRAM
+        extract <constant>:
+            # specifies extracts
+            match: <match-constant>
+                # match constant is 4B
+            source: <phe-source>
+                # specifies a PHE source pair
     # Specific for Tofino 5 pseudo parser (parser egress):
     pov_flags_pos: <constant>
         # specifies start position of POV flags in bridge metadata (6b)

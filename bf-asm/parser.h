@@ -7,7 +7,7 @@
 #include "json.h"
 #include "sections.h"
 
-class BaseParser : public Configurable {
+class BaseParser : virtual public Configurable, virtual public Contextable {
  protected:
     int lineno = -1;
 };

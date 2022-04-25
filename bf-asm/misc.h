@@ -5,6 +5,7 @@
 #include <string>
 #include <iomanip>
 #include <memory>
+#include <limits>
 
 #include "json.h"
 #include "asm-types.h"
@@ -84,7 +85,44 @@ uint64_t bitMask(unsigned size);
 int parity(uint32_t v);
 int parity_2b(uint32_t v);  // two-bit parity (parity of pairs in the word)
 
-void check_value(value_t value, int expected);
-void check_range(value_t value, int lo, int hi);
+inline void check_value(const value_t value, const decltype(value_t::i) expected) {
+    CHECKTYPE(value, tINT);
+    if (value.i != expected)
+        error(value.lineno, "unexpected value %ld; expected %ld", value.i, expected);
+}
+
+inline void check_range(const value_t value,
+        const decltype(value_t::i) lo, const decltype(value_t::i) hi) {
+    CHECKTYPE(value, tINT);
+    if (value.i < lo || value.i > hi)
+        error(value.lineno, "value %ld out of allowed range <%ld; %ld>", value.i, lo, hi);
+}
+
+inline void check_range_match(const value_t &match,
+        const decltype(match_t::word0) mask, int width) {
+    CHECKTYPE(match, tMATCH);
+    if ((match.m.word0 | match.m.word1) != mask)
+        error(match.lineno, "invalid match width; expected %i bits", width);
+}
+
+inline void convert_i2m(const decltype(value_t::i) i, match_t &m) {
+    m.word0 = ~i;
+    m.word1 =  i;
+}
+
+/// * is parsed as match_t::word0 == 0 && match_t::word1 == 0.
+/// The function converts the match according to the specified with @p mask.
+inline void fix_match_star(match_t &match, const decltype(match_t::word0) mask) {
+    if (match.word0 == 0 && match.word1 == 0)
+        match.word0 = match.word1 = mask;
+}
+
+/// The function reads a tINT or tMATCH value, performs range checks, and converts
+/// the value to a new tMATCH value.
+/// @param value Input value
+/// @param match Output value
+/// @param width Expected width of the input value used for range checks
+/// @pre @p value must be a tINT or tMATCH value.
+void input_int_match(const value_t value, match_t &match, int width);
 
 #endif /* BF_ASM_MISC_H_ */

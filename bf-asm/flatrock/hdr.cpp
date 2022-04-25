@@ -21,7 +21,7 @@ void Hdr::input_map(VECTOR(value_t) args, value_t data) {
 void Hdr::input_seq(VECTOR(value_t) args, value_t data) {
     if (!CHECKTYPE(data, tMAP)) return;
     for (auto &kv : MapIterChecked(data.map, true)) {
-        if (!CHECKTYPE(kv.key, tINT) || !CHECKTYPE(kv.value, tVEC)) return;
+        if (!CHECKTYPE(kv.value, tVEC)) return;
         check_range(kv.key, 0, Target::Flatrock::PARSER_SEQ_ID_MAX);
         for (int i = 0; i < kv.value.vec.size; i++) {
             if (!CHECKTYPE2(kv.value.vec[i], tINT, tSTR)) return;
@@ -51,7 +51,6 @@ void Hdr::input_len(VECTOR(value_t) args, value_t data) {
         }
         len_enc _len;
         for (auto &kv2 : MapIterChecked(kv.value.map, false)) {
-            if (!CHECKTYPE(kv2.value, tINT)) return;
             if (kv2.key == "base_len") {
                 check_range(kv2.value, 0, Target::Flatrock::PARSER_BASE_LEN_MAX);
                 _len.base_len = kv2.value.i;
@@ -81,18 +80,15 @@ void Hdr::input(VECTOR(value_t) args, value_t data) {
         } else if (kv.key == "seq") {
             input_seq(args, kv.value);
         } else if (kv.key == "seq_pos") {
-            if (!CHECKTYPE(kv.value, tINT)) return;
-            check_range(kv.value, 0, Target::Flatrock::PARSER_SEQ_POS_MAX_OFFSET);
+            check_range(kv.value, 0, Target::Flatrock::PARSER_BRIDGE_MD_WIDTH - 1);
             seq_pos = kv.value.i;
         } else if (kv.key == "len") {
             input_len(args, kv.value);
         } else if (kv.key == "len_pos") {
-            if (!CHECKTYPE(kv.value, tINT)) return;
-            check_range(kv.value, 0, Target::Flatrock::PARSER_LEN_POS_MAX_OFFSET);
+            check_range(kv.value, 0, Target::Flatrock::PARSER_BRIDGE_MD_WIDTH - 1);
             len_pos = kv.value.i;
         } else if (kv.key == "off_pos") {
-            if (!CHECKTYPE(kv.value, tINT)) return;
-            check_range(kv.value, 0, Target::Flatrock::PARSER_OFF_POS_MAX_OFFSET);
+            check_range(kv.value, 0, Target::Flatrock::PARSER_BRIDGE_MD_WIDTH - 1);
             off_pos = kv.value.i;
         } else {
             error(kv.key.lineno, "unrecognized key");

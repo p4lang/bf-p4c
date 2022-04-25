@@ -71,6 +71,12 @@ struct ParserAsmSerializer : public ParserInspector {
         }
         out << ":" << std::endl;
 
+#ifdef HAVE_FLATROCK
+        // To avoid invalid keys in Flatrock parser assembly
+        if (BackendOptions().target == "tofino5")
+            return false;
+#endif  /* HAVE_FLATROCK */
+
         if (parser->name && parser->portmap.size() != 0)
             out << indent << "name: " << canon_name(parser->name)
                 << std::endl;

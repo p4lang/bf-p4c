@@ -13,7 +13,7 @@
 /// A Section represents a top level section in assembly
 /// Current sections include:
 /// version, phv, parser, deparser, stage, dynhash, primitives
-class Section : public Parsable {
+class Section : virtual public Parsable, virtual public Contextable {
     static std::map<std::string, Section *>     *sections;
     std::string name;
     bool isInput = false;
@@ -35,8 +35,6 @@ class Section : public Parsable {
     virtual void start(int lineno, VECTOR(value_t) args) { }
     /// optionally process the data if not done during parsing
     virtual void process() {}
-    /// generate context.json for this section
-    virtual void output(json::map &ctxtJson) = 0;
 
  public:
     static int start_section(int lineno, char *name, VECTOR(value_t) args) {

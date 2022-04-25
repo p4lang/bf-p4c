@@ -268,7 +268,7 @@ class Parser : public BaseParser {
  public:
     void input(VECTOR(value_t) args, value_t data);
     void process();
-    void output(json::map &);
+    void output(json::map &) override;
     void output_legacy(json::map &);
     gress_t                             gress;
     std::string                         name;
@@ -386,9 +386,9 @@ class AsmParser : public BaseAsmParser {
                                          // smaller one.
     unsigned ghost_pipe_mask = 0xf;  // only set for JBAY
     void start(int lineno, VECTOR(value_t) args);
-    void input(VECTOR(value_t) args, value_t data);
+    void input(VECTOR(value_t) args, value_t data) override;
     void process();
-    void output(json::map &);
+    void output(json::map &) override;
     void init_port_use(bitvec& port_use, const value_t &arg);
 
  public:

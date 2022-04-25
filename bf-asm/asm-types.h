@@ -359,15 +359,23 @@ struct RegisterSetBase {
 
 struct ParserRegisterSet : public RegisterSetBase {};
 
+/// An interface for parsing a section of a .bfa file
 class Parsable {
  public:
-    /// parsing the section: data is the entire map/sequence of elements
+    /// @param data entire map/sequence of elements
     virtual void input(VECTOR(value_t) args, value_t data) = 0;
 };
 
+/// An interface for writing into registers
 class Configurable {
  public:
     virtual void write_config(RegisterSetBase &regs, json::map &json, bool legacy = true) = 0;
+};
+
+/// An interface for generating context.json
+class Contextable {
+ public:
+    virtual void output(json::map &ctxtJson) = 0;
 };
 
 #endif /* __cplusplus */

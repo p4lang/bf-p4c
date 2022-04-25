@@ -24,7 +24,7 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
-  "context.json schema validation failed"
+  "Error producing mau.json"
   extensions/p4_tests/p4_16/flatrock/passthrough.p4
   )
 
@@ -53,7 +53,7 @@ p4c_add_xfail_reason("tofino5"
 
 # PAC test cases
 p4c_add_xfail_reason("tofino5"
-  "context.json schema validation failed"
+  "Error producing mau.json"
   extensions/p4_tests/p4_16/flatrock/pac_trivial.p4
   extensions/p4_tests/p4_16/flatrock/pac_single_hdr.p4
   )

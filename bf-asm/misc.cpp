@@ -3,6 +3,7 @@
 #include <sstream>
 #include <string>
 #include "bfas.h"
+#include "target.h"
 
 int remove_name_tail_range(std::string &name, int *size) {
     auto tail = name.rfind('.');
@@ -93,12 +94,21 @@ int parity_2b(uint32_t v) {
     return v&3;
 }
 
-void check_value(value_t value, int expected) {
-    if (value.i != expected)
-            error(value.lineno, "unexpected value %ld; expected %i", value.i, expected);
-}
-
-void check_range(value_t value, int lo, int hi) {
-    if (value.i < lo || value.i > hi)
-        error(value.lineno, "value %ld out of allowed range <%i; %i>", value.i, lo, hi);
+void input_int_match(const value_t value, match_t &match, int width) {
+    BUG_CHECK(width <= sizeof(match_t::word0) * 8);
+    decltype(match_t::word0) mask;
+    if (width < sizeof(match_t::word0) * 8)
+        mask = (1ULL << width) - 1;
+    else
+        mask = std::numeric_limits<decltype(match_t::word0)>::max();
+    if (value.type == tINT) {
+        check_range(value, 0, mask);
+        convert_i2m(value.i, match);
+    } else {
+        value_t fixed_value = value;
+        fixed_value.m = value.m;
+        fix_match_star(fixed_value.m, mask);
+        check_range_match(fixed_value, mask, width);
+        match = fixed_value.m;
+    }
 }
