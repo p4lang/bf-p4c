@@ -1250,7 +1250,7 @@ endif()
 
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/dist/p4c-build-logs
   POST_BUILD
-  COMMAND PYTHONPATH=${INTERFACES_DIR}:$ENV{PYTHONPATH} pyinstaller --onefile --workpath=${CMAKE_CURRENT_BINARY_DIR}/build --distpath=${CMAKE_CURRENT_BINARY_DIR}/dist ${INTERFACES_DIR}/p4c-build-logs.spec
+  COMMAND PYTHONPATH=${INTERFACES_DIR}:$ENV{PYTHONPATH} pyinstaller --workpath=${CMAKE_CURRENT_BINARY_DIR}/build --distpath=${CMAKE_CURRENT_BINARY_DIR}/dist ${INTERFACES_DIR}/p4c-build-logs.spec
   DEPENDS ${LOGGING_FILES} ${SCHEMA_FILES} ${INTERFACES_DIR}/p4c-build-logs.spec
   WORKING_DIRECTORY ${INTERFACES_DIR}
   COMMENT "Package logging tools")

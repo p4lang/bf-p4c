@@ -94,7 +94,7 @@ export PYTHON3_DEPS="Cython \
                      pexpect \
                      ply \
                      prettytable \
-                     pyinstaller==4.10 \
+                     pyinstaller \
                      pyroute2 \
                      pyyaml \
                      scapy \
@@ -229,7 +229,7 @@ if [[ "${BUILD_FOR}" != 'jenkins-final' ]] ; then
   pip3 install ${PYTHON3_DEPS}
 
   # workaround for two mismatched python3 installations in p4factory
-  python3.8 -m pip install --force-reinstall pyinstaller==4.10 jsonschema packaging jsl
+  python3.8 -m pip install --force-reinstall pyinstaller jsonschema packaging jsl
 
   # Copy scripts into ${BFN}.
   {
