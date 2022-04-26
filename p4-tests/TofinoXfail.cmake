@@ -2037,3 +2037,18 @@ p4c_add_xfail_reason("tofino"
   "Conditions in an action must be simple comparisons of an action data parameter"
   testdata/p4_16_samples/psa-dpdk-flatten-local-struct.p4
 )
+
+# p4c update 04/26/2022 (new tests)
+p4c_add_xfail_reason("tofino"
+  "error: cast"
+  testdata/p4_16_samples/m_psa-dpdk-non-zero-arg-default-action-08.p4
+  testdata/p4_16_samples/psa-dpdk-non-zero-arg-default-action-01.p4
+  testdata/p4_16_samples/psa-dpdk-non-zero-arg-default-action-02.p4
+  testdata/p4_16_samples/psa-dpdk-non-zero-arg-default-action-03.p4
+  testdata/p4_16_samples/psa-dpdk-non-zero-arg-default-action-04.p4
+  testdata/p4_16_samples/psa-dpdk-non-zero-arg-default-action-05.p4
+  testdata/p4_16_samples/psa-dpdk-non-zero-arg-default-action-06.p4
+  testdata/p4_16_samples/psa-dpdk-non-zero-arg-default-action-07.p4
+  testdata/p4_16_samples/psa-dpdk-non-zero-arg-default-action-08.p4
+  testdata/p4_16_samples/psa-dpdk-non-zero-arg-default-action-09.p4
+)
