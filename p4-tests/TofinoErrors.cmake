@@ -111,3 +111,12 @@ p4c_add_xfail_reason("tofino"
   # p4c update 2022-04-25
   testdata/p4_16_samples/issue3225.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "error: .*: unsupported 64-bit select"
+  extensions/p4_tests/p4_16/errors/p4c-2156.p4
+  testdata/p4_14_samples/simple_nat.p4
+  testdata/p4_14_samples/copy_to_cpu.p4
+  testdata/p4_14_samples/axon.p4
+  testdata/p4_14_samples/source_routing.p4
+)

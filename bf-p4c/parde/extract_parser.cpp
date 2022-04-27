@@ -1513,14 +1513,21 @@ static match_t buildListMatch(const IR::Vector<IR::Expression> *list,
     return rv;
 }
 
+static void checkParserMatchBits(const IR::Expression* expr) {
+    if (expr->type->width_bits() > Device::maxParserMatchBits())
+        ::fatal_error("%s: unsupported %d-bit select (only %d-bit select is supported currently)",
+                      expr, expr->type->width_bits(), Device::maxParserMatchBits());
+}
+
 static match_t buildMatch(int match_size, const IR::Expression *key,
                           const IR::Vector<IR::Expression> &selectExprs) {
     LOG3("key: " << key);
     if (key->is<IR::DefaultExpression>())
         return match_t::dont_care(match_size);
-    else if (auto k = key->to<IR::Constant>())
+    else if (auto k = key->to<IR::Constant>()) {
+        checkParserMatchBits(key);
         return match_t(match_size, k->asUnsigned(), ~((~uintmax_t(0)) << match_size));
-    else if (auto mask = key->to<IR::Mask>())
+    } else if (auto mask = key->to<IR::Mask>())
         return match_t(match_size, mask->left->to<IR::Constant>()->asUnsigned(),
                                    mask->right->to<IR::Constant>()->asUnsigned());
     else if (auto list = key->to<IR::ListExpression>())

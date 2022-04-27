@@ -157,7 +157,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1765-1-bmv2.p4
   testdata/p4_16_samples/stack_complex-bmv2.p4
   testdata/p4_16_samples/checksum-l4-bmv2.p4
-  testdata/p4_14_samples/simple_nat.p4
   testdata/p4_16_samples/issue1001-1-bmv2.p4
 )
 
@@ -1146,7 +1145,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
    "Assignment source cannot be evaluated in the parser"
-   testdata/p4_14_samples/axon.p4
    testdata/p4_16_samples/issue1001-bmv2.p4
 )
 
@@ -1363,7 +1361,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Ran out of parser match registers"
   testdata/p4_16_samples/pvs-struct-3-bmv2.p4
-  testdata/p4_14_samples/copy_to_cpu.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1717,9 +1714,6 @@ p4c_add_xfail_reason("tofino"
 # digest fields related failures or expected to fail.
 p4c_add_xfail_reason("tofino"
   "invalid SuperCluster was formed"
-  # digest fields related failures.
-  testdata/p4_14_samples/source_routing.p4
-
   # Expected to fail, which means that constraint conflicts are being correctly detected.
   extensions/p4_tests/p4_14/compile_only/01-FlexCounter.p4
   extensions/p4_tests/p4_14/compile_only/03-VlanProfile.p4

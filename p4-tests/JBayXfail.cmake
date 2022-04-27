@@ -95,9 +95,11 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "error: Assignment source cannot be evaluated in the parser"
-  testdata/p4_14_samples/axon.p4
+  "error: .*: unsupported 64-bit select"
   testdata/p4_14_samples/simple_nat.p4
+  testdata/p4_14_samples/copy_to_cpu.p4
+  testdata/p4_14_samples/axon.p4
+  testdata/p4_14_samples/source_routing.p4
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -407,12 +409,6 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "invalid SuperCluster was formed|Compiler Bug.*SIGSEGV"
-  # digest fields related failures.
-  testdata/p4_14_samples/source_routing.p4
-)
-
-p4c_add_xfail_reason("tofino2"
   "Could not place table .* table .* could not fit|The ability to split directly addressed counters/meters/stateful resources across multiple logical tables of an algorithmic tcam match table is not currently supported"
   extensions/p4_tests/p4_16/compile_only/p4c-1601-neg.p4
 )
@@ -499,12 +495,6 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "AssertionError: Expected packet was not received"
   extensions/p4_tests/p4_14/ptf/inner_checksum_l4.p4
-)
-
-# This is tracked in P4C-2829, should be removed once that is fixed
-p4c_add_xfail_reason("tofino2"
-  "error: Multiple matches in .* matcher"
-  testdata/p4_14_samples/copy_to_cpu.p4
 )
 
 # Tracked in P4C-3328

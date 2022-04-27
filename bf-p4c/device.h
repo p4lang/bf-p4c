@@ -64,6 +64,7 @@ class Device {
     static int cloneSessionIdWidth() { return Device::get().getCloneSessionIdWidth(); }
     static int queueIdWidth() { return Device::get().getQueueIdWidth(); }
     static int portBitWidth() { return Device::get().getPortBitWidth(); }
+    static int maxParserMatchBits() { return Device::get().getMaxParserMatchBits(); }
     static unsigned maxDigestSizeInBytes() { return Device::get().getMaxDigestSizeInBytes(); }
     static int numParsersPerPipe() { return 18; }
     static int numMaxChannels() { return Device::get().getNumMaxChannels(); }
@@ -106,6 +107,7 @@ class Device {
     virtual int getCloneSessionIdWidth() const = 0;
     virtual int getQueueIdWidth() const = 0;
     virtual int getPortBitWidth() const = 0;
+    virtual int getMaxParserMatchBits() const = 0;
     virtual int getNumMaxChannels() const = 0;
     virtual bool getIfMemoryCoreSplit() const = 0;
     virtual bool getHasCompareInstructions() const = 0;
@@ -154,6 +156,7 @@ class TofinoDevice : public Device {
     int getCloneSessionIdWidth() const override { return 10; }
     int getQueueIdWidth() const override { return 5; }
     int getPortBitWidth() const override { return 9; }
+    int getMaxParserMatchBits() const override { return 32; }
     int getNumMaxChannels() const override {
         return getNumPipes() * getNumPortsPerPipe() * getNumChannelsPerPort(); }
     unsigned getMaxDigestSizeInBytes() const override { return (384/8); }
@@ -207,6 +210,7 @@ class JBayDevice : public Device {
     int getCloneSessionIdWidth() const override { return 8; }
     int getQueueIdWidth() const override { return 7; }
     int getPortBitWidth() const override { return 9; }
+    int getMaxParserMatchBits() const override { return 32; }
     int getNumMaxChannels() const override {
         return getNumPipes() * getNumPortsPerPipe() * getNumChannelsPerPort(); }
 
@@ -289,6 +293,7 @@ class CloudbreakDevice : public Device {
     int getCloneSessionIdWidth() const override { return 8; }
     int getQueueIdWidth() const override { return 7; }
     int getPortBitWidth() const override { return 11; }
+    int getMaxParserMatchBits() const override { return 32; }
     int getNumMaxChannels() const override {
         return getNumPipes() * getNumPortsPerPipe() * getNumChannelsPerPort(); }
 
@@ -343,6 +348,7 @@ class FlatrockDevice : public Device {
     int getCloneSessionIdWidth() const override { return 10; }
     int getQueueIdWidth() const override { return 5; }
     int getPortBitWidth() const override { return 9; }
+    int getMaxParserMatchBits() const override { return 32; }
     int getNumMaxChannels() const override {
         return getNumPipes() * getNumPortsPerPipe() * getNumChannelsPerPort(); }
 
