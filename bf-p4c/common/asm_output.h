@@ -190,6 +190,10 @@ void emit_user_annotation_context_json(std::ostream &out,
                                        const IR::IAnnotated* node,
                                        bool emit_dash = false);
 
+void emit_user_annotation_context_json(indent_t indent,
+                                       const IR::IAnnotated* node,
+                                       std::stringstream &context_json_entries);
+
 template<class T> inline auto operator<<(std::ostream &out, const T &obj) ->
         decltype((void)obj.print(out), out)
 { obj.print(out); return out; }

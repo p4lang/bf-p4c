@@ -2189,7 +2189,8 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
 }
 
 void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
-        const IR::MAU::Table *tbl) const {
+        const IR::MAU::Table *tbl,
+        std::stringstream &context_json_entries) const {
     if (tbl->entries_list == nullptr)
         return;
 
@@ -2200,15 +2201,14 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
                 " with the static entry.");
     }
 
-    out << indent++ << "context_json:" << std::endl;
-    out << indent << "static_entries:" << std::endl;
+    context_json_entries << ++indent << "static_entries:" << std::endl;
     int priority = 0;  // The order of entries in p4 program determine priority
     for (auto entry : tbl->entries_list->entries) {
         auto method_call = entry->action->to<IR::MethodCallExpression>();
         BUG_CHECK(method_call, "Action is not specified for a static entry");
 
-        out << indent++ << "- priority: " << priority++ << std::endl;
-        out << indent << "match_key_fields_values:" << std::endl;
+        context_json_entries << indent++ << "- priority: " << priority++ << std::endl;
+        context_json_entries << indent << "match_key_fields_values:" << std::endl;
 
         auto extract = ExtractKeyDetails(tbl->match_key, phv, nullptr);
         auto key_info = extract.begin();
@@ -2218,18 +2218,24 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
                         "in match field for table %2%.", key, tbl->externalName());
 
             auto key_name = key_info->key_name(true);
-            out << indent++ << "- field_name: " << canon_name(key_name) << std::endl;
+            context_json_entries << indent++
+                << "- field_name: " << canon_name(key_name) << std::endl;
 
             // Helper functions for formatting field entries.
-            auto out_value = [&out, &indent]
+            auto out_value = [&context_json_entries, &indent]
                              (const big_int& val, cstring match_type, const big_int& mask) {
-                out << indent << "value: " << '"' << hex_big_int(val) << '"' << std::endl;
+                context_json_entries << indent
+                    << "value: " << '"' << hex_big_int(val) << '"' << std::endl;
                 if (match_type == "ternary")
-                    out << indent << "mask: " << '"' << hex_big_int(mask) << '"' << std::endl;
+                    context_json_entries << indent
+                        << "mask: " << '"' << hex_big_int(mask) << '"' << std::endl;
             };
-            auto out_range = [&out, &indent](const big_int& start, const big_int& end) {
-                out << indent << "range_start: " << '"' << hex_big_int(start) << '"' << std::endl;
-                out << indent << "range_end: " << '"' << hex_big_int(end) << '"' << std::endl;
+            auto out_range =
+            [&context_json_entries, &indent](const big_int& start, const big_int& end) {
+                context_json_entries << indent
+                    << "range_start: " << '"' << hex_big_int(start) << '"' << std::endl;
+                context_json_entries << indent
+                    << "range_end: " << '"' << hex_big_int(end) << '"' << std::endl;
             };
 
             if (const auto b = key->to<IR::BoolLiteral>()) {
@@ -2283,14 +2289,15 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
         auto path = method->path;
         for (auto action : Values(tbl->actions)) {
             if (action->name.name == path->name) {
-                out << indent << "action_handle: 0x" << hex(action->handle) << std::endl;
+                context_json_entries << indent
+                    << "action_handle: 0x" << hex(action->handle) << std::endl;
                 break;
             }
         }
 
-        out << indent << "is_default_entry: false" <<  std::endl;
+        context_json_entries << indent << "is_default_entry: false" <<  std::endl;
         auto num_mc_args = method_call->arguments->size();
-        out << indent << "action_parameters_values:";
+        context_json_entries << indent << "action_parameters_values:";
         if (num_mc_args > 0) {
             auto mc_type = method->type->to<IR::Type_Action>();
             auto param_list = mc_type->parameters->parameters;
@@ -2298,24 +2305,24 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
             BUG_CHECK((param_list.size() == num_mc_args),
                 "Total arguments on method call differ from those on method"
                 " parameters in table %s", tbl->name);
-            out << std::endl;
+            context_json_entries << std::endl;
             size_t param_index = 0;
             for (auto param : *method_call->arguments) {
                 auto p = param_list.at(param_index++);
                 auto param_name = p->name.toString();
-                out << indent++ << "- parameter_name: " << param_name << std::endl;
-                out << indent << "value: \"0x" << std::hex;
+                context_json_entries << indent++ << "- parameter_name: " << param_name << std::endl;
+                context_json_entries << indent << "value: \"0x" << std::hex;
                 if (param->expression->type->to<IR::Type_Boolean>()) {
                     auto boolExpr = param->expression->to<IR::BoolLiteral>();
-                    out << (boolExpr->value ? 1 : 0);
+                    context_json_entries << (boolExpr->value ? 1 : 0);
                 } else {
-                    out << param;
+                    context_json_entries << param;
                 }
-                out << std::dec << "\"" << std::endl;
+                context_json_entries << std::dec << "\"" << std::endl;
                 indent--;
             }
         } else {
-            out << " []" << std::endl;
+            context_json_entries << " []" << std::endl;
         }
         indent--;
     }
@@ -2334,7 +2341,8 @@ void MauAsmOutput::next_table_non_action_map(const IR::MAU::Table *tbl,
 }
 
 void MauAsmOutput::emit_atcam_match(std::ostream &out, indent_t indent,
-        const IR::MAU::Table *tbl) const {
+        const IR::MAU::Table *tbl,
+        std::stringstream &context_json_entries) const {
     out << indent << "number_partitions: "
         << tbl->layout.partition_count << std::endl;
     if (tbl->layout.alpm) {
@@ -2360,20 +2368,17 @@ void MauAsmOutput::emit_atcam_match(std::ostream &out, indent_t indent,
           tbl->layout.atcam_subset_width << std::endl;
         out << indent << "shift_granularity: " <<
           tbl->layout.shift_granularity << std::endl;
-        if (!tbl->layout.excluded_field_msb_bits.empty()) {
-            out << indent << "context_json: " << std::endl;
-            out << indent+1 << "excluded_field_msb_bits: " << "[" << std::endl;
-            std::string sep = "";
-            for (auto v : tbl->layout.excluded_field_msb_bits) {
-                out << sep;
-                if (sep == "") sep = ", ";
-                out << indent+2 << "{ ";
-                out << "field_name : " << v.first << ",";
-                out << "msb_bits_excluded: " << v.second;
-                out << "}";
-            }
-            out << indent+1 << "]" << std::endl;
+        context_json_entries << indent+1 << "excluded_field_msb_bits: " << "[" << std::endl;
+        std::string sep = "";
+        for (auto v : tbl->layout.excluded_field_msb_bits) {
+            context_json_entries << sep;
+            if (sep == "") sep = ", ";
+            context_json_entries << indent+2 << "{ ";
+            context_json_entries << "field_name : " << v.first << ",";
+            context_json_entries << "msb_bits_excluded: " << v.second;
+            context_json_entries << "}";
         }
+        context_json_entries << indent+1 << "]" << std::endl;
     }
     for (auto ixr : tbl->match_key) {
         if (ixr->partition_index) {
@@ -2418,7 +2423,8 @@ void MauAsmOutput::emit_atcam_match(std::ostream &out, indent_t indent,
 // node syntax which the assembler plugs in to the match table context json
 // Associated JIRA - P4C-1528
 void MauAsmOutput::emit_indirect_res_context_json(std::ostream &out,
-        indent_t indent, const IR::MAU::Table *tbl) const {
+        indent_t indent, const IR::MAU::Table *tbl,
+        std::stringstream &context_json_entries) const {
     ordered_set<cstring> bind_res;
     for (auto back_at : tbl->attached) {
         auto at = back_at->attached;
@@ -2444,13 +2450,12 @@ void MauAsmOutput::emit_indirect_res_context_json(std::ostream &out,
         }
     }
     if (bind_res.size() > 0) {
-        out << indent++ << "context_json:" << std::endl;
-        out << indent   << "ap_bind_indirect_res_to_match: [ ";
+        context_json_entries << ++indent << "ap_bind_indirect_res_to_match: [ ";
         for (auto biter = bind_res.begin(); biter != bind_res.end(); biter++) {
-            out << *biter;
-            if (biter != --bind_res.end()) out << ", ";
+            context_json_entries << *biter;
+            if (biter != --bind_res.end()) context_json_entries << ", ";
         }
-        out << " ]" << std::endl;
+        context_json_entries << " ]" << std::endl;
     }
 }
 
@@ -2624,6 +2629,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
     bool no_match_hit = tbl->layout.no_match_hit_path() && !tbl->conditional_gateway_only();
     TableMatch fmt(*this, phv, tbl);
     indent_t indent(1);
+    std::stringstream context_json_entries;
 
     BUG_CHECK(tbl->logical_id, "Table %s was not assigned a table ID", tbl->name);
     out << indent++ << tbl->get_table_type_string()
@@ -2653,13 +2659,13 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
             emit_ternary_match(out, indent, tbl->resources->table_format);
 
         if (tbl->layout.atcam)
-            emit_atcam_match(out, indent, tbl);
+            emit_atcam_match(out, indent, tbl, context_json_entries);
     }
     if (tbl->resources->action_ixbar)
         emit_ixbar(out, indent, tbl->resources->action_ixbar.get(), nullptr, nullptr, nullptr,
                    nullptr, tbl, false);
-    emit_indirect_res_context_json(out, indent, tbl);
-    emit_user_annotation_context_json(out, indent, tbl->match_table);
+    emit_indirect_res_context_json(out, indent, tbl, context_json_entries);
+    emit_user_annotation_context_json(indent, tbl->match_table, context_json_entries);
 
     NextTableSet next_hit;
     NextTableSet gw_miss;
@@ -2747,7 +2753,11 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
     }
 
     emit_table_hitmap(out, indent, tbl, next_hit, gw_miss, no_match_hit, gw_can_miss);
-    emit_static_entries(out, indent, tbl);
+    emit_static_entries(out, indent, tbl, context_json_entries);
+    if (context_json_entries.str().length() != 0) {
+        out << indent << "context_json:" << std::endl;
+        out << context_json_entries << std::endl;
+    }
     /* FIXME -- this is a mess and needs to be rewritten to be sane */
     bool have_action = false, have_indirect = false;
     for (auto back_at : tbl->attached) {

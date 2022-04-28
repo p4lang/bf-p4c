@@ -4,6 +4,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <sstream>
 #include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/mau/input_xbar.h"
 #include "bf-p4c/mau/memories.h"
@@ -89,11 +90,13 @@ class MauAsmOutput : public MauInspector {
             const TableMatch *tm, bool ternary, bool no_match) const;
     void emit_table_context_json(std::ostream &out, indent_t, const IR::MAU::Table *tbl) const;
     void emit_ternary_match(std::ostream &out, indent_t, const TableFormat::Use &use) const;
-    void emit_atcam_match(std::ostream &out, indent_t, const IR::MAU::Table *tbl) const;
+    void emit_atcam_match(std::ostream &out, indent_t, const IR::MAU::Table *tbl,
+            std::stringstream &context_json_entries) const;
     void emit_table(std::ostream &out, const IR::MAU::Table *tbl, int stage, gress_t gress) const;
     void emit_always_run_action(std::ostream &out, const IR::MAU::Table *tbl, int stage,
         gress_t gress) const;
-    void emit_static_entries(std::ostream &out, indent_t indent, const IR::MAU::Table *tbl) const;
+    void emit_static_entries(std::ostream &out, indent_t indent, const IR::MAU::Table *tbl,
+            std::stringstream &context_json_entries) const;
     void next_table_non_action_map(const IR::MAU::Table *,
             safe_vector<NextTableSet> &next_table_map) const;
     void emit_table_indir(std::ostream &out, indent_t, const IR::MAU::Table *tbl,
@@ -110,7 +113,8 @@ class MauAsmOutput : public MauInspector {
     bool emit_idletime(std::ostream &out, indent_t indent, const IR::MAU::Table *tbl,
                        const IR::MAU::IdleTime *id) const;
     void emit_indirect_res_context_json(std::ostream &out, indent_t indent,
-                        const IR::MAU::Table *tbl) const;
+            const IR::MAU::Table *tbl,
+            std::stringstream &context_json_entries) const;
     std::string indirect_address(const IR::MAU::AttachedMemory *) const;
     std::string indirect_pfe(const IR::MAU::AttachedMemory *) const;
     std::string stateful_counter_addr(IR::MAU::StatefulUse use) const;

@@ -157,6 +157,17 @@ void emit_user_annotation_context_json(std::ostream &out,
                                        indent_t indent,
                                        const IR::IAnnotated* node,
                                        bool emit_dash) {
+    std::stringstream context_json_entries;
+    emit_user_annotation_context_json(indent, node, context_json_entries);
+    if (context_json_entries.str().length() != 0) {
+        out << indent++ << (emit_dash ? "- " : "") << "context_json" << ":" << std::endl;
+        out << context_json_entries << std::endl;
+    }
+}
+
+void emit_user_annotation_context_json(indent_t indent,
+                                       const IR::IAnnotated* node,
+                                       std::stringstream &context_json_entries) {
     if (!node) return;
 
     bool emitted_header = false;
@@ -164,8 +175,8 @@ void emit_user_annotation_context_json(std::ostream &out,
         if (annotation->name != PragmaUserAnnotation::name) continue;
 
         if (!emitted_header) {
-            out << indent++ << (emit_dash ? "- " : "") << "context_json" << ":" << std::endl;
-            out << indent++ << "user_annotations:" << std::endl;
+            indent++;
+            context_json_entries << indent++ << "user_annotations:" << std::endl;
             emitted_header = true;
         }
 
@@ -176,14 +187,14 @@ void emit_user_annotation_context_json(std::ostream &out,
 
             auto cur_elt = str->value;
 
-            if (!emitted_elts) out << indent << "- [";
+            if (!emitted_elts) context_json_entries << indent << "- [";
             else
-              out << ", ";
+              context_json_entries << ", ";
 
-            out << "\"" << cur_elt.escapeJson() << "\"";
+            context_json_entries << "\"" << cur_elt.escapeJson() << "\"";
             emitted_elts = true;
         }
 
-        if (emitted_elts) out << "]" << std::endl;
+        if (emitted_elts) context_json_entries << "]" << std::endl;
     }
 }
