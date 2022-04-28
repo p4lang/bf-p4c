@@ -4,6 +4,13 @@
         "description": "Arista default profile",
         "args": ["-Xp4c=--disable-power-check"]
     },
+    "arista-msee": {
+        "path": "../p4_16/customer/arista/obfuscated-msee_tofino2.p4",
+        "description": "Arista MSEE profile",
+        "args": [
+            "-Xp4c=--disable-power-check",
+            "--target", "tofino2"]
+    },
     "extreme-npb": {
         "path": "../p4_16/customer/extreme/npb-master-20210301.p4",
         "description": "Extreme npb profile",

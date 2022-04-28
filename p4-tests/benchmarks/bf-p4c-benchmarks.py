@@ -194,7 +194,7 @@ class Benchmarks:
             if diff > threshold:
                 in_thr = False
                 print("FAIL: Benchmark '{}' was slowed down by more than its threshold ({} %). "
-                      "If this slow down is unavoidable, then change the reference compile time in "
+                      "If this slow down is unavoidable, change the reference compile time in "
                       "'benchmark-references.json' file to {}.".format(name, threshold, c_time_now))
             diff_abs = round(abs(diff), 1)
             # leave small difference as equality
@@ -204,7 +204,7 @@ class Benchmarks:
                 print("SPEED UP: '{}' was sped up by {} % (from {} s to {} s)."
                       .format(name, diff_abs, c_time_master, c_time_now))
             else:
-                print("SLOW DOWN: '{}' was slowed down by {} % (from {} s to {}s)."
+                print("SLOW DOWN: '{}' was slowed down by {} % (from {} s to {} s)."
                       .format(name, diff_abs, c_time_master, c_time_now))
         return in_thr
 
@@ -248,11 +248,12 @@ class Benchmarks:
 
         results = {}
         for c, test in enumerate(tests):
-            print("[{}/{}] RUNNING {}".format(c+1, len(tests), test.name), file=sys.stderr)
-            results[test.name] = {"compile_time": test.run(),
+            print("[{}/{}] RUNNING {}".format(c+1, len(tests), test.name))
+            compile_time = test.run()
+            results[test.name] = {"compile_time": compile_time,
                                   "path": test.path,
                                   "p4c_args": test.args}
-            print("[{}/{}] FINISHED {}".format(c+1, len(tests), test.name), file=sys.stderr)
+            print("[{}/{}] FINISHED {} in {} sec".format(c+1, len(tests), test.name, compile_time))
         # Save results to the output file
         self.save_results(results, self.output_path)
         # Compare results with reference values
