@@ -924,10 +924,42 @@ void GatewayTable::gen_tbl_cfg(json::vector &out) const {
 
     json::vector gStageTables;
     json::map gStageTable;
-    json::map next_tables;
-    next_tables["false"] = cond_false.next.next_table_id();
-    next_tables["true"] = cond_true.next.next_table_id();
-    gStageTable["next_tables"] = std::move(next_tables);
+
+    json::map &next_table_ids = gStageTable["next_tables"];
+    json::map &next_table_names = gStageTable["next_table_names"];
+
+    auto &condTNext = cond_true.next;
+    auto &condFNext = cond_false.next;
+    if (Target::LONG_BRANCH_TAGS() > 0) {
+        json::vector &next_table_names_true  = next_table_names["true"];
+        json::vector &next_table_names_false = next_table_names["false"];
+        json::vector &next_table_ids_true    = next_table_ids["true"];
+        json::vector &next_table_ids_false   = next_table_ids["false"];
+        if (condTNext.size() == 0) {
+            next_table_names_true.push_back(condTNext.next_table_name());
+            next_table_ids_true.push_back(condTNext.next_table_id());
+        } else {
+            for (auto t : condTNext) {
+                next_table_names_true.push_back(t.name);
+                next_table_ids_true.push_back(t->table_id());
+            }
+        }
+        if (condFNext.size() == 0) {
+            next_table_names_false.push_back(condFNext.next_table_name());
+            next_table_ids_false.push_back(condFNext.next_table_id());
+        } else {
+            for (auto t : condFNext) {
+                next_table_names_false.push_back(t.name);
+                next_table_ids_false.push_back(t->table_id());
+            }
+        }
+    } else {
+        next_table_ids["false"]   = json::string(condFNext.next_table_id());
+        next_table_ids["true"]    = json::string(condTNext.next_table_id());
+        next_table_names["false"] = json::string(condFNext.next_table_name());
+        next_table_names["true"]  = json::string(condTNext.next_table_name());
+    }
+
     json::map mra;
     mra["memory_unit"] = layout[0].row * 2 + gw_unit;
     mra["memory_type"] = "gateway";
@@ -935,10 +967,7 @@ void GatewayTable::gen_tbl_cfg(json::vector &out) const {
     gStageTable["memory_resource_allocation"] = std::move(mra);
     json::vector pack_format;  // For future use
     gStageTable["pack_format"] = std::move(pack_format);
-    json::map next_table_names;
-    next_table_names["false"] = cond_false.next.next_table_name();
-    next_table_names["true"] = cond_true.next.next_table_name();
-    gStageTable["next_table_names"] = std::move(next_table_names);
+
     gStageTable["logical_table_id"] = logical_id;
     gStageTable["stage_number"] = stage->stageno;
     gStageTable["stage_table_type"] = "gateway";

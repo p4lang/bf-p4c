@@ -183,6 +183,7 @@ class Table {
 
         std::set<Ref>::iterator begin() const { return next.begin(); }
         std::set<Ref>::iterator end() const { return next.end(); }
+        int size() const { return next.size(); }
         bool operator==(const NextTables &a) const { return next == a.next; }
         bool subset_of(const NextTables &a) const {
             for (auto &n : next)
@@ -549,6 +550,7 @@ class Table {
         return "";
     }
     int table_id() const;
+    virtual bool is_always_run() const { return false; }
     virtual void pass0() {}  // only match tables need pass0
     virtual void pass1();
     virtual void pass2() = 0;
@@ -894,6 +896,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
     bool common_setup(pair_t &, const VECTOR(pair_t) &, P4Table::type) override;
     int get_address_mau_actiondata_adr_default(unsigned log2size, bool per_flow_enable);
 public:
+    bool is_always_run() const override { return always_run; }
     void pass0() override;
     void pass1() override;
     void pass3() override;
@@ -1577,6 +1580,7 @@ public:
     bool needs_next() const override { return true; }
     bool is_branch() const;   // Tofino2/3 needs is_a_brnch set to use next_table
     void verify_format();
+    bool is_always_run() const override { return always_run; }
 )
 
 DECLARE_TABLE_TYPE(SelectionTable, AttachedTable, "selection",

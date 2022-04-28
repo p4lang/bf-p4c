@@ -2424,6 +2424,10 @@ json::map *Table::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) 
             stage_tbl["has_attached_gateway"] = true; }
     if (!strcmp(type, "selection") && get_stateful())
         tbl["bound_to_stateful_table_handle"] = get_stateful()->handle();
+    if (Target::SUPPORT_ALWAYS_RUN()
+            && (this->to<MatchTable>() || this->to<GatewayTable>()))
+        stage_tbl["always_run"] = is_always_run();
+
     stage_tables.push_back(std::move(stage_tbl));
     return &(stage_tables.back()->to<json::map>());
 }

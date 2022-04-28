@@ -134,6 +134,7 @@ class string : public obj, public std::string {
     string(const char *a) : std::string(a) {}  // NOLINT(runtime/explicit)
     string(string &&) = default;
     string(std::string &&a) : std::string(a) {}  // NOLINT
+    string(int64_t l) : std::string(std::to_string(l)) {}  // NOLINT
     string &operator=(const string &) & = default;
     string &operator=(string &&) & = default;
     ~string() {}
