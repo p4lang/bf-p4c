@@ -1870,8 +1870,37 @@ bool SetupAttachedAddressing::InitializeAttachedInfo::preorder(const IR::MAU::Ba
     return false;
 }
 
+struct StatefulConflict {
+    cstring act_name;
+    const IR::MAU::Action *act;
+    const IR::MAU::StatefulCall *calls[2];
+
+    StatefulConflict(cstring act_name, const IR::MAU::Action *act,
+                     const IR::MAU::StatefulCall *a, const IR::MAU::StatefulCall *b)
+        : act_name(act_name), act(act), calls{a, b}
+    { }
+
+    template<typename T>
+    void fill_conflict_names(T &set) const {
+        for (auto &call : calls)
+            set.emplace(call->attached_callee->toString());
+    }
+
+    void emitError() const {
+        // note: source info objects are not printed as part of the message, they only give the
+        // context below the error message -- we use them for the last two arguments to avoid
+        // polluting the error message and to give the right context
+        ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+            "The action %1% indexes %2% with %3% but it also indexes %4% with %5%.%6%%7%", act,
+            calls[0]->attached_callee->toString(), calls[0]->index->toString(),
+            calls[1]->attached_callee->toString(), calls[1]->index->toString(),
+            calls[0]->getSourceInfo(), calls[1]->getSourceInfo());
+    }
+};
+
 bool SetupAttachedAddressing::ScanTables::preorder(const IR::MAU::Table *tbl) {
-    std::list<std::string> stats_issues, meter_issues, state_issues;
+    std::vector<StatefulConflict> state_issues;
+    std::list<std::string> stats_issues, meter_issues;
     auto create_issue_item = [](const cstring &action,
             const cstring &used, const cstring &not_used) {
         std::stringstream str;
@@ -1935,8 +1964,7 @@ bool SetupAttachedAddressing::ScanTables::preorder(const IR::MAU::Table *tbl) {
                 continue;
             if (*prev && (sc->index ? (*prev)->index ? !sc->index->equiv(*(*prev)->index)
                                             : true : (*prev)->index != nullptr)) {
-                state_issues.push_back(create_issue_item(act_name,
-                    sc->attached_callee->toString(), (*prev)->attached_callee->toString()));
+                state_issues.emplace_back(act_name, act, sc, *prev);
             }
             *prev = sc;
         }
@@ -1956,8 +1984,14 @@ bool SetupAttachedAddressing::ScanTables::preorder(const IR::MAU::Table *tbl) {
             boost::algorithm::join(meter_issues, "\n  "));
     }
     if (state_issues.size() > 0) {
+        std::set<std::string> error_exts;
+        for (const auto &entry : state_issues)
+            entry.fill_conflict_names(error_exts);
+
         ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, common_msg, tbl,
-            boost::algorithm::join(state_issues, "\n  "));
+            boost::algorithm::join(error_exts, ", ") + " (see following errors for details).");
+        for (const auto &entry : state_issues)
+            entry.emitError();
     }
 
     return true;
