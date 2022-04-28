@@ -52,6 +52,5 @@ tofino_meta_init_problem,glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_pro
 tofino_p4c_2350,p4-tests/p4_16/customer/ruijie/p4c-2350-1.p4,,"",tofino,p4-16,tna,skip_Glass
 tofino2_lrn1,p4-tests/p4_16/compile_only/lrn1.p4,,"",tofino2,p4-16,t2na,skip_Glass
 tofino2_p4c_2091,p4-tests/p4_16/compile_only/p4c-2091.p4,,"",tofino2,p4-16,t2na,skip_Glass
-tofino2_p4c_1585_b2,p4-tests/p4_16/customer/extreme/p4c-1585-b2.p4,,"",tofino2,p4-16,t2na,skip_Glass
 # Tofino 3 examples
 tofino3_t3na_multipipe,p4-tests/p4_16/stf/t3na_multipipe.p4,,,tofino3,p4-16,t3na

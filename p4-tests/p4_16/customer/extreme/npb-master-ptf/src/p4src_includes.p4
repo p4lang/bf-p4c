@@ -1,7 +1,7 @@
-// Copyright 2020-2021 Extreme Networks, Inc.
+// Copyright 2022 Extreme Networks, Inc.
 // All rights reserved.
 
-// This file is auto-generated via ./package-it
+// This file is auto-generated via /npb-dp/p4_programs/cls/package.py
 #ifndef _P4SRC_INCLUDES_PGM_SP_NPB_VCPFW_
 #define _P4SRC_INCLUDES_PGM_SP_NPB_VCPFW_
 

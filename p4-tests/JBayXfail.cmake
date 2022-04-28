@@ -83,12 +83,6 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "PHV allocation was not successful"
-  # P4C-3295
-  extensions/p4_tests/p4_16/customer/extreme/npb-GA.p4
-)
-
-p4c_add_xfail_reason("tofino2"
   "The stage specified for table .* is .*, but we could not place it until stage .*"
   # P4C-3093
   extensions/p4_tests/p4_16/jbay/ghost3.p4
@@ -180,9 +174,6 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "error: Ran out of chunks in field dictionary"
   extensions/p4_tests/p4_16/compile_only/p4c-1757-neg.p4
-
-  # P4C-2555
-  extensions/p4_tests/p4_16/customer/extreme/p4c-2555-2.p4
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -267,22 +258,13 @@ p4c_add_xfail_reason("tofino2"
 
 p4c_add_xfail_reason("tofino2"
   "This program violates action constraints imposed by Tofino2"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1460.p4
-
   # P4C-3155
   extensions/p4_tests/p4_16/customer/extreme/p4c-1323-c2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1680-2.p4
 )
 
 p4c_add_xfail_reason("tofino2"
-  "Field .* is not a member of header .*"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1802.p4
-)
-
-p4c_add_xfail_reason("tofino2"
   "Use of uninitialized parser value"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1561.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1740.p4
   testdata/p4_14_samples/issue2196.p4
 )
 
@@ -301,15 +283,6 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "error.*PHV allocation was not successful|CANNOT_PACK_CANDIDATES"
   extensions/p4_tests/p4_16/compile_only/p4c-2091.p4
-)
-
-# P4C-3157
-p4c_add_xfail_reason("tofino2"
-  "PHV allocation is invalid for container|Exiting with SIGSEGV"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1565-2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1585-b2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1587-b2.p4
 )
 
 # Negative tests to test slice list creation
@@ -478,11 +451,6 @@ p4c_add_xfail_reason("tofino2"
 Compiler will improve allocation of learning fields in future releases.
 Temporary fix: try to apply @pa_container_size pragma to small fields allocated to large container in. Here are possible useful progmas you can try: .*"
   extensions/p4_tests/p4_16/compile_only/p4c-3914.p4
-)
-
-p4c_add_xfail_reason("tofino2"
-  "error: tofino2 supports up to 20 stages, using .*"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-3573.p4
 )
 
 # P4C-3922 - Fail with both python3 + bf-pktpy and python2 + scapy environments

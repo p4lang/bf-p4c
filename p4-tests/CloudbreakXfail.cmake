@@ -240,11 +240,6 @@ p4c_add_xfail_reason("tofino3"
 #  extensions/p4_tests/p4-programs/programs/stful/stful.p4
 #)
 
-p4c_add_xfail_reason("tofino3"
-  "Field .* is not a member of header .*"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1802.p4
-)
-
 #p4c_add_xfail_reason("tofino3"
 #  "Name '.*' is used for multiple Register objects in the P4Info message"
 #  p4_16_internal_p4_16_t2na_fifo
@@ -324,7 +319,6 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/compile_only/p4c-2490.p4
   extensions/p4_tests/p4_16/compile_only/p4c-3453.p4
   extensions/p4_tests/p4_16/compile_only/too_many_pov_bits.p4
-  extensions/p4_tests/p4_16/customer/extreme/npb-GA.p4
   extensions/p4_tests/p4_16/customer/extreme/npb-master-20210108.p4
   extensions/p4_tests/p4_16/customer/extreme/npb-master-20210202.p4
   extensions/p4_tests/p4_16/customer/extreme/npb-master-20210211.p4
@@ -334,31 +328,21 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1323-b.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1323-c2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1326.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1458-a.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1458-b.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1460.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1492.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1557.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1559.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1560.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1561.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1562-1.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1562-2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1565-2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1572-a.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1585-a.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1585-b2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1586.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1587-a.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1587-b2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1599.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1680-2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1740.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-2238.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-2262-2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-2358-2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-2555-2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-2641.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-2649.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-2794.p4
@@ -369,7 +353,6 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/customer/extreme/p4c-3455.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-3455_2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-3476.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-3573.p4
   extensions/p4_tests/p4_16/customer/keysight/keysight-tf2.p4
   extensions/p4_tests/p4_16/customer/keysight/pktgen9_16.p4
   extensions/p4_tests/p4_16/customer/keysight/p4c-2554.p4

@@ -1,0 +1,409 @@
+#ifndef _P4_L2_
+#define _P4_L2_
+
+//-----------------------------------------------------------------------------
+// Destination MAC lookup
+//
+// Performs a lookup on bd and destination MAC address.
+// - Bridge out the packet of the interface in the MAC entry.
+// - Flood the packet out of all ports within the ingress BD.
+//
+// @param dst_addr : destination MAC address.
+// @param ig_md : Ingess metadata
+// @param ig_intr_md_for_tm
+// @param table_size : Size of the dmac table.
+//-----------------------------------------------------------------------------
+//control DMAC_t(in mac_addr_t dst_addr, inout switch_ingress_metadata_t ig_md);
+
+control DMAC(
+	in mac_addr_t dst_addr,
+	in switch_lookup_fields_t lkp,
+	inout switch_ingress_metadata_t ig_md,
+	inout switch_header_t hdr
+) (
+	switch_uint32_t table_size
+) {
+
+//	bool copp_enable_;
+//	switch_copp_meter_id_t copp_meter_id_;
+
+	//-------------------------------------------------------------
+
+	DirectCounter<bit<switch_counter_width>>(type=CounterType_t.PACKETS_AND_BYTES) stats;  // direct counter
+
+	// sets: port_lag_index
+	action dmac_miss(//bool copp_enable, switch_copp_meter_id_t copp_meter_id
+	) {
+		stats.count();
+
+//		ig_md.egress_port_lag_index = SWITCH_FLOOD;
+
+//		copp_enable_ = copp_enable;
+//		copp_meter_id_ = copp_meter_id;
+
+		ig_md.nsh_md.l2_fwd_en = true;
+	}
+
+	// sets: port_lag_index
+	action dmac_hit(switch_port_lag_index_t port_lag_index //, bool copp_enable, switch_copp_meter_id_t copp_meter_id
+	) {
+		stats.count();
+
+		ig_md.egress_port_lag_index = port_lag_index;
+
+//		copp_enable_ = copp_enable;
+//		copp_meter_id_ = copp_meter_id;
+
+		ig_md.nsh_md.l2_fwd_en = true;
+	}
+
+	// sets: mgid
+	action dmac_multicast(switch_mgid_t index //, bool copp_enable, switch_copp_meter_id_t copp_meter_id
+	) {
+		stats.count();
+
+		ig_md.multicast.id = index;
+
+//		copp_enable_ = copp_enable;
+//		copp_meter_id_ = copp_meter_id;
+
+		ig_md.nsh_md.l2_fwd_en = true;
+	}
+
+	// sets: nexthop
+	action dmac_redirect(switch_nexthop_t nexthop_index //, bool copp_enable, switch_copp_meter_id_t copp_meter_id
+	) {
+		stats.count();
+
+		ig_md.nexthop = nexthop_index;
+
+//		copp_enable_ = copp_enable;
+//		copp_meter_id_ = copp_meter_id;
+
+		ig_md.nsh_md.l2_fwd_en = true;
+	}
+
+	action dmac_npb(
+	) {
+		stats.count();
+
+		ig_md.nsh_md.l2_fwd_en = false;
+	}
+
+	table dmac {
+		key = {
+//			ig_md.bd : exact;
+//			dst_addr : exact;
+
+			lkp.mac_dst_addr     : ternary @name("mac_dst_addr");
+			lkp.vid              : ternary @name("vid");
+			lkp.mac_type         : ternary @name("mac_type");
+			ig_md.port_lag_index : ternary @name("port_lag_index");
+		}
+
+		actions = {
+			dmac_miss;
+			dmac_hit;
+			dmac_multicast;
+			dmac_redirect;
+
+			dmac_npb;
+		}
+
+//		const default_action = dmac_miss(false, 0);
+//		const default_action = dmac_miss;
+		const default_action = dmac_npb;
+		size = table_size;
+		counters = stats;
+	}
+
+	//-------------------------------------------------------------
+
+	apply {
+		if (!INGRESS_BYPASS(L2)) {
+			dmac.apply();
+		}
+
+#ifdef CPU_ENABLE
+//		ig_md.copp_enable = copp_enable_;
+//      ig_md.copp_meter_id = copp_meter_id_;
+#endif
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Ingress BD (VLAN, RIF) Stats
+//
+//-----------------------------------------------------------------------------
+
+control IngressBd(
+	in switch_bd_t bd,
+	in switch_pkt_type_t pkt_type
+) (
+	switch_uint32_t table_size
+) {
+
+	DirectCounter<bit<switch_counter_width>>(CounterType_t.PACKETS_AND_BYTES) stats;
+
+	action count() { stats.count(); }
+
+	table bd_stats {
+		key = {
+			bd : exact;
+			pkt_type : exact;
+		}
+
+		actions = {
+			count;
+			@defaultonly NoAction;
+		}
+
+		const default_action = NoAction;
+
+		// 3 entries per bridge domain for unicast/broadcast/multicast packets.
+		size = 3 * table_size;
+		counters = stats;
+	}
+
+	apply {
+		bd_stats.apply();
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Egress BD Stats
+//      -- Outer BD for encap cases
+//
+//-----------------------------------------------------------------------------
+
+control EgressBDStats(
+	inout switch_header_transport_t hdr,
+	inout switch_egress_metadata_t eg_md
+) (
+	switch_uint32_t BD_TABLE_SIZE
+) {
+
+	DirectCounter<bit<switch_counter_width>>(CounterType_t.PACKETS_AND_BYTES) stats;
+
+	action count() {
+		stats.count();
+	}
+
+	table bd_stats {
+		key = {
+			eg_md.bd       : exact;
+//			eg_md.pkt_type : exact;
+		}
+
+		actions = {
+			count;
+			@defaultonly NoAction;
+		}
+
+		size = 3 * BD_TABLE_SIZE;
+		counters = stats;
+	}
+
+	apply {
+		if (eg_md.pkt_src == SWITCH_PKT_SRC_BRIDGED) {
+			bd_stats.apply();
+		}
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Egress BD Properties
+//      -- Outer BD for encap cases
+//
+//-----------------------------------------------------------------------------
+
+control EgressBD(
+	inout switch_header_transport_t hdr,
+	inout switch_egress_metadata_t eg_md,
+	out switch_smac_index_t smac_idx
+) (
+	switch_uint32_t table_size
+) {
+
+	DirectCounter<bit<switch_counter_width>>(CounterType_t.PACKETS_AND_BYTES) stats;
+
+	action set_bd_properties(
+		switch_smac_index_t smac_index
+	) {
+		stats.count();
+
+		smac_idx = smac_index;
+	}
+
+	action no_action() {
+		stats.count();
+	}
+
+	table bd_mapping {
+		key = { eg_md.bd       : exact @name("bd"); }
+		actions = {
+			no_action;
+			set_bd_properties;
+		}
+
+		const default_action = no_action;
+		size = table_size;
+		counters = stats;
+	}
+
+	apply {
+		smac_idx = 0; // extreme added
+
+//		if (!eg_md.flags.bypass_egress && eg_md.flags.routed) {
+			bd_mapping.apply();
+//		}
+	}
+}
+
+//-----------------------------------------------------------------------------
+// VLAN tag decapsulation
+// Removes the vlan tag by default or selectively based on the ingress port if QINQ_ENABLE flag
+// is defined.
+//
+// @param hdr : Parsed headers.
+// @param eg_md : Egress metadata fields.
+// @param port : Ingress port.
+// @flag QINQ_ENABLE
+//-----------------------------------------------------------------------------
+
+control VlanDecap(
+	inout switch_header_transport_t hdr,
+	in switch_egress_metadata_t eg_md
+) {
+
+	// ---------------------
+	// Apply
+	// ---------------------
+
+	apply {
+		if (!eg_md.flags.bypass_egress) {
+			// Remove the vlan tag by default.
+			if (hdr.vlan_tag[0].isValid()) {
+				hdr.ethernet.ether_type = hdr.vlan_tag[0].ether_type;
+				hdr.vlan_tag[0].setInvalid();
+			}
+		}
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Vlan translation
+//
+// @param hdr : Parsed headers.
+// @param eg_md : Egress metadata fields.
+// @flag QINQ_ENABLE
+//-----------------------------------------------------------------------------
+
+control VlanXlate(
+	inout switch_header_transport_t hdr,
+	in switch_egress_metadata_t eg_md
+) (
+	switch_uint32_t bd_table_size,
+	switch_uint32_t port_bd_table_size
+) {
+
+	action set_vlan_untagged() {
+		//NoAction.
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	action set_vlan_tagged(vlan_id_t vid, bit<3> pcp) {
+
+
+
+		hdr.vlan_tag[0].setValid();
+		hdr.vlan_tag[0].ether_type = hdr.ethernet.ether_type;
+		hdr.vlan_tag[0].pcp = pcp; // derek: added this here...barefoot set it in qos.p4, which we don't have.
+		hdr.vlan_tag[0].cfi = 0;
+		hdr.vlan_tag[0].vid =  vid;
+		hdr.ethernet.ether_type = ETHERTYPE_VLAN;
+	}
+
+	table port_bd_to_vlan_mapping {
+		key = {
+			eg_md.port_lag_index : exact @name("port_lag_index");
+			eg_md.bd : exact @name("bd");
+		}
+
+		actions = {
+			set_vlan_untagged;
+			set_vlan_tagged;
+		}
+
+		const default_action = set_vlan_untagged;
+		size = port_bd_table_size;
+		//TODO : fix table size once scale requirements for double tag is known
+	}
+
+	table bd_to_vlan_mapping {
+		key = { eg_md.bd : exact @name("bd"); }
+		actions = {
+			set_vlan_untagged;
+			set_vlan_tagged;
+		}
+
+		const default_action = set_vlan_untagged;
+		size = bd_table_size;
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	apply {
+		if (!eg_md.flags.bypass_egress) {
+			if (!port_bd_to_vlan_mapping.apply().hit) {
+				bd_to_vlan_mapping.apply();
+			}
+		}
+
+
+
+	}
+}
+
+#endif /* _P4_L2_ */

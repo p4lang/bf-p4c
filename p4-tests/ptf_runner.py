@@ -294,7 +294,7 @@ def start_model(model, out=None, context_json=None, config=None, port_map_path=N
         cmd.extend(['--p4-target-config', config])
     if port_map_path is not None:
         cmd.extend(['-f', port_map_path])
-        if '2pipe' in port_map_path:
+        if '2pipe' in port_map_path or 'folded-pipe' in port_map_path:
             if device == 'tofino':
                 cmd.extend(['--int-port-loop=0xa'])
             else:

@@ -203,7 +203,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1458-a.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1797-1.p4
   extensions/p4_tests/p4_16/customer/arista/obfuscated-nat_static.p4
   extensions/p4_tests/p4_16/customer/arista/obfuscated-stateless_load_balance_v4v6.p4
@@ -1268,7 +1267,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Use of uninitialized parser value"
   extensions/p4_tests/p4_16/compile_only/p4c-1561-neg.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1561.p4
   # unable to resolve "lookahead" expression in resolve_parser_values.cpp
   testdata/p4_16_samples/issue1409-bmv2.p4
   testdata/p4_14_samples/issue2196.p4
@@ -1553,16 +1551,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Dynamic hashes must have the same field list and sets of algorithm for each get call, as these must change simultaneously at runtime"
   p4c_1585_a
-)
-
-p4c_add_xfail_reason("tofino"
-  "PHV allocation was not successful"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1458-b.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "This program violates action constraints imposed by Tofino"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1460.p4
 )
 
 # power.p4 PTF failure

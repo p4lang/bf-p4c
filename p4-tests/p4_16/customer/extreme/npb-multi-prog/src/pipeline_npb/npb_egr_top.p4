@@ -141,17 +141,32 @@ control Npb_Egr_Top (
 		// SFF - Hdr Decap / Encap
 		// -------------------------------------
 
-//		if (!eg_md.flags.bypass_egress) {
-			npb_egr_sff_top.apply (
-				hdr_0,
-				eg_md,
-				eg_intr_md,
-				eg_intr_md_from_prsr,
-				eg_intr_md_for_dprsr,
-				eg_intr_md_for_oport
-			);
-//		}
-
+		if(FOLDED_ENABLE) {
+//			hdr.transport.nsh_type1_internal = { 
+			hdr_0.nsh_type1_internal = { 
+				version  = 0,
+				o        = 0,
+				reserved = 0, 
+				ttl      = eg_md.nsh_md.ttl,
+				len      = 0,
+				spi      = eg_md.nsh_md.spi,
+				si       = eg_md.nsh_md.si,
+				vpn      = (bit<SSAP_ID_WIDTH>)eg_md.nsh_md.vpn,
+				scope    = eg_md.nsh_md.scope,
+				sap      = (bit<VPN_ID_WIDTH>)eg_md.nsh_md.sap
+			};
+		} else {
+//			if (!eg_md.flags.bypass_egress) {
+				npb_egr_sff_top.apply (
+					hdr_0,
+					eg_md,
+					eg_intr_md,
+					eg_intr_md_from_prsr,
+					eg_intr_md_for_dprsr,
+					eg_intr_md_for_oport
+				);
+//			}
+		}
 	}
 }
 
