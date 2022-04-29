@@ -46,25 +46,9 @@ set (P16_TNA_ARISTA_FILES
   "obfuscated-mpls_baremetal.p4"
   "obfuscated-nat.p4"
   "obfuscated-nat_scale.p4"
-  "obfuscated-nat_scale-2021-11-16.p4"
   "obfuscated-nat_static.p4"
   "obfuscated-nat_vxlan.p4"
   "obfuscated-packet_filter.p4"
-  "obfuscated-small_scale_test.p4"
-  "obfuscated-stateless_load_balance_v4v6.p4"
-  "obfuscated-vxlan_evpn_scale.p4"
-)
-
-# Arista profiles
-set (P16_TNA_ARISTA_EXP_FILES
-  "obfuscated-baremetal.p4"
-  "obfuscated-default.p4"
-  "obfuscated-map.p4"
-  "obfuscated-media.p4"
-  "obfuscated-nat.p4"
-  "obfuscated-nat_scale.p4"
-  "obfuscated-nat_static.p4"
-  "obfuscated-nat_vxlan.p4"
   "obfuscated-small_scale_test.p4"
   "obfuscated-stateless_load_balance_v4v6.p4"
   "obfuscated-vxlan_evpn_scale.p4"
@@ -77,7 +61,7 @@ set (P16_TNA_EXCLUDE_FILES "digest_tna\\.p4" "p4c-1323-b\\.p4" "p4c-2143\\.p4"
     "p4c-3241\\.p4" "p4c-3139\\.p4" "p4c-3254\\.p4" "p4c-3255\\.p4" "p4c-2423\\.p4"
     "p4c-2534\\.p4" "p4c-3678-leaf\\.p4" "p4c-2722\\.p4" "p4c-3920-b\\.p4" "p4c_3926\\.p4"
     "p4c_4158\\.p4" "p4c-4064\\.p4" "forensics\\.p4" "mirror_constants\\.p4" "p4c_2601\\.p4")
-set (P16_TNA_EXCLUDE_FILES "${P16_TNA_EXCLUDE_FILES}" "${P16_TNA_ARISTA_FILES}" "${P16_TNA_ARISTA_EXP_FILES}")
+set (P16_TNA_EXCLUDE_FILES "${P16_TNA_EXCLUDE_FILES}" "${P16_TNA_ARISTA_FILES}")
 set (P16_TNA_FOR_TOFINO
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/errors/*.p4"
@@ -236,15 +220,6 @@ set (P16_TNA_ARISTA_SET_MAX_POWER_FILES
   "obfuscated-nat.p4"
   "obfuscated-nat_scale.p4"
   "obfuscated-nat_static.p4"
-  "obfuscated-nat_scale-2021-11-16.p4"
-  "obfuscated-nat_vxlan.p4"
-  "obfuscated-media.p4"
-)
-
-set (P16_TNA_ARISTA_EXP_SET_MAX_POWER_FILES
-  "obfuscated-nat.p4"
-  "obfuscated-nat_scale.p4"
-  "obfuscated-nat_static.p4"
   "obfuscated-nat_vxlan.p4"
   "obfuscated-media.p4"
 )
@@ -253,7 +228,7 @@ cmake_policy(SET CMP0057 NEW)
 # p4_16/customer/arista/obfuscated-*.p4
 foreach (t IN LISTS P16_TNA_ARISTA_FILES)
   if (${t} IN_LIST P16_TNA_ARISTA_SET_MAX_POWER_FILES)
-      set (POWER_CHECK_ARG "-Xp4c=\"--set-max-power 62.0\"")
+      set (POWER_CHECK_ARG "-Xp4c=\"--set-max-power 65.0 --traffic-limit 95.0 --excludeBackendPasses=ResetInvalidatedChecksumHeaders\"")
   else()
       set (POWER_CHECK_ARG "-Xp4c=\"--disable-power-check\"")
   endif()
@@ -262,19 +237,6 @@ foreach (t IN LISTS P16_TNA_ARISTA_FILES)
   p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/${t}")
 endforeach()
 set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/arista/obfuscated-media.p4" PROPERTIES TIMEOUT 3200)
-
-# p4_16/customer/arista/experimental/obfuscated-*.p4
-foreach (t IN LISTS P16_TNA_ARISTA_EXP_FILES)
-  if (${t} IN_LIST P16_TNA_ARISTA_EXP_SET_MAX_POWER_FILES)
-      set (POWER_CHECK_ARG "-Xp4c=\"--set-max-power 65.0 --traffic-limit 95.0 --excludeBackendPasses=ResetInvalidatedChecksumHeaders\"")
-  else()
-      set (POWER_CHECK_ARG "-Xp4c=\"--disable-power-check\"")
-  endif()
-  p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/experimental/${t}" "-to 2400 ${POWER_CHECK_ARG}")
-  set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/arista/experimental/${t}" PROPERTIES TIMEOUT 2400)
-  p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/experimental/${t}")
-endforeach()
-set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/arista/experimental/obfuscated-media.p4" PROPERTIES TIMEOUT 3200)
 
 # p4_16/customer/extreme/p4c-1323-b.p4 needs a longer timeout.
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1323-b.p4" "-to 1200")

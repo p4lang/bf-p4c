@@ -204,8 +204,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1797-1.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-nat_static.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-stateless_load_balance_v4v6.p4
   # extensions/p4_tests/p4-programs/internal_p4_14/netcache/netcache.p4
   extensions/p4_tests/p4_16/compile_only/p4c-3417.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-282/case1864.p4
@@ -825,11 +823,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/strength3.p4 # NO_SLICING_FOUND
   testdata/p4_16_samples/strength6.p4 # NO_SLICING_FOUND
   testdata/p4_16_samples/issue1713-bmv2.p4 # NO_SLICING_FOUND
-)
-
-p4c_add_xfail_reason("tofino"
-  "This program violates action constraints imposed by Tofino"
-  extensions/p4_tests/p4_14/customer/arista/obfuscated-1.p4
 )
 
 p4c_add_xfail_reason("tofino"

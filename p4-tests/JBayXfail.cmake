@@ -334,28 +334,6 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/compile_only/p4c-2694.p4
 )
 
-# Enable in a subsequent PR for nightly regression with deprecated Arista p4s
-# # P4C-2799
-# p4c_add_xfail_reason("tofino2"
-#   "error: PHV allocation creates an invalid container action within a Tofino ALU"
-#   # P4C-3043
-#   extensions/p4_tests/p4_16/customer/arista/deprecated/obfuscated-ref-baremetal_tofino2_2.p4
-# )
-
-# # P4C-2953
-# p4c_add_xfail_reason("tofino2"
-#   "error: Use of uninitialized parser value"
-#   extensions/p4_tests/p4_16/customer/arista/deprecated/obfuscated-ref-noname_tofino2_2.p4
-# )
-
-# p4c_add_xfail_reason("tofino2"
-#   "error: This program violates action constraints imposed by Tofino2"
-#   # P4C-2800
-#   extensions/p4_tests/p4_16/customer/arista/deprecated/obfuscated-ref-noname_tofino2_3.p4
-#   # P4C-3091
-#   extensions/p4_tests/p4_16/customer/arista/deprecated/obfuscated-ref-noname_tofino2_4.p4
-# )
-
 # P4C-2886
 p4c_add_xfail_reason("tofino2"
   "CRASH with signal 6"
@@ -469,5 +447,11 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "Metadata initialization analysis incorrect. Live ranges between .* and .* overlap"
   p4c_3043
+)
+
+# P4C-4477
+p4c_add_xfail_reason("tofino2"
+  "Merge of speciality argument cannot be built"
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-l2_dci.p4
 )
 
