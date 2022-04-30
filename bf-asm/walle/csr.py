@@ -2238,7 +2238,7 @@ def parse_csrcompiler_csv (filename, section_name):
     active_reg = None
     active_reg_default = 0
 
-    with open(filename, "rt", encoding='utf-8') as csv_file:
+    with open(filename, "rt", encoding='utf-8', errors='ignore') as csv_file:
         csv_reader = csv.DictReader(csv_file)
         row_num = 0
         for row in csv_reader:

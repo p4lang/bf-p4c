@@ -668,7 +668,7 @@ class Target::Flatrock : public Target {
         MAU_BASE_DELAY = 23,
         MAU_BASE_PREDICATION_DELAY = 13,
         METER_ALU_GROUP_DATA_DELAY = 15,
-        PHASE0_FORMAT_WIDTH = 0,
+        PHASE0_FORMAT_WIDTH = 128,  // FIXME -- what should it be?
         STATEFUL_CMP_UNITS = 4,
         STATEFUL_CMP_ADDR_WIDTH = 2,
         STATEFUL_CMP_CONST_WIDTH = 6,

@@ -23,10 +23,11 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/flatrock/exact1.p4
   )
 
-p4c_add_xfail_reason("tofino5"
-  "Error producing mau.json"
-  extensions/p4_tests/p4_16/flatrock/passthrough.p4
-  )
+# requires model build update to build ftr_test_harness and run to see this failure
+#p4c_add_xfail_reason("tofino5"
+#  "3 expected packets on port 2 not seen"
+#  extensions/p4_tests/p4_16/flatrock/passthrough.p4
+#  )
 
 p4c_add_xfail_reason("tofino5"
   "Flatrock .* not implemented yet"
@@ -52,11 +53,11 @@ p4c_add_xfail_reason("tofino5"
 
 
 # PAC test cases
-p4c_add_xfail_reason("tofino5"
-  "Error producing mau.json"
-  extensions/p4_tests/p4_16/flatrock/pac_trivial.p4
-  extensions/p4_tests/p4_16/flatrock/pac_single_hdr.p4
-  )
+#p4c_add_xfail_reason("tofino5"
+#  ""  -- need a real test case here.
+#  extensions/p4_tests/p4_16/flatrock/pac_trivial.p4
+#  extensions/p4_tests/p4_16/flatrock/pac_single_hdr.p4
+#  )
 
 p4c_add_xfail_reason("tofino5"
   "Flatrock .* not implemented yet"

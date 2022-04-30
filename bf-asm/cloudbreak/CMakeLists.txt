@@ -46,5 +46,11 @@ set (BFAS_CLOUDBREAK_HEADERS
   PARENT_SCOPE
   )
 
+set (BFAS_CLOUDBREAK_HEADERS
+  cloudbreak/gateway.h
+  cloudbreak/input_xbar.h
+  PARENT_SCOPE
+  )
+
 include_directories (${BFASM_BINARY_DIR}/gen/cloudbreak)
 add_library (regs_cb ${GEN_CLOUDBREAK_SRCS} ${GEN_CLOUDBREAK_HDRS})

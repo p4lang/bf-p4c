@@ -46,5 +46,11 @@ set (BFAS_JBAY_HEADERS
   PARENT_SCOPE
   )
 
+set (BFAS_JBAY_HEADERS
+  jbay/gateway.h
+  jbay/input_xbar.h
+  PARENT_SCOPE
+  )
+
 include_directories (${BFASM_BINARY_DIR}/gen/jbay)
 add_library (regs_jbay ${GEN_JBAY_SRCS} ${GEN_JBAY_HDRS})

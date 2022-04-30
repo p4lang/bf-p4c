@@ -46,5 +46,11 @@ set (BFAS_TOFINO_HEADERS
   PARENT_SCOPE
   )
 
+set (BFAS_TOFINO_HEADERS
+  tofino/gateway.h
+  tofino/input_xbar.h
+  PARENT_SCOPE
+  )
+
 include_directories (${BFASM_BINARY_DIR}/gen/tofino)
 add_library (regs_tofino ${GEN_TOFINO_SRCS} ${GEN_TOFINO_HDRS})

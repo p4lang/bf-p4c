@@ -266,7 +266,7 @@ while [ $# -gt 1 ]; do
         elif [[ $target =~ "tofino3" ]]; then
             toolsdevice="cb"
         elif [[ $target =~ "tofino5" ]]; then
-            toolsdevice="fr"
+            toolsdevice="ftr"
         else
             echo "Unknown target $target"
             exit 1
@@ -296,7 +296,7 @@ while [ $# -gt 1 ]; do
     -tofino5)
         target="tofino5${TOFINO5_VARIANT}"
         device="tofino5${TOFINO5_VARIANT}"
-        toolsdevice="fr"
+        toolsdevice="ftr"
         testdir="tofino5${TOFINO5_VARIANT}"
         ;;
     -arch)
