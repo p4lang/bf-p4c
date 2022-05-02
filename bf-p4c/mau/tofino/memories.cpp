@@ -155,7 +155,7 @@ UniqueId Memories::SRAM_group::build_unique_id() const {
 
 Memories::result_bus_info Memories::SRAM_group::build_result_bus(int width_sect) const {
     if (ta->table_format->result_bus_words().getbit(width_sect))
-        return result_bus_info(ta->table->name, width_sect, logical_table);
+        return result_bus_info(build_unique_id().build_name(), width_sect, logical_table);
     return result_bus_info();
 }
 
@@ -1588,6 +1588,8 @@ void Memories::fill_out_match_alloc(SRAM_group *group, match_selection &match_se
         } else {
             sram_search_bus[row][bus] = group_search_bus;
             sram_print_search_bus[row][bus] = group_search_bus.name;
+            LOG7("Setting sram search bus on row " << row << " and bus "
+                    << result_bus << " for " << sram_print_search_bus[row][bus]);
         }
 
         if (result_bus >= 0) {
@@ -1597,6 +1599,8 @@ void Memories::fill_out_match_alloc(SRAM_group *group, match_selection &match_se
             } else {
                 sram_result_bus[row][result_bus] = group_result_bus;
                 sram_print_result_bus[row][result_bus] = group_result_bus.name;
+                LOG7("Setting sram result bus on row " << row << " and result bus "
+                        << result_bus << " for " << sram_print_result_bus[row][result_bus]);
             }
         }
     }
@@ -3724,8 +3728,10 @@ bool Memories::find_search_bus_gw(table_alloc *ta, Memories::Use &alloc, cstring
 /** Finding a result bus for the gateway.  Will save associated information, such as payload
  *  row, bus, and value, as well as link no match tables if necessary
  */
-bool Memories::find_result_bus_gw(Memories::Use &alloc, uint64_t payload, cstring name,
+bool Memories::find_result_bus_gw(Memories::Use &alloc, uint64_t payload, cstring gw_name,
                                  table_alloc *table, int logical_table) {
+    LOG5("Finding result bus for gateway " << gw_name << " on table "
+                                        << table->table->name << IndentCtl::indent);
     Memories::Use *sram_use = nullptr;
     auto *result_bus = &sram_result_bus;
     auto *print_result_bus = &sram_print_result_bus;
@@ -3746,6 +3752,8 @@ bool Memories::find_result_bus_gw(Memories::Use &alloc, uint64_t payload, cstrin
             // no result bus in this memory type
             sram_use = nullptr;
             break; } }
+    // FIXME: Check if below code is valid and gets executed in any regression
+    // tests. Add a BUG_CHECK? Possible legacy code which can be removed
     if (!sram_use) {
         for (auto &mem : *table->memuse) {
             switch (mem.second.type) {
@@ -3777,7 +3785,9 @@ bool Memories::find_result_bus_gw(Memories::Use &alloc, uint64_t payload, cstrin
     // match address to be invalid in case the PFE is defaulted.
     // FIXME -- this probably belongs somewhere else?
     for (auto at : table->table->attached) {
-        if (at->attached->direct && at->attached->is<IR::MAU::Synth2Port>()) {
+        if (at->attached->direct && (at->attached->is<IR::MAU::Synth2Port>()
+                                    || at->attached->is<IR::MAU::IdleTime>())) {
+            LOG6("Forcing payload match address to 0x7ffff on attached table " << at);
             alloc.gateway.payload_match_address = 0x7ffff;
             break; } }
     ordered_set<int> rows;
@@ -3797,15 +3807,22 @@ bool Memories::find_result_bus_gw(Memories::Use &alloc, uint64_t payload, cstrin
                     break; } } }
         for (; bus < BUS_COUNT; bus++) {
             if ((*print_result_bus)[row][bus] &&
-                (*print_result_bus)[row][bus] != match_id.build_name())
+                (*print_result_bus)[row][bus] != match_id.build_name()) {
+                LOG7("Cannot assign on row " << row << " and bus " << bus
+                        << " as it is occupied by " << (*print_result_bus)[row][bus]);
                 continue;
+            }
             alloc.gateway.bus_type = ternary ? Use::TIND : Use::EXACT;
+            LOG7("Payload use on row " << row << " and bus " << bus
+                                            << " is " << payload_use[row][bus]);
             if (payload != 0ULL || alloc.gateway.payload_match_address >= 0) {
-                if (payload_use[row][bus]) continue;
+                if (auto pUse = payload_use[row][bus]) {
+                    if (pUse != gw_name) continue;
+                }
                 alloc.gateway.payload_row = row;
                 alloc.gateway.payload_unit = bus;
                 alloc.gateway.payload_value = payload;
-                payload_use[row][bus] = name; }
+                payload_use[row][bus] = gw_name; }
             if (sram_use && !std::any_of(sram_use->row.begin(), sram_use->row.end(),
                 [row, bus](Use::Row &r) { return r.row == row && r.result_bus == bus; })) {
                 sram_use->row.emplace_back(row);
@@ -3813,11 +3830,14 @@ bool Memories::find_result_bus_gw(Memories::Use &alloc, uint64_t payload, cstrin
                 if (ternary)
                     sram_use->row.back().bus = bus; }
             if (result_bus)
-                (*result_bus)[row][bus] = result_bus_info(match_id.name, 0, logical_table);
+                (*result_bus)[row][bus] = result_bus_info(match_id.build_name(), 0, logical_table);
             (*print_result_bus)[row][bus] = match_id.build_name();
+            LOG6("Result bus assigned on row " << row << " and bus " << bus
+                                        << " for " << (*print_result_bus)[row][bus]);
             return true;
         }
     }
+    LOG5("No result bus found" << IndentCtl::unindent);
     return false;
 }
 
@@ -3855,6 +3875,8 @@ uint64_t Memories::determine_payload(table_alloc *ta) {
  *  Thus it needs a payload, result bus, and search bus.
  */
 bool Memories::allocate_all_payload_gw(bool alloc_search_bus) {
+    LOG3("Allocate all payload gateways with alloc search bus set to "
+                                        << (alloc_search_bus ? "true" : "false"));
     for (auto *ta : payload_gws) {
         if (IS_FLATROCK) continue;  // TODO
         auto match_ixbar = dynamic_cast<const IXBar::Use *>(ta->match_ixbar);
@@ -4022,13 +4044,17 @@ bool Memories::allocate_all_gw() {
 
         if (auto *mt = ta_gw->table_link ? ta_gw->table_link->table : nullptr) {
             for (auto at : mt->attached) {
-                if (at->attached->direct && at->attached->is<IR::MAU::Synth2Port>()) {
-                    /* direct attached synth2port tables will use the match address, so we
-                     * need to make sure the gateway has an invalid match address in case
-                     * it wants to completely override the linked match table
-                     * FIXME -- the direct attached could in theory use a PFE in the match
-                     * overhead, in which case this would not be necessary.  Hard to know
-                     * when we could/should do that -- in the match table layout perhaps? */
+                if (at->attached->direct && (at->attached->is<IR::MAU::Synth2Port>()
+                                            || at->attached->is<IR::MAU::IdleTime>())) {
+                    LOG5("Adding payload gw for attached table : " << at);
+                    /* direct attached synth2port / idletime tables will use the
+                     * match address, so we need to make sure the gateway has an
+                     * invalid match address in case it wants to completely
+                     * override the linked match table
+                     * FIXME -- the direct attached could in theory use a PFE in
+                     * the match overhead, in which case this would not be
+                     * necessary.  Hard to know when we could/should do that --
+                     * in the match table layout perhaps? */
                     payload_gws.push_back(ta_gw);
                     ta_gw->payload_match_addr_only = true;
                     ta_gw->table_link->payload_match_addr_only = true;

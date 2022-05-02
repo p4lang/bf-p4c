@@ -140,6 +140,9 @@ struct Memories : public ::Memories {
     BFN::Alloc2D<cstring, SRAM_ROWS, STASH_UNITS>           stash_use;
     BFN::Alloc2D<cstring, TCAM_ROWS, TCAM_COLUMNS>          tcam_use;
     BFN::Alloc2D<cstring, SRAM_ROWS, GATEWAYS_PER_ROW>      gateway_use;
+    // FIXME (Refactoring): Remove sram_print_result_bus / sram_print_search_bus
+    // and move the info inside and move into main result_bus_info /
+    // search_bus_info class
     BFN::Alloc2D<search_bus_info, SRAM_ROWS, BUS_COUNT>     sram_search_bus;
     BFN::Alloc2D<cstring, SRAM_ROWS, BUS_COUNT>             sram_print_search_bus;
     BFN::Alloc2D<result_bus_info, SRAM_ROWS, BUS_COUNT>     sram_result_bus;
