@@ -238,6 +238,9 @@ if [[ "${BUILD_FOR}" != 'jenkins-final' ]] ; then
        p4-tests/p4testutils/veth_setup.sh \
        docker/docker_entry_point.sh \
        "${BFN}"
+    if [[ "${BUILD_FOR}" = 'jarvis' ]] ; then
+        cp docker/bf-p4c-preconfig-jarvis.cmake "${BFN}/bf-p4c-preconfig.cmake"
+    fi
     cd -
   }
 

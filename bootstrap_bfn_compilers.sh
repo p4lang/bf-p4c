@@ -21,6 +21,7 @@ show_help () {
     echo >&2 "   --minimal-config       disable most build targets other than the compiler"
     echo >&2 "   --disable-unified      disable unified build"
     echo >&2 "   --cmake-gen <gen>      see 'cmake -h' for list of generators"
+    echo >&2 "   --disable-preconfig    disable local pre-configured defaults even if they are present"
 }
 
 
@@ -31,6 +32,8 @@ P4C_CPP_FLAGS=''
 smallConfig=false
 minimalConfig=false
 disableUnified=false
+disablePreconfig=false
+preconfigPath=/bfn/bf-p4c-preconfig.cmake
 otherArgs=""
 
 while [ $# -gt 0 ]; do
@@ -61,6 +64,10 @@ while [ $# -gt 0 ]; do
         ;;
     --cmake-gen)
         cmakeGen="$2"
+        shift
+        ;;
+    --disable-preconfig)
+        disablePreconfig=true
         shift
         ;;
     -D*)
@@ -119,11 +126,15 @@ if $disableUnified ; then
     ENABLED_COMPONENTS+=" -DENABLE_UNIFIED_COMPILATION=OFF"
 fi
 
+if [ "$disablePreconfig" = "false"  -a -r $preconfigPath ]; then
+    otherArgs+=" -C$preconfigPath"
+fi
+
 mkdir -p ${builddir}
 pushd ${builddir}
 ( cat <<EOF
 #/bin/bash
-# CMake recofnfiguration script. Run it in the build directory if content of
+# CMake reconfiguration script. Run it in the build directory if content of
 # CMakeLists has changed but there is no intention to change configuration.
 
 cmake ${mydir} -DCMAKE_BUILD_TYPE=${buildtype}\
