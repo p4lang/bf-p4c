@@ -26,12 +26,12 @@ deparser egress:
     Deparser* dprsr = dynamic_cast<Deparser*>(Section::test_get("deparser"));
     dprsr->write_config(regs);
 
-    EXPECT_EQ(regs.egress.dprsr_phvxb_rspec.pbo_cfg.key[0].key_wh, 0xFFFFFFFF);
-    EXPECT_EQ(regs.egress.dprsr_phvxb_rspec.pbo_cfg.key[0].key_wl, 0xFFFFFFFF);
-    EXPECT_EQ(regs.egress.dprsr_phvxb_rspec.pbo_cfg.data[0].hdr, 254);
-    EXPECT_EQ(regs.egress.dprsr_phvxb_rspec.pbo_cfg.data[0].offset, 1);
-    EXPECT_EQ(regs.egress.dprsr_phvxb_rspec.pbo_cfg.data[0].var_start, 2);
-    EXPECT_EQ(regs.egress.dprsr_phvxb_rspec.pbo_cfg.data[0].var_len, 3);
+    EXPECT_EQ(regs.dprsr.dprsr_phvxb_rspec.pbo_cfg.key[0].key_wh, 0xFFFFFFFF);
+    EXPECT_EQ(regs.dprsr.dprsr_phvxb_rspec.pbo_cfg.key[0].key_wl, 0xFFFFFFFF);
+    EXPECT_EQ(regs.dprsr.dprsr_phvxb_rspec.pbo_cfg.data[0].hdr, 254);
+    EXPECT_EQ(regs.dprsr.dprsr_phvxb_rspec.pbo_cfg.data[0].offset, 1);
+    EXPECT_EQ(regs.dprsr.dprsr_phvxb_rspec.pbo_cfg.data[0].var_start, 2);
+    EXPECT_EQ(regs.dprsr.dprsr_phvxb_rspec.pbo_cfg.data[0].var_len, 3);
 }
 
 TEST(deparser, tof5_packet_body_offset_2) {
@@ -56,12 +56,12 @@ deparser egress:
     Deparser* dprsr = dynamic_cast<Deparser*>(Section::test_get("deparser"));
     dprsr->write_config(regs);
 
-    EXPECT_EQ(regs.egress.dprsr_phvxb_rspec.pbo_cfg.key[0].key_wh, 0xFFFFFFFF);
-    EXPECT_EQ(regs.egress.dprsr_phvxb_rspec.pbo_cfg.key[0].key_wl, 0xFFFFFFFF);
-    EXPECT_EQ(regs.egress.dprsr_phvxb_rspec.pbo_cfg.data[0].hdr, 128);
-    EXPECT_EQ(regs.egress.dprsr_phvxb_rspec.pbo_cfg.data[0].offset, 2);
-    EXPECT_EQ(regs.egress.dprsr_phvxb_rspec.pbo_cfg.data[0].var_start, 4);
-    EXPECT_EQ(regs.egress.dprsr_phvxb_rspec.pbo_cfg.data[0].var_len, 6);
+    EXPECT_EQ(regs.dprsr.dprsr_phvxb_rspec.pbo_cfg.key[0].key_wh, 0xFFFFFFFF);
+    EXPECT_EQ(regs.dprsr.dprsr_phvxb_rspec.pbo_cfg.key[0].key_wl, 0xFFFFFFFF);
+    EXPECT_EQ(regs.dprsr.dprsr_phvxb_rspec.pbo_cfg.data[0].hdr, 128);
+    EXPECT_EQ(regs.dprsr.dprsr_phvxb_rspec.pbo_cfg.data[0].offset, 2);
+    EXPECT_EQ(regs.dprsr.dprsr_phvxb_rspec.pbo_cfg.data[0].var_start, 4);
+    EXPECT_EQ(regs.dprsr.dprsr_phvxb_rspec.pbo_cfg.data[0].var_len, 6);
 }
 
 }  // namespace

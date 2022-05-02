@@ -630,10 +630,10 @@ class Target::Flatrock : public Target {
     };
     typedef ::Flatrock::regs_match_action_stage_        mau_regs;
     struct                              deparser_regs {
-        ::Flatrock::memories_ingress_deparser           imem;
-        ::Flatrock::memories_egress_deparser            emem;
-        ::Flatrock::regs_ingress_deparser               ingress;
-        ::Flatrock::regs_egress_deparser                egress;
+        ::Flatrock::memories_ingress_deparser           mdp_mem;
+        ::Flatrock::memories_egress_deparser            dprsr_mem;
+        ::Flatrock::regs_ingress_deparser               mdp;
+        ::Flatrock::regs_egress_deparser                dprsr;
     };
 
     enum {
@@ -750,6 +750,7 @@ class Target::Flatrock : public Target {
                                                     // variable offset component. The length
                                                     // in the config register must be in the range
                                                     // [0, DEPARSER_PBO_VAR_OFFSET_LEN_MAX].
+        MDP_HDR_ID_COMP_ROWS = 255,
     };
     static int encodeConst(int src) {
         return src;

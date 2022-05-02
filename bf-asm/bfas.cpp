@@ -87,11 +87,13 @@ BaseAsmParser *asm_parser = nullptr;
 void createSingleAsmParser() {
     if (asm_parser != nullptr) {
 #ifdef HAVE_FLATROCK
-        if (options.target == Target::Flatrock::tag && dynamic_cast<AsmParser *>(::asm_parser)) {
+        // Deletion and recreation is necessary for gtests when switching between targets
+        if (options.target == Target::Flatrock::tag &&
+                dynamic_cast<FlatrockAsmParser *>(::asm_parser) == nullptr) {
             delete asm_parser;
             asm_parser = new FlatrockAsmParser;
         } else if (options.target != Target::Flatrock::tag &&
-                   dynamic_cast<FlatrockAsmParser *>(::asm_parser)) {
+                   dynamic_cast<AsmParser *>(::asm_parser) == nullptr) {
             delete asm_parser;
             asm_parser = new AsmParser;
         }

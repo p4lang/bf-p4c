@@ -1,8 +1,79 @@
 /* deparser template specializations for flatrock -- #included directly in top-level deparser.cpp */
 
+#include "ubits.h"
+
+#define YES(X)  X
+#define NO(X)
+
+#define FLATROCK_SIMPLE_INTRINSIC(GRESS, VAL, REG, REGNAME, IFSHIFT) \
+    REG.phv_n_##REGNAME = VAL.val->reg.deparser_id();                \
+    IFSHIFT(REG.REGNAME##_shft = intrin.vals[0].val->lo;)
+
+#define FLATROCK_BYTE_PAIR_INTRINSIC(GRESS, VAL, REG, REGNAME, IFSHIFT) \
+    /* FIXME: what are the two deparser IDs? */                         \
+    REG.phv_n_b0_##REGNAME = VAL.val->reg.deparser_id();                \
+    REG.phv_n_b1_##REGNAME = VAL.val->reg.deparser_id();                \
+    IFSHIFT(REG.REGNAME##_shft = intrin.vals[0].val->lo;)
+
+#define MDP_INTRINSIC(NAME, R1, IFSHIFT)                                      \
+    DEPARSER_INTRINSIC(Flatrock, INGRESS, NAME, 1) {                                          \
+        FLATROCK_SIMPLE_INTRINSIC(INGRESS, intrin.vals[0], regs.mdp_mem.R1, NAME, IFSHIFT) \
+    }
+
+#define MDP_INTRINSIC_BP(NAME, R1, IFSHIFT)                                      \
+    DEPARSER_INTRINSIC(Flatrock, INGRESS, NAME, 1) {                                          \
+        FLATROCK_BYTE_PAIR_INTRINSIC(INGRESS, intrin.vals[0], regs.mdp_mem.R1, NAME, IFSHIFT) \
+    }
+
+#define MDP_INTRINSIC_RENAME(NAME, R1, REGNAME, IFSHIFT)                                      \
+    DEPARSER_INTRINSIC(Flatrock, INGRESS, NAME, 1) {                                          \
+        FLATROCK_SIMPLE_INTRINSIC(INGRESS, intrin.vals[0], regs.mdp_mem.R1, REGNAME, IFSHIFT) \
+    }
+
+#define MDP_INTRINSIC_BP_RENAME(NAME, R1, REGNAME, IFSHIFT)                                      \
+    DEPARSER_INTRINSIC(Flatrock, INGRESS, NAME, 1) {                                          \
+        FLATROCK_BYTE_PAIR_INTRINSIC(INGRESS, intrin.vals[0], regs.mdp_mem.R1, REGNAME, IFSHIFT) \
+    }
+
+#define DPR_INTRINSIC_RENAME(NAME, R1, REGNAME, IFSHIFT)                                       \
+    DEPARSER_INTRINSIC(Flatrock, EGRESS, NAME, 1) {                                            \
+        FLATROCK_SIMPLE_INTRINSIC(EGRESS, intrin.vals[0], regs.dprsr.R1, REGNAME, IFSHIFT) \
+    }
+
 // minimal intrinsics for now
+// only supporting instance 0 for now
+MDP_INTRINSIC_RENAME(meter_color, tmm_ext_ram.tmm_ext[0], color, YES)
+MDP_INTRINSIC(icos, tmm_ext_ram.tmm_ext[0], YES)
+MDP_INTRINSIC_RENAME(copy_to_cpu_cos, tmm_ext_ram.tmm_ext[0], c2c_cos, YES)
+// TODO: c2c_qid
+MDP_INTRINSIC_RENAME(mirr_icos, tmm_ext_ram.tmm_ext[0], mrr_cos, YES)
+MDP_INTRINSIC_RENAME(egress_unicast_port, tmm_ext_ram.tmm_ext[0], epipe_port, YES)
+MDP_INTRINSIC_RENAME(qid, tmm_ext_ram.tmm_ext[0], eport_qid, YES)
+// TODO: epipe_id -- split from egress_unicast_port?
+// TODO: b0_mrr_bmp
+// TODO: b1_mrr_bmp
+MDP_INTRINSIC_BP_RENAME(egress_multicast_group_0, tmm_ext_ram.tmm_ext[0], mcid1, YES)
+MDP_INTRINSIC_BP_RENAME(egress_multicast_group_1, tmm_ext_ram.tmm_ext[0], mcid2, YES)
+MDP_INTRINSIC_BP(rid, tmm_ext_ram.tmm_ext[0], YES)
+MDP_INTRINSIC_BP(yid, tmm_ext_ram.tmm_ext[0], YES)
+MDP_INTRINSIC_BP(xid, tmm_ext_ram.tmm_ext[0], YES)
+MDP_INTRINSIC_BP_RENAME(hash_lag_ecmp_mcast_0, tmm_ext_ram.tmm_ext[0], hash1, YES)
+MDP_INTRINSIC_BP_RENAME(hash_lag_ecmp_mcast_1, tmm_ext_ram.tmm_ext[0], hash2, YES)
+// TODO: b0_pkt_len
+// TODO: b1_pkt_len
+
+
+// FIXME: egress_unicast_port should be removed from EGRESS
 DEPARSER_INTRINSIC(Flatrock, EGRESS, egress_unicast_port, 1) { }
-DEPARSER_INTRINSIC(Flatrock, INGRESS, egress_unicast_port, 1) { }
+
+
+#undef FLATROCK_BYTE_PAIR_INTRINSIC
+#undef FLATROCK_SIMPLE_INTRINSIC
+#undef MDP_INTRINSIC
+#undef MDP_INTRINSIC_BP
+#undef MDP_INTRINSIC_RENAME
+#undef MDP_INTRINSIC_BP_RENAME
+#undef DPR_INTRINSIC_RENAME
 
 template<> unsigned Deparser::FDEntry::Checksum::encode<Target::Flatrock>() {
     error(-1, "%s:%d: Flatrock deparser not implemented yet!", __FILE__, __LINE__);
@@ -40,15 +111,128 @@ void fill_string(int idx, int seq, ITER begin, ITER end, const pov_map_t &pov_ma
 }
 
 template<> void Deparser::write_config(Target::Flatrock::deparser_regs &regs) {
+    // NOTE: Some of the sections listed below may be programmed via intrinsics (see above)
+
+    // Ingress "deparser" -- metadata packer
+    // -------------------------------------
+    //
+    // See: https://wiki.ith.intel.com/pages/viewpage.action?pageId=1767709001
+
+    // POV extraction
+    auto &mdp_pov_ext = regs.mdp.pov_ext;
     unsigned i = 0;
-    pov_map_t pov_map;
-    auto &phvxb = regs.egress.dprsr_phvxb_rspec;
+    pov_map_t i_pov_map;
+    ubits<8>* mdp_pov_ext_bytes[16] = {
+        &mdp_pov_ext.b0_src_iphv_num,
+        &mdp_pov_ext.b1_src_iphv_num,
+        &mdp_pov_ext.b2_src_iphv_num,
+        &mdp_pov_ext.b3_src_iphv_num,
+        &mdp_pov_ext.b4_src_iphv_num,
+        &mdp_pov_ext.b5_src_iphv_num,
+        &mdp_pov_ext.b6_src_iphv_num,
+        &mdp_pov_ext.b7_src_iphv_num,
+        &mdp_pov_ext.b8_src_iphv_num,
+        &mdp_pov_ext.b9_src_iphv_num,
+        &mdp_pov_ext.b10_src_iphv_num,
+        &mdp_pov_ext.b11_src_iphv_num,
+        &mdp_pov_ext.b12_src_iphv_num,
+        &mdp_pov_ext.b13_src_iphv_num,
+        &mdp_pov_ext.b14_src_iphv_num,
+        &mdp_pov_ext.b15_src_iphv_num,
+    };
+    for (auto &ent : pov_order[INGRESS]) {
+        i_pov_map.emplace(&ent->reg, i*8);
+        for (unsigned j = 0; j < ent->reg.size/8; ++j) {
+            *mdp_pov_ext_bytes[i++] = ent->reg.deparser_id() + j; }
+    }
+
+    // Valid vector
+    // TODO: regs.mdp.vld_vec_ext
+
+    // Default select vector
+    // TODO: regs.mdp.dflt_vec_ext
+
+    // Bridge metadata
+    // TODO: regs.mdp.brm_ext
+    // TODO: regs.mdp.bf_meta_cfg_tcam
+    // TODO: regs.mdp_mem.rem_brm_ext_ram
+
+    // TM metadata
+    // TODO: regs.mdp.tmm_ext
+    // TODO: regs.mdp.tm_meta_cfg_tcam
+    // TODO: regs.mdp.default_tm_meta*
+    // TODO: regs.mdp_mem.tmm_ext_ram
+    // Match on entry 0 always
+    regs.mdp.tm_meta_cfg_tcam.tcam[0].key_wh = 0xFFFFFFFFUL;
+    regs.mdp.tm_meta_cfg_tcam.tcam[0].key_wl = 0xFFFFFFFFUL;
+
+    // Learn quanta
+    // TODO: regs.mdp.lq_ext
+    // TODO: regs.mdp.lq_cfg_tcam
+    // TODO: regs.mdp_mem.lq_ext_ram
+
+    // IAFC - ingress advanced flow control
+    // TODO: regs.mdp.iafc_ext
+    // TODO: regs.mdp.iafc_ext_ram
+
+    // Packet gen
+    // TODO: regs.mdp.pgen_ext
+    // TODO: regs.mdp.pgen_cfg_tcam
+    // TODO: regs.mdp_mem.pgen_ext_ram
+
+    // Header ID table
+    // Program Header ID compression TCAM with the 255 chosen sequences
+    auto &hdr_id_tcam = regs.mdp_mem.hdr_id_compr_tcam;
+
+    // Header ID compression RAM should always program each entry with its index
+    // FIXME: only program as many entries as we have in the TCAM
+    auto &hdr_id_ram = regs.mdp.hdr_id_compr_ram;
+    for (int i = 0; i < Target::Flatrock::MDP_HDR_ID_COMP_ROWS; i++) hdr_id_ram.compr_hdr_id[i] = i;
+
+    // Header len compression
+    // TODO: regs.mdp.hdr_len_comr_tab (asked to rename to hdr_len_compr_tab)
+
+
+    // Egress deparser
+    // ---------------
+    //
+    // See: https://wiki.ith.intel.com/display/ITS51T/Deparser
+
+    // Crossbar config
+    auto &phvxb = regs.dprsr.dprsr_phvxb_rspec;
+
+    // POV extraction
+    i = 0;
+    pov_map_t e_pov_map;
     for (auto &ent : pov_order[EGRESS]) {
-        pov_map.emplace(&ent->reg, i*8);
+        e_pov_map.emplace(&ent->reg, i*8);
         for (unsigned j = 0; j < ent->reg.size/8; ++j) {
             phvxb.phe2pov[i/4].phe_byte[i%4] = ent->reg.deparser_id() + j;
             ++i; } }
 
+    // Content memory
+    // TODO: regs.dprsr.dprsr_phvxb_rspec.cm
+    // TODO: regs.dprsr_mem.cm
+
+    // Checksum configuration
+    // TODO: regs.dprsr.dprsr_phvxb_rspec.csm_phe_xb
+    // TODO: regs.dprsr.dprsr_phvxb_rspec.final_csum_cfg
+    // TODO: regs.dprsr.dprsr_ipkt_rspec.*
+    // TODO: regs.dprsr.dprsr_output_rspec.*
+
+    // Advanced flow control (AFC)
+    // TODO: regs.dprsr.dprsr_phvxb_rspec.afc_xb
+
+    // Egress MAC metadata
+    // TODO: regs.dprsr.dprsr_phvxb_rspec.md_xb
+
+    // Egress header mirror (EHM)
+    // TODO: regs.dprsr.dprsr_phvxb_rspec.ehm_xb
+
+    // String configuration
+    // TODO: regs.dprsr.dprsr_phvxb_rspec.str*
+    // TODO: regs.dprsr.dprsr_phvxb_rspec.lp_str
+    // TODO: regs.dprsr.dprsr_sd_rspec.*
     ftr_str_info_t info[3] = {
         // FIXME the chip supports 16 different configs for the strings, selected by a tcam
         // match.  We just always program config 0 here
@@ -60,7 +244,7 @@ template<> void Deparser::write_config(Target::Flatrock::deparser_regs &regs) {
     auto next = dictionary[EGRESS].begin();
     unsigned max_bytes = 32;
     int seq = 0;
-    auto &strings = regs.egress.dprsr_sd_rspec;
+    auto &strings = regs.dprsr.dprsr_sd_rspec;
     for (auto it = next; it != dictionary[EGRESS].end(); it = next) {
         int entries = 1;
         unsigned bytes = it->what->size();
@@ -75,9 +259,9 @@ template<> void Deparser::write_config(Target::Flatrock::deparser_regs &regs) {
         i->en[i->use] = 1;
         i->sel[i->use] = 0;
         switch (i->len) {
-        case 8: fill_string(i->use*4, seq, it, next, pov_map, strings.str8); break;
-        case 16: fill_string(i->use*4, seq, it, next, pov_map, strings.str16); break;
-        case 32: fill_string(i->use*4, seq, it, next, pov_map, strings.str32); break;
+        case 8: fill_string(i->use*4, seq, it, next, e_pov_map, strings.str8); break;
+        case 16: fill_string(i->use*4, seq, it, next, e_pov_map, strings.str16); break;
+        case 32: fill_string(i->use*4, seq, it, next, e_pov_map, strings.str32); break;
         default: BUG("bad size"); }
         ++seq;
         ++i->use;
@@ -96,8 +280,11 @@ template<> void Deparser::write_config(Target::Flatrock::deparser_regs &regs) {
     phvxb.pbo_cfg.data[0].var_start = pbo[EGRESS].var_start;
     phvxb.pbo_cfg.data[0].var_len = pbo[EGRESS].var_len;
 
+    for (auto &intrin : intrinsics)
+        intrin.type->setregs(regs, *this, intrin);
+
     if (!intrinsics.empty())
-        error(intrinsics.front().lineno, "Flatrock intrinsics not implemented yet!");
+        warning(intrinsics.front().lineno, "Flatrock intrinsics not fully implemented yet!");
     if (!digests.empty())
         error(digests.front().lineno, "Flatrock digests not implemented yet!");
 }

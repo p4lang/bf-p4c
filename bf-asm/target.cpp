@@ -367,10 +367,22 @@ void declare_registers(const Target::Flatrock::mau_regs *regs, int stage) {
             regs->emit_fieldname(out, addr, end); });
 }
 void declare_registers(const Target::Flatrock::deparser_regs *regs) {
-    declare_registers(&regs->egress, sizeof regs->egress,
+    declare_registers(&regs->mdp, sizeof regs->mdp,
         [=](std::ostream &out, const char *addr, const void *end) {
-            out << "deparser.egress.regs";
-            regs->egress.emit_fieldname(out, addr, end); });
+            out << "mdp.regs";
+            regs->mdp.emit_fieldname(out, addr, end); });
+    declare_registers(&regs->mdp_mem, sizeof regs->mdp_mem,
+        [=](std::ostream &out, const char *addr, const void *end) {
+            out << "mdp.mem";
+            regs->mdp_mem.emit_fieldname(out, addr, end); });
+    declare_registers(&regs->dprsr, sizeof regs->dprsr,
+        [=](std::ostream &out, const char *addr, const void *end) {
+            out << "deparser.regs";
+            regs->dprsr.emit_fieldname(out, addr, end); });
+    declare_registers(&regs->dprsr_mem, sizeof regs->dprsr_mem,
+        [=](std::ostream &out, const char *addr, const void *end) {
+            out << "deparser.mem";
+            regs->dprsr_mem.emit_fieldname(out, addr, end); });
 }
 
 void emit_parser_registers(const Target::Flatrock::top_level_regs *regs, std::ostream &out) {
