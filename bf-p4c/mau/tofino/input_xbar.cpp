@@ -3811,6 +3811,7 @@ void IXBar::XBarHashDist::hash_action() {
     for (auto ba : tbl->attached) {
         if (!(ba->attached && ba->attached->direct))
             continue;
+        if (attached_entries.at(ba->attached).entries == 0) continue;
         build_req(hd, ba, true);
     }
 
@@ -3825,7 +3826,7 @@ bool IXBar::XBarHashDist::preorder(const IR::MAU::HashDist *hd) {
     } else if (auto mtr = findContext<IR::MAU::Meter>()) {
         build_req(hd, mtr);
     } else if (auto ba = findContext<IR::MAU::BackendAttached>()) {
-        build_req(hd, ba);
+        if (attached_entries.at(ba->attached).entries > 0) build_req(hd, ba);
     } else if (findContext<IR::MAU::Instruction>()) {
         return false;
     }
