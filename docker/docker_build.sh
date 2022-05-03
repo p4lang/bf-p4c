@@ -57,6 +57,7 @@ export P4C_DEPS="autoconf \
                  distcc \
                  flex \
                  g++-9 \
+                 lld \
                  graphviz \
                  libboost1.71-all-dev \
                  libfl-dev \
