@@ -247,6 +247,7 @@ set(EXTENSION_FRONTEND_SOURCES ${EXTENSION_FRONTEND_SOURCES} ${QUAL_BF_P4C_IR_SR
 set (BF_P4C_BACKEND_COMMON_SRCS
   common/alias.cpp
   common/asm_output.cpp
+  common/check_field_corruption.cpp
   common/check_for_unimplemented_features.cpp
   common/check_uninitialized_read.cpp
   common/dump_pipe.cpp
@@ -274,6 +275,7 @@ build_unified(BF_P4C_BACKEND_COMMON_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 set (BF_P4C_BACKEND_COMMON_HDRS
   common/alias.h
   common/autoindent.h
+  common/check_field_corruption.h
   common/check_for_unimplemented_features.h
   common/check_header_refs.h
   common/check_uninitialized_read.h
