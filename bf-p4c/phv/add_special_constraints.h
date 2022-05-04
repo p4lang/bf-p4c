@@ -34,9 +34,6 @@ class AddSpecialConstraints : public Inspector {
     /// containers.
     bool preorder(const IR::BFN::ChecksumVerify* verify) override;
     bool preorder(const IR::BFN::ChecksumResidualDeposit* get) override;
-
-    bool preorder(const IR::BFN::DeparserParameter* param) override;
-
     void end_apply() override;
 
  public:

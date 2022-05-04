@@ -95,10 +95,9 @@ bool DetermineCandidateFields::multipleSourcesFound(
 // (Music suggestion when modifying code here: Fixing a hole - The Beatles)
 // :)
 bool DetermineCandidateFields::incompatibleConstraints(
-        const PHV::Field* /* dest */,
+        const PHV::Field* dest,
         const PHV::Field* src) const {
     // case1: non-byte aligned arithmetic dests require whole container
-
     if (src->size % 8 != 0) {
         if (d2i.dest_to_inst.count(src)) {
             for (auto inst : d2i.dest_to_inst.at(src)) {
@@ -106,6 +105,30 @@ bool DetermineCandidateFields::incompatibleConstraints(
                     return true;
             }
         }
+    }
+
+    // case2: incompatible alignment and starting bits.
+    const auto alignment_ok = [](const PHV::Field* a, const PHV::Field* b) {
+        if (a->alignment) {
+            const auto align = a->alignment->align;
+            if (b->alignment && b->alignment->align != align) {
+                return false;
+            }
+            // must found at least one overlapped start bit.
+            for (auto container_size : Device::phvSpec().containerSizes()) {
+                const bitvec valid_starts = b->getStartBits(container_size);
+                for (int i = align; i <= int(container_size) - 1; i += 8) {
+                    if (valid_starts.getbit(i)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+        return true;
+    };
+    if (!alignment_ok(dest, src) || !alignment_ok(src, dest)) {
+        return true;
     }
 
     // more to come ...

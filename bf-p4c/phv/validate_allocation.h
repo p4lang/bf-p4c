@@ -43,6 +43,7 @@ class ValidateAllocation final : public Inspector {
     profile_t init_apply(const IR::Node* root) override;
     bool preorder(const IR::BFN::Digest* digest) override;
     bool preorder(const IR::BFN::Pipe* pipe) override;
+    bool preorder(const IR::BFN::DeparserParameter* dp) override;
 
     /// @returns total number of container bits used for POV bit allocation in @p gress.
     size_t getPOVContainerBytes(gress_t gress) const;

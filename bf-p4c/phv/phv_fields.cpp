@@ -1081,11 +1081,17 @@ bitvec PHV::Field::getStartBits(PHV::Size size) const {
     return startBitsByContainerSize_i.at(size);
 }
 
-void PHV::Field::setStartBitsToBottomByte() {
+void PHV::Field::setStartBitsToLowerBitsOfBottomByte() {
+    int shiftable_bits = 0;
+    if (size <= 8) {
+        shiftable_bits = 8 - size;
+    } else if (size > 8 && size <= 16) {
+        shiftable_bits = 16 - size;
+    } else {
+        shiftable_bits = 7;
+    }
     for (auto container_size : Device::phvSpec().containerSizes()) {
-        const int shiftable_bits = int(container_size) - size;
-        const int n_start_bits = shiftable_bits >= 0 ? std::min(8, shiftable_bits + 1) : 0;
-        startBitsByContainerSize_i[container_size] = bitvec(0, n_start_bits);
+        startBitsByContainerSize_i[container_size] = bitvec(0, shiftable_bits + 1);
         LOG3("Setting field " << name << " to bottom byte: " <<
              startBitsByContainerSize_i[container_size]);
     }
@@ -1851,6 +1857,15 @@ class CollectPardeConstraints : public Inspector {
                         param->source->field->getSourceInfo());
                 f->set_deparsed_bottom_bits(true);
             }
+        }
+
+        if (!f->deparsed_bottom_bits()) {
+            // The lsb of DeparserParameter field must in the bottom byte.
+            // The limit comes from a hardware limit that the deparser only has a 3-bit 'shift'
+            // field, it can only (right) shift the value by at most 7 when extracting output
+            // intrinsic metadata from the container.
+            f->setStartBitsToLowerBitsOfBottomByte();
+            LOG3("setting StartBitsToBottomByte for " << f << ", because it is DeparserParameter");
         }
 
         BUG_CHECK(f->size <= 32, "The architecture requires that field %1% not be split "

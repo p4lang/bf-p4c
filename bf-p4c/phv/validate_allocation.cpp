@@ -827,6 +827,26 @@ bool ValidateAllocation::preorder(const IR::BFN::Digest* digest) {
     return true;
 }
 
+/// https://jira.devtools.intel.com/browse/P4C-4469
+bool ValidateAllocation::preorder(const IR::BFN::DeparserParameter* dp) {
+    le_bitrange bits = {};
+    auto field = phv.field(dp->source->field, &bits);
+    int container_upper_bound = 8;
+    if (field->size > 8) {
+        container_upper_bound = 16;
+    }
+    if (field->size > 16) {
+        container_upper_bound = 32;
+    }
+    field->foreach_alloc(
+        bits, PHV::AllocContext::DEPARSER, nullptr, [&](const PHV::AllocSlice& alloc) {
+            BUG_CHECK(alloc.container_slice().hi <= container_upper_bound,
+                      "deparser parameter must be allocated to lower bytes, but %1% violates it.",
+                      alloc);
+        });
+    return true;
+}
+
 size_t ValidateAllocation::getPOVContainerBytes(gress_t gress) const {
     ordered_set<PHV::Container> containers;
     for (const auto& f : phv) {

@@ -821,9 +821,13 @@ class Field : public LiftLess<Field> {
         return name < other.name;
     }
 
-    // setStartBitsToBottomByte will set the start bit of this field to be limited to
-    // the [0..7]-th (little endian) bit of any-sized containers.
-    void setStartBitsToBottomByte();
+    /// setStartBitsToLowerBitsOfBottomByte will set the start bit of this field to be limited to
+    /// the [0..x]-th (little endian) bit of any-sized containers, where x equals to
+    /// (1) for field.size <= 8-bit, x = 8 - size;
+    /// (2) for 8 < field.size <= 16, x = 16 - size;
+    /// (3) for 16 < field.size, x = 7.
+    /// see https://jira.devtools.intel.com/browse/P4C-4469 for more of the hardware constraints.
+    void setStartBitsToLowerBitsOfBottomByte();
 };
 
 /**

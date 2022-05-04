@@ -1190,7 +1190,7 @@ control RockHill(inout Frederika Lefor, inout HighRock Starkey, in ingress_intri
     @name(".Boyle") action Boyle() {
         Starkey.Lookeba.RossFork = (bit<1>)1w0;
     }
-    @disable_atomic_modify(1) @name(".Ackerly") table Ackerly {
+    @disable_atomic_modify(1) @stage(2) @name(".Ackerly") table Ackerly {
         actions = {
             Philip();
             Levasy();
@@ -1208,7 +1208,7 @@ control RockHill(inout Frederika Lefor, inout HighRock Starkey, in ingress_intri
         counters = Fishers;
         requires_versioning = false;
     }
-    @disable_atomic_modify(1) @name(".Noyack") table Noyack {
+    @disable_atomic_modify(1) @stage(2) @name(".Noyack") table Noyack {
         actions = {
             Indios();
             Ponder();
@@ -1315,7 +1315,7 @@ control Tularosa(inout Frederika Lefor, inout HighRock Starkey, in ingress_intri
         Starkey.Covert.Whitewood = Moosic;
         Starkey.Covert.Tilton = Ossining;
     }
-    @disable_atomic_modify(1) @name(".Nason") table Nason {
+    @disable_atomic_modify(1) @stage(2) @name(".Nason") table Nason {
         actions = {
             Uniopolis();
         }
@@ -1583,7 +1583,7 @@ control Mattapex(inout Frederika Lefor, inout HighRock Starkey, in ingress_intri
     @name(".Bucklin") action Bucklin() {
         Starkey.Covert.Placedo = (bit<12>)Lefor.Palouse[0].Newfane;
     }
-    @disable_atomic_modify(1) @name(".Bernard") table Bernard {
+    @disable_atomic_modify(1) @stage(0) @name(".Bernard") table Bernard {
         actions = {
             Potosi();
             Mulvane();
@@ -1602,7 +1602,7 @@ control Mattapex(inout Frederika Lefor, inout HighRock Starkey, in ingress_intri
         size = 512;
         requires_versioning = false;
     }
-    @disable_atomic_modify(1) @name(".Owanka") table Owanka {
+    @disable_atomic_modify(1) @stage(0) @name(".Owanka") table Owanka {
         actions = {
             Tillson();
             Micro();
@@ -1619,7 +1619,7 @@ control Mattapex(inout Frederika Lefor, inout HighRock Starkey, in ingress_intri
         requires_versioning = false;
         const default_action = NoAction();
     }
-    @disable_atomic_modify(1) @name(".Natalia") table Natalia {
+    @disable_atomic_modify(1) @stage(0) @name(".Natalia") table Natalia {
         actions = {
             Pacifica();
             Judson();
@@ -1632,7 +1632,7 @@ control Mattapex(inout Frederika Lefor, inout HighRock Starkey, in ingress_intri
         default_action = Mogadore();
         size = 4096;
     }
-    @disable_atomic_modify(1) @name(".Sunman") table Sunman {
+    @disable_atomic_modify(1) @stage(0) @name(".Sunman") table Sunman {
         actions = {
             Pacifica();
             Judson();
@@ -1645,7 +1645,7 @@ control Mattapex(inout Frederika Lefor, inout HighRock Starkey, in ingress_intri
         default_action = Mogadore();
         size = 4096;
     }
-    @disable_atomic_modify(1) @name(".FairOaks") table FairOaks {
+    @disable_atomic_modify(1) @stage(1) @name(".FairOaks") table FairOaks {
         actions = {
             SanPablo();
             Forepaugh();
@@ -1663,7 +1663,7 @@ control Mattapex(inout Frederika Lefor, inout HighRock Starkey, in ingress_intri
         size = 8192;
         default_action = NoAction();
     }
-    @ways(1) @disable_atomic_modify(1) @name(".Baranof") table Baranof {
+    @ways(1) @disable_atomic_modify(1) @stage(0) @name(".Baranof") table Baranof {
         actions = {
             Kellner();
             @defaultonly Hagaman();
@@ -1674,7 +1674,7 @@ control Mattapex(inout Frederika Lefor, inout HighRock Starkey, in ingress_intri
         const default_action = Hagaman();
         size = 4096;
     }
-    @disable_atomic_modify(1) @name(".Anita") table Anita {
+    @disable_atomic_modify(1) @stage(0) @name(".Anita") table Anita {
         actions = {
             McKenney();
             @defaultonly Ponder();
@@ -1686,7 +1686,7 @@ control Mattapex(inout Frederika Lefor, inout HighRock Starkey, in ingress_intri
         const default_action = Ponder();
         size = 4096;
     }
-    @ways(1) @disable_atomic_modify(1) @name(".Cairo") table Cairo {
+    @ways(1) @disable_atomic_modify(1) @stage(0) @name(".Cairo") table Cairo {
         actions = {
             Decherd();
             @defaultonly Bucklin();
@@ -1743,7 +1743,7 @@ control Exeter(inout Frederika Lefor, inout HighRock Starkey, in ingress_intrins
     @name(".Oconee") action Oconee() {
         Starkey.Picabo.Osyka = Yulee.get<tuple<bit<24>, bit<24>, bit<24>, bit<24>, bit<16>, bit<9>>>({ Lefor.RichBar.Palmhurst, Lefor.RichBar.Comfrey, Lefor.RichBar.Clyde, Lefor.RichBar.Clarion, Lefor.Harding.Cisco, Starkey.Garrison.Avondale });
     }
-    @disable_atomic_modify(1) @name(".Salitpa") table Salitpa {
+    @disable_atomic_modify(1) @stage(1) @name(".Salitpa") table Salitpa {
         actions = {
             Oconee();
         }
@@ -1844,14 +1844,14 @@ control Brodnax(inout Frederika Lefor, inout HighRock Starkey, in ingress_intrin
         Waterman = Florahome.get<tuple<bit<9>, bit<12>>>({ Starkey.Garrison.Avondale, Lefor.Palouse[0].Newfane });
         Starkey.Alstown.Savery = Algonquin.execute((bit<32>)Waterman);
     }
-    @disable_atomic_modify(1) @name(".Morrow") table Morrow {
+    @disable_atomic_modify(1) @stage(0) @name(".Morrow") table Morrow {
         actions = {
             Newtonia();
         }
         default_action = Newtonia();
         size = 1;
     }
-    @disable_atomic_modify(1) @name(".Elkton") table Elkton {
+    @disable_atomic_modify(1) @stage(0) @name(".Elkton") table Elkton {
         actions = {
             Beatrice();
         }
@@ -1909,7 +1909,7 @@ control Penzance(inout Frederika Lefor, inout HighRock Starkey, in ingress_intri
     @name(".Rives") action Rives() {
         Starkey.Covert.Weatherby = (bit<1>)1w1;
     }
-    @disable_atomic_modify(1) @name(".Sedona") table Sedona {
+    @disable_atomic_modify(1) @stage(0) @name(".Sedona") table Sedona {
         actions = {
             Weathers();
             Coupland();
@@ -1930,7 +1930,7 @@ control Penzance(inout Frederika Lefor, inout HighRock Starkey, in ingress_intri
         counters = Shasta;
         requires_versioning = false;
     }
-    @disable_atomic_modify(1) @name(".Kotzebue") table Kotzebue {
+    @disable_atomic_modify(1) @stage(0) @name(".Kotzebue") table Kotzebue {
         actions = {
             Rives();
             @defaultonly NoAction();
@@ -1970,7 +1970,7 @@ control Arial(inout Frederika Lefor, inout HighRock Starkey, in ingress_intrinsi
         Amalga(Starkey.Covert.Palmhurst, Starkey.Covert.Comfrey, Starkey.Covert.Aguilita, Grannis);
     }
     @name(".Leacock") DirectMeter(MeterType_t.BYTES) Leacock;
-    @disable_atomic_modify(1) @name(".WestPark") table WestPark {
+    @disable_atomic_modify(1) @stage(2) @name(".WestPark") table WestPark {
         actions = {
             Burmah();
         }
@@ -2160,7 +2160,7 @@ control Standard(inout Frederika Lefor, inout HighRock Starkey, in ingress_intri
         Starkey.Longwood.Cassa = Cassa;
         Starkey.Longwood.Steger = Steger;
     }
-    @disable_atomic_modify(1) @name(".Wentworth") table Wentworth {
+    @disable_atomic_modify(1) @stage(1) @name(".Wentworth") table Wentworth {
         actions = {
             Wolverine();
         }
@@ -2281,7 +2281,7 @@ control Ihlen(inout Frederika Lefor, inout HighRock Starkey, in ingress_intrinsi
         Starkey.Longwood.Millston = Millston;
         Starkey.Longwood.Irvine = Irvine;
     }
-    @disable_atomic_modify(1) @name(".Redvale") table Redvale {
+    @disable_atomic_modify(1) @stage(0) @name(".Redvale") table Redvale {
         actions = {
             Faulkton();
         }
@@ -2648,7 +2648,7 @@ control Palco(inout Frederika Lefor, inout HighRock Starkey, in egress_intrinsic
         Lefor.Arapahoe.Elderon = (bit<16>)16w0;
         Lefor.Arapahoe.Knierim = OldTown;
     }
-    @ternary(1) @disable_atomic_modify(1) @name(".Govan") table Govan {
+    @ternary(1) @disable_atomic_modify(1) @stage(1) @name(".Govan") table Govan {
         actions = {
             Melder();
             FourTown();
@@ -3165,7 +3165,7 @@ control Issaquah(inout Frederika Lefor, inout HighRock Starkey, in egress_intrin
         const default_action = Herring(32w0, 32w0);
         size = 65536;
     }
-    @use_hash_action(1) @disable_atomic_modify(1) @name(".Caspian") table Caspian {
+    @use_hash_action(1) @disable_atomic_modify(1) @stage(1) @name(".Caspian") table Caspian {
         actions = {
             Herring();
         }
@@ -3265,7 +3265,7 @@ control Issaquah(inout Frederika Lefor, inout HighRock Starkey, in egress_intrin
         const default_action = Herring(32w0, 32w0);
         size = 65536;
     }
-    @disable_atomic_modify(1) @name(".Lackey") table Lackey {
+    @disable_atomic_modify(1) @stage(1) @name(".Lackey") table Lackey {
         actions = {
             Truro();
             Plush();
@@ -4033,7 +4033,7 @@ control Charters(inout Frederika Lefor, inout HighRock Starkey, in egress_intrin
         Starkey.Wyndmoor.Wauconda = Newland;
         Starkey.Wyndmoor.Wellton = (bit<1>)1w1;
     }
-    @disable_atomic_modify(1) @name(".Kinter") table Kinter {
+    @disable_atomic_modify(1) @stage(1) @name(".Kinter") table Kinter {
         actions = {
             LaMarque();
             @defaultonly NoAction();
@@ -4086,7 +4086,7 @@ control Keltys(inout Frederika Lefor, inout HighRock Starkey, in ingress_intrins
     @name(".Burmester") action Burmester() {
         Starkey.Covert.Lecompte = (bit<1>)1w1;
     }
-    @disable_atomic_modify(1) @name(".Petrolia") table Petrolia {
+    @disable_atomic_modify(1) @stage(1) @name(".Petrolia") table Petrolia {
         actions = {
             Claypool();
             Bodcaw();
@@ -4099,7 +4099,7 @@ control Keltys(inout Frederika Lefor, inout HighRock Starkey, in ingress_intrins
         size = 4096;
         requires_versioning = false;
     }
-    @disable_atomic_modify(1) @name(".Aguada") table Aguada {
+    @disable_atomic_modify(1) @stage(1) @name(".Aguada") table Aguada {
         actions = {
             BigPark();
             Bodcaw();
@@ -4112,7 +4112,7 @@ control Keltys(inout Frederika Lefor, inout HighRock Starkey, in ingress_intrins
         size = 512;
         requires_versioning = false;
     }
-    @disable_atomic_modify(1) @name(".Brush") table Brush {
+    @disable_atomic_modify(1) @stage(1) @name(".Brush") table Brush {
         actions = {
             Watters();
             Burmester();
@@ -4179,7 +4179,7 @@ control Dresden(inout Frederika Lefor, inout HighRock Starkey, in ingress_intrin
         size = 1024;
         const default_action = NoAction();
     }
-    @disable_atomic_modify(1) @name(".McCallum") table McCallum {
+    @disable_atomic_modify(1) @stage(1) @name(".McCallum") table McCallum {
         actions = {
             Dundalk();
             Ponder();
@@ -9187,7 +9187,7 @@ control Devore(inout Frederika Lefor, inout HighRock Starkey, in ingress_intrins
     @name(".Fairborn") action Fairborn() {
         Starkey.Picabo.Brookneal = Tryon.get<tuple<bit<128>, bit<128>, bit<20>, bit<8>, bit<9>>>({ Starkey.Crump.Loris, Starkey.Crump.Mackville, Lefor.Tofte.Vinemont, Starkey.WebbCity.Lakehills, Starkey.Garrison.Avondale });
     }
-    @ternary(1) @disable_atomic_modify(1) @name(".China") table China {
+    @ternary(1) @disable_atomic_modify(1) @stage(0) @name(".China") table China {
         actions = {
             Maybee();
             Fairborn();
@@ -9797,7 +9797,7 @@ control Ashley(inout Frederika Lefor, inout HighRock Starkey, in egress_intrinsi
         size = 128;
         default_action = NoAction();
     }
-    @disable_atomic_modify(1) @name(".Woodland") table Woodland {
+    @disable_atomic_modify(1) @stage(0) @name(".Woodland") table Woodland {
         actions = {
             Dalton();
             @defaultonly NoAction();
