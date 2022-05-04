@@ -87,6 +87,7 @@ class ParseAnnotations : public P4::ParseAnnotations {
         BFN_PARSE_EMPTY(PragmaNotExtractedInEgress, PARSE_EMPTY, intPragma);
         BFN_PARSE(PragmaDontMerge, PARSE, Expression, extPragma);
         BFN_PARSE(PragmaDoNotBridge, PARSE_PAIR, StringLiteral, extPragma);
+        BFN_PARSE_EMPTY(PragmaNoGatewayConversion, PARSE_EMPTY, extPragma);
         BFN_PARSE(PragmaPack, PARSE, Expression, extPragma);
         BFN_PARSE_EMPTY(PragmaPadding, PARSE_EMPTY, extPragma);
         BFN_PARSE_EMPTY(PragmaPacketEntry, PARSE_EMPTY, extPragma);

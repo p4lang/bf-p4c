@@ -154,6 +154,8 @@
  * and convert them if table placement wishes to do so.
  */
 void FindPayloadCandidates::add_option(const IR::MAU::Table *tbl, LayoutChoices &lc) {
+    if (tbl->getAnnotation("no_gateway_conversion")) return;
+
     CollectMatchFieldsAsGateway collect(phv);
     tbl->apply(collect);
     if (!collect || !collect.compute_offsets())
@@ -192,6 +194,12 @@ void FindPayloadCandidates::add_option(const IR::MAU::Table *tbl, LayoutChoices 
 IR::MAU::Table *FindPayloadCandidates::convert_to_gateway(const IR::MAU::Table *tbl) {
     if (candidates.count(tbl->name) == 0)
         return nullptr;
+
+    // see FindPayloadCandidates::add_option()
+    // for the check that ensures the conversion doesn't happen
+    BUG_CHECK(!tbl->match_table->getAnnotation("no_gateway_conversion"),
+        "attempt to perform a disabled optimisation");
+
     IR::MAU::Table *gw_tbl = new IR::MAU::Table(*tbl);
 
     // We iterate over the list of entries.

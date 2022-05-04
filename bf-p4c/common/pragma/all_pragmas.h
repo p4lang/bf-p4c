@@ -56,6 +56,7 @@ DEFINE_PRAGMA_CLASS(PragmaMinWidth);
 DEFINE_PRAGMA_CLASS(PragmaMode);
 DEFINE_PRAGMA_CLASS(PragmaDontMerge);
 DEFINE_PRAGMA_CLASS(PragmaNotExtractedInEgress);
+DEFINE_PRAGMA_CLASS(PragmaNoGatewayConversion);
 DEFINE_PRAGMA_CLASS(PragmaNoVersioning);
 DEFINE_PRAGMA_CLASS(PragmaPack);
 DEFINE_PRAGMA_CLASS(PragmaPadding);

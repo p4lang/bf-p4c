@@ -601,6 +601,12 @@ const char *PragmaDoNotBridge::help = "@pragma pa_do_not_bridge gress instance_n
     "the field is already not going to be bridged.  The gress value can be "
     "either ingress or egress. ";
 
+const char *PragmaNoGatewayConversion::name = "no_gateway_conversion";
+const char *PragmaNoGatewayConversion::description =
+    "Disables conversion of small tables into gateways";
+const char *PragmaNoGatewayConversion::help = "@pragma no_gateway_conversion\n"
+    "+ attached to P4 match tables";
+
 const char *PragmaNoVersioning::name = "no_versioning";
 const char *PragmaNoVersioning::description =
     "Specifies whether or not to allocate version/valid bits for each table entry";
