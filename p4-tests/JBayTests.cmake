@@ -2,6 +2,8 @@ set (tofino2_timeout 600)
 
 # check for PTF requirements
 packet_test_setup_check("jbay")
+# check for STF requirements
+simple_test_setup_check("jbay")
 
 set (V1_SEARCH_PATTERNS "include.*(v1model|psa).p4" "main")
 set (P4TESTDATA ${P4C_SOURCE_DIR}/testdata)
@@ -84,8 +86,6 @@ set (JBAY_V1_TEST_SUITES_P416
   )
 
 p4c_add_bf_backend_tests("tofino2" "jbay" "${JBAY_P414_TEST_ARCH}" "base\;JENKINS_PART1" "${JBAY_V1_TEST_SUITES_P414}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
-bfn_needs_scapy("tofino2" "extensions/p4_tests/p4_14/ptf/p4c_3029.p4")
-bfn_needs_scapy("tofino2" "extensions/p4_tests/p4_14/ptf/inner_checksum.p4")
 bfn_needs_scapy("tofino2" "extensions/p4_tests/p4_14/ptf/inner_checksum_l4.p4")
 p4c_add_bf_backend_tests("tofino2" "jbay" "v1model" "base\;JENKINS_PART1" "${JBAY_V1_TEST_SUITES_P416}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
 
@@ -203,7 +203,8 @@ set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/extreme/p4c-300
 p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base\;JENKINS_PART1" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-3030-2.p4" "-to 1800")
 set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/extreme/p4c-3030-2.p4" PROPERTIES TIMEOUT 1800)
 
-p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-3473-a2.p4")
+p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-3473-a2.p4" "-to 1200")
+set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/extreme/p4c-3473-a2.p4" PROPERTIES TIMEOUT 1200)
 
 set (testExtraArgs "${testExtraArgs} -tofino2")
 

@@ -46,9 +46,8 @@ ARG TOFINO_P414_TEST_ARCH_TNA=false
 
 # Handle p4factory/bf-p4c-compilers specifics
 RUN ln -rs /usr/local/bin/tofinoB0_test_harness /usr/local/bin/tofino_test_harness && \
-    ln -rs /usr/local/bin/jbayB0_test_harness /usr/local/bin/jbay_test_harness
-RUN rm -rf /root/.ssh/id_* && \
-    git config --global --add https.proxy http://proxy-dmz.intel.com:912
+    ln -rs /usr/local/bin/jbayB0_test_harness /usr/local/bin/jbay_test_harness || true
+RUN rm -rf /root/.ssh/id_*
 
 COPY . /bfn/bf-p4c-compilers/
 

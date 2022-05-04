@@ -252,8 +252,6 @@ macro(p4c_add_bf_backend_tests device toolsdevice arch label tests)
   # this is used later to add other tests for multiple configurations.
   # set (testExtraArgs "${testExtraArgs} -${device}")
 
-  simple_test_setup_check(${toolsdevice})
-
   # if STF is not found, disable all stf tests
   if (NOT HARLYN_STF_${toolsdevice})
     set (testExtraArgs "${testExtraArgs} -norun")

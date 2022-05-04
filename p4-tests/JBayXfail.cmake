@@ -191,12 +191,6 @@ p4c_add_xfail_reason("tofino2"
   tor.p4
 )
 
-# P4C-1228
-p4c_add_xfail_reason("tofino2"
-  "AssertionError: False is not true"
-  extensions/p4_tests/p4-programs/programs/multicast_test/multicast_test.p4
-)
-
 endif() # PTF_REQUIREMENTS_MET
 
 # don't support splitting counters, as they are not tracked in attached_info.cpp
@@ -445,7 +439,7 @@ p4c_add_xfail_reason("tofino2"
 
 # Tracked in P4C-3328
 p4c_add_xfail_reason("tofino2"
-  "Metadata initialization analysis incorrect. Live ranges between .* and .* overlap"
+  "AssertionError: Expected packet was not received on device .*, port .*."
   p4c_3043
 )
 

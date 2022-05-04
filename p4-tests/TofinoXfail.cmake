@@ -176,7 +176,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*Ran out of parser match registers for"
   testdata/p4_16_samples/issue995-bmv2.p4
-  ../glass/testsuite/p4_tests/parde/COMPILER-368/out.p4
   testdata/p4_16_samples/v1model-p4runtime-most-types1.p4
   testdata/p4_16_samples/v1model-p4runtime-enumint-types1.p4
   testdata/p4_16_samples/psa-example-select_tuple.p4
@@ -847,7 +846,6 @@ p4c_add_xfail_reason("tofino"
 # Errors because pa_container_size pragmas used in these tests cannot be satisfy all constraints.
 p4c_add_xfail_reason("tofino"
   "Cannot find a slicing to satisfy @pa_container_size|NO_SLICING_FOUND"
-  extensions/p4_tests/p4_14/customer/arista/p4c-1814.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-1114/case8156.p4
   ../glass/testsuite/p4_tests/phv/test_config_593_reduce_extraction_bandwidth_32.p4
   extensions/p4_tests/p4_16/compile_only/ssub_illegal_pack.p4
@@ -1366,11 +1364,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Invalid args to MakeSlice"
-  ../glass/testsuite/p4_tests/mau/adb_issue_from_faster.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "Cannot unify type"
   extensions/p4_tests/p4_16/compile_only/brig-305.p4
 )
@@ -1655,11 +1648,6 @@ p4c_add_xfail_reason("tofino"
   "error: table .*: Number of partitions are specified for table .* but the partition index .* is not found"
   extensions/p4_tests/p4_16/compile_only/p4c-2035-name-neg.p4
   extensions/p4_tests/p4_16/compile_only/atcam_match_wide1-neg.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "was not correctly converted in Instruction Selection"
-  ../glass/testsuite/p4_tests/mau/test_config_183_sample_e2e.p4
 )
 
 p4c_add_xfail_reason("tofino"

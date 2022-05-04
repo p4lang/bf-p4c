@@ -2,6 +2,9 @@ set (tofino_timeout 600)
 
 # check for PTF requirements
 packet_test_setup_check("tofino")
+# check for STF requirements
+simple_test_setup_check("tofino")
+
 # experimental -- doesn't quite work yet
 # bfn_add_switch("tofino")
 
@@ -130,9 +133,7 @@ set (TOFINO_V1_TEST_SUITES
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/parde/*/*.p4
   )
 p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base\;p414_nightly" "${TOFINO_V1_TEST_SUITES}")
-p4c_add_test_label("tofino" "p414_nightly" "extensions/p4_tests/p4_14/ptf/inner_checksum.p4")
 p4c_add_test_label("tofino" "p414_nightly" "extensions/p4_tests/p4_14/ptf/p4c_1962.p4")
-p4c_add_test_label("tofino" "p414_nightly" "extensions/p4_tests/p4_14/ptf/p4c_3029.p4")
 p4c_add_test_label("tofino" "p414_nightly" "extensions/p4_tests/p4_14/ptf/p4c2662.p4")
 
 p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base\;p414_nightly" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/customer/ruijie/p4c-2250.p4" "-to 2400")
@@ -811,28 +812,6 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "P4C-1021-2"
 
 p4c_add_ptf_test_with_ptfdir ("tofino" "case5577" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/COMPILER-897/case5577.p4
     "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/COMPILER-897")
-
-# Barefoot academy tests
-set (BA101_TESTS_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/ba-101/labs/*/solution/p4src/*.p4")
-p4c_find_tests("${BA101_TESTS_FOR_TOFINO}" ba101_tests INCLUDE "__TARGET_TOFINO__")
-# message("BA-101 tests: ${ba101_tests}")
-foreach(t IN LISTS ba101_tests)
-  get_filename_component(__td ${t} DIRECTORY)
-  string (REGEX REPLACE "ba-101/labs/([0-9]+[a-z0-9_-]+)/solution.*" "\\1" __t ${__td})
-  if (CMAKE_MATCH_1)
-    set (testname ${CMAKE_MATCH_1})
-  endif()
-  set (ptfdir "${__td}/../ptf-tests")
-  if (EXISTS ${ptfdir})
-    p4c_add_ptf_test_with_ptfdir ("tofino" ba101_${testname} ${t} "${testExtraArgs} -pd -arch ${TOFINO_P414_TEST_ARCH}" ${ptfdir})
-  else()
-    file(RELATIVE_PATH testfile ${P4C_SOURCE_DIR} ${t})
-    p4c_add_ptf_test_with_args("tofino" ba101_${testname} ${testfile} "${testExtraArgs} -arch ${TOFINO_P414_TEST_ARCH}" "")
-  endif()
-  p4c_add_test_label("tofino" "BA-101" ba101_${testname})
-  p4c_add_test_label("tofino" "p414_nightly" ba101_${testname})
-  p4c_add_test_label("tofino" "p414_nightly" ba101_${testname})
-endforeach()
 
 set (BA102_TESTS_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ba-102/labs/*/solution/p4src/*.p4")
 p4c_find_tests("${BA102_TESTS_FOR_TOFINO}" ba102_tests INCLUDE "tna.p4")

@@ -97,8 +97,9 @@ p4c_add_xfail_reason("tofino"
 
 # P4C-1390 - sample_e2e is not supported by the TNA
 p4c_add_xfail_reason("tofino"
-  "error: (Primitive sample4 is not supported by the backend)|(sample_e2e primitive is not currently supported by the TNA architecture)"
+  "error: (Primitive sample[34] is not supported by the backend)|(sample_e2e primitive is not currently supported by the TNA architecture)"
   ../glass/testsuite/p4_tests/parde/test_start_coalesced_state.p4
+  ../glass/testsuite/p4_tests/mau/test_config_183_sample_e2e.p4
   )
 
 # Headers that are not byte aligned
@@ -119,4 +120,5 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/copy_to_cpu.p4
   testdata/p4_14_samples/axon.p4
   testdata/p4_14_samples/source_routing.p4
+  ../glass/testsuite/p4_tests/parde/COMPILER-368/out.p4
 )
