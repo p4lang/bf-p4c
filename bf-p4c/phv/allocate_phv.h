@@ -128,9 +128,11 @@ struct AllocUtils {
 
     // has_pack_conflict should be used as the only source of pack conflict checks.
     // It checks mutex + pack conflict from mau + no pack constraint from cluster.
-    bool has_pack_conflict(const PHV::Field* f1, const PHV::Field* f2) const {
-        if (f1 == f2 || mutex()(f1->id, f2->id)) return false;
-        return clustering.no_pack(f1, f2) || actions.hasPackConflict(f1, f2);
+    bool has_pack_conflict(const PHV::FieldSlice &fs1, const PHV::FieldSlice &fs2) const {
+        if (fs1.field() != fs2.field()) {
+            if (mutex()(fs1.field()->id, fs2.field()->id)) return false;
+        }
+        return clustering.no_pack(fs1.field(), fs2.field()) || actions.hasPackConflict(fs1, fs2);
     }
 
     // return true if field is used and not padding.

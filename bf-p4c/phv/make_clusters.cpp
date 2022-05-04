@@ -722,7 +722,7 @@ void Clustering::CollectPlaceTogetherConstraints::pack_pov_bits() {
         for (auto& slice1 : *current_list) {
             for (auto& slice2 : toBeAddedFields) {
                 if (slice1 == slice2) continue;
-                if (conflicts_i.hasPackConflict(slice1.field(), slice2.field()))
+                if (conflicts_i.hasPackConflict(slice1, slice2))
                     any_pack_conflicts = true;
             }
         }
@@ -1552,24 +1552,43 @@ Visitor::profile_t Clustering::UpdateSameContainerAllocConstraint::init_apply(
                 same_byte_bits.insert({fs.field(), i});
             }
         });
+        ordered_set<PHV::FieldSlice> rot_has_no_split;
+        // collect all no split fieldslice either because it has no split annotation or there is a
+        // fieldslice in the same rotational cluster that has no split annotation.
+        for (const auto fs : sc->slices()) {
+            if (fs.field()->no_split()) {
+                LOG6(fs << "is no split");
+                auto rot = sc->cluster(fs);
+                rot_has_no_split.insert(rot.slices().begin(), rot.slices().end());
+            }
+        }
+        for (const auto fs : rot_has_no_split) {
+            LOG6(fs << " is rot no split");
+        }
 
-        // merge bits in same byte.
         for (const auto* sl : sc->slice_lists()) {
             int offset = 0;
             boost::optional<FieldBit> prev = boost::make_optional(false, FieldBit());
+            boost::optional<PHV::FieldSlice> prev_fs = boost::none;
             for (const auto& fs : *sl) {
                 const auto* field = fs.field();
                 for (int i = 0; i < fs.size(); i++, offset++) {
                     FieldBit curr{field, fs.range().lo + i};
                     // (1) prev bit in same byte does not exist.
                     // (2) two byte boundary bits that can be split.
-                    if (!prev ||
-                        (offset % 8 == 0 && !((*prev).first == field && field->no_split()))) {
+                    // (3) the fieldslice does not has a fieldslice in the same rotational cluster
+                    // that is no split.
+                    if (!prev || (
+                            offset % 8 == 0 && !(
+                                ((*prev).first == field && field->no_split()) ||
+                                (*prev_fs == fs && rot_has_no_split.count(fs))))) {
                         prev = curr;
+                        prev_fs = fs;
                         continue;
                     }
                     same_byte_bits.makeUnion(*prev, curr);
                     prev = curr;
+                    prev_fs = fs;
                 }
             }
         }

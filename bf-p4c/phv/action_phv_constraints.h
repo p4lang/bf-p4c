@@ -808,9 +808,9 @@ class ActionPhvConstraints : public Inspector {
         return meter_color_destinations_8bit.count(f) > 0;
     }
 
-    /// @returns true if the fields @p f1 and @p f2 have a pack conflict.
-    bool hasPackConflict(const PHV::Field* f1, const PHV::Field* f2) const {
-        return conflicts.hasPackConflict(f1, f2);
+    /// @returns true if the fieldslice @p fs1 and @p fs2 have a pack conflict.
+    bool hasPackConflict(const PHV::FieldSlice fs1, const PHV::FieldSlice fs2) const {
+        return conflicts.hasPackConflict(fs1, fs2);
     }
 
     /// @returns true if the field @p f is written using a speciality read (METER_ALU, HASH_DIST,

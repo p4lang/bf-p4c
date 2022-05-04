@@ -7,6 +7,8 @@
 #include <tofino1_arch.p4>
 
 @pa_auto_init_metadata
+@pa_container_size("ingress" , "Hettinger.Bratt.Weatherby" , 16)
+@pa_container_size("ingress" , "Hettinger.Bratt.Gause" , 32)
 @pa_container_size("egress" , "Noyack.Rochert.Madawaska" , 16)
 @pa_container_size("ingress" , "Hettinger.PeaRidge.Burrel" , 8)
 @pa_container_size("egress" , "Hettinger.Frederika.Martelle" , 8)

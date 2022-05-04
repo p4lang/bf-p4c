@@ -107,9 +107,11 @@ bool CollectForceImmediateFields::preorder(const IR::MAU::Action* action) {
     for (const auto* f1 : fields) {
         for (const auto* f2 : writtenFields) {
             if (f1 == f2) continue;
-            if (pack.hasPackConflict(f1, f2)) continue;
+            PHV::FieldSlice fs1(f1);
+            PHV::FieldSlice fs2(f2);
+            if (pack.hasPackConflict(fs1, fs2)) continue;
             LOG3("\t\tAdding pack conflict between " << f1->name << " and " << f2->name);
-            pack.addPackConflict(f1, f2);
+            pack.addPackConflict(fs1, fs2);
         }
     }
     return true;

@@ -673,19 +673,20 @@ boost::optional<std::list<SuperCluster*>> DfsItrContext::split_by_adjacent_no_pa
         const std::map<int, FieldSlice> fs_bitmap = make_fs_bitmap(sl);
         const int n_bits = SuperCluster::slice_list_total_bits(*sl);
         const int n_bytes = n_bits / 8 + int(n_bits % 8 != 0);
-        std::vector<ordered_set<const Field*>> group_by_byte(n_bytes);
+        std::vector<ordered_set<PHV::FieldSlice>> group_by_byte(n_bytes);
         for (int i = 0; i < n_bytes; i++) {
             // group fieldslices by the byte they are in.
             for (int bit = i * 8; bit < (i + 1) * 8; bit++) {
                 if (fs_bitmap.count(bit)) {
-                    group_by_byte[i].insert(fs_bitmap.at(bit).field());
+                    group_by_byte[i].insert(fs_bitmap.at(bit));
                 }
             }
             if (i > 0) {
-                for (const auto* fi : group_by_byte[i - 1]) {
-                    for (const auto* fj : group_by_byte[i]) {
+                for (const auto &fi : group_by_byte[i - 1]) {
+                    for (const auto &fj : group_by_byte[i]) {
                         if (fi != fj && !group_by_byte[i - 1].count(fj) &&
-                            !group_by_byte[i].count(fi) && has_pack_conflict_i(fi, fj)) {
+                            !group_by_byte[i].count(fi) && has_pack_conflict_i(fi, fj)
+                            && !phv_i.must_alloc_same_container(fi, fj)) {
                             schema[sl].setbit(i * 8);
                             LOG5("set split after " << i * 8 << "th bit because no_pack between "
                                                     << fi << " and " << fj);
@@ -1134,7 +1135,7 @@ bool DfsItrContext::check_pack_conflict(const SuperCluster::SliceList* sl) const
         }
 
         for (; next != sl->end(); next++) {
-            if (itr->field() != next->field() && has_pack_conflict_i(itr->field(), next->field())) {
+            if (has_pack_conflict_i(*itr, *next)) {
                 LOG6("pack conflict: " << *itr << " and " << *next);
                 return true;
             }
@@ -1441,9 +1442,8 @@ bool DfsItrContext::dfs_prune_unsat_slicelist_constraints(
             int leftmost_start = offset;
             for (; leftmost_start >= start_bit_left_bound; leftmost_start--) {
                 const auto prev_fs = fs_bitmap.at(leftmost_start);
-                const auto* prev_field = prev_fs.field();
-                if (prev_field != fs.field() && !phv_i.must_alloc_same_container(prev_fs, fs) &&
-                    has_pack_conflict_i(prev_field, fs.field())) {
+                if (!phv_i.must_alloc_same_container(prev_fs, fs) &&
+                    has_pack_conflict_i(prev_fs, fs)) {
                     break;
                 }
                 auto intersection = constraint_vec[leftmost_start].intersect(sz_req);
@@ -1478,10 +1478,8 @@ bool DfsItrContext::dfs_prune_unsat_slicelist_constraints(
             // check forwarding pack_conflict.
             for (int i = leftmost_start; i < leftmost_start + sz_req.min(); i++) {
                 const auto next_fs = fs_bitmap.at(i);
-                const auto* next_field = next_fs.field();
-                if (next_field != fs.field() &&
-                    !phv_i.must_alloc_same_container(next_fs, fs) &&
-                    has_pack_conflict_i(next_field, fs.field())) {
+                if (!phv_i.must_alloc_same_container(next_fs, fs) &&
+                    has_pack_conflict_i(next_fs, fs)) {
                     LOG5("DFS pruned(unsat_constraint_3): not enough room after "
                          << i << ", slice list: " << sl << "\n, fieldslice " << fs
                          << " must be allocated to " << sz_req << ", offset: " << offset

@@ -31,7 +31,12 @@ class PackConflicts : public PassManager {
     ordered_map<const IR::MAU::Table*, ordered_set<const IR::MAU::Action*>> tableActions;
     /// Stores a set of all fields written in a particular action
     /// xxx(Deep): Change the field here to PHV::FieldSlice for more precise analysis
-    ordered_map<const IR::MAU::Action*, ordered_set<const PHV::Field*>> actionWrites;
+    ordered_map<const IR::MAU::Action*, ordered_set<PHV::FieldSlice>> actionWrites;
+
+    ordered_map<PHV::FieldSlice, int> fieldslice_to_id;
+    ordered_map<const PHV::Field*, ordered_set<le_bitrange>> field_fine_slices;
+    int fieldslice_id_counter;
+    SymBitMatrix fieldslice_no_pack_i;
 
     profile_t init_apply(const IR::Node *root) override;
 
@@ -73,9 +78,11 @@ class PackConflicts : public PassManager {
         });
     }
 
-    void addPackConflict(const PHV::Field* f1, const PHV::Field* f2);
+    void removePackConflict(const PHV::FieldSlice f1, const PHV::FieldSlice f2);
 
-    bool hasPackConflict(const PHV::Field* f1, const PHV::Field* f2) const;
+    void addPackConflict(const PHV::FieldSlice f1, const PHV::FieldSlice f2);
+
+    bool hasPackConflict(const PHV::FieldSlice f1, const PHV::FieldSlice f2) const;
 
     bool writtenInSameStageDifferentTable(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const;
 

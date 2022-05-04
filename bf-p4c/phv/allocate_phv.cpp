@@ -5395,7 +5395,7 @@ bool FieldPackingOpportunity::canPack(const PHV::Field* f1, const PHV::Field* f2
     if (mutex(f1->id, f2->id))
         return false;
     // Same stage packing conflits.
-    if (actions.hasPackConflict(f1, f2))
+    if (actions.hasPackConflict(PHV::FieldSlice(f1), PHV::FieldSlice(f2)))
         return false;
     // Extracted Uninitilized packing conflits
     if (isExtractedOrUninitialized(f1) && isExtractedOrUninitialized(f2))

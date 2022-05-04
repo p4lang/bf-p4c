@@ -1539,9 +1539,10 @@ bool ActionPhvConstraints::pack_conflicts_present(
                     continue;
                 }
             }
-            if (hasPackConflict(sl1.field(), sl2.field())) {
-                LOG5("\t\t\t" << sl1.field()->name << " cannot be packed in the same stage with "
-                              << sl2.field()->name);
+            PHV::FieldSlice fs1(sl1.field(), sl1.field_slice());
+            PHV::FieldSlice fs2(sl2.field(), sl2.field_slice());
+            if (hasPackConflict(fs1, fs2)) {
+                LOG5("\t\t\t" << fs1 << " cannot be packed in the same stage with " << fs2);
                 return true;
             }
         }
@@ -1570,7 +1571,8 @@ bool ActionPhvConstraints::pack_conflicts_present(
             auto* f1 = sl1.field();
             auto* f2 = sl2.field();
             if (f1 == f2) continue;
-            if (hasPackConflict(f1, f2)) {
+            if (hasPackConflict(PHV::FieldSlice(sl1.field(), sl1.field_slice()),
+                PHV::FieldSlice(sl2.field(), sl2.field_slice()))) {
                 LOG5("\t\t\tAllocation candidate " << sl1.field()->name
                                                    << " cannot be packed in "
                                                       "the same stage with "
