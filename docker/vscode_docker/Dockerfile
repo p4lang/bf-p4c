@@ -1,5 +1,6 @@
 # Dockerfile
-ARG DOCKER_BASE_IMAGE=amr-registry.caas.intel.com/bxd-sw/jarvis:latest
+ARG SRC_IMG=latest
+ARG DOCKER_BASE_IMAGE=amr-registry.caas.intel.com/bxd-sw/jarvis:$SRC_IMG
 FROM $DOCKER_BASE_IMAGE
 
 ARG USER=user
@@ -7,8 +8,8 @@ ARG UID=1000
 ARG GID=1000
 ARG KEY_DIR
 
-ARG HTTP_PROXY=http://proxy-mu.intel.com:911/
-ARG HTTPS_PROXY=http://proxy-mu.intel.com:912/
+ARG HTTP_PROXY=http://proxy-dmz.intel.com:911/
+ARG HTTPS_PROXY=http://proxy-dmz.intel.com:912/
 
 # Diagnostic
 RUN echo USER=${USER} UID=${UID} GID=${GID} KEY_DIR=${KEY_DIR}
@@ -19,7 +20,8 @@ ARG PW=docker
 # Package installation
 # ====================
 # Configure proxies
-RUN echo "Acquire::http::proxy \"${HTTP_PROXY}\"; Acquire::https::proxy \"${HTTPS_PROXY}\";" > /etc/apt/apt.conf.d/99HttpProxy
+# Unsure why the HTTPS proxy has to point to the http version, but it doesnt' work otherwise
+RUN echo "Acquire::http::proxy \"${HTTP_PROXY}\"; Acquire::https::proxy \"${HTTP_PROXY}\";" > /etc/apt/apt.conf.d/99HttpProxy
 
 # Install useful packages
 RUN apt-get update && apt-get install -y graphviz openssh-server sudo htop mc clang-format clang-tidy clang-format-8 clang-tidy-8 bash-completion
@@ -31,8 +33,8 @@ RUN apt-get install -y apt-transport-https ca-certificates gnupg software-proper
     wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | \
     gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null
 COPY cmake /etc/apt/preferences.d/
-RUN apt-add-repository 'deb https://apt.kitware.com/ubuntu/ xenial main' && \
-    apt-get update && apt-get install -y cmake cmake-curses-gui
+#RUN apt-add-repository "deb https://apt.kitware.com/ubuntu/ `lsb_release -cs` main" && \
+#    apt-get update && apt-get install -y cmake cmake-curses-gui
 
 # User creation
 # =============

@@ -4,20 +4,29 @@
 # Build a Docker image for use with Visual Studio Code remote development
 #
 
+# Source image name
+SRC_IMG=latest
+
 # Target image name
 DST_IMG=jarvis-ssh
 
 # Directory for host SSH keys
 SSH_KEY_DIR=~/docker_ssh_keys
 
+USAGE_STR=`cat << _USAGE_
+Usage: $0 [OPTION]...
+Build a Docker image for remote Visual Studio Code development
+
+Options:
+  -k, --key-dir[=DIR]    store generated SSH keys in DIR (default=~/docker_ssh_keys)
+  -i, --image[=IMG]      destination image name to generate (default=$DST_IMG)
+  -s, --src-image[=IMG]  jarvis source image to pull (default=$SRC_IMG)
+      --help             display this help message
+_USAGE_
+`
+
 usage() {
-    echo "Usage: $0 [OPTION]..."
-    echo "Build a Docker image for remote Visual Studio Code development"
-    echo ""
-    echo "Options:"
-    echo "  -k, --key-dir[=DIR]  store generated SSH keys in DIR (default=~/docker_ssh_keys)"
-    echo "  -i, --image[=DIR]    image name to genearate (default=jarvis-ssh)"
-    echo "      --help           display this help message"
+    echo "$USAGE_STR"
 }
 
 
@@ -37,7 +46,7 @@ create_key() {
 
 
 # Parse command line options
-OPTIONS=`getopt -o ":k:i:h" -l "key-dir:,image:,help" -- $@`
+OPTIONS=`getopt -o "hk:i:s:" -l "help,key-dir:,image:,src-image:" -- $@`
 if [ $? != 0 ] ; then
     echo "Error: invalid option(s)"
     echo ""
@@ -57,6 +66,10 @@ while true ; do
             DST_IMG=$2
             shift
             ;;
+	-s|--src-image)
+	    SRC_IMG=$2
+	    shift
+	    ;;
         -h|--help)
             usage
             exit
