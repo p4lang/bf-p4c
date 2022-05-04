@@ -350,7 +350,10 @@ const IR::MethodCallExpression *IR::MAU::HashFunction::hash_to_mce(const IR::Exp
  */
 bool IR::MAU::HashFunction::setup(const Expression *e) {
     if (!e) return false;
-    memset(this, 0, sizeof *this);
+
+    /* -- set empty state (replacement of original memset) */
+    *this = HashFunction{};
+
     srcInfo = e->srcInfo;
     size = 0;
     bool on_hash_matrix = false;

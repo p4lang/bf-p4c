@@ -31,6 +31,9 @@
 #include "lib/ordered_map.h"
 #include "ir/ir.h"
 
+const std::vector<PHV::Size> StateExtractUsage::extractor_sizes = {PHV::Size::b8, PHV::Size::b16,
+                                                                   PHV::Size::b32};
+
 // AllocScore metrics.
 namespace {
 

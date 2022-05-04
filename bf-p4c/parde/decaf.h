@@ -105,6 +105,13 @@ struct Value {
             BUG("Value cannot be both field and constant");
     }
 
+    Value& operator=(const Value& other) {
+        field = other.field;
+        constant = other.constant;
+        if (field && constant) BUG("Value cannot be both field and constant");
+        return *this;
+    }
+
     std::string print() const {
         std::stringstream ss;
         if (field) ss << field->name;

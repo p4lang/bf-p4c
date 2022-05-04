@@ -1,6 +1,10 @@
 #ifndef BF_P4C_PHV_PARSER_EXTRACT_BALANCE_SCORE_H_
 #define BF_P4C_PHV_PARSER_EXTRACT_BALANCE_SCORE_H_
 
+/* Note: this is an incorrect header. It contains function implementations, hence it can
+ *    be included just in one translation unit. Otherwise, linking conflicts will
+ *    happen. */
+
 #include <iostream>
 #include <vector>
 #include <map>
@@ -8,11 +12,11 @@
 #include <algorithm>
 
 #include "bf-p4c/common/table_printer.h"
+#include "bf-p4c/phv/phv.h"
 
 struct StateExtractUsage {
-    const std::vector<PHV::Size> extractor_sizes = { PHV::Size::b8,
-                                                     PHV::Size::b16,
-                                                     PHV::Size::b32 };
+    static const std::vector<PHV::Size> extractor_sizes;
+
     // TODO would be nice to get this from PardeSpec. JBay has one size,
     // 16-bit extractors, so the extractor balance may not even be relevant.
 
@@ -128,13 +132,6 @@ struct StateExtractUsage {
         }
 
         return false;
-    }
-
-    // extractor_sizes is a const vector that prevents the default generation of
-    // the copy assignment operator.
-    StateExtractUsage & operator=(const StateExtractUsage &other) {
-        use = other.use;
-        return *this;
     }
 
     bool operator==(const StateExtractUsage& c) const {

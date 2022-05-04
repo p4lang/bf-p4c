@@ -1,3 +1,5 @@
+#include <sys/types.h>
+
 #include "bf-p4c/mau/table_layout.h"
 #include "bf-p4c/mau/memories.h"
 #include "bf-p4c/phv/analysis/dark_live_range.h"
@@ -584,8 +586,7 @@ bool DarkLiveRange::nonOverlaidWrites(
 
     LOG_DEBUG5(TAB1 "Overlaid slices range: " << *overlay_range);
 
-    if (overlay_range->size() == c.size())
-        return rv;
+    if (overlay_range->size() == static_cast<ssize_t>(c.size())) return rv;
 
     // Check if there are more allocated slices than included in @fields
     auto alloc_slices = alloc.slices(c);
