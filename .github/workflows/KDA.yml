@@ -59,7 +59,7 @@ jobs:
               const branch = await github.rest.repos.getBranch({ owner: context.repo.owner, repo: context.repo.repo, branch: pr.data.head.ref});
             } catch (HttpError) {
               // Restore branch to save KDA results
-              const new_branch = await github.rest.git.createRef({ owner: context.repo.owner, repo: context.repo.repo, ref:'refs/heads/'.concat(pr.data.head.ref), sha: pr.data.head.sha}); 
+              const new_branch = await github.rest.git.createRef({ owner: context.repo.owner, repo: context.repo.repo, ref:'refs/heads/'.concat('${{github.head_ref}}'), sha: '${{github.sha}}'}); 
             }
       
       - name: Checkout code
