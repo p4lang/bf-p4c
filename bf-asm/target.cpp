@@ -356,9 +356,29 @@ void undeclare_registers(const Target::Flatrock::top_level_regs *regs) {
     undeclare_registers(&regs->reg_top);
     undeclare_registers(&regs->reg_pipe);
 }
-void declare_registers(const Target::Flatrock::parser_regs *) {
+void declare_registers(const Target::Flatrock::parser_regs *regs) {
+    declare_registers(&regs->prsr, sizeof regs->prsr,
+        [=](std::ostream &out, const char *addr, const void *end) {
+            out << "parser.regs";
+            regs->prsr.emit_fieldname(out, addr, end); });
+    declare_registers(&regs->prsr_mem, sizeof regs->prsr_mem,
+        [=](std::ostream &out, const char *addr, const void *end) {
+            out << "parser.mem";
+            regs->prsr_mem.emit_fieldname(out, addr, end); });
+    declare_registers(&regs->pprsr, sizeof regs->pprsr,
+        [=](std::ostream &out, const char *addr, const void *end) {
+            out << "pseudo_parser.regs";
+            regs->pprsr.emit_fieldname(out, addr, end); });
+    declare_registers(&regs->pprsr_mem, sizeof regs->pprsr_mem,
+        [=](std::ostream &out, const char *addr, const void *end) {
+            out << "pseudo_parser.mem";
+            regs->pprsr_mem.emit_fieldname(out, addr, end); });
 }
-void undeclare_registers(const Target::Flatrock::parser_regs *) {
+void undeclare_registers(const Target::Flatrock::parser_regs *regs) {
+    undeclare_registers(&regs->pprsr_mem);
+    undeclare_registers(&regs->pprsr);
+    undeclare_registers(&regs->prsr_mem);
+    undeclare_registers(&regs->prsr);
 }
 void declare_registers(const Target::Flatrock::mau_regs *regs, int stage) {
     declare_registers(regs, sizeof *regs,

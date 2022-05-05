@@ -623,10 +623,10 @@ class Target::Flatrock : public Target {
         ::Flatrock::regs_pipe                           reg_pipe;
     };
     struct                              parser_regs : public ParserRegisterSet {
-        ::Flatrock::memories_ingress_parser             imem;
-        ::Flatrock::memories_egress_parser              emem;
-        ::Flatrock::regs_ingress_parser                 ingress;
-        ::Flatrock::regs_egress_parser                  egress;
+        ::Flatrock::memories_ingress_parser             prsr_mem;
+        ::Flatrock::memories_egress_parser              pprsr_mem;
+        ::Flatrock::regs_ingress_parser                 prsr;
+        ::Flatrock::regs_egress_parser                  pprsr;
     };
     typedef ::Flatrock::regs_match_action_stage_        mau_regs;
     struct                              deparser_regs {

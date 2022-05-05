@@ -19,11 +19,11 @@ void FlatrockPseudoParser::input(VECTOR(value_t) args, value_t data) {
 
 void FlatrockPseudoParser::write_config(RegisterSetBase &regs, json::map &json, bool legacy) {
     auto &_regs = dynamic_cast<Target::Flatrock::parser_regs &>(regs);
-    _regs.egress.pprsr_pov_bmd_ext.st_start = pov_state_pos;
-    _regs.egress.pprsr_pov_bmd_ext.flg_start = pov_flags_pos;
-    _regs.egress.pprsr_comp_hdr_bmd_ext.off_start = Hdr::hdr.off_pos;
-    _regs.egress.pprsr_comp_hdr_bmd_ext.id_start = Hdr::hdr.seq_pos;
-    _regs.egress.pprsr_comp_hdr_bmd_ext.len_start = Hdr::hdr.len_pos;
+    _regs.pprsr.pprsr_pov_bmd_ext.st_start = pov_state_pos;
+    _regs.pprsr.pprsr_pov_bmd_ext.flg_start = pov_flags_pos;
+    _regs.pprsr.pprsr_comp_hdr_bmd_ext.off_start = Hdr::hdr.off_pos;
+    _regs.pprsr.pprsr_comp_hdr_bmd_ext.id_start = Hdr::hdr.seq_pos;
+    _regs.pprsr.pprsr_comp_hdr_bmd_ext.len_start = Hdr::hdr.len_pos;
 }
 
 void FlatrockPseudoParser::output(json::map &json) {

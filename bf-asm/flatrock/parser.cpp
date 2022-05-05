@@ -39,7 +39,7 @@ void FlatrockParser::PortMetadataItem::write_config(RegisterSetBase &regs,
         json::map &json, bool legacy) {
     auto &_regs = dynamic_cast<Target::Flatrock::parser_regs &>(regs);
     for (int i = 0; i < Target::Flatrock::PARSER_PORT_METADATA_WIDTH; i++)
-        _regs.imem.port_md_tbl.port_md_mem[*port].md[i] = data[i];
+        _regs.prsr_mem.port_md_tbl.port_md_mem[*port].md[i] = data[i];
 }
 
 void FlatrockParser::Profile::input_match(VECTOR(value_t) args,
@@ -589,76 +589,78 @@ void FlatrockParser::Profile::write_config(RegisterSetBase &regs,
      */
       // 4Byte of inband metadata: inband_meta[4:7][7:0]
       // inband_metadata is in network byte order
-    _regs.imem.md_prof_tcam.md_prof_tcam[*id].key_wh_0 = match.inband_metadata.word0 & 0xffffffff;
-    _regs.imem.md_prof_tcam.md_prof_tcam[*id].key_wl_0 = match.inband_metadata.word1 & 0xffffffff;
+    _regs.prsr_mem.md_prof_tcam.md_prof_tcam[*id].key_wh_0 =
+        match.inband_metadata.word0 & 0xffffffff;
+    _regs.prsr_mem.md_prof_tcam.md_prof_tcam[*id].key_wl_0 =
+        match.inband_metadata.word1 & 0xffffffff;
       // 4Byte of inband metadata: inband_meta[0:3][7:0]
       // inband_metadata is in network byte order
-    _regs.imem.md_prof_tcam.md_prof_tcam[*id].key_wh_1 = match.inband_metadata.word0 >> 32;
-    _regs.imem.md_prof_tcam.md_prof_tcam[*id].key_wl_1 = match.inband_metadata.word1 >> 32;
+    _regs.prsr_mem.md_prof_tcam.md_prof_tcam[*id].key_wh_1 = match.inband_metadata.word0 >> 32;
+    _regs.prsr_mem.md_prof_tcam.md_prof_tcam[*id].key_wl_1 = match.inband_metadata.word1 >> 32;
       // 8bit port_info = {2'b0, logic_port#(6b)}
-    _regs.imem.md_prof_tcam.md_prof_tcam[*id].key_wh_2 = match.port.word0 & 0x3f;
-    _regs.imem.md_prof_tcam.md_prof_tcam[*id].key_wl_2 = match.port.word1 & 0x3f;
+    _regs.prsr_mem.md_prof_tcam.md_prof_tcam[*id].key_wh_2 = match.port.word0 & 0x3f;
+    _regs.prsr_mem.md_prof_tcam.md_prof_tcam[*id].key_wl_2 = match.port.word1 & 0x3f;
     // RAM
       // initial state
-    _regs.imem.md_prof_ram.md_prof[*id].start_state_hi
+    _regs.prsr_mem.md_prof_ram.md_prof[*id].start_state_hi
         = initial_state[9] << 8 | initial_state[8];
-    _regs.imem.md_prof_ram.md_prof[*id].start_state_mid
+    _regs.prsr_mem.md_prof_ram.md_prof[*id].start_state_mid
         = initial_state[7] << 24 | initial_state[6] << 16
           | initial_state[5] << 8 | initial_state[4];
-    _regs.imem.md_prof_ram.md_prof[*id].start_state_lo
+    _regs.prsr_mem.md_prof_ram.md_prof[*id].start_state_lo
         = initial_state[3] << 24 | initial_state[2] << 16
           | initial_state[1] << 8 | initial_state[0];
       // initial flags
-    _regs.imem.md_prof_ram.md_prof[*id].start_flags_hi
+    _regs.prsr_mem.md_prof_ram.md_prof[*id].start_flags_hi
         = initial_flags[7] << 24 | initial_flags[6] << 16
           | initial_flags[5] << 8 | initial_flags[4];
-    _regs.imem.md_prof_ram.md_prof[*id].start_flags_lo
+    _regs.prsr_mem.md_prof_ram.md_prof[*id].start_flags_lo
         = initial_flags[3] << 24 | initial_flags[2] << 16
           | initial_flags[1] << 8 | initial_flags[0];
       // initial ptr
-    _regs.imem.md_prof_ram.md_prof[*id].start_ptr = initial_ptr;
+    _regs.prsr_mem.md_prof_ram.md_prof[*id].start_ptr = initial_ptr;
       // initial w0 offset
-    _regs.imem.md_prof_ram.md_prof[*id].start_w0 = initial_w0_offset;
+    _regs.prsr_mem.md_prof_ram.md_prof[*id].start_w0 = initial_w0_offset;
       // initial w1 offset
-    _regs.imem.md_prof_ram.md_prof[*id].start_w1 = initial_w1_offset;
+    _regs.prsr_mem.md_prof_ram.md_prof[*id].start_w1 = initial_w1_offset;
       // initial w2 offset
-    _regs.imem.md_prof_ram.md_prof[*id].start_w2 = initial_w2_offset;
+    _regs.prsr_mem.md_prof_ram.md_prof[*id].start_w2 = initial_w2_offset;
       // initial ALU0 instruction
-    _regs.imem.md_prof_ram.md_prof[*id].start_op0 = initial_alu0_instruction.build_opcode();
+    _regs.prsr_mem.md_prof_ram.md_prof[*id].start_op0 = initial_alu0_instruction.build_opcode();
       // initial ALU1 instruction
-    _regs.imem.md_prof_ram.md_prof[*id].start_op1 = initial_alu1_instruction.build_opcode();
+    _regs.prsr_mem.md_prof_ram.md_prof[*id].start_op1 = initial_alu1_instruction.build_opcode();
       // metadata select
     for (int i = 0; i < Target::Flatrock::PARSER_PROFILE_MD_SEL_NUM; i++) {
         // Skip uninitialized fields
         if (metadata_select[i].type == metadata_select::INVALID) continue;
-        _regs.imem.md_prof_ram.md_prof[*id].md_sel_const[i]
+        _regs.prsr_mem.md_prof_ram.md_prof[*id].md_sel_const[i]
             = (metadata_select[i].type == metadata_select::CONSTANT);
         switch (metadata_select[i].type) {
         case metadata_select::CONSTANT:
-            _regs.imem.md_prof_ram.md_prof[*id].md_sel[i] = metadata_select[i].constant.value;
+            _regs.prsr_mem.md_prof_ram.md_prof[*id].md_sel[i] = metadata_select[i].constant.value;
             break;
         case metadata_select::LOGICAL_PORT_NUMBER:
-            _regs.imem.md_prof_ram.md_prof[*id].md_sel[i]
+            _regs.prsr_mem.md_prof_ram.md_prof[*id].md_sel[i]
                 = Target::Flatrock::PARSER_PROFILE_MD_SEL_PORT_METADATA_ENC
                   | Target::Flatrock::PARSER_PROFILE_MD_SEL_LOGICAL_PORT_NUMBER_INDEX;
             break;
         case metadata_select::PORT_METADATA:
-            _regs.imem.md_prof_ram.md_prof[*id].md_sel[i]
+            _regs.prsr_mem.md_prof_ram.md_prof[*id].md_sel[i]
                 = Target::Flatrock::PARSER_PROFILE_MD_SEL_PORT_METADATA_ENC
                   | metadata_select[i].port_metadata.index;
             break;
          case metadata_select::INBAND_METADATA:
-            _regs.imem.md_prof_ram.md_prof[*id].md_sel[i]
+            _regs.prsr_mem.md_prof_ram.md_prof[*id].md_sel[i]
                 = Target::Flatrock::PARSER_PROFILE_MD_SEL_INBAND_METADATA_ENC
                   | metadata_select[i].inband_metadata.index;
             break;
          case metadata_select::TIMESTAMP:
-            _regs.imem.md_prof_ram.md_prof[*id].md_sel[i]
+            _regs.prsr_mem.md_prof_ram.md_prof[*id].md_sel[i]
                 = Target::Flatrock::PARSER_PROFILE_MD_SEL_TIMESTAMP_ENC
                   | metadata_select[i].timestamp.index;
             break;
          case metadata_select::COUNTER:
-            _regs.imem.md_prof_ram.md_prof[*id].md_sel[i]
+            _regs.prsr_mem.md_prof_ram.md_prof[*id].md_sel[i]
                 = Target::Flatrock::PARSER_PROFILE_MD_SEL_COUNTER_ENC
                   | metadata_select[i].counter.index;
             break;
