@@ -257,6 +257,16 @@ if [[ "${BUILD_FOR}" != 'jenkins-final' ]] ; then
     install -D -o root -g root -m 0644 \
       docker/jenkins-ccache.conf /usr/local/etc/ccache.conf
   fi
+
+  if [[ "${BUILD_FOR}" == "jarvis" ]]; then
+    # install VIM highlighter for P4
+    # based on https://raw.githubusercontent.com/c3m3gyanesh/p4-syntax-highlighter-collection/master/vim/install.sh
+    # but global
+    mkdir -p /etc/vim/syntax
+    mkdir -p /etc/vim/ftdetect
+    curl -o- -L https://raw.githubusercontent.com/c3m3gyanesh/p4-syntax-highlighter-collection/master/vim/ftdetect/p4.vim > /etc/vim/ftdetect/p4.vim
+    curl -o- -L https://raw.githubusercontent.com/c3m3gyanesh/p4-syntax-highlighter-collection/master/vim/syntax/p4.vim > /etc/vim/syntax/p4.vim
+  fi
 fi  # Done installing dependencies and configuring build environment.
 
 # Configure the linker to strip symbols.
