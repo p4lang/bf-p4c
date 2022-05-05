@@ -136,6 +136,7 @@ update_flowgraph(const ordered_set<const IR::BFN::Unit*>& g_units,
             if (f_u == g_u) {
                 canUseAra = false;
                 LOG5("\t  turn-off canUseAra");
+                break;
             }
 
             BUG_CHECK(g_u->thread() == f_u->thread(),

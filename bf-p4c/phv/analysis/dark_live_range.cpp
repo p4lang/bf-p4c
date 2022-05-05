@@ -509,8 +509,10 @@ bool DarkLiveRange::ignoreReachCondition(
         LOG_DEBUG6(TAB4 "current: " << currentAccessAtTable << ", lastAccessAtTable: "
                    << lastAccessAtTable);
         // FIXME: Determine right condition
-        if (!currentAccessAtTable || !lastAccessAtTable)
+        if (!currentAccessAtTable || !lastAccessAtTable) {
             rv = false;
+            break;
+        }
     }
     return rv;
 }
@@ -685,8 +687,6 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
         unsigned idx_g = 0;
         for (const auto& g_info : *fieldsInOrder) {
             if (idx_g++ == idx) break;
-            auto updatedFlowgraph = update_flowgraph(g_info.units, info.units,
-                                                     domTree.getFlowGraph(), alloc, canUseARA);
             if (phv.isFieldMutex(info.field.field(), g_info.field.field())) {
                 LOG_DEBUG2(TAB2 "Exclusive with field " << (idx_g - 1) << ": "<< g_info.field);
                 // FIXME: How does this effect the return vector.
@@ -695,9 +695,10 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
             LOG_DEBUG2(TAB2 "Non-exclusive with field " << g_info.field);
             LOG_DEBUG2(TAB2 "Can all defuses of " << info.field << " reach the defuses of "
                        << g_info.field << "?");
+            auto updatedFlowgraph = update_flowgraph(g_info.units, info.units,
+                                                     domTree.getFlowGraph(), alloc, canUseARA);
             auto reach_condition = canFUnitsReachGUnits(info.units, g_info.units,
                                                         updatedFlowgraph);
-
             if (reach_condition.size() > 0) {
                 bool ignoreReach = ignoreReachCondition(info, g_info, reach_condition);
                 if (!ignoreReach) {
