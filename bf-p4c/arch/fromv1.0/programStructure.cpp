@@ -22,7 +22,7 @@ namespace P4V1 {
 const IR::Expression *
 P4V1::TNA_ProgramStructure::convertHashAlgorithm(Util::SourceInfo srcInfo, IR::ID algorithm) {
     include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
-    return IR::MAU::HashFunction::convertHashAlgorithmBFN(srcInfo, algorithm, nullptr);
+    return IR::MAU::HashFunction::convertHashAlgorithmBFN(srcInfo, algorithm);
 }
 
 // This convertTable function calls the parent frontend convertTable function
@@ -128,7 +128,7 @@ const std::vector<std::tuple<cstring, cstring, IR::Direction>> intrinsic_metadat
 
 const IR::Expression *
 TnaProgramStructure::convertHashAlgorithm(Util::SourceInfo srcInfo, IR::ID algorithm) {
-    auto algo = IR::MAU::HashFunction::convertHashAlgorithmBFN(srcInfo, algorithm, nullptr);
+    auto algo = IR::MAU::HashFunction::convertHashAlgorithmBFN(srcInfo, algorithm);
 
     auto mce = algo->to<IR::MethodCallExpression>();
     if (!mce)

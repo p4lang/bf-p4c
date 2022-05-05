@@ -55,11 +55,14 @@ enum SelectorMode_t { FAIR, RESILIENT }
 enum HashAlgorithm_t {
     IDENTITY,
     RANDOM,
+    XOR8,
+    XOR16,
+    XOR32,
     CRC8,
     CRC16,
     CRC32,
     CRC64,
-    CUSTOM
+    CUSTOM  /*< custom CRC polynomial - see the CRCPolynomial extern */
 }
 
 match_kind {

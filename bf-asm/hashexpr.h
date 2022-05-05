@@ -10,6 +10,7 @@ class HashExpr {
     class PhvRef;
     class Random;
     class Crc;
+    class XorHash;
     class Xor;
     class Mask;
     class Stripe;
@@ -45,6 +46,11 @@ class HashExpr {
     virtual void dbprint(std::ostream & out) const {}
     virtual Phv::Ref *get_ghost_slice() { return nullptr; }
     virtual ~HashExpr() {}
+
+ private:
+    void generate_ixbar_inputs_with_gaps(const std::multimap<unsigned, Phv::Ref> &what,
+                                         std::vector<ixbar_input_t> &inputs, InputXbar *ix,
+                                         int hash_table);
 };
 
 extern void dump(const HashExpr *);

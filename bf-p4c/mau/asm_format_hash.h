@@ -94,8 +94,11 @@ inline std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
         // FIXME -- final_xor needs to go into the seed for the hash group
         out << ")";
     } else if (hash.func.type == IR::MAU::HashFunction::XOR) {
-        // fixme -- should be able to implement this in a hash function
-        BUG("xor hashing algorithm not supported");
+        /* -- note: constants are computed by the midend into the seed value.
+         *    There is no need to pass them through the xor directive. */
+        BUG_CHECK(hash.match_data_map, "For a xor, must be a map");
+        out << "stripe(xor("
+            << "0x" << hex(hash.func.size) << ", " << *hash.match_data_map << "))";
     } else if (hash.func.type == IR::MAU::HashFunction::CSUM) {
         BUG("csum hashing algorithm not supported");
     } else {

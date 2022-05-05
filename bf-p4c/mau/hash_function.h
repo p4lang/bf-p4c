@@ -70,13 +70,22 @@ struct HashFunction {
     }
 
  private:
-    const IR::MethodCallExpression *hash_to_mce(const IR::Expression *, bool *on_hash_matrix);
+    const IR::MethodCallExpression *hash_to_mce(const IR::Expression *);
     uint64_t toKoopman(uint64_t poly, uint32_t width);
 
  public:
     void build_algorithm_t(bfn_hash_algorithm_ *) const;
     static const IR::Expression *convertHashAlgorithmBFN(Util::SourceInfo srcInfo,
-        IR::ID algorithm, bool *on_hash_matrix);
+                                                         IR::ID algorithm);
+
+ private:
+    static const IR::Expression *convertHashAlgorithmExtern(Util::SourceInfo srcInfo,
+                                                            IR::ID algorithm);
+
+    static const IR::Expression *convertHashAlgorithmInner(Util::SourceInfo srcInfo,
+                                                           IR::ID algorithm, bool msb, bool extend,
+                                                           bool extension_set,
+                                                           const std::string &alg_name);
 };
 
 }  // end namespace MAU

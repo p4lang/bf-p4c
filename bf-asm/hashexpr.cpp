@@ -225,6 +225,37 @@ class HashExpr::Crc : HashExpr {
         rv.insert(rv.end(), vec_what.begin(), vec_what.end()); }
 };
 
+/**
+ * @brief XOR hashing algorithm implemented on the hashing matrix
+ *
+ * This expression implements XOR over the hasing matrix. The input
+ * message is handled as a big integer number - the highest bit is
+ * the begining, the zero-th bit is the end. The message is split
+ * from the begining into blocks of length bit_width and these blocks
+ * are bitwise XORed together.
+ */
+class HashExpr::XorHash : public HashExpr {
+ private:
+    std::multimap<unsigned, Phv::Ref> what;
+    int bit_width;
+    friend class HashExpr;
+
+ public:
+    explicit XorHash(int lineno, int bit_width_);
+
+    /* -- avoid copying */
+    XorHash &operator=(XorHash &&) = delete;
+
+    bool check_ixbar(InputXbar *ix, int grp) override;
+    int width() override;
+    int input_size() override;
+    bool operator==(const HashExpr &a_) const override;
+    void build_algorithm() override;
+    void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
+                          int hash_table) override;
+    void get_sources(int, std::vector<Phv::Ref> &rv) const override;
+};
+
 class HashExpr::Xor : HashExpr {
     std::vector<HashExpr *>     what;
     explicit Xor(int lineno) : HashExpr(lineno) {}
@@ -444,6 +475,28 @@ HashExpr *HashExpr::create(gress_t gress, int stage, const value_t &what) {
             for (int i = 1; i < what.vec.size; i++)
                 rv->what.emplace_back(gress, stage, what[i]);
             return rv;
+        } else if (what[0] == "xor") {
+            if (what.vec.size != 3) {
+                error(what[1].lineno,
+                      "Syntax error, invalid number of parameters for 'xor' hash expression");
+                return nullptr;
+            }
+            if (!CHECKTYPE(what[1], tINT)) {
+                return nullptr;
+            }
+            if (!CHECKTYPE(what[2], tMAP)) {
+                return nullptr;
+            }
+            std::unique_ptr<XorHash> rv(new XorHash(what.lineno, what[1].i));
+            for (auto &kv : what[2].map) {
+                if (CHECKTYPE(kv.key, tINT)) {
+                    rv->what.emplace(kv.key.i, Phv::Ref(gress, stage, kv.value));
+                } else {
+                    return nullptr;
+                }
+            }
+
+            return rv.release();
         } else if ((what[0] == "crc" || what[0] == "crc_rev" || what[0] == "crc_reverse") &&
                    CHECKTYPE2(what[1], tBIGINT, tINT)) {
             Crc *rv = new Crc(what.lineno);
@@ -565,6 +618,35 @@ void HashExpr::find_input(Phv::Ref what, std::vector<ixbar_input_t> &inputs, Inp
     }
 }
 
+void HashExpr::generate_ixbar_inputs_with_gaps(const std::multimap<unsigned, Phv::Ref> &what,
+                                               std::vector<ixbar_input_t> &inputs, InputXbar *ix,
+                                               int hash_table) {
+    unsigned previous_range_hi = 0;
+    for (auto &entry : what) {
+        if (previous_range_hi != entry.first) {
+            ixbar_input_t invalid_input = {
+                ixbar_input_type::tPHV,           // type
+                0,                                // ixbar_bit_position
+                entry.first - previous_range_hi,  // bit_size
+                false                             // u.valid
+            };
+            inputs.push_back(invalid_input);
+        }
+
+        auto &ref = entry.second;
+        find_input(ref, inputs, ix, hash_table);
+        previous_range_hi = entry.first + ref->size();
+    }
+    if (previous_range_hi != input_size()) {
+        ixbar_input_t invalid_input = {
+            ixbar_input_type::tPHV,            // type
+            0,                                 // ixbar_bit_position
+            input_size() - previous_range_hi,  // bit_size
+            false                              // u.valid
+        };
+        inputs.push_back(invalid_input);
+    }
+}
 
 /**
  * Creates a vector with a single entry corresponding to the identity input
@@ -590,32 +672,8 @@ void HashExpr::Random::gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, Inpu
  * These are marked as invalid, so that the hash calculation will be correct
  */
 void HashExpr::Crc::gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
-        int hash_table) {
-    unsigned previous_range_hi = 0;
-    for (auto &entry : what) {
-        if (previous_range_hi != entry.first) {
-            ixbar_input_t invalid_input = {
-                ixbar_input_type::tPHV,  // type
-                0,  // ixbar_bit_position
-                entry.first - previous_range_hi,  // bit_size
-                false  // u.valid
-            };
-            inputs.push_back(invalid_input);
-        }
-
-        auto &ref = entry.second;
-        find_input(ref, inputs, ix, hash_table);
-        previous_range_hi = entry.first + ref->size();
-    }
-    if (previous_range_hi != input_size()) {
-        ixbar_input_t invalid_input = {
-            ixbar_input_type::tPHV,  // type
-            0,  // ixbar_bit_position
-            input_size() - previous_range_hi,  // bit_size
-            false  // u.valid
-        };
-        inputs.push_back(invalid_input);
-    }
+                                     int hash_table) {
+    generate_ixbar_inputs_with_gaps(what, inputs, ix, hash_table);
 }
 
 bool HashExpr::Crc::check_ixbar(InputXbar *ix, int grp) {
@@ -636,6 +694,55 @@ bool HashExpr::Crc::check_ixbar(InputXbar *ix, int grp) {
             rv &= ::check_ixbar(ref.second, ix, grp); } }
     return rv;
 }
+
+HashExpr::XorHash::XorHash(int lineno, int bit_width_) : HashExpr(lineno), bit_width(bit_width_) {}
+
+bool HashExpr::XorHash::check_ixbar(InputXbar *ix, int grp) {
+    bool rv(true);
+    for (auto &ref : what) {
+        rv = ::check_ixbar(ref.second, ix, grp) && rv;
+    }
+    return rv;
+}
+
+int HashExpr::XorHash::width() { return bit_width; }
+
+int HashExpr::XorHash::input_size() {
+    if (what.empty()) return 0;
+    return what.rbegin()->first + what.rbegin()->second->size();
+}
+
+bool HashExpr::XorHash::operator==(const HashExpr &a_) const {
+    if (typeid(*this) != typeid(a_)) return false;
+    auto &a = static_cast<const XorHash &>(a_);
+
+    if (what.size() != a.what.size()) return false;
+    if (bit_width != a.bit_width) return false;
+
+    auto iter1(what.begin());
+    auto iter2(a.what.begin());
+    while (iter1 != what.end()) {
+        if (*iter1 != *iter2) return false;
+        ++iter1;
+        ++iter2;
+    }
+    return true;
+}
+
+void HashExpr::XorHash::build_algorithm() {
+    memset(&hash_algorithm, 0, sizeof(hash_algorithm));
+    hash_algorithm.hash_alg = XOR_DYN;
+    hash_algorithm.extend = false;
+    hash_algorithm.msb = false;
+    hash_algorithm.hash_bit_width = bit_width;
+}
+
+void HashExpr::XorHash::gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
+                                         int hash_table) {
+    generate_ixbar_inputs_with_gaps(what, inputs, ix, hash_table);
+}
+
+void HashExpr::XorHash::get_sources(int, std::vector<Phv::Ref> &rv) const {}
 
 void HashExpr::Xor::gen_data(bitvec &data, int bit, InputXbar *ix, int grp) {
     for (auto *e : what)

@@ -1,5 +1,3 @@
-
-import functools
 from bfruntime_client_base_tests import BfRuntimeTest
 from ptf import config
 import ptf.testutils as testutils
@@ -7,73 +5,18 @@ import ptf.testutils as testutils
 import pd_base_tests
 from res_pd_rpc.ttypes import *
 from mirror_pd_rpc.ttypes import *
+import bfrt_grpc.client as grpccli
 
-@functools.total_ordering
-class Port:
-    '''
-    An identifier of a switch port. It consists of index of the device and index of
-    the physical port.
-    '''
-
-    def __init__(self, port, device = None):
-        if isinstance(port, int):
-            if device is None:
-                device = 0
-            self._port = port
-            self._device = device
-        elif isinstance(port, Port):
-            self._port = port._port
-            self._device = port._device
-        else:
-            raise TypeError("Invalid type of the port object")
-    
-    @staticmethod
-    def createPort(device, port):
-        '''
-        Create new Port object from device and port indexes
-        '''
-        return Port(port, device)
-
-    def _is_valid_operand(self, other):
-        return hasattr(other, "_port") and hasattr(other, "_device")
-    
-    def __hash__(self):
-        return hash((self._port, self._device))
-    
-    def __eq__(self, other):
-        if not self._is_valid_operand(other):
-            return NotImplemented
-        return (self._port == other._port and self._device == other._device)
-
-    def __lt__(self, other):
-        if not self._is_valid_operand(other):
-            return NotImplemented
-        return (self._device, self._port) < (other._device, other._port)
-    
-    def __str__(self):
-        return "(device={}, port={})".format(self._device, self._port)
-    
-    def __repr__(self):
-        return "Port({}, {})".format(self._device, self._port)
-
-    def device(self):
-        '''
-        Get index of the device
-        '''
-        return self._device
-    
-    def port(self):
-        '''
-        Get index of the port
-        '''
-        return self._port
-
+from .table import Table
+from .port import Port
 class TestRuntime(BfRuntimeTest):
     def __init__(self):
         BfRuntimeTest.__init__(self)
         self._fixed = None
         self._client = None
+        self._device_map = {}
         self._port_map = {}
+        self._tables = {}
         self._registered_mirrors = []
 
     def createPort(self, device, port):
@@ -89,11 +32,48 @@ class TestRuntime(BfRuntimeTest):
         '''    
         return Port.createPort(device, port)
     
+    def _convertLogicalDevice(self, device):
+        return self._device_map[device]
+
     def _convertLogicalPort(self, port):
         port = Port(port)
         if port not in self._port_map:
             raise ValueError("Invalid port {}".format(port))
         return self._port_map[port]
+
+    def getTable(self, tablename, device = None):
+        '''
+        Get specified table
+
+        Parameters:
+        -----------
+        tablename: string
+            Unique name of the table (P4 name of the table)
+        device: int
+            Number of the device the table belongs to
+        '''
+        if tablename not in self._tables:
+            if device is None:
+                device = 0
+            target = grpccli.Target(self._convertLogicalDevice(device), pipe_id = 0xffff)
+            self._tables[tablename] = Table(
+                tablename, target, self.bfrt_info.table_get(tablename))
+        return self._tables[tablename]
+
+    def createTableEntryBuilder(self, tablename, action, device = None):
+        '''
+        Create the entry builder for a table
+        
+        Parameters:
+        -----------
+        tablename: string
+            Unique name of the table (P4 table name)
+        action: string
+            Name of the entry action
+        device: int
+            Number of the device the table belongs to
+        '''
+        return self.getTable(tablename, device).createEntryBuilder(action)
 
     def registerIngressMirrorSession(self, mirror_id, egr_port, max_pkt_len):
         '''
@@ -171,6 +151,7 @@ class TestRuntime(BfRuntimeTest):
                 last_device = device
                 logical_device += 1
                 logical_port = 0
+                self._device_map[logical_device] = device
             self._port_map[Port(logical_port, logical_device)] = (device, port)
             logical_port += 1
 
@@ -183,6 +164,10 @@ class TestRuntime(BfRuntimeTest):
         # -- destroy registered mirroring sessions
         for mirror_id, dev_target in self._registered_mirrors:
             self._fixed.mirror.mirror_session_delete(self._client, dev_target, mirror_id)
+        
+        # -- clean all table entries
+        for table in self._tables.values():
+            table.cleanEntries()
 
         self._fixed.tearDown()
         BfRuntimeTest.tearDown(self)

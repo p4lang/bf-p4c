@@ -474,6 +474,17 @@ stage <constant> <thread>:
                         # the value <int> encodes the value of the constant
                     crc_rev(...)
                         # bit-reversed (little endian instead of the defaul big endian) crc
+                    xor(<int>, '{' <int> : <phv-location>, ... '}')
+                        # XOR of a data block (message)
+                        #
+                        # Fields specified in the second parameter are joined into one
+                        # big bit stream, cut into blocks of width specified in the first
+                        # parameter and the blocks are bitwise XORed together. If the
+                        # field list is not continuous (there are gaps in bit offsets),
+                        # zeros are padded in.
+                        #
+                        # Constants are not supported by this directive - they are computed
+                        # into the seed value by the backend.
                     <expression> ^ <expression>
                         # xor of other expressions.
                     <expression> & <int>

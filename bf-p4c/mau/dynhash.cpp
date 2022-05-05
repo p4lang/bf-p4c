@@ -328,8 +328,7 @@ void GenerateDynamicHashJson::gen_algo_json(Util::JsonObject *_dhc,
         for (auto a : hge->alg_names->names) {
             // Call Dyn Hash Library and generate a hash function object for
             // given algorithm
-            auto algoExpr = IR::MAU::HashFunction::convertHashAlgorithmBFN(
-                    hge->srcInfo, a.name, nullptr);
+            auto algoExpr = IR::MAU::HashFunction::convertHashAlgorithmBFN(hge->srcInfo, a.name);
             auto algorithm = new IR::MAU::HashFunction();
             if (algorithm->setup(algoExpr)) {
                 gen_single_algo_json(_algos, algorithm, a.name, is_default);
@@ -563,8 +562,7 @@ void GenerateDynamicHashJson::gen_ixbar_json(const IXBar::Use *ixbar_use_,
             // Call Dyn Hash Library and generate a hash function object for
             // given algorithm
             auto srcInfo = hashAlgo ? &hashAlgo->srcInfo : new Util::SourceInfo();
-            auto algoExpr = IR::MAU::HashFunction::convertHashAlgorithmBFN(
-                    *srcInfo, a.name, nullptr);
+            auto algoExpr = IR::MAU::HashFunction::convertHashAlgorithmBFN(*srcInfo, a.name);
             auto algorithm = new IR::MAU::HashFunction();
             if (algorithm->setup(algoExpr)) {
                 Util::JsonObject *_algo = new Util::JsonObject();
