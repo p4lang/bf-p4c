@@ -153,15 +153,15 @@ typedef bit<12> vlan_id_t;
 // Layer2 Headers
 //////////////////////////////////////////////////////////////
 
-@pa_container_size("ingress", "hdr.transport.ethernet.src_addr", 16, 32)
-@pa_container_size("ingress", "hdr.transport.ethernet.dst_addr", 16, 32)
-@pa_container_size("ingress", "hdr.transport.ethernet.$valid", 16)
-@pa_container_size("ingress", "hdr.outer.ethernet.src_addr", 16, 32)
-@pa_container_size("ingress", "hdr.outer.ethernet.dst_addr", 16, 32)
-@pa_container_size("ingress", "hdr.outer.ethernet.$valid", 16)
-@pa_container_size("ingress", "hdr.inner.ethernet.src_addr", 16, 32)
-@pa_container_size("ingress", "hdr.inner.ethernet.dst_addr", 16, 32)
-@pa_container_size("ingress", "hdr.inner.ethernet.$valid", 16)
+//@pa_container_size("ingress", "hdr.transport.ethernet.src_addr", 16, 32)
+//@pa_container_size("ingress", "hdr.transport.ethernet.dst_addr", 16, 32)
+//@pa_container_size("ingress", "hdr.transport.ethernet.$valid", 16)
+//@pa_container_size("ingress", "hdr.outer.ethernet.src_addr", 16, 32)
+//@pa_container_size("ingress", "hdr.outer.ethernet.dst_addr", 16, 32)
+//@pa_container_size("ingress", "hdr.outer.ethernet.$valid", 16)
+//@pa_container_size("ingress", "hdr.inner.ethernet.src_addr", 16, 32)
+//@pa_container_size("ingress", "hdr.inner.ethernet.dst_addr", 16, 32)
+//@pa_container_size("ingress", "hdr.inner.ethernet.$valid", 16)
 header ethernet_h {
     mac_addr_t dst_addr;
     mac_addr_t src_addr;
@@ -1015,7 +1015,7 @@ struct switch_port_metadata_t {
 // Ingress Metadata
 // --------------------------------------------------------------------------------
 
-@pa_container_size("ingress", "ig_md.lkp.l4_src_port", 8)
+//@pa_container_size("ingress", "ig_md.lkp.l4_src_port", 8)
 @pa_alias("ingress", "ig_md.egress_port", "ig_intr_md_for_tm.ucast_egress_port")
 @pa_alias("ingress", "ig_md.multicast.id", "ig_intr_md_for_tm.mcast_grp_b")
 

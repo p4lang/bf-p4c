@@ -1629,6 +1629,10 @@ bool CoreAllocation::satisfies_constraints(
         }
         initFieldSlices.insert(PHV::FieldSlice(sl.field(), sl.field_slice()));
     }
+    LOG_DEBUG7(TAB2 "liveFieldSlices:");
+    for (auto& sl : liveFieldSlices) LOG_DEBUG7(TAB2 "  " << sl);
+    LOG_DEBUG7(TAB2 "initFieldsSlices:");
+    for (auto& sl : initFieldSlices) LOG_DEBUG7(TAB2 "  " << sl);
 
     for (auto &sl : slices) {
         bool disjoint = slice.isLiveRangeDisjoint(sl) ||
@@ -1652,17 +1656,6 @@ bool CoreAllocation::satisfies_constraints(
     // pov bits are parser initialized as well.
     // discount slices that are going to be initialized through metadata initialization from being
     // considered uninitialized reads.
-    bool hasOtherUninitializedRead =
-        std::any_of(liveFieldSlices.begin(), liveFieldSlices.end(), [&](const PHV::FieldSlice& s) {
-            return s.field()->pov || (utils_i.defuse.hasUninitializedRead(s.field()->id) &&
-                                      !initFieldSlices.count(s));
-        });
-
-    bool hasOtherExtracted =
-        std::any_of(liveFieldSlices.begin(), liveFieldSlices.end(), [&](const PHV::FieldSlice& s) {
-            return !s.field()->pov && utils_i.uses.is_extracted(s.field()) &&
-                   !utils_i.uses.is_extracted_from_constant(s.field());
-        });
 
     bool isThisSliceExtracted = !slice.field()->pov && utils_i.uses.is_extracted(slice.field());
     bool isThisSliceUninitialized =
@@ -1670,32 +1663,41 @@ bool CoreAllocation::satisfies_constraints(
          (utils_i.defuse.hasUninitializedRead(slice.field()->id) && !initFields.count(slice) &&
           !utils_i.pragmas.pa_no_init().getFields().count(slice.field())));
 
-    bool hasExtractedTogether =
-        std::all_of(liveFieldSlices.begin(), liveFieldSlices.end(), [&](const PHV::FieldSlice& s) {
-            auto extracted_together =
-                utils_i.phv.are_bridged_extracted_together(slice.field(), s.field());
-            LOG_DEBUG7(TAB2 "Check if " << slice.field() << " and " << s.field()
-                                        << " are extracted "
-                                           "together: "
-                                        << extracted_together);
-            return extracted_together;
-        });
+    bool hasOtherUninitializedRead, hasOtherExtracted, hasExtractedTogether;
 
-    if (hasOtherExtracted && !hasExtractedTogether &&
-        (isThisSliceUninitialized || isThisSliceExtracted)) {
-        LOG_DEBUG5(TAB1 "Constraint violation: Container already contains extracted slices, "
-                   "can't be packed because this slice is: "
-                   << (isThisSliceExtracted ? "extracted" : "uninitialized"));
-        return false; }
+    for (auto slc : liveFieldSlices) {
+        hasOtherUninitializedRead = slc.field()->pov ||
+            (utils_i.defuse.hasUninitializedRead(slc.field()->id) &&
+             !initFieldSlices.count(slc));
+        hasOtherExtracted = !slc.field()->pov && utils_i.uses.is_extracted(slc.field()) &
+            !utils_i.uses.is_extracted_from_constant(slc.field());
+        hasExtractedTogether = utils_i.phv.are_bridged_extracted_together(slice.field(),
+                                                                          slc.field());
 
-    // Account for metadata initialization and ensure that initialized fields are not considered
-    // uninitialized any more.
-    if (isThisSliceExtracted && (hasOtherUninitializedRead || hasOtherExtracted) &&
-        (!hasExtractedTogether || !hasOtherUninitializedRead)) {
-        LOG_DEBUG5(TAB1 "Constraint violation: This slice is extracted, can't be packed because "
-                   "allocated fields have: "
-                   << (hasOtherExtracted ? "extracted" : "uninitialized"));
-        return false; }
+        LOG_DEBUG7(TAB1 "  slice: " << slice << "  lfs: " << slc <<
+                   "  hasOtherExtracted:" << hasOtherExtracted <<
+                   "  hasExtractedTogether:" << hasExtractedTogether <<
+                   "  isThisSliceUninitialized:" << isThisSliceUninitialized <<
+                   "  isThisSliceExtracted:" << isThisSliceExtracted <<
+                   "  hasOtherUninitializedRead:" << hasOtherUninitializedRead);
+
+        if (hasOtherExtracted && !hasExtractedTogether &&
+            (isThisSliceUninitialized || isThisSliceExtracted)) {
+            LOG_DEBUG5(TAB1 "Constraint violation: Container already contains extracted slices, "
+                       "can't be packed because this slice is: "
+                       << (isThisSliceExtracted ? "extracted" : "uninitialized"));
+            return false; }
+
+        // Account for metadata initialization and ensure that initialized fields are not considered
+        // uninitialized any more.
+        if (isThisSliceExtracted && (hasOtherUninitializedRead || hasOtherExtracted) &&
+            (!hasExtractedTogether || !hasOtherUninitializedRead)) {
+            LOG_DEBUG5(TAB1
+                       "Constraint violation: This slice is extracted, can't be packed because "
+                       "allocated fields have: "
+                       << (hasOtherExtracted ? "extracted" : "uninitialized"));
+            return false; }
+    }
 
     return true;
 }
@@ -1857,8 +1859,8 @@ bool CoreAllocation::try_pack_slice_list(
         bool hasOverlay = std::any_of(candidate_slices.begin(), candidate_slices.end(),
             Overlaps);
         for (auto& candidate_slice : candidate_slices) {
-            if (!utils_i.phv.metadata_mutex()(
-                        field_slice.field()->id, candidate_slice.field()->id))
+            if (!utils_i.phv.metadata_mutex()(field_slice.field()->id,
+                                              candidate_slice.field()->id))
                 sliceLiveRangeDisjointWithAllCandidates = false;
         }
         // If the current slice overlays with at least one candidate slice AND its live range
@@ -2284,7 +2286,7 @@ bool CoreAllocation::check_metadata_and_dark_overlay(
             bool sliceOverlaysAllCandidates = true;
             for (auto& candidate_slice : candidate_slices) {
                 if (!utils_i.phv.metadata_mutex()(field_slice.field()->id,
-                                                    candidate_slice.field()->id))
+                                                  candidate_slice.field()->id))
                     sliceOverlaysAllCandidates = false;
             }
             if (sliceOverlaysAllCandidates) continue;
@@ -2833,11 +2835,12 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
             perContainerAlloc, utils_i.phv, utils_i.clot, utils_i.uses,
             utils_i.field_to_parser_states, utils_i.parser_critical_path,
             utils_i.tablePackOpt, num_bitmasks);
-        LOG_DEBUG5(TAB1 "SLICE LIST score for container " << c << ": " << score);
+        LOG_FEATURE("alloc_progress", 5, TAB1 "SLICE LIST score for container " <<
+                    c << ": " << score);
 
         // update the best
         if ((!best_candidate || score_ctx.is_better(score, best_score))) {
-            LOG_DEBUG5(TAB2 "Best score for container " << c);
+            LOG_FEATURE("alloc_progress", 5, TAB2 "Best score for container " << c);
             best_score = score;
             best_candidate = std::move(perContainerAlloc);
             if (score_ctx.stop_at_first()) {
@@ -2847,7 +2850,8 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
     }  // end of for containers
 
     if (!best_candidate) {
-        LOG_FEATURE("alloc_progress", 5, TAB2 "Failed: There is no suitable candidate");
+        LOG_FEATURE("alloc_progress", 5, TAB2 "Failed: There is no suitable candidate for slices"
+                    << slices);
         return boost::none; }
 
     alloc_attempt.commit(*best_candidate);
@@ -3252,7 +3256,7 @@ boost::optional<PHV::Transaction> CoreAllocation::alloc_super_cluster_with_align
             alloc_attempt, container_group, super_cluster, *slice_list,
             alignment.slice_alignment, score_ctx);
         if (!partial_alloc_result) {
-            LOG_FEATURE("alloc_progress", 5, "Failed to allocate list ");
+            LOG_FEATURE("alloc_progress", 5, "Failed to allocate slice list " << *slice_list);
             return boost::none;
         }
         alloc_attempt.commit(*partial_alloc_result);
@@ -3260,6 +3264,7 @@ boost::optional<PHV::Transaction> CoreAllocation::alloc_super_cluster_with_align
         // Track allocated slices in order to skip them when allocating their clusters.
         for (auto& slice : *slice_list) {
             allocated.insert(slice);
+            LOG_FEATURE("alloc_progress", 5, "Add to allocated: " << slice);
         }
     }
 
@@ -3285,7 +3290,9 @@ boost::optional<PHV::Transaction> CoreAllocation::alloc_super_cluster_with_align
                 if (optStarts.empty()) {
                     // Other constraints satisfied, but alignment constraints
                     // cannot be satisfied.
-                    LOG_DEBUG7(TAB1 "Alignment constraint violation: No valid start positions");
+                    LOG_FEATURE("alloc_progress",6, TAB1
+                                "Failed: Alignment constraint violation: No valid start positions "
+                                "for aligned cluster " << slice_list);
                     return boost::none;
                 }
                 // Constraints satisfied so long as aligned_cluster is placed
@@ -3310,8 +3317,11 @@ boost::optional<PHV::Transaction> CoreAllocation::alloc_super_cluster_with_align
                             PHV::SuperCluster::SliceList{slice}, start_map, score_ctx);
                     if (partial_alloc_result) {
                         this_alloc.commit(*partial_alloc_result);
+                        LOG_FEATURE("alloc_progress", 5, TAB1 "Allocated rotational " << slice);
                     } else {
                         failed = true;
+                        LOG_FEATURE("alloc_progress", 5, TAB1 "Failed to allocate rotational " <<
+                            slice);
                         break; }
                 }  // for slices
 
@@ -3330,9 +3340,11 @@ boost::optional<PHV::Transaction> CoreAllocation::alloc_super_cluster_with_align
             }
 
             if (!best_alloc) {
+                LOG_FEATURE("alloc_progress", 5, TAB1 "Failed to allocate rotational cluster");
                 return boost::none;
             }
             alloc_attempt.commit(*best_alloc);
+            LOG_FEATURE("alloc_progress", 5, TAB1 "Allocated rotational cluster!");
         }
     }
     return alloc_attempt;
@@ -3420,12 +3432,16 @@ boost::optional<PHV::Transaction> CoreAllocation::try_alloc(
     std::list<const PHV::SuperCluster::SliceList*> sorted_slice_lists(
         super_cluster.slice_lists().begin(), super_cluster.slice_lists().end());
     utils_i.actions.sort(sorted_slice_lists);
+    LOG_FEATURE("alloc_progress", 5, "Sorted SliceList:");
+    for (auto* s_list : sorted_slice_lists) {
+        for (auto fsl : *s_list) {
+            LOG_FEATURE("alloc_progress", 5, TAB1 << fsl); } }
 
     // try different alignments.
     boost::optional<PHV::Transaction> best_alloc = boost::none;
     AllocScore best_score = AllocScore::make_lowest();
     for (const auto& alignment : alignments) {
-        LOG_DEBUG6("Try allocate with " <<
+        LOG_FEATURE("alloc_progress", 6, "Try allocate with " <<
                    str_supercluster_alignments(super_cluster, alignment));
         auto this_alloc = alloc_super_cluster_with_alignment(
             alloc, container_group, super_cluster, alignment, sorted_slice_lists, score_ctx);
@@ -3437,13 +3453,14 @@ boost::optional<PHV::Transaction> CoreAllocation::try_alloc(
             if (!best_alloc || score_ctx.is_better(score, best_score)) {
                 best_alloc = std::move(this_alloc);
                 best_score = score;
+                LOG_FEATURE("alloc_progress", 5, "Allocated Sorted SliceList with this alignment");
                 // XXX(yumin): currently we stop at the first valid alignmnt
                 // and avoid search too much which might slow down compilation.
                 break;
             }
         } else {
             LOG_FEATURE("alloc_progress", 5, TAB1
-                        "Failed: Cannot allocate SuperCluster with this alignment");
+                        "Failed: Cannot allocate sorted SliceList with this alignment");
         }
     }
     return best_alloc;
@@ -4985,6 +5002,8 @@ BruteForceAllocationStrategy::tryAllocSlicing(
                 if (!best_slice_alloc || score_ctx.is_better(score, best_slice_score)) {
                     best_slice_score = score;
                     best_slice_alloc = partial_alloc;
+                    LOG_FEATURE("alloc_progress", 5, "Allocated supercluster " << sc->uid <<
+                                " to container group " << container_group);
                     if (score_ctx.stop_at_first()) {
                         break;
                     }
@@ -5053,7 +5072,7 @@ BruteForceAllocationStrategy::tryAllocStride(
     auto leader = stride.front();
 
     for (PHV::ContainerGroup* container_group : container_groups) {
-        LOG_DEBUG4(TAB1 "Try container group: " << container_group);
+        LOG_FEATURE("alloc_progress", 4, TAB1 "Try container group: " << container_group);
 
         auto leader_alloc = core_alloc_i.try_alloc(
             stride_alloc, *container_group, *leader, config_i.max_sl_alignment, score_ctx);
@@ -5069,6 +5088,8 @@ BruteForceAllocationStrategy::tryAllocStride(
                 if (!best_alloc || score_ctx.is_better(score, best_score)) {
                     best_score = score;
                     best_alloc = leader_alloc;
+                    LOG_FEATURE("alloc_progress", 5, "Allocated slicing stride " << leader->uid <<
+                                " to container group " << container_group);
                     if (score_ctx.stop_at_first()) {
                         break;
                     }
@@ -5237,8 +5258,9 @@ BruteForceAllocationStrategy::tryVariousSlicing(
                 LOG_DEBUG5(TAB1 "Check impossible slicelist");
                 if (auto impossible_slicelist =
                         diagnose_slicing(slicing, container_groups)) {
-                    LOG_DEBUG5(TAB2 "found slicelist that is impossible to allocate: "
-                            << *impossible_slicelist);
+                    LOG_FEATURE("alloc_progress", 5, TAB2
+                                "found slicelist that is impossible to allocate: " <<
+                                *impossible_slicelist);
                     itr_ctx->invalidate(*impossible_slicelist);
                     diagnosed_unallocatables.push_back(*impossible_slicelist);
                 }
@@ -5338,6 +5360,8 @@ BruteForceAllocationStrategy::allocLoop(
 
         // If any allocation was found, commit it.
         if (best_alloc) {
+            LOG_FEATURE("alloc_progress", 5, TAB1 "Success: allocated cluster group " <<
+                        cluster_group);
             PHV::Transaction* clone = (*best_alloc).clone(try_alloc);
             opt_strategy.addTransaction(*clone, *cluster_group);
             try_alloc.commit(*best_alloc);

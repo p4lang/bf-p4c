@@ -126,7 +126,9 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                     continue;
                 std::stringstream ss;
                 ss << "\n  " << slice << "\n  " << slice2;
-                ERROR_CHECK(slice2.isLiveRangeDisjoint(slice),
+                bool isMetaMutex = ((slice.field()->pov || slice2.field()->pov) ? false :
+                                    phv.isMetadataMutex(slice2.field(), slice.field()));
+                ERROR_CHECK((slice2.isLiveRangeDisjoint(slice) || isMetaMutex),
                         "PHV allocation produced following overlapping slices of field %1% that "
                         "are simultaneously live in the MAU pipeline: %2%", field.name, ss.str());
             }
@@ -147,13 +149,16 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                     assignedContainers[phvSpec.containerToId(slice.container())];
                 bool foundOverlappingSlices = false;
                 if (!field.metadata && alreadyAssignedContainer)
-                    for (auto& slice2 : allocations[slice.container()])
+                    for (auto& slice2 : allocations[slice.container()]) {
+                        bool isMetaMutex = ((slice.field()->pov || slice2.field()->pov) ? false :
+                                            phv.isMetadataMutex(slice.field(), slice2.field()));
                         if (slice2.container_slice().overlaps(slice.container_slice()) &&
                                 !slice2.isLiveRangeDisjoint(slice) &&
                                 !phv.isFieldMutex(slice.field(), slice2.field()) &&
-                                !phv.isMetadataMutex(slice.field(), slice2.field()) &&
+                                !isMetaMutex &&
                                 !phv.isDarkMutex(slice.field(), slice2.field()))
                             foundOverlappingSlices = true;
+                    }
                 ERROR_CHECK(!foundOverlappingSlices,
                             "Multiple slices in the same container %2% are allocated "
                             "to field %1%", cstring::to_cstring(field), slice.container());
@@ -180,7 +185,9 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         const PHV::AllocSlice* lastSlice = nullptr;
         for (auto& slice : boost::adaptors::reverse(field.get_alloc())) {
             if (lastSlice && lastSlice->container() == slice.container()) {
-                bool disjointSlices = slice.isLiveRangeDisjoint(*lastSlice);
+                bool isMetaMutex = ((slice.field()->pov || lastSlice->field()->pov) ? false :
+                                    phv.isMetadataMutex(slice.field(), lastSlice->field()));
+                bool disjointSlices = slice.isLiveRangeDisjoint(*lastSlice) || isMetaMutex;
                 ERROR_CHECK(disjointSlices ||
                             (!disjointSlices && last_msb_idx < slice.field_slice().hi),
                             "Field %1% has allocated slices out of order.  Slice %2% is the first "
@@ -528,7 +535,9 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                         //     "Container %1% contains fields which should never be overlaid:\n"
                         //     "%2% and %3%.",
                         //     container, cstring::to_cstring(slice), cstring::to_cstring(slice2));
-                        if (slice.isLiveRangeDisjoint(slice2)) continue;
+                        bool isMetaMutex = ((slice.field()->pov || slice2.field()->pov) ? false :
+                                            phv.isMetadataMutex(slice.field(), slice2.field()));
+                        if (slice.isLiveRangeDisjoint(slice2) || isMetaMutex) continue;
                         foundOverlappingSlices = true;
                     }
                     ERROR_CHECK(!foundOverlappingSlices,

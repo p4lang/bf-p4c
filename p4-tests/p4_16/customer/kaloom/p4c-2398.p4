@@ -1802,15 +1802,15 @@ struct eg_kvtep_metadata_t {
 }
 
 /* Egress Metadata */
-@pa_no_overlay("egress", "eg_md.mirror.src")
-@pa_no_overlay("egress", "eg_md.mirror.session_id")
-@pa_no_overlay("egress", "eg_md.mirror.ingress_port")
-@pa_no_overlay("egress", "eg_md.mirror.egress_port")
-@pa_no_overlay("egress", "eg_md.mirror.queue_id")
-@pa_no_overlay("egress", "eg_md.mirror.queue_depth")
-@pa_no_overlay("egress", "eg_md.mirror.ingress_tstamp")
-@pa_no_overlay("egress", "eg_md.mirror.egress_tstamp")
-@pa_no_overlay("egress", "eg_md.mirror.sequence_num")
+//@pa_no_overlay("egress", "eg_md.mirror.src")
+//@pa_no_overlay("egress", "eg_md.mirror.session_id")
+//@pa_no_overlay("egress", "eg_md.mirror.ingress_port")
+//@pa_no_overlay("egress", "eg_md.mirror.egress_port")
+//@pa_no_overlay("egress", "eg_md.mirror.queue_id")
+//@pa_no_overlay("egress", "eg_md.mirror.queue_depth")
+//@pa_no_overlay("egress", "eg_md.mirror.ingress_tstamp")
+//@pa_no_overlay("egress", "eg_md.mirror.egress_tstamp")
+//@pa_no_overlay("egress", "eg_md.mirror.sequence_num")
 /* WARNING: For PHV allocation efficiency, each mirror header needs to be overlayed
  * with an egress metadata field of an equal or bigger size.
  * Make sure the list below remains relevant. 
@@ -3709,7 +3709,7 @@ control LagFailover(
     /* This table must be placed in the same stage as lag_groups table as they 
      * both have access to the same register.
      */
-    @stage(9)
+    // @stage(9)
     table lag_failover {
         key = {
             hdr.pktgen_port_down.port_num : exact;
@@ -3814,7 +3814,7 @@ control VnetEgressIfaces(
      * hardware ports where only one port will be selected via the lag_selector
      * and the hashing of a list of metadata fields.
      */
-    @stage(9)
+    // @stage(9)
     table lag_groups {
         key = {
             ktep_meta.egress_iface_id : exact;
@@ -5147,7 +5147,7 @@ control L3EgressCntr(
     /* Punt_tunnel_stats table is used to capture L3 service packets exiting 
      * the egress pipeline towards a vRouter's punt channel.
      */
-    @placement_priority(-1)
+    // @placement_priority(-1)
     @ternary(1)
     table punt_tunnel_stats {
         key = {

@@ -251,6 +251,8 @@ PHV::Allocation::slicesByLiveness(const PHV::Container c, const AllocSlice& sl) 
     auto slices = this->slices(c);
     for (auto& slice : slices) {
         bool mutex = phv_i->field_mutex()(slice.field()->id, sl.field()->id);
+        // *ALEX* Checking disjoint liveranges may be too conservative due to
+        // default [parser, deparser] liveranges - See P4C-4467
         bool liverange_mutex = slice.isLiveRangeDisjoint(sl);
         if (!mutex && !liverange_mutex) rs.insert(slice);
     }
