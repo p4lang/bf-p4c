@@ -21,6 +21,7 @@ DEFINE_PRAGMA_CLASS(PragmaAtcamPartitionIndex);
 DEFINE_PRAGMA_CLASS(PragmaAlpmAtcamExcludeFieldMsbs);
 DEFINE_PRAGMA_CLASS(PragmaAutoInitMetadata);
 DEFINE_PRAGMA_CLASS(PragmaQuickPhvAlloc);
+DEFINE_PRAGMA_CLASS(PragmaParserBandwidthOpt);
 DEFINE_PRAGMA_CLASS(PragmaParserGroupMonogress);
 DEFINE_PRAGMA_CLASS(PragmaCalculatedFieldUpdateLocation);
 DEFINE_PRAGMA_CLASS(PragmaChainAddress);
@@ -86,6 +87,7 @@ DEFINE_PRAGMA_CLASS(PragmaUserAnnotation);
 DEFINE_PRAGMA_CLASS(PragmaWays);
 DEFINE_PRAGMA_CLASS(PragmaNoFieldInits);
 DEFINE_PRAGMA_CLASS(PragmaSeparateGateway);
+DEFINE_PRAGMA_CLASS(PragmaBackwardCompatible);
 // meter
 DEFINE_PRAGMA_CLASS(PragmaRed);
 DEFINE_PRAGMA_CLASS(PragmaYellow);

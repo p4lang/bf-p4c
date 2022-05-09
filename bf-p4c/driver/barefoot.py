@@ -414,7 +414,7 @@ class BarefootBackend(BackendDriver):
         if opts.create_graphs or opts.archive:
             self.add_command_option('compiler', '--create-graphs')
 
-        if opts.backward_compatible or opts.language == 'p4-14':
+        if opts.backward_compatible:
             self.add_command_option('compiler', '--backward-compatible')
 
         if opts.parser_timing_reports:

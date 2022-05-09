@@ -1067,7 +1067,7 @@ void AllocScore::calcParserExtractorBalanceScore(const PHV::Transaction& alloc, 
     // If program has user specified critical states, we will only compute score for those.
     //
     // Otherwise, we compute the score on the critical path (path with most extracted bits),
-    // if --parser-bandwidth-opt is turned on.
+    // if --parser-bandwidth-opt is turned on or pa_parser_bandwidth_opt pragma is used.
     //
     if (!parser_critical_path.get_ingress_user_critical_states().empty() ||
         !parser_critical_path.get_egress_user_critical_states().empty()) {

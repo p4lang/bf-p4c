@@ -120,6 +120,20 @@ const char *PragmaQuickPhvAlloc::help = "@pragma pa_quick_phv_alloc\n"
     "reduce the time it takes to do a PHV allocation. This might affect the PHV allocation results "
     "and may even result in PHV allocation being unsuccessful.";
 
+const char *PragmaParserBandwidthOpt::name = "pa_parser_bandwidth_opt";
+const char *PragmaParserBandwidthOpt::description =
+    "Optimize for parser bandwidth.";
+const char *PragmaParserBandwidthOpt::help = "@pragma pa_parser_bandwidth_opt\n"
+    "\n"
+    "Specifies that the compiler should optimize PHV allocation for parser bandwidth.";
+
+const char *PragmaBackwardCompatible::name = "backward_compatible";
+const char *PragmaBackwardCompatible::description =
+    "Set compiler to be backward compatible with p4c-tofino.";
+const char *PragmaBackwardCompatible::help = "@pragma backward_compatible\n"
+    "\n"
+    "Set compiler to be backward compatible with p4c-tofino.";
+
 const char *PragmaParserGroupMonogress::name = "pa_parser_group_monogress";
 const char *PragmaParserGroupMonogress::description =
     "Enforce single gress in even/odd Byte Containers.";

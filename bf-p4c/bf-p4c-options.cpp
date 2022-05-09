@@ -209,8 +209,16 @@ BFN_Options::BFN_Options() {
         [this](const char *arg) { bfRtSchema = arg; return true; },
         "Generate and write BF-RT JSON schema to the specified file");
     registerOption("--backward-compatible", nullptr,
-        [this](const char *) { backward_compatible = true; return true; },
-        "Set compiler to be backward compatible with p4c-tofino");
+        [this](const char *) {
+            backward_compatible = true;
+            ::warning(ErrorType::WARN_DEPRECATED,
+                "The --backward-compatible command-line option is deprecated and will be "
+                "removed in a future release. Please modify your P4 source to use the "
+                "%s annotation instead.",
+                PragmaBackwardCompatible::name);
+            return true; },
+        "DEPRECATED. Use the backward_compatible annotation instead. "
+        "Set compiler to be backward compatible with p4c-tofino.");
     registerOption("--verbose", nullptr,
         [this](const char *) { verbose = true; return true; },
         "Set compiler verbosity logging");
@@ -221,8 +229,16 @@ BFN_Options::BFN_Options() {
         [this](const char *) { parser_timing_reports = true; return true; },
         "Report parser timing summary");
     registerOption("--parser-bandwidth-opt", nullptr,
-        [this](const char *) { parser_bandwidth_opt = true; return true; },
-        "Optimize for parser bandwidth");
+        [this](const char *) {
+            parser_bandwidth_opt = true;
+            ::warning(ErrorType::WARN_DEPRECATED,
+                "The --parser-bandwidth-opt command-line option is deprecated and will be "
+                "removed in a future release. Please modify your P4 source to use the "
+                "%s annotation instead.",
+                PragmaParserBandwidthOpt::name);
+            return true; },
+        "DEPRECATED. Use the pa_parser_bandwidth_opt annotation instead. "
+        "Optimize for parser bandwidth.");
     registerOption("--egress-intrinsic-metadata-opt", nullptr,
         [this](const char *) { egress_intr_md_opt = true; return true; },
         "Optimize unused egress intrinsic metadata");
@@ -282,6 +298,7 @@ BFN_Options::BFN_Options() {
                 "%s annotation instead.",
                 PragmaQuickPhvAlloc::name);
             return true; },
+         "DEPRECATED. Use the pa_quick_phv_alloc annotation instead. "
          "Reduce PHV allocation search space for faster compilation");
 #if BAREFOOT_INTERNAL
     registerOption("--alt-phv-alloc", nullptr,
@@ -420,6 +437,11 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
             {"../share/p4c/p4_14include"}, exename(argv[0]));
 
     auto remainingOptions = CompilerOptions::process(argc, argv);
+
+    // P4_14 programs should have backward_compatible set to true
+    if (langVersion == FrontendVersion::P4_14) {
+        backward_compatible = true;
+    }
 
     if (!processed) {
         processed = true;
@@ -578,7 +600,11 @@ BFNOptionPragmaParser::tryToParse(const IR::Annotation* annotation) {
         return parseCompilerOption(annotation);
     if (pragmaName == "pa_quick_phv_alloc")
         BFNContext::get().options().quick_phv_alloc = true;
-    if (pragmaName == "gfm_parity_enable")
+    else if (pragmaName == "pa_parser_bandwidth_opt")
+        BFNContext::get().options().parser_bandwidth_opt = true;
+    else if (pragmaName == "backward_compatible")
+        BFNContext::get().options().backward_compatible = true;
+    else if (pragmaName == "gfm_parity_enable")
         BFNContext::get().options().disable_gfm_parity = false;
     return P4COptionPragmaParser::tryToParse(annotation);
 }

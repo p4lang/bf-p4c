@@ -1510,6 +1510,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_tofino.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/post_midend_constant_folding.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/power_schema_dot_prefix.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pragmas_backward_quick_phv_bandwidth.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pragma_no_gateway_conversion.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pragma_sep_gat.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pragma_stage.cpp

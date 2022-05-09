@@ -126,10 +126,13 @@ class ParseAnnotations : public P4::ParseAnnotations {
         BFN_PARSE_EMPTY(PragmaHeaderChecksum,  PARSE_EMPTY, intPragma);
         BFN_PARSE_EMPTY(PragmaPayloadChecksum, PARSE_EMPTY, intPragma);
 
+        BFN_PARSE_EMPTY(PragmaBackwardCompatible, PARSE_EMPTY, extPragma);
+
         // pa_ pragmas
         BFN_PARSE_EMPTY(PragmaAlias, PARSE_STRING_LITERAL_LIST, extPragma);
         BFN_PARSE_EMPTY(PragmaAutoInitMetadata, PARSE_EMPTY, extPragma);
         BFN_PARSE_EMPTY(PragmaQuickPhvAlloc, PARSE_EMPTY, extPragma);
+        BFN_PARSE_EMPTY(PragmaParserBandwidthOpt, PARSE_EMPTY, extPragma);
         BFN_PARSE_EMPTY(PragmaParserGroupMonogress, PARSE_EMPTY, extPragma);
         BFN_PARSE_EMPTY(PragmaAtomic, PARSE_STRING_LITERAL_LIST, extPragma);
         BFN_PARSE_EMPTY(PragmaContainerSize, PARSE_EXPRESSION_LIST, extPragma);
