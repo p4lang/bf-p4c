@@ -202,7 +202,7 @@ node ('compiler-travis') {
 
                         echo 'Running some Arista must-pass tests that are excluded in Travis jobs'
                         runInDocker(
-                            ctestParallelLevel: 4,
+                            ctestParallelLevel: 8,
                             "ctest -R '^tofino/.*arista*' -L 'CUST_MUST_PASS'"
                         )
 

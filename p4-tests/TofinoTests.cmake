@@ -30,7 +30,7 @@ bfn_find_tests("${P4_16_V1_TESTS}" v1tests EXCLUDE "${V1_EXCLUDE_FILES}")
 
 set (P16_V1_INCLUDE_PATTERNS "include.*v1model.p4" "main|common_v1_test")
 set (P16_V1_EXCLUDE_PATTERNS "tofino\\.h")
-set (P16_V1MODEL_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/*.p4")
+set (P16_V1MODEL_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/*.p4")
 p4c_find_tests("${P16_V1MODEL_FOR_TOFINO}" p16_v1tests INCLUDE "${P16_V1_INCLUDE_PATTERNS}" EXCLUDE "${P16_V1_EXCLUDE_PATTERNS}")
 
 set (P16_TNA_INCLUDE_PATTERNS "include.*(tofino|tna).p4" "main|common_tna_test")
@@ -67,9 +67,9 @@ set (P16_TNA_EXCLUDE_FILES "digest_tna\\.p4" "p4c-1323-b\\.p4" "p4c-2143\\.p4"
     "hash_extern_xor\\.p4")
 set (P16_TNA_EXCLUDE_FILES "${P16_TNA_EXCLUDE_FILES}" "${P16_TNA_ARISTA_FILES}")
 set (P16_TNA_FOR_TOFINO
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*/*.p4"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/errors/*.p4"
-    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*/*.p4"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/*.p4"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/*.p4")
 p4c_find_tests("${P16_TNA_FOR_TOFINO}" P4_16_TNA_TESTS INCLUDE "${P16_TNA_INCLUDE_PATTERNS}" EXCLUDE "${P16_TNA_EXCLUDE_PATTERNS}")
@@ -82,7 +82,7 @@ set (P16_PSA_EXCLUDE_FILES
 set (PSA_SEARCH_PATTERNS "include.*psa.p4")
 set (PSA_EXCLUDE_PATTERNS "package" "extern")
 set (P4TESTDATA ${P4C_SOURCE_DIR}/testdata)
-set (P16_PSA_FOR_TOFINO "${P4TESTDATA}/p4_16_samples/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/fabric-psa/*.p4")
+set (P16_PSA_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*/*.p4" "${P4TESTDATA}/p4_16_samples/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/fabric-psa/*.p4")
 p4c_find_tests("${P16_PSA_FOR_TOFINO}" P4_16_PSA_TESTS INCLUDE "${PSA_SEARCH_PATTERNS}" EXCLUDE "${PSA_EXCLUDE_PATTERNS}")
 bfn_find_tests("${P4_16_PSA_TESTS}" p16_psa_tests EXCLUDE "${P16_PSA_EXCLUDE_FILES}")
 
