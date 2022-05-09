@@ -210,57 +210,54 @@ header ghost_intrinsic_metadata_t {
 // EGRESS INTRINSIC METADATA
 // -----------------------------------------------------------------------------
 @__intrinsic_metadata
-struct egress_intrinsic_metadata_t {
+header egress_intrinsic_metadata_t {
+    @padding bit<(8 - PORT_ID_WIDTH % 8)> _pad0;
     PortId_t egress_port;               // Egress port id.
                                         // this field is passed to the deparser
-
-    bit<19> enq_qdepth;                 // Queue depth at the packet enqueue
-                                        // time.
-
-    bit<2> enq_congest_stat;            // Queue congestion status at the packet
-                                        // enqueue time.
 
     bit<32> enq_tstamp;                 // Time snapshot taken when the packet
                                         // is enqueued (in nsec).
 
+    @padding bit<3> _pad1;
+    bit<2> enq_congest_stat;            // Queue congestion status at the packet
+                                        // enqueue time.
+    bit<19> enq_qdepth;                 // Queue depth at the packet enqueue
+                                        // time.
+    @padding bit<3> _pad2;
+    bit<2> deq_congest_stat;            // Queue congestion status at the packet
+                                        // dequeue time.
     bit<19> deq_qdepth;                 // Queue depth at the packet dequeue
                                         // time.
 
-    bit<2> deq_congest_stat;            // Queue congestion status at the packet
-                                        // dequeue time.
+    @padding bit<5> _pad3;
+    PipeId_t ingress_pipe;              // Ingress pipe forwarded from ingress
+    PortId_t ingress_port;              // Ingress port forwarded from ingress
 
-    bit<16> app_pool_congest_stat;       // Dequeue-time application-pool
+    @padding bit<7> _pad4;
+    bit<1> redir;                       // Negative mirror. TM redirect dropped packet to a SW specified eport
+
+    @padding bit<1> _pad5;
+    QueueId_t egress_qid;               // Egress (physical) queue id within a MAC via which
+                                        // this packet was served.
+    @padding bit<5> _pad6;
+    bit<3> egress_cos;                  // Egress cos (eCoS) value.
+
+    @padding bit<7> _pad7;
+    bit<1> mirror;                      // Flag indicating whether a packet is mirror packet.
+
+    @padding bit<2> _pad8;
+    bit<14> pkt_length;                 // Packet length, in bytes. zero for cut-through mode.
+
+    bit<16> app_pool_congest_stat;      // Dequeue-time application-pool
                                         // congestion status. 2bits per
                                         // pool.
-
-    bit<32> deq_timedelta;              // Time delta between the packet's
-                                        // enqueue and dequeue time.
 
     bit<16> egress_rid;                 // L3 replication id for multicast
                                         // packets.
 
+    @padding bit<7> _pad9;
     bit<1> egress_rid_first;            // Flag indicating the first replica for
                                         // the given multicast group.
-
-    QueueId_t egress_qid;               // Egress (physical) queue id within a MAC via which
-                                        // this packet was served.
-
-    bit<3> egress_cos;                  // Egress cos (eCoS) value.
-
-
-    bit<14> pkt_length;                 // Packet length, in bytes. zero for cut-through mode.
-
-    PipeId_t ingress_pipe;              // Ingress pipe forwarded from ingress
-
-    PortId_t ingress_port;              // Ingress port forwarded from ingress
-
-    bit<1> redir;                       // Negative mirror. TM redirect dropped packet to a SW specified eport
-
-    bit<1> mirror;                      // Flag indicating whether a packet is mirror packet.
-
-    bit<2> minpkt;                      // Packet was dequeued from TM "min BW" shaper bucket
-
-    bit<12> ba_tag;                     // byte adjust tag
 }
 
 @__intrinsic_metadata
