@@ -62,6 +62,8 @@ void HashActionTable::pass2() {
     if (action_bus) action_bus->pass2(this);
     if (gateway) gateway->pass2();
     if (idletime) idletime->pass2();
+    for (auto &hd : hash_dist)
+        hd.pass2(this);
 }
 
 /**

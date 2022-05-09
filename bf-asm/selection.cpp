@@ -123,6 +123,8 @@ void SelectionTable::pass2() {
             error(lineno, "No selection_hash in selector table %s", name()); }
     if (input_xbar.empty()) {
         error(lineno, "No input xbar in selector table %s", name()); }
+    for (auto &hd : hash_dist)
+        hd.pass2(this);
 }
 
 void SelectionTable::pass3() {

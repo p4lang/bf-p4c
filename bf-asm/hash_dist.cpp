@@ -23,6 +23,24 @@ static void set_output_bit(unsigned &xbar_use, value_t &v) {
     }
 }
 
+static const char *xbar_use_string(unsigned xbar_use) {
+    static char buffer[256];
+    static const char *bits[] = { "immed hi", "immed lo", "meter addr", "stats addr",
+                                  "action addr", "hashmod-div" };
+    char *p = buffer, *e = buffer+sizeof(buffer);
+    for (int bit = 0; bit < sizeof(bits)/sizeof(bits[0]); ++bit) {
+        if (!(xbar_use & (1U << bit))) continue;
+        xbar_use &= ~(1U << bit);
+        if (p != buffer)
+            p += snprintf(p, p<e ? e-p : 0, xbar_use ? ", " : " and ");
+        p += snprintf(p, p<e ? e-p : 0, "%s", bits[bit]); }
+    if (xbar_use) {
+        if (p != buffer)
+            p += snprintf(p, p<e ? e-p : 0, " and ");
+        p += snprintf(p, p<e ? e-p : 0, "<0x%x>", xbar_use); }
+    return buffer;
+}
+
 HashDistribution::HashDistribution(int id_, value_t &data, unsigned u)
     : lineno(data.lineno), id(id_), xbar_use(u) {
     if (id < 0 || id >= 6)
@@ -120,6 +138,18 @@ void HashDistribution::pass1(Table *tbl, delay_type_t delay_type, bool non_linea
             if (use->hash_group != hash_group) {
                 error(lineno, "hash_dist %d and %d use different hash groups", id, m);
                 warning(use->lineno, "previous use here"); } } }
+}
+
+void HashDistribution::pass2(Table *tbl) {
+    for (auto &hd : tbl->hash_dist) {
+        if (&hd == this) return;
+        if (id == hd.id) {
+            error(lineno, "mulitple definitions for hash_dist %d in table %s", id, tbl->name());
+            error(hd.lineno, "previous definition");
+            break; }
+        if (xbar_use & hd.xbar_use)
+            error(lineno, "confliction output use between hash_dist %d and %d in table %s %s",
+                  id, hd.id, tbl->name(), xbar_use_string(xbar_use & hd.xbar_use)); }
 }
 
 #if HAVE_FLATROCK

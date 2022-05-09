@@ -312,6 +312,8 @@ void AlgTcamMatchTable::pass2() {
     if (gateway) gateway->pass2();
     if (idletime) idletime->pass2();
     if (format) format->pass2(this);
+    for (auto &hd : hash_dist)
+        hd.pass2(this);
 }
 
 void AlgTcamMatchTable::pass3() {

@@ -237,6 +237,8 @@ void ExactMatchTable::pass2() {
             stash_format->add_field(f->second, f->first, group);
         }
     }
+    for (auto &hd : hash_dist)
+        hd.pass2(this);
 }
 
 void ExactMatchTable::pass3() {

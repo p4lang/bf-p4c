@@ -294,6 +294,8 @@ void StatefulTable::pass2() {
                   (phv_byte_mask & 1) ? "lo" : "hi");
         }
     }
+    for (auto &hd : hash_dist)
+        hd.pass2(this);
 }
 
 void StatefulTable::pass3() {

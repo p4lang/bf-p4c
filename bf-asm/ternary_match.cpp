@@ -329,6 +329,8 @@ void TernaryMatchTable::pass2() {
                     // assume first parameter is partition_field_name
                     set_partition_field_name(act->p4_params_list[0].name);
             } } } }
+    for (auto &hd : hash_dist)
+        hd.pass2(this);
 }
 
 void TernaryMatchTable::pass3() {

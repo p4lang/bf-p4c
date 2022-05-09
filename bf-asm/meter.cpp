@@ -206,6 +206,8 @@ void MeterTable::pass2() {
     }
     if (get_match_tables().size() > 1 && color_mapram_addr == IDLE_MAP_ADDR)
         error(lineno, "Shared meter cannot use idletime addressing for color maprams");
+    for (auto &hd : hash_dist)
+        hd.pass2(this);
 }
 
 void MeterTable::pass3() {
