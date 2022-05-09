@@ -63,6 +63,7 @@ class ParseAnnotations : public P4::ParseAnnotations {
         BFN_PARSE_EMPTY(PragmaDisableI2EReservedDropImplementation, PARSE_EMPTY, extPragma);
         BFN_PARSE(PragmaDontTranslateExternMethod, PARSE, StringLiteral, intPragma);
         BFN_PARSE(PragmaDynamicTableKeyMasks, PARSE, Expression, extPragma);
+        BFN_PARSE_EMPTY(PragmaEgressIntrinsicMetadataOpt, PARSE_EMPTY, extPragma);
         BFN_PARSE(PragmaEntriesWithRanges, PARSE, Expression, extPragma);
         BFN_PARSE(PragmaFieldListFieldSlice, PARSE_TRIPLE, Expression, extPragma);
         BFN_PARSE_EMPTY(PragmaFlexible, PARSE_EMPTY, extPragma);

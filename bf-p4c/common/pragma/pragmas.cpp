@@ -271,6 +271,15 @@ const char *PragmaEntriesWithRanges::help = "@pragma entries_with_ranges <number
     "specified table size are capped at the table size.  The default value "
     "is 25% of the table size for tables that can use ranges.";
 
+const char *PragmaEgressIntrinsicMetadataOpt::name = "egress_intrinsic_metadata_opt";
+const char *PragmaEgressIntrinsicMetadataOpt::description =
+    "Optimize unused egress intrinsic metadata.";
+const char *PragmaEgressIntrinsicMetadataOpt::help = "@pragma egress_intrinsic_metadata_opt\n"
+    "+ at the beginning of the P4 source file"
+    "\n"
+    "Removes unused egress intrinsic metadata fields,"
+    " while preserving each field's byte alignment.";
+
 const char *PragmaFieldListFieldSlice::name = "field_list_field_slice";
 const char *PragmaFieldListFieldSlice::description = "Adds field slice support to P4-14.";
 const char *PragmaFieldListFieldSlice::help =

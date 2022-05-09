@@ -240,8 +240,17 @@ BFN_Options::BFN_Options() {
         "DEPRECATED. Use the pa_parser_bandwidth_opt annotation instead. "
         "Optimize for parser bandwidth.");
     registerOption("--egress-intrinsic-metadata-opt", nullptr,
-        [this](const char *) { egress_intr_md_opt = true; return true; },
-        "Optimize unused egress intrinsic metadata");
+        [this](const char *) {
+            egress_intr_md_opt = true;
+            ::warning(ErrorType::WARN_DEPRECATED,
+                "The --egress-intrinsic-metadata-opt command-line option is deprecated and will be "
+                "removed in a future release. Please modify your P4 source to use the "
+                "%s annotation instead.",
+                PragmaEgressIntrinsicMetadataOpt::name);
+            return true;
+         },
+        "DEPRECATED. Use the egress_intrinsic_metadata_opt annotation instead. "
+        "Optimize unused egress intrinsic metadata.");
     registerOption("--p4runtime-force-std-externs", nullptr,
         [this](const char *) { p4RuntimeForceStdExterns = true; return true; },
         "Generate P4Info file using standard extern messages instead of Tofino-specific ones, for "
@@ -606,6 +615,8 @@ BFNOptionPragmaParser::tryToParse(const IR::Annotation* annotation) {
         BFNContext::get().options().backward_compatible = true;
     else if (pragmaName == "gfm_parity_enable")
         BFNContext::get().options().disable_gfm_parity = false;
+    else if (pragmaName == "egress_intrinsic_metadata_opt")
+        BFNContext::get().options().egress_intr_md_opt = true;
     return P4COptionPragmaParser::tryToParse(annotation);
 }
 

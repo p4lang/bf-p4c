@@ -35,6 +35,7 @@ DEFINE_PRAGMA_CLASS(PragmaDontTranslateExternMethod);
 DEFINE_PRAGMA_CLASS(PragmaDoNotBridge);
 DEFINE_PRAGMA_CLASS(PragmaDynamicTableKeyMasks);
 DEFINE_PRAGMA_CLASS(PragmaEntriesWithRanges);
+DEFINE_PRAGMA_CLASS(PragmaEgressIntrinsicMetadataOpt);
 DEFINE_PRAGMA_CLASS(PragmaFieldListFieldSlice);
 DEFINE_PRAGMA_CLASS(PragmaFlexible);
 DEFINE_PRAGMA_CLASS(PragmaForceImmediate);
