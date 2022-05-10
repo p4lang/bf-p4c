@@ -478,13 +478,15 @@ std::ostream &operator<<(std::ostream &out, const FieldDefUse &a) {
     out << DBPrint::Brief;
     unsigned maxw = 0;
     for (unsigned i = 0; i < a.phv.num_fields(); i++) {
-        unsigned sz = a.phv.field(i)->name.size();
+        auto field = a.phv.field(i);
+        CHECK_NULL(field);
+        unsigned sz = field->name.size();
         if (!a.defuse.count(i))
             sz += 2;
         if (maxw < sz) maxw = sz; }
     for (unsigned i = 0; i < a.phv.num_fields(); i++) {
         auto field = a.phv.field(i);
-        if (!field) continue;
+        CHECK_NULL(field);
         auto name = field->name;
         if (!a.defuse.count(i))
             out << '[' << std::setw(maxw-2) << std::left << name << ']';
@@ -572,8 +574,10 @@ void FieldDefUse::end_apply(const IR::Node *) {
         for (int j = 0; j < count; j++)
             tmp += (conflict[i][j] ? '1' : '0');
         if (count < 40) {
+            auto field = phv.field(i);
+            CHECK_NULL(field);
             tmp += " ";
-            tmp += phv.field(i)->name; } }
+            tmp += field->name; } }
     LOG2(tmp << IndentCtl::unindent);
 
     LOG2("The number of uninitialized fields: " << uninitialized_fields.size());

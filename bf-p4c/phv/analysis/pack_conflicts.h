@@ -35,7 +35,7 @@ class PackConflicts : public PassManager {
 
     ordered_map<PHV::FieldSlice, int> fieldslice_to_id;
     ordered_map<const PHV::Field*, ordered_set<le_bitrange>> field_fine_slices;
-    int fieldslice_id_counter;
+    int fieldslice_id_counter = 0;
     SymBitMatrix fieldslice_no_pack_i;
 
     profile_t init_apply(const IR::Node *root) override;
