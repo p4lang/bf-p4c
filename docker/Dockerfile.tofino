@@ -2,7 +2,7 @@
 ARG DOCKER_PROJECT=amr-registry.caas.intel.com/bxd-sw
 
 # p4factory docker image to use (p4factory:<tag> or p4factory@sha256:<hash>)
-ARG P4FACTORY_IMAGE=p4factory@sha256:d97a21673f49f54dc48618bf4f4c1eaaaada0ddaeba7a6c09b6dd1f9b22f7a5f
+ARG P4FACTORY_IMAGE=p4factory@sha256:97abb32fd736c34aa162f1eb86ba0a298299aa9059c21d1476f485ec9426e2d8
 
 FROM ${DOCKER_PROJECT}/${P4FACTORY_IMAGE}
 
@@ -44,9 +44,8 @@ ARG TOFINO_P414_TEST_ARCH_TNA=false
   ENV no_proxy='intel.com,*.intel.com,localhost,127.0.0.1,10.0.0.0/8,192.168.0.0/16,172.16.0.0/12'
   ENV ALL_PROXY='socks5://proxy-us.intel.com'
 
-# Handle p4factory/bf-p4c-compilers specifics
-RUN ln -rs /usr/local/bin/tofinoB0_test_harness /usr/local/bin/tofino_test_harness && \
-    ln -rs /usr/local/bin/jbayB0_test_harness /usr/local/bin/jbay_test_harness || true
+  ENV PYTHONPATH="/p4factory/install/lib/python3.8/site-packages"
+
 RUN rm -rf /root/.ssh/id_*
 
 COPY . /bfn/bf-p4c-compilers/

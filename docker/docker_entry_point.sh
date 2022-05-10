@@ -6,8 +6,6 @@ if [ "$TRAVIS" = true ]; then
     sudo /bfn/ptf_hugepage_setup.sh >&2
 fi
 
-export PYTHONPATH="/usr/local/lib/python3.8/site-packages${PYTHONPATH+":"}${PYTHONPATH-}"
-
 # Setup veths (run as root)
 sudo /bfn/veth_setup.sh 34 >&2
 
