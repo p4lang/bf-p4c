@@ -1152,7 +1152,7 @@ bool TableFormat::is_match_entry_wide() const {
  *  Note that each individual byte from PHV requires an individual byte in the match format,
  *  and cannot be reused by a separate entry.
  */
-bool TableFormat::initialize_byte(int byte_offset, int width_sect, ByteInfo &info,
+bool TableFormat::initialize_byte(int byte_offset, int width_sect, const ByteInfo &info,
         safe_vector<ByteInfo> &alloced, bitvec &byte_attempt, bitvec &bit_attempt) {
      int initial_offset = byte_offset + width_sect * SINGLE_RAM_BYTES;
 
@@ -1177,7 +1177,7 @@ bool TableFormat::initialize_byte(int byte_offset, int width_sect, ByteInfo &inf
      return true;
 }
 
-bool TableFormat::allocate_match_byte(ByteInfo &info, safe_vector<ByteInfo> &alloced,
+bool TableFormat::allocate_match_byte(const ByteInfo &info, safe_vector<ByteInfo> &alloced,
         int width_sect, bitvec &byte_attempt, bitvec &bit_attempt) {
     int lo = pa == SAVE_GW_SPACE ? GATEWAY_BYTES : 0;
     int hi = pa == SAVE_GW_SPACE ? VERSION_BYTES : SINGLE_RAM_BYTES;
@@ -1202,7 +1202,7 @@ bool TableFormat::allocate_match_byte(ByteInfo &info, safe_vector<ByteInfo> &all
  * Find the correct position for the interleaved byte of a particular entry, and allocate that
  * byte to that position.
  */
-bool TableFormat::allocate_interleaved_byte(ByteInfo &info, safe_vector<ByteInfo> &alloced,
+bool TableFormat::allocate_interleaved_byte(const ByteInfo &info, safe_vector<ByteInfo> &alloced,
         int width_sect, int entry, bitvec &byte_attempt, bitvec &bit_attempt) {
     BUG_CHECK(info.il_info.interleaved, "Illegally calling allocate_interleaved_byte");
 
@@ -1222,7 +1222,7 @@ bool TableFormat::allocate_interleaved_byte(ByteInfo &info, safe_vector<ByteInfo
  */
 void TableFormat::find_bytes_to_allocate(int width_sect, safe_vector<ByteInfo> &unalloced) {
     int search_bus = search_bus_per_width[width_sect];
-    for (auto info : match_bytes) {
+    for (const auto& info : match_bytes) {
         if (info.byte.search_bus != search_bus)
             continue;
         unalloced.push_back(info);
@@ -1352,7 +1352,7 @@ void TableFormat::classify_match_bits() {
 
     safe_vector<IXBar::Use::Byte> potential_ghost;
 
-    for (auto byte : single_match) {
+    for (const auto& byte : single_match) {
         potential_ghost.push_back(byte);
     }
 
@@ -1361,7 +1361,7 @@ void TableFormat::classify_match_bits() {
 
     std::set<int> search_buses;
 
-    for (auto byte : potential_ghost) {
+    for (const auto& byte : potential_ghost) {
         search_buses.insert(byte.search_bus);
         match_bytes.emplace_back(byte, byte.bit_use);
     }
@@ -1374,7 +1374,7 @@ void TableFormat::classify_match_bits() {
     }
 
 
-    for (auto info : ghost_bytes) {
+    for (const auto& info : ghost_bytes) {
         LOG6("\t\tGhost " << info.byte);
         use->ghost_bits[info.byte] = info.bit_use;
     }
@@ -1501,7 +1501,7 @@ int TableFormat::determine_group(int width_sect, int groups_allocated) {
 void TableFormat::fill_out_use(int group, const safe_vector<ByteInfo> &alloced,
                                bitvec &version_loc) {
     auto &group_use = use->match_groups[group];
-    for (auto info : alloced) {
+    for (const auto& info : alloced) {
         bitvec match_location = info.bit_use << (8 * info.byte_location);
         group_use.match[info.byte] = match_location;
         group_use.mask[MATCH] |= match_location;
@@ -1545,7 +1545,7 @@ void TableFormat::allocate_full_fits(int width_sect) {
         if (group == -1)
             break;
         LOG4("\t    Attempting Entry " << group);
-        for (auto info : allocation_needed) {
+        for (const auto& info : allocation_needed) {
             if (info.il_info.interleaved) {
                 if (!allocate_interleaved_byte(info, alloced, width_sect, group, byte_attempt,
                                                bit_attempt))

@@ -466,10 +466,10 @@ cstring PHV::Allocation::commit(Transaction& view) {
         }
     }
 
-    for (auto map_entry : view.getARAedges()) {
+    for (const auto& map_entry : view.getARAedges()) {
         gress_t grs = map_entry.first;
 
-        for (auto src2dsts : map_entry.second) {
+        for (const auto& src2dsts : map_entry.second) {
             auto* src_tbl = src2dsts.first;
 
             for (auto* dst_tbl : src2dsts.second) {
@@ -495,7 +495,7 @@ cstring PHV::Allocation::commit(Transaction& view) {
 PHV::Transaction* PHV::Allocation::clone(const Allocation& parent) const {
     PHV::Transaction* rv = new PHV::Transaction(parent);
 
-    for (auto kv : container_status_i) {
+    for (const auto& kv : container_status_i) {
         bool new_slice = false;
         auto parent_status = parent.getStatus(kv.first);
         BUG_CHECK(parent_status,
@@ -526,16 +526,16 @@ PHV::Transaction* PHV::Allocation::clone(const Allocation& parent) const {
         rv->container_status_i[kv.first] = kv.second;
     }
 
-    for (auto kv : meta_init_points_i)
+    for (const auto& kv : meta_init_points_i)
         rv->meta_init_points_i[kv.first].insert(kv.second.begin(), kv.second.end());
 
-    for (auto kv : init_writes_i)
+    for (const auto& kv : init_writes_i)
         rv->init_writes_i[kv.first].insert(kv.second.begin(), kv.second.end());
 
-    for (auto map_entry : parent.getARAedges()) {
+    for (const auto& map_entry : parent.getARAedges()) {
         auto grs = map_entry.first;
 
-        for (auto src2dsts : map_entry.second) {
+        for (const auto& src2dsts : map_entry.second) {
             auto* src_tbl = src2dsts.first;
 
             for (auto* dst_tbl : src2dsts.second) {
@@ -566,7 +566,7 @@ PHV::Allocation::getMetadataInits(const IR::MAU::Action* act) const {
 const ordered_set<const IR::MAU::Action*>
 PHV::Allocation::getInitPointsForField(const PHV::Field* f) const {
     ordered_set<const IR::MAU::Action*> rs;
-    for (auto kv : meta_init_points_i) {
+    for (const auto& kv : meta_init_points_i) {
         if (kv.first.field() != f) continue;
         rs.insert(kv.second.begin(), kv.second.end());
     }
@@ -628,7 +628,7 @@ PHV::Allocation::available_spots() const {
             continue; }
         // calculate allocate bitvec
         bitvec allocatedBits;
-        for (auto slice : slices) {
+        for (const auto& slice : slices) {
             allocatedBits |= bitvec(slice.container_slice().lo,
                                     slice.container_slice().size()); }
         // Full
@@ -710,12 +710,12 @@ PHV::Transaction::getInitPoints(const PHV::AllocSlice& slice) const {
 
 void PHV::Transaction::printMetaInitPoints() const {
     LOG5("\t\tTransaction: Getting init points for slices:");
-    for (auto kv : meta_init_points_i)
+    for (const auto& kv : meta_init_points_i)
         LOG5("\t\t  " << kv.first << " : " << kv.second.size());
     const Transaction* parentTransaction = dynamic_cast<const PHV::Transaction*>(parent_i);
     while (parentTransaction) {
         LOG5("\t\tAllocation: Getting init points for slices:");
-        for (auto kv : parentTransaction->get_meta_init_points())
+        for (const auto& kv : parentTransaction->get_meta_init_points())
             LOG5("\t\t  " << kv.first << " : " << kv.second.size());
         parentTransaction = dynamic_cast<const PHV::Transaction*>(parentTransaction->parent_i);
     }
@@ -889,7 +889,7 @@ cstring PHV::Transaction::getTransactionDiff() const {
         return ss.str();
     }
 
-    for (auto kv : getTransactionStatus()) {
+    for (const auto& kv : getTransactionStatus()) {
         PHV::Container c = kv.first;
 
         auto parent_status = parent_tr->getStatus(c);
@@ -919,14 +919,14 @@ cstring PHV::Transaction::getTransactionDiff() const {
         }
     }
 
-    for (auto kv : getMetaInitPoints()) {
+    for (const auto& kv : getMetaInitPoints()) {
         ss << "    *** Initialization Points ***" << std::endl;
         ss << "    " << kv.first << std::endl;
         for (auto action : kv.second)
             ss << "            |-->" << *action << std::endl;
     }
 
-    for (auto kv : getInitWrites()) {
+    for (const auto& kv : getInitWrites()) {
         ss << "    *** Initialization Writes ***" << std::endl;
         ss << "    " << *kv.first << std::endl;
         for (auto field : kv.second)
@@ -943,11 +943,11 @@ cstring PHV::Transaction::getTransactionSummary() const {
                 int>>> alloc_status;
 
     // Compute status.
-    for (auto kv : getTransactionStatus()) {
+    for (const auto& kv : getTransactionStatus()) {
         PHV::Container c = kv.first;
         ContainerAllocStatus status = ContainerAllocStatus::EMPTY;
         bitvec allocatedBits;
-        for (auto slice : kv.second.slices)
+        for (const auto& slice : kv.second.slices)
             allocatedBits |= bitvec(slice.container_slice().lo, slice.container_slice().size());
         if (allocatedBits == bitvec(0, c.size()))
             status = ContainerAllocStatus::FULL;

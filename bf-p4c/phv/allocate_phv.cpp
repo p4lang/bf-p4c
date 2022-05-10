@@ -4417,7 +4417,7 @@ BruteForceAllocationStrategy::preslice_validation(
         bool succ = false;
         auto itr_ctx = utils_i.make_slicing_ctx(cluster);
         boost::optional<const PHV::SuperCluster::SliceList*> last_invald;
-        itr_ctx->iterate([&](std::list<PHV::SuperCluster*> sliced) {
+        itr_ctx->iterate([&](const std::list<PHV::SuperCluster*>& sliced) {
             ++n_tried;
             for (auto* sc : sliced) {
                 // we don't validate stridedAlloc cluster.

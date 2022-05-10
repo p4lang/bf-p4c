@@ -423,7 +423,7 @@ class Allocation {
 
     /// @returns the map of source tables to the set of target tables
     /// connected through the ARA overlays
-    const ordered_map<gress_t, ordered_map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>>>
+    const ordered_map<gress_t, ordered_map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>>>&
     getARAedges() const { return ara_edges; }
 
     std::string printARAedges() const;
@@ -531,10 +531,10 @@ class Transaction : public Allocation {
     : Allocation(*parent.phv_i, *parent.uses_i), parent_i(&parent) {
         BUG_CHECK(&parent != this, "Creating transaction with self as parent");
 
-        for (auto map_entry : parent.getARAedges()) {
+        for (const auto& map_entry : parent.getARAedges()) {
             auto grs = map_entry.first;
 
-            for (auto src2dsts : map_entry.second) {
+            for (const auto& src2dsts : map_entry.second) {
                 auto* src_tbl = src2dsts.first;
 
                 for (auto* dst_tbl : src2dsts.second) {
@@ -626,7 +626,7 @@ class Transaction : public Allocation {
 
     /// @returns the map of source tables to the set of target tables
     /// connected through the ARA overlays
-    const ordered_map<gress_t, ordered_map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>>>
+    const ordered_map<gress_t, ordered_map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>>>&
     getARAedges() const {
         // if (ara_edges.count(grs)) return ara_edges.at(grs);
         return ara_edges;

@@ -226,7 +226,7 @@ class AllocSlice {
     bool getShadowAlwaysRun() const { return shadow_always_run_i; }
     const ordered_map<cstring, FieldUse>& getRefs() const { return refs; }
     void clearRefs() { refs.clear(); }
-    void addRefs(ordered_map<cstring, FieldUse> sl_refs, bool clear_refs = false) {
+    void addRefs(const ordered_map<cstring, FieldUse>& sl_refs, bool clear_refs = false) {
         if (clear_refs)
             refs.clear();
         for (auto ref_entry : sl_refs)
@@ -307,7 +307,7 @@ class DarkInitEntry {
         destinationSlice.setEarliestLiveness(min);
     }
 
-    void addRefs(ordered_map<cstring, FieldUse> sl_refs, bool clear_refs = false) {
+    void addRefs(const ordered_map<cstring, FieldUse>& sl_refs, bool clear_refs = false) {
         destinationSlice.addRefs(sl_refs, clear_refs);
     }
 

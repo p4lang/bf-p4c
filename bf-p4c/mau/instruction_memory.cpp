@@ -4,50 +4,58 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/device.h"
 
-bool GenerateVLIWInstructions::preorder(const IR::MAU::Action *act) {
+GenerateVLIWInstructions::GenerateVLIWInstructions(PhvInfo &p, ActionData::FormatType_t ft,
+        SplitAttachedInfo &sai, const IR::MAU::Table* tbl)
+    : phv(p)
+    , format_type(ft)
+    , split_attached(sai)
+    , tbl(tbl)
+{
+    LOG3("GenerateVLIWInstructions for table " << tbl->name);
+    for (const auto& act : tbl->actions) {
+        generate_for_action(act.second);
+    }
+}
+
+void GenerateVLIWInstructions::generate_for_action(const IR::MAU::Action *act) {
     LOG3("GenerateVLIWInstructions for action " << act->name);
-    const IR::MAU::Table *tbl = findContext<IR::MAU::Table>();
-    current_vliw.clear();
-    current_has_unalloc_tempvar = false;
+    bitvec current_vliw;
+    bool current_has_unalloc_tempvar = false;
     // Need to capture the instructions that will be created during the splitting of the tables
     auto *act_to_visit = split_attached.get_split_action(act, tbl, format_type);
     if (act_to_visit == nullptr)
-        return false;
+        return;
     BUG_CHECK(act_to_visit, "Somehow have a nullptr action for %1%", format_type);
 
     LOG4("\tSplit action found " << act_to_visit);
-    for (auto instr : act_to_visit->action)
-        visit(instr);
+    for (auto* prim : act_to_visit->action) {
+        auto instr = prim->to<IR::MAU::Instruction>();
+        BUG_CHECK(instr, "Unexpected IR::Primitive, expected IR::MAU::Instruction");
+        auto output = instr->getOutput();
+        if (output) {
+            LOG3("\tGenerateVLIWInstructions for expression " << output);
+            le_bitrange bits;
+            auto field = phv.field(output, &bits);
+            BUG_CHECK(field != nullptr, "Instruction writing to a non-phv allocated object");
+            auto isTempVar = phv.isTempVar(field);
+            LOG2("\t\tExpression is write for field " << field << " tempvar "
+                    << isTempVar << " alloc size " << field->alloc_size());
+            if (field->alloc_size() == 0 && isTempVar) {
+                current_has_unalloc_tempvar = true;
+                return;
+            }
+            // Mark which containers are to have non noop instructions
+            PHV::FieldUse use(PHV::FieldUse::WRITE);
+            field->foreach_alloc(bits, tbl, &use,
+                                 [&](const PHV::AllocSlice &alloc) {
+                if (!alloc.container()) return;
+                current_vliw.setbit(Device::phvSpec().containerToId(alloc.container()));
+            });
+        }
+    }
     table_instrs[act] = current_vliw;
     table_instrs_has_unalloc_tempvar[act] = current_has_unalloc_tempvar;
     LOG4("\t Action vliw bits :" << current_vliw);
-    return false;
-}
-
-bool GenerateVLIWInstructions::preorder(const IR::Expression *expr) {
-    LOG3("\tGenerateVLIWInstructions for expression " << expr);
-    if (!findContext<IR::MAU::Action>()) return false;
-    if (isWrite()) {
-        le_bitrange bits;
-        auto field = phv.field(expr, &bits);
-        BUG_CHECK(field != nullptr, "Instruction writing to a non-phv allocated object");
-        auto isTempVar = phv.isTempVar(field);
-        LOG2("\t\tExpression is write for field " << field << " tempvar "
-                << isTempVar << " alloc size " << field->alloc_size());
-        if (field->alloc_size() == 0 && isTempVar) {
-            current_has_unalloc_tempvar = true;
-            return false;
-        }
-        // Mark which containers are to have non noop instructions
-        PHV::FieldUse use(PHV::FieldUse::WRITE);
-        field->foreach_alloc(bits, findContext<IR::MAU::Table>(), &use,
-                             [&](const PHV::AllocSlice &alloc) {
-            if (!alloc.container()) return;
-            current_vliw.setbit(Device::phvSpec().containerToId(alloc.container()));
-        });
-        return false;
-    }
-    return true;
 }
 
 void InstructionMemory::Use::merge(const Use &alloc) {
@@ -232,8 +240,7 @@ bool InstructionMemory::allocate_imem(const IR::MAU::Table *tbl, Use &alloc, Phv
         return true;
     gw_linked |= !format_type.matchThisStage();
 
-    GenerateVLIWInstructions gen_vliw(phv, format_type, sai);
-    tbl->apply(gen_vliw);
+    GenerateVLIWInstructions gen_vliw(phv, format_type, sai, tbl);
     if (tbl->is_always_run_action()) {
         auto act_it = Values(tbl->actions).begin();
         auto current_bv = gen_vliw.get_instr((*act_it));

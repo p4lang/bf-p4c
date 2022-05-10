@@ -952,7 +952,10 @@ void PHV::Field::foreach_alloc(
         SliceMatch useTblRefs) const {
     // XXX(Deep): Maintain all the candidate alloc slices here. I am going to filter later based on
     // context and use on this vector during stage based allocation.
-    std::vector<PHV::AllocSlice> candidate_slices;
+    auto apply_fn = [&] (const PHV::AllocSlice& slice) {
+        LOG6("\tforeach_alloc slice: " << slice);
+        fn(slice);
+    };
     // Sort from hi to lo.
     for (auto it = alloc_slice_i.rbegin(); it != alloc_slice_i.rend(); ++it) {
         // ignore other stage alloc slices
@@ -968,7 +971,7 @@ void PHV::Field::foreach_alloc(
         if (lo > range.hi && hi > range.hi) continue;
         // Entire alloc slice is in the requested range, so add the slice to the candidates list.
         if (lo >= range.lo && hi <= range.hi) {
-            candidate_slices.push_back(*it);
+            apply_fn(*it);
             continue;
         }
 
@@ -976,13 +979,8 @@ void PHV::Field::foreach_alloc(
         // because there is only a partial overlap with the requested range.
         auto overlap = range.intersectWith(it->field_slice());
         if (!overlap.empty()) {
-            candidate_slices.push_back(*(it->sub_alloc_by_field(overlap.lo, overlap.size())));
+            apply_fn(*(it->sub_alloc_by_field(overlap.lo, overlap.size())));
         }
-    }
-    // candidate_slices contains all the slices that are in @range.
-    for (auto& slice : candidate_slices) {
-        LOG6("\tforeach_alloc slice: " << slice);
-        fn(slice);
     }
 }
 

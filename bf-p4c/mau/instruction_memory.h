@@ -6,21 +6,13 @@
 #include "lib/alloc.h"
 #include "bf-p4c/common/alloc.h"
 
-class GenerateVLIWInstructions : public MauInspector, TofinoWriteContext {
+class GenerateVLIWInstructions {
     PhvInfo &phv;
     ActionData::FormatType_t format_type;
     SplitAttachedInfo &split_attached;
-    bool preorder(const IR::MAU::TableSeq *) override { return false; }
-    bool preorder(const IR::MAU::BackendAttached *) override { return false; }
-    bool preorder(const IR::MAU::AttachedOutput *) override { return false; }
-    bool preorder(const IR::MAU::StatefulCounter *) override { return false; }
-    bool preorder(const IR::MAU::Action *) override;
-    // Do not visit the stateful primitives
-    bool preorder(const IR::MAU::StatefulCall *) override { return false; }
-    bool preorder(const IR::MAU::Instruction *) override { return true; }
-    bool preorder(const IR::Expression *) override;
-    bitvec current_vliw;
-    bool current_has_unalloc_tempvar = false;
+    const IR::MAU::Table* tbl;
+
+    void generate_for_action(const IR::MAU::Action *);
     ordered_map<const IR::MAU::Action *, bitvec> table_instrs;
     ordered_map<const IR::MAU::Action *, bool> table_instrs_has_unalloc_tempvar;
 
@@ -32,8 +24,7 @@ class GenerateVLIWInstructions : public MauInspector, TofinoWriteContext {
         return table_instrs_has_unalloc_tempvar[act];
     }
     GenerateVLIWInstructions(PhvInfo &p, ActionData::FormatType_t ft,
-            SplitAttachedInfo &sai)
-       : phv(p), format_type(ft), split_attached(sai) { visitDagOnce = false; }
+            SplitAttachedInfo &sai, const IR::MAU::Table* tbl);
 };
 
 /** Algorithms for the allocation of the Instruction Memory.  The Instruction Memory is defined

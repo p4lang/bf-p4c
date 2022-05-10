@@ -627,6 +627,11 @@ class SetupAttachedTables : public MauInspector {
         return false;
     }
 
+    bool preorder(const IR::MAU::Table* tbl) {
+        visit(tbl->attached);
+        return false;
+    }
+
     bool preorder(const IR::MAU::IdleTime *idle) {
         for (auto u_id : ta->allocation_units(idle)) {
             auto &alloc = (*ta->memuse)[u_id];

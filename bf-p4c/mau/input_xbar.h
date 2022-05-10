@@ -76,8 +76,9 @@ struct IXBar {
     static constexpr int MAX_HASH_BITS = 52;
 
     static int get_hash_single_bits() {
+        static bool disable_gfm_parity = BackendOptions().disable_gfm_parity;
         // If hash parity is enabled reserve a bit for parity
-        if (!BackendOptions().disable_gfm_parity)
+        if (!disable_gfm_parity)
             return HASH_SINGLE_BITS - 1;
         return HASH_SINGLE_BITS;
     }

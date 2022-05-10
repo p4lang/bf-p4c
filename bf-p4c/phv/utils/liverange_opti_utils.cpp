@@ -165,10 +165,10 @@ update_flowgraph(const ordered_set<const IR::BFN::Unit*>& g_units,
     }
 
     // Update FlowGraph with ARA edges in transaction
-    for (auto map_entry : transact.getARAedges()) {
+    for (const auto& map_entry : transact.getARAedges()) {
         FlowGraph& fg = new_flowgraphs[map_entry.first];
 
-        for (auto src2dsts : map_entry.second) {
+        for (const auto& src2dsts : map_entry.second) {
             auto* src_tbl = src2dsts.first;
 
             for (auto* dst_tbl : src2dsts.second) {

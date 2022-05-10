@@ -308,12 +308,12 @@ struct TableFormat {
     bool allocate_indirect_ptr(int total, type_t type, int group, int RAM);
 
     void find_bytes_to_allocate(int width_sect, safe_vector<ByteInfo> &unalloced);
-    bool initialize_byte(int byte_offset, int width_sect, ByteInfo &info,
+    bool initialize_byte(int byte_offset, int width_sect, const ByteInfo &info,
         safe_vector<ByteInfo> &alloced, bitvec &byte_attempt, bitvec &bit_attempted);
-    bool allocate_match_byte(ByteInfo &info, safe_vector<ByteInfo> &alloced, int width_sect,
+    bool allocate_match_byte(const ByteInfo &info, safe_vector<ByteInfo> &alloced, int width_sect,
         bitvec &byte_attempt, bitvec &bit_attempt);
-    bool allocate_interleaved_byte(ByteInfo &info, safe_vector<ByteInfo> &alloced, int width_sect,
-        int entry, bitvec &byte_attempt, bitvec &bit_attempt);
+    bool allocate_interleaved_byte(const ByteInfo &info, safe_vector<ByteInfo> &alloced,
+        int width_sect, int entry, bitvec &byte_attempt, bitvec &bit_attempt);
     bool allocate_version(int width_sect, const safe_vector<ByteInfo> &alloced,
         bitvec &version_loc, bitvec &byte_attempt, bitvec &bit_attempt);
     void fill_out_use(int group, const safe_vector<ByteInfo> &alloced, bitvec &version_loc);
