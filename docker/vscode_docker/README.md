@@ -223,7 +223,7 @@ If you'll be using `make -76` just make sure that you have an access to the buil
 
 3. To build your project with this configuration just press `ctrl + shift + b` and after short while a prompt should pop up containing all the builds added to the `tasks.json` file and here you can simply select the one you want to build with right now (build progress should show up in the VSCode terminal).
 
-## Debuging in VSCode
+## Debugging in VSCode
 Just as you can build projects in VSCode, you can also debug right from VSCode.
 
 1. In your workspace (just as in case of building) create `.vscode` folder and inside of it create file `launch.json`. Your file explorer in VSCode should now look similar to this:
@@ -293,3 +293,68 @@ This configuration file sets up 2 debug options -- the first is for `p4c-barefoo
 4. You can now use `F5` which will run the target application or alternatively click the debug icon in the Activity bar (or press `ctrl+shift+d`) and in the top left of the panel next to `RUN AND DEBUG` select one of your debugging configurations.
 
 5. To run this debug simply click on the green start symbol (after creating some breakpoints by clicking on the space next to line number or by using the `F9` shortcut) and after little while the debug should start and it's output will be visible in the `DEBUG CONSOLE` tab same as additional information. Also a small control panel with debugging control should appear.
+
+### Alternative Approach
+
+Using Remote Containers extension is another way of opening your workspace in a container. This approach can re-use the existing Dockerfile mentioned above and directly invoke it to open it in a docker container. This bypasses the SSH configuration and port forwarding required in the above step.
+
+## Step 1 - Install Extension
+
+In VSCode, go to Extensions and search for "Remote - Containers". Install this extension.
+
+## Step 2 - Connect to Remote Host
+
+In the Command Palette (Ctrl + Shift + P) click on "Remote SSH : Connect to Host" and click on 'HostForRemoteVScode'. Initial part of the main approach walks through configuring the SSH connection to connect to remote VM.
+
+## Step 3 - Open Workspace Folder
+
+Click on Open Folder and open the checked out repo in the remote VM
+
+## Step 4 - Add devcontainer.json file
+
+If not already present, create a '.devcontainer' folder in the top level repo directory and add a devcontainer.json file.
+
+Sample contents for json file,
+
+```
+{
+	"name": "Jarvis",
+	"image": "amr-registry.caas.intel.com/bxd-sw/jarvis:latest",
+	"build": {
+		"context": "..",
+		"args": {
+		}
+	},
+    "runArgs": [
+		"--privileged"
+	],
+	"extensions": [
+		"ms-vscode.cpptools",
+		"ms-vscode.cmake-tools"
+	]
+}
+```
+Note,
+- 'context' parameter gives the location of context folder for building the image
+- Instead of 'image' you can use the 'dockerfile' parameter as follows:
+```
+	"build": {
+		"dockerfile": "../docker/vscode_docker/Dockerfile",
+		"context": "..",
+		"args": {},
+        "target": "jarvis-vscode"
+	},
+```
+   While this is another way to build the container, the former approach seems faster and can also be configured in the same way as the Dockerfile by adding a 'postCreateCommand'.
+
+See Devcontainer.json reference for customization can be found here:
+https://code.visualstudio.com/docs/remote/devcontainerjson-reference
+
+## Step 5 - Run folder in docker container
+
+Open the command palette (Ctrl + Shift + P) and click on "Remote Containers - Open Folder in Container". 
+VScode searches for the devcontainer.json file and runs the linked Dockerfile to build the image. Once the image is built, a container is automatically started and terminal will be available for use inside the container.
+
+The repo folder is mapped to /workspaces/<repo> by default. devcontainer.json can be customized based on user preferences.
+
+Enjoy!

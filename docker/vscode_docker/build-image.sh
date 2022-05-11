@@ -10,6 +10,9 @@ SRC_IMG=latest
 # Target image name
 DST_IMG=jarvis-ssh
 
+# Target name
+TGT=jarvis-vscode-ssh-tunnel
+
 # Directory for host SSH keys
 SSH_KEY_DIR=~/docker_ssh_keys
 
@@ -66,10 +69,10 @@ while true ; do
             DST_IMG=$2
             shift
             ;;
-	-s|--src-image)
-	    SRC_IMG=$2
-	    shift
-	    ;;
+        -s|--src-image)
+            SRC_IMG=$2
+            shift
+            ;;
         -h|--help)
             usage
             exit
@@ -87,9 +90,9 @@ done
 set -e
 
 TMP_KEY_DIR=`mktemp -p . -d`
-echo "Copying current authorized keys..."
+echo "Copying current authorized keys to $TMP_KEY_DIR"
 if [ -e ~/.ssh/authorized_keys ]; then
-   cp ~/.ssh/authorized_keys $TMP_KEY_DIR/authorized_keys
+   cp -v ~/.ssh/authorized_keys $TMP_KEY_DIR/authorized_keys
 fi
 
 if [ ! -d $SSH_KEY_DIR ] ; then
@@ -112,7 +115,8 @@ docker build -t ${DST_IMG} . \
     --build-arg USER=${USER} \
     --build-arg UID=`id -u` \
     --build-arg GID=`id -g` \
-    --build-arg KEY_DIR=${TMP_KEY_DIR}
+    --build-arg KEY_DIR=${TMP_KEY_DIR} \
+    --target ${TGT}
 
-echo "Cleaning temporary files ..." 
+echo "Cleaning temporary files ..."
 rm -rf $TMP_KEY_DIR

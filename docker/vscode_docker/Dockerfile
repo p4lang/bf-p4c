@@ -1,11 +1,27 @@
-# Dockerfile
+################################################################################
+# Dockerfile For VSCode
+################################################################################
+# This Dockerfile can be invoked in 2 ways
+#
+# 1. From build-image.sh which allows direct ssh into docker container (see
+# details in README). This requires the SSH configuration in the Dockerfile to
+# be enabled
+#
+# 2. Directly from Remote Containers Extension - In this case there is no need
+# for a separate ssh connection or port forwarding and the plugin takes care of
+# setting up the ssh and connecting to the docker container.  Specifics are in
+# .devcontainer/devcontainer.json file. This requires the SSH configuration in
+# the Dockerfile to be disabled
+################################################################################
 ARG SRC_IMG=latest
 ARG DOCKER_BASE_IMAGE=amr-registry.caas.intel.com/bxd-sw/jarvis:$SRC_IMG
-FROM $DOCKER_BASE_IMAGE
+
+FROM ${DOCKER_BASE_IMAGE} as jarvis-vscode
 
 ARG USER=user
 ARG UID=1000
 ARG GID=1000
+# Do not set default value!
 ARG KEY_DIR
 
 ARG HTTP_PROXY=http://proxy-dmz.intel.com:911/
@@ -45,10 +61,16 @@ RUN useradd -m ${USER} --uid=${UID} -s/bin/bash && echo "${USER}:${PW}" | chpass
 RUN usermod -a -G sudo ${USER}
 RUN echo "${USER} ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/${USER}
 
+FROM jarvis-vscode as jarvis-vscode-ssh-tunnel
 # SSH configuration
 # =================
+# Disabled when Dockerfile is directly invoked / KEY_DIR is not set
+# only on jarvis-ssh-to-docker target
+
 # Copy the authorized keys into container
 # (Not used when home dirs mounted inside container)
+ARG KEY_DIR
+ARG USER
 COPY ${KEY_DIR}/authorized_keys /home/${USER}/.ssh/authorized_keys
 RUN chmod 700 /home/${USER}/.ssh && \
     chmod 600 /home/${USER}/.ssh/* && \

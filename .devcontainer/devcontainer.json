@@ -1,0 +1,17 @@
+{
+	"name": "Jarvis",
+	"image": "amr-registry.caas.intel.com/bxd-sw/jarvis:latest",
+	"postCreateCommand": "apt-get update && apt-get install -y clang-format-8 clang-tidy-8",
+	"build": {
+		"context": "..",
+		"args": {
+		}
+	},
+    "runArgs": [
+		"--privileged"
+	],
+	"extensions": [
+		"ms-vscode.cpptools",
+		"ms-vscode.cmake-tools"
+	]
+}
