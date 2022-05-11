@@ -304,6 +304,12 @@ void CmpOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions
         salu.salu_cmp_bsrc_sign = srcb_neg;
         salu.salu_cmp_bsrc_enable = 1;
         if (maskb != uint32_t(-1)) {
+            // uarch 6.2.12.6.1, masks for operand a/b are sourced from the
+            // same regfile slot.
+            if (salu.salu_cmp_asrc_mask_enable && salu.salu_cmp_mask_input &&
+                maskb != maska)
+                error(lineno, "inconsistent operand mask %d and %d in salu compare operation",
+                        maska, maskb);
             salu.salu_cmp_bsrc_mask_enable = 1;
             salu.salu_cmp_regfile_adr = tbl->get_const(srcb->lineno, maskb);
         }
@@ -316,6 +322,16 @@ void CmpOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions
                 salu.salu_cmp_const_src = k->value & Target::STATEFUL_CMP_CONST_MASK();
                 salu.salu_cmp_regfile_const = 0;
             } else {
+                // uarch 6.2.12.6.1, masks for operand a/b are sourced from the
+                // same regfile slot as operand c if c is a constant.
+                if (salu.salu_cmp_asrc_mask_enable && salu.salu_cmp_mask_input &&
+                    maska != uint32_t(k->value))
+                    error(lineno, "inconsistent operand mask %d and %d in salu compare operation",
+                            maska, uint32_t(k->value));
+                if (salu.salu_cmp_bsrc_mask_enable && salu.salu_cmp_mask_input &&
+                    maskb != uint32_t(k->value))
+                    error(lineno, "inconsistent operand mask %d and %d in salu compare operation",
+                            maskb, uint32_t(k->value));
                 salu.salu_cmp_regfile_adr = tbl->get_const(srcc->lineno, k->value);
                 salu.salu_cmp_regfile_const = 1;
             }
