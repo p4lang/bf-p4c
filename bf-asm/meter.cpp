@@ -854,7 +854,8 @@ template<> void MeterTable::meter_color_logical_to_phys(Target::Cloudbreak::mau_
 
 void MeterTable::gen_tbl_cfg(json::vector &out) const {
     // FIXME -- factor common Synth2Port stuff
-    int size = (layout_size() - 1)*1024;
+    auto spare_mems = determine_spare_bank_memory_units(layout);
+    int size = (layout_size() - spare_mems.size()) * SRAM_DEPTH;
     json::map &tbl = *base_tbl_cfg(out, "meter", size);
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "meter", size);
     stage_tbl["color_memory_resource_allocation"] =

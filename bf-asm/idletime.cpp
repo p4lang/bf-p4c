@@ -175,7 +175,7 @@ FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
         write_regs_vt(regs); })
 
 void IdletimeTable::gen_stage_tbl_cfg(json::map &out) const {
-    unsigned number_entries = layout_size() * (8U/precision) * 1024;
+    unsigned number_entries = layout_size() * (8U/precision) * SRAM_DEPTH;
     json::map &tbl = out["idletime_stage_table"] = json::map();
     tbl["stage_number"] = stage->stageno;
     tbl["size"] = number_entries;

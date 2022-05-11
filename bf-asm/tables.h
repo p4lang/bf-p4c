@@ -572,6 +572,7 @@ class Table {
     virtual json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size) const;
     virtual std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(const char *type,
             const std::vector<Layout> &layout, bool skip_spare_bank = false) const;
+    std::vector<int> determine_spare_bank_memory_units(const std::vector<Layout> &layout) const;
     virtual void common_tbl_cfg(json::map &tbl) const;
     void add_match_key_cfg(json::map& tbl) const;
     bool add_json_node_to_table(json::map &tbl, const char *name) const;

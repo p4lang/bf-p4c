@@ -366,7 +366,8 @@ template<class REGS> void CounterTable::write_regs_vt(REGS &regs) {
 
 void CounterTable::gen_tbl_cfg(json::vector &out) const {
     // FIXME -- factor common Synth2Port stuff
-    int size = (layout_size() - 1)*1024*format->groups();
+    auto spare_mems = determine_spare_bank_memory_units(layout);
+    int size = (layout_size() - spare_mems.size()) * SRAM_DEPTH * format->groups();
     json::map &tbl = *base_tbl_cfg(out, "statistics", size);
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "statistics", size);
     if (home_rows.size() > 1)

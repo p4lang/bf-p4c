@@ -440,7 +440,7 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) const {
             way_tbl["stage_table_type"] = "hash_way";
             auto fmt_width = get_format_width();
             BUG_CHECK(fmt_width);
-            way_tbl["size"] = way.rams.size()/fmt_width * format->groups() * 1024;
+            way_tbl["size"] = way.rams.size()/fmt_width * format->groups() * SRAM_DEPTH;
             add_pack_format(way_tbl, format.get(), false);
             way_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg(way);
             way_stage_tables.push_back(std::move(way_tbl)); } }

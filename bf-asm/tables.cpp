@@ -2320,6 +2320,30 @@ int Table::find_on_ixbar(Phv::Slice sl, InputXbar::Group group, InputXbar::Group
     return -1;
 }
 
+std::vector<int>
+Table::determine_spare_bank_memory_units(const std::vector<Layout> &layout) const {
+    std::vector<int> spare_mem;
+    int vpn_ctr = 0;
+    int minvpn, spare_vpn;
+
+    // Retrieve the Spare VPN
+    layout_vpn_bounds(minvpn, spare_vpn, false);
+    for (auto &row : layout) {
+        auto vpn_itr = row.vpns.begin();
+        for (auto col : row.cols) {
+            if (vpn_itr != row.vpns.end())
+                vpn_ctr = *vpn_itr++;
+            if (spare_vpn == vpn_ctr) {
+                spare_mem.push_back(memunit(row.row, col));
+                if (table_type() == SELECTION || table_type() == COUNTER ||
+                    table_type() == METER || table_type() == STATEFUL)
+                    continue;
+            }
+        }
+    }
+    return spare_mem;
+}
+
 std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(
         const char *type, const std::vector<Layout> &layout, bool skip_spare_bank) const {
     int width, depth, period;
