@@ -821,15 +821,23 @@ foreach(t IN LISTS ba102_tests)
   get_filename_component(p4name ${t} NAME)
   string (REGEX REPLACE ".p4" "" testname ${p4name})
   get_filename_component(__td ${t} DIRECTORY)
+  set(_ba102_common_opts "-bfrt -arch tna -Xp4c=\"--disable-parse-depth-limit\" -append-pythonpath ${CMAKE_CURRENT_SOURCE_DIR}/p4examples/tools")
+  set(_full_testname "ba102_${testname}")
+
+  # some labs have PTF as part of the assignment and therefore in the solution subdir but some have
+  # it one level up, available for the students
   set (ptfdir "${__td}/../ptf-tests")
+  if (NOT EXISTS ${ptfdir})
+      set (ptfdir "${__td}/../../ptf-tests")
+  endif()
   if (EXISTS ${ptfdir})
-    p4c_add_ptf_test_with_ptfdir("tofino" ba102_${testname} ${t} "${testExtraArgs} -bfrt -arch tna -Xp4c=\"--disable-parse-depth-limit\"" ${ptfdir})
+    p4c_add_ptf_test_with_ptfdir("tofino" ${_full_testname} ${t} "${testExtraArgs} ${_ba102_common_opts}" ${ptfdir})
   else()
     file(RELATIVE_PATH testfile ${P4C_SOURCE_DIR} ${t})
-    p4c_add_ptf_test_with_args("tofino" ba102_${testname} ${testfile} "${testExtraArgs}"
-	    "-arch tna -bfrt -force-link -Xp4c=\"--disable-parse-max-depth-limit\"")
+    p4c_add_ptf_test_with_args("tofino" ${_full_testname} ${testfile} "${testExtraArgs}"
+	    "${_ba102_common_opts} -force-link")
   endif()
-  p4c_add_test_label("tofino" "BA-102" ba102_${testname})
+  p4c_add_test_label("tofino" "BA-102" ${_full_testname})
 endforeach()
 p4c_add_test_label("tofino" "UNSTABLE" "ba102_simple_wred")
 p4c_add_test_label("tofino" "UNSTABLE" "ba102_simple_lpf")
@@ -838,6 +846,7 @@ bfn_needs_scapy("tofino" "ba102_simple_l3_mpls")
 bfn_needs_scapy("tofino" "ba102_simple_l3_arping")
 bfn_needs_scapy("tofino" "ba102_simple_wred")
 bfn_needs_scapy("tofino" "ba102_simple_lpf")
+bfn_needs_scapy("tofino" "ba102_simple_mpls_decap")
 
 # p4testgen ptf tests for p4factory programs
 p4c_add_ptf_test_with_ptfdir ("tofino" "p4testgen_emulation" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/p4testgen_regression/emulation.p4
