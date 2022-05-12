@@ -133,11 +133,17 @@ void addDeparserParamRename(IR::BFN::Deparser* deparser,
 void AddDeparserMetadata::addIngressMetadata(IR::BFN::Deparser *d) {
     for (auto f : Device::archSpec().getIngressInstrinicMetadataForTM()) {
         auto* tmMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_tm");
+        if (!tmMeta) {
+            ::warning("ig_intr_md_for_tm not defined in ingress control block");
+            continue; }
         addDeparserParamRename(d, tmMeta, f.name, f.asm_name);
     }
 
     for (auto f : Device::archSpec().getIngressInstrinicMetadataForDeparser()) {
         auto* dpMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_deparser");
+        if (!dpMeta) {
+            ::warning("ig_intr_md_for_dprsr not defined in ingress control block");
+            continue; }
         addDeparserParamRename(d, dpMeta, f.name, f.asm_name);
     }
 }
@@ -145,11 +151,17 @@ void AddDeparserMetadata::addIngressMetadata(IR::BFN::Deparser *d) {
 void AddDeparserMetadata::addEgressMetadata(IR::BFN::Deparser *d) {
     for (auto f : Device::archSpec().getEgressIntrinsicMetadataForOutputPort()) {
         auto* outputMeta = getMetadataType(pipe, "egress_intrinsic_metadata_for_output_port");
+        if (!outputMeta) {
+            ::warning("eg_intr_md_for_oport not defined in egress control block");
+            continue; }
         addDeparserParamRename(d, outputMeta, f.name, f.asm_name);
     }
 
     for (auto f : Device::archSpec().getEgressIntrinsicMetadataForDeparser()) {
         auto* dpMeta = getMetadataType(pipe, "egress_intrinsic_metadata_for_deparser");
+        if (!dpMeta) {
+            ::warning("eg_intr_md_for_dprsr not defined in egress control block");
+            continue; }
         addDeparserParamRename(d, dpMeta, f.name, f.asm_name);
     }
     /* egress_port is how the egress deparser knows where to push
@@ -157,6 +169,9 @@ void AddDeparserMetadata::addEgressMetadata(IR::BFN::Deparser *d) {
      */
     for (auto f : Device::archSpec().getEgressIntrinsicMetadata()) {
         auto* egMeta = getMetadataType(pipe, "egress_intrinsic_metadata");
+        if (!egMeta) {
+            ::warning("eg_intr_md not defined in egress control block");
+            continue; }
         addDeparserParamRename(d, egMeta, f.name, f.asm_name);
     }
 }

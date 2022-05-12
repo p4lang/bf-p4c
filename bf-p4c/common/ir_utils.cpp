@@ -13,10 +13,9 @@ IR::Member *gen_fieldref(const IR::HeaderOrMetadata *hdr, cstring field) {
 
 const IR::HeaderOrMetadata*
 getMetadataType(const IR::BFN::Pipe* pipe, cstring typeName) {
-    auto* meta = pipe->metadata[typeName];
-    BUG_CHECK(meta != nullptr,
-              "Couldn't find required intrinsic metadata type: %1%", typeName);
-    return meta;
+    if (pipe->metadata.count(typeName) == 0)
+        return nullptr;
+    return pipe->metadata[typeName];
 }
 
 bool isSigned(const IR::Type *t) {
