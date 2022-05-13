@@ -14,6 +14,7 @@
 #include "bf-p4c/mau/table_summary.h"
 #include "bf-p4c/parde/clot/clot_info.h"
 #include "bf-p4c/parde/decaf.h"
+#include "bf-p4c/parde/parser_header_sequences.h"
 #include "bf-p4c/phv/mau_backtracker.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
@@ -52,6 +53,9 @@ class Backend : public PassManager {
     MauPower::FinalizeMauPredDepsPower* power_and_mpr;
     LiveRangeReport *liveRangeReport;
 
+    // Identify the header sequences extracted in the parser
+    ParserHeaderSequences parserHeaderSeqs;
+
  protected:
     profile_t init_apply(const IR::Node *root) override {
         BFNContext::get().setBackendOptions(&options);
@@ -80,6 +84,7 @@ class Backend : public PassManager {
     const ordered_map<cstring, ordered_set<int>>& get_table_alloc() const {
         return table_summary.getTableAlloc();
     }
+    const ParserHeaderSequences &get_parser_hdr_seqs() const { return parserHeaderSeqs; }
 };
 
 }  // namespace BFN

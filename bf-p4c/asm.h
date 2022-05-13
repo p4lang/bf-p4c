@@ -18,6 +18,7 @@
 #include "bf-p4c/mau/jbay_next_table.h"
 #include "bf-p4c/parde/clot/clot_info.h"
 #include "bf-p4c/parde/asm_output.h"
+#include "bf-p4c/parde/parser_header_sequences.h"
 #include "bf-p4c/phv/asm_output.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/utils/live_range_report.h"
@@ -39,6 +40,7 @@ class AsmOutput : public Inspector {
     const TableSummary &tbl_summary;
     const LiveRangeReport *live_range_report;
     const BFN_Options &options;
+    const ParserHeaderSequences &prsr_header_seqs;
     /// Tell this pass whether it is called after a succesful compilation
     bool               _successfulCompile = true;
     std::string ghostPhvContainer() const {
@@ -76,11 +78,13 @@ class AsmOutput : public Inspector {
               const MauPower::FinalizeMauPredDepsPower* pmpr,
               const TableSummary& tbl_summary,
               const LiveRangeReport* live_range_report,
+              const ParserHeaderSequences &prsr_header_seqs,
               const BFN_Options &opts,
               bool success)
         : phv(phv), clot(clot), defuse(defuse), flex(flex), nxt_tbl(nxts),
           power_and_mpr(pmpr),
           tbl_summary(tbl_summary), live_range_report(live_range_report),
+          prsr_header_seqs(prsr_header_seqs),
           options(opts), _successfulCompile(success) {}
 
     bool preorder(const IR::BFN::Pipe* pipe) override {
@@ -101,8 +105,12 @@ class AsmOutput : public Inspector {
                 << "  target: " << Device::name() << std::endl;
             if (::errorCount() == 0) {
                 out << PhvAsmOutput(phv, defuse, tbl_summary, live_range_report,
-                        pipe->ghost_thread.ghost_parser != nullptr)
-                    << ParserAsmOutput(pipe, phv, INGRESS);
+                        pipe->ghost_thread.ghost_parser != nullptr);
+#if HAVE_FLATROCK
+                if (Device::currentDevice() == Device::FLATROCK)
+                    out << HeaderAsmOutput(pipe, prsr_header_seqs);
+#endif
+                out << ParserAsmOutput(pipe, phv, INGRESS);
 #if HAVE_FLATROCK
                 if (Device::currentDevice() != Device::FLATROCK)
 #endif

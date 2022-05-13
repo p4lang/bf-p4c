@@ -498,11 +498,13 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/extract_parser.cpp
   parde/extract_deparser.cpp
   parde/field_packing.cpp
+  parde/header_output.cpp
+  parde/infer_payload_offset.cpp
   parde/lower_parser.cpp
   parde/merge_parser_state.cpp
+  parde/parser_header_sequences.cpp
   parde/parser_output.cpp
   parde/phase0.cpp
-  parde/infer_payload_offset.cpp
   parde/rewrite_parser_locals.cpp
   parde/split_parser_state.cpp
   parde/clot/allocate_clot.cpp
@@ -533,12 +535,14 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/extract_parser.h
   parde/extract_deparser.h
   parde/field_packing.h
+  parde/header_output.h
+  parde/infer_payload_offset.h
   parde/lower_parser.h
   parde/marshal.h
   parde/match_register.h
   parde/merge_parser_state.h
   parde/parde_spec.h
-  parde/infer_payload_offset.h
+  parde/parser_header_sequences.h
   parde/phase0.h
   parde/parde_utils.h
   parde/parser_info.h

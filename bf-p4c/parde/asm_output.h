@@ -3,6 +3,7 @@
 
 #include "ir/ir.h"
 #include "bf-p4c-options.h"
+#include "bf-p4c/parde/parser_header_sequences.h"
 
 class PhvInfo;
 class ClotInfo;
@@ -41,6 +42,17 @@ struct DeparserAsmOutput {
     friend std::ostream &operator<<(std::ostream&, const DeparserAsmOutput&);
 
     const IR::BFN::LoweredDeparser* deparser;
+};
+
+/// Helper that can generate header assembly and write it to an output stream.
+struct HeaderAsmOutput {
+    HeaderAsmOutput(const IR::BFN::Pipe* pipe, const ParserHeaderSequences &seqs);
+
+ private:
+    friend std::ostream& operator<<(std::ostream&, const HeaderAsmOutput&);
+
+    const PhvInfo               &phv;
+    const ParserHeaderSequences &seqs;
 };
 
 #endif /* BF_P4C_PARDE_ASM_OUTPUT_H_ */

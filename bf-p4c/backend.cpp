@@ -147,7 +147,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
     decaf(phv, uses, defuse, deps),
     table_summary(pipe_id, deps, phv),
     table_alloc(options, phv, deps, table_summary, &jsonGraph, mau_backtracker),
-    mau_backtracker(&table_summary) {
+    mau_backtracker(&table_summary), parserHeaderSeqs(phv) {
     BUG_CHECK(pipe_id >= 0, "Invalid pipe id in backend : %d", pipe_id);
     flexibleLogging = new LogFlexiblePacking(phv);
     phvLoggingInfo = new CollectPhvLoggingInfo(phv, uses);
@@ -273,6 +273,11 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         // Can't (re)run CollectPhvInfo after this point as it will corrupt clot allocation
         &defuse,
         (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
+
+#ifdef HAVE_FLATROCK
+        // ParserHeaderSequences must be run before the IR is lowered
+        Device::currentDevice() == Device::FLATROCK ? &parserHeaderSeqs : nullptr,
+#endif  /* HAVE_FLATROCK */
 
         // Two different allocation flow:
         // (1) Normal allocation:

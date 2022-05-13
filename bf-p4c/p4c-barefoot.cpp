@@ -84,6 +84,7 @@
 #include "bf-p4c/mau/dynhash.h"
 #include "bf-p4c/midend/type_checker.h"
 #include "bf-p4c/mau/table_flow_graph.h"
+#include "bf-p4c/parde/parser_header_sequences.h"
 #include "common/extract_maupipe.h"
 #include "common/run_id.h"
 #include "device.h"
@@ -255,7 +256,8 @@ class GenerateOutputs : public PassManager {
                     new BFN::AsmOutput(b.get_phv(), b.get_clot(), b.get_defuse(),
                                        b.get_flexible_logging(), b.get_nxt_tbl(),
                                        b.get_power_and_mpr(),
-                                       b.get_tbl_summary(), b.get_live_range_report(), o, success),
+                                       b.get_tbl_summary(), b.get_live_range_report(),
+                                       b.get_parser_hdr_seqs(), o, success),
                     o.debugInfo ? new PhvLogging(phvLogFile.c_str(), b.get_phv(), b.get_clot(),
                                                  *b.get_phv_logging(), b.get_defuse(),
                                                  b.get_table_alloc(), b.get_tbl_summary())
