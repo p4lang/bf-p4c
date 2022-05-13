@@ -255,7 +255,7 @@ class JBayUDevice : public JBayDevice {
 
 class JBayA0Device : public JBayDevice {
  public:
-    const JBayA0PardeSpec parde_;
+    const JBayA0PardeSpec parde_{};
     const PardeSpec& getPardeSpec() const override { return parde_; }
     cstring get_name() const override { return "Tofino2A0"; }
 };

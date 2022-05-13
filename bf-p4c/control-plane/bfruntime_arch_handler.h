@@ -1172,9 +1172,9 @@ class BFRuntimeArchHandlerCommon: public P4::ControlPlaneAPI::P4RuntimeArchHandl
         if (instance->type->name != "ActionProfile") return boost::none;
         auto size = instance->substitution.lookupByName("size")->expression;
         // size is a bit<32> compile-time value
-        BUG_CHECK(size->is<IR::Constant>(), "Non-constant size");
+        BUG_CHECK(size->template is<IR::Constant>(), "Non-constant size");
         return ActionProfile{*instance->name,
-                             size->to<IR::Constant>()->asInt(),
+                             size->template to<IR::Constant>()->asInt(),
                              getTableImplementationAnnotations(table, refMap)};
     }
 
@@ -1201,12 +1201,12 @@ class BFRuntimeArchHandlerCommon: public P4::ControlPlaneAPI::P4RuntimeArchHandl
         // used to support deprecated ActionSelector constructor.
         if (action_selector->substitution.lookupByName("size")) {
             auto size = action_selector->substitution.lookupByName("size")->expression;
-            BUG_CHECK(size->is<IR::Constant>(), "Non-constant size");
+            BUG_CHECK(size->template is<IR::Constant>(), "Non-constant size");
             return ActionSelector{*action_selector->name,
                                   boost::none,
-                                  size->to<IR::Constant>()->asInt(),
+                                  size->template to<IR::Constant>()->asInt(),
                                   defaultMaxGroupSize,
-                                  size->to<IR::Constant>()->asInt(),
+                                  size->template to<IR::Constant>()->asInt(),
                                   getTableImplementationAnnotations(table, refMap),
                                   true /* _sel suffix */ };
         }
@@ -1215,13 +1215,13 @@ class BFRuntimeArchHandlerCommon: public P4::ControlPlaneAPI::P4RuntimeArchHandl
         auto numGroups =
             action_selector->substitution.lookupByName("num_groups")->expression;
         // size is a bit<32> compile-time value
-        BUG_CHECK(maxGroupSize->is<IR::Constant>(), "Non-constant max group size");
-        BUG_CHECK(numGroups->is<IR::Constant>(), "Non-constant num groups");
+        BUG_CHECK(maxGroupSize->template is<IR::Constant>(), "Non-constant max group size");
+        BUG_CHECK(numGroups->template is<IR::Constant>(), "Non-constant num groups");
         return ActionSelector{*action_selector->name,
                               *action_selector->name,
                               -1  /* size */,
-                              maxGroupSize->to<IR::Constant>()->asInt(),
-                              numGroups->to<IR::Constant>()->asInt(),
+                              maxGroupSize->template to<IR::Constant>()->asInt(),
+                              numGroups->template to<IR::Constant>()->asInt(),
                               getTableImplementationAnnotations(table, refMap),
                               false /* _sel suffix */ };
     }
