@@ -8,6 +8,8 @@ namespace {
 static int numHeaderIDs = 255;
 static int numHeaderSeqs = 2;
 static int numHeadersPerSeq = 10;
+static int payloadHeaderID = 254;
+static cstring payloadHeaderName = "payload";
 
 }  // namespace
 
@@ -35,6 +37,7 @@ std::ostream& operator<<(std::ostream& out, const HeaderAsmOutput& headerOut) {
     int id = 0;
     for (const auto& hdr : seqs.headers.at(INGRESS))
         out << indent << hdr << ": " << id++ << std::endl;
+    out << indent << payloadHeaderName << ": " << payloadHeaderID << std::endl;
     indent--;
 
     // Sequences: ids to header sequences
@@ -52,6 +55,7 @@ std::ostream& operator<<(std::ostream& out, const HeaderAsmOutput& headerOut) {
                     ss << sep << hdr;
                     sep = ", ";
                 }
+                ss << sep << payloadHeaderName;
                 ss << "]";
                 BUG_CHECK(seq.size() <= numHeadersPerSeq,
                           "Too many headers in sequence: count=%1% allowed=%2% sequence=%3%",
@@ -73,6 +77,8 @@ std::ostream& operator<<(std::ostream& out, const HeaderAsmOutput& headerOut) {
     out << indent++ << "len:" << std::endl;
     for (const auto& hdr : seqs.headers.at(INGRESS))
         out << indent << hdr << ": { base_len: 0, num_comp_bits: 0, scale: 0 }" << std::endl;
+    out << indent << payloadHeaderName << ": { base_len: 0, num_comp_bits: 0, scale: 0 }"
+        << std::endl;
     indent--;
 
     // FIXME: These shouldn't strictly be necessary. Currently following up with HW team.
