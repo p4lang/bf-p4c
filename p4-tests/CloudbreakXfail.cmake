@@ -482,3 +482,8 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/stf/p4c-4055.p4
 )
 
+# P4C-3220
+p4c_add_xfail_reason("tofino3"
+  "error: Incompatible outputs in RegisterAction: mem_lo and mem_hi"
+  extensions/p4_tests/p4_16/compile_only/p4c-3220_1.p4
+)

@@ -2019,3 +2019,9 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-dpdk-non-zero-arg-default-action-08.p4
   testdata/p4_16_samples/psa-dpdk-non-zero-arg-default-action-09.p4
 )
+
+# P4C-3220
+p4c_add_xfail_reason("tofino"
+  "error: Incompatible outputs in RegisterAction: mem_lo and mem_hi"
+  extensions/p4_tests/p4_16/compile_only/p4c-3220_1.p4
+)

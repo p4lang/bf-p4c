@@ -4,6 +4,135 @@
 
 namespace BFN {
 
+/**
+ * @brief Detects if IR::Expression passed as an argument is a structure nested inside a header.
+ *
+ * @param expr Expression which we want to check.
+ * @return true If an expression passed as an argument is a structure nested inside a header.
+ * @return false If not.
+ */
+bool InjectTmpVar::DoInject::isNestedStruct(const IR::Expression *expr) {
+    bool foundStruct = false;
+    while (expr->is<IR::Member>() && expr->type->is<IR::Type_Struct>()) {
+        LOG4("Nested struct member: " << expr << ", type: " << expr->type);
+        foundStruct = true;
+        expr = expr->to<IR::Member>()->expr;
+    }
+
+    if (foundStruct && (expr->is<IR::PathExpression>() || expr->is<IR::Member>()) &&
+            expr->type->is<IR::Type_Header>()) {
+        LOG3("Found nested struct in header: " << expr << ", type: " << expr->type);
+        return true;
+    }
+    return false;
+}
+
+const IR::Node *InjectTmpVar::DoInject::postorder(IR::AssignmentStatement *as) {
+    auto mce = as->right->to<IR::MethodCallExpression>();
+    if (!mce)
+        return as;
+
+    auto retTypeStruct = mce->type->to<IR::Type_Struct>();
+    if (!retTypeStruct)
+        return as;
+
+    auto mi = P4::MethodInstance::resolve(mce, refMap, typeMap);
+    if (!mi->is<P4::ExternMethod>())
+        return as;
+
+    if (!isNestedStruct(as->left))
+        return as;
+
+    IR::IndexedVector<IR::StatOrDecl> statements;
+    IR::ID tmpVarName(refMap->newName("tmp"));
+    auto tmpVarType = new IR::Type_Name(retTypeStruct->name);
+
+    statements.push_back(new IR::Declaration_Variable(tmpVarName, tmpVarType, mce));
+    statements.push_back(
+            new IR::AssignmentStatement(as->left, new IR::PathExpression(tmpVarName)));
+
+    LOG3("Replacing AssignmentStatement:" << std::endl <<
+         "  " << as << std::endl <<
+         "by statements:");
+    for (auto st : statements) {
+        LOG3("  " << st);
+    }
+    return new IR::BlockStatement(statements);
+}
+
+const IR::Node *InjectTmpVar::DoInject::postorder(IR::MethodCallStatement *mcs) {
+    auto mce = mcs->methodCall;
+    if (!mce)
+        return mcs;
+
+    auto mi = P4::MethodInstance::resolve(mce, refMap, typeMap);
+    if (!mi->is<P4::ExternMethod>())
+        return mcs;
+    auto em = mi->to<P4::ExternMethod>();
+
+    P4::ParameterSubstitution paramSub;
+    paramSub.populate(em->method->getParameters(), mce->arguments);
+
+    IR::IndexedVector<IR::StatOrDecl> before;
+    IR::IndexedVector<IR::StatOrDecl> after;
+    auto newArgs = new IR::Vector<IR::Argument>();
+
+    for (auto param : em->method->getParameters()->parameters) {
+        auto arg = paramSub.lookup(param);
+        if (param->type->is<IR::Type_Struct>() && isNestedStruct(arg->expression)) {
+            LOG3("Processing argument: " << arg << " for parameter: " << param);
+            cstring newName = refMap->newName(param->name);
+            newArgs->push_back(new IR::Argument(
+                    arg->srcInfo, arg->name, new IR::PathExpression(newName)));
+            // Save arguments of in and inout parameters into local variables
+            if (param->direction == IR::Direction::In ||
+                    param->direction == IR::Direction::InOut) {
+                auto vardecl = new IR::Declaration_Variable(newName,
+                        param->annotations, param->type,
+                        arg->expression);
+                before.push_back(vardecl);
+            } else if (param->direction == IR::Direction::Out) {
+                auto vardecl = new IR::Declaration_Variable(newName,
+                        param->annotations, param->type);
+                before.push_back(vardecl);
+            }
+            // Copy out and inout parameters
+            if (param->direction == IR::Direction::InOut ||
+                    param->direction == IR::Direction::Out) {
+                auto right = new IR::PathExpression(newName);
+                auto copyout = new IR::AssignmentStatement(arg->expression, right);
+                after.push_back(copyout);
+            }
+        } else {
+            newArgs->push_back(arg);
+        }
+    }
+
+    /**
+     * If this is empty it means that we don't need any new temporary variables so
+     * we don't modify the original statement.
+     */
+    if (before.empty())
+        return mcs;
+
+    auto mceClone = mce->clone();
+    mceClone->arguments = newArgs;
+    mcs->methodCall = mceClone;
+
+    IR::IndexedVector<IR::StatOrDecl> statements;
+    statements.append(before);
+    statements.push_back(mcs);
+    statements.append(after);
+
+    LOG3("Replacing MethodCallStatement:" << std::endl <<
+         "  " << mcs << std::endl <<
+         "by statements:");
+    for (auto st : statements) {
+        LOG3("  " << st);
+    }
+    return new IR::BlockStatement(statements);
+}
+
 void FlattenHeader::flattenType(const IR::Type* type) {
     if (auto st = type->to<IR::Type_StructLike>()) {
         allAnnotations.push_back(st->annotations);

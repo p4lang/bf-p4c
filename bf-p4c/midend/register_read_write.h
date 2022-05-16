@@ -3,6 +3,7 @@
 
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/typeMap.h"
+#include "bf-p4c/midend/copy_header.h"
 #include "bf-p4c/midend/type_checker.h"
 #include "ir/ir.h"
 
@@ -147,7 +148,9 @@ class RegisterReadWrite : public PassManager {
             new CollectRegisterReadsWrites(*this),
             new AnalyzeActionWithRegisterCalls(*this),
             new UpdateRegisterActionsAndExecuteCalls(*this),
-            new P4::ClearTypeMap(typeMap)
+            new P4::ClearTypeMap(typeMap),
+            new CopyHeaders(refMap, typeMap, typeChecking),
+            new P4::ClearTypeMap(typeMap),
         });
     }
 
