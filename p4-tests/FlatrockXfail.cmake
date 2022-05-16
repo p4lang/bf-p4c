@@ -23,11 +23,11 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/flatrock/exact1.p4
   )
 
-# requires model build update to build ftr_test_harness and run to see this failure
-#p4c_add_xfail_reason("tofino5"
-#  "3 expected packets on port 2 not seen"
-#  extensions/p4_tests/p4_16/flatrock/passthrough.p4
-#  )
+# model fails -- probably many other problems besides this message
+p4c_add_xfail_reason("tofino5"
+   "WARNING:.*binary.*does not match model version"
+  extensions/p4_tests/p4_16/flatrock/passthrough.p4
+  )
 
 p4c_add_xfail_reason("tofino5"
   "Flatrock .* not implemented yet"
