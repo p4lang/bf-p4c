@@ -94,21 +94,73 @@ int parity_2b(uint32_t v) {
     return v&3;
 }
 
-void input_int_match(const value_t value, match_t &match, int width) {
+bool check_bigint_unsigned(value_t value, uint32_t byte_width) {
+    BUG_CHECK(value.type == tBIGINT);
+
+    /* -- zero is in the range */
+    if (value.bigi.size == 0) return true;
+
+    constexpr uint64_t size_bigint_item(sizeof(value.bigi.data[0]));
+
+    bool overflow(false);
+
+    /* -- all items above the max_index must by zero */
+    const uint64_t max_index(((byte_width + size_bigint_item - 1) / size_bigint_item) - 1);
+    for (int i(max_index + 1); i < value.bigi.size; ++i) {
+        if (value.bigi.data[i] != 0) {
+            overflow = true;
+        }
+    }
+    /* -- check limit in the boundary bigint part */
+    if (value.bigi.size > max_index) {
+        const uint64_t ext_width(byte_width % size_bigint_item);
+        if (ext_width > 0 && value.bigi.data[max_index] >= (1 << (ext_width * 8))) {
+            overflow = true;
+        }
+    }
+    if (overflow) {
+        error(
+            value.lineno,
+            "the integer constant is wider than the requested width %u bytes",
+            byte_width);
+        return false;
+    }
+
+    return true;
+}
+
+bool input_int_match(const value_t value, match_t &match, int width) {
     BUG_CHECK(width <= sizeof(match_t::word0) * 8);
-    decltype(match_t::word0) mask;
-    if (width < sizeof(match_t::word0) * 8)
+
+    using MatchType = decltype(match_t::word0);
+    MatchType mask;
+    if (width < sizeof(MatchType) * 8)
         mask = (1ULL << width) - 1;
     else
-        mask = std::numeric_limits<decltype(match_t::word0)>::max();
+        mask = std::numeric_limits<MatchType>::max();
     if (value.type == tINT) {
-        check_range(value, 0, mask);
+        if (!check_range_strict<MatchType>(value, 0, mask)) return false;
         convert_i2m(value.i, match);
+    } else if (value.type == tBIGINT) {
+        /* -- As the match type is uint64_t and value_t::i is int64_t, constants
+         *    above 0x7fffffffffffffff are passed as big integers. */
+        if (value.bigi.size > 1) {
+            error(value.lineno, "the match constant is out of the expected range <0, %lu>", mask);
+            return false;
+        }
+        MatchType v(0);
+        if (value.bigi.size > 0) v = value.bigi.data[0];
+        if (v > mask) {
+            error(value.lineno, "the match constant is out of the expected range <0, %lu>", mask);
+            return false;
+        }
+        convert_i2m(v, match);
     } else {
         value_t fixed_value = value;
         fixed_value.m = value.m;
         fix_match_star(fixed_value.m, mask);
-        check_range_match(fixed_value, mask, width);
+        if (!check_range_match(fixed_value, mask, width)) return false;
         match = fixed_value.m;
     }
+    return true;
 }

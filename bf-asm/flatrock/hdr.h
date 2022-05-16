@@ -19,7 +19,7 @@ class Hdr : public Section {
 
     bool map_init = false;
     std::map<std::string, int> map;  // header name -> hdr_id
-    int _hdr_id(int lineno, std::string name) {
+    int _hdr_id(int lineno, const std::string &name) {
         if (!map_init)
             error(lineno, "hdr -> map has not been initialized; "
                           "only header IDs can be used until initialization");
@@ -29,8 +29,8 @@ class Hdr : public Section {
         }
         return map.at(name);
     }
-    void _hdr_id_check_range(value_t hdr_id) {
-        check_range(hdr_id, 0, Target::Flatrock::PARSER_HDR_ID_MAX);
+    bool _hdr_id_check_range(value_t hdr_id) {
+        return check_range(hdr_id, 0, Target::Flatrock::PARSER_HDR_ID_MAX);
     }
 
  public:
@@ -55,9 +55,7 @@ class Hdr : public Section {
     /// Byte location of the offset of the first header in bridge metadata
     int off_pos = -1;
 
-    static int id(int lineno, std::string name) {
-        return hdr._hdr_id(lineno, name);
-    }
+    static int id(int lineno, const std::string &name) { return hdr._hdr_id(lineno, name); }
 
     // For use by gtests
     static void test_clear() {

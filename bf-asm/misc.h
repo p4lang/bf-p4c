@@ -1,11 +1,15 @@
 #ifndef BF_ASM_MISC_H_
 #define BF_ASM_MISC_H_
 
-#include <vector>
-#include <string>
 #include <iomanip>
-#include <memory>
 #include <limits>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <type_traits>
+#include <vector>
+
+#include <boost/numeric/conversion/converter.hpp>
 
 #include "json.h"
 #include "asm-types.h"
@@ -85,30 +89,85 @@ uint64_t bitMask(unsigned size);
 int parity(uint32_t v);
 int parity_2b(uint32_t v);  // two-bit parity (parity of pairs in the word)
 
-inline void check_value(const value_t value, const decltype(value_t::i) expected) {
-    CHECKTYPE(value, tINT);
-    if (value.i != expected)
+inline bool check_value(const value_t value, const decltype(value_t::i) expected) {
+    if (!CHECKTYPE(value, tINT)) return false;
+    if (value.i != expected) {
         error(value.lineno, "unexpected value %ld; expected %ld", value.i, expected);
+        return false;
+    }
+    return true;
 }
 
-inline void check_range(const value_t value,
-        const decltype(value_t::i) lo, const decltype(value_t::i) hi) {
-    CHECKTYPE(value, tINT);
-    if (value.i < lo || value.i > hi)
-        error(value.lineno, "value %ld out of allowed range <%ld; %ld>", value.i, lo, hi);
+/**
+ * @brief Check range of an input integer value (tINT)
+ *
+ * This method is designated mainly for checking input integer constants. The template
+ * parameter defines target type in which the value is going to be stored. As the
+ * higher limit is quite often 0xffff... we must handle signed and unsigned integers
+ * correctly.
+ *
+ * @tparam IntType Target type which the value will be stored in.
+ * @param value The checked value
+ * @param lo lower inclusive limit
+ * @param hi higher include limit
+ * @return False if the value is out of the specified limits
+ */
+template <
+    typename IntType,
+    typename = typename std::enable_if<std::is_integral<IntType>::value>::type>
+bool check_range_strict(value_t value, IntType lo, IntType hi) {
+    auto format_error_message([](value_t value, IntType lo, IntType hi) {
+        /* -- As we don't know actual type of the IntType, we cannot use the printf-like
+         *    formatting. */
+        std::ostringstream oss;
+        oss << "value " << value.i << " is out of allowed range <" << +lo << "; " << +hi << ">";
+        error(value.lineno, "%s", oss.str().c_str());
+    });
+
+    if (!CHECKTYPE(value, tINT)) return false;
+
+    /* -- Handle different ranges (signed, unsigned, different size) of the value_t::i
+     *    and IntType. */
+    typedef boost::numeric::converter<IntType, decltype(value_t::i)> Converter;
+    if (Converter::out_of_range(value.i)) {
+        format_error_message(value, lo, hi);
+        return false;
+    }
+
+    /* -- Now check requested limits */
+    IntType converted(static_cast<IntType>(value.i));
+    if (converted < lo || converted > hi) {
+        format_error_message(value, lo, hi);
+        return false;
+    }
+    return true;
 }
 
-inline void check_range_match(const value_t &match,
-        const decltype(match_t::word0) mask, int width) {
-    CHECKTYPE(match, tMATCH);
-    if ((match.m.word0 | match.m.word1) != mask)
+inline bool check_range(const value_t value, const decltype(value_t::i) lo,
+                        const decltype(value_t::i) hi) {
+    return check_range_strict<decltype(value_t::i)>(value, lo, hi);
+}
+
+inline bool check_range_match(const value_t &match, const decltype(match_t::word0) mask,
+                              int width) {
+    if (!CHECKTYPE(match, tMATCH)) return false;
+    if ((match.m.word0 | match.m.word1) != mask) {
         error(match.lineno, "invalid match width; expected %i bits", width);
+        return false;
+    }
+    return true;
 }
 
-inline void convert_i2m(const decltype(value_t::i) i, match_t &m) {
-    m.word0 = ~i;
-    m.word1 =  i;
+template <typename IntType>
+void convert_i2m(IntType i, match_t &m) {
+    static_assert(sizeof(IntType) == sizeof(match_t::word0));
+    static_assert(std::is_integral<IntType>::value);
+
+    m.word0 = ~static_cast<decltype(match_t::word0)>(i);
+    m.word1 = static_cast<decltype(match_t::word0)>(i);
 }
+
+bool check_bigint_unsigned(value_t value, uint32_t byte_width);
 
 /// * is parsed as match_t::word0 == 0 && match_t::word1 == 0.
 /// The function converts the match according to the specified with @p mask.
@@ -123,6 +182,7 @@ inline void fix_match_star(match_t &match, const decltype(match_t::word0) mask) 
 /// @param match Output value
 /// @param width Expected width of the input value used for range checks
 /// @pre @p value must be a tINT or tMATCH value.
-void input_int_match(const value_t value, match_t &match, int width);
+/// @return True if the value is correctly parsed
+bool input_int_match(const value_t value, match_t &match, int width);
 
 #endif /* BF_ASM_MISC_H_ */

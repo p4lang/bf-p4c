@@ -358,7 +358,7 @@ parser [<thread>] [<port_use>, ...]:
         rule <constant>:
             # constant is explicit rule index; it also specifies the rule priority
             # when more rules match (lower value is higher priority)
-            match_state: <match-constant>
+            match_state: <match-constant> | <name>
             # if state match constant is ommited, it is derived from the state name at stage
             # if it is missing, it is treated as *
             match_w0: <match-constant>
@@ -383,8 +383,8 @@ parser [<thread>] [<port_use>, ...]:
                 # specifies instruction for ALU0 for the next stage (15b)
             next_alu1_instruction: <alu1-instruction>
                 # specifies instruction for ALU1 for the next stage (19b)
-            push_hdr_id: <hdr-id-name> <constant>
-                # specifies header ID (8b) or name and offset (8b) to be pushed to ana_hdr_ptrs
+            push_hdr_id: { hdr: <hdr-id-name>, offset: <constant> }
+                # specifies header ID (8b) or name, and offset (8b) to be pushed to ana_hdr_ptrs
                 # if name is specified, it is looked up in hdr -> map
                 # 0xff for header ID is reserved for invalid
                 # offset is relative to pointer

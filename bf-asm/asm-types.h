@@ -364,18 +364,21 @@ class Parsable {
  public:
     /// @param data entire map/sequence of elements
     virtual void input(VECTOR(value_t) args, value_t data) = 0;
+    virtual ~Parsable() = default;
 };
 
 /// An interface for writing into registers
 class Configurable {
  public:
     virtual void write_config(RegisterSetBase &regs, json::map &json, bool legacy = true) = 0;
+    virtual ~Configurable() = default;
 };
 
 /// An interface for generating context.json
 class Contextable {
  public:
     virtual void output(json::map &ctxtJson) = 0;
+    virtual ~Contextable() = default;
 };
 
 #endif /* __cplusplus */
