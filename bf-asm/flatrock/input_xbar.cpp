@@ -171,7 +171,7 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
             minput.rf.minput_scm_xb_tab[table->get_tcam_id()].key40_used |= 1U << group.first.index;
             break; }
         case Group::GATEWAY: {
-            auto &gw_key_cfg = minput.rf.minput_gw_xb_vdg;
+            auto &gw_key_cfg = minput.rf.minput_gw_xb_vgd;
             for (auto &input : group.second) {
                 gw_key_cfg[input.lo/8U].vgd = input.what->reg.ixbar_id();
                 set_bit(minput.minput_byte_pwr[3],
