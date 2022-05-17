@@ -59,8 +59,21 @@ std::ostream &operator<<(std::ostream &out, const CanPackErrorCode& info);
 using CanPackReturnType = std::tuple<CanPackErrorCode,
       boost::optional<PHV::Allocation::ConditionalConstraints>>;
 
-/// CanPackV2ReturnType has both an error code and detailed error messages for debugging.
-using CanPackV2ReturnType = std::pair<CanPackErrorCode, cstring>;
+/// CanPackErrorV2 has
+/// (1) an error code for classification.
+/// (2) detailed error messages for debugging.
+/// (3) the destination container status when action synthesize failed.
+struct CanPackErrorV2 {
+    CanPackErrorCode code;
+    cstring msg;
+    const std::vector<PHV::AllocSlice>* invalid_dest_packing = nullptr;
+    explicit CanPackErrorV2(CanPackErrorCode code) : code(code) {}
+    CanPackErrorV2(CanPackErrorCode code, cstring msg) : code(code), msg(msg) {}
+    CanPackErrorV2(CanPackErrorCode code, cstring msg,
+                   const std::vector<PHV::AllocSlice>* dest_cont)
+        : code(code), msg(msg), invalid_dest_packing(dest_cont) {}
+    bool ok() const { return code == CanPackErrorCode::NO_ERROR; };
+};
 
 /** This class is meant to gather action information as well as provide information to PHV analysis
   * through function calls. Methods in AllocatePHV query the information contained in class members
@@ -929,13 +942,13 @@ class ActionPhvConstraints : public Inspector {
 
     /// returns an eroor when any action constraint of @p actions are violated if
     /// the destination container has slices in @p container_state.
-    CanPackV2ReturnType check_bitwise_and_basic_move_constraints(
-        const ordered_set<const IR::MAU::Action*>& actions,
-        const PHV::Allocation::MutuallyLiveSlices& container_state,
-        const ActionPropertyMap* action_props) const;
+    CanPackErrorV2 check_bitwise_and_basic_move_constraints(
+            const ordered_set<const IR::MAU::Action*>& actions,
+            const PHV::Allocation::MutuallyLiveSlices& container_state,
+            const ActionPropertyMap* action_props) const;
 
     /// can_pack_v2 checks whether allocating @p slices will violate any action constraints.
-    CanPackV2ReturnType can_pack_v2(
+    CanPackErrorV2 can_pack_v2(
             const PHV::Allocation& alloc,
             const std::vector<PHV::AllocSlice>& slices) const;
 
@@ -981,13 +994,7 @@ class ActionPhvConstraints : public Inspector {
     ///    destination flow, i.e., like the `last destination`) of the list.
     /// 2. number of actions that write to the slice list.
     /// 3. lo part of the same-field list will be allcoated first.
-    void dest_first_sort(std::list<const PHV::SuperCluster::SliceList*>& slice_list) const;
-
-    /// sort @p slices by
-    /// 1. a topographical order of their data flow graph, where destinations will be sorted
-    ///    to the front. Strongly-connected-components will be converted to one node.
-    /// 2. number of actions that write to the slice list.
-    void dest_first_sort(std::vector<PHV::FieldSlice>& slices) const;
+    void dest_first_sort(std::vector<const PHV::SuperCluster::SliceList*>& slice_list) const;
 
     /** @returns the set of fields that are read in action @p act
       */
@@ -1119,7 +1126,7 @@ class ActionPhvConstraints : public Inspector {
      *  (1) mocha container can only be written in whole by ad/constant/container.
      *  (2) dark container can only be written in while by container.
      */
-    CanPackV2ReturnType check_move_constraints(
+    CanPackErrorV2 check_move_constraints(
         const PHV::Allocation& alloc, const IR::MAU::Action* action,
         const std::vector<PHV::AllocSlice>& slices,
         const PHV::Allocation::MutuallyLiveSlices& container_state, const PHV::Container& c,
@@ -1144,14 +1151,14 @@ class ActionPhvConstraints : public Inspector {
     /// Check action move constraints when a source slice is allocated in @p slices.
     /// It will iterate over all actions that has read any in @p slices and run move constraint
     /// checker on its destination container, with fields during the action.
-    CanPackV2ReturnType check_move_constraints_from_read(
+    CanPackErrorV2 check_move_constraints_from_read(
         const PHV::Allocation& alloc,
         const std::vector<PHV::AllocSlice>& candidates,
         const PHV::Allocation::LiveRangeShrinkingMap& initActions) const;
 
     /// Use action constraint solver to check move-based instruction constraints from
     /// reader-side, i.e., @p candidates are sources of instructions.
-    CanPackV2ReturnType check_read_action_move_constraints(
+    CanPackErrorV2 check_read_action_move_constraints(
     const PHV::Allocation& alloc,
     const std::vector<PHV::AllocSlice>& candidates,
     const IR::MAU::Action* action,
@@ -1159,7 +1166,7 @@ class ActionPhvConstraints : public Inspector {
 
     /// @returns error if the number of sources is more than allowed for in @p action, when we
     /// allocate sources @p candidates to @p alloc.
-    CanPackV2ReturnType check_read_action_num_source_constraints(
+    CanPackErrorV2 check_read_action_num_source_constraints(
         const PHV::Allocation& alloc,
         const std::vector<PHV::AllocSlice>& candidates,
         const IR::MAU::Action* action) const;

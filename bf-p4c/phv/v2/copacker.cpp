@@ -61,6 +61,25 @@ std::ostream& operator<<(std::ostream& out, const CoPackHint* v) {
     return out;
 }
 
+std::ostream& operator<<(std::ostream& out, const ActionSourceCoPackMap& v) {
+    cstring sep = "";
+    for (const auto& action_hints : v) {
+        out << sep << action_hints.first->externalName() << ":{";
+        for (const auto* copack : action_hints.second) {
+            out << copack;
+        }
+        out << "}";
+        sep = "\n";
+    }
+    return out;
+}
+
+std::ostream& operator<<(std::ostream& out, const ActionSourceCoPackMap* v) {
+    if (!v) out << "null";
+    out << *v;
+    return out;
+}
+
 CoPacker::CoPacker(const ActionSourceTracker& sources,
                    const SuperCluster* sc,
                    const ScAllocAlignment* alignment)

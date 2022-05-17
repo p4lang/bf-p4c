@@ -7,6 +7,7 @@
 
 #include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/device.h"
+#include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/parde/clot/clot_info.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
@@ -758,12 +759,17 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 bool ValidateAllocation::preorder(const IR::BFN::Digest* digest) {
     // Check that all learning quanta generated is less than the maximum allowed size.
     if (digest->name != "learning") return true;
-    const PHV::Field* selector = phv.field(digest->selector->field);
+    le_bitrange selector_bits;
+    const PHV::Field* selector = phv.field(digest->selector->field, &selector_bits);
     BUG_CHECK(selector, "Selector field not present in PhvInfo");
+    ordered_set<PHV::Container> selector_containers;
+    selector->foreach_alloc(
+        selector_bits, PHV::AllocContext::DEPARSER, nullptr,
+        [&](const PHV::AllocSlice& alloc) { selector_containers.insert(alloc.container()); });
     size_t selectorSize = 0;
-    selector->foreach_alloc([&](const PHV::AllocSlice& alloc) {
-        selectorSize += alloc.container().size();
-    });
+    for (const auto& c : selector_containers) {
+        selectorSize += c.size();
+    }
 
     ordered_map<const PHV::Field *, std::vector<size_t>> field_info_map;
     std::stringstream ss;
@@ -796,6 +802,8 @@ bool ValidateAllocation::preorder(const IR::BFN::Digest* digest) {
     };
 
     for (auto fieldList : digest->fieldLists) {
+        ss.clear();
+        ordered_set<PHV::Container> containers_to_read;
         size_t digestSizeInBits = selectorSize;
         for (auto flval : fieldList->sources) {
             le_bitrange bits = {};
@@ -805,8 +813,11 @@ bool ValidateAllocation::preorder(const IR::BFN::Digest* digest) {
                 bits,
                 PHV::AllocContext::DEPARSER, nullptr, [&](const PHV::AllocSlice& alloc) {
                     field_info_map[f].push_back(alloc.container().size());
-                    digestSizeInBits += alloc.container().size();
+                    containers_to_read.insert(alloc.container());
                 });
+        }
+        for (const auto& c : containers_to_read) {
+            digestSizeInBits += c.size();
         }
         BUG_CHECK(digestSizeInBits % 8 == 0, "Digest size in bits cannot be non byte aligned.");
         size_t digestSizeInBytes = digestSizeInBits / 8;
@@ -824,7 +835,6 @@ bool ValidateAllocation::preorder(const IR::BFN::Digest* digest) {
                     get_correct_containers(field);
                 }
             }
-
             ::error(
                 "Size of learning quanta is %1% bytes, greater than the maximum allowed %2% "
                 "bytes.\nCompiler will improve allocation of learning fields in future releases.\n"

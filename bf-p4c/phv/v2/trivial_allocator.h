@@ -1,8 +1,9 @@
 #ifndef BF_P4C_PHV_V2_TRIVIAL_ALLOCATOR_H_
 #define BF_P4C_PHV_V2_TRIVIAL_ALLOCATOR_H_
 
-#include "bf-p4c/phv/allocate_phv.h"
+#include "bf-p4c/phv/v2/phv_kit.h"
 #include "bf-p4c/phv/utils/utils.h"
+#include "bf-p4c/phv/v2/kind_size_indexed_map.h"
 #include "bf-p4c/phv/v2/utils_v2.h"
 
 namespace PHV {
@@ -12,7 +13,7 @@ namespace v2 {
 /// (1) trivial allocation before table placement.
 /// (2) check whether all constraints can be satisfied.
 class TrivialAllocator {
- private:
+ public:
     /// PhvStatus bookkeeper for containers.
     class PhvStatus {
         std::unordered_map<PHV::Size, int> next_container_idx;
@@ -23,7 +24,20 @@ class TrivialAllocator {
         void inc_next_container(PHV::Size);
     };
 
-    const AllocUtils& utils_i;
+    /// PartialAllocResult contains the allocation result and updated phv status if we slice
+    /// and allocate a super cluster.
+    struct PartialAllocResult {
+        const AllocError* err = nullptr;
+        std::vector<AllocSlice> alloc_slices;
+        PhvStatus phv_status;
+        bool ok() const { return err == nullptr; };
+        PartialAllocResult(const std::vector<AllocSlice>& alloc_slices, PhvStatus phv_status)
+            : alloc_slices(alloc_slices), phv_status(phv_status) {}
+        explicit PartialAllocResult(const AllocError* err) : err(err) {}
+    };
+
+ private:
+    const PhvKit& kit_i;
     PhvInfo& phv_i;
     const int pipe_id_i;  /// used for logging purposes
 
@@ -42,20 +56,11 @@ class TrivialAllocator {
     /// and phv_status will be updated.
     void bind_alloc_slices(const std::vector<PHV::AllocSlice>& slices);
 
- public:
-    TrivialAllocator(const AllocUtils& utils, PhvInfo& phv, int pipe_id);
+    /// @returns user-friendly error msg.
+    cstring make_error_msg(const SuperCluster* sc, const PartialAllocResult* rst) const;
 
-    /// PartialAllocResult contains the allocation result and updated phv status if we slice
-    /// and allocate a super cluster.
-    struct PartialAllocResult {
-        const AllocError* err = nullptr;
-        std::vector<AllocSlice> alloc_slices;
-        PhvStatus phv_status;
-        bool ok() const { return err == nullptr; };
-        PartialAllocResult(const std::vector<AllocSlice>& alloc_slices, PhvStatus phv_status)
-            : alloc_slices(alloc_slices), phv_status(phv_status) {}
-        explicit PartialAllocResult(const AllocError* err) : err(err) {}
-    };
+ public:
+    TrivialAllocator(const PhvKit& kit, PhvInfo& phv, int pipe_id);
 
     /// @returns a PartialAllocResult that contains alloc_slices of an updated phv status when
     /// allocation succeeded. If allocation failed, PartialResult of an error that contains
@@ -64,6 +69,7 @@ class TrivialAllocator {
                                                     const PHV::SuperCluster* sc,
                                                     PhvStatus phv_status,
                                                     const ContainerGroupsBySize& container_groups,
+                                                    bool minimal_packing_slicing = true,
                                                     const int max_slicings = 128,
                                                     std::ostream* history = nullptr) const;
 
@@ -76,14 +82,25 @@ class TrivialAllocator {
                           const PHV::SuperCluster* sc,
                           const int max_slicings = 128) const;
 
-    /// @returns a vector of sliced cluster from @p sc with the minimal number of slicing
+    /// result of pre-slicing will always have a set of sliced super cluster. If any sliced
+    /// super cluster failed to pass can_be_allocated verification, the first one will be saved
+    /// to invalid.
+    struct PreSlicingResult {
+        std::list<SuperCluster*> sliced;
+        const SuperCluster* invalid = nullptr;
+        ordered_map<SuperCluster*, KindSizeIndexedMap> baseline_cont_req;
+    };
+
+    /// @returns result of sliced cluster from @p sc with the minimal number of slicing
     /// (try to maximize packing). This function will try to ensure that all the returned super
     /// clusters can be allocated, without violating any constraints, by calling can_be_allocated
     /// to verify before return. However, there can by cases that either we are not lucky enough
     /// or there are conflicting constraints, the @p sc cannot be split to allocatable clusters.
     /// In those cases, we will just return the last slicing we found.
-    std::list<SuperCluster*> pre_slice(const Allocation& empty_alloc,
-                                       SuperCluster* sc) const;
+    PreSlicingResult pre_slice(const Allocation& empty_alloc,
+                               SuperCluster* sc,
+                               const int n_max_slicing = 128,
+                               bool baseline_mode = false) const;
 };
 
 }  // namespace v2

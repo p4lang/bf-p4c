@@ -16,6 +16,7 @@ const cstring& Logging::FileLog::name2type(cstring logName) {
         {"phv_optimization",            "phv"},
         {"phv_incremental_allocation",  "phv"},
         {"phv_trivial_allocation",      "phv"},
+        {"phv_greedy_allocation",       "phv"},
         {"table_",                      "mau"},
         {"pragmas",                     "phv"}
     };

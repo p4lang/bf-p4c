@@ -10,10 +10,8 @@ cstring to_str(const ErrorCode& e) {
     switch (e) {
         case ec::NOT_ENOUGH_SPACE:
             return "NOT_ENOUGH_SPACE";
-        case ec::CANNOT_PACK_CANDIDATES:
-            return "CANNOT_PACK_CANDIDATES(found unsatisfiable action constraints)";
-        case ec::CANNOT_PACK_WITH_ALLOCATED:
-            return "CANNOT_PACK_WITH_ALLOCATED";
+        case ec::ACTION_CANNOT_BE_SYNTHESIZED:
+            return "ACTION_CANNOT_BE_SYNTHESIZED";
         case ec::CONTAINER_TYPE_MISMATCH:
             return "CONTAINER_TYPE_MISMATCH";
         case ec::CONTAINER_GRESS_MISMATCH:
@@ -24,8 +22,6 @@ cstring to_str(const ErrorCode& e) {
             return "CONTAINER_PARSER_PACKING_INVALID";
         case ec::FIELD_MAX_CONTAINER_BYTES_EXCEEDED:
             return "FIELD_MAX_CONTAINER_BYTES_EXCEEDED";
-        case ec::NO_CONTAINER_AVAILABLE:
-            return "NO_CONTAINER_AVAILABLE";
         case ec::ALIGNED_CLUSTER_NO_VALID_START:
             return "ALIGNED_CLUSTER_NO_VALID_START";
         case ec::ALIGNED_CLUSTER_CANNOT_BE_ALLOCATED:
@@ -38,6 +34,8 @@ cstring to_str(const ErrorCode& e) {
             return "WIDE_ARITH_ALLOC_FAILED";
         case ec::NO_SLICING_FOUND:
             return "NO_SLICING_FOUND";
+        case ec::INVALID_ALLOC_FOUND_BY_COPACKER:
+            return "INVALID_ALLOC_FOUND_BY_COPACKER";
         default:
             BUG("unimplemented errorcode: %1%", int(e));
     }
@@ -45,6 +43,54 @@ cstring to_str(const ErrorCode& e) {
 
 constexpr const char* ScoreContext::tab_table[];
 constexpr int ScoreContext::max_log_level;
+
+std::string AllocError::str() const {
+    std::stringstream ss;
+    ss << "code:" << to_str(code) << ", msg:" << msg << ". ";
+    if (invalid_packing) {
+        ss << "invalid packing of destination:";
+        for (const auto& sl : *invalid_packing) {
+            ss << "\n\t\t" << sl;
+        }
+    }
+    if (reslice_required) {
+        ss << "need to reslice:";
+        for (const auto& sl : *reslice_required) {
+            ss << "\n\t\t" << sl;
+        }
+    }
+    return ss.str();
+}
+
+std::string AllocResult::err_str() const {
+    BUG_CHECK(err, "cannot call err_str when err does not exists");
+    std::stringstream ss;
+    ss << err->str();
+    return ss.str();
+}
+
+
+std::string AllocResult::pretty_print_tx(const PHV::Transaction& tx, cstring prefix) {
+    std::stringstream ss;
+    cstring new_line = "";
+    for (const auto& container_status : tx.get_actual_diff()) {
+        // const auto& c = container_status.first;
+        const auto& slices = container_status.second.slices;
+        for (const auto& a : slices) {
+            auto fs = PHV::FieldSlice(a.field(), a.field_slice());
+            ss << new_line << prefix << "allocate: " << a.container() << "["
+               << a.container_slice().lo << ":" << a.container_slice().hi << "] <- " << fs
+               << " @[" << a.getEarliestLiveness() << "," << a.getLatestLiveness() << "]";
+            new_line = "\n";
+        }
+    }
+    return ss.str();
+}
+
+std::string AllocResult::tx_str(cstring prefix) const {
+    BUG_CHECK(tx, "cannot call tx_str when tx does not exists");
+    return pretty_print_tx(*tx, prefix);
+}
 
 namespace {
 
@@ -77,7 +123,6 @@ std::vector<ScAllocAlignment> make_slicelist_alignment(const SuperCluster* sc,
 
             // Otherwise, update the alignment for this slice's cluster.
             curr.cluster_starts[&cluster] = le_offset;
-            curr.slice_starts[slice] = le_offset;
             le_offset += slice.size();
         }
         if (success) {
@@ -89,38 +134,9 @@ std::vector<ScAllocAlignment> make_slicelist_alignment(const SuperCluster* sc,
 
 }  // namespace
 
-
-std::string AllocResult::err_str() const {
-    BUG_CHECK(err, "cannot call err_str when err does not exists");
-    std::stringstream ss;
-    ss << err->str();
-    return ss.str();
-}
-
-std::string AllocResult::tx_str(cstring prefix) const {
-    BUG_CHECK(tx, "cannot call tx_str when tx does not exists");
-    std::stringstream ss;
-    cstring new_line = "";
-    for (const auto& container_status : tx->getTransactionStatus()) {
-        const auto& status = container_status.second;
-        for (const auto& a : status.slices) {
-            auto fs = PHV::FieldSlice(a.field(), a.field_slice());
-            ss << new_line << prefix << "allocate: " << a.container() << "["
-               << a.container_slice().lo << ":" << a.container_slice().hi << "] <- " << fs
-               << " @[" << a.getEarliestLiveness() << "," << a.getLatestLiveness() << "]";
-            new_line = "\n";
-        }
-    }
-    return ss.str();
-}
-
 boost::optional<ScAllocAlignment> ScAllocAlignment::merge(const ScAllocAlignment& other) const {
     ScAllocAlignment rst;
     for (auto& alignment : std::vector<const ScAllocAlignment*>{this, &other}) {
-        // wont' be conflict
-        for (auto& sl_start : alignment->slice_starts) {
-            rst.slice_starts.emplace(sl_start.first, sl_start.second);
-        }
         // may conflict
         for (auto& cluster_start : alignment->cluster_starts) {
             const auto* cluster = cluster_start.first;
@@ -203,7 +219,8 @@ cstring ScAllocAlignment::pretty_print(cstring prefix, const SuperCluster* sc) c
         new_line = "\n";
         cstring sep = "";
         for (const auto& fs : *sl) {
-            ss << sep << "{" << fs.shortString() << ", " << slice_starts.at(fs) << "}";
+            ss << sep << "{" << fs.shortString() << ", "
+               << cluster_starts.at(&sc->aligned_cluster(fs)) << "}";
             sep = ", ";
         }
         ss << "]";

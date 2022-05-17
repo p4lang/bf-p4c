@@ -323,7 +323,63 @@ TEST(action_constraint_solver, bitmasked_set_only_but_disabled) {
     EXPECT_FALSE(rst.ok());
 }
 
-TEST(action_constraint_solver, dakr_solver) {
+
+TEST(action_constraint_solver, mocha_solver) {
+    auto solver = ActionMochaSolver();
+    // not okay, action data source, will overwrite w0[2:31].
+    solver.set_container_spec("W0", 32, bitvec(0, 32));
+    solver.add_assign(make_container_operand("W0", FromTo(0, 1)), make_ad_or_const_operand());
+    EXPECT_FALSE(solver.solve().ok());
+    solver.clear();
+
+    // not okay, will overwrite w0[2:31]
+    solver.set_container_spec("W35", 32, bitvec());
+    solver.set_container_spec("W0", 32, bitvec(0, 32));
+    solver.add_assign(make_container_operand("W0", FromTo(0, 1)),
+                      make_container_operand("W35", FromTo(0, 1)));
+    EXPECT_FALSE(solver.solve().ok());
+    solver.clear();
+
+    // not okay, will overwrite w0[2:31], even if source not allocated yet.
+    solver.set_container_spec("W35", 32, bitvec());
+    solver.set_container_spec("W0", 32, bitvec(0, 32));
+    solver.add_src_unallocated_assign("W0", FromTo(0, 1));
+    EXPECT_FALSE(solver.solve().ok());
+    solver.clear();
+
+    // okay, full set, action data.
+    solver.set_container_spec("W35", 32, bitvec());
+    solver.set_container_spec("W0", 32, bitvec(0, 32));
+    solver.add_assign(make_container_operand("W0", FromTo(0, 31)),
+                      make_ad_or_const_operand());
+    EXPECT_TRUE(solver.solve().ok());
+    solver.clear();
+
+    // okay, full set
+    solver.set_container_spec("W35", 32, bitvec());
+    solver.set_container_spec("W0", 32, bitvec(0, 32));
+    solver.add_assign(make_container_operand("W0", FromTo(0, 31)),
+                      make_container_operand("W35", FromTo(0, 31)));
+    EXPECT_TRUE(solver.solve().ok());
+    solver.clear();
+
+    // okay, w0[2:31] does not have live bits.
+    solver.set_container_spec("W35", 32, bitvec());
+    solver.set_container_spec("W0", 32, bitvec(0, 2));
+    solver.add_assign(make_container_operand("W0", FromTo(0, 1)),
+                      make_container_operand("W35", FromTo(0, 1)));
+    EXPECT_TRUE(solver.solve().ok());
+    solver.clear();
+
+    // okay, full set by self.
+    solver.set_container_spec("W0", 32, bitvec(0, 32));
+    solver.add_assign(make_container_operand("W0", FromTo(0, 31)),
+                      make_container_operand("W0", FromTo(0, 31)));
+    EXPECT_TRUE(solver.solve().ok());
+    solver.clear();
+}
+
+TEST(action_constraint_solver, dark_solver) {
     auto solver = ActionDarkSolver();
     // not okay, action data source.
     solver.set_container_spec("W0", 32, bitvec(0, 32));
@@ -340,6 +396,13 @@ TEST(action_constraint_solver, dakr_solver) {
     EXPECT_FALSE(solver.solve().ok());
     solver.clear();
 
+    // not okay, will overwrite w0[2:31], even if source not allocated yet.
+    solver.set_container_spec("W35", 32, bitvec());
+    solver.set_container_spec("W0", 32, bitvec(0, 32));
+    solver.add_src_unallocated_assign("W0", FromTo(0, 1));
+    EXPECT_FALSE(solver.solve().ok());
+    solver.clear();
+
     // okay, full set
     solver.set_container_spec("W35", 32, bitvec());
     solver.set_container_spec("W0", 32, bitvec(0, 32));
@@ -353,6 +416,13 @@ TEST(action_constraint_solver, dakr_solver) {
     solver.set_container_spec("W0", 32, bitvec(0, 2));
     solver.add_assign(make_container_operand("W0", FromTo(0, 1)),
                       make_container_operand("W35", FromTo(0, 1)));
+    EXPECT_TRUE(solver.solve().ok());
+    solver.clear();
+
+    // okay, full set by self.
+    solver.set_container_spec("W0", 32, bitvec(0, 32));
+    solver.add_assign(make_container_operand("W0", FromTo(0, 31)),
+                      make_container_operand("W0", FromTo(0, 31)));
     EXPECT_TRUE(solver.solve().ok());
     solver.clear();
 }

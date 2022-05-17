@@ -82,8 +82,8 @@ void ConstrainedField::setSameContainerGroup(bool b) {
 
 /* ConstrainedFieldMap */
 
-ConstrainedFieldMap ConstrainedFieldMapBuilder::buildMap(const PhvInfo &phv,
-                                                    const std::list<PHV::SuperCluster*> &groups) {
+ConstrainedFieldMap ConstrainedFieldMapBuilder::buildMap(
+    const PhvInfo &phv, const std::list<PHV::SuperCluster *> &groups) {
     ConstrainedFieldMap result;
 
     for (auto &f : phv) {

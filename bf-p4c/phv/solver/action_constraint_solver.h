@@ -179,6 +179,11 @@ class ActionSolverBase {
     Result try_container_set(const ContainerID dest,
                              const RotateClassifiedAssigns& offset_assigns) const;
 
+    /// For all destination container c in @a src_unallocated_bits, that if dest_assigns_i
+    /// do not have records of c, i.e., none of the sources have been allocated, check
+    /// if whole container set will corrupt other live bits.
+    boost::optional<Error> check_whole_container_set_with_none_source_allocated() const;
+
  public:
     /// set true to enable bitmasked_set set, otherwise disable. default: enable.
     void enable_bitmasked_set(bool enable) {

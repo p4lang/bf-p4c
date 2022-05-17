@@ -507,9 +507,6 @@ void Clustering::CollectInconsistentFlexibleFieldExtract::end_apply() {
                 const nw_bitrange j_range = j->first;
                 const PHV::Field* j_field = j->second;
                 int extract_dist = j_range.lo - i_range.lo;
-                if (extract_dist >= 32) {
-                    break;
-                }
                 if (relative_distances.count(i_field) &&
                     relative_distances.at(i_field).count(j_field)) {
                     if (relative_distances.at(i_field).at(j_field) != extract_dist) {

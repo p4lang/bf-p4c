@@ -48,6 +48,8 @@ std::ostream& operator<<(std::ostream&, const CoPackHint*);
 /// The value is a list of hints that are mutually exclusive,
 /// only one of them needs to be satisfied.
 using ActionSourceCoPackMap = ordered_map<const IR::MAU::Action*, std::vector<const CoPackHint*>>;
+std::ostream& operator<<(std::ostream&, const ActionSourceCoPackMap&);
+std::ostream& operator<<(std::ostream&, const ActionSourceCoPackMap*);
 
 /// Result type that either has some copack hints, or an error.
 struct CoPackResult {

@@ -789,7 +789,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "error.*This program violates action constraints imposed by Tofino.|CANNOT_PACK_CANDIDATES"
+  "error.*This program violates action constraints imposed by Tofino.|Trivial allocator has found unsatisfiable constraints"
   extensions/p4_tests/p4_16/compile_only/multi-constraint.p4
 )
 
@@ -813,8 +813,8 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "This program violates action constraints imposed by Tofino|CANNOT_PACK_CANDIDATES"
-  extensions/p4_tests/p4_16/ptf/int_transit.p4 # CANNOT_PACK_CANDIDATES
+  "This program violates action constraints imposed by Tofino|Trivial allocator has found unsatisfiable constraints"
+  extensions/p4_tests/p4_16/ptf/int_transit.p4 # ACTION_CANNOT_BE_SYNTHESIZED
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1442,7 +1442,7 @@ p4c_add_xfail_reason("tofino"
 # P4C-2091
 # Expected failure (negative test)
 p4c_add_xfail_reason("tofino"
-  "error.*PHV allocation was not successful|CANNOT_PACK_CANDIDATES"
+  "error.*PHV allocation was not successful|ACTION_CANNOT_BE_SYNTHESIZED|NO_SLICING_FOUND"
   extensions/p4_tests/p4_16/compile_only/p4c-2091.p4
 )
 
@@ -1688,11 +1688,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/03-VlanProfile.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "mismatch from expected"
-  extensions/p4_tests/p4_16/stf/header_stack_strided_alloc2.p4
-)
-
 # P4C-3036
 p4c_add_xfail_reason("tofino"
   "AssertionError: Expected packet was not received on device 0, port 0"
@@ -1744,7 +1739,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "warning: AssignmentStatement: Padding fields do not need to be explicitly set.* Tofino does not support action data/constant with rotated PHV source at the same time|CANNOT_PACK_CANDIDATES"
+  "warning: AssignmentStatement: Padding fields do not need to be explicitly set.* Tofino does not support action data/constant with rotated PHV source at the same time|ACTION_CANNOT_BE_SYNTHESIZED"
   extensions/p4_tests/p4_16/compile_only/p4c-3453.p4
 )
 

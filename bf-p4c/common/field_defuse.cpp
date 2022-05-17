@@ -4,6 +4,34 @@
 #include "lib/map.h"
 #include "lib/range.h"
 
+namespace {
+
+/// TODO(yumin): move them to IR and remove this hack.
+/// These constant variables are fields with the bug that hardware behaviors are not
+/// correctly captured by our IR. For example, parser_err might be written in parser, but
+/// our IR does not have any node to represent it.
+const std::unordered_set<cstring> write_by_parser = {
+    "ingress::ig_intr_md_from_prsr.parser_err",
+    "egress::eg_intr_md_from_prsr.parser_err"
+};
+
+class WriteParserError : public IR::Expression {
+ private:
+    IR::Expression *clone() const override {
+        auto *new_expr = new WriteParserError(*this);
+        return new_expr;
+    }
+
+ public:
+    explicit WriteParserError(const PHV::Field *f) : field(f) {
+        BUG_CHECK(write_by_parser.count(f->name), "incorrect parser error name");
+    }
+    const PHV::Field *field;
+    void dbprint(std::ostream &out) const override { out << "write parser error to " << field; }
+};
+
+}  // namespace
+
 static std::ostream &operator<<(std::ostream &out, const FieldDefUse::locpair &loc) {
     return out << *loc.second << " in " << *loc.first;
 }
@@ -278,17 +306,31 @@ bool FieldDefUse::preorder(const IR::BFN::Parser *p) {
             if (p->gress == INGRESS && (!f.metadata && !f.bridged)) continue;
             if (p->gress == EGRESS  && (!f.metadata || f.bridged)) continue;
         }
-        LOG2("Adding implicit parser initialization expr for " << f.name);
-        auto* parser_begin = p->start;
-        const PHV::Field* f_p = phv.field(f.id);
-        BUG_CHECK(f_p != nullptr, "Dereferencing an invalid field id");
-        IR::Expression* dummy_expr = new ImplicitParserInit(f_p);
-        auto& info = field(f_p);
-        parser_zero_inits.emplace(parser_begin, dummy_expr);
-        info.def.emplace(parser_begin, dummy_expr);
-        info.def_covered_ranges_map[locpair(parser_begin, dummy_expr)].insert(
-            le_bitrange(0, f_p->size - 1));
-        located_defs[f.id].emplace(parser_begin, dummy_expr);
+
+        if (write_by_parser.count(f.name)) {
+            LOG2("Adding parser error write expr for " << f.name);
+            auto *parser_begin = p->start;
+            const PHV::Field *f_p = phv.field(f.id);
+            BUG_CHECK(f_p != nullptr, "Dereferencing an invalid field id");
+            IR::Expression *parser_err_expr = new WriteParserError(f_p);
+            auto &info = field(f_p);
+            info.def.emplace(parser_begin, parser_err_expr);
+            info.def_covered_ranges_map[locpair(parser_begin, parser_err_expr)].insert(
+                    StartLen(0, f.size));
+            located_defs[f.id].emplace(parser_begin, parser_err_expr);
+        } else {
+            LOG2("Adding implicit parser initialization expr for " << f.name);
+            auto *parser_begin = p->start;
+            const PHV::Field *f_p = phv.field(f.id);
+            BUG_CHECK(f_p != nullptr, "Dereferencing an invalid field id");
+            IR::Expression *dummy_expr = new ImplicitParserInit(f_p);
+            auto &info = field(f_p);
+            parser_zero_inits.emplace(parser_begin, dummy_expr);
+            info.def.emplace(parser_begin, dummy_expr);
+            info.def_covered_ranges_map[locpair(parser_begin, dummy_expr)].insert(
+                le_bitrange(0, f_p->size - 1));
+            located_defs[f.id].emplace(parser_begin, dummy_expr);
+        }
     }
     LOG6_UNINDENT;
     return true;

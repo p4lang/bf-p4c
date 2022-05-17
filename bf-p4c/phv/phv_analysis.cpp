@@ -18,6 +18,7 @@
 #include "bf-p4c/phv/analysis/jbay_phv_analysis.h"
 #include "bf-p4c/phv/analysis/mocha.h"
 #include "bf-p4c/phv/analysis/mutex_overlay.h"
+#include "bf-p4c/phv/v2/phv_allocation_v2.h"
 #include "bf-p4c/mau/action_mutex.h"
 #include "bf-p4c/logging/event_logger.h"
 #include "ir/visitor.h"
@@ -86,6 +87,9 @@ PHV_AnalysisPass::PHV_AnalysisPass(
       source_tracker(phv),
       tablePackOpt(phv),
       utils(phv, clot, clustering, uses, defuse, action_constraints, meta_init, dark_live_range,
+            field_to_parser_states, parser_critical_path, parser_info, strided_headers,
+            physical_liverange_db, source_tracker, pragmas, settings, tablePackOpt),
+      kit(phv, clot, clustering, uses, defuse, action_constraints,
             field_to_parser_states, parser_critical_path, parser_info, strided_headers,
             physical_liverange_db, source_tracker, pragmas, settings, tablePackOpt) {
         auto* validate_allocation = new PHV::ValidateAllocation(phv, clot, physical_liverange_db);
@@ -162,9 +166,11 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             &tablePackOpt,
             // From this point on, we are starting to transform the PHV related data structures.
             // Before this is all analysis that collected constraints for PHV allocation to use.
-            // &table_friendly_packing_backtracker,    // <---
-            &clustering,                               //    |
-            new AllocatePHV(utils, alloc, phv),        // ----
+            // &table_friendly_packing_backtracker,                          // <---
+            &clustering,                                                     //    |
+            options.alt_phv_alloc                                            //    |
+                ? (Visitor*)new PHV::v2::PhvAllocation(kit, alloc, phv)      //    |
+                : (Visitor*)new AllocatePHV(utils, alloc, phv),              // ----
             new AddSliceInitialization(phv, defuse, deps, meta_live_range),
             &defuse,
             phvLoggingInfo,

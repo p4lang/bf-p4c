@@ -200,11 +200,13 @@ ordered_map<const PHV::Field*, const PHV::Field*> PhvLogging::getFieldAliases() 
 }
 
 Phv_Schema_Logger::FieldInfo* PhvLogging::getFieldInfo(const PHV::Field *f) const {
+    BUG_CHECK(f, "field cannot be null");
     return new FieldInfo(f->size, getFieldType(f), std::string(stripThreadPrefix(f->name)),
             getGress(f), "");
 }
 
 Phv_Schema_Logger::SourceLocation* PhvLogging::getSourceLoc(const PHV::Field *f) const {
+    BUG_CHECK(f, "field cannot be null");
     if (f->srcInfo == boost::none)
         return new SourceLocation("DummyFile", -1);
     return new SourceLocation(std::string(f->srcInfo->toPosition().fileName),
@@ -319,6 +321,7 @@ int PhvLogging::getDatabaseIndex(std::vector<T> &db, T item) {
 
 void PhvLogging::logFieldConstraints(const cstring &fieldName, Field *logger) {
     auto f = phv.field(fieldName);
+    if (!f) return;
     auto fieldInfo = getFieldInfo(f);
     auto srcLoc = getSourceLoc(f);
 
@@ -395,8 +398,8 @@ void PhvLogging::logSolitaryConstraints(ConstrainedField &field, const SourceLoc
 }
 
 void PhvLogging::logNoPackConstraint(ConstrainedField &field,
-                                                 const FieldInfo *fieldInfo,
-                                                 const SourceLocation *srcLoc) {
+                                     const FieldInfo *fieldInfo,
+                                     const SourceLocation *srcLoc) {
     auto &fieldGroupItems = logger.get_field_group_items();
     auto &fieldGroups = logger.get_field_groups();
 
@@ -410,6 +413,7 @@ void PhvLogging::logNoPackConstraint(ConstrainedField &field,
         if (field.getName() == f.getName()) continue;
         if (!info.noPackConstraints.at(field.getName()).at(f.getName())) continue;
         auto phvf = phv.field(f.getName());
+        if (!phvf) continue;
 
         auto otherFieldInfo = getFieldInfo(phvf);
         auto otherSrcLoc = getSourceLoc(phvf);
@@ -445,6 +449,7 @@ void PhvLogging::logGroupConstraint(ConstrainedField &field, ListConstraint *c,
     std::vector<int> indexGroup;
     for (auto &item : group) {
         auto f = phv.field(item.getParent().getName());
+        if (!f) continue;
         PHV::FieldSlice slice(f, item.getRange());
 
         auto info = getFieldInfo(f);

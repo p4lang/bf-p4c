@@ -1,6 +1,7 @@
 #ifndef BF_P4C_PHV_PHV_PARDE_MAU_USE_H_
 #define BF_P4C_PHV_PHV_PARDE_MAU_USE_H_
 
+#include "bf-p4c/ir/bitrange.h"
 #include "ir/ir.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/ir/gress.h"
@@ -25,6 +26,13 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
     /// Fields used in at least one ALU instruction. Keys are fields used in an ALU instruction.
     /// Values are the slices of the fields so used.
     FieldIdToRangeMap used_alu_i;
+
+    /// field to ranges that was used as table key.
+    ordered_map<const PHV::Field *,
+                ordered_map<le_bitrange, ordered_set<const IR::MAU::Table *>>> ixbar_read_i;
+
+    /// fields that are read by deparser learning engine, including selector.
+    ordered_set<const PHV::Field*> learning_reads_i;
 
     /// Fields extracted in the parser.
     bitvec      extracted_i[GRESS_T_COUNT];
@@ -90,18 +98,29 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
     ///     eliminated this case once P4C-3925 add ghost field writes to IR).
     bool is_allocation_required(const PHV::Field *f) const;
 
+    /// @returns true if @p is read by deparser for learning digest and subject to the
+    /// maxDigestSizeInBytes constraint.
+    bool is_learning(const PHV::Field *f) const { return learning_reads_i.count(f); };
+
+    /// @returns ixbar read of sub-ranges to tables of @p range of @p f.
+    /// premise: @p range must be a fine-sliced range that either all of or none of
+    /// the bits in the range are read by ixbar. Otherwise, BUG will be thrown.
+    ordered_set<const IR::MAU::Table *> ixbar_read(const PHV::Field *f, le_bitrange range) const;
+
  protected:
     const PhvInfo &phv;
     gress_t       thread = INGRESS;
     bool          in_mau = false;
     bool          in_dep = false;
 
- private:
+ protected:
     profile_t init_apply(const IR::Node *) override;
     bool preorder(const IR::BFN::Parser *) override;
     bool preorder(const IR::BFN::Extract *) override;
     bool preorder(const IR::BFN::Deparser *) override;
+    bool preorder(const IR::BFN::Digest *) override;
     bool preorder(const IR::MAU::TableSeq *) override;
+    bool preorder(const IR::MAU::TableKey *) override;
     bool preorder(const IR::Expression *) override;
 };
 

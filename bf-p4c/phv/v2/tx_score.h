@@ -1,6 +1,7 @@
 #ifndef BF_P4C_PHV_V2_TX_SCORE_H_
 #define BF_P4C_PHV_V2_TX_SCORE_H_
 
+#include "bf-p4c/phv/v2/phv_kit.h"
 #include "bf-p4c/phv/utils/utils.h"
 
 namespace PHV {
@@ -38,7 +39,9 @@ class MinPackTxScore : public TxScore {
  public:
     // number of container that is used for packing.
     int n_packed = 0;
-    explicit MinPackTxScore(int n_packed) : n_packed(n_packed) {}
+    bool use_mocha_or_dark = false;
+    MinPackTxScore(int n_packed, bool use_mocha_or_dark)
+        : n_packed(n_packed), use_mocha_or_dark(use_mocha_or_dark) {}
     bool better_than(const TxScore* other) const override;
     std::string str() const override;
 };
@@ -51,6 +54,5 @@ class MinPackTxScoreMaker : public TxScoreMaker {
 
 }  // namespace v2
 }  // namespace PHV
-
 
 #endif /* BF_P4C_PHV_V2_TX_SCORE_H_ */

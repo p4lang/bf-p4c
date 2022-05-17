@@ -29,16 +29,18 @@ using ContainerGroupsBySize = std::map<PHV::Size, std::vector<ContainerGroup>>;
 /// ErrorCode classifies all kinds of PHV allocation error.
 /// NOTE: when adding a new error, remember to update to_str function.
 enum class ErrorCode {
-    /// The container bits has been occupied by allocated fields.
+    /// For an allocation attempt, if we cannot find bits of container (space) to
+    /// satisfy `static` (non-action-related) constraints of candidates,
+    /// this error will be returned.
     NOT_ENOUGH_SPACE,
-    /// The candidate list of AllocSlices that are packed into a specific container with
-    /// specific starting positions will violate action constraints.
-    /// NOTE: this error does not necessarily mean candidates are invalid. For example,
-    /// the reason could be that source operands are not allocated accordingly.
-    CANNOT_PACK_CANDIDATES,
-    /// The candidate list of AllocSlices, together with AllocSlices that has already been
-    /// assigned to the container, will violate action constraints.
-    CANNOT_PACK_WITH_ALLOCATED,
+    /// We cannot synthesize an action based on current allocation. Reasons can be
+    /// (1) proposed packing in the destination container are invalid.
+    /// (2) source operands are not or cannot be allocated accordingly and so we cannot
+    ///     find an instruction for the write.
+    /// (3) intrinsic conflict of constraints.
+    /// For AllocError of this type, it should include a vector of AllocSlices of the destination
+    /// container where instruction could not be found. (if many, any one is okay).
+    ACTION_CANNOT_BE_SYNTHESIZED,
     /// container type constraint not satisfied, e.g., try non-mocha field against mocha container.
     CONTAINER_TYPE_MISMATCH,
     /// container gress assignment mismatches field gress.
@@ -49,8 +51,6 @@ enum class ErrorCode {
     CONTAINER_PARSER_PACKING_INVALID,
     /// violating max container bytes constraint on field.
     FIELD_MAX_CONTAINER_BYTES_EXCEEDED,
-    /// no container can be used to allocate candidate slices.
-    NO_CONTAINER_AVAILABLE,
     /// when allocate the aligned cluster, no valid start position was found.
     ALIGNED_CLUSTER_NO_VALID_START,
     /// aligned cluster cannot be allocated to any container group.
@@ -78,17 +78,17 @@ cstring to_str(const ErrorCode& e);
 struct AllocError {
     ErrorCode code;
     cstring msg;
-    const SuperCluster::SliceList* cannot_allocate_sl = nullptr;
+    /// when allocating slices, and action cannot be synthesized, alloc slices in the
+    /// destination container will be saved here.
+    const std::vector<AllocSlice>* invalid_packing = nullptr;
+    /// when failed to allocate a super cluster because action cannot be synthesized, if it is
+    /// intrinsic conflict of constraints, then either the destination slice list needs to be
+    /// sliced more, or source slice list needs to be sliced less (packed together). Both
+    /// sources and destination slice lists will be saved here.
+    const ordered_set<const SuperCluster::SliceList*>* reslice_required = nullptr;
     explicit AllocError(ErrorCode code) : code(code), msg("") {}
     AllocError(ErrorCode code, cstring msg) : code(code), msg(msg) {}
-    std::string str() const {
-        std::stringstream ss;
-        ss << "code:" << to_str(code) << ", msg:" << msg;
-        if (cannot_allocate_sl) {
-            ss << " => cannot allocate " << cannot_allocate_sl;
-        }
-        return ss.str();
-    }
+    std::string str() const;
 };
 
 template<class T>
@@ -108,24 +108,26 @@ struct AllocResult {
     explicit AllocResult(const Transaction& tx): tx(tx) {}
     bool ok() const { return err == nullptr; }
     std::string err_str() const;
-    std::string tx_str(cstring prefix) const;
+    std::string tx_str(cstring prefix = "") const;
+    static std::string pretty_print_tx(const PHV::Transaction& tx, cstring prefix = "");
 };
 
 /// ScAllocAlignment is the alignment arrangement for a super cluster based on its alignment
-/// constraints of slice lists.
-/// TODO(yumin): @a slice_starts is redundant, cluster_starts.at(sc->aligned_cluster(fs)) is
-/// equivalent.
+/// constraints of slice lists and aligned clusters.
 struct ScAllocAlignment {
-    /// a slice_alignment maps field slice to start bit location in a container.
-    ordered_map<FieldSlice, int> slice_starts;
     /// a cluster_alignment maps aligned cluster to start bit location in a container.
     ordered_map<const AlignedCluster*, int> cluster_starts;
     /// @returns merged alignment constraint if no conflict was found.
     boost::optional<ScAllocAlignment> merge(const ScAllocAlignment& other) const;
     /// @returns pretty print string for the alignment of @p sc.
     cstring pretty_print(cstring prefix, const SuperCluster* sc) const;
+    /// @returns true if it is okay to place field slices in @p aligned to @p start index of
+    /// a container.
+    bool ok(const AlignedCluster* aligned, int start) const {
+        return !cluster_starts.count(aligned) || cluster_starts.at(aligned) == start;
+    }
     /// @returns true if there is no alignment scheduled: cluster without slice lists.
-    bool empty() const { return slice_starts.empty(); }
+    bool empty() const { return cluster_starts.empty(); }
 };
 
 /// Factory function to build up to @p max_n alignment for @p sc in @p width container group.
@@ -139,12 +141,16 @@ std::vector<ScAllocAlignment> make_sc_alloc_alignment(
 
 /// a collection of allocation configurations that balances speed and performance of allocation.
 struct SearchConfig {
-    int n_max_sc_alignments = 8;
+    /// The number of DFS steps that allocator can use for each super cluster. This variable
+    /// sets the upper-bound of searching time. Ideally, each step can place one slice list to
+    /// a container.
+    int n_dfs_steps_sc_alloc = 256;
 
-    bool stop_first_succ_sc_alignment = true;
+    /// Allocator will find the best score out of this number of allocation for a super cluster.
+    int n_best_of_sc_alloc = 1;
 
-    bool stop_first_succ_fs_alignment = false;
-
+    /// Allocator will stop try allocating candiddates to other containers if candidates have been
+    /// successfully allcoated to an empty normal container.
     bool stop_first_succ_empty_normal_container = false;
 };
 
@@ -156,8 +162,8 @@ class ScoreContext {
     /// current container group that we are trying to allocate.
     const ContainerGroup* cont_group_i = nullptr;
 
-    /// slice lists are better to be allocated in this order.
-    const std::list<const SuperCluster::SliceList*>* sl_alloc_order_i = {};
+    /// allocation ordered of a super cluster.
+    const std::vector<const SuperCluster::SliceList*>* alloc_order_i = {};
 
     /// decided allocation alignment under current context.
     const ScAllocAlignment* alloc_alignment_i = nullptr;
@@ -200,14 +206,14 @@ class ScoreContext {
         return cloned;
     }
 
-    const std::list<const SuperCluster::SliceList*>* sl_alloc_order() const {
-        BUG_CHECK(sl_alloc_order_i, "sl alloc order not added in ctx.");
-        return sl_alloc_order_i;
+    const std::vector<const SuperCluster::SliceList*>* alloc_order() const {
+        BUG_CHECK(alloc_order_i, "sl alloc order not added in ctx.");
+        return alloc_order_i;
     }
-    ScoreContext with_sl_alloc_order(
-            const std::list<const SuperCluster::SliceList*>* order) const {
+    ScoreContext with_alloc_order(
+            const std::vector<const SuperCluster::SliceList*>* order) const {
         auto cloned = *this;
-        cloned.sl_alloc_order_i = order;
+        cloned.alloc_order_i = order;
         return cloned;
     }
 

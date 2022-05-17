@@ -22,9 +22,9 @@
 #include "bf-p4c/phv/utils/report.h"
 #include "bf-p4c/phv/utils/slice_alloc.h"
 #include "bf-p4c/phv/utils/utils.h"
+#include "bf-p4c/phv/legacy_packing_validator.h"
 #include "bf-p4c/common/pragma/all_pragmas.h"
 #include "bf-p4c/logging/event_logger.h"
-#include "bf-p4c/phv/v2/trivial_allocator.h"
 #include "lib/error.h"
 #include "lib/exceptions.h"
 #include "lib/log.h"
@@ -391,53 +391,6 @@ std::list<PHV::SuperCluster*> remove_deparser_zero_superclusters(
     return rst;
 }
 
-/// Check if the supercluster has field slice that requires strided
-/// allocation. Merge all related stride superclusters.
-std::list<PHV::SuperCluster*> create_strided_clusters(
-        const CollectStridedHeaders& strided_headers,
-        const std::list<PHV::SuperCluster*>& cluster_groups) {
-    std::list<PHV::SuperCluster*> rst;
-    for (auto sc : cluster_groups) {
-        const ordered_set<const PHV::Field*>* strided_group = nullptr;
-        auto slices = sc->slices();
-        for (auto sl : slices) {
-            strided_group = strided_headers.get_strided_group(sl.field());
-            if (!strided_group) continue;
-            if (slices.size() != 1) {
-                ::error(
-                    "Field %1% requires strided allocation"
-                    " but has conflicting constraints on it.",
-                    sl.field()->name);
-            }
-            break;
-        }
-        if (!strided_group) {
-            rst.push_back(sc);
-            continue;
-        }
-        bool merged = false;
-        for (auto r : rst) {
-            auto r_slices = r->slices();
-            for (auto sl : r_slices) {
-                if (!strided_group->count(sl.field())) continue;
-                if (r_slices.front().range() == slices.front().range()) {
-                    rst.remove(r);
-                    auto m = r->merge(sc);
-                    m->needsStridedAlloc(true);
-                    rst.push_back(m);
-                    merged = true;
-                    break;
-                }
-            }
-            if (merged)
-                break;
-        }
-        if (!merged) rst.push_back(sc);
-    }
-
-    return rst;
-}
-
 // SuperClusterDiagnoseInfo is ported from AllocatePHV::diagnoseSuperCluster.
 // This struct and related analysis are not precise (high false positive rate).
 // We should deprecate them once the table first alloc mode is ready for production.
@@ -654,10 +607,26 @@ std::vector<PHV::AllocSlice> make_alloc_slices_with_physical_liverange(
     return rst;
 }
 
+const auto slicing_config = PHV::Slicing::IteratorConfig{false, true, false};
+
+// Create callback for creating FileLog objects
+// Those can locally redirect LOG* macros to another file which
+// will share path and suffix number with phv_allocation_*.log
+// To restore original logging behaviour, call Logging::FileLog::close on the object.
+Logging::FileLog* createFileLog(
+        int pipeId, const cstring& prefix, int loglevel) {
+    if (!LOGGING(loglevel)) return nullptr;
+
+    auto filename = Logging::PassManager::getNewLogFileName(prefix);
+    return new Logging::FileLog(pipeId, filename, Logging::Mode::AUTO);
+}
+
+
 }  // namespace
 
 PHV::Slicing::IteratorInterface* PHV::AllocUtils::make_slicing_ctx(
     const PHV::SuperCluster* sc) const {
+    auto* packing_validator = new PHV::legacy::ActionPackingValidator(source_tracker, uses);
     return new PHV::Slicing::ItrContext(phv, sc, pragmas.pa_container_sizes().field_to_layout(),
                                         *packing_validator,
                                         boost::bind(&AllocUtils::has_pack_conflict, this, _1, _2),
@@ -786,9 +755,10 @@ std::list<PHV::SuperCluster*> PHV::AllocUtils::remove_unref_clusters(
 
 std::list<PHV::SuperCluster*> PHV::AllocUtils::remove_clot_allocated_clusters(
     const ClotInfo& clot, std::list<PHV::SuperCluster*> clusters) {
-    std::remove_if(clusters.begin(), clusters.end(), [&](const PHV::SuperCluster* sc) {
+    auto res = std::remove_if(clusters.begin(), clusters.end(), [&](const PHV::SuperCluster* sc) {
         return AllocUtils::is_clot_allocated(clot, *sc);
     });
+    clusters.erase(res, clusters.end());
     return clusters;
 }
 
@@ -3593,6 +3563,51 @@ void PHV::AllocUtils::update_slice_refs(PhvInfo& phv, const FieldDefUse& defuse)
     }
 }
 
+std::list<PHV::SuperCluster*> PHV::AllocUtils::create_strided_clusters(
+        const CollectStridedHeaders& strided_headers,
+        const std::list<PHV::SuperCluster*>& cluster_groups) {
+    std::list<PHV::SuperCluster*> rst;
+    for (auto* sc : cluster_groups) {
+        const ordered_set<const PHV::Field*>* strided_group = nullptr;
+        auto slices = sc->slices();
+        for (const auto& sl : slices) {
+            strided_group = strided_headers.get_strided_group(sl.field());
+            if (!strided_group) continue;
+            if (slices.size() != 1) {
+                ::error(
+                    "Field %1% requires strided allocation"
+                    " but has conflicting constraints on it.",
+                    sl.field()->name);
+            }
+            break;
+        }
+        if (!strided_group) {
+            rst.push_back(sc);
+            continue;
+        }
+        bool merged = false;
+        for (auto* r : rst) {
+            auto r_slices = r->slices();
+            for (const auto& sl : r_slices) {
+                if (!strided_group->count(sl.field())) continue;
+                if (r_slices.front().range() == slices.front().range()) {
+                    rst.remove(r);
+                    auto m = r->merge(sc);
+                    m->needsStridedAlloc(true);
+                    rst.push_back(m);
+                    merged = true;
+                    break;
+                }
+            }
+            if (merged)
+                break;
+        }
+        if (!merged) rst.push_back(sc);
+    }
+
+    return rst;
+}
+
 void merge_slices(
     safe_vector<PHV::AllocSlice> &slices, safe_vector<PHV::AllocSlice> &merged_alloc) {
     boost::optional<PHV::AllocSlice> last = boost::none;
@@ -3701,18 +3716,6 @@ static void log_device_stats() {
     LOG_DEBUG3("There are " << numContainers << " containers.");
     LOG_DEBUG3("Ingress only: " << numIngress);
     LOG_DEBUG3("Egress  only: " << numEgress);
-}
-
-// Create callback for creating FileLog objects
-// Those can locally redirect LOG* macros to another file which
-// will share path and suffix number with phv_allocation_*.log
-// To restore original logging behaviour, call Logging::FileLog::close on the object.
-Logging::FileLog* PHV::AllocUtils::createFileLog(
-        int pipeId, const cstring& prefix, int loglevel) {
-    if (!LOGGING(loglevel)) return nullptr;
-
-    auto filename = Logging::PassManager::getNewLogFileName(prefix);
-    return new Logging::FileLog(pipeId, filename, Logging::Mode::AUTO);
 }
 
 AllocResult AllocatePHV::brute_force_alloc(
@@ -3870,28 +3873,6 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
         LOG_DEBUG4("Skipping CLOT-allocated super cluster: " << sc);
     }
 
-    // only run byte packing in --alt-phv-alloc
-    if (BFNContext::get().options().alt_phv_alloc == true) {
-        auto trivial_allocator = new PHV::v2::TrivialAllocator(utils_i, phv_i, pipeId);
-        const auto alloc_verifier = [&](const PHV::SuperCluster* sc) {
-            return trivial_allocator->can_be_allocated(alloc.makeTransaction(), sc);
-        };
-        auto packed_cluster_groups =
-            get_packed_cluster_group(
-                    cluster_groups, utils_i.tablePackOpt, alloc_verifier, phv_i);
-
-        cluster_groups = packed_cluster_groups;
-    }
-
-    if (utils_i.settings.trivial_alloc) {
-        auto trivial_allocator = new PHV::v2::TrivialAllocator(utils_i, phv_i, pipeId);
-        bool ok = trivial_allocator->allocate(cluster_groups);
-        if (!ok) {
-            LOG1("Trivial allocation failed.");
-        }
-        return root;
-    }
-
     std::vector<const PHV::SuperCluster::SliceList*> unallocatable_lists;
     AllocResult result(
         AllocResultCode::UNKNOWN, alloc.makeTransaction(), {});
@@ -3924,7 +3905,7 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
 
     // Redirect all following LOG*s into summary file
     // Print summaries
-    auto logfile = PHV::AllocUtils::createFileLog(pipeId, "phv_allocation_summary_", 1);
+    auto logfile = createFileLog(pipeId, "phv_allocation_summary_", 1);
     if (result.status == AllocResultCode::SUCCESS) {
         LOG_DEBUG1("PHV ALLOCATION SUCCESSFUL");
         LOG1(alloc);  // Not emitting to EventLog on purpose
@@ -4416,6 +4397,7 @@ BruteForceAllocationStrategy::preslice_validation(
         int n_tried = 0;
         bool succ = false;
         auto itr_ctx = utils_i.make_slicing_ctx(cluster);
+        itr_ctx->set_config(slicing_config);
         boost::optional<const PHV::SuperCluster::SliceList*> last_invald;
         itr_ctx->iterate([&](const std::list<PHV::SuperCluster*>& sliced) {
             ++n_tried;
@@ -4465,6 +4447,7 @@ BruteForceAllocationStrategy::preslice_clusters(
         std::list<PHV::SuperCluster*> sliced;
 
         auto itr_ctx = utils_i.make_slicing_ctx(sc);
+        itr_ctx->set_config(slicing_config);
         itr_ctx->iterate([&](std::list<PHV::SuperCluster*> sliced_clusters) {
             n_tried++;
             if (n_tried > config_i.max_slicing) {
@@ -4529,7 +4512,8 @@ BruteForceAllocationStrategy::tryAllocationFailuresFirst(
     cluster_groups = remove_deparser_zero_superclusters(
         cluster_groups, deparser_zero_superclusters);
 
-    cluster_groups = create_strided_clusters(utils_i.strided_headers, cluster_groups);
+    cluster_groups =
+        PHV::AllocUtils::create_strided_clusters(utils_i.strided_headers, cluster_groups);
 
     // Sorting clusters must happen after the deparser zero superclusters are removed.
     sortClusters(cluster_groups);
@@ -5217,6 +5201,7 @@ BruteForceAllocationStrategy::tryVariousSlicing(
     // auto& pa_container_sizes = utils_i.pragmas.pa_container_sizes();
 
     auto itr_ctx = utils_i.make_slicing_ctx(cluster_group);
+    itr_ctx->set_config(slicing_config);
     itr_ctx->iterate([&](std::list<PHV::SuperCluster*> slicing) {
         ++n_tried;
         if (n_tried > MAX_SLICING_TRY) {
@@ -5374,7 +5359,7 @@ BruteForceAllocationStrategy::allocLoop(
     for (auto cluster_group : allocated)
         cluster_groups.remove(cluster_group);
 
-    auto logfile = PHV::AllocUtils::createFileLog(pipe_id_i, "phv_allocation_history_", 1);
+    auto logfile = createFileLog(pipe_id_i, "phv_allocation_history_", 1);
     LOG1("Allocation history of config " << config_i.name);
     LOG1(alloc_history.str());
     Logging::FileLog::close(logfile);
@@ -5505,7 +5490,7 @@ const IR::Node* IncrementalPHVAllocation::apply_visitor(const IR::Node* root, co
         PHV::AllocUtils::sort_and_merge_alloc_slices(phv_i);
     }
 
-    auto logfile = PHV::AllocUtils::createFileLog(pipeId, "phv_allocation_incremental_summary_", 1);
+    auto logfile = createFileLog(pipeId, "phv_allocation_incremental_summary_", 1);
     if (result.status == AllocResultCode::SUCCESS) {
         LOG1("PHV ALLOCATION SUCCESSFUL");
         LOG2(alloc);

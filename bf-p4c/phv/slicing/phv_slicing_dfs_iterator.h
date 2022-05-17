@@ -3,7 +3,7 @@
 
 #include <utility>
 
-#include "bf-p4c/phv/packing_validator.h"
+#include "bf-p4c/phv/packing_validator_interface.h"
 #include "bf-p4c/phv/slicing/phv_slicing_split.h"
 #include "bf-p4c/phv/slicing/types.h"
 #include "bf-p4c/phv/utils/utils.h"
@@ -78,7 +78,7 @@ class DfsItrContext : public IteratorInterface {
     const PackingValidator& packing_validator_i;
     const PackConflictChecker has_pack_conflict_i;
     const IsReferencedChecker is_used_i;
-    bool minimal_packing_mode_i = false;
+    IteratorConfig config_i;
 
     // if a pa_container_size asks a field to be allocated to containers larger than it's
     // size, it's recorded here and will be used during pruning. Note that for one field,
@@ -93,9 +93,9 @@ class DfsItrContext : public IteratorInterface {
     // for that slicelist has already been made.
     SplitDecision split_decisions_i;
 
-    // slicelist_head_on_stack stores all first fieldslices of slice_lists
-    // already split on the DFS stack.
-    std::vector<PHV::FieldSlice> slicelist_head_on_stack_i;
+    // slicelist_on_stack stores all slice list that were split during DFS in a stack-style.
+    // and the number of choices left for the slice list to try different slicing.
+    std::vector<const SuperCluster::SliceList*> slicelist_on_stack_i;
 
     // done_i is a set of super clusters that
     // (1) all slice slices are already split, or cannot be split further.
@@ -125,6 +125,22 @@ class DfsItrContext : public IteratorInterface {
     // i.e. not a part of the DFS path.
     const SuperCluster::SliceList* to_invalidate = nullptr;
 
+    // When an action cannot be synthesized, either we can try to split the destination more,
+    // or we try to split sources differently so that maybe then src and dest slices happen to
+    // be aligned magically or two sources are packed together (very rare, but not impossible).
+    // Then problem is that, we do not know which one to try first. So we always invalidate the
+    // most recent choice in DFS. However,consider this:
+    // dfs-1: incorrect decision on a destination field.
+    // ....
+    // dfs-99: finally made a decision on the source fields.
+    // If we always revert what we have done in dsf-99, and retry, it will take 2^98 times to
+    // make it backtrack to dfs-1, to correct the wrong.
+    // So we set the counter here that as long as the number of times that a slice list is called
+    // to be invalidated, but ignored, exceeds the max allowance, we will try to backtrack to that
+    // slice list. Counter is cleared when we backtracked to the list.
+    static constexpr int to_invalidate_max_ignore = 8;
+    ordered_map<const SuperCluster::SliceList*, int> to_invalidate_sl_counter;
+
  public:
     DfsItrContext(const PhvInfo& phv, const SuperCluster* sc, const PHVContainerSizeLayout& pa,
                   const PackingValidator& packing_validator,
@@ -138,6 +154,7 @@ class DfsItrContext : public IteratorInterface {
           packing_validator_i(packing_validator),
           has_pack_conflict_i(pack_conflict),
           is_used_i(is_used),
+          config_i(false, false, true),
           n_step_limit_i(max_search_steps),
           n_step_limit_per_solution(max_search_steps_per_solution) {}
 
@@ -145,12 +162,15 @@ class DfsItrContext : public IteratorInterface {
     void iterate(const IterateCb& cb) override;
 
     /// invalidate is the feedback mechanism for allocation algorithm to
-    /// ask iterator not to produce slicing result contains @p sl.
+    /// ask iterator not to produce slicing result contains @p sl. Caller can
+    /// This DFS iterator will respect the list of top-most stack frame,
+    /// i.e., the most recent decision made by DFS.
     void invalidate(const SuperCluster::SliceList* sl) override;
 
-    /// set minimal packing mode to true so that iterator will get slicing results
-    /// that prefers minimal packing first.
-    void set_minimal_packing_mode(bool enable) override { minimal_packing_mode_i = enable; }
+    /// set configs.
+    void set_config(const IteratorConfig& cfg) override {
+        config_i = cfg;
+    }
 
     /// dfs search valid slicing. @p unchecked are superclusters that needs to be checked
     /// for pruning.
@@ -195,7 +215,8 @@ class DfsItrContext : public IteratorInterface {
     /// pruning strategies
     /// return true if found any unsatisfactory case. This function will return true
     /// if any of the following pruning strategies returns true.
-    bool dfs_prune(const ordered_set<SuperCluster*>& unchecked) const;
+    /// XXX(yumin): non-const because it may call invalidate();
+    bool dfs_prune(const ordered_set<SuperCluster*>& unchecked);
 
     /// dfs_prune_unwell_formed: return true if
     /// (1) @p sc cannot be split further and is not well_formed.
@@ -234,7 +255,8 @@ class DfsItrContext : public IteratorInterface {
 
     /// return true if there exists packing that make it impossible to
     /// to synthesize actions.
-    bool dfs_prune_invalid_packing(const SuperCluster* sc) const;
+    /// XXX(yumin): non-const because it may call invalidate();
+    bool dfs_prune_invalid_packing(const SuperCluster* sc);
 
     /// collect_aftersplit_constraints returns AfterSplitConstraints on the fieldslice
     /// of @p sc based on split_decisions_i and pa_container_size_upcastings_i.

@@ -17,34 +17,21 @@
 #include "bf-p4c/phv/fieldslice_live_range.h"
 #include "bf-p4c/phv/make_clusters.h"
 #include "bf-p4c/phv/mau_backtracker.h"
-#include "bf-p4c/phv/packing_validator.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "bf-p4c/phv/slicing/types.h"
+#include "bf-p4c/phv/smart_fieldslice_packing.h"
 #include "bf-p4c/phv/table_phv_constraints.h"
 #include "bf-p4c/phv/utils/slice_alloc.h"
 #include "bf-p4c/phv/utils/tables_to_ids.h"
 #include "bf-p4c/phv/utils/utils.h"
+#include "bf-p4c/phv/alloc_setting.h"
 #include "lib/bitvec.h"
 #include "lib/symbitmatrix.h"
-#include "smart_fieldslice_packing.h"
 
 namespace PHV {
-
-// AllocSetting holds const references to various alloc settings.
-struct AllocSetting {
-    /// trivial allocation mode that
-    /// (1) do minimal packing, i.e., pack fieldslices only when unavoidable.
-    /// (2) assume that there were infinite number of containers.
-    /// (3) no metadata or dark initialization, as if no_code_change mode is enabled.
-    bool trivial_alloc = false;
-    bool no_code_change = false;              // true if disable metadata and dark init.
-    bool physical_liverange_overlay = false;  // true if allow physical liverange overlay.
-    bool limit_tmp_creation = false;          // true if intermediate tmp value are limited.
-    bool single_gress_parser_group = false;   // true if PragmaParserGroupMonogress enabled.
-};
 
 /// AllocUtils is a collection of const references to misc passes that PHV allocation depends on.
 /// It also provides some helper methods that are used by different allocation strategies.
@@ -63,10 +50,6 @@ struct AllocUtils {
     // action-related constraints
     const ActionPhvConstraints& actions;
     const ActionSourceTracker& source_tracker;
-
-    // packing validator that checks whether a set of packing is valid
-    // in terms of action phv constraints.
-    PackingValidator* packing_validator;
 
     // Metadata initialization possibilities.
     const LiveRangeShrinking& meta_init;
@@ -110,7 +93,6 @@ struct AllocUtils {
           defuse(defuse),
           actions(actions),
           source_tracker(source_tracker),
-          packing_validator(new ActionPackingValidator(source_tracker)),
           meta_init(meta_init),
           dark_init(dark_init),
           field_to_parser_states(field_to_parser_states),
@@ -189,16 +171,18 @@ struct AllocUtils {
     static std::list<PHV::SuperCluster*> remove_clot_allocated_clusters(
             const ClotInfo& clot, std::list<PHV::SuperCluster*> clusters);
 
+    /// Check if the supercluster has field slice that requires strided
+    /// allocation. Merge all related stride superclusters.
+    static std::list<PHV::SuperCluster*> create_strided_clusters(
+            const CollectStridedHeaders& strided_headers,
+            const std::list<PHV::SuperCluster*>& cluster_groups);
+
     /// Update table references of AllocSlices by using the FieldDefUse data
     /// Table references will be used to replace the static min_stage_i/max_stage_i
     /// for determining the AllocSlice liverange in both min-stage and placed-table domain
     static bool update_refs(AllocSlice& slc, const PhvInfo& p, const FieldDefUse::LocPairSet& refs,
                             FieldUse fuse);
     static void update_slice_refs(PhvInfo& phv, const FieldDefUse& defuse);
-
-    /// @returns a FileLog and rewrite LOG& macro to the returned file log.
-    /// To restore log stream, close the file log.
-    static Logging::FileLog *createFileLog(int pipeId, const cstring &prefix, int loglevel);
 };
 
 }  // namespace PHV

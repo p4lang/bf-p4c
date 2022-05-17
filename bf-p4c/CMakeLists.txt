@@ -580,7 +580,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/make_clusters.cpp
   phv/mau_backtracker.cpp
   phv/optimize_phv.cpp
-  phv/packing_validator.cpp
+  phv/legacy_packing_validator.cpp
   phv/parde_phv_constraints.cpp
   phv/add_alias_allocation.cpp
   phv/phv_analysis.cpp
@@ -625,11 +625,16 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/utils/utils.cpp
   phv/utils/liverange_opti_utils.cpp
   phv/fieldslice_live_range.cpp
+  phv/v2/phv_kit.cpp
   phv/v2/allocator_base.cpp
   phv/v2/copacker.cpp
-  phv/v2/phv_allocator_v2.cpp
+  phv/v2/phv_allocation_v2.cpp
+  phv/v2/packing_validator.cpp
+  phv/v2/greedy_allocator.cpp
+  phv/v2/kind_size_indexed_map.cpp
   phv/v2/trivial_allocator.cpp
   phv/v2/tx_score.cpp
+  phv/v2/greedy_tx_score.cpp
   phv/v2/utils_v2.cpp
   )
 if (ENABLE_JBAY)
@@ -663,7 +668,8 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/make_clusters.h
   phv/mau_backtracker.h
   phv/optimize_phv.h
-  phv/packing_validator.h
+  phv/packing_validator_interface.h
+  phv/legacy_packing_validator.h
   phv/parde_phv_constraints.h
   phv/add_alias_allocation.h
   phv/phv_analysis.h
@@ -711,12 +717,19 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/utils/utils.h
   phv/utils/liverange_opti_utils.h
   phv/fieldslice_live_range.h
+  phv/alloc_setting.h
+  phv/v2/phv_kit.h
   phv/v2/allocator_base.h
   phv/v2/copacker.h
-  phv/v2/phv_allocator_v2.h
+  phv/v2/phv_allocation_v2.h
+  phv/v2/packing_validator.h
+  phv/v2/greedy_allocator.h
+  phv/v2/kind_size_indexed_map.h
   phv/v2/trivial_allocator.h
   phv/v2/tx_score.h
+  phv/v2/greedy_tx_score.h
   phv/v2/utils_v2.h
+  phv/v2/sort_macros.h
   )
 if (ENABLE_JBAY)
   list (APPEND BF_P4C_BACKEND_PHV_HDRS

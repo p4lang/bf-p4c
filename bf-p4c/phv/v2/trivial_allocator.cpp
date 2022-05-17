@@ -1,4 +1,10 @@
 #include "bf-p4c/phv/v2/trivial_allocator.h"
+
+#include <sstream>
+
+#include "bf-p4c/device.h"
+#include "bf-p4c/phv/phv.h"
+#include "bf-p4c/phv/slicing/types.h"
 #include "bf-p4c/phv/utils/utils.h"
 #include "bf-p4c/phv/v2/allocator_base.h"
 #include "bf-p4c/phv/v2/tx_score.h"
@@ -9,10 +15,9 @@ namespace v2 {
 
 namespace {
 
-Logging::FileLog* createFileLog(int pipeId, const cstring& prefix, int loglevel) {
+Logging::FileLog* trivial_allocator_file_log(int pipeId, int loglevel) {
     if (!LOGGING(loglevel)) return nullptr;
-
-    auto filename = Logging::PassManager::getNewLogFileName(prefix);
+    auto filename = Logging::PassManager::getNewLogFileName("phv_trivial_allocation_history_");
     return new Logging::FileLog(pipeId, filename, Logging::Mode::AUTO);
 }
 
@@ -34,8 +39,8 @@ void TrivialAllocator::PhvStatus::inc_next_container(PHV::Size s) {
     next_container_idx[s]++;
 }
 
-TrivialAllocator::TrivialAllocator(const PHV::AllocUtils& utils, PhvInfo& phv, int pipe_id)
-    : utils_i(utils), phv_i(phv), pipe_id_i(pipe_id) {}
+TrivialAllocator::TrivialAllocator(const PhvKit& kit, PhvInfo& phv, int pipe_id)
+    : kit_i(kit), phv_i(phv), pipe_id_i(pipe_id) {}
 
 std::vector<PHV::AllocSlice> TrivialAllocator::gen_alloc_slices_from_tx(
     const PHV::Transaction& tx, PhvStatus& phv_status) const {
@@ -66,6 +71,22 @@ void TrivialAllocator::bind_alloc_slices(const std::vector<PHV::AllocSlice>& sli
     }
 }
 
+cstring TrivialAllocator::make_error_msg(const SuperCluster* sc,
+                                         const PartialAllocResult* rst) const {
+    std::stringstream unsat_err;
+    unsat_err << "Trivial allocator has found unsatisfiable constraints.\n";
+    unsat_err << "Error code: " << to_str(rst->err->code) << "\n";
+    unsat_err << "In this super clusters: " << sc << "\n";
+    if (rst->err->code != ErrorCode::NO_SLICING_FOUND) {
+        unsat_err << "(Trace) Last error we saw during allocation is: " << rst->err->msg;
+        if (rst->err->code == ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED &&
+            rst->err->reslice_required) {
+            unsat_err << "Please check action(s) that write to these slice lists";
+        }
+    }
+    return unsat_err.str();
+}
+
 ContainerGroupsBySize TrivialAllocator::make_container_groups_merged_by_size() const {
     ContainerGroupsBySize rv;
 
@@ -82,18 +103,57 @@ ContainerGroupsBySize TrivialAllocator::make_container_groups_merged_by_size() c
     return rv;
 }
 
-std::list<SuperCluster*> TrivialAllocator::pre_slice(const Allocation& empty_alloc,
-                                                     SuperCluster* sc) const {
-    const int max_pre_slicing_try = 128;
+TrivialAllocator::PreSlicingResult TrivialAllocator::pre_slice(const Allocation& empty_alloc,
+                                                               SuperCluster* sc,
+                                                               const int max_pre_slicing_try,
+                                                               bool baseline_mode) const {
+    const bool try_minimal_packing_first = !baseline_mode;
+    PreSlicingResult rst;
+    rst.sliced = {sc};
+    rst.invalid = sc;
     int n_pre_slicing_tried = 0;
-    auto pre_slicing_ctx = utils_i.make_slicing_ctx(sc);
-    std::list<PHV::SuperCluster*> rst = {sc};
-    pre_slicing_ctx->iterate([&](std::list<PHV::SuperCluster*> sliced) {
-        rst = std::move(sliced);
+    auto pre_slicing_ctx = kit_i.make_slicing_ctx(sc);
+    // max-packing mode with loose action constraints checks.
+    pre_slicing_ctx->set_config(Slicing::IteratorConfig{false, true, true});
+    pre_slicing_ctx->iterate([&](std::list<SuperCluster*> sliced) {
         n_pre_slicing_tried++;
-        for (const auto* sc : rst) {
-            if (!can_be_allocated(empty_alloc, sc)) {
+        LOG3("Pre-slicing-attempt-" << n_pre_slicing_tried);
+        rst.sliced = std::move(sliced);
+        rst.invalid = nullptr;
+        rst.baseline_cont_req.clear();
+        for (auto* sc : rst.sliced) {
+            LOG3("Check possibility of allocation of " << sc);
+            auto sc_rst = slice_and_allocate_sc(empty_alloc, sc, PhvStatus(),
+                                                make_container_groups_merged_by_size(),
+                                                try_minimal_packing_first, max_pre_slicing_try);
+            if (!sc_rst->ok()) {
+                LOG3("Unallocatable cluster found: SC-" << sc->uid);
+                rst.invalid = sc;
                 return n_pre_slicing_tried < max_pre_slicing_try;
+            }
+            LOG3("This is an allocatable cluster: SC-" << sc->uid);
+            // update baseline for this pre-sliced cluster.
+            rst.baseline_cont_req[sc] = {};
+            ordered_map<Container, ordered_set<AllocSlice>> container_slices;
+            for (const auto& sl : sc_rst->alloc_slices) {
+                container_slices[sl.container()].insert(sl);
+            }
+            for (const auto& c_slices : container_slices) {
+                PHV::Kind updated_kind = Kind::normal;
+                if (Device::phvSpec().hasContainerKind(PHV::Kind::mocha) &&
+                    std::all_of(
+                        c_slices.second.begin(), c_slices.second.end(),
+                        [](const AllocSlice& sl) { return sl.field()->is_mocha_candidate(); })) {
+                    updated_kind = Kind::mocha;
+                }
+                if (Device::phvSpec().hasContainerKind(PHV::Kind::tagalong) &&
+                    std::all_of(c_slices.second.begin(), c_slices.second.end(),
+                                [&](const AllocSlice& sl) {
+                                    return sl.field()->is_tphv_candidate(kit_i.uses);
+                                })) {
+                    updated_kind = Kind::tagalong;
+                }
+                rst.baseline_cont_req[sc][{updated_kind, c_slices.first.type().size()}]++;
             }
         }
         // found one valid slicing
@@ -104,15 +164,15 @@ std::list<SuperCluster*> TrivialAllocator::pre_slice(const Allocation& empty_all
 
 const TrivialAllocator::PartialAllocResult* TrivialAllocator::slice_and_allocate_sc(
     const Allocation& empty_alloc, const PHV::SuperCluster* sc, PhvStatus phv_status,
-    const ContainerGroupsBySize& container_groups, const int max_slicings,
-    std::ostream* history) const {
-    const auto base = AllocatorBase(utils_i);
-    auto slicing_ctx = utils_i.make_slicing_ctx(sc);
-    slicing_ctx->set_minimal_packing_mode(true);
+    const ContainerGroupsBySize& container_groups, bool minimal_packing_slicing,
+    const int max_slicings, std::ostream* history) const {
+    const auto base = AllocatorBase(kit_i);
+    auto slicing_ctx = kit_i.make_slicing_ctx(sc);
+    // use @p minimal_packing_slicing mode with strict action packing checking mode.
+    slicing_ctx->set_config(Slicing::IteratorConfig{minimal_packing_slicing, false, true});
     auto* search_config = new SearchConfig();
-    search_config->n_max_sc_alignments = 8;
-    search_config->stop_first_succ_sc_alignment = true;
-    search_config->stop_first_succ_fs_alignment = true;
+    search_config->n_dfs_steps_sc_alloc = 256;
+    search_config->n_best_of_sc_alloc = 1;  // trivial alloc stops at the first ok solution.
     search_config->stop_first_succ_empty_normal_container = true;
 
     // setup allocator context.
@@ -129,12 +189,12 @@ const TrivialAllocator::PartialAllocResult* TrivialAllocator::slice_and_allocate
         n_tried++;
         if (LOGGING(3)) {
             LOG3("Clusters of slicing-attempt-" << n_tried << ":");
-            for (auto* sc : sliced) LOG_DEBUG4(sc);
+            for (auto* sc : sliced) LOG3(sc);
         }
         std::vector<AllocSlice> this_split_alloc_slices;
         auto this_split_status = phv_status;
         for (const auto* sc : sliced) {
-            if (utils_i.is_clot_allocated(utils_i.clot, *sc)) {
+            if (kit_i.is_clot_allocated(kit_i.clot, *sc)) {
                 LOG3("skip clot allocated cluster: " << sc->uid);
                 continue;
             }
@@ -148,13 +208,17 @@ const TrivialAllocator::PartialAllocResult* TrivialAllocator::slice_and_allocate
                 last_err = new AllocError(rst.err->code);
                 LOG3("slicing-attempt-" << n_tried << " failed, while allocating: " << sc);
                 *last_err << " failed when allocating this sliced " << sc;
-                // found a slice list that cannot be allocated because packing issue.
-                if (rst.err->code == ErrorCode::CANNOT_PACK_CANDIDATES &&
-                    rst.err->cannot_allocate_sl) {
-                    LOG3("Found cannot_allocate slice list: " << rst.err->cannot_allocate_sl);
-                    *last_err << "Found unsatisfiable action constraints in this list: "
-                              << rst.err->cannot_allocate_sl;
-                    slicing_ctx->invalidate(rst.err->cannot_allocate_sl);
+                // found a slice list that cannot be allocated because of packing issue.
+                if (rst.err->code == ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED &&
+                    rst.err->reslice_required) {
+                    for (const auto* sl : *rst.err->reslice_required) {
+                        LOG3("Found invalid packing slice list: " << sl);
+                        *last_err << "Found unsatisfiable action constraints in this list: " << sl
+                                  << "\n";
+                    }
+                    for (const auto* sl : *rst.err->reslice_required) {
+                        slicing_ctx->invalidate(sl);
+                    }
                 } else {
                     *last_err << rst.err_str();
                 }
@@ -193,9 +257,9 @@ bool TrivialAllocator::allocate(const std::list<PHV::SuperCluster*>& clusters) {
     // but we should add support for them in the future, to check whether they can be
     // allocated or not.
     // create strided clusters
-    // clusters = create_strided_clusters(utils_i.strided_headers, clusters);
+    // clusters = create_strided_clusters(kit_i.strided_headers, clusters);
 
-    PHV::ConcreteAllocation empty_alloc = PHV::ConcreteAllocation(phv_i, utils_i.uses);
+    PHV::ConcreteAllocation empty_alloc = PHV::ConcreteAllocation(phv_i, kit_i.uses);
     auto container_groups = make_container_groups_merged_by_size();
     const int max_try_alloc_slicing_try = 256;
     std::stringstream history;
@@ -207,22 +271,36 @@ bool TrivialAllocator::allocate(const std::list<PHV::SuperCluster*>& clusters) {
         // some time because the validation process inside pre_slice are basically calling
         // slice_and_allocate_sc.
         LOG3("Trying to pre-slice original (unsliced) cluster: " << unsliced_sc);
-        auto pre_sliced = pre_slice(empty_alloc, unsliced_sc);
+        auto pre_sliced = pre_slice(empty_alloc, unsliced_sc, max_try_alloc_slicing_try);
         if (LOGGING(3)) {
             LOG3("Pre-slicing result of super cluster uid " << unsliced_sc->uid << ":");
-            for (const auto* sc : pre_sliced) {
+            for (const auto* sc : pre_sliced.sliced) {
                 LOG3(sc);
             }
+            if (pre_sliced.invalid) {
+                LOG3("But we found an unallocatable cluster: " << pre_sliced.invalid);
+            }
         }
-        for (const auto* sc : pre_sliced) {
+        if (pre_sliced.invalid) {
+            auto rst = slice_and_allocate_sc(empty_alloc, pre_sliced.invalid, phv_status,
+                                             container_groups,
+                                             true, max_try_alloc_slicing_try, &history);
+            BUG_CHECK(!rst->ok(), "invalid supercluster can be allocated?");
+            const cstring err_log = make_error_msg(unsliced_sc, rst);
+            history << err_log;
+            ::error(err_log);
+            ok = false;
+            break;
+        }
+        for (const auto* sc : pre_sliced.sliced) {
             LOG3("Allocating: \n " << sc);
             history << "Allocating: \n" << sc;
             auto rst = slice_and_allocate_sc(empty_alloc, sc, phv_status, container_groups,
-                                             max_try_alloc_slicing_try, &history);
+                                             true, max_try_alloc_slicing_try, &history);
             if (!rst->ok()) {
-                history << "Trivial Allocation Failed because:" << rst->err->str() << "\n";
-                ::error("Trivial allocation failed. Cannot allocate %1%Reason: %2%",
-                        cstring::to_cstring(sc), rst->err->str());
+                const cstring err_log = make_error_msg(sc, rst);
+                history << err_log;
+                ::error(err_log);
                 ok = false;
                 break;
             }
@@ -236,11 +314,11 @@ bool TrivialAllocator::allocate(const std::list<PHV::SuperCluster*>& clusters) {
     if (ok) {
         LOG3("Trivial Allocation Successfully Allocated All Clusters.");
         history << "Trivial Allocation Successfully Allocated All Clusters.\n";
-        PHV::AllocUtils::sort_and_merge_alloc_slices(phv_i);
+        PhvKit::sort_and_merge_alloc_slices(phv_i);
         phv_i.set_done(true);
     }
 
-    auto logfile = createFileLog(pipe_id_i, "phv_trivial_allocation_history_", 1);
+    auto logfile = trivial_allocator_file_log(pipe_id_i, 1);
     LOG1("Trivial Allocation history");
     LOG1(history.str());
     Logging::FileLog::close(logfile);
@@ -250,8 +328,8 @@ bool TrivialAllocator::allocate(const std::list<PHV::SuperCluster*>& clusters) {
 bool TrivialAllocator::can_be_allocated(const Allocation& empty_alloc,
                                         const PHV::SuperCluster* sc,
                                         const int max_slicings) const {
-    const auto rst = slice_and_allocate_sc(empty_alloc, sc, PhvStatus(),
-                                           make_container_groups_merged_by_size(), max_slicings);
+    const auto rst = slice_and_allocate_sc(
+        empty_alloc, sc, PhvStatus(), make_container_groups_merged_by_size(), true, max_slicings);
     return rst->ok();
 }
 

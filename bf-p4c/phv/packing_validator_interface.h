@@ -1,5 +1,5 @@
-#ifndef BF_P4C_PHV_PACKING_VALIDATOR_H_
-#define BF_P4C_PHV_PACKING_VALIDATOR_H_
+#ifndef BF_P4C_PHV_PACKING_VALIDATOR_INTERFACE_H_
+#define BF_P4C_PHV_PACKING_VALIDATOR_INTERFACE_H_
 
 #include <boost/optional.hpp>
 
@@ -18,6 +18,14 @@ class PackingValidator {
         enum class Code { OK, BAD, UNKNOWN };
         Code code = Code::UNKNOWN;
         cstring err = "";
+        /// When the instruction to the destination container of an action cannot be found,
+        /// all slice lists involved are included in this set: including all sources
+        /// and the destination. If it is an intrinsic conflict of constraint, then either
+        /// (1)the destination needs to be split more, or (2) sources needs to be split
+        /// less to be packed together.
+        ordered_set<const SuperCluster::SliceList*>* invalid_packing =
+            new ordered_set<const SuperCluster::SliceList*>();
+        boost::optional<const IR::MAU::Action*> invalid_action = boost::none;
         Result() = default;
         explicit Result(Code code, cstring err = "") : code(code), err(err) {}
     };
@@ -33,30 +41,17 @@ class PackingValidator {
     /// PHV::Fieldslices, that any operation will only read or write one PHV::FieldSlice.
     /// All Slicelists in a super cluster satisfy this constraint.
     /// contract: no overlapping slice between @p slice_lists and @p can_be_further_split.
+    /// @p when loose_mode is true, instructions are allowed to overwrite bytes of destination
+    /// container that has unwritten fields slices. Although it usually means that the action
+    /// cannot be be synthesized because *live* bits will be corrupted. However, because dest
+    /// can be split further later to avoid corruption, it is sometimes useful to use loose_mode
+    /// so that caller can solve the problem in a divide-and-conquer way.
     virtual Result can_pack(
         const ordered_set<const SuperCluster::SliceList*>& slice_lists,
-        const ordered_set<const SuperCluster::SliceList*>& can_be_further_split = {}) const = 0;
+        const ordered_set<const SuperCluster::SliceList*>& can_be_further_split = {},
+        const bool loose_mode = false) const = 0;
 };
 
-/// ActionPackingValidator checks action PHV constraints for packing of fieldslices, by using
-/// ActionConstraintSolver. It will try to compute container sizes and corresponding alignments
-/// of all slice lists, and then it will build and call the solver to check if it is possible
-/// to synthesize actions.
-class ActionPackingValidator : public PackingValidator {
- private:
-    const ActionSourceTracker& sources_i;
+}
 
- public:
-    explicit ActionPackingValidator(const ActionSourceTracker& sources) : sources_i(sources) {}
-
-    /// can_pack checks action phv constraints if fieldslices packed in @p slice_lists will be
-    /// allocated without further split. Currently, we only support validation of move-based
-    /// instructions.
-    Result can_pack(const ordered_set<const SuperCluster::SliceList*>& slice_lists,
-                    const ordered_set<const SuperCluster::SliceList*>& can_be_further_split = {})
-        const override;
-};
-
-}  // namespace PHV
-
-#endif /* BF_P4C_PHV_PACKING_VALIDATOR_H_ */
+#endif /* BF_P4C_PHV_PACKING_VALIDATOR_INTERFACE_H_ */

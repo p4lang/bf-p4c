@@ -581,6 +581,9 @@ class Transaction : public Allocation {
         return container_status_i;
     }
 
+    /// Returns the actual diff of outstanding writes in this view.
+    ordered_map<PHV::Container, ContainerStatus> get_actual_diff() const;
+
     const ordered_map<const PHV::Field*, FieldStatus>& getFieldStatus() const {
         return field_status_i;
     }

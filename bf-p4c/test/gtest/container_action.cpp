@@ -242,6 +242,42 @@ TEST_F(DepositFieldContigousMask, test2) {
     ok();
 }
 
+class ByteRotateMerge : public TofinoContainerAction {
+ protected:
+    void SetUp() override {
+        FIELD(d1, 2);
+        FIELD(d_p1, 6);
+        FIELD(d2, 1);
+        FIELD(d3, 2);
+        FIELD(d_p2, 5);
+
+        FIELD(s2, 1);
+        FIELD(s3, 2);
+
+        d_p1->set_padding(true);
+        d_p2->set_padding(true);
+
+        alloc(d1, "W0", 0, 0, 2);
+        alloc(d_p1, "W0", 0, 2, 6);
+        alloc(d2, "W0", 0, 8, 1);
+        alloc(d3, "W0", 0, 9, 2);
+        alloc(d_p2, "W0", 0, 11, 5);
+
+        add_set(d1, 0xabcd);
+        add_set(d2, s2);
+        add_set(d3, s3);
+    }
+
+    PHV::Field *d1, *d_p1, *d2, *d3, *d_p2;
+    PHV::Field *s2, *s3;
+};
+
+TEST_F(ByteRotateMerge, one_const_and_one_source) {
+    alloc(s2, "W1", 0, 0, 1);
+    alloc(s3, "W1", 0, 1, 2);
+    ok();
+}
+
 // The following tests are lifted directly from Evan's MAU onboarding slides.
 // see slide 55 and onwards from link below:
 // https://intel.sharepoint.com/:p:/r/sites/BXD/_layouts/15/Doc.aspx?sourcedoc=%7B81E2FE32-6FDA-4A39-872E-FCE2329561EB%7D&file=Day4a-Evan-MAU-Introduction.pptx&action=edit&mobileredirect=true

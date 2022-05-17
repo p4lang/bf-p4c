@@ -486,6 +486,9 @@ class BarefootBackend(BackendDriver):
             ta_logging = "table_placement:3,table_summary:1,table_dependency_graph:3"
             phv_verbosity = str(2 * opts.verbose - 1)
             pa_logging = "allocate_phv:" + phv_verbosity + \
+                         ",allocator_base:3" + \
+                         ",trivial_allocator:5" + \
+                         ",greedy_allocator:5" + \
                          ",alias:1"
             parde_verbosity = str(2 * opts.verbose - 1)
             parde_logging = ",allocate_clot:" + parde_verbosity + \

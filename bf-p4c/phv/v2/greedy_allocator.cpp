@@ -1,0 +1,575 @@
+#include "bf-p4c/phv/v2/greedy_allocator.h"
+
+#include "bf-p4c/device.h"
+#include "bf-p4c/parde/clot/clot.h"
+#include "bf-p4c/phv/v2/phv_kit.h"
+#include "bf-p4c/phv/utils/utils.h"
+#include "bf-p4c/phv/v2/allocator_base.h"
+#include "bf-p4c/phv/v2/trivial_allocator.h"
+#include "bf-p4c/phv/v2/greedy_tx_score.h"
+#include "bf-p4c/phv/v2/utils_v2.h"
+#include "bf-p4c/phv/v2/sort_macros.h"
+
+namespace PHV {
+namespace v2 {
+
+namespace {
+
+/// this function has to be defined in the file that invokes it.
+Logging::FileLog* greedy_allocator_file_log(int pipeId, const cstring& prefix, int loglevel) {
+    if (!LOGGING(loglevel)) return nullptr;
+    auto filename = Logging::PassManager::getNewLogFileName(prefix);
+    return new Logging::FileLog(pipeId, filename, Logging::Mode::AUTO);
+}
+
+// SuperClusterMetrics collects metrics for super clusters.
+class SuperClusterMetrics {
+ private:
+    const PhvKit& kit_i;
+
+ public:
+    std::unordered_set<const SuperCluster*> has_pov;
+    std::unordered_set<const SuperCluster*> non_sliceable;
+    std::unordered_set<const SuperCluster*> has_no_split;
+    std::unordered_set<const SuperCluster*> has_solitary;
+    std::unordered_set<const SuperCluster*> has_exact_containers;
+    std::unordered_set<const SuperCluster*> has_constraint_of_starting_index;
+    std::unordered_map<const SuperCluster*, int> n_container_size_pragma;
+    std::unordered_map<const SuperCluster*, int> n_container_type_pragma;
+    std::unordered_map<const SuperCluster*, int> n_ixbar_read_bits;
+    std::unordered_map<const SuperCluster*, int> n_max_sl_width_bits;
+    std::unordered_map<const SuperCluster*, int> n_max_rot_cluster_size;
+
+    SuperClusterMetrics(const PhvKit& kit,
+                        const std::list<SuperCluster*>& cluster_groups)
+        : kit_i(kit) {
+        for (const auto* sc : cluster_groups) {
+            insert_if_any_of(sc, has_pov,
+                             [](const FieldSlice& fs) { return fs.field()->pov; });
+            insert_if_any_of(sc, has_no_split, [](const FieldSlice& fs) {
+                auto* f = fs.field();
+                return f->no_split() || f->has_no_split_at_pos();
+            });
+            insert_if_any_of(sc, has_solitary,
+                             [](const FieldSlice& fs) { return fs.field()->is_solitary(); });
+            insert_if_any_of(sc, has_exact_containers,
+                             [](const FieldSlice& fs) { return fs.field()->exact_containers(); });
+            insert_if_any_of(sc, has_constraint_of_starting_index, [](const FieldSlice& fs) {
+                return fs.alignment().is_initialized() || fs.field()->deparsed_bottom_bits() ||
+                       fs.field()->deparsed_to_tm();
+            });
+
+            calc_max_sl_width_bits(sc);
+            calc_non_sliceable(sc);
+            calc_pa_container_size_pragma(sc);
+            calc_container_type_pragma(sc);
+            calc_n_max_rot_cluster_size(sc);
+            calc_ixbar_read_bits(sc);
+        }
+    }
+
+    bool wide_non_sliceable(const SuperCluster* sc) const {
+        return n_max_sl_width_bits.at(sc) >= 8 && non_sliceable.count(sc);
+    }
+
+    int speculated_n_containers_required(const SuperCluster* sc) const {
+        return std::max(n_max_rot_cluster_size.at(sc), int(sc->slice_lists().size()));
+    }
+
+ private:
+    void insert_if_any_of(const SuperCluster* sc,
+                          std::unordered_set<const SuperCluster*>& set,
+                          const std::function<bool(const FieldSlice& fs)>& pred) {
+        if (sc->any_of_fieldslices(pred)) {
+            set.insert(sc);
+        }
+    }
+
+    void calc_ixbar_read_bits(const SuperCluster* sc) {
+        int n_bits = 0;
+        sc->forall_fieldslices([&](const FieldSlice& fs) {
+            if (!kit_i.uses.ixbar_read(fs.field(), fs.range()).empty()) {
+                n_bits += fs.size();
+            }
+        });
+        n_ixbar_read_bits[sc] = n_bits;
+    }
+
+    void calc_container_type_pragma(const SuperCluster* sc) {
+        const auto& pa_ct = kit_i.pragmas.pa_container_type();
+        ordered_set<const Field*> fields;
+        sc->forall_fieldslices([&](const FieldSlice& fs) {
+            if (pa_ct.required_kind(fs.field())) fields.insert(fs.field());
+        });
+        n_container_type_pragma[sc] = fields.size();
+    }
+
+    void calc_pa_container_size_pragma(const SuperCluster* sc) {
+        const auto& container_sizes = kit_i.pragmas.pa_container_sizes();
+        ordered_set<const Field*> fields;
+        sc->forall_fieldslices([&](const FieldSlice& fs) {
+            if (container_sizes.is_specified(fs.field())) fields.insert(fs.field());
+        });
+        n_container_size_pragma[sc] = fields.size();
+    }
+
+    void calc_non_sliceable(const SuperCluster* sc) {
+        auto itr_ctx = kit_i.make_slicing_ctx(sc);
+        itr_ctx->set_config(Slicing::IteratorConfig{true, false, true});
+        int n = 0;
+        bool sliceable = false;
+        itr_ctx->iterate([&](std::list<SuperCluster*> clusters) {
+            n++;
+            if (clusters.size() > 1 || n > 1) {
+                sliceable = true;
+                return false;
+            }
+            return true;
+        });
+        if (!sliceable) {
+            non_sliceable.insert(sc);
+        }
+    }
+
+    void calc_max_sl_width_bits(const SuperCluster* sc) {
+        n_max_sl_width_bits[sc] = sc->max_width();
+        for (const auto* sl : sc->slice_lists()) {
+            int length = SuperCluster::slice_list_total_bits(*sl);
+            if (sl->front().alignment()) {
+                length += sl->front().alignment()->align;
+            }
+            n_max_sl_width_bits[sc] = std::max(n_max_sl_width_bits[sc], length);
+        }
+    }
+
+    void calc_n_max_rot_cluster_size(const SuperCluster* sc) {
+        n_max_rot_cluster_size[sc] = 0;
+        for (const auto* rot : sc->clusters()) {
+            n_max_rot_cluster_size[sc] =
+                std::max(n_max_rot_cluster_size[sc], int(rot->slices().size()));
+        }
+    }
+};
+
+struct ScAllocTracker {
+    const PhvKit& kit_i;
+    explicit ScAllocTracker(const PhvKit& kit) : kit_i(kit) {}
+
+    struct AllocSummary {
+        const PHV::SuperCluster* sc;
+        gress_t gress;
+        ordered_set<AllocSlice> slices;
+        ordered_set<Container> containers;
+        bool has_exact_containers = false;
+        bool has_pa_container_size = false;
+        bool has_pov = false;
+        bool has_learning_bits = false;
+
+        std::map<PHV::Size, int> containers_solely_occupied(
+            const ConcreteAllocation& curr_alloc) const {
+            std::map<PHV::Size, int> rv;
+            for (const auto& c : containers) {
+                const auto& status = curr_alloc.getStatus(c);
+                bool no_other_cluster = true;
+                for (const auto& sl : status->slices) {
+                    no_other_cluster &= slices.count(sl);
+                    if (!no_other_cluster) break;
+                }
+                if (no_other_cluster) {
+                    rv[c.type().size()]++;
+                }
+            }
+            return rv;
+        }
+    };
+    ordered_map<const SuperCluster*, const AllocSummary*> sc_alloc;
+
+    /// will overwrite if recorded before.
+    void record(const Transaction& tx, const SuperCluster* sc) {
+        auto* summary = new AllocSummary();
+        summary->gress = sc->slices().front().field()->gress;
+        summary->sc = sc;
+        for (const auto& container_status : tx.get_actual_diff()) {
+            for (const auto& sl : container_status.second.slices) {
+                summary->slices.insert(sl);
+                summary->has_exact_containers |= sl.field()->exact_containers();
+                summary->has_pov |= sl.field()->pov;
+                summary->has_pa_container_size |=
+                    kit_i.pragmas.pa_container_sizes().is_specified(sl.field());
+                summary->has_learning_bits |= kit_i.uses.is_learning(sl.field());
+            }
+            summary->containers.insert(container_status.first);
+        }
+        sc_alloc[sc] = summary;
+    }
+
+    /// Returns a super cluster (summary) that is potentially the best candidate that
+    /// if we redo its allocation, we can find available contaienr for @p sc.
+    const AllocSummary* best_swap(const ConcreteAllocation& curr_alloc,
+                                  const SuperCluster* sc,
+                                  const KindSizeIndexedMap& required) {
+        std::map<PHV::Size, int> sc_required;
+        for (const auto& sz : Device::phvSpec().containerSizes()) {
+            sc_required[sz] = required.sum(sz);
+        }
+        const AllocSummary* best = nullptr;
+        int best_n_more_than_needed = 0;
+        auto gress = sc->slices().front().field()->gress;
+        for (const auto* s : Values(sc_alloc)) {
+            if (s->gress != gress) continue;
+            if (s->has_exact_containers) continue;
+            if (s->has_pa_container_size) continue;
+
+            auto can_supply_sizes = s->containers_solely_occupied(curr_alloc);
+            bool can_cover = true;
+            int n_more_than_needed = 0;
+            for (const auto& sz_n : sc_required) {
+                if (sz_n.second == 0) continue;
+                if (!can_supply_sizes.count(sz_n.first) ||
+                    can_supply_sizes.at(sz_n.first) < sz_n.second) {
+                    can_cover = false;
+                    break;
+                }
+                n_more_than_needed += can_supply_sizes.at(sz_n.first) - sz_n.second;
+            }
+            if (!can_cover) continue;
+            bool this_is_best = false;;
+            if (!best) {
+                this_is_best = true;
+            } else {
+                if (n_more_than_needed < best_n_more_than_needed) {
+                    this_is_best = true;
+                } else if (s->has_learning_bits < best->has_pa_container_size) {
+                    this_is_best = true;
+                } else if (s->has_pov < best->has_pov) {
+                    this_is_best = true;
+                }
+            }
+            if (this_is_best) {
+                best = s;
+                best_n_more_than_needed = n_more_than_needed;
+            }
+        }
+        return best;
+    }
+};
+
+}  // namespace
+
+ContainerGroupsBySize GreedyAllocator::make_container_groups_by_size() const {
+    ContainerGroupsBySize rv;
+    auto container_groups = PhvKit::make_device_container_groups();
+    for (auto* group : container_groups) {
+        rv[group->width()].push_back(*group);
+    }
+    return rv;
+}
+
+GreedyAllocator::PreSliceResult GreedyAllocator::pre_slice_all(
+    const Allocation& empty_alloc,
+    const std::list<SuperCluster*>& clusters,
+    ordered_set<const SuperCluster*>& invalid_clusters) const {
+    // use trivial allocator to pre-slice and validate super clusters.
+    const auto trivial_allocator = new v2::TrivialAllocator(kit_i, phv_i, pipe_id_i);
+    PreSliceResult rst;
+    for (const auto sc : clusters) {
+        auto pre_sliced = trivial_allocator->pre_slice(empty_alloc, sc, max_slicing_tries_i);
+        LOG3("Pre-slice: " << sc);
+        if (pre_sliced.invalid) {
+            LOG3("Found unallocatable sliced cluster:" << pre_sliced.invalid);
+            invalid_clusters.insert(pre_sliced.invalid);
+        } else {
+            LOG3("pre-slice succeeded, result:");
+            for (auto* sliced : pre_sliced.sliced) {
+                LOG3(sliced);
+                rst.clusters.push_back(sliced);
+                rst.baseline_cont_req[sliced] = pre_sliced.baseline_cont_req.at(sliced);
+            }
+        }
+    }
+    // after per-slicing, there might be clusters that are fully clotted, that they
+    // were sliced out from the header, or simply unreferenced (unlikely,
+    // but not harmful to remove them again). We remove them here because they do not need
+    // any allocation.
+    rst.clusters = PhvKit::remove_unref_clusters(kit_i.uses, rst.clusters);
+    rst.clusters = PhvKit::remove_clot_allocated_clusters(kit_i.clot, rst.clusters);
+    return rst;
+}
+
+GreedyAllocator::RefinedSuperClusterSet GreedyAllocator::prepare_refined_set(
+    const std::list<SuperCluster*>& clusters) const {
+    RefinedSuperClusterSet rst;
+    for (const auto& sc : clusters) {
+        if (sc->is_deparser_zero_candidate()) {
+            rst.deparser_zero.push_back(sc);
+        } else if (sc->needsStridedAlloc()) {
+            rst.strided.push_back(sc);
+        } else {
+            rst.normal.push_back(sc);
+        }
+    }
+    return rst;
+}
+
+void GreedyAllocator::sort_normal_clusters(std::list<PHV::SuperCluster*>& clusters) const {
+    auto m = SuperClusterMetrics(kit_i, clusters);
+    clusters.sort([&m](const SuperCluster* a, const SuperCluster* b) {
+        IF_NEQ_RETURN_IS_GREATER(m.has_pov.count(a), m.has_pov.count(b));
+        IF_NEQ_RETURN_IS_GREATER(m.speculated_n_containers_required(a),
+                                 m.speculated_n_containers_required(b));
+        IF_NEQ_RETURN_IS_GREATER(m.wide_non_sliceable(a), m.wide_non_sliceable(b));
+        IF_NEQ_RETURN_IS_GREATER(m.has_exact_containers.count(a), m.has_exact_containers.count(b));
+        IF_NEQ_RETURN_IS_GREATER(m.has_no_split.count(a), m.has_no_split.count(b));
+        IF_NEQ_RETURN_IS_GREATER(m.has_solitary.count(a), m.has_solitary.count(b));
+        IF_NEQ_RETURN_IS_GREATER(m.n_container_size_pragma.at(a), m.n_container_size_pragma.at(b));
+        IF_NEQ_RETURN_IS_GREATER(m.n_container_type_pragma.at(a), m.n_container_type_pragma.at(b));
+        IF_NEQ_RETURN_IS_GREATER(m.has_constraint_of_starting_index.count(a),
+                                 m.has_constraint_of_starting_index.count(b));
+        IF_NEQ_RETURN_IS_GREATER(m.n_ixbar_read_bits.at(a), m.n_ixbar_read_bits.at(b));
+        IF_NEQ_RETURN_IS_GREATER(m.n_max_sl_width_bits.at(a), m.n_max_sl_width_bits.at(b));
+        IF_NEQ_RETURN_IS_GREATER(m.n_max_rot_cluster_size.at(a), m.n_max_rot_cluster_size.at(b));
+        return false;
+    });
+}
+
+AllocResult GreedyAllocator::slice_and_allocate_sc(const ScoreContext& ctx,
+                                                   const Allocation& alloc,
+                                                   const PHV::SuperCluster* sc,
+                                                   const ContainerGroupsBySize& container_groups,
+                                                   const int max_slicings,
+                                                   std::ostream* history) const {
+    const auto base = AllocatorBase(kit_i);
+    auto slicing_ctx = kit_i.make_slicing_ctx(sc);
+    // max packing and strict mode.
+    slicing_ctx->set_config(Slicing::IteratorConfig{false, false, true});
+    int n_tried = 0;
+    boost::optional<Transaction> best_tx;
+    boost::optional<TxScore*> best_score;
+    boost::optional<std::list<PHV::SuperCluster*>> best_slicing;
+    AllocError* last_err = new AllocError(ErrorCode::NO_SLICING_FOUND);
+    *last_err << "found unsatisfiable constraints.";
+    slicing_ctx->iterate([&](std::list<PHV::SuperCluster*> sliced) {
+        n_tried++;
+        if (LOGGING(3)) {
+            LOG3("Slicing-attempt-" << n_tried << ":");
+            for (auto* sc : sliced) LOG3(sc);
+        }
+        auto this_slicing_tx = alloc.makeTransaction();
+        for (const auto* sc : sliced) {
+            if (kit_i.is_clot_allocated(kit_i.clot, *sc)) {
+                LOG3("skip clot allocated cluster: " << sc->uid);
+                continue;
+            }
+            if (sc->is_deparser_zero_candidate()) {
+                LOG3("Found another deparser-zero cluster: " << sc);
+                auto tx = base.alloc_deparser_zero_cluster(ctx, this_slicing_tx, sc, phv_i);
+                this_slicing_tx.commit(tx);
+                continue;
+            }
+            auto rst = base.try_sliced_super_cluster(ctx, this_slicing_tx, sc, container_groups);
+            if (rst.ok()) {
+                this_slicing_tx.commit(*rst.tx);
+            } else {
+                last_err = new AllocError(rst.err->code);
+                LOG3("Slicing-attempt-" << n_tried << ": failed, while allocating: " << sc);
+                *last_err << " failed when allocating this sliced " << sc;
+                // found a slice list that cannot be allocated because packing issue.
+                if (rst.err->code == ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED &&
+                    rst.err->reslice_required) {
+                    for (const auto* sl : *rst.err->reslice_required) {
+                        LOG3("Found invalid packing slice list: " << sl);
+                        slicing_ctx->invalidate(sl);
+                    }
+                } else {
+                    *last_err << rst.err_str();
+                }
+                return n_tried < max_slicings;
+            }
+        }
+        LOG3("Slicing-attempt-" << n_tried << ": succeeded.");
+        auto* this_slicing_score = ctx.score()->make(this_slicing_tx);
+        LOG3("Slicing-attempt-" << n_tried << " score: " << this_slicing_score->str());
+        if (!best_score || this_slicing_score->better_than(*best_score)) {
+            if (best_score) {
+                LOG3("Slicing-attempt-" << n_tried << " yields a *BETTER* allocation.");
+                LOG3("Previous score: " << (*best_score)->str());
+            } else {
+                LOG3("Slicing-attempt-" << n_tried << " is the first succeeded slicing.");
+            }
+            best_tx = this_slicing_tx;
+            best_score = this_slicing_score;
+            best_slicing = sliced;
+        } else {
+            LOG3("Slicing-attempt-" << n_tried << " did *NOT* yield a better allocation.");
+        }
+        return n_tried < max_slicings;
+    });
+
+    /// allocation failed
+    if (!best_score) {
+        if (history) {
+            *history << "Failed because: " << last_err->str() << "\n";
+        }
+        return AllocResult(last_err);
+    }
+
+    auto rst = AllocResult(*best_tx);
+    // history logging
+    if (history) {
+        *history << "Successfully Allocated\n";
+        *history << "By slicing into the following superclusters:\n";
+        for (auto* sc : *best_slicing) {
+            *history << sc << "\n";
+        }
+        *history << "Allocation Decisions: \n";
+        *history << rst.tx_str() << "\n";
+        *history << "\n";
+    }
+    return rst;
+}
+
+bool GreedyAllocator::allocate(std::list<SuperCluster*> clusters_input) {
+    LOG1("Run GreedyAllocator.");
+
+    // pre-slicing
+    LOG1("GreedyAllocator: start pre-slicing");
+    ordered_set<const SuperCluster*> invalid_clusters;
+    auto pre_sliced =
+        pre_slice_all(ConcreteAllocation(phv_i, kit_i.uses), clusters_input, invalid_clusters);
+    if (!invalid_clusters.empty()) {
+        ::error("GreedyAllocation failed because these clusters have unsatisfiable constraints.");
+        for (const auto& sc : invalid_clusters) {
+            ::error("unsat cluster: %1%", cstring::to_cstring(sc));
+        }
+        return false;
+    }
+
+    // create strided clusters.
+    pre_sliced.clusters =
+        PhvKit::create_strided_clusters(kit_i.strided_headers, pre_sliced.clusters);
+
+    // categorize super clusters.
+    auto refined_cluster_set = prepare_refined_set(pre_sliced.clusters);
+
+    // sorting.
+    sort_normal_clusters(refined_cluster_set.normal);
+
+    // logging all clusters
+    if (LOGGING(3)) {
+        LOG3(">>> Ready to allocate clusters:");
+        LOG3("Deparser zero clusters:");
+        for (const auto& sc : refined_cluster_set.deparser_zero) {
+            LOG3(sc);
+        }
+        LOG3("Strided clusters:");
+        for (const auto& sc : refined_cluster_set.strided) {
+            LOG3(sc);
+        }
+        LOG3("Sorted normal clusters:");
+        int n = 0;
+        for (const auto& sc : refined_cluster_set.normal) {
+            LOG3(n << "th: " << sc);
+            n++;
+        }
+    }
+
+    // actual allocation starts here.
+    const auto base = AllocatorBase(kit_i);
+    const auto container_groups = make_container_groups_by_size();
+    ConcreteAllocation alloc(phv_i, kit_i.uses);
+    auto* score_maker = new GreedyTxScoreMaker(kit_i,
+                                               PhvKit::make_device_container_groups(),
+                                               refined_cluster_set.normal,
+                                               pre_sliced.baseline_cont_req);
+    auto* search_config = new SearchConfig();
+    search_config->n_dfs_steps_sc_alloc = 256;
+    search_config->n_best_of_sc_alloc = 1;
+
+    // setup allocator context.
+    auto ctx = PHV::v2::ScoreContext()
+                   .with_score(score_maker)
+                   .with_search_config(search_config)
+                   .with_t(0);
+
+    // allocate deparser zero clusters
+    std::stringstream history;
+    for (const auto* sc : refined_cluster_set.deparser_zero) {
+        auto tx =
+            base.alloc_deparser_zero_cluster(v2::ScoreContext().with_t(1), alloc, sc, phv_i);
+        score_maker->record_commit(tx, sc);
+        alloc.commit(tx);
+    }
+
+    // allocate strided clusters
+    for (const auto* sc : refined_cluster_set.strided) {
+        auto rst = base.alloc_strided_super_clusters(ctx, alloc, sc, container_groups,
+                                                     max_slicing_tries_i);
+        if (!rst.ok()) {
+            ::error("Failed to allocate stride cluster: %1%, because %2%", cstring::to_cstring(sc),
+                    rst.err_str());
+        } else {
+            score_maker->record_commit(*rst.tx, sc);
+            alloc.commit(*rst.tx);
+        }
+    }
+
+    // allocate normal clusters.
+    int i = 0;
+    ordered_map<const SuperCluster*, const AllocError*> unallocated;
+    ScAllocTracker sc_tracker(kit_i);
+    LOG3("GreedyAllocator starts to allocate normal clusters");
+    for (const auto* sc : refined_cluster_set.normal) {
+        LOG3(score_maker->status());
+        LOG3("Allocating normal cluster of index " << i << ":\n " << sc);
+        history << "Allocating normal cluster of index " << i << ":\n " << sc;
+        i++;
+        auto result =
+            slice_and_allocate_sc(ctx, alloc, sc, container_groups, max_slicing_tries_i, &history);
+        if (!result.ok()) {
+            LOG3("Failed to allocate: SC-" << sc->uid);
+            unallocated[sc] = result.err;
+            const auto* to_swap =
+                sc_tracker.best_swap(alloc, sc, pre_sliced.baseline_cont_req.at(sc));
+            if (to_swap) {
+                LOG3("But maybe we can fit it by removing alloc of " << to_swap->sc);
+            }
+        } else {
+            sc_tracker.record(*result.tx, sc);
+            score_maker->record_commit(*result.tx, sc);
+            alloc.commit(*result.tx);
+            LOG3("Successfully allocated: SC-" << sc->uid);
+        }
+    }
+    LOG3(score_maker->status());
+
+    if (unallocated.empty()) {
+        LOG3("Greedy allocation succeeded.");
+        history << "Greedy allocation succeeded.\n";
+        PhvKit::bind_slices(alloc, phv_i);
+        PhvKit::sort_and_merge_alloc_slices(phv_i);
+        phv_i.set_done(false);
+    } else {
+        ::error("PHV fitting failed, %1% clusters cannot be allocated.",
+                unallocated.size());
+        for (const auto& kv : unallocated) {
+            ::error("Cannot allocated %1%, because %2%", cstring::to_cstring(kv.first),
+                    kv.second->str());
+        }
+    }
+
+    // log allocation history.
+    auto logfile = greedy_allocator_file_log(pipe_id_i, "phv_greedy_allocation_history_", 1);
+    LOG1("Greedy Allocation history");
+    LOG1(history.str());
+    Logging::FileLog::close(logfile);
+
+    // log allocation summary
+    auto summary_logfile = greedy_allocator_file_log(pipe_id_i, "phv_allocation_summary_", 1);
+    LOG1(alloc);
+    Logging::FileLog::close(summary_logfile);
+
+    return unallocated.empty();
+}
+
+}  // namespace v2
+}  // namespace PHV

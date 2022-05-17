@@ -35,6 +35,7 @@
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "bf-p4c/phv/collect_strided_headers.h"
+#include "bf-p4c/phv/v2/phv_kit.h"
 #include "bf-p4c/logging/phv_logging.h"
 
 /** This is the main PHV allocation pass manager.
@@ -98,6 +99,9 @@ class PHV_AnalysisPass : public Logging::PassManager {
 
     // a collection class of above passe.
     PHV::AllocUtils utils;
+
+    // Similar as AllocUtils but only used by v2::allocator.
+    PHV::v2::PhvKit kit;
 
  public:
     PHV_AnalysisPass(

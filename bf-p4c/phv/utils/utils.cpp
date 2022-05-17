@@ -879,6 +879,27 @@ PHV::Allocation::slices(
     return rv;
 }
 
+ordered_map<PHV::Container, PHV::Allocation::ContainerStatus> PHV::Transaction::get_actual_diff()
+    const {
+    ordered_map<PHV::Container, PHV::Allocation::ContainerStatus> rst;
+    const auto* parent = getParent();
+    for (const auto& container_status : getTransactionStatus()) {
+        const auto& c = container_status.first;
+        const auto parent_status = parent->getStatus(c);
+        auto copy = container_status.second;
+        for (const auto& a : container_status.second.slices) {
+            // filter out allocated slices.
+            if (parent_status && parent_status->slices.count(a)) {
+                copy.slices.erase(a);
+            }
+        }
+        if (!copy.slices.empty()) {
+            rst[c] = copy;
+        }
+    }
+    return rst;
+}
+
 cstring PHV::Transaction::getTransactionDiff() const {
     std::stringstream ss;
 

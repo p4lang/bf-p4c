@@ -1,5 +1,6 @@
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "ir/ir-generated.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
 
@@ -22,6 +23,8 @@ Visitor::profile_t Phv_Parde_Mau_Use::init_apply(const IR::Node *root) {
     for (auto &x : extracted_from_const_i) x.clear();
     written_i.clear();
     used_alu_i.clear();
+    ixbar_read_i.clear();
+    learning_reads_i.clear();
     return rv;
 }
 
@@ -62,6 +65,22 @@ bool Phv_Parde_Mau_Use::preorder(const IR::BFN::Deparser *d) {
     return true;
 }
 
+bool Phv_Parde_Mau_Use::preorder(const IR::BFN::Digest* digest) {
+    if (digest->name == "learning") {
+        const PHV::Field* selector = phv.field(digest->selector->field);
+        learning_reads_i.insert(selector);
+        for (auto fieldList : digest->fieldLists) {
+            for (auto flval : fieldList->sources) {
+                if (const auto *f = phv.field(flval->field)) {
+                    learning_reads_i.insert(f);
+                    LOG1("save learning: " << f);
+                }
+            }
+        }
+    }
+    return true;
+}
+
 bool Phv_Parde_Mau_Use::preorder(const IR::MAU::TableSeq *) {
     LOG5("PREORDER TableSeq ");
     // FIXME -- treat GHOST thread as ingress for PHV allocation
@@ -70,6 +89,21 @@ bool Phv_Parde_Mau_Use::preorder(const IR::MAU::TableSeq *) {
     in_mau = true;
     in_dep = false;
     revisit_visited();
+    return true;
+}
+
+bool Phv_Parde_Mau_Use::preorder(const IR::MAU::TableKey * key) {
+    // TODO: no document of for_selection() ?
+    LOG5("PREORDER TableKey: " << *key);
+    if (key->for_selection())
+        return true;
+    const auto* table = findContext<IR::MAU::Table>();
+    BUG_CHECK(table, "no table for key: %1%", key);
+    le_bitrange bits;
+    const PHV::Field* f = phv.field(key->expr, &bits);
+    if (!f) return true;
+    LOG5("Found table key field: " << f->name << bits);
+    ixbar_read_i[f][bits].insert(table);
     return true;
 }
 
@@ -198,6 +232,20 @@ bool Phv_Parde_Mau_Use::is_allocation_required(const PHV::Field *f) const {
     return !f->is_ignore_alloc() && (is_referenced(f) || f->isGhostField());
 }
 
+ordered_set<const IR::MAU::Table *> Phv_Parde_Mau_Use::ixbar_read(const PHV::Field *f,
+                                                                  le_bitrange range) const {
+    if (!ixbar_read_i.count(f)) return {};
+    ordered_set<const IR::MAU::Table *> rv;
+    for (const auto& kv : ixbar_read_i.at(f)) {
+        if (kv.first.contains(range)) {
+            rv.insert(kv.second.begin(), kv.second.end());
+        } else {
+            BUG_CHECK(!range.overlaps(kv.first), "not fine-sliced range of %1% %2%, saved: %3%", f,
+                      range, kv.first);
+        }
+    }
+    return rv;
+}
 
 //***********************************************************************************
 //
@@ -238,7 +286,8 @@ void PhvUse::postorder(const IR::BFN::DeparserParameter*) {
     LOG5("\t\t Turn off MAU for DeparserParameter");
 }
 
-bool PhvUse::preorder(const IR::BFN::Digest*) {
+bool PhvUse::preorder(const IR::BFN::Digest* digest) {
+    Phv_Parde_Mau_Use::preorder(digest);
     LOG5("PREORDER Digest PhvUse");
     // Treat fields which are used in digests as if they're used in the MAU,
     // because they can't go in TPHV or CLOT.

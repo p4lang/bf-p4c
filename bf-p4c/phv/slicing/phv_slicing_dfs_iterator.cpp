@@ -11,7 +11,6 @@
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/logging/logging.h"
 #include "bf-p4c/phv/error.h"
-#include "bf-p4c/phv/packing_validator.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/utils/utils.h"
 #include "lib/algorithm.h"
@@ -32,6 +31,17 @@ struct DeferHelper {
     virtual ~DeferHelper() { defer(); }
 };
 
+bool overlapped(const PHV::SuperCluster::SliceList* a, const PHV::SuperCluster::SliceList* b) {
+    for (const auto& fs_a : *a) {
+        for (const auto& fs_b : *b) {
+            if (fs_a.field() == fs_b.field() && fs_a.range().overlaps(fs_b.range())) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 }  // namespace
 
 // SuperCluster with no slicelist has a different but much simpler iterator.
@@ -43,7 +53,7 @@ struct DeferHelper {
 // the nth bit will take max(pre-alignment) into account, See below for details.
 namespace PHV {
 namespace Slicing {
-namespace NoSliceListItr {
+namespace Internal {
 
 // inc @p bv by 1.
 void inc(bitvec& bv) {
@@ -58,10 +68,22 @@ void inc(bitvec& bv) {
     bv.setbit(i);
 }
 
-// all_is_well_formed return true if all clusters are well-formed.
-bool all_is_well_formed(const std::list<SuperCluster*>& clusters) {
+// all_well_formed return true if all clusters are well-formed.
+bool all_well_formed(const std::list<SuperCluster*>& clusters) {
     return std::all_of(clusters.begin(), clusters.end(),
                        [](const SuperCluster* s) { return SuperCluster::is_well_formed(s); });
+}
+
+// all_container_sized return true if all clusters are well-formed.
+bool all_container_sized(const std::list<SuperCluster*>& clusters) {
+    return std::all_of(clusters.begin(), clusters.end(), [](const SuperCluster* s) {
+        for (const auto& sl : s->slice_lists()) {
+            if (!sl->front().field()->exact_containers()) continue;
+            const int sz = SuperCluster::slice_list_total_bits(*sl);
+            if (sz != 8 && sz != 16 && sz != 32) return false;
+        }
+        return true;
+    });
 }
 
 // Returns a bitvec that there are no more than 3 consecutive 0s, by
@@ -107,9 +129,9 @@ void no_slicelist_itr(const IterateCb& yield, const SuperCluster* sc) {
             split_schema.setbit((i + 1) * 8);
         }
         // Split the supercluster.
-        auto res = split_rotational_cluster(sc, split_schema);
+        auto res = split_rotational_cluster(sc, split_schema, max_aligment);
         // If successful, return it.
-        if (res && all_is_well_formed(*res)) {
+        if (res && all_well_formed(*res) && all_container_sized(*res)) {
             if (!yield(*res)) {
                 return;
             }
@@ -118,7 +140,42 @@ void no_slicelist_itr(const IterateCb& yield, const SuperCluster* sc) {
     }
 }
 
-}  // namespace NoSliceListItr
+void stride_cluster_itr(const IterateCb& yield, const SuperCluster* sc) {
+    BUG_CHECK(!sc->slice_lists().empty(), "empty slice lists stride cluster: %1%", sc);
+    int max_width = 0;
+    for (const auto* sl : sc->slice_lists()) {
+        const auto& head = sl->front();
+        const int alignment = head.alignment() ? (*head.alignment()).align : 0;
+        max_width = std::max(max_width, alignment + SuperCluster::slice_list_total_bits(*sl));
+    }
+    int sentinel_idx = max_width / 8 - (1 - bool(max_width % 8));
+    if (sentinel_idx < 0) {
+        return;
+    }
+    bitvec compressed_schema;
+    while (!compressed_schema[sentinel_idx]) {
+        // Expand the compressed schema.
+        bitvec split_schema;
+        for (int i : enforce_le_32b(compressed_schema, sentinel_idx)) {
+            split_schema.setbit((i + 1) * 8);
+        }
+        SplitSchema sc_schema;
+        for (const auto& sl : sc->slice_lists()) {
+            sc_schema[sl] = split_schema;
+        }
+        // Split all slice lists in the same way.
+        auto res = split(sc, sc_schema);
+        // If successful, return it.
+        if (res && all_well_formed(*res) && all_container_sized(*res)) {
+            if (!yield(*res)) {
+                return;
+            }
+        }
+        inc(compressed_schema);
+    }
+}
+
+}  // namespace Internal
 }  // namespace Slicing
 }  // namespace PHV
 
@@ -420,7 +477,7 @@ std::vector<SplitChoice> DfsItrContext::make_choices(const SliceListLoc& target)
             LOG5(c);
         }
     }
-    if (minimal_packing_mode_i) {
+    if (config_i.minimal_packing_mode) {
         std::sort(choices.begin(), choices.end(), NextSplitChoiceMetrics::minimal_packing);
     } else {
         std::sort(choices.begin(), choices.end(), NextSplitChoiceMetrics::default_heuristics);
@@ -952,7 +1009,13 @@ void DfsItrContext::iterate(const IterateCb& cb) {
     // no slice list supercluster, a simpler case.
     if (sc_i->slice_lists().size() == 0) {
         LOG3("empty slicelist SuperCluster");
-        NoSliceListItr::no_slicelist_itr(cb, sc_i);
+        Internal::no_slicelist_itr(cb, sc_i);
+        return;
+    }
+
+    if (sc_i->needsStridedAlloc()) {
+        LOG3("stride SuperCluster");
+        Internal::stride_cluster_itr(cb, sc_i);
         return;
     }
 
@@ -1570,7 +1633,7 @@ bool DfsItrContext::dfs_prune_unsat_exact_list_size_mismatch(
     return false;
 }
 
-bool DfsItrContext::dfs_prune_invalid_packing(const SuperCluster* sc) const {
+bool DfsItrContext::dfs_prune_invalid_packing(const SuperCluster* sc) {
     ordered_set<const SuperCluster::SliceList*> decided_packings;
     ordered_set<const SuperCluster::SliceList*> undecided_lists;
     for (auto* sl : sc->slice_lists()) {
@@ -1583,13 +1646,19 @@ bool DfsItrContext::dfs_prune_invalid_packing(const SuperCluster* sc) const {
             undecided_lists.insert(sl);
         }
     }
-    auto rst = packing_validator_i.can_pack(decided_packings, undecided_lists);
+    auto rst = packing_validator_i.can_pack(
+            decided_packings, undecided_lists, config_i.loose_action_packing_check_mode);
     switch (rst.code) {
         case PackingValidator::Result::Code::OK: {
             return false;
         }
         case PackingValidator::Result::Code::BAD: {
             LOG5("DFS pruned(invalid packing): " << rst.err);
+            if (config_i.smart_backtracking_mode) {
+                for (const auto* sl : *rst.invalid_packing) {
+                    invalidate(sl);
+                }
+            }
             return true;
         }
         default:
@@ -1598,7 +1667,7 @@ bool DfsItrContext::dfs_prune_invalid_packing(const SuperCluster* sc) const {
     }
 }
 
-bool DfsItrContext::dfs_prune(const ordered_set<SuperCluster*>& unchecked) const {
+bool DfsItrContext::dfs_prune(const ordered_set<SuperCluster*>& unchecked) {
     for (const auto* sc : unchecked) {
         // unwell_formed
         if (dfs_prune_unwell_formed(sc)) {
@@ -1731,7 +1800,7 @@ bool DfsItrContext::dfs(const IterateCb& yield, const ordered_set<SuperCluster*>
                               << " bits of " << sl);
             to_be_split_i.insert(rst->begin(), rst->end());
             split_decisions_i.insert(split_meta.second.begin(), split_meta.second.end());
-            slicelist_head_on_stack_i.push_back(sl->front());
+            slicelist_on_stack_i.push_back(sl);
             DeferHelper restore_results([&]() {
                 for (const auto& sc : *rst) {
                     to_be_split_i.erase(sc);
@@ -1739,7 +1808,7 @@ bool DfsItrContext::dfs(const IterateCb& yield, const ordered_set<SuperCluster*>
                 for (auto& v : split_meta.second) {
                     split_decisions_i.erase(v.first);
                 }
-                slicelist_head_on_stack_i.pop_back();
+                slicelist_on_stack_i.pop_back();
             });
             ordered_set<SuperCluster*> newly_created;
             newly_created.insert(rst->begin(), rst->end());
@@ -1747,17 +1816,16 @@ bool DfsItrContext::dfs(const IterateCb& yield, const ordered_set<SuperCluster*>
                 return false;
             }
             if (to_invalidate != nullptr) {
-                // checking the front fieldslice is enough because our way of searching is to
-                // cut first N bits of sl. If found that the current sl is the invalidation
-                // target, then we reset to_invalid. Otherwise, we backtrack to the layer that
-                // its sl equals to invalidation.
-                if (to_invalidate->front().field() == sl->front().field() &&
-                    to_invalidate->front().range().lo == sl->front().range().lo) {
+                // If the current sl is the invalidation target, then we reset to_invalid.
+                // Otherwise, we backtrack to the layer that its sl equals to invalidation.
+                if (to_invalidate == sl) {
                     LOG1("to_invalidate stop at dfs-depth-"
                          << dfs_depth_i << ", last choice: " << int(choice) << " on " << sl);
+                    to_invalidate_sl_counter.erase(to_invalidate);
                     to_invalidate = nullptr;
                 } else {
-                    LOG1("found to_invalidate, backtrack: " << to_invalidate);
+                    LOG1("Found to_invalidate: " << to_invalidate);
+                    LOG1("Backtracking from : " << sl);
                     return true;
                 }
             }
@@ -1769,14 +1837,47 @@ bool DfsItrContext::dfs(const IterateCb& yield, const ordered_set<SuperCluster*>
 }
 
 void DfsItrContext::invalidate(const SuperCluster::SliceList* sl) {
-    for (const auto& on_stack : slicelist_head_on_stack_i) {
-        if (on_stack.field() == sl->front().field() &&
-            on_stack.range().lo == sl->front().range().lo) {
-            // set to_invalidate only when we are sure that sl is on the stack.
-            to_invalidate = sl;
-            return;
+    // current to_invalidate slice list has already exceeded the limit, must
+    // backtrack to the point, so ignoring all other to invalidate.
+    if (to_invalidate && to_invalidate_sl_counter[to_invalidate] > to_invalidate_max_ignore) {
+        return;
+    }
+    bool ignore = false;
+    const SuperCluster::SliceList* target_sl = nullptr;
+    for (const auto& sl_on_stack : boost::adaptors::reverse(slicelist_on_stack_i)) {
+        // if there is already a to-invalidate slice list, then we will only update
+        // it if the new @p sl is on higher stack frame: try to backtrack less.
+        if (to_invalidate && to_invalidate == sl_on_stack) {
+            ignore = true;
+        }
+        if (overlapped(sl, sl_on_stack)) {
+            target_sl = sl_on_stack;
+            break;
         }
     }
+    if (target_sl) {
+        // if we found the slice list on stack.
+        if (ignore) {
+            // if it is deeper than current to_invalidate, just inc counter.
+            to_invalidate_sl_counter[target_sl]++;
+            // but if the counter exceeds the limit, we will always use the deeper one.
+            if (to_invalidate_sl_counter[target_sl] > to_invalidate_max_ignore) {
+                to_invalidate = target_sl;
+            }
+        } else {
+            // if it is lower than current to_invalidate, replace current with this new
+            // slice list and inc counter for the current to_invalidate.
+            if (to_invalidate) {
+                to_invalidate_sl_counter[to_invalidate]++;
+                // but if the counter exceeds the limit, do not replace.
+                if (to_invalidate_sl_counter[to_invalidate] > to_invalidate_max_ignore) {
+                    return;
+                }
+            }
+            to_invalidate = target_sl;
+        }
+    }
+    return;
 }
 
 std::ostream& operator<<(std::ostream& out, const PHV::Slicing::AfterSplitConstraint& c) {

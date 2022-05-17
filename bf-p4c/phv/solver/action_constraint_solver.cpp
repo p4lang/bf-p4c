@@ -187,6 +187,26 @@ Result ActionSolverBase::try_container_set(const ContainerID dest,
     return Result(new ContainerSet(dest, assigns.front().src.container));
 }
 
+boost::optional<Error> ActionSolverBase::check_whole_container_set_with_none_source_allocated()
+    const {
+    // check partial write for destinations when none of their sources has been allocated.
+    for (const auto& dest_unallocated_bv : src_unallocated_bits) {
+        const auto& dest = dest_unallocated_bv.first;
+        const auto& unallocated_bv = dest_unallocated_bv.second;
+        if (dest_assigns_i.count(dest)) continue;
+        // do not check if there is no source unallocated.
+        if (unallocated_bv.empty()) continue;
+        auto invalid_write_bit = invalid_whole_container_set({}, specs_i.at(dest), unallocated_bv);
+        if (invalid_write_bit) {
+            std::stringstream ss;
+            ss << "whole container write on destination " << dest
+               << " will corrupt bit : " << *invalid_write_bit;
+            return Error(ErrorCode::invalid_whole_container_write, ss.str());
+        }
+    }
+    return boost::none;
+}
+
 void ActionSolverBase::add_assign(const Operand& dst, Operand src) {
     // Assume that ad_or_const sources are always aligned with dst.
     if (src.is_ad_or_const) {
@@ -629,6 +649,9 @@ Result ActionMoveSolver::solve() const {
 
 /// solve checks that either
 Result ActionMochaSolver::solve() const {
+    if (auto err = check_whole_container_set_with_none_source_allocated()) {
+        return Result(*err);
+    }
     std::vector<const Instruction*> instructions;
     for (const auto& dest_assigns : dest_assigns_i) {
         auto rst = try_container_set(dest_assigns.first, dest_assigns.second);
@@ -647,6 +670,9 @@ Result ActionMochaSolver::solve() const {
 /// and since set instruction on mocha/dark are whole-container-set, all other bits that
 /// are not set in this action need to be not live.
 Result ActionDarkSolver::solve() const {
+    if (auto err = check_whole_container_set_with_none_source_allocated()) {
+        return Result(*err);
+    }
     std::stringstream ss;
     std::vector<const Instruction*> instructions;
     for (const auto& dest_assigns : dest_assigns_i) {

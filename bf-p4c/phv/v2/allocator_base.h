@@ -1,21 +1,55 @@
 #ifndef BF_P4C_PHV_V2_ALLOCATOR_BASE_H_
 #define BF_P4C_PHV_V2_ALLOCATOR_BASE_H_
 
-#include "bf-p4c/phv/allocate_phv.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/utils/utils.h"
 #include "bf-p4c/phv/v2/copacker.h"
 #include "bf-p4c/phv/v2/utils_v2.h"
+#include "bf-p4c/phv/v2/phv_kit.h"
 
 namespace PHV {
 namespace v2 {
 
-struct AllocResultWithPackHint : public AllocResult {
+/// ContScopeAllocResult extends the AllocResult with additional properties for
+/// allocator to pick the best one.
+/// 1. additional packing hints.
+/// 2. allocated container.
+/// 3. is this allocation result packing with other existing field slices.
+struct ContScopeAllocResult : public AllocResult {
     ActionSourceCoPackMap action_hints;
-    explicit AllocResultWithPackHint(const AllocError* err) : AllocResult(err) {}
-    AllocResultWithPackHint(const Transaction& tx, const ActionSourceCoPackMap& hints)
-        : AllocResult(tx), action_hints(hints) {}
+    Container c;
+    bool is_packing;
+    ContScopeAllocResult(): AllocResult(new AllocError(ErrorCode::NOT_ENOUGH_SPACE, "")) {}
+    explicit ContScopeAllocResult(const AllocError* err)
+        : AllocResult(err) {}
+    ContScopeAllocResult(const Transaction& tx, const ActionSourceCoPackMap& hints, Container c,
+                         bool is_packing)
+        : AllocResult(tx), action_hints(hints), c(c), is_packing(is_packing) {}
+    bool cont_is_whole_container_set_only() const {
+        BUG_CHECK(ok(), "cannot query this status on error");
+        return c.type().kind() == Kind::mocha || c.type().kind() == Kind::dark;
+    }
+};
+
+/// SomeContScopeAllocResult will store multiple ContScoreAllocResult(s) of the highest score under
+/// different standards. They will be saved into the results vector and the index represents:
+/// 0: highest score overall.
+/// 1: highest score of not packing with any other field slices.
+/// 2: highest score of not packing with any other field slices and not introducing
+///    whole_container_set_only constraint. (i.e., not in mocha/dark container).
+struct SomeContScopeAllocResult {
+    const AllocError* err = nullptr;
+    std::vector<const TxScore*> scores;
+    std::vector<ContScopeAllocResult> results;
+    explicit SomeContScopeAllocResult(const AllocError* default_err): err(default_err) {}
+    explicit SomeContScopeAllocResult(ContScopeAllocResult& rst, const TxScore* score)
+        : scores{score}, results{rst} {}
+    /// update the result list.
+    void collect(const ContScopeAllocResult& rst, const TxScore* score);
+    bool ok() const { return !results.empty(); }
+    ContScopeAllocResult& front() { return results.front(); }
+    size_t size() const { return results.size(); }
 };
 
 /// AllocatorBase contains all reusable functions for PHV allocation, mostly 3 categories:
@@ -24,7 +58,7 @@ struct AllocResultWithPackHint : public AllocResult {
 /// (3) allocation functions: const-qualified functions that returns an AllocResult.
 class AllocatorBase {
  protected:
-    const AllocUtils& utils_i;
+    const PhvKit& kit_i;
 
  protected:
     /// @returns error when @p sl cannot fit the container type constraint of @p c.
@@ -64,9 +98,16 @@ class AllocatorBase {
         const std::vector<AllocSlice> candidates,
         const Container& c) const;
 
+    /// @returns a vector of slice list that covers all field slices of @p sc.
+    /// SliceLists are sorted in the order of suggested allocation by
+    /// (1) slice list with fixed alignment.
+    std::vector<const SuperCluster::SliceList*>* make_alloc_order(const ScoreContext& ctx,
+                                                                  const SuperCluster* sc,
+                                                                  const PHV::Size width) const;
+
     /// @returns AllocError if can_pack verification failed.
     /// NOTE: when @p c is an empty normal container, a special error with
-    /// code CANNOT_PACK_CANDIDATES will be returned.
+    /// code ACTION_CANNOT_BE_SYNTHESIZED will be returned.
     /// It indicates that even if we are allocating candidates to an empty container
     /// (assume all other container-scope constraint checks have passed), we still cannot pack
     /// or allocate candidates, which usually means that we need to slice the original super
@@ -95,7 +136,9 @@ class AllocatorBase {
     std::set<PHV::Size> compute_valid_container_sizes(const SuperCluster* sc) const;
 
     /// Try to allocate fieldslices with starting positions defined in @p fs_starts to container @p
-    /// c. Various container-level constraints will be checked.
+    /// c. Various container-level constraints will be checked. When @p skip_mau_checks are true,
+    /// mau-related checks will be skipped, e.g., verify_can_pack. It should only be true when
+    /// allocator is trying to allocate stride clusters.
     /// Premises without BUG_CHECK:
     ///   (1) @p fs_starts contains all field slices that needs to be allocated to @p c. They
     ///       should never exceed the width of the container,
@@ -125,11 +168,16 @@ class AllocatorBase {
     ///   (9) fields in @p fs_starts will not violate parser extraction constraints.
     ///   (5) field max container bytes constraints.
     /// NOTE: alloc slices of ignore_alloc field slices will not be generated.
-    AllocResultWithPackHint try_slices_to_container(
+    /// Possible ErrorCode:
+    /// (1) NOT_ENOUGH_SPACE
+    /// (2) ACTION_CANNOT_BE_SYNTHESIZED
+    /// (3) *all kinds of container scope static error codes, e.g. gress, container type mismatch..
+    ContScopeAllocResult try_slices_to_container(
         const ScoreContext& ctx,
         const Allocation& alloc,
         const FieldSliceAllocStartMap& fs_starts,
-        const Container& c) const;
+        const Container& c,
+        const bool skip_mau_checks = false) const;
 
     /// try to find a valid container in @p group for @p fs_starts by calling
     /// try_slices_to_container on every container of @p group. The returned result
@@ -138,7 +186,10 @@ class AllocatorBase {
     ///   (1) AllocSlices that will be generated based on @p fs_starts will not exceed
     ///       the size of width of @p group.
     ///   (2) @p ctx score has been initialized.
-    AllocResultWithPackHint try_slices_to_container_group(
+    /// Possible ErrorCode:
+    /// (1) NOT_ENOUGH_SPACE
+    /// (2) ACTION_CANNOT_BE_SYNTHESIZED
+    SomeContScopeAllocResult try_slices_to_container_group(
         const ScoreContext& ctx,
         const Allocation& alloc,
         const FieldSliceAllocStartMap& fs_starts,
@@ -146,20 +197,20 @@ class AllocatorBase {
 
     /// A helper function that will call try_slices_to_container if @p c is specified (not
     /// boost::none). Otherwise, it will call try_slices_to_container_group with @p group.
-    AllocResultWithPackHint try_slices_adapter(const ScoreContext& ctx,
-                                               const Allocation& alloc,
-                                               const FieldSliceAllocStartMap& fs_starts,
-                                               const ContainerGroup& group,
-                                               boost::optional<Container> c) const;
+    SomeContScopeAllocResult try_slices_adapter(const ScoreContext& ctx,
+                                                const Allocation& alloc,
+                                                const FieldSliceAllocStartMap& fs_starts,
+                                                const ContainerGroup& group,
+                                                boost::optional<Container> c) const;
 
     /// Try to allocate by @p action_hints to @p group. This function will add allocated field
     /// slices to @p allocated.
-    Transaction try_hints(const ScoreContext& ctx,
-                          const Allocation& alloc,
-                          const ContainerGroup& group,
-                          const ActionSourceCoPackMap& action_hints_map,
-                          ordered_set<PHV::FieldSlice>& allocated,
-                          ScAllocAlignment& hint_enforced_alignments) const;
+    boost::optional<Transaction> try_hints(const ScoreContext& ctx,
+                                           const Allocation& alloc,
+                                           const ContainerGroup& group,
+                                           const ActionSourceCoPackMap& action_hints_map,
+                                           ordered_set<PHV::FieldSlice>& allocated,
+                                           ScAllocAlignment& hint_enforced_alignments) const;
 
     /// try to allocate a pair of wide_arith slice lists (@p lo, @p hi) to an even-odd
     /// pair of containers in @p group.
@@ -174,14 +225,64 @@ class AllocatorBase {
     /// try to allocate @p sc with @p alignment to @p group.
     /// premise:
     /// (1) alloc_alignment must have been populated in @p ctx.
-    AllocResult try_super_cluster_with_alignment_to_container_group(
-        const ScoreContext& ctx,
-        const Allocation& alloc,
-        const SuperCluster* sc,
-        const ContainerGroup& group) const;
+    AllocResult try_super_cluster_to_container_group(const ScoreContext& ctx,
+                                                     const Allocation& alloc,
+                                                     const SuperCluster* sc,
+                                                     const ContainerGroup& group) const;
+
+    /// internal type of callback.
+    using DfsAllocCb = std::function<bool(const Transaction&)>;
+    struct DfsState {
+        ScAllocAlignment alignment;
+        std::vector<const SuperCluster::SliceList*> allocated;
+        std::vector<const SuperCluster::SliceList*> to_allocate;
+        DfsState(const ScAllocAlignment& alignment,
+                 const std::vector<const SuperCluster::SliceList*>& allocated,
+                 const std::vector<const SuperCluster::SliceList*>& to_allocate)
+            : alignment(alignment), allocated(allocated), to_allocate(to_allocate) {}
+        bool done() const { return to_allocate.empty(); }
+        const SuperCluster::SliceList* next_to_allocate() const { return to_allocate.front(); }
+        DfsState next_state(
+            const ScAllocAlignment& updated_alignment,
+            const ordered_set<const SuperCluster::SliceList*>& just_allocated) const;
+    };
+    class DfsListsAllocator {
+        const AllocatorBase& base;
+        const int n_step_limit;
+        DfsAllocCb yield;
+        int n_steps = 0;
+        bool caller_pruned = false;  // pruned by caller.
+        ordered_set<const SuperCluster::SliceList*>* reslice_required_i =
+            new ordered_set<const SuperCluster::SliceList*>();
+        bool pruned() const { return caller_pruned || n_steps > n_step_limit; }
+        std::string depth_prefix(const int depth) const;
+        boost::optional<ScAllocAlignment> new_alignment_with_start(
+            const ScoreContext& ctx, const SuperCluster::SliceList* target, const int sl_start,
+            const PHV::Size& width, const ScAllocAlignment& alignment) const;
+        bool allocate(const ScoreContext& ctx, const Transaction& tx, const DfsState& state,
+                      const int depth);
+
+     public:
+        DfsListsAllocator(const AllocatorBase& base, int n_step_limit)
+            : base(base), n_step_limit(n_step_limit) {}
+        ordered_set<const SuperCluster::SliceList*>* reslice_required() const {
+            return reslice_required_i;
+        }
+        bool search_allocate(const ScoreContext& ctx,
+                             const Transaction& tx,
+                             const ScAllocAlignment& alignment,
+                             const std::vector<const SuperCluster::SliceList*>& allocated,
+                             const std::vector<const SuperCluster::SliceList*>& to_allocate,
+                             const DfsAllocCb& yield);
+    };
+
+    AllocResult alloc_stride(const ScoreContext& ctx,
+                             const Allocation& alloc,
+                             const std::vector<FieldSlice>& stride,
+                             const ContainerGroupsBySize& groups) const;
 
  public:
-    explicit AllocatorBase(const AllocUtils& utils): utils_i(utils) {};
+    explicit AllocatorBase(const PhvKit& kit): kit_i(kit) {};
     virtual ~AllocatorBase() {};
 
     /// Try to allocate @p sc, without further slicing, to @p groups.
@@ -206,10 +307,18 @@ class AllocatorBase {
                                                  const PHV::Allocation& alloc,
                                                  const PHV::SuperCluster* sc,
                                                  PhvInfo& phv) const;
+
+    /// Try to allocate stride super cluster @p sc, without further slicing, to @p groups.
+    /// Premise:
+    /// (1) DO NOT pass non-strided super cluster to this function.
+    AllocResult alloc_strided_super_clusters(const ScoreContext& ctx,
+                                             const Allocation& alloc,
+                                             const SuperCluster* sc,
+                                             const ContainerGroupsBySize& groups,
+                                             const int max_n_slicings = 64) const;
 };
 
 }  // namespace v2
 }  // namespace PHV
-
 
 #endif /* BF_P4C_PHV_V2_ALLOCATOR_BASE_H_ */

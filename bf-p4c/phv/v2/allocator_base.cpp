@@ -3,11 +3,13 @@
 #include <sstream>
 #include <tuple>
 
+#include <boost/optional/optional.hpp>
 #include <boost/range/join.hpp>
 
+#include "bf-p4c/device.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/phv/action_source_tracker.h"
-#include "bf-p4c/phv/allocate_phv.h"
+#include "bf-p4c/phv/v2/phv_kit.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/utils/slice_alloc.h"
@@ -32,7 +34,7 @@ bool can_control_flow_overlay(const SymBitMatrix& mutex,
 }
 
 /// @returns true if the live range of @p slice is disjoint with all slices in @p overlapped.
-bool can_physical_liverange_overlay(const AllocUtils& utils,
+bool can_physical_liverange_overlay(const PhvKit& kit,
                                     const AllocSlice& slice,
                                     const ordered_set<AllocSlice>& overlapped) {
     BUG_CHECK(slice.isPhysicalStageBased(),
@@ -40,7 +42,7 @@ bool can_physical_liverange_overlay(const AllocUtils& utils,
     for (const auto& other : overlapped) {
         BUG_CHECK(other.isPhysicalStageBased(),
                   "slice must be physical-stage-based in can_physical_liverange_overlay");
-        if (!utils.can_physical_liverange_be_overlaid(slice, other)) {
+        if (!kit.can_physical_liverange_be_overlaid(slice, other)) {
             return false;
         }
     }
@@ -77,6 +79,7 @@ std::vector<AllocSlice> make_alloc_slices(const PhvUse& uses,
 std::vector<AllocSlice> update_alloc_slices_with_physical_liverange(
     const ClotInfo& clot,
     const FieldSliceLiveRangeDB& liverange_db,
+    const CollectStridedHeaders& strided_headers,
     const std::vector<AllocSlice>& slices) {
     const bool deparsed_cannot_read_clot =
         std::any_of(slices.begin(), slices.end(), [&](const AllocSlice& slice) {
@@ -99,6 +102,10 @@ std::vector<AllocSlice> update_alloc_slices_with_physical_liverange(
         // packed in this slice list.
         if (deparsed_cannot_read_clot && clot.allocated_unmodified_undigested(field)) {
             info = liverange_db.default_liverange();
+        } else if (strided_headers.get_strided_group(field)) {
+            // XXX(yumin): workaround for @donot_unroll pragma parser loop bug: defuse analysis
+            // (control flow visitor) cannot handle parser loop correctly.
+            info = liverange_db.default_liverange();
         }
         for (const auto& r : LiveRangeInfo::merge_invalid_ranges(info->disjoint_ranges())) {
             PHV::AllocSlice clone = slice;
@@ -111,16 +118,76 @@ std::vector<AllocSlice> update_alloc_slices_with_physical_liverange(
 }
 
 /// @returns a map of start of field slices in @p sl, based on @p alignment.
-FieldSliceAllocStartMap make_start_map(const ScAllocAlignment& alignment,
+FieldSliceAllocStartMap make_start_map(const SuperCluster* sc,
+                                       const ScAllocAlignment& alignment,
                                        const SuperCluster::SliceList* sl) {
     FieldSliceAllocStartMap starts;
     for (const auto& fs : *sl) {
-        starts[fs] = alignment.slice_starts.at(fs);
+        starts[fs] = alignment.cluster_starts.at(&sc->aligned_cluster(fs));
     }
     return starts;
 }
 
+/// @returns true if have overlapped field slices.
+bool has_overlapped_slice(const SuperCluster::SliceList* sl,
+                          const std::vector<AllocSlice>* allocated) {
+    for (const auto& fs : *sl) {
+        for (const auto& alloc_sl : *allocated) {
+            if (fs.field() == alloc_sl.field() && alloc_sl.field_slice().overlaps(fs.range())) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 }  // namespace
+
+void SomeContScopeAllocResult::collect(const ContScopeAllocResult& rst,
+                                       const TxScore* score) {
+    // 0: highest score overall.
+    // 1: highest score of not packing with any other field slices.
+    // 2: highest score of not packing with any other field slices and not introducing
+    //    whole_container_set_only constraint. (i.e., not in mocha/dark container).
+    const auto sat_level = [](const ContScopeAllocResult& r) {
+        size_t level = 0;
+        if (!r.is_packing) {
+            level = 1;
+            if (!r.cont_is_whole_container_set_only()) {
+                level = 2;
+            }
+        }
+        return level;
+    };
+    ContScopeAllocResult curr = rst;
+    const TxScore* curr_score = score;
+    for (size_t i = 0; i < 3; i++) {
+        size_t curr_level = sat_level(curr);
+        if (i > curr_level) {
+            break;
+        }
+        if (i >= results.size()) {
+            results.push_back(curr);
+            scores.push_back(curr_score);
+            break;
+        } else if (curr_score->better_than(scores[i])) {
+            std::swap(curr, results[i]);
+            std::swap(curr_score, scores[i]);
+        } else if (curr_level <= sat_level(results[i])) {
+            // score is not better, and level is not deeper.
+            break;
+        }
+    }
+
+    // erase unnecessary results: more constraints, lower score.
+    for (size_t i = 0; i < results.size(); i++) {
+        if ((i == 0 && !results[i].cont_is_whole_container_set_only() && !results[i].is_packing) ||
+            (i == 1 && !results[i].cont_is_whole_container_set_only())) {
+            results.resize(i + 1);
+            break;
+        }
+    }
+}
 
 Transaction AllocatorBase::make_speculated_alloc(const ScoreContext& ctx,
                                                  const Allocation& alloc,
@@ -146,20 +213,19 @@ Transaction AllocatorBase::make_speculated_alloc(const ScoreContext& ctx,
         return false;
     };
     ordered_set<Container> empty_containers;
-    for (const auto& group : Device::phvSpec().mauGroups(candidates_cont.type().size())) {
-        for (const auto cid : group) {
-            const Container c = Device::phvSpec().idToContainer(cid);
-            if (c.type().kind() != Kind::normal) continue;
-            if ((gress == INGRESS && Device::phvSpec().egressOnly()[cid]) ||
-                (gress == EGRESS && Device::phvSpec().ingressOnly()[cid])) {
-                continue;
-            }
-            if (alloc.parserGroupGress(c) && *alloc.parserGroupGress(c) != gress) continue;
-            if (alloc.deparserGroupGress(c) && *alloc.deparserGroupGress(c) != gress) continue;
-            const auto EMPTY = Allocation::ContainerAllocStatus::EMPTY;
-            if (!alloc.getStatus(c) || alloc.getStatus(c)->alloc_status == EMPTY) {
-                empty_containers.insert(c);
-            }
+    const auto& phv_spec = Device::phvSpec();
+    for (const auto &c : *ctx.cont_group()) {
+        const int cid = phv_spec.containerToId(c);
+        if (c.type().kind() != Kind::normal) continue;
+        if ((gress == INGRESS && phv_spec.egressOnly()[cid]) ||
+            (gress == EGRESS && phv_spec.ingressOnly()[cid])) {
+            continue;
+        }
+        if (alloc.parserGroupGress(c) && *alloc.parserGroupGress(c) != gress) continue;
+        if (alloc.deparserGroupGress(c) && *alloc.deparserGroupGress(c) != gress) continue;
+        const auto EMPTY = Allocation::ContainerAllocStatus::EMPTY;
+        if (!alloc.getStatus(c) || alloc.getStatus(c)->alloc_status == EMPTY) {
+            empty_containers.insert(c);
         }
     }
     empty_containers.erase(candidates_cont);
@@ -217,9 +283,10 @@ Transaction AllocatorBase::make_speculated_alloc(const ScoreContext& ctx,
             speculated_alloc_slices.emplace_back(alloc_slice);
             offset += fs.size();
         }
-        if (utils_i.settings.physical_liverange_overlay) {
+        if (kit_i.settings.physical_liverange_overlay) {
             speculated_alloc_slices = update_alloc_slices_with_physical_liverange(
-                utils_i.clot, utils_i.physical_liverange_db, speculated_alloc_slices);
+                kit_i.clot, kit_i.physical_liverange_db, kit_i.strided_headers,
+                speculated_alloc_slices);
         }
         pseudo_slice_added = true;
         for (const auto& alloc_slice : speculated_alloc_slices) {
@@ -239,53 +306,33 @@ const AllocError* AllocatorBase::verify_can_pack(const ScoreContext& ctx,
                                                  const std::vector<AllocSlice>& candidates,
                                                  const Container& c,
                                                  ActionSourceCoPackMap& action_copack_hints) const {
-    // TODO(yumin): speed optimization: we can skip adding speculated alloc if
-    // slice lists have all been allocated.
-    const auto speculated_alloc = make_speculated_alloc(ctx, alloc, sc, candidates, c);
-    const auto err = utils_i.actions.can_pack_v2(speculated_alloc, candidates);
-    if (err.first != CanPackErrorCode::NO_ERROR) {
+    boost::optional<CanPackErrorV2> err;
+    if (c.type().kind() == Kind::mocha || c.type().kind() == Kind::dark) {
+        // materialize slice lists allocation into alloc when dark/mocha.
+        // Materializing unallocated but fixed alignment slices will help
+        // solver to check whole-container-set alignment constraints.
+        const auto speculated_alloc = make_speculated_alloc(ctx, alloc, sc, candidates, c);
+        err = kit_i.actions.can_pack_v2(speculated_alloc, candidates);
+    } else {
+        err = kit_i.actions.can_pack_v2(alloc, candidates);
+    }
+    if (!err->ok()) {
         std::stringstream ss;
-        ss << err.first << ", " << err.second;
-        const auto is_container_empty = alloc.liverange_overlapped_slices(c, candidates).empty();
-        if (is_container_empty && c.type().kind() == PHV::Kind::normal) {
-            return new AllocError(ErrorCode::CANNOT_PACK_CANDIDATES, ss.str());
-        } else {
-            return new AllocError(ErrorCode::CANNOT_PACK_WITH_ALLOCATED, ss.str());
-        }
+        ss << err->code << ", " << err->msg;
+        auto* alloc_err = new AllocError(ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED, ss.str());
+        alloc_err->invalid_packing = err->invalid_dest_packing;
+        return alloc_err;
     }
 
     //// recursivesly check conditional constraints, but do not need to commit them to tx.
-    auto tx = speculated_alloc.makeTransaction();
+    auto tx = alloc.makeTransaction();
     for (const auto& sl : candidates)
-        tx.allocate(sl, nullptr, utils_i.settings.single_gress_parser_group);
+        tx.allocate(sl, nullptr, kit_i.settings.single_gress_parser_group);
 
-    auto copack_hints = CoPacker(utils_i.source_tracker, sc, ctx.alloc_alignment())
+    auto copack_hints = CoPacker(kit_i.source_tracker, sc, ctx.alloc_alignment())
                             .gen_copack_hints(tx, candidates, c);
     if (!copack_hints.ok()) {
         return copack_hints.err;
-    }
-
-    for (const auto& action_hints : copack_hints.action_hints) {
-        const auto* action = action_hints.first;
-        const auto& hints = action_hints.second;
-        if (!(hints.size() == 1 && hints.front()->required)) continue;
-        LOG5(ctx.t_tabs() << "Recursively check action " << cstring::to_cstring(action->name)
-                          << " for unallocated sources that must be pack, reason: "
-                          << hints.front()->reason);
-        for (const auto& pack_vec : hints.front()->pack_sources) {
-            auto* min_search_config = new SearchConfig(*ctx.search_config());
-            min_search_config->stop_first_succ_empty_normal_container = true;
-            auto rst =
-                try_slices_adapter(ctx.with_t(ctx.t() + 1)
-                                       .with_search_config(min_search_config)
-                                       .with_score(new NilTxScoreMaker()),
-                                   tx, pack_vec->fs_starts, *ctx.cont_group(), pack_vec->container);
-            if (!rst.ok()) {
-                std::stringstream ss;
-                ss << "recursive can_pack failed for action " << cstring::to_cstring(action->name);
-                return new AllocError(ErrorCode::CANNOT_PACK_WITH_ALLOCATED, ss.str());
-            }
-        }
     }
     action_copack_hints = std::move(copack_hints.action_hints);
     return nullptr;
@@ -296,7 +343,7 @@ const AllocError* AllocatorBase::is_container_type_ok(const AllocSlice& sl,
     auto* err = new AllocError(ErrorCode::CONTAINER_TYPE_MISMATCH);
 
     // pa_container_type pragma.
-    auto required_kind = utils_i.pragmas.pa_container_type().required_kind(sl.field());
+    auto required_kind = kit_i.pragmas.pa_container_type().required_kind(sl.field());
     if (required_kind && *required_kind != c.type().kind()) {
         *err << "unsat @pa_container_type: " << sl.field() << " must be " << *required_kind;
         return err;
@@ -316,12 +363,12 @@ const AllocError* AllocatorBase::is_container_type_ok(const AllocSlice& sl,
             break;
         }
         case Kind::tagalong: {
-            type_ok = sl.field()->is_tphv_candidate(utils_i.uses);
+            type_ok = sl.field()->is_tphv_candidate(kit_i.uses);
             break;
         }
     }
     if (!type_ok) {
-        *err << "unsat container type: " << sl.field() << " cannot be allocated to " << c;
+        *err << sl.field()->name << " is not a candidate of " << c.type();
         return err;
     }
     return nullptr;
@@ -333,13 +380,13 @@ const AllocError* AllocatorBase::is_container_gress_ok(const Allocation& alloc,
     auto* err = new AllocError(ErrorCode::CONTAINER_GRESS_MISMATCH);
     const auto gress = alloc.gress(c);
     if (gress && *gress != sl.field()->gress) {
-        *err << "container is " << *gress << " but the field is not: " << sl.field();
+        *err << "container is " << *gress << " but this field is not: " << sl.field()->name;
         return err;
     }
     // all containers within parser group must have same gress assignment
     const auto parser_group_gress = alloc.parserGroupGress(c);
-    const bool is_extracted = utils_i.uses.is_extracted(sl.field());
-    if (parser_group_gress && (is_extracted || utils_i.settings.single_gress_parser_group) &&
+    const bool is_extracted = kit_i.uses.is_extracted(sl.field());
+    if (parser_group_gress && (is_extracted || kit_i.settings.single_gress_parser_group) &&
         (*parser_group_gress != sl.field()->gress)) {
         *err << c << " has parser group gress " << *parser_group_gress
              << " but the field is not: " << sl.field();
@@ -347,7 +394,7 @@ const AllocError* AllocatorBase::is_container_gress_ok(const Allocation& alloc,
     }
     // all containers within deparser group must have same gress assignment
     auto deparser_group_gress = alloc.deparserGroupGress(c);
-    bool is_deparsed = utils_i.uses.is_deparsed(sl.field());
+    bool is_deparsed = kit_i.uses.is_deparsed(sl.field());
     if (deparser_group_gress && is_deparsed && *deparser_group_gress != sl.field()->gress) {
         *err << c << " has deparser group gress " << *deparser_group_gress << " but slice needs "
              << sl.field()->gress;
@@ -363,37 +410,40 @@ const AllocError* AllocatorBase::is_container_write_mode_ok(const Allocation& al
                                                             const Container& c) const {
     auto* err = new AllocError(ErrorCode::CONTAINER_PARSER_WRITE_MODE_MISMATCH);
     const Field* f = candidate.field();
-    const auto& field_to_states = utils_i.field_to_parser_states;
+    const auto& field_to_states = kit_i.field_to_parser_states;
     const auto parser_group_gress = alloc.parserGroupGress(c);
-    const bool is_extracted = utils_i.uses.is_extracted(f);
+    const bool is_extracted = kit_i.uses.is_extracted(f);
     if (!is_extracted || !parser_group_gress) {
         return nullptr;
     }
-    // all containers within parser group must have same parser write mode
+    // TODO(yumin): these checks was inherited from old allocator, I do not think they
+    // make sense. We really need the parser packing checker to replace those all.
+    // check they will not be extracted by the same input buffer position in the same state?
     auto allocated_slices = alloc.liverange_overlapped_slices(c, {candidate});
-    if (allocated_slices.empty()) return nullptr;
-    boost::optional<IR::BFN::ParserWriteMode> write_mode;
     for (auto allocated : allocated_slices) {
         auto allocated_field = allocated.field();
         if (allocated_field == f) {
             continue;
         }
         if (!field_to_states.field_to_extracts.count(allocated_field)) continue;
-        for (auto ef : field_to_states.field_to_extracts.at(f)) {
-            auto ef_state = field_to_states.extract_to_state.at(ef);
-            for (auto esl : field_to_states.field_to_extracts.at(allocated_field)) {
-                auto esl_state = field_to_states.extract_to_state.at(esl);
+        for (auto candidate_extract : field_to_states.field_to_extracts.at(f)) {
+            auto candidate_state = field_to_states.extract_to_state.at(candidate_extract);
+            for (auto allocated_extract : field_to_states.field_to_extracts.at(allocated_field)) {
+                auto allocated_state = field_to_states.extract_to_state.at(allocated_extract);
                 // A container cannot have same extract in same state
-                if (esl_state == ef_state && ef->source->equiv(*esl->source) &&
-                    ef->source->is<IR::BFN::PacketRVal>()) {
+                if (candidate_state == allocated_state &&
+                    candidate_extract->source->equiv(*allocated_extract->source) &&
+                    candidate_extract->source->is<IR::BFN::PacketRVal>()) {
                     *err << "Slices of field " << f << " and " << allocated_field
-                         << " have same extract source in the same state " << esl_state->name;
+                         << " have same extract source in the same state " << candidate_state->name;
                     return err;
                 }
             }
         }
     }
 
+    // all containers within parser group must have same parser write mode
+    boost::optional<IR::BFN::ParserWriteMode> write_mode;
     if (field_to_states.field_to_extracts.count(f)) {
         for (auto e : field_to_states.field_to_extracts.at(f)) {
             write_mode = e->write_mode;
@@ -497,11 +547,11 @@ const AllocError* AllocatorBase::is_container_parser_packing_ok(
         // constants will have zeros in irrelevant bits, and when extracter bit-or-write
         // the container, zeros will just be no-op to other fields packed in the container,
         // so extracted from constant are okay to be packed with any other fields.
-        return !f->pov && utils_i.uses.is_extracted(f) &&
-               !utils_i.uses.is_extracted_from_constant(f);
+        return !f->pov && kit_i.uses.is_extracted(f) &&
+               !kit_i.uses.is_extracted_from_constant(f);
     };
     const auto is_uninitialized = [&](const Field* f) {
-        return (f->pov || (utils_i.defuse.hasUninitializedRead(f->id)));
+        return (f->pov || (kit_i.defuse.hasUninitializedRead(f->id)));
     };
     bool has_uninitialized_read = false;
     bool has_extracted = false;
@@ -519,7 +569,7 @@ const AllocError* AllocatorBase::is_container_parser_packing_ok(
         // a container in an order that is different from input buffer. The correct check
         // should be are they always extracted in this layout.
         all_extracted_togehter &=
-            utils_i.phv.are_bridged_extracted_together(allocated.field(), candidate.field());
+            kit_i.phv.are_bridged_extracted_together(allocated.field(), candidate.field());
     }
 
     // if all are extracted together, them they can be packed.
@@ -618,143 +668,180 @@ const AllocError* AllocatorBase::check_container_scope_constraints(
     return nullptr;
 }
 
-AllocResultWithPackHint AllocatorBase::try_slices_to_container(
+ContScopeAllocResult AllocatorBase::try_slices_to_container(
     const ScoreContext& ctx, const Allocation& alloc, const FieldSliceAllocStartMap& fs_starts,
-    const Container& c) const {
-    auto candidates = make_alloc_slices(utils_i.uses, fs_starts, c);
-    // check misc container-scope constraints.
-    if (const auto* err = check_container_scope_constraints(alloc, candidates, c)) {
-        return AllocResultWithPackHint(err);
-    }
-    if (utils_i.settings.physical_liverange_overlay) {
+    const Container& c, const bool skip_mau_checks) const {
+    auto candidates = make_alloc_slices(kit_i.uses, fs_starts, c);
+    if (kit_i.settings.physical_liverange_overlay) {
         candidates = update_alloc_slices_with_physical_liverange(
-            utils_i.clot, utils_i.physical_liverange_db, candidates);
+            kit_i.clot, kit_i.physical_liverange_db, kit_i.strided_headers, candidates);
     }
-    if (LOGGING(3)) {
-        LOG3(ctx.t_tabs() << "AllocSlices:");
+    LOG4(ctx.t_tabs() << "@" << c);
+    if (LOGGING(5)) {
+        LOG5(ctx.t_tabs() << "AllocSlices:");
         for (const auto& slice : candidates) {
-            LOG3(ctx.t_tabs() << " " << slice);
+            LOG5(ctx.t_tabs() << " " << slice);
         }
     }
 
     // check overlay
-    LOG5(ctx.t_tabs() << "Overlay status:");
+    LOG4(ctx.t_tabs() << "Overlay status:");
     for (const auto& slice : candidates) {
         const auto& overlapped = alloc.slices(slice.container(), slice.container_slice());
         const cstring short_name =
             slice.field()->name + " " + cstring::to_cstring(slice.field_slice());
         if (overlapped.empty()) {
-            LOG5(ctx.t_tabs() << " " << short_name << ": "
+            LOG4(ctx.t_tabs() << " " << short_name << ": "
                               << "no overlapped slices.");
-        } else if (can_control_flow_overlay(utils_i.mutex(), slice.field(), overlapped)) {
-            LOG5(ctx.t_tabs() << short_name << ": " << "control flow overlaid.");
-        } else if (utils_i.settings.physical_liverange_overlay &&
-                   can_physical_liverange_overlay(utils_i, slice, overlapped)) {
-            LOG5(ctx.t_tabs() << short_name << ": "
+        } else if (can_control_flow_overlay(kit_i.mutex(), slice.field(), overlapped)) {
+            LOG4(ctx.t_tabs() << short_name << ": " << "control flow overlaid.");
+        } else if (kit_i.settings.physical_liverange_overlay &&
+                   can_physical_liverange_overlay(kit_i, slice, overlapped)) {
+            LOG4(ctx.t_tabs() << short_name << ": "
                               << "physical liverange overlaid.");
         } else {
             auto err = new AllocError(ErrorCode::NOT_ENOUGH_SPACE);
-            *err << short_name << ": " << "not available, overlapped with: " << overlapped;
-            return AllocResultWithPackHint(err);
+            *err << "overlapped with allocated slices";
+            // detailed error message only for high log level.
+            if (LOGGING(6)) {
+                *err << ": " << short_name << " is overlapped with: " << overlapped.front();
+            }
+            return ContScopeAllocResult(err);
         }
     }
 
-    // check can_pack
+    // check misc container-scope constraints.
+    if (const auto* err = check_container_scope_constraints(alloc, candidates, c)) {
+        return ContScopeAllocResult(err);
+    }
+
+    // check all kinds of action phv constraints.
     ActionSourceCoPackMap action_copack_hints;
-    if (const auto* err =
-            verify_can_pack(ctx, alloc, ctx.sc(), candidates, c, action_copack_hints)) {
-        return AllocResultWithPackHint(err);
+    if (!skip_mau_checks) {
+        if (const auto* err =
+                verify_can_pack(ctx, alloc, ctx.sc(), candidates, c, action_copack_hints)) {
+            return ContScopeAllocResult(err);
+        }
     }
 
     // save allocation to result transaction.
     auto tx = alloc.makeTransaction();
     for (auto& slice : candidates) {
-        tx.allocate(slice, nullptr, utils_i.settings.single_gress_parser_group);
+        tx.allocate(slice, nullptr, kit_i.settings.single_gress_parser_group);
     }
 
-    return AllocResultWithPackHint(tx, action_copack_hints);
+    const bool packed_with_existing = !alloc.liverange_overlapped_slices(c, candidates).empty();
+    return ContScopeAllocResult(tx, action_copack_hints, c, packed_with_existing);
 }
 
-AllocResultWithPackHint AllocatorBase::try_slices_to_container_group(
+SomeContScopeAllocResult AllocatorBase::try_slices_to_container_group(
     const ScoreContext& ctx,
     const Allocation& alloc,
     const FieldSliceAllocStartMap& fs_starts,
     const ContainerGroup& group) const {
-    const TxScore* rst_score = nullptr;
-    boost::optional<AllocResultWithPackHint> rst;
     const auto new_ctx = ctx.with_t(ctx.t() + 1);
-    ErrorCode err_code = ErrorCode::NO_CONTAINER_AVAILABLE;
-    cstring err_details = "no container have enough space.";
+    /// pretty-print error messages that aggregates the same failures.
+    boost::optional<cstring> last_err_str = boost::none;
+    std::vector<Container> same_err_conts;
+    const auto flush_aggregated_errs = [&]() {
+        if (last_err_str) {
+            std::stringstream ss;
+            ss << "Try container";
+            for (const auto& c : same_err_conts) {
+                ss << " " << c;
+            }
+            LOG3(ctx.t_tabs() << ss.str());
+            LOG3(new_ctx.t_tabs() << "Failed, " << *last_err_str);
+        }
+        last_err_str = boost::none;
+        same_err_conts.clear();
+    };
+    const auto pretty_print_errs = [&](const Container& c, const ContScopeAllocResult& r) {
+        if (r.ok()) {
+            flush_aggregated_errs();
+        } else {
+            cstring err_str = r.err_str();
+            if (last_err_str && *last_err_str != err_str) {
+                flush_aggregated_errs();
+            }
+            last_err_str = err_str;
+            same_err_conts.push_back(c);
+        }
+    };
+
+    // try all containers.
+    SomeContScopeAllocResult some(
+        new AllocError(ErrorCode::NOT_ENOUGH_SPACE, "no container have enough space"));
     for (const Container& c : group) {
-        LOG3(ctx.t_tabs() << "Try container " << c);
         auto c_rst = try_slices_to_container(new_ctx, alloc, fs_starts, c);
+        pretty_print_errs(c, c_rst);
         if (c_rst.ok()) {
             // pick this container if higher score.
             const auto* c_rst_score = ctx.score()->make(*c_rst.tx);
-            LOG3(ctx.t_tabs() << "Succeeded, result: ");
-            LOG3(c_rst.tx_str(ctx.t_tabs() + " "));
-            LOG3(ctx.t_tabs() << "score: " << c_rst_score->str());
-            if (!rst || c_rst_score->better_than(rst_score)) {
-                rst = c_rst;
-                rst_score = c_rst_score;
-                LOG3(ctx.t_tabs() << "Container " << c << " now has the highest score");
-            } else {
-                LOG3(ctx.t_tabs() << "Container " << c << " is not the best choice found");
-            }
-            // handle container-level search optimization parameter.
+            LOG3(ctx.t_tabs() << "Try container " << c);
+            LOG3(new_ctx.t_tabs() << "Succeeded, score: " << c_rst_score->str());
+            some.collect(c_rst, c_rst_score);
+            // XXX(yumin): we do not use is_packing in c_rst because only strict empty is allowed,
+            // for this container-level search optimization parameter.
             if (ctx.search_config()->stop_first_succ_empty_normal_container) {
                 const auto container_status = alloc.getStatus(c);
                 if (c.type().kind() == PHV::Kind::normal &&
                     (!container_status || container_status->slices.empty())) {
-                    LOG3(ctx.t_tabs() << "Stop early because first_succ_empty_normal_container.");
+                    LOG3(new_ctx.t_tabs()
+                         << "Stop early because first_succ_empty_normal_container.");
                     break;
                 }
             }
         } else {
-            LOG3(ctx.t_tabs() << "Failed @" << c << " because: " << c_rst.err_str());
             // prefer to return this most informative error message.
-            if (c_rst.err->code == ErrorCode::CANNOT_PACK_CANDIDATES) {
-                err_code = ErrorCode::CANNOT_PACK_CANDIDATES;
-                err_details = c_rst.err_str();
+            if (c_rst.err->code == ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED) {
+                some.err = c_rst.err;
             }
         }
     }
-    if (rst) {
-        return *rst;
-    }
-    // no valid container found.
-    return AllocResultWithPackHint(new AllocError(err_code, err_details));
+    flush_aggregated_errs();
+    return some;
 }
 
-AllocResultWithPackHint AllocatorBase::try_slices_adapter(const ScoreContext& ctx,
-                                                          const Allocation& alloc,
-                                                          const FieldSliceAllocStartMap& fs_starts,
-                                                          const ContainerGroup& group,
-                                                          boost::optional<Container> c) const {
+SomeContScopeAllocResult AllocatorBase::try_slices_adapter(const ScoreContext& ctx,
+                                                           const Allocation& alloc,
+                                                           const FieldSliceAllocStartMap& fs_starts,
+                                                           const ContainerGroup& group,
+                                                           boost::optional<Container> c) const {
     if (c) {
-        return try_slices_to_container(ctx, alloc, fs_starts, *c);
+        auto rst = try_slices_to_container(ctx, alloc, fs_starts, *c);
+        if (rst.ok()) {
+            auto score = ctx.score()->make(*rst.tx);
+            return SomeContScopeAllocResult(rst, score);
+        } else {
+            return SomeContScopeAllocResult(rst.err);
+        }
     } else {
         return try_slices_to_container_group(ctx, alloc, fs_starts, group);
     }
 }
 
-Transaction AllocatorBase::try_hints(const ScoreContext& ctx,
-                                     const Allocation& alloc,
-                                     const ContainerGroup& group,
-                                     const ActionSourceCoPackMap& action_hints_map,
-                                     ordered_set<PHV::FieldSlice>& allocated,
-                                     ScAllocAlignment& hint_enforced_alignments) const {
+boost::optional<Transaction> AllocatorBase::try_hints(
+    const ScoreContext& ctx,
+    const Allocation& alloc,
+    const ContainerGroup& group,
+    const ActionSourceCoPackMap& action_hints_map,
+    ordered_set<PHV::FieldSlice>& allocated,
+    ScAllocAlignment& hint_enforced_alignments) const {
     auto tx = alloc.makeTransaction();
     // try hints for every action.
     for (const auto& action_hints : action_hints_map) {
         const auto* act = action_hints.first;
         const auto& hints = action_hints.second;
-        LOG3(ctx.t_tabs() << "> trying to allocate by hints for " << act->externalName());
+        const bool required = hints.size() == 1 && hints.front()->required;
+        LOG3(ctx.t_tabs() << "> trying to allocate by hints for " << act->externalName()
+                          << (required ? " (required)" : ""));
         // for all mutex hints of this action, try until we find an allocation.
         for (const auto* hint : hints) {
             LOG3(ctx.t_tabs() << "> trying hints: " << hint);
             auto hint_tx = tx.makeTransaction();
             bool hint_ok = true;
+            bool hint_empty = true;
             for (const auto& src_pack : hint->pack_sources) {
                 LOG3(ctx.t_tabs() << " try SrcPackVec: " << src_pack);
                 // remove allocated.
@@ -767,19 +854,24 @@ Transaction AllocatorBase::try_hints(const ScoreContext& ctx,
                     LOG3(ctx.t_tabs() << "skip this SrcPackVec because all have been allocated");
                     continue;
                 }
+                hint_empty = false;
                 // XXX(yumin): we trust that copacker will respect ScAllocAlignment.
                 auto src_pack_rst = try_slices_adapter(
                         ctx.with_t(ctx.t() + 1), hint_tx, fs_starts,
                         group, src_pack->container);
                 if (src_pack_rst.ok()) {
-                    hint_tx.commit(*src_pack_rst.tx);
+                    hint_tx.commit(*src_pack_rst.front().tx);
                 } else {
                     LOG3("Failed to allocate by hints.");
                     hint_ok = false;
-                    break;
+                    if (required) {
+                        return boost::none;
+                    } else {
+                        break;
+                    }
                 }
             }
-            if (!hint_ok) continue;
+            if (!hint_ok || hint_empty) continue;
             /// we found one hint allocated, commit and break.
             for (const auto& src_pack : hint->pack_sources) {
                 for (const auto& fs_idx : src_pack->fs_starts) {
@@ -810,13 +902,14 @@ AllocResult AllocatorBase::try_wide_arith_slices_to_container_group(
     const ContainerGroup& group) const {
     const TxScore* rst_score = nullptr;
     boost::optional<AllocResult> rst;
-    const auto lo_starts = make_start_map(alignment, lo);
-    const auto hi_starts = make_start_map(alignment, hi);
+    const auto lo_starts = make_start_map(ctx.sc(), alignment, lo);
+    const auto hi_starts = make_start_map(ctx.sc(), alignment, hi);
     for (auto itr = group.begin(); itr != group.end(); ++itr) {
         if (std::next(itr) == group.end()) continue;
         const auto lo_cont = *itr;
         const auto hi_cont = *(std::next(itr));
-        if (lo_cont.index() % 2 != 0) continue;
+        if (!(lo_cont.index() % 2 == 0)) continue;  // arith lo in even container
+        if (!(hi_cont.index() % 2 != 0)) continue;  // arith hi in  odd container
 
         auto tx = alloc.makeTransaction();
         LOG3(ctx.t_tabs() << "TryAlloc wide_arith lo slice list " << lo << " to " << lo_cont);
@@ -849,25 +942,222 @@ AllocResult AllocatorBase::try_wide_arith_slices_to_container_group(
     }
     return *rst;
 }
+AllocatorBase::DfsState AllocatorBase::DfsState::next_state(
+    const ScAllocAlignment& updated_alignment,
+    const ordered_set<const SuperCluster::SliceList*>& just_allocated) const {
+    auto updated_allocated = allocated;
+    std::vector<const SuperCluster::SliceList*> updated_to_allocate;
+    for (const auto& sl : to_allocate) {
+        if (just_allocated.count(sl)) {
+            updated_allocated.push_back(sl);
+        } else {
+            updated_to_allocate.push_back(sl);
+        }
+    }
+    return DfsState(updated_alignment, updated_allocated, updated_to_allocate);
+}
 
-// TODO(yumin): use universal dest-to-src field slice allocation order.
-// The current allocation process is still a bit weird. It allocates slice lists first,
-// and then field slices in rotational clusters. The problem is that, if the slice list
-// allocation is invalid (violating action phv constraints by packing some field slices),
-// we cannot know it until allocating its sources. Instead, we can just use a universal
-// destination fieldslice first order, backtrack immediately if we cannot allocate sources.
-AllocResult AllocatorBase::try_super_cluster_with_alignment_to_container_group(
+std::string AllocatorBase::DfsListsAllocator::depth_prefix(const int depth) const {
+    std::stringstream prefix_ss;
+    prefix_ss << ">> @Depth-" << depth << ": ";
+    return prefix_ss.str();
+}
+
+boost::optional<ScAllocAlignment> AllocatorBase::DfsListsAllocator::new_alignment_with_start(
+    const ScoreContext& ctx, const SuperCluster::SliceList* target, const int sl_start,
+    const PHV::Size& width, const ScAllocAlignment& alignment) const {
+    auto this_start_alignment = alignment;
+    int offset = sl_start;
+    for (const auto& fs : *target) {
+        // if the slice 's cluster cannot be placed at the current offset.
+        if (!ctx.sc()->aligned_cluster(fs).validContainerStart(width).getbit(offset)) {
+            return boost::none;
+        }
+        if (this_start_alignment.ok(&ctx.sc()->aligned_cluster(fs), offset)) {
+            this_start_alignment.cluster_starts[&ctx.sc()->aligned_cluster(fs)] = offset;
+        } else {
+            return boost::none;
+        }
+        offset += fs.size();
+    }
+    return this_start_alignment;
+}
+
+bool AllocatorBase::DfsListsAllocator::allocate(const ScoreContext& ctx, const Transaction& tx,
+                                                const DfsState& state, const int depth) {
+    cstring log_prefix = ctx.t_tabs() + depth_prefix(depth);
+    if (state.done()) {
+        // all items have been allocated.
+        LOG3(log_prefix << "ALL slice lists have been allocated.");
+        caller_pruned = !yield(tx);
+        return true;  // returns true when we have found a solution on this path.
+    }
+
+    n_steps++;
+    const auto* sl = state.next_to_allocate();
+    LOG3(log_prefix << "Start to allocate target: " << sl);
+
+    // find the the best container start index for this slice list.
+    bool found_solution = false;
+    bool found_alignment = false;
+    bool sl_can_be_allocated = false;
+    const PHV::Size width = ctx.cont_group()->width();
+    const auto valid_starts = ctx.sc()->aligned_cluster(sl->front()).validContainerStart(width);
+    auto* invalid_action_lists = new ordered_set<const SuperCluster::SliceList*>();
+    for (const int sl_start : valid_starts) {
+        if (pruned()) break;
+        auto this_start_alignment =
+            new_alignment_with_start(ctx, sl, sl_start, width, state.alignment);
+        if (!this_start_alignment) continue;
+        const auto new_state = state.next_state(*this_start_alignment, {sl});
+        found_alignment = true;
+        // we have found a valid alignment, try to allocate sl by it.
+        FieldSliceAllocStartMap to_be_allocated =
+            make_start_map(ctx.sc(), *this_start_alignment, sl);
+        LOG3(log_prefix << "Try to allocate slice list starts @ " << sl_start
+                        << ", layout: " << to_be_allocated);
+        const auto this_start_ctx =
+            ctx.with_t(ctx.t() + 1).with_alloc_alignment(&(*this_start_alignment));
+        auto some_sl_alloc_rst = base.try_slices_to_container_group(
+                this_start_ctx, tx, to_be_allocated, *ctx.cont_group());
+        if (!some_sl_alloc_rst.ok()) {
+            // failed, save important errors and try other alignments.
+            LOG3(log_prefix << "slice list starts @ " << sl_start << " failed, because "
+                            << some_sl_alloc_rst.err->str());
+            auto err = some_sl_alloc_rst.err;
+            if (err->code == ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED && err->invalid_packing) {
+                for (const auto* allocated_sl : new_state.allocated) {
+                    if (has_overlapped_slice(allocated_sl, err->invalid_packing)) {
+                        invalid_action_lists->insert(allocated_sl);
+                    }
+                }
+            }
+            continue;
+        }
+        if (LOGGING(3)) {
+            LOG3(log_prefix << "# of some results: " << some_sl_alloc_rst.size());
+            for (const auto& r : some_sl_alloc_rst.results) {
+                LOG3(log_prefix << r.c);
+            }
+        }
+        sl_can_be_allocated = true;
+        LOG3(log_prefix << "slice list starts @ " << sl_start << " succeeded.");
+        // try to search deeper with every one of Some result.
+        for (const auto& sl_alloc_rst : some_sl_alloc_rst.results) {
+            if (pruned()) break;
+            LOG3(log_prefix << "try search deeper with: " << sl_alloc_rst.c);
+            Transaction this_choice = tx;
+            for (const auto& kv : sl_alloc_rst.tx->get_actual_diff()) {
+                for (const auto& alloc_slice : kv.second.slices) {
+                    this_choice.allocate(alloc_slice);
+                }
+            }
+            if (sl_alloc_rst.action_hints.empty()) {
+                found_solution |= allocate(ctx, this_choice, new_state, depth + 1);
+                continue;
+            }
+
+            // split by required and optional hints.
+            ActionSourceCoPackMap required_hints;
+            ActionSourceCoPackMap optional_hints;
+            for (const auto& action_hints : sl_alloc_rst.action_hints) {
+                const auto* act = action_hints.first;
+                const auto& hints = action_hints.second;
+                const bool required = hints.size() == 1 && hints.front()->required;
+                if (required) {
+                    required_hints[act] = hints;
+                } else {
+                    optional_hints[act] = hints;
+                }
+            }
+            LOG3(log_prefix << "Required CoPack hint(s):" << required_hints);
+            LOG3(log_prefix << "Optional CoPack hint(s) found:" << optional_hints);
+
+            /// When a hint is allocated, the alignment is then fixed for all the slice
+            /// in the aligned cluster, so we clone a mutable updated_alignment.
+            ScAllocAlignment hint_updated_alignment = *this_start_alignment;
+            ordered_set<PHV::FieldSlice> allocated_fs;
+            for (const auto* sl : new_state.allocated) {
+                for (const auto& fs : *sl) {
+                    allocated_fs.insert(fs);
+                }
+            }
+
+            // try required hints, skip this choice if failed.
+            auto required_hints_applied_tx = base.try_hints(
+                    this_start_ctx, this_choice, *ctx.cont_group(),
+                    required_hints, allocated_fs, hint_updated_alignment);
+            if (!required_hints_applied_tx) {
+                LOG3(log_prefix << "cannot search deeper with: " << sl_alloc_rst.c
+                                << " because required copack failed");
+                continue;
+            }
+            this_choice.commit(*required_hints_applied_tx);
+
+            // apply optional hints for higher chance of successful allocation.
+            // TODO(yumin): we might consider to provide an option to try without copack hints.
+            auto optional_hints_applied_tx = base.try_hints(
+                    this_start_ctx, this_choice, *ctx.cont_group(),
+                    optional_hints, allocated_fs, hint_updated_alignment);
+            BUG_CHECK(optional_hints_applied_tx, "optional hints shall not fail.");
+            this_choice.commit(*optional_hints_applied_tx);
+
+            // recursion
+            ordered_set<const SuperCluster::SliceList*> just_allocated;
+            for (const auto& sl : new_state.to_allocate) {
+                if (allocated_fs.count(sl->front())) {
+                    just_allocated.insert(sl);
+                    continue;
+                }
+            }
+            DfsState hint_updated_state =
+                new_state.next_state(hint_updated_alignment, just_allocated);
+            found_solution |= allocate(ctx, this_choice, hint_updated_state, depth + 1);
+        }
+    }
+    if (!found_alignment) {
+        LOG3(log_prefix << "Failed to find an alignment, will *backtrack*.");
+        return false;
+    }
+    if (!sl_can_be_allocated) {
+        if (!invalid_action_lists->empty()) {
+            invalid_action_lists->insert(sl);
+            reslice_required_i = invalid_action_lists;
+        }
+        LOG3(log_prefix << "Cannot allocate " << sl);
+        if (depth > 0) {
+            LOG3(log_prefix << "Current Tx status:");
+            LOG3(AllocResult::pretty_print_tx(tx, log_prefix));
+        }
+    }
+    return found_solution;
+}
+
+bool AllocatorBase::DfsListsAllocator::search_allocate(
+    const ScoreContext& ctx,
+    const Transaction& tx,
+    const ScAllocAlignment& alignment,
+    const std::vector<const SuperCluster::SliceList*>& allocated,
+    const std::vector<const SuperCluster::SliceList*>& to_allocate,
+    const DfsAllocCb& yield_cb) {
+    yield = yield_cb;
+    DfsState state(alignment, allocated, to_allocate);
+    return allocate(ctx, tx, state, 0);
+}
+
+AllocResult AllocatorBase::try_super_cluster_to_container_group(
     const ScoreContext& ctx,
     const Allocation& alloc,
     const SuperCluster* sc,
     const ContainerGroup& group) const {
     // Make a new transaction.
     PHV::Transaction sc_tx = alloc.makeTransaction();
-    ordered_set<PHV::FieldSlice> allocated;
+    ScAllocAlignment curr_alignment;
     auto new_ctx = ctx.with_t(ctx.t() + 1);
 
     // always try to allocate wide_arithmetic slice lists first.
-    for (const auto* lo_sl : *ctx.sl_alloc_order()) {
+    ordered_set<const SuperCluster::SliceList*> wide_arith_lists;
+    for (const auto* lo_sl : *ctx.alloc_order()) {
         const PHV::SuperCluster::SliceList *hi_sl = nullptr;
         for (const auto& slice : *lo_sl) {
             // find lo part of wide_arithmetic slice lists.
@@ -882,179 +1172,74 @@ AllocResult AllocatorBase::try_super_cluster_with_alignment_to_container_group(
         }
         if (!hi_sl) continue;
 
+        // Track alignment of wide arithmetic field slices.
+        for (const auto* sl : {lo_sl, hi_sl}) {
+            int offset = sl->front().alignment() ? sl->front().alignment()->align : 0;
+            for (const auto& fs : *sl) {
+                curr_alignment.cluster_starts[&sc->aligned_cluster(fs)] = offset;
+                offset += fs.size();
+            }
+        }
         static const cstring prefix = "> trying to allocate wide_arith slice list:";
         LOG3(ctx.t_tabs() <<  prefix << "START to allocate the pair: " << lo_sl << ", " << hi_sl);
-        auto sl_alloc_rst = try_wide_arith_slices_to_container_group(
-                new_ctx, sc_tx, *ctx.alloc_alignment(), lo_sl, hi_sl, group);
+        auto sl_alloc_rst =
+            try_wide_arith_slices_to_container_group(
+                    new_ctx.with_alloc_alignment(&curr_alignment),
+                    sc_tx, curr_alignment, lo_sl, hi_sl, group);
         if (!sl_alloc_rst.ok()) {
             LOG3(ctx.t_tabs() << prefix << "FAILED, because " << sl_alloc_rst.err_str());
             return sl_alloc_rst;
         }
         LOG3(ctx.t_tabs() << prefix << "SUCCEEDED, result:\n"
-             << sl_alloc_rst.tx_str(ctx.t_tabs()));
+             << sl_alloc_rst.tx_str(ctx.t_tabs() + " "));
         sc_tx.commit(*sl_alloc_rst.tx);
 
         // Track allocated slices in order to skip them when allocating their clusters.
-        for (const auto& fs : boost::range::join(*lo_sl, *hi_sl)) {
-            allocated.insert(fs);
-        }
+        wide_arith_lists.insert(lo_sl);
+        wide_arith_lists.insert(hi_sl);
     }
 
-    // allocate non_wide_arithmetic slice lists.
-    // Successfully allocated copack hints can update alignment starts.
-    ScAllocAlignment updated_alignment = *ctx.alloc_alignment();
-    for (const auto* sl : *ctx.sl_alloc_order()) {
-        // skip wide_arithmetic slice lists, they should have been allocated above.
-        if (allocated.count(sl->front())) continue;
-
-
-        static const cstring prefix = "> trying to allocate slice list: ";
-        LOG3(ctx.t_tabs() << prefix << "START to allocate " << sl);
-        // Try allocating the slice list.
-        FieldSliceAllocStartMap to_be_allocated = make_start_map(*ctx.alloc_alignment(), sl);
-        new_ctx = new_ctx.with_alloc_alignment(&updated_alignment);
-        auto sl_alloc_rst = try_slices_to_container_group(
-                new_ctx, sc_tx, to_be_allocated, group);
-        if (!sl_alloc_rst.ok()) {
-            LOG3(ctx.t_tabs() << prefix << "FAILED, because " << sl_alloc_rst.err->str());
-            auto* new_err = new AllocError(*sl_alloc_rst.err);
-            new_err->cannot_allocate_sl = sl;
-            return AllocResult(new_err);
+    // allocate non-wide-arithmetic slices.
+    std::vector<const SuperCluster::SliceList*> allocated;
+    std::vector<const SuperCluster::SliceList*> to_allocate;
+    for (const auto* sl : *ctx.alloc_order()) {
+        if (wide_arith_lists.count(sl)) {
+            allocated.push_back(sl);
+            continue;
         }
-        LOG3(ctx.t_tabs() << prefix << "SUCCEEDED, result:\n"
-             << sl_alloc_rst.tx_str(ctx.t_tabs()));
-        sc_tx.commit(*sl_alloc_rst.tx);
-
-        // Track allocated slices in order to skip them when allocating their clusters.
-        for (auto& slice : *sl) {
-            allocated.insert(slice);
+        to_allocate.push_back(sl);
+    }
+    boost::optional<Transaction> best_tx;
+    const TxScore* best_score = nullptr;
+    DfsListsAllocator dfs_alloc(*this, ctx.search_config()->n_dfs_steps_sc_alloc);
+    int n_found = 0;
+    auto cb = [&](const Transaction& new_tx) {
+        auto score = ctx.score()->make(new_tx);
+        LOG3(ctx.t_tabs() << "New Allocation for SC-" << sc->uid << " found:\n"
+             << AllocResult(new_tx).tx_str(ctx.t_tabs() + " "));
+        LOG3(ctx.t_tabs() << "Score: " << score->str());
+        if (!best_score || score->better_than(best_score)) {
+            LOG3(ctx.t_tabs() << "which is the best of this container group so far.");
+            best_score = score;
+            best_tx = new_tx;
         }
-
-        /// try hints here
-        /// When a hint is allocated, the alignment is then fixed for all the slice
-        /// in the aligned cluster, so we pass a mutable updated_alignment.
-        auto hint_tx = try_hints(new_ctx, sc_tx, group, sl_alloc_rst.action_hints, allocated,
-                                 updated_alignment);
-        sc_tx.commit(hint_tx);
-    }
-
-    LOG3(ctx.t_tabs() << "Slice lists allocation done, start to allocate clusters");
-    // always allocate wider clusters first.
-    std::vector<const RotationalCluster*> rot_alloc_order;
-    for (auto* rot : sc->clusters()) {
-        rot_alloc_order.push_back(rot);
-    }
-    std::stable_sort(rot_alloc_order.begin(), rot_alloc_order.end(),
-                     [&](const RotationalCluster* a, const RotationalCluster* b) {
-                         if (a->slices().size() != b->slices().size()) {
-                             return a->slices().size() > b->slices().size();
-                         }
-                         return a->aggregate_size() > b->aggregate_size();
-                     });
-
-    // After allocating each slice list, use the alignment for each slice in
-    // each list to place its cluster.
-    for (auto* rotational_cluster : rot_alloc_order) {
-        for (auto* aligned_cluster : rotational_cluster->clusters()) {
-            // TODO(yumin): move this part to context.
-            // Sort all field slices in an aligned cluster by the dest_first_order.
-            std::vector<PHV::FieldSlice> aligned_slices;
-            for (const PHV::FieldSlice& fs : aligned_cluster->slices()) {
-                aligned_slices.push_back(fs);
-            }
-            utils_i.actions.dest_first_sort(aligned_slices);
-
-            // skip aligned cluster if all allocated. Cannot filter before sorting because
-            // allocated field may impact sorting order.
-            if (std::all_of(aligned_slices.begin(), aligned_slices.end(),
-                            [&](const FieldSlice& fs) { return allocated.count(fs); })) {
-                continue;
-            }
-
-            // Forall fields in an aligned cluster, they must share a same start position.
-            // Compute possible starts.
-            bitvec starts;
-            if (updated_alignment.cluster_starts.count(aligned_cluster)) {
-                // decided by slice list or hints already.
-                starts = bitvec(updated_alignment.cluster_starts.at(aligned_cluster), 1);
-            }  else {
-                auto optStarts = aligned_cluster->validContainerStart(group.width());
-                if (optStarts.empty()) {
-                    auto* err = new AllocError(ErrorCode::ALIGNED_CLUSTER_NO_VALID_START);
-                    // Other constraints satisfied, but alignment constraints
-                    // cannot be satisfied.
-                    *err << aligned_cluster << " to " << group.width() << " container ";
-                    return AllocResult(err);
-                }
-                // Constraints satisfied so long as aligned_cluster is placed
-                // starting at a bit position in `starts`.
-                starts = optStarts;
-            }
-
-            // try all possible alignments
-            const TxScore* rst_score = nullptr;
-            boost::optional<AllocResult> rst;  // save the best transaction.
-            std::stringstream all_err;
-            for (auto start : starts) {
-                bool failed = false;
-                auto aligned_cluster_tx = sc_tx.makeTransaction();
-                // Try allocating all fields at this alignment.
-                for (const PHV::FieldSlice& slice : aligned_slices) {
-                    // Skip fields that have already been allocated above.
-                    if (allocated.find(slice) != allocated.end()) continue;
-                    std::stringstream ss;
-                    ss << "> trying to allocate field slice " << slice.shortString() << " @"
-                       << start << ": ";
-                    const cstring prefix = ss.str();
-                    LOG3(ctx.t_tabs() << prefix << "START");
-                    const FieldSliceAllocStartMap fs_start = {{slice, start}};
-                    auto this_slice_rst =
-                        try_slices_to_container_group(new_ctx, aligned_cluster_tx, fs_start, group);
-                    if (this_slice_rst.ok()) {
-                        LOG3(ctx.t_tabs() << prefix << "SUCCEEDED");
-                        aligned_cluster_tx.commit(*this_slice_rst.tx);
-                    } else {
-                        LOG3(ctx.t_tabs()
-                             << prefix << "FAILED, because: " << this_slice_rst.err_str());
-                        // keep records of all errors if we have not found any solution yet.
-                        if (!rst) {
-                            all_err << "When trying to allocate " << slice.shortString()
-                                    << " at alignment @" << start << ", allocation failed because "
-                                    << this_slice_rst.err_str() << "\n";
-                        }
-                        failed = true;
-                        break;
-                    }
-                }
-                if (failed) {
-                    LOG3(ctx.t_tabs() << "Aligned cluster allocation FAILED @" << start);
-                    continue;
-                }
-                LOG3(ctx.t_tabs() << "Aligned cluster allocation SUCCEEDED @" << start);
-
-                auto new_score = ctx.score()->make(aligned_cluster_tx);
-                if (!rst || new_score->better_than(rst_score)) {
-                    LOG3(ctx.t_tabs()
-                         << "New best score is of alignment @" << start);
-                    rst = AllocResult(std::move(aligned_cluster_tx));
-                    rst_score = new_score;
-                }
-                if (ctx.search_config()->stop_first_succ_fs_alignment) {
-                    LOG3(ctx.t_tabs() << "Stop early because stop_first_succ_fs_alignment.");
-                    break;
-                }
-            }
-
-            if (!rst) {
-                auto* err = new AllocError(ErrorCode::ALIGNED_CLUSTER_CANNOT_BE_ALLOCATED);
-                *err << "Failed to allocate this aligned cluster: " << aligned_cluster << "\n";
-                *err << "Error logs:\n" << all_err.str();
-                return AllocResult(err);
-            }
-            sc_tx.commit(*(rst->tx));
+        ++n_found;
+        return n_found < ctx.search_config()->n_best_of_sc_alloc;
+    };
+    dfs_alloc.search_allocate(
+            ctx, sc_tx.makeTransaction(), curr_alignment, allocated, to_allocate, cb);
+    if (best_tx) {
+        sc_tx.commit(*best_tx);
+        return AllocResult(sc_tx);
+    } else {
+        if (!dfs_alloc.reslice_required()->empty()) {
+            auto err = new AllocError(ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED);
+            err->reslice_required = dfs_alloc.reslice_required();
+            return AllocResult(err);
         }
+        auto* err = new AllocError(ErrorCode::ALIGNED_CLUSTER_CANNOT_BE_ALLOCATED);
+        return AllocResult(err);
     }
-    return AllocResult(sc_tx);
 }
 
 std::set<PHV::Size> AllocatorBase::compute_valid_container_sizes(const SuperCluster* sc) const {
@@ -1082,7 +1267,7 @@ std::set<PHV::Size> AllocatorBase::compute_valid_container_sizes(const SuperClus
         }
     };
     // apply pa_container_size constraints
-    const auto& pa_sz = utils_i.pragmas.pa_container_sizes();
+    const auto& pa_sz = kit_i.pragmas.pa_container_sizes();
     sc->forall_fieldslices([&](const FieldSlice& fs) {
         if (auto req = pa_sz.expected_container_size(fs)) {
             remove_if_not(*req);
@@ -1123,6 +1308,60 @@ std::set<PHV::Size> AllocatorBase::compute_valid_container_sizes(const SuperClus
     return ok_sizes;
 }
 
+std::vector<const SuperCluster::SliceList*>* AllocatorBase::make_alloc_order(
+    const ScoreContext& ctx, const SuperCluster* sc, const PHV::Size width) const {
+    auto* alloc_order = new std::vector<const SuperCluster::SliceList*>();
+    ordered_set<FieldSlice> in_list_slices;
+    for (const auto* sl : sc->slice_lists()) {
+        alloc_order->push_back(sl);
+        for (const auto& fs : *sl) {
+            in_list_slices.insert(fs);
+        }
+    }
+    for (const auto& fs : sc->slices()) {
+        if (!in_list_slices.count(fs)) {
+            alloc_order->push_back(new SuperCluster::SliceList{fs});
+        }
+    }
+    kit_i.actions.dest_first_sort(*alloc_order);
+
+    ordered_set<const SuperCluster::SliceList*> is_alignment_fixed;
+    for (const auto* sl : *alloc_order) {
+        // fixed because of constraints
+        const auto& head = sl->front();
+        if (head.field()->exact_containers() || head.field()->deparsed_bottom_bits()) {
+            is_alignment_fixed.insert(sl);
+            continue;
+        }
+
+        // fixed because of size.
+        const int total_bits = SuperCluster::slice_list_total_bits(*sl);
+        const int alignment = sl->front().alignment() ? sl->front().alignment()->align : 0;
+        // with bit-in-byte alignment constraint and it limits the choice of starting position.
+        if (total_bits == int(width) ||
+            (sl->front().alignment() && alignment + total_bits + 8 > int(width))) {
+            is_alignment_fixed.insert(sl);
+        }
+    }
+
+    // sort again
+    std::stable_sort(alloc_order->begin(), alloc_order->end(),
+                     [&](const SuperCluster::SliceList* a, const SuperCluster::SliceList* b) {
+                         if (is_alignment_fixed.count(a) != is_alignment_fixed.count(b)) {
+                             return is_alignment_fixed.count(a) > is_alignment_fixed.count(b);
+                         }
+                         return false;
+                     });
+
+    if (LOGGING(4)) {
+        LOG4(ctx.t_tabs() << "Sorted slice list allocation order: ");
+        for (const auto* sl : *alloc_order) {
+            LOG4(ctx.t_tabs() << sl);
+        }
+    }
+    return alloc_order;
+}
+
 AllocResult AllocatorBase::try_sliced_super_cluster(const ScoreContext& ctx,
                                                     const Allocation& alloc,
                                                     const SuperCluster* sc,
@@ -1143,84 +1382,73 @@ AllocResult AllocatorBase::try_sliced_super_cluster(const ScoreContext& ctx,
         return AllocResult(new AllocError(ErrorCode::NO_VALID_CONTAINER_SIZE));
     }
 
-    // attach the sorted slice list order to context. This is the order of allocation
-    // for slice lists. NOTE: because we have finally deprecated the conditional constrain
-    // we shall allocate destinations first to be able to detect failures.
-    auto* sorted_slice_lists = new std::list<const SuperCluster::SliceList*>(
-        sc->slice_lists().begin(), sc->slice_lists().end());
-    utils_i.actions.dest_first_sort(*sorted_slice_lists);
-    if (LOGGING(5)) {
-        LOG5(ctx.t_tabs() << "Sorted slice list allocation order: ");
-        for (const auto* sl : *sorted_slice_lists) {
-            LOG5(ctx.t_tabs() << sl);
-        }
-    }
-
-    // find the best score, forall (alignment, container group) of @p sc.
-    const auto new_ctx =
-        ctx.with_sc(sc).with_sl_alloc_order(sorted_slice_lists).with_t(ctx.t() + 1);
+    const bool not_all_tphv_candidates = sc->any_of_fieldslices(
+        [&](const FieldSlice& fs) { return !fs.field()->is_tphv_candidate(kit_i.uses); });
     const TxScore* rst_score = nullptr;
     boost::optional<AllocResult> rst;  // save the last succeed transaction only.
     // slice lists that allocator has returned an error of cannot_pack.
-    ordered_set<const SuperCluster::SliceList*> cannot_pack_sl;
-    boost::optional<const AllocError*> other_err;
-    bool found_alignment = false;
     // stores only critical error message that might help caller to better slice the cluster.
-    for (const auto& sz : ok_sizes) {
+    auto* reslice_required = new ordered_set<const SuperCluster::SliceList*>();
+    boost::optional<const AllocError*> other_err =
+        boost::make_optional(false, (const AllocError*)nullptr);
+    bool has_any_valid_alignment = false;
+    // find the best score, forall (container group) of @p sc.
+    for (const PHV::Size& sz : ok_sizes) {
+        // Attach the sorted slice list order to context. This is the order of allocation
+        // for all field slices in this cluster.
+        auto* alloc_order = make_alloc_order(ctx, sc, sz);
+        const auto new_ctx = ctx.with_sc(sc).with_alloc_order(alloc_order).with_t(ctx.t() + 1);
         LOG3(new_ctx.t_tabs() << "Trying to allocate SC-" << sc->uid << " to " << sz
-                          << " container groups");
-        auto alignments = make_sc_alloc_alignment(
-                sc, sz, new_ctx.search_config()->n_max_sc_alignments, sorted_slice_lists);
-        if (alignments.empty()) {
-            LOG3(new_ctx.t_tabs() << "No valid ScAllocAlignment found for size " << sz);
+                              << " container groups");
+        // pre-screening for alignment issue.
+        if (make_sc_alloc_alignment(sc, sz, 1).empty()) {
+            LOG3(new_ctx.t_tabs() << "No alignment found, skip this size of containers: " << sz);
             continue;
-        } else {
-            found_alignment = true;
         }
-        LOG3(new_ctx.t_tabs() << "# of alignments found: " << alignments.size());
+        has_any_valid_alignment = true;
         for (const auto& group : groups.at(sz)) {
             const auto grp_ctx = new_ctx.with_t(new_ctx.t() + 1).with_cont_group(&group);
+            // if this is a pure TPHV group but not all fields are TPHV-compatible, skip.
+            if (Device::currentDevice() == Device::TOFINO && !group.is(Kind::normal) &&
+                not_all_tphv_candidates) {
+                LOG3(grp_ctx.t_tabs() << "Skip TPHV group: " << group);
+                continue;
+            }
             LOG3(grp_ctx.t_tabs() << "Try container group: " << group);
-            for (const auto& alignment : alignments) {
-                const auto grp_aln_ctx =
-                    grp_ctx.with_t(grp_ctx.t() + 1).with_alloc_alignment(&alignment);
-                if (!alignment.empty()) {
-                    LOG3(grp_aln_ctx.t_tabs() << "Try with this slice list alignment:\n"
-                                              << alignment.pretty_print(grp_aln_ctx.t_tabs(), sc));
-                }
-                auto group_rst = try_super_cluster_with_alignment_to_container_group(
-                        grp_aln_ctx, alloc, sc, group);
-                if (!group_rst.ok()) {
-                    LOG3(grp_aln_ctx.t_tabs()
-                         << "Failed to find valid allocation because: " << group_rst.err_str());
-                    if (group_rst.err->code == ErrorCode::CANNOT_PACK_CANDIDATES &&
-                        group_rst.err->cannot_allocate_sl) {
-                        cannot_pack_sl.insert(group_rst.err->cannot_allocate_sl);
-                    } else {
-                        other_err = group_rst.err;
+            auto group_rst =
+                try_super_cluster_to_container_group(
+                        grp_ctx.with_t(grp_ctx.t() + 1), alloc, sc, group);
+            LOG3(grp_ctx.t_tabs()
+                 << "(End) Try container group: " << group);
+            if (!group_rst.ok()) {
+                LOG3(grp_ctx.t_tabs()
+                     << "Failed to find valid allocation because: " << group_rst.err_str());
+                if (group_rst.err->code == ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED &&
+                    group_rst.err->reslice_required) {
+                    for (const auto& sl : *group_rst.err->reslice_required) {
+                        reslice_required->insert(sl);
                     }
-                    continue;
-                }
-                auto new_score = grp_aln_ctx.score()->make(*group_rst.tx);
-                LOG3(grp_aln_ctx.t_tabs() << "Successfully allocated " << "SC-" << sc->uid << ":");
-                LOG3(group_rst.tx_str(grp_aln_ctx.t_tabs() + " "));
-                LOG3(grp_aln_ctx.t_tabs() << "Score: " << new_score->str());
-                if (!rst || new_score->better_than(rst_score)) {
-                    if (!rst) {
-                        LOG3(grp_aln_ctx.t_tabs() << "This is the first valid allocation.");
-                    } else {
-                        LOG3(grp_aln_ctx.t_tabs() << "This is a better allocation.");
-                    }
-                    rst = group_rst;
-                    rst_score = new_score;
                 } else {
-                    LOG3(grp_aln_ctx.t_tabs() << "This is a worse allocation.");
+                    other_err = group_rst.err;
                 }
-                if (grp_aln_ctx.search_config()->stop_first_succ_sc_alignment) {
-                    LOG3(grp_aln_ctx.t_tabs()
-                         << "Stopped at first alignment of successful allocation.");
-                    break;
+                continue;
+            }
+            auto new_score = grp_ctx.score()->make(*group_rst.tx);
+            LOG3(grp_ctx.t_tabs() << "Successfully allocated "
+                 << "SC-" << sc->uid << " to group " << group << ": ");
+            LOG3(group_rst.tx_str(grp_ctx.t_tabs() + " "));
+            LOG3(grp_ctx.t_tabs() << "Score: " << new_score->str());
+            if (!rst || new_score->better_than(rst_score)) {
+                if (!rst) {
+                    LOG3(grp_ctx.t_tabs() << "This is the first valid allocation.");
+                } else {
+                    LOG3(grp_ctx.t_tabs() << "This is a *BETTER* allocation.");
+                    LOG3(grp_ctx.t_tabs() << "Previous score: " << rst_score->str());
                 }
+                rst = group_rst;
+                rst_score = new_score;
+            } else {
+                LOG3(grp_ctx.t_tabs() << "This is *NOT* a better allocation.");
             }
         }
     }
@@ -1228,12 +1456,11 @@ AllocResult AllocatorBase::try_sliced_super_cluster(const ScoreContext& ctx,
         return *rst;
     } else {
         AllocError* err = new AllocError(ErrorCode::NOT_ENOUGH_SPACE);
-        if (!found_alignment) {
+        if (!has_any_valid_alignment) {
             err = new AllocError(ErrorCode::NO_VALID_SC_ALLOC_ALIGNMENT);
-        } else if (!cannot_pack_sl.empty()) {
-            err = new AllocError(ErrorCode::CANNOT_PACK_CANDIDATES);
-            err->cannot_allocate_sl = *cannot_pack_sl.begin();
-            *err << "cannot allocate slice list: " << err->cannot_allocate_sl;
+        } else if (!reslice_required->empty()) {
+            err = new AllocError(ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED);
+            err->reslice_required = reslice_required;
         } else if (other_err) {
             return AllocResult(*other_err);
         }
@@ -1250,39 +1477,35 @@ PHV::Transaction AllocatorBase::alloc_deparser_zero_cluster(
         {INGRESS, PHV::Container("B0")}, {EGRESS, PHV::Container("B16")}};
 
     auto tx = alloc.makeTransaction();
-    if (utils_i.is_clot_allocated(utils_i.clot, *sc)) {
+    if (kit_i.is_clot_allocated(kit_i.clot, *sc)) {
         return tx;
     }
-    LOG3(ctx.t_tabs() << " try alloc deparser-zero optimization clusters: " << sc);
+    LOG3(ctx.t_tabs() << "try alloc deparser-zero optimization clusters: " << sc);
     for (auto* sl : sc->slice_lists()) {
         int offset = 0;
         for (const auto& slice : *sl) {
-            LOG5(ctx.t_tabs() << "Slice in slice list: " << slice);
             std::vector<PHV::AllocSlice> candidate_slices;
             const int slice_width = slice.size();
             // Allocate bytewise chunks of this field to B0 and B16.
             for (int i = 0; i < slice_width; i += 8) {
                 int alloc_slice_width = std::min(8, slice_width - i);
-                LOG5(ctx.t_tabs() << "Alloc slice width: " << alloc_slice_width);
-                LOG5(ctx.t_tabs() << "Slice list offset: " << offset);
                 le_bitrange container_slice = StartLen(offset % 8, alloc_slice_width);
                 le_bitrange field_slice = StartLen(i + slice.range().lo, alloc_slice_width);
-                LOG5(ctx.t_tabs() << "Container slice: " << container_slice
-                                  << ", field slice: " << field_slice);
                 BUG_CHECK(slice.gress() == INGRESS || slice.gress() == EGRESS,
                           "Found a field slice for %1% that is neither ingress nor egress",
                           slice.field()->name);
                 const auto& container = zero_container.at(slice.gress());
                 auto alloc_slice = PHV::AllocSlice(
-                        utils_i.phv.field(slice.field()->id), container,
+                        kit_i.phv.field(slice.field()->id), container,
                         field_slice, container_slice);
+                LOG5(ctx.t_tabs() << "deparser-zero slice: " << alloc_slice);
                 candidate_slices.push_back(alloc_slice);
                 phv.addZeroContainer(slice.gress(), container);
                 offset += alloc_slice_width;
             }
-            if (utils_i.settings.physical_liverange_overlay) {
+            if (kit_i.settings.physical_liverange_overlay) {
                 // candidate_slices = update_alloc_slices_with_physical_liverange(
-                //     utils_i.clot, utils_i.physical_liverange_db, candidate_slices);
+                //     kit_i.clot, kit_i.physical_liverange_db, candidate_slices);
                 // XXX(yumin): do not overlay with deparser-zero optimization slices, because
                 // they rely on parser to init the container to zero and use them in deparser
                 // for emitting zeros.
@@ -1290,17 +1513,160 @@ PHV::Transaction AllocatorBase::alloc_deparser_zero_cluster(
                 // deparser output any one of 8 constant bytes in any slot of a field
                 // dictionary (the 8 constants can be programmed to any 8 8bit values).
                 const auto default_lr =
-                    utils_i.physical_liverange_db.default_liverange()->disjoint_ranges().front();
+                    kit_i.physical_liverange_db.default_liverange()->disjoint_ranges().front();
                 for (auto& slice : candidate_slices) {
                     slice.setIsPhysicalStageBased(true);
                     slice.setLiveness(default_lr.start, default_lr.end);
                 }
             }
             for (auto& alloc_slice : candidate_slices)
-                tx.allocate(alloc_slice, nullptr, utils_i.settings.single_gress_parser_group);
+                tx.allocate(alloc_slice, nullptr, kit_i.settings.single_gress_parser_group);
         }
     }
     return tx;
+}
+
+AllocResult AllocatorBase::alloc_stride(const ScoreContext& ctx,
+                                        const Allocation& alloc,
+                                        const std::vector<FieldSlice>& stride,
+                                        const ContainerGroupsBySize& groups_by_sizes) const {
+    const auto& leader = stride.front();
+    BUG_CHECK(leader.field()->exact_containers(),
+              "non-header stride not supported: %1%", leader);
+    BUG_CHECK(groups_by_sizes.count(PHV::Size(leader.size())),
+              "non-container-sized stride not supported: %1%", leader);
+
+    if (LOGGING(3)) {
+        LOG3(ctx.t_tabs() << "Trying to allocate stride:");
+        for (const auto& fs : stride) {
+            LOG3(ctx.t_tabs() << "\t" << fs);
+        }
+    }
+
+    boost::optional<AllocResult> best_rst;
+    const TxScore* best_score = nullptr;
+    // find the best container group for this stride.
+    for (const auto& group : groups_by_sizes.at(PHV::Size(leader.size()))) {
+        LOG3(ctx.t_tabs() << " Trying container group: " << group);
+        // XXX(yumin): for each group, we will only try the first okay container stride,
+        // (may go across to the next group because stride are not limited by mau groups).
+        // pick a leader container, and try to allocate the stride starting from leader.
+        auto leader_cond_ctx = ctx.with_t(ctx.t() + 1);
+        for (const auto& leader_cond : group) {
+            // build allocation schedule based on this leader container.
+            bool ok = true;
+            PHV::Container curr_cond = leader_cond;
+            ordered_map<FieldSlice, Container> container_schedule;
+            for (const auto& fs : stride) {
+                if (!alloc.getStatus(curr_cond)) {
+                    ok = false;
+                    break;
+                }
+                container_schedule[fs] = curr_cond;
+                curr_cond = PHV::Container(curr_cond.type(), curr_cond.index() + 1);
+            }
+            if (!ok) break;
+            // allocate them by schedule.
+            auto tx = alloc.makeTransaction();
+            for (const auto& fs_cond : container_schedule) {
+                FieldSliceAllocStartMap fs_start;
+                fs_start[fs_cond.first] = 0;
+                LOG3(leader_cond_ctx.t_tabs()
+                     << "Try to allocate " << fs_cond.first << " ==> " << fs_cond.second);
+                auto rst = try_slices_to_container(leader_cond_ctx.with_t(leader_cond_ctx.t() + 1),
+                                                   tx, fs_start, fs_cond.second, true);
+                if (!rst.ok()) {
+                    LOG3(leader_cond_ctx.t_tabs() << "Failed because " << rst.err_str());
+                    ok = false;
+                    break;
+                }
+                tx.commit(*rst.tx);
+            }
+            if (ok) {
+                LOG3(leader_cond_ctx.t_tabs()
+                     << "stride allocation succeeded for leader container: " << leader_cond);
+                auto* score = ctx.score()->make(tx);
+                if (!best_score || score->better_than(best_score)) {
+                    LOG3(leader_cond_ctx.t_tabs() << "This is by far the best score.");
+                    best_rst = AllocResult(tx);
+                    best_score = score;
+                }
+                break;
+            }
+        }
+    }
+    if (best_rst) {
+        return *best_rst;
+    }
+    return AllocResult(new AllocError(ErrorCode::NOT_ENOUGH_SPACE));
+}
+
+AllocResult AllocatorBase::alloc_strided_super_clusters(const ScoreContext& ctx,
+                                                        const Allocation& alloc,
+                                                        const SuperCluster* sc,
+                                                        const ContainerGroupsBySize& groups,
+                                                        const int max_n_slicings) const {
+    BUG_CHECK(sc->needsStridedAlloc(), "invalid argument: a non-strided cluster : %1%", sc);
+    LOG3(ctx.t_tabs() << "Trying to stride-allocate " << sc);
+    const auto* stride_group =
+        kit_i.strided_headers.get_strided_group(sc->slices().front().field());
+    ordered_map<const PHV::Field*, int> stride_group_index;
+    int idx = 0;
+    for (const auto* f : *stride_group) {
+        stride_group_index[f] = idx++;
+    }
+    boost::optional<Transaction> best_rst;
+    const TxScore* best_score = nullptr;
+    int n_tried = 0;
+    auto itr_ctx = kit_i.make_slicing_ctx(sc);  // do not need to set config, strided mode.
+    const auto* err = new AllocError(ErrorCode::NOT_ENOUGH_SPACE);
+    const auto new_ctx = ctx.with_sc(sc).with_t(ctx.t() + 1);
+    itr_ctx->iterate([&](std::list<SuperCluster*> clusters) {
+        n_tried++;
+        if (LOGGING(3)) {
+            LOG3(ctx.t_tabs() << "Clusters of (strided) slicing-attempt-" << n_tried << ":");
+            for (auto* sc : clusters) LOG3(ctx.t_tabs() << sc);
+        }
+        // group stride cluster by their ranges, where each range is a group.
+        ordered_map<le_bitrange, std::vector<FieldSlice>> strides;
+        for (const auto* sc : clusters) {
+            BUG_CHECK(!sc->slices().empty(), "empty cluster: %1%", sc);
+            const auto fs = sc->slices().front();
+            strides[fs.range()].push_back(fs);
+        }
+        auto tx = alloc.makeTransaction();
+        for (std::vector<FieldSlice> stride : Values(strides)) {
+            // sort by their header stack index, because lower index fields needs to be allocated to
+            // lower id containers. NOTE: there is no such check in the old PHV allocation,
+            // either I missed something, or it is correct when only super clusters order is the
+            // same as header stack order, which would be a miracle if it is always true.
+            // B
+            std::sort(stride.begin(), stride.end(),
+                      [&](const PHV::FieldSlice& a, const PHV::FieldSlice& b) {
+                          return stride_group_index.at(a.field()) <
+                                 stride_group_index.at(b.field());
+                      });
+            auto rst = alloc_stride(new_ctx, tx, stride, groups);
+            if (!rst.ok()) {
+                LOG3(ctx.t_tabs() << "slicing-attempt-" << n_tried
+                     << " failed, while allocating the stride of " << stride.front());
+                err = rst.err;
+                return n_tried < max_n_slicings;
+            }
+            tx.commit(*rst.tx);
+        }
+        auto score = ctx.score()->make(tx);
+        if (!best_score || score->better_than(best_score)) {
+            LOG3(ctx.t_tabs() << "slicing-attempt-" << n_tried << " succeeded. ");
+            best_rst = tx;
+            best_score = score;
+        }
+        return n_tried < max_n_slicings;
+    });
+    if (best_rst)
+        return AllocResult(*best_rst);
+    else
+        return AllocResult(err);
 }
 
 }  // namespace v2

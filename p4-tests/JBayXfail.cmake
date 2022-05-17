@@ -167,7 +167,7 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "This program violates action constraints imposed by"
+  "This program violates action constraints imposed by|Trivial allocator has found unsatisfiable constraints"
   extensions/p4_tests/p4_16/ptf/int_transit.p4
 )
 
@@ -275,7 +275,7 @@ p4c_add_xfail_reason("tofino2"
 # P4C-2091
 # Expected failure (negative test)
 p4c_add_xfail_reason("tofino2"
-  "error.*PHV allocation was not successful|CANNOT_PACK_CANDIDATES"
+  "error.*PHV allocation was not successful|Trivial allocator has found unsatisfiable constraints"
   extensions/p4_tests/p4_16/compile_only/p4c-2091.p4
 )
 
@@ -379,7 +379,7 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "warning: AssignmentStatement: Padding fields do not need to be explicitly set.* Tofino2 does not support action data/constant with rotated PHV source at the same time|CANNOT_PACK_CANDIDATES"
+  "warning: AssignmentStatement: Padding fields do not need to be explicitly set.* Tofino2 does not support action data/constant with rotated PHV source at the same time|Trivial allocator has found unsatisfiable constraints"
   extensions/p4_tests/p4_16/compile_only/p4c-3453.p4
 )
 
