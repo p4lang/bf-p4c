@@ -15,5 +15,5 @@ p4c_add_test_with_args("tofino3" ${P4C_RUNTEST} FALSE
 #  "smoketest_switch_16_compile_z2_profile" ${switch_p4_16_z2} "${testExtraArgs}" "-DZ2_PROFILE -I${SWITCH_P4_16_INC} -tofino3 -Xp4c=\"--auto-init-metadata -Tstage_advance:1\" -arch t3na --num-stages-override 16")
 #
 ## 500s timeout is too little for compiling and testing the entire switch, bumping it up
-set_tests_properties("tofino3/smoketest_switch_16_compile_y2_profile" PROPERTIES TIMEOUT 1600)
-#set_tests_properties("tofino3/smoketest_switch_16_compile_z2_profile" PROPERTIES TIMEOUT 1600)
+set_tests_properties("tofino3/smoketest_switch_16_compile_y2_profile" PROPERTIES TIMEOUT ${extended_timeout_2times})
+#set_tests_properties("tofino3/smoketest_switch_16_compile_z2_profile" PROPERTIES TIMEOUT ${extended_timeout_2times})

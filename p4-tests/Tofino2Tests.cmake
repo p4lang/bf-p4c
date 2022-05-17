@@ -14,13 +14,13 @@ list(REMOVE_ITEM __p4_16_tests ${P16_TOFINO_VARIANTS_EXCLUDE})
 
 # P4-16 Programs with PTF tests
 foreach(v IN LISTS jbay_variants)
-  set (${v}_timeout 600)
+  set (${v}_timeout ${default_test_timeout})
   set (__t2na_compile_args "--target ${v} --arch t2na -I${__p4_16_path}")
   foreach(t IN LISTS __p4_16_tests)
     set(__alias "p4_16_programs_${t}")
     if (PTF_REQUIREMENTS_MET AND EXISTS ${__p4_16_path}/${t}/test.py)
       p4c_add_ptf_test_with_ptfdir (${v} ${__alias} "${__p4_16_path}/${t}/${t}.p4"
-        "${__t2na_compile_args} -target ${v} -arch t2na -bfrt -to 2000" "${__p4_16_path}/${t}")
+        "${__t2na_compile_args} -target ${v} -arch t2na -bfrt" "${__p4_16_path}/${t}")
       set (ports_json ${__p4_16_path}/${t}/ports.json)
       if (EXISTS ${ports_json})
         bfn_set_ptf_ports_json_file(${v} ${__alias} ${ports_json})

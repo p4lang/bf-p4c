@@ -51,9 +51,10 @@ fi
 # -bfrt        any p4-16 test with ptf dir (with bfrt tests), run ptf with bfrt
 # -profile     any p4-16 switch profile
 
-# Setting this timeout (590) to be lower than the ctest timeout (600)
-# to capture known failures due to test timeout for XFAIL
-TIMEOUT=${P4C_TIMEOUT:-590}
+# Take the default timeout from P4C_TIMEOUT, if it is empty then we have no
+# default timeout.
+# This timeout setting can be overridden using the -to commandline argument.
+TIMEOUT=${P4C_TIMEOUT}
 TIME_COMMAND="" # don't time commands
 verbose=false
 debug=false
@@ -84,14 +85,15 @@ die() {
 }
 
 run() {
+    _run_args=($TIME_COMMAND ${TIMEOUT:+$TIMEOUT_COMMAND $TIMEOUT} "$@")
     if $verbose; then
-        echo >&2 $TIME_COMMAND $TIMEOUT_COMMAND $TIMEOUT "$@"
+        echo >&2 "${_run_args[@]}"
     fi
 
     # `timeout` can't be killed by ctrl^c when run inside a bash script, so we
     # need to run it in the background, record the pid, then kill it on INT.
     trap 'kill -INT -$pid' INT
-    $TIME_COMMAND $TIMEOUT_COMMAND $TIMEOUT "$@" &
+    "${_run_args[@]}" &
     pid=$!
     wait $pid
     status=$?

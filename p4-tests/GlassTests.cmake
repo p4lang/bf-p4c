@@ -24,19 +24,19 @@ p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base" "${
 
 # Add additional flags to some customer tests
 p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "arista" "${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4"
-  "--backward-compatible -to 600 -Xp4c=\"--no-power-check\" --disable-pragmas=pa_container_size")
+  "--backward-compatible -Xp4c=\"--no-power-check\" --disable-pragmas=pa_container_size")
 
 p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "arista" "${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-562/case3005.p4"
-  "--backward-compatible -to 600 -Xp4c=\"--no-power-check\"")
+  "--backward-compatible -Xp4c=\"--no-power-check\"")
 
 p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "arista" "${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-576/case3042.p4"
-  "--backward-compatible -to 600 -Xp4c=\"--no-power-check\"")
+  "--backward-compatible -Xp4c=\"--no-power-check\"")
 
 p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "arista" "${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-589/comp589.p4"
-  "--backward-compatible -to 600 -Xp4c=\"--no-power-check\"")
+  "--backward-compatible -Xp4c=\"--no-power-check\"")
 
 p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "alibaba" "${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/alibaba/COMPILER-869/alpm_ali_cloud.p4"
-  "--backward-compatible -to 600 -Xp4c=\"--no-power-check\"")
+  "--backward-compatible -Xp4c=\"--no-power-check\"")
 
 set (GTS_ARISTA
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/BRIG-5/case1715.p4
@@ -253,7 +253,9 @@ set (GTS_KALOOM
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/kaloom/COMPILER-839/leaf.p4
 )
 
-p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base" "${GTS_KALOOM}")
+# since COMPILER-839/leaf.p4 has XFail that checks that it timeouts we need to
+# set timeout explictly
+p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base" "${GTS_KALOOM}" "-to 590")
 
 foreach(t IN LISTS GTS_KALOOM)
   file(RELATIVE_PATH test_path ${P4C_SOURCE_DIR} ${t})

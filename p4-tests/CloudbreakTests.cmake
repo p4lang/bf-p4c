@@ -1,4 +1,4 @@
-set (tofino3_timeout 600)
+set (tofino3_timeout ${default_test_timeout})
 
 # check for PTF requirements
 packet_test_setup_check("cb")
@@ -69,19 +69,19 @@ p4c_add_test_label("tofino3" "base;stf" "parser-inline-opt/${P4C_2985_TESTNAME}"
 
 p4c_add_ptf_test_with_ptfdir ("tofino3" "mirror_constants"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/mirror_constants.p4"
-    "${testExtraArgs} -target tofino3 -arch t3na -bfrt -to 2000"
+    "${testExtraArgs} -target tofino3 -arch t3na -bfrt"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/mirror_constants.ptf")
 bfn_needs_scapy("tofino3" "mirror_constants")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino3" "p4c_2601" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/p4c_2601.p4"
-    "${testExtraArgs} -target tofino3 -arch t3na -bfrt -to 2400 --p4runtime-force-std-externs"
+    "${testExtraArgs} -target tofino3 -arch t3na -bfrt --p4runtime-force-std-externs"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/p4c_2601.ptf")
 bfn_needs_scapy("tofino3" "p4c_2601")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino3" "hash_extern_xor" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/hash_extern_xor.p4"
-    "${testExtraArgs} -target tofino3 -arch t3na -bfrt -to 2400 --p4runtime-force-std-externs"
+    "${testExtraArgs} -target tofino3 -arch t3na -bfrt --p4runtime-force-std-externs"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/hash_extern_xor.ptf")
 bfn_needs_scapy("tofino3" "hash_extern_xor")
 
@@ -91,8 +91,8 @@ p4c_find_tests("${CLOUDBREAK_JNA_TEST_SUITES}" cloudbreak_jna_tests INCLUDE "${P
 set (cloudbreak_jna_tests ${cloudbreak_jna_tests} ${p16_jna_tests})
 p4c_add_bf_backend_tests("tofino3" "cb" "t3na" "base" "${cloudbreak_jna_tests}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
 
-p4c_add_bf_backend_tests("tofino3" "cb" "t3na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/p4c-2740.p4" "-to 2400")
-set_tests_properties("tofino3/extensions/p4_tests/p4_16/compile_only/p4c-2740.p4" PROPERTIES TIMEOUT 2400)
+p4c_add_bf_backend_tests("tofino3" "cb" "t3na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/p4c-2740.p4")
+set_tests_properties("tofino3/extensions/p4_tests/p4_16/compile_only/p4c-2740.p4" PROPERTIES TIMEOUT ${extended_timeout_4times})
 
 #set (testExtraArgs "${testExtraArgs} -tofino3")
 #
@@ -102,7 +102,7 @@ set_tests_properties("tofino3/extensions/p4_tests/p4_16/compile_only/p4c-2740.p4
 #
 #p4c_add_ptf_test_with_ptfdir (
 #    "tofino3" "p4c_1585" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585/p4c_1585.p4"
-#    "${testExtraArgs} -target tofino3 -arch t3na -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585")
+#    "${testExtraArgs} -target tofino3 -arch t3na -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585")
 #
 #set (ONOS_FABRIC_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/bf-onos/pipelines/fabric/src/main/resources/fabric-tofino.p4)
 #set (ONOS_FABRIC_PTF ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/onf_fabric/tests/onf)
@@ -282,7 +282,7 @@ set_tests_properties("tofino3/extensions/p4_tests/p4_16/compile_only/p4c-2740.p4
 ## P4-16 Programs with PTF tests
 #foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS)
 #  p4c_add_ptf_test_with_ptfdir ("tofino3" "p4_16_programs_${t}" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}/${t}.p4"
-#    "${testExtraArgs} -target tofino3 -arch t3na -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}")
+#    "${testExtraArgs} -target tofino3 -arch t3na -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}")
 #  bfn_set_p4_build_flag("tofino3" "p4_16_programs_${t}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs")
 #  set (ports_json ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}/ports_tof2.json)
 #  if (EXISTS ${ports_json})
@@ -295,8 +295,8 @@ set_tests_properties("tofino3/extensions/p4_tests/p4_16/compile_only/p4c-2740.p4
 #bfn_set_ptf_ports_json_file("tofino3" "p4_16_programs_tna_idletimeout" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_idletimeout/ports.json")
 #
 ## 500s timeout is too little for compiling and testing the entire switch, bumping it up
-#set_tests_properties("tofino3/p4_16_programs_tna_exact_match" PROPERTIES TIMEOUT 1200)
-#set_tests_properties("tofino3/p4_16_programs_tna_ternary_match" PROPERTIES TIMEOUT 2400)
+#set_tests_properties("tofino3/p4_16_programs_tna_exact_match" PROPERTIES TIMEOUT ${extended_timeout_2times})
+#set_tests_properties("tofino3/p4_16_programs_tna_ternary_match" PROPERTIES TIMEOUT ${extended_timeout_4times})
 #
 include(SwitchCloudbreak.cmake)
 include(CloudbreakXfail.cmake)

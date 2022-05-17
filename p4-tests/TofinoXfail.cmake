@@ -235,7 +235,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "error.*tofino supports up to 12 stages|./p4c TIMEOUT"
+  "error.*tofino supports up to 12 stages"
   ../glass/testsuite/p4_tests/mau/COMPILER-362/icmp_typecode.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-243/comp243.p4
 )
@@ -252,7 +252,7 @@ p4c_add_xfail_reason("tofino"
 
 # timeout
 p4c_add_xfail_reason("tofino"
-  "PHV allocation was not successful|./p4c TIMEOUT|This program violates action constraints imposed by Tofino"
+  "PHV allocation was not successful|This program violates action constraints imposed by Tofino"
   ../glass/testsuite/p4_tests/arista/COMPILER-235/case1737_1.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-2200.p4
 )
@@ -468,7 +468,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "The input .* cannot be found on the hash input|./p4c TIMEOUT"
+  "The input .* cannot be found on the hash input"
   ../glass/testsuite/p4_tests/phv/COMPILER-724/comp_724.p4
 )
 
@@ -794,13 +794,13 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "error.*This program violates action constraints imposed by Tofino.|./p4c TIMEOUT|NO_SLICING_FOUND"
+  "error.*This program violates action constraints imposed by Tofino.|NO_SLICING_FOUND"
   # Negative tests for violation of action constraints.
   extensions/p4_tests/p4_16/customer/kaloom/p4c-1299.p4
 )
 
 p4c_add_xfail_reason("tofino"
-  "error.*This program violates action constraints imposed by Tofino.|./p4c TIMEOUT"
+  "error.*This program violates action constraints imposed by Tofino."
 # Negative tests for violation of action constraints.
   extensions/p4_tests/p4_14/compile_only/action_conflict_1.p4
   extensions/p4_tests/p4_14/compile_only/action_conflict_3.p4
@@ -863,7 +863,7 @@ p4c_add_xfail_reason("tofino"
     # Depending on VM Load these tests may timeout before displaying the PHV
     # alloc unsuccessful message and fail travis, we use both messages to check
     # xfails
-    "PHV allocation was not successful|./p4c TIMEOUT"
+    "PHV allocation was not successful"
   ../glass/testsuite/p4_tests/phv/COMPILER-136/06-FullTPHV1.p4
   )
 
@@ -873,7 +873,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "PHV allocation was not successful|./p4c TIMEOUT"
+  "PHV allocation was not successful"
   ../glass/testsuite/p4_tests/rdp/COMPILER-443/case2514.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-502/case2675.p4
   # funnel shift not supported
@@ -1296,7 +1296,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*Slicing the following supercluster is taking too long...|./p4c TIMEOUT"
+  "Compiler Bug.*Slicing the following supercluster is taking too long..."
   ../glass/testsuite/p4_tests/arista/COMPILER-568/case3026.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-568/case3026dce.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-575/case3041.p4
@@ -1370,7 +1370,7 @@ p4c_add_xfail_reason("tofino"
 
 # Expected failures due to program error
 p4c_add_xfail_reason("tofino"
-  "Dynamic hashes must have the same field list and sets of algorithm for each get call|./p4c TIMEOUT"
+  "Dynamic hashes must have the same field list and sets of algorithm for each get call"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1492.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1587-a.p4
 )
@@ -1472,7 +1472,7 @@ p4c_add_xfail_reason("tofino"
 
 # P4C-923
 p4c_add_xfail_reason("tofino"
-  "ALU ops cannot operate on slices|./p4c TIMEOUT"
+  "ALU ops cannot operate on slices"
   ../glass/testsuite/p4_tests/arista/COMPILER-228/case1644.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-562/case3005.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-567/case2807.p4
@@ -1487,7 +1487,7 @@ p4c_add_xfail_reason("tofino"
 # P4C-1957
 # Compiler Bug: Extracted range byte[4..24) with size 160 doesn't match destination container TH7 with size 16
 p4c_add_xfail_reason("tofino"
-  "doesn't match destination container .* with size .*|./p4c TIMEOUT"
+  "doesn't match destination container .* with size .*"
   ../glass/testsuite/p4_tests/arista/COMPILER-744/comp_744.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-751/case4256.p4
 )
@@ -1500,7 +1500,7 @@ p4c_add_xfail_reason("tofino"
 
 # P4C-1906
 p4c_add_xfail_reason("tofino"
-  "Depth of way doesn't match number of rams in table|./p4c TIMEOUT"
+  "Depth of way doesn't match number of rams in table"
   ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
 )
 
@@ -1921,7 +1921,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/stf/stateful6.p4
 )
 p4c_add_xfail_reason("tofino"
-  "error.*tofino supports up to 12 stages|./p4c TIMEOUT"
+  "error.*tofino supports up to 12 stages"
   ../glass/testsuite/p4_tests/phv/COMPILER-733/ipu_ingress.p4
 )
 # P4C-4140

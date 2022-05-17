@@ -1,4 +1,4 @@
-set (tofino5_timeout 600)
+set (tofino5_timeout ${default_test_timeout})
 
 packet_test_setup_check("ftr")
 # ftr simple harness is not available yet

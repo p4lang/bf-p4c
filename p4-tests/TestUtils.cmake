@@ -1,3 +1,13 @@
+# A default timeout for all kinds of tests in bf-p4c
+set(default_test_timeout 900)
+# A set of extended timeouts that should be used for larger tests
+math(EXPR extended_timeout_150percent "(${default_test_timeout} * 15) / 10")
+math(EXPR extended_timeout_2times "${default_test_timeout} * 2")
+math(EXPR extended_timeout_4times "${default_test_timeout} * 4")
+math(EXPR extended_timeout_6times "${default_test_timeout} * 6")
+math(EXPR extended_timeout_8times "${default_test_timeout} * 8")
+math(EXPR extended_timeout_12times "${default_test_timeout} * 12")
+
 # if we have a reason for failure, then use that regular expression to
 # make the test succeed. If that changes, we know the test moved to a
 # different failure. Also turn off automatic ignoring of failures (WILL_FAIL).
@@ -92,7 +102,7 @@ function(bfn_add_p4factory_tests tag device arch label test_list)
     get_filename_component (ptfdir ${ptfpath} DIRECTORY)
     p4c_add_ptf_test_with_ptfdir (${tag} ${p4test} ${__t} "${testExtraArgs} -pd -${device} -arch ${arch}" ${ptfdir})
     set_property(TEST "${tag}/${p4test}" PROPERTY ENVIRONMENT "")
-    set_tests_properties("${tag}/${p4test}" PROPERTIES TIMEOUT 1000)
+    set_tests_properties("${tag}/${p4test}" PROPERTIES TIMEOUT ${extended_timeout_150percent})
     p4c_add_test_label(${tag} ${label} ${p4test})
   endforeach()
 endfunction()
