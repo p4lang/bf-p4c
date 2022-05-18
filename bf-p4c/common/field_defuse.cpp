@@ -427,12 +427,13 @@ bool FieldDefUse::preorder(const IR::Expression *e) {
         for (auto c = getContext(); c; c = c->parent) {
             if (c->node->is<IR::MAU::IXBarExpression>() || c->node->is<IR::MAU::StatefulCall>() ||
                 c->node->is<IR::MAU::StatefulAlu>() || c->node->is<IR::MAU::Table>() ||
-                c->node->is<IR::MAU::Meter>())
+                c->node->is<IR::MAU::Meter>()) {
                 needsIXBar = true;
                 ok = true;
                 break;
+            }
             if (c->node->is<IR::MAU::Action>() || c->node->is<IR::BFN::ParserState>() ||
-                c->node->is<IR::BFN::Deparser>()) {
+                c->node->is<IR::BFN::Deparser>() || c->node->is<IR::BFN::GhostParser>()) {
                 needsIXBar = false;
                 ok = true;
                 break;
