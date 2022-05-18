@@ -17,6 +17,7 @@ show_help () {
     echo >&2 "   --build-dir <dir>      build in <dir> rather than ./build"
     echo >&2 "   --build-type <type>    DEBUG RELEASE or RelWithDebInfo"
     echo >&2 "   --p4c-cpp-flags <x>    add <x> to CPPFLAGS for p4c build"
+    echo >&2 "   --enable-ubsan         build with undefined sanitizer"
     echo >&2 "   --small-config         only builds: (1) the compiler, (2) testing EXCEPT for the gtest-based tests"
     echo >&2 "   --minimal-config       disable most build targets other than the compiler"
     echo >&2 "   --disable-unified      disable unified build"
@@ -29,6 +30,7 @@ RUN_BOOTSTRAP_PTF=yes
 builddir=${mydir}/build
 buildtype=DEBUG
 P4C_CPP_FLAGS=''
+enableUBSan=false
 smallConfig=false
 minimalConfig=false
 disableUnified=false
@@ -52,6 +54,9 @@ while [ $# -gt 0 ]; do
     --p4c-cpp-flags)
         P4C_CPP_FLAGS="$2"
         shift
+        ;;
+    --enable-ubsan)
+        enableUBSan=true
         ;;
     --small-config)
         smallConfig=true
@@ -128,6 +133,10 @@ fi
 
 if [ "$disablePreconfig" = "false"  -a -r $preconfigPath ]; then
     otherArgs+=" -C$preconfigPath"
+fi
+
+if $enableUBSan ; then
+    P4C_CPP_FLAGS+=" -fno-var-tracking-assignments -fsanitize=undefined"
 fi
 
 mkdir -p ${builddir}
