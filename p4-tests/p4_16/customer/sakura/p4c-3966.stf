@@ -1,0 +1,16 @@
+
+add SwitchIngress.reg_rw.reg_write_icmp_tbl 0 src_addr:0xac10000* type_:0x8 reg_write_icmp()
+
+$( pkt=`python3 -c 'from scapy.all import *; \
+    p=Ether()/IP(src="172.16.0.1",dst="10.170.171.187")/ICMP(); \
+    print(plain_str(bytes_hex(p))) \
+    '`; \
+    printf "packet 0 $pkt";                           \
+)
+
+wait
+check_register SwitchIngress.reg_rw.reg_one(0xaaa) lo = 0x1
+check_register SwitchIngress.reg_rw.reg_two(0xbbb) lo = 0x1
+
+# Above shell command should create below packet stf command
+# packet 0 02420d299cf40242ac11000208004500001c000100004001186aac1000010aaaabbb0800f7ff00000000

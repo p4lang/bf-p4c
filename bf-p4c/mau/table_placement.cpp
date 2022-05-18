@@ -2100,6 +2100,9 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
                 if (count_sful_actions(rv->table) > 1)
                     continue;
 
+                // Cannot split attached entries for Tofino
+                if (Device::currentDevice() == Device::TOFINO) break;
+
                 rv->attached_entries.at(ba->attached).entries = 0;
                 rv->attached_entries.at(ba->attached).need_more = true;
                 if (stateful_selector) {
