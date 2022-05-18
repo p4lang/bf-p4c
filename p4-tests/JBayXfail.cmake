@@ -443,12 +443,6 @@ p4c_add_xfail_reason("tofino2"
   p4c_3043
 )
 
-# P4C-4477
-p4c_add_xfail_reason("tofino2"
-  "Merge of speciality argument cannot be built"
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-l2_dci.p4
-)
-
 # P4C-3220
 p4c_add_xfail_reason("tofino2"
   "error: Incompatible outputs in RegisterAction: mem_lo and mem_hi"

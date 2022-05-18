@@ -381,8 +381,9 @@ bool RandomNumber::is_subset_of(const Parameter *ad) const {
         return false;
     if (size() != ad->size())
         return false;
+    // Random Number is not a subset of Random Padding!! P4C-4477
     if (ad->is<RandomPadding>())
-        return true;
+        return false;
     auto rn = ad->to<RandomNumber>();
     return std::includes(rn->_rand_nums.begin(), rn->_rand_nums.end(),
                          _rand_nums.begin(), _rand_nums.end());

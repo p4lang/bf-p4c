@@ -588,9 +588,9 @@ void RandomNumberSingleAction() {
 
     EXPECT_FALSE(rn1_a1->is_subset_of(rn2_a1));
     EXPECT_FALSE(rn2_a1->is_subset_of(rn1_a1));
-    EXPECT_TRUE(rn1_a1->is_subset_of(pad));
+    EXPECT_FALSE(rn1_a1->is_subset_of(pad));
     EXPECT_TRUE(pad->is_subset_of(rn1_a1));
-    EXPECT_TRUE(rn2_a1->is_subset_of(pad));
+    EXPECT_FALSE(rn2_a1->is_subset_of(pad));
     EXPECT_TRUE(pad->is_subset_of(rn2_a1));
 }
 
