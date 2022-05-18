@@ -2300,7 +2300,7 @@ bool ActionAnalysis::ContainerAction::verify_speciality(cstring &error_message,
     int ad_params = 0;
     ActionParam *speciality_read = nullptr;
     const IR::Expression *param = nullptr;
-    for (auto field_action : field_actions) {
+    for (auto &field_action : field_actions) {
         for (auto &read : field_action.reads) {
             if (read.type == ActionParam::ACTIONDATA || read.type == ActionParam::CONSTANT) {
                 auto *expr = read.expr;

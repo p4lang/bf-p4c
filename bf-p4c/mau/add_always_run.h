@@ -62,7 +62,7 @@ class AddAlwaysRun : public PassManager {
         AddAlwaysRun& self;
 
         /// The subsequent table for the current program point being visited.
-        const IR::MAU::Table* subsequentTable;
+        const IR::MAU::Table* subsequentTable = nullptr;
 
         /// Maps each table to its earliest subsequent table.
         std::map<const IR::MAU::Table*, const IR::MAU::Table*> minSubsequentTables;

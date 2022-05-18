@@ -123,7 +123,7 @@ bool AddAlwaysRun::PrepareToAdd::preorder(const IR::MAU::Table* table) {
     // Ensure we re-visit this table if we encounter it again elsewhere in the IR.
     visitAgain();
 
-    auto* curMin = minSubsequentTables[table];
+    auto* curMin = ::get(minSubsequentTables, table);
     if (self.compare(subsequentTable, curMin) < 0) curMin = subsequentTable;
     minSubsequentTables[table] = curMin;
 
