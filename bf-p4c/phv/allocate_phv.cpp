@@ -451,119 +451,121 @@ void print_alloc_history(const PHV::Transaction& tx,
 
 void print_or_throw_slicing_error(const PHV::AllocUtils& utils, const PHV::SuperCluster* sc,
                                   int n_slicing_tried) {
-    const auto print_error_or_bug = [&]() {
-        auto& pa_container_sizes = utils.pragmas.pa_container_sizes();
-        auto& meter_color_dests_8bit = utils.actions.meter_color_dests_8bit();
-        ordered_set<const PHV::Field*> unsat_fields;
-        sc->forall_fieldslices([&](const PHV::FieldSlice& fs) {
-            const auto* f = fs.field();
-            if (!unsat_fields.count(f) && pa_container_sizes.field_to_layout().count(f)) {
-                unsat_fields.insert(f);
-                if (meter_color_dests_8bit.count(f)) {
-                    if (f->size > 8) {
-                        P4C_UNIMPLEMENTED(
-                            "Currently the compiler only supports allocation "
-                            "of meter color destination field %1% to an 8-bit container when "
-                            "the meter color is also part of a larger operation (e.g. arithmetic, "
-                            "bit operation). However, meter color destination %1% with size %2% "
-                            "bits cannot be split based on its use. Therefore, it cannot be "
-                            "allocated to an 8-bit container. Suggest using a meter color "
-                            "destination that is less than or equal to 8b in size or simplify the "
-                            "instruction relative to the meter color to a basic set.",
-                            f->name, f->size);
-                    } else {
-                        P4C_UNIMPLEMENTED(
-                            "Currently the compiler only supports allocation of "
-                            "meter color destination field %1% to an 8-bit container when "
-                            "the meter color is also part of a larger operation (e.g. arithmetic, "
-                            "bit operation). However, %1% cannot be allocated to an 8-bit "
-                            "container.",
-                            f->name);
-                    }
-                }
-            }
-        });
-        if (LOGGING(5)) {
-            if (unsat_fields.size() > 0) {
-                LOG_DEBUG5("Found " << unsat_fields.size() << " unsatisfiable fields:");
-            }
-            for (const auto* f : unsat_fields) {
-                LOG_DEBUG5(TAB1 << f);
-            }
-        }
-        if (unsat_fields.size() > 0) {
-            std::stringstream ss;
-            ss << "Cannot find a slicing to satisfy @pa_container_size pragma(s): ";
-            std::string sep = "";
-            for (const auto* f : unsat_fields) {
-                ss << sep << f->name;
-                sep = ", ";
-            }
-            ss << "\n" << sc;
-            ::error("%1%", ss.str());
-        } else if (n_slicing_tried == 0) {
-            auto diagnose_info = SuperClusterActionDiagnoseInfo(sc);
-            if (diagnose_info.scCannotBeSplitFurther) {
-                std::stringstream ss;
-                bool diagnosed = utils.actions.diagnoseSuperCluster(
-                    diagnose_info.sliceListsOfInterest, diagnose_info.fieldAlignments, ss);
-                if (diagnosed) {
-                    ::error("%1%", ss.str());
+    auto& pa_container_sizes = utils.pragmas.pa_container_sizes();
+    auto& meter_color_dests_8bit = utils.actions.meter_color_dests_8bit();
+    ordered_set<const PHV::Field*> unsat_fields;
+    sc->forall_fieldslices([&](const PHV::FieldSlice& fs) {
+        const auto* f = fs.field();
+        if (!unsat_fields.count(f) && pa_container_sizes.field_to_layout().count(f)) {
+            unsat_fields.insert(f);
+            if (meter_color_dests_8bit.count(f)) {
+                if (f->size > 8) {
+                    P4C_UNIMPLEMENTED(
+                        "Currently the compiler only supports allocation "
+                        "of meter color destination field %1% to an 8-bit container when "
+                        "the meter color is also part of a larger operation (e.g. arithmetic, "
+                        "bit operation). However, meter color destination %1% with size %2% "
+                        "bits cannot be split based on its use. Therefore, it cannot be "
+                        "allocated to an 8-bit container. Suggest using a meter color "
+                        "destination that is less than or equal to 8b in size or simplify the "
+                        "instruction relative to the meter color to a basic set.",
+                        f->name, f->size);
                 } else {
-                    // SuperCluster can't be split any further, but it's not because
-                    // of field type or packing in actions (since diagnoseSuperCluster
-                    // returned false).
-                    //
-                    // If one of the slice lists contains a field that contains a number
-                    // of no_split bits that exceeds the size of the largest PHV container (32b),
-                    // then there's nothing the compiler can do to overcome that limitation
-                    // and the P4 code can't be compiled as-is.
-                    for (const auto& list : sc->slice_lists()) {
-                        int no_split_size = 0;
-                        int alignment_bits = 0;
-                        boost::optional<PHV::FieldSlice> prev_slice = boost::none;
+                    P4C_UNIMPLEMENTED(
+                        "Currently the compiler only supports allocation of "
+                        "meter color destination field %1% to an 8-bit container when "
+                        "the meter color is also part of a larger operation (e.g. arithmetic, "
+                        "bit operation). However, %1% cannot be allocated to an 8-bit "
+                        "container.",
+                        f->name);
+                }
+            }
+        }
+    });
+    if (LOGGING(5)) {
+        if (unsat_fields.size() > 0) {
+            LOG_DEBUG5("Found " << unsat_fields.size() << " unsatisfiable fields:");
+        }
+        for (const auto* f : unsat_fields) {
+            LOG_DEBUG5(TAB1 << f);
+        }
+    }
+    if (unsat_fields.size() > 0) {
+        std::stringstream ss;
+        ss << "Cannot find a slicing to satisfy @pa_container_size pragma(s): ";
+        std::string sep = "";
+        for (const auto* f : unsat_fields) {
+            ss << sep << f->name;
+            sep = ", ";
+        }
+        ss << "\n" << sc;
+        ::error("%1%", ss.str());
+    } else if (n_slicing_tried == 0) {
+        auto diagnose_info = SuperClusterActionDiagnoseInfo(sc);
+        if (diagnose_info.scCannotBeSplitFurther) {
+            std::stringstream ss;
+            bool diagnosed = utils.actions.diagnoseSuperCluster(diagnose_info.sliceListsOfInterest,
+                                                                diagnose_info.fieldAlignments, ss);
+            if (diagnosed) {
+                ::error("%1%", ss.str());
+            } else {
+                // SuperCluster can't be split any further, but it's not because
+                // of field type or packing in actions (since diagnoseSuperCluster
+                // returned false).
+                //
+                // If one of the slice lists contains a field that contains a number
+                // of no_split bits that exceeds the size of the largest PHV container (32b),
+                // then there's nothing the compiler can do to overcome that limitation
+                // and the P4 code can't be compiled as-is.
+                for (const auto& list : sc->slice_lists()) {
+                    int no_split_size = 0;
+                    int alignment_bits = 0;
+                    boost::optional<PHV::FieldSlice> prev_slice = boost::none;
 
-                        for (const auto& slice : *list) {
-                            if (!prev_slice || (prev_slice->field() != slice.field())) {
-                                // First slice or new field in slice list.
-                                no_split_size = 0;
-                                if (slice.field()->exact_containers()){
-                                    alignment_bits = 0;
-                                } else {
-                                    if (slice.alignment())
-                                        alignment_bits = slice.alignment()->align;
-                                }
+                    for (const auto& slice : *list) {
+                        if (!prev_slice || (prev_slice->field() != slice.field())) {
+                            // First slice or new field in slice list.
+                            no_split_size = 0;
+                            if (slice.field()->exact_containers()) {
+                                alignment_bits = 0;
+                            } else {
+                                if (slice.alignment()) alignment_bits = slice.alignment()->align;
                             }
-
-                            if (slice.field()->no_split()) {
-                                no_split_size += slice.size();
-
-                                if ((no_split_size + alignment_bits) > int(PHV::Size::b32)) {
-                                    // Slice list too large for PHV container.
-                                    std::stringstream ss;
-                                    ss << "The slice list below contains " << no_split_size << " "
-                                          "bits, the no_split attribute prevents it from being "
-                                          "split any further, and it is too large to fit in the "
-                                          "largest PHV containers." << "\n\n\t" << *list;
-                                    LOG_DEBUG3(ss);
-                                    ::error("%1%", ss.str());
-                                    return;
-                                }
-                            }
-                            prev_slice = slice;
                         }
+
+                        if (slice.field()->no_split()) {
+                            no_split_size += slice.size();
+
+                            if ((no_split_size + alignment_bits) > int(PHV::Size::b32)) {
+                                // Slice list too large for PHV container.
+                                std::stringstream ss;
+                                ss << "The slice list below contains " << no_split_size
+                                   << " "
+                                      "bits, the no_split attribute prevents it from being "
+                                      "split any further, and it is too large to fit in the "
+                                      "largest PHV containers."
+                                   << "\n\n\t" << *list;
+                                LOG_DEBUG3(ss);
+                                ::error("%1%", ss.str());
+                                return;
+                            }
+                        }
+                        prev_slice = slice;
                     }
                 }
             }
-            BUG("invalid SuperCluster was formed");
         }
-    };
-    try {
-        print_error_or_bug();
-    } catch (const Util::CompilerBug& e) {
-        BUG("The compiler failed in slicing the following group of fields related by "
-            "parser alignment and MAU constraints\n%1%, %2%\n",
-            sc, e.what());
+
+        std::stringstream ss;
+        ss << "Unable to slice the following group of fields due to unsatisfiable constraints: ";
+        std::string sep = "";
+        sc->forall_fieldslices([&](const PHV::FieldSlice& s) {
+            ss << sep << s.field()->name;
+            sep = ", ";
+        });
+        ss << std::endl;
+
+        ::error("%1%", ss.str());
     }
 }
 

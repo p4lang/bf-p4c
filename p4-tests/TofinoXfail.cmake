@@ -1677,12 +1677,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-dpdk-token-too-big.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "invalid SuperCluster was formed|NO_SLICING_FOUND"
-  # Expected to fail, until we have better user-facing messages.
-  extensions/p4_tests/p4_16/stf/cast_widening_add.p4
-)
-
 # digest fields related failures or expected to fail.
 p4c_add_xfail_reason("tofino"
   "invalid SuperCluster was formed"

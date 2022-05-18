@@ -122,3 +122,13 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/source_routing.p4
   ../glass/testsuite/p4_tests/parde/COMPILER-368/out.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "error: Unable to slice the following group of fields due to unsatisfiable constraints: .*|NO_SLICING_FOUND"
+  extensions/p4_tests/p4_16/stf/cast_widening_add.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: Unable to slice the following group of fields due to unsatisfiable constraints: .*|NO_SLICING_FOUND"
+  extensions/p4_tests/p4_16/errors/p4c-4346.p4
+)
