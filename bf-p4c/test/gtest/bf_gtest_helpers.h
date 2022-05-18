@@ -178,7 +178,7 @@ class TestCode {
      */
     enum class Hdr {None,       // You need to provide the 'package' - see min_control_shell().
                     TofinoMin,  // For building an empty tofino_shell() - add only what you need.
-                    Tofino1arch, Tofino2arch, Tofino3arch,  // The regular header files.
+                    Tofino1arch, Tofino2arch, Tofino3arch, Tofino5arch,  // The regular header files
                     V1model_2018, V1model_2020};  // The regular header files.
 
     /** See test_bf_gtest_helpers.cpp for example usage of 'TestCode'.
@@ -249,6 +249,7 @@ class TestCode {
     /// P4Code is always available, xxxAsm code is only availble post `Pass::FullBackend`.
     enum class CodeBlock {P4Code,                     // P4Code combines with `blockMarker`.
                           PhvAsm, MauAsm,             // Ingress & Egress.
+                          HdrAsm,                     // Ingress & Egress.
                           ParserIAsm, DeparserIAsm,   // Ingress.
                           ParserEAsm, DeparserEAsm};  // Egress.
 

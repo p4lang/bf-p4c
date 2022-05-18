@@ -1401,6 +1401,10 @@ if (ENABLE_TESTING)
   file(WRITE  "${P4C_BINARY_DIR}/p4headers_tofino3.p4" "${TOFINO3_SPECS}")
   file(READ   "${BFN_P4INCLUDE_DIR}/tofino3_arch.p4"      TOFINO3_ARCH)
   file(APPEND "${P4C_BINARY_DIR}/p4headers_tofino3.p4" "${TOFINO3_ARCH}")
+  file(READ   "${BFN_P4INCLUDE_DIR}/tofino5.p4"           TOFINO5_SPECS)
+  file(WRITE  "${P4C_BINARY_DIR}/p4headers_tofino5.p4" "${TOFINO5_SPECS}")
+  file(READ   "${BFN_P4INCLUDE_DIR}/tofino5arch.p4"       TOFINO5_ARCH)
+  file(APPEND "${P4C_BINARY_DIR}/p4headers_tofino5.p4" "${TOFINO5_ARCH}")
   add_custom_command (OUTPUT "${P4HEADERS_H}"
       COMMAND ${CMAKE_COMMAND} -E echo "// auto generated file, do not edit" >  "${P4HEADERS_H}"
       COMMAND ${CMAKE_COMMAND} -E echo "#ifndef P4HEADERS_H_"                >> "${P4HEADERS_H}"
@@ -1411,6 +1415,7 @@ if (ENABLE_TESTING)
       COMMAND ${CMAKE_COMMAND} -E echo "    std::string tofino1arch_p4;"     >> "${P4HEADERS_H}"
       COMMAND ${CMAKE_COMMAND} -E echo "    std::string tofino2arch_p4;"     >> "${P4HEADERS_H}"
       COMMAND ${CMAKE_COMMAND} -E echo "    std::string tofino3arch_p4;"     >> "${P4HEADERS_H}"
+      COMMAND ${CMAKE_COMMAND} -E echo "    std::string tofino5arch_p4;"     >> "${P4HEADERS_H}"
       COMMAND ${CMAKE_COMMAND} -E echo "    std::string v1model_2018_p4;"    >> "${P4HEADERS_H}"
       COMMAND ${CMAKE_COMMAND} -E echo "    std::string v1model_2020_p4;"    >> "${P4HEADERS_H}"
       COMMAND ${CMAKE_COMMAND} -E echo "};"                                  >> "${P4HEADERS_H}"
@@ -1431,6 +1436,8 @@ if (ENABLE_TESTING)
       COMMAND ${CMAKE_C_COMPILER} -E -x c "${P4C_BINARY_DIR}/p4headers_tofino2.p4" ${I_P4INCLUDE} >> "${P4HEADERS_CPP}"
       COMMAND ${CMAKE_COMMAND} -E echo "    )\"}, std::string{R\"("                               >> "${P4HEADERS_CPP}"
       COMMAND ${CMAKE_C_COMPILER} -E -x c "${P4C_BINARY_DIR}/p4headers_tofino3.p4" ${I_P4INCLUDE} >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_COMMAND} -E echo "    )\"}, std::string{R\"("                               >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_C_COMPILER} -E -x c "${P4C_BINARY_DIR}/p4headers_tofino5.p4" ${I_P4INCLUDE} >> "${P4HEADERS_CPP}"
       COMMAND ${CMAKE_COMMAND} -E echo "    )\"}, std::string{R\"("                               >> "${P4HEADERS_CPP}"
       COMMAND ${CMAKE_C_COMPILER} -E -x c -DV1MODEL_VERSION=20180101
                                        "${P4C_SOURCE_DIR}/p4include/v1model.p4" ${I_P4INCLUDE}    >> "${P4HEADERS_CPP}"
@@ -1493,6 +1500,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_packing.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/fold_constant_hashes.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/gateway_control_flow.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/hdr_asm.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/hidden_merged.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/input_xbar.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/instruction_selection.cpp

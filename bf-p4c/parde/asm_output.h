@@ -46,12 +46,11 @@ struct DeparserAsmOutput {
 
 /// Helper that can generate header assembly and write it to an output stream.
 struct HeaderAsmOutput {
-    HeaderAsmOutput(const IR::BFN::Pipe* pipe, const ParserHeaderSequences &seqs);
+    explicit HeaderAsmOutput(const ParserHeaderSequences &seqs);
 
  private:
     friend std::ostream& operator<<(std::ostream&, const HeaderAsmOutput&);
 
-    const PhvInfo               &phv;
     const ParserHeaderSequences &seqs;
 };
 

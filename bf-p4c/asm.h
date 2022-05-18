@@ -39,8 +39,8 @@ class AsmOutput : public Inspector {
     const MauPower::FinalizeMauPredDepsPower* power_and_mpr;
     const TableSummary &tbl_summary;
     const LiveRangeReport *live_range_report;
-    const BFN_Options &options;
     const ParserHeaderSequences &prsr_header_seqs;
+    const BFN_Options &options;
     /// Tell this pass whether it is called after a succesful compilation
     bool               _successfulCompile = true;
     std::string ghostPhvContainer() const {
@@ -108,7 +108,7 @@ class AsmOutput : public Inspector {
                         pipe->ghost_thread.ghost_parser != nullptr);
 #if HAVE_FLATROCK
                 if (Device::currentDevice() == Device::FLATROCK)
-                    out << HeaderAsmOutput(pipe, prsr_header_seqs);
+                    out << HeaderAsmOutput(prsr_header_seqs);
 #endif
                 out << ParserAsmOutput(pipe, phv, INGRESS);
 #if HAVE_FLATROCK

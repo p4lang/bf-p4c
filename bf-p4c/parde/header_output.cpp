@@ -5,16 +5,15 @@
 
 namespace {
 
-static int numHeaderIDs = 255;
-static int numHeaderSeqs = 2;
-static int numHeadersPerSeq = 10;
-static int payloadHeaderID = 254;
+static unsigned int numHeaderIDs = 255;
+static unsigned int numHeaderSeqs = 2;
+static unsigned int numHeadersPerSeq = 10;
+static unsigned int payloadHeaderID = 254;
 static cstring payloadHeaderName = "payload";
 
 }  // namespace
 
-HeaderAsmOutput::HeaderAsmOutput(const IR::BFN::Pipe* pipe, const ParserHeaderSequences& seqs)
-    : phv(phv), seqs(seqs) {}
+HeaderAsmOutput::HeaderAsmOutput(const ParserHeaderSequences& seqs) : seqs(seqs) {}
 
 /**
  * @brief Outputs the header configuration for Flatrock+
@@ -34,7 +33,7 @@ std::ostream& operator<<(std::ostream& out, const HeaderAsmOutput& headerOut) {
 
     // Header map: names to IDs
     out << indent++ << "map:" << std::endl;
-    int id = 0;
+    unsigned int id = 0;
     for (const auto& hdr : seqs.headers.at(INGRESS))
         out << indent << hdr << ": " << id++ << std::endl;
     out << indent << payloadHeaderName << ": " << payloadHeaderID << std::endl;

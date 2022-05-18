@@ -395,6 +395,10 @@ TestCode::TestCode(Hdr header, std::string code,
             o.target = "tofino3";
             o.arch = "t3na";
             break;
+        case Hdr::Tofino5arch:
+            o.target = "tofino5";
+            o.arch = "t5na";
+            break;
     }
 
     std::vector<char*> argv;
@@ -423,6 +427,9 @@ TestCode::TestCode(Hdr header, std::string code,
             break;
         case Hdr::Tofino3arch:
             source << p4headers().tofino3arch_p4;
+            break;
+        case Hdr::Tofino5arch:
+            source << p4headers().tofino5arch_p4;
             break;
         case Hdr::V1model_2018:
             source << p4headers().v1model_2018_p4;
@@ -618,6 +625,9 @@ std::string TestCode::extract_asm(CodeBlock blk_type) const {
             break;
         case CodeBlock::MauAsm:
             oss << *mauasm << "\n";
+            break;
+        case CodeBlock::HdrAsm:
+            oss << HeaderAsmOutput(backend->get_parser_hdr_seqs());
             break;
         case CodeBlock::ParserIAsm:
             oss << ParserAsmOutput(pipe, backend->get_phv(), INGRESS);
