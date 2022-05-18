@@ -312,22 +312,34 @@ const IR::MethodCallExpression *IR::MAU::HashFunction::hash_to_mce(const IR::Exp
             error_alg_name = "random";
             break;
         case 2:
+            conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("xor8"));
+            error_alg_name = "xor8";
+            break;
+        case 3:
+            conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("xor16"));
+            error_alg_name = "xor16";
+            break;
+        case 4:
+            conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("xor32"));
+            error_alg_name = "xor32";
+            break;
+        case 5:
             conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("crc_8"));
             error_alg_name = "crc_8";
             break;
-        case 3:
+        case 6:
             conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("crc_16"));
             error_alg_name = "crc_16";
             break;
-        case 4:
+        case 7:
             conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("crc_32"));
             error_alg_name = "crc_32";
             break;
-        case 5:
+        case 8:
             conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("crc_64"));
             error_alg_name = "crc_64";
             break;
-        case 6:
+        case 9:
             conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("csum16"));
             error_alg_name = "csum16";
             break;
