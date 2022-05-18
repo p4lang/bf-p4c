@@ -892,6 +892,13 @@ class AddParserPad : public Modifier {
             new IR::ListExpression(IR::Vector<IR::Expression>({isNegative, isZero})),
             IR::Vector<IR::SelectCase>({scZeroZero, scWildcard}));
 
+        // Possible select expression that does not loop back to _loop state again
+        // in case the stack only has 1 item which would create a data re-assignment
+        // Also when the stack has only 1 item we do not need to loop at all
+        auto *se_no_loop = new IR::SelectExpression(
+            new IR::ListExpression(IR::Vector<IR::Expression>({isNegative, isZero})),
+            IR::Vector<IR::SelectCase>({scWildcard}));
+
         // Operation: decrement counter
         auto *decArgs = new IR::Vector<IR::Argument>(
             {new IR::Argument(new IR::Constant(IR::Type_Bits::get(8), ctrShiftAmt))});
@@ -920,11 +927,12 @@ class AddParserPad : public Modifier {
                                                  IR::IndexedVector<IR::StatOrDecl>(), se);
 
         // Loop state that decrements and extracts (accept only)
+        // We only need to loop when we need more than 1 state extracts
         auto *stateLoop = new IR::ParserState(
             prsrCheckLoopState[dst],
             new IR::Annotations(
                 IR::Vector<IR::Annotation>({new IR::Annotation("max_loop_depth", loopStates)})),
-            IR::IndexedVector<IR::StatOrDecl>({decOp}), se);
+            IR::IndexedVector<IR::StatOrDecl>({decOp}), (prsrNumPadStates > 1) ? se : se_no_loop);
         if (dst == IR::ParserState::accept) stateLoop->components.push_back(extOp);
 
         prsr->states.push_back(stateInitial);

@@ -885,11 +885,13 @@ set (BF_P4C_GRAPHS_HDRS
   ${P4C_SOURCE_DIR}/backends/graphs/controls.h
   ${P4C_SOURCE_DIR}/backends/graphs/graphs.h
   ${P4C_SOURCE_DIR}/backends/graphs/parsers.h
+  ${P4C_SOURCE_DIR}/backends/graphs/graph_visitor.h
   )
 set (BF_P4C_GRAPHS_SRCS
   ${P4C_SOURCE_DIR}/backends/graphs/controls.cpp
   ${P4C_SOURCE_DIR}/backends/graphs/graphs.cpp
   ${P4C_SOURCE_DIR}/backends/graphs/parsers.cpp
+  ${P4C_SOURCE_DIR}/backends/graphs/graph_visitor.cpp
   )
 
 set (p4include_HEADERS

@@ -1600,6 +1600,9 @@ p4c_add_xfail_reason("tofino"
   "Compiler Bug.*: .*unexpected statement with call"
   testdata/p4_16_samples/issue2205-1-bmv2.p4
   testdata/p4_16_samples/issue3001-1.p4
+  # p4c update 2022-05-09
+  testdata/p4_16_samples/issue2291-bmv2.p4
+  testdata/p4_16_samples/issue2355.p4
 )
 
 p4c_add_xfail_reason("tofino"

@@ -71,6 +71,7 @@
 #include "asm.h"
 #include "backend.h"
 #include "backends/graphs/controls.h"
+#include "backends/graphs/graph_visitor.h"
 #include "bf-p4c/backend.h"
 #include "bf-p4c/common/pragma/collect_global_pragma.h"
 #include "bf-p4c/control-plane/runtime.h"
@@ -484,6 +485,14 @@ int main(int ac, char **av) {
                 // FIXME(cc): this should move to the manifest graph generation to work per-pipe
                 graphs::ControlGraphs cgen(&substitute.refMap, &substitute.typeMap, graphsDir);
                 toplevel->getMain()->apply(cgen);
+                // p4c frontend only saves the parser graphs into controlGraphsArray
+                // (and does not output them)
+                // Therefore we just create empty parser graphs
+                std::vector<graphs::Graphs::Graph *> emptyParser;
+                // And call graph visitor that actually outputs the graphs from the arrays
+                cstring filePath("");
+                graphs::Graph_visitor gvs(graphsDir, true, false, false, filePath);
+                gvs.process(cgen.controlGraphsArray, emptyParser);
                 toplevel->getMain()->apply(manifest);  // generate entries for controls in manifest
             }
             LOG2("Generating parser graphs");

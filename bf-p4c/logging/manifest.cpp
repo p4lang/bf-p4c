@@ -5,6 +5,7 @@
 #include "manifest.h"
 #include "backends/graphs/controls.h"
 #include "backends/graphs/parsers.h"
+#include "backends/graphs/graph_visitor.h"
 #include "bf-p4c/common/run_id.h"
 #include "bf-p4c/version.h"
 #include "ir/ir.h"
@@ -18,6 +19,14 @@ void Manifest::postorder(const IR::BFN::TnaParser *parser) {
         auto graphsDir = BFNContext::get().getOutputDirectory("graphs", _pipeId);
         graphs::ParserGraphs pgen(_refMap, _typeMap, graphsDir);
         parser->apply(pgen);
+        // p4c frontend only saves the parser graphs into parserGraphsArray
+        // (and does not output them)
+        // Therefore we just create empty control graphs
+        std::vector<graphs::Graphs::Graph *> emptyControl;
+        // And call graph visitor that actually outputs the graphs from the arrays
+        cstring filePath("");
+        graphs::Graph_visitor gvs(graphsDir, true, false, false, filePath);
+        gvs.process(emptyControl, pgen.parserGraphsArray);
         addGraph(_pipeId, "parser", parser->name, parser->thread);
     }
 }
@@ -32,6 +41,14 @@ void Manifest::postorder(const IR::BFN::TnaControl *control) {
         // auto graphsDir = BFNContext::get().getOutputDirectory("graphs", _pipeId);
         // graphs::ControlGraphs cgen(_refMap, _typeMap, graphsDir);
         // control->apply(cgen);
+        // p4c frontend only saves the parser graphs into controlGraphsArray
+        // (and does not output them)
+        // Therefore we just create empty parser graphs
+        // std::vector<graphs::Graphs::Graph *> emptyParser;
+        // And call graph visitor that actually outputs the graphs from the arrays
+        // cstring filePath("");
+        // graphs::Graph_visitor gvs(graphsDir, true, false, false, filePath);
+        // gvs.process(cgen.controlGraphsArray, emptyParser);
         addGraph(_pipeId, "control", controlName, control->thread);
     }
 }

@@ -3,12 +3,24 @@
 
 #include <boost/graph/adjacency_list.hpp>
 #include "backends/graphs/parsers.h"
+#include "backends/graphs/controls.h"
+#include "backends/graphs/graph_visitor.h"
 
 /// Extends p4c's parser graph with various algorithms
 class P4ParserGraphs: public graphs::ParserGraphs {
     void postorder(const IR::P4Parser* parser) override {
-        if (dumpDot)
+        if (dumpDot) {
+            // Create parser dot, that is saved into parserGraphsArray
             graphs::ParserGraphs::postorder(parser);
+            // Create empty control graphs
+            std::vector<graphs::Graphs::Graph *> emptyControl;
+            // And call graph visitor that actually outputs the graphs from the arrays
+            cstring filePath("");
+            graphs::Graph_visitor gvs(cstring(), true, false, false, filePath);
+            gvs.process(emptyControl, parserGraphsArray);
+            // Clear the array so it won't stay there if another parser is outputted
+            parserGraphsArray.clear();
+        }
     }
 
     void end_apply() override {
