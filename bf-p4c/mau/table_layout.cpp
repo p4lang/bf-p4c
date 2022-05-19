@@ -84,6 +84,7 @@ void LayoutChoices::add_payload_gw_layout(const IR::MAU::Table *tbl,
     lo.layout.immediate_bits = base_option.layout.immediate_bits;
     lo.action_format_index = base_option.action_format_index;
     lo.way.match_groups = tbl->entries_list->entries.size();
+    BUG_CHECK(tbl->entries_list->entries.size(), "entry size of a table should not be 0");
     lo.way.width = 1;
     lo.layout.overhead_bits = base_option.layout.overhead_bits * lo.way.match_groups;
     auto ft = ActionData::FormatType_t::default_for_table(tbl);

@@ -487,3 +487,9 @@ p4c_add_xfail_reason("tofino3"
   "error: Incompatible outputs in RegisterAction: mem_lo and mem_hi"
   extensions/p4_tests/p4_16/compile_only/p4c-3220_1.p4
 )
+
+#P4C-4498
+p4c_add_xfail_reason("tofino3"
+  "error: table .* should not have empty const entries list."
+  extensions/p4_tests/p4_16/compile_only/p4c-4498.p4
+)

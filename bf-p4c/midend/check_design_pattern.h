@@ -119,6 +119,22 @@ class CheckDirectResourceInvocation: public PassManager {
     }
 };
 
+/**
+ * \class CheckTableConstEntries
+ * \ingroup CheckTableConstEntries
+ * It does not make any sense to have an empty const entry list when defining a table. If const
+ * entries is defined, table's entries size is based on the size of const entries and cannot be
+ * modified during runtime. Based on P4_16 language spec v1.2.2, there is only definition of const
+ * entries, but in the future, it is possible that both mutable and immutable enteris can be
+ * defined. Therefore, if P4_16 spec changes, this pass should be changed accordingly.
+ */
+
+class CheckTableConstEntries : public Inspector {
+ public:
+    CheckTableConstEntries() {}
+    bool preorder(const IR::P4Table *) override;
+};
+
 
 /**
  * \class CheckDesignPattern
@@ -127,11 +143,12 @@ class CheckDirectResourceInvocation: public PassManager {
  */
 class CheckDesignPattern : public PassManager {
  public:
-     CheckDesignPattern(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
-         passes.push_back(new CheckExternValidity(refMap, typeMap));
-         if (BackendOptions().arch != "v1model")
-            passes.push_back(new CheckDirectResourceInvocation(refMap, typeMap));
-     }
+    CheckDesignPattern(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
+        passes.push_back(new CheckExternValidity(refMap, typeMap));
+        if (BackendOptions().arch != "v1model")
+        passes.push_back(new CheckDirectResourceInvocation(refMap, typeMap));
+        passes.push_back(new CheckTableConstEntries);
+    }
 };
 
 }  // namespace BFN
