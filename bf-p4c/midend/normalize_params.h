@@ -8,7 +8,7 @@
 
 /** At the P4 level, the TNA architecture provides an interface for users to
  * define custom parsers/controls/deparsers that are parameterized on
- * architecture-supplied inputs and outputs.  For example, a user might supply
+ * architecture-supplied inputs and outputs. For example, a user might supply
  * the following ingress parser and ingress MAU control:
  *
  *  parser ingress_parser(

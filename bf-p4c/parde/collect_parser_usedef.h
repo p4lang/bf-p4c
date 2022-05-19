@@ -559,10 +559,6 @@ struct CollectParserUseDef : PassManager {
             if (!select)
                 return false;
 
-            if (!parser_use_def[parser].use_to_defs.count(use))
-                ::fatal_error("Use of uninitialized parser value in a select statement %1%. "
-                              , use->print());
-
             le_bitrange bits;
             auto f = phv.field(save->source, &bits);
             // Check if the value used in select is defined on each path to this state
@@ -573,9 +569,14 @@ struct CollectParserUseDef : PassManager {
                 !is_source_extracted_on_each_path_to_state(graph, state, f)) {
                 ::fatal_error("Value used in select statement needs to be set "
                               "from input packet (not a constant) for every possible path "
-                              "through the parse graph. This does not hold true for: %1%"
-                              , use->print());
+                              "through the parse graph. This does not hold true for: %1%",
+                              use->print());
             }
+
+            if (!parser_use_def[parser].use_to_defs.count(use))
+                ::fatal_error("Use of uninitialized parser value in a select statement %1%. ",
+                              use->print());
+
 
             LOG4(parser_use_def[parser].print(use));
 

@@ -113,6 +113,12 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue3225.p4
 )
 
+# P4C-2943: Parser value used by select statement is only initialised from constants
+p4c_add_xfail_reason("tofino"
+  "error: Value used in select statement needs to be set from input packet"
+  extensions/p4_tests/p4_16/errors/p4c-2943.p4
+)
+
 p4c_add_xfail_reason("tofino"
   "error: .*: unsupported 64-bit select"
   extensions/p4_tests/p4_16/errors/p4c-2156.p4

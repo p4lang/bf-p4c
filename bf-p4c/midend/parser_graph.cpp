@@ -79,7 +79,7 @@ P4ParserGraphs::topological_sort(const IR::P4Parser* parser) const {
 
   typedef boost::graph_traits<BGraph>::vertex_descriptor Vertex;
 
-  std::vector<Vertex> sorted;;
+  std::vector<Vertex> sorted;
   boost::topological_sort(g, std::back_inserter(sorted));
 
   std::vector<cstring> rv;
