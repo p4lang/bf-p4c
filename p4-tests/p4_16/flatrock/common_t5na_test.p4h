@@ -18,6 +18,7 @@ control ingress(in headers hdrs, inout metadata meta,
                 in ingress_intrinsic_metadata_t ig_intr_md,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
     apply {
+        ig_intr_tm_md.ucast_egress_pipe = ig_intr_md.ingress_pipe;
         ig_intr_tm_md.ucast_egress_port = ig_intr_md.ingress_port;
     }
 }

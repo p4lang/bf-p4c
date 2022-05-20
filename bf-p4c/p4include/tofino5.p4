@@ -104,6 +104,8 @@ error {
 struct ingress_intrinsic_metadata_t {
     bit<1> pktgen_flag;                 // Flag distinguishing original packets
                                         // from PktGen packets.
+    PipeId_t ingress_pipe;              // Ingress physical pipe.
+                                        // this field is passed to the deparser
     PortId_t ingress_port;              // Ingress physical port id.
                                         // this field is passed to the deparser
     bit<48> ingress_mac_tstamp;         // Ingress IEEE 1588 timestamp (in nsec)
@@ -112,6 +114,9 @@ struct ingress_intrinsic_metadata_t {
 
 @__intrinsic_metadata
 struct ingress_intrinsic_metadata_for_tm_t {
+    PipeId_t ucast_egress_pipe;         // Egress pipe for unicast packets. Must
+                                        // be presented to TM for unicast.
+
     PortId_t ucast_egress_port;         // Egress port for unicast packets. must
                                         // be presented to TM for unicast.
 

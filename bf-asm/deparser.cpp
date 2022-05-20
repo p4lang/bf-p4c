@@ -419,7 +419,11 @@ void Deparser::process() {
                         pov_use[intrin.type->gress][pov->reg.uid] = 1; } } } }
         if (intrin.vals.size() > (size_t)intrin.type->max)
             error(intrin.lineno, "Too many values for %s", intrin.type->name.c_str()); }
-    if (phv_use[INGRESS].intersects(phv_use[EGRESS]))
+    if (phv_use[INGRESS].intersects(phv_use[EGRESS])
+#ifdef HAVE_FLATROCK
+        && options.target != Target::Flatrock::tag
+#endif  /* HAVE_FLATROCK */
+            )
         error(lineno[INGRESS], "Registers used in both ingress and egress in deparser: %s",
               Phv::db_regset(phv_use[INGRESS] & phv_use[EGRESS]).c_str());
     for (auto &digest : digests) {

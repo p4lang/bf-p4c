@@ -1156,6 +1156,9 @@ deparser <thread>:
     mirror: <digest-params>
     egress_unicast_port: <phv-location> [ ':' <pov-bit> ]
         # specifies the port to write to
+    # FIXME: should this be squashed into the port?
+    egress_unicast_pipe: <phv-location> [ ':' <pov-bit> ]
+        # specifies the port to write to
     drop_ctl: <phv-location> [ ':' <pov-bit> ]
     # jbay only, ingress or egress
     afc: '{' <phv->location> ':' <pov-bit> '}'

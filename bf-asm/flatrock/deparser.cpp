@@ -47,6 +47,7 @@ MDP_INTRINSIC(icos, tmm_ext_ram.tmm_ext[0], YES)
 MDP_INTRINSIC_RENAME(copy_to_cpu_cos, tmm_ext_ram.tmm_ext[0], c2c_cos, YES)
 // TODO: c2c_qid
 MDP_INTRINSIC_RENAME(mirr_icos, tmm_ext_ram.tmm_ext[0], mrr_cos, YES)
+MDP_INTRINSIC_RENAME(egress_unicast_pipe, tmm_ext_ram.tmm_ext[0], epipe_id, YES)
 MDP_INTRINSIC_RENAME(egress_unicast_port, tmm_ext_ram.tmm_ext[0], epipe_port, YES)
 MDP_INTRINSIC_RENAME(qid, tmm_ext_ram.tmm_ext[0], eport_qid, YES)
 // TODO: epipe_id -- split from egress_unicast_port?

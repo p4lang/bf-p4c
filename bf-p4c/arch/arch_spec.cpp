@@ -191,6 +191,9 @@ CloudbreakArchSpec::CloudbreakArchSpec() : ArchSpec() {
 
 #if HAVE_FLATROCK
 void FlatrockArchSpec::setFlatrockIntrinsicTypes() {
+    // ingress_intrinsic_metadata_for_tm
+    add_tm_md(INGRESS, IntrinsicField("ucast_egress_pipe", "egress_unicast_pipe"));
+
     parser_intrinsic_types[INGRESS] = {
         { "ingress_intrinsic_metadata_t", "ingress_intrinsic_metadata" },
         { "ingress_intrinsic_metadata_for_tm_t", "ingress_intrinsic_metadata_for_tm" }
