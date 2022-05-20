@@ -1,0 +1,21 @@
+{
+	"name": "Jarvis",
+	"build": {
+		"dockerfile": "../docker/vscode_docker/Dockerfile",
+		"target": "jarvis-vscode",
+		"context": "..",
+		"args": {
+			"USER": "${localEnv:USER}",
+		}
+	},
+	"remoteUser": "${localEnv:USER}",
+    "runArgs": [
+		"--privileged",
+	],
+	"extensions": [
+		"ms-vscode.cpptools",
+		"ms-vscode.cmake-tools",
+	],
+	"mounts": [
+	],
+}
