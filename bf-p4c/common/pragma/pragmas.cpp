@@ -609,9 +609,26 @@ const char *PragmaDontMerge::description = "The specific parser state will not b
                                            "any other state";
 const char *PragmaDontMerge::help = "@dontmerge gress state state_name";
 
-const char *PragmaNotExtractedInEgress::name = "not_extracted_in_egress";  // FIXME
-const char *PragmaNotExtractedInEgress::description = "To be documented";
-const char *PragmaNotExtractedInEgress::help = "To be documented";
+const char *PragmaNotExtractedInEgress::name = "not_extracted_in_egress";
+const char *PragmaNotExtractedInEgress::description = "Removes extracts of the annotated header "
+                                                      "from the egress parser instance";
+const char *PragmaNotExtractedInEgress::help = "@pragma not_extracted_in_egress "
+    "+ attached to P4 header definition\n"
+    "\n"
+    "Workaround introduced to deal with “v1model” architecture limitation of only "
+    "supporting a single parser block that is shared by both ingress and egress. "
+    "If the header annotated with this pragma appears in any extracts in the "
+    "parser definition, those extracts are removed from the egress instance of "
+    "that parser only. The ingress instance of that parser remains unchanged.\n"
+    "\n"
+    "However, its use is not restricted to “v1model” architecture programs: It "
+    "still has the same behaviour when used in programs using architectures that "
+    "support different parser blocks in ingress and egress, such as “psa” and "
+    "“tna”. Any extracts for the header annotated with this pragma are also "
+    "removed from the egress parser instance, but in those cases the programmer "
+    "could simply remove the extracts from the egress parser definition instead "
+    "of using this pragma, which makes its use redundant in non “v1model” "
+    "architecture programs.";
 
 const char *PragmaDoNotBridge::name = "pa_do_not_bridge";
 const char *PragmaDoNotBridge::description = "Do not bridge the annotated metadata field.";
