@@ -51,13 +51,14 @@ def get_delta(new_value, old_value, delta_format):
 
 
 class Metric:
-    def __init__(self, caption, path, value = 0, limit = 1, delta_format = ' %'):
+    def __init__(self, caption, path, value=0, limit=1, delta_format=' %', warning_only = False):
         self.caption = caption            # display caption
         self.path = path                  # metrics.json path -- for now a list of json labels.
                                           # Can be an XPath (or the json equivalent).
         self.value = value                # metric value
         self.limit = limit                # limit
         self.delta_format = delta_format  # whether the delta is an absolute difference or percentage
+        self.warning_only = warning_only  # don't fail, only warn
 
     def setValue(self, value):
         self.value = value
@@ -87,7 +88,8 @@ class Metric:
         result = 0
         delta = self.compare(metric)
         if delta > self.limit:
-            result = -1
+            if not self.warning_only:
+                result = -1
             print(self.caption, delta, 'exceeded the limit of', self.limit, self.delta_format)
         elif delta < 0:
             print(self.caption, 'improved!')
@@ -108,7 +110,7 @@ class CoreMetrics():
         self.metrics['mau_power'] = Metric('MAU power estimate', ('mau', 'power', 'estimate'), limit = 10.0)
         self.metrics['parser_ingress_tcam_rows'] = Metric('Parser ingress tcam rows', ('parser', 'ingress', 'tcam_rows'), limit = 10.0)
         self.metrics['parser_egress_tcam_rows'] = Metric('Parser egress tcam rows', ('parser', 'egress', 'tcam_rows'), limit = 10.0)
-        self.metrics['compilation_time'] = Metric('Compilation time', ('compilation_time', ), limit = 40.0)
+        self.metrics['compilation_time'] = Metric('Compilation time', ('compilation_time', ), limit = 10.0, warning_only=True)
 
     def display(self):
         dt = PrettyTable(['Metric', 'Value'])
