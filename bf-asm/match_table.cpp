@@ -156,7 +156,7 @@ void MatchTable::pass0() {
     // redundant with (and supercedes) choose_logical_id in pass2.  That function is much
     // better, taking dependencies into account, so logical_id should not be allocated here
     alloc_id("logical", logical_id, stage->pass1_logical_id,
-             LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use[logical_id_set(gress)]);
+             LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
 #endif
     if (action.check() && action->set_match_table(this, !action.is_direct_call()) != ACTION)
         error(action.lineno, "%s is not an action table", action->name());

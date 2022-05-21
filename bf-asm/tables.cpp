@@ -315,11 +315,11 @@ void Table::setup_layout(std::vector<Layout> &layout, const VECTOR(pair_t) &data
 
 void Table::setup_logical_id() {
     if (logical_id >= 0) {
-        if (Table *old = stage->logical_id_use[logical_id_set(gress)][logical_id]) {
+        if (Table *old = stage->logical_id_use[logical_id]) {
             error(lineno, "table %s wants logical id %d:%d", name(),
                   stage->stageno, logical_id);
             error(old->lineno, "already in use by %s", old->name()); }
-        stage->logical_id_use[logical_id_set(gress)][logical_id] = this; }
+        stage->logical_id_use[logical_id] = this; }
 }
 
 void Table::setup_maprams(value_t &v) {
@@ -846,9 +846,9 @@ bool Table::choose_logical_id(const slist<Table *> *work) {
             n->logical_id >= 0 && n->logical_id <= max_id) {
             max_id = n->logical_id - 1; } });
     for (int id = min_id; id <= max_id; ++id) {
-        if (!stage->logical_id_use[logical_id_set(gress)][id]) {
+        if (!stage->logical_id_use[id]) {
             logical_id = id;
-            stage->logical_id_use[logical_id_set(gress)][id] = this;
+            stage->logical_id_use[id] = this;
             return true; } }
     error(lineno, "Can't find a logcial id for table %s", name());
     return false;
@@ -917,7 +917,7 @@ void Table::pass1() {
         // though it is not 'live' there.  It can also be reused (set) in that stage for use in
         // later stages.  This matches the range of stages we need to set timing regs for.
         for (int st = stage->stageno; st < last_stage; ++st) {
-            auto stg = Stage::stage(st);
+            auto stg = Stage::stage(gress, st);
             BUG_CHECK(stg);
             auto &prev = stg->long_branch_use[lb.first];
             if (prev && *prev != lb.second) {
@@ -926,7 +926,7 @@ void Table::pass1() {
             } else {
                 prev = &lb.second; }
             stg->long_branch_thread[gress] |= 1U << lb.first; }
-        auto last_stg = Stage::stage(last_stage);
+        auto last_stg = Stage::stage(gress, last_stage);
         BUG_CHECK(last_stg);
         last_stg->long_branch_thread[gress] |= 1U << lb.first;
         last_stg->long_branch_terminate |= 1U << lb.first; }

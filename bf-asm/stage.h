@@ -10,11 +10,6 @@
 #include "input_xbar.h"
 #include "bf-p4c/common/alloc.h"
 
-// Tofino shares logical IDS between all threads, while flatrock only shares ingress/ghost;
-// egress has its own distinct ids.
-#define MAX_LOGICAL_ID_SETS     2
-int logical_id_set(gress_t);
-
 class Stage_data {
     /* we encapsulate all the Stage non-static fields in a base class to automate the
      * generation of the move construtor properly */
@@ -32,7 +27,7 @@ class Stage_data {
     BFN::Alloc2D<Table *, SRAM_ROWS, 2>                      tcam_indirect_bus_use;
     BFN::Alloc2D<GatewayTable *, SRAM_ROWS, 2>               gw_unit_use;
     BFN::Alloc2D<GatewayTable *, SRAM_ROWS, 2>               gw_payload_use;
-    BFN::Alloc1D<Table *, LOGICAL_TABLES_PER_STAGE>          logical_id_use[MAX_LOGICAL_ID_SETS];
+    BFN::Alloc1D<Table *, LOGICAL_TABLES_PER_STAGE>          logical_id_use;
     BFN::Alloc1D<Table *, TCAM_TABLES_PER_STAGE>             tcam_id_use;
     ordered_map<InputXbar::Group, std::vector<InputXbar *>>  ixbar_use;
     BFN::Alloc1D<Table *, TCAM_XBAR_INPUT_BYTES>             tcam_ixbar_input;
@@ -96,9 +91,10 @@ class Stage : public Stage_data {
     static unsigned char action_bus_slot_size[ACTION_DATA_BUS_SLOTS];  // size in bits
 
     Stage();
+    Stage(const Stage &) = delete;
     Stage(Stage &&);
     ~Stage();
-    template<class TARGET> void output(json::map &ctxt_json);
+    template<class TARGET> void output(json::map &ctxt_json, bool egress_only = false);
     template<class REGS> void fixup_regs(REGS &regs);
     template<class REGS>
         void gen_configuration_cache_common(REGS &regs, json::vector &cfg_cache);
@@ -121,7 +117,7 @@ class Stage : public Stage_data {
     void verify_have_mpr(std::string key, int line_number);
     static int first_table(gress_t gress);
     static unsigned end_of_pipe() { return Target::END_OF_PIPE(); }
-    static Stage *stage(int stageno);
+    static Stage *stage(gress_t gress, int stageno);
     void log_hashes(std::ofstream& out) const;
     bitvec imem_use_all() const;
 };

@@ -72,6 +72,7 @@
     M(int, DEPARSER_MAX_POV_PER_USE) \
     M(int, DYNAMIC_CONFIG) \
     M(int, DYNAMIC_CONFIG_INPUT_BITS) \
+    M(bool, EGRESS_SEPARATE) \
     M(int, END_OF_PIPE) \
     M(int, GATEWAY_PAYLOAD_GROUPS) \
     M(bool, GATEWAY_SINGLE_XBAR_GROUP) \
@@ -85,6 +86,7 @@
     M(int, METER_ALU_GROUP_DATA_DELAY) \
     M(int, MINIMUM_INSTR_CONSTANT) \
     M(int, NUM_MAU_STAGES_PRIVATE) \
+    M(int, NUM_EGRESS_STAGES_PRIVATE) \
     M(int, NUM_PARSERS) \
     M(int, NUM_PIPES) \
     M(bool, OUTPUT_STAGE_EXTENSION_PRIVATE) \
@@ -129,6 +131,11 @@ class Target {
 
     static int NUM_MAU_STAGES() {
         return numMauStagesOverride ? numMauStagesOverride : NUM_MAU_STAGES_PRIVATE();
+    }
+    static int NUM_EGRESS_STAGES() {
+        int egress_stages = NUM_EGRESS_STAGES_PRIVATE();
+        return numMauStagesOverride && numMauStagesOverride < egress_stages
+               ? numMauStagesOverride : egress_stages;
     }
 
     static int OUTPUT_STAGE_EXTENSION() {
@@ -205,6 +212,7 @@ class Target::Tofino : public Target {
         PARSER_DEPTH_MAX_BYTES_EGRESS = (((1<<10)-1)*16),
         MATCH_BYTE_16BIT_PAIRS = true,
         NUM_MAU_STAGES_PRIVATE = 12,
+        NUM_EGRESS_STAGES_PRIVATE = NUM_MAU_STAGES_PRIVATE,
         ACTION_INSTRUCTION_MAP_WIDTH = 7,
         DEPARSER_CHECKSUM_UNITS = 6,
         DEPARSER_CONSTANTS = 0,
@@ -213,6 +221,7 @@ class Target::Tofino : public Target {
         DEPARSER_MAX_FD_ENTRIES = 192,
         DYNAMIC_CONFIG = 0,
         DYNAMIC_CONFIG_INPUT_BITS = 0,
+        EGRESS_SEPARATE = false,
         END_OF_PIPE = 0xff,
         GATEWAY_PAYLOAD_GROUPS = 1,
         GATEWAY_SINGLE_XBAR_GROUP = true,
@@ -336,6 +345,7 @@ class Target::JBay : public Target {
         NUM_MAU_STAGES_PRIVATE = 20,
         OUTPUT_STAGE_EXTENSION_PRIVATE = 0,
 #endif
+        NUM_EGRESS_STAGES_PRIVATE = NUM_MAU_STAGES_PRIVATE,
         ACTION_INSTRUCTION_MAP_WIDTH = 8,
         DEPARSER_CHECKSUM_UNITS = 8,
         DEPARSER_CONSTANTS = 8,
@@ -349,6 +359,7 @@ class Target::JBay : public Target {
         DEPARSER_MAX_FD_ENTRIES = DEPARSER_TOTAL_CHUNKS,
         DYNAMIC_CONFIG = 0,
         DYNAMIC_CONFIG_INPUT_BITS = 0,
+        EGRESS_SEPARATE = false,
         END_OF_PIPE = 0x1ff,
         GATEWAY_PAYLOAD_GROUPS = 5,
         GATEWAY_SINGLE_XBAR_GROUP = true,
@@ -406,6 +417,7 @@ class Target::Tofino2H : public Target::JBay {
     class Phv;
     enum {
         NUM_MAU_STAGES_PRIVATE = 6,
+        NUM_EGRESS_STAGES_PRIVATE = NUM_MAU_STAGES_PRIVATE,
         OUTPUT_STAGE_EXTENSION_PRIVATE = 1,
     };
 };
@@ -418,6 +430,7 @@ class Target::Tofino2M : public Target::JBay {
     class Phv;
     enum {
         NUM_MAU_STAGES_PRIVATE = 12,
+        NUM_EGRESS_STAGES_PRIVATE = NUM_MAU_STAGES_PRIVATE,
         OUTPUT_STAGE_EXTENSION_PRIVATE = 1,
     };
 };
@@ -429,7 +442,8 @@ class Target::Tofino2U : public Target::JBay {
     typedef Target::Tofino2U target_type;
     class Phv;
     enum {
-        NUM_MAU_STAGES_PRIVATE = 20
+        NUM_MAU_STAGES_PRIVATE = 20,
+        NUM_EGRESS_STAGES_PRIVATE = NUM_MAU_STAGES_PRIVATE,
     };
 };
 
@@ -440,7 +454,8 @@ class Target::Tofino2A0 : public Target::JBay {
     typedef Target::Tofino2A0 target_type;
     class Phv;
     enum {
-        NUM_MAU_STAGES_PRIVATE = 20
+        NUM_MAU_STAGES_PRIVATE = 20,
+        NUM_EGRESS_STAGES_PRIVATE = NUM_MAU_STAGES_PRIVATE,
     };
 };
 
@@ -516,6 +531,7 @@ class Target::Cloudbreak : public Target {
         NUM_MAU_STAGES_PRIVATE = 20,
         OUTPUT_STAGE_EXTENSION_PRIVATE = 0,
 #endif
+        NUM_EGRESS_STAGES_PRIVATE = NUM_MAU_STAGES_PRIVATE,
         ACTION_INSTRUCTION_MAP_WIDTH = 8,
         DEPARSER_CHECKSUM_UNITS = 8,
         DEPARSER_CONSTANTS = 8,
@@ -529,6 +545,7 @@ class Target::Cloudbreak : public Target {
         DEPARSER_MAX_FD_ENTRIES = DEPARSER_TOTAL_CHUNKS,
         DYNAMIC_CONFIG = 0,
         DYNAMIC_CONFIG_INPUT_BITS = 0,
+        EGRESS_SEPARATE = false,
         END_OF_PIPE = 0x1ff,
         GATEWAY_PAYLOAD_GROUPS = 5,
         GATEWAY_SINGLE_XBAR_GROUP = true,
@@ -644,10 +661,12 @@ class Target::Flatrock : public Target {
         MATCH_BYTE_16BIT_PAIRS = false,
 #ifdef EMU_OVERRIDE_STAGE_COUNT
         NUM_MAU_STAGES_PRIVATE = EMU_OVERRIDE_STAGE_COUNT,
+        NUM_EGRESS_STAGES_PRIVATE = EMU_OVERRIDE_STAGE_COUNT,
         OUTPUT_STAGE_EXTENSION_PRIVATE = 1,
 #else
         // max of ingress and egress stages (ingress=13, egress=11)
         NUM_MAU_STAGES_PRIVATE = 13,
+        NUM_EGRESS_STAGES_PRIVATE = 11,
         OUTPUT_STAGE_EXTENSION_PRIVATE = 0,
 #endif
         ACTION_INSTRUCTION_MAP_WIDTH = 8,
@@ -659,6 +678,7 @@ class Target::Flatrock : public Target {
         DEPARSER_MAX_FD_ENTRIES = 256,  // actuall up to 32 "strings", each up to 16 bytes
         DYNAMIC_CONFIG = 2,
         DYNAMIC_CONFIG_INPUT_BITS = 8,
+        EGRESS_SEPARATE = true,
         END_OF_PIPE = 0xfff,
         GATEWAY_PAYLOAD_GROUPS = 4,
         GATEWAY_SINGLE_XBAR_GROUP = false,

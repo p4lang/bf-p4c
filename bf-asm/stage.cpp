@@ -18,14 +18,6 @@ extern std::string asmfile_name;
 unsigned char Stage::action_bus_slot_map[ACTION_DATA_BUS_BYTES];
 unsigned char Stage::action_bus_slot_size[ACTION_DATA_BUS_SLOTS];
 
-int logical_id_set(gress_t gress) {
-#if HAVE_FLATROCK
-    if (options.target == FLATROCK)
-        return gress % 2;
-#endif
-    return 0;
-}
-
 class AsmStage : public Section {
     void start(int lineno, VECTOR(value_t) args);
     void input(VECTOR(value_t) args, value_t data);
@@ -38,12 +30,21 @@ class AsmStage : public Section {
     unsigned compute_latency(gress_t gress);
     AsmStage();
     ~AsmStage() {}
-    std::vector<Stage>  stage;
+    std::vector<Stage>  pipe;
+#if HAVE_FLATROCK
+    std::vector<Stage>  epipe;   // for separate egress pipe
+#endif
     static AsmStage     singleton_object;
     bitvec              stages_seen[NUM_GRESS_T];
+
  public:
-    static int numstages() { return singleton_object.stage.size(); }
-    static std::vector<Stage> &stages() { return singleton_object.stage; }
+    static int numstages() { return singleton_object.pipe.size(); }
+    static std::vector<Stage> &stages(gress_t gress) {
+#if HAVE_FLATROCK
+        if (gress == EGRESS && Target::EGRESS_SEPARATE())
+            return singleton_object.epipe;
+#endif
+        return singleton_object.pipe; }
 } AsmStage::singleton_object;
 
 #include "tofino/stage.cpp"                             // NOLINT(build/include)
@@ -75,9 +76,14 @@ AsmStage::AsmStage() : Section("stage") {
 }
 
 void AsmStage::start(int lineno, VECTOR(value_t) args) {
-    size_t oldsize = stage.size();
-    if (int(stage.size()) < Target::NUM_MAU_STAGES())
-        stage.resize(Target::NUM_MAU_STAGES());
+    size_t oldsize = pipe.size();
+    if (int(pipe.size()) < Target::NUM_MAU_STAGES())
+        pipe.resize(Target::NUM_MAU_STAGES());
+#if HAVE_FLATROCK
+    size_t oldesize = epipe.size();
+    if (Target::EGRESS_SEPARATE() && int(epipe.size()) < Target::NUM_EGRESS_STAGES())
+        epipe.resize(Target::NUM_EGRESS_STAGES());
+#endif
     if (args.size != 2 || args[0].type != tINT ||
         (args[1] != "ingress" && args[1] != "egress" &&
          (args[1] != "ghost" || options.target < JBAY))) {
@@ -85,20 +91,30 @@ void AsmStage::start(int lineno, VECTOR(value_t) args) {
             options.target >= JBAY ? ", ghost" : "");
     } else if (args[0].i < 0) {
         error(lineno, "invalid stage number");
-    } else if ((unsigned)args[0].i >= stage.size()) {
-        stage.resize(args[0].i + 1); }
-    for (size_t i = oldsize; i < stage.size(); i++)
-        stage[i].stageno = i;
+#if HAVE_FLATROCK
+    } else if (args[1] == "egress" && Target::EGRESS_SEPARATE()) {
+        if ((unsigned)args[0].i >= epipe.size())
+            epipe.resize(args[0].i + 1);
+#endif
+    } else if ((unsigned)args[0].i >= pipe.size()) {
+        pipe.resize(args[0].i + 1); }
+    for (size_t i = oldsize; i < pipe.size(); i++)
+        pipe[i].stageno = i;
+#if HAVE_FLATROCK
+    for (size_t i = oldesize; i < epipe.size(); i++)
+        epipe[i].stageno = i;
+#endif
 }
 
 void AsmStage::input(VECTOR(value_t) args, value_t data) {
     if (!CHECKTYPE(data, tMAP)) return;
     int stageno = args[0].i;
-    BUG_CHECK(stageno >= 0 && (unsigned)stageno < stage.size());
     gress_t gress = args[1] == "ingress" ? INGRESS
                   : args[1] == "egress" ? EGRESS
                   : args[1] == "ghost" && options.target >= JBAY ? GHOST
                   : (error(args[1].lineno, "Invalid thread %s", value_desc(args[1])), INGRESS);
+    auto &stage = stages(gress);
+    BUG_CHECK(stageno >= 0 && (unsigned)stageno < stage.size());
     if (stages_seen[gress][stageno])
         error(args[0].lineno, "Duplicate stage %d %s", stageno, to_string(gress).c_str());
     stages_seen[gress][stageno] = 1;
@@ -250,20 +266,24 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
 }
 
 void AsmStage::process() {
-    for (unsigned i = 0; i < stage.size(); i++) {
-        stage[i].pass1_logical_id = -1;
-        stage[i].pass1_tcam_id = -1;
-        for (auto table : stage[i].tables)
-            table->pass0();
-    }
-    for (int i = 0; i < int(stage.size()); i++) {
-        for (auto table : stage[i].tables)
+    for (auto &stage : pipe) {
+        stage.pass1_logical_id = stage.pass1_tcam_id = -1;
+        for (auto table : stage.tables)
+            table->pass0(); }
+#if HAVE_FLATROCK
+    for (auto &stage : epipe) {
+        stage.pass1_logical_id = stage.pass1_tcam_id = -1;
+        for (auto table : stage.tables)
+            table->pass0(); }
+#endif
+    for (auto &stage : pipe) {
+        for (auto table : stage.tables)
             table->pass1();
         if (options.target == TOFINO) {
-            if (i == Target::NUM_MAU_STAGES()/2) {
+            if (&stage - &pipe[0] == Target::NUM_MAU_STAGES()/2) {
                 /* to turn the corner, the middle stage must always be match dependent */
                 for (gress_t gress : Range(INGRESS, EGRESS))
-                    stage[i].stage_dep[gress] = Stage::MATCH_DEP; }
+                    stage.stage_dep[gress] = Stage::MATCH_DEP; }
         }
         if (options.match_compiler || 1) {
             /* FIXME -- do we really want to do this?  In theory different stages could
@@ -271,28 +291,54 @@ void AsmStage::process() {
              * FIXME -- consistently, so we need this to get bit-identical results
              * FIXME -- we also don't correctly determine liveness, so need this */
             for (gress_t gress : Range(INGRESS, GHOST)) {
-                Phv::setuse(gress, stage[i].match_use[gress]);
-                Phv::setuse(gress, stage[i].action_use[gress]);
-                Phv::setuse(gress, stage[i].action_set[gress]); }
+                Phv::setuse(gress, stage.match_use[gress]);
+                Phv::setuse(gress, stage.action_use[gress]);
+                Phv::setuse(gress, stage.action_set[gress]); }
         }
     }
+#if HAVE_FLATROCK
+    for (auto &stage : epipe) {
+        for (auto table : stage.tables)
+            table->pass1();
+        // FIXME -- comment above indicates we (still) need the below due to liveness errors?
+        Phv::setuse(EGRESS, stage.match_use[EGRESS]);
+        Phv::setuse(EGRESS, stage.action_use[EGRESS]);
+        Phv::setuse(EGRESS, stage.action_set[EGRESS]); }
+#endif
 }
 
 void AsmStage::output(json::map &ctxt_json) {
-    for (unsigned i = 0; i < stage.size(); i++) {
-        for (auto table : stage[i].tables)
+    for (auto &stage : pipe) {
+        for (auto table : stage.tables)
             table->pass2();
-        std::sort(stage[i].tables.begin(), stage[i].tables.end(), [](Table *a, Table *b) {
+        std::sort(stage.tables.begin(), stage.tables.end(), [](Table *a, Table *b) {
                     return a->logical_id < b->logical_id; }); }
-    for (unsigned i = 0; i < stage.size(); i++) {
-        for (auto table : stage[i].tables)
+#if HAVE_FLATROCK
+    for (auto &stage : epipe) {
+        for (auto table : stage.tables)
+            table->pass2();
+        std::sort(stage.tables.begin(), stage.tables.end(), [](Table *a, Table *b) {
+                    return a->logical_id < b->logical_id; }); }
+#endif
+    for (auto &stage : pipe) {
+        for (auto table : stage.tables)
             table->pass3(); }
-    if (int(stage.size()) > Target::NUM_MAU_STAGES()) {
-        auto lineno = stage.back().tables.empty() ? 0 : stage.back().tables[0]->lineno;
-        error(lineno,
-              "%s supports up to %d stages, using %zd", Target::name(), Target::NUM_MAU_STAGES(),
-              stage.size());
-    }
+#if HAVE_FLATROCK
+    for (auto &stage : epipe) {
+        for (auto table : stage.tables)
+            table->pass3(); }
+#endif
+    if (int(pipe.size()) > Target::NUM_MAU_STAGES()) {
+        auto lineno = pipe.back().tables.empty() ? 0 : pipe.back().tables[0]->lineno;
+        error(lineno, "%s supports up to %d stages, using %zd", Target::name(),
+              Target::NUM_MAU_STAGES(), pipe.size()); }
+#if HAVE_FLATROCK
+    if (int(epipe.size()) > Target::NUM_EGRESS_STAGES()) {
+        auto lineno = epipe.back().tables.empty() ? 0 : epipe.back().tables[0]->lineno;
+        error(lineno, "%s supports up to %d egress stages, using %zd", Target::name(),
+              Target::NUM_MAU_STAGES(), epipe.size()); }
+#endif
+
     // If we encounter errors, no binary is generated, however we still proceed
     // to generate the context.json with whatever info is provided in the .bfa.
     // This can be inspected in p4i for debugging.
@@ -300,24 +346,25 @@ void AsmStage::output(json::map &ctxt_json) {
         options.binary = NO_BINARY;
         error(0, "Due to errors, no binary will be generated");
     }
-    if (stage.empty()) return;
+    if (pipe.empty()) return;
 
     /* Allow to set any stage as match dependent based on a pattern - Should never be used for
      * normal compilation */
     if (options.target != TOFINO && !options.stage_dependency_pattern.empty()) {
         for (gress_t gress : Range(INGRESS, EGRESS)) {
-            for (unsigned i = 0; i < stage.size(); i++) {
-                    if ((options.stage_dependency_pattern.size() > i) &&
-                        (options.stage_dependency_pattern.at(i) == '1')) {
-                            LOG1("explicitly setting stage " << i << " " << gress
-                                << " as match dependent on previous stage");
-                            stage[i].stage_dep[gress] = Stage::MATCH_DEP;
-                    }
-            }
+            auto &stage = stages(gress);
+            unsigned i = 0;
+            for (auto ch : options.stage_dependency_pattern) {
+                if (ch == '1') {
+                    LOG1("explicitly setting stage " << i << " " << gress
+                        << " as match dependent on previous stage");
+                    stage[i].stage_dep[gress] = Stage::MATCH_DEP; }
+                if (++i >= stage.size()) break; }
         }
     }
 
     for (gress_t gress : Range(INGRESS, EGRESS)) {
+        auto &stage = stages(gress);
         bitvec set_regs = stage[0].action_set[gress];
         for (unsigned i = 1; i < stage.size(); i++) {
             if (!stage[i].stage_dep[gress]) {
@@ -349,8 +396,8 @@ void AsmStage::output(json::map &ctxt_json) {
         if (!options.disable_egress_latency_padding) {
             // Get non match dependent stages
             bitvec non_match_dep;
-            for (unsigned i = 1; i < stage.size(); i++) {
-                auto stage_dep = stage[i].stage_dep[EGRESS];
+            for (unsigned i = 1; i < pipe.size(); i++) {
+                auto stage_dep = pipe[i].stage_dep[EGRESS];
                 if (stage_dep != Stage::MATCH_DEP)
                     non_match_dep.setbit(i);
             }
@@ -358,7 +405,7 @@ void AsmStage::output(json::map &ctxt_json) {
             while (total_cycles < Target::Tofino::MINIMUM_REQUIRED_EGRESS_PIPELINE_LATENCY) {
                 if (non_match_dep == bitvec(0)) break;
                 auto non_match_dep_stage = non_match_dep.min().index();
-                stage[non_match_dep_stage].stage_dep[EGRESS] = Stage::MATCH_DEP;
+                pipe[non_match_dep_stage].stage_dep[EGRESS] = Stage::MATCH_DEP;
                 LOG3("Converting egress stage " << non_match_dep_stage <<
                     " to match dependent to meet minimum egress pipeline latency requirement");
                 non_match_dep.clrbit(non_match_dep_stage);
@@ -376,16 +423,24 @@ void AsmStage::output(json::map &ctxt_json) {
     // Re-propagate group_table_use to account for any stages that may now be match dependent.
     propagate_group_table_use();
 
-    for (unsigned i = 0; i < stage.size(); i++)
-        SWITCH_FOREACH_TARGET(options.target, stage[i].output<TARGET>(ctxt_json);)
+    for (auto &stage : pipe)
+        SWITCH_FOREACH_TARGET(options.target, stage.output<TARGET>(ctxt_json);)
+#if HAVE_FLATROCK
+    for (auto &stage : epipe)
+        SWITCH_FOREACH_TARGET(options.target, stage.output<TARGET>(ctxt_json, true);)
+#endif
 
     if (options.log_hashes) {
         std::ofstream hash_out;
         std::string fname = options.output_dir + "/logs/mau.hashes.log";
         hash_out.open(fname.c_str());
         if (hash_out) {
-            for (unsigned i = 0; i < stage.size(); i++) {
-                stage[i].log_hashes(hash_out); }
+            for (auto &stage : pipe)
+                stage.log_hashes(hash_out);
+#if HAVE_FLATROCK
+            for (auto &stage : epipe)
+                stage.log_hashes(hash_out);
+#endif
             hash_out.close();
         }
     }
@@ -393,6 +448,7 @@ void AsmStage::output(json::map &ctxt_json) {
 
 void AsmStage::propagate_group_table_use() {
     for (gress_t gress : Range(INGRESS, EGRESS)) {
+        auto &stage = stages(gress);
         stage[0].group_table_use[gress] = stage[0].table_use[gress];
         for (unsigned i = 1; i < stage.size(); i++) {
             stage[i].group_table_use[gress] = stage[i].table_use[gress];
@@ -404,12 +460,13 @@ void AsmStage::propagate_group_table_use() {
 }
 
 unsigned AsmStage::compute_latency(gress_t gress) {
+    // FIXME -- this is Tofino1 only, so should be in target specific code somewhere
     auto total_cycles = 4;  // There are 4 extra cycles between stages 5 & 6 of the MAU
-    for (unsigned i = 1; i < stage.size(); i++) {
-        auto stage_dep = stage[i].stage_dep[gress];
+    for (unsigned i = 1; i < pipe.size(); i++) {
+        auto stage_dep = pipe[i].stage_dep[gress];
         auto contribute = 0;
         if (stage_dep == Stage::MATCH_DEP) {
-            contribute = stage[i].pipelength(gress);
+            contribute = pipe[i].pipelength(gress);
         } else if (stage_dep == Stage::ACTION_DEP) {
             contribute = 2;
         } else if (stage_dep == Stage::CONCURRENT) {
@@ -443,7 +500,7 @@ Stage::~Stage() {
 }
 
 int Stage::first_table(gress_t gress) {
-    for (auto &st : AsmStage::stages()) {
+    for (auto &st : AsmStage::stages(gress)) {
         int min_logical_id = INT_MAX;
         for (auto tbl : st.tables) {
             if (tbl->gress != gress) continue;
@@ -456,10 +513,10 @@ int Stage::first_table(gress_t gress) {
     return -1;
 }
 
-Stage *Stage::stage(int stageno) {
-    if (stageno < 0 || stageno >= AsmStage::stages().size())
+Stage *Stage::stage(gress_t gress, int stageno) {
+    if (stageno < 0 || stageno >= AsmStage::stages(gress).size())
         return nullptr;
-    return &AsmStage::stages().at(stageno);
+    return &AsmStage::stages(gress).at(stageno);
 }
 
 Stage::Stage(Stage &&a) : Stage_data(std::move(a)) {
@@ -712,7 +769,7 @@ void Stage::fixup_regs(REGS &regs) {
 }
 
 template<class TARGET>
-void Stage::output(json::map &ctxt_json) {
+void Stage::output(json::map &ctxt_json, bool egress_only) {
     auto *regs = new typename TARGET::mau_regs();
     declare_registers(regs, stageno);
     json::vector &ctxt_tables = ctxt_json["tables"];
@@ -731,15 +788,17 @@ void Stage::output(json::map &ctxt_json) {
         regs->disable_if_reset_value();
 
     fixup_regs(*regs);
-    if (error_count == 0 && options.gen_json)
-        regs->emit_json(*open_output("regs.match_action_stage.%02x.cfg.json", stageno) , stageno);
     char buf[64];
-    snprintf(buf, sizeof(buf), "regs.match_action_stage.%02x", stageno);
-    if (stageno < Target::NUM_MAU_STAGES())
-        TopLevel::all->set_mau_stage(stageno, buf, regs);
+    snprintf(buf, sizeof(buf), "regs.match_action_stage%s.%02x",
+             egress_only ? ".egress" : "", stageno);
+    if (error_count == 0 && options.gen_json)
+        regs->emit_json(*open_output("%s.cfg.json", buf) , stageno);
+    auto NUM_STAGES = egress_only ? Target::NUM_EGRESS_STAGES() : Target::NUM_MAU_STAGES();
+    if (stageno < NUM_STAGES)
+        TopLevel::all->set_mau_stage(stageno, buf, regs, egress_only);
     gen_mau_stage_characteristics(*regs, ctxt_json["mau_stage_characteristics"]);
     gen_configuration_cache(*regs, ctxt_json["configuration_cache"]);
-    if (stageno == Target::NUM_MAU_STAGES()-1 && Target::OUTPUT_STAGE_EXTENSION())
+    if (stageno == NUM_STAGES-1 && Target::OUTPUT_STAGE_EXTENSION())
         gen_mau_stage_extension(*regs, ctxt_json["mau_stage_extension"]);
 }
 

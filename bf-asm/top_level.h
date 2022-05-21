@@ -16,7 +16,7 @@ class TopLevel {
     static void output_all(json::map &ctxtJson) { all->output(ctxtJson); }
     template<class T> static TopLevelRegs<typename T::register_type> *regs();
 #define SET_MAU_STAGE(TARGET)                                                           \
-    virtual void set_mau_stage(int, const char *i, Target::TARGET::mau_regs *r) {       \
+    virtual void set_mau_stage(int, const char *, Target::TARGET::mau_regs *, bool) {   \
         BUG_CHECK(!"register mismatch"); }
     FOR_ALL_REGISTER_SETS(SET_MAU_STAGE)
 };
@@ -28,7 +28,8 @@ class TopLevelRegs : public TopLevel, public REGSET::top_level_regs {
     ~TopLevelRegs();
 
     void output(json::map &);
-    void set_mau_stage(int stage, const char *file, typename REGSET::mau_regs *regs);
+    void set_mau_stage(int stage, const char *file, typename REGSET::mau_regs *regs,
+                       bool egress_only);
 };
 
 template<class T> TopLevelRegs<typename T::register_type> *TopLevel::regs() {

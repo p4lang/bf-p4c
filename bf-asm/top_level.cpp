@@ -166,14 +166,17 @@ void TopLevelRegs<TARGET>::output(json::map &ctxt_json) {
 
 #if HAVE_FLATROCK
 template<> void TopLevelRegs<Target::Flatrock>::set_mau_stage(int stage,
-            const char *file, Target::Flatrock::mau_regs *regs) {
-    // FIXME -- these are just the ingress regs; need another for the egress regs
-    this->reg_pipe.ppu_pack.ippu[stage].set(file, regs);
+            const char *file, Target::Flatrock::mau_regs *regs, bool egress_only) {
+    if (egress_only)
+        this->reg_pipe.ppu_pack.eppu[stage].set(file, regs);
+    else
+        this->reg_pipe.ppu_pack.ippu[stage].set(file, regs);
 }
 #endif  /* HAVE_FLATROCK */
 template<class TARGET>
 void TopLevelRegs<TARGET>::set_mau_stage(int stage, const char *file,
-                                         typename TARGET::mau_regs *regs) {
+                                         typename TARGET::mau_regs *regs, bool egress_only) {
+    BUG_CHECK(!egress_only, "separate egress MAU on target that does not support it");
     this->reg_pipe.mau[stage].set(file, regs);
 }
 
