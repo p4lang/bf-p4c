@@ -226,6 +226,8 @@ template<> void Deparser::write_config(Target::Flatrock::deparser_regs &regs) {
 
     // Egress MAC metadata
     // TODO: regs.dprsr.dprsr_phvxb_rspec.md_xb
+    regs.dprsr.dprsr_phvxb_rspec.md_xb.key[0].key_wh = 0xFFFFFFFFUL;
+    regs.dprsr.dprsr_phvxb_rspec.md_xb.key[0].key_wl = 0xFFFFFFFFUL;
 
     // Egress header mirror (EHM)
     // TODO: regs.dprsr.dprsr_phvxb_rspec.ehm_xb
@@ -288,6 +290,17 @@ template<> void Deparser::write_config(Target::Flatrock::deparser_regs &regs) {
         warning(intrinsics.front().lineno, "Flatrock intrinsics not fully implemented yet!");
     if (!digests.empty())
         error(digests.front().lineno, "Flatrock digests not implemented yet!");
+
+    // Verify that TopLevel::regs<>() is non-null before attempting to set.
+    // Will sometimes be nullptr when running in a gtest context
+    if (TopLevel::regs<Target::Flatrock>()) {
+        TopLevel::regs<Target::Flatrock>()->mem_pipe.mdp_mem.set("mem.mdp_mem", &regs.mdp_mem);
+        TopLevel::regs<Target::Flatrock>()->reg_pipe.mdp.set("regs.mdp", &regs.mdp);
+        TopLevel::regs<Target::Flatrock>()->reg_pipe.dprsr.set("regs.dprsr", &regs.dprsr);
+        // FIXME: enable line below causes model to assert at chip.cpp:665
+        // TopLevel::regs<Target::Flatrock>()->mem_pipe.dprsr_mem.set("mem.dprsr_mem",
+        //                                                            &regs.dprsr_mem);
+    }
 }
 
 template<> void Deparser::gen_learn_quanta(Target::Flatrock::deparser_regs&,
