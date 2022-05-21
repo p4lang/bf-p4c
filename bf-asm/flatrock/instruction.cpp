@@ -68,12 +68,9 @@ struct operand {
         int bits(int slot) override {
             BUG_CHECK(abs.type == ActionBusSource::XcmpData, "%s not on xcmp abus", reg.name());
             unsigned size = ::Phv::reg(slot)->size/8U;  // size in bytes
-            if (abs.xcmp_group == 0) {  // BADB
-                return abs.xcmp_byte/size;
-            } else {  // WADB
-                BUG_CHECK(((abs.xcmp_byte ^ slot) & (7>>size)) == 0,
-                          "%s not aligned for slot %d in wadb", reg.name(), slot);
-                return (32>>size) + abs.xcmp_group*4 - 4 + abs.xcmp_byte/4U; } }
+            // FIXME -- need to be checking to make sure the whole value is within the slot
+            // somehow.  But we only have a single bye recorded in the ActionBusSource?
+            return (abs.xcmp_group*16 + abs.xcmp_byte)/size; }
         int bit_offset(int slot) override { return reg->lo % ::Phv::reg(slot)->size; }
         bool check() override {
             if (!reg.check()) return false;

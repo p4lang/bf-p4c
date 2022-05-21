@@ -10,6 +10,7 @@ int IXBar::Use::slot_size(int group) const {
     case GATEWAY:
         return 8;
     default:
+        // exact and xcmp grp 1 is by 32-bits words; the rest are 8 bit bytes
         return group ? 32 : 8;
     }
 }
@@ -19,15 +20,19 @@ void IXBar::Use::gather_bytes(const PhvInfo &phv, std::map<int, std::map<int, Sl
     PHV::FieldUse f_use(PHV::FieldUse::READ);
     for (auto &b : use) {
         BUG_CHECK(b.loc.allocated(), "Byte not allocated by assembly");
-        // exact grp 1 is by 32-bits words; the rest are 8 bit bytes
-        int size = slot_size(b.loc.group);
+        unsigned size = slot_size(b.loc.group);
+        unsigned bit = b.loc.byte * size;
+        // PHEs smaller than the slot size are gathered into aligned groups to match the slot size
+        if (b.container.size() < size) {
+            unsigned gsize = size/b.container.size();  // number of PHEs grouped to fill the slot
+            bit += (b.container.index() % gsize) * b.container.size(); }
         for (auto &fi : b.field_bytes) {
             auto field = phv.field(fi.get_use_name());
             CHECK_NULL(field);
             le_bitrange field_bits = { fi.lo, fi.hi };
             field->foreach_alloc(field_bits, tbl, &f_use, [&](const PHV::AllocSlice &sl) {
                 Slice asm_sl(phv, fi.get_use_name(), sl.field_slice().lo, sl.field_slice().hi);
-                auto n = sort[b.loc.group].emplace(b.loc.byte*size + asm_sl.align(size), asm_sl);
+                auto n = sort[b.loc.group].emplace(bit + asm_sl.align(size), asm_sl);
                 BUG_CHECK(n.second, "duplicate byte use in ixbar");
             });
         }
@@ -68,7 +73,8 @@ void IXBar::Use::emit_ixbar_asm(const PhvInfo &phv, std::ostream &out, indent_t 
         index = [](int i)->cstring { return " " + std::to_string(i); };
         break;
     case TRIE_MATCH:
-        group_type = "trie";
+        // is just XCMP?  so this case should go away and use default: below
+        BUG("TRIE_MATCH not supported");
         break;
     case GATEWAY:
         group_type = "gateway";

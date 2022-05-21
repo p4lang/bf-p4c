@@ -463,6 +463,8 @@ class IXBarUseBytePrinter(object):
         rv += str(self.val['loc']['byte']) + ')'
         if int(self.val['flags']) != 0:
             rv += " flags=" + hex(int(self.val['flags']))
+        if int(self.val['bit_use']['data']) != 255:
+            rv += " bit_use=" + str(self.val['bit_use']);
         fields = self.val['field_bytes']
         for i in range(0, vec_size(fields)):
             field_info = vec_at(fields, i)
@@ -568,7 +570,9 @@ class PHVContainerPrinter(object):
     def to_string(self):
         tk = int(self.val['type_']['kind_'])
         ts = int(self.val['type_']['size_'])
-        if tk < 0 or tk >= len(self.container_kinds) or not ts in self.container_sizes:
+        if ts == 0:
+            return "<U>";  # unused in an ixbar alloc, elsewhere?
+        elif tk < 0 or tk >= len(self.container_kinds) or not ts in self.container_sizes:
             return "<invalid PHV::Container>"
         rv = self.container_kinds[tk] + self.container_sizes[ts] + str(self.val['index_'])
         return rv;

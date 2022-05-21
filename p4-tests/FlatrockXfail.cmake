@@ -13,47 +13,36 @@ set (FLATROCK_XFAIL_TESTS
   # or open a new one.
   )
 
-# Failures introduced after adding pipe to ingress_intrinsic_metadata_for_tm_t
-# and ingress_intrinsic_metadata_t
-p4c_add_xfail_reason("tofino5"
-  "ig_intr_md.ingress_pipe misaligned on input_xbar"
-  extensions/p4_tests/p4_16/flatrock/direct1.p4
-  extensions/p4_tests/p4_16/flatrock/exact1.p4
-  extensions/p4_tests/p4_16/flatrock/gateway1.p4
-  extensions/p4_tests/p4_16/flatrock/gateway2.p4
-  extensions/p4_tests/p4_16/flatrock/passthrough.p4
-  )
-
 p4c_add_xfail_reason("tofino5"
   "Compiler Bug: conflicting ixbar allocation at exact match word 0"
   extensions/p4_tests/p4_16/flatrock/pac_single_hdr.p4
   )
 
-#p4c_add_xfail_reason("tofino5"
-#  "Flatrock .* not implemented yet"
-#  extensions/p4_tests/p4_16/flatrock/direct1.p4
-#  )
+p4c_add_xfail_reason("tofino5"
+  "Flatrock .* not implemented yet"
+  extensions/p4_tests/p4_16/flatrock/direct1.p4
+  )
 
-#p4c_add_xfail_reason("tofino5"
-#  "Flatrock .* not implemented yet"
-#  extensions/p4_tests/p4_16/flatrock/exact1.p4
-#  )
+p4c_add_xfail_reason("tofino5"
+  "Flatrock .* not implemented yet"
+  extensions/p4_tests/p4_16/flatrock/exact1.p4
+  )
 
 # model fails -- probably many other problems besides this message
-#p4c_add_xfail_reason("tofino5"
-#   "WARNING:.*binary.*does not match model version"
-#  extensions/p4_tests/p4_16/flatrock/passthrough.p4
-#  )
+p4c_add_xfail_reason("tofino5"
+   "WARNING:.*binary.*does not match model version"
+  extensions/p4_tests/p4_16/flatrock/passthrough.p4
+  )
 
-#p4c_add_xfail_reason("tofino5"
-#  "Flatrock .* not implemented yet"
-#  extensions/p4_tests/p4_16/flatrock/gateway1.p4
-#  )
+p4c_add_xfail_reason("tofino5"
+  "Flatrock .* not implemented yet"
+  extensions/p4_tests/p4_16/flatrock/gateway1.p4
+  )
 
-#p4c_add_xfail_reason("tofino5"
-#  "Flatrock .* not implemented yet"
-#  extensions/p4_tests/p4_16/flatrock/gateway2.p4
-#  )
+p4c_add_xfail_reason("tofino5"
+  "Flatrock .* not implemented yet"
+  extensions/p4_tests/p4_16/flatrock/gateway2.p4
+  )
 
 # invalid assembly code
 p4c_add_xfail_reason("tofino5"
