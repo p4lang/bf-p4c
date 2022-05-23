@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 # -*- Python -*-
 
+"""! P4C driver
+Takes care of creating output structure and guiding the whole compilation.
+"""
+
 import os
 import os.path
 import argparse
@@ -14,12 +18,12 @@ from p4c_src.util import find_file, find_bin
 from p4c_src.driver import BackendDriver
 
 class CompilationError(Exception):
-    """Raised when a P4 program fails to compile"""
+    """! Raised when a P4 program fails to compile"""
     pass
 
 def checkEnv():
-    """
-    return the top source directory, or None if can not determine it.
+    """!
+    @return the top source directory, or None if can not determine it.
     """
     top_src_dir = None
     if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
@@ -53,8 +57,19 @@ else:
 
 bfrt_schema = find_file(os.environ['P4C_BIN_DIR'], 'bfrt_schema.py')
 p4c_gen_conf = find_file(os.environ['P4C_BIN_DIR'], 'p4c-gen-conf')
+
 class BarefootBackend(BackendDriver):
+    """!
+    Customized version of public driver to specify our options,
+    how to work with them and process them.
+    """
+
     def __init__(self, target, arch, argParser):
+        """!
+        @param target Target device
+        @param arch Target architecture
+        @param argParser argparse instace to setup arguments
+        """
         BackendDriver.__init__(self, target, arch, argParser)
         self.compilation_time = 0.0
         self.conf_file = None
@@ -93,6 +108,7 @@ class BarefootBackend(BackendDriver):
         self.add_command_line_options()
 
     def add_command_line_options(self):
+        """! Sets up argparser instance to contain all needed arguments."""
         # BackendDriver.add_command_line_options(self)
         self._argGroup = self._argParser.add_argument_group("Barefoot Networks specific options")
         self._argGroup.add_argument("--create-graphs",
@@ -199,14 +215,14 @@ class BarefootBackend(BackendDriver):
                                     dest="program_name", required=False)
 
     def configPrecleaner(self, opts, output_dir):
-        """
-        Configures precleaners command to remove possible previous 
+        """! Configures precleaners command to remove possible previous 
         build artifacts.
         Use directory and file delete lists since PTF usually uses the output
         directory for its files and this helps the user not delete their
         files if for some reason . is used as output directory.
-        :param opts Options object
-        :param output_dir Output directory (will be cleaned)
+
+        @param opts Options object
+        @param output_dir Output directory (will be cleaned)
         """
         # List of directory patterns to delete in the output folder
         # Folder graphs and logs might not be located within pipe folder in
@@ -269,33 +285,42 @@ class BarefootBackend(BackendDriver):
             self.disable_commands(["preclean-runtime"])
 
     def config_preprocessor(self, targetDefine):
+        """! Configures preprocessor option.
+        @param targetDefine Define name (what goes after -D)
+        """
         self.add_command_option('preprocessor', "-E -x assembler-with-cpp")
         self.add_command_option('preprocessor', "-D" + targetDefine)
         self.add_command_option('preprocessor', p4c_version.macro_defs)
 
     def config_compiler(self, targetDefine):
+        """! Configures compile option.
+        @param targetDefine Define name (what goes after -D)
+        """
         self.add_command_option('compiler', "--nocpp")
         self.add_command_option('compiler', "-D" + targetDefine)
         self.add_command_option('compiler', p4c_version.macro_defs)
 
     def config_assembler(self, targetName):
+        """! Configures assembler option.
+        @param targetName Target name
+        """
         self._targetName = targetName
         self._no_link = False
         self._multi_parsers = False
 
     def config_warning_modifiers(self, arguments, option):
-        """
-        Behaviour of warnings emitted by p4c can be modified by two options:
+        """! Behaviour of warnings emitted by p4c can be modified by two options:
         --Werror which turns all/selected warnings into errors
         --Wdisable which ignores all/selected warnings
-
         Both accept either no further options or they accept comma separated list of strings
         or they can occur multiple times with a different CSL each time. If argparser is properly configured
         (action="append", nargs="?", default=None, const="", type=str) it will create a list of strings
         (plain or CSLs) or empty string (if no further option was provided).
-
         You can then pass parsed argument to this function to properly select between everything or something
         and to properly parse CSLs.
+
+        @param arguments Warning arguments
+        @param option String value, either "disable" or "error"
         """
         if option != "disable" and option != "error":
             raise Exception("Programmer error - config_warning_modifiers does not support option " + option)
@@ -311,9 +336,15 @@ class BarefootBackend(BackendDriver):
                     self.add_command_option('compiler', '--W{}={}'.format(option, sd))
 
     def should_not_check_input(self, opts):
+        """!
+        @return True if input should not be checked, otherwise False
+        """
         return opts.help_pragmas or opts.help_warnings
 
     def process_command_line_options(self, opts):
+        """! Main parsing or command line options
+        @param opts Object holding set arguments
+        """
         BackendDriver.process_command_line_options(self, opts)
 
         # P4 program name is by default derived from the source file name,
@@ -593,12 +624,10 @@ class BarefootBackend(BackendDriver):
                     " generate an archive", file=sys.stderr)
 
     def parseManifest(self):
-        """
-        parse the manifest file and return a map of the program pipes
+        """! Parse the manifest file and return a map of the program pipes
         If dry-run, the manifest does not exist, so we fake one to print at least
         one assembler line if needed.
         """
-
         manifest_filename = "{}/manifest.json".format(self._output_directory)
 
         if self._dry_run:
@@ -694,7 +723,6 @@ class BarefootBackend(BackendDriver):
                         self._pipes[pipe_id]['power_json'] = os.path.join(self._output_directory,
                                                                           log['path'])
 
-
         for prog in programs:
             p4_version = prog['p4_version']
             if schema_version < version.parse("2.0.0"):
@@ -703,8 +731,9 @@ class BarefootBackend(BackendDriver):
                 __parseManifestAfter_2_0(prog, p4_version)
 
     def updateManifest(self, jsonFile, compilation_successful = True):
-        """
-        Set the compile_command in the manifest or context.json
+        """! Set the compile_command in the manifest or context.json
+        @param jsonFile Path to the json file
+        @param compilation_successful Updated value for compilation_succeeded attribute
         """
         if self._dry_run or not os.path.exists(jsonFile) or os.path.getsize(jsonFile) == 0:
             return
@@ -737,8 +766,8 @@ class BarefootBackend(BackendDriver):
                 json.dump(jsonTree, new_file, indent=2, separators=(',', ': '))
 
     def exitWithError(self, error_msg):
-        """
-        Function to be called when compilation ends in error.
+        """! Function to be called when compilation ends in error.
+        @param error_msg Error message to be emitted
         """
         try:
             manifest_json = os.path.join(self._output_directory, 'manifest.json')
@@ -751,8 +780,10 @@ class BarefootBackend(BackendDriver):
             sys.exit(1)
 
     def runAssembler(self, dirname, unique_table_offset):
-        """
-        Run an instance of the assembler on the provided directory
+        """! Run an instance of the assembler on the provided directory
+        @param dirname Name of the directory on which to run the assembler
+        @param unique_table_offset --table-handle-offset argument value
+        @return Assemblers return code
         """
         # reset all assembler options to what was passed on cmd line
         # Note that we need to make a copy of the list
@@ -797,6 +828,10 @@ class BarefootBackend(BackendDriver):
         return self.checkAndRunCmd('assembler')
 
     def runSummaryLogging(self, pipe):
+        """! Does summary logging
+        @param pipe Pipe to log
+        @return Return code
+        """
         def __update_log_file(filemap, filetype, filename):
             fpath = os.path.join(filetype, filename) if self.language == 'p4-14' else \
                     os.path.join(pipe['pipe_name'], filetype, filename)
@@ -826,6 +861,9 @@ class BarefootBackend(BackendDriver):
         return 1
 
     def runCleaner(self):
+        """! Executes cleaner process
+        @return Cleaner return code
+        """
         if self.debug_info:
             return 0
 
@@ -849,8 +887,12 @@ class BarefootBackend(BackendDriver):
 
         return self.checkAndRunCmd('cleaner')
 
-    # this should be in the parent class!!
     def checkAndRunCmd(self, command):
+        """! Checks command existance and runs the command
+        @param command Command to be run
+        @return Return code of the command
+        """
+        # this should be in the parent class!!
         cmd = self._commands[command]
         if cmd[0].find('/') != 0 and (find_bin(cmd[0]) == None):
             error_msg = "{}: command not found".format(cmd[0])
@@ -868,6 +910,11 @@ class BarefootBackend(BackendDriver):
         return rc
 
     def checkVersionTargetArch(self, target, language, arch):
+        """! Set the architecture and other attributes based on set values
+        @param target Target device
+        @param language P4 language standard
+        @param arch Target architecture
+        """
         if language == "p4-14" and arch == 'default':
             self._arch = "v1model"
             self.backend = target + '-' + 'v1model'
@@ -877,13 +924,10 @@ class BarefootBackend(BackendDriver):
             self._arch = 't' + rev + 'na'
             self.backend = target + '-' + self._arch
 
-    def aggregate_deparser_resources_json(self,pipe):
-        """
-        This method joins together all files from the p4c-barefoot and
+    def aggregate_deparser_resources_json(self, pipe):
+        """! This method joins together all files from the p4c-barefoot and
         assembler generator.
-
-        Parameters:
-            - pipe - object with available pipes
+        @param pipe Object with available pipes
         """
         # Prepare path for output files
         log_dir = os.path.join(self._output_directory,pipe["pipe_name"],"logs")
@@ -915,8 +959,8 @@ class BarefootBackend(BackendDriver):
         resources_json.close()
 
     def run(self):
-        """
-        Override the parent run, in order to insert manifest parsing.
+        """! Override the parent run, in order to insert manifest parsing.
+        @return Return code
         """
         run_assembler = 'assembler' in self._commandsEnabled
         run_archiver = 'archiver' in self._commandsEnabled

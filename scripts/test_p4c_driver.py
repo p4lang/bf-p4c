@@ -316,17 +316,17 @@ class Test:
                         "ERROR: Input file '{}' contains an invalid "
                         "{} path: {}".format(manifest_file, 'resources file', m_file))
                 # Get the resources.json/res.json path if it exists
-                if r['type'] is "resources":
+                if r['type'] == "resources":
                     resources_file = os.path.join(args.output_directory, r['path'])
             if resources_file:
                 with open(resources_file, 'r') as res_file:
                     res_json = json.load(res_file)
                     resources = res_json['resources']
-                    nStages = int(resources['pipes'][0]['mau']['nStages'])
-                    if nStages != stages[target]:
+                    nStages = int(resources['mau']['nStages'])
+                    if nStages > stages[target]:
                         raise TestError(
                             "ERROR: Number of stages in resource file {} "
-                            "!= {} expected".format(nStages, stages[target]))
+                            "is more than maximum expected ({})".format(nStages, stages[target]))
         # success
         # if we either did not have a resource file, or all the stages check out.
 
@@ -340,7 +340,7 @@ class Test:
 
         for file in file_list:
             fileShouldNotExist = False
-            if file[0] is '!':
+            if file[0] == '!':
                 file = file[1:]
                 fileShouldNotExist = True
             path = os.path.join(args.output_directory, file)

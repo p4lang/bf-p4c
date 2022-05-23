@@ -313,6 +313,58 @@ greedy allocation.
 Inspector passes to find constraints could logically be either part of
 the component they are anaylzing (parde or mau) or part of phv allocation.
 
+# Driver
+
+Driver is a program that interacts with the user and drives the whole
+compilation process.
+
+Driver consists of two Python 3 scripts `driver.py` and `barefoot.py` 
+(see `barefoot.BarefootBackend` class).
+From inside the compiler, the `bf-p4c-options` handles the arguments and
+their additional parsing.
+
+__Developer environment variables__:
+* `P4C_BUILD_TYPE` - if set to `DEVELOPER` then the driver will parse developer 
+arguments.
+* `P4C_BIN_DIR` - Directory containing P4C binaries (p4c-barefoor, bfas...).
+* `P4C_CFG_PATH` - Schemas directory.
+
+Other environment variables and all command line options are documented
+in the [user guide wiki](https://wiki.ith.intel.com/display/BXDCOMPILER/Getting+started)
+
+## driver.py
+
+This script is part of the public frontend and serves as the base driver.
+It is being invoked by `barefoot.py` with setup argument parser and commands.
+This script sets up the output program structure (output folder) and
+executes all setup processes.
+
+## barefoot.py
+
+Driver for bf-p4c. It sets up all the command line options and commands
+for specific compilation processes (such as preprocessor invocation...).
+
+## Driver testing
+
+There are scripts to test driver's correctness - `test_p4c_driver.py`,
+which runs the tests and `p4c_driver_tests.py`, which contains the tests.
+
+To add new tests for driver, one has to edit the `test_matrix` dictionary
+in `p4c_driver_tests.py`. Each entry in this dictionary is a test. To add
+a new test a new key has to be created and its value has to be a tuple
+with following parameters (in order listed):
+0. List of compiler arguments.
+1. String with expected xfail message or None if fail is not expected.
+2. List of files that the driver should have or have not created after 
+the test being run. The file has to be specified by a relative path and if
+the path includes `!` as the first character, then this checks that the
+file does not exist. E. g. if `/pipe/foo` was used, then tests will
+check that file `foo` exists in a folder `pipe` after compilation of the test.
+Using `!/pipe/foo` would check that the file DOES NOT exist.
+3. Reference source json (`source.json`) file or None.
+4. Reference configuration file or None.
+5. Expected string in STDOUT or None.
+
 # Compiler's output
 
 General documentation for the compiler output can be found on the wiki:
