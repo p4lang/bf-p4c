@@ -145,6 +145,8 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
                 for (auto &input : group.second) {
                     for (int d : dconfig)
                         key32[input.lo/32U][d].key32 = input.what->reg.ixbar_id()/4U;
+                    set_bit(minput.minput_byte_pwr[2],
+                            minput_byte_pwr_transpose[input.what->reg.uid]);
                     set_bit(minput.minput_word_pwr[0],
                             minput_word_pwr_transpose[input.what->reg.uid]);
                     for (int x : xmu_units)
@@ -154,6 +156,8 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
                 for (auto &input : group.second) {
                     for (int d : dconfig)
                         key8[input.lo/8U][d].key8 = input.what->reg.ixbar_id();
+                    set_bit(minput.minput_byte_pwr[2],
+                            minput_byte_pwr_transpose[input.what->reg.uid]);
                     set_bit(minput.minput_byte_pwr[0],
                             minput_byte_pwr_transpose[input.what->reg.uid]);
                     for (int x : xmu_units)
@@ -166,6 +170,8 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
             for (auto &input : group.second) {
                 for (int d : dconfig)
                     key8[base + input.lo/8U][d].key8 = input.what->reg.ixbar_id();
+                set_bit(minput.minput_byte_pwr[2],
+                        minput_byte_pwr_transpose[input.what->reg.uid]);
                 set_bit(minput.minput_byte_pwr[4 + group.first.index/4],
                         minput_byte_pwr_transpose[input.what->reg.uid]); }
             minput.rf.minput_scm_xb_tab[table->get_tcam_id()].key40_used |= 1U << group.first.index;
@@ -174,6 +180,8 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
             auto &gw_key_cfg = minput.rf.minput_gw_xb_vgd;
             for (auto &input : group.second) {
                 gw_key_cfg[input.lo/8U].vgd = input.what->reg.ixbar_id();
+                set_bit(minput.minput_byte_pwr[2],
+                        minput_byte_pwr_transpose[input.what->reg.uid]);
                 set_bit(minput.minput_byte_pwr[3],
                         minput_byte_pwr_transpose[input.what->reg.uid]); }
             break; }
@@ -184,6 +192,8 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
                 for (auto &input : group.second) {
                     for (int d : dconfig)
                         key32[input.lo/32U][d].key32 = input.what->reg.ixbar_id()/4U;
+                    set_bit(minput.minput_byte_pwr[2],
+                            minput_byte_pwr_transpose[input.what->reg.uid]);
                     set_bit(minput.minput_word_pwr[1],
                             minput_word_pwr_transpose[input.what->reg.uid]); }
             } else {
@@ -191,6 +201,8 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
                 for (auto &input : group.second) {
                     for (int d : dconfig)
                         key8[input.lo/8U][d].key8 = input.what->reg.ixbar_id();
+                    set_bit(minput.minput_byte_pwr[2],
+                            minput_byte_pwr_transpose[input.what->reg.uid]);
                     set_bit(minput.minput_byte_pwr[1],
                             minput_byte_pwr_transpose[input.what->reg.uid]); } }
             break; }
