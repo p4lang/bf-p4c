@@ -297,9 +297,8 @@ template<> void Deparser::write_config(Target::Flatrock::deparser_regs &regs) {
         TopLevel::regs<Target::Flatrock>()->mem_pipe.mdp_mem.set("mem.mdp_mem", &regs.mdp_mem);
         TopLevel::regs<Target::Flatrock>()->reg_pipe.mdp.set("regs.mdp", &regs.mdp);
         TopLevel::regs<Target::Flatrock>()->reg_pipe.dprsr.set("regs.dprsr", &regs.dprsr);
-        // FIXME: enable line below causes model to assert at chip.cpp:665
-        // TopLevel::regs<Target::Flatrock>()->mem_pipe.dprsr_mem.set("mem.dprsr_mem",
-        //                                                            &regs.dprsr_mem);
+        TopLevel::regs<Target::Flatrock>()->mem_pipe.dprsr_mem.set("mem.dprsr_mem",
+                                                                   &regs.dprsr_mem);
     }
 }
 
