@@ -96,7 +96,7 @@ class test(BfRuntimeTest):
 			sfc                     = 6 # Arbitrary value
 			dsap                    = 7 # Arbitrary value
 
-			sf_bitmask              = 4 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
+			sf_bitmask              = 1 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
 
 			nexthop_ptr             = 1 # Arbitrary value
 			vid                     = 0 # Arbitrary value
@@ -118,19 +118,19 @@ class test(BfRuntimeTest):
 
 			npb_nsh_chain_start_end_add(self, self.target, ig_pipe,
 				#ingress
-				[ig_port], ig_lag_ptr, 0, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, bd, eg_lag_ptr, 0, 0, [eg_port], False, 0, dsap
+				[ig_port], ig_lag_ptr, 0, sap, vpn, spi, si, sf_bitmask, rmac, nexthop_ptr, bd, eg_lag_ptr, 0, 0, [eg_port2], True, 0, dsap
 				#tunnel
 #				tunnel_encap_ptr, EgressTunnelType.NSH.value, tunnel_encap_nexthop_ptr, tunnel_encap_bd, dmac, tunnel_encap_smac_ptr, smac
 				#egress
 			)
 
 			# mirrored, to cpu port
-			npb_egr_port_add      (self, self.target, ig_pipe, [eg_port2], True, eg_lag_ptr)
+#			npb_egr_port_add      (self, self.target, ig_pipe, [eg_port2], True, eg_lag_ptr)
 
 			# from cpu port, to normal port
 			npb_nsh_bridge_add(self, self.target, ig_pipe,
 				#ingress
-				[ig_port2], ig_lag_ptr, rmac,  nexthop_ptr, bd, 0x0800, 0xffff, 0, 0x1, vid, 0xfff, dmac2, 0xffffffffffff, eg_lag_ptr+1, 0+1, 0+1, [eg_port], False
+				[ig_port2], ig_lag_ptr, rmac, nexthop_ptr, bd, 0x0800, 0xffff, 0, 0x1, vid, 0xfff, dmac2, 0xffffffffffff, eg_lag_ptr+1, 0+1, 0+1, [eg_port], False
 				#egress
 			)
 
@@ -138,21 +138,18 @@ class test(BfRuntimeTest):
 			# Ingress SF(s)
 			# -----------------
 
-			npb_npb_sf2_policy_l2_add(self, self.target, ig_pipe, dsap=dsap, tun_type=IngressTunnelType.NONE.value,   tun_type_mask=0xf, mirror_enable=1, mirror_id=250, cpu_reason_code=5)
+			npb_npb_sf0_policy_l2_add(self, self.target, ig_pipe, sap=sap, vpn=vpn, tun_type=IngressTunnelType.NONE.value,   tun_type_mask=0xf, flow_class=flow_class_acl, mirror_enable=1, mirror_id=251, cpu_reason_code=5)
 
-			npb_npb_sf2_policy_l2_add(self, self.target, ig_pipe, dsap=dsap, tun_type=IngressTunnelType.VXLAN.value,  tun_type_mask=0xf, mirror_enable=1, mirror_id=250, cpu_reason_code=5)
-			npb_npb_sf2_policy_l2_add(self, self.target, ig_pipe, dsap=dsap, tun_type=IngressTunnelType.IPINIP.value, tun_type_mask=0xf, mirror_enable=1, mirror_id=250, cpu_reason_code=5)
-			npb_npb_sf2_policy_l2_add(self, self.target, ig_pipe, dsap=dsap, tun_type=IngressTunnelType.NVGRE.value,  tun_type_mask=0xf, mirror_enable=1, mirror_id=250, cpu_reason_code=5)
-			npb_npb_sf2_policy_l2_add(self, self.target, ig_pipe, dsap=dsap, tun_type=IngressTunnelType.GRE.value,    tun_type_mask=0xf, mirror_enable=1, mirror_id=250, cpu_reason_code=5)
-			npb_npb_sf2_policy_l2_add(self, self.target, ig_pipe, dsap=dsap, tun_type=IngressTunnelType.GTPC.value,   tun_type_mask=0xf, mirror_enable=1, mirror_id=250, cpu_reason_code=5)
-			npb_npb_sf2_policy_l2_add(self, self.target, ig_pipe, dsap=dsap, tun_type=IngressTunnelType.GTPU.value,   tun_type_mask=0xf, mirror_enable=1, mirror_id=250, cpu_reason_code=5)
-			npb_npb_sf2_policy_l2_add(self, self.target, ig_pipe, dsap=dsap, tun_type=IngressTunnelType.ERSPAN.value, tun_type_mask=0xf, mirror_enable=1, mirror_id=250, cpu_reason_code=5)
+			npb_npb_sf0_policy_l2_add(self, self.target, ig_pipe, sap=sap, vpn=vpn, tun_type=IngressTunnelType.VXLAN.value,  tun_type_mask=0xf, flow_class=flow_class_acl, mirror_enable=1, mirror_id=251, cpu_reason_code=5)
+			npb_npb_sf0_policy_l2_add(self, self.target, ig_pipe, sap=sap, vpn=vpn, tun_type=IngressTunnelType.IPINIP.value, tun_type_mask=0xf, flow_class=flow_class_acl, mirror_enable=1, mirror_id=251, cpu_reason_code=5)
+			npb_npb_sf0_policy_l2_add(self, self.target, ig_pipe, sap=sap, vpn=vpn, tun_type=IngressTunnelType.NVGRE.value,  tun_type_mask=0xf, flow_class=flow_class_acl, mirror_enable=1, mirror_id=251, cpu_reason_code=5)
+			npb_npb_sf0_policy_l2_add(self, self.target, ig_pipe, sap=sap, vpn=vpn, tun_type=IngressTunnelType.GRE.value,    tun_type_mask=0xf, flow_class=flow_class_acl, mirror_enable=1, mirror_id=251, cpu_reason_code=5)
+			npb_npb_sf0_policy_l2_add(self, self.target, ig_pipe, sap=sap, vpn=vpn, tun_type=IngressTunnelType.GTPC.value,   tun_type_mask=0xf, flow_class=flow_class_acl, mirror_enable=1, mirror_id=251, cpu_reason_code=5)
+			npb_npb_sf0_policy_l2_add(self, self.target, ig_pipe, sap=sap, vpn=vpn, tun_type=IngressTunnelType.GTPU.value,   tun_type_mask=0xf, flow_class=flow_class_acl, mirror_enable=1, mirror_id=251, cpu_reason_code=5)
+			npb_npb_sf0_policy_l2_add(self, self.target, ig_pipe, sap=sap, vpn=vpn, tun_type=IngressTunnelType.ERSPAN.value, tun_type_mask=0xf, flow_class=flow_class_acl, mirror_enable=1, mirror_id=251, cpu_reason_code=5)
 
 #			npb_pre_port_add(self, self.target, ig_pipe, eg_port2)
-			if(p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top'):
-				npb_pre_mirror_add(self, self.target, ig_pipe, 250, "EGRESS", eg_port2 | 0x100) # this is defined in the p4 code: SWITCH_MIRROR_SESSION_CPU = 250
-			else:
-				npb_pre_mirror_add(self, self.target, ig_pipe, 250, "EGRESS", eg_port2        ) # this is defined in the p4 code: SWITCH_MIRROR_SESSION_CPU = 250
+#			npb_pre_mirror_add(self, self.target, ig_pipe, 251, "INGRESS", eg_port2) # this is defined in the p4 code: SWITCH_MIRROR_SESSION_CPU_INGRESS = 251
 
 			# -----------------
 			# Ingress SFP Sel
@@ -255,5 +252,26 @@ class test(BfRuntimeTest):
 			# -----------------------------------------------------------
 			# Delete Table Entries
 			# -----------------------------------------------------------
+
+			npb_nsh_chain_start_end_del(self, self.target, ig_pipe,
+				#ingress
+				[ig_port], ig_lag_ptr, spi, si, sf_bitmask, rmac, nexthop_ptr, eg_lag_ptr, 0, 0, [eg_port2]
+				#tunnel
+#				tunnel_encap_ptr, tunnel_encap_nexthop_ptr, tunnel_encap_bd, tunnel_encap_smac_ptr
+				#egress
+			)
+
+			# mirrored, to cpu port
+#			npb_egr_port_del      (self, self.target, ig_pipe, [eg_port2])
+
+			npb_nsh_bridge_del(self, self.target, ig_pipe,
+				#ingress
+				[ig_port2], ig_lag_ptr, rmac, nexthop_ptr, 0x0800, 0xffff, 0, 0x1, vid, 0xfff, dmac2, 0xffffffffffff, eg_lag_ptr+1, 0+1, 0+1, [eg_port]
+				#egress
+			)
+
+			# -----------------
+			# Ingress SF(s)
+			# -----------------
 			cleanUpGlobal(self)
 

@@ -149,7 +149,10 @@ class test(BfRuntimeTest):
 			npb_npb_sf2_policy_l2_add(self, self.target, ig_pipe, dsap=dsap, tun_type=IngressTunnelType.ERSPAN.value, tun_type_mask=0xf, mirror_enable=1, mirror_id=250, cpu_reason_code=5)
 
 #			npb_pre_port_add(self, self.target, ig_pipe, eg_port2)
-			npb_pre_mirror_add(self, self.target, ig_pipe, 250, "EGRESS", eg_port2) # this is defined in the p4 code: SWITCH_MIRROR_SESSION_CPU_EGRESS = 250
+			if(p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top'):
+				npb_pre_mirror_add(self, self.target, ig_pipe, 250, "EGRESS", eg_port2 | 0x100) # this is defined in the p4 code: SWITCH_MIRROR_SESSION_CPU_EGRESS = 250
+			else:
+				npb_pre_mirror_add(self, self.target, ig_pipe, 250, "EGRESS", eg_port2        ) # this is defined in the p4 code: SWITCH_MIRROR_SESSION_CPU_EGRESS = 250
 
 			# -----------------
 			# Ingress SFP Sel

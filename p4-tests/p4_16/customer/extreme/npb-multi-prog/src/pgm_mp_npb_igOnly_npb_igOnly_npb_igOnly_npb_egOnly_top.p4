@@ -9,6 +9,8 @@
 
 #define BRIDGED_METADATA_WIDTH          36 // number of bytes in the bridged metadata -- must be set manually -- can change between compiler runs
 
+#define BRIDGED_METADATA_WIDTH_EG        0 // number of bytes in the bridged metadata -- must be set manually -- can change between compiler runs
+
 #include "p4src_includes.p4"
 
 Pipeline(

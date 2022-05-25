@@ -1882,7 +1882,7 @@ control EgressAcl(
 
 		if(eg_md.nsh_md.truncate_enable) {
 #if __TARGET_TOFINO__ == 2
-			eg_intr_md_for_dprsr.mtu_trunc_len = eg_md.nsh_md.truncate_len;
+			eg_intr_md_for_dprsr.mtu_trunc_len = eg_md.nsh_md.truncate_len + BRIDGED_METADATA_WIDTH_EG;
   #ifdef PA_NO_INIT
 		} else {
 			eg_intr_md_for_dprsr.mtu_trunc_len = 0x3fff;
