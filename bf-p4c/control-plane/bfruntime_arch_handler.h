@@ -348,7 +348,7 @@ struct ValueSet {
     from(const cstring name,
          const IR::P4ValueSet* instance,
          const ReferenceMap* refMap,
-         const TypeMap* typeMap,
+         TypeMap* typeMap,
          p4configv1::P4TypeInfo* p4RtTypeInfo) {
         CHECK_NULL(instance);
         int64_t size = 0;
@@ -385,7 +385,7 @@ struct Register {
     static boost::optional<Register>
     from(const IR::ExternBlock* instance,
          const ReferenceMap* refMap,
-         const TypeMap* typeMap,
+         TypeMap* typeMap,
          p4configv1::P4TypeInfo* p4RtTypeInfo) {
         CHECK_NULL(instance);
         auto declaration = instance->node->to<IR::Declaration_Instance>();
@@ -414,7 +414,7 @@ struct Register {
     fromDirect(const P4::ExternInstance& instance,
                const IR::P4Table* table,
                const ReferenceMap* refMap,
-               const TypeMap* typeMap,
+               TypeMap* typeMap,
                p4configv1::P4TypeInfo* p4RtTypeInfo) {
         CHECK_NULL(table);
         BUG_CHECK(instance.name != boost::none,
@@ -455,7 +455,7 @@ struct RegisterParam {
     static boost::optional<RegisterParam>
     from(const IR::ExternBlock* instance,
          const ReferenceMap* refMap,
-         const TypeMap* typeMap,
+         TypeMap* typeMap,
          p4configv1::P4TypeInfo* p4RtTypeInfo) {
         CHECK_NULL(instance);
         auto declaration = instance->node->to<IR::Declaration_Instance>();
@@ -2245,7 +2245,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
     static boost::optional<PortMetadata>
     getPortMetadataExtract(const P4::ExternFunction* function,
                            ReferenceMap* refMap,
-                           const TypeMap* typeMap,
+                           TypeMap* typeMap,
                            p4configv1::P4TypeInfo* p4RtTypeInfo) {
         if (function->method->name != BFN::ExternPortMetadataUnpackString)
             return boost::none;

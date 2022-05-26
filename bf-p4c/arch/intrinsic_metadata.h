@@ -228,6 +228,7 @@ class AddMetadataFields : public Transform {
     // that is used to transit to these state. Used to support extra
     // entry point to P4-14 parser.
     std::map<cstring, const IR::SelectCase*> selectCaseMap;
+    cstring p4c_start = nullptr;
 
  public:
     AddMetadataFields() { setName("AddIntrinsicMetadata"); }
@@ -264,7 +265,8 @@ class AddMetadataFields : public Transform {
             // state is restored before the logic in this pass modifies the start state.
             // Basically, the invariant here is to ensure the start state is unmodified,
             // with or w/o the @packet_entry pragma.
-            state->name = "start";
+            p4c_start = state->name;
+            state->name = IR::ParserState::start;
             return state;
         } else if (name->value == ".$start") {
             auto selExpr = state->selectExpression->to<IR::SelectExpression>();
@@ -283,6 +285,13 @@ class AddMetadataFields : public Transform {
             return nullptr;
         }
         return state;
+    }
+
+    // Also rename paths to start_0
+    IR::Path* postorder(IR::Path* path) override {
+        if (path->name.name == p4c_start)
+            path->name = IR::ParserState::start;
+        return path;
     }
 
     IR::BFN::TnaParser* postorder(IR::BFN::TnaParser *parser) override {
