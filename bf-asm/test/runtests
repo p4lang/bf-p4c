@@ -465,7 +465,7 @@ function test_bfa() {
     rv=0
     start=`date +%s`
     # added -Tcrash:0 to disable stack trace on crash as it seems unreasonably slow
-    if not run $BFAS --partial -g $target -Tcrash:0 -Mvvvvl $name.out/bfas.config.log $srcfile >$name.out/bfas.log 2>&1; then
+    if not run $BFAS --partial -g $target -Tcrash:0 -Mvvvvl $name.out/bfas.config.log $srcfile -o $name.out >$name.out/bfas.log 2>&1; then
         msg="$msg bfas failed"
         fail_type="bfas"
         if [ $count -eq 1 ] || [ "$expect_fail" != "bfas" ]; then
