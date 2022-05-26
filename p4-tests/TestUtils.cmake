@@ -147,18 +147,10 @@ function(bfn_needs_scapy tag p4test)
   set_property(TEST "${tag}/${p4test}" APPEND PROPERTY ENVIRONMENT "PKTPY=false")
 endfunction()
 
-macro(p4c_add_ptf_test_with_args device alias p4test test_args cmake_args)
-  p4c_test_set_name(__testname ${device} ${alias})
-  if (PTF_REQUIREMENTS_MET)
-    p4c_add_test_with_args (${device} ${P4C_RUNTEST} FALSE ${alias}
-      ${p4test} "${test_args}" "${cmake_args}")
-    set_property(TEST ${__testname} APPEND PROPERTY RESOURCE_LOCK ptf_test_environment)
-    p4c_add_test_label(${device} "ptf" ${alias})
-  else()
-    p4c_add_test_with_args (${device} ${P4C_RUNTEST} FALSE ${alias}
-      ${p4test} "${test_args}" "${cmake_args}")
-  endif()
-endmacro(p4c_add_ptf_test_with_args)
+macro(bfn_add_test_with_args device alias p4test test_args cmake_args)
+  p4c_add_test_with_args (${device} ${P4C_RUNTEST} FALSE ${alias}
+    ${p4test} "${test_args}" "${cmake_args} -${device}")
+endmacro(bfn_add_test_with_args)
 
 # call this macro to register a PTF test with a custom PTF test directory; by
 # default the behavior is to look for a directory with the same name as the P4
@@ -171,12 +163,12 @@ macro(p4c_add_ptf_test_with_ptfdir device alias ts args ptfdir)
   p4c_test_set_name(__testname ${device} ${alias})
   if (PTF_REQUIREMENTS_MET)
     p4c_add_test_with_args (${device} ${P4C_RUNTEST} FALSE ${alias}
-      ${p4test} "" "${args} -ptfdir ${ptfdir}")
+      ${p4test} "" "${args} -${device} -ptf -ptfdir ${ptfdir}")
     set_property(TEST ${__testname} APPEND PROPERTY RESOURCE_LOCK ptf_test_environment)
     p4c_add_test_label(${device} "ptf" ${alias})
   else()
     p4c_add_test_with_args (${device} ${P4C_RUNTEST} FALSE ${alias}
-      ${p4test} "" "${args}")
+      ${p4test} "" "${args} -${device}")
   endif()
 endmacro(p4c_add_ptf_test_with_ptfdir)
 
@@ -257,27 +249,27 @@ endmacro(packet_test_setup_check)
 
 # extra test args can be passed as unamed arguments
 macro(p4c_add_bf_backend_tests device toolsdevice arch label tests)
-  set (testExtraArgs "${ARGN}")
-  # do not add the device directly to testExtraArgs
+  set (_testExtraArgs "${ARGN}")
+  # do not add the device directly to _testExtraArgs
   # this is used later to add other tests for multiple configurations.
-  # set (testExtraArgs "${testExtraArgs} -${device}")
+  # set (_testExtraArgs "${_testExtraArgs} -${device}")
 
   # if STF is not found, disable all stf tests
   if (NOT HARLYN_STF_${toolsdevice})
-    set (testExtraArgs "${testExtraArgs} -norun")
+    set (_testExtraArgs "${_testExtraArgs} -norun")
   endif()
 
   if (PTF_REQUIREMENTS_MET)
-    set (testExtraArgs "${testExtraArgs} -ptf")
+    set (_testExtraArgs "${_testExtraArgs} -ptf")
     if (ENABLE_STF2PTF)
       if ( "${device}" STREQUAL "tofino")
-        set (testExtraArgs "${testExtraArgs} -stf2ptf")
+        set (_testExtraArgs "${_testExtraArgs} -stf2ptf")
       endif()
     endif()
   endif()
 
   p4c_add_tests (${device} ${P4C_RUNTEST} "${tests}"
-     "" "${testExtraArgs} -${device} -arch ${arch}")
+     "" "${_testExtraArgs} -${device} -arch ${arch}")
 
   # If label is not empty, add it to the tests
   foreach (ts "${tests}")
