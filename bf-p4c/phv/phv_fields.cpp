@@ -286,12 +286,14 @@ void PhvInfo::addPadding(const IR::Padding *pad, gress_t gress) {
 
 const PhvInfo::StructInfo PhvInfo::struct_info(cstring name_) const {
     StringRef name = name_;
-    if (all_structs.find(name) != all_structs.end())
-        return all_structs.at(name);
+    auto it = all_structs.find(name);
+    if (it != all_structs.end())
+        return it->second;
     if (auto *p = name.findstr("::")) {
         name = name.after(p+2); }
-    if (all_structs.find(name) != all_structs.end())
-        return all_structs.at(name);
+    it = all_structs.find(name);
+    if (it != all_structs.end())
+        return it->second;
     BUG("No PhvInfo::header for header named '%s'", name_);
 }
 

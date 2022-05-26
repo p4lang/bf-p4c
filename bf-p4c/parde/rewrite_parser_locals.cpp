@@ -18,7 +18,9 @@ bool AddParserMatchDefs::preorder(IR::BFN::Extract* extract) {
     if (getSelectField.select_field_to_state.count(dest_field) &&
         extract->dest->field->is<IR::TempVar>() && !uses.is_used_mau(dest_field)) {
         for (auto select_state : getSelectField.select_field_to_state.at(dest_field)) {
-            if (graph.is_ancestor(state, select_state)) {
+            // since select has to be at the end of a state it is safe to use a field defined in
+            // the same state as it was extracted in
+            if (state == select_state || graph.is_ancestor(state, select_state)) {
                 auto match = new IR::BFN::MatchLVal(extract->dest->field);
                 LOG3("Match Value added in " << extract << " in state " << state->name);
                 extract->dest = match;

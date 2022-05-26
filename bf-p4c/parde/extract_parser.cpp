@@ -109,53 +109,6 @@ struct ParserPragmas : public Inspector {
     std::set<cstring> dont_unroll;
 };
 
-// Rewrite p4-14's "current(a,b)" or p4-16's "pkt.lookahead<switch_pkt_src_t>()"
-// as IR::BFN::PacketRVal (bit position in the input buffer)
-static const IR::BFN::PacketRVal*
-rewriteLookahead(P4::TypeMap* typeMap,
-                 const IR::MethodCallExpression* call,
-                 int bitShift,
-                 const IR::Slice* slice = nullptr,
-                 const IR::Member* member = nullptr) {
-    BUG_CHECK(call->typeArguments->size() == 1,
-              "Expected 1 type parameter for %1%", call);
-
-    if (slice && member) BUG("Invalid use of function rewriteLookahead");
-
-    auto* typeArg = call->typeArguments->at(0);
-    auto* typeArgType = typeMap->getTypeType(typeArg, true);
-    int width = typeArgType->width_bits();
-    BUG_CHECK(width > 0, "Non-positive width for lookahead type %1%", typeArg);
-
-    nw_bitrange finalRange;
-    if (slice) {
-        le_bitrange sliceRange(slice->getL(), slice->getH());
-        nw_bitinterval lookaheadInterval =
-          sliceRange.toOrder<Endian::Network>(width)
-                    .intersectWith(StartLen(0, width));
-        if (lookaheadInterval.empty())
-            ::fatal_error("Slice is empty: %1%", slice);
-
-        auto lookaheadRange = *toClosedRange(lookaheadInterval);
-        finalRange = lookaheadRange.shiftedByBits(bitShift);
-    } else if (member) {
-        auto header = typeArgType->to<IR::Type_Header>();
-        unsigned offset = 0;
-
-        for (auto f : header->fields) {
-            if (f->name == member->member)
-                break;
-            offset += f->type->width_bits();
-        }
-
-        finalRange = nw_bitrange(StartLen(bitShift + offset, member->type->width_bits()));
-    } else {
-        finalRange = nw_bitrange(StartLen(bitShift, width));
-    }
-    auto rval = new IR::BFN::PacketRVal(finalRange);
-    return rval;
-}
-
 static bool isExtern(const IR::Member* method, cstring externName) {
     if (auto pe = method->expr->to<IR::PathExpression>()) {
         if (auto type = pe->type->to<IR::Type_SpecializedCanonical>()) {
@@ -280,6 +233,56 @@ struct ParserLoopsInfo {
     }
 };
 
+struct GetHeaderStackIndex : public Inspector {
+    cstring header;
+    int rv = -1;
+    bool ignore_valid;
+
+    explicit GetHeaderStackIndex(cstring hdr, bool ignore_valid = false) :
+        header(hdr), ignore_valid(ignore_valid) { }
+
+    bool preorder(const IR::HeaderStackItemRef* ref) override {
+        if (ignore_valid) {
+            auto stmt = findContext<IR::AssignmentStatement>();
+            if (stmt) {
+                auto lhs = stmt->left->to<IR::Member>();
+                // Ignore any prior change to $valid
+                if (lhs && lhs->member == "$valid") {
+                    return false;
+                }
+            }
+        }
+        auto hdrRef = ref->baseRef();
+        if (!hdrRef)
+            return false;
+        auto hdr = hdrRef->name;
+
+        if (hdr == header) {
+            auto index = ref->index()->to<IR::Constant>();
+            rv = index->asUnsigned();
+        }
+
+        return false;
+    }
+
+    void postorder(const IR::MethodCallStatement* statement) override {
+        auto* call = statement->methodCall;
+        if (auto* method = call->method->to<IR::Member>()) {
+            if (method->member == "extract") {
+                auto dest = (*call->arguments)[0]->expression;
+                auto hdr = dest->to<IR::HeaderRef>();
+                BUG_CHECK(hdr, "%1%: not a header reference in extract", statement);
+
+                if (!hdr->is<IR::HeaderStackItemRef>()) {
+                    if (header == hdr->to<IR::ConcreteHeaderRef>()->ref->name) {
+                        rv = 0;
+                    }
+                }
+            }
+        }
+    }
+};
+
 /// Keeps track of visited states which are all ancestors
 /// to the current state.
 struct AncestorStates {
@@ -313,53 +316,11 @@ struct AncestorStates {
         return it;
     }
 
-    struct GetHeaderStackIndex : public Inspector {
-        cstring header;
-        int rv = -1;
-
-        explicit GetHeaderStackIndex(cstring hdr) : header(hdr) { }
-
-        bool preorder(const IR::HeaderStackItemRef* ref) override {
-            auto stmt = findContext<IR::AssignmentStatement>();
-            if (stmt) {
-                auto lhs = stmt->left->to<IR::Member>();
-                // Ignore any prior change to $valid
-                if (lhs && lhs->member == "$valid") {
-                    return false;
-                }
-            }
-            auto hdr = ref->baseRef()->name;
-
-            if (hdr == header) {
-                auto index = ref->index()->to<IR::Constant>();
-                rv = index->asUnsigned();
-            }
-
-            return false;
-        }
-
-        void postorder(const IR::MethodCallStatement* statement) override {
-            auto* call = statement->methodCall;
-            if (auto* method = call->method->to<IR::Member>()) {
-                if (method->member == "extract") {
-                    auto dest = (*call->arguments)[0]->expression;
-                    auto hdr = dest->to<IR::HeaderRef>();
-
-                    if (!hdr->is<IR::HeaderStackItemRef>()) {
-                        if (header == hdr->to<IR::ConcreteHeaderRef>()->ref->name) {
-                            rv = 0;
-                        }
-                    }
-                }
-            }
-        }
-    };
-
     int getCurrentIndex(cstring header) {
         int rv = -1;
 
         for (auto state : stack) {
-            GetHeaderStackIndex getHeaderStackIndex(header);
+            GetHeaderStackIndex getHeaderStackIndex(header, true);
             state->p4State->apply(getHeaderStackIndex);
 
             if (getHeaderStackIndex.rv > rv)
@@ -422,10 +383,6 @@ class GetBackendParser {
         }
     }
 
-    const IR::Node* rewriteLookaheadExpr(const IR::MethodCallExpression* call,
-                                         const IR::Slice* slice,
-                                         int bitShift, nw_bitrange& bitrange);
-
     const IR::Node* rewriteSelectExpr(const IR::Expression* selectExpr, int bitShift,
                                       nw_bitrange& bitrange);
 
@@ -480,40 +437,6 @@ struct ResolveHeaderStackIndex : public Transform {
 
         return index < 0 || index >= stackSize;
     }
-
-    struct GetHeaderStackIndex : public Inspector {
-        cstring header;
-        int rv = -1;
-
-        explicit GetHeaderStackIndex(cstring hdr) : header(hdr) { }
-
-        bool preorder(const IR::HeaderStackItemRef* ref) override {
-            auto hdr = ref->baseRef()->name;
-
-            if (hdr == header) {
-                auto index = ref->index()->to<IR::Constant>();
-                rv = index->asUnsigned();
-            }
-
-            return false;
-        }
-
-        void postorder(const IR::MethodCallStatement* statement) override {
-            auto* call = statement->methodCall;
-            if (auto* method = call->method->to<IR::Member>()) {
-                if (method->member == "extract") {
-                    auto dest = (*call->arguments)[0]->expression;
-                    auto hdr = dest->to<IR::HeaderRef>();
-
-                    if (!hdr->is<IR::HeaderStackItemRef>()) {
-                        if (header == hdr->to<IR::ConcreteHeaderRef>()->ref->name) {
-                            rv = 0;
-                        }
-                    }
-                }
-            }
-        }
-    };
 
     // In order to decide the index of headerstack reference, we need to look into its preceding
     // state and then decide its index. Of all preceding states we need to look into closest
@@ -855,36 +778,104 @@ void GetBackendParser::addTransition(IR::BFN::ParserState* state, match_t matchV
     ancestors.pop();
 }
 
-const IR::BFN::PacketRVal*
-resolveLookahead(P4::TypeMap* typeMap, const IR::Expression* expr, int currentBit) {
-    if (auto* slice = expr->to<IR::Slice>()) {
-        if (auto* call = slice->e0->to<IR::MethodCallExpression>()) {
-            if (auto* mem = call->method->to<IR::Member>()) {
-                if (mem->member == "lookahead") {
-                    auto rval = rewriteLookahead(typeMap, call, currentBit, slice);
-                    return rval;
-                }
-            }
-        }
-    } else if (auto* call = expr->to<IR::MethodCallExpression>()) {
+/// Rewrite an expression that is a lookahead or a member of a lookahead value
+/// (inc. slices and stack-parts of lookaheads) to a tuple (type of the extracted
+/// expression, corresponding range of bits to be extracted from packet).
+/// If the input is not such an expression the result will contain nullptr as
+/// the first member of the tuple.
+boost::optional<nw_bitrange>
+lookaheadToExtractRange(P4::TypeMap* typeMap, const IR::Expression* expr, int currentBit) {
+    if (auto* call = expr->to<IR::MethodCallExpression>()) {
         if (auto* mem = call->method->to<IR::Member>()) {
             if (mem->member == "lookahead") {
-                auto rval = rewriteLookahead(typeMap, call, currentBit);
-                return rval;
-            }
-        }
-    } else if (auto* member = expr->to<IR::Member>()) {
-        if (auto* call = member->expr->to<IR::MethodCallExpression>()) {
-            if (auto* mem = call->method->to<IR::Member>()) {
-                if (mem->member == "lookahead") {
-                    auto rval = rewriteLookahead(typeMap, call, currentBit, nullptr, member);
-                    return rval;
-                }
-            }
-        }
-    }
+                BUG_CHECK(call->typeArguments->size() == 1,
+                          "Expected 1 type parameter for %1%", call);
 
-    return nullptr;
+                // type->width_bits does not calculate size of stacks correctly
+                // (it assumes they are empty), the TypeMap::widthBits handles
+                // this properly, but it will also return maximum size for
+                // header unions which makes little sense for lookahead. The
+                // header union case should be handled by typechecker.
+                // The false argument indicates we would not consider the
+                // maximum width for varbits but consider them empty (again,
+                // varbits should not be allowed in lookahead).
+                int width = typeMap->widthBits(expr->type, expr, false);
+                BUG_CHECK(width > 0, "Non-positive width for lookahead type %1%", expr->type);
+                return nw_bitrange(StartLen(currentBit, width));
+            }
+        }
+
+    } else if (auto* slice = expr->to<IR::Slice>()) {
+        auto range = lookaheadToExtractRange(typeMap, slice->e0, currentBit);
+        if (!range)
+            return boost::none;
+
+        BUG_CHECK(slice->e0->type->is<IR::Type_Bits>(), "%1%: Cannot slice non-bit type %2%",
+                  slice, slice->e0->type);
+        int src_width = typeMap->widthBits(slice->e0->type, expr, false);
+        BUG_CHECK(src_width == range->hi - range->lo + 1,
+                  "%1%: inconsistent size in lookup calculation", expr);
+        BUG_CHECK(int(slice->getH()) < src_width, "%1%: Invalid slice, value length is only %2%",
+                  slice, src_width);
+        le_bitrange sliceRange(slice->getL(), slice->getH());
+        nw_bitrange lookaheadInterval = sliceRange.toOrder<Endian::Network>(src_width);
+        return lookaheadInterval.shiftedByBits(currentBit);
+
+    } else if (auto* member = expr->to<IR::Member>()) {
+        auto range = lookaheadToExtractRange(typeMap, member->expr, currentBit);
+        if (!range)
+            return boost::none;
+
+        auto type = member->expr->type;
+        auto composite = type->to<IR::Type_StructLike>();
+        BUG_CHECK(composite, "Invalid type %1% of %2%", type->toString(), member->expr);
+        unsigned offset = 0;
+
+        for (auto f : composite->fields) {
+            if (f->name == member->member)
+                return nw_bitrange(StartLen(currentBit + offset, f->type->width_bits()));
+            offset += f->type->width_bits();
+        }
+        BUG("%1%: did not find field %2% in type %3%", expr, member->member, type->toString());
+
+    } else if (auto *stack = expr->to<IR::HeaderStackItemRef>()) {
+        auto range = lookaheadToExtractRange(typeMap, stack->base(), currentBit);
+        if (!range)
+            return boost::none;
+
+        auto index = stack->index()->to<IR::Constant>();
+        if (!index) {
+            ::error(ErrorType::ERR_UNSUPPORTED,
+                    "%1%: header stack index must be constant in lookahead", expr);
+            return boost::none;
+        }
+        BUG_CHECK(index->fitsUint64(), "%1%: Invalid index for header stack lookahead", expr);
+        auto index_val = index->asUint64();
+        auto stack_type = stack->base()->type->to<IR::Type_Stack>();
+        auto elem_type = stack->type;
+        BUG_CHECK(stack_type, "%1%: Invalid type for header stack: %2%",
+                  expr, stack->base()->type);
+        auto elem_size = typeMap->widthBits(elem_type, expr, false);
+        BUG_CHECK(elem_size > 0, "%1%: Stack elem in lookahead does not have size", expr);
+        if (index_val >= stack_type->getSize()) {
+            ::error(ErrorType::ERR_EXPRESSION, "%1%: Index ouf of bounds for stack size %2%",
+                    index, stack_type->getSize());
+            return boost::none;
+        }
+
+        range = range->shiftedByBits(index_val * elem_size);
+        return range->resizedToBits(elem_size);
+    }
+    return boost::none;
+}
+
+const IR::BFN::PacketRVal*
+resolveLookahead(P4::TypeMap* typeMap, const IR::Expression* expr, int currentBit) {
+    auto range = lookaheadToExtractRange(typeMap, expr, currentBit);
+    if (!range)
+        return nullptr;
+
+    return new IR::BFN::PacketRVal(*range);
 }
 
 /// Rewrites frontend parser IR statements to the backend ones.
@@ -1535,16 +1526,6 @@ static match_t buildMatch(int match_size, const IR::Expression *key,
     else
         BUG("Invalid select case expression %1%", key);
     return match_t();
-}
-
-const IR::Node*
-GetBackendParser::rewriteLookaheadExpr(const IR::MethodCallExpression* call,
-                                       const IR::Slice* slice,
-                                       int bitShift, nw_bitrange& bitrange) {
-    auto rval = rewriteLookahead(typeMap, call, bitShift, slice);
-    auto select = new IR::BFN::Select(new IR::BFN::SavedRVal(rval), call);
-    bitrange = rval->range;
-    return select;
 }
 
 const IR::Node*
