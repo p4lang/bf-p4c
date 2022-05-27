@@ -327,7 +327,7 @@ void GatewayTable::pass1() {
         if (layout[1].result_bus >= 0 && (have_payload >= 0 || match_address >= 0)) {
             if (payload_unit < 0) {
                 payload_unit = layout[1].result_bus & 1;
-            } else if (payload_unit != layout[1].result_bus & 1) {
+            } else if (payload_unit != (layout[1].result_bus & 1)) {
                 error(layout[1].lineno, "payload unit %d cannot write to result bus %d",
                       payload_unit, layout[1].result_bus); } }
         if (layout[1].row < 0) {
