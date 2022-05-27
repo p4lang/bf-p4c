@@ -74,11 +74,11 @@ class Device {
     static int numLogTablesPerStage() { return Device::get().getNumLogTablesPerStage(); }
     static bool hasIngressDeparser() { return Device::get().getHasIngressDeparser(); }
     static bool hasEgressParser() { return Device::get().getHasEgressParser(); }
-    static bool hasImplictPHVValidBit() { return Device::get().getHasImplicitPHVValidBit(); }
     static bool hasGhostThread() { return Device::get().getHasGhostThread(); }
     static bool threadsSharePipe(gress_t a, gress_t b) {
         return Device::get().getThreadsSharePipe(a, b); }
     static bool hasMirrorIOSelect() { return Device::get().getHasMirrorIOSelect(); }
+    static bool hasMetadataPOV() { return Device::get().getHasMetadataPOV(); }
 
  protected:
     explicit Device(cstring name) : name_(name) {}
@@ -114,10 +114,10 @@ class Device {
     virtual int getNumLogTablesPerStage() const = 0;
     virtual bool getHasIngressDeparser() const = 0;
     virtual bool getHasEgressParser() const = 0;
-    virtual bool getHasImplicitPHVValidBit() const = 0;
     virtual bool getHasGhostThread() const = 0;
     virtual bool getThreadsSharePipe(gress_t a, gress_t b) const = 0;
     virtual bool getHasMirrorIOSelect() const = 0;
+    virtual bool getHasMetadataPOV() const = 0;
 
  private:
     static Device* instance_;
@@ -172,10 +172,10 @@ class TofinoDevice : public Device {
     int getNumLogTablesPerStage() const override { return 16; }
     bool getHasIngressDeparser() const override { return true; }
     bool getHasEgressParser() const override { return true; }
-    bool getHasImplicitPHVValidBit() const override { return true; }
     bool getHasGhostThread() const override { return false; };
     bool getThreadsSharePipe(gress_t, gress_t) const override { return true; }
     bool getHasMirrorIOSelect() const override { return false; }
+    bool getHasMetadataPOV() const override { return false; }
 };
 
 class JBayDevice : public Device {
@@ -225,10 +225,10 @@ class JBayDevice : public Device {
     int getNumLogTablesPerStage() const override { return 16; }
     bool getHasIngressDeparser() const override { return true; }
     bool getHasEgressParser() const override { return true; }
-    bool getHasImplicitPHVValidBit() const override { return false; }
     bool getHasGhostThread() const override { return true; };
     bool getThreadsSharePipe(gress_t, gress_t) const override { return true; }
     bool getHasMirrorIOSelect() const override { return true; }
+    bool getHasMetadataPOV() const override { return true; }
 };
 
 /// Tofino2 variants. The only difference between them is the number of
@@ -308,10 +308,10 @@ class CloudbreakDevice : public Device {
     int getNumLogTablesPerStage() const override { return 16; }
     bool getHasIngressDeparser() const override { return true; }
     bool getHasEgressParser() const override { return true; }
-    bool getHasImplicitPHVValidBit() const override { return false; }
     bool getHasGhostThread() const override { return true; };
     bool getThreadsSharePipe(gress_t, gress_t) const override { return true; }
     bool getHasMirrorIOSelect() const override { return true; }
+    bool getHasMetadataPOV() const override { return true; }
 };
 #endif /* HAVE_CLOUDBREAK */
 
@@ -363,12 +363,12 @@ class FlatrockDevice : public Device {
     int getNumLogTablesPerStage() const override { return 16; }
     bool getHasIngressDeparser() const override { return false; }
     bool getHasEgressParser() const override { return false; }
-    bool getHasImplicitPHVValidBit() const override { return false; }
     bool getHasGhostThread() const override { return false; /* TBD */ };
     bool getThreadsSharePipe(gress_t a, gress_t b) const {
         // just check bottom bit, as ingress/ghost share a pipe
         return (a&1) == (b&1); }
     bool getHasMirrorIOSelect() const override { return false; }
+    bool getHasMetadataPOV() const override { return false; }
 };
 #endif /* HAVE_FLATROCK */
 

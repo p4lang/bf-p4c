@@ -28,7 +28,7 @@ void CheckUninitializedRead::end_apply() {
         } else if (field.is_overlayable()) {
             LOG3("Ignore overlayable field: " << field);
             return true;
-        } else if (Device::hasImplictPHVValidBit()) {
+        } else if (!Device::hasMetadataPOV()) {
             // Only for tofino, if a field is invalidated by the arch, then this field is pov bit
             // protected and will not overlay with other fields. So no need to check it.
             if (field.is_invalidate_from_arch())

@@ -35,7 +35,7 @@ const IR::Node* DisableAutoInitMetadata::preorder(IR::BFN::Pipe* pipe) {
         // auto_init_metadata is not enabled. Therefore, these two fields should be excluded from
         // pa_no_init, unless users explicitly set it. And this only applies to tna arch, since
         // after t2na, phv containers do not come with a implicit validity bit. A explicit validity
-        // bit is needed, see add_jbay_cb_pov.h
+        // bit is needed, see add_metdata_pov.h
         if (field->is_intrinsic()) {
             if (field->name.endsWith("ig_intr_md_for_dprsr.drop_ctl")) continue;
             if (field->name.endsWith("ig_intr_md_for_dprsr.mirror_type")) continue;

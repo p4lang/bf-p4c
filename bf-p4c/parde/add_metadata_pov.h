@@ -1,18 +1,18 @@
-#ifndef BF_P4C_PARDE_ADD_JBAY_CB_POV_H_
-#define BF_P4C_PARDE_ADD_JBAY_CB_POV_H_
+#ifndef BF_P4C_PARDE_ADD_METADATA_POV_H_
+#define BF_P4C_PARDE_ADD_METADATA_POV_H_
 
 #include "ir/ir.h"
 #include "bf-p4c/phv/phv_fields.h"
 
 
-/**@brief Create POV bits for JBay output metadata
+/**@brief Create POV bits for output metadata (JBAY / Cloudbreak)
  *
  * JBay / CloudBreak requires POV bits to control output metadata as implicit
  * PHV valid bits * are gone.  We create a single POV bit for each metadata in use
  * and set the bit * whenever the metadata is set.
  */
 
-class AddJBayOrCBMetadataPOV : public Transform {
+class AddMetadataPOV : public Transform {
     const PhvInfo &phv;
     const IR::BFN::Deparser *dp = nullptr;
     bool equiv(const IR::Expression *a, const IR::Expression *b) {
@@ -96,7 +96,7 @@ class AddJBayOrCBMetadataPOV : public Transform {
         return e; }
 
  public:
-    explicit AddJBayOrCBMetadataPOV(PhvInfo &p) : phv(p) {}
+    explicit AddMetadataPOV(PhvInfo &p) : phv(p) {}
 };
 
-#endif /* BF_P4C_PARDE_ADD_JBAY_CB_POV_H_ */
+#endif /* BF_P4C_PARDE_ADD_METADATA_POV_H_ */
