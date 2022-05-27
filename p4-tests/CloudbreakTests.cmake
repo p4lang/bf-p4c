@@ -194,9 +194,11 @@ set_tests_properties("tofino3/extensions/p4_tests/p4_16/compile_only/p4c-2740.p4
 #bfn_set_pd_build_flag("tofino3" "extensions/p4_tests/p4-programs/programs/ha/ha.p4"
 #    "--gen-hitless-ha-test-pd")
 #
-## Add some tests as compile only (if they take too long to run or cannot be run
-## in compiler docker env due to port issues or lack of pd-16 support)
-#set (TOF3_V1MODEL_COMPILE_ONLY_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/action_spec_format/*.p4"
+
+# Add some tests as compile only (if they take too long to run or cannot be run
+# in compiler docker env due to port issues or lack of pd-16 support)
+set (TOF3_V1MODEL_COMPILE_ONLY_TESTS 
+#                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/action_spec_format/*.p4"
 #                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4/*.p4"
 #                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/exm_direct_1/*.p4"
 #                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/exm_direct/*.p4"
@@ -210,7 +212,7 @@ set_tests_properties("tofino3/extensions/p4_tests/p4_16/compile_only/p4c-2740.p4
 #                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/opcode_test_saturating/*.p4"
 #                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/opcode_test_signed_and_saturating/*.p4"
 #                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/opcode_test_signed/*.p4"
-#                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/opcode_test/*.p4"
+                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/opcode_test/*.p4"
 #                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/parser_error/*.p4"
 #                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/parser_intr_md/*.p4"
 #                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/pgrs_tof2/*.p4"
@@ -219,10 +221,11 @@ set_tests_properties("tofino3/extensions/p4_tests/p4_16/compile_only/p4c-2740.p4
 #                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/iterator/*.p4"
 #                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/perf_test_alpm/*.p4"
 #                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/perf_test/*.p4"
-#                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/pgrs/*.p4")
-#bfn_find_tests ("${TOF3_V1MODEL_COMPILE_ONLY_TESTS}" TOF3_V1MODEL_COMPILE_ONLY_TESTS_LIST EXCLUDE "${BFN_EXCLUDE_PATTERNS}")
-#p4c_add_bf_backend_tests("tofino3" "cb" "${TOF3_V1MODEL_COMPILE_ONLY_TESTS_LIST}")
-#
+#                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/pgrs/*.p4"
+                                      )
+bfn_find_tests ("${TOF3_V1MODEL_COMPILE_ONLY_TESTS}" TOF3_V1MODEL_COMPILE_ONLY_TESTS_LIST EXCLUDE "${BFN_EXCLUDE_PATTERNS}")
+p4c_add_bf_backend_tests("tofino3" "cb" "${JBAY_P414_TEST_ARCH}" "smoketest_programs\;JENKINS_PART2" "${TOF3_V1MODEL_COMPILE_ONLY_TESTS_LIST}")
+
 #file(RELATIVE_PATH tofino32q-3pipe_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tofino32q-3pipe/sfc.p4)
 #bfn_add_test_with_args ("tofino3" "tofino32q-3pipe" ${tofino32q-3pipe_path} "${testExtraArgs} -tofino3 -arch t3na" "")
 #

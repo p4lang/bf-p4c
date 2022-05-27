@@ -80,7 +80,7 @@
 #include "bf-p4c/mau/stateful_alu.h"
 #include "bf-p4c/mau/table_summary.h"
 #include "bf-p4c/mau/validate_actions.h"
-#include "bf-p4c/parde/add_jbay_pov.h"
+#include "bf-p4c/parde/add_jbay_cb_pov.h"
 #include "bf-p4c/parde/adjust_extract.h"
 #include "bf-p4c/parde/check_parser_multi_write.h"
 #include "bf-p4c/parde/clot/allocate_clot.h"
@@ -208,7 +208,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         // FIXME -- Flatrock will need somethimg here, but the JBay code won't work
         Device::currentDevice() != Device::FLATROCK &&
 #endif
-        Device::hasImplictPHVValidBit() == false ?  new AddJBayMetadataPOV(phv) : nullptr,
+        Device::hasImplictPHVValidBit() == false ?  new AddJBayOrCBMetadataPOV(phv) : nullptr,
         Device::currentDevice() == Device::TOFINO ?
             new ResetInvalidatedChecksumHeaders(phv) : nullptr,
         new CollectPhvInfo(phv),

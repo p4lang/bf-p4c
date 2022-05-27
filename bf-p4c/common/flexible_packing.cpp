@@ -24,7 +24,7 @@
 #include "bf-p4c/mau/push_pop.h"
 #include "bf-p4c/mau/selector_update.h"
 #include "bf-p4c/mau/stateful_alu.h"
-#include "bf-p4c/parde/add_jbay_pov.h"
+#include "bf-p4c/parde/add_jbay_cb_pov.h"
 #include "bf-p4c/parde/stack_push_shims.h"
 #include "bf-p4c/phv/create_thread_local_instances.h"
 #include "bf-p4c/parde/reset_invalidated_checksum_headers.h"
@@ -393,7 +393,9 @@ PackFlexibleHeaders::PackFlexibleHeaders(const BFN_Options& options,
         new CollectHeaderStackInfo,  // Needed by CollectPhvInfo.
         new CollectPhvInfo(phv),
         &defuse,
-        Device::currentDevice() == Device::JBAY ? new AddJBayMetadataPOV(phv) : nullptr,
+        (Device::currentDevice() == Device::JBAY
+            || Device::currentDevice() == Device::CLOUDBREAK) ?
+               new AddJBayOrCBMetadataPOV(phv) : nullptr,
         new CollectPhvInfo(phv),
         &defuse,
         new CollectHeaderStackInfo,  // Needs to be rerun after CreateThreadLocalInstances, but
