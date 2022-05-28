@@ -17,6 +17,32 @@ bool AddSpecialConstraints::preorder(const IR::BFN::ChecksumResidualDeposit* get
     return true;
 }
 
+bool AddSpecialConstraints::preorder(const IR::Concat* concat) {
+    PHV::Field* f1 = phv_i.field(concat->left);
+    PHV::Field* f2 = phv_i.field(concat->right);
+    if ((f1 != f2) && f2) {
+        if (concat->left->is<IR::Constant>()) {
+            LOG3("Setting field " << f2->name << " as upcasted because of a concat operation");
+            f2->set_upcasted(true);
+        }
+    }
+    return true;
+}
+bool AddSpecialConstraints::preorder(const IR::Cast* cast) {
+    const IR::Type* srcType = cast->expr->type;
+    const IR::Type* dstType = cast->destType;
+
+    if (srcType->is<IR::Type_Bits>() && dstType->is<IR::Type_Bits>() &&
+        srcType->width_bits() < dstType->width_bits()) {
+        PHV::Field* f = phv_i.field(cast->expr);
+        if (f) {
+            LOG3("Setting field " << f->name << " as upcasted because of a cast operation");
+            f->set_upcasted(true);
+        }
+    }
+    return true;
+}
+
 void AddSpecialConstraints::end_apply() {
     // decaf constraint
     for (auto f : decaf_i.rewrite_deparser.must_split_fields) {

@@ -321,6 +321,9 @@ class Field : public LiftLess<Field> {
     /// continuous between the combined containers.
     bool            no_holes_i = false;
 
+    bool            upcasted_i = false;                /// true if field is upcasted as a source
+                                                       /// using concat or cast operation.
+
     /// Maximum size of container bytes this field can occupy. -1 if there is no constraint on this
     /// field.
     /// E.g. if an 8-bit field can only occupy a maximum of 2 bytes, this value will be 2, and that
@@ -395,6 +398,9 @@ class Field : public LiftLess<Field> {
 
     bool emitted() const                                   { return emitted_i; }
     void set_emitted(bool b)                               { emitted_i = b; }
+
+    bool is_upcasted() const                               { return upcasted_i; }
+    void set_upcasted(bool c)                              { upcasted_i = c; }
 
     //
     // constraints

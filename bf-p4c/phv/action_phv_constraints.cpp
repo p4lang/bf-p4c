@@ -4331,6 +4331,22 @@ CanPackErrorV2 ActionPhvConstraints::check_move_constraints(
             if (!uses.is_referenced(slice.field()) || slice.field()->padding) {
                 continue;
             }
+            // When placing upcasted source field into dark/mocha, the write must cover the
+            // whole container: all (msb) container bits should not be clobbered. Because otherwise
+            // the instruction, that read this container for the upcasted field, will read
+            // corrupted bits. We check it by setting all bits of destination
+            // to be *live*, (meaning cannot be clobbered), to solver.
+            if (c.type().kind() == PHV::Kind::mocha || c.type().kind() == PHV::Kind::dark){
+                if (slice.field()->is_upcasted()) {
+                    const auto sources = constraint_tracker.sources(slice, action);
+                    if (!sources.empty()) {
+                        const auto& operand = sources.front();
+                        // Action Data or Constant set the entire container with padding
+                        if (!operand.ad && !operand.constant)
+                            solver->set_container_spec(c.toString(), c.size(), bitvec(0, c.size()));
+                    }
+                }
+            }
             const auto dest = make_container_operand(c.toString(), slice.container_slice());
             LOG5("check dest slice: " << slice << " as " << dest);
             add_meta_init_assign(action, slice, dest);
