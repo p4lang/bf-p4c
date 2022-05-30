@@ -156,6 +156,19 @@ const char *PragmaParserGroupMonogress::help =
     "The pa_parser_group_monogress pragma prevents extracted and non-extracted "
     "fields of different gresses to be allocated into the same parser-group containers.";
 
+const char *PragmaPrioritizeARAinits::name = "pa_prioritize_ara_inits";
+const char *PragmaPrioritizeARAinits::description =
+    "Use AlwaysRunActions (ARAs) more aggressively for overlay initializations";
+const char *PragmaPrioritizeARAinits::help =
+    "@pragma pa_prioritize_ara_inits\n"
+    "+ at the beginning of the P4 source file"
+    "\n"
+    "By default zero-initizalization are implemented by injecting initialization "
+    "instructions into regular tables dominating the references of the initialized field. "
+    "The pa_prioritize_ara_inits pragma prioritizes the use of Always-Run-Actions (ARAs) "
+    "for zero-initialization of overlaid metadata fields which may result in more aggressive "
+    "overlaying of fields into PHV containers and thus more efficient PHV utilization";
+
 const char *PragmaCalculatedFieldUpdateLocation::name = "calculated_field_update_location";
 const char *PragmaCalculatedFieldUpdateLocation::description =
     "Specifies the pipe to update the checksum for a calculated field object.";

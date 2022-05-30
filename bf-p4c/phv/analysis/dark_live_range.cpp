@@ -615,7 +615,8 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
         const PHV::Container& c,
         const ordered_set<PHV::AllocSlice>& fields,
         const PHV::Transaction& alloc,
-        bool canUseARA) const {
+        bool canUseARA,
+        bool prioritizeARAinits) const {
     // If one of the fields has been marked as "do not init to dark" (primarily because we did not
     // find dominator nodes for use nodes of those fields), then return false early.
     for (const auto& sl : fields)
@@ -824,16 +825,38 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
                        << info.field << " using 0 after stage " << lastField->maxStage.first
                        << lastField->maxStage.second);
 
-        if (onlyDeparserUse && initializeCurrentField && initializeFromDark) {
-            auto init = generateInitForLastStageAlwaysInit(info, lastField, rv);
-            if (!init) return boost::none;
-            rv.push_back(*init);
-            continue;
-        } else if (onlyDeparserUse) {
-            // FIXME
-            LOG_FEATURE("alloc_progress", 5, TAB2
-                        "Currently doesn't support initialization from 0 in always init block.");
-            return boost::none;
+        if (initializeCurrentField) {
+            if (onlyDeparserUse && initializeFromDark) {
+                LOG_DEBUG4(TAB2 "   Trying to initialize from dark for deparser-only use");
+                auto init = generateInitForLastStageAlwaysInit(info, lastField, rv);
+                if (!init) return boost::none;
+                rv.push_back(*init);
+                continue;
+            } else if ((fieldsInOrder->size() == 2) && (idx == 1) && canUseARA) {
+                // Use of ARA for zero-init of later slice in metadata overlay of 2 slices
+                // This is enabled with pragma @pa_prioritize_ara_inits
+                LOG_DEBUG4(TAB2 "   Trying to zero initialize:   onlyDeparserUse:" <<
+                          onlyDeparserUse);
+                auto init = generateARAzeroInit(info, lastField, alloc, onlyDeparserUse,
+                                                onlyReadCandidates);
+                if (init && prioritizeARAinits) {
+                    if (firstDarkInitEntry != nullptr) {
+                        LOG_DEBUG3(TAB2 "Need to push the first dark init primitive "
+                                   "corresponding to " << *firstDarkInitEntry);
+                        rv.push_back(*firstDarkInitEntry);
+                    }
+
+                    rv.push_back(*init);
+                    continue;
+                }
+                if (onlyDeparserUse) {
+                    LOG_FEATURE("alloc_progress", 5, TAB2 "Currently doesn't support"
+                                " initialization from 0 in always init block.");
+                    return boost::none;
+                }
+                LOG_DEBUG4(TAB3 "Did not generate ARA for zero Init, will try using dominator"
+                           " table ...");
+            }
         }
 
         bool ARAspill = PhvInfo::darkSpillARA && movePreviousToDark && !initializeFromDark &&
@@ -1409,6 +1432,60 @@ DarkLiveRange::generateInitForLastStageAlwaysInit(
     }
     BUG("Did not find allocation for slice %1% in a dark container", field.field);
     return boost::none;
+}
+
+boost::optional<PHV::DarkInitEntry>
+DarkLiveRange::generateARAzeroInit(
+        const OrderedFieldInfo& field,
+        const OrderedFieldInfo* prvField,
+        const PHV::Transaction& alloc,
+        bool onlyDeparserUse,
+        bool onlyReadCandidates) const {
+    PHV::AllocSlice dstSlice(field.field);
+    // Initially set the starting stage of the current liverange to the first ref stage
+    int initStage = field.minStage.first;
+    // If we need to initialize the current field we need to adjust the earliest liverange
+    if (!onlyReadCandidates) {
+        // if slice is already allocated and has later starting liverange
+        if (alloc.slices(dstSlice.container(), dstSlice.field_slice()).count(dstSlice) &&
+            (dstSlice.getEarliestLiveness().first > prvField->maxStage.first))
+            initStage = dstSlice.getEarliestLiveness().first;
+        else
+            initStage = prvField->maxStage.second == PHV::FieldUse(READ) ? prvField->maxStage.first
+                : (prvField->maxStage.first + 1);
+    }
+
+    dstSlice.setLiveness(std::make_pair(initStage,
+                                        (onlyReadCandidates ? PHV::FieldUse(READ) :
+                                         PHV::FieldUse(WRITE))),
+            field.maxStage);
+    PHV::DarkInitEntry rv(dstSlice, PHV::Allocation::ActionSet());
+    // Handle padding fields
+    if (field.field.field()->padding || onlyReadCandidates) {
+        rv.setNop();
+        // *ALEX* This is not actually required for overlaid fields that are only read
+        // rv.addPriorUnits(prvField->units);
+        LOG_DEBUG3(TAB5 "Adding NOP initialization for non-written slice: " << rv);
+        return rv;
+    }
+
+    // Check if we can inject ARA without pushing uses of @field later
+    if ((field.minStage.first - initStage) < 1) {
+        LOG_FEATURE("alloc_progress", 5, TAB2 "No stage for ARA zero-init. Prev maxStage:" <<
+                    prvField->maxStage << "  Cur minStage:" << field.minStage);
+        return boost::none;
+    }
+
+    if (onlyDeparserUse) {
+        rv.setLastStageAlwaysInit();
+    } else {
+        rv.setAlwaysRunInit();
+        rv.addPostUnits(field.units);
+    }
+
+    rv.addPriorUnits(prvField->units);
+    LOG_DEBUG3(TAB5 "Adding ARA zero initialization: " << rv);
+    return rv;
 }
 
 boost::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForCurrentFieldFromDark(

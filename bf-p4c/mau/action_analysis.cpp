@@ -491,15 +491,9 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
         const auto *field = phv.field(field_action.write.expr, &bits);
         PHV::FieldUse use(PHV::FieldUse::WRITE);
         int split_count = 0;
-        bitvec unallocated_bits(bits.lo, bits.size());
         field->foreach_alloc(bits, tbl, &use, [&](const PHV::AllocSlice& s) {
             split_count++;
-            unallocated_bits.clrrange(s.field_slice().lo, s.field_slice().size());
         });
-
-        // a helpful bugcheck to ensure that all relevant slices has been allocated.
-        BUG_CHECK(unallocated_bits.empty() || is_allowed_unalloc(field_action.write.expr),
-                  "PHV not allocated for field %s wrt table %s", field, (tbl ? tbl->name : "null"));
 
         const bool split = (split_count != 1);
         field->foreach_alloc(bits, tbl, &use,

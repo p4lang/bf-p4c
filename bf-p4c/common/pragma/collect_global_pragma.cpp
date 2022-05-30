@@ -12,6 +12,7 @@ CollectGlobalPragma::g_global_pragma_names = new std::vector<cstring>{
     PragmaParserBandwidthOpt::name,
     PragmaBackwardCompatible::name,
     PragmaParserGroupMonogress::name,
+    PragmaPrioritizeARAinits::name,
     PragmaContainerSize::name,
     PragmaContainerType::name,
     PragmaDisableI2EReservedDropImplementation::name,

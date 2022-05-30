@@ -1281,6 +1281,32 @@ bool CoreAllocation::satisfies_constraints(
                        "them having 'no pack' constraint: " << slices);
             return false; } }
 
+    // Reject allocation of slices of the same deparsed field if the Less Significant bits
+    // of the field are allocated to more significant container bits
+    for (auto& cand_sl : slices) {
+        auto *f = cand_sl.field();
+        // Only apply check to deparsed fields
+        if (!(f->deparsed() || f->deparsed_to_tm() || f->is_digest())) continue;
+
+        for (auto &alloc_sl : alloc.slices(cand_sl.field())) {
+            LOG_DEBUG5("\t" << alloc_sl);
+            // Check allocated slices of the same field on the same container.
+            if (cand_sl.container() != alloc_sl.container()) continue;
+
+            bool cand_fslice_lsbs = (cand_sl.field_slice().hi < alloc_sl.field_slice().lo);
+            bool cand_cont_lsbs = (cand_sl.container_slice().hi <
+                                   alloc_sl.container_slice().lo);
+            LOG_DEBUG5(" lsbs " << cand_fslice_lsbs << " - " << cand_cont_lsbs <<
+                       " cand = " << cand_sl << "  alloc = " << alloc_sl);
+            if (cand_fslice_lsbs != cand_cont_lsbs) {
+                LOG_DEBUG1("\t Reject allocation of the same deparsed field " << f->name <<
+                           "  when the Less-Signifiant bits of the field are in the more "
+                           "significant container bits");
+                return false;
+            }
+        }
+    }
+
     // Check sum of constraints.
     ordered_set<const PHV::Field*> containerBytesFields;
     ordered_map<const PHV::Field*, int> allocatedBitsInThisTransaction;
@@ -2189,7 +2215,7 @@ bool CoreAllocation::try_dark_overlay(
         }
 
         auto darkInitNodes = utils_i.dark_init.findInitializationNodes(
-            group, alloced_slices, slice, perContainerAlloc, canDarkInitUseARA);
+            group, alloced_slices, slice, perContainerAlloc, canDarkInitUseARA, prioritizeARAinits);
         if (!darkInitNodes) {
             LOG_FEATURE("alloc_progress", 5, TAB1
                         "Failed: Cannot find initialization points for dark containers.");
@@ -2267,7 +2293,7 @@ bool CoreAllocation::check_metadata_and_dark_overlay(
         // Disable metadata initialization if the container for metadata overlay is a mocha
         // or dark container.
         // XXX(Deep): P4C-1187
-        if (!is_mocha_or_dark && metadataOverlay) {
+        if (!is_mocha_or_dark && metadataOverlay && (!prioritizeARAinits || !darkOverlay)) {
             if (!try_metadata_overlay(c, allocedSlices, slice, initNodes, new_candidate_slices,
                 metaInitSlices, initActions, perContainerAlloc, alloced_slices, actual_cntr_state))
                 return false;
@@ -2290,7 +2316,8 @@ bool CoreAllocation::check_metadata_and_dark_overlay(
 // Compare properties of existing primitive and new primitive and
 // check if some of them need to be maintained in new slice.
 bool CoreAllocation::update_new_prim(const PHV::AllocSlice &existingSl,
-                                     PHV::AllocSlice& newSl) const {
+                                     PHV::AllocSlice& newSl,
+                                     ordered_set<PHV::AllocSlice>& toBeRemovedFromAlloc) const {
     LOG_DEBUG5("\t\t existing Prim:" << existingSl.getInitPrimitive());
     LOG_DEBUG5("\t\t      new Prim:" << newSl.getInitPrimitive());
 
@@ -2321,6 +2348,15 @@ bool CoreAllocation::update_new_prim(const PHV::AllocSlice &existingSl,
     if (existingPrim.isNOP()) {
         LOG_DEBUG5(" Existing slice is a NOP. No further update checks required.");
         return true;
+    }
+
+    // Keep early liverange if new prim is NOP
+    if (newPrim.isNOP()) {
+        if (existingSl.getEarliestLiveness().first < newSl.getEarliestLiveness().first) {
+            LOG_DEBUG5(" New slice is NOP. Keeping existing slice early liverange.");
+            toBeRemovedFromAlloc.insert(newSl);
+            newSl.setEarliestLiveness(existingSl.getEarliestLiveness());
+        }
     }
 
     // If existing and new primitive use different regular tables then
@@ -3082,7 +3118,7 @@ bool CoreAllocation::generateNewAllocSlices(
             foundAnyNewSliceForThisAllocatedSlice = true;
 
             // Copy prior units from removed to new slice
-            if (!update_new_prim(alreadyAllocatedSlice, newSlice)) {
+            if (!update_new_prim(alreadyAllocatedSlice, newSlice, toBeRemovedFromAlloc)) {
                 LOG_FEATURE("alloc_progress", 5, TAB3 "New dark primitive " << newSlice <<
                             " not compatible with existing slice " << alreadyAllocatedSlice);
                 return false;
@@ -3846,6 +3882,10 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
 
     if (utils_i.settings.single_gress_parser_group) {
         core_alloc_i.set_single_gress_parser_group();
+    }
+
+    if (utils_i.settings.prioritize_ara_inits) {
+        core_alloc_i.set_prioritize_ARA_inits();
     }
 
     int pipeId = root->id;

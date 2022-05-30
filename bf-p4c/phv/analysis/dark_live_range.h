@@ -353,13 +353,21 @@ class DarkLiveRange : public Inspector {
             const OrderedFieldInfo* previousField,
             PHV::DarkInitMap& darkInitMap) const;
 
+     boost::optional<PHV::DarkInitEntry> generateARAzeroInit(
+         const OrderedFieldInfo& field,
+         const OrderedFieldInfo* previousField,
+         const PHV::Transaction& alloc,
+         bool onlyDeparserUse,
+         bool onlyReadCandidates) const;
+
  public:
     boost::optional<PHV::DarkInitMap> findInitializationNodes(
             const PHV::ContainerGroup& group,
             const PHV::Container& c,
             const ordered_set<PHV::AllocSlice>& fields,
             const PHV::Transaction& alloc,
-            bool canUseARA) const;
+            bool canUseARA,
+            bool prioritizeARAinits) const;
 
     explicit DarkLiveRange(
             PhvInfo& p,
@@ -408,7 +416,8 @@ class DarkOverlay : public PassManager {
             const ordered_set<PHV::AllocSlice>& alloced,
             const PHV::AllocSlice& slice,
             const PHV::Transaction& alloc,
-            bool canUseARA) const {
+            bool canUseARA,
+            bool prioritizeARAinits) const {
         if (!suitableForDarkOverlay(slice)) {
             LOG_FEATURE("alloc_progress", 5, TAB2 "Dark overlay candidate " << slice <<
                         " not a good fit for container " << slice.container());
@@ -429,7 +438,8 @@ class DarkOverlay : public PassManager {
                   "Container candidate for dark overlay cannot be NULL.");
         BUG_CHECK(c == slice.container(), "Needs to be the same container");
         fields.insert(PHV::AllocSlice(slice));
-        return initNode.findInitializationNodes(group, c, fields, alloc, canUseARA);
+        return initNode.findInitializationNodes(group, c, fields, alloc, canUseARA,
+                                                prioritizeARAinits);
     }
 
     explicit DarkOverlay(

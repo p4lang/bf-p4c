@@ -360,6 +360,8 @@ class CoreAllocation {
     const bool disableMetadataInit;
     // Enforce single gress parser groups
     bool singleGressParserGroups;
+    // Prioritize use of ARA for overlay inits
+    bool prioritizeARAinits;
 
     boost::optional<PHV::Transaction> alloc_super_cluster_with_alignment(
         const PHV::Allocation& alloc,
@@ -397,7 +399,8 @@ class CoreAllocation {
         const PHV::ContainerGroup& group,
         const bool &canDarkInitUseARA) const;
 
-    bool update_new_prim(const PHV::AllocSlice &existingSl, PHV::AllocSlice &newSl) const;
+    bool update_new_prim(const PHV::AllocSlice &existingSl, PHV::AllocSlice &newSl,
+                         ordered_set<PHV::AllocSlice> &toBeRemovedFromAlloc) const;
 
     boost::optional<std::vector<PHV::AllocSlice>> prepare_candidate_slices(
             PHV::SuperCluster::SliceList & slices,
@@ -506,6 +509,9 @@ class CoreAllocation {
     void set_single_gress_parser_group() { singleGressParserGroups = true; }
     bool get_single_gress_parser_group() { return singleGressParserGroups; }
 
+    // Set/Get ARA init priority
+    void set_prioritize_ARA_inits() { prioritizeARAinits = true; }
+    bool get_prioririze_ARA_inits() { return prioritizeARAinits; }
 
     /** Try to allocate all fields in @p cluster to containers in @p group, using the
      * following techniques (when permissible by constraints), assuming @p alloc is

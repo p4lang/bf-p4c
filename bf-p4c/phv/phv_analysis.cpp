@@ -42,6 +42,9 @@ class ApplyGlobalPragmas : public Visitor {
             if (anno->name.name == PragmaParserGroupMonogress::name) {
                 settings_i.single_gress_parser_group = true;
             }
+            if (anno->name.name == PragmaPrioritizeARAinits::name) {
+                settings_i.prioritize_ara_inits = true;
+            }
         }
         return root;
     }

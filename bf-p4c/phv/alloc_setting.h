@@ -14,6 +14,7 @@ struct AllocSetting {
     bool physical_liverange_overlay = false;  // true if allow physical liverange overlay.
     bool limit_tmp_creation = false;          // true if intermediate tmp value are limited.
     bool single_gress_parser_group = false;   // true if PragmaParserGroupMonogress enabled.
+    bool prioritize_ara_inits = false;        // true if PragmaPrioritizeARAinits enabled.
 };
 
 }  // namespace PHV
