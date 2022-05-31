@@ -1455,10 +1455,11 @@ DarkLiveRange::generateARAzeroInit(
                 : (prvField->maxStage.first + 1);
     }
 
-    dstSlice.setLiveness(std::make_pair(initStage,
-                                        (onlyReadCandidates ? PHV::FieldUse(READ) :
-                                         PHV::FieldUse(WRITE))),
-            field.maxStage);
+    dstSlice.setLiveness(std::make_pair(initStage, (onlyReadCandidates ? PHV::FieldUse(READ) :
+                                                    PHV::FieldUse(WRITE))),
+                         field.maxStage);
+    dstSlice.addRefs(field.field.getRefs());
+
     PHV::DarkInitEntry rv(dstSlice, PHV::Allocation::ActionSet());
     // Handle padding fields
     if (field.field.field()->padding || onlyReadCandidates) {
