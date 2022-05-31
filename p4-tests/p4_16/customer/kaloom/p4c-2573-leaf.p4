@@ -792,8 +792,28 @@ parser TofinoEgressParser(
  * forbidden except by express written permission of Kaloom Inc.
  ****************************************************************/
 
-
-
+/* P4C-4079: Restore header mutexes that were conservatively removed by fix */
+@pa_mutually_exclusive("ingress", "hdr.pktgen_port_down", "hdr.dp_ctrl_hdr")
+@pa_mutually_exclusive("ingress", "hdr.pktgen_ext_header", "hdr.dp_ctrl_hdr")
+@pa_mutually_exclusive("egress", "hdr.ethernet", "eg_md.mirror")
+@pa_mutually_exclusive("egress", "hdr.vlan", "hdr.knf")
+@pa_mutually_exclusive("egress", "hdr.vlan", "hdr.inner_ethernet")
+@pa_mutually_exclusive("egress", "hdr.vlan", "hdr.inner_ipv6")
+@pa_mutually_exclusive("egress", "hdr.vlan", "hdr.inner_udp")
+@pa_mutually_exclusive("egress", "hdr.vlan", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.vlan", "eg_md.mirror")
+@pa_mutually_exclusive("egress", "hdr.ipv6", "eg_md.mirror")
+@pa_mutually_exclusive("egress", "hdr.udp", "eg_md.mirror")
+@pa_mutually_exclusive("egress", "hdr.knf", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.knf", "eg_md.mirror")
+@pa_mutually_exclusive("egress", "hdr.inner_ethernet", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.ipv4", "hdr.inner_ipv6")
+@pa_mutually_exclusive("egress", "hdr.ipv4", "hdr.inner_udp")
+@pa_mutually_exclusive("egress", "hdr.ipv4", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.ipv4", "eg_md.mirror")
+@pa_mutually_exclusive("egress", "hdr.udpv4", "hdr.inner_ipv6")
+@pa_mutually_exclusive("egress", "hdr.udpv4", "hdr.inner_udp")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_ipv6", "hdr.vxlan_inner_ipv4")
 
 /* Egress to Egress Mirroring */
 control EgressMirror(

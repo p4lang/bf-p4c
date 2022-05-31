@@ -3847,7 +3847,7 @@ parser SwitchIngressParser(
 
     state parse_pfc {
         pkt.extract(hdr.pfc);
-        ig_md.bypass = 16w0xfffb; // SWITCH_INGRESS_BYPASS_ALL; 
+        ig_md.bypass = 16w0xfffb; // SWITCH_INGRESS_BYPASS_ALL;
         transition accept;
     }
 
@@ -9601,6 +9601,9 @@ control IPv4_Checksum_Compute(inout switch_header_t hdr) {
 // other fields which were set by action data. Until Brig fixes
 // it, it is safer to mark SALU related fields as solitary.
 @pa_solitary("egress", "eg_md.dtel.queue_report_flag")
+
+/* P4C-4079: Restore header mutexes that were conservatively removed by fix */
+@pa_mutually_exclusive("egress", "hdr.ipv4", "hdr.ipv6")
 
 control SwitchIngress(
         inout switch_header_t hdr,

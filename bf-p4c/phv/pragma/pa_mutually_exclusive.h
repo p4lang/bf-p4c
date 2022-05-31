@@ -16,10 +16,12 @@
 class PragmaMutuallyExclusive : public Inspector {
     const PhvInfo& phv_i;
     ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>> pa_mutually_exclusive_i;
+    ordered_map<cstring, ordered_set<cstring>> mutually_exclusive_headers;
 
     profile_t init_apply(const IR::Node* root) override {
         profile_t rv = Inspector::init_apply(root);
         pa_mutually_exclusive_i.clear();
+        mutually_exclusive_headers.clear();
         return rv;
     }
 
@@ -37,6 +39,9 @@ class PragmaMutuallyExclusive : public Inspector {
 
     const ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>>& mutex_fields() const {
         return pa_mutually_exclusive_i;
+    }
+    const ordered_map<cstring, ordered_set<cstring>>& mutex_headers() const {
+        return mutually_exclusive_headers;
     }
 };
 

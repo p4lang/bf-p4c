@@ -274,7 +274,8 @@ p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base"
 # p4_16/compile_only/p4c-3241.p4
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/p4c-3241.p4"
-    "-Xp4c=\"--set-max-power 56.98\"")
+    "-to 1200 -Xp4c=\"--set-max-power 56.98\"")
+set_tests_properties("tofino/extensions/p4_tests/p4_16/compile_only/p4c-3241.p4" PROPERTIES TIMEOUT 1200)
 
 # p4_16/customer/kaloom/p4c-3139.p4
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base"
@@ -1037,10 +1038,10 @@ foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS)
   # FIXME: remove disabling of parser min/max depth limits (P4C-4170)
   if (${t} STREQUAL "tna_meter_lpf_wred")
     p4c_add_ptf_test_with_ptfdir ("tofino" "p4_16_programs_${t}" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}/${t}.p4"
-      "${testExtraArgs} -arch tna -bfrt -Xp4c=\"--disable-parse-depth-limit\" --p4runtime-force-std-externs" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}")
+      "${testExtraArgs} -target tofino -arch tna -bfrt -Xp4c=\"--disable-parse-depth-limit\" --p4runtime-force-std-externs" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}")
   else()
     p4c_add_ptf_test_with_ptfdir ("tofino" "p4_16_programs_${t}" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}/${t}.p4"
-      "${testExtraArgs} -arch tna -bfrt --p4runtime-force-std-externs" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}")
+      "${testExtraArgs} -target tofino -arch tna -bfrt --p4runtime-force-std-externs" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}")
   endif()
   bfn_set_p4_build_flag("tofino" "p4_16_programs_${t}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs")
   set (ports_json ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}/ports.json)
@@ -1061,7 +1062,7 @@ endforeach()
 foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS_INTERNAL)
   p4c_add_ptf_test_with_ptfdir ("tofino" "p4_16_programs_internal_${t}"
       "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/${t}/${t}.p4"
-    "${testExtraArgs} -arch tna -bfrt"
+    "${testExtraArgs} -target tofino -arch tna -bfrt"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/${t}")
   bfn_set_p4_build_flag("tofino" "p4_16_programs_internal_${t}"
       "-I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16")
@@ -1099,80 +1100,80 @@ bfn_set_ptf_test_spec("tofino" "p4_16_programs_tna_mirror"
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c_1585_a" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585_a/p4c_1585_a.p4"
-    "${testExtraArgs} -arch tna -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585_a")
+    "${testExtraArgs} -target tofino -arch tna -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585_a")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c_1585_b" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585_b/p4c_1585_b.p4"
-    "${testExtraArgs} -arch tna -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585_b")
+    "${testExtraArgs} -target tofino -arch tna -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585_b")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c_2249" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2249/p4c_2249.p4"
-    "${testExtraArgs} -arch tna -bfrt -Xp4c=\"--disable-parse-max-depth-limit\""
+    "${testExtraArgs} -target tofino -arch tna -bfrt -Xp4c=\"--disable-parse-max-depth-limit\""
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2249")
 set_tests_properties("tofino/p4c_2249" PROPERTIES TIMEOUT ${extended_timeout_4times})
 bfn_needs_scapy("tofino" "p4c_2249")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c_3005" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_3005/p4c3005.p4"
-    "${testExtraArgs} -arch tna -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_3005/p4c3005.ptf")
+    "${testExtraArgs} -target tofino -arch tna -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_3005/p4c3005.ptf")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c_2611" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2611/p4c2611.p4"
-    "${testExtraArgs} -arch tna -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2611/p4c2611.ptf")
+    "${testExtraArgs} -target tofino -arch tna -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2611/p4c2611.ptf")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c_2713" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2713/p4c2713.p4"
-    "${testExtraArgs} -arch tna -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2713/p4c2713.ptf")
+    "${testExtraArgs} -target tofino -arch tna -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2713/p4c2713.ptf")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" "t2na_static_entry" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/t2na_static_entry/t2na_static_entry.p4"
-    "${testExtraArgs} -arch tna -bfrt " "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/t2na_static_entry")
+    "${testExtraArgs} -target tofino -arch tna -bfrt " "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/t2na_static_entry")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c_2785_sizeinbits" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2785/p4c_2785_sizeinbits.p4"
-    "${testExtraArgs} -arch tna -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2785/p4c_2785_sizeinbits.ptf")
+    "${testExtraArgs} -target tofino -arch tna -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2785/p4c_2785_sizeinbits.ptf")
 p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c_2785_sizeinbytes" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2785/p4c_2785_sizeinbytes.p4"
-    "${testExtraArgs} -arch tna -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2785/p4c_2785_sizeinbytes.ptf")
+    "${testExtraArgs} -target tofino -arch tna -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2785/p4c_2785_sizeinbytes.ptf")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c-3876" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3876/p4c_3876.p4"
-    "${testExtraArgs} -arch tna -bfrt -Xp4c=--disable-parse-min-depth-limit" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3876")
+    "${testExtraArgs} -target tofino -arch tna -bfrt -Xp4c=--disable-parse-min-depth-limit" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3876")
 bfn_needs_scapy("tofino" "p4c-3876")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c_3343" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-3343.ptf/p4c_3343.p4"
-    "${testExtraArgs} -arch tna -bfrt"
+    "${testExtraArgs} -target tofino -arch tna -bfrt"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-3343.ptf")
 bfn_set_p4_build_flag("tofino" "p4c_3343" "-Xp4c=\"--disable-power-check\"")
 set_tests_properties("tofino/p4c_3343" PROPERTIES TIMEOUT ${extended_timeout_4times})
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c_3926" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/p4c_3926.p4"
-    "${testExtraArgs} -arch tna -bfrt --p4runtime-force-std-externs"
+    "${testExtraArgs} -target tofino -arch tna -bfrt --p4runtime-force-std-externs"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/p4c_3926.ptf")
 
 p4c_add_ptf_test_with_ptfdir(
     "tofino" "mirror_constants" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/mirror_constants.p4"
-    "${testExtraArgs} -arch tna -bfrt --p4runtime-force-std-externs"
+    "${testExtraArgs} -target tofino -arch tna -bfrt --p4runtime-force-std-externs"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/mirror_constants.ptf")
 bfn_needs_scapy("tofino" "mirror_constants")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c_4158" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_4158/p4c_4158.p4"
-    "${testExtraArgs} -arch tna -bfrt -Xp4c=\"--set-max-power 60\""
+    "${testExtraArgs} -target tofino -arch tna -bfrt -Xp4c=\"--set-max-power 60\""
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_4158")
 set_tests_properties("tofino/p4c_4158" PROPERTIES TIMEOUT ${extended_timeout_4times})
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c_2601" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/p4c_2601.p4"
-    "${testExtraArgs} -arch tna -bfrt --p4runtime-force-std-externs"
+    "${testExtraArgs} -target tofino -arch tna -bfrt --p4runtime-force-std-externs"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/p4c_2601.ptf")
 bfn_needs_scapy("tofino" "p4c_2601")
 
 p4c_add_ptf_test_with_ptfdir(
     "tofino" "hash_extern_xor" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/hash_extern_xor.p4"
-    "${testExtraArgs} -arch tna -bfrt --p4runtime-force-std-externs"
+    "${testExtraArgs} -target tofino -arch tna -bfrt --p4runtime-force-std-externs"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/hash_extern_xor.ptf")
 bfn_needs_scapy("tofino" "hash_extern_xor")
 

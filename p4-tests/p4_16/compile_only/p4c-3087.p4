@@ -1,4 +1,4 @@
-#include <t2na.p4>  /* TOFINO2_ONLY */ 
+#include <t2na.p4>  /* TOFINO2_ONLY */
 
 
 //-----------------------------------------------------------------------------
@@ -3959,7 +3959,7 @@ parser SwitchIngressParser(
 
     state parse_pfc {
         pkt.extract(hdr.pfc);
-        ig_md.bypass = 16w0xfffb; // SWITCH_INGRESS_BYPASS_ALL; 
+        ig_md.bypass = 16w0xfffb; // SWITCH_INGRESS_BYPASS_ALL;
         transition accept;
     }
 
@@ -9133,7 +9133,7 @@ control IngressAlwaysTriggerSfc(
             ig_md.mirror.src = (bit<8>)SWITCH_PKT_SRC_CLONED_INGRESS;
             //ig_md.sfc.queue_register_idx = 1;
             //ig_md.sfc.qlength_threshold = 100;
-            //ig_md.qos.tc = 3;	
+            //ig_md.qos.tc = 3;
         }
     table always_trigger_sfc_pkt_table {
         key = {
@@ -9639,7 +9639,7 @@ control EgressThreadSfcTrigger(inout switch_header_t hdr,
         hdr.ipv4.setInvalid();
         hdr.udp.setInvalid();
         hdr.sfc_pause.setInvalid();
-        //PFC pkts (802.1Qbb 66B) -- dstmac(6B),srcmac(6B),TYPE(2B8808),Opcode(2B0101),CEV(2B),Time0-7(8*2B),Pad(28B),CRC(4B)            
+        //PFC pkts (802.1Qbb 66B) -- dstmac(6B),srcmac(6B),TYPE(2B8808),Opcode(2B0101),CEV(2B),Time0-7(8*2B),Pad(28B),CRC(4B)
         hdr.ethernet.src_addr = 0x000000000000;//ori_dst_mac;
         hdr.ethernet.ether_type = 0x8808;
 
@@ -9702,7 +9702,7 @@ control EgressThreadSfcTrigger(inout switch_header_t hdr,
                 data_qd_write();
                 return;
             }
-            trigger: {//cloned packet 
+            trigger: {//cloned packet
                 // Create SFC pause packet from trigger, calculate pause time
                 // and recirculate.
                 trigger_qd_read();
@@ -10047,6 +10047,28 @@ control IPv4_Checksum_Compute(inout switch_header_t hdr) {
 // other fields which were set by action data. Until Brig fixes
 // it, it is safer to mark SALU related fields as solitary.
 @pa_solitary("egress", "eg_md.dtel.queue_report_flag")
+
+/* P4C-4079: Restore header mutexes that were conservatively removed by fix */
+@pa_mutually_exclusive("egress", "hdr.dtel_report", "hdr.ethernet")
+@pa_mutually_exclusive("egress", "hdr.dtel_report", "hdr.ipv4")
+@pa_mutually_exclusive("egress", "hdr.dtel_report", "hdr.udp")
+@pa_mutually_exclusive("egress", "hdr.dtel_report", "hdr.sfc_pause")
+@pa_mutually_exclusive("egress", "hdr.dtel_drop_report", "hdr.ethernet")
+@pa_mutually_exclusive("egress", "hdr.dtel_drop_report", "hdr.ipv4")
+@pa_mutually_exclusive("egress", "hdr.dtel_drop_report", "hdr.udp")
+@pa_mutually_exclusive("egress", "hdr.dtel_drop_report", "hdr.sfc_pause")
+@pa_mutually_exclusive("egress", "hdr.ethernet", "hdr.dtel_switch_local_report")
+@pa_mutually_exclusive("egress", "hdr.dtel_switch_local_report", "hdr.ipv4")
+@pa_mutually_exclusive("egress", "hdr.dtel_switch_local_report", "hdr.udp")
+@pa_mutually_exclusive("egress", "hdr.dtel_switch_local_report", "hdr.sfc_pause")
+@pa_mutually_exclusive("egress", "hdr.ipv4", "hdr.ipv6")
+@pa_mutually_exclusive("egress", "hdr.ipv4", "hdr.pfc")
+@pa_mutually_exclusive("egress", "hdr.ipv4_option", "hdr.udp")
+@pa_mutually_exclusive("egress", "hdr.ipv4_option", "hdr.sfc_pause")
+@pa_mutually_exclusive("egress", "hdr.udp", "hdr.ipv6")
+@pa_mutually_exclusive("egress", "hdr.udp", "hdr.pfc")
+@pa_mutually_exclusive("egress", "hdr.sfc_pause", "hdr.ipv6")
+@pa_mutually_exclusive("egress", "hdr.sfc_pause", "hdr.pfc")
 
 control SwitchIngress(
         inout switch_header_t hdr,

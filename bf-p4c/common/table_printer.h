@@ -6,7 +6,7 @@
 #include "lib/log.h"
 
 /**
- *  Usage: 
+ *  Usage:
  *
  *  TablePrinter tp(std::cout, {"name", "size", "price"});
  *
@@ -26,6 +26,10 @@ class TablePrinter {
       : _s(s), _headers(headers), _align(align) {
         for (auto& h : headers)
             _colWidth.push_back(h.length());
+    }
+
+    bool empty() {
+        return _data.empty();
     }
 
     void addRow(std::vector<std::string> row) {
@@ -58,7 +62,7 @@ class TablePrinter {
 
         for (unsigned i = 0; i < _data.size(); i++) {
             printRow(_data.at(i));
-            if (_seps.count(i+1)) printSep(_seps.at(i+1));
+            if (_seps.count(i+1) && i+1 != _data.size()) printSep(_seps.at(i+1));
         }
 
         printSep();

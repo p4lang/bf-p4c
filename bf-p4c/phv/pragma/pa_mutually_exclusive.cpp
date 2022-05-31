@@ -16,9 +16,9 @@ const char *PragmaMutuallyExclusive::help =
     "+ attached to P4 header instances\n"
     "\n"
     "Specifies that the two indicated nodes which may be either single "
-    "fields or simple headers can be considered mutually exclusive of "
-    "one another. In the case of simple header nodes, the exclusivity "
-    "applies to the fields of the header. "
+    "fields or headers can be considered mutually exclusive of one "
+    "another. In the case of header nodes, the exclusivity applies to "
+    "the fields of the header. "
     "PHV allocation uses field exclusivity to optimize container usage "
     "by overlaying mutually exclusive fields in the same container. "
     "This pragma does not guarantee that the mutually exclusive fields "
@@ -71,27 +71,46 @@ bool PragmaMutuallyExclusive::preorder(const IR::BFN::Pipe* pipe) {
         auto node2_name = gress_arg->value + "::" + node2_ir->value;
         auto field1 = phv_i.field(node1_name);
         auto field2 = phv_i.field(node2_name);
-        auto s_hdr1 = field1 ? nullptr : phv_i.simple_hdr(node1_name);
-        auto s_hdr2 = field2 ? nullptr : phv_i.simple_hdr(node2_name);
+        auto hdr1 = field1 ? nullptr : phv_i.hdr(node1_name);
+        auto hdr2 = field2 ? nullptr : phv_i.hdr(node2_name);
         auto n1_flds = ordered_set<const PHV::Field*>();
         auto n2_flds = ordered_set<const PHV::Field*>();
 
+        LOG4("node1_name = " << node1_name);
+        LOG4("node2_name = " << node2_name);
+        LOG4("field1 = " << field1);
+        LOG4("field2 = " << field2);
+        LOG4("hdr1 = " << hdr1);
+        LOG4("hdr2 = " << hdr2);
+
         if (field1)
             n1_flds.insert(field1);
-        if (s_hdr1)
+        if (hdr1)
             phv_i.get_hdr_fields(node1_name, n1_flds);
-        if (!field1 && !s_hdr1) {
+        if (!field1 && !hdr1) {
             PHV::Pragmas::reportNoMatchingPHV(pipe, node1_ir);
             continue;
         }
 
+        LOG4("n1_flds = " << n1_flds);
+
         if (field2)
             n2_flds.insert(field2);
-        if (s_hdr2)
+        if (hdr2)
             phv_i.get_hdr_fields(node2_name, n2_flds);
-        if (!field2 && !s_hdr2) {
+        if (!field2 && !hdr2) {
             PHV::Pragmas::reportNoMatchingPHV(pipe, node2_ir);
             continue;
+        }
+
+        LOG4("n2_flds = " << n2_flds);
+
+        if (hdr1 && hdr2) {
+            auto hdr1_name = phv_i.full_hdr_name(node1_name);
+            auto hdr2_name = phv_i.full_hdr_name(node2_name);
+            LOG3("Adding into mutually exclusive headers: " << hdr1_name << " <--> " << hdr2_name);
+            mutually_exclusive_headers[hdr1_name].insert(hdr2_name);
+            mutually_exclusive_headers[hdr2_name].insert(hdr1_name);
         }
 
         for (auto fld1 : n1_flds) {

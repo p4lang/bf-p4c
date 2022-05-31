@@ -10155,6 +10155,34 @@ control EgressSflow(inout switch_egress_metadata_t eg_md) {
 @pa_solitary("ingress", "ig_md.flags.ipv4_checksum_err")
 @pa_no_overlay("ingress", "smac_src_move")
 
+/* P4C-4079: Restore header mutexes that were conservatively removed by fix */
+@pa_mutually_exclusive("egress", "hdr.dtel_report", "hdr.cpu")
+@pa_mutually_exclusive("egress", "hdr.dtel_report", "hdr.ethernet")
+@pa_mutually_exclusive("egress", "hdr.dtel_report", "hdr.ipv4")
+@pa_mutually_exclusive("egress", "hdr.dtel_report", "hdr.udp")
+@pa_mutually_exclusive("egress", "hdr.dtel_report", "hdr.vxlan")
+@pa_mutually_exclusive("egress", "hdr.dtel_report", "hdr.inner_ipv4")
+@pa_mutually_exclusive("egress", "hdr.dtel_report", "hdr.inner_udp")
+@pa_mutually_exclusive("egress", "hdr.dtel_drop_report", "hdr.cpu")
+@pa_mutually_exclusive("egress", "hdr.dtel_drop_report", "hdr.ethernet")
+@pa_mutually_exclusive("egress", "hdr.dtel_drop_report", "hdr.ipv4")
+@pa_mutually_exclusive("egress", "hdr.dtel_drop_report", "hdr.udp")
+@pa_mutually_exclusive("egress", "hdr.dtel_drop_report", "hdr.vxlan")
+@pa_mutually_exclusive("egress", "hdr.dtel_drop_report", "hdr.inner_ipv4")
+@pa_mutually_exclusive("egress", "hdr.dtel_drop_report", "hdr.inner_udp")
+@pa_mutually_exclusive("egress", "hdr.cpu", "hdr.dtel_switch_local_report")
+@pa_mutually_exclusive("egress", "hdr.ethernet", "hdr.dtel_switch_local_report")
+@pa_mutually_exclusive("egress", "hdr.dtel_switch_local_report", "hdr.ipv4")
+@pa_mutually_exclusive("egress", "hdr.dtel_switch_local_report", "hdr.udp")
+@pa_mutually_exclusive("egress", "hdr.dtel_switch_local_report", "hdr.vxlan")
+@pa_mutually_exclusive("egress", "hdr.dtel_switch_local_report", "hdr.inner_ipv4")
+@pa_mutually_exclusive("egress", "hdr.dtel_switch_local_report", "hdr.inner_udp")
+@pa_mutually_exclusive("egress", "hdr.ipv4", "hdr.ipv6")
+@pa_mutually_exclusive("egress", "hdr.udp", "hdr.ipv6")
+@pa_mutually_exclusive("egress", "hdr.vxlan", "hdr.ipv6")
+@pa_mutually_exclusive("egress", "hdr.inner_ipv4", "hdr.inner_ipv6")
+@pa_mutually_exclusive("egress", "hdr.inner_udp", "hdr.ipv6")
+
 control SwitchIngress(
         inout switch_header_t hdr,
         inout switch_ingress_metadata_t ig_md,

@@ -1786,6 +1786,11 @@ struct switch_bridged_metadata_tunnel_extension_t {
 @pa_mutually_exclusive("egress", "hdr.erspan_type3.ft_d_other", "hdr.dtel_report.queue_id")
 @pa_mutually_exclusive("egress", "hdr.erspan_type3.ft_d_other", "hdr.dtel_report.ingress_port")
 @pa_mutually_exclusive("egress", "hdr.erspan_type3.ft_d_other", "hdr.dtel_report.egress_port")
+
+/* P4C-4079: Restore some header mutexes that were conservatively removed by fix */
+@pa_mutually_exclusive("egress", "hdr.ipv4", "hdr.ipv6")
+@pa_mutually_exclusive("egress", "hdr.tcp", "hdr.udp")
+
 # 1434 "/mnt/p4-tests/p4_16/switch_16/p4src/shared/types.p4"
 typedef bit<8> switch_bridge_type_t;
 
@@ -4564,7 +4569,7 @@ control Nexthop(inout switch_local_metadata_t local_md)(
                    ecmp_group_table_size) ecmp_selector;
 
 
-    // ---------------- IP Nexthop ---------------- 
+    // ---------------- IP Nexthop ----------------
     action set_nexthop_properties(switch_port_lag_index_t port_lag_index,
                                   switch_bd_t bd,
                                   switch_nat_zone_t zone) {
@@ -4592,7 +4597,7 @@ control Nexthop(inout switch_local_metadata_t local_md)(
         set_nexthop_properties(port_lag_index, bd, zone);
     }
 
-    // ----------------  Post Route Flood ---------------- 
+    // ----------------  Post Route Flood ----------------
     action set_nexthop_properties_post_routed_flood(switch_bd_t bd, switch_mgid_t mgid, switch_nat_zone_t zone) {
         local_md.egress_port_lag_index = 0;
         local_md.multicast.id = mgid;
@@ -4609,7 +4614,7 @@ control Nexthop(inout switch_local_metadata_t local_md)(
         set_nexthop_properties_post_routed_flood(bd, mgid, zone);
     }
 
-    // ---------------- Glean ---------------- 
+    // ---------------- Glean ----------------
     action set_nexthop_properties_glean() {
         local_md.flags.glean = true;
     }
@@ -4619,7 +4624,7 @@ control Nexthop(inout switch_local_metadata_t local_md)(
         set_nexthop_properties_glean();
     }
 
-    // ---------------- Drop ---------------- 
+    // ---------------- Drop ----------------
     action set_nexthop_properties_drop() {
         local_md.drop_reason = SWITCH_DROP_REASON_NEXTHOP;
     }
@@ -4717,7 +4722,7 @@ control Neighbor(inout switch_header_t hdr,
 
 //--------------------------------------------------------------------------
 // Egress Pipeline: Outer Nexthop lookup for both routed and tunnel encap cases
-/* CODE_HACK: Neighbor and OuterNexthop tables are implemented separately to 
+/* CODE_HACK: Neighbor and OuterNexthop tables are implemented separately to
    reduce the data-dependency between various p4 tables. Neighbor table needs to
    be placed after the tunnel encapsulation but OuterNexthop table can be placed
    earlier in the pipeline to reduce the overall pipeline length. */
@@ -4975,7 +4980,7 @@ parser SwitchIngressParser(
 
     state parse_pfc {
         pkt.extract(hdr.pfc);
-        local_md.bypass = 16w0xfffb; // Don't skip ACL 
+        local_md.bypass = 16w0xfffb; // Don't skip ACL
         transition accept;
     }
 
@@ -6144,7 +6149,7 @@ control MirrorRewrite(inout switch_header_t hdr,
     }
 # 139 "/mnt/p4-tests/p4_16/switch_16/p4src/shared/mirror_rewrite.p4"
     //
-    // ---------------- ERSPAN Type II ---------------- 
+    // ---------------- ERSPAN Type II ----------------
     //
     action rewrite_erspan_type2(
             switch_qid_t qid,
@@ -6239,7 +6244,7 @@ control MirrorRewrite(inout switch_header_t hdr,
     }
 # 286 "/mnt/p4-tests/p4_16/switch_16/p4src/shared/mirror_rewrite.p4"
     //
-    // ----------------  DTEL Report  ---------------- 
+    // ----------------  DTEL Report  ----------------
     //
     action rewrite_dtel_report(
             mac_addr_t smac, mac_addr_t dmac,
@@ -10070,11 +10075,11 @@ control EgressSfc(in egress_intrinsic_metadata_t eg_intr_md,
      * 100GBE: 64
      * For all conversions, the resulting value is guaranteed to be smaller than
      * 16 bits, which means the type case should be lossless.
-     * we think 16 bit with microseconds as the unit is enough. 
+     * we think 16 bit with microseconds as the unit is enough.
      * The maximum switch buffer can support with this pause_duration_us are as follows:
      * 25GBE: 65535 us *25GBE/8.0 = 204,796KB
      * 50GBE: 65535 us *50GBE/8.0 = 409,593KB
-     * 100GBE: 65535 us *100GBE/8.0 = 819,187KB  
+     * 100GBE: 65535 us *100GBE/8.0 = 819,187KB
      * As long as the switch buffer size is less than the above values, we are safe to use 16-bit pause_duration_us.
      */
     action do_calc_cells_to_pause_25g(bit<8> _sfc_pause_dscp) {

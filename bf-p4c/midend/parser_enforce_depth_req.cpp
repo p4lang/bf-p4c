@@ -11,10 +11,10 @@
 
 namespace BFN {
 
-const cstring ParserEnforceDepthReq::pad_hdr_name = "prsr_pad";
-const cstring ParserEnforceDepthReq::pad_hdr_type_name = "prsr_pad_t";
-const cstring ParserEnforceDepthReq::pad_hdr_field = "blob";
-const cstring ParserEnforceDepthReq::pad_ctr_name = "pad_ctr";
+const cstring ParserEnforceDepthReq::pad_hdr_name = "min_parse_depth_padding";
+const cstring ParserEnforceDepthReq::pad_hdr_type_name = "min_parse_depth_padding_t";
+const cstring ParserEnforceDepthReq::pad_hdr_field = "packet_payload";
+const cstring ParserEnforceDepthReq::pad_ctr_name = "min_parse_depth_counter";
 const cstring ParserEnforceDepthReq::pad_state_name = "min_parse_depth";
 const cstring ParserEnforceDepthReq::non_struct_pad_suf = "_padded";
 
@@ -382,7 +382,7 @@ class IdentifyPadRequirements : public Inspector {
  *       requiring parser min-depth padding.
  *   - Struct headers (i.e., a P4 "struct" is passed into the parser):
  *     - Adds a blob header to store data parsed in padding states.
- *     - Adds a stack of blob headers to each header struct to meed parse depth requirements.
+ *     - Adds a stack of blob headers to each header struct to meet parse depth requirements.
  *     - For each parser that doesn't meet parse depth requirements:
  *       - Adds a counter.
  *       - Initializes the counter in the start state to the parse depth minus the number of bytes

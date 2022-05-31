@@ -6,12 +6,116 @@
 #include <boost/graph/copy.hpp>
 #include <boost/graph/topological_sort.hpp>
 #include <boost/graph/graphviz.hpp>
+#include <boost/optional.hpp>
 
 #include "ir/ir.h"
 #include "lib/cstring.h"
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/ir/control_flow_visitor.h"
 #include "bf-p4c/parde/parde_visitor.h"
+
+namespace boost {
+    enum vertex_state_t { vertex_state };
+    BOOST_INSTALL_PROPERTY(vertex, state);
+
+    enum edge_transition_t { edge_transition };
+    BOOST_INSTALL_PROPERTY(edge, transition);
+}
+
+/**
+ * This data structure uses different template parameters of boost::adjacency_list than the ones
+ * used by the ParserGraphImpl class in order to be able to build a graph who's edges can be
+ * reversed using the boost::make_reverse_graph function. This is particularly useful to determine
+ * post dominators using the boost::lengauer_tarjan_dominator_tree function. It also uses custom
+ * properties to bind ParserStates and Transitions directly to vertices and edges respectively.
+ */
+class ReversibleParserGraph {
+ public:
+    typedef boost::adjacency_list<
+        boost::vecS,
+        boost::vecS,
+        boost::bidirectionalS,
+        boost::property<boost::vertex_state_t, const IR::BFN::ParserState*>,
+        boost::property<boost::edge_transition_t, const IR::BFN::Transition*>
+    > Graph;
+
+    Graph graph;
+
+    boost::optional<gress_t> gress;
+    boost::optional<typename Graph::vertex_descriptor> entry_point;
+    boost::optional<typename Graph::vertex_descriptor> end;
+
+    ordered_map<const IR::BFN::ParserState*, typename Graph::vertex_descriptor> state_to_vertex;
+    ordered_map<typename Graph::vertex_descriptor, const IR::BFN::ParserState*> vertex_to_state;
+
+    bool empty() const {
+        auto all_vertices = boost::vertices(graph);
+        if (++all_vertices.first == all_vertices.second) {
+            return true;
+        }
+        return false;
+    }
+
+    bool contains(const IR::BFN::ParserState* state) {
+        return state_to_vertex.count(state);
+    }
+
+    typename Graph::vertex_descriptor add_vertex(const IR::BFN::ParserState* state) {
+        if (state != nullptr && !gress)
+            gress = state->gress;
+
+        if (contains(state)) {
+            LOG1("State " << ((state) ? state->name : "END") << " already exists");
+            return state_to_vertex.at(state);
+        }
+
+        auto vertex = boost::add_vertex(state, graph);
+        if (state)
+            LOG1("Added vertex " << vertex << " for state " << state->name);
+        else
+            LOG1("Added vertex " << vertex << " for state END");
+
+        if (state && state->name.find("$entry_point"))
+            entry_point = vertex;
+        if (state == nullptr)
+            end = vertex;
+
+        state_to_vertex[state] = vertex;
+        vertex_to_state[vertex] = state;
+
+        return vertex;
+    }
+
+    std::pair<typename Graph::edge_descriptor, bool> add_edge(
+            const IR::BFN::ParserState* source,
+            const IR::BFN::ParserState* destination,
+            const IR::BFN::Transition* transition) {
+        typename Graph::vertex_descriptor source_vertex, destination_vertex;
+        source_vertex = add_vertex(source);
+        destination_vertex = add_vertex(destination);
+
+        // Look for a pre-existing edge.
+        typename Graph::out_edge_iterator out, end;
+        for (boost::tie(out, end) = boost::out_edges(source_vertex, graph); out != end; ++out) {
+            if (boost::target(*out, graph) == destination_vertex)
+                return {*out, false};
+        }
+        // No pre-existing edge, so make one.
+        auto edge = boost::add_edge(source_vertex, destination_vertex, graph);
+        if (!edge.second)
+            // A vector-based adjacency_list (i.e. Graph) is a multigraph.
+            // Inserting edges should always create new edges.
+            BUG("Boost Graph Library failed to add edge.");
+        boost::get(boost::edge_transition, graph)[edge.first] = transition;
+        return {edge.first, true};
+    }
+
+    ReversibleParserGraph() {}
+
+    ReversibleParserGraph(const ReversibleParserGraph& other) {
+        boost::copy_graph(other.graph, graph);
+    }
+};
 
 class DirectedGraph {
     typedef boost::adjacency_list<boost::listS,

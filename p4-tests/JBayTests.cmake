@@ -48,6 +48,10 @@ set (P16_JNA_EXCLUDE_PATTERNS
   "p4c_2601\\.p4"
   "mirror_constants\\.p4"
   "hash_extern_xor\\.p4"
+  "keysight-eagle-tf2\\.p4"
+  "p4c-4055\\.p4"
+  "MODEL-1095\\.p4"
+  "p4c-4072\\.p4"
 )
 set (P16_JNA_FOR_JBAY "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*/*.p4"
                       "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4"
@@ -193,19 +197,19 @@ p4c_add_test_label("tofino2" "JENKINS_PART1" "extensions/p4_tests/p4_16/customer
 # PTF tests with different parameters
 p4c_add_ptf_test_with_ptfdir ("tofino2" "mirror_constants"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/mirror_constants.p4"
-    "${testExtraArgs} -arch t2na -bfrt"
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/mirror_constants.ptf")
 bfn_needs_scapy("tofino2" "mirror_constants")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c_2601" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/p4c_2601.p4"
-    "${testExtraArgs} -arch t2na -bfrt --p4runtime-force-std-externs"
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt --p4runtime-force-std-externs"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/p4c_2601.ptf")
 bfn_needs_scapy("tofino2" "p4c_2601")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "hash_extern_xor" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/hash_extern_xor.p4"
-    "${testExtraArgs} -arch t2na -bfrt --p4runtime-force-std-externs"
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt --p4runtime-force-std-externs"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/hash_extern_xor.ptf")
 bfn_needs_scapy("tofino2" "hash_extern_xor")
 
@@ -216,40 +220,40 @@ p4c_add_test_label("tofino2" "JENKINS_PART1" "p4c_873")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c_1585" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585/p4c_1585.p4"
-    "${testExtraArgs} -arch t2na -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585")
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585")
 p4c_add_test_label("tofino2" "JENKINS_PART1" "p4c_1585")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c_3043" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_3043/p4c_3043.p4"
-    "${testExtraArgs} -arch t2na -bfrt -Xp4c=\"--disable-power-check\"" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_3043")
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt -Xp4c=\"--disable-power-check\"" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_3043")
 p4c_add_test_label("tofino2" "JENKINS_PART1" "p4c_3043")
 p4c_add_test_label("tofino2" "UNSTABLE" "p4c_3043")
 set_tests_properties("tofino2/p4c_3043" PROPERTIES TIMEOUT ${extended_timeout_4times})
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c_1585_a" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585_a/p4c_1585_a.p4"
-    "${testExtraArgs} -arch t2na -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585_a")
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585_a")
 p4c_add_test_label("tofino2" "JENKINS_PART1" "p4c_1585_a")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c_1585_b" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585_b/p4c_1585_b.p4"
-    "${testExtraArgs} -arch t2na -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585_b")
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585_b")
 p4c_add_test_label("tofino2" "JENKINS_PART1" "p4c_1585_b")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c_1587" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1587/p4c_1587.p4"
-    "${testExtraArgs} -arch t2na -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1587")
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1587")
 set_tests_properties("tofino2/p4c_1587" PROPERTIES TIMEOUT ${extended_timeout_2times})
 p4c_add_test_label("tofino2" "JENKINS_PART1" "p4c_1587")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c_2527" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2527/npb.p4"
-    "${testExtraArgs} -arch t2na -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2527")
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2527")
 p4c_add_test_label("tofino2" "JENKINS_PART1" "p4c_2527")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c-3033" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3033/npb.p4"
-    "${testExtraArgs} -arch t2na -bfrt " "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3033")
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt " "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3033")
 set_tests_properties("tofino2/p4c-3033" PROPERTIES TIMEOUT ${extended_timeout_4times})
 p4c_add_test_label("tofino2" "JENKINS_PART1" "p4c-3033")
 bfn_needs_scapy("tofino2" "p4c-3033")
@@ -257,20 +261,20 @@ p4c_add_test_label("tofino2" "UNSTABLE" "p4c-3033")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c-3614" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_3614/npb/npb.p4"
-    "${testExtraArgs} -arch t2na -bfrt " "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_3614")
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt " "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_3614")
 set_tests_properties("tofino2/p4c-3614" PROPERTIES TIMEOUT ${extended_timeout_4times})
 p4c_add_test_label("tofino2" "JENKINS_PART1" "p4c-3614")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c-3379" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3379/npb.p4"
-    "${testExtraArgs} -arch t2na -bfrt"
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3379")
 set_tests_properties("tofino2/p4c-3379" PROPERTIES TIMEOUT ${extended_timeout_4times})
 p4c_add_test_label("tofino2" "JENKINS_PART2" "p4c-3379")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c-3570" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3570/npb.p4"
-    "${testExtraArgs} -arch t2na -bfrt"
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3570")
 set_tests_properties("tofino2/p4c-3570" PROPERTIES TIMEOUT ${extended_timeout_2times})
 p4c_add_test_label("tofino2" "JENKINS_PART2" "p4c-3570")
@@ -278,14 +282,14 @@ bfn_needs_scapy("tofino2" "p4c-3570")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c-3479" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3479/p4c_3479.p4"
-    "${testExtraArgs} -arch t2na -bfrt"
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3479")
 set_tests_properties("tofino2/p4c-3479" PROPERTIES TIMEOUT ${extended_timeout_2times})
 p4c_add_test_label("tofino2" "JENKINS_PART2" "p4c-3479")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c-3876" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3876/p4c_3876.p4"
-    "${testExtraArgs} -arch t2na -bfrt"
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3876")
 set_tests_properties("tofino2/p4c-3876" PROPERTIES TIMEOUT ${extended_timeout_2times})
 p4c_add_test_label("tofino2" "JENKINS_PART2" "p4c-3876")
@@ -294,7 +298,7 @@ bfn_needs_scapy("tofino2" "p4c-3876")
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "npb-master-ptf"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-master-ptf/src/pgm_sp_npb_vcpFw_top.p4"
-    "${testExtraArgs} -arch t2na -bfrt"
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-master-ptf/tests")
 bfn_set_p4_build_flag("tofino2" "npb-master-ptf" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-master-ptf/src -I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-master-ptf/src/pipeline_npb")
 bfn_set_ptf_ports_json_file("tofino2" "npb-master-ptf" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-master-ptf/tests/ports.json")
@@ -303,7 +307,7 @@ set_tests_properties("tofino2/npb-master-ptf" PROPERTIES TIMEOUT ${extended_time
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "npb-multi-prog"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-multi-prog/src/pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top.p4"
-    "${testExtraArgs} -arch t2na -bfrt"
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-multi-prog/tests")
 bfn_set_p4_build_flag("tofino2" "npb-multi-prog" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-multi-prog/src -I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-multi-prog/src/pipeline_npb")
 bfn_set_ptf_ports_json_file("tofino2" "npb-multi-prog" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-multi-prog/tests/ports.json")
@@ -312,7 +316,7 @@ set_tests_properties("tofino2/npb-multi-prog" PROPERTIES TIMEOUT ${extended_time
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "npb-folded-pipe"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-folded-pipe/src/pgm_fp_npb_dedup_dtel_vcpFw_top.p4"
-    "${testExtraArgs} -arch t2na -bfrt"
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-folded-pipe/tests")
 bfn_set_p4_build_flag("tofino2" "npb-folded-pipe" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-folded-pipe/src -I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-folded-pipe/src/pipeline_npb")
 bfn_set_ptf_ports_json_file("tofino2" "npb-folded-pipe" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-folded-pipe/tests/ports.json")
@@ -320,7 +324,7 @@ set_tests_properties("tofino2/npb-folded-pipe" PROPERTIES TIMEOUT ${extended_tim
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c-3484" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3484/npb.p4"
-    "${testExtraArgs} -arch t2na -bfrt"
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3484/tests")
 set_tests_properties("tofino2/p4c-3484" PROPERTIES TIMEOUT ${extended_timeout_4times})
 bfn_set_ptf_test_spec("tofino2" "p4c-3484" "test_mau_1hop_s___ing_mirror.test")
@@ -544,7 +548,7 @@ bfn_add_test_with_args ("tofino2" "p4_16_internal_p4_16_t2na_emulation"
     ${p4_16_internal_p4_16_path}/t2na_emulation/t2na_emulation.p4 "${testExtraArgs} -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
 p4c_add_test_label("tofino2" "JENKINS_PART2" "p4_16_internal_p4_16_t2na_emulation")
 
-bfn_add_test_with_args ("tofino2" "p4_16_internal_p4_16_t2na_fifo" 
+bfn_add_test_with_args ("tofino2" "p4_16_internal_p4_16_t2na_fifo"
     ${p4_16_internal_p4_16_path}/t2na_fifo/t2na_fifo.p4 "${testExtraArgs} -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
 p4c_add_test_label("tofino2" "JENKINS_PART2" "p4_16_internal_p4_16_t2na_fifo")
 
@@ -568,16 +572,16 @@ bfn_add_test_with_args ("tofino2" "p4_16_internal_p4_16_mirror"
     ${p4_16_internal_p4_16_path}/mirror/mirror.p4 "${testExtraArgs} -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
 p4c_add_test_label("tofino2" "JENKINS_PART2" "p4_16_internal_p4_16_mirror")
 
-p4c_add_ptf_test_with_ptfdir ("tofino2" "t2na_ghost_dod" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod/t2na_ghost_dod.p4" "${testExtraArgs} -arch t2na -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod")
+p4c_add_ptf_test_with_ptfdir ("tofino2" "t2na_ghost_dod" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod/t2na_ghost_dod.p4" "${testExtraArgs} -target tofino2 -arch t2na -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod")
 bfn_set_ptf_test_spec("tofino2" "t2na_ghost_dod" "test.T2naGhostTestDoD")
 p4c_add_test_label("tofino2" "JENKINS_PART2" "t2na_ghost_dod")
 
-p4c_add_ptf_test_with_ptfdir ("tofino2" "t2na_ghost_dod_simpl" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod_simpl/t2na_ghost_dod_simpl.p4" "${testExtraArgs} -arch t2na -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod_simpl")
+p4c_add_ptf_test_with_ptfdir ("tofino2" "t2na_ghost_dod_simpl" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod_simpl/t2na_ghost_dod_simpl.p4" "${testExtraArgs} -target tofino2 -arch t2na -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod_simpl")
 bfn_set_ptf_test_spec("tofino2" "t2na_ghost_dod_simpl" "test.T2naGhostSimplTestDoD")
 p4c_add_test_label("tofino2" "JENKINS_PART2" "t2na_ghost_dod_simpl")
 
 p4c_add_ptf_test_with_ptfdir ("tofino2" "large_counter_meter" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/large_counter_meter/large_counter_meter.p4"
-  "${testExtraArgs} -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16 -bfrt"
+  "${testExtraArgs} -target tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16 -bfrt"
   "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/large_counter_meter")
 bfn_set_ptf_test_spec("tofino2" "large_counter_meter" "all")
 p4c_add_test_label("tofino2" "JENKINS_PART2" "large_counter_meter")
@@ -585,7 +589,7 @@ p4c_add_test_label("tofino2" "JENKINS_PART2" "large_counter_meter")
 # P4-16 Programs with PTF tests
 foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS)
   p4c_add_ptf_test_with_ptfdir ("tofino2" "p4_16_programs_${t}" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}/${t}.p4"
-    "${testExtraArgs} -arch t2na -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}")
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}")
   bfn_set_p4_build_flag("tofino2" "p4_16_programs_${t}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs")
   set (ports_json ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}/ports_tof2.json)
   if (EXISTS ${ports_json})
@@ -611,6 +615,17 @@ bfn_set_ptf_ports_json_file("tofino2" "p4_16_programs_tna_idletimeout" "${CMAKE_
 set_tests_properties("tofino2/p4_16_programs_tna_exact_match" PROPERTIES TIMEOUT ${extended_timeout_2times})
 set_tests_properties("tofino2/p4_16_programs_tna_ternary_match" PROPERTIES TIMEOUT ${extended_timeout_4times})
 set_tests_properties("tofino2/p4c_2527" PROPERTIES TIMEOUT ${extended_timeout_2times})
+
+# P4C-4079
+# New HeaderMutex pass increases compilation time a bit over 600s default timeout value (usually 660s to 780s).
+p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/keysight/keysight-eagle-tf2.p4" "-to 1200")
+set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/keysight/keysight-eagle-tf2.p4" PROPERTIES TIMEOUT 1200)
+p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/p4c-4055.p4" "-to 1200")
+set_tests_properties("tofino2/extensions/p4_tests/p4_16/stf/p4c-4055.p4" PROPERTIES TIMEOUT 1200)
+p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/MODEL-1095.p4" "-to 1200")
+set_tests_properties("tofino2/extensions/p4_tests/p4_16/stf/MODEL-1095.p4" PROPERTIES TIMEOUT 1200)
+p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/jbay/p4c-4072.p4" "-to 1200")
+set_tests_properties("tofino2/extensions/p4_tests/p4_16/jbay/p4c-4072.p4" PROPERTIES TIMEOUT 1200)
 
 include(SwitchJBay.cmake)
 include(JBayXfail.cmake)

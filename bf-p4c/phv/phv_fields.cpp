@@ -129,6 +129,7 @@ void PhvInfo::add_struct(
             bool meta = !struct_type->is<IR::Type_Header>();
             // Add fields inside nested structs and headers.
             add_struct(f_name, struct_type, gress, meta, bridged, offset);
+            continue;
         }
         // path-expression may point to an empty header, which require no phv.
         // path-expression can also point to an error field, which is invalid on Tofino
@@ -204,7 +205,7 @@ bool PhvInfo::has_struct_info(cstring name_) const {
     return all_structs.find(name) != all_structs.end();
 }
 
-/// Look up the fully qualified name of a header
+/// Look up the fully qualified name of a header or metadata collection
 ///   PHV header names are fully qualified, but we sometimes look up a partial
 ///   name when it's unique.  Eg. using "ingress::bar" to find
 ///   "ingress::foo.bar" when there are no other "bar" suffixes.
@@ -214,12 +215,9 @@ cstring PhvInfo::full_hdr_name(const cstring& name_) const {
     if (simple_headers.find(name) != simple_headers.end())
         return name;
 
-    if (auto *p = name.findstr("::")) {
-        name = name.after(p+2); }
-    if (simple_headers.find(name) != simple_headers.end())
+    if (all_structs.find(name) != all_structs.end())
         return name;
 
-    name = name_;
     StringRef prefixRef;
     StringRef suffixRef = name;
     if (auto* p = name.findstr("::")) {
@@ -232,7 +230,7 @@ cstring PhvInfo::full_hdr_name(const cstring& name_) const {
     LOG4("    ...with prefix " << prefix);
     LOG4("    ...with suffix " << suffix);
     std::set<cstring> matches;
-    for (auto& hdr : simple_headers) {
+    for (auto& hdr : all_structs) {
         if ((hdr.first).endsWith(suffix))
             LOG4("    ...found suffix: " << hdr.first);
         if ((hdr.first).startsWith(prefix) && (hdr.first).endsWith(suffix))
@@ -266,10 +264,17 @@ void PhvInfo::get_hdr_fields(cstring name_, ordered_set<const PHV::Field*> & fld
     BUG_CHECK(fld_id == last_fld, "Something wrong going with fields of header %s", name_);
 }
 
-const PhvInfo::StructInfo *PhvInfo::simple_hdr(const cstring& name_) const {
+/**
+ * @brief Get information about a collection of header or metadata fields, based on the partial or
+ * complete @p name_ of the collection or of a field in the collection
+ *
+ * @param name_ Partial or complete name of a field, or a header or metadata collection
+ * @return const PhvInfo::StructInfo* Information about collection
+ */
+const PhvInfo::StructInfo *PhvInfo::hdr(const cstring& name_) const {
     cstring full_name = full_hdr_name(name_);
-    if (full_name.size())
-        return &(simple_headers.at(full_name));
+    if (full_name.size() && all_structs.count(full_name))
+        return &(all_structs.at(full_name));
 
     return nullptr;
 }

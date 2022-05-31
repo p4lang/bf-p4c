@@ -590,10 +590,12 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/smart_fieldslice_packing.cpp
   phv/table_phv_constraints.cpp
   phv/validate_allocation.cpp
+  phv/analysis/build_mutex.cpp
   phv/analysis/critical_path_clusters.cpp
   phv/analysis/dark_live_range.cpp
   phv/analysis/deparser_zero.cpp
   phv/analysis/dominator_tree.cpp
+  phv/analysis/header_mutex.cpp
   phv/analysis/memoize_min_stage.cpp
   phv/analysis/meta_live_range.cpp
   phv/analysis/mutex_overlay.cpp
@@ -679,10 +681,12 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/smart_fieldslice_packing.h
   phv/table_phv_constraints.h
   phv/validate_allocation.h
+  phv/analysis/build_mutex.h
   phv/analysis/critical_path_clusters.h
   phv/analysis/dark_live_range.h
   phv/analysis/deparser_zero.h
   phv/analysis/dominator_tree.h
+  phv/analysis/header_mutex.h
   phv/analysis/memoize_min_stage.h
   phv/analysis/meta_live_range.h
   phv/analysis/mutex_overlay.h

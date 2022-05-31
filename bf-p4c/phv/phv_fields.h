@@ -1473,7 +1473,7 @@ class PhvInfo {
     bool has_struct_info(cstring name) const;
     void get_hdr_fields(cstring name_, ordered_set<const PHV::Field*> & flds) const;
     cstring full_hdr_name(const cstring& name) const;
-    const PhvInfo::StructInfo* simple_hdr(const cstring& name_) const;
+    const PhvInfo::StructInfo* hdr(const cstring& name_) const;
 
     const StructInfo struct_info(cstring name) const;
     const StructInfo struct_info(const IR::HeaderRef *hr) const {

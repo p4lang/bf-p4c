@@ -80,7 +80,7 @@ void BuildDominatorTree::generateDominatorTree(
         const FlowGraph& fg,
         const ordered_map<int, const IR::MAU::Table*>& indexToTableMap,
         ImmediateDominatorMap& iDom) {
-    // idom is a mapping from index of a vertex to the index of its immediate dominator veretx.
+    // idom is a mapping from index of a vertex to the index of its immediate dominator vertex.
     ordered_map<int, int> idom;
 
     // Standard boost dominator tree analysis.

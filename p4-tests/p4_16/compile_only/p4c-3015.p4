@@ -3686,7 +3686,7 @@ control TBvrVtep(
     action forward_to_x86_bvr(){
         hdr.udp.dst_port = eg_md.custom_bridge_hdr.fwd_x86_vtep_port;
 
-        //only dst_addr is enough, no need to set src_addr, 
+        //only dst_addr is enough, no need to set src_addr,
         hdr.ipv4.dst_addr = eg_md.custom_bridge_hdr.fwd_x86_vtep_ip;
 
         hdr.ethernet.src_addr = eg_md.bvr_md.outer_dst_mac;

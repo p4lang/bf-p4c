@@ -2374,6 +2374,13 @@ struct egress_meta_t {
     bit<32> tstamp_inc;
 }
 
+@pa_mutually_exclusive("egress", "meta.ctrl", "hdr.ethernet")
+@pa_mutually_exclusive("egress", "hdr.template", "hdr.ethernet")
+@pa_mutually_exclusive("egress", "hdr.prsr_pad_0[0]", "hdr.ethernet")
+@pa_mutually_exclusive("egress", "hdr.prsr_pad_0[1]", "hdr.ethernet")
+@pa_mutually_exclusive("egress", "hdr.prsr_pad_0[2]", "hdr.ethernet")
+@pa_mutually_exclusive("egress", "hdr.prsr_pad_0[3]", "hdr.ethernet")
+
 parser EgressParser( packet_in pkt,
                     out egress_headers_t hdr,
                     out egress_meta_t meta,

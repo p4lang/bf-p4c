@@ -4,27 +4,27 @@
  *
  * The mid-end performs a mix of passes from p4c and bf-p4c. These passes
  * modify the IR, usually making transformations that keep the functionality
- * of the code, but changes it to be more optimal (removing unnecesarry code,
+ * of the code, but changes it to be more optimal (removing unnecessary code,
  * moving stuff around, ...). The goal of midend is mostly to transform the IR into
  * a shape that is easily translatable for the backend.
  *
  * The form of mid-end IR is the same as the form of front-end IR.
  * The passes from p4c are enclosed in the P4 namespace while the passes
  * from bf-p4c are enclosed in the BFN namespace.
- * 
+ *
  * There are two main structures used across most of the passes:
  * * P4::ReferenceMap maps paths found within the IR to a declaration node for
  *   the entity the path refers to.
  * * P4::TypeMap maps nodes of the IR to their respective types.
- * 
+ *
  * Tied to those structures there are also some general passes that fill them out
  * (that are invoked repeatedly, usually after/before each IR modification) or clear them:
  * * BFN::TypeInference
  * * BFN::TypeChecking
  * * P4::ClearTypeMap - clears the P4::TypeMap if the program has changed or the 'force' flag is set.
- * 
+ *
  * There are also some best practices that are tied to using BFN::TypeChecking and P4::ReferenceMap/P4::TypeMap:
- * * Each top level PassManager (that will in any way use P4::ReferenceMap or P4::TypeMap) should start by invoking 
+ * * Each top level PassManager (that will in any way use P4::ReferenceMap or P4::TypeMap) should start by invoking
  *   BFN::TypeChecking to ensure that it is working with the up-to-date data.
  * * BFN::TypeChecking should be also invoked in the middle of a PassManager anytime the IR changes in a way that might
  *   change P4::ReferenceMap or P4::TypeMap (changing indentificators, changing types, ...) and some of the
@@ -33,12 +33,12 @@
  *   parts of the IR correctly. In those cases it should still be invoked after the last such pass is completed.
  * * P4::ClearTypeMap should be used as the last pass of each PassManager (or even before every BFN::TypeChecking
  *   invocation) to force the need to use BFN::TypeChecking in case anything changed.
- * 
+ *
  * There are also some other helpful passes that are used repeatedly:
  * * BFN::EvaluatorPass evaluates the program and creates blocks for all high-level constucts.
  * * P4::MethodInstance and P4::ExternInstance extract information about different instances
  *   from expressions.
- * 
+ *
  * Details on some of the passes can be found in the modules and classes sections of this page.
  * The following P4 (parts) passes are used as they are and have no further
  * description yet:
@@ -154,7 +154,7 @@ namespace BFN {
  * \class OptionalToTernaryMatchTypeConverter
  * \ingroup midend
  * \brief Pass that converts optional match type to ternary.
- * 
+ *
  * This class implements a pass to convert optional match type to ternary.
  * Optional is a special case of ternary which allows for 2 cases
  *
@@ -187,7 +187,7 @@ class OptionalToTernaryMatchTypeConverter: public Transform {
  * \class EnumOn32Bits
  * \ingroup midend
  * \brief Class that implements a policy suitable for the ConvertEnums pass.
- * 
+ *
  * This class implements a policy suitable for the ConvertEnums pass.
  * The policy is: convert all enums that are not part of the architecture files, and
  * are not used as the output type from a RegisterAction.  These latter enums will get
@@ -243,7 +243,7 @@ class EnumOn32Bits : public P4::ChooseEnumRepresentation {
 
 /**
  * \ingroup midend
- * 
+ *
  * This function implements a policy suitable for the LocalCopyPropagation pass.
  * The policy is: do not local copy propagate for assignment statement
  * setting the output param of a register action.

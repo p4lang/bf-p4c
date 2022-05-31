@@ -40,7 +40,7 @@
 
 // define to enable the handling of parser errors in MAU
 // (currently, only udf-releated partial header errors are supported)
-// (currently, all parser errors get dropped in the parser due to p4c limitation (case #9472)) 
+// (currently, all parser errors get dropped in the parser due to p4c limitation (case #9472))
 
 
 // define to include the parse_cpu state in the ingress parser.
@@ -92,6 +92,13 @@ typedef bit<12> vlan_id_t;
 @pa_container_size("ingress", "hdr.ethernet.src_addr", 16, 32)
 @pa_container_size("ingress", "hdr.ethernet.dst_addr", 16, 32)
 @pa_container_size("ingress", "hdr.ethernet.$valid", 16)
+
+/* P4C-4079: Restore a few header mutexes that were conservatively removed by fix */
+@pa_mutually_exclusive("egress", "hdr.outer.ipv4", "hdr.outer.ipv6")
+@pa_mutually_exclusive("egress", "hdr.outer.udp", "hdr.outer.tcp")
+@pa_mutually_exclusive("egress", "hdr.inner.ipv4", "hdr.inner.ipv6")
+@pa_mutually_exclusive("egress", "hdr.inner.udp", "hdr.inner.tcp")
+
 header ethernet_h {
     mac_addr_t dst_addr;
     mac_addr_t src_addr;
@@ -1721,7 +1728,7 @@ struct switch_header_inner_t {
 struct switch_header_t {
 
     // ===========================
-    // misc 
+    // misc
     // ===========================
 
     switch_bridged_metadata_h bridged_md;
@@ -6387,11 +6394,11 @@ parser ParserUnderlayL2(
 // // For now, we'll just assume a fixed 20Bytes of opaque Extreme metadata and
 // // parse the whole thing as one big (fixed sized) header. We're also assuming
 // // the next header will always be ethernet.
-// 
+//
 // parser ParserUnderlayNsh(
 //     packet_in pkt,
 //     inout switch_header_t hdr) {
-// 
+//
 //     state start {
 // 	    pkt.extract(hdr.nsh_extr);
 //         // verify base header md-type = 2
@@ -6407,14 +6414,14 @@ parser ParserUnderlayL2(
 // //-----------------------------------------------------------------------------
 // // Layer3 - IPv4
 // //-----------------------------------------------------------------------------
-// 
+//
 // parser ParserIPv4(
 //     packet_in pkt,
 //     inout switch_ingress_metadata_t ig_md,
 //     inout switch_header_t hdr) {
-// 
+//
 //     Checksum<bit<16>>(HashAlgorithm_t.CRC16) ipv4_checksum;
-// 
+//
 //     state start {
 //         pkt.extract(hdr.ipv4);
 //          // todo: Flag packet (to be sent to host) if it's a frag or has options.
@@ -6425,7 +6432,7 @@ parser ParserUnderlayL2(
 //             default : accept;
 //         }
 //     }
-// 
+//
 //     state parse_ipv4_no_options_frags {
 //         ig_md.flags.ipv4_checksum_err = ipv4_checksum.verify();
 //         // bit slicing like this not supported in v8.6.0
@@ -6436,8 +6443,8 @@ parser ParserUnderlayL2(
 //         ig_md.parser_protocol = 0xFF;
 //         transition accept;
 //     }
-// 
-// 
+//
+//
 // //     state start {
 // //          // todo: Flag packet (to be sent to host) if it's a frag or has options.
 // //         ig_md.parser_scratch = 0xFFFF; // can we flag it like this?
@@ -6449,7 +6456,7 @@ parser ParserUnderlayL2(
 // //             default : accept;
 // //         }
 // //     }
-// // 
+// //
 // //     state parse_ipv4_no_options_frags {
 // //         pkt.extract(hdr.ipv4);
 // //         ipv4_checksum.add(hdr.ipv4);
@@ -6462,21 +6469,21 @@ parser ParserUnderlayL2(
 // //         ig_md.parser_scratch = (bit<16>)hdr.ipv4.protocol;
 // //         transition accept;
 // //     }
-// 
-// 
+//
+//
 // }
-// 
-// 
-// 
+//
+//
+//
 // //-----------------------------------------------------------------------------
 // // Layer3 - IPv6
 // //-----------------------------------------------------------------------------
-// 
+//
 // parser ParserIPv6(
 //     packet_in pkt,
 //     inout switch_ingress_metadata_t ig_md,
 //     inout switch_header_t hdr) {
-// 
+//
 //     state start {
 //         pkt.extract(hdr.ipv6);
 //         // bit slicing like this not supported in v8.6.0
@@ -6497,15 +6504,15 @@ parser ParserUnderlayL2(
 // // Based on pseudo code from Glenn (see email from 02/11/2019):
 // // Does not support parsing GTP optional word
 // // Does not support parsing (TLV) extension headers
-// 
+//
 // parser ParserGtp(
 //     packet_in pkt,
 //     //inout switch_ingress_metadata_t ig_md,
 //     inout bit<2> md_tunnel_type,
 //     inout switch_header_t hdr) {
-// 
+//
 //     state start {
-// 
+//
 //         // todo: Flag frame (to be trapped) if version > 2
 // #ifdef GTP_ENABLE
 //         transition select(pkt.lookahead<bit<4>>()) { //version,PT
@@ -6518,7 +6525,7 @@ parser ParserUnderlayL2(
 //         transition reject;
 // #endif  /* GTP_ENABLE */
 //     }
-// 
+//
 // #ifdef GTP_ENABLE
 //     state parse_gtp_u {
 //         pkt.extract(hdr.gtp_v1_base);
@@ -6530,21 +6537,21 @@ parser ParserUnderlayL2(
 //             default: accept;
 //         }
 //     }
-// 
+//
 //     state parse_gtp_c {
 //         pkt.extract(hdr.gtp_v1_base);
 //         //ig_md.tunnel.type = SWITCH_TUNNEL_TYPE_GTP_C;
 //         md_tunnel_type = SWITCH_TUNNEL_TYPE_GTP_C;
 //     	transition accept;
 //     }
-// 
+//
 //     state parse_gtp_u_end {
 //         //ig_md.tunnel.type = SWITCH_TUNNEL_TYPE_GTP_U;
 //         md_tunnel_type = SWITCH_TUNNEL_TYPE_GTP_U;
 //     	transition accept;
 //     }
 // #endif  /* GTP_ENABLE */
-// 
+//
 // }
 # 5 "/mnt/ws_tofino/extreme_2313/npb_ing_parser.p4" 2
 
@@ -6974,7 +6981,7 @@ parser NpbIngressParser(
     //         default: accept;
     //     }
     // }
-    // 
+    //
     // state parse_gtp_c_teid {
     //     pkt.extract(hdr.outer.teid);
     // 	transition accept;
@@ -7012,7 +7019,7 @@ parser NpbIngressParser(
     //         hdr.outer.gtp_v1_base.S,
     //         hdr.outer.gtp_v1_base.PN
     //         pkt.lookahead<bit<4>>()) {
-    // 
+    //
     //         (1, 1, 0, 0, 0, 4): parse_inner_ipv4;
     //         (1, 1, 0, 0, 0, 6): parse_inner_ipv6;
     //         default: accept;
@@ -7389,13 +7396,13 @@ parser NpbEgressParser(
     //         default: parse_ethernet_ETH;
     //     }
     // }
-    // 
+    //
     // state parse_transport_nsh {
     //     pkt.extract(hdr.underlay.ethernet);
  //     pkt.extract(hdr.underlay.nsh_extr);
     //     transition parse_ethernet_ETH;
     // }
-    // 
+    //
     // state parse_transport_nsh_tagged {
     //     pkt.extract(hdr.underlay.ethernet);
     //     pkt.extract(hdr.underlay.vlan_tag.next);
@@ -7636,7 +7643,7 @@ parser NpbEgressParser(
     //         default: accept;
     //     }
     // }
-    // 
+    //
     // state parse_gtp_c_teid {
     //     pkt.extract(hdr.outer.gtp_v1_v2_teid);
     // 	transition accept;
@@ -7672,7 +7679,7 @@ parser NpbEgressParser(
     //         hdr.outer.gtp_v1_base.S,
     //         hdr.outer.gtp_v1_base.PN
     //         pkt.lookahead<bit<4>>()) {
-    // 
+    //
     //         (1, 1, 0, 0, 0, 4): parse_inner_ipv4;
     //         (1, 1, 0, 0, 0, 6): parse_inner_ipv6;
     //         default: accept;
@@ -7819,28 +7826,28 @@ parser NpbEgressParser(
     // Inner Tunnels
     ///////////////////////////////////////////////////////////////////////////
 # 753 "/mnt/ws_tofino/extreme_2313/npb_egr_parser.p4"
-// 
+//
 // ///////////////////////////////////////////////////////////////////////////////
 // // Underlay Encaps
 // ///////////////////////////////////////////////////////////////////////////////
-// 
+//
 // //-----------------------------------------------------------------------------
 // // Encapsulated Remote Switch Port Analyzer (ERSPAN)
 // //-----------------------------------------------------------------------------
-// 
+//
 // state parse_erspan_t1 {
 //     pkt.extract(hdr.erspan_type1);
 //     //metadata.ingress_tunnel_type, INGRESS_TUNNEL_TYPE_ERSPAN_T1
 //     transition parse_inner_ethernet;
 // }
-// 
+//
 // state parse_erspan_t2 {
 //     pkt.extract(hdr.erspan_type2);
 //     //verify(hdr.erspan_typeII.version == 1, error.Erspan2VersionNotOne);
 //     //metadata.ingress_tunnel_type, INGRESS_TUNNEL_TYPE_ERSPAN_T2
 //     transition parse_inner_ethernet;
 // }
-// 
+//
 // // state parse_erspan_t3 {
 // //     pkt.extract(hdr.erspan_type3);
 // //     //verify(hdr.erspan_typeIII.version == 2, error.Erspan3VersionNotTwo);
@@ -7850,13 +7857,13 @@ parser NpbEgressParser(
 // //         default: parse_inner_ethernet;
 // //     }
 // // }
-// // 
+// //
 // // state parse_erspan_type3_platform {
 // //     pkt.extract(hdr.erspan_platform);
 // //     transition parse_inner_ethernet;
 // // }
-// 
-// 
+//
+//
 
 
 }
@@ -10268,17 +10275,17 @@ control PktValidation(
     //
     //   Drop the packet if:
     //
-    //        version != 0                     -> Base Header          
-    //              o == 1  (oam)                     :                
-    //            ttl == 0                            :                
-    //            len != 5  (4B words)                :                
-    //        md_type != 2                            :                
-    //     next_proto != 3  (enet)                    :                
-    //             si == 0                     -> Service Path Header      
+    //        version != 0                     -> Base Header
+    //              o == 1  (oam)                     :
+    //            ttl == 0                            :
+    //            len != 5  (4B words)                :
+    //        md_type != 2                            :
+    //     next_proto != 3  (enet)                    :
+    //             si == 0                     -> Service Path Header
     //       md_class != ?  (todo)             -> Variable Length Context Header
-    //           type != ?  (todo)                    :                
-    //         md_len != 8  (bytes)                   :                
-    //           todo == ?  (any checks here?) -> Variable Length Metadata   
+    //           type != ?  (todo)                    :
+    //         md_len != 8  (bytes)                   :
+    //           todo == ?  (any checks here?) -> Variable Length Metadata
 
     table validate_nsh {
 
@@ -14548,7 +14555,7 @@ control npb_egr_sff_top_part1 (
  //
  //   [0:0] sf  #1: ingress basic/advanced
  //   [1:1] sf  #2: unused (was multicast)
- //   [2:2] sf  #3: egress proxy 
+ //   [2:2] sf  #3: egress proxy
 
  // =========================================================================
  // Apply
@@ -14612,7 +14619,7 @@ control npb_egr_sff_top_part1 (
   // (nothing to do)
 
   // ext: type 2 - word 1+
-  hdr.nsh_extr.scope = 0x0; // word 0 TODO: fix         
+  hdr.nsh_extr.scope = 0x0; // word 0 TODO: fix
   hdr.nsh_extr.ifindex = eg_md.ingress_ifindex; // word 0
 
   hdr.nsh_extr.vpn_id = eg_md.nsh_extr.extr_vpn_id; // word 1
@@ -14716,7 +14723,7 @@ control npb_egr_sff_top_part2 (
  //
  //   [0:0] sf  #1: ingress basic/advanced
  //   [1:1] sf  #2: unused (was multicast)
- //   [2:2] sf  #3: egress proxy 
+ //   [2:2] sf  #3: egress proxy
 
  // =========================================================================
  // Apply

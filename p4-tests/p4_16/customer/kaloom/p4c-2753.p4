@@ -5735,6 +5735,31 @@ control TelGeneratePostcard(
 
 const bit<16> MSB_MASK = 0x8000;
 
+/* P4C-4079: Restore header mutexes that were conservatively removed by fix */
+@pa_mutually_exclusive("ingress", "hdr.pktgen_port_down", "hdr.dp_ctrl_hdr")
+@pa_mutually_exclusive("ingress", "hdr.pktgen_ext_header", "hdr.dp_ctrl_hdr")
+@pa_mutually_exclusive("egress", "hdr.ethernet", "hdr.prsr_pad_0[0]")
+@pa_mutually_exclusive("egress", "hdr.ethernet", "hdr.prsr_pad_0[1]")
+@pa_mutually_exclusive("egress", "hdr.ethernet", "hdr.prsr_pad_0[2]")
+@pa_mutually_exclusive("egress", "hdr.ethernet", "hdr.prsr_pad_0[3]")
+@pa_mutually_exclusive("egress", "hdr.ipv6", "hdr.prsr_pad_0[0]")
+@pa_mutually_exclusive("egress", "hdr.ipv6", "hdr.prsr_pad_0[1]")
+@pa_mutually_exclusive("egress", "hdr.ipv6", "hdr.prsr_pad_0[2]")
+@pa_mutually_exclusive("egress", "hdr.ipv6", "hdr.prsr_pad_0[3]")
+@pa_mutually_exclusive("egress", "hdr.udp", "hdr.prsr_pad_0[0]")
+@pa_mutually_exclusive("egress", "hdr.udp", "hdr.prsr_pad_0[1]")
+@pa_mutually_exclusive("egress", "hdr.udp", "hdr.prsr_pad_0[2]")
+@pa_mutually_exclusive("egress", "hdr.udp", "hdr.prsr_pad_0[3]")
+@pa_mutually_exclusive("egress", "hdr.ipv4", "hdr.inner_ipv6")
+@pa_mutually_exclusive("egress", "hdr.ipv4_option", "hdr.inner_ipv6")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_ethernet", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_ipv6", "hdr.vxlan_inner_ipv4")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_ipv6", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.postcard_header", "hdr.prsr_pad_0[0]")
+@pa_mutually_exclusive("egress", "hdr.postcard_header", "hdr.prsr_pad_0[1]")
+@pa_mutually_exclusive("egress", "hdr.postcard_header", "hdr.prsr_pad_0[2]")
+@pa_mutually_exclusive("egress", "hdr.postcard_header", "hdr.prsr_pad_0[3]")
+
 control SwitchIngress(
         inout header_t hdr,
         inout ingress_metadata_t ig_md,

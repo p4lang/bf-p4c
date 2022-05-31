@@ -230,7 +230,7 @@ header knf_t {
     bit<4> pType;
     knid_t knid; /* OEType : 8; IDID : 16; VNI : 32; */
     /* bit<16> hdrMap; */
-    bit<16> remoteLagID; /* TODO: this field used to be hdrMap. We need to put 
+    bit<16> remoteLagID; /* TODO: this field used to be hdrMap. We need to put
                           * it back when KNF header extensions are supported.
                           */
     bit<1> hdrElided;
@@ -789,8 +789,46 @@ parser TofinoEgressParser(
  * forbidden except by express written permission of Kaloom Inc.
  ****************************************************************/
 
-
-
+/* P4C-4079: Restore header mutexes that were conservatively removed by fix */
+@pa_mutually_exclusive("ingress", "hdr.pktgen_port_down", "hdr.dp_ctrl_hdr")
+@pa_mutually_exclusive("ingress", "hdr.pktgen_ext_header", "hdr.dp_ctrl_hdr")
+// @pa_mutually_exclusive("egress", "hdr.ethernet", "hdr.min_parse_depth_padding_0[0]")
+// @pa_mutually_exclusive("egress", "hdr.ethernet", "hdr.min_parse_depth_padding_0[1]")
+// @pa_mutually_exclusive("egress", "hdr.ethernet", "hdr.min_parse_depth_padding_0[2]")
+// @pa_mutually_exclusive("egress", "hdr.ethernet", "hdr.min_parse_depth_padding_0[3]")
+@pa_mutually_exclusive("egress", "hdr.vlan", "hdr.knf")
+@pa_mutually_exclusive("egress", "hdr.vlan", "hdr.inner_ipv6")
+@pa_mutually_exclusive("egress", "hdr.vlan", "hdr.inner_udp")
+@pa_mutually_exclusive("egress", "hdr.vlan", "hdr.postcard_header")
+// @pa_mutually_exclusive("egress", "hdr.ipv6", "hdr.min_parse_depth_padding_0[0]")
+// @pa_mutually_exclusive("egress", "hdr.ipv6", "hdr.min_parse_depth_padding_0[1]")
+// @pa_mutually_exclusive("egress", "hdr.ipv6", "hdr.min_parse_depth_padding_0[2]")
+// @pa_mutually_exclusive("egress", "hdr.ipv6", "hdr.min_parse_depth_padding_0[3]")
+// @pa_mutually_exclusive("egress", "hdr.udp", "hdr.min_parse_depth_padding_0[0]")
+// @pa_mutually_exclusive("egress", "hdr.udp", "hdr.min_parse_depth_padding_0[1]")
+// @pa_mutually_exclusive("egress", "hdr.udp", "hdr.min_parse_depth_padding_0[2]")
+// @pa_mutually_exclusive("egress", "hdr.udp", "hdr.min_parse_depth_padding_0[3]")
+@pa_mutually_exclusive("egress", "hdr.knf", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.inner_ethernet", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.ipv4", "hdr.inner_ipv6")
+@pa_mutually_exclusive("egress", "hdr.ipv4", "hdr.inner_udp")
+@pa_mutually_exclusive("egress", "hdr.ipv4", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.udpv4", "hdr.inner_ipv6")
+@pa_mutually_exclusive("egress", "hdr.udpv4", "hdr.inner_udp")
+@pa_mutually_exclusive("egress", "hdr.udpv4", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.inner_ipv6", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.inner_udp", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.vxlan", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_ethernet", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_ipv6", "hdr.vxlan_inner_ipv4")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_ipv6", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_udp", "hdr.vxlan_inner_ipv4")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_udp", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_ipv4", "hdr.postcard_header")
+// @pa_mutually_exclusive("egress", "hdr.postcard_header", "hdr.min_parse_depth_padding_0[0]")
+// @pa_mutually_exclusive("egress", "hdr.postcard_header", "hdr.min_parse_depth_padding_0[1]")
+// @pa_mutually_exclusive("egress", "hdr.postcard_header", "hdr.min_parse_depth_padding_0[2]")
+// @pa_mutually_exclusive("egress", "hdr.postcard_header", "hdr.min_parse_depth_padding_0[3]")
 
 /* Egress to Egress Mirroring */
 control EgressMirror(
@@ -2865,7 +2903,7 @@ control OnetMappingAndLearning(
         kvtep_onets_cntr.count();
     }
 
-    /* Kvtep overlay networks. Each overlay network is identified by a VNI 
+    /* Kvtep overlay networks. Each overlay network is identified by a VNI
      * and it is mapped to an OKNID (Overlay Network ID).
      */
     table kvtep_onets {
@@ -3478,7 +3516,7 @@ control IngressVRouter(
         ig_md.ktep_meta.nw_id = nw_id;
     }
 
-    /* Route that corresponds to a Router's loopback interface. 
+    /* Route that corresponds to a Router's loopback interface.
      * The packet will be sent to the control plane via the punt channel.
      */
     action ktep_route_local_hit() {
@@ -3509,7 +3547,7 @@ control IngressVRouter(
         size = vrouter_l3_exact_table_size;
     }
 
-    /* Routing LPM table. Routers use an 8 bits ID, it isolates logically their 
+    /* Routing LPM table. Routers use an 8 bits ID, it isolates logically their
      * respective routing tables.
      */
     @alpm(1)
@@ -3528,7 +3566,7 @@ control IngressVRouter(
         size = vrouter_l3_table_size;
     }
 
-    /* Sets the destination MAC address of the user packet and prepares ktep 
+    /* Sets the destination MAC address of the user packet and prepares ktep
      * metadata for the next lookup in the vnet_dmac table.
      */
     action ktep_neigh_hit(mac_addr_t mac) {
@@ -3663,12 +3701,12 @@ control IngressVRouter(
             /* Some L2 packets arriving from remote vtep will match the vRouter
              * KVtep interface but if they are not vxlan packets they will still
              * have ktep_meta.process_l3 == 1 because of vrouter_ifaces_hit.
-             * Those packets should perform l2 services and bypass l3 vrouter 
+             * Those packets should perform l2 services and bypass l3 vrouter
              * tables.
              */
             if ((ig_md.ktep_meta.process_l3 == 1) &&
                     (ig_md.ktep_router_meta.input_iface != 0x3F)) {
-                /* Process L3 routing if packet misses Vxlan onets mapping or if 
+                /* Process L3 routing if packet misses Vxlan onets mapping or if
                  * it is not destined to KVtep.
                  */
                 switch(ktep_l3_exact.apply().action_run) {
@@ -3742,7 +3780,7 @@ control VRouter(
         ig_md.ktep_router_meta.is_not_ip = 0;
     }
 
-    /* Non IP packets that match Router's interface MAC address are sent to 
+    /* Non IP packets that match Router's interface MAC address are sent to
      * the control plane via the punt channel.
      */
     action process_non_ip_pkts() {
@@ -3750,7 +3788,7 @@ control VRouter(
         ig_md.ktep_router_meta.is_not_ip = 1;
     }
 
-    /* Copy the destination IP address from the user packet into ktep router 
+    /* Copy the destination IP address from the user packet into ktep router
      * metadata. Also send non IP packets to remote control plane via punt tunnel.
      */
     table pre_routing {
@@ -3794,8 +3832,8 @@ control VRouter(
         vrouter_ifaces_cntr.count();
     }
 
-    /* Filters packets that are sent to the vRouter where L3 processing is 
-     * performed then the L3 packet reaches L2 processing. Otherwise, the packet 
+    /* Filters packets that are sent to the vRouter where L3 processing is
+     * performed then the L3 packet reaches L2 processing. Otherwise, the packet
      * will move directly to L2 processing.
      */
     @ternary(1)
@@ -3899,13 +3937,13 @@ control VRouterEgress(
     action ktep_l2_egress_process_vxlan() {
         hdr.vxlan_inner_ethernet.dstAddr = eg_md.ktep_router_meta.dst_mac;
         hdr.vxlan_inner_ethernet.srcAddr = eg_md.ktep_router_meta.src_mac;
-        /* We need to reset the egress_pkt_type before recirculation in case we 
+        /* We need to reset the egress_pkt_type before recirculation in case we
          * have a local overlay vrouter.
          */
         eg_md.kvtep_meta.egress_pkt_type = KVTEP_PKT_TYPE_RAW;
     }
 
-    /* Set source and destination MAC addresses to the inner packet of the KNF 
+    /* Set source and destination MAC addresses to the inner packet of the KNF
      * packet.
      */
     action ktep_l2_egress_process_knf() {
@@ -3913,7 +3951,7 @@ control VRouterEgress(
         hdr.inner_ethernet.srcAddr = eg_md.ktep_router_meta.src_mac;
     }
 
-    /* Set source and destination MAC addresses to the outer headers of the 
+    /* Set source and destination MAC addresses to the outer headers of the
      * user packet.
      */
     action ktep_l2_egress_process_user() {
@@ -3925,8 +3963,8 @@ control VRouterEgress(
         if (eg_md.ktep_router_meta.process_l2_egress == 1) {
             ktep_router_iface.apply();
             if (eg_md.ktep_meta.egress_pkt_type == PKT_TYPE_KNF) {
-                /* TODO: if we manage to swap the bloc ktep router egress before 
-                 * kvtep egress then this condition and its internal action 
+                /* TODO: if we manage to swap the bloc ktep router egress before
+                 * kvtep egress then this condition and its internal action
                  * should be removed.
                  */
                 if (eg_md.kvtep_meta.egress_pkt_type == KVTEP_PKT_TYPE_VXLAN) {
@@ -3951,7 +3989,7 @@ control L3EgressCntr(
         punt_tunnel_stats_cntr.count();
     }
 
-    /* Punt_tunnel_stats table is used to capture L3 service packets exiting 
+    /* Punt_tunnel_stats table is used to capture L3 service packets exiting
      * the egress pipeline towards a vRouter's punt channel.
      */
     @placement_priority(-1)
@@ -4040,7 +4078,7 @@ control CPUPort(out port_id_t cpu_port_id, out bit<3> ring_id) {
     }
 }
 
-/* Resetting cpu_port in egress pipeline as action data by the host reduces its 
+/* Resetting cpu_port in egress pipeline as action data by the host reduces its
  * life range in ingress pipeline and lowers the size of bridged metadata.
  */
 control EgressCPUPort(inout egress_metadata_t eg_md) {
@@ -4547,16 +4585,16 @@ control CopyNexthopMAC(
 
     action set_neigh_mac_miss() {}
 
-    /* Set_neigh_mac table is used for mapping the Neighbor MAC ID address to its 
+    /* Set_neigh_mac table is used for mapping the Neighbor MAC ID address to its
      * MAC address in the underlay.
-     * Today, with the current assumptions like fabric topology and the current hardware 
-     * and number of ports and links between spines and leaf switches, a MAC neighbors 
-     * table of 256 entries and a MAC ID of 8 bits is enough. 
-     * However, if the current assumptions change then we will be able to scale by 
+     * Today, with the current assumptions like fabric topology and the current hardware
+     * and number of ports and links between spines and leaf switches, a MAC neighbors
+     * table of 256 entries and a MAC ID of 8 bits is enough.
+     * However, if the current assumptions change then we will be able to scale by
      * incresing the MAC ID size and set_neigh_mac table size.
-     * Set_neigh_mac table is placed in stage 10, which is almost fully used because 
-     * of the port_failover and lag_failover tables being also placed in stage 10. 
-     * Therefore, we are placing the key in the TCAM via the @ternary annotation for 
+     * Set_neigh_mac table is placed in stage 10, which is almost fully used because
+     * of the port_failover and lag_failover tables being also placed in stage 10.
+     * Therefore, we are placing the key in the TCAM via the @ternary annotation for
      * most of the tables in stage 10 to leave more SRAM blocks available for scaling.
      */
     @ternary(1)
@@ -5218,7 +5256,7 @@ control INTGenerateRandVal(
 }
 
 /* Apply postcard watchlist, on Leaf switches only, to define the traffic that
- * will be monitored. 
+ * will be monitored.
  */
 control Watchlist(
         inout header_t hdr,
@@ -5235,9 +5273,9 @@ control Watchlist(
      */
     const bit<32> tel_postcard_reg_instance_count = 101;
 
-    /* Sampling registers are filled by the control plane to represent the 
-     * possibility of having a hash value lower than x value by setting 
-     * the register value to: (uint16_t)(0xFFFFLL * (i / 100.0)), 
+    /* Sampling registers are filled by the control plane to represent the
+     * possibility of having a hash value lower than x value by setting
+     * the register value to: (uint16_t)(0xFFFFLL * (i / 100.0)),
      * where i = 0..100.
      */
     Register<bit<16>, bit<32>>(tel_postcard_reg_instance_count)
@@ -5254,7 +5292,7 @@ control Watchlist(
         }
     };
 
-    /* This action is necessary because the python PD client used in the PTF 
+    /* This action is necessary because the python PD client used in the PTF
      * tests can't set up a register that has index higher than 50.
      */
     action postcard_watch_all() {
@@ -5318,13 +5356,13 @@ control Watchlist(
     apply {
         /* Apply watchlist table only on USER ports traffic for now.
          * TODO: With the new parser this condition can be updated to add KVS
-         * port type. 
+         * port type.
          */
         if (ig_md.ktep_port_meta.port_type == PORT_TYPE_USER) {
             postcard_watchlist.apply();
         } else if (ig_md.ktep_port_meta.port_type == PORT_TYPE_FABRIC &&
                 hdr.knf.isValid() && hdr.knf.telSequenceNum != 0) {
-            /* If KNF header is valid and knf.telSequenceNum is set, then use 
+            /* If KNF header is valid and knf.telSequenceNum is set, then use
              * it as the postcard sequence number, don't generate new number.
              */
             set_knf_telemetry_valid();
@@ -5478,7 +5516,7 @@ control TelGeneratePostcard(
         tel_postcard_insert_cntr.count();
     }
 
-    /* tel_postcard_insert runs on mirrored packets, tel_postcard_e2e runs on 
+    /* tel_postcard_insert runs on mirrored packets, tel_postcard_e2e runs on
      * original ones.
      */
     /* TODO: @ignore_table_dependency("tel_postcard_e2e") */

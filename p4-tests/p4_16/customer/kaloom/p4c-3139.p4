@@ -4479,7 +4479,7 @@ control L3EgressCntr(
 
     action punt_tunnel_stats_hit() {
         punt_tunnel_stats_cntr.count();
-        /* Due To compiler issues we did not find a way to pass the information 
+        /* Due To compiler issues we did not find a way to pass the information
          * that if the packet is sent to punt channel it should not be MPLS decapsulated.
          * In fact we have a flag "punt" in ktep_router_meta but it is not bridged.
          * Since the l3_counters block happen right before the MPLS decap block then
@@ -6096,6 +6096,79 @@ control TelGeneratePostcard(
 
 const bit<16> MSB_MASK = 0x8000;
 
+/* P4C-4079: Restore header mutexes that were conservatively removed by fix */
+@pa_mutually_exclusive("ingress", "hdr.vlan", "hdr.dp_ctrl_hdr")
+@pa_mutually_exclusive("ingress", "hdr.pktgen_port_down", "hdr.dp_ctrl_hdr")
+@pa_mutually_exclusive("ingress", "hdr.pktgen_port_down", "hdr.mpls")
+@pa_mutually_exclusive("ingress", "hdr.pktgen_ext_header", "hdr.dp_ctrl_hdr")
+@pa_mutually_exclusive("ingress", "hdr.pktgen_ext_header", "hdr.mpls")
+@pa_mutually_exclusive("egress", "hdr.inner_ethernet", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.vlan", "hdr.ethernet")
+@pa_mutually_exclusive("egress", "hdr.vlan", "hdr.ipv6")
+@pa_mutually_exclusive("egress", "hdr.vlan", "hdr.udp")
+@pa_mutually_exclusive("egress", "hdr.vlan", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.vlan", "hdr.prsr_pad_0[0]")
+@pa_mutually_exclusive("egress", "hdr.vlan", "hdr.prsr_pad_0[1]")
+@pa_mutually_exclusive("egress", "hdr.vlan", "hdr.prsr_pad_0[2]")
+@pa_mutually_exclusive("egress", "hdr.vlan", "hdr.prsr_pad_0[3]")
+@pa_mutually_exclusive("egress", "hdr.ethernet", "hdr.prsr_pad_0[0]")
+@pa_mutually_exclusive("egress", "hdr.ethernet", "hdr.prsr_pad_0[1]")
+@pa_mutually_exclusive("egress", "hdr.ethernet", "hdr.prsr_pad_0[2]")
+@pa_mutually_exclusive("egress", "hdr.ethernet", "hdr.prsr_pad_0[3]")
+@pa_mutually_exclusive("egress", "hdr.ipv6", "hdr.prsr_pad_0[0]")
+@pa_mutually_exclusive("egress", "hdr.ipv6", "hdr.prsr_pad_0[1]")
+@pa_mutually_exclusive("egress", "hdr.ipv6", "hdr.prsr_pad_0[2]")
+@pa_mutually_exclusive("egress", "hdr.ipv6", "hdr.prsr_pad_0[3]")
+@pa_mutually_exclusive("egress", "hdr.udp", "hdr.prsr_pad_0[0]")
+@pa_mutually_exclusive("egress", "hdr.udp", "hdr.prsr_pad_0[1]")
+@pa_mutually_exclusive("egress", "hdr.udp", "hdr.prsr_pad_0[2]")
+@pa_mutually_exclusive("egress", "hdr.udp", "hdr.prsr_pad_0[3]")
+@pa_mutually_exclusive("egress", "hdr.mpls", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.ipv4", "hdr.inner_ipv6")
+@pa_mutually_exclusive("egress", "hdr.ipv4", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.ipv4", "hdr.prsr_pad_0[0]")
+@pa_mutually_exclusive("egress", "hdr.ipv4", "hdr.prsr_pad_0[1]")
+@pa_mutually_exclusive("egress", "hdr.ipv4", "hdr.prsr_pad_0[2]")
+@pa_mutually_exclusive("egress", "hdr.ipv4", "hdr.prsr_pad_0[3]")
+@pa_mutually_exclusive("egress", "hdr.ipv4_option", "hdr.inner_ipv6")
+@pa_mutually_exclusive("egress", "hdr.ipv4_option", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.inner_ipv6", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.inner_ipv6", "hdr.prsr_pad_0[0]")
+@pa_mutually_exclusive("egress", "hdr.inner_ipv6", "hdr.prsr_pad_0[1]")
+@pa_mutually_exclusive("egress", "hdr.inner_ipv6", "hdr.prsr_pad_0[2]")
+@pa_mutually_exclusive("egress", "hdr.inner_ipv6", "hdr.prsr_pad_0[3]")
+@pa_mutually_exclusive("egress", "hdr.inner_udp", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.inner_udp", "hdr.prsr_pad_0[0]")
+@pa_mutually_exclusive("egress", "hdr.inner_udp", "hdr.prsr_pad_0[1]")
+@pa_mutually_exclusive("egress", "hdr.inner_udp", "hdr.prsr_pad_0[2]")
+@pa_mutually_exclusive("egress", "hdr.inner_udp", "hdr.prsr_pad_0[3]")
+@pa_mutually_exclusive("egress", "hdr.vxlan", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.vxlan", "hdr.prsr_pad_0[0]")
+@pa_mutually_exclusive("egress", "hdr.vxlan", "hdr.prsr_pad_0[1]")
+@pa_mutually_exclusive("egress", "hdr.vxlan", "hdr.prsr_pad_0[2]")
+@pa_mutually_exclusive("egress", "hdr.vxlan", "hdr.prsr_pad_0[3]")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_ethernet", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_ipv6", "hdr.vxlan_inner_ipv4")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_ipv6", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_ipv6", "hdr.prsr_pad_0[0]")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_ipv6", "hdr.prsr_pad_0[1]")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_ipv6", "hdr.prsr_pad_0[2]")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_ipv6", "hdr.prsr_pad_0[3]")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_ipv4", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_ipv4", "hdr.prsr_pad_0[0]")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_ipv4", "hdr.prsr_pad_0[1]")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_ipv4", "hdr.prsr_pad_0[2]")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_ipv4", "hdr.prsr_pad_0[3]")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_udp", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_udp", "hdr.prsr_pad_0[0]")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_udp", "hdr.prsr_pad_0[1]")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_udp", "hdr.prsr_pad_0[2]")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_udp", "hdr.prsr_pad_0[3]")
+@pa_mutually_exclusive("egress", "hdr.postcard_header", "hdr.prsr_pad_0[0]")
+@pa_mutually_exclusive("egress", "hdr.postcard_header", "hdr.prsr_pad_0[1]")
+@pa_mutually_exclusive("egress", "hdr.postcard_header", "hdr.prsr_pad_0[2]")
+@pa_mutually_exclusive("egress", "hdr.postcard_header", "hdr.prsr_pad_0[3]")
+
 control SwitchIngress(
         inout header_t hdr,
         inout ingress_metadata_t ig_md,
@@ -6486,7 +6559,7 @@ control SwitchEgress(
             egress_cpu_port_encap.apply(hdr, eg_md, eg_intr_md);
 
             /* This condition is for capturing and dropping unicast packets that are
-             * exiting on the same interface they came from. It should be applied for            
+             * exiting on the same interface they came from. It should be applied for
              *          vnet_dmac_iface_untagged_hit :
              *          vnet_dmac_iface_vlan_hit :
              * in vnet_dmac table in ingress pipeline but the compiler did not allow it.
