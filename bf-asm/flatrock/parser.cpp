@@ -4,6 +4,7 @@
 
 #include "flatrock/hdr.h"
 #include "misc.h"
+#include "top_level.h"
 
 namespace {
 
@@ -1188,6 +1189,10 @@ void FlatrockParser::write_config(RegisterSetBase &regs, json::map &json, bool l
             profiles[i].write_config(regs, json, legacy);
     for (unsigned int i(0); i < Target::Flatrock::PARSER_ANALYZER_STAGES; ++i) {
         analyzer[i].write_config(regs, json, legacy);
+    }
+    if (auto *top = TopLevel::regs<Target::Flatrock>()) {
+        top->mem_pipe.prsr_mem.set("mem.prsr_mem", &_regs.prsr_mem);
+        top->reg_pipe.prsr.set("reg.prsr", &_regs.prsr);
     }
 }
 

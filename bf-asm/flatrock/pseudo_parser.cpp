@@ -2,6 +2,7 @@
 #include "target.h"
 #include "misc.h"
 #include "hdr.h"
+#include "top_level.h"
 
 void FlatrockPseudoParser::input(VECTOR(value_t) args, value_t data) {
     for (auto &kv : MapIterChecked(data.map, false)) {
@@ -24,4 +25,8 @@ void FlatrockPseudoParser::write_config(RegisterSetBase &regs, json::map &json, 
     _regs.pprsr.pprsr_comp_hdr_bmd_ext.off_start = Hdr::hdr.off_pos;
     _regs.pprsr.pprsr_comp_hdr_bmd_ext.id_start = Hdr::hdr.seq_pos;
     _regs.pprsr.pprsr_comp_hdr_bmd_ext.len_start = Hdr::hdr.len_pos;
+    if (auto *top = TopLevel::regs<Target::Flatrock>()) {
+        top->mem_pipe.pprsr_mem.set("mem.pprsr_mem", &_regs.pprsr_mem);
+        top->reg_pipe.pprsr.set("reg.pprsr", &_regs.pprsr);
+    }
 }
