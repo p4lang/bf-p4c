@@ -1006,12 +1006,47 @@ struct AllocateParserState : public ParserTransform {
             // Fix up for constraint that header end position must be less than the current state's
             // shift amount for residual checksum. See MODEL-542.
             std::vector<const IR::BFN::ParserPrimitive*> to_spill;
+            bool spilledGet = false;
             for (auto s : current_statements) {
                 if (auto get = s->to<IR::BFN::ChecksumResidualDeposit>()) {
                     if (get->header_end_byte->range.lo >= compute_max_shift_in_bits()) {
                         spilled_statements.push_back(s);
                         to_spill.push_back(s);
-                        LOG3("spill checksum get (end_pos < shift_amt)");
+                        spilledGet = true;
+                        LOG3("spill checksum get (end_pos > shift_amt)");
+                    }
+                }
+            }
+            if (spilledGet) {
+                for (auto s : current_statements) {
+                    // We have to also spill any adds/subs to the checksum that are not
+                    // extracted otherwise the computed checksum is wrong
+                    // This happens if some field is extracted in the spilled state
+                    // but it is added/subtracted from the checksum in the original
+                    // For example lets assume we have a state that extracts fields a and b
+                    // It gets split into two, the first state will extract a, shift the buffer just
+                    // behind a (and in front of b), but also will have buffer required set
+                    // to include b as well and the checksum will subtract b in this first state
+                    // Then the second split state basically only extracts b, shifts the buffer
+                    // behind it and "ends" the checksum by doing ChecksumResidualDeposit
+                    // However in this case the subtract of b in the first state does not actually
+                    // happen since it is not really extracted there
+                    if (auto add = s->to<IR::BFN::ChecksumAdd>()) {
+                        const auto* src = add->source;
+                        CHECK_NULL(src);
+                        if (src->range.lo >= compute_max_shift_in_bits()) {
+                            spilled_statements.push_back(s);
+                            to_spill.push_back(s);
+                            LOG3("spill checksum add (pos > shift_amt)");
+                        }
+                    } else if (auto sub = s->to<IR::BFN::ChecksumSubtract>()) {
+                        const auto* src = sub->source;
+                        CHECK_NULL(src);
+                        if (src->range.lo >= compute_max_shift_in_bits()) {
+                            spilled_statements.push_back(s);
+                            to_spill.push_back(s);
+                            LOG3("spill checksum subtract (pos > shift_amt)");
+                        }
                     }
                 }
             }
