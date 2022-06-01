@@ -357,6 +357,9 @@ else
     die "$file is not under $srcdir"
 fi
 
+# Set environment variable to provide a link to the test source directory
+# This is useful in searching for test related artifacts e.g. pcap files for stf run
+export TESTSOURCEDIR=$(dirname $file)
 name=$(basename $file .p4)
 
 if [[ ! -x $P4C  &&  ! -x $P4C_pd ]]; then

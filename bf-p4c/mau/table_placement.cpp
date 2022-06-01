@@ -2101,7 +2101,7 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
                     continue;
 
                 // Cannot split attached entries for Tofino
-                if (Device::currentDevice() == Device::TOFINO) break;
+                if (Device::currentDevice() == Device::TOFINO) continue;
 
                 rv->attached_entries.at(ba->attached).entries = 0;
                 rv->attached_entries.at(ba->attached).need_more = true;

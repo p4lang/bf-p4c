@@ -1,0 +1,145 @@
+
+add SwitchIngress.reg_rw.reg_read_cpu_tbl egress_port:0x1ff ether_type:0x100b reg_read_cpu()
+add SwitchIngress.reg_rw.reg_read_icmp_tbl protocol:0x1 src_addr:0xa80003 type_:0x8 reg_read_icmp()
+add SwitchIngress.reg_rw.reg_write_cpu_tbl egress_port:0x1ff ether_type:0x100a reg_write_cpu()
+add SwitchIngress.reg_rw.reg_write_icmp_tbl 0 src_addr:0xac10000* type_:0x8 reg_write_icmp()
+
+# This stf reads packets from a pcap file
+# Note : No expect command indicates packet drop
+# Note : All packets are dropped, reg values are checked after each packet
+
+# Packet 1 - reg_read_cpu - Read 0 for reg 1 / 2
+$( pkt=`python3 -c 'from scapy.all import *; \
+    import os; \
+    pkts=rdpcap(os.path.expandvars("$TESTSOURCEDIR") + "/pkt_1.pcap"); \
+    p=pkts[0]; \
+    print(plain_str(bytes_hex(p))) \
+    '`; \
+    echo $pkt > pkt.log; \
+    printf "packet 4 $pkt";                           \
+)
+
+wait
+check_register SwitchIngress.reg_rw.reg_one(0xaaa) lo = 0x0
+check_register SwitchIngress.reg_rw.reg_two(0xbbb) lo = 0x0
+
+# Packet 2 - reg_read_icmp - Read 0 for reg 1 / 2
+$( pkt=`python3 -c 'from scapy.all import *; \
+    import os; \
+    pkts=rdpcap(os.path.expandvars("$TESTSOURCEDIR") + "/pkt_2.pcap"); \
+    p=pkts[0]; \
+    print(plain_str(bytes_hex(p))) \
+    '`; \
+    echo $pkt > pkt.log; \
+    printf "packet 4 $pkt";                           \
+)
+
+wait
+check_register SwitchIngress.reg_rw.reg_one(0xaaa) lo = 0x0
+check_register SwitchIngress.reg_rw.reg_two(0xbbb) lo = 0x0
+
+# Packet 3 - reg_write_cpu - Write 1 for reg 1 / 2
+$( pkt=`python3 -c 'from scapy.all import *; \
+    import os; \
+    pkts=rdpcap(os.path.expandvars("$TESTSOURCEDIR") + "/pkt_3.pcap"); \
+    p=pkts[0]; \
+    print(plain_str(bytes_hex(p))) \
+    '`; \
+    echo $pkt > pkt.log; \
+    printf "packet 64 $pkt";                           \
+)
+
+wait
+check_register SwitchIngress.reg_rw.reg_one(0xaaa) lo = 0x1
+check_register SwitchIngress.reg_rw.reg_two(0xbbb) lo = 0x1
+
+# Packet 4 - reg_read_cpu - Read 1 for reg 1 / 2
+$( pkt=`python3 -c 'from scapy.all import *; \
+    import os; \
+    pkts=rdpcap(os.path.expandvars("$TESTSOURCEDIR") + "/pkt_4.pcap"); \
+    p=pkts[0]; \
+    print(plain_str(bytes_hex(p))) \
+    '`; \
+    echo $pkt > pkt.log; \
+    printf "packet 4 $pkt";                           \
+)
+
+wait
+check_register SwitchIngress.reg_rw.reg_one(0xaaa) lo = 0x1
+check_register SwitchIngress.reg_rw.reg_two(0xbbb) lo = 0x1
+
+# Packet 5 - reg_read_icmp - Read 1 for reg 1 / 2
+$( pkt=`python3 -c 'from scapy.all import *; \
+    import os; \
+    pkts=rdpcap(os.path.expandvars("$TESTSOURCEDIR") + "/pkt_5.pcap"); \
+    p=pkts[0]; \
+    print(plain_str(bytes_hex(p))) \
+    '`; \
+    echo $pkt > pkt.log; \
+    printf "packet 4 $pkt";                           \
+)
+
+wait
+check_register SwitchIngress.reg_rw.reg_one(0xaaa) lo = 0x1
+check_register SwitchIngress.reg_rw.reg_two(0xbbb) lo = 0x1
+
+# Packet 6 - reg_read_cpu - Read 1 for reg 1 / 2
+$( pkt=`python3 -c 'from scapy.all import *; \
+    import os; \
+    pkts=rdpcap(os.path.expandvars("$TESTSOURCEDIR") + "/pkt_6.pcap"); \
+    p=pkts[0]; \
+    print(plain_str(bytes_hex(p))) \
+    '`; \
+    echo $pkt > pkt.log; \
+    printf "packet 64 $pkt";                           \
+)
+
+wait
+check_register SwitchIngress.reg_rw.reg_one(0xaaa) lo = 0x1
+check_register SwitchIngress.reg_rw.reg_two(0xbbb) lo = 0x1
+
+# Packet 7 - reg_write_cpu - Write 0 for reg 1 / 2
+$( pkt=`python3 -c 'from scapy.all import *; \
+    import os; \
+    pkts=rdpcap(os.path.expandvars("$TESTSOURCEDIR") + "/pkt_7.pcap"); \
+    p=pkts[0]; \
+    print(plain_str(bytes_hex(p))) \
+    '`; \
+    echo $pkt > pkt.log; \
+    printf "packet 64 $pkt";                           \
+)
+
+wait
+check_register SwitchIngress.reg_rw.reg_one(0xaaa) lo = 0x0
+check_register SwitchIngress.reg_rw.reg_two(0xbbb) lo = 0x0
+
+# Packet 8 - reg_read_cpu - Read 0 for reg 1 / 2
+$( pkt=`python3 -c 'from scapy.all import *; \
+    import os; \
+    pkts=rdpcap(os.path.expandvars("$TESTSOURCEDIR") + "/pkt_8.pcap"); \
+    p=pkts[0]; \
+    print(plain_str(bytes_hex(p))) \
+    '`; \
+    echo $pkt > pkt.log; \
+    printf "packet 64 $pkt";                           \
+)
+
+wait
+check_register SwitchIngress.reg_rw.reg_one(0xaaa) lo = 0x0
+check_register SwitchIngress.reg_rw.reg_two(0xbbb) lo = 0x0
+
+# Packet 9 - reg_read_icmp - Read 0 for reg 1 / 2
+$( pkt=`python3 -c 'from scapy.all import *; \
+    import os; \
+    pkts=rdpcap(os.path.expandvars("$TESTSOURCEDIR") + "/pkt_9.pcap"); \
+    p=pkts[0]; \
+    print(plain_str(bytes_hex(p))) \
+    '`; \
+    echo $pkt > pkt.log; \
+    printf "packet 4 $pkt";                           \
+)
+
+wait
+check_register SwitchIngress.reg_rw.reg_one(0xaaa) lo = 0x0
+check_register SwitchIngress.reg_rw.reg_two(0xbbb) lo = 0x0
+
