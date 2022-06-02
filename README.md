@@ -29,6 +29,22 @@ desired .md files.
 - To avoid automatic link generation for a particular word, prepend it with \@.
 - There is no \@seealso, use \@sa or \@see instead.
 
+### Using Doxygen in Python 3 scripts
+
+Doxygen can also parse Python 3 documentation comments. For this the usual Python 3 
+doc strings can be used, but each Doxygen documentation comment has to have `!` at the 
+start of the comment.
+
+Example documentation comment:
+```
+def foo(bar):
+    """! Does foo
+    @param bar Bar object
+    @return None
+    """
+    ...
+```
+
 ## Setup
 
 This repo contains the backend for the Barefoot p4c compiler suite.
