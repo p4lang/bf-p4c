@@ -152,6 +152,9 @@ struct SearchConfig {
     /// Allocator will stop try allocating candiddates to other containers if candidates have been
     /// successfully allcoated to an empty normal container.
     bool stop_first_succ_empty_normal_container = false;
+
+    /// For table match key fields, try byte-aligned container starts first.
+    bool try_byte_aligned_starts_first_for_table_keys = false;
 };
 
 /// ScoreContext is the allocation context that is updated and passed down during allocation.

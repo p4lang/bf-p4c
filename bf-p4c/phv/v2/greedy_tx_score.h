@@ -7,6 +7,13 @@
 namespace PHV {
 namespace v2 {
 
+/// a pair of container and the index of the byte, counting from 0.
+using ContainerByte = std::pair<Container, int>;
+/// map tables to ixbar bytes of container.
+using TableIxbarContBytesMap = ordered_map<const IR::MAU::Table*, ordered_set<ContainerByte>>;
+/// map tables to ixbar bytes of container.
+using StageIxbarContBytesMap = ordered_map<int, ordered_set<ContainerByte>>;
+
 /// Vision stores
 /// (1) available bits in the PHV v.s. unallocated candidates.
 /// (2) TODO: table layout status.
@@ -32,6 +39,27 @@ struct Vision {
     // ordered_map<gress_t, int> pov_bits_used;
     // ordered_map<gress_t, int> pov_bits_unallocated;
 
+    // The direction of dataflow for table matching is
+    // phv-bytes ======> ixbar (groups)  =======> search bus ========> SRAM/TCAM table.
+    //             (1)                     (2)
+    // (1) Constraints are:
+    //     + 32-bit container bytes must be mapped to same mod-4 bytes.
+    //     + 16-bit container bytes must be mapped to same mod-2 bytes.
+    //     + 8-bit container byte can be mapped to any bytes.
+    // (2) Constraints are:
+    //     + search bus read from one of 8 (exact) or 12 (ternary) ixbar group.
+    //     + For ternary, a group is of 5 + 1 (4bit of mid-byte) bytes group.
+    //     + For sram, a group has 16 bytes.
+
+    /// maps table to allocated match key positions.
+    TableIxbarContBytesMap table_ixbar_cont_bytes;
+    /// maps stages to allocated sram match key positions. We do not need to take table mutually
+    /// exclusiveness into account because table ixbar cannot be reused, it is a static config.
+    StageIxbarContBytesMap stage_sram_ixbar_cont_bytes;
+    /// maps stages to allocated tcam match key positions. We do not need to take table mutually
+    /// exclusiveness into account because table ixbar cannot be reused, it is a static config.
+    StageIxbarContBytesMap stage_tcam_ixbar_cont_bytes;
+
     /// supply vs demand in terms of bits.
     int bits_demand(const PHV::Kind& k) const;
     int bits_supply(const PHV::Kind& k) const;
@@ -40,6 +68,7 @@ struct Vision {
     };
 };
 
+std::ostream& operator<<(std::ostream&, const ContainerByte&);
 std::ostream& operator<<(std::ostream&, const Vision&);
 
 class GreedyTxScoreMaker : public TxScoreMaker {
@@ -63,8 +92,19 @@ class GreedyTxScoreMaker : public TxScoreMaker {
     void record_commit(const Transaction& tx, const SuperCluster* presliced_sc);
 
     cstring status() const;
-};
 
+    // algorithms
+ public:
+    /// @returns an score of how imbalanced container bytes are. Imbalance is measured under
+    /// a mod-4 system. For example,
+    ///      ixbar bytes layout
+    ///   0       1     2       3
+    ///  H2@0   MH5@1  W6@2    W6@3
+    ///  H9@0          MH5@1
+    /// The score is 2 because there are 2 ixbar bytes that has more than minimal bytes (1
+    /// in this case). See gtests.
+    static int ixbar_imbalanced_alignment(const ordered_set<ContainerByte>& cont_bytes);
+};
 
 /// GreedyTxScore is the default allocation heuristics.
 class GreedyTxScore : public TxScore {
@@ -134,6 +174,24 @@ class GreedyTxScore : public TxScore {
     /// the delta of the number of bytes that will be read by deparser
     /// when learning fields are allocated to containers.
     int n_deparser_read_learning_bytes = 0;
+
+    /// The sum of the number of new bytes used by all tables in this tx.
+    /// (1) unnecessary cross-byte allocation will use more bytes.
+    /// (2) packing match key fields of the same table into the same byte will save bytes.
+    int n_table_new_ixbar_bytes = 0;
+
+    /// The sum of the number of new bytes used by all stages int this tx.
+    /// (1) unnecessary cross-byte allocation will use more bytes.
+    /// (2) packing match key fields of the same stage into the same byte will save bytes.
+    int n_stage_new_ixbar_bytes = 0;
+
+    // sum of the imbalanced alignment for all tables involved in this tx.
+    int n_table_ixbar_imbalanced_alignments = 0;
+
+    // sum of the imbalanced alignment of ixbar bytes,
+    // for all stages that are (1) involved in this tx and (2) the remaining bytes of the stage
+    // are less than threshold.
+    int n_overloaded_stage_ixbar_imbalanced_alignments = 0;
 
  public:
     explicit GreedyTxScore(const Vision* vision) : vision_i(vision) {}

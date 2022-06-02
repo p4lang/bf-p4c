@@ -290,7 +290,7 @@ class TableSummary: public MauInspector {
     // --------------------------
     // }
     std::map<int, int> findBytesOnIxbar(const PHV::FieldSlice &slice) const;
-    void printAllIxbarUsages(const PhvInfo *phv = nullptr) const;
+    cstring ixbarUsagesStr(const PhvInfo *phv = nullptr) const;
     void printPlacedTables() const;
 
     friend std::ostream &operator<<(std::ostream &out, const TableSummary &ts);

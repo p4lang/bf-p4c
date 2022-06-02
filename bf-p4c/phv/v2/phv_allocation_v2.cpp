@@ -27,7 +27,7 @@ const IR::Node* PhvAllocation::apply_visitor(const IR::Node* root_, const char *
     const auto alloc_verifier = [&](const PHV::SuperCluster* sc) {
         return trivial_allocator->can_be_allocated(alloc.makeTransaction(), sc);
     };
-    clusters = get_packed_cluster_group(clusters, kit_i.tablePackOpt, alloc_verifier, phv_i);
+    clusters = get_packed_cluster_group(clusters, kit_i.table_pack_opt, alloc_verifier, phv_i);
 
     if (kit_i.settings.trivial_alloc) {
         if (!trivial_allocator->allocate(clusters)) {

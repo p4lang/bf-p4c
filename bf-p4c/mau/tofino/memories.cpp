@@ -6,6 +6,7 @@
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/resource_estimate.h"
 #include "lib/bitops.h"
+#include "lib/log.h"
 #include "lib/range.h"
 
 /* TODO -- we don't yet have a flatrock memory alloc, so this code ends up getting used
@@ -3839,6 +3840,7 @@ bool Memories::find_result_bus_gw(Memories::Use &alloc, uint64_t payload, cstrin
             (*print_result_bus)[row][bus] = match_id.build_name();
             LOG6("Result bus assigned on row " << row << " and bus " << bus
                                         << " for " << (*print_result_bus)[row][bus]);
+            LOG5_UNINDENT;
             return true;
         }
     }

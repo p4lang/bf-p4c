@@ -131,6 +131,11 @@ class AllocatorBase {
                                       const std::vector<AllocSlice>& candidates,
                                       const Container& candidates_cont) const;
 
+    /// @returns a vector a starting postions for @p sl in @p width-sized containers.
+    /// The starting positions might be sorted for more efficient searching, see implementation.
+    std::vector<int> make_start_positions(const ScoreContext& ctx,
+                                          const SuperCluster::SliceList* sl,
+                                          const PHV::Size width) const;
 
     /// @returns a set of container sizes that are okay for @p sc.
     std::set<PHV::Size> compute_valid_container_sizes(const SuperCluster* sc) const;

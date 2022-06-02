@@ -2,6 +2,7 @@
 
 #include <sstream>
 #include <tuple>
+#include <unordered_map>
 
 #include <boost/optional/optional.hpp>
 #include <boost/range/join.hpp>
@@ -9,12 +10,12 @@
 #include "bf-p4c/device.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/phv/action_source_tracker.h"
-#include "bf-p4c/phv/v2/phv_kit.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/utils/slice_alloc.h"
 #include "bf-p4c/phv/utils/utils.h"
 #include "bf-p4c/phv/v2/copacker.h"
+#include "bf-p4c/phv/v2/phv_kit.h"
 #include "bf-p4c/phv/v2/tx_score.h"
 #include "bf-p4c/phv/v2/utils_v2.h"
 #include "lib/exceptions.h"
@@ -1003,9 +1004,9 @@ bool AllocatorBase::DfsListsAllocator::allocate(const ScoreContext& ctx, const T
     bool found_alignment = false;
     bool sl_can_be_allocated = false;
     const PHV::Size width = ctx.cont_group()->width();
-    const auto valid_starts = ctx.sc()->aligned_cluster(sl->front()).validContainerStart(width);
     auto* invalid_action_lists = new ordered_set<const SuperCluster::SliceList*>();
-    for (const int sl_start : valid_starts) {
+    const auto ordered_valid_starts = base.make_start_positions(ctx, sl, width);
+    for (const int sl_start : ordered_valid_starts) {
         if (pruned()) break;
         auto this_start_alignment =
             new_alignment_with_start(ctx, sl, sl_start, width, state.alignment);
@@ -1241,6 +1242,47 @@ AllocResult AllocatorBase::try_super_cluster_to_container_group(
         auto* err = new AllocError(ErrorCode::ALIGNED_CLUSTER_CANNOT_BE_ALLOCATED);
         return AllocResult(err);
     }
+}
+
+std::vector<int> AllocatorBase::make_start_positions(const ScoreContext& ctx,
+                                                     const SuperCluster::SliceList* sl,
+                                                     const PHV::Size width) const {
+    auto valid_starts_bv = ctx.sc()->aligned_cluster(sl->front()).validContainerStart(width);
+    std::vector<int> ordered_valid_starts;
+    for (const int i : valid_starts_bv) {
+        ordered_valid_starts.push_back(i);
+    }
+    if (ctx.search_config()->try_byte_aligned_starts_first_for_table_keys) {
+        // find the first match key field.
+        int offset = 0;
+        bitvec ixbar_read;
+        for (const auto& fs : *sl) {
+            if (!kit_i.uses.ixbar_read(fs.field(), fs.range()).empty()) {
+                ixbar_read.setrange(offset, fs.size());
+            }
+            offset += fs.size();
+        }
+        if (!ixbar_read.empty()) {
+            // for every valid start, check how many bytes it might use.
+            std::unordered_map<int, int> start_n_bytes;
+            for (const int start : ordered_valid_starts) {
+                std::unordered_set<int> bytes;
+                for (const int read_bit : ixbar_read) {
+                    bytes.insert((start + read_bit) / 8);
+                }
+                start_n_bytes[start] = bytes.size();
+            }
+            // sort by less ixbar byte usage and then by index.
+            std::sort(ordered_valid_starts.begin(), ordered_valid_starts.end(), [&](int a, int b) {
+                if (start_n_bytes[a] != start_n_bytes[b]) {
+                    return start_n_bytes[a] < start_n_bytes[b];
+                }
+                return a < b;
+            });
+        }
+    }
+    // rest of starts.
+    return ordered_valid_starts;
 }
 
 std::set<PHV::Size> AllocatorBase::compute_valid_container_sizes(const SuperCluster* sc) const {

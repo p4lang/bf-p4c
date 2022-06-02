@@ -47,6 +47,8 @@
 #include "bf-p4c/mau/table_summary.h"
 
 #include <numeric>
+#include <sstream>
+
 #include <boost/optional/optional_io.hpp>
 
 #include "bf-p4c/bf-p4c-options.h"
@@ -158,7 +160,7 @@ void TableSummary::printPlacedTables() const {
 void TableSummary::end_apply() {
     // Generate Input XBar Bytes per Field Slice per stage
     generateIxbarBytesInfo();
-    printAllIxbarUsages();
+    LOG3(ixbarUsagesStr());
     printTablePlacement();
     LOG2(*this);
     printPlacedTables();
@@ -342,9 +344,11 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
         case ALT_INITIAL: {
             // table placement succeeded, backtrack to run actual PHV allocation.
             if (!criticalPlacementFailure && maxStage <= deviceStages) {
+                generateIxbarBytesInfo();
+                LOG1(ixbarUsagesStr());
                 state = ALT_FINALIZE_TABLE_SAME_ORDER;
                 throw PHVTrigger::failure(tableAlloc, internalTableAlloc,
-                                            mergedGateways, firstRoundFit);
+                                          mergedGateways, firstRoundFit);
             } else {
                 if (maxStage > deviceStages) {
                     // retry with table backtrack and resource-based allocation enabled.
@@ -361,9 +365,11 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
         case ALT_RETRY_ENHANCED_TP: {
             // table placement succeeded, backtrack to run actual PHV allocation.
             if (!criticalPlacementFailure && maxStage <= deviceStages) {
+                generateIxbarBytesInfo();
+                LOG1(ixbarUsagesStr());
                 state = ALT_FINALIZE_TABLE_SAME_ORDER;
                 throw PHVTrigger::failure(tableAlloc, internalTableAlloc,
-                                            mergedGateways, firstRoundFit);
+                                          mergedGateways, firstRoundFit);
             } else {
                 state = FAILURE;
             }
@@ -550,11 +556,10 @@ std::map<int, int> TableSummary::findBytesOnIxbar(const PHV::FieldSlice &slice) 
 
 // Print all Input XBar usages on a per field per slice basis
 // Usages are determined on each stage the field slice is valid
-void TableSummary::printAllIxbarUsages(const PhvInfo *phv_i) const {
-    if (!LOGGING(3)) return;
-    LOG3("Printing All Input XBar Usages - STATE : " << getActualStateStr());
-    if (!phv_i) phv_i = &phv;
+cstring TableSummary::ixbarUsagesStr(const PhvInfo *phv_i) const {
     std::stringstream ss;
+    ss << "All Input XBar Usages - STATE : " << getActualStateStr() << "\n";
+    if (!phv_i) phv_i = &phv;
     std::vector<std::string> header;
     header.push_back("FIELD NAME");
     header.push_back("SLICE");
@@ -566,34 +571,27 @@ void TableSummary::printAllIxbarUsages(const PhvInfo *phv_i) const {
     TablePrinter tp(ss, header, TablePrinter::Align::CENTER);
     for (auto &f : phv.get_all_fields()) {
         le_bitrange bits(0, f.second.size - 1);
-        f.second.foreach_alloc(bits, [&](const PHV::AllocSlice& sl) {
-            auto fl = sl.field();
-            auto fn = fl->name;
-            auto fr = sl.field_slice();
-            auto fs = PHV::FieldSlice(fl, fr);
-            // auto bytesOnIxbar = findBytesOnIxbar(fs);
-            // auto bytesOnIxbar = ixbarBytes[sl.field()][sl.field_slice()];
-            if (ixbarBytes.count(fn) == 0) return;
-            auto fIxbarBytes = ixbarBytes.at(fn);
-            if (fIxbarBytes.count(fr) == 0) return;
-            auto bytesOnIxbar = fIxbarBytes.at(fr);
+        auto fn = f.second.name;
+        if (ixbarBytes.count(fn) == 0) continue;
+        for (const auto& ixbar_alloc : ixbarBytes.at(fn)) {
+            const auto& fr = ixbar_alloc.first;
+            const auto& bytesOnIxbar = ixbar_alloc.second;
             if (bytesOnIxbar.size() > 0) {
                 std::vector<std::string> row;
                 row.push_back(std::string(stripThreadPrefix(f.first.c_str())));
-                row.push_back(std::string("(" + std::to_string(fr.hi)
-                                        + ":" + std::to_string(fr.lo) + ")"));
+                row.push_back(
+                    std::string("(" + std::to_string(fr.hi) + ":" + std::to_string(fr.lo) + ")"));
                 row.push_back(std::string(toSymbol(f.second.gress).c_str()));
-                for (auto i = 0; i < deviceStages; i++)
-                    row.push_back("-");
+                for (auto i = 0; i < deviceStages; i++) row.push_back("-");
                 for (auto i : bytesOnIxbar) {
                     row[3 + i.first] = std::to_string(i.second);
                 }
                 tp.addRow(row);
             }
-        });
+        }
     }
     tp.print();
-    LOG3(ss.str());
+    return ss.str();
 }
 
 cstring TableSummary::getActualStateStr() const {

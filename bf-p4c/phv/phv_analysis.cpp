@@ -94,7 +94,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             physical_liverange_db, source_tracker, pragmas, settings, tablePackOpt),
       kit(phv, clot, clustering, uses, defuse, action_constraints,
             field_to_parser_states, parser_critical_path, parser_info, strided_headers,
-            physical_liverange_db, source_tracker, pragmas, settings, tablePackOpt) {
+            physical_liverange_db, source_tracker, pragmas, settings, tablePackOpt, alloc) {
         auto* validate_allocation = new PHV::ValidateAllocation(phv, clot, physical_liverange_db);
         addPasses({
             // Identify uses of fields in MAU, PARDE

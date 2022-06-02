@@ -55,6 +55,4 @@ TEST(symbolic_bitvec_tests, basic) {
                         new And(a.get(0), new And(b.get(0), a.get(1)))));
 }
 
-
-
 }  // namespace Test

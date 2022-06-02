@@ -1,10 +1,12 @@
 #include "bf-p4c/phv/v2/greedy_tx_score.h"
 
+#include <algorithm>
 #include <sstream>
 #include <utility>
 
 #include <boost/optional/optional.hpp>
 
+#include "bf-p4c/common/table_printer.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/ir/gress.h"
@@ -76,8 +78,62 @@ void deduped_iterate(const T& alloc_slices,
     }
 }
 
-}  // namespace
+/// XXX(yumin): duplicated from TableLayout::check_for_ternary().
+bool is_ternary(const IR::MAU::Table* tbl) {
+    auto annot = tbl->match_table->getAnnotations();
+    if (auto s = annot->getSingle("ternary")) {
+        if (s->expr.size() <= 0) {
+            return false;
+        } else {
+            auto* pragma_val = s->expr.at(0)->to<IR::Constant>();
+            ERROR_CHECK(pragma_val != nullptr, ErrorType::ERR_UNKNOWN,
+                        "unknown ternary pragma %1% on table %2%.", s, tbl->externalName());
+            if (pragma_val->asInt() == 1) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+    } else {
+        for (auto ixbar_read : tbl->match_key) {
+            if (ixbar_read->match_type.name == "ternary" || ixbar_read->match_type.name == "lpm") {
+                return true;
+            }
+        }
+        for (auto ixbar_read : tbl->match_key) {
+            if (ixbar_read->match_type == "range") {
+                return true;
+            }
+        }
+    }
+    return false;
+}
 
+void update_table_stage_ixbar_bytes(const PhvKit& kit, const Container& c,
+                                    const ordered_set<AllocSlice> slices,
+                                    TableIxbarContBytesMap& table_ixbar_cont_bytes,
+                                    StageIxbarContBytesMap& stage_sram_ixbar_cont_bytes,
+                                    StageIxbarContBytesMap& stage_tcam_ixbar_cont_bytes) {
+    for (const auto& sl : slices) {
+        for (const auto& tb_key : kit.uses.ixbar_read(sl.field(), sl.field_slice())) {
+            const auto* tb = tb_key.first;
+            const auto& c_range = sl.container_slice();
+            for (int i = c_range.loByte(); i <= c_range.hiByte(); i++) {
+                const auto cont_byte = std::make_pair(c, i);
+                table_ixbar_cont_bytes[tb].insert(cont_byte);
+                for (const auto& stage : kit.mau.stage(tb, true)) {
+                    if (is_ternary(tb)) {
+                        stage_tcam_ixbar_cont_bytes[stage].insert(cont_byte);
+                    } else {
+                        stage_sram_ixbar_cont_bytes[stage].insert(cont_byte);
+                    }
+                }
+            }
+        }
+    }
+}
+
+}  // namespace
 
 int Vision::bits_demand(const PHV::Kind& k) const {
     int rv = 0;
@@ -99,6 +155,32 @@ int Vision::bits_supply(const PHV::Kind& k) const {
         }
     }
     return rv;
+}
+
+int GreedyTxScoreMaker::ixbar_imbalanced_alignment(const ordered_set<ContainerByte>& cont_bytes) {
+    std::vector<int> counters(4, 0);
+    // allocate 32-bit container bytes first.
+    for (const auto& cont_byte : cont_bytes) {
+        if (cont_byte.first.type().size() != PHV::Size::b32) continue;
+        counters[cont_byte.second]++;
+    }
+    // then 16-bit, greedy algorithm, pick the smaller one to allocate.
+    for (const auto& cont_byte : cont_bytes) {
+        if (cont_byte.first.type().size() != PHV::Size::b16) continue;
+        if (counters[cont_byte.second] <= counters[cont_byte.second + 2]) {
+            counters[cont_byte.second]++;
+        } else {
+            counters[cont_byte.second + 2]++;
+        }
+    }
+    // larger the smallest, less the imbalanced.
+    std::sort(counters.begin(), counters.end());
+    const int min_pressure = std::max(1, counters.front());
+    int total_imba = 0;
+    for (const auto& c : counters) {
+        total_imba += std::max(0, c - min_pressure);
+    }
+    return total_imba;
 }
 
 GreedyTxScoreMaker::GreedyTxScoreMaker(
@@ -137,23 +219,27 @@ void GreedyTxScoreMaker::record_commit(const Transaction& tx, const SuperCluster
     auto* parent = tx.getParent();
     for (const auto& container_status : tx.get_actual_diff()) {
         const auto& c = container_status.first;
-        auto slices = container_status.second.slices;
+        const auto& slices = container_status.second.slices;
         auto parent_c_status = AllocStatus::EMPTY;
         if (auto parent_status = parent->getStatus(c)) {
             parent_c_status = parent_status->alloc_status;
         }
+        // update container availability vector.
         if (parent_c_status == AllocStatus::EMPTY && !slices.empty()) {
             vision_i.cont_available[device_gress(c)][{c.type().kind(), c.type().size()}]--;
         }
+        // update vision ixbar bytes stats.
+        update_table_stage_ixbar_bytes(kit_i, c, slices, vision_i.table_ixbar_cont_bytes,
+                                       vision_i.stage_sram_ixbar_cont_bytes,
+                                       vision_i.stage_tcam_ixbar_cont_bytes);
     }
 
-    // skip special clusters: deparser-zero, strided...
-    if (!vision_i.sc_cont_required.count(sc)) {
-        return;
-    }
     // update cont required.
-    for (const auto& kindsize_n : vision_i.sc_cont_required.at(sc).m) {
-        vision_i.cont_required[sc->gress()][kindsize_n.first] -= kindsize_n.second;
+    // skip special clusters: deparser-zero, strided...
+    if (vision_i.sc_cont_required.count(sc)) {
+        for (const auto& kindsize_n : vision_i.sc_cont_required.at(sc).m) {
+            vision_i.cont_required[sc->gress()][kindsize_n.first] -= kindsize_n.second;
+        }
     }
 }
 
@@ -255,6 +341,98 @@ TxScore* GreedyTxScoreMaker::make(const Transaction& tx) const {
             rv->n_deparser_read_learning_bytes += c.size() / 8;
         }
     }
+
+    // TODO(yumin): we can know how many sram group and tcam group has left in that stage,
+    // especially by comparing by the baseline ixbar usage.
+    ordered_set<Container> range_match_double_bytes_container;
+    TableIxbarContBytesMap new_table_ixbar_cont_bytes;
+    StageIxbarContBytesMap new_stage_sram_ixbar_cont_bytes;
+    StageIxbarContBytesMap new_stage_tcam_ixbar_cont_bytes;
+    for (const auto& kv : tx.get_actual_diff()) {
+        const auto& c = kv.first;
+        const auto& slices = kv.second.slices;
+        update_table_stage_ixbar_bytes(kit_i, c, slices, new_table_ixbar_cont_bytes,
+                                       new_stage_sram_ixbar_cont_bytes,
+                                       new_stage_tcam_ixbar_cont_bytes);
+        // When placing a less-than-24-bit and range look-up match key field to
+        // a 32-bit container, because there are inefficiencies of the implementation
+        // of ixbar allocation: it will use two TCAM groups, which will double the
+        // number of bytes used. see P4C-4545 for more details.
+        if (c.type().size() == PHV::Size::b32) {
+            for (const auto& sl : slices) {
+                if (range_match_double_bytes_container.count(c)) break;
+                if (sl.field()->size >= 24) continue;
+                const auto& fs = FieldSlice(sl.field(), sl.field_slice());
+                for (const auto& tb_key : kit_i.uses.ixbar_read(fs.field(), fs.range())) {
+                    const auto* tb = tb_key.first;
+                    const auto* key = tb_key.second;
+                    for (const int stage : kit_i.mau.stage(tb, true)) {
+                        if (!sl.isLiveAt(stage, FieldUse(FieldUse::READ))) continue;
+                        if (key->for_range()) {
+                            range_match_double_bytes_container.insert(c);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // n_table_ixbar_imbalance_alignments and n_table_new_ixbar_bytes.
+    for (auto& table_cont_bytes : new_table_ixbar_cont_bytes) {
+        const auto& tb = table_cont_bytes.first;
+        auto& cont_bytes = table_cont_bytes.second;
+        // merge with allocated byte stats.
+        if (vision_i.table_ixbar_cont_bytes.count(tb)) {
+            const auto& allocated = vision_i.table_ixbar_cont_bytes.at(tb);
+            for (const auto& cont_byte : cont_bytes) {
+                if (!allocated.count(cont_byte)) {
+                    rv->n_table_new_ixbar_bytes +=
+                        range_match_double_bytes_container.count(cont_byte.first) ? 2 : 1;
+                }
+            }
+            cont_bytes.insert(allocated.begin(), allocated.end());
+        }
+        const int imba = ixbar_imbalanced_alignment(cont_bytes);
+        rv->n_table_ixbar_imbalanced_alignments += imba;
+        LOG6("Allocated match-key container bytes of table " << tb->name);
+        for (const auto& b : cont_bytes) {
+            LOG6(b);
+        }
+        LOG6("imba score: " << imba);
+    }
+
+    constexpr int STAGE_SRAM_IXBAR_BYTES = 128;
+    constexpr int STAGE_TCAM_IXBAR_BYTES = 66;
+    const auto add_stage_pressure = [&](StageIxbarContBytesMap& stage_ixbar_bytes,
+                                        const StageIxbarContBytesMap& stage_allocated,
+                                        const int limit) {
+        for (auto& stage_cont_bytes : stage_ixbar_bytes) {
+            const auto& stage = stage_cont_bytes.first;
+            auto& cont_bytes = stage_cont_bytes.second;
+            // merge with allocated byte stats.
+            if (stage_allocated.count(stage)) {
+                const auto& allocated = stage_allocated.at(stage);
+                for (const auto& cont_byte : cont_bytes) {
+                    if (!allocated.count(cont_byte)) {
+                        rv->n_stage_new_ixbar_bytes +=
+                            range_match_double_bytes_container.count(cont_byte.first) ? 2 : 1;
+                    }
+                }
+                cont_bytes.insert(allocated.begin(), allocated.end());
+            }
+            // when half of the bytes are used already, we think it's overloaded.
+            if (int(cont_bytes.size()) > limit / 2) {
+                rv->n_overloaded_stage_ixbar_imbalanced_alignments +=
+                    ixbar_imbalanced_alignment(cont_bytes);
+            }
+        }
+    };
+    add_stage_pressure(new_stage_sram_ixbar_cont_bytes,
+                       vision_i.stage_sram_ixbar_cont_bytes,
+                       STAGE_SRAM_IXBAR_BYTES);
+    add_stage_pressure(new_stage_tcam_ixbar_cont_bytes,
+                       vision_i.stage_tcam_ixbar_cont_bytes,
+                       STAGE_TCAM_IXBAR_BYTES);
 
     // empty tx.
     if (!tx_gress) return rv;
@@ -358,9 +536,25 @@ bool GreedyTxScore::better_than(const TxScore* other_score) const {
     IF_NEQ_RETURN_IS_LESS(n_pov_deparser_read_bits, other->n_pov_deparser_read_bits);
     IF_NEQ_RETURN_IS_LESS(n_deparser_read_learning_bytes, other->n_deparser_read_learning_bytes);
 
-    // container balance has the highest priority.
+    // Avoid using more ixbar bytes. This has the highest priority because we
+    // if table allocation failed, this PHV allocation, even if fit, would become
+    // useless. In the future, if we could have some post-phv-alloc optimization
+    // passes for ixbar usages, maybe we could lower the priority.
+    // less ixbar bytes.
+    IF_NEQ_RETURN_IS_LESS(n_table_new_ixbar_bytes,
+                          other->n_table_new_ixbar_bytes);
+    IF_NEQ_RETURN_IS_LESS(n_stage_new_ixbar_bytes,
+                          other->n_stage_new_ixbar_bytes);
+
+    // container balance has the second highest priority.
     IF_NEQ_RETURN_IS_LESS(n_size_overflow, other->n_size_overflow);
     IF_NEQ_RETURN_IS_LESS(n_max_overflowed, other->n_max_overflowed);
+
+    // less imbalanced ixbar alignments.
+    IF_NEQ_RETURN_IS_LESS(n_table_ixbar_imbalanced_alignments,
+                          other->n_table_ixbar_imbalanced_alignments);
+    IF_NEQ_RETURN_IS_LESS(n_overloaded_stage_ixbar_imbalanced_alignments,
+                          other->n_overloaded_stage_ixbar_imbalanced_alignments);
 
     // compare l1 bits usage.
     const int l1_bits = used_L1_bits();
@@ -404,8 +598,20 @@ std::string GreedyTxScore::str() const {
     if (n_deparser_read_learning_bytes) {
         ss << "learning_read: " << n_deparser_read_learning_bytes << " ";
     }
+    if (n_table_new_ixbar_bytes) {
+        ss << "tb_ixbar: " << n_table_new_ixbar_bytes << " ";
+    }
+    if (n_stage_new_ixbar_bytes) {
+        ss << "st_ixbar: " << n_stage_new_ixbar_bytes << " ";
+    }
     ss << "ovf: " << n_size_overflow << " ";
     ss << "ovf_max: " << n_max_overflowed << " ";
+    if (n_table_ixbar_imbalanced_alignments) {
+        ss << "tb_ixbar_imba: " << n_table_ixbar_imbalanced_alignments << " ";
+    }
+    if (n_overloaded_stage_ixbar_imbalanced_alignments) {
+        ss << "st_ixbar_imba: " << n_overloaded_stage_ixbar_imbalanced_alignments << " ";
+    }
     ss << "L1: " << used_L1_bits() << " ";
     ss << "L2: " << used_L2_bits() << " ";
     ss << "inc_cont: " << used_containers.sum(Kind::normal) << " ";
@@ -420,6 +626,11 @@ std::string GreedyTxScore::str() const {
     }
     ss << "}";
     return ss.str();
+}
+
+std::ostream& operator<<(std::ostream& out, const ContainerByte& c) {
+    out << c.first << "@" << c.second;
+    return out;
 }
 
 std::ostream& operator<<(std::ostream& out, const KindSizeIndexedMap& m) {
@@ -456,6 +667,26 @@ std::ostream& operator<<(std::ostream& out, const Vision& v) {
             }
         }
     }
+    std::stringstream ss;
+    std::vector<std::string> headers = {"Type"};
+    for (auto i = 0; i < Device::numStages(); i++)
+        headers.push_back(std::to_string(i));
+    TablePrinter tp(ss, headers, TablePrinter::Align::CENTER);
+    for (const auto& t : {std::string("SRAM"), std::string("TCAM")}) {
+        std::vector<std::string> row;
+        row.push_back(t);
+        const StageIxbarContBytesMap* bytes = &v.stage_sram_ixbar_cont_bytes;
+        if (t == "TCAM") {
+            bytes = &v.stage_tcam_ixbar_cont_bytes;
+        }
+        for (auto i = 0; i < Device::numStages(); i++) {
+            row.push_back(std::to_string(bytes->count(i) ? bytes->at(i).size(): 0));
+        }
+        tp.addRow(row);
+    }
+    tp.print();
+    out << " stage ixbar status\n";
+    out << ss.str();
     out << "}";
     return out;
 }

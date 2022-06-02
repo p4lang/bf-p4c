@@ -28,8 +28,11 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
     FieldIdToRangeMap used_alu_i;
 
     /// field to ranges that was used as table key.
-    ordered_map<const PHV::Field *,
-                ordered_map<le_bitrange, ordered_set<const IR::MAU::Table *>>> ixbar_read_i;
+    ordered_map<
+        const PHV::Field *,
+        ordered_map<le_bitrange,
+                    ordered_set<std::pair<const IR::MAU::Table *, const IR::MAU::TableKey *>>>>
+        ixbar_read_i;
 
     /// fields that are read by deparser learning engine, including selector.
     ordered_set<const PHV::Field*> learning_reads_i;
@@ -105,7 +108,8 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
     /// @returns ixbar read of sub-ranges to tables of @p range of @p f.
     /// premise: @p range must be a fine-sliced range that either all of or none of
     /// the bits in the range are read by ixbar. Otherwise, BUG will be thrown.
-    ordered_set<const IR::MAU::Table *> ixbar_read(const PHV::Field *f, le_bitrange range) const;
+    ordered_set<std::pair<const IR::MAU::Table *, const IR::MAU::TableKey *>> ixbar_read(
+        const PHV::Field *f, le_bitrange range) const;
 
  protected:
     const PhvInfo &phv;

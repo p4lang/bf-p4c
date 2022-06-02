@@ -1533,6 +1533,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/payload_gateway.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv/action_source_tracker.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv/fieldslice_live_range.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv/greedy_tx_score.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv/solver/action_constraint_solver.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv/solver/symbolic_bitvec.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_crush.cpp

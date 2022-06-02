@@ -93,17 +93,14 @@ bool Phv_Parde_Mau_Use::preorder(const IR::MAU::TableSeq *) {
 }
 
 bool Phv_Parde_Mau_Use::preorder(const IR::MAU::TableKey * key) {
-    // TODO: no document of for_selection() ?
     LOG5("PREORDER TableKey: " << *key);
-    if (key->for_selection())
-        return true;
     const auto* table = findContext<IR::MAU::Table>();
     BUG_CHECK(table, "no table for key: %1%", key);
     le_bitrange bits;
     const PHV::Field* f = phv.field(key->expr, &bits);
     if (!f) return true;
     LOG5("Found table key field: " << f->name << bits);
-    ixbar_read_i[f][bits].insert(table);
+    ixbar_read_i[f][bits].insert({table, key});
     return true;
 }
 
@@ -232,10 +229,10 @@ bool Phv_Parde_Mau_Use::is_allocation_required(const PHV::Field *f) const {
     return !f->is_ignore_alloc() && (is_referenced(f) || f->isGhostField());
 }
 
-ordered_set<const IR::MAU::Table *> Phv_Parde_Mau_Use::ixbar_read(const PHV::Field *f,
-                                                                  le_bitrange range) const {
+ordered_set<std::pair<const IR::MAU::Table *, const IR::MAU::TableKey *>>
+Phv_Parde_Mau_Use::ixbar_read(const PHV::Field *f, le_bitrange range) const {
     if (!ixbar_read_i.count(f)) return {};
-    ordered_set<const IR::MAU::Table *> rv;
+    ordered_set<std::pair<const IR::MAU::Table *, const IR::MAU::TableKey *>> rv;
     for (const auto& kv : ixbar_read_i.at(f)) {
         if (kv.first.contains(range)) {
             rv.insert(kv.second.begin(), kv.second.end());

@@ -59,17 +59,27 @@ struct PhvKit {
     const AllocSetting& settings;
 
     // Collect field packing that table/ixbar would benefit from.
-    const TableFieldPackOptimization& tablePackOpt;
+    const TableFieldPackOptimization& table_pack_opt;
 
-    PhvKit(const PhvInfo& phv, const ClotInfo& clot, const Clustering& clustering,
-           const PhvUse& uses, const FieldDefUse& defuse, const ActionPhvConstraints& actions,
+    // provide access to information of last round of table placement.
+    const MauBacktracker& mau;
+
+    PhvKit(const PhvInfo& phv,
+           const ClotInfo& clot,
+           const Clustering& clustering,
+           const PhvUse& uses,
+           const FieldDefUse& defuse,
+           const ActionPhvConstraints& actions,
            const MapFieldToParserStates& field_to_parser_states,
            const CalcParserCriticalPath& parser_critical_path,
            const CollectParserInfo& parser_info,
            const CollectStridedHeaders& strided_headers,
-           const PHV::FieldSliceLiveRangeDB& physical_liverange_db,
-           const ActionSourceTracker& source_tracker, const PHV::Pragmas& pragmas,
-           const AllocSetting& settings, const TableFieldPackOptimization& tablePackOpt)
+           const FieldSliceLiveRangeDB& physical_liverange_db,
+           const ActionSourceTracker& source_tracker,
+           const Pragmas& pragmas,
+           const AllocSetting& settings,
+           const TableFieldPackOptimization& table_pack_opt,
+           const MauBacktracker& mau)
         : phv(phv),
           clot(clot),
           clustering(clustering),
@@ -85,7 +95,8 @@ struct PhvKit {
           physical_liverange_db(physical_liverange_db),
           pragmas(pragmas),
           settings(settings),
-          tablePackOpt(tablePackOpt) {}
+          table_pack_opt(table_pack_opt),
+          mau(mau) {}
 
     const SymBitMatrix& mutex() const {
         return phv.field_mutex();

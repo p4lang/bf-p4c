@@ -423,6 +423,7 @@ AllocResult GreedyAllocator::slice_and_allocate_sc(const ScoreContext& ctx,
         }
         *history << "Allocation Decisions: \n";
         *history << rst.tx_str() << "\n";
+        *history << (*best_score)->str() << "\n";
         *history << "\n";
     }
     return rst;
@@ -430,6 +431,8 @@ AllocResult GreedyAllocator::slice_and_allocate_sc(const ScoreContext& ctx,
 
 bool GreedyAllocator::allocate(std::list<SuperCluster*> clusters_input) {
     LOG1("Run GreedyAllocator.");
+    // print table ixbar usage
+    LOG3(kit_i.mau.get_table_summary()->ixbarUsagesStr(&phv_i));
 
     // pre-slicing
     LOG1("GreedyAllocator: start pre-slicing");
@@ -482,8 +485,9 @@ bool GreedyAllocator::allocate(std::list<SuperCluster*> clusters_input) {
                                                refined_cluster_set.normal,
                                                pre_sliced.baseline_cont_req);
     auto* search_config = new SearchConfig();
-    search_config->n_dfs_steps_sc_alloc = 256;
-    search_config->n_best_of_sc_alloc = 1;
+    search_config->n_dfs_steps_sc_alloc = 1024;
+    search_config->n_best_of_sc_alloc = 32;
+    search_config->try_byte_aligned_starts_first_for_table_keys = true;
 
     // setup allocator context.
     auto ctx = PHV::v2::ScoreContext()
