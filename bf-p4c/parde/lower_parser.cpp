@@ -22,6 +22,7 @@
 #include "bf-p4c/parde/allocate_parser_match_register.h"
 #include "bf-p4c/parde/characterize_parser.h"
 #include "bf-p4c/parde/clot/clot_info.h"
+#include "bf-p4c/parde/coalesce_learning.h"
 #include "bf-p4c/parde/collect_parser_usedef.h"
 #include "bf-p4c/parde/field_packing.h"
 #include "bf-p4c/parde/parde_visitor.h"
@@ -2141,7 +2142,8 @@ struct LowerDeparserIR : public PassManager {
             rewriteEmitClot,
             computeLoweredDeparserIR,
             new ReplaceDeparserIR(computeLoweredDeparserIR->igLoweredDeparser,
-                                  computeLoweredDeparserIR->egLoweredDeparser)
+                                  computeLoweredDeparserIR->egLoweredDeparser),
+            new CoalesceLearning,
         });
     }
 };
