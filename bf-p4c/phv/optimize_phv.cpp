@@ -25,7 +25,7 @@ void BruteForceOptimizationStrategy::addTransaction(PHV::Transaction& transactio
     BUG_CHECK(parent, "Unable to find the parent of this Transaction");
     for (auto kv : transaction.getTransactionStatus()) {
         bool new_slice = false;
-        auto parent_status = parent->getStatus(kv.first);
+        const auto* parent_status = parent->getStatus(kv.first);
         BUG_CHECK(parent_status,
                   "Trying to get allocation status for container %1% not in Allocation",
                   cstring::to_cstring(kv.first));

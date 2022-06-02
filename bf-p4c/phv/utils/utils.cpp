@@ -111,7 +111,8 @@ std::string PHV::Allocation::printARAedges() const{
 
 void PHV::Allocation::addSlice(PHV::Container c, PHV::AllocSlice slice) {
     // Get the current status in container_status_i, or its ancestors, if any.
-    ContainerStatus status = this->getStatus(c).get_value_or(ContainerStatus());
+    const auto* container_status = this->getStatus(c);
+    ContainerStatus status = container_status ? *container_status : ContainerStatus();
     status.slices.insert(slice);
     container_status_i[c] = status;
 
@@ -210,21 +211,24 @@ bool PHV::Allocation::addDarkAllocation(const PHV::AllocSlice& slice) {
 
 void PHV::Allocation::setGress(PHV::Container c, GressAssignment gress) {
     // Get the current status in container_status_i, or its ancestors, if any.
-    ContainerStatus status = this->getStatus(c).get_value_or(ContainerStatus());
+    const auto* container_status = this->getStatus(c);
+    ContainerStatus status = container_status ? *container_status : ContainerStatus();
     status.gress = gress;
     container_status_i[c] = status;
 }
 
 void PHV::Allocation::setParserGroupGress(PHV::Container c, GressAssignment parserGroupGress) {
     // Get the current status in container_status_i, or its ancestors, if any.
-    ContainerStatus status = this->getStatus(c).get_value_or(ContainerStatus());
+    const auto* container_status = this->getStatus(c);
+    ContainerStatus status = container_status ? *container_status : ContainerStatus();
     status.parserGroupGress = parserGroupGress;
     container_status_i[c] = status;
 }
 
 void PHV::Allocation::setDeparserGroupGress(PHV::Container c, GressAssignment deparserGroupGress) {
     // Get the current status in container_status_i, or its ancestors, if any.
-    ContainerStatus status = this->getStatus(c).get_value_or(ContainerStatus());
+    const auto* container_status = this->getStatus(c);
+    ContainerStatus status = container_status ? *container_status : ContainerStatus();
     status.deparserGroupGress = deparserGroupGress;
     container_status_i[c] = status;
 }
@@ -426,7 +430,8 @@ void PHV::Allocation::allocate(
 
 void PHV::Allocation::removeAllocatedSlice(const ordered_set<PHV::AllocSlice>& slices) {
     PHV::Container c = (*(slices.begin())).container();
-    ContainerStatus status = this->getStatus(c).get_value_or(ContainerStatus());
+    const auto* container_status = this->getStatus(c);
+    ContainerStatus status = container_status ? *container_status : ContainerStatus();
     ordered_set<AllocSlice> toBeRemoved;
     for (auto& sl : status.slices) {
         for (auto& slice : slices) {
@@ -497,7 +502,7 @@ PHV::Transaction* PHV::Allocation::clone(const Allocation& parent) const {
 
     for (const auto& kv : container_status_i) {
         bool new_slice = false;
-        auto parent_status = parent.getStatus(kv.first);
+        const auto* parent_status = parent.getStatus(kv.first);
         BUG_CHECK(parent_status,
                   "Trying to get allocation status for container %1% not in Allocation",
                   cstring::to_cstring(kv.first));
@@ -721,11 +726,12 @@ void PHV::Transaction::printMetaInitPoints() const {
     }
 }
 
-boost::optional<PHV::Allocation::ContainerStatus>
+const PHV::Allocation::ContainerStatus*
 PHV::ConcreteAllocation::getStatus(const PHV::Container& c) const {
-    if (container_status_i.find(c) != container_status_i.end())
-        return container_status_i.at(c);
-    return boost::none;
+    auto it = container_status_i.find(c);
+    if (it != container_status_i.end())
+        return &it->second;
+    return nullptr;
 }
 
 PHV::Allocation::FieldStatus PHV::ConcreteAllocation::getStatus(const PHV::Field* f) const {
@@ -736,7 +742,7 @@ PHV::Allocation::FieldStatus PHV::ConcreteAllocation::getStatus(const PHV::Field
 
 /// @returns the container status of @c and fails if @c is not present.
 PHV::Allocation::GressAssignment PHV::Allocation::gress(const PHV::Container& c) const {
-    auto status = this->getStatus(c);
+    const auto* status = this->getStatus(c);
     BUG_CHECK(status, "Trying to get gress for container %1% not in Allocation",
               cstring::to_cstring(c));
     return status->gress;
@@ -744,7 +750,7 @@ PHV::Allocation::GressAssignment PHV::Allocation::gress(const PHV::Container& c)
 
 PHV::Allocation::GressAssignment
 PHV::Allocation::parserGroupGress(PHV::Container c) const {
-    auto status = this->getStatus(c);
+    const auto* status = this->getStatus(c);
     BUG_CHECK(status, "Trying to get parser group gress for container %1% not in Allocation",
               cstring::to_cstring(c));
     return status->parserGroupGress;
@@ -752,7 +758,7 @@ PHV::Allocation::parserGroupGress(PHV::Container c) const {
 
 PHV::Allocation::GressAssignment
 PHV::Allocation::deparserGroupGress(PHV::Container c) const {
-    auto status = this->getStatus(c);
+    const auto* status = this->getStatus(c);
     BUG_CHECK(status, "Trying to get deparser group gress for container %1% not in Allocation",
               cstring::to_cstring(c));
     return status->deparserGroupGress;
@@ -760,7 +766,7 @@ PHV::Allocation::deparserGroupGress(PHV::Container c) const {
 
 PHV::Allocation::ContainerAllocStatus
 PHV::Allocation::alloc_status(PHV::Container c) const {
-    auto status = this->getStatus(c);
+    const auto* status = this->getStatus(c);
     BUG_CHECK(status, "Trying to get allocation status for container %1% not in Allocation",
               cstring::to_cstring(c));
     return status->alloc_status;
@@ -788,7 +794,7 @@ PHV::Allocation::slices(PHV::Container c, int stage, PHV::FieldUse access) const
 ordered_set<PHV::AllocSlice> PHV::Allocation::slices(PHV::Container c, le_bitrange range) const {
     ordered_set<PHV::AllocSlice> rv;
 
-    if (auto status = this->getStatus(c))
+    if (const auto* status = this->getStatus(c))
         for (auto& slice : status->slices)
             if (slice.container_slice().overlaps(range)) {
                 rv.insert(slice);
@@ -813,16 +819,16 @@ PHV::Allocation::slices(
     return rv;
 }
 
-boost::optional<PHV::Allocation::ContainerStatus>
+const PHV::Allocation::ContainerStatus*
 PHV::Transaction::getStatus(const PHV::Container& c) const {
     // If a status exists in the transaction, then it includes info from the
     // parent.
     auto it = container_status_i.find(c);
     if (it != container_status_i.end())
-        return it->second;
+        return &it->second;
 
     // Otherwise, retrieve and cache parent info.
-    auto parentStatus = parent_i->getStatus(c);
+    const auto* parentStatus = parent_i->getStatus(c);
     if (parentStatus)
         container_status_i[c] = *parentStatus;
     return parentStatus;
@@ -913,7 +919,7 @@ cstring PHV::Transaction::getTransactionDiff() const {
     for (const auto& kv : getTransactionStatus()) {
         PHV::Container c = kv.first;
 
-        auto parent_status = parent_tr->getStatus(c);
+        const auto* parent_status = parent_tr->getStatus(c);
         BUG_CHECK(parent_status,
                   "Trying to get allocation status for container %1% not in Allocation",
                   cstring::to_cstring(c));

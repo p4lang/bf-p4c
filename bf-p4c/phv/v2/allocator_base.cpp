@@ -224,7 +224,8 @@ Transaction AllocatorBase::make_speculated_alloc(const ScoreContext& ctx,
         if (alloc.parserGroupGress(c) && *alloc.parserGroupGress(c) != gress) continue;
         if (alloc.deparserGroupGress(c) && *alloc.deparserGroupGress(c) != gress) continue;
         const auto EMPTY = Allocation::ContainerAllocStatus::EMPTY;
-        if (!alloc.getStatus(c) || alloc.getStatus(c)->alloc_status == EMPTY) {
+        const auto* container_status = alloc.getStatus(c);
+        if (!container_status || container_status->alloc_status == EMPTY) {
             empty_containers.insert(c);
         }
     }
@@ -461,7 +462,7 @@ const AllocError* AllocatorBase::is_container_write_mode_ok(const Allocation& al
         auto other = phv_spec.idToContainer(other_id);
         if (c == other) continue;
 
-        auto cs = alloc.getStatus(other);
+        const auto* cs = alloc.getStatus(other);
         if (!cs) continue;
         for (auto allocated : (*cs).slices) {
             if (!field_to_states.field_to_extracts.count(allocated.field())) continue;

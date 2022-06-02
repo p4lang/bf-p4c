@@ -226,8 +226,8 @@ class Allocation {
  public:
     /// Uniform abstraction for accessing a container state.
     /// @returns the ContainerStatus of this allocation, if present.  Failing
-    ///          that, check its ancestors.  If @c has no status yet, return boost::none.
-    virtual boost::optional<ContainerStatus> getStatus(const PHV::Container& c) const = 0;
+    ///          that, check its ancestors.  If @c has no status yet, return nullptr.
+    virtual const ContainerStatus* getStatus(const PHV::Container& c) const = 0;
 
     /// Uniform abstraction for accessing field state.
     /// @returns the FieldStatus of this allocation, if present.  Failing
@@ -474,8 +474,8 @@ class ConcreteAllocation : public Allocation {
  public:
     /// Uniform abstraction for accessing a container state.
     /// @returns the ContainerStatus of this allocation, if present.  Failing
-    ///          that, check its ancestors.  If @c has no status yet, return boost::none.
-    boost::optional<ContainerStatus> getStatus(const PHV::Container& c) const override;
+    ///          that, check its ancestors.  If @c has no status yet, return nullptr.
+    const ContainerStatus* getStatus(const PHV::Container& c) const override;
 
     /// Uniform abstraction for accessing field state.
     /// @returns the FieldStatus of this allocation, if present.  Failing
@@ -517,8 +517,8 @@ class Transaction : public Allocation {
  public:
     /// Uniform abstraction for accessing a container state.
     /// @returns the ContainerStatus of this allocation, if present.  Failing
-    ///          that, check its ancestors.  If @c has no status yet, return boost::none.
-    boost::optional<ContainerStatus> getStatus(const PHV::Container& c) const override;
+    ///          that, check its ancestors.  If @c has no status yet, return nullptr.
+    const ContainerStatus* getStatus(const PHV::Container& c) const override;
 
     /// Uniform abstraction for accessing field state.
     /// @returns the FieldStatus of this allocation, if present.  Failing

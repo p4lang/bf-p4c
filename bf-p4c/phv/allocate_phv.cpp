@@ -1476,7 +1476,7 @@ bool CoreAllocation::satisfies_constraints(
         ordered_set<PHV::AllocSlice>& initFields) const {
     const PHV::Field* f = slice.field();
     PHV::Container c = slice.container();
-    auto container_status = alloc.getStatus(c);
+    const auto* container_status = alloc.getStatus(c);
 
     // Check container limitation.
     if (slice.field()->limited_container_ids()) {
@@ -1549,10 +1549,10 @@ bool CoreAllocation::satisfies_constraints(
         BUG_CHECK(write_mode, "parser write mode not exist for extracted field %1%", f->name);
         for (unsigned cid : phvSpec.parserGroup(slice_cid)) {
             auto other = phvSpec.idToContainer(cid);
-            auto cs = alloc.getStatus(other);
             if (c == other)
                 continue;
 
+            const auto* cs = alloc.getStatus(other);
             if (cs) {
                 for (auto sl : (*cs).slices) {
                     if (!utils_i.field_to_parser_states.field_to_extracts.count(sl.field()))
@@ -5163,7 +5163,7 @@ BruteForceAllocationStrategy::tryAllocStrideWithLeaderAllocated(
 
         PHV::Container curr(prev.type(), prev.index() + 1);
 
-        if (leader_alloc.getStatus(curr) == boost::none) {
+        if (!leader_alloc.getStatus(curr)) {
             LOG_FEATURE("alloc_progress", 5, TAB1 "Failed: No allocation status for " << curr);
             return false;
         }
