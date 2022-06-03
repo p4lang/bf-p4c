@@ -219,6 +219,12 @@ class ElimCasts : public PassManager {
                new SimplifyRedundantCasts()}),
            new RewriteCastToReinterpretCast(typeMap),
            new EliminateWidthCasts(),
+           // EliminateWidthCasts might change some of the Type_Bits
+           // to different objects representing the same type =>
+           // rerun typechecking with empty typemap to properly
+           // unify those new types
+           new P4::ClearTypeMap(typeMap),
+           new BFN::TypeChecking(refMap, typeMap, true),
            // FIXME -- StrengthReduction has problems with complex nested things like
            // (0 ++ field << 1)[15:0] (from brig-405), which causes problems for Rewrite
            // so we repeat until a fixed point is reached.

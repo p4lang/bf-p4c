@@ -2018,3 +2018,16 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/p4c-4498.p4
   testdata/p4_16_samples/issue2905-bmv2.p4
 )
+
+# p4c update 2022-06-02
+p4c_add_xfail_reason("tofino"
+  "does not have method matching this call"
+  testdata/p4_16_samples/psa-hash-06.p4
+  testdata/p4_16_samples/psa-hash-07.p4
+  testdata/p4_16_samples/psa-hash-08.p4
+)
+p4c_add_xfail_reason("tofino"
+  "Null cTypeSpec"
+  testdata/p4_16_samples/psa-hash-09.p4
+  testdata/p4_16_samples/psa-hash-10.p4
+)

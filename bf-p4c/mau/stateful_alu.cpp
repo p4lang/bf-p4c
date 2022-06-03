@@ -348,7 +348,7 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
             ++idx; }
         if (size_t(idx) >= params->parameters.size()) return false;
         BUG_CHECK(size_t(idx) < param_types->size(), "param index out of range"); }
-    if (field && regtype->is<IR::Type_StructLike>() && argType == regtype) {
+    if (field && regtype->is<IR::Type_StructLike>() && argType->equiv(*regtype)) {
         BUG_CHECK(field_idx == 0 || (local && local->use == LocalVar::NONE),
                   "invalid reuse of local %s.%s", pe, field);
         field_idx = 0;
@@ -1777,8 +1777,16 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
     auto bits = regtype->to<IR::Type::Bits>();
     if (auto str = regtype->to<IR::Type_Struct>()) {
         auto nfields = str->fields.size();
-        if (nfields < 1 || !(bits = getType(str->fields.at(0)->type)->to<IR::Type::Bits>()) ||
-            nfields > 2 || (nfields > 1 && bits != getType(str->fields.at(1)->type))) {
+        bool sameTypes = false;
+        if (nfields > 0)
+            bits = getType(str->fields.at(0)->type)->to<IR::Type::Bits>();
+        if (nfields > 1) {
+            auto* secondBits = getType(str->fields.at(1)->type);
+            if (bits && secondBits)
+                sameTypes = bits->equiv(*secondBits);
+        }
+        if (nfields < 1 || !bits ||
+            nfields > 2 || (nfields > 1 && !sameTypes)) {
             bits = nullptr; }
         if (bits) {
             salu->dual = nfields > 1;

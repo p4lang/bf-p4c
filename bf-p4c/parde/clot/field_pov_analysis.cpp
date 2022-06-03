@@ -27,6 +27,7 @@ void FieldPovAnalysis::end_apply() {
                 if (auto extract = statement->to<IR::BFN::Extract>()) {
                     if (auto fieldLVal = extract->dest->to<IR::BFN::FieldLVal>()) {
                         auto field = phv.field(fieldLVal->field);
+                        CHECK_NULL(field);
                         if (field->pov && pov_to_fields.count(field)) {
                             auto const_src = extract->source->to<IR::BFN::ConstantRVal>()->constant;
                             if (const_src->asInt()) {

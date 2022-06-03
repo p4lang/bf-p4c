@@ -843,9 +843,17 @@ P4V1::StatefulAluConverter::reg_info P4V1::StatefulAluConverter::getRegInfo(
                     error("No type named %s", rv.reg->layout);
                 } else if (auto st = rv.rtype->to<IR::Type_Struct>()) {
                     auto nfields = st->fields.size();
+                    bool sameTypes = false;
+                    if (nfields > 0)
+                        rv.utype = st->fields.at(0)->type->to<IR::Type::Bits>();
+                    if (nfields > 1) {
+                        auto* secondType = st->fields.at(1)->type;
+                        if (rv.utype && secondType)
+                            sameTypes = rv.utype->equiv(*secondType);
+                    }
                     if (nfields < 1 || nfields > 2 ||
-                        !(rv.utype = st->fields.at(0)->type->to<IR::Type::Bits>()) ||
-                        (nfields > 1 && rv.utype != st->fields.at(1)->type))
+                        !rv.utype ||
+                        (nfields > 1 && !sameTypes))
                         rv.utype = nullptr;
                     if (!rv.utype)
                         error("%s not a valid register layout for stateful_alu", rv.reg->layout);

@@ -52,6 +52,11 @@ class RemoveSelectBooleans : public PassManager {
            new P4::RemoveSelectBooleans(refMap, typeMap),
            new BFN::TypeChecking(refMap, typeMap, true),
            new BFN::RewriteCastToReinterpretCast(typeMap),
+           // RewriteCastToReinterpretCast might change some of the Type_Bits
+           // to different objects representing the same type =>
+           // rerun typechecking with empty typemap to properly
+           // unify those new types
+           new P4::ClearTypeMap(typeMap),
            new BFN::TypeChecking(refMap, typeMap, true),
         });
     }
