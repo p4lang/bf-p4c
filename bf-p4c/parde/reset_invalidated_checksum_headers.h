@@ -203,6 +203,7 @@ class InsertTableToResetInvalidatedHeaders : public MauTransform {
         auto t = new IR::MAU::Table(table_name, gress);
 
         t->is_compiler_generated = true;
+        t->run_before_exit = true;
         t->actions[action->name] = action;
         t->match_table = new IR::P4Table(table_name.c_str(), new IR::TableProperties());
 

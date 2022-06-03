@@ -2674,7 +2674,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
         if (tbl->has_exit_action()) {
             BUG_CHECK(!tbl->has_non_exit_action(), "Need action chaining to handle both exit "
                       "and non-exit actions in table %1%", tbl);
-            next_hit = NextTableSet();
+            next_hit = next_for(tbl, tbl->get_exit_actions().at(0)->name.originalName);
         } else {
             next_hit = next_for(tbl, "$hit");
         }

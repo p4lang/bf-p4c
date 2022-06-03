@@ -16,7 +16,6 @@ class DefaultNext : public MauInspector, public NextTable, BFN::ControlFlowVisit
     std::set<cstring> *errors;
     ordered_map<const IR::MAU::Table *, ordered_set<const IR::MAU::Table *>> &possible_nexts;
     ordered_set<const IR::MAU::Table *> prev_tbls;
-    std::map<gress_t, std::vector<const IR::MAU::Table *>> run_before_exit_tables;
 
     bool preorder(const IR::Expression *) override { return false; }
 
@@ -85,6 +84,8 @@ class DefaultNext : public MauInspector, public NextTable, BFN::ControlFlowVisit
                     if (errors) errors->insert(prev->externalName()); } } } }
 
  public:
+    std::map<gress_t, std::vector<const IR::MAU::Table *>> run_before_exit_tables;
+
     explicit DefaultNext(const bool& lbd, std::set<cstring> *errs = nullptr)
     : long_branch_disabled(lbd), errors(errs),
       possible_nexts(* new std::remove_reference<decltype(possible_nexts)>::type) {
