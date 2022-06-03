@@ -426,7 +426,7 @@ void GenerateDynamicHashJson::gen_hash_json(Util::JsonArray *_hash_cfgs, int sta
         // calculate the output hash bits from a hash table
         for (auto &b : hdh.galois_start_bit_to_p4_hash) {
             auto hash_bit = b.first;
-            num_hash_bits = b.second.size();
+            num_hash_bits += b.second.size();
             for (auto bit = b.second.lo; bit <= b.second.hi; bit++) {
                 Util::JsonObject *_hash_bit = new Util::JsonObject();
                 _hash_bit->emplace("gfm_hash_bit", hash_bit++);
