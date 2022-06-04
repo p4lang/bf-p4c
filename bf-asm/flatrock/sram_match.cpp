@@ -11,8 +11,5 @@ template<> void SRamMatchTable::write_regs_vt(Target::Flatrock::mau_regs &regs) 
     for (auto &row : layout) {
         error(lineno, "%s:%d: Flatrock STM not implemented yet!", __FILE__, __LINE__);
     }
-    if (actions) actions->write_regs(regs, this);
-    if (gateway) gateway->write_regs(regs);
-    if (idletime) idletime->write_regs(regs);
 }
 

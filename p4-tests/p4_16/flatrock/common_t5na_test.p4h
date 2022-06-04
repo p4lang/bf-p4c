@@ -14,6 +14,7 @@ parser ingressParser(packet_in packet, out headers hdrs,
 }
 #endif  // ifndef PRSR_OVERRIDE
 
+#ifndef HAVE_INGRESS
 control ingress(in headers hdrs, inout metadata meta,
                 in ingress_intrinsic_metadata_t ig_intr_md,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
@@ -22,6 +23,7 @@ control ingress(in headers hdrs, inout metadata meta,
         ig_intr_tm_md.ucast_egress_port = ig_intr_md.ingress_port;
     }
 }
+#endif /* !HAVE_INGRESS */
 
 control egressDeparser(packet_out packet, inout headers hdrs, in metadata meta,
                        in egress_intrinsic_metadata_t eg_intr_md,

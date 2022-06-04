@@ -85,6 +85,7 @@
     M(int, MAU_BASE_PREDICATION_DELAY) \
     M(int, METER_ALU_GROUP_DATA_DELAY) \
     M(int, MINIMUM_INSTR_CONSTANT) \
+    M(bool, NEXT_TABLE_EXEC_COMBINED) \
     M(int, NUM_MAU_STAGES_PRIVATE) \
     M(int, NUM_EGRESS_STAGES_PRIVATE) \
     M(int, NUM_PARSERS) \
@@ -95,6 +96,7 @@
     M(int, PARSER_DEPTH_MAX_BYTES_INGRESS) \
     M(int, PARSER_DEPTH_MAX_BYTES_EGRESS) \
     M(int, PHASE0_FORMAT_WIDTH) \
+    M(bool, REQUIRE_TCAM_ID) \
     M(int, STATEFUL_ALU_ADDR_WIDTH) \
     M(int, STATEFUL_ALU_CONST_MASK) \
     M(int, STATEFUL_ALU_CONST_MAX) \
@@ -234,7 +236,9 @@ class Target::Tofino : public Target {
         METER_ALU_GROUP_DATA_DELAY = 13,
         // To avoid under run scenarios, there is a minimum egress pipeline latency required
         MINIMUM_REQUIRED_EGRESS_PIPELINE_LATENCY = 160,
+        NEXT_TABLE_EXEC_COMBINED = false,  // no next_exec on tofino1 at all
         PHASE0_FORMAT_WIDTH = 64,
+        REQUIRE_TCAM_ID = false,   // miss-only tables do not need a tcam id
         STATEFUL_CMP_UNITS = 2,
         STATEFUL_CMP_ADDR_WIDTH = 2,
         STATEFUL_CMP_CONST_WIDTH = 4,
@@ -370,7 +374,9 @@ class Target::JBay : public Target {
         MAU_BASE_DELAY = 23,
         MAU_BASE_PREDICATION_DELAY = 13,
         METER_ALU_GROUP_DATA_DELAY = 15,
+        NEXT_TABLE_EXEC_COMBINED = true,
         PHASE0_FORMAT_WIDTH = 128,
+        REQUIRE_TCAM_ID = false,   // miss-only tables do not need a tcam id
         STATEFUL_CMP_UNITS = 4,
         STATEFUL_CMP_ADDR_WIDTH = 2,
         STATEFUL_CMP_CONST_WIDTH = 6,
@@ -555,7 +561,9 @@ class Target::Cloudbreak : public Target {
         MAU_BASE_DELAY = 23,
         MAU_BASE_PREDICATION_DELAY = 13,
         METER_ALU_GROUP_DATA_DELAY = 15,
+        NEXT_TABLE_EXEC_COMBINED = true,
         PHASE0_FORMAT_WIDTH = 128,
+        REQUIRE_TCAM_ID = false,   // miss-only tables do not need a tcam id
         STATEFUL_CMP_UNITS = 4,
         STATEFUL_CMP_ADDR_WIDTH = 2,
         STATEFUL_CMP_CONST_WIDTH = 6,
@@ -679,7 +687,7 @@ class Target::Flatrock : public Target {
         DYNAMIC_CONFIG = 2,
         DYNAMIC_CONFIG_INPUT_BITS = 8,
         EGRESS_SEPARATE = true,
-        END_OF_PIPE = 0xfff,
+        END_OF_PIPE = 0xff,
         GATEWAY_PAYLOAD_GROUPS = 4,
         GATEWAY_SINGLE_XBAR_GROUP = false,
         INSTR_SRC2_BITS = 0,
@@ -688,7 +696,9 @@ class Target::Flatrock : public Target {
         MAU_BASE_DELAY = 23,
         MAU_BASE_PREDICATION_DELAY = 13,
         METER_ALU_GROUP_DATA_DELAY = 15,
+        NEXT_TABLE_EXEC_COMBINED = false,
         PHASE0_FORMAT_WIDTH = 128,  // FIXME -- what should it be?
+        REQUIRE_TCAM_ID = true,
         STATEFUL_CMP_UNITS = 4,
         STATEFUL_CMP_ADDR_WIDTH = 2,
         STATEFUL_CMP_CONST_WIDTH = 6,

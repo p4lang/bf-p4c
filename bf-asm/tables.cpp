@@ -2126,9 +2126,15 @@ void Table::Actions::add_action_format(const Table *table, json::map &tbl) const
         action_format_per_action["next_table"] = next_table;
         action_format_per_action["next_table_full"] = next_table_full;
         if (Target::LONG_BRANCH_TAGS() > 0 && !options.disable_long_branch) {
-            action_format_per_action["next_table_exec"] =
-                ((act.next_table_miss_ref.next_in_stage(table->stage->stageno) & 0xfffe) << 15) +
-                (act.next_table_miss_ref.next_in_stage(table->stage->stageno + 1) & 0xffff);
+            if (Target::NEXT_TABLE_EXEC_COMBINED) {
+                action_format_per_action["next_table_exec"] =
+                    ((act.next_table_miss_ref.next_in_stage(table->stage->stageno) & 0xfffe) << 15)
+                    + (act.next_table_miss_ref.next_in_stage(table->stage->stageno + 1) & 0xffff);
+            } else {
+                action_format_per_action["next_table_local_exec"] =
+                    act.next_table_miss_ref.next_in_stage(table->stage->stageno) >> 1;
+                action_format_per_action["next_table_global_exec"] =
+                    act.next_table_miss_ref.next_in_stage(table->stage->stageno + 1); }
             action_format_per_action["next_table_long_brch"] =
                 act.next_table_miss_ref.long_branch_tags(); }
         action_format_per_action["vliw_instruction"] = act.code;
@@ -2441,6 +2447,8 @@ json::map *Table::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) 
     stage_tbl["size"] = size;
     stage_tbl["stage_table_type"] = type;
     stage_tbl["logical_table_id"] = logical_id;
+    if (physical_id >= 0)
+        stage_tbl["physical_table_id"] = logical_id;
 
     if (this->to<MatchTable>()) {
         stage_tbl["has_attached_gateway"] = false;

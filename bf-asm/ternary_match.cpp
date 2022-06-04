@@ -154,7 +154,8 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
                     error(kv.key.lineno, "Tcam id %d already in use by table %s",
                           tcam_id, stage->tcam_id_use[tcam_id]->name());
                 else
-                    stage->tcam_id_use[tcam_id] = this; }
+                    stage->tcam_id_use[tcam_id] = this;
+                physical_id = tcam_id; }
         } else {
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name());
@@ -207,7 +208,7 @@ void TernaryMatchTable::pass1() {
     if (layout_size() != 0) {
         alloc_id("tcam", tcam_id, stage->pass1_tcam_id,
              TCAM_TABLES_PER_STAGE, false, stage->tcam_id_use);
-    }
+        physical_id = tcam_id; }
     // alloc_busses(stage->tcam_match_bus_use); -- now hardwired
     if (layout_size() == 0) layout.clear();
     BUG_CHECK(input_xbar.size() == 1, "%s does not have one input xbar", name());
@@ -307,6 +308,10 @@ void TernaryMatchTable::pass1() {
 void TernaryMatchTable::pass2() {
     LOG1("### Ternary match table " << name() << " pass2 " << loc());
     if (logical_id < 0) choose_logical_id();
+    if (tcam_id < 0 && Target::REQUIRE_TCAM_ID()) {
+        alloc_id("tcam", tcam_id, stage->pass1_tcam_id,
+             TCAM_TABLES_PER_STAGE, false, stage->tcam_id_use);
+        physical_id = tcam_id; }
     for (auto &ixb : input_xbar)
         ixb->pass2();
     if (!indirect && indirect_bus < 0) {

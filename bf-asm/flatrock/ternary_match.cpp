@@ -6,11 +6,6 @@ template<> void TernaryMatchTable::write_regs_vt(Target::Flatrock::mau_regs &reg
     if (layout_size() != 0) {
         error(lineno, "%s:%d: Flatrock non-empty ternary match not implemented yet!",
               __FILE__, __LINE__); }
-    if (actions) actions->write_regs(regs, this);
-    if (gateway) gateway->write_regs(regs);
-    if (idletime) idletime->write_regs(regs);
-    for (auto &hd : hash_dist)
-        hd.write_regs(regs, this);
 }
 
 template<> void TernaryIndirectTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {

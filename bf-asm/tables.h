@@ -635,6 +635,7 @@ class Table {
     gress_t                     gress;
     int                         lineno = -1;
     int                         logical_id = -1;
+    int                         physical_id = -1;
     std::vector<DynamicIXbar>   dynamic_config;
     std::vector<std::unique_ptr<InputXbar>>     input_xbar;
     std::vector<Layout>         layout;
