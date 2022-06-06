@@ -784,7 +784,8 @@ endif ()
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "arch/t2na.cpp")
 if (ENABLE_FLATROCK)
   list (APPEND BF_P4C_BACKEND_ARCH_SRCS
-  arch/t5na.cpp)
+  arch/t5na.cpp
+  arch/tna/t5na_program_structure.cpp)
 endif ()
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "arch/t5na.cpp")
 build_unified(BF_P4C_BACKEND_ARCH_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
@@ -811,6 +812,7 @@ set (BF_P4C_BACKEND_ARCH_HDRS
   arch/tna.h
   arch/t2na.h
   arch/t5na.h
+  arch/tna/t5na_program_structure.h
   arch/v1model.h
   arch/fromv1.0/add_metadata_parser_states.h
   arch/fromv1.0/egress_packet_length.h

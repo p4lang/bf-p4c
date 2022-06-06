@@ -74,3 +74,107 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/flatrock/pac_shallow_branch.p4
   extensions/p4_tests/p4_16/flatrock/pac_wide_branch.p4
   )
+
+# *********************************************************************************************** #
+# ** TNA tests that "should" work *************************************************************** #
+# *********************************************************************************************** #
+p4c_add_xfail_reason("tofino5"
+  "Compiler Bug: conflicting ixbar allocation at"
+  extensions/p4_tests/p4_16/stf/auto_init_meta2.p4
+  extensions/p4_tests/p4_16/stf/failed_elim_valid_bit.p4
+  extensions/p4_tests/p4_16/stf/narrow_to_wide_w_csum_1.p4
+  extensions/p4_tests/p4_16/stf/narrow_to_wide_w_csum_2.p4
+  extensions/p4_tests/p4_16/stf/narrow_to_wide_w_csum_3.p4
+  extensions/p4_tests/p4_16/stf/narrow_to_wide_w_csum_4.p4
+  extensions/p4_tests/p4_16/stf/narrow_to_wide_w_csum_5.p4
+  extensions/p4_tests/p4_16/stf/p4c-1504.p4
+  extensions/p4_tests/p4_16/stf/p4c-2772-c.p4
+  extensions/p4_tests/p4_16/stf/p4c-3089.p4
+  extensions/p4_tests/p4_16/stf/p4c-4107.p4
+  extensions/p4_tests/p4_16/stf/wide_arith_non_64.p4
+  )
+p4c_add_xfail_reason("tofino5"
+  "error: Constant literals only useable on 8-bit PHEs"
+  extensions/p4_tests/p4_16/stf/backend_bug1c.p4
+  extensions/p4_tests/p4_16/stf/bit_or_in_same_state.p4
+  extensions/p4_tests/p4_16/stf/p4c-2695.p4
+  extensions/p4_tests/p4_16/stf/p4c-2638.p4
+  )
+p4c_add_xfail_reason("tofino5"
+  "Flatrock .* not implemented yet"
+  extensions/p4_tests/p4_16/stf/cond_checksum_update_4.p4
+  extensions/p4_tests/p4_16/stf/funnel_shift.p4
+  extensions/p4_tests/p4_16/stf/lookahead1.p4
+  extensions/p4_tests/p4_16/stf/p4c-1513.p4
+  extensions/p4_tests/p4_16/stf/p4c-3470.p4
+  extensions/p4_tests/p4_16/stf/varbit_constant.p4
+  )
+p4c_add_xfail_reason("tofino5"
+  "invalid gateway group"
+  extensions/p4_tests/p4_16/stf/extract_slice_2.p4
+  extensions/p4_tests/p4_16/stf/metadata_extract.p4
+  extensions/p4_tests/p4_16/stf/p4c-3055-2.p4
+  extensions/p4_tests/p4_16/stf/p4c-3551.p4
+  extensions/p4_tests/p4_16/stf/p4c-3659.p4
+  extensions/p4_tests/p4_16/stf/parse_depth_1.p4
+  extensions/p4_tests/p4_16/stf/parser_counter_6.p4
+  extensions/p4_tests/p4_16/stf/parser_counter_8.p4
+  extensions/p4_tests/p4_16/stf/parser_local_register.p4
+  extensions/p4_tests/p4_16/stf/parser_local_register_2.p4
+  extensions/p4_tests/p4_16/stf/parser_multi_write_1.p4
+  extensions/p4_tests/p4_16/stf/parser_multi_write_5.p4
+  extensions/p4_tests/p4_16/stf/parser_multi_write_8.p4
+  extensions/p4_tests/p4_16/stf/simple_l3_acl_disappearing_options.p4
+  extensions/p4_tests/p4_16/stf/p4c-1179.p4
+  )
+p4c_add_xfail_reason("tofino5"
+  "Compiler Bug: Unknown device"
+  extensions/p4_tests/p4_16/stf/header_stack_checksum.p4
+  extensions/p4_tests/p4_16/stf/update_checksum_1.p4
+  extensions/p4_tests/p4_16/stf/verify_checksum_3.p4
+  )
+p4c_add_xfail_reason("tofino5"
+  "Assembler BUG"
+  extensions/p4_tests/p4_16/stf/header_stack_next.p4
+  extensions/p4_tests/p4_16/stf/header_stack_strided_alloc1.p4
+  extensions/p4_tests/p4_16/stf/update_checksum_6.p4
+  )
+p4c_add_xfail_reason("tofino5"
+  "error: Syntax error, expecting identifier"
+  extensions/p4_tests/p4_16/stf/header_stack_strided_alloc2.p4
+  )
+p4c_add_xfail_reason("tofino5"
+  "CRASH with signal 6"
+  extensions/p4_tests/p4_16/stf/lookahead2.p4
+  extensions/p4_tests/p4_16/stf/lookahead3.p4
+  extensions/p4_tests/p4_16/stf/parser_counter_12.p4
+  extensions/p4_tests/p4_16/stf/update_checksum_3.p4
+  extensions/p4_tests/p4_16/stf/update_checksum_4.p4
+  )
+p4c_add_xfail_reason("tofino5"
+  "operand not a phv ref"
+  extensions/p4_tests/p4_16/stf/p4c-2772-b.p4
+  )
+p4c_add_xfail_reason("tofino5"
+  "error: Invalid slice"
+  extensions/p4_tests/p4_16/stf/p4c-2772.p4
+  extensions/p4_tests/p4_16/stf/parser_extract_upcast.p4
+  )
+p4c_add_xfail_reason("tofino5"
+  "Compiler Bug: Illegal header stack references"
+  extensions/p4_tests/p4_16/stf/parser_loop_1.p4
+  extensions/p4_tests/p4_16/stf/parser_loop_2.p4
+  extensions/p4_tests/p4_16/stf/parser_loop_3.p4
+  extensions/p4_tests/p4_16/stf/parser_loop_4.p4
+  )
+p4c_add_xfail_reason("tofino5"
+  "error: PHV allocation creates an invalid container action within a Tofino ALU"
+  extensions/p4_tests/p4_16/stf/update_checksum_2.p4
+  )
+p4c_add_xfail_reason("tofino5"
+  "Compiler Bug: Bytes on same search bus are not contained within the same ixbar group"
+  extensions/p4_tests/p4_16/stf/zeros_as_ones.p4
+  )
+# *********************************************************************************************** #
+# ** \TNA tests that "should" work ************************************************************** #
+# *********************************************************************************************** #

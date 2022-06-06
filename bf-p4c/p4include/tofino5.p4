@@ -101,7 +101,8 @@ error {
 // -----------------------------------------------------------------------------
 // THIS NEEDS UPDATE FOR FLATROCK
 @__intrinsic_metadata
-struct ingress_intrinsic_metadata_t {
+header ingress_intrinsic_metadata_t {
+    @padding bit<((15 - (PORT_ID_WIDTH % 8) - (PIPE_ID_WIDTH % 8)) % 8)> _pad0;
     bit<1> pktgen_flag;                 // Flag distinguishing original packets
                                         // from PktGen packets.
     PipeId_t ingress_pipe;              // Ingress physical pipe.

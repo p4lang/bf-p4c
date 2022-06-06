@@ -45,6 +45,11 @@ void ProgramStructure::include(cstring filename, IR::IndexedVector<IR::Node> *ve
         options.file = path.join(filename).toString();
 
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
+
+    if (filename == "tna.p4")
+        options.preprocessor_options += " -D__TARGET_TOFINO__=1";
+    else if (filename == "t5na.p4")
+        options.preprocessor_options += " -D__TARGET_TOFINO__=5";
     if (FILE *file = options.preprocess()) {
         if (::errorCount() > 0) {
             ::error("Failed to preprocess architecture file %1%", options.file);
