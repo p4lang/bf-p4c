@@ -102,10 +102,6 @@ p4c_add_xfail_reason("tofino5"
   )
 p4c_add_xfail_reason("tofino5"
   "Flatrock .* not implemented yet"
-  extensions/p4_tests/p4_16/stf/cond_checksum_update_4.p4
-  extensions/p4_tests/p4_16/stf/funnel_shift.p4
-  extensions/p4_tests/p4_16/stf/lookahead1.p4
-  extensions/p4_tests/p4_16/stf/p4c-1513.p4
   extensions/p4_tests/p4_16/stf/p4c-3470.p4
   extensions/p4_tests/p4_16/stf/varbit_constant.p4
   )
@@ -144,12 +140,16 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/stf/header_stack_strided_alloc2.p4
   )
 p4c_add_xfail_reason("tofino5"
-  "CRASH with signal 6"
+  "CRASH with signal .*"
   extensions/p4_tests/p4_16/stf/lookahead2.p4
   extensions/p4_tests/p4_16/stf/lookahead3.p4
   extensions/p4_tests/p4_16/stf/parser_counter_12.p4
   extensions/p4_tests/p4_16/stf/update_checksum_3.p4
   extensions/p4_tests/p4_16/stf/update_checksum_4.p4
+  extensions/p4_tests/p4_16/stf/cond_checksum_update_4.p4
+  extensions/p4_tests/p4_16/stf/funnel_shift.p4
+  extensions/p4_tests/p4_16/stf/lookahead1.p4
+  extensions/p4_tests/p4_16/stf/p4c-1513.p4
   )
 p4c_add_xfail_reason("tofino5"
   "operand not a phv ref"
