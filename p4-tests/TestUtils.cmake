@@ -147,11 +147,6 @@ function(bfn_needs_scapy tag p4test)
   set_property(TEST "${tag}/${p4test}" APPEND PROPERTY ENVIRONMENT "PKTPY=false")
 endfunction()
 
-macro(bfn_add_test_with_args device alias p4test test_args cmake_args)
-  p4c_add_test_with_args (${device} ${P4C_RUNTEST} FALSE ${alias}
-    ${p4test} "${test_args}" "${cmake_args} -${device}")
-endmacro(bfn_add_test_with_args)
-
 # call this macro to register a PTF test with a custom PTF test directory; by
 # default the behavior is to look for a directory with the same name as the P4
 # program and a .ptf extension, which may not always be convenient when adding
@@ -248,6 +243,39 @@ macro(packet_test_setup_check device)
 endmacro(packet_test_setup_check)
 
 # extra test args can be passed as unamed arguments
+function(bfn_add_test_with_args device alias p4file test_args cmake_args)
+  # create the test
+  p4c_add_test_with_args (${device} ${P4C_RUNTEST} FALSE ${alias}
+      ${p4file} "${test_args}" "-${device} ${cmake_args}")
+  if (PTF_REQUIREMENTS_MET)
+    set(__havePTF 0)
+    # the ptf dir is expected to be in source.ptf directory in the same directory as source.p4
+    # use p4c_add_ptf_test_with_ptfdir macro to add ptf test with custom ptf directory
+    string (REGEX REPLACE ".p4$" ".ptf" __ptffile ${p4file})
+    if (EXISTS ${P4C_SOURCE_DIR}/${__ptffile})
+      set(__havePTF 1)
+    endif()
+    string (REGEX REPLACE ".p4$" ".stf" __stffile ${p4file})
+    if (ENABLE_STF2PTF AND NOT ${__havePTF} AND EXISTS ${P4C_SOURCE_DIR}/${__stffile})
+      # Also add as PTF test the STF
+      # MESSAGE(STATUS "STF2PTF: Generating ${P4C_BINARY_DIR}/${device}/${__ptffile}/test.py")
+      set(__havePTF 1)
+    endif()
+    if (${__havePTF})
+      p4c_test_set_name(__testname ${device} ${alias})
+      set_tests_properties(${__testname} PROPERTIES RESOURCE_LOCK ptf_test_environment)
+      p4c_add_test_label(${device} "ptf" ${alias})
+    endif()
+  endif() # PTF_REQUIREMENTS_MET
+  if (HARLYN_STF_${toolsdevice})
+    string (REGEX REPLACE ".p4$" ".stf" __stffile ${p4file})
+    if (EXISTS ${P4C_SOURCE_DIR}/${__stffile})
+      p4c_add_test_label(${device} "stf" ${p4file})
+    endif()
+  endif(HARLYN_STF_${toolsdevice})
+endfunction(bfn_add_test_with_args)
+
+# extra test args can be passed as unamed arguments
 macro(p4c_add_bf_backend_tests device toolsdevice arch label tests)
   set (_testExtraArgs "${ARGN}")
   # do not add the device directly to _testExtraArgs
@@ -268,55 +296,13 @@ macro(p4c_add_bf_backend_tests device toolsdevice arch label tests)
     endif()
   endif()
 
-  p4c_add_tests (${device} ${P4C_RUNTEST} "${tests}"
-     "" "${_testExtraArgs} -${device} -arch ${arch}")
-
   # If label is not empty, add it to the tests
   foreach (ts "${tests}")
     file (GLOB __testfiles RELATIVE ${P4C_SOURCE_DIR} ${ts})
     foreach (__p4file ${__testfiles})
+      bfn_add_test_with_args(${device} ${__p4file} ${__p4file}
+          "-arch ${arch} ${_testExtraArgs}" "")
       p4c_add_test_label(${device} ${label} ${__p4file})
-    endforeach()
+    endforeach() # __p4file
   endforeach()
-
-  if (PTF_REQUIREMENTS_MET)
-    # PTF tests cannot be run in parallel with other PTF tests, so every PTF tests need to
-    # acquire the "ptf_test_environment" resource
-    set (__ptfCounter 0)
-    foreach (ts "${tests}")
-      file (GLOB __testfiles RELATIVE ${P4C_SOURCE_DIR} ${ts})
-      foreach (__p4file ${__testfiles})
-        set(__havePTF 0)
-        string (REGEX REPLACE ".p4$" ".ptf" __ptffile ${__p4file})
-        if (EXISTS ${P4C_SOURCE_DIR}/${__ptffile})
-          set(__havePTF 1)
-        endif()
-        string (REGEX REPLACE ".p4$" ".stf" __stffile ${__p4file})
-        if (ENABLE_STF2PTF AND NOT ${__havePTF} AND EXISTS ${P4C_SOURCE_DIR}/${__stffile})
-          # Also add as PTF test the STF
-          # MESSAGE(STATUS "STF2PTF: Generating ${P4C_BINARY_DIR}/${device}/${__ptffile}/test.py")
-          set(__havePTF 1)
-        endif()
-        if (${__havePTF})
-          p4c_test_set_name(__testname ${device} ${__p4file})
-          set_tests_properties(${__testname} PROPERTIES RESOURCE_LOCK ptf_test_environment)
-          p4c_add_test_label(${device} "ptf" ${__p4file})
-          math (EXPR __ptfCounter "${__ptfCounter} + 1")
-        endif()
-      endforeach() # __p4file
-    endforeach() # ts
-    MESSAGE(STATUS "Added ${__ptfCounter} PTF tests")
-  endif() # PTF_REQUIREMENTS_MET
-
-  if (HARLYN_STF_${toolsdevice})
-    foreach (ts "${tests}")
-      file (GLOB __testfiles RELATIVE ${P4C_SOURCE_DIR} ${ts})
-      foreach (__p4file ${__testfiles})
-        string (REGEX REPLACE ".p4$" ".stf" __stffile ${__p4file})
-        if (EXISTS ${P4C_SOURCE_DIR}/${__stffile})
-          p4c_add_test_label(${device} "stf" ${__p4file})
-        endif()
-      endforeach() # __p4file
-    endforeach()   # ts
-  endif(HARLYN_STF_${toolsdevice})
 endmacro(p4c_add_bf_backend_tests)
