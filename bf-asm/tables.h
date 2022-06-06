@@ -945,6 +945,7 @@ class TYPE : public PARENT {                                            \
                       Stage *stage, int lid, VECTOR(pair_t) &data);     \
     } table_type_singleton;                                             \
     friend struct Type;                                                 \
+ protected:                                                             \
     TYPE(int l, const char *n, gress_t g, Stage *s, int lid)            \
         : PARENT(l, n, g, s, lid) {}                                    \
     void setup(VECTOR(pair_t) &data) override;                          \
@@ -966,6 +967,23 @@ class TYPE : public PARENT {                                            \
 TYPE::Type TYPE::table_type_singleton;                                  \
 TYPE *TYPE::Type::create(int lineno, const char *name, gress_t gress,   \
                           Stage *stage, int lid, VECTOR(pair_t) &data) {\
+    TYPE *rv = new TYPE(lineno, name, gress, stage, lid);               \
+    rv->setup(data);                                                    \
+    return rv;                                                          \
+}                                                                       \
+FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,                                  \
+    void TYPE::write_regs, (mau_regs &regs), {                          \
+        write_regs_vt(regs); })
+
+/* Used to create a subclass for a table type */
+#define DEFINE_TABLE_TYPE_WITH_TF5_SPECIALIZATION(TYPE)                 \
+TYPE::Type TYPE::table_type_singleton;                                  \
+TYPE *TYPE::Type::create(int lineno, const char *name, gress_t gress,   \
+                          Stage *stage, int lid, VECTOR(pair_t) &data) {\
+    if (options.target == TOFINO5) {                                    \
+        TYPE *rv = new Flatrock::TYPE(lineno, name, gress, stage, lid); \
+        rv->setup(data);                                                \
+        return rv; }                                                    \
     TYPE *rv = new TYPE(lineno, name, gress, stage, lid);               \
     rv->setup(data);                                                    \
     return rv;                                                          \
@@ -1302,7 +1320,7 @@ public:
         auto def_action_params = indirect ? indirect->get_default_action_parameters() : nullptr;
         return def_action_params; }
     bitvec compute_reachable_tables() override;
-    int get_tcam_id() const { return tcam_id; }
+    int get_tcam_id() const override { return tcam_id; }
 
  private:
     template<class REGS> void tcam_table_map(REGS &regs, int row, int col);
@@ -1386,7 +1404,7 @@ public:
     bool needs_next() const override { return true; }
     void determine_word_and_result_bus() override;
     bitvec compute_reachable_tables() override;
-    int get_tcam_id() const { return match_table->tcam_id; }
+    int get_tcam_id() const override { return match_table->tcam_id; }
 )
 
 DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,

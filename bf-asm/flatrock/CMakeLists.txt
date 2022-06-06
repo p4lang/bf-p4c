@@ -30,6 +30,7 @@ set_source_files_properties(
   PROPERTIES GENERATED TRUE)
 
 set (BFAS_FLATROCK_SRCS
+  flatrock/action_table.cpp
   flatrock/hdr.cpp
   flatrock/gateway.cpp
   flatrock/instruction.cpp
@@ -41,6 +42,7 @@ set (BFAS_FLATROCK_SRCS
   )
 
 set (BFAS_FLATROCK_HEADERS
+  flatrock/action_table.h
   flatrock/hdr.h
   flatrock/gateway.h
   flatrock/input_xbar.h

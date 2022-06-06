@@ -10,6 +10,9 @@
 #include "stage.h"
 #include "tables.h"
 
+// template specialization declarations
+#include "flatrock/action_table.h"
+
 unsigned StatefulTable::const_info_t::unique_register_param_handle = REGISTER_PARAM_HANDLE_START;
 
 std::map<std::string, Table *> *Table::all;

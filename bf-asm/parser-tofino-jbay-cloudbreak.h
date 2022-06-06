@@ -385,9 +385,9 @@ class AsmParser : public BaseAsmParser {
                                          // can be from a single 32-bit container or multiple
                                          // smaller one.
     unsigned ghost_pipe_mask = 0xf;  // only set for JBAY
-    void start(int lineno, VECTOR(value_t) args);
+    void start(int lineno, VECTOR(value_t) args) override;
     void input(VECTOR(value_t) args, value_t data) override;
-    void process();
+    void process() override;
     void output(json::map &) override;
     void init_port_use(bitvec& port_use, const value_t &arg);
 

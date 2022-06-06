@@ -5,6 +5,9 @@
 #include "stage.h"
 #include "tables.h"
 
+// template specialization declarations
+#include "flatrock/action_table.h"
+
 /// See 6.2.8.4.3 of the MAU Micro-Architecture document.
 const unsigned MAX_AD_SHIFT = 5U;
 
@@ -542,11 +545,6 @@ static void flow_selector_addr(REGS &regs, int from, int to) {
         break; }
 }
 
-#if HAVE_FLATROCK
-template<> void ActionTable::write_regs_vt(Target::Flatrock::mau_regs &) {
-    error(lineno, "%s:%d: Flatrock action data not implemented yet!", __FILE__, __LINE__);
-}
-#endif /* HAVE_FLATROCK */
 template<class REGS>
 void ActionTable::write_regs_vt(REGS &regs) {
     LOG1("### Action table " << name() << " write_regs " << loc());
@@ -753,4 +751,9 @@ void ActionTable::gen_tbl_cfg(json::vector &out) const {
     merge_context_json(tbl, stage_tbl);
 }
 
+#if HAVE_FLATROCK
+DEFINE_TABLE_TYPE_WITH_TF5_SPECIALIZATION(ActionTable)   // NOLINT(readability/fn_size)
+#else
 DEFINE_TABLE_TYPE(ActionTable)
+#endif
+
