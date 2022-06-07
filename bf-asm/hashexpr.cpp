@@ -64,8 +64,17 @@ void HashExpr::gen_data(bitvec &data, int logical_hash_bit, InputXbar *ix, int h
 
     gen_ixbar_init(&ixbar_init, inputs, outputs, logical_hash_bit, ix, hash_table);
 
-    determine_hash_matrix(&ixbar_init, ixbar_init.ixbar_inputs, ixbar_init.inputs_sz,
-                          &hash_algorithm, hash_matrix);
+    bool non_zero = false;
+    // It is possible that a hash column can be genereated as all 0s if using RANDOM_DYN algo, so
+    // regeneration is required if a hash column is all 0s and using RANDOM_DYN.
+    while (!non_zero) {
+        determine_hash_matrix(&ixbar_init, ixbar_init.ixbar_inputs, ixbar_init.inputs_sz,
+                              &hash_algorithm, hash_matrix);
+        if (hash_algorithm.hash_alg != RANDOM_DYN ||
+            hash_matrix[hash_table][0].column_value) {
+            non_zero = true;
+        }
+    }
     uint64_t hash_column = hash_matrix[hash_table][0].column_value;
     data |= hash_column;
 }
