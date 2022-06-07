@@ -303,4 +303,6 @@ p4c_add_xfail_reason("p4"
   extensions/p4_tests/p4_16/ptf/mirror_constants.p4
   extensions/p4_tests/p4_16/ptf/hash_extern_xor.p4
   extensions/p4_tests/p4_16/ptf/p4c_4411.p4
+  extensions/p4_tests/p4_16/ptf/hash_field_expression.p4
+  extensions/p4_tests/p4_16/ptf/hash_field_expression_sym.p4
 )

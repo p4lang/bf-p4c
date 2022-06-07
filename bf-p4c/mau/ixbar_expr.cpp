@@ -91,17 +91,15 @@ void P4HashFunction::dbprint(std::ostream &out) const {
     out << "hash " << name() << "(" << inputs << ", " << algorithm << ")" << hash_bits;
 }
 
-/**
- * The purpose of this class is to verify that symmetric hashes are valid and can be allocated.
- * A key can currently be symmetric if it is on either a selector or a hash calculation,
- * and as long as algorithm is a CRC.
- *
- * Currently full string literals are required, perhaps at sometime this can be a function
- * within the tna/t2na files.
- */
-VerifySymmetricHashPairs::VerifySymmetricHashPairs(const PhvInfo &phv,
-       safe_vector<const IR::Expression *> &field_list, const IR::Annotations *annotations,
-       gress_t gress, IR::MAU::HashFunction hf, LTBitMatrix *sym_pairs) {
+bool verifySymmetricHashPairs(
+    const PhvInfo &phv,
+    safe_vector<const IR::Expression *> &field_list,
+    const IR::Annotations *annotations,
+    gress_t gress,
+    const IR::MAU::HashFunction& hf,
+    LTBitMatrix *sym_pairs) {
+
+    bool contains_symmetric = false;
     ordered_set<PHV::FieldSlice> symmetric_fields;
 
     for (auto annot : annotations->annotations) {
@@ -113,8 +111,8 @@ VerifySymmetricHashPairs::VerifySymmetricHashPairs(const PhvInfo &phv,
             continue;
         }
 
-        const IR::StringLiteral *sl0 = annot->expr.at(0)->to<IR::StringLiteral>();
-        const IR::StringLiteral *sl1 = annot->expr.at(1)->to<IR::StringLiteral>();
+        const auto *sl0 = annot->expr.at(0)->to<IR::StringLiteral>();
+        const auto *sl1 = annot->expr.at(1)->to<IR::StringLiteral>();
 
         cstring gress_str = (gress == INGRESS ? "ingress::" : "egress::");
         auto field0 = phv.field(gress_str + sl0->value);
@@ -190,18 +188,21 @@ VerifySymmetricHashPairs::VerifySymmetricHashPairs(const PhvInfo &phv,
         if (hf.type != IR::MAU::HashFunction::CRC) {
             ::error("%1%: Currently in p4c, symmetric hash is only supported to work with CRC "
                     "algorithms", annotations->srcInfo);
-            return;
+            return false;
         }
     }
+
+    return contains_symmetric;
+}
+
+bool BuildP4HashFunction::InsideHashGenExpr::preorder(const IR::MAU::HashGenExpression *) {
+    state = State::INSIDE;
+    return true;
 }
 
 bool BuildP4HashFunction::InsideHashGenExpr::preorder(const IR::MAU::FieldListExpression *fle) {
     sym_fields = fle->symmetric_keys;
-    return true;
-}
-
-bool BuildP4HashFunction::InsideHashGenExpr::preorder(const IR::MAU::HashGenExpression *) {
-    inside_expr = true;
+    state = State::FIELD_LIST;
     return true;
 }
 
@@ -229,13 +230,42 @@ bool BuildP4HashFunction::InsideHashGenExpr::preorder(const IR::Concat *) {
     return true;
 }
 
+bool BuildP4HashFunction::InsideHashGenExpr::preorder(const IR::ListExpression*) {
+    /* -- Conversion from P4_14 can create nested tuples. As we construct the hash
+     *    field list in the same order as the nested tuple, we can bravely enter
+     *    inside. */
+    return true;
+}
+
 bool BuildP4HashFunction::InsideHashGenExpr::preorder(const IR::Expression *expr) {
-    if (!inside_expr)
+    if (state == State::OUTSIDE)
         return true;
+
+    /* -- expression attached to a PHV container is always accepted in the hash expression */
     if (self.phv.field(expr)) {
         fields.emplace_back(expr);
         return false;
     }
+
+    if (state == State::FIELD_LIST) {
+        /* -- The field list must contain only items attached to PHV containers
+         *    as the hashing engine takes inputs from the PHV crossbar. The midend
+         *    NormalizeHashList pass should force replacement of expressions
+         *    to temporary variables and this invariant should be true. */
+        BUG("%s: Hasher's field list must contain only expressions attached with PHV containers.",
+            expr->srcInfo);
+        return false;
+    }
+
+    /* -- We are not in a field list -> the expression must be an ixbar expression */
+    if (state == State::INSIDE) {
+        state = State::IXBAR_EXPR;
+        BUG_CHECK(
+            CanBeIXBarExpr(expr),
+            "%s: Hashing expression cannot be implemented at the input crossbar",
+            expr->srcInfo);
+    }
+
     return true;
 }
 
@@ -253,7 +283,7 @@ void BuildP4HashFunction::InsideHashGenExpr::postorder(const IR::BFN::SignExtend
 }
 
 void BuildP4HashFunction::InsideHashGenExpr::postorder(const IR::MAU::HashGenExpression *hge) {
-    inside_expr = false;
+    state = State::OUTSIDE;
     BUG_CHECK(!self._func, "Multiple HashGenExpressions in a single BuildP4HashFunction");
     self._func = new P4HashFunction();
     self._func->inputs = fields;

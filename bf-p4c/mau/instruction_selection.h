@@ -327,14 +327,17 @@ class BackendCopyPropagation : public MauTransform, TofinoWriteContext {
  *  not been copy propagated, then this is a multi-stage action
  */
 class VerifyParallelWritesAndReads : public MauInspector, TofinoWriteContext {
+ public:
+    typedef ordered_map<const PHV::Field*, safe_vector<le_bitrange>> FieldWrites;
+
+ private:
     const PhvInfo &phv;
-    ordered_map<const PHV::Field *, safe_vector<le_bitrange>> writes;
+    FieldWrites writes;
 
     bool preorder(const IR::MAU::Action *) override;
     void postorder(const IR::MAU::Instruction *) override;
     bool preorder(const IR::MAU::StatefulCall *) override { return false; }
     bool preorder(const IR::MAU::BackendAttached *) override { return false; }
-    bool is_parallel(const IR::Expression *e, bool is_write);
 
  public:
     explicit VerifyParallelWritesAndReads(const PhvInfo &p) : phv(p) {}

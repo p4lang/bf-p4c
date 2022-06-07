@@ -1,5 +1,7 @@
 #include "bf-p4c/mau/instruction_selection.h"
 
+#include <sstream>
+
 #include <boost/algorithm/string.hpp>
 
 #include "bf-p4c/mau/stateful_alu.h"
@@ -137,7 +139,7 @@ void HashGenSetup::CreateHashGenExprs::check_for_symmetric(const IR::Declaration
     for (auto expr : le->components) {
         field_list.push_back(expr);
     }
-    VerifySymmetricHashPairs(self.phv, field_list, decl->annotations, tbl->gress, hf, sym_keys);
+    verifySymmetricHashPairs(self.phv, field_list, decl->annotations, tbl->gress, hf, sym_keys);
 }
 
 /**
@@ -219,7 +221,9 @@ bool HashGenSetup::CreateHashGenExprs::preorder(const IR::MAU::Primitive *prim) 
     const IR::NameList *alg_names = nullptr;
     if (self.options.langVersion == CompilerOptions::FrontendVersion::P4_14) {
         auto hle = orig_hash_list->to<IR::HashListExpression>();
+
         BUG_CHECK(hle != nullptr, "Hash not converted correctly in the midend");
+
         IR::ID fl_id(hle->fieldListNames->names[0]);
         fle = new IR::MAU::FieldListExpression(hle->srcInfo, hle->components, fl_id);
         hash_name = hle->fieldListCalcName;
@@ -234,7 +238,9 @@ bool HashGenSetup::CreateHashGenExprs::preorder(const IR::MAU::Primitive *prim) 
                 le = new IR::ListExpression(orig_hash_list->srcInfo, le_vec);
             }
         }
+
         BUG_CHECK(le != nullptr, "Hash.get calls must have a valid input or list of inputs");
+
         IR::ID fl_id("$field_list_1");
         fle = new IR::MAU::FieldListExpression(le->srcInfo, le->components, fl_id);
         fle->rotateable = true;
@@ -2338,6 +2344,120 @@ const IR::MAU::Action *BackendCopyPropagation::postorder(IR::MAU::Action *action
     return action;
 }
 
+namespace {
+
+class VerifyInstructionParams : public Inspector {
+ private:
+    const PhvInfo* phv;
+    VerifyParallelWritesAndReads::FieldWrites* writes;
+    const IR::MAU::Instruction* instruction;
+    bool is_write;
+    int param_index;
+
+ public:
+    explicit VerifyInstructionParams(
+        const PhvInfo* phv_,
+        VerifyParallelWritesAndReads::FieldWrites* writes_,
+        const IR::MAU::Instruction* instruction_,
+        bool is_write_,
+        int param_index_);
+
+    /* -- avoid copying */
+    VerifyInstructionParams& operator=(VerifyInstructionParams&&) = delete;
+
+    /* -- visitor interface */
+    bool preorder(const IR::MAU::HashDist* hd_) override;
+    bool preorder(const IR::MAU::HashGenExpression* hge_) override;
+    bool preorder(const IR::ListExpression* le_) override;
+    bool preorder(const IR::Expression* expr_) override;
+
+ private:
+    bool isParallel(
+        const IR::Expression *e,
+        const PHV::Field* field,
+        const le_bitrange& bits);
+};
+
+VerifyInstructionParams::VerifyInstructionParams(
+    const PhvInfo* phv_,
+    VerifyParallelWritesAndReads::FieldWrites* writes_,
+    const IR::MAU::Instruction* instruction_,
+    bool is_write_,
+    int param_index_) :
+    phv(phv_),
+    writes(writes_),
+    instruction(instruction_),
+    is_write(is_write_),
+    param_index(param_index_) {
+}
+
+bool VerifyInstructionParams::preorder(const IR::MAU::HashDist*) {
+    return true;
+}
+
+bool VerifyInstructionParams::preorder(const IR::MAU::HashGenExpression*) {
+    return true;
+}
+
+bool VerifyInstructionParams::preorder(const IR::ListExpression*) {
+    return true;
+}
+
+bool VerifyInstructionParams::preorder(const IR::Expression* expr_) {
+    le_bitrange bits_ = { 0, 0 };
+    const auto* field_(phv->field(expr_, &bits_));
+    if (field_ == nullptr) {
+        /* -- if the expression is not a reference to a PHV field, enter inside */
+        return true;
+    }
+
+    if (!isParallel(expr_, field_, bits_)) {
+        // Overlapping set will be handled in the EliminateAllButLastWrite pass
+        if (instruction->name != "set") {
+            const auto* act_(findContext<IR::MAU::Action>());
+            ::error(ErrorType::ERR_UNSUPPORTED,
+                    "%1%: action spanning multiple stages. "
+                    "Operations on operand %3% (%4%[%5%..%6%]) in action %2% require multiple "
+                    "stages for a single action. We currently support only single stage actions. "
+                    "Please rewrite the action to be a single stage action.",
+                    instruction, act_, (param_index+1), field_->name, bits_.lo, bits_.hi);
+        }
+    }
+    return false;
+}
+
+bool VerifyInstructionParams::isParallel(
+    const IR::Expression *e,
+    const PHV::Field* field,
+    const le_bitrange& bits) {
+    if (is_write) {
+        bool append = true;
+        // Ensures that the writes of ranges of field bits are either completely identical
+        // or over mutually exclusive regions of that field, as those are too difficult
+        // to deal with
+        for (auto write_bits : (*writes)[field]) {
+            // Because EliminateAllButLastWrite has to come after this, due to the write
+            // appearing in potentially reads
+            if (bits == write_bits) {
+                append = false;
+            } else if (!bits.intersectWith(write_bits).empty()) {
+                return false;
+            }
+        }
+        if (append)
+            (*writes)[field].push_back(bits);
+    } else {
+        for (auto write_bits : (*writes)[field]) {
+            if (!bits.intersectWith(write_bits).empty()) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+} /* -- namespace */
+
 /** The purpose of this pass is to verify that an action is able to be performed in parallel
  *  Because the semantics of P4 are that instructions are sequential, and the actions in
  *  Tofino are parallel, this guarantees that an action is possible as a single action.
@@ -2402,61 +2522,18 @@ const IR::MAU::Action *BackendCopyPropagation::postorder(IR::MAU::Action *action
  *   to write to two logical tables, which definitely does not yet have driver support.
  *
  */
-bool VerifyParallelWritesAndReads::is_parallel(const IR::Expression *e, bool is_write) {
-    le_bitrange bits = { 0, 0 };
-    auto field = phv.field(e, &bits);
-    if (field == nullptr)
-        return true;
-
-    if (is_write) {
-        bool append = true;
-        // Ensures that the writes of ranges of field bits are either completely identical
-        // or over mutually exclusive regions of that field, as those are too difficult
-        // to deal with
-        for (auto write_bits : writes[field]) {
-            // Because EliminateAllButLastWrite has to come after this, due to the write
-            // appearing in potentially reads
-            if (bits == write_bits) {
-                append = false;
-            } else if (!bits.intersectWith(write_bits).empty()) {
-                return false;
-            }
-        }
-        if (append)
-            writes[field].push_back(bits);
-    } else {
-        for (auto write_bits : writes[field]) {
-            if (!bits.intersectWith(write_bits).empty()) {
-                return false;
-            }
-        }
-    }
-    return true;
-}
 
 /** Determines if any values of this particular instruction have previously been written
  *  within this action, and if so, throw an error
  */
 void VerifyParallelWritesAndReads::postorder(const IR::MAU::Instruction *instr) {
-    auto act = findContext<IR::MAU::Action>();
     for (ssize_t i = instr->operands.size() -1; i >= 0; i--) {
         // Skip copy propagated values
         if (instr->copy_propagated[i])
             continue;
-        if (!is_parallel(instr->operands[i], instr->isOutput(i))) {
-            le_bitrange bits = {0, 0};
-            auto field = phv.field(instr->operands[i], &bits);
-            CHECK_NULL(field);
-            // Overlapping set will be handled in the EliminateAllButLastWrite pass
-            if (instr->name != "set") {
-              ::error(ErrorType::ERR_UNSUPPORTED,
-                      "%1%: action spanning multiple stages. "
-                      "Operations on operand %3% (%4%[%5%..%6%]) in action %2% require multiple "
-                      "stages for a single action. We currently support only single stage actions. "
-                      "Please consider rewriting the action to be a single stage action.",
-                      instr, act, (i+1), field->name, bits.lo, bits.hi);
-            }
-        }
+        instr->operands[i]->apply(
+            VerifyInstructionParams(&phv, &writes, instr, instr->isOutput(i), i),
+            getChildContext());
     }
 }
 

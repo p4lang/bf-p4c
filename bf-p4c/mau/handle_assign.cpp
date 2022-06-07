@@ -138,7 +138,7 @@ bool AssignActionHandle::ValidateSelectors::ValidateKey::preorder(const IR::MAU:
     sel_func->inputs = sel_key_vec;
     sel_func->hash_bits = hash_bits;
     sel_func->algorithm = sel->algorithm;
-    VerifySymmetricHashPairs(self.phv, sel_func->inputs, sel->annotations, tbl->gress,
+    verifySymmetricHashPairs(self.phv, sel_func->inputs, sel->annotations, tbl->gress,
                              sel->algorithm, &sel_func->symmetrically_hashed_inputs);
 
     self.table_to_selector[tbl] = sel;

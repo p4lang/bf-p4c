@@ -161,6 +161,7 @@ set (BF_P4C_MIDEND_SRCS
   midend/desugar_varbit_extract.cpp
   midend/initialize_mirror_io_select.cpp
   midend/move_to_egress.cpp
+  midend/normalize_hash_list.cpp
   midend/normalize_params.cpp
   midend/param_binding.cpp
   midend/parser_enforce_depth_req.cpp
@@ -196,6 +197,7 @@ set (BF_P4C_BACKEND_MIDEND_HDRS
   midend/desugar_varbit_extract.h
   midend/initialize_mirror_io_select.h
   midend/move_to_egress.h
+  midend/normalize_hash_list.h
   midend/normalize_params.h
   midend/param_binding.h
   midend/parser_enforce_depth_req.h

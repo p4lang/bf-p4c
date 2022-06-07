@@ -135,6 +135,13 @@ class TestRuntime(BfRuntimeTest):
         '''
         testutils.verify_no_other_packets(self)
 
+    def verifyFinalPacket(self, egress_port, packet):
+        '''
+        Verify a packet and check that the packet is the last one
+        '''
+        self.verifyPacket(egress_port, packet)
+        self.verifyNoOtherPackets()
+
     def setUp(self, client_id = 0, p4_name = None):
         BfRuntimeTest.setUp(self, client_id, p4_name)
 

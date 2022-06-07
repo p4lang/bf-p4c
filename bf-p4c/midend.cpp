@@ -66,6 +66,7 @@
  * * P4::RemoveSelectBooleans – converts booleans in select statements into 1 bit variables.
  * * P4::Predication – converts if-else statements into "condition ? true : false".
  * * P4::MoveDeclarations – moves local declarations from control or parser to the top.
+ * * NormalizeHashList - replace expressions in hash field lists by temporary variables.
  * * P4::SimplifyBitwise - converts modify_field with mask into an bitwise operations.
  * * P4::LocalCopyPropagation – local copy propagation and dead code elimination.
  * * P4::TableHit – converts assignment of hit into if statement.
@@ -102,6 +103,7 @@
 #include "midend/local_copyprop.h"
 #include "midend/nestedStructs.h"
 #include "midend/move_to_egress.h"
+#include "midend/normalize_hash_list.h"
 #include "midend/orderArguments.h"
 #include "midend/parser_enforce_depth_req.h"
 #include "midend/predication.h"
@@ -292,9 +294,6 @@ bool skipRegisterActionOutput(const Visitor::Context *ctxt, const IR::Expression
     return true;
 }
 
-/**
- * \ingroup midend
- */
 bool skipFlexibleHeader(const Visitor::Context *, const IR::Type_StructLike* e) {
     if (e->getAnnotation("flexible"))
         return false;
@@ -402,6 +401,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::ConstantFolding(&refMap, &typeMap, true, typeChecking),
         new P4::StrengthReduction(&refMap, &typeMap, typeChecking),
         new P4::MoveDeclarations(),
+        new NormalizeHashList(&refMap, &typeMap, typeChecking),
         new P4::SimplifyNestedIf(&refMap, &typeMap, typeChecking),
         new P4::SimplifyControlFlow(&refMap, &typeMap, typeChecking),
         new CompileTimeOperations(),

@@ -48,6 +48,8 @@ set (P16_JNA_EXCLUDE_PATTERNS
   "p4c_2601\\.p4"
   "mirror_constants\\.p4"
   "hash_extern_xor\\.p4"
+  "hash_field_expression\\.p4"
+  "hash_field_expression_sym\\.p4"
   "keysight-eagle-tf2\\.p4"
   "p4c-4055\\.p4"
   "MODEL-1095\\.p4"
@@ -212,6 +214,18 @@ p4c_add_ptf_test_with_ptfdir (
     "${testExtraArgs} -target tofino2 -arch t2na -bfrt --p4runtime-force-std-externs"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/hash_extern_xor.ptf")
 bfn_needs_scapy("tofino2" "hash_extern_xor")
+
+p4c_add_ptf_test_with_ptfdir (
+    "tofino2" "hash_field_expression" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/hash_field_expression.p4"
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt --p4runtime-force-std-externs"
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/hash_field_expression.ptf")
+bfn_needs_scapy("tofino2" "hash_field_expression")
+
+p4c_add_ptf_test_with_ptfdir (
+    "tofino2" "hash_field_expression_sym" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/hash_field_expression_sym.p4"
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt --p4runtime-force-std-externs"
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/hash_field_expression_sym.ptf")
+bfn_needs_scapy("tofino2" "hash_field_expression_sym")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c_873" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_873/p4c_873.p4"

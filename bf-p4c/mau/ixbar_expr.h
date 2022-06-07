@@ -193,13 +193,21 @@ struct P4HashFunction {
     void dbprint(std::ostream &out) const;
 };
 
-class VerifySymmetricHashPairs {
- public:
-    VerifySymmetricHashPairs(const PhvInfo &phv, safe_vector<const IR::Expression *> &field_list,
-        const IR::Annotations *annotations, gress_t gress, IR::MAU::HashFunction hf,
-        LTBitMatrix *sym_pairs);
-    bool contains_symmetric = false;
-};
+/**
+ * The purpose of this function is to verify that symmetric hashes are valid and can be allocated.
+ * A key can currently be symmetric if it is on either a selector or a hash calculation,
+ * and as long as algorithm is a CRC.
+ *
+ * Currently full string literals are required, perhaps at sometime this can be a function
+ * within the tna/t2na files.
+ */
+bool verifySymmetricHashPairs(
+    const PhvInfo &phv,
+    safe_vector<const IR::Expression *> &field_list,
+    const IR::Annotations *annotations,
+    gress_t gress,
+    const IR::MAU::HashFunction& hf,
+    LTBitMatrix *sym_pairs);
 
 /**
  * The purpose of this function is to convert an Expression into a P4HashFunction, which can
@@ -225,27 +233,35 @@ class BuildP4HashFunction : public PassManager {
 
     class InsideHashGenExpr : public MauInspector {
         BuildP4HashFunction &self;
-        bool inside_expr = false;
         safe_vector<const IR::Expression *> fields;
         LTBitMatrix sym_fields;
+
+        enum class State {
+            OUTSIDE,
+            INSIDE,
+            FIELD_LIST,
+            IXBAR_EXPR,
+        } state = State::OUTSIDE;
 
         Visitor::profile_t init_apply(const IR::Node *node) override {
             auto rv = MauInspector::init_apply(node);
             fields.clear();
             sym_fields.clear();
-            inside_expr = false;
+            state = State::OUTSIDE;
             return rv;
         }
-        bool preorder(const IR::Constant *) override;
-        bool preorder(const IR::Expression *) override;
-        void postorder(const IR::BFN::SignExtend *) override;
-        bool preorder(const IR::MAU::ActionArg *) override;
-        bool preorder(const IR::Mask *) override;
+
         bool preorder(const IR::MAU::HashGenExpression *) override;
         bool preorder(const IR::MAU::FieldListExpression *) override;
-        void postorder(const IR::MAU::HashGenExpression *) override;
+        bool preorder(const IR::Constant *) override;
+        bool preorder(const IR::Expression *) override;
+        bool preorder(const IR::MAU::ActionArg *) override;
+        bool preorder(const IR::Mask *) override;
         bool preorder(const IR::Cast *) override;
         bool preorder(const IR::Concat*) override;
+        bool preorder(const IR::ListExpression*) override;
+        void postorder(const IR::BFN::SignExtend *) override;
+        void postorder(const IR::MAU::HashGenExpression *) override;
 
      public:
         explicit InsideHashGenExpr(BuildP4HashFunction &s) : self(s) {}
