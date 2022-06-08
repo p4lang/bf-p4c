@@ -50,6 +50,23 @@ std::ostream& outputDebugInfo(std::ostream& out, indent_t indent,
          : outputDebugInfo(out, indent, sourceRef->debug);
 }
 
+/// An `outputDebugInfo()` overload that accepts a Vector of Reference objects;
+/// this often makes calling code less verbose since it's not necessary to
+/// null-check the POV bit reference.
+template <class T>
+std::ostream& outputDebugInfo(std::ostream& out, indent_t indent,
+                              const IR::Vector<T> sourcesRef,
+                              const IR::BFN::Reference* povBitRef = nullptr) {
+    for (const auto* source : sourcesRef) {
+        if (sourcesRef.size() > 1) {
+            AutoIndent debugInfoIndent(indent, 2);
+            out << std::endl << indent << "# " << source << ":";
+        }
+        outputDebugInfo(out, indent, source, povBitRef);
+    }
+    return out;
+}
+
 /// Generate assembly for the deparser dictionary, which controls which
 /// data is written to the output packet.
 struct OutputDictionary : public Inspector {
@@ -217,7 +234,7 @@ struct OutputParameters : public Inspector {
             return false; }
         out << indent << param->name << ": ";
         outputParamSource(param);
-        outputDebugInfo(out, indent, param->source, param->povBit) << std::endl;
+        outputDebugInfo(out, indent, param->sources, param->povBit) << std::endl;
 
         return false;
     }
@@ -230,7 +247,17 @@ struct OutputParameters : public Inspector {
  private:
     void outputParamSource(const IR::BFN::LoweredDeparserParameter* param) const {
         if (param->povBit) out << "{ ";
-        out << param->source;
+        if (param->sources.size() > 1) {
+            out << "[";
+            std::string sep = "";
+            for (const auto* source : param->sources) {
+                out << sep << source;
+                sep = ", ";
+            }
+            out << "]";
+        } else {
+            out << param->sources.front();
+        }
         if (param->povBit) out << ": " << param->povBit << " }";
     }
 
@@ -242,7 +269,7 @@ struct OutputParameters : public Inspector {
             AutoIndent paramGroupIndex(indent);
             out << indent << "- ";
             outputParamSource(param.second);
-            outputDebugInfo(out, indent, param.second->source, param.second->povBit);
+            outputDebugInfo(out, indent, param.second->sources, param.second->povBit);
             out << std::endl;
         }
     }

@@ -48,6 +48,7 @@ bool findFlexibleAnnotation(const IR::Type_StructLike* header) {
 // same property: ct_disable, ct_mcast, qid, icos, meter_color, deflect_on_drop, copy_to_cpu_cos.
 // BRIG-333 is tracking this issue.
 bool GatherDeparserParameters::preorder(const IR::BFN::DeparserParameter* p) {
+    BUG_CHECK(p->source, "Parameter %1% missing source", p->name);
     const PHV::Field* f = phv.field(p->source->field);
     BUG_CHECK(f, "Field %1% not found while gathering deparser parameters", p->source->field);
     LOG5("    Deparser parameter identified: " << f);
@@ -393,7 +394,7 @@ PackFlexibleHeaders::PackFlexibleHeaders(const BFN_Options& options,
         new CollectHeaderStackInfo,  // Needed by CollectPhvInfo.
         new CollectPhvInfo(phv),
         &defuse,
-        (Device::hasMetadataPOV()) ? new AddMetadataPOV(phv) : nullptr,
+        Device::hasMetadataPOV() ? new AddMetadataPOV(phv) : nullptr,
         new CollectPhvInfo(phv),
         &defuse,
         new CollectHeaderStackInfo,  // Needs to be rerun after CreateThreadLocalInstances, but

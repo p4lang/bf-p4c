@@ -1212,6 +1212,7 @@ deparser <thread>:
     copy_to_cpu_cos: <phv-location> [ ':' <pov-bit> ] # or c2c_cos
     copy_to_cpu_qid: <phv-location> [ ':' <pov-bit> ] # or c2c_qid
     mirr_bitmap: <phv-location> [ ':' <pov-bit> ]
+    valid_vec: <phv-location> [ ':' <pov-bit> ]
     # Ingress pipe -> TM fields
     #  - tableid (1b) -- ???
     #  - mcid1 - Multicast Group ID 1

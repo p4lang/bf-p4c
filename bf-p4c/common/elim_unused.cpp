@@ -226,7 +226,15 @@ class ElimUnused::Headers : public PardeTransform {
 
         // We don't need to set a deparser parameter if the field it gets its
         // value from is never set.
-        if (hasDefs(param->source->field)) return param;
+        if (param->source && hasDefs(param->source->field)) return param;
+#if HAVE_FLATROCK
+        if (Device::currentDevice() == Device::FLATROCK && !param->sourceReq) {
+            LOG1("ELIM UNUSED deparser parameter " << param << " IN UNIT " <<
+                DBPrint::Brief << findContext<IR::BFN::Unit>() << " but keeping POV");
+            param->source = nullptr;
+            return param;
+        }
+#endif  /* HAVE_FLATROCK */
 
         LOG1("ELIM UNUSED deparser parameter " << param << " IN UNIT " <<
              DBPrint::Brief << findContext<IR::BFN::Unit>());

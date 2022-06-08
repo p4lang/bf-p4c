@@ -28,6 +28,11 @@ class AddSpecialConstraints : public Inspector {
     const ActionPhvConstraints&   actions_i;
     const DeparserCopyOpt&        decaf_i;
 
+    /// List of metadata instances that we've already processed
+    std::set<cstring>             seen_hdr_i;
+
+    profile_t init_apply(const IR::Node* root) override;
+
     /// Checksum related fields can go either in an 8-bit container or a 16-bit container.
     /// Currently, we do not have the infrastructure to specify multiple options for
     /// pa_container_size pragmas. Therefore, we are just allocating these fields to 16-bit
@@ -38,6 +43,9 @@ class AddSpecialConstraints : public Inspector {
     /// Track upcasting
     bool preorder(const IR::Concat*) override;
     bool preorder(const IR::Cast*) override;
+
+    bool preorder(const IR::ConcreteHeaderRef* hr) override;
+
     void end_apply() override;
 
  public:

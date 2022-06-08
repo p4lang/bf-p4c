@@ -848,6 +848,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Digest* digest) {
 
 /// https://jira.devtools.intel.com/browse/P4C-4469
 bool ValidateAllocation::preorder(const IR::BFN::DeparserParameter* dp) {
+    if (!dp->source) return true;
     le_bitrange bits = {};
     auto field = phv.field(dp->source->field, &bits);
     int container_upper_bound = 8;

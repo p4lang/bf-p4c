@@ -362,7 +362,23 @@ class LoweredEmitConstant : LoweredEmit {
 /// deparser parameter.
 class LoweredDeparserParameter {
     dbprint {
-        out << "parameter " << name << " = " << source->toString();
+        out << "parameter " << name << " = ";
+        if (sources.size() > 1) {
+            out << "[";
+            std::string sep = "";
+            for (const auto* source : sources) {
+                out << sep << source->toString();
+                sep = ", ";
+            }
+            out << "]";
+        } else {
+            out << sources.front()->toString();
+        }
+    }
+
+    validate {
+        BUG_CHECK(sources.size() != 0, "LoweredDeparserParameter with 0 sources");
+        for (const auto* source : sources) CHECK_NULL(source);
     }
 
     /// The deparser parameter to configure. The name is the one used in the
@@ -370,7 +386,7 @@ class LoweredDeparserParameter {
     cstring name;
 
     /// The container whose contents will be used for the parameter.
-    BFN::ContainerRef source;
+    inline Vector<BFN::ContainerRef> sources;
 
     /// On JBay, each deparser parameter has a POV bit which determines whether
     /// the container's contents are valid (and often implicitly enables or

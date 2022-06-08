@@ -6,7 +6,7 @@ bool CheckFieldCorruption::preorder(const IR::BFN::Pipe* pipe) {
 }
 
 bool CheckFieldCorruption::preorder(const IR::BFN::DeparserParameter* param) {
-    pov_protected_fields.insert(phv.field(param->source->field));
+    if (param->source) pov_protected_fields.insert(phv.field(param->source->field));
     return false;
 }
 

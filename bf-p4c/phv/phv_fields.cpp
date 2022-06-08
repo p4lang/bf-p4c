@@ -1844,6 +1844,8 @@ class CollectPardeConstraints : public Inspector {
     }
 
     void postorder(const IR::BFN::DeparserParameter* param) override {
+        if (!param->source) return;
+
         // extract deparser constraints from Deparser & Digest IR nodes ref: bf-p4c/ir/parde.def
         // set deparser constaints on field
         PHV::Field* f = phv.field(param->source->field);

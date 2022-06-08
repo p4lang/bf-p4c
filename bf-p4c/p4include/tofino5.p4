@@ -121,8 +121,7 @@ struct ingress_intrinsic_metadata_for_tm_t {
     PortId_t ucast_egress_port;         // Egress port for unicast packets. must
                                         // be presented to TM for unicast.
 
-    bit<1> ucast_egress_port_valid;     // valid bit for ucast_egress_port, 0 means
-                                        // no unicast.
+    bit<1> drop;                        // Packet drop indication from PPU.
 
     bit<1> deflect_on_drop;             // Request for deflect on drop. must be
                                         // presented to TM to enable deflection
@@ -199,6 +198,19 @@ struct ingress_intrinsic_metadata_for_tm_t {
 
     bit<14> packet_length;              // Packet length in bytes, valid at the end of
                                         // packet. Does not include 64B bridged metadata.
+
+    // FIXME: vld vec -- should these be expressed in other ways?
+    bit<1> pkt_expan_idx_vld;           // Indicates if packet expansion index is to be extracted.
+
+    bit<1> lq_vld;                      // Learn quanta valid
+
+    bit<1> iafc_vld;                    // Ingress Advanced Flow Control valid.
+
+    bit<1> pgen_trig_vld;               // Valid indication for packet gen trigger.
+
+    bit<1> icrc_enable;                 // Indicates ICRC check is enabled in Imerge. If
+                                        // enabled, MDP extracts the header offset and
+                                        // icrc profile index from the PHV.
 }
 
 // -----------------------------------------------------------------------------

@@ -488,6 +488,7 @@ set (BF_P4C_BACKEND_MAU_FLATROCK_HDRS
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_FLATROCK_HDRS}")
 
 set (BF_P4C_BACKEND_PARDE_SRCS
+  parde/add_metadata_pov.cpp
   parde/add_parde_metadata.cpp
   parde/adjust_extract.cpp
   parde/allocate_parser_checksum.cpp
@@ -523,6 +524,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PARDE_SRCS}")
 build_unified(BF_P4C_BACKEND_PARDE_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_PARDE_HDRS
+  parde/add_metadata_pov.h
   parde/add_parde_metadata.h
   parde/allocate_parser_checksum.h
   parde/allocate_parser_match_register.h

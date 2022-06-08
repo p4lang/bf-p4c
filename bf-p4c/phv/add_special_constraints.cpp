@@ -1,6 +1,12 @@
 #include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/phv/add_special_constraints.h"
 
+Visitor::profile_t AddSpecialConstraints::init_apply(const IR::Node* root) {
+    profile_t rv = Inspector::init_apply(root);
+    seen_hdr_i.clear();
+    return rv;
+}
+
 bool AddSpecialConstraints::preorder(const IR::BFN::ChecksumVerify* verify) {
     if (!verify->dest) return false;
     const PHV::Field* field = phv_i.field(verify->dest->field);
@@ -28,6 +34,7 @@ bool AddSpecialConstraints::preorder(const IR::Concat* concat) {
     }
     return true;
 }
+
 bool AddSpecialConstraints::preorder(const IR::Cast* cast) {
     const IR::Type* srcType = cast->expr->type;
     const IR::Type* dstType = cast->destType;
@@ -40,6 +47,71 @@ bool AddSpecialConstraints::preorder(const IR::Cast* cast) {
             f->set_upcasted(true);
         }
     }
+    return true;
+}
+
+bool AddSpecialConstraints::preorder(const IR::ConcreteHeaderRef* hr) {
+#ifdef HAVE_FLATROCK
+    if (Device::currentDevice() == Device::FLATROCK) {
+        const auto* ts = hr->type->to<IR::Type_Struct>();
+        const auto* md = hr->ref->to<IR::Metadata>();
+        if (md && ts && ts->name == "ingress_intrinsic_metadata_for_tm_t") {
+            static std::vector<std::string> mdp_vld_vec = {
+                "icrc_enable",
+                "drop",
+                "pgen_trig_vld",
+                "iafc_vld",
+                "lq_vld",
+                "pkt_expan_idx_vld",
+                "ucast_egress_port.$valid",
+                "mcast_grp_b.$valid",
+                "mcast_grp_a.$valid",
+                "mirror_bitmap.$valid",
+                "copy_to_cpu",
+                "perfect_hash_table_id",
+                "enable_mcast_cutthru",
+                "disable_ucast_cutthru",
+                "deflect_on_drop",
+            };
+
+            if (seen_hdr_i.count(md->name)) return true;
+            seen_hdr_i.emplace(md->name);
+
+            LOG3("Adding byte pack constraint for " << md->name);
+            PHV::PackingLayout packing;
+            packing.gress = INGRESS;
+
+            // Add padding if we don't have a multiple of 8b
+            if (8 - (mdp_vld_vec.size() % 8))
+                packing.layout.push_back(
+                    PHV::PackingLayout::FieldRangeOrPadding(8 - (mdp_vld_vec.size() % 8)));
+
+            // Add the fields
+            for (auto mdp_field : mdp_vld_vec) {
+                cstring field_name = md->name + "." + mdp_field;
+                const auto* field = phv_i.field(field_name);
+                // The field function matches suffixes, so make sure we have the field we actually
+                // care about
+                if (field && field->name == field_name) {
+                    LOG5("  Adding: " << field_name);
+                    packing.layout.push_back(PHV::PackingLayout::FieldRangeOrPadding(
+                        {field, le_bitrange(StartLen(0, field->size))}));
+                } else {
+                    LOG5("  Couldn't find: " << field_name);
+                    packing.layout.push_back(PHV::PackingLayout::FieldRangeOrPadding(1));
+                }
+
+                // FIXME: setting ucast_egress_port.$valid fails if the group is assigned to a 16b
+                // container. PHV alloc should handle this automatically.
+                if (mdp_field == "ucast_egress_port.$valid")
+                    pragmas_i.pa_container_sizes().add_constraint(field, {PHV::Size::b8});
+            }
+
+            auto res = pragmas_i.pa_byte_pack().add_compiler_added_packing(packing);
+            if (!res.ok()) error(*res.error);
+        }
+    }
+#endif  /* HAVE_FLATROCK */
     return true;
 }
 

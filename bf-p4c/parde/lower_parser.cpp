@@ -14,6 +14,7 @@
 #include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/common/debug_info.h"
 #include "bf-p4c/common/field_defuse.h"
+#include "bf-p4c/common/ir_utils.h"
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/device.h"
@@ -2016,17 +2017,86 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
         }
 
         // Lower deparser parameters from fields to containers.
+#if HAVE_FLATROCK
+        static std::vector<std::string> mdp_vld_vec = {
+            "icrc_enable",
+            "drop",
+            "pgen_trig_vld",
+            "iafc_vld",
+            "lq_vld",
+            "pkt_expan_idx_vld",
+            "ucast_egress_port",
+            "mcast_grp_b",
+            "mcast_grp_a",
+            "mirror_bitmap",
+            "copy_to_cpu",
+            "perfect_hash_table_id",
+            "enable_mcast_cutthru",
+            "disable_ucast_cutthru",
+            "deflect_on_drop",
+        };
+#endif /* HAVE_FLATROCK*/
+
         for (auto* param : deparser->params) {
+            bool skipPOV = false;
+#if HAVE_FLATROCK
+            // Skip Flatrock metadata packer valid_vec fields
+            if (Device::currentDevice() == Device::FLATROCK && deparser->gress == INGRESS) {
+                auto res = std::find(mdp_vld_vec.begin(), mdp_vld_vec.end(), param->name);
+                if (res == mdp_vld_vec.end() && param->source) {
+                    if (const auto* mem = param->source->field->to<IR::Member>()) {
+                        res = std::find(mdp_vld_vec.begin(), mdp_vld_vec.end(), mem->member.name);
+                    }
+                }
+                if (res != mdp_vld_vec.end()) {
+                    if (param->povBit) {
+                        if (param->source)
+                            skipPOV = true;
+                        else
+                            continue;
+                    } else {
+                        continue;
+                    }
+                }
+            }
+#endif  /* HAVE_FLATROCK */
+            if (!param->source) continue;
             auto* loweredSource =
                 lowerUnsplittableField(phv, clotInfo, param->source, "deparser parameter");
-            auto* lowered = new IR::BFN::LoweredDeparserParameter(param->name,
-                                                                  loweredSource);
-            if (param->povBit)
+            auto* lowered = new IR::BFN::LoweredDeparserParameter(param->name, {loweredSource});
+            if (param->povBit && !skipPOV)
                 lowered->povBit = lowerSingleBit(phv,
                                                  param->povBit,
                                                  PHV::AllocContext::DEPARSER);
             loweredDeparser->params.push_back(lowered);
         }
+
+#if HAVE_FLATROCK
+        // Build the Flatrock MDP valid vector
+        if (Device::currentDevice() == Device::FLATROCK && deparser->gress == INGRESS) {
+            IR::Vector<IR::BFN::FieldLVal> mdp_vld_vec_fields;
+
+            const auto* pipe = findContext<IR::BFN::Pipe>();
+            auto* tmMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_tm");
+            if (!tmMeta) {
+                ::warning("ig_intr_md_for_tm not defined in ingress control block");
+            } else {
+                for (auto fname : mdp_vld_vec) {
+                    const IR::Expression* exp = nullptr;
+                    auto* f = phv.field(tmMeta->name + "." + fname + ".$valid");
+                    if (f && phv.getTempVar(f)) exp = phv.getTempVar(f);
+                    if (!exp) exp = gen_fieldref(tmMeta, fname);
+                    mdp_vld_vec_fields.push_back(new IR::BFN::FieldLVal(exp));
+                }
+            }
+
+            // Calculate the containers for the valid vector
+            IR::Vector<IR::BFN::ContainerRef> containers;
+            std::tie(containers, std::ignore) = lowerFields(phv, clotInfo, mdp_vld_vec_fields);
+            loweredDeparser->params.push_back(
+                new IR::BFN::LoweredDeparserParameter("valid_vec", containers));
+        }
+#endif /* HAVE_FLATROCK */
 
         // Filter padding field out of digest field list
         auto filterPaddingField =

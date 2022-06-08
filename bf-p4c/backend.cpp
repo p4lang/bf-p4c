@@ -204,11 +204,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         new CollectHeaderStackInfo,  // Needed by CollectPhvInfo.
         new CollectPhvInfo(phv),
         &defuse,
-#if HAVE_FLATROCK
-        // FIXME -- Flatrock will need somethimg here, but the JBay code won't work
-        Device::currentDevice() != Device::FLATROCK &&
-#endif
-        (Device::hasMetadataPOV()) ? new AddMetadataPOV(phv) : nullptr,
+        Device::hasMetadataPOV() ? new AddMetadataPOV(phv) : nullptr,
         Device::currentDevice() == Device::TOFINO ?
             new ResetInvalidatedChecksumHeaders(phv) : nullptr,
         new CollectPhvInfo(phv),

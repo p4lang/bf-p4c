@@ -368,7 +368,8 @@ class FlatrockDevice : public Device {
         // just check bottom bit, as ingress/ghost share a pipe
         return (a&1) == (b&1); }
     bool getHasMirrorIOSelect() const override { return false; }
-    bool getHasMetadataPOV() const override { return false; }
+    // _Some_ flatrock metadata have associated POV bits
+    bool getHasMetadataPOV() const override { return true; }
 };
 #endif /* HAVE_FLATROCK */
 

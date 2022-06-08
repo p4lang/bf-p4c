@@ -612,8 +612,13 @@ class DeparserParameter {
       : Node(si), name(name), source(new FieldLVal(source)), povBit(nullptr) { }
 
     dbprint {
-        out << "parameter " << name << " = " << source->field->toString();
-        if (povBit) out << " if " << povBit->field->toString();
+        out << "parameter " << name << " = ";
+        if (source) {
+            out << source->field->toString();
+            if (povBit) out << " if " << povBit->field->toString();
+        } else {
+            out << "pov " << povBit->field->toString();
+        }
     }
 
     /// The deparser parameter to configure. The name is the one used in the
@@ -621,11 +626,23 @@ class DeparserParameter {
     cstring name;
 
     /// The location to read the parameter value from.
-    FieldLVal source;
+    NullOK FieldLVal source;
 
     /// If present, the POV bit controlling whether the contents of the source
     /// location are valid. Not used on Tofino.
     NullOK FieldLVal povBit = nullptr;
+
+    /// A source is required. If this is false, then a DeparserParameter can
+    /// exist that is just a povBit.
+    bool sourceReq = true;
+
+    validate {
+        if (sourceReq)
+            CHECK_NULL(source);
+        else
+            BUG_CHECK(source || povBit,
+                      "DeparserParameter %1% must have either a source or a povBit", name);
+    }
 }
 
 /// The supertype for all BFN IR deparsers.
