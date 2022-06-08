@@ -4299,6 +4299,8 @@ void TransformTables::merge_match_and_gateway(IR::MAU::Table *tbl,
     tbl->created_during_tp = match->created_during_tp;
     tbl->is_compiler_generated = match->is_compiler_generated;
     tbl->has_dark_init = match->has_dark_init;
+    tbl->random_seed = match->random_seed;
+    tbl->dynamic_key_masks = match->dynamic_key_masks;
 
     // Generate the correct table layout from the options
     gw_layout = tbl->layout;

@@ -1810,6 +1810,8 @@ TableMatch::TableMatch(const MauAsmOutput &, const PhvInfo &phv,
 
     identity_hash = tbl->resources->table_format.identity_hash;
 
+    dynamic_key_masks = tbl->dynamic_key_masks;
+
     // Determine which fields are part of a table match.  If a field partially ghosted,
     // then this information is contained within the bitvec and the int of the match_info
     for (auto match_info : tbl->resources->table_format.match_groups[0].match) {

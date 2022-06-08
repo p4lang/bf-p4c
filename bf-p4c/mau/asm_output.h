@@ -166,6 +166,7 @@ class TableMatch {
     safe_vector<ProxyHashSlice> proxy_hash_fields;
     bool proxy_hash = false;
     bool identity_hash = false;
+    bool dynamic_key_masks = false;
 
     const IR::MAU::Table     *table = nullptr;
     void init_proxy_hash(const IR::MAU::Table *tbl);

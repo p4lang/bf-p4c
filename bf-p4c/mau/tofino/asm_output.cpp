@@ -777,7 +777,11 @@ void emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &match_data,
             safe_vector<Slice> reg_ghost;
             safe_vector<Slice> reg_hash = reg.split(fmt->ghost_bits, reg_ghost);
             ghost.insert(ghost.end(), reg_ghost.begin(), reg_ghost.end());
-            if (!fmt->identity_hash)
+            // P4C-4496: if dynamic_table_key_masks pragma is applied to the
+            // table, ghost bits are disabled, as a result, match key must be
+            // emitted as match data to generated the correct hash section in
+            // bfa and context.json
+            if (!fmt->identity_hash || fmt->dynamic_key_masks)
                 match_data.insert(match_data.end(), reg_hash.begin(), reg_hash.end());
         } else {
             match_data.emplace_back(reg);
