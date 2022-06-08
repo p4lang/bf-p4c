@@ -63,7 +63,7 @@ node ('compiler-travis') {
                 sh 'git log -1 --stat'
 
                 echo "Initializing bf-p4c-compilers submodules"
-                sh "git submodule update --init --recursive"
+                sh "git submodule update --init --recursive -j 16"
             }
 
             stage ('Pull image') {
