@@ -57,6 +57,122 @@ struct ParserAsmSerializer : public ParserInspector {
         return handle;
     }
 
+#ifdef HAVE_FLATROCK
+
+    bool preorder(const IR::Flatrock::Parser* /*parser*/) override {
+        AutoIndent indentParser(indent);
+        out << "parser ingress:" << std::endl;
+        return true;
+    }
+
+    bool preorder(const IR::Flatrock::PortMetadata* port_metadata) override {
+        AutoIndent indentParser(indent, 1);
+        if (port_metadata->items.size() > 0)
+            out << indent << "port_metadata:" << std::endl;
+        return true;
+    }
+
+    bool preorder(const IR::Flatrock::PortMetadataItem* port_metadata_item) override {
+        AutoIndent indentParser(indent, 2);
+        out << indent << port_metadata_item->port << ": [ ";
+        cstring sep = "";
+        for (auto &i : port_metadata_item->data) {
+            out << sep << static_cast<unsigned int>(i);
+            sep = ", ";
+        }
+        out << " ]" << std::endl;
+        return true;
+    }
+
+    bool preorder(const IR::Flatrock::Profile* profile) override {
+        AutoIndent indentParser(indent, 1);
+        out << indent << "profile " << profile->id << ":" << std::endl;
+        indent++;
+        out << indent << "match_port: " << profile->match_port << std::endl;
+        out << indent << "match_inband_metadata: " << profile->match_inband_metadata << std::endl;
+        out << indent << "initial_pktlen: " << profile->initial_pktlen << std::endl;
+        out << indent << "initial_seglen: " << profile->initial_seglen << std::endl;
+        if (profile->initial_state && profile->initial_state->size() > 0) {
+            out << indent << "initial_state: 0x";
+            auto original_flags = out.flags();
+            auto original_fill = out.fill('0');
+            for (auto &s : *profile->initial_state)
+                out << std::hex << std::setw(2) << static_cast<unsigned int>(s);
+            out << std::endl;
+            out.fill(original_fill);
+            out.flags(original_flags);
+        }
+        if (profile->initial_flags && profile->initial_flags->size() > 0) {
+            out << indent << "initial_flags: 0x";
+            auto original_flags = out.flags();
+            auto original_fill = out.fill('0');
+            for (auto &f : *profile->initial_flags)
+                out << std::hex << std::setw(2) << static_cast<unsigned int>(f);
+            out << std::endl;
+            out.fill(original_fill);
+            out.flags(original_flags);
+        }
+        if (profile->initial_ptr)
+            out << indent << "initial_ptr: " << profile->initial_ptr << std::endl;
+        if (profile->initial_w0_offset)
+            out << indent << "initial_w0_offset: " << profile->initial_w0_offset << std::endl;
+        if (profile->initial_w1_offset)
+            out << indent << "initial_w1_offset: " << profile->initial_w1_offset << std::endl;
+        if (profile->initial_w2_offset)
+            out << indent << "initial_w2_offset: " << profile->initial_w2_offset << std::endl;
+        if (profile->initial_alu0_instruction) {
+            out << indent << "initial_alu0_instruction: ";
+            print_params(out, *profile->initial_alu0_instruction);
+            out << "  # ";
+            print_pretty(out, *profile->initial_alu0_instruction);
+            out << std::endl;
+        }
+        if (profile->initial_alu1_instruction) {
+            out << indent << "initial_alu1_instruction: ";
+            print_params(out, *profile->initial_alu1_instruction);
+            out << "  # ";
+            print_pretty(out, *profile->initial_alu1_instruction);
+            out << std::endl;
+        }
+        if (profile->metadata_select.size() > 0) {
+            out << indent << "metadata_select: [ ";
+            std::string sep = "";
+            for (auto &m : profile->metadata_select) {
+                out << sep << m;
+                sep = ", ";
+            }
+            out << " ]" << std::endl;
+        }
+        indent--;
+        return true;
+    }
+
+    bool preorder(const IR::Flatrock::AnalyzerStage* analyzer_stage) override {
+        AutoIndent indentParser(indent, 1);
+        out << indent << "analyzer_stage " << analyzer_stage->stage;
+        if (!analyzer_stage->name.isNullOrEmpty())
+            out << " " << analyzer_stage->name;
+        out << ":" << std::endl;
+        return true;
+    }
+
+    bool preorder(const IR::Flatrock::AnalyzerRule* analyzer_rule) override {
+        AutoIndent indentParser(indent, 2);
+        out << indent << "rule " << analyzer_rule->index << ":" << std::endl;
+        indent++;
+        out << indent << "push_hdr_id: { hdr: " << analyzer_rule->push_hdr_id_hdr_id
+            << ", offset: " << analyzer_rule->push_hdr_id_offset << " }" << std::endl;
+        indent--;
+        return true;
+    }
+
+    bool preorder(const IR::Flatrock::PseudoParser* /*pparser*/) override {
+        out << "parser egress:" << std::endl;
+        return true;
+    }
+
+#endif  // HAVE_FLATROCK
+
     bool preorder(const IR::BFN::LoweredParser* parser) override {
         AutoIndent indentParser(indent);
 
@@ -70,12 +186,6 @@ struct ParserAsmSerializer : public ParserInspector {
             out << " ]";
         }
         out << ":" << std::endl;
-
-#ifdef HAVE_FLATROCK
-        // To avoid invalid keys in Flatrock parser assembly
-        if (BackendOptions().target == "tofino5")
-            return false;
-#endif  /* HAVE_FLATROCK */
 
         if (parser->name && parser->portmap.size() != 0)
             out << indent << "name: " << canon_name(parser->name)
@@ -470,7 +580,7 @@ ParserAsmOutput::ParserAsmOutput(const IR::BFN::Pipe* pipe, const PhvInfo &phv, 
     : phv(phv) {
     BUG_CHECK(pipe->thread[gress].parsers.size() != 0, "No parser?");
     for (auto parser : pipe->thread[gress].parsers) {
-        auto lowered_parser = parser->to<IR::BFN::LoweredParser>();
+        auto lowered_parser = parser->to<IR::BFN::BaseLoweredParser>();
         BUG_CHECK(lowered_parser != nullptr, "Writing assembly for a non-lowered parser?");
         parsers.push_back(lowered_parser);
     }

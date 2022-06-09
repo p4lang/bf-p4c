@@ -119,7 +119,7 @@ void FlatrockParser::alu0_instruction::input(VECTOR(value_t) args, value_t data)
                           kv.value.s);
                 } else {
                     value_t noop_value = {.type = tINT, .lineno = kv.value.lineno};
-                    noop_value.i = alu0_instruction::OPCODE_0_NOOP;
+                    noop_value.i = Flatrock::alu0_instruction::OPCODE_NOOP;
                     opcode = noop_value;
                 }
             }
@@ -142,10 +142,11 @@ void FlatrockParser::alu0_instruction::input(VECTOR(value_t) args, value_t data)
             report_invalid_directive("invalid key", kv.key);
         }
     }
-    if (!check_range(*opcode, alu0_instruction::OPCODE_0, alu0_instruction::OPCODE_6)) return;
-    this->opcode = static_cast<alu0_instruction::opcode_enum>(opcode->i);
+    if (!check_range(*opcode, Flatrock::alu0_instruction::OPCODE_0,
+        Flatrock::alu0_instruction::OPCODE_6)) return;
+    this->opcode = static_cast<Flatrock::alu0_instruction::opcode_enum>(opcode->i);
     switch (this->opcode) {
-    case alu0_instruction::OPCODE_0_NOOP:
+    case Flatrock::alu0_instruction::OPCODE_NOOP:
         // ptr += 0  ->  { opcode: noop }
         if (msb || lsb || shift || mask || add) {
             error(opcode->lineno, "unexpected: msb, lsb, shift, mask, or add");
@@ -153,9 +154,9 @@ void FlatrockParser::alu0_instruction::input(VECTOR(value_t) args, value_t data)
         value_t add_value;
         add_value.i = 0;
         add = add_value;
-    case alu0_instruction::OPCODE_0:
+    case Flatrock::alu0_instruction::OPCODE_0:
         // opcode 0: ptr += imm8s  ->  { opcode: 0, add: <constant> }
-    case alu0_instruction::OPCODE_1:
+    case Flatrock::alu0_instruction::OPCODE_1:
         // opcode 1: ptr += w2[7:0] + imm8s  ->  { opcode: 1, add: <constant> }
         if (msb || lsb || shift || mask) {
             error(opcode->lineno, "unexpected: msb, lsb, shift, or mask");
@@ -166,10 +167,10 @@ void FlatrockParser::alu0_instruction::input(VECTOR(value_t) args, value_t data)
             opcode_0_1.add_imm8s = add->i;
         }
         break;
-    case alu0_instruction::OPCODE_2:
+    case Flatrock::alu0_instruction::OPCODE_2:
         // opcode 2: ptr += state[MSB:LSB], MSB&LSB -> 2/4/8/16-bit state sub-field
         //   -> { opcode: 2, msb: <constant>, lsb: <constant>}
-    case alu0_instruction::OPCODE_3:
+    case Flatrock::alu0_instruction::OPCODE_3:
         // opcode 3: ptr += (state[MSB:LSB] << 2), MSB&LSB -> 2/4/8/16-bit state sub-field
         //   -> { opcode: 3, msb: <constant>, lsb: <constant>}
         if (shift || mask || add) {
@@ -182,13 +183,13 @@ void FlatrockParser::alu0_instruction::input(VECTOR(value_t) args, value_t data)
             opcode_2_3.state_lsb = lsb->i;
         }
         break;
-    case alu0_instruction::OPCODE_4:
+    case Flatrock::alu0_instruction::OPCODE_4:
         // opcode 4: ptr += ((w2[7:0] & imm8u) << imm2u) + (imm2u << 2)
         //   -> { opcode: 4, mask: <constant>, shift: <constant>, add: <constant> }
-    case alu0_instruction::OPCODE_5:
+    case Flatrock::alu0_instruction::OPCODE_5:
         // opcode 5: ptr += ((w2[7:0] & imm8u) >> imm2u) + (imm2u << 2)
         //   -> { opcode: 5, mask: <constant>, shift: <constant>, add: <constant> }
-    case alu0_instruction::OPCODE_6:
+    case Flatrock::alu0_instruction::OPCODE_6:
         // opcode 6: ptr += ((w2[7:0] & imm8u) >> imm2u) + (imm2u << 2)
         //           if ((w2[7:0] & imm8u) >> imm2u) != 0,
         //           then + 4 - ((w2[7:0] & imm8u) >> imm2u)
@@ -206,7 +207,7 @@ void FlatrockParser::alu0_instruction::input(VECTOR(value_t) args, value_t data)
             opcode_4_5_6.add_imm2u = add->i;
         }
         break;
-    case alu0_instruction::INVALID:
+    case Flatrock::alu0_instruction::INVALID:
     default:
         error(opcode->lineno, "invalid opcode for ALU0");
         break;
@@ -216,42 +217,42 @@ void FlatrockParser::alu0_instruction::input(VECTOR(value_t) args, value_t data)
 uint32_t FlatrockParser::alu0_instruction::build_opcode() const {
     uint32_t op0 = 0;
     switch (opcode) {
-    case alu0_instruction::OPCODE_0_NOOP:
-    case alu0_instruction::OPCODE_0:
+    case Flatrock::alu0_instruction::OPCODE_NOOP:
+    case Flatrock::alu0_instruction::OPCODE_0:
         op0 = Target::Flatrock::PARSER_ALU0_OPCODE0_ENC;
         break;
-    case alu0_instruction::OPCODE_1:
+    case Flatrock::alu0_instruction::OPCODE_1:
         op0 = Target::Flatrock::PARSER_ALU0_OPCODE1_ENC;
         break;
-    case alu0_instruction::OPCODE_2:
+    case Flatrock::alu0_instruction::OPCODE_2:
         op0 = Target::Flatrock::PARSER_ALU0_OPCODE2_ENC;
         break;
-    case alu0_instruction::OPCODE_3:
+    case Flatrock::alu0_instruction::OPCODE_3:
         op0 = Target::Flatrock::PARSER_ALU0_OPCODE3_ENC;
         break;
-    case alu0_instruction::OPCODE_4:
+    case Flatrock::alu0_instruction::OPCODE_4:
         op0 = Target::Flatrock::PARSER_ALU0_OPCODE4_ENC;
         break;
-    case alu0_instruction::OPCODE_5:
+    case Flatrock::alu0_instruction::OPCODE_5:
         op0 = Target::Flatrock::PARSER_ALU0_OPCODE5_ENC;
         break;
-    case alu0_instruction::OPCODE_6:
+    case Flatrock::alu0_instruction::OPCODE_6:
         op0 = Target::Flatrock::PARSER_ALU0_OPCODE6_ENC;
         break;
     }
     int __len;
     uint8_t _len, _off, _mask, _shift, _add;
     switch (opcode) {
-    case alu0_instruction::OPCODE_0_NOOP:
+    case Flatrock::alu0_instruction::OPCODE_NOOP:
         break;
-    case alu0_instruction::OPCODE_0:
-    case alu0_instruction::OPCODE_1:
+    case Flatrock::alu0_instruction::OPCODE_0:
+    case Flatrock::alu0_instruction::OPCODE_1:
         // op0[7:0] : imm (signed)
         // op0[11:8] : reserved
         op0 |= opcode_0_1.add_imm8s & 0xff;
         break;
-    case alu0_instruction::OPCODE_2:
-    case alu0_instruction::OPCODE_3:
+    case Flatrock::alu0_instruction::OPCODE_2:
+    case Flatrock::alu0_instruction::OPCODE_3:
         // op0[7:6] : len
         // op0[5:0] : off
         // op0[11:8] : reserved
@@ -260,9 +261,9 @@ uint32_t FlatrockParser::alu0_instruction::build_opcode() const {
         _off = opcode_2_3.state_lsb;
         op0 |= (_len & 0x3) << 6 | (_off & 0x3f);
         break;
-    case alu0_instruction::OPCODE_4:
-    case alu0_instruction::OPCODE_5:
-    case alu0_instruction::OPCODE_6:
+    case Flatrock::alu0_instruction::OPCODE_4:
+    case Flatrock::alu0_instruction::OPCODE_5:
+    case Flatrock::alu0_instruction::OPCODE_6:
         // op0[7:0] : mask
         // op0[11:10] : shift
         // op0[9:8] : imm (unsigned)
@@ -280,8 +281,21 @@ void FlatrockParser::alu1_instruction::input(VECTOR(value_t) args, value_t data)
     boost::optional<value_t> opcode, msb, lsb, shift_dir, shift, mask_mode, mask, add, set;
     for (auto &kv : MapIterChecked(data.map, false)) {
         if (kv.key == "opcode") {
-            if (!CHECKTYPE(kv.value, tINT)) return;
-            opcode = kv.value;
+            if (!CHECKTYPE2(kv.value, tINT, tSTR)) return;
+            if (kv.value.type == tINT) {
+                opcode = kv.value;
+            } else {
+                if (kv.value != "noop") {
+                    error(kv.value.lineno,
+                          "unexpected opcode %s; "
+                          "expected an opcode number or noop",
+                          kv.value.s);
+                } else {
+                    value_t noop_value = {.type = tINT, .lineno = kv.value.lineno};
+                    noop_value.i = Flatrock::alu1_instruction::OPCODE_NOOP;
+                    opcode = noop_value;
+                }
+            }
         } else if (kv.key == "msb") {
             if (!CHECKTYPE(kv.value, tINT)) return;
             msb = kv.value;
@@ -310,13 +324,14 @@ void FlatrockParser::alu1_instruction::input(VECTOR(value_t) args, value_t data)
             error(kv.key.lineno, "invalid key: %s", kv.key.s);
         }
     }
-    if (!check_range(*opcode, alu1_instruction::OPCODE_0, alu1_instruction::OPCODE_7)) return;
-    this->opcode = static_cast<alu1_instruction::opcode_enum>(opcode->i);
+    if (!check_range(*opcode, Flatrock::alu1_instruction::OPCODE_0,
+        Flatrock::alu1_instruction::OPCODE_7)) return;
+    this->opcode = static_cast<Flatrock::alu1_instruction::opcode_enum>(opcode->i);
     switch (this->opcode) {
-    case alu1_instruction::OPCODE_0:
+    case Flatrock::alu1_instruction::OPCODE_0:
         // opcode 0: state[MSB:LSB] >>= imm4u, MSB&LSB -> 2/4/8/16-bit state sub-field
         //  -> { opcode: 0, msb: <constant>, lsb: <constant>, shift: <constant> }
-    case alu1_instruction::OPCODE_1:
+    case Flatrock::alu1_instruction::OPCODE_1:
         // opcode 1: state[MSB:LSB] <<= imm4u, MSB&LSB -> 2/4/8/16-bit state sub-field
         //  -> { opcode: 1, msb: <constant>, lsb: <constant>, shift: <constant> }
         if (shift_dir || mask_mode || mask || add || set) {
@@ -331,7 +346,7 @@ void FlatrockParser::alu1_instruction::input(VECTOR(value_t) args, value_t data)
             opcode_0_1.shift_imm4u = shift->i;
         }
         break;
-    case alu1_instruction::OPCODE_2:
+    case Flatrock::alu1_instruction::OPCODE_2:
         // opcode 2: state[MSB:LSB] += imm8s, MSB&LSB -> 2/4/8/16-bit state sub-field
         //   -> { opcode: 2, msb: <constant>, lsb: <constant>, add: <constant> }
         if (shift_dir || shift || mask_mode || mask || set) {
@@ -346,7 +361,7 @@ void FlatrockParser::alu1_instruction::input(VECTOR(value_t) args, value_t data)
             opcode_2_3.add_set_imm8s = add->i;
         }
         break;
-    case alu1_instruction::OPCODE_3:
+    case Flatrock::alu1_instruction::OPCODE_3:
         // opcode 3: state[MSB:LSB] = imm8s, MSB&LSB -> 2/4/8/16-bit state sub-field
         //   -> * { opcode: 3, msb: <constant>, lsb: <constant>, value: <constant> }
         if (shift_dir || shift || mask_mode || mask || add) {
@@ -361,7 +376,7 @@ void FlatrockParser::alu1_instruction::input(VECTOR(value_t) args, value_t data)
             opcode_2_3.add_set_imm8s = set->i;
         }
         break;
-    case alu1_instruction::OPCODE_4:
+    case Flatrock::alu1_instruction::OPCODE_4:
         // opcode 4:
         //   shift_dir = 0: state[MSB:LSB] += ((w2[7:0] & mask_mode(imm4u)) << imm2u) + (imm2u << 2)
         //   shift_dir = 1: state[MSB:LSB] += ((w2[7:0] & mask_mode(imm4u)) >> imm2u) + (imm2u << 2)
@@ -370,7 +385,7 @@ void FlatrockParser::alu1_instruction::input(VECTOR(value_t) args, value_t data)
         //   -> { opcode: 4, msb: <constant>, lsb: <constant>, mask_mode: <constant>,
         //        mask: <constant>, shift_dir: <constant>, shift: <constant>, add: <constant> }
         // MSB&LSB -> 8-bit state sub-field
-    case alu1_instruction::OPCODE_5:
+    case Flatrock::alu1_instruction::OPCODE_5:
         // opcode 5:
         //   shift_dir = 0: state[MSB:LSB] -= ((w2[7:0] & mask_mode(imm4u)) << imm2u) + (imm2u << 2)
         //   shift_dir = 1: state[MSB:LSB] -= ((w2[7:0] & mask_mode(imm4u)) >> imm2u) + (imm2u << 2)
@@ -379,7 +394,7 @@ void FlatrockParser::alu1_instruction::input(VECTOR(value_t) args, value_t data)
         //   -> { opcode: 5, msb: <constant>, lsb: <constant>, mask_mode: <constant>,
         //        mask: <constant>, shift_dir: <constant>, shift: <constant>, add: <constant> }
         // MSB&LSB -> 8-bit state sub-field
-    case alu1_instruction::OPCODE_6:
+    case Flatrock::alu1_instruction::OPCODE_6:
         // opcode 6:
         //   shift_dir = 0: state[MSB:LSB] += ((w2[7:0] & mask_mode(imm4u)) << imm2u) + (imm2u << 2)
         //   shift_dir = 1: state[MSB:LSB] += ((w2[7:0] & mask_mode(imm4u)) >> imm2u) + (imm2u << 2)
@@ -389,7 +404,7 @@ void FlatrockParser::alu1_instruction::input(VECTOR(value_t) args, value_t data)
         //   -> { opcode: 6, msb: <constant>, lsb: <constant>, mask_mode: <constant>,
         //        mask: <constant>, shift_dir: <constant>, shift: <constant>, add: <constant> }
         // MSB&LSB -> 8-bit state sub-field
-    case alu1_instruction::OPCODE_7:
+    case Flatrock::alu1_instruction::OPCODE_7:
         // opcode 7:
         //   shift_dir = 0: state[MSB:LSB] -= ((w2[7:0] & mask_mode(imm4u)) << imm2u) + (imm2u << 2)
         //   shift_dir = 1: state[MSB:LSB] -= ((w2[7:0] & mask_mode(imm4u)) >> imm2u) + (imm2u << 2)
@@ -419,7 +434,7 @@ void FlatrockParser::alu1_instruction::input(VECTOR(value_t) args, value_t data)
             opcode_4_5_6_7.add_imm2u = add->i;
         }
         break;
-    case alu0_instruction::INVALID:
+    case Flatrock::alu0_instruction::INVALID:
     default:
         error(opcode->lineno, "invalid opcode for ALU1");
         break;
@@ -429,36 +444,39 @@ void FlatrockParser::alu1_instruction::input(VECTOR(value_t) args, value_t data)
 uint32_t FlatrockParser::alu1_instruction::build_opcode() const {
     uint32_t op1 = 0;
     switch (opcode) {
-    case alu1_instruction::OPCODE_0:
+    case Flatrock::alu1_instruction::OPCODE_NOOP:
+    case Flatrock::alu1_instruction::OPCODE_0:
         op1 = Target::Flatrock::PARSER_ALU1_OPCODE0_ENC;
         break;
-    case alu1_instruction::OPCODE_1:
+    case Flatrock::alu1_instruction::OPCODE_1:
         op1 = Target::Flatrock::PARSER_ALU1_OPCODE1_ENC;
         break;
-    case alu1_instruction::OPCODE_2:
+    case Flatrock::alu1_instruction::OPCODE_2:
         op1 = Target::Flatrock::PARSER_ALU1_OPCODE2_ENC;
         break;
-    case alu1_instruction::OPCODE_3:
+    case Flatrock::alu1_instruction::OPCODE_3:
         op1 = Target::Flatrock::PARSER_ALU1_OPCODE3_ENC;
         break;
-    case alu1_instruction::OPCODE_4:
+    case Flatrock::alu1_instruction::OPCODE_4:
         op1 = Target::Flatrock::PARSER_ALU1_OPCODE4_ENC;
         break;
-    case alu1_instruction::OPCODE_5:
+    case Flatrock::alu1_instruction::OPCODE_5:
         op1 = Target::Flatrock::PARSER_ALU1_OPCODE5_ENC;
         break;
-    case alu1_instruction::OPCODE_6:
+    case Flatrock::alu1_instruction::OPCODE_6:
         op1 = Target::Flatrock::PARSER_ALU1_OPCODE6_ENC;
         break;
-    case alu1_instruction::OPCODE_7:
+    case Flatrock::alu1_instruction::OPCODE_7:
         op1 = Target::Flatrock::PARSER_ALU1_OPCODE7_ENC;
         break;
     }
     int __len;
     uint8_t _len, _off, _mask, _shift, _add;
     switch (opcode) {
-    case alu1_instruction::OPCODE_0:
-    case alu1_instruction::OPCODE_1:
+    case Flatrock::alu1_instruction::OPCODE_NOOP:
+        break;
+    case Flatrock::alu1_instruction::OPCODE_0:
+    case Flatrock::alu1_instruction::OPCODE_1:
         // op1[15:10] : offset
         // op1[9:8] : len
         // op1[7:4] : reserved
@@ -469,8 +487,8 @@ uint32_t FlatrockParser::alu1_instruction::build_opcode() const {
         _shift = opcode_0_1.shift_imm4u;
         op1 |= (_off & 0x3f) << 10 | (_len & 0x3) << 8 | (_shift & 0xf);
         break;
-    case alu1_instruction::OPCODE_2:
-    case alu1_instruction::OPCODE_3:
+    case Flatrock::alu1_instruction::OPCODE_2:
+    case Flatrock::alu1_instruction::OPCODE_3:
         // op1[15:10] : offset
         // op1[9:8] : len
         // op1[7:0] : imm (signed)
@@ -480,10 +498,10 @@ uint32_t FlatrockParser::alu1_instruction::build_opcode() const {
         _add = opcode_2_3.add_set_imm8s;
         op1 |= (_off & 0x3f) << 10 | (_len & 0x3) << 8 | (_add & 0xff);
         break;
-    case alu1_instruction::OPCODE_4:
-    case alu1_instruction::OPCODE_5:
-    case alu1_instruction::OPCODE_6:
-    case alu1_instruction::OPCODE_7:
+    case Flatrock::alu1_instruction::OPCODE_4:
+    case Flatrock::alu1_instruction::OPCODE_5:
+    case Flatrock::alu1_instruction::OPCODE_6:
+    case Flatrock::alu1_instruction::OPCODE_7:
         // op1[15:10] : offset
         // op1[9] : mask_mode
         // op1[8] : shift_dir
@@ -679,11 +697,11 @@ void FlatrockParser::Profile::input_metadata_select(VECTOR(value_t) args, value_
     for (int i = 0; i < value.vec.size; i++) {
         if (!CHECKTYPE3(value.vec[i], tINT, tSTR, tCMD)) return;
         if (value.vec[i].type == tINT) {
-            metadata_select[i].type = metadata_select::CONSTANT;
+            metadata_select[i].type = Flatrock::metadata_select::CONSTANT;
             metadata_select[i].constant.value = value.vec[i].i;
         } else if (value.vec[i].type == tSTR) {
             if (value.vec[i] == "logical_port_number") {
-                metadata_select[i].type = metadata_select::LOGICAL_PORT_NUMBER;
+                metadata_select[i].type = Flatrock::metadata_select::LOGICAL_PORT_NUMBER;
             } else {
                 error(value.vec[i].lineno, "invalid key: %s", value.vec[i].s);
             }
@@ -692,22 +710,22 @@ void FlatrockParser::Profile::input_metadata_select(VECTOR(value_t) args, value_
             if (value.vec[i] == "port_metadata") {
                 check_range(value.vec[i].vec[1],
                     0, Target::Flatrock::PARSER_PORT_METADATA_WIDTH - 1);
-                metadata_select[i].type = metadata_select::PORT_METADATA;
+                metadata_select[i].type = Flatrock::metadata_select::PORT_METADATA;
                 metadata_select[i].port_metadata.index = value.vec[i].vec[1].i;
             } else if (value.vec[i] == "inband_metadata") {
                 check_range(value.vec[i].vec[1],
                     0, Target::Flatrock::PARSER_INBAND_METADATA_WIDTH - 1);
-                metadata_select[i].type = metadata_select::INBAND_METADATA;
+                metadata_select[i].type = Flatrock::metadata_select::INBAND_METADATA;
                 metadata_select[i].inband_metadata.index = value.vec[i].vec[1].i;
             } else if (value.vec[i] == "timestamp") {
                 check_range(value.vec[i].vec[1],
                     0, Target::Flatrock::PARSER_PROFILE_MD_SEL_TIMESTAMP_INDEX_MAX);
-                metadata_select[i].type = metadata_select::TIMESTAMP;
+                metadata_select[i].type = Flatrock::metadata_select::TIMESTAMP;
                 metadata_select[i].timestamp.index = value.vec[i].vec[1].i;
             } else if (value.vec[i] == "counter") {
                 check_range(value.vec[i].vec[1],
                     0, Target::Flatrock::PARSER_PROFILE_MD_SEL_COUNTER_INDEX_MAX);
-                metadata_select[i].type = metadata_select::COUNTER;
+                metadata_select[i].type = Flatrock::metadata_select::COUNTER;
                 metadata_select[i].timestamp.index = value.vec[i].vec[1].i;
             } else {
                 report_invalid_directive("invalid key", value.vec[i]);
@@ -822,35 +840,35 @@ void FlatrockParser::Profile::write_config(RegisterSetBase &regs, json::map &jso
     // metadata select
     for (int i = 0; i < Target::Flatrock::PARSER_PROFILE_MD_SEL_NUM; i++) {
         // Skip uninitialized fields
-        if (metadata_select[i].type == metadata_select::INVALID) continue;
+        if (metadata_select[i].type == Flatrock::metadata_select::INVALID) continue;
         _regs.prsr_mem.md_prof_ram.md_prof[*id].md_sel_const[i] =
-            (metadata_select[i].type == metadata_select::CONSTANT);
+            (metadata_select[i].type == Flatrock::metadata_select::CONSTANT);
         switch (metadata_select[i].type) {
-        case metadata_select::CONSTANT:
+        case Flatrock::metadata_select::CONSTANT:
             _regs.prsr_mem.md_prof_ram.md_prof[*id].md_sel[i] =
                 metadata_select[i].constant.value;
             break;
-        case metadata_select::LOGICAL_PORT_NUMBER:
+        case Flatrock::metadata_select::LOGICAL_PORT_NUMBER:
             _regs.prsr_mem.md_prof_ram.md_prof[*id].md_sel[i] =
                 Target::Flatrock::PARSER_PROFILE_MD_SEL_PORT_METADATA_ENC |
                 Target::Flatrock::PARSER_PROFILE_MD_SEL_LOGICAL_PORT_NUMBER_INDEX;
             break;
-        case metadata_select::PORT_METADATA:
+        case Flatrock::metadata_select::PORT_METADATA:
             _regs.prsr_mem.md_prof_ram.md_prof[*id].md_sel[i] =
                 Target::Flatrock::PARSER_PROFILE_MD_SEL_PORT_METADATA_ENC |
                 metadata_select[i].port_metadata.index;
             break;
-        case metadata_select::INBAND_METADATA:
+        case Flatrock::metadata_select::INBAND_METADATA:
             _regs.prsr_mem.md_prof_ram.md_prof[*id].md_sel[i] =
                 Target::Flatrock::PARSER_PROFILE_MD_SEL_INBAND_METADATA_ENC |
                 metadata_select[i].inband_metadata.index;
             break;
-        case metadata_select::TIMESTAMP:
+        case Flatrock::metadata_select::TIMESTAMP:
             _regs.prsr_mem.md_prof_ram.md_prof[*id].md_sel[i] =
                 Target::Flatrock::PARSER_PROFILE_MD_SEL_TIMESTAMP_ENC |
                 metadata_select[i].timestamp.index;
             break;
-        case metadata_select::COUNTER:
+        case Flatrock::metadata_select::COUNTER:
             _regs.prsr_mem.md_prof_ram.md_prof[*id].md_sel[i] =
                 Target::Flatrock::PARSER_PROFILE_MD_SEL_COUNTER_ENC |
                 metadata_select[i].counter.index;

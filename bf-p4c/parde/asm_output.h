@@ -15,7 +15,7 @@ struct ParserAsmOutput {
  private:
     friend std::ostream& operator<<(std::ostream&, const ParserAsmOutput&);
 
-    std::vector<const IR::BFN::LoweredParser*> parsers;
+    std::vector<const IR::BFN::BaseLoweredParser*> parsers;
     const PhvInfo               &phv;
 };
 

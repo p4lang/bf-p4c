@@ -2,6 +2,7 @@
 #define BF_ASM_FLATROCK_PARSER_H_
 
 #include <boost/optional.hpp>
+#include "bf-p4c/common/flatrock_parser.h"
 #include "../parser.h"
 #include "asm-types.h"
 #include "flatrock/pseudo_parser.h"
@@ -41,123 +42,20 @@ class FlatrockParser : public BaseParser, virtual public Parsable {
         virtual bool is_invalid() const = 0;
     };
 
-    struct alu0_instruction : public alu_instruction {
-        enum opcode_enum { INVALID = 99, OPCODE_0_NOOP = 10, OPCODE_0 = 0, OPCODE_1 = 1,
-            OPCODE_2 = 2, OPCODE_3 = 3, OPCODE_4 = 4, OPCODE_5 = 5, OPCODE_6 = 6 } opcode;
-        union {
-            struct {} opcode_0_noop;  // ptr += 0
-
-            struct {
-                int add_imm8s;
-            } opcode_0_1;
-            // opcode 0: ptr += imm8s
-            // opcode 1: ptr += w2[7:0] + imm8s
-
-            struct {
-                int state_msb;
-                int state_lsb;
-            } opcode_2_3;
-            // opcode 2: ptr += state[MSB:LSB], MSB&LSB -> 2/4/8/16-bit state sub-field
-            // opcode 3: ptr += (state[MSB:LSB] << 2), MSB&LSB -> 2/4/8/16-bit state sub-field
-
-            struct {
-                int mask_imm8u;
-                int shift_imm2u;
-                int add_imm2u;
-            } opcode_4_5_6;
-            // opcode 4: ptr += ((w2[7:0] & imm8u) << imm2u) + (imm2u << 2)
-            // opcode 5: ptr += ((w2[7:0] & imm8u) >> imm2u) + (imm2u << 2)
-            // opcode 6: ptr += ((w2[7:0] & imm8u) >> imm2u) + (imm2u << 2)
-            //           if ((w2[7:0] & imm8u) >> imm2u) != 0,
-            //           then + 4 - ((w2[7:0] & imm8u) >> imm2u)
-        };
-
-        alu0_instruction() : opcode(INVALID) {}
-
+    struct alu0_instruction : public alu_instruction, public Flatrock::alu0_instruction {
         uint32_t build_opcode() const override;
         void input(VECTOR(value_t) args, value_t data) override;
-        bool is_invalid() const override { return opcode == INVALID; }
+        bool is_invalid() const override {
+            return opcode == Flatrock::alu0_instruction::INVALID;
+        }
     };
 
-    struct alu1_instruction : public alu_instruction {
-        enum opcode_enum { INVALID = 99, OPCODE_0 = 0, OPCODE_1 = 1, OPCODE_2 = 2,
-            OPCODE_3 = 3, OPCODE_4 = 4, OPCODE_5 = 5, OPCODE_6 = 6, OPCODE_7 = 7} opcode;
-        union {
-            struct {
-                int state_msb;
-                int state_lsb;
-                int shift_imm4u;
-            } opcode_0_1;
-            // opcode 0: state[MSB:LSB] >>= imm4u, MSB&LSB -> 2/4/8/16-bit state sub-field
-            // opcode 1: state[MSB:LSB] <<= imm4u, MSB&LSB -> 2/4/8/16-bit state sub-field
-
-            struct {
-                int state_msb;
-                int state_lsb;
-                int add_set_imm8s;
-            } opcode_2_3;
-            // opcode 2: state[MSB:LSB] += imm8s, MSB&LSB -> 2/4/8/16-bit state sub-field
-            // opocde 3: state[MSB:LSB] = imm8s, MSB&LSB -> 2/4/8/16-bit state sub-field
-
-            struct {
-                int state_msb;
-                int state_lsb;
-                int mask_mode;
-                int mask_imm4u;
-                int shift_dir;
-                int shift_imm2u;
-                int add_imm2u;
-            } opcode_4_5_6_7;
-            // opcode 4:
-            //   shift_dir = 0: state[MSB:LSB] += ((w2[7:0] & imm4u) << imm2u) + (imm2u << 2)
-            //   shift_dir = 1: state[MSB:LSB] += ((w2[7:0] & imm4u) >> imm2u) + (imm2u << 2)
-            // opcode 5:
-            //   shift_dir = 0: state[MSB:LSB] -= ((w2[7:0] & imm4u) << imm2u) + (imm2u << 2)
-            //   shift_dir = 1: state[MSB:LSB] -= ((w2[7:0] & imm4u) >> imm2u) + (imm2u << 2)
-            // opcode 6:
-            //   shift_dir = 0: state[MSB:LSB] += ((w2[7:0] & imm4u) << imm2u) + (imm2u << 2)
-            //   shift_dir = 1: state[MSB:LSB] += ((w2[7:0] & imm4u) >> imm2u) + (imm2u << 2)
-            //   if ((w2[7:0] & imm8u) >> imm2u) != 0, then + 4 - ((w2[7:0] & imm8u) >> imm2u)
-            // opcode 7:
-            //   shift_dir = 0: state[MSB:LSB] -= ((w2[7:0] & imm4u) << imm2u) + (imm2u << 2)
-            //   shift_dir = 1: state[MSB:LSB] -= ((w2[7:0] & imm4u) >> imm2u) + (imm2u << 2)
-            //   if ((w2[7:0] & imm8u) >> imm2u) != 0, then + 4 - ((w2[7:0] & imm8u) >> imm2u)
-            // MSB&LSB -> 8-bit state sub-field
-        };
-
-        alu1_instruction() : opcode(INVALID) {}
-
+    struct alu1_instruction : public alu_instruction, public Flatrock::alu1_instruction {
         uint32_t build_opcode() const override;
         void input(VECTOR(value_t) args, value_t data) override;
-        bool is_invalid() const override { return opcode == INVALID; }
-    };
-
-    struct metadata_select {
-        enum { INVALID, CONSTANT, LOGICAL_PORT_NUMBER, PORT_METADATA,
-               INBAND_METADATA, TIMESTAMP, COUNTER } type = INVALID;
-        union {
-            struct {
-                int value;
-            } constant;
-
-            struct {} logical_port_number;
-
-            struct {
-                int index;
-            } port_metadata;
-
-            struct {
-                int index;
-            } inband_metadata;
-
-            struct {
-                int index;
-            } timestamp;
-
-            struct {
-                int index;
-            } counter;
-        };
+        bool is_invalid() const override {
+            return opcode == Flatrock::alu1_instruction::INVALID;
+        }
     };
 
     /**
@@ -247,7 +145,7 @@ class FlatrockParser : public BaseParser, virtual public Parsable {
         int initial_w2_offset;
         struct alu0_instruction initial_alu0_instruction;
         struct alu1_instruction initial_alu1_instruction;
-        struct metadata_select metadata_select[Target::Flatrock::PARSER_PROFILE_MD_SEL_NUM];
+        Flatrock::metadata_select metadata_select[Target::Flatrock::PARSER_PROFILE_MD_SEL_NUM];
 
         void input_match(VECTOR(value_t) args, value_t key, value_t value);
         void input_metadata_select(VECTOR(value_t) args, value_t key, value_t value);

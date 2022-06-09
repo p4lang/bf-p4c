@@ -1,5 +1,6 @@
 #include "flatrock/hdr.h"
 #include "flatrock/parser.h"
+#include "bf-p4c/common/flatrock_parser.h"
 #include "gtest/gtest.h"
 
 #include "register-matcher.h"
@@ -187,32 +188,36 @@ parser ingress:
     EXPECT_EQ(asm_parser->parser.profiles[1].initial_w1_offset, 1);
     EXPECT_EQ(asm_parser->parser.profiles[1].initial_w2_offset, 2);
     EXPECT_EQ(asm_parser->parser.profiles[1].initial_alu0_instruction.opcode,
-              FlatrockParser::alu0_instruction::OPCODE_0);
-    EXPECT_EQ(asm_parser->parser.profiles[1].initial_alu0_instruction.opcode_0_1.add_imm8s, -3);
+              Flatrock::alu0_instruction::OPCODE_0);
+    EXPECT_EQ(asm_parser->parser.profiles[1].initial_alu0_instruction.opcode_0_1.
+        add_imm8s, -3);
     EXPECT_EQ(asm_parser->parser.profiles[1].initial_alu1_instruction.opcode,
-              FlatrockParser::alu1_instruction::OPCODE_0);
-    EXPECT_EQ(asm_parser->parser.profiles[1].initial_alu1_instruction.opcode_0_1.state_msb, 15);
-    EXPECT_EQ(asm_parser->parser.profiles[1].initial_alu1_instruction.opcode_0_1.state_lsb, 8);
-    EXPECT_EQ(asm_parser->parser.profiles[1].initial_alu1_instruction.opcode_0_1.shift_imm4u, 7);
+              Flatrock::alu1_instruction::OPCODE_0);
+    EXPECT_EQ(asm_parser->parser.profiles[1].initial_alu1_instruction.opcode_0_1.
+        state_msb, 15);
+    EXPECT_EQ(asm_parser->parser.profiles[1].initial_alu1_instruction.opcode_0_1.
+        state_lsb, 8);
+    EXPECT_EQ(asm_parser->parser.profiles[1].initial_alu1_instruction.opcode_0_1.
+        shift_imm4u, 7);
     EXPECT_EQ(asm_parser->parser.profiles[1].metadata_select[0].type,
-              FlatrockParser::metadata_select::CONSTANT);
+              Flatrock::metadata_select::CONSTANT);
     EXPECT_EQ(asm_parser->parser.profiles[1].metadata_select[0].constant.value, 1);
     EXPECT_EQ(asm_parser->parser.profiles[1].metadata_select[1].type,
-              FlatrockParser::metadata_select::LOGICAL_PORT_NUMBER);
+              Flatrock::metadata_select::LOGICAL_PORT_NUMBER);
     EXPECT_EQ(asm_parser->parser.profiles[1].metadata_select[2].type,
-              FlatrockParser::metadata_select::PORT_METADATA);
+              Flatrock::metadata_select::PORT_METADATA);
     EXPECT_EQ(asm_parser->parser.profiles[1].metadata_select[2].port_metadata.index, 1);
     EXPECT_EQ(asm_parser->parser.profiles[1].metadata_select[3].type,
-              FlatrockParser::metadata_select::INBAND_METADATA);
+              Flatrock::metadata_select::INBAND_METADATA);
     EXPECT_EQ(asm_parser->parser.profiles[1].metadata_select[3].inband_metadata.index, 2);
     EXPECT_EQ(asm_parser->parser.profiles[1].metadata_select[4].type,
-              FlatrockParser::metadata_select::TIMESTAMP);
+              Flatrock::metadata_select::TIMESTAMP);
     EXPECT_EQ(asm_parser->parser.profiles[1].metadata_select[4].timestamp.index, 3);
     EXPECT_EQ(asm_parser->parser.profiles[1].metadata_select[5].type,
-              FlatrockParser::metadata_select::COUNTER);
+              Flatrock::metadata_select::COUNTER);
     EXPECT_EQ(asm_parser->parser.profiles[1].metadata_select[5].counter.index, 4);
     EXPECT_EQ(asm_parser->parser.profiles[1].metadata_select[6].type,
-              FlatrockParser::metadata_select::INVALID);
+              Flatrock::metadata_select::INVALID);
 }
 
 TEST(flatrock_parser, section_parser_egress) {

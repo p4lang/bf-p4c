@@ -258,6 +258,7 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/empty_tableseq.cpp
   common/extract_maupipe.cpp
   common/field_defuse.cpp
+  common/flatrock_parser.cpp
   common/flexible_packing.cpp
   common/bridged_packing.cpp
   common/header_stack.cpp
@@ -287,6 +288,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/empty_tableseq.h
   common/extract_maupipe.h
   common/field_defuse.h
+  common/flatrock_parser.h
   common/flexible_packing.h
   common/bridged_packing.h
   common/header_stack.h
@@ -541,6 +543,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/extract_parser.h
   parde/extract_deparser.h
   parde/field_packing.h
+  parde/flatrock.h
   parde/header_output.h
   parde/infer_payload_offset.h
   parde/lower_parser.h
@@ -888,6 +891,7 @@ set (BF_P4C_IR_DEF_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/ir/mau.def
   ${CMAKE_CURRENT_SOURCE_DIR}/ir/parde.def
   ${CMAKE_CURRENT_SOURCE_DIR}/ir/parde-lowered.def
+  ${CMAKE_CURRENT_SOURCE_DIR}/ir/flatrock.def
   )
 # publish IR_DEF_FILES upstream
 set (IR_DEF_FILES ${IR_DEF_FILES} ${BF_P4C_IR_DEF_FILES} PARENT_SCOPE)

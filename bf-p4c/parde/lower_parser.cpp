@@ -15,6 +15,7 @@
 #include "bf-p4c/common/debug_info.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/common/ir_utils.h"
+#include "bf-p4c/common/flatrock_parser.h"
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/device.h"
@@ -977,6 +978,31 @@ struct ComputeLoweredParserIR : public ParserInspector {
     std::map<gress_t, std::map<unsigned, unsigned>> clotTagToCsumUnit;
 };
 
+#ifdef HAVE_FLATROCK
+class ReplaceFlatrockParserIR : public Transform {
+    const IR::Flatrock::Parser*
+    preorder(IR::BFN::Parser* parser) override {
+        LOG4("[ReplaceFlatrockParserIR] lowering Flatrock parser " << parser->name);
+
+        auto *lowered_parser = new IR::Flatrock::Parser;
+
+        auto *default_profile = new IR::Flatrock::Profile(
+            /* id */ 0,
+            /* initial_pktlen */ Device::pardeSpec().byteTotalIngressMetadataSize(),
+            /* initial_seglen */ Device::pardeSpec().byteTotalIngressMetadataSize(),
+            /* initial_state */ boost::none,
+            /* initial_flags */ boost::none,
+            /* initial_ptr */ boost::none,
+            /* initial_w0_offset */ boost::none,
+            /* initial_w1_offset */ boost::none,
+            /* initial_w2_offset */ boost::none);
+        lowered_parser->profiles.push_back(default_profile);
+
+        return lowered_parser;
+    }
+};
+#endif  // HAVE_FLATROCK
+
 /// Replace the high-level parser IR version of each parser's root node with its
 /// lowered version. This has the effect of replacing the entire parse graph.
 struct ReplaceParserIR : public Transform {
@@ -1311,8 +1337,17 @@ struct MergeLoweredParserStates : public ParserTransform {
 struct LowerParserIR : public PassManager {
     LowerParserIR(const PhvInfo& phv, ClotInfo& clotInfo) {
         auto* allocateParserChecksums = new AllocateParserChecksums(phv, clotInfo);
-        auto* computeLoweredParserIR = new ComputeLoweredParserIR(phv, clotInfo,
-                                            *allocateParserChecksums);
+        auto* computeLoweredParserIR =
+#ifdef HAVE_FLATROCK
+            Device::currentDevice() == Device::FLATROCK ? nullptr :
+#endif  // HAVE_FLATROCK
+            new ComputeLoweredParserIR(phv, clotInfo, *allocateParserChecksums);
+        auto* replaceLoweredParserIR =
+#ifdef HAVE_FLATROCK
+            Device::currentDevice() == Device::FLATROCK ?
+            static_cast<Transform *>(new ReplaceFlatrockParserIR) :
+#endif  // HAVE_FLATROCK
+            static_cast<Transform *>(new ReplaceParserIR(*computeLoweredParserIR));
 
         auto* parser_info = new CollectParserInfo;
         auto* lower_parser_info = new CollectLoweredParserInfo;
@@ -1330,7 +1365,7 @@ struct LowerParserIR : public PassManager {
             LOGGING(4) ? new DumpParser("after_alloc_parser_csums") : nullptr,
             LOGGING(4) ? new DumpParser("final_hlir_parser") : nullptr,
             computeLoweredParserIR,
-            new ReplaceParserIR(*computeLoweredParserIR),
+            replaceLoweredParserIR,
             LOGGING(4) ? new DumpParser("after_parser_lowering") : nullptr,
             lower_parser_info,
             new MergeLoweredParserStates(*lower_parser_info, *computeLoweredParserIR, clotInfo),
@@ -2536,6 +2571,10 @@ LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &
         parser_info,
         new ComputeMultiWriteContainers(phv, *parser_info),
         new ComputeBufferRequirements,
+#ifdef HAVE_FLATROCK
+        // TODO CharacterizeParser not implemented for Flatrock yet
+        Device::currentDevice() == Device::FLATROCK ? nullptr :
+#endif  // HAVE_FLATROCK
         new CharacterizeParser
     });
 }

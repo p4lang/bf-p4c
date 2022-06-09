@@ -5,6 +5,7 @@
 #include "bfas.h"
 #include "map.h"
 #include "asm-types.h"
+#include "bf-p4c/common/flatrock_parser.h"
 
 /** FOR_ALL_TARGETS -- metamacro that expands a macro for each defined target
  *  FOR_ALL_REGISTER_SETS -- metamacro that expands for each distinct register set;
@@ -731,20 +732,23 @@ class Target::Flatrock : public Target {
         PARSER_BASE_LEN_MAX = 255,
         PARSER_NUM_COMP_BITS_MAX = 15,
         PARSER_SCALE_MAX = 3,
-        PARSER_PORT_METADATA_WIDTH = 15,  // Byte width of per-port metadata
-        PARSER_PORT_METADATA_ITEMS = 40,  // Fpp_params.pm: N_PORT
+        // Byte width of per-port metadata
+        PARSER_PORT_METADATA_WIDTH = ::Flatrock::PARSER_PORT_METADATA_WIDTH,
+        // Fpp_params.pm: N_PORT
+        PARSER_PORT_METADATA_ITEMS = ::Flatrock::PARSER_PORT_METADATA_ITEMS,
         PARSER_PORT_METADATA_ITEM_MAX = 255,
         PARSER_INBAND_METADATA_WIDTH = 8,  // MD8
-        PARSER_PROFILES = 16,              // Fpp_params.pm: N_PHV_TCAM_DEPTH
-        PARSER_STATE_WIDTH = 10,           // 8 + 2 bytes
+        PARSER_PROFILES = ::Flatrock::PARSER_PROFILES,  // Fpp_params.pm: N_PHV_TCAM_DEPTH
+        PARSER_STATE_WIDTH = ::Flatrock::PARSER_STATE_WIDTH,  // 8 + 2 bytes
         PARSER_STATE_MATCH_WIDTH = 8,      // only lower 8 bytes participate in TCAM matching
-        PARSER_FLAGS_WIDTH = 8,
-        PARSER_PTR_MAX = 255,
+        PARSER_FLAGS_WIDTH = ::Flatrock::PARSER_FLAGS_WIDTH,
+        PARSER_PTR_MAX = ::Flatrock::PARSER_PTR_MAX,
         PARSER_W_WIDTH = 2,  // Width of W0, W1, W2 registers
-        PARSER_W_OFFSET_MAX = 255,
-        PARSER_PROFILE_PKTLEN_MAX = 63,
-        PARSER_PROFILE_SEGLEN_MAX = 63,
-        PARSER_PROFILE_PORT_BIT_WIDTH = 6,  // 8bit port_info = {2'b0, logic_port#(6b)}
+        PARSER_W_OFFSET_MAX = ::Flatrock::PARSER_W_OFFSET_MAX,
+        PARSER_PROFILE_PKTLEN_MAX = ::Flatrock::PARSER_PROFILE_PKTLEN_MAX,
+        PARSER_PROFILE_SEGLEN_MAX = ::Flatrock::PARSER_PROFILE_SEGLEN_MAX,
+        // 8bit port_info = {2'b0, logic_port#(6b)}
+        PARSER_PROFILE_PORT_BIT_WIDTH = ::Flatrock::PARSER_PROFILE_PORT_BIT_WIDTH,
         PARSER_PROFILE_MD_SEL_NUM = 32,
         PARSER_PROFILE_MD_SEL_PORT_METADATA_ENC = 0x00,
         // Index of logical port number in port metadata array
@@ -754,7 +758,7 @@ class Target::Flatrock : public Target {
         PARSER_PROFILE_MD_SEL_COUNTER_ENC = 0xc0,
         PARSER_PROFILE_MD_SEL_TIMESTAMP_INDEX_MAX = 7,
         PARSER_PROFILE_MD_SEL_COUNTER_INDEX_MAX = 7,
-        PARSER_ANALYZER_STAGES = 48,
+        PARSER_ANALYZER_STAGES = ::Flatrock::PARSER_ANALYZER_STAGES,
         PARSER_ANALYZER_STAGE_RULES = 24,
         PARSER_PHV_BUILDER_GROUPS = 32,  // Fpp_params.pm: N_PHV_TCAM
         PARSER_PHV_BUILDER_GROUP_POV_SELECT_NUM = 4,

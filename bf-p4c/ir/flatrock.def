@@ -1,0 +1,267 @@
+#emit
+#include "bf-p4c/common/flatrock_parser.h"
+#include "bf-p4c/parde/flatrock.h"
+#include "lib/exceptions.h"
+#end
+
+namespace Flatrock {
+
+class PortMetadataItem {
+    int port;
+    std::vector<uint8_t> data;
+
+    validate {
+        BUG_CHECK(data.size() <= ::Flatrock::PARSER_PORT_METADATA_WIDTH,
+            "port metadata too wide: %d, allowed at most %d",
+            data.size(), ::Flatrock::PARSER_PORT_METADATA_WIDTH);
+    }
+    dbprint {
+        out << "port=" << port << ": data=[";
+        cstring sep = "";
+        for (auto &d : data) {
+            out << sep << static_cast<unsigned int>(d);
+            sep = ", ";
+        }
+        out << "]";
+    }
+}
+
+class PortMetadata {
+    optional inline Vector<PortMetadataItem> items;
+
+    visit_children {
+        v.visit(items, "port_metadata");
+    }
+    validate {
+        BUG_CHECK(items.size() <= ::Flatrock::PARSER_PORT_METADATA_ITEMS,
+            "too many port metadata items: %d, allowed at most %d",
+            items.size(), ::Flatrock::PARSER_PORT_METADATA_ITEMS);
+    }
+    dbprint {
+        out << "port metadata:" << IndentCtl::indent;
+        if (items.size() > 0) {
+            for (auto &item : items)
+                out << IndentCtl::endl << item;
+        } else {
+            out << IndentCtl::endl << "<unset>";
+        }
+        out << IndentCtl::unindent;
+    }
+}
+
+class Profile {
+    int id;
+#emit
+    static constexpr decltype(match_t::word0) match_port_all =
+        (1 << ::Flatrock::PARSER_PROFILE_PORT_BIT_WIDTH) - 1;  // all-match by default
+#end
+    match_t match_port = {match_port_all, match_port_all};
+    match_t match_inband_metadata = {~0ULL, ~0ULL};  // all-match by default
+    int initial_pktlen;
+    int initial_seglen;
+    boost::optional<std::vector<uint8_t>> initial_state;
+    boost::optional<std::vector<uint8_t>> initial_flags;
+    boost::optional<int> initial_ptr;
+    boost::optional<int> initial_w0_offset;
+    boost::optional<int> initial_w1_offset;
+    boost::optional<int> initial_w2_offset;
+#emit
+    boost::optional<::Flatrock::alu0_instruction> initial_alu0_instruction;
+    boost::optional<::Flatrock::alu1_instruction> initial_alu1_instruction;
+    std::vector<::Flatrock::metadata_select> metadata_select;
+#end
+    validate {
+        BUG_CHECK(id >= 0 && id < ::Flatrock::PARSER_PROFILES,
+            "profile ID %d out of allowed range <%d, %d>", id, 0, ::Flatrock::PARSER_PROFILES);
+        BUG_CHECK(match_port.word0 != 0 || match_port.word1 != 0,
+            "unusable (non-matchable) profile");
+        BUG_CHECK(match_inband_metadata.word0 != 0 || match_inband_metadata.word1 != 0,
+            "unusable (non-matchable) profile");
+        BUG_CHECK(initial_pktlen >= 0 && initial_pktlen <= ::Flatrock::PARSER_PROFILE_PKTLEN_MAX,
+            "initial packet length %d out of allowed range <%d, %d>",
+            initial_pktlen, 0, ::Flatrock::PARSER_PROFILE_PKTLEN_MAX - 1);
+        BUG_CHECK(initial_seglen >= 0 && initial_seglen <= ::Flatrock::PARSER_PROFILE_SEGLEN_MAX,
+            "initial segment length %d out of allowed range <%d, %d>",
+            initial_seglen, 0, ::Flatrock::PARSER_PROFILE_SEGLEN_MAX - 1);
+        if (initial_state)
+            BUG_CHECK(
+                initial_state->size() == 0 ||
+                initial_state->size() == ::Flatrock::PARSER_STATE_WIDTH,
+                "invalid width of initial state: %d; expected %d",
+                initial_state->size(), ::Flatrock::PARSER_STATE_WIDTH);
+        if (initial_flags)
+            BUG_CHECK(
+                initial_flags->size() == 0 ||
+                initial_flags->size() == ::Flatrock::PARSER_FLAGS_WIDTH,
+                "invalid width of initial flags: %d; expected %d",
+                initial_flags->size(), ::Flatrock::PARSER_FLAGS_WIDTH);
+        if (initial_ptr)
+            BUG_CHECK((*initial_ptr) >= 0 && (*initial_ptr) <= ::Flatrock::PARSER_PTR_MAX,
+                "initial pointer value %d out of allowed range <%d, %d>",
+                (*initial_ptr), 0, ::Flatrock::PARSER_PTR_MAX - 1);
+        if (initial_w0_offset)
+            BUG_CHECK((*initial_w0_offset) >= 0 &&
+                (*initial_w0_offset) <= ::Flatrock::PARSER_W_OFFSET_MAX,
+                "initial W0 offset %d out of allowed range <%d, %d>",
+                (*initial_w0_offset), 0, ::Flatrock::PARSER_W_OFFSET_MAX - 1);
+        if (initial_w1_offset)
+            BUG_CHECK((*initial_w1_offset) >= 0 &&
+                (*initial_w1_offset) <= ::Flatrock::PARSER_W_OFFSET_MAX,
+                "initial W1 offset %d out of allowed range <%d, %d>",
+                (*initial_w1_offset), 0, ::Flatrock::PARSER_W_OFFSET_MAX - 1);
+        if (initial_w2_offset)
+            BUG_CHECK((*initial_w2_offset) >= 0 &&
+                (*initial_w2_offset) <= ::Flatrock::PARSER_W_OFFSET_MAX,
+                "initial W2 offset %d out of allowed range <%d, %d>",
+                (*initial_w2_offset), 0, ::Flatrock::PARSER_W_OFFSET_MAX - 1);
+    }
+    toString { return "profile id=" + cstring::to_cstring(id); }
+    dbprint {
+        out << toString() << ":" << IndentCtl::indent;
+        out << IndentCtl::endl << "match.port=" << match_port;
+        out << IndentCtl::endl << "match.inband_metadata=" << match_inband_metadata;
+        out << IndentCtl::endl << "initial_pktlen=" << initial_pktlen;
+        out << IndentCtl::endl << "initial_seglen=" << initial_seglen;
+        out << IndentCtl::endl << "initial_flags=";
+        if (initial_flags) {
+            out << "0x";
+            auto original_flags = out.flags();
+            auto original_fill = out.fill('0');
+            for (auto &f : *initial_flags)
+                out << std::hex << std::setw(2) << static_cast<unsigned int>(f);
+            out.fill(original_fill);
+            out.flags(original_flags);
+        } else {
+            out << "<unset>";
+        }
+        out << IndentCtl::endl << "initial_state=";
+        if (initial_state) {
+        out << "0x";
+            auto original_flags = out.flags();
+            auto original_fill = out.fill('0');
+            for (auto &s : *initial_state)
+                out << std::hex << std::setw(2) << static_cast<unsigned int>(s);
+            out.fill(original_fill);
+            out.flags(original_flags);
+        } else {
+            out << "<unset>";
+        }
+        out << IndentCtl::endl << "initial_ptr=";
+        if (initial_ptr) out << *initial_ptr;
+        else out << "<unset>";
+        out << IndentCtl::endl << "initial_w0_offset=";
+        if (initial_w0_offset) out << *initial_w0_offset;
+        else out << "<unset>";
+        out << IndentCtl::endl << "initial_w1_offset=";
+        if (initial_w1_offset) out << *initial_w1_offset;
+        else out << "<unset>";
+        out << IndentCtl::endl << "initial_w2_offset=";
+        if (initial_w2_offset) out << *initial_w2_offset;
+        else out << "<unset>";
+        out << IndentCtl::endl << "initial_alu0_instruction=";
+        if (initial_alu0_instruction) {
+            out << "\"";
+            print_params(out, *initial_alu0_instruction);
+            out << "\"";
+            out << IndentCtl::endl << "initial_alu0_instruction=\"";
+            print_pretty(out, *initial_alu0_instruction);
+            out << "\"";
+        } else {
+            out << "<unset>";
+        }
+        out << IndentCtl::endl << "initial_alu1_instruction=";
+        if (initial_alu1_instruction) {
+            out << "\"";
+            print_params(out, *initial_alu1_instruction);
+            out << "\"";
+            out << IndentCtl::endl << "initial_alu1_instruction=\"";
+            print_pretty(out, *initial_alu1_instruction);
+            out << "\"";
+        } else {
+            out << "<unset>";
+        }
+        out << IndentCtl::endl << "metadata_select=";
+        if (metadata_select.size() > 0) out << metadata_select;
+        else out << "<unset>";
+        out << IndentCtl::unindent;
+    }
+}
+
+// TODO to be extended
+class AnalyzerRule {
+    int index;
+    int push_hdr_id_hdr_id;
+    int push_hdr_id_offset;
+
+    toString { return "rule id=" + cstring::to_cstring(index); }
+    dbprint {
+        out << toString() << ":" << IndentCtl::indent;
+        out << IndentCtl::endl << "push_hdr_id.hdr_id=" << push_hdr_id_hdr_id;
+        out << IndentCtl::endl << "push_hdr_id.offset=" << push_hdr_id_offset;
+        out << IndentCtl::unindent;
+    }
+}
+
+// TODO to be extended
+class AnalyzerStage {
+    int stage;
+    optional cstring name;
+    optional inline Vector<AnalyzerRule> rules;
+
+    visit_children {
+        v.visit(rules, "analyzer_stage");
+    }
+    toString {
+        std::string s = "analyzer stage=" + std::to_string(stage);
+        if (!name.isNullOrEmpty()) s += " name=" + name;
+        return s;
+    }
+    dbprint {
+        out << toString() << ":" << IndentCtl::indent;
+        for (auto &rule : rules)
+            out << IndentCtl::endl << rule;
+        out << IndentCtl::unindent;
+    }
+}
+
+class Parser : BFN::BaseLoweredParser {
+    inline PortMetadata port_metadata;
+    inline Vector<Profile> profiles;
+    inline Vector<AnalyzerStage> analyzer;
+#noconstructor
+    Parser() : BaseLoweredParser(INGRESS) {}
+    visit_children {
+        v.visit(&port_metadata, "parser");
+        v.visit(profiles, "parser");
+        v.visit(analyzer, "parser");
+    }
+    validate {
+        BUG_CHECK(profiles.size() > 0, "default profile missing");
+        BUG_CHECK(profiles.size() < ::Flatrock::PARSER_PROFILES,
+            "too many profiles: %d, allowed at most %d",
+            profiles.size(), ::Flatrock::PARSER_PROFILES);
+        BUG_CHECK(analyzer.size() < ::Flatrock::PARSER_ANALYZER_STAGES,
+            "too many analyzer stages: %d, allowed at most %d",
+            analyzer.size(), ::Flatrock::PARSER_ANALYZER_STAGES);
+    }
+    toString { return "parser"; }
+    dbprint {
+        out << toString() << IndentCtl::indent;
+        out << IndentCtl::endl << port_metadata;
+        for (auto &profile : profiles)
+            out << IndentCtl::endl << profile;
+        for (auto &analyzer_stage : analyzer)
+            out << IndentCtl::endl << analyzer_stage;
+        out << IndentCtl::unindent;
+    }
+}
+
+class PseudoParser : BFN::BaseLoweredParser {
+#noconstructor
+    PseudoParser() : BaseLoweredParser(EGRESS) {}
+    toString { return "pseudo parser"; }
+    dbprint { out << toString(); }
+
+}
+
+}  // namespace Flatrock

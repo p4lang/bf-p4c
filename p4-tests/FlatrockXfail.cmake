@@ -196,7 +196,7 @@ p4c_add_xfail_reason("tofino5"
 #  )
 
 p4c_add_xfail_reason("tofino5"
-  "Compiler Bug: Illegal header stack references"
+  "Compiler Bug: Emitted field didn't receive a PHV allocation"
   extensions/p4_tests/p4_16/stf/parser_loop_1.p4
   extensions/p4_tests/p4_16/stf/parser_loop_2.p4
   extensions/p4_tests/p4_16/stf/parser_loop_3.p4

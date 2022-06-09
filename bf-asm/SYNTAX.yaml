@@ -123,19 +123,19 @@
 #     opcode 5, shift_dir = 0: state[MSB:LSB] -= ((w2[7:0] & mask_mode(imm4u)) << imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
 #     opcode 5, shift_dir = 1: state[MSB:LSB] -= ((w2[7:0] & mask_mode(imm4u)) >> imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
 #     opcode 6, shift_dir = 0: state[MSB:LSB] += ((w2[7:0] & mask_mode(imm4u)) << imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
-#                              if ((w2[7:0] & imm8u) << imm2u) != 0, then + 4 - ((w2[7:0] & imm8u) << imm2u)
+#                              if ((w2[7:0] & mask_mode(imm4u)) << imm2u) != 0, then + 4 - ((w2[7:0] & mask_mode(imm4u)) << imm2u)
 #                              if mask_mode == 0, then each bit is a half-nibble mask
 #                              if mask_mode == 1, then the mask is a full bit mask on the lower bits; upper bits are 0xF
 #     opcode 6, shift_dir = 1: state[MSB:LSB] += ((w2[7:0] & mask_mode(imm4u)) >> imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
-#                              if ((w2[7:0] & imm8u) >> imm2u) != 0, then + 4 - ((w2[7:0] & imm8u) >> imm2u)
+#                              if ((w2[7:0] & mask_mode(imm4u)) >> imm2u) != 0, then + 4 - ((w2[7:0] & mask_mode(imm4u)) >> imm2u)
 #                              if mask_mode == 0, then each bit is a half-nibble mask
 #                              if mask_mode == 1, then the mask is a full bit mask on the lower bits; upper bits are 0xF
 #     opcode 7, shift_dir = 0: state[MSB:LSB] -= ((w2[7:0] & mask_mode(imm4u)) << imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
-#                              if ((w2[7:0] & imm8u) << imm2u) != 0, then + 4 - ((w2[7:0] & imm8u) << imm2u)
+#                              if ((w2[7:0] & mask_mode(imm4u)) << imm2u) != 0, then + 4 - ((w2[7:0] & mask_mode(imm4u)) << imm2u)
 #                              if mask_mode == 0, then each bit is a half-nibble mask
 #                              if mask_mode == 1, then the mask is a full bit mask on the lower bits; upper bits are 0xF
 #     opcode 7, shift_dir = 1: state[MSB:LSB] -= ((w2[7:0] & mask_mode(imm4u)) >> imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
-#                              if ((w2[7:0] & imm8u) >> imm2u) != 0, then + 4 - ((w2[7:0] & imm8u) >> imm2u)
+#                              if ((w2[7:0] & mask_mode(imm4u)) >> imm2u) != 0, then + 4 - ((w2[7:0] & mask_mode(imm4u)) >> imm2u)
 #                              if mask_mode == 0, then each bit is a half-nibble mask
 #                              if mask_mode == 1, then the mask is a full bit mask on the lower bits; upper bits are 0xF
 phv [<thread>]:
