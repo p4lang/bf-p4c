@@ -1,8 +1,11 @@
-#include "table_injected_deps.h"
+#include <algorithm>
 #include <sstream>
 #include "ir/ir.h"
 #include "lib/log.h"
 #include "lib/ltbitmatrix.h"
+
+#include "table_injected_deps.h"
+#include "bf-p4c/common/field_defuse.h"
 
 bool InjectControlDependencies::preorder(const IR::MAU::TableSeq *seq) {
     const Context *ctxt = getContext();
@@ -494,11 +497,131 @@ void InjectDarkAntiDependencies::end_apply() {
     }
 }
 
+void InjectDepForAltPhvAlloc::end_apply() {
+    LOG3("Injecting dependencies for alt-phv-alloc overlays" << IndentCtl::indent);
+
+    // Field Filtering Function
+    // Field is an alias
+    std::function<bool(const PHV::Field*)>
+    fieldIsAlias = [&](const PHV::Field* f) {
+        if (!f) return false;
+        return (f->aliasSource != nullptr);
+    };
+
+    // Slice Filtering Function
+    // Slice is read only & deparsed zero
+    std::function<bool(const PHV::AllocSlice*)>
+    sliceIsReadOnlyOrDeparseZero = [&](const PHV::AllocSlice* sl) {
+        if (!sl) return false;
+        return ((sl->getEarliestLiveness().second.isRead()
+                && sl->getLatestLiveness().second.isRead())
+               || sl->field()->is_deparser_zero_candidate());
+    };
+    auto container_to_slices = phv.getContainerToSlicesMap(&fieldIsAlias,
+                                                            &sliceIsReadOnlyOrDeparseZero);
+
+    for (const auto& kv : container_to_slices) {
+        const auto& c = kv.first;
+        const auto& slices = kv.second;
+
+        // Skip container with single or no slice allocation
+        if (slices.size() <= 1) continue;
+
+        for (auto i = slices.begin(); i != (slices.end() - 1); i++) {
+            LOG4("Injecting for container: " << c << " --> slice A: " << *i << IndentCtl::indent);
+            for (auto j = i + 1; j != slices.end(); j++) {
+                const auto& si = *i;
+                const auto& sj = *j;
+                LOG4("Start slice B: " << sj);
+
+                // Filter slice pairs to those which are overlayed,
+                // not mutex and have a disjoint live range
+
+                // Skip fields which are not overlayed
+                auto overlayed = si.container_slice().overlaps(sj.container_slice());
+                if (!overlayed) {
+                    LOG5("Fields are not overlayed");
+                    continue;
+                }
+
+                // Skip fields mutex
+                if (phv.field_mutex()(si.field()->id, sj.field()->id)) {
+                    LOG5("Fields are mutually exlusive");
+                    continue;
+                }
+
+                // Ideally we need a BUG_CHECK here to error out if there are
+                // instances of mutex fields which are overlayed but do not have disjoint
+                // ranges (i.e. they overlap). However there are cases where this is not true
+                // when the tables are mutually exclusive, the fields can be mutex but overlap and
+                // not cause an issue.
+                //
+                // Two non-mutex fields, f_a and f_b, are overlaid in B0.
+                // f_a's live range: [-1w, 4r]
+                // f_b's live range: [3w, 7r]
+                // It's not a BUG, because when the table t_a that writes f_a are mutex
+                // with table t_b that reads f_b, hence they will not cause read / write violations
+                //
+                //             stage 3         stage 4
+                //    |---- t_a writes B0
+                // ---|
+                //    |--------------------- t_b reads B0
+                //
+                // BUG_CHECK(si.isLiveRangeDisjoint(sj),
+                //     "Slices are overlayed but not disjoint or mutually exclusive %1% - %2%",
+                //      si, sj);
+
+                // Determine dependency direction (from / to) based on live range
+                bool siBeforeSj = si.getEarliestLiveness() < sj.getEarliestLiveness();
+                const PHV::AllocSlice& fromSlice = siBeforeSj ? si : sj;
+                const PHV::AllocSlice& toSlice   = siBeforeSj ? sj : si;
+
+                LOG6("From Slice : " << fromSlice << " --> To Slice : " << toSlice);
+                std::map<int, const IR::MAU::Table*> id_from_tables;
+                std::map<int, const IR::MAU::Table*> id_to_tables;
+                for (const auto& from_locpair : defuse.getAllDefsAndUses(fromSlice.field())) {
+                    const auto from_table = from_locpair.first->to<IR::MAU::Table>();
+                    if (!from_table) continue;
+                    id_from_tables[from_table->id] = from_table;
+                    LOG6("Table Read / Write (From Slice): " << from_table->name);
+                }
+                for (const auto& to_locpair : defuse.getAllDefsAndUses(toSlice.field())) {
+                    const auto to_table = to_locpair.first->to<IR::MAU::Table>();
+                    if (!to_table) continue;
+                    id_to_tables[to_table->id] = to_table;
+                    LOG6("Table Read / Write (To Slice): " << to_table->name);
+                }
+                for (const auto& from_table : id_from_tables) {
+                    for (const auto& to_table : id_to_tables) {
+                        auto mutex_tables = mutex(from_table.second, to_table.second);
+                        if (mutex_tables) {
+                            LOG5("Tables " << from_table.second->name << " and "
+                                    << to_table.second->name << " are mutually exclusive");
+                            continue;
+                        }
+                        LOG4("Adding edge between " << from_table.second->name
+                                                   << " and " << to_table.second->name);
+                        dg.add_edge(from_table.second, to_table.second,
+                                    DependencyGraph::ANTI_NEXT_TABLE_CONTROL);
+                    }
+                }
+            }
+            LOG4_UNINDENT;
+        }
+    }
+
+    LOG6("Table Dependency Graph (Alt Inject Deps)");
+    LOG6(dg);
+    LOG3_UNINDENT;
+}
 
 TableFindInjectedDependencies
         ::TableFindInjectedDependencies(const PhvInfo &p, DependencyGraph& d,
-                                        FlowGraph& f, const BFN_Options *options)
-        : phv(p), dg(d), fg(f) {
+                                        FlowGraph& f, const BFN_Options *options,
+                                        const TableSummary *summary)
+        : phv(p), dg(d), fg(f), summary(summary) {
+    auto mutex = new TablesMutuallyExclusive();
+    auto defuse = new FieldDefUse(phv);
     addPasses({
         // new DominatorAnalysis(dg, dominators),
         // new InjectControlDependencies(dg, dominators),
@@ -521,7 +644,18 @@ TableFindInjectedDependencies
                 return Device::currentDevice() == Device::TOFINO;
             },
             { new InjectControlExitDependencies(dg, ctrl_paths) }),
-        new InjectDarkAntiDependencies(phv, dg, ctrl_paths)
+        new InjectDarkAntiDependencies(phv, dg, ctrl_paths),
+        // P4C-4393 : During Alt finalize table inject dependencies between overlayed fields
+        new PassIf(
+            [options, summary] {
+                return (options && options->alt_phv_alloc && summary
+                        && summary->getActualState() == TableSummary::ALT_FINALIZE_TABLE);
+            },
+            {
+                mutex,
+                defuse,
+                new InjectDepForAltPhvAlloc(phv, dg, *defuse, *mutex)
+            })
     });
 }
 

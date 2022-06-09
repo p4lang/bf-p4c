@@ -2516,3 +2516,20 @@ bool PhvInfo::SameContainerAllocConstraint::same_container(const PHV::FieldSlice
     return same_byte_bits.find(a_lo) == same_byte_bits.find(b_hi) ||
            same_byte_bits.find(a_hi) == same_byte_bits.find(b_lo);
 }
+
+PhvInfo::ContainterToSliceMap
+PhvInfo::getContainerToSlicesMap(std::function<bool(const PHV::Field*)> *f,
+                        std::function<bool(const PHV::AllocSlice*)> *s) const {
+    ContainterToSliceMap cont_to_slices;
+    for (const PHV::Field& field : *this) {
+        if (f && (*f)(&field)) continue;
+        const auto alloc_slices = get_alloc(&field);
+        for (const auto& alloc_slice : alloc_slices) {
+            if (s && (*s)(&alloc_slice)) continue;
+            cont_to_slices[alloc_slice.container()].push_back(alloc_slice);
+            LOG5("Container: " << alloc_slice.container()
+                               << " --> slice: " << alloc_slice);
+        }
+    }
+    return cont_to_slices;
+}

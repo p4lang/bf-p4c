@@ -354,10 +354,12 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
                     // retry with table backtrack and resource-based allocation enabled.
                     // DO NOT ignore container conflict conflict.
                     state = ALT_RETRY_ENHANCED_TP;
+                    LOG1("Alt phv alloc: Invoking ALT_RETRY_ENHANCED_TP after ALT_INITIAL");
                     throw RerunTablePlacementTrigger::failure(false);
                 } else {
                     // critical failures, do not retry.
                     state = FAILURE;
+                    LOG1("Alt phv alloc: Failure after ALT_INITIAL");
                 }
             }
             break;
@@ -371,6 +373,7 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
                 throw PHVTrigger::failure(tableAlloc, internalTableAlloc,
                                           mergedGateways, firstRoundFit);
             } else {
+                LOG1("Alt phv alloc: Failure after ALT_RETRY_ENHANCED_TP");
                 state = FAILURE;
             }
             break;
@@ -385,8 +388,10 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
         }
         case ALT_FINALIZE_TABLE: {
             if (!criticalPlacementFailure && maxStage <= deviceStages) {
+                LOG1("Alt phv alloc: Success post ALT_FINALIZE_TABLE");
                 state = SUCCESS;
             } else {
+                LOG1("Alt phv alloc: Failure post ALT_FINALIZE_TABLE");
                 state = FAILURE;
             }
             break;

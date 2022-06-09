@@ -7,6 +7,21 @@
 
 namespace PHV {
 
+// TODO (Yumin): Enhance logs during PHV::AllocateTempsAndFinalizeLiverange to indentify
+// and log these conditions in phv logs where a field mutex is not consistent with a table mutex
+//
+// Two non-mutex fields, f_a and f_b, are overlaid in B0.
+// f_a's live range: [-1w, 4r]
+// f_b's live range: [3w, 7r]
+// It's not a BUG, because when the table t_a that writes f_a are mutex
+// with table t_b that reads f_b, hence they will not cause read / write violations
+//
+//             stage 3         stage 4
+//    |---- t_a writes B0
+// ---|
+//    |--------------------- t_b reads B0
+//
+
 class AllocateTempsAndFinalizeLiverange : public PassManager {
     PhvInfo& phv_i;
     const ClotInfo& clot_i;

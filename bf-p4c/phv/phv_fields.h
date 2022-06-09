@@ -2,6 +2,7 @@
 #define BF_P4C_PHV_PHV_FIELDS_H_
 
 #include <limits>
+#include <functional>
 #include <boost/optional.hpp>
 #include <boost/range/irange.hpp>
 
@@ -1673,6 +1674,12 @@ class PhvInfo {
     const ordered_map<tpair, const PHV::FieldSlice*>& getMetadataDepFields() const {
         return metadataDepFields;
     }
+
+    /// @returns a map of container to slices filtered based on field & slice filtering functions
+    typedef ordered_map<PHV::Container, std::vector<PHV::AllocSlice>> ContainterToSliceMap;
+    ContainterToSliceMap
+    getContainerToSlicesMap(std::function<bool(const PHV::Field*)> *f = nullptr,
+                            std::function<bool(const PHV::AllocSlice*)> *s = nullptr) const;
 };
 
 /**

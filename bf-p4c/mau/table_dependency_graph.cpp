@@ -2377,7 +2377,7 @@ FindDependencyGraph::FindDependencyGraph(const PhvInfo &phv,
         &ignore,
         new GatherReductionOrReqs(red_info),
         new PrintPipe,
-        new TableFindInjectedDependencies(phv, dg, fg, options),
+        new TableFindInjectedDependencies(phv, dg, fg, options, summary),
         new FindDataDependencyGraph(phv, dg, red_info, mutex, ignore),
         new DepStagesThruDomFrontier(ntp, dg, *this, s)
     });

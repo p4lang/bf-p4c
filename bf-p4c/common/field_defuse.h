@@ -137,6 +137,21 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
         return getDefs(locpair(u, e)); }
     const LocPairSet &getDefs(const Visitor *v, const IR::Expression *e) const {
         return getDefs(locpair(v->findOrigCtxt<IR::BFN::Unit>(), e)); }
+
+    /** Get all defs and uses of the PHV::Field with ID @p fid. */
+    const LocPairSet getAllDefsAndUses(int fid) const {
+        LocPairSet defsnuses;
+        if (located_defs.count(fid)) defsnuses |= located_defs.at(fid);
+        if (located_uses.count(fid)) defsnuses |= located_uses.at(fid);
+        return defsnuses;
+    }
+
+    /** Get all defs and uses of the PHV::Field */
+    const LocPairSet getAllDefsAndUses(const PHV::Field *f) const {
+        if (!f) return {};
+        return getAllDefsAndUses(f->id);
+    }
+
     /** Get all defs of the PHV::Field with ID @p fid. */
     const LocPairSet &getAllDefs(int fid) const {
         static const LocPairSet emptyset;

@@ -20,6 +20,7 @@
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/resource_estimate.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
+#include "bf-p4c/mau/table_injected_deps.h"
 #include "bf-p4c/mau/table_layout.h"
 #include "bf-p4c/mau/table_mutex.h"
 #include "bf-p4c/mau/table_summary.h"
@@ -5341,7 +5342,7 @@ TablePlacement::TablePlacement(const BFN_Options &opt, DependencyGraph &d,
         &con_paths,
         new SetupInfo(*this),
         new DecidePlacement(*this),
-        new TransformTables(*this)
+        new TransformTables(*this),
         // new MergeAlwaysRunActions(*this)
     });
 }

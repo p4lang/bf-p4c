@@ -5,9 +5,12 @@
 #include <stack>
 #include "mau_visitor.h"
 #include "table_dependency_graph.h"
+#include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/ir/control_flow_visitor.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/mau/table_flow_graph.h"
+#include "bf-p4c/mau/table_mutex.h"
+#include "bf-p4c/mau/table_summary.h"
 #include "lib/ordered_set.h"
 #include "lib/ordered_map.h"
 
@@ -34,17 +37,6 @@ class PredicationBasedControlEdges : public MauInspector {
  public:
     std::map<cstring, const IR::MAU::Table *> name_to_table;
 
- private:
-    profile_t init_apply(const IR::Node *node) override {
-        auto rv = MauInspector::init_apply(node);
-        edges_to_add.clear();
-        return rv;
-    }
-
-    void postorder(const IR::MAU::Table *) override;
-    void end_apply() override;
-
- public:
     bool edge(const IR::MAU::Table *a, const IR::MAU::Table *b) const {
         if (edges_to_add.count(a) == 0) return false;
         return edges_to_add.at(a).count(b);
@@ -52,6 +44,16 @@ class PredicationBasedControlEdges : public MauInspector {
 
     PredicationBasedControlEdges(DependencyGraph *d, const ControlPathwaysToTable &cp)
         : dg(d), ctrl_paths(cp) {}
+
+ private:
+    profile_t init_apply(const IR::Node *node) override {
+        auto rv = MauInspector::init_apply(node);
+        edges_to_add.clear();
+        return rv;
+    }
+
+    void postorder(const IR::MAU::Table *tbl) override;
+    void end_apply() override;
 };
 
 
@@ -182,6 +184,8 @@ class TableFindInjectedDependencies : public PassManager {
     FlowGraph &fg;
     ControlPathwaysToTable ctrl_paths;
     CalculateNextTableProp cntp;
+    const FieldDefUse *defuse;
+    const TableSummary *summary;
 
     profile_t init_apply(const IR::Node *root) override {
         auto rv = PassManager::init_apply(root);
@@ -191,10 +195,29 @@ class TableFindInjectedDependencies : public PassManager {
 
  public:
     explicit TableFindInjectedDependencies(const PhvInfo &p, DependencyGraph& dg,
-        FlowGraph& fg, const BFN_Options *options = nullptr);
+        FlowGraph& fg, const BFN_Options *options = nullptr,
+        const TableSummary *summary = nullptr);
  private:
     // Duplicates to dominators
     ordered_map<const IR::MAU::TableSeq*, const IR::MAU::Table*> dominators;
+};
+
+// During alt-phv-alloc, the ALT_FINALIZE_TABLE round during table placement
+// needs to have additional dependencies injected between overlayed fields which
+// are disjoint. This ensures the tables are placed in the correct order to
+// not violate read / write dependencies (P4C-4393)
+class InjectDepForAltPhvAlloc : public MauInspector {
+    const PhvInfo &phv;
+    DependencyGraph &dg;
+    const FieldDefUse &defuse;
+    const TablesMutuallyExclusive &mutex;
+
+    void end_apply() override;
+
+ public:
+    InjectDepForAltPhvAlloc(const PhvInfo &p, DependencyGraph &g,
+            const FieldDefUse &du, const TablesMutuallyExclusive &mu)
+        : phv(p), dg(g), defuse(du), mutex(mu) { }
 };
 
 #endif /* BF_P4C_MAU_TABLE_INJECTED_DEPS_H_ */
