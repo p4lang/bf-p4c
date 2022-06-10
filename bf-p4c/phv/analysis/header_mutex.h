@@ -325,7 +325,6 @@ class ExcludeMAUNotMutexHeaders : public MauInspector,
 
     bool preorder(const IR::BFN::Parser* parser) override {
         gress = toString(parser->gress);
-        LOG1("Wow!" << gress);
         return false;
     }
 
