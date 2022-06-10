@@ -179,7 +179,6 @@ class TablePlacement : public PassManager {
     int errorCount() const { return ::errorCount() + summary.placementErrorCount(); }
 };
 
-
 class DecidePlacement : public MauInspector {
     TablePlacement &self;
     typedef TablePlacement::Placed Placed;
@@ -191,9 +190,16 @@ class DecidePlacement : public MauInspector {
     class PlacementScore;
     class ResourceBasedAlloc;
     class FinalPlacement;
+#ifdef MULTITHREAD
+    class TryPlacedPool;
+#endif
     explicit DecidePlacement(TablePlacement &s);
 
  private:
+#ifdef MULTITHREAD
+    // Arbitrary number of worker threads that should be exposed as compiler option, e.g. "-j4"
+    int jobs = 4;
+#endif
     struct save_placement_t;
     std::map<cstring, save_placement_t>  saved_placements;
     int backtrack_count = 0;  // number of times backtracked in this pipe

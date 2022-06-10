@@ -1,5 +1,16 @@
 #include "bf-p4c/mau/table_placement.h"
 
+#ifdef MULTITHREAD
+#include <gc/gc.h>
+#include <pthread.h>
+#include <atomic>
+#include <condition_variable>
+#include <map>
+#include <mutex>
+#include <queue>
+#include <thread>
+#include <vector>
+#endif
 #include <algorithm>
 #include <list>
 #include <sstream>
@@ -317,7 +328,7 @@ struct TablePlacement::Placed {
     StageUseEstimate            use;
     TableResourceAlloc          resources;
     Placed(TablePlacement &self_, const IR::MAU::Table *t, const Placed *done)
-        : self(self_), id(++uid_counter), clone_id(id), prev(done), table(t) {
+        : self(self_), id(getNextUid()), clone_id(id), prev(done), table(t) {
         if (t) { name = t->name; }
         if (done) {
             stage = done->stage;
@@ -465,7 +476,7 @@ struct TablePlacement::Placed {
         return out; }
 
     Placed(const Placed &p)
-        : self(p.self), id(++uid_counter), clone_id(p.clone_id), prev(p.prev), group(p.group),
+        : self(p.self), id(getNextUid()), clone_id(p.clone_id), prev(p.prev), group(p.group),
            name(p.name), entries(p.entries), requested_stage_entries(p.requested_stage_entries),
           attached_entries(p.attached_entries), placed(p.placed),
           match_placed(p.match_placed), complete_shared(p.complete_shared),
@@ -473,8 +484,7 @@ struct TablePlacement::Placed {
           need_more(p.need_more), need_more_match(p.need_more_match),
           gw_result_tag(p.gw_result_tag), table(p.table), gw(p.gw), stage(p.stage),
           logical_id(p.logical_id),
-          stage_split(p.stage_split), use(p.use), resources(p.resources)
-          { traceCreation(); }
+          stage_split(p.stage_split), use(p.use), resources(p.resources) { traceCreation(); }
 
     const Placed *diff_prev(const Placed *new_prev) const {
         auto rv = new Placed(*this);
@@ -498,7 +508,14 @@ struct TablePlacement::Placed {
  private:
     Placed(Placed &&) = delete;
     void traceCreation() { }
-    static int uid_counter;
+    int getNextUid() {
+#ifdef MULTITHREAD
+        static std::atomic<int> uid_counter(0);
+#else
+        static int uid_counter = 0;
+#endif
+        return ++uid_counter;
+    }
 };
 
 // Retrieve the stage resources for a given placement
@@ -530,7 +547,6 @@ static int count(const TablePlacement::Placed *pl) {
     return rv;
 }
 
-int TablePlacement::Placed::uid_counter = 0;
 DecidePlacement::DecidePlacement(TablePlacement &s) : self(s) {}
 
 /** encapsulates the data needed to backtrack and continue on an alternate placement path
@@ -3359,6 +3375,205 @@ DecidePlacement::find_backtrack_point(const Placed *best, int offset, bool local
     return boost::none;
 }
 
+#ifdef MULTITHREAD
+/* This class is used to evaluate multiple possible table placement in parallel using x number
+ * of worker threads. Typically the table placement code evaluate all of the table that can be
+ * placed at any given time and choose which one to select based on some heuristics. The evaluated
+ * table that are not selected can be saved as backtrack point if table placement want to try a
+ * different approach going forward. The evaluation does not update any IR element nor update
+ * any storage class so it is a good candidate for parallel execution. The table evaluation
+ * are distributed amond the worker thread in any given order but each request have an ID that
+ * specify the original request sorting order. This ID is used to re-order the table evaluation
+ * with the exact same order as initially requested. The idea is to have the exact same result
+ * with or without parallel evaluation.
+ *
+ * The multithreading code can be enabled by defining "ENABLE_MULTITHREAD",
+ * e.g. "-DENABLE_MULTITHREAD=ON" when calling the "bootstrap_bfn_compilers.sh" step. This variable
+ * is also used in the P4C Frontend to make sure logging is thread safe.
+ *
+ * Enabling the multithreading code also require the garbage collector to be compiled with thread
+ * support. We experimented it on GC 8.2.0 using the settings:
+ * "--enable-large-config --enable-cplusplus --enable-shared --enable-threads=posix"
+ *
+ * Unfortunately the performance result was not as good as we would have expected. The main issue
+ * is related to the fact that memory allocation/deallocation is consuming most of the CPU cycles
+ * and the garbage collector serialize all of these call. The result is that most of the threads
+ * are waiting on a lock at any given time. This also increase the scheduler overhead that have
+ * to always swap from one thread to another the control of the GC lock. Performance test on large
+ * profile show a performance reduction of 0 to 20% when using multithreading vs single thread.
+ *
+ * Enabling multithreading also scramble the logging because this part was not being thought with
+ * parallel execution. We decided to keep the multithreading code in table allocation if we
+ * found a solution for the garbage collector and logging going forward.
+ */
+class DecidePlacement::TryPlacedPool {
+    const DecidePlacement &self;
+    std::vector<pthread_t> workers;
+    std::atomic<bool> terminated{false};
+    std::condition_variable_any queue_CV;
+    std::mutex queue_mutex;
+
+    // Carry all the information needed to evaluate a table.
+    struct request_arg {
+        const IR::MAU::Table *t;
+        const Placed *done;
+        const StageUseEstimate &current;
+        TablePlacement::GatewayMergeChoices *gmc;
+        const GroupPlace *group;
+
+        request_arg(const IR::MAU::Table *t, const Placed *done, const StageUseEstimate &current,
+                    TablePlacement::GatewayMergeChoices *gmc, const GroupPlace *group) :
+                        t(t), done(done), current(current), gmc(gmc), group(group) { }
+    };
+    std::queue<std::pair<int, struct request_arg*>> work_queue;
+    std::condition_variable_any res_CV;
+    std::mutex res_mutex;
+    std::map<int, std::pair<safe_vector<TablePlacement::Placed *>, const GroupPlace *>> work_result;
+
+    int num_req = 0;
+    int exe_req = 0;
+
+    // Required to bind a pthread to an object
+    static void* workerWaitCast(void* arg) {
+        DecidePlacement::TryPlacedPool* tp = reinterpret_cast<DecidePlacement::TryPlacedPool*>(arg);
+        tp->workerWait();
+        return NULL;
+    }
+    void* workerWait();
+
+ public:
+    explicit TryPlacedPool(DecidePlacement &self, int n) : self(self) {
+        static bool init_mt = true;
+        if (init_mt) {
+            GC_allow_register_threads();
+            init_mt = false;
+        }
+        for (int i = 0; i < n; i++) {
+            pthread_t tid;
+            pthread_attr_t attr;
+            int err;
+            // This value is to make sure the created stack will not be cached
+            size_t stack_size = 1024 * 1024 * 64;  // 64MB
+            err = pthread_attr_init(&attr);
+            BUG_CHECK(!err, "Pthread Attribute initialization fail with error: %d", err);
+            err = pthread_attr_setstacksize(&attr, stack_size);
+            BUG_CHECK(!err, "Pthread Attribute Set Stack Size fail with error: %d", err);
+            err = pthread_create(&tid, &attr, workerWaitCast, this);
+            BUG_CHECK(!err, "Pthread Creation fail with error: %d", err);
+            err = pthread_attr_destroy(&attr);
+            BUG_CHECK(!err, "Pthread Attribute destroy fail with error: %d", err);
+            workers.push_back(tid);
+        }
+    }
+    ~TryPlacedPool() {
+        if (!terminated.load()) {
+            shutdown();
+        }
+    }
+    void cleanup();
+    void shutdown();
+    void addReq(const IR::MAU::Table *t, const Placed *done, const StageUseEstimate &current,
+                const TablePlacement::GatewayMergeChoices &gmc, const GroupPlace *group);
+    bool fillTrial(safe_vector<const Placed *> &trial, bitvec &trial_tables);
+};
+
+// Worker thread that process request until the "terminated" flag is set
+void* DecidePlacement::TryPlacedPool::workerWait() {
+    GC_stack_base sb;
+    GC_get_stack_base(&sb);
+    GC_register_my_thread(&sb);
+
+    while (!terminated.load()) {
+        std::pair<int, struct request_arg*> req;
+        {
+            std::unique_lock<std::mutex> guard(queue_mutex);
+            queue_CV.wait(guard, [&]{ return !work_queue.empty() || terminated.load(); });
+            if (terminated.load()) {
+                break;
+            }
+            req = work_queue.front();
+            work_queue.pop();
+        }
+        safe_vector<TablePlacement::Placed *> res = self.self.try_place_table(req.second->t,
+                                                                              req.second->done,
+                                                                              req.second->current,
+                                                                              *req.second->gmc);
+        {
+            std::lock_guard<std::mutex> guard(res_mutex);
+            work_result[req.first] = std::make_pair(std::move(res), req.second->group);
+            exe_req++;
+            res_CV.notify_one();
+        }
+    }
+    GC_unregister_my_thread();
+    return NULL;
+}
+
+// Add a request to be processed by one of the Worker Thread
+void DecidePlacement::TryPlacedPool::addReq(const IR::MAU::Table *t, const Placed *done,
+                                            const StageUseEstimate &current,
+                                            const TablePlacement::GatewayMergeChoices &gmc,
+                                            const GroupPlace *group) {
+    TablePlacement::GatewayMergeChoices* gmc_copy = new TablePlacement::GatewayMergeChoices(gmc);
+    request_arg *req_arg = new request_arg(t, done, current, gmc_copy, group);
+    std::lock_guard<std::mutex> guard(queue_mutex);
+    work_queue.push(std::make_pair(num_req++, req_arg));
+    queue_CV.notify_one();
+}
+
+// Wait for the worker thread to finalize all the requested evaluation than fill the trial vector
+// for further analysis by heuristic based best choice
+bool DecidePlacement::TryPlacedPool::fillTrial(safe_vector<const Placed *> &trial,
+                                               bitvec &trial_tables) {
+    int expected_req;
+    {
+        std::lock_guard<std::mutex> guard(queue_mutex);
+        expected_req = num_req;
+    }
+    {
+        std::unique_lock<std::mutex> guard(res_mutex);
+        res_CV.wait(guard, [&]{ return exe_req == expected_req; });
+    }
+    for (auto &res : work_result) {
+        for (auto &pl : res.second.first) {
+            if (trial_tables[self.self.uid(pl->table)])
+                continue;
+
+            pl->group = res.second.second;
+            trial.push_back(pl);
+            trial_tables.setbit(self.self.uid(pl->table));
+        }
+    }
+    return true;
+}
+
+// Reset the executed count to zero for the next round of evaluation
+void DecidePlacement::TryPlacedPool::cleanup() {
+    {
+        std::lock_guard<std::mutex> guard(queue_mutex);
+        BUG_CHECK(work_queue.empty(), "Multi-Threaded Work Queue not entirely processed");
+        num_req = 0;
+    }
+    {
+        std::lock_guard<std::mutex> guard(res_mutex);
+        work_result.clear();
+        exe_req = 0;
+    }
+}
+
+// Shutdown all the worker threads
+void DecidePlacement::TryPlacedPool::shutdown() {
+    void *status;
+    terminated = true;
+    // Wake up the waiting threads
+    queue_CV.notify_all();
+    for (pthread_t &tid : workers) {
+        int err = pthread_join(tid, &status);
+        BUG_CHECK(!err, "Pthread Join fail with error: %d", err);
+    }
+}
+#endif
+
 const DecidePlacement::Placed*
 DecidePlacement::default_table_placement(const IR::BFN::Pipe *pipe) {
     LOG1("Table placement starting on " << pipe->name << " with DEFAULT PLACEMENT approach");
@@ -3381,7 +3596,9 @@ DecidePlacement::default_table_placement(const IR::BFN::Pipe *pipe) {
     Backfill backfill(*this);
     ResourceBasedAlloc res_based_alloc(*this, work, partly_placed, placed);
     FinalPlacement final_placement(*this, work, partly_placed, placed);
-
+#ifdef MULTITHREAD
+    TryPlacedPool placed_pool(*this, jobs);
+#endif
     while (true) {
         // Empty work means that all the tables are actually placed. Save it as a complete
         // placement for future comparison.
@@ -3403,6 +3620,9 @@ DecidePlacement::default_table_placement(const IR::BFN::Pipe *pipe) {
             LOG5("    partly_placed: " << partly_placed);
         safe_vector<const Placed *> trial;
         bitvec  trial_tables;
+#ifdef MULTITHREAD
+        placed_pool.cleanup();
+#endif
         for (auto it = work.begin(); it != work.end();) {
             // DANGER -- we iterate over the work queue while possibly removing and
             // appending groups.  So care is required to not invalidate the iterator
@@ -3481,7 +3701,7 @@ DecidePlacement::default_table_placement(const IR::BFN::Pipe *pipe) {
                 }
 
                 // Find potential tables this table can be merged with (if it's a gateway)
-                auto gmc = self.gateway_merge_choices(t);
+                TablePlacement::GatewayMergeChoices gmc = self.gateway_merge_choices(t);
                 // Prune these choices according to happens after
                 std::vector<const IR::MAU::Table*> to_erase;
                 for (auto mc : gmc) {
@@ -3523,7 +3743,10 @@ DecidePlacement::default_table_placement(const IR::BFN::Pipe *pipe) {
 
                 // Now skip attempting to place this table if this flag was set at all
                 if (should_skip) continue;
-
+#ifdef MULTITHREAD
+                placed_pool.addReq(t, placed, current, gmc, grp);
+                done = false;
+#else
                 // Attempt to actually place the table
                 auto pl_vec = self.try_place_table(t, placed, current, gmc);
                 LOG3("    Pl vector: " << pl_vec);
@@ -3533,6 +3756,7 @@ DecidePlacement::default_table_placement(const IR::BFN::Pipe *pipe) {
                     trial.push_back(pl);
                     trial_tables.setbit(self.uid(pl->table));
                 }
+#endif
             }
             if (done) {
                 BUG_CHECK(!placed->is_fully_placed(grp->seq), "Can't find a table to place");
@@ -3542,6 +3766,9 @@ DecidePlacement::default_table_placement(const IR::BFN::Pipe *pipe) {
                 it++;
             }
         }
+#ifdef MULTITHREAD
+        placed_pool.fillTrial(trial, trial_tables);
+#endif
         if (work.empty()) continue;
         if (trial.empty()) {
             if (errorCount() == 0) {
