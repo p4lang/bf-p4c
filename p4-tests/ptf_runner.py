@@ -24,6 +24,7 @@ from p4.v1 import p4runtime_pb2_grpc
 from p4.config.v1 import p4info_pb2
 from p4.tmp import p4config_pb2
 import google.protobuf.text_format
+from typing import List, Tuple
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("PTF runner")
@@ -179,6 +180,29 @@ def append_list_to_environment(varname, items_list):
         os.environ[varname] = ""
     os.environ[varname] += ':'.join(map(str, items_list))
 
+
+def extract_test_params(extra_args: List[str]) -> Tuple[List[str], List[str]]:
+    params, remaining_extra = [], []
+
+    arg_as_param = False
+    for arg in extra_args:
+        if arg_as_param:
+            arg_as_param = False
+            params.extend(arg.split(';'))
+
+        # ptf will gracefully eat even prefix of the command and both = and
+        # space version
+        elif arg.startswith("--test-param"):
+            if '=' in arg:
+                _, raw_params = arg.split('=', 1)
+                params.extend(raw_params.split(';'))
+            else:
+                arg_as_param = True
+        else:
+            remaining_extra.append(arg)
+    print(f"extract_test_params: {params}, {remaining_extra}")
+    return params, remaining_extra
+
 def run_pi_ptf_tests(PTF, grpc_addr, ptfdir, p4info_path, port_map, stftest,
                   platform, verbose_model_logging, extra_args=[]):
     if verbose_model_logging:
@@ -197,13 +221,14 @@ def run_pi_ptf_tests(PTF, grpc_addr, ptfdir, p4info_path, port_map, stftest,
     cmd = ['python3', '-u', PTF] # Unbuffered to make sure that whole error output is captured
     cmd.extend(['--test-dir', ptfdir])
     cmd.extend(ifaces)
-    test_params = 'p4info=\'{}\''.format(p4info_path)
-    test_params += ';grpcaddr=\'{}\''.format(grpc_addr)
+    test_params, extra_args = extract_test_params(extra_args)
+    test_params.append("p4info='{}'".format(p4info_path))
+    test_params.append("grpcaddr='{}'".format(grpc_addr))
     if stftest is not None:
-        test_params += ';stftest=\'{}\''.format(stftest)
+        test_params.append("stftest='{}'".format(stftest))
     if platform is not None:
-        test_params += ';pltfm=\'{}\''.format(platform)
-    cmd.append('--test-params={}'.format(test_params))
+        test_params.append("pltfm='{}'".format(platform))
+    cmd.append('--test-params={}'.format(';'.join(test_params)))
     cmd.extend(extra_args)
     info("Executing PTF command: {}".format(' '.join(cmd)))
 
@@ -250,28 +275,29 @@ def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform
     cmd.extend(['--pypath', os.environ['PYTHONPATH']])
     cmd.extend(ifaces)
     cmd.extend(['--socket-recv-size', '10240'])
-    test_params = 'arch=\'{}\''.format(device)
-    test_params += ';target=\'asic-model\''
-    test_params += ';config_file=\'{}\''.format(config_file)
-    test_params += ';num_pipes=4'
-    test_params += ';port_mode=\'100G\''
-    test_params += ';thrift_server=\'localhost\''
-    test_params += ';use_pi=\'False\''
-    test_params += ';test_seed=\'None\''
-    test_params += ";base_pick_path='{}'".format(testdir)
+    test_params, extra_args = extract_test_params(extra_args)
+    test_params.append("arch='{}'".format(device))
+    test_params.append("target='asic-model'")
+    test_params.append("config_file='{}'".format(config_file))
+    test_params.append("num_pipes=4")
+    test_params.append("port_mode='100G'")
+    test_params.append("thrift_server='localhost'")
+    test_params.append("use_pi='False'")
+    test_params.append("test_seed='None'")
+    test_params.append("base_pick_path='{}'".format(testdir))
     # Pass api_model_json for bf_switch
     if 'switch_16' in testdir:
-        test_params += ';api_model_json=\'{}\''.format(os.path.join(testdir, 'share/switch/aug_model.json'))
+        test_params.append("api_model_json='{}'".format(os.path.join(testdir, 'share/switch/aug_model.json')))
 
     if test_port is not None:
-        test_params += ';test_port={}'.format(test_port)
+        test_params.append("test_port={}".format(test_port))
 
     if port_map_file is not None:
-        test_params += ';port_map_file=\'{}\''.format(port_map_file)
+        test_params.append("port_map_file='{}'".format(port_map_file))
 
     if platform is not None:
-        test_params += ';pltfm=\'{}\''.format(platform)
-    cmd.append('--test-params={}'.format(test_params))
+        test_params.append("pltfm='{}'".format(platform))
+    cmd.append('--test-params={}'.format(';'.join(test_params)))
     cmd.extend(extra_args)
     info("Executing PTF command: {}".format(' '.join(cmd)))
 
@@ -313,7 +339,7 @@ def start_model(model, out=None, context_json=None, config=None, port_map_path=N
     if '/meters/' in context_json or '/hash_driven/' in context_json:
         cmd.extend(['--time-disable'])
     if disable_logging:
-	    cmd.extend(['--logs-disable'])
+        cmd.extend(['--logs-disable'])
 
     info("Starting model: {}".format(' '.join(cmd)))
     return subprocess.Popen(cmd, stdout=out, stderr=out)
@@ -659,7 +685,7 @@ def main():
 
         disable_model_logging = True
         if args.enable_model_logging:
-	        disable_model_logging = False
+            disable_model_logging = False
 
         if args.pdtest is not None:
             conf_path = args.pdtest

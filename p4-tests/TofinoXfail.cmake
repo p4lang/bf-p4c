@@ -1759,10 +1759,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "ERROR:PTF runner:Error when running PTF tests"
    ba102_simple_l3_nexthop_hash_action
-   ba102_simple_l3_rewrite_920
-   ba102_simple_l3_rewrite_930
-   ba102_simple_l3_acl
-   ba102_simple_l3_lag_ecmp
    ba102_simple_l3_mcast_checksum_full_headers
    ba102_simple_l3_mcast_checksum_split_headers
 )

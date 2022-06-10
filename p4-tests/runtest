@@ -73,6 +73,7 @@ arch="v1model"
 target="tofino"
 p4info=true
 stf_bin=false
+ptf_cmd_args=()
 
 force_link=false
 reverse_pipe_scopes=false
@@ -206,6 +207,7 @@ while [ $# -gt 1 ]; do
         echo >&2 "   -target <target> target (default tofino)"
         echo >&2 "   -to <sec>      timeout programs after <sec> seconds (default $TIMEOUT)"
         echo >&2 "   -append-pythonpath <dir> append given path to PYTHONPATH of tests"
+        echo >&2 "   -Xptf=<arg>    pass given arg to PTF test runner"
         echo >&2 "   -v             verbose -- print commands before running them"
         echo >&2 "other arguments passed to p4c-barefoot:"
         $P4C --help
@@ -319,6 +321,9 @@ while [ $# -gt 1 ]; do
     -append-pythonpath)
         PYTHONPATH="${PYTHONPATH:+${PYTHONPATH}:}$2"
         shift
+        ;;
+    -Xptf=*)
+        ptf_cmd_args+=("${1#-Xptf=}")
         ;;
     -v) if $verbose; then
             P4C_ARGS+=("$1")
@@ -620,7 +625,7 @@ if $run_stf && [ -r ${file%.p4}.stf ]; then
         || die
 fi
 
-PTF_EXTRA_ARGS="$keep_PTF_LOGS --default-negative-timeout=0.2 $PTF_TEST_SPECS"
+PTF_EXTRA_ARGS="${ptf_cmd_args[@]} $keep_PTF_LOGS --default-negative-timeout=0.2 $PTF_TEST_SPECS"
 
 clean_process() {
     process_name="$1"
