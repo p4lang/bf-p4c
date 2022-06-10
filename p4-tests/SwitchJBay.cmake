@@ -48,8 +48,6 @@ bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests_y1"
         "all
 	^acl2
         ^hash
-        ^switch_l2.L2FloodTest
-        ^switch_l2.StatsTest
         ^switch_l3.L3SVITest
         ^switch_l2.L2LagTest
         ^switch_l3.L3ECMPTest
