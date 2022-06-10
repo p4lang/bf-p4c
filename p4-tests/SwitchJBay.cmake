@@ -46,6 +46,7 @@ p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_16_Tests_y1" ${SWITCH_
 # ^switch_l2.StatsTest and ^switch_l2.L2FloodTest fails due to P4C-2766
 bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests_y1"
         "all
+	^acl2
         ^hash
         ^switch_l2.L2FloodTest
         ^switch_l2.StatsTest
@@ -58,6 +59,7 @@ p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_16_Tests_y2" ${SWITCH_
 # Cannot run some of the tests as they access ports outside the range of the set ports using veth_setup.sh
 bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests_y2"
         "all
+	^acl2
         ^hash
         ^switch_l3.L3SVITest
         ^switch_l2.L2LagTest
@@ -68,6 +70,7 @@ p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_16_Tests_y0" ${SWITCH_
 # Cannot run some of the tests as they access ports outside the range of the set ports using veth_setup.sh
 bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests_y0"
         "all
+	^acl2
         ^hash
         ^switch_l3.L3SVITest
         ^switch_l2.L2LagTest

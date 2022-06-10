@@ -105,6 +105,7 @@ p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_x3_profile")
     "${testExtraArgs} -arch tna -bfrt -profile x1_tofino" ${SWITCH_P4_16_PTF})
   bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests_x1"
          "all
+	 ^acl2
          ^hash
          ^switch_l3.L3SVITest
          ^switch_l2.L2LagTest")
@@ -114,6 +115,7 @@ p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_x3_profile")
   bfn_set_p4_build_flag("tofino" "smoketest_switch_16_Tests_x2" "-Xp4c=\"--disable-parse-depth-limit\"")
   bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests_x2"
          "all
+	 ^acl2
          ^hash
          ^switch_l3.L3SVITest
          ^switch_l2.L2LagTest")
