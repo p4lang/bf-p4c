@@ -21,7 +21,7 @@ class HashExpr {
 
  public:
     int lineno;
-    bfn_hash_algorithm_t hash_algorithm;
+    bfn_hash_algorithm_t hash_algorithm = {};  // Zero-init to make Klockwork happy
     static HashExpr *create(gress_t, int stage, const value_t &);
     virtual void build_algorithm() = 0;
     virtual bool check_ixbar(InputXbar *ix, int grp) = 0;

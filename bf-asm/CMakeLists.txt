@@ -339,11 +339,12 @@ if (ENABLE_GTESTS)
     gtest/asm-types.cpp
     gtest/deparser.cpp
     gtest/depositfield.cpp
+    gtest/flatrock-parser.cpp
+    gtest/hashexpr.cpp
     gtest/mirror.cpp
     gtest/parser-test.cpp
-    gtest/flatrock-parser.cpp
     gtest/register-matcher.h
-          gtest/register-matcher.cpp)
+    gtest/register-matcher.cpp)
   add_executable (gtestasm ${BFAS_GTEST_SOURCES})
   include_directories(
     ${BFN_P4C_SOURCE_DIR}/p4c/test/frameworks/gtest/googletest/include
