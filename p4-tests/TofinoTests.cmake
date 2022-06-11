@@ -1163,6 +1163,13 @@ p4c_add_ptf_test_with_ptfdir (
 set_tests_properties("tofino/p4c_4158" PROPERTIES TIMEOUT ${extended_timeout_4times})
 
 p4c_add_ptf_test_with_ptfdir (
+ "tofino" "p4c_2549" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2549/p4c_2549.p4"
+ "${testExtraArgs} -target tofino -arch tna -bfrt"
+ "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2549")
+set_tests_properties("tofino/p4c_2549" PROPERTIES TIMEOUT ${extended_timeout_4times})
+bfn_needs_scapy("tofino" "p4c_2549")
+
+p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c_2601" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/p4c_2601.p4"
     "${testExtraArgs} -target tofino -arch tna -bfrt --p4runtime-force-std-externs"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/p4c_2601.ptf")
