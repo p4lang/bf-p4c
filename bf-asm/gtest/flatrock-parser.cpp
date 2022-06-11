@@ -78,12 +78,9 @@ hdr:
   seq:
     0: [ 1, 2, 4 ]  # ethernet, ipv4, tcp
     1: [ ethernet, ipv4, udp ]
-  seq_pos: 2
   len:
     2: { base_len: 20, num_comp_bits: 4, scale: 2 }  # IPv4: 20B + N * 4B; N < 10
     ipv6: { base_len: 40, num_comp_bits: 7, scale: 3 }  # IPv6: 40B + N * 8B
-  len_pos: 4
-  off_pos: 6
 )PARSER_CFG";
 
     AsmParserGuard parser;
@@ -105,8 +102,6 @@ hdr:
     EXPECT_EQ(Hdr::hdr.seq.at(1).at(0), 1);  // ethernet
     EXPECT_EQ(Hdr::hdr.seq.at(1).at(1), 2);  // ipv4
     EXPECT_EQ(Hdr::hdr.seq.at(1).at(2), 5);  // udp
-    // hdr > seq_pos
-    EXPECT_EQ(Hdr::hdr.seq_pos, 2);
     // hdr > len
     // IPv4
     EXPECT_EQ(Hdr::hdr.len.at(2).base_len, 20);
@@ -116,10 +111,6 @@ hdr:
     EXPECT_EQ(Hdr::hdr.len.at(3).base_len, 40);
     EXPECT_EQ(Hdr::hdr.len.at(3).num_comp_bits, 7);
     EXPECT_EQ(Hdr::hdr.len.at(3).scale, 3);
-    // hdr > len_pos
-    EXPECT_EQ(Hdr::hdr.len_pos, 4);
-    // hdr > off_pos
-    EXPECT_EQ(Hdr::hdr.off_pos, 6);
 }
 
 TEST(flatrock_parser, section_parser_ingress) {
@@ -235,12 +226,9 @@ hdr:
   seq:
     0: [ 1, 2, 4 ]  # ethernet, ipv4, tcp
     1: [ ethernet, ipv4, udp ]
-  seq_pos: 2
   len:
     2: { base_len: 20, num_comp_bits: 4, scale: 2 }  # IPv4: 20B + N * 4B; N < 10
     ipv6: { base_len: 40, num_comp_bits: 7, scale: 3 }  # IPv6: 40B + N * 8B
-  len_pos: 4
-  off_pos: 6
 parser egress:
   pov_flags_pos: 10
   pov_state_pos: 20
@@ -249,12 +237,6 @@ parser egress:
     AsmParserGuard asm_parser;
     asm_parser.parseString(parser_str);
 
-    // hdr > seq_pos
-    EXPECT_EQ(Hdr::hdr.seq_pos, 2);
-    // hdr > len_pos
-    EXPECT_EQ(Hdr::hdr.len_pos, 4);
-    // hdr > off_pos
-    EXPECT_EQ(Hdr::hdr.off_pos, 6);
     // parser egress > pov_flags_pos
     EXPECT_EQ(asm_parser->pseudo_parser.pov_flags_pos, 10);
     // parser egress > pov_state_pos

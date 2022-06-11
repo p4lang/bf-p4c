@@ -37,8 +37,6 @@ class Hdr : public Section {
     /// Compressed header sequence encoding in bridge metadata
     /// header sequence id -> header sequence
     std::map<int, std::vector<int>> seq;
-    /// Byte location of compressed header sequence number in bridge metadata
-    int seq_pos = -1;
 
     /// Compressed header length encoding
     struct len_enc {
@@ -49,11 +47,6 @@ class Hdr : public Section {
     /// Compressed header length encoding in bridge metadata
     /// hdr_id -> header length encoding
     std::map<int, len_enc> len;
-    /// Byte location of compressed header length information in bridge metadata
-    int len_pos = -1;
-
-    /// Byte location of the offset of the first header in bridge metadata
-    int off_pos = -1;
 
     static int id(int lineno, const std::string &name) { return hdr._hdr_id(lineno, name); }
 
@@ -62,10 +55,7 @@ class Hdr : public Section {
         hdr.map_init = false;
         hdr.map.clear();
         hdr.seq.clear();
-        hdr.seq_pos = -1;
         hdr.len.clear();
-        hdr.len_pos = -1;
-        hdr.off_pos = -1;
     }
 
     static Hdr hdr;

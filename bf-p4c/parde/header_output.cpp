@@ -80,12 +80,6 @@ std::ostream& operator<<(std::ostream& out, const HeaderAsmOutput& headerOut) {
         << std::endl;
     indent--;
 
-    // FIXME: These shouldn't strictly be necessary. Currently following up with HW team.
-    out << indent << "off_pos: 0" << std::endl;
-    out << indent << "seq_pos: 1" << std::endl;
-    // FIXME: This can't be static as it depends whether the header IDs are compressed or not :(
-    out << indent << "len_pos: 2" << std::endl;
-
     // Simple implementation: take the first numHeaderSeq header sequences
     return out;
 }

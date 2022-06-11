@@ -178,18 +178,12 @@ hdr:
             # constant is 8b sequence number; 255 is reserved for
             # escape value to specify explicit list of all headers
             # e.g. 0: ethernet, ipv4
-    seq_pos: <constant>
-        # Byte location of compressed header sequence number in bridge metadata
     len:
         # Compressed header length encoding in bridge metadata
         <hdr-id-name>: { base_len: <constant>, num_comp_bits: <constant>, scale: <constant> }
             # base_len is 8b, num_comp_bits 3b, scale 2b
             # e.g. ipv4: { base_len: 20, num_comp_bits: 4, scale: 2 }  # (20B + N * 4B; N < 10)
             # e.g. ipv6: { base_len: 40, num_comp_bits: 7, scale: 3 }  # (40B + N * 8B)
-    len_pos: <constant>
-        # Byte location of compressed header length information in bridge metadata
-    off_pos: <constant>
-        # Byte location of the offset of the first header in bridge metadata
 parser [<thread>] [<port_use>, ...]:
     # Defines a parser.  <thread> must be 'ingress' or 'egress'
     # For Tofino 5, parser egress is pseudo parser.

@@ -79,17 +79,8 @@ void Hdr::input(VECTOR(value_t) args, value_t data) {
             input_map(args, kv.value);
         } else if (kv.key == "seq") {
             input_seq(args, kv.value);
-        } else if (kv.key == "seq_pos") {
-            check_range(kv.value, 0, Target::Flatrock::PARSER_BRIDGE_MD_WIDTH - 1);
-            seq_pos = kv.value.i;
         } else if (kv.key == "len") {
             input_len(args, kv.value);
-        } else if (kv.key == "len_pos") {
-            check_range(kv.value, 0, Target::Flatrock::PARSER_BRIDGE_MD_WIDTH - 1);
-            len_pos = kv.value.i;
-        } else if (kv.key == "off_pos") {
-            check_range(kv.value, 0, Target::Flatrock::PARSER_BRIDGE_MD_WIDTH - 1);
-            off_pos = kv.value.i;
         } else {
             error(kv.key.lineno, "unrecognized key");
         }
