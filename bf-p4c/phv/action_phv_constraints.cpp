@@ -658,7 +658,7 @@ void ActionPhvConstraints::dest_first_sort(
         const auto& r_front = r->front();
         if (l_front.field() == r_front.field()) {
             BUG_CHECK(l_front.range().lo != r_front.range().lo,
-                      "same field slice in different slice lists.");
+                      "same field slice in different slice lists: %1% and %2%", l, r);
             return l_front.range().lo < r_front.range().lo;
         }
         return false;

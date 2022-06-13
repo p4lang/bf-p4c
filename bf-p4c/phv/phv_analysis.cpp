@@ -174,7 +174,9 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             options.alt_phv_alloc                                            //    |
                 ? (Visitor*)new PHV::v2::PhvAllocation(kit, alloc, phv)      //    |
                 : (Visitor*)new AllocatePHV(utils, alloc, phv),              // ----
-            new AddSliceInitialization(phv, defuse, deps, meta_live_range),
+            options.alt_phv_alloc
+                ? nullptr
+                : new AddSliceInitialization(phv, defuse, deps, meta_live_range),
             &defuse,
             phvLoggingInfo,
             // Validate results of PHV allocation.

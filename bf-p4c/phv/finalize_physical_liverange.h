@@ -3,6 +3,7 @@
 
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/ir/tofino_write_context.h"
+#include "bf-p4c/mau/table_mutex.h"
 #include "bf-p4c/parde/clot/clot_info.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
@@ -20,6 +21,9 @@ class FinalizePhysicalLiverange : public Inspector, TofinoWriteContext {
  private:
     PhvInfo& phv_i;
     const ClotInfo& clot_i;
+    // used to verify overlapped live ranges for overlaying but non-mutex fields.
+    const TablesMutuallyExclusive& tb_mutex_i;
+    const FieldDefUse& defuse_i;
 
     /// AllocSlice to updated live ranges.
     ordered_map<AllocSlice, LiveRange> live_ranges_i;
@@ -71,8 +75,10 @@ class FinalizePhysicalLiverange : public Inspector, TofinoWriteContext {
     /// that are copied instead of cloned. For example, we notice that the
     /// the *_partition_index:alpm expression is copied but they should be cloned.
     explicit FinalizePhysicalLiverange(PhvInfo& phv,
-                                       const ClotInfo& clot)
-        : phv_i(phv), clot_i(clot) {
+                                       const ClotInfo& clot,
+                                       const TablesMutuallyExclusive& tb_mutex,
+                                       const FieldDefUse& defuse)
+        : phv_i(phv), clot_i(clot), tb_mutex_i(tb_mutex), defuse_i(defuse) {
         visitDagOnce = false;
     }
 

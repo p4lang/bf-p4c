@@ -5,6 +5,7 @@
 #include <boost/optional/optional_io.hpp>
 #include "bf-p4c/common/table_printer.h"
 #include "bf-p4c/ir/bitrange.h"
+#include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/algorithm.h"
 #include "bf-p4c/device.h"
@@ -738,6 +739,50 @@ PHV::Allocation::FieldStatus PHV::ConcreteAllocation::getStatus(const PHV::Field
     if (field_status_i.find(f) != field_status_i.end())
         return field_status_i.at(f);
     return { };
+}
+
+void PHV::ConcreteAllocation::deallocate(const ordered_set<PHV::AllocSlice>& slices) {
+    ordered_set<PHV::Container> touched_conts;
+    for (const auto& sl : slices) {
+        auto c = sl.container();
+        touched_conts.insert(c);
+        BUG_CHECK(container_status_i.count(c) && container_status_i[c].slices.count(sl),
+                  "slice does not seem to be allocated: %1%", sl);
+        container_status_i[c].slices.erase(sl);
+        field_status_i[sl.field()].erase(sl);
+    }
+    // TODO(yumin): This is still not 100% correct because if we just removed deparsed
+    // slices of a container *c*, deparser group gress prop of all other containers in
+    // the same deparser group might need to be cleared if c was the only one that has
+    // deparsed slice.
+    // update gress and status if container is empty after deallocation.
+    const auto& phv_spec = Device::phvSpec();
+    for (const auto& c : touched_conts) {
+        if (!container_status_i[c].slices.empty()) continue;
+        const unsigned cid = phv_spec.containerToId(c);
+        container_status_i[c].alloc_status = ContainerAllocStatus::EMPTY;
+        if (!phv_spec.ingressOnly()[cid] && !phv_spec.egressOnly()[cid]) {
+            container_status_i[c].gress = boost::none;
+            // reset parser group gress.
+            container_status_i[c].parserGroupGress = boost::none;
+            for (const unsigned other_cid : phv_spec.parserGroup(cid)) {
+                if (other_cid == cid) continue;
+                const auto other = phv_spec.idToContainer(other_cid);
+                const auto other_parser_group_gress = this->parserGroupGress(other);
+                container_status_i[c].parserGroupGress = other_parser_group_gress;
+                break;
+            }
+            // reset deparser group gress.
+            container_status_i[c].deparserGroupGress = boost::none;
+            for (const unsigned other_cid : phv_spec.deparserGroup(cid)) {
+                if (other_cid == cid) continue;
+                const auto other = phv_spec.idToContainer(other_cid);
+                const auto other_deparser_group_gress = this->deparserGroupGress(other);
+                container_status_i[c].deparserGroupGress = other_deparser_group_gress;
+                break;
+            }
+        }
+    }
 }
 
 /// @returns the container status of @c and fails if @c is not present.

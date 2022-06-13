@@ -160,6 +160,95 @@ void FinalizePhysicalLiverange::end_apply() {
         PhvInfo::setPhysicalStages(table, table_stages_i.at(TableSummary::getTableIName(table)));
     }
 
+    // BUG_CHECK for overlapped live ranges of overlaying but non-mutex fields.
+    // Slice Filtering Function
+    std::function<bool(const PHV::AllocSlice* sl)> need_skip_slices =
+        [&](const PHV::AllocSlice* sl) -> bool {
+        if (!sl) return true;
+        if (!sl->field()) return true;
+        // skip alias destination fields and deparsed-zero fields
+        if (sl->field()->aliasSource != nullptr || sl->field()->is_deparser_zero_candidate())
+            return true;
+        // skip
+        return (sl->getEarliestLiveness().second.isRead() &&
+                sl->getLatestLiveness().second.isRead());
+    };
+
+    // Temporarily disabled (print warnings instead of BUG_CHECK),
+    // because post-table-placement table-mutex pass seems to be incorrect.
+    // In barefoot_academy/p4c-2756.p4, it complains about
+    // table ipv6_lpm_0 reads ... stage 1, while table ipv6_host_0 writes ... stage 0
+    // but in P4 codes, they are mutex.
+    // if (!ipv6_host.apply().hit) {
+    //     ipv6_lpm.apply();
+    // }
+
+    // BUG_CHECK that all non-mutex nor liverange-disjoint but overlaid fields are accessed
+    // mutex tables only.
+    // Two non-mutex fields, f_a and f_b, are overlaid in B0.
+    // f_a's live range: [-1w, 4r]
+    // f_b's live range: [3w, 7r]
+    // It's not a BUG, because when the table t_a that writes f_a are mutex
+    // with table t_b that reads f_b, hence they will not cause read / write violations
+    //
+    //             stage 3         stage 4
+    //    |---- t_a writes B0
+    // ---|
+    //    |--------------------- t_b reads B0
+    //
+    for (const auto& c_slices : phv_i.getContainerToSlicesMap(nullptr, &need_skip_slices)) {
+        const auto& slices = c_slices.second;
+        if (slices.size() <= 1) continue;
+        for (auto i = slices.begin(); i != (slices.end() - 1); i++) {
+            for (auto j = i + 1; j != slices.end(); j++) {
+                const auto& si = *i;
+                const auto& sj = *j;
+                if (!si.container_slice().overlaps(sj.container_slice())) {
+                    continue;
+                }
+                if (phv_i.field_mutex()(si.field()->id, sj.field()->id)) {
+                    continue;
+                }
+                if (si.isLiveRangeDisjoint(sj)) {
+                    continue;
+                }
+                bool is_i_before_j = si.getEarliestLiveness() < sj.getEarliestLiveness();
+                const PHV::AllocSlice& from = is_i_before_j ? si : sj;
+                const PHV::AllocSlice& to   = is_i_before_j ? sj : si;
+                for (const auto& from_locpair : defuse_i.getAllUses(from.field()->id)) {
+                    const auto from_table = from_locpair.first->to<IR::MAU::Table>();
+                    if (!from_table) continue;
+                    for (const auto& to_locpair : defuse_i.getAllDefs(to.field()->id)) {
+                        const auto to_table = to_locpair.first->to<IR::MAU::Table>();
+                        if (!to_table) continue;
+                        if (TableSummary::getTableIName(from_table) ==
+                            TableSummary::getTableIName(to_table))
+                            continue;  // same table is okay!
+                        if (from_table->stage() <= to_table->stage()) continue;
+                        // BUG_CHECK(tb_mutex_i(from_table, to_table),
+                        //           "Overlaying slices with overlapped live range without "
+                        //           "non-mutex table access is not allowed. table %1% reads %2% "
+                        //           "at stage %3%, while table %4% writes %5% at stage %6%",
+                        //           from_table->name, from, from_table->stage(), to_table->name,
+                        //           to, to_table->stage());
+                        if (!tb_mutex_i(from_table, to_table)) {
+                            ::warning(
+                                "Overlaying slices with overlapped live range are not allowed to "
+                                "be accessed by non-mutex tables. table %1% reads %2% "
+                                "at stage %3%, while table %4% writes %5% at stage %6%."
+                                "This could be a false-positive alarm due to imprecise table mutex "
+                                "analysis in post-table-placement phase. If two tables above are "
+                                "mutually exclusive, it is safe to ignore this warning.",
+                                from_table->externalName(), cstring::to_cstring(from),
+                                from_table->stage(), to_table->externalName(),
+                                cstring::to_cstring(to), to_table->stage());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     if (LOGGING(3)) {
         // log final phv allocation
         LOG3("PHV Allocation Result After Live Range Finalization");

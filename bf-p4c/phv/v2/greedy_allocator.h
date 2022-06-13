@@ -42,6 +42,9 @@ class GreedyAllocator {
         std::list<PHV::SuperCluster*> normal;
         std::list<PHV::SuperCluster*> deparser_zero;
         std::list<PHV::SuperCluster*> strided;
+
+        /// @returns normal clusters in a deque with its original index.
+        std::deque<std::pair<int, const PHV::SuperCluster*>> normal_sc_que() const;
     };
 
     /// sort normal (not deparser-zero, nor strided) clusters based on our heuristics.
@@ -51,14 +54,29 @@ class GreedyAllocator {
     /// allocated.
     RefinedSuperClusterSet prepare_refined_set(const std::list<SuperCluster*>& clusters) const;
 
+    /// AllocResult of the slice_and_allocate_sc function with details including:
+    /// (1) how did it slice the cluster.
+    /// (2) score.
+    /// (2) transaction of each sliced cluster.
+    struct AllocResultWithSlicingDetails {
+        AllocResult rst;
+        TxScore* best_score = nullptr;
+        std::list<PHV::SuperCluster*> best_slicing;
+        int best_slicing_idx = 0;  // valid index starts from 1.
+        /// NOTE: clot_allocated and deparser_zero_candidate sliced sc will not have transaction.
+        ordered_map<const PHV::SuperCluster*, TxContStatus>* sliced_tx = nullptr;
+        explicit AllocResultWithSlicingDetails(const Transaction& tx): rst(tx) {}
+        explicit AllocResultWithSlicingDetails(AllocError* err): rst(err) {}
+    };
+    friend std::ostream& operator<<(std::ostream&, const AllocResultWithSlicingDetails&);
+
     /// Try slicing and allocate @p sc.
-    AllocResult slice_and_allocate_sc(
+    AllocResultWithSlicingDetails slice_and_allocate_sc(
             const ScoreContext& ctx,
             const Allocation& alloc,
             const PHV::SuperCluster* sc,
             const ContainerGroupsBySize& container_groups,
-            const int max_slicings = 128,
-            std::ostream* history = nullptr) const;
+            const int max_slicings = 128) const;
 
  public:
     GreedyAllocator(const PhvKit& kit, PhvInfo& phv, int pipe_id)
@@ -69,6 +87,8 @@ class GreedyAllocator {
     /// when allocation failed.
     bool allocate(std::list<SuperCluster*> clusters);
 };
+
+std::ostream& operator<<(std::ostream&, const GreedyAllocator::AllocResultWithSlicingDetails&);
 
 }  // namespace v2
 }  // namespace PHV

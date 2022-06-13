@@ -91,6 +91,13 @@ class GreedyTxScoreMaker : public TxScoreMaker {
     /// update @a vision_i.
     void record_commit(const Transaction& tx, const SuperCluster* presliced_sc);
 
+    /// When deallocating @p sc from @p curr_alloc, by removing @p slices, some containers
+    /// will become free again. We will update vision_i based on them and return them as
+    /// a new baseline for this super cluster.
+    KindSizeIndexedMap record_deallocation(const SuperCluster* sc,
+                                           const ConcreteAllocation& curr_alloc,
+                                           const ordered_set<AllocSlice>& slices);
+
     cstring status() const;
 
     // algorithms

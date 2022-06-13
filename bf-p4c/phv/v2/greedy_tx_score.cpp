@@ -110,7 +110,7 @@ bool is_ternary(const IR::MAU::Table* tbl) {
 }
 
 void update_table_stage_ixbar_bytes(const PhvKit& kit, const Container& c,
-                                    const ordered_set<AllocSlice> slices,
+                                    const ordered_set<AllocSlice>& slices,
                                     TableIxbarContBytesMap& table_ixbar_cont_bytes,
                                     StageIxbarContBytesMap& stage_sram_ixbar_cont_bytes,
                                     StageIxbarContBytesMap& stage_tcam_ixbar_cont_bytes) {
@@ -241,6 +241,52 @@ void GreedyTxScoreMaker::record_commit(const Transaction& tx, const SuperCluster
             vision_i.cont_required[sc->gress()][kindsize_n.first] -= kindsize_n.second;
         }
     }
+}
+
+KindSizeIndexedMap GreedyTxScoreMaker::record_deallocation(const SuperCluster* sc,
+                                                           const ConcreteAllocation& curr_alloc,
+                                                           const ordered_set<AllocSlice>& slices) {
+    KindSizeIndexedMap baseline;
+    ordered_map<Container, ordered_set<AllocSlice>> cont_slices;
+    for (const auto& sl : slices) {
+        cont_slices[sl.container()].insert(sl);
+    }
+    for (const auto& c_slices : cont_slices) {
+        const auto& c = c_slices.first;
+        const auto& slices = c_slices.second;
+        const auto& status = curr_alloc.getStatus(c);
+        bool no_other_cluster = true;
+        for (const auto& sl : status->slices) {
+            no_other_cluster &= slices.count(sl);
+            if (!no_other_cluster) break;
+        }
+        if (no_other_cluster) {
+            auto kind_size = std::make_pair(c.type().kind(), c.type().size());
+            baseline.m[kind_size]++;
+            vision_i.cont_available[device_gress(c)][kind_size]++;
+            vision_i.cont_required[sc->gress()][kind_size]++;
+        }
+    }
+    vision_i.sc_cont_required[sc] = baseline;
+
+    // reset ixbar bytes info.
+    vision_i.table_ixbar_cont_bytes.clear();
+    vision_i.stage_sram_ixbar_cont_bytes.clear();
+    vision_i.stage_tcam_ixbar_cont_bytes.clear();
+    for (const auto& cont_status : curr_alloc) {
+        const auto& c = cont_status.first;
+        auto slices = cont_status.second.slices;
+        if (cont_slices.count(c)) {
+            for (const auto& erased : cont_slices.at(c)) {
+                slices.erase(erased);
+            }
+        }
+        update_table_stage_ixbar_bytes(kit_i, c, slices,
+                                       vision_i.table_ixbar_cont_bytes,
+                                       vision_i.stage_sram_ixbar_cont_bytes,
+                                       vision_i.stage_tcam_ixbar_cont_bytes);
+    }
+    return baseline;
 }
 
 TxScore* GreedyTxScoreMaker::make(const Transaction& tx) const {
@@ -647,7 +693,7 @@ std::ostream& operator<<(std::ostream& out, const KindSizeIndexedMap& m) {
 std::ostream& operator<<(std::ostream& out, const Vision& v) {
     out << "Vision {\n";
     out << " overall container bits status: " << "\n";
-    auto kinds = {Kind::mocha};
+    auto kinds = std::vector<PHV::Kind>{Kind::mocha};
     if (Device::currentDevice() == Device::TOFINO) {
         kinds = {Kind::tagalong};
     }

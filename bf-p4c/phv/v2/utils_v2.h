@@ -26,6 +26,9 @@ std::ostream& operator<<(std::ostream& out, const FieldSliceAllocStartMap& fs);
 /// type of container groups grouped by sizes.
 using ContainerGroupsBySize = std::map<PHV::Size, std::vector<ContainerGroup>>;
 
+/// Map container to container status.
+using TxContStatus = ordered_map<PHV::Container, Transaction::ContainerStatus>;
+
 /// ErrorCode classifies all kinds of PHV allocation error.
 /// NOTE: when adding a new error, remember to update to_str function.
 enum class ErrorCode {
@@ -66,6 +69,10 @@ enum class ErrorCode {
     /// when copacker has identified invalid allocation that sources can never be
     /// packed correctly.
     INVALID_ALLOC_FOUND_BY_COPACKER,
+    /// some copack hints are required, for example, when you pack destination fields into
+    /// a mocha container, all their sources needs to be packed into a container. If it can't
+    /// be applied, then we will throw this error.
+    CANNOT_APPLY_REQUIRED_COPACK_HINTS,
 };
 
 /// convert @p to string.

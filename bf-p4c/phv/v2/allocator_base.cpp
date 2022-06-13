@@ -1000,9 +1000,11 @@ bool AllocatorBase::DfsListsAllocator::allocate(const ScoreContext& ctx, const T
     LOG3(log_prefix << "Start to allocate target: " << sl);
 
     // find the the best container start index for this slice list.
+    AllocError* no_alignment_err = new AllocError(ErrorCode::NO_VALID_SC_ALLOC_ALIGNMENT);
+    *no_alignment_err << "Cannot find any valid alignment, when allocating " << sl;
+    const auto* last_err = no_alignment_err;
     bool found_solution = false;
-    bool found_alignment = false;
-    bool sl_can_be_allocated = false;
+    bool sl_and_required_hints_can_be_allocated = false;
     const PHV::Size width = ctx.cont_group()->width();
     auto* invalid_action_lists = new ordered_set<const SuperCluster::SliceList*>();
     const auto ordered_valid_starts = base.make_start_positions(ctx, sl, width);
@@ -1012,7 +1014,6 @@ bool AllocatorBase::DfsListsAllocator::allocate(const ScoreContext& ctx, const T
             new_alignment_with_start(ctx, sl, sl_start, width, state.alignment);
         if (!this_start_alignment) continue;
         const auto new_state = state.next_state(*this_start_alignment, {sl});
-        found_alignment = true;
         // we have found a valid alignment, try to allocate sl by it.
         FieldSliceAllocStartMap to_be_allocated =
             make_start_map(ctx.sc(), *this_start_alignment, sl);
@@ -1026,7 +1027,8 @@ bool AllocatorBase::DfsListsAllocator::allocate(const ScoreContext& ctx, const T
             // failed, save important errors and try other alignments.
             LOG3(log_prefix << "slice list starts @ " << sl_start << " failed, because "
                             << some_sl_alloc_rst.err->str());
-            auto err = some_sl_alloc_rst.err;
+            auto* err = some_sl_alloc_rst.err;
+            last_err = err;
             if (err->code == ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED && err->invalid_packing) {
                 for (const auto* allocated_sl : new_state.allocated) {
                     if (has_overlapped_slice(allocated_sl, err->invalid_packing)) {
@@ -1042,7 +1044,6 @@ bool AllocatorBase::DfsListsAllocator::allocate(const ScoreContext& ctx, const T
                 LOG3(log_prefix << r.c);
             }
         }
-        sl_can_be_allocated = true;
         LOG3(log_prefix << "slice list starts @ " << sl_start << " succeeded.");
         // try to search deeper with every one of Some result.
         for (const auto& sl_alloc_rst : some_sl_alloc_rst.results) {
@@ -1072,8 +1073,10 @@ bool AllocatorBase::DfsListsAllocator::allocate(const ScoreContext& ctx, const T
                     optional_hints[act] = hints;
                 }
             }
-            LOG3(log_prefix << "Required CoPack hint(s):" << required_hints);
-            LOG3(log_prefix << "Optional CoPack hint(s) found:" << optional_hints);
+            if (!required_hints.empty())
+                LOG3(log_prefix << "Required CoPack hint(s):" << required_hints);
+            if (!optional_hints.empty())
+                LOG3(log_prefix << "Optional CoPack hint(s) found:" << optional_hints);
 
             /// When a hint is allocated, the alignment is then fixed for all the slice
             /// in the aligned cluster, so we clone a mutable updated_alignment.
@@ -1092,9 +1095,14 @@ bool AllocatorBase::DfsListsAllocator::allocate(const ScoreContext& ctx, const T
             if (!required_hints_applied_tx) {
                 LOG3(log_prefix << "cannot search deeper with: " << sl_alloc_rst.c
                                 << " because required copack failed");
+                auto* copack_err = new AllocError(ErrorCode::CANNOT_APPLY_REQUIRED_COPACK_HINTS);
+                *copack_err << "If we pack " << to_be_allocated << " into " << sl_alloc_rst.c
+                            << ", required hints: " << required_hints << " cannot be applied.";
+                last_err = copack_err;
                 continue;
             }
             this_choice.commit(*required_hints_applied_tx);
+            sl_and_required_hints_can_be_allocated = true;
 
             // apply optional hints for higher chance of successful allocation.
             // TODO(yumin): we might consider to provide an option to try without copack hints.
@@ -1117,19 +1125,30 @@ bool AllocatorBase::DfsListsAllocator::allocate(const ScoreContext& ctx, const T
             found_solution |= allocate(ctx, this_choice, hint_updated_state, depth + 1);
         }
     }
-    if (!found_alignment) {
-        LOG3(log_prefix << "Failed to find an alignment, will *backtrack*.");
-        return false;
-    }
-    if (!sl_can_be_allocated) {
-        if (!invalid_action_lists->empty()) {
-            invalid_action_lists->insert(sl);
-            reslice_required_i = invalid_action_lists;
-        }
+    if (!sl_and_required_hints_can_be_allocated) {
         LOG3(log_prefix << "Cannot allocate " << sl);
         if (depth > 0) {
             LOG3(log_prefix << "Current Tx status:");
             LOG3(AllocResult::pretty_print_tx(tx, log_prefix));
+        }
+        // prepare error messages.
+        auto* err = new AllocError(*last_err);
+        if (!invalid_action_lists->empty()) {
+            invalid_action_lists->insert(sl);
+            err = new AllocError(ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED);
+            err->reslice_required = invalid_action_lists;
+        }
+        if (depth > 0) {
+            *err << "; Allocated slices:";
+            for (const auto& kv : tx.get_actual_diff()) {
+                for (const auto& alloc_slice : kv.second.slices) {
+                    *err << " " << alloc_slice;
+                }
+            }
+        }
+        if (depth > deepest_depth) {
+            deepest_err = err;
+            deepest_depth = depth;
         }
     }
     return found_solution;
@@ -1234,13 +1253,7 @@ AllocResult AllocatorBase::try_super_cluster_to_container_group(
         sc_tx.commit(*best_tx);
         return AllocResult(sc_tx);
     } else {
-        if (!dfs_alloc.reslice_required()->empty()) {
-            auto err = new AllocError(ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED);
-            err->reslice_required = dfs_alloc.reslice_required();
-            return AllocResult(err);
-        }
-        auto* err = new AllocError(ErrorCode::ALIGNED_CLUSTER_CANNOT_BE_ALLOCATED);
-        return AllocResult(err);
+        return AllocResult(dfs_alloc.get_deepest_err());
     }
 }
 

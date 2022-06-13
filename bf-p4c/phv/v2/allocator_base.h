@@ -257,8 +257,8 @@ class AllocatorBase {
         DfsAllocCb yield;
         int n_steps = 0;
         bool caller_pruned = false;  // pruned by caller.
-        ordered_set<const SuperCluster::SliceList*>* reslice_required_i =
-            new ordered_set<const SuperCluster::SliceList*>();
+        const AllocError* deepest_err = nullptr;  // will not be nullptr unless succeeded.
+        int deepest_depth = -1;
         bool pruned() const { return caller_pruned || n_steps > n_step_limit; }
         std::string depth_prefix(const int depth) const;
         boost::optional<ScAllocAlignment> new_alignment_with_start(
@@ -270,15 +270,13 @@ class AllocatorBase {
      public:
         DfsListsAllocator(const AllocatorBase& base, int n_step_limit)
             : base(base), n_step_limit(n_step_limit) {}
-        ordered_set<const SuperCluster::SliceList*>* reslice_required() const {
-            return reslice_required_i;
-        }
         bool search_allocate(const ScoreContext& ctx,
                              const Transaction& tx,
                              const ScAllocAlignment& alignment,
                              const std::vector<const SuperCluster::SliceList*>& allocated,
                              const std::vector<const SuperCluster::SliceList*>& to_allocate,
                              const DfsAllocCb& yield);
+        const AllocError* get_deepest_err() const { return deepest_err; }
     };
 
     AllocResult alloc_stride(const ScoreContext& ctx,

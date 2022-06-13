@@ -211,6 +211,7 @@ const TrivialAllocator::PartialAllocResult* TrivialAllocator::slice_and_allocate
                 // found a slice list that cannot be allocated because of packing issue.
                 if (rst.err->code == ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED &&
                     rst.err->reslice_required) {
+                    last_err->reslice_required = rst.err->reslice_required;
                     for (const auto* sl : *rst.err->reslice_required) {
                         LOG3("Found invalid packing slice list: " << sl);
                         *last_err << "Found unsatisfiable action constraints in this list: " << sl

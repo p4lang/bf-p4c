@@ -36,6 +36,8 @@ cstring to_str(const ErrorCode& e) {
             return "NO_SLICING_FOUND";
         case ec::INVALID_ALLOC_FOUND_BY_COPACKER:
             return "INVALID_ALLOC_FOUND_BY_COPACKER";
+        case ec::CANNOT_APPLY_REQUIRED_COPACK_HINTS:
+            return "CANNOT_APPLY_REQUIRED_COPACK_HINTS";
         default:
             BUG("unimplemented errorcode: %1%", int(e));
     }
@@ -64,11 +66,8 @@ std::string AllocError::str() const {
 
 std::string AllocResult::err_str() const {
     BUG_CHECK(err, "cannot call err_str when err does not exists");
-    std::stringstream ss;
-    ss << err->str();
-    return ss.str();
+    return err->str();
 }
-
 
 std::string AllocResult::pretty_print_tx(const PHV::Transaction& tx, cstring prefix) {
     std::stringstream ss;

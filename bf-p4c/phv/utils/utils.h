@@ -497,6 +497,11 @@ class ConcreteAllocation : public Allocation {
 
     /// @returns true if this allocation owns @p c.
     bool contains(PHV::Container c) const override;
+
+    /// This is the more correct implementation of removing allocated slices that will also
+    /// reset container gress, including container, parser, deparser gress.
+    /// It is only allowed in concrete allocation.
+    void deallocate(const ordered_set<PHV::AllocSlice>& slices);
 };
 
 
