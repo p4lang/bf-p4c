@@ -16,7 +16,6 @@
 namespace BFN {
 
 /**
- * \class CollectAlpmInfo
  * \ingroup alpm
  */
 class CollectAlpmInfo : public Inspector {
@@ -34,7 +33,6 @@ class CollectAlpmInfo : public Inspector {
 };
 
 /**
- * \class HasTableApply
  * \ingroup alpm
  */
 class HasTableApply : public Inspector {
@@ -66,7 +64,6 @@ class HasTableApply : public Inspector {
 };
 
 /**
- * \class SplitAlpm
  * \ingroup alpm
  * \brief Pass that splits ALPM table into pre-classifier TCAM and TCAM.
  * 
@@ -175,7 +172,6 @@ class SplitAlpm : public Transform {
 };
 
 /**
- * \class AlpmImplementation
  * \ingroup alpm
  * \brief Top level PassManager that governs the ALPM implementation.
  */

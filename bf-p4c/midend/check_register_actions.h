@@ -7,7 +7,6 @@
 namespace BFN {
 
 /**
- * \class CheckRegisterActions
  * \ingroup midend
  * \brief PassManager that checks if the RegisterActions work on proper Registers.
  *

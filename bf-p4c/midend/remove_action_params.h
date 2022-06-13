@@ -13,7 +13,6 @@
 namespace BFN {
 
 /**
- * \class DoRemoveActionParametersTofino
  * \ingroup RemoveActionParameters
  */
 class DoRemoveActionParametersTofino : public P4::DoRemoveActionParameters {
@@ -148,7 +147,6 @@ class DoRemoveActionParametersTofino : public P4::DoRemoveActionParameters {
 };
 
 /**
- * \class RemoveActionParameters
  * \ingroup RemoveActionParameters
  * \brief Top level PassManager that governs moving of action parameters out of the actions
  *        (specialized for BFN).

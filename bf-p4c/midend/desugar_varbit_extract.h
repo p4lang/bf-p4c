@@ -1,7 +1,8 @@
 /**
  * \defgroup DesugarVarbitExtract DesugarVarbitExtract
  * \ingroup midend
- * \brief Set of passes that rewrite usage of varbit.
+ * \ingroup parde
+ * \brief %Set of passes that rewrite usage of varbit.
  *
  * Header field may have variable size (varbit), which can be encoded
  * by another header field, e.g. IPv4 options length is encoded by ihl
@@ -87,7 +88,6 @@
 #include "frontends/common/resolveReferences/referenceMap.h"
 
 /**
- * \struct CheckMauUse
  * \ingroup DesugarVarbitExtract
  */
 struct CheckMauUse : public Inspector {
@@ -110,7 +110,6 @@ struct CheckMauUse : public Inspector {
 };
 
 /**
- * \class CollectVarbitExtract
  * \ingroup DesugarVarbitExtract
  */
 class CollectVarbitExtract : public Inspector {
@@ -190,7 +189,6 @@ class CollectVarbitExtract : public Inspector {
 };
 
 /**
- * \class RewriteVarbitUses
  * \ingroup DesugarVarbitExtract
  */
 class RewriteVarbitUses : public Modifier {
@@ -249,7 +247,6 @@ class RewriteVarbitUses : public Modifier {
 };
 
 /**
- * \class RemoveZeroVarbitExtract
  * \ingroup DesugarVarbitExtract
  */
 struct RemoveZeroVarbitExtract : public Modifier {
@@ -281,7 +278,6 @@ struct RemoveZeroVarbitExtract : public Modifier {
 };
 
 /**
- * \class RewriteVarbitTypes
  * \ingroup DesugarVarbitExtract
  */
 class RewriteVarbitTypes : public Modifier {
@@ -300,7 +296,6 @@ class RewriteVarbitTypes : public Modifier {
 };
 
 /**
- * \class RewriteParserVerify
  * \ingroup DesugarVarbitExtract
  */
 class RewriteParserVerify : public Transform {
@@ -313,7 +308,6 @@ class RewriteParserVerify : public Transform {
 };
 
 /**
- * \class DesugarVarbitExtract
  * \ingroup DesugarVarbitExtract
  * \brief Top level PassManager that governs the rewrite of varbit usage.
  */

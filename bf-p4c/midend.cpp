@@ -153,7 +153,6 @@
 namespace BFN {
 
 /**
- * \class OptionalToTernaryMatchTypeConverter
  * \ingroup midend
  * \brief Pass that converts optional match type to ternary.
  *
@@ -186,7 +185,6 @@ class OptionalToTernaryMatchTypeConverter: public Transform {
 
 
 /**
- * \class EnumOn32Bits
  * \ingroup midend
  * \brief Class that implements a policy suitable for the ConvertEnums pass.
  *
@@ -211,7 +209,6 @@ class EnumOn32Bits : public P4::ChooseEnumRepresentation {
 
  public:
     /**
-     * \class FindStatefulEnumOutputs
      * \brief Pass that creates a policy for ConvertEnums.
      */
     class FindStatefulEnumOutputs : public Inspector {
@@ -301,7 +298,6 @@ bool skipFlexibleHeader(const Visitor::Context *, const IR::Type_StructLike* e) 
 }
 
 /**
- * \class CompileTimeOperations
  * \ingroup midend
  * \brief Pass that checks for operations that are defined at compile time (Div, Mod).
  *
@@ -326,7 +322,6 @@ class CompileTimeOperations : public P4::CompileTimeOperations {
 };
 
 /**
- * \class MidEndLast
  * \ingroup midend
  * \brief Final midend pass.
  */

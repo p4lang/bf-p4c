@@ -17,7 +17,6 @@ class ReferenceMap;
 namespace BFN {
 
 /**
- * \class RewriteHeader
  * \ingroup RewriteFlexibleStruct
  */
 struct RewriteHeader : public Transform {
@@ -40,7 +39,6 @@ struct RewriteHeader : public Transform {
 };
 
 /**
- * \class RewriteFlexibleStruct
  * \ingroup RewriteFlexibleStruct
  * \brief Top level PassManager that governs moving of flexible annotation
  *        from structure to its fields.

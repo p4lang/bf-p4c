@@ -12,6 +12,9 @@ class BaseParser : virtual public Configurable {
     int lineno = -1;
 };
 
+/**
+ * \ingroup parde
+ */
 class BaseAsmParser : public Section {
  public:
     explicit BaseAsmParser(const char *name_) : Section(name_) {}

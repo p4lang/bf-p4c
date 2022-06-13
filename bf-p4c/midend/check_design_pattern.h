@@ -37,7 +37,6 @@
 
 namespace BFN {
 /**
- * \class CheckExternValidity
  * \ingroup CheckDesignPattern
  * \brief Checks if the emit function call is valid with the TNA constraints.
  * 
@@ -67,7 +66,6 @@ class CheckExternValidity : public Inspector {
  */
 typedef std::map<const IR::P4Action*, std::vector<const P4::ExternMethod*>> ActionExterns;
 /**
- * \class FindDirectExterns
  * \ingroup CheckDesignPattern
  */
 class FindDirectExterns : public Inspector {
@@ -84,7 +82,6 @@ class FindDirectExterns : public Inspector {
 };
 
 /**
- * \class CheckDirectExternsOnTables
  * \ingroup CheckDesignPattern
  */
 class CheckDirectExternsOnTables: public Modifier {
@@ -99,7 +96,6 @@ class CheckDirectExternsOnTables: public Modifier {
 };
 
 /**
- * \class CheckDirectResourceInvocation
  * \ingroup CheckDesignPattern
  * 
  * Direct resources declared in the program and used in an action need to be
@@ -120,7 +116,6 @@ class CheckDirectResourceInvocation: public PassManager {
 };
 
 /**
- * \class CheckTableConstEntries
  * \ingroup CheckTableConstEntries
  * It does not make any sense to have an empty const entry list when defining a table. If const
  * entries is defined, table's entries size is based on the size of const entries and cannot be
@@ -137,7 +132,6 @@ class CheckTableConstEntries : public Inspector {
 
 
 /**
- * \class CheckDesignPattern
  * \ingroup CheckDesignPattern
  * \brief Top level PassManager that governs checking for design patterns.
  */

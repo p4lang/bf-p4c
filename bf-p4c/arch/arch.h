@@ -96,7 +96,6 @@ class TranslationLast : public PassManager {
 };
 
 /**
- * \class ArchTranslation
  * \ingroup ArchTranslation
  * \brief PassManager that governs the normalization of variations in the architectures.
  * @sa BFN::SimpleSwitchTranslation

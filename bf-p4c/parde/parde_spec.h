@@ -12,39 +12,93 @@
  * \defgroup parde Parser & deparser
  * \brief Content related to parser and deparser
  *
+ * # General information
+ *
+ * There are some basic visitors defined for parde:
+ * - PardeInspector
+ * - PardeModifier
+ * - PardeTransform
+ * - ParserInspector
+ * - ParserModifier
+ * - ParserTransform
+ * - DeparserInspector
+ * - DeparserModifier
+ * - DeparserTransform
+ *
+ * The assembler representations for parde:
+ * - Deparser
+ * - BaseAsmParser
+ * 
+ * The parde can also be affected at the beginning of \ref midend by architecture translation,
+ * see \ref ArchTranslation for more information.
+ *
  * # Parser
  *
  * \todo Basic documentation for parser should be included here.
- *
+ * 
  * # Deparser
  *
  * The deparser reassembles packets prior to storage in TM (Tofino 1-3) and prior to transmission
  * via the MAC (all chips).
  *
+ * ## Target constants
+ * 
+ * Tofino1:
+ * - Target::Tofino::DEPARSER_CHECKSUM_UNITS = 6
+ * - Target::Tofino::DEPARSER_CONSTANTS = 0
+ * - Target::Tofino::DEPARSER_MAX_POV_BYTES = 32
+ * - Target::Tofino::DEPARSER_MAX_POV_PER_USE = 1
+ * - Target::Tofino::DEPARSER_MAX_FD_ENTRIES = 192
+ *
+ * Tofino2:
+ * - Target::JBay::DEPARSER_CHECKSUM_UNITS = 8
+ * - Target::JBay::DEPARSER_CONSTANTS = 8
+ * - Target::JBay::DEPARSER_MAX_POV_BYTES = 16
+ * - Target::JBay::DEPARSER_MAX_POV_PER_USE = 1
+ * - Target::JBay::DEPARSER_CHUNKS_PER_GROUP = 8
+ * - Target::JBay::DEPARSER_CHUNK_SIZE = 8
+ * - Target::JBay::DEPARSER_CHUNK_GROUPS = 16
+ * - Target::JBay::DEPARSER_CLOTS_PER_GROUP = 4
+ * - Target::JBay::DEPARSER_TOTAL_CHUNKS = DEPARSER_CHUNK_GROUPS * DEPARSER_CHUNKS_PER_GROUP = 128
+ * - Target::JBay::DEPARSER_MAX_FD_ENTRIES = DEPARSER_TOTAL_CHUNKS = 128
+ *
+ * Tofino3:
+ * - Target::Cloudbreak::DEPARSER_CHECKSUM_UNITS = 8
+ * - Target::Cloudbreak::DEPARSER_CONSTANTS = 8
+ * - Target::Cloudbreak::DEPARSER_MAX_POV_BYTES = 16
+ * - Target::Cloudbreak::DEPARSER_MAX_POV_PER_USE =  1
+ * - Target::Cloudbreak::DEPARSER_CHUNKS_PER_GROUP = 8
+ * - Target::Cloudbreak::DEPARSER_CHUNK_SIZE = 8
+ * - Target::Cloudbreak::DEPARSER_CHUNK_GROUPS = 16
+ * - Target::Cloudbreak::DEPARSER_CLOTS_PER_GROUP = 4
+ * - Target::Cloudbreak::DEPARSER_TOTAL_CHUNKS = DEPARSER_CHUNK_GROUPS * DEPARSER_CHUNKS_PER_GROUP
+ *                                             = 128
+ * - Target::Cloudbreak::DEPARSER_MAX_FD_ENTRIES = DEPARSER_TOTAL_CHUNKS = 128
  *
  * ## Midend passes
  *
  * Midend passes related to deparsing:
  *  - BFN::CheckHeaderAlignment (in BFN::PadFlexibleField) - Ensures that headers are byte aligned.
- *  - DesugarVarbitExtract - Generates emit statements for variable-length headers.
+ *  - \ref DesugarVarbitExtract - Generates emit statements for variable-length headers.
  *  - BFN::ParserEnforceDepthReq - Adds emit statements for padding headers to ensure the minimum
  *                                 parse depth.
- *  - P4::SimplifyNestedIf - Simplifies nested if statements into simple if statements that the
+ *  - \ref SimplifyNestedIf - Simplifies nested if statements into simple if statements that the
  *                           deparser can process.
  *
- * ## Backend
+ * ## Backend passes
  *
  * Backend passes related to deparsing:
  *  - AddDeparserMetadata - Adds deparser metadata parameters.
- *  - AddJBayMetadataPOV - Adds POV bits for metadata used by the deparser (Tofino 2/3). Tofino 1
- *                         uses the valid bit associated with each %PHV; Tofino 2+ use POV bits
- *                         instead.
+ *  - AddMetadataPOV - Adds POV bits for metadata used by the deparser (Tofino 2/3). Tofino 1
+ *                     uses the valid bit associated with each %PHV; Tofino 2+ use POV bits
+ *                     instead.
  *  - BFN::AsmOutput - Outputs the deparser assembler. Uses DeparserAsmOutput and the passes it
  *                     invokes.
  *  - CollectClotInfo - Collects information for generating CLOTs.
- *  - DeparserCopyOpt - Optimize copy assigned fields prior to deparsing.
- *  - BFN::ExtractChecksum - Replaces EmitField with EmitChecksum emits in deparser. (Invoked from
- *                           BFN::BackendConverter.)
+ *  - \ref DeparserCopyOpt - Optimize copy assigned fields prior to deparsing.
+ *  - \ref ExtractChecksum - Replaces EmitField with EmitChecksum emits in deparser. Also 
+ *                           creates tables and optimizes conditions and fields that the
+ *                           checksum uses. Invoked from BFN::BackendConverter.
  *  - BFN::ExtractDeparser - Convert IR::BFN::TnaDeparser objects to IR::BFN::Deparser objects. The
  *                           pass generates emit and digest objects as part of this process.
  *  - GreedyClotAllocator - CLOT allocation. Enforces deparser CLOT rules during allocation.
@@ -52,8 +106,9 @@
  *                                checksum to be calculated in the parser (Tofino 2/3).
  *  - LowerParser - Replaces high-level parser and deparser %IR that operate on fields with
  *                  low-level parser and deparser %IR that operate on %PHV containers.
- *  - ResetInvalidatedChecksumHeaders - Reset fields that are used in deparser checksum operations
- *                                      and that are invalidated in the MAU (Tofino 1).
+ *  - \ref ResetInvalidatedChecksumHeaders - Reset fields that are used in deparser checksum
+ *                                           operations and that are invalidated in the MAU
+ *                                           (Tofino 1).
  */
 
 class PardeSpec {

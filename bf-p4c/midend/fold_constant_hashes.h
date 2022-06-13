@@ -9,7 +9,6 @@
 namespace BFN {
 
 /**
- * \class FoldConstantHashes
  * \ingroup midend
  * \brief PassManager that substitutes the calls of the get methods of the Hash externs
  *        whose inputs are constants with the resulting hash value.

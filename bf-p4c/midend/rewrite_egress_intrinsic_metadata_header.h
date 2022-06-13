@@ -11,7 +11,6 @@ class ReferenceMap;
 namespace BFN {
 
 /**
- * \class RewriteEgressIntrinsicMetadataHeader
  * \ingroup midend
  * \brief Pass that updates egress intrinsic metadata.
  */

@@ -509,13 +509,17 @@ struct ParserChecksumAllocator : public Visitor {
     }
 };
 
-/// For CLOTs that contribute to checksum update at the deparser,
-/// we need to compute the CLOT's portion of checksum in the parser
-/// when we issue the CLOTs. So after CLOT allocation, we know which
-/// fields are allocated to CLOTs, and of those fields, which contribute
-/// to the checksum update. We then insert the checksum calculation
-/// primitives for these fields into the parser state where they are
-/// extracted.
+/**
+ * \ingroup parde
+ *
+ * For CLOTs that contribute to checksum update at the deparser,
+ * we need to compute the CLOT's portion of checksum in the parser
+ * when we issue the CLOTs. So after CLOT allocation, we know which
+ * fields are allocated to CLOTs, and of those fields, which contribute
+ * to the checksum update. We then insert the checksum calculation
+ * primitives for these fields into the parser state where they are
+ * extracted.
+ */
 struct InsertParserClotChecksums : public PassManager {
     struct CollectClotChecksumFields : DeparserInspector {
         CollectClotChecksumFields(const PhvInfo& phv, const ClotInfo& clotInfo) :

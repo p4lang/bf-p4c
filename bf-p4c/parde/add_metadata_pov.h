@@ -5,7 +5,10 @@
 #include "bf-p4c/phv/phv_fields.h"
 
 
-/**@brief Create POV bits for output metadata (JBAY / Cloudbreak / Flatrock)
+
+/**
+ * \ingroup parde
+ * @brief Create POV bits for output metadata (JBAY / Cloudbreak / Flatrock)
  *
  * JBay / CloudBreak requires POV bits to control output metadata as implicit
  * PHV valid bits are gone.  We create a single POV bit for each metadata in use

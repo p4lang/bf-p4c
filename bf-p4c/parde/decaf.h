@@ -8,77 +8,66 @@
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
 
-/*********************************************************************************
+/**
+ * \defgroup DeparserCopyOpt DeparserCopyOpt
+ * \ingroup parde
+ * \brief decaf : a deparser optimization of copy assigned fields
  *
- *  decaf : a deparser optimization of copy assigned fields
+ * author: zhao ma
  *
- *                     author: zhao ma
+ * The observation is that there is a high degree of data movement in many common
+ * data-plane program patterns (e.g. tunneling, label switching), i.e. a large number
+ * of fields participate in copy assignment only. These are the fields whose final
+ * value is that of another such copied only field.
  *
- *  The observation is that there is a high degree of data movement in many common
- *  data-plane program patterns (e.g. tunneling, label switching), i.e. a large number
- *  of fields participate in copy assignment only. These are the fields whose final
- *  value is that of another such copied only field.
+ * Based on this observation, we devise an optimization to resolve data copies directly
+ * in the deparser rather than using the MAU to move the data, costing normal %PHV
+ * containers.
  *
- *  Based on this observation, we devise an optimization to resolve data copies directly
- *  in the deparser rather than using the MAU to move the data, costing normal PHV
- *  containers.
+ * Consider the program below:
  *
+ *      action a1() { modify_field(data.a, data.b); }
+ *      action a2() { modify_field(data.a, 0x0800); }
+ *      action a3() { modify_field(data.a, data.c); }
+ *      table t1 {
+ *          reads { data.m : exact; }
+ *          actions { a1; a2; a3; nop; }
+ *      }
+ *      action a4() { modify_field(data.b, data.a); }
+ *      action a5() { modify_field(data.b, 0x0866); }
+ *      table t2 {
+ *          reads { data.k : exact; }
+ *          actions { a4; a5; nop; }
+ *      }
+ *      control ingress {
+ *          apply(t1);
+ *          apply(t2);
+ *      }
  *
- *  Consider the program below:
+ * The possible values for each field (and reaching action sequence) are:
  *
- *     action a1() { modify_field(data.a, data.b); }
+ *      data.a : v0: 0x0800:   t1.a2 -> *
+ *               v1: data.b:   t1.a1 -> *
+ *               v2: data.c:   t1.a3 -> *
+ *               v3: data.a:  t1.nop -> *
+ *      data.b : v0: 0x0800:  t1.a2 -> t2.a4
+ *               v1: 0x0866:      * -> t2.a5
+ *               v2: data.a: t1.nop -> t2.a4
+ *               v3: data.c:  t1.a3 -> t2.a4
+ *               v4: data.b:  t1.a1 -> t2.nop
+ *      data.c : data.c (read-only)
  *
- *     action a2() { modify_field(data.a, 0x0800); }
+ * Let's assign a bit to each action, and another bit to each version for a
+ * field's final value. The function between the action bits and version bits
+ * can be represented as a truth table.
  *
- *     action a3() { modify_field(data.a, data.c); }
- *
- *     table t1 {
- *           reads { data.m : exact; }
- *         actions { a1; a2; a3; nop; }
- *     }
- *
- *     action a4() { modify_field(data.b, data.a); }
- *
- *     action a5() { modify_field(data.b, 0x0866); }
- *
- *     table t2 {
- *           reads { data.k : exact; }
- *         actions { a4; a5; nop; }
- *     }
- *
- *     control ingress {
- *         apply(t1);
- *         apply(t2);
- *     }
- *
- *
- *  The possible values for each field (and reaching action sequence) are:
- *
- *       data.a : v0: 0x0800:   t1.a2 -> *
- *                v1: data.b:   t1.a1 -> *
- *                v2: data.c:   t1.a3 -> *
- *                v3: data.a:  t1.nop -> *
- *
- *       data.b : v0: 0x0800:  t1.a2 -> t2.a4
- *                v1: 0x0866:      * -> t2.a5
- *                v2: data.a: t1.nop -> t2.a4
- *                v3: data.c:  t1.a3 -> t2.a4
- *                v4: data.b:  t1.a1 -> t2.nop
- *
- *       data.c : data.c (read-only)
- *
- *
- *  Let's assign a bit to each action, and another bit to each version for a
- *  field's final value. The function between the action bits and version bits
- *  can be represented as a truth table.
- *
- *     a1  a2  a3  a4  a5 | a_v0 a_v1 a_v2 a_v3  b_v0 b_v1 b_v2 b_v3 b_v4
- *    -------------------------------------------------------------------
- *      1   0   0   0   0 |   0    1    0    0     0    0    0    0    1
- *      0   1   0   0   0 |   1    0    0    0     0    0    0    0    1
- *      0   0   1   0   0 |   0    1    0    1     0    0    0    0    1
- *      0   1   0   1   0 |   1    0    0    0     1    0    0    0    0
- *      0   0   0   0   1 |   0    0    0    1     0    1    0    0    0
+ *      a1  a2  a3  a4  a5 | a_v0 a_v1 a_v2 a_v3  b_v0 b_v1 b_v2 b_v3 b_v4
+ *      -------------------------------------------------------------------
+ *      1   0   0   0   0  | 0    1    0    0     0    0    0    0    1
+ *      0   1   0   0   0  | 1    0    0    0     0    0    0    0    1
+ *      0   0   1   0   0  | 0    1    0    1     0    0    0    0    1
+ *      0   1   0   1   0  | 1    0    0    0     1    0    0    0    0
+ *      0   0   0   0   1  | 0    0    0    1     0    1    0    0    0
  *        ...
  *        ...
  *
@@ -88,9 +77,25 @@
  *  final packet, and with each version allocated to its own FD entry. Finally, all
  *  versions of value can be parsed into tagalong containers.
  *
- **********************************************************************************/
+ * # TODO
+ * 
+ * Tagalong containers, though abundant, are not unlimited. In addition, other resources
+ * also need to be managed. The list below is all resources need to be managed in the order
+ * of scarcity (most scarce to least). We need to make sure we don't over-fit any of these.
+ * Given a list of fields that can be decaf'd, we need to establish a partial order between
+ * any two fields such that one requires less resource than the other.
+ *
+ *   1. tagalong %PHV space (2k bits, half of normal %PHV)
+ *   2. POV bits (128 bits per gress)
+ *   3. %Parser constant extract (each state has 4xB, 2xH, 2xW constant extract bandwidth)
+ *   4. %Table resources (logical ID, memory)
+ *   5. FD entries (abundant)
+ */
 
 
+/**
+ * \ingroup DeparserCopyOpt
+ */
 struct Value {
     const PHV::Field* field = nullptr;
     const IR::Constant* constant = nullptr;
@@ -146,6 +151,9 @@ struct Value {
     }
 };
 
+/**
+ * \ingroup DeparserCopyOpt
+ */
 struct Assign {
     Assign(const IR::MAU::Instruction* instr,
            const PHV::Field* dst,
@@ -169,6 +177,9 @@ struct Assign {
     const IR::MAU::Instruction* instr = nullptr;
 };
 
+/**
+ * \ingroup DeparserCopyOpt
+ */
 class AssignChain : public std::vector<const Assign*> {
  public:
     void push_front(const Assign* assign) { insert(begin(), assign); }
@@ -183,12 +194,18 @@ class AssignChain : public std::vector<const Assign*> {
     }
 };
 
+/**
+ * \ingroup DeparserCopyOpt
+ */
 struct FieldGroup : public ordered_set<const PHV::Field*> {
     FieldGroup() { }
     explicit FieldGroup(int i) : id(i) { }
     int id = -1;
 };
 
+/**
+ * \ingroup DeparserCopyOpt
+ */
 struct CollectHeaderValidity : public Inspector {
     const PhvInfo &phv;
 
@@ -264,11 +281,15 @@ struct CollectHeaderValidity : public Inspector {
     }
 };
 
-// We categorize fields that are referenced in the control flow as either strong or
-// weak. The strong fields are ones that participate in match, non-move instruction, action
-// data bus read, or other reasons (non packet defs, is part of a checksum update or
-// digest). The weak fields are, by exclusion, the ones that are not strong. Weak fields
-// also shall not have a transitive strong source. All weak fields are then decaf candidates.
+/**
+ * \ingroup DeparserCopyOpt
+ *
+ * We categorize fields that are referenced in the control flow as either strong or
+ * weak. The strong fields are ones that participate in match, non-move instruction, action
+ * data bus read, or other reasons (non packet defs, is part of a checksum update or
+ * digest). The weak fields are, by exclusion, the ones that are not strong. Weak fields
+ * also shall not have a transitive strong source. All weak fields are then decaf candidates.
+ */
 class CollectWeakFields : public MauInspector, BFN::ControlFlowVisitor {
     const PhvInfo &phv;
     const PhvUse &uses;
@@ -416,9 +437,13 @@ class CollectWeakFields : public MauInspector, BFN::ControlFlowVisitor {
     void elim_non_byte_aligned_fields();
 };
 
-// Perform copy/constant propagation for the weak fields on table dependency.
-// For each weak field, what are the all possible values that are reachable at the
-// deparser?
+/**
+ * \ingroup DeparserCopyOpt
+ *
+ * Perform copy/constant propagation for the weak fields on table dependency.
+ * For each weak field, what are the all possible values that are reachable at the
+ * deparser?
+ */
 class ComputeValuesAtDeparser : public Inspector {
  public:
     std::vector<FieldGroup> weak_field_groups;
@@ -467,6 +492,9 @@ class ComputeValuesAtDeparser : public Inspector {
     bool compute_all_reachable_values_at_deparser(const FieldGroup& weak_field_group);
 };
 
+/**
+ * \ingroup DeparserCopyOpt
+ */
 struct VersionMap {
     ordered_map<const PHV::Field*, const IR::TempVar*> default_version;
 
@@ -489,9 +517,13 @@ struct VersionMap {
 };
 
 
-// Given a set of weak fields, and their reaching values/action chains at
-// the deparser, we construct tables to synthesize the POV bits needed
-// to deparse the right version at runtime.
+/**
+ * \ingroup DeparserCopyOpt
+ *
+ * Given a set of weak fields, and their reaching values/action chains at
+ * the deparser, we construct tables to synthesize the POV bits needed
+ * to deparse the right version at runtime.
+ */
 class SynthesizePovEncoder : public MauTransform {
     const CollectHeaderValidity& pov_bits;
     const CollectWeakFields& weak_fields;
@@ -592,9 +624,13 @@ class SynthesizePovEncoder : public MauTransform {
     }
 };
 
-// Certain weak fields may have constant values. These constants need to be extracted
-// by the parser in Tofino. In JBay, the deparser comes with 8 bytes of constants we
-// can use, the rest still need to be extracted in the parser.
+/**
+ * \ingroup DeparserCopyOpt
+ *
+ * Certain weak fields may have constant values. These constants need to be extracted
+ * by the parser in Tofino. In JBay, the deparser comes with 8 bytes of constants we
+ * can use, the rest still need to be extracted in the parser.
+ */
 class CreateConstants : public PardeTransform {
     const ComputeValuesAtDeparser& values_at_deparser;
     unsigned cid = 0;
@@ -641,9 +677,13 @@ class CreateConstants : public PardeTransform {
     IR::BFN::Parser* preorder(IR::BFN::Parser* parser) override;
 };
 
-// Replace all move instructions that weak fields are involved in by a single
-// bit set to the $ctl bits for each action that the move instructions are in.
-// Typically, these are the tunnel encap/decap actions.
+/**
+ * \ingroup DeparserCopyOpt
+ *
+ * Replace all move instructions that weak fields are involved in by a single
+ * bit set to the $ctl bits for each action that the move instructions are in.
+ * Typically, these are the tunnel encap/decap actions.
+ */
 class RewriteWeakFieldWrites : public MauTransform {
     const ComputeValuesAtDeparser& values_at_deparser;
     const SynthesizePovEncoder& synth_pov_encoder;
@@ -671,9 +711,13 @@ class RewriteWeakFieldWrites : public MauTransform {
     const IR::Node* postorder(IR::MAU::Instruction* instr) override;
 };
 
-// Rewrite deparser to insert new emits created for each of the weak field's
-// reachable value at the deparser. Each value emit is predicated by the synthesized
-// POV bit created in the SynthesizePovEncoder pass.
+/**
+ * \ingroup DeparserCopyOpt
+ *
+ * Rewrite deparser to insert new emits created for each of the weak field's
+ * reachable value at the deparser. Each value emit is predicated by the synthesized
+ * %POV bit created in the SynthesizePovEncoder pass.
+ */
 class RewriteDeparser : public DeparserModifier {
     const PhvInfo& phv;
     const SynthesizePovEncoder& synth_pov_encoder;
@@ -717,6 +761,10 @@ class RewriteDeparser : public DeparserModifier {
     bool preorder(IR::BFN::Deparser* deparser) override;
 };
 
+/**
+ * \ingroup DeparserCopyOpt
+ * \brief Top level PassManager.
+ */
 class DeparserCopyOpt : public Logging::PassManager {
     CollectHeaderValidity     collect_hdr_valid_bits;
     CollectWeakFields         collect_weak_fields;
@@ -750,18 +798,5 @@ class DeparserCopyOpt : public Logging::PassManager {
         });
     }
 };
-// TODO
-//
-// Tagalong containers, though abundant, are not unlimited. In addition, other resources
-// also need to be managed. The list below is all resources need to be managed in the order
-// of scarcity (most scarce to least). We need to make sure we don't over-fit any of these.
-// Given a list of fields that can be decaf'd, we need to establish a partial order between
-// any two fields such that one requires less resource than the other.
-//
-//   1. tagalong PHV space (2k bits, half of normal PHV)
-//   2. POV bits (128 bits per gress)
-//   3. Parser constant extract (each state has 4xB, 2xH, 2xW constant extract bandwidth)
-//   4. Table resources (logical ID, memory)
-//   5. FD entries (abundant)
 
 #endif  /* BF_P4C_PARDE_DECAF_H_ */

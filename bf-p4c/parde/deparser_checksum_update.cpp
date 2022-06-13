@@ -13,7 +13,10 @@
 
 namespace {
 
-/// Represent update condition
+/**
+ * \ingroup ExtractChecksum
+ * Represents update condition
+ */
 struct UpdateConditionInfo {
     UpdateConditionInfo(const IR::Member* field, bool conditionNegated) :
                  field(field), conditionNegated(conditionNegated) { }
@@ -26,7 +29,10 @@ struct UpdateConditionInfo {
     bool conditionNegated = false;
 };
 
-/// Represents a checksum field list
+/**
+ * \ingroup ExtractChecksum
+ * Represents a checksum field list
+ */
 struct FieldListInfo {
      explicit FieldListInfo(IR::Vector<IR::BFN::ChecksumEntry>* fields) :
                   fields(fields) { }
@@ -56,7 +62,10 @@ struct FieldListInfo {
     }
 };
 
-/// Represents checksum update info for a checksum field
+/**
+ * \ingroup ExtractChecksum
+ * Represents checksum update info for a checksum field
+ */
 struct ChecksumUpdateInfo {
     explicit ChecksumUpdateInfo(cstring dest) : dest(dest) { }
 
@@ -509,8 +518,12 @@ struct GetChecksumPovBits : public Inspector {
     }
 };
 
-/// Substitute computed checksums into the deparser code by replacing EmitFields for
-/// the destination field with EmitChecksums.
+/**
+ * \ingroup ExtractChecksum
+ * 
+ * Substitute computed checksums into the deparser code by replacing EmitFields for
+ * the destination field with EmitChecksums.
+ */
 struct SubstituteUpdateChecksums : public Transform {
     explicit SubstituteUpdateChecksums(const ChecksumUpdateInfoMap& checksums)
         : checksums(checksums) { }
@@ -591,12 +604,17 @@ struct SubstituteUpdateChecksums : public Transform {
     const ChecksumUpdateInfoMap& checksums;
 };
 
-/// If checksum update is unconditional, we don't need to allocate PHV space to store
-/// the original header checksum field, nor do we need to extract the header checksum
-/// field (since we will deparse the checksum from the computed value in the deparser).
-/// This pass replaces the unconditional checksum field with the "ChecksumLVal" so that
-/// PHV allocation doesn't allocate container for it.
-/// FIXME(zma) check if checksum is used in MAU
+/**
+ * \ingroup ExtractChecksum
+ * 
+ * If checksum update is unconditional, we don't need to allocate %PHV space to store
+ * the original header checksum field, nor do we need to extract the header checksum
+ * field (since we will deparse the checksum from the computed value in the deparser).
+ * This pass replaces the unconditional checksum field with the "ChecksumLVal" so that
+ * %PHV allocation doesn't allocate container for it.
+ * 
+ * FIXME(zma) check if checksum is used in MAU
+ */
 struct SubstituteChecksumLVal : public Transform {
     explicit SubstituteChecksumLVal(const ChecksumUpdateInfoMap& checksums)
         : checksums(checksums) { }
@@ -621,31 +639,6 @@ struct SubstituteChecksumLVal : public Transform {
     const ChecksumUpdateInfoMap& checksums;
 };
 
-/// For each user checksum update condition bit, e.g.
-///
-///   calculated_field hdr.checksum  {
-///       update tcp_checksum if (meta.update_checksum == 1);
-///   }
-///
-/// we need to create two bits to predicate two FD entries in the
-/// deparser, one for the updated checksum value, the other for
-/// the original checksum value from packet.
-/// The logic for these two bits are:
-///
-///   $deparse_updated_csum = update_checksum & hdr.$valid
-///   $deparse_original_csum = !update_checksum & hdr.$valid
-///
-/// At the end of the table sequence of each gress, we insert
-/// a table that runs an action that contains the two instructions
-/// for all user condition bits. This is the correct place to insert
-/// the table since header maybe become validated/invalidated
-/// anywhere in the parser or MAU. It is possible that we could
-/// insert these instructions earlier in the table sequence (thus
-/// saving a table) if the compiler can figure out an action
-/// is predicated by the header validity bit, but this should be a
-/// general table "fusing" optimization in the backend.
-
-
 // Finds the key and return position. Will return -1 if key not found
 int get_key_position(const std::vector<const IR::Expression*> &keys,
                      const IR::Expression* findKey) {
@@ -659,6 +652,33 @@ int get_key_position(const std::vector<const IR::Expression*> &keys,
     return -1;
 }
 
+/**
+ * \ingroup ExtractChecksum
+ * 
+ * For each user checksum update condition bit, e.g.
+ *
+ *     calculated_field hdr.checksum  {
+ *         update tcp_checksum if (meta.update_checksum == 1);
+ *     }
+ *
+ * we need to create two bits to predicate two FD entries in the
+ * deparser, one for the updated checksum value, the other for
+ * the original checksum value from packet.
+ * The logic for these two bits are:
+ *
+ *     $deparse_updated_csum = update_checksum & hdr.$valid
+ *     $deparse_original_csum = !update_checksum & hdr.$valid
+ *
+ * At the end of the table sequence of each gress, we insert
+ * a table that runs an action that contains the two instructions
+ * for all user condition bits. This is the correct place to insert
+ * the table since header maybe become validated/invalidated
+ * anywhere in the parser or MAU. It is possible that we could
+ * insert these instructions earlier in the table sequence (thus
+ * saving a table) if the compiler can figure out an action
+ * is predicated by the header validity bit, but this should be a
+ * general table "fusing" optimization in the backend.
+ */
 void add_checksum_condition_table(IR::MAU::TableSeq* tableSeq,
                                   ChecksumUpdateInfo* csumInfo,
                                   gress_t gress) {
@@ -721,12 +741,16 @@ void add_checksum_condition_table(IR::MAU::TableSeq* tableSeq,
     return;
 }
 
-// If a field is included in multiple times in checksum update, a mau table will be created
-// with an action to copy the repeated field into a  metadata. This metadata will be used instead of
-// the duplicate field. This is done because a checksum engine can add a PHV only once.
-// If a field is added more than twice, that many
-// actions will be created to copy the field in different metadatas
 
+/**
+ * \ingroup ExtractChecksum
+ * 
+ * If a field is included in multiple times in checksum update, a mau table will be created
+ * with an action to copy the repeated field into a  metadata. This metadata will be used instead of
+ * the duplicate field. This is done because a checksum engine can add a %PHV only once.
+ * If a field is added more than twice, that many
+ * actions will be created to copy the field in different metadatas
+ */
 void add_entry_duplication_tables(IR::MAU::TableSeq* tableSeq,
                                  ChecksumUpdateInfo* csumInfo,
                                  gress_t gress) {
@@ -755,6 +779,13 @@ void add_entry_duplication_tables(IR::MAU::TableSeq* tableSeq,
     return;
 }
 
+/**
+ * \ingroup ExtractChecksum
+ * 
+ * Inserts possible extra tables into gress that determine if the checksum should be updated.
+ * 
+ * @sa add_checksum_condition_table, add_entry_duplication_tables
+ */
 struct InsertTablesForChecksums : public Transform {
     explicit InsertTablesForChecksums(const ChecksumUpdateInfoMap& checksums, gress_t gress)
         : checksums(checksums), gress(gress) { }
@@ -875,22 +906,31 @@ struct CollectNestedChecksumInfo : public Inspector {
     }
 };
 
-// In nested checksums, if fieldlist of one checksum update is subset of
-// the other checksum update , then all the fields along with the checksum update destination
-// of the former checksum can be removed from the latter.
-// Consider two checksum updates
-// a.csum.update({ x, y, z})
-// b.csum.update({x, y, z, a.csum, c, d}
-// Note that b.csum contains a nested checksum a.csum.
-// According to the above statements,
-// a.csum = ~(x + y + z) where '~' means complement
-// b.csum = ~(x + y + z + a.csum + c + d)
-// If we substitute a.csum
-// b.csum = ~(x + y + z +  ~(x + y + z) + c + d) = ~(c + d)
-// From the above equation, we see that a.csum, x, y, z has no effect on b.csum
-// This means we can safely remove the fields for a.csum from b.csum fieldlist
-// if fieldlist of a.csum are subset of b.csum fieldlist
-
+/**
+ * \ingroup ExtractChecksum
+ *
+ * In nested checksums, if fieldlist of one checksum update is subset of
+ * the other checksum update , then all the fields along with the checksum update destination
+ * of the former checksum can be removed from the latter.
+ * Consider two checksum updates
+ * 
+ *      a.csum.update({ x, y, z})
+ *      b.csum.update({x, y, z, a.csum, c, d}
+ *
+ * Note that b.csum contains a nested checksum a.csum.
+ * According to the above statements,
+ *
+ *      a.csum = ~(x + y + z) where '~' means complement
+ *      b.csum = ~(x + y + z + a.csum + c + d)
+ *
+ * If we substitute a.csum
+ *
+ *      b.csum = ~(x + y + z +  ~(x + y + z) + c + d) = ~(c + d)
+ *
+ * From the above equation, we see that a.csum, x, y, z has no effect on b.csum
+ * This means we can safely remove the fields for a.csum from b.csum fieldlist
+ * if fieldlist of a.csum are subset of b.csum fieldlist.
+ */
 struct AbsorbNestedChecksum : public Transform {
     ChecksumUpdateInfoMap checksumUpdateInfoMap;
     std::map<cstring, std::set<const IR::BFN::EmitChecksum*>> dest_to_nested_csum;
@@ -958,10 +998,14 @@ struct AbsorbNestedChecksum : public Transform {
     }
 };
 
-// Remove the nested checksum destination from the parent checksum update field list
-// if the parent checksum is unconditional.
-// Use the "deparse_original" bit as gating pov bit for the nested checksum destination
-// in the parent checksum update if the parent checksum is conditional
+/**
+ * \ingroup ExtractChecksum
+ *
+ * Remove the nested checksum destination from the parent checksum update field list
+ * if the parent checksum is unconditional.
+ * Use the "deparse_original" bit as gating pov bit for the nested checksum destination
+ * in the parent checksum update if the parent checksum is conditional.
+ */
 struct DeleteChecksumField : public Transform {
     const ChecksumUpdateInfoMap& checksumInfo;
     explicit DeleteChecksumField(const ChecksumUpdateInfoMap& checksumInfo) :
@@ -985,8 +1029,6 @@ struct DeleteChecksumField : public Transform {
 
 namespace BFN {
 
-/// This function extracts checksum from the translated tofino.p4 checksum extern.
-/// Error checking should be done during the translation, not in this function.
 IR::BFN::Pipe*
 extractChecksumFromDeparser(const IR::BFN::TnaDeparser* deparser, IR::BFN::Pipe* pipe) {
     CHECK_NULL(pipe);

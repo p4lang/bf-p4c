@@ -4,7 +4,11 @@
 #include "ir/ir.h"
 #include "bf-p4c/phv/phv_fields.h"
 
-/*
+/**
+ * \defgroup ResetInvalidatedChecksumHeaders ResetInvalidatedChecksumHeaders
+ * \ingroup parde
+ * \brief Reset fields that are used in deparser checksum operations and were invalidated.
+ *
  * Fields involved in deparser checksum update can be invalidated in the
  * MAU and need to be reset before they reach the deparser. Otherwise
  * the fields will corrupt the checksum calculation.
@@ -41,6 +45,9 @@ struct CollectPovBitToFields : public DeparserInspector {
     }
 };
 
+/**
+ * \ingroup ResetInvalidatedChecksumHeaders
+ */
 struct CollectInvalidatedHeaders : public Inspector {
     const PhvInfo &phv;
     const std::map<const PHV::Field*,
@@ -111,6 +118,9 @@ struct CollectInvalidatedHeaders : public Inspector {
     }
 };
 
+/**
+ * \ingroup ResetInvalidatedChecksumHeaders
+ */
 class InsertParsedValidBits : public ParserModifier {
     const PhvInfo& phv;
     const CollectInvalidatedHeaders& invalidated_headers;
@@ -172,6 +182,9 @@ class InsertParsedValidBits : public ParserModifier {
     }
 };
 
+/**
+ * \ingroup ResetInvalidatedChecksumHeaders
+ */
 class InsertTableToResetInvalidatedHeaders : public MauTransform {
     const std::map<const PHV::Field*, const IR::Expression*>& phv_field_to_expr;
     const CollectInvalidatedHeaders& invalidated_headers;
@@ -295,6 +308,10 @@ class InsertTableToResetInvalidatedHeaders : public MauTransform {
         parsed_valid_bits(parsed_valid_bits) {}
 };
 
+/**
+ * \ingroup ResetInvalidatedChecksumHeaders
+ * \brief Top level PassManager.
+ */
 class ResetInvalidatedChecksumHeaders : public PassManager {
  public:
     explicit ResetInvalidatedChecksumHeaders(const PhvInfo& phv) {

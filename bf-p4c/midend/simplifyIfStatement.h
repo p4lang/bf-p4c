@@ -14,7 +14,6 @@
 namespace P4 {
 
 /**
- * \class ElimCallExprInIfCond
  * \ingroup SimplifyIfStatement
  * \brief Pass that eliminates call expressions in if statement’s condition.
  *
@@ -45,7 +44,6 @@ class ElimCallExprInIfCond : public Transform {
 };
 
 /**
- * \class SimplifyIfStatement
  * \ingroup SimplifyIfStatement
  * \brief Top level PassManager that governs simplification of if statements.
  * 

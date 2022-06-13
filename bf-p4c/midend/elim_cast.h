@@ -35,8 +35,7 @@
 
 namespace BFN {
 
-/** 
- * \class IgnoreKeyElementTransform
+/**
  * \ingroup ElimCasts
  * \brief Auxiliary transformer to avoid processing IR::KeyElement nodes.
  * 
@@ -49,7 +48,6 @@ class IgnoreKeyElementTransform : public Transform {
 };
 
 /** 
- * \class EliminateWidthCasts
  * \ingroup ElimCasts
  */
 class EliminateWidthCasts : public IgnoreKeyElementTransform {
@@ -79,8 +77,7 @@ class EliminateWidthCasts : public IgnoreKeyElementTransform {
     }
 };
 
-/** 
- * \class RewriteCastToReinterpretCast
+/**
  * \ingroup ElimCasts
  * \brief Pass that converts some of the IR::Casts to ReinterpretCasts.
  * 
@@ -102,7 +99,6 @@ class RewriteCastToReinterpretCast : public IgnoreKeyElementTransform {
 };
 
 /**
- * \class SimplifyRedundantCasts
  * \ingroup ElimCasts
  * \brief Pass that removes some of the redundant casts.
  * 
@@ -122,7 +118,6 @@ class SimplifyRedundantCasts : public IgnoreKeyElementTransform {
 };
 
 /**
- * \class SimplifyNestedCasts
  * \ingroup ElimCasts
  * \brief Pass that removes nested casts when applicable.
  * 
@@ -144,7 +139,6 @@ class SimplifyNestedCasts : public IgnoreKeyElementTransform {
 };
 
 /**
- * \class SimplifyOperationBinary
  * \ingroup ElimCasts
  * \brief Pass that moves the cast on binary operation to each operand.
  * 
@@ -163,7 +157,6 @@ class SimplifyOperationBinary : public IgnoreKeyElementTransform {
 
 
 /**
- * \class RewriteConcatToSlices
  * \ingroup ElimCasts
  * \brief Pass that replaces concat ++ operations with multiple operations
  *        on slices in the contexts.
@@ -192,7 +185,6 @@ class RewriteConcatToSlices : public IgnoreKeyElementTransform {
 };
 
 /**
- * \class StrengthReduction
  * \ingroup ElimCasts
  */
 class StrengthReduction : public PassManager {
@@ -204,7 +196,6 @@ class StrengthReduction : public PassManager {
 };
 
 /**
- * \class ElimCasts
  * \ingroup ElimCasts
  * \brief Top level PassManager that simplifies complex expression with multiple casts
  *        into simpler expression with at most one cast.

@@ -12,7 +12,6 @@ class TypeMap;
 namespace BFN {
 
 /**
- * \class CheckUnsupported
  * \ingroup midend
  * \brief Check for unsupported features in the backend compiler.
  */

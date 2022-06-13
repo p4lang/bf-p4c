@@ -90,7 +90,7 @@ void ExtractDeparser::processConcat(IR::Vector<IR::BFN::FieldLVal>& vec,
     }
 }
 
-// Get digest index from the conditional in if statement.
+/// Get digest index from the conditional in if statement.
 std::tuple<int, const IR::Expression*>
 ExtractDeparser::getDigestIndex(const IR::IfStatement* ifstmt, cstring name, bool singleEntry) {
     const IR::Expression *pred = ifstmt->condition;
@@ -127,7 +127,7 @@ ExtractDeparser::getDigestIndex(const IR::IfStatement* ifstmt, cstring name, boo
     return std::make_tuple(digest_index, select);
 }
 
-// Get digest index from constructor parameter
+/// Get digest index from constructor parameter
 int ExtractDeparser::getDigestIndex(const IR::Declaration_Instance* decl) {
     auto cst = decl->arguments->at(0)->expression->to<IR::Constant>();
     if (!cst)
@@ -135,7 +135,7 @@ int ExtractDeparser::getDigestIndex(const IR::Declaration_Instance* decl) {
     return cst->asInt();
 }
 
-// handle deprecated syntax
+/// handle deprecated syntax
 void ExtractDeparser::processMirrorEmit(const IR::MethodCallExpression* mc,
         const IR::Expression* select, int idx) {
     if (mc->arguments->size() == 1) {
@@ -339,10 +339,14 @@ bool ExtractDeparser::preorder(const IR::AssignmentStatement* stmt) {
      return false;
 }
 
-// FIXME -- factor this with Digests::add_to_digest in digest.h?
-// Collect information to generate assembly output.
-// @param singleEntry is used by jbay pktgen, as the pktgen_tbl has only one entry.
-// the entry index must be 0.
+/**
+ * Collect information to generate assembly output.
+ * @param singleEntry is used by jbay pktgen, as the pktgen_tbl has only one entry.
+ * 
+ * The entry index must be 0.
+ *
+ * FIXME -- factor this with Digests::add_to_digest in digest.h?
+ */
 void ExtractDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
                                       const IR::Expression *expr,
                                       const IR::Expression *select,

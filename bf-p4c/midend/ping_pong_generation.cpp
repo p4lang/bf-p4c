@@ -17,7 +17,6 @@ const cstring PingPongGeneration::PING_PONG_FIELD_NAME = "ping_pong";
 
 // HELPER VISITORS --------------------------------------------------------------------------------
 /**
- * \class PingPongGeneration::DeclarationChanger
  * \brief Base visitor class for other classes that change declarations.
  */
 class PingPongGeneration::DeclarationChanger: public Transform {
@@ -53,7 +52,6 @@ class PingPongGeneration::DeclarationChanger: public Transform {
 
 
 /**
- * \class PingPongGeneration::RegActionChanger
  * \brief This visitor changes specific references in new cloned register action.
  */
 class PingPongGeneration::RegActionChanger: public PingPongGeneration::DeclarationChanger {
@@ -77,7 +75,6 @@ class PingPongGeneration::RegActionChanger: public PingPongGeneration::Declarati
 };
 
 /**
- * \class PingPongGeneration::P4ActionChanger
  * \brief This visitor changes specific references in new cloned P4 action.
  */
 class PingPongGeneration::P4ActionChanger: public PingPongGeneration::DeclarationChanger {
@@ -102,7 +99,6 @@ class PingPongGeneration::P4ActionChanger: public PingPongGeneration::Declaratio
 };
 
 /**
- * \class PingPongGeneration::P4TableChanger
  * \brief This visitor changes specific references in new cloned P4 table.
  */
 class PingPongGeneration::P4TableChanger: public PingPongGeneration::DeclarationChanger {
@@ -134,7 +130,6 @@ class PingPongGeneration::P4TableChanger: public PingPongGeneration::Declaration
 };
 
 /**
- * \class PingPongGeneration::ApplyMCSChanger
  * \brief This visitor changes P4 table references in cloned MethodCallStatement.
  */
 class PingPongGeneration::ApplyMCSChanger: public Transform {
@@ -197,7 +192,6 @@ class PingPongGeneration::ApplyMCSChanger: public Transform {
 };
 
 /**
- * \class PingPongGeneration::PingPongFieldFinder
  * \brief Finds a ghost_metadata.ping_pong field reference in a subtree.
  */
 class PingPongGeneration::PingPongFieldFinder: public Inspector {

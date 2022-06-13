@@ -381,6 +381,9 @@ class ClotInfo {
                                ordered_set<const IR::BFN::ParserState*>*>*>* memo = nullptr) const;
 };
 
+/**
+ * \ingroup parde
+ */
 class CollectClotInfo : public Inspector {
     const PhvInfo& phv;
     ClotInfo& clotInfo;

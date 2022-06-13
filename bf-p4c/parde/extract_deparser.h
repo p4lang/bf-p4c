@@ -27,8 +27,12 @@ class P4Control;
 
 namespace BFN {
 
-// Assume the nested if statements are already canonicalized to a
-// single if statement enclosing any emit/pack method calls.
+/**
+ * \ingroup parde
+ * 
+ * @pre Assume the nested if statements are already canonicalized to a
+ *      single if statement enclosing any emit/pack method calls.
+ */
 class ExtractDeparser : public DeparserInspector {
     P4::TypeMap                                 *typeMap;
     P4::ReferenceMap                            *refMap;

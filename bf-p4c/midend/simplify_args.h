@@ -181,7 +181,6 @@ struct InjectTmpVar : public PassManager {
 };
 
 /**
- * \class FlattenHeader
  * \ingroup SimplifyEmitArgs
  * \brief Pass that flattened nested struct within a struct.
  *
@@ -244,7 +243,6 @@ class FlattenHeader : public Modifier {
 };
 
 /**
- * \class EliminateHeaders
  * \ingroup SimplifyEmitArgs
  *
  * Assume header type are flattend, no nested struct.
@@ -265,7 +263,6 @@ class EliminateHeaders : public Transform {
 };
 
 /**
- * \class RewriteTypeArguments
  * \ingroup SimplifyEmitArgs
  */
 class RewriteTypeArguments : public Transform {
@@ -277,7 +274,6 @@ class RewriteTypeArguments : public Transform {
 };
 
 /**
- * \class SimplifyEmitArgs
  * \ingroup SimplifyEmitArgs
  * \brief Top level PassManager that governs simplification of headers and emits.
  *

@@ -1,6 +1,7 @@
 /**
  * \defgroup SimplifyNestedIf P4::SimplifyNestedIf
  * \ingroup midend
+ * \ingroup parde
  * \brief Set of passes that simplify nested if statements in the
  *        deparser control block.
  */
@@ -23,7 +24,6 @@
 namespace P4 {
 
 /**
- * \class SkipControlPolicy
  * \ingroup SimplifyNestedIf
  */
 class SkipControlPolicy {
@@ -37,7 +37,6 @@ class SkipControlPolicy {
 };
 
 /**
- * \class ProcessDeparser
  * \ingroup SimplifyNestedIf
  */
 class ProcessDeparser : public SkipControlPolicy {
@@ -49,7 +48,6 @@ class ProcessDeparser : public SkipControlPolicy {
 };
 
 /**
- * \class DoSimplifyNestedIf
  * \ingroup SimplifyNestedIf
  */
 class DoSimplifyNestedIf : public Transform {
@@ -81,7 +79,6 @@ class DoSimplifyNestedIf : public Transform {
 };
 
 /**
- * \class SimplifyComplexConditionPolicy
  * \ingroup SimplifyNestedIf
  */
 class SimplifyComplexConditionPolicy {
@@ -92,7 +89,6 @@ class SimplifyComplexConditionPolicy {
 };
 
 /**
- * \class UniqueAndValidDest
  * \ingroup SimplifyNestedIf
  */
 class UniqueAndValidDest : public SimplifyComplexConditionPolicy {
@@ -140,7 +136,6 @@ class UniqueAndValidDest : public SimplifyComplexConditionPolicy {
 };
 
 /**
- * \class DoSimplifyComplexCondition
  * \ingroup SimplifyNestedIf
  * \brief Pass that tries to simplify the conditions to a simple comparison
  *        of constants.
@@ -173,7 +168,6 @@ class DoSimplifyComplexCondition : public Transform {
 };
 
 /**
- * \class SimplifyNestedIf
  * \ingroup SimplifyNestedIf
  * \brief Top level PassManager that governs simplification of
  *        nested if statements in the deparser control block.

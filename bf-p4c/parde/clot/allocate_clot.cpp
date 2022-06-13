@@ -4,6 +4,7 @@
 #include "field_pov_analysis.h"
 #include "header_removal_analysis.h"
 /**
+ * \ingroup parde
  * This implements a greedy CLOT-allocation algorithm, as described in
  * \ref clot_alloc_and_metric "CLOT allocator and metric" (README.md).
  * 

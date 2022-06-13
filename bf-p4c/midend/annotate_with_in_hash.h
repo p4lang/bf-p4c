@@ -42,7 +42,6 @@
 namespace BFN {
 
 /**
- * \class DoAnnotateWithInHash
  * \ingroup AnnotateWithInHash
  */
 class DoAnnotateWithInHash : public Transform {
@@ -62,7 +61,6 @@ class DoAnnotateWithInHash : public Transform {
 };
 
 /**
- * \class AnnotateWithInHash
  * \ingroup AnnotateWithInHash
  * \brief Top level PassManager that governs annotation of specific assignment
  *        statements with the \@in_hash annotation.

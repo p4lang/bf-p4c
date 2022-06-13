@@ -1807,6 +1807,10 @@ class ExtractMetadata : public Inspector {
     ParamBinding *bindings;
 };
 
+/**
+ * \ingroup ExtractChecksum ExtractChecksum
+ * \brief Pass that extracts checksums from deparser.
+ */
 struct ExtractChecksum : public Inspector {
     explicit ExtractChecksum(IR::BFN::Pipe* rv) :
         rv(rv) { setName("ExtractChecksumNative"); }

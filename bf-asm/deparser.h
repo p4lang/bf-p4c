@@ -14,6 +14,9 @@ enum {
     DEPARSER_STAGE = INT_MAX,  // greater than the number of stages
 };
 
+/**
+ * \ingroup parde 
+ */
 class Deparser : public Section {
     static Deparser singleton_object;
 

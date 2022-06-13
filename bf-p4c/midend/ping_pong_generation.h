@@ -12,7 +12,6 @@
 namespace BFN {
 
 /**
- * \class PingPongGeneration
  * \ingroup midend
  * \brief PassManager that adds the ping pong mechanism for ghost thread.
  * 
@@ -108,7 +107,6 @@ class PingPongGeneration : public PassManager {
 
     // MAIN VISITORS ------------------------------------------------------------------------------
     /**
-     * \class GetAllRegisters
      * \brief Gets all of the registers used and their actions.
      */
     class GetAllRegisters: public Inspector {
@@ -121,7 +119,6 @@ class PingPongGeneration : public PassManager {
     };
 
     /**
-     * \class AddAllTables
      * \brief Finds and adds all of the corresponding tables.
      */
     class AddAllTables: public Inspector {
@@ -134,7 +131,6 @@ class PingPongGeneration : public PassManager {
     };
 
     /**
-     * \class CheckPingPongTables
      * \brief Checks for tables that are already applied under ping_pong condition.
      * 
      * Also checks if ghost_metadata are even present or if there are multiple pipelines
@@ -155,7 +151,6 @@ class PingPongGeneration : public PassManager {
     };
 
     /**
-     * \class GeneratePingPongMechanismDeclarations
      * \brief Duplicates all of the required tables, registers, actions.
      */
     class GeneratePingPongMechanismDeclarations: public Transform {
@@ -169,7 +164,6 @@ class PingPongGeneration : public PassManager {
     };
 
     /**
-     * \class GeneratePingPongMechanism.
      * \brief Adds PingPong mechanism/if statement.
      */
     class GeneratePingPongMechanism: public Transform {

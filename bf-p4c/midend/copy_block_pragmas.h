@@ -5,7 +5,6 @@
 #include "frontends/p4/typeChecking/typeChecker.h"
 
 /**
- * \class CopyBlockPragmas
  * \ingroup midend
  * \brief Pass that copies block annotations to the block's tables.
  */
