@@ -9,6 +9,9 @@
 
 namespace {
 
+/// @ingroup AsmOutput
+/// @{
+
 /// A helper that displays debug information for deparser features. Frequently
 /// deparser features included a POV bit, which only show up on certain devices,
 /// so this function displays the debug information for both and tries to format
@@ -384,6 +387,8 @@ struct OutputDigests : public Inspector {
     indent_t indent;
 };
 
+/// @}
+
 }  // namespace
 
 DeparserAsmOutput::DeparserAsmOutput(const IR::BFN::Pipe* pipe,
@@ -396,6 +401,7 @@ DeparserAsmOutput::DeparserAsmOutput(const IR::BFN::Pipe* pipe,
     BUG_CHECK(deparser, "Writing assembly for a non-lowered deparser?");
 }
 
+/// @ingroup AsmOutput
 std::ostream&
 operator<<(std::ostream& out, const DeparserAsmOutput& deparserOut) {
     out << "deparser " << deparserOut.deparser->thread() << ":" << std::endl;

@@ -1464,6 +1464,15 @@ computeControlPlaneFormat(const PhvInfo& phv,
     return packing;
 }
 
+/**
+ * \ingroup LowerDeparserIR
+ *
+ * \brief Replace Emits covered in a CLOT with EmitClot
+ *
+ * This pass visits the deparsers, and for each deparser, it walks through the emits and identifies
+ * checksums/fields that are covered as part of a CLOT. Elements that are covered by a CLOT are
+ * removed from the emit list and are replace by EmitClot objects.
+ */
 struct RewriteEmitClot : public DeparserModifier {
     RewriteEmitClot(const PhvInfo& phv, ClotInfo& clotInfo) :
         phv(phv), clotInfo(clotInfo) {}
@@ -1707,6 +1716,10 @@ std::map<PHV::Container, unsigned> getChecksumPhvSwap(const PhvInfo& phv,
     return containerToSwap;
 }
 
+/// \ingroup LowerDeparserIR
+///
+/// \brief Generates lowered deparser IR with container references.
+///
 /// Generate the lowered deparser IR by splitting references to fields in the
 /// high-level deparser IR into references to containers.
 struct ComputeLoweredDeparserIR : public DeparserInspector {
@@ -1725,10 +1738,12 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
     std::map<gress_t, std::map<const IR::BFN::EmitChecksum*, unsigned>> checksumInfo;
 
  private:
+    /// \brief Remove guaranteed-zero fields from checksum calculations.
+    ///
+    /// Fields which are deparser zero candidates are guaranteed to be zero.
+    /// Removing such fields from a checksum calculation will not alter the checksum.
     IR::Vector<IR::BFN::FieldLVal>
     removeDeparserZeroFields(IR::Vector<IR::BFN::FieldLVal> checksumFields) {
-        // Fields which are deparser zero candidate are guaranteed to be zero
-        // Removing such fields will not alter checksum.
         IR::Vector<IR::BFN::FieldLVal> newChecksumFields;
         for (auto cfield : checksumFields) {
             auto* phv_field = phv.field(cfield->field);
@@ -1739,7 +1754,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
         return newChecksumFields;
     }
 
-    // Returns lowered partial phv and clot checksum
+    /// Returns lowered partial phv and clot checksum
     std::pair<IR::BFN::PartialChecksumUnitConfig*, std::vector<IR::BFN::ChecksumClotInput*>>
     getPartialUnit(const IR::BFN::EmitChecksum* emitChecksum,
                    gress_t gress) {
@@ -1826,8 +1841,8 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
         return {unitConfig, clots};
     }
 
-    // Lowers full checksum unit
-    // First lower @p emitChecksum then lower emitChecksum->nestedChecksum
+    /// Lowers full checksum unit
+    /// First lower @p emitChecksum then lower emitChecksum->nestedChecksum
     IR::BFN::FullChecksumUnitConfig* lowerChecksum(const IR::BFN::EmitChecksum* emitChecksum,
                                                    gress_t gress) {
         auto fullChecksumUnit = new IR::BFN::FullChecksumUnitConfig();
@@ -1859,13 +1874,14 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
         return fullChecksumUnit;
     }
 
-    // JBAYB0 can invert the output of partial checksum units and clots. But this feature
-    // exists only for full checksum unit 0 - 3. This inversion feature is needed for
-    // calculation of nested checksum. So for JBAYB0, checksum engine allocation for normal
-    // checksums(normal means not nested) starts from unit 4. If 4 - 7 engines are not free
-    // then any free engine from 0 - 3 will be allocated. For nested checksums, engine
-    // allocation starts from unit 0.
-    // For all other targets, checksum engine allocation starts from unit 0.
+    /// JBAYB0 can invert the output of partial checksum units and clots. But this feature
+    /// exists only for full checksum unit 0 - 3. This inversion feature is needed for
+    /// calculation of nested checksum. So for JBAYB0, checksum engine allocation for normal
+    /// checksums (normal means not nested) starts from unit 4. If 4 - 7 engines are not free
+    /// then any free engine from 0 - 3 will be allocated. For nested checksums, engine
+    /// allocation starts from unit 0.
+    ///
+    /// For all other targets, checksum engine allocation starts from unit 0.
     unsigned int getChecksumUnit(bool nested) {
         if (Device::pardeSpec().numDeparserInvertChecksumUnits() == 4) {
             if (nested) {
@@ -1893,6 +1909,9 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
         }
     }
 
+    /// \brief Compute the lowered deparser IR
+    ///
+    /// Convers the field emits to container emits.
     bool preorder(const IR::BFN::Deparser* deparser) override {
         // Flatrock: metadata packer is output as a deparser
         auto* loweredDeparser = deparser->gress == INGRESS ? igLoweredDeparser
@@ -1909,10 +1928,10 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
         }
 
         struct LastSimpleEmitInfo {
-            /// The `PHV::Field::id` of the POV bit for the last simple emit.
+            // The `PHV::Field::id` of the POV bit for the last simple emit.
             int povFieldId;
-            /// The actual range of bits (of size 1) corresponding to the POV
-            /// bit for the last simple emit.
+            // The actual range of bits (of size 1) corresponding to the POV
+            // bit for the last simple emit.
             le_bitrange povFieldBits;
         };
 
@@ -2138,7 +2157,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
             [&](const IR::BFN::DigestFieldList* fl)->IR::BFN::DigestFieldList* {
             auto sources = new IR::Vector<IR::BFN::FieldLVal>();
             for (auto src : fl->sources) {
-                /// do not emit padding field in digest field list.
+                // do not emit padding field in digest field list.
                 if (src->is<IR::Padding>())
                     continue;
                 sources->push_back(src);
@@ -2212,6 +2231,10 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
     unsigned normal_unit;
 };
 
+/// \ingroup LowerDeparserIR
+///
+/// \brief Replace deparser IR with lowered version.
+///
 /// Replace the high-level deparser IR version of each deparser with the lowered
 /// version generated by ComputeLoweredDeparserIR.
 struct ReplaceDeparserIR : public DeparserTransform {
@@ -2237,8 +2260,20 @@ struct ReplaceDeparserIR : public DeparserTransform {
     const IR::BFN::LoweredDeparser* egLoweredDeparser;
 };
 
-/// Generate a lowered version of the parser IR in this program and swap it in
-/// for the existing representation.
+/**
+ * \defgroup LowerDeparserIR LowerDeparserIR
+ * \ingroup LowerParser
+ *
+ * \brief Replace deparser IR with lowered version that references containers instead of fields.
+ *
+ * Generate a lowered version of the parser IR in this program and swap it in
+ * in place of the existing representation.
+ *
+ * The pass does this by:
+ *  1. Replacing field/checksum emits that are covered by CLOTs with EmitClot objects.
+ *  2. Generating lowered version of the deparser and swapping them in.
+ *  3. Coalescing the learning digest to remove consecutive uses of the same container.
+ */
 struct LowerDeparserIR : public PassManager {
     LowerDeparserIR(const PhvInfo& phv, ClotInfo& clot) {
         auto* rewriteEmitClot = new RewriteEmitClot(phv, clot);
@@ -2555,6 +2590,20 @@ class ComputeBufferRequirements : public ParserModifier {
 
 }  // namespace
 
+/**
+ * \class LowerParser
+ *
+ * Sub-passes:
+ *  - CharacterizeParser
+ *  - CollectLoweredParserInfo
+ *  - ComputeBufferRequirements
+ *  - ComputeInitZeroContainers (Tofino 1 only)
+ *  - ComputeMultiWriteContainers
+ *  - LowerDeparserIR
+ *  - LowerParserIR
+ *  - PragmaNoInit
+ *  - WarnTernaryMatchFields
+ */
 LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &defuse) :
     Logging::PassManager("parser", Logging::Mode::AUTO) {
     auto pragma_no_init = new PragmaNoInit(phv);

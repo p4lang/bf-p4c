@@ -3,7 +3,10 @@
 
 #include "parde_visitor.h"
 
-/**@brief Extend parsers to extract standard metadata.
+/**
+ * @ingroup parde
+ *
+ * @brief Extend parsers to extract standard metadata.
  *
  * "Standard metadata" refers to hardware-specific metadata, such as the
  * ingress port or egress spec.  Tofino prepends packets with metadata, which
@@ -28,14 +31,29 @@ class AddParserMetadata : public ParserModifier {
     bool isV1;
 };
 
+/**
+ * @ingroup parde
+ *
+ * @brief Add deparser parameters for standard metadata.
+ *
+ * Add deparser parameters for "standard metadata" required by the hardware. An example is the
+ * egress port information required required by TM: this is a parameter that the deparser needs to
+ * provide.
+ *
+ * The ArchSpec for the current device defines the metadata parameters to add.
+ */
 class AddDeparserMetadata : public DeparserModifier {
  public:
     explicit AddDeparserMetadata(const IR::BFN::Pipe* pipe)
         : pipe(pipe) { CHECK_NULL(pipe); }
 
+    /// Process the deparser instances to add parameters
     bool preorder(IR::BFN::Deparser *) override;
 
+    /// Add ingress deparser parameters
     void addIngressMetadata(IR::BFN::Deparser *d);
+
+    // Add egress deparser parameters
     void addEgressMetadata(IR::BFN::Deparser *d);
 
     const IR::BFN::Pipe* pipe;

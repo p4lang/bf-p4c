@@ -12,7 +12,11 @@
  * \defgroup parde Parser & deparser
  * \brief Content related to parser and deparser
  *
- * # %Deparser
+ * # Parser
+ *
+ * \todo Basic documentation for parser should be included here.
+ *
+ * # Deparser
  *
  * The deparser reassembles packets prior to storage in TM (Tofino 1-3) and prior to transmission
  * via the MAC (all chips).
@@ -41,13 +45,13 @@
  *  - DeparserCopyOpt - Optimize copy assigned fields prior to deparsing.
  *  - BFN::ExtractChecksum - Replaces EmitField with EmitChecksum emits in deparser. (Invoked from
  *                           BFN::BackendConverter.)
- *  - BFN::ExtractDeparser - Convert IR::BFN::TnaDeparser objects to IR::BFN::Deparser objects. The pass
- *                           generates emit and digest objects as part of this process.
+ *  - BFN::ExtractDeparser - Convert IR::BFN::TnaDeparser objects to IR::BFN::Deparser objects. The
+ *                           pass generates emit and digest objects as part of this process.
  *  - GreedyClotAllocator - CLOT allocation. Enforces deparser CLOT rules during allocation.
  *  - InsertParserClotChecksums - Identifies CLOT fields used in deparser checksums to allow the
  *                                checksum to be calculated in the parser (Tofino 2/3).
- *  - LowerParser - Replaces high-level parser and deparser %IR that operate on fields with low-level
- *                  parser and deparser %IR that operate on %PHV containers.
+ *  - LowerParser - Replaces high-level parser and deparser %IR that operate on fields with
+ *                  low-level parser and deparser %IR that operate on %PHV containers.
  *  - ResetInvalidatedChecksumHeaders - Reset fields that are used in deparser checksum operations
  *                                      and that are invalidated in the MAU (Tofino 1).
  */

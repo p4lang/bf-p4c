@@ -16,9 +16,12 @@ static cstring payloadHeaderName = "payload";
 HeaderAsmOutput::HeaderAsmOutput(const ParserHeaderSequences& seqs) : seqs(seqs) {}
 
 /**
- * @brief Outputs the header configuration for Flatrock+
+ * @ingroup AsmOutput
  * 
- * Header configuration is derived from the ingress parser
+ * @brief Outputs the header configuration for Flatrock+
+ *
+ * The header configuration specifies the headers that are identified by the parser. This
+ * configuration is derived from the ingress parser.
  */
 std::ostream& operator<<(std::ostream& out, const HeaderAsmOutput& headerOut) {
     const auto& seqs = headerOut.seqs;

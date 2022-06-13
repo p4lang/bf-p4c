@@ -29,6 +29,23 @@ class FieldDefUse;
 
 namespace BFN {
 
+/**
+ * \defgroup AsmOutput Assembly output
+ *
+ * \brief Generate assembly output
+ *
+ * Generate the assembly output for the program. Invokes separate subpasses for outputting %PHV,
+ * parser, deparser, and %MAU sections.
+ */
+
+/**
+ * \ingroup AsmOutput
+ *
+ * \brief Generate assembly output
+ *
+ * Generate the assembly output for the program. Invokes separate subpasses for outputting %PHV,
+ * parser, deparser, and %MAU sections.
+ */
 class AsmOutput : public Inspector {
  private:
     const PhvInfo     &phv;

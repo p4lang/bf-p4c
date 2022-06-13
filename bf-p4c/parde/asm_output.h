@@ -8,6 +8,8 @@
 class PhvInfo;
 class ClotInfo;
 
+/// \ingroup AsmOutput parde
+///
 /// Helper that can generate parser assembly and write it to an output stream.
 struct ParserAsmOutput {
     ParserAsmOutput(const IR::BFN::Pipe* pipe, const PhvInfo &phv, gress_t gress);
@@ -19,6 +21,8 @@ struct ParserAsmOutput {
     const PhvInfo               &phv;
 };
 
+/// \ingroup AsmOutput parde
+///
 /// Helper that can generate phase0 assembly and write it to an output stream.
 struct Phase0AsmOutput {
     const IR::BFN::Pipe *pipe;
@@ -30,6 +34,8 @@ struct Phase0AsmOutput {
     friend std::ostream& operator<<(std::ostream&, const Phase0AsmOutput&);
 };
 
+/// \ingroup AsmOutput parde
+///
 /// Helper that can generate deparser assembly and write it to an output stream.
 struct DeparserAsmOutput {
     DeparserAsmOutput(const IR::BFN::Pipe* pipe, const PhvInfo &phv, const ClotInfo &clot,
@@ -44,6 +50,8 @@ struct DeparserAsmOutput {
     const IR::BFN::LoweredDeparser* deparser;
 };
 
+/// \ingroup AsmOutput parde
+///
 /// Helper that can generate header assembly and write it to an output stream.
 struct HeaderAsmOutput {
     explicit HeaderAsmOutput(const ParserHeaderSequences &seqs);
