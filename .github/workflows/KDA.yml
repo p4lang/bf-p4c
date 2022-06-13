@@ -43,6 +43,13 @@ jobs:
         with:
           result-encoding: string
           script: |
+            // Do not run KDA scan on close if there are no KW issues found in preovious scans
+            if (context.eventName == 'pull_request_target') {
+              const comments = await github.rest.issues.listComments({owner:context.repo.owner, repo:context.repo.repo, issue_number: context.issue.number});
+              result = (comments.data.map(i => i.body.includes('Klocwork Differential Analysis')))
+              if (result == '') return result;
+            }
+            
             const files = await github.rest.pulls.listFiles({ owner: context.repo.owner, repo: context.repo.repo, pull_number: context.issue.number});
             const file_pattern = [".cpp" , ".h", ".hpp", ".c", "CmakeLists.txt", "yml", "kw_config"]
             return files.data.map(i => i.filename).filter(file => file_pattern.some(p => file.includes(p)))
@@ -74,10 +81,3 @@ jobs:
             
           # Run KDA
           python3.9 /KDA/KDA/src/main.py diff_analysis --pr_number ${{ github.event.number }} --config $GITHUB_WORKSPACE/ci/kw_config --pat ${{ secrets.GITHUB_TOKEN }}
-      # Branch will be deleted after KDA scan uploads the results after merging the PR
-      - name: Delete Branch on merge
-        if: ${{ github.event.pull_request.merged }}
-        uses: actions/github-script@v5
-        with:
-          script: |
-            await github.rest.git.deleteRef({ owner: context.repo.owner, repo: context.repo.repo, ref:'heads/'.concat('${{github.head_ref}}')})
