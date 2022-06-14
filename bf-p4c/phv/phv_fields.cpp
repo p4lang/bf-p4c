@@ -555,6 +555,7 @@ bitvec PhvInfo::bits_allocated(
     bitvec result;
     field->foreach_alloc(ctxt, use, [&](const PHV::AllocSlice& alloc) {
         if (alloc.container() != c) return;
+        if (alloc.isUninitializedRead()) return;
         le_bitrange bits = alloc.container_slice();
         result.setrange(bits.lo, bits.size());
     });
@@ -587,6 +588,7 @@ bitvec PhvInfo::bits_allocated(
 
         field->foreach_alloc(ctxt, use, [&](const PHV::AllocSlice &alloc) {
             if (alloc.container() != c) return;
+            if (alloc.isUninitializedRead()) return;
             le_bitrange bits = alloc.container_slice();
 
             // Discard the slices that are mutually exclusive with any of the written slices

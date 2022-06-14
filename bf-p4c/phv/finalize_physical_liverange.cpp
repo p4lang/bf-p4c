@@ -170,8 +170,7 @@ void FinalizePhysicalLiverange::end_apply() {
         if (sl->field()->aliasSource != nullptr || sl->field()->is_deparser_zero_candidate())
             return true;
         // skip
-        return (sl->getEarliestLiveness().second.isRead() &&
-                sl->getLatestLiveness().second.isRead());
+        return (sl->isUninitializedRead());
     };
 
     // Temporarily disabled (print warnings instead of BUG_CHECK),

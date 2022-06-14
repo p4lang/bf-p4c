@@ -244,6 +244,12 @@ class AllocSlice {
     bool isPhysicalDeparserStage() const { return physical_deparser_stage_i; }
     void setPhysicalDeparserStage(bool v) { physical_deparser_stage_i = v; }
 
+    bool isUninitializedRead() const {
+        return (getEarliestLiveness().second.isRead() &&
+                getLatestLiveness().second.isRead());
+    }
+
+
     // @returns true if this alloc slice is referenced within @p ctxt for @p use.
     bool isReferenced(const AllocContext* ctxt, const FieldUse* use,
                       SliceMatch match = SliceMatch::DFLT) const;
