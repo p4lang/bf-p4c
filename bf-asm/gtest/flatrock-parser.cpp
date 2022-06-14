@@ -1,6 +1,7 @@
 #include "flatrock/hdr.h"
 #include "flatrock/parser.h"
 #include "bf-p4c/common/flatrock_parser.h"
+#include "phv.h"
 #include "gtest/gtest.h"
 
 #include "register-matcher.h"
@@ -44,6 +45,7 @@ void AsmParserGuard::cleanSingletons() {
         ::asm_parser = nullptr;
     }
     Hdr::test_clear();
+    Phv::test_clear();
     options.target = NO_TARGET;
     error_count = 0;
     warn_count = 0;
@@ -1398,6 +1400,2151 @@ parser ingress:
       next_skip_extractions: 1
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
+)PARSER_CFG"));
+    }
+}
+
+TEST(flatrock_parser, section_phv_builder_group_valid) {
+    {
+        /* -- the simplest case (parser), only pov_select key is set,
+         *    the rest is at defaults */
+        AsmParserGuard asm_parser;
+        ASSERT_TRUE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+)PARSER_CFG"));
+
+        const auto &regs(asm_parser.generateConfig());
+
+        /* -- POV key bytes selection is set */
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[0].src[0], "1b1");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[0].src[1], "1b1");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[0].src[2], "1b1");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[0].src[3], "1b1");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[0].start[0], "3x1");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[0].start[1], "3x2");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[0].start[2], "3x3");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[0].start[3], "3x4");
+    }
+
+    {
+        /* -- the simplest case (pseudo parser), only pov_select key is set,
+         *    the rest is at defaults */
+        AsmParserGuard asm_parser;
+        ASSERT_TRUE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser egress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+)PARSER_CFG"));
+
+        const auto &regs(asm_parser.generateConfig());
+
+        /* -- POV key bytes selection is set */
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[0].src[0], "1b1");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[0].src[1], "1b1");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[0].src[2], "1b1");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[0].src[3], "1b1");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[0].start[0], "3x1");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[0].start[1], "3x2");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[0].start[2], "3x3");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[0].start[3], "3x4");
+    }
+
+    {
+        /* -- complex case:
+         *    - both parser and pseudo parser
+         *    - all types of PHV builder groups: PHE8 (0-15), PHE16 (16-23), PHE32(24-31)
+         *    - other and packet8, packet16, packet32 PHE sources */
+        AsmParserGuard asm_parser;
+        ASSERT_TRUE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+    bar: 0x43
+    baz: 0x44
+    foobar: 0x45
+    foobaz: 0x46
+    efoo: 0x52
+    ebar: 0x53
+    ebaz: 0x54
+    efoobar: 0x55
+    efoobaz: 0x56
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [flags 0, state 5, flags 7, state 0]
+    extract 1:
+      source: [
+        {B2: constant 0xab, B3: none, B0: pov_flags 5}
+      ]
+    extract 2:
+      match: 0x01****23
+  phv_builder_group 15:
+    pov_select: [flags 1, state 2, state 3, flags 4]
+    extract 1:
+      match: 0x45**67**
+      source: [
+        {},
+        {B124: pov_state 2, B125: checksum_and_error, B127: ghost 5}
+      ]
+    extract 2:
+      match: 0x89****ab
+      source: [
+        {B120: udf0 0, B121: udf1 1, B122: udf2 2, B123: udf3 3},
+        packet8 foo [B125 offset 0x11, B126 offset 0x12]
+      ]
+  phv_builder_group 16:
+    pov_select: [state 1, flags 1, state 2, flags 2]
+    extract 1:
+      match: 0x123456**
+      source: [
+        {H0(8..15): pov_state 4, H1(0..7): constant 0x56, H0(0..7): udf1 3, H1(8..15): ghost 2},
+        packet16 bar [H3 msb_offset 0x33, H2 msb_offset 0x22 swap]
+      ]
+  phv_builder_group 24:
+    pov_select: [flags 3, state 3, flags 4, state 4]
+    extract 1:
+      match: 0x**345678
+      source: [
+        packet32 baz W0 msb_offset 0x11,
+        packet32 foobar W1 msb_offset 0x12 reverse
+      ]
+    extract 2:
+      match: 0x**34**78
+      source: [
+        packet32 foobaz W0 msb_offset 0x13 reverse_16b_words,
+        {W1(0..7): pov_flags 1, W1(8..15): constant 0x78, W1(16..23): udf3 5, W1(24..31): ghost 3}
+      ]
+parser egress:
+  phv_builder_group 0:
+    pov_select: [state 1, flags 2, flags 3, state 4]
+    extract 1:
+      source: [
+        {B0: constant 0xcd, B1: none, B2: pov_flags 1}
+      ]
+    extract 2:
+      match: 0x******45
+  phv_builder_group 15:
+    pov_select: [state 0, flags 5, state 6, flags 7]
+    extract 1:
+      match: 0x**aa**bb
+      source: [
+        {B120: pov_state 3, B121: tm 0x11, B123: bridge 0x13},
+        packet8 efoo [B124 offset 0x24, B127 offset 0x27]
+      ]
+  phv_builder_group 16:
+    pov_select: [flags 5, flags 6, flags 7, state 0]
+    extract 1:
+      match: 0xccdd****
+      source: [
+        {H0(0..7): tm 0x1a, H1(0..7): bridge 0x1b, H1(8..15): constant 0xde, H0(8..15): pov_state 2},
+        packet16 ebar [H2 msb_offset 0xab, H3 msb_offset 0xcd swap]
+      ]
+  phv_builder_group 24:
+    pov_select: [state 7, state 6, state 5, flags 0]
+    extract 1:
+      match: 0x**abcdef
+      source: [
+        packet32 ebaz W0 msb_offset 0x8a reverse_16b_words,
+        packet32 efoobar W1 msb_offset 0x9b
+      ]
+    extract 2:
+      match: 0x5a****6b
+      source: [
+        packet32 efoobaz W0 msb_offset 0x2d reverse,
+        {W1(0..7): pov_state 5, W1(8..15): bridge 0x12, W1(16..23): tm 0x15, W1(24..31): constant 0xfa}
+      ]
+)PARSER_CFG"));
+
+        const auto &regs(asm_parser.generateConfig());
+
+        /* ---- PARSER (ingress) ---- */
+
+        /* -- PHV builder group 0 */
+        /* -- POV key bytes selection is set */
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[0].src[0], "1b0");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[0].src[1], "1b1");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[0].src[2], "1b0");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[0].src[3], "1b1");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[0].start[0], "3x0");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[0].start[1], "3x5");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[0].start[2], "3x7");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[0].start[3], "3x0");
+        /* -- TCAM 0 not set, at defaults */
+        EXPECT_REGISTER(regs.prsr_mem.phv_tcam.phv_tcam[0][0].key_wh, "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_tcam.phv_tcam[0][0].key_wl, "");
+        /* -- SRAM 0 not set, at defaults */
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][0].type0, "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][0].type0_field[0], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][0].type0_field[1], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][0].type0_field[2], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][0].type0_field[3], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][0].type0_field[4], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][0].type1, "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][0].type1_field[0], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][0].type1_field[1], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][0].type1_field[2], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][0].type1_field[3], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][0].type1_field[4], "");
+        /* -- TCAM 1 not set, at defaults */
+        EXPECT_REGISTER(regs.prsr_mem.phv_tcam.phv_tcam[0][1].key_wh, "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_tcam.phv_tcam[0][1].key_wl, "");
+        /* -- SRAM 1 is set */
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][1].type0, "1b1");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][1].type0_field[0],
+                "none: 2b00 | constant: 2b00 | none: 2b00 | pov_flags: 2b01");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][1].type0_field[1],
+                "POV: 1b0 | reserved: 3b000 | flags: 1b0 | value: 3x5");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][1].type0_field[2], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][1].type0_field[3],
+                "8xab");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][1].type0_field[4], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][1].type1, "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][1].type1_field[0], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][1].type1_field[1], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][1].type1_field[2], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][1].type1_field[3], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][1].type1_field[4], "");
+        /* -- TCAM 2 is set */
+        EXPECT_REGISTER(regs.prsr_mem.phv_tcam.phv_tcam[0][2].key_wh, "~8x01 | 16xffff | ~8x23");
+        EXPECT_REGISTER(regs.prsr_mem.phv_tcam.phv_tcam[0][2].key_wl,  "8x01 | 16xffff |  8x23");
+        /* -- SRAM 2 not set, at defaults */
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][2].type0, "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][2].type0_field[0], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][2].type0_field[1], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][2].type0_field[2], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][2].type0_field[3], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][2].type0_field[4], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][2].type1, "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][2].type1_field[0], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][2].type1_field[1], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][2].type1_field[2], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][2].type1_field[3], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][2].type1_field[4], "");
+
+        /* -- PHV builder group 15 */
+        /* -- POV key bytes selection is set */
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[15].src[0], "1b0");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[15].src[1], "1b1");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[15].src[2], "1b1");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[15].src[3], "1b0");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[15].start[0], "3x1");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[15].start[1], "3x2");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[15].start[2], "3x3");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[15].start[3], "3x4");
+        /* -- TCAM 0 not set, at defaults */
+        EXPECT_REGISTER(regs.prsr_mem.phv_tcam.phv_tcam[15][0].key_wh, "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_tcam.phv_tcam[15][0].key_wl, "");
+        /* -- SRAM 0 not set, at defaults */
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][0].type0, "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][0].type0_field[0], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][0].type0_field[1], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][0].type0_field[2], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][0].type0_field[3], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][0].type0_field[4], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][0].type1, "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][0].type1_field[0], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][0].type1_field[1], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][0].type1_field[2], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][0].type1_field[3], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][0].type1_field[4], "");
+        /* -- TCAM 1 is set */
+        EXPECT_REGISTER(regs.prsr_mem.phv_tcam.phv_tcam[15][1].key_wh,
+                "~8x45 | 8xff | ~8x67 | 8xff");
+        EXPECT_REGISTER(regs.prsr_mem.phv_tcam.phv_tcam[15][1].key_wl,
+                 "8x45 | 8xff |  8x67 | 8xff");
+        /* -- SRAM 1 is set */
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][1].type0, "1b1");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][1].type0_field[0], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][1].type0_field[1], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][1].type0_field[2], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][1].type0_field[3], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][1].type0_field[4], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][1].type1, "1b1");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][1].type1_field[0],
+                "ghost: 2b11 | none: 2b00 | checksum_and_error: 2b01 | pov_state: 2b01");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][1].type1_field[1],
+                "POV: 1b0 | reserved: 3b000 | state: 1b1 | value: 3x2");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][1].type1_field[2],
+                "CSUM: 1b1 | reserved: 7b0000000");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][1].type1_field[3], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][1].type1_field[4],
+                "reserved: 5b00000 | value: 3x5");
+        /* -- TCAM 2 is set */
+        EXPECT_REGISTER(regs.prsr_mem.phv_tcam.phv_tcam[15][2].key_wh, "~8x89 | 16xffff | ~8xab");
+        EXPECT_REGISTER(regs.prsr_mem.phv_tcam.phv_tcam[15][2].key_wl,  "8x89 | 16xffff |  8xab");
+        /* -- SRAM 2 is set */
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type0, "1b1");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type0_field[0],
+                "udf3: 2b10 | udf2: 2b10 | udf1: 2b10 | udf0: 2b10");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type0_field[1],
+                "udf: 2b00 | reserved: 3b000 | value: 3x0");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type0_field[2],
+                "udf: 2b01 | reserved: 3b000 | value: 3x1");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type0_field[3],
+                "udf: 2b10 | reserved: 3b000 | value: 3x2");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type0_field[4],
+                "udf: 2b11 | reserved: 3b000 | value: 3x3");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type1, "1b0");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type1_field[0],
+                "8x42");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type1_field[1], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type1_field[2],
+                "8x11");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type1_field[3],
+                "8x12");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type1_field[4], "");
+
+        /* -- PHV builder group 16 */
+        /* -- POV key bytes selection is set */
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[16].src[0], "1b1");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[16].src[1], "1b0");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[16].src[2], "1b1");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[16].src[3], "1b0");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[16].start[0], "3x1");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[16].start[1], "3x1");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[16].start[2], "3x2");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[16].start[3], "3x2");
+        /* -- TCAM 0 not set, at defaults */
+        EXPECT_REGISTER(regs.prsr_mem.phv_tcam.phv_tcam[16][0].key_wh, "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_tcam.phv_tcam[16][0].key_wl, "");
+        /* -- SRAM 0 not set, at defaults */
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][0].type0, "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][0].type0_field[0], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][0].type0_field[1], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][0].type0_field[2], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][0].type0_field[3], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][0].type0_field[4], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][0].type1, "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][0].type1_field[0], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][0].type1_field[1], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][0].type1_field[2], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][0].type1_field[3], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][0].type1_field[4], "");
+        /* -- TCAM 1 is set */
+        EXPECT_REGISTER(regs.prsr_mem.phv_tcam.phv_tcam[16][1].key_wh, "~24x123456 | 8xff");
+        EXPECT_REGISTER(regs.prsr_mem.phv_tcam.phv_tcam[16][1].key_wl,  "24x123456 | 8xff");
+        /* -- SRAM 1 is set */
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type0, "1b1");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type0_field[0],
+                "ghost: 2b11 | constant: 2b00 | pov_state: 2b01 | udf1: 2b10");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type0_field[1],
+                "udf: 2b01 | reserved: 3b000 | value: 3x3");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type0_field[2],
+                "POV: 1b0 | reserved: 3b000 | state: 1b1 | value: 3x4");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type0_field[3],
+                "8x56");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type0_field[4],
+                "reserved: 5b00000 | value: 3x2");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type1, "1b0");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type1_field[0],
+                "8x43");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type1_field[1],
+                "8x22");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type1_field[2],
+                "reserved: 7b0000000 | swap: 1b1");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type1_field[3],
+                "8x33");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type1_field[4],
+                "reserved: 7b0000000 | swap: 1b0");
+
+        /* -- PHV builder group 24 */
+        /* -- POV key bytes selection is set */
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[24].src[0], "1b0");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[24].src[1], "1b1");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[24].src[2], "1b0");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[24].src[3], "1b1");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[24].start[0], "3x3");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[24].start[1], "3x3");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[24].start[2], "3x4");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[24].start[3], "3x4");
+        /* -- TCAM 0 not set, at defaults */
+        EXPECT_REGISTER(regs.prsr_mem.phv_tcam.phv_tcam[24][0].key_wh, "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_tcam.phv_tcam[24][0].key_wl, "");
+        /* -- SRAM 0 not set, at defaults */
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][0].type0, "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][0].type0_field[0], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][0].type0_field[1], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][0].type0_field[2], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][0].type0_field[3], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][0].type0_field[4], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][0].type1, "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][0].type1_field[0], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][0].type1_field[1], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][0].type1_field[2], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][0].type1_field[3], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][0].type1_field[4], "");
+        /* -- TCAM 1 is set */
+        EXPECT_REGISTER(regs.prsr_mem.phv_tcam.phv_tcam[24][1].key_wh, "8xff | ~24x345678");
+        EXPECT_REGISTER(regs.prsr_mem.phv_tcam.phv_tcam[24][1].key_wl, "8xff |  24x345678");
+        /* -- SRAM 1 is set */
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type0, "1b0");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type0_field[0],
+                "8x44");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type0_field[1],
+                "8x11");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type0_field[2], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type0_field[3], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type0_field[4], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type1, "1b0");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type1_field[0],
+                "8x45");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type1_field[1],
+                "8x12");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type1_field[2],
+                "reserved: 6b000000 | reverse: 2b10");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type1_field[3], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type1_field[4], "");
+        /* -- TCAM 2 is set */
+        EXPECT_REGISTER(regs.prsr_mem.phv_tcam.phv_tcam[24][2].key_wh,
+                "8xff | ~8x34 | 8xff | ~8x78");
+        EXPECT_REGISTER(regs.prsr_mem.phv_tcam.phv_tcam[24][2].key_wl,
+                "8xff |  8x34 | 8xff |  8x78");
+        /* -- SRAM 2 is set */
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type0, "1b0");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type0_field[0],
+                "8x46");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type0_field[1],
+                "8x13");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type0_field[2],
+                "reserved: 6b000000 | reverse_16b_words: 2b01");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type0_field[3], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type0_field[4], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type1, "1b1");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type1_field[0],
+                "ghost: 2b11 | udf3: 2b10 | constant: 2b00 | pov_flags: 2b01");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type1_field[1],
+                "POV: 1b0 | reserved: 3b000 | flags: 1b0 | value: 3x1");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type1_field[2],
+                "8x78");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type1_field[3],
+                "udf: 2b11 | reserved: 3b000 | value: 3x5");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type1_field[4],
+                "reserved: 5b00000 | value: 3x3");
+
+
+        /* ---- PSEUDO PARSER (egress) ---- */
+
+        /* -- PHV builder group 0 */
+        /* -- POV key bytes selection is set */
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[0].src[0], "1b1");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[0].src[1], "1b0");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[0].src[2], "1b0");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[0].src[3], "1b1");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[0].start[0], "3x1");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[0].start[1], "3x2");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[0].start[2], "3x3");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[0].start[3], "3x4");
+        /* -- TCAM 0 not set, at defaults */
+        EXPECT_REGISTER(regs.pprsr_mem.phv_tcam.phv_tcam[0][0].key_wh, "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_tcam.phv_tcam[0][0].key_wl, "");
+        /* -- SRAM 0 not set, at defaults */
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][0].type0, "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][0].type0_field[0], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][0].type0_field[1], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][0].type0_field[2], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][0].type0_field[3], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][0].type0_field[4], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][0].type1, "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][0].type1_field[0], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][0].type1_field[1], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][0].type1_field[2], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][0].type1_field[3], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][0].type1_field[4], "");
+        /* -- TCAM 1 not set, at defaults */
+        EXPECT_REGISTER(regs.pprsr_mem.phv_tcam.phv_tcam[0][1].key_wh, "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_tcam.phv_tcam[0][1].key_wl, "");
+        /* -- SRAM 1 is set */
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][1].type0, "1b1");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][1].type0_field[0],
+                "none: 2b00 | pov_flags: 2b01 | none: 2b00 | constant: 2b00");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][1].type0_field[1],
+                "8xcd");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][1].type0_field[2], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][1].type0_field[3],
+                "POV: 1b0 | reserved: 3b000 | flags: 1b0 | value: 3x1");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][1].type0_field[4], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][1].type1, "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][1].type1_field[0], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][1].type1_field[1], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][1].type1_field[2], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][1].type1_field[3], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][1].type1_field[4], "");
+        /* -- TCAM 2 is set */
+        EXPECT_REGISTER(regs.pprsr_mem.phv_tcam.phv_tcam[0][2].key_wh, "24xffffff | ~8x45");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_tcam.phv_tcam[0][2].key_wl, "24xffffff |  8x45");
+        /* -- SRAM 2 not set, at defaults */
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][2].type0, "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][2].type0_field[0], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][2].type0_field[1], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][2].type0_field[2], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][2].type0_field[3], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][2].type0_field[4], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][2].type1, "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][2].type1_field[0], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][2].type1_field[1], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][2].type1_field[2], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][2].type1_field[3], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][2].type1_field[4], "");
+
+        /* -- PHV builder group 15 */
+        /* -- POV key bytes selection is set */
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[15].src[0], "1b1");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[15].src[1], "1b0");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[15].src[2], "1b1");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[15].src[3], "1b0");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[15].start[0], "3x0");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[15].start[1], "3x5");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[15].start[2], "3x6");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[15].start[3], "3x7");
+        /* -- TCAM 0 not set, at defaults */
+        EXPECT_REGISTER(regs.pprsr_mem.phv_tcam.phv_tcam[15][0].key_wh, "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_tcam.phv_tcam[15][0].key_wl, "");
+        /* -- SRAM 0 not set, at defaults */
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][0].type0, "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][0].type0_field[0], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][0].type0_field[1], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][0].type0_field[2], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][0].type0_field[3], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][0].type0_field[4], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][0].type1, "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][0].type1_field[0], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][0].type1_field[1], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][0].type1_field[2], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][0].type1_field[3], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][0].type1_field[4], "");
+        /* -- TCAM 1 is set */
+        EXPECT_REGISTER(regs.pprsr_mem.phv_tcam.phv_tcam[15][1].key_wh,
+                "8xff | ~8xaa | 8xff | ~8xbb");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_tcam.phv_tcam[15][1].key_wl,
+                "8xff |  8xaa | 8xff |  8xbb");
+        /* -- SRAM 1 is set */
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type0, "1b1");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type0_field[0],
+                "bridge: 2b11 | none: 2b00 | tm: 2b10 | pov_state: 2b01");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type0_field[1],
+                "POV: 1b0 | reserved: 3b000 | state: 1b1 | value: 3x3");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type0_field[2],
+                "reserved: 3b000 | tm: 5x11");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type0_field[3], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type0_field[4],
+                "reserved: 2b00 | bridge: 6x13");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type1, "1b0");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type1_field[0],
+                "8x52");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type1_field[1],
+                "8x24");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type1_field[2], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type1_field[3], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type1_field[4],
+                "8x27");
+
+        /* -- PHV builder group 16 */
+        /* -- POV key bytes selection is set */
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[16].src[0], "1b0");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[16].src[1], "1b0");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[16].src[2], "1b0");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[16].src[3], "1b1");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[16].start[0], "3x5");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[16].start[1], "3x6");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[16].start[2], "3x7");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[16].start[3], "3x0");
+        /* -- TCAM 0 not set, at defaults */
+        EXPECT_REGISTER(regs.pprsr_mem.phv_tcam.phv_tcam[16][0].key_wh, "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_tcam.phv_tcam[16][0].key_wl, "");
+        /* -- SRAM 0 not set, at defaults */
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][0].type0, "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][0].type0_field[0], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][0].type0_field[1], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][0].type0_field[2], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][0].type0_field[3], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][0].type0_field[4], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][0].type1, "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][0].type1_field[0], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][0].type1_field[1], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][0].type1_field[2], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][0].type1_field[3], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][0].type1_field[4], "");
+        /* -- TCAM 1 is set */
+        EXPECT_REGISTER(regs.pprsr_mem.phv_tcam.phv_tcam[16][1].key_wh, "~16xccdd | 16xffff");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_tcam.phv_tcam[16][1].key_wl,  "16xccdd | 16xffff");
+        /* -- SRAM 1 is set */
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type0, "1b1");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type0_field[0],
+                "constant: 2b00 | bridge: 2b11 | pov_state: 2b01 | tm: 2b10");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type0_field[1],
+                "reserved: 3b000 | tm: 5x1a");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type0_field[2],
+                "POV: 1b0 | reserved: 3b000 | state: 1b1 | value: 3x2");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type0_field[3],
+                "reserved: 2b00 | bridge: 6x1b");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type0_field[4],
+                "8xde");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type1, "1b0");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type1_field[0],
+                "8x53");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type1_field[1],
+                "8xab");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type1_field[2],
+                "reserved: 7b0000000 | swap: 1b0");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type1_field[3],
+                "8xcd");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type1_field[4],
+                "reserved: 7b0000000 | swap: 1b1");
+
+        /* -- PHV builder group 24 */
+        /* -- POV key bytes selection is set */
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[24].src[0], "1b1");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[24].src[1], "1b1");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[24].src[2], "1b1");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[24].src[3], "1b0");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[24].start[0], "3x7");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[24].start[1], "3x6");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[24].start[2], "3x5");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[24].start[3], "3x0");
+        /* -- TCAM 0 not set, at defaults */
+        EXPECT_REGISTER(regs.pprsr_mem.phv_tcam.phv_tcam[24][0].key_wh, "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_tcam.phv_tcam[24][0].key_wl, "");
+        /* -- SRAM 0 not set, at defaults */
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][0].type0, "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][0].type0_field[0], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][0].type0_field[1], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][0].type0_field[2], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][0].type0_field[3], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][0].type0_field[4], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][0].type1, "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][0].type1_field[0], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][0].type1_field[1], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][0].type1_field[2], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][0].type1_field[3], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][0].type1_field[4], "");
+        /* -- TCAM 1 is set */
+        EXPECT_REGISTER(regs.pprsr_mem.phv_tcam.phv_tcam[24][1].key_wh, "8xff | ~24xabcdef");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_tcam.phv_tcam[24][1].key_wl, "8xff |  24xabcdef");
+        /* -- SRAM 1 is set */
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type0, "1b0");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type0_field[0],
+                "8x54");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type0_field[1],
+                "8x8a");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type0_field[2],
+                "reserved: 6b000000 | reverse_16b_words: 2b01");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type0_field[3], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type0_field[4], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type1, "1b0");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type1_field[0],
+                "8x55");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type1_field[1],
+                "8x9b");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type1_field[2], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type1_field[3], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type1_field[4], "");
+        /* -- TCAM 2 is set */
+        EXPECT_REGISTER(regs.pprsr_mem.phv_tcam.phv_tcam[24][2].key_wh,
+                "~8x5a | 16xffff | ~8x6b");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_tcam.phv_tcam[24][2].key_wl,
+                 "8x5a | 16xffff |  8x6b");
+        /* -- SRAM 2 is set */
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type0, "1b0");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type0_field[0],
+                "8x56");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type0_field[1],
+                "8x2d");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type0_field[2],
+                "reserved: 6b000000 | reverse: 2b10");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type0_field[3], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type0_field[4], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type1, "1b1");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type1_field[0],
+                "constant: 2b00 | tm: 2b10 | bridge: 2b11 | pov_state: 2b01");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type1_field[1],
+                "POV: 1b0 | reserved: 3b000 | state: 1b1 | value: 3x5");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type1_field[2],
+                "reserved: 2b00 | bridge: 6x12");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type1_field[3],
+                "reserved: 3b000 | tm: 5x15");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type1_field[4],
+                "8xfa");
+    }
+}
+
+TEST(flatrock_parser, section_phv_builder_group_invalid) {
+    {
+        /* -- missing PHV builder group number */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group:
+    pov_select: [state 1, state 2, state 3, state 4]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- too many parameters */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 1 2:
+    pov_select: [state 1, state 2, state 3, state 4]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- PHV builder group number is too big */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 32:
+    pov_select: [state 1, state 2, state 3, state 4]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- redefinition of the same PHV builder group */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 31:
+    pov_select: [state 1, state 2, state 3, state 4]
+  phv_builder_group 31:
+    pov_select: [state 0, state 1, state 2, state 3]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- value is not map */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 31: 1
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- invalid directive inside phv_builder_group */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 31:
+    pov_select: [state 1, state 2, state 3, state 4]
+    foo:
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- invalid type of key used inside phv_builder_group */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 31:
+    5: 1
+    pov_select: [state 1, state 2, state 3, state 4]
+)PARSER_CFG"));
+    }
+}
+
+TEST(flatrock_parser, section_phv_builder_group_pov_select_invalid) {
+    {
+        /* -- use of pov_select with parameter */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 31:
+    pov_select 1: [state 1, state 2, state 3, state 4]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- use of pov_select with value other than vector */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 31:
+    pov_select: 1
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- too many values for pov_select */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 31:
+    pov_select: [state 1, state 2, state 3, state 4, state 5]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- invalid type of value for pov_select */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 31:
+    pov_select: [state 1, state 2, foo 3, state 4]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- out of range value (greater than allowed) for pov_select */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 31:
+    pov_select: [state 1, state 2, state 8, state 4]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- out of range value (less than allowed) for pov_select */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 31:
+    pov_select: [state 1, state -1, state 3, state 4]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- missing mandatory pov_select */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 31:
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- pov_select used multiple times */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 31:
+    pov_select: [state 1, state 2, state 3, state 4]
+    pov_select: [state 1, state 2, state 3, state 4]
+)PARSER_CFG"));
+    }
+}
+
+TEST(flatrock_parser, section_phv_builder_group_extract_invalid) {
+    {
+        /* -- missing extract index */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract:
+      match: 0x******01
+      source: [{}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- too many parameters for extract */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1 2:
+      match: 0x******01
+      source: [{}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- extract number out of range */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 16:
+      match: 0x******01
+      source: [{}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- redefinition of the same extract */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 31:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{}]
+    extract 1:
+      match: 0x******02
+      source: [{}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- value for extract is not map */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1: 5
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- invalid extract directive */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{}]
+      foo: 1
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- invalid extract match constant type */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: foo
+      source: [{}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- match constant references unused POV byte */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 31:
+    pov_select: [state 1, state 2, state 3]
+    extract 1:
+      match: 0x******ff
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- match constant references unused POV byte */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 31:
+    pov_select: [state 1, state 2, state 3]
+    extract 1:
+      match: 0x******00
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- match constant references unused POV byte */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 31:
+    pov_select: [state 1, state 2, state 3]
+    extract 1:
+      match: 0x1234567*
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- invalid extract match constant width */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x********_******01
+      source: [{}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- invalid extract source type */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: packet
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- number of extract source values exceeds allowed value */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{}, {}, {}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- invalid type of extract source value (constant) */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [1]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- invalid type of extract source value (string) */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet]
+)PARSER_CFG"));
+    }
+}
+
+TEST(flatrock_parser, section_phv_builder_group_other_phe_invalid) {
+    {
+        /* -- number of other values per PHE source exceeds the limit */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{B0: none, B1: none, B2: none, B3: none, B4: none}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- invalid register name for other value of PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{A1: none}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- specified register does not match PHV builder group and PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{B4: none}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- specified register slice is not correctly aligned */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 16:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{H0(1..8): none}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- same register can not be used multiple times */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{B0: none, B0: constant 1}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- invalid other value type (neither operation nor string) */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{B0: 1}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- invalid other value string (constant should be an operation) */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{B0: constant}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- checksum_and_error is not valid in pseudo parser (egress) */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser egress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{B0: checksum_and_error}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- too many arguments for other value with parameter */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{B0: constant 1 2}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- invalid other value type */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{B0: foo 1}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- invalid other value type */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{B0: 1 constant}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- constant is out of range */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{B0: constant 256}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- pov_flags is out of range */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{B0: pov_flags 0x8}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- pov_state is out of range */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{B0: pov_state 0x8}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- ghost is out of range */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{B0: ghost 0x8}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- ghost is not valid in pseudo parser */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser egress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{B0: ghost 0x7}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- udf0 is out of range */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{B0: udf0 0x8}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- udf0 is not valid in pseudo parser */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser egress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{B0: udf0 0x7}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- udf1 is out of range */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{B0: udf1 0x8}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- udf1 is not valid in pseudo parser */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser egress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{B0: udf1 0x7}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- udf2 is out of range */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{B0: udf2 0x8}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- udf2 is not valid in pseudo parser */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser egress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{B0: udf2 0x7}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- udf3 is out of range */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{B0: udf3 0x8}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- udf3 is not valid in pseudo parser */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser egress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{B0: udf3 0x7}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- tm is out of range */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser egress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{B0: tm 0x20}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- tm is not valid in parser */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{B0: tm 0x1f}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- bridge is out of range */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser egress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{B0: bridge 0x40}]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- bridge is not valid in parser */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [{B0: bridge 0x3f}]
+)PARSER_CFG"));
+    }
+}
+
+TEST(flatrock_parser, section_phv_builder_group_packet8_phe_invalid) {
+    {
+        /* -- missing argument for packet PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet8 foo]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- invalid type of header for packet PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet8 {} [B0 offset 1]]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- specified unknown header for packet PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet8 bar [B0 offset 1]]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- specified out of range header index for packet PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet8 256 [B0 offset 1]]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- packet8 PHE source used in incorrect PHV builder group */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 16:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet8 foo [B0 offset 1]]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- invalid number of arguments for packet8 PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet8 foo [B0 offset 1] bar]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- invalid type of argument for packet8 PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet8 foo B0]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- invalid number of values for packet8 PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet8 foo [
+        B0 offset 1, B1 offset 2, B2 offset 3, B3 offset 4, B4 offset 5
+      ]]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- incorrect offset specification for packet8 PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet8 foo [B0]]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- incorrect offset specification for packet8 PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet8 foo [B0 offset]]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- incorrect register for specified PHV builder group and packet8 PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet8 foo [B4 offset 1]]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- same register used multiple times for specified PHV builder group
+         *    and packet8 PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet8 foo [B0 offset 1, B0 offset 2]]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- incorrect offset specification for packet8 PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet8 foo [B0 offse 1]]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- offset is out of range for packet8 PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet8 foo [B0 offset 256]]
+)PARSER_CFG"));
+    }
+}
+
+TEST(flatrock_parser, section_phv_builder_group_packet16_phe_invalid) {
+    {
+        /* -- packet16 PHE source used in incorrect PHV builder group */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet16 foo [H0 msb_offset 1]]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- invalid number of arguments for packet16 PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 16:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet16 foo [H0 msb_offset 1] bar]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- invalid type of argument for packet16 PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 16:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet16 foo H0]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- invalid number of values for packet16 PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 16:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet16 foo [H0 msb_offset 1, H1 msb_offset 2, H2 msb_offset3]]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- incorrect offset specification for packet16 PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 16:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet16 foo [H0]]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- incorrect offset specification for packet16 PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 16:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet16 foo [H0 msb_offset 1 swap bar]]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- incorrect register for specified PHV builder group and packet16 PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 16:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet16 foo [H2 msb_offset 1]]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- same register used multiple times for specified PHV builder group
+         *    and packet16 PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 16:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet16 foo [H0 msb_offset 1, H0 msb_offset 2]]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- register slice can not be used for packet16 PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 16:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet16 foo [H0(0..7) msb_offset 1]]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- incorrect offset specification for packet16 PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 16:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet16 foo [H0 offset 1]]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- offset is out of range for packet16 PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 16:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet16 foo [H0 msb_offset 256]]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- incorrect value used instead of swap keyword */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 16:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet16 foo [H0 msb_offset 1 1]]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- incorrect value used instead of swap keyword */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 16:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet16 foo [H0 msb_offset 1 swa]]
+)PARSER_CFG"));
+    }
+}
+
+TEST(flatrock_parser, section_phv_builder_group_packet32_phe_invalid) {
+    {
+        /* -- packet32 PHE source used in incorrect PHV builder group */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 0:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet32 foo W0 msb_offset 1]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- invalid number of arguments for packet32 PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 24:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet32 foo W0 msb_offset 1 reverse bar]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- incorrect register for specified PHV builder group and packet32 PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 24:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet32 foo W1 msb_offset 1]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- register slice can not be used for packet32 PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 24:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet32 foo W0(0..15) msb_offset 1]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- incorrect offset specification for packet32 PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 24:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet32 foo W0 offset 1]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- offset is out of range for packet32 PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 24:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet32 foo W0 msb_offset 256]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- invalid reverse specification for packet32 PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 24:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet32 foo W0 msb_offset 1 1]
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- invalid reverse specification for packet32 PHE source */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    foo: 0x42
+parser ingress:
+  phv_builder_group 24:
+    pov_select: [state 1, state 2, state 3, state 4]
+    extract 1:
+      match: 0x******01
+      source: [packet32 foo W0 msb_offset 1 revers]
 )PARSER_CFG"));
     }
 }

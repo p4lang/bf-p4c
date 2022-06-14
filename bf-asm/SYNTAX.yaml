@@ -43,49 +43,104 @@
 #
 #   <hdr-id-name> ::= <constant> | <name>
 #
-#   <other-source> ::= 'constant' <constant> | 'pov_flags' <constant> | 'pov_state' <constant>
-#                      | 'checksum_and_error' | 'udf0' <constant> | 'udf1' <constant>
-#                      | 'udf2' <constant> | 'udf3' <constant> | 'ghost' <constant>
-#                      | 'tm' <constant> | 'bridge' <constant> | 'none'
-#                      checksum_and_error, udf, and ghost are valid only in parser
-#                      tm_emeta and bridge are valid only in pseudo parser
-#                      'constant' -> constant is 8b
-#                      'pov_flags' and 'pov_state' -> constant is 3b
-#                      'udf0..3' -> constant is 3b
-#                      'ghost' -> constant is 2b
-#                      'tm' -> constant is 5b
-#                      'bridge' -> constant is 6b
+#   <pov-select-val-type> ::= state | flags
 #
-#   <other8-sources> ::= <other-source> <other-source> <other-source> <other-source>
+#   <pov-select-val> ::= <pov-select-val-type> <constant>  # <constant> is 3 bits
+#
+#   <pov-select> ::= '[' [ <pov-select-val>
+#                        [, <pov-select-val>
+#                        [, <pov-select-val>
+#                        [, <pov-select-val> ] ] ] ] ']'
+#
+#   <register-slice> ::= <register> | <slice>
+#
+#   <other-source-type> ::=
+#       'constant' <constant> |   # <constant> is 8b, valid in parser, pseudo parser
+#       'none' |                  # valid in parser, pseudo parser
+#       'pov_flags' <constant> |  # <constant> is 3b, valid in parser, pseudo parser
+#       'pov_state' <constant> |  # <constant> is 3b, valid in parser, pseudo parser
+#       'checksum_and_error' |    # valid in parser
+#       'ghost' <constant> |      # <constant> is 3b, valid in parser
+#       'udf0' <constant> |       # <constant> is 3b, valid in parser
+#       'udf1' <constant> |       # <constant> is 3b, valid in parser
+#       'udf2' <constant> |       # <constant> is 3b, valid in parser
+#       'udf3' <constant> |       # <constant> is 3b, valid in parser
+#       'tm' <constant> |         # <constant> is 5b, valid in pseudo parser
+#       'bridge' <constant>       # <constant> is 6b, valid in pseudo parser
+#
+#   <other-source> ::= <register-slice>: <other-source-type>
+#
+#   <other8-sources> ::= { [ <other-source> [ , <other-source> [ , <other-source> [ , <other-source> ]]]] }
+#                       Only limited group of registers/slices can be used in each PHV builder group
+#                       and PHE source and there can not be duplicates.
+#                       e.g. B0 - B3 in first PHE source of PHV builder group 0
+#                            B4 - B7 in second PHE source of PHV builder group 0
+#                            B8 - B11 in first PHE source of PHV builder group 1
+#                            ...
+#                            H0(0..7), H0(8..15), H1(0..7), H1(8..15) in first PHE source
+#                                of PHV builder group 16
+#                            H2(0..7), H2(8..15), H3(0..7), H3(8..15) in second PHE source
+#                                of PHV builder group 16
+#                            H4(0..7), H4(8..15), H5(0..7), H5(8..15) in first PHE source
+#                                of PHV builder group 17
+#                            ...
+#                            W0(0..7), W0(8..15), W0(16..23), W0(24..31) in first PHE source
+#                                of PHV builder group 24
+#                            W1(0..7), W1(8..15), W1(16..23), W1(24..31) in second PHE source
+#                                of PHV builder group 24
+#                            W2(0..7), W2(8..15), W2(16..23), W2(24..31) in first PHE source
+#                                of PHV builder group 25
+#                            ...
 #
 #   <packet8-sources> ::= 'packet8' <hdr-id-name>
-#                                   <register> 'offset' <constant>
-#                                   [<register> 'offset' <constant>
-#                                   [<register> 'offset' <constant>
-#                                   [<register> 'offset' <constant>]]]
-#                         constants are 8b
-#
-#   <phe8-sources> ::= <packet8-source> | <other8-source>
+#                            '[' <register> 'offset' <constant>
+#                                [, <register> 'offset' <constant>
+#                                [, <register> 'offset' <constant>
+#                                [, <register> 'offset' <constant>]]] ']'
+#                        <constant> is 8b
+#                        Only limited group of registers can be used in each PHV builder group
+#                        and PHE source and there can not be duplicates.
+#                        e.g. B0 - B3 in first PHE source of PHV builder group 0
+#                             B4 - B7 in second PHE source of PHV builder group 0
+#                             B8 - B11 in first PHE source of PHV builder group 1
+#                             ...
 #
 #   <packet16-sources> ::= 'packet16' <hdr-id-name>
-#                                     <register> 'msb_offset' <constant> ['swap']
-#                                     [<register> 'msb_offset' <constant> ['swap']]
-#                          constants are 8b
-#
-#   <phe16-sources> ::= <packet16-sources> | <other8-sources>
+#                             '[' <register> 'msb_offset' <constant> ['swap']
+#                                 [, <register> 'msb_offset' <constant> ['swap']] ']'
+#                         <constant> is 8b
+#                         Only limited group of registers can be used in each PHV builder group
+#                         and PHE source and there can not be duplicates.
+#                         e.g. H0 - H1 in first PHE source of PHV builder group 16
+#                              H2 - H3 in second PHE source of PHV builder group 16
+#                              H4 - H5 in first PHE source of PHV builder group 17
+#                              ...
 #
 #   <packet32-source> ::= 'packet32' <hdr-id-name>
-#                                    <register> 'msb_offset' <constant>
-#                                    ['reverse'] ['reverse-words']
-#                         specifies 1x PHE32 source, constant is 8b
+#                             <register> 'msb_offset' <constant>
+#                             ['reverse' | 'reverse_16b_words']
+#                         specifies 1x PHE32 source, <constant> is 8b
 #                         only one of 'reverse' ({B3, B2, B1, B0} -> {B0, B1, B2, B3}) and
-#                         'reverse-words' ({B3, B2, B1, B0} -> {B2, B3, B0, B1}) can be used
+#                         'reverse_16b_words' ({B3, B2, B1, B0} -> {B2, B3, B0, B1}) can be used
+#                         Only specific register can be used in each PHV builder group PHE source.
+#                         e.g. W0 in first PHE source of PHV builder group 24
+#                              W1 in second PHE source of PHV builder group 24
+#                              W2 in first PHE source of PHV builder group 25
+#                              ...
+#
+#   <phe8-source> ::= <packet8-sources> | <other8-sources>
+#
+#   <phe8-source-pair> ::= '[' <phe8-source> [ , <phe8-source> ] ']'
+#
+#   <phe16-source> ::= <packet16-sources> | <other8-sources>
+#
+#   <phe16-source-pair> ::= '[' <phe16-source> [ , <phe16-source> ] ']'
 #
 #   <phe32-source> ::= <packet32-source> | <other8-sources>
 #
-#   <phe-any-source> ::= <phe8-sources> | <phe16-sources> | <phe32-source>
+#   <phe32-source-pair> ::= '[' <phe32-source> [ , <phe32-source> ] ']'
 #
-#   <phe-source> ::= <phe-any-source> <phe-any-source>
+#   <phe-source> ::= <phe8-source-pair> | <phe16-source-pair> | <phe32-source-pair>
 #                    specifies a PHE source pair
 #
 # <sub-state>        ::= 'state' '[' <range> ']'
@@ -342,7 +397,7 @@ parser [<thread>] [<port_use>, ...]:
             # specifies initial instruction for ALU0 (15b)
         initial_alu1_instruction: <alu1-instruction>
             # specifies initial instruction for ALU1 (19b)
-        metadata_select: [ <metadata-select>, ... ]
+        metadata_select: '[' <metadata-select>, ... ']'
             # specifies source of each of 32B of MD32 metadata
     analyzer_stage <constant> [<name>]:
         # constant is stage number
@@ -386,7 +441,7 @@ parser [<thread>] [<port_use>, ...]:
             # TODO update flags, update csum enable
     phv_builder_group <constant>:
         # specifies extract groups
-        pov_select: [ <constant>, <constant>, <constant>, <constant> ]
+        pov_select: <pov-select>
             # specifies which POV bytes are used to address the TCAM & SRAM
         extract <constant>:
             # specifies extracts

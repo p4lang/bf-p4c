@@ -1,9 +1,14 @@
 #include "flatrock/parser.h"
 
 #include <cstring>
+#include <string>
+#include <unordered_map>
 
+#include "bitvec.h"
 #include "flatrock/hdr.h"
 #include "misc.h"
+#include "phv.h"
+#include "target.h"
 #include "top_level.h"
 
 namespace {
@@ -39,6 +44,30 @@ bool input_boolean(bool &target, const value_t value) {
     }
 }
 
+void input_phv_builder_group(PhvBuilderGroup *phv_builder, int phv_builder_size,
+        VECTOR(value_t) args, value_t key, value_t value) {
+    if (key.type == tSTR) {
+        /* -- The key is just one string, no parameters. This could be handled by
+         *    CHECKTYPE macro, but we check it here to have more specific error message. */
+        error(key.lineno, "number of PHV builder group is missing");
+        return;
+    }
+    if (!CHECKTYPE(key, tCMD))
+        return;
+    if (key.vec.size < 2) {
+        error(key.lineno, "number of PHV builder group is missing");
+        return;
+    }
+    if (key.vec.size > 2) {
+        error(key.lineno, "too many parameters of the phv_builder_group directive");
+        return;
+    }
+    if (!check_range(key[1], 0, phv_builder_size - 1))
+        return;
+    const int group_id = key[1].i;
+    phv_builder[group_id].input(args, key.lineno, group_id, value);
+}
+
 }  // namespace
 
 bool check_range_state_subfield(value_t msb, value_t lsb, bool only8b) {
@@ -60,6 +89,695 @@ bool check_range_state_subfield(value_t msb, value_t lsb, bool only8b) {
         return false;
     }
     return true;
+}
+
+bool PovSelect::input(value_t data) {
+    if (!CHECKTYPE(data, tVEC))
+        return false;
+    if (data.vec.size > Target::Flatrock::PARSER_POV_SELECT_NUM) {
+        error(data.lineno, "invalid number of POV bytes specified: %d, valid: 0-%d",
+                data.vec.size, Target::Flatrock::PARSER_POV_SELECT_NUM);
+        return false;
+    }
+
+    bool ok = true;
+
+    for (int i = 0; i < data.vec.size; ++i) {
+        if (!CHECKTYPE(data.vec[i], tCMD)) {
+            ok = false;
+            continue;
+        }
+        if (data.vec[i].vec.size != 2) {
+            error(data.vec[i].lineno, "invalid POV byte specification");
+            ok = false;
+            continue;
+        }
+
+        if (data.vec[i] == "flags") {
+            key[i].src = PovSelectKey::FLAGS;
+        } else if (data.vec[i] == "state") {
+            key[i].src = PovSelectKey::STATE;
+        } else {
+            error(data.vec[i].lineno, "invalid POV byte specification");
+            ok = false;
+            continue;
+        }
+        if (!check_range(data.vec[i].vec[1], 0, 0x7)) {
+            ok = false;
+            continue;
+        }
+        key[i].start = data.vec[i].vec[1].i;
+        key[i].used = true;
+    }
+    return ok;
+}
+
+#define MATCH_CONSTANT_BYTE(word, byte_offset) \
+        (((word) & (0xff << (byte_offset))) >> (byte_offset))
+
+bool PovSelect::check_match(const match_t match) const {
+    for (int i = 0; i < Target::Flatrock::PARSER_POV_SELECT_NUM; ++i) {
+        if (!key[i].used && (MATCH_CONSTANT_BYTE(match.word0, i) != 0xff ||
+                MATCH_CONSTANT_BYTE(match.word1, i) != 0xff))
+            return false;
+    }
+    return true;
+}
+
+bool PhvBuilderGroup::check_register(value_t reg_name, int phe_source_id,
+        int slice_size, bitvec &used_regs, int &val_index) {
+    Phv::Ref reg_ref(gress, 0, reg_name);
+    if (!reg_ref.check()) {
+        error(reg_name.lineno, "invalid register for other PHE source");
+        return false;
+    }
+
+    int reg_min = *group_id * 8 + phe_source_id * 4;
+    int reg_max = reg_min + 3;
+    int reg_id = reg_ref->reg.parser_id();
+    int slice_id = reg_ref.lobit() / slice_size;
+
+    if (reg_id < reg_min || reg_id > reg_max) {
+        error(reg_name.lineno, "invalid register for group %d and PHE source %d",
+                *group_id, phe_source_id);
+        return false;
+    }
+    if (reg_ref.lobit() % slice_size != 0 || reg_ref.size() != slice_size) {
+        error(reg_name.lineno,
+                "invalid register slice, slice has to be aligned to %d bits with size %d",
+                slice_size, slice_size);
+        return false;
+    }
+    if (used_regs.getbit(reg_id + slice_id)) {
+        error(reg_name.lineno, "same register/slice can not be used multiple times");
+        return false;
+    }
+    used_regs.setbit(reg_id + slice_id);
+    val_index = ((reg_id - reg_min) / (slice_size / 8)) + slice_id;
+    return true;
+}
+
+bool PhvBuilderGroup::check_gress(OtherInputConfig &config, value_t value) {
+    bool ok = true;
+    const char *parser_str;
+    switch (config.where_valid) {
+    case PARSER:
+        ok = (gress == INGRESS);
+        parser_str = "parser";
+        break;
+    case PSEUDO_PARSER:
+        ok = (gress == EGRESS);
+        parser_str = "pseudo parser";
+        break;
+    }
+    if (!ok)
+        error(value.lineno, "%s is not valid in %s", value.s, parser_str);
+    return ok;
+}
+
+bool PhvBuilderGroup::input_other_phe_source(VECTOR(value_t) args,
+        Extract::PheSource& phe_source, const int phe_source_id, value_t data) {
+    if (!CHECKTYPE(data, tMAP))
+        return false;
+    if (data.map.size > Target::Flatrock::PARSER_PHV_BUILDER_OTHER_PHE_SOURCES) {
+        error(data.lineno, "%d values exceed limit of %d other type values allowed per PHE source",
+                data.map.size, Target::Flatrock::PARSER_PHV_BUILDER_OTHER_PHE_SOURCES);
+        return false;
+    }
+
+    /* -- initialize all slots for other type to NONE in case they were not set */
+    for (int j = 0; j < Target::Flatrock::PARSER_PHV_BUILDER_OTHER_PHE_SOURCES; ++j) {
+        phe_source.other[j] = {other_subtype::NONE, 0};
+    }
+
+    static std::unordered_map<std::string, OtherInputConfig> other_source_input_config = {
+        {"constant",  {0xff, BOTH, CONSTANT}},
+        {"pov_flags", {0x07, BOTH, POV_FLAGS}},
+        {"pov_state", {0x07, BOTH, POV_STATE}},
+        {"ghost",     {0x07, PARSER, GHOST}},
+        {"udf0",      {0x07, PARSER, UDF0}},
+        {"udf1",      {0x07, PARSER, UDF1}},
+        {"udf2",      {0x07, PARSER, UDF2}},
+        {"udf3",      {0x07, PARSER, UDF3}},
+        {"tm",        {0x1f, PSEUDO_PARSER, TM}},
+        {"bridge",    {0x3f, PSEUDO_PARSER, BRIDGE}},
+    };
+
+    bitvec used_regs;
+    bool ok = true;
+    for (auto &kv : MapIterChecked(data.map, true)) {
+        /* -- Check register if it is in correct PHV builder group and correct PHE
+         *    source and if it hasn't been used yet. */
+        int index;
+        if (!check_register(kv.key, phe_source_id, 8, used_regs, index)) {
+            ok = false;
+            continue;
+        }
+
+        if (!CHECKTYPE2(kv.value, tCMD, tSTR)) {
+            ok = false;
+            continue;
+        }
+
+        if (kv.value.type == tSTR) {
+            if (kv.value == "none") {
+                /* -- phe source type was initialized to NONE, no need to set it here */
+            } else if (kv.value == "checksum_and_error") {
+                if (gress != INGRESS) {
+                    error(kv.value.lineno, "checksum_and_error is valid only in parser");
+                    ok = false;
+                    continue;
+                }
+                phe_source.other[index].subtype = other_subtype::CHKSUM_ERROR;
+            } else {
+                error(kv.value.lineno, "invalid other type");
+                ok = false;
+                continue;
+            }
+        } else if (kv.value.vec.size == 2 && kv.value.vec[0].type == tSTR) {
+            /* -- tCMD */
+            std::string source_subtype{kv.value.vec[0].s};
+            if (other_source_input_config.count(source_subtype)) {
+                auto &source = other_source_input_config.at(source_subtype);
+                if (!check_range(kv.value.vec[1], 0, source.max) ||
+                        !check_gress(source, kv.value.vec[0])) {
+                    ok = false;
+                    continue;
+                }
+                phe_source.other[index].subtype = source.subtype;
+                phe_source.other[index].value = kv.value.vec[1].i;
+            } else {
+                error(kv.value.lineno, "invalid other type");
+                ok = false;
+                continue;
+            }
+        } else {
+            error(kv.value.lineno, "incorrect syntax of other type PHE source value");
+            ok = false;
+            continue;
+        }
+    }
+    phe_source.type = Extract::PheSource::OTHER_SOURCE;
+    return ok;
+}
+
+bool PhvBuilderGroup::input_packet_phe_source(VECTOR(value_t) args,
+        Extract::PheSource& phe_source, const int phe_source_id, value_t data) {
+    if (data.vec.size < 3) {
+        /* -- Size should be 3 for 'packet8' and 'packet16' and 5 or 6 for
+         *    'packet32'. */
+        error(data.lineno, "invalid packet PHE source");
+        return false;
+    }
+
+    if (!CHECKTYPE2(data.vec[1], tSTR, tINT))
+        return false;
+    value_t hdr_id;
+    if (data.vec[1].type == tSTR) {
+        hdr_id = {.type = tINT, .i = Hdr::id(data.vec[1].lineno, data.vec[1].s)};
+    } else {
+        /* -- tINT */
+        hdr_id = data.vec[1];
+    }
+    if (!check_range(hdr_id, 0, 0xff))
+        return false;
+
+    bool ok = true;
+
+    auto &packet_phe = data.vec[0];
+    if (packet_phe == "packet8") {
+        if (*group_id < Target::Flatrock::PARSER_PHV_BUILDER_GROUP_PHE8_MIN ||
+                *group_id > Target::Flatrock::PARSER_PHV_BUILDER_GROUP_PHE8_MAX) {
+            error(packet_phe.lineno,
+                    "PHV builder group %d invalid for PHE8 packet source (valid %d-%d)",
+                    *group_id, Target::Flatrock::PARSER_PHV_BUILDER_GROUP_PHE8_MIN,
+                    Target::Flatrock::PARSER_PHV_BUILDER_GROUP_PHE8_MAX);
+            return false;
+        }
+        if (data.vec.size != 3) {
+            error(packet_phe.lineno, "invalid packet8 PHE source");
+            return false;
+        }
+        if (!CHECKTYPE(data.vec[2], tVEC))
+            return false;
+        auto &offsets = data.vec[2];
+        if (offsets.vec.size < 1 || offsets.vec.size > 4) {
+            error(packet_phe.lineno,
+                    "invalid number (%d) of packet8 PHE source values (valid 1-4)",
+                    offsets.vec.size);
+            return false;
+        }
+        for (int i = 0; i < Target::Flatrock::PARSER_PHV_BUILDER_PACKET_PHE8_SOURCES; ++i) {
+            phe_source.packet8.offset[i] = 0;
+        }
+        bitvec used_regs;
+        for (int i = 0; i < offsets.vec.size; ++i) {
+            if (!CHECKTYPE(offsets.vec[i], tCMD)) {
+                ok = false;
+                continue;
+            }
+            if (offsets.vec[i].vec.size != 3) {
+                error(offsets.vec[i].lineno, "invalid packet8 offset specification");
+                ok = false;
+                continue;
+            }
+            /* -- Check register if it is in correct PHV builder group and correct PHE
+             *    source and if it hasn't been used yet. */
+            int index;
+            if (!check_register(offsets.vec[i].vec[0], phe_source_id, 8, used_regs, index)) {
+                ok = false;
+                continue;
+            }
+            if (offsets.vec[i].vec[1] != "offset") {
+                error(packet_phe.lineno, "invalid packet8 offset specification");
+                ok = false;
+                continue;
+            }
+            if (!check_range(offsets.vec[i].vec[2], 0, 0xff)) {
+                ok = false;
+                continue;
+            }
+            phe_source.packet8.offset[index] = static_cast<uint8_t>(offsets.vec[i].vec[2].i);
+        }
+        if (ok) {
+            phe_source.packet8.hdr_id = static_cast<uint8_t>(hdr_id.i);
+            phe_source.type = Extract::PheSource::PACKET8_SOURCE;
+        }
+    } else if (packet_phe == "packet16") {
+        if (*group_id < Target::Flatrock::PARSER_PHV_BUILDER_GROUP_PHE16_MIN ||
+                *group_id > Target::Flatrock::PARSER_PHV_BUILDER_GROUP_PHE16_MAX) {
+            error(packet_phe.lineno,
+                    "PHV builder group %d invalid for PHE16 packet source (valid %d-%d)",
+                    *group_id, Target::Flatrock::PARSER_PHV_BUILDER_GROUP_PHE16_MIN,
+                    Target::Flatrock::PARSER_PHV_BUILDER_GROUP_PHE16_MAX);
+            return false;
+        }
+        if (data.vec.size != 3) {
+            error(packet_phe.lineno, "invalid packet16 PHE source");
+            return false;
+        }
+        if (!CHECKTYPE(data.vec[2], tVEC))
+            return false;
+        auto &offsets = data.vec[2];
+        if (offsets.vec.size < 1 || offsets.vec.size > 2) {
+            error(packet_phe.lineno,
+                    "invalid number (%d) of packet16 PHE source values (valid 1-2)",
+                    offsets.vec.size);
+            return false;
+        }
+        for (int i = 0; i < Target::Flatrock::PARSER_PHV_BUILDER_PACKET_PHE16_SOURCES; ++i) {
+            phe_source.packet16.offset[i] = 0;
+            phe_source.packet16.swap[i] = false;
+        }
+        bitvec used_regs;
+        for (int i = 0; i < offsets.vec.size; ++i) {
+            if (!CHECKTYPE(offsets.vec[i], tCMD)) {
+                ok = false;
+                continue;
+            }
+            if (offsets.vec[i].vec.size < 3 || offsets.vec[i].vec.size > 4) {
+                error(offsets.vec[i].lineno, "invalid packet16 offset specification");
+                ok = false;
+                continue;
+            }
+            /* -- Check register if it is in correct PHV builder group and correct PHE
+             *    source and if it hasn't been used yet. */
+            int index;
+            if (!check_register(offsets.vec[i].vec[0], phe_source_id, 16, used_regs, index)) {
+                ok = false;
+                continue;
+            }
+            if (offsets.vec[i].vec[1] != "msb_offset") {
+                error(packet_phe.lineno, "invalid packet16 offset specification");
+                ok = false;
+                continue;
+            }
+            if (!check_range(offsets.vec[i].vec[2], 0, 0xff)) {
+                ok = false;
+                continue;
+            }
+            if (offsets.vec[i].vec.size == 4) {
+                if (!CHECKTYPE(offsets.vec[i].vec[3], tSTR)) {
+                    ok = false;
+                    continue;
+                }
+                if (offsets.vec[i].vec[3] == "swap") {
+                    phe_source.packet16.swap[index] = true;
+                } else {
+                    error(packet_phe.lineno, "invalid packet16 offset specification");
+                    ok = false;
+                    continue;
+                }
+            }
+            phe_source.packet16.offset[index] = static_cast<uint8_t>(offsets.vec[i].vec[2].i);
+        }
+        if (ok) {
+            phe_source.packet16.hdr_id = static_cast<uint8_t>(hdr_id.i);
+            phe_source.type = Extract::PheSource::PACKET16_SOURCE;
+        }
+    } else if (packet_phe == "packet32") {
+        if (*group_id < Target::Flatrock::PARSER_PHV_BUILDER_GROUP_PHE32_MIN ||
+                *group_id > Target::Flatrock::PARSER_PHV_BUILDER_GROUP_PHE32_MAX) {
+            error(packet_phe.lineno,
+                    "PHV builder group %d invalid for PHE32 packet source (valid %d-%d)",
+                    *group_id, Target::Flatrock::PARSER_PHV_BUILDER_GROUP_PHE32_MIN,
+                    Target::Flatrock::PARSER_PHV_BUILDER_GROUP_PHE32_MAX);
+            return false;
+        }
+        if (data.vec.size < 5 || data.vec.size > 6) {
+            error(packet_phe.lineno, "invalid packet32 PHE source");
+            return false;
+        }
+        /* -- Check register if it is in correct PHV builder group and correct PHE source. */
+        bitvec used_regs;  // not used here
+        int index;  // not used here
+        if (!check_register(data.vec[2], phe_source_id, 32, used_regs, index))
+            return false;
+        if (data.vec[3] != "msb_offset") {
+            error(packet_phe.lineno, "invalid packet32 PHE source");
+            return false;
+        }
+        if (!check_range(data.vec[4], 0, 0xff))
+            return false;
+        if (data.vec.size == 6) {
+            if (!CHECKTYPE(data.vec[5], tSTR))
+                return false;
+            if (data.vec[5] == "reverse") {
+                phe_source.packet32.reverse = PheSourcePacket32::REVERSE;
+            } else if (data.vec[5] == "reverse_16b_words") {
+                phe_source.packet32.reverse = PheSourcePacket32::REVERSE_16B_WORDS;
+            } else {
+                error(packet_phe.lineno, "invalid packet32 PHE source");
+                return false;
+            }
+        }
+        phe_source.packet32.offset = static_cast<uint8_t>(data.vec[4].i);
+        phe_source.packet32.hdr_id = static_cast<uint8_t>(hdr_id.i);
+        phe_source.type = Extract::PheSource::PACKET32_SOURCE;
+    } else {
+        error(packet_phe.lineno, "invalid PHE source type");
+        return false;
+    }
+
+    return ok;
+}
+
+bool PhvBuilderGroup::input_phe_source_pair(VECTOR(value_t) args,
+        Extract& extract, value_t data) {
+    if (!CHECKTYPE(data, tVEC))
+        return false;
+    if (data.vec.size > Target::Flatrock::PARSER_PHV_BUILDER_PHE_SOURCES) {
+        error(data.lineno, "more than %d PHE sources are not allowed",
+                Target::Flatrock::PARSER_PHV_BUILDER_PHE_SOURCES);
+        return false;
+    }
+    bool ok = true;
+    for (int i = 0; i < data.vec.size; ++i) {
+        if (!CHECKTYPE2(data.vec[i], tMAP, tCMD)) {
+            ok = false;
+            continue;
+        }
+        if (data.vec[i].type == tMAP) {
+            /* -- <other8-sources> */
+            if (!input_other_phe_source(args, extract.phe_source[i], i, data.vec[i])) {
+                ok = false;
+                continue;
+            }
+        } else {
+            /* -- data.vec[i].type == tCMD: 'packet8', 'packet16' or 'packet32' */
+            if (!input_packet_phe_source(args, extract.phe_source[i], i, data.vec[i])) {
+                ok = false;
+                continue;
+            }
+        }
+    }
+    return ok;
+}
+
+bool PhvBuilderGroup::input_extract(VECTOR(value_t) args, value_t key,
+        value_t data) {
+    if (key.type == tSTR) {
+        error(key.lineno, "index of the extract is missing");
+        return false;
+    }
+    if (!CHECKTYPE(key, tCMD))
+        return false;
+    if (key.vec.size < 2) {
+        error(key.lineno, "index of the extract is missing");
+        return false;
+    }
+    if (key.vec.size > 2) {
+        error(key.lineno, "too many parameters of the PHV builder group extract");
+        return false;
+    }
+    if (!check_range(key[1], 0, Target::Flatrock::PARSER_PHV_BUILDER_GROUP_EXTRACTS_NUM - 1))
+        return false;
+
+    const int extract_id = key[1].i;
+
+    if (extracts[extract_id].extract_id) {
+        error(key.lineno, "redefinition of extract (%d) in PHV builder group not allowed",
+                extract_id);
+        return false;
+    }
+
+    if (!CHECKTYPE(data, tMAP))
+        return false;
+
+    bool ok = true;
+    for (auto &kv : MapIterChecked(data.map)) {
+        if (kv.key == "match") {
+            if (!input_match_constant(extracts[extract_id].match_pov, kv.value,
+                    Target::Flatrock::PARSER_POV_SELECT_NUM * 8)) {
+                ok = false;
+                continue;
+            }
+            if (!pov_select.check_match(extracts[extract_id].match_pov)) {
+                error(kv.value.lineno, "match constant references unused POV byte");
+                ok = false;
+                continue;
+            }
+        } else if (kv.key == "source") {
+            if (!input_phe_source_pair(args, extracts[extract_id], kv.value)) {
+                ok = false;
+                continue;
+            }
+        } else {
+            report_invalid_directive("invalid PHV builder group extract directive", kv.key);
+            ok = false;
+            continue;
+        }
+    }
+
+    if (ok)
+        extracts[extract_id].extract_id = extract_id;
+    return ok;
+}
+
+void PhvBuilderGroup::input(VECTOR(value_t) args, const int lineno,
+        const int group, value_t data) {
+    if (group_id) {
+        error(lineno, "redefinition of PHV builder group (number %d) not allowed", group);
+        return;
+    }
+    if (!CHECKTYPE(data, tMAP))
+        return;
+
+    group_id = group;
+    gress = (args.size == 1 && args[0] == "ingress") ? INGRESS : EGRESS;
+
+    bool pov_select_found = false;
+
+    for (auto &kv : MapIterChecked(data.map, true)) {
+        if (!CHECKTYPE2(kv.key, tSTR, tCMD))
+            continue;
+        if (kv.key == "pov_select") {
+            if (!CHECKTYPE(kv.key, tSTR))
+                continue;
+            if (pov_select_found) {
+                error(lineno, "multiple pov_select directives not allowed for PHV builder group");
+                continue;
+            }
+            pov_select_found = true;
+            if (!pov_select.input(kv.value))
+                continue;
+        } else if (kv.key == "extract") {
+            if (!input_extract(args, kv.key, kv.value))
+                continue;
+        } else {
+            report_invalid_directive("invalid phv builder group directive", kv.key);
+            continue;
+        }
+    }
+
+    if (!pov_select_found) {
+        error(lineno, "mandatory pov_select directive not found for PHV builder group %d", group);
+    }
+}
+
+void PhvBuilderGroup::write_config(RegisterSetBase &regs, json::map &json,
+                                                   bool legacy) {
+    auto &fr_regs(dynamic_cast<Target::Flatrock::parser_regs &>(regs));
+
+    /* -- the PHV builder group is not specified, leave the registers at defaults */
+    if (!group_id)
+        return;
+
+    static std::unordered_map<other_subtype, OtherWriteConfig> other_source_write_config {
+        {other_subtype::CONSTANT,     {0x0,  0x0, 8}},
+        /* -- bit[7] = 0 is POV / 1 is CSUM
+         *    bit[3] = 0 is flags / 1 is state
+         *    bit[2:0] is value */
+        {other_subtype::POV_FLAGS,    {0x1,  0x0, 3}},
+        {other_subtype::POV_STATE,    {0x1,  0x1, 3}},
+        {other_subtype::CHKSUM_ERROR, {0x1, 0x80, 0}},
+        /* -- bit[7:6] to select UDF0/1/2/3
+         *    bit[2:0] to select byte from UDF */
+        {other_subtype::UDF0,         {0x2,  0x0, 3}},
+        {other_subtype::UDF1,         {0x2,  0x8, 3}},
+        {other_subtype::UDF2,         {0x2, 0x10, 3}},
+        {other_subtype::UDF3,         {0x2, 0x18, 3}},
+        /* -- bit[4:0] to select byte from TM_eMETA(tm_q_out_meta_s) */
+        {other_subtype::TM,           {0x2,    0, 5}},
+        /* -- bit[2:0] to select byte from TM.QStat (35bit) */
+        {other_subtype::GHOST,        {0x3,    0, 3}},
+        /* -- bit[5:0] to select byte from BridgeMETA(64B) */
+        {other_subtype::BRIDGE,       {0x3,    0, 6}},
+    };
+
+    /* -- POV key bytes selection */
+    for (int i = 0; i < Target::Flatrock::PARSER_POV_SELECT_NUM; ++i) {
+        if (gress == INGRESS) {
+            /* -- parser */
+            fr_regs.prsr.pov_keys_ext.pov_key_ext[*group_id].src[i] = pov_select.key[i].src;
+            fr_regs.prsr.pov_keys_ext.pov_key_ext[*group_id].start[i] = pov_select.key[i].start;
+        } else {
+            /* -- pseudo parser */
+            fr_regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[*group_id].src[i] = pov_select.key[i].src;
+            fr_regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[*group_id].start[i] =
+                    pov_select.key[i].start;
+        }
+    }
+
+    for (int i = 0; i < Target::Flatrock::PARSER_PHV_BUILDER_GROUP_EXTRACTS_NUM; ++i) {
+        if (!extracts[i].extract_id)
+            /* -- extract is not specified, leave the registers at defaults */
+            continue;
+
+        /* -- TCAM match key */
+        if (gress == INGRESS) {
+            /* -- parser */
+            fr_regs.prsr_mem.phv_tcam.phv_tcam[*group_id][i].key_wh = extracts[i].match_pov.word0;
+            fr_regs.prsr_mem.phv_tcam.phv_tcam[*group_id][i].key_wl = extracts[i].match_pov.word1;
+        } else {
+            /* -- pseudo parser */
+            fr_regs.pprsr_mem.phv_tcam.phv_tcam[*group_id][i].key_wh = extracts[i].match_pov.word0;
+            fr_regs.pprsr_mem.phv_tcam.phv_tcam[*group_id][i].key_wl = extracts[i].match_pov.word1;
+        }
+
+        /* -- SRAM PHE sources */
+        for (int j = 0; j < Target::Flatrock::PARSER_PHV_BUILDER_PHE_SOURCES; ++j) {
+            auto &type = (j == 0) ?
+                ( (gress == INGRESS) ?
+                    /* -- parser */
+                    fr_regs.prsr_mem.phv_action_ram.iphv_action_mem16[*group_id][i].type0 :
+                    /* -- pseudo parser */
+                    fr_regs.pprsr_mem.phv_action_ram.ephv_action_mem16[*group_id][i].type0) :
+                ( (gress == INGRESS) ?
+                    /* -- parser */
+                    fr_regs.prsr_mem.phv_action_ram.iphv_action_mem16[*group_id][i].type1 :
+                    /* -- pseudo parser */
+                    fr_regs.pprsr_mem.phv_action_ram.ephv_action_mem16[*group_id][i].type1);
+            auto &type_field = (j == 0) ?
+                ( (gress == INGRESS) ?
+                    /* -- parser */
+                    fr_regs.prsr_mem.phv_action_ram.iphv_action_mem16[*group_id][i].type0_field :
+                    /* -- pseudo parser */
+                    fr_regs.pprsr_mem.phv_action_ram.ephv_action_mem16[*group_id][i].type0_field) :
+                ( (gress == INGRESS) ?
+                    /* -- parser */
+                    fr_regs.prsr_mem.phv_action_ram.iphv_action_mem16[*group_id][i].type1_field :
+                    /* -- pseudo parser */
+                    fr_regs.pprsr_mem.phv_action_ram.ephv_action_mem16[*group_id][i].type1_field);
+
+            switch (extracts[i].phe_source[j].type) {
+            case Extract::PheSource::OTHER_SOURCE:
+            {
+                type = 1;
+                for (int k = 0; k < Target::Flatrock::PARSER_PHV_BUILDER_OTHER_PHE_SOURCES; ++k) {
+                    auto &other = extracts[i].phe_source[j].other[k];
+                    if (other_source_write_config.count(other.subtype)) {
+                        auto &source = other_source_write_config.at(other.subtype);
+                        /* -- set 2 bit subtype */
+                        type_field[0].set_subfield(source.subtype_value, k * 2, 2);
+                        /* -- set value */
+                        type_field[k+1].set_subfield(source.fixed_val, source.var_width,
+                                8 - source.var_width);
+                        type_field[k+1].set_subfield(other.value, 0, source.var_width);
+                    } /* -- else other_subtype::NONE */
+                }
+                break;
+            }
+            case Extract::PheSource::PACKET8_SOURCE:
+            {
+                type = 0;
+                auto &packet = extracts[i].phe_source[j].packet8;
+                /* -- header_id: 0-254, 255 = unused */
+                type_field[0] = packet.hdr_id;
+                /* -- offsets for PHE8 */
+                for (int k = 0; k < Target::Flatrock::PARSER_PHV_BUILDER_PACKET_PHE8_SOURCES; ++k) {
+                    type_field[k+1] = packet.offset[k];
+                }
+                break;
+            }
+            case Extract::PheSource::PACKET16_SOURCE:
+            {
+                type = 0;
+                auto &packet = extracts[i].phe_source[j].packet16;
+                /* -- header_id: 0-254, 255 = unused */
+                type_field[0] = packet.hdr_id;
+                /* -- offsets for PHE16 */
+                for (int k = 0; k < Target::Flatrock::PARSER_PHV_BUILDER_PACKET_PHE16_SOURCES;
+                        ++k) {
+                    type_field[(k*2)+1] = packet.offset[k];
+                }
+                /* -- byte swaps */
+                for (int k = 0; k < Target::Flatrock::PARSER_PHV_BUILDER_PACKET_PHE16_SOURCES;
+                        ++k) {
+                    /* -- bit[0] = 0 no swap
+                     *    bit[0] = 1 swap */
+                    type_field[(k*2)+2].set_subfield(packet.swap[k] ? 0x1 : 0x0, 0, 1);
+                }
+                break;
+            }
+            case Extract::PheSource::PACKET32_SOURCE:
+            {
+                type = 0;
+                auto &packet = extracts[i].phe_source[j].packet32;
+                /* -- header_id: 0-254, 255 = unused */
+                type_field[0] = packet.hdr_id;
+                /* -- offset for PHE32 */
+                type_field[1] = packet.offset;
+                /* -- byte swap */
+                if (packet.reverse == PheSourcePacket32::REVERSE) {
+                    /* -- bit[1:0] = 2 ... 4Byte SWAP: B3,B2,B1,B0 -> B0,B1,B2,B3 */
+                    type_field[2].set_subfield(0x2, 0, 2);
+                } else if (packet.reverse == PheSourcePacket32::REVERSE_16B_WORDS) {
+                    /* -- bit[1:0] = 1 ... 2Byte SWAP: B3,B2,B1,B0 -> B2,B3,B0,B1 */
+                    type_field[2].set_subfield(0x1, 0, 2);
+                } else {
+                    /* -- PheSourcePacket32::NO_REVERSE
+                     *    bit[1:0] = 0 or bit[1:0] = 3 ... no swap
+                     *    We leave the default value (0) here. */
+                }
+                break;
+            }
+            default: /* -- Extract::PheSource::INVALID */
+                /* -- PHE source is not specified, leave the registers at defaults */
+                break;
+            }
+        }
+    }
 }
 
 void FlatrockParser::input_states(VECTOR(value_t) args, value_t key, value_t value) {
@@ -1110,15 +1828,6 @@ void FlatrockParser::AnalyzerStage::write_config(RegisterSetBase &regs, json::ma
     }
 }
 
-void FlatrockParser::PhvBuilderGroup::input(VECTOR(value_t) args, value_t data) {
-    // TODO
-}
-
-void FlatrockParser::PhvBuilderGroup::write_config(RegisterSetBase &regs, json::map &json,
-                                                   bool legacy) {
-    // TODO
-}
-
 void FlatrockParser::input_port_metadata(VECTOR(value_t) args, value_t key, value_t value) {
     if (!CHECKTYPE(key, tSTR) || !CHECKTYPE(value, tMAP)) return;
     for (auto &item : value.map) {
@@ -1172,10 +1881,6 @@ void FlatrockParser::input_analyzer_stage(VECTOR(value_t) args, value_t key, val
     analyzer[stage_index].input(args, stage_index, state_name, value);
 }
 
-void FlatrockParser::input_phv_builder_group(VECTOR(value_t) args, value_t key, value_t value) {
-    if (!CHECKTYPE(key, tCMD) || !CHECKTYPE(value, tMAP)) return;
-}
-
 void FlatrockParser::input(VECTOR(value_t) args, value_t data) {
     if (!CHECKTYPE(data, tMAP)) return;
     for (auto &kv : MapIterChecked(data.map, true)) {
@@ -1188,7 +1893,8 @@ void FlatrockParser::input(VECTOR(value_t) args, value_t data) {
         } else if (kv.key == "analyzer_stage") {
             input_analyzer_stage(args, kv.key, kv.value);
         } else if (kv.key == "phv_builder_group") {
-            input_phv_builder_group(args, kv.key, kv.value);
+            input_phv_builder_group(phv_builder, Target::Flatrock::PARSER_PHV_BUILDER_GROUPS,
+                    args, kv.key, kv.value);
         } else {
             report_invalid_directive("invalid key", kv.key);
         }
@@ -1207,6 +1913,9 @@ void FlatrockParser::write_config(RegisterSetBase &regs, json::map &json, bool l
             profiles[i].write_config(regs, json, legacy);
     for (unsigned int i(0); i < Target::Flatrock::PARSER_ANALYZER_STAGES; ++i) {
         analyzer[i].write_config(regs, json, legacy);
+    }
+    for (unsigned int i = 0; i < Target::Flatrock::PARSER_PHV_BUILDER_GROUPS; ++i) {
+        phv_builder[i].write_config(regs, json, legacy);
     }
     if (auto *top = TopLevel::regs<Target::Flatrock>()) {
         top->mem_pipe.prsr_mem.set("mem.prsr_mem", &_regs.prsr_mem);
@@ -1235,6 +1944,42 @@ bool FlatrockParser::get_state_match(match_t &state_match, value_t name) const {
         return true;
     }
     return false;
+}
+
+void FlatrockPseudoParser::input(VECTOR(value_t) args, value_t data) {
+    for (auto &kv : MapIterChecked(data.map, true)) {
+        if (kv.key == "pov_flags_pos") {
+            if (!CHECKTYPE(kv.key, tSTR)) return;
+            if (!check_range(kv.value, 0, Target::Flatrock::PARSER_BRIDGE_MD_WIDTH - 1)) return;
+            pov_flags_pos = kv.value.i;
+        } else if (kv.key == "pov_state_pos") {
+            if (!CHECKTYPE(kv.key, tSTR)) return;
+            if (!check_range(kv.value, 0, Target::Flatrock::PARSER_BRIDGE_MD_WIDTH - 1)) return;
+            pov_state_pos = kv.value.i;
+        } else if (kv.key == "phv_builder_group") {
+            input_phv_builder_group(phv_builder, Target::Flatrock::PARSER_PHV_BUILDER_GROUPS,
+                    args, kv.key, kv.value);
+        } else {
+            error(kv.key.lineno, "invalid key: %s", kv.key.s);
+        }
+    }
+}
+
+void FlatrockPseudoParser::write_config(RegisterSetBase &regs, json::map &json, bool legacy) {
+    auto &_regs = dynamic_cast<Target::Flatrock::parser_regs &>(regs);
+    _regs.pprsr.pprsr_pov_bmd_ext.st_start = pov_state_pos;
+    _regs.pprsr.pprsr_pov_bmd_ext.flg_start = pov_flags_pos;
+    // _start registers should be hardcoded. Possible removal in future update.
+    _regs.pprsr.pprsr_comp_hdr_bmd_ext.off_start = 0;
+    _regs.pprsr.pprsr_comp_hdr_bmd_ext.id_start = 1;
+    _regs.pprsr.pprsr_comp_hdr_bmd_ext.len_start = 2;
+    for (unsigned int i = 0; i < Target::Flatrock::PARSER_PHV_BUILDER_GROUPS; ++i) {
+        phv_builder[i].write_config(regs, json, legacy);
+    }
+    if (auto *top = TopLevel::regs<Target::Flatrock>()) {
+        top->mem_pipe.pprsr_mem.set("mem.pprsr_mem", &_regs.pprsr_mem);
+        top->reg_pipe.pprsr.set("reg.pprsr", &_regs.pprsr);
+    }
 }
 
 FlatrockAsmParser::FlatrockAsmParser() : BaseAsmParser("parser") {

@@ -5,11 +5,96 @@
 #include "bf-p4c/common/flatrock_parser.h"
 #include "../parser.h"
 #include "asm-types.h"
-#include "flatrock/pseudo_parser.h"
 #include "target.h"
 #include "vector.h"
 
 bool check_range_state_subfield(value_t msb, value_t lsb, bool only8b = false);
+
+struct PovSelect {
+    struct PovSelectKey {
+        enum { FLAGS = 0, STATE = 1} src = FLAGS;
+        uint8_t start = 0;
+        bool used = false;
+    } key[Target::Flatrock::PARSER_POV_SELECT_NUM];
+
+    bool input(value_t data);
+    bool check_match(const match_t match) const;
+};
+
+class PhvBuilderGroup {
+    boost::optional<int> group_id;  // If not set, the PHV builder group is not specified.
+    gress_t gress; /* -- INGRESS: parser, EGRESS: pseudo parser */
+    PovSelect pov_select;
+
+    enum phe_source_valid {
+        BOTH, PARSER, PSEUDO_PARSER
+    };
+    enum other_subtype {
+        NONE, CONSTANT, POV_FLAGS, POV_STATE, CHKSUM_ERROR,
+        UDF0, UDF1, UDF2, UDF3, GHOST, TM, BRIDGE,
+    };
+    struct OtherInputConfig {
+        int max;
+        enum phe_source_valid where_valid;
+        enum other_subtype subtype;
+    };
+
+    struct OtherWriteConfig {
+        uint8_t subtype_value;
+        uint8_t fixed_val;
+        uint8_t var_width;
+    };
+
+    struct PheSourcePacket8 {
+        uint8_t hdr_id;
+        uint8_t offset[Target::Flatrock::PARSER_PHV_BUILDER_PACKET_PHE8_SOURCES];
+    };
+    struct PheSourcePacket16 {
+        uint8_t hdr_id;
+        uint8_t offset[Target::Flatrock::PARSER_PHV_BUILDER_PACKET_PHE16_SOURCES];
+        bool swap[Target::Flatrock::PARSER_PHV_BUILDER_PACKET_PHE16_SOURCES];
+    };
+    struct PheSourcePacket32 {
+        uint8_t hdr_id;
+        uint8_t offset;
+        enum {NO_REVERSE, REVERSE, REVERSE_16B_WORDS} reverse;
+    };
+    struct PheSourceOther{
+        enum other_subtype subtype;
+        uint8_t value;
+    };
+
+    struct Extract {
+        boost::optional<int> extract_id;
+        match_t match_pov = {0, 0};
+        struct PheSource {
+            enum phe_source_type {
+                INVALID, PACKET8_SOURCE, PACKET16_SOURCE, PACKET32_SOURCE, OTHER_SOURCE
+            } type = INVALID;
+            union {
+                PheSourcePacket8 packet8;
+                PheSourcePacket16 packet16;
+                PheSourcePacket32 packet32;
+                PheSourceOther other[Target::Flatrock::PARSER_PHV_BUILDER_OTHER_PHE_SOURCES];
+            };
+        };
+        PheSource phe_source[Target::Flatrock::PARSER_PHV_BUILDER_PHE_SOURCES];
+    } extracts[Target::Flatrock::PARSER_PHV_BUILDER_GROUP_EXTRACTS_NUM];
+
+    bool check_register(value_t reg_name, int phe_source_id, int slice_size,
+            bitvec &used_regs, int &val_index);
+    bool check_gress(OtherInputConfig &config, value_t value);
+    bool input_extract(VECTOR(value_t) args, value_t key, value_t data);
+    bool input_phe_source_pair(VECTOR(value_t) args, Extract& extract, value_t data);
+    bool input_other_phe_source(VECTOR(value_t) args, Extract::PheSource& phe_source,
+            const int phe_source_id, value_t data);
+    bool input_packet_phe_source(VECTOR(value_t) args, Extract::PheSource& phe_source,
+            const int phe_source_id, value_t data);
+
+ public:
+    void input(VECTOR(value_t) args, const int lineno, const int group, value_t data);
+    void write_config(RegisterSetBase &regs, json::map &json, bool legacy = false);
+};
 
 class FlatrockParser : public BaseParser, virtual public Parsable {
     bool states_init = false;
@@ -193,24 +278,12 @@ class FlatrockParser : public BaseParser, virtual public Parsable {
         bool input_push_hdr(Rule& rule, value_t value);
     } analyzer[Target::Flatrock::PARSER_ANALYZER_STAGES];
 
-    struct PhvBuilderGroup : virtual public Parsable, virtual public Configurable {
-        int lineno = -1;
-        int id = -1;
-        int pov_select[Target::Flatrock::PARSER_PHV_BUILDER_GROUP_POV_SELECT_NUM];
-        struct Extract {
-            match_t match_pov;
-            // TODO source
-        } extracts[Target::Flatrock::PARSER_PHV_BUILDER_GROUP_POV_SELECT_NUM];
-
-        void input(VECTOR(value_t) args, value_t data) override;
-        void write_config(RegisterSetBase &regs, json::map &json, bool legacy = false) override;
-    } phv_builder[Target::Flatrock::PARSER_PHV_BUILDER_GROUPS];
+    PhvBuilderGroup phv_builder[Target::Flatrock::PARSER_PHV_BUILDER_GROUPS];
 
     void input_states(VECTOR(value_t) args, value_t key, value_t value);
     void input_port_metadata(VECTOR(value_t) args, value_t key, value_t value);
     void input_profile(VECTOR(value_t) args, value_t key, value_t value);
     void input_analyzer_stage(VECTOR(value_t) args, value_t key, value_t value);
-    void input_phv_builder_group(VECTOR(value_t) args, value_t key, value_t value);
 
     void input(VECTOR(value_t) args, value_t data) override;
     void write_config(RegisterSetBase &regs, json::map &json, bool legacy = false) override;
@@ -224,6 +297,16 @@ class FlatrockParser : public BaseParser, virtual public Parsable {
         for (int i = 0; i < Target::Flatrock::PARSER_ANALYZER_STAGES; i++)
             analyzer[i].parser = this;
     }
+};
+
+class FlatrockPseudoParser : virtual public Parsable, virtual public Configurable {
+ public:
+    int pov_flags_pos = -1;
+    int pov_state_pos = -1;
+    PhvBuilderGroup phv_builder[Target::Flatrock::PARSER_PHV_BUILDER_GROUPS];
+
+    void input(VECTOR(value_t) args, value_t data) override;
+    void write_config(RegisterSetBase &regs, json::map &json, bool legacy = true) override;
 };
 
 class FlatrockAsmParser : public BaseAsmParser {
