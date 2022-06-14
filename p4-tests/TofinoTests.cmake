@@ -818,9 +818,8 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "case5577" ${CMAKE_CURRENT_SOURCE_DIR}/p4
     "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/COMPILER-897")
 
 set (BA102_TESTS_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ba-102/labs/*/solution/p4src/*.p4")
-p4c_find_tests("${BA102_TESTS_FOR_TOFINO}" ba102_tests INCLUDE "tna.p4")
 # l3_rewrite_920 and _930 are not actually tests but helper files for l3_rewrite
-list(FILTER ba102_tests EXCLUDE REGEX "simple_l3_rewrite_9[23]0")
+p4c_find_tests("${BA102_TESTS_FOR_TOFINO}" ba102_tests INCLUDE "tna.p4" EXCLUDE "simple_l3_rewrite_9[23]0")
 # message("BA-102 tests: ${ba102_tests}")
 set(_ba102_common_opts "-bfrt -arch tna -Xp4c=\"--disable-parse-depth-limit\" -append-pythonpath ${CMAKE_CURRENT_SOURCE_DIR}/p4examples/tools")
 function(add_ba102_test t suffix extra_opts)
