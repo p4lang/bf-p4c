@@ -40,9 +40,22 @@ class ReversibleParserGraph {
     > Graph;
 
     Graph graph;
-
+    const IR::BFN::Parser* parser;
     boost::optional<gress_t> gress;
+
+    typename Graph::vertex_descriptor get_entry_point() {
+        if (entry_point) return *entry_point;
+
+        BUG_CHECK(parser, "Cannot get entry point, as provided parser is a nullptr.");
+        if (state_to_vertex.count(parser->start)) return state_to_vertex.at(parser->start);
+
+        BUG("Cannot get entry point of parser.");
+    }
+
+ private:
     boost::optional<typename Graph::vertex_descriptor> entry_point;
+
+ public:
     boost::optional<typename Graph::vertex_descriptor> end;
 
     ordered_map<const IR::BFN::ParserState*, typename Graph::vertex_descriptor> state_to_vertex;

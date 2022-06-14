@@ -222,6 +222,7 @@ class FindParserHeaderEncounterInfo : public PardeInspector {
     FindParserHeaderEncounterInfo *clone() const override {
         return new FindParserHeaderEncounterInfo(*this);
     }
+    bool preorder(const IR::BFN::Parser* parser) override;
     bool preorder(const IR::BFN::ParserState* parser_state) override;
     bool preorder(const IR::BFN::Extract* extract) override;
 

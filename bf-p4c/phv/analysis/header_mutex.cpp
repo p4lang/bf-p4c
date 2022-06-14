@@ -356,6 +356,14 @@ Visitor::profile_t FindParserHeaderEncounterInfo::init_apply(const IR::Node* roo
 }
 
 /**
+ * @brief Associate graph data structure to its parser.
+ */
+bool FindParserHeaderEncounterInfo::preorder(const IR::BFN::Parser* parser) {
+    parser_graphs[parser->gress].parser = parser;
+    return true;
+}
+
+/**
  * @brief Build ReversibleParserGraph for use with Boost Graph Library algorithms.
  */
 bool FindParserHeaderEncounterInfo::preorder(const IR::BFN::ParserState* parser_state) {
@@ -665,7 +673,7 @@ bitvec FindParserHeaderEncounterInfo::get_always_extracted() {
     for (const auto& kv : parser_graphs) {
         auto end = kv.second.vertex_to_state.at(*kv.second.end);
         auto end_dominators = get_all_dominators(end, kv.first);
-        auto entry_point = kv.second.vertex_to_state.at(*kv.second.entry_point);
+        auto entry_point = kv.second.parser->start;
         auto entry_point_post_dominators = get_all_post_dominators(entry_point);
         entry_point_post_dominators.insert(entry_point);
         BUG_CHECK(end_dominators == entry_point_post_dominators,
@@ -687,7 +695,7 @@ bitvec FindParserHeaderEncounterInfo::get_always_extracted() {
 void FindParserHeaderEncounterInfo::build_dominator_maps() {
     LOG3("Building immediate dominator and post-dominator maps.");
     for (auto &kv : parser_graphs) {
-        auto idoms = get_immediate_dominators(kv.second.graph, *kv.second.entry_point);
+        auto idoms = get_immediate_dominators(kv.second.graph, kv.second.get_entry_point());
         auto idm = int_map_to_state_map(idoms, kv.second);
 
         auto reversed_graph = boost::make_reverse_graph(kv.second.graph);
