@@ -23,6 +23,9 @@ class InputXbar : public ::InputXbar {
 
     InputXbar(Table *table, const value_t *key);
     void write_regs_v(Target::Flatrock::mau_regs &regs) override;
+
+ public:
+    static void write_global_regs(Target::Flatrock::mau_regs &regs, gress_t gress);
 };
 
 }

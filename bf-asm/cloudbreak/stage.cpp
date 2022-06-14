@@ -51,7 +51,7 @@ void Stage::gen_configuration_cache(Target::Cloudbreak::mau_regs &regs, json::ve
     }
 }
 
-template<> void Stage::write_regs(Target::Cloudbreak::mau_regs &regs) {
+template<> void Stage::write_regs(Target::Cloudbreak::mau_regs &regs, bool) {
     write_common_regs<Target::Cloudbreak>(regs);
     auto &merge = regs.rams.match.merge;
     for (gress_t gress : Range(INGRESS, EGRESS)) {

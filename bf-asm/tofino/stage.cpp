@@ -1,6 +1,6 @@
 /* mau stage template specializations for tofino -- #included directly in top-level stage.cpp */
 
-template<> void Stage::write_regs(Target::Tofino::mau_regs &regs) {
+template<> void Stage::write_regs(Target::Tofino::mau_regs &regs, bool) {
     write_common_regs<Target::Tofino>(regs);
     auto &merge = regs.rams.match.merge;
     for (gress_t gress : Range(INGRESS, EGRESS)) {
@@ -8,24 +8,25 @@ template<> void Stage::write_regs(Target::Tofino::mau_regs &regs) {
             merge.predication_ctl[gress].start_table_fifo_delay0 = pred_cycle(gress) - 1;
             merge.predication_ctl[gress].start_table_fifo_delay1 = 0;
             merge.predication_ctl[gress].start_table_fifo_enable = 1;
-        } else switch (stage_dep[gress]) {
-        case MATCH_DEP:
-            merge.predication_ctl[gress].start_table_fifo_delay0 =
-                this[-1].pipelength(gress) - this[-1].pred_cycle(gress) + pred_cycle(gress) - 1;
-            merge.predication_ctl[gress].start_table_fifo_delay1 =
-                this[-1].pipelength(gress) - this[-1].pred_cycle(gress);
-            merge.predication_ctl[gress].start_table_fifo_enable = 3;
-            break;
-        case ACTION_DEP:
-            merge.predication_ctl[gress].start_table_fifo_delay0 = 1;
-            merge.predication_ctl[gress].start_table_fifo_delay1 = 0;
-            merge.predication_ctl[gress].start_table_fifo_enable = 1;
-            break;
-        case CONCURRENT:
-            merge.predication_ctl[gress].start_table_fifo_enable = 0;
-            break;
-        default:
-            BUG(); }
+        } else {
+            switch (stage_dep[gress]) {
+            case MATCH_DEP:
+                merge.predication_ctl[gress].start_table_fifo_delay0 =
+                    this[-1].pipelength(gress) - this[-1].pred_cycle(gress) + pred_cycle(gress) - 1;
+                merge.predication_ctl[gress].start_table_fifo_delay1 =
+                    this[-1].pipelength(gress) - this[-1].pred_cycle(gress);
+                merge.predication_ctl[gress].start_table_fifo_enable = 3;
+                break;
+            case ACTION_DEP:
+                merge.predication_ctl[gress].start_table_fifo_delay0 = 1;
+                merge.predication_ctl[gress].start_table_fifo_delay1 = 0;
+                merge.predication_ctl[gress].start_table_fifo_enable = 1;
+                break;
+            case CONCURRENT:
+                merge.predication_ctl[gress].start_table_fifo_enable = 0;
+                break;
+            default:
+                BUG(); } }
         if (stageno != 0) {
             regs.dp.cur_stage_dependency_on_prev[gress] = MATCH_DEP - stage_dep[gress];
             if (stage_dep[gress] == CONCURRENT)

@@ -59,7 +59,7 @@ const Device::GatewaySpec &FlatrockDevice::getGatewaySpec() const {
         /* .MaxRows = */        24,
         /* .SupportXor = */     true,
         /* .SupportRange = */   false,
-        /* .ExactShifts = */    1,
+        /* .ExactShifts = */    4,
         /* .ByteSwizzle = */    false,
         /* .XorByteSlots = */   0xf0,
     };

@@ -28,6 +28,7 @@ class Stage_data {
     BFN::Alloc2D<GatewayTable *, SRAM_ROWS, 2>               gw_unit_use;
     BFN::Alloc2D<GatewayTable *, SRAM_ROWS, 2>               gw_payload_use;
     BFN::Alloc1D<Table *, LOGICAL_TABLES_PER_STAGE>          logical_id_use;
+    BFN::Alloc1D<Table *, PHYSICAL_TABLES_PER_STAGE>         physical_id_use;
     BFN::Alloc1D<Table *, TCAM_TABLES_PER_STAGE>             tcam_id_use;
     ordered_map<InputXbar::Group, std::vector<InputXbar *>>  ixbar_use;
     BFN::Alloc1D<Table *, TCAM_XBAR_INPUT_BYTES>             tcam_ixbar_input;
@@ -106,7 +107,7 @@ class Stage : public Stage_data {
         void gen_mau_stage_characteristics(REGS &regs, json::vector &stg_characteristics);
     template<class REGS>
         void gen_mau_stage_extension(REGS &regs, json::map &extend);
-    template<class REGS> void write_regs(REGS &regs);
+    template<class REGS> void write_regs(REGS &regs, bool egress_only);
     template<class TARGET> void write_common_regs(typename TARGET::mau_regs &regs);
     template<class REGS> void write_teop_regs(REGS &regs);
     int adr_dist_delay(gress_t gress);

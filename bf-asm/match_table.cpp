@@ -158,6 +158,16 @@ void MatchTable::pass0() {
     alloc_id("logical", logical_id, stage->pass1_logical_id,
              LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
 #endif
+    if (logical_id >= 0) {
+        if (stage->logical_id_use[logical_id] && stage->logical_id_use[logical_id] != this) {
+            error(lineno, "Duplicate logical id %d use", logical_id);
+            error(stage->logical_id_use[logical_id]->lineno, "previous use here"); }
+        stage->logical_id_use[logical_id] = this; }
+    if (physical_id >= 0) {
+        if (stage->physical_id_use[physical_id] && stage->physical_id_use[physical_id] != this) {
+            error(lineno, "Duplicate physical id %d use", physical_id);
+            error(stage->physical_id_use[physical_id]->lineno, "previous use here"); }
+        stage->physical_id_use[physical_id] = this; }
     if (action.check() && action->set_match_table(this, !action.is_direct_call()) != ACTION)
         error(action.lineno, "%s is not an action table", action->name());
     attached.pass0(this);
@@ -198,6 +208,21 @@ void MatchTable::pass1() {
     if (gateway) {
         gateway->logical_id = logical_id;
         gateway->pass1(); }
+}
+
+void MatchTable::allocate_physical_id(unsigned usable) {
+    if (physical_id >= 0) {
+        BUG_CHECK((usable >> physical_id) & 1, "table %s has physical id %d which appears to be "
+                  "invalid", name(), physical_id);
+        return; }
+    if (!Target::MATCH_REQUIRES_PHYSID()) return;
+    for (int i = 0; i < PHYSICAL_TABLES_PER_STAGE; ++i) {
+        if (!((usable >> i) & 1)) continue;
+        if (stage->physical_id_use[i]) continue;
+        physical_id = i;
+        stage->physical_id_use[i] = this;
+        return; }
+    error(lineno, "No physical id available for table %s", name());
 }
 
 void MatchTable::pass3() {

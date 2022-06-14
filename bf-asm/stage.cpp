@@ -778,7 +778,7 @@ void Stage::output(json::map &ctxt_json, bool egress_only) {
         table->gen_tbl_cfg(ctxt_tables);
         if (auto gw = table->get_gateway())
             gw->gen_tbl_cfg(ctxt_tables); }
-    write_regs(*regs);
+    write_regs(*regs, egress_only);
 
     // Output GFM
     if (gfm_out)

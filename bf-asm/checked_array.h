@@ -44,12 +44,12 @@ class checked_array : public checked_array_base<T> {
     T& operator[](size_t idx) {
         if (idx >= S) {
             LOG1("ERROR: array index " << idx << " out of bounds " << this);
-            BUG(); }
+            BUG("array index %zu out of bounds (%zu)", idx, S); }
         return data[idx]; }
     const T& operator[](size_t idx) const {
         if (idx >= S) {
             LOG1("ERROR: array index " << idx << " out of bounds " << this);
-            BUG(); }
+            BUG("array index %zu out of bounds (%zu)", idx, S); }
         return data[idx]; }
     size_t size() const { return S; }
     T *begin() { return data; }

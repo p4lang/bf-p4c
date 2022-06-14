@@ -164,3 +164,16 @@ bool input_int_match(const value_t value, match_t &match, int width) {
     }
     return true;
 }
+
+
+unsigned match_t::dirtcam(unsigned width, unsigned bit) {
+    static unsigned masks[] = { 0x5555, 0x3333, 0xf0f0, 0xffff };
+    BUG_CHECK(width <= 4, "dirtcam of more than 4 bits?");
+    unsigned rv = (1U << (1U << width)) - 1;
+    for (unsigned i = 0; i < width; ++i, ++bit) {
+        if (!((word0 >> bit) & 1))
+            rv &= ~masks[i];
+        if (!((word1 >> bit) & 1))
+            rv &= masks[i]; }
+    return rv;
+}

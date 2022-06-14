@@ -36,6 +36,7 @@ struct match_t {
     bool matches(uint64_t v) const {
         return (v | word1) == word1 && ((~v & word1) | word0) == word0; }
     bool matches(const match_t &v) const { assert(0); return false; }
+    unsigned dirtcam(unsigned width, unsigned bit);
 #endif /* __cplusplus */
 };
 

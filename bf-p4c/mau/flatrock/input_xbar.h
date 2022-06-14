@@ -20,7 +20,7 @@ class IXBar : public ::IXBar {
     static constexpr int BYTES_PER_WORD = 4;
     static constexpr int EXACT_MATCH_UNITS = 8;  /* 4 STM + 4 LAMB */
     static constexpr int EXACT_MATCH_STM_UNITS = 4;  /* first 4 units */
-    static constexpr int TERNARY_GROUPS = 16;
+    static constexpr int TERNARY_GROUPS = 20;
     static constexpr int TERNARY_BYTES_PER_GROUP = 5;
 
     using Loc = ::IXBar::Loc;

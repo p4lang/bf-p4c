@@ -43,6 +43,10 @@ p4c_add_xfail_reason("tofino5"
 p4c_add_xfail_reason("tofino5"
   "Invalid slice of 7 bit field immediate"
   extensions/p4_tests/p4_16/flatrock/tf5_template.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "Compiler Bug.* not an always hit hash_action table"
   extensions/p4_tests/p4_16/flatrock/t5na_bridged_md.p4
   )
 
@@ -65,7 +69,8 @@ p4c_add_xfail_reason("tofino5"
 #  )
 
 p4c_add_xfail_reason("tofino5"
-  "Flatrock .* not implemented yet"
+  #"Flatrock .* not implemented yet"
+  "No format field or table named immediate"
   extensions/p4_tests/p4_16/flatrock/pac_unbal_reconverge.p4
   )
 

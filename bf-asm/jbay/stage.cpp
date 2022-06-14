@@ -146,7 +146,7 @@ static void disable_jbay_power_gating(REGS &regs) {
     }
 }
 
-template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
+template<> void Stage::write_regs(Target::JBay::mau_regs &regs, bool) {
     write_common_regs<Target::JBay>(regs);
     auto &merge = regs.rams.match.merge;
     for (gress_t gress : Range(INGRESS, EGRESS)) {

@@ -742,6 +742,15 @@ void LayoutChoices::setup_layout_option_no_match(const IR::MAU::Table *tbl,
         // post split gets index via hash_dist, so it needs to be hash_action
         layout.hash_action = true; }
 
+#if HAVE_FLATROCK
+    if (Device::currentDevice() == Device::FLATROCK) {
+        // Flatrock does not support no_match_miss tables, so force it to be hit path
+        // if we need to run an action.
+        if (!tbl->actions.empty()) {
+            // should use gateway table?  Needs table_layout/table_format updates for flatrock
+            layout.hash_action = true; } }
+#endif /* HAVE_FLATROCK */
+
     // No match tables are required to have only one layout option in a later pass, so the
     // algorithm picks the action format that has the most immediate.  This is the option
     // that is preferred generally, but not always, if somehow it couldn't fit on the action

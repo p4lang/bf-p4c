@@ -4,6 +4,9 @@
 #include "tables.h"
 #include "misc.h"
 
+// target specific instantiatitions
+#include "flatrock/hash_action.h"
+
 Table::Format::Field *HashActionTable::lookup_field(const std::string &n,
         const std::string &act) const {
     auto *rv = format ? format->field(n) : nullptr;
@@ -55,6 +58,7 @@ void HashActionTable::pass2() {
         layout[0].bus = layout[0].result_bus;
     else if (layout[0].result_bus < 0)
         layout[0].result_bus = layout[0].bus;
+    allocate_physical_id();
     determine_word_and_result_bus();
     for (auto &ixb : input_xbar)
         ixb->pass2();
@@ -87,11 +91,6 @@ void HashActionTable::write_merge_regs_vt(REGS &regs, int type, int bus) {
     attached.write_merge_regs(regs, this, type, bus);
 }
 
-#if HAVE_FLATROCK
-template<> void HashActionTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
-    error(lineno, "%s:%d: Flatrock hash_action not implemented yet!", __FILE__, __LINE__);
-}
-#endif  /* HAVE_FLATROCK */
 template<class REGS>
 void HashActionTable::write_regs_vt(REGS &regs) {
     LOG1("### Hash Action " << name() << " write_regs " << loc());

@@ -908,6 +908,7 @@ public:
         }
         return false;
     }
+    void allocate_physical_id(unsigned usable = ~0U);
     bool is_attached(const Table *tbl) const override;
     const Table::Call *get_call(const Table *tbl) const { return get_attached()->get_call(tbl); }
     const AttachedTables *get_attached() const override { return &attached; }
@@ -938,7 +939,7 @@ public:
 )
 
 #define DECLARE_TABLE_TYPE(TYPE, PARENT, NAME, ...)                     \
-class TYPE : public PARENT {                                            \
+class TYPE : public PARENT {           /* NOLINT */                     \
     static struct Type : public Table::Type {                           \
         Type() : Table::Type(NAME) {}                                   \
         TYPE *create(int lineno, const char *name, gress_t gress,       \
@@ -963,6 +964,7 @@ class TYPE : public PARENT {                                            \
  private:                                                               \
     __VA_ARGS__                                                         \
 };
+
 #define DEFINE_TABLE_TYPE(TYPE)                                         \
 TYPE::Type TYPE::table_type_singleton;                                  \
 TYPE *TYPE::Type::create(int lineno, const char *name, gress_t gress,   \
@@ -993,7 +995,7 @@ FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,                                  \
         write_regs_vt(regs); })
 
 DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam, or proxy_hash
-protected:
+ protected:
     struct Way {
         int                              lineno;
         int                              group, subgroup, mask;
@@ -1064,7 +1066,7 @@ protected:
     virtual void gen_ghost_bits(int hash_function_number, json::vector &ghost_bits_to_hash_bits,
         json::vector &ghost_bits_info) const { }
     virtual void no_overhead_determine_result_bus_usage();
-public:
+ public:
     Format::Field *lookup_field(const std::string &n, const std::string &act = "") const override;
     virtual void setup_word_ixbar_group();
     virtual void verify_format();
@@ -1114,7 +1116,7 @@ DECLARE_TABLE_TYPE(ExactMatchTable, SRamMatchTable, "exact_match",
     std::vector<int> stash_units;
     std::vector<int> stash_overhead_rows;
 
-public:
+ public:
     int unitram_type() override { return UnitRam::MATCH; }
     table_type_t table_type() const override { return EXACT; }
     bool has_group(int grp) {
@@ -1217,7 +1219,7 @@ DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
     unsigned            chain_rows[TCAM_UNITS_PER_ROW]; /* bitvector per column */
     enum { ALWAYS_ENABLE_ROW = (1<<2) | (1<<5) | (1<<9) };
     friend class TernaryIndirectTable;
-public:
+ public:
     void pass0() override;
     int tcam_id = -1;
     Table::Ref indirect;
@@ -1339,7 +1341,7 @@ DECLARE_TABLE_TYPE(Phase0MatchTable, MatchTable, "phase0_match",
     bool needs_next() const override { return false; }
 )
 DECLARE_TABLE_TYPE(HashActionTable, MatchTable, "hash_action",
-public:
+ public:
     // int                                 row = -1, bus = -1;
     table_type_t table_type() const override { return HASH_ACTION; }
     template<class REGS> void write_merge_regs_vt(REGS &regs, int type, int bus);
@@ -1385,7 +1387,7 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
         void write_merge_regs, (mau_regs &regs, int type, int bus), override {
             write_merge_regs_vt(regs, type, bus); })
     int unitram_type() override { return UnitRam::TERNARY_INDIRECTION; }
-public:
+ public:
     Format::Field *lookup_field(const std::string &n,
                                         const std::string &act = "") const override;
     const std::vector<NextTables> &get_hit_next() const override {
@@ -1441,11 +1443,11 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
         int bus, const std::vector<Call::Arg> &arg, METER_ACCESS_TYPE default_type,
         unsigned &adr_mask, unsigned &per_entry_mux_ctl, unsigned &adr_default,
         unsigned &meter_type_position);
-protected:
+ protected:
     // Accessed by Meter/Selection/Stateful Tables as "meter_alu_index"
     // Accessed by Statistics (Counter) Tables as "stats_alu_index"
     void add_alu_index(json::map &stage_tbl, std::string alu_index) const;
-public:
+ public:
     const MatchTable *get_match_table() const override {
         return match_tables.size() == 1 ? *match_tables.begin() : 0; }
     MatchTable *get_match_table() override {
@@ -1507,7 +1509,7 @@ DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
     void pad_format_fields();
     unsigned get_do_care_count(std::string bstring);
     unsigned get_lower_huffman_encoding_bits(unsigned width);
-public:
+ public:
     const std::map<std::string, std::unique_ptr<Format>>& get_action_formats() const {
         return action_formats; }
     unsigned get_size() const {
@@ -1545,7 +1547,7 @@ DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
     std::string                 gateway_name;
     std::string                 gateway_cond;
     bool                        always_run = false;  // only for standalone
-public:
+ public:
     struct MatchKey {
         int                     offset;
         Phv::Ref                val;
@@ -1553,7 +1555,7 @@ public:
         MatchKey(int off, gress_t gr, int stg, value_t &v) : offset(off), val(gr, stg, v) {}
         bool operator<(const MatchKey &a) const { return offset < a.offset; }
     };
-private:
+ private:
     std::vector<MatchKey>       match, xor_match;
     struct Match {
         int                     lineno = 0;
@@ -1570,7 +1572,7 @@ private:
     template<class REGS> void payload_write_regs(REGS &, int row, int type, int bus);
     template<class REGS> void standalone_write_regs(REGS &regs);
     template<class REGS> void write_next_table_regs(REGS &);
-public:
+ public:
     table_type_t table_type() const override { return GATEWAY; }
     const MatchTable *get_match_table() const override { return match_table; }
     MatchTable *get_match_table() override { return match_table; }
@@ -1610,7 +1612,7 @@ DECLARE_TABLE_TYPE(SelectionTable, AttachedTable, "selection",
     std::vector<int>    pool_sizes;
     int                 min_words = -1, max_words = -1;
     int                 selection_hash = -1;
-public:
+ public:
     StatefulTable*           bound_stateful = nullptr;
     table_type_t table_type() const override { return SELECTION; }
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) const override {
@@ -1689,7 +1691,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(Synth2Port, AttachedTable,
     int                 home_lineno = -1;
     std::set<int, std::greater<int>> home_rows;
     json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size) const override;
-public:
+ public:
     int get_home_row_for_row(int row) const;
     void add_alu_indexes(json::map &stage_tbl, std::string alu_indexes) const;
     template<class REGS> void write_regs_vt(REGS &regs);
@@ -1734,7 +1736,7 @@ DECLARE_TABLE_TYPE(CounterTable, Synth2Port, "counter",
         explicit lrt_params(const value_t &);
     };
     std::vector<lrt_params>     lrt;
-public:
+ public:
     int home_row() const override { return layout.at(0).row; }
     int direct_shiftcount() const override;
     int indirect_shiftcount() const override;
@@ -1778,7 +1780,7 @@ DECLARE_TABLE_TYPE(MeterTable, Synth2Port, "meter",
 #endif  /* HAVE_JBAY || HAVE_CLOUDBREAK */
 
     int                 sweep_interval = 2;
-public:
+ public:
     enum { NO_COLOR_MAP, IDLE_MAP_ADDR, STATS_MAP_ADDR }  color_mapram_addr = NO_COLOR_MAP;
     int direct_shiftcount() const override;
     int indirect_shiftcount() const override;
@@ -1818,7 +1820,7 @@ struct TMatchInfo {
 };
 
 Instruction *genNoop(StatefulTable *tbl, Table::Actions::Action *act);
-}
+}  // end namespace StatefulAlu  NOLINT
 
 DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
     table_type_t table_type() const override { return STATEFUL; }
@@ -1880,7 +1882,7 @@ DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
     int pred_shift = 0, pred_comb_shift = 0;
     int stage_alu_id = -1;
     Ref underflow_action, overflow_action;
-public:
+ public:
     Ref                 bound_selector;
     unsigned            phv_byte_mask = 0;
     std::vector<Ref>    sbus_learn, sbus_match;

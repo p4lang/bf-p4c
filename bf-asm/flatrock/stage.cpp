@@ -1,5 +1,7 @@
 /* mau stage template specializations for jbay -- #included directly in top-level stage.cpp */
 
+#include "input_xbar.h"
+
 template<> void Stage::fixup_regs(Target::Flatrock::mau_regs &) {
 }
 template<> void Stage::gen_configuration_cache(Target::Flatrock::mau_regs &, json::vector &) {
@@ -10,7 +12,13 @@ template<> void Stage::gen_mau_stage_characteristics(Target::Flatrock::mau_regs 
 }
 template<> void Stage::gen_mau_stage_extension(Target::Flatrock::mau_regs &, json::map &) {
 }
-template<> void Stage::write_regs(Target::Flatrock::mau_regs &) {
+template<> void Stage::write_regs(Target::Flatrock::mau_regs &regs, bool egress_only) {
+    if (egress_only) {
+        Flatrock::InputXbar::write_global_regs(regs, EGRESS);
+    } else {
+        Flatrock::InputXbar::write_global_regs(regs, INGRESS);
+        Flatrock::InputXbar::write_global_regs(regs, GHOST);
+    }
 }
 
 void AlwaysRunTable::write_regs(Target::Flatrock::mau_regs &regs) {

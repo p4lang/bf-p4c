@@ -82,6 +82,7 @@
     M(int, IMEM_COLORS) \
     M(int, LONG_BRANCH_TAGS) \
     M(int, MATCH_BYTE_16BIT_PAIRS) \
+    M(int, MATCH_REQUIRES_PHYSID) \
     M(int, MAU_BASE_DELAY) \
     M(int, MAU_BASE_PREDICATION_DELAY) \
     M(int, METER_ALU_GROUP_DATA_DELAY) \
@@ -214,6 +215,7 @@ class Target::Tofino : public Target {
         PARSER_DEPTH_MAX_BYTES_INGRESS = (((1<<10)-1)*16),
         PARSER_DEPTH_MAX_BYTES_EGRESS = (((1<<10)-1)*16),
         MATCH_BYTE_16BIT_PAIRS = true,
+        MATCH_REQUIRES_PHYSID = false,
         NUM_MAU_STAGES_PRIVATE = 12,
         NUM_EGRESS_STAGES_PRIVATE = NUM_MAU_STAGES_PRIVATE,
         ACTION_INSTRUCTION_MAP_WIDTH = 7,
@@ -343,6 +345,7 @@ class Target::JBay : public Target {
         PARSER_DEPTH_MAX_BYTES_INGRESS = (((1<<10)-1)*16),
         PARSER_DEPTH_MAX_BYTES_EGRESS = (32*16),
         MATCH_BYTE_16BIT_PAIRS = false,
+        MATCH_REQUIRES_PHYSID = false,
 #ifdef EMU_OVERRIDE_STAGE_COUNT
         NUM_MAU_STAGES_PRIVATE = EMU_OVERRIDE_STAGE_COUNT,
         OUTPUT_STAGE_EXTENSION_PRIVATE = 1,
@@ -531,6 +534,7 @@ class Target::Cloudbreak : public Target {
         PARSER_DEPTH_MAX_BYTES_INGRESS = (((1<<10)-1)*16),
         PARSER_DEPTH_MAX_BYTES_EGRESS = (32*16),
         MATCH_BYTE_16BIT_PAIRS = false,
+        MATCH_REQUIRES_PHYSID = false,
 #ifdef EMU_OVERRIDE_STAGE_COUNT
         NUM_MAU_STAGES_PRIVATE = EMU_OVERRIDE_STAGE_COUNT,
         OUTPUT_STAGE_EXTENSION_PRIVATE = 1,
@@ -668,14 +672,15 @@ class Target::Flatrock : public Target {
         PARSER_DEPTH_MAX_BYTES_INGRESS = (((1 << 10) - 1) * 16),
         PARSER_DEPTH_MAX_BYTES_EGRESS = (32 * 16),
         MATCH_BYTE_16BIT_PAIRS = false,
+        MATCH_REQUIRES_PHYSID = true,
 #ifdef EMU_OVERRIDE_STAGE_COUNT
         NUM_MAU_STAGES_PRIVATE = EMU_OVERRIDE_STAGE_COUNT,
         NUM_EGRESS_STAGES_PRIVATE = EMU_OVERRIDE_STAGE_COUNT,
         OUTPUT_STAGE_EXTENSION_PRIVATE = 1,
 #else
-        // max of ingress and egress stages (ingress=13, egress=11)
-        NUM_MAU_STAGES_PRIVATE = 13,
-        NUM_EGRESS_STAGES_PRIVATE = 11,
+        // max of ingress and egress stages (ingress=16, egress=12)
+        NUM_MAU_STAGES_PRIVATE = 16,
+        NUM_EGRESS_STAGES_PRIVATE = 12,
         OUTPUT_STAGE_EXTENSION_PRIVATE = 0,
 #endif
         ACTION_INSTRUCTION_MAP_WIDTH = 8,

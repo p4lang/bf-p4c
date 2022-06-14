@@ -28,4 +28,20 @@ template<> void MatchTable::write_regs(Target::Flatrock::mau_regs &regs, int typ
     mrd.mrd_p2l_xbar[logical_id].phy_table = physical_id;
     if (get_actions())
         mrd.mrd_imem_cfg.active_en |= 1 << physical_id;
+    minput.minput_mpr_act[logical_id].activate = 1 << physical_id;
+
+    /* action/imem setup */
+    // FIXME -- factor with common code in MatchTable::write_common_regs
+    Actions *actions = action && action->actions ? action->actions.get() : this->actions.get();
+    unsigned adr_default = 0;
+    auto instr_call = instruction_call();
+    if (instr_call.args[0] == "$DEFAULT") {
+        for (auto it = actions->begin(); it != actions->end(); it++) {
+            if (it->code != -1) {
+                adr_default |= it->addr;
+                break;
+            }
+        }
+    }
+    regs.ppu_mrd.mrd_imem_map_erf.mrd_imem_map[physical_id][12].data = adr_default;
 }

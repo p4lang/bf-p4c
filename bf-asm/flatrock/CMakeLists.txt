@@ -31,8 +31,9 @@ set_source_files_properties(
 
 set (BFAS_FLATROCK_SRCS
   flatrock/action_table.cpp
-  flatrock/hdr.cpp
   flatrock/gateway.cpp
+  flatrock/hash_action.cpp
+  flatrock/hdr.cpp
   flatrock/instruction.cpp
   flatrock/input_xbar.cpp
   flatrock/parser.cpp
@@ -43,8 +44,9 @@ set (BFAS_FLATROCK_SRCS
 
 set (BFAS_FLATROCK_HEADERS
   flatrock/action_table.h
-  flatrock/hdr.h
   flatrock/gateway.h
+  flatrock/hash_action.h
+  flatrock/hdr.h
   flatrock/input_xbar.h
   flatrock/parser.h
   flatrock/pseudo_parser.h
