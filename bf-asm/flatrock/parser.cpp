@@ -294,7 +294,8 @@ bool PhvBuilderGroup::input_packet_phe_source(VECTOR(value_t) args,
         return false;
     value_t hdr_id;
     if (data.vec[1].type == tSTR) {
-        hdr_id = {.type = tINT, .i = Hdr::id(data.vec[1].lineno, data.vec[1].s)};
+        hdr_id.type = tINT;
+        hdr_id.i = Hdr::id(data.vec[1].lineno, data.vec[1].s);
     } else {
         /* -- tINT */
         hdr_id = data.vec[1];
