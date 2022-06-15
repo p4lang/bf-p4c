@@ -28,21 +28,21 @@
  * The assembler representations for parde:
  * - Deparser
  * - BaseAsmParser
- * 
+ *
  * The parde can also be affected at the beginning of \ref midend by architecture translation,
  * see \ref ArchTranslation for more information.
  *
  * # Parser
  *
  * \todo Basic documentation for parser should be included here.
- * 
+ *
  * # Deparser
  *
  * The deparser reassembles packets prior to storage in TM (Tofino 1-3) and prior to transmission
  * via the MAC (all chips).
  *
  * ## Target constants
- * 
+ *
  * Tofino1:
  * - Target::Tofino::DEPARSER_CHECKSUM_UNITS = 6
  * - Target::Tofino::DEPARSER_CONSTANTS = 0
@@ -89,14 +89,14 @@
  *
  * Backend passes related to deparsing:
  *  - AddDeparserMetadata - Adds deparser metadata parameters.
- *  - AddMetadataPOV - Adds POV bits for metadata used by the deparser (Tofino 2/3). Tofino 1
+ *  - AddMetadataPOV - Adds POV bits for metadata used by the deparser (Tofino 2/3/5). Tofino 1
  *                     uses the valid bit associated with each %PHV; Tofino 2+ use POV bits
- *                     instead.
+ *                     instead. Tofino 5 requires POV bits for only a subset of metadata.
  *  - BFN::AsmOutput - Outputs the deparser assembler. Uses DeparserAsmOutput and the passes it
  *                     invokes.
  *  - CollectClotInfo - Collects information for generating CLOTs.
  *  - \ref DeparserCopyOpt - Optimize copy assigned fields prior to deparsing.
- *  - \ref ExtractChecksum - Replaces EmitField with EmitChecksum emits in deparser. Also 
+ *  - \ref ExtractChecksum - Replaces EmitField with EmitChecksum emits in deparser. Also
  *                           creates tables and optimizes conditions and fields that the
  *                           checksum uses. Invoked from BFN::BackendConverter.
  *  - BFN::ExtractDeparser - Convert IR::BFN::TnaDeparser objects to IR::BFN::Deparser objects. The
