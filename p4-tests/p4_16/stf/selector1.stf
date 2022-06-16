@@ -4,8 +4,16 @@
 # currently meter_addr, meter_pfe, and action_addr  are 'raw' bus addresses, so need to include
 # the subword shifts, even though those bits will end up not being stored in the match word
 # overhead; it is assumed the default bits from the compiler will be the right thing.
+
+# meter_addr is the raw selector base address -- selector group number
+#   left shifted by 7 + log2(group size in words).  See 6.2.8.4.7 in the uArch
+#   in this case group 4 << 7 (group size is 1 word)
+# action_addr is the raw action data base address -- the action data base index
+#   left shifted by the number of subword huffman bits for the entry size in the
+#   action data table.  See 6.2.8.4.3 in the uArch doc
+#   in this case 0x80 << 1 (1 huffman bit for 8 bit entries)
 add select_output data.b1:0 set_b2(meter_addr:0, meter_pfe:0x800000, action_addr:0)
-add select_output data.b1:4 set_b2(meter_addr:0x200, meter_pfe:0x800000, action_addr:0x200)
+add select_output data.b1:4 set_b2(meter_addr:0x200, meter_pfe:0x800000, action_addr:0x100)
 
 $(for val in $(seq 0 255); do printf "add ap %d set_b2(v:%d);" $val $val; done)
 

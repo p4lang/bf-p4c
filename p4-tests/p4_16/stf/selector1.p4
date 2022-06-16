@@ -17,6 +17,11 @@ struct metadata {
 
 #include "trivial_parser.h"
 
+// We have to force b2 to be placed in 8-bit container because our STF test code,
+// for now, have hard-coded action_addr: 0x100. This address needs to be changed if we
+// allocate differently. For example, if we allocate b2 to 16-bit container, then it
+// needs to be 0x200.
+@pa_container_size("ingress", "hdr.data.b2", 8)
 control ingress(inout headers hdr, inout metadata meta,
                 in ingress_intrinsic_metadata_t ig_intr_md,
                 in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md,
