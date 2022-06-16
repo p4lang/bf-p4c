@@ -607,7 +607,7 @@ std::string TestCode::extract_asm(CodeBlock blk_type) const {
     // TODO do we need to apply this pass before we can extract a non-Mau CodeBlock?
     if (!mauasm) {
         auto before = ::errorCount();
-        mauasm = new MauAsmOutput {backend->get_phv(), pipe, backend->get_nxt_tbl(),
+        mauasm = new Tofino::MauAsmOutput {backend->get_phv(), pipe, backend->get_nxt_tbl(),
                                    backend->get_power_and_mpr(), BackendOptions()};
         pipe->apply(*mauasm);
         if (::errorCount() != before)

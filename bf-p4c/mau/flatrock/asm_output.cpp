@@ -1,5 +1,6 @@
 #include "action_data_bus.h"
 #include "bf-p4c/mau/asm_output.h"
+#include "bf-p4c/mau/flatrock/asm_output.h"
 #include "input_xbar.h"
 
 namespace Flatrock {
@@ -208,6 +209,12 @@ bool ActionDataBus::Use::emit_adb_asm(std::ostream &out, const IR::MAU::Table *t
         }
     }
     return !first;
+}
+
+void PpuAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
+        const TableFormat::Use &use, const TableMatch *tm, bool ternary,
+        bool no_match) const {
+    MauAsmOutput::emit_table_format(out, indent, use, tm, ternary, no_match);
 }
 
 }  // end namespace Flatrock

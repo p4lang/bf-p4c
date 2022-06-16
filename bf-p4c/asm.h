@@ -15,6 +15,8 @@
 #include "bf-p4c/device.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/mau/asm_output.h"
+#include "bf-p4c/mau/tofino/asm_output.h"
+#include "bf-p4c/mau/flatrock/asm_output.h"
 #include "bf-p4c/mau/jbay_next_table.h"
 #include "bf-p4c/parde/clot/clot_info.h"
 #include "bf-p4c/parde/asm_output.h"
@@ -113,8 +115,15 @@ class AsmOutput : public Inspector {
             cstring outputFile = outputDir + "/" + options.programName + ".bfa";
             std::ofstream out(outputFile, std::ios_base::out);
 
-            MauAsmOutput mauasm(phv, pipe, nxt_tbl, power_and_mpr, options);
-            pipe->apply(mauasm);
+            MauAsmOutput *mauasm = nullptr;
+#if HAVE_FLATROCK
+            if (Device::currentDevice() == Device::FLATROCK)
+                mauasm = new Flatrock::PpuAsmOutput(phv, pipe, nxt_tbl, power_and_mpr, options);
+#endif
+            if (!mauasm)
+                mauasm = new Tofino::MauAsmOutput(phv, pipe, nxt_tbl, power_and_mpr, options);
+
+            pipe->apply(*mauasm);
 
             out << "version:" << std::endl
                 << "  version: " << BFASM::Version::getVersion() << std::endl
@@ -145,7 +154,7 @@ class AsmOutput : public Inspector {
 #endif
                     out << ParserAsmOutput(pipe, phv, EGRESS);
                 out << DeparserAsmOutput(pipe, phv, clot, EGRESS)
-                    << mauasm << std::endl
+                    << *mauasm << std::endl
                     << flex->asm_output() << std::endl;
             }
             out << std::flush;

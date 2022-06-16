@@ -6,6 +6,7 @@
 #include <memory>
 
 #include "action_data_bus.h"
+#include "bf-p4c/mau/flatrock/asm_output.h"
 #include "boost/range/adaptor/reversed.hpp"
 #include "bf-p4c/common/alias.h"
 #include "bf-p4c/common/ir_utils.h"
@@ -18,6 +19,7 @@
 #include "bf-p4c/mau/payload_gateway.h"
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/table_format.h"
+#include "bf-p4c/mau/tofino/asm_output.h"
 #include "bf-p4c/mau/tofino/input_xbar.h"
 #include "bf-p4c/parde/asm_output.h"
 #include "bf-p4c/mau/jbay_next_table.h"
@@ -30,7 +32,7 @@
 #include "lib/indent.h"
 #include "lib/stringref.h"
 
-namespace {
+namespace Tofino {
 
 void emit_ixbar_gather_map(const PhvInfo &phv, std::multimap<int, Slice> &match_data_map,
         std::map<le_bitrange, const IR::Constant*> &constant_map,
@@ -714,7 +716,7 @@ void emit_ixbar_gather_bytes(const PhvInfo &phv,
     for (auto &b : use) {
         BUG_CHECK(b.loc.allocated(), "Byte not allocated by assembly");
         int byte_loc = IXBar::TERNARY_BYTES_PER_GROUP;
-        if (atcam && !b.is_spec(IXBar::ATCAM_INDEX))
+        if (atcam && !b.is_spec(::IXBar::ATCAM_INDEX))
             continue;
         for (auto &fi : b.field_bytes) {
             auto field = phv.field(fi.get_use_name());
@@ -732,7 +734,7 @@ void emit_ixbar_gather_bytes(const PhvInfo &phv,
                     auto n = sort[b.loc.group].emplace(b.loc.byte*8 + asm_sl.bytealign(), asm_sl);
                     BUG_CHECK(n.second, "duplicate byte use in ixbar");
                 }
-                                                          }, PHV::SliceMatch::REF_PHYS_LR);
+            }, PHV::SliceMatch::REF_PHYS_LR);
         }
     }
 
@@ -788,8 +790,6 @@ void emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &match_data,
         }
     }
 }
-
-}  // end anonymous namespace
 
 void Tofino::IXBar::Use::emit_ixbar_asm(const PhvInfo &phv, std::ostream &out, indent_t indent,
         const TableMatch *fmt, const IR::MAU::Table *tbl) const {
@@ -939,3 +939,23 @@ bool Tofino::ActionDataBus::Use::emit_adb_asm(std::ostream &out, const IR::MAU::
     }
     return !first;
 }
+
+void MauAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
+        const TableFormat::Use &use, const TableMatch *tm,
+        bool ternary, bool no_match) const {
+    ::MauAsmOutput::emit_table_format(out, indent, use, tm, ternary, no_match);
+
+    if (!use.match_group_map.empty()) {
+        out << indent << "match_group_map: [ ";
+        std::string sep = "";
+        for (auto ram_entries : use.match_group_map) {
+            out << sep << "[ " << emit_vector(ram_entries) << " ]";
+            sep = ", ";
+        }
+        out << " ]" << std::endl;
+        indent--;
+    }
+}
+
+}  // end Tofino namespace
+
