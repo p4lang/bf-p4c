@@ -10,6 +10,12 @@ shopt -s nullglob
 TIMEOUT_COMMAND=$(which gtimeout || which timeout)
 READLINK_COMMAND=$(which greadlink || which readlink)
 
+
+
+LOAD_MEASUREMENT___COMMAND="$(realpath $(dirname $0))"/measure_and_report_the_system_load.py
+
+
+
 # set the debugger based on platform: lldb on MacOS, gdb everywhere else
 if [ $(uname -s) == 'Darwin' ]; then
     DEBUGGER_COMMAND="lldb --"
