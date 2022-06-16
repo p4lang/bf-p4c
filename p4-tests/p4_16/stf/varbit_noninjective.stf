@@ -1,0 +1,29 @@
+# the last byte is after varbit and must be inverted by the P4 program
+
+# index 00 -> 1B varbit
+expect 0 00 11 55
+packet 0 00 11 aa
+
+# index 01 -> 1B varbit
+expect 0 01 11 55
+packet 0 01 11 aa
+
+# index 02 -> 3B varbit
+expect 0 02 11 22 33 55
+packet 0 02 11 22 33 aa
+
+# index 03 -> 3B varbit
+expect 0 03 11 22 33 55
+packet 0 03 11 22 33 aa
+
+# index fb & 0x6 = 3 -> 24b varbit
+expect 0 fb 11 22 33 55
+packet 0 fb 11 22 33 aa
+
+# index 6 -> 7B varbit
+expect 0 06 11 22 33 44 55 66 77 55
+packet 0 06 11 22 33 44 55 66 77 aa
+
+# index 76 & 0x6 = 6 -> 7B varbit
+expect 0 76 11 22 33 44 55 66 77 55
+packet 0 76 11 22 33 44 55 66 77 aa

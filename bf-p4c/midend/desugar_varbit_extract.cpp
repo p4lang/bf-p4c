@@ -1,3 +1,4 @@
+#include <lib/bitvec.h>
 #include "desugar_varbit_extract.h"
 #include "frontends/common/constantFolding.h"
 #include "bf-p4c/bf-p4c-options.h"
@@ -98,13 +99,13 @@ void check_compile_time_constant(const IR::Constant* c,
                                  int varbit_field_size,
                                  bool zero_ok = false) {
     if (c->asInt() < 0 || (!zero_ok && c->asInt() == 0)) {
-        std::stringstream hint;
+        cstring hint;
 
         if (BackendOptions().langVersion == CompilerOptions::FrontendVersion::P4_16)
-            hint << "Please make sure the encoding variable is cast to bit<32>.";
+            hint = "Please make sure the encoding variable is cast to bit<32>.";
 
         ::fatal_error("Varbit field size expression evaluates to invalid value %1%: %2% \n%3%",
-                      c->asInt(), call, hint.str());
+                      c->asInt(), call, hint);
     }
 
     if (c->asInt() % 8) {
@@ -125,7 +126,7 @@ bool CollectVarbitExtract::enumerate_varbit_field_values(
         const IR::Expression* varsize_expr,
         const IR::Expression*& encode_var,
         std::map<unsigned, unsigned>& match_to_length,
-        std::map<unsigned, unsigned>& length_to_match,
+        std::map<unsigned, std::set<unsigned>>& length_to_match,
         std::set<unsigned>& reject_matches,
         cstring header_name) {
     CollectVariables find_encode_var;
@@ -134,7 +135,7 @@ bool CollectVarbitExtract::enumerate_varbit_field_values(
     if (find_encode_var.rv.size() == 0)
         ::fatal_error("No varbit length encoding variable in %1%.", call);
     else if (find_encode_var.rv.size() > 1)
-        ::fatal_error("Varbit expression %1% contains more than one variables.", call);
+        ::fatal_error("Varbit expression %1% contains more than one variable.", call);
 
     encode_var = find_encode_var.rv[0];
 
@@ -159,7 +160,7 @@ bool CollectVarbitExtract::enumerate_varbit_field_values(
             } else {
                 check_compile_time_constant(c, call, varbit_field_size, true);
                 match_to_length[i] = c->asUnsigned();
-                length_to_match[c->asUnsigned()] = i;
+                length_to_match[c->asUnsigned()].insert(i);
             }
         } else {
             reject_matches.insert(i);
@@ -217,7 +218,7 @@ void CollectVarbitExtract::enumerate_varbit_field_values(
     varbit_hdr_instance_to_varbit_field[headerName] = varbit_field;
     const IR::Expression* encode_var = nullptr;
     std::map<unsigned, unsigned> match_to_length;
-    std::map<unsigned, unsigned> length_to_match;
+    std::map<unsigned, std::set<unsigned>> length_to_match;
     std::set<unsigned> reject_matches;
 
     if (auto c = varsize_expr->to<IR::Constant>()) {
@@ -225,7 +226,7 @@ void CollectVarbitExtract::enumerate_varbit_field_values(
 
         check_compile_time_constant(c, call, varbit_field_size);
         match_to_length[0] = c->asUnsigned();  // use 0 as key, but really don't care
-        length_to_match[c->asUnsigned()] = 0;
+        length_to_match[c->asUnsigned()].insert(0);
         varbit_hdr_instance_to_constant_state[headerName][c->asUnsigned()].insert(state);
     } else {
         bool ok = enumerate_varbit_field_values(call, state, varbit_field, varsize_expr,
@@ -657,6 +658,59 @@ create_select_case(unsigned bitwidth, unsigned value, unsigned mask, cstring nex
     return new IR::SelectCase(new IR::Mask(value_expr, mask_expr), next_state_expr);
 }
 
+struct Match {
+    unsigned value = 0;
+    unsigned mask = 0;
+};
+
+
+/// Try to be smart about multiple matches - if we can collapse consecutive values from one value
+/// set into a ternary match that matches them exactly, we do so and proceed to match the remaining
+/// values. This is not optimal, sometimes grouping non-consective values would provide lower
+/// number of matches, but this is a sufficiently simple heuristic.
+static std::vector<Match> merge_matches(const std::set<unsigned> &values0, unsigned mask) {
+    if (values0.empty())
+        return {};
+    // avoid having to keep counts for each range, use random access iterator difference instead
+    std::vector<unsigned> values(values0.begin(), values0.end());
+    std::vector<Match> out;
+    LOG9("Trying to cover " << values.size() << " values between " << values.front()
+         << " and " << values.back());
+
+    unsigned irrelevant_bits_candidate = 0;
+    Match match_candidate;
+    auto low = values.begin();
+    auto high = values.begin();
+    auto last_high = low;
+    while (high != values.end()) {
+        LOG9("  adding " << *high << " to match set");
+        for (auto it = low; it != high; ++it) {
+            irrelevant_bits_candidate |= *high ^ *it;
+        }
+        unsigned match_size = 1u << bv::popcount(irrelevant_bits_candidate);
+        if (match_size == high - low + 1) {
+            match_candidate.value = *low;
+            match_candidate.mask = mask & ~irrelevant_bits_candidate;
+            last_high = high;
+        }
+        // if we oversoot or if we got to the end of values, we save the last working match and
+        // continue after its end
+        if (match_size > (values.end() - low + 1) || high == std::prev(values.end())) {
+            LOG9("  covered " << (last_high - low + 1) << " values between "
+                 << *low << " and " << *last_high << " with "
+                 << match_candidate.value << " &&& " << match_candidate.mask);
+            out.push_back(match_candidate);
+            low = high = std::next(last_high);
+            match_candidate = Match();
+            irrelevant_bits_candidate = 0;
+            continue;  // skip high increment
+        }
+        ++high;
+    }
+
+    return out;
+}
+
 bool RewriteVarbitUses::preorder(IR::ParserState* state) {
     auto orig = getOriginal<IR::ParserState>();
     IR::IndexedVector<IR::StatOrDecl> components;
@@ -689,15 +743,18 @@ bool RewriteVarbitUses::preorder(IR::ParserState* state) {
 
         for (auto& ms : length_to_branch_state) {
             auto length = ms.first;
-            auto match = length_to_match.at(length);
+            auto matches = length_to_match.at(length);
             auto next_state = ms.second;
 
-            auto select_case = create_select_case(var_bitwidth, match, var_mask, next_state->name);
-            select_cases.push_back(select_case);
+            for (auto match : merge_matches(matches, var_mask)) {
+                auto select_case = create_select_case(var_bitwidth, match.value, match.mask,
+                                                      next_state->name);
+                select_cases.push_back(select_case);
+            }
         }
 
-        for (auto reject : cve.state_to_reject_matches.at(orig)) {
-            auto select_case = create_select_case(var_bitwidth, reject, var_mask, "reject");
+        for (auto rej : merge_matches(cve.state_to_reject_matches.at(orig), var_mask)) {
+            auto select_case = create_select_case(var_bitwidth, rej.value, rej.mask, "reject");
             select_cases.push_back(select_case);
         }
 

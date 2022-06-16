@@ -57,6 +57,7 @@ set (P16_TNA_EXCLUDE_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/byte-rotate-merge\\.p4"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/p4c-2722\\.p4"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/simple_l3_acl\\.p4"
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/varbit_noninjective\\.p4"
     # Using field that no longer exists (part of removed/changed
     # metadata)
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/constant_hash\\.p4"

@@ -158,6 +158,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/stack_complex-bmv2.p4
   testdata/p4_16_samples/checksum-l4-bmv2.p4
   testdata/p4_16_samples/issue1001-1-bmv2.p4
+  testdata/p4_16_samples/psa-variable-index.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1946,6 +1947,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Can only switch on table"
   testdata/p4_16_samples/invalid-hdr-warnings3.p4
+  testdata/p4_16_samples/issue3374.p4
 )
 
 # P4C-4158 - Expected program output not communicated to us by customer (Arista)

@@ -144,7 +144,7 @@ class CollectVarbitExtract : public Inspector {
 
     // reverse map of above
     std::map<const IR::ParserState*,
-             std::map<unsigned, unsigned>> state_to_length_to_match;
+             std::map<unsigned, std::set<unsigned>>> state_to_length_to_match;
 
     std::map<const IR::ParserState*, std::set<unsigned>> state_to_reject_matches;
 
@@ -169,7 +169,7 @@ class CollectVarbitExtract : public Inspector {
         const IR::Expression* varsize_expr,
         const IR::Expression*& encode_var,
         std::map<unsigned, unsigned>& match_to_length,
-        std::map<unsigned, unsigned>& length_to_match,
+        std::map<unsigned, std::set<unsigned>>& length_to_match,
         std::set<unsigned>& reject_matches,
         cstring header_name);
 
