@@ -2379,7 +2379,7 @@ parser ingress:
   phv_builder_group 31:
     pov_select: [state 1, state 2, state 3]
     extract 1:
-      match: 0x******ff
+      match: 0xff******
 )PARSER_CFG"));
     }
 
@@ -2393,7 +2393,7 @@ parser ingress:
   phv_builder_group 31:
     pov_select: [state 1, state 2, state 3]
     extract 1:
-      match: 0x******00
+      match: 0x00******
 )PARSER_CFG"));
     }
 
@@ -2407,7 +2407,7 @@ parser ingress:
   phv_builder_group 31:
     pov_select: [state 1, state 2, state 3]
     extract 1:
-      match: 0x1234567*
+      match: 0x*1234567
 )PARSER_CFG"));
     }
 

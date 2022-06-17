@@ -133,12 +133,12 @@ bool PovSelect::input(value_t data) {
 }
 
 #define MATCH_CONSTANT_BYTE(word, byte_offset) \
-        (((word) & (0xff << (byte_offset))) >> (byte_offset))
+        (((word) & (0xffULL << ((byte_offset) * 8))) >> ((byte_offset) * 8))
 
 bool PovSelect::check_match(const match_t match) const {
     for (int i = 0; i < Target::Flatrock::PARSER_POV_SELECT_NUM; ++i) {
-        if (!key[i].used && (MATCH_CONSTANT_BYTE(match.word0, i) != 0xff ||
-                MATCH_CONSTANT_BYTE(match.word1, i) != 0xff))
+        if (!key[i].used && (MATCH_CONSTANT_BYTE(match.word0, i) != 0xffULL ||
+                MATCH_CONSTANT_BYTE(match.word1, i) != 0xffULL))
             return false;
     }
     return true;
