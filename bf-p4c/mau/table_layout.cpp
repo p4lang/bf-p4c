@@ -279,6 +279,12 @@ void DoTableLayout::check_for_proxy_hash(IR::MAU::Table::Layout &layout,
 }
 
 bool DoTableLayout::check_for_versioning(const IR::MAU::Table *tbl) {
+#ifdef HAVE_FLATROCK
+    // No version bits in Flatrock
+    if (Device::currentDevice() == Device::FLATROCK)
+        return false;
+#endif
+
     if (!tbl->match_table)
         return false;
     bool rv = true;
@@ -429,7 +435,12 @@ void DoTableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR:
                     "proxy hash table for table %1%. Cannot be ternary.", tbl);
     }
 
+#ifdef HAVE_FLATROCK
+    if (!layout.requires_versioning && !layout.ternary
+            && Device::currentDevice() != Device::FLATROCK)
+#else
     if (!layout.requires_versioning && !layout.ternary)
+#endif
         ::error("%1%: Tables, such as %2% that do not require versioning must be allocated to "
                 "the TCAM array", tbl, tbl->name);
 

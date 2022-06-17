@@ -393,7 +393,7 @@ T5naArchTranslation::T5naArchTranslation(P4::ReferenceMap *refMap,
         new BFN::TypeChecking(refMap, typeMap, true),
         new P4::ValidateTableProperties({"implementation", "size", "counters", "meters",
                                          "filters", "idle_timeout", "registers",
-                                         "requires_versioning", "atcam", "alpm", "proxy_hash",
+                                         "atcam", "alpm", "proxy_hash",
                                          /* internal table property, not exposed to customer */
                                          "as_alpm", "number_partitions", "subtrees_per_partition",
                                          "atcam_subset_width", "shift_granularity"}),

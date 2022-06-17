@@ -271,7 +271,12 @@ struct TableFormat {
     FindPayloadCandidates &fpc;
 
     bool skinny = false;
-    bool requires_versioning() const { return layout_option.layout.requires_versioning; }
+    bool requires_versioning() const {
+#ifdef HAVE_FLATROCK
+        // no version bits set for Flatrock
+        if (Device::currentDevice() == Device::FLATROCK) return false;
+#endif
+        return layout_option.layout.requires_versioning; }
 
     void clear_match_state();
     void clear_pre_allocation_state();
