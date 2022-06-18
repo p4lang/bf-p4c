@@ -728,24 +728,27 @@ void VLIWInstruction::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl,
     auto &imem = regs.ppu_phvwr.imem;
     int iaddr = act->addr / Target::Flatrock::IMEM_COLORS;
     int color = act->addr % Target::Flatrock::IMEM_COLORS;
-    uint32_t bits = encode();
+    uint32_t bits = encode(), delta = bits;
     BUG_CHECK(slot >= 0);
     switch (Phv::reg(slot)->size) {
     case 8:
         imem.imem8[slot].phvwr_imem8[iaddr].color = color;
+        delta ^= imem.imem8[slot].phvwr_imem8[iaddr].instr;
         imem.imem8[slot].phvwr_imem8[iaddr].instr = bits;
         break;
     case 16:
         imem.imem16[slot-160].phvwr_imem16[iaddr].color = color;
+        delta ^= imem.imem16[slot-160].phvwr_imem16[iaddr].instr;
         imem.imem16[slot-160].phvwr_imem16[iaddr].instr = bits;
         break;
     case 32:
         imem.imem32[slot-200].phvwr_imem32[iaddr].color = color;
+        delta ^= imem.imem32[slot-200].phvwr_imem32[iaddr].instr;
         imem.imem32[slot-200].phvwr_imem32[iaddr].instr = bits;
         break;
     default:
         BUG(); }
-    regs.ppu_phvwr.rf.phvwr_parity[iaddr].parity[color] ^= parity_2b(bits);
+    regs.ppu_phvwr.rf.phvwr_parity[iaddr].parity[color] ^= parity_2b(delta);
 }
 
 }  // end namespace Flatrock

@@ -82,18 +82,47 @@ bool Flatrock::InputXbar::parse_unit(Table *t, const pair_t &kv) {
     if (kv.key[0] != "exact") return false;
     if (CHECKTYPE2(kv.value, tINT, tVEC)) {
         if (kv.value.type == tINT) {
-            if (kv.value.i < 0 || kv.value.i >= XMU_UNITS)
+            if (kv.value.i < 0 || kv.value.i >= XME_UNITS)
                 error(kv.value.lineno, "Invalid exact unit %" PRId64, kv.value.i);
             else
-                xmu_units[kv.value.i] = 1;
+                xme_units[kv.value.i] = 1;
         } else {
             for (auto &v : kv.value.vec) {
                 if (CHECKTYPE(v, tINT)) {
-                    if (v.i < 0 || v.i >= XMU_UNITS)
+                    if (v.i < 0 || v.i >= XME_UNITS)
                         error(v.lineno, "Invalid exact unit %" PRId64, v.i);
                     else
-                        xmu_units[v.i] = 1; } } } }
+                        xme_units[v.i] = 1; } } } }
     return true;
+}
+
+unsigned Flatrock::InputXbar::exact_physical_ids() const {
+    if (xme_units.getrange(8,8)) return 0xf000;
+    if (xme_units.getrange(0,8)) return 0x0f00;
+    return 0xff00;
+}
+
+void Flatrock::InputXbar::pass2() {
+    ::InputXbar::pass2();
+    // Find the range (min/max) of units used in the exact byte and word xbars.  This
+    // will only be needed if this ixbar is for an exact match table, but that is ok.
+    int lo[2] = { INT_MAX, INT_MAX }, hi[2] = { -1, -1 };
+    for (auto &group : groups) {
+        if (group.first.type != Group::EXACT) continue;
+        BUG_CHECK(group.first.index < 2, "invalid exact group %d", group.first.index);
+        for (auto &input : group.second) {
+            if (input.lo < lo[group.first.index]) lo[group.first.index] = input.lo;
+            if (input.hi > hi[group.first.index]) hi[group.first.index] = input.hi; } }
+    if (hi[0] >= lo[0]) {
+        first8 = lo[0]/8U;
+        num8 = hi[0]/8U - first8 + 1;
+    } else {
+        first8 = num8 = 0; }
+    if (hi[1] >= lo[1]) {
+        first32 = lo[1]/32U;
+        num32 = hi[1]/32U - first32 + 1;
+    } else {
+        first32 = num32 = 0; }
 }
 
 // tables mapping PHEs to the bit indexes used for their power gating.
@@ -147,8 +176,10 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
                         key32[input.lo/32U][d].key32 = input.what->reg.ixbar_id()/4U;
                     set_bit(minput.minput_word_pwr[0],
                             minput_word_pwr_transpose[input.what->reg.uid]);
-                    for (int x : xmu_units)
-                        minput.rf.minput_em_xb_stm_tab[x].key32_used |= 1U << input.lo/32U; }
+                    for (int x : xme_units) {
+                        if (x < FIRST_STM_UNIT) continue;
+                        minput.rf.minput_em_xb_stm_tab[(x-FIRST_STM_UNIT)/2].key32_used
+                            |= 1U << input.lo/32U; } }
             } else {
                 auto &key8 = em_key_cfg.minput_em_xb_key8;
                 for (auto &input : group.second) {
@@ -156,8 +187,8 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
                         key8[input.lo/8U][d].key8 = input.what->reg.ixbar_id();
                     set_bit(minput.minput_byte_pwr[0],
                             minput_byte_pwr_transpose[input.what->reg.uid]);
-                    for (int x : xmu_units)
-                        minput.rf.minput_em_xb_tab[x].key8_used |= 1U << input.lo/8U; } }
+                    for (int x : xme_units)
+                        minput.rf.minput_em_xb_tab[x/2].key8_used |= 1U << input.lo/8U; } }
             break; }
         case Group::TERNARY: {
             auto &scm_key_cfg = minput.minput_scm_xb_key_erf;
@@ -201,6 +232,52 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
 }
 
 template<> void InputXbar::write_regs(Target::Flatrock::mau_regs &regs) { write_regs_v(regs); }
+
+void Flatrock::InputXbar::write_xmu_key_mux(Target::Flatrock::mau_regs::_ppu_eml &xmu) {
+    for (int d : dconfig) {
+        xmu.eml_key_cfg[d].first8 = first8;
+        xmu.eml_key_cfg[d].num8 = num8; }
+}
+
+void Flatrock::InputXbar::write_xmu_key_mux(Target::Flatrock::mau_regs::_ppu_ems &xmu) {
+    for (int d : dconfig) {
+        xmu.ems_key_cfg[d].first8 = first8;
+        xmu.ems_key_cfg[d].num8 = num8;
+        xmu.ems_key_cfg[d].first32 = first32;
+        xmu.ems_key_cfg[d].num32 = num32; }
+}
+
+void Flatrock::InputXbar::write_xme_regs(Target::Flatrock::mau_regs::_ppu_eml &xmu, int l) {
+    for (int d : dconfig) {
+        xmu.eml_addr_cfg[l][d].banknum = 0;
+        xmu.eml_match_cfg[l][d].entries_per_set = table->format->groups();
+        // TBD -- rest of the config fields
+    }
+}
+
+void Flatrock::InputXbar::write_xme_regs(Target::Flatrock::mau_regs::_ppu_ems &xmu, int l) {
+    BUG("STM XME setup not done yet");
+}
+
+void Flatrock::InputXbar::write_xmu_regs_v(Target::Flatrock::mau_regs &regs) {
+    int prev_xme = -1;
+    for (auto xme : xme_units) {
+        bool lamb = xme < FIRST_STM_UNIT;
+        int xmu = (xme/2U)%4U;
+        if (xme%2U != prev_xme%2U) {
+            if (lamb)
+                write_xmu_key_mux(regs.ppu_eml[xmu]);
+            else
+                write_xmu_key_mux(regs.ppu_ems[xmu]); }
+        if (lamb)
+            write_xme_regs(regs.ppu_eml[xmu], xme%2U);
+        else
+            write_xme_regs(regs.ppu_ems[xmu], xme%2U);
+        prev_xme = xme; }
+}
+
+template<>
+void InputXbar::write_xmu_regs(Target::Flatrock::mau_regs &regs) { write_xmu_regs_v(regs); }
 
 /* registers that are needed in the minput block even when the stage is being bypassed and
  * doing nothing */

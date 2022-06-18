@@ -488,6 +488,10 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
 
     for (auto &ixb : input_xbar)
         ixb->write_regs(regs);
+    /* DANGER -- you might think we should call write_regs on other related things here
+     * (actions, hash_dist, idletime, gateway) rather than just input_xbar, but those are
+     * all called by the various callers of this method.  Not clear why input_xbar is
+     * different */
 
     if (gress == EGRESS)
         regs.cfg_regs.mau_cfg_lt_thread |= 1U << logical_id;

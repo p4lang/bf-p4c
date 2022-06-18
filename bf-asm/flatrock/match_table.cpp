@@ -7,11 +7,11 @@ template<> void MatchTable::write_next_table_regs(Target::Flatrock::mau_regs &re
 template<> void MatchTable::write_regs(Target::Flatrock::mau_regs &regs, int type, Table *result) {
     for (auto &ixb : input_xbar)
         ixb->write_regs(regs);
-    if (actions) actions->write_regs(regs, this);
-    if (gateway) gateway->write_regs(regs);
-    if (idletime) idletime->write_regs(regs);
-    for (auto &hd : hash_dist)
-        hd.write_regs(regs, this);
+    /* DANGER -- you might think we should call write_regs on other related things here
+     * (actions, hash_dist, idletime, gateway) rather than just input_xbar, but those are
+     * all called by the various callers of this method.  Not clear why input_xbar is
+     * different */
+
     auto &mrd = regs.ppu_mrd.rf;
     auto &minput = regs.ppu_minput.rf;
     if (gress == GHOST) {
@@ -22,6 +22,8 @@ template<> void MatchTable::write_regs(Target::Flatrock::mau_regs &regs, int typ
         minput.minput_mpr.main_tables |= 1 << logical_id; }
     if (always_run || pred.empty())
         minput.minput_mpr.always_run = 1;
+    // these xbars are "backwards" (because they are oxbars?) -- l2p maps physical to logical
+    // and p2l maps logical to physical
     mrd.mrd_l2p_xbar[physical_id].en = 1;
     mrd.mrd_l2p_xbar[physical_id].logical_table = logical_id;
     mrd.mrd_p2l_xbar[logical_id].en = 1;

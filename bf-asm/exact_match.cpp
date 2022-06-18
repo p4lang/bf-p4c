@@ -214,6 +214,7 @@ void ExactMatchTable::determine_ghost_bits() {
 
 void ExactMatchTable::pass2() {
     LOG1("### Exact match table " << name() << " pass2 " << loc());
+    // FIXME -- does some of this common stuff belong in SRamMatch::pass2
     if (logical_id < 0) choose_logical_id();
     for (auto &ixb : input_xbar)
         ixb->pass2();
@@ -223,6 +224,10 @@ void ExactMatchTable::pass2() {
     if (gateway) gateway->pass2();
     if (idletime) idletime->pass2();
     if (format) format->pass2(this);
+    unsigned usable = -1;
+    for (auto &ixb : input_xbar)
+        usable &= ixb->exact_physical_ids();
+    allocate_physical_id(usable);
     determine_ghost_bits();
     // Derive a stash format from current table format with a single entry (we
     // use group 0 entry) and all fields except 'version' and 'action' (match

@@ -105,6 +105,7 @@ class InputXbar {
     void tcam_update_use(TcamUseCache &use);
     void gen_hash_column(std::pair<const int, HashCol> &col,
         std::pair<const unsigned int, std::map<int, HashCol>> &hash);
+
     struct GroupSet {
         Group           group;
         const std::vector<InputXbar *> &use;
@@ -127,10 +128,12 @@ class InputXbar {
     static std::unique_ptr<InputXbar> create(Table *table, bool tern, const value_t &key,
                                              const VECTOR(pair_t) &data);
     void pass1();
-    void pass2();
+    virtual void pass2();
     template<class REGS> void write_regs(REGS &regs);
+    template<class REGS> void write_xmu_regs(REGS &regs);
 #if HAVE_FLATROCK
     virtual void write_regs_v(Target::Flatrock::mau_regs &regs) { BUG(); }
+    virtual void write_xmu_regs_v(Target::Flatrock::mau_regs &regs) { BUG(); }
 #endif
     template<class REGS> void write_galois_matrix(REGS &regs,
             int id, const std::map<int, HashCol> &mat);
@@ -199,6 +202,8 @@ class InputXbar {
         return nullptr;
     }
     bool log_hashes(std::ofstream& out) const;
+    virtual unsigned exact_physical_ids() const { return -1; }
+
     class all_iter {
         decltype(groups)::const_iterator        outer, outer_end;
         bool                                    inner_valid;

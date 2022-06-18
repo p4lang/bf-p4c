@@ -859,6 +859,11 @@ template void InputXbar::write_regs(Target::JBay::mau_regs &);
 template void InputXbar::write_regs(Target::Cloudbreak::mau_regs &);
 #endif  /* HAVE_CLOUDBREAK */
 
+template<class REGS>
+void InputXbar::write_xmu_regs(REGS &regs) {
+    BUG("no XMU regs for %s", Target::name()); }
+FOR_ALL_REGISTER_SETS(INSTANTIATE_TARGET_TEMPLATE, void InputXbar::write_xmu_regs, mau_regs &)
+
 InputXbar::Input *InputXbar::find(Phv::Slice sl, Group grp, Group *found) {
     InputXbar::Input *rv = nullptr;
     if (groups.count(grp)) {
