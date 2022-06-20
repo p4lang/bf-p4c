@@ -979,6 +979,14 @@ struct ComputeLoweredParserIR : public ParserInspector {
 };
 
 #ifdef HAVE_FLATROCK
+/**
+ * @brief The pass that replaces an IR::BRN::Parser node with an IR::Flatrock::Parser node
+ * @ingroup parde
+ *
+ * A default profile, which matches all packets, is created.
+ * Initial packet and segment length are set to the amount of ingress metadata.
+ * All other profile properties and all other parser subcomponents are left unconfigured.
+ */
 class ReplaceFlatrockParserIR : public Transform {
     const IR::Flatrock::Parser*
     preorder(IR::BFN::Parser* parser) override {
@@ -1003,8 +1011,13 @@ class ReplaceFlatrockParserIR : public Transform {
 };
 #endif  // HAVE_FLATROCK
 
-/// Replace the high-level parser IR version of each parser's root node with its
-/// lowered version. This has the effect of replacing the entire parse graph.
+/**
+ * @brief The pass that replaces an IR::BRN::Parser node with an IR::BFN::LoweredParser node
+ * @ingroup parde
+ *
+ * Replace the high-level parser IR version of each parser's root node with its
+ * lowered version. This has the effect of replacing the entire parse graph.
+ */
 struct ReplaceParserIR : public Transform {
     explicit ReplaceParserIR(const ComputeLoweredParserIR& computed)
       : computed(computed) { }

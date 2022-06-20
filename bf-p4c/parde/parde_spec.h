@@ -34,7 +34,19 @@
  *
  * # Parser
  *
- * \todo Basic documentation for parser should be included here.
+ * In frontend and midend, the IR::P4Parser %IR node is used to represent a parser.
+ * During architecture translation, i.e. within the BFN::ArchTranslation midend pass,
+ * the Tofino parser becomes represented with the IR::BFN::TnaParser %IR node.
+ *
+ * In backend, after transformation within the BFN::BackendConverter post-midend pass,
+ * the Tofino parser is represented with the IR::BFN::Parser %IR node.
+ * Within the LowerParser pass, the parser is transformed (lowered) into the representation
+ * that is closer to how HW works. For Tofino 1/2/3, IR::BFN::LoweredParser is produced,
+ * while for %Flatrock, IR::Flatrock::Parser and IR::Flatrock::PseudoParser are produced.
+ *
+ * In assembler, the Tofino 1/2/3 parser is represented with the Parser class,
+ * while %Flatrock is represented with the FlatrockParser class.
+ * Specific differences of Tofino 1 vs 2 vs 3 are implemented using template specialization.
  *
  * # Deparser
  *

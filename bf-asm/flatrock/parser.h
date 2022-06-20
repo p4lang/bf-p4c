@@ -96,9 +96,23 @@ class PhvBuilderGroup {
     void write_config(RegisterSetBase &regs, json::map &json, bool legacy = false);
 };
 
+/**
+ * @brief Representation of the %Flatrock parser in assembler
+ * @ingroup parde
+ */
 class FlatrockParser : public BaseParser, virtual public Parsable {
+    /**
+     * Have state names been initialized in the parser ingress -> states section?
+     * If not, only state masks can be used in corresponsing elements.
+     */
     bool states_init = false;
-    std::map<std::string, match_t> states;  // state name -> state mask
+    /// Mapping of the state name to the corresponding state mask
+    std::map<std::string, match_t> states;
+    /**
+     * Maps a state @p name to the corresponding state mask.
+     * If not initialized so far, it reports an error.
+     * @returns corresponding state mask.
+     */
     const match_t *_state_mask(int lineno, std::string name) const {
         if (!states_init) {
             error(lineno, "parser ingress -> states has not been initialized; "
@@ -113,6 +127,11 @@ class FlatrockParser : public BaseParser, virtual public Parsable {
     }
 
  public:
+    /**
+     * @brief Representation of a row of the %Flatrock parser port metadata table in assembler
+     *
+     * If @a port is not set, the row is unused.
+     */
     struct PortMetadataItem : virtual public Parsable, virtual public Configurable {
         int lineno = -1;
         boost::optional<int> port;
@@ -121,12 +140,19 @@ class FlatrockParser : public BaseParser, virtual public Parsable {
         void input(VECTOR(value_t) args, value_t data) override;
         void write_config(RegisterSetBase &regs, json::map &json, bool legacy = false) override;
     } port_metadata[Target::Flatrock::PARSER_PORT_METADATA_ITEMS];
+    ///< Port metadata table
 
+    /// Base class for the %Flatrock parser ALU0 and ALU1 instructions
     struct alu_instruction : virtual public Parsable {
         virtual uint32_t build_opcode() const = 0;
         virtual bool is_invalid() const = 0;
     };
 
+    /**
+     * @brief The representation of the %Flatrock parser ALU0 instruction in assembler
+     *
+     * ALU0 updates the packet pointer.
+     */
     struct alu0_instruction : public alu_instruction, public Flatrock::alu0_instruction {
         uint32_t build_opcode() const override;
         void input(VECTOR(value_t) args, value_t data) override;
@@ -135,6 +161,11 @@ class FlatrockParser : public BaseParser, virtual public Parsable {
         }
     };
 
+    /**
+     * @brief The representation of the %Flatrock parser ALU1 instruction in assembler
+     *
+     * ALU1 updates the analyzer state field.
+     */
     struct alu1_instruction : public alu_instruction, public Flatrock::alu1_instruction {
         uint32_t build_opcode() const override;
         void input(VECTOR(value_t) args, value_t data) override;
@@ -213,15 +244,20 @@ class FlatrockParser : public BaseParser, virtual public Parsable {
                                       const value_t value);
     };
 
+    /**
+     * @brief The representation of the %Flatrock parser profile in assembler
+     *
+     * If @a id is not set, the profile is unused.
+     */
     struct Profile : virtual public Parsable, virtual public Configurable {
         int lineno = -1;
-        boost::optional<int> id;  // If not set, the profile is not specified
+        boost::optional<int> id;
         struct Match {
             match_t port;
             match_t inband_metadata;
         } match;
-        int initial_pktlen;
-        int initial_seglen;
+        int initial_pktlen;  ///< Packet length adjustment value
+        int initial_seglen;  ///< Segment length adjustment value
         ParserStateVector initial_state;
         unsigned char initial_flags[Target::Flatrock::PARSER_FLAGS_WIDTH];
         int initial_ptr;
@@ -240,11 +276,20 @@ class FlatrockParser : public BaseParser, virtual public Parsable {
 
         const FlatrockParser *parser = nullptr;
     } profiles[Target::Flatrock::PARSER_PROFILES];
+    ///< %Profile table
 
+    /**
+     * @brief The representation of the %Flatrock parser analyzer stage in assembler
+     *
+     * If @a stage is not set, the analyzer stage is unused.
+     */
     class AnalyzerStage {
      private:
-        boost::optional<int> stage;  // If not set, the analyzer stage is not specified
+        boost::optional<int> stage;
         boost::optional<value_t> name;
+        /**
+         * @brief The representation of a rule in the %Flatrock parser analyzer stage in assembler
+         */
         struct Rule {
             struct Match {
                 match_t state = {0, 0};
@@ -265,6 +310,7 @@ class FlatrockParser : public BaseParser, virtual public Parsable {
             };
             boost::optional<PushHdrId> push_hdr_id;
         } rules[Target::Flatrock::PARSER_ANALYZER_STAGE_RULES];
+        ///< Rules within a single analyzer stage
 
         const FlatrockParser *parser = nullptr;
         friend class FlatrockParser;
@@ -276,9 +322,9 @@ class FlatrockParser : public BaseParser, virtual public Parsable {
      private:
         void input_rule(VECTOR(value_t) args, value_t key, value_t data);
         bool input_push_hdr(Rule& rule, value_t value);
-    } analyzer[Target::Flatrock::PARSER_ANALYZER_STAGES];
+    } analyzer[Target::Flatrock::PARSER_ANALYZER_STAGES];  ///< Analyzer
 
-    PhvBuilderGroup phv_builder[Target::Flatrock::PARSER_PHV_BUILDER_GROUPS];
+    PhvBuilderGroup phv_builder[Target::Flatrock::PARSER_PHV_BUILDER_GROUPS];  ///< %PHV builder
 
     void input_states(VECTOR(value_t) args, value_t key, value_t value);
     void input_port_metadata(VECTOR(value_t) args, value_t key, value_t value);
@@ -299,11 +345,15 @@ class FlatrockParser : public BaseParser, virtual public Parsable {
     }
 };
 
+/**
+ * @brief Representation of the %Flatrock pseudo parser in assembler
+ * @ingroup parde
+ */
 class FlatrockPseudoParser : virtual public Parsable, virtual public Configurable {
  public:
     int pov_flags_pos = -1;
     int pov_state_pos = -1;
-    PhvBuilderGroup phv_builder[Target::Flatrock::PARSER_PHV_BUILDER_GROUPS];
+    PhvBuilderGroup phv_builder[Target::Flatrock::PARSER_PHV_BUILDER_GROUPS];  ///< %PHV builder
 
     void input(VECTOR(value_t) args, value_t data) override;
     void write_config(RegisterSetBase &regs, json::map &json, bool legacy = true) override;

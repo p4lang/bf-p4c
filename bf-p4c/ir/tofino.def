@@ -16,6 +16,10 @@ struct StageUse {
     static constexpr int MAX_TERNARY_GROUPS = 12;
 };
 
+/**
+ * @namespace IR::BFN
+ * @brief The namespace encapsulating Tofino 1/2/3-specific %IR nodes
+ */
 namespace BFN {
 struct HeaderStackInfo;
 }  // namespace BFN

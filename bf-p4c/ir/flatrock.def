@@ -4,8 +4,17 @@
 #include "lib/exceptions.h"
 #end
 
+/**
+ * @namespace IR::Flatrock
+ * @brief The namespace encapsulating Flatrock-specific %IR nodes
+ */
 namespace Flatrock {
 
+/**
+ * A row of the %Flatrock parser port metadata table.
+ *
+ * The corresponding struct in assembler is FlatrockParser::PortMetadataItem.
+ */
 class PortMetadataItem {
     int port;
     std::vector<uint8_t> data;
@@ -26,6 +35,11 @@ class PortMetadataItem {
     }
 }
 
+/**
+ * A subcomponent of the %Flatrock parser, which contains the %Flatrock parser port metadata table.
+ *
+ * The corresponding instance in assembler is FlatrockParser::port_metadata.
+ */
 class PortMetadata {
     optional inline Vector<PortMetadataItem> items;
 
@@ -49,6 +63,22 @@ class PortMetadata {
     }
 }
 
+/**
+ * A subcomponent of the %Flatrock parser, which contains initial configuration
+ * of the parser pipeline.
+ *
+ * At least one (default) profile must match.
+ * There are four mandatory fields:
+ *
+ * - @a match_port and @a match_inband_metadata,
+ *   which are used to select a suitable profile for the incoming packet
+ * - @a initial_pktlen and @a initial_seglen,
+ *   which hold an adjustment values for packet and segment legth
+ *
+ * The rest of the fields are optional and if not specified, their value is left untouched.
+ *
+ * The corresponding struct in assembler is FlatrockParser::Profile.
+ */
 class Profile {
     int id;
 #emit
@@ -224,6 +254,16 @@ class AnalyzerStage {
     }
 }
 
+/**
+ * @brief A lowered %Flatrock parser
+ * @ingroup parde
+ *
+ * It contains sub-nodes representing HW blocks of the parser.
+ * %Flatrock parser is created in ReplaceFlatrockParserIR::preorder(IR::BFN::Parser* parser)
+ * ← LowerParserIR ← LowerParser ← Backend::Backend.
+ *
+ * The corresponding class in assembler is FlatrockParser.
+ */
 class Parser : BFN::BaseLoweredParser {
     inline PortMetadata port_metadata;
     inline Vector<Profile> profiles;
@@ -256,12 +296,20 @@ class Parser : BFN::BaseLoweredParser {
     }
 }
 
+/**
+ * @brief A lowered %Flatrock pseudo parser
+ * @ingroup parde
+ *
+ * It substitutes Tofino 1/2/3 egress parser.
+ * It contains sub-nodes representing HW blocks of the pseudo parser.
+ *
+ * The corresponding class in assembler is FlatrockPseudoParser.
+ */
 class PseudoParser : BFN::BaseLoweredParser {
 #noconstructor
     PseudoParser() : BaseLoweredParser(EGRESS) {}
     toString { return "pseudo parser"; }
     dbprint { out << toString(); }
-
 }
 
 }  // namespace Flatrock

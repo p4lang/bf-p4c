@@ -26,6 +26,10 @@ enum {
     PARSER_MAX_CLOT_LENGTH = 64,
 };
 
+/**
+ * @brief Representation of the Tofino 1/2/3 parser in assembler
+ * @ingroup parde
+ */
 class Parser : public BaseParser, public Contextable {
     void write_config(RegisterSetBase &regs, json::map &json, bool legacy = true) override;
     template<class REGS> void write_config(REGS &, json::map &, bool legacy = true);

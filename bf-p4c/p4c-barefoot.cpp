@@ -48,7 +48,7 @@
  */
 /**
  * @namespace IR
- * @brief The namespace encapsulating IR node classes
+ * @brief The namespace encapsulating %IR node classes
  */
 /**
  * @namespace PHV

@@ -3,26 +3,39 @@
 
 #include <vector>
 
-/*
- * The namespace contains Flatrock-specific constants and data structures shared
- * between assembler and backend.
+/**
+ * @file flatrock_parser.h
+ *
+ * @warning The corresponding .cpp file is linked only with the compiler, not the assembler.
+ * Thus, the constructors defined in the .cpp can be used only in the compiler.
+ */
+
+/**
+ * @namespace Flatrock
+ * @brief The namespace encapsulating Flatrock-specific constants and data structures
  */
 namespace Flatrock {
 
 enum constants {
-    PARSER_PORT_METADATA_WIDTH = 15,  // Byte width of per-port metadata
-    PARSER_PORT_METADATA_ITEMS = 40,  // Fpp_params.pm: N_PORT
-    PARSER_PROFILES = 16,  // Fpp_params.pm: N_PHV_TCAM_DEPTH
-    PARSER_STATE_WIDTH = 10,  // 8 + 2 bytes
+    PARSER_PORT_METADATA_WIDTH = 15,  ///< Byte width of per-port metadata
+    PARSER_PORT_METADATA_ITEMS = 40,  ///< Fpp_params.pm: N_PORT
+    PARSER_PROFILES = 16,  ///< Fpp_params.pm: N_PHV_TCAM_DEPTH
+    PARSER_STATE_WIDTH = 10,  ///< 8 + 2 bytes
     PARSER_FLAGS_WIDTH = 8,
     PARSER_PTR_MAX = 255,
     PARSER_W_OFFSET_MAX = 255,
     PARSER_PROFILE_PKTLEN_MAX = 63,
     PARSER_PROFILE_SEGLEN_MAX = 63,
-    PARSER_PROFILE_PORT_BIT_WIDTH = 6,  // 8bit port_info = {2'b0, logic_port#(6b)}
+    PARSER_PROFILE_PORT_BIT_WIDTH = 6,  ///< 8bit port_info = {2'b0, logic_port#(6b)}
     PARSER_ANALYZER_STAGES = 48,
 };
 
+/**
+ * The structure representing instruction for %Flatrock parser ALU0 operating
+ * with the packet pointer.
+ *
+ * It is used both in backend IR and in assembler.
+ */
 struct alu0_instruction {
     enum opcode_enum { INVALID = 99, OPCODE_NOOP = 10, OPCODE_0 = 0, OPCODE_1 = 1,
         OPCODE_2 = 2, OPCODE_3 = 3, OPCODE_4 = 4, OPCODE_5 = 5, OPCODE_6 = 6 } opcode = INVALID;
@@ -58,6 +71,12 @@ struct alu0_instruction {
     alu0_instruction(opcode_enum opcode, std::vector<int> ops);
 };
 
+/**
+ * The structure representing instruction for %Flatrock parser ALU1 operating
+ * with the analyzer state.
+ *
+ * It is used both in backend IR and in assembler.
+ */
 struct alu1_instruction {
     enum opcode_enum { INVALID = 99, OPCODE_NOOP = 10, OPCODE_0 = 0, OPCODE_1 = 1, OPCODE_2 = 2,
         OPCODE_3 = 3, OPCODE_4 = 4, OPCODE_5 = 5, OPCODE_6 = 6, OPCODE_7 = 7} opcode = INVALID;
@@ -108,6 +127,11 @@ struct alu1_instruction {
     alu1_instruction(opcode_enum opcode, std::vector<int> ops);
 };
 
+/**
+ * The structure representing a byte of the Flatrock MD32 metadata.
+ *
+ * It is used both in backend IR and in assembler.
+ */
 struct metadata_select {
     enum type_enum { INVALID, CONSTANT, LOGICAL_PORT_NUMBER, PORT_METADATA,
         INBAND_METADATA, TIMESTAMP, COUNTER } type = INVALID;
