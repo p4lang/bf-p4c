@@ -1569,6 +1569,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/register_read_write.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/scc_toposort.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/simplify_key_elim_casts.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/slice_comparison.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/slice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/static_entries_const_prop.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/table_dependency_graph.cpp
