@@ -349,14 +349,6 @@ node ('compiler-travis') {
                     "Travis - Tofino 2 (part 1)": {
                         echo 'Running tofino2 tests'
                         runInDocker(
-                            '''
-                                /bin/bash -c "\
-                                    ln -s /usr/bin/python3 /usr/bin/python; \
-                                    ctest -R 'cpplint' \
-                                "
-                            '''
-                        )
-                        runInDocker(
                             extraArgs: '--privileged',
                             ctestParallelLevel: 8,
                             '''
@@ -473,6 +465,18 @@ node ('compiler-travis') {
                         echo 'Testing Doxygen documentation build'
                         runInDocker(
                             'make doc'
+                        )
+                    },
+
+                    "Check code style": {
+                        echo 'Checking code style'
+                        runInDocker(
+                            '''
+                                /bin/bash -c "\
+                                    ln -s /usr/bin/python3 /usr/bin/python; \
+                                    ctest -R 'cpplint' \
+                                "
+                            '''
                         )
                     },
 
