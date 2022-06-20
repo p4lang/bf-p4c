@@ -878,11 +878,23 @@ bool CollectGatewayFields::compute_offsets() {
                     LOG5(sl << " already done via hash");
                     return; }
                 auto alloc_byte = sl.container_byte();
+                bool add_to_need_alloc = false;
                 if (alloc_bytes.count(alloc_byte)) {
                     auto bit = alloc_bytes.at(alloc_byte) * 8U + sl.container_slice().lo % 8U;
-                    info.offsets.emplace_back(bit, sl.field_slice());
-                    LOG5("  duplicate byte " << (bit/8) << " " << field << ' ' << sl);
+                    if (std::find_if(info.offsets.begin(), info.offsets.end(),
+                                     [&](const std::pair<int, le_bitrange> &offset) {
+                                         return le_bitinterval(offset.first,
+                                                               offset.first + offset.second.size())
+                                             .overlaps(bit, bit + sl.container_slice().size());
+                                     }) != info.offsets.end()) {
+                        add_to_need_alloc = true;
+                    } else {
+                        info.offsets.emplace_back(bit, sl.field_slice());
+                        LOG5("  duplicate byte " << (bit/8) << " " << field << ' ' << sl);
+                    }
                 } else {
+                    add_to_need_alloc = true; }
+                if (add_to_need_alloc) {
                     need_alloc.push_back({ &field, &info, sl }); }
                 field_bits.clrrange(sl.field_slice().lo, sl.width()); }); }
 #if 0
@@ -1112,6 +1124,7 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
         uint64_t val = cmplmask & mask;
         mask &= andmask & ~ormask;
         mask <<= match_field.range().lo;
+        val <<= match_field.range().lo;
         auto *field_info = &fields.info.at({field, bits});
         auto *match_info = &fields.info.at(match_field);
         if (match_info->offsets.empty() && !match_info->xor_offsets.empty())
