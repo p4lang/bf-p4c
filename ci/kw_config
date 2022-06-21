@@ -16,7 +16,7 @@ PROJECTS:
         
     - NAME: "bootstrap_bfn_compilers"
       WORKDIR: ""
-      COMMAND: "pwd; ls; ./bootstrap_bfn_compilers.sh --no-ptf --build-dir build --build-type RelWithDebInfo -DCMAKE_INSTALL_PREFIX=$(pwd)/install --minimal-config -DFIXED_LIBDYNHASH=ON -DENABLE_STATIC_LIBS=ON -DENABLE_BAREFOOT_INTERNAL=OFF -DENABLE_FLATROCK=ON"
+      COMMAND: "pwd; ls; ./bootstrap_bfn_compilers.sh --no-ptf --build-dir build --build-type RelWithDebInfo -DCMAKE_INSTALL_PREFIX=$(pwd)/install --minimal-config -DFIXED_LIBDYNHASH=ON -DENABLE_STATIC_LIBS=ON -DENABLE_BAREFOOT_INTERNAL=OFF -DENABLE_FLATROCK=ON --disable-unified"
       
     BUILD_STAGE:                                                                                           #[Optional] Path to the working directory for this script, if not defined, the default will be used
       WORKDIR: "/build"
