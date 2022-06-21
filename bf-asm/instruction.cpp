@@ -586,29 +586,27 @@ void VLIWInstruction::write_regs(Target::Flatrock::mau_regs &, Table *, Table::A
 #endif  /* HAVE_FLATROCK */
 
 struct AluOP : VLIWInstruction {
-    enum special_flags { Commutative=1, IgnoreSrc1=2, IgnoreSrc2=4, IgnoreSrcs=6 };
+    enum special_flags { Commutative=1, IgnoreSrc1=2, IgnoreSrc2=4, IgnoreSrcs=6,
+                         CanSliceWithConst=8 };
     const struct Decode : Instruction::Decode {
         std::string name;
         unsigned opcode;
         const Decode *swap_args;
-        bool ignoresSrc1 = false, ignoresSrc2 = false;
+        int flags = 0;
         Decode(const char *n, unsigned opc, int flgs = 0, const char *alias_name = 0)
         : Instruction::Decode(n), name(n), opcode(opc), swap_args(flgs & Commutative ? this : 0),
-          ignoresSrc1(flgs & IgnoreSrc1), ignoresSrc2(flgs & IgnoreSrc2) {
+          flags(flgs) {
             if (alias_name) alias(alias_name); }
         Decode(const char *n, target_t targ, unsigned opc, int flgs = 0)
         : Instruction::Decode(n, targ), name(n), opcode(opc),
-          swap_args(flgs & Commutative ? this : 0),
-          ignoresSrc1(flgs & IgnoreSrc1), ignoresSrc2(flgs & IgnoreSrc2)  {}
+          swap_args(flgs & Commutative ? this : 0), flags(flgs) {}
         Decode(const char *n, std::set<target_t> targ, unsigned opc, int flgs = 0,
                const char *alias_name = 0)
         : Instruction::Decode(n, targ), name(n), opcode(opc),
-          swap_args(flgs & Commutative ? this : 0),
-          ignoresSrc1(flgs & IgnoreSrc1), ignoresSrc2(flgs & IgnoreSrc2)  {
+          swap_args(flgs & Commutative ? this : 0), flags(flgs) {
             if (alias_name) alias(alias_name); }
         Decode(const char *n, unsigned opc, int flgs, Decode *sw, const char *alias_name = 0)
-        : Instruction::Decode(n), name(n), opcode(opc), swap_args(sw),
-          ignoresSrc1(flgs & IgnoreSrc1), ignoresSrc2(flgs & IgnoreSrc2) {
+        : Instruction::Decode(n), name(n), opcode(opc), swap_args(sw), flags(flgs) {
             if (sw && !sw->swap_args) sw->swap_args = this;
             if (alias_name) alias(alias_name); }
         Decode(const char *n, unsigned opc, Decode *sw, const char *alias_name = 0)
@@ -626,8 +624,7 @@ struct AluOP : VLIWInstruction {
             if (alias_name) alias(alias_name); }
         Decode(const char *n, std::set<target_t> targ, unsigned opc, int flgs, Decode *sw,
                const char *alias_name = 0)
-        : Instruction::Decode(n, targ), name(n), opcode(opc), swap_args(sw),
-          ignoresSrc1(flgs & IgnoreSrc1), ignoresSrc2(flgs & IgnoreSrc2) {
+        : Instruction::Decode(n, targ), name(n), opcode(opc), swap_args(sw), flags(flgs) {
             if (sw && !sw->swap_args) sw->swap_args = this;
             if (alias_name) alias(alias_name); }
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
@@ -678,13 +675,13 @@ Instruction *AluOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
     if (op.size == 4) {
         rv = new AluOP(this, tbl, act, op.data[1], op.data[2], op.data[3]);
     } else if (op.size == 3) {
-        if (!ignoresSrc1 && ignoresSrc2) {
+        if (!(flags & IgnoreSrc1) && (flags & IgnoreSrc2)) {
             rv = new AluOP(this, tbl, act, op.data[1], op.data[2], op.data[2]);
             rv->ignoreSrc2 = true;
         } else {
             rv = new AluOP(this, tbl, act, op.data[1], op.data[1], op.data[2]);
-            rv->ignoreSrc1 = ignoresSrc1; }
-    } else if (op.size == 3 && ignoresSrc1 && ignoresSrc2) {
+            rv->ignoreSrc1 = (flags & IgnoreSrc1) != 0; }
+    } else if (op.size == 3 && (flags & IgnoreSrc1) && (flags & IgnoreSrc2)) {
         rv = new AluOP(this, tbl, act, op.data[1], op.data[1], op.data[1]);
         rv->ignoreSrc1 = rv->ignoreSrc2 = true;
     } else {
@@ -730,9 +727,6 @@ Instruction *AluOP::pass1(Table *tbl, Table::Actions::Action *) {
     if (dest->reg.type != Phv::Register::NORMAL) {
         error(dest.lineno, "%s dest can't be dark or mocha phv", opc->name.c_str());
         return this; }
-    if (dest->lo || dest->hi != dest->reg.size-1) {
-        error(lineno, "ALU ops cannot operate on slices");
-        return this; }
     slot = dest->reg.mau_id();
     tbl->stage->action_set[tbl->gress][dest->reg.uid] = true;
     if (!ignoreSrc1) src1->pass1(tbl, slot/Phv::mau_groupsize());
@@ -743,6 +737,18 @@ Instruction *AluOP::pass1(Table *tbl, Table::Actions::Action *) {
         opc = opc->swap_args; }
     if (!ignoreSrc2 && src2.phvGroup() < 0)
         error(lineno, "src2 must be phv register");
+    if (dest->lo || dest->hi != dest->reg.size-1) {
+        auto *k = src1.to<operand::Const>();
+        if (k && (opc->flags & CanSliceWithConst) && operand(dest) == src2 && k->value >= 0 &&
+            (k->value << dest->lo) < 8) {
+            // special case -- bitwise op wih dest==src2 and src1 is a constant can just operate
+            // on the whole container to get the right result
+            k->value <<= dest->lo;
+            // FIXME -- should rewrite dest and src2 to refer to the whole container for
+            // strict correctness?  We don't actually look at the slice after this so maybe ok
+            return this; }
+        error(lineno, "ALU ops cannot operate on slices");
+    }
     return this;
 }
 Instruction *AluOP3Src::pass1(Table *tbl, Table::Actions::Action *act) {
@@ -1435,11 +1441,11 @@ static AluOP::Decode     opADD      ("add",   tofino123, 0x23e,  AluOP::Commutat
                          opMAXS     ("maxs",  tofino123, 0x1fe,  AluOP::Commutative),               // NOLINT
                          opSETZ     ("setz",  tofino123, 0x01e,  AluOP::Commutative+AluOP::IgnoreSrcs), // NOLINT
                          opNOR      ("nor",   tofino123, 0x05e,  AluOP::Commutative),               // NOLINT
-                         opANDCA    ("andca", tofino123, 0x09e),                                    // NOLINT
+                         opANDCA    ("andca", tofino123, 0x09e,  AluOP::CanSliceWithConst),         // NOLINT
                          opANDCB    ("andcb", tofino123, 0x11e,  &opANDCA),                         // NOLINT
                          opNOTB     ("notb",  tofino123, 0x15e,  AluOP::IgnoreSrc1,  "not"),        // NOLINT
                          opNOTA     ("nota",  tofino123, 0x0de,  AluOP::IgnoreSrc2,  &opNOTB),      // NOLINT
-                         opXOR      ("xor",   tofino123, 0x19e,  AluOP::Commutative),               // NOLINT
+                         opXOR      ("xor",   tofino123, 0x19e,  AluOP::Commutative+AluOP::CanSliceWithConst), // NOLINT
                          opNAND     ("nand",  tofino123, 0x1de,  AluOP::Commutative),               // NOLINT
                          opAND      ("and",   tofino123, 0x21e,  AluOP::Commutative),               // NOLINT
                          opXNOR     ("xnor",  tofino123, 0x25e,  AluOP::Commutative),               // NOLINT
@@ -1447,7 +1453,7 @@ static AluOP::Decode     opADD      ("add",   tofino123, 0x23e,  AluOP::Commutat
                          opORCA     ("orca",  tofino123, 0x2de),                                    // NOLINT
                          opA        ("alu_a", tofino123, 0x31e,  AluOP::IgnoreSrc2,  &opB),         // NOLINT
                          opORCB     ("orcb",  tofino123, 0x35e,  &opORCA),                          // NOLINT
-                         opOR       ("or",    tofino123, 0x39e,  AluOP::Commutative),               // NOLINT
+                         opOR       ("or",    tofino123, 0x39e,  AluOP::Commutative+AluOP::CanSliceWithConst), // NOLINT
                          opSETHI    ("sethi", tofino123, 0x3de,  AluOP::Commutative+AluOP::IgnoreSrcs); // NOLINT
 static LoadConst::Decode opLoadConst("load-const", tofino123);                                      // NOLINT
 static Set::Decode       opSet      ("set", tofino123);                                             // NOLINT
