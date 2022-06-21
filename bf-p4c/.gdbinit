@@ -289,8 +289,8 @@ class TofinoIXBarPrinter(object):
                     field = ptrs[indir[t]].dereference()
                     if c == 8:
                         rv += ' '
-                    if field['first']['str']:
-                        name = field['first']['str'].string()
+                    if field['first']['type_']['size_'] != 0:
+                        name = str(field['first'])
                         if name not in fields:
                             if (len(fields) > 26):
                                 fields[name] = chr(ord('A') + len(fields) - 26)
