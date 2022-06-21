@@ -196,13 +196,63 @@ const char *PragmaCalculatedFieldUpdateLocation::help =
     "    output_width : 16;\n"
     "}\n";
 
-const char *PragmaChainAddress::name = "chain_address";  // FIXME
-const char *PragmaChainAddress::description = "Something to do with hw learning.";
-const char *PragmaChainAddress::help = "To be documented";
+const char *PragmaChainAddress::name = "chain_address";
+const char *PragmaChainAddress::description =
+    "Workaround used to create multistage FIFOs with Registers.";
+const char *PragmaChainAddress::help = "@pragma chain_address "
+    "+ attached to initialization of each RegisterAction in a multistage FIFO\n"
+    "\n"
+    "For example:\n"
+    "\n"
+    "// Example of param1 for Register\n"
+    "struct pair {\n"
+    "    bit<64> lo;\n"
+    "    bit<64> hi;\n"
+    "}\n"
+    "// Skip to Register declarations\n"
+    "@chain_total_size(3072)\n"
+    "Register<pair, bit<32>>(1024) fifo_1_of_3; // First stage\n"
+    "Register<pair, bit<32>>(1024) fifo_2_of_3; // Second stage\n"
+    "Register<pair, bit<32>>(1024) fifo_3_of_3; // Third stage\n"
+    "// Skip to RegisterAction initialization\n"
+    "@chain_address\n"
+    "RegisterAction<pair, bit<32>, b32>(fifo_1_of_3) read_1 = {\n"
+    "    void apply(inout pair value, out b32 rv) { rv = value.lo[31:0]; } };\n"
+    "@chain_address\n"
+    "RegisterAction<pair, bit<32>, b32>(fifo_2_of_3) read_2 = {\n"
+    "    void apply(inout pair value, out b32 rv) { rv = value.lo[31:0]; } };\n"
+    "@chain_address\n"
+    "RegisterAction<pair, bit<32>, b32>(fifo_3_of_3) read_3 = {\n"
+    "    void apply(inout pair value, out b32 rv) { rv = value.lo[31:0]; } };\n"
+    "\n"
+    "After declaring a multistage FIFO using 2 or more Register declarations and "
+    "@pragma chain_total_size(NUMBER_OF_REGISTERS * REGISTER_SIZE), use this "
+    "pragma to chain RegisterActions to each stage of the FIFO.";
 
-const char *PragmaChainTotalSize::name = "chain_total_size";  // FIXME
-const char *PragmaChainTotalSize::description = "Something to do with hw learning.";
-const char *PragmaChainTotalSize::help = "To be documented";
+const char *PragmaChainTotalSize::name = "chain_total_size";
+const char *PragmaChainTotalSize::description =
+    "Workaround used to create multistage FIFOs with Registers.";
+const char *PragmaChainTotalSize::help =
+    "@pragma chain_total_size(NUMBER_OF_REGISTERS * REGISTER_SIZE) "
+    "+ before first declaration of 2 or more “Register<param1, param2>(REGISTER_SIZE)” extern "
+    "declarations\n"
+    "\n"
+    "For example:\n"
+    "\n"
+    "// Example of param1 for Register\n"
+    "struct pair {\n"
+    "    bit<64> lo;\n"
+    "    bit<64> hi;\n"
+    "}\n"
+    "// Skip to Register declarations\n"
+    "@chain_total_size(3072)\n"
+    "Register<pair, bit<32>>(1024) fifo_1_of_3; // First stage\n"
+    "Register<pair, bit<32>>(1024) fifo_2_of_3; // Second stage\n"
+    "Register<pair, bit<32>>(1024) fifo_3_of_3; // Third stage\n"
+    "\n"
+    "Workaround to enable creation of a Register that should be split across "
+    "multiple stages. The value passed as an argument should be the sum of the "
+    "size of all the Registers.";
 
 const char *PragmaCritical::name = "critical";
 const char *PragmaCritical::description = "To be documented";  // FIXME
@@ -1147,7 +1197,7 @@ const char *PragmaActionSelectorHashFieldListName::description = "internal";
 const char *PragmaActionSelectorHashFieldListName::help = "internal";
 
 const char *PragmaActionSelectorHashFieldCalcOutputWidth::name =
-                                                    "action_selector_hash_field_calc_output_width";
+    "action_selector_hash_field_calc_output_width";
 const char *PragmaActionSelectorHashFieldCalcOutputWidth::description = "internal";
 const char *PragmaActionSelectorHashFieldCalcOutputWidth::help = "internal";
 

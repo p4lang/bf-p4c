@@ -1134,8 +1134,8 @@ void AttachTables::InitializeStatefulAlus
             regName = getString(anno);
         salu = new IR::MAU::StatefulAlu(reg->srcInfo, regName, reg->annotations, reg);
         // Reg initialization values for lo/hi are passed as annotations. In
-        // p4_14 conversion they cannot be set directly on the register For
-        // p4_16 programs these are passed in as optional stateful params
+        // p4_14 conversion, they cannot be set directly on the register. For
+        // p4_16 programs, these are passed in as optional stateful params
         for (auto annot : ext->annotations->annotations) {
             if (annot->name == "initial_register_lo_value") {
                 salu->init_reg_lo = getConstant(annot, INT_MIN, UINT_MAX);
@@ -1172,7 +1172,7 @@ void AttachTables::InitializeStatefulAlus
                 salu->dual = str->fields.size() > 1;
             if (reg->arguments->size() > !salu->direct) {
                 auto *init = reg->arguments->at(!salu->direct)->expression;
-                // any malformed initial value should have been diagnoesd already, so no need
+                // any malformed initial value should have been diagnosed already, so no need
                 // for error messages here
                 if (auto *k = init->to<IR::Constant>()) {
                     salu->init_reg_lo = k->asInt();
