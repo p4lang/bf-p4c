@@ -74,7 +74,7 @@
             ],
             "symbol_name": "NoAction",
             "declaration": {
-                "file": "/home/ubuntu/bf-p4c-compilers-master/build/p4c/p4include/core.p4",
+                "file": "/build/bf-p4c/debug/p4c/p4include/core.p4",
                 "line": 70,
                 "column": 8
             },
@@ -178,6 +178,22 @@
                 "file": "tna_multicast.p4",
                 "line": 141,
                 "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_multicast.p4",
+                    "line": 221,
+                    "column": 32
+                }
+            ],
+            "symbol_name": "tna_multicast221",
+            "declaration": {
+                "file": "tna_multicast.p4",
+                "line": 221,
+                "column": 32
             },
             "symbol_type": "P4Action"
         },
@@ -1327,5 +1343,5 @@
             "symbol_type": "IfStatement"
         }
     ],
-    "source_root": "/home/ubuntu/bf-p4c-compilers-master/p4-tests/p4-programs/p4_16_programs/tna_multicast"
+    "source_root": "/root/repo/bf-p4c/p4-tests/p4-programs/p4_16_programs/tna_multicast"
 }

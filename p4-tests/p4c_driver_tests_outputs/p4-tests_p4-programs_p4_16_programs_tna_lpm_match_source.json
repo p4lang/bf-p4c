@@ -60,7 +60,7 @@
             ],
             "symbol_name": "NoAction",
             "declaration": {
-                "file": "/nfs/site/home/cgeoffri/Work/bf-p4c-compilers/build/p4c/p4include/core.p4",
+                "file": "/build/bf-p4c/debug/p4c/p4include/core.p4",
                 "line": 70,
                 "column": 8
             },
@@ -116,6 +116,38 @@
                 "file": "tna_lpm_match.p4",
                 "line": 115,
                 "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_lpm_match.p4",
+                    "line": 137,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "tna_lpm_match137",
+            "declaration": {
+                "file": "tna_lpm_match.p4",
+                "line": 137,
+                "column": 13
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_lpm_match.p4",
+                    "line": 142,
+                    "column": 37
+                }
+            ],
+            "symbol_name": "tna_lpm_match142",
+            "declaration": {
+                "file": "tna_lpm_match.p4",
+                "line": 142,
+                "column": 37
             },
             "symbol_type": "P4Action"
         },
@@ -601,5 +633,5 @@
             "symbol_type": "Parameter_Type_Extern"
         }
     ],
-    "source_root": "/nfs/site/home/cgeoffri/Work/bf-p4c-compilers/p4-tests/p4-programs/p4_16_programs/tna_lpm_match"
+    "source_root": "/root/repo/bf-p4c/p4-tests/p4-programs/p4_16_programs/tna_lpm_match"
 }

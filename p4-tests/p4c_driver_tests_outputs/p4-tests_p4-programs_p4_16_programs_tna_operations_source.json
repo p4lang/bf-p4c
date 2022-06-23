@@ -132,6 +132,22 @@
             "references": [
                 {
                     "file": "tna_operations.p4",
+                    "line": 144,
+                    "column": 37
+                }
+            ],
+            "symbol_name": "tna_operations144",
+            "declaration": {
+                "file": "tna_operations.p4",
+                "line": 144,
+                "column": 37
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_operations.p4",
                     "line": 140,
                     "column": 9
                 }
@@ -552,5 +568,5 @@
             "symbol_type": "Parameter_Type_Extern"
         }
     ],
-    "source_root": "/nfs/site/home/cgeoffri/Work/bf-p4c-compilers/p4-tests/p4-programs/p4_16_programs/tna_operations"
+    "source_root": "/root/repo/bf-p4c/p4-tests/p4-programs/p4_16_programs/tna_operations"
 }

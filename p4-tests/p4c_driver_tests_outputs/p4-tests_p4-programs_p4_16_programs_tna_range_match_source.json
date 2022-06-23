@@ -58,6 +58,22 @@
             "references": [
                 {
                     "file": "tna_range_match.p4",
+                    "line": 115,
+                    "column": 37
+                }
+            ],
+            "symbol_name": "tna_range_match115",
+            "declaration": {
+                "file": "tna_range_match.p4",
+                "line": 115,
+                "column": 37
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_range_match.p4",
                     "line": 112,
                     "column": 9
                 }
@@ -431,5 +447,5 @@
             "symbol_type": "Parameter_Type_Extern"
         }
     ],
-    "source_root": "/nfs/site/home/cgeoffri/Work/bf-p4c-compilers/p4-tests/p4-programs/p4_16_programs/tna_range_match"
+    "source_root": "/root/repo/bf-p4c/p4-tests/p4-programs/p4_16_programs/tna_range_match"
 }

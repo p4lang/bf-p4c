@@ -44,7 +44,7 @@
             ],
             "symbol_name": "NoAction",
             "declaration": {
-                "file": "/nfs/site/home/cgeoffri/Work/bf-p4c-compilers/build/p4c/p4include/core.p4",
+                "file": "/build/bf-p4c/debug/p4c/p4include/core.p4",
                 "line": 70,
                 "column": 8
             },
@@ -95,6 +95,88 @@
                 "file": "tna_bridged_md.p4",
                 "line": 126,
                 "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_bridged_md.p4",
+                    "line": 226,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "tna_bridged_md226",
+            "declaration": {
+                "file": "tna_bridged_md.p4",
+                "line": 226,
+                "column": 13
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_bridged_md.p4",
+                    "line": 226,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "tna_bridged_md226_0",
+            "declaration": {
+                "file": "tna_bridged_md.p4",
+                "line": 226,
+                "column": 13
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_bridged_md.p4",
+                    "line": 228,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "tna_bridged_md228",
+            "declaration": {
+                "file": "tna_bridged_md.p4",
+                "line": 228,
+                "column": 13
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_bridged_md.p4",
+                    "line": 228,
+                    "column": 13,
+                    "end_line": 229
+                }
+            ],
+            "symbol_name": "tna_bridged_md228_0",
+            "declaration": {
+                "file": "tna_bridged_md.p4",
+                "line": 228,
+                "column": 13,
+                "end_line": 229
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_bridged_md.p4",
+                    "line": 229,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "tna_bridged_md229",
+            "declaration": {
+                "file": "tna_bridged_md.p4",
+                "line": 229,
+                "column": 13
             },
             "symbol_type": "P4Action"
         },
@@ -1399,5 +1481,5 @@
             "symbol_type": "IfStatement"
         }
     ],
-    "source_root": "/nfs/site/home/cgeoffri/Work/bf-p4c-compilers/p4-tests/p4-programs/p4_16_programs/tna_bridged_md"
+    "source_root": "/root/repo/bf-p4c/p4-tests/p4-programs/p4_16_programs/tna_bridged_md"
 }

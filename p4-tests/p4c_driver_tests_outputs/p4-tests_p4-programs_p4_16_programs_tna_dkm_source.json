@@ -123,7 +123,7 @@
             ],
             "symbol_name": "NoAction",
             "declaration": {
-                "file": "/nfs/site/home/cgeoffri/Work/bf-p4c-compilers/build/p4c/p4include/core.p4",
+                "file": "/build/bf-p4c/debug/p4c/p4include/core.p4",
                 "line": 70,
                 "column": 8
             },
@@ -195,6 +195,38 @@
                 "file": "tna_dkm.p4",
                 "line": 127,
                 "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 164,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "tna_dkm164",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 164,
+                "column": 13
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 168,
+                    "column": 32
+                }
+            ],
+            "symbol_name": "tna_dkm168",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 168,
+                "column": 32
             },
             "symbol_type": "P4Action"
         },
@@ -951,5 +983,5 @@
             "symbol_type": "Parameter_Type_Extern"
         }
     ],
-    "source_root": "/nfs/site/home/cgeoffri/Work/bf-p4c-compilers/p4-tests/p4-programs/p4_16_programs/tna_dkm"
+    "source_root": "/root/repo/bf-p4c/p4-tests/p4-programs/p4_16_programs/tna_dkm"
 }

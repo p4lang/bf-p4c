@@ -351,6 +351,8 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/wrong-warning.p4
   #p4c update 2022-04-25
   testdata/p4_16_samples/extract_for_header_union.p4
+  #p4c update 2022-06-22
+  testdata/p4_16_samples/parser-unroll-test7.p4
   )
 
 p4c_add_xfail_reason("tofino"

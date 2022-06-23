@@ -282,7 +282,7 @@
             ],
             "symbol_name": "NoAction",
             "declaration": {
-                "file": "/nfs/site/home/cgeoffri/Work/bf-p4c-compilers/build/p4c/p4include/core.p4",
+                "file": "/build/bf-p4c/debug/p4c/p4include/core.p4",
                 "line": 70,
                 "column": 8
             },
@@ -587,6 +587,22 @@
                 "file": "pipeline_profile_b.p4",
                 "line": 221,
                 "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "pipeline_profile_a.p4",
+                    "line": 298,
+                    "column": 22
+                }
+            ],
+            "symbol_name": "pipeline_profile_a298",
+            "declaration": {
+                "file": "pipeline_profile_a.p4",
+                "line": 298,
+                "column": 22
             },
             "symbol_type": "P4Action"
         },
@@ -2988,5 +3004,5 @@
             "symbol_type": "Parameter_Type_Bits"
         }
     ],
-    "source_root": "/nfs/site/home/cgeoffri/Work/bf-p4c-compilers/p4-tests/p4-programs/p4_16_programs/tna_32q_2pipe"
+    "source_root": "/root/repo/bf-p4c/p4-tests/p4-programs/p4_16_programs/tna_32q_2pipe"
 }

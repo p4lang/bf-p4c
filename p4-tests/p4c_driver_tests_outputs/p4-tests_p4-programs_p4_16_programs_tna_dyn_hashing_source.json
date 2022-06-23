@@ -143,6 +143,22 @@
             "references": [
                 {
                     "file": "tna_dyn_hashing.p4",
+                    "line": 144,
+                    "column": 30
+                }
+            ],
+            "symbol_name": "tna_dyn_hashing144",
+            "declaration": {
+                "file": "tna_dyn_hashing.p4",
+                "line": 144,
+                "column": 30
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dyn_hashing.p4",
                     "line": 141,
                     "column": 7
                 }
@@ -638,5 +654,5 @@
             "symbol_type": "Parameter_Type_Extern"
         }
     ],
-    "source_root": "/nfs/site/home/cgeoffri/Work/bf-p4c-compilers/p4-tests/p4-programs/p4_16_programs/tna_dyn_hashing"
+    "source_root": "/root/repo/bf-p4c/p4-tests/p4-programs/p4_16_programs/tna_dyn_hashing"
 }

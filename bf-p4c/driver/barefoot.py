@@ -195,10 +195,10 @@ class BarefootBackend(BackendDriver):
                                     action="store_true", default=False,
                                     help="Reduce PHV allocation search space for faster compilation.")
         if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
-            self._argGroup.add_argument("--gdb", action="store_true", default=False,
-                                        help="run the backend compiler under gdb")
-            self._argGroup.add_argument("--lldb", action="store_true", default=False,
-                                        help="run the backend compiler under lldb")
+            for debugger in ["gdb", "cgdb", "lldb"]:
+                self._argGroup.add_argument("--" + debugger, action="store_true", default=False,
+                                            help="run the backend compiler under the %s debugger"
+                                                 % (debugger,))
             self._argGroup.add_argument("--validate-output", action="store_true", default=False,
                                         help="run context.json validation")
             self._argGroup.add_argument("--validate-manifest", action="store_true", default=False,
@@ -380,7 +380,7 @@ class BarefootBackend(BackendDriver):
 
         # Make sure we don't have conflicting debugger options.
         if (os.environ['P4C_BUILD_TYPE'] == "DEVELOPER"):
-            if opts.gdb and opts.lldb:
+            if sum(int(x) for x in [opts.gdb, opts.cgdb, opts.lldb]) > 1:
                 self.exitWithError("Cannot use more than one debugger at a time.")
 
         # process the options related to source file
@@ -427,18 +427,15 @@ class BarefootBackend(BackendDriver):
             self._no_link = True
 
         if (os.environ['P4C_BUILD_TYPE'] == "DEVELOPER"):
-            if opts.gdb:
+            if opts.gdb or opts.cgdb or opts.lldb:
                 # XXX breaks abstraction
                 old_command = self._commands['compiler']
-                self.add_command('compiler', 'gdb')
-                self.add_command_option('compiler', '--args')
-                for arg in old_command:
-                    self.add_command_option('compiler', arg)
-            if opts.lldb:
-                # XXX breaks abstraction
-                old_command = self._commands['compiler']
-                self.add_command('compiler', 'lldb')
-                self.add_command_option('compiler', '--')
+                if opts.lldb:
+                    self.add_command('compiler', 'lldb')
+                    self.add_command_option('compiler', '--')
+                else:
+                    self.add_command('compiler', 'gdb' if opts.gdb else 'cgdb')
+                    self.add_command_option('compiler', '--args')
                 for arg in old_command:
                     self.add_command_option('compiler', arg)
 

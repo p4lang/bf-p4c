@@ -116,7 +116,7 @@
             ],
             "symbol_name": "NoAction",
             "declaration": {
-                "file": "/nfs/site/home/cgeoffri/Work/bf-p4c-compilers/build/p4c/p4include/core.p4",
+                "file": "/build/bf-p4c/debug/p4c/p4include/core.p4",
                 "line": 70,
                 "column": 8
             },
@@ -188,6 +188,56 @@
                 "file": "tna_digest.p4",
                 "line": 119,
                 "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_digest.p4",
+                    "line": 159,
+                    "column": 17,
+                    "end_line": 162
+                }
+            ],
+            "symbol_name": "tna_digest159",
+            "declaration": {
+                "file": "tna_digest.p4",
+                "line": 159,
+                "column": 17,
+                "end_line": 162
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_digest.p4",
+                    "line": 169,
+                    "column": 37
+                }
+            ],
+            "symbol_name": "tna_digest169",
+            "declaration": {
+                "file": "tna_digest.p4",
+                "line": 169,
+                "column": 37
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_digest.p4",
+                    "line": 178,
+                    "column": 32
+                }
+            ],
+            "symbol_name": "tna_digest178",
+            "declaration": {
+                "file": "tna_digest.p4",
+                "line": 178,
+                "column": 32
             },
             "symbol_type": "P4Action"
         },
@@ -826,5 +876,5 @@
             "symbol_type": "IfStatement"
         }
     ],
-    "source_root": "/nfs/site/home/cgeoffri/Work/bf-p4c-compilers/p4-tests/p4-programs/p4_16_programs/tna_digest"
+    "source_root": "/root/repo/bf-p4c/p4-tests/p4-programs/p4_16_programs/tna_digest"
 }

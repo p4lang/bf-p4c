@@ -334,9 +334,43 @@
             ],
             "symbol_name": "NoAction",
             "declaration": {
-                "file": "/nfs/site/home/cgeoffri/Work/bf-p4c-compilers/build/p4c/p4include/core.p4",
+                "file": "/build/bf-p4c/debug/p4c/p4include/core.p4",
                 "line": 70,
                 "column": 8
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 349,
+                    "column": 32
+                }
+            ],
+            "symbol_name": "bri_handle349",
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 349,
+                "column": 32
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_handle.p4",
+                    "line": 364,
+                    "column": 34,
+                    "end_line": 365
+                }
+            ],
+            "symbol_name": "bri_handle364",
+            "declaration": {
+                "file": "bri_handle.p4",
+                "line": 364,
+                "column": 34,
+                "end_line": 365
             },
             "symbol_type": "P4Action"
         },
@@ -1433,5 +1467,5 @@
             "symbol_type": "Parameter_Type_Extern"
         }
     ],
-    "source_root": "/nfs/site/home/cgeoffri/Work/bf-p4c-compilers/p4-tests/p4-programs/p4_16_programs/bri_handle"
+    "source_root": "/root/repo/bf-p4c/p4-tests/p4-programs/p4_16_programs/bri_handle"
 }

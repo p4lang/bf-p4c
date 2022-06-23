@@ -251,6 +251,58 @@
             "references": [
                 {
                     "file": "tna_resubmit.p4",
+                    "line": 292,
+                    "column": 35,
+                    "end_line": 293
+                }
+            ],
+            "symbol_name": "tna_resubmit292",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 292,
+                "column": 35,
+                "end_line": 293
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 304,
+                    "column": 38
+                }
+            ],
+            "symbol_name": "tna_resubmit304",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 304,
+                "column": 38
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_resubmit.p4",
+                    "line": 307,
+                    "column": 36,
+                    "end_line": 308
+                }
+            ],
+            "symbol_name": "tna_resubmit307",
+            "declaration": {
+                "file": "tna_resubmit.p4",
+                "line": 307,
+                "column": 36,
+                "end_line": 308
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_resubmit.p4",
                     "line": 294,
                     "column": 13
                 }
@@ -1441,5 +1493,5 @@
             "symbol_type": "IfStatement"
         }
     ],
-    "source_root": "/home/ubuntu/bf-p4c-compilers/p4-tests/p4-programs/p4_16_programs/tna_resubmit"
+    "source_root": "/root/repo/bf-p4c/p4-tests/p4-programs/p4_16_programs/tna_resubmit"
 }
