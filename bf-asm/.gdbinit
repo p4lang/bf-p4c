@@ -3,6 +3,12 @@ set print object
 set unwindonsignal on
 set unwind-on-terminating-exception on
 
+if $_isvoid($bpnum)
+    break __assert_fail
+    break error
+    break bug
+end
+
 define d
     call ::dump($arg0)
 end
@@ -230,7 +236,7 @@ class InputXbar_Group_Printer:
     def __init__(self, val):
         self.val = val
     def to_string(self):
-        types = [ 'invalid', 'exact', 'ternary', 'byte', 'gateway', 'trie', 'action' ]
+        types = [ 'invalid', 'exact', 'ternary', 'byte', 'gateway', 'xcmp' ]
         t = int(self.val['type'])
         if t >= 0 and t < len(types):
             rv = types[t]
@@ -288,8 +294,21 @@ class ActionBus_Source_Printer:
     def children(self):
         return self._iter(self.val, int(self.val['type']))
 
+class PhvRef_Printer:
+    "Print a Phv::Ref"
+    def __init__(self, val):
+        self.val = val
+    def to_string(self):
+        threads = [ "ig::", "eg::", "gh::" ]
+        rv = threads[self.val['gress_']] + str(self.val['name_'])
+        if self.val['lo'] >= 0:
+            rv += '(' + str(self.val['lo'])
+            if self.val['hi'] >= 0:
+                rv += '..' + str(self.val['hi'])
+            rv += ')'
+        return rv
 
-def find_pp(val):
+def bfas_pp(val):
     if val.type.tag == 'bitvec':
         return bitvecPrinter(val)
     if val.type.tag == 'value_t':
@@ -304,8 +323,22 @@ def find_pp(val):
         return InputXbar_Group_Printer(val)
     if val.type.tag == 'ActionBus::Source':
         return ActionBus_Source_Printer(val)
+    if val.type.tag == 'Phv::Ref':
+        return PhvRef_Printer(val)
     return None
 
-#gdb.pretty_printers = [ gdb.pretty_printers[0] ]  # uncomment if reloading
-gdb.pretty_printers.append(find_pp)
+try:
+    found = False
+    for i in range(len(gdb.pretty_printers)):
+        try:
+            if gdb.pretty_printers[i].__name__ == "bfas_pp":
+                gdb.pretty_printers[i] = bfas_pp
+                found = True
+        except:
+            pass
+    if not found:
+        gdb.pretty_printers.append(bfas_pp)
+except:
+    pass
+
 end

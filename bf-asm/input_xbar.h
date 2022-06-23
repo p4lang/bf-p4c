@@ -73,7 +73,6 @@ class InputXbar {
         bool            seed_parity = false;  // Parity to be set on the seed value
     };
     Table       *table;
-    std::map<int, HashCol>                              empty_hash_table;
     ordered_map<Group, std::vector<Input>>              groups;
     std::map<unsigned, std::map<int, HashCol>>          hash_tables;
     // Map of hash table index to parity bit set on the table
@@ -245,9 +244,9 @@ class InputXbar {
     Input *find_exact(Phv::Slice sl, int group) { return find(sl, Group(Group::EXACT, group)); }
 
     std::vector<Input *> find_all(Phv::Slice sl, Group grp);
-    std::vector<Input *> find_all_exact(Phv::Slice sl, int group) {
-        return find_all(sl, Group(Group::EXACT, group));
-    }
+    virtual std::vector<Input *> find_hash_inputs(Phv::Slice sl, int hash_table);
+    virtual int global_bit_position_adjust(int hash_table) const {
+        return (hash_table / 2) * 128; }
 };
 
 inline std::ostream &operator<<(std::ostream &out, InputXbar::Group gr) {

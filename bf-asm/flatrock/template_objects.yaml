@@ -54,6 +54,8 @@ generate:
         ppu_minput_rspec:
           minput_phe_pwr_erf: [ scan_chain, minput_byte_pwr, [9, 7], rf.minput_phe_pwr_scnsl ]
           minput_word_pwr_erf: [ scan_chain, minput_word_pwr, [2, 3], rf.minput_word_pwr_scnsl ]
+        minput_em_bhash2_erf:
+          minput_em_bhash2_scan: [ scan_chain, minput_em_bhash2, [5] ]
         rf:
           minput_phe_pwr_scnsl: [ delete ]
           minput_word_pwr_scnsl: [ delete ]

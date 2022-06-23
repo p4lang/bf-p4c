@@ -567,7 +567,7 @@ void GatewayTable::pass3() {
                         // FIXME -- not really used, so we don't need to check the
                         // match/hash group.  Should this be an asm error?
                         return; }
-                    way = &sram_tbl->way_map.at(std::make_pair(row.row, row.cols[0]));
+                    way = &sram_tbl->way_map.at(SRamMatchTable::Ram(row.row, row.cols[0]));
                     break; } }
             BUG_CHECK(way, "%s claims to use search bus %d.%d, but we can't find it in the layout",
                       sram_tbl->name(), layout[0].row, layout[0].bus);

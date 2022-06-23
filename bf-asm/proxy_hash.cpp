@@ -49,7 +49,7 @@ void ProxyHashMatchTable::setup_ways() {
     for (auto &row : layout) {
         int first_way = -1;
         for (auto col : row.cols) {
-            int way = way_map.at(std::make_pair(row.row, col)).way;
+            int way = way_map.at(Ram(row.row, col)).way;
             if (first_way < 0) {
                 first_way = way;
             } else if (ways[way].group != ways[first_way].group) {
@@ -98,7 +98,7 @@ template<class REGS> void ProxyHashMatchTable::write_regs_vt(REGS &regs) {
     for (auto &row : layout) {
         auto &rams_row = regs.rams.array.row[row.row];
         for (auto col : row.cols) {
-            auto &way = way_map[std::make_pair(row.row, col)];
+            auto &way = way_map[Ram(row.row, col)];
             auto &ram = rams_row.ram[col];
             ram.match_nibble_s0q1_enable = version_nibble_mask.getrange(way.word*32U, 32);
             ram.match_nibble_s1q0_enable = UINT64_C(0xffffffff); } }

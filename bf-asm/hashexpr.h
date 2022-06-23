@@ -24,8 +24,8 @@ class HashExpr {
     bfn_hash_algorithm_t hash_algorithm = {};  // Zero-init to make Klockwork happy
     static HashExpr *create(gress_t, int stage, const value_t &);
     virtual void build_algorithm() = 0;
-    virtual bool check_ixbar(InputXbar *ix, int grp) = 0;
-    virtual void gen_data(bitvec &data, int bit, InputXbar *ix, int grp);
+    virtual bool check_ixbar(InputXbar *ix, int hash_table) = 0;
+    virtual void gen_data(bitvec &data, int bit, InputXbar *ix, int hash_table);
     void gen_ixbar_init(ixbar_init_t *ixbar_init, std::vector<ixbar_input_t> &inputs,
         std::vector<hash_matrix_output_t> &outputs, int logical_hash_bit, InputXbar *ix,
         int hash_table);

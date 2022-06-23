@@ -37,6 +37,10 @@ class InputXbar : public ::InputXbar {
 
  public:
     static void write_global_regs(Target::Flatrock::mau_regs &regs, gress_t gress);
+    std::vector<Input *> find_hash_inputs(Phv::Slice sl, int hash_table) override {
+        return find_all(sl, Group(Group::EXACT, hash_table)); }
+    int global_bit_position_adjust(int hash_table) const {
+        return hash_table * 160; }
 };
 
 }

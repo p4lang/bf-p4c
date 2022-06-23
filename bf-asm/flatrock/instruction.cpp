@@ -130,9 +130,16 @@ struct operand {
             return b1 == b2 && b1 >= 0; }
         Action *clone() override { return new Action(*this); }
         int bits(int slot) override {
-            int size = ::Phv::reg(slot)->size;
-            error(lineno, "Flatrock ADB decode not implemented yet");
-            return 0; }
+            int size = ::Phv::reg(slot)->size/8U;
+            int byte = field ? table->find_on_actionbus(field, lo, hi, 0)
+                             : table->find_on_actionbus(name, mod, lo, hi, 0);
+            if (byte < 0) {
+                if (lo > 0 || (field && hi + 1 < int(field->size)))
+                    error(lineno, "%s(%d..%d) is not on the action bus", name.c_str(), lo, hi);
+                else
+                    error(lineno, "%s is not on the action bus", name.c_str());
+                return -1; }
+            return byte/size; }
         int bit_offset(int slot) override { return lo % ::Phv::reg(slot)->size; }
         void pass1(Table *tbl, int slot) override {
             if (field) field->flags |= Table::Format::Field::USED_IMMED;

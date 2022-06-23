@@ -613,7 +613,11 @@ class Table {
     virtual int address_shift() const { BUG(); return -1; }
     virtual int home_row() const { BUG(); return -1; }
     /* row,col -> mem unitno mapping -- unitnumbers used in context json */
-    virtual int memunit(const int r, const int c) const { return r*12 + c; }
+    virtual int memunit(const int r, const int c) const {
+#if HAVE_FLATROCK
+        BUG_CHECK(options.target != TOFINO5, "need memunit update for tofino5");
+#endif /* HAVE_FLATROCK */
+        return r*12 + c; }
     virtual int unitram_type() { BUG(); return -1; }
     virtual bool uses_colormaprams() const { return false; }
     virtual int color_shiftcount(Table::Call &call, int group, int tcam_shift) const {
@@ -996,10 +1000,22 @@ FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,                                  \
 
 DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam, or proxy_hash
  protected:
+    struct Ram {
+        int                             stage = -1;  // current stage (only) for tofino1/2/3
+        int                             row = -1;
+        int                             col;    // (lamb) unit when row == -1
+        Ram() = delete;
+        explicit Ram(int unit) : col(unit) {}
+        Ram(int r, int c) : row(r), col(c) {}
+        Ram(int s, int r, int c) : stage(s), row(r), col(c) {}
+        bool operator<(const Ram &a) const {
+            return std::tie(stage, row, col) < std::tie(a.stage, a.row, a.col); }
+        bool isLamb() const { return stage == -1 && row == -1; }
+    };
     struct Way {
-        int                              lineno;
-        int                              group, subgroup, mask;
-        std::vector<std::pair<int, int>> rams;
+        int                             lineno;
+        int                             group, subgroup, mask;
+        std::vector<Ram>                rams;
         bitvec select_bits() const {
             bitvec rv(mask);
             rv <<= EXACT_HASH_FIRST_SELECT_BIT;
@@ -1009,7 +1025,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam,
     };
     std::vector<Way>                      ways;
     struct WayRam { int way, index, word, bank; };
-    std::map<std::pair<int, int>, WayRam> way_map;
+    std::map<Ram, WayRam>                   way_map;
     std::vector<MatchSource *>              match;
     std::map<unsigned, MatchSource *>       match_by_bit;
     std::vector<std::vector<MatchSource *>> match_in_word;
@@ -1038,6 +1054,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam,
     std::map<unsigned, unsigned> hash_fn_ids;
     template<class REGS>
     void write_attached_merge_regs(REGS &regs, int bus, int word, int word_group);
+    bool parse_ram(const value_t &, std::vector<Ram> &);
     void common_sram_setup(pair_t &, const VECTOR(pair_t) &);
     void common_sram_checks();
     void alloc_vpns() override;
@@ -1066,6 +1083,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam,
     virtual void gen_ghost_bits(int hash_function_number, json::vector &ghost_bits_to_hash_bits,
         json::vector &ghost_bits_info) const { }
     virtual void no_overhead_determine_result_bus_usage();
+    int memunit(const Ram &r) const;
  public:
     Format::Field *lookup_field(const std::string &n, const std::string &act = "") const override;
     virtual void setup_word_ixbar_group();
@@ -1273,7 +1291,11 @@ DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
             bool skip_spare_bank = false) const override;
     Call &action_call() override { return indirect ? indirect->action : action; }
     Call &instruction_call() override { return indirect ? indirect->instruction: instruction; }
-    int memunit(const int r, const int c) const override { return r + c*12; }
+    int memunit(const int r, const int c) const override {
+#if HAVE_FLATROCK
+        BUG_CHECK(options.target != TOFINO5, "need memunit update for tofino5");
+#endif /* HAVE_FLATROCK */
+        return r + c*12; }
     bool is_ternary() override { return true; }
     bool has_indirect() { return indirect; }
     int hit_next_size() const override {
@@ -1431,7 +1453,11 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
     MeterTable* get_meter() const override;
     Call &action_call() override {
         return match_tables.size() == 1 ? (*match_tables.begin())->action_call() : action; }
-    int memunit(const int r, const int c) const override { return r*6 + c; }
+    int memunit(const int r, const int c) const override {
+#if HAVE_FLATROCK
+        BUG_CHECK(options.target != TOFINO5, "need memunit update for tofino5");
+#endif /* HAVE_FLATROCK */
+        return r*6 + c; }
     void pass1() override;
     unsigned get_alu_index() const {
         if (layout.size() > 0) return layout[0].row/4U;
@@ -1660,7 +1686,11 @@ class IdletimeTable : public Table {
         return IDLETIME; }
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) const override {
         width = period = 1; depth = layout_size(); period_name = 0; }
-    int memunit(const int r, const int c) const override { return r*6 + c; }
+    int memunit(const int r, const int c) const override {
+#if HAVE_FLATROCK
+        BUG_CHECK(options.target != TOFINO5, "need memunit update for tofino5");
+#endif /* HAVE_FLATROCK */
+        return r*6 + c; }
     int precision_shift() const;
     int direct_shiftcount() const override;
     void pass1() override;

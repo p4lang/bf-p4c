@@ -88,7 +88,7 @@ void ExactMatchTable::setup_ways() {
     for (auto &row : layout) {
         int first_way = -1;
         for (auto col : row.cols) {
-            int way = way_map.at(std::make_pair(row.row, col)).way;
+            int way = way_map.at(Ram(row.row, col)).way;
             if (first_way < 0) {
                 first_way = way;
             } else if (ways[way].group != ways[first_way].group) {
@@ -135,8 +135,12 @@ void ExactMatchTable::determine_ghost_bits() {
     int way_index = 0;
     for (auto way : ways) {
         BUG_CHECK(input_xbar.size() == 1, "%s does not have one input xbar", name());
-        auto *hash_group = input_xbar[0]->get_hash_group(way.group);
-        BUG_CHECK(hash_group != nullptr);
+        bitvec hash_tables;
+        if (auto *hash_group = input_xbar[0]->get_hash_group(way.group)) {
+            hash_tables = bitvec(hash_group->tables);
+        } else {
+            for (auto &ht : input_xbar[0]->get_hash_tables())
+                hash_tables[ht.first] = 1; }
 
         // key is the field name/field bit that is the ghost bit
         // value is the bits that the ghost bit appears in within this way
@@ -168,7 +172,7 @@ void ExactMatchTable::determine_ghost_bits() {
         };
 
         // Calculate the ghost bit per hash way
-        for (unsigned hash_table_id : bitvec(hash_group->tables)) {
+        for (unsigned hash_table_id : hash_tables) {
             auto &hash_table = input_xbar[0]->get_hash_table(hash_table_id);
             for (auto hash_bit : way.select_bits()) {
                 if (hash_table.count(hash_bit) == 0)
@@ -264,7 +268,7 @@ void ExactMatchTable::generate_stash_overhead_rows() {
         auto stash_col = stash_cols[i];
         for (auto &row : layout) {
             if (row.row == stash_row) {
-                auto stash_ram = std::make_pair(stash_row, stash_col);
+                Ram stash_ram(stash_row, stash_col);
                 if (way_map.count(stash_ram) > 0) {
                     auto way_word = way_map[stash_ram].word;
                     BUG_CHECK(format);
@@ -292,7 +296,7 @@ template<class REGS> void ExactMatchTable::write_regs_vt(REGS &regs) {
     for (auto &row : layout) {
         auto &rams_row = regs.rams.array.row[row.row];
         for (auto col : row.cols) {
-            auto &way = way_map[std::make_pair(row.row, col)];
+            auto &way = way_map[Ram(row.row, col)];
             auto &ram = rams_row.ram[col];
             ram.match_nibble_s0q1_enable = version_nibble_mask.getrange(way.word*32U, 32);
             ram.match_nibble_s1q0_enable = UINT64_C(0xffffffff); } }
@@ -309,7 +313,7 @@ template<class REGS> void ExactMatchTable::write_regs_vt(REGS &regs) {
         auto stash_unit_id = stash_units[i];
         auto idx = i / mem_units_per_word;
         auto physical_row_with_overhead = stash_overhead_rows.size() > idx ?
-                                            stash_overhead_rows[idx] : ways[0].rams[0].first;
+                                            stash_overhead_rows[idx] : ways[0].rams[0].row;
         LOG5("Setting cfg for stash Row: " << stash_row <<
                 ", stash Unit: " << stash_unit_id << " with overhead word row: " <<
                 physical_row_with_overhead);
@@ -445,7 +449,8 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) const {
             way_tbl["stage_table_type"] = "hash_way";
             auto fmt_width = get_format_width();
             BUG_CHECK(fmt_width);
-            way_tbl["size"] = way.rams.size()/fmt_width * format->groups() * SRAM_DEPTH;
+            unsigned ram_depth = way.rams.at(0).isLamb() ? LAMB_DEPTH : SRAM_DEPTH;
+            way_tbl["size"] = way.rams.size()/fmt_width * format->groups() * ram_depth;
             add_pack_format(way_tbl, format.get(), false);
             way_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg(way);
             way_stage_tables.push_back(std::move(way_tbl)); } }

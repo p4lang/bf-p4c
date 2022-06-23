@@ -81,6 +81,8 @@
     M(int, INSTR_SRC2_BITS) \
     M(int, IMEM_COLORS) \
     M(int, LONG_BRANCH_TAGS) \
+    M(int, MAX_OVERHEAD_OFFSET) \
+    M(int, MAX_OVERHEAD_OFFSET_NEXT) \
     M(int, MATCH_BYTE_16BIT_PAIRS) \
     M(int, MATCH_REQUIRES_PHYSID) \
     M(int, MAU_BASE_DELAY) \
@@ -99,6 +101,11 @@
     M(int, PARSER_DEPTH_MAX_BYTES_EGRESS) \
     M(int, PHASE0_FORMAT_WIDTH) \
     M(bool, REQUIRE_TCAM_ID) \
+    M(int, SRAM_EGRESS_ROWS) \
+    M(int, SRAM_GLOBAL_ACCESS) \
+    M(int, SRAM_INGRESS_ROWS) \
+    M(int, SRAM_LAMBS_PER_STAGE) \
+    M(int, SRAM_UNITS_PER_ROW) \
     M(int, STATEFUL_ALU_ADDR_WIDTH) \
     M(int, STATEFUL_ALU_CONST_MASK) \
     M(int, STATEFUL_ALU_CONST_MAX) \
@@ -121,7 +128,6 @@
     M(bool, SUPPORT_SALU_FAST_CLEAR) \
     M(bool, SUPPORT_TRUE_EOP) \
     M(bool, TABLES_REQUIRE_ROW) \
-    M(bool, TABLES_REQUIRE_WAYS) \
 
 #define DECLARE_PER_TARGET_CONSTANT(TYPE, NAME) static TYPE NAME();
 
@@ -141,12 +147,19 @@ class Target {
         return numMauStagesOverride && numMauStagesOverride < egress_stages
                ? numMauStagesOverride : egress_stages;
     }
+    static int NUM_STAGES(gress_t gr) {
+        return gr == EGRESS ? NUM_EGRESS_STAGES() : NUM_MAU_STAGES();
+    }
 
     static int OUTPUT_STAGE_EXTENSION() {
         return numMauStagesOverride ? 1 : OUTPUT_STAGE_EXTENSION_PRIVATE();
     }
 
     static void OVERRIDE_NUM_MAU_STAGES(int num);
+
+    static int SRAM_ROWS(gress_t gr) {
+        return gr == EGRESS ? SRAM_EGRESS_ROWS() : SRAM_INGRESS_ROWS();
+    }
 
  private:
     static int numMauStagesOverride;
@@ -216,6 +229,8 @@ class Target::Tofino : public Target {
         PARSER_DEPTH_MAX_BYTES_EGRESS = (((1<<10)-1)*16),
         MATCH_BYTE_16BIT_PAIRS = true,
         MATCH_REQUIRES_PHYSID = false,
+        MAX_OVERHEAD_OFFSET = 64,
+        MAX_OVERHEAD_OFFSET_NEXT = 40,
         NUM_MAU_STAGES_PRIVATE = 12,
         NUM_EGRESS_STAGES_PRIVATE = NUM_MAU_STAGES_PRIVATE,
         ACTION_INSTRUCTION_MAP_WIDTH = 7,
@@ -242,6 +257,11 @@ class Target::Tofino : public Target {
         NEXT_TABLE_EXEC_COMBINED = false,  // no next_exec on tofino1 at all
         PHASE0_FORMAT_WIDTH = 64,
         REQUIRE_TCAM_ID = false,   // miss-only tables do not need a tcam id
+        SRAM_EGRESS_ROWS = 8,
+        SRAM_GLOBAL_ACCESS = false,
+        SRAM_INGRESS_ROWS = 8,
+        SRAM_LAMBS_PER_STAGE = 0,
+        SRAM_UNITS_PER_ROW = 12,
         STATEFUL_CMP_UNITS = 2,
         STATEFUL_CMP_ADDR_WIDTH = 2,
         STATEFUL_CMP_CONST_WIDTH = 4,
@@ -268,7 +288,6 @@ class Target::Tofino : public Target {
         NUM_PIPES = 4,
         OUTPUT_STAGE_EXTENSION_PRIVATE = 0,
         TABLES_REQUIRE_ROW = 1,
-        TABLES_REQUIRE_WAYS = true,
     };
     static int encodeConst(int src) {
         return (src >> 10 << 15) | (0x8 << 10) | (src & 0x3ff);
@@ -346,6 +365,8 @@ class Target::JBay : public Target {
         PARSER_DEPTH_MAX_BYTES_EGRESS = (32*16),
         MATCH_BYTE_16BIT_PAIRS = false,
         MATCH_REQUIRES_PHYSID = false,
+        MAX_OVERHEAD_OFFSET = 64,
+        MAX_OVERHEAD_OFFSET_NEXT = 40,
 #ifdef EMU_OVERRIDE_STAGE_COUNT
         NUM_MAU_STAGES_PRIVATE = EMU_OVERRIDE_STAGE_COUNT,
         OUTPUT_STAGE_EXTENSION_PRIVATE = 1,
@@ -381,6 +402,11 @@ class Target::JBay : public Target {
         NEXT_TABLE_EXEC_COMBINED = true,
         PHASE0_FORMAT_WIDTH = 128,
         REQUIRE_TCAM_ID = false,   // miss-only tables do not need a tcam id
+        SRAM_EGRESS_ROWS = 8,
+        SRAM_GLOBAL_ACCESS = false,
+        SRAM_INGRESS_ROWS = 8,
+        SRAM_LAMBS_PER_STAGE = 0,
+        SRAM_UNITS_PER_ROW = 12,
         STATEFUL_CMP_UNITS = 4,
         STATEFUL_CMP_ADDR_WIDTH = 2,
         STATEFUL_CMP_CONST_WIDTH = 6,
@@ -406,7 +432,6 @@ class Target::JBay : public Target {
         NUM_PARSERS = 36,
         NUM_PIPES = 4,
         TABLES_REQUIRE_ROW = 1,
-        TABLES_REQUIRE_WAYS = true,
     };
     static int encodeConst(int src) {
         return (src >> 11 << 16) | (0x8 << 11) | (src & 0x7ff);
@@ -535,6 +560,8 @@ class Target::Cloudbreak : public Target {
         PARSER_DEPTH_MAX_BYTES_EGRESS = (32*16),
         MATCH_BYTE_16BIT_PAIRS = false,
         MATCH_REQUIRES_PHYSID = false,
+        MAX_OVERHEAD_OFFSET = 64,
+        MAX_OVERHEAD_OFFSET_NEXT = 40,
 #ifdef EMU_OVERRIDE_STAGE_COUNT
         NUM_MAU_STAGES_PRIVATE = EMU_OVERRIDE_STAGE_COUNT,
         OUTPUT_STAGE_EXTENSION_PRIVATE = 1,
@@ -569,6 +596,11 @@ class Target::Cloudbreak : public Target {
         NEXT_TABLE_EXEC_COMBINED = true,
         PHASE0_FORMAT_WIDTH = 128,
         REQUIRE_TCAM_ID = false,   // miss-only tables do not need a tcam id
+        SRAM_EGRESS_ROWS = 8,
+        SRAM_GLOBAL_ACCESS = false,
+        SRAM_INGRESS_ROWS = 8,
+        SRAM_LAMBS_PER_STAGE = 0,
+        SRAM_UNITS_PER_ROW = 12,
         STATEFUL_CMP_UNITS = 4,
         STATEFUL_CMP_ADDR_WIDTH = 2,
         STATEFUL_CMP_CONST_WIDTH = 6,
@@ -603,7 +635,6 @@ class Target::Cloudbreak : public Target {
          */
         NUM_PIPES = 4,
         TABLES_REQUIRE_ROW = 1,
-        TABLES_REQUIRE_WAYS = true,
     };
     static int encodeConst(int src) {
         return (src >> 11 << 16) | (0x8 << 11) | (src & 0x7ff);
@@ -701,10 +732,17 @@ class Target::Flatrock : public Target {
         LONG_BRANCH_TAGS = 32,
         MAU_BASE_DELAY = 23,
         MAU_BASE_PREDICATION_DELAY = 13,
+        MAX_OVERHEAD_OFFSET = 128,
+        MAX_OVERHEAD_OFFSET_NEXT = 128,
         METER_ALU_GROUP_DATA_DELAY = 15,
         NEXT_TABLE_EXEC_COMBINED = false,
         PHASE0_FORMAT_WIDTH = 128,  // FIXME -- what should it be?
         REQUIRE_TCAM_ID = true,
+        SRAM_EGRESS_ROWS = 4,
+        SRAM_GLOBAL_ACCESS = true,
+        SRAM_INGRESS_ROWS = 6,
+        SRAM_LAMBS_PER_STAGE = 8,
+        SRAM_UNITS_PER_ROW = 8,
         STATEFUL_CMP_UNITS = 4,
         STATEFUL_CMP_ADDR_WIDTH = 2,
         STATEFUL_CMP_CONST_WIDTH = 6,
@@ -730,7 +768,6 @@ class Target::Flatrock : public Target {
         NUM_PARSERS = 1,
         NUM_PIPES = 8,  // TODO what is the correct number here?
         TABLES_REQUIRE_ROW = 0,
-        TABLES_REQUIRE_WAYS = false,
         PARSER_BRIDGE_MD_WIDTH = 64,
         PARSER_SEQ_ID_MAX = 254,  // Max value of header sequence ID; 255 reserved for escape value
         PARSER_HDR_ID_MAX = 254,  // Max value of hdr_id; 255 is reserved for invalid header

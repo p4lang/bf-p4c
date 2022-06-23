@@ -178,6 +178,8 @@ mkdir -p ${builddir}/p4c/backends/bmv2/
 ln -sf $(realpath --relative-to ${builddir}/p4c/backends/bmv2 ${mydir}/bf-p4c/.gdbinit) ${builddir}/p4c/backends/bmv2/p4c-bm2-ss-gdb.gdb
 mkdir -p ${builddir}/p4c/backends/p4test
 ln -sf $(realpath --relative-to ${builddir}/p4c/backends/p4test ${mydir}/bf-p4c/.gdbinit) ${builddir}/p4c/backends/p4test/p4test-gdb.gdb
+mkdir -p ${builddir}/bf-asm
+ln -sf $(realpath --relative-to ${builddir}/bf-asm ${mydir}/bf-asm/.gdbinit) ${builddir}/bf-asm/bf-asm-gdb.gdb
 
 echo "Configured for build in ${builddir}"
 popd > /dev/null # $mydir

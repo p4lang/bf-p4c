@@ -63,8 +63,8 @@ void AlgTcamMatchTable::setup_column_priority() {
     // Determine the side and which way corresponds to which column
     int side = -1;
     for (int w = 0; w < no_ways; w++) {
-        int col = ways[w].rams[0].second;
-        int row = ways[w].rams[0].first;
+        int col = ways[w].rams[0].col;
+        int row = ways[w].rams[0].row;
         if (side == 0) {
             if (lrams.find(col) == lrams.end()) {
                 error(lineno, "ram(%d, %d) is not on correct side compared to rest in column "
@@ -104,8 +104,8 @@ void AlgTcamMatchTable::setup_column_priority() {
         int prev_col = -1;
         int prev_row = -1;
         while (way_it != col_priority_way.end()) {
-            int row = ways[way_it->second].rams[i].first;
-            int col = ways[way_it->second].rams[i].second;
+            int row = ways[way_it->second].rams[i].row;
+            int col = ways[way_it->second].rams[i].col;
             if (way_it != col_priority_way.begin()) {
                 if (!(((side == 0 && prev_col < col && lrams.find(col) != lrams.end()) ||
                        (side == 1 && prev_col > col && rrams.find(col) != rrams.end())) &&
@@ -329,7 +329,7 @@ template<class REGS> void AlgTcamMatchTable::write_regs_vt(REGS &regs) {
     for (auto &row : layout) {
         auto &rams_row = regs.rams.array.row[row.row];
         for (auto col : row.cols) {
-            auto &way = way_map[std::make_pair(row.row, col)];
+            auto &way = way_map[Ram(row.row, col)];
             auto &ram = rams_row.ram[col];
             ram.match_nibble_s0q1_enable =
                 version_nibble_mask.getrange(way.word*32U, 32)
@@ -357,10 +357,10 @@ std::unique_ptr<json::vector> AlgTcamMatchTable::gen_memory_resource_allocation_
         unsigned vpn_ctr = 0;
         for (auto &ram : way.rams) {
             if (mem_units.empty())
-                vpn_ctr = layout_get_vpn(ram.first, ram.second);
+                vpn_ctr = layout_get_vpn(ram.row, ram.col);
             else
-                BUG_CHECK(vpn_ctr == layout_get_vpn(ram.first, ram.second));
-            mem_units.push_back(memunit(ram.first, ram.second));
+                BUG_CHECK(vpn_ctr == layout_get_vpn(ram.row, ram.col));
+            mem_units.push_back(memunit(ram));
             if (mem_units.size() == fmt_width) {
                 json::map tmp;
                 tmp["memory_units"] = std::move(mem_units);

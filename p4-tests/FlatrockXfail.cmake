@@ -14,12 +14,12 @@ set (FLATROCK_XFAIL_TESTS
   )
 
 p4c_add_xfail_reason("tofino5"
-  "Flatrock .* not implemented yet"
+  "No ways defined in table test1"
   extensions/p4_tests/p4_16/flatrock/direct1.p4
   )
 
 p4c_add_xfail_reason("tofino5"
-  "Flatrock .* not implemented yet"
+  "No ways defined in table test1"
   extensions/p4_tests/p4_16/flatrock/exact1.p4
   )
 
@@ -30,13 +30,18 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
-  "Flatrock .* not implemented yet"
+  "No ways defined in table test1"
   extensions/p4_tests/p4_16/flatrock/gateway1.p4
   )
 
 p4c_add_xfail_reason("tofino5"
-  "Flatrock .* not implemented yet"
+  "No ways defined in table test1"
   extensions/p4_tests/p4_16/flatrock/gateway2.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "Assembler BUG"
+  extensions/p4_tests/p4_16/flatrock/ternary1.p4
   )
 
 # invalid assembly code
@@ -214,7 +219,8 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
-  "Compiler Bug: Bytes on same search bus are not contained within the same ixbar group"
+  #"Compiler Bug: Bytes on same search bus are not contained within the same ixbar group"
+  "IXBar::Use::bits_per_search_bus.. const: Assertion|Internal compiler error"
   extensions/p4_tests/p4_16/stf/zeros_as_ones.p4
   )
 

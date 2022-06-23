@@ -229,6 +229,52 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
             BUG("invalid InputXbar::Group::Type(%d)", group.first.type);
         }
     }
+    for (auto &hash : hash_tables) {
+        switch (hash.first) {
+        case 0: {  // exact byte hash
+            unsigned byte = 0;
+            for (auto &col : hash.second) {
+                for (unsigned bit : col.second.data) {
+                    unsigned b = bit % 32U;
+                    auto &row = minput.minput_em_bhash1_erf.minput_em_bhash1[bit/32U];
+                    byte |= 1U << (bit/8U);
+                    if (!(row[col.first].gf & b)) {
+                        row[45].gf ^= b;  // parity;
+                        row[col.first].gf |= b; } } }
+            int prev_xmu = -1;
+            for (int xme : xme_units) {
+                int xmu = xme/2;
+                if (prev_xmu == xmu) continue;
+                unsigned shift = xmu * 20;
+                auto &bhash2 = minput.minput_em_bhash2_erf.minput_em_bhash2;
+                bhash2[shift/32] |= (byte << (shift%32)) & 0xffffffff;
+                if (shift%32 != 0)
+                    bhash2[shift/32 + 1] |= byte >> (32 - shift%32);
+                prev_xmu = xmu; }
+            break; }
+        case 1: {  // exact word hash
+            unsigned word = 0;
+            for (auto &col : hash.second) {
+                for (unsigned bit : col.second.data) {
+                    unsigned b = bit % 32U;
+                    auto &row = minput.minput_em_whash1_erf.minput_em_whash1[bit/32U];
+                    word |= 1U << (bit/32U);
+                    if (!(row[col.first].gf & b)) {
+                        row[45].gf ^= b;  // parity;
+                        row[col.first].gf |= b; } } }
+            int prev_xmu = -1;
+            for (int xme : xme_units) {
+                if (xme < FIRST_STM_UNIT) continue;
+                int xmu = xme/2;
+                if (prev_xmu == xmu) continue;
+                minput.rf.minput_em_whash2[xmu-4].enable_ |= word;
+                prev_xmu = xmu; }
+            break; }
+        // FIXME -- xcmp hashes here?
+        default:
+            BUG("invalid hash table %d", hash.first);
+        }
+    }
 }
 
 template<> void InputXbar::write_regs(Target::Flatrock::mau_regs &regs) { write_regs_v(regs); }

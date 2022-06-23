@@ -336,6 +336,7 @@ const std::map<int, HashCol>& InputXbar::get_hash_table(unsigned id) {
     for (auto &ht : hash_tables)
         if (ht.first == id) return ht.second;
     warning(lineno, "Hash Table for index %d does not exist in table %s", id, table->name());
+    static const std::map<int, HashCol> empty_hash_table = {};
     return empty_hash_table;
 }
 
@@ -558,7 +559,7 @@ void InputXbar::pass1() {
         HashExpr *prev = 0;
         for (auto &col : hash.second) {
             if (col.second.fn && col.second.fn != prev)
-                ok = (prev = col.second.fn)->check_ixbar(this, hash.first/2U);
+                ok = (prev = col.second.fn)->check_ixbar(this, hash.first);
             if (ok && col.second.fn && !copy_existing_hash(hash.first, col)) {
                 gen_hash_column(col, hash);
             }
@@ -903,6 +904,27 @@ std::vector<InputXbar::Input *> InputXbar::find_all(Phv::Slice sl, Group grp) {
             if (g.type != grp.type) continue;
             auto tmp = find_all(sl, g);
             rv.insert(rv.end(), tmp.begin(), tmp.end()); } }
+    return rv;
+}
+
+/**
+ * InputXbar::find_hash_inputs: find all of the ixbar inputs that feed a particular phv slice
+ * to a hash table
+ * @param sl            the PHV container slice we're interested in
+ * @param hash_table    which hash table we want the input for (-1 for all hash tables)
+ */
+std::vector<InputXbar::Input *> InputXbar::find_hash_inputs(Phv::Slice sl, int hash_table) {
+    /* code for tofino1/2/3 -- all hash tables take input from exact ixbar groups, with
+     * two hash tables per group (even in lower bits and odd in upper bits) */
+    auto rv = find_all(sl, Group(Group::EXACT, hash_table >= 0 ? hash_table/2 : -1));
+    if (hash_table >= 0) {
+        unsigned upper = hash_table % 2;
+        for (auto it = rv.begin(); it != rv.end();) {
+            unsigned bit = (*it)->lo + (sl.lo - (*it)->what->lo);
+            if (bit / 64 != upper || (bit + sl.size() - 1) / 64 != upper)
+                it = rv.erase(it);
+            else
+                ++it; } }
     return rv;
 }
 
