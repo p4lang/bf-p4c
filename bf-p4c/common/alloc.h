@@ -10,6 +10,7 @@ namespace BFN {
 template<class T> class Alloc1Dbase {
     int         size;
     T           *data;
+
  protected:
     explicit Alloc1Dbase(int sz) : size(sz) {
         data = new T[sz];
@@ -18,6 +19,7 @@ template<class T> class Alloc1Dbase {
     virtual ~Alloc1Dbase() { delete [] data; }
 
  public:
+    Alloc1Dbase(const Alloc1Dbase &) = default;
     typedef T *iterator;
     typedef T *const_iterator;
     T &operator[](int i) {
@@ -26,6 +28,12 @@ template<class T> class Alloc1Dbase {
     const T &operator[](int i) const {
         if (i < 0 || i >= size) throw std::out_of_range("Alloc1D");
         return data[i]; }
+    bool operator==(const Alloc1Dbase<T> &t) const {
+        for (int i = 0; i < size; i++)
+            if (data[i] != t.data[i]) return false;
+        return true; }
+    bool operator!=(const Alloc1Dbase<T> &t) const { return !(*this==t); }
+
     void clear() { for (int i = 0; i < size; i++) data[i] = T(); }
     T *begin() { return data; }
     T *end() { return data + size; }
@@ -35,6 +43,8 @@ template<class T, int S> class Alloc1D : public Alloc1Dbase<T> {
  public:
     Alloc1D() : Alloc1Dbase<T>(S) {}
     Alloc1Dbase<T> &base() { return *this; }
+    bool operator!=(const Alloc1D<T,S> &t) const {
+        return Alloc1Dbase<T>::operator!=(t); }
 };
 
 template<class T> class Alloc2Dbase {
@@ -65,6 +75,7 @@ template<class T> class Alloc2Dbase {
     virtual ~Alloc2Dbase() { delete [] data; }
 
  public:
+    Alloc2Dbase(const Alloc2Dbase &) = default;
     rowref<T> operator[](int i) {
         if (i < 0 || i >= nrows) throw std::out_of_range("Alloc2D");
         return rowref<T>(data+i*ncols, ncols); }
@@ -84,6 +95,15 @@ template<class T> class Alloc2Dbase {
             i.second < 0 || i.second >= ncols)
             throw std::out_of_range("Alloc2D");
         return data[i.first*ncols + i.second]; }
+    bool operator==(const Alloc2Dbase<T> &t) const {
+        int sz = nrows*ncols;
+        int tsz = t.nrows*t.ncols;
+        if (sz != tsz) return false;
+        for (int i = 0; i < sz; i++)
+            if (data[i] != t.data[i]) return false;
+        return true; }
+    bool operator!=(const Alloc2Dbase<T> &t) const { return !(*this==t); }
+
     int rows() const { return nrows; }
     int cols() const { return ncols; }
     void clear() { for (int i = 0; i < nrows*ncols; i++) data[i] = T(); }

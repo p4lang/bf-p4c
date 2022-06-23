@@ -141,15 +141,23 @@ class TablePlacement : public PassManager {
     profile_t init_apply(const IR::Node *root) override;
     void end_apply() override { placement_round++; };
 
-    bool try_alloc_adb(Placed *next, std::vector<Placed *> whole_stage);
-    bool try_alloc_imem(Placed *next, std::vector<Placed *> whole_stage);
-    bool try_alloc_ixbar(Placed *next);
+    bool try_pick_layout(const gress_t &gress,
+                         std::vector<Placed *> tables_to_allocate,
+                         std::vector<Placed *> tables_placed);
+    bool try_alloc_adb(const gress_t &gress,
+                       std::vector<Placed *> tables_to_allocate,
+                       std::vector<Placed *> tables_placed);
+    bool try_alloc_imem(const gress_t &gress,
+                        std::vector<Placed *> tables_to_allocate,
+                        std::vector<Placed *> tables_placed);
+
+    bool try_alloc_ixbar(Placed *next, std::vector<Placed *> allocated_layout);
     bool try_alloc_format(Placed *next, bool gw_linked);
     bool try_alloc_mem(Placed *next, std::vector<Placed *> whole_stage);
     void setup_detached_gateway(IR::MAU::Table *tbl, const Placed *placed);
     void filter_layout_options(Placed *pl);
     bool disable_split_layout(const IR::MAU::Table *tbl);
-    bool pick_layout_option(Placed *next);
+    bool pick_layout_option(Placed *next, std::vector<Placed *> allocated_layout);
     bool shrink_estimate(Placed *next, int &srams_left, int &tcams_left, int min_entries,
                          bool &update_whole_stage);
     bool try_alloc_all(Placed *next, std::vector<Placed *> whole_stage, const char *what,

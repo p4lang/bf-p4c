@@ -75,6 +75,12 @@ struct ActionDataBus : public ::ActionDataBus {
         explicit ADB_CSR(ActionData::SlotType_t t) : type(t) {
             reserved.resize(ActionDataBus::CSR_SECTION[type], false);
         }
+
+        bool operator==(const ADB_CSR &adb_csr) const {
+            if (reserved != adb_csr.reserved) return false;
+            if (type != adb_csr.type) return false;
+            return true;
+        }
     };
 
     typedef safe_vector<ADB_CSR> ActionIXBar;
@@ -96,12 +102,25 @@ struct ActionDataBus : public ::ActionDataBus {
 
             RandomNumberGenerator(int u, bitvec b)
                 : unit(u), bytes(b) { }
+
+            bool operator==(const RandomNumberGenerator &rng) const {
+                if (unit != rng.unit) return false;
+                if (bytes != rng.bytes) return false;
+                return true;
+            }
         };
 
         safe_vector<RandomNumberGenerator> rng_locs;
+        bool operator==(const Use &use) const {
+            if (rng_locs != use.rng_locs) return false;
+            return true;
+        }
     };
 
     void clear() override;
+
+    bool operator==(const ActionDataBus &adb) const;
+    bool operator!=(ActionDataBus &adb) { return !(*this==adb); }
 
  private:
     static Use &getUse(autoclone_ptr<::ActionDataBus::Use> &ac);
@@ -174,6 +193,8 @@ struct ActionDataBus : public ::ActionDataBus {
     void update(cstring name, const Use::ReservedSpace &rs) override;
     void update(cstring name, const Use::RandomNumberGenerator &rng);
     void update(const IR::MAU::Table *tbl) override;
+
+    virtual std::unique_ptr<::ActionDataBus> clone() const;
 };
 
 }  // end namespace Tofino

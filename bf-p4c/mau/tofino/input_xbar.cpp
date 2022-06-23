@@ -2513,6 +2513,7 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
     hash_group_print_use[hash_group] = name;
     hash_group_use[hash_group] |= local_hash_table_input;
     update_hash_parity(alloc, hash_group);
+    allocated_attached.emplace(as, alloc);
     return rv;
 }
 
@@ -2651,6 +2652,7 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const IR::MAU::Table *tbl, con
     }
 
     fill_out_use(alloced, false);
+    allocated_attached.emplace(mtr, alloc);
     return true;
 }
 
@@ -2983,6 +2985,7 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const IR::MAU::Table
 
     LOG3("allocStateful succeeded: " << alloc);
     fill_out_use(xbar_alloced, false);
+    allocated_attached.emplace(salu, alloc);
     return true;
 }
 

@@ -47,6 +47,12 @@ struct ActionDataBus {
             int slot_size = (8 << type);
             out << "ADB[" << byte << ":" << ((byte + slot_size / 8) - 1) << "]";
         }
+        bool operator==(const Loc &loc) const {
+            if (byte != loc.byte) return false;
+            if (type != loc.type) return false;
+            return true;
+        };
+        bool operator!=(const Loc &loc) const { return !(*this==loc); }
     };
     /** Information on the sharing of resources between the BYTE/HALF regions and a potential
      *  full setion sharing the same location in the action data table
@@ -80,6 +86,14 @@ struct ActionDataBus {
             void dbprint(std::ostream &out) const {
                 out << "Source:Offset " << source << ":" << byte_offset << " : " << location;
             }
+            bool operator==(const ReservedSpace &rs) const {
+                if (location != rs.location) return false;
+                if (byte_offset != rs.byte_offset) return false;
+                if (bytes_used != rs.bytes_used) return false;
+                if (source != rs.source) return false;
+                return true;
+            }
+            bool operator!=(const ReservedSpace &rs) const { return !(*this==rs); }
         };
         // Locations of action data where the ALUs will pull action data
         safe_vector<ReservedSpace> action_data_locs;
@@ -93,6 +107,13 @@ struct ActionDataBus {
         virtual bool emit_adb_asm(std::ostream &, const IR::MAU::Table *, bitvec source) const = 0;
         virtual bool empty() const { return action_data_locs.empty() && clobber_locs.empty(); }
         virtual int rng_unit() const = 0;
+        bool operator==(const Use &use) const {
+            if (action_data_locs != use.action_data_locs) return false;
+            if (clobber_locs != use.clobber_locs) return false;
+            return true;
+        };
+        bool operator!=(const Use &use) const { return !(*this==use); }
+        friend std::ostream &operator<<(std::ostream &out, const Use &u);
     };
 
     /** Location Algorithm: For finding an allocation within the correct type region */
@@ -123,6 +144,8 @@ struct ActionDataBus {
 
     static ActionDataBus *create();
     static int getAdbSize();
+    virtual std::unique_ptr<ActionDataBus> clone() const = 0;
+    friend std::ostream &operator<<(std::ostream &out, const ActionDataBus &adb);
 };
 
 #endif /* BF_P4C_MAU_ACTION_DATA_BUS_H_*/

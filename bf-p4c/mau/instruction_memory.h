@@ -100,6 +100,15 @@ struct InstructionMemory {
             }
             VLIW_Instruction(bitvec nni, int r, int c)
                 : non_noop_instructions(nni), row(r), color(c) {}
+
+            bool operator==(const VLIW_Instruction &v) const {
+                return (non_noop_instructions == v.non_noop_instructions) && \
+                       (row == v.row) && \
+                       (color == v.color) && \
+                       (mem_code == v.mem_code);
+            }
+
+            friend std::ostream & operator<<(std::ostream &out, const VLIW_Instruction &i);
         };
         std::map<cstring, VLIW_Instruction> all_instrs;
 
@@ -107,6 +116,16 @@ struct InstructionMemory {
             all_instrs.clear();
         }
         void merge(const Use &alloc);
+
+        bool operator==(const Use &u) const {
+            return all_instrs == u.all_instrs;
+        }
+
+        bool operator!=(const Use &u) const {
+            return all_instrs != u.all_instrs;
+        }
+
+        friend std::ostream & operator<<(std::ostream &out, const Use &u);
     };
 
     std::map<const IR::MAU::ActionData *, const Use *> shared_action_profiles;

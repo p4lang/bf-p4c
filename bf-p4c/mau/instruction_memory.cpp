@@ -75,6 +75,22 @@ void InstructionMemory::Use::merge(const Use &alloc) {
     all_instrs.emplace(key, m_instr);;
 }
 
+std::ostream & operator<<(std::ostream &out, const InstructionMemory::Use &u) {
+    out << "Instruction Memory: [" << std::endl;
+    for (auto &instr : u.all_instrs)
+        out << instr.first << ": " << instr.second << std::endl;
+    out << " ]" << std::endl;
+    return out;
+}
+
+std::ostream & operator<<(std::ostream &out, const InstructionMemory::Use::VLIW_Instruction &i) {
+    out << "non_noop_instructions=" << i.non_noop_instructions;
+    out << " row=" << i.row;
+    out << " color=" << i.color;
+    out << " mem_code=" << i.mem_code;
+    return out;
+}
+
 bool InstructionMemory::is_noop_slot(int row, int color) {
     return row == NOOP_ROW && color == NOOP_COLOR;
 }
@@ -287,6 +303,16 @@ bool InstructionMemory::allocate_imem(const IR::MAU::Table *tbl, Use &alloc, Phv
                 << " mem code " << single_instr.mem_code
                 << " for action " << use[row][color]);
     }
+
+    for (auto back_at : tbl->attached) {
+        auto at = back_at->attached;
+        auto ad = at->to<IR::MAU::ActionData>();
+        if (ad) {
+            shared_action_profiles.emplace(ad, &alloc);
+            break;
+        }
+    }
+
     return true;
 }
 

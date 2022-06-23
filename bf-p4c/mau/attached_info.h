@@ -42,6 +42,8 @@ class FormatType_t {
 
  public:
     bool operator<(FormatType_t a) const { return value < a.value; }
+    bool operator==(const FormatType_t &a) const { return value == a.value; }
+    bool operator!=(const FormatType_t &a) const { return !(*this == a); }
     bool valid() const { return value != 0; }
     void invalidate() { value = 0; }
     void check_valid(const IR::MAU::Table *tbl = nullptr) const;  // sanity check for

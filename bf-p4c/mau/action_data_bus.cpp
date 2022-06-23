@@ -95,6 +95,22 @@ ActionDataBus *ActionDataBus::create() {
     return new Tofino::ActionDataBus;
 }
 
+std::ostream &operator<<(std::ostream &out, const ActionDataBus::Use &u) {
+    out << "["
+        << "action_data_locs size: " << u.action_data_locs.size()
+        << " clobber_locs size: " << u.clobber_locs.size()
+        << "]";
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const ActionDataBus &adb) {
+    out << "["
+        << "allocated_attached size: " << adb.allocated_attached.size()
+        << " reduction_or_mapping: " << adb.reduction_or_mapping.size()
+        << "]";
+    return out;
+}
+
 int ActionDataBus::getAdbSize() {
     return Tofino::ActionDataBus::ADB_BYTES;
 }

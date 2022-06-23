@@ -107,3 +107,4 @@ std::ostream &operator<<(std::ostream &out, const TableResourceAlloc &alloc) {
     out << *mem;
     return out;
 }
+

@@ -55,6 +55,8 @@ struct ActionDataBus : public ::ActionDataBus {
     void update(cstring name, const ::ActionDataBus::Use &) override;
     void update(cstring name, const Use::ReservedSpace &rs) override;
     void update(const IR::MAU::Table *tbl) override;
+
+    virtual std::unique_ptr<::ActionDataBus> clone() const;
 };
 
 }  // end namespace Flatrock

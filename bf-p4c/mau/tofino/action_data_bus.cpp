@@ -31,6 +31,29 @@ void ActionDataBus::clear() {
     action_ixbars.clear();
 }
 
+std::unique_ptr<::ActionDataBus> ActionDataBus::clone() const {
+    return std::unique_ptr<::ActionDataBus>(new ActionDataBus(*this));
+}
+
+bool ActionDataBus::operator==(const ActionDataBus &adb) const {
+    if (cont_use != adb.cont_use) return false;
+    if (total_use != adb.total_use) return false;
+    if (rng_use != adb.rng_use) return false;
+
+    if (cont_in_use != adb.cont_in_use) return false;
+    if (total_in_use != adb.total_in_use) return false;
+    if (rng_in_use != adb.rng_in_use) return false;
+
+    if (immed_starts != adb.immed_starts) return false;
+    if (atcam_updates != adb.atcam_updates) return false;
+
+    if (reserved_immed != adb.reserved_immed) return false;
+
+    if (action_ixbars != adb.action_ixbars) return false;
+
+    return true;
+}
+
 ActionDataBus::Use &ActionDataBus::getUse(autoclone_ptr<::ActionDataBus::Use> &ac) {
     Use *rv;
     if (ac) {
@@ -1022,9 +1045,10 @@ bool ActionDataBus::alloc_rng(Use &use, const ActionData::Format::Use *format, c
 bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
         const ActionData::Format::Use *use, TableResourceAlloc &alloc) {
     LOG1("Allocating action data bus for " << tbl->name);
+    const IR::MAU::ActionData *ad = nullptr;
     for (auto back_at : tbl->attached) {
         auto at = back_at->attached;
-        auto ad = at->to<IR::MAU::ActionData>();
+        ad = at->to<IR::MAU::ActionData>();
         if (ad == nullptr) continue;
 
         auto pos = allocated_attached.find(ad);
@@ -1070,6 +1094,9 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
         LOG2("    Reserved clobber " << rs.location.byte << " for offset "
              << rs.byte_offset << " of type " << rs.location.type);
     }
+
+    if (ad)
+        allocated_attached.emplace(ad, *alloc.action_data_xbar);
 
     return true;
 }
@@ -1141,6 +1168,7 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
              << rs.byte_offset << " of type " << rs.location.type);
     }
 
+    allocated_attached.emplace(am, *alloc.meter_xbar);
     return true;
 }
 

@@ -475,6 +475,12 @@ struct TablePlacement::Placed {
         out << pl->name;
         return out; }
 
+    friend std::ostream &operator<<(std::ostream &out, const std::vector<Placed *> &placed_vector) {
+        for (auto &p : placed_vector)
+            out << p << " ";
+        return out;
+    }
+
     Placed(const Placed &p)
         : self(p.self), id(getNextUid()), clone_id(p.clone_id), prev(p.prev), group(p.group),
            name(p.name), entries(p.entries), requested_stage_entries(p.requested_stage_entries),
@@ -1408,7 +1414,7 @@ bool TablePlacement::disable_split_layout(const IR::MAU::Table *tbl) {
  * potential layouts if the allocation can not fit within the pack format.
  *
  */
-bool TablePlacement::pick_layout_option(Placed *next) {
+bool TablePlacement::pick_layout_option(Placed *next, std::vector<Placed *> allocated_layout) {
     bool table_format = true;
     int req_entries = next->entries;
 
@@ -1419,7 +1425,7 @@ bool TablePlacement::pick_layout_option(Placed *next) {
         if (next->stage_flags) filter_layout_options(next); }
 
     do {
-        bool ixbar_fit = try_alloc_ixbar(next);
+        bool ixbar_fit = try_alloc_ixbar(next, allocated_layout);
         if (!ixbar_fit) {
             next->stage_advance_log = "ran out of ixbar";
             return false;
@@ -1452,6 +1458,45 @@ bool TablePlacement::pick_layout_option(Placed *next) {
              * For now we avoid changing table placement's entries to 0, but otherwise we
              * update it to match what the chosen layout specifies */
             next->entries = entries; } }
+    return true;
+}
+
+/* Estimate the layout options for all tables that are included in
+ * vector tables_to_allocate, considering the layout options already
+ * estimated for tables included in vector tables_placed as all these
+ * tables are in the same stage.
+ */
+bool TablePlacement::try_pick_layout(const gress_t &gress,
+                                     std::vector<Placed *> tables_to_allocate,
+                                     std::vector<Placed *> tables_placed) {
+    LOG3("Trying to allocate layout for " << tables_to_allocate);
+
+    std::vector<Placed *> layout_allocated;
+    for (auto *p : boost::adaptors::reverse(tables_placed)) {
+        if (!Device::threadsSharePipe(p->table->gress, gress)) continue;
+        layout_allocated.insert(layout_allocated.begin(), p);
+    }
+
+    for (auto *p : boost::adaptors::reverse(tables_to_allocate)) {
+        if (!Device::threadsSharePipe(p->table->gress, gress)) continue;
+        p->resources.clear_ixbar();
+        if (!pick_layout_option(p, layout_allocated))
+            return false;
+        layout_allocated.insert(layout_allocated.begin(), p);
+    }
+
+    std::unique_ptr<IXBar> verify_ixbar(IXBar::create());
+    for (auto *p : tables_placed) {
+        if (!Device::threadsSharePipe(p->table->gress, gress)) continue;
+        verify_ixbar->update(p->table, &p->resources);
+    }
+    for (auto *p : tables_to_allocate) {
+        if (!Device::threadsSharePipe(p->table->gress, gress)) continue;
+        verify_ixbar->update(p->table, &p->resources);
+    }
+    verify_ixbar->verify_hash_matrix();
+    LOG7(IndentCtl::indent << IndentCtl::indent);
+    LOG7(*verify_ixbar << IndentCtl::unindent << IndentCtl::unindent);
     return true;
 }
 
@@ -1582,10 +1627,10 @@ struct TablePlacement::RewriteForSplitAttached : public Transform {
         return ba; }
 };
 
-bool TablePlacement::try_alloc_ixbar(Placed *next) {
+bool TablePlacement::try_alloc_ixbar(Placed *next, std::vector<Placed *> allocated_layout) {
     next->resources.clear_ixbar();
     std::unique_ptr<IXBar> current_ixbar(IXBar::create());
-    for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev) {
+    for (auto *p : boost::adaptors::reverse(allocated_layout)) {
         if (!Device::threadsSharePipe(p->table->gress, next->table->gress)) continue;
         current_ixbar->update(p->table, &p->resources);
     }
@@ -1614,15 +1659,6 @@ bool TablePlacement::try_alloc_ixbar(Placed *next) {
         LOG3("    " << error_message);
         return false;
     }
-
-    std::unique_ptr<IXBar> verify_ixbar(IXBar::create());
-    for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev) {
-        if (!Device::threadsSharePipe(p->table->gress, next->table->gress)) continue;
-        verify_ixbar->update(p->table, &p->resources); }
-    verify_ixbar->update(next->table, &next->resources);
-    verify_ixbar->verify_hash_matrix();
-    LOG7(IndentCtl::indent << IndentCtl::indent);
-    LOG7(*verify_ixbar << IndentCtl::unindent << IndentCtl::unindent);
 
     return true;
 }
@@ -1735,79 +1771,35 @@ bool TablePlacement::try_alloc_format(Placed *next, bool gw_linked) {
     return true;
 }
 
-bool TablePlacement::try_alloc_adb(Placed *next,
-                                   std::vector<Placed *> whole_stage) {
-    if (next->table->conditional_gateway_only())
-        return true;
+bool TablePlacement::try_alloc_adb(const gress_t &gress,
+                                   std::vector<Placed *> tables_to_allocate,
+                                   std::vector<Placed *> tables_placed) {
+    LOG3("Trying to allocate adb for " << tables_to_allocate);
 
-    BUG_CHECK(next->use.preferred_action_format() != nullptr,
-              "A non gateway table has a null action data format allocation");
+    std::vector<Placed *> adb_allocated;
+    for (auto *p : boost::adaptors::reverse(tables_placed)) {
+        if (!Device::threadsSharePipe(p->table->gress, gress)) continue;
+        if (p->table->conditional_gateway_only()) continue;
+        adb_allocated.insert(adb_allocated.begin(), p);
+    }
 
     std::unique_ptr<ActionDataBus> current_adb(ActionDataBus::create());
-    next->resources.action_data_xbar.reset();
-    next->resources.meter_xbar.reset();
 
-    bool done_next = false;
-    for (auto *p : boost::adaptors::reverse(whole_stage)) {
-#if 0  /* see P4C-4322 */
-        if (!Device::threadsSharePipe(p->table->gress, next->table->gress)) continue;
-        // FIXME -- should not need to redo adb alloc for whole stage here.  Should
-        // just need to call current_adb->update
-        current_adb->update(p->name, &p->resources, p->table);
-#else
-        if (p->prev == next) {
-            // FIXME -- something is broken between adb alloc and update -- seems like
-            // some temps get changed in the ActionDataBus object when allocing, such that
-            // an additional alloc call won't work right?  Or something needs resetting.
-            // In any case, the result of calling alloc_action_data_bus is not the same
-            // as the result of calling update, so to preserve existing behavior, we
-            // clear the ActionDataBus and call update from all the previous allocations
-            // std::unique_ptr<ActionDataBus> old_alloc = current_adb->clone();
-            current_adb->clear();
-            for (auto *q = next->prev; q && q->stage == next->stage; q = q->prev) {
-                if (!Device::threadsSharePipe(q->table->gress, next->table->gress)) continue;
-                current_adb->update(q->name, &q->resources, q->table); }
-            // BUG_CHECK(*current_adb- == *old_alloc, "inconsistent adb state");
-            if (!current_adb->alloc_action_data_bus(next->table,
-                    next->use.preferred_action_format(), next->resources)) {
-                error_message = "The table " + next->table->name + " could not fit in within "
-                                "the action data bus";
-                LOG3("    " << error_message);
-                next->resources.action_data_xbar.reset();
-                next->stage_advance_log = "ran out of action data bus space";
-                return false;
-            }
-
-            /**
-             * allocate meter output on adb
-             */
-            if (!current_adb->alloc_action_data_bus(next->table,
-                    next->use.preferred_meter_format(), next->resources)) {
-                error_message = "The table " + next->table->name + " could not fit its meter "
-                                " output in within the action data bus";
-                LOG3(error_message);
-                next->resources.meter_xbar.reset();
-                next->stage_advance_log = "ran out of action data bus space for meter output";
-                return false;
-            }
-            done_next = true;
-        }
-        if (!Device::threadsSharePipe(p->table->gress, next->table->gress)) continue;
-        if (p->table->conditional_gateway_only())
-            continue;
-        // std::unique_ptr<ActionDataBus> old_alloc = current_adb->clone();
-        current_adb->clear();
-        for (auto *q = p->prev; q && q->stage == p->stage; q = q->prev) {
-            if (!Device::threadsSharePipe(q->table->gress, p->table->gress)) continue;
-            current_adb->update(q->name, &q->resources, q->table); }
-        // BUG_CHECK(*current_adb- == *old_alloc, "inconsistent adb state");
-        // auto old_adxbar = p->resources.action_data_xbar;
-        // auto old_mxbar = p->resources.meter_xbar;
-        p->resources.action_data_xbar.reset();
-        p->resources.meter_xbar.reset();
+    for (auto *p : boost::adaptors::reverse(tables_to_allocate)) {
+        if (!Device::threadsSharePipe(p->table->gress, gress)) continue;
+        if (p->table->conditional_gateway_only()) continue;
         BUG_CHECK(p->use.preferred_action_format() != nullptr,
                   "A non gateway table has a null action data format allocation");
 
+        current_adb->clear();
+        for (auto *q : boost::adaptors::reverse(adb_allocated))
+            current_adb->update(q->name, &q->resources, q->table);
+
+        p->resources.action_data_xbar.reset();
+        p->resources.meter_xbar.reset();
+        /*
+         * allocate action data on adb
+         */
         if (!current_adb->alloc_action_data_bus(p->table,
                 p->use.preferred_action_format(), p->resources)) {
             error_message = "The table " + p->table->name + " could not fit in within "
@@ -1817,10 +1809,8 @@ bool TablePlacement::try_alloc_adb(Placed *next,
             p->stage_advance_log = "ran out of action data bus space";
             return false;
         }
-        // BUG_CHECK(done_next || equiv(p->resources.action_data_xbar, old_adxbar),
-        //           "action_data_xbar alloc changed");
 
-        /**
+        /*
          * allocate meter output on adb
          */
         if (!current_adb->alloc_action_data_bus(p->table,
@@ -1832,139 +1822,120 @@ bool TablePlacement::try_alloc_adb(Placed *next,
             p->stage_advance_log = "ran out of action data bus space for meter output";
             return false;
         }
-        // BUG_CHECK(done_next || equiv(p->resources.meter_xbar, old_mxbar),
-        //           "meter_xbar alloc changed");
-#endif
+
+        adb_allocated.insert(adb_allocated.begin(), p);
     }
 
-    if (!done_next) {
-        current_adb->clear();
-        for (auto *q = next->prev; q && q->stage == next->stage; q = q->prev) {
-            if (!Device::threadsSharePipe(q->table->gress, next->table->gress)) continue;
-            current_adb->update(q->name, &q->resources, q->table); }
-        if (!current_adb->alloc_action_data_bus(next->table, next->use.preferred_action_format(),
-                                                next->resources)) {
-            error_message = "The table " + next->table->name + " could not fit in within the "
-                            "action data bus";
-            LOG3("    " << error_message);
-            next->resources.action_data_xbar.reset();
-            next->stage_advance_log = "ran out of action data bus space";
-            return false;
-        }
-
-        /**
-         * allocate meter output on adb
-         */
-        if (!current_adb->alloc_action_data_bus(next->table, next->use.preferred_meter_format(),
-                                                next->resources)) {
-            error_message = "The table " + next->table->name + " could not fit its meter "
-                            " output in within the action data bus";
-            LOG3(error_message);
-            next->resources.meter_xbar.reset();
-            next->stage_advance_log = "ran out of action data bus space for meter output";
-            return false;
-        }
+    std::unique_ptr<ActionDataBus> verify_adb(ActionDataBus::create());
+    for (auto *p : tables_placed) {
+        if (!Device::threadsSharePipe(p->table->gress, gress)) continue;
+        if (p->table->conditional_gateway_only()) continue;
+        verify_adb->update(p->name, &p->resources, p->table);
     }
-
-    std::unique_ptr<ActionDataBus> adb_update(ActionDataBus::create());
-    for (auto p : whole_stage) {
-        if (!Device::threadsSharePipe(p->table->gress, next->table->gress)) continue;
-        adb_update->update(p->name, &p->resources, p->table);
+    for (auto *p : tables_to_allocate) {
+        if (!Device::threadsSharePipe(p->table->gress, gress)) continue;
+        if (p->table->conditional_gateway_only()) continue;
+        verify_adb->update(p->name, &p->resources, p->table);
     }
-    adb_update->update(next->name, &next->resources, next->table);
     return true;
 }
 
-bool TablePlacement::try_alloc_imem(Placed *next, std::vector<Placed *> whole_stage) {
-    LOG3("Trying to allocate imem for " << next->name);
-    if (next->table->conditional_gateway_only())
-        return true;
+bool TablePlacement::try_alloc_imem(const gress_t &gress, std::vector<Placed *> tables_to_allocate,
+                                    std::vector<Placed *> tables_placed) {
+    LOG3("Trying to allocate imem for " << tables_to_allocate);
 
     InstructionMemory imem;
-    next->resources.instr_mem.clear();
 
-    bool done_next = false;
-    for (auto *p : boost::adaptors::reverse(whole_stage)) {
-#if 0  /* see P4C-4322 */
-        if (!Device::threadsSharePipe(p->table->gress, next->table->gress)) continue;
-        // FIXME -- should not need to redo imem alloc for all the tables in the stage;
-        // this entire loop body should be replaced with a call to imem.update
-        imem.update(p->name, &p->resources, p->table);
-#else
-        if (p->prev == next) {
-            bool gw_linked = next->gw != nullptr;
-            gw_linked |= next->use.preferred()->layout.gateway_match;
-            if (!imem.allocate_imem(next->table, next->resources.instr_mem, phv, gw_linked,
-                                    next->use.format_type, att_info)) {
-                error_message = "The table " + next->table->name + " could not fit within the "
-                                "instruction memory";
-                LOG3("    " << error_message);
-                next->resources.instr_mem.clear();
-                next->stage_advance_log = "ran out of imem";
-                return false; }
-            done_next = true; }
-        if (!Device::threadsSharePipe(p->table->gress, next->table->gress)) continue;
+    for (auto *p : boost::adaptors::reverse(tables_placed)) {
+        if (!Device::threadsSharePipe(p->table->gress, gress)) continue;
         if (p->table->conditional_gateway_only()) continue;
-        // FIXME -- should save the previous allocation and check that it is unchanged --
-        // any change represent a latent bug in the compiler that we don't cover
-        // auto old_alloc = p->resources.instr_mem;
+        imem.update(p->name, &p->resources, p->table);
+    }
+
+    for (auto *p : boost::adaptors::reverse(tables_to_allocate)) {
+        if (!Device::threadsSharePipe(p->table->gress, gress)) continue;
+        if (p->table->conditional_gateway_only()) continue;
         p->resources.instr_mem.clear();
         bool gw_linked = p->gw != nullptr;
         gw_linked |= p->use.preferred()->layout.gateway_match;
         if (!imem.allocate_imem(p->table, p->resources.instr_mem, phv, gw_linked,
                                 p->use.format_type, att_info)) {
-            // BUG_CHECK(done_next, "imem alloc redo failed when it succeeded before");
             error_message = "The table " + p->table->name + " could not fit within the "
                             "instruction memory";
             LOG3("    " << error_message);
-            next->resources.instr_mem.clear();
-            next->stage_advance_log = "ran out of imem";
+            p->resources.instr_mem.clear();
+            p->stage_advance_log = "ran out of imem";
             return false; }
-        // BUG_CHECK(done_next, p->resources.instr_mem == old_alloc, "imem alloc changed");
-#endif
     }
-    if (!done_next) {
-        bool gw_linked = next->gw != nullptr;
-        gw_linked |= next->use.preferred()->layout.gateway_match;
-        if (!imem.allocate_imem(next->table, next->resources.instr_mem, phv, gw_linked,
-                                next->use.format_type, att_info)) {
-            error_message = "The table " + next->table->name + " could not fit within the "
-                            "instruction memory";
-            LOG3("    " << error_message);
-            next->resources.instr_mem.clear();
-            next->stage_advance_log = "ran out of imem";
-            return false; } }
 
     InstructionMemory verify_imem;
-    for (auto p : whole_stage) {
-        if (!Device::threadsSharePipe(p->table->gress, next->table->gress)) continue;
+    for (auto p : tables_placed) {
+        if (!Device::threadsSharePipe(p->table->gress, gress)) continue;
         verify_imem.update(p->name, &p->resources, p->table);
     }
-    verify_imem.update(next->name, &next->resources, next->table);
+    for (auto p : tables_to_allocate) {
+        if (!Device::threadsSharePipe(p->table->gress, gress)) continue;
+        verify_imem.update(p->name, &p->resources, p->table);
+    }
     return true;
 }
 
 bool TablePlacement::try_alloc_all(Placed *next, std::vector<Placed *> whole_stage,
         const char *what, bool no_memory) {
+    LOG3("Try_alloc_all for " << std::string(what));
     bool done_next = false;
+    bool add_to_tables_placed = true;
+    std::vector<Placed *> tables_to_allocate;
+    std::vector<Placed *> tables_placed;
+
+    // Insert each Placed object, i.e. 'next' and the ones included
+    // in whole_stage, in one of the following two vectors:
+    //
+    //    - tables_placed if the object's resources have already
+    //      been calculated and are still valid;
+    //
+    //    - tables_to_allocate if the object's resources need to
+    //      be calculated or re-calculated.  Object 'next' always
+    //      goes in tables_to_allocate.
+    //
+    // Place these objects so the resources are allocated in the order
+    // tables appear in the pipeline.  This is the most efficient way
+    // to allocate resources, since it ensures that the resources are
+    // packed as much as possible.  Some profiles in the current CI
+    // fail to compile when the table order is not respected.
+    //
+    // Finally, since in-order allocation is performed, when 'next'
+    // is inserted in tables_to_allocate before any tables in
+    // whole_stage, the tables that follow in whole_stage also
+    // need to be recalculated.  This happens when a table is
+    // backfilled.
+    //
     for (auto *p : boost::adaptors::reverse(whole_stage)) {
         if (p->prev == next) {
-            if (!pick_layout_option(next)) {
-                LOG3("    " << what << " ixbar allocation did not fit");
-                return false; }
-            done_next = true; }
-        if (!pick_layout_option(p)) {
-            LOG3("    redo of " << p->name << " ixbar allocation did not fit");
-            return false; } }
-    if (!done_next && !pick_layout_option(next)) {
+            done_next = true;
+            add_to_tables_placed = false;
+            tables_to_allocate.insert(tables_to_allocate.begin(), next);
+        }
+        if (!p->use.format_type.valid())
+            add_to_tables_placed = false;
+        if (add_to_tables_placed)
+            tables_placed.insert(tables_placed.begin(), p);
+        else
+            tables_to_allocate.insert(tables_to_allocate.begin(), p);
+    }
+    if (!done_next) {
+        tables_to_allocate.insert(tables_to_allocate.begin(), next);
+    }
+
+    if (!try_pick_layout(next->table->gress, tables_to_allocate, tables_placed)) {
         LOG3("    " << what << " ixbar allocation did not fit");
         return false; }
 
-    if (!try_alloc_adb(next, whole_stage)) {
+    if (!try_alloc_adb(next->table->gress, tables_to_allocate, tables_placed)) {
         LOG3("    " << what << " of action data bus did not fit");
         return false; }
 
-    if (!try_alloc_imem(next, whole_stage)) {
+    if (!try_alloc_imem(next->table->gress, tables_to_allocate, tables_placed)) {
         LOG3("    " << what << " of instruction memory did not fit");
         return false; }
 
@@ -2360,7 +2331,6 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
         *p = clone;
         p = &clone->prev; }
 
-
     // update shared attached tables in the stage
     for (auto *p : boost::adaptors::reverse(whole_stage))
         p->update_attached(rv);
@@ -2487,15 +2457,61 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
                     advance_to_next_stage = true;
                     break; }
             } else {
-                if (!pick_layout_option(rv)) {
+                if (!pick_layout_option(rv, whole_stage)) {
                     LOG2("shrinking table " << rv->name << " can't find layout option");
                     advance_to_next_stage = true;
                     break; }
-                if (!try_alloc_adb(rv, whole_stage)) {
+
+                    bool done_next = false;
+                    bool add_to_tables_placed = true;
+                    std::vector<Placed *> tables_to_allocate;
+                    std::vector<Placed *> tables_placed;
+
+                    // Insert each Placed object, i.e. 'next' and the ones included
+                    // in whole_stage, in one of the following two vectors:
+                    //
+                    //    - tables_placed if the object's resources have already
+                    //      been calculated and are still valid;
+                    //
+                    //    - tables_to_allocate if the object's resources need to
+                    //      be calculated or re-calculated.  Object 'next' always
+                    //      goes in tables_to_allocate.
+                    //
+                    // Place these objects so the resources are allocated in the order
+                    // tables appear in the pipeline.  This is the most efficient way
+                    // to allocate resources, since it ensures that the resources are
+                    // packed as much as possible.  Some profiles in the current CI
+                    // fail to compile when the table order is not respected.
+                    //
+                    // Finally, since in-order allocation is performed, when 'next'
+                    // is inserted in tables_to_allocate before any tables in
+                    // whole_stage, the tables that follow in whole_stage also
+                    // need to be recalculated.  This happens when a table is
+                    // backfilled.
+                    //
+                    for (auto *p : boost::adaptors::reverse(whole_stage)) {
+                        if (p->prev == rv) {
+                            done_next = true;
+                            add_to_tables_placed = false;
+                            tables_to_allocate.insert(tables_to_allocate.begin(), rv);
+                        }
+                        if (!p->use.format_type.valid())
+                            add_to_tables_placed = false;
+                        if (add_to_tables_placed)
+                            tables_placed.insert(tables_placed.begin(), p);
+                        else
+                            tables_to_allocate.insert(tables_to_allocate.begin(), p);
+                    }
+                    if (!done_next) {
+                        tables_to_allocate.insert(tables_to_allocate.begin(), rv);
+                    }
+
+                if (!try_alloc_adb(rv->table->gress, tables_to_allocate, tables_placed)) {
                     LOG1("ERROR: Action Data Bus Allocation error after previous allocation?");
                     advance_to_next_stage = true;
                     break; }
-                if (!try_alloc_imem(rv, whole_stage)) {
+
+                if (!try_alloc_imem(rv->table->gress, tables_to_allocate, tables_placed)) {
                     LOG1("ERROR: IMem Allocation error after previous allocation?");
                     advance_to_next_stage = true;
                     break; }
