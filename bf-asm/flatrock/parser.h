@@ -21,6 +21,24 @@ struct PovSelect {
     bool check_match(const match_t match) const;
 };
 
+struct InitialPredicationVector : virtual public Parsable, virtual public Configurable {
+    struct NextTblConfig {
+        match_t key;
+        uint8_t next_tbl;
+    };
+
+    gress_t gress;
+    PovSelect pov_select;
+    NextTblConfig next_tbl_config[Target::Flatrock::PARSER_PRED_VEC_TCAM_DEPTH];
+
+    void input(VECTOR(value_t) args, value_t data) override;
+    void write_config(RegisterSetBase &regs, json::map &json, bool legacy = false) override;
+    void write_config_parser(Target::Flatrock::parser_regs &, json::map &json) const;
+    void write_config_pseudo_parser(Target::Flatrock::parser_regs &, json::map &json) const;
+ private:
+    bool input_mappings(const value_t &v);
+};
+
 class PhvBuilderGroup {
     boost::optional<int> group_id;  // If not set, the PHV builder group is not specified.
     gress_t gress; /* -- INGRESS: parser, EGRESS: pseudo parser */
@@ -326,10 +344,14 @@ class FlatrockParser : public BaseParser, virtual public Parsable {
 
     PhvBuilderGroup phv_builder[Target::Flatrock::PARSER_PHV_BUILDER_GROUPS];  ///< %PHV builder
 
+    // Two IPVs, one for the normal thread, one for the ghost thread
+    InitialPredicationVector initial_predication_vector[2];
+
     void input_states(VECTOR(value_t) args, value_t key, value_t value);
     void input_port_metadata(VECTOR(value_t) args, value_t key, value_t value);
     void input_profile(VECTOR(value_t) args, value_t key, value_t value);
     void input_analyzer_stage(VECTOR(value_t) args, value_t key, value_t value);
+    void input_initial_predication_vector(VECTOR(value_t) args, value_t key, value_t value);
 
     void input(VECTOR(value_t) args, value_t data) override;
     void write_config(RegisterSetBase &regs, json::map &json, bool legacy = false) override;
@@ -342,6 +364,9 @@ class FlatrockParser : public BaseParser, virtual public Parsable {
             profiles[i].parser = this;
         for (int i = 0; i < Target::Flatrock::PARSER_ANALYZER_STAGES; i++)
             analyzer[i].parser = this;
+
+        initial_predication_vector[0].gress = INGRESS;
+        initial_predication_vector[1].gress = GHOST;
     }
 };
 
@@ -354,9 +379,14 @@ class FlatrockPseudoParser : virtual public Parsable, virtual public Configurabl
     int pov_flags_pos = -1;
     int pov_state_pos = -1;
     PhvBuilderGroup phv_builder[Target::Flatrock::PARSER_PHV_BUILDER_GROUPS];  ///< %PHV builder
+    InitialPredicationVector initial_predication_vector;
 
     void input(VECTOR(value_t) args, value_t data) override;
     void write_config(RegisterSetBase &regs, json::map &json, bool legacy = true) override;
+
+    FlatrockPseudoParser() {
+        initial_predication_vector.gress = EGRESS;
+    }
 };
 
 class FlatrockAsmParser : public BaseAsmParser {

@@ -1404,6 +1404,268 @@ parser ingress:
     }
 }
 
+TEST(flatrock_parser, section_phv_builder_ipv_valid) {
+    {
+        AsmParserGuard asm_parser;
+        ASSERT_TRUE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  states:
+    ethernet_hdr: 0xff******_******01
+    ipv4_hdr: 0x7f******_******02
+  initial_predication_vector:
+    pov_select: [ flags 7, state 7, flags 0, state 4 ]
+    next_tbl_config:
+      0xdeadb*ef: 9
+      0xcafe: 42
+  ghost_initial_predication_vector:
+    pov_select: [ state 1, flags 2, flags 3, flags 4 ]
+    next_tbl_config:
+      0xa5df: 72
+parser egress:
+  initial_predication_vector:
+    pov_select: [state 1, state 2, state 3, flags 7]
+    next_tbl_config:
+      0xface: 255
+)PARSER_CFG"));
+
+        const auto &regs = asm_parser.generateConfig();
+
+        // INGRESS
+
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[32].src  [0], "1x0");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[32].start[0], "3x7");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[32].src  [1], "1x1");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[32].start[1], "3x7");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[32].src  [2], "1x0");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[32].start[2], "3x0");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[32].src  [3], "1x1");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[32].start[3], "3x4");
+        // 0xdeadb*ef: 9
+        EXPECT_REGISTER(regs.prsr_mem.pred_vec_tcam.pred_tcam[0][0].key_wh, "~32xdeadb0ef");
+        EXPECT_REGISTER(regs.prsr_mem.pred_vec_tcam.pred_tcam[0][0].key_wl,  "32xdeadbfef");
+        EXPECT_REGISTER(regs.prsr.pred_info_ram[0].pred_info[0].next_tbl, "8x9");
+        // 0xcafe: 42
+        EXPECT_REGISTER(regs.prsr_mem.pred_vec_tcam.pred_tcam[0][1].key_wh, "~32x0000cafe");
+        EXPECT_REGISTER(regs.prsr_mem.pred_vec_tcam.pred_tcam[0][1].key_wl,      "32xcafe");
+        EXPECT_REGISTER(regs.prsr.pred_info_ram[0].pred_info[1].next_tbl, "8x2A");
+
+        // GHOST
+
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[33].src  [0], "1x1");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[33].start[0], "3x1");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[33].src  [1], "1x0");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[33].start[1], "3x2");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[33].src  [2], "1x0");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[33].start[2], "3x3");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[33].src  [3], "1x0");
+        EXPECT_REGISTER(regs.prsr.pov_keys_ext.pov_key_ext[33].start[3], "3x4");
+        // 0xa5df: 72
+        EXPECT_REGISTER(regs.prsr_mem.pred_vec_tcam.pred_tcam[1][0].key_wh, "~32x0000a5df");
+        EXPECT_REGISTER(regs.prsr_mem.pred_vec_tcam.pred_tcam[1][0].key_wl,      "32xa5df");
+        EXPECT_REGISTER(regs.prsr.pred_info_ram[1].pred_info[0].next_tbl, "8x48");
+
+        // EGRESS (pseudo parser)
+
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[32].src  [0], "1x1");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[32].start[0], "3x1");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[32].src  [1], "1x1");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[32].start[1], "3x2");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[32].src  [2], "1x1");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[32].start[2], "3x3");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[32].src  [3], "1x0");
+        EXPECT_REGISTER(regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[32].start[3], "3x7");
+        // 0xface: 255
+        EXPECT_REGISTER(regs.pprsr_mem.pred_vec_tcam.pred_tcam[0].key_wh, "~32x0000face");
+        EXPECT_REGISTER(regs.pprsr_mem.pred_vec_tcam.pred_tcam[0].key_wl,      "32xface");
+        EXPECT_REGISTER(regs.pprsr.pred_info_ram.pred_info[0].next_tbl, "8xff");
+    }
+}
+
+TEST(flatrock_parser, section_phv_builder_ipv_valid_pov_select_empty) {
+    {
+        AsmParserGuard asm_parser;
+        ASSERT_TRUE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  states:
+    ethernet_hdr: 0xff******_******01
+    ipv4_hdr: 0x7f******_******02
+  ghost_initial_predication_vector:
+    pov_select: []
+    next_tbl_config:
+      *: 42
+)PARSER_CFG"));
+        const auto &regs = asm_parser.generateConfig();
+        // 0xcafe: 42
+        EXPECT_REGISTER(regs.prsr_mem.pred_vec_tcam.pred_tcam[1][0].key_wh, "~32x00000000");
+        EXPECT_REGISTER(regs.prsr_mem.pred_vec_tcam.pred_tcam[1][0].key_wl, "~32x00000000");
+        EXPECT_REGISTER(regs.prsr.pred_info_ram[1].pred_info[0].next_tbl, "8x2A");
+    }
+}
+
+TEST(flatrock_parser, section_phv_builder_ipv_error_too_many_pov_selects) {
+    {
+        AsmParserGuard asm_parser;
+        ASSERT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  states:
+    ethernet_hdr: 0xff******_******01
+    ipv4_hdr: 0x7f******_******02
+  initial_predication_vector:
+    pov_select: [ flags 7, state 7, flags 0, state 4, state 1 ]
+    next_tbl_config:
+      0xdeadb*ef: 9
+      0xcafe: 42
+  ghost_initial_predication_vector:
+    pov_select: [ state 1, flags 2, flags 3, flags 4 ]
+    next_tbl_config:
+      0xa5df: 72
+)PARSER_CFG"));
+    }
+}
+
+TEST(flatrock_parser, section_phv_builder_ipv_error_pov_select_missing) {
+    {
+        AsmParserGuard asm_parser;
+        ASSERT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  states:
+    ethernet_hdr: 0xff******_******01
+    ipv4_hdr: 0x7f******_******02
+  initial_predication_vector:
+    next_tbl_config:
+      0xcafe: 42
+)PARSER_CFG"));
+    }
+}
+
+TEST(flatrock_parser, section_phv_builder_ipv_error_all_keys_missing) {
+    {
+        AsmParserGuard asm_parser;
+        ASSERT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  states:
+    ethernet_hdr: 0xff******_******01
+    ipv4_hdr: 0x7f******_******02
+  initial_predication_vector:
+  ghost_initial_predication_vector:
+)PARSER_CFG"));
+    }
+}
+
+TEST(flatrock_parser, section_phv_builder_ipv_error_next_tbl_wrong_type) {
+    {
+        AsmParserGuard asm_parser;
+        ASSERT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  states:
+    ethernet_hdr: 0xff******_******01
+    ipv4_hdr: 0x7f******_******02
+  initial_predication_vector:
+    pov_select: [flags 1]
+    next_tbl_config: [1, 2, 3, 4]
+)PARSER_CFG"));
+    }
+}
+
+TEST(flatrock_parser, section_phv_builder_ipv_error_match_constant_too_wide) {
+    {
+        AsmParserGuard asm_parser;
+        ASSERT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  states:
+    ethernet_hdr: 0xff******_******01
+    ipv4_hdr: 0x7f******_******02
+  initial_predication_vector:
+    pov_select: [state 3]
+    next_tbl_config:
+      0xd*adbeef1: 42
+)PARSER_CFG"));
+    }
+}
+
+TEST(flatrock_parser, section_phv_builder_ipv_error_next_tbl_too_wide) {
+    {
+        AsmParserGuard asm_parser;
+        ASSERT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  states:
+    ethernet_hdr: 0xff******_******01
+    ipv4_hdr: 0x7f******_******02
+  initial_predication_vector:
+    pov_select: [state 6]
+    next_tbl_config:
+      0xdeadbeef: 0xcafe
+)PARSER_CFG"));
+    }
+}
+
+TEST(flatrock_parser, section_phv_builder_ipv_error_key_is_cmd) {
+    {
+        AsmParserGuard asm_parser;
+        ASSERT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  states:
+    ethernet_hdr: 0xff******_******01
+    ipv4_hdr: 0x7f******_******02
+  initial_predication_vector 1:
+    pov_select: [state 6]
+    next_tbl_config:
+      0xdeadbeef: 42
+)PARSER_CFG"));
+    }
+}
+
+TEST(flatrock_parser, section_phv_builder_ipv_error_ghost_key_is_cmd) {
+    {
+        AsmParserGuard asm_parser;
+        ASSERT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  states:
+    ethernet_hdr: 0xff******_******01
+    ipv4_hdr: 0x7f******_******02
+  ghost_initial_predication_vector 1:
+    pov_select: [state 6]
+    next_tbl_config:
+      0xdeadbeef: 42
+)PARSER_CFG"));
+    }
+}
+
+TEST(flatrock_parser, section_phv_builder_ipv_error_pov_select_after_table_config) {
+    {
+        AsmParserGuard asm_parser;
+        ASSERT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  ghost_initial_predication_vector:
+    next_tbl_config:
+      0xdeadbeef: 42
+    pov_select: [state 6]
+)PARSER_CFG"));
+    }
+}
+
 TEST(flatrock_parser, section_phv_builder_group_valid) {
     {
         /* -- the simplest case (parser), only pov_select key is set,
@@ -2257,6 +2519,24 @@ parser ingress:
   phv_builder_group 31:
     pov_select: [state 1, state 2, state 3, state 4]
     pov_select: [state 1, state 2, state 3, state 4]
+)PARSER_CFG"));
+    }
+
+    {
+      /* -- pov_select after extract */
+        AsmParserGuard asm_parser;
+        EXPECT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  phv_builder_group 24:
+    extract 1:
+      match: 0x**345678
+      source: [
+        packet32 baz W0 msb_offset 0x11,
+        packet32 foobar W1 msb_offset 0x12 reverse
+      ]
+    pov_select: [flags 3, state 3, flags 4, state 4]
 )PARSER_CFG"));
     }
 }

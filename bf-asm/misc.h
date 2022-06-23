@@ -185,4 +185,11 @@ inline void fix_match_star(match_t &match, const decltype(match_t::word0) mask) 
 /// @return True if the value is correctly parsed
 bool input_int_match(const value_t value, match_t &match, int width);
 
+/// Check if a tMAP value contains all the given keys.
+/// @param value A tMAP value
+/// @param keys A set of keys
+/// @pre @p value must be a tMAP
+/// @return True if the given keys are a subset of the map's keys
+bool require_keys(const value_t &data, std::set<const char *> keys);
+
 #endif /* BF_ASM_MISC_H_ */

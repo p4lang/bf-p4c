@@ -449,6 +449,22 @@ parser [<thread>] [<port_use>, ...]:
                 # match constant is 4B
             source: <phe-source>
                 # specifies a PHE source pair
+    initial_predication_vector:
+        # specifies the initial predication information
+        pov_select: <pov-select>
+            # specifies which POV bytes are used to address the TCAM
+        next_tbl_config:
+            # a mapping for the IPV TCAM, from match constants to next table identifiers
+            <match-constant>: <constant>
+                # match constant is 4B, constant is 1B
+    ghost_initial_predication_vector:
+        # specifies the initial predication information for the ghost thread
+        pov_select: <pov-select>
+            # specifies which POV bytes are used to address the TCAM
+        next_tbl_config:
+            # a mapping for the IPV TCAM, from match constants to next table identifiers
+            <match-constant>: <constant>
+                # match constant is 4B, constant is 1B
     # Specific for Tofino 5 pseudo parser (parser egress):
     pov_flags_pos: <constant>
         # specifies start position of POV flags in bridge metadata (6b)

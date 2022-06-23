@@ -581,13 +581,12 @@ void PhvBuilderGroup::input(VECTOR(value_t) args, const int lineno,
         error(lineno, "redefinition of PHV builder group (number %d) not allowed", group);
         return;
     }
-    if (!CHECKTYPE(data, tMAP))
+    if (!CHECKTYPE(data, tMAP) || !require_keys(data, {"pov_select"}))
         return;
 
     group_id = group;
     gress = (args.size == 1 && args[0] == "ingress") ? INGRESS : EGRESS;
-
-    bool pov_select_found = false;
+    bool pov_select_parsed = false;
 
     for (auto &kv : MapIterChecked(data.map, true)) {
         if (!CHECKTYPE2(kv.key, tSTR, tCMD))
@@ -595,24 +594,21 @@ void PhvBuilderGroup::input(VECTOR(value_t) args, const int lineno,
         if (kv.key == "pov_select") {
             if (!CHECKTYPE(kv.key, tSTR))
                 continue;
-            if (pov_select_found) {
-                error(lineno, "multiple pov_select directives not allowed for PHV builder group");
-                continue;
-            }
-            pov_select_found = true;
             if (!pov_select.input(kv.value))
                 continue;
+            pov_select_parsed = true;
         } else if (kv.key == "extract") {
+            if (!pov_select_parsed) {
+                error(kv.key.lineno,
+                      "POV selection has to be defined before extracts");
+                continue;
+            }
             if (!input_extract(args, kv.key, kv.value))
                 continue;
         } else {
             report_invalid_directive("invalid phv builder group directive", kv.key);
             continue;
         }
-    }
-
-    if (!pov_select_found) {
-        error(lineno, "mandatory pov_select directive not found for PHV builder group %d", group);
     }
 }
 
@@ -1882,6 +1878,131 @@ void FlatrockParser::input_analyzer_stage(VECTOR(value_t) args, value_t key, val
     analyzer[stage_index].input(args, stage_index, state_name, value);
 }
 
+bool InitialPredicationVector::input_mappings(const value_t &v) {
+    unsigned next_tbl_idx = 0;
+    auto prefix = gress == GHOST
+        ? "the ghost next table configuration"
+        : "the next table configuration";
+    if (!CHECKTYPE(v, tMAP)) { return false; }
+
+    for (const auto &row : MapIterChecked(v.map, true)) {
+        value_t next_table = row.value;
+        match_t match_key;
+
+        if (!check_range(next_table, 0, 255)) {
+            return false;
+        } else if (next_tbl_idx >= Target::Flatrock::PARSER_PRED_VEC_TCAM_DEPTH) {
+            error(v.lineno, "%s can hold at most %d entries", prefix,
+                Target::Flatrock::PARSER_PRED_VEC_TCAM_DEPTH);
+            return false;
+        } else if (!input_match_constant(match_key, row.key,
+            Target::Flatrock::PARSER_POV_SELECT_NUM * 8)) {
+            error(row.key.lineno,
+                  "the match key has to be a valid match constant of the correct width");
+            return false;
+        } else if (!pov_select.check_match(match_key)) {
+            error(row.key.lineno, "match constant references unused POV byte");
+            return false;
+        }
+
+        next_tbl_config[next_tbl_idx++] = NextTblConfig{
+            .key = match_key,
+            .next_tbl = static_cast<uint8_t>(next_table.i),
+        };
+    }
+
+    return true;
+}
+
+void InitialPredicationVector::input(VECTOR(value_t) args, value_t data) {
+    if (!CHECKTYPE(data, tMAP) || !require_keys(data, {"pov_select"})) { return; }
+
+    bool pov_select_parsed = false;
+    for (const auto &kv : MapIterChecked(data.map)) {
+        if (kv.key == "next_tbl_config") {
+            if (!pov_select_parsed) {
+                error(kv.key.lineno,
+                    "POV selection has to be defined before next table configuration");
+                return;
+            }
+            if (!input_mappings(kv.value)) return;
+        } else if (kv.key == "pov_select") {
+            if (!pov_select.input(kv.value)) return;
+            pov_select_parsed = true;
+        } else {
+            report_invalid_directive(
+                "this key is not valid in the initial predication vector configuration",
+                kv.key);
+            return;
+        }
+    }
+}
+
+void InitialPredicationVector::write_config_parser(Target::Flatrock::parser_regs &regs,
+                                                   json::map &json) const {
+    unsigned thread = gress == GHOST;
+    unsigned i = 0;
+    for (const auto &entry : next_tbl_config) {
+        auto &pred_tcam = regs.prsr_mem.pred_vec_tcam.pred_tcam[thread][i];
+        auto &pred_info = regs.prsr.pred_info_ram[thread].pred_info[i];
+
+        pred_tcam.key_wh = entry.key.word0;
+        pred_tcam.key_wl = entry.key.word1;
+        pred_info.next_tbl = entry.next_tbl;
+
+        i++;
+    }
+
+    auto &key_ext = regs.prsr.pov_keys_ext.pov_key_ext[
+        Target::Flatrock::PARSER_PHV_BUILDER_GROUPS + thread
+    ];
+    for (i = 0; i < Target::Flatrock::PARSER_POV_SELECT_NUM; i++) {
+        key_ext.src[i]   = pov_select.key[i].src;
+        key_ext.start[i] = pov_select.key[i].start;
+    }
+}
+
+void InitialPredicationVector::write_config_pseudo_parser(Target::Flatrock::parser_regs &regs,
+                                                          json::map &json) const {
+    unsigned i = 0;
+    for (const auto &entry : next_tbl_config) {
+        auto &pred_tcam = regs.pprsr_mem.pred_vec_tcam.pred_tcam[i];
+        auto &pred_info = regs.pprsr.pred_info_ram.pred_info[i];
+
+        pred_tcam.key_wh = entry.key.word0;
+        pred_tcam.key_wl = entry.key.word1;
+        pred_info.next_tbl = entry.next_tbl;
+
+        i++;
+    }
+
+    auto &key_ext = regs.pprsr.pprsr_pov_keys_ext.pov_key_ext[
+        Target::Flatrock::PARSER_PHV_BUILDER_GROUPS
+    ];
+    for (i = 0; i < Target::Flatrock::PARSER_POV_SELECT_NUM; i++) {
+        key_ext.src[i]   = pov_select.key[i].src;
+        key_ext.start[i] = pov_select.key[i].start;
+    }
+}
+
+void InitialPredicationVector::write_config(RegisterSetBase &_regs,
+                                            json::map &json,
+                                            bool legacy) {
+    auto &regs = dynamic_cast<Target::Flatrock::parser_regs &>(_regs);
+    switch (gress) {
+        case INGRESS:
+        case GHOST:
+            write_config_parser(regs, json);
+            break;
+        case EGRESS:
+            write_config_pseudo_parser(regs, json);
+            break;
+        case NUM_GRESS_T:
+            error(0, "invalid gress value");
+            break;
+    }
+}
+
 void FlatrockParser::input(VECTOR(value_t) args, value_t data) {
     if (!CHECKTYPE(data, tMAP)) return;
     for (auto &kv : MapIterChecked(data.map, true)) {
@@ -1896,6 +2017,10 @@ void FlatrockParser::input(VECTOR(value_t) args, value_t data) {
         } else if (kv.key == "phv_builder_group") {
             input_phv_builder_group(phv_builder, Target::Flatrock::PARSER_PHV_BUILDER_GROUPS,
                     args, kv.key, kv.value);
+        } else if (kv.key == "initial_predication_vector" && CHECKTYPE(kv.key, tSTR)) {
+            initial_predication_vector[0].input(args, kv.value);
+        } else if (kv.key == "ghost_initial_predication_vector" && CHECKTYPE(kv.key, tSTR)) {
+            initial_predication_vector[1].input(args, kv.value);
         } else {
             report_invalid_directive("invalid key", kv.key);
         }
@@ -1918,6 +2043,8 @@ void FlatrockParser::write_config(RegisterSetBase &regs, json::map &json, bool l
     for (unsigned int i = 0; i < Target::Flatrock::PARSER_PHV_BUILDER_GROUPS; ++i) {
         phv_builder[i].write_config(regs, json, legacy);
     }
+    initial_predication_vector[0].write_config(regs, json, legacy);
+    initial_predication_vector[1].write_config(regs, json, legacy);
     if (auto *top = TopLevel::regs<Target::Flatrock>()) {
         top->mem_pipe.prsr_mem.set("mem.prsr_mem", &_regs.prsr_mem);
         top->reg_pipe.prsr.set("reg.prsr", &_regs.prsr);
@@ -1960,6 +2087,8 @@ void FlatrockPseudoParser::input(VECTOR(value_t) args, value_t data) {
         } else if (kv.key == "phv_builder_group") {
             input_phv_builder_group(phv_builder, Target::Flatrock::PARSER_PHV_BUILDER_GROUPS,
                     args, kv.key, kv.value);
+        } else if (kv.key == "initial_predication_vector" && CHECKTYPE(kv.key, tSTR)) {
+            initial_predication_vector.input(args, kv.value);
         } else {
             error(kv.key.lineno, "invalid key: %s", kv.key.s);
         }
@@ -1977,6 +2106,7 @@ void FlatrockPseudoParser::write_config(RegisterSetBase &regs, json::map &json, 
     for (unsigned int i = 0; i < Target::Flatrock::PARSER_PHV_BUILDER_GROUPS; ++i) {
         phv_builder[i].write_config(regs, json, legacy);
     }
+    initial_predication_vector.write_config(regs, json, legacy);
     if (auto *top = TopLevel::regs<Target::Flatrock>()) {
         top->mem_pipe.pprsr_mem.set("mem.pprsr_mem", &_regs.pprsr_mem);
         top->reg_pipe.pprsr.set("reg.pprsr", &_regs.pprsr);

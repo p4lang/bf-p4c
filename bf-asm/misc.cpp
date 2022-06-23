@@ -177,3 +177,14 @@ unsigned match_t::dirtcam(unsigned width, unsigned bit) {
             rv &= masks[i]; }
     return rv;
 }
+
+bool require_keys(const value_t &data, std::set<const char *> keys) {
+    for (auto key : keys) {
+        pair_t *kv = data.map[key];
+        if (!kv) {
+            error(data.lineno, "missing required key '%s'", key);
+            return false;
+        }
+    }
+    return true;
+}

@@ -766,8 +766,9 @@ class Target::Flatrock : public Target {
         PARSER_ANALYZER_STAGES = ::Flatrock::PARSER_ANALYZER_STAGES,
         PARSER_ANALYZER_STAGE_RULES = 24,
         PARSER_PHV_BUILDER_GROUPS = 32,  // Fpp_params.pm: N_PHV_TCAM
-        PARSER_POV_SELECT_NUM = 4,
+        PARSER_POV_SELECT_NUM = 4,  // number of bytes extracted from the POV
         PARSER_PHV_BUILDER_GROUP_EXTRACTS_NUM = 16,  // Fpp_params.pm: N_PHV_TCAM_DEPTH
+        PARSER_PRED_VEC_TCAM_DEPTH = 16,             // Fpp_params.pm: N_PHV_TCAM_DEPTH
         PARSER_PHV_BUILDER_GROUP_PHE8_MIN = 0,
         PARSER_PHV_BUILDER_GROUP_PHE8_MAX = 15,
         PARSER_PHV_BUILDER_GROUP_PHE16_MIN = 16,
