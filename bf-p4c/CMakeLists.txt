@@ -1594,3 +1594,9 @@ if (ENABLE_TESTING)
   set_tests_properties(test_p4c_driver PROPERTIES LABELS lint)
 
 endif(ENABLE_TESTING)
+
+
+set (EVEN_MORE_FILES_TO_LINT
+  p4c-barefoot.cpp
+  )
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${EVEN_MORE_FILES_TO_LINT}")

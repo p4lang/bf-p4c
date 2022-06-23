@@ -59,9 +59,11 @@
  * @brief The namespace encapsulating test-related stuff
  */
 
+//  All C includes should come before the first C++ include, according to one of our Git hooks.
+#include <libgen.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <libgen.h>
+
 #include <climits>
 #include <csignal>
 #include <cstdio>
@@ -110,6 +112,8 @@
 // Catch all exceptions in production or release environment
 #define BFP4C_CATCH_EXCEPTIONS 1
 #endif
+
+
 
 static void log_dump(const IR::Node *node, const char *head) {
     if (!node || !LOGGING(1)) return;
@@ -315,6 +319,24 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
         maupipe->apply(as);
 }
 
+
+
+static void reportStats_alwaysCallThisONCEshortlyBeforeExiting() {
+    // Han indicated ≤1 ‘_’ per identifier is a required rule.
+    auto& myErrorReporter { BFNContext::get().errorReporter() };
+    //  The next 2 lines: creating variables just for readability of code.
+    const unsigned long long   error_count = myErrorReporter.getErrorCount();
+    const unsigned long long warning_count = myErrorReporter.getWarningCount();
+
+    using namespace std;
+    cerr << endl;
+    cerr << "Number of ERRORs: "   <<   error_count << endl;
+    cerr << "Number of WARNINGs: " << warning_count << endl;
+    cerr << endl;
+}  //  end of reporting procedure
+
+
+
 int main(int ac, char **av) {
     setup_gc_logging();
     setup_signals();
@@ -506,6 +528,8 @@ int main(int ac, char **av) {
     manifest.setSuccess(::errorCount() == 0);
     manifest.serialize();
 
+    reportStats_alwaysCallThisONCEshortlyBeforeExiting();
+
     if (Log::verbose())
         std::cout << "Done." << std::endl;
     return ::errorCount() > 0 ? COMPILER_ERROR : SUCCESS;
@@ -513,6 +537,8 @@ int main(int ac, char **av) {
 #if BFP4C_CATCH_EXCEPTIONS
     // catch all exceptions here
     } catch (const Util::CompilerBug &e) {
+        reportStats_alwaysCallThisONCEshortlyBeforeExiting();
+
 #ifdef BAREFOOT_INTERNAL
         bool barefootInternal = true;
 #else
@@ -525,6 +551,8 @@ int main(int ac, char **av) {
               << std::endl;
         return INTERNAL_COMPILER_ERROR;
     } catch (const Util::CompilerUnimplemented &e) {
+        reportStats_alwaysCallThisONCEshortlyBeforeExiting();
+
         std::cerr << e.what() << std::endl;
         return COMPILER_ERROR;
     } catch (const Util::CompilationError &e) {
@@ -532,10 +560,14 @@ int main(int ac, char **av) {
         return PROGRAM_ERROR;
 #if BAREFOOT_INTERNAL
     } catch (const std::exception &e) {
+        reportStats_alwaysCallThisONCEshortlyBeforeExiting();
+
         std::cerr << "Internal compiler error: " << e.what() << std::endl;
         return INTERNAL_COMPILER_ERROR;
 #endif
     } catch (...) {
+        reportStats_alwaysCallThisONCEshortlyBeforeExiting();
+
         std::cerr << "Internal compiler error. Please submit a bug report with your code."
                   << std::endl;
         return INTERNAL_COMPILER_ERROR;
