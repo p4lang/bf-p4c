@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 bfnhome="/bfn/bf-p4c-compilers"
 
