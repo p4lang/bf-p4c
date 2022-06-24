@@ -347,11 +347,51 @@ class FlatrockParser : public BaseParser, virtual public Parsable {
     // Two IPVs, one for the normal thread, one for the ghost thread
     InitialPredicationVector initial_predication_vector[2];
 
+    struct ChecksumCheckers : virtual public Parsable, virtual public Configurable {
+        int lineno = -1;
+
+        struct Mask {
+            uint32_t words[Target::Flatrock::PARSER_CSUM_MASK_WIDTH];
+            bool used = false;
+            int lineno = -1;
+        } masks[Target::Flatrock::PARSER_CSUM_MASKS];
+
+        struct Config {
+            match_t match_pov;
+            uint8_t mask_sel;
+            uint8_t hdr_id;
+            bool used = false;
+            int lineno = -1;
+        };
+
+        struct Unit {
+            PovSelect pov_select;
+            Config configs[Target::Flatrock::PARSER_PROFILES];
+            bool used = false;
+            int lineno = -1;
+        } units[Target::Flatrock::PARSER_CHECKSUM_UNITS];
+
+        void input_unit(std::size_t id, value_t &data);
+        void input_config(std::size_t unit_id, std::size_t id, value_t &data);
+        void input_mask(std::size_t id, value_t &data);
+
+        void write_unit(std::size_t id, Target::Flatrock::parser_regs &regs);
+        void write_pov_select(std::size_t unit_id, Target::Flatrock::parser_regs &regs);
+        void write_config(std::size_t unit_id, std::size_t id, Target::Flatrock::parser_regs &regs);
+        void write_mask(std::size_t id, Target::Flatrock::parser_regs &regs);
+
+        void validate();
+
+        void input(VECTOR(value_t) args, value_t data) override;
+        void write_config(RegisterSetBase &regs, json::map &json, bool legacy = false) override;
+    } csum_checkers;
+
     void input_states(VECTOR(value_t) args, value_t key, value_t value);
     void input_port_metadata(VECTOR(value_t) args, value_t key, value_t value);
     void input_profile(VECTOR(value_t) args, value_t key, value_t value);
     void input_analyzer_stage(VECTOR(value_t) args, value_t key, value_t value);
     void input_initial_predication_vector(VECTOR(value_t) args, value_t key, value_t value);
+    void input_checksum_checkers(VECTOR(value_t) args, value_t key, value_t value);
 
     void input(VECTOR(value_t) args, value_t data) override;
     void write_config(RegisterSetBase &regs, json::map &json, bool legacy = false) override;

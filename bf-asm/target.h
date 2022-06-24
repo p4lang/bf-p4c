@@ -698,7 +698,7 @@ class Target::Flatrock : public Target {
     };
 
     enum {
-        PARSER_CHECKSUM_UNITS = 0,
+        PARSER_CHECKSUM_UNITS = 2,
         PARSER_EXTRACT_BYTES = true,
         PARSER_DEPTH_MAX_BYTES_INGRESS = (((1 << 10) - 1) * 16),
         PARSER_DEPTH_MAX_BYTES_EGRESS = (32 * 16),
@@ -768,6 +768,12 @@ class Target::Flatrock : public Target {
         NUM_PARSERS = 1,
         NUM_PIPES = 8,  // TODO what is the correct number here?
         TABLES_REQUIRE_ROW = 0,
+        TABLES_REQUIRE_WAYS = false,
+        PARSER_CSUM_MASKS = 4,
+        PARSER_CSUM_MASK_WIDTH = 7,
+        PARSER_CSUM_MASK_REG_WIDTH = 32,  // Each checksum mask is written into 7 32b wide registers
+        PARSER_CSUM_MASK_BITS = PARSER_CSUM_MASK_WIDTH * PARSER_CSUM_MASK_REG_WIDTH,
+        PARSER_CSUM_MATCH_WIDTH = 32,
         PARSER_BRIDGE_MD_WIDTH = 64,
         PARSER_SEQ_ID_MAX = 254,  // Max value of header sequence ID; 255 reserved for escape value
         PARSER_HDR_ID_MAX = 254,  // Max value of hdr_id; 255 is reserved for invalid header

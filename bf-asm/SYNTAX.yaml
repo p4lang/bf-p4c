@@ -465,6 +465,33 @@ parser [<thread>] [<port_use>, ...]:
             # a mapping for the IPV TCAM, from match constants to next table identifiers
             <match-constant>: <constant>
                 # match constant is 4B, constant is 1B
+    checksum_checkers:
+        mask <constant>: <constant>
+            # There can be up to 4 masks.
+            # Each mask is specified as an up to 224b wide constant.
+            # A mask specifies which bytes of the header are used for the checksum computation.
+            # 1 -> used, 0 -> not used
+        unit <constant>: 
+            # Each unit is able to verify 1 checksum.
+            # The checksum is computed according to the selected 'config'
+            # which specifies a header ('hdr') and a mask ('mask_sel').
+            # A config is selected using the 'match_pov' key.
+            # There are 2 units.
+            # Both units operate independently and allow verification of overlapping bytes.
+            pov_select: <pov-select>
+                # Specifies which POV bytes are used to address the TCAM
+            config <constant>:
+                # There are up to 16 checksum configurations for each unit.
+                match_pov: <match-constant>
+                    # 32b match key
+                mask_sel: <constant>
+                    # Selects one of the 4 masks (2b).
+                    # Both csum units can select the same mask.
+                hdr: <hdr-id-name>
+                    # Specifies which header is used for the checksum computation.
+                    # The concrete header bytes which are used for the checksum
+                    # are specified using a mask.
+                    # One of the 4 masks is selected using the 'mask_sel' field.
     # Specific for Tofino 5 pseudo parser (parser egress):
     pov_flags_pos: <constant>
         # specifies start position of POV flags in bridge metadata (6b)

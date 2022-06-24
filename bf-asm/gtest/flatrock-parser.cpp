@@ -1,3 +1,4 @@
+#include <boost/algorithm/string/replace.hpp>
 #include "flatrock/hdr.h"
 #include "flatrock/parser.h"
 #include "bf-p4c/common/flatrock_parser.h"
@@ -25,7 +26,10 @@ class AsmParserGuard {
     /* -- avoid copying */
     AsmParserGuard &operator=(AsmParserGuard &&) = delete;
 
-    FlatrockAsmParser *operator->() { return parser; }
+    FlatrockAsmParser *operator->() {
+        assert(parser);
+        return parser;
+    }
 
     bool parseString(const char *bfa_string);
     const Target::Flatrock::parser_regs &generateConfig();
@@ -60,6 +64,7 @@ bool AsmParserGuard::parseString(const char *bfa_string) {
 }
 
 const Target::Flatrock::parser_regs &AsmParserGuard::generateConfig() {
+    assert(parser);
     json::map context_json;
     parser->output(context_json);
     return parser->get_cfg_registers();
@@ -3828,6 +3833,715 @@ parser ingress:
 )PARSER_CFG"));
     }
 }
+
+TEST(flatrock_parser, section_checksum_checker) {
+    const char *parser_str = R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    md32: 0
+    ethernet: 1
+    ipv4: 2
+    ipv6: 3
+    tcp: 4
+    udp: 5
+  seq:
+    0: [ 1, 2, 4 ]  # ethernet, ipv4, tcp
+    1: [ ethernet, ipv4, udp ]
+  len:
+    2: { base_len: 20, num_comp_bits: 4, scale: 2 }  # IPv4: 20B + N * 4B; N < 10
+    ipv6: { base_len: 40, num_comp_bits: 7, scale: 3 }  # IPv6: 40B + N * 8B
+parser ingress:
+  checksum_checkers:
+    mask 0: 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    mask 2: 0x000000000000000000000000000000000000111100000000ffffffff
+    mask 1: 0xdabcdcafe0011aabbccdd12345678abba4242acda11420401b3ac
+    mask 3: 0x100000020000000000000000000000000000000000000000
+    unit 0:
+      pov_select: [ flags 0, state 1, flags 7, state 2 ]
+      config 0:
+        match_pov: 0xabcd***1
+        mask_sel: 3
+        hdr: ipv4
+    unit 1:
+      pov_select: [ state 7, flags 3, state 2 ]
+      config 0:
+        match_pov: 0x**1d**bc
+        mask_sel: 1
+        hdr: tcp
+      config 1:
+        match_pov: 0x****cd**
+        mask_sel: 2
+        hdr: 3
+)PARSER_CFG";
+
+  AsmParserGuard parser;
+  parser.parseString(parser_str);
+
+  const auto &regs = parser.generateConfig();
+
+  // > mask 0
+  EXPECT_REGISTER(regs.prsr.csum_mask.csum_mask[0].en32[0], "32xffffffff");
+  EXPECT_REGISTER(regs.prsr.csum_mask.csum_mask[0].en32[1], "32xffffffff");
+  EXPECT_REGISTER(regs.prsr.csum_mask.csum_mask[0].en32[2], "32xffffffff");
+  EXPECT_REGISTER(regs.prsr.csum_mask.csum_mask[0].en32[3], "32xffffffff");
+  EXPECT_REGISTER(regs.prsr.csum_mask.csum_mask[0].en32[4], "32xffffffff");
+  EXPECT_REGISTER(regs.prsr.csum_mask.csum_mask[0].en32[5], "32xffffffff");
+  EXPECT_REGISTER(regs.prsr.csum_mask.csum_mask[0].en32[6], "32xffffffff");
+
+  // > mask 1
+  EXPECT_REGISTER(regs.prsr.csum_mask.csum_mask[1].en32[0], "32x0401b3ac");
+  EXPECT_REGISTER(regs.prsr.csum_mask.csum_mask[1].en32[1], "32xacda1142");
+  EXPECT_REGISTER(regs.prsr.csum_mask.csum_mask[1].en32[2], "32xabba4242");
+  EXPECT_REGISTER(regs.prsr.csum_mask.csum_mask[1].en32[3], "32x12345678");
+  EXPECT_REGISTER(regs.prsr.csum_mask.csum_mask[1].en32[4], "32xaabbccdd");
+  EXPECT_REGISTER(regs.prsr.csum_mask.csum_mask[1].en32[5], "32xcafe0011");
+  EXPECT_REGISTER(regs.prsr.csum_mask.csum_mask[1].en32[6], "32x000dabcd");
+
+  // > mask 2
+  EXPECT_REGISTER(regs.prsr.csum_mask.csum_mask[2].en32[0], "32xffffffff");
+  EXPECT_REGISTER(regs.prsr.csum_mask.csum_mask[2].en32[1], "32x00000000");
+  EXPECT_REGISTER(regs.prsr.csum_mask.csum_mask[2].en32[2], "32x00001111");
+  EXPECT_REGISTER(regs.prsr.csum_mask.csum_mask[2].en32[3], "32x00000000");
+  EXPECT_REGISTER(regs.prsr.csum_mask.csum_mask[2].en32[4], "32x00000000");
+  EXPECT_REGISTER(regs.prsr.csum_mask.csum_mask[2].en32[5], "32x00000000");
+  EXPECT_REGISTER(regs.prsr.csum_mask.csum_mask[2].en32[6], "32x00000000");
+
+  // > mask 3
+  EXPECT_REGISTER(regs.prsr.csum_mask.csum_mask[3].en32[0], "32x00000000");
+  EXPECT_REGISTER(regs.prsr.csum_mask.csum_mask[3].en32[1], "32x00000000");
+  EXPECT_REGISTER(regs.prsr.csum_mask.csum_mask[3].en32[2], "32x00000000");
+  EXPECT_REGISTER(regs.prsr.csum_mask.csum_mask[3].en32[3], "32x00000000");
+  EXPECT_REGISTER(regs.prsr.csum_mask.csum_mask[3].en32[4], "32x00000000");
+  EXPECT_REGISTER(regs.prsr.csum_mask.csum_mask[3].en32[5], "32x10000002");
+  EXPECT_REGISTER(regs.prsr.csum_mask.csum_mask[3].en32[6], "32x00000000");
+
+  // > unit 0 > pov_select
+  EXPECT_REGISTER(regs.prsr.csum_key_ext[0].src[0], "1b0");
+  EXPECT_REGISTER(regs.prsr.csum_key_ext[0].start[0], "3x0");
+  EXPECT_REGISTER(regs.prsr.csum_key_ext[0].src[1], "1b1");
+  EXPECT_REGISTER(regs.prsr.csum_key_ext[0].start[1], "3x1");
+  EXPECT_REGISTER(regs.prsr.csum_key_ext[0].src[2], "1b0");
+  EXPECT_REGISTER(regs.prsr.csum_key_ext[0].start[2], "3x7");
+  EXPECT_REGISTER(regs.prsr.csum_key_ext[0].src[3], "1b1");
+  EXPECT_REGISTER(regs.prsr.csum_key_ext[0].start[3], "3x2");
+
+  // > unit 0 > config 0
+  EXPECT_REGISTER(regs.prsr_mem.csum_chk_tcam.csum_tcam[0][0].key_wl, "32xabcdfff1");
+  EXPECT_REGISTER(regs.prsr_mem.csum_chk_tcam.csum_tcam[0][0].key_wh, "~32xabcd0001");
+  EXPECT_REGISTER(regs.prsr.csum_chk_ram[0].csum_chk[0].csum_mask_sel, "3x3");
+  EXPECT_REGISTER(regs.prsr.csum_chk_ram[0].csum_chk[0].csum_hdr_id, "8x2");  // ipv4
+
+  // > unit 1 > pov_select
+  EXPECT_REGISTER(regs.prsr.csum_key_ext[1].src[0], "1b1");
+  EXPECT_REGISTER(regs.prsr.csum_key_ext[1].start[0], "3x7");
+  EXPECT_REGISTER(regs.prsr.csum_key_ext[1].src[1], "1b0");
+  EXPECT_REGISTER(regs.prsr.csum_key_ext[1].start[1], "3x3");
+  EXPECT_REGISTER(regs.prsr.csum_key_ext[1].src[2], "1b1");
+  EXPECT_REGISTER(regs.prsr.csum_key_ext[1].start[2], "3x2");
+  EXPECT_REGISTER(regs.prsr.csum_key_ext[1].src[3], "1b0");
+  EXPECT_REGISTER(regs.prsr.csum_key_ext[1].start[3], "3x0");
+
+  // > unit 1 > config 0
+  EXPECT_REGISTER(regs.prsr_mem.csum_chk_tcam.csum_tcam[1][0].key_wl, "32xff1dffbc");
+  EXPECT_REGISTER(regs.prsr_mem.csum_chk_tcam.csum_tcam[1][0].key_wh, "~32x001d00bc");
+  EXPECT_REGISTER(regs.prsr.csum_chk_ram[1].csum_chk[0].csum_mask_sel, "3x1");
+  EXPECT_REGISTER(regs.prsr.csum_chk_ram[1].csum_chk[0].csum_hdr_id, "8x4");  // tcp
+
+  // > unit 1 > config 1
+  EXPECT_REGISTER(regs.prsr_mem.csum_chk_tcam.csum_tcam[1][1].key_wl, "32xffffcdff");
+  EXPECT_REGISTER(regs.prsr_mem.csum_chk_tcam.csum_tcam[1][1].key_wh, "~32x0000cd00");
+  EXPECT_REGISTER(regs.prsr.csum_chk_ram[1].csum_chk[1].csum_mask_sel, "3x2");
+  EXPECT_REGISTER(regs.prsr.csum_chk_ram[1].csum_chk[1].csum_hdr_id, "8x3");
+}
+
+TEST(flatrock_parser, section_checksum_checker_invalid_unit) {
+    const char *code = R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    md32: 0
+    ethernet: 1
+    ipv4: 2
+    ipv6: 3
+    tcp: 4
+    udp: 5
+  seq:
+    0: [ 1, 2, 4 ]  # ethernet, ipv4, tcp
+    1: [ ethernet, ipv4, udp ]
+  len:
+    2: { base_len: 20, num_comp_bits: 4, scale: 2 }  # IPv4: 20B + N * 4B; N < 10
+    ipv6: { base_len: 40, num_comp_bits: 7, scale: 3 }  # IPv6: 40B + N * 8B
+parser ingress:
+  checksum_checkers:
+    mask 0: 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    mask 2: 0x000000000000000000000000000000000000111100000000ffffffff
+    mask 1: 0xdabcdcafe0011aabbccdd12345678abba4242acda11420401b3ac
+    %UNIT%
+    unit 1:
+      pov_select: [ state 7, flags 3, state 2 ]
+      config 0:
+        match_pov: 0x**1d**bc
+        mask_sel: 1
+        hdr: tcp
+      config 1:
+        match_pov: 0x****cd**
+        mask_sel: 2
+        hdr: 3
+)PARSER_CFG";
+
+  std::string str;
+  auto with_unit = [&str](const std::string& unit, std::string code) {
+      str = code;
+      boost::replace_all(str, "%UNIT%", unit);
+      return str.c_str();
+  };
+
+  {
+    /* -- unit index is not from range 0-1 */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 5:
+      pov_select: [ flags 0, state 1, flags 7, state 2 ]
+      config 0:
+          match_pov: 0x**1dacbc
+          mask_sel: 1
+          hdr: tcp
+    )", code)));
+  }
+
+  {
+    /* -- unit index is not from range 0-1 */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit -1:
+      pov_select: [ flags 0, state 1, flags 7, state 2 ]
+      config 0:
+          match_pov: 0x**1dacbc
+          mask_sel: 1
+          hdr: tcp
+    )", code)));
+  }
+
+  {
+    /* -- config index is not from range 0-15 */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0:
+      pov_select: [ flags 0, state 1, flags 7, state 2 ]
+      config 16:
+          match_pov: 0x**1dacbc
+          mask_sel: 1
+          hdr: tcp
+    )", code)));
+  }
+
+  {
+    /* -- config index is not from range 0-15 */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0:
+      pov_select: [ flags 0, state 1, flags 7, state 2 ]
+      config -2:
+          match_pov: 0x**1dacbc
+          mask_sel: 1
+          hdr: tcp
+    )", code)));
+  }
+
+  {
+    /* -- match_pov references unused byte */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0:
+      pov_select: [ state 1, flags 7, state 2 ]
+      config 0:
+          match_pov: 0xab1dac**
+          mask_sel: 1
+          hdr: tcp
+    )", code)));
+  }
+
+  {
+    /* -- match_pov references unused byte */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0:
+      pov_select: [ state 1, flags 7, state 2 ]
+      config 0:
+          match_pov: 0xab**ac2*
+          mask_sel: 1
+          hdr: tcp
+    )", code)));
+  }
+
+  {
+    /* -- match_pov references unused byte */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0:
+      pov_select: [ state 1, flags 7 ]
+      config 0:
+          match_pov: 0xab**a***
+          mask_sel: 1
+          hdr: tcp
+    )", code)));
+  }
+
+  {
+    /* -- match_pov references unused byte */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0:
+      pov_select: [ state 1 ]
+      config 0:
+          match_pov: 0x*b******
+          mask_sel: 1
+          hdr: tcp
+    )", code)));
+  }
+
+  {
+    /* -- match_pov references unused byte */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0:
+      pov_select: []
+      config 0:
+          match_pov: 0x*b******
+          mask_sel: 1
+          hdr: tcp
+    )", code)));
+  }
+
+  {
+    /* -- mask_sel references invalid mask */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0:
+      pov_select: [ flags 0, state 1, flags 7, state 2 ]
+      config 0:
+          match_pov: 0x*b******
+          mask_sel: 4
+          hdr: tcp
+    )", code)));
+  }
+
+  {
+    /* -- mask_sel references invalid mask */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0:
+      pov_select: [ flags 0, state 1, flags 7, state 2 ]
+      config 0:
+          match_pov: 0x*b******
+          mask_sel: -1
+          hdr: tcp
+    )", code)));
+  }
+
+  {
+    /* -- mask_sel references invalid mask */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0:
+      pov_select: [ flags 0, state 1, flags 7, state 2 ]
+      config 0:
+          match_pov: 0x**1dacbc
+          mask_sel: 4
+          hdr: tcp
+    )", code)));
+  }
+
+  {
+    /* -- mask_sel references invalid mask */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0:
+      pov_select: [ flags 0, state 1, flags 7, state 2 ]
+      config 0:
+          match_pov: 0x**1dacbc
+          mask_sel: 3
+          hdr: tcp
+    )", code)));
+  }
+
+  {
+    /* -- mask_sel references invalid mask */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0:
+      pov_select: [ flags 0, state 1, flags 7, state 2 ]
+      config 0:
+          match_pov: 0x**1dacbc
+          mask_sel: -1
+          hdr: tcp
+    )", code)));
+  }
+
+  {
+    /* -- pov_select has too many elements */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0:
+      pov_select: [ flags 0, state 1, flags 7, state 2, flags 1 ]
+      config 0:
+          match_pov: 0x**1dacbc
+          mask_sel: 0
+          hdr: tcp
+    )", code)));
+  }
+
+  {
+    /* -- match_pov is too wide */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0:
+      pov_select: [ flags 0, state 1, flags 7, state 2 ]
+      config 0:
+          match_pov: 0x**1dacbcff
+          mask_sel: 0
+          hdr: tcp
+    )", code)));
+  }
+
+  {
+    /* -- hdr specifies invalid header */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0:
+      pov_select: [ flags 0, state 1, flags 7, state 2 ]
+      config 0:
+          match_pov: 0x**1dacbc
+          mask_sel: 0
+          hdr: aaa
+    )", code)));
+  }
+
+  {
+    /* -- hdr specifies invalid header */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0:
+      pov_select: [ flags 0, state 1, flags 7, state 2 ]
+      config 0:
+          match_pov: 0x**1dacbc
+          mask_sel: 0
+          hdr: 255
+    )", code)));
+  }
+
+  {
+    /* -- hdr specifies invalid header */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0:
+      pov_select: [ flags 0, state 1, flags 7, state 2 ]
+      config 0:
+          match_pov: 0x**1dacbc
+          mask_sel: 0
+          hdr: 1200
+    )", code)));
+  }
+
+  {
+    /* -- unit key has invalid parameters */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0 1:
+      pov_select: [ flags 0, state 1, flags 7, state 2 ]
+      config 0:
+          match_pov: 0x**1dacbc
+          mask_sel: 0
+          hdr: tcp
+    )", code)));
+  }
+
+  {
+    /* -- unit key has invalid parameters */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit:
+      pov_select: [ flags 0, state 1, flags 7, state 2 ]
+      config 0:
+          match_pov: 0x**1dacbc
+          mask_sel: 0
+          hdr: tcp
+    )", code)));
+  }
+
+  {
+    /* -- unit key has invalid parameters */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit abc:
+      pov_select: [ flags 0, state 1, flags 7, state 2 ]
+      config 0:
+          match_pov: 0x**1dacbc
+          mask_sel: 0
+          hdr: tcp
+    )", code)));
+  }
+
+  {
+    /* -- config key has invalid parameters */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0:
+      pov_select: [ flags 0, state 1, flags 7, state 2 ]
+      config 0 1:
+          match_pov: 0x**1dacbc
+          mask_sel: 0
+          hdr: tcp
+    )", code)));
+  }
+
+  {
+    /* -- config key has invalid parameters */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0:
+      pov_select: [ flags 0, state 1, flags 7, state 2 ]
+      config abc:
+          match_pov: 0x**1dacbc
+          mask_sel: 0
+          hdr: tcp
+    )", code)));
+  }
+
+  {
+    /* -- config key has invalid parameters */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0:
+      pov_select: [ flags 0, state 1, flags 7, state 2 ]
+      config 0 abc:
+          match_pov: 0x**1dacbc
+          mask_sel: 0
+          hdr: tcp
+    )", code)));
+  }
+
+  {
+    /* -- match_pov key has invalid parameters */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0:
+      pov_select: [ flags 0, state 1, flags 7, state 2 ]
+      config 0:
+          match_pov 1: 0x**1dacbc
+          mask_sel: 0
+          hdr: tcp
+    )", code)));
+  }
+
+  {
+    /* -- mask_sel key has invalid parameters */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0:
+      pov_select: [ flags 0, state 1, flags 7, state 2 ]
+      config 0:
+          match_pov: 0x**1dacbc
+          mask_sel 1: 0
+          hdr: tcp
+    )", code)));
+  }
+
+  {
+    /* -- hdr key has invalid parameters */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0:
+      pov_select: [ flags 0, state 1, flags 7, state 2 ]
+      config 0:
+          match_pov: 0x**1dacbc
+          mask_sel: 0
+          hdr 1: tcp
+    )", code)));
+  }
+
+  {
+    /* -- pov_select key has invalid parameters */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0:
+      pov_select 1: [ flags 0, state 1, flags 7, state 2 ]
+      config 0:
+          match_pov: 0x**1dacbc
+          mask_sel: 0
+          hdr: tcp
+    )", code)));
+  }
+
+  {
+    /* -- pov_select value has invalid type */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0:
+      pov_select: flags 0
+      config 0:
+          match_pov: 0x**1dacbc
+          mask_sel: 0
+          hdr: tcp
+    )", code)));
+  }
+
+  {
+    /* -- hdr value has invalid type */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0:
+      pov_select: [ flags 0, state 1, flags 7, state 2 ]
+      config 0:
+          match_pov: 0x**1dacbc
+          mask_sel: 0
+          hdr: 0x**42**
+    )", code)));
+  }
+
+  {
+    /* -- mask_sel value has invalid type */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0:
+      pov_select: [ flags 0, state 1, flags 7, state 2 ]
+      config 0:
+          match_pov: 0x**1dacbc
+          mask_sel: abc
+          hdr: tcp
+    )", code)));
+  }
+
+  {
+    /* -- match_pov value has invalid type */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_unit(R"(
+    unit 0:
+      pov_select: [ flags 0, state 1, flags 7, state 2 ]
+      config 0:
+          match_pov: hello
+          mask_sel: 0
+          hdr: tcp
+    )", code)));
+  }
+}
+
+TEST(flatrock_parser, section_checksum_checker_invalid_masks) {
+    const char *code = R"PARSER_CFG(
+version:
+  target: Tofino5
+hdr:
+  map:
+    md32: 0
+    ethernet: 1
+    ipv4: 2
+    ipv6: 3
+    tcp: 4
+    udp: 5
+  seq:
+    0: [ 1, 2, 4 ]  # ethernet, ipv4, tcp
+    1: [ ethernet, ipv4, udp ]
+  len:
+    2: { base_len: 20, num_comp_bits: 4, scale: 2 }  # IPv4: 20B + N * 4B; N < 10
+    ipv6: { base_len: 40, num_comp_bits: 7, scale: 3 }  # IPv6: 40B + N * 8B
+parser ingress:
+  checksum_checkers:
+    %MASKS%
+    unit 1:
+      pov_select: [ state 7, flags 3, state 2 ]
+      config 0:
+        match_pov: 0x**1d**bc
+        mask_sel: 0
+        hdr: tcp
+      config 1:
+        match_pov: 0x****cd**
+        mask_sel: 0
+        hdr: 3
+)PARSER_CFG";
+
+  std::string str;
+  auto with_masks = [&str](const std::string& unit, std::string code) {
+      str = code;
+      boost::replace_all(str, "%MASKS%", unit);
+      return str.c_str();
+  };
+
+  {
+    /* -- mask index is not from range 0-3 */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_masks(R"(
+    mask 0: 0xff
+    mask 4: 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    )", code)));
+  }
+
+  {
+    /* -- mask index is not from range 0-3 */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_masks(R"(
+    mask 0: 0xff
+    mask -1: 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    )", code)));
+  }
+
+  {
+    /* -- mask is too wide */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_masks(R"(
+    mask 0: 0xff
+    mask 1: 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    )", code)));
+  }
+
+  {
+    /* -- mask value has incorrect type */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_masks(R"(
+    mask 0: 0xff
+    mask 1: 0x**abc**
+    )", code)));
+  }
+
+  {
+    /* -- mask value has incorrect type */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_masks(R"(
+    mask 0: 0xff
+    mask 1: hello
+    )", code)));
+  }
+
+  {
+    /* -- mask key has incorrect parameters */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_masks(R"(
+    mask 0: 0xff
+    mask: 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    )", code)));
+  }
+
+  {
+    /* -- mask key has incorrect parameters */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_masks(R"(
+    mask 0: 0xff
+    mask 1 0: 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    )", code)));
+  }
+
+  {
+    /* -- mask key has incorrect parameters */
+    AsmParserGuard parser;
+    EXPECT_FALSE(parser.parseString(with_masks(R"(
+    mask 0: 0xff
+    mask abc: 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    )", code)));
+  }
+}
+
 
 }  // namespace
 

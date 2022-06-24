@@ -1825,6 +1825,251 @@ void FlatrockParser::AnalyzerStage::write_config(RegisterSetBase &regs, json::ma
     }
 }
 
+void FlatrockParser::ChecksumCheckers::input_unit(std::size_t id, value_t &data) {
+    if (!CHECKTYPE(data, tMAP)) {
+        return;
+    }
+
+    auto is_config_key = [](value_t &val) {
+        if (!CHECKTYPE(val, tCMD)) {
+            return false;
+        }
+        if (val.vec.size != 2) {
+            error(val.lineno, "expected 1 parameter for the 'config' key, got %d", val.vec.size);
+            return false;
+        }
+        return CHECKTYPE(val.vec[0], tSTR) &&
+               CHECKTYPE(val.vec[1], tINT) &&
+               check_range(val.vec[1], 0, Target::Flatrock::PARSER_PROFILES - 1);
+    };
+
+    bool saw_pov_select = false;
+    for (auto &kv : MapIterChecked(data.map, true)) {
+        if (kv.key == "pov_select") {
+            if (CHECKTYPE(kv.key, tSTR)) {
+                units[id].pov_select.input(kv.value);
+            }
+            saw_pov_select = true;
+        } else if (kv.key == "config") {
+            if (is_config_key(kv.key)) {
+                input_config(id, kv.key.vec[1].i, kv.value);
+            }
+        } else {
+            report_invalid_directive("invalid key", kv.key);
+        }
+    }
+    if (!saw_pov_select) {
+        error(data.lineno, "each checksum unit must have pov_select specified");
+    }
+    units[id].used = true;
+    units[id].lineno = data.lineno;
+}
+
+void FlatrockParser::ChecksumCheckers::input_config(std::size_t unit_id, std::size_t id,
+                                                   value_t &data) {
+    if (!CHECKTYPE(data, tMAP)) {
+        return;
+    }
+
+    auto parse_hdr_id = [](value_t &val) -> boost::optional<uint8_t> {
+        if (!CHECKTYPE2(val, tSTR, tINT)) {
+            error(val.lineno,
+                  "id attribute of the push_hdr_id must be a symbolic header name "
+                  "or a numeric id");
+            return boost::none;
+        }
+        if (val.type == tSTR) {
+            int id = Hdr::id(val.lineno, val.s);
+            value_t idVal{.type = tINT, .lineno = val.lineno, .i = id};
+            if (!check_range(idVal, 0, Target::Flatrock::PARSER_HDR_ID_MAX)) {
+                return boost::none;
+            }
+            return static_cast<uint8_t>(id);
+        } else if (val.type == tINT) {
+            if (!check_range(val, 0, Target::Flatrock::PARSER_HDR_ID_MAX)) {
+                return boost::none;
+            }
+            return static_cast<uint8_t>(val.i);
+        }
+        return boost::none;
+    };
+
+    auto &config = units[unit_id].configs[id];
+    for (auto &kv : MapIterChecked(data.map, true)) {
+        if (kv.key == "match_pov") {
+            if (!CHECKTYPE(kv.key, tSTR) || !CHECKTYPE(kv.value, tMATCH)) {
+                continue;
+            }
+            input_match_constant(config.match_pov, kv.value,
+                                 Target::Flatrock::PARSER_CSUM_MATCH_WIDTH);
+        } else if (kv.key == "mask_sel") {
+            if (!CHECKTYPE(kv.key, tSTR) ||
+                !check_range(kv.value, 0, Target::Flatrock::PARSER_CSUM_MASKS - 1)) {
+                continue;
+            }
+            config.mask_sel = kv.value.i;
+        } else if (kv.key == "hdr") {
+            auto hdr_id = parse_hdr_id(kv.value);
+            if (!CHECKTYPE(kv.key, tSTR) || !hdr_id) {
+                continue;
+            }
+            config.hdr_id = hdr_id.value();
+        } else {
+            report_invalid_directive("invalid key", kv.key);
+        }
+    }
+    config.lineno = data.lineno;
+    config.used = true;
+}
+
+void FlatrockParser::ChecksumCheckers::input_mask(std::size_t id, value_t &data) {
+    if (!CHECKTYPE2(data, tBIGINT, tINT)) {
+        return;
+    }
+    bitvec bv = get_bitvec(data, Target::Flatrock::PARSER_CSUM_MASK_BITS,
+                           "checksum mask cannot be wider than 224b");
+    for (std::size_t i = 0; i < Target::Flatrock::PARSER_CSUM_MASK_WIDTH; ++i) {
+        constexpr std::size_t stride = Target::Flatrock::PARSER_CSUM_MASK_REG_WIDTH;
+        masks[id].words[i] = static_cast<uint32_t>(bv.getrange(i * stride, stride));
+    }
+    masks[id].lineno = data.lineno;
+    masks[id].used = true;
+}
+
+void FlatrockParser::ChecksumCheckers::write_unit(std::size_t id,
+                                                  Target::Flatrock::parser_regs &regs) {
+    if (!units[id].used) {
+        return;
+    }
+    write_pov_select(id, regs);
+    for (std::size_t i = 0; i < Target::Flatrock::PARSER_PROFILES; ++i) {
+        write_config(id, i, regs);
+    }
+}
+
+void FlatrockParser::ChecksumCheckers::write_pov_select(std::size_t unit_id,
+                                                        Target::Flatrock::parser_regs &regs) {
+    auto &pov_select = units[unit_id].pov_select;
+    auto &pov_regs = regs.prsr.csum_key_ext[unit_id];
+    for (std::size_t i = 0; i < Target::Flatrock::PARSER_POV_SELECT_NUM; ++i) {
+        pov_regs.src[i] = pov_select.key[i].src;
+        pov_regs.start[i] = pov_select.key[i].start;
+    }
+}
+
+void FlatrockParser::ChecksumCheckers::write_config(std::size_t unit_id, std::size_t id,
+                                                   Target::Flatrock::parser_regs &regs) {
+    if (!units[unit_id].configs[id].used) {
+        return;
+    }
+    auto &config_regs = regs.prsr.csum_chk_ram[unit_id].csum_chk[id];
+    auto &config = units[unit_id].configs[id];
+    config_regs.csum_hdr_id = config.hdr_id;
+    config_regs.csum_mask_sel = config.mask_sel;
+    auto &config_mem = regs.prsr_mem.csum_chk_tcam.csum_tcam[unit_id][id];
+    config_mem.key_wh = config.match_pov.word0;
+    config_mem.key_wl = config.match_pov.word1;
+}
+
+void FlatrockParser::ChecksumCheckers::write_mask(std::size_t id,
+                                                  Target::Flatrock::parser_regs &regs) {
+    if (!masks[id].used) {
+        return;
+    }
+    auto &mask_regs = regs.prsr.csum_mask.csum_mask[id];
+    for (std::size_t i = 0; i < Target::Flatrock::PARSER_CSUM_MASK_WIDTH; ++i) {
+        mask_regs.en32[i] = masks[id].words[i];
+    }
+}
+
+void FlatrockParser::ChecksumCheckers::validate() {
+    auto check_mask = [&](Config &conf) {
+        if (!conf.used) {
+            return;
+        }
+        if (!masks[conf.mask_sel].used) {
+            error(conf.lineno, "cannot reference unused mask %d", conf.mask_sel);
+        }
+    };
+
+    auto check_match_pov = [](PovSelect &ps) {
+        return [ps](Config &conf) {
+            if (!conf.used) {
+                return;
+            }
+            bool success = ps.check_match(conf.match_pov);
+            if (!success) {
+                error(conf.lineno, "match constant references unused POV byte");
+            }
+        };
+    };
+
+    for (auto &unit : units) {
+        if (!unit.used) {
+            continue;
+        }
+        std::for_each(std::begin(unit.configs), std::end(unit.configs), check_mask);
+        std::for_each(std::begin(unit.configs), std::end(unit.configs),
+                      check_match_pov(unit.pov_select));
+    }
+}
+
+void FlatrockParser::ChecksumCheckers::input(VECTOR(value_t) args, value_t data) {
+    auto is_mask_key = [](value_t &val) {
+        if (!CHECKTYPE(val, tCMD)) {
+            return false;
+        }
+        if (val.vec.size != 2) {
+            error(val.lineno, "expected 1 parameter for the 'mask' key, got %d", val.vec.size);
+            return false;
+        }
+        return CHECKTYPE(val.vec[0], tSTR) &&
+               CHECKTYPE(val.vec[1], tINT) &&
+               check_range(val.vec[1], 0, Target::Flatrock::PARSER_CSUM_MASKS - 1);
+    };
+
+    auto is_unit_key = [](value_t &val) {
+        if (!CHECKTYPE(val, tCMD)) {
+            return false;
+        }
+        if (val.vec.size != 2) {
+            error(val.lineno, "expected 1 parameter for the 'unit' key, got %d", val.vec.size);
+            return false;
+        }
+        return CHECKTYPE(val.vec[0], tSTR) &&
+               CHECKTYPE(val.vec[1], tINT) &&
+               check_range(val.vec[1], 0, Target::Flatrock::PARSER_CHECKSUM_UNITS - 1);
+    };
+
+    for (auto &kv : MapIterChecked(data.map, true)) {
+        if (kv.key == "mask") {
+            if (is_mask_key(kv.key)) {
+                input_mask(kv.key.vec[1].i, kv.value);
+            }
+        } else if (kv.key == "unit") {
+            if (is_unit_key(kv.key)) {
+                input_unit(kv.key.vec[1].i, kv.value);
+            }
+        } else {
+            report_invalid_directive("invalid key", kv.key);
+        }
+    }
+    validate();
+}
+
+void FlatrockParser::ChecksumCheckers::write_config(RegisterSetBase &regs, json::map &json,
+                                                   bool legacy) {
+    auto *fr_regs = dynamic_cast<Target::Flatrock::parser_regs *>(&regs);
+    BUG_CHECK(fr_regs, "the registers must be Flatrock registers");
+
+    for (std::size_t i = 0; i < Target::Flatrock::PARSER_CSUM_MASKS; ++i) {
+        write_mask(i, *fr_regs);
+    }
+    for (std::size_t i = 0; i < Target::Flatrock::PARSER_CHECKSUM_UNITS; ++i) {
+        write_unit(i, *fr_regs);
+    }
+}
+
 void FlatrockParser::input_port_metadata(VECTOR(value_t) args, value_t key, value_t value) {
     if (!CHECKTYPE(key, tSTR) || !CHECKTYPE(value, tMAP)) return;
     for (auto &item : value.map) {
@@ -2003,6 +2248,13 @@ void InitialPredicationVector::write_config(RegisterSetBase &_regs,
     }
 }
 
+void FlatrockParser::input_checksum_checkers(VECTOR(value_t) args, value_t key, value_t value) {
+    if (!CHECKTYPE(key, tSTR) || !CHECKTYPE(value, tMAP)) {
+        return;
+    }
+    csum_checkers.input(args, value);
+}
+
 void FlatrockParser::input(VECTOR(value_t) args, value_t data) {
     if (!CHECKTYPE(data, tMAP)) return;
     for (auto &kv : MapIterChecked(data.map, true)) {
@@ -2021,6 +2273,8 @@ void FlatrockParser::input(VECTOR(value_t) args, value_t data) {
             initial_predication_vector[0].input(args, kv.value);
         } else if (kv.key == "ghost_initial_predication_vector" && CHECKTYPE(kv.key, tSTR)) {
             initial_predication_vector[1].input(args, kv.value);
+        } else if (kv.key == "checksum_checkers") {
+            input_checksum_checkers(args, kv.key, kv.value);
         } else {
             report_invalid_directive("invalid key", kv.key);
         }
@@ -2045,6 +2299,7 @@ void FlatrockParser::write_config(RegisterSetBase &regs, json::map &json, bool l
     }
     initial_predication_vector[0].write_config(regs, json, legacy);
     initial_predication_vector[1].write_config(regs, json, legacy);
+    csum_checkers.write_config(regs, json, legacy);
     if (auto *top = TopLevel::regs<Target::Flatrock>()) {
         top->mem_pipe.prsr_mem.set("mem.prsr_mem", &_regs.prsr_mem);
         top->reg_pipe.prsr.set("reg.prsr", &_regs.prsr);
