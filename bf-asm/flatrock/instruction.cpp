@@ -81,7 +81,7 @@ struct operand {
         void pass1(Table *tbl, int) override {
             tbl->stage->action_use[tbl->gress][reg->reg.uid] = true; }
         void pass2(Table *tbl, int slot) override {
-            InputXbar::Group grp(InputXbar::Group::XCMP, -1);
+            ::InputXbar::Group grp(::InputXbar::Group::XCMP, -1);
             int byte = tbl->find_on_ixbar(*reg, grp, &grp);
             if (byte < 0) {
                 error(reg.lineno, "%s not available on the xcmp ixbar", reg.name());

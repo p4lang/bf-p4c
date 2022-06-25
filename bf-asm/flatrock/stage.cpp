@@ -19,6 +19,12 @@ template<> void Stage::write_regs(Target::Flatrock::mau_regs &regs, bool egress_
         Flatrock::InputXbar::write_global_regs(regs, INGRESS);
         Flatrock::InputXbar::write_global_regs(regs, GHOST);
     }
+    if (tables.empty()) {
+        /* no tables in this stage, so bypass */
+        regs.rf.ppu_cfg.bypass = 1;
+    }
+    regs.rf.ppu_phvfifo_cfg.delay = 8;  // FIXME -- needs to be 8-31
+    regs.rf.ppu_pktdly_cfg.delay = 2;   // FIXME -- needs to be 2-31
 }
 
 void AlwaysRunTable::write_regs(Target::Flatrock::mau_regs &regs) {

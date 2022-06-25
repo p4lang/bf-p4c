@@ -10,10 +10,11 @@ template<> void InputXbar::write_xmu_regs(Target::Flatrock::mau_regs &regs);
 namespace Flatrock {
 
 class InputXbar : public ::InputXbar {
-    enum { XME_UNITS = 16, FIRST_STM_UNIT = 8 };  // 0-7 are LAMB and 8-15 are STM
+    enum { XMU_UNITS = 8, XME_UNITS = 16, FIRST_STM_XME = 8 };  // 0-7 are LAMB and 8-15 are STM
 
     bitvec      dconfig;
     bitvec      xme_units;
+    int         output_unit = -1;
     unsigned    first8, num8, first32, num32;
 
     friend class ::InputXbar;

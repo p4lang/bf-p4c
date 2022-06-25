@@ -79,20 +79,27 @@ void Flatrock::InputXbar::check_input(Group group, Input &input, TcamUseCache &t
 }
 
 bool Flatrock::InputXbar::parse_unit(Table *t, const pair_t &kv) {
-    if (kv.key[0] != "exact") return false;
-    if (CHECKTYPE2(kv.value, tINT, tVEC)) {
-        if (kv.value.type == tINT) {
-            if (kv.value.i < 0 || kv.value.i >= XME_UNITS)
-                error(kv.value.lineno, "Invalid exact unit %" PRId64, kv.value.i);
-            else
-                xme_units[kv.value.i] = 1;
-        } else {
-            for (auto &v : kv.value.vec) {
-                if (CHECKTYPE(v, tINT)) {
-                    if (v.i < 0 || v.i >= XME_UNITS)
-                        error(v.lineno, "Invalid exact unit %" PRId64, v.i);
-                    else
-                        xme_units[v.i] = 1; } } } }
+    if (kv.key[0] == "output") {
+        if (CHECKTYPE(kv.value, tINT)) {
+            if (kv.value.i < 0 || kv.value.i >= XMU_UNITS)
+                error(kv.value.lineno, "Invalid output unit %" PRId64, kv.value.i);
+            output_unit = kv.value.i; }
+    } else if (kv.key[0] == "exact") {
+        if (CHECKTYPE2(kv.value, tINT, tVEC)) {
+            if (kv.value.type == tINT) {
+                if (kv.value.i < 0 || kv.value.i >= XME_UNITS)
+                    error(kv.value.lineno, "Invalid exact unit %" PRId64, kv.value.i);
+                else
+                    xme_units[kv.value.i] = 1;
+            } else {
+                for (auto &v : kv.value.vec) {
+                    if (CHECKTYPE(v, tINT)) {
+                        if (v.i < 0 || v.i >= XME_UNITS)
+                            error(v.lineno, "Invalid exact unit %" PRId64, v.i);
+                        else
+                            xme_units[v.i] = 1; } } } }
+    } else {
+        return false; }
     return true;
 }
 
@@ -177,8 +184,8 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
                     set_bit(minput.minput_word_pwr[0],
                             minput_word_pwr_transpose[input.what->reg.uid]);
                     for (int x : xme_units) {
-                        if (x < FIRST_STM_UNIT) continue;
-                        minput.rf.minput_em_xb_stm_tab[(x-FIRST_STM_UNIT)/2].key32_used
+                        if (x < FIRST_STM_XME) continue;
+                        minput.rf.minput_em_xb_stm_tab[(x-FIRST_STM_XME)/2].key32_used
                             |= 1U << input.lo/32U; } }
             } else {
                 auto &key8 = em_key_cfg.minput_em_xb_key8;
@@ -264,7 +271,7 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
                         row[col.first].gf |= b; } } }
             int prev_xmu = -1;
             for (int xme : xme_units) {
-                if (xme < FIRST_STM_UNIT) continue;
+                if (xme < FIRST_STM_XME) continue;
                 int xmu = xme/2;
                 if (prev_xmu == xmu) continue;
                 minput.rf.minput_em_whash2[xmu-4].enable_ |= word;
@@ -293,22 +300,70 @@ void Flatrock::InputXbar::write_xmu_key_mux(Target::Flatrock::mau_regs::_ppu_ems
         xmu.ems_key_cfg[d].num32 = num32; }
 }
 
-void Flatrock::InputXbar::write_xme_regs(Target::Flatrock::mau_regs::_ppu_eml &xmu, int l) {
+void Flatrock::InputXbar::write_xme_regs(Target::Flatrock::mau_regs::_ppu_eml &xmu, int xme) {
+    auto *mt = table->to<SRamMatchTable>();
+    BUG_CHECK(mt, "%s is not an sram table", table->name());
+    SRamMatchTable::Ram unit(xme);
+    auto *way = mt->way_for_ram(unit);
+    int idx = std::find(way->rams.begin(), way->rams.end(), unit) - way->rams.begin();
+    int subword_bits = 0;
+    int bank_bits = ceil_log2(way->rams.size());
+    int set_size = 1;
+    bitvec key_mask;
+    int key_size = 0;
+    if (auto *match = table->format->field("match")) {
+        // cuckoo hash (or BPH?)
+        set_size = table->format->groups();
+        while (set_size > 4) {
+            BUG_CHECK((set_size & 1) == 0, "cuckoo table %s match groups not valid", table->name());
+            set_size >>= 1;
+            ++subword_bits; }
+        // FIXME -- figure out key_mask and key_size
+    } else {
+        // direct match
+        subword_bits = ceil_log2(table->format->groups());
+        BUG_CHECK(table->format->groups() == 1 << subword_bits, "direct table %s match "
+                  "groups not a power of 2", table->name());
+    }
+    int addr_size = bank_bits + 6 + subword_bits;  // 6 is the whole lamb, but we could use less?
+    int hash_base = way->group + way->subgroup*addr_size;
     for (int d : dconfig) {
-        xmu.eml_addr_cfg[l][d].banknum = 0;
-        xmu.eml_match_cfg[l][d].entries_per_set = table->format->groups();
-        // TBD -- rest of the config fields
+        auto &addr = xmu.eml_addr_cfg[xme%2U][d];
+        addr.banknum = idx;
+        addr.banknum_size = bank_bits;
+        addr.banknum_start = hash_base + addr_size - bank_bits;
+        addr.base_addr = 0;   // does not seem useful?
+        addr.idx_size = 6;
+        addr.idx_start = hash_base + subword_bits;
+        xmu.eml_en_sel[xme%2U][d].en = 1;
+        xmu.eml_lamb_map[xme%2U][d].sel = output_unit;
+        auto &match = xmu.eml_match_cfg[xme%2U][d];
+        match.bph_l1_en = 0;  // FIXME -- support BPH
+        match.entries_per_set = set_size;
+        for (int i = 0; i < 16; ++i)
+            match.key_mask[i] = key_mask.getrange(i*8, 8);
+        match.key_size = key_size;
+        match.sets_per_word = subword_bits;
+        match.valid_en = 0;  // FIXME -- one bit valid field
+        auto &payload = xmu.eml_payload_cfg[xme%2U][d];
+        payload.addon = 0;      // not clear what it is used for?
+        payload.base_mask = 0;  // pass ram data (can pass key bytes, useful for?)
+        payload.cuckoo_start = 0;
+        payload.idx_hi = 63;    // can rotate and chop the the payload if
+        payload.idx_lo = 0;     // that can be useful?  align things?
+        payload.idx_rot = 0;
+        payload.mres_en = 1;
     }
 }
 
-void Flatrock::InputXbar::write_xme_regs(Target::Flatrock::mau_regs::_ppu_ems &xmu, int l) {
+void Flatrock::InputXbar::write_xme_regs(Target::Flatrock::mau_regs::_ppu_ems &xmu, int xme) {
     BUG("STM XME setup not done yet");
 }
 
 void Flatrock::InputXbar::write_xmu_regs_v(Target::Flatrock::mau_regs &regs) {
     int prev_xme = -1;
     for (auto xme : xme_units) {
-        bool lamb = xme < FIRST_STM_UNIT;
+        bool lamb = xme < FIRST_STM_XME;
         int xmu = (xme/2U)%4U;
         if (xme%2U != prev_xme%2U) {
             if (lamb)
@@ -316,9 +371,9 @@ void Flatrock::InputXbar::write_xmu_regs_v(Target::Flatrock::mau_regs &regs) {
             else
                 write_xmu_key_mux(regs.ppu_ems[xmu]); }
         if (lamb)
-            write_xme_regs(regs.ppu_eml[xmu], xme%2U);
+            write_xme_regs(regs.ppu_eml[xmu], xme);
         else
-            write_xme_regs(regs.ppu_ems[xmu], xme%2U);
+            write_xme_regs(regs.ppu_ems[xmu], xme - FIRST_STM_XME);
         prev_xme = xme; }
 }
 

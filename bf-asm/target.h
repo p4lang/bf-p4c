@@ -768,7 +768,6 @@ class Target::Flatrock : public Target {
         NUM_PARSERS = 1,
         NUM_PIPES = 8,  // TODO what is the correct number here?
         TABLES_REQUIRE_ROW = 0,
-        TABLES_REQUIRE_WAYS = false,
         PARSER_CSUM_MASKS = 4,
         PARSER_CSUM_MASK_WIDTH = 7,
         PARSER_CSUM_MASK_REG_WIDTH = 32,  // Each checksum mask is written into 7 32b wide registers

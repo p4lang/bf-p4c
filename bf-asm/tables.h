@@ -999,7 +999,7 @@ FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,                                  \
         write_regs_vt(regs); })
 
 DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam, or proxy_hash
- protected:
+ public:
     struct Ram {
         int                             stage = -1;  // current stage (only) for tofino1/2/3
         int                             row = -1;
@@ -1008,10 +1008,15 @@ DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam,
         explicit Ram(int unit) : col(unit) {}
         Ram(int r, int c) : row(r), col(c) {}
         Ram(int s, int r, int c) : stage(s), row(r), col(c) {}
+        bool operator==(const Ram &a) const {
+            return std::tie(stage, row, col) == std::tie(a.stage, a.row, a.col); }
+        bool operator!=(const Ram &a) const {
+            return std::tie(stage, row, col) != std::tie(a.stage, a.row, a.col); }
         bool operator<(const Ram &a) const {
             return std::tie(stage, row, col) < std::tie(a.stage, a.row, a.col); }
         bool isLamb() const { return stage == -1 && row == -1; }
     };
+ protected:
     struct Way {
         int                             lineno;
         int                             group, subgroup, mask;
@@ -1117,6 +1122,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam,
     SelectionTable *get_selector() const override { return attached.get_selector(); }
     StatefulTable *get_stateful() const override { return attached.get_stateful(); }
     MeterTable* get_meter() const override { return attached.get_meter(); }
+    const Way *way_for_ram(Ram r) const { return &ways[way_map.at(r).way]; }
 )
 
 DECLARE_TABLE_TYPE(ExactMatchTable, SRamMatchTable, "exact_match",

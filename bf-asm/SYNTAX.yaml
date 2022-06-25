@@ -519,7 +519,7 @@ stage <constant> <thread>:
         dyanamic_config:
             # (Flatrock only) dynamic config setup for table
             <int> : <match-constant>
-            <int> : { <slice> : <match-constant>
+            <int> : { <slice> : <match-constant> }
                 # defines the match for one specific dconfig bit.  Match may be a single
                 # match for the entire width (40 bits on flatrock) or matches against specific
                 # named slices of those PHVs.  Other bits are implicitly don't-care
@@ -610,8 +610,10 @@ stage <constant> <thread>:
                 # use an xbar group configured elsewhere
             random_seed: <constant>
                 # random seed from pragma for the table
-            <type> unit: <vector>
-                # match unit(s) to use (tofino5)
+            exact unit: <vector>
+                # xme unit(s) to use (tofino5)
+            output unit: <int>
+                # physical mres output to use (tofino5)
         gateway:
             # gateway table on this table -- see below
         format: { <name>: <range>, <name>: <size> ... }

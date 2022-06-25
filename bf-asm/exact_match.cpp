@@ -132,87 +132,89 @@ void ExactMatchTable::determine_ghost_bits() {
         }
     }
 
-    int way_index = 0;
-    for (auto way : ways) {
-        BUG_CHECK(input_xbar.size() == 1, "%s does not have one input xbar", name());
-        bitvec hash_tables;
-        if (auto *hash_group = input_xbar[0]->get_hash_group(way.group)) {
-            hash_tables = bitvec(hash_group->tables);
-        } else {
-            for (auto &ht : input_xbar[0]->get_hash_tables())
-                hash_tables[ht.first] = 1; }
+    BUG_CHECK(!input_xbar.empty(), "%s does not have an input xbar", name());
+    for (const auto &ixb : input_xbar) {
+        int way_index = 0;
+        for (auto way : ways) {
+            bitvec hash_tables;
+            if (auto *hash_group = ixb->get_hash_group(way.group)) {
+                hash_tables = bitvec(hash_group->tables);
+            } else {
+                for (auto &ht : ixb->get_hash_tables())
+                    hash_tables[ht.first] = 1; }
 
-        // key is the field name/field bit that is the ghost bit
-        // value is the bits that the ghost bit appears in within this way
-        std::map<std::pair<std::string, int>, bitvec> ghost_bit_impact;
+            // key is the field name/field bit that is the ghost bit
+            // value is the bits that the ghost bit appears in within this way
+            std::map<std::pair<std::string, int>, bitvec> ghost_bit_impact;
 
-        // Check a phv ref against the ghost bits for sanity
-        auto check_ref = [this, way_index, &ghost_bits, &ghost_bit_impact]
-                         (Phv::Ref &ref, int hash_bit) {
-            std::string field_name = ref.name();
-            int field_bit = remove_name_tail_range(field_name) + ref.fieldlobit();
-            for (int i = 0; i < ref.size(); ++i) {
-                auto key = std::make_pair(field_name, field_bit + i);
-                auto ghost_bit_it = ghost_bits.find(key);
-                if (ghost_bit_it == ghost_bits.end())
-                    continue;
+            // Check a phv ref against the ghost bits for sanity
+            auto check_ref = [this, way_index, &ghost_bits, &ghost_bit_impact, &ixb]
+                             (Phv::Ref &ref, int hash_bit) {
+                std::string field_name = ref.name();
+                int field_bit = remove_name_tail_range(field_name) + ref.fieldlobit();
+                for (int i = 0; i < ref.size(); ++i) {
+                    auto key = std::make_pair(field_name, field_bit + i);
+                    auto ghost_bit_it = ghost_bits.find(key);
+                    if (ghost_bit_it == ghost_bits.end())
+                        continue;
 
-                // This is a check to make sure that the ghost bit appears only once
-                // in the hash column, as an even number of appearances would
-                // xor each other out, and cancel the hash out.  This check
-                // should be done on all hash bits
-                if (ghost_bit_impact[key].getbit(hash_bit)) {
-                    error(input_xbar[0]->lineno, "Ghost bit %s:%d appears multiple times "
-                          "in the same hash col %d", key.first.c_str(), key.second,
-                          way_index);
+                    // This is a check to make sure that the ghost bit appears only once
+                    // in the hash column, as an even number of appearances would
+                    // xor each other out, and cancel the hash out.  This check
+                    // should be done on all hash bits
+                    if (ghost_bit_impact[key].getbit(hash_bit)) {
+                        error(ixb->lineno, "Ghost bit %s:%d appears multiple times "
+                              "in the same hash col %d", key.first.c_str(), key.second,
+                              way_index);
+                        return;
+                    }
+                    ghost_bit_impact[key].setbit(hash_bit);
+                }
+            };
+
+            // Calculate the ghost bit per hash way
+            for (unsigned hash_table_id : hash_tables) {
+                auto &hash_table = ixb->get_hash_table(hash_table_id);
+                for (auto hash_bit : way.select_bits()) {
+                    if (hash_table.count(hash_bit) == 0)
+                        continue;
+                    const HashCol &hash_col = hash_table.at(hash_bit);
+                    if (hash_col.fn) {
+                        for (auto &ref : hash_col.fn->get_sources(hash_col.bit))
+                            check_ref(ref, hash_bit);
+                    } else {
+                        for (const auto &input_bit : hash_col.data)
+                            if (auto ref = ixb->get_hashtable_bit(hash_table_id, input_bit))
+                                check_ref(ref, hash_bit);
+                    }
+                }
+            }
+
+            // Verify that each ghost bit appears in the hash function
+            for (auto gb : ghost_bits) {
+                if (ghost_bit_impact.find(gb) == ghost_bit_impact.end()) {
+                    error(ixb->lineno, "Ghost bit %s:%d does not appear on the hash function "
+                          "for way %d", gb.first.c_str(), gb.second, way_index);
                     return;
                 }
-                ghost_bit_impact[key].setbit(hash_bit);
             }
-        };
 
-        // Calculate the ghost bit per hash way
-        for (unsigned hash_table_id : hash_tables) {
-            auto &hash_table = input_xbar[0]->get_hash_table(hash_table_id);
-            for (auto hash_bit : way.select_bits()) {
-                if (hash_table.count(hash_bit) == 0)
-                    continue;
-                const HashCol &hash_col = hash_table.at(hash_bit);
-                if (hash_col.fn) {
-                    for (auto &ref : hash_col.fn->get_sources(hash_col.bit))
-                        check_ref(ref, hash_bit);
-                } else {
-                    for (const auto &input_bit : hash_col.data)
-                        if (auto ref = input_xbar[0]->get_hashtable_bit(hash_table_id, input_bit))
-                            check_ref(ref, hash_bit);
-                }
+            // Verify that the ghost bits are linearly independent, that only one ghost bit
+            // exists per column
+            bitvec total_use;
+            for (auto gbi : ghost_bit_impact) {
+                if (!(total_use & gbi.second).empty())
+                    error(ixb->lineno, "The ghost bits are not linear independent on way %d",
+                          way_index);
+                total_use |= gbi.second;
             }
-        }
 
-        // Verify that each ghost bit appears in the hash function
-        for (auto gb : ghost_bits) {
-            if (ghost_bit_impact.find(gb) == ghost_bit_impact.end()) {
-                error(input_xbar[0]->lineno, "Ghost bit %s:%d does not appear on the hash function "
-                      "for way %d", gb.first.c_str(), gb.second, way_index);
-                return;
+            auto &ghost_bit_position = ghost_bit_positions[way.group];
+            for (auto gbi : ghost_bit_impact) {
+                ghost_bit_position[gbi.first] |= gbi.second;
             }
+            way_index++;
         }
-
-        // Verify that the ghost bits are linearly independent, that only one ghost bit
-        // exists per column
-        bitvec total_use;
-        for (auto gbi : ghost_bit_impact) {
-            if (!(total_use & gbi.second).empty())
-                error(input_xbar[0]->lineno, "The ghost bits are not linear independent on way %d",
-                      way_index);
-            total_use |= gbi.second;
-        }
-
-        auto &ghost_bit_position = ghost_bit_positions[way.group];
-        for (auto gbi : ghost_bit_impact) {
-            ghost_bit_position[gbi.first] |= gbi.second;
-        }
-        way_index++;
     }
 }
 
