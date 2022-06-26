@@ -401,9 +401,7 @@ std::vector<SplitChoice> DfsItrContext::make_choices(const SliceListLoc& target)
     bitvec middle_of_fieldslices;
     int offset = pre_alignment;
     for (const auto& fs : *target.second) {
-        if (!fs.field()->is_padding()) {
-            middle_of_fieldslices.setrange(offset + 1, fs.size() - 1);
-        }
+        middle_of_fieldslices.setrange(offset + 1, fs.size() - 1);
         offset += fs.size();
         if (offset > 32) break;
     }
@@ -472,7 +470,7 @@ std::vector<SplitChoice> DfsItrContext::make_choices(const SliceListLoc& target)
     }
 
     if (LOGGING(5)) {
-        LOG5("possible splice choices: ");
+        LOG5("possible slice choices: ");
         for (const auto& c : choices) {
             LOG5(c);
         }

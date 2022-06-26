@@ -72,16 +72,25 @@ void TrivialAllocator::bind_alloc_slices(const std::vector<PHV::AllocSlice>& sli
 }
 
 cstring TrivialAllocator::make_error_msg(const SuperCluster* sc,
-                                         const PartialAllocResult* rst) const {
+                                         const AllocError* err) const {
     std::stringstream unsat_err;
     unsat_err << "Trivial allocator has found unsatisfiable constraints.\n";
-    unsat_err << "Error code: " << to_str(rst->err->code) << "\n";
+    unsat_err << "Error code: " << to_str(err->code) << "\n";
     unsat_err << "In this super clusters: " << sc << "\n";
-    if (rst->err->code != ErrorCode::NO_SLICING_FOUND) {
-        unsat_err << "(Trace) Last error we saw during allocation is: " << rst->err->msg;
-        if (rst->err->code == ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED &&
-            rst->err->reslice_required) {
-            unsat_err << "Please check action(s) that write to these slice lists";
+    if (err->code != ErrorCode::NO_SLICING_FOUND) {
+        unsat_err << "(Trace) Last error we saw during allocation is: " << err->msg;
+        if (err->code == ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED &&
+            err->reslice_required) {
+            unsat_err << "\n";
+            unsat_err << "Above logs should help you debug:\n";
+            unsat_err << "(1) The action and the related destination container shown in Allocation "
+                         "error logs.\n";
+            unsat_err << "(2) The list of field slices that we cannot allocate.\n";
+            unsat_err << "(3) Allocated field slices in the destination container.\n";
+            unsat_err << "Note that these logs are from one of the many paths that compiler has "
+                         "searched. If you suspect that the action actually can be synthesized if "
+                         "compiler made different decisions, you add some pragma(s) as hints and "
+                         "rerun.\n";
         }
     }
     return unsat_err.str();
@@ -183,7 +192,7 @@ const TrivialAllocator::PartialAllocResult* TrivialAllocator::slice_and_allocate
 
     int n_tried = 0;
     AllocError* last_err = new AllocError(ErrorCode::NO_SLICING_FOUND);
-    *last_err << "found unsatisfiable constraints.";
+    *last_err << "Found unsatisfiable constraints during slicing";
     PartialAllocResult* rst = nullptr;
     slicing_ctx->iterate([&](std::list<PHV::SuperCluster*> sliced) {
         n_tried++;
@@ -207,21 +216,15 @@ const TrivialAllocator::PartialAllocResult* TrivialAllocator::slice_and_allocate
             } else {
                 last_err = new AllocError(rst.err->code);
                 LOG3("slicing-attempt-" << n_tried << " failed, while allocating: " << sc);
-                *last_err << " failed when allocating this sliced " << sc;
+                *last_err << "Failed when allocating this sliced " << sc;
+                *last_err << "Allocation error logs: " << rst.err->msg;
                 // found a slice list that cannot be allocated because of packing issue.
                 if (rst.err->code == ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED &&
                     rst.err->reslice_required) {
                     last_err->reslice_required = rst.err->reslice_required;
                     for (const auto* sl : *rst.err->reslice_required) {
-                        LOG3("Found invalid packing slice list: " << sl);
-                        *last_err << "Found unsatisfiable action constraints in this list: " << sl
-                                  << "\n";
-                    }
-                    for (const auto* sl : *rst.err->reslice_required) {
                         slicing_ctx->invalidate(sl);
                     }
-                } else {
-                    *last_err << rst.err_str();
                 }
                 return n_tried < max_slicings;
             }
@@ -284,10 +287,9 @@ bool TrivialAllocator::allocate(const std::list<PHV::SuperCluster*>& clusters) {
         }
         if (pre_sliced.invalid) {
             auto rst = slice_and_allocate_sc(empty_alloc, pre_sliced.invalid, phv_status,
-                                             container_groups,
-                                             true, max_try_alloc_slicing_try, &history);
+                                             container_groups, true, 1, nullptr);
             BUG_CHECK(!rst->ok(), "invalid supercluster can be allocated?");
-            const cstring err_log = make_error_msg(unsliced_sc, rst);
+            const cstring err_log = make_error_msg(unsliced_sc, rst->err);
             history << err_log;
             ::error(err_log);
             ok = false;
@@ -298,8 +300,9 @@ bool TrivialAllocator::allocate(const std::list<PHV::SuperCluster*>& clusters) {
             history << "Allocating: \n" << sc;
             auto rst = slice_and_allocate_sc(empty_alloc, sc, phv_status, container_groups,
                                              true, max_try_alloc_slicing_try, &history);
+            // unlikely to happen here, because pre_slicing has validated.
             if (!rst->ok()) {
-                const cstring err_log = make_error_msg(sc, rst);
+                const cstring err_log = make_error_msg(sc, rst->err);
                 history << err_log;
                 ::error(err_log);
                 ok = false;

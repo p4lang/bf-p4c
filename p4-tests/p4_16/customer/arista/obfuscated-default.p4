@@ -7,6 +7,7 @@
 #include <tofino1_arch.p4>
 
 @pa_auto_init_metadata
+@pa_container_size("ingress", "Aguila.Skillman.Ledoux", 32)  // table fitting hack
 @pa_mutually_exclusive("egress" , "Nixon.Hillside.Newfane" , "Aguila.Olcott.Newfane")
 @pa_mutually_exclusive("egress" , "Aguila.Skillman.Eldred" , "Aguila.Olcott.Newfane")
 @pa_mutually_exclusive("egress" , "Aguila.Olcott.Newfane" , "Nixon.Hillside.Newfane")

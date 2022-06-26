@@ -187,6 +187,9 @@ class ScoreContext {
     /// search time related parameters.
     const SearchConfig* search_config_i = new SearchConfig();
 
+    /// tracer will try to log steps of every allocation.
+    std::ostream* tracer = nullptr;
+
  private:
     static constexpr const char* tab_table[] = {
         "", " ", "  ", "   ", "    ", "     ", "      ", "       ", "        ",

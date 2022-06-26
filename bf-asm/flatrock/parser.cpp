@@ -1880,7 +1880,10 @@ void FlatrockParser::ChecksumCheckers::input_config(std::size_t unit_id, std::si
         }
         if (val.type == tSTR) {
             int id = Hdr::id(val.lineno, val.s);
-            value_t idVal{.type = tINT, .lineno = val.lineno, .i = id};
+            value_t idVal;
+            idVal.type = tINT;
+            idVal.lineno = val.lineno;
+            idVal.i = id;
             if (!check_range(idVal, 0, Target::Flatrock::PARSER_HDR_ID_MAX)) {
                 return boost::none;
             }

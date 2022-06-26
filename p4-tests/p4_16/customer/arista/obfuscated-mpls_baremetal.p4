@@ -5,6 +5,7 @@
 #include <tofino1_arch.p4>
 
 @pa_auto_init_metadata
+@pa_container_size("egress", "Crannell.Greenwood.Hackett", 8)
 @pa_container_size("egress" , "Aniak.LaMoille.Rocklake" , 16)
 @pa_container_size("egress" , "Aniak.LaMoille.SoapLake" , 16)
 @pa_container_size("ingress" , "Crannell.Wesson.Garcia" , 16)

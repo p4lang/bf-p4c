@@ -7,6 +7,9 @@
 #include <tofino2_arch.p4>
 
 @pa_auto_init_metadata
+
+@pa_container_size("egress", "Westoak.Peoria.Garibaldi", 16)
+// @pa_container_size("egress", "Westoak.Peoria.Eldred", 16)
 @pa_parser_group_monogress
 @pa_mutually_exclusive("egress" , "Lefor.Ekwok.Conner" , "Westoak.Flaherty.Conner")
 @pa_mutually_exclusive("egress" , "Westoak.Flaherty.Conner" , "Lefor.Ekwok.Conner")

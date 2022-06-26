@@ -48,17 +48,17 @@ constexpr int ScoreContext::max_log_level;
 
 std::string AllocError::str() const {
     std::stringstream ss;
-    ss << "code:" << to_str(code) << ", msg:" << msg << ". ";
+    ss << "code:" << to_str(code) << ", msg:" << msg << ".";
     if (invalid_packing) {
-        ss << "invalid packing of destination:";
+        ss << "\nFound decisions of invalid packing:";
         for (const auto& sl : *invalid_packing) {
-            ss << "\n\t\t" << sl;
+            ss << "\n\t" << sl;
         }
     }
     if (reslice_required) {
-        ss << "need to reslice:";
+        ss << "\nNext reslice target:";
         for (const auto& sl : *reslice_required) {
-            ss << "\n\t\t" << sl;
+            ss << "\n\t" << sl;
         }
     }
     return ss.str();
@@ -228,8 +228,13 @@ cstring ScAllocAlignment::pretty_print(cstring prefix, const SuperCluster* sc) c
 }
 
 std::ostream& operator<<(std::ostream& out, const FieldSliceAllocStartMap& fs) {
+    cstring sep = "";
     for (const auto& kv : fs) {
-        out << kv.first.field()->name << " " << kv.first.range() << ":" << kv.second << ";";
+        const auto& index = kv.second;
+        const auto& fs = kv.first;
+        out << sep << index << ":" << fs.field()->name << "[" << fs.range().lo << ":"
+            << fs.range().hi << "]";
+        sep = ", ";
     }
     return out;
 }

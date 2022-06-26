@@ -57,7 +57,7 @@ class TrivialAllocator {
     void bind_alloc_slices(const std::vector<PHV::AllocSlice>& slices);
 
     /// @returns user-friendly error msg.
-    cstring make_error_msg(const SuperCluster* sc, const PartialAllocResult* rst) const;
+    cstring make_error_msg(const SuperCluster* sc, const AllocError* err) const;
 
  public:
     TrivialAllocator(const PhvKit& kit, PhvInfo& phv, int pipe_id);

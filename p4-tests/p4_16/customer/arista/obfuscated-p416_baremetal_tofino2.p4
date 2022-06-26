@@ -2319,7 +2319,7 @@ control Bains(inout Frederika Lefor, inout HighRock Starkey, in egress_intrinsic
     @name(".Swandale") action Swandale(bit<6> Irvine) {
         Starkey.Longwood.HillTop = Irvine;
     }
-    @ternary(1) @disable_atomic_modify(1) @name(".Neosho") table Neosho {
+    @ternary(1) @disable_atomic_modify(1) @stage(0) @name(".Neosho") table Neosho {
         actions = {
             Swandale();
             @defaultonly NoAction();
@@ -5055,7 +5055,7 @@ control Emigrant(inout Frederika Lefor, inout HighRock Starkey, in ingress_intri
     @name(".Pearce") action Pearce(bit<32> Belfalls) {
         Starkey.Covert.Ralls = (bit<1>)Ancho.execute(Belfalls);
     }
-    @disable_atomic_modify(1) @name(".Clarendon") table Clarendon {
+    @disable_atomic_modify(1) @stage(2) @name(".Clarendon") table Clarendon {
         actions = {
             @tableonly Pearce();
             @defaultonly NoAction();
@@ -5071,7 +5071,7 @@ control Emigrant(inout Frederika Lefor, inout HighRock Starkey, in ingress_intri
     @name(".Edmeston") action Edmeston() {
         Slayden.count();
     }
-    @disable_atomic_modify(1) @name(".Lamar") table Lamar {
+    @disable_atomic_modify(1) @stage(3) @name(".Lamar") table Lamar {
         actions = {
             Edmeston();
         }

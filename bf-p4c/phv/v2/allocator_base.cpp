@@ -985,8 +985,10 @@ boost::optional<ScAllocAlignment> AllocatorBase::DfsListsAllocator::new_alignmen
     return this_start_alignment;
 }
 
-bool AllocatorBase::DfsListsAllocator::allocate(const ScoreContext& ctx, const Transaction& tx,
-                                                const DfsState& state, const int depth) {
+bool AllocatorBase::DfsListsAllocator::allocate(const ScoreContext& ctx,
+                                                const Transaction& tx,
+                                                const DfsState& state,
+                                                const int depth) {
     cstring log_prefix = ctx.t_tabs() + depth_prefix(depth);
     if (state.done()) {
         // all items have been allocated.
@@ -1006,6 +1008,7 @@ bool AllocatorBase::DfsListsAllocator::allocate(const ScoreContext& ctx, const T
     bool found_solution = false;
     bool sl_and_required_hints_can_be_allocated = false;
     const PHV::Size width = ctx.cont_group()->width();
+    // all slice lists that have ever been marked as part of the invalid packing.
     auto* invalid_action_lists = new ordered_set<const SuperCluster::SliceList*>();
     const auto ordered_valid_starts = base.make_start_positions(ctx, sl, width);
     for (const int sl_start : ordered_valid_starts) {
@@ -1027,7 +1030,9 @@ bool AllocatorBase::DfsListsAllocator::allocate(const ScoreContext& ctx, const T
             // failed, save important errors and try other alignments.
             LOG3(log_prefix << "slice list starts @ " << sl_start << " failed, because "
                             << some_sl_alloc_rst.err->str());
-            auto* err = some_sl_alloc_rst.err;
+            auto* err = new AllocError(*some_sl_alloc_rst.err);
+            *err << "\nWhen trying to allocate in these field slices in this layout "
+                    "(container_index:field_slice): " << to_be_allocated;
             last_err = err;
             if (err->code == ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED && err->invalid_packing) {
                 for (const auto* allocated_sl : new_state.allocated) {
@@ -1056,6 +1061,7 @@ bool AllocatorBase::DfsListsAllocator::allocate(const ScoreContext& ctx, const T
                 }
             }
             if (sl_alloc_rst.action_hints.empty()) {
+                sl_and_required_hints_can_be_allocated = true;
                 found_solution |= allocate(ctx, this_choice, new_state, depth + 1);
                 continue;
             }
@@ -1102,7 +1108,6 @@ bool AllocatorBase::DfsListsAllocator::allocate(const ScoreContext& ctx, const T
                 continue;
             }
             this_choice.commit(*required_hints_applied_tx);
-            sl_and_required_hints_can_be_allocated = true;
 
             // apply optional hints for higher chance of successful allocation.
             // TODO(yumin): we might consider to provide an option to try without copack hints.
@@ -1122,31 +1127,23 @@ bool AllocatorBase::DfsListsAllocator::allocate(const ScoreContext& ctx, const T
             }
             DfsState hint_updated_state =
                 new_state.next_state(hint_updated_alignment, just_allocated);
+            sl_and_required_hints_can_be_allocated = true;
             found_solution |= allocate(ctx, this_choice, hint_updated_state, depth + 1);
         }
     }
     if (!sl_and_required_hints_can_be_allocated) {
         LOG3(log_prefix << "Cannot allocate " << sl);
-        if (depth > 0) {
-            LOG3(log_prefix << "Current Tx status:");
-            LOG3(AllocResult::pretty_print_tx(tx, log_prefix));
-        }
         // prepare error messages.
         auto* err = new AllocError(*last_err);
         if (!invalid_action_lists->empty()) {
             invalid_action_lists->insert(sl);
-            err = new AllocError(ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED);
             err->reslice_required = invalid_action_lists;
         }
-        if (depth > 0) {
-            *err << "; Allocated slices:";
-            for (const auto& kv : tx.get_actual_diff()) {
-                for (const auto& alloc_slice : kv.second.slices) {
-                    *err << " " << alloc_slice;
-                }
-            }
-        }
         if (depth > deepest_depth) {
+            LOG3(log_prefix << "Current Tx status:");
+            LOG3(AllocResult::pretty_print_tx(tx, log_prefix));
+            *err << ";\nWhen some slices have been allocated:\n";
+            *err << AllocResult::pretty_print_tx(tx, "\t");
             deepest_err = err;
             deepest_depth = depth;
         }
@@ -1445,6 +1442,7 @@ AllocResult AllocatorBase::try_sliced_super_cluster(const ScoreContext& ctx,
     // slice lists that allocator has returned an error of cannot_pack.
     // stores only critical error message that might help caller to better slice the cluster.
     auto* reslice_required = new ordered_set<const SuperCluster::SliceList*>();
+    cstring reslice_required_reason = "";
     boost::optional<const AllocError*> other_err =
         boost::make_optional(false, (const AllocError*)nullptr);
     bool has_any_valid_alignment = false;
@@ -1481,6 +1479,7 @@ AllocResult AllocatorBase::try_sliced_super_cluster(const ScoreContext& ctx,
                      << "Failed to find valid allocation because: " << group_rst.err_str());
                 if (group_rst.err->code == ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED &&
                     group_rst.err->reslice_required) {
+                    reslice_required_reason = group_rst.err->msg;
                     for (const auto& sl : *group_rst.err->reslice_required) {
                         reslice_required->insert(sl);
                     }
@@ -1517,6 +1516,7 @@ AllocResult AllocatorBase::try_sliced_super_cluster(const ScoreContext& ctx,
         } else if (!reslice_required->empty()) {
             err = new AllocError(ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED);
             err->reslice_required = reslice_required;
+            *err << reslice_required_reason;
         } else if (other_err) {
             return AllocResult(*other_err);
         }
