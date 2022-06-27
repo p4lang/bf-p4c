@@ -1017,11 +1017,21 @@ set (P4C_BAREFOOT_SRCS
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${P4C_BAREFOOT_SRCS}")
 build_unified(P4C_BAREFOOT_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
-add_library(tofinobackend ${BF_P4C_SOURCES})
+if(BUILD_STATIC_BFP4C_LIBS_INTERNAL)
+    add_library(tofinobackend STATIC ${BF_P4C_SOURCES})
+else()
+    add_library(tofinobackend OBJECT ${BF_P4C_SOURCES})
+endif()
 add_dependencies(tofinobackend genIR genLogging bfn_p4runtime)
 target_include_directories(tofinobackend PRIVATE "${BFN_P4C_SOURCE_DIR}/third_party/spdlog/include")
 
-add_library(bfp4c ${P4C_BAREFOOT_SRCS})
+if(BUILD_STATIC_BFP4C_LIBS_INTERNAL)
+    add_library(bfp4c STATIC ${P4C_BAREFOOT_SRCS})
+else()
+    # For objlib there is no way (as far as I know) to encompass smaller libraries (namely adding
+    # $<TARGET_OBJECTS:tofinobackend> $<TARGET_OBJECTS:bfn_p4runtime> to sources does not work)
+    add_library(bfp4c OBJECT ${P4C_BAREFOOT_SRCS})
+endif()
 target_link_libraries (bfp4c tofinobackend bfn_p4runtime
   ${P4C_LIBRARIES} ${P4C_LIB_DEPS} ${CMAKE_THREAD_LIBS_INIT})
 
@@ -1072,23 +1082,31 @@ target_include_directories(bfp4c
   INTERFACE ${CMAKE_SOURCE_DIR}/third_party/spdlog/include
 )
 
-add_executable(p4c-barefoot p4c-barefoot.cpp)
-# --whole-archive prevents the linker from removing unused symbols
-#
-# This prevents an issue with non-unified builds and P4 primitives being
-# undefined. The file "bf-p4c/arch/fromv1.0/primitives.cpp" defines a number
-# of primitives (e.g., bypass_egress). This is done by subclassing
-# PrimitiveConverter and creating a singleton instance, which registers
-# itself with the PrimitiveConverter base class. These singleton instances are
-# omitted during linking of the non-unified builds, and so the primitives are
-# not registered.
-#
-# FIXME: Understand why the symbols are present in unified builds but not
-# non-unified builds and remove the --whole-archive flag if possible.
-target_link_libraries(p4c-barefoot
-	-Wl,--whole-archive
-	bfp4c
-	-Wl,--no-whole-archive)
+if(BUILD_STATIC_BFP4C_LIBS_INTERNAL)
+    add_executable(p4c-barefoot p4c-barefoot.cpp)
+    # --whole-archive prevents the linker from removing unused symbols
+    #
+    # This prevents an issue with non-unified builds and P4 primitives being
+    # undefined. The file "bf-p4c/arch/fromv1.0/primitives.cpp" defines a number
+    # of primitives (e.g., bypass_egress). This is done by subclassing
+    # PrimitiveConverter and creating a singleton instance, which registers
+    # itself with the PrimitiveConverter base class. These singleton instances are
+    # omitted during linking of the non-unified builds, and so the primitives are
+    # not registered.
+    #
+    # FIXME: Understand why the symbols are present in unified builds but not
+    # non-unified builds and remove the --whole-archive flag if possible.
+    target_link_libraries(p4c-barefoot
+            -Wl,--whole-archive
+            bfp4c
+            -Wl,--no-whole-archive)
+else()
+    # No transitive library dependencies for objlibs :-/, bring tofinobackend & bfn_p4runtime
+    # here explictly as well as their dependencies
+    add_executable(p4c-barefoot p4c-barefoot.cpp $<TARGET_OBJECTS:bfp4c>
+                                $<TARGET_OBJECTS:tofinobackend> $<TARGET_OBJECTS:bfn_p4runtime>)
+    target_link_libraries(p4c-barefoot ${P4C_LIBRARIES} ${P4C_LIB_DEPS} ${CMAKE_THREAD_LIBS_INIT})
+endif()
 
 
 if (NOT ENABLE_JBAY)
@@ -1396,8 +1414,12 @@ add_custom_command(
   COMMENT "Generating protobuf files for p4info."
   )
 
-add_library(bfn_p4runtime STATIC ${BFN_P4RUNTIME_INFO_GEN_SRCS})
-set_source_files_properties (${BFN_P4RUNTIME_INFO_GEN_SRCS} PROPERTIES GENERATED TRUE)
+if(BUILD_STATIC_BFP4C_LIBS_INTERNAL)
+    add_library(bfn_p4runtime STATIC ${BFN_P4RUNTIME_INFO_GEN_SRCS})
+else()
+    add_library(bfn_p4runtime OBJECT ${BFN_P4RUNTIME_INFO_GEN_SRCS})
+endif()
+set_source_files_properties(${BFN_P4RUNTIME_INFO_GEN_SRCS} PROPERTIES GENERATED TRUE)
 add_dependencies(bfn_p4runtime barefootdir controlplane)
 
 ################ Testing
@@ -1583,6 +1605,11 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/utils/super_cluster_builder.cpp
     ${BF_P4C_GRAPHS_SRCS}
     )
+  if (NOT BUILD_STATIC_BFP4C_LIBS_INTERNAL)
+      # objlibs cannot be linked, need to add objects here explicitly
+      set (GTEST_BF_P4C_SOURCES ${GTEST_BF_P4C_SOURCES}
+                                $<TARGET_OBJECTS:tofinobackend> $<TARGET_OBJECTS:bfn_p4runtime>)
+  endif()
 
   set (GTEST_SOURCES ${GTEST_SOURCES} ${GTEST_BF_P4C_SOURCES} PARENT_SCOPE)
   set (GTEST_LDADD ${GTEST_LDADD}

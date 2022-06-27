@@ -20,6 +20,24 @@ OPTION(ENABLE_DOXYGEN "Build Doxygen-based developer documentation" ON)
 OPTION(FIXED_LIBDYNHASH "Use future version of the Dynamic hash library" OFF)
 OPTION(INSTALL_LIBDYNHASH "Install the Dynamic hash library" OFF)
 
+# BUILD_STATIC_BFP4C_LIBS should never be used directly, see BUILD_STATIC_BFP4C_LIBS_INTERNAL below
+OPTION(BUILD_STATIC_BFP4C_LIBS OFF "Build static libs (archives) of bf-p4c components \
+                              (tofinobackend, bfn_p4runtime) for external usage. If not set, the \
+                              libraries are build only as object and cannot be used easily by \
+                              other projects compiled alongside. Building static libraries slows \
+                              down compilation. Using CMake < 3.12 forces this to ON.")
+
+# CMake < 3.12 will not work with OBJLIBs so we will need to build static libs regardless of the
+# user's intent. However, we want to keep the option set as intended by the user so it will start
+# working with newer cmake (and so that we don't need to override the OPTION).
+set(BUILD_STATIC_BFP4C_LIBS_INTERNAL ${BUILD_STATIC_BFP4C_LIBS})
+if(NOT BUILD_STATIC_BFP4C_LIBS_INTERNAL AND CMAKE_VERSION VERSION_LESS 3.12)
+    set(BUILD_STATIC_BFP4C_LIBS_INTERNAL ON)
+    message(WARNING "BUILD_STATIC_BFP4C_LIBS=OFF, but CMake ${CMAKE_VERSION} has insufficient support \
+                     for OBJLIB so static libraries will be build anyway (3.12 needed for this to \
+                     work")
+endif()
+
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 if (ENABLE_STATIC_LIBS)
