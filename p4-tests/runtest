@@ -100,12 +100,12 @@ run() {
     # `timeout` can't be killed by ctrl^c when run inside a bash script, so we
     # need to run it in the background, record the pid, then kill it on INT.
     trap 'kill -INT -$pid' INT
-    $LOAD_MEASUREMENT___COMMAND
+    # $LOAD_MEASUREMENT___COMMAND
     "${_run_args[@]}" &
     pid=$!
     wait $pid
     status=$?
-    $LOAD_MEASUREMENT___COMMAND
+    # $LOAD_MEASUREMENT___COMMAND
 
     # Clear the trap for the INT signal.
     trap - INT

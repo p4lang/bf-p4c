@@ -8,10 +8,15 @@ class IXBarVerify::GetCurrentUse : public MauInspector {
     bool preorder(const IR::Expression *) override { return false; }
     bool preorder(const IR::MAU::Table *t) override {
         BUG_CHECK(t->is_always_run_action() || t->global_id(), "Table not placed");
+        int gress = INGRESS;
+#if HAVE_FLATROCK
+        if (!Device::threadsSharePipe(INGRESS, EGRESS))
+            gress = t->thread();
+#endif
         unsigned stage = t->stage();
-        while (stage >= self.stage.size())
-            self.stage.emplace_back(IXBar::create());
-        self.stage[stage]->update(t);
+        if (!self.ixbar[gress][stage])
+            self.ixbar[gress][stage].reset(IXBar::create());
+        self.ixbar[gress][stage]->update(t);
         return true; }
  public:
     explicit GetCurrentUse(IXBarVerify &s) : self(s) {}
@@ -85,7 +90,8 @@ void IXBarVerify::verify_format(const IXBar::Use *use) {
 
 Visitor::profile_t IXBarVerify::init_apply(const IR::Node *root) {
     auto rv = MauModifier::init_apply(root);
-    stage.clear();
+    for (auto gress : { INGRESS, EGRESS })
+        ixbar[gress].clear();
     currentTable = nullptr;
     root->apply(GetCurrentUse(*this));
     return rv;

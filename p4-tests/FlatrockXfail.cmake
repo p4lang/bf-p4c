@@ -60,13 +60,6 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/flatrock/exact2.p4
   )
 
-
-# PAC test cases
-p4c_add_xfail_reason("tofino5"
-  "conflicting ixbar allocation at exact match word 0"
-  extensions/p4_tests/p4_16/flatrock/pac_single_hdr.p4
-  )
-
 #p4c_add_xfail_reason("tofino5"
 #  ""  -- need a real test case here.
 #  extensions/p4_tests/p4_16/flatrock/pac_trivial.p4
@@ -110,23 +103,18 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/stf/update_checksum_4.p4
   extensions/p4_tests/p4_16/stf/update_checksum_6.p4
   extensions/p4_tests/p4_16/stf/varbit_constant.p4
-  )
-
-p4c_add_xfail_reason("tofino5"
-  "Compiler Bug: conflicting ixbar allocation at"
   extensions/p4_tests/p4_16/stf/auto_init_meta2.p4
   extensions/p4_tests/p4_16/stf/failed_elim_valid_bit.p4
-  extensions/p4_tests/p4_16/stf/narrow_to_wide_w_csum_1.p4
-  extensions/p4_tests/p4_16/stf/narrow_to_wide_w_csum_2.p4
-  extensions/p4_tests/p4_16/stf/narrow_to_wide_w_csum_3.p4
-  extensions/p4_tests/p4_16/stf/narrow_to_wide_w_csum_4.p4
-  extensions/p4_tests/p4_16/stf/narrow_to_wide_w_csum_5.p4
   extensions/p4_tests/p4_16/stf/p4c-1504.p4
   extensions/p4_tests/p4_16/stf/p4c-2772.p4
   extensions/p4_tests/p4_16/stf/p4c-2772-c.p4
   extensions/p4_tests/p4_16/stf/p4c-3089.p4
-  extensions/p4_tests/p4_16/stf/p4c-4107.p4
   extensions/p4_tests/p4_16/stf/wide_arith_non_64.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "Compiler Bug: Conflicting alloc on the action data bus"
+  extensions/p4_tests/p4_16/stf/p4c-4107.p4
   )
 
 #p4c_add_xfail_reason("tofino5"
@@ -145,6 +133,7 @@ p4c_add_xfail_reason("tofino5"
 
 p4c_add_xfail_reason("tofino5"
   "invalid gateway group"
+  extensions/p4_tests/p4_16/flatrock/dconfig1.p4
   extensions/p4_tests/p4_16/stf/extract_slice_2.p4
   extensions/p4_tests/p4_16/stf/metadata_extract.p4
   extensions/p4_tests/p4_16/stf/p4c-3055-2.p4
@@ -167,6 +156,11 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/stf/header_stack_checksum.p4
   extensions/p4_tests/p4_16/stf/update_checksum_1.p4
   extensions/p4_tests/p4_16/stf/verify_checksum_3.p4
+  extensions/p4_tests/p4_16/stf/narrow_to_wide_w_csum_1.p4
+  extensions/p4_tests/p4_16/stf/narrow_to_wide_w_csum_2.p4
+  extensions/p4_tests/p4_16/stf/narrow_to_wide_w_csum_3.p4
+  extensions/p4_tests/p4_16/stf/narrow_to_wide_w_csum_4.p4
+  extensions/p4_tests/p4_16/stf/narrow_to_wide_w_csum_5.p4
   )
 
 #p4c_add_xfail_reason("tofino5"
@@ -211,6 +205,7 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/stf/parser_loop_2.p4
   extensions/p4_tests/p4_16/stf/parser_loop_3.p4
   extensions/p4_tests/p4_16/stf/parser_loop_4.p4
+
   )
 
 p4c_add_xfail_reason("tofino5"

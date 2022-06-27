@@ -105,7 +105,7 @@ Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
 
     auto rv = MauInspector::init_apply(root);
     order.clear();
-    ixbar.clear();
+    for (auto gress : { INGRESS, EGRESS }) ixbar[gress].clear();
     memory.clear();
     action_data_bus.clear();
     imems.clear();
@@ -200,8 +200,14 @@ bool TableSummary::preorder(const IR::MAU::Table *t) {
         tableINames[t->gateway_name] = t->gateway_name;
     }
     if (t->resources) {
-        if (!ixbar[t->stage()]) ixbar[t->stage()].reset(IXBar::create());
-        ixbar[t->stage()]->update(t);
+        int gress = INGRESS;
+#if HAVE_FLATROCK
+        if (!Device::threadsSharePipe(INGRESS, EGRESS))
+            gress = t->thread();
+#endif
+        if (!ixbar[gress][t->stage()])
+            ixbar[gress][t->stage()].reset(IXBar::create());
+        ixbar[gress][t->stage()]->update(t);
         if (!memory[t->stage()]) memory[t->stage()].reset(Memories::create());
         memory[t->stage()]->update(t->resources->memuse);
         if (!action_data_bus[t->stage()])
@@ -633,8 +639,13 @@ std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
     tp.print();
 
     if (LOGGING(3)) {
-        for (auto &i : ts.ixbar)
+        for (auto &i : ts.ixbar[0])
             out << "Stage " << i.first << std::endl << *i.second << *ts.memory.at(i.first);
+#if HAVE_FLATROCK
+        if (!Device::threadsSharePipe(INGRESS, EGRESS)) {
+            for (auto &i : ts.ixbar[1])
+                out << "Stage " << i.first << std::endl << *i.second << *ts.memory.at(i.first); }
+#endif
     }
 
     return out;

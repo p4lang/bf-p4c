@@ -196,8 +196,10 @@ class TableSummary: public MauInspector {
     //   ...
     //  }
     std::map<cstring, std::map<le_bitrange, std::map<int, int>>> ixbarBytes;
-    // Map of Stage -> Input Xbar
-    std::map<int, std::unique_ptr<IXBar>> ixbar;
+    // Array of Map of Stage -> Input Xbar
+    // Tofino 1/2/3 only uses ixbar[0] for both ingress and egress.
+    // Tofino 5 uses ixbar[0] for ingress and ixbar[1] for egress.
+    std::map<int, std::unique_ptr<IXBar>> ixbar[2];
     // Map of Stage -> Memories
     std::map<int, std::unique_ptr<Memories>> memory;
     // Map of Stage -> ActionDataBus

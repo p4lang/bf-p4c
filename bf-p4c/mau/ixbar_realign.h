@@ -14,7 +14,10 @@ class IXBarVerify: public MauModifier {
     void postorder(IR::MAU::Table *) override;
     void verify_format(const IXBar::Use *);
     class GetCurrentUse;
-    safe_vector<std::unique_ptr<IXBar>> stage;
+    // Array of Map of Stage -> Input Xbar
+    // Tofino 1/2/3 only uses ixbar[0] for both ingress and egress.
+    // Tofino 5 uses ixbar[0] for ingress and ixbar[1] for egress.
+    std::map<int, std::unique_ptr<IXBar>> ixbar[2];
 
  public:
     explicit IXBarVerify(const PhvInfo &phv) : phv(phv) {}
