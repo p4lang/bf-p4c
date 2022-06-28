@@ -31,6 +31,7 @@ def runInDocker(Map namedArgs, String cmd) {
             -w ${args.workingDir} \
             -e CTEST_PARALLEL_LEVEL=${args.ctestParallelLevel} \
             -e CTEST_OUTPUT_ON_FAILURE='true' \
+            -e P4C_DO_RUN_LOAD_MEASUREMENT='yes' \
             ${args.extraArgs} \
             ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag} \
             ${cmd}

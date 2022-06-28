@@ -12,7 +12,10 @@ READLINK_COMMAND=$(which greadlink || which readlink)
 
 
 
-LOAD_MEASUREMENT___COMMAND="$(realpath $(dirname $0))"/measure_and_report_the_system_load.py
+LOAD_MEASUREMENT___COMMAND=true ### make this command do nothing by default
+if [ -n "$P4C_DO_RUN_LOAD_MEASUREMENT" ] && ! echo $P4C_DO_RUN_LOAD_MEASUREMENT | grep --extended-regexp --ignore-case --quiet '(^0$|disable|false|no|off)'; then
+  LOAD_MEASUREMENT___COMMAND="$(realpath $(dirname $0))"/measure_and_report_the_system_load.py
+fi
 
 
 
