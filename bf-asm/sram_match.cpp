@@ -332,11 +332,10 @@ std::unique_ptr<json::map>
             json::map tmp;
             tmp["memory_units"] = std::move(mem_units);
             mem_units = json::vector();
-            if (!way_uses_lambs) {
-                json::vector vpns;
-                for (unsigned i = 0; i < format->groups(); i++)
-                    vpns.push_back(vpn_ctr++);
-                tmp["vpns"] = std::move(vpns); }
+            json::vector vpns;
+            for (unsigned i = 0; i < format->groups(); i++)
+                vpns.push_back(vpn_ctr++);
+            tmp["vpns"] = std::move(vpns);
             mem_units_and_vpns.push_back(std::move(tmp)); } }
     BUG_CHECK(mem_units.empty());
     return json::mkuniq<json::map>(std::move(mra));
