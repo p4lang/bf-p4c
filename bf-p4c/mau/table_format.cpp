@@ -175,7 +175,8 @@ bool TableFormat::analyze_layout_option() {
         !layout_option.layout.proxy_hash && layout_option.entries > 0) {
         int min_way_size = *std::min_element(layout_option.way_sizes.begin(),
                                              layout_option.way_sizes.end());
-        ghost_bits_count = RAM_GHOST_BITS + floor_log2(min_way_size);
+        ghost_bits_count = layout_option.layout.get_ram_ghost_bits()
+                            + floor_log2(min_way_size);
     }
 
     use->only_one_result_bus = layout_option.layout.atcam;
@@ -541,6 +542,15 @@ bool TableFormat::find_format(Use *u) {
             return false;
     }
     redistribute_next_table();
+
+#ifdef HAVE_FLATROCK
+    if (Device::currentDevice() == Device::FLATROCK) {
+        verify();
+        LOG2("SRAM Table format is successful");
+        return true;
+    }
+#endif
+
     LOG3("Build match group map");
     if (!build_match_group_map())
         return false;
@@ -593,7 +603,65 @@ bool TableFormat::allocate_overhead() {
 }
 
 
+#ifdef HAVE_FLATROCK
+// Flatrock Action Format For LAMB's
+// - Maximum 4 entries per word
+// - Cannot be a wide match and span multiple words
+// - Each entry is grouped in the following order
+//   [ Match bits - Next Table Bits - Action bits - Immediate bits ]
+//   This order can be modified once we gain more understanding of what HW allows
+bool TableFormat::allocate_match_and_overhead() {
+    BUG_CHECK(overhead_groups_per_RAM.size() == 1,
+        "Cannot allocate wide RAMS in Flatrock. Invalid size %1%",
+        overhead_groups_per_RAM.size());
+
+    auto total_groups = layout_option.way.match_groups;
+    for (auto group = 0; group < layout_option.way.match_groups; group++) {
+        use->match_groups[group].clear_match();
+    }
+    match_bytes.clear();
+    ghost_bytes.clear();
+    std::fill(full_match_groups_per_RAM.begin(), full_match_groups_per_RAM.end(), 0);
+
+    use->ghost_bits.clear();
+    match_byte_use.clear();
+    classify_match_bits();
+
+    int per_group_width = 0;
+    int group = 0;
+    auto allocate_overhead_bits = [&](const type_t t) {
+        int alloc_bits = bits_necessary(t);
+        if (alloc_bits > 0) {
+            auto start = total_use.max().index() + 1;
+            bitvec alloc_mask(start, alloc_bits);
+            use->match_groups[group].mask[t] |= alloc_mask;
+            total_use |= alloc_mask;
+        }
+    };
+
+    while ((per_group_width * (group + 1) <= SINGLE_RAM_BITS)
+            && group < total_groups) {
+        if (!allocate_match_with_algorithm(group)) return false;
+        allocate_overhead_bits(NEXT);
+        allocate_overhead_bits(ACTION);
+        allocate_overhead_bits(IMMEDIATE);
+
+        per_group_width = (per_group_width == 0) ?
+            (1 << ceil_log2(total_use.max().index())) : per_group_width;
+
+        group++;
+    }
+
+    if (group == total_groups) return true;
+    return false;
+}
+#endif
+
 bool TableFormat::allocate_sram_match() {
+#ifdef HAVE_FLATROCK
+    if (Device::currentDevice() == Device::FLATROCK)
+        return allocate_match_and_overhead();
+#endif
     if (allocate_overhead())
         if (allocate_match())
             return true;
@@ -1083,6 +1151,7 @@ bool TableFormat::allocate_all_indirect_ptrs() {
    bit field has 7 free bits which can potentially be allocated into.  Thus the spaces
    are left open for space to be filled by either instr selection or match bytes */
 bool TableFormat::allocate_all_immediate() {
+    LOG5("Allocating all immediate bits: " << layout_option.layout.immediate_bits);
     if (layout_option.layout.immediate_bits == 0)
         return true;
     use->immed_mask = immediate_mask;
@@ -1179,6 +1248,21 @@ bool TableFormat::initialize_byte(int byte_offset, int width_sect, const ByteInf
 
 bool TableFormat::allocate_match_byte(const ByteInfo &info, safe_vector<ByteInfo> &alloced,
         int width_sect, bitvec &byte_attempt, bitvec &bit_attempt) {
+#ifdef HAVE_FLATROCK
+    if (Device::currentDevice() == Device::FLATROCK) {
+        // Need to increment by entry size
+        // Entry size = 1/2 1/4 of a set
+        // Set size 1, 2, 4, 8, 16, 32, 64, 128 (sets per word)
+        // Set enable 4 way lookup always
+        // for (int i = 0; i < SINGLE_RAM_BYTES; i+=((SINGLE_RAM_BITS/MAX_GROUPS_PER_LAMB)/8)) {
+        for (int i = 0; i < SINGLE_RAM_BYTES; i++) {
+           if (initialize_byte(i, width_sect, info, alloced, byte_attempt, bit_attempt))
+               return true;
+        }
+        return false;
+    }
+#endif
+
     int lo = pa == SAVE_GW_SPACE ? GATEWAY_BYTES : 0;
     int hi = pa == SAVE_GW_SPACE ? VERSION_BYTES : SINGLE_RAM_BYTES;
 
@@ -1527,9 +1611,9 @@ void TableFormat::fill_out_use(int group, const safe_vector<ByteInfo> &alloced,
  *  For wide matches, this ensures that the entirety of the search bus is placed, but not
  *  necessarily version, as version can be placed in any of the wide match sections.
  */
-void TableFormat::allocate_full_fits(int width_sect) {
+void TableFormat::allocate_full_fits(int width_sect, int group) {
     LOG4("\t  Allocating Full Fits on RAM word " << width_sect << " search bus "
-         << search_bus_per_width[width_sect]);
+         << search_bus_per_width[width_sect] << " for group " << group);
     safe_vector<ByteInfo> allocation_needed;
     safe_vector<ByteInfo> alloced;
     find_bytes_to_allocate(width_sect, allocation_needed);
@@ -1537,11 +1621,13 @@ void TableFormat::allocate_full_fits(int width_sect) {
     bitvec bit_attempt;
 
     int groups_allocated = 0;
+    int allocate_single_group = (group >= 0);
     while (true) {
         alloced.clear();
         byte_attempt.clear();
         bit_attempt.clear();
-        int group = determine_group(width_sect, groups_allocated);
+        if (!allocate_single_group)
+            group = determine_group(width_sect, groups_allocated);
         if (group == -1)
             break;
         LOG4("\t    Attempting Entry " << group);
@@ -1588,6 +1674,9 @@ void TableFormat::allocate_full_fits(int width_sect) {
         groups_allocated++;
         full_match_groups_per_RAM[width_sect]++;
         fill_out_use(group, alloced, version_loc);
+        LOG4("\t    Entry usage: " << total_use);
+
+        if (allocate_single_group) break;
     }
 }
 
@@ -1911,9 +2000,9 @@ bool TableFormat::allocate_match() {
  *    2. Allocate full fits: i.e. match groups that fit on the entirety of the individual RAM
  *    3. Allocate shares: share match groups RAMs
  */
-bool TableFormat::allocate_match_with_algorithm() {
+bool TableFormat::allocate_match_with_algorithm(int group) {
     for (int width_sect = 0; width_sect < layout_option.way.width; width_sect++) {
-        allocate_full_fits(width_sect);
+        allocate_full_fits(width_sect, group);
     }
 
     // Determine if everything is fully allocated
@@ -1924,6 +2013,11 @@ bool TableFormat::allocate_match_with_algorithm() {
             continue;
         search_bus_alloc[search_bus] += full_match_groups_per_RAM[width_sect];
     }
+
+#ifdef HAVE_FLATROCK
+    if (Device::currentDevice() == Device::FLATROCK)
+        return true;
+#endif
 
     bool split_match = false;
 

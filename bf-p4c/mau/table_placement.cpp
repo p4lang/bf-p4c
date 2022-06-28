@@ -1415,6 +1415,7 @@ bool TablePlacement::disable_split_layout(const IR::MAU::Table *tbl) {
  *
  */
 bool TablePlacement::pick_layout_option(Placed *next, std::vector<Placed *> allocated_layout) {
+    LOG3("Picking layout option for table : " << next->name);
     bool table_format = true;
     int req_entries = next->entries;
 
@@ -1424,7 +1425,10 @@ bool TablePlacement::pick_layout_option(Placed *next, std::vector<Placed *> allo
                                      next->stage_split > 0, next->gw != nullptr, disable_split);
         if (next->stage_flags) filter_layout_options(next); }
 
+    LOG5("Layout options: " << next->use.layout_options);
     do {
+        LOG5("Layout options (preferred): " << next->use.preferred());
+        LOG5("Trying table format : " << table_format);
         bool ixbar_fit = try_alloc_ixbar(next, allocated_layout);
         if (!ixbar_fit) {
             next->stage_advance_log = "ran out of ixbar";

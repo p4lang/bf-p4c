@@ -22,8 +22,10 @@ struct Memories {
     static constexpr int RIGHT_SIDE_COLUMNS = SRAM_COLUMNS - LEFT_SIDE_COLUMNS;
     static constexpr int LEFT_SIDE_RAMS = LEFT_SIDE_COLUMNS * SRAM_ROWS;
     static constexpr int RIGHT_SIDE_RAMS = RIGHT_SIDE_COLUMNS * SRAM_ROWS;
+    static constexpr int TOTAL_SRAMS = SRAM_ROWS * SRAM_COLUMNS;
     static constexpr int MAPRAM_COLUMNS = 6;
     static constexpr int MAPRAM_MASK = (1U << MAPRAM_COLUMNS) - 1;
+    static constexpr int LAMB_DEPTH = 64;
     static constexpr int SRAM_DEPTH = 1024;
     static constexpr int TCAM_ROWS = 12;
     static constexpr int TCAM_COLUMNS = 2;

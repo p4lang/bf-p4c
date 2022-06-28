@@ -48,9 +48,10 @@ struct TableFormat {
     static constexpr int OVERHEAD_BITS = 64;
     static constexpr int SINGLE_RAM_BITS = 128;
     static constexpr int SINGLE_RAM_BYTES = 16;
+    static constexpr int MAX_GROUPS_PER_LAMB = 4;  // Tofino5 specific
+    static constexpr int RAM_GHOST_BITS = IXBar::RAM_LINE_SELECT_BITS;
     static constexpr int GATEWAY_BYTES = 4;
     static constexpr int VERSION_BYTES = 14;
-    static constexpr int RAM_GHOST_BITS = IXBar::RAM_LINE_SELECT_BITS;
     static constexpr int VERSION_BITS = 4;
     static constexpr int VERSION_NIBBLES = 4;
     static constexpr int MID_BYTE_LO = 0;
@@ -288,12 +289,15 @@ struct TableFormat {
         int RAM_word);
     bool allocate_overhead_entry(int entry, int RAM_word, int lsb_mem_word_offset);
     bool allocate_overhead();
+#ifdef HAVE_FLATROCK
+    bool allocate_match_and_overhead();
+#endif
     void setup_pfes_and_types();
     bool allocate_all_indirect_ptrs();
     bool allocate_all_immediate();
     bool allocate_all_instr_selection();
     bool allocate_match();
-    bool allocate_match_with_algorithm();
+    bool allocate_match_with_algorithm(int group = -1);
     bool allocate_sram_match();
     bool is_match_entry_wide() const;
 
@@ -331,7 +335,7 @@ struct TableFormat {
         bitvec &bit_attempt, bool overhead_section);
     bool attempt_allocate_shares();
     bool allocate_shares();
-    void allocate_full_fits(int width_sect);
+    void allocate_full_fits(int width_sect, int group = -1);
     bool redistribute_entry_priority();
     void redistribute_next_table();
     bool build_match_group_map();

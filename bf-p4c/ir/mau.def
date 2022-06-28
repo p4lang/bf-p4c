@@ -120,6 +120,7 @@ class Table : BFN::Unit, IAnnotated  {
         bool            has_range = false;
         bool            proxy_hash = false;
         bool            requires_versioning = true;
+        bool            is_lamb = false;  // Tofino5 specific
         int             ixbar_bytes = 0;
         int             match_bytes = 0;
         int             ixbar_width_bits = 0;
@@ -143,6 +144,20 @@ class Table : BFN::Unit, IAnnotated  {
         int             sel_len_bits = 0;
         int             proxy_hash_width = 0;
         HashFunction    proxy_hash_algorithm = {};
+
+        int get_sram_depth() const {
+            if (is_lamb) return Memories::LAMB_DEPTH;
+            return Memories::SRAM_DEPTH;
+        }
+
+        int get_ram_line_select_bits() const {
+            if (is_lamb) return IXBar::LAMB_LINE_SELECT_BITS;
+            return IXBar::RAM_LINE_SELECT_BITS;
+        }
+
+        int get_ram_ghost_bits() const {
+            return get_ram_line_select_bits();
+        }
 
         bool direct_ad_required() const {
             if (action_addr.address_bits > 0)

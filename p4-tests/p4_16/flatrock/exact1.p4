@@ -30,7 +30,7 @@ control egress(inout headers hdrs, inout metadata meta,
             hdrs.data.h1 : exact; 
         }
         actions = { noop; setb1; }
-        size = 32;
+        size = 128;
         const default_action = noop();
     }
 

@@ -20,6 +20,7 @@ class LayoutOption {
     safe_vector<int> dleft_hash_sizes;
     int entries = 0;
     int srams = 0, maprams = 0, tcams = 0;
+    int lambs = 0;  // Tofino5 specific
     int select_bus_split = -1;
     int action_format_index = -1;
     bool previously_widened = false;
@@ -31,6 +32,7 @@ class LayoutOption {
         : layout(l), way(w), action_format_index(i) {}
     void clear_mems() {
         srams = 0;
+        lambs = 0;  // Tofino5 specific
         maprams = 0;
         tcams = 0;
         entries = 0;

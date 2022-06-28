@@ -79,6 +79,9 @@ class Device {
         return Device::get().getThreadsSharePipe(a, b); }
     static bool hasMirrorIOSelect() { return Device::get().getHasMirrorIOSelect(); }
     static bool hasMetadataPOV() { return Device::get().getHasMetadataPOV(); }
+    static int sramMinPackEntries() { return Device::get().getSramMinPackEntries(); }
+    static int sramMaxPackEntries() { return Device::get().getSramMaxPackEntries(); }
+    static int sramMaxPackEntriesPerRow() { return Device::get().getSramMaxPackEntriesPerRow(); }
 
  protected:
     explicit Device(cstring name) : name_(name) {}
@@ -118,6 +121,9 @@ class Device {
     virtual bool getThreadsSharePipe(gress_t a, gress_t b) const = 0;
     virtual bool getHasMirrorIOSelect() const = 0;
     virtual bool getHasMetadataPOV() const = 0;
+    virtual int getSramMinPackEntries() const = 0;
+    virtual int getSramMaxPackEntries() const = 0;
+    virtual int getSramMaxPackEntriesPerRow() const = 0;
 
  private:
     static Device* instance_;
@@ -176,6 +182,9 @@ class TofinoDevice : public Device {
     bool getThreadsSharePipe(gress_t, gress_t) const override { return true; }
     bool getHasMirrorIOSelect() const override { return false; }
     bool getHasMetadataPOV() const override { return false; }
+    int getSramMinPackEntries() const override { return 1; }
+    int getSramMaxPackEntries() const override { return 9; }
+    int getSramMaxPackEntriesPerRow() const override { return 5; }
 };
 
 class JBayDevice : public Device {
@@ -229,6 +238,9 @@ class JBayDevice : public Device {
     bool getThreadsSharePipe(gress_t, gress_t) const override { return true; }
     bool getHasMirrorIOSelect() const override { return true; }
     bool getHasMetadataPOV() const override { return true; }
+    int getSramMinPackEntries() const override { return 1; }
+    int getSramMaxPackEntries() const override { return 9; }
+    int getSramMaxPackEntriesPerRow() const override { return 5; }
 };
 
 /// Tofino2 variants. The only difference between them is the number of
@@ -312,6 +324,9 @@ class CloudbreakDevice : public Device {
     bool getThreadsSharePipe(gress_t, gress_t) const override { return true; }
     bool getHasMirrorIOSelect() const override { return true; }
     bool getHasMetadataPOV() const override { return true; }
+    int getSramMinPackEntries() const override { return 1; }
+    int getSramMaxPackEntries() const override { return 9; }
+    int getSramMaxPackEntriesPerRow() const override { return 5; }
 };
 #endif /* HAVE_CLOUDBREAK */
 
@@ -370,6 +385,9 @@ class FlatrockDevice : public Device {
     bool getHasMirrorIOSelect() const override { return false; }
     // _Some_ flatrock metadata have associated POV bits
     bool getHasMetadataPOV() const override { return true; }
+    int getSramMinPackEntries() const override { return 1; }
+    int getSramMaxPackEntries() const override { return 4; }
+    int getSramMaxPackEntriesPerRow() const override { return 4; }
 };
 #endif /* HAVE_FLATROCK */
 

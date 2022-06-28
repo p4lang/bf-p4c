@@ -464,7 +464,8 @@ bool StageUseEstimate::can_be_identity_hash(const IR::MAU::Table *tbl, LayoutOpt
     if (default_action_has_attached_resource)
         return false;
 
-    int extra_identity_bits = lo->layout.ixbar_width_bits - ceil_log2(Memories::SRAM_DEPTH);
+    int extra_identity_bits = lo->layout.ixbar_width_bits
+                                - ceil_log2(lo->layout.get_sram_depth());
     // Generally the limit becomes around 18 bits: 4 way pack plus 64 bits of entries
     if (extra_identity_bits <= 8) {
         int entries_needed = (1 << extra_identity_bits);
@@ -529,8 +530,25 @@ void StageUseEstimate::calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOpti
     if (ways_provided(tbl, lo, calculated_depth))
         return;
 
+    // TODO: Lambs are only used in Flatrock. Code needs to be updated for large lambs, currently
+    // only deals with small tables which fit in 64 / 128 words.
+    // For non-lamb layouts (STMs) the remaining code will also require a different approach.
+    // Eventually its best to separate out this function for Flatrock
+    if (lo->layout.is_lamb) {
+        switch (calculated_depth) {
+            case 1:
+                lo->way_sizes = { 1 };
+                break;
+            case 2:
+                lo->way_sizes = {1, 1};
+                break;
+        }
+        if (lo->way_sizes.size() > 0) return;
+    }
+
     // This indicates that we are using identity function.
-    if (lo->layout.ixbar_width_bits < ceil_log2(Memories::SRAM_DEPTH) && !lo->layout.proxy_hash) {
+    if (lo->layout.ixbar_width_bits < ceil_log2(lo->layout.get_sram_depth())
+        && !lo->layout.proxy_hash) {
         if (calculated_depth == 1) {
             lo->way_sizes = {1};
             lo->identity = true;
@@ -582,7 +600,8 @@ void StageUseEstimate::calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOpti
     } else {
         int test_depth = calculated_depth > 64 ? 64 : calculated_depth;
         int max_group_size = (1 << floor_log2(test_depth)) / 4;
-        int depth = calculated_depth > 80 ? 80 : calculated_depth;
+        int depth = calculated_depth > Memories::TOTAL_SRAMS ?
+                        Memories::TOTAL_SRAMS : calculated_depth;
         int select_bits_added = 0;
         int ways_added = 0;
         int select_ways = 0;
@@ -630,6 +649,7 @@ void StageUseEstimate::calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOpti
 /* Convert all possible layout options to the correct way sizes */
 void StageUseEstimate::options_to_ways(const IR::MAU::Table *tbl, int entries) {
     for (auto &lo : layout_options) {
+        LOG5("Calculating options to ways for layout: " << lo);
         if (lo.layout.hash_action || lo.way.match_groups == 0 || lo.layout.gateway_match) {
             lo.entries = entries;
             lo.srams = 0;
@@ -637,12 +657,18 @@ void StageUseEstimate::options_to_ways(const IR::MAU::Table *tbl, int entries) {
         }
 
         int per_row = lo.way.match_groups;
-        int total_depth = (entries + per_row * 1024 - 1) / (per_row * 1024);
+        int total_depth = (entries +
+                            per_row * lo.layout.get_sram_depth() - 1)
+                            / (per_row * lo.layout.get_sram_depth());
         int calculated_depth = total_depth;
         calculate_way_sizes(tbl, &lo, calculated_depth);
-        lo.entries = calculated_depth * lo.way.match_groups * 1024;
+        lo.entries = calculated_depth * lo.way.match_groups
+                        * lo.layout.get_sram_depth();
         lo.srams = calculated_depth * lo.way.width;
         lo.maprams = 0;
+        LOG5("Entries: " << lo.entries << ", srams: " << lo.srams
+            << ", calculated_depth: " << calculated_depth << ", total_depth: " << total_depth
+            << ", ways: " << lo.way_sizes);
     }
 }
 
@@ -710,7 +736,8 @@ void StageUseEstimate::options_to_atcam_entries(const IR::MAU::Table *tbl, int e
         lo.way_sizes.push_back(ways_per_partition);
         lo.srams = ram_depth * lo.way.width * ways_per_partition;
         lo.entries = ram_depth * ways_per_partition * lo.way.match_groups
-                     * std::min(tbl->layout.partition_count, Memories::SRAM_DEPTH);
+                     * std::min(tbl->layout.partition_count,
+                             lo.layout.get_sram_depth());
     }
 }
 
@@ -769,6 +796,7 @@ void StageUseEstimate::options_to_dleft_entries(const IR::MAU::Table *tbl,
 void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
                                                const attached_entries_t &att_entries,
                                                LayoutOption *lo) {
+    LOG5("Calculating RAMs for layout: " << lo);
     for (auto back_at : tbl->attached) {
         auto at = back_at->attached;
         int per_word = 0;
@@ -826,14 +854,17 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
         int width = 1;
         int per_word = ActionDataPerWord(&lo->layout, &width);
         int attached_entries = lo->entries;
-        int entries_per_sram = 1024 * per_word;
+        int entries_per_sram = lo->layout.get_sram_depth() * per_word;
         int units = (attached_entries + entries_per_sram - 1) / entries_per_sram;
         lo->srams += units * width;
+        LOG5("Action Data Reqd: per_word: " << per_word << ", attached_entries: "
+                << attached_entries << ", entries_per_sram: " << entries_per_sram
+                << ", units: " << units);
     }
     if (lo->layout.ternary_indirect_required()) {
         int per_word = TernaryIndirectPerWord(&lo->layout, tbl);
         int attached_entries = lo->entries;
-        int entries_per_sram = 1024 * per_word;
+        int entries_per_sram = lo->layout.get_sram_depth() * per_word;
         int units = (attached_entries + entries_per_sram - 1) / entries_per_sram;
         lo->srams += units;
     }
@@ -929,6 +960,8 @@ void StageUseEstimate::fill_estimate_from_option(int &entries) {
 
 void StageUseEstimate::determine_initial_layout_option(const IR::MAU::Table *tbl,
         int &entries, attached_entries_t &attached_entries) {
+    LOG3("Determining initial layout options on table : " << tbl->name << ", entries: " << entries
+            << ", att entries: " << attached_entries);
     if (tbl->for_dleft()) {
         BUG_CHECK(layout_options.size() == 1, "Should only be one layout option for dleft "
                   "hash tables");
@@ -1020,6 +1053,8 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
 
 bool StageUseEstimate::adjust_choices(const IR::MAU::Table *tbl, int &entries,
                                       attached_entries_t &attached_entries) {
+    LOG3("Adjusting choices on table : " << tbl->name << ", entries: " << entries
+            << ", att entries: " << attached_entries);
     if (tbl->is_a_gateway_table_only() || tbl->layout.no_match_data())
         return false;
 

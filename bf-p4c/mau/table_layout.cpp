@@ -497,7 +497,7 @@ void DoTableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR:
     }
 
     if (!layout.ternary && !layout.atcam && !layout.proxy_hash) {
-        int ghost_bits_left = TableFormat::RAM_GHOST_BITS;
+        int ghost_bits_left = layout.get_ram_ghost_bits();
         std::sort(byte_sizes.begin(), byte_sizes.end());
         for (auto byte_size : byte_sizes) {
             if (ghost_bits_left >= byte_size) {
@@ -506,7 +506,7 @@ void DoTableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR:
                 layout.match_bytes--;
             }
         }
-        layout.match_width_bits -= TableFormat::RAM_GHOST_BITS;
+        layout.match_width_bits -= layout.get_ram_ghost_bits();
     } else if (layout.proxy_hash) {
         layout.match_width_bits = layout.proxy_hash_width;
     }
@@ -614,10 +614,9 @@ void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
         const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type,
         int action_data_bytes_in_table, int immediate_bits, int index) {
     BUG_CHECK(format_type.valid(), "invalid format type in LayoutChoices::setup_exact_match");
-    static constexpr int MIN_PACK = 1;
-    static constexpr int MAX_PACK = 9;
-    // FIXME: Technically this is 5, but need to update version bit information
-    static constexpr int MAX_ENTRIES_PER_ROW = 5;
+    auto MIN_PACK = Device::sramMinPackEntries();
+    auto MAX_PACK = Device::sramMaxPackEntries();
+    auto MAX_ENTRIES_PER_ROW = Device::sramMaxPackEntriesPerRow();
 
     auto annot = tbl->match_table->getAnnotations();
     int pack_val = 0;
@@ -646,6 +645,8 @@ void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
         return;
     }
 
+    // TODO : FOR Layout generation in Flatrock below loop needs to be executed twice, once for LAMB
+    // and once for STM
     auto lo_key = std::make_pair(tbl->name, format_type);
     for (int entry_count = MIN_PACK; entry_count <= MAX_PACK; entry_count++) {
         if (pack_val > 0 && entry_count != pack_val)
@@ -660,44 +661,57 @@ void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
         single_entry_bits += layout_proto.match_width_bits;
 
         int total_bits = entry_count * single_entry_bits;
-        int total_bytes = entry_count * layout_proto.match_bytes;
-        int total_overhead_bits = entry_count * single_overhead_bits;
+        int width = 1;
+#ifdef HAVE_FLATROCK
+        if (Device::currentDevice() == Device::FLATROCK) {
+            // Per entry cannot exceed 64 bits overhead
+            if (single_overhead_bits > TableFormat::OVERHEAD_BITS) continue;
 
-        int bit_limit_width = (total_bits + TableFormat::SINGLE_RAM_BITS - 1)
-                              / TableFormat::SINGLE_RAM_BITS;
-        int byte_limit_width = (total_bytes + TableFormat::SINGLE_RAM_BYTES - 1)
-                               / TableFormat::SINGLE_RAM_BYTES;
-        int overhead_width = (total_overhead_bits + TableFormat::OVERHEAD_BITS - 1)
-                             / TableFormat::OVERHEAD_BITS;
-        int pack_width = (entry_count + MAX_ENTRIES_PER_ROW - 1)
-                          / MAX_ENTRIES_PER_ROW;
-
-        // ATCAM tables can only have one payload bus, as the priority ranking happens on
-        // a single bus
-        if ((overhead_width > 1 || entry_count > MAX_ENTRIES_PER_ROW) && layout_proto.atcam)
-            break;
-
-
-        int width = std::max({ bit_limit_width, byte_limit_width, overhead_width, pack_width });
-
-        int mod_value;
-        int min_value = 0;
-
-        if (width > entry_count) {
-            mod_value = width % entry_count;
-            min_value = entry_count;
+            // Total bits cannot exceed single RAM width
+            if (total_bits > TableFormat::SINGLE_RAM_BITS) continue;
         } else {
-            mod_value = entry_count % width;
-            min_value = width;
+#endif
+            int total_bytes = entry_count * layout_proto.match_bytes;
+            int total_overhead_bits = entry_count * single_overhead_bits;
+
+            int bit_limit_width = (total_bits + TableFormat::SINGLE_RAM_BITS - 1)
+                                  / TableFormat::SINGLE_RAM_BITS;
+            int byte_limit_width = (total_bytes + TableFormat::SINGLE_RAM_BYTES - 1)
+                                   / TableFormat::SINGLE_RAM_BYTES;
+            int overhead_width = (total_overhead_bits + TableFormat::OVERHEAD_BITS - 1)
+                                 / TableFormat::OVERHEAD_BITS;
+            int pack_width = (entry_count + MAX_ENTRIES_PER_ROW - 1)
+                              / MAX_ENTRIES_PER_ROW;
+
+            // ATCAM tables can only have one payload bus, as the priority ranking happens on
+            // a single bus
+            if ((overhead_width > 1 || entry_count > MAX_ENTRIES_PER_ROW) && layout_proto.atcam)
+                break;
+
+
+            width = std::max({ bit_limit_width, byte_limit_width, overhead_width, pack_width });
+
+            int mod_value;
+            int min_value = 0;
+
+            if (width > entry_count) {
+                mod_value = width % entry_count;
+                min_value = entry_count;
+            } else {
+                mod_value = entry_count % width;
+                min_value = width;
+            }
+
+            // Skip potential doubling of layouts: i.e. if the layout is 2 entries per RAM row,
+            // and 1 RAM wide, then there is no point to adding the double, 4 entries per RAM row,
+            // and 2 RAM wide.  This is the same packing, and wider matches are more constrained
+            if (mod_value == 0 && min_value != 1 && pack_val == 0)
+                continue;
+
+            if (width > Memories::SRAM_ROWS) break;
+#ifdef HAVE_FLATROCK
         }
-
-        // Skip potential doubling of layouts: i.e. if the layout is 2 entries per RAM row,
-        // and 1 RAM wide, then there is no point to adding the double, 4 entries per RAM row,
-        // and 2 RAM wide.  This is the same packing, and wider matches are more constrained
-        if (mod_value == 0 && min_value != 1 && pack_val == 0)
-            continue;
-
-        if (width > Memories::SRAM_ROWS) break;
+#endif
 
         LOG2("Layout Option: { pack : " << entry_count << ", width : " << width
              << ", action data table bytes : " << action_data_bytes_in_table
@@ -708,6 +722,11 @@ void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
         layout_for_pack.immediate_bits = immediate_bits;
         layout_for_pack.overhead_bits += immediate_bits;
         layout_for_pack.action_data_bytes = action_data_bytes_in_table + (immediate_bits + 7) / 8;
+#ifdef HAVE_FLATROCK
+        // TODO: Update layouts to consider STM allocation
+        if (Device::currentDevice() == Device::FLATROCK)
+            layout_for_pack.is_lamb = true;
+#endif
         way.match_groups = entry_count;
         way.width = width;
         cache_layout_options[lo_key].emplace_back(layout_for_pack, way, index);

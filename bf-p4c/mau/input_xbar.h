@@ -7,6 +7,7 @@
 #include <unordered_set>
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/alloc.h"
+#include "bf-p4c/device.h"
 #include "bf-p4c/lib/autoclone.h"
 #include "bf-p4c/lib/dyn_vector.h"
 #include "bf-p4c/mau/attached_entries.h"
@@ -53,6 +54,8 @@ struct IXBar {
     static constexpr int HASH_SINGLE_BITS = 12;  /* top 12 bits of hash table individually */
     static constexpr int HASH_PARITY_BIT = 51;  /* If enabled reserved parity bit position */
     static constexpr int RAM_SELECT_BIT_START = 40;
+    // 64 words in a LAMB - 6 bits
+    static constexpr int LAMB_LINE_SELECT_BITS = 6;
     static constexpr int RAM_LINE_SELECT_BITS = 10;
     static constexpr int HASH_MATRIX_SIZE = RAM_SELECT_BIT_START + HASH_SINGLE_BITS;
     static constexpr int HASH_DIST_SLICES = 3;
