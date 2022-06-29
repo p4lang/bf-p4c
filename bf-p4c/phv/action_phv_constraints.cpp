@@ -3814,6 +3814,9 @@ bool ActionPhvConstraints::diagnoseSuperCluster(
             ss << "  Action " << action_name << " must be rewritten.";
             // Check whether the operations in this slice list are of the correct kind.
             if (!valid_container_operation_type(action, set_of_slices, ss)) {
+                if (action->srcInfo.isValid())
+                    error_msg << action->srcInfo.toPositionString() << ":" << std::endl <<
+                            action->srcInfo.toSourceFragment() << std::endl;
                 error_msg << ss.str();
                 error_found = true;
                 continue;
@@ -3822,6 +3825,9 @@ bool ActionPhvConstraints::diagnoseSuperCluster(
             ss << "  Action " << action_name << " must be rewritten, because ";
             // Then check if the packing for this supercluster is valid.
             if (!diagnoseInvalidPacking(action, list, fieldAlignments, slice_to_slice_list, ss)) {
+                if (action->srcInfo.isValid())
+                    error_msg << action->srcInfo.toPositionString() << ":" << std::endl <<
+                            action->srcInfo.toSourceFragment() << std::endl;
                 error_msg << slices.str() << std::endl;
                 error_msg << ss.str();
                 error_found = true;
