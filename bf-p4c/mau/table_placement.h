@@ -202,6 +202,7 @@ class DecidePlacement : public MauInspector {
 #ifdef MULTITHREAD
     class TryPlacedPool;
 #endif
+    class BacktrackManagement;
     explicit DecidePlacement(TablePlacement &s);
 
  private:

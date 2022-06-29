@@ -3208,53 +3208,6 @@ void DecidePlacement::initForPipe(const IR::BFN::Pipe *pipe,
         new GroupPlace(*this, work, {}, pipe->ghost_thread.ghost_mau); }
     self.rejected_placements.clear();
     saved_placements.clear();
-    backtrack_count = 0;
-    resource_mode = false;
-
-    if (BFNContext::get().options().alt_phv_alloc) {
-        switch (self.summary.getActualState()) {
-            case TableSummary::ALT_INITIAL:
-                // first round of table placement does not enable backtracking.
-                MaxBacktracksPerPipe = -1;
-                break;
-            case TableSummary::ALT_RETRY_ENHANCED_TP:
-                // retry table placement with resource-based allocation and backtracking ON.
-                resource_mode = true;
-                MaxBacktracksPerPipe = 32;
-                break;
-            case TableSummary::ALT_FINALIZE_TABLE_SAME_ORDER:
-                MaxBacktracksPerPipe = -1;
-                break;
-            case TableSummary::ALT_FINALIZE_TABLE:
-                // final round, enable both resource-based allocation and backtracking.
-                resource_mode = true;
-                MaxBacktracksPerPipe = 32;
-                break;
-            default:
-                MaxBacktracksPerPipe = -1;
-                break;
-        }
-        return;
-    }
-
-    // This is to balance compile time with benefit from backtracking
-    switch (self.summary.getActualState()) {
-        case TableSummary::INITIAL:
-            // Disable backtracking on initial state.
-            MaxBacktracksPerPipe = -1;
-            break;
-        case TableSummary::NOCC_TRY1:
-        case TableSummary::NOCC_TRY2:
-            MaxBacktracksPerPipe = 12;
-            break;
-        case TableSummary::REDO_PHV1:
-        case TableSummary::REDO_PHV2:
-            MaxBacktracksPerPipe = 32;
-            break;
-        default:
-            MaxBacktracksPerPipe = -1;
-            break;
-    }
 }
 
 void DecidePlacement::recomputePartlyPlaced(const Placed *done,
@@ -3609,6 +3562,235 @@ void DecidePlacement::TryPlacedPool::shutdown() {
 }
 #endif
 
+/* This class encapsulate most of the high level backtracking services. Backtracking is used
+ * mainly for:
+ * 1 - Find an alternative solution to workaround a dependency problem
+ * 2 - Build multiple solution for a single stage to evaluate them after and choose the best one
+ *     (resource based allocation)
+ * 3 - Build multiple entire placement and compare them if none of them fit in the actual device
+ *     resources. We currently have 4 strategies
+ *     a) Dependency Only
+ *     b) Dependency Only with backtracking
+ *     c) Resource based allocation
+ *     d) Resource based allocation with backtracking
+ */
+class DecidePlacement::BacktrackManagement {
+    DecidePlacement &self;
+
+    ResourceBasedAlloc res_based_alloc;  // Handle resource based allocation
+    FinalPlacement final_placement;      // Carry the complete solution based on allocation strategy
+
+    // These references are used to update local element of default_table_placement()
+    ordered_set<const GroupPlace *> &active_work;
+    ordered_set<const IR::MAU::Table *> &partly_placed;
+    const Placed *&active_placed;
+    Backfill &backfill;
+
+    // We only move from dependency only strategy to resource based allocation if this flag is set
+    bool ena_resource_mode = false;
+
+    // Track the first table allocated as a backtrack point to create multiple complete solutions
+    BacktrackPlacement *start_flow = nullptr;
+
+ public:
+    BacktrackManagement(DecidePlacement &self, ordered_set<const GroupPlace *> &w,
+                        ordered_set<const IR::MAU::Table *> &p, const Placed *&a, Backfill &b) :
+                        self(self), res_based_alloc(self, w, p, a), final_placement(self, w, p, a),
+                        active_work(w), partly_placed(p), active_placed(a), backfill(b) {
+        self.backtrack_count = 0;
+        self.resource_mode = false;
+        // This is for the table first approach
+        if (BFNContext::get().options().alt_phv_alloc) {
+            switch (self.self.summary.getActualState()) {
+                case TableSummary::ALT_INITIAL:
+                    // first round of table placement does not enable resource-based alloc.
+                    self.MaxBacktracksPerPipe = 32;
+                    break;
+                case TableSummary::ALT_RETRY_ENHANCED_TP:
+                    // retry table placement with resource-based allocation and backtracking ON.
+                    ena_resource_mode = true;
+                    self.resource_mode = true;
+                    self.MaxBacktracksPerPipe = 32;
+                    break;
+                case TableSummary::ALT_FINALIZE_TABLE_SAME_ORDER:
+                    self.MaxBacktracksPerPipe = -1;
+                    break;
+                case TableSummary::ALT_FINALIZE_TABLE:
+                    // final round, enable both resource-based allocation and backtracking.
+                    ena_resource_mode = true;
+                    self.MaxBacktracksPerPipe = 32;
+                    break;
+                default:
+                    self.MaxBacktracksPerPipe = -1;
+                    break;
+            }
+            return;
+        }
+
+        // This is to balance compile time with benefit from backtracking
+        switch (self.self.summary.getActualState()) {
+            case TableSummary::INITIAL:
+                // Disable backtracking on initial state.
+                self.MaxBacktracksPerPipe = -1;
+                break;
+            case TableSummary::NOCC_TRY1:
+            case TableSummary::NOCC_TRY2:
+                ena_resource_mode = true;
+                self.MaxBacktracksPerPipe = 12;
+                break;
+            case TableSummary::REDO_PHV1:
+            case TableSummary::REDO_PHV2:
+                ena_resource_mode = true;
+                self.MaxBacktracksPerPipe = 32;
+                break;
+            default:
+                self.MaxBacktracksPerPipe = -1;
+                break;
+        }
+    }
+
+    // Save future backtrack position and handle resouce based allocation solution buildup. Return
+    // true if a backtracking position was found, false otherwise.
+    bool update_bt_point(const Placed *best, safe_vector<const Placed *> &trial) {
+        // Always try to respect the stage and placement pragma even when backtracking.
+        bool best_with_pragmas = false;
+        if (best->table->get_provided_stage() >= 0 ||
+            best->table->get_placement_priority_int() > 0) {
+            LOG3("Best table have stage or priority pragma");
+            best_with_pragmas = true;
+        } else {
+            std::set<cstring> pri_tbls = best->table->get_placement_priority_string();
+            for (auto t : trial) {
+                if (pri_tbls.count(t->table->externalName())) {
+                    LOG3("Best table have priority pragma with tbl " << t->name);
+                    best_with_pragmas = true;
+                    break;
+                }
+            }
+        }
+
+        // Resource mode handling
+        if (self.resource_mode && active_placed && best->stage > active_placed->stage) {
+            self.savePlacement(best, active_work, true);
+            LOG3("Resource mode and placement completed for stage:" << active_placed->stage);
+            PlacementScore *pl_score = res_based_alloc.add_stage_complete(best, active_work, trial,
+                                                                          best_with_pragmas);
+            if (res_based_alloc.found_other_placement()) {
+                LOG3("Found incompleted placement to try");
+                backfill.clear();
+                return true;
+            } else {
+                LOG3("Found NO other incomplete placement");
+                bool cur_is_best = res_based_alloc.select_best_solution(best, pl_score);
+                backfill.clear();
+                if (!cur_is_best)
+                    return true;
+            }
+        }
+
+        // Tables being placed because of pragmas can't be overriden by backtrack. Other table
+        // possible placement are saved under some scenario to be re-used in future backtracking
+        // situation.
+        if (!best_with_pragmas) {
+            for (auto t : trial) {
+                if (t->stage == best->stage) {
+                    if (self.resource_mode)
+                        res_based_alloc.add_placed_pos(t, active_work, t == best);
+
+                    self.savePlacement(t, active_work, t == best);
+                }
+            }
+        } else {
+            if (self.resource_mode)
+                res_based_alloc.add_placed_pos(best, active_work, true);
+
+            self.savePlacement(best, active_work, true);
+        }
+
+        // Save the first placement position we encounter to use it as baseline for all complete
+        // solutions.
+        if (!start_flow)
+            start_flow = new BacktrackPlacement(self, best, active_work, true);
+
+        return false;
+    }
+
+    // Backtrack to this placement
+    void backtrack_to(BacktrackPlacement *bt) {
+        active_placed = bt->reset_place_table(active_work);
+        self.recomputePartlyPlaced(active_placed, partly_placed);
+        backfill.clear();
+        res_based_alloc.clear_stage();
+    }
+
+    // Try to find a backtrack placement that relaxe the actual constraint if possible. Change
+    // strategy from dependency only to resource based if the number of backtracking allowed was
+    // exceeded. Return true if a backtrack placement to try was found, false otherwise.
+    bool find_backtrack_solution(const Placed *best, int dep_chain) {
+        // Incomplete placement before trying with backtracking.
+        if (self.backtrack_count == 0) {
+            BacktrackPlacement *bt = new BacktrackPlacement(self, best, active_work, true);
+            final_placement.add_incomplete_placement(bt);
+        }
+
+        LOG3("Found dependency chain of " << dep_chain << " at stage " << best->stage);
+        LOG3("Actual backtrack count:" << self.backtrack_count << " with max backtrack count:"
+             << self.MaxBacktracksPerPipe);
+
+        // Try to increase the solution by doing "local" backtracking which mean that we
+        // prefer latest backtracking point for a given table. If this strategy fail, we
+        // move to the "global" backtracking point which can go back anywhere in the past.
+        if (self.backtrack_count < self.MaxBacktracksPerPipe) {
+            int offset = best->stage + dep_chain - (Device::numStages() - 1);
+            boost::optional<BacktrackPlacement&> bt = self.find_backtrack_point(best, offset, true);
+            if (bt) {
+                LOG3("Found local backtracking point");
+                backtrack_to(&(*bt));
+                return true;
+            } else {
+                boost::optional<BacktrackPlacement&> bt = self.find_backtrack_point(best, offset,
+                                                                                    false);
+                if (bt) {
+                    LOG3("Found global backtracking point");
+                    backtrack_to(&(*bt));
+                    return true;
+                }
+            }
+        }
+
+        if (start_flow && !self.resource_mode && ena_resource_mode) {
+            // Non resource mode with backtracking incomplete placement
+            if (self.backtrack_count) {
+                BacktrackPlacement *bt = new BacktrackPlacement(self, best, active_work, true);
+                final_placement.add_incomplete_placement(bt);
+            }
+            // Restart table placement from the beginning in resource mode
+            LOG3("Try with resource mode enabled");
+            backtrack_to(start_flow);
+            self.saved_placements.clear();
+            self.backtrack_count = 0;
+            self.resource_mode = true;
+            return true;
+        } else {
+            // Set the backtrack_count to the maximum value to disable any more
+            // backtracking for this table allocation pass.
+            self.backtrack_count = self.MaxBacktracksPerPipe + 1;
+        }
+        return false;
+    }
+
+    // Add a complete solution for one of the strategy
+    void add_complete_solution() {
+        BacktrackPlacement *bt = new BacktrackPlacement(self, active_placed, active_work, true);
+        final_placement.add_complete_placement(bt);
+    }
+
+    // Select the best solution if none of them fill all the device requirement
+    void select_best_final_solution() {
+        final_placement.select_best_final_placement();
+    }
+};
+
 const DecidePlacement::Placed*
 DecidePlacement::default_table_placement(const IR::BFN::Pipe *pipe) {
     LOG1("Table placement starting on " << pipe->name << " with DEFAULT PLACEMENT approach");
@@ -3619,7 +3801,6 @@ DecidePlacement::default_table_placement(const IR::BFN::Pipe *pipe) {
 
     ordered_set<const GroupPlace *>     work;  // queue with random-access lookup
     const Placed *placed = nullptr;
-    BacktrackPlacement *start_flow = nullptr;
 
     /* all the state for a partial table placement is stored in the work
      * set and placed list, which are const pointers, so we can backtrack
@@ -3629,8 +3810,7 @@ DecidePlacement::default_table_placement(const IR::BFN::Pipe *pipe) {
 
     ordered_set<const IR::MAU::Table *> partly_placed;
     Backfill backfill(*this);
-    ResourceBasedAlloc res_based_alloc(*this, work, partly_placed, placed);
-    FinalPlacement final_placement(*this, work, partly_placed, placed);
+    BacktrackManagement bt_mgmt(*this, work, partly_placed, placed, backfill);
 #ifdef MULTITHREAD
     TryPlacedPool placed_pool(*this, jobs);
 #endif
@@ -3638,8 +3818,7 @@ DecidePlacement::default_table_placement(const IR::BFN::Pipe *pipe) {
         // Empty work means that all the tables are actually placed. Save it as a complete
         // placement for future comparison.
         if (work.empty()) {
-            BacktrackPlacement *bt = new BacktrackPlacement(*this, placed, work, true);
-            final_placement.add_complete_placement(bt);
+            bt_mgmt.add_complete_solution();
             // No other incomplete placement to finalize
             if (work.empty())
                 break;
@@ -3844,60 +4023,8 @@ DecidePlacement::default_table_placement(const IR::BFN::Pipe *pipe) {
                 LOG3("    Keeping best " << best->name << " for reason: " << choice);
                 self.reject_placement(t, choice, best); } }
 
-        // Always try to respect the stage and placement pragma even when backtracking.
-        bool best_with_pragmas = false;
-        if (best->table->get_provided_stage() >= 0 ||
-            best->table->get_placement_priority_int() > 0) {
-            LOG3("Best table have stage or priority pragma");
-            best_with_pragmas = true;
-        } else {
-            std::set<cstring> pri_tbls = best->table->get_placement_priority_string();
-            for (auto t : trial) {
-                if (pri_tbls.count(t->table->externalName())) {
-                    LOG3("Best table have priority pragma with tbl " << t->name);
-                    best_with_pragmas = true;
-                    break;
-                }
-            }
-        }
-
-        if (resource_mode && placed && best->stage > placed->stage) {
-            savePlacement(best, work, true);
-            LOG3("Resource mode and placement completed for stage:" << placed->stage);
-            PlacementScore *pl_score = res_based_alloc.add_stage_complete(best, work, trial,
-                                                                          best_with_pragmas);
-            if (res_based_alloc.found_other_placement()) {
-                LOG3("Found incompleted placement to try");
-                backfill.clear();
-                continue;
-            } else {
-                LOG3("Found NO other incomplete placement");
-                bool cur_is_best = res_based_alloc.select_best_solution(best, pl_score);
-                backfill.clear();
-                if (!cur_is_best)
-                    continue;
-            }
-        }
-
-        // Tables being placed because of pragmas can't be overriden by backtrack.
-        if (!best_with_pragmas) {
-            for (auto t : trial) {
-                if (t->stage == best->stage) {
-                    if (resource_mode)
-                        res_based_alloc.add_placed_pos(t, work, t == best);
-
-                    savePlacement(t, work, t == best);
-                }
-            }
-        } else {
-            if (resource_mode)
-                res_based_alloc.add_placed_pos(best, work, true);
-
-            savePlacement(best, work, true);
-        }
-
-        if (!start_flow)
-            start_flow = new BacktrackPlacement(*this, best, work, true);
+        if (bt_mgmt.update_bt_point(best, trial))
+            continue;
 
         if (placed && best->stage > placed->stage &&
             !self.options.disable_table_placement_backfill) {
@@ -3946,9 +4073,7 @@ DecidePlacement::default_table_placement(const IR::BFN::Pipe *pipe) {
                     LOG3("  - too many backtracks!");
                 } else {
                     LOG3("  - backtrack trying " << (*bt)->name << " in stage " << (*bt)->stage);
-                    placed = bt->reset_place_table(work);
-                    recomputePartlyPlaced(placed, partly_placed);
-                    backfill.clear();
+                    bt_mgmt.backtrack_to(bt);
                     continue; } }
         }
 
@@ -3956,64 +4081,8 @@ DecidePlacement::default_table_placement(const IR::BFN::Pipe *pipe) {
             int dep_chain = self.deps.stage_info[best->table].dep_stages_control_anti;
             if ((best->stage + dep_chain >= Device::numStages()) &&
                 (backtrack_count <= MaxBacktracksPerPipe)) {
-                // Incomplete placement before trying with backtracking.
-                if (backtrack_count == 0) {
-                    BacktrackPlacement *bt = new BacktrackPlacement(*this, best, work, true);
-                    final_placement.add_incomplete_placement(bt);
-                }
-
-                LOG3("Found dependency chain of " << dep_chain << " at stage " << best->stage);
-                LOG3("Actual backtrack count:" << backtrack_count << " with max backtrack count:"
-                     << MaxBacktracksPerPipe);
-
-                // Try to increase the solution by doing "local" backtracking which mean that we
-                // prefer latest backtracking point for a given table. If this strategy fail, we
-                // move to the "global" backtracking point which can go back anywhere in the past.
-                if (backtrack_count < MaxBacktracksPerPipe) {
-                    int offset = best->stage + dep_chain - (Device::numStages() - 1);
-                    boost::optional<BacktrackPlacement&> bt = find_backtrack_point(best, offset,
-                                                                                   true);
-                    if (bt) {
-                        LOG3("Found local backtracking point");
-                        placed = bt->reset_place_table(work);
-                        recomputePartlyPlaced(placed, partly_placed);
-                        backfill.clear();
-                        res_based_alloc.clear_stage();
-                        continue;
-                    } else {
-                        boost::optional<BacktrackPlacement&> bt = find_backtrack_point(best, offset,
-                                                                                       false);
-                        if (bt) {
-                            LOG3("Found global backtracking point");
-                            placed = bt->reset_place_table(work);
-                            recomputePartlyPlaced(placed, partly_placed);
-                            backfill.clear();
-                            res_based_alloc.clear_stage();
-                            continue;
-                        }
-                    }
-                }
-
-                if (start_flow && !resource_mode) {
-                    // Non resource mode with backtracking incomplete placement
-                    if (backtrack_count) {
-                        BacktrackPlacement *bt = new BacktrackPlacement(*this, best, work, true);
-                        final_placement.add_incomplete_placement(bt);
-                    }
-                    // Restart table placement from the beginning in resource mode
-                    LOG3("Try with resource mode enabled");
-                    placed = start_flow->reset_place_table(work);
-                    recomputePartlyPlaced(placed, partly_placed);
-                    backfill.clear();
-                    res_based_alloc.clear_stage();
-                    saved_placements.clear();
-                    backtrack_count = 0;
-                    resource_mode = true;
+                if (bt_mgmt.find_backtrack_solution(best, dep_chain)) {
                     continue;
-                } else {
-                    // Set the backtrack_count to the maximum value to disable any more
-                    // backtracking for this table allocation pass.
-                    backtrack_count = MaxBacktracksPerPipe + 1;
                 }
             }
         }
@@ -4034,7 +4103,7 @@ DecidePlacement::default_table_placement(const IR::BFN::Pipe *pipe) {
         else
             partly_placed.erase(placed->table);
     }
-    final_placement.select_best_final_placement();
+    bt_mgmt.select_best_final_solution();
     LOG1("Table placement placed " << count(placed) << " tables in " <<
          (placed ? placed->stage+1 : 0) << " stages");
     return placed;
