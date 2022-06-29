@@ -652,7 +652,7 @@ void MauAsmOutput::emit_ways(std::ostream &out, indent_t indent, const IXBar::Us
 }
 
 void MauAsmOutput::emit_hash_dist(std::ostream &out, indent_t indent,
-        const safe_vector<IXBar::HashDistUse> *hash_dist_use, bool hashmod) const {
+        const safe_vector<Tofino::IXBar::HashDistUse> *hash_dist_use, bool hashmod) const {
     if (hash_dist_use == nullptr || hash_dist_use->empty())
         return;
 
@@ -694,7 +694,8 @@ void MauAsmOutput::emit_hash_dist(std::ostream &out, indent_t indent,
 }
 
 void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const ::IXBar::Use *use,
-        const ::IXBar::Use *proxy_hash_use, const safe_vector<IXBar::HashDistUse> *hash_dist_use,
+        const ::IXBar::Use *proxy_hash_use,
+        const safe_vector<Tofino::IXBar::HashDistUse> *hash_dist_use,
         const Memories::Use *mem, const TableMatch *fmt, const IR::MAU::Table *tbl,
         bool ternary) const {
     if (!ternary) {
@@ -2870,7 +2871,7 @@ std::string MauAsmOutput::build_call(const IR::MAU::AttachedMemory *at_mem,
     } else if (ba->addr_location == IR::MAU::AddrLocation::HASH) {
         BUG_CHECK(ba->hash_dist, "Hash Dist not allocated correctly");
         auto hash_dist_uses = tbl->resources->hash_dists;
-        const IXBar::HashDistUse *hd_use = nullptr;
+        const Tofino::IXBar::HashDistUse *hd_use = nullptr;
 
         IXBar::HashDistDest_t dest = IXBar::dest_location(ba);
         for (auto &hash_dist_use : hash_dist_uses) {
@@ -2925,7 +2926,7 @@ std::string MauAsmOutput::build_meter_color_call(const IR::MAU::Meter *mtr,
     } else if (ba->addr_location == IR::MAU::AddrLocation::HASH) {
         BUG_CHECK(ba->hash_dist, "Hash Dist not allocated correctly");
         auto &hash_dist_uses = tbl->resources->hash_dists;
-        const IXBar::HashDistUse *hd_use = nullptr;
+        const Tofino::IXBar::HashDistUse *hd_use = nullptr;
         IXBar::HashDistDest_t dest = IXBar::dest_location(ba, true);
         for (auto &hash_dist_use : hash_dist_uses) {
             for (auto &ir_alloc : hash_dist_use.ir_allocations) {
@@ -3228,8 +3229,8 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
         out << indent << "sweep_interval: " << meter->sweep_interval << std::endl;
     }
     if (meter->pre_color) {
-        const IXBar::HashDistUse *hd_use = nullptr;
-        const IXBar::HashDistIRUse *hd_ir_use = nullptr;
+        const Tofino::IXBar::HashDistUse *hd_use = nullptr;
+        const Tofino::IXBar::HashDistIRUse *hd_ir_use = nullptr;
         IXBar::HashDistDest_t dest = IXBar::dest_location(meter);
         auto &hash_dist_uses = tbl->resources->hash_dists;
         for (auto &hash_dist_use : hash_dist_uses) {
@@ -3322,7 +3323,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Selector *as) {
     out << indent << "non_linear: " << (as->sps_scramble ? "true" : "false") << std::endl;
     out << indent << "pool_sizes: [" << as->max_pool_size << "]" << std::endl;
     if (as->hash_mod) {
-        safe_vector<IXBar::HashDistUse> sel_hash_dist;
+        safe_vector<Tofino::IXBar::HashDistUse> sel_hash_dist;
         bool found = false;
         for (auto &hash_dist_use : tbl->resources->hash_dists) {
             for (auto &ir_alloc : hash_dist_use.ir_allocations) {

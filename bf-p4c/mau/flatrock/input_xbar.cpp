@@ -565,9 +565,6 @@ void IXBar::update(cstring table_name, const ::IXBar::Use &use_) {
     }
 }
 
-void IXBar::update(cstring , const HashDistUse &) {
-}
-
 void IXBar::add_collisions() {
 }
 

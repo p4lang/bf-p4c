@@ -293,7 +293,8 @@ void ResourcesLogging::collectXbarBytesUsage(unsigned int stage, const IXBar::Us
     LOG2("add_xbar_bytes_usage (stage=" << stage << "), table: " << alloc->used_by << " done!");
 }
 
-void ResourcesLogging::collectHashDistUsage(unsigned int stage, const IXBar::HashDistUse &hdUse) {
+void ResourcesLogging::collectHashDistUsage(unsigned int stage,
+                                            const Tofino::IXBar::HashDistUse &hdUse) {
     for (auto &irAlloc : hdUse.ir_allocations) {
         collectXbarBytesUsage(stage, irAlloc.use.get());
     }

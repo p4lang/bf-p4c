@@ -385,77 +385,6 @@ struct IXBar {
     static HashDistDest_t dest_location(const IR::Node *node, bool precolor = false);
     static std::string hash_dist_name(HashDistDest_t dest);
 
-    /**
-     * The Hash Distribution Unit is captured in uArch section 6.4.3.5.3 Hash Distribution.
-     * This is sourcing calculations from the Galois matrix and sends them to various locations
-     * in the MAU, as discussed in the comments above allocHashDist.
-     * FIXME -- this is tofino-specific, so should be in tofino/input_xbar.h
-     *
-     * This captures the data that will pass to a single possible destination after the expand
-     * but before the Mask/Shift block
-     */
-    struct HashDistAllocPostExpand {
-        P4HashFunction *func;
-        le_bitrange bits_in_use;
-        HashDistDest_t dest;
-        int shift;
-        // Only currently used for dynamic hash.  Goal is to remove
-        const IR::MAU::HashDist *created_hd;
-        // Workaround for multi-stage fifo tests.  Goal is to remove this as well and have
-        // the hash/compiler to generate this individually and determine it, but that's not
-        // very optimal in the given structure
-        bool chained_addr = false;
-        bitvec possible_shifts() const;
-        friend std::ostream &operator<<(std::ostream &, HashDistAllocPostExpand &);
-
-     public:
-        HashDistAllocPostExpand(P4HashFunction *f, le_bitrange b, HashDistDest_t d, int s)
-            : func(f), bits_in_use(b), dest(d), shift(s) {}
-        bool operator<(const HashDistAllocPostExpand& hd) const {
-            return std::tie(dest, shift, bits_in_use, chained_addr) <
-                std::tie(hd.dest, hd.shift, hd.bits_in_use, hd.chained_addr);
-        }
-    };
-
-    struct HashDistIRUse {
-        autoclone_ptr<IXBar::Use> use;
-        le_bitrange p4_hash_range;
-        HashDistDest_t dest;
-        // Only currently used for dynamic hash.  Goal is to remove
-        const IR::MAU::HashDist *created_hd = nullptr;
-        cstring dyn_hash_name;
-        bool is_dynamic() const { return !dyn_hash_name.isNull(); }
-    };
-
-    struct HashDistUse {
-        // Source of this translated HashDistUse.
-        safe_vector<HashDistAllocPostExpand> src_reqs;
-
-        safe_vector<HashDistIRUse> ir_allocations;
-        int expand = -1;
-        int unit = -1;
-        int shift = -1;
-        bitvec mask;
-
-        std::set<cstring> outputs;
-
-        int hash_group() const;
-        bitvec destinations() const;
-        bitvec galois_matrix_bits() const;
-
-        cstring used_by;
-        std::string used_for() const;
-
-        void clear() {
-            src_reqs.clear();
-            ir_allocations.clear();
-            expand = -1;
-            unit = -1;
-            shift = 0;
-            mask.clear();
-            outputs.clear();
-        }
-    };
 
     /* A problem occurred with the way the IXbar was allocated that requires backtracking
      * and trying something else */
@@ -526,7 +455,6 @@ struct IXBar {
                             const LayoutOption *, const ActionData::Format::Use *,
                             const attached_entries_t &) = 0;
     virtual void update(cstring name, const Use &alloc) = 0;
-    virtual void update(cstring name, const HashDistUse &hash_dist_alloc) = 0;
     virtual void update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc);
     // virtual void update(cstring name, const TableResourceAlloc *alloc) = 0;
     virtual void update(const IR::MAU::Table *tbl);

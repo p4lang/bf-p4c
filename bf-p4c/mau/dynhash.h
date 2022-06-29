@@ -35,8 +35,8 @@ struct HashFuncLoc {
 
 using NameToHashGen = std::map<cstring, const IR::MAU::HashGenExpression *>;
 using HashGenToAlloc
-    = std::map<cstring, safe_vector<std::pair<HashFuncLoc, const IXBar::HashDistIRUse *>>>;
-using AllocToHashUse = std::map<HashFuncLoc, safe_vector<const IXBar::HashDistIRUse *>>;
+    = std::map<cstring, safe_vector<std::pair<HashFuncLoc, const Tofino::IXBar::HashDistIRUse *>>>;
+using AllocToHashUse = std::map<HashFuncLoc, safe_vector<const Tofino::IXBar::HashDistIRUse *>>;
 
 class VerifyUniqueDynamicHash : public MauInspector {
     NameToHashGen &verify_hash_gen;

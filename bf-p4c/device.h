@@ -5,6 +5,7 @@
 #include "lib/cstring.h"
 #include "lib/exceptions.h"
 #include "lib/range.h"
+#include "mau/mau_spec.h"
 #include "mau/power_spec.h"
 #include "parde/parde_spec.h"
 #include "phv/phv_spec.h"
@@ -45,6 +46,8 @@ class Device {
     static const StatefulAluSpec& statefulAluSpec() { return Device::get().getStatefulAluSpec(); }
     static const ArchSpec& archSpec() { return Device::get().getArchSpec(); }
     static const MauPowerSpec& mauPowerSpec() { return Device::get().getMauPowerSpec(); }
+    static const MauSpec& mauSpec() { return Device::get().getMauSpec(); }
+    static const IXBarSpec& ixbarSpec() { return Device::get().getMauSpec().getIXBarSpec(); }
     static int numPipes() { return Device::get().getNumPipes(); }
     static int numStages() {
         return numStagesRuntimeOverride_ ? numStagesRuntimeOverride_ : Device::get().getNumStages();
@@ -94,6 +97,7 @@ class Device {
     virtual const GatewaySpec& getGatewaySpec() const = 0;
     virtual const StatefulAluSpec& getStatefulAluSpec() const = 0;
     virtual const MauPowerSpec& getMauPowerSpec() const = 0;
+    virtual const MauSpec& getMauSpec() const = 0;
     virtual const ArchSpec& getArchSpec() const = 0;
     virtual int getNumPipes() const = 0;
     virtual int getNumPortsPerPipe() const = 0;
@@ -136,6 +140,7 @@ class TofinoDevice : public Device {
     const TofinoPhvSpec phv_;
     const TofinoPardeSpec parde_;
     const TofinoMauPowerSpec mau_power_;
+    const TofinoMauSpec mau_;
     const TofinoArchSpec arch_;
 
  public:
@@ -172,6 +177,7 @@ class TofinoDevice : public Device {
     const GatewaySpec& getGatewaySpec() const override;
     const StatefulAluSpec& getStatefulAluSpec() const override;
     const MauPowerSpec& getMauPowerSpec() const override { return mau_power_; }
+    const MauSpec& getMauSpec() const override { return mau_; }
     const ArchSpec& getArchSpec() const override { return arch_; }
     bool getIfMemoryCoreSplit() const override { return false; }
     bool getHasCompareInstructions() const override { return false; }
@@ -191,6 +197,7 @@ class JBayDevice : public Device {
     const JBayPhvSpec phv_;
     const JBayPardeSpec parde_;
     const JBayMauPowerSpec mau_power_;
+    const JBayMauSpec mau_;
     const JBayArchSpec arch_;
 
  protected:
@@ -227,6 +234,7 @@ class JBayDevice : public Device {
     const PardeSpec& getPardeSpec() const override { return parde_; }
     const GatewaySpec& getGatewaySpec() const override;
     const StatefulAluSpec& getStatefulAluSpec() const override;
+    const MauSpec& getMauSpec() const override { return mau_; }
     const MauPowerSpec& getMauPowerSpec() const override { return mau_power_; }
     const ArchSpec& getArchSpec() const override { return arch_; }
     bool getIfMemoryCoreSplit() const override { return true; }
@@ -276,6 +284,7 @@ class JBayA0Device : public JBayDevice {
 class CloudbreakDevice : public Device {
     const CloudbreakPhvSpec phv_;
     const CloudbreakPardeSpec parde_;
+    const CloudbreakMauSpec mau_;
     const CloudbreakMauPowerSpec mau_power_;
     const CloudbreakArchSpec arch_;
 
@@ -313,6 +322,7 @@ class CloudbreakDevice : public Device {
     const PardeSpec& getPardeSpec() const override { return parde_; }
     const GatewaySpec& getGatewaySpec() const override;
     const StatefulAluSpec& getStatefulAluSpec() const override;
+    const MauSpec& getMauSpec() const override { return mau_; }
     const MauPowerSpec& getMauPowerSpec() const override { return mau_power_; }
     const ArchSpec& getArchSpec() const override { return arch_; }
     bool getIfMemoryCoreSplit() const override { return true; }
@@ -334,6 +344,7 @@ class CloudbreakDevice : public Device {
 class FlatrockDevice : public Device {
     const FlatrockPhvSpec phv_;
     const FlatrockPardeSpec parde_;
+    const FlatrockMauSpec mau_;
     const FlatrockMauPowerSpec mau_power_;
     const FlatrockArchSpec arch_;
 
@@ -371,6 +382,7 @@ class FlatrockDevice : public Device {
     const PardeSpec& getPardeSpec() const override { return parde_; }
     const GatewaySpec& getGatewaySpec() const override;
     const StatefulAluSpec& getStatefulAluSpec() const override;
+    const MauSpec& getMauSpec() const override { return mau_; }
     const MauPowerSpec& getMauPowerSpec() const override { return mau_power_; }
     const ArchSpec& getArchSpec() const override { return arch_; }
     bool getIfMemoryCoreSplit() const override { return true; }

@@ -38,6 +38,24 @@ std::ostream &operator<<(std::ostream &out,
     return out;
 }
 
+std::ostream &operator<<(std::ostream &out, Tofino::IXBar::HashDistAllocPostExpand &hda) {
+    if (hda.func)
+        hda.func->dbprint(out);
+    else
+        out << "(null)";
+    out << " " << IXBar::hash_dist_name(hda.dest);
+    out << "[" << hda.bits_in_use.hi << ":" << hda.bits_in_use.lo << "]";
+    if (hda.shift) out << " shft=" << hda.shift;
+    if (hda.chained_addr) out << " chain";
+    return out;
+}
+
+void dump(Tofino::IXBar::HashDistAllocPostExpand &hda) { std::cout << hda << std::endl; }
+void dump(std::vector<Tofino::IXBar::HashDistAllocPostExpand> &hdav) {
+    for (auto& hda : hdav)
+        std::cout << hda << std::endl;
+}
+
 namespace Tofino {
 
 IXBar::Use &IXBar::getUse(autoclone_ptr<::IXBar::Use> &ac) {
@@ -267,6 +285,46 @@ unsigned IXBar::hash_table_inputs(const HashDistUse &hdu) {
         if (auto use = dynamic_cast<const IXBar::Use *>(ir_alloc.use.get())) {
             rv |= use->hash_table_inputs[hdu.hash_group()];
         }
+    }
+    return rv;
+}
+
+int IXBar::HashDistUse::hash_group() const {
+    int hash_group = -1;
+    for (auto &ir_alloc : ir_allocations) {
+        if (hash_group == -1)
+            hash_group = ir_alloc.use->hash_dist_hash_group();
+        else
+            BUG_CHECK(hash_group == ir_alloc.use->hash_dist_hash_group(), "Hash Groups "
+                 "are different across units");
+    }
+    return hash_group;
+}
+
+bitvec IXBar::HashDistUse::destinations() const {
+    bitvec rv;
+    for (auto &ir_alloc : ir_allocations) {
+        rv.setbit(static_cast<int>(ir_alloc.dest));
+    }
+    return rv;
+}
+
+bitvec IXBar::HashDistUse::galois_matrix_bits() const {
+    bitvec rv;
+    for (auto &ir_alloc : ir_allocations) {
+        rv |= ir_alloc.use->galois_matrix_bits();
+    }
+    return rv;
+}
+
+std::string IXBar::HashDistUse::used_for() const {
+    auto dests = destinations();
+    std::string rv = "";
+    std::string sep = "";
+    for (auto bit : dests) {
+        std::string type = IXBar::hash_dist_name(static_cast<HashDistDest_t>(bit));
+        rv += sep + type;
+        sep = ", ";
     }
     return rv;
 }
@@ -4226,6 +4284,11 @@ void IXBar::update(cstring name, const HashDistUse &hash_dist_alloc) {
 
 void IXBar::update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc) {
     ::IXBar::update(tbl, rsrc);
+    auto name = tbl->name;
+    int index = 0;
+    for (auto &hash_dist : rsrc->hash_dists) {
+        update(name + "$hash_dist" + std::to_string(index++), hash_dist);
+    }
     tbl_hash_dists.emplace(tbl, &rsrc->hash_dists);
 }
 

@@ -70,12 +70,13 @@ class MauAsmOutput : public MauInspector {
 
  protected:
     void emit_ixbar(std::ostream &out, indent_t, const IXBar::Use *, const IXBar::Use *,
-        const safe_vector<IXBar::HashDistUse> *, const Memories::Use *, const TableMatch *,
+        const safe_vector<Tofino::IXBar::HashDistUse> *, const Memories::Use *, const TableMatch *,
         const IR::MAU::Table *, bool ternary) const;
     void emit_ways(std::ostream &out, indent_t indent, const IXBar::Use *use,
         const Memories::Use *mem) const;
+    // FIXME: change API to be target-agnostic
     void emit_hash_dist(std::ostream &out, indent_t indent,
-        const safe_vector<IXBar::HashDistUse> *hash_dist_use, bool hashmod) const;
+        const safe_vector<Tofino::IXBar::HashDistUse> *hash_dist_use, bool hashmod) const;
 
     void emit_memory(std::ostream &out, indent_t, const Memories::Use &,
         const IR::MAU::Table::Layout *l = nullptr, const TableFormat::Use *f = nullptr) const;

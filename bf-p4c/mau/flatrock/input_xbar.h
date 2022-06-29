@@ -3,6 +3,7 @@
 
 #include "bf-p4c/mau/input_xbar.h"
 #include "bf-p4c/common/alloc.h"
+#include "bf-p4c/mau/mau_spec.h"
 
 class Slice;
 
@@ -25,7 +26,6 @@ class IXBar : public ::IXBar {
 
     using Loc = ::IXBar::Loc;
     using FieldInfo = ::IXBar::FieldInfo;
-    using HashDistUse = ::IXBar::HashDistUse;
 
     struct Use : public ::IXBar::Use {
         int exact_unit = -1;
@@ -133,7 +133,6 @@ class IXBar : public ::IXBar {
                     const LayoutOption *, const ActionData::Format::Use *,
                     const attached_entries_t &);
     void update(cstring name, const ::IXBar::Use &alloc);
-    void update(cstring name, const HashDistUse &hash_dist_alloc);
     void add_collisions();
     void verify_hash_matrix() const;
     void dbprint(std::ostream &) const;
