@@ -2736,7 +2736,7 @@ bool ByteInfo::is_better_for_overhead(const ByteInfo &bi, int overhead_bits) con
  */
 void ByteInfo::set_interleave_info(int overhead_bits) {
     il_info.interleaved = true;
-    int middle_hole_start;
+    int middle_hole_start = 0;
     int middle_hole_size = hole_size(MIDDLE, &middle_hole_start);
     // Overhead would start at the beginning of the largest hole
     if (middle_hole_size >= overhead_bits) {
@@ -2748,7 +2748,7 @@ void ByteInfo::set_interleave_info(int overhead_bits) {
 
 
     int lsb_hole_start;
-    int msb_hole_start;
+    int msb_hole_start = 0;
     HoleType_t best_hole
         = better_hole_type(hole_size(LSB, &lsb_hole_start), hole_size(MSB, &msb_hole_start),
                            overhead_bits)

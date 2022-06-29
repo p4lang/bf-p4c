@@ -833,6 +833,11 @@ BFRuntimeSchemaGenerator::addDynHashAlgorithm(Util::JsonArray* tablesJson,
     tableJson->emplace("key", new Util::JsonArray());  // empty key
 
     auto* dataJson = new Util::JsonArray();
+    // Add rotate key field
+    auto* rotateJson = makeCommonDataField(BF_RT_DATA_HASH_ALGORITHM_ROTATE, "rotate",
+                makeTypeInt("uint32", 0 /* default */), false /* repeated */);
+    addSingleton(dataJson, rotateJson, false /* mandatory */, false /* read-only */);
+
     // Add seed key field
     auto* seedJson = makeCommonDataField(BF_RT_DATA_HASH_ALGORITHM_SEED, "seed",
                 makeTypeInt("uint32", 0 /* default */), false /* repeated */);
