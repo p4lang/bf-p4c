@@ -1038,6 +1038,11 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
     }
     BUG_CHECK(tbl->conditional_gateway_only() || !layout_options.empty(), "No layout for %s", tbl);
     determine_initial_layout_option(tbl, entries, attached_entries);
+
+    // Remove empty layout that does not fit on the remaining resources.
+    if (initial_entries > 0 && layout_options.size() != 1)
+        remove_invalid_option();
+
     // FIXME: This is a quick hack to handle tables with only a default action
 
     // FIXME if the initial_entries was 0, we can't set it non-zero as that will cause
@@ -1077,9 +1082,18 @@ bool StageUseEstimate::adjust_choices(const IR::MAU::Table *tbl, int &entries,
         layout_options.erase(layout_options.begin() + preferred_index);
         LOG2("    adjust_choices: previously_widened.  Erasing");
     } else {
-        layout_options[preferred_index].way.width++;
-        layout_options[preferred_index].previously_widened = true;
-        LOG2("    adjust_choices: widen the exact match way");
+        IR::MAU::Table::Way &way = layout_options[preferred_index].way;
+        way.width++;
+        // While adjusting the layout we might end up creating one that is suboptimal. E.g.
+        // 4 entries packed in 1 SRAMs can be adjusted to 4 entries packed in 2 SRAMs. This layout
+        // is no longer a good one since a 2 entry in 1 SRAM is more flexible.
+        if ((way.width % way.match_groups == 0) && way.match_groups != 1) {
+            layout_options.erase(layout_options.begin() + preferred_index);
+            LOG2("    adjust_choices: producing layout that can easily be split.  Erasing");
+        } else {
+            layout_options[preferred_index].previously_widened = true;
+            LOG2("    adjust_choices: widen the exact match way");
+        }
     }
 
     if (layout_options.size() == 0) {
@@ -1123,43 +1137,6 @@ bool StageUseEstimate::calculate_for_leftover_srams(const IR::MAU::Table *tbl, i
     }
     srams_left_best_option(srams_left);
     fill_estimate_from_option(entries);
-
-    // An alternative layout was found previously that can potentially pack more entries than this
-    // optimized variant. For example, we might have split a table based on a layout that can pack
-    // two entries on three rows + couple of actions ram for an estimate of 40 SRAMs and 20480
-    // entries. The next best layout might only be able to insert 18432 entries on the same 40
-    // SRAMs. Because of that (and because when splitting we discard the layout that don't qualify
-    // for the number of entries we expect), this second layout will not be evaluated. We will try
-    // to optimize the first one instead if the original estimate can't be translated in a real
-    // allocation. That can happen for multiple reasons (IXBar allocation, Other table SRAM usage,
-    // bus usage, ...). By optimizing this layout we will try different ways approach but also
-    // reduce the number of SRAMs consumed by this layout (and also reduce the number of entries
-    // being carried) until we find a solution. The problem is that at some point the optimized
-    // solution might contain fewer entries than the second best layout at the beginning. This is
-    // why we always keep track of the next best option to try that one if the optimized variant
-    // now carry less entries than the second best layout.
-    if (entries < alternate_sol_entries) {
-        srams_left = alternate_sol_srams;
-        for (auto &lo : layout_options) {
-            lo.clear_mems();
-            known_srams_needed(tbl, attached_entries, &lo);
-            unknown_srams_needed(tbl, &lo, srams_left);
-        }
-        srams_left_best_option(srams_left);
-        fill_estimate_from_option(entries);
-        entries = alternate_sol_entries;
-        alternate_sol_entries = 0;
-        alternate_sol_srams = 0;
-    }
-    if (alternate_sol_entries == 0) {
-        for (auto &lo : layout_options) {
-            if (lo.entries < entries && lo.srams <= srams_left) {
-                alternate_sol_entries = lo.entries;
-                alternate_sol_srams = srams_left;
-                break;
-            }
-        }
-    }
     return true;
 }
 
@@ -1185,6 +1162,76 @@ void StageUseEstimate::calculate_for_leftover_atcams(const IR::MAU::Table *tbl, 
     }
     srams_left_best_option(srams_left);
     fill_estimate_from_option(entries);
+}
+
+// Shrink the preferred layout and reduce the SRAM consumption by at least one SRAM. Remove the
+// layout option if the result is invalid. Finally sort the remaining layout option based on
+// the number of entries that each layout can fit.
+void StageUseEstimate::shrink_preferred_srams_lo(const IR::MAU::Table *tbl, int &entries,
+                                                 attached_entries_t &attached_entries) {
+    BUG_CHECK(!layout_options.empty(), "Empty Layout Option");
+    LayoutOption *lo = &layout_options[preferred_index];
+    int prev_srams = lo->srams;
+    for (int new_srams = prev_srams - 1; lo->srams >= prev_srams && new_srams > 0; new_srams--) {
+        lo->clear_mems();
+        known_srams_needed(tbl, attached_entries, lo);
+        unknown_srams_needed(tbl, lo, new_srams);
+    }
+    if (lo->srams >= prev_srams || lo->srams == 0) {
+        layout_options.erase(layout_options.begin() + preferred_index);
+        if (layout_options.size() == 0)
+            return;
+    }
+    max_entries_best_option();
+    fill_estimate_from_option(entries);
+    return;
+}
+
+// Shrink the preferred layout and reduce the TCAM consumption by at least one TCAM. Remove the
+// layout option if the result is invalid. Finally sort the remaining layout option based on
+// the number of entries that each layout can fit.
+void StageUseEstimate::shrink_preferred_tcams_lo(const IR::MAU::Table *tbl, int &entries,
+                                                 attached_entries_t &attached_entries) {
+    BUG_CHECK(!layout_options.empty(), "Empty Layout Option");
+    LayoutOption *lo = &layout_options[preferred_index];
+    int prev_tcams = lo->tcams;
+    int prev_srams = lo->srams;
+    for (int new_tcams = prev_tcams - 1; lo->tcams >= prev_tcams && new_tcams > 0; new_tcams--) {
+        lo->clear_mems();
+        known_srams_needed(tbl, attached_entries, lo);
+        unknown_tcams_needed(tbl, lo, new_tcams, prev_srams);
+    }
+    if (lo->tcams >= prev_tcams || lo->tcams == 0) {
+        layout_options.erase(layout_options.begin() + preferred_index);
+        if (layout_options.size() == 0)
+            return;
+    }
+    tcams_left_best_option();
+    fill_estimate_from_option(entries);
+    return;
+}
+
+// Shrink the preferred layout and reduce the SRAM consumption by at least one SRAM. Remove the
+// layout option if the result is invalid. Finally sort the remaining layout option based on
+// the number of entries that each layout can fit.
+void StageUseEstimate::shrink_preferred_atcams_lo(const IR::MAU::Table *tbl, int &entries,
+                                                  attached_entries_t &attached_entries) {
+    BUG_CHECK(!layout_options.empty(), "Empty Layout Option");
+    LayoutOption *lo = &layout_options[preferred_index];
+    int prev_srams = lo->srams;
+    for (int new_srams = prev_srams - 1; lo->srams >= prev_srams && new_srams > 0; new_srams--) {
+        lo->clear_mems();
+        known_srams_needed(tbl, attached_entries, lo);
+        unknown_atcams_needed(tbl, lo, new_srams);
+    }
+    if (lo->srams >= prev_srams || lo->srams == 0) {
+        layout_options.erase(layout_options.begin() + preferred_index);
+        if (layout_options.size() == 0)
+            return;
+    }
+    max_entries_best_option();
+    fill_estimate_from_option(entries);
+    return;
 }
 
 /* Calculates the number of resources needed by the attached tables that are independent
@@ -1401,6 +1448,30 @@ void StageUseEstimate::srams_left_best_option(int srams_left) {
         if (b.srams > srams_left && a.srams <= srams_left)
             return true;
         if ((t = a.entries - b.entries) != 0) return t > 0;
+        if ((t = a.way.width - b.way.width) != 0) return t < 0;
+        if ((t = a.way.match_groups - b.way.match_groups) != 0) return t < 0;
+        if (!a.layout.direct_ad_required() && b.layout.direct_ad_required())
+            return true;
+        if (a.layout.direct_ad_required() && !b.layout.direct_ad_required())
+            return false;
+        return a.layout.action_data_bytes_in_table < b.layout.action_data_bytes_in_table;
+    });
+    for (auto &lo : layout_options) {
+        LOG3("layout option width " << lo.way.width << " match groups " << lo.way.match_groups
+              << " entries " << lo.entries << " srams " << lo.srams
+              << " action data " << lo.layout.action_data_bytes_in_table
+              << " immediate " << lo.layout.immediate_bits);
+        LOG3("Layout option way sizes " << lo.way_sizes);
+    }
+    preferred_index = 0;
+}
+
+void StageUseEstimate::max_entries_best_option() {
+    std::sort(layout_options.begin(), layout_options.end(),
+        [=](const LayoutOption &a, const LayoutOption &b) {
+        int t;
+        if ((t = a.entries - b.entries) != 0) return t > 0;
+        if ((t = a.srams - b.srams) != 0) return t < 0;
         if ((t = a.way.width - b.way.width) != 0) return t < 0;
         if ((t = a.way.match_groups - b.way.match_groups) != 0) return t < 0;
         if (!a.layout.direct_ad_required() && b.layout.direct_ad_required())

@@ -211,7 +211,6 @@ bool TableFormat::analyze_layout_option() {
             if (!rv) return false;
         }
 
-
         for (auto &hi : total_info) {
             safe_vector<int> ixbar_groups;
             std::sort(hi.all_group_info.begin(), hi.all_group_info.end(),
@@ -220,10 +219,18 @@ bool TableFormat::analyze_layout_option() {
             });
 
             for (auto sb : search_bus_per_width) {
-                if (sb >= 0)
-                    ixbar_groups.push_back(hi.all_group_info[sb].ixbar_group);
-                else
+                if (sb >= 0) {
+                    auto it = std::find_if(hi.all_group_info.begin(), hi.all_group_info.end(),
+                                           [&](const IXBar::Use::GroupInfo &a) {
+                        return a.search_bus == sb;
+                    });
+                    if (it != hi.all_group_info.end())
+                        ixbar_groups.push_back(it->ixbar_group);
+                    else
+                        ixbar_groups.push_back(-1);
+                } else {
                     ixbar_groups.push_back(-1);
+                }
             }
             use->ixbar_group_per_width[hi.hash_group] = ixbar_groups;
         }

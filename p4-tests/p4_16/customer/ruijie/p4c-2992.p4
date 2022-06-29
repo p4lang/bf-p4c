@@ -4473,7 +4473,7 @@ control Out_LifMeter(inout switch_header_t hdr, inout switch_egress_metadata_t e
     action v6_set_color_blind() {
         eg_md.qos.lif_meter_color = (bit<2>)v6_meter.execute((bit<14>)eg_md.common.oif);
     }
-    @ignore_table_dependency("Eg_downlink.lif_meter.v4_lif_meter") @placement_priority(50) table v6_lif_meter {
+    @ignore_table_dependency("Eg_downlink.lif_meter.v4_lif_meter") @stage(3) table v6_lif_meter {
         key = {
             eg_md.common.oif: exact;
         }

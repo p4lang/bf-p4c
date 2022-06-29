@@ -582,7 +582,7 @@ void ActionBus::alloc_field(Table *tbl, ActionBusSource src,
     } else {
         lo = offset;
         if (src.type == ActionBusSource::TableOutput || src.type == ActionBusSource::TableColor ||
-            src.type == ActionBusSource::TableAddress)
+            src.type == ActionBusSource::TableAddress || src.type == ActionBusSource::RandomGen)
             can_merge = false;
         if (src.type == ActionBusSource::HashDist
                 && !(src.hd->xbar_use & HashDistribution::IMMEDIATE_LOW))

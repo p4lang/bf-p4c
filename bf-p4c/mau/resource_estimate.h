@@ -3,6 +3,7 @@
 
 #include "bf-p4c/mau/attached_entries.h"
 #include "bf-p4c/mau/table_layout.h"
+#include "lib/algorithm.h"
 #include "lib/safe_vector.h"
 
 struct StageUseEstimate {
@@ -42,12 +43,6 @@ struct StageUseEstimate {
     safe_vector<ActionData::Format::Use> action_formats;
     MeterALU::Format::Use                meter_format;
     size_t                               preferred_index;  // into layout_options
-
-    // Track alternate solution when trying to find optimal layout on exact match. It is possible
-    // that after trying to optimize a layout we end up having a worst solution than a previously
-    // discarded layout. In that case, we want to evaluate such layout.
-    int alternate_sol_entries = 0;
-    int alternate_sol_srams = 0;
     StageUseEstimate() {}
     StageUseEstimate &operator+=(const StageUseEstimate &a) {
         logical_ids += a.logical_ids;
@@ -96,6 +91,9 @@ struct StageUseEstimate {
     void calculate_attached_rams(const IR::MAU::Table *tbl, const attached_entries_t &att_entries,
                                  LayoutOption *lo);
     void fill_estimate_from_option(int &entries);
+    void remove_invalid_option() {
+        erase_if(layout_options, [](const LayoutOption &lo){ return lo.entries == 0; });
+    }
     const LayoutOption *preferred() const {
     if (layout_options.empty())
         return nullptr;
@@ -123,6 +121,12 @@ struct StageUseEstimate {
                                       int &entries, attached_entries_t &);
     void calculate_for_leftover_atcams(const IR::MAU::Table *tbl, int srams_left,
                                        int &entries, attached_entries_t &);
+    void shrink_preferred_srams_lo(const IR::MAU::Table *tbl, int &entries,
+                                   attached_entries_t &attached_entries);
+    void shrink_preferred_tcams_lo(const IR::MAU::Table *tbl, int &entries,
+                                   attached_entries_t &attached_entries);
+    void shrink_preferred_atcams_lo(const IR::MAU::Table *tbl, int &entries,
+                                    attached_entries_t &attached_entries);
     void known_srams_needed(const IR::MAU::Table *tbl, const attached_entries_t &,
                             LayoutOption *lo);
     void unknown_srams_needed(const IR::MAU::Table *tbl, LayoutOption *lo, int srams_left);
@@ -134,6 +138,7 @@ struct StageUseEstimate {
     void calculate_partition_sizes(const IR::MAU::Table *tbl, LayoutOption *lo, int ram_depth);
     bool ways_provided(const IR::MAU::Table *tbl, LayoutOption *lo, int &calculated_depth);
     void srams_left_best_option(int srams_left);
+    void max_entries_best_option();
     void tcams_left_best_option();
     struct RAM_counter {
         int per_word;

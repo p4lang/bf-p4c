@@ -1484,8 +1484,12 @@ bool TablePlacement::try_pick_layout(const gress_t &gress,
     for (auto *p : boost::adaptors::reverse(tables_to_allocate)) {
         if (!Device::threadsSharePipe(p->table->gress, gress)) continue;
         p->resources.clear_ixbar();
-        if (!pick_layout_option(p, layout_allocated))
+        if (!pick_layout_option(p, layout_allocated)) {
+            // Invalidating intermediate table that fail layout option
+            if (p != tables_to_allocate.front())
+                p->use.format_type.invalidate();
             return false;
+        }
         layout_allocated.insert(layout_allocated.begin(), p);
     }
 
@@ -1504,40 +1508,26 @@ bool TablePlacement::try_pick_layout(const gress_t &gress,
     return true;
 }
 
-bool TablePlacement::shrink_estimate(Placed *next, int &srams_left, int &tcams_left,
-        int min_entries, bool &update_whole_stage) {
-    if (next->table->is_a_gateway_table_only() || next->table->match_key.empty())
-        return false;
-
-    // No shrinking estimates for alt table placement round. This will happen
-    // mostly because the phv allocation does not allow fitting the same no. of
-    // entries as previous round. For now, we exit and continue with the default
-    // placement round.
-    if (summary.getActualState() == summary.ALT_FINALIZE_TABLE_SAME_ORDER)
-        return false;
-
-    LOG2("Shrinking estimate on table " << next->name << " for min entries: " << min_entries);
-    bool done_shrink = false;
+bool TablePlacement::shrink_attached_tbl(Placed *next, bool first_time, bool &done_shrink) {
     for (auto *ba : next->table->attached) {
         auto *att = ba->attached;
         if (att->direct || next->attached_entries.at(att).entries == 0) continue;
-        if (!can_split(next->table, att)) {
+        if (first_time && !can_split(next->table, att)) {
             if (!can_duplicate(att)) return false;
             continue; }
-        if (attached_to.at(att).size() > 1 &&
+        if (first_time && attached_to.at(att).size() > 1 &&
             !next->attached_entries.at(att).need_more) {
             // a shared attached table may be shared by tables in whole_stage,
             // so they need recomputing layout, etc as well.
-            update_whole_stage = true;
             BUG_CHECK(next->complete_shared > 0, "inconsistent shared table");
             next->complete_shared--; }
-        if (next->entries > 0) {
+        if (first_time && next->entries > 0) {
             LOG3("  - splitting " << att->name << " to later stage(s)");
             next->attached_entries.at(att).entries = 0;
             next->attached_entries.at(att).need_more = true;
             next->use.format_type.invalidate();
             done_shrink = true;
-        } else {
+        } else if (next->entries == 0) {
             // FIXME -- need a better way of reducing the size to what will fit in the stage
             // Also need to fix the memories.cpp code to adjust the numbers to match how
             // many entries are actually allocated if it is not an extact match up.
@@ -1555,6 +1545,26 @@ bool TablePlacement::shrink_estimate(Placed *next, int &srams_left, int &tcams_l
                 done_shrink = true; }
         }
     }
+    return true;
+}
+
+bool TablePlacement::shrink_estimate(Placed *next, int &srams_left, int &tcams_left,
+                                     int min_entries) {
+    if (next->table->is_a_gateway_table_only() || next->table->match_key.empty())
+        return false;
+
+    // No shrinking estimates for alt table placement round. This will happen
+    // mostly because the phv allocation does not allow fitting the same no. of
+    // entries as previous round. For now, we exit and continue with the default
+    // placement round.
+    if (summary.getActualState() == summary.ALT_FINALIZE_TABLE_SAME_ORDER)
+        return false;
+
+    LOG2("Shrinking estimate on table " << next->name << " for min entries: " << min_entries);
+    bool done_shrink = false;
+    if (!shrink_attached_tbl(next, true, done_shrink))
+        return false;
+
     if (done_shrink)
         return true;
 
@@ -1585,10 +1595,44 @@ bool TablePlacement::shrink_estimate(Placed *next, int &srams_left, int &tcams_l
             next->stage_advance_log = "ran out of srams";
         return false;
     }
-    if (!t->layout.ternary)
-        srams_left--;
-    else
-        tcams_left--;
+
+    if (min_entries > 0)
+        next->use.remove_invalid_option();
+
+    LOG3("  - reducing to " << next->entries << " of " << t->name << " in stage " << next->stage);
+    for (auto *ba : next->table->attached)
+        if (ba->attached->direct)
+            next->attached_entries.at(ba->attached).entries = next->entries;
+
+    return true;
+}
+
+bool TablePlacement::shrink_preferred_lo(Placed *next) {
+    const IR::MAU::Table* t = next->table;
+    LOG3("Shrinking table resource of the preferred layout");
+    bool done_shrink = false;
+    if (!shrink_attached_tbl(next, false, done_shrink))
+        return false;
+
+    if (done_shrink)
+        return true;
+
+    if (t->layout.atcam) {
+        next->use.shrink_preferred_atcams_lo(t, next->entries, next->attached_entries);
+    } else if (!t->layout.ternary) {
+        next->use.shrink_preferred_srams_lo(t, next->entries, next->attached_entries);
+    } else {
+        next->use.shrink_preferred_tcams_lo(t, next->entries, next->attached_entries);
+    }
+
+    if (next->use.layout_options.size() == 0) {
+        LOG5("Couldn't place minimum entries within table " << t->name);
+        if (t->layout.ternary)
+            next->stage_advance_log = "ran out of tcams";
+        else
+            next->stage_advance_log = "ran out of srams";
+        return false;
+    }
 
     LOG3("  - reducing to " << next->entries << " of " << t->name << " in stage " << next->stage);
     for (auto *ba : next->table->attached)
@@ -1618,9 +1662,14 @@ struct TablePlacement::RewriteForSplitAttached : public Transform {
         auto *tbl = findContext<IR::MAU::Table>();
         for (auto act : Values(tbl->actions)) {
             if (auto *sc = act->stateful_call(ba->attached->name)) {
-                if (auto *hd = sc->index->to<IR::MAU::HashDist>()) {
-                    ba->hash_dist = hd;
-                    break; } } }
+                if (sc->index) {
+                    if (auto *hd = sc->index->to<IR::MAU::HashDist>()) {
+                        ba->hash_dist = hd;
+                        break;
+                    }
+                }
+            }
+        }
         if (ba->attached->is<IR::MAU::Counter>() || ba->attached->is<IR::MAU::Meter>() ||
             ba->attached->is<IR::MAU::StatefulAlu>()) {
             ba->pfe_location = IR::MAU::PfeLocation::DEFAULT;
@@ -2398,135 +2447,101 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
         auto avail = StageUseEstimate::max();
         bool advance_to_next_stage = false;
         allocated = false;
+        // Rebuild the layout when moving from stage to stage
+        rv->use.format_type.invalidate();
+        min_placed->use.format_type.invalidate();
 
-        if (!try_alloc_all(min_placed, whole_stage, "Min use") ||
-            !try_alloc_all(rv, whole_stage, "Table use", true)) {
-            if (!rv->stage_advance_log)
+        // Try to allocate the entire table
+        do {
+            allocated = try_alloc_all(rv, whole_stage, "Table use");
+            if (allocated)
+                break;
+            rv->use.preferred_index++;
+        } while (rv->use.layout_options.size() &&
+                (rv->use.preferred_index < rv->use.layout_options.size()));
+
+        if (allocated)
+            break;
+
+        // If a table contains initialization for dark containers, it cannot be split into
+        // multiple stages. Ignore this limitation if the table allocation is run with ignore
+        // container conflict. For this particular case PHV will always rerun and ultimately
+        // catch this situation and avoid dark initialization on this splitted table.
+        if (rv->table->has_dark_init) {
+            LOG3("    Table with dark initialization cannot be split");
+            if (!ignoreContainerConflicts) {
+                error_message = "PHV allocation doesn't want this table split, and it's "
+                                "too big for one stage";
+                advance_to_next_stage = true;
+            }
+        }
+
+        // Not able to allocate the entire table, try the smallest possible size
+        if (!advance_to_next_stage) {
+            bool min_allocated = false;
+            do {
+                min_allocated = try_alloc_all(min_placed, whole_stage, "Min use");
+                if (min_allocated)
+                    break;
+                min_placed->use.preferred_index++;
+            } while (min_placed->use.layout_options.size() &&
+                    (min_placed->use.preferred_index < min_placed->use.layout_options.size()));
+
+            if (!min_allocated) {
                 if (!(rv->stage_advance_log = min_placed->stage_advance_log))
                     rv->stage_advance_log = "repacking previously placed failed";
-            advance_to_next_stage = true; }
+                advance_to_next_stage = true;
+            }
+        }
+        if (!advance_to_next_stage) {
+            // Now try to shrink the table to maximize the number of entries that can fit into
+            // this particular stage
+            if (rv->prev && rv->stage == rv->prev->stage) {
+                avail.srams -= stage_current.srams;
+                avail.tcams -= stage_current.tcams;
+                avail.maprams -= stage_current.maprams;
+            }
 
-        if (rv->prev && rv->stage == rv->prev->stage) {
-            avail.srams -= stage_current.srams;
-            avail.tcams -= stage_current.tcams;
-            avail.maprams -= stage_current.maprams; }
+            int srams_left = avail.srams;
+            int tcams_left = avail.tcams;
+            if (!shrink_estimate(rv, srams_left, tcams_left, min_placed->entries)) {
+                error_message = "Can't split this table across stages and it's "
+                                "too big for one stage";
+                advance_to_next_stage = true;
+            }
+            while (!advance_to_next_stage) {
+                rv->update_need_more(needed_entries);
+                // If the table is split for the first time, then the stage_split is set to 0
+                if (rv->need_more && initial_stage_split == -1)
+                    rv->stage_split = 0;
+                // If the table does not need more entries and is previously marked
+                // as split for the first time, then reset the stage_split to -1
+                // Note: Stage split value is used during allocation to create
+                // unique id suffixes e.g. $st0, $st1 etc. hence if this is
+                // incorrectly set the unique ids generated in memories.cpp will not
+                // match those generated on the table (P4C-4064)
+                else if (!rv->need_more && rv->stage_split == 0)
+                    rv->stage_split = -1;
 
-        int srams_left = avail.srams;
-        int tcams_left = avail.tcams;
-        // If the max needed entries do not fit, shrink the table given the number of available
-        // rams until the table is able to be placed
-        while (!advance_to_next_stage &&
-               (!(rv->use <= avail) ||
-               (allocated = try_alloc_mem(rv, whole_stage)) == false)) {
-            // If a table contains initialization for dark containers, it cannot be split into
-            // multiple stages. Ignore this limitation if the table allocation is run with ignore
-            // container conflict. For this particular case PHV will always rerun and ultimately
-            // catch this situation and avoid dark initialization on this splitted table.
-            if (rv->table->has_dark_init) {
-                LOG3("    Table with dark initialization cannot be split");
-                if (!ignoreContainerConflicts) {
-                    error_message = "PHV allocation doesn't want this table split, and it's "
-                                    "too big for one stage";
+                allocated = try_alloc_all(rv, whole_stage, "Table shrink");
+                if (allocated)
+                    break;
+
+                // Shrink preferred layout and sort them by prioritizing the number of entries
+                if (!shrink_preferred_lo(rv)) {
+                    error_message = "Can't shrink layout anymore";
                     advance_to_next_stage = true;
                     break;
                 }
             }
-            bool need_update_whole_stage = false;
-            if (!shrink_estimate(rv, srams_left, tcams_left, min_placed->entries,
-                                 need_update_whole_stage)) {
-                error_message = "Can't split this table across stages and it's "
-                                "too big for one stage";
-                advance_to_next_stage = true;
-                break;
-            }
-
-            rv->update_need_more(needed_entries);
-            // If the table is split for the first time, then the stage_split is set to 0
-            if (rv->need_more && initial_stage_split == -1)
-                rv->stage_split = 0;
-            // If the table does not need more entries and is previously marked
-            // as split for the first time, then reset the stage_split to -1
-            // Note: Stage split value is used during allocation to create
-            // unique id suffixes e.g. $st0, $st1 etc. hence if this is
-            // incorrectly set the unique ids generated in memories.cpp will not
-            // match those generated on the table (P4C-4064)
-            else if (!rv->need_more && rv->stage_split == 0)
-                rv->stage_split = -1;
-
-            if (need_update_whole_stage) {
-                for (auto *p : boost::adaptors::reverse(whole_stage))
-                    p->update_attached(rv);
-                if (!try_alloc_all(rv, whole_stage, "Table use (redo)", true)) {
-                    LOG1("ERROR: realloc after shrink failed?");
-                    advance_to_next_stage = true;
-                    break; }
-            } else {
-                if (!pick_layout_option(rv, whole_stage)) {
-                    LOG2("shrinking table " << rv->name << " can't find layout option");
-                    advance_to_next_stage = true;
-                    break; }
-
-                    bool done_next = false;
-                    bool add_to_tables_placed = true;
-                    std::vector<Placed *> tables_to_allocate;
-                    std::vector<Placed *> tables_placed;
-
-                    // Insert each Placed object, i.e. 'next' and the ones included
-                    // in whole_stage, in one of the following two vectors:
-                    //
-                    //    - tables_placed if the object's resources have already
-                    //      been calculated and are still valid;
-                    //
-                    //    - tables_to_allocate if the object's resources need to
-                    //      be calculated or re-calculated.  Object 'next' always
-                    //      goes in tables_to_allocate.
-                    //
-                    // Place these objects so the resources are allocated in the order
-                    // tables appear in the pipeline.  This is the most efficient way
-                    // to allocate resources, since it ensures that the resources are
-                    // packed as much as possible.  Some profiles in the current CI
-                    // fail to compile when the table order is not respected.
-                    //
-                    // Finally, since in-order allocation is performed, when 'next'
-                    // is inserted in tables_to_allocate before any tables in
-                    // whole_stage, the tables that follow in whole_stage also
-                    // need to be recalculated.  This happens when a table is
-                    // backfilled.
-                    //
-                    for (auto *p : boost::adaptors::reverse(whole_stage)) {
-                        if (p->prev == rv) {
-                            done_next = true;
-                            add_to_tables_placed = false;
-                            tables_to_allocate.insert(tables_to_allocate.begin(), rv);
-                        }
-                        if (!p->use.format_type.valid())
-                            add_to_tables_placed = false;
-                        if (add_to_tables_placed)
-                            tables_placed.insert(tables_placed.begin(), p);
-                        else
-                            tables_to_allocate.insert(tables_to_allocate.begin(), p);
-                    }
-                    if (!done_next) {
-                        tables_to_allocate.insert(tables_to_allocate.begin(), rv);
-                    }
-
-                if (!try_alloc_adb(rv->table->gress, tables_to_allocate, tables_placed)) {
-                    LOG1("ERROR: Action Data Bus Allocation error after previous allocation?");
-                    advance_to_next_stage = true;
-                    break; }
-
-                if (!try_alloc_imem(rv->table->gress, tables_to_allocate, tables_placed)) {
-                    LOG1("ERROR: IMem Allocation error after previous allocation?");
-                    advance_to_next_stage = true;
-                    break; }
-            }
         }
-
         if (advance_to_next_stage) {
             rv->stage++;
             rv->stage_split = initial_stage_split;
+            rv->use.preferred_index = 0;
             min_placed->stage++;
             min_placed->stage_split = initial_stage_split;
+            min_placed->use.preferred_index = 0;
             if (done) {
                 rv->placed -= rv->prev->placed - done->placed;
                 min_placed->placed -= min_placed->prev->placed - done->placed; }

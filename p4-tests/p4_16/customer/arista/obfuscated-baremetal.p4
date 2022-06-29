@@ -2061,7 +2061,7 @@ control Burmah(inout Frederika Westoak, inout WebbCity Lefor, in ingress_intrins
         Lefor.Lookeba.McGonigle = Freeny;
         Lefor.Cranbury.Sonoma = (Ipv4PartIdx_t)Sonoma;
     }
-    @idletime_precision(1) @force_immediate(1) @ways(4) @disable_atomic_modify(1) @name(".Luttrell") table Luttrell {
+    @idletime_precision(1) @ways(4) @disable_atomic_modify(1) @name(".Luttrell") table Luttrell {
         actions = {
             Endicott();
             Willey();
@@ -2077,7 +2077,7 @@ control Burmah(inout Frederika Westoak, inout WebbCity Lefor, in ingress_intrins
         size = 98304;
         idle_timeout = true;
     }
-    @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @name(".Plano") table Plano {
+    @idletime_precision(1) @disable_atomic_modify(1) @name(".Plano") table Plano {
         actions = {
             @tableonly Woodsboro();
             @tableonly Amherst();
@@ -2133,7 +2133,7 @@ control Leoma(inout Frederika Westoak, inout WebbCity Lefor, in ingress_intrinsi
         Lefor.Bronwood.Sonoma = (Ipv6PartIdx_t)Sonoma;
         Lefor.Lookeba.Stennett = (bit<16>)Stennett;
     }
-    @idletime_precision(1) @force_immediate(1) @ways(4) @disable_atomic_modify(1) @pack(2) @name(".Anawalt") table Anawalt {
+    @idletime_precision(1) @ways(4) @disable_atomic_modify(1) @name(".Anawalt") table Anawalt {
         actions = {
             Endicott();
             Willey();
@@ -2149,7 +2149,7 @@ control Leoma(inout Frederika Westoak, inout WebbCity Lefor, in ingress_intrinsi
         size = 16384;
         idle_timeout = true;
     }
-    @idletime_precision(1) @immediate(0) @disable_atomic_modify(1) @name(".Asharoken") table Asharoken {
+    @idletime_precision(1) @disable_atomic_modify(1) @name(".Asharoken") table Asharoken {
         actions = {
             @tableonly Aiken();
             @defaultonly Anita();
@@ -2273,7 +2273,7 @@ control Weissert(inout Frederika Westoak, inout WebbCity Lefor, in ingress_intri
     }
     @name(".Kalaloch") action Kalaloch() {
     }
-    @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @name(".Papeton") table Papeton {
+    @idletime_precision(1) @disable_atomic_modify(1) @name(".Papeton") table Papeton {
         actions = {
             Chatom();
             Danbury();
@@ -2289,7 +2289,7 @@ control Weissert(inout Frederika Westoak, inout WebbCity Lefor, in ingress_intri
         size = 2048;
         idle_timeout = true;
     }
-    @idletime_precision(1) @atcam_partition_index("Bronwood.Sonoma") @atcam_number_partitions(1024) @force_immediate(1) @disable_atomic_modify(1) @name(".Yatesboro") table Yatesboro {
+    @idletime_precision(1) @atcam_partition_index("Bronwood.Sonoma") @atcam_number_partitions(1024) @disable_atomic_modify(1) @name(".Yatesboro") table Yatesboro {
         actions = {
             @tableonly Ranburne();
             @tableonly Standard();
@@ -2305,7 +2305,7 @@ control Weissert(inout Frederika Westoak, inout WebbCity Lefor, in ingress_intri
         idle_timeout = true;
         const default_action = Kalaloch();
     }
-    @idletime_precision(1) @atcam_partition_index("Wyndmoor.Lewiston") @atcam_number_partitions(2048) @force_immediate(1) @disable_atomic_modify(1) @name(".Maxwelton") table Maxwelton {
+    @idletime_precision(1) @atcam_partition_index("Wyndmoor.Lewiston") @atcam_number_partitions(2048) @disable_atomic_modify(1) @name(".Maxwelton") table Maxwelton {
         actions = {
             Endicott();
             Willey();
@@ -2321,7 +2321,7 @@ control Weissert(inout Frederika Westoak, inout WebbCity Lefor, in ingress_intri
         size = 16384;
         idle_timeout = true;
     }
-    @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @name(".Ihlen") table Ihlen {
+    @idletime_precision(1) @disable_atomic_modify(1) @name(".Ihlen") table Ihlen {
         actions = {
             Endicott();
             Willey();
@@ -2337,7 +2337,7 @@ control Weissert(inout Frederika Westoak, inout WebbCity Lefor, in ingress_intri
         size = 8192;
         idle_timeout = true;
     }
-    @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @name(".Faulkton") table Faulkton {
+    @idletime_precision(1) @disable_atomic_modify(1) @name(".Faulkton") table Faulkton {
         actions = {
             Endicott();
             Willey();
@@ -2364,7 +2364,7 @@ control Weissert(inout Frederika Westoak, inout WebbCity Lefor, in ingress_intri
         default_action = Frontenac(32w0);
         size = 2;
     }
-    @atcam_partition_index("Cranbury.Sonoma") @atcam_number_partitions(10240) @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @pack(2) @name(".ElCentro") table ElCentro {
+    @atcam_partition_index("Cranbury.Sonoma") @atcam_number_partitions(10240) @idletime_precision(1) @disable_atomic_modify(1) @name(".ElCentro") table ElCentro {
         actions = {
             @tableonly Bellmead();
             @tableonly Wardville();
@@ -5084,7 +5084,7 @@ control Slayden(inout Frederika Westoak, inout WebbCity Lefor, in ingress_intrin
         const default_action = Anita();
         size = 512;
     }
-    @disable_atomic_modify(1) @disable_atomic_modify(1) @ways(2) @pack(4) @name(".Albin") table Albin {
+    @disable_atomic_modify(1) @disable_atomic_modify(1) @ways(2) @name(".Albin") table Albin {
         actions = {
             @tableonly Statham();
             @defaultonly NoAction();
@@ -5146,7 +5146,7 @@ control Slayden(inout Frederika Westoak, inout WebbCity Lefor, in ingress_intrin
     }
     @name(".Tontogany") action Tontogany() {
     }
-    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Neuse") table Neuse {
+    @ways(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Neuse") table Neuse {
         key = {
             Lefor.Humeston.Barnhill: exact @name("Humeston.Barnhill") ;
             Lefor.Armagh.Beasley   : exact @name("Armagh.Beasley") ;
@@ -5204,7 +5204,7 @@ control Sharon(inout Frederika Westoak, inout WebbCity Lefor, in ingress_intrins
     }
     @name(".Tontogany") action Tontogany() {
     }
-    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Separ") table Separ {
+    @ways(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Separ") table Separ {
         key = {
             Lefor.Humeston.Barnhill: exact @name("Humeston.Barnhill") ;
             Lefor.Armagh.Beasley   : exact @name("Armagh.Beasley") ;
@@ -5262,7 +5262,7 @@ control Gerster(inout Frederika Westoak, inout WebbCity Lefor, in ingress_intrin
     }
     @name(".Tontogany") action Tontogany() {
     }
-    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Rodessa") table Rodessa {
+    @ways(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Rodessa") table Rodessa {
         key = {
             Lefor.Humeston.Barnhill: exact @name("Humeston.Barnhill") ;
             Lefor.Armagh.Beasley   : exact @name("Armagh.Beasley") ;
@@ -5320,7 +5320,7 @@ control Carrizozo(inout Frederika Westoak, inout WebbCity Lefor, in ingress_intr
     }
     @name(".Tontogany") action Tontogany() {
     }
-    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Munday") table Munday {
+    @ways(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Munday") table Munday {
         key = {
             Lefor.Humeston.Barnhill: exact @name("Humeston.Barnhill") ;
             Lefor.Armagh.Beasley   : exact @name("Armagh.Beasley") ;
@@ -5378,7 +5378,7 @@ control Dante(inout Frederika Westoak, inout WebbCity Lefor, in ingress_intrinsi
     }
     @name(".Tontogany") action Tontogany() {
     }
-    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Poynette") table Poynette {
+    @ways(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Poynette") table Poynette {
         key = {
             Lefor.Humeston.Barnhill: exact @name("Humeston.Barnhill") ;
             Lefor.Armagh.Beasley   : exact @name("Armagh.Beasley") ;

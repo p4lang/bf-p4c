@@ -1070,14 +1070,15 @@ void IXBar::allocate_mid_bytes(safe_vector<IXBar::Use::Byte *> &unalloced,
             }
         }
 
-        LOG5("       Mid byte selected was " << mid_byte_order[0].group << " bytes left "
+        if (!selected_grp) continue;
+        LOG5("       Mid byte selected was " << selected_grp->group << " bytes left "
              << unalloced.size());
         int match_bytes_placed = 0;
         found_mid_bytes(selected_grp, unalloced, ternary, match_bytes_placed, search_bus,
                         prefer_nibble, only_alloc_nibble);
         free_mid_bytes(selected_grp, unalloced, alloced, match_bytes_placed, search_bus,
                        prefer_nibble, only_alloc_nibble);
-        mid_byte_order[0].attempted = true;
+        selected_grp->attempted = true;
         bytes_to_allocate -= match_bytes_placed;
         calculate_found(unalloced, order, mid_byte_order, ternary, false, ~0U);
     }
