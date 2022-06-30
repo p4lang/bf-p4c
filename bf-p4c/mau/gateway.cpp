@@ -79,7 +79,7 @@ class CanonGatewayExpr::NeedNegate : public Inspector {
     explicit NeedNegate(const IR::Expression *e) { e->apply(*this); }
     explicit NeedNegate(safe_vector<GWRow_t> &rows) {
         for (auto &row : rows) {
-            row.first->apply(*this);
+            if (row.first) row.first->apply(*this);
             if (rv) break; } }
     explicit operator bool() const { return rv; }
 };
@@ -634,6 +634,8 @@ void CanonGatewayExpr::removeNotEquals(safe_vector<GWRow_t> &rows) {
     std::deque<GWRow_t> need_negate;
     /* move things that need negation to the end and negate them */
     for (auto it = rows.begin(); it != rows.end()-1;) {
+        if (!it->first)
+            break;
         if (NeedNegate(it->first)) {
             need_negate.push_back(*it);
             it = rows.erase(it);

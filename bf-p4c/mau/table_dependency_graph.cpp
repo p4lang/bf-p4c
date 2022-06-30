@@ -1175,7 +1175,7 @@ bool FindDataDependencyGraph::preorder(const IR::MAU::Table *t) {
 
     // Add data dependences induced by gateways, matches, and actions.
     for (auto &gw : t->gateway_rows)
-        gw.first->apply(AddDependencies(*this, t));
+        if (gw.first) gw.first->apply(AddDependencies(*this, t));
     for (auto ixbar_read : t->match_key)
         ixbar_read->apply(AddDependencies(*this, t));
     for (auto &action : Values(t->actions))
@@ -1186,7 +1186,7 @@ bool FindDataDependencyGraph::preorder(const IR::MAU::Table *t) {
     // Mark fields read/written by this table in accesses.
     // FIXME: Should have a separate gateway row IR to visit rather than other information
     for (auto &gw : t->gateway_rows)
-        gw.first->apply(UpdateAccess(*this, t, true));
+        if (gw.first) gw.first->apply(UpdateAccess(*this, t, true));
 
     // FIXME: Need to have this as part of the visitors on Actions, rather than on Attached
     // Tables, but these visitor information really needs to be cleaned up.
