@@ -301,6 +301,14 @@ void GeneratePrimitiveInfo::gen_action_json(const IR::MAU::Table *tbl,
                                     auto _salu_d = _prim_o->get("stateful_alu_details");
                                     if (_salu_d) {
                                         auto _salu_d_o = _salu_d->to<Util::JsonObject>();
+                                        if (_salu_d_o->count("output_dst")) {
+                                            error(ErrorType::ERR_DUPLICATE,
+                                                  "At most one stateful ALU operation "
+                                                  "with a given address is allowed per action. "
+                                                  "Writing to %s is not allowed here.",
+                                                  op0);
+                                            continue;
+                                        }
                                         _salu_d_o->emplace("output_dst", canon_name(dst));
                                         is_stful_dest = true;
                                     }

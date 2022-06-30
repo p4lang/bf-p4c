@@ -1554,6 +1554,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/jbay_next_table.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mau_control_flow_visitor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mau_group_extractor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mau_indirect_externs_single_action.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/meta_live_range.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mocha_dark.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/multipipe_bf_runtime.cpp
