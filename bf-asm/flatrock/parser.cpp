@@ -487,9 +487,9 @@ bool PhvBuilderGroup::input_phe_source_pair(VECTOR(value_t) args,
         Extract& extract, value_t data) {
     if (!CHECKTYPE(data, tVEC))
         return false;
-    if (data.vec.size > Target::Flatrock::PARSER_PHV_BUILDER_PHE_SOURCES) {
+    if (data.vec.size > Target::Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES) {
         error(data.lineno, "more than %d PHE sources are not allowed",
-                Target::Flatrock::PARSER_PHV_BUILDER_PHE_SOURCES);
+                Target::Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES);
         return false;
     }
     bool ok = true;
@@ -673,7 +673,7 @@ void PhvBuilderGroup::write_config(RegisterSetBase &regs, json::map &json,
         }
 
         /* -- SRAM PHE sources */
-        for (int j = 0; j < Target::Flatrock::PARSER_PHV_BUILDER_PHE_SOURCES; ++j) {
+        for (int j = 0; j < Target::Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES; ++j) {
             auto &type = (j == 0) ?
                 ( (gress == INGRESS) ?
                     /* -- parser */
@@ -857,7 +857,8 @@ void FlatrockParser::alu0_instruction::input(VECTOR(value_t) args, value_t data)
             report_invalid_directive("invalid key", kv.key);
         }
     }
-    if (!check_range(*opcode, Flatrock::alu0_instruction::OPCODE_0,
+    if (opcode->i != Flatrock::alu0_instruction::OPCODE_NOOP &&
+        !check_range(*opcode, Flatrock::alu0_instruction::OPCODE_0,
         Flatrock::alu0_instruction::OPCODE_6)) return;
     this->opcode = static_cast<Flatrock::alu0_instruction::opcode_enum>(opcode->i);
     switch (this->opcode) {
@@ -866,9 +867,8 @@ void FlatrockParser::alu0_instruction::input(VECTOR(value_t) args, value_t data)
         if (msb || lsb || shift || mask || add) {
             error(opcode->lineno, "unexpected: msb, lsb, shift, mask, or add");
         }
-        value_t add_value;
-        add_value.i = 0;
-        add = add_value;
+        add = value_t { .type = tINT, .lineno = opcode->lineno, .i = 0 };
+        break;
     case Flatrock::alu0_instruction::OPCODE_0:
         // opcode 0: ptr += imm8s  ->  { opcode: 0, add: <constant> }
     case Flatrock::alu0_instruction::OPCODE_1:
@@ -1039,10 +1039,18 @@ void FlatrockParser::alu1_instruction::input(VECTOR(value_t) args, value_t data)
             error(kv.key.lineno, "invalid key: %s", kv.key.s);
         }
     }
-    if (!check_range(*opcode, Flatrock::alu1_instruction::OPCODE_0,
+    if (opcode->i != Flatrock::alu1_instruction::OPCODE_NOOP &&
+        !check_range(*opcode, Flatrock::alu1_instruction::OPCODE_0,
         Flatrock::alu1_instruction::OPCODE_7)) return;
     this->opcode = static_cast<Flatrock::alu1_instruction::opcode_enum>(opcode->i);
     switch (this->opcode) {
+    case Flatrock::alu1_instruction::OPCODE_NOOP:
+        if (shift_dir || shift || mask_mode || mask || add || set || msb || lsb) {
+            error(opcode->lineno,
+                "unexpected: shift_dir, shift, mask_mode, mask, add, set, msb, or lsb");
+        }
+        shift = value_t { .type = tINT, .lineno = opcode->lineno, .i = 0 };
+        break;
     case Flatrock::alu1_instruction::OPCODE_0:
         // opcode 0: state[MSB:LSB] >>= imm4u, MSB&LSB -> 2/4/8/16-bit state sub-field
         //  -> { opcode: 0, msb: <constant>, lsb: <constant>, shift: <constant> }

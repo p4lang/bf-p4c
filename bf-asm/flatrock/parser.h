@@ -96,7 +96,7 @@ class PhvBuilderGroup {
                 PheSourceOther other[Target::Flatrock::PARSER_PHV_BUILDER_OTHER_PHE_SOURCES];
             };
         };
-        PheSource phe_source[Target::Flatrock::PARSER_PHV_BUILDER_PHE_SOURCES];
+        PheSource phe_source[Target::Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES];
     } extracts[Target::Flatrock::PARSER_PHV_BUILDER_GROUP_EXTRACTS_NUM];
 
     bool check_register(value_t reg_name, int phe_source_id, int slice_size,

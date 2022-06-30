@@ -8,6 +8,16 @@
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/phv/phv_fields.h"
 
+namespace {
+
+static unsigned int numHeaderIDs = 255;
+static unsigned int numHeaderSeqs = 2;
+static unsigned int numHeadersPerSeq = 10;
+static unsigned int payloadHeaderID = 254;
+static cstring payloadHeaderName = "payload";
+
+}  // namespace
+
 /**
  * @brief Identify _parsed_ header sequences.
  */
@@ -23,6 +33,8 @@ class ParserHeaderSequences : public BFN::ControlFlowVisitor, public PardeInspec
  public:
     /** Headers extracted in the parser */
     std::map<gress_t, ordered_set<cstring>> headers;
+    std::map<std::pair<gress_t, cstring>, int> header_ids;
+    int header_id_cnt;  // Current header ID
 
     /** Header sequences extracted in the parser */
     std::map<gress_t, ordered_set<ordered_set<cstring>>> sequences;

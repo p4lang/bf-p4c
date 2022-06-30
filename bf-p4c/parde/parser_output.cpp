@@ -59,9 +59,18 @@ struct ParserAsmSerializer : public ParserInspector {
 
 #ifdef HAVE_FLATROCK
 
-    bool preorder(const IR::Flatrock::Parser* /*parser*/) override {
-        AutoIndent indentParser(indent);
-        out << "parser ingress:" << std::endl;
+    bool preorder(const IR::Flatrock::Parser* parser) override {
+        AutoIndent indentParser(indent, 0);
+        out << indent << "parser ingress:" << std::endl;
+        if (!parser->states.empty()){
+            indent++;
+            out << indent << "states:" << std::endl;
+            indent++;
+            for (auto &state : parser->states)
+                out << indent << state.first << ": " << state.second << std::endl;
+            indent--;
+            indent--;
+        }
         return true;
     }
 
@@ -86,13 +95,15 @@ struct ParserAsmSerializer : public ParserInspector {
 
     bool preorder(const IR::Flatrock::Profile* profile) override {
         AutoIndent indentParser(indent, 1);
-        out << indent << "profile " << profile->id << ":" << std::endl;
+        out << indent << "profile " << profile->index << ":" << std::endl;
         indent++;
         out << indent << "match_port: " << profile->match_port << std::endl;
         out << indent << "match_inband_metadata: " << profile->match_inband_metadata << std::endl;
         out << indent << "initial_pktlen: " << profile->initial_pktlen << std::endl;
         out << indent << "initial_seglen: " << profile->initial_seglen << std::endl;
-        if (profile->initial_state && profile->initial_state->size() > 0) {
+        if (profile->initial_state_name) {
+            out << indent << "initial_state: " << *profile->initial_state_name << std::endl;
+        } else if (profile->initial_state && profile->initial_state->size() > 0) {
             out << indent << "initial_state: 0x";
             auto original_flags = out.flags();
             auto original_fill = out.fill('0');
@@ -160,8 +171,121 @@ struct ParserAsmSerializer : public ParserInspector {
         AutoIndent indentParser(indent, 2);
         out << indent << "rule " << analyzer_rule->index << ":" << std::endl;
         indent++;
-        out << indent << "push_hdr_id: { hdr: " << analyzer_rule->push_hdr_id_hdr_id
-            << ", offset: " << analyzer_rule->push_hdr_id_offset << " }" << std::endl;
+        if (auto *stage = findContext<IR::Flatrock::AnalyzerStage>()) {
+            if (!stage->name)
+                // Named analyzer stage must not contain any rule with the match_state attribute
+                out << indent << "match_state: " << analyzer_rule->match_state << std::endl;
+        }
+        out << indent << "match_w0: " << analyzer_rule->match_w0 << std::endl;
+        out << indent << "match_w1: " << analyzer_rule->match_w1 << std::endl;
+        if (analyzer_rule->next_state_name) {
+            out << indent << "next_state: " << *analyzer_rule->next_state_name << std::endl;
+        } else if (analyzer_rule->next_state) {
+            out << indent << "next_state: " << *analyzer_rule->next_state << std::endl;
+        }
+        if (analyzer_rule->next_alu0_instruction) {
+            out << indent << "next_alu0_instruction: ";
+            print_params(out, *analyzer_rule->next_alu0_instruction);
+            out << "  # ";
+            print_pretty(out, *analyzer_rule->next_alu0_instruction);
+            out << std::endl;
+        }
+        if (analyzer_rule->next_alu1_instruction) {
+            out << indent << "next_alu1_instruction: ";
+            print_params(out, *analyzer_rule->next_alu1_instruction);
+            out << "  # ";
+            print_pretty(out, *analyzer_rule->next_alu1_instruction);
+            out << std::endl;
+        }
+        if (analyzer_rule->push_hdr_id_hdr_id && analyzer_rule->push_hdr_id_offset)
+            out << indent << "push_hdr_id: { hdr: " << *analyzer_rule->push_hdr_id_hdr_id
+                << ", offset: " << *analyzer_rule->push_hdr_id_offset << " }" << std::endl;
+        indent--;
+        return true;
+    }
+
+    bool preorder(const IR::Flatrock::PhvBuilderGroup* phv_builder_group) override {
+        AutoIndent indentParser(indent, 1);
+        out << indent << "phv_builder_group " << phv_builder_group->index << ":" << std::endl;
+        indent++;
+        out << indent << "pov_select: [ ";
+        std::string sep = "";
+        for (auto &p : phv_builder_group->pov_select) {
+            out << sep << p;
+            sep = ", ";
+        }
+        out << "]" << std::endl;
+        indent--;
+        return true;
+    }
+
+    bool preorder(const IR::Flatrock::PhvBuilderExtract* phv_builder_extract) override {
+        AutoIndent indentParser(indent, 2);
+        out << indent << "extract " << phv_builder_extract->index << ":" << std::endl;
+        indent++;
+        out << indent << "match: " << phv_builder_extract->match << std::endl;
+
+        std::string source;
+        switch (phv_builder_extract->size) {
+        case PHV::Size::b8: source = "packet8"; break;
+        case PHV::Size::b16: source = "packet16"; break;
+        case PHV::Size::b32: source = "packet32"; break;
+        default:
+            BUG("invalid container size in PHV builder extractor");
+            break;
+        }
+
+        auto output_extract = [this, &phv_builder_extract, &source](
+                const boost::optional<int> &hdr_id, const boost::optional<cstring> &hdr_name,
+                const PHV::Size size, const std::vector<std::pair<cstring, int>> &offsets) {
+            if (hdr_id)
+                out << source << ' ' << *hdr_id;
+            else if (hdr_name)
+                out << source << ' ' << *hdr_name;
+            else
+                out << "{}";
+            if (hdr_id || hdr_name) {
+                out << ' ';
+                if (size != PHV::Size::b32)
+                    out << "[ ";
+                std::string sep = "";
+                for (auto &offset : offsets) {
+                    out << sep << offset.first;
+                    if (size != PHV::Size::b8)
+                        out << " msb_offset ";
+                    else
+                        out << " offset ";
+                    out << offset.second;
+                    sep = ", ";
+                }
+                if (size != PHV::Size::b32)
+                    out << " ]";
+            }
+        };
+
+        out << indent << "source: [ ";
+
+        output_extract(
+            phv_builder_extract->hdr1_id,
+            phv_builder_extract->hdr1_name,
+            phv_builder_extract->size,
+            phv_builder_extract->offsets1);
+
+        out << ", ";
+
+        output_extract(
+            phv_builder_extract->hdr2_id,
+            phv_builder_extract->hdr2_name,
+            phv_builder_extract->size,
+            phv_builder_extract->offsets2);
+
+        out << " ]" << std::endl;
+
+        indent++;
+        for (auto& info : phv_builder_extract->debug.info)
+            out << indent << "# " << info << std::endl;
+        indent--;
+
         indent--;
         return true;
     }

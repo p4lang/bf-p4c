@@ -45,10 +45,10 @@ p4c_add_xfail_reason("tofino5"
   )
 
 # invalid assembly code
-p4c_add_xfail_reason("tofino5"
-  "Invalid slice of 7 bit field immediate"
-  extensions/p4_tests/p4_16/flatrock/tf5_template.p4
-  )
+#p4c_add_xfail_reason("tofino5"
+#  "Invalid slice of 7 bit field immediate"
+#  extensions/p4_tests/p4_16/flatrock/tf5_template.p4
+#  )
 
 p4c_add_xfail_reason("tofino5"
   "Compiler Bug.* not an always hit hash_action table"
@@ -66,16 +66,41 @@ p4c_add_xfail_reason("tofino5"
 #  extensions/p4_tests/p4_16/flatrock/pac_single_hdr.p4
 #  )
 
-p4c_add_xfail_reason("tofino5"
-  #"Flatrock .* not implemented yet"
-  "No format field or table named immediate"
-  extensions/p4_tests/p4_16/flatrock/pac_unbal_reconverge.p4
-  )
+#p4c_add_xfail_reason("tofino5"
+#  #"Flatrock .* not implemented yet"
+#  "No format field or table named immediate"
+#  extensions/p4_tests/p4_16/flatrock/pac_unbal_reconverge.p4
+#  )
 
 p4c_add_xfail_reason("tofino5"
   "invalid gateway group"
   extensions/p4_tests/p4_16/flatrock/pac_shallow_branch.p4
   extensions/p4_tests/p4_16/flatrock/pac_wide_branch.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "Only one parser state transition supported"
+  extensions/p4_tests/p4_16/flatrock/pac_unbal_reconverge.p4
+  extensions/p4_tests/p4_16/flatrock/tf5_template.p4
+  extensions/p4_tests/p4_16/stf/header_stack_next.p4
+  extensions/p4_tests/p4_16/stf/header_stack_strided_alloc1.p4
+  extensions/p4_tests/p4_16/stf/header_stack_strided_alloc2.p4
+  extensions/p4_tests/p4_16/stf/lookahead1.p4
+  extensions/p4_tests/p4_16/stf/parser_counter_12.p4
+  extensions/p4_tests/p4_16/stf/parser_extract_upcast.p4
+  extensions/p4_tests/p4_16/stf/parser_loop_1.p4
+  extensions/p4_tests/p4_16/stf/parser_loop_2.p4
+  extensions/p4_tests/p4_16/stf/parser_loop_3.p4
+  extensions/p4_tests/p4_16/stf/parser_loop_4.p4
+  extensions/p4_tests/p4_16/stf/varbit_constant.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "Only one allocation allowed after PHV allocation"
+  extensions/p4_tests/p4_16/stf/failed_elim_valid_bit.p4
+  extensions/p4_tests/p4_16/stf/p4c-2638.p4
+  extensions/p4_tests/p4_16/stf/p4c-2695.p4
+  extensions/p4_tests/p4_16/stf/wide_arith_non_64.p4
   )
 
 # *********************************************************************************************** #
@@ -87,29 +112,29 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/stf/bit_or_in_same_state.p4
   extensions/p4_tests/p4_16/stf/cond_checksum_update_4.p4
   extensions/p4_tests/p4_16/stf/funnel_shift.p4
-  extensions/p4_tests/p4_16/stf/header_stack_next.p4
-  extensions/p4_tests/p4_16/stf/header_stack_strided_alloc1.p4
-  extensions/p4_tests/p4_16/stf/header_stack_strided_alloc2.p4
-  extensions/p4_tests/p4_16/stf/lookahead1.p4
+  #extensions/p4_tests/p4_16/stf/header_stack_next.p4
+  #extensions/p4_tests/p4_16/stf/header_stack_strided_alloc1.p4
+  #extensions/p4_tests/p4_16/stf/header_stack_strided_alloc2.p4
+  #extensions/p4_tests/p4_16/stf/lookahead1.p4
   extensions/p4_tests/p4_16/stf/lookahead2.p4
   extensions/p4_tests/p4_16/stf/lookahead3.p4
   extensions/p4_tests/p4_16/stf/p4c-1513.p4
-  extensions/p4_tests/p4_16/stf/p4c-2638.p4
-  extensions/p4_tests/p4_16/stf/p4c-2695.p4
+  #extensions/p4_tests/p4_16/stf/p4c-2638.p4
+  #extensions/p4_tests/p4_16/stf/p4c-2695.p4
   extensions/p4_tests/p4_16/stf/p4c-3470.p4
-  extensions/p4_tests/p4_16/stf/parser_counter_12.p4
-  extensions/p4_tests/p4_16/stf/parser_extract_upcast.p4
+  #extensions/p4_tests/p4_16/stf/parser_counter_12.p4
+  #extensions/p4_tests/p4_16/stf/parser_extract_upcast.p4
   extensions/p4_tests/p4_16/stf/update_checksum_3.p4
   extensions/p4_tests/p4_16/stf/update_checksum_4.p4
   extensions/p4_tests/p4_16/stf/update_checksum_6.p4
-  extensions/p4_tests/p4_16/stf/varbit_constant.p4
+  #extensions/p4_tests/p4_16/stf/varbit_constant.p4
   extensions/p4_tests/p4_16/stf/auto_init_meta2.p4
-  extensions/p4_tests/p4_16/stf/failed_elim_valid_bit.p4
+  #extensions/p4_tests/p4_16/stf/failed_elim_valid_bit.p4
   extensions/p4_tests/p4_16/stf/p4c-1504.p4
   extensions/p4_tests/p4_16/stf/p4c-2772.p4
   extensions/p4_tests/p4_16/stf/p4c-2772-c.p4
   extensions/p4_tests/p4_16/stf/p4c-3089.p4
-  extensions/p4_tests/p4_16/stf/wide_arith_non_64.p4
+  #extensions/p4_tests/p4_16/stf/wide_arith_non_64.p4
   )
 
 p4c_add_xfail_reason("tofino5"
@@ -201,10 +226,10 @@ p4c_add_xfail_reason("tofino5"
 
 p4c_add_xfail_reason("tofino5"
   "Compiler Bug: Emitted field didn't receive a PHV allocation"
-  extensions/p4_tests/p4_16/stf/parser_loop_1.p4
-  extensions/p4_tests/p4_16/stf/parser_loop_2.p4
-  extensions/p4_tests/p4_16/stf/parser_loop_3.p4
-  extensions/p4_tests/p4_16/stf/parser_loop_4.p4
+  #extensions/p4_tests/p4_16/stf/parser_loop_1.p4
+  #extensions/p4_tests/p4_16/stf/parser_loop_2.p4
+  #extensions/p4_tests/p4_16/stf/parser_loop_3.p4
+  #extensions/p4_tests/p4_16/stf/parser_loop_4.p4
 
   )
 

@@ -23,11 +23,29 @@ enum constants {
     PARSER_STATE_WIDTH = 10,  ///< 8 + 2 bytes
     PARSER_FLAGS_WIDTH = 8,
     PARSER_PTR_MAX = 255,
+    PARSER_W_WIDTH = 2,  ///< Byte width of W0, W1, W2 registers
     PARSER_W_OFFSET_MAX = 255,
     PARSER_PROFILE_PKTLEN_MAX = 63,
     PARSER_PROFILE_SEGLEN_MAX = 63,
     PARSER_PROFILE_PORT_BIT_WIDTH = 6,  ///< 8bit port_info = {2'b0, logic_port#(6b)}
+    PARSER_PROFILE_MD_SEL_NUM = 32,
     PARSER_ANALYZER_STAGES = 48,
+    PARSER_PHV_BUILDER_GROUPS = 32,  // Fpp_params.pm: N_PHV_TCAM
+    PARSER_POV_SELECT_NUM = 4,
+    PARSER_PHV_BUILDER_GROUP_PHE_SOURCES = 2,
+    PARSER_PHV_BUILDER_GROUP_EXTRACTS_NUM = 16,  // Fpp_params.pm: N_PHV_TCAM_DEPTH
+    PARSER_PHV_BUILDER_GROUP_PHE8_MIN = 0,
+    PARSER_PHV_BUILDER_GROUP_PHE8_MAX = 15,
+    PARSER_PHV_BUILDER_GROUP_PHE8_NUM = 16,
+    PARSER_PHV_BUILDER_GROUP_PHE16_MIN = 16,
+    PARSER_PHV_BUILDER_GROUP_PHE16_MAX = 23,
+    PARSER_PHV_BUILDER_GROUP_PHE16_NUM = 8,
+    PARSER_PHV_BUILDER_GROUP_PHE32_MIN = 24,
+    PARSER_PHV_BUILDER_GROUP_PHE32_MAX = 31,
+    PARSER_PHV_BUILDER_GROUP_PHE32_NUM = 8,
+    PARSER_PHV_BUILDER_PACKET_PHE8_SOURCES = 4,
+    PARSER_PHV_BUILDER_PACKET_PHE16_SOURCES = 2,
+    PARSER_PHV_BUILDER_PACKET_PHE32_SOURCES = 1,
 };
 
 /**
@@ -68,7 +86,7 @@ struct alu0_instruction {
     };
 
     alu0_instruction() : opcode(INVALID) {}
-    alu0_instruction(opcode_enum opcode, std::vector<int> ops);
+    explicit alu0_instruction(opcode_enum opcode, std::vector<int> ops = {});
 };
 
 /**
@@ -124,7 +142,7 @@ struct alu1_instruction {
     };
 
     alu1_instruction() : opcode(INVALID) {}
-    alu1_instruction(opcode_enum opcode, std::vector<int> ops);
+    explicit alu1_instruction(opcode_enum opcode, std::vector<int> ops = {});
 };
 
 /**

@@ -361,7 +361,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         new AdjustExtract(phv),
         // Rewrite parser and deparser IR to reflect the PHV allocation such that field operations
         // are converted into container operations.
-        new LowerParser(phv, clot, defuse),
+        new LowerParser(phv, clot, defuse, parserHeaderSeqs),
         new CheckTableNameDuplicate,
         new CheckUnimplementedFeatures(options.allowUnimplemented),
         // must be called right before characterize power

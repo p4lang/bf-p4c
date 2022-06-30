@@ -39,6 +39,15 @@
 
 namespace {
 
+/// @return a version of the provided state name which is safe to use in the
+/// generated assembly.
+cstring sanitizeName(StringRef name) {
+    // Drop any thread-specific prefix from the name.
+    if (auto prefix = name.findstr("::"))
+        name = name.after(prefix) += 2;
+    return name;
+}
+
 /**
  * Construct debugging debugging information describing a slice of a field.
  *
@@ -657,15 +666,6 @@ struct ComputeLoweredParserIR : public ParserInspector {
         return true;
     }
 
-    /// @return a version of the provided state name which is safe to use in the
-    /// generated assembly.
-    cstring sanitizeName(StringRef name) {
-        // Drop any thread-specific prefix from the name.
-        if (auto prefix = name.findstr("::"))
-            name = name.after(prefix) += 2;
-        return name;
-    }
-
     IR::Vector<IR::BFN::LoweredParserChecksum>
     lowerParserChecksums(const IR::BFN::Parser* parser,
                          const IR::BFN::ParserState* state,
@@ -979,6 +979,114 @@ struct ComputeLoweredParserIR : public ParserInspector {
 };
 
 #ifdef HAVE_FLATROCK
+
+struct ComputeFlatrockParserIR : public ParserInspector {
+    ComputeFlatrockParserIR(const PhvInfo& phv, const ParserHeaderSequences &parserHeaderSeqs) :
+        parserHeaderSeqs(parserHeaderSeqs), phv(phv) {}
+
+    const ParserHeaderSequences &parserHeaderSeqs;
+
+    std::vector<const IR::BFN::ParserState*> states;
+    // nullptr key is used for headers without corresponding parser state,
+    // e.g. MD32 and payload
+    std::map<const IR::BFN::ParserState*, std::set<cstring>> headers;
+    // state -> header, width
+    std::map<const IR::BFN::ParserState*, std::vector<std::pair<cstring, int>>> header_widths;
+    struct Extract {
+        PHV::Size size;
+        unsigned int index;
+        cstring hdr;
+        int offset;
+
+        bool operator<(const Extract& e) const {
+            // header name does not affect ordering
+            return std::tie(size, index, offset) < std::tie(e.size, e.index, e.offset);
+        }
+    };
+    // textual information about extracts performed in parser
+    std::map<const Extract, std::vector<cstring>> comments;
+    // extracts performed in parser
+    std::set<Extract> extracts;
+
+ private:
+    const PhvInfo& phv;
+
+    profile_t init_apply(const IR::Node *node) override {
+        extracts.clear();
+        return Inspector::init_apply(node);
+    }
+
+    bool preorder(const IR::BFN::ParserState* state) override {
+        LOG4("[ComputeFlatrockParserIR] lowering state " << state->name);
+
+        BUG_CHECK(state->transitions.size() <= 1, "Only one parser state transition supported");
+
+        states.push_back(state);
+
+        return true;
+    }
+
+    bool preorder(const IR::BFN::Extract* extract) {
+        auto* lval = extract->dest->to<IR::BFN::FieldLVal>();
+        CHECK_NULL(lval);
+
+        auto* field = phv.field(lval->field);
+        CHECK_NULL(field);
+        BUG_CHECK(!field->header().isNullOrEmpty(), "Unspecified header name");
+        BUG_CHECK(field->parsed(), "Processing non-parsed field");
+
+        boost::optional<int> hdr_offset;
+        field->foreach_alloc([&](const PHV::AllocSlice& alloc) {
+            BUG_CHECK(!hdr_offset, "Only one allocation allowed after PHV allocation");
+            hdr_offset = (field->offset - alloc.container_slice().lo) / 8;
+            Extract e = {
+                .size = alloc.container().type().size(),
+                .index = alloc.container().index(),
+                .hdr = field->header(),
+                .offset = *hdr_offset
+            };
+            extracts.insert(e);
+            comments[e].push_back(debugInfoFor(extract, alloc));
+        });
+
+        auto *member = lval->field->to<IR::Member>();
+        CHECK_NULL(member);
+        CHECK_NULL(member->expr);
+
+        auto hdr_ref = member->expr->to<IR::ConcreteHeaderRef>();
+        CHECK_NULL(hdr_ref);
+        CHECK_NULL(hdr_ref->ref);
+
+        size_t width = hdr_ref->ref->type->width_bits();
+
+        if (auto *state = findContext<IR::BFN::ParserState>()) {
+            if (headers[state].count(field->header()) == 0) {
+                headers[state].insert(field->header());
+                header_widths[state].push_back({field->header(), width});
+            }
+        }
+
+        return true;
+    }
+
+    void end_apply() override {
+        states.push_back(nullptr);
+        headers[nullptr].insert(payloadHeaderName);
+        header_widths[nullptr].push_back({payloadHeaderName, 0});
+        if (LOGGING(4)) {
+            LOG4("[ComputeFlatrockParserIR] parser extracts:");
+            for (auto &extract : extracts) {
+                LOG4("  size=" << extract.size
+                  << ", index=" << extract.index
+                  << ", header=" << extract.hdr
+                  << ", offset=" << extract.offset);
+                for (auto &comment : comments.at(extract))
+                    LOG4("    " << comment);
+            }
+        }
+    }
+};
+
 /**
  * @brief The pass that replaces an IR::BRN::Parser node with an IR::Flatrock::Parser node
  * @ingroup parde
@@ -994,21 +1102,139 @@ class ReplaceFlatrockParserIR : public Transform {
 
         auto *lowered_parser = new IR::Flatrock::Parser;
 
+        cstring start_state;
+        IR::Flatrock::AnalyzerRule *last_rule = nullptr;
+
+        int stage = 0;
+        for (auto *state : computed.states) {
+            if (computed.header_widths.count(state) == 0) continue;
+            for (auto header_width : computed.header_widths.at(state)) {
+                auto &header = header_width.first;
+                auto &bit_width = header_width.second;
+                // For each header extraction, there is a separate stage
+                cstring state_name =
+                    sanitizeName((state != nullptr ? (state->name + "_") : "") + header);
+                // 0 -> 0x**************00, 1 -> 0x**************01, etc.
+                match_t state_match =
+                    { .word0 = ~0ULL & ~(stage & 0xff), .word1 = ~0xffULL | stage };
+                // Store mapping into the parser state map
+                lowered_parser->states[state_name] = state_match;
+                // Store starting state to be stored in the default profile
+                if (start_state.isNullOrEmpty())
+                    start_state = state_name;
+
+                auto *analyzer_stage = new IR::Flatrock::AnalyzerStage(
+                    /* stage */ stage,
+                    /* name */ state_name);
+                lowered_parser->analyzer.push_back(analyzer_stage);
+
+                if (last_rule != nullptr)
+                    last_rule->next_state_name = state_name;
+
+                auto *analyzer_rule = new IR::Flatrock::AnalyzerRule(
+                    /* id */ 0,
+                    /* next_state */ boost::none,
+                    /* next_state_name */ boost::none,
+                    /* push_hdr_id_hdr_id */
+                        computed.parserHeaderSeqs.header_ids.at({INGRESS, header}),
+                    /* push_hdr_id_offset */ 0);
+                if (bit_width == 0) {
+                    analyzer_rule->next_alu0_instruction = Flatrock::alu0_instruction(
+                        Flatrock::alu0_instruction::OPCODE_NOOP);
+                } else {
+                    analyzer_rule->next_alu0_instruction = Flatrock::alu0_instruction(
+                        Flatrock::alu0_instruction::OPCODE_0,
+                        std::vector<int> { /* add */ bit_width / 8 });
+                }
+                analyzer_rule->next_alu1_instruction = Flatrock::alu1_instruction(
+                    Flatrock::alu1_instruction::OPCODE_NOOP);
+                analyzer_stage->rules.push_back(analyzer_rule);
+
+                last_rule = analyzer_rule;
+                stage++;
+            }
+        }
+
         auto *default_profile = new IR::Flatrock::Profile(
-            /* id */ 0,
+            /* index */ 0,
             /* initial_pktlen */ Device::pardeSpec().byteTotalIngressMetadataSize(),
             /* initial_seglen */ Device::pardeSpec().byteTotalIngressMetadataSize(),
             /* initial_state */ boost::none,
+            /* initial_state_name */ lowered_parser->analyzer.at(0)->name,
             /* initial_flags */ boost::none,
-            /* initial_ptr */ boost::none,
+            /* initial_ptr */ Flatrock::PARSER_PROFILE_MD_SEL_NUM,  // Skip MD32
             /* initial_w0_offset */ boost::none,
             /* initial_w1_offset */ boost::none,
             /* initial_w2_offset */ boost::none);
         lowered_parser->profiles.push_back(default_profile);
 
+        const int PARSER_PHV_BUILDER_GROUP_PHES_TOTAL =
+            Flatrock::PARSER_PHV_BUILDER_GROUP_PHE8_NUM +
+            Flatrock::PARSER_PHV_BUILDER_GROUP_PHE16_NUM +
+            Flatrock::PARSER_PHV_BUILDER_GROUP_PHE32_NUM;
+
+        // Temporary array being filled based on results of ComputeFlatrockParserIR
+        IR::Flatrock::PhvBuilderExtract *extracts[PARSER_PHV_BUILDER_GROUP_PHES_TOTAL];
+        for (int i = 0; i < PARSER_PHV_BUILDER_GROUP_PHES_TOTAL; i++)
+            extracts[i] = nullptr;
+
+        for (auto &extract : computed.extracts) {
+            int base_group_index = 0;  // index within PHE8/16/32 groups
+            int phe_sources = 0;
+            std::string container_name;
+            if (extract.size == PHV::Size::b8) {
+                phe_sources = Flatrock::PARSER_PHV_BUILDER_PACKET_PHE8_SOURCES;
+                base_group_index = 0;
+                container_name = "B";
+            } else if (extract.size == PHV::Size::b16) {
+                phe_sources = Flatrock::PARSER_PHV_BUILDER_PACKET_PHE16_SOURCES;
+                base_group_index = Flatrock::PARSER_PHV_BUILDER_GROUP_PHE8_NUM;
+                container_name = "H";
+            } else if (extract.size == PHV::Size::b32) {
+                phe_sources = Flatrock::PARSER_PHV_BUILDER_PACKET_PHE32_SOURCES;
+                base_group_index = Flatrock::PARSER_PHV_BUILDER_GROUP_PHE8_NUM +
+                    Flatrock::PARSER_PHV_BUILDER_GROUP_PHE16_NUM;
+                container_name = "W";
+            } else {
+                BUG("Invalid container size in PHV builder extractor");
+            }
+            int sub_group_offset =
+                extract.index / phe_sources / Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES;
+            container_name += std::to_string(extract.index);
+
+            auto &phv_builder_extract = extracts[base_group_index + sub_group_offset];
+            if (phv_builder_extract == nullptr)
+                phv_builder_extract = new IR::Flatrock::PhvBuilderExtract(extract.size);
+            phv_builder_extract->debug.info = computed.comments.at(extract);
+
+            phv_builder_extract->index = 0;
+            if (extract.index % Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES == 0) {
+                phv_builder_extract->hdr1_name = extract.hdr;
+                phv_builder_extract->offsets1.push_back({container_name, extract.offset});
+            } else {
+                phv_builder_extract->hdr2_name = extract.hdr;
+                phv_builder_extract->offsets2.push_back({container_name, extract.offset});
+            }
+        }
+
+        for (int i = 0; i < PARSER_PHV_BUILDER_GROUP_PHES_TOTAL; i++) {
+            if (extracts[i] == nullptr) continue;
+            auto *phv_builder_group = new IR::Flatrock::PhvBuilderGroup(
+                /* id */ i, /* pov_select */ {});
+            phv_builder_group->extracts.push_back(extracts[i]);
+            lowered_parser->phv_builder.push_back(phv_builder_group);
+        }
+
         return lowered_parser;
     }
+
+    const ComputeFlatrockParserIR& computed;
+
+ public:
+    explicit ReplaceFlatrockParserIR(const ComputeFlatrockParserIR& computed)
+      : computed(computed) { }
 };
+
 #endif  // HAVE_FLATROCK
 
 /**
@@ -1348,20 +1574,18 @@ struct MergeLoweredParserStates : public ParserTransform {
 /// Generate a lowered version of the parser IR in this program and swap it in
 /// for the existing representation.
 struct LowerParserIR : public PassManager {
-    LowerParserIR(const PhvInfo& phv, ClotInfo& clotInfo) {
+    LowerParserIR(const PhvInfo& phv, ClotInfo& clotInfo,
+            const ParserHeaderSequences &parserHeaderSeqs) {
         auto* allocateParserChecksums = new AllocateParserChecksums(phv, clotInfo);
         auto* computeLoweredParserIR =
-#ifdef HAVE_FLATROCK
-            Device::currentDevice() == Device::FLATROCK ? nullptr :
-#endif  // HAVE_FLATROCK
             new ComputeLoweredParserIR(phv, clotInfo, *allocateParserChecksums);
-        auto* replaceLoweredParserIR =
 #ifdef HAVE_FLATROCK
-            Device::currentDevice() == Device::FLATROCK ?
-            static_cast<Transform *>(new ReplaceFlatrockParserIR) :
+        auto* computeFlatrockParserIR = new ComputeFlatrockParserIR(phv, parserHeaderSeqs);
 #endif  // HAVE_FLATROCK
-            static_cast<Transform *>(new ReplaceParserIR(*computeLoweredParserIR));
-
+        auto* replaceLoweredParserIR = new ReplaceParserIR(*computeLoweredParserIR);
+#ifdef HAVE_FLATROCK
+        auto *replaceFlatrockParserIR = new ReplaceFlatrockParserIR(*computeFlatrockParserIR);
+#endif  // HAVE_FLATROCK
         auto* parser_info = new CollectParserInfo;
         auto* lower_parser_info = new CollectLoweredParserInfo;
 
@@ -1377,8 +1601,16 @@ struct LowerParserIR : public PassManager {
             allocateParserChecksums,
             LOGGING(4) ? new DumpParser("after_alloc_parser_csums") : nullptr,
             LOGGING(4) ? new DumpParser("final_hlir_parser") : nullptr,
-            computeLoweredParserIR,
-            replaceLoweredParserIR,
+#ifdef HAVE_FLATROCK
+            Device::currentDevice() == Device::FLATROCK ?
+                static_cast<Visitor *>(computeFlatrockParserIR) :
+#endif  // HAVE_FLATROCK
+                static_cast<Visitor *>(computeLoweredParserIR),
+#ifdef HAVE_FLATROCK
+            Device::currentDevice() == Device::FLATROCK ?
+                static_cast<Visitor *>(replaceFlatrockParserIR) :
+#endif  // HAVE_FLATROCK
+                static_cast<Visitor *>(replaceLoweredParserIR),
             LOGGING(4) ? new DumpParser("after_parser_lowering") : nullptr,
             lower_parser_info,
             new MergeLoweredParserStates(*lower_parser_info, *computeLoweredParserIR, clotInfo),
@@ -2617,7 +2849,8 @@ class ComputeBufferRequirements : public ParserModifier {
  *  - PragmaNoInit
  *  - WarnTernaryMatchFields
  */
-LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &defuse) :
+LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &defuse,
+        const ParserHeaderSequences &parserHeaderSeqs) :
     Logging::PassManager("parser", Logging::Mode::AUTO) {
     auto pragma_no_init = new PragmaNoInit(phv);
     auto compute_init_valid =
@@ -2626,7 +2859,7 @@ LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &
 
     addPasses({
         pragma_no_init,
-        new LowerParserIR(phv, clot),
+        new LowerParserIR(phv, clot, parserHeaderSeqs),
         new LowerDeparserIR(phv, clot),
         new WarnTernaryMatchFields(phv),
         Device::currentDevice() == Device::TOFINO ? compute_init_valid : nullptr,

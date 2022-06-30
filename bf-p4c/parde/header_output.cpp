@@ -3,16 +3,6 @@
 
 #if HAVE_FLATROCK
 
-namespace {
-
-static unsigned int numHeaderIDs = 255;
-static unsigned int numHeaderSeqs = 2;
-static unsigned int numHeadersPerSeq = 10;
-static unsigned int payloadHeaderID = 254;
-static cstring payloadHeaderName = "payload";
-
-}  // namespace
-
 HeaderAsmOutput::HeaderAsmOutput(const ParserHeaderSequences& seqs) : seqs(seqs) {}
 
 /**
@@ -36,10 +26,8 @@ std::ostream& operator<<(std::ostream& out, const HeaderAsmOutput& headerOut) {
 
     // Header map: names to IDs
     out << indent++ << "map:" << std::endl;
-    unsigned int id = 0;
-    for (const auto& hdr : seqs.headers.at(INGRESS))
-        out << indent << hdr << ": " << id++ << std::endl;
-    out << indent << payloadHeaderName << ": " << payloadHeaderID << std::endl;
+    for (const auto& hdr : seqs.header_ids)
+        out << indent << hdr.first.second << ": " << hdr.second << std::endl;
     indent--;
 
     // Sequences: ids to header sequences
@@ -47,7 +35,7 @@ std::ostream& operator<<(std::ostream& out, const HeaderAsmOutput& headerOut) {
     // in decided which sequences are compressed vs not.
     if (seqs.sequences.count(INGRESS)) {
         out << indent++ << "seq:" << std::endl;
-        id = 0;
+        unsigned int id = 0;
         for (const auto& seq : seqs.sequences.at(INGRESS)) {
             if (seq.size() > 0) {
                 cstring sep = "";
@@ -57,7 +45,6 @@ std::ostream& operator<<(std::ostream& out, const HeaderAsmOutput& headerOut) {
                     ss << sep << hdr;
                     sep = ", ";
                 }
-                ss << sep << payloadHeaderName;
                 ss << "]";
                 BUG_CHECK(seq.size() <= numHeadersPerSeq,
                           "Too many headers in sequence: count=%1% allowed=%2% sequence=%3%",
@@ -79,8 +66,6 @@ std::ostream& operator<<(std::ostream& out, const HeaderAsmOutput& headerOut) {
     out << indent++ << "len:" << std::endl;
     for (const auto& hdr : seqs.headers.at(INGRESS))
         out << indent << hdr << ": { base_len: 0, num_comp_bits: 0, scale: 0 }" << std::endl;
-    out << indent << payloadHeaderName << ": { base_len: 0, num_comp_bits: 0, scale: 0 }"
-        << std::endl;
     indent--;
 
     // Simple implementation: take the first numHeaderSeq header sequences

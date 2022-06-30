@@ -1,5 +1,6 @@
 #emit
 #include "bf-p4c/common/flatrock_parser.h"
+#include "bf-p4c/common/debug_info.h"
 #include "bf-p4c/parde/flatrock.h"
 #include "lib/exceptions.h"
 #end
@@ -80,7 +81,7 @@ class PortMetadata {
  * The corresponding struct in assembler is FlatrockParser::Profile.
  */
 class Profile {
-    int id;
+    int index;
 #emit
     static constexpr decltype(match_t::word0) match_port_all =
         (1 << ::Flatrock::PARSER_PROFILE_PORT_BIT_WIDTH) - 1;  // all-match by default
@@ -90,6 +91,7 @@ class Profile {
     int initial_pktlen;
     int initial_seglen;
     boost::optional<std::vector<uint8_t>> initial_state;
+    boost::optional<cstring> initial_state_name;
     boost::optional<std::vector<uint8_t>> initial_flags;
     boost::optional<int> initial_ptr;
     boost::optional<int> initial_w0_offset;
@@ -101,8 +103,8 @@ class Profile {
     std::vector<::Flatrock::metadata_select> metadata_select;
 #end
     validate {
-        BUG_CHECK(id >= 0 && id < ::Flatrock::PARSER_PROFILES,
-            "profile ID %d out of allowed range <%d, %d>", id, 0, ::Flatrock::PARSER_PROFILES);
+        BUG_CHECK(index >= 0 && index < ::Flatrock::PARSER_PROFILES,
+            "profile ID %d out of allowed range <%d, %d>", index, 0, ::Flatrock::PARSER_PROFILES);
         BUG_CHECK(match_port.word0 != 0 || match_port.word1 != 0,
             "unusable (non-matchable) profile");
         BUG_CHECK(match_inband_metadata.word0 != 0 || match_inband_metadata.word1 != 0,
@@ -113,6 +115,8 @@ class Profile {
         BUG_CHECK(initial_seglen >= 0 && initial_seglen <= ::Flatrock::PARSER_PROFILE_SEGLEN_MAX,
             "initial segment length %d out of allowed range <%d, %d>",
             initial_seglen, 0, ::Flatrock::PARSER_PROFILE_SEGLEN_MAX - 1);
+        if (initial_state && initial_state_name)
+            BUG("initial_state and initial_state_name cannot be used at the same time");
         if (initial_state)
             BUG_CHECK(
                 initial_state->size() == 0 ||
@@ -145,7 +149,7 @@ class Profile {
                 "initial W2 offset %d out of allowed range <%d, %d>",
                 (*initial_w2_offset), 0, ::Flatrock::PARSER_W_OFFSET_MAX - 1);
     }
-    toString { return "profile id=" + cstring::to_cstring(id); }
+    toString { return "profile id=" + cstring::to_cstring(index); }
     dbprint {
         out << toString() << ":" << IndentCtl::indent;
         out << IndentCtl::endl << "match.port=" << match_port;
@@ -165,8 +169,10 @@ class Profile {
             out << "<unset>";
         }
         out << IndentCtl::endl << "initial_state=";
-        if (initial_state) {
-        out << "0x";
+        if (initial_state_name) {
+            out << *initial_state_name;
+        } else if (initial_state) {
+            out << "0x";
             auto original_flags = out.flags();
             auto original_fill = out.fill('0');
             for (auto &s : *initial_state)
@@ -176,18 +182,14 @@ class Profile {
         } else {
             out << "<unset>";
         }
-        out << IndentCtl::endl << "initial_ptr=";
-        if (initial_ptr) out << *initial_ptr;
-        else out << "<unset>";
-        out << IndentCtl::endl << "initial_w0_offset=";
-        if (initial_w0_offset) out << *initial_w0_offset;
-        else out << "<unset>";
-        out << IndentCtl::endl << "initial_w1_offset=";
-        if (initial_w1_offset) out << *initial_w1_offset;
-        else out << "<unset>";
-        out << IndentCtl::endl << "initial_w2_offset=";
-        if (initial_w2_offset) out << *initial_w2_offset;
-        else out << "<unset>";
+        out << IndentCtl::endl << "initial_ptr="
+            << (initial_ptr ? std::to_string(*initial_ptr) : "<unset>");
+        out << IndentCtl::endl << "initial_w0_offset="
+            << (initial_w0_offset ? std::to_string(*initial_w0_offset) : "<unset>");
+        out << IndentCtl::endl << "initial_w1_offset="
+            << (initial_w1_offset ? std::to_string(*initial_w1_offset) : "<unset>");
+        out << IndentCtl::endl << "initial_w2_offset="
+            << (initial_w2_offset ? std::to_string(*initial_w2_offset) : "<unset>");
         out << IndentCtl::endl << "initial_alu0_instruction=";
         if (initial_alu0_instruction) {
             out << "\"";
@@ -217,22 +219,65 @@ class Profile {
     }
 }
 
-// TODO to be extended
 class AnalyzerRule {
     int index;
-    int push_hdr_id_hdr_id;
-    int push_hdr_id_offset;
+    match_t match_state = {~0ULL, ~0ULL};  // all-match by default
+#emit
+    static constexpr decltype(match_t::word0) match_w_all =
+        (1ULL << (::Flatrock::PARSER_W_WIDTH * 8)) - 1;  // all-match by default
+#end
+    match_t match_w0 = {match_w_all, match_w_all};  // all-match by default
+    match_t match_w1 = {match_w_all, match_w_all};  // all-match by default
+    boost::optional<match_t> next_state;
+    boost::optional<cstring> next_state_name;
+#emit
+    boost::optional<::Flatrock::alu0_instruction> next_alu0_instruction;
+    boost::optional<::Flatrock::alu1_instruction> next_alu1_instruction;
+#end
+    boost::optional<int> push_hdr_id_hdr_id;
+    boost::optional<int> push_hdr_id_offset;
 
     toString { return "rule id=" + cstring::to_cstring(index); }
     dbprint {
         out << toString() << ":" << IndentCtl::indent;
-        out << IndentCtl::endl << "push_hdr_id.hdr_id=" << push_hdr_id_hdr_id;
-        out << IndentCtl::endl << "push_hdr_id.offset=" << push_hdr_id_offset;
+        out << IndentCtl::endl << "match_state=" << match_state;
+        out << IndentCtl::endl << "match_w0=" << match_w0;
+        out << IndentCtl::endl << "match_w1=" << match_w1;
+        out << IndentCtl::endl << "next_state=";
+        if (next_state) out << *next_state;
+        else out << "<unset>";
+        out << IndentCtl::endl << "next_state_name="
+            << (next_state_name ? *next_state_name : "<unset>");
+        out << IndentCtl::endl << "next_alu0_instruction=";
+        if (next_alu0_instruction) {
+            out << "\"";
+            print_params(out, *next_alu0_instruction);
+            out << "\"";
+            out << IndentCtl::endl << "next_alu0_instruction=\"";
+            print_pretty(out, *next_alu0_instruction);
+            out << "\"";
+        } else {
+            out << "<unset>";
+        }
+        out << IndentCtl::endl << "next_alu1_instruction=";
+        if (next_alu1_instruction) {
+            out << "\"";
+            print_params(out, *next_alu1_instruction);
+            out << "\"";
+            out << IndentCtl::endl << "next_alu1_instruction=\"";
+            print_pretty(out, *next_alu1_instruction);
+            out << "\"";
+        } else {
+            out << "<unset>";
+        }
+        out << IndentCtl::endl << "push_hdr_id.hdr_id="
+            << (push_hdr_id_hdr_id ? std::to_string(*push_hdr_id_hdr_id) : "<unset>");
+        out << IndentCtl::endl << "push_hdr_id.offset="
+            << (push_hdr_id_offset ? std::to_string(*push_hdr_id_offset) : "<unset>");
         out << IndentCtl::unindent;
     }
 }
 
-// TODO to be extended
 class AnalyzerStage {
     int stage;
     optional cstring name;
@@ -254,6 +299,102 @@ class AnalyzerStage {
     }
 }
 
+class PhvBuilderExtract {
+    int index;
+#emit
+    static constexpr decltype(match_t::word0) match_all =
+        (1ULL << (::Flatrock::PARSER_POV_SELECT_NUM * 8)) - 1;  // all-match by default
+#end
+    match_t match = {match_all, match_all};
+#emit
+    PHV::Size size = PHV::Size::null;
+#end
+    boost::optional<int> hdr1_id = boost::none;
+    boost::optional<cstring> hdr1_name = boost::none;
+    std::vector<std::pair<cstring, int>> offsets1 = {};
+
+    boost::optional<int> hdr2_id = boost::none;
+    boost::optional<cstring> hdr2_name = boost::none;
+    std::vector<std::pair<cstring, int>> offsets2 = {};
+#emit
+    ::BFN::DebugInfo debug;
+#end
+#noconstructor
+    PhvBuilderExtract() : size(PHV::Size::null) {}
+    PhvBuilderExtract(PHV::Size size) : size(size) {}
+    validate {
+        size_t sources = 0;
+        switch (size) {
+        case PHV::Size::b8: sources = ::Flatrock::PARSER_PHV_BUILDER_PACKET_PHE8_SOURCES; break;
+        case PHV::Size::b16: sources = ::Flatrock::PARSER_PHV_BUILDER_PACKET_PHE16_SOURCES; break;
+        case PHV::Size::b32: sources = ::Flatrock::PARSER_PHV_BUILDER_PACKET_PHE32_SOURCES; break;
+        default:
+            BUG("Invalid container size in PHV builder extractor");
+        }
+        BUG_CHECK(offsets1.size() <= sources,
+            "too many offsets provided on left: %d, allowed at most %d", offsets1.size(), sources);
+        BUG_CHECK(offsets2.size() <= sources,
+            "too many offsets provided on right: %d, allowed at most %d", offsets2.size(), sources);
+    }
+    toString { return "extract id=" + cstring::to_cstring(index); }
+    dbprint {
+        out << toString() << ":" << IndentCtl::indent;
+        out << IndentCtl::endl << "match=" << match;
+        out << IndentCtl::endl << "source=";
+        switch (size) {
+        case PHV::Size::b8: out << "packet8"; break;
+        case PHV::Size::b16: out << "packet16"; break;
+        case PHV::Size::b32: out << "packet32"; break;
+        default:
+            BUG("Invalid container size in PHV builder extractor");
+        }
+        out << IndentCtl::endl << "hdr1_id=" << (hdr1_id ? std::to_string(*hdr1_id) : "<unset>");
+        out << IndentCtl::endl << "hdr1_name=" << (hdr1_name ? *hdr1_name : "<unset>");
+        out << IndentCtl::endl << "offsets=[";
+        std::string sep = "";
+        for (auto &offset : offsets1) {
+            out << sep << '(' << offset.first << ", " << offset.second << ')';
+            sep = ", ";
+        }
+        out << ']';
+        out << IndentCtl::endl << "hdr2_id=" << (hdr2_id ? std::to_string(*hdr2_id) : "<unset>");
+        out << IndentCtl::endl << "hdr2_name=" << (hdr2_name ? *hdr2_name : "<unset>");
+        out << IndentCtl::endl << "offsets=[";
+        sep = "";
+        for (auto &offset : offsets2) {
+            out << sep << '(' << offset.first << ", " << offset.second << ')';
+            sep = ", ";
+        }
+        out << ']';
+        out << IndentCtl::unindent;
+    }
+}
+
+class PhvBuilderGroup {
+    int index;
+    std::vector<uint8_t> pov_select;
+    optional inline Vector<PhvBuilderExtract> extracts;
+
+    visit_children {
+        v.visit(extracts, "phv_builder");
+    }
+    validate {
+        BUG_CHECK(pov_select.size() <= ::Flatrock::PARSER_POV_SELECT_NUM,
+            "too many POV selection bytes: %d, allowed at most %d",
+            pov_select.size(), ::Flatrock::PARSER_POV_SELECT_NUM);
+        BUG_CHECK(extracts.size() <= ::Flatrock::PARSER_PHV_BUILDER_GROUP_EXTRACTS_NUM,
+            "too many extracts: %d, allowed at most %d",
+            extracts.size(), ::Flatrock::PARSER_PHV_BUILDER_GROUP_EXTRACTS_NUM);
+    }
+    toString { return "phv builder group id=" + std::to_string(index); }
+    dbprint {
+        out << toString() << ":" << IndentCtl::indent;
+        for (auto &extract : extracts)
+            out << IndentCtl::endl << extract;
+        out << IndentCtl::unindent;
+    }
+}
+
 /**
  * @brief A lowered %Flatrock parser
  * @ingroup parde
@@ -265,33 +406,50 @@ class AnalyzerStage {
  * The corresponding class in assembler is FlatrockParser.
  */
 class Parser : BFN::BaseLoweredParser {
+    std::map<cstring, match_t> states;  // state -> mask
     inline PortMetadata port_metadata;
     inline Vector<Profile> profiles;
     inline Vector<AnalyzerStage> analyzer;
+    inline Vector<PhvBuilderGroup> phv_builder;
 #noconstructor
     Parser() : BaseLoweredParser(INGRESS) {}
     visit_children {
         v.visit(&port_metadata, "parser");
         v.visit(profiles, "parser");
         v.visit(analyzer, "parser");
+        v.visit(phv_builder, "parser");
     }
     validate {
         BUG_CHECK(profiles.size() > 0, "default profile missing");
-        BUG_CHECK(profiles.size() < ::Flatrock::PARSER_PROFILES,
+        BUG_CHECK(profiles.size() <= ::Flatrock::PARSER_PROFILES,
             "too many profiles: %d, allowed at most %d",
             profiles.size(), ::Flatrock::PARSER_PROFILES);
-        BUG_CHECK(analyzer.size() < ::Flatrock::PARSER_ANALYZER_STAGES,
+        BUG_CHECK(analyzer.size() <= ::Flatrock::PARSER_ANALYZER_STAGES,
             "too many analyzer stages: %d, allowed at most %d",
             analyzer.size(), ::Flatrock::PARSER_ANALYZER_STAGES);
+        BUG_CHECK(phv_builder.size() <= ::Flatrock::PARSER_PHV_BUILDER_GROUPS,
+            "too many PHV groups: %d, allowed at most %d",
+            phv_builder.size(), ::Flatrock::PARSER_PHV_BUILDER_GROUPS);
     }
     toString { return "parser"; }
     dbprint {
         out << toString() << IndentCtl::indent;
+        out << IndentCtl::endl << "states:";
+        if (states.empty()) {
+            out << " " << "<empty>";
+        } else {
+            out << IndentCtl::indent;
+            for (auto &state : states)
+                out << IndentCtl::endl << state.first << ": " << state.second;
+            out << IndentCtl::unindent;
+        }
         out << IndentCtl::endl << port_metadata;
         for (auto &profile : profiles)
             out << IndentCtl::endl << profile;
         for (auto &analyzer_stage : analyzer)
             out << IndentCtl::endl << analyzer_stage;
+        for (auto &phv_builder_group : phv_builder)
+            out << IndentCtl::endl << phv_builder_group;
         out << IndentCtl::unindent;
     }
 }
