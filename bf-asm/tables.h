@@ -1398,7 +1398,6 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
     AttachedTables *get_attached() override { return &attached; }
     const GatewayTable *get_gateway() const override { return match_table->get_gateway(); }
     const MatchTable *get_match_table() const override { return match_table; }
-    MatchTable *get_match_table() override { return match_table; }
     std::set<MatchTable *> get_match_tables() override {
         std::set<MatchTable *> rv;
         if (match_table) rv.insert(match_table);
@@ -1418,6 +1417,7 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
  public:
     Format::Field *lookup_field(const std::string &n,
                                         const std::string &act = "") const override;
+    MatchTable *get_match_table() override { return match_table; }
     const std::vector<NextTables> &get_hit_next() const override {
         if (hit_next.empty() && match_table)
             return match_table->get_hit_next();

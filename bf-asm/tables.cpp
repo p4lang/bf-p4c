@@ -2003,9 +2003,13 @@ void Table::Actions::gen_tbl_cfg(json::vector &actions_cfg) const {
 
         // XXX(amresh): These will be set to 'true' & "" for a keyless table to
         // allow any action to be set as default by the control plane
-        if (table->p4_params_list.empty()) {
+        // Exception is TernaryIndirectTables which dont have params list as they are on the main
+        // TernaryMatchTable, hence check for match_table to query params list
+        if (table->get_match_table()->p4_params_list.empty()) {
             action_cfg["allowed_as_default_action"] = true;
-            action_cfg["disallowed_as_default_action_reason"] = ""; }
+            action_cfg["disallowed_as_default_action_reason"] = "";
+        }
+
         json::vector &p4_params = action_cfg["p4_parameters"] = json::vector();
         act.add_p4_params(p4_params);
         action_cfg["override_meter_addr"] = false;
