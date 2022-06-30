@@ -1,7 +1,6 @@
 set (tofino5_timeout ${default_test_timeout})
 
 packet_test_setup_check("ftr")
-# ftr simple harness is not available yet
 simple_test_setup_check("ftr")
 
 set (P16_T5NA_INCLUDE_PATTERNS "include.*(t5na).p4" "main|common_t5na_test")

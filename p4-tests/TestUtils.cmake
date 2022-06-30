@@ -243,7 +243,7 @@ macro(packet_test_setup_check device)
 endmacro(packet_test_setup_check)
 
 # extra test args can be passed as unamed arguments
-function(bfn_add_test_with_args device alias p4file test_args cmake_args)
+function(bfn_add_test_with_args device toolsdevice alias p4file test_args cmake_args)
   # create the test
   p4c_add_test_with_args (${device} ${P4C_RUNTEST} FALSE ${alias}
       ${p4file} "${test_args}" "-${device} ${cmake_args}")
@@ -270,7 +270,7 @@ function(bfn_add_test_with_args device alias p4file test_args cmake_args)
   if (HARLYN_STF_${toolsdevice})
     string (REGEX REPLACE ".p4$" ".stf" __stffile ${p4file})
     if (EXISTS ${P4C_SOURCE_DIR}/${__stffile})
-      p4c_add_test_label(${device} "stf" ${p4file})
+      p4c_add_test_label(${device} "stf" ${alias})
     endif()
   endif(HARLYN_STF_${toolsdevice})
 endfunction(bfn_add_test_with_args)
@@ -300,7 +300,7 @@ macro(p4c_add_bf_backend_tests device toolsdevice arch label tests)
   foreach (ts "${tests}")
     file (GLOB __testfiles RELATIVE ${P4C_SOURCE_DIR} ${ts})
     foreach (__p4file ${__testfiles})
-      bfn_add_test_with_args(${device} ${__p4file} ${__p4file}
+      bfn_add_test_with_args(${device} ${toolsdevice} ${__p4file} ${__p4file}
           "-arch ${arch} ${_testExtraArgs}" "")
       p4c_add_test_label(${device} ${label} ${__p4file})
     endforeach() # __p4file

@@ -68,7 +68,7 @@ p4c_add_bf_backend_tests("tofino3" "cb" "v1model" "base" "${CLOUDBREAK_V1_TEST_S
 # --parser-inline-opt here, and let the other test be created as part of tests created from variable
 # CLOUDBREAK_JNA_TEST_SUITES.
 p4c_find_test_names("${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/p4c-2985.p4" P4C_2985_TESTNAME)
-bfn_add_test_with_args("tofino3" "parser-inline-opt/${P4C_2985_TESTNAME}" ${P4C_2985_TESTNAME} "" "--parser-inline-opt")
+bfn_add_test_with_args("tofino3" "cb" "parser-inline-opt/${P4C_2985_TESTNAME}" ${P4C_2985_TESTNAME} "" "--parser-inline-opt")
 p4c_add_test_label("tofino3" "base;stf" "parser-inline-opt/${P4C_2985_TESTNAME}")
 
 p4c_add_ptf_test_with_ptfdir ("tofino3" "mirror_constants"
@@ -250,7 +250,7 @@ bfn_find_tests ("${TOF3_V1MODEL_COMPILE_ONLY_TESTS}" TOF3_V1MODEL_COMPILE_ONLY_T
 p4c_add_bf_backend_tests("tofino3" "cb" "${JBAY_P414_TEST_ARCH}" "smoketest_programs\;JENKINS_PART2" "${TOF3_V1MODEL_COMPILE_ONLY_TESTS_LIST}")
 
 #file(RELATIVE_PATH tofino32q-3pipe_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tofino32q-3pipe/sfc.p4)
-#bfn_add_test_with_args ("tofino3" "tofino32q-3pipe" ${tofino32q-3pipe_path} "${testExtraArgs} -tofino3 -arch t3na" "")
+#bfn_add_test_with_args ("tofino3" "cb" "tofino32q-3pipe" ${tofino32q-3pipe_path} "${testExtraArgs} -tofino3 -arch t3na" "")
 #
 ### P4-16 Programs
 #set (P4FACTORY_P4_16_PROGRAMS
@@ -278,31 +278,31 @@ p4c_add_bf_backend_tests("tofino3" "cb" "${JBAY_P414_TEST_ARCH}" "smoketest_prog
 #
 ## No ptf, compile-only
 #file(RELATIVE_PATH p4_16_programs_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs)
-#bfn_add_test_with_args ("tofino3"
+#bfn_add_test_with_args ("tofino3" "cb"
 #  "p4_16_programs_tna_simple_switch" ${p4_16_programs_path}/tna_simple_switch/tna_simple_switch.p4 "${testExtraArgs} -tofino3 -arch t3na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs" "")
-#bfn_add_test_with_args ("tofino3"
+#bfn_add_test_with_args ("tofino3" "cb"
 #  "p4_16_programs_tna_32q_multiprogram_a" ${p4_16_programs_path}/tna_32q_multiprogram/program_a/tna_32q_multiprogram_a.p4 "${testExtraArgs} -tofino3 -arch t3na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_32q_multiprogram" "")
-#bfn_add_test_with_args ("tofino3"
+#bfn_add_test_with_args ("tofino3" "cb"
 #  "p4_16_programs_tna_32q_multiprogram_b" ${p4_16_programs_path}/tna_32q_multiprogram/program_b/tna_32q_multiprogram_b.p4 "${testExtraArgs} -tofino3 -arch t3na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_32q_multiprogram" "")
 #
 #file(RELATIVE_PATH p4_16_internal_p4_16_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16)
-#bfn_add_test_with_args ("tofino3"
+#bfn_add_test_with_args ("tofino3" "cb"
 #  "p4_16_internal_p4_16_hwlrn" ${p4_16_internal_p4_16_path}/hwlrn/hwlrn.p4 "${testExtraArgs} -tofino3 -arch t3na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
 #set_property(TEST "tofino3/extensions/p4_tests/p4_16/jbay/hwlearn1.p4"
 #  APPEND PROPERTY ENVIRONMENT "CTEST_P4C_ARGS=--no-bf-rt-schema")
-#bfn_add_test_with_args ("tofino3"
+#bfn_add_test_with_args ("tofino3" "cb"
 #  "p4_16_internal_p4_16_ipv4_checksum" ${p4_16_internal_p4_16_path}/ipv4_checksum/ipv4_checksum.p4 "${testExtraArgs} -tofino3 -arch t3na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
-#bfn_add_test_with_args ("tofino3"
+#bfn_add_test_with_args ("tofino3" "cb"
 #  "p4_16_internal_p4_16_lrn" ${p4_16_internal_p4_16_path}/lrn/lrn.p4 "${testExtraArgs} -tofino3 -arch t3na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
-#bfn_add_test_with_args ("tofino3"
+#bfn_add_test_with_args ("tofino3" "cb"
 #  "p4_16_internal_p4_16_t2na_emulation" ${p4_16_internal_p4_16_path}/t2na_emulation/t2na_emulation.p4 "${testExtraArgs} -tofino3 -arch t3na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
-#bfn_add_test_with_args ("tofino3"
+#bfn_add_test_with_args ("tofino3" "cb"
 #  "p4_16_internal_p4_16_t2na_fifo" ${p4_16_internal_p4_16_path}/t2na_fifo/t2na_fifo.p4 "${testExtraArgs} -tofino3 -arch t3na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
-#bfn_add_test_with_args ("tofino3"
+#bfn_add_test_with_args ("tofino3" "cb"
 #  "p4_16_internal_p4_16_t2na_pgr" ${p4_16_internal_p4_16_path}/t2na_pgr/t2na_pgr.p4 "${testExtraArgs} -tofino3 -arch t3na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
-#bfn_add_test_with_args ("tofino3"
+#bfn_add_test_with_args ("tofino3" "cb"
 #  "p4_16_internal_p4_16_t2na_static_entry" ${p4_16_internal_p4_16_path}/t2na_static_entry/t2na_static_entry.p4 "${testExtraArgs} -tofino3 -arch t3na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
-#bfn_add_test_with_args ("tofino3"
+#bfn_add_test_with_args ("tofino3" "cb"
 #  "p4_16_internal_p4_16_tna_pvs_multi_states" ${p4_16_internal_p4_16_path}/tna_pvs_multi_states/tna_pvs_multi_states.p4 "${testExtraArgs} -tofino3 -arch t3na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
 #
 ## P4-16 Programs with PTF tests
