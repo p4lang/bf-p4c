@@ -775,11 +775,23 @@ stage <constant> <thread>:
         match: <phv-location> | '[' <phv-location>, ... ']'
             # value(s) to match against the 'match' field(s) in the format
         ways:
-            - '[' <int>,<int>,<int>, '[' <row>,<col> ']',... ']'
+            - '{' < way description '}'
             # description of one way of the table
+                group: <int>
+                    # hash group or XME used for this way
+                index: <range> | <int>
+                    # hash bits used to index the way rams/lambs (including subword bits)
+                select: <range> [ '&' <mask> ]
+                    # hash bits used to select enable rams/lambs in the way
+                rams: '[' <ram>, ... ']'
+                    # rams or lambs in the way.  Each is a vector of 1, 2, or 3 integers
+                    '[' <int> ']'                   # lamb unit (tofino5)
+                    '[' <row>,<col> ']'             # tofino1/2/3
+                    '[' <stage>,<row>,<col> ']'     # tofino5 stm
+            - '[' <int>,<int>,<int>, '[' <row>,<col> ']',... ']'
+            # DEPRECATED description of one way of the table
             # initial 3 values are hash group, 10-bit slice from group, and
             # mask of upper 12 bits from the group.
-            # FIXME -- needs to be done as a more descriptive map?
         match_group_map: '[' '[' <int>,... ']',... ']'
             # map from per-word match groups to overall match groups
             # one row for each word in the width of the table with up to

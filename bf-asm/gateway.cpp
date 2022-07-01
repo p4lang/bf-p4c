@@ -571,8 +571,8 @@ void GatewayTable::pass3() {
                     break; } }
             BUG_CHECK(way, "%s claims to use search bus %d.%d, but we can't find it in the layout",
                       sram_tbl->name(), layout[0].row, layout[0].bus);
-            if (ixb->hash_group() >= 0 && sram_tbl->ways[way->way].group >= 0 &&
-                ixb->hash_group() != sram_tbl->ways[way->way].group) {
+            if (ixb->hash_group() >= 0 && sram_tbl->ways[way->way].group_xme >= 0 &&
+                ixb->hash_group() != sram_tbl->ways[way->way].group_xme) {
                 error(layout[0].lineno, "%s sharing search bus %d.%d with %s, but wants a "
                       "different hash group", name(), layout[0].row, layout[0].bus, tbl->name());
             }

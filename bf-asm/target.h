@@ -80,6 +80,9 @@
     M(bool, HAS_MPR) \
     M(int, INSTR_SRC2_BITS) \
     M(int, IMEM_COLORS) \
+    M(int, IXBAR_HASH_GROUPS) \
+    M(int, IXBAR_HASH_INDEX_MAX) \
+    M(int, IXBAR_HASH_INDEX_STRIDE) \
     M(int, LONG_BRANCH_TAGS) \
     M(int, MAX_OVERHEAD_OFFSET) \
     M(int, MAX_OVERHEAD_OFFSET_NEXT) \
@@ -248,6 +251,9 @@ class Target::Tofino : public Target {
         SUPPORT_TRUE_EOP = 0,
         INSTR_SRC2_BITS = 4,
         IMEM_COLORS = 2,
+        IXBAR_HASH_GROUPS = 8,
+        IXBAR_HASH_INDEX_MAX = 40,
+        IXBAR_HASH_INDEX_STRIDE = 10,
         LONG_BRANCH_TAGS = 0,
         MAU_BASE_DELAY = 20,
         MAU_BASE_PREDICATION_DELAY = 11,
@@ -395,6 +401,9 @@ class Target::JBay : public Target {
         SUPPORT_TRUE_EOP = 1,
         INSTR_SRC2_BITS = 5,
         IMEM_COLORS = 2,
+        IXBAR_HASH_GROUPS = 8,
+        IXBAR_HASH_INDEX_MAX = 40,
+        IXBAR_HASH_INDEX_STRIDE = 10,
         LONG_BRANCH_TAGS = 8,
         MAU_BASE_DELAY = 23,
         MAU_BASE_PREDICATION_DELAY = 13,
@@ -589,6 +598,9 @@ class Target::Cloudbreak : public Target {
         GATEWAY_SINGLE_XBAR_GROUP = true,
         INSTR_SRC2_BITS = 5,
         IMEM_COLORS = 2,
+        IXBAR_HASH_GROUPS = 8,
+        IXBAR_HASH_INDEX_MAX = 40,
+        IXBAR_HASH_INDEX_STRIDE = 10,
         LONG_BRANCH_TAGS = 8,
         MAU_BASE_DELAY = 23,
         MAU_BASE_PREDICATION_DELAY = 13,
@@ -729,6 +741,9 @@ class Target::Flatrock : public Target {
         GATEWAY_SINGLE_XBAR_GROUP = false,
         INSTR_SRC2_BITS = 0,
         IMEM_COLORS = 4,
+        IXBAR_HASH_GROUPS = 16,  // actually XME indexes
+        IXBAR_HASH_INDEX_MAX = 45,
+        IXBAR_HASH_INDEX_STRIDE = 1,
         LONG_BRANCH_TAGS = 32,
         MAU_BASE_DELAY = 23,
         MAU_BASE_PREDICATION_DELAY = 13,

@@ -52,7 +52,7 @@ void ProxyHashMatchTable::setup_ways() {
             int way = way_map.at(Ram(row.row, col)).way;
             if (first_way < 0) {
                 first_way = way;
-            } else if (ways[way].group != ways[first_way].group) {
+            } else if (ways[way].group_xme != ways[first_way].group_xme) {
                 error(row.lineno, "Ways %d and %d of table %s share address bus on row %d, "
                       "but use different hash groups", first_way, way, name(), row.row);
                 break; } } }

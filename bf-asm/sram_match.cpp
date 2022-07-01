@@ -297,22 +297,25 @@ std::unique_ptr<json::map>
     json::map mra;
     unsigned vpn_ctr = 0;
     unsigned fmt_width = format ? (format->size + 127)/128 : 0;
-    if (hash_fn_ids.count(way.group) > 0)
-        mra["hash_function_id"] = hash_fn_ids.at(way.group);
-    mra["hash_entry_bit_lo"] = way.subgroup*10;
-    mra["hash_entry_bit_hi"] = way.subgroup*10 + 9;
-    mra["number_entry_bits"] = 10;
-    if (way.mask) {
-        int lo = ffs(way.mask) - 1, hi = floor_log2(way.mask);
-        mra["hash_select_bit_lo"] = EXACT_HASH_FIRST_SELECT_BIT + lo;
-        mra["hash_select_bit_hi"] = EXACT_HASH_FIRST_SELECT_BIT + hi;
-        if (way.mask != (1 << (hi+1)) - (1 << lo)) {
+    unsigned ramdepth = way.isLamb() ? LAMB_DEPTH_BITS : SRAM_DEPTH_BITS;
+    if (hash_fn_ids.count(way.group_xme) > 0)
+        mra["hash_function_id"] = hash_fn_ids.at(way.group_xme);
+    mra["hash_entry_bit_lo"] = way.index;
+    mra["hash_entry_bit_hi"] = way.index + ramdepth + way.subword_bits - 1;
+    mra["number_entry_bits"] = ramdepth + way.subword_bits;
+    mra["number_subword_bits"] = way.subword_bits;
+    if (way.select) {
+        int lo = way.select.min().index(), hi = way.select.max().index();
+        mra["hash_select_bit_lo"] = lo;
+        mra["hash_select_bit_hi"] = hi;
+        if (way.select.popcount() != hi - lo + 1) {
             warning(way.lineno, "driver does not support discontinuous bits in a way mask");
-            mra["hash_select_bit_mask"] = way.mask >> lo; }
+            mra["hash_select_bit_mask"] = way.select.getrange(lo, 32); }
     } else {
         mra["hash_select_bit_lo"] = mra["hash_select_bit_hi"] = 40;
     }
-    mra["number_select_bits"] = bitcount(way.mask);
+    mra["number_select_bits"] = way.select.popcount();
+    mra["memory_type"] = way.isLamb() ? "lamb" : "sram";
     json::vector mem_units;
     json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"] = json::vector();
     int way_uses_lambs = -1;  // don't know yet
@@ -367,11 +370,9 @@ void SRamMatchTable::add_hash_functions(json::map &stage_tbl) const {
     std::map<int, bitvec> hash_bits_per_group;
     for (auto &way : ways) {
         bitvec way_impact;
-        way_impact.setrange(way.subgroup * 10, 10);
-        bitvec select_impact;
-        select_impact |= way.mask;
-        way_impact |= select_impact << 40;
-        hash_bits_per_group[way.group] |= way_impact;
+        way_impact.setrange(way.index, way.isLamb() ? LAMB_DEPTH_BITS : SRAM_DEPTH_BITS);
+        way_impact |= way.select;
+        hash_bits_per_group[way.group_xme] |= way_impact;
     }
 
     // Order so that the order is the same of the hash_function_ids in the ways
@@ -593,22 +594,75 @@ bool SRamMatchTable::parse_ram(const value_t &v, std::vector<Ram> &res) {
     return false;
 }
 
+bool SRamMatchTable::parse_way(const value_t &v) {
+    Way way = {};
+    way.lineno = v.lineno;
+    if (!CHECKTYPE2(v, tVEC, tMAP)) return true;  // supress added message
+    if (v.type == tVEC) {
+        // DEPRECATED -- old style "raw" way for tofino1/2/3
+        if (v.vec.size < 3 || v[0].type != tINT || v[1].type != tINT || v[2].type != tINT ||
+            v[0].i < 0 || v[1].i < 0 || v[2].i < 0 || v[0].i >= EXACT_HASH_GROUPS ||
+            v[1].i >= EXACT_HASH_ADR_GROUPS || v[2].i >= (1 << EXACT_HASH_SELECT_BITS)) {
+            return false; }
+        way.group_xme = v[0].i;
+        way.index = v[1].i * EXACT_HASH_ADR_BITS;
+        way.select = bitvec(v[2].i) << EXACT_HASH_FIRST_SELECT_BIT;
+        for (int i = 3; i < v.vec.size; i++) {
+            if (!CHECKTYPE(v[i], tVEC)) return true;  // supress added message
+            if (!parse_ram(v[i], way.rams))
+                error(v[i].lineno, "invalid ram in way"); }
+    } else {
+        int index_size = 0;
+        for (auto &kv : MapIterChecked(v.map)) {
+            if ((kv.key == "group" || kv.key == "xme") && CHECKTYPE(kv.value, tINT)) {
+                if ((way.group_xme = kv.value.i) >= Target::IXBAR_HASH_GROUPS())
+                    error(kv.value.lineno, "%s %s out of range", kv.key.s, kv.value.i);
+            } else if (kv.key == "index") {
+                if (!CHECKTYPE2(kv.value, tINT, tRANGE)) continue;
+                if (kv.value.type == tINT) {
+                    way.index = kv.value.i;
+                } else {
+                    way.index = kv.value.lo;
+                    index_size = kv.value.hi - kv.value.lo + 1; }
+                if (way.index > Target::IXBAR_HASH_INDEX_MAX() ||
+                    way.index % Target::IXBAR_HASH_INDEX_STRIDE() != 0)
+                    error(kv.value.lineno, "invalid way index %d", way.index);
+            } else if (kv.key == "select") {
+                if (kv.value.type == tCMD && kv.value == "&") {
+                    if (CHECKTYPE2(kv.value[1], tINT, tRANGE) && CHECKTYPE(kv.value[2], tINT)) {
+                        way.select = bitvec(kv.value[2].i);
+                        if (kv.value[1].type == tINT) {
+                            way.select <<= kv.value[1].i;
+                        } else {
+                            way.select <<= kv.value[1].lo;
+                            if (kv.value[1].hi < way.select.max().index())
+                                error(kv.value.lineno, "invalid select mask for range"); } }
+                } else if (kv.value.type == tRANGE) {
+                    way.select.setrange(kv.value.lo, kv.value.hi - kv.value.lo + 1);
+                } else {
+                    error(kv.value.lineno, "invalid select %s", value_desc(&kv.value)); }
+            } else if (kv.key == "rams" && CHECKTYPE(kv.value, tVEC)) {
+                for (auto &ram : kv.value.vec) {
+                    if (!CHECKTYPE(ram, tVEC)) break;
+                    if (!parse_ram(ram, way.rams))
+                        error(ram.lineno, "invalid ram in way"); }
+            }
+        }
+        if (index_size) {
+            way.subword_bits = index_size - (way.isLamb() ? LAMB_DEPTH_BITS : SRAM_DEPTH_BITS);
+            if (way.subword_bits < 0)
+                error(v.lineno, "index range too small for way rams"); }
+    }
+    ways.push_back(way);
+    return true;
+}
+
 void SRamMatchTable::common_sram_setup(pair_t &kv, const VECTOR(pair_t) &data) {
     if (kv.key == "ways") {
         if (!CHECKTYPE(kv.value, tVEC)) return;
-        for (auto &w : kv.value.vec) {
-            if (!CHECKTYPE(w, tVEC)) return;
-            if (w.vec.size < 3 || w[0].type != tINT || w[1].type != tINT || w[2].type != tINT ||
-                w[0].i < 0 || w[1].i < 0 || w[2].i < 0 || w[0].i >= EXACT_HASH_GROUPS ||
-                w[1].i >= EXACT_HASH_ADR_GROUPS || w[2].i >= (1 << EXACT_HASH_SELECT_BITS)) {
+        for (auto &w : kv.value.vec)
+            if (!parse_way(w))
                 error(w.lineno, "invalid way descriptor");
-                continue; }
-            ways.emplace_back(Way{w.lineno, static_cast<int>(w[0].i), static_cast<int>(w[1].i),
-                static_cast<int>(w[2].i), {}});
-            for (int i = 3; i < w.vec.size; i++) {
-                if (!CHECKTYPE(w[i], tVEC)) return;
-                if (!parse_ram(w[i], ways.back().rams))
-                    error(w[i].lineno, "invalid ram in way"); } }
     } else if (kv.key == "match") {
         if (kv.value.type == tVEC) {
             for (auto &v : kv.value.vec) {
@@ -681,8 +735,8 @@ void SRamMatchTable::pass1() {
 void SRamMatchTable::setup_hash_function_ids() {
     unsigned hash_fn_id = 0;
     for (auto &w : ways) {
-        if (hash_fn_ids.count(w.group) == 0)
-            hash_fn_ids[w.group] = hash_fn_id++;
+        if (hash_fn_ids.count(w.group_xme) == 0)
+            hash_fn_ids[w.group_xme] = hash_fn_id++;
     }
 }
 
@@ -709,7 +763,7 @@ void SRamMatchTable::setup_ways() {
             if (ridx >= layout.size()) {
                 error(way.lineno, "Not enough rams for ways in table %s", name());
                 break; }
-            unsigned size = 1U << bitcount(way.mask);
+            unsigned size = 1U << way.select.popcount();
             for (unsigned i = 0; i < size; i++) {
                 for (unsigned word = 0; word < fmt_width; ++word) {
                     BUG_CHECK(ridx + word < layout.size());
@@ -731,13 +785,13 @@ void SRamMatchTable::setup_ways() {
             ++way;
             int index = -1;
             if (table_type() != ATCAM) {
-                if ((w.rams.size() != (1U << bitcount(w.mask)) * fmt_width))
+                if ((w.rams.size() != (1U << w.select.popcount()) * fmt_width))
                     error(w.lineno, "Depth of way doesn't match number of rams in table %s",
                           name());
             } else {
                 // Allowed to not fully match, as the partition index can be set from the
                 // control plane
-                if (!((w.rams.size() <= (1U << bitcount(w.mask)) * fmt_width) &&
+                if (!((w.rams.size() <= (1U << w.select.popcount()) * fmt_width) &&
                      (w.rams.size() % fmt_width) == 0))
                     error(w.lineno, "RAMs in ATCAM is not a legal multiple of the format width %s",
                           name());
@@ -761,7 +815,7 @@ void SRamMatchTable::setup_ways() {
     if (error_count > 0) return;
     int way = 0;
     for (auto &w : ways) {
-        MaskCounter bank(w.mask);
+        MaskCounter bank(w.select.getrange(EXACT_HASH_FIRST_SELECT_BIT, 32));
         unsigned index = 0, word = 0;
         int col = -1;
         for (auto &ram : w.rams) {
@@ -880,25 +934,26 @@ template<class REGS> void SRamMatchTable::write_regs_vt(REGS &regs) {
         for (auto col : row.cols) {
             auto &way = way_map[Ram(row.row, col)];
             if (first) {
-                hash_group = ways[way.way].group;
+                hash_group = ways[way.way].group_xme;
                 word = way.word;
                 setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[row.bus], hash_group);
                 first = false;
-            } else if (hash_group != ways[way.way].group || static_cast<int>(word) != way.word) {
+            } else if (hash_group != ways[way.way].group_xme || int(word) != way.word) {
                 auto first_way = way_map[Ram(row.row, row.cols[0])];
                 error(ways[way.way].lineno, "table %s ways #%d and #%d use the same row bus "
                       "(%d.%d) but different %s", name(), first_way.way, way.way, row.row,
                       row.bus, static_cast<int>(word) == way.word ? "hash groups" : "word order");
-                hash_group = ways[way.way].group;
+                hash_group = ways[way.way].group_xme;
                 word = way.word; }
             setup_muxctl(vh_adr_xbar.exactmatch_mem_hashadr_xbar_ctl[col],
-                         ways[way.way].subgroup + row.bus*5);
-            if (options.match_compiler || ways[way.way].mask) {
+                         ways[way.way].index / EXACT_HASH_ADR_BITS + row.bus*5);
+            if (options.match_compiler || ways[way.way].select) {
                 // Glass always sets this.  When mask == 0, bank will also be 0, and the
                 // comparison will always match, so the bus need not be read (inp_sel).
                 // CSR suggests it should NOT be set if not needed to save power.
                 auto &bank_enable = vh_adr_xbar.exactmatch_bank_enable[col];
-                bank_enable.exactmatch_bank_enable_bank_mask = ways[way.way].mask;
+                bank_enable.exactmatch_bank_enable_bank_mask =
+                    ways[way.way].select.getrange(EXACT_HASH_FIRST_SELECT_BIT, 32);
                 bank_enable.exactmatch_bank_enable_bank_id = way.bank;
                 bank_enable.exactmatch_bank_enable_inp_sel |= 1 << row.bus; }
             auto &ram = rams_row.ram[col];

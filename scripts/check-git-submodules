@@ -9,7 +9,7 @@ declare -A branchOverrides=(
   # Looks like we have a custom branch of google-tor that omits PTF tests.
   ['p4-tests/p4_16/google-tor']=4afb7169
   # temp to allow flatrock progress
-  ['compiler_interfaces']=3aede9a5db
+  ['compiler_interfaces']=717fd98
 )
 
 ### End configuration #########################################################

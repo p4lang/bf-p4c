@@ -91,7 +91,7 @@ void ExactMatchTable::setup_ways() {
             int way = way_map.at(Ram(row.row, col)).way;
             if (first_way < 0) {
                 first_way = way;
-            } else if (ways[way].group != ways[first_way].group) {
+            } else if (ways[way].group_xme != ways[first_way].group_xme) {
                 error(row.lineno, "Ways %d and %d of table %s share address bus on row %d, "
                       "but use different hash groups", first_way, way, name(), row.row);
                 break; } } }
@@ -137,7 +137,7 @@ void ExactMatchTable::determine_ghost_bits() {
         int way_index = 0;
         for (auto way : ways) {
             bitvec hash_tables;
-            if (auto *hash_group = ixb->get_hash_group(way.group)) {
+            if (auto *hash_group = ixb->get_hash_group(way.group_xme)) {
                 hash_tables = bitvec(hash_group->tables);
             } else {
                 for (auto &ht : ixb->get_hash_tables())
@@ -209,7 +209,7 @@ void ExactMatchTable::determine_ghost_bits() {
                 total_use |= gbi.second;
             }
 
-            auto &ghost_bit_position = ghost_bit_positions[way.group];
+            auto &ghost_bit_position = ghost_bit_positions[way.group_xme];
             for (auto gbi : ghost_bit_impact) {
                 ghost_bit_position[gbi.first] |= gbi.second;
             }
@@ -324,7 +324,7 @@ template<class REGS> void ExactMatchTable::write_regs_vt(REGS &regs) {
         stash_map_entry.enabled_3bit_muxctl_enable = 1;
         auto &stash_reg = regs.rams.array.row[stash_row].stash;
         auto &input_data_ctl = stash_reg.stash_match_input_data_ctl[stash_unit_id];
-        input_data_ctl.stash_hash_adr_select = ways[0].subgroup;
+        input_data_ctl.stash_hash_adr_select = ways[0].index / EXACT_HASH_ADR_BITS;
         input_data_ctl.stash_enable = 1;
         input_data_ctl.stash_logical_table = logical_id;
         input_data_ctl.stash_thread = (gress == EGRESS);

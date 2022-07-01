@@ -1019,12 +1019,17 @@ DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam,
  protected:
     struct Way {
         int                             lineno;
-        int                             group, subgroup, mask;
+        int                             group_xme;      // hash group or xme
+        int                             index;          // first bit of index
+        int                             subword_bits;
+        bitvec                          select;
         std::vector<Ram>                rams;
+        bool isLamb() const {
+            BUG_CHECK(!rams.empty(), "no rams in way");
+            return rams.at(0).isLamb(); }
         bitvec select_bits() const {
-            bitvec rv(mask);
-            rv <<= EXACT_HASH_FIRST_SELECT_BIT;
-            rv.setrange(subgroup * EXACT_HASH_ADR_BITS, EXACT_HASH_ADR_BITS);
+            bitvec rv = select;
+            rv.setrange(index, (isLamb() ? LAMB_DEPTH_BITS : SRAM_DEPTH_BITS) + subword_bits);
             return rv;
         }
     };
@@ -1060,6 +1065,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam,
     template<class REGS>
     void write_attached_merge_regs(REGS &regs, int bus, int word, int word_group);
     bool parse_ram(const value_t &, std::vector<Ram> &);
+    bool parse_way(const value_t &);
     void common_sram_setup(pair_t &, const VECTOR(pair_t) &);
     void common_sram_checks();
     void alloc_vpns() override;
@@ -1145,7 +1151,7 @@ DECLARE_TABLE_TYPE(ExactMatchTable, SRamMatchTable, "exact_match",
     table_type_t table_type() const override { return EXACT; }
     bool has_group(int grp) {
         for (auto &way : ways)
-            if (way.group == grp) return true;
+            if (way.group_xme == grp) return true;
         return false; }
     void determine_ghost_bits();
     void gen_ghost_bits(int hash_function_number, json::vector &ghost_bits_to_hash_bits,

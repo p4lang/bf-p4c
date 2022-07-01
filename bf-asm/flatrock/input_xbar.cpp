@@ -325,8 +325,9 @@ void Flatrock::InputXbar::write_xme_regs(Target::Flatrock::mau_regs::_ppu_eml &x
         BUG_CHECK(table->format->groups() == 1 << subword_bits, "direct table %s match "
                   "groups not a power of 2", table->name());
     }
+    BUG_CHECK(subword_bits == way->subword_bits, "subword bit size mismatch");
     int addr_size = bank_bits + 6 + subword_bits;  // 6 is the whole lamb, but we could use less?
-    int hash_base = way->group + way->subgroup*addr_size;
+    int hash_base = way->index;
     for (int d : dconfig) {
         auto &addr = xmu.eml_addr_cfg[xme%2U][d];
         addr.banknum = idx;
