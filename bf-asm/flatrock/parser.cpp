@@ -867,7 +867,9 @@ void FlatrockParser::alu0_instruction::input(VECTOR(value_t) args, value_t data)
         if (msb || lsb || shift || mask || add) {
             error(opcode->lineno, "unexpected: msb, lsb, shift, mask, or add");
         }
-        add = value_t { .type = tINT, .lineno = opcode->lineno, .i = 0 };
+        add->type = tINT;
+        add->lineno = opcode->lineno;
+        add->i = 0;
         break;
     case Flatrock::alu0_instruction::OPCODE_0:
         // opcode 0: ptr += imm8s  ->  { opcode: 0, add: <constant> }
@@ -1049,7 +1051,9 @@ void FlatrockParser::alu1_instruction::input(VECTOR(value_t) args, value_t data)
             error(opcode->lineno,
                 "unexpected: shift_dir, shift, mask_mode, mask, add, set, msb, or lsb");
         }
-        shift = value_t { .type = tINT, .lineno = opcode->lineno, .i = 0 };
+        shift->type = tINT;
+        shift->lineno = opcode->lineno;
+        shift->i = 0;
         break;
     case Flatrock::alu1_instruction::OPCODE_0:
         // opcode 0: state[MSB:LSB] >>= imm4u, MSB&LSB -> 2/4/8/16-bit state sub-field
