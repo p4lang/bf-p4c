@@ -867,6 +867,7 @@ void FlatrockParser::alu0_instruction::input(VECTOR(value_t) args, value_t data)
         if (msb || lsb || shift || mask || add) {
             error(opcode->lineno, "unexpected: msb, lsb, shift, mask, or add");
         }
+        add = value_t();
         add->type = tINT;
         add->lineno = opcode->lineno;
         add->i = 0;
@@ -1051,6 +1052,7 @@ void FlatrockParser::alu1_instruction::input(VECTOR(value_t) args, value_t data)
             error(opcode->lineno,
                 "unexpected: shift_dir, shift, mask_mode, mask, add, set, msb, or lsb");
         }
+        shift = value_t();
         shift->type = tINT;
         shift->lineno = opcode->lineno;
         shift->i = 0;
