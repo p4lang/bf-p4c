@@ -96,6 +96,7 @@ void IXBar::Use::emit_ixbar_asm(const PhvInfo &phv, std::ostream &out, indent_t 
 
 bool ActionDataBus::Use::emit_adb_asm(std::ostream &out, const IR::MAU::Table *tbl,
                                       bitvec source) const {
+    LOG1("Emitting action data bus asm for table " << tbl->name);
     auto &format = tbl->resources->action_format;
     auto &meter_use = tbl->resources->meter_format;
 

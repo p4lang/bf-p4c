@@ -1,4 +1,5 @@
 #include "action_data_bus.h"
+#include "bf-p4c/mau/action_format.h"
 #include "bf-p4c/mau/resource.h"
 
 namespace Flatrock {
@@ -17,101 +18,113 @@ ActionDataBus::Use &ActionDataBus::getUse(autoclone_ptr<::ActionDataBus::Use> &a
     return *rv;
 }
 
-int ActionDataBus::find_free_words(bitvec bits, size_t align, int *slots) {
-    int bytes = bits.max().index()/8U + 1;
-    if ((bytes & 3) == 1) --bytes;  // don't try for an odd single byte
-    if (bytes == 0) {
-        *slots = 0;
-        return -1; }
-    int best = -1, best_size = 0;
-    for (int idx = 0; idx < IABUS32*4; idx += align/8) {
-        int i;
-        for (i = 0; i < bytes; i++) {
-            if (bits.getrange(i*8, 8) == 0) continue;
-            if (adb_use[idx+i]) {
-                break; } }
-        if (i > best_size) {
-            best = idx;
-            best_size = i; }
-        if (best_size >= bytes)
-            break; }
-    if (best_size < 4 && best_size != bytes) {
-        *slots = 0;
-        return -1; }
-    *slots = (best_size + 3)/4;
-    return best;
+int ActionDataBus::find_free_bytes(const IR::MAU::Table *tbl, const ActionData::ALUPosition *pos,
+            safe_vector<Use::ReservedSpace> &action_data_locs, ActionData::Location_t loc) {
+    int byte_start = 0, byte_end = 0, align = 0;
+    if (loc == ActionData::IMMEDIATE) {
+        byte_start  = IMMEDIATE_BYTES_START;
+        byte_end    = IMMEDIATE_BYTES_END;
+        align       = (pos->alu_op->size() + 7) / 8;  // Byte align
+    } else {
+        byte_start  = WORD_BYTES_START;
+        byte_end    = WORD_BYTES_END;
+        align       = ((pos->alu_op->size() + 7) / 8) + 3 / 4;  // Word align
+    }
+
+    if (byte_start + align > byte_end) return false;
+
+    LOG5("   Finding free bytes for table " << tbl->name << " loc: " << loc
+            << " pos: " << *pos << " align: " << align);
+    for (int idx = byte_start; idx < byte_end; idx += align) {
+        if (total_in_use.getrange(idx, align) == 0) {
+            std::string print_bytes = "{";
+            total_in_use.setrange(idx, align);
+            for (int i = 0; i < align; i++) { print_bytes += (" " + std::to_string(i) + " "); }
+            print_bytes += "}";
+            Loc loc(idx, ActionData::bits_to_slot_type(pos->alu_op->size()));
+            action_data_locs.emplace_back(loc, pos->start_byte, pos->alu_op->phv_bytes(),
+                                          pos->loc);
+            LOG5("    Found on bytes " << print_bytes);
+            return true;
+        }
+    }
+    LOG5("   No bytes found");
+    return false;
 }
 
-int ActionDataBus::find_free_bytes(bitvec bits, size_t align, int offset, int *slots) {
-    int bytes = bits.max().index()/8U + 1;
-    for (int idx = IABUS32*4; idx < IABUS32*4 + IABUS8; idx += align/8) {
-        bool ok = true;
-        for (int i = offset; i < bytes; i++) {
-            if (bits.getrange(i*8, 8) == 0) continue;
-            if (adb_use[idx+i]) {
-                ok = false;
-                break; } }
-        if (ok) {
-            *slots = bytes - offset;
-            return idx; } }
-    *slots = 0;
-    return -1;
-}
-
-/** allocation of the action data bus for a set of uses
+/** Allocation of the action data bus for a set of uses
+ * The adb as a whole is 64 bytes, with the first 16 byes being the 'byte' adb.  This is analogous
+ * to the byte/halfword/word regions of the adb in tofino.  Basically we have a bit more alignment
+ * freedom putting things into the first 16 bytes of the adb
+ *
+ * The immediate data extracted from the payload can ony go to the first 16 bytes of the adb
+ *
+ * There is a bit shift in the extract part of the immediate path (before the map/def table), so
+ * this does not mean that the immediate data needs to be byte aligned in the overhead/match word
+ * format. Generally the extract will shift the immediate data down to bit 0, which then goes
+ * through the map/def, and is then byte rotated to the appropriate bytes on the (byte) adb.
+ *
+ * The alignment restrictions in PHVWRITE are matching the PHE size.  So the
+ * adb source for a 32-bit PHE needs to be 32-bit aligned in the adb.
  */
 bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
         safe_vector<const ActionData::ALUPosition *> &alu_ops, TableResourceAlloc &alloc) {
-    LOG2("  Initial Action Data Bus");
-    LOG2("    " << hex(total_in_use.getrange(32, 32), 8, '0')
-         << "|" << hex(total_in_use.getrange(0, 32), 8, '0'));
+    LOG2("  Initial Action Data Bus : " << get_total_in_use());
 
     if (alu_ops.empty()) return true;  // nothing needed on abus
     std::stable_sort(alu_ops.begin(), alu_ops.end(),
         [](const ActionData::ALUPosition *a, const ActionData::ALUPosition *b) {
             return a->alu_op->size() > b->alu_op->size(); });
 
-    // pack all alu ouputs into a correctly aligned chunk for the phv to be written
+    if (LOGGING(4)) {
+        LOG4("   Alu ops to pack:");
+        for (auto *alu_op : alu_ops)
+            LOG4("    " << *alu_op);
+    }
+
+    // Pack all alu ouputs into a correctly aligned chunk for the phv to be written
     // best effect trying to get them into a compact space (which is why we sort based
     // on destination phv container size -- largest first as they are the most constrained)
-    bitvec bit_pack;
-    safe_vector<int> shift;
-    size_t align = 0;
+    // Allocation Algorithm:
+    // 1. Allocate immediates in byte adb
+    // 2. Allocate non immediates to word adb
+    // 3. Allocate unallocated non immediates to byte adb
+
+    // Work with a copy of adb usage to update for each alu op
+    safe_vector<Use::ReservedSpace> action_data_locs;
     for (auto *pos : alu_ops) {
-        shift.push_back(0);
-        while (bit_pack & (pos->alu_op->phv_bits() << shift.back()))
-            shift.back() += pos->alu_op->size();
-        align = std::max(align, pos->alu_op->size());
-        bit_pack |= (pos->alu_op->phv_bits() << shift.back()); }
-    int bytes = bit_pack.max().index()/8U + 1;
-
-    int word_offset = -1, word_slots = 0, byte_offset = -1, byte_slots = 0;
-    word_offset = find_free_words(bit_pack, align, &word_slots);
-    if (bytes > word_slots * 4) {
-        if ((byte_offset = find_free_bytes(bit_pack, align, word_slots*4, &byte_slots)) < 0)
+        if (pos->loc != ActionData::IMMEDIATE) continue;
+        auto ok = find_free_bytes(tbl, pos, action_data_locs, ActionData::IMMEDIATE);
+        if (!ok) {
+            LOG4("  Cannot allocate " << *pos << " to action data bus ");
             return false;
-        BUG_CHECK(bytes == word_slots * 4 + byte_slots, "inconsistent adb allocation"); }
+        }
+    }
+    for (auto *pos : alu_ops) {
+        if (pos->loc == ActionData::IMMEDIATE) continue;
+        auto ok = find_free_bytes(tbl, pos, action_data_locs, ActionData::AD_LOCATIONS);
+        if (!ok) {
+            ok = find_free_bytes(tbl, pos, action_data_locs, ActionData::IMMEDIATE);
+            if (!ok) {
+                LOG4("  Cannot allocate " << *pos << " to action data bus");
+                return false;
+            }
+        }
+    }
 
+    // All action data is allocated update xbar
     auto &ad_xbar = getUse(alloc.action_data_xbar);
     ad_xbar.clear();
-    int i = -1;
-    for (auto *pos : alu_ops) {
-        int byte = word_offset + shift[++i]/8;
-        if (shift[i] >= word_slots * 32)
-            byte = byte_offset + shift[i]/8;
-        Loc loc(byte, ActionData::bits_to_slot_type(pos->alu_op->size()));
-        ad_xbar.action_data_locs.emplace_back(loc, pos->start_byte, pos->alu_op->phv_bytes(),
-                                              pos->loc);
-    }
+    ad_xbar.action_data_locs = action_data_locs;
 
     LOG2(" Action data bus for " << tbl->name);
     for (auto &rs : ad_xbar.action_data_locs) {
         LOG2("    Reserved " << rs.location.byte << " for offset " << rs.byte_offset <<
-             " of type " << rs.location.type);
+             " of type " << rs.location.type << " " << rs.location);
     }
     for (auto &rs : ad_xbar.clobber_locs) {
         LOG2("    Reserved clobber " << rs.location.byte << " for offset "
-             << rs.byte_offset << " of type " << rs.location.type);
+             << rs.byte_offset << " of type " << rs.location.type << " " << rs.location);
     }
 
     return true;
@@ -192,15 +205,17 @@ void ActionDataBus::update(cstring name, const ::ActionDataBus::Use &alloc_) {
 }
 
 void ActionDataBus::update(cstring name, const Use::ReservedSpace &rs) {
+    LOG3("Updating ADB for " << name << " rs: " << rs);
     int byte_sz = ActionData::slot_type_to_bits(rs.location.type)/8;
     for (int i = rs.location.byte; i < rs.location.byte + byte_sz; i++) {
         if (rs.bytes_used.getbit(i - rs.location.byte) == false)
             continue;
-        if (!adb_use[i].isNull() && adb_use[i] != name)
+        if (!total_use[i].isNull() && total_use[i] != name)
             BUG("Conflicting alloc on the action data bus between %s and %s at byte %d",
-                name, adb_use[i], rs.location.byte);
-        adb_use[i] = name; }
+                name, total_use[i], rs.location.byte);
+        total_use[i] = name; }
     total_in_use |= rs.bytes_used << rs.location.byte;
+    LOG4("  Updated Action Data Bus: " << get_total_in_use());
 }
 
 void ActionDataBus::update(const IR::MAU::Table *tbl) {
@@ -209,6 +224,14 @@ void ActionDataBus::update(const IR::MAU::Table *tbl) {
 
 std::unique_ptr<::ActionDataBus> ActionDataBus::clone() const {
     return std::unique_ptr<::ActionDataBus>(new ActionDataBus(*this));
+}
+
+std::string ActionDataBus::get_total_in_use() const {
+    std::stringstream ss;
+    // Outputs as "Word ADB | Byte ADB"
+    ss << hex(total_in_use.getrange(ABUS8, ABUS32), ABUS32/4, '0')
+       << "|" << hex(total_in_use.getrange(0, ABUS8), ABUS8/4, '0');
+    return ss.str();
 }
 
 }  // end namespace Flatrock

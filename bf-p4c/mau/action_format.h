@@ -770,7 +770,11 @@ class RamSection {
     BusInputs bus_inputs() const;
 };
 
-enum Location_t { ACTION_DATA_TABLE, IMMEDIATE, AD_LOCATIONS, METER_ALU = 2, ALL_LOCATIONS = 3 };
+// Actual locations are ACTION_DATA_TABLE, IMMEDIATE & METER_ALU
+// AD_LOCATIONS / ALL_LOCATIONS provide a way to loop over desired locations
+// for (loc = 0; loc < AD_LOCATIONS; ++loc) to iterate over action data locations or
+// for (loc = 0; loc < ALL_LOCATIONS; ++loc) to iterate over all location types
+enum Location_t { ACTION_DATA_TABLE , IMMEDIATE, AD_LOCATIONS, METER_ALU = 2, ALL_LOCATIONS = 3 };
 
 /**
  * Used to keep track of the coordination of RamSections and the byte offset

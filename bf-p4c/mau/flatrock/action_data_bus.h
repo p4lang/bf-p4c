@@ -12,23 +12,23 @@
 namespace Flatrock {
 
 struct ActionDataBus : public ::ActionDataBus {
-    static constexpr int IABUS32 = 8;   // number of 32-bit slots in ingress action data bus
-    static constexpr int IABUS8 = 32;   // number of 8-bit slots in ingress action data bus
-    static constexpr int EABUS32 = 8;   // number of 32-bit slots in egress action data bus
-    static constexpr int EABUS8 = 32;   // number of 8-bit slots in egress action data bus
-    static int ADB_BYTES(gress_t gress) {
-        return gress != EGRESS ? IABUS32*4 + IABUS8 : EABUS32*4 + EABUS8; }
-    static constexpr int MAX_ADB_BYTES = 64;    // total number of bytes (max of igr/egr)
+    static constexpr int ABUS32 = 48;  // Bytes for 32-bit slots in ing/egr ADB
+    static constexpr int ABUS8 = 16;   // Bytes for  8-bit slots in ing/egr ADB
+    static constexpr int MAX_ADB_BYTES = ABUS8 + ABUS32;  // total number of bytes on ADB
     static constexpr int ACTION_UNITS = 4;
     static constexpr int ALUS_PER_ACTION_UNIT = 2;
     static constexpr int SALU_UNITS = 4;
     static constexpr int METER_UNITS = 2;
     static constexpr int STATS_UNITS = 2;
     static constexpr int XCMP_UNITS = 1;
+    static constexpr int IMMEDIATE_BYTES_START = 0;        // Immediate bytes location on byte ADB
+    static constexpr int IMMEDIATE_BYTES_END = ABUS8 - 1;
+    static constexpr int WORD_BYTES_START = ABUS8;         // Word bytes location on word ADB
+    static constexpr int WORD_BYTES_END = (ABUS8 + ABUS32) - 1;
 
  private:
-    BFN::Alloc1D<cstring, MAX_ADB_BYTES> adb_use;
-    bitvec total_in_use;  // duplicates adb_use (1 bit per byte)
+    BFN::Alloc1D<cstring, MAX_ADB_BYTES> total_use;
+    bitvec total_in_use;  // duplicates total_use (1 bit per byte)
     BFN::Alloc2D<cstring, ACTION_UNITS, ALUS_PER_ACTION_UNIT> action_alu_use;
 
     struct Use : public ::ActionDataBus::Use {
@@ -41,7 +41,8 @@ struct ActionDataBus : public ::ActionDataBus {
 
     static Use &getUse(autoclone_ptr<::ActionDataBus::Use> &ac);
     int find_free_words(bitvec bits, size_t align, int *slots);
-    int find_free_bytes(bitvec bits, size_t align, int offset, int *slots);
+    int find_free_bytes(const IR::MAU::Table *tbl, const ActionData::ALUPosition *pos,
+            safe_vector<Use::ReservedSpace> &action_data_locs, ActionData::Location_t loc);
 
  public:
     void clear() override;
@@ -55,6 +56,7 @@ struct ActionDataBus : public ::ActionDataBus {
     void update(cstring name, const ::ActionDataBus::Use &) override;
     void update(cstring name, const Use::ReservedSpace &rs) override;
     void update(const IR::MAU::Table *tbl) override;
+    std::string get_total_in_use() const;
 
     virtual std::unique_ptr<::ActionDataBus> clone() const;
 };
