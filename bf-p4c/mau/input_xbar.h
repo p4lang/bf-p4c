@@ -305,6 +305,18 @@ struct IXBar {
         };
         safe_vector<Byte>    use;
 
+        /* hash tables used for way address computation */
+        struct Way {
+            int         source;         // source of hash bits (ixbar hash group or xmu hash)
+            le_bitrange index;          // hash bits for index lookup
+            le_bitrange select;         // hash bits for bank select;
+            unsigned    select_mask;    // mask for bank select;
+            Way() = delete;
+            Way(int s, le_bitrange i, le_bitrange sel, unsigned m)
+            : source(s), index(i), select(sel), select_mask(m) {}
+        };
+        safe_vector<Way>     way_use;
+
         bool allocated() { return !use.empty(); }
 
 #if 0
@@ -318,12 +330,13 @@ struct IXBar {
             type = TYPES;
             used_by.clear();
             use.clear();
+            way_use.clear();
 #if 0
             hash_table_inputs.clear();
             hash_seed.clear();
 #endif
         }
-        virtual bool empty() const { return type == TYPES && use.empty(); }
+        virtual bool empty() const { return type == TYPES && use.empty() && way_use.empty(); }
         virtual void dbprint(std::ostream &) const;
 
         typedef safe_vector<safe_vector<Byte> *> TotalBytes;
@@ -368,7 +381,8 @@ struct IXBar {
         virtual bitvec meter_bit_mask() const = 0;
         virtual int search_buses_single() const;
         virtual int total_input_bits() const = 0;
-        virtual void update_resources(int, BFN::Resources::StageResources &) const = 0;
+        virtual void update_resources(int, BFN::Resources::StageResources &) const;
+        virtual const char *way_source_kind() const = 0;
         int findBytesOnIxbar(const PHV::FieldSlice& sl) const {
             int bytesOnIxbar = 0;
             for (auto &u : use) {

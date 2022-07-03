@@ -1,6 +1,7 @@
 #include "input_xbar.h"
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/device.h"
+#include "bf-p4c/logging/resources.h"
 #include "bf-p4c/mau/gateway.h"
 #include "bf-p4c/mau/ixbar_expr.h"
 #include "bf-p4c/mau/resource.h"
@@ -216,7 +217,7 @@ unsigned IXBar::Use::compute_hash_tables() {
 }
 
 /* Combining the allocation of multiple separately allocated hash groups of the same
-   table.  Done if the table requires two hash groups */
+   table.  Done if the table requires two sources */
 void IXBar::Use::add(const IXBar::Use &alloc) {
     type = alloc.type;
     used_by = alloc.used_by;
@@ -228,7 +229,15 @@ void IXBar::Use::add(const IXBar::Use &alloc) {
                 BUG("Two combined input xbar groups are using the same byte location");
         }
     }
+    for (auto old_way : way_use) {
+        for (auto new_way : alloc.way_use) {
+            if (old_way.source == new_way.source)
+                BUG("Ways from supposedly different sources have same sources?");
+        }
+    }
+
     use.insert(use.end(), alloc.use.begin(), alloc.use.end());
+    way_use.insert(way_use.end(), alloc.way_use.begin(), alloc.way_use.end());;
 }
 
 /** Visualization Information of Bytes and their corresponding Hash Matrix Bits
@@ -257,11 +266,63 @@ std::string IXBar::Use::used_for() const {
     return "";
 }
 
+void IXBar::Use::update_resources(int stage, BFN::Resources::StageResources &stageResource) const {
+    LOG_FEATURE("resources", 2, "add_xbar_bytes_usage (stage=" << stage <<
+                                "), table: " << used_by);
+    for (auto &byte : use) {
+        bool ternary = type == IXBar::Use::TERNARY_MATCH;
+        LOG_FEATURE("resources", 3, "\tadding resource: xbar bytes " << byte.loc.getOrd(ternary));
+        stageResource.xbarBytes[byte.loc.getOrd(ternary)].emplace(used_by, used_for(), byte);
+    }
+
+    using UsageType = BFN::Resources::HashBitResource::UsageType;
+
+    // Used for the bits to do exact match/atcam match
+    int wayIndex = 0;
+    for (auto &way : way_use) {
+        for (int bit = way.index.lo; bit <= way.index.hi; bit++) {
+            auto key = std::make_pair(bit, way.source);
+
+            LOG_FEATURE("resources", 3, "\tadding resource hash_bits from way_use(" << bit <<
+                                        ", " << way.source << "): {" << used_by << " --> " <<
+                                        used_for() << ": " << "Hash Way " << wayIndex <<
+                                        " RAM line select" << "}");
+            stageResource.hashBits[key].append(
+                used_by,
+                used_for(),
+                UsageType::WayLineSelect,
+                wayIndex);
+        }
+
+        for (auto bit : bitvec(way.select_mask)) {
+            bit += way.select.lo;
+            auto key = std::make_pair(bit, way.source);
+
+            LOG_FEATURE("resources", 3, "\tadding resource hash_bits from way_use(" << bit <<
+                                        ", " << way.source << "): {" << used_by << " --> " <<
+                                        used_for() << ": " << "Hash Way " << wayIndex <<
+                                        " RAM select" << "}");
+            stageResource.hashBits[key].append(
+                used_by,
+                used_for(),
+                UsageType::WaySelect,
+                wayIndex);
+        }
+
+        wayIndex++;
+    }
+}
+
+
+
 /** Visualization Information on Hash Distribution Units
  */
 void IXBar::Use::dbprint(std::ostream &out) const {
     for (auto &b : use)
         out << b << Log::endl;
+    for (auto &w : way_use)
+        out << "[ " << w.source << ", " << w.index << ", " << w.select << ", 0x"
+            << hex(w.select_mask) << " ]" << Log::endl;
 }
 
 void dump(const IXBar::Use *use) {

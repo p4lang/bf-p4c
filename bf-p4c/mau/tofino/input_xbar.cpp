@@ -16,6 +16,9 @@
 #include "lib/range.h"
 #include "lib/log.h"
 
+constexpr le_bitrange Tofino::IXBar::SELECT_BIT_RANGE;
+// = le_bitrange(RAM_SELECT_BIT_START, METER_ALU_HASH_BITS-1);
+
 // helper functions for logging -- these need to not be in namespace Tofino or they
 // mess up template instantiations of operator<<
 std::ostream &operator<<(std::ostream &out,
@@ -91,12 +94,6 @@ void IXBar::Use::add(const IXBar::Use &alloc) {
                   "Hash seed already present for group %1%", i);
         hash_seed[i] |= alloc.hash_seed[i];
     }
-    for (auto old_way : way_use) {
-        for (auto new_way : alloc.way_use) {
-            if (old_way.group == new_way.group)
-                BUG("Ways from supposedly different hash groups have same group?");
-        }
-    }
     for (auto old_bits : bit_use) {
         for (auto new_bits : alloc.bit_use) {
             if (old_bits.group == new_bits.group)
@@ -104,7 +101,6 @@ void IXBar::Use::add(const IXBar::Use &alloc) {
         }
     }
     bit_use.insert(bit_use.end(), alloc.bit_use.begin(), alloc.bit_use.end());
-    way_use.insert(way_use.end(), alloc.way_use.begin(), alloc.way_use.end());
 }
 
 /** Provides the bytes and hash group location of the partition index of an atcam table
@@ -124,8 +120,6 @@ safe_vector<IXBar::Use::Byte> IXBar::Use::atcam_partition(int *hash_group) const
 
 void IXBar::Use::dbprint(std::ostream &out) const {
     ::IXBar::Use::dbprint(out);
-    for (auto &w : way_use)
-        out << "[ " << w.group << ", " << w.slice << ", 0x" << hex(w.mask) << " ]" << Log::endl;
 }
 
 void IXBar::Use::emit_salu_bytemasks(std::ostream &out, indent_t indent) const {
@@ -139,9 +133,9 @@ int IXBar::Use::hash_groups() const {
     int rv = 0;
     unsigned counted = 0;
     for (auto way : way_use) {
-        if (((1U << way.group) & counted) == 0) {
+        if (((1U << way.source) & counted) == 0) {
             rv++;
-            counted |= 1U << way.group;
+            counted |= 1U << way.source;
         }
     }
     return rv;
@@ -169,15 +163,8 @@ IXBar::Use::TotalBytes IXBar::Use::match_hash(safe_vector<int> *hash_groups) con
 }
 
 void IXBar::Use::update_resources(int stage, BFN::Resources::StageResources &stageResource) const {
-    LOG_FEATURE("resources", 2, "add_xbar_bytes_usage (stage=" << stage <<
-                                "), table: " << used_by);
-    for (auto &byte : use) {
-        bool ternary = type == IXBar::Use::TERNARY_MATCH;
-        LOG_FEATURE("resources", 3, "\tadding resource: xbar bytes " << byte.loc.getOrd(ternary));
-        stageResource.xbarBytes[byte.loc.getOrd(ternary)].emplace(used_by, used_for(), byte);
-    }
-
     using UsageType = BFN::Resources::HashBitResource::UsageType;
+    ::IXBar::Use::update_resources(stage, stageResource);
 
     // Used for the upper 12 bits of gateways
     for (auto &bits : bit_use) {
@@ -197,42 +184,6 @@ void IXBar::Use::update_resources(int stage, BFN::Resources::StageResources &sta
                 bits.lo + b,
                 bits.field.c_str());
         }
-    }
-
-    // Used for the bits to do exact match/atcam match
-    int wayIndex = 0;
-    for (auto &way : way_use) {
-        for (int bitOffset = 0; bitOffset < IXBar::RAM_LINE_SELECT_BITS; bitOffset++) {
-            int bit = bitOffset + way.slice * IXBar::RAM_LINE_SELECT_BITS;
-            auto key = std::make_pair(bit, way.group);
-
-            LOG_FEATURE("resources", 3, "\tadding resource hash_bits from way_use(" << bit <<
-                                        ", " << way.group << "): {" << used_by << " --> " <<
-                                        used_for() << ": " << "Hash Way " << wayIndex <<
-                                        " RAM line select" << "}");
-            stageResource.hashBits[key].append(
-                used_by,
-                used_for(),
-                UsageType::WayLineSelect,
-                wayIndex);
-        }
-
-        for (auto bit : bitvec(way.mask)) {
-            bit += IXBar::RAM_SELECT_BIT_START;
-            auto key = std::make_pair(bit, way.group);
-
-            LOG_FEATURE("resources", 3, "\tadding resource hash_bits from way_use(" << bit <<
-                                        ", " << way.group << "): {" << used_by << " --> " <<
-                                        used_for() << ": " << "Hash Way " << wayIndex <<
-                                        " RAM select" << "}");
-            stageResource.hashBits[key].append(
-                used_by,
-                used_for(),
-                UsageType::WaySelect,
-                wayIndex);
-        }
-
-        wayIndex++;
     }
 
     // Used for the bits provided to the selector
@@ -1543,18 +1494,18 @@ bool IXBar::allocMatch(bool ternary, const IR::MAU::Table *tbl,
 unsigned IXBar::find_balanced_group(Use &alloc, int way_size) {
     std::map<unsigned, unsigned> sliceDepths;
     for (unsigned i = 0; i < alloc.way_use.size(); ++i) {
-        int slice_group = alloc.way_use[i].slice;
-        int slice_ways  = (1U << bitvec(alloc.way_use[i].mask).popcount());
+        int slice_group = INDEX_RANGE_SUBGROUP(alloc.way_use[i].index);
+        int slice_ways  = (1U << bitvec(alloc.way_use[i].select_mask).popcount());
         sliceDepths[slice_group] += slice_ways;
     }
     unsigned minWayDepth = -1;
     int sel_group = -1;
     int way_bits = ceil_log2(way_size);
     for (unsigned i = 0; i < alloc.way_use.size(); ++i) {
-        bitvec slice_way_mask(alloc.way_use[i].mask);
+        bitvec slice_way_mask(alloc.way_use[i].select_mask);
         int slice_way_bits = slice_way_mask.popcount();
         if (way_bits > slice_way_bits) continue;
-        int slice_group = alloc.way_use[i].slice;
+        int slice_group = INDEX_RANGE_SUBGROUP(alloc.way_use[i].index);
         unsigned sliceDepth = way_size + sliceDepths[slice_group];
         if (sliceDepth < minWayDepth) {
             minWayDepth = sliceDepth;
@@ -2032,7 +1983,8 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
 
     std::map<unsigned, std::set<std::pair<unsigned, unsigned>>> requiredSeedCombinations;
     for (auto way : alloc.way_use)
-        requiredSeedCombinations[way.group].insert(std::make_pair(way.slice, way.mask));
+        requiredSeedCombinations[way.source]
+            .emplace(INDEX_RANGE_SUBGROUP(way.index), way.select_mask);
 
     for (auto kv : requiredSeedCombinations) {
         unsigned group = kv.first;
@@ -2040,8 +1992,8 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
             LOG3("  Way details: " << kv.first << ", " << v.first << ", " << v.second);
             unsigned slice = v.first;
             unsigned mask = v.second;
-            unsigned random_number = IXBarRandom::nextRandomNumber(10);
-            bitvec random_seed = bitvec(random_number) << (10 * slice);
+            unsigned random_number = IXBarRandom::nextRandomNumber(RAM_LINE_SELECT_BITS);
+            bitvec random_seed = bitvec(random_number) << (RAM_LINE_SELECT_BITS * slice);
             bitvec mask_bits(mask);
             bitvec mask_seed;
             for (auto b : mask_bits) {
@@ -2092,7 +2044,8 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl, const LayoutOption *layout_o
         }
     }
     for (auto &way_use : alloc.way_use) {
-        used_bits |= way_use.mask;
+        BUG_CHECK(way_use.select.lo == RAM_SELECT_BIT_START, "invalid select range for tofino");
+        used_bits |= way_use.select_mask;
     }
 
     if (way_bits == 0) {
@@ -2129,7 +2082,7 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl, const LayoutOption *layout_o
 
     slice_to_select_bits[group] |= bitvec(way_mask);
 
-    alloc.way_use.emplace_back(Use::Way{ hash_group, group, way_mask });
+    alloc.way_use.emplace_back(hash_group, INDEX_BIT_RANGE(group), SELECT_BIT_RANGE, way_mask);
     LOG3("\tAllocation of way " << hash_group << " " << group << " 0x" << hex(way_mask));
     hash_index_inuse[group] |= hf_hash_table_input;
     for (auto bit : bitvec(way_mask)) {
@@ -2242,7 +2195,8 @@ bool IXBar::allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &m
     match_alloc.hash_table_inputs[hash_group] = local_hash_table_input;
     hash_group_use[hash_group] |= local_hash_table_input;
     update_hash_parity(match_alloc, hash_group);
-    match_alloc.way_use.emplace_back(Use::Way{ hash_group, group, way_mask});
+    match_alloc.way_use.emplace_back(hash_group, INDEX_BIT_RANGE(group),
+                                     SELECT_BIT_RANGE, way_mask);
     hash_index_inuse[group] |= hf_hash_table_input;
     for (auto bit : bitvec(way_mask)) {
         hash_single_bit_inuse[bit] |= hf_hash_table_input;
@@ -4174,18 +4128,18 @@ void IXBar::update(cstring name, const ::IXBar::Use &alloc_) {
         hash_used_per_function[bits.group].setrange(bits.bit + RAM_SELECT_BIT_START, bits.width);
     }
     for (auto &way : alloc.way_use) {
-        hash_group_use[way.group] |= alloc.hash_table_inputs[way.group];
-        update_hash_parity(way.group);
-        hash_group_print_use[way.group] = name;
-        hash_used_per_function[way.group].setrange(way.slice * RAM_LINE_SELECT_BITS,
-                                                   RAM_LINE_SELECT_BITS);
-        hash_used_per_function[way.group] |= bitvec(way.mask) << RAM_SELECT_BIT_START;
-        hash_index_inuse[way.slice] |= alloc.hash_table_inputs[way.group];
-        for (int hash : bitvec(alloc.hash_table_inputs[way.group])) {
-            if (!hash_index_use[hash][way.slice])
-                hash_index_use[hash][way.slice] = name;
-            for (auto bit : bitvec(way.mask)) {
-                hash_single_bit_inuse[bit] |= alloc.hash_table_inputs[way.group];
+        hash_group_use[way.source] |= alloc.hash_table_inputs[way.source];
+        update_hash_parity(way.source);
+        hash_group_print_use[way.source] = name;
+        hash_used_per_function[way.source].setrange(way.index.lo, way.index.size());
+        BUG_CHECK(way.select.lo == RAM_SELECT_BIT_START, "invalid select range for tofino");
+        hash_used_per_function[way.source] |= bitvec(way.select_mask) << way.select.lo;
+        hash_index_inuse[INDEX_RANGE_SUBGROUP(way.index)] |= alloc.hash_table_inputs[way.source];
+        for (int hash : bitvec(alloc.hash_table_inputs[way.source])) {
+            if (!hash_index_use[hash][INDEX_RANGE_SUBGROUP(way.index)])
+                hash_index_use[hash][INDEX_RANGE_SUBGROUP(way.index)] = name;
+            for (auto bit : bitvec(way.select_mask)) {
+                hash_single_bit_inuse[bit] |= alloc.hash_table_inputs[way.source];
                 if (!hash_single_bit_use[hash][bit])
                     hash_single_bit_use[hash][bit] = name; } } }
 

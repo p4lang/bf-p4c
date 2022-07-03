@@ -449,7 +449,7 @@ struct ClosedRange {
     static constexpr Endian order = Order;
 
     ClosedRange() : lo(0), hi(0) { }  // FIXME(zma) default is [0,0]? This is just wrong ...
-    ClosedRange(int lo, int hi) : lo(lo), hi(hi) { }
+    constexpr ClosedRange(int lo, int hi) : lo(lo), hi(hi) { }
     ClosedRange(FromTo&& fromTo)  // NOLINT(runtime/explicit)
       : lo(fromTo.from), hi(fromTo.to) { }
     ClosedRange(StartLen&& startLen)  // NOLINT(runtime/explicit)

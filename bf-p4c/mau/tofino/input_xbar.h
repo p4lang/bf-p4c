@@ -37,6 +37,11 @@ struct IXBar : public ::IXBar {
     static constexpr int METER_PRECOLOR_SIZE = 2;
     static constexpr int REPEATING_CONSTRAINT_SECT = 4;
     static constexpr int MAX_HASH_BITS = 52;
+    static constexpr le_bitrange SELECT_BIT_RANGE =
+            le_bitrange(RAM_SELECT_BIT_START, METER_ALU_HASH_BITS-1);
+    static constexpr le_bitrange INDEX_BIT_RANGE(int group) {
+            return le_bitrange(group*RAM_LINE_SELECT_BITS, (group+1)*RAM_LINE_SELECT_BITS - 1); }
+    static constexpr int INDEX_RANGE_SUBGROUP(le_bitrange r) { return r.lo / RAM_LINE_SELECT_BITS; }
 
  private:
     static int get_meter_alu_hash_bits() {
@@ -186,17 +191,6 @@ struct IXBar : public ::IXBar {
             int hi() const { return lo + width - 1; } };
         safe_vector<Bits>    bit_use;
 
-        /* hash tables used for way address computation */
-        struct Way {
-            int         group, slice;  // group refers to which 8 of the hash groups used,
-                                       // slice refers to the 10b way used
-                                       // slice = bit / 10
-            // Upper 12 bits. Also want a seed over the bits used in the mask.
-            unsigned    mask;
-            Way() = delete;
-            Way(int g, int s, unsigned m) : group(g), slice(s), mask(m) {} };
-        safe_vector<Way>     way_use;
-
         /* tracks hash use for Stateful and Selectors (and meter?) */
         struct MeterAluHash {
             bool allocated = false;
@@ -270,7 +264,6 @@ struct IXBar : public ::IXBar {
             for (auto &ht : hash_table_inputs) ht = 0;
             for (auto &hs : hash_seed) hs.clear();
             bit_use.clear();
-            way_use.clear();
             meter_alu_hash.clear();
             hash_dist_hash.clear();
             proxy_hash_key_use.clear();
@@ -279,7 +272,7 @@ struct IXBar : public ::IXBar {
         }
         Use *clone() const { return new Use(*this); }
         bool empty() const {
-            return ::IXBar::Use::empty() && bit_use.empty() && way_use.empty() &&
+            return ::IXBar::Use::empty() && bit_use.empty() &&
                 !meter_alu_hash.allocated && !hash_dist_hash.allocated &&
                 !proxy_hash_key_use.allocated && salu_input_source.empty(); }
         void dbprint(std::ostream &) const;
@@ -299,6 +292,7 @@ struct IXBar : public ::IXBar {
                 rv += fl->type->width_bits(); }
             return rv; }
         void update_resources(int, BFN::Resources::StageResources &) const;
+        const char *way_source_kind() const { return "group"; }
     };
     static Use &getUse(autoclone_ptr<::IXBar::Use> &ac);
     static const Use &getUse(const autoclone_ptr<::IXBar::Use> &ac);

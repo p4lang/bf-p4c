@@ -626,9 +626,8 @@ void MauAsmOutput::emit_action_data_format(std::ostream &out, indent_t indent,
 
 /* Generate asm for the way information, such as the size, select mask, and specifically which
    RAMs belong to a specific way */
-void MauAsmOutput::emit_ways(std::ostream &out, indent_t indent, const IXBar::Use *use_,
+void MauAsmOutput::emit_ways(std::ostream &out, indent_t indent, const IXBar::Use *use,
         const Memories::Use *mem) const {
-    auto *use = dynamic_cast<const Tofino::IXBar::Use *>(use_);
     if (use == nullptr || use->way_use.empty())
         return;
     out << indent++ << "ways:" << std::endl;
@@ -636,8 +635,10 @@ void MauAsmOutput::emit_ways(std::ostream &out, indent_t indent, const IXBar::Us
     auto ixbar_way = use->way_use.begin();
     for (auto mem_way : mem->ways) {
         BUG_CHECK(ixbar_way != use->way_use.end(), "No more ixbar ways to output in asm_output");
-        out << indent << "- [" << ixbar_way->group << ", " << ixbar_way->slice;
-        out << ", 0x" << hex(mem_way.select_mask) << ", ";
+        out << indent << "- { " << use->way_source_kind() << ": " << ixbar_way->source << ", "
+            << "index: " << ixbar_way->index.lo << ".." << ixbar_way->index.hi << ", "
+            << "select: " << ixbar_way->select.lo << ".." << ixbar_way->select.hi << " & "
+            << "0x" << hex(mem_way.select_mask) << ", rams: [";
         size_t index = 0;
         for (auto ram : mem_way.rams) {
             out << "[" << ram.first << ", " << (ram.second + 2) << "]";
@@ -645,7 +646,7 @@ void MauAsmOutput::emit_ways(std::ostream &out, indent_t indent, const IXBar::Us
                 out << ", ";
             index++;
         }
-        out  << "]" << std::endl;
+        out  << "] }" << std::endl;
         // ATCAM tables have only one input xbar way
         if (use->type != IXBar::Use::ATCAM_MATCH) ++ixbar_way;
     }
@@ -2180,7 +2181,7 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
         out << --indent << "dynamic_key_masks: true" << std::endl;
 }
 
-void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
+void MauAsmOutput::emit_static_entries(std::ostream &, indent_t indent,
         const IR::MAU::Table *tbl,
         std::stringstream &context_json_entries) const {
     if (tbl->entries_list == nullptr)
@@ -2414,7 +2415,7 @@ void MauAsmOutput::emit_atcam_match(std::ostream &out, indent_t indent,
 // actions. A valid resource is directly output in the bfa as a context json
 // node syntax which the assembler plugs in to the match table context json
 // Associated JIRA - P4C-1528
-void MauAsmOutput::emit_indirect_res_context_json(std::ostream &out,
+void MauAsmOutput::emit_indirect_res_context_json(std::ostream &,
         indent_t indent, const IR::MAU::Table *tbl,
         std::stringstream &context_json_entries) const {
     ordered_set<cstring> bind_res;

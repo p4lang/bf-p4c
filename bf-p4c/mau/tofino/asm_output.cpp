@@ -170,15 +170,15 @@ void emit_ixbar_hash_atcam(std::ostream &out, indent_t indent,
         }
 
         le_bitrange hash_bits = { start_bit, end_bit };
-        hash_bits = hash_bits.shiftedByBits(use->way_use[0].slice * IXBar::RAM_LINE_SELECT_BITS);
+        hash_bits = hash_bits.shiftedByBits(use->way_use[0].index.lo);
         emit_ixbar_match_func(out, indent, empty, &adapted_ghost, hash_bits);
     }
 
     unsigned mask_bits = 0;
     for (auto way : use->way_use) {
-        if (way.group != hash_group)
+        if (way.source != hash_group)
             continue;
-        mask_bits |= way.mask;
+        mask_bits |= way.select_mask;
     }
 
     for (auto ghost_slice : ghost) {
@@ -232,24 +232,24 @@ void ixbar_hash_exact_info(int &min_way_size, int &min_way_slice,
         const Tofino::IXBar::Use *use, int hash_group,
         std::map<int, bitvec> &slice_to_select_bits) {
     for (auto way : use->way_use) {
-        if (way.group != hash_group)
+        if (way.source != hash_group)
             continue;
-        bitvec local_select_mask = bitvec(way.mask);
+        bitvec local_select_mask = bitvec(way.select_mask);
         int curr_way_size = IXBar::RAM_LINE_SELECT_BITS + local_select_mask.popcount();
         min_way_size = std::min(min_way_size, curr_way_size);
-        min_way_slice = std::min(way.slice, min_way_slice);
+        min_way_slice = std::min(way.index.lo / 10, min_way_slice);
 
         // Guarantee that way object that have the same slice bits also use a
         // similar pattern of select bits
-        auto mask_p = slice_to_select_bits.find(way.slice);
+        auto mask_p = slice_to_select_bits.find(way.index.lo / 10);
         if (mask_p != slice_to_select_bits.end()) {
             bitvec curr_mask = mask_p->second;
             BUG_CHECK(curr_mask.min().index() == local_select_mask.min().index()
                       || local_select_mask.empty(), "Shared line select bits are not coordinated "
                       "to shared ram select index");
-            slice_to_select_bits[way.slice] |= local_select_mask;
+            slice_to_select_bits[way.index.lo / 10] |= local_select_mask;
         } else {
-            slice_to_select_bits[way.slice] = local_select_mask;
+            slice_to_select_bits[way.index.lo / 10] = local_select_mask;
         }
     }
 
@@ -310,17 +310,17 @@ void emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
     bitvec ways_done;
 
     for (auto way : use->way_use) {
-        if (ways_done.getbit(way.slice))
+        if (ways_done.getbit(way.index.lo / 10))
             continue;
-        if (way.group != hash_group)
+        if (way.source != hash_group)
             continue;
-        ways_done.setbit(way.slice);
+        ways_done.setbit(way.index.lo / 10);
         // pair is portion of identity function, slice of PHV field
         safe_vector<std::pair<le_bitrange, Slice>> ghost_line_select_positions;
         safe_vector<std::pair<le_bitrange, Slice>> ghost_ram_select_positions;
         int ident_pos = ident_bits_prev_alloc;
         for (auto ghost_slice : ghost) {
-            int ident_pos_shifted = ident_pos + way.slice - min_way_slice;
+            int ident_pos_shifted = ident_pos + way.index.lo / 10 - min_way_slice;
             // This is the identity bits starting at bit 0 that this ghost slice will impact on
             // a per way basis.
             le_bitrange non_rotated_slice = { ident_pos_shifted,
@@ -369,18 +369,18 @@ void emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
         // random hash on the normal match data (RAM line select)
         for (auto br : bitranges(no_ghost_line_select_bits)) {
             le_bitrange hash_bits = { br.first, br.second };
-            hash_bits = hash_bits.shiftedByBits(IXBar::RAM_LINE_SELECT_BITS * way.slice);
+            hash_bits = hash_bits.shiftedByBits(way.index.lo);
             emit_ixbar_match_func(out, indent, match_data, nullptr, hash_bits);
         }
 
         // Print out the portions that have both match data and ghost data (RAM line select)
         for (auto ghost_pos : ghost_line_select_positions) {
             le_bitrange hash_bits = ghost_pos.first;
-            hash_bits = hash_bits.shiftedByBits(IXBar::RAM_LINE_SELECT_BITS * way.slice);
+            hash_bits = hash_bits.shiftedByBits(way.index.lo);
             emit_ixbar_match_func(out, indent, match_data, &(ghost_pos.second), hash_bits);
         }
 
-        bitvec ram_select_mask = slice_to_select_bits.at(way.slice);
+        bitvec ram_select_mask = slice_to_select_bits.at(way.index.lo / 10);
         bitvec used_ram_select_range;
         for (auto ghost_pos : ghost_ram_select_positions) {
             used_ram_select_range.setrange(ghost_pos.first.lo, ghost_pos.first.size());

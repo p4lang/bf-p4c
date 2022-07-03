@@ -47,6 +47,7 @@ class IXBar : public ::IXBar {
         bitvec meter_bit_mask() const { BUG(""); }
         int total_input_bits() const { BUG(""); }
         void update_resources(int, BFN::Resources::StageResources &) const;
+        const char *way_source_kind() const { return "xme"; }
 
      private:
         int slot_size(int group) const;

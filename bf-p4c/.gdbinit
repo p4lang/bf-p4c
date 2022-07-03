@@ -528,7 +528,12 @@ class IXBarUsePrinter(object):
                 for i in range(0, vec_size(self.val['way_use'])):
                     rv += "\n   way_use[" + str(i) +"]: "
                     way = vec_at(self.val['way_use'], i)
-                    rv += "[%d:%d:%x]" % (int(way['group']), int(way['slice']), int(way['mask']))
+                    rv += "%d,[%d:%d],[%d:%d],%x" % (int(way['source']),
+                        int(way['index']['hi']), int(way['index']['lo']),
+                        int(way['select']['hi']), int(way['select']['lo']),
+                        int(way['select_mask']))
+            if any(field.name == 'xme_units' for field in self.val.type.fields()):
+                rv += "\n  xme_units = 0x%x" % int(self.val['xme_units'])
             #for i in range(0, vec_size(self.val['select_use'])):
             #    rv += "\n   sel_use[" + str(i) +"]: "
             #    sel = vec_at(self.val['select_use'], i)

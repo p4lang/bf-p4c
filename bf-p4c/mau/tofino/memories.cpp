@@ -991,13 +991,13 @@ void Memories::break_exact_tables_into_ways() {
             for (auto &way : match_ixbar->way_use) {
                 SRAM_group *wa
                       = new SRAM_group(ta, ta->layout_option->way_sizes[index],
-                                       ta->layout_option->way.width, index, way.group,
+                                       ta->layout_option->way.width, index, way.source,
                                        SRAM_group::EXACT);
                 wa->logical_table = u_id.logical_table;
 
                 exact_match_ways.push_back(wa);
                 (*ta->memuse)[u_id].ways.emplace_back(ta->layout_option->way_sizes[index],
-                                                      way.mask);
+                                                      way.select_mask);
                 index++;
             }
         }
@@ -1266,10 +1266,10 @@ bool Memories::allocate_all_exact(unsigned column_mask) {
                 std::map<int, std::vector<int>> stash_map;
                 for (auto mem_way : alloc.ways) {
                     BUG_CHECK(ixbar_way != match_ixbar->way_use.end(), "No ixbar_way found!");
-                    LOG5("way group : " << ixbar_way->group
+                    LOG5("way group : " << ixbar_way->source
                             << " - way: " << wayno << " - size : " << mem_way.size
                             << " - mem way: " << mem_way);
-                    if (stash_map.count(ixbar_way->group) == 0) {
+                    if (stash_map.count(ixbar_way->source) == 0) {
                         auto ram_width = mem_way.rams.size()/mem_way.size;
                         LOG6("Ram Width: " << ram_width << ", mem way rams size : "
                                 << mem_way.rams.size() << " mem way size : " << mem_way.size);
@@ -1318,7 +1318,7 @@ bool Memories::allocate_all_exact(unsigned column_mask) {
                                 unsigned width = 0;
                                 for (auto ram : mem_way.rams) {
                                     if (width >= ram_width) break;
-                                    stash_map[ixbar_way->group].push_back(ram.first);
+                                    stash_map[ixbar_way->source].push_back(ram.first);
                                     stash_use[ram.first][stash_unit] = u_id.build_name();
                                     LOG4("Rams : " << "[" << ram.first << ", "
                                         << (ram.second + 2) << "]"
@@ -1485,7 +1485,7 @@ void Memories::break_atcams_into_partitions() {
                       "calculated for an ATCAM table");
             auto way = match_ixbar->way_use[0];
             for (int j = 0; j < ta->layout_option->partition_sizes[lt]; j++) {
-                (*ta->memuse)[u_id].ways.emplace_back(search_bus_per_lt, way.mask);
+                (*ta->memuse)[u_id].ways.emplace_back(search_bus_per_lt, way.select_mask);
             }
         }
     }
