@@ -2701,6 +2701,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
                 if (!use.row.empty()) {
                     out << gw_indent << "row: " << use.row[0].row << std::endl;
                     out << gw_indent << "bus: " << use.row[0].bus << std::endl; }
+                if (use.gateway.unit >= 0)
                 out << gw_indent << "unit: " << use.gateway.unit << std::endl;
                 if (use.gateway.payload_row >= 0)
                     out << gw_indent << "payload_row: " << use.gateway.payload_row << std::endl;
