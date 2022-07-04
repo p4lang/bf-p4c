@@ -31,8 +31,10 @@ IXBar::Use::TotalBytes IXBar::Use::match_hash(safe_vector<int> *hash_groups) con
     // not crash until it gets updates for flatrock
     auto rv_index = new safe_vector<Byte>(use);
     rv.push_back(rv_index);
-    if (hash_groups)
-        hash_groups->push_back(exact_unit);
+    if (hash_groups) {
+        for (unsigned i = 0, bits = xme_units; bits; ++i, bits >>= 2) {
+            if (bits & 3)
+                hash_groups->push_back(i); } }
     return rv;
 }
 
@@ -61,13 +63,7 @@ static int find_free_byte(bitvec free, IXBar::Use::Byte *byte) {
 }
 
 void IXBar::Use::update_resources(int stage, BFN::Resources::StageResources &stageResource) const {
-    LOG_FEATURE("resources", 2, "add_xbar_bytes_usage (stage=" << stage <<
-                                "), table: " << used_by);
-    for (auto &byte : use) {
-        bool ternary = type == IXBar::Use::TERNARY_MATCH;
-        LOG_FEATURE("resources", 3, "\tadding resource: xbar bytes " << byte.loc.getOrd(ternary));
-        stageResource.xbarBytes[byte.loc.getOrd(ternary)].emplace(used_by, used_for(), byte);
-    }
+    ::IXBar::Use::update_resources(stage, stageResource);
 }
 
 IXBar::IXBar() {
@@ -178,13 +174,11 @@ bool IXBar::gateway_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
 
 bool IXBar::exact_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                              safe_vector<IXBar::Use::Byte *> &alloced,
-                             int exact_unit) {
-    if (exact_unit < EXACT_MATCH_STM_UNITS) {  // only STM can use word slots
-        find_alloc(alloc_use, alloced, exact_fields, exact_byte_use, true);
+                             bool allow_word) {
+    find_alloc(alloc_use, alloced, exact_fields, exact_byte_use, allow_word);
+    if (allow_word) {
         return do_alloc(alloced, exact_byte_use, exact_word_use);
     } else {
-        // LAMB match can't access the word slots
-        find_alloc(alloc_use, alloced, exact_fields, exact_byte_use, false);
         return do_alloc(alloced, exact_byte_use); }
 }
 
@@ -358,24 +352,31 @@ void IXBar::setupActionAlloc(const IR::MAU::Table *tbl, const PhvInfo &phv,
     LOG3("need " << alloc.use.size() << " bytes for actions in table " << tbl->name);
 }
 
-bool IXBar::exact_find_hash(Use &alloc, const LayoutOption *lo) {
-    // FIXME -- TableLayout needs to be updated for Flatrock, laying out as either
-    // 2-way cuckoo or BPH match tables.  Tofino-style n-way cuckoo won't work.
-    // for now we choose a STM or LAMB unit based on sizing
-    int unit = bitvec(exact_hash_inuse).ffz(0);
-    if (lo->way.width > 1 || lo->way.match_groups < 2 ||        // must use BPH
-        lo->layout.entries > 128*lo->way.match_groups) {        // too big for LAMB
-        if (unit >= EXACT_MATCH_STM_UNITS) return false;
-        // FIXME -- wide BPH need mulitple STM units.  Some BPH might want LAMB + STM
-        // TableLayout needs to tell us when these apply
-    } else {
-        int lamb = bitvec(exact_hash_inuse).ffz(EXACT_MATCH_STM_UNITS);
-        if (lamb < EXACT_MATCH_UNITS) unit = lamb;
-    }
-    if (unit >= EXACT_MATCH_UNITS)
-        return false;
-    alloc.exact_unit = unit;
-    return true;
+bool IXBar::exact_find_units(Use &alloc, const LayoutOption *lo) {
+    unsigned avail_xme = lo->layout.is_lamb ? LAMB_XME_UNITS : STM_XME_UNITS;
+    avail_xme &= ~xme_inuse;
+    unsigned units = lo->way_sizes.size();
+    if (lo->layout.is_lamb) {
+        units = 0;
+        for (auto sz : lo->way_sizes) units += sz; }
+    if (units > bitcount(avail_xme)) return false;
+    int unit;
+    for (unit = ffs(avail_xme) - 1; units > 0; ++unit) {
+        if (!(avail_xme >> unit)) break;
+        if (!(avail_xme >> unit) & 1) continue;
+        if (units > 1 && (unit & 1) == 1) continue;
+        alloc.xme_units |= 1 << unit;
+        --units; }
+    if (units == 1 && (unit = ffs(avail_xme &~ alloc.xme_units) - 1) >= 0) {
+        alloc.xme_units |= 1 << unit;
+        --units; }
+    return units == 0;
+}
+
+bool IXBar::allocProxyHash(const IR::MAU::Table *, const PhvInfo &, Use &,
+                           const LayoutOption *, const ActionData::Format::Use *) {
+    BUG("flatrock proxy hash todo");
+    return false;
 }
 
 bool IXBar::allocExact(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
@@ -385,13 +386,52 @@ bool IXBar::allocExact(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc
     setupMatchAlloc(tbl, phv, map_alloc, alloc);
     if (!alloc.use.empty()) {
         safe_vector<IXBar::Use::Byte *> xbar_alloced;  // FIXME -- not needed?
-        if (!exact_find_hash(alloc, lo) ||
-            !exact_find_alloc(alloc.use, xbar_alloced, alloc.exact_unit)) {
+        if (!exact_find_units(alloc, lo) ||
+            !exact_find_alloc(alloc.use, xbar_alloced, !lo->layout.is_lamb)) {
             return false; }
         alloc.type = Use::EXACT_MATCH;
         alloc.used_by = tbl->name;
         update(tbl->name, alloc); }
     if (lo || af) return true;
+    return true;
+}
+
+/* find the first free (zero) block of size bits in the bitvec, and set them */
+static le_bitrange alloc_bitrange(bitvec &inuse, unsigned size) {
+    if (size == 0) return le_bitrange(0, 0);
+    int rv = inuse.ffz(0);
+    while (inuse.getrange(rv, size) != 0) {
+        rv = inuse.ffs(rv);
+        rv = inuse.ffz(rv); }
+    inuse.setrange(rv, size);
+    return le_bitrange(rv, rv+size-1);;
+}
+
+bool IXBar::allocAllHashWays(Use &alloc, const LayoutOption *lo) {
+    unsigned ram_depth = lo->layout.is_lamb ? 6 : 10;  // index size in bits
+    // ram_depth += subword bits; -- FIXME -- where are the subword bits in the LayoutOption?
+    unsigned sel_size = 0;  // FIXME -- when will this ever be non-zero?
+    int unit = ffs(alloc.xme_units) - 1;
+    bitvec inuse;
+    int inuse_xmu = -1;
+    for (auto way_size : lo->way_sizes) {
+        int depth_bits = lo->layout.is_lamb ? 0 : ceil_log2(way_size);
+        for (int i = 0; i < way_size; ++i) {
+            BUG_CHECK(unit >= 0, "didn't allocate enough units?");
+            int xmu = unit/2;  // two XMEs per XMU
+            if (inuse_xmu != xmu) {
+                inuse_xmu = xmu;
+                inuse = exact_hash_inuse[xmu]; }
+            auto start = alloc_bitrange(inuse, ram_depth + depth_bits);
+            if (start.hi >= EXACT_HASH_BITS) return false;
+            auto sel = alloc_bitrange(inuse, sel_size);
+            if (sel.hi >= EXACT_HASH_BITS) return false;
+            alloc.way_use.emplace_back(xmu, start, sel, (1U << sel_size) - 1);
+            while (!((alloc.xme_units >> ++unit) & 1)) {
+                if (!(alloc.xme_units >> unit)) {
+                    unit = -1;
+                    break; } }
+            if (!lo->layout.is_lamb) break; } }
     return true;
 }
 
@@ -457,7 +497,12 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
     if (tbl->layout.atcam) {
         BUG("flatrock ATCAM todo");
     } else if (tbl->layout.proxy_hash) {
-        BUG("flatrock proxy hash todo");
+        BUG_CHECK(!alloc.proxy_hash_ixbar, "proxy hash ixbar already allocated?");
+        auto &proxy_hash_ixbar = getUse(alloc.proxy_hash_ixbar);
+        if (!allocProxyHash(tbl, phv, proxy_hash_ixbar, lo, af) ||
+            !allocAllHashWays(proxy_hash_ixbar, lo)) {
+            alloc.clear_ixbar();
+            return false; }
     } else if (!tbl->match_key.empty()) {
         BUG_CHECK(!alloc.match_ixbar, "match ixbar already allocated?");
         if (tbl->layout.ternary) {
@@ -465,7 +510,9 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
                 alloc.clear_ixbar();
                 return false; }
         } else {
-            if (!allocExact(tbl, phv, getUse(alloc.match_ixbar), lo, af)) {
+            auto &match_ixbar = getUse(alloc.match_ixbar);
+            if (!allocExact(tbl, phv, match_ixbar, lo, af) ||
+                !allocAllHashWays(match_ixbar, lo)) {
                 alloc.clear_ixbar();
                 return false; }
         }
@@ -561,7 +608,30 @@ void IXBar::update(cstring table_name, const ::IXBar::Use &use_) {
             gateway_fields.emplace(byte.container, byte.loc); }
         break;
     default:
-        BUG("Unhandled use type %d (%s)", use.type, use.used_for());
+        BUG("Unhandled use type %d (%s)", use.type, use.used_for()); }
+
+    xme_inuse |= use.xme_units;
+    for (auto xme : bitvec(xme_inuse)) {
+        if (xme_use[xme] && xme_use[xme] != table_name) {
+            BUG("conflicting use of xme %d between %s and %s", xme, xme_use[xme], table_name);
+            xme_use[xme] = table_name; } }
+
+    for (auto &way : use.way_use) {
+        if (way.index.size() > 0) {
+            exact_hash_inuse[way.source].setrange(way.index.lo, way.index.size());
+            for (int bit = way.index.lo; bit <= way.index.hi; ++bit) {
+                auto &u = exact_hash_use.at(way.source, bit);
+                if (u && u != table_name)
+                    BUG("conflicting use of exact hash %d bit %d between %s and %s",
+                        way.source, bit, u, table_name); } }
+        exact_hash_inuse[way.source] |= bitvec(way.select_mask) << way.select.lo;
+        unsigned mask = way.select_mask;
+        for (int bit = way.select.lo; mask; ++bit, mask >>= 1) {
+            if (!(mask & 1)) continue;
+            auto &u = exact_hash_use.at(way.source, bit);
+            if (u && u != table_name)
+                BUG("conflicting use of exact hash %d bit %d between %s and %s",
+                    way.source, bit, u, table_name); }
     }
 }
 

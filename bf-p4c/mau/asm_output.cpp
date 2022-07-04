@@ -30,6 +30,12 @@
 #include "lib/indent.h"
 #include "lib/stringref.h"
 
+#if HAVE_FLATROCK
+// FIXME -- temp hack for flatrock specific stuff here -- should be removed once we
+// have Flatrock-specific memory allocation
+#include "bf-p4c/mau/flatrock/input_xbar.h"
+#endif
+
 int DefaultNext::id_counter = 0;
 
 // TODO(zma) not sure how the tEOP buses are shared, punt it for another day
@@ -650,6 +656,21 @@ void MauAsmOutput::emit_ways(std::ostream &out, indent_t indent, const IXBar::Us
         // ATCAM tables have only one input xbar way
         if (use->type != IXBar::Use::ATCAM_MATCH) ++ixbar_way;
     }
+#if HAVE_FLATROCK
+    // FIXME -- ftr memory allocation not done yet, so hack to get something here for lambs
+    // should be put into mem->ways as part of Flatrock::Memories something?
+    if (auto *u = dynamic_cast<const Flatrock::IXBar::Use *>(use)) {
+        unsigned xme_units = u->xme_units;
+        for (; ixbar_way != use->way_use.end(); ++ixbar_way) {
+            int xme = ffs(xme_units) - 1;
+            out << indent << "- { " << use->way_source_kind() << ": " << xme << ", "
+                << "index: " << ixbar_way->index.lo << ".." << ixbar_way->index.hi;
+            if (ixbar_way->select_mask)
+                out << ", select: " << ixbar_way->select.lo << ".." << ixbar_way->select.hi
+                    << " & 0x" << hex(ixbar_way->select_mask);
+            out << ", rams: [[" << xme << "]] }" << std::endl;
+            xme_units &= ~(1U << xme); } }
+#endif
 }
 
 void MauAsmOutput::emit_hash_dist(std::ostream &out, indent_t indent,

@@ -19,20 +19,23 @@ class IXBar : public ::IXBar {
     static constexpr int XCMP_BYTES = 16;
     static constexpr int XCMP_WORDS = 12;
     static constexpr int BYTES_PER_WORD = 4;
-    static constexpr int EXACT_MATCH_UNITS = 8;  /* 4 STM + 4 LAMB */
-    static constexpr int EXACT_MATCH_STM_UNITS = 4;  /* first 4 units */
+    static constexpr int XME_UNITS = 16;          /* 8 LAMB + 8 STM */
+    static constexpr int LAMB_XME_UNITS = 0xff;   /* first 8 units */
+    static constexpr int STM_XME_UNITS = 0xff00;  /* second 8 units */
+    static constexpr int XMU_UNITS = 8;           /* the number of different hash inputs */
     static constexpr int TERNARY_GROUPS = 20;
     static constexpr int TERNARY_BYTES_PER_GROUP = 5;
+    static constexpr int EXACT_HASH_BITS = 45;
 
     using Loc = ::IXBar::Loc;
     using FieldInfo = ::IXBar::FieldInfo;
 
     struct Use : public ::IXBar::Use {
-        int exact_unit = -1;
+        unsigned        xme_units = 0;
 
         void clear() override {
             ::IXBar::Use::clear();
-            exact_unit = -1; }
+            xme_units = 0; }
         Use *clone() const { return new Use(*this); }
         void emit_salu_bytemasks(std::ostream &, indent_t) const { BUG(""); }
         void emit_ixbar_asm(const PhvInfo &phv, std::ostream& out, indent_t indent,
@@ -82,8 +85,11 @@ class IXBar : public ::IXBar {
     std::multimap<PHV::Container, Loc>          ternary_fields;
     std::multimap<PHV::Container, Loc>          xcmp_fields;
 
-    BFN::Alloc1D<cstring, EXACT_MATCH_UNITS>    exact_hash_use;         // 1:1 mapping between hash
-    unsigned                                    exact_hash_inuse = 0;   // and exact match units
+    BFN::Alloc1D<cstring, XME_UNITS>            xme_use;        // 1:2 mapping between hash
+    unsigned                                    xme_inuse = 0;  // and XME units
+
+    BFN::Alloc2D<cstring, XMU_UNITS, EXACT_HASH_BITS>   exact_hash_use;
+    bitvec                                              exact_hash_inuse[XMU_UNITS];
 
     // map from container to tables that use those fields (mostly for dbprint)
     std::map<PHV::Container, std::set<cstring>>        field_users;
@@ -108,8 +114,8 @@ class IXBar : public ::IXBar {
                             const xor_map_t &xor_map);
     bool exact_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                           safe_vector<IXBar::Use::Byte *> &alloced,
-                          int exact_unit);
-    bool exact_find_hash(IXBar::Use &alloc, const LayoutOption *lo);
+                          bool allow_word);
+    bool exact_find_units(IXBar::Use &alloc, const LayoutOption *lo);
     bool ternary_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                             safe_vector<IXBar::Use::Byte *> &alloced);
     bool xcmp_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
@@ -118,8 +124,11 @@ class IXBar : public ::IXBar {
     bool allocGateway(const IR::MAU::Table *, const PhvInfo &, Use &, const LayoutOption *);
     void setupMatchAlloc(const IR::MAU::Table *, const PhvInfo &, ContByteConversion &, Use &);
     void setupActionAlloc(const IR::MAU::Table *, const PhvInfo &, ContByteConversion &, Use &);
+    bool allocProxyHash(const IR::MAU::Table *, const PhvInfo &, Use &,
+                        const LayoutOption *, const ActionData::Format::Use *);
     bool allocExact(const IR::MAU::Table *, const PhvInfo &, Use &,
                     const LayoutOption *, const ActionData::Format::Use *);
+    bool allocAllHashWays(Use &, const LayoutOption *);
     bool allocTernary(const IR::MAU::Table *, const PhvInfo &, Use &,
                       const LayoutOption *, const ActionData::Format::Use *);
     class GetActionUse;

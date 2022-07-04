@@ -14,28 +14,28 @@ set (FLATROCK_XFAIL_TESTS
   )
 
 p4c_add_xfail_reason("tofino5"
-  "No ways defined in table test1"
+  "WARNING:.*binary.*does not match model version|unexpected packet output on port 0"
   extensions/p4_tests/p4_16/flatrock/direct1.p4
   )
 
 p4c_add_xfail_reason("tofino5"
-  "No ways defined in table test1"
+  "WARNING:.*binary.*does not match model version|unexpected packet output on port 0"
   extensions/p4_tests/p4_16/flatrock/exact1.p4
   )
 
 # model fails -- probably many other problems besides this message
 p4c_add_xfail_reason("tofino5"
-   "WARNING:.*binary.*does not match model version"
+  "WARNING:.*binary.*does not match model version|unexpected packet output on port 0"
   extensions/p4_tests/p4_16/flatrock/passthrough.p4
   )
 
 p4c_add_xfail_reason("tofino5"
-  "No ways defined in table test1"
+  "WARNING:.*binary.*does not match model version|unexpected packet output on port 0"
   extensions/p4_tests/p4_16/flatrock/gateway1.p4
   )
 
 p4c_add_xfail_reason("tofino5"
-  "No ways defined in table test1"
+  "WARNING:.*binary.*does not match model version|unexpected packet output on port 0"
   extensions/p4_tests/p4_16/flatrock/gateway2.p4
   )
 
@@ -128,13 +128,16 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/stf/update_checksum_4.p4
   extensions/p4_tests/p4_16/stf/update_checksum_6.p4
   #extensions/p4_tests/p4_16/stf/varbit_constant.p4
-  extensions/p4_tests/p4_16/stf/auto_init_meta2.p4
   #extensions/p4_tests/p4_16/stf/failed_elim_valid_bit.p4
   extensions/p4_tests/p4_16/stf/p4c-1504.p4
   extensions/p4_tests/p4_16/stf/p4c-2772.p4
   extensions/p4_tests/p4_16/stf/p4c-2772-c.p4
   extensions/p4_tests/p4_16/stf/p4c-3089.p4
   #extensions/p4_tests/p4_16/stf/wide_arith_non_64.p4
+  )
+p4c_add_xfail_reason("tofino5"
+  "Compiler Bug: Cannot allocate wide RAMS in Flatrock. Invalid size 2"
+  extensions/p4_tests/p4_16/stf/auto_init_meta2.p4
   )
 
 p4c_add_xfail_reason("tofino5"

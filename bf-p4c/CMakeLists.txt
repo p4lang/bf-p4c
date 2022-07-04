@@ -356,6 +356,7 @@ set (BF_P4C_BACKEND_MAU_SRCS
   mau/adjust_byte_count.cpp
   mau/add_always_run.cpp
   mau/asm_output.cpp
+  mau/asm_hash_output.cpp
   mau/attached_info.cpp
   mau/attached_output.cpp
   mau/build_power_graph.cpp
@@ -429,6 +430,7 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/adjust_byte_count.h
   mau/add_always_run.h
   mau/asm_output.h
+  mau/asm_hash_output.h
   mau/attached_entries.h
   mau/attached_info.h
   mau/attached_output.h

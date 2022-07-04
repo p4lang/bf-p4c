@@ -1,5 +1,6 @@
 #include "action_data_bus.h"
 #include "bf-p4c/mau/asm_output.h"
+#include "bf-p4c/mau/asm_hash_output.h"
 #include "bf-p4c/mau/flatrock/asm_output.h"
 #include "input_xbar.h"
 
@@ -58,7 +59,7 @@ void IXBar::Use::gather_bytes(const PhvInfo &phv, std::map<int, std::map<int, Sl
 }
 
 void IXBar::Use::emit_ixbar_asm(const PhvInfo &phv, std::ostream &out, indent_t indent,
-                                const TableMatch *, const IR::MAU::Table *tbl) const {
+                                const TableMatch *fmt, const IR::MAU::Table *tbl) const {
     std::map<int, std::map<int, Slice>> sort;
     cstring group_type;
     cstring (*index)(int i) = [](int)->cstring { return ""; };
@@ -90,8 +91,19 @@ void IXBar::Use::emit_ixbar_asm(const PhvInfo &phv, std::ostream &out, indent_t 
     gather_bytes(phv, sort, tbl);
     for (auto &group : sort)
         out << indent << group_type << index(group.first) << ": " << group.second << std::endl;
-    if (exact_unit >= 0)
-        out << indent << "exact unit: " << exact_unit << std::endl;
+    if (xme_units) {
+        out << indent << "exact unit: [ " << emit_vector(bitvec(xme_units)) << " ]" << std::endl;
+        int ident_bits_prev_alloc = 0;
+        for (int mask = xme_units, xmu = 0; mask; ++xmu, mask >>= 2) {
+            if ((mask & 3) == 0) continue;
+            out << indent++ << "hash " << xmu << ":" << std::endl;
+            safe_vector<Slice> match_data;
+            safe_vector<Slice> ghost;
+            emit_ixbar_hash_table(xmu, match_data, ghost, fmt, sort);
+            emit_ixbar_hash_exact(out, indent, match_data, ghost, this, xmu,
+                                  ident_bits_prev_alloc);
+        }
+    }
 }
 
 bool ActionDataBus::Use::emit_adb_asm(std::ostream &out, const IR::MAU::Table *tbl,
