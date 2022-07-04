@@ -1542,8 +1542,10 @@ void FlatrockParser::Profile::write_config(RegisterSetBase &regs, json::map &jso
     _regs.prsr_mem.md_prof_tcam.md_prof_tcam[*id].key_wh_1 = match.inband_metadata.word0 >> 32;
     _regs.prsr_mem.md_prof_tcam.md_prof_tcam[*id].key_wl_1 = match.inband_metadata.word1 >> 32;
     // 8bit port_info = {2'b0, logic_port#(6b)}
-    _regs.prsr_mem.md_prof_tcam.md_prof_tcam[*id].key_wh_2 = match.port.word0 & 0x3f;
-    _regs.prsr_mem.md_prof_tcam.md_prof_tcam[*id].key_wl_2 = match.port.word1 & 0x3f;
+    // The 2 MSBs are part of the key and must be matched on, either with an explicit zero-match or
+    // a wildcard match.
+    _regs.prsr_mem.md_prof_tcam.md_prof_tcam[*id].key_wh_2 = 0xc0 | (match.port.word0 & 0x3f);
+    _regs.prsr_mem.md_prof_tcam.md_prof_tcam[*id].key_wl_2 = 0x00 | (match.port.word1 & 0x3f);
     // RAM
     // initial state
     initial_state.writeValue(_regs.prsr_mem.md_prof_ram.md_prof[*id].start_state_hi,
