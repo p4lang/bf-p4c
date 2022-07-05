@@ -102,12 +102,12 @@ error {
 // THIS NEEDS UPDATE FOR FLATROCK
 @__intrinsic_metadata
 header ingress_intrinsic_metadata_t {
-    @padding bit<((15 - (PORT_ID_WIDTH % 8) - (PIPE_ID_WIDTH % 8)) % 8)> _pad0;
     bit<1> pktgen_flag;                 // Flag distinguishing original packets
                                         // from PktGen packets.
-    PipeId_t ingress_pipe;              // Ingress physical pipe.
-                                        // this field is passed to the deparser
     PortId_t ingress_port;              // Ingress physical port id.
+                                        // this field is passed to the deparser
+    @padding bit<((15 - (PORT_ID_WIDTH % 8) - (PIPE_ID_WIDTH % 8)) % 8)> _pad0;
+    PipeId_t ingress_pipe;              // Ingress physical pipe.
                                         // this field is passed to the deparser
     bit<48> ingress_mac_tstamp;         // Ingress IEEE 1588 timestamp (in nsec)
                                         // taken at the ingress MAC.

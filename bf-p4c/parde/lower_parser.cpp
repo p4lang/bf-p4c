@@ -987,8 +987,6 @@ struct ComputeFlatrockParserIR : public ParserInspector {
     const ParserHeaderSequences &parserHeaderSeqs;
 
     std::vector<const IR::BFN::ParserState*> states;
-    // nullptr key is used for headers without corresponding parser state,
-    // e.g. MD32 and payload
     std::map<const IR::BFN::ParserState*, std::set<cstring>> headers;
     // state -> header, width
     std::map<const IR::BFN::ParserState*, std::vector<std::pair<cstring, int>>> header_widths;
@@ -1004,16 +1002,29 @@ struct ComputeFlatrockParserIR : public ParserInspector {
         }
     };
     // textual information about extracts performed in parser
-    std::map<const Extract, std::vector<cstring>> comments;
+    std::map<std::pair<PHV::Size, unsigned int /* index */>, std::vector<cstring>> comments;
     // extracts performed in parser
     std::set<Extract> extracts;
 
  private:
     const PhvInfo& phv;
+    cstring igMetaName;
 
     profile_t init_apply(const IR::Node *node) override {
         extracts.clear();
+        states.clear();
+        headers.clear();
+        header_widths.clear();
+        comments.clear();
         return Inspector::init_apply(node);
+    }
+
+    bool preorder(const IR::BFN::Pipe* pipe) override {
+        auto *igMeta = getMetadataType(pipe, "ingress_intrinsic_metadata");
+        BUG_CHECK(igMeta, "Could not find ingress_intrinsic_metadata");
+        igMetaName = igMeta->name;
+
+        return true;
     }
 
     bool preorder(const IR::BFN::ParserState* state) override {
@@ -1039,14 +1050,16 @@ struct ComputeFlatrockParserIR : public ParserInspector {
         field->foreach_alloc([&](const PHV::AllocSlice& alloc) {
             BUG_CHECK(!hdr_offset, "Only one allocation allowed after PHV allocation");
             hdr_offset = (field->offset - alloc.container_slice().lo) / 8;
+            auto size = alloc.container().type().size();
+            auto index = alloc.container().index();
             Extract e = {
-                .size = alloc.container().type().size(),
-                .index = alloc.container().index(),
+                .size = size,
+                .index = index,
                 .hdr = field->header(),
                 .offset = *hdr_offset
             };
             extracts.insert(e);
-            comments[e].push_back(debugInfoFor(extract, alloc));
+            comments[{size, index}].push_back(debugInfoFor(extract, alloc));
         });
 
         auto *member = lval->field->to<IR::Member>();
@@ -1062,7 +1075,8 @@ struct ComputeFlatrockParserIR : public ParserInspector {
         if (auto *state = findContext<IR::BFN::ParserState>()) {
             if (headers[state].count(field->header()) == 0) {
                 headers[state].insert(field->header());
-                header_widths[state].push_back({field->header(), width});
+                header_widths[state].push_back({ field->header(), (field->header() == igMetaName) ?
+                    Flatrock::PARSER_PROFILE_MD_SEL_NUM * 8 : width });
             }
         }
 
@@ -1070,9 +1084,12 @@ struct ComputeFlatrockParserIR : public ParserInspector {
     }
 
     void end_apply() override {
-        states.push_back(nullptr);
-        headers[nullptr].insert(payloadHeaderName);
-        header_widths[nullptr].push_back({payloadHeaderName, 0});
+        // Insert payload pseudo header
+        // TODO This can be done in some previous pass to form correct parser IR tree
+        auto *payload = new IR::BFN::ParserState(nullptr, "final", INGRESS);
+        states.push_back(payload);
+        headers[payload].insert(payloadHeaderName);
+        header_widths[payload].push_back({payloadHeaderName, 0});
         if (LOGGING(4)) {
             LOG4("[ComputeFlatrockParserIR] parser extracts:");
             for (auto &extract : extracts) {
@@ -1080,7 +1097,7 @@ struct ComputeFlatrockParserIR : public ParserInspector {
                   << ", index=" << extract.index
                   << ", header=" << extract.hdr
                   << ", offset=" << extract.offset);
-                for (auto &comment : comments.at(extract))
+                for (auto &comment : comments.at({extract.size, extract.index}))
                     LOG4("    " << comment);
             }
         }
@@ -1112,8 +1129,7 @@ class ReplaceFlatrockParserIR : public Transform {
                 auto &header = header_width.first;
                 auto &bit_width = header_width.second;
                 // For each header extraction, there is a separate stage
-                cstring state_name =
-                    sanitizeName((state != nullptr ? (state->name + "_") : "") + header);
+                cstring state_name = sanitizeName(state->name + "_" + header);
                 // 0 -> 0x**************00, 1 -> 0x**************01, etc.
                 match_t state_match =
                     { .word0 = ~0ULL & ~(stage & 0xff), .word1 = ~0xffULL | stage };
@@ -1157,15 +1173,27 @@ class ReplaceFlatrockParserIR : public Transform {
 
         auto *default_profile = new IR::Flatrock::Profile(
             /* index */ 0,
-            /* initial_pktlen */ Device::pardeSpec().byteTotalIngressMetadataSize(),
-            /* initial_seglen */ Device::pardeSpec().byteTotalIngressMetadataSize(),
+            /* initial_pktlen */ 0,
+            /* initial_seglen */ 0,
             /* initial_state */ boost::none,
             /* initial_state_name */ lowered_parser->analyzer.at(0)->name,
             /* initial_flags */ boost::none,
-            /* initial_ptr */ Flatrock::PARSER_PROFILE_MD_SEL_NUM,  // Skip MD32
+            /* initial_ptr */ 0,
             /* initial_w0_offset */ boost::none,
             /* initial_w1_offset */ boost::none,
             /* initial_w2_offset */ boost::none);
+        // {is_pktgen(1bit),port_id(7bit),8'b0}
+        default_profile->metadata_select.push_back(
+            Flatrock::metadata_select(
+                Flatrock::metadata_select::INBAND_METADATA, { /* index */ 0 }));
+        // timestamp
+        for (int i = Flatrock::PARSER_PROFILE_MD_SEL_TIMESTAMP_BYTE_OFFSET;
+             i < Flatrock::PARSER_PROFILE_MD_SEL_TIMESTAMP_BYTE_OFFSET +
+                 Flatrock::PARSER_PROFILE_MD_SEL_TIMESTAMP_BYTE_WIDTH; i++) {
+            default_profile->metadata_select.push_back(
+                Flatrock::metadata_select(
+                    Flatrock::metadata_select::INBAND_METADATA, { /* index */ i }));
+        }
         lowered_parser->profiles.push_back(default_profile);
 
         const int PARSER_PHV_BUILDER_GROUP_PHES_TOTAL =
@@ -1205,10 +1233,13 @@ class ReplaceFlatrockParserIR : public Transform {
             auto &phv_builder_extract = extracts[base_group_index + sub_group_offset];
             if (phv_builder_extract == nullptr)
                 phv_builder_extract = new IR::Flatrock::PhvBuilderExtract(extract.size);
-            phv_builder_extract->debug.info = computed.comments.at(extract);
+            auto &comments = computed.comments.at({extract.size, extract.index});
+            phv_builder_extract->debug.info.insert(phv_builder_extract->debug.info.begin(),
+                comments.begin(), comments.end());
 
             phv_builder_extract->index = 0;
-            if (extract.index % Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES == 0) {
+            if ((extract.index / phe_sources) %
+                    Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES == 0) {
                 phv_builder_extract->hdr1_name = extract.hdr;
                 phv_builder_extract->offsets1.push_back({container_name, extract.offset});
             } else {
