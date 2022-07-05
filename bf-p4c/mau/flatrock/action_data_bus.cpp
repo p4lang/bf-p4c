@@ -37,14 +37,16 @@ int ActionDataBus::find_free_bytes(const IR::MAU::Table *tbl, const ActionData::
             << " pos: " << *pos << " align: " << align);
     for (int idx = byte_start; idx < byte_end; idx += align) {
         if (total_in_use.getrange(idx, align) == 0) {
-            std::string print_bytes = "{";
             total_in_use.setrange(idx, align);
-            for (int i = 0; i < align; i++) { print_bytes += (" " + std::to_string(i) + " "); }
-            print_bytes += "}";
             Loc loc(idx, ActionData::bits_to_slot_type(pos->alu_op->size()));
             action_data_locs.emplace_back(loc, pos->start_byte, pos->alu_op->phv_bytes(),
                                           pos->loc);
-            LOG5("    Found on bytes " << print_bytes);
+            if (LOGGING(5)) {
+                std::string print_bytes = "{";
+                for (int i = 0; i < align; i++) { print_bytes += (" " + std::to_string(i) + " "); }
+                print_bytes += "}";
+                LOG5("    Found on bytes " << print_bytes);
+            }
             return true;
         }
     }
@@ -69,7 +71,7 @@ int ActionDataBus::find_free_bytes(const IR::MAU::Table *tbl, const ActionData::
  */
 bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
         safe_vector<const ActionData::ALUPosition *> &alu_ops, TableResourceAlloc &alloc) {
-    LOG2("  Initial Action Data Bus : " << get_total_in_use());
+    LOG2("  Initial Action Data Bus : " << *this);
 
     if (alu_ops.empty()) return true;  // nothing needed on abus
     std::stable_sort(alu_ops.begin(), alu_ops.end(),
@@ -102,13 +104,10 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
     }
     for (auto *pos : alu_ops) {
         if (pos->loc == ActionData::IMMEDIATE) continue;
-        auto ok = find_free_bytes(tbl, pos, action_data_locs, ActionData::AD_LOCATIONS);
-        if (!ok) {
-            ok = find_free_bytes(tbl, pos, action_data_locs, ActionData::IMMEDIATE);
-            if (!ok) {
-                LOG4("  Cannot allocate " << *pos << " to action data bus");
-                return false;
-            }
+        if (!find_free_bytes(tbl, pos, action_data_locs, pos->loc)
+            || !find_free_bytes(tbl, pos, action_data_locs, ActionData::IMMEDIATE)) {
+            LOG4("  Cannot allocate " << *pos << " to action data bus");
+            return false;
         }
     }
 
@@ -143,7 +142,7 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
         auto pos = allocated_attached.find(ad);
         if (pos != allocated_attached.end()) {
             alloc.action_data_xbar.reset(pos->second.clone());
-            LOG2(" Action data bus shared on action profile " << ad->name);
+            LOG2(" Action data bus shared on action profile " << ad->name.toString());
             return true;
         }
     }
@@ -187,7 +186,8 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
     if (am == nullptr)
         return true;
 
-    LOG1("Allocating action data bus for " << tbl->name << " for meter output of " << am->name);
+    LOG1("Allocating action data bus for " << tbl->name
+            << " for meter output of " << am->name.toString());
     auto alu_ops = use->all_alu_positions();
     if (alu_ops.empty()) return true;
     if (!alloc_action_data_bus(tbl, alu_ops, alloc)) return false;
@@ -215,7 +215,7 @@ void ActionDataBus::update(cstring name, const Use::ReservedSpace &rs) {
                 name, total_use[i], rs.location.byte);
         total_use[i] = name; }
     total_in_use |= rs.bytes_used << rs.location.byte;
-    LOG4("  Updated Action Data Bus: " << get_total_in_use());
+    LOG4("  Updated Action Data Bus: " << *this);
 }
 
 void ActionDataBus::update(const IR::MAU::Table *tbl) {
@@ -226,12 +226,12 @@ std::unique_ptr<::ActionDataBus> ActionDataBus::clone() const {
     return std::unique_ptr<::ActionDataBus>(new ActionDataBus(*this));
 }
 
-std::string ActionDataBus::get_total_in_use() const {
-    std::stringstream ss;
+std::ostream &operator<<(std::ostream &out, const ActionDataBus &adb) {
     // Outputs as "Word ADB | Byte ADB"
-    ss << hex(total_in_use.getrange(ABUS8, ABUS32), ABUS32/4, '0')
-       << "|" << hex(total_in_use.getrange(0, ABUS8), ABUS8/4, '0');
-    return ss.str();
+    auto ABUS8 = ActionDataBus::ABUS8;
+    auto ABUS32 = ActionDataBus::ABUS32;
+    out << hex(adb.total_in_use.getrange(ABUS8, ABUS32), ABUS32/4, '0')
+       << "|" << hex(adb.total_in_use.getrange(0, ABUS8), ABUS8/4, '0');
+    return out;
 }
-
 }  // end namespace Flatrock

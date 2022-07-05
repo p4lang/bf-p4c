@@ -28,7 +28,6 @@ struct ActionDataBus : public ::ActionDataBus {
 
  private:
     BFN::Alloc1D<cstring, MAX_ADB_BYTES> total_use;
-    bitvec total_in_use;  // duplicates total_use (1 bit per byte)
     BFN::Alloc2D<cstring, ACTION_UNITS, ALUS_PER_ACTION_UNIT> action_alu_use;
 
     struct Use : public ::ActionDataBus::Use {
@@ -45,6 +44,7 @@ struct ActionDataBus : public ::ActionDataBus {
             safe_vector<Use::ReservedSpace> &action_data_locs, ActionData::Location_t loc);
 
  public:
+    bitvec total_in_use;  // duplicates total_use (1 bit per byte)
     void clear() override;
     bool alloc_action_data_bus(const IR::MAU::Table *tbl,
                                safe_vector<const ActionData::ALUPosition *> &alu_ops,
@@ -56,11 +56,11 @@ struct ActionDataBus : public ::ActionDataBus {
     void update(cstring name, const ::ActionDataBus::Use &) override;
     void update(cstring name, const Use::ReservedSpace &rs) override;
     void update(const IR::MAU::Table *tbl) override;
-    std::string get_total_in_use() const;
 
     virtual std::unique_ptr<::ActionDataBus> clone() const;
 };
 
+std::ostream &operator<<(std::ostream &out, const ActionDataBus &adb);
 }  // end namespace Flatrock
 
 #endif /* BF_P4C_MAU_FLATROCK_ACTION_DATA_BUS_H_*/
