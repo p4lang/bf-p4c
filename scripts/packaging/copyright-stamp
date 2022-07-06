@@ -71,6 +71,8 @@ ignoreFilePatterns=(
   '^scripts/gen_reference_outputs/inputs/.*\.p4$'
   '^scripts/pkg-src/src/.*\.patch$'
   '^scripts/run_custom_tests/patches/scapy/.*\.py$'
+  '^scripts/flatrock_utilities/.*\.py$'
+  '^scripts/flatrock_utilities/.*\.schema$'
   '^third_party/'
   '^ci/' # CI Klocwork Differential Analysis files 
 
