@@ -194,13 +194,21 @@ class ActionSolverBase {
     virtual void add_assign(const Operand& dst, Operand src);
 
     /// setrange on @p c of src_unallocated_bits by @p range.
+    /// contract:
+    /// DO NOT add unallocated assignment if the source can be perfectly overlaid with
+    /// the destination!
+    /// Example: f2<3> = f1<3>, f2 is allocated to W[0:2], and f1 is unallocated.
+    /// If their liveranges are:
+    /// f1: [0w, 3r],
+    /// f2: [3w, 4r].
+    /// if we allocate (overlay) f2 to W[0:2], this assignment can be eliminated.
     virtual void add_src_unallocated_assign(const ContainerID& c, const le_bitrange& range);
 
     /// set_container_spec will update the container spec.
     virtual void set_container_spec(ContainerID id, int size, bitvec live);
 
     /// return solve result.
-    virtual Result solve() const = 0;
+    virtual Result solve() = 0;
 
     /// clear all states and will reset enable_bitmasked_set to true.
     virtual void clear() {
@@ -280,8 +288,34 @@ class ActionMoveSolver : public ActionSolverBase {
     Result try_bitmasked_set(
         const ContainerID dest, const RotateClassifiedAssigns& assigns) const;
 
+    /// This optimization allows solver to detect impossible action
+    /// synthesis even before all source fields have been allocated. It targets the case that
+    /// when we are assigning a fieldslice from ad_or_const source, for the unallocated sources,
+    /// their best allocation is to be
+    /// (1) for deposit-field and bit-masked-set: aligned with their destinations, required.
+    /// (2) for byte-rotate-merge, aligned with any allocated source or aligned with dest, if no
+    ///     source has been allocated, aligned with destination, same as (1).
+    /// To simplify the problem, we can uniformly use the (2) as our optimization: add speculated
+    /// allocations for unallocated sources, because (1) can be treated as a special case of (2).
+    /// Although it is okay for most of cases, the optimization might return false positive result
+    /// when a very rare case is presented:
+    /// If we have:
+    /// w[0:8] = an unallocated phv src (f_src)
+    /// w[9:15] = 0
+    /// w[16:31] are still alive post-action.
+    /// This is *almost* never possible because writing from both an ad_or_const and a phv will
+    /// *likely* overwrite the whole container (w[16:31] will be clobbered),
+    /// *except* for the one rare special case: when the unallocated fieldslice, f_src,
+    /// is allocated to w[0:8]. This can only happen when the f_src's live range ends at this
+    /// action, and the live range of field at w[0:8] starts right from this action.
+    /// To overcome the above false positive caller must strictly follow the contract in
+    /// add_src_unallocated_assign: DO NOT add overlayable source as unallocated.
+    /// unit-tests: unallocated_src_optimization_*
+    const RotateClassifiedAssigns* apply_unallocated_src_optimization(
+        const ContainerID dest, const RotateClassifiedAssigns& offset_assigns);
+
  public:
-    Result solve() const override;
+    Result solve() override;
 };
 
 /// ActionMochaSolver checks basic mocha set constraints for an action that either
@@ -293,7 +327,7 @@ class ActionMoveSolver : public ActionSolverBase {
 class ActionMochaSolver : public ActionSolverBase {
  public:
     ActionMochaSolver() {};
-    Result solve() const override;
+    Result solve() override;
 };
 
 /// ActionDarkSolver checks basic dark set constraints for an action that either
@@ -304,7 +338,7 @@ class ActionMochaSolver : public ActionSolverBase {
 class ActionDarkSolver : public ActionSolverBase {
  public:
     ActionDarkSolver() {};
-    Result solve() const override;
+    Result solve() override;
 };
 
 }  // namespace solver

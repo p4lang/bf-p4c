@@ -123,7 +123,7 @@ TrivialAllocator::PreSlicingResult TrivialAllocator::pre_slice(const Allocation&
     int n_pre_slicing_tried = 0;
     auto pre_slicing_ctx = kit_i.make_slicing_ctx(sc);
     // max-packing mode with loose action constraints checks.
-    pre_slicing_ctx->set_config(Slicing::IteratorConfig{false, true, true});
+    pre_slicing_ctx->set_config(Slicing::IteratorConfig{false, true, true, (1 << 25), (1 << 16)});
     pre_slicing_ctx->iterate([&](std::list<SuperCluster*> sliced) {
         n_pre_slicing_tried++;
         LOG3("Pre-slicing-attempt-" << n_pre_slicing_tried);
@@ -171,20 +171,66 @@ TrivialAllocator::PreSlicingResult TrivialAllocator::pre_slice(const Allocation&
     return rst;
 }
 
+const AllocError* TrivialAllocator::diagnose_invalid_cluster(
+    const Allocation& empty_alloc,
+    const PHV::SuperCluster* sc,
+    const ContainerGroupsBySize& container_groups) const {
+    const auto base = AllocatorBase(kit_i);
+    auto* search_config = new SearchConfig();
+    search_config->n_dfs_steps_sc_alloc = 256;
+    search_config->n_best_of_sc_alloc = 1;  // trivial alloc stops at the first ok solution.
+    search_config->stop_first_succ_empty_normal_container = true;
+    auto ctx = PHV::v2::ScoreContext()
+                   .with_score(new MinPackTxScoreMaker())
+                   .with_search_config(search_config)
+                   .with_t(0);
+
+    std::list<PHV::SuperCluster*> sliced_clusters;
+    AllocError* last_err = new AllocError(ErrorCode::NO_SLICING_FOUND);
+    *last_err << "Found unsatisfiable constraints during slicing";
+    // Use minimal_packing_slicing mode disable action-related packing checks.
+    // This allows conflicting action constraints to be caught during PHV allocation
+    // so that detailed error logs (trace) can be printed to user.
+    auto slicing_cfg = Slicing::IteratorConfig{true, true, false, (1 << 25), (1 << 16)};
+    slicing_cfg.disable_action_packing_check = true;
+    auto slicing_ctx = kit_i.make_slicing_ctx(sc);
+    slicing_ctx->set_config(slicing_cfg);
+    slicing_ctx->iterate([&](std::list<PHV::SuperCluster*> sliced) {
+        last_err = nullptr;
+        sliced_clusters = sliced;
+        return false;
+    });
+    if (LOGGING(3)) {
+        LOG3("Sliced clusters:");
+        for (auto* sc : sliced_clusters) LOG3(sc);
+    }
+    for (const auto* sc : sliced_clusters) {
+        if (kit_i.is_clot_allocated(kit_i.clot, *sc)) {
+            LOG3("skip clot allocated cluster: " << sc->uid);
+            continue;
+        }
+        auto rst = base.try_sliced_super_cluster(ctx, empty_alloc, sc, container_groups);
+        if (rst.ok()) {
+            continue;
+        } else {
+            last_err = new AllocError(rst.err->code);
+            *last_err << "Failed when allocating this sliced " << sc;
+            *last_err << "Allocation error logs: " << rst.err->msg;
+            break;
+        }
+    }
+    return last_err;
+}
+
 const TrivialAllocator::PartialAllocResult* TrivialAllocator::slice_and_allocate_sc(
     const Allocation& empty_alloc, const PHV::SuperCluster* sc, PhvStatus phv_status,
     const ContainerGroupsBySize& container_groups, bool minimal_packing_slicing,
     const int max_slicings, std::ostream* history) const {
     const auto base = AllocatorBase(kit_i);
-    auto slicing_ctx = kit_i.make_slicing_ctx(sc);
-    // use @p minimal_packing_slicing mode with strict action packing checking mode.
-    slicing_ctx->set_config(Slicing::IteratorConfig{minimal_packing_slicing, false, true});
     auto* search_config = new SearchConfig();
     search_config->n_dfs_steps_sc_alloc = 256;
     search_config->n_best_of_sc_alloc = 1;  // trivial alloc stops at the first ok solution.
     search_config->stop_first_succ_empty_normal_container = true;
-
-    // setup allocator context.
     auto ctx = PHV::v2::ScoreContext()
                    .with_score(new MinPackTxScoreMaker())
                    .with_search_config(search_config)
@@ -194,6 +240,10 @@ const TrivialAllocator::PartialAllocResult* TrivialAllocator::slice_and_allocate
     AllocError* last_err = new AllocError(ErrorCode::NO_SLICING_FOUND);
     *last_err << "Found unsatisfiable constraints during slicing";
     PartialAllocResult* rst = nullptr;
+    auto slicing_ctx = kit_i.make_slicing_ctx(sc);
+    // use @p minimal_packing_slicing mode with strict action packing checking mode.
+    slicing_ctx->set_config(
+        Slicing::IteratorConfig{minimal_packing_slicing, false, true, (1 << 25), (1 << 16)});
     slicing_ctx->iterate([&](std::list<PHV::SuperCluster*> sliced) {
         n_tried++;
         if (LOGGING(3)) {
@@ -286,10 +336,14 @@ bool TrivialAllocator::allocate(const std::list<PHV::SuperCluster*>& clusters) {
             }
         }
         if (pre_sliced.invalid) {
-            auto rst = slice_and_allocate_sc(empty_alloc, pre_sliced.invalid, phv_status,
-                                             container_groups, true, 1, nullptr);
-            BUG_CHECK(!rst->ok(), "invalid supercluster can be allocated?");
-            const cstring err_log = make_error_msg(unsliced_sc, rst->err);
+            auto err = diagnose_invalid_cluster(empty_alloc, pre_sliced.invalid, container_groups);
+            BUG_CHECK(
+                err,
+                "Compiler failed to find PHV allocation for the following cluster, but the "
+                "diagnose process has proved that it actually can be allocated. This is a rare but "
+                "possible case because diagnose algorithm searches differently. Cluster: %1%",
+                pre_sliced.invalid);
+            const cstring err_log = make_error_msg(unsliced_sc, err);
             history << err_log;
             ::error(err_log);
             ok = false;

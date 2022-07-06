@@ -1094,14 +1094,26 @@ void DfsItrContext::iterate(const IterateCb& cb) {
     // An example is that when there are multiple bit<128> fields being searched for different
     // slicing between two critical choices, and the slicing of bit<128> fields does not matter.
     // TODO(yumin): There should be a algorithmic way to prune those cases.
-    if (n_steps_since_last_solution > n_step_limit_per_solution) {
+    if (n_steps_since_last_solution > config_i.max_search_steps_per_solution) {
         LOG1("failed to find one valid solution within step limit. "
             "Retry with pre-splitting large fieldslice");
+        bool is_any_long_field_split = false;
         after_pre_split = presplit_by(
-            to_be_split_i, [&](SuperCluster* sc) { return split_by_long_fieldslices(sc); },
+            to_be_split_i,
+            [&](SuperCluster* sc) {
+                auto splitted = split_by_long_fieldslices(sc);
+                is_any_long_field_split = splitted && splitted->size() > 1;
+                return splitted;
+            },
             "split_by_long_fieldslices");
         if (!after_pre_split) {
             LOG1("split by split_by_long_fieldslices fields failed, iteration stopped.");
+            return;
+        }
+        if (!is_any_long_field_split) {
+            LOG1(
+                "no optimization applied while we cannot find a solution in limited steps, "
+                "iteration stopped.");
             return;
         }
         to_be_split_i = *after_pre_split;
@@ -1694,7 +1706,7 @@ bool DfsItrContext::dfs_prune(const ordered_set<SuperCluster*>& unchecked) {
         }
 
         // prune invalid packing
-        if (dfs_prune_invalid_packing(sc)) {
+        if (!config_i.disable_action_packing_check && dfs_prune_invalid_packing(sc)) {
             return true;
         }
     }
@@ -1722,7 +1734,7 @@ std::vector<SuperCluster*> DfsItrContext::get_well_formed_no_more_split() const 
 bool DfsItrContext::dfs(const IterateCb& yield, const ordered_set<SuperCluster*>& unchecked) {
     // prune when we reached the limit of steps.
     n_steps_i++;
-    if (n_steps_i > n_step_limit_i) {
+    if (n_steps_i > config_i.max_search_steps) {
         return false;
     }
 
@@ -1731,7 +1743,7 @@ bool DfsItrContext::dfs(const IterateCb& yield, const ordered_set<SuperCluster*>
     // our prune strategy cannot detect and it takes too long time to backtrack to
     // overwrite wrong decisions.
     n_steps_since_last_solution++;
-    if (n_steps_since_last_solution > n_step_limit_per_solution) {
+    if (n_steps_since_last_solution > config_i.max_search_steps_per_solution) {
         return false;
     }
 
@@ -1785,9 +1797,13 @@ bool DfsItrContext::dfs(const IterateCb& yield, const ordered_set<SuperCluster*>
     // then recursion.
     auto choices = make_choices(*target);
     if (LOGGING(5)) {
+        std::stringstream ss;
+        ss << "{ ";
         for (const auto& c : choices) {
-            LOG5("dfs_depth-" << dfs_depth_i << ": possible choice " << int(c));
+            ss << int(c) << " ";
         }
+        ss << "}";
+        LOG5("dfs_depth-" << dfs_depth_i << ": possible choices: " << ss.str());
     }
     for (const auto& choice : choices) {
         // create metadata for making a split.

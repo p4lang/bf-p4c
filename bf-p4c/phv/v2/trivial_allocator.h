@@ -56,6 +56,12 @@ class TrivialAllocator {
     /// and phv_status will be updated.
     void bind_alloc_slices(const std::vector<PHV::AllocSlice>& slices);
 
+    /// diagnose_invalid_cluster returns an AllocError that contains detailed error message of
+    /// why we cannot allocate @p sc.
+    const AllocError* diagnose_invalid_cluster(const Allocation& empty_alloc,
+                                               const PHV::SuperCluster* sc,
+                                               const ContainerGroupsBySize& container_groups) const;
+
     /// @returns user-friendly error msg.
     cstring make_error_msg(const SuperCluster* sc, const AllocError* err) const;
 

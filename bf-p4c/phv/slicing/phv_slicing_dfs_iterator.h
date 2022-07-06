@@ -113,13 +113,9 @@ class DfsItrContext : public IteratorInterface {
 
     // a step counter records how many steps the search has tried.
     int n_steps_i = 0;
-    // maximum search steps.
-    const int n_step_limit_i;
 
     // last solution was found at n_steps_since_last_solution before.
     int n_steps_since_last_solution = 0;
-    // max steps per one valid solution.
-    const int n_step_limit_per_solution;
 
     // if not nullptr, backtrack to the stack that to_invalidate is not on stack,
     // i.e. not a part of the DFS path.
@@ -145,18 +141,14 @@ class DfsItrContext : public IteratorInterface {
     DfsItrContext(const PhvInfo& phv, const SuperCluster* sc, const PHVContainerSizeLayout& pa,
                   const PackingValidator& packing_validator,
                   const PackConflictChecker& pack_conflict,
-                  const IsReferencedChecker is_used,
-                  int max_search_steps = (1 << 25),
-                  int max_search_steps_per_solution = (1 << 19))
+                  const IsReferencedChecker is_used)
         : phv_i(phv),
           sc_i(sc),
           pa_i(pa),
           packing_validator_i(packing_validator),
           has_pack_conflict_i(pack_conflict),
           is_used_i(is_used),
-          config_i(false, false, true),
-          n_step_limit_i(max_search_steps),
-          n_step_limit_per_solution(max_search_steps_per_solution) {}
+          config_i(false, false, true, (1 << 25), (1 << 19)) {}
 
     /// iterate will pass valid slicing results to cb. Stop when cb returns false.
     void iterate(const IterateCb& cb) override;

@@ -169,7 +169,12 @@ struct SliceListGroupProp {
     int floating_range(const SuperCluster::SliceList* sl) const {
         BUG_CHECK(container(sl), "container size not decided: %1%", sl);
         BUG_CHECK(sl_bits.count(sl), "unknown slice list: %1%", sl);
-        return sl_cont_size.at(sl) - sl_bits.at(sl);
+        const auto& front = sl->front();
+        if (front.field()->deparsed_bottom_bits() && front.range().lo == 0) {
+            return 0;
+        } else {
+            return sl_cont_size.at(sl) - sl_bits.at(sl);
+        }
     }
 
     /// returns a fieldslice which contains the @p fs.

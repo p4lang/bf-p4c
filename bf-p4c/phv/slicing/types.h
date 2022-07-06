@@ -37,6 +37,7 @@ struct IteratorConfig {
     /// packing of fieldslices. Slicing result that has less packing of fieldslices will be
     /// iterated before others.
     bool minimal_packing_mode = false;
+
     /// loose_action_packing_check mode allows iterator to return super clusters that, without
     /// further slicing, action might not be synthesizable because:
     /// (1) unwritten bytes in destination container might be corrupted.
@@ -48,11 +49,28 @@ struct IteratorConfig {
     /// invalid packing info from packing validator.
     bool smart_backtracking_mode = false;
 
+    /// the total number of steps that the search can take.
+    int max_search_steps = (1 << 25);
+
+    /// the maximum number of steps that the search can take for finding one valid solution.
+    /// Once this number is reached, iterator may stop or try apply some optimization then
+    /// search again.
+    /// Currently, search (1 << 16) times will take ~50 seconds on Intel(R) Core(TM) i7-8665U.
+    /// For p4 program with more complicated actions, the duration will be longer.
+    int max_search_steps_per_solution = (1 << 16);
+
+    /// Disable packing checks during slicing. This should only be used for diagnose, so
+    /// it is default to false and not shown in any constructor.
+    bool disable_action_packing_check = false;
+
     IteratorConfig(bool minimal_packing_mode, bool loose_action_packing_check_mode,
-                   bool smart_backtracking_mode)
+                   bool smart_backtracking_mode, int max_search_steps,
+                   int max_search_steps_per_solution)
         : minimal_packing_mode(minimal_packing_mode),
           loose_action_packing_check_mode(loose_action_packing_check_mode),
-          smart_backtracking_mode(smart_backtracking_mode) {}
+          smart_backtracking_mode(smart_backtracking_mode),
+          max_search_steps(max_search_steps),
+          max_search_steps_per_solution(max_search_steps_per_solution) {}
 };
 
 /// The interface that the iterator must satisfy.

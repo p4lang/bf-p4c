@@ -609,7 +609,7 @@ std::vector<PHV::AllocSlice> make_alloc_slices_with_physical_liverange(
     return rst;
 }
 
-const auto slicing_config = PHV::Slicing::IteratorConfig{false, true, false};
+const auto slicing_config = PHV::Slicing::IteratorConfig{false, true, false, (1 << 25), (1 << 19)};
 
 // Create callback for creating FileLog objects
 // Those can locally redirect LOG* macros to another file which

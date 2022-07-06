@@ -67,6 +67,14 @@ int left_rotate_offset(const Assign& assign, int container_sz) {
     return n_left_shift_bits;
 }
 
+int right_rotate(int dest_idx, int n_bits, int container_sz) {
+    int src_idx = dest_idx - n_bits;
+    if (src_idx < 0) {
+        src_idx += container_sz;  // wrap-around case
+    }
+    return src_idx;
+}
+
 bitvec byte_rotate_merge_src1_mask(const std::vector<Assign>& assigns) {
     bitvec mask;
     for (const auto& v : assigns) {
@@ -237,6 +245,8 @@ void ActionSolverBase::add_src_unallocated_assign(const ContainerID& c, const le
 
 void ActionSolverBase::set_container_spec(ContainerID id, int size, bitvec live) {
     BUG_CHECK(size <= 32, "container larger than 32-bit is not supported");
+    BUG_CHECK(!id.startsWith("$"),
+              "invalid ContainerID: %1%, starting with $ is reserved for internal names.", id);
     specs_i[id] = ContainerSpec{size, live};
     if (!src_unallocated_bits.count(id)) {
         src_unallocated_bits[id] = bitvec();
@@ -596,7 +606,46 @@ Result ActionMoveSolver::try_bitmasked_set(
     }
 }
 
-Result ActionMoveSolver::solve() const {
+const RotateClassifiedAssigns* ActionMoveSolver::apply_unallocated_src_optimization(
+        const ContainerID dest,
+        const RotateClassifiedAssigns& offset_assigns) {
+    // optimization requirement: must have unallocated phv source and ad_or_const source.
+    if (src_unallocated_bits.at(dest).empty() || !offset_assigns.count(0)) {
+        return &offset_assigns;
+    }
+    const SourceClassifiedAssigns aligned_assigns = classify_by_sources(offset_assigns.at(0));
+    if (aligned_assigns.ad_or_const.empty()) {
+        return &offset_assigns;
+    }
+    // decide offset and container.
+    int offset = 0;
+    boost::optional<ContainerID> c = boost::none;
+    if (!aligned_assigns.containers.empty()) {
+        offset = 0;
+        c = aligned_assigns.containers.begin()->first;
+    } else if (offset_assigns.size() > 1) {
+        const auto next = std::next(offset_assigns.begin());
+        offset = next->first;
+        c = next->second.front().src.container;
+    }
+    const int dest_sz = specs_i.at(dest).size;
+    if (!c.is_initialized()) {
+        c = ContainerID("$unallocated");
+        specs_i[*c] = ContainerSpec{dest_sz, bitvec()};
+    }
+    auto* rst = new RotateClassifiedAssigns(offset_assigns);
+    for (const int idx : src_unallocated_bits.at(dest)) {
+        const auto dst_bit = make_container_operand(dest, StartLen(idx, 1));
+        const auto src_bit =
+            make_container_operand(*c, StartLen(right_rotate(idx, offset, dest_sz), 1));
+        (*rst)[offset].push_back({dst_bit, src_bit});
+    }
+    src_unallocated_bits.at(dest).clear();
+    LOG3("unallocated_src_optimization applied on " << dest);
+    return rst;
+}
+
+Result ActionMoveSolver::solve() {
     if (auto err = validate_input()) {
         return Result(*err);
     }
@@ -605,7 +654,7 @@ Result ActionMoveSolver::solve() const {
         ErrorCode code = ErrorCode::unsat;
         std::stringstream ss;
         ContainerID dest = kv.first;
-        const auto& offset_assigns = kv.second;
+        const auto& offset_assigns = *apply_unallocated_src_optimization(dest, kv.second);
         if (offset_assigns.empty()) {
             continue;
         }
@@ -648,7 +697,7 @@ Result ActionMoveSolver::solve() const {
 }
 
 /// solve checks that either
-Result ActionMochaSolver::solve() const {
+Result ActionMochaSolver::solve() {
     if (auto err = check_whole_container_set_with_none_source_allocated()) {
         return Result(*err);
     }
@@ -669,7 +718,7 @@ Result ActionMochaSolver::solve() const {
 /// Also, we need to ensure that other allocated bits in the container will not be corrupted,
 /// and since set instruction on mocha/dark are whole-container-set, all other bits that
 /// are not set in this action need to be not live.
-Result ActionDarkSolver::solve() const {
+Result ActionDarkSolver::solve() {
     if (auto err = check_whole_container_set_with_none_source_allocated()) {
         return Result(*err);
     }

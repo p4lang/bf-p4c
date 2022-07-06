@@ -4280,30 +4280,35 @@ CanPackErrorV2 ActionPhvConstraints::check_move_constraints(
 
     // add assignment to dest in the action.
     const auto add_action_assign = [&](const IR::MAU::Action* action,
-                                       const PHV::AllocSlice& slice,
+                                       const PHV::AllocSlice& dest_slice,
                                        const Operand& dest,
                                        const int stage) {
         // ignore slices that are not live for this action.
         // earliest is always a write, if write after this stage, ignore
         // latest is always a read, if read at or before this stage, ignore
-        if (!slice.isLiveAt(stage, PHV::FieldUse(PHV::FieldUse::WRITE))) {
+        if (!dest_slice.isLiveAt(stage, PHV::FieldUse(PHV::FieldUse::WRITE))) {
             return;
         }
-        const auto sources = constraint_tracker.sources(slice, action);
+        const auto sources = constraint_tracker.sources(dest_slice, action);
         if (sources.empty()) {
             return;
         }
         BUG_CHECK(sources.size() == 1,
-            "slice %1% is not fine-sliced. Multiple sources found for one fieldslice: %2%\n%3%",
-             slice.toString(), sources.size(), sources);
+            "dest_slice %1% is not fine-sliced. Multiple sources found: %2%\n%3%",
+             dest_slice.toString(), sources.size(), sources);
         const auto& operand = sources.front();
         LOG5("has op: " << operand);
         if (operand.ad || operand.constant) {
             LOG5("add ad_or_const move to " << dest);
             solver->add_assign(dest, make_ad_or_const_operand());
         } else {
-            const auto src_phv = getSourcePHVSlice(alloc, slices, slice, action, stage);
+            const auto src_phv = getSourcePHVSlice(alloc, slices, dest_slice, action, stage);
             if (!src_phv) {
+                // TODO(yumin): do not add unallocated assignment if src_phv can be
+                // overlaid with dest because of disjoint live range.
+                // We will need to add physical live range as a dep of action constraints,
+                // and potentially the function that checks overlay.
+                // Without ^, we might prune some vary rare but possible case.
                 solver->add_src_unallocated_assign(dest.container, dest.range);
                 return;
             }

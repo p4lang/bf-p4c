@@ -323,6 +323,73 @@ TEST(action_constraint_solver, bitmasked_set_only_but_disabled) {
     EXPECT_FALSE(rst.ok());
 }
 
+TEST(action_constraint_solver, unallocated_src_optimization_deposit_field_1) {
+    // w[0:8] = an unallocated src
+    // w[9:15] = 0
+    // w[16:31] are still alive.
+    // This should be impossible already even if the source has not
+    // been allocated.
+    auto solver = ActionMoveSolver();
+    solver.set_container_spec("W0", 32, bitvec(0, 32));
+    solver.add_src_unallocated_assign("W0", FromTo(0, 8));
+    solver.add_assign(make_container_operand("W0", FromTo(9, 15)),
+                      make_ad_or_const_operand());
+    auto rst = solver.solve();
+    EXPECT_FALSE(rst.ok());
+}
+
+TEST(action_constraint_solver, unallocated_src_optimization_deposit_field_2) {
+    // w[0:3] = an unallocated src
+    // w[7:8] = another unallocated src
+    // w[9:15] = 0
+    // w[16:31] are still alive.
+    // This should be impossible already even if the source has not
+    // been allocated.
+    auto solver = ActionMoveSolver();
+    solver.set_container_spec("W0", 32, bitvec(0, 32));
+    solver.add_src_unallocated_assign("W0", FromTo(0, 3));
+    solver.add_src_unallocated_assign("W0", FromTo(7, 8));
+    solver.add_assign(make_container_operand("W0", FromTo(9, 15)),
+                      make_ad_or_const_operand());
+    auto rst = solver.solve();
+    EXPECT_FALSE(rst.ok());
+}
+
+TEST(action_constraint_solver, unallocated_src_optimization_byte_rotate_merge_ok1) {
+    // w[0:7] = ad_or_const
+    // w[8:15] = unallocated
+    // w[16:23] = ad_or_const
+    // w[24:31] = unallocated
+    auto solver = ActionMoveSolver();
+    solver.set_container_spec("W0", 32, bitvec(0, 32));
+    solver.add_src_unallocated_assign("W0", FromTo(8, 15));
+    solver.add_src_unallocated_assign("W0", FromTo(24, 31));
+    solver.add_assign(make_container_operand("W0", FromTo(0, 7)),
+                      make_ad_or_const_operand());
+    solver.add_assign(make_container_operand("W0", FromTo(16, 23)),
+                      make_ad_or_const_operand());
+    auto rst = solver.solve();
+    EXPECT_TRUE(rst.ok());
+}
+
+TEST(action_constraint_solver, unallocated_src_optimization_byte_rotate_merge_ok2) {
+    // w[0:7] = ad_or_const
+    // w[8:15] = w1[24:31]
+    // w[16:23] = ad_or_const
+    // w[24:31] = unallocated
+    auto solver = ActionMoveSolver();
+    solver.set_container_spec("W0", 32, bitvec(0, 32));
+    solver.set_container_spec("W1", 32, bitvec(0, 32));
+    solver.add_assign(make_container_operand("W0", FromTo(8, 15)),
+                      make_container_operand("W1", FromTo(24, 31)));
+    solver.add_src_unallocated_assign("W0", FromTo(24, 31));
+    solver.add_assign(make_container_operand("W0", FromTo(0, 7)),
+                      make_ad_or_const_operand());
+    solver.add_assign(make_container_operand("W0", FromTo(16, 23)),
+                      make_ad_or_const_operand());
+    auto rst = solver.solve();
+    EXPECT_TRUE(rst.ok());
+}
 
 TEST(action_constraint_solver, mocha_solver) {
     auto solver = ActionMochaSolver();
