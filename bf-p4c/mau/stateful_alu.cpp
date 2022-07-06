@@ -1861,6 +1861,25 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
             salu->chain_vpn = chain != nullptr;
             first = salu_action;
         }
+        // Validate that each operand are not larger than the stateful ALU can support based on
+        // the register size selected.
+        for (const IR::MAU::Primitive *act_prim : salu_action->action) {
+            // Min and Max instruction can operate on 128 bit input even if the stateful ALU
+            // operate in 8 or 16 bit mode. Just ignore this corner case for now in this
+            // preemptive error reporting.
+            if (act_prim->name.startsWith("min") || act_prim->name.startsWith("max"))
+                break;
+            for (const IR::Expression *op : act_prim->operands) {
+                int salu_size = bits->size;
+                if (salu_size < 8)
+                    salu_size = 8;
+                if (op->type->width_bits() > salu_size)
+                    error("%sBecause you declared the register %s to store the type %s, the SALU "
+                          "for the associated RegisterAction()s is configured in %d-bit mode. As a "
+                          "result, it can only access header/metadata fields of the type bit<%d>",
+                          op->srcInfo, salu->reg, regtype, salu_size, salu_size);
+            }
+        }
     }
 
     lmatch_usage.clear();

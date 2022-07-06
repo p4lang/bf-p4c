@@ -138,3 +138,8 @@ p4c_add_xfail_reason("tofino"
   "error: Unable to slice the following group of fields due to unsatisfiable constraints: .*|NO_SLICING_FOUND"
   extensions/p4_tests/p4_16/errors/p4c-4346.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "error: Because you declared the register SwitchIngress.time_feats.pull_flow to store the type bit<8>.*"
+  extensions/p4_tests/p4_16/compile_only/p4c-4612.p4
+)

@@ -1439,7 +1439,7 @@ bool AdjustStatefulInstructions::verify_on_search_bus(const IR::MAU::StatefulAlu
     int phv_width = salu->source_width();
     if (salu_bytes.popcount() > (phv_width / 8)) {
         ::error("The input %s to stateful alu %s is allocated to more input xbar bytes than the "
-                "width than the ALU and cannot be resolved.", field->name, salu->name);
+                "width of the ALU and cannot be resolved.", field->name, salu->name);
         return false;
     }
 
