@@ -123,7 +123,8 @@ TrivialAllocator::PreSlicingResult TrivialAllocator::pre_slice(const Allocation&
     int n_pre_slicing_tried = 0;
     auto pre_slicing_ctx = kit_i.make_slicing_ctx(sc);
     // max-packing mode with loose action constraints checks.
-    pre_slicing_ctx->set_config(Slicing::IteratorConfig{false, true, true, (1 << 25), (1 << 16)});
+    pre_slicing_ctx->set_config(
+        Slicing::IteratorConfig{false, true, true, true, (1 << 25), (1 << 16)});
     pre_slicing_ctx->iterate([&](std::list<SuperCluster*> sliced) {
         n_pre_slicing_tried++;
         LOG3("Pre-slicing-attempt-" << n_pre_slicing_tried);
@@ -191,7 +192,7 @@ const AllocError* TrivialAllocator::diagnose_invalid_cluster(
     // Use minimal_packing_slicing mode disable action-related packing checks.
     // This allows conflicting action constraints to be caught during PHV allocation
     // so that detailed error logs (trace) can be printed to user.
-    auto slicing_cfg = Slicing::IteratorConfig{true, true, false, (1 << 25), (1 << 16)};
+    auto slicing_cfg = Slicing::IteratorConfig{true, true, false, true, (1 << 25), (1 << 16)};
     slicing_cfg.disable_action_packing_check = true;
     auto slicing_ctx = kit_i.make_slicing_ctx(sc);
     slicing_ctx->set_config(slicing_cfg);
@@ -243,7 +244,7 @@ const TrivialAllocator::PartialAllocResult* TrivialAllocator::slice_and_allocate
     auto slicing_ctx = kit_i.make_slicing_ctx(sc);
     // use @p minimal_packing_slicing mode with strict action packing checking mode.
     slicing_ctx->set_config(
-        Slicing::IteratorConfig{minimal_packing_slicing, false, true, (1 << 25), (1 << 16)});
+        Slicing::IteratorConfig{minimal_packing_slicing, false, true, true, (1 << 25), (1 << 16)});
     slicing_ctx->iterate([&](std::list<PHV::SuperCluster*> sliced) {
         n_tried++;
         if (LOGGING(3)) {

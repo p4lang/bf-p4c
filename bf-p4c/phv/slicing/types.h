@@ -47,7 +47,16 @@ struct IteratorConfig {
 
     /// smartly backtrack to the frame that made the invalid packing decision, by leveraging the
     /// invalid packing info from packing validator.
+    /// TODO(yumin): prefer to enable but still alt-phv-alloc only because of regression.
     bool smart_backtracking_mode = false;
+
+    /// Misc improvements that are almost *necessary* for slicing but cannot be enabled
+    /// because of regression on other part of compiler on master.
+    /// (1) when choosing the next slice list, prefer the one what the size of its head
+    ///     byte has been decided, for exact containers only.
+    /// (2) split out the tail if the size of the tail byte have been decided, recursively.
+    /// TODO(yumin): prefer to enable but still alt-phv-alloc only because of regression.
+    bool smart_slicing = true;
 
     /// the total number of steps that the search can take.
     int max_search_steps = (1 << 25);
@@ -64,11 +73,12 @@ struct IteratorConfig {
     bool disable_action_packing_check = false;
 
     IteratorConfig(bool minimal_packing_mode, bool loose_action_packing_check_mode,
-                   bool smart_backtracking_mode, int max_search_steps,
+                   bool smart_backtracking_mode, bool smart_slicing, int max_search_steps,
                    int max_search_steps_per_solution)
         : minimal_packing_mode(minimal_packing_mode),
           loose_action_packing_check_mode(loose_action_packing_check_mode),
           smart_backtracking_mode(smart_backtracking_mode),
+          smart_slicing(smart_slicing),
           max_search_steps(max_search_steps),
           max_search_steps_per_solution(max_search_steps_per_solution) {}
 };

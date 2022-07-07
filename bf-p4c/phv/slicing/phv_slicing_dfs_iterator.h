@@ -148,7 +148,7 @@ class DfsItrContext : public IteratorInterface {
           packing_validator_i(packing_validator),
           has_pack_conflict_i(pack_conflict),
           is_used_i(is_used),
-          config_i(false, false, true, (1 << 25), (1 << 19)) {}
+          config_i(false, false, true, true, (1 << 25), (1 << 19)) {}
 
     /// iterate will pass valid slicing results to cb. Stop when cb returns false.
     void iterate(const IterateCb& cb) override;
@@ -281,11 +281,19 @@ class DfsItrContext : public IteratorInterface {
     void propagate_8bit_exact_container_split(SuperCluster* sc, SuperCluster::SliceList* target,
                                               SplitSchema* schema, SplitDecision* decisions) const;
 
+    /// If we found that any field slice in the last byte of a slice list has a decided size,
+    /// then we can split the *tail* out so that the packing is materialized as early as possible.
+    bool propagate_tail_split(SuperCluster* sc,
+                              const ordered_map<FieldSlice, AfterSplitConstraint>& constraints,
+                              const SplitDecision* decisions,
+                              const SuperCluster::SliceList* just_split_target,
+                              const int n_just_split_bits,
+                              SplitSchema* schema) const;
+
     /// make_split_meta will generate schema and decision to split out first @p first_n_bits
-    /// of @p sl under @p sc.
-    std::pair<SplitSchema, SplitDecision> make_split_meta(SuperCluster* sc,
-                                                          SuperCluster::SliceList* sl,
-                                                          int first_n_bits) const;
+    /// of @p sl under @p sc.When a conflicting split decision is found, @returns boost::none.
+    boost::optional<std::pair<SplitSchema, SplitDecision>> make_split_meta(
+        SuperCluster* sc, SuperCluster::SliceList* sl, int first_n_bits) const;
 
     /// return true if the slicelist needs to be further split.
     bool need_further_split(const SuperCluster::SliceList* sl) const;

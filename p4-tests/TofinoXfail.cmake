@@ -202,7 +202,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "error.*tofino supports up to 12 stages|table allocation (alt-phv-alloc enabled) failed"
+  "error.*tofino supports up to 12 stages|error.*table allocation.*failed"
   extensions/p4_tests/p4_16/compile_only/p4c-3417.p4
 )
 
@@ -801,7 +801,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "error.*This program violates action constraints imposed by Tofino.|NO_SLICING_FOUND"
+  "error.*This program violates action constraints imposed by Tofino.|ACTION_CANNOT_BE_SYNTHESIZED"
   # Negative tests for violation of action constraints.
   extensions/p4_tests/p4_16/customer/kaloom/p4c-1299.p4
 )
