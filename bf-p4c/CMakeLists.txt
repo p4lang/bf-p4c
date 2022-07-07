@@ -11,11 +11,6 @@ set(BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE "5" CACHE STRING
 
 # add_cxx_compiler_option ("-Werror")
 
-set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl")
-if(ENABLE_STATIC_LIBS)
-  set (OPENSSL_USE_STATIC_LIBS TRUE)
-endif()
-find_package (OpenSSL REQUIRED)
 find_package (Boost REQUIRED COMPONENTS graph)
 add_definitions("-DBOOST_NO_ARGUMENT_DEPENDENT_LOOKUP")
 if (ENABLE_JBAY)
@@ -97,12 +92,12 @@ add_definitions("-DRESOURCES_SCHEMA_VERSION=\"${RESOURCES_SCHEMA_VERSION}\"")
 
 include_directories(${BFN_P4C_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}
-  ${Boost_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR} ${LIBDYNHASH_INCLUDE_DIR} ${Z3_INCLUDE_DIR} )
+  ${Boost_INCLUDE_DIRS} ${LIBDYNHASH_INCLUDE_DIR} ${Z3_INCLUDE_DIR} )
 # The generated code for protobuf has an excessive number of warnings so we
 # include the build directory as a system directory
 include_directories(SYSTEM ${P4C_BINARY_DIR}/control-plane)
 set (HAVE_LIBBOOST_GRAPH 1)
-set (P4C_LIB_DEPS "${P4C_LIB_DEPS};${Boost_GRAPH_LIBRARY};${OPENSSL_LIBRARIES};${LIBDYNHASH_LIBRARY};${Z3_LIBRARY}")
+set (P4C_LIB_DEPS "${P4C_LIB_DEPS};${Boost_GRAPH_LIBRARY};${LIBDYNHASH_LIBRARY};${Z3_LIBRARY}")
 set (P4C_LIB_DEPS ${P4C_LIB_DEPS} PARENT_SCOPE)
 
 add_subdirectory(logging)
@@ -1620,7 +1615,7 @@ if (ENABLE_TESTING)
 
   set (GTEST_SOURCES ${GTEST_SOURCES} ${GTEST_BF_P4C_SOURCES} PARENT_SCOPE)
   set (GTEST_LDADD ${GTEST_LDADD}
-      "bf_gtest_support;tofinobackend;${OPENSSL_LIBRARIES};${LIBDYNHASH_LIBRARY};bfn_p4runtime" PARENT_SCOPE)
+      "bf_gtest_support;tofinobackend;${LIBDYNHASH_LIBRARY};bfn_p4runtime" PARENT_SCOPE)
 
   add_test(NAME test_p4c_driver
     COMMAND ${BFN_P4C_SOURCE_DIR}/scripts/test_p4c_driver.py -j 4 --print-on-failure --compiler ${P4C_BINARY_DIR}/bf-p4c

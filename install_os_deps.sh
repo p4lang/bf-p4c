@@ -155,7 +155,7 @@ install_linux_packages() {
                  gcc-c++ git \
                  libcli-devel libedit-devel libevent-devel \
                  gc json-devel Judy-devel \
-                 libpcap-devel openssl-devel \
+                 libpcap-devel \
                  libtool pkg-config \
                  python2 python python-devel python-pip python3 python3-devel python3-pip \
                  rapidjson-devel rpm texinfo unzip"
@@ -430,7 +430,7 @@ install_macos_packages() {
         /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
     fi
 
-    brew_packages="autoconf automake bison bdw-gc boost ccache cmake coreutils doxygen dpkg flex gcc5 git graphviz libtool openssl pkg-config python rapidjson"
+    brew_packages="autoconf automake bison bdw-gc boost ccache cmake coreutils doxygen dpkg flex gcc5 git graphviz libtool pkg-config python rapidjson"
     # libedit-dev libeditline-dev libevent-dev libjudy-dev libjson0 libjson0-dev libmoose-perl libnl-route-3-dev libpcap0.8-dev
     brew install $brew_packages || die "Failed to install brew packages"
     # force to use the newer installed bison
@@ -480,53 +480,6 @@ function install_protobuf() {
         cd grpc
         git checkout tags/v1.3.2
         git submodule update --init --recursive
-        # openssl 1.1.0 has changed the visibility of struct fields so we need to patch the RSA code
-        if ! version_LT `pkg-config --modversion openssl` "1.1.0"; then
-            cat > openssl-1.1.0.patch <<EOF
-diff --git a/src/core/lib/security/credentials/jwt/jwt_verifier.c b/src/core/lib/security/credentials/jwt/jwt_verifier.c
-index 0e2a264371..5c1e6a70f7 100644
---- a/src/core/lib/security/credentials/jwt/jwt_verifier.c
-+++ b/src/core/lib/security/credentials/jwt/jwt_verifier.c
-@@ -493,6 +493,7 @@ static EVP_PKEY *pkey_from_jwk(grpc_exec_ctx *exec_ctx, const grpc_json *json,
-     gpr_log(GPR_ERROR, "Could not create rsa key.");
-     goto end;
-   }
-+#if OPENSSL_VERSION_NUMBER < 0x10100005L
-   for (key_prop = json->child; key_prop != NULL; key_prop = key_prop->next) {
-     if (strcmp(key_prop->key, "n") == 0) {
-       rsa->n =
-@@ -508,6 +509,28 @@ static EVP_PKEY *pkey_from_jwk(grpc_exec_ctx *exec_ctx, const grpc_json *json,
-     gpr_log(GPR_ERROR, "Missing RSA public key field.");
-     goto end;
-   }
-+#else
-+  {
-+    BIGNUM *bn_n = NULL;
-+    BIGNUM *bn_e = NULL;
-+    for (key_prop = json->child; key_prop != NULL; key_prop = key_prop->next) {
-+      if (strcmp(key_prop->key, "n") == 0) {
-+       bn_n =
-+          bignum_from_base64(exec_ctx, validate_string_field(key_prop, "n"));
-+       if (bn_n == NULL) goto end;
-+      } else if (strcmp(key_prop->key, "e") == 0) {
-+       bn_e =
-+          bignum_from_base64(exec_ctx, validate_string_field(key_prop, "e"));
-+       if (bn_e == NULL) goto end;
-+      }
-+    }
-+    RSA_set0_key(rsa, bn_n, bn_e, NULL);
-+    if (bn_e == NULL || bn_n == NULL) {
-+      gpr_log(GPR_ERROR, "Missing RSA public key field.");
-+      goto end;
-+    }
-+  }
-+#endif
-   result = EVP_PKEY_new();
-   EVP_PKEY_set1_RSA(result, rsa); /* uprefs rsa. */
-
-EOF
-            git apply openssl-1.1.0.patch
-        fi
         # gcc-7 gives errors
         make -j $nprocs CFLAGS="-Wno-error --std=c99" && \
         $SUDO make install && \
