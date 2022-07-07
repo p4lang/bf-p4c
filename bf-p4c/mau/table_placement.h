@@ -172,8 +172,8 @@ class TablePlacement : public PassManager {
 
     friend std::ostream &operator<<(std::ostream &out, choice_t choice);
 
-    const Placed *add_starter_pistols(const Placed *done, safe_vector<const Placed *> &trial,
-        const StageUseEstimate &current);
+    const Placed *add_starter_pistols(const Placed *done, const Placed **best,
+                                      const StageUseEstimate &current);
 
     std::multimap<cstring, const Placed *> table_placed;
     std::multimap<cstring, const Placed *>::const_iterator find_placed(cstring name) const;

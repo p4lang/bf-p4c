@@ -1181,6 +1181,7 @@ class DecidePlacement::FinalPlacement {
             }
         }
         active_placed = best_pl;
+        self.recomputePartlyPlaced(active_placed, partly_placed);
     }
 };
 
@@ -2664,15 +2665,14 @@ TablePlacement::Placed *DecidePlacement::try_backfill_table(
  * stage 0.
  */
 const TablePlacement::Placed *TablePlacement::add_starter_pistols(const Placed *done,
-        safe_vector<const Placed *> &trial, const StageUseEstimate &current) {
+                                                                  const Placed **best,
+                                                                  const StageUseEstimate &current) {
     if (Device::currentDevice() != Device::TOFINO)
         return done;
     if (done != nullptr && done->stage > 0)
         return done;
-    for (auto p : trial) {
-        if (p->stage == 0)
-            return done;
-    }
+    if (best != nullptr && *best != nullptr && (*best)->stage == 0)
+        return done;
 
     // Determine if a table has been placed yet within this gress
     std::array<bool, 2> placed_gress = { { false, false } };
@@ -2702,12 +2702,9 @@ const TablePlacement::Placed *TablePlacement::add_starter_pistols(const Placed *
 
     // place_table cannot be called on these tables, as they don't appear in the initial IR.
     // Adding them to the placed linked list is sufficient for them to be placed
-    for (size_t i = 0; i < trial.size(); i++) {
-        trial[i] = trial[i]->diff_prev(last_placed);
-    }
+    if (best != nullptr && *best != nullptr) *best = (*best)->diff_prev(last_placed);
     return last_placed;
 }
-
 
 const TablePlacement::Placed *
 DecidePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *pl) {
@@ -4005,7 +4002,6 @@ DecidePlacement::default_table_placement(const IR::BFN::Pipe *pipe) {
         }
         LOG2("found " << trial.size() << " tables that could be placed: " << trial);
         const Placed *best = 0;
-        placed = self.add_starter_pistols(placed, trial, current);
 
         TablePlacement::choice_t choice = TablePlacement::DEFAULT;
         for (auto t : trial) {
@@ -4086,6 +4082,7 @@ DecidePlacement::default_table_placement(const IR::BFN::Pipe *pipe) {
                 }
             }
         }
+        self.add_starter_pistols(placed, &best, current);
         placed = place_table(work, best);
 
         if (!self.options.disable_table_placement_backfill) {
@@ -4202,8 +4199,7 @@ DecidePlacement::alt_table_placement(const IR::BFN::Pipe *pipe) {
         // Setup starter pistol table if required
         if (is_starter_pistol_table) {
             LOG1("Adding starter pistol : " << ptName);
-            safe_vector<const Placed *> trials;  // empty trials
-            placed = self.add_starter_pistols(placed, trials, current);
+            placed = self.add_starter_pistols(placed, nullptr, current);
             continue;
         }
 
