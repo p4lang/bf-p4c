@@ -231,6 +231,16 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
                         key8[input.lo/8U][d].key8 = input.what->reg.ixbar_id();
                     set_bit(minput.minput_byte_pwr[1],
                             minput_byte_pwr_transpose[input.what->reg.uid]); } }
+            // XCMP key xbar table configuration
+            auto &xcmp_xb_tab = minput.rf.minput_xcmp_xb_tab;
+            if (group.first.index) {  // source from phe32
+                for (auto &input : group.second) {
+                    for (int i = input.lo/32U; i <= input.hi/32U; i++)
+                        xcmp_xb_tab[table->physical_id].key32_used |= 1 << i; }
+            } else {  // source from phe8
+                for (auto &input : group.second) {
+                    for (int i = input.lo/8U; i <= input.hi/8U; i++)
+                        xcmp_xb_tab[table->physical_id].key8_used |= 1 << i; } }
             break; }
         default:
             BUG("invalid InputXbar::Group::Type(%d)", group.first.type);
