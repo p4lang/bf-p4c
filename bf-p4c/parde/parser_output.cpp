@@ -239,11 +239,11 @@ struct ParserAsmSerializer : public ParserInspector {
                 const boost::optional<int> &hdr_id, const boost::optional<cstring> &hdr_name,
                 const PHV::Size size, const std::vector<std::pair<cstring, int>> &offsets) {
             if (hdr_id)
-                out << source << ' ' << *hdr_id;
+                out << indent << "- " << source << ' ' << *hdr_id;
             else if (hdr_name)
-                out << source << ' ' << *hdr_name;
+                out << indent << "- " << source << ' ' << *hdr_name;
             else
-                out << "{}";
+                out << indent << "- {}";
             if (hdr_id || hdr_name) {
                 out << ' ';
                 if (size != PHV::Size::b32)
@@ -263,7 +263,8 @@ struct ParserAsmSerializer : public ParserInspector {
             }
         };
 
-        out << indent << "source: [ ";
+        out << indent << "source:" << std::endl;
+        indent++;
 
         output_extract(
             phv_builder_extract->hdr1_id,
@@ -271,7 +272,7 @@ struct ParserAsmSerializer : public ParserInspector {
             phv_builder_extract->size,
             phv_builder_extract->offsets1);
 
-        out << ", ";
+        out << std::endl;
 
         output_extract(
             phv_builder_extract->hdr2_id,
@@ -279,11 +280,13 @@ struct ParserAsmSerializer : public ParserInspector {
             phv_builder_extract->size,
             phv_builder_extract->offsets2);
 
-        out << " ]" << std::endl;
+        out << std::endl;
 
         indent++;
         for (auto& info : phv_builder_extract->debug.info)
             out << indent << "# " << info << std::endl;
+        indent--;
+
         indent--;
 
         indent--;

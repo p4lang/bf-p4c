@@ -1747,86 +1747,75 @@ parser ingress:
   phv_builder_group 0:
     pov_select: [flags 0, state 5, flags 7, state 0]
     extract 1:
-      source: [
-        {B2: constant 0xab, B3: none, B0: pov_flags 5}
-      ]
+      source:
+        - {B2: constant 0xab, B3: none, B0: pov_flags 5}
     extract 2:
       match: 0x01****23
   phv_builder_group 15:
     pov_select: [flags 1, state 2, state 3, flags 4]
     extract 1:
       match: 0x45**67**
-      source: [
-        {},
-        {B124: pov_state 2, B125: checksum_and_error, B127: ghost 5}
-      ]
+      source:
+        - {}
+        - {B124: pov_state 2, B125: checksum_and_error, B127: ghost 5}
     extract 2:
       match: 0x89****ab
-      source: [
-        {B120: udf0 0, B121: udf1 1, B122: udf2 2, B123: udf3 3},
-        packet8 foo [B125 offset 0x11, B126 offset 0x12]
-      ]
+      source:
+        - {B120: udf0 0, B121: udf1 1, B122: udf2 2, B123: udf3 3}
+        - packet8 foo [B125 offset 0x11, B126 offset 0x12]
   phv_builder_group 16:
     pov_select: [state 1, flags 1, state 2, flags 2]
     extract 1:
       match: 0x123456**
-      source: [
-        {H0(8..15): pov_state 4, H1(0..7): constant 0x56, H0(0..7): udf1 3, H1(8..15): ghost 2},
-        packet16 bar [H3 msb_offset 0x33, H2 msb_offset 0x22 swap]
-      ]
+      source:
+        - {H0(8..15): pov_state 4, H1(0..7): constant 0x56, H0(0..7): udf1 3, H1(8..15): ghost 2}
+        - packet16 bar [H3 msb_offset 0x33, H2 msb_offset 0x22 swap]
   phv_builder_group 24:
     pov_select: [flags 3, state 3, flags 4, state 4]
     extract 1:
       match: 0x**345678
-      source: [
-        packet32 baz W0 msb_offset 0x11,
-        packet32 foobar W1 msb_offset 0x12 reverse
-      ]
+      source:
+        - packet32 baz W0 msb_offset 0x11
+        - packet32 foobar W1 msb_offset 0x12 reverse
     extract 2:
       match: 0x**34**78
-      source: [
-        packet32 foobaz W0 msb_offset 0x13 reverse_16b_words,
-        {W1(0..7): pov_flags 1, W1(8..15): constant 0x78, W1(16..23): udf3 5, W1(24..31): ghost 3}
-      ]
+      source:
+        - packet32 foobaz W0 msb_offset 0x13 reverse_16b_words
+        - {W1(0..7): pov_flags 1, W1(8..15): constant 0x78, W1(16..23): udf3 5, W1(24..31): ghost 3}
 parser egress:
   phv_builder_group 0:
     pov_select: [state 1, flags 2, flags 3, state 4]
     extract 1:
-      source: [
-        {B0: constant 0xcd, B1: none, B2: pov_flags 1}
-      ]
+      source:
+        - {B0: constant 0xcd, B1: none, B2: pov_flags 1}
     extract 2:
       match: 0x******45
   phv_builder_group 15:
     pov_select: [state 0, flags 5, state 6, flags 7]
     extract 1:
       match: 0x**aa**bb
-      source: [
-        {B120: pov_state 3, B121: tm 0x11, B123: bridge 0x13},
-        packet8 efoo [B124 offset 0x24, B127 offset 0x27]
-      ]
+      source:
+        - {B120: pov_state 3, B121: tm 0x11, B123: bridge 0x13}
+        - packet8 efoo [B124 offset 0x24, B127 offset 0x27]
   phv_builder_group 16:
     pov_select: [flags 5, flags 6, flags 7, state 0]
     extract 1:
       match: 0xccdd****
-      source: [
-        {H0(0..7): tm 0x1a, H1(0..7): bridge 0x1b, H1(8..15): constant 0xde, H0(8..15): pov_state 2},
-        packet16 ebar [H2 msb_offset 0xab, H3 msb_offset 0xcd swap]
-      ]
+      source:
+        - {H0(0..7): tm 0x1a, H1(0..7): bridge 0x1b, H1(8..15): constant 0xde, H0(8..15): pov_state 2}
+        - packet16 ebar [H2 msb_offset 0xab, H3 msb_offset 0xcd swap]
   phv_builder_group 24:
     pov_select: [state 7, state 6, state 5, flags 0]
     extract 1:
       match: 0x**abcdef
-      source: [
-        packet32 ebaz W0 msb_offset 0x8a reverse_16b_words,
-        packet32 efoobar W1 msb_offset 0x9b
-      ]
+      source:
+        - packet32 ebaz W0 msb_offset 0x8a reverse_16b_words
+        - packet32 efoobar W1 msb_offset 0x9b
     extract 2:
       match: 0x5a****6b
-      source: [
-        packet32 efoobaz W0 msb_offset 0x2d reverse,
-        {W1(0..7): pov_state 5, W1(8..15): bridge 0x12, W1(16..23): tm 0x15, W1(24..31): constant 0xfa}
-      ]
+      source:
+        - packet32 efoobaz W0 msb_offset 0x2d reverse
+        - {W1(0..7): pov_state 5, W1(8..15): bridge 0x12, W1(16..23): tm 0x15, W1(24..31): constant 0xfa}
 )PARSER_CFG"));
 
         const auto &regs(asm_parser.generateConfig());
@@ -2537,10 +2526,9 @@ parser ingress:
   phv_builder_group 24:
     extract 1:
       match: 0x**345678
-      source: [
-        packet32 baz W0 msb_offset 0x11,
-        packet32 foobar W1 msb_offset 0x12 reverse
-      ]
+      source:
+        - packet32 baz W0 msb_offset 0x11
+        - packet32 foobar W1 msb_offset 0x12 reverse
     pov_select: [flags 3, state 3, flags 4, state 4]
 )PARSER_CFG"));
     }
@@ -2558,7 +2546,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract:
       match: 0x******01
-      source: [{}]
+      source: 
+        - {}
 )PARSER_CFG"));
     }
 
@@ -2573,7 +2562,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1 2:
       match: 0x******01
-      source: [{}]
+      source: 
+        - {}
 )PARSER_CFG"));
     }
 
@@ -2588,7 +2578,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 16:
       match: 0x******01
-      source: [{}]
+      source: 
+        - {}
 )PARSER_CFG"));
     }
 
@@ -2603,10 +2594,12 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{}]
+      source: 
+        - {}
     extract 1:
       match: 0x******02
-      source: [{}]
+      source: 
+        - {}
 )PARSER_CFG"));
     }
 
@@ -2634,7 +2627,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{}]
+      source: 
+        - {}
       foo: 1
 )PARSER_CFG"));
     }
@@ -2650,7 +2644,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: foo
-      source: [{}]
+      source: 
+        - {}
 )PARSER_CFG"));
     }
 
@@ -2707,7 +2702,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x********_******01
-      source: [{}]
+      source: 
+        - {}
 )PARSER_CFG"));
     }
 
@@ -2722,7 +2718,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: packet
+      source: 
+        - packet
 )PARSER_CFG"));
     }
 
@@ -2737,7 +2734,10 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{}, {}, {}]
+      source: 
+        - {}
+        - {}
+        - {}
 )PARSER_CFG"));
     }
 
@@ -2752,7 +2752,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [1]
+      source: 
+        - 1
 )PARSER_CFG"));
     }
 
@@ -2767,7 +2768,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet]
+      source: 
+        - packet
 )PARSER_CFG"));
     }
 }
@@ -2784,7 +2786,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{B0: none, B1: none, B2: none, B3: none, B4: none}]
+      source: 
+        - {B0: none, B1: none, B2: none, B3: none, B4: none}
 )PARSER_CFG"));
     }
 
@@ -2799,7 +2802,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{A1: none}]
+      source: 
+        - {A1: none}
 )PARSER_CFG"));
     }
 
@@ -2814,7 +2818,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{B4: none}]
+      source: 
+        - {B4: none}
 )PARSER_CFG"));
     }
 
@@ -2829,7 +2834,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{H0(1..8): none}]
+      source: 
+        - {H0(1..8): none}
 )PARSER_CFG"));
     }
 
@@ -2844,7 +2850,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{B0: none, B0: constant 1}]
+      source: 
+        - {B0: none, B0: constant 1}
 )PARSER_CFG"));
     }
 
@@ -2859,7 +2866,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{B0: 1}]
+      source: 
+        - {B0: 1}
 )PARSER_CFG"));
     }
 
@@ -2874,7 +2882,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{B0: constant}]
+      source: 
+        - {B0: constant}
 )PARSER_CFG"));
     }
 
@@ -2889,7 +2898,8 @@ parser egress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{B0: checksum_and_error}]
+      source: 
+        - {B0: checksum_and_error}
 )PARSER_CFG"));
     }
 
@@ -2904,7 +2914,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{B0: constant 1 2}]
+      source: 
+        - {B0: constant 1 2}
 )PARSER_CFG"));
     }
 
@@ -2919,7 +2930,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{B0: foo 1}]
+      source: 
+        - {B0: foo 1}
 )PARSER_CFG"));
     }
 
@@ -2934,7 +2946,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{B0: 1 constant}]
+      source: 
+        - {B0: 1 constant}
 )PARSER_CFG"));
     }
 
@@ -2949,7 +2962,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{B0: constant 256}]
+      source: 
+        - {B0: constant 256}
 )PARSER_CFG"));
     }
 
@@ -2964,7 +2978,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{B0: pov_flags 0x8}]
+      source: 
+        - {B0: pov_flags 0x8}
 )PARSER_CFG"));
     }
 
@@ -2979,7 +2994,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{B0: pov_state 0x8}]
+      source: 
+        - {B0: pov_state 0x8}
 )PARSER_CFG"));
     }
 
@@ -2994,7 +3010,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{B0: ghost 0x8}]
+      source: 
+        - {B0: ghost 0x8}
 )PARSER_CFG"));
     }
 
@@ -3009,7 +3026,8 @@ parser egress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{B0: ghost 0x7}]
+      source: 
+        - {B0: ghost 0x7}
 )PARSER_CFG"));
     }
 
@@ -3024,7 +3042,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{B0: udf0 0x8}]
+      source: 
+        - {B0: udf0 0x8}
 )PARSER_CFG"));
     }
 
@@ -3039,7 +3058,8 @@ parser egress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{B0: udf0 0x7}]
+      source: 
+        - {B0: udf0 0x7}
 )PARSER_CFG"));
     }
 
@@ -3054,7 +3074,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{B0: udf1 0x8}]
+      source: 
+        - {B0: udf1 0x8}
 )PARSER_CFG"));
     }
 
@@ -3069,7 +3090,8 @@ parser egress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{B0: udf1 0x7}]
+      source: 
+        - {B0: udf1 0x7}
 )PARSER_CFG"));
     }
 
@@ -3084,7 +3106,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{B0: udf2 0x8}]
+      source: 
+        - {B0: udf2 0x8}
 )PARSER_CFG"));
     }
 
@@ -3099,7 +3122,8 @@ parser egress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{B0: udf2 0x7}]
+      source: 
+        - {B0: udf2 0x7}
 )PARSER_CFG"));
     }
 
@@ -3114,7 +3138,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{B0: udf3 0x8}]
+      source: 
+        - {B0: udf3 0x8}
 )PARSER_CFG"));
     }
 
@@ -3129,7 +3154,8 @@ parser egress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{B0: udf3 0x7}]
+      source: 
+        - {B0: udf3 0x7}
 )PARSER_CFG"));
     }
 
@@ -3144,7 +3170,8 @@ parser egress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{B0: tm 0x20}]
+      source: 
+        - {B0: tm 0x20}
 )PARSER_CFG"));
     }
 
@@ -3159,7 +3186,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{B0: tm 0x1f}]
+      source: 
+        - {B0: tm 0x1f}
 )PARSER_CFG"));
     }
 
@@ -3174,7 +3202,8 @@ parser egress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{B0: bridge 0x40}]
+      source: 
+        - {B0: bridge 0x40}
 )PARSER_CFG"));
     }
 
@@ -3189,7 +3218,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [{B0: bridge 0x3f}]
+      source: 
+        - {B0: bridge 0x3f}
 )PARSER_CFG"));
     }
 }
@@ -3209,7 +3239,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet8 foo]
+      source:
+        - packet8 foo
 )PARSER_CFG"));
     }
 
@@ -3227,7 +3258,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet8 {} [B0 offset 1]]
+      source: 
+        - packet8 {} [B0 offset 1]
 )PARSER_CFG"));
     }
 
@@ -3245,7 +3277,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet8 bar [B0 offset 1]]
+      source:
+        - packet8 bar [B0 offset 1]
 )PARSER_CFG"));
     }
 
@@ -3263,7 +3296,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet8 256 [B0 offset 1]]
+      source:
+        - packet8 256 [B0 offset 1]
 )PARSER_CFG"));
     }
 
@@ -3281,7 +3315,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet8 foo [B0 offset 1]]
+      source: 
+        - packet8 foo [B0 offset 1]
 )PARSER_CFG"));
     }
 
@@ -3299,7 +3334,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet8 foo [B0 offset 1] bar]
+      source:
+        - packet8 foo [B0 offset 1] bar
 )PARSER_CFG"));
     }
 
@@ -3317,7 +3353,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet8 foo B0]
+      source:
+        - packet8 foo B0
 )PARSER_CFG"));
     }
 
@@ -3335,9 +3372,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet8 foo [
-        B0 offset 1, B1 offset 2, B2 offset 3, B3 offset 4, B4 offset 5
-      ]]
+      source:
+        - packet8 foo [ B0 offset 1, B1 offset 2, B2 offset 3, B3 offset 4, B4 offset 5 ]
 )PARSER_CFG"));
     }
 
@@ -3355,7 +3391,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet8 foo [B0]]
+      source:
+        - packet8 foo [B0]
 )PARSER_CFG"));
     }
 
@@ -3373,7 +3410,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet8 foo [B0 offset]]
+      source:
+        - packet8 foo [B0 offset]
 )PARSER_CFG"));
     }
 
@@ -3391,7 +3429,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet8 foo [B4 offset 1]]
+      source:
+        - packet8 foo [B4 offset 1]
 )PARSER_CFG"));
     }
 
@@ -3410,7 +3449,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet8 foo [B0 offset 1, B0 offset 2]]
+      source:
+        - packet8 foo [B0 offset 1, B0 offset 2]
 )PARSER_CFG"));
     }
 
@@ -3428,7 +3468,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet8 foo [B0 offse 1]]
+      source:
+        - packet8 foo [B0 offse 1]
 )PARSER_CFG"));
     }
 
@@ -3446,7 +3487,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet8 foo [B0 offset 256]]
+      source:
+        - packet8 foo [B0 offset 256]
 )PARSER_CFG"));
     }
 }
@@ -3466,7 +3508,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet16 foo [H0 msb_offset 1]]
+      source:
+        - packet16 foo [H0 msb_offset 1]
 )PARSER_CFG"));
     }
 
@@ -3484,7 +3527,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet16 foo [H0 msb_offset 1] bar]
+      source:
+        - packet16 foo [H0 msb_offset 1] bar
 )PARSER_CFG"));
     }
 
@@ -3502,7 +3546,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet16 foo H0]
+      source:
+        - packet16 foo H0
 )PARSER_CFG"));
     }
 
@@ -3520,7 +3565,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet16 foo [H0 msb_offset 1, H1 msb_offset 2, H2 msb_offset3]]
+      source:
+        - packet16 foo [H0 msb_offset 1, H1 msb_offset 2, H2 msb_offset3]
 )PARSER_CFG"));
     }
 
@@ -3538,7 +3584,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet16 foo [H0]]
+      source:
+        - packet16 foo [H0]
 )PARSER_CFG"));
     }
 
@@ -3556,7 +3603,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet16 foo [H0 msb_offset 1 swap bar]]
+      source:
+        - packet16 foo [H0 msb_offset 1 swap bar]
 )PARSER_CFG"));
     }
 
@@ -3574,7 +3622,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet16 foo [H2 msb_offset 1]]
+      source:
+        - packet16 foo [H2 msb_offset 1]
 )PARSER_CFG"));
     }
 
@@ -3593,7 +3642,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet16 foo [H0 msb_offset 1, H0 msb_offset 2]]
+      source:
+        - packet16 foo [H0 msb_offset 1, H0 msb_offset 2]
 )PARSER_CFG"));
     }
 
@@ -3611,7 +3661,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet16 foo [H0(0..7) msb_offset 1]]
+      source:
+        - packet16 foo [H0(0..7) msb_offset 1]
 )PARSER_CFG"));
     }
 
@@ -3629,7 +3680,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet16 foo [H0 offset 1]]
+      source:
+        - packet16 foo [H0 offset 1]
 )PARSER_CFG"));
     }
 
@@ -3647,7 +3699,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet16 foo [H0 msb_offset 256]]
+      source:
+        - packet16 foo [H0 msb_offset 256]
 )PARSER_CFG"));
     }
 
@@ -3665,7 +3718,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet16 foo [H0 msb_offset 1 1]]
+      source:
+        - packet16 foo [H0 msb_offset 1 1]
 )PARSER_CFG"));
     }
 
@@ -3683,7 +3737,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet16 foo [H0 msb_offset 1 swa]]
+      source:
+        - packet16 foo [H0 msb_offset 1 swa]
 )PARSER_CFG"));
     }
 }
@@ -3703,7 +3758,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet32 foo W0 msb_offset 1]
+      source:
+        - packet32 foo W0 msb_offset 1
 )PARSER_CFG"));
     }
 
@@ -3721,7 +3777,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet32 foo W0 msb_offset 1 reverse bar]
+      source:
+        - packet32 foo W0 msb_offset 1 reverse bar
 )PARSER_CFG"));
     }
 
@@ -3739,7 +3796,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet32 foo W1 msb_offset 1]
+      source:
+        - packet32 foo W1 msb_offset 1
 )PARSER_CFG"));
     }
 
@@ -3757,7 +3815,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet32 foo W0(0..15) msb_offset 1]
+      source:
+        - packet32 foo W0(0..15) msb_offset 1
 )PARSER_CFG"));
     }
 
@@ -3775,7 +3834,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet32 foo W0 offset 1]
+      source:
+        - packet32 foo W0 offset 1
 )PARSER_CFG"));
     }
 
@@ -3793,7 +3853,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet32 foo W0 msb_offset 256]
+      source:
+        - packet32 foo W0 msb_offset 256
 )PARSER_CFG"));
     }
 
@@ -3811,7 +3872,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet32 foo W0 msb_offset 1 1]
+      source:
+        - packet32 foo W0 msb_offset 1 1
 )PARSER_CFG"));
     }
 
@@ -3829,7 +3891,8 @@ parser ingress:
     pov_select: [state 1, state 2, state 3, state 4]
     extract 1:
       match: 0x******01
-      source: [packet32 foo W0 msb_offset 1 revers]
+      source:
+        - packet32 foo W0 msb_offset 1 revers
 )PARSER_CFG"));
     }
 }
