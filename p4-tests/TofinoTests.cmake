@@ -1189,6 +1189,11 @@ p4c_add_ptf_test_with_ptfdir (
     "${testExtraArgs} -target tofino -arch tna -bfrt " "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/t2na_static_entry")
 
 p4c_add_ptf_test_with_ptfdir (
+    "tofino" "parse_srv6_fast_ptf" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/parse_srv6_fast_ptf/parse_srv6_fast_ptf.p4"
+    "${testExtraArgs} -target tofino -arch tna -bfrt " "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/parse_srv6_fast_ptf")
+set_tests_properties("tofino/parse_srv6_fast_ptf" PROPERTIES TIMEOUT ${extended_timeout_4times})
+
+p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c_2785_sizeinbits" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2785/p4c_2785_sizeinbits.p4"
     "${testExtraArgs} -target tofino -arch tna -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2785/p4c_2785_sizeinbits.ptf")
 p4c_add_ptf_test_with_ptfdir (
