@@ -2035,3 +2035,9 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-hash-09.p4
   testdata/p4_16_samples/psa-hash-10.p4
 )
+
+# p4c update 2022-07-04
+p4c_add_xfail_reason("tofino"
+  "Unsupported architecture \"v1model\" for parser minimum depth enforcement"
+  testdata/p4_16_samples/issue3394.p4
+)
