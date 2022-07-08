@@ -22,7 +22,10 @@ class IXBar : public ::IXBar {
     static constexpr int XME_UNITS = 16;          /* 8 LAMB + 8 STM */
     static constexpr int LAMB_XME_UNITS = 0xff;   /* first 8 units */
     static constexpr int STM_XME_UNITS = 0xff00;  /* second 8 units */
-    static constexpr int XMU_UNITS = 8;           /* the number of different hash inputs */
+    static constexpr int EXACT_HASH_TABLES = 8;   /* one per pair of xmes */
+    static constexpr int XMU_UNITS = 8;           /* number xmu outputs really */
+    static constexpr int LAMB_XMU_UNITS = 0xf;    /* first 8 units */
+    static constexpr int STM_XMU_UNITS = 0xf0;    /* second 8 units */
     static constexpr int TERNARY_GROUPS = 20;
     static constexpr int TERNARY_BYTES_PER_GROUP = 5;
     static constexpr int EXACT_HASH_BITS = 45;
@@ -32,6 +35,7 @@ class IXBar : public ::IXBar {
 
     struct Use : public ::IXBar::Use {
         unsigned        xme_units = 0;
+        int             output_unit = -1;
 
         void clear() override {
             ::IXBar::Use::clear();
@@ -87,9 +91,10 @@ class IXBar : public ::IXBar {
 
     BFN::Alloc1D<cstring, XME_UNITS>            xme_use;        // 1:2 mapping between hash
     unsigned                                    xme_inuse = 0;  // and XME units
+    BFN::Alloc1D<cstring, XMU_UNITS>            xmu_output_use;
 
-    BFN::Alloc2D<cstring, XMU_UNITS, EXACT_HASH_BITS>   exact_hash_use;
-    bitvec                                              exact_hash_inuse[XMU_UNITS];
+    BFN::Alloc2D<cstring, EXACT_HASH_TABLES, EXACT_HASH_BITS>   exact_hash_use;
+    bitvec                      exact_hash_inuse[EXACT_HASH_TABLES];
 
     // map from container to tables that use those fields (mostly for dbprint)
     std::map<PHV::Container, std::set<cstring>>        field_users;

@@ -7,6 +7,7 @@
 #include "misc.h"
 #include "stage.h"
 #include "tables.h"
+#include "flatrock/sram_match.h"
 
 Table::Format::Field *SRamMatchTable::lookup_field(const std::string &n,
         const std::string &act) const {
@@ -65,7 +66,7 @@ void SRamMatchTable::no_overhead_determine_result_bus_usage() {
     }
 }
 
-void SRamMatchTable::verify_format() {
+void SRamMatchTable::verify_format(Target::Tofino) {
     if (format->log2size < 7)
         format->log2size = 7;
     format->pass1(this);
@@ -526,10 +527,6 @@ void SRamMatchTable::setup_word_ixbar_group() {
     }
 }
 
-#if HAVE_FLATROCK
-// flatrock-specific template specializations
-#include "flatrock/sram_match.cpp"                              // NOLINT(build/include)
-#endif  /* HAVE_FLATROCK */
 
 template<class REGS>
 void SRamMatchTable::write_attached_merge_regs(REGS &regs, int bus, int word, int word_group) {
@@ -616,7 +613,7 @@ bool SRamMatchTable::parse_way(const value_t &v) {
         for (auto &kv : MapIterChecked(v.map)) {
             if ((kv.key == "group" || kv.key == "xme") && CHECKTYPE(kv.value, tINT)) {
                 if ((way.group_xme = kv.value.i) >= Target::IXBAR_HASH_GROUPS())
-                    error(kv.value.lineno, "%s %s out of range", kv.key.s, kv.value.i);
+                    error(kv.value.lineno, "%s %ld out of range", kv.key.s, kv.value.i);
             } else if (kv.key == "index") {
                 if (!CHECKTYPE2(kv.value, tINT, tRANGE)) continue;
                 if (kv.value.type == tINT) {
@@ -709,7 +706,7 @@ void SRamMatchTable::pass1() {
     LOG1("### SRam match table " << name() << " pass1 " << loc());
     alloc_busses(stage->sram_search_bus_use);
     if (format) {
-        verify_format();
+        SWITCH_FOREACH_TARGET_CLASS(options.target, verify_format(TARGET()); )
         setup_ways();
         determine_word_and_result_bus();
     }

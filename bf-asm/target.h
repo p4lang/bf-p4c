@@ -26,6 +26,9 @@
     M(JBay, ##__VA_ARGS__) \
     M(Cloudbreak, ##__VA_ARGS__) \
     M(Flatrock, ##__VA_ARGS__)
+#define FOR_ALL_TARGET_CLASSES(M, ...) \
+    M(Tofino, ##__VA_ARGS__)   \
+    M(Flatrock, ##__VA_ARGS__)
 #elif HAVE_CLOUDBREAK  /* for now also implies HAVE_JBAY */
 #define FOR_ALL_TARGETS(M, ...) \
     M(Tofino, ##__VA_ARGS__)   \
@@ -39,6 +42,8 @@
     M(Tofino, ##__VA_ARGS__)   \
     M(JBay, ##__VA_ARGS__) \
     M(Cloudbreak, ##__VA_ARGS__)
+#define FOR_ALL_TARGET_CLASSES(M, ...) \
+    M(Tofino, ##__VA_ARGS__)
 #elif HAVE_JBAY
 #define FOR_ALL_TARGETS(M, ...) \
     M(Tofino, ##__VA_ARGS__)   \
@@ -50,12 +55,56 @@
 #define FOR_ALL_REGISTER_SETS(M, ...) \
     M(Tofino, ##__VA_ARGS__)   \
     M(JBay, ##__VA_ARGS__)
+#define FOR_ALL_TARGET_CLASSES(M, ...) \
+    M(Tofino, ##__VA_ARGS__)
 #else
 #define FOR_ALL_TARGETS(M, ...) \
     M(Tofino, ##__VA_ARGS__)
 #define FOR_ALL_REGISTER_SETS(M, ...) \
     M(Tofino, ##__VA_ARGS__)
+#define FOR_ALL_TARGET_CLASSES(M, ...) \
+    M(Tofino, ##__VA_ARGS__)
 #endif  /* !HAVE_FLATROCK && !HAVE_CLOUBREAK && !HAVE_JBAY */
+
+#if HAVE_FLATROCK
+#define TARGETS_IN_CLASS_Flatrock(M, ...) M(Flatrock, ##__VA_ARGS__)
+#define TARGETS_USING_REGS_Flatrock(M, ...) M(Flatrock, ##__VA_ARGS__)
+#endif /* HAVE_FLATROCK */
+
+#if HAVE_CLOUDBREAK  /* for now also implies HAVE_JBAY */
+#define TARGETS_IN_CLASS_Tofino(M, ...) \
+    M(Tofino, ##__VA_ARGS__)   \
+    M(JBay, ##__VA_ARGS__)     \
+    M(Tofino2H, ##__VA_ARGS__) \
+    M(Tofino2M, ##__VA_ARGS__) \
+    M(Tofino2U, ##__VA_ARGS__) \
+    M(Tofino2A0, ##__VA_ARGS__) \
+    M(Cloudbreak, ##__VA_ARGS__)
+#define TARGETS_USING_REGS_Cloudbreak(M, ...) M(Cloudbreak, ##__VA_ARGS__)
+#elif HAVE_JBAY
+#define TARGETS_IN_CLASS_Tofino(M, ...) \
+    M(Tofino, ##__VA_ARGS__)   \
+    M(JBay, ##__VA_ARGS__)     \
+    M(Tofino2H, ##__VA_ARGS__) \
+    M(Tofino2M, ##__VA_ARGS__) \
+    M(Tofino2U, ##__VA_ARGS__) \
+    M(Tofino2A0, ##__VA_ARGS__)
+#else
+#define TARGETS_IN_CLASS_Tofino(M, ...) M(Tofino, ##__VA_ARGS__)
+#endif
+
+#if HAVE_JBAY
+#define TARGETS_USING_REGS_Jbay(M, ...) \
+    M(JBay, ##__VA_ARGS__)     \
+    M(Tofino2H, ##__VA_ARGS__) \
+    M(Tofino2M, ##__VA_ARGS__) \
+    M(Tofino2U, ##__VA_ARGS__) \
+    M(Tofino2A0, ##__VA_ARGS__)
+#endif
+#define TARGETS_USING_REGS_Tofino(M, ...) M(Tofino, ##__VA_ARGS__)
+
+#define TARGETS_IN_CLASS(CL, ...) TARGETS_IN_CLASS_##CL(__VA_ARGS__)
+#define TARGETS_USING_REGS(CL, ...) TARGETS_USING_REGS_##CL(__VA_ARGS__)
 
 #define EXPAND(...)     __VA_ARGS__
 #define INSTANTIATE_TARGET_TEMPLATE(TARGET, FUNC, ...)  template FUNC(Target::TARGET::__VA_ARGS__);
@@ -896,5 +945,18 @@ void emit_parser_registers(const Target::Flatrock::top_level_regs *regs, std::os
             typedef Target::TARGET_  TARGET;                    \
             __VA_ARGS__                                         \
             break; }
+
+#define SWITCH_FOREACH_TARGET_CLASS(VAR, ...)                                   \
+        switch (VAR) {                                                          \
+        FOR_ALL_TARGET_CLASSES(DO_SWITCH_FOREACH_TARGET_CLASS, __VA_ARGS__)     \
+        default: BUG("invalid target"); }
+
+#define DO_SWITCH_FOREACH_TARGET_CLASS(CLASS_, ...)             \
+        TARGETS_IN_CLASS(CLASS_, CASE_FOR_TARGET) {             \
+            typedef Target::CLASS_  TARGET;                     \
+            __VA_ARGS__                                         \
+            break; }
+
+#define CASE_FOR_TARGET(TARGET) case Target::TARGET::tag:
 
 #endif /* BF_ASM_TARGET_H_ */

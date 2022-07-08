@@ -262,7 +262,7 @@ class Table {
                     bits(f.bits), fmt(fmt) {}
 
             /// mark all bits from the field in @param bitset
-            void set_field_bits(bitvec &bitset) {
+            void set_field_bits(bitvec &bitset) const {
                 for (auto &b : bits) bitset.setrange(b.lo, b.size());
             }
         };
@@ -288,6 +288,7 @@ class Table {
         int                     overhead_word = -1;
 
         unsigned groups() const { return fmt.size(); }
+        const ordered_map<std::string, Field> &group(int g) const { return fmt.at(g); }
         Field *field(const std::string &n, int group = 0) {
             BUG_CHECK(group >= 0 && (size_t)group < fmt.size());
             auto it = fmt[group].find(n);
@@ -346,10 +347,10 @@ class Table {
 
          public:
             Arg() = delete;
-            Arg(const Arg &a) : type(a.type) {
+            Arg(const Arg &a) {
                 memcpy(this, &a, sizeof(*this));
                 if (type == Name) str = strdup(str); }
-            Arg(Arg &&a) : type(a.type) {
+            Arg(Arg &&a) {
                 memcpy(this, &a, sizeof(*this));
                 a.type = Const; }
             Arg &operator=(const Arg &a) {
@@ -1098,7 +1099,10 @@ DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam,
  public:
     Format::Field *lookup_field(const std::string &n, const std::string &act = "") const override;
     virtual void setup_word_ixbar_group();
-    virtual void verify_format();
+    virtual void verify_format(Target::Tofino);
+#if HAVE_FLATROCK
+    virtual void verify_format(Target::Flatrock);
+#endif
     virtual bool verify_match_key();
     void verify_match(unsigned fmt_width);
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) const override {
@@ -1177,7 +1181,7 @@ DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
     std::vector<Phv::Ref*>                s0q1_prefs, s1q0_prefs;
     std::map<int, match_element>          s0q1, s1q0;
     table_type_t table_type() const override { return ATCAM; }
-    void verify_format() override;
+    void verify_format(Target::Tofino) override;
     void verify_entry_priority();
     void setup_column_priority();
     void find_tcam_match();

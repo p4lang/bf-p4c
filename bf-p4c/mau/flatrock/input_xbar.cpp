@@ -370,7 +370,13 @@ bool IXBar::exact_find_units(Use &alloc, const LayoutOption *lo) {
     if (units == 1 && (unit = ffs(avail_xme &~ alloc.xme_units) - 1) >= 0) {
         alloc.xme_units |= 1 << unit;
         --units; }
-    return units == 0;
+    if (units != 0) return false;
+    unsigned avail_xmu = lo->layout.is_lamb ? LAMB_XMU_UNITS : STM_XMU_UNITS;
+    for (int unit : bitvec(avail_xmu)) {
+        if (!xmu_output_use[unit]) {
+            alloc.output_unit = unit;
+            return true; } }
+    return false;
 }
 
 bool IXBar::allocProxyHash(const IR::MAU::Table *, const PhvInfo &, Use &,
@@ -611,10 +617,15 @@ void IXBar::update(cstring table_name, const ::IXBar::Use &use_) {
         BUG("Unhandled use type %d (%s)", use.type, use.used_for()); }
 
     xme_inuse |= use.xme_units;
-    for (auto xme : bitvec(xme_inuse)) {
-        if (xme_use[xme] && xme_use[xme] != table_name) {
+    for (auto xme : bitvec(use.xme_units)) {
+        if (xme_use[xme] && xme_use[xme] != table_name)
             BUG("conflicting use of xme %d between %s and %s", xme, xme_use[xme], table_name);
-            xme_use[xme] = table_name; } }
+        xme_use[xme] = table_name; }
+    if (use.output_unit >= 0) {
+        if (xmu_output_use[use.output_unit] && xmu_output_use[use.output_unit] != table_name)
+            BUG("conflicting use of xmu %d between %s and %s", use.output_unit,
+                xmu_output_use[use.output_unit], table_name);
+        xmu_output_use[use.output_unit] = table_name; }
 
     for (auto &way : use.way_use) {
         if (way.index.size() > 0) {

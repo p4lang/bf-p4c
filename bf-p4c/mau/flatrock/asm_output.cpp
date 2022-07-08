@@ -96,14 +96,14 @@ void IXBar::Use::emit_ixbar_asm(const PhvInfo &phv, std::ostream &out, indent_t 
         int ident_bits_prev_alloc = 0;
         for (int mask = xme_units, xmu = 0; mask; ++xmu, mask >>= 2) {
             if ((mask & 3) == 0) continue;
-            out << indent++ << "hash " << xmu << ":" << std::endl;
+            out << indent << "hash " << xmu << ":" << std::endl;
             safe_vector<Slice> match_data;
             safe_vector<Slice> ghost;
             emit_ixbar_hash_table(xmu, match_data, ghost, fmt, sort);
-            emit_ixbar_hash_exact(out, indent, match_data, ghost, this, xmu,
-                                  ident_bits_prev_alloc);
-        }
-    }
+            emit_ixbar_hash_exact(out, indent+1, match_data, ghost, this, xmu,
+                                  ident_bits_prev_alloc); } }
+    if (output_unit >= 0)
+        out << indent << "output unit: " << output_unit << std::endl;
 }
 
 bool ActionDataBus::Use::emit_adb_asm(std::ostream &out, const IR::MAU::Table *tbl,

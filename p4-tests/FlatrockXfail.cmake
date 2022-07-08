@@ -14,12 +14,14 @@ set (FLATROCK_XFAIL_TESTS
   )
 
 p4c_add_xfail_reason("tofino5"
-  "WARNING:.*binary.*does not match model version|unexpected packet output on port 0"
+  #"WARNING:.*binary.*does not match model version|unexpected packet output on port 0"
+  "error: match group 1 at wrong offset"
   extensions/p4_tests/p4_16/flatrock/direct1.p4
   )
 
 p4c_add_xfail_reason("tofino5"
-  "WARNING:.*binary.*does not match model version|unexpected packet output on port 0"
+  #"WARNING:.*binary.*does not match model version|unexpected packet output on port 0"
+  "error: mismatch for match between match groups"
   extensions/p4_tests/p4_16/flatrock/exact1.p4
   )
 

@@ -360,8 +360,8 @@ void Flatrock::InputXbar::write_xme_regs(Target::Flatrock::mau_regs::_ppu_eml &x
         payload.addon = 0;      // not clear what it is used for?
         payload.base_mask = 0;  // pass ram data (can pass key bytes, useful for?)
         payload.cuckoo_start = 0;
-        payload.idx_hi = 63;    // can rotate and chop the the payload if
-        payload.idx_lo = 0;     // that can be useful?  align things?
+        payload.idx_hi = 0;     // insert the 'index' into the payload.  For LAMB, there's
+        payload.idx_lo = 63;    // no idx_sel field, so it always comes from hash?
         payload.idx_rot = 0;
         payload.mres_en = 1;
     }

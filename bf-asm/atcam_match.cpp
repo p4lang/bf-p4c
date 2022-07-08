@@ -202,8 +202,8 @@ void AlgTcamMatchTable::no_overhead_determine_result_bus_usage() {
         error(format->lineno, "ATCAM cannot safely send hit signals to same result bus");
 }
 
-void AlgTcamMatchTable::verify_format() {
-    SRamMatchTable::verify_format();
+void AlgTcamMatchTable::verify_format(Target::Tofino targ) {
+    SRamMatchTable::verify_format(targ);
     if (!error_count)
         verify_entry_priority();
 }

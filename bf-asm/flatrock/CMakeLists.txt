@@ -37,6 +37,7 @@ set (BFAS_FLATROCK_SRCS
   flatrock/instruction.cpp
   flatrock/input_xbar.cpp
   flatrock/parser.cpp
+  flatrock/sram_match.cpp
   flatrock/ternary_match.cpp
   PARENT_SCOPE
   )
@@ -48,6 +49,7 @@ set (BFAS_FLATROCK_HEADERS
   flatrock/hdr.h
   flatrock/input_xbar.h
   flatrock/parser.h
+  flatrock/sram_match.h
   flatrock/ternary_match.h
   PARENT_SCOPE
   )

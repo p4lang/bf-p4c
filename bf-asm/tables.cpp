@@ -1033,7 +1033,7 @@ Table::Format::Format(Table *t, const VECTOR(pair_t) &data, bool may_overlap) : 
         f.second.by_group[0] = &f.second; }
     for (size_t i = 1; i < fmt.size(); i++)
         for (auto &f : fmt[i]) {
-            Field &f0 = fmt[0].emplace(f.first, Field(this)).first->second;
+            Field &f0 = fmt[0].at(f.first);
             f.second.by_group = f0.by_group;
             f.second.by_group[i] = &f.second; }
 }
@@ -2771,21 +2771,23 @@ void Table::add_zero_padding_fields(Table::Format *format, Table::Actions::Actio
     // bits that are used. Create padding for the remaining bit ranges.
     bitvec padbits;
     padbits.clrrange(0, format_width-1);
-    for (auto &field : *format) {
-        auto aliases = get(alias, field.first);
-        for (auto a : aliases) {
-            auto newField = field.second;
-            json::string param_name = a->first;
-            int lo = remove_name_tail_range(param_name);
-            if (act->has_param(param_name) || a->second.is_constant) {
-                auto newField = Table::Format::Field(field.second.fmt, a->second.size(),
-                    a->second.lo + field.second.bits[0].lo,
-                    static_cast<Format::Field::flags_t>(field.second.flags));
-                newField.set_field_bits(padbits);
+    for (int entry = 0; entry < format->groups(); ++entry) {
+        for (auto &field : format->group(entry)) {
+            auto aliases = get(alias, field.first);
+            for (auto a : aliases) {
+                auto newField = field.second;
+                json::string param_name = a->first;
+                int lo = remove_name_tail_range(param_name);
+                if (act->has_param(param_name) || a->second.is_constant) {
+                    auto newField = Table::Format::Field(field.second.fmt, a->second.size(),
+                        a->second.lo + field.second.bits[0].lo,
+                        static_cast<Format::Field::flags_t>(field.second.flags));
+                    newField.set_field_bits(padbits);
+                }
             }
+            if (aliases.size() == 0)
+                field.second.set_field_bits(padbits);
         }
-        if (aliases.size() == 0)
-            field.second.set_field_bits(padbits);
     }
 
     int idx_lo = 0;
