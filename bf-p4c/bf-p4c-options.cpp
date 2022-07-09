@@ -1,26 +1,31 @@
-#include "bf-p4c-options.h"
 #include <libgen.h>
 #include <sys/stat.h>
+
 #include <algorithm>
 #include <cstring>
 #include <set>
+#include <sstream>
 #include <unordered_set>
 #include <vector>
+
 #include <boost/algorithm/string.hpp>
-#include "ir/ir.h"
-#include "ir/visitor.h"
-#include "lib/cstring.h"
-#include "version.h"
-#include "frontends/p4/evaluator/evaluator.h"
-#include "bf-p4c/midend/type_checker.h"
+
+#include "bf-p4c-options.h"
+
+#include "bf-p4c/arch/arch.h"
 #include "bf-p4c/common/parse_annotations.h"
 #include "bf-p4c/common/pragma/all_pragmas.h"
 #include "bf-p4c/common/pragma/collect_global_pragma.h"
 #include "bf-p4c/common/pragma/pragma.h"
 #include "bf-p4c/lib/error_type.h"
-#include "bf-p4c/arch/arch.h"
 #include "bf-p4c/logging/manifest.h"
+#include "bf-p4c/midend/type_checker.h"
+#include "frontends/p4/evaluator/evaluator.h"
 #include "frontends/parsers/parserDriver.h"
+#include "ir/ir.h"
+#include "ir/visitor.h"
+#include "lib/cstring.h"
+#include "version.h"
 
 static bool check_exclusive(bool option1, std::string option1Arg,
                             bool option2, std::string option2Arg) {
@@ -31,6 +36,41 @@ static bool check_exclusive(bool option1, std::string option1Arg,
     }
     return true;
 }
+
+
+
+// vvv --- ANSI code --- vvv //
+
+const char * ANSI_CSI = "\033[";
+const char * EMPTY_STR = "";
+
+const char * ANSI_DRY(const char * str, FILE* output_channel) {
+    if ( isatty(fileno(output_channel) ) ) {
+        fputs(ANSI_CSI, output_channel);
+        fputs(str     , output_channel);
+    }
+    return EMPTY_STR;
+}
+
+const char * ANSI_bold_on_maybe(FILE* output_channel) {
+    return ANSI_DRY("1m", output_channel);
+}
+
+const char * ANSI_underline_on_maybe(FILE* output_channel) {
+    return ANSI_DRY("4m", output_channel);
+}
+
+const char * ANSI_reverseVideo_on_maybe(FILE* output_channel) {
+    return ANSI_DRY("7m", output_channel);
+}
+
+const char * ANSI_reset_maybe(FILE* output_channel) {
+    return ANSI_DRY("0m", output_channel);
+}
+
+// ^^^ --- ANSI code --- ^^^ //
+
+
 
 BFN_Options::BFN_Options() {
     target = "tofino";
@@ -372,7 +412,61 @@ BFN_Options::BFN_Options() {
         },
         "Disable parser minimum and maximum depth limiting. Equivalent to "
         "\"--disable-parse-min-depth-limit --disable-parse-max-depth-limit\"");
-}
+
+    registerOption(
+        "--after_N_errors,_be_silent_except_for_the_summary", "N",
+        [this](const char * arg) {
+            long long int temp_N;
+            // DEVELOPMENT NOTES: with “std::stringstream(arg) >> new_N;”,
+            //   giving a negative input string produced a _huge_ uint
+            //   rather than an exception, like it _should_ have done,
+            //   so I`m doing the checking _myself_. :-(
+            std::stringstream(arg) >> temp_N;
+            const unsigned int new_N { static_cast<unsigned int>(temp_N) };
+
+            if (temp_N < 1) {
+                std::cerr << "INFO: new value " << temp_N << " for ''"
+                             "inclusive_max_errors_before_enforcing_silence_other_than_the_summary"
+                             "'' is < 1 and therefore too low; setting that value to 1 "
+                             "instead." << std::endl;
+                inclusive_max_errors_before_enforcing_silence_other_than_the_summary = 1;
+            } else if (temp_N > INT_MAX) {
+                std::cerr << "INFO: new value " << temp_N << " for ''"
+                             "inclusive_max_errors_before_enforcing_silence_other_than_the_summary"
+                             "'' is > " << INT_MAX << " and therefore is too big;"
+                             " setting that value to " << INT_MAX << " instead." << std::endl;
+                inclusive_max_errors_before_enforcing_silence_other_than_the_summary = INT_MAX;
+            } else {
+                if (new_N > inclusive_max_errors_before_enforcing_silence_other_than_the_summary) {
+                    std::cerr << "WARNING: new value " << new_N << " for ''inclusive_max_errors_"
+                            "before_enforcing_silence_other_than_the_summary'' is " <<
+                            ANSI_underline_on_maybe(stderr) << "larger" << ANSI_reset_maybe(stderr)
+                            << " than the old value of " <<
+                            inclusive_max_errors_before_enforcing_silence_other_than_the_summary <<
+                            "; this is not necessarily " << ANSI_underline_on_maybe(stderr) <<
+                            "wrong" << ANSI_reset_maybe(stderr) << ", but it " <<
+                            ANSI_underline_on_maybe(stderr) << "is" << ANSI_reset_maybe(stderr) <<
+                            " " << ANSI_reverseVideo_on_maybe(stderr) << "unusual" <<
+                            ANSI_reset_maybe(stderr) <<".  Did you really " <<
+                            ANSI_underline_on_maybe(stderr) << "intend" <<
+                            ANSI_reset_maybe(stderr) <<
+                            " to issue that flag twice with different values?" << std::endl;
+                }
+                if (verbose)  std::clog << "INFO: About to set internal value ''"
+                    "inclusive_max_errors_before_enforcing_silence_other_than_the_summary'' to "
+                    << new_N << ", thus overwriting the old value of "
+                    << inclusive_max_errors_before_enforcing_silence_other_than_the_summary
+                    << std::endl;
+                inclusive_max_errors_before_enforcing_silence_other_than_the_summary = new_N;
+            }
+            return true;
+        },
+        "Silence output from the compiler proper after N errors have been emitted.  "
+        "The default value of N is effectively equivalent to positive infinity.  "
+        "Inclusive minimum value: 1 [one].");
+}  //  end of "BFN_Options::BFN_Options()"
+
+
 
 using Target = std::pair<cstring, cstring>;
 std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {

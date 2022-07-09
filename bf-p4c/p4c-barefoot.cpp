@@ -329,12 +329,29 @@ static void reportStats_alwaysCallThisONCEshortlyBeforeExiting() {
     const unsigned long long warning_count = myErrorReporter.getWarningCount();
 
     using namespace std;
+
+    if ( get_has_output_already_been_silenced() ) {  //  we need to re-enable cerr
+  //  no good ctors for this acc. to <https://m.cplusplus.com/reference/fstream/filebuf/open/> :-(
+        static filebuf devStdErr;
+
+        devStdErr.open("/dev/stderr", ios::out | ios::app);
+        cerr.rdbuf(&devStdErr);
+
+        // should we call “reset_has_output_already_been_silenced()” here?
+    }
+
     cerr << endl;
     cerr << "Number of ERRORs: "   <<   error_count << endl;
     cerr << "Number of WARNINGs: " << warning_count << endl;
     cerr << endl;
 }  //  end of reporting procedure
 
+
+
+int return_from_main_politely(const int foo) {
+    reportStats_alwaysCallThisONCEshortlyBeforeExiting();
+    return foo;
+}
 
 
 int main(int ac, char **av) {
@@ -363,7 +380,7 @@ int main(int ac, char **av) {
     auto& options = BackendOptions();
 
     if (!options.process(ac, av) || ::errorCount() > 0)
-        return INVOCATION_ERROR;
+        return return_from_main_politely(INVOCATION_ERROR);
 
     options.setInputFile();
     Device::init(options.target);
@@ -386,18 +403,18 @@ int main(int ac, char **av) {
     if (options.num_stages_override) {
         Device::overrideNumStages(options.num_stages_override);
         if (::errorCount() > 0) {
-            return INVOCATION_ERROR;
+            return return_from_main_politely(INVOCATION_ERROR);
         }
     }
 
     // If there was an error in the frontend, we are likely to end up
     // with an invalid program for serialization, so we bail out here.
     if (!program || ::errorCount() > 0)
-        return PROGRAM_ERROR;
+        return return_from_main_politely(PROGRAM_ERROR);
 
     // If we just want to prettyprint to p4_16, running the frontend is sufficient.
     if (!options.prettyPrintFile.isNullOrEmpty())
-        return ::errorCount() > 0 ? PROGRAM_ERROR : SUCCESS;
+        return return_from_main_politely(::errorCount() > 0 ? PROGRAM_ERROR : SUCCESS);
 
     log_dump(program, "Initial program");
 
@@ -418,7 +435,7 @@ int main(int ac, char **av) {
 
     BFN::generateRuntime(program, options);
     if (::errorCount() > 0)
-        return PROGRAM_ERROR;
+        return return_from_main_politely(PROGRAM_ERROR);
 
     auto hook = options.getDebugHook();
     BFN::MidEnd midend(options);
@@ -428,13 +445,14 @@ int main(int ac, char **av) {
     // so far, everything is still under the same program for 32q, generate two separate threads
     program = program->apply(midend);
     if (!program)
-        return PROGRAM_ERROR;  // still did not reach the backend for fitting issues
+        // still did not reach the backend for fitting issues
+        return return_from_main_politely(PROGRAM_ERROR);
     log_dump(program, "After midend");
     if (::errorCount() > 0)
-        return PROGRAM_ERROR;
+        return return_from_main_politely(PROGRAM_ERROR);
 
     if (::errorCount() > 0)
-        return PROGRAM_ERROR;
+        return return_from_main_politely(PROGRAM_ERROR);
 
     /* save the pre-packing p4 program */
     // return IR::P4Program with @flexible header packed
@@ -445,7 +463,8 @@ int main(int ac, char **av) {
 
     program->apply(bridgePacking);
     if (!program)
-        return PROGRAM_ERROR;  // still did not reach the backend for fitting issues
+        return return_from_main_politely(PROGRAM_ERROR);
+        // still did not reach the backend for fitting issues
 
     BFN::SubstitutePackedHeaders substitute(options, *map, *midend.sourceInfoLogging);
     substitute.addDebugHook(hook, true);
@@ -454,10 +473,11 @@ int main(int ac, char **av) {
     program = program->apply(substitute);
     log_dump(program, "After flexiblePacking");
     if (!program)
-        return PROGRAM_ERROR;  // still did not reach the backend for fitting issues
+        // still did not reach the backend for fitting issues
+        return return_from_main_politely(PROGRAM_ERROR);
 
     if (!substitute.getToplevelBlock())
-        return PROGRAM_ERROR;
+        return return_from_main_politely(PROGRAM_ERROR);
 
     if (options.debugInfo) {
         program->apply(SourceInfoLogging(BFNContext::get().getOutputDirectory().c_str(),
@@ -533,6 +553,9 @@ int main(int ac, char **av) {
     if (Log::verbose())
         std::cout << "Done." << std::endl;
     return ::errorCount() > 0 ? COMPILER_ERROR : SUCCESS;
+    //     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    // _intentionally_ not "return_from_main_politely"
+    //   since the stats code has already been called, by this point.
 
 #if BFP4C_CATCH_EXCEPTIONS
     // catch all exceptions here
@@ -556,6 +579,8 @@ int main(int ac, char **av) {
         std::cerr << e.what() << std::endl;
         return COMPILER_ERROR;
     } catch (const Util::CompilationError &e) {
+        reportStats_alwaysCallThisONCEshortlyBeforeExiting();
+
         std::cerr << e.what() << std::endl;
         return PROGRAM_ERROR;
 #if BAREFOOT_INTERNAL

@@ -93,6 +93,7 @@ class BFN_Options : public CompilerOptions {
     // Set ghost pipe ids for program, for a multipipe program all pipes with
     // ghost threads will be set
     unsigned ghost_pipes = 0;
+    unsigned int inclusive_max_errors_before_enforcing_silence_other_than_the_summary = INT_MAX;
 };
 
 // forward declarations so we do not include ir-generated.h
