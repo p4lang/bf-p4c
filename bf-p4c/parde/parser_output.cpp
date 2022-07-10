@@ -236,30 +236,47 @@ struct ParserAsmSerializer : public ParserInspector {
         }
 
         auto output_extract = [this, &phv_builder_extract, &source](
+                const unsigned int type,
                 const boost::optional<int> &hdr_id, const boost::optional<cstring> &hdr_name,
                 const PHV::Size size, const std::vector<std::pair<cstring, int>> &offsets) {
-            if (hdr_id)
-                out << indent << "- " << source << ' ' << *hdr_id;
-            else if (hdr_name)
-                out << indent << "- " << source << ' ' << *hdr_name;
-            else
-                out << indent << "- {}";
-            if (hdr_id || hdr_name) {
-                out << ' ';
+            if (type == 0) {
+                if (hdr_id)
+                    out << indent << "- " << source << ' ' << *hdr_id;
+                else if (hdr_name)
+                    out << indent << "- " << source << ' ' << *hdr_name;
+                else
+                    out << indent << "- {}";
+                if (hdr_id || hdr_name) {
+                    out << ' ';
+                    if (size != PHV::Size::b32)
+                        out << "[ ";
+                    std::string sep = "";
+                    for (auto &offset : offsets) {
+                        out << sep << offset.first;
+                        if (size != PHV::Size::b8)
+                            out << " msb_offset ";
+                        else
+                            out << " offset ";
+                        out << offset.second;
+                        sep = ", ";
+                    }
+                    if (size != PHV::Size::b32)
+                        out << " ]";
+                }
+            } else {
+                out << indent << "- ";
                 if (size != PHV::Size::b32)
-                    out << "[ ";
+                    out << "{ ";
                 std::string sep = "";
                 for (auto &offset : offsets) {
                     out << sep << offset.first;
-                    if (size != PHV::Size::b8)
-                        out << " msb_offset ";
-                    else
-                        out << " offset ";
+                    // FIXME:: handle the subtypes
+                    out << ": constant ";
                     out << offset.second;
                     sep = ", ";
                 }
                 if (size != PHV::Size::b32)
-                    out << " ]";
+                    out << " }";
             }
         };
 
@@ -267,6 +284,7 @@ struct ParserAsmSerializer : public ParserInspector {
         indent++;
 
         output_extract(
+            phv_builder_extract->type1,
             phv_builder_extract->hdr1_id,
             phv_builder_extract->hdr1_name,
             phv_builder_extract->size,
@@ -275,6 +293,7 @@ struct ParserAsmSerializer : public ParserInspector {
         out << std::endl;
 
         output_extract(
+            phv_builder_extract->type2,
             phv_builder_extract->hdr2_id,
             phv_builder_extract->hdr2_name,
             phv_builder_extract->size,

@@ -234,6 +234,14 @@ void PHV::Allocation::setDeparserGroupGress(PHV::Container c, GressAssignment de
     container_status_i[c] = status;
 }
 
+void PHV::Allocation::setParserExtractGroupSource(PHV::Container c, ExtractSource source) {
+    // Get the current status in container_status_i, or its ancestors, if any.
+    const auto* container_status = this->getStatus(c);
+    ContainerStatus status = container_status ? *container_status : ContainerStatus();
+    status.parserExtractGroupSource = source;
+    container_status_i[c] = status;
+}
+
 PHV::Allocation::MutuallyLiveSlices PHV::Allocation::liverange_overlapped_slices(
         const PHV::Container c, const std::vector<AllocSlice>& slices) const {
     PHV::Allocation::MutuallyLiveSlices rs;
@@ -357,6 +365,7 @@ void PHV::Allocation::allocate(
     auto containerGress = this->gress(slice.container());
     auto parserGroupGress = this->parserGroupGress(slice.container());
     auto deparserGroupGress = this->deparserGroupGress(slice.container());
+    auto parserExtractGroupSource = this->parserExtractGroupSource(slice.container());
     bool isDeparsed = uses_i->is_deparsed(slice.field());
 
     // If the container has been pinned to a gress, check that the gress
@@ -391,6 +400,29 @@ void PHV::Allocation::allocate(
         }
     }
 
+    // If the slice is extracted, check (and maybe set) the parser extract group source
+    if (phvSpec.hasParserExtractGroups() && uses_i->is_extracted(slice.field())) {
+        bool pktExt = uses_i->is_extracted_from_pkt(slice.field());
+        if (parserExtractGroupSource != ExtractSource::NONE) {
+            BUG_CHECK((parserExtractGroupSource == ExtractSource::PACKET && pktExt) ||
+                          (parserExtractGroupSource == ExtractSource::NON_PACKET && !pktExt),
+                      "Trying to allocate field %1% with %2% source to container %3% with "
+                      "%4% source",
+                      slice.field()->name, pktExt ? "packet" : "non-packet", slice.container(),
+                      parserExtractGroupSource);
+        } else {
+            ExtractSource source = pktExt ? ExtractSource::PACKET : ExtractSource::NON_PACKET;
+            for (unsigned cid : phvSpec.parserExtractGroup(slice_cid)) {
+                auto c = phvSpec.idToContainer(cid);
+                auto cSource = this->parserExtractGroupSource(c);
+                BUG_CHECK(cSource == ExtractSource::NONE || cSource == source,
+                        "Container %1% already has parser extract group source set to %2%",
+                        c, cSource);
+                this->setParserExtractGroupSource(c, source);
+                LOG4("\t\t\t ... setting container " << c << " source to " << source);
+            }
+        }
+    }
 
     // If the slice is deparsed but the deparser group gress has not yet been
     // set, then set it for each container in the deparser group.
@@ -628,9 +660,11 @@ PHV::Allocation::available_spots() const {
         auto gress = this->gress(c);
         auto parserGroupGress = this->parserGroupGress(c);
         auto deparserGroupGress = this->deparserGroupGress(c);
+        auto parserExtractGroupSource = this->parserExtractGroupSource(c);
         // Empty
         if (slices.size() == 0) {
-            rst.insert(AvailableSpot(c, gress, parserGroupGress, deparserGroupGress, c.size()));
+            rst.insert(AvailableSpot(c, gress, parserGroupGress, deparserGroupGress,
+                                     parserExtractGroupSource, c.size()));
             continue; }
         // calculate allocate bitvec
         bitvec allocatedBits;
@@ -648,7 +682,7 @@ PHV::Allocation::available_spots() const {
                                        allocatedBits.end(), 0,
                                        [] (int a, int) { return a + 1; });
             rst.insert(AvailableSpot(c, gress, parserGroupGress, deparserGroupGress,
-                                     c.size() - used)); }
+                                     parserExtractGroupSource, c.size() - used)); }
     }
     return rst;
 }
@@ -815,6 +849,15 @@ PHV::Allocation::alloc_status(PHV::Container c) const {
     BUG_CHECK(status, "Trying to get allocation status for container %1% not in Allocation",
               cstring::to_cstring(c));
     return status->alloc_status;
+}
+
+PHV::Allocation::ExtractSource
+PHV::Allocation::parserExtractGroupSource(PHV::Container c) const {
+    const auto* status = this->getStatus(c);
+    BUG_CHECK(status,
+              "Trying to get parser extract group source for container %1% not in Allocation",
+              cstring::to_cstring(c));
+    return status->parserExtractGroupSource;
 }
 
 PHV::Allocation::const_iterator PHV::Transaction::begin() const {
@@ -1784,6 +1827,17 @@ std::ostream &operator<<(std::ostream &out, const PHV::Allocation* alloc) {
         out << *alloc;
     else
         out << "-null-alloc-";
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const PHV::Allocation::ExtractSource& source) {
+    using ExtractSource = PHV::Allocation::ExtractSource;
+    switch (source) {
+    case ExtractSource::NONE:       out << "none"; break;
+    case ExtractSource::PACKET:     out << "packet"; break;
+    case ExtractSource::NON_PACKET: out << "non-packet"; break;
+    default:                        out << "unknown"; break;
+    };
     return out;
 }
 

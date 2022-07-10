@@ -1853,14 +1853,14 @@ parser egress:
         EXPECT_REGISTER(regs.prsr_mem.phv_tcam.phv_tcam[0][1].key_wl, "");
         /* -- SRAM 1 is set */
         EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][1].type0, "1b1");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][1].type0_field[0],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][1].type0_field[4],
                 "none: 2b00 | constant: 2b00 | none: 2b00 | pov_flags: 2b01");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][1].type0_field[1],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][1].type0_field[3],
                 "POV: 1b0 | reserved: 3b000 | flags: 1b0 | value: 3x5");
         EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][1].type0_field[2], "");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][1].type0_field[3],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][1].type0_field[1],
                 "8xab");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][1].type0_field[4], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][1].type0_field[0], "");
         EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][1].type1, "");
         EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][1].type1_field[0], "");
         EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[0][1].type1_field[1], "");
@@ -1923,39 +1923,39 @@ parser egress:
         EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][1].type0_field[3], "");
         EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][1].type0_field[4], "");
         EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][1].type1, "1b1");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][1].type1_field[0],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][1].type1_field[4],
                 "ghost: 2b11 | none: 2b00 | checksum_and_error: 2b01 | pov_state: 2b01");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][1].type1_field[1],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][1].type1_field[3],
                 "POV: 1b0 | reserved: 3b000 | state: 1b1 | value: 3x2");
         EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][1].type1_field[2],
                 "CSUM: 1b1 | reserved: 7b0000000");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][1].type1_field[3], "");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][1].type1_field[4],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][1].type1_field[1], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][1].type1_field[0],
                 "reserved: 5b00000 | value: 3x5");
         /* -- TCAM 2 is set */
         EXPECT_REGISTER(regs.prsr_mem.phv_tcam.phv_tcam[15][2].key_wh, "~8x89 | 16xffff | ~8xab");
         EXPECT_REGISTER(regs.prsr_mem.phv_tcam.phv_tcam[15][2].key_wl,  "8x89 | 16xffff |  8xab");
         /* -- SRAM 2 is set */
         EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type0, "1b1");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type0_field[0],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type0_field[4],
                 "udf3: 2b10 | udf2: 2b10 | udf1: 2b10 | udf0: 2b10");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type0_field[1],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type0_field[3],
                 "udf: 2b00 | reserved: 3b000 | value: 3x0");
         EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type0_field[2],
                 "udf: 2b01 | reserved: 3b000 | value: 3x1");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type0_field[3],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type0_field[1],
                 "udf: 2b10 | reserved: 3b000 | value: 3x2");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type0_field[4],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type0_field[0],
                 "udf: 2b11 | reserved: 3b000 | value: 3x3");
         EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type1, "1b0");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type1_field[0],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type1_field[4],
                 "8x42");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type1_field[1], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type1_field[3], "");
         EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type1_field[2],
                 "8x11");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type1_field[3],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type1_field[1],
                 "8x12");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type1_field[4], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[15][2].type1_field[0], "");
 
         /* -- PHV builder group 16 */
         /* -- POV key bytes selection is set */
@@ -1988,26 +1988,26 @@ parser egress:
         EXPECT_REGISTER(regs.prsr_mem.phv_tcam.phv_tcam[16][1].key_wl,  "24x123456 | 8xff");
         /* -- SRAM 1 is set */
         EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type0, "1b1");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type0_field[0],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type0_field[4],
                 "ghost: 2b11 | constant: 2b00 | pov_state: 2b01 | udf1: 2b10");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type0_field[1],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type0_field[3],
                 "udf: 2b01 | reserved: 3b000 | value: 3x3");
         EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type0_field[2],
                 "POV: 1b0 | reserved: 3b000 | state: 1b1 | value: 3x4");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type0_field[3],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type0_field[1],
                 "8x56");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type0_field[4],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type0_field[0],
                 "reserved: 5b00000 | value: 3x2");
         EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type1, "1b0");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type1_field[0],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type1_field[4],
                 "8x43");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type1_field[1],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type1_field[3],
                 "8x22");
         EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type1_field[2],
                 "reserved: 7b0000000 | swap: 1b1");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type1_field[3],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type1_field[1],
                 "8x33");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type1_field[4],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[16][1].type1_field[0],
                 "reserved: 7b0000000 | swap: 1b0");
 
         /* -- PHV builder group 24 */
@@ -2041,22 +2041,22 @@ parser egress:
         EXPECT_REGISTER(regs.prsr_mem.phv_tcam.phv_tcam[24][1].key_wl, "8xff |  24x345678");
         /* -- SRAM 1 is set */
         EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type0, "1b0");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type0_field[0],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type0_field[4],
                 "8x44");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type0_field[1],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type0_field[3],
                 "8x11");
         EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type0_field[2], "");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type0_field[3], "");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type0_field[4], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type0_field[1], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type0_field[0], "");
         EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type1, "1b0");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type1_field[0],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type1_field[4],
                 "8x45");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type1_field[1],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type1_field[3],
                 "8x12");
         EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type1_field[2],
                 "reserved: 6b000000 | reverse: 2b10");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type1_field[3], "");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type1_field[4], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type1_field[1], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][1].type1_field[0], "");
         /* -- TCAM 2 is set */
         EXPECT_REGISTER(regs.prsr_mem.phv_tcam.phv_tcam[24][2].key_wh,
                 "8xff | ~8x34 | 8xff | ~8x78");
@@ -2064,24 +2064,24 @@ parser egress:
                 "8xff |  8x34 | 8xff |  8x78");
         /* -- SRAM 2 is set */
         EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type0, "1b0");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type0_field[0],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type0_field[4],
                 "8x46");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type0_field[1],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type0_field[3],
                 "8x13");
         EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type0_field[2],
                 "reserved: 6b000000 | reverse_16b_words: 2b01");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type0_field[3], "");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type0_field[4], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type0_field[1], "");
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type0_field[0], "");
         EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type1, "1b1");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type1_field[0],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type1_field[4],
                 "ghost: 2b11 | udf3: 2b10 | constant: 2b00 | pov_flags: 2b01");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type1_field[1],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type1_field[3],
                 "POV: 1b0 | reserved: 3b000 | flags: 1b0 | value: 3x1");
         EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type1_field[2],
                 "8x78");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type1_field[3],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type1_field[1],
                 "udf: 2b11 | reserved: 3b000 | value: 3x5");
-        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type1_field[4],
+        EXPECT_REGISTER(regs.prsr_mem.phv_action_ram.iphv_action_mem16[24][2].type1_field[0],
                 "reserved: 5b00000 | value: 3x3");
 
 
@@ -2118,14 +2118,14 @@ parser egress:
         EXPECT_REGISTER(regs.pprsr_mem.phv_tcam.phv_tcam[0][1].key_wl, "");
         /* -- SRAM 1 is set */
         EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][1].type0, "1b1");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][1].type0_field[0],
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][1].type0_field[4],
                 "none: 2b00 | pov_flags: 2b01 | none: 2b00 | constant: 2b00");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][1].type0_field[1],
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][1].type0_field[3],
                 "8xcd");
         EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][1].type0_field[2], "");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][1].type0_field[3],
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][1].type0_field[1],
                 "POV: 1b0 | reserved: 3b000 | flags: 1b0 | value: 3x1");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][1].type0_field[4], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][1].type0_field[0], "");
         EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][1].type1, "");
         EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][1].type1_field[0], "");
         EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[0][1].type1_field[1], "");
@@ -2182,23 +2182,23 @@ parser egress:
                 "8xff |  8xaa | 8xff |  8xbb");
         /* -- SRAM 1 is set */
         EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type0, "1b1");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type0_field[0],
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type0_field[4],
                 "bridge: 2b11 | none: 2b00 | tm: 2b10 | pov_state: 2b01");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type0_field[1],
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type0_field[3],
                 "POV: 1b0 | reserved: 3b000 | state: 1b1 | value: 3x3");
         EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type0_field[2],
                 "reserved: 3b000 | tm: 5x11");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type0_field[3], "");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type0_field[4],
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type0_field[1], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type0_field[0],
                 "reserved: 2b00 | bridge: 6x13");
         EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type1, "1b0");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type1_field[0],
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type1_field[4],
                 "8x52");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type1_field[1],
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type1_field[3],
                 "8x24");
         EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type1_field[2], "");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type1_field[3], "");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type1_field[4],
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type1_field[1], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[15][1].type1_field[0],
                 "8x27");
 
         /* -- PHV builder group 16 */
@@ -2232,26 +2232,26 @@ parser egress:
         EXPECT_REGISTER(regs.pprsr_mem.phv_tcam.phv_tcam[16][1].key_wl,  "16xccdd | 16xffff");
         /* -- SRAM 1 is set */
         EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type0, "1b1");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type0_field[0],
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type0_field[4],
                 "constant: 2b00 | bridge: 2b11 | pov_state: 2b01 | tm: 2b10");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type0_field[1],
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type0_field[3],
                 "reserved: 3b000 | tm: 5x1a");
         EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type0_field[2],
                 "POV: 1b0 | reserved: 3b000 | state: 1b1 | value: 3x2");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type0_field[3],
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type0_field[1],
                 "reserved: 2b00 | bridge: 6x1b");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type0_field[4],
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type0_field[0],
                 "8xde");
         EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type1, "1b0");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type1_field[0],
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type1_field[4],
                 "8x53");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type1_field[1],
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type1_field[3],
                 "8xab");
         EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type1_field[2],
                 "reserved: 7b0000000 | swap: 1b0");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type1_field[3],
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type1_field[1],
                 "8xcd");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type1_field[4],
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[16][1].type1_field[0],
                 "reserved: 7b0000000 | swap: 1b1");
 
         /* -- PHV builder group 24 */
@@ -2285,22 +2285,22 @@ parser egress:
         EXPECT_REGISTER(regs.pprsr_mem.phv_tcam.phv_tcam[24][1].key_wl, "8xff |  24xabcdef");
         /* -- SRAM 1 is set */
         EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type0, "1b0");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type0_field[0],
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type0_field[4],
                 "8x54");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type0_field[1],
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type0_field[3],
                 "8x8a");
         EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type0_field[2],
                 "reserved: 6b000000 | reverse_16b_words: 2b01");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type0_field[3], "");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type0_field[4], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type0_field[1], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type0_field[0], "");
         EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type1, "1b0");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type1_field[0],
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type1_field[4],
                 "8x55");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type1_field[1],
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type1_field[3],
                 "8x9b");
         EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type1_field[2], "");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type1_field[3], "");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type1_field[4], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type1_field[1], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][1].type1_field[0], "");
         /* -- TCAM 2 is set */
         EXPECT_REGISTER(regs.pprsr_mem.phv_tcam.phv_tcam[24][2].key_wh,
                 "~8x5a | 16xffff | ~8x6b");
@@ -2308,24 +2308,24 @@ parser egress:
                  "8x5a | 16xffff |  8x6b");
         /* -- SRAM 2 is set */
         EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type0, "1b0");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type0_field[0],
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type0_field[4],
                 "8x56");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type0_field[1],
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type0_field[3],
                 "8x2d");
         EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type0_field[2],
                 "reserved: 6b000000 | reverse: 2b10");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type0_field[3], "");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type0_field[4], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type0_field[1], "");
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type0_field[0], "");
         EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type1, "1b1");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type1_field[0],
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type1_field[4],
                 "constant: 2b00 | tm: 2b10 | bridge: 2b11 | pov_state: 2b01");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type1_field[1],
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type1_field[3],
                 "POV: 1b0 | reserved: 3b000 | state: 1b1 | value: 3x5");
         EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type1_field[2],
                 "reserved: 2b00 | bridge: 6x12");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type1_field[3],
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type1_field[1],
                 "reserved: 3b000 | tm: 5x15");
-        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type1_field[4],
+        EXPECT_REGISTER(regs.pprsr_mem.phv_action_ram.ephv_action_mem16[24][2].type1_field[0],
                 "8xfa");
     }
 }

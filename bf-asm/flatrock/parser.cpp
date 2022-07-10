@@ -705,12 +705,18 @@ void PhvBuilderGroup::write_config(RegisterSetBase &regs, json::map &json,
                     auto &other = extracts[i].phe_source[j].other[k];
                     if (other_source_write_config.count(other.subtype)) {
                         auto &source = other_source_write_config.at(other.subtype);
+                        // FIXME: compiler/model have reversed expectations on
+                        // type_field indexing; awaiting HW team feedback
                         /* -- set 2 bit subtype */
-                        type_field[0].set_subfield(source.subtype_value, k * 2, 2);
+                        // type_field[0].set_subfield(source.subtype_value, k * 2, 2);
+                        type_field[4].set_subfield(source.subtype_value, k * 2, 2);
                         /* -- set value */
-                        type_field[k+1].set_subfield(source.fixed_val, source.var_width,
+                        // type_field[k+1].set_subfield(source.fixed_val, source.var_width,
+                        //         8 - source.var_width);
+                        // type_field[k+1].set_subfield(other.value, 0, source.var_width);
+                        type_field[3-k].set_subfield(source.fixed_val, source.var_width,
                                 8 - source.var_width);
-                        type_field[k+1].set_subfield(other.value, 0, source.var_width);
+                        type_field[3-k].set_subfield(other.value, 0, source.var_width);
                     } /* -- else other_subtype::NONE */
                 }
                 break;
@@ -719,11 +725,15 @@ void PhvBuilderGroup::write_config(RegisterSetBase &regs, json::map &json,
             {
                 type = 0;
                 auto &packet = extracts[i].phe_source[j].packet8;
+                // FIXME: compiler/model have reversed expectations on
+                // type_field indexing; awaiting HW team feedback
                 /* -- header_id: 0-254, 255 = unused */
-                type_field[0] = packet.hdr_id;
+                // type_field[0] = packet.hdr_id;
+                type_field[4] = packet.hdr_id;
                 /* -- offsets for PHE8 */
                 for (int k = 0; k < Target::Flatrock::PARSER_PHV_BUILDER_PACKET_PHE8_SOURCES; ++k) {
-                    type_field[k+1] = packet.offset[k];
+                    // type_field[k+1] = packet.offset[k];
+                    type_field[3-k] = packet.offset[k];
                 }
                 break;
             }
@@ -731,19 +741,24 @@ void PhvBuilderGroup::write_config(RegisterSetBase &regs, json::map &json,
             {
                 type = 0;
                 auto &packet = extracts[i].phe_source[j].packet16;
+                // FIXME: compiler/model have reversed expectations on
+                // type_field indexing; awaiting HW team feedback
                 /* -- header_id: 0-254, 255 = unused */
-                type_field[0] = packet.hdr_id;
+                // type_field[0] = packet.hdr_id;
+                type_field[4] = packet.hdr_id;
                 /* -- offsets for PHE16 */
                 for (int k = 0; k < Target::Flatrock::PARSER_PHV_BUILDER_PACKET_PHE16_SOURCES;
                         ++k) {
-                    type_field[(k*2)+1] = packet.offset[k];
+                    // type_field[(k*2)+1] = packet.offset[k];
+                    type_field[3-(k*2)] = packet.offset[k];
                 }
                 /* -- byte swaps */
                 for (int k = 0; k < Target::Flatrock::PARSER_PHV_BUILDER_PACKET_PHE16_SOURCES;
                         ++k) {
                     /* -- bit[0] = 0 no swap
                      *    bit[0] = 1 swap */
-                    type_field[(k*2)+2].set_subfield(packet.swap[k] ? 0x1 : 0x0, 0, 1);
+                    // type_field[(k*2)+2].set_subfield(packet.swap[k] ? 0x1 : 0x0, 0, 1);
+                    type_field[3-(k*2)-1].set_subfield(packet.swap[k] ? 0x1 : 0x0, 0, 1);
                 }
                 break;
             }
@@ -751,17 +766,23 @@ void PhvBuilderGroup::write_config(RegisterSetBase &regs, json::map &json,
             {
                 type = 0;
                 auto &packet = extracts[i].phe_source[j].packet32;
+                // FIXME: compiler/model have reversed expectations on
+                // type_field indexing; awaiting HW team feedback
                 /* -- header_id: 0-254, 255 = unused */
-                type_field[0] = packet.hdr_id;
+                // type_field[0] = packet.hdr_id;
+                type_field[4] = packet.hdr_id;
                 /* -- offset for PHE32 */
-                type_field[1] = packet.offset;
+                // type_field[1] = packet.offset;
+                type_field[3] = packet.offset;
                 /* -- byte swap */
                 if (packet.reverse == PheSourcePacket32::REVERSE) {
                     /* -- bit[1:0] = 2 ... 4Byte SWAP: B3,B2,B1,B0 -> B0,B1,B2,B3 */
+                    // type_field[2].set_subfield(0x2, 0, 2);
                     type_field[2].set_subfield(0x2, 0, 2);
                 } else if (packet.reverse == PheSourcePacket32::REVERSE_16B_WORDS) {
                     /* -- bit[1:0] = 1 ... 2Byte SWAP: B3,B2,B1,B0 -> B2,B3,B0,B1 */
                     type_field[2].set_subfield(0x1, 0, 2);
+                    // type_field[2].set_subfield(0x1, 0, 2);
                 } else {
                     /* -- PheSourcePacket32::NO_REVERSE
                      *    bit[1:0] = 0 or bit[1:0] = 3 ... no swap

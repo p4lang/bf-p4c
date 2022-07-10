@@ -62,6 +62,7 @@ const MetricName n_prefer_bits = "n_prefer_bits";
 const MetricName n_set_gress = "n_set_gress";
 const MetricName n_set_parser_group_gress = "n_set_parser_group_gress";
 const MetricName n_set_deparser_group_gress = "n_set_deparser_group_gress";
+const MetricName n_set_parser_extract_group_source = "n_set_parser_extract_group_source";
 const MetricName n_overlay_bits = "n_overlay_bits";
 const MetricName n_field_packing_score = "n_field_packing_score";
 // how many wasted bits in partial container get used.
@@ -238,6 +239,8 @@ bool default_alloc_score_is_better(const AllocScore& left, const AllocScore& rig
             {n_set_gress, weighted_delta[n_set_gress], false},
             {n_set_deparser_group_gress, weighted_delta[n_set_deparser_group_gress], false},
             {n_set_parser_group_gress, weighted_delta[n_set_parser_group_gress], false},
+            {n_set_parser_extract_group_source, weighted_delta[n_set_parser_extract_group_source],
+                false},
             {n_field_packing_score, weighted_delta[n_field_packing_score], true},
             // suspicious why true?
             {n_mismatched_deparser_gress, weighted_delta[n_mismatched_deparser_gress], true},
@@ -258,6 +261,8 @@ bool default_alloc_score_is_better(const AllocScore& left, const AllocScore& rig
             {n_set_gress, weighted_delta[n_set_gress], false},
             {n_set_deparser_group_gress, weighted_delta[n_set_deparser_group_gress], false},
             {n_set_parser_group_gress, weighted_delta[n_set_parser_group_gress], false},
+            {n_set_parser_extract_group_source, weighted_delta[n_set_parser_extract_group_source],
+                false},
             {n_field_packing_score, weighted_delta[n_field_packing_score], true},
             // suspicious why true?
             {n_mismatched_deparser_gress, weighted_delta[n_mismatched_deparser_gress], true},
@@ -298,6 +303,8 @@ bool less_fragment_alloc_score_is_better(const AllocScore& left, const AllocScor
             {n_set_gress, weighted_delta[n_set_gress], false},
             {n_set_deparser_group_gress, weighted_delta[n_set_deparser_group_gress], false},
             {n_set_parser_group_gress, weighted_delta[n_set_parser_group_gress], false},
+            {n_set_parser_extract_group_source, weighted_delta[n_set_parser_extract_group_source],
+                false},
             {n_field_packing_score, weighted_delta[n_field_packing_score], true},
             {n_mismatched_deparser_gress, weighted_delta[n_mismatched_deparser_gress], false},
         };
@@ -326,6 +333,8 @@ bool less_fragment_alloc_score_is_better(const AllocScore& left, const AllocScor
             {n_set_gress, weighted_delta[n_set_gress], false},
             {n_set_deparser_group_gress, weighted_delta[n_set_deparser_group_gress], false},
             {n_set_parser_group_gress, weighted_delta[n_set_parser_group_gress], false},
+            {n_set_parser_extract_group_source, weighted_delta[n_set_parser_extract_group_source],
+                false},
             {n_field_packing_score, weighted_delta[n_field_packing_score], true},
             {n_mismatched_deparser_gress, weighted_delta[n_mismatched_deparser_gress], false},
         };
@@ -782,6 +791,7 @@ const std::vector<MetricName> AllocScore::g_by_kind_metrics = {
     n_set_gress,
     n_set_parser_group_gress,
     n_set_deparser_group_gress,
+    n_set_parser_extract_group_source,
     n_overlay_bits,
     n_packing_bits,
     n_packing_priority,
@@ -849,6 +859,7 @@ AllocScore::AllocScore(
         const auto& gress = kv.second.gress;
         const auto& parserGroupGress = kv.second.parserGroupGress;
         const auto& deparserGroupGress = kv.second.deparserGroupGress;
+        const auto& parserExtractGroupSource = kv.second.parserExtractGroupSource;
         bitvec parent_alloc_vec = calcContainerAllocVec(parent->slices(container));
         // The set of slices that are allocated in this transaction, by subtracting out
         // slices allocated in parent, robust in that @p alloc can commit things that
@@ -1008,6 +1019,13 @@ AllocScore::AllocScore(
         // Deparser group gress
         if (!parent->deparserGroupGress(container) && deparserGroupGress) {
             by_kind[kind][n_set_deparser_group_gress]++; }
+
+        // Parser extract group source
+        if (Device::phvSpec().hasParserExtractGroups() &&
+            parent->parserExtractGroupSource(container) == PHV::Allocation::ExtractSource::NONE &&
+            parserExtractGroupSource != PHV::Allocation::ExtractSource::NONE) {
+            by_kind[kind][n_set_parser_extract_group_source]++;
+        }
     }
 
     // calc_n_inc_tphv_collections
@@ -1500,7 +1518,9 @@ bool CoreAllocation::satisfies_constraints(
     // Check parser group constraints.
 
     auto parserGroupGress = alloc.parserGroupGress(c);
+    auto parserExtractGroupSource = alloc.parserExtractGroupSource(c);
     bool isExtracted = utils_i.uses.is_extracted(f);
+    bool isExtractedFromPkt = utils_i.uses.is_extracted_from_pkt(f);
 
     // Check 1: all containers within parser group must have same gress assignment
     if (parserGroupGress) {
@@ -1588,6 +1608,19 @@ bool CoreAllocation::satisfies_constraints(
                     }
                 }
             }
+        }
+    }
+
+    // Check 3: all constainers within parser extract group must have same source type
+    using ExtractSource = PHV::Allocation::ExtractSource;
+    if (Device::phvSpec().hasParserExtractGroups() && isExtracted &&
+            parserExtractGroupSource != ExtractSource::NONE) {
+        if ((parserExtractGroupSource == ExtractSource::PACKET && !isExtractedFromPkt) ||
+            (parserExtractGroupSource == ExtractSource::NON_PACKET && isExtractedFromPkt)) {
+            LOG_DEBUG5(TAB1 "Constraint violation: Container "
+                       << c << " has parser extract group source " << parserExtractGroupSource
+                       << " but slice needs " << (isExtractedFromPkt ? "packet" : "non-packet"));
+            return false;
         }
     }
 

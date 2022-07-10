@@ -106,6 +106,7 @@ class Allocation {
     using ActionSet = ordered_set<const IR::MAU::Action*>;
     using LiveRangeShrinkingMap = ordered_map<const PHV::Field*, ActionSet>;
     enum class ContainerAllocStatus { EMPTY, PARTIAL, FULL };
+    enum class ExtractSource { NONE, PACKET, NON_PACKET };
 
     /// This struct tracks PHV container state that can change during the
     /// course of allocation, such as the thread to which this container must be
@@ -119,6 +120,7 @@ class Allocation {
         GressAssignment deparserGroupGress;
         ordered_set<AllocSlice> slices;
         ContainerAllocStatus alloc_status;
+        ExtractSource parserExtractGroupSource;
     };
 
     using const_iterator = ordered_map<PHV::Container, ContainerStatus>::const_iterator;
@@ -222,6 +224,10 @@ class Allocation {
     /// Uniform abstraction for setting container state.  For internal use
     /// only.  @c must exist in this Allocation.
     virtual void setDeparserGroupGress(PHV::Container c, GressAssignment gress);
+
+    /// Uniform abstraction for setting container state.  For internal use
+    /// only.  @c must exist in this Allocation.
+    virtual void setParserExtractGroupSource(PHV::Container c, ExtractSource source);
 
  public:
     /// Uniform abstraction for accessing a container state.
@@ -397,6 +403,10 @@ class Allocation {
     /// @returns the allocation status of @p c and fails if @p c is not present.
     virtual ContainerAllocStatus alloc_status(PHV::Container c) const;
 
+    /// @returns the source of @p c's parser extract group.  All containers in
+    /// a group must have the same source.
+    virtual ExtractSource parserExtractGroupSource(PHV::Container c) const;
+
     /// @returns the number of empty containers of size @p size.
     int empty_containers(PHV::Size size) const;
 
@@ -447,14 +457,17 @@ class Allocation {
         GressAssignment gress;
         GressAssignment parserGroupGress;
         GressAssignment deparserGroupGress;
+        ExtractSource parserExtractGroupSource;
         int n_bits;
         AvailableSpot(const PHV::Container& c,
                       const GressAssignment& gress,
                       const GressAssignment& parserGroupGress,
                       const GressAssignment& deparserGroupGress,
+                      const ExtractSource& parserExtractGroupSource,
                       int n_bits)
             : container(c), gress(gress), parserGroupGress(parserGroupGress),
-              deparserGroupGress(deparserGroupGress), n_bits(n_bits)
+              deparserGroupGress(deparserGroupGress),
+              parserExtractGroupSource(parserExtractGroupSource), n_bits(n_bits)
             { }
         bool operator<(const AvailableSpot& other) const {
             return n_bits < other.n_bits; }
@@ -1194,6 +1207,7 @@ class SuperCluster : public ClusterStats {
 
 std::ostream &operator<<(std::ostream &out, const Allocation&);
 std::ostream &operator<<(std::ostream &out, const Allocation*);
+std::ostream &operator<<(std::ostream &out, const Allocation::ExtractSource&);
 std::ostream &operator<<(std::ostream &out, const ContainerGroup&);
 std::ostream &operator<<(std::ostream &out, const ContainerGroup*);
 std::ostream &operator<<(std::ostream &out, const AlignedCluster&);

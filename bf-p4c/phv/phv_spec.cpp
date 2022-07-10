@@ -457,6 +457,14 @@ bitvec TofinoPhvSpec::parserGroup(unsigned id) const {
     return bitvec(id, 1);
 }
 
+bool TofinoPhvSpec::hasParserExtractGroups() const {
+    return false;
+}
+
+bitvec TofinoPhvSpec::parserExtractGroup(unsigned id) const {
+    return bitvec(id, 1);
+}
+
 unsigned TofinoPhvSpec::parserGroupId(const PHV::Container &c) const {
     // On Tofino, the mapping from parser to MAU is identical
     return mauGroupId(c);
@@ -618,6 +626,14 @@ bitvec JBayPhvSpec::parserGroup(unsigned id) const {
     return bitvec(id, 1);
 }
 
+bool JBayPhvSpec::hasParserExtractGroups() const {
+    return false;
+}
+
+bitvec JBayPhvSpec::parserExtractGroup(unsigned id) const {
+    return bitvec(id, 1);
+}
+
 unsigned JBayPhvSpec::parserGroupId(const PHV::Container &c) const {
     // Get de/parser group specific information from phvSpec -- this is silly!
     std::pair<int, int> numBytes = deparserGroupNumAndSize(PHV::Type::B);
@@ -769,6 +785,21 @@ FlatrockPhvSpec::FlatrockPhvSpec() {
 }
 
 bitvec FlatrockPhvSpec::parserGroup(unsigned id) const {
+    return bitvec(id, 1);
+}
+
+bool FlatrockPhvSpec::hasParserExtractGroups() const {
+    return true;
+}
+
+bitvec FlatrockPhvSpec::parserExtractGroup(unsigned id) const {
+    const auto containerType = idToContainerType(id % numContainerTypes());
+    const unsigned index =  id / numContainerTypes();
+    if (idToContainer(id).is(PHV::Size::b8)) {
+        return range(containerType, index & ~0x3U, 4) & physicalContainers();
+    } else if (idToContainer(id).is(PHV::Size::b16)) {
+        return range(containerType, index & ~0x1U, 2) & physicalContainers();
+    }
     return bitvec(id, 1);
 }
 

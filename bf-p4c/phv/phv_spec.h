@@ -167,6 +167,19 @@ class PhvSpec {
      */
     virtual bitvec parserGroup(unsigned id) const = 0;
 
+    /** Does the device have extract groups where all extracts to the group must be of the same
+     * source type (e.g., packet vs non-packet)?
+     */
+    virtual bool hasParserExtractGroups() const = 0;
+
+    /** The Flatrock PHV Builder must have the same extraction type (packet
+     * data vs non packet data) for a set of 4 x 8b or 2 x 16 containers.
+     *
+     * @return the ids of every container in the same parser group as the
+     * provided container.
+     */
+    virtual bitvec parserExtractGroup(unsigned id) const = 0;
+
     /// @return the Parser group id of the container
     virtual unsigned parserGroupId(const PHV::Container &c) const = 0;
 
@@ -271,6 +284,12 @@ class TofinoPhvSpec : public PhvSpec {
     /// @see PhvSpec::parserGroup(unsigned id).
     bitvec parserGroup(unsigned id) const override;
 
+    /// @see PhvSpec::hasParserExtractGroups().
+    bool hasParserExtractGroups() const override;
+
+    /// @see PhvSpec::parserExtractGroup(unsigned id).
+    bitvec parserExtractGroup(unsigned id) const override;
+
     /// @see PhvSpec::parserGroupId(const PHV::Container &)
     unsigned parserGroupId(const PHV::Container &c) const override;
 
@@ -302,6 +321,12 @@ class JBayPhvSpec : public PhvSpec {
 
     /// @see PhvSpec::parserGroup(unsigned id).
     bitvec parserGroup(unsigned id) const override;
+
+    /// @see PhvSpec::hasParserExtractGroups().
+    bool hasParserExtractGroups() const override;
+
+    /// @see PhvSpec::parserExtractGroup(unsigned id).
+    bitvec parserExtractGroup(unsigned id) const override;
 
     /// @see PhvSpec::parserGroupId(const PHV::Container &)
     unsigned parserGroupId(const PHV::Container &c) const override;
@@ -347,6 +372,12 @@ class FlatrockPhvSpec : public PhvSpec {
 
     /// @see PhvSpec::parserGroup(unsigned id).
     bitvec parserGroup(unsigned id) const override;
+
+    /// @see PhvSpec::hasParserExtractGroups().
+    bool hasParserExtractGroups() const override;
+
+    /// @see PhvSpec::parserExtractGroup(unsigned id).
+    bitvec parserExtractGroup(unsigned id) const override;
 
     /// @see PhvSpec::parserGroupId(const PHV::Container &)
     unsigned parserGroupId(const PHV::Container &c) const override;

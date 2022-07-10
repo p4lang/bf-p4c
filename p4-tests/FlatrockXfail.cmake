@@ -97,21 +97,20 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/stf/varbit_constant.p4
   )
 
+# *********************************************************************************************** #
+# ** TNA tests that "should" work *************************************************************** #
+# *********************************************************************************************** #
 p4c_add_xfail_reason("tofino5"
-  "Only one allocation allowed after PHV allocation"
+  "Compiler Bug: .* Null member"
   extensions/p4_tests/p4_16/stf/failed_elim_valid_bit.p4
   extensions/p4_tests/p4_16/stf/p4c-2638.p4
   extensions/p4_tests/p4_16/stf/p4c-2695.p4
   extensions/p4_tests/p4_16/stf/wide_arith_non_64.p4
   )
 
-# *********************************************************************************************** #
-# ** TNA tests that "should" work *************************************************************** #
-# *********************************************************************************************** #
 p4c_add_xfail_reason("tofino5"
   "Compiler Bug: Emitted field didn't receive a PHV allocation: ig_intr_md_for_tm.icrc_enable"
   extensions/p4_tests/p4_16/stf/backend_bug1c.p4
-  extensions/p4_tests/p4_16/stf/bit_or_in_same_state.p4
   extensions/p4_tests/p4_16/stf/cond_checksum_update_4.p4
   extensions/p4_tests/p4_16/stf/funnel_shift.p4
   #extensions/p4_tests/p4_16/stf/header_stack_next.p4
@@ -137,6 +136,13 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/stf/p4c-3089.p4
   #extensions/p4_tests/p4_16/stf/wide_arith_non_64.p4
   )
+
+# These may be genuine expected failures due to field packing and extractions
+p4c_add_xfail_reason("tofino5"
+  "Compiler Bug: Trying to allocate field .* with .* source to container .* with .* source"
+  extensions/p4_tests/p4_16/stf/bit_or_in_same_state.p4
+  )
+
 p4c_add_xfail_reason("tofino5"
   "Compiler Bug: Cannot allocate wide RAMS in Flatrock. Invalid size 2"
   extensions/p4_tests/p4_16/stf/auto_init_meta2.p4

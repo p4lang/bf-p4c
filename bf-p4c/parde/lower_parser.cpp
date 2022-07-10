@@ -993,12 +993,16 @@ struct ComputeFlatrockParserIR : public ParserInspector {
     struct Extract {
         PHV::Size size;
         unsigned int index;
+        // FIXME: clean up type/subtype/hdr
+        unsigned int type;
+        unsigned int subtype;
         cstring hdr;
         int offset;
 
         bool operator<(const Extract& e) const {
             // header name does not affect ordering
-            return std::tie(size, index, offset) < std::tie(e.size, e.index, e.offset);
+            return std::tie(size, index, offset, type, subtype) <
+                   std::tie(e.size, e.index, e.offset, e.type, e.subtype);
         }
     };
     // textual information about extracts performed in parser
@@ -1046,22 +1050,6 @@ struct ComputeFlatrockParserIR : public ParserInspector {
         BUG_CHECK(!field->header().isNullOrEmpty(), "Unspecified header name");
         BUG_CHECK(field->parsed(), "Processing non-parsed field");
 
-        boost::optional<int> hdr_offset;
-        field->foreach_alloc([&](const PHV::AllocSlice& alloc) {
-            BUG_CHECK(!hdr_offset, "Only one allocation allowed after PHV allocation");
-            hdr_offset = (field->offset - alloc.container_slice().lo) / 8;
-            auto size = alloc.container().type().size();
-            auto index = alloc.container().index();
-            Extract e = {
-                .size = size,
-                .index = index,
-                .hdr = field->header(),
-                .offset = *hdr_offset
-            };
-            extracts.insert(e);
-            comments[{size, index}].push_back(debugInfoFor(extract, alloc));
-        });
-
         auto *member = lval->field->to<IR::Member>();
         CHECK_NULL(member);
         CHECK_NULL(member->expr);
@@ -1071,6 +1059,34 @@ struct ComputeFlatrockParserIR : public ParserInspector {
         CHECK_NULL(hdr_ref->ref);
 
         size_t width = hdr_ref->ref->type->width_bits();
+
+        boost::optional<int> hdr_offset;
+        field->foreach_alloc([&](const PHV::AllocSlice& alloc) {
+            BUG_CHECK(!hdr_offset, "Only one allocation allowed after PHV allocation");
+            unsigned int type = 0;
+            unsigned int subtype = 0;
+            if (extract->source->is<IR::BFN::PacketRVal>()) {
+                hdr_offset = (width - field->offset -
+                              (alloc.container().size() - alloc.container_slice().lo)) /
+                             8;
+            } else if (auto* constantSource = extract->source->to<IR::BFN::ConstantRVal>()) {
+                type = 1;
+                hdr_offset = constantSource->constant->asUnsigned() << alloc.container_slice().lo;
+            }
+            auto size = alloc.container().type().size();
+            auto index = alloc.container().index();
+
+            Extract e = {
+                .size = size,
+                .index = index,
+                .type = type,
+                .subtype = subtype,
+                .hdr = field->header(),
+                .offset = *hdr_offset
+            };
+            extracts.insert(e);
+            comments[{size, index}].push_back(debugInfoFor(extract, alloc));
+        });
 
         if (auto *state = findContext<IR::BFN::ParserState>()) {
             if (headers[state].count(field->header()) == 0) {
@@ -1095,6 +1111,8 @@ struct ComputeFlatrockParserIR : public ParserInspector {
             for (auto &extract : extracts) {
                 LOG4("  size=" << extract.size
                   << ", index=" << extract.index
+                  << ", type=" << extract.type
+                  << ", subtype=" << extract.subtype
                   << ", header=" << extract.hdr
                   << ", offset=" << extract.offset);
                 for (auto &comment : comments.at({extract.size, extract.index}))
@@ -1185,7 +1203,10 @@ class ReplaceFlatrockParserIR : public Transform {
         // {is_pktgen(1bit),port_id(7bit),8'b0}
         default_profile->metadata_select.push_back(
             Flatrock::metadata_select(
-                Flatrock::metadata_select::INBAND_METADATA, { /* index */ 0 }));
+                Flatrock::metadata_select::LOGICAL_PORT_NUMBER, {}));
+        default_profile->metadata_select.push_back(
+            Flatrock::metadata_select(
+                Flatrock::metadata_select::PORT_METADATA, { /* index */ 0 }));
         // timestamp
         for (int i = Flatrock::PARSER_PROFILE_MD_SEL_TIMESTAMP_BYTE_OFFSET;
              i < Flatrock::PARSER_PROFILE_MD_SEL_TIMESTAMP_BYTE_OFFSET +
@@ -1240,9 +1261,13 @@ class ReplaceFlatrockParserIR : public Transform {
             phv_builder_extract->index = 0;
             if ((extract.index / phe_sources) %
                     Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES == 0) {
+                // FIXME: clean up
+                phv_builder_extract->type1 = extract.type;
                 phv_builder_extract->hdr1_name = extract.hdr;
                 phv_builder_extract->offsets1.push_back({container_name, extract.offset});
             } else {
+                // FIXME: clean up
+                phv_builder_extract->type2 = extract.type;
                 phv_builder_extract->hdr2_name = extract.hdr;
                 phv_builder_extract->offsets2.push_back({container_name, extract.offset});
             }

@@ -309,10 +309,12 @@ class PhvBuilderExtract {
 #emit
     PHV::Size size = PHV::Size::null;
 #end
+    unsigned type1;
     boost::optional<int> hdr1_id = boost::none;
     boost::optional<cstring> hdr1_name = boost::none;
     std::vector<std::pair<cstring, int>> offsets1 = {};
 
+    unsigned type2;
     boost::optional<int> hdr2_id = boost::none;
     boost::optional<cstring> hdr2_name = boost::none;
     std::vector<std::pair<cstring, int>> offsets2 = {};
@@ -348,6 +350,7 @@ class PhvBuilderExtract {
         default:
             BUG("Invalid container size in PHV builder extractor");
         }
+        out << IndentCtl::endl << "type1=" << type1;
         out << IndentCtl::endl << "hdr1_id=" << (hdr1_id ? std::to_string(*hdr1_id) : "<unset>");
         out << IndentCtl::endl << "hdr1_name=" << (hdr1_name ? *hdr1_name : "<unset>");
         out << IndentCtl::endl << "offsets=[";
@@ -357,6 +360,7 @@ class PhvBuilderExtract {
             sep = ", ";
         }
         out << ']';
+        out << IndentCtl::endl << "type2=" << type2;
         out << IndentCtl::endl << "hdr2_id=" << (hdr2_id ? std::to_string(*hdr2_id) : "<unset>");
         out << IndentCtl::endl << "hdr2_name=" << (hdr2_name ? *hdr2_name : "<unset>");
         out << IndentCtl::endl << "offsets=[";
