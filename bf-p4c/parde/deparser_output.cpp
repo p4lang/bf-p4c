@@ -387,6 +387,31 @@ struct OutputDigests : public Inspector {
     indent_t indent;
 };
 
+/// Generate the assembly for packet body offset
+struct OutputPacketBodyOffset : public Inspector {
+    explicit OutputPacketBodyOffset(std::ostream& out) : out(out), indent(1) { }
+
+    bool preorder(const IR::BFN::LoweredDeparser* deparser) override {
+#if HAVE_FLATROCK
+        if (Device::currentDevice() == Device::FLATROCK && deparser->gress == EGRESS) {
+            out << indent << "packet_body_offset:" << std::endl;
+            AutoIndent pboIndent(indent);
+
+            out << indent << "hdr: " << payloadHeaderName << std::endl;
+            out << indent << "offset: " << 0 << std::endl;
+            out << indent << "var_off_pos: " << 0 << std::endl;
+            out << indent << "var_off_len: " << 0 << std::endl;
+        }
+#endif  /* HAVE_FLATROCK */
+
+        return false;
+    }
+
+ private:
+    std::ostream& out;
+    indent_t indent;
+};
+
 /// @}
 
 }  // namespace
@@ -409,6 +434,7 @@ operator<<(std::ostream& out, const DeparserAsmOutput& deparserOut) {
     deparserOut.deparser->apply(OutputChecksums(out));
     deparserOut.deparser->apply(OutputParameters(out));
     deparserOut.deparser->apply(OutputDigests(out, deparserOut.phv));
+    deparserOut.deparser->apply(OutputPacketBodyOffset(out));
 
     return out;
 }
