@@ -1645,10 +1645,10 @@ bool CoreAllocation::satisfies_constraints(
             b.container_slice().lo - a.container_slice().hi;
     };
     // Check no pack for this field.
-    const auto& slices = alloc.slicesByLiveness(c, slice);
+    const auto& byte_slices = alloc.byteSlicesByLiveness(c, slice);
     std::vector<PHV::FieldSlice> liveFieldSlices;
     ordered_set<PHV::FieldSlice> initFieldSlices;
-    for (auto& sl : slices) {
+    for (auto& sl : byte_slices) {
         // XXX(yumin): aligned fieldslice from the same field can be ignored
         if (is_aligned_same_field_alloc(slice, sl)) {
             continue;
@@ -1667,7 +1667,7 @@ bool CoreAllocation::satisfies_constraints(
     LOG_DEBUG7(TAB2 "initFieldsSlices:");
     for (auto& sl : initFieldSlices) LOG_DEBUG7(TAB2 "  " << sl);
 
-    for (auto &sl : slices) {
+    for (auto &sl : byte_slices) {
         bool disjoint = slice.isLiveRangeDisjoint(sl) ||
                         (slice.container_slice().overlaps(sl.container_slice()) &&
                         utils_i.phv.isMetadataMutex(slice.field(), sl.field()));
@@ -1707,12 +1707,12 @@ bool CoreAllocation::satisfies_constraints(
         hasExtractedTogether = utils_i.phv.are_bridged_extracted_together(slice.field(),
                                                                           slc.field());
 
-        LOG_DEBUG7(TAB1 "  slice: " << slice << "  lfs: " << slc <<
-                   "  hasOtherExtracted:" << hasOtherExtracted <<
-                   "  hasExtractedTogether:" << hasExtractedTogether <<
-                   "  isThisSliceUninitialized:" << isThisSliceUninitialized <<
-                   "  isThisSliceExtracted:" << isThisSliceExtracted <<
-                   "  hasOtherUninitializedRead:" << hasOtherUninitializedRead);
+        LOG_DEBUG7(TAB1 "  slice: " << slice << "  \n\tlfs: " << slc << std::endl <<
+                   TAB2 "hasOtherUninitialized:" << hasOtherUninitializedRead << std::endl <<
+                   TAB2 "hasOtherExtracted:" << hasOtherExtracted << std::endl <<
+                   TAB2 "hasExtractedTogether:" << hasExtractedTogether << std::endl <<
+                   TAB2 "isThisSliceUninitialized:" << isThisSliceUninitialized << std::endl <<
+                   TAB2 "isThisSliceExtracted:" << isThisSliceExtracted);
 
         if (hasOtherExtracted && !hasExtractedTogether &&
             (isThisSliceUninitialized || isThisSliceExtracted)) {

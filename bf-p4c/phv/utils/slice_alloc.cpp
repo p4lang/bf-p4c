@@ -65,6 +65,7 @@ AllocSlice& AllocSlice::operator=(const AllocSlice& other) {
     width_i = other.width();
     init_points_i = other.getInitPoints();
     shadow_always_run_i = other.getShadowAlwaysRun();
+    shadow_zero_init_i = other.is_zero_initialized();
     has_meta_init_i = other.hasMetaInit();
     is_physical_stage_based_i = other.is_physical_stage_based_i;
     physical_deparser_stage_i = other.physical_deparser_stage_i;
@@ -402,6 +403,21 @@ bool AllocSlice::addRef(cstring u_name, FieldUse f_use) const {
         refs[u_name] = f_use;
         return true;
     }
+}
+
+le_bitrange AllocSlice::container_bytes() const {
+    int byte_lo = container_bit_lo_i / 8;
+    int byte_hi = (container_bit_lo_i + width_i -1) / 8;
+    return StartLen(byte_lo, (byte_hi - byte_lo + 1));
+}
+
+bool AllocSlice::is_zero_initialized() const {
+    if (init_points_i.size() ||
+        init_i.destAssignedToZero() ||
+        shadow_zero_init_i)
+        return true;
+
+    return false;
 }
 
 // Convert NOP slice to assignZeroToDestion

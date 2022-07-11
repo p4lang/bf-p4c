@@ -357,6 +357,8 @@ class Allocation {
      */
     virtual MutuallyLiveSlices slicesByLiveness(const PHV::Container c,
                                                 const AllocSlice& sl) const;
+    virtual MutuallyLiveSlices byteSlicesByLiveness(const PHV::Container c,
+                                                    const AllocSlice& sl) const;
     virtual MutuallyLiveSlices slicesByLiveness(const PHV::Container c,
                                                 std::vector<AllocSlice>& slices) const;
 

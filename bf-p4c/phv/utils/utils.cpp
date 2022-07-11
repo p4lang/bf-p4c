@@ -273,6 +273,28 @@ PHV::Allocation::slicesByLiveness(const PHV::Container c, const AllocSlice& sl) 
 }
 
 PHV::Allocation::MutuallyLiveSlices
+PHV::Allocation::byteSlicesByLiveness(const PHV::Container c, const AllocSlice& sl) const {
+    PHV::Allocation::MutuallyLiveSlices rs;
+    auto slices = this->slices(c);
+    bool sl_is_extracted = uses_i->is_extracted(sl.field());
+    for (auto& slice : slices) {
+        bool mutex = phv_i->field_mutex()(slice.field()->id, sl.field()->id);
+        // *ALEX* Checking disjoint liveranges may be too conservative due to
+        // default [parser, deparser] liveranges - See P4C-4467
+        bool liverange_mutex = slice.isLiveRangeDisjoint(sl);
+        bool same_bytes = sl.container_bytes().overlaps(slice.container_bytes());
+        bool extr_in_uninit_byte = false;
+        if (same_bytes) {
+            extr_in_uninit_byte = (sl_is_extracted && !slice.is_zero_initialized()) ||
+                (uses_i->is_extracted(slice.field()) && !sl.is_zero_initialized());
+        }
+
+        if (!mutex && (!liverange_mutex || extr_in_uninit_byte)) rs.insert(slice);
+    }
+    return rs;
+}
+
+PHV::Allocation::MutuallyLiveSlices
 PHV::Allocation::slicesByLiveness(const PHV::Container c,
                                   std::vector<AllocSlice>& slices) const {
     PHV::Allocation::MutuallyLiveSlices rs;

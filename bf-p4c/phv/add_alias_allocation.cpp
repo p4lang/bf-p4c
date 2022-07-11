@@ -25,6 +25,8 @@ void AddAliasAllocation::addAllocation(
         // Workaround to ensure only one of the aliased fields has an always run instruction in the
         // last stage.
         new_slice.setShadowAlwaysRun(alloc.getInitPrimitive().mustInitInLastMAUStage());
+        // Set zero init for alias source fields
+        new_slice.setShadowZeroInit(alloc.is_zero_initialized());
 
         if (LOGGING(5)) {
             // Copy units of dest to source slice
