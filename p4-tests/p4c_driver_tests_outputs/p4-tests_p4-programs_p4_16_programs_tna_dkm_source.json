@@ -5,17 +5,17 @@
             "references": [
                 {
                     "file": "tna_dkm.p4",
-                    "line": 131,
+                    "line": 145,
                     "column": 9
                 },
                 {
                     "file": "tna_dkm.p4",
-                    "line": 140,
+                    "line": 154,
                     "column": 9
                 },
                 {
                     "file": "tna_dkm.p4",
-                    "line": 158,
+                    "line": 172,
                     "column": 20
                 }
             ],
@@ -31,17 +31,17 @@
             "references": [
                 {
                     "file": "tna_dkm.p4",
-                    "line": 132,
+                    "line": 146,
                     "column": 26
                 },
                 {
                     "file": "tna_dkm.p4",
-                    "line": 141,
+                    "line": 155,
                     "column": 26
                 },
                 {
                     "file": "tna_dkm.p4",
-                    "line": 159,
+                    "line": 173,
                     "column": 18
                 }
             ],
@@ -73,14 +73,14 @@
             "references": [
                 {
                     "file": "tna_dkm.p4",
-                    "line": 179,
+                    "line": 194,
                     "column": 8
                 }
             ],
             "symbol_name": "pipe",
             "declaration": {
                 "file": "tna_dkm.p4",
-                "line": 177,
+                "line": 192,
                 "column": 33
             },
             "symbol_type": "Declaration_Instance_Type_Specialized"
@@ -89,12 +89,12 @@
             "references": [
                 {
                     "file": "tna_dkm.p4",
-                    "line": 148,
+                    "line": 162,
                     "column": 13
                 },
                 {
                     "file": "tna_dkm.p4",
-                    "line": 164,
+                    "line": 179,
                     "column": 9
                 }
             ],
@@ -110,20 +110,32 @@
             "references": [
                 {
                     "file": "tna_dkm.p4",
-                    "line": 147,
+                    "line": 128,
                     "column": 9,
-                    "end_line": 159
+                    "end_line": 138
                 },
                 {
                     "file": "tna_dkm.p4",
-                    "line": 152,
+                    "line": 133,
                     "column": 20,
-                    "end_line": 154
+                    "end_line": 135
+                },
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 161,
+                    "column": 9,
+                    "end_line": 173
+                },
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 166,
+                    "column": 20,
+                    "end_line": 168
                 }
             ],
             "symbol_name": "NoAction",
             "declaration": {
-                "file": "/build/bf-p4c/debug/p4c/p4include/core.p4",
+                "file": "/build/bf-p4c-dev/debug/p4c/p4include/core.p4",
                 "line": 70,
                 "column": 8
             },
@@ -134,6 +146,11 @@
                 {
                     "file": "tna_dkm.p4",
                     "line": 119,
+                    "column": 13
+                },
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 134,
                     "column": 13
                 }
             ],
@@ -156,6 +173,11 @@
                     "file": "tna_dkm.p4",
                     "line": 123,
                     "column": 32
+                },
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 135,
+                    "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress.miss",
@@ -170,14 +192,14 @@
             "references": [
                 {
                     "file": "tna_dkm.p4",
-                    "line": 154,
+                    "line": 168,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress.nat",
             "declaration": {
                 "file": "tna_dkm.p4",
-                "line": 136,
+                "line": 150,
                 "column": 12
             },
             "symbol_type": "P4Action"
@@ -186,14 +208,14 @@
             "references": [
                 {
                     "file": "tna_dkm.p4",
-                    "line": 153,
+                    "line": 167,
                     "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress.route",
             "declaration": {
                 "file": "tna_dkm.p4",
-                "line": 127,
+                "line": 141,
                 "column": 12
             },
             "symbol_type": "P4Action"
@@ -202,14 +224,14 @@
             "references": [
                 {
                     "file": "tna_dkm.p4",
-                    "line": 164,
+                    "line": 179,
                     "column": 13
                 }
             ],
-            "symbol_name": "tna_dkm164",
+            "symbol_name": "tna_dkm179",
             "declaration": {
                 "file": "tna_dkm.p4",
-                "line": 164,
+                "line": 179,
                 "column": 13
             },
             "symbol_type": "P4Action"
@@ -218,14 +240,14 @@
             "references": [
                 {
                     "file": "tna_dkm.p4",
-                    "line": 168,
+                    "line": 183,
                     "column": 32
                 }
             ],
-            "symbol_name": "tna_dkm168",
+            "symbol_name": "tna_dkm183",
             "declaration": {
                 "file": "tna_dkm.p4",
-                "line": 168,
+                "line": 183,
                 "column": 32
             },
             "symbol_type": "P4Action"
@@ -234,7 +256,7 @@
             "references": [
                 {
                     "file": "tna_dkm.p4",
-                    "line": 163,
+                    "line": 177,
                     "column": 9
                 }
             ],
@@ -250,34 +272,50 @@
             "references": [
                 {
                     "file": "tna_dkm.p4",
-                    "line": 165,
+                    "line": 178,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.forward_key_slice",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 127,
+                "column": 39
+            },
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 180,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.ipRoute",
             "declaration": {
                 "file": "tna_dkm.p4",
-                "line": 146,
+                "line": 160,
                 "column": 11
             },
             "symbol_type": "P4Table"
         },
         {
             "references": [],
-            "symbol_name": "tbl_tna_dkm164",
+            "symbol_name": "tbl_tna_dkm179",
             "declaration": {
                 "file": "tna_dkm.p4",
-                "line": 164,
+                "line": 179,
                 "column": 13
             },
             "symbol_type": "P4Table"
         },
         {
             "references": [],
-            "symbol_name": "tbl_tna_dkm168",
+            "symbol_name": "tbl_tna_dkm183",
             "declaration": {
                 "file": "tna_dkm.p4",
-                "line": 168,
+                "line": 183,
                 "column": 32
             },
             "symbol_type": "P4Table"
@@ -292,6 +330,11 @@
                 {
                     "file": "tna_dkm.p4",
                     "line": 129,
+                    "column": 13
+                },
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 143,
                     "column": 9
                 }
             ],
@@ -307,7 +350,7 @@
             "references": [
                 {
                     "file": "tna_dkm.p4",
-                    "line": 130,
+                    "line": 144,
                     "column": 9
                 }
             ],
@@ -323,12 +366,12 @@
             "references": [
                 {
                     "file": "tna_dkm.p4",
-                    "line": 138,
+                    "line": 152,
                     "column": 9
                 },
                 {
                     "file": "tna_dkm.p4",
-                    "line": 149,
+                    "line": 163,
                     "column": 13
                 }
             ],
@@ -344,7 +387,7 @@
             "references": [
                 {
                     "file": "tna_dkm.p4",
-                    "line": 139,
+                    "line": 153,
                     "column": 9
                 }
             ],
@@ -381,12 +424,12 @@
                 },
                 {
                     "file": "tna_dkm.p4",
-                    "line": 133,
+                    "line": 147,
                     "column": 9
                 },
                 {
                     "file": "tna_dkm.p4",
-                    "line": 142,
+                    "line": 156,
                     "column": 9
                 }
             ],
@@ -404,6 +447,11 @@
                     "file": "tna_dkm.p4",
                     "line": 115,
                     "column": 13
+                },
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 130,
+                    "column": 13
                 }
             ],
             "symbol_name": "SwitchIngress.ig_intr_md.ingress_port",
@@ -418,7 +466,7 @@
             "references": [
                 {
                     "file": "tna_dkm.p4",
-                    "line": 168,
+                    "line": 183,
                     "column": 9
                 }
             ],
@@ -439,12 +487,12 @@
                 },
                 {
                     "file": "tna_dkm.p4",
-                    "line": 128,
+                    "line": 142,
                     "column": 9
                 },
                 {
                     "file": "tna_dkm.p4",
-                    "line": 137,
+                    "line": 151,
                     "column": 9
                 }
             ],
@@ -460,14 +508,14 @@
             "references": [
                 {
                     "file": "tna_dkm.p4",
-                    "line": 138,
+                    "line": 152,
                     "column": 29
                 }
             ],
             "symbol_name": "SwitchIngress.nat.dstAddr",
             "declaration": {
                 "file": "tna_dkm.p4",
-                "line": 136,
+                "line": 150,
                 "column": 49
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -476,14 +524,14 @@
             "references": [
                 {
                     "file": "tna_dkm.p4",
-                    "line": 137,
+                    "line": 151,
                     "column": 38
                 }
             ],
             "symbol_name": "SwitchIngress.nat.dst_port",
             "declaration": {
                 "file": "tna_dkm.p4",
-                "line": 136,
+                "line": 150,
                 "column": 67
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -492,14 +540,14 @@
             "references": [
                 {
                     "file": "tna_dkm.p4",
-                    "line": 139,
+                    "line": 153,
                     "column": 29
                 }
             ],
             "symbol_name": "SwitchIngress.nat.srcAddr",
             "declaration": {
                 "file": "tna_dkm.p4",
-                "line": 136,
+                "line": 150,
                 "column": 28
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -508,14 +556,14 @@
             "references": [
                 {
                     "file": "tna_dkm.p4",
-                    "line": 129,
+                    "line": 143,
                     "column": 33
                 }
             ],
             "symbol_name": "SwitchIngress.route.dstMac",
             "declaration": {
                 "file": "tna_dkm.p4",
-                "line": 127,
+                "line": 141,
                 "column": 48
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -524,14 +572,14 @@
             "references": [
                 {
                     "file": "tna_dkm.p4",
-                    "line": 128,
+                    "line": 142,
                     "column": 38
                 }
             ],
             "symbol_name": "SwitchIngress.route.dst_port",
             "declaration": {
                 "file": "tna_dkm.p4",
-                "line": 127,
+                "line": 141,
                 "column": 65
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -540,14 +588,14 @@
             "references": [
                 {
                     "file": "tna_dkm.p4",
-                    "line": 130,
+                    "line": 144,
                     "column": 33
                 }
             ],
             "symbol_name": "SwitchIngress.route.srcMac",
             "declaration": {
                 "file": "tna_dkm.p4",
-                "line": 127,
+                "line": 141,
                 "column": 29
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -983,5 +1031,5 @@
             "symbol_type": "Parameter_Type_Extern"
         }
     ],
-    "source_root": "/root/repo/bf-p4c/p4-tests/p4-programs/p4_16_programs/tna_dkm"
+    "source_root": "/root/repo/bf-p4c-dev/p4-tests/p4-programs/p4_16_programs/tna_dkm"
 }

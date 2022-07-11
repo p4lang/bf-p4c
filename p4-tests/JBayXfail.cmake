@@ -454,3 +454,9 @@ p4c_add_xfail_reason("tofino2"
   "error: table .* should not have empty const entries list."
   extensions/p4_tests/p4_16/compile_only/p4c-4498.p4
 )
+
+# DRV-5911
+p4c_add_xfail_reason("tofino2"
+  "\"grpc_message\":\"Socket closed\""
+  p4_16_programs_tna_dkm
+)

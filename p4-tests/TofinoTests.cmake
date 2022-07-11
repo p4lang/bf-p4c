@@ -819,15 +819,15 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "case5577" ${CMAKE_CURRENT_SOURCE_DIR}/p4
 
 set (BA102_TESTS_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ba-102/labs/*/solution/p4src/*.p4")
 # l3_rewrite_920 and _930 are not actually tests but helper files for l3_rewrite
-p4c_find_tests("${BA102_TESTS_FOR_TOFINO}" ba102_tests INCLUDE "tna.p4" EXCLUDE "simple_l3_rewrite_9[23]0")
+p4c_find_tests("${BA102_TESTS_FOR_TOFINO}" ba102_tests INCLUDE "tna.p4")
 # message("BA-102 tests: ${ba102_tests}")
-set(_ba102_common_opts "-bfrt -arch tna -Xp4c=\"--disable-parse-depth-limit\" -append-pythonpath ${CMAKE_CURRENT_SOURCE_DIR}/p4examples/tools")
+set(_ba102_common_opts "-bfrt -arch tna -Xp4c=\"--disable-parse-depth-limit\" -append-pythonpath ${CMAKE_CURRENT_SOURCE_DIR}/p4examples/tools -Xptf=--test-params=student=False")
 function(add_ba102_test t suffix extra_opts)
   get_filename_component(p4name ${t} NAME)
   string (REGEX REPLACE ".p4" "" testname ${p4name})
+  string (REGEX REPLACE ".*labs/([^/]*)/.*" "\\1" test_group ${t})
   get_filename_component(__td ${t} DIRECTORY)
-  set(_ba102_common_opts "-bfrt -arch tna -Xp4c=\"--disable-parse-depth-limit\" -append-pythonpath ${CMAKE_CURRENT_SOURCE_DIR}/p4examples/tools -Xptf=--test-params=student=False")
-  set(_full_testname "ba102_${testname}${suffix}")
+  set(_full_testname "ba102_${test_group}_${testname}${suffix}")
 
   # some labs have PTF as part of the assignment and therefore in the solution subdir but some have
   # it one level up, available for the students
@@ -851,8 +851,8 @@ foreach(t IN LISTS ba102_tests)
 endforeach()
 add_ba102_test("${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ba-102/labs/13-simple_mpls_decap/solution/p4src/simple_mpls_decap.p4"
                "_p4c-2880" " -DFAST_MPLS_PARSER -DMPLS_STACK_LOOKAHEAD")
-p4c_add_test_label("tofino" "UNSTABLE" "ba102_simple_wred")
-p4c_add_test_label("tofino" "UNSTABLE" "ba102_simple_lpf")
+p4c_add_test_label("tofino" "UNSTABLE" "ba102_15-simple_lpf_simple_lpf")
+p4c_add_test_label("tofino" "UNSTABLE" "ba102_16-simple_wred_simple_wred")
 
 # p4testgen ptf tests for p4factory programs
 p4c_add_ptf_test_with_ptfdir ("tofino" "p4testgen_emulation" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/p4testgen_regression/emulation.p4

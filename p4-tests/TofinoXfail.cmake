@@ -1762,12 +1762,26 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-register-read-write-2-bmv2.p4
 )
 
-# P4C-3720 - PTF tests to be fixed and removed from Xfails
+# P4C-3722 - BA102 PTF tests to be fixed and removed from Xfails
 p4c_add_xfail_reason("tofino"
   "ERROR:PTF runner:Error when running PTF tests"
-   ba102_simple_l3_nexthop_hash_action
-   ba102_simple_l3_mcast_checksum_full_headers
-   ba102_simple_l3_mcast_checksum_split_headers
+   ba102_04-simple_l3_nexthop_simple_l3_nexthop_hash_action
+   ba102_17-simple_l3_action_profile_simple_l3_nexthop_hash_action
+   ba102_10-simple_l3_mcast_simple_l3_mcast_checksum_full_headers
+   ba102_10-simple_l3_mcast_simple_l3_mcast_checksum_split_headers
+   ba102_03-simple_l3_rewrite_simple_l3_rewrite_920  # old version
+)
+
+p4c_add_xfail_reason("tofino"
+    "KeyError: 'SUDO_USER'"
+    ba102_02-simple_l3_acl_simple_l3_acl
+    ba102_03-simple_l3_rewrite_simple_l3_rewrite_930
+)
+
+p4c_add_xfail_reason("tofino"
+    "NOT READY YET"
+    ba102_17-simple_l3_action_profile_simple_l3_action_profile
+    ba102_17-simple_l3_action_profile_simple_l3_no_action_profile
 )
 
 # P4C-3402
