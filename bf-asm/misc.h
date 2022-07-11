@@ -84,7 +84,10 @@ template<class T> struct ptrless {
         { return b ? a ? *a < *b : true : false; }
 };
 
+/* word with size (lowest) bits set */
 uint64_t bitMask(unsigned size);
+/* word with range of bits from lo to hi (inclusive) set */
+uint64_t bitRange(unsigned lo, unsigned hi);
 
 int parity(uint32_t v);
 int parity_2b(uint32_t v);  // two-bit parity (parity of pairs in the word)

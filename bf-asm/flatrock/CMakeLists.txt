@@ -30,6 +30,7 @@ set_source_files_properties(
   PROPERTIES GENERATED TRUE)
 
 set (BFAS_FLATROCK_SRCS
+  flatrock/action_bus.cpp
   flatrock/action_table.cpp
   flatrock/gateway.cpp
   flatrock/hash_action.cpp
@@ -43,6 +44,7 @@ set (BFAS_FLATROCK_SRCS
   )
 
 set (BFAS_FLATROCK_HEADERS
+  flatrock/action_bus.h
   flatrock/action_table.h
   flatrock/gateway.h
   flatrock/hash_action.h

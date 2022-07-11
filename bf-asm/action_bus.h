@@ -81,10 +81,11 @@ struct ActionBusSource {
             return field < a.field; } }
     std::string name(Table *tbl) const;
     std::string toString(Table *tbl) const;
+    friend std::ostream &operator<<(std::ostream &, const ActionBusSource &);
 };
 
 class ActionBus {
- private :
+ protected :
     // Check two ActionBusSource refs to ensure that they are compatible (can be at the same
     // location on the aciton bus -- basically the same data)
     static bool compatible(const ActionBusSource &a, unsigned a_off,
@@ -106,7 +107,6 @@ class ActionBus {
                     return true; }
             return false; }
     };
-    friend std::ostream &operator<<(std::ostream &, const ActionBusSource &);
     friend std::ostream &operator<<(std::ostream &, const Slot &);
     friend std::ostream &operator<<(std::ostream &, const ActionBus &);
     ordered_map<unsigned, Slot>                        by_byte;
@@ -130,19 +130,28 @@ class ActionBus {
     bool check_atcam_sharing(Table *tbl1, Table *tbl2);
     bool check_slot_sharing(ActionBus::Slot &slot, bitvec &action_bus);
 
- public:
-    int             lineno;
     ActionBus() : lineno(-1) {}
     ActionBus(Table *, VECTOR(pair_t) &);
+
+ public:
+    int             lineno;
+    static std::unique_ptr<ActionBus> create();
+    static std::unique_ptr<ActionBus> create(Table *, VECTOR(pair_t) &);
+
     void pass1(Table *tbl);
     void pass2(Table *tbl) {}
     void pass3(Table *tbl);
     template<class REGS> void write_immed_regs(REGS &regs, Table *tbl);
     template<class REGS>
     void write_action_regs(REGS &regs, Table *tbl, int homerow, unsigned action_slice);
+#if HAVE_FLATROCK
+    virtual void write_regs(Target::Flatrock::mau_regs &regs, Table *tbl) { BUG(); }
+#endif
+
     void do_alloc(Table *tbl, ActionBusSource src, unsigned use, int lobyte,
             int bytes, unsigned offset);
-    void alloc_field(Table *, ActionBusSource src, unsigned offset, unsigned sizes_needed);
+    static const unsigned size_masks[8];
+    virtual void alloc_field(Table *, ActionBusSource src, unsigned offset, unsigned sizes_needed);
     void need_alloc(Table *tbl, const ActionBusSource &src, unsigned lo,
             unsigned hi, unsigned size);
     void need_alloc(Table *tbl, Table *attached, TableOutputModifier mod,

@@ -275,7 +275,7 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
                 actions.reset(new Actions(this, kv.value.map));
         } else if (kv.key == "action_bus") {
             if (CHECKTYPE(kv.value, tMAP))
-                action_bus.reset(new ActionBus(this, kv.value.map));
+                action_bus = ActionBus::create(this, kv.value.map);
         } else if (kv.key == "action_id") {
             if (CHECKTYPE(kv.value, tINT))
                 action_id = kv.value.i;
@@ -346,7 +346,7 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
         }
     }
     alloc_rams(true, stage->sram_use, 0);
-    if (!action_bus) action_bus.reset(new ActionBus());
+    if (!action_bus) action_bus = ActionBus::create();
 }
 
 void ActionTable::pass1() {

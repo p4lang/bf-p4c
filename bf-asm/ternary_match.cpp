@@ -175,7 +175,7 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
     } else if (!action.set() && !actions) {
         error(lineno, "Table %s has no indirect, action table or immediate actions", name());
     }
-    if (action && !action_bus) action_bus.reset(new ActionBus());
+    if (action && !action_bus) action_bus = ActionBus::create();
 }
 
 bitvec TernaryMatchTable::compute_reachable_tables() {
@@ -1026,7 +1026,7 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
     alloc_rams(false, stage->sram_use, &stage->tcam_indirect_bus_use);
     if (!action.set() && !actions)
         error(lineno, "Table %s has neither action table nor immediate actions", name());
-    if (actions && !action_bus) action_bus.reset(new ActionBus());
+    if (actions && !action_bus) action_bus = ActionBus::create();
 }
 
 Table::table_type_t TernaryIndirectTable::set_match_table(MatchTable *m, bool indirect) {

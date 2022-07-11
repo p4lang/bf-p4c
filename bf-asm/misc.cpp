@@ -77,6 +77,12 @@ uint64_t bitMask(unsigned size) {
     return (UINT64_C(1) << size) - 1;
 }
 
+uint64_t bitRange(unsigned lo, unsigned hi) {
+    BUG_CHECK(hi >= lo && hi < 64, "bitRange(%u,%u) invalid", lo, hi);
+    if (lo == 0 && hi+1 == 64) return ~UINT64_C(0);
+    return ((UINT64_C(1) << (hi-lo+1)) - 1) << lo;
+}
+
 int parity(uint32_t v) {
     v ^= v >> 16;
     v ^= v >> 8;

@@ -89,8 +89,8 @@ struct operand {
             if (reg->hi/8U - reg->lo/8U >= ::Phv::reg(slot)->size/8U)
                 error(reg.lineno, "%s is not entirely in one ADB slot", reg.name());
             abs = ActionBusSource(grp, byte);
-            if (tbl->find_on_actionbus(abs, reg->lo, reg->hi, ::Phv::reg(slot)->size) < 0)
-                tbl->need_on_actionbus(abs, reg->lo, reg->hi, ::Phv::reg(slot)->size); }
+            if (tbl->find_on_actionbus(abs, reg->lo, reg->hi, ::Phv::reg(slot)->size/8U) < 0)
+                tbl->need_on_actionbus(abs, reg->lo, reg->hi, ::Phv::reg(slot)->size/8U); }
         void dbprint(std::ostream &out) const override { out << reg; }
         bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) override {
             fn(*reg);

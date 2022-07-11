@@ -4,6 +4,7 @@
 #include "hex.h"
 #include "misc.h"
 #include "stage.h"
+#include "flatrock/action_bus.h"
 
 std::ostream &operator<<(std::ostream &out, const ActionBusSource &src) {
     const char *sep = "";
@@ -38,6 +39,12 @@ std::ostream &operator<<(std::ostream &out, const ActionBusSource &src) {
         break;
     case ActionBusSource::TableAddress:
         out << "TableAddress(" << (src.table ? src.table->name() : "0") << ")";
+        break;
+    case ActionBusSource::Ealu:
+        out << "EALU";
+        break;
+    case ActionBusSource::XcmpData:
+        out << "XCMP(" << src.xcmp_group << ":" << src.xcmp_byte << ")";
         break;
     case ActionBusSource::NameRef:
         out << "NameRef(" << (src.name_ref ? src.name_ref->name : "0") << ")";
@@ -208,6 +215,22 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
             });
         }
     }
+}
+
+std::unique_ptr<ActionBus> ActionBus::create() {
+#ifdef HAVE_FLATROCK
+    if (options.target == TOFINO5)
+        return std::unique_ptr<ActionBus>(new Flatrock::ActionBus());
+#endif
+    return std::unique_ptr<ActionBus>(new ActionBus());
+}
+
+std::unique_ptr<ActionBus> ActionBus::create(Table *tbl, VECTOR(pair_t) &data) {
+#ifdef HAVE_FLATROCK
+    if (options.target == TOFINO5)
+        return std::unique_ptr<ActionBus>(new Flatrock::ActionBus(tbl, data));
+#endif
+    return std::unique_ptr<ActionBus>(new ActionBus(tbl, data));
 }
 
 void ActionBus::setup_slot(int lineno, Table *tbl, const char *name, unsigned idx,
@@ -457,6 +480,9 @@ void ActionBus::need_alloc(Table *tbl, const ActionBusSource &src,
     case ActionBusSource::TableAddress:
         src.table->set_address_used();
         break;
+    case ActionBusSource::XcmpData:
+        // FIXME -- need something for flatrock?
+        break;
     default:
         break; }
     byte_use.setrange(lo/8U, size);
@@ -566,7 +592,7 @@ void ActionBus::do_alloc(Table *tbl, ActionBusSource src, unsigned use, int loby
         use += slotsize/8U; }
 }
 
-static unsigned size_masks[8] = { 7, 7, 15, 15, 31, 31, 31, 31 };
+const unsigned ActionBus::size_masks[8] = { 7, 7, 15, 15, 31, 31, 31, 31 };
 
 void ActionBus::alloc_field(Table *tbl, ActionBusSource src,
         unsigned offset, unsigned sizes_needed) {
@@ -996,6 +1022,11 @@ std::string ActionBusSource::toString(Table *tbl) const {
         return table->name_ + " color";
     case TableAddress:
         return table->name_ + " address";
+    case Ealu:
+        return "ealu";
+    case XcmpData:
+        tmp << "xcmp(" << xcmp_group << ":" << xcmp_byte << ")";
+        return tmp.str();
     case NameRef: case ColorRef: case AddressRef:
         tmp <<  "name ";
         if (name_ref)

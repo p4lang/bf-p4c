@@ -186,7 +186,7 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
                     for (int x : xme_units) {
                         if (x < FIRST_STM_XME) continue;
                         minput.rf.minput_em_xb_stm_tab[(x-FIRST_STM_XME)/2].key32_used
-                            |= 1U << input.lo/32U; } }
+                            |= bitRange(input.lo/32U, input.hi/32U); } }
             } else {
                 auto &key8 = em_key_cfg.minput_em_xb_key8;
                 for (auto &input : group.second) {
@@ -195,7 +195,8 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
                     set_bit(minput.minput_byte_pwr[0],
                             minput_byte_pwr_transpose[input.what->reg.uid]);
                     for (int x : xme_units)
-                        minput.rf.minput_em_xb_tab[x/2].key8_used |= 1U << input.lo/8U; } }
+                        minput.rf.minput_em_xb_tab[x/2].key8_used |=
+                            bitRange(input.lo/8U, input.hi/8U); } }
             break; }
         case Group::TERNARY: {
             auto &scm_key_cfg = minput.minput_scm_xb_key_erf;
@@ -223,24 +224,18 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
                     for (int d : dconfig)
                         key32[input.lo/32U][d].key32 = input.what->reg.ixbar_id()/4U;
                     set_bit(minput.minput_word_pwr[1],
-                            minput_word_pwr_transpose[input.what->reg.uid]); }
+                            minput_word_pwr_transpose[input.what->reg.uid]);
+                    minput.rf.minput_xcmp_xb_tab[table->physical_id].key32_used |=
+                        bitRange(input.lo/32U, input.hi/32U); }
             } else {
                 auto &key8 = xcmp_key_cfg.minput_xcmp_xb_key8;
                 for (auto &input : group.second) {
                     for (int d : dconfig)
                         key8[input.lo/8U][d].key8 = input.what->reg.ixbar_id();
                     set_bit(minput.minput_byte_pwr[1],
-                            minput_byte_pwr_transpose[input.what->reg.uid]); } }
-            // XCMP key xbar table configuration
-            auto &xcmp_xb_tab = minput.rf.minput_xcmp_xb_tab;
-            if (group.first.index) {  // source from phe32
-                for (auto &input : group.second) {
-                    for (int i = input.lo/32U; i <= input.hi/32U; i++)
-                        xcmp_xb_tab[table->physical_id].key32_used |= 1 << i; }
-            } else {  // source from phe8
-                for (auto &input : group.second) {
-                    for (int i = input.lo/8U; i <= input.hi/8U; i++)
-                        xcmp_xb_tab[table->physical_id].key8_used |= 1 << i; } }
+                            minput_byte_pwr_transpose[input.what->reg.uid]);
+                    minput.rf.minput_xcmp_xb_tab[table->physical_id].key8_used |=
+                        bitRange(input.lo/8U, input.hi/8U); } }
             break; }
         default:
             BUG("invalid InputXbar::Group::Type(%d)", group.first.type);

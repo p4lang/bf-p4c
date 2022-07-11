@@ -33,6 +33,15 @@ def template_split(s):
     parts.append("".join(current))
     return parts
 
+def vec_begin(vec):
+    return vec['_M_impl']['_M_start']
+def vec_end(vec):
+    return vec['_M_impl']['_M_finish']
+def vec_size(vec):
+    return int(vec_end(vec) - vec_begin(vec))
+def vec_at(vec, i):
+    return (vec_begin(vec) + i).dereference()
+
 class bitvecPrinter(object):
     "Print a bitvec"
     def __init__(self, val):
@@ -213,7 +222,12 @@ class ordered_map_Printer:
         self.args = template_split(val.type.tag)
         self.eltype = gdb.lookup_type('std::pair<' + self.args[0] + ' const,' + self.args[1] + '>')
     def to_string(self):
-        return "ordered_map<..>"
+        it = self.val['data']['_M_impl']['_M_node']['_M_next']
+        e = self.val['data']['_M_impl']['_M_node'].address
+        if it == e:  # empty map
+            return "{}"
+        else:
+            return None
     class _iter:
         def __init__(self, eltype, it, e):
             self.eltype = eltype
@@ -244,20 +258,22 @@ class InputXbar_Group_Printer:
             rv = '<bad type 0x%x>' % int(self.val['type'])
         rv += ' group ' + str(self.val['index'])
         return rv
-class ActionBus_Source_Printer:
-    "Print an ActionBus::Source"
+class ActionBusSource_Printer:
+    "Print an ActionBusSource"
     def __init__(self, val):
         self.val = val
     def to_string(self):
         try:
             types = [ "None", "Field", "HashDist", "HashDistPair", "RandomGen",
-                      "TableOutput", "TableColor", "TableAddress", "NameRef",
-                      "ColorRef", "AddressRef" ]
+                      "TableOutput", "TableColor", "TableAddress", "Ealu", "XCmp",
+                      "NameRef", "ColorRef", "AddressRef" ]
             t = int(self.val['type'])
             if t >= 0 and t < len(types):
                 rv = types[t]
             else:
                 rv = '<bad type 0x%x>' % int(self.val['type'])
+            if t == 9:  # XCMP on one line without children
+                rv += "[" + str(self.val['xcmp_group']) + ":" + str(self.val['xcmp_byte']) + "]"
         except Exception as e:
             rv += "{crash: "+str(e)+"}"
         return rv
@@ -270,26 +286,32 @@ class ActionBus_Source_Printer:
             return self
         def __next__(self):
             self.count = self.count + 1
-            if self.type != 3 and self.count > 1: raise StopIteration
-            if self.type == 1:
-                return ("field", self.val['field'])
-            elif self.type == 2:
-                return ("hd", self.val['hd'])
-            elif self.type == 3:
+            if self.type == 3:
                 if self.count == 1:
                     return ("hd1", self.val['hd1'])
                 elif self.count == 2:
                     return ("hd2", self.val['hd2'])
                 else:
                     raise StopIteration
+            #elif self.type == 9:
+            #    XCmp on one line without children
+            #    if self.count == 1:
+            #        return ("group", self.val['xcmp_group'])
+            #    elif self.count == 2:
+            #        return ("byte", self.val['xcmp_byte'])
+            elif self.count > 1:
+                raise StopIteration
+            elif self.type == 1:
+                return ("field", self.val['field'].dereference())
+            elif self.type == 2:
+                return ("hd", self.val['hd'])
             elif self.type == 4:
                 return ("rng", self.val['rng'])
             elif self.type == 5 or self.type == 6 or self.type == 7:
                 return ("table", self.val['table'])
-            elif self.type == 8 or self.type == 9 or self.type == 10:
+            elif self.type == 10 or self.type == 11 or self.type == 12:
                 return ("name_ref", self.val['name_ref'])
-            else:
-                raise StopIteration
+            raise StopIteration
         def next(self): return self.__next__()
     def children(self):
         return self._iter(self.val, int(self.val['type']))
@@ -321,8 +343,8 @@ def bfas_pp(val):
         return ordered_map_Printer(val)
     if val.type.tag == 'InputXbar::Group':
         return InputXbar_Group_Printer(val)
-    if val.type.tag == 'ActionBus::Source':
-        return ActionBus_Source_Printer(val)
+    if val.type.tag == 'ActionBusSource':
+        return ActionBusSource_Printer(val)
     if val.type.tag == 'Phv::Ref':
         return PhvRef_Printer(val)
     return None

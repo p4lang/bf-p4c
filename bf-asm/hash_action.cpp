@@ -32,7 +32,7 @@ void HashActionTable::setup(VECTOR(pair_t) &data) {
         error(lineno, "Table %s has neither action table nor immediate actions", name());
     if (action.args.size() > 2)
         error(lineno, "Unexpected number of action table arguments %zu", action.args.size());
-    if (actions && !action_bus) action_bus.reset(new ActionBus());
+    if (actions && !action_bus) action_bus = ActionBus::create();
 }
 
 

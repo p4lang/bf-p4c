@@ -46,4 +46,6 @@ template<> void MatchTable::write_regs(Target::Flatrock::mau_regs &regs, int typ
         }
     }
     regs.ppu_mrd.mrd_imem_map_erf.mrd_imem_map[physical_id][12].data = adr_default;
+
+    if (action_bus) action_bus->write_regs(regs, this);
 }

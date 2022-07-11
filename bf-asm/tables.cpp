@@ -507,7 +507,7 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
             actions.reset(new Actions(this, kv.value.map));
     } else if (kv.key == "action_bus") {
         if (CHECKTYPE(kv.value, tMAP))
-            action_bus.reset(new ActionBus(this, kv.value.map));
+            action_bus = ActionBus::create(this, kv.value.map);
     } else if ((kv.key == "default_action")
             || (kv.key == "default_only_action")) {
         if (kv.key == "default_only_action")
@@ -2298,7 +2298,7 @@ int Table::find_on_actionbus(const char *name, TableOutputModifier mod,
 }
 
 void Table::need_on_actionbus(Table *att, TableOutputModifier mod, int lo, int hi, int size) {
-    if (!action_bus) action_bus.reset(new ActionBus());
+    if (!action_bus) action_bus = ActionBus::create();
     action_bus->need_alloc(this, att, mod, lo, hi, size);
 }
 
@@ -2307,7 +2307,7 @@ int Table::find_on_actionbus(const ActionBusSource &src, int lo, int hi, int siz
 }
 
 void Table::need_on_actionbus(const ActionBusSource &src, int lo, int hi, int size) {
-    if (!action_bus) action_bus.reset(new ActionBus());
+    if (!action_bus) action_bus = ActionBus::create();
     action_bus->need_alloc(this, src, lo, hi, size);
 }
 

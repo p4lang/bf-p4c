@@ -423,7 +423,7 @@ void SRamMatchTable::verify_match(unsigned fmt_width) {
     auto match_format = format->field("match");
     if ((unsigned)bit != (match_format ? match_format->size : 0))
         warning(match[0]->get_lineno(), "Match width %d for table %s doesn't match format match "
-                "width %d", bit, name(), match_format->size);
+                "width %d", bit, name(), match_format ? match_format->size : 0);
     match_in_word.resize(fmt_width);
     for (unsigned i = 0; i < format->groups(); i++) {
         Format::Field *match = format->field("match", i);
@@ -697,7 +697,7 @@ void SRamMatchTable::common_sram_checks() {
         error(lineno, "No format specified in table %s", name());
     if (!action.set() && !actions)
         error(lineno, "Table %s has neither action table nor immediate actions", name());
-    if (actions && !action_bus) action_bus.reset(new ActionBus());
+    if (actions && !action_bus) action_bus = ActionBus::create();
     if (input_xbar.empty())
         input_xbar.emplace_back(InputXbar::create(this));
 }
