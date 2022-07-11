@@ -7,6 +7,7 @@
  *  for more abstract overview to determine what each method should do and is used for.
  */
 #include "ping_pong_generation.h"
+#include "lib/set.h"
 
 namespace BFN {
 
@@ -291,6 +292,111 @@ inline void PingPongGeneration::duplicateNodeDeclaration(const IR::Declaration* 
     return;
 }
 
+std::set<const IR::Declaration_Instance *> PingPongGeneration::allRegisters() const {
+    std::set<const IR::Declaration_Instance *> all;
+    for (auto &kv : controlToRegister)
+        for (auto reg : kv.second)
+            all.insert(reg);
+
+    return all;
+}
+
+bool PingPongGeneration::shouldTransform() {
+    std::map<const CollectPipelines::Pipe *, RegisterSet> validInPipe;
+    bool anyValid = false;
+    auto registers = allRegisters();
+    for (auto &pipe : pipelines) {
+        if (!pipe.ghost)
+            continue;
+
+        for (auto reg : registers) {
+            if (isPingPongValid(pipe, reg)) {
+                LOG3("[PPG] Register: " << reg->name << " seems to be valid for PPG on pipeline "
+                     << pipe.dec->getName() << ".");
+                validInPipe[&pipe].insert(reg);
+                anyValid = true;
+            }
+        }
+    }
+    if (!anyValid) {
+        LOG6("[PPG] No transformation is needed");
+        return false;
+    }
+
+    LOG6("[PPG] There are registers to transform");
+    for (auto &p1 : pipelines) {
+        if (!p1.ghost || validInPipe[&p1].empty())
+            continue;
+
+        for (auto &p2 : pipelines) {
+            // looking for different pipes with host and intersecting set of registers used in
+            // ping-pong
+            if (&p1 == &p2 || !p2.ghost || !intersects(validInPipe[&p1], validInPipe[&p2]))
+                continue;
+            // We can safely transform if either ingress & ghost are the same in both, or they
+            // are both different. If we have same control and different ghosts or different
+            // controls but same ghost we would need to duplicate the shared resource (TODO).
+            if ((p1.ingress.control == p2.ingress.control) != (p1.ghost == p2.ghost)) {
+                warning(ErrorType::WARN_UNSUPPORTED,
+                        "Fould registers for ping-pong mechanism generation, but the "
+                        "ingress-ghost pairs are overlapping between pipes. This "
+                        "transformation is not yet supported. Conflict between pipes %1% "
+                        "and %2%.",
+                        p1.dec, p2.dec);
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+bool PingPongGeneration::isPingPongValid(const IR::Declaration_Instance *reg) {
+    for (auto &pipe : pipelines)
+        if (isPingPongValid(pipe, reg))
+            return true;
+    return false;
+}
+
+bool PingPongGeneration::isPingPongValid(const IR::BFN::TnaControl *gress,
+                                         const IR::Declaration_Instance *reg,
+                                         bool calculatingCovered) {
+    for (auto &pipe : pipelines.get(gress))
+        if (isPingPongValid(pipe, reg, calculatingCovered))
+            return true;
+    return false;
+}
+
+bool PingPongGeneration::isPingPongValid(const CollectPipelines::Pipe &pipe,
+                                         const IR::Declaration_Instance *reg,
+                                         bool calculatingCovered) {
+    //                 register used in egrees => cannot be pingpong
+    if (!pipe.ghost || controlToRegister[pipe.egress.control].count(reg))
+        return false;
+
+    auto itIn = registerToP4Action.find({pipe.ingress.control, reg});
+    auto itGh = registerToP4Action.find({pipe.ghost, reg});
+    if (itIn != registerToP4Action.end() && !itIn->second.empty()
+        && itGh != registerToP4Action.end() && !itIn->second.empty())
+    {
+        // if the register is already covered by if ping_pong we do not transform it
+        bool coveredIn = ppIfCoveredRegisters[pipe.ingress.control].count(reg);
+        bool coveredGhost = ppIfCoveredRegisters[pipe.ghost].count(reg);
+        if (!calculatingCovered && (coveredIn || coveredGhost)) {
+            if (!(coveredIn && coveredGhost)) {
+                ::warning(ErrorType::WARN_MISMATCH, "Register %1% is covered by ping-pong 'if' in "
+                          "%2% but not in corresponding %3%, not going to auto-generate "
+                          "ping-poing 'if' for inconsistently used register.",
+                          reg, coveredIn ? pipe.ingress.control->getName() : pipe.ghost->getName(),
+                          coveredIn ? pipe.ghost->getName() : pipe.ingress.control->getName());
+            }
+            return false;
+        }
+
+        return true;
+    }
+    return false;
+}
+
 // MAIN VISITORS ----------------------------------------------------------------------------------
 /**
  * Gets all of the registers used and their actions.
@@ -318,34 +424,35 @@ bool PingPongGeneration::GetAllRegisters::preorder(const IR::MethodCallExpressio
     auto gress = findContext<IR::BFN::TnaControl>();
     if (!gress)
         return false;
-    auto gress_index = gress->thread;
     auto p4_action = findContext<IR::P4Action>();
     if (!p4_action)
         return false;
 
+    self.controlToRegister[gress].insert(r_decl);
     // Check if this action doesn't work with multiple registers
-    if (self.p4ActionToRegister[gress_index].count(p4_action)) {
+    // the register can be nullptr if it was already invalidated
+    auto other_reg_it = self.p4ActionToRegister.find({gress, p4_action});
+    if (other_reg_it != self.p4ActionToRegister.end()) {
         // Invalidate this action and everything attached to it
         LOG4("[PPG::GAR] Invalidating P4 action " << p4_action->name <<
              " that uses multiple registers.");
-        if (auto other_reg = self.p4ActionToRegister[gress_index][p4_action]) {
-            self.registerToRegisterAction[gress_index][other_reg].clear();
-            self.registerToP4Action[gress_index][other_reg].clear();
+        if (auto other_reg = other_reg_it->second) {
+            self.registerToRegisterAction.erase({gress, other_reg});
+            self.registerToP4Action.erase({gress, other_reg});
         }
-        self.registerToRegisterAction[gress_index][r_decl].clear();
-        self.registerToP4Action[gress_index][r_decl].clear();
-        self.p4ActionToRegister[gress_index][p4_action] = nullptr;
+        self.registerToRegisterAction.erase({gress, r_decl});
+        self.registerToP4Action.erase({gress, r_decl});
+        // Invalidate permanentry, don't erase (it could be problem if 3 registers use the action)
+        self.p4ActionToRegister[{gress, p4_action}] = nullptr;
     } else {
         // Add the register action
         LOG4("[PPG::GAR] adding register with declaration: " << r_decl->name <<
             "; register action declaration: " << ra_decl->name <<
             "; p4 action: " << p4_action->name);
-        self.registerToRegisterAction[gress_index][r_decl].insert(ra_decl);
-        self.registerToP4Action[gress_index][r_decl].insert(p4_action);
-        self.p4ActionToRegister[gress_index][p4_action] = r_decl;
+        self.registerToRegisterAction[{gress, r_decl}].insert(ra_decl);
+        self.registerToP4Action[{gress, r_decl}].insert(p4_action);
+        self.p4ActionToRegister[{gress, p4_action}] = r_decl;
     }
-    // Not yet valid
-    self.registerToValid[r_decl] = false;
     return false;
 }
 
@@ -379,60 +486,45 @@ bool PingPongGeneration::AddAllTables::preorder(const IR::ActionListElement* ale
     auto gress = findContext<IR::BFN::TnaControl>();
     if (!gress)
         return false;
-    auto gress_index = gress->thread;
 
     // Check if it works with register
-    if (!self.p4ActionToRegister[gress_index].count(p4_action))
+    auto regIt = self.p4ActionToRegister.find({gress, p4_action});
+    if (regIt == self.p4ActionToRegister.end() || !regIt->second)
         return false;
 
     // Get the register
-    auto reg = self.p4ActionToRegister[gress_index][p4_action];
-    if (!reg)
-        return false;
+    auto reg = regIt->second;
 
     // Check if we already have a table for the action/register or
     // register for the table
-    if (self.p4ActionToP4Table[gress_index].count(p4_action) ||
-        (self.p4TableToRegister[gress_index].count(p4_table) &&
-         self.p4TableToRegister[gress_index][p4_table] != reg)) {
+    if (self.p4ActionToP4Table.count({gress, p4_action}) ||
+        (self.p4TableToRegister.count({gress, p4_table}) &&
+         self.p4TableToRegister[{gress, p4_table}] != reg)) {
         // There should only be one to one mapping, this is not ping-pong
         // Invalidate any other register that might not satisfy this
         const IR::Declaration_Instance *other_reg = nullptr;
-        if (self.p4TableToRegister[gress_index].count(p4_table))
-            other_reg = self.p4TableToRegister[gress_index][p4_table];
+        if (self.p4TableToRegister.count({gress, p4_table}))
+            other_reg = self.p4TableToRegister[{gress, p4_table}];
         if (other_reg && other_reg != reg) {
             LOG3("[PPG::AAT] Register " << other_reg->name <<
                 " does not have 1-1 mapping to P4 tables => not a ping-pong");
-            self.registerToValid[other_reg] = false;
+            self.registerToRegisterAction.erase({gress, other_reg});
+            self.registerToP4Action.erase({gress, other_reg});
         }
         // Invalidate the register
         LOG3("[PPG::AAT] Register " << reg->name <<
              " does not have 1-1 mapping to P4 tables => not a ping-pong");
-        self.registerToRegisterAction[gress_index][reg].clear();
-        self.registerToP4Action[gress_index][reg].clear();
-        self.p4ActionToRegister[gress_index][p4_action] = nullptr;
-        self.p4ActionToP4Table[gress_index][p4_action] = nullptr;
-        self.p4TableToRegister[gress_index][p4_table] = nullptr;
-        self.registerToValid[reg] = false;
+        self.registerToRegisterAction.erase({gress, reg});
+        self.registerToP4Action.erase({gress, reg});
+        self.p4ActionToRegister[{gress, p4_action}] = nullptr;
+        self.p4ActionToP4Table.erase({gress, p4_action});
+        self.p4TableToRegister.erase({gress, p4_table});
     } else {
         LOG4("[PPG::AAT] found table for register " << reg->name <<
              "; p4 action: " << p4_action->name <<
              "; p4 table: " << p4_table->name);
-        self.p4ActionToP4Table[gress_index][p4_action] = p4_table;
-        self.p4TableToRegister[gress_index][p4_table] = reg;
-        // Invalidate it if it is used in egress (reg is the only
-        // thing shared by the gresses)
-        if (self.registerToP4Action[EGRESS].count(reg)) {
-            LOG3("[PPG::AAT] Register: " << reg->name << " used in egress => invalidating.");
-            self.registerToValid[reg] = false;
-        // Validate the register if we already have ingress, ghost and no egress
-        } else if (self.registerToP4Action[INGRESS].count(reg)
-                 && !self.registerToP4Action[INGRESS][reg].empty()
-                 && self.registerToP4Action[GHOST].count(reg)
-                 && !self.registerToP4Action[GHOST][reg].empty()) {
-            LOG3("[PPG::AAT] Register: " << reg->name << " seems to be valid for PPG.");
-            self.registerToValid[reg] = true;
-        }
+        self.p4ActionToP4Table[{gress, p4_action}] = p4_table;
+        self.p4TableToRegister[{gress, p4_table}] = reg;
     }
 
     return false;
@@ -452,7 +544,7 @@ bool PingPongGeneration::CheckPingPongTables::preorder(const IR::Parameter* para
     if (!gress)
         return false;
     // Parameter name is the name of ghost metadata
-    self.ghost_meta_name[gress->thread] = param->name;
+    self.ghost_meta_name[gress] = param->name;
     LOG5("[PPG::CPPT] Found ghost md name: " << param->name << " for gress: " << gress->thread);
     return false;
 }
@@ -492,15 +584,14 @@ bool PingPongGeneration::CheckPingPongTables::preorder(const IR::PathExpression*
     auto gress = findContext<IR::BFN::TnaControl>();
     if (!gress)
         return false;
-    auto gress_index = gress->thread;
 
     // Get the approriate register
-    if (!self.p4TableToRegister[gress_index].count(p4_table))
+    if (!self.p4TableToRegister.count({gress, p4_table}))
         return false;
-    auto reg = self.p4TableToRegister[gress_index][p4_table];
+    auto reg = self.p4TableToRegister[{gress, p4_table}];
 
     // Check if this is still valid ping-pong candidate
-    if (!reg || !self.registerToValid.count(reg) || !self.registerToValid[reg])
+    if (!self.isPingPongValid(gress, reg, true))
         return false;
 
     // Check if there is already ping-pong mechanism attached
@@ -515,8 +606,9 @@ bool PingPongGeneration::CheckPingPongTables::preorder(const IR::PathExpression*
     if_stmt->condition->apply(findPingPongField);
     // If it was found invalidate this for ping pong generation
     if (findPingPongField.found) {
-        LOG3("[PPG::CPPT] Found ping pong mechanism for: " << reg->name << " => invalidating.");
-        self.registerToValid[reg] = false;
+        LOG3("[PPG::CPPT] Found ping pong mechanism for: " << reg->name
+             << " in gress " << gress->getName() << " => invalidating.");
+        self.ppIfCoveredRegisters[gress].insert(reg);
     }
 
     return false;
@@ -527,11 +619,9 @@ bool PingPongGeneration::CheckPingPongTables::preorder(const IR::PathExpression*
  */
 IR::Node *PingPongGeneration::GeneratePingPongMechanismDeclarations::preorder(IR::P4Program* prog) {
     // For every register
-    for (auto const & r : self.registerToValid) {
-        auto reg = r.first;
-        bool valid = r.second;
-        // That was found to be valid for ping pong duplication
-        if (valid && reg) {
+    for (auto const &reg : self.allRegisters()) {
+        // That was found to be valid for ping pong duplication in any pipe
+        if (self.isPingPongValid(reg)) {
             // Create duplicate register
             auto new_reg = new IR::Declaration_Instance(
                                 IR::ID(reg->name + PingPongGeneration::ID_PING_PONG_SUFFIX),
@@ -553,24 +643,22 @@ IR::Node *PingPongGeneration::GeneratePingPongMechanismDeclarations::preorder(IR
  */
 IR::Node *PingPongGeneration::GeneratePingPongMechanismDeclarations::preorder(
                                                         IR::BFN::TnaControl* gress) {
-    auto gress_index = gress->thread;
     // We dont care about egress
-    if (gress_index == EGRESS)
+    if (gress->thread == EGRESS)
         return gress;
 
-    for (auto const & r : self.registerToValid) {
-        auto reg = r.first;
-        bool valid = r.second;
-        if (valid && reg) {
-            if (!self.registerToRegisterAction[gress_index].count(reg) ||
-                !self.registerToP4Action[gress_index].count(reg))
+    for (auto const &reg : self.allRegisters()) {
+        // is it valid in any pipe that uses this gress? (FIXME)
+        if (self.isPingPongValid(gress, reg)) {
+            if (!self.registerToRegisterAction.count({gress, reg}) ||
+                !self.registerToP4Action.count({gress, reg}))
                 continue;
-            auto reg_actions = self.registerToRegisterAction[gress_index][reg];
-            auto p4_actions = self.registerToP4Action[gress_index][reg];
+            auto reg_actions = self.registerToRegisterAction[{gress, reg}];
+            auto p4_actions = self.registerToP4Action[{gress, reg}];
             if (p4_actions.empty())
                 continue;
             auto p4_action = *p4_actions.begin();
-            auto p4_table = self.p4ActionToP4Table[gress_index][p4_action];
+            auto p4_table = self.p4ActionToP4Table[{gress, p4_action}];
             if (!p4_table)
                 continue;
             // We need to duplicate any attached direct resources as well as they cannot
@@ -636,9 +724,8 @@ IR::Node *PingPongGeneration::GeneratePingPongMechanism::postorder(IR::MethodCal
     auto gress = findContext<IR::BFN::TnaControl>();
     if (!gress)
         return mcs;
-    auto gress_index = gress->thread;
     // We dont care about egress
-    if (gress_index == EGRESS)
+    if (gress->thread == EGRESS)
         return mcs;
 
     // Check if this has apply call of a table
@@ -652,11 +739,11 @@ IR::Node *PingPongGeneration::GeneratePingPongMechanism::postorder(IR::MethodCal
     if (!p4_table)
         return mcs;
     // Get the approriate register
-    if (!self.p4TableToRegister[gress_index].count(p4_table))
+    if (!self.p4TableToRegister.count({gress, p4_table}))
         return mcs;
-    auto reg = self.p4TableToRegister[gress_index][p4_table];
+    auto reg = self.p4TableToRegister[{gress, p4_table}];
     // Check if this is valid ping-pong candidate
-    if (!reg || !self.registerToValid.count(reg) || !self.registerToValid[reg])
+    if (!self.isPingPongValid(gress, reg))
         return mcs;
     // Get the duplicate of this table
     if (!self.p4TableToDuplicateTable.count(p4_table))
@@ -665,10 +752,10 @@ IR::Node *PingPongGeneration::GeneratePingPongMechanism::postorder(IR::MethodCal
     if (!duplicate_table)
         return mcs;
     // Get the action for this table
-    if (!self.registerToP4Action[gress_index].count(reg))
+    if (!self.registerToP4Action.count({gress, reg}))
         return mcs;
     std::set<cstring> p4_actions_names;
-    auto p4_actions = self.registerToP4Action[gress_index][reg];
+    auto p4_actions = self.registerToP4Action[{gress, reg}];
     for (auto p4_action : p4_actions)
         p4_actions_names.insert(p4_action->name);
 
@@ -680,17 +767,20 @@ IR::Node *PingPongGeneration::GeneratePingPongMechanism::postorder(IR::MethodCal
     // Check existence of ghost metadata
     if (!self.ghost_meta_struct)
         return mcs;
-    if (self.ghost_meta_name[INGRESS] == "" || self.ghost_meta_name[GHOST] == "")
-        return mcs;
+    for (auto pipe : self.pipelines.get(gress)) {
+        if (self.ghost_meta_name[pipe.ingress.control] == "" ||
+            self.ghost_meta_name[pipe.ghost] == "")
+            return mcs;
+    }
     // Left expression (ghost_metadata.ping_pong)
     auto left = new IR::Member(IR::Type::Bits::get(1),
                                new IR::PathExpression(self.ghost_meta_struct,
                                                       new IR::Path(
-                                                        IR::ID(self.ghost_meta_name[gress_index]),
+                                                        IR::ID(self.ghost_meta_name[gress]),
                                                       false)),
                                IR::ID(PING_PONG_FIELD_NAME));
     // Right expression - 0 or 1 based on if this is ingress or ghost
-    auto right = new IR::Constant(IR::Type::Bits::get(1), (gress_index == INGRESS) ? 0 : 1);
+    auto right = new IR::Constant(IR::Type::Bits::get(1), (gress->thread == INGRESS) ? 0 : 1);
     LOG3("[PPG::GPPM] Created ping-pong if statement.");
     // Return new if statement
     return new IR::IfStatement(new IR::Equ(IR::Type_Boolean::get(), left, right), mcs, new_mcs);

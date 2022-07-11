@@ -1,3 +1,6 @@
+#include <cstring>
+#include <functional>
+
 #ifndef BF_P4C_LIB_CMP_H_
 #define BF_P4C_LIB_CMP_H_
 
@@ -83,4 +86,39 @@ class LiftCompare : public LiftEqual<T>, public LiftLess<T> {
     }
 };
 
+/// A type suitable as map comparator that will compare objects of type T.
+/// Expects that `T::getName()` returns `IR::ID`
+/// The same comparer works for `T &` - reference comparison and `T *` - pointer comparison.
+template <class T>
+class ByNameLess {
+ public:
+    bool operator()(const T &a, const T &b) const {
+        return std::strcmp(a.getName().name, b.getName().name) < 0;
+    }
+
+    bool operator()(const T *a, const T *b) const {
+        // note: std::less is guaranteed to be defined for pointers, operator < is not
+        return a && b ? (*this)(*a, *b) : std::less<T *>()(a, b);
+    }
+};
+
+/// Lifts `std::less`, or user-specified comparer to `std::pair<A, B>` using lexicographical
+/// comparison.
+/// Comparers given in `AComp`, `BComp` must be stateless and default constructible.
+/// Comparers must produce total order, in particular it must hold that
+/// `!(a < b) && !(b < a) => a == b`.
+template <class A, class B, class AComp = std::less<A>, class BCmp = std::less<B>>
+class PairLess {
+ public:
+    using Pair = std::pair<A, B>;
+    bool operator()(const Pair &a, const Pair &b) const {
+        AComp acmp;
+        if (acmp(a.first, b.first))
+            return true;
+        // !(a < b) && !(b < a) => a == b
+        if (!acmp(b.first, a.first))
+            return BCmp()(a.second, b.second);
+        return false;
+    }
+};
 #endif /* BF_P4C_LIB_CMP_H_ */

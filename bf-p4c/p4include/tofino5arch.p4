@@ -33,6 +33,9 @@ control EgressDeparserT<H, M>(
     @optional in egress_intrinsic_metadata_t eg_intr_md,
     @optional in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr);
 
+// TODO: once ghost thread support is added here, it needs to be also added into
+// the CollectPipeline pass, namely the CollectPipelines::Pipe::set isFlatrock
+// `if` (bf-p4c/midend/collect_pipelines.cpp) to detect it properly.
 package Pipeline<H, M>(
     IngressParserT<H, M> ingress_parser,
     IngressT<H, M> ingress,

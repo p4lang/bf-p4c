@@ -167,6 +167,7 @@ set (BF_P4C_MIDEND_SRCS
   midend/parser_enforce_depth_req.cpp
   midend/parser_graph.cpp
   midend/detect_multiple_pipelines.cpp
+  midend/collect_pipelines.cpp
   midend/ping_pong_generation.cpp
   midend/register_read_write.cpp
   midend/simplify_args.cpp

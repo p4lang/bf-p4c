@@ -7,7 +7,7 @@
 #include "ir/ir.h"
 #include "ir/gress.h"
 #include "bf-p4c/midend/type_checker.h"
-#include "midend/detect_multiple_pipelines.h"
+#include "midend/collect_pipelines.h"
 
 namespace BFN {
 
@@ -43,10 +43,6 @@ class PingPongGeneration : public PassManager {
     // VARIABLES ----------------------------------------------------------------------------------
     // These variables serve as a state/storage between different passes
     /**
-     * Array of ghost metadata names for different gresses
-     */
-    cstring ghost_meta_name[GRESS_T_COUNT] = { "", "", "" };
-    /**
      * Declaration of ghost_intrinsic_metadata struct
      */
     const IR::Type_Header* ghost_meta_struct = nullptr;
@@ -56,33 +52,45 @@ class PingPongGeneration : public PassManager {
     P4::TypeMap *typeMap;
 
     // Local maps for storing information
-    typedef std::unordered_map<const IR::Declaration_Instance *,
-                               std::set<const IR::Declaration_Instance *>>
-            RegisterToRegisterActionMap;
-    typedef std::unordered_map<const IR::Declaration_Instance *,
-                               std::set<const IR::P4Action *>>
-            RegisterToP4ActionMap;
-    typedef std::unordered_map<const IR::P4Action *,
-        const IR::Declaration_Instance *> P4ActionToRegisterMap;
-    typedef std::unordered_map<const IR::P4Action *,
-         const IR::P4Table *> P4ActionToP4TableMap;
-    typedef std::unordered_map<const IR::P4Table *,
-        const IR::Declaration_Instance *> P4TableToRegisterMap;
-    typedef std::unordered_map<const IR::Declaration_Instance *,
-        bool> RegisterToValidMap;
-    typedef std::unordered_map<const IR::P4Table *,
-        const IR::P4Table *> P4TableToP4TableMap;
-    // Mappings for different parts and for different Gress
-    RegisterToRegisterActionMap registerToRegisterAction[GRESS_T_COUNT];
-    RegisterToP4ActionMap registerToP4Action[GRESS_T_COUNT];
-    P4ActionToRegisterMap p4ActionToRegister[GRESS_T_COUNT];
-    P4ActionToP4TableMap p4ActionToP4Table[GRESS_T_COUNT];
-    P4TableToRegisterMap p4TableToRegister[GRESS_T_COUNT];
-    RegisterToValidMap registerToValid;
+    using RegisterSet = std::set<const IR::Declaration_Instance *>;
+    using TnaControlLess = ByNameLess<const IR::BFN::TnaControl>;
+
+    template<typename Key>
+    using TnaControlPairLess = PairLess<const IR::BFN::TnaControl *, const Key, TnaControlLess>;
+
+    template<typename Key, typename Value>
+    using TnaControlPairMap = std::map<std::pair<const IR::BFN::TnaControl *, const Key>, Value,
+                                       TnaControlPairLess<const Key>>;
+
+    template<typename Value>
+    using TnaControlMap = std::map<const IR::BFN::TnaControl *, Value, TnaControlLess>;
+
+    using RegisterToRegisterActionMap = TnaControlPairMap<const IR::Declaration_Instance *,
+                                                          RegisterSet>;;
+    using RegisterToP4ActionMap = TnaControlPairMap<const IR::Declaration_Instance *,
+                                                    std::set<const IR::P4Action *>>;
+    using P4ActionToRegisterMap = TnaControlPairMap<const IR::P4Action *,
+                                                    const IR::Declaration_Instance *>;
+    using P4ActionToP4TableMap = TnaControlPairMap<const IR::P4Action *, const IR::P4Table *>;
+    using P4TableToRegisterMap = TnaControlPairMap<const IR::P4Table *,
+                                                   const IR::Declaration_Instance *>;
+    using P4TableToP4TableMap = std::unordered_map<const IR::P4Table *, const IR::P4Table *>;
+    using ControlToRegisterMap = TnaControlMap<RegisterSet>;
+    /**
+     * Array of ghost metadata names for different gresses
+     */
+    TnaControlMap<cstring> ghost_meta_name;
+
+    RegisterToRegisterActionMap registerToRegisterAction;
+    RegisterToP4ActionMap registerToP4Action;
+    P4ActionToRegisterMap p4ActionToRegister;
+    P4ActionToP4TableMap p4ActionToP4Table;
+    P4TableToRegisterMap p4TableToRegister;
+    ControlToRegisterMap ppIfCoveredRegisters;
+    ControlToRegisterMap controlToRegister;
     P4TableToP4TableMap p4TableToDuplicateTable;
 
-    // Detector of multiple pipelines
-    DetectMultiplePipelines *detectMultiplePipelines = new DetectMultiplePipelines();
+    CollectPipelines::Pipelines pipelines;
 
     // HELPER FUNCTIONS ---------------------------------------------------------------------------
     inline IR::Path* appendPingPongSuffix(IR::Path*, std::set<cstring>&);
@@ -90,6 +98,28 @@ class PingPongGeneration : public PassManager {
                                 const IR::Declaration*,
                                 IR::BFN::TnaControl*,
                                 std::set<cstring>&);
+
+    /// Collect all registers for which we have metadata calculated, i.e. that
+    /// are potential candidates for ping-pong.
+    std::set<const IR::Declaration_Instance *> allRegisters() const;
+    bool shouldTransform();  // FIXME const;
+
+    /// Checks if the register valid ping-pong register for any pipeline.
+    /// Usable only after all inpectors finish.
+    bool isPingPongValid(const IR::Declaration_Instance *reg);
+
+    /// Checks if the register valid ping-pong register for any pipeline that
+    /// uses given gress.
+    /// Usable only after all inpectors finish.
+    bool isPingPongValid(const IR::BFN::TnaControl *gress,
+                         const IR::Declaration_Instance *reg,
+                         bool calculatingCovered = false);  // FIXME const;
+
+    /// Checks if the register valid ping-pong register for the given pipeline.
+    /// Usable only after all inpectors finish.
+    bool isPingPongValid(const CollectPipelines::Pipe &pipe,
+                         const IR::Declaration_Instance *reg,
+                         bool calculatingCovered = false);  // FIXME const;
 
     // HELPER VISITORS ----------------------------------------------------------------------------
     // Finds a ghost_metadata.ping_pong field reference in a subtree
@@ -183,14 +213,12 @@ class PingPongGeneration : public PassManager {
          refMap(refMap), typeMap(typeMap) {
         setName("Automatic ping-pong generation");
         addPasses({
-            // Detect multiple pipelines (which is not supported currently)
-            detectMultiplePipelines,
-            // Run the ping-pong generation for single pipeline programs
-            new PassIf([this]() { return !detectMultiplePipelines->hasMultiplePipelines(); }, {
-                new TypeChecking(refMap, typeMap, true),
-                new GetAllRegisters(*this),
-                new AddAllTables(*this),
-                new CheckPingPongTables(*this),
+            new CollectPipelines(refMap, &pipelines),
+            new TypeChecking(refMap, typeMap, true),
+            new GetAllRegisters(*this),
+            new AddAllTables(*this),
+            new CheckPingPongTables(*this),
+            new PassIf([this]() { return shouldTransform(); }, {
                 new GeneratePingPongMechanismDeclarations(*this),
                 // Update ref and type map, bacause the IR might have changed
                 new TypeChecking(refMap, typeMap, true),
