@@ -119,6 +119,7 @@ void AddSpecialConstraints::end_apply() {
     // decaf constraint
     for (auto f : decaf_i.rewrite_deparser.must_split_fields) {
         auto field = phv_i.field(f);
+        CHECK_NULL(field);
         if (field->size == 16) {
             pragmas_i.pa_container_sizes().add_constraint(field,
                                                    {PHV::Size::b8, PHV::Size::b8});
@@ -151,6 +152,7 @@ void AddSpecialConstraints::end_apply() {
     // rotated. This was relaxed from the original constraint, see P4C-3019.
     for (const auto* f : actions_i.meter_color_dests()) {
         auto* meter_color_dest = phv_i.field(f->id);
+        CHECK_NULL(meter_color_dest);
         meter_color_dest->set_no_split(true);
 
         // Meter color destination have constraint relative to immediate position which make it
@@ -169,6 +171,7 @@ void AddSpecialConstraints::end_apply() {
         const PHV::Field &field = kv.second;
         if (field.name.startsWith("ghost::gh_intr_md") && !field.pov) {
             auto* ghost_field = phv_i.field(field.id);
+            CHECK_NULL(ghost_field);
             pragmas_i.pa_container_sizes().add_constraint(ghost_field, { PHV::Size::b32 });
             ghost_field->set_no_split(true);
         }

@@ -157,6 +157,7 @@ void TableLayout::check_for_atcam(IR::MAU::Table::Layout &layout, const IR::MAU:
     for (auto key : tbl->match_key) {
         if (key->partition_index) {
             auto* partition_index_field = phv.field(key->expr);
+            CHECK_NULL(partition_index_field);
             partition_index = partition_index_field->name;
             index_found = true; } }
 
@@ -1062,6 +1063,7 @@ void LayoutChoices::compute_layout_options(const IR::MAU::Table *tbl,
 
 bool DoTableLayout::preorder(IR::MAU::Action *act) {
     auto tbl = findContext<IR::MAU::Table>();
+    CHECK_NULL(tbl);
     GetActionRequirements ghdr;
     act->apply(ghdr);
     if (!ghdr.is_hash_dist_needed() && !ghdr.is_rng_needed())
@@ -1132,6 +1134,7 @@ bool DoTableLayout::preorder(IR::MAU::Action *act) {
 
 bool DoTableLayout::preorder(IR::MAU::TableKey *read) {
     auto tbl = findContext<IR::MAU::Table>();
+    CHECK_NULL(tbl);
     cstring partition_index;
     if (tbl->layout.alpm) {
         auto hdr_instance_name = tbl->name + "__metadata";
@@ -1150,6 +1153,7 @@ bool DoTableLayout::preorder(IR::MAU::TableKey *read) {
 
 bool DoTableLayout::preorder(IR::MAU::Selector *sel) {
     auto tbl = findContext<IR::MAU::Table>();
+    CHECK_NULL(tbl);
     if (SelectorLengthBits(sel) <= 0) {
         return false;
     }
@@ -1355,6 +1359,7 @@ void AssignCounterLRTValues::ComputeLRT::calculate_lrt_threshold_and_interval(
 
 bool AssignCounterLRTValues::ComputeLRT::preorder(IR::MAU::Counter *cntr) {
     auto tbl = findContext<IR::MAU::Table>();
+    CHECK_NULL(tbl);
     if (!tbl->is_placed())
         return true;
     calculate_lrt_threshold_and_interval(tbl, cntr);
@@ -1407,6 +1412,7 @@ void RandomExternUsedOncePerAction::postorder(const IR::MAU::RandomNumber *rn) {
  */
 bool ValidateActionProfileFormat::preorder(const IR::MAU::ActionData *ad) {
     auto tbl = findContext<IR::MAU::Table>();
+    CHECK_NULL(tbl);
     auto formats = lc.get_action_formats(tbl);
     BUG_CHECK(formats.size() == 1, "%s: Compiler generated multiple formats for action profile "
               "%s on table %s", ad->srcInfo, ad->name, tbl->externalName());
@@ -1428,6 +1434,7 @@ bool ValidateActionProfileFormat::preorder(const IR::MAU::ActionData *ad) {
  */
 bool ProhibitAtcamWideSelectors::preorder(const IR::MAU::Selector *as) {
     auto tbl = findContext<IR::MAU::Table>();
+    CHECK_NULL(tbl);
     if (as->max_pool_size > StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE && tbl->layout.atcam) {
         ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
                 "ATCAM table %2% cannot have selector %1%.  An ATCAM table may require "
@@ -1484,7 +1491,7 @@ bool MeterColorMapramAddress::DetermineMeterReqs::preorder(const IR::MAU::Meter 
     // In uArch section 6.4.3.5.3 Hash Distribution, the hash distribution unit can create
     // stats and meter addresses, but not idletime address.  Thus if the meter is accessed
     // by hash distribution, then the color mapram must be addressed by stats
-    if (ba->addr_location != IR::MAU::AddrLocation::HASH)
+    if (ba && ba->addr_location != IR::MAU::AddrLocation::HASH)
         possible.setbit(static_cast<int>(IR::MAU::ColorMapramAddress::IDLETIME));
 
     // Can't use idletime if the meter is shared as only one logical table can write

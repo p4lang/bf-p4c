@@ -153,7 +153,7 @@ class DoSimplifyComplexCondition : public Transform {
 
     bitvec constants;
     std::stack<const IR::Expression*> stack_;
-    const IR::Expression* unique_dest;
+    const IR::Expression* unique_dest = nullptr;
 
  public:
     DoSimplifyComplexCondition(SimplifyComplexConditionPolicy* policy,

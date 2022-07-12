@@ -220,7 +220,7 @@ class JbayNextTable : public PassRepeated, public NextTable {
         explicit LBAlloc(JbayNextTable& ntp) : self(ntp) {}
     };
 
-    size_t                                       num_dts;
+    size_t                                       num_dts = 0;
     // Attempts to reduce the number of tags in use to the max supported by the device
     class TagReduce : public MauTransform {
         JbayNextTable& self;

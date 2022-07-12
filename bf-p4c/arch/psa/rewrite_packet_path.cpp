@@ -393,6 +393,7 @@ struct PacketPath : public Transform {
 
     const IR::ParserState *postorder(IR::ParserState *state) override {
         auto parser = findOrigCtxt<IR::BFN::TnaParser>();
+        CHECK_NULL(parser);
         if (state->name == "__phase0") {
             if (structure->recirculate.exists) {
                 addRecirculateState(state);

@@ -269,7 +269,7 @@ class ExtractKeyDetails {
             }
             return mask;
         }
-        int full_size() const { return phv_field(key)->size; }
+        int full_size() const { return (phv_field(key) ? phv_field(key)->size : 0); }
         big_int field_mask() const { return Util::mask(full_size()); }
         big_int expression_mask() const { return Util::mask((*key)->expr->type->width_bits()); }
         const IR::MAU::TableKey* table_keys() const {
@@ -1248,7 +1248,7 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
     indent_t                    indent;
     const char                  *sep = nullptr;
     std::map<cstring, cstring>  alias;
-    bool                        is_empty;
+    bool                        is_empty = false;
 
     /**
      * Outputs the next table configuration for this action:
@@ -2132,10 +2132,12 @@ void MauAsmOutput::emit_no_match_gateway(std::ostream &out, indent_t gw_indent,
 void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
         const IR::MAU::Table *tbl) const {
     if (tbl->suppress_context_json) return;
-    auto p4Name = cstring::to_cstring(canon_name(tbl->match_table->externalName()));
-    out << indent << "p4: { name: " << p4Name;
-    if (auto k = tbl->match_table->getConstantProperty("size"))
-        out << ", size: " << k->asInt();
+    if (tbl->match_table) {
+        auto p4Name = cstring::to_cstring(canon_name(tbl->match_table->externalName()));
+        out << indent << "p4: { name: " << p4Name;
+        if (auto k = tbl->match_table->getConstantProperty("size"))
+            out << ", size: " << k->asInt();
+    }
     if (tbl->layout.pre_classifier || tbl->layout.alpm)
         out << ", match_type: alpm";
     if (tbl->is_compiler_generated)
@@ -3189,7 +3191,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Counter *counter) {
     out << "}" << std::endl;
     // FIXME: Eventually should not be necessary due to DRV-1856
     auto *ba = findContext<IR::MAU::BackendAttached>();
-    if (ba->pfe_location == IR::MAU::PfeLocation::OVERHEAD)
+    if (ba && ba->pfe_location == IR::MAU::PfeLocation::OVERHEAD)
         out << indent << "per_flow_enable: " << "counter_pfe" << std::endl;
     if (counter->threshold != -1) {
         // 3 indicies to populate, all with same value for "simple LR(t)"
@@ -3297,7 +3299,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
         out << indent << "bytecount_adjust: " << bytecount_adjust << std::endl;
     auto *ba = findContext<IR::MAU::BackendAttached>();
     // FIXME: Eventually should not be necessary due to DRV-1856
-    if (ba->pfe_location == IR::MAU::PfeLocation::OVERHEAD)
+    if (ba && ba->pfe_location == IR::MAU::PfeLocation::OVERHEAD)
         out << indent << "per_flow_enable: " << "meter_pfe" << std::endl;
     return false;
 }
@@ -3513,7 +3515,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
         --indent; }
 
     auto *back_at = getParent<IR::MAU::BackendAttached>();
-    if (salu->chain_vpn || back_at->chain_vpn) {
+    if (salu->chain_vpn || (back_at && back_at->chain_vpn)) {
         out << indent << "offset_vpn: true" << std::endl;
         // if the address comes from hash_dist, we'll have allocated it with
         // IXBar::Use::METER_ADR_AND_IMMEDIATE, so need to use meter_adr_shift

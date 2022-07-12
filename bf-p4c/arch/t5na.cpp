@@ -313,9 +313,9 @@ class TransformTnatoT5na : public PassManager {
         P4::ReferenceMap *refMap;
         P4::TypeMap *typeMap;
         std::map<cstring, const IR::Member *> hdrFieldModifications;
-        cstring currentHdrName;
-        cstring currentMetaName;
-        const IR::Type_Name* currentMetaType;
+        cstring currentHdrName = nullptr;
+        cstring currentMetaName = nullptr;
+        const IR::Type_Name* currentMetaType = nullptr;
     };
 
     // TODO(MK): Make this better

@@ -348,12 +348,14 @@ struct operand {
         int bits(int group, int dest_size = -1) override {
             int size = group_size[group]/8U;
             auto hd = find_hash_dist(units.at(0));
+            if (!hd) error(lineno, "could not find hash dist");
             int byte = table->find_on_actionbus(hd, lo, hi, size);
             if (byte < 0) {
                 error(lineno, "hash dist %d is not on the action bus", hd->id);
                 return -1; }
             if (units.size() == 2) {
                 auto hd1 = find_hash_dist(units.at(1));
+                if (!hd1) error(lineno, "could not find hash dist");
                 if (table->find_on_actionbus(ActionBusSource(hd, hd1), lo + 16, hi, size) < 0)
                     error(lineno, "hash dists %d and %d not contiguous on the action bus",
                           hd->id, hd1->id);

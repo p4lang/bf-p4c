@@ -1410,6 +1410,7 @@ class CollectPhvFields : public Inspector {
         LOG3("Set constraints on padding " << pad);
         phv.addPadding(pad, getGress());
         PHV::Field* f = phv.field(pad);
+        CHECK_NULL(f);
         f->set_exact_containers(true);
         f->set_deparsed(true);
         f->set_emitted(true);
@@ -1535,7 +1536,7 @@ struct ComputeFieldAlignments : public Inspector {
             if (auto* checksum = emitPrimitive->to<IR::BFN::EmitChecksum>()) {
                 for (auto source : checksum->sources) {
                     auto f = phv.field(source->field->field);
-                    if (f->metadata && f->size % 8) {
+                    if (f && f->metadata && f->size % 8) {
                         const auto alignment = FieldAlignment(le_bitrange(
                                     StartLen((source->offset + f->size), f->size)));
                         LOG3("B. Updating alignment of " << f->name << " to " << alignment);
@@ -1701,6 +1702,7 @@ class MarkPaddingAsDeparsed : public Inspector {
 
         for (int fid : boost::adaptors::reverse(struct_info.field_ids())) {
             PHV::Field* field = phv.field(fid);
+            CHECK_NULL(field);
             LOG5("  found field " << field);
 
             if (lastDeparsed && field->is_padding()) {
@@ -1959,6 +1961,7 @@ class CollectPardeConstraints : public Inspector {
             for (auto fieldList : digest->fieldLists) {
                 for (auto fieldListEntry : fieldList->sources) {
                     auto fieldInfo = phv.field(fieldListEntry->field);
+                    CHECK_NULL(fieldInfo);
                     if (fieldInfo->metadata) {
                         LOG3("E. Updating alignment of metadata field " << fieldInfo->name << " to "
                                 << FieldAlignment(le_bitrange(StartLen(0, fieldInfo->size))));
@@ -2183,6 +2186,7 @@ class ConstrainSatAddResultTempVars : public Inspector {
         auto expr = ins->operands.begin();
         if ((*expr)->is<IR::TempVar>()) {
             PHV::Field *f = phv_i.field((*expr)->to<IR::TempVar>());
+            CHECK_NULL(f);
             f->set_exact_containers(true);
             f->set_solitary(PHV::SolitaryReason::ARCH);
             f->set_no_split(true);

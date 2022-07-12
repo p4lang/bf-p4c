@@ -1750,7 +1750,8 @@ void RewriteDeparser::infer_deparser_no_repeat_constraint(IR::BFN::Deparser* dep
                     if (can_repeat) {
                         auto field = phv.field(ei->source->field);
 
-                        BUG_CHECK(field->size % 8 == 0, "non byte-aligned field gets decaf'd?");
+                        BUG_CHECK(field && field->size % 8 == 0,
+                                    "non byte-aligned field gets decaf'd?");
 
                         if (field->size == 16 || field->size == 32)
                             must_split_fields.insert(field->name);

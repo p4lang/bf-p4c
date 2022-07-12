@@ -6,6 +6,7 @@
 
 bool ValidateActions::preorder(const IR::MAU::Action *act) {
     auto tbl = findContext<IR::MAU::Table>();
+    CHECK_NULL(tbl);
     LOG4("ValidateActions for table: " << tbl->externalName());
     ActionAnalysis::FieldActionsMap field_actions_map;
     ActionAnalysis::ContainerActionsMap container_actions_map;

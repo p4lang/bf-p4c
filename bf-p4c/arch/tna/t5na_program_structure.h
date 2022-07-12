@@ -27,8 +27,8 @@ struct T5naProgramStructure : ProgramStructure {
     // Keep instances of pipes
     std::vector<const IR::Declaration_Instance *> pipeInstances;
     // Keep main/switch instance
-    const IR::Declaration_Instance *mainInstance;
-    const IR::Type_Package *pipePackage;
+    const IR::Declaration_Instance *mainInstance = nullptr;
+    const IR::Type_Package *pipePackage = nullptr;
 
     // Keep information about controls and what they represent
     std::set<cstring> ingressParsers;

@@ -205,7 +205,7 @@ struct InjectTmpVar : public PassManager {
 class FlattenHeader : public Modifier {
     P4::ClonePathExpressions cloner;
     const P4::TypeMap* typeMap;
-    IR::Type_Header* flattenedHeader;
+    IR::Type_Header* flattenedHeader = nullptr;
     std::vector<cstring> nameSegments{};
     std::vector<const IR::Annotations*> allAnnotations{};
     std::vector<Util::SourceInfo> srcInfos{};

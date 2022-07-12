@@ -672,7 +672,6 @@ Instruction *CmpOP::pass1(Table *tbl_, Table::Actions::Action *act) {
 struct TMatchOP : public SaluInstruction {
     const struct Decode : public Instruction::Decode {
         std::string     name;
-        unsigned        opcode;
         Decode(const char *n, target_t target)
         : Instruction::Decode(n, target, STATEFUL_ALU), name(n) {}
         Decode(const char *n, std::set<target_t> target)

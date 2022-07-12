@@ -36,6 +36,7 @@ void FinalizeStageAllocation::summarizeUseDefs(
             auto* t = ref.first->to<IR::MAU::Table>();
             le_bitrange bits;
             auto* f = phv.field(ref.second, &bits);
+            CHECK_NULL(f);
             // *ALEX* The stage info stored into PhvInfo::table_to_min_stage is still not physical.
             // So this if else clause is meaningless because in both cases we use dg generated
             // stage info

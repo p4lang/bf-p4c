@@ -37,6 +37,7 @@ void IXBarVerify::verify_format(const IXBar::Use *use) {
         bool container_set = false;
         for (auto fi : byte.field_bytes) {
             auto *field = phv.field(fi.field);
+            CHECK_NULL(field);
             bool byte_found = false;
             bool single_byte = true;
             PHV::FieldUse use(PHV::FieldUse::READ);

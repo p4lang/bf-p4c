@@ -15,7 +15,7 @@ class InputXbar : public ::InputXbar {
     bitvec      dconfig;
     bitvec      xme_units;
     int         output_unit = -1;
-    unsigned    first8, num8, first32, num32;
+    unsigned    first8, num8, first32, num32 = 0;
 
     friend class ::InputXbar;
     void check_input(Group group, Input &input, TcamUseCache &tcam_use) override;

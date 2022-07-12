@@ -449,6 +449,7 @@ class TranslateProgram : public Inspector {
 
     void postorder(const IR::ParserState* state) {
         auto ctxt = findContext<IR::P4Parser>();
+        CHECK_NULL(ctxt);
         for (auto stmt : state->components) {
             if (auto mc = stmt->to<IR::MethodCallStatement>()) {
                 auto mi = P4::MethodInstance::resolve(mc, refMap, typeMap);

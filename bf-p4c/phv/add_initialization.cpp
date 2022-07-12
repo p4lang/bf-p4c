@@ -531,6 +531,7 @@ class AddDarkInitialization : public Transform {
 
     IR::Node* preorder(IR::MAU::Action* action) override {
         const IR::MAU::Table* tbl = findContext<IR::MAU::Table>();
+        CHECK_NULL(tbl);
         ordered_set<PHV::FieldSlice> dests;
         for (auto* prim : action->action) {
             le_bitrange range;
