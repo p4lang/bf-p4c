@@ -26,6 +26,7 @@ struct Memories {
     static constexpr int MAPRAM_COLUMNS = 6;
     static constexpr int MAPRAM_MASK = (1U << MAPRAM_COLUMNS) - 1;
     static constexpr int LAMB_DEPTH = 64;
+    static constexpr int TOTAL_LAMBS = 8;
     static constexpr int SRAM_DEPTH = 1024;
     static constexpr int TCAM_ROWS = 12;
     static constexpr int TCAM_COLUMNS = 2;

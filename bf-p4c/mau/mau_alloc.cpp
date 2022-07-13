@@ -18,41 +18,42 @@ int TableAllocPass::table_placement_round = 1;
 TableAllocPass::TableAllocPass(const BFN_Options& options, PhvInfo& phv, DependencyGraph &deps,
                                TableSummary &summary, Util::JsonObject* jsonGraph,
                                MauBacktracker &mau_backtracker)
-    : Logging::PassManager("table_placement_"), lc(phv, att_info),
-      siaa(mutex, ignore, action_mutex, lc), att_info(phv), options(options) {
-        addPasses({
-            new GatewayOpt(phv),   // must be before TableLayout?  or just TablePlacement?
-            new TableLayout(phv, lc, att_info),  // catches IXBar::realign backtracks
-            new AssignActionHandle(phv),
-            new MeterALU::Format(phv, lc),
-            new TableFindSeqDependencies(phv),
-            new FindDependencyGraph(phv, deps),
-            new SpreadGatewayAcrossSeq(phv),
-            new CheckTableNameDuplicate,
-            new TableFindSeqDependencies(phv),
-            new CheckTableNameDuplicate,
-            new FindDependencyGraph(phv, deps, &options, "", "Before Table Placement", &summary),
-            new DumpJsonGraph(deps, jsonGraph, "Before Table Placement", false),
-            &ignore,
-            &mutex,
-            &action_mutex,
-            &siaa,
-            new DumpPipe("Before TablePlacement"),
-            new TablePlacement(options, deps, mutex, phv, lc,
-                                siaa, att_info, summary, mau_backtracker),
-            new DumpPipe("After TablePlacement"),
-            new CheckTableNameDuplicate,
-            new TableFindSeqDependencies(phv),  // not needed?
-            new AssignCounterLRTValues(),
-            new CheckTableNameDuplicate,
-            new AdjustIXBarExpression,
-            // RemoveNoopGateway can be removed after MultipleApply2 is in
-            new PassIf(
-                [options] {
-                    return !Device::hasLongBranches() || options.disable_long_branch;
-                },
-                { new RemoveNoopGateway })
-        });
+    : Logging::PassManager("table_placement_"), att_info(phv), options(options) {
+    lc = LayoutChoices::create(phv, att_info);
+    siaa = new SharedIndirectAttachedAnalysis(mutex, ignore, action_mutex, *lc);
+    addPasses({
+        new GatewayOpt(phv),   // must be before TableLayout?  or just TablePlacement?
+        new TableLayout(phv, *lc, att_info),  // catches IXBar::realign backtracks
+        new AssignActionHandle(phv),
+        new MeterALU::Format(phv, *lc),
+        new TableFindSeqDependencies(phv),
+        new FindDependencyGraph(phv, deps),
+        new SpreadGatewayAcrossSeq(phv),
+        new CheckTableNameDuplicate,
+        new TableFindSeqDependencies(phv),
+        new CheckTableNameDuplicate,
+        new FindDependencyGraph(phv, deps, &options, "", "Before Table Placement", &summary),
+        new DumpJsonGraph(deps, jsonGraph, "Before Table Placement", false),
+        &ignore,
+        &mutex,
+        &action_mutex,
+        siaa,
+        new DumpPipe("Before TablePlacement"),
+        new TablePlacement(options, deps, mutex, phv, *lc,
+                            *siaa, att_info, summary, mau_backtracker),
+        new DumpPipe("After TablePlacement"),
+        new CheckTableNameDuplicate,
+        new TableFindSeqDependencies(phv),  // not needed?
+        new AssignCounterLRTValues(),
+        new CheckTableNameDuplicate,
+        new AdjustIXBarExpression,
+        // RemoveNoopGateway can be removed after MultipleApply2 is in
+        new PassIf(
+            [options] {
+                return !Device::hasLongBranches() || options.disable_long_branch;
+            },
+            { new RemoveNoopGateway })
+    });
 
     setName("Table Alloc");
 }

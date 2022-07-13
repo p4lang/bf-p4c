@@ -535,13 +535,23 @@ void StageUseEstimate::calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOpti
     // For non-lamb layouts (STMs) the remaining code will also require a different approach.
     // Eventually its best to separate out this function for Flatrock
     if (lo->layout.is_lamb) {
-        switch (calculated_depth) {
-            case 1:
-                lo->way_sizes = { 1 };
-                break;
-            case 2:
-                lo->way_sizes = {1, 1};
-                break;
+        if (lo->layout.is_direct) {
+            lo->way_sizes.push_back(calculated_depth);
+        } else {
+            switch (calculated_depth) {
+                case 1:
+                    lo->way_sizes = { 1 };
+                    break;
+                case 2:
+                    lo->way_sizes = {1, 1};
+                    break;
+                case 3:
+                    lo->way_sizes = {1, 1, 1};
+                    break;
+                case 4:
+                    lo->way_sizes = {1, 1, 1, 1};
+                    break;
+            }
         }
         if (lo->way_sizes.size() > 0) return;
     }
@@ -649,7 +659,7 @@ void StageUseEstimate::calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOpti
 /* Convert all possible layout options to the correct way sizes */
 void StageUseEstimate::options_to_ways(const IR::MAU::Table *tbl, int entries) {
     for (auto &lo : layout_options) {
-        LOG5("Calculating options to ways for layout: " << lo);
+        LOG5("Calculating options to ways for : " << lo);
         if (lo.layout.hash_action || lo.way.match_groups == 0 || lo.layout.gateway_match) {
             lo.entries = entries;
             lo.srams = 0;
@@ -664,11 +674,11 @@ void StageUseEstimate::options_to_ways(const IR::MAU::Table *tbl, int entries) {
         calculate_way_sizes(tbl, &lo, calculated_depth);
         lo.entries = calculated_depth * lo.way.match_groups
                         * lo.layout.get_sram_depth();
-        lo.srams = calculated_depth * lo.way.width;
+        if (lo.layout.is_lamb) lo.lambs = calculated_depth * lo.way.width;
+        else
+            lo.srams = calculated_depth * lo.way.width;
         lo.maprams = 0;
-        LOG5("Entries: " << lo.entries << ", srams: " << lo.srams
-            << ", calculated_depth: " << calculated_depth << ", total_depth: " << total_depth
-            << ", ways: " << lo.way_sizes);
+        LOG5("  Updated : " << lo);
     }
 }
 
@@ -895,7 +905,11 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
     std::sort(layout_options.begin(), layout_options.end(),
         [=](const LayoutOption &a, const LayoutOption &b) {
         int t;
-        if ((t = a.srams - b.srams) != 0) return t < 0;
+        // For comparisons between lamb vs non lamb layouts prefer lambs
+        if (a.layout.is_lamb && !b.layout.is_lamb) return true;
+        if (a.layout.is_lamb && b.layout.is_lamb) {
+            if ((t = a.lambs - b.lambs) != 0) return t < 0;
+        } else if ((t = a.srams - b.srams) != 0) return t < 0;
         // Added to keep obfuscated-nat-mpls for compiling.  In theory the match groups/width
         // should not be used for hash action tables
         if (a.layout.hash_action && !b.layout.hash_action) return true;
@@ -914,13 +928,7 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
         LOG3("small table allocation");
     else
         LOG3("large table allocation");
-    for (auto &lo : layout_options) {
-        LOG3("layout option width " << lo.way.width << " match groups " << lo.way.match_groups
-              << " entries " << lo.entries << " srams " << lo.srams
-              << " action data " << lo.layout.action_data_bytes_in_table
-              << " immediate " << lo.layout.immediate_bits);
-        LOG3("Layout option way sizes " << lo.way_sizes);
-    }
+    LOG3(layout_options);
 
     preferred_index = 0;
 }

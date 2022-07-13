@@ -2109,6 +2109,7 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
             if (!(disable_atomic_modify && BackendOptions().target == "tofino"))
                 rv->entries += t->layout.partition_count;
         }
+
         if (t->layout.exact) {
             if (t->layout.ixbar_width_bits < ceil_log2(rv->entries)) {
                 rv->entries = 1 << t->layout.ixbar_width_bits;

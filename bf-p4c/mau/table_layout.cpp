@@ -1,4 +1,7 @@
 #include "bf-p4c/mau/table_layout.h"
+#ifdef HAVE_FLATROCK
+#include "bf-p4c/mau/flatrock/table_layout.h"
+#endif
 #include <math.h>
 
 #include <set>
@@ -69,6 +72,15 @@ class DoTableLayout : public MauModifier, Backtrack {
 Visitor::profile_t DoTableLayout::init_apply(const IR::Node *root) {
     alloc_done = phv.alloc_done();
     return MauModifier::init_apply(root);
+}
+
+LayoutChoices* LayoutChoices::create(PhvInfo &p, SplitAttachedInfo &a) {
+#if HAVE_FLATROCK
+    // FIXME -- add Device::newLayoutChoices() method?
+    if (Device::currentDevice() == Device::FLATROCK)
+        return new Flatrock::LayoutChoices(p, a);
+#endif
+    return new LayoutChoices(p, a);
 }
 
 void LayoutChoices::add_payload_gw_layout(const IR::MAU::Table *tbl,
@@ -497,7 +509,13 @@ void DoTableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR:
         }
     }
 
+#ifdef HAVE_FLATROCK
+    // Ghost bits are decided based on direct / cuckoo lookup later
+    if (!layout.ternary && !layout.atcam && !layout.proxy_hash
+            && !(Device::currentDevice() == Device::FLATROCK)) {
+#else
     if (!layout.ternary && !layout.atcam && !layout.proxy_hash) {
+#endif
         int ghost_bits_left = layout.get_ram_ghost_bits();
         std::sort(byte_sizes.begin(), byte_sizes.end());
         for (auto byte_size : byte_sizes) {
@@ -646,8 +664,6 @@ void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
         return;
     }
 
-    // TODO : FOR Layout generation in Flatrock below loop needs to be executed twice, once for LAMB
-    // and once for STM
     auto lo_key = std::make_pair(tbl->name, format_type);
     for (int entry_count = MIN_PACK; entry_count <= MAX_PACK; entry_count++) {
         if (pack_val > 0 && entry_count != pack_val)
@@ -662,57 +678,44 @@ void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
         single_entry_bits += layout_proto.match_width_bits;
 
         int total_bits = entry_count * single_entry_bits;
-        int width = 1;
-#ifdef HAVE_FLATROCK
-        if (Device::currentDevice() == Device::FLATROCK) {
-            // Per entry cannot exceed 64 bits overhead
-            if (single_overhead_bits > TableFormat::OVERHEAD_BITS) continue;
+        int total_bytes = entry_count * layout_proto.match_bytes;
+        int total_overhead_bits = entry_count * single_overhead_bits;
 
-            // Total bits cannot exceed single RAM width
-            if (total_bits > TableFormat::SINGLE_RAM_BITS) continue;
+        int bit_limit_width = (total_bits + TableFormat::SINGLE_RAM_BITS - 1)
+                              / TableFormat::SINGLE_RAM_BITS;
+        int byte_limit_width = (total_bytes + TableFormat::SINGLE_RAM_BYTES - 1)
+                               / TableFormat::SINGLE_RAM_BYTES;
+        int overhead_width = (total_overhead_bits + TableFormat::OVERHEAD_BITS - 1)
+                             / TableFormat::OVERHEAD_BITS;
+        int pack_width = (entry_count + MAX_ENTRIES_PER_ROW - 1)
+                          / MAX_ENTRIES_PER_ROW;
+
+        // ATCAM tables can only have one payload bus, as the priority ranking happens on
+        // a single bus
+        if ((overhead_width > 1 || entry_count > MAX_ENTRIES_PER_ROW) && layout_proto.atcam)
+            break;
+
+
+        int width = std::max({ bit_limit_width, byte_limit_width, overhead_width, pack_width });
+
+        int mod_value;
+        int min_value = 0;
+
+        if (width > entry_count) {
+            mod_value = width % entry_count;
+            min_value = entry_count;
         } else {
-#endif
-            int total_bytes = entry_count * layout_proto.match_bytes;
-            int total_overhead_bits = entry_count * single_overhead_bits;
-
-            int bit_limit_width = (total_bits + TableFormat::SINGLE_RAM_BITS - 1)
-                                  / TableFormat::SINGLE_RAM_BITS;
-            int byte_limit_width = (total_bytes + TableFormat::SINGLE_RAM_BYTES - 1)
-                                   / TableFormat::SINGLE_RAM_BYTES;
-            int overhead_width = (total_overhead_bits + TableFormat::OVERHEAD_BITS - 1)
-                                 / TableFormat::OVERHEAD_BITS;
-            int pack_width = (entry_count + MAX_ENTRIES_PER_ROW - 1)
-                              / MAX_ENTRIES_PER_ROW;
-
-            // ATCAM tables can only have one payload bus, as the priority ranking happens on
-            // a single bus
-            if ((overhead_width > 1 || entry_count > MAX_ENTRIES_PER_ROW) && layout_proto.atcam)
-                break;
-
-
-            width = std::max({ bit_limit_width, byte_limit_width, overhead_width, pack_width });
-
-            int mod_value;
-            int min_value = 0;
-
-            if (width > entry_count) {
-                mod_value = width % entry_count;
-                min_value = entry_count;
-            } else {
-                mod_value = entry_count % width;
-                min_value = width;
-            }
-
-            // Skip potential doubling of layouts: i.e. if the layout is 2 entries per RAM row,
-            // and 1 RAM wide, then there is no point to adding the double, 4 entries per RAM row,
-            // and 2 RAM wide.  This is the same packing, and wider matches are more constrained
-            if (mod_value == 0 && min_value != 1 && pack_val == 0)
-                continue;
-
-            if (width > Memories::SRAM_ROWS) break;
-#ifdef HAVE_FLATROCK
+            mod_value = entry_count % width;
+            min_value = width;
         }
-#endif
+
+        // Skip potential doubling of layouts: i.e. if the layout is 2 entries per RAM row,
+        // and 1 RAM wide, then there is no point to adding the double, 4 entries per RAM row,
+        // and 2 RAM wide.  This is the same packing, and wider matches are more constrained
+        if (mod_value == 0 && min_value != 1 && pack_val == 0)
+            continue;
+
+        if (width > Memories::SRAM_ROWS) break;
 
         LOG2("Layout Option: { pack : " << entry_count << ", width : " << width
              << ", action data table bytes : " << action_data_bytes_in_table
@@ -723,11 +726,6 @@ void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
         layout_for_pack.immediate_bits = immediate_bits;
         layout_for_pack.overhead_bits += immediate_bits;
         layout_for_pack.action_data_bytes = action_data_bytes_in_table + (immediate_bits + 7) / 8;
-#ifdef HAVE_FLATROCK
-        // TODO: Update layouts to consider STM allocation
-        if (Device::currentDevice() == Device::FLATROCK)
-            layout_for_pack.is_lamb = true;
-#endif
         way.match_groups = entry_count;
         way.width = width;
         cache_layout_options[lo_key].emplace_back(layout_for_pack, way, index);
@@ -772,15 +770,6 @@ void LayoutChoices::setup_layout_option_no_match(const IR::MAU::Table *tbl,
     } else if (!format_type.matchThisStage()) {
         // post split gets index via hash_dist, so it needs to be hash_action
         layout.hash_action = true; }
-
-#if HAVE_FLATROCK
-    if (Device::currentDevice() == Device::FLATROCK) {
-        // Flatrock does not support no_match_miss tables, so force it to be hit path
-        // if we need to run an action.
-        if (!tbl->actions.empty()) {
-            // should use gateway table?  Needs table_layout/table_format updates for flatrock
-            layout.hash_action = true; } }
-#endif /* HAVE_FLATROCK */
 
     // No match tables are required to have only one layout option in a later pass, so the
     // algorithm picks the action format that has the most immediate.  This is the option
@@ -1571,28 +1560,29 @@ TableLayout::TableLayout(PhvInfo &p, LayoutChoices &l, SplitAttachedInfo &sia)
 }
 
 std::ostream &operator<<(std::ostream &out, const LayoutOption &lo) {
-    out << "layout: " << lo.layout.entries;
-    if (lo.layout.pre_classifier) out << 'c';
-    if (lo.layout.gateway) out << 'g';
-    if (lo.layout.exact) out << 'e';
-    if (lo.layout.ternary) out << 't';
-    if (lo.layout.hash_action) out << 'h';
-    if (lo.layout.gateway_match) out << 'G';
-    if (lo.layout.atcam) out << 'T';
-    if (lo.layout.alpm) out << 'L';
-    if (lo.layout.has_range) out << 'r';
-    if (lo.layout.proxy_hash) out << 'P';
-    if (lo.layout.requires_versioning) out << 'V';
-    out << " ixbar:" << lo.layout.ixbar_bytes << "B/" << lo.layout.ixbar_width_bits << "b";
-    out << " match:" << lo.layout.match_bytes << "B/" << lo.layout.match_width_bits << "b";
-    if (lo.layout.ghost_bytes) out << " gh:" << lo.layout.ghost_bytes;
-    if (lo.layout.action_data_bytes || lo.layout.action_data_bytes_in_table) {
-        out << " adb:" << lo.layout.action_data_bytes;
-        if (lo.layout.action_data_bytes_in_table)
-            out << "/" << lo.layout.action_data_bytes_in_table; }
-    if (lo.layout.overhead_bits) out << " ov:" << lo.layout.overhead_bits;
-    if (lo.layout.immediate_bits) out << " imm:" << lo.layout.immediate_bits;
-    if (lo.layout.partition_bits) out << " part:" << lo.layout.partition_bits;
+    auto &layout = lo.layout;
+    out << "layout: " << layout.entries;
+    if (layout.pre_classifier) out << 'c';
+    if (layout.gateway) out << 'g';
+    if (layout.exact) out << 'e';
+    if (layout.ternary) out << 't';
+    if (layout.hash_action) out << 'h';
+    if (layout.gateway_match) out << 'G';
+    if (layout.atcam) out << 'T';
+    if (layout.alpm) out << 'L';
+    if (layout.has_range) out << 'r';
+    if (layout.proxy_hash) out << 'P';
+    if (layout.requires_versioning) out << 'V';
+    out << " ixbar:" << layout.ixbar_bytes << "B/" << layout.ixbar_width_bits << "b";
+    out << " match:" << layout.match_bytes << "B/" << layout.match_width_bits << "b";
+    if (layout.ghost_bytes) out << " gh:" << layout.ghost_bytes;
+    if (layout.action_data_bytes || layout.action_data_bytes_in_table) {
+        out << " adb:" << layout.action_data_bytes;
+        if (layout.action_data_bytes_in_table)
+            out << "/" << layout.action_data_bytes_in_table; }
+    if (layout.overhead_bits) out << " ov:" << layout.overhead_bits;
+    if (layout.immediate_bits) out << " imm:" << layout.immediate_bits;
+    if (layout.partition_bits) out << " part:" << layout.partition_bits;
     out << IndentCtl::indent << Log::endl;
     bool empty = true;
     if (lo.way.match_groups || lo.way.entries || lo.way.width || !lo.way_sizes.empty()) {
@@ -1616,8 +1606,15 @@ std::ostream &operator<<(std::ostream &out, const LayoutOption &lo) {
             out << sep << s;
             sep = "/"; } }
     if (!empty) out << Log::endl;
-    out << "entries:" << lo.entries << " srams:" << lo.srams << " maprams:" << lo.maprams
-        << " tcams:" << lo.tcams;
+    out << "entries:" << lo.entries;
+    out << " lambs: " << lo.lambs;
+    if (layout.is_direct) {
+        out << " (direct - " << layout.entries_per_set
+                      << "/" << layout.sets_per_word;
+        out << ")";
+    }
+    out << " srams:" << lo.srams;
+    out << " maprams:" << lo.maprams << " tcams:" << lo.tcams;
     if (lo.select_bus_split >= 0) out << " sbs:" << lo.select_bus_split;
     if (lo.action_format_index >= 0) out << " afi:" << lo.action_format_index;
     if (lo.previously_widened) out << " W";

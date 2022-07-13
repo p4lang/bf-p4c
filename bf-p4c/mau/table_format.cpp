@@ -611,12 +611,43 @@ bool TableFormat::allocate_overhead() {
 
 
 #ifdef HAVE_FLATROCK
-// Flatrock Action Format For LAMB's
-// - Maximum 4 entries per word
-// - Cannot be a wide match and span multiple words
-// - Each entry is grouped in the following order
-//   [ Match bits - Next Table Bits - Action bits - Immediate bits ]
-//   This order can be modified once we gain more understanding of what HW allows
+/*************************************************************************************************
+Flatrock Action Format For LAMB's
+- Entry constituents
+  - Match bits must be aligned to the container in input xbar
+  - Immediate must be byte aligned, they are byte rotated 
+    (0-16 & 16 byte mask which enables / disables each byte) for extraction (without a shift)
+  - Next bits can be present anywhere within the entry 
+  - Action bits can be present anywhere within the entry(?)  
+- Entries and Sets
+  - Entries cannot be a wide match and span multiple words (BPH & STM only)
+  - Each entry is grouped in the following order
+    [ Match bits - Immediate bits - (Next Table Bits / Action bits / Indirect Pointers / Valid Bits in any order) ]
+    This order can be modified once we gain more understanding of what HW allows
+  - 1 or more entries (max 4) can be grouped into sets
+  - 1 or more sets (power of 2 - 1,2,4,8,16,32,64,128) can be present in a 128 bit lamb / STM word
+  - In a word multiple sets are accessed as sub words based on index bits
+  - How are index bits alloted? In the hash function (first n bits for 2^n subwords)
+- For a direct lookup
+  - No. of entries per set is always 1 
+  - No. of sets per word can be 1 or more based on packing
+  - Subword (set) is used as a single entry 
+  - No match bits are allocated in the entry
+  - May need a valid bit per entry (option to enable?) - Never a miss because direct
+- For a cuckoo match
+  - No. of entries per set is more than 1
+  - No. of sets per word can be 1 or more based on packing
+  - Subword (set) is used as multiple entries 
+  - Match bits which are non ghosted are allocated
+  - Need a valid bit per entry (Use disable_versioning to disable valid bit)
+
+Questions:
+- Do we need separate assembly syntax to represent sets / word? Or can this be somehow determined
+  based on match format? - Absence of match bits to indicate direct
+  Have a match table layout for one set only / can figure out how many sets can be packed in a word
+- Should layout generation create both cuckoo / direct when possible as options? Maybe TP can
+  give preference to a direct if they are using same amount of lambs
+*************************************************************************************************/
 bool TableFormat::allocate_match_and_overhead() {
     BUG_CHECK(overhead_groups_per_RAM.size() == 1,
         "Cannot allocate wide RAMS in Flatrock. Invalid size %1%",
@@ -626,6 +657,9 @@ bool TableFormat::allocate_match_and_overhead() {
     for (auto group = 0; group < layout_option.way.match_groups; group++) {
         use->match_groups[group].clear_match();
     }
+    if (layout_option.layout.is_lamb_direct())
+        total_groups = layout_option.layout.sets_per_word;
+
     match_bytes.clear();
     ghost_bytes.clear();
     std::fill(full_match_groups_per_RAM.begin(), full_match_groups_per_RAM.end(), 0);
@@ -636,10 +670,12 @@ bool TableFormat::allocate_match_and_overhead() {
 
     int per_group_width = 0;
     int group = 0;
-    auto allocate_overhead_bits = [&](const type_t t) {
+    auto allocate_overhead_bits = [&](const type_t t, const int align = 0) {
         int alloc_bits = bits_necessary(t);
         if (alloc_bits > 0) {
             auto start = total_use.max().index() + 1;
+            if ((align > 1) && (start % align))
+                    start = ((start / align) + 1) * align;
             bitvec alloc_mask(start, alloc_bits);
             use->match_groups[group].mask[t] |= alloc_mask;
             total_use |= alloc_mask;
@@ -648,17 +684,26 @@ bool TableFormat::allocate_match_and_overhead() {
 
     while ((per_group_width * (group + 1) <= SINGLE_RAM_BITS)
             && group < total_groups) {
-        if (!allocate_match_with_algorithm(group)) return false;
+        // Pad to next group start
+        if (per_group_width > 0) {
+            auto pad_range = ((per_group_width * group) - 1) - total_use.max().index();
+            total_use.setrange(total_use.max().index() + 1, pad_range);
+        }
+        // Dont allocate match bits overhead for direct lookup
+        if (!layout_option.layout.is_lamb_direct())
+            if (!allocate_match_with_algorithm(group)) return false;
+        allocate_overhead_bits(IMMEDIATE, 8 /* byte boundary? */);
         allocate_overhead_bits(NEXT);
         allocate_overhead_bits(ACTION);
-        allocate_overhead_bits(IMMEDIATE);
 
         per_group_width = (per_group_width == 0) ?
-            (1 << ceil_log2(total_use.max().index())) : per_group_width;
+            (1ULL << (ceil_log2(total_use.max().index() + 1))) : per_group_width;
 
         group++;
     }
 
+    LOG3("Allocating for total groups: " << total_groups << ", allocated: " << group
+            << ", per_group_width: " << per_group_width);
     if (group == total_groups) return true;
     return false;
 }

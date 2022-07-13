@@ -63,27 +63,29 @@ class LayoutChoices {
     FindPayloadCandidates fpc;
 
  private:
-    using key_t = std::pair<cstring, ActionData::FormatType_t>;
-    template<class T> using cache_t = std::map<key_t, safe_vector<T>>;
-    cache_t<LayoutOption>               cache_layout_options;
-    cache_t<ActionData::Format::Use>    cache_action_formats;
+    virtual void setup_exact_match(const IR::MAU::Table *tbl,
+            const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type,
+            int action_data_bytes_in_table, int immediate_bits, int index);
+    virtual void setup_layout_option_no_match(const IR::MAU::Table *tbl,
+            const IR::MAU::Table::Layout &layout, ActionData::FormatType_t format_type);
     void compute_action_formats(const IR::MAU::Table *t, ActionData::FormatType_t type);
     void compute_layout_options(const IR::MAU::Table *t, ActionData::FormatType_t type);
 
     void add_hash_action_option(const IR::MAU::Table *tbl, const IR::MAU::Table::Layout &layout,
             ActionData::FormatType_t format_type, bool &hash_action_only);
-    void setup_exact_match(const IR::MAU::Table *tbl, const IR::MAU::Table::Layout &layout_proto,
-            ActionData::FormatType_t format_type, int action_data_bytes_in_table,
-            int immediate_bits, int index);
     static void setup_indirect_ptrs(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
             ActionData::FormatType_t format_type);
-    void setup_layout_option_no_match(const IR::MAU::Table *tbl,
-            const IR::MAU::Table::Layout &layout, ActionData::FormatType_t format_type);
     void setup_layout_options(const IR::MAU::Table *tbl,
             const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type);
     void setup_ternary_layout_options(const IR::MAU::Table *tbl,
             const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type);
     bool need_meter(const IR::MAU::Table *t, ActionData::FormatType_t format_type) const;
+
+ protected:
+    using key_t = std::pair<cstring, ActionData::FormatType_t>;
+    template<class T> using cache_t = std::map<key_t, safe_vector<T>>;
+    cache_t<LayoutOption>               cache_layout_options;
+    cache_t<ActionData::Format::Use>    cache_action_formats;
 
  public:
     const safe_vector<LayoutOption> &
@@ -123,6 +125,7 @@ class LayoutChoices {
         fpc.clear();
     }
 
+    static LayoutChoices* create(PhvInfo &p, SplitAttachedInfo &a);
     LayoutChoices(PhvInfo &p, SplitAttachedInfo &a)
         : phv(p), att_info(a), fpc(phv) {}
     void add_payload_gw_layout(const IR::MAU::Table *tbl, const LayoutOption &base_option);

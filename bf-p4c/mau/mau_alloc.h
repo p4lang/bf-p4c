@@ -17,12 +17,12 @@ class TableSummary;
 class TableAllocPass : public Logging::PassManager {
  private:
     IgnoreTableDeps                     ignore;
-    LayoutChoices                       lc;
-    SharedIndirectAttachedAnalysis      siaa;
     SplitAttachedInfo                   att_info;
     TablesMutuallyExclusive             mutex;
     ActionMutuallyExclusive             action_mutex;
     const BFN_Options&                  options;
+    LayoutChoices                       *lc = nullptr;
+    SharedIndirectAttachedAnalysis      *siaa = nullptr;
 
  public:
     static int table_placement_round;

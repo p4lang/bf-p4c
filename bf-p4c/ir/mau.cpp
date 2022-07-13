@@ -390,34 +390,35 @@ cstring IR::MAU::Table::get_table_type_string() const {
 }
 
 IR::MAU::Table::Layout &IR::MAU::Table::Layout::operator +=(const IR::MAU::Table::Layout &a) {
-    total_actions += a.total_actions;
-    entries += a.entries;
-    gateway |= a.gateway;
-    ternary |= a.ternary;
-    gateway_match |= a.gateway_match;
-    hash_action |= a.hash_action;
-    atcam |= a.atcam;
-    has_range |= a.has_range;
-    proxy_hash |= a.proxy_hash;
+    gateway             |= a.gateway;
+    ternary             |= a.ternary;
+    gateway_match       |= a.gateway_match;
+    hash_action         |= a.hash_action;
+    atcam               |= a.atcam;
+    has_range           |= a.has_range;
+    proxy_hash          |= a.proxy_hash;
     requires_versioning |= a.requires_versioning;
-    ixbar_bytes += a.ixbar_bytes;
-    ixbar_width_bits += a.ixbar_width_bits;
-    match_width_bits += a.match_width_bits;
+    is_lamb             |= a.is_lamb;
+    is_direct           |= a.is_direct;
     if (a.action_data_bytes > action_data_bytes)
         action_data_bytes = a.action_data_bytes;
-
-
     if (a.action_data_bytes_in_table > action_data_bytes_in_table)
         action_data_bytes_in_table = a.action_data_bytes_in_table;
-
-    overhead_bits += a.overhead_bits;
-    immediate_bits += a.immediate_bits;
-    meter_addr += a.meter_addr;
-    stats_addr += a.stats_addr;
-    action_addr += a.action_addr;
-    ghost_bytes += a.ghost_bytes;
-    partition_bits += a.partition_bits;
-    partition_count += a.partition_count;
+    total_actions       += a.total_actions;
+    entries             += a.entries;
+    ixbar_bytes         += a.ixbar_bytes;
+    ixbar_width_bits    += a.ixbar_width_bits;
+    match_width_bits    += a.match_width_bits;
+    overhead_bits       += a.overhead_bits;
+    immediate_bits      += a.immediate_bits;
+    meter_addr          += a.meter_addr;
+    stats_addr          += a.stats_addr;
+    action_addr         += a.action_addr;
+    ghost_bytes         += a.ghost_bytes;
+    partition_bits      += a.partition_bits;
+    partition_count     += a.partition_count;
+    entries_per_set     += a.entries_per_set;
+    sets_per_word       += a.sets_per_word;
     return *this;
 }
 
@@ -826,6 +827,16 @@ int IR::MAU::Table::get_pragma_max_actions() const {
         }
     }
     return -1;
+}
+
+unsigned IR::MAU::Table::get_match_key_width() const {
+    unsigned match_key_width = 0;
+    for (auto &m : match_key) {
+        if (m->for_match()) {
+            match_key_width += m->expr->type->width_bits();
+        }
+    }
+    return match_key_width;
 }
 
 IR::MAU::Table::ImmediateControl_t IR::MAU::Table::get_immediate_ctrl() const {

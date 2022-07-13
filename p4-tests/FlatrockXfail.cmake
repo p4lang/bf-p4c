@@ -15,13 +15,13 @@ set (FLATROCK_XFAIL_TESTS
 
 p4c_add_xfail_reason("tofino5"
   #"WARNING:.*binary.*does not match model version|unexpected packet output on port 0"
-  "error: match group 1 at wrong offset"
+  "error: The ghost bits are not linear independent on way 0" 
   extensions/p4_tests/p4_16/flatrock/direct1.p4
   )
 
 p4c_add_xfail_reason("tofino5"
   #"WARNING:.*binary.*does not match model version|unexpected packet output on port 0"
-  "error: mismatch for match between match groups"
+  "ftr_test_harness FAILED"
   extensions/p4_tests/p4_16/flatrock/exact1.p4
   )
 
@@ -108,10 +108,18 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/stf/wide_arith_non_64.p4
   )
 
+# Unimplemented - support for wide matches
+p4c_add_xfail_reason("tofino5"
+  "Compiler Bug: Cannot allocate wide RAMS in Flatrock. Invalid size 2"
+  extensions/p4_tests/p4_16/stf/cond_checksum_update_4.p4
+  extensions/p4_tests/p4_16/stf/p4c-1513.p4
+  extensions/p4_tests/p4_16/stf/p4c-3089.p4
+  extensions/p4_tests/p4_16/stf/zeros_as_ones.p4
+  )
+
 p4c_add_xfail_reason("tofino5"
   "Compiler Bug: Emitted field didn't receive a PHV allocation: ig_intr_md_for_tm.icrc_enable"
   extensions/p4_tests/p4_16/stf/backend_bug1c.p4
-  extensions/p4_tests/p4_16/stf/cond_checksum_update_4.p4
   extensions/p4_tests/p4_16/stf/funnel_shift.p4
   #extensions/p4_tests/p4_16/stf/header_stack_next.p4
   #extensions/p4_tests/p4_16/stf/header_stack_strided_alloc1.p4
@@ -119,7 +127,6 @@ p4c_add_xfail_reason("tofino5"
   #extensions/p4_tests/p4_16/stf/lookahead1.p4
   extensions/p4_tests/p4_16/stf/lookahead2.p4
   extensions/p4_tests/p4_16/stf/lookahead3.p4
-  extensions/p4_tests/p4_16/stf/p4c-1513.p4
   #extensions/p4_tests/p4_16/stf/p4c-2638.p4
   #extensions/p4_tests/p4_16/stf/p4c-2695.p4
   extensions/p4_tests/p4_16/stf/p4c-3470.p4
@@ -133,7 +140,6 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/stf/p4c-1504.p4
   extensions/p4_tests/p4_16/stf/p4c-2772.p4
   extensions/p4_tests/p4_16/stf/p4c-2772-c.p4
-  extensions/p4_tests/p4_16/stf/p4c-3089.p4
   #extensions/p4_tests/p4_16/stf/wide_arith_non_64.p4
   )
 
@@ -249,11 +255,11 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/stf/update_checksum_2.p4
   )
 
-p4c_add_xfail_reason("tofino5"
-  #"Compiler Bug: Bytes on same search bus are not contained within the same ixbar group"
-  "IXBar::Use::bits_per_search_bus.. const: Assertion|Internal compiler error"
-  extensions/p4_tests/p4_16/stf/zeros_as_ones.p4
-  )
+# p4c_add_xfail_reason("tofino5"
+#   #"Compiler Bug: Bytes on same search bus are not contained within the same ixbar group"
+#   "IXBar::Use::bits_per_search_bus.. const: Assertion|Internal compiler error"
+#   extensions/p4_tests/p4_16/stf/zeros_as_ones.p4
+#   )
 
 # *********************************************************************************************** #
 # ** \TNA tests that "should" work ************************************************************** #

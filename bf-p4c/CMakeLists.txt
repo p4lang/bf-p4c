@@ -414,6 +414,7 @@ set (BF_P4C_BACKEND_MAU_FLATROCK_SRCS
   mau/flatrock/action_data_bus.cpp
   mau/flatrock/asm_output.cpp
   mau/flatrock/input_xbar.cpp
+  mau/flatrock/table_layout.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_FLATROCK_SRCS}")
 build_unified(BF_P4C_BACKEND_MAU_FLATROCK_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
@@ -491,6 +492,7 @@ set (BF_P4C_BACKEND_MAU_FLATROCK_HDRS
   mau/flatrock/action_data_bus.h
   mau/flatrock/asm_output.h
   mau/flatrock/input_xbar.h
+  mau/flatrock/table_layout.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_FLATROCK_HDRS}")
 

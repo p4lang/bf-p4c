@@ -515,6 +515,7 @@ void emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &match_data,
     if (sort.empty())
         return;
     unsigned half = hash_table & 1;
+    if (sort.count(hash_table/2) == 0) return;
     for (auto &match : sort.at(hash_table/2)) {
         Slice reg = match.second;
         if (match.first/64U != half) {

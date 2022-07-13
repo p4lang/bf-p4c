@@ -353,6 +353,7 @@ void IXBar::setupActionAlloc(const IR::MAU::Table *tbl, const PhvInfo &phv,
 }
 
 bool IXBar::exact_find_units(Use &alloc, const LayoutOption *lo) {
+    // LOG3("Finding exact units for Layout : " << lo);
     unsigned avail_xme = lo->layout.is_lamb ? LAMB_XME_UNITS : STM_XME_UNITS;
     avail_xme &= ~xme_inuse;
     unsigned units = lo->way_sizes.size();
@@ -363,7 +364,7 @@ bool IXBar::exact_find_units(Use &alloc, const LayoutOption *lo) {
     int unit;
     for (unit = ffs(avail_xme) - 1; units > 0; ++unit) {
         if (!(avail_xme >> unit)) break;
-        if (!(avail_xme >> unit) & 1) continue;
+        if (!((avail_xme >> unit) & 1)) continue;
         if (units > 1 && (unit & 1) == 1) continue;
         alloc.xme_units |= 1 << unit;
         --units; }
