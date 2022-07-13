@@ -64,6 +64,7 @@ MDP_INTRINSIC_BP_RENAME(hash_lag_ecmp_mcast_1, tmm_ext_ram.tmm_ext[0], hash2, YE
 // TODO: b1_pkt_len
 
 DEPARSER_INTRINSIC(Flatrock, INGRESS, valid_vec, 2) {
+    // FIXME: b0_sel/b1_sel should be from the extracted POV
     // Works with either 1 x 16b container or 2 x 8b containers
     regs.mdp.vld_vec_ext.b1_sel = intrin.vals.front().val->reg.deparser_id();
     regs.mdp.vld_vec_ext.b0_sel = intrin.vals.back().val->reg.deparser_id();
