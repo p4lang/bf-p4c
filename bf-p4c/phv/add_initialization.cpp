@@ -649,7 +649,15 @@ Visitor::profile_t ComputeDependencies::init_apply(const IR::Node* root) {
                 auto liverange2 = livemap.at(sl.field()->id);
                 // If the fields to be initialized has an earlier
                 // liverange --> no initization is needed
-                if (liverange1.first <= liverange2.first || liverange1.second <= liverange2.first) {
+                if (liverange1.first <= liverange2.first && liverange1.second <= liverange2.first) {
+                    LOG3("\t  Ignoring field " << sl.field()->name << " (" << liverange2.first <<
+                         ", " << liverange2.second << ")  with earlier liverange than " << f->name
+                         << " (" << liverange1.first << ", " << liverange1.second <<
+                         ") due to live ranges");
+                    continue;
+                }
+                if (!(liverange1.first >= liverange2.second &&
+                      liverange1.second >= liverange2.second)) {
                     LOG3("\t  Ignoring field " << sl.field()->name << " (" << liverange2.first <<
                          ", " << liverange2.second << ") overlapping with " << f->name << " (" <<
                          liverange1.first << ", " << liverange1.second << ") due to live ranges");
