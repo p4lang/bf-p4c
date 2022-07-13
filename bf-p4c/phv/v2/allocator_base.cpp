@@ -458,6 +458,21 @@ const AllocError* AllocatorBase::is_container_write_mode_ok(const Allocation& al
     }
 
     BUG_CHECK(write_mode, "parser write mode not exist for extracted field %1%", f->name);
+
+    // W0 is not allowed to be used with clear_on_write due to a hardware issue (P4C-4589).
+    // W0 is a 32-bit container, and it will be the only container of its parser group,
+    // so we do not need to check other containers of its parser group.
+    if ((Device::currentDevice() == Device::JBAY
+#if HAVE_CLOUDBREAK
+         || Device::currentDevice() == Device::CLOUDBREAK
+#endif
+) &&
+        c == Container({PHV::Kind::normal, PHV::Size::b32}, 0) &&
+        write_mode == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE) {
+        *err << "W0 must not be used in clear-on-write mode on either Tofino 2 or Tofino 3.";
+        return err;
+    }
+
     const PhvSpec& phv_spec = Device::phvSpec();
     for (unsigned other_id : phv_spec.parserGroup(phv_spec.containerToId(c))) {
         auto other = phv_spec.idToContainer(other_id);
