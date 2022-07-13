@@ -51,7 +51,6 @@ RUN rm -rf /root/.ssh/id_*
 
 COPY . /bfn/bf-p4c-compilers/
 
-RUN chmod a+x /bfn/bf-p4c-compilers/docker/docker_build.sh
 RUN /bfn/bf-p4c-compilers/docker/docker_build.sh
 
 # Setup PTF environment (Use bf-pktpy by default)

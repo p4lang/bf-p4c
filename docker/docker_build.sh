@@ -56,7 +56,6 @@ export P4C_DEPS="autoconf \
                  curl \
                  distcc \
                  flex \
-                 g++-9 \
                  lld \
                  graphviz \
                  libboost1.71-all-dev \
@@ -162,13 +161,22 @@ function WORKDIR() {
 # Set apt to be non-interactive.
 export DEBIAN_FRONTEND=noninteractive
 
-# Clear out CC and CXX.
-#   * These apparently cause pip to build its packages incorrectly: some
-#     packages (e.g., pysubnettree) use CC where they should use CXX.
-#
-#   * CC and CXX are set by Dockerbuild to enable distcc. We wish to build the
-#     compiler locally anyway.
-unset CC CXX
+if [[ "${CC}" == "gcc-6" || "${CXX}" == "g++-6" ]] ; then
+  gcc6archive="deb http://archive.ubuntu.com/ubuntu bionic main universe"
+  if ! grep -q "$gcc6archive" /etc/apt/sources.list; then
+    echo -e "\n#needed for gcc6\n$gcc6archive" | sudo tee -a /etc/apt/sources.list >/dev/null
+  fi
+  apt update
+  apt install -y g++-6
+else
+  # Clear out CC and CXX.
+  #   * These apparently cause pip to build its packages incorrectly: some
+  #     packages (e.g., pysubnettree) use CC where they should use CXX.
+  #
+  #   * CC and CXX are set by Dockerbuild to enable distcc. We wish to build the
+  #     compiler locally anyway.
+  unset CC CXX
+fi
 
 # Install dependencies and configure the build environment.
 if [[ "${BUILD_FOR}" != 'jenkins-final' ]] ; then
@@ -180,13 +188,16 @@ if [[ "${BUILD_FOR}" != 'jenkins-final' ]] ; then
   # Install packages.
   apt-get install -y ${P4C_DEPS} ${P4C_RUNTIME_DEPS}
 
+  # Configure distcc to just use localhost for building the Docker image.
+  echo localhost > /etc/distcc/hosts
+
   # Install more packages.
   case "${BUILD_FOR}" in
   jarvis)
     apt-get install -y ${DEV_PKGS}
     ;;
   release)
-    apt-get install -y ${REL_PKGS}
+    apt install -y ${REL_PKGS}
     ;;
   esac
 
@@ -244,9 +255,6 @@ if [[ "${BUILD_FOR}" != 'jenkins-final' ]] ; then
     fi
     cd -
   }
-
-  # Configure distcc to just use localhost for building the Docker image.
-  echo localhost > /etc/distcc/hosts
 
   if [[ "${BUILD_FOR}" == "jenkins-intermediate" ]] ; then
     WORKDIR "${BF_P4C_COMPILERS}"
