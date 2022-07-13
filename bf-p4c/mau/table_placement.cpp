@@ -4747,20 +4747,22 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
     if (tbl->is_placed())
         return tbl;
 
+    const TablePlacement::Placed* pl = it->second;
+
     if (LOGGING_FEATURE("stage_advance", 2)) {
         // look for tables that were delayed (not placed in the earliest stage they could have
         // been based on depedencies) and log that
         std::map<int, ordered_map<const TablePlacement::Placed *,
                                   DependencyGraph::dependencies_t>> earliest_stage;
-        self.find_dependency_stages(it->second->table, earliest_stage);
-        if (it->second->gw) self.find_dependency_stages(it->second->gw, earliest_stage);
+        self.find_dependency_stages(pl->table, earliest_stage);
+        if (pl->gw) self.find_dependency_stages(pl->gw, earliest_stage);
         if (earliest_stage.empty()) {
-            if (it->second->stage != 0)
-                LOG_FEATURE("stage_advance", 2, "Table " << it->second->name << " with no "
-                            "predecessors delayed until stage " << it->second->stage);
-        } else if (earliest_stage.rbegin()->first < it->second->stage) {
-            LOG_FEATURE("stage_advance", 2, "Table " << it->second->name << " delayed to stage " <<
-                        it->second->stage << " from stage " << earliest_stage.rbegin()->first);
+            if (pl->stage != 0)
+                LOG_FEATURE("stage_advance", 2, "Table " << pl->name << " with no "
+                            "predecessors delayed until stage " << pl->stage);
+        } else if (earliest_stage.rbegin()->first < pl->stage) {
+            LOG_FEATURE("stage_advance", 2, "Table " << pl->name << " delayed to stage " <<
+                        pl->stage << " from stage " << earliest_stage.rbegin()->first);
             ordered_set<const TablePlacement::Placed *> filter;
             // filter out duplicates due to multiple kinds of dependencies
             for (auto i = earliest_stage.end(); i != earliest_stage.begin();) {
@@ -4776,8 +4778,8 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
                                 "dependency (" << p.second << ") on " << p.first->name <<
                                 " in stage " << p.first->stage); } } }
         for (auto &rr : self.rejected_placements[tbl->name]) {
-            if (rr.second.stage < it->second->stage || rr.second.entries > it->second->entries ||
-                rr.second.attached_entries > it->second->attached_entries) {
+            if (rr.second.stage < pl->stage || rr.second.entries > pl->entries ||
+                rr.second.attached_entries > pl->attached_entries) {
                 LOG_FEATURE("stage_advance", 3, "  - preferred " << rr.first << "(" <<
                             rr.second.reason << ") over " << rr.second.entries << " of " <<
                             tbl->name << " in stage " << rr.second.stage); } }
@@ -4789,52 +4791,53 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
     bool gw_only = true;
     bool gw_layout_used = false;
     ordered_map<cstring, const IR::MAU::TableSeq *> match_table_next;
-    IR::MAU::TableSeq *gw_true_seq = nullptr;
+    IR::MAU::TableSeq *gw_result_tag_seq = nullptr;
 
-    if (it->second->use.preferred() && it->second->use.preferred()->layout.gateway_match) {
+    if (pl->use.preferred() && pl->use.preferred()->layout.gateway_match) {
         tbl = self.lc.fpc.convert_to_gateway(tbl);
         gw_only = false;
-    } else if (it->second->gw && it->second->gw->name == tbl->name) {
+    } else if (pl->gw && pl->gw->name == tbl->name) {
         // Fold gateway and match table together, deepcopy match table's next sequences.
         // If the merged table is split, all table parts beyond the first will use this copy.
-        if (!it->second->table->next.empty() && Device::currentDevice() != Device::TOFINO) {
-            for (auto const &element : it->second->table->next) {
+        if (!pl->table->next.empty() && Device::currentDevice() != Device::TOFINO) {
+            for (auto const &element : pl->table->next) {
                 // Create new TableSeqs rather than clones to have new unique IDs.
                 auto deepcopy = new IR::MAU::TableSeq();
                 deepcopy->tables = element.second->tables;
                 match_table_next[element.first] = deepcopy;
             }
         }
-        // Store a clone of gw's "$true" to be used if the merged table is split.
-        gw_true_seq = (tbl->next.count("$true")) ? tbl->next["$true"]->clone() : nullptr;
-        merge_match_and_gateway(tbl, it->second, gw_layout);
+        // Store a clone of gw's gw_result_tag branch to be used if the merged table is split.
+        gw_result_tag_seq =
+            (tbl->next.count(pl->gw_result_tag)) ? tbl->next[pl->gw_result_tag]->clone() : nullptr;
+        merge_match_and_gateway(tbl, pl, gw_layout);
         gw_only = false;
         gw_layout_used = true;
-    } else if (it->second->table->match_table) {
+    } else if (pl->table->match_table) {
         gw_only = false;
     }
 
     if (tbl->is_always_run_action()) {
-        tbl->stage_ = it->second->stage;
+        tbl->stage_ = pl->stage;
         LOG4("\t Set stage for ARA " << tbl->name << " to " << tbl->stage());
     } else {
-        tbl->set_global_id(it->second->logical_id);
+        tbl->set_global_id(pl->logical_id);
         LOG4("\t Set stage for table " << tbl->name << " to " << tbl->stage());
     }
 
     if (self.table_placed.count(tbl->name) == 1) {
         if (!gw_only) {
-            select_layout_option(tbl, it->second->use.preferred());
-            add_attached_tables(tbl, it->second->use.preferred(), &it->second->resources);
+            select_layout_option(tbl, pl->use.preferred());
+            add_attached_tables(tbl, pl->use.preferred(), &pl->resources);
             if (gw_layout_used)
                 tbl->layout += gw_layout;
         }
         if (tbl->layout.atcam)
-            return break_up_atcam(tbl, it->second);
+            return break_up_atcam(tbl, pl);
         else if (tbl->for_dleft())
-            return break_up_dleft(tbl, it->second);
+            return break_up_dleft(tbl, pl);
         else
-            table_set_resources(tbl, it->second->resources.clone(), it->second->entries);
+            table_set_resources(tbl, pl->resources.clone(), pl->entries);
         return tbl;
     }
     int stage_table = 0;
@@ -4848,7 +4851,7 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
     int deferred_attached = 0;
     for (auto *att : tbl->attached) {
         if (att->attached->direct) continue;
-        if (!it->second->attached_entries.at(att->attached).need_more) continue;
+        if (!pl->attached_entries.at(att->attached).need_more) continue;
         // splitting a table with an un-duplicatable indirect attached table
         // allocate TempVar to propagate index from match to attachment stage
         ++deferred_attached;
@@ -4965,22 +4968,22 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
             //    - Get rid of the $try_next_stage and just go through the standard hit/miss
             // Separate control flow processing for try_next_stage vs miss
             auto try_next_stage_seq = new IR::MAU::TableSeq(table_part);
-            if (gw_true_seq && Device::currentDevice() != Device::TOFINO) {
-                for (auto table : gw_true_seq->tables) {
+            if (gw_result_tag_seq && Device::currentDevice() != Device::TOFINO) {
+                for (auto table : gw_result_tag_seq->tables) {
                     // Remove table_part, as try_next_stage_seq already includes it.
                     if (table->name == table_part->name) {
-                        gw_true_seq->tables.erase(remove(gw_true_seq->tables.begin(),
-                                                         gw_true_seq->tables.end(),
+                        gw_result_tag_seq->tables.erase(remove(gw_result_tag_seq->tables.begin(),
+                                                         gw_result_tag_seq->tables.end(),
                                                          table),
-                                                  gw_true_seq->tables.end());
+                                                  gw_result_tag_seq->tables.end());
                         break;
                     }
                 }
                 try_next_stage_seq->tables.insert(
                     try_next_stage_seq->tables.end(),
-                    gw_true_seq->tables.begin(),
-                    gw_true_seq->tables.end());
-                gw_true_seq = nullptr;
+                    gw_result_tag_seq->tables.begin(),
+                    gw_result_tag_seq->tables.end());
+                gw_result_tag_seq = nullptr;
             }
             // Since the gateway is handled by the first table part, all subsequent parts
             // should use a deepcopy of the original match table's next sequences.
