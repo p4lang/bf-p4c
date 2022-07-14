@@ -10,7 +10,9 @@ template<> void InputXbar::write_xmu_regs(Target::Flatrock::mau_regs &regs);
 namespace Flatrock {
 
 class InputXbar : public ::InputXbar {
-    enum { XMU_UNITS = 8, XME_UNITS = 16, FIRST_STM_XME = 8 };  // 0-7 are LAMB and 8-15 are STM
+    enum { XMU_UNITS = 8, XME_UNITS = 16, FIRST_STM_XME = 8,    // 0-7 are LAMB and 8-15 are STM
+           EXACT_HASH_SIZE = 160,
+    };
 
     bitvec      dconfig;
     bitvec      xme_units;
@@ -41,7 +43,9 @@ class InputXbar : public ::InputXbar {
     std::vector<Input *> find_hash_inputs(Phv::Slice sl, int hash_table) override {
         return find_all(sl, Group(Group::EXACT, hash_table)); }
     int global_bit_position_adjust(int hash_table) const {
-        return hash_table * 160; }
+        return hash_table * EXACT_HASH_SIZE; }
+    bitvec global_column0_extract(int hash_table,
+        const hash_column_t matrix[PARITY_GROUPS_DYN][HASH_MATRIX_WIDTH_DYN]) const;
 };
 
 }

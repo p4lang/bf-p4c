@@ -2,3 +2,5 @@
 
 ctags -R -I VECTOR --exclude=test --exclude=submodules \
     --regex-C++='/^DECLARE_(ABSTRACT_)?TABLE_TYPE\(([a-zA-Z0-9_]+)/\2/c/'
+
+ctags -a -R $HOME/bf-utils/include/bfutils

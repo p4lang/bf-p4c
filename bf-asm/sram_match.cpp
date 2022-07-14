@@ -1192,6 +1192,10 @@ void SRamMatchTable::add_field_to_pack_format(json::vector &field_list, int base
                                                const Table::Format::Field &field,
                                                const Table::Actions::Action *act) const {
     if (name != "match") {
+        // FIXME -- tofino always pads out the wordsize so basebit is always 0.  For flatrock
+        // that is not the case, but the computation from basebit seems broken, so we set it
+        // to 0 here to avoid problems
+        basebit = 0;
         Table::add_field_to_pack_format(field_list, basebit, name, field, act);
         return; }
     LOG3("Adding fields for " << name << " - " << field << " to pack format for SRAM table "

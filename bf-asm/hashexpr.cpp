@@ -71,12 +71,11 @@ void HashExpr::gen_data(bitvec &data, int logical_hash_bit, InputXbar *ix, int h
         determine_hash_matrix(&ixbar_init, ixbar_init.ixbar_inputs, ixbar_init.inputs_sz,
                               &hash_algorithm, hash_matrix);
         if (hash_algorithm.hash_alg != RANDOM_DYN ||
-            hash_matrix[hash_table][0].column_value) {
+            ix->global_column0_extract(hash_table, hash_matrix)) {
             non_zero = true;
         }
     }
-    uint64_t hash_column = hash_matrix[hash_table][0].column_value;
-    data |= hash_column;
+    data |= ix->global_column0_extract(hash_table, hash_matrix);
 }
 
 class HashExpr::PhvRef : HashExpr {

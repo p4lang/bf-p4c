@@ -105,7 +105,12 @@ class ordered_map_Printer:
         self.args = template_split(val.type.tag)
         self.eltype = gdb.lookup_type('std::pair<' + self.args[0] + ' const,' + self.args[1] + '>')
     def to_string(self):
-        return "ordered_map<..>"
+        it = self.val['data']['_M_impl']['_M_node']['_M_next']
+        e = self.val['data']['_M_impl']['_M_node'].address
+        if it == e:  # empty map
+            return "{}"
+        else:
+            return None
     class _iter:
         def __init__(self, eltype, it, e):
             self.eltype = eltype
@@ -352,7 +357,9 @@ class safe_vector_Printer:
     def __init__(self, val):
         self.val = val
     def to_string(self):
-        return "" if vec_size(self.val) > 0 else "[]"
+        return None if vec_size(self.val) > 0 else "[]"
+    def display_hint(self):
+        return 'array'
     class _iter:
         def __init__(self, val):
             self.val = val

@@ -132,6 +132,19 @@ void Flatrock::InputXbar::pass2() {
         first32 = num32 = 0; }
 }
 
+/* DANGER -- messy problem -- the dynhash code in bfnutils assumes a Tofino1 style
+ * hash matrix of 16*64*52 bits, which is stored in matrix[16][52] with 64 bits in
+ * each element.  We only care about column 0 (since we always map stuff there), but
+ * flatrock hash functions are more than 64 bits.  So we assemble the entire 1024
+ * bit column and then extract from that */
+bitvec Flatrock::InputXbar::global_column0_extract(int hash_table,
+        const hash_column_t matrix[PARITY_GROUPS_DYN][HASH_MATRIX_WIDTH_DYN]) const {
+    bitvec column0;
+    for (int i = PARITY_GROUPS_DYN-1; i >= 0; --i)
+        column0.putrange(i*64, 64, matrix[i][0].column_value);
+    return column0.getslice(hash_table*EXACT_HASH_SIZE, EXACT_HASH_SIZE);
+}
+
 // tables mapping PHEs to the bit indexes used for their power gating.
 static unsigned short minput_byte_pwr_transpose[] = {
 /*B0*/     4,   5,   6,   7,   8,   9,  10,  11,  26,  27,  28,  29,  30,  31,  32,  33,
@@ -246,18 +259,23 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
         case 0: {  // exact byte hash
             unsigned byte = 0;
             for (auto &col : hash.second) {
-                for (unsigned bit : col.second.data) {
-                    unsigned b = bit % 32U;
-                    auto &row = minput.minput_em_bhash1_erf.minput_em_bhash1[bit/32U];
-                    byte |= 1U << (bit/8U);
-                    if (!(row[col.first].gf & b)) {
-                        row[45].gf ^= b;  // parity;
-                        row[col.first].gf |= b; } } }
+                for (int i = 0; i < EXACT_HASH_SIZE/32; ++i) {
+                    uint32_t bits = col.second.data.getrange(i*32, 32);
+                    if (!bits) continue;
+                    auto &row = minput.minput_em_bhash1_erf.minput_em_bhash1[i];
+                    for (auto b = 0; b < 4; ++b) {
+                        if ((bits >> (b*8)) & 0xff)
+                            byte |= 1 << (i*4 + b); }
+                    uint32_t delta = bits & ~row[col.first].gf;
+                    row[col.first].gf |= bits;
+                    row[45].gf ^= delta; } }  // parity;
             int prev_xmu = -1;
             for (int xme : xme_units) {
                 int xmu = xme/2;
                 if (prev_xmu == xmu) continue;
-                unsigned shift = xmu * 20;
+                // DANGER -- for this config lambs/stms are SWAPPED (0-3 are stms
+                // and 4-7 are lambs) so we need ^4 to swap them
+                unsigned shift = (xmu ^ 4) * 20;
                 auto &bhash2 = minput.minput_em_bhash2_erf.minput_em_bhash2;
                 bhash2[shift/32] |= (byte << (shift%32)) & 0xffffffff;
                 if (shift%32 != 0)
@@ -267,13 +285,14 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
         case 1: {  // exact word hash
             unsigned word = 0;
             for (auto &col : hash.second) {
-                for (unsigned bit : col.second.data) {
-                    unsigned b = bit % 32U;
-                    auto &row = minput.minput_em_whash1_erf.minput_em_whash1[bit/32U];
-                    word |= 1U << (bit/32U);
-                    if (!(row[col.first].gf & b)) {
-                        row[45].gf ^= b;  // parity;
-                        row[col.first].gf |= b; } } }
+                for (int i = 0; i < EXACT_HASH_SIZE/32; ++i) {
+                    uint32_t bits = col.second.data.getrange(i*32, 32);
+                    if (!bits) continue;
+                    auto &row = minput.minput_em_whash1_erf.minput_em_whash1[i];
+                    word |= 1 << i;
+                    uint32_t delta = bits & ~row[col.first].gf;
+                    row[col.first].gf |= bits;
+                    row[45].gf ^= delta; } }  // parity;
             int prev_xmu = -1;
             for (int xme : xme_units) {
                 if (xme < FIRST_STM_XME) continue;
@@ -371,11 +390,13 @@ void Flatrock::InputXbar::write_xmu_regs_v(Target::Flatrock::mau_regs &regs) {
     for (auto xme : xme_units) {
         bool lamb = xme < FIRST_STM_XME;
         int xmu = (xme/2U)%4U;
-        if (xme%2U != prev_xme%2U) {
-            if (lamb)
+        if (xme/2U != prev_xme/2U) {
+            if (lamb) {
+                regs.ppu_minput.rf.minput_em.lamb_used |= 1U << xmu;
                 write_xmu_key_mux(regs.ppu_eml[xmu]);
-            else
-                write_xmu_key_mux(regs.ppu_ems[xmu]); }
+            } else {
+                regs.ppu_minput.rf.minput_em.stm_used |= 1U << xmu;
+                write_xmu_key_mux(regs.ppu_ems[xmu]); } }
         if (lamb)
             write_xme_regs(regs.ppu_eml[xmu], xme);
         else

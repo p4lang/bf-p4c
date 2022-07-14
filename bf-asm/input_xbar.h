@@ -247,6 +247,9 @@ class InputXbar {
     virtual std::vector<Input *> find_hash_inputs(Phv::Slice sl, int hash_table);
     virtual int global_bit_position_adjust(int hash_table) const {
         return (hash_table / 2) * 128; }
+    virtual bitvec global_column0_extract(int hash_table,
+        const hash_column_t matrix[PARITY_GROUPS_DYN][HASH_MATRIX_WIDTH_DYN]) const {
+            return bitvec(matrix[hash_table][0].column_value); }
 };
 
 inline std::ostream &operator<<(std::ostream &out, InputXbar::Group gr) {
