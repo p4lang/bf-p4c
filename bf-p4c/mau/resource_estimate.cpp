@@ -646,7 +646,7 @@ void StageUseEstimate::calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOpti
 
             // Recalculate group size on reaching hash bit boundary based on
             // remaining depth. This spreads the rams across ways more evenly
-            if (select_ways >= 4) {
+            if (depth > 0 && select_ways >= 4) {
                 select_ways = 0;
                 max_group_size = depth >= lo->way_sizes[0] ? lo->way_sizes[0]
                                 : (1 << floor_log2(depth));

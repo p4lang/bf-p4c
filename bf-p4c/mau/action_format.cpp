@@ -1817,7 +1817,7 @@ size_t SingleActionPositions::bits_required() const {
 size_t SingleActionPositions::adt_bits_required() const {
     size_t rv = bits_required();
     if (rv < 128U)
-        return 1 << ceil_log2(rv);
+        return rv == 0 ? 0 : 1 << ceil_log2(rv);
     else
         return ((rv + 127U) / 128U) * 128U;
 }
@@ -2784,7 +2784,7 @@ void Format::condense_action(cstring action_name, RamSec_vec_t &ram_sects) {
               "condense_action");
     LOG2("   After condense total bits : " << total_bits << ", size_counts : " << size_counts
           << ", total_alus : " << total_alus << ", total_sections : " << ram_sects.size());
-    calc_max_size = std::max(calc_max_size, 1 << ceil_log2(total_bits / 8));
+    calc_max_size = std::max(calc_max_size, total_bits < 8 ? 0 : 1 << ceil_log2(total_bits / 8));
 }
 
 bool Format::analyze_actions(FormatType_t format_type) {
