@@ -989,18 +989,30 @@ template<class REGS> void SRamMatchTable::write_regs_vt(REGS &regs) {
             unitram_config.unitram_enable = 1;
 
             int vpn = *vpn_iter++;
-            int vpn_base = vpn & ~3;
-            // FIXME -- temp workaround for P4C-3436 allows unused words in the match
-            if (!word_info[way.word].empty())
-                vpn_base = (vpn + *min_element(word_info[way.word])) & ~3;
-            ram.match_ram_vpn.match_ram_vpn0 = vpn_base >> 2;
-            int vpn_use = 0;
+            std::vector<int> vpn01;
             for (unsigned group = 0; group < word_info[way.word].size(); group++) {
-                int vpn_off = vpn + word_info[way.word][group] - vpn_base;
-                vpn_use |= vpn_off;
-                ram.match_ram_vpn.match_ram_vpn_lsbs .set_subfield(vpn_off, group*3, 3); }
-            if (vpn_use & 4)
-                ram.match_ram_vpn.match_ram_vpn1 = (vpn_base >> 2) + 1;
+                int overhead_word = group_info[word_info[way.word][group]].overhead_word;
+                if (overhead_word >= 0 && overhead_word != way.word)
+                    continue;  // skip if the overhead is not in this word
+                int group_vpn = vpn + word_info[way.word][group];
+                bool ok = false;
+                for (unsigned i = 0; i < vpn01.size(); ++i) {
+                    if (vpn01[i] == group_vpn >> 2) {
+                        ok = true;
+                        group_vpn = (group_vpn & 3) + (i << 2);
+                        break; } }
+                if (!ok) {
+                    if (vpn01.size() >= 2) {
+                        error(lineno, "Too many diverse vpns in table layout");
+                        break; }
+                    vpn01.push_back(group_vpn >> 2);
+                    group_vpn &= 3;
+                    if (vpn01.size() == 1) {
+                        ram.match_ram_vpn.match_ram_vpn0 = vpn01.back();
+                    } else {
+                        ram.match_ram_vpn.match_ram_vpn1 = vpn01.back();
+                        group_vpn |= 4; } }
+                ram.match_ram_vpn.match_ram_vpn_lsbs.set_subfield(group_vpn, group*3, 3); }
 
             int word_group = 0;
             for (int group : word_info[way.word]) {
