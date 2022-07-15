@@ -3521,7 +3521,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
         // IXBar::Use::METER_ADR_AND_IMMEDIATE, so need to use meter_adr_shift
         // to shift up the correct number of subword bits
         // see IXBar::XBarHashDist::initialize_hash_dist_unit
-        if (back_at->hash_dist)
+        if (back_at && back_at->hash_dist)
             out << indent << "address_shift: " << ceil_log2(salu->width) << std::endl;
     }
     if (salu->learn_action) {
