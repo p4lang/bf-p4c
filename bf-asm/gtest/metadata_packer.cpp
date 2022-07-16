@@ -14,6 +14,31 @@ void resetTarget() {
     Phv::test_clear();
 }
 
+// Basic test that the metadata packer (using "deparser ingress") is correctly processed
+TEST(metadata_packer, basic) {
+    const char* deparser_str = R"MDP_CFG(
+version:
+  target: Tofino5
+deparser ingress:
+  dictionary: {}
+  egress_unicast_port: H0(0..6)  # bit[6..0]: ig_intr_md_for_tm.ucast_egress_port
+  egress_unicast_pipe: B2(2..5)  # bit[5..2]: ig_intr_md_for_tm.ucast_egress_pipe
+)MDP_CFG";
+
+    resetTarget();
+
+    asm_parse_string(deparser_str);
+
+    Target::Flatrock::deparser_regs regs;
+    Deparser* dprsr = dynamic_cast<Deparser*>(Section::test_get("deparser"));
+    dprsr->write_config(regs);
+
+    EXPECT_EQ(regs.mdp_mem.tmm_ext_ram.tmm_ext[0].phv_n_epipe_id, 2);
+    EXPECT_EQ(regs.mdp_mem.tmm_ext_ram.tmm_ext[0].epipe_id_shft, 2);
+    EXPECT_EQ(regs.mdp_mem.tmm_ext_ram.tmm_ext[0].phv_n_epipe_port, 128);
+    EXPECT_EQ(regs.mdp_mem.tmm_ext_ram.tmm_ext[0].epipe_port_shft, 0);
+}
+
 // FIXME: These tests are wrong. The code is currently assigning the deparser
 // id to the b0_sel/b1_sel fields, but these should be from the POVs.
 // Verify that the valid vector is correstly picked up
