@@ -1009,12 +1009,15 @@ struct ComputeFlatrockParserIR : public ParserInspector {
     std::map<std::pair<PHV::Size, unsigned int /* index */>, std::vector<cstring>> comments;
     // extracts performed in parser
     std::set<Extract> extracts;
+    // Ingress intrinsic metadata has been extracted
+    bool igMetaExtracted;
 
  private:
     const PhvInfo& phv;
     cstring igMetaName;
 
     profile_t init_apply(const IR::Node *node) override {
+        igMetaExtracted = false;
         extracts.clear();
         states.clear();
         headers.clear();
@@ -1067,8 +1070,7 @@ struct ComputeFlatrockParserIR : public ParserInspector {
             unsigned int subtype = 0;
             if (extract->source->is<IR::BFN::PacketRVal>()) {
                 hdr_offset = (width - field->offset -
-                              (alloc.container().size() - alloc.container_slice().lo)) /
-                             8;
+                              (alloc.container().size() - alloc.container_slice().lo)) / 8;
             } else if (auto* constantSource = extract->source->to<IR::BFN::ConstantRVal>()) {
                 type = 1;
                 hdr_offset = constantSource->constant->asUnsigned() << alloc.container_slice().lo;
@@ -1091,8 +1093,10 @@ struct ComputeFlatrockParserIR : public ParserInspector {
         if (auto *state = findContext<IR::BFN::ParserState>()) {
             if (headers[state].count(field->header()) == 0) {
                 headers[state].insert(field->header());
-                header_widths[state].push_back({ field->header(), (field->header() == igMetaName) ?
+                bool igMeta = (field->header() == igMetaName);
+                header_widths[state].push_back({ field->header(), igMeta ?
                     Flatrock::PARSER_PROFILE_MD_SEL_NUM * 8 : width });
+                if (igMeta) igMetaExtracted = true;
             }
         }
 
@@ -1118,6 +1122,8 @@ struct ComputeFlatrockParserIR : public ParserInspector {
                 for (auto &comment : comments.at({extract.size, extract.index}))
                     LOG4("    " << comment);
             }
+            LOG4("[ComputeFlatrockParserIR] ingress_intrinsic_metadata has "
+                << (igMetaExtracted ? "" : "not ") << "been extracted");
         }
     }
 };
@@ -1196,7 +1202,10 @@ class ReplaceFlatrockParserIR : public Transform {
             /* initial_state */ boost::none,
             /* initial_state_name */ lowered_parser->analyzer.at(0)->name,
             /* initial_flags */ boost::none,
-            /* initial_ptr */ 0,
+            // If ingress intrinsic metadata has not been extracted,
+            // thus there is no analyzer rule advancing ptr over MD32,
+            // initial value of ptr needs to be set accordingly.
+            /* initial_ptr */ computed.igMetaExtracted ? 0 : Flatrock::PARSER_PROFILE_MD_SEL_NUM,
             /* initial_w0_offset */ boost::none,
             /* initial_w1_offset */ boost::none,
             /* initial_w2_offset */ boost::none);

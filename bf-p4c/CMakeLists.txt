@@ -1547,6 +1547,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_alignment.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_defuse.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_packing.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/flatrock_parser.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/fold_constant_hashes.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/gateway_control_flow.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/hdr_asm.cpp
