@@ -23,6 +23,22 @@ Table::Format::Field *SRamMatchTable::lookup_field(const std::string &n,
     return rv;
 }
 
+const char *SRamMatchTable::Ram::desc() const {
+    static char buffer[256], *p = buffer;
+    char *end = buffer+sizeof(buffer), *rv;
+    do {
+        if (end - p < 7) p = buffer;
+        rv = p;
+        if (stage)
+            p += snprintf(p, end-p, "Ram %d,%d,%d", stage, row, col);
+        else if (row)
+            p += snprintf(p, end-p, "Ram %d,%d", row, col);
+        else
+            p += snprintf(p, end-p, "Lamb %d", col);
+    } while (p++ >= end);
+    return rv;
+}
+
 /* calculate the 18-bit byte/nybble mask tofino uses for matching in a 128-bit word */
 static unsigned tofino_bytemask(int lo, int hi) {
     unsigned rv = 0;
@@ -370,8 +386,15 @@ void SRamMatchTable::add_hash_functions(json::map &stage_tbl) const {
     // Output cjson node only if hash tables present
     std::map<int, bitvec> hash_bits_per_group;
     for (auto &way : ways) {
+        int depth = way.isLamb() ? LAMB_DEPTH_BITS : SRAM_DEPTH_BITS;
+        if (format->field("match")) {
+            // cuckoo or BPH
+        } else {
+            depth += ceil_log2(format->groups());
+            if (format->size < 128)
+            depth += 7 - ceil_log2(format->size); }
         bitvec way_impact;
-        way_impact.setrange(way.index, way.isLamb() ? LAMB_DEPTH_BITS : SRAM_DEPTH_BITS);
+        way_impact.setrange(way.index, depth);
         way_impact |= way.select;
         hash_bits_per_group[way.group_xme] |= way_impact;
     }
@@ -797,16 +820,16 @@ void SRamMatchTable::setup_ways() {
                 ++index;
                 if (way_map.count(ram)) {
                     if (way == way_map[ram].way)
-                        error(w.lineno, "Ram %d,%d used twice in way %d of table %s",
-                              ram.row, ram.col, way, name());
+                        error(w.lineno, "%s used twice in way %d of table %s",
+                              ram.desc(), way, name());
                     else
-                        error(w.lineno, "Ram %d,%d used ways %d and %d of table %s",
-                              ram.row, ram.col, way, way_map[ram].way, name());
+                        error(w.lineno, "%s used ways %d and %d of table %s",
+                              ram.desc(), way, way_map[ram].way, name());
                     continue; }
                 way_map[ram].way = way;
                 if (!ram.isLamb() && !rams[ram.row*16 + ram.col].set(false))
-                    error(w.lineno, "Ram %d,%d in way %d not part of table %s",
-                          ram.row, ram.col, way, name()); } }
+                    error(w.lineno, "%s in way %d not part of table %s",
+                          ram.desc(), way, name()); } }
         for (auto bit : rams)
             error(lineno, "Ram %d,%d not in any way of table %s", bit/16, bit%16, name()); }
     if (error_count > 0) return;

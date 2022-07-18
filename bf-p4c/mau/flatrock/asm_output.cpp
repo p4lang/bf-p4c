@@ -99,7 +99,7 @@ void IXBar::Use::emit_ixbar_asm(const PhvInfo &phv, std::ostream &out, indent_t 
             out << indent << "hash " << xmu << ":" << std::endl;
             safe_vector<Slice> match_data;
             safe_vector<Slice> ghost;
-            emit_ixbar_hash_table(xmu, match_data, ghost, fmt, sort);
+            emit_ixbar_hash_table(0, match_data, ghost, fmt, sort);
             emit_ixbar_hash_exact(out, indent+1, match_data, ghost, this, xmu,
                                   ident_bits_prev_alloc); } }
     if (output_unit >= 0)

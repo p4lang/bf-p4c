@@ -1016,6 +1016,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam,
         bool operator<(const Ram &a) const {
             return std::tie(stage, row, col) < std::tie(a.stage, a.row, a.col); }
         bool isLamb() const { return stage == -1 && row == -1; }
+        const char *desc() const;  // Short lived temp for messages
     };
  protected:
     struct Way {

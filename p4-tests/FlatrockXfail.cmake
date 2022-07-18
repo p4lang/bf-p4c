@@ -21,6 +21,11 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
+  "WARNING:.*binary.*does not match model version|unexpected packet output on port 0"
+  extensions/p4_tests/p4_16/flatrock/exact0.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
   #"WARNING:.*binary.*does not match model version|unexpected packet output on port 0"
   "ftr_test_harness FAILED"
   extensions/p4_tests/p4_16/flatrock/exact1.p4
@@ -28,17 +33,17 @@ p4c_add_xfail_reason("tofino5"
 
 # model fails -- probably many other problems besides this message
 p4c_add_xfail_reason("tofino5"
-  "WARNING:.*binary.*does not match model version|unexpected packet output on port 0"
+  "WARNING:.*binary.*does not match model version|packet output on port 2"
   extensions/p4_tests/p4_16/flatrock/passthrough.p4
   )
 
 p4c_add_xfail_reason("tofino5"
-  "WARNING:.*binary.*does not match model version|unexpected packet output on port 0"
+  "WARNING:.*binary.*does not match model version|mismatch from expected"
   extensions/p4_tests/p4_16/flatrock/gateway1.p4
   )
 
 p4c_add_xfail_reason("tofino5"
-  "WARNING:.*binary.*does not match model version|unexpected packet output on port 0"
+  "WARNING:.*binary.*does not match model version|mismatch from expected"
   extensions/p4_tests/p4_16/flatrock/gateway2.p4
   )
 

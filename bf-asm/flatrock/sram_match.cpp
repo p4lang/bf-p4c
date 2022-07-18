@@ -43,6 +43,16 @@ void SRamMatchTable::verify_format(Target::Flatrock) {
                       i, offsets.at(i), (i/3)*stride + (i%3)*(stride/3));
                 return; } } }
     verify_match((format->size + 127)/128);
+    for (auto &way : ways) {
+        if (way.subword_bits != ways.front().subword_bits) {
+            error(way.lineno, "incompatible way indexes");
+            break; }
+        if (way.subword_bits + format->log2size < 7) {
+            // make the format compatible with the way by padding it out.  Is there
+            // a better way of doing this?  Or perhaps it should be an error
+            format->log2size = 7 - way.subword_bits;
+        }
+    }
 }
 
 template<> void SRamMatchTable::write_attached_merge_regs(Target::Flatrock::mau_regs &regs,

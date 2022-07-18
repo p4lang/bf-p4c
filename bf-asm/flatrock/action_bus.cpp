@@ -31,15 +31,19 @@ void Flatrock::ActionBus::write_regs(Target::Flatrock::mau_regs &regs, Table *tb
             if (immed_offset < 0) {
                 immed_offset = el.first + bit/8U;
                 mrd.rf.mrd_iad_cfg[tbl->physical_id].badb_start = immed_offset;
+                // FIXME -- need dconfig here
+                mrd.rf.mrd_iad_ext[tbl->physical_id].ext_size[0] = tbl->format->immed_size;
             } else if (immed_offset != el.first + bit/8U) {
                 error(lineno, "immediate field misalignment on action bus"); }
-            for (auto i = el.first + bit/8U; i < el.first + (bit + el.second.size - 1)/8U; ++i) {
-                if (i < 4)
+            for (auto i = el.first + bit/8U; i <= el.first + (bit + el.second.size - 1)/8U; ++i) {
+                if (i < 4) {
                     ealu.ealu_cfg.bypass_ealu |= 1U << i;
-                else if (i < 8)
+                } else if (i < 8) {
                     ealu.ealu_cfg.bypass_ealu |= 1U << (2 + i/2);
-                else if (i >= 16)
-                    error(lineno, "immediate must be in the bottom 16 bytes of action data bus"); }
+                } else if (i >= 16) {
+                    error(lineno, "immediate must be in the bottom 16 bytes of action data bus");
+                    continue; }
+                ealu.ealu_eb_xbar[i].en |= 1U << i; }
             break; }
         case ActionBusSource::XcmpData:
             if (src.xcmp_group) {

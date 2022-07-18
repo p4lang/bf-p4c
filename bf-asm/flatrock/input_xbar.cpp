@@ -182,6 +182,29 @@ template<class REG> static void set_bit(REG &reg, unsigned bit) {
     reg[bit/reg[0].size()] |= 1UL << (bit % reg[0].size());
 }
 
+template<class REG>
+void Flatrock::InputXbar::setup_byte_ixbar(REG &reg, const Input &input, int offset) {
+    for (int d : dconfig) {
+        unsigned byte = input.lo/8U + offset;
+        Phv::Slice slice = *input.what;
+        for (auto i = slice.lo/8U; i <= slice.hi/8U; ++i, ++byte) {
+            BUG_CHECK(slice.reg.size == 8 || ((i ^ byte) & 1) == 0,
+                      "%s needs 16-bit alignment on ixbar", slice.reg.name);
+            reg[byte][d].key8 = slice.reg.ixbar_id() + (i&2);
+        }
+    }
+}
+
+template<class REG> void Flatrock::InputXbar::setup_byte_ixbar_gw(REG &reg, const Input &input) {
+    unsigned byte = input.lo/8U;
+    Phv::Slice slice = *input.what;
+    for (auto i = slice.lo/8U; i <= slice.hi/8U; ++i, ++byte) {
+        BUG_CHECK(slice.reg.size == 8 || ((i ^ byte) & 1) == 0,
+                  "%s needs 16-bit alignment on ixbar", slice.reg.name);
+        reg[byte].vgd = slice.reg.ixbar_id() + (i&2);
+    }
+}
+
 void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
     LOG1("### Input xbar " << table->name() << " write_regs " << table->loc());
     auto &minput = regs.ppu_minput;
@@ -203,8 +226,7 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
             } else {
                 auto &key8 = em_key_cfg.minput_em_xb_key8;
                 for (auto &input : group.second) {
-                    for (int d : dconfig)
-                        key8[input.lo/8U][d].key8 = input.what->reg.ixbar_id();
+                    setup_byte_ixbar(key8, input, 0);
                     set_bit(minput.minput_byte_pwr[0],
                             minput_byte_pwr_transpose[input.what->reg.uid]);
                     for (int x : xme_units)
@@ -216,8 +238,7 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
             auto &key8 = scm_key_cfg.minput_scm_xb_key8;
             int base = group.first.index * 5;  // first byte for the group
             for (auto &input : group.second) {
-                for (int d : dconfig)
-                    key8[base + input.lo/8U][d].key8 = input.what->reg.ixbar_id();
+                setup_byte_ixbar(key8, input, base);
                 set_bit(minput.minput_byte_pwr[4 + group.first.index/4],
                         minput_byte_pwr_transpose[input.what->reg.uid]); }
             minput.rf.minput_scm_xb_tab[table->get_tcam_id()].key40_used |= 1U << group.first.index;
@@ -225,7 +246,7 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
         case Group::GATEWAY: {
             auto &gw_key_cfg = minput.rf.minput_gw_xb_vgd;
             for (auto &input : group.second) {
-                gw_key_cfg[input.lo/8U].vgd = input.what->reg.ixbar_id();
+                setup_byte_ixbar_gw(gw_key_cfg, input);
                 set_bit(minput.minput_byte_pwr[3],
                         minput_byte_pwr_transpose[input.what->reg.uid]); }
             break; }
@@ -243,8 +264,7 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
             } else {
                 auto &key8 = xcmp_key_cfg.minput_xcmp_xb_key8;
                 for (auto &input : group.second) {
-                    for (int d : dconfig)
-                        key8[input.lo/8U][d].key8 = input.what->reg.ixbar_id();
+                    setup_byte_ixbar(key8, input, 0);
                     set_bit(minput.minput_byte_pwr[1],
                             minput_byte_pwr_transpose[input.what->reg.uid]);
                     minput.rf.minput_xcmp_xb_tab[table->physical_id].key8_used |=
@@ -330,11 +350,12 @@ void Flatrock::InputXbar::write_xme_regs(Target::Flatrock::mau_regs::_ppu_eml &x
     SRamMatchTable::Ram unit(xme);
     auto *way = mt->way_for_ram(unit);
     int idx = std::find(way->rams.begin(), way->rams.end(), unit) - way->rams.begin();
-    int subword_bits = 0;
+    int subword_bits = std::max(0, 7 - static_cast<int>(table->format->log2size));
     int bank_bits = ceil_log2(way->rams.size());
     int set_size = 1;
     bitvec key_mask;
     int key_size = 0;
+    int valid_en = 0;
     if (auto *match = table->format->field("match")) {
         // cuckoo hash (or BPH?)
         set_size = table->format->groups();
@@ -342,13 +363,26 @@ void Flatrock::InputXbar::write_xme_regs(Target::Flatrock::mau_regs::_ppu_eml &x
             BUG_CHECK((set_size & 1) == 0, "cuckoo table %s match groups not valid", table->name());
             set_size >>= 1;
             ++subword_bits; }
-        // FIXME -- figure out key_mask and key_size
+        for (int i = 0; i < set_size; ++i) {
+            for (auto &br : match->by_group[i]->bits) {
+                key_mask.setrange(br.lo, br.size());
+                if (i == 0 && br.hi >= key_size)
+                    key_size = br.hi+1; } }
+        int shift = 64;
+        for (int i = 0; i < subword_bits; ++i, shift >>= 1)
+            key_mask |= key_mask << shift;
     } else {
         // direct match
-        subword_bits = ceil_log2(table->format->groups());
-        BUG_CHECK(table->format->groups() == 1 << subword_bits, "direct table %s match "
-                  "groups not a power of 2", table->name());
+        BUG_CHECK((table->format->groups() & (table->format->groups() - 1)) == 0,
+                  "direct table %s match groups not a power of 2", table->name());
+        subword_bits += ceil_log2(table->format->groups());
     }
+    if (auto *valid = table->format->field("valid")) {
+        BUG_CHECK(valid->bits.size() == 1 && valid->bits.front().size() == 1,
+                  "valid is not one bit");
+        BUG_CHECK(valid->bits.front().lo >= key_size, "valid is not after match");
+        key_size = valid->bits.front().lo + 1;
+        valid_en = 1; }
     BUG_CHECK(subword_bits == way->subword_bits, "subword bit size mismatch");
     int addr_size = bank_bits + 6 + subword_bits;  // 6 is the whole lamb, but we could use less?
     int hash_base = way->index;
@@ -369,7 +403,7 @@ void Flatrock::InputXbar::write_xme_regs(Target::Flatrock::mau_regs::_ppu_eml &x
             match.key_mask[i] = key_mask.getrange(i*8, 8);
         match.key_size = key_size;
         match.sets_per_word = subword_bits;
-        match.valid_en = 0;  // FIXME -- one bit valid field
+        match.valid_en = valid_en;
         auto &payload = xmu.eml_payload_cfg[xme%2U][d];
         payload.addon = 0;      // not clear what it is used for?
         payload.base_mask = 0;  // pass ram data (can pass key bytes, useful for?)

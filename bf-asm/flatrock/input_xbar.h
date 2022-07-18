@@ -30,6 +30,8 @@ class InputXbar : public ::InputXbar {
     void pass2() override;
 
     InputXbar(Table *table, const value_t *key);
+    template<class REG> void setup_byte_ixbar(REG &reg, const Input &input, int offset);
+    template<class REG> void setup_byte_ixbar_gw(REG &reg, const Input &input);
     void write_regs_v(Target::Flatrock::mau_regs &regs) override;
     void write_xmu_regs_v(Target::Flatrock::mau_regs &regs) override;
 

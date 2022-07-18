@@ -12,6 +12,9 @@ template<> void MatchTable::write_regs(Target::Flatrock::mau_regs &regs, int typ
      * all called by the various callers of this method.  Not clear why input_xbar is
      * different */
 
+    int dconfig = 0;  // FIXME -- some parts of this support selecting config based on
+    // dconfig bits -- for now we just use config 0
+
     auto &mrd = regs.ppu_mrd.rf;
     auto &minput = regs.ppu_minput.rf;
     if (gress == GHOST) {
@@ -34,6 +37,7 @@ template<> void MatchTable::write_regs(Target::Flatrock::mau_regs &regs, int typ
 
     /* action/imem setup */
     // FIXME -- factor with common code in MatchTable::write_common_regs
+    auto &imem_map = regs.ppu_mrd.mrd_imem_map_erf.mrd_imem_map[physical_id];
     Actions *actions = action && action->actions ? action->actions.get() : this->actions.get();
     unsigned adr_default = 0;
     auto instr_call = instruction_call();
@@ -44,8 +48,17 @@ template<> void MatchTable::write_regs(Target::Flatrock::mau_regs &regs, int typ
                 break;
             }
         }
-    }
-    regs.ppu_mrd.mrd_imem_map_erf.mrd_imem_map[physical_id][12].data = adr_default;
+        imem_map[12].data = adr_default;
+    } else if (auto *action_field = instr_call.args[0].field()) {
+        if (actions->max_code < ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH) {
+            mrd.mrd_imem_pld[physical_id].map_en[dconfig] = 1;
+            for (auto &act : *actions)
+                if ((act.name != result->default_action) || !result->default_only_action)
+                    imem_map[act.code].data = act.addr; }
+        mrd.mrd_imem_ext[physical_id].ext_start[dconfig] = action_field->immed_bit(0);
+        mrd.mrd_imem_ext[physical_id].ext_size[dconfig] = action_field->size; }
 
     if (action_bus) action_bus->write_regs(regs, this);
+
+    // write_next_table_regs(regs, result); -- TBD
 }
