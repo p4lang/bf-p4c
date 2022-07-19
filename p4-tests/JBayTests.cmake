@@ -608,10 +608,11 @@ p4c_add_test_label("tofino2" "JENKINS_PART2" "t2na_ghost_dod_2pipe_simpl")
 bfn_set_ptf_ports_json_file("tofino2" "t2na_ghost_dod_2pipe_simpl" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod_2pipe_simpl/ports.json")
 
 p4c_add_ptf_test_with_ptfdir ("tofino2" "large_counter_meter" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/large_counter_meter/large_counter_meter.p4"
-  "${testExtraArgs} -target tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16 -bfrt"
+  "${testExtraArgs} -target tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16 -bfrt -Xp4c=\"--disable_split_attached\""
   "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/large_counter_meter")
 bfn_set_ptf_test_spec("tofino2" "large_counter_meter" "all")
 p4c_add_test_label("tofino2" "JENKINS_PART2" "large_counter_meter")
+set_tests_properties("tofino2/large_counter_meter" PROPERTIES TIMEOUT ${extended_timeout_2times})
 
 # P4-16 Programs with PTF tests
 foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS)

@@ -1055,18 +1055,20 @@ foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS_COMPILE_ONLY)
 endforeach()
 
 # Internal P4-16 Programs with PTF tests
+set(P4FACTORY_P4_16_PROGRAMS_INTERNAL_FLAGS "-I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16")
 foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS_INTERNAL)
   p4c_add_ptf_test_with_ptfdir ("tofino" "p4_16_programs_internal_${t}"
       "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/${t}/${t}.p4"
     "${testExtraArgs} -target tofino -arch tna -bfrt"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/${t}")
-  bfn_set_p4_build_flag("tofino" "p4_16_programs_internal_${t}"
-      "-I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16")
+  bfn_set_p4_build_flag("tofino" "p4_16_programs_internal_${t}" "${P4FACTORY_P4_16_PROGRAMS_INTERNAL_FLAGS}")
   set (ports_json ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/${t}/ports.json)
   if (EXISTS ${ports_json})
     bfn_set_ptf_ports_json_file("tofino" "p4_16_programs_internal_${t}" ${ports_json})
   endif()
 endforeach()
+bfn_set_p4_build_flag("tofino" "p4_16_programs_internal_misc1"
+                      "${P4FACTORY_P4_16_PROGRAMS_INTERNAL_FLAGS} -Xp4c=--disable-power-check")
 
 set_tests_properties("tofino/p4_16_programs_internal_misc1" PROPERTIES TIMEOUT ${extended_timeout_150percent})
 set_tests_properties("tofino/p4_16_programs_internal_tna_pvs_multi_states" PROPERTIES TIMEOUT ${extended_timeout_150percent})
