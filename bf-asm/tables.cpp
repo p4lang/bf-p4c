@@ -2628,6 +2628,8 @@ void Table::get_cjson_source(const std::string &field_name, std::string &source,
         source = "selection_length";
     } else if (field_name == "sel_len_shift") {
         source = "selection_length_shift";
+    } else if (field_name == "valid") {
+        source = "valid";
     }
 }
 

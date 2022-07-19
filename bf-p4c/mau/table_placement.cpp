@@ -1,4 +1,5 @@
 #include "bf-p4c/mau/table_placement.h"
+#include "bf-p4c/mau/flatrock/table_format.h"
 
 #ifdef MULTITHREAD
 #include <gc/gc.h>
@@ -1811,11 +1812,12 @@ bool TablePlacement::try_alloc_format(Placed *next, bool gw_linked) {
     erase_if(tbl->attached, [next](const IR::MAU::BackendAttached *ba) {
         return !next->attached_entries.count(ba->attached) ||
                next->attached_entries.at(ba->attached).entries == 0; });
-    TableFormat current_format(*next->use.preferred(), next->resources.match_ixbar.get(),
-                               next->resources.proxy_hash_ixbar.get(), tbl,
-                               immediate_mask, gw_linked, lc.fpc);
 
-    if (!current_format.find_format(&next->resources.table_format)) {
+    auto* current_format = TableFormat::create(*next->use.preferred(),
+            next->resources.match_ixbar.get(), next->resources.proxy_hash_ixbar.get(),
+            tbl, immediate_mask, gw_linked, lc.fpc);
+
+    if (!current_format->find_format(&next->resources.table_format)) {
         next->resources.table_format.clear();
         error_message = "The selected pack format for table " + next->table->name + " could "
                         "not fit given the input xbar allocation";

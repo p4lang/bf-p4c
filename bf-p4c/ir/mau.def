@@ -134,6 +134,7 @@ class Table : BFN::Unit, IAnnotated  {
         int   pre_classifer_number_entries = 0;
         int   overhead_bits                = 0;
         int   immediate_bits               = 0;
+        int   valid_bits                   = 0;
         int   partition_bits               = 0;
         int   partition_count              = 0;
         int   subtrees_per_partition       = 0;
@@ -149,6 +150,10 @@ class Table : BFN::Unit, IAnnotated  {
         std::map<cstring, int> excluded_field_msb_bits = {};
 
         bool is_lamb_direct() const { return is_lamb && is_direct; }
+        int get_subword_bits() const { 
+            if (is_lamb) return ceil_log2(sets_per_word);
+            return 0;
+        }
 
         int get_sram_depth() const {
             if (is_lamb) return Memories::LAMB_DEPTH;

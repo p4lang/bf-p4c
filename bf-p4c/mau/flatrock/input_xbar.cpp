@@ -415,8 +415,8 @@ static le_bitrange alloc_bitrange(bitvec &inuse, unsigned size) {
 }
 
 bool IXBar::allocAllHashWays(Use &alloc, const LayoutOption *lo) {
-    unsigned ram_depth = lo->layout.is_lamb ? 6 : 10;  // index size in bits
-    // ram_depth += subword bits; -- FIXME -- where are the subword bits in the LayoutOption?
+    unsigned ram_depth = ceil_log2(lo->layout.get_sram_depth());  // index size in bits
+    ram_depth += lo->layout.get_subword_bits();
     unsigned sel_size = 0;  // FIXME -- when will this ever be non-zero?
     int unit = ffs(alloc.xme_units) - 1;
     bitvec inuse;

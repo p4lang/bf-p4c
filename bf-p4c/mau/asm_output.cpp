@@ -1034,6 +1034,8 @@ cstring format_name(int type) {
         return "sel_len_mod";
     if (type == TableFormat::SEL_LEN_SHIFT)
         return "sel_len_shift";
+    if (type == TableFormat::VALID)
+        return "valid";
     return "";
 }
 

@@ -14,13 +14,6 @@ set (FLATROCK_XFAIL_TESTS
   )
 
 p4c_add_xfail_reason("tofino5"
-  #"WARNING:.*binary.*does not match model version|unexpected packet output on port 0"
-  "error: The ghost bits are not linear independent on way 0" 
-  extensions/p4_tests/p4_16/flatrock/direct0.p4
-  extensions/p4_tests/p4_16/flatrock/direct1.p4
-  )
-
-p4c_add_xfail_reason("tofino5"
   "WARNING:.*binary.*does not match model version|unexpected packet output on port 0"
   extensions/p4_tests/p4_16/flatrock/exact0.p4
   )
@@ -28,6 +21,8 @@ p4c_add_xfail_reason("tofino5"
 p4c_add_xfail_reason("tofino5"
   #"WARNING:.*binary.*does not match model version|unexpected packet output on port 0"
   "ftr_test_harness FAILED"
+  extensions/p4_tests/p4_16/flatrock/direct0.p4
+  extensions/p4_tests/p4_16/flatrock/direct1.p4
   extensions/p4_tests/p4_16/flatrock/exact1.p4
   )
 
