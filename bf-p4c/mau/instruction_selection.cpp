@@ -427,7 +427,14 @@ const IR::Node *Synth2PortSetup::postorder(IR::MAU::Primitive *prim) {
                 bit += 4 + salu->pred_shift;
                 output_size = 1 << Device::statefulAluSpec().CmpUnits.size(); }
             auto ao = new IR::MAU::AttachedOutput(IR::Type::Bits::get(bit+output_size), salu);
-            output_size = std::min(dest->type->width_bits(), output_size);
+            int dest_size = dest->type->width_bits();
+            if (output_size < dest_size) {
+                created_instrs.push_back(new IR::MAU::Instruction(
+                    prim->srcInfo, "set", MakeSlice(dest, output_size, dest_size - 1),
+                    new IR::Constant(IR::Type_Bits::get(dest_size - output_size), 0)));
+                dest = MakeSlice(dest, 0, output_size - 1);
+            } else
+                output_size = dest_size;
             return new IR::MAU::Instruction(prim->srcInfo, "set", dest,
                                             MakeSlice(ao, bit, bit+output_size - 1));
         };
@@ -1045,10 +1052,13 @@ static const IR::MAU::Instruction *fillInstDest(const IR::Expression *in,
         return fillInstDest(c->expr, dest, c->destType->width_bits(), -1);
     auto *inst = in ? in->to<IR::MAU::Instruction>() : nullptr;
     auto *tv = inst ? inst->operands[0]->to<IR::TempVar>() : nullptr;
+    auto *sl = inst ? inst->operands[0]->to<IR::Slice>() : nullptr;
+    if (!tv) tv = sl ? sl->e0->to<IR::TempVar>() : nullptr;
     if (tv) {
         int id;
         if (sscanf(tv->name, "$tmp%d", &id) > 0 && id == tv->uid) --tv->uid;
         auto *rv = inst->clone();
+        if (sl != nullptr) dest = MakeSlice(dest, 0, sl->type->width_bits() - 1);
         rv->operands[0] = dest;
         for (size_t i = 1; i < rv->operands.size(); i++) {
             if (lo == -1)
