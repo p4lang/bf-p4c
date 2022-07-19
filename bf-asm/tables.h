@@ -345,19 +345,30 @@ class Table {
                 char                    *str;
             };
 
+            void set(const Arg &a) {
+                type = a.type;
+                switch (type) {
+                case Field: fld = a.fld; return;
+                case HashDist: hd = a.hd; return;
+                case Counter:
+                case Const: val = a.val; return;
+                case Name: str = a.str; return;
+                }
+            }
+
          public:
             Arg() = delete;
             Arg(const Arg &a) {
-                memcpy(this, &a, sizeof(*this));
+                set(a);
                 if (type == Name) str = strdup(str); }
             Arg(Arg &&a) {
-                memcpy(this, &a, sizeof(*this));
+                set(a);
                 a.type = Const; }
             Arg &operator=(const Arg &a) {
-                if (a == *this) return *this;
                 if (&a == this) return *this;
+                if (a == *this) return *this;
                 if (type == Name) free(str);
-                memcpy(this, &a, sizeof(*this));
+                set(a);
                 if (type == Name) str = strdup(str);
                 return *this; }
             Arg &operator=(Arg &&a) {
@@ -1574,9 +1585,6 @@ DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
     bool needs_next() const override { return true; }
 )
 
-// Dummy value used to start gateway handles. For future use by driver,
-// Incremented from inside the gateway table
-static uint gateway_handle = 0x70000000;
 DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
     MatchTable                  *match_table = 0;
     uint64_t                    payload = -1;

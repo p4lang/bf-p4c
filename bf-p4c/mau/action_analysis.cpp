@@ -491,7 +491,7 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
         const auto *field = phv.field(field_action.write.expr, &bits);
         PHV::FieldUse use(PHV::FieldUse::WRITE);
         int split_count = 0;
-        field->foreach_alloc(bits, tbl, &use, [&](const PHV::AllocSlice& s) {
+        field->foreach_alloc(bits, tbl, &use, [&](const PHV::AllocSlice& ) {
             split_count++;
         });
 

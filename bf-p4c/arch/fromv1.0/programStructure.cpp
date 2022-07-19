@@ -1782,17 +1782,17 @@ void TnaProgramStructure::createIngressDeparser() {
     auto addAllEmits = [this, checksumUpdates](IR::BlockStatement* blk) {
         auto headerEmits = blk->components;
         auto allEmits = new IR::IndexedVector<IR::StatOrDecl>();
-        for (auto d : digestFieldLists["clone_ingress_pkt_to_egress"]) {
+        for (const auto &d : digestFieldLists["clone_ingress_pkt_to_egress"]) {
             auto cond = createDigestEmit("ig_mirror_header_", d.first,
                     d.second, "ig_intr_md_for_dprsr", "mirror", "mirror_type");
             allEmits->push_back(cond);
         }
-        for (auto d : digestFieldLists["resubmit"]) {
+        for (const auto &d : digestFieldLists["resubmit"]) {
             auto cond = createDigestEmit("resubmit_header_", d.first,
                     d.second, "ig_intr_md_for_dprsr", "resubmit", "resubmit_type");
             allEmits->push_back(cond);
         }
-        for (auto d : digestFieldLists["generate_digest"]) {
+        for (const auto &d : digestFieldLists["generate_digest"]) {
             auto cond = createDigestEmit("digest_header_", d.first,
                     d.second, "ig_intr_md_for_dprsr", "digest", "digest_type");
             allEmits->push_back(cond);
@@ -1991,7 +1991,7 @@ void TnaProgramStructure::createEgressDeparser() {
     auto addAllEmits = [this, checksumUpdates](IR::BlockStatement* blk) {
         auto headerEmits = blk->components;
         auto allEmits = new IR::IndexedVector<IR::StatOrDecl>();
-        for (auto d : digestFieldLists["clone_egress_pkt_to_egress"]) {
+        for (const auto &d : digestFieldLists["clone_egress_pkt_to_egress"]) {
             LOG3("digest field list " << d.first << d.second.second);
             auto cond = createDigestEmit("eg_mirror_header_", d.first,
                     d.second, "eg_intr_md_for_dprsr", "mirror", "mirror_type");

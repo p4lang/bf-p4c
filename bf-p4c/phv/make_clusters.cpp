@@ -783,7 +783,7 @@ bool Clustering::CollectPlaceTogetherConstraints::preorder(const IR::BFN::Parser
         }
     }
 
-    boost::optional<std::pair<nw_bitrange, const PHV::Field*>> last = boost::none;
+    std::pair<const PHV::Field *, nw_bitrange> last = { nullptr, nw_bitrange() };
     PHV::SuperCluster::SliceList* accumulator = new PHV::SuperCluster::SliceList();
     auto start_new_slicelist = [&]() {
         if (accumulator->size() > 1) {
@@ -800,16 +800,16 @@ bool Clustering::CollectPlaceTogetherConstraints::preorder(const IR::BFN::Parser
                 bridged_extracted_together_i.insert(accumulator);
             }
         }
-        last = boost::none;
+        last.first = nullptr;
         accumulator = new PHV::SuperCluster::SliceList();
     };
 
     for (const auto& kv : boost::adaptors::reverse(sorted)) {
         const nw_bitrange range = kv.first;
         const auto* field = kv.second;
-        if (last && phv_i.are_bridged_extracted_together((*last).second, field) &&
-            (*last).first.lo == range.hi + 1) {
-            LOG3("bridged extracted together: " << (*last).second << " , " << field);
+        if (last.first && phv_i.are_bridged_extracted_together(last.first, field) &&
+            last.second.lo == range.hi + 1) {
+            LOG3("bridged extracted together: " << last.first << " , " << field);
         } else {
             start_new_slicelist();
         }
@@ -818,7 +818,7 @@ bool Clustering::CollectPlaceTogetherConstraints::preorder(const IR::BFN::Parser
         for (const auto& fs : self.fields_to_slices_i.at(field)) {
             accumulator->push_back(fs);
         }
-        last = std::make_pair(range, field);
+        last = std::make_pair(field, range);
     }
     return true;
 }

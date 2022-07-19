@@ -7,6 +7,14 @@
 #include "lib/gc.h"
 #include "ir/ir.h"
 
+#if defined(__GNUC__) && __GNUC__ < 7
+#define BFN_FALLTHROUGH /* fall through */
+#define BFN_MAYBE_UNUSED __attribute__((unused))
+#else
+#define BFN_FALLTHROUGH [[fallthrough]]
+#define BFN_MAYBE_UNUSED [[maybe_unused]]
+#endif
+
 struct DumpPipe : public Inspector {
     const char *heading;
     DumpPipe() : heading(nullptr) {}

@@ -43,16 +43,7 @@ static constexpr P4Id getIdPrefix(P4Id id) {
     return ((id >> 24) & 0xff);
 }
 
-static Util::JsonObject* findJsonTable(Util::JsonArray* tablesJson, cstring tblName) {
-    for (auto *t : *tablesJson) {
-        auto *tblObj = t->to<Util::JsonObject>();
-        auto tName = tblObj->get("name")->to<Util::JsonValue>()->getString();
-        if (tName == tblName) {
-            return tblObj;
-        }
-    }
-    return nullptr;
-}
+Util::JsonObject* findJsonTable(Util::JsonArray* tablesJson, cstring tblName);
 
 // See https://stackoverflow.com/a/33799784/4538702
 static std::string escapeJson(const std::string& s) {
@@ -124,38 +115,18 @@ static const p4configv1::Table* findTable(const p4configv1::P4Info& p4info, P4Id
     return findP4InfoObject(tables.begin(), tables.end(), tableId);
 }
 
-static const p4configv1::Action* findAction(const p4configv1::P4Info& p4info, P4Id actionId) {
-    const auto& actions = p4info.actions();
-    return Standard::findP4InfoObject(actions.begin(), actions.end(), actionId);
-}
+const p4configv1::ActionProfile* findActionProf(const p4configv1::P4Info& p4info,
+                                                P4Id actionProfId);
 
-static const p4configv1::ActionProfile* findActionProf(const p4configv1::P4Info& p4info,
-                                                         P4Id actionProfId) {
-    const auto& actionProfs = p4info.action_profiles();
-    return findP4InfoObject(actionProfs.begin(), actionProfs.end(), actionProfId);
-}
+const p4configv1::DirectCounter* findDirectCounter(const p4configv1::P4Info& p4info,
+                                                   P4Id counterId);
 
-static const p4configv1::DirectCounter* findDirectCounter(const p4configv1::P4Info& p4info,
-                                                            P4Id counterId) {
-    const auto& counters = p4info.direct_counters();
-    return findP4InfoObject(counters.begin(), counters.end(), counterId);
-}
-
-static const p4configv1::DirectMeter* findDirectMeter(const p4configv1::P4Info& p4info,
-                                                        P4Id meterId) {
-    const auto& meters = p4info.direct_meters();
-    return findP4InfoObject(meters.begin(), meters.end(), meterId);
-}
+const p4configv1::DirectMeter* findDirectMeter(const p4configv1::P4Info& p4info,
+                                               P4Id meterId);
 
 }  // namespace Standard
 
-static Util::JsonObject* makeTypeInt(cstring type, cstring mask = "") {
-    auto* typeObj = new Util::JsonObject();
-    typeObj->emplace("type", type);
-    if (!mask.isNullOrEmpty())
-        typeObj->emplace("mask", mask);
-    return typeObj;
-}
+Util::JsonObject* makeTypeInt(cstring type, cstring mask = "");
 
 template <typename T, typename std::enable_if<std::is_integral<T>::value, int>::type = 0>
 static Util::JsonObject* makeTypeInt(cstring type, T defaultValue, cstring mask = "") {
@@ -167,85 +138,17 @@ static Util::JsonObject* makeTypeInt(cstring type, T defaultValue, cstring mask 
     return typeObj;
 }
 
-static Util::JsonObject* makeTypeBool(boost::optional<bool> defaultValue = boost::none) {
-    auto* typeObj = new Util::JsonObject();
-    typeObj->emplace("type", "bool");
-    if (defaultValue != boost::none)
-        typeObj->emplace("default_value", *defaultValue);
-    return typeObj;
-}
+Util::JsonObject* makeTypeBool(boost::optional<bool> defaultValue = boost::none);
 
-static Util::JsonObject* makeTypeBytes(int width,
+Util::JsonObject* makeTypeBytes(int width,
                                        boost::optional<int64_t> defaultValue = boost::none,
-                                       cstring mask = "") {
-    auto* typeObj = new Util::JsonObject();
-    typeObj->emplace("type", "bytes");
-    typeObj->emplace("width", width);
-    if (defaultValue != boost::none)
-        typeObj->emplace("default_value", *defaultValue);
-    if (!mask.isNullOrEmpty())
-        typeObj->emplace("mask", mask);
-    return typeObj;
-}
+                                       cstring mask = "");
 
-static Util::JsonObject* makeTypeEnum(const std::vector<cstring>& choices,
-                                      boost::optional<cstring> defaultValue = boost::none) {
-    auto* typeObj = new Util::JsonObject();
-    typeObj->emplace("type", "string");
-    auto* choicesArray = new Util::JsonArray();
-    for (auto choice : choices)
-        choicesArray->append(choice);
-    typeObj->emplace("choices", choicesArray);
-    if (defaultValue != boost::none)
-        typeObj->emplace("default_value", *defaultValue);
-    return typeObj;
-}
+Util::JsonObject* makeTypeEnum(const std::vector<cstring>& choices,
+                               boost::optional<cstring> defaultValue = boost::none);
 
-static void addSingleton(Util::JsonArray* dataJson,
-                         Util::JsonObject* dataField, bool mandatory, bool readOnly) {
-    auto* singletonJson = new Util::JsonObject();
-    singletonJson->emplace("mandatory", mandatory);
-    singletonJson->emplace("read_only", readOnly);
-    singletonJson->emplace("singleton", dataField);
-    dataJson->append(singletonJson);
-}
-
-static void addOneOf(Util::JsonArray* dataJson,
-                     Util::JsonArray* choicesJson, bool mandatory, bool readOnly) {
-    auto* oneOfJson = new Util::JsonObject();
-    oneOfJson->emplace("mandatory", mandatory);
-    oneOfJson->emplace("read_only", readOnly);
-    oneOfJson->emplace("oneof", choicesJson);
-    dataJson->append(oneOfJson);
-}
-
-static boost::optional<cstring> transformMatchType(p4configv1::MatchField_MatchType matchType) {
-    switch (matchType) {
-        case p4configv1::MatchField_MatchType_UNSPECIFIED:
-            return boost::none;
-        case p4configv1::MatchField_MatchType_EXACT:
-            return cstring("Exact");
-        case p4configv1::MatchField_MatchType_LPM:
-            return cstring("LPM");
-        case p4configv1::MatchField_MatchType_TERNARY:
-            return cstring("Ternary");
-        case p4configv1::MatchField_MatchType_RANGE:
-            return cstring("Range");
-        case p4configv1::MatchField_MatchType_OPTIONAL:
-            return cstring("Optional");
-        default:
-            return boost::none;
-    }
-}
-
-static boost::optional<cstring> transformOtherMatchType(std::string matchType) {
-    if (matchType == "atcam_partition_index")
-        return cstring("ATCAM");
-    else if (matchType == "dleft_hash")
-        return cstring("DLEFT_HASH");
-    else
-        return boost::none;
-}
+void addSingleton(Util::JsonArray* dataJson,
+                  Util::JsonObject* dataField, bool mandatory, bool readOnly);
 
 template <typename It>
 static std::vector<P4Id> collectTableIds(const p4configv1::P4Info& p4info,

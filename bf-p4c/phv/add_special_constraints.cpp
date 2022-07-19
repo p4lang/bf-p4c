@@ -1,4 +1,5 @@
 #include "bf-p4c/arch/bridge_metadata.h"
+#include "bf-p4c/common/utils.h"
 #include "bf-p4c/phv/add_special_constraints.h"
 
 Visitor::profile_t AddSpecialConstraints::init_apply(const IR::Node* root) {
@@ -50,7 +51,7 @@ bool AddSpecialConstraints::preorder(const IR::Cast* cast) {
     return true;
 }
 
-bool AddSpecialConstraints::preorder(const IR::ConcreteHeaderRef* hr) {
+bool AddSpecialConstraints::preorder(BFN_MAYBE_UNUSED const IR::ConcreteHeaderRef* hr) {
 #ifdef HAVE_FLATROCK
     if (Device::currentDevice() == Device::FLATROCK) {
         const auto* ts = hr->type->to<IR::Type_Struct>();

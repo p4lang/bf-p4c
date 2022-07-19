@@ -2383,7 +2383,6 @@ class VerifyInstructionParams : public Inspector {
 
  private:
     bool isParallel(
-        const IR::Expression *e,
         const PHV::Field* field,
         const le_bitrange& bits);
 };
@@ -2421,7 +2420,7 @@ bool VerifyInstructionParams::preorder(const IR::Expression* expr_) {
         return true;
     }
 
-    if (!isParallel(expr_, field_, bits_)) {
+    if (!isParallel(field_, bits_)) {
         // Overlapping set will be handled in the EliminateAllButLastWrite pass
         if (instruction->name != "set") {
             const auto* act_(findContext<IR::MAU::Action>());
@@ -2437,7 +2436,6 @@ bool VerifyInstructionParams::preorder(const IR::Expression* expr_) {
 }
 
 bool VerifyInstructionParams::isParallel(
-    const IR::Expression *e,
     const PHV::Field* field,
     const le_bitrange& bits) {
     if (is_write) {

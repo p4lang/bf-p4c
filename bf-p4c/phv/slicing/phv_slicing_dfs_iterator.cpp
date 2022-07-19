@@ -553,7 +553,7 @@ struct NextSplitTargetMetrics {
 
 boost::optional<SliceListLoc> DfsItrContext::dfs_pick_next() const {
     using ctype = AfterSplitConstraint::ConstraintType;
-    boost::optional<SliceListLoc> rst = boost::none;
+    auto rst = boost::make_optional(false, SliceListLoc());
     NextSplitTargetMetrics best;
 
     for (auto* sc : to_be_split_i) {

@@ -3332,7 +3332,7 @@ boost::optional<PHV::Transaction> CoreAllocation::alloc_super_cluster_with_align
             // Sort all field slices in an aligned cluster based on the
             // number of times they are written to or read from in different actions
             std::vector<PHV::FieldSlice> slice_list;
-            for (PHV::FieldSlice slice : aligned_cluster->slices()) {
+            for (const PHV::FieldSlice &slice : aligned_cluster->slices()) {
                 slice_list.push_back(slice);
             }
             utils_i.actions.sort(slice_list);

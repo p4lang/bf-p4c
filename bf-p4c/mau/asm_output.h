@@ -96,7 +96,7 @@ class MauAsmOutput : public MauInspector {
     void emit_table(std::ostream &out, const IR::MAU::Table *tbl, int stage, gress_t gress) const;
     void emit_always_run_action(std::ostream &out, const IR::MAU::Table *tbl, int stage,
         gress_t gress) const;
-    void emit_static_entries(std::ostream &out, indent_t indent, const IR::MAU::Table *tbl,
+    void emit_static_entries(std::ostream &, indent_t indent, const IR::MAU::Table *tbl,
             std::stringstream &context_json_entries) const;
     void next_table_non_action_map(const IR::MAU::Table *,
             safe_vector<NextTableSet> &next_table_map) const;
@@ -113,7 +113,7 @@ class MauAsmOutput : public MauInspector {
                               bitvec source) const;
     bool emit_idletime(std::ostream &out, indent_t indent, const IR::MAU::Table *tbl,
                        const IR::MAU::IdleTime *id) const;
-    void emit_indirect_res_context_json(std::ostream &out, indent_t indent,
+    void emit_indirect_res_context_json(std::ostream &, indent_t indent,
             const IR::MAU::Table *tbl,
             std::stringstream &context_json_entries) const;
     std::string indirect_address(const IR::MAU::AttachedMemory *) const;

@@ -17,13 +17,13 @@ void Target::Tofino::Phv::init_regs(::Phv &phv) {
             reg->size = sizes[i].size;
             if (sizes[i].size) {
                 char buf[8];
-                sprintf(buf, "R%d", uid);
+                snprintf(buf, sizeof(buf), "R%d", uid);
                 phv.names[INGRESS][buf][0].slice = ::Phv::Slice(*reg, 0, sizes[i].size - 1);
                 phv.names[EGRESS][buf][0].slice = ::Phv::Slice(*reg, 0, sizes[i].size - 1);
-                sprintf(buf, "%s%d", sizes[i].code, j);
-                strcpy(reg->name, buf);
-                phv.names[INGRESS][buf][0].slice = ::Phv::Slice(*reg, 0, sizes[i].size - 1);
-                phv.names[EGRESS][buf][0].slice = ::Phv::Slice(*reg, 0, sizes[i].size - 1); } } }
+                snprintf(reg->name, sizeof(reg->name), "%.2s%d", sizes[i].code, j);
+                phv.names[INGRESS][reg->name][0].slice = ::Phv::Slice(*reg, 0, sizes[i].size - 1);
+                phv.names[EGRESS][reg->name][0].slice
+                    = ::Phv::Slice(*reg, 0, sizes[i].size - 1); } } }
     BUG_CHECK(uid == phv.regs.size());
 }
 

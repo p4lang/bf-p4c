@@ -10,10 +10,10 @@
 
 namespace {
 
-static unsigned int numHeaderIDs = 255;
-static unsigned int numHeaderSeqs = 2;
-static unsigned int numHeadersPerSeq = 10;
-static unsigned int payloadHeaderID = 254;
+static constexpr unsigned int numHeaderIDs = 255;
+static constexpr unsigned int numHeaderSeqs = 2;
+static constexpr unsigned int numHeadersPerSeq = 10;
+static constexpr unsigned int payloadHeaderID = 254;
 static cstring payloadHeaderName = "payload";
 
 }  // namespace

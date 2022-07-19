@@ -42,8 +42,8 @@ std::vector<PackChoice> prepare_packing_solutions(
         PackChoice to_pack;
         // skip fieldslice who has already been packed in a slice list
         if (some_ranges_packed(fs)) continue;
-        for (auto sc : cluster_groups) {
-            for (auto candidate_fs : sc->slices()) {
+        for (const auto &sc : cluster_groups) {
+            for (const auto &candidate_fs : sc->slices()) {
                 if (candidate_fs.field() == field) {
                     if (pack_range.contains(candidate_fs.range())) {
                         to_pack.push_back(std::make_pair(candidate_fs, sc));
@@ -155,7 +155,7 @@ PHV::SuperCluster* create_merged_cluster(
     ordered_set<PHV::SuperCluster::SliceList*> refreshed_merged_sl;
     for (auto slicelist : merged_sc->slice_lists()) {
         auto refreshed_sl = new PHV::SuperCluster::SliceList;
-        for (auto slice : *slicelist) {
+        for (const auto &slice : *slicelist) {
                 if (slice.field()->id == field->id) {
                     refreshed_sl->push_back(PHV::FieldSlice(field, slice.range()));
                 } else {

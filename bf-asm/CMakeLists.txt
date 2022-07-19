@@ -41,7 +41,7 @@ include(P4CUtils)
 # add_cxx_compiler_option ("-Wall")
 # add_cxx_compiler_option ("-Wextra")
 # Disabling -Werror checks until all issues are fixed on all platforms
-# add_cxx_compiler_option ("-Werror")
+add_cxx_compiler_option ("-Werror")
 # add_cxx_compiler_option ("-Wno-unused")
 # add_cxx_compiler_option ("-Wno-unused-parameter")
 # add_cxx_compiler_option ("-Wno-pragmas")
@@ -282,6 +282,9 @@ set (BFAS_SOURCES ${BFAS_COMMON_SOURCES} ${BFAS_GEN_SOURCES}
 
 build_unified(BFAS_SOURCES ${BF_ASM_UNIFIED_SOURCE_CHUNK_SIZE})
 set_source_files_properties(${BFAS_SOURCES} PROPERTIES COMPILE_FLAGS ${BFASM_CXX_FLAGS})
+# Remove compiler flag that is C++ only for vector.c
+string(REPLACE "-Wno-overloaded-virtual" "" vector_c_flags ${BFASM_CXX_FLAGS})
+set_source_files_properties(vector.c PROPERTIES COMPILE_FLAGS ${vector_c_flags})
 add_executable (bfas ${BFAS_SOURCES})
 target_link_libraries (bfas ${BFASM_LIBS} ${BFASM_LIB_DEPS})
 

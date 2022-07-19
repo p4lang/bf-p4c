@@ -18,7 +18,12 @@ void Target::JBay::Phv::init_regs(::Phv &phv) {
                     auto reg = new Register;
                     phv.regs[uid] = reg;
                     memset(reg->name, 0, sizeof(reg->name));
-                    sprintf(reg->name, "%s%s%d", types[k].code, groups[i].code, idx[k]);
+                    snprintf(reg->name,
+                             sizeof(reg->name),
+                             "%.2s%.2s%d",
+                             types[k].code,
+                             groups[i].code,
+                             idx[k]);
                     reg->type = types[k].type;
                     reg->index = idx[k];
                     reg->uid = uid;
@@ -30,8 +35,8 @@ void Target::JBay::Phv::init_regs(::Phv &phv) {
                         reg->deparser_id_ = deparser_id++;
                         byte += reg->size/8U; }
                     phv.names[INGRESS][reg->name][0].slice = ::Phv::Slice(*reg, 0, reg->size - 1);
-                    phv.names[EGRESS][reg->name][0].slice = ::Phv::Slice(*reg, 0, reg->size - 1); 
-                    phv.names[GHOST][reg->name][0].slice = ::Phv::Slice(*reg, 0, reg->size - 1); 
+                    phv.names[EGRESS][reg->name][0].slice = ::Phv::Slice(*reg, 0, reg->size - 1);
+                    phv.names[GHOST][reg->name][0].slice = ::Phv::Slice(*reg, 0, reg->size - 1);
                 }
             }
         }

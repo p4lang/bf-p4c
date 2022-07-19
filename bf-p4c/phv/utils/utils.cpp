@@ -738,7 +738,8 @@ PHV::ConcreteAllocation::ConcreteAllocation(const PhvInfo& phv, const PhvUse& us
                                  parserGroupGress,
                                  deparserGroupGress,
                                  {},
-                                 PHV::Allocation::ContainerAllocStatus::EMPTY};
+                                 PHV::Allocation::ContainerAllocStatus::EMPTY,
+                                 PHV::Allocation::ExtractSource::NONE};
     }
     // set phv state
     for (const auto& f : phv) {
@@ -1806,7 +1807,7 @@ std::vector<PHV::SuperCluster::SliceList*> PHV::SuperCluster::slice_list_split_b
     std::vector<SuperCluster::SliceList*> rst;
     std::deque<PHV::FieldSlice> slices(sl.begin(), sl.end());
     while (!slices.empty()) {
-        auto fs = slices.front();
+        FieldSlice fs(slices.front().field(), slices.front().range());
         slices.pop_front();
         if (offset + fs.size() >= 8) {
             const int head_length = 8 - offset;

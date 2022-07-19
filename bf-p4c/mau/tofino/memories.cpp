@@ -1,4 +1,5 @@
-#include<functional>
+#include <functional>
+#include "bf-p4c/common/utils.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/mau/tofino/memories.h"
 #include "bf-p4c/mau/mau_visitor.h"
@@ -3767,7 +3768,7 @@ bool Memories::find_result_bus_gw(Memories::Use &alloc, uint64_t payload, cstrin
                 print_result_bus = &tind_bus;
                 result_bus = nullptr;
                 ternary = true;
-                // fall through
+                BFN_FALLTHROUGH;
             case Use::EXACT:
             case Use::ATCAM:
                 match_id = mem.first;

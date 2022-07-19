@@ -1719,7 +1719,7 @@ class GetBackendTables : public MauInspector {
                 fallthrough.push_back(label); } } }
     bool preorder(const IR::IfStatement *c) override {
         if (!isApplyHit(c->condition)) {
-            static int uid = 0;
+            static unsigned uid = 0;
             char buf[16];
             snprintf(buf, sizeof(buf), "cond-%d", ++uid);
             tables[c] = new IR::MAU::Table(buf, gress, c->condition);

@@ -5,6 +5,132 @@ namespace BFN {
 
 namespace BFRT {
 
+Util::JsonObject* findJsonTable(Util::JsonArray* tablesJson, cstring tblName) {
+    for (auto *t : *tablesJson) {
+        auto *tblObj = t->to<Util::JsonObject>();
+        auto tName = tblObj->get("name")->to<Util::JsonValue>()->getString();
+        if (tName == tblName) {
+            return tblObj;
+        }
+    }
+    return nullptr;
+}
+
+namespace Standard {
+
+static const p4configv1::Action* findAction(const p4configv1::P4Info& p4info, P4Id actionId) {
+    const auto& actions = p4info.actions();
+    return Standard::findP4InfoObject(actions.begin(), actions.end(), actionId);
+}
+
+const p4configv1::ActionProfile* findActionProf(const p4configv1::P4Info& p4info,
+                                                P4Id actionProfId) {
+    const auto& actionProfs = p4info.action_profiles();
+    return findP4InfoObject(actionProfs.begin(), actionProfs.end(), actionProfId);
+}
+
+const p4configv1::DirectCounter* findDirectCounter(const p4configv1::P4Info& p4info,
+                                                   P4Id counterId) {
+    const auto& counters = p4info.direct_counters();
+    return findP4InfoObject(counters.begin(), counters.end(), counterId);
+}
+
+const p4configv1::DirectMeter* findDirectMeter(const p4configv1::P4Info& p4info,
+                                               P4Id meterId) {
+    const auto& meters = p4info.direct_meters();
+    return findP4InfoObject(meters.begin(), meters.end(), meterId);
+}
+
+}  // namespace Standard
+
+Util::JsonObject* makeTypeInt(cstring type, cstring mask) {
+    auto* typeObj = new Util::JsonObject();
+    typeObj->emplace("type", type);
+    if (!mask.isNullOrEmpty())
+        typeObj->emplace("mask", mask);
+    return typeObj;
+}
+
+Util::JsonObject* makeTypeBool(boost::optional<bool> defaultValue) {
+    auto* typeObj = new Util::JsonObject();
+    typeObj->emplace("type", "bool");
+    if (defaultValue != boost::none)
+        typeObj->emplace("default_value", *defaultValue);
+    return typeObj;
+}
+
+Util::JsonObject* makeTypeBytes(int width,
+                                boost::optional<int64_t> defaultValue,
+                                cstring mask) {
+    auto* typeObj = new Util::JsonObject();
+    typeObj->emplace("type", "bytes");
+    typeObj->emplace("width", width);
+    if (defaultValue != boost::none)
+        typeObj->emplace("default_value", *defaultValue);
+    if (!mask.isNullOrEmpty())
+        typeObj->emplace("mask", mask);
+    return typeObj;
+}
+
+Util::JsonObject* makeTypeEnum(const std::vector<cstring>& choices,
+                               boost::optional<cstring> defaultValue) {
+    auto* typeObj = new Util::JsonObject();
+    typeObj->emplace("type", "string");
+    auto* choicesArray = new Util::JsonArray();
+    for (auto choice : choices)
+        choicesArray->append(choice);
+    typeObj->emplace("choices", choicesArray);
+    if (defaultValue != boost::none)
+        typeObj->emplace("default_value", *defaultValue);
+    return typeObj;
+}
+
+void addSingleton(Util::JsonArray* dataJson,
+                  Util::JsonObject* dataField, bool mandatory, bool readOnly) {
+    auto* singletonJson = new Util::JsonObject();
+    singletonJson->emplace("mandatory", mandatory);
+    singletonJson->emplace("read_only", readOnly);
+    singletonJson->emplace("singleton", dataField);
+    dataJson->append(singletonJson);
+}
+
+static void addOneOf(Util::JsonArray* dataJson,
+                     Util::JsonArray* choicesJson, bool mandatory, bool readOnly) {
+    auto* oneOfJson = new Util::JsonObject();
+    oneOfJson->emplace("mandatory", mandatory);
+    oneOfJson->emplace("read_only", readOnly);
+    oneOfJson->emplace("oneof", choicesJson);
+    dataJson->append(oneOfJson);
+}
+
+static boost::optional<cstring> transformMatchType(p4configv1::MatchField_MatchType matchType) {
+    switch (matchType) {
+        case p4configv1::MatchField_MatchType_UNSPECIFIED:
+            return boost::none;
+        case p4configv1::MatchField_MatchType_EXACT:
+            return cstring("Exact");
+        case p4configv1::MatchField_MatchType_LPM:
+            return cstring("LPM");
+        case p4configv1::MatchField_MatchType_TERNARY:
+            return cstring("Ternary");
+        case p4configv1::MatchField_MatchType_RANGE:
+            return cstring("Range");
+        case p4configv1::MatchField_MatchType_OPTIONAL:
+            return cstring("Optional");
+        default:
+            return boost::none;
+    }
+}
+
+static boost::optional<cstring> transformOtherMatchType(std::string matchType) {
+    if (matchType == "atcam_partition_index")
+        return cstring("ATCAM");
+    else if (matchType == "dleft_hash")
+        return cstring("DLEFT_HASH");
+    else
+        return boost::none;
+}
+
 using BFN::BFRT::P4Id;
 
 TypeSpecParser TypeSpecParser::make(const p4configv1::P4Info& p4info,

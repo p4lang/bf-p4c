@@ -28,7 +28,7 @@ void Target::Flatrock::Phv::init_regs(::Phv &phv) {
                 snprintf(buf, sizeof(buf), "R%d", uid);
                 phv.names[INGRESS][buf][0].slice = ::Phv::Slice(*reg, 0, sizes[i].size - 1);
                 phv.names[EGRESS][buf][0].slice = ::Phv::Slice(*reg, 0, sizes[i].size - 1);
-                snprintf(buf, sizeof(buf), "%s%d", sizes[i].code, j);
+                snprintf(buf, sizeof(buf), "%.2s%d", sizes[i].code, j);
                 strncpy(reg->name, buf, sizeof(reg->name));
                 phv.names[INGRESS][buf][0].slice = ::Phv::Slice(*reg, 0, sizes[i].size - 1);
                 phv.names[EGRESS][buf][0].slice = ::Phv::Slice(*reg, 0, sizes[i].size - 1); } } }

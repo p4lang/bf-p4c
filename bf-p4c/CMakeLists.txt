@@ -1021,6 +1021,8 @@ set (P4C_BAREFOOT_SRCS
   ${BF_P4C_GRAPHS_SRCS}
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${P4C_BAREFOOT_SRCS}")
+set_source_files_properties(${BF_P4C_SOURCES} PROPERTIES COMPILE_OPTIONS "-Werror")
+set_source_files_properties(${P4C_BAREFOOT_SRCS} PROPERTIES COMPILE_OPTIONS "-Werror")
 build_unified(P4C_BAREFOOT_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 if(BUILD_STATIC_BFP4C_LIBS_INTERNAL)
@@ -1402,7 +1404,8 @@ set (BFN_P4RUNTIME_INFO_GEN_SRCS ${P4C_BINARY_DIR}/control-plane/barefoot/p4info
 set (BFN_P4RUNTIME_INFO_GEN_HDRS ${P4C_BINARY_DIR}/control-plane/barefoot/p4info.pb.h)
 # The generated code for protobuf has an excessive number of warnings
 set_source_files_properties(${BFN_P4RUNTIME_INFO_GEN_SRCS} PROPERTIES
-  COMPILE_FLAGS "-Wno-unused-parameter")
+  GENERATED TRUE
+  COMPILE_OPTIONS "-Wno-unused-parameter;-Wno-array-bounds")
 
 add_custom_target (barefootdir
   ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/control-plane/barefoot)

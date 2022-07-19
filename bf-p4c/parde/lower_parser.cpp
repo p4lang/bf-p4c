@@ -1640,7 +1640,7 @@ struct MergeLoweredParserStates : public ParserTransform {
 /// for the existing representation.
 struct LowerParserIR : public PassManager {
     LowerParserIR(const PhvInfo& phv, ClotInfo& clotInfo,
-            const ParserHeaderSequences &parserHeaderSeqs) {
+                  BFN_MAYBE_UNUSED const ParserHeaderSequences &parserHeaderSeqs) {
         auto* allocateParserChecksums = new AllocateParserChecksums(phv, clotInfo);
         auto* computeLoweredParserIR =
             new ComputeLoweredParserIR(phv, clotInfo, *allocateParserChecksums);

@@ -2,6 +2,7 @@
 #include "bf-p4c/common/alias.h"
 #include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/common/autoindent.h"
+#include "bf-p4c/common/utils.h"
 #include "bf-p4c/parde/clot/clot_info.h"
 #include "bf-p4c/parde/field_packing.h"
 #include "bf-p4c/device.h"
@@ -391,7 +392,7 @@ struct OutputDigests : public Inspector {
 struct OutputPacketBodyOffset : public Inspector {
     explicit OutputPacketBodyOffset(std::ostream& out) : out(out), indent(1) { }
 
-    bool preorder(const IR::BFN::LoweredDeparser* deparser) override {
+    bool preorder(BFN_MAYBE_UNUSED const IR::BFN::LoweredDeparser* deparser) override {
 #if HAVE_FLATROCK
         if (Device::currentDevice() == Device::FLATROCK && deparser->gress == EGRESS) {
             out << indent << "packet_body_offset:" << std::endl;

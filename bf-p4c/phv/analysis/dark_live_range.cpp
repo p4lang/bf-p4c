@@ -539,7 +539,7 @@ bool DarkLiveRange::nonOverlaidWrites(
     const PHV::Container c,
     bool onlyReadCandidates) const {
     bool rv = false;
-    boost::optional<le_bitrange> overlay_range = boost::none;
+    auto overlay_range = boost::make_optional(false, le_bitrange());
 
     // if the AllocSlices in @fields are taking the entire container then
     // there are no non-overlaid writes, i.e. all slices should be

@@ -12,51 +12,6 @@ namespace BFRT {
 
 using namespace BFN::BFRT;
 
-static const p4configv1::Extern*
-findExternType(const p4configv1::P4Info& p4info, ::barefoot::P4Ids::Prefix externTypeId) {
-    for (const auto& externType : p4info.externs()) {
-        if (externType.extern_type_id() == static_cast<uint32_t>(externTypeId))
-            return &externType;
-    }
-    return nullptr;
-}
-
-static const p4configv1::ExternInstance*
-findExternInstance(const p4configv1::P4Info& p4info, P4Id externId) {
-    auto prefix = static_cast<::barefoot::P4Ids::Prefix>(getIdPrefix(externId));
-    auto* externType = findExternType(p4info, prefix);
-    if (externType == nullptr) return nullptr;
-    auto* externInstance = Standard::findP4InfoObject(
-        externType->instances().begin(), externType->instances().end(), externId);
-    return externInstance;
-}
-
-static void addROSingleton(Util::JsonArray* dataJson, Util::JsonObject* dataField) {
-    addSingleton(dataJson, dataField, false, true);
-}
-
-static Util::JsonObject* makeTypeFloat(cstring type) {
-    auto* typeObj = new Util::JsonObject();
-    typeObj->emplace("type", type);
-    return typeObj;
-}
-
-static Util::JsonObject* makeTypeString(boost::optional<cstring> defaultValue = boost::none) {
-    auto* typeObj = new Util::JsonObject();
-    typeObj->emplace("type", "string");
-    if (defaultValue != boost::none)
-        typeObj->emplace("default_value", *defaultValue);
-    return typeObj;
-}
-
-static P4Id makeActProfId(P4Id implementationId) {
-  return makeBFRuntimeId(implementationId, ::barefoot::P4Ids::ACTION_PROFILE);
-}
-
-static P4Id makeActSelectorId(P4Id implementationId) {
-  return makeBFRuntimeId(implementationId, ::barefoot::P4Ids::ACTION_SELECTOR);
-}
-
 /// This class is in charge of translating the P4Info Protobuf message used in
 /// the context of P4Runtime to the BF-RT info JSON used by the BF-RT API. It
 /// supports both the "standard" P4Info message (the one used for v1model & PSA)
