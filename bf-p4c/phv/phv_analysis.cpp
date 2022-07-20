@@ -158,7 +158,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
                 ? &dark_live_range : nullptr,
             // Metadata initialization pass should be run after the metadata live range is
             // calculated.
-            &meta_init,
+            options.alt_phv_alloc_meta_init ? (Visitor*)nullptr: (Visitor*)&meta_init,
             // Determine parser constant extract constraints, to be run before Clustering.
             Device::currentDevice() == Device::TOFINO ? new TofinoParserConstantExtract(phv) :
                 nullptr,

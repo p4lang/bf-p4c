@@ -354,6 +354,9 @@ BFN_Options::BFN_Options() {
         [this](const char *) { alt_phv_alloc = true; return true; },
          "Alternate PHV allocation ordering (trivial alloc before table placement, "
          "real allocation after)");
+    registerOption("--alt-phv-alloc-meta-init", nullptr,
+        [this](const char *) { alt_phv_alloc_meta_init = true; return true; },
+         "Enable Metadata Initialization for alternative PHV allocation ordering(--alt-phv-alloc)");
 #endif
     registerOption("--traffic-limit", "arg",
         [this](const char* arg) {

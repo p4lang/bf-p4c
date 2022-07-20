@@ -47,6 +47,7 @@ class BFN_Options : public CompilerOptions {
     bool enable_event_logger = false;
     bool disable_parse_min_depth_limit = false;
     bool disable_parse_max_depth_limit = false;
+    bool alt_phv_alloc_meta_init = false;
 #if BAREFOOT_INTERNAL || 1
     // FIXME -- Cmake does not consistently set BAREFOOT_INTERNAL for all source
     // files (why?), so having the layout of any class depend on it will result in

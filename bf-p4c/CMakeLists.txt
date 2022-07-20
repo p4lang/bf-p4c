@@ -658,6 +658,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/v2/tx_score.cpp
   phv/v2/greedy_tx_score.cpp
   phv/v2/utils_v2.cpp
+  phv/v2/metadata_initialization.cpp
   )
 if (ENABLE_JBAY)
   list (APPEND BF_P4C_BACKEND_PHV_SRCS
@@ -756,6 +757,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/v2/greedy_tx_score.h
   phv/v2/utils_v2.h
   phv/v2/sort_macros.h
+  phv/v2/metadata_initialization.h
   )
 if (ENABLE_JBAY)
   list (APPEND BF_P4C_BACKEND_PHV_HDRS

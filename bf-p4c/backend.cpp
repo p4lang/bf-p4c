@@ -101,6 +101,7 @@
 #include "bf-p4c/phv/dump_table_flow_graph.h"
 #include "bf-p4c/phv/finalize_stage_allocation.h"
 #include "bf-p4c/phv/phv_analysis.h"
+#include "bf-p4c/phv/v2/metadata_initialization.h"
 
 namespace BFN {
 
@@ -262,6 +263,9 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         options.auto_init_metadata ? nullptr : new DisableAutoInitMetadata(defuse),
         new RemoveMetadataInits(phv, defuse),
         new CollectPhvInfo(phv),
+        &defuse,
+        options.alt_phv_alloc_meta_init ?
+            new PHV::v2::MetadataInitialization(mau_backtracker, phv, defuse) : nullptr,
         new CheckParserMultiWrite(phv),
         new CollectPhvInfo(phv),
         new CheckForHeaders(),
