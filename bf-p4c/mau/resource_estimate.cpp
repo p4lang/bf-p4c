@@ -745,9 +745,8 @@ void StageUseEstimate::options_to_atcam_entries(const IR::MAU::Table *tbl, int e
              << ways_per_partition << " width " << lo.way.width);
         lo.way_sizes.push_back(ways_per_partition);
         lo.srams = ram_depth * lo.way.width * ways_per_partition;
-        lo.entries = ram_depth * ways_per_partition * lo.way.match_groups
-                     * std::min(tbl->layout.partition_count,
-                             lo.layout.get_sram_depth());
+        lo.entries =
+            ram_depth * ways_per_partition * lo.way.match_groups * tbl->layout.words_per_sram();
     }
 }
 
@@ -1349,15 +1348,16 @@ void StageUseEstimate::unknown_srams_needed(const IR::MAU::Table *tbl, LayoutOpt
     int used_srams = 0; int used_maprams = 0;
     int adding_entries = 0;
     int depth = 0;
+    int words_per_sram = tbl->layout.words_per_sram();
 
     while (lo->way.match_groups > 0) {
         int attempted_depth = depth + 1;
         int sram_count = 0;
         int mapram_count = 0;
-        int attempted_entries = lo->way.match_groups * 1024 * attempted_depth;
-        sram_count += attempted_entries / (lo->way.match_groups * 1024) * lo->way.width;
+        int attempted_entries = lo->way.match_groups * words_per_sram * attempted_depth;
+        sram_count += attempted_entries / (lo->way.match_groups * words_per_sram) * lo->way.width;
         for (auto rc : per_word_and_width) {
-            int entries_per_sram = 1024 * rc.per_word;
+            int entries_per_sram = words_per_sram * rc.per_word;
             int units = (attempted_entries + entries_per_sram - 1) / entries_per_sram;
             if (rc.need_srams)
                 sram_count += units * rc.width;
@@ -1378,11 +1378,12 @@ void StageUseEstimate::unknown_srams_needed(const IR::MAU::Table *tbl, LayoutOpt
         calculate_way_sizes(tbl, lo, depth_test);
 
     if (depth_test != depth) {
-        int attempted_entries = lo->way.match_groups * 1024 * depth_test;
-        int sram_count = attempted_entries / (lo->way.match_groups * 1024) * lo->way.width;
+        int attempted_entries = lo->way.match_groups * words_per_sram * depth_test;
+        int sram_count =
+            attempted_entries / (lo->way.match_groups * words_per_sram) * lo->way.width;
         int mapram_count = 0;
         for (auto rc : per_word_and_width) {
-            int entries_per_sram = 1024 * rc.per_word;
+            int entries_per_sram = words_per_sram * rc.per_word;
             int units = (attempted_entries + entries_per_sram - 1) / entries_per_sram;
             if (rc.need_srams)
                 sram_count += units * rc.width;
@@ -1420,11 +1421,12 @@ void StageUseEstimate::unknown_atcams_needed(const IR::MAU::Table *tbl, LayoutOp
         int sram_count = 0;
         int mapram_count = 0;
         int atcam_srams = attempted_depth * ways_per_partition;
-        int attempted_entries = atcam_srams * lo->way.match_groups * 1024;
+        int words_per_sram = tbl->layout.words_per_sram();
+        int attempted_entries = atcam_srams * lo->way.match_groups * words_per_sram;
         sram_count += atcam_srams * lo->way.width;
 
         for (auto rc : per_word_and_width) {
-            int entries_per_sram = 1024 * rc.per_word;
+            int entries_per_sram = words_per_sram * rc.per_word;
             int units = (attempted_entries + entries_per_sram - 1) / entries_per_sram;
             if (rc.need_srams)
                 sram_count += units * rc.width;

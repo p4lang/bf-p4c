@@ -160,6 +160,15 @@ class Table : BFN::Unit, IAnnotated  {
             return Memories::SRAM_DEPTH;
         }
 
+        /**
+         * @brief Equivalent to get_sram_depth() for non-ATCAM tables.
+         * 
+         * @return min(partition_count, get_sram_depth()) for ATCAM tables 
+         */
+        int words_per_sram() const {
+            return std::min(atcam ? partition_count : INT_MAX, get_sram_depth());
+        }
+
         int get_ram_line_select_bits() const {
             if (is_lamb) return IXBar::LAMB_LINE_SELECT_BITS;
             return IXBar::RAM_LINE_SELECT_BITS;
