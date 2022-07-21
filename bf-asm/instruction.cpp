@@ -1335,7 +1335,6 @@ struct ShiftOP : VLIWInstruction {
         std::string name;
         unsigned opcode;
         bool use_src1;
-        const Decode *swap_args;
         Decode(const char *n, std::set<target_t> targ, unsigned opc, bool funnel = false)
         : Instruction::Decode(n, targ), name(n), opcode(opc), use_src1(funnel) {}
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
