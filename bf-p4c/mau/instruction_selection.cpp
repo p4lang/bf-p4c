@@ -388,6 +388,8 @@ const IR::Node *Synth2PortSetup::postorder(IR::MAU::Primitive *prim) {
             auto t = IR::Type::Bits::get(32);
             return new IR::MAU::StatefulCounter(prim->srcInfo, t, salu); }
         auto *salu_inst = salu->calledAction(tbl, act);
+        BUG_CHECK(salu_inst != nullptr, "%s: Could not find called action for stateful memory in ",
+                  prim->srcInfo, salu->name);
         auto salu_index = salu_inst->inst_code;
         if (salu_index < 0) {
             // FIXME -- should be allocating/setting this

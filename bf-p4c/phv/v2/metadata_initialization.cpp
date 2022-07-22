@@ -93,7 +93,7 @@ class WriteTableInfo : public BFN::ControlFlowVisitor, public MauInspector, Tofi
 
     bool preorder(const IR::MAU::Table* table) override {
         for (int id : been_written) {
-            if (phv.field(id)->gress != table->gress) {
+            if (!phv.field(id) || phv.field(id)->gress != table->gress) {
                 continue; }
             table_write_info[id].insert(table);
         }
@@ -710,7 +710,7 @@ class ApplyMetadataInitialization : public MauTransform {
     const IR::MAU::Action *postorder(IR::MAU::Action * act) override {
         auto* act_orig = getOriginal<IR::MAU::Action>();
         auto* table_orig = findOrigCtxt<IR::MAU::Table>();
-        if (!rst.init_summay.count(table_orig)) {
+        if (!table_orig || !rst.init_summay.count(table_orig)) {
             return act; }
         auto& fields = rst.init_summay.at(table_orig);
         for (const auto& f : fields) {
