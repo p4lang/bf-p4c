@@ -998,13 +998,11 @@ std::string ExcludeMAUNotMutexHeaders::get_active_headers() {
  * @brief Initialize the active headers bitvec based on whether or not MAU handles Parser Errors.
  */
 void ExcludeMAUNotMutexHeaders::init_active_headers() {
-    if (mau_handles_parser_error) {
-        for (const auto& parser_header : header_info.parser_headers)
-            set_header_state(parser_header, UNKNOWN);
-    } else {
+    for (const auto& parser_header : header_info.parser_headers)
+        set_header_state(parser_header, UNKNOWN);
+    if (!mau_handles_parser_error)
         for (const auto& header_index : header_info.headers_always_encountered)
             set_header_state(header_index, ACTIVE);
-    }
     for (const auto& mau_header : header_info.mau_headers)
         set_header_state(mau_header, INACTIVE);
 }
@@ -1193,6 +1191,7 @@ bool ExcludeMAUNotMutexHeaders::preorder(const IR::MAU::Action* action) {
         LOG5(seperator);
     } else {
         LOG3(seperator);
+        LOG3(action->srcInfo.toPositionString());
         LOG3(action->name << "\n");
         LOG3("Header mutexes invalidated by hdr.setValid() in this action:");
         action_report.print();
@@ -1266,8 +1265,11 @@ boost::optional<std::pair<const IR::Expression*, cstring>>
         ExcludeMAUNotMutexHeaders::get_gateway_row() {
     int index;
     if (const auto* table = gateway_context(index)) {
+        if (visiting != table)
+            visiting = table;
+
         const auto gateway_row = table->gateway_rows[index];
-        LOG_DEBUG9("Currently visiting gateway: " << table->name);
+        LOG_DEBUG9("Currently visiting gateway expression of " << table->name << ":");
         LOG_DEBUG9(TAB1 << gateway_row.first << " " << gateway_row.second);
         return boost::optional<std::pair<const IR::Expression*, cstring>>(gateway_row);
     }
@@ -1330,18 +1332,21 @@ bool ExcludeMAUNotMutexHeaders::preorder(const IR::Expression*) {
     boost::optional<std::pair<const IR::Expression*, cstring>> gateway_row = get_gateway_row();
     if (!gateway_row) return true;
 
-    if (visiting_gateway_row != gateway_row) {
-        visiting_gateway_row = *gateway_row;
-        const IR::Expression* expression = (*gateway_row).first;
-        cstring tag = (*gateway_row).second;
-        const auto* table = findContext<IR::MAU::Table>();
-        LOG_DEBUG7("Visiting new gateway: " << table->name);
-        LOG_DEBUG7(TAB1 << expression << " " << tag);
+    visiting_gateway_row = *gateway_row;
+    return true;
+}
 
-        LOG_DEBUG7("Looking for header POV bits in expression.");
-        auto pairs = get_all_header_to_state_pairs_from_gateway_row_expression(expression);
+void ExcludeMAUNotMutexHeaders::pre_visit_table_next(const IR::MAU::Table *tbl, cstring tag) {
+    if (tbl != visiting) {
+        visiting = nullptr;
+        visiting_gateway_row = std::make_pair(nullptr, nullptr);
+    } else {
+        LOG_DEBUG7("Looking for header POV bits in expression:");
+        LOG_DEBUG7(TAB1 << visiting_gateway_row.first << " " << tag);
+        auto pairs = get_all_header_to_state_pairs_from_gateway_row_expression(
+            visiting_gateway_row.first);
         if (pairs.empty())
-            LOG_DEBUG7(TAB1 << "None found.");
+            LOG_DEBUG7("None found.");
         // Ordering matters here. All INACTIVE headers must be processed before ACTIVE ones, or
         // else active_headers will not end up with the correct values.
         auto compare_header_states = [](const std::pair<cstring, HeaderState>& a,
@@ -1352,17 +1357,15 @@ bool ExcludeMAUNotMutexHeaders::preorder(const IR::Expression*) {
         for (const auto& pair : pairs) {
             if ((pair.second == INACTIVE && tag == "$true") ||
                 (pair.second == ACTIVE && tag == "$false")) {
-                LOG_DEBUG7(TAB1 << pair.first << ": " << get_header_state_as_cstring(INACTIVE));
+                LOG_DEBUG7(pair.first << ": " << get_header_state_as_cstring(INACTIVE));
                 process_is_invalid(pair.first);
             } else if ((pair.second == ACTIVE && tag == "$true") ||
                        (pair.second == INACTIVE && tag == "$false")) {
-                LOG_DEBUG7(TAB1 << pair.first << ": " << get_header_state_as_cstring(ACTIVE));
+                LOG_DEBUG7(pair.first << ": " << get_header_state_as_cstring(ACTIVE));
                 process_is_valid(pair.first);
             }
         }
     }
-
-    return true;
 }
 
 void ExcludeMAUNotMutexHeaders::clear_row(cstring header,
@@ -1470,7 +1473,8 @@ void ExcludeMAUNotMutexHeaders::set_header_state(size_t header_index, HeaderStat
             active_headers.clrbit(header_index * state_size + 1);
             break;
         case ACTIVE:
-            active_headers.setrange(header_index * state_size, state_size);
+            active_headers.clrbit(header_index * state_size);
+            active_headers.setbit(header_index * state_size + 1);
             break;
         default:
             BUG("%i is not a valid value for HeaderState.", value);
@@ -1483,12 +1487,7 @@ void ExcludeMAUNotMutexHeaders::set_header_state(cstring header_name, HeaderStat
 }
 
 void ExcludeMAUNotMutexHeaders::merge_active_headers(bitvec other_active_headers) {
-    for (size_t i = 0; i < header_info.all_headers.size(); i++) {
-        auto state = active_headers.getrange(i * state_size, state_size);
-        auto other_state = other_active_headers.getrange(i * state_size, state_size);
-        if (state != other_state)
-            set_header_state(i, UNKNOWN);
-    }
+    active_headers &= other_active_headers;
 }
 
 void ExcludeMAUNotMutexHeaders::bitwise_and_bit_matrices(

@@ -797,6 +797,7 @@ parser TofinoEgressParser(
 // @pa_mutually_exclusive("egress", "hdr.ethernet", "hdr.min_parse_depth_padding_0[2]")
 // @pa_mutually_exclusive("egress", "hdr.ethernet", "hdr.min_parse_depth_padding_0[3]")
 @pa_mutually_exclusive("egress", "hdr.vlan", "hdr.knf")
+@pa_mutually_exclusive("egress", "hdr.vlan", "hdr.inner_ethernet")
 @pa_mutually_exclusive("egress", "hdr.vlan", "hdr.inner_ipv6")
 @pa_mutually_exclusive("egress", "hdr.vlan", "hdr.inner_udp")
 @pa_mutually_exclusive("egress", "hdr.vlan", "hdr.postcard_header")

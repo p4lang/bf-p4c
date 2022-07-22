@@ -13,7 +13,7 @@ enum HeaderState : uintmax_t {
     INACTIVE = 1,
     // ACTIVE has to be larger than INACTIVE because later we want to sort header name and header
     // state pairs by header state value so that INACTIVE headers are ordered first.
-    ACTIVE = 3
+    ACTIVE = 2
 };
 const uint state_size = 2;
 const std::map<HeaderState, cstring> header_state_to_cstring = {
@@ -314,6 +314,7 @@ class ExcludeMAUNotMutexHeaders : public MauInspector,
     SymBitMatrix parser_mutex_headers;
     SymBitMatrix mutex_headers_modified;
     std::pair<const IR::Expression*, cstring> visiting_gateway_row;
+    const IR::MAU::Table* visiting = nullptr;
     cstring gress;
 
     cstring get_header_name(const PHV::Field* field) { return field->header(); }
@@ -329,10 +330,11 @@ class ExcludeMAUNotMutexHeaders : public MauInspector,
         return false;
     }
 
+    void pre_visit_table_next(const IR::MAU::Table *tbl, cstring tag) override;
+
     ExcludeMAUNotMutexHeaders *clone() const override {
         return new ExcludeMAUNotMutexHeaders(*this);
     }
-    void pre_visit_table_next(const IR::MAU::Table*, cstring) override {}
 
     bool is_header(const PHV::Field* field) {
         return field && field->header() && !field->metadata;
