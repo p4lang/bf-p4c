@@ -2060,3 +2060,10 @@ p4c_add_xfail_reason("tofino"
   "Unsupported architecture \"v1model\" for parser minimum depth enforcement"
   testdata/p4_16_samples/issue3394.p4
 )
+
+# p4c-4366 test currently does not work due to a model issue
+# MODEL-1156
+p4c_add_xfail_reason("tofino"
+  "AssertionError: Expected packet was not received on"
+  p4c_4366
+)

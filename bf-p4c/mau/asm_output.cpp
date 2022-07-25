@@ -231,7 +231,6 @@ class ExtractKeyDetails {
                     cstring::to_cstring(canon_name(plainName))) {
                 return use_name? plainName : nullptr;
             }
-            annName = get_key_and_mask(annName).first;
             return annName;
         }
         cstring match_type() const {

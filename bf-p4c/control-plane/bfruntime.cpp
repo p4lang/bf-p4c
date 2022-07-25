@@ -860,7 +860,6 @@ BFRuntimeGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
             if (keyName == mf.name() &&
                 (*matchType == "Exact")) {
                     auto km = get_key_and_mask(mf.name());
-                    keyName = km.first;
                     keyMask = km.second;
             }
 
