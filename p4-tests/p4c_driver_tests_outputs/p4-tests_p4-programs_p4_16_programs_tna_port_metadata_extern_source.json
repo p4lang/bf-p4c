@@ -529,6 +529,16 @@
             "symbol_type": "Parameter_Type_Struct"
         },
         {
+            "references": [],
+            "symbol_name": "SwitchIngressDeparser.ig_dprsr_md.mirror_type",
+            "declaration": {
+                "file": "tna_port_metadata_extern.p4",
+                "line": 89,
+                "column": 54
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
             "references": [
                 {
                     "file": "tna_port_metadata_extern.p4",
@@ -651,5 +661,5 @@
             "symbol_type": "Parameter_Type_Extern"
         }
     ],
-    "source_root": "/root/repo/bf-p4c/p4-tests/p4-programs/p4_16_programs/tna_port_metadata_extern"
+    "source_root": "/workspaces/bf-p4c2/p4-tests/p4-programs/p4_16_programs/tna_port_metadata_extern"
 }

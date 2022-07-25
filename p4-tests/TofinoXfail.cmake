@@ -1726,6 +1726,11 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue2614-bmv2.p4
 )
 
+p4c_add_xfail_reason("tofino"
+  "Inconsistent mirror selectors"
+  extensions/p4_tests/p4_16/compile_only/mirror_5.p4
+)
+
 # p4c 7fbc2a4
 p4c_add_xfail_reason("tofino"
   ".*error: The table .* with no key cannot have the action .*"

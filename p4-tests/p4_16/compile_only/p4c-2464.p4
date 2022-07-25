@@ -5,8 +5,8 @@
 /*!
  * @file patch_panel.p4
  * @brief  main functions for Eagle switch.
- * @author 
- * @date 
+ * @author
+ * @date
  */
 
 
@@ -670,6 +670,8 @@ extern T max<T>(in T t1, in T t2);
 extern T min<T>(in T t1, in T t2);
 
 extern void invalidate<T>(in T field);
+
+extern bool is_validated<T>(in T field);
 
 /// Phase0
 extern T port_metadata_unpack<T>(packet_in pkt);
@@ -1338,7 +1340,7 @@ struct ingress_metadata_t {
 }
 
 /*
- * Egress metadata, 
+ * Egress metadata,
  */
 struct egress_metadata_t {
     example_bridge_h bridge;
@@ -1438,8 +1440,8 @@ parser SimplePacketParser(packet_in pkt, inout header_t hdr) {
 /*!
  * @file packet_parser_ingress.p4
  * @brief  main functions for Eagle switch.
- * @author 
- * @date 
+ * @author
+ * @date
  */
 
 
@@ -1565,7 +1567,7 @@ parser PacketParserIngress(packet_in pkt,
           default: parseL23;
       }
     }
-    //last vlan, accept anything that is not decoded 
+    //last vlan, accept anything that is not decoded
     state parseVlan2 {
       pkt.extract(hdr.vlan_tag_2);
       transition select(hdr.vlan_tag_2.ether_type) {
@@ -1723,8 +1725,8 @@ parser PacketParserIngress(packet_in pkt,
 /*!
  * @file packet_parser_egress.p4
  * @brief  main functions for Eagle switch.
- * @author 
- * @date 
+ * @author
+ * @date
  */
 
 
@@ -1841,7 +1843,7 @@ parser PacketParserEgress(packet_in pkt,
             default: accept;
         }
     }
-    //last vlan, accept anything that is not decoded 
+    //last vlan, accept anything that is not decoded
     state parseVlan2 {
         pkt.extract(hdr.vlan_tag_2);
         transition select(hdr.vlan_tag_2.ether_type) {
@@ -2050,7 +2052,7 @@ control calculate_hash(inout header_t hdr,
     inout ingress_metadata_t meta,
     out bit<8> hashRes) {
     /******************************/
-  Hash<bit<32>>(HashAlgorithm_t.CRC32) coreSelHash; // CRC32 hash algorithm with default polynomial 
+  Hash<bit<32>>(HashAlgorithm_t.CRC32) coreSelHash; // CRC32 hash algorithm with default polynomial
   //Hash<bit<8>>(HashAlgorithm_t.IDENTITY) truncate_hash;
   bit<32> srcDig; // smaller of the hash fields extracted from IPv4/6 src or dst addresses
   bit<32> srcDigPart0; // condensed upper half of IPv6 src address
@@ -2140,7 +2142,7 @@ control calculate_hash(inout header_t hdr,
   /******************************/
   apply
   {
-    /*if (hdr.ipv6.isValid()) 
+    /*if (hdr.ipv6.isValid())
     {
       crunchIpv6Addr();
       maptov6();
@@ -2176,7 +2178,7 @@ control calculate_hash(inout header_t hdr,
 
     /*if (swap == 0)
       noSwapOrder();
-    else 
+    else
       swapOrder();*/
 
     final_hash = coreSelHash.get({hiDig, loDig, hiPort, loPort});
@@ -2270,8 +2272,8 @@ control outbound_l47(inout header_t hdr,
   /******************************/
   apply
   {
-    //assume it will always have 2 MPLS 
-    // this is only applied on pkts 
+    //assume it will always have 2 MPLS
+    // this is only applied on pkts
     // from L47 compute node traffic
     if (hdr.vlan_tag_1.isValid())
     {
@@ -2491,7 +2493,7 @@ control inbound_l47_gen_lookup(inout header_t hdr,
 
 control inbound_l47_insert_vlan(inout header_t hdr,
 in bit<5> ingress_port, in bit<8> queue_no) {
-  // push vlan label as the first label then swap the ethertype 
+  // push vlan label as the first label then swap the ethertype
   action insertVlanOverhead() {
     hdr.ethernet.ether_type = 0x8100;
     hdr.vlan_tag_0.setValid();
@@ -2809,7 +2811,7 @@ control SxIngPipeline(inout header_t hdr,
   /**
    * Sets egress port.
    * @param egPort egress port
-   * @return none 
+   * @return none
    */
   action setEgPort(PortId_t egPort) {
     ig_intr_tm_md.ucast_egress_port = egPort;
@@ -2872,12 +2874,12 @@ control SxIngPipeline(inout header_t hdr,
     truncate_rx_tstamp();
     //calculate hash based on packet headers
     calculate_hash.apply(hdr, meta, sel_hash);
-    //lookup egress port and queue parameters for l47 
+    //lookup egress port and queue parameters for l47
     inbound_l47_gen_lookup.apply(hdr, ig_intr_md, ig_intr_tm_md,
       queue_offset, queue_range, queue_max, l47_match, timestamp_calc, stat_index);
     //calculate latency assuming it is l47 payload
     inbound_l47_calc_latency.apply(hdr, ig_intr_md, meta.bridge.ingress_mac_timestamp, pkt_latency);
-    //if input port is a l47 port 
+    //if input port is a l47 port
     if (meta.port_properties.port_type == 3)
     {
       assignEPort();
@@ -2885,7 +2887,7 @@ control SxIngPipeline(inout header_t hdr,
     }
     else
     {
-      // match if signature exist in payload 
+      // match if signature exist in payload
       check_signature();
       //If L23 type packets
       if (xor_signature == 0)

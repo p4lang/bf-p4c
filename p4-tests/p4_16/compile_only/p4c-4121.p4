@@ -719,6 +719,8 @@ extern void funnel_shift_right<T>(inout T dst, in T src1, in T src2, int shift_a
 
 extern void invalidate<T>(in T field);
 
+extern bool is_validated<T>(in T field);
+
 /// Phase0
 extern T port_metadata_unpack<T>(packet_in pkt);
 
@@ -1603,7 +1605,7 @@ control RegRw(
                 }
             }
             else if (reg_read_cpu_tbl.apply().hit) {
-                // 
+                //
                 v_one = read_one.execute(ig_md.register_position_one);
                 v_two = read_two.execute(ig_md.register_position_two);
                 if (v_one == 1) {
@@ -1628,7 +1630,7 @@ control RegRw(
                 }
             }
             else if (reg_read_icmp_tbl.apply().hit) {
-                // 
+                //
                 v_one = read_one.execute(ig_md.register_position_one);
                 v_two = read_two.execute(ig_md.register_position_two);
                 if (v_one == 1) {

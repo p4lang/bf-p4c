@@ -31,6 +31,7 @@ class AddMetadataPOV : public Transform {
     static IR::MAU::Primitive *create_pov_write(const IR::Expression *povBit, bool validate);
     IR::Node *insert_deparser_param_pov_write(const IR::MAU::Primitive *p, bool validate);
     IR::Node *insert_deparser_digest_pov_write(const IR::MAU::Primitive *p, bool validate);
+    IR::Node *insert_field_pov_read(const IR::MAU::Primitive *p);
 
     IR::BFN::Pipe *preorder(IR::BFN::Pipe *pipe) override;
 

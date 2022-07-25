@@ -342,7 +342,7 @@ bool ExtractDeparser::preorder(const IR::AssignmentStatement* stmt) {
 /**
  * Collect information to generate assembly output.
  * @param singleEntry is used by jbay pktgen, as the pktgen_tbl has only one entry.
- * 
+ *
  * The entry index must be 0.
  *
  * FIXME -- factor this with Digests::add_to_digest in digest.h?
@@ -372,7 +372,7 @@ void ExtractDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
                 digest_index, sources, nullptr, controlPlaneName);
         digest->fieldLists.push_back(fieldList);
     } else if (auto *ref = expr->to<IR::ConcreteHeaderRef>()) {
-        LOG1("concrete header ref " << expr);
+        // e.g. emit(hdr);
         if (auto *st = expr->type->to<IR::Type_StructLike>()) {
             for (auto *item : st->fields) {
                 sources.push_back(new IR::BFN::FieldLVal(gen_fieldref(ref->ref, item->name)));
@@ -385,6 +385,7 @@ void ExtractDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
             new IR::BFN::DigestFieldList(digest_index, sources, type, controlPlaneName);
         digest->fieldLists.push_back(fieldList);
     } else if (auto* initializer = expr->to<IR::StructExpression>()) {
+        // e.g. emit({ ... })
         for (auto *item : initializer->components) {
             Pattern::Match<IR::Expression> e1;
             if (item->expression->is<IR::Concat>()) {
@@ -415,12 +416,22 @@ void ExtractDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
             new IR::BFN::DigestFieldList(digest_index, sources, type, controlPlaneName);
         digest->fieldLists.push_back(fieldList);
     } else if (auto session_id = expr->to<IR::Member>()) {
+        // e.g. emit(mirror.session_id)
         sources.push_back(new IR::BFN::FieldLVal(session_id));
         auto* fieldList =
             new IR::BFN::DigestFieldList(digest_index, sources, nullptr, controlPlaneName);
         digest->fieldLists.push_back(fieldList);
+    } else if (auto cst = expr->to<IR::Constant>()) {
+        // e.g. emit(0)
+        auto t = new IR::TempVar(cst->type);
+        t->deparsed_zero = true;
+        sources.push_back(new IR::BFN::FieldLVal(t));
+        auto* fieldList =
+            new IR::BFN::DigestFieldList(digest_index, sources, nullptr, controlPlaneName);
+        digest->fieldLists.push_back(fieldList);
     } else {
-        BUG("Unexpected expression as digest field list ", expr);
+        ::error(ErrorType::ERR_UNSUPPORTED,
+            "expression %1% in %2%", expr, name);
     }
 }
 
@@ -465,4 +476,3 @@ void ExtractDeparser::end_apply() {
 }
 
 }  // namespace BFN
-

@@ -693,6 +693,8 @@ extern T min<T>(in T t1, in T t2);
 
 extern void invalidate<T>(in T field);
 
+extern bool is_validated<T>(in T field);
+
 /// Phase0
 extern T port_metadata_unpack<T>(packet_in pkt);
 
@@ -1256,7 +1258,7 @@ const bit<16> IP_GRE_OPT_KEY_CSUM_LEN = 16w32;
 
 
 /*
-* 1500 - 32(gre:4 + opt_ket:4 + opt_csum:4 +out_ip:20) = 1468 
+* 1500 - 32(gre:4 + opt_ket:4 + opt_csum:4 +out_ip:20) = 1468
 */
 
 
@@ -1394,7 +1396,7 @@ header inthdr_h {
     bit<8> header_type;
 }
 
-/* 
+/*
  *Bridged metadata: 28 byte free, after that minimum packet size will be impacted.
 */
 header bridge_meta_h {

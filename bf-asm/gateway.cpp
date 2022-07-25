@@ -163,9 +163,15 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
                 for (auto &v : kv.value.vec)
                     match.emplace_back(gress, stage->stageno, v);
             } else if (kv.value.type == tMAP) {
-                for (auto &v : kv.value.map)
-                    if (CHECKTYPE(v.key, tINT))
-                        match.emplace_back(v.key.i, gress, stage->stageno, v.value);
+                for (auto &v : kv.value.map) {
+                    if (CHECKTYPE(v.key, tINT)) {
+                        if (v.value.type == tCMD && v.value.vec.size == 2 &&
+                            v.value.vec[0] == "$valid") {
+                            match.emplace_back(v.key.i, gress, stage->stageno,
+                                               v.value.vec[1], true);
+                        } else {
+                            match.emplace_back(v.key.i, gress, stage->stageno, v.value);
+                        } } }
             } else {
                 match.emplace_back(gress, stage->stageno, kv.value);
             }
@@ -233,9 +239,16 @@ static void check_match_key(Table *tbl, std::vector<GatewayTable::MatchKey> &vec
             BUG_CHECK(tbl->input_xbar.size() == 1, "%s does not have one input xbar", tbl->name());
             auto hash = tbl->input_xbar[0]->hash_column(vec[i].offset + 8);
             if (hash.size() != 1 || hash[0]->bit || !hash[0]->fn ||
-                !hash[0]->fn->match_phvref(vec[i].val))
+                !hash[0]->fn->match_phvref(vec[i].val)) {
+                // FIXME: hash.size() maybe zero when vec[i].valid is true.
+                // which means the vec[i].offset is incorrect.
+                if (vec[i].valid)
+                    continue;
                 error(vec[i].val.lineno, "Gateway %s key %s not in matching hash column", name,
-                      vec[i].val.name()); } }
+                          vec[i].val.name());
+            }
+        }
+    }
 }
 
 void GatewayTable::verify_format() {
@@ -581,6 +594,7 @@ void GatewayTable::pass3() {
                       "different hash group", name(), layout[0].row, layout[0].bus, tbl->name());
             }
             if (ixb->match_group() >= 0 && sram_tbl->word_ixbar_group[way->word] >= 0 &&
+                gateway_needs_ixbar_group() &&
                 ixb->match_group() != sram_tbl->word_ixbar_group[way->word]) {
                 error(layout[0].lineno, "%s sharing search bus %d.%d with %s, but wants a "
                       "different match group", name(), layout[0].row, layout[0].bus, tbl->name());
@@ -820,7 +834,7 @@ void GatewayTable::write_regs_vt(REGS &regs) {
         if (ixb->hash_group() >= 0)
             setup_muxctl(row_reg.vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[row.bus],
                          ixb->hash_group());
-        if (ixb->match_group() >= 0) {
+        if (ixb->match_group() >= 0 && gateway_needs_ixbar_group()) {
             auto &vh_xbar_ctl = row_reg.vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl;
             setup_muxctl(vh_xbar_ctl, ixb->match_group());
             /* vh_xbar_ctl.exactmatch_row_vh_xbar_thread = gress; */ } }

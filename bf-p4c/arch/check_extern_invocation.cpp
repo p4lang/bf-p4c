@@ -46,6 +46,7 @@ void CheckExternInvocationCommon::initCommonPipeConstraints() {
     setPipeConstraints("RegisterParam", validInMau);
     setPipeConstraints("Wred", validInMau);
     setPipeConstraints("invalidate", validInMau);
+    setPipeConstraints("is_validated", validInMau);
     setPipeConstraints("max", validInMau);
     setPipeConstraints("min", validInMau);
     setPipeConstraints("SelectorAction", validInMau);
@@ -58,6 +59,7 @@ void CheckExternInvocationCommon::initCommonPipeConstraints() {
     setPipeConstraints("Mirror", validInDeparsers);
     setPipeConstraints("Resubmit", validInDeparsers);
     setPipeConstraints("packet_out", validInDeparsers);
+    setPipeConstraints("is_validated", validInDeparsers);
 
     bitvec validInParsers;
     validInParsers.setbit(genIndex(INGRESS, PARSER));

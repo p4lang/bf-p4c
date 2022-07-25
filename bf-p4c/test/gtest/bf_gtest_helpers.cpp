@@ -227,6 +227,7 @@ std::string TofinoMin() {
     typedef bit<16> MulticastGroupId_t;
     typedef bit<5>  QueueId_t;
     typedef bit<3>  MirrorType_t;
+    typedef bit<10> MirrorId_t;
     extern packet_in {
         void extract<T>(out T hdr);
         void extract<T>(out T variableSizeHeader, in bit<32> variableFieldSizeInBits);
@@ -236,6 +237,14 @@ std::string TofinoMin() {
     }
     extern packet_out {
         void emit<T>(in T hdr);
+    }
+    // added Mirror extern because DropPacketWithMirrorEngine pass
+    // assumes the Mirror extern is defined.
+    extern Mirror {
+        Mirror();
+        Mirror(MirrorType_t mirror_type);
+        void emit(in MirrorId_t session_id);
+        void emit<T>(in MirrorId_t session_id, in T hdr);
     }
     header ingress_intrinsic_metadata_t {
         bit<1> resubmit_flag;

@@ -31,7 +31,7 @@ const IR::Node* DisableAutoInitMetadata::preorder(IR::BFN::Pipe* pipe) {
         auto field_name = stripThreadPrefix(field->name);
 
         // Pre tna specification section 5.5, ig_intr_md_for_dprsr.drop_ctl and
-        // ig_intr_md_for_dprsr.mirror_type should be initialized to zero automatically even if
+        // ig_intr_md_for_dprsr.mirror_type should be initialized to zero unconditionally even if
         // auto_init_metadata is not enabled. Therefore, these two fields should be excluded from
         // pa_no_init, unless users explicitly set it. And this only applies to tna arch, since
         // after t2na, phv containers do not come with a implicit validity bit. A explicit validity

@@ -738,6 +738,8 @@ extern void funnel_shift_right<T>(inout T dst, in T src1, in T src2, int shift_a
 
 extern void invalidate<T>(in T field);
 
+extern bool is_validated<T>(in T field);
+
 /// Phase0
 extern T port_metadata_unpack<T>(packet_in pkt);
 
@@ -1208,7 +1210,7 @@ header resubmit_h {
 //     bit<64> port_id;
 // }
 
-// For testing, adapt line 161: action resubmit_add_hdr(bit<8> add_hdr_port_id) 
+// For testing, adapt line 161: action resubmit_add_hdr(bit<8> add_hdr_port_id)
 // as required by the resubmit_h layout.
 
 struct metadata_t {

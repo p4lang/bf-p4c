@@ -91,6 +91,7 @@ struct Memories : public ::Memories {
      */
     struct search_bus_info {
         cstring name;
+        // word number in exact match format
         int width_section = 0;   // Each search bus for a table has a particular width
         int hash_group = 0;   // Each hash function requires a different hash function
         bool init = false;

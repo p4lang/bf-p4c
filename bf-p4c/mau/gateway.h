@@ -52,6 +52,7 @@ class CanonGatewayExpr : public MauTransform {
     const IR::Expression *postorder(IR::LNot *) override;
     const IR::Expression *postorder(IR::BAnd *) override;
     const IR::Expression *postorder(IR::BOr *) override;
+    const IR::Expression *postorder(IR::MAU::TypedPrimitive *) override;
     const IR::Node *postorder(IR::MAU::Table *) override;
     // helper functions
     using GWRow_t = std::pair<const IR::Expression *, cstring>;
@@ -74,6 +75,7 @@ class CollectGatewayFields : public Inspector {
     PHV::FieldSlice     xor_match;
     bool preorder(const IR::MAU::Table *tbl) override;
     bool preorder(const IR::Expression *) override;
+    bool preorder(const IR::MAU::TypedPrimitive*) override;
     void postorder(const IR::Literal *) override;
     void postorder(const IR::Operation::Relation *) override { xor_match = {}; }
 
@@ -82,6 +84,7 @@ class CollectGatewayFields : public Inspector {
         ordered_set<PHV::FieldSlice>    xor_with;       // {x: x ==/!= this field in gateway }
         bool                    const_eq = false;       // bits compared ==/!= const
         bool                    need_range = false;     // bits needed in range compares
+        bool                    valid_bit = false;    // TOFINO1-ONLY: implicit container valid bit
         safe_vector<std::pair<int, le_bitrange>> offsets;
         safe_vector<std::pair<int, le_bitrange>> xor_offsets; };
     ordered_map<PHV::FieldSlice, info_t>       info;
@@ -151,7 +154,7 @@ class BuildGatewayMatch : public Inspector {
     safe_vector<int>            range_match;
     profile_t init_apply(const IR::Node *root) override;
     bool preorder(const IR::Expression *) override;
-    bool preorder(const IR::MAU::Primitive *) override;
+    bool preorder(const IR::MAU::TypedPrimitive *) override;
     bool preorder(const IR::LAnd *) override { return true; }
     bool preorder(const IR::LNot *) override { return true; }
     bool preorder(const IR::BAnd *) override { return true; }

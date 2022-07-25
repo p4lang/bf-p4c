@@ -29,7 +29,7 @@ namespace BFN {
 
 /**
  * \ingroup parde
- * 
+ *
  * @pre Assume the nested if statements are already canonicalized to a
  *      single if statement enclosing any emit/pack method calls.
  */
@@ -95,42 +95,6 @@ class ExtractDeparser : public DeparserInspector {
                 }
             }
         }
-
-        // COMPILER-914: In Tofino, clone id - 0 is reserved in i2e
-        // due to a hardware bug. Hence, valid clone ids are 1 - 7.
-        // We check mirror id 0 is not used in the program, and create a dummy
-        // mirror (with id = 0) for i2e;
-        if (deparser->thread == INGRESS && Device::currentDevice() == Device::TOFINO &&
-            BackendOptions().arch == "v1model") {
-            // TODO(zma) it's not very clear to me how to handle this for TNA program
-            // in particular, the mirror id is a user defined field. So we probably
-            // need to find the field reference of mirror id in the program.
-
-            auto mirror = digests["mirror"];
-            if (mirror) {
-                for (auto fieldList : mirror->fieldLists) {
-                    bool disableI2eDropImpl =
-                        collect_pragma.exists(PragmaDisableI2EReservedDropImplementation::name);
-                    if ((fieldList->idx == 0) && !disableI2eDropImpl) {
-                        ::error("Invalid mirror index 0, valid i2e mirror indices are 1-7");
-                    }
-                }
-            } else {
-                auto deparserMetadataHdr =
-                        getMetadataType(rv, "ingress_intrinsic_metadata_for_deparser");
-                auto select = gen_fieldref(deparserMetadataHdr, "mirror_type");
-                mirror = new IR::BFN::Digest("mirror", select);
-                dprsr->digests.addUnique("mirror", mirror);
-            }
-
-            IR::Vector<IR::BFN::FieldLVal> sources;
-            auto compilerMetadataHdr = getMetadataType(rv, COMPILER_META);
-            auto mirrorId = gen_fieldref(compilerMetadataHdr, "mirror_id");
-            sources.push_back(new IR::BFN::FieldLVal(mirrorId));
-            auto dummy = new IR::BFN::DigestFieldList(0, sources, nullptr);
-            mirror->fieldLists.push_back(dummy);
-        }
-
         rv->thread[deparser->thread].deparser = dprsr; }
 };
 //// check if the LHS of the assignment statements are being used

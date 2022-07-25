@@ -272,7 +272,7 @@ control IngressDeparser(packet_out pkt,
          * Note: Mirror() externs emits the provided header, but also
          * appends the ORIGINAL ingress packet after those
          */
-        if (meta.do_mirror == 1) {
+        if (ig_dprsr_md.mirror_type == 1) {
             ing_port_mirror.emit(
                 meta.ing_mirror.data.mirror_session,
                 meta.ing_mirror);

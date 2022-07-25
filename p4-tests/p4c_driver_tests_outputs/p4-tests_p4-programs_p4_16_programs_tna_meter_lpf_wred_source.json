@@ -212,7 +212,7 @@
             ],
             "symbol_name": "NoAction",
             "declaration": {
-                "file": "/build/bf-p4c/debug/p4c/p4include/core.p4",
+                "file": "/workspaces/bf-p4c2/build/p4c/p4include/core.p4",
                 "line": 70,
                 "column": 8
             },
@@ -743,6 +743,16 @@
             "symbol_type": "Parameter_Type_Struct"
         },
         {
+            "references": [],
+            "symbol_name": "SwitchIngressDeparser.ig_dprsr_md.mirror_type",
+            "declaration": {
+                "file": "tna_meter_lpf_wred.p4",
+                "line": 64,
+                "column": 54
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
             "references": [
                 {
                     "file": "tna_meter_lpf_wred.p4",
@@ -864,5 +874,5 @@
             "symbol_type": "Parameter_Type_Extern"
         }
     ],
-    "source_root": "/root/repo/bf-p4c/p4-tests/p4-programs/p4_16_programs/tna_meter_lpf_wred"
+    "source_root": "/workspaces/bf-p4c2/p4-tests/p4-programs/p4_16_programs/tna_meter_lpf_wred"
 }

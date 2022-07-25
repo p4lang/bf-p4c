@@ -155,6 +155,7 @@ set (BF_P4C_MIDEND_SRCS
   midend/copy_block_pragmas.cpp
   midend/copy_header.cpp
   midend/defuse.cpp
+  midend/drop_packet_with_mirror_engine.cpp
   midend/elim_cast.cpp
   midend/eliminate_tuples.cpp
   midend/fold_constant_hashes.cpp
@@ -192,6 +193,7 @@ set (BF_P4C_BACKEND_MIDEND_HDRS
   midend/copy_block_pragmas.h
   midend/copy_header.h
   midend/defuse.h
+  midend/drop_packet_with_mirror_engine.h
   midend/elim_cast.h
   midend/eliminate_tuples.h
   midend/fold_constant_hashes.h

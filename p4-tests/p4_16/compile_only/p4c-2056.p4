@@ -703,6 +703,8 @@ extern T min<T>(in T t1, in T t2);
 
 extern void invalidate<T>(in T field);
 
+extern bool is_validated<T>(in T field);
+
 /// Phase0
 extern T port_metadata_unpack<T>(packet_in pkt);
 
@@ -1430,14 +1432,14 @@ control PpsTable(inout header_t hdr,
 
     table pps_stage_offset {
         key = {
-            // (hdr.pps_data.data[stage] ++ hdr.pps_data.data[stage+1])[byte_ofs+match_width_byte:byte_ofs]: exact; 
-            // (hdr.pps_data[stage].data ++ hdr.pps_data[stage+1].data): exact @name("pps_input"); 
+            // (hdr.pps_data.data[stage] ++ hdr.pps_data.data[stage+1])[byte_ofs+match_width_byte:byte_ofs]: exact;
+            // (hdr.pps_data[stage].data ++ hdr.pps_data[stage+1].data): exact @name("pps_input");
             (hdr.pps_data[0].data ++ hdr.pps_data[1].data): exact @name("pps_input");
         }
 
         actions = {}
-        // actions = { 
-        //     NoAction; 
+        // actions = {
+        //     NoAction;
         // }
 
         // const default_action = NoAction;

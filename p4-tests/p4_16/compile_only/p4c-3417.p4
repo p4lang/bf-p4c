@@ -692,6 +692,8 @@ extern T min<T>(in T t1, in T t2);
 
 extern void invalidate<T>(in T field);
 
+extern bool is_validated<T>(in T field);
+
 /// Phase0
 extern T port_metadata_unpack<T>(packet_in pkt);
 
@@ -1204,7 +1206,7 @@ const bit<16> IP_GRE_OPT_KEY_CSUM_SEQ_LEN = 16w36;
 
 
 /*
-* 1500 - 36(gre:4 + opt_ket:4 + opt_csum:4 + opt_seq:4 + out_ip:20) = 1464 
+* 1500 - 36(gre:4 + opt_ket:4 + opt_csum:4 + opt_seq:4 + out_ip:20) = 1464
 */
 
 
@@ -1370,7 +1372,7 @@ header inthdr_h {
     bit<8> header_type;
 }
 
-/* 
+/*
  *Bridged metadata: 28 byte free, after that minimum packet size will be impacted.
 */
 header to_vnet_bridge_a_meta_h {
@@ -4784,10 +4786,10 @@ control Egress_b(
 @pa_container_size("egress", "hdr.dump.$valid", 8)
 @pa_container_size("egress", "hdr.recir_header.$valid", 8)
 
-/* 
+/*
 * arp/icmp/ctrl flow: ingress_a (ing_mirror for dump) <--> cpu_pcie
 * v2r flow: ingress_a (ing_mirror for input dump) --> egress_a (eg_mirror for output dump)
-* r2v flow: ingress_a (ing_mirror to egress_a for input dump) --> egress_b 
+* r2v flow: ingress_a (ing_mirror to egress_a for input dump) --> egress_b
 *           egress_b(lookup underlay_flow_tb) --> ingress_b
 *           ingress_b(ing_mirror to egress_a for fragment) --> egress_a(eg_mirror to egress_a for output dump)
 * frag pkts or flow_tb not found: ingress_a --> egress_b(CPU ETH2)
@@ -4809,4 +4811,3 @@ Pipeline(IngressParser_b(),
          EgressDeparser_b()) pipeline_profile_b;
 
 Switch(pipeline_profile_b, pipeline_profile_a) main;
-

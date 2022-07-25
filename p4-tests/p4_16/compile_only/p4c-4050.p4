@@ -685,6 +685,8 @@ extern void funnel_shift_right<T>(inout T dst, in T src1, in T src2, int shift_a
 
 extern void invalidate<T>(in T field);
 
+extern bool is_validated<T>(in T field);
+
 /// Phase0
 extern T port_metadata_unpack<T>(packet_in pkt);
 
@@ -5112,7 +5114,7 @@ control Nexthop(inout switch_ingress_metadata_t ig_md)(
                    ecmp_group_table_size) ecmp_selector;
 
 
-    // ---------------- IP Nexthop ---------------- 
+    // ---------------- IP Nexthop ----------------
     action set_nexthop_properties(switch_port_lag_index_t port_lag_index,
                                   switch_bd_t bd,
                                   switch_nat_zone_t zone) {
@@ -5140,7 +5142,7 @@ control Nexthop(inout switch_ingress_metadata_t ig_md)(
         set_nexthop_properties(port_lag_index, bd, zone);
     }
 
-    // ----------------  Post Route Flood ---------------- 
+    // ----------------  Post Route Flood ----------------
     action set_nexthop_properties_post_routed_flood(switch_bd_t bd, switch_mgid_t mgid, switch_nat_zone_t zone) {
         ig_md.egress_port_lag_index = 0;
         ig_md.multicast.id = mgid;
@@ -5157,7 +5159,7 @@ control Nexthop(inout switch_ingress_metadata_t ig_md)(
         set_nexthop_properties_post_routed_flood(bd, mgid, zone);
     }
 
-    // ---------------- Glean ---------------- 
+    // ---------------- Glean ----------------
     action set_nexthop_properties_glean() {
         ig_md.flags.glean = true;
     }
@@ -5167,7 +5169,7 @@ control Nexthop(inout switch_ingress_metadata_t ig_md)(
         set_nexthop_properties_glean();
     }
 
-    // ---------------- Drop ---------------- 
+    // ---------------- Drop ----------------
     action set_nexthop_properties_drop() {
         ig_md.drop_reason = SWITCH_DROP_REASON_NEXTHOP;
     }
@@ -5271,7 +5273,7 @@ control Neighbor(inout switch_header_t hdr,
 
 //--------------------------------------------------------------------------
 // Egress Pipeline: Outer Nexthop lookup for both routed and tunnel encap cases
-/* CODE_HACK: Neighbor and OuterNexthop tables are implemented separately to 
+/* CODE_HACK: Neighbor and OuterNexthop tables are implemented separately to
    reduce the data-dependency between various p4 tables. Neighbor table needs to
    be placed after the tunnel encapsulation but OuterNexthop table can be placed
    earlier in the pipeline to reduce the overall pipeline length. */
@@ -6410,7 +6412,7 @@ control MirrorRewrite(inout switch_header_t hdr,
     }
 
     //
-    // ----------------  Remote SPAN  ---------------- 
+    // ----------------  Remote SPAN  ----------------
     //
     action rewrite_rspan(switch_qid_t qid, bit<3> pcp, vlan_id_t vid) {
 
@@ -6421,7 +6423,7 @@ control MirrorRewrite(inout switch_header_t hdr,
     }
 
     //
-    // ---------------- ERSPAN Type II ---------------- 
+    // ---------------- ERSPAN Type II ----------------
     //
     action rewrite_erspan_type2(
             switch_qid_t qid,

@@ -265,6 +265,16 @@
             "symbol_type": "Parameter_Type_Struct"
         },
         {
+            "references": [],
+            "symbol_name": "SwitchIngressDeparser.ig_intr_dprsr_md.mirror_type",
+            "declaration": {
+                "file": "tna_random.p4",
+                "line": 74,
+                "column": 33
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
             "references": [
                 {
                     "file": "tna_random.p4",
@@ -423,5 +433,5 @@
             "symbol_type": "Parameter_Type_Extern"
         }
     ],
-    "source_root": "/root/repo/bf-p4c/p4-tests/p4-programs/p4_16_programs/tna_random"
+    "source_root": "/workspaces/bf-p4c2/p4-tests/p4-programs/p4_16_programs/tna_random"
 }

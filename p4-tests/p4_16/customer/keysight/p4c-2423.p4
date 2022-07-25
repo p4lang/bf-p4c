@@ -707,6 +707,8 @@ extern T min<T>(in T t1, in T t2);
 
 extern void invalidate<T>(in T field);
 
+extern bool is_validated<T>(in T field);
+
 /// Phase0
 extern T port_metadata_unpack<T>(packet_in pkt);
 
@@ -1439,7 +1441,7 @@ parser SwitchIngressParser(
     TofinoIngressParser() tofino_parser;
 
     // TODO what to do with this state, is it still needed?
-    // @packet_entry 
+    // @packet_entry
     // @name(".start_i2e_mirrored") state start_i2e_mirrored {
     //     hdr.bridged_md.is_pktgen = 1w0;
     //     packet.extract(hdr.outer_eth);
@@ -1735,7 +1737,7 @@ control SwitchIngressDeparser(
         in ingress_metadata_t ig_md,
         in ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md) {
     apply {
-      // TODO - add headers as needed 
+      // TODO - add headers as needed
         packet.emit(hdr.bridged_md);
         packet.emit(hdr.outer_eth);
         packet.emit(hdr.fabric_hdr);
@@ -1815,7 +1817,7 @@ control process_bank_select_reg(inout header_t hdr) {
 # 1 "counter_udf.p4" 1
 /*------------------------------------------------------------------------
     counter_udf.p4 - Module to modify protocol fields via nested counters.
-    Specifies protocol fields for each UDF(User Defined Field). 
+    Specifies protocol fields for each UDF(User Defined Field).
 
     Copyright (C) 2019 by Keysight Technologies
     All Rights Reserved.
@@ -1963,10 +1965,10 @@ control process_compute_conditional_cntr_udf(inout header_t hdr, inout egress_me
                 value.lo = in_value.lo + 32w1;
             }
 
-            // If inner loop pattern is finished and stutter is finished 
+            // If inner loop pattern is finished and stutter is finished
             if (!(in_value.lo + 32w1 <= eg_md.udf1_cntr_params_eg.repeat) &&
                 !(in_value.hi + 32w1 <= eg_md.udf1_cntr_params_eg.stutter)) {
-                // ... then reset inner loop counter 
+                // ... then reset inner loop counter
                 value.lo = (bit<32>)0;
             }
             // If stutter is not finished
@@ -1975,7 +1977,7 @@ control process_compute_conditional_cntr_udf(inout header_t hdr, inout egress_me
                 value.hi = in_value.hi + 32w1;
             }
 
-            // Else if stutter is finished 
+            // Else if stutter is finished
             if (!(in_value.hi + 32w1 <= eg_md.udf1_cntr_params_eg.stutter)) {
                 // Reset stutter counter
                 value.hi = (bit<32>)0;
@@ -2005,10 +2007,10 @@ control process_compute_conditional_cntr_udf(inout header_t hdr, inout egress_me
                 value.lo = in_value.lo + 32w1;
             }
 
-            // If inner loop pattern is finished and stutter is finished 
+            // If inner loop pattern is finished and stutter is finished
             if (!(in_value.lo + 32w1 <= eg_md.udf2_cntr_params_eg.repeat) &&
                 !(in_value.hi + 32w1 <= eg_md.udf2_cntr_params_eg.stutter)) {
-                // ... then reset inner loop counter 
+                // ... then reset inner loop counter
                 value.lo = 32w0;
             }
 
@@ -2018,7 +2020,7 @@ control process_compute_conditional_cntr_udf(inout header_t hdr, inout egress_me
                 value.hi = in_value.hi + 32w1;
             }
 
-            // Else if stutter is finished 
+            // Else if stutter is finished
             if (!(in_value.hi + 32w1 <= eg_md.udf2_cntr_params_eg.stutter)) {
                 // Reset stutter counter
                 value.hi = 32w0;
@@ -2075,7 +2077,7 @@ control process_compute_inner_cntr_udf(inout header_t hdr, inout egress_metadata
             reg_pair_t in_value;
             in_value = value;
             rv = in_value.lo;
-            // Inner repeat count has not rolled over and stutter is done 
+            // Inner repeat count has not rolled over and stutter is done
             if (eg_md.udf1_cntr_vars.update_inner_true == 4w2) {
                 // Update inner loop counter
                 value.lo = in_value.lo + eg_md.udf1_cntr_params_eg.step;
@@ -2095,7 +2097,7 @@ control process_compute_inner_cntr_udf(inout header_t hdr, inout egress_metadata
             reg_pair_t in_value;
             in_value = value;
             rv = in_value.lo;
-            // Inner repeat count has not rolled over and stutter is done 
+            // Inner repeat count has not rolled over and stutter is done
             if (eg_md.udf2_cntr_vars.update_inner_true == 4w2) {
                 // Update inner loop counter
                 value.lo = in_value.lo + eg_md.udf2_cntr_params_eg.step;
@@ -2251,7 +2253,7 @@ control process_intermediate_outer_cntr_udf(inout header_t hdr, inout egress_met
             }
              // Outer repeat count has not rolled over
             if (in_value.lo + 32w1 <= eg_md.udf1_cntr_params_br.nested_repeat) {
-                // Update outer repeat count 
+                // Update outer repeat count
                 value.lo = in_value.lo + 32w1;
             }
              // Outer repeat count has rolled over
@@ -2385,7 +2387,7 @@ control process_update_cntr_udf(inout header_t hdr, in egress_intrinsic_metadata
 
     // Will be two entries per stream
     // One for normal condition, and one for rollover condition
-    // In normal condition, update_value = inital value of UDF 
+    // In normal condition, update_value = inital value of UDF
     // In rollover condition for incrementing UDF, update_value = (min - (max - init) + step)
     // For decrementing UDF, update_value = initial value of UDF
     // In rollover condition for decrementing UDF, update_value = (max + (init - min) + step)
@@ -2410,7 +2412,7 @@ control process_update_cntr_udf(inout header_t hdr, in egress_intrinsic_metadata
 
     // Will be two entries per stream
     // One for normal condition, and one for rollover condition
-    // In normal condition, update_value = inital value of UDF 
+    // In normal condition, update_value = inital value of UDF
     // In rollover condition for incrementing UDF, update_value = (min - (max - init) + step)
     // For decrementing UDF, update_value = initial value of UDF
     // In rollover condition for decrementing UDF, update_value = (max + (init - min) + step)
@@ -2729,7 +2731,7 @@ control process_ingress_fp_port(inout header_t hdr, in ingress_intrinsic_metadat
 # 68 "pktgen9_16.p4" 2
 # 1 "g_pkt_cntr.p4" 1
 /*------------------------------------------------------------------------
-    g_pkt_cntr.p4 - Count global packets in egress pipeline per stream and port. 
+    g_pkt_cntr.p4 - Count global packets in egress pipeline per stream and port.
                   - Implement bursts by counting packets to burst size.
                     Indices larger than burst size are dropped.
 
@@ -4535,7 +4537,7 @@ control process_ig_pgid_tstampB(inout header_t hdr, inout ingress_metadata_t ig_
 /*------------------------------------------------------------------------
     tx_instrum.p4 - Module to compute register index for sequence number and insert timestamp and corresponding
                     sequence number into Ixia instrumentation if there is an Ixia signature in the stream.
-                    The existence of a signature is programmed by the control plane per stream. 
+                    The existence of a signature is programmed by the control plane per stream.
 
     Copyright (C) 2019 by Keysight Technologies
     All Rights Reserved.
@@ -4942,7 +4944,7 @@ Pipeline(SwitchIngressParser(),
 @pkginfo(contact="support@keysight.com")
 @pkginfo(url="www.keysight.com")
 
-// User-defined pkginfo annotations to main() 
+// User-defined pkginfo annotations to main()
 // merge package-level attributes, conditionally set and/or #included
 
 @Attr(target_type=TOFINO1,access=ro,descrip="Target device type")

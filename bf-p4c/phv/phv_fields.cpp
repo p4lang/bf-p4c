@@ -5,6 +5,7 @@
 #include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/common/flexible_packing.h"
 #include "bf-p4c/common/header_stack.h"
+#include "bf-p4c/common/pragma/all_pragmas.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/mau/table_summary.h"
 #include "bf-p4c/mau/gateway.h"
@@ -1601,6 +1602,7 @@ struct ComputeFieldAlignments : public Inspector {
 
 class AddIntrinsicConstraints : public Inspector {
     PhvInfo& phv;
+    bool disable_reserved_i2e_drop_implementation = false;
 
     std::vector<cstring> invalidate_fields_from_arch() {
         static std::vector<cstring> rv = {
@@ -1609,14 +1611,33 @@ class AddIntrinsicConstraints : public Inspector {
             "ig_intr_md_for_tm.ucast_egress_port",
             "ig_intr_md_for_dprsr.resubmit_type",
             "ig_intr_md_for_dprsr.digest_type",
-            "ig_intr_md_for_dprsr.mirror_type",
             "eg_intr_md_for_dprsr.mirror_type"
            };
 
         return rv;
     }
 
-    profile_t init_apply(const IR::Node* root) override {
+    // field that are required to be initialized to zero based on requirement
+    // from architecture. ig_intr_md_for_dprsr.mirror_type must be init to zero
+    // to workaround ibuf hardware bug in P4C-4507. It is validated by default
+    // in parser, unless explicitly disabled by the pragma
+    // @disable_reserved_i2e_drop_implementation.
+    std::vector<cstring> valid_fields_from_arch() {
+        static std::vector<cstring> rv = {
+            "ig_intr_md_for_dprsr.mirror_type",  /// special field that can be validated to zero.
+        };
+        return rv;
+    }
+
+    bool preorder(const IR::BFN::Pipe *pipe) override {
+        for (auto anno : pipe->global_pragmas) {
+            if (anno->name != PragmaDisableI2EReservedDropImplementation::name) continue;
+            disable_reserved_i2e_drop_implementation = true;
+        }
+        return true;
+    }
+
+    void end_apply() override {
         for (auto& f : phv) {
             if (f.pov) continue;
 
@@ -1637,9 +1658,18 @@ class AddIntrinsicConstraints : public Inspector {
                         LOG3("\tMarking field " << f.name << " as invalidate from arch");
                     }
                 }
+                for (auto& meta : valid_fields_from_arch()) {
+                    std::string f_name(f.name.c_str());
+                    if (f_name.find(meta) != std::string::npos) {
+                        f.set_solitary(PHV::SolitaryReason::ARCH);
+                        if (disable_reserved_i2e_drop_implementation) {
+                            f.set_invalidate_from_arch(true);
+                            LOG3("\tMarking field " << f.name << " as invalidate from arch");
+                        }
+                    }
+                }
             }
         }
-        return Inspector::init_apply(root);
     }
 
  public:

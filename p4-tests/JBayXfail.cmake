@@ -37,6 +37,11 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
   p4c_add_xfail_reason("tofino2"
     ".* expected packet.* on port .* not seen|shorter than expected"
     extensions/p4_tests/p4_16/stf/parser_loop_3.p4
+    #extensions/p4_tests/p4_16/stf/parser_loop_4.p4
+  )
+
+  p4c_add_xfail_reason("tofino2"
+    "mismatch from expected"
     extensions/p4_tests/p4_16/stf/parser_loop_4.p4
   )
 
@@ -244,6 +249,12 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/issue894.p4
 )
 
+# Failed after P4C-4507
+p4c_add_xfail_reason("tofino2"
+  "tofino2 supports up to 20 stages, using"
+  extensions/p4_tests/p4_16/compile_only/p4c-3175.p4
+)
+
 # Not being tracked by JBay regression yet
 p4c_add_xfail_reason("tofino2"
   "Field key is not a member of header pktgen_recirc_header_t"
@@ -356,6 +367,16 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "Could not place table .* table .* could not fit|The ability to split directly addressed counters/meters/stateful resources across multiple logical tables of an algorithmic tcam match table is not currently supported"
   extensions/p4_tests/p4_16/compile_only/p4c-1601-neg.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "Inconsistent mirror selectors"
+  extensions/p4_tests/p4_16/compile_only/mirror_5.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "PHV allocation was not successful"
+  extensions/p4_tests/p4_16/stf/auto_init_meta2.p4
 )
 
 # P4C-3059

@@ -697,6 +697,8 @@ extern T min<T>(in T t1, in T t2);
 
 extern void invalidate<T>(in T field);
 
+extern bool is_validated<T>(in T field);
+
 /// Phase0
 extern T port_metadata_unpack<T>(packet_in pkt);
 
@@ -1152,9 +1154,9 @@ struct l4_lookup_t {
  ***********************  H E A D E R S  *********************************
  *************************************************************************/
 /*
- *  Define all the headers the program will recognize             
- *  The actual sets of headers processed by each gress can potentially differ 
- * 
+ *  Define all the headers the program will recognize
+ *  The actual sets of headers processed by each gress can potentially differ
+ *
  * In this particular case, the actual set of the processed headers will
  * be defined in the parser module as packet_headers_t
 */
@@ -1187,7 +1189,7 @@ header ipv4_h {
     ipv4_addr_t dst_addr;
 }
 
-/* 
+/*
  * Depending on the parser, only one of these two header types will
  * be used. We could've #ifdef'ed them, but decided not to.
  */
@@ -1210,7 +1212,7 @@ header ipv6_h {
     ipv6_addr_t dst_addr;
 }
 
-/* 
+/*
  * Depending on the parser, only one of these two header types will
  * be used. We could've #ifdef'ed them, but decided not to.
  */
@@ -1220,7 +1222,7 @@ header ipv6_ext_hdr_h {
     bit<48> data;
 }
 
-/* 
+/*
  * Depending on the parser, only one of these two header types will
  * be used. We could've #ifdef'ed them, but decided not to.
  */
@@ -1233,7 +1235,7 @@ header ipv6_ext_h {
 }
 
 /*
- * Layer 4 Headers 
+ * Layer 4 Headers
  */
 header icmp_h {
     bit<16> type_code;
@@ -1269,8 +1271,8 @@ header udp_h {
  *********** C O M M O N    P A C K E T   P R O C E S S I N G ************
  *************************************************************************/
 
-/* 
- * The implementation is supposed to provide a parser (PacketParser) and 
+/*
+ * The implementation is supposed to provide a parser (PacketParser) and
  * a deparser (PacketDeparser) that parse and deparse packet_headers_t and
  * also return parser_metadata_t. All are defined in the module.
  *
@@ -1296,7 +1298,7 @@ header udp_h {
  * Here is what the file defines:
  *
  * struct packet_headers_t  -- the list of parsed (and deparsed headers)
- * struct parser_metadata_t -- additional metadata that gets populated as a 
+ * struct parser_metadata_t -- additional metadata that gets populated as a
  *                             direct result of packet parsing
  * parser  PacketParser     -- the actual packet parsing code
  * control PacketDeparser   -- packet deparser code
@@ -1343,7 +1345,7 @@ parser PacketParser(packet_in pkt,
 
     state parse_ethernet {
         pkt.extract(hdr.ethernet);
-        /* 
+        /*
          * The explicit cast allows us to use ternary matching on
          * serializable enum
          */
@@ -1400,7 +1402,7 @@ parser PacketParser(packet_in pkt,
             13 : parse_ipv4_options_8;
             14 : parse_ipv4_options_9;
             15 : parse_ipv4_options_10;
-            /* 
+            /*
              * Packets with other values of IHL are illegal and will be
              * dropped by the parser
              */
@@ -1689,7 +1691,7 @@ parser IngressParser(packet_in pkt,
     /* Intrinsic */
     out ingress_intrinsic_metadata_t ig_intr_md)
 {
-    /* 
+    /*
      * We instantiate the packet parser, since we might also need in Egress.
      * Otherwise we could have invoked it directly, i.e. PacketParser.apply()
      */
@@ -1754,7 +1756,7 @@ control Ingress(
         bool do_dst_mac, mac_addr_t new_dst_mac,
         bool do_src_mac, mac_addr_t new_src_mac)
     {
-        /* 
+        /*
          * On Tofino, only a boolean action data parameter can be used
          * as a condition
          */

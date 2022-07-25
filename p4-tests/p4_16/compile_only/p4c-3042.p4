@@ -710,6 +710,8 @@ extern T min<T>(in T t1, in T t2);
 
 extern void invalidate<T>(in T field);
 
+extern bool is_validated<T>(in T field);
+
 /// Phase0
 extern T port_metadata_unpack<T>(packet_in pkt);
 
@@ -1641,7 +1643,7 @@ control SwitchEgressDeparser(
 
 
 // -----------------------------------------------------------------------------
-// Control 
+// Control
 // -----------------------------------------------------------------------------
 
 # 1 "portfwd.p4" 1
@@ -1747,7 +1749,7 @@ control PortMap(
      *      none x untag : vlan_id = config
      *      tag  x untag : drop?
      *      none x tag   : drop?
-     *      tag  x tag   : vlan_id = hdr.vlan_tag.vid 
+     *      tag  x tag   : vlan_id = hdr.vlan_tag.vid
     */
     action set_vlan_default() {
         ig_md.vlan_id = VLAN_DEFAULT;
@@ -1993,4 +1995,3 @@ Pipeline(SwitchIngressParser(),
          SwitchEgressDeparser()) pipe;
 
 Switch(pipe) main;
-

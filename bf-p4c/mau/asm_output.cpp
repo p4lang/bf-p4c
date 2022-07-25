@@ -2010,7 +2010,12 @@ bool MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
                         [&](const PHV::AllocSlice &sl) {
                     int bit = offset.first + (sl.field_slice().lo - offset.second.lo);
                     if (bits_done[bit]) return;  // supress duplicates
-                    out << sep << bit << ": " << Slice(field, sl.field_slice());
+                    out << sep << bit << ": ";
+                    if (f.second.valid_bit)
+                        out << "$valid(";
+                    out << Slice(field, sl.field_slice());
+                    if (f.second.valid_bit)
+                        out << ")";
                     sep = ", ";
                     BUG_CHECK(bits_done.getrange(bit, sl.width()) == 0,
                               "partial overlapping gateway fields in %s", tbl);

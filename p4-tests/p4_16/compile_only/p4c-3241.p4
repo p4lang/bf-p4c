@@ -652,6 +652,8 @@ extern T min<T>(in T t1, in T t2);
 
 extern void invalidate<T>(in T field);
 
+extern bool is_validated<T>(in T field);
+
 /// Phase0
 extern T port_metadata_unpack<T>(packet_in pkt);
 
@@ -1861,7 +1863,7 @@ action acl_miss(inout acl_result_metadata_t res_md)
     res_md.match = 1;
 }
 # 236 "/home/liubin/P4-TOFINO-YDFL/p4_16_src/acl.p4"
-    //default_action = acl_key_select_ip_port_proto(ig_md.inner_lkp, dyn_lkp); 
+    //default_action = acl_key_select_ip_port_proto(ig_md.inner_lkp, dyn_lkp);
 
 
 control IPv4TcamAcl (inout switch_header_t hdr,
@@ -2378,7 +2380,7 @@ control AclActionPerform(inout switch_ingress_metadata_t ig_md,
  /*
 	const entries = {
 		(_,SWITCH_PORT_TYPE_NORMAL) : acl_action(ig_md.default_acl_res_md, ACL_ACTION_FWD_PG, 7, 64, 0);
-		(_,_)                       : acl_action(ig_md.default_acl_res_md, ACL_ACTION_DORP, 7, 0, 0); 
+		(_,_)                       : acl_action(ig_md.default_acl_res_md, ACL_ACTION_DORP, 7, 0, 0);
 	}
 	*/
 
@@ -3471,7 +3473,7 @@ control PktValidation(
     //@symmetric("ig_md.outer_lkp.l4_src_port", "ig_md.outer_lkp.l4_dst_port")
     Hash<switch_hash_t>(HashAlgorithm_t.CRC32) port_hash;
     //@symmetric("ig_md.outer_lkp.l4_src_port", "ig_md.outer_lkp.l4_dst_port")
-    //@symmetric("ig_md.outer_lkp.src_addr", "ig_md.outer_lkp.dst_addr")    	
+    //@symmetric("ig_md.outer_lkp.src_addr", "ig_md.outer_lkp.dst_addr")
     Hash<switch_hash_t>(HashAlgorithm_t.CUSTOM, poly0) enhanced_hash0;
     Hash<switch_hash_t>(HashAlgorithm_t.CUSTOM, poly1) enhanced_hash1;
     Hash<switch_hash_t>(HashAlgorithm_t.CUSTOM, poly2) enhanced_hash2;
@@ -4796,7 +4798,7 @@ control IngressMirror(
     Mirror() mirror;
 
     apply {
-        if (ig_md.src_type == SWITCH_MIRROR_TYPE) {
+        if (ig_dprsr_md.mirror_type == 3w1) {
             mirror.emit<switch_mirror_metadata_h>(ig_md.session_id,
                  {
                  ig_md.src_type,

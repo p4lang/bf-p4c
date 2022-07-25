@@ -112,6 +112,20 @@ IR::Node *AddMetadataPOV::insert_deparser_digest_pov_write(const IR::MAU::Primit
     return nullptr;
 }
 
+/**
+ * @brief Convert the 'is_validated' extern to $valid bit read.
+ *
+ * @param p represents the method call to is_validated()
+ * @return reference to <field>.$valid
+ */
+IR::Node *
+AddMetadataPOV::insert_field_pov_read(const IR::MAU::Primitive* p) {
+    if (p->is<IR::MAU::TypedPrimitive>()) {
+        return new IR::TempVar(
+            IR::Type::Bits::get(1), true, p->operands.at(0)->toString() + ".$valid"); }
+    return nullptr;
+}
+
 IR::Node *AddMetadataPOV::postorder(IR::MAU::Primitive *p) {
     if (p->name == "modify_field") {
         if (auto rv = insert_deparser_param_pov_write(p, true)) return rv;
@@ -119,7 +133,10 @@ IR::Node *AddMetadataPOV::postorder(IR::MAU::Primitive *p) {
     } else if (p->name == "invalidate") {
         if (auto rv = insert_deparser_param_pov_write(p, false)) return rv;
         if (auto rv = insert_deparser_digest_pov_write(p, false)) return rv;
+    } else if (p->name == "is_validated") {
+        if (auto rv = insert_field_pov_read(p)) return rv;
     }
+
     return p;
 }
 

@@ -4,7 +4,7 @@ import os
 import sys
 from prettytable import PrettyTable
 
-TEST_DRIVER_TIMEOUT = 2000
+TEST_DRIVER_TIMEOUT = 3000
 
 BF_P4C_PATH = os.path.abspath(os.path.dirname(__file__)).replace('/scripts/gen_reference_outputs', '')
 

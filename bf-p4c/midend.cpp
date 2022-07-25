@@ -135,6 +135,7 @@
 #include "bf-p4c/midend/eliminate_tuples.h"
 #include "bf-p4c/midend/fold_constant_hashes.h"
 #include "bf-p4c/midend/desugar_varbit_extract.h"
+#include "bf-p4c/midend/drop_packet_with_mirror_engine.h"
 #include "bf-p4c/midend/initialize_mirror_io_select.h"
 #include "bf-p4c/midend/normalize_params.h"
 #include "bf-p4c/midend/ping_pong_generation.h"
@@ -356,6 +357,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new BFN::CheckDesignPattern(&refMap, &typeMap),  // add checks for p4 design pattern here.
         new BFN::SetDefaultSize(true /* warn */),  // set default table size to 512 if not set.
         new BFN::InitializeMirrorIOSelect(&refMap, &typeMap),
+        new BFN::DropPacketWithMirrorEngine(&refMap, &typeMap),
         new EnumOn32Bits::FindStatefulEnumOutputs(*enum_policy),
         new P4::ConvertEnums(&refMap, &typeMap, enum_policy, typeChecking),
         new P4::ConstantFolding(&refMap, &typeMap, true, typeChecking),

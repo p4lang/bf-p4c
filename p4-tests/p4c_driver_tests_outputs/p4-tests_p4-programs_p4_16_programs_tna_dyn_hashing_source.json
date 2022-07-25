@@ -363,6 +363,16 @@
             "symbol_type": "Parameter_Type_Struct"
         },
         {
+            "references": [],
+            "symbol_name": "SwitchIngressDeparser.dprsr_md.mirror_type",
+            "declaration": {
+                "file": "tna_dyn_hashing.p4",
+                "line": 75,
+                "column": 55
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
             "references": [
                 {
                     "file": "tna_dyn_hashing.p4",
@@ -654,5 +664,5 @@
             "symbol_type": "Parameter_Type_Extern"
         }
     ],
-    "source_root": "/root/repo/bf-p4c/p4-tests/p4-programs/p4_16_programs/tna_dyn_hashing"
+    "source_root": "/workspaces/bf-p4c2/p4-tests/p4-programs/p4_16_programs/tna_dyn_hashing"
 }

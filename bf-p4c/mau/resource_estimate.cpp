@@ -1176,7 +1176,7 @@ void StageUseEstimate::calculate_for_leftover_atcams(const IR::MAU::Table *tbl, 
 // the number of entries that each layout can fit.
 void StageUseEstimate::shrink_preferred_srams_lo(const IR::MAU::Table *tbl, int &entries,
                                                  attached_entries_t &attached_entries) {
-    BUG_CHECK(!layout_options.empty(), "Empty Layout Option");
+    if (layout_options.empty()) return;
     LayoutOption *lo = &layout_options[preferred_index];
     int prev_srams = lo->srams;
     for (int new_srams = prev_srams - 1; lo->srams >= prev_srams && new_srams > 0; new_srams--) {
@@ -1199,7 +1199,7 @@ void StageUseEstimate::shrink_preferred_srams_lo(const IR::MAU::Table *tbl, int 
 // the number of entries that each layout can fit.
 void StageUseEstimate::shrink_preferred_tcams_lo(const IR::MAU::Table *tbl, int &entries,
                                                  attached_entries_t &attached_entries) {
-    BUG_CHECK(!layout_options.empty(), "Empty Layout Option");
+    if (layout_options.empty()) return;
     LayoutOption *lo = &layout_options[preferred_index];
     int prev_tcams = lo->tcams;
     int prev_srams = lo->srams;
@@ -1223,7 +1223,7 @@ void StageUseEstimate::shrink_preferred_tcams_lo(const IR::MAU::Table *tbl, int 
 // the number of entries that each layout can fit.
 void StageUseEstimate::shrink_preferred_atcams_lo(const IR::MAU::Table *tbl, int &entries,
                                                   attached_entries_t &attached_entries) {
-    BUG_CHECK(!layout_options.empty(), "Empty Layout Option");
+    if (layout_options.empty()) return;
     LayoutOption *lo = &layout_options[preferred_index];
     int prev_srams = lo->srams;
     for (int new_srams = prev_srams - 1; lo->srams >= prev_srams && new_srams > 0; new_srams--) {

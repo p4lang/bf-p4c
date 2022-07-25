@@ -2248,6 +2248,8 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
         } else if (info.second.need_range) {
             flags |= IXBar::Use::NeedRange;
             hash_bus_bits += info.first.size();
+        } else if (info.second.valid_bit) {
+            hash_bus_bits += 1;
         }
         cstring aliasSourceName;
         if (collect->info_to_uses.count(&info.second)) {
@@ -2326,8 +2328,14 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
             for (auto &offset : info.second.offsets) {
                 if (offset.first < 32) continue;
                 offset.first += shift;
-                alloc.bit_use.emplace_back(info.first.field()->name, hash_group, offset.second.lo,
-                                           offset.first - 32, offset.second.size()); } }
+                if (info.second.valid_bit) {
+                    alloc.bit_use.emplace_back(info.first.field()->name, hash_group,
+                                               offset.second.lo, offset.first - 32, 1,
+                                               info.second.valid_bit);
+                } else {
+                    alloc.bit_use.emplace_back(info.first.field()->name, hash_group,
+                                               offset.second.lo, offset.first - 32,
+                                               offset.second.size()); } } }
         for (auto ht : bitvec(local_hash_table_input))
             for (int i = 0; i < collect->bits; ++i)
                 hash_single_bit_use[ht][shift + i] = tbl->name + "$gw";

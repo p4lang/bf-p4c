@@ -197,19 +197,26 @@ void emit_ixbar_hash(const PhvInfo &phv, std::ostream &out, indent_t indent,
 
     // Printing out the hash for gateway tables
     for (auto ident : use->bit_use) {
-        // Gateway fields in the hash are continuous bitranges, but may not match up
-        // with the fields.  So we figure out the overlap between each use and each
-        // match field and split them up where they don't match.  Do we really need to
-        // do this?
-        Slice range_sl(phv, ident.field, ident.lo, ident.lo + ident.width - 1);
-        for (auto sl : match_data) {
-            auto overlap = range_sl & sl;
-            if (!overlap) continue;
-            int bit = 40 + ident.bit + overlap.get_lo() - range_sl.get_lo();
-            out << indent << bit;
-            if (overlap.width() > 1)
-                out << ".." << (bit + overlap.width() - 1);
-            out << ": " << overlap << std:: endl;
+        if (ident.valid) {
+            int bit = 40 + ident.bit;
+            out << indent << "valid " << bit;
+            out << ": ";
+            out << "0x" << hex(1 << ident.group) << std::endl;
+        } else {
+            // Gateway fields in the hash are continuous bitranges, but may not match up
+            // with the fields.  So we figure out the overlap between each use and each
+            // match field and split them up where they don't match.  Do we really need to
+            // do this?
+            Slice range_sl(phv, ident.field, ident.lo, ident.lo + ident.width - 1);
+            for (auto sl : match_data) {
+                auto overlap = range_sl & sl;
+                if (!overlap) continue;
+                int bit = 40 + ident.bit + overlap.get_lo() - range_sl.get_lo();
+                out << indent << bit;
+                if (overlap.width() > 1)
+                    out << ".." << (bit + overlap.width() - 1);
+                out << ": " << overlap << std:: endl;
+            }
         }
     }
 
@@ -413,4 +420,3 @@ void MauAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
 }
 
 }  // end Tofino namespace
-

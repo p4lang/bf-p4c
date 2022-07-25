@@ -9,6 +9,7 @@ using namespace IndentCtl;
 std::ostream &operator<<(std::ostream &out, const CollectGatewayFields::info_t &info) {
     if (info.const_eq) out << " const_eq";
     if (info.need_range) out << " range";
+    if (info.valid_bit) out << " valid";
     for (auto &off : info.offsets) out << " " << off.first << ":" << off.second;
     for (auto &off : info.xor_offsets) out << " xor:" << off.first << ":" << off.second;
     return out;

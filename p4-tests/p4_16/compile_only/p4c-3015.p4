@@ -676,6 +676,8 @@ extern T min<T>(in T t1, in T t2);
 
 extern void invalidate<T>(in T field);
 
+extern bool is_validated<T>(in T field);
+
 /// Phase0
 extern T port_metadata_unpack<T>(packet_in pkt);
 
@@ -3974,4 +3976,3 @@ Pipeline(SwitchIngressParser(),
          SwitchEgressDeparser()) pipe;
 
 Switch(pipe) main;
-

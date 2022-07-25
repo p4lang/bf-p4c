@@ -694,6 +694,8 @@ extern T min<T>(in T t1, in T t2);
 
 extern void invalidate<T>(in T field);
 
+extern bool is_validated<T>(in T field);
+
 /// Phase0
 extern T port_metadata_unpack<T>(packet_in pkt);
 
@@ -1166,7 +1168,7 @@ parser IngressParser(packet_in pkt,
         meta.portMetadata = port_metadata_unpack<portMetadata_t>(pkt);
         transition parseMpls;
     }
-    state parseMpls {       
+    state parseMpls {
         pkt.extract(headers.mpls.next);
         MplsStack_h mplsStack = pkt.lookahead<MplsStack_h>();
         transition select(headers.mpls.last.bos,
@@ -1213,7 +1215,7 @@ parser IngressParser(packet_in pkt,
             default : testForEthernet;
         }
     }
-    
+
     state mplsTriplePlus {
         pkt.extract(headers.mpls.next);
         pkt.extract(headers.mpls.next);
@@ -1304,7 +1306,7 @@ parser IngressParser(packet_in pkt,
             default : cpuRoutedData;
         }
     }
-    
+
     state extCwEth {
         pkt.extract(headers.mplsZeroBlob);
         transition possibleEthernet;
@@ -1422,4 +1424,3 @@ Pipeline(
 ) pipe;
 
 Switch(pipe) main;
-

@@ -282,7 +282,7 @@
             ],
             "symbol_name": "NoAction",
             "declaration": {
-                "file": "/build/bf-p4c/debug/p4c/p4include/core.p4",
+                "file": "/workspaces/bf-p4c2/build/p4c/p4include/core.p4",
                 "line": 70,
                 "column": 8
             },
@@ -1997,6 +1997,16 @@
             "symbol_type": "Parameter_Type_Struct"
         },
         {
+            "references": [],
+            "symbol_name": "SwitchIngressDeparser_a.ig_dprsr_md.mirror_type",
+            "declaration": {
+                "file": "pipeline_profile_a.p4",
+                "line": 111,
+                "column": 54
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
             "references": [
                 {
                     "file": "pipeline_profile_a.p4",
@@ -2303,6 +2313,16 @@
                 }
             ],
             "symbol_name": "SwitchIngressDeparser_b.ig_dprsr_md.digest_type",
+            "declaration": {
+                "file": "pipeline_profile_b.p4",
+                "line": 104,
+                "column": 54
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [],
+            "symbol_name": "SwitchIngressDeparser_b.ig_dprsr_md.mirror_type",
             "declaration": {
                 "file": "pipeline_profile_b.p4",
                 "line": 104,
@@ -3004,5 +3024,5 @@
             "symbol_type": "Parameter_Type_Bits"
         }
     ],
-    "source_root": "/root/repo/bf-p4c/p4-tests/p4-programs/p4_16_programs/tna_32q_2pipe"
+    "source_root": "/workspaces/bf-p4c2/p4-tests/p4-programs/p4_16_programs/tna_32q_2pipe"
 }

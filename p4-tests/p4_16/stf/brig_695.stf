@@ -1,5 +1,5 @@
 # add t meta.ingress_port:0x1 set_port(port:2)
-add t ingress_port:0x0 set_port(port:2)
+add ingress.t ingress_port:0x0 set_port(port:2)
 
 #        dstAddr        srcAddr        etherType    payload
 expect 2 0101 0101 0901 0202 0202 0202 0800         DEADBEEF

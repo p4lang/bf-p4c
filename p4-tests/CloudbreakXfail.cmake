@@ -36,9 +36,14 @@ if (HARLYN_STF_cb AND NOT ENABLE_STF2PTF)
   p4c_add_xfail_reason("tofino3"
     ".* expected packet.* on port .* not seen|shorter than expected"
     extensions/p4_tests/p4_16/stf/parser_loop_3.p4
-    extensions/p4_tests/p4_16/stf/parser_loop_4.p4
+    #extensions/p4_tests/p4_16/stf/parser_loop_4.p4
     extensions/p4_tests/p4_16/stf/header_stack_strided_alloc2.p4
     extensions/p4_tests/p4_16/stf/header_stack_strided_alloc1.p4
+  )
+
+  p4c_add_xfail_reason("tofino3"
+    "mismatch from expected"
+    extensions/p4_tests/p4_16/stf/parser_loop_4.p4
   )
 
   p4c_add_xfail_reason("tofino3"
@@ -415,6 +420,16 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/stf/parser_loop_2.p4
   extensions/p4_tests/p4_16/stf/parser_counter_12.p4
   extensions/p4_tests/p4_16/stf/parser_loop_1.p4
+)
+
+p4c_add_xfail_reason("tofino3"
+  "Inconsistent mirror selectors"
+  extensions/p4_tests/p4_16/compile_only/mirror_5.p4
+)
+
+p4c_add_xfail_reason("tofino3"
+  "PHV allocation was not successful"
+  extensions/p4_tests/p4_16/stf/auto_init_meta2.p4
 )
 
 # Negative test, expected xfail

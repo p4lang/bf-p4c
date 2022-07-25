@@ -186,8 +186,11 @@ struct IXBar : public ::IXBar {
             cstring     field;
             int         group;
             int         lo, bit, width;
+            bool        valid;
             Bits(cstring f, int g, int l, int b, int w)
-            : field(f), group(g), lo(l), bit(b), width(w) {}
+            : field(f), group(g), lo(l), bit(b), width(w), valid(false) {}
+            Bits(cstring f, int g, int l, int b, int w, bool v)
+            : field(f), group(g), lo(l), bit(b), width(w), valid(v) {}
             int hi() const { return lo + width - 1; } };
         safe_vector<Bits>    bit_use;
 

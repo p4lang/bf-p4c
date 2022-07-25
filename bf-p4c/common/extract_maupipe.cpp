@@ -1669,8 +1669,11 @@ class GetBackendTables : public MauInspector {
                     seqs.at(b)->tables.push_back(tbl); } }
     bool preorder(const IR::MethodCallExpression *m) override {
         auto mi = P4::MethodInstance::resolve(m, refMap, typeMap, true);
-        if (!mi || !mi->isApply())
-            BUG("Method Call %1% not apply", m);
+        if (!mi || !mi->isApply()) {
+            // it's possible that an extern function is invoked in the
+            // apply statement, e.g.
+            // if (isValidate(ig_intr_dprsr_md.mirror_type)) { ... }
+            return false; }
         auto table = mi->object->to<IR::P4Table>();
         if (!table) BUG("%1% not apllied to table", m);
         if (!tables.count(m)) {

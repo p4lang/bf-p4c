@@ -208,7 +208,7 @@
             ],
             "symbol_name": "NoAction",
             "declaration": {
-                "file": "/build/bf-p4c/debug/p4c/p4include/core.p4",
+                "file": "/workspaces/bf-p4c2/build/p4c/p4include/core.p4",
                 "line": 70,
                 "column": 8
             },
@@ -1271,6 +1271,16 @@
             "symbol_type": "Parameter_Type_Struct"
         },
         {
+            "references": [],
+            "symbol_name": "SwitchIngressDeparser_a.ig_dprsr_md.mirror_type",
+            "declaration": {
+                "file": "tna_32q_multiprogram_a.p4",
+                "line": 108,
+                "column": 54
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
             "references": [
                 {
                     "file": "tna_32q_multiprogram_a.p4",
@@ -1657,5 +1667,5 @@
             "symbol_type": "Parameter_Type_Bits"
         }
     ],
-    "source_root": "/root/repo/bf-p4c/p4-tests/p4-programs/p4_16_programs/tna_32q_multiprogram/program_a"
+    "source_root": "/workspaces/bf-p4c2/p4-tests/p4-programs/p4_16_programs/tna_32q_multiprogram/program_a"
 }

@@ -441,6 +441,20 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::BOr *e) {
     return e;
 }
 
+/*
+ * is_validated() may be applied to a constant as the result of
+ * constant propagation. In that case, the container validity bit
+ * is automatically assumed to be set due to an earlier assignment.
+ */
+const IR::Expression *CanonGatewayExpr::postorder(IR::MAU::TypedPrimitive *p) {
+    if (p->name != "is_validated")
+        error("%scondition too complex", p->srcInfo);
+    auto e = p->operands.at(0);
+    if (e->is<IR::Constant>())
+        return new IR::BoolLiteral(true);
+    return p;
+}
+
 /* return true if two boolean expressions are contradictory (cannot both be true) */
 static bool contradictory(const IR::Expression *a_, const IR::Expression *b_) {
     auto a = a_->to<IR::Operation::Relation>();
@@ -733,6 +747,18 @@ bool CollectMatchFieldsAsGateway::preorder(const IR::MAU::Table *tbl) {
     return false;
 }
 
+// TOFINO1-ONLY
+bool CollectGatewayFields::preorder(const IR::MAU::TypedPrimitive *prim) {
+    if (prim->name != "is_validated")
+        error("%scondition too complex", prim->srcInfo);
+    le_bitrange bits;
+    auto e = prim->operands.at(0);
+    auto finfo = phv.field(e, &bits);
+    if (!finfo) return false;
+    info_t &info = this->info[{finfo, bits}];
+    info.valid_bit = true;
+    return false;
+}
 bool CollectGatewayFields::preorder(const IR::Expression *e) {
     boost::optional<cstring> aliasSourceName = phv.get_alias_name(e);
     le_bitrange bits;
@@ -906,6 +932,18 @@ bool CollectGatewayFields::compute_offsets() {
 #endif
     }
 
+    // TOFINO1-ONLY: handle implicit container valid bit
+    if (Device::currentDevice() == Device::TOFINO) {
+        for (auto *it : sort_by_size) {
+            const PHV::FieldSlice &field = it->first;
+            info_t &info = it->second;
+            if (!info.valid_bit) continue;
+            LOG1("handle valid bit for field slice: " << field);
+            info.offsets.emplace_back(bits + 32, le_bitrange(0, 0));
+            LOG5("  bit " << bits + 32 << " " << field);
+            bits += 1;
+        } }
+
     std::stable_sort(need_alloc.begin(), need_alloc.end(),
                      [](const need_alloc_t &a, const need_alloc_t &b) {
                              return a.slice.width() > b.slice.width(); });
@@ -1066,6 +1104,8 @@ bool CheckGatewayExpr::preorder(const IR::MAU::Table *tbl) {
 }
 
 bool CheckGatewayExpr::preorder(const IR::Expression *e) {
+    if (e->is<IR::MAU::TypedPrimitive>())
+        return false;
     if (!phv.field(e))
         error("%s: condition expression too complex", e->srcInfo);
     return false;
@@ -1161,7 +1201,26 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
     return false;
 }
 
-bool BuildGatewayMatch::preorder(const IR::MAU::Primitive *) {
+//  TOFINO1-ONLY
+bool BuildGatewayMatch::preorder(const IR::MAU::TypedPrimitive *prim) {
+    if (Device::currentDevice() != Device::TOFINO)
+        return false;
+    if (prim->name != "is_validated")
+        error("%sunsupported primitive %s", prim->srcInfo, prim->name);
+    le_bitrange bits;
+    auto e = prim->operands.at(0);
+    auto field = phv.field(e, &bits);
+    if (!field)
+        BUG("Unhandled expression in BuildGatewayMatch: %s", e);
+    match_field = {field, bits};
+    auto &match_info = fields.info.at(match_field);
+    for (auto &off : match_info.offsets) {
+        if (getParent<IR::LNot>())
+            match.word1 &= ~(UINT64_C(1) << off.first >> shift);
+        else
+            match.word0 &= ~(UINT64_C(1) << off.first >> shift);
+    }
+    match_field = {};
     return false;
 }
 

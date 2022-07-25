@@ -814,6 +814,13 @@ parser TofinoEgressParser(
 @pa_mutually_exclusive("egress", "hdr.udpv4", "hdr.inner_ipv6")
 @pa_mutually_exclusive("egress", "hdr.udpv4", "hdr.inner_udp")
 @pa_mutually_exclusive("egress", "hdr.vxlan_inner_ipv6", "hdr.vxlan_inner_ipv4")
+@pa_mutually_exclusive("egress", "hdr.inner_ipv6", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.inner_udp", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.vxlan", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_ethernet", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_ipv6", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_udp", "hdr.postcard_header")
+@pa_mutually_exclusive("egress", "hdr.vxlan_inner_ipv4", "hdr.postcard_header")
 
 /* Egress to Egress Mirroring */
 control EgressMirror(

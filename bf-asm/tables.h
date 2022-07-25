@@ -1602,8 +1602,15 @@ DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
     struct MatchKey {
         int                     offset;
         Phv::Ref                val;
-        MatchKey(gress_t gr, int stg, value_t &v) : offset(-1), val(gr, stg, v) {}
-        MatchKey(int off, gress_t gr, int stg, value_t &v) : offset(off), val(gr, stg, v) {}
+        bool                    valid;  /* implicit valid bit for tofino1 only */
+        MatchKey(gress_t gr, int stg, value_t &v) :
+            offset(-1), val(gr, stg, v), valid(false) {}
+        MatchKey(int off, gress_t gr, int stg, value_t &v) :
+            offset(off), val(gr, stg, v), valid(false) {}
+        // tofino1 only: phv has an implicit valid bit that can be matched in
+        // gateway or ternary table.
+        MatchKey(int off, gress_t gr, int stg, value_t &v, bool vld) :
+            offset(off), val(gr, stg, v), valid(vld) {}
         bool operator<(const MatchKey &a) const { return offset < a.offset; }
     };
  private:
@@ -1623,6 +1630,11 @@ DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
     template<class REGS> void payload_write_regs(REGS &, int row, int type, int bus);
     template<class REGS> void standalone_write_regs(REGS &regs);
     template<class REGS> void write_next_table_regs(REGS &);
+    bool gateway_needs_ixbar_group() {
+        for (auto& m : match)
+            if (m.offset < 32)
+                return true;
+        return !xor_match.empty(); }
  public:
     table_type_t table_type() const override { return GATEWAY; }
     const MatchTable *get_match_table() const override { return match_table; }
