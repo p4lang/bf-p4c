@@ -274,6 +274,24 @@ if [[ "${BUILD_FOR}" != 'jenkins-final' ]] ; then
     mkdir -p /etc/vim/ftdetect
     curl -o- -L https://raw.githubusercontent.com/c3m3gyanesh/p4-syntax-highlighter-collection/master/vim/ftdetect/p4.vim > /etc/vim/ftdetect/p4.vim
     curl -o- -L https://raw.githubusercontent.com/c3m3gyanesh/p4-syntax-highlighter-collection/master/vim/syntax/p4.vim > /etc/vim/syntax/p4.vim
+
+    # install CGDB (newer then in Ubuntu)
+    CGDB_VERSION=0.8.0
+    (  # run in subshell to prevent changing workdir & affecting variables
+        CGDB_MAKEDEPS="libreadline-dev libncurses-dev texinfo"
+        apt install -yy --no-install-recommends $CGDB_MAKEDEPS
+        BUILDDIR=$(mktemp -d)
+        cd $BUILDDIR
+        wget https://cgdb.me/files/cgdb-${CGDB_VERSION}.tar.gz
+        tar xavf cgdb-${CGDB_VERSION}.tar.gz
+        cd cgdb-${CGDB_VERSION}
+        ./configure --prefix=/usr/local
+        make
+        make install
+        cd
+        rm -rf $BUILDDIR
+        apt remove $CGDB_MAKEDEPS
+    )
   fi
 fi  # Done installing dependencies and configuring build environment.
 
