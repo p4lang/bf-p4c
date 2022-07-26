@@ -290,7 +290,7 @@ if [[ "${BUILD_FOR}" != 'jenkins-final' ]] ; then
         make install
         cd
         rm -rf $BUILDDIR
-        apt remove $CGDB_MAKEDEPS
+        apt remove -yy $CGDB_MAKEDEPS
     )
   fi
 fi  # Done installing dependencies and configuring build environment.
