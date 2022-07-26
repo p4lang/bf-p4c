@@ -17,7 +17,7 @@ class RunCmd(threading.Thread):
         self.Run()
 
     def run(self):
-        self.p = subprocess.Popen(self.cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.p = subprocess.Popen(self.cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8")
         self.out, self.err = self.p.communicate()
         self.return_code = self.p.returncode
 

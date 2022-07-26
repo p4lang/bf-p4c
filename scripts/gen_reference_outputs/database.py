@@ -37,7 +37,7 @@ def get_manifest_files(metrics_outdir, ts):
     rc = RunCmd(manifest_find_cmd, config.TEST_DRIVER_TIMEOUT)
     manifest_files = []
     if rc.out is not None and len(rc.out) > 0:
-        for line in rc.out.decode('utf-8').split('\n'):
+        for line in rc.out.split('\n'):
             if ts in line and 'manifest.json' in line:
                 manifest_files.append(metrics_outdir + line[2:])
     else:

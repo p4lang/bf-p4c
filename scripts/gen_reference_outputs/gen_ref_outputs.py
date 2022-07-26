@@ -14,7 +14,7 @@ from datetime import datetime
 def writeblock_to_file(filename, fileblock):
     with open(filename, 'w') as fwrite:
         if fileblock and len(fileblock) > 0:
-            fwrite.write(fileblock)
+            fwrite.write(str(fileblock))
 
 def get_test_list(tests_csv, out_dir, ts):
     errorCount = 0
@@ -101,18 +101,18 @@ def run_test_matrix(p4c, test_cmd):
     failed = []
     rc = RunCmd(test_cmd, config.TEST_DRIVER_TIMEOUT)
     writeblock_to_file(os.path.join(config.REF_OUTPUTS_DIR, \
-        p4c + '_test_error.log'), rc.err.decode('utf-8'))
+        p4c + '_test_error.log'), rc.err)
     writeblock_to_file(os.path.join(config.REF_OUTPUTS_DIR, \
-        p4c + '_test_out.log'), rc.out.decode('utf-8'))
+        p4c + '_test_out.log'), rc.out)
     print('Test Summary:\n')
     if rc.out is not None:
-        lines = rc.out.decode('utf-8').split('\n')
+        lines = rc.out.split('\n')
         for line in lines[-10:]:
             print(line + '\n')
             failed.append(line.strip())
     print('Test Errors:\n')
     if rc.err is not None:
-        print(rc.err.decode('utf-8') + '\n')
+        print(rc.err + '\n')
     return rc.return_code, failed
 
 def process_metrics(tests, metrics_db, metrics_outdir, ts, update, failed):
