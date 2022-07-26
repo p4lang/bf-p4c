@@ -26,7 +26,7 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
-  "WARNING:.*binary.*does not match model version|unexpected packet output on port 0"
+  "WARNING:.*binary.*does not match model version|mismatch from expected"
   extensions/p4_tests/p4_16/flatrock/direct1.p4
   )
 
