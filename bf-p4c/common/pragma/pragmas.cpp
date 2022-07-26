@@ -653,7 +653,7 @@ const char *PragmaMaxLoopDepth::name = "max_loop_depth";
 const char *PragmaMaxLoopDepth::description =
     "Specifies the maximum number of loops in the parser.";
 const char *PragmaMaxLoopDepth::help = "@pragma max_loop_depth [count]\n"
-    "+attached to P4 parser state\n"
+    "+ attached to P4 parser state\n"
     "\n"
     "Allows the parser to infer the maximum number of loops that could "
     "happen in ingress or egress in a state. This is used to flatten the "
@@ -669,8 +669,19 @@ const char *PragmaMode::help = "To be documented";
 
 const char *PragmaDontMerge::name = "dontmerge";
 const char *PragmaDontMerge::description = "The specific parser state will not be merged with "
-                                           "any other state";
-const char *PragmaDontMerge::help = "@dontmerge gress state state_name";
+                                           "any other state.";
+const char *PragmaDontMerge::help = "@dontmerge gress state state_name\n"
+    "+ attached to P4 parser state\n"
+    "\n"
+    "Instructs the compiler not to merge the parser state with any other parser states. Without "
+    "this pragma, the compiler may merge a state with preceding or succeeding states.\n"
+    "\n"
+    "P4 example:\n"
+    "\n"
+    "@dontmerge (\"ingress\")\n"
+    "state parse_h5_pre {\n"
+    "    transition parse_h5;\n"
+    "}\n";
 
 const char *PragmaNotExtractedInEgress::name = "not_extracted_in_egress";
 const char *PragmaNotExtractedInEgress::description = "Removes extracts of the annotated header "

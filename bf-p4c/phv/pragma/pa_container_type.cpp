@@ -29,7 +29,22 @@ boost::optional<PHV::Kind> str_to_kind(cstring str) {
 const char *PragmaContainerType::name = "pa_container_type";
 const char *PragmaContainerType::description =
     "Forces the allocation of a field in the specified container type.";
-const char *PragmaContainerType::help = "??";  // FIXME
+const char* PragmaContainerType::help =
+    "@pragma pa_container_type gress field field_type\n"
+    "+ attached to P4 header instances\n"
+    "\n"
+    "Valid field_type values are:\n"
+    " - normal\n"
+    " - mocha\n"
+    " - dark\n"
+    " - tagalong\n"
+    "\n"
+    "P4 example:\n"
+    "\n"
+    "@pa_container_type(\"ingress\", \"hdr.data.f1\", \"normal\")\n"
+    "\n"
+    "This specifies that the field hdr.data.f1 in the ingress pipe should be placed "
+    "in a normal container.";
 
 bool PragmaContainerType::add_constraint(const IR::BFN::Pipe* pipe, const IR::Expression* expr,
                                          cstring field_name, PHV::Kind kind) {
