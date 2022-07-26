@@ -203,8 +203,10 @@ template<> void Deparser::write_config(Target::Flatrock::deparser_regs &regs) {
 
     // Header ID compression RAM should always program each entry with its index
     // FIXME: only program as many entries as we have in the TCAM
-    auto &hdr_id_ram = regs.mdp.hdr_id_compr_ram;
-    for (int i = 0; i < Target::Flatrock::MDP_HDR_ID_COMP_ROWS; i++) hdr_id_ram.compr_hdr_id[i] = i;
+    // FIXME: this register is now gone?
+    // auto &hdr_id_ram = regs.mdp.hdr_id_compr_ram;
+    // for (int i = 0; i < Target::Flatrock::MDP_HDR_ID_COMP_ROWS; i++)
+    //    hdr_id_ram.compr_hdr_id[i] = i;
 
     // Header len compression
     // TODO: regs.mdp.hdr_len_comr_tab (asked to rename to hdr_len_compr_tab)
