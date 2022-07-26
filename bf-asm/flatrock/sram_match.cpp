@@ -55,6 +55,36 @@ void SRamMatchTable::verify_format(Target::Flatrock) {
     }
 }
 
+void SRamMatchTable::verify_format_pass2(Target::Flatrock) {
+    if (Format::Field *match = format->field("match")) {
+        int stride = (1 << format->log2size)/format->groups();
+        bool err = false;
+        for (int i = 0; i < format->groups(); ++i) {
+            // FIXME -- the below double-loop is cribbed from SRamMatchTable::verify_match;
+            // there should be a better/cleaner interface for mapping between the match
+            // key and things in the ixbar
+            unsigned bit = 0;
+            for (auto &piece : match->by_group[i]->bits) {
+                auto mw = --match_by_bit.upper_bound(bit);
+                int lo = bit - mw->first;
+                while (!err && mw != match_by_bit.end() && mw->first < bit + piece.size()) {
+                    for (auto &ixb : input_xbar) {
+                        int offset = ixb->find_match_offset(mw->second);
+                        if (offset < 0) continue;  // error?  not fond on ixbar
+                        if (offset + i*stride != piece.lo + mw->first - bit) {
+                            error(match->fmt->lineno, "match entries don't match "
+                                  "input_xbar ordering");
+                            err = true;
+                            break; } }
+                    lo = 0;
+                    ++mw;
+                }
+                bit += piece.size();
+                if (err) break; }
+            if (err) break; }
+    }
+}
+
 template<> void SRamMatchTable::write_attached_merge_regs(Target::Flatrock::mau_regs &regs,
             int bus, int word, int word_group) {
     error(lineno, "%s:%d: Flatrock sram match not implemented yet!", __FILE__, __LINE__);

@@ -1112,8 +1112,10 @@ DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam,
     Format::Field *lookup_field(const std::string &n, const std::string &act = "") const override;
     virtual void setup_word_ixbar_group();
     virtual void verify_format(Target::Tofino);
+    virtual void verify_format_pass2(Target::Tofino);
 #if HAVE_FLATROCK
     virtual void verify_format(Target::Flatrock);
+    virtual void verify_format_pass2(Target::Flatrock);
 #endif
     virtual bool verify_match_key();
     void verify_match(unsigned fmt_width);

@@ -250,6 +250,8 @@ void ExactMatchTable::pass2() {
     }
     for (auto &hd : hash_dist)
         hd.pass2(this);
+    if (format)
+        SWITCH_FOREACH_TARGET_CLASS(options.target, verify_format_pass2(TARGET()); )
 }
 
 void ExactMatchTable::pass3() {

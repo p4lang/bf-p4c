@@ -271,6 +271,8 @@ void SRamMatchTable::verify_format(Target::Tofino) {
     verify_match(fmt_width);
 }
 
+void SRamMatchTable::verify_format_pass2(Target::Tofino) { }
+
 /**
  * Guarantees that each match field is a PHV field, which is the standard unless the table is
  * a proxy hash table.

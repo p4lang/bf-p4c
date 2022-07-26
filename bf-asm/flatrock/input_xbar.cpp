@@ -132,6 +132,33 @@ void Flatrock::InputXbar::pass2() {
         first32 = num32 = 0; }
 }
 
+int Flatrock::InputXbar::find_match_offset(const MatchSource *ms) const {
+    if (auto *phv = dynamic_cast<const Phv::Ref *>(ms)) {
+        Group group(Group::EXACT, -1);
+        auto sl = **phv;
+        if (auto *in = find(sl, group, &group)) {
+            int offset = in->lo + sl.lo - in->what->lo;
+            switch (group.index) {
+            case 0:  // byte ixbar
+                offset += num32 * 32;
+                offset -= first8 * 8;
+                break;
+            case 1:  // word ixbar
+                offset -= first32 * 32;
+                break;
+            default:
+                BUG("invalid exact group %d", group.index); }
+            BUG_CHECK(offset >= 0, "computed invalid offset in InputXbar::find_match_offset");
+            return offset; }
+    } else if (auto *hash = dynamic_cast<const HashMatchSource *>(ms)) {
+        error(lineno, "HashMatchSource not supported on flatrock");
+        // up to 24 hash bits are included starting at num32*32 + num8*8, so we can support it
+    } else {
+        BUG();
+    }
+    return -1;
+}
+
 /* DANGER -- messy problem -- the dynhash code in bfnutils assumes a Tofino1 style
  * hash matrix of 16*64*52 bits, which is stored in matrix[16][52] with 64 bits in
  * each element.  We only care about column 0 (since we always map stuff there), but

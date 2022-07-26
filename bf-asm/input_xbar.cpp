@@ -606,16 +606,16 @@ void InputXbar::add_use(unsigned &byte_use, std::vector<Input> &inputs) {
     }
 }
 
-InputXbar::Input *InputXbar::GroupSet::find(Phv::Slice sl) const {
+const InputXbar::Input *InputXbar::GroupSet::find(Phv::Slice sl) const {
     for (InputXbar *i : use)
         if (auto rv = i->find(sl, group))
             return rv;
     return 0;
 }
 
-std::vector<InputXbar::Input *> InputXbar::GroupSet::find_all(Phv::Slice sl) const {
-    std::vector<Input *> rv;
-    for (InputXbar *i : use) {
+std::vector<const InputXbar::Input *> InputXbar::GroupSet::find_all(Phv::Slice sl) const {
+    std::vector<const Input *> rv;
+    for (const InputXbar *i : use) {
          auto vec = i->find_all(sl, group);
          rv.insert(rv.end(), vec.begin(), vec.end());
     }
@@ -624,8 +624,8 @@ std::vector<InputXbar::Input *> InputXbar::GroupSet::find_all(Phv::Slice sl) con
 
 
 void InputXbar::GroupSet::dbprint(std::ostream &out) const {
-    std::map<unsigned, InputXbar::Input *> byte_use;
-    for (InputXbar *ixbar : use) {
+    std::map<unsigned, const InputXbar::Input *> byte_use;
+    for (const InputXbar *ixbar : use) {
         if (ixbar->groups.count(group)) {
             for (auto &i : ixbar->groups.at(group)) {
                 if (i.lo < 0) continue;
@@ -633,8 +633,8 @@ void InputXbar::GroupSet::dbprint(std::ostream &out) const {
                     byte_use[byte] = &i;
             }
         }
-}
-    InputXbar::Input *prev = 0;
+    }
+    const InputXbar::Input *prev = 0;
     for (auto &in : byte_use) {
         if (prev == in.second) continue;
         if (prev) out << ", ";
@@ -865,8 +865,8 @@ void InputXbar::write_xmu_regs(REGS &regs) {
     BUG("no XMU regs for %s", Target::name()); }
 FOR_ALL_REGISTER_SETS(INSTANTIATE_TARGET_TEMPLATE, void InputXbar::write_xmu_regs, mau_regs &)
 
-InputXbar::Input *InputXbar::find(Phv::Slice sl, Group grp, Group *found) {
-    InputXbar::Input *rv = nullptr;
+const InputXbar::Input *InputXbar::find(Phv::Slice sl, Group grp, Group *found) const {
+    const InputXbar::Input *rv = nullptr;
     if (groups.count(grp)) {
         for (auto &in : groups.at(grp)) {
             if (in.lo < 0) continue;
@@ -889,8 +889,12 @@ InputXbar::Input *InputXbar::find(Phv::Slice sl, Group grp, Group *found) {
     return rv;
 }
 
-std::vector<InputXbar::Input *> InputXbar::find_all(Phv::Slice sl, Group grp) {
-    std::vector<InputXbar::Input *> rv;
+int InputXbar::find_match_offset(const MatchSource *) const {
+    BUG("find_match_offset should not be needed on %s", Target::name());
+}
+
+std::vector<const InputXbar::Input *> InputXbar::find_all(Phv::Slice sl, Group grp) const {
+    std::vector<const InputXbar::Input *> rv;
     if (groups.count(grp)) {
         for (auto &in : groups.at(grp)) {
             if (in.lo < 0) continue;
@@ -913,7 +917,8 @@ std::vector<InputXbar::Input *> InputXbar::find_all(Phv::Slice sl, Group grp) {
  * @param sl            the PHV container slice we're interested in
  * @param hash_table    which hash table we want the input for (-1 for all hash tables)
  */
-std::vector<InputXbar::Input *> InputXbar::find_hash_inputs(Phv::Slice sl, int hash_table) {
+std::vector<const InputXbar::Input *>
+InputXbar::find_hash_inputs(Phv::Slice sl, int hash_table) const {
     /* code for tofino1/2/3 -- all hash tables take input from exact ixbar groups, with
      * two hash tables per group (even in lower bits and odd in upper bits) */
     auto rv = find_all(sl, Group(Group::EXACT, hash_table >= 0 ? hash_table/2 : -1));

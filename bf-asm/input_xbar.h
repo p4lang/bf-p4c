@@ -111,8 +111,8 @@ class InputXbar {
         GroupSet(const std::vector<InputXbar *> &u, Group g) : group(g), use(u) {}
         GroupSet(ordered_map<Group, std::vector<InputXbar *>> &u, Group g) : group(g), use(u[g]) {}
         void dbprint(std::ostream &) const;
-        Input *find(Phv::Slice sl) const;
-        std::vector<Input *> find_all(Phv::Slice sl) const;
+        const Input *find(Phv::Slice sl) const;
+        std::vector<const Input *> find_all(Phv::Slice sl) const;
     };
 
     InputXbar() = delete;
@@ -240,11 +240,13 @@ class InputXbar {
     all_iter begin() const { return all_iter(groups.begin(), groups.end()); }
     all_iter end() const { return all_iter(groups.end(), groups.end()); }
 
-    Input *find(Phv::Slice sl, Group grp, Group *found = nullptr);
-    Input *find_exact(Phv::Slice sl, int group) { return find(sl, Group(Group::EXACT, group)); }
+    const Input *find(Phv::Slice sl, Group grp, Group *found = nullptr) const;
+    const Input *find_exact(Phv::Slice sl, int group) const {
+        return find(sl, Group(Group::EXACT, group)); }
+    virtual int find_match_offset(const MatchSource *) const;
 
-    std::vector<Input *> find_all(Phv::Slice sl, Group grp);
-    virtual std::vector<Input *> find_hash_inputs(Phv::Slice sl, int hash_table);
+    std::vector<const Input *> find_all(Phv::Slice sl, Group grp) const;
+    virtual std::vector<const Input *> find_hash_inputs(Phv::Slice sl, int hash_table) const;
     virtual int global_bit_position_adjust(int hash_table) const {
         return (hash_table / 2) * 128; }
     virtual bitvec global_column0_extract(int hash_table,

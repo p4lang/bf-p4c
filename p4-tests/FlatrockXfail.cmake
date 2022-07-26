@@ -14,16 +14,20 @@ set (FLATROCK_XFAIL_TESTS
   )
 
 p4c_add_xfail_reason("tofino5"
-  "WARNING:.*binary.*does not match model version|unexpected packet output on port 0"
-  extensions/p4_tests/p4_16/flatrock/exact0.p4
+  "WARNING:.*binary.*does not match model version|packet output on port 3"
+  extensions/p4_tests/p4_16/flatrock/direct0.p4
   )
 
 p4c_add_xfail_reason("tofino5"
   #"WARNING:.*binary.*does not match model version|unexpected packet output on port 0"
-  "ftr_test_harness FAILED"
-  extensions/p4_tests/p4_16/flatrock/direct0.p4
-  extensions/p4_tests/p4_16/flatrock/direct1.p4
+  "error: match entries don't match input_xbar ordering"
+  extensions/p4_tests/p4_16/flatrock/exact0.p4
   extensions/p4_tests/p4_16/flatrock/exact1.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "WARNING:.*binary.*does not match model version|unexpected packet output on port 0"
+  extensions/p4_tests/p4_16/flatrock/direct1.p4
   )
 
 # model fails -- probably many other problems besides this message
@@ -33,12 +37,14 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
-  "WARNING:.*binary.*does not match model version|mismatch from expected"
+  #"WARNING:.*binary.*does not match model version|mismatch from expected"
+  "error: match entries don't match input_xbar ordering"
   extensions/p4_tests/p4_16/flatrock/gateway1.p4
   )
 
 p4c_add_xfail_reason("tofino5"
-  "WARNING:.*binary.*does not match model version|mismatch from expected"
+  #"WARNING:.*binary.*does not match model version|mismatch from expected"
+  "error: match entries don't match input_xbar ordering"
   extensions/p4_tests/p4_16/flatrock/gateway2.p4
   )
 
