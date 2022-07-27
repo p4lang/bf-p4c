@@ -29,7 +29,7 @@ KLOCWORK:
   KWCIAGENT_DIRECTORY: "/KDA/kwciagent"                                                                              #[Required] Root directory for Klocwork binaries at runner machine
   SCAN_ONLY_CHANGED_FILES: True                                                                                  #[True|False] Flag to scan whole repository or only the files that have been changed
   KLOCWORK_LTOKEN: "/root/.klocwork/ltoken"                                                                     #[Optional] Path to Klocwork ltoken that will be used to authenticate to the Klocwork server
-  KWCIAGENT_JOBS_NUMBER: 8
+  KWCIAGENT_JOBS_NUMBER: 4
 
 MISC:
   ROOT_WORKDIR: "/KDA/workspace"                                                                          #[Required] Name of the directory for temporary Klocwork files
