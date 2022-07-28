@@ -301,7 +301,7 @@ macro(p4c_add_bf_backend_tests device toolsdevice arch label tests)
     file (GLOB __testfiles RELATIVE ${P4C_SOURCE_DIR} ${ts})
     foreach (__p4file ${__testfiles})
       bfn_add_test_with_args(${device} ${toolsdevice} ${__p4file} ${__p4file}
-          "-arch ${arch} ${_testExtraArgs}" "")
+          "-target ${device} -arch ${arch} ${_testExtraArgs}" "")
       p4c_add_test_label(${device} ${label} ${__p4file})
     endforeach() # __p4file
   endforeach()
