@@ -390,10 +390,12 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
         }
         break;
     case param_t::OUTPUT:       /* out rv; */
-        if (islvalue(etype))
+        if (islvalue(etype)) {
+            captureAssigstateProps();
             etype = OUTPUT;
-        else
+        } else {
             error("Reading out param %s in %s not supported", pe, action_type_name);
+        }
         if (output_index > Device::statefulAluSpec().OutputWords)
             error("Only %d stateful output%s supported", Device::statefulAluSpec().OutputWords,
                   Device::statefulAluSpec().OutputWords > 1 ? "s" : "");
@@ -625,9 +627,8 @@ void CreateSaluInstruction::captureAssigstateProps() {
     auto assig = findContext<IR::AssignmentStatement>(assignCtxt);
     // Check if the expression is not in an assignment or not the first (left) child
     // of the assignment
-    if (!assig || assignCtxt->child_index != 0)   {
-        BUG("Expression is not the left child of the assignment.");
-    }
+    if (!assig || assignCtxt->child_index != 0)
+        return;
 
     // Backup statement & predicate for the checkWriteAfterWrite method
     assig_st = assig;
@@ -641,6 +642,8 @@ void CreateSaluInstruction::checkWriteAfterWrite() {
     // here. The code here needs to check all predicates for given assignment
     // statement. The report will be reported if and only if both expressions
     // can be fired in the same time --> can lead to a data corruption
+    // If there are more operations with same variable, there are aggregated with OR.
+
     if (!assig_st) return;
 
     // Check if we already have some data for the destination
@@ -648,9 +651,17 @@ void CreateSaluInstruction::checkWriteAfterWrite() {
     LOG4("Searching for the lvalue: " << lvalue_name);
     auto elem = written_dest.find(lvalue_name);
     if (elem == written_dest.end()) {
-        LOG4("lvalue doesn't find, storing for the next analysis: name=" << lvalue_name <<
-            ", pred=" << assig_pred);
-        written_dest[lvalue_name].emplace_back(assig_pred, assig_st->srcInfo);
+        bool zero_assigned = assig_st->right->is<IR::Constant>() &&
+                             assig_st->right->to<IR::Constant>()->asUint64() == 0;
+        bool false_assigned = assig_st->right->is<IR::BoolLiteral>() &&
+                             assig_st->right->to<IR::BoolLiteral>()->value == false;
+        bool uncond_zero_or_false = !assig_pred && (zero_assigned || false_assigned);
+        // Ignore initial zero/false assignments like rv = 0; 0 | X is still X.
+        if (!uncond_zero_or_false) {
+            LOG4("lvalue doesn't find, storing for the next analysis: name="
+                 << lvalue_name << ", pred=" << assig_pred);
+            written_dest[lvalue_name].emplace_back(assig_pred, assig_st->srcInfo);
+        }
         assig_st = nullptr;
         assig_pred = nullptr;
         return;
