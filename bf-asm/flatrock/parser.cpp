@@ -1486,10 +1486,19 @@ void FlatrockParser::Profile::input_metadata_select(VECTOR(value_t) args, value_
 
 void FlatrockParser::Profile::input(VECTOR(value_t) args, value_t data) {
     if (!CHECKTYPE(data, tMAP)) return;
+
+    /* -- Require match attributes to be present in the ASM file. The default values that the
+     * compiler sets for them is "match everything" already, so them not being present in the ASM
+     * file is most likely a bug. */
+    auto match_port_present = false;
+    auto match_inband_metadata_present = false;
+
     for (auto &kv : MapIterChecked(data.map, false)) {
         if (kv.key == "match_port") {
+            match_port_present = true;
             input_match(args, kv.key, kv.value);
         } else if (kv.key == "match_inband_metadata") {
+            match_inband_metadata_present = true;
             input_match(args, kv.key, kv.value);
         } else if (kv.key == "initial_pktlen") {
             check_range(kv.value, 0, Target::Flatrock::PARSER_PROFILE_PKTLEN_MAX);
@@ -1537,6 +1546,13 @@ void FlatrockParser::Profile::input(VECTOR(value_t) args, value_t data) {
         } else {
             report_invalid_directive("invalid key", kv.key);
         }
+    }
+
+    if (!match_port_present) {
+        error(data.lineno, "mandatory profile's match_port attribute is missing");
+    }
+    if (!match_inband_metadata_present) {
+        error(data.lineno, "mandatory profile's match_inband_metadata attribute is missing");
     }
 }
 
@@ -1695,13 +1711,6 @@ void FlatrockParser::AnalyzerStage::input_rule(VECTOR(value_t) args, value_t key
     const int rule_index(key[1].i);
     auto &rule(rules[rule_index]);
 
-    /* -- If the rule is specified in the ASM file, the default matching values are
-     *    "match everything". That's different than default rule "match nothing" if
-     *    the rule is not written in the file. */
-    std::memset(&rule.match.state, 0xff, sizeof(rule.match.state));
-    std::memset(&rule.match.w0, 0xff, sizeof(rule.match.w0));
-    std::memset(&rule.match.w1, 0xff, sizeof(rule.match.w1));
-
     /* -- if the analyzer stage is attached to a state, use the state */
     if (name) {
         if (!parser->get_state_match(rule.match.state, *name))
@@ -1710,10 +1719,19 @@ void FlatrockParser::AnalyzerStage::input_rule(VECTOR(value_t) args, value_t key
 
     if (!CHECKTYPE(data, tMAP))
         return;
+
+    /* -- Require match attributes to be present in the ASM file. The default values that the
+     * compiler sets for them is "match everything" already, so them not being present in the ASM
+     * file is most likely a bug. */
+    auto match_w0_present = false;
+    auto match_w1_present = false;
+    auto match_state_present = name.is_initialized();  // not needed in named stages
+
     for (auto &kv : MapIterChecked(data.map, true)) {
         if (!CHECKTYPE2(kv.key, tSTR, tCMD))
             continue;
         if (kv.key == "match_state") {
+            match_state_present = true;
             if (name) {
                 error(kv.key.lineno,
                       "named analyzer stage must not contain any rule with the match_state "
@@ -1728,9 +1746,11 @@ void FlatrockParser::AnalyzerStage::input_rule(VECTOR(value_t) args, value_t key
                     rule.match.state, kv.value, Target::Flatrock::PARSER_STATE_MATCH_WIDTH * 8);
             }
         } else if (kv.key == "match_w0") {
+            match_w0_present = true;
             input_match_constant(
                 rule.match.w0, kv.value, Target::Flatrock::PARSER_W_WIDTH * 8);
         } else if (kv.key == "match_w1") {
+            match_w1_present = true;
             input_match_constant(
                 rule.match.w1, kv.value, Target::Flatrock::PARSER_W_WIDTH * 8);
         } else if (kv.key == "next_state") {
@@ -1771,6 +1791,17 @@ void FlatrockParser::AnalyzerStage::input_rule(VECTOR(value_t) args, value_t key
     }
     if (rule.next_alu1_instruction.is_invalid()) {
         error(key.lineno, "mandatory rule's next_alu1_instruction field is missing");
+    }
+
+    if (!match_w0_present) {
+        error(key.lineno, "mandatory rule's match_w0 field is missing");
+    }
+    if (!match_w1_present) {
+        error(key.lineno, "mandatory rule's match_w1 field is missing");
+    }
+    if (!match_state_present) {
+        error(key.lineno,
+              "mandatory rule's match_state field is missing, as it's inside an unnamed stage");
     }
 }
 

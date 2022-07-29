@@ -260,13 +260,16 @@ version:
 parser ingress:
   analyzer_stage 0:
     rule 0:
+      match_w0: 0x****
+      match_w1: 0x****
+      match_state: 0x****************
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 78}
       next_alu1_instruction: {opcode: 1, lsb: 16, msb: 23, shift: 4}
 )PARSER_CFG"));
 
         const auto &regs(asm_parser.generateConfig());
 
-        /* -- by default the rule matches everything */
+        /* -- match attributes must be set */
         EXPECT_REGISTER(regs.prsr_mem.parser_key_s.key_s[0][0].key_wh_0, "32xffffffff");
         EXPECT_REGISTER(regs.prsr_mem.parser_key_s.key_s[0][0].key_wl_0, "32xffffffff");
         EXPECT_REGISTER(regs.prsr_mem.parser_key_s.key_s[0][0].key_wh_1, "32xffffffff");
@@ -591,9 +594,11 @@ parser ingress:
   analyzer_stage 1 ethernet_hdr:
     rule 1:
       match_w0: 0xfedc
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
     rule 2:
+      match_w0: 0x****
       match_w1: 0x***4
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
@@ -601,9 +606,12 @@ parser ingress:
     rule 0:
       match_state: ipv4_hdr
       match_w0: 0x1234
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
     rule 2:
+      match_state: 0x****************
+      match_w0: 0x****
       match_w1: 0x5678
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
@@ -876,6 +884,9 @@ version:
 parser ingress:
   analyzer_stage:
     rule 0:
+      match_state: 0x****************
+      match_w0: 0x****
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
 )PARSER_CFG"));
@@ -890,6 +901,9 @@ version:
 parser ingress:
   analyzer_stage 0 foo 10:
     rule 0:
+      match_state: 0x****************
+      match_w0: 0x****
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
 )PARSER_CFG"));
@@ -907,6 +921,9 @@ parser ingress:
         oss << Target::Flatrock::PARSER_ANALYZER_STAGES;
         oss << R"PARSER_CFG(:
     rule 0:
+      match_state: 0x****************
+      match_w0: 0x****
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
 )PARSER_CFG";
@@ -934,6 +951,9 @@ version:
 parser ingress:
   analyzer_stage 0:
     rule:
+      match_state: 0x****************
+      match_w0: 0x****
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
 )PARSER_CFG"));
@@ -948,6 +968,9 @@ version:
 parser ingress:
   analyzer_stage 0:
     rule 0 foo:
+      match_state: 0x****************
+      match_w0: 0x****
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
 )PARSER_CFG"));
@@ -963,6 +986,9 @@ parser ingress:
   analyzer_stage 0:
     rule 0:
       invalid_attribute: foo
+      match_state: 0x****************
+      match_w0: 0x****
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
 )PARSER_CFG"));
@@ -979,6 +1005,8 @@ parser ingress:
     ethernet_hdr: 0xff******_******01
   analyzer_stage 0 wrong_state_name:
     rule 0:
+      match_w0: 0x****
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
 )PARSER_CFG"));
@@ -996,6 +1024,8 @@ parser ingress:
   analyzer_stage 0:
     rule 0:
       match_state: another_wrong_state_name
+      match_w0: 0x****
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
 )PARSER_CFG"));
@@ -1013,6 +1043,9 @@ hdr:
 parser ingress:
   analyzer_stage 0:
     rule 0:
+      match_state: 0x****************
+      match_w0: 0x****
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
       push_hdr_id: {hdr: wrong_header_name, offset: 0x10}
@@ -1032,6 +1065,9 @@ parser ingress:
   analyzer_stage 0:
     rule 0:
       next_w0_offset: -1
+      match_state: 0x****************
+      match_w0: 0x****
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
 )PARSER_CFG"));
@@ -1050,6 +1086,9 @@ parser ingress:
   analyzer_stage 0:
     rule 0:
       next_w0_offset: 256
+      match_state: 0x****************
+      match_w0: 0x****
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
 )PARSER_CFG"));
@@ -1068,6 +1107,9 @@ parser ingress:
   analyzer_stage 0:
     rule 0:
       next_w1_offset: -1
+      match_state: 0x****************
+      match_w0: 0x****
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
 )PARSER_CFG"));
@@ -1086,6 +1128,9 @@ parser ingress:
   analyzer_stage 0:
     rule 0:
       next_w1_offset: 256
+      match_state: 0x****************
+      match_w0: 0x****
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
 )PARSER_CFG"));
@@ -1104,6 +1149,9 @@ parser ingress:
   analyzer_stage 0:
     rule 0:
       next_w2_offset: -1
+      match_state: 0x****************
+      match_w0: 0x****
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
 )PARSER_CFG"));
@@ -1122,6 +1170,9 @@ parser ingress:
   analyzer_stage 0:
     rule 0:
       next_w2_offset: 256
+      match_state: 0x****************
+      match_w0: 0x****
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
 )PARSER_CFG"));
@@ -1137,6 +1188,8 @@ parser ingress:
   analyzer_stage 0:
     rule 0:
       match_state: -1
+      match_w0: 0x****
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
 )PARSER_CFG"));
@@ -1152,6 +1205,8 @@ parser ingress:
   analyzer_stage 0:
     rule 0:
       match_state: 0x1_00000000_00000000
+      match_w0: 0x****
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
 )PARSER_CFG"));
@@ -1167,6 +1222,8 @@ parser ingress:
   analyzer_stage 0:
     rule 0:
       match_state: 0x*_********_********
+      match_w0: 0x****
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
 )PARSER_CFG"));
@@ -1182,6 +1239,8 @@ parser ingress:
   analyzer_stage 0:
     rule 0:
       match_w0: -1
+      match_state: 0x****************
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
 )PARSER_CFG"));
@@ -1197,6 +1256,8 @@ parser ingress:
   analyzer_stage 0:
     rule 0:
       match_w0: 0x10000
+      match_state: 0x****************
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
 )PARSER_CFG"));
@@ -1212,6 +1273,8 @@ parser ingress:
   analyzer_stage 0:
     rule 0:
       match_w0: 0x*****
+      match_state: 0x****************
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
 )PARSER_CFG"));
@@ -1227,6 +1290,8 @@ parser ingress:
   analyzer_stage 0:
     rule 0:
       match_w1: -1
+      match_state: 0x****************
+      match_w0: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
 )PARSER_CFG"));
@@ -1242,6 +1307,8 @@ parser ingress:
   analyzer_stage 0:
     rule 0:
       match_w1: 0x10000
+      match_state: 0x****************
+      match_w0: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
 )PARSER_CFG"));
@@ -1257,6 +1324,8 @@ parser ingress:
   analyzer_stage 0:
     rule 0:
       match_w1: 0x*****
+      match_state: 0x****************
+      match_w0: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
 )PARSER_CFG"));
@@ -1271,6 +1340,9 @@ version:
 parser ingress:
   analyzer_stage 0:
     rule 0:
+      match_state: 0x****************
+      match_w0: 0x****
+      match_w1: 0x****
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
 )PARSER_CFG"));
     }
@@ -1284,6 +1356,9 @@ version:
 parser ingress:
   analyzer_stage 0:
     rule 0:
+      match_state: 0x****************
+      match_w0: 0x****
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
 )PARSER_CFG"));
     }
@@ -1297,6 +1372,9 @@ version:
 parser ingress:
   analyzer_stage 0:
     rule 0:
+      match_state: 0x****************
+      match_w0: 0x****
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
       push_hdr_id: {hdr: -1, offset: 0}
@@ -1312,6 +1390,9 @@ version:
 parser ingress:
   analyzer_stage 0:
     rule 0:
+      match_state: 0x****************
+      match_w0: 0x****
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
       push_hdr_id: {hdr: 0x100, offset: 0}
@@ -1327,6 +1408,9 @@ version:
 parser ingress:
   analyzer_stage 0:
     rule 0:
+      match_state: 0x****************
+      match_w0: 0x****
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
       push_hdr_id: {hdr: 0x1, offset: -1}
@@ -1342,6 +1426,9 @@ version:
 parser ingress:
   analyzer_stage 0:
     rule 0:
+      match_state: 0x****************
+      match_w0: 0x****
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
       push_hdr_id: {hdr: 0x1, offset: 256}
@@ -1358,6 +1445,9 @@ parser ingress:
   analyzer_stage 0:
     rule 0:
       next_state: -1
+      match_state: 0x****************
+      match_w0: 0x****
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
 )PARSER_CFG"));
@@ -1373,6 +1463,9 @@ parser ingress:
   analyzer_stage 0:
     rule 0:
       next_state: 0x1_0000_00000000_00000000
+      match_state: 0x****************
+      match_w0: 0x****
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
 )PARSER_CFG"));
@@ -1388,6 +1481,9 @@ parser ingress:
   analyzer_stage 0:
     rule 0:
       next_state: {lo: 0x********_********, hi: 0x*****}
+      match_state: 0x****************
+      match_w0: 0x****
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
 )PARSER_CFG"));
@@ -1403,6 +1499,57 @@ parser ingress:
   analyzer_stage 0:
     rule 0:
       next_skip_extractions: 1
+      match_state: 0x****************
+      match_w0: 0x****
+      match_w1: 0x****
+      next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
+      next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- missing match_w0 */
+        AsmParserGuard asm_parser;
+        ASSERT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  analyzer_stage 0:
+    rule 0:
+      match_w1: 0x****
+      match_state: 0x**************00
+      next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
+      next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- missing match_w1 */
+        AsmParserGuard asm_parser;
+        ASSERT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  analyzer_stage 0:
+    rule 0:
+      match_w0: 0x****
+      match_state: 0x**************00
+      next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
+      next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- missing match_state */
+        AsmParserGuard asm_parser;
+        ASSERT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  analyzer_stage 0:
+    rule 0:
+      match_w0: 0x****
+      match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
 )PARSER_CFG"));
@@ -4605,6 +4752,31 @@ parser ingress:
   }
 }
 
+TEST(flatrock_parser, section_profile_errors) {
+    {
+        /* -- missing match_port */
+        AsmParserGuard asm_parser;
+        ASSERT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  profile 0:
+    match_inband_metadata: 0x****************
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- missing match_inband_metadata */
+        AsmParserGuard asm_parser;
+        ASSERT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  profile 0:
+    match_port: 0o**
+)PARSER_CFG"));
+    }
+}
 
 }  // namespace
 
