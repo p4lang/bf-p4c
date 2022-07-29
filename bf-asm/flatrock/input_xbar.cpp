@@ -359,16 +359,16 @@ template<> void InputXbar::write_regs(Target::Flatrock::mau_regs &regs) { write_
 
 void Flatrock::InputXbar::write_xmu_key_mux(Target::Flatrock::mau_regs::_ppu_eml &xmu) {
     for (int d : dconfig) {
-        xmu.eml_key_cfg[d].first8 = first8;
-        xmu.eml_key_cfg[d].num8 = num8; }
+        xmu.rf.eml_key_cfg[d].first8 = first8;
+        xmu.rf.eml_key_cfg[d].num8 = num8; }
 }
 
 void Flatrock::InputXbar::write_xmu_key_mux(Target::Flatrock::mau_regs::_ppu_ems &xmu) {
     for (int d : dconfig) {
-        xmu.ems_key_cfg[d].first8 = first8;
-        xmu.ems_key_cfg[d].num8 = num8;
-        xmu.ems_key_cfg[d].first32 = first32;
-        xmu.ems_key_cfg[d].num32 = num32; }
+        xmu.rf.ems_key_cfg[d].first8 = first8;
+        xmu.rf.ems_key_cfg[d].num8 = num8;
+        xmu.rf.ems_key_cfg[d].first32 = first32;
+        xmu.rf.ems_key_cfg[d].num32 = num32; }
 }
 
 void Flatrock::InputXbar::write_xme_regs(Target::Flatrock::mau_regs::_ppu_eml &xmu, int xme) {
@@ -414,16 +414,16 @@ void Flatrock::InputXbar::write_xme_regs(Target::Flatrock::mau_regs::_ppu_eml &x
     int addr_size = bank_bits + 6 + subword_bits;  // 6 is the whole lamb, but we could use less?
     int hash_base = way->index;
     for (int d : dconfig) {
-        auto &addr = xmu.eml_addr_cfg[xme%2U][d];
+        auto &addr = xmu.rf.eml_addr_cfg[xme%2U][d];
         addr.banknum = idx;
         addr.banknum_size = bank_bits;
         addr.banknum_start = hash_base + addr_size - bank_bits;
         addr.base_addr = 0;   // does not seem useful?
         addr.idx_size = 6;
         addr.idx_start = hash_base + subword_bits;
-        xmu.eml_en_sel[xme%2U][d].en = 1;
-        xmu.eml_lamb_map[xme%2U][d].sel = output_unit;
-        auto &match = xmu.eml_match_cfg[xme%2U][d];
+        xmu.rf.eml_en_sel[xme%2U][d].en = 1;
+        xmu.rf.eml_lamb_map[xme%2U][d].sel = output_unit;
+        auto &match = xmu.rf.eml_match_cfg[xme%2U][d];
         match.bph_l1_en = 0;  // FIXME -- support BPH
         match.entries_per_set = set_size;
         for (int i = 0; i < 16; ++i)
@@ -431,7 +431,7 @@ void Flatrock::InputXbar::write_xme_regs(Target::Flatrock::mau_regs::_ppu_eml &x
         match.key_size = key_size;
         match.sets_per_word = subword_bits;
         match.valid_en = valid_en;
-        auto &payload = xmu.eml_payload_cfg[xme%2U][d];
+        auto &payload = xmu.rf.eml_payload_cfg[xme%2U][d];
         payload.action_size = (MEM_WORD_WIDTH >> subword_bits)/set_size - key_size;
         payload.addon = 0;      // not clear what it is used for?
         payload.base_mask = 0;  // pass ram data (can pass key bytes, useful for?)
