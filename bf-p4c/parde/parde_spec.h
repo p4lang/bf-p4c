@@ -221,6 +221,12 @@ class PardeSpec {
 
     /// Max line rate per-port (Gbps)
     virtual unsigned lineRate() const = 0;
+
+    /// Metadata packer valid vector fields - as vector (Flatrock)
+    virtual const std::vector<std::string>& mdpValidVecFields() const = 0;
+
+    /// Metadata packer valid vector fields - as set (Flatrock)
+    virtual const std::unordered_set<std::string>& mdpValidVecFieldsSet() const = 0;
 };
 
 class TofinoPardeSpec : public PardeSpec {
@@ -278,6 +284,16 @@ class TofinoPardeSpec : public PardeSpec {
 
     double clkFreq() const override { return 1.22; }
     unsigned lineRate() const override { return 100; }
+
+    const std::vector<std::string>& mdpValidVecFields() const override {
+        static std::vector<std::string> vldVecFields;
+        return vldVecFields;
+    }
+
+    const std::unordered_set<std::string>& mdpValidVecFieldsSet() const override {
+        static std::unordered_set<std::string> vldVecSet;
+        return vldVecSet;
+    }
 };
 
 class JBayPardeSpec : public PardeSpec {
@@ -342,6 +358,16 @@ class JBayPardeSpec : public PardeSpec {
     // FIXME: adjust to true clock rate
     double clkFreq() const override { return 1.35; }
     unsigned lineRate() const override { return 400; }
+
+    const std::vector<std::string>& mdpValidVecFields() const override {
+        static std::vector<std::string> vldVecFields;
+        return vldVecFields;
+    }
+
+    const std::unordered_set<std::string>& mdpValidVecFieldsSet() const override {
+        static std::unordered_set<std::string> vldVecSet;
+        return vldVecSet;
+    }
 };
 
 class JBayA0PardeSpec : public JBayPardeSpec {
@@ -359,6 +385,34 @@ class CloudbreakPardeSpec : public JBayPardeSpec {
 #if HAVE_FLATROCK
 class FlatrockPardeSpec : public TofinoPardeSpec {
  public:
+    const std::vector<std::string>& mdpValidVecFields() const override {
+        static std::vector<std::string> vldVecFields = {
+            "icrc_enable",
+            "drop",
+            "pgen_trig_vld",
+            "iafc_vld",
+            "lq_vld",
+            "pkt_expan_idx_vld",
+            "ucast_egress_port.$valid",
+            "mcast_grp_b.$valid",
+            "mcast_grp_a.$valid",
+            "mirror_bitmap.$valid",     // FIXME: should this be mirror_cos?
+            "copy_to_cpu",
+            "perfect_hash_table_id",
+            "enable_mcast_cutthru",
+            "disable_ucast_cutthru",
+            "deflect_on_drop",
+        };
+        return vldVecFields;
+    }
+
+    const std::unordered_set<std::string>& mdpValidVecFieldsSet() const override {
+        static std::unordered_set<std::string> vldVecSet;
+        if (vldVecSet.size() != mdpValidVecFields().size()) {
+            vldVecSet.insert(mdpValidVecFields().begin(), mdpValidVecFields().end());
+        }
+        return vldVecSet;
+    }
 };
 #endif /* HAVE_FLATROCK */
 

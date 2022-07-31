@@ -2381,38 +2381,20 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
         }
 
         // Lower deparser parameters from fields to containers.
-#if HAVE_FLATROCK
-        static std::vector<std::string> mdp_vld_vec = {
-            "icrc_enable",
-            "drop",
-            "pgen_trig_vld",
-            "iafc_vld",
-            "lq_vld",
-            "pkt_expan_idx_vld",
-            "ucast_egress_port",
-            "mcast_grp_b",
-            "mcast_grp_a",
-            "mirror_bitmap",
-            "copy_to_cpu",
-            "perfect_hash_table_id",
-            "enable_mcast_cutthru",
-            "disable_ucast_cutthru",
-            "deflect_on_drop",
-        };
-#endif /* HAVE_FLATROCK*/
-
         for (auto* param : deparser->params) {
             bool skipPOV = false;
 #if HAVE_FLATROCK
             // Skip Flatrock metadata packer valid_vec fields
+            auto& mdp_vld_vec = Device::get().pardeSpec().mdpValidVecFieldsSet();
             if (Device::currentDevice() == Device::FLATROCK && deparser->gress == INGRESS) {
-                auto res = std::find(mdp_vld_vec.begin(), mdp_vld_vec.end(), param->name);
-                if (res == mdp_vld_vec.end() && param->source) {
+                bool found = mdp_vld_vec.count(std::string(param->name));
+                if (!found) found = mdp_vld_vec.count(param->name + ".$valid");
+                if (!found && param->source) {
                     if (const auto* mem = param->source->field->to<IR::Member>()) {
-                        res = std::find(mdp_vld_vec.begin(), mdp_vld_vec.end(), mem->member.name);
+                        found = mdp_vld_vec.count(std::string(mem->member.name));
                     }
                 }
-                if (res != mdp_vld_vec.end()) {
+                if (found) {
                     if (param->povBit) {
                         if (param->source)
                             skipPOV = true;
@@ -2445,9 +2427,13 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
             if (!tmMeta) {
                 ::warning("ig_intr_md_for_tm not defined in ingress control block");
             } else {
-                for (auto fname : mdp_vld_vec) {
+                for (auto fname : Device::get().pardeSpec().mdpValidVecFields()) {
                     const IR::Expression* exp = nullptr;
-                    auto* f = phv.field(tmMeta->name + "." + fname + ".$valid");
+                    const PHV::Field* f = nullptr;
+                    if (fname.rfind(".$valid") != std::string::npos)
+                        f = phv.field(tmMeta->name + "." + fname);
+                    else
+                        f = phv.field(tmMeta->name + "." + fname + ".$valid");
                     if (f && phv.getTempVar(f)) exp = phv.getTempVar(f);
                     if (!exp) exp = gen_fieldref(tmMeta, fname);
                     mdp_vld_vec_fields.push_back(new IR::BFN::FieldLVal(exp));

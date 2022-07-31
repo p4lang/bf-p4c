@@ -126,27 +126,16 @@ p4c_add_xfail_reason("tofino5"
 
 p4c_add_xfail_reason("tofino5"
   "Compiler Bug: Emitted field didn't receive a PHV allocation: ig_intr_md_for_tm.icrc_enable"
-  extensions/p4_tests/p4_16/stf/backend_bug1c.p4
-  extensions/p4_tests/p4_16/stf/funnel_shift.p4
   #extensions/p4_tests/p4_16/stf/header_stack_next.p4
   #extensions/p4_tests/p4_16/stf/header_stack_strided_alloc1.p4
   #extensions/p4_tests/p4_16/stf/header_stack_strided_alloc2.p4
   #extensions/p4_tests/p4_16/stf/lookahead1.p4
-  extensions/p4_tests/p4_16/stf/lookahead2.p4
-  extensions/p4_tests/p4_16/stf/lookahead3.p4
   #extensions/p4_tests/p4_16/stf/p4c-2638.p4
   #extensions/p4_tests/p4_16/stf/p4c-2695.p4
-  extensions/p4_tests/p4_16/stf/p4c-3470.p4
   #extensions/p4_tests/p4_16/stf/parser_counter_12.p4
   #extensions/p4_tests/p4_16/stf/parser_extract_upcast.p4
-  extensions/p4_tests/p4_16/stf/update_checksum_3.p4
-  extensions/p4_tests/p4_16/stf/update_checksum_4.p4
-  extensions/p4_tests/p4_16/stf/update_checksum_6.p4
   #extensions/p4_tests/p4_16/stf/varbit_constant.p4
   #extensions/p4_tests/p4_16/stf/failed_elim_valid_bit.p4
-  extensions/p4_tests/p4_16/stf/p4c-1504.p4
-  extensions/p4_tests/p4_16/stf/p4c-2772.p4
-  extensions/p4_tests/p4_16/stf/p4c-2772-c.p4
   #extensions/p4_tests/p4_16/stf/wide_arith_non_64.p4
   )
 
@@ -166,13 +155,13 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/stf/p4c-4107.p4
   )
 
-#p4c_add_xfail_reason("tofino5"
-#  "error: Constant literals only useable on 8-bit PHEs"
-#  extensions/p4_tests/p4_16/stf/backend_bug1c.p4
+p4c_add_xfail_reason("tofino5"
+  "error: Constant literals only useable on 8-bit PHEs"
+  extensions/p4_tests/p4_16/stf/backend_bug1c.p4
 #  extensions/p4_tests/p4_16/stf/bit_or_in_same_state.p4
 #  extensions/p4_tests/p4_16/stf/p4c-2695.p4
 #  extensions/p4_tests/p4_16/stf/p4c-2638.p4
-#  )
+  )
 
 #p4c_add_xfail_reason("tofino5"
 #  "Flatrock .* not implemented yet"
@@ -184,7 +173,7 @@ p4c_add_xfail_reason("tofino5"
   "invalid gateway group"
   extensions/p4_tests/p4_16/flatrock/dconfig1.p4
   extensions/p4_tests/p4_16/stf/extract_slice_2.p4
-  extensions/p4_tests/p4_16/stf/metadata_extract.p4
+  #extensions/p4_tests/p4_16/stf/metadata_extract.p4
   extensions/p4_tests/p4_16/stf/p4c-3055-2.p4
   extensions/p4_tests/p4_16/stf/p4c-3551.p4
   extensions/p4_tests/p4_16/stf/p4c-3659.p4
@@ -267,6 +256,43 @@ p4c_add_xfail_reason("tofino5"
 #   "IXBar::Use::bits_per_search_bus.. const: Assertion|Internal compiler error"
 #   extensions/p4_tests/p4_16/stf/zeros_as_ones.p4
 #   )
+
+p4c_add_xfail_reason("tofino5"
+  ".* expected packet on port .* not seen"
+  extensions/p4_tests/p4_16/stf/lookahead2.p4
+  extensions/p4_tests/p4_16/stf/lookahead3.p4
+  extensions/p4_tests/p4_16/stf/update_checksum_3.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "Could not place table .*: The table .* could not fit within a single input crossbar in an MAU stage"
+  extensions/p4_tests/p4_16/stf/metadata_extract.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "error: Unknown instruction or table add"
+  extensions/p4_tests/p4_16/stf/p4c-1504.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "error: No format field or table named immediate"
+  extensions/p4_tests/p4_16/stf/p4c-2772.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "Compiler Bug: No memory allocation for gateway"
+  extensions/p4_tests/p4_16/stf/p4c-2772-c.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "error: Duplicate element"
+  extensions/p4_tests/p4_16/stf/update_checksum_4.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "Assembler BUG"
+  extensions/p4_tests/p4_16/stf/update_checksum_6.p4
+  )
 
 # *********************************************************************************************** #
 # ** \TNA tests that "should" work ************************************************************** #

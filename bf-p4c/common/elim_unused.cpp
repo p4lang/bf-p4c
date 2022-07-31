@@ -1,5 +1,6 @@
 #include "elim_unused.h"
 #include <string.h>
+#include "bf-p4c/common/ir_utils.h"
 #include "bf-p4c/ir/thread_visitor.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/parde/dump_parser.h"
@@ -188,6 +189,7 @@ class ElimUnused::Tables : public MauTransform {
 
 class ElimUnused::Headers : public PardeTransform {
     ElimUnused &self;
+    const IR::BFN::Pipe* pipe;
 
     bool hasDefs(const IR::Expression* fieldRef) const {
         auto* field = self.phv.field(fieldRef);
@@ -220,6 +222,11 @@ class ElimUnused::Headers : public PardeTransform {
         return nullptr;
     }
 
+    const IR::BFN::Pipe* preorder(IR::BFN::Pipe* p) override {
+        pipe = p;
+        return p;
+    }
+
     const IR::BFN::DeparserParameter*
     preorder(IR::BFN::DeparserParameter* param) override {
         prune();
@@ -228,6 +235,21 @@ class ElimUnused::Headers : public PardeTransform {
         // value from is never set.
         if (param->source && hasDefs(param->source->field)) return param;
 #if HAVE_FLATROCK
+        // Keep Flatrock metadata packer valid vector fields
+        // Handle fields without POV bits
+        if (Device::currentDevice() == Device::FLATROCK && param->source && !param->povBit) {
+            if (const auto* f = self.phv.field(param->source->field)) {
+                auto* tmMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_tm");
+                std::string fName(f->name.c_str());
+                std::string mdPrefix(tmMeta->name + ".");
+                if (fName.find(mdPrefix) != std::string::npos) {
+                    std::string fName_short = fName.substr(mdPrefix.size());
+                    if (Device::get().pardeSpec().mdpValidVecFieldsSet().count(fName_short))
+                        return param;
+                }
+            }
+        }
+        // MDP - fields with POV bits
         if (Device::currentDevice() == Device::FLATROCK && !param->sourceReq) {
             LOG1("ELIM UNUSED deparser parameter " << param << " IN UNIT " <<
                 DBPrint::Brief << findContext<IR::BFN::Unit>() << " but keeping POV");

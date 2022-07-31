@@ -74,6 +74,9 @@ set (P16_TNA_EXCLUDE_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/p4c-2911-2\\.p4"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/p4c-2911\\.p4"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/update_checksum_2b\\.p4"
+    # FIXME: These tests cause bf-asm to enter an infinite loop
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/funnel_shift\\.p4"
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/p4c-3470\\.p4"
     )
 p4c_find_tests("${P16_TNA_FOR_FLATROCK}" P16_TNA_TESTS INCLUDE "${P16_TNA_INCLUDE_PATTERNS}" EXCLUDE "${P16_TNA_EXCLUDE_PATTERNS}")
 bfn_find_tests("${P16_TNA_TESTS}" p16_tna_tests EXCLUDE "${P16_TNA_EXCLUDE_FILES}")
