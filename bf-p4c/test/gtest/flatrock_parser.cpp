@@ -24,14 +24,11 @@ TEST(FlatrockParser, IngressIntrinsicMetadata) {
         bit<8>      b1;
         bit<8>      b2;
     }
-
     struct headers {
         data_h       data;
     }
-
     struct metadata {
     }
-
     parser ingressParser(packet_in packet, out headers hdrs,
                         out metadata meta, out ingress_intrinsic_metadata_t ig_intr_md) {
         state start {
@@ -40,7 +37,6 @@ TEST(FlatrockParser, IngressIntrinsicMetadata) {
             transition accept;
         }
     }
-
     control ingress(in headers hdrs, inout metadata meta,
                     in ingress_intrinsic_metadata_t ig_intr_md,
                     inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
@@ -49,7 +45,6 @@ TEST(FlatrockParser, IngressIntrinsicMetadata) {
             ig_intr_tm_md.ucast_egress_port = ig_intr_md.ingress_port;
         }
     }
-
     control egress(inout headers hdrs, inout metadata meta,
                 in egress_intrinsic_metadata_t eg_intr_md,
                 inout egress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
@@ -57,7 +52,6 @@ TEST(FlatrockParser, IngressIntrinsicMetadata) {
     {
         apply { }
     }
-
     control egressDeparser(packet_out packet, inout headers hdrs, in metadata meta,
                         in egress_intrinsic_metadata_t eg_intr_md,
                         in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprs) {
@@ -65,7 +59,6 @@ TEST(FlatrockParser, IngressIntrinsicMetadata) {
             packet.emit(hdrs);
         }
     }
-
     Pipeline(ingressParser(), ingress(), egress(), egressDeparser()) pipe;
     Switch(pipe) main;
     )";
@@ -98,14 +91,11 @@ TEST(FlatrockParser, NoIngressIntrinsicMetadata) {
         bit<8>      b1;
         bit<8>      b2;
     }
-
     struct headers {
         data_h       data;
     }
-
     struct metadata {
     }
-
     parser ingressParser(packet_in packet, out headers hdrs,
                         out metadata meta, out ingress_intrinsic_metadata_t ig_intr_md) {
         state start {
@@ -114,7 +104,6 @@ TEST(FlatrockParser, NoIngressIntrinsicMetadata) {
             transition accept;
         }
     }
-
     control ingress(in headers hdrs, inout metadata meta,
                     in ingress_intrinsic_metadata_t ig_intr_md,
                     inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
@@ -123,7 +112,6 @@ TEST(FlatrockParser, NoIngressIntrinsicMetadata) {
             ig_intr_tm_md.ucast_egress_port = 4;
         }
     }
-
     control egress(inout headers hdrs, inout metadata meta,
                 in egress_intrinsic_metadata_t eg_intr_md,
                 inout egress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
@@ -131,7 +119,6 @@ TEST(FlatrockParser, NoIngressIntrinsicMetadata) {
     {
         apply { }
     }
-
     control egressDeparser(packet_out packet, inout headers hdrs, in metadata meta,
                         in egress_intrinsic_metadata_t eg_intr_md,
                         in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprs) {
@@ -139,7 +126,6 @@ TEST(FlatrockParser, NoIngressIntrinsicMetadata) {
             packet.emit(hdrs);
         }
     }
-
     Pipeline(ingressParser(), ingress(), egress(), egressDeparser()) pipe;
     Switch(pipe) main;
     )";
@@ -157,6 +143,74 @@ TEST(FlatrockParser, NoIngressIntrinsicMetadata) {
                             "initial_ptr:` *`32"});  // MD32
     EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count << "\n'"
                              << blk.extract_code(TestCode::CodeBlock::ParserIAsm) << "'\n";
+}
+
+/**
+ * Verify that there is an egress parser section present if there are any extracted fields
+ * used in egress control block.
+ */
+TEST(FlatrockParser, PseudoParserExtraction) {
+    std::string test_prog = R"(
+    header data_h {
+        bit<32>     f1;
+        bit<32>     f2;
+        bit<16>     h1;
+        bit<8>      b1;
+        bit<8>      b2;
+    }
+    struct headers {
+        data_h       data;
+    }
+    struct metadata {
+    }
+    parser ingressParser(packet_in packet, out headers hdrs,
+                        out metadata meta, out ingress_intrinsic_metadata_t ig_intr_md) {
+        state start {
+            packet.extract(ig_intr_md);
+            packet.extract(hdrs.data);
+            transition accept;
+        }
+    }
+    control ingress(in headers hdrs, inout metadata meta,
+                    in ingress_intrinsic_metadata_t ig_intr_md,
+                    inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
+        apply { }
+    }
+    control egress(inout headers hdrs, inout metadata meta,
+                in egress_intrinsic_metadata_t eg_intr_md,
+                inout egress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
+                inout egress_intrinsic_metadata_for_output_port_t eg_intr_oport_md)
+    {
+        apply {
+            hdrs.data.f1 = hdrs.data.f2;
+        }
+    }
+    control egressDeparser(packet_out packet, inout headers hdrs, in metadata meta,
+                        in egress_intrinsic_metadata_t eg_intr_md,
+                        in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprs) {
+        apply {
+            packet.emit(hdrs);
+        }
+    }
+    Pipeline(ingressParser(), ingress(), egress(), egressDeparser()) pipe;
+    Switch(pipe) main;
+    )";
+
+    auto blk = TestCode(TestCode::Hdr::Tofino5arch, test_prog);
+    blk.flags(TrimWhiteSpace | TrimAnnotations);
+
+    EXPECT_TRUE(blk.CreateBackend());
+    EXPECT_TRUE(blk.apply_pass(TestCode::Pass::FullBackend));
+
+    auto res =
+        blk.match(TestCode::CodeBlock::ParserEAsm,
+                  CheckList{"parser egress:",
+                            "`.*`",
+                            "packet32 hdrs.data `(W\\d+)` msb_offset `\\d+`",
+                            "`.*`",
+                            "#`.*``\\1` bit[`\\d+`..`\\d+`]: hdrs.data.f2"});
+    EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count << "\n'"
+                             << blk.extract_code(TestCode::CodeBlock::ParserEAsm) << "'\n";
 }
 
 }  // namespace Test

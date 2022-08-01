@@ -467,11 +467,25 @@ class Parser : BFN::BaseLoweredParser {
  *
  * The corresponding class in assembler is FlatrockPseudoParser.
  */
-class PseudoParser : BFN::BaseLoweredParser {
-#noconstructor
+ class PseudoParser : BFN::BaseLoweredParser {
+    inline Vector<PhvBuilderGroup> phv_builder;
+ #noconstructor
     PseudoParser() : BaseLoweredParser(EGRESS) {}
+    visit_children {
+        v.visit(phv_builder, "pseudo_parser");
+    }
+    validate {
+        BUG_CHECK(phv_builder.size() <= ::Flatrock::PARSER_PHV_BUILDER_GROUPS,
+            "too many PHV groups: %d, allowed at most %d",
+            phv_builder.size(), ::Flatrock::PARSER_PHV_BUILDER_GROUPS);
+    }
     toString { return "pseudo parser"; }
-    dbprint { out << toString(); }
+    dbprint {
+        out << toString() << IndentCtl::indent;
+        for (auto &phv_builder_group : phv_builder)
+            out << IndentCtl::endl << phv_builder_group;
+        out << IndentCtl::unindent;
+    }
 }
 
 }  // namespace Flatrock

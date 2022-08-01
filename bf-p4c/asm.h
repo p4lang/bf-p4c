@@ -149,10 +149,7 @@ class AsmOutput : public Inspector {
                         out << "  pipe_mask: 0" << std::endl;
                     }
                 }
-#if HAVE_FLATROCK
-                if (Device::currentDevice() != Device::FLATROCK)
-#endif
-                    out << ParserAsmOutput(pipe, phv, EGRESS);
+                out << ParserAsmOutput(pipe, phv, EGRESS);
                 out << DeparserAsmOutput(pipe, phv, clot, EGRESS)
                     << *mauasm << std::endl
                     << flex->asm_output() << std::endl;

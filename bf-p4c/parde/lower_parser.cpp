@@ -981,8 +981,9 @@ struct ComputeLoweredParserIR : public ParserInspector {
 #ifdef HAVE_FLATROCK
 
 struct ComputeFlatrockParserIR : public ParserInspector {
-    ComputeFlatrockParserIR(const PhvInfo& phv, const ParserHeaderSequences &parserHeaderSeqs) :
-        parserHeaderSeqs(parserHeaderSeqs), phv(phv) {}
+    ComputeFlatrockParserIR(const PhvInfo& phv, const FieldDefUse& defuse,
+            const ParserHeaderSequences &parserHeaderSeqs) :
+        parserHeaderSeqs(parserHeaderSeqs), phv(phv), defuse(defuse) {}
 
     const ParserHeaderSequences &parserHeaderSeqs;
 
@@ -1005,15 +1006,17 @@ struct ComputeFlatrockParserIR : public ParserInspector {
                    std::tie(e.size, e.index, e.offset, e.type, e.subtype);
         }
     };
-    // textual information about extracts performed in parser
-    std::map<std::pair<PHV::Size, unsigned int /* index */>, std::vector<cstring>> comments;
-    // extracts performed in parser
-    std::set<Extract> extracts;
+    // textual information about extracts performed in parser and pseudo parser
+    std::map<std::tuple<gress_t, PHV::Size, unsigned int /* index */>,
+             std::vector<cstring>> comments;
+    // extracts performed in parser classified by gress where they are used
+    std::map<gress_t, std::set<Extract>> extracts;
     // Ingress intrinsic metadata has been extracted
     bool igMetaExtracted;
 
  private:
     const PhvInfo& phv;
+    const FieldDefUse& defuse;
     cstring igMetaName;
 
     profile_t init_apply(const IR::Node *node) override {
@@ -1063,6 +1066,16 @@ struct ComputeFlatrockParserIR : public ParserInspector {
 
         size_t width = hdr_ref->ref->type->width_bits();
 
+        bool used_in_ingress = false;
+        bool used_in_egress = false;
+
+        for (auto &u : defuse.getAllUses(field->id)) {
+            if (u.first->thread() == INGRESS)
+                used_in_ingress = true;
+            if (u.first->thread() == EGRESS)
+                used_in_egress = true;
+        }
+
         boost::optional<int> hdr_offset;
         field->foreach_alloc([&](const PHV::AllocSlice& alloc) {
             BUG_CHECK(!hdr_offset, "Only one allocation allowed after PHV allocation");
@@ -1086,8 +1099,14 @@ struct ComputeFlatrockParserIR : public ParserInspector {
                 .hdr = field->header(),
                 .offset = *hdr_offset
             };
-            extracts.insert(e);
-            comments[{size, index}].push_back(debugInfoFor(extract, alloc));
+            if (used_in_ingress) {
+                extracts[INGRESS].insert(e);
+                comments[{INGRESS, size, index}].push_back(debugInfoFor(extract, alloc));
+            }
+            if (used_in_egress) {
+                extracts[EGRESS].insert(e);
+                comments[{EGRESS, size, index}].push_back(debugInfoFor(extract, alloc));
+            }
         });
 
         if (auto *state = findContext<IR::BFN::ParserState>()) {
@@ -1110,18 +1129,27 @@ struct ComputeFlatrockParserIR : public ParserInspector {
         states.push_back(payload);
         headers[payload].insert(payloadHeaderName);
         header_widths[payload].push_back({payloadHeaderName, 0});
-        if (LOGGING(4)) {
-            LOG4("[ComputeFlatrockParserIR] parser extracts:");
-            for (auto &extract : extracts) {
+
+        auto log = [this](gress_t gress){
+            if (extracts.count(gress) == 0) return;
+            for (auto &extract : extracts.at(gress)) {
                 LOG4("  size=" << extract.size
                   << ", index=" << extract.index
                   << ", type=" << extract.type
                   << ", subtype=" << extract.subtype
                   << ", header=" << extract.hdr
                   << ", offset=" << extract.offset);
-                for (auto &comment : comments.at({extract.size, extract.index}))
+                if (comments.count({gress, extract.size, extract.index}) == 0) continue;
+                for (auto &comment : comments.at({gress, extract.size, extract.index}))
                     LOG4("    " << comment);
             }
+        };
+
+        if (LOGGING(4)) {
+            LOG4("[ComputeFlatrockParserIR] parser extracts:");
+            log(INGRESS);
+            LOG4("[ComputeFlatrockParserIR] pseudo parser extracts:");
+            log(EGRESS);
             LOG4("[ComputeFlatrockParserIR] ingress_intrinsic_metadata has "
                 << (igMetaExtracted ? "" : "not ") << "been extracted");
         }
@@ -1137,6 +1165,75 @@ struct ComputeFlatrockParserIR : public ParserInspector {
  * All other profile properties and all other parser subcomponents are left unconfigured.
  */
 class ReplaceFlatrockParserIR : public Transform {
+    void build_phv_builder(IR::Vector<IR::Flatrock::PhvBuilderGroup> &phv_builder, gress_t gress) {
+        const int PARSER_PHV_BUILDER_GROUP_PHES_TOTAL =
+            Flatrock::PARSER_PHV_BUILDER_GROUP_PHE8_NUM +
+            Flatrock::PARSER_PHV_BUILDER_GROUP_PHE16_NUM +
+            Flatrock::PARSER_PHV_BUILDER_GROUP_PHE32_NUM;
+
+        // Temporary array being filled based on results of ComputeFlatrockParserIR
+        IR::Flatrock::PhvBuilderExtract *extracts[PARSER_PHV_BUILDER_GROUP_PHES_TOTAL];
+        for (int i = 0; i < PARSER_PHV_BUILDER_GROUP_PHES_TOTAL; i++)
+            extracts[i] = nullptr;
+
+        if (computed.extracts.count(gress) == 0) return;
+        for (auto &extract : computed.extracts.at(gress)) {
+            int base_group_index = 0;  // index within PHE8/16/32 groups
+            int phe_sources = 0;
+            std::string container_name;
+            if (extract.size == PHV::Size::b8) {
+                phe_sources = Flatrock::PARSER_PHV_BUILDER_PACKET_PHE8_SOURCES;
+                base_group_index = 0;
+                container_name = "B";
+            } else if (extract.size == PHV::Size::b16) {
+                phe_sources = Flatrock::PARSER_PHV_BUILDER_PACKET_PHE16_SOURCES;
+                base_group_index = Flatrock::PARSER_PHV_BUILDER_GROUP_PHE8_NUM;
+                container_name = "H";
+            } else if (extract.size == PHV::Size::b32) {
+                phe_sources = Flatrock::PARSER_PHV_BUILDER_PACKET_PHE32_SOURCES;
+                base_group_index = Flatrock::PARSER_PHV_BUILDER_GROUP_PHE8_NUM +
+                    Flatrock::PARSER_PHV_BUILDER_GROUP_PHE16_NUM;
+                container_name = "W";
+            } else {
+                BUG("Invalid container size in PHV builder extractor");
+            }
+            int sub_group_offset =
+                extract.index / phe_sources / Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES;
+            container_name += std::to_string(extract.index);
+
+            auto &phv_builder_extract = extracts[base_group_index + sub_group_offset];
+            if (phv_builder_extract == nullptr)
+                phv_builder_extract = new IR::Flatrock::PhvBuilderExtract(extract.size);
+            if (computed.comments.count({gress, extract.size, extract.index}) > 0) {
+                auto &comments = computed.comments.at({gress, extract.size, extract.index});
+                phv_builder_extract->debug.info.insert(phv_builder_extract->debug.info.begin(),
+                    comments.begin(), comments.end());
+            }
+
+            phv_builder_extract->index = 0;
+            if ((extract.index / phe_sources) %
+                    Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES == 0) {
+                // FIXME: clean up
+                phv_builder_extract->type1 = extract.type;
+                phv_builder_extract->hdr1_name = extract.hdr;
+                phv_builder_extract->offsets1.push_back({container_name, extract.offset});
+            } else {
+                // FIXME: clean up
+                phv_builder_extract->type2 = extract.type;
+                phv_builder_extract->hdr2_name = extract.hdr;
+                phv_builder_extract->offsets2.push_back({container_name, extract.offset});
+            }
+        }
+
+        for (int i = 0; i < PARSER_PHV_BUILDER_GROUP_PHES_TOTAL; i++) {
+            if (extracts[i] == nullptr) continue;
+            auto *phv_builder_group = new IR::Flatrock::PhvBuilderGroup(
+                /* id */ i, /* pov_select */ {});
+            phv_builder_group->extracts.push_back(extracts[i]);
+            phv_builder.push_back(phv_builder_group);
+        }
+    }
+
     const IR::Flatrock::Parser*
     preorder(IR::BFN::Parser* parser) override {
         LOG4("[ReplaceFlatrockParserIR] lowering Flatrock parser " << parser->name);
@@ -1226,71 +1323,24 @@ class ReplaceFlatrockParserIR : public Transform {
         }
         lowered_parser->profiles.push_back(default_profile);
 
-        const int PARSER_PHV_BUILDER_GROUP_PHES_TOTAL =
-            Flatrock::PARSER_PHV_BUILDER_GROUP_PHE8_NUM +
-            Flatrock::PARSER_PHV_BUILDER_GROUP_PHE16_NUM +
-            Flatrock::PARSER_PHV_BUILDER_GROUP_PHE32_NUM;
-
-        // Temporary array being filled based on results of ComputeFlatrockParserIR
-        IR::Flatrock::PhvBuilderExtract *extracts[PARSER_PHV_BUILDER_GROUP_PHES_TOTAL];
-        for (int i = 0; i < PARSER_PHV_BUILDER_GROUP_PHES_TOTAL; i++)
-            extracts[i] = nullptr;
-
-        for (auto &extract : computed.extracts) {
-            int base_group_index = 0;  // index within PHE8/16/32 groups
-            int phe_sources = 0;
-            std::string container_name;
-            if (extract.size == PHV::Size::b8) {
-                phe_sources = Flatrock::PARSER_PHV_BUILDER_PACKET_PHE8_SOURCES;
-                base_group_index = 0;
-                container_name = "B";
-            } else if (extract.size == PHV::Size::b16) {
-                phe_sources = Flatrock::PARSER_PHV_BUILDER_PACKET_PHE16_SOURCES;
-                base_group_index = Flatrock::PARSER_PHV_BUILDER_GROUP_PHE8_NUM;
-                container_name = "H";
-            } else if (extract.size == PHV::Size::b32) {
-                phe_sources = Flatrock::PARSER_PHV_BUILDER_PACKET_PHE32_SOURCES;
-                base_group_index = Flatrock::PARSER_PHV_BUILDER_GROUP_PHE8_NUM +
-                    Flatrock::PARSER_PHV_BUILDER_GROUP_PHE16_NUM;
-                container_name = "W";
-            } else {
-                BUG("Invalid container size in PHV builder extractor");
-            }
-            int sub_group_offset =
-                extract.index / phe_sources / Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES;
-            container_name += std::to_string(extract.index);
-
-            auto &phv_builder_extract = extracts[base_group_index + sub_group_offset];
-            if (phv_builder_extract == nullptr)
-                phv_builder_extract = new IR::Flatrock::PhvBuilderExtract(extract.size);
-            auto &comments = computed.comments.at({extract.size, extract.index});
-            phv_builder_extract->debug.info.insert(phv_builder_extract->debug.info.begin(),
-                comments.begin(), comments.end());
-
-            phv_builder_extract->index = 0;
-            if ((extract.index / phe_sources) %
-                    Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES == 0) {
-                // FIXME: clean up
-                phv_builder_extract->type1 = extract.type;
-                phv_builder_extract->hdr1_name = extract.hdr;
-                phv_builder_extract->offsets1.push_back({container_name, extract.offset});
-            } else {
-                // FIXME: clean up
-                phv_builder_extract->type2 = extract.type;
-                phv_builder_extract->hdr2_name = extract.hdr;
-                phv_builder_extract->offsets2.push_back({container_name, extract.offset});
-            }
-        }
-
-        for (int i = 0; i < PARSER_PHV_BUILDER_GROUP_PHES_TOTAL; i++) {
-            if (extracts[i] == nullptr) continue;
-            auto *phv_builder_group = new IR::Flatrock::PhvBuilderGroup(
-                /* id */ i, /* pov_select */ {});
-            phv_builder_group->extracts.push_back(extracts[i]);
-            lowered_parser->phv_builder.push_back(phv_builder_group);
-        }
+        build_phv_builder(lowered_parser->phv_builder, INGRESS);
 
         return lowered_parser;
+    }
+
+    const IR::BFN::Pipe*
+    postorder(IR::BFN::Pipe* pipe) override {
+        // Create a pseudo parser
+        auto *pseudo_parser = new IR::Flatrock::PseudoParser;
+
+        BUG_CHECK(pipe->thread[EGRESS].parsers.size() == 0,
+            "unexpected egress parser before lowering");
+
+        build_phv_builder(pseudo_parser->phv_builder, EGRESS);
+
+        pipe->thread[EGRESS].parsers.push_back(pseudo_parser);
+
+        return pipe;
     }
 
     const ComputeFlatrockParserIR& computed;
@@ -1639,13 +1689,15 @@ struct MergeLoweredParserStates : public ParserTransform {
 /// Generate a lowered version of the parser IR in this program and swap it in
 /// for the existing representation.
 struct LowerParserIR : public PassManager {
-    LowerParserIR(const PhvInfo& phv, ClotInfo& clotInfo,
+    LowerParserIR(const PhvInfo& phv,
+                  BFN_MAYBE_UNUSED const FieldDefUse& defuse,
+                  ClotInfo& clotInfo,
                   BFN_MAYBE_UNUSED const ParserHeaderSequences &parserHeaderSeqs) {
         auto* allocateParserChecksums = new AllocateParserChecksums(phv, clotInfo);
         auto* computeLoweredParserIR =
             new ComputeLoweredParserIR(phv, clotInfo, *allocateParserChecksums);
 #ifdef HAVE_FLATROCK
-        auto* computeFlatrockParserIR = new ComputeFlatrockParserIR(phv, parserHeaderSeqs);
+        auto* computeFlatrockParserIR = new ComputeFlatrockParserIR(phv, defuse, parserHeaderSeqs);
 #endif  // HAVE_FLATROCK
         auto* replaceLoweredParserIR = new ReplaceParserIR(*computeLoweredParserIR);
 #ifdef HAVE_FLATROCK
@@ -2910,7 +2962,7 @@ LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &
 
     addPasses({
         pragma_no_init,
-        new LowerParserIR(phv, clot, parserHeaderSeqs),
+        new LowerParserIR(phv, defuse, clot, parserHeaderSeqs),
         new LowerDeparserIR(phv, clot),
         new WarnTernaryMatchFields(phv),
         Device::currentDevice() == Device::TOFINO ? compute_init_valid : nullptr,
