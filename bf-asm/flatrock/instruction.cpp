@@ -140,7 +140,11 @@ struct operand {
                     error(lineno, "%s is not on the action bus", name.c_str());
                 return -1; }
             return byte/size; }
-        int bit_offset(int slot) override { return lo % ::Phv::reg(slot)->size; }
+        int bit_offset(int slot) override {
+            int size = ::Phv::reg(slot)->size;
+            int byte = field ? table->find_on_actionbus(field, lo, hi, 0)
+                             : table->find_on_actionbus(name, mod, lo, hi, 0);
+            return (byte * 8U + lo) % size; }
         void pass1(Table *tbl, int slot) override {
             if (field) field->flags |= Table::Format::Field::USED_IMMED;
             auto slot_size = ::Phv::reg(slot)->size;
