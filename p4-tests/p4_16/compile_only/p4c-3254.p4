@@ -1499,6 +1499,7 @@ control Aniak(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsic_me
         Osyka.LaUnion.Sutherlin = (bit<1>)1w1;
         Nevis();
     }
+    @stage(7)
     @disable_atomic_modify(1) @name(".Boonsboro") table Boonsboro {
         actions = {
             Lindsborg();
@@ -4934,6 +4935,7 @@ control Mynard(inout Murphy Gotham, inout Fredonia Osyka, in egress_intrinsic_me
         default_action = Devola();
         size = 1;
     }
+    @stage(10)
     @disable_atomic_modify(1) @name(".Walland") table Walland {
         actions = {
             Buras();

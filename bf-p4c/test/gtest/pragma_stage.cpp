@@ -39,6 +39,7 @@ TEST(PragmaStage, PragmaStage) {
             @stage(1, 4096, "noimmediate")
             @stage(2, 4096, "immediate")
             @stage(3, 4096, "noimmediate")
+            @pack(1)
             table test_table {
                 key = { hdr.h.f1 : exact; }
                 actions = { test_action; }

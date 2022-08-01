@@ -3567,6 +3567,7 @@ control Botna(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_me
         Lemont.Crannell.Pinole = Goodwin;
         Lemont.Gambrills.Wartburg = Chappell.get();
     }
+    @stage(7)
     @disable_atomic_modify(1) @name(".Inkom") table Inkom {
         actions = {
             Delavan();
@@ -4542,6 +4543,7 @@ control Newsoms(inout Knights Almota, inout Mather Lemont, in ingress_intrinsic_
         Lemont.Balmorhea.Brookneal = Brookneal;
         Lemont.Balmorhea.Shirley = Shirley;
     }
+    @stage(8)
     @idletime_precision(1) @disable_atomic_modify(1) @name(".Harrison") table Harrison {
         actions = {
             TenSleep();

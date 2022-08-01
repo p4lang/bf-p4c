@@ -914,12 +914,16 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
         if (a.layout.hash_action && !b.layout.hash_action) return true;
         if (!a.layout.hash_action && b.layout.hash_action) return false;
         if ((t = a.way.width - b.way.width) != 0) return t < 0;
-        if ((t = a.way.match_groups - b.way.match_groups) != 0) return t < 0;
+        if (a.entries == b.entries) {
+            if ((t = a.way.match_groups - b.way.match_groups) != 0) return t < 0;
+        }
         if (!a.layout.direct_ad_required() && b.layout.direct_ad_required())
             return true;
         if (a.layout.direct_ad_required() && !b.layout.direct_ad_required())
             return false;
-        return a.layout.action_data_bytes_in_table < b.layout.action_data_bytes_in_table;
+        if ((t = a.layout.action_data_bytes_in_table - b.layout.action_data_bytes_in_table) != 0)
+            return t < 0;
+        return a.entries > b.entries;
     });
 
     LOG3("table " << tbl->name << " requiring " << table_size << " entries.");
