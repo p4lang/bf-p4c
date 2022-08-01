@@ -294,22 +294,10 @@ p4c_add_xfail_reason("tofino3"
 #driver does not yet work
 p4c_add_xfail_reason("tofino3"
   "ERROR:PTF runner:Error when starting model & switchd"
-  extensions/p4_tests/p4_14/ptf/easy_exact.p4
-  extensions/p4_tests/p4_14/ptf/easy_no_match.p4
-  extensions/p4_tests/p4_14/ptf/easy_no_match_with_gateway.p4
-  extensions/p4_tests/p4_14/ptf/easy.p4
-  extensions/p4_tests/p4_14/ptf/easy_ternary.p4
-  extensions/p4_tests/p4_14/ptf/ecmp_pi.p4
-  extensions/p4_tests/p4_14/ptf/ternary_match_constant_action_data.p4
-  extensions/p4_tests/p4_16/ptf/adata_constant_out_of_range_for_immediate.p4
-  extensions/p4_tests/p4_16/ptf/clone_v1model.p4
-  extensions/p4_tests/p4_16/ptf/ingress_checksum.p4
-  extensions/p4_tests/p4_16/ptf/ipv4_checksum.p4
-  extensions/p4_tests/p4_16/ptf/large_action_data_constant.p4
-  extensions/p4_tests/p4_16/ptf/multicast_basic.p4
-  extensions/p4_tests/p4_16/ptf/udpv4_and_v6_checksum.p4
-  extensions/p4_tests/p4_16/ptf/various_indirect_meters.p4
-  extensions/p4_tests/p4_16/ptf/verify_checksum.p4
+  # Is this test even supported in compilers dev env?
+  # Hitting BF_DVM ERROR - Program "tna_32q_2pipe" Pipeline "pipeline_profile_a" cannot be assigned to device 0 pipe 4, only 4 pipe(s) available
+  # Need to debug
+  p4_16_programs_tna_32q_2pipe
 )
 
 # ports are 11 bits on cloudbreak, so programs that assume 9 bits won't work
@@ -363,8 +351,16 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/customer/keysight/p4c-2554.p4
   extensions/p4_tests/p4_16/customer/microsoft/p4c-2387.p4
   extensions/p4_tests/p4_16/ptf/digest.p4
-  extensions/p4_tests/p4_16/ptf/hash_driven_stats.p4
   extensions/p4_tests/p4_16/ptf/ONLab_packetio.p4
+)
+
+p4c_add_xfail_reason("tofino3"
+  "<: not defined on bit<11> and bit<9>"
+  # Caused by the fact that port number in v1model is bit<9> but in Tofino 3 port
+  # number is bit<11> and type inference of the constants happens before translation
+  # from v1model to t3na architecture.
+  # Therefore this error happens during translation from v1model to t3na.
+  extensions/p4_tests/p4_16/ptf/hash_driven_stats.p4
 )
 
 p4c_add_xfail_reason("tofino3"
@@ -507,4 +503,20 @@ p4c_add_xfail_reason("tofino3"
 p4c_add_xfail_reason("tofino3"
   "error: table .* should not have empty const entries list."
   extensions/p4_tests/p4_16/compile_only/p4c-4498.p4
+)
+
+p4c_add_xfail_reason("tofino3"
+  "AssertionError: Expected packet was not received"
+  # Packet is received, but 2 bytes are different than expected for unknown reason.
+  extensions/p4_tests/p4_16/ptf/inner_checksum_payload_offset.p4
+  extensions/p4_tests/p4_14/ptf/inner_checksum_l4.p4
+  # Packet is received, but 1 byte is different than expected for unknown reason.
+  # This is already in JBay and Tofino Xfails, too.
+  extensions/p4_tests/p4_16/ptf/ingress_checksum.p4
+)
+
+p4c_add_xfail_reason("tofino3"
+  "Error when creating clone session in target"
+  # Error during runtime, unknown reason.
+  extensions/p4_tests/p4_16/ptf/clone_v1model.p4
 )

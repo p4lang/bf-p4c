@@ -530,13 +530,19 @@ def main():
     if port_map_path is None:
         veth_start_index = 0
         base_if_index = 0
-        # Default ports for Tofino2 have offset 8
+        # Default ports for Tofino2 and Tofino3 have offset 8
         if 'tofino2' in args.device or 'tofino3' in args.device:
             base_if_index = 8
-        for iface_idx in range(base_if_index, base_if_index + DEFAULT_NUM_IFACES):
+        max_if_index = base_if_index + DEFAULT_NUM_IFACES
+        if_step = 1
+        if 'tofino3' in args.device:
+            # Only even port numbers can be used for Tofino3
+            max_if_index = base_if_index + (DEFAULT_NUM_IFACES * 2)
+            if_step = 2
+        for iface_idx in range(base_if_index, max_if_index, if_step):
             port_map[iface_idx] = 'veth{}'.format(2 * veth_start_index + 1)
             veth_start_index += 1
-        # Ethernet CPU port: 64 for Tofino and 2 for Tofino2
+        # Ethernet CPU port: 64 for Tofino and 2 for Tofino2 and Tofino3
         if 'tofino2' in args.device or 'tofino3' in args.device:
             port_map[2] = "veth251"
         else:

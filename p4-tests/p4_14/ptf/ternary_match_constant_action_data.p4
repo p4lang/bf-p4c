@@ -4,6 +4,9 @@
 #if __TARGET_TOFINO__ == 2
 // Default ports for Tofino2 have offset 8 
 #define FP_PORT_3 11
+#elif __TARGET_TOFINO__ == 3
+// Default ports for Tofino3 have offset 8 and only even port numbers are used
+#define FP_PORT_3 14
 #else
 #define FP_PORT_3 3
 #endif
