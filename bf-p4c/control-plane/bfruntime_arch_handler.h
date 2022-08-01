@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <set>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -639,6 +640,11 @@ class SnapshotFieldFinder : public Inspector {
                         SnapshotFieldIdTable* fieldIds)
         : typeMap(typeMap), includeValid(includeValid), fields(fields), fieldIds(fieldIds) {
         prefixList.push_back(prefix);
+        // Setting visitDagOnce to false so IR nodes can be visited more than once. This is required
+        // while dealing with header stacks where we have to loop for all elements in a stack.
+        // Type_Stack is not a vector so we have a single node which needs to output 'n' values for
+        // a size 'n' stack. [P4C-4329]
+        visitDagOnce = false;
     }
 
     std::string assembleName() const {
@@ -653,10 +659,13 @@ class SnapshotFieldFinder : public Inspector {
         auto name = assembleName();
         auto id = fieldIds->assignId(name);
         SnapshotFieldInfo field = { name, id, bitwidth };
+        LOG5("Adding snapshot to bfrt info for field: { "
+                << name << ", " << id << ", " << bitwidth << " }");
         fields->insert(field);
     }
 
     bool preorder(const IR::Type_Header* type) override {
+        LOG3("SnapshotFinder preorder Type_Header: " << type);
         auto flattenedType = P4::ControlPlaneAPI::FlattenHeader::flatten(typeMap, type);
         if (includeValid) {
             prefixList.push_back("$valid");
@@ -668,6 +677,7 @@ class SnapshotFieldFinder : public Inspector {
     }
 
     bool preorder(const IR::StructField* f) override {
+        LOG3("SnapshotFinder preorder StructField : " << f);
         auto typeType = typeMap->getTypeType(f->type, true);
         prefixList.push_back(f->controlPlaneName());
         visit(typeType);
@@ -675,14 +685,29 @@ class SnapshotFieldFinder : public Inspector {
         return false;
     }
 
+    bool preorder(const IR::Type_Stack* st) override {
+        LOG3("SnapshotFinder preorder Stack : " << st);
+        // Remove stack name and re-insert based on index
+        // E.g. hdr.stack --> hdr.stack$0 / hdr.stack$1 ...
+        auto p = prefixList.back();
+        prefixList.pop_back();
+        for (size_t i = 0; i < st->getSize(); i++) {
+            prefixList.push_back(p + "$" + std::to_string(i));
+            visit(st->elementType);
+            prefixList.pop_back();
+        }
+        prefixList.push_back(p);
+        return false;
+    }
+
     bool preorder(const IR::Type_Bits* type) override {
-        visitAgain();
+        LOG3("SnapshotFinder preorder Type_Bits: " << type);
         addField(type->width_bits());
         return false;
     }
 
     bool preorder(const IR::Type_Varbits* type) override {
-        visitAgain();
+        LOG3("SnapshotFinder preorder Type_Varbits: " << type);
         // TODO(antonin): unsure whether anything needs to be done / can be done
         // for VL fields.
         (void)type;
@@ -1861,6 +1886,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
             SnapshotFieldFinder::find(
                 typeMap, p->type, p->name, includeValid, snapshotFields, fieldIds);
         }
+        LOG3("Adding snaphot to bfrt info for control: " << snapshot_name);
         symbols->add(SymbolType::SNAPSHOT(), snapshot_name);
     }
 
