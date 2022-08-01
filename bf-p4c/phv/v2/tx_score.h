@@ -1,7 +1,6 @@
 #ifndef BF_P4C_PHV_V2_TX_SCORE_H_
 #define BF_P4C_PHV_V2_TX_SCORE_H_
 
-#include "bf-p4c/phv/v2/phv_kit.h"
 #include "bf-p4c/phv/utils/utils.h"
 
 namespace PHV {

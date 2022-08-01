@@ -44,9 +44,17 @@ void merge_slices(safe_vector<PHV::AllocSlice>& slices,
 
 }  // namespace
 
+bool PhvKit::has_pack_conflict(const PHV::FieldSlice& fs1, const PHV::FieldSlice& fs2) const {
+    if (fs1.field() != fs2.field()) {
+        if (mutex()(fs1.field()->id, fs2.field()->id)) return false;
+    }
+    return clustering.no_pack(fs1.field(), fs2.field()) || actions.hasPackConflict(fs1, fs2);
+}
+
 PHV::Slicing::IteratorInterface* PhvKit::make_slicing_ctx(const PHV::SuperCluster* sc) const {
     return new PHV::Slicing::ItrContext(phv, sc, pragmas.pa_container_sizes().field_to_layout(),
                                         *packing_validator,
+                                        *parser_packing_validator,
                                         boost::bind(&PhvKit::has_pack_conflict, this, _1, _2),
                                         boost::bind(&PhvKit::is_referenced, this, _1));
 }
@@ -57,6 +65,7 @@ bool PhvKit::can_physical_liverange_be_overlaid(const PHV::AllocSlice& a,
               "physical liverange overlay should be checked "
               "only when both slices are physical stage based");
     // TODO(yumin): need more thoughts on these constraints.
+    // (1) is_invalidate_from_arch might be needed only for tofino1.
     const auto never_overlay = [](const PHV::Field* f) {
         return f->pov || f->deparsed_to_tm() || f->is_invalidate_from_arch();
     };

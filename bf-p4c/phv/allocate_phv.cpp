@@ -23,7 +23,7 @@
 #include "bf-p4c/phv/utils/report.h"
 #include "bf-p4c/phv/utils/slice_alloc.h"
 #include "bf-p4c/phv/utils/utils.h"
-#include "bf-p4c/phv/legacy_packing_validator.h"
+#include "bf-p4c/phv/legacy_action_packing_validator.h"
 #include "bf-p4c/common/pragma/all_pragmas.h"
 #include "bf-p4c/logging/event_logger.h"
 #include "lib/error.h"
@@ -634,14 +634,24 @@ Logging::FileLog* createFileLog(
     return new Logging::FileLog(pipeId, filename, Logging::Mode::AUTO);
 }
 
+class DummyParserPackingValidator : public PHV::ParserPackingValidatorInterface {
+ public:
+    const PHV::v2::AllocError* can_pack(
+        const PHV::v2::FieldSliceAllocStartMap&,
+        const boost::optional<PHV::Container>&) const override {
+        return nullptr;
+    }
+};
 
 }  // namespace
 
 PHV::Slicing::IteratorInterface* PHV::AllocUtils::make_slicing_ctx(
     const PHV::SuperCluster* sc) const {
     auto* packing_validator = new PHV::legacy::ActionPackingValidator(source_tracker, uses);
+    auto* parser_packing_validator = new DummyParserPackingValidator();
     return new PHV::Slicing::ItrContext(phv, sc, pragmas.pa_container_sizes().field_to_layout(),
                                         *packing_validator,
+                                        *parser_packing_validator,
                                         boost::bind(&AllocUtils::has_pack_conflict, this, _1, _2),
                                         boost::bind(&AllocUtils::is_referenced, this, _1));
 }

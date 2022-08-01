@@ -70,7 +70,7 @@ struct IteratorConfig {
 
     /// Disable packing checks during slicing. This should only be used for diagnose, so
     /// it is default to false and not shown in any constructor.
-    bool disable_action_packing_check = false;
+    bool disable_packing_check = false;
 
     IteratorConfig(bool minimal_packing_mode, bool loose_action_packing_check_mode,
                    bool smart_backtracking_mode, bool smart_slicing, int max_search_steps,

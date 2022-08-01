@@ -193,7 +193,7 @@ const AllocError* TrivialAllocator::diagnose_invalid_cluster(
     // This allows conflicting action constraints to be caught during PHV allocation
     // so that detailed error logs (trace) can be printed to user.
     auto slicing_cfg = Slicing::IteratorConfig{true, true, false, true, (1 << 25), (1 << 16)};
-    slicing_cfg.disable_action_packing_check = true;
+    slicing_cfg.disable_packing_check = true;
     auto slicing_ctx = kit_i.make_slicing_ctx(sc);
     slicing_ctx->set_config(slicing_cfg);
     slicing_ctx->iterate([&](std::list<PHV::SuperCluster*> sliced) {

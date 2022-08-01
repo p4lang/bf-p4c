@@ -1402,6 +1402,31 @@ bool DfsItrContext::dfs_prune_unwell_formed(const SuperCluster* sc) const {
     return false;
 }
 
+bool DfsItrContext::dfs_prune_invalid_parser_packing(const SuperCluster* sc) const {
+    for (auto* sl : sc->slice_lists()) {
+        if (need_further_split(sl)) {
+            continue;
+        }
+        v2::FieldSliceAllocStartMap fs_starts;
+        int offset = 0;
+        for (const auto& fs : *sl) {
+            // ideally we should filter out field slices that will never be live in
+            // parser. But since these fields are all in a slice list, those cases
+            // are rare: likely either all lived in parser or all not live, expect:
+            // slice list was formed from: (1) field list resubmit/mirror...
+            // (2) optimization-driven packing.
+            fs_starts[fs] = offset;
+            offset += fs.size();
+        }
+        if (auto err = parser_packing_validator_i.can_pack(fs_starts, boost::none)) {
+            LOG5("DFS pruned: invalid parser packing found in " << *sl << ", because "
+                 << err->str());
+            return true;
+        }
+    }
+    return false;
+}
+
 boost::optional<ordered_map<FieldSlice, AfterSplitConstraint>>
 DfsItrContext::collect_aftersplit_constraints(const SuperCluster* sc) const {
     using ctype = AfterSplitConstraint::ConstraintType;
@@ -1801,13 +1826,13 @@ bool DfsItrContext::dfs_prune_invalid_packing(const SuperCluster* sc) {
             undecided_lists.insert(sl);
         }
     }
-    auto rst = packing_validator_i.can_pack(
+    auto rst = action_packing_validator_i.can_pack(
             decided_packings, undecided_lists, config_i.loose_action_packing_check_mode);
     switch (rst.code) {
-        case PackingValidator::Result::Code::OK: {
+        case ActionPackingValidatorInterface::Result::Code::OK: {
             return false;
         }
-        case PackingValidator::Result::Code::BAD: {
+        case ActionPackingValidatorInterface::Result::Code::BAD: {
             LOG5("DFS pruned(invalid packing): " << rst.err);
             if (config_i.smart_backtracking_mode) {
                 for (const auto* sl : *rst.invalid_packing) {
@@ -1826,6 +1851,11 @@ bool DfsItrContext::dfs_prune(const ordered_set<SuperCluster*>& unchecked) {
     for (const auto* sc : unchecked) {
         // unwell_formed
         if (dfs_prune_unwell_formed(sc)) {
+            return true;
+        }
+
+        // decided slice list will create invalid parser packing.
+        if (!config_i.disable_packing_check && dfs_prune_invalid_parser_packing(sc)) {
             return true;
         }
 
@@ -1851,7 +1881,7 @@ bool DfsItrContext::dfs_prune(const ordered_set<SuperCluster*>& unchecked) {
         }
 
         // prune invalid packing
-        if (!config_i.disable_action_packing_check && dfs_prune_invalid_packing(sc)) {
+        if (!config_i.disable_packing_check && dfs_prune_invalid_packing(sc)) {
             return true;
         }
     }

@@ -1,8 +1,9 @@
 #ifndef BF_P4C_PHV_SLICING_PHV_SLICING_ITERATOR_H_
 #define BF_P4C_PHV_SLICING_PHV_SLICING_ITERATOR_H_
 
+#include "bf-p4c/phv/action_packing_validator_interface.h"
+#include "bf-p4c/phv/parser_packing_validator_interface.h"
 #include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/phv/packing_validator_interface.h"
 #include "bf-p4c/phv/slicing/types.h"
 #include "bf-p4c/phv/utils/utils.h"
 
@@ -22,7 +23,8 @@ class ItrContext : public IteratorInterface {
 
  public:
     ItrContext(const PhvInfo& phv, const SuperCluster* sc, const PHVContainerSizeLayout& pa,
-               const PackingValidator& packing_validator,
+               const ActionPackingValidatorInterface& action_packing_validator,
+               const ParserPackingValidatorInterface& parser_packing_validator,
                const PackConflictChecker pack_conflict,
                const IsReferencedChecker is_referenced);
 

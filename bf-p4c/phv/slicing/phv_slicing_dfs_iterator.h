@@ -3,11 +3,12 @@
 
 #include <utility>
 
-#include "bf-p4c/phv/packing_validator_interface.h"
+#include "lib/ordered_set.h"
+
+#include "bf-p4c/phv/slicing/phv_slicing_iterator.h"
 #include "bf-p4c/phv/slicing/phv_slicing_split.h"
 #include "bf-p4c/phv/slicing/types.h"
 #include "bf-p4c/phv/utils/utils.h"
-#include "lib/ordered_set.h"
 
 namespace PHV {
 namespace Slicing {
@@ -75,7 +76,8 @@ class DfsItrContext : public IteratorInterface {
     const PhvInfo& phv_i;
     const SuperCluster* sc_i;
     const PHVContainerSizeLayout pa_i;
-    const PackingValidator& packing_validator_i;
+    const ActionPackingValidatorInterface& action_packing_validator_i;
+    const ParserPackingValidatorInterface& parser_packing_validator_i;
     const PackConflictChecker has_pack_conflict_i;
     const IsReferencedChecker is_used_i;
     IteratorConfig config_i;
@@ -139,13 +141,15 @@ class DfsItrContext : public IteratorInterface {
 
  public:
     DfsItrContext(const PhvInfo& phv, const SuperCluster* sc, const PHVContainerSizeLayout& pa,
-                  const PackingValidator& packing_validator,
+                  const ActionPackingValidatorInterface& action_packing_validator,
+                  const ParserPackingValidatorInterface& parser_packing_validator,
                   const PackConflictChecker& pack_conflict,
                   const IsReferencedChecker is_used)
         : phv_i(phv),
           sc_i(sc),
           pa_i(pa),
-          packing_validator_i(packing_validator),
+          action_packing_validator_i(action_packing_validator),
+          parser_packing_validator_i(parser_packing_validator),
           has_pack_conflict_i(pack_conflict),
           is_used_i(is_used),
           config_i(false, false, true, true, (1 << 25), (1 << 19)) {}
@@ -214,6 +218,8 @@ class DfsItrContext : public IteratorInterface {
     /// (1) @p sc cannot be split further and is not well_formed.
     /// (2) a slicelist in @p sc that cannot be split further has pack conflicts.
     bool dfs_prune_unwell_formed(const SuperCluster* sc) const;
+
+    bool dfs_prune_invalid_parser_packing(const SuperCluster* sc) const;
 
     /// return true if exists constraint unsat due to the limit of slice list size.
     bool dfs_prune_unsat_slicelist_max_size(

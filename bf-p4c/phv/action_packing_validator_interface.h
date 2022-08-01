@@ -1,5 +1,5 @@
-#ifndef BF_P4C_PHV_PACKING_VALIDATOR_INTERFACE_H_
-#define BF_P4C_PHV_PACKING_VALIDATOR_INTERFACE_H_
+#ifndef BF_P4C_PHV_ACTION_PACKING_VALIDATOR_INTERFACE_H_
+#define BF_P4C_PHV_ACTION_PACKING_VALIDATOR_INTERFACE_H_
 
 #include <boost/optional.hpp>
 
@@ -12,7 +12,7 @@ namespace PHV {
 
 /// PackingValidator is an interface type of classes that have a can_pack function to verify
 /// whether the packing will violate any constraint.
-class PackingValidator {
+class ActionPackingValidatorInterface {
  public:
     struct Result {
         enum class Code { OK, BAD, UNKNOWN };
@@ -54,4 +54,4 @@ class PackingValidator {
 
 }
 
-#endif /* BF_P4C_PHV_PACKING_VALIDATOR_INTERFACE_H_ */
+#endif /* BF_P4C_PHV_ACTION_PACKING_VALIDATOR_INTERFACE_H_ */

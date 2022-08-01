@@ -10,7 +10,8 @@
 #include "bf-p4c/phv/collect_strided_headers.h"
 #include "bf-p4c/phv/fieldslice_live_range.h"
 #include "bf-p4c/phv/make_clusters.h"
-#include "bf-p4c/phv/v2/packing_validator.h"
+#include "bf-p4c/phv/v2/action_packing_validator.h"
+#include "bf-p4c/phv/v2/parser_packing_validator.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
@@ -41,7 +42,10 @@ struct PhvKit {
 
     // packing validator that checks whether a set of packing is valid
     // in terms of action phv constraints.
-    PackingValidator* packing_validator;
+    const ActionPackingValidator* packing_validator;
+
+    /// parser packing validator checks whether a packing would break parser constraints.
+    const ParserPackingValidator* parser_packing_validator;
 
     // parser-related
     const MapFieldToParserStates& field_to_parser_states;
@@ -64,21 +68,14 @@ struct PhvKit {
     // provide access to information of last round of table placement.
     const MauBacktracker& mau;
 
-    PhvKit(const PhvInfo& phv,
-           const ClotInfo& clot,
-           const Clustering& clustering,
-           const PhvUse& uses,
-           const FieldDefUse& defuse,
-           const ActionPhvConstraints& actions,
+    PhvKit(const PhvInfo& phv, const ClotInfo& clot, const Clustering& clustering,
+           const PhvUse& uses, const FieldDefUse& defuse, const ActionPhvConstraints& actions,
            const MapFieldToParserStates& field_to_parser_states,
-           const CalcParserCriticalPath& parser_critical_path,
-           const CollectParserInfo& parser_info,
+           const CalcParserCriticalPath& parser_critical_path, const CollectParserInfo& parser_info,
            const CollectStridedHeaders& strided_headers,
            const FieldSliceLiveRangeDB& physical_liverange_db,
-           const ActionSourceTracker& source_tracker,
-           const Pragmas& pragmas,
-           const AllocSetting& settings,
-           const TableFieldPackOptimization& table_pack_opt,
+           const ActionSourceTracker& source_tracker, const Pragmas& pragmas,
+           const AllocSetting& settings, const TableFieldPackOptimization& table_pack_opt,
            const MauBacktracker& mau)
         : phv(phv),
           clot(clot),
@@ -88,6 +85,8 @@ struct PhvKit {
           actions(actions),
           source_tracker(source_tracker),
           packing_validator(new ActionPackingValidator(source_tracker, uses)),
+          parser_packing_validator(new ParserPackingValidator(
+              phv, field_to_parser_states, parser_info, defuse, pragmas.pa_no_init())),
           field_to_parser_states(field_to_parser_states),
           parser_critical_path(parser_critical_path),
           parser_info(parser_info),
@@ -104,12 +103,7 @@ struct PhvKit {
 
     // has_pack_conflict should be used as the only source of pack conflict checks.
     // It checks mutex + pack conflict from mau + no pack constraint from cluster.
-    bool has_pack_conflict(const PHV::FieldSlice &fs1, const PHV::FieldSlice &fs2) const {
-        if (fs1.field() != fs2.field()) {
-            if (mutex()(fs1.field()->id, fs2.field()->id)) return false;
-        }
-        return clustering.no_pack(fs1.field(), fs2.field()) || actions.hasPackConflict(fs1, fs2);
-    }
+    bool has_pack_conflict(const PHV::FieldSlice &fs1, const PHV::FieldSlice &fs2) const;
 
     // return true if field is used and not padding.
     bool is_referenced(const PHV::Field* f) const { return !f->padding && uses.is_referenced(f); };

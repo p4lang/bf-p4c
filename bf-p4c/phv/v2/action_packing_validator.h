@@ -1,19 +1,19 @@
-#ifndef BF_P4C_PHV_LEGACY_PACKING_VALIDATOR_H_
-#define BF_P4C_PHV_LEGACY_PACKING_VALIDATOR_H_
+#ifndef BF_P4C_PHV_V2_ACTION_PACKING_VALIDATOR_H_
+#define BF_P4C_PHV_V2_ACTION_PACKING_VALIDATOR_H_
 
 #include <boost/optional.hpp>
 
-#include "bf-p4c/phv/packing_validator_interface.h"
+#include "bf-p4c/phv/action_packing_validator_interface.h"
 #include "lib/ordered_set.h"
 
 namespace PHV {
-namespace legacy {
+namespace v2 {
 
 /// ActionPackingValidator checks action PHV constraints for packing of fieldslices, by using
 /// ActionConstraintSolver. It will try to compute container sizes and corresponding alignments
 /// of all slice lists, and then it will build and call the solver to check if it is possible
 /// to synthesize actions.
-class ActionPackingValidator : public PackingValidator {
+class ActionPackingValidator : public ActionPackingValidatorInterface {
  private:
     const ActionSourceTracker& sources_i;
     const PhvUse& uses_i;
@@ -31,7 +31,7 @@ class ActionPackingValidator : public PackingValidator {
         const override;
 };
 
-}  // namespace legacy
+}  // namespace v2
 }  // namespace PHV
 
-#endif /* BF_P4C_PHV_LEGACY_PACKING_VALIDATOR_H_ */
+#endif /* BF_P4C_PHV_V2_ACTION_PACKING_VALIDATOR_H_ */

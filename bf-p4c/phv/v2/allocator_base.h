@@ -80,13 +80,6 @@ class AllocatorBase {
                                                const AllocSlice& candidate,
                                                const Container& c) const;
 
-    /// @returns error if packing
-    /// (1) uninitialized field with extracted field.
-    /// (2) extracted field with other extracted field while not extracted together.
-    const AllocError* is_container_parser_packing_ok(const Allocation& alloc,
-                                                     const AllocSlice& candidate,
-                                                     const Container& c) const;
-
     /// @returns error if violating max container bytes constraints on some field.
     const AllocError* is_container_bytes_ok(const Allocation& alloc,
                                             const std::vector<AllocSlice>& candidates,
@@ -95,7 +88,7 @@ class AllocatorBase {
     /// @returns error if violating any of the above is_container_* constraint.
     const AllocError* check_container_scope_constraints(
         const Allocation& alloc,
-        const std::vector<AllocSlice> candidates,
+        const std::vector<AllocSlice>& candidates,
         const Container& c) const;
 
     /// @returns a vector of slice list that covers all field slices of @p sc.

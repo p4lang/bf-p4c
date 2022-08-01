@@ -418,31 +418,6 @@ const AllocError* AllocatorBase::is_container_write_mode_ok(const Allocation& al
     if (!is_extracted || !parser_group_gress) {
         return nullptr;
     }
-    // TODO(yumin): these checks was inherited from old allocator, I do not think they
-    // make sense. We really need the parser packing checker to replace those all.
-    // check they will not be extracted by the same input buffer position in the same state?
-    auto allocated_slices = alloc.liverange_overlapped_slices(c, {candidate});
-    for (auto allocated : allocated_slices) {
-        auto allocated_field = allocated.field();
-        if (allocated_field == f) {
-            continue;
-        }
-        if (!field_to_states.field_to_extracts.count(allocated_field)) continue;
-        for (auto candidate_extract : field_to_states.field_to_extracts.at(f)) {
-            auto candidate_state = field_to_states.extract_to_state.at(candidate_extract);
-            for (auto allocated_extract : field_to_states.field_to_extracts.at(allocated_field)) {
-                auto allocated_state = field_to_states.extract_to_state.at(allocated_extract);
-                // A container cannot have same extract in same state
-                if (candidate_state == allocated_state &&
-                    candidate_extract->source->equiv(*allocated_extract->source) &&
-                    candidate_extract->source->is<IR::BFN::PacketRVal>()) {
-                    *err << "Slices of field " << f << " and " << allocated_field
-                         << " have same extract source in the same state " << candidate_state->name;
-                    return err;
-                }
-            }
-        }
-    }
 
     // all containers within parser group must have same parser write mode
     boost::optional<IR::BFN::ParserWriteMode> write_mode;
@@ -558,63 +533,6 @@ const AllocError* AllocatorBase::is_container_solitary_ok(const Allocation& allo
     return nullptr;
 }
 
-const AllocError* AllocatorBase::is_container_parser_packing_ok(
-    const Allocation& alloc, const AllocSlice& candidate, const Container& c) const {
-    const auto is_extracted = [&](const Field* f) {
-        // constants will have zeros in irrelevant bits, and when extracter bit-or-write
-        // the container, zeros will just be no-op to other fields packed in the container,
-        // so extracted from constant are okay to be packed with any other fields.
-        return !f->pov && kit_i.uses.is_extracted(f) &&
-               !kit_i.uses.is_extracted_from_constant(f);
-    };
-    const auto is_uninitialized = [&](const Field* f) {
-        return (f->pov || (kit_i.defuse.hasUninitializedRead(f->id)));
-    };
-    bool has_uninitialized_read = false;
-    bool has_extracted = false;
-    bool all_extracted_togehter = true;
-    for (auto& allocated : alloc.liverange_overlapped_slices(c, {candidate})) {
-        if (allocated.field()->is_ignore_alloc()) {
-            continue;
-        }
-        has_uninitialized_read |=
-            !allocated.field()->is_padding() && is_uninitialized(allocated.field());
-        // padding field may overwrite uninitialized field, as long as it was extracted.
-        // TODO(yumin): unless we do not generate extract for padding fields?
-        has_extracted |= is_extracted(allocated.field());
-        // TODO(yumin): WARNING: this is wrong! extracted together slices can be packed into
-        // a container in an order that is different from input buffer. The correct check
-        // should be are they always extracted in this layout.
-        all_extracted_togehter &=
-            kit_i.phv.are_bridged_extracted_together(allocated.field(), candidate.field());
-    }
-
-    // if all are extracted together, them they can be packed.
-    if (all_extracted_togehter) {
-        return nullptr;
-    }
-
-    const bool candidate_extracted = is_extracted(candidate.field());
-    const bool candidate_uninitialized =
-        !candidate.field()->is_padding() && is_uninitialized(candidate.field());
-    auto* err = new AllocError(ErrorCode::CONTAINER_PARSER_PACKING_INVALID);
-    if (has_extracted && (candidate_uninitialized || candidate_extracted)) {
-        // TODO(yumin): when both allcoated and candidate are extracted, actually they can be
-        // packed together as long as they are *always extracted together*:
-        // AllocSlices (allocated + candidates) are in the same layout as they were on the
-        // input buffer on any state.
-        *err << "extracted slices allocated already, can't be packed because " << candidate
-             << " is " << (candidate_extracted ? "extracted" : "uninitialized");
-        return err;
-    }
-    if (has_uninitialized_read && candidate_extracted) {
-        *err << "uninitialized slices allocated already, can't be packed with extracted slice: "
-             << candidate;
-        return err;
-    }
-    return nullptr;
-}
-
 const AllocError* AllocatorBase::is_container_bytes_ok(
     const Allocation& alloc, const std::vector<AllocSlice>& candidates, const Container& c) const {
     // Check sum of constraints.
@@ -655,7 +573,21 @@ const AllocError* AllocatorBase::is_container_bytes_ok(
 }
 
 const AllocError* AllocatorBase::check_container_scope_constraints(
-    const Allocation& alloc, const std::vector<AllocSlice> candidates, const Container& c) const {
+    const Allocation& alloc, const std::vector<AllocSlice>& candidates, const Container& c) const {
+    // check parser packing.
+    FieldSliceAllocStartMap fs_starts;
+    for (const auto& slice : alloc.slices(c)) {
+        if (slice.getEarliestLiveness().first != -1) continue;  // filter our non-parsed slice
+        fs_starts[FieldSlice(slice.field(), slice.field_slice())] = slice.container_slice().lo;
+    }
+    for (const auto& slice : candidates) {
+        if (slice.getEarliestLiveness().first != -1) continue;  // filter out non-parsed slice
+        fs_starts[FieldSlice(slice.field(), slice.field_slice())] = slice.container_slice().lo;
+    }
+    if (auto* parser_packing_err = kit_i.parser_packing_validator->can_pack(fs_starts, c)) {
+        return parser_packing_err;
+    }
+    // check every candidate slice against allocated.
     for (const auto& sl : candidates) {
         // Check container type constraint.
         if (auto* err = is_container_type_ok(sl, c)) {
@@ -665,16 +597,12 @@ const AllocError* AllocatorBase::check_container_scope_constraints(
         if (auto* err = is_container_gress_ok(alloc, sl, c)) {
             return err;
         }
-        // Check container group write mode constraints.
-        if (auto* err = is_container_write_mode_ok(alloc, sl, c)) {
-            return err;
-        }
         // Check solitary constraint for candidates and allocated fields.
         if (auto* err = is_container_solitary_ok(alloc, sl, c)) {
             return err;
         }
-        // Check solitary constraint for candidates and allocated fields.
-        if (auto* err = is_container_parser_packing_ok(alloc, sl, c)) {
+        // Check container group write mode constraints.
+        if (auto* err = is_container_write_mode_ok(alloc, sl, c)) {
             return err;
         }
     }
@@ -810,8 +738,11 @@ SomeContScopeAllocResult AllocatorBase::try_slices_to_container_group(
                 }
             }
         } else {
-            // prefer to return this most informative error message.
+            // prefer to return the most informative error message.
             if (c_rst.err->code == ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED) {
+                some.err = c_rst.err;
+            } else if (some.err->code != ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED &&
+                       c_rst.err->code == ErrorCode::CONTAINER_PARSER_PACKING_INVALID) {
                 some.err = c_rst.err;
             }
         }

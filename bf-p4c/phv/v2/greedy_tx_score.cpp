@@ -705,7 +705,9 @@ std::ostream& operator<<(std::ostream& out, const Vision& v) {
     for (const auto& gress : {gress_t::INGRESS, gress_t::EGRESS}) {
         for (const auto k : {Kind::tagalong, Kind::dark, Kind::mocha, Kind::normal}) {
             for (const auto s : {PHV::Size::b8, PHV::Size::b16, PHV::Size::b32}) {
-                if (auto n_req = v.cont_required.at(gress).get(k, s)) {
+                auto n_req = v.cont_required.at(gress).get(k, s);
+                if (k == Kind::normal && !n_req) n_req = 0;  // always print normal availability
+                if (n_req) {
                     out << "  " << gress << "-" << k << s << ": " << *n_req << "/("
                         << v.cont_available.at(from(gress)).get_or(k, s, 0) << " + "
                         << v.cont_available.at(ContGress::unassigned).get_or(k, s, 0) << ")\n";

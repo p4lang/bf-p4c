@@ -1,4 +1,4 @@
-#include "bf-p4c/phv/v2/packing_validator.h"
+#include "bf-p4c/phv/legacy_action_packing_validator.h"
 
 #include <algorithm>
 #include <boost/optional/optional.hpp>
@@ -15,15 +15,12 @@
 #include "lib/bitvec.h"
 #include "lib/exceptions.h"
 #include "lib/log.h"
+#include "lib/map.h"
 #include "lib/ordered_set.h"
 #include "lib/safe_vector.h"
 
 namespace PHV {
-namespace v2 {
-
-/// Map a slice list to the assigned starting position in container. Use this to assign a
-/// start to a floating slice list that its allocation are not fixed.
-using SliceListAssignedStarts = ordered_map<const SuperCluster::SliceList*, int>;
+namespace legacy {
 
 namespace {
 
@@ -43,22 +40,6 @@ boost::optional<unsigned int> slice_list_alignment(const SuperCluster::SliceList
         return head.alignment()->align;
     }
     return boost::none;
-}
-
-// assuming we allocate sl to the container size.
-int max_slice_list_packable_bits(const SuperCluster::SliceList* sl) {
-    const auto alignment = slice_list_alignment(sl);
-    int max_empty_bits = alignment ? *alignment : 0;
-    int adjacent_empty_bits = 0;
-    for (const auto& fs : *sl) {
-        if (fs.field()->is_padding() || fs.field()->is_ignore_alloc()) {
-            adjacent_empty_bits += fs.size();
-        } else {
-            adjacent_empty_bits = 0;
-        }
-        max_empty_bits = std::max(max_empty_bits, adjacent_empty_bits);
-    }
-    return max_empty_bits;
 }
 
 /// @returns if @p sources has only one phv source of move-based instruction, return that slice.
@@ -175,6 +156,7 @@ struct SliceListGroupProp {
         } else {
             return sl_cont_size.at(sl) - sl_bits.at(sl);
         }
+        return sl_cont_size.at(sl) - sl_bits.at(sl);
     }
 
     /// returns a fieldslice which contains the @p fs.
@@ -195,8 +177,7 @@ struct SliceListGroupProp {
     /// return the container ID and the offset of the starting bit of @p fs, if
     /// the enclosing slice list will be allocated at 0th bit of container.
     boost::optional<std::pair<solver::ContainerID, int>> find_allocation(
-        const FieldSlice& fs,
-        const SliceListAssignedStarts& sl_assigned_start = {}) const {
+        const FieldSlice& fs) const {
         auto enclosing_fs = find_enclosing_settled_fs(fs);
         if (!enclosing_fs) {
             return boost::none;
@@ -206,16 +187,10 @@ struct SliceListGroupProp {
         if (!alloc_container) {
             return boost::none;
         }
-        const int alloc_offset = offset(*enclosing_fs);
         if (floating_range(enclosing_sl) > 0) {
-            if (sl_assigned_start.count(enclosing_sl)) {
-                auto fixed_start = sl_assigned_start.at(enclosing_sl);
-                return std::pair<solver::ContainerID, int>{
-                    *alloc_container,
-                    fixed_start + alloc_offset + fs.range().lo - enclosing_fs->range().lo};
-            }
             return boost::none;
         }
+        const int alloc_offset = offset(*enclosing_fs);
         return std::pair<solver::ContainerID, int>{
             *alloc_container, alloc_offset + fs.range().lo - enclosing_fs->range().lo};
     }
@@ -356,10 +331,7 @@ Result validate_mixed_op(const ordered_map<FieldSlice, ActionClassifiedSources>&
             ops.insert(s.t);
         }
         if (ops.size() > 1) {
-            auto rst = Result(Code::BAD, (boost::format("mixed operands: %1%") % sl).str());
-            rst.invalid_action = action;
-            rst.invalid_packing->insert(sl);
-            return rst;
+            return Result(Code::BAD, (boost::format("mixed operands: %1%") % sl).str());
         }
     }
     return Result(Code::OK);
@@ -442,8 +414,6 @@ Result validate_num_sources(
         for (const auto* action : prop.sl_actions.at(sl)) {
             auto rst = validate_num_sources_of_sl_and_action(
                     prop.fs_sources, settled_fs_sl, unsettled_fs_sl, sl, action);
-            rst.invalid_action = action;
-            rst.invalid_packing->insert(sl);
             if (rst.code == Code::BAD) {
                 return rst;
             }
@@ -452,103 +422,26 @@ Result validate_num_sources(
     return Result(Code::OK);
 }
 
-/// The returned bitvec[i] is true only when i-the bit is in a byte that will *NOT* be
-/// written by more than 1 source, e.g., 1 action data and 1 container, or two
-/// container sources. For those bytes, we can always slice the destination more to avoid.
-/// being corrupted by the writing instruction.
-bitvec compute_single_source_bytes_bv(const SliceListGroupProp& prop,
-                                      const IR::MAU::Action* action,
-                                      const SuperCluster::SliceList* sl,
-                                      const int dest_offset,
-                                      const SliceListAssignedStarts& sl_assigned_start = {}) {
-    // using container name to represent sources, $ad_const represents action data.
-    std::map<int, ordered_set<cstring>> dest_byte_written_by;
-    for (const auto& fs : *sl) {
-        if (!prop.fs_sources.at(fs).count(action)) continue;
-        const int start_bit_idx = dest_offset + prop.fs_offset.at(fs);
-        // ClosedOpen range of written bytes: [start, end)
-        const int start_byte = start_bit_idx / 8;
-        const int end_byte = ROUNDUP(start_bit_idx + fs.size(), 8);
-
-        // currently we support move-based instruction only.
-        const auto& sources = prop.fs_sources.at(fs).at(action);
-        if (sources.size() > 1 || sources.front().t != SourceOp::OpType::move) {
-            continue;
-        }
-        const auto& src = sources.front();
-        for (int i = start_byte; i < end_byte; i++) {
-            if (src.ad_or_const) {
-                dest_byte_written_by[i].insert("$ad_const");
-            } else {
-                const auto& src_fs = *src.phv_src;
-                const auto src_alloc = prop.find_allocation(src_fs, sl_assigned_start);
-                if (!src_alloc) {
-                    continue;
-                }
-                dest_byte_written_by[i].insert(src_alloc->first);
-            }
-        }
-    }
-    bitvec rv;
-    for (const auto& kv : dest_byte_written_by) {
-        if (kv.second.size() <= 1) {
-            rv.setrange(kv.first * 8, 8);
-        }
-    }
-    return rv;
-}
-
 // validate_slicelist_for_action returns results with Code::Bad if it found that @p action
 // that cannot be synthesized, when  @p sl is allocated to
 // container @p dest of @p dest_cont_size bits, starting from the @p dest_offset bit.
 // @p prop must have all properties of slice list that their allocation can be speculated.
-Result validate_slicelist_for_action(const PhvUse& uses,
-                                     const SliceListGroupProp& prop,
-                                     const solver::ContainerID dest,
-                                     const int dest_cont_size,
-                                     const int dest_offset,
-                                     const SuperCluster::SliceList* sl,
-                                     const IR::MAU::Action* action,
-                                     const bool loose_mode,
-                                     const SliceListAssignedStarts& sl_assigned_start = {}) {
+Result validate_slicelist_for_action(
+    const SliceListGroupProp& prop,
+    const solver::ContainerID dest,
+    const int dest_cont_size,
+    const int dest_offset,
+    const SuperCluster::SliceList* sl,
+    const IR::MAU::Action* action) {
     // setup solver
     solver::ActionMoveSolver solver;
-    // loose mode allows live bits of bytes that were not written by
-    // (1) both ad_const and container, or
-    // (2) more than 1 container source,
-    // in this action to be corrupted. Because the corruption can be avoid
-    // if we slice more on destination.
-    bitvec no_corruption_check_bits;
-    if (loose_mode) {
-        no_corruption_check_bits =
-            compute_single_source_bytes_bv(prop, action, sl, dest_offset, sl_assigned_start);
-    }
-    // dest_live assumes that as long as the field is used, it will be live after this action.
-    // This is sometimes stricter than the reality, because field slice can be dead after this
-    // action.
+    // for destination, set a dummy liveness bitvec first. After adding all assignments,
+    // we will update the container liveness using dest_live.
+    // dest_live is a loose liveness bitvec for destination that assumes that all other
+    // fieldslices, that is not written in this action, will be dead.
     bitvec dest_live;
-    for (const auto& fs : *sl) {
-        const int start_bit_idx = dest_offset + prop.fs_offset.at(fs);
-        const bool is_written = prop.fs_sources.at(fs).count(action);
-        if (is_written) {
-            dest_live.setrange(start_bit_idx, fs.size());
-            continue;
-        }
-        const bool is_not_padding = !fs.field()->is_padding() && !fs.field()->is_ignore_alloc() &&
-                                    uses.is_referenced(fs.field());
-        if (!is_not_padding) continue;
-        // we will mark bits of live but unwritten field slices to be *live*
-        // (cannot be corrupted), only if they are not part of the no check list.
-        for (int i = start_bit_idx; i < start_bit_idx + fs.size(); i++) {
-            if (!no_corruption_check_bits.getbit(i)) {
-                dest_live.setbit(i);
-            }
-        }
-    }
-    solver.set_container_spec(dest, dest_cont_size, dest_live);
-    LOG5("dest live bits bitvec: " << dest_live);
+    solver.set_container_spec(dest, dest_cont_size, bitvec(0, dest_cont_size));
 
-    auto* involved_lists = new ordered_set<const SuperCluster::SliceList*>{sl};
     // setup assignments
     for (const auto& fs : *sl) {
         // skip fs not written in @p action.
@@ -560,6 +453,7 @@ Result validate_slicelist_for_action(const PhvUse& uses,
         if (sources.size() > 1 || sources.front().t != SourceOp::OpType::move) {
             continue;
         }
+        dest_live.setrange(dest_offset + prop.fs_offset.at(fs), fs.size());
         const auto dest_operand = solver::make_container_operand(
             dest, StartLen(dest_offset + prop.fs_offset.at(fs), fs.size()));
         const auto& src = sources.front();
@@ -569,7 +463,7 @@ Result validate_slicelist_for_action(const PhvUse& uses,
             solver.add_assign(dest_operand, solver::make_ad_or_const_operand());
         } else {
             const auto& src_fs = *src.phv_src;
-            const auto src_alloc = prop.find_allocation(src_fs, sl_assigned_start);
+            const auto src_alloc = prop.find_allocation(src_fs);
             // skip when there is a source that its allocation is not decided that
             // (1) either it does not have decided container size,
             // (2) or its float_range is large than 0.
@@ -577,11 +471,9 @@ Result validate_slicelist_for_action(const PhvUse& uses,
             // floating range is large than 0, by iterating combinations of them, we do not,
             // because the time complexity will become nonlinear.
             if (!src_alloc) {
-                LOG5("adding unallocated source to " << dest_operand);
                 solver.add_src_unallocated_assign(dest_operand.container, dest_operand.range);
                 continue;
             }
-            involved_lists->insert(prop.fs_sl.at(*prop.find_enclosing_settled_fs(src_fs)));
             const auto src_operand = solver::make_container_operand(
                 src_alloc->first, StartLen(src_alloc->second, src_fs.size()));
             if (src_alloc->first != dest) {
@@ -591,110 +483,18 @@ Result validate_slicelist_for_action(const PhvUse& uses,
             LOG5("adding phv assignment from " << src_operand << " to " << dest_operand);
         }
     }
+    LOG5("dest live bits bitvec: " << dest_live);
+    solver.set_container_spec(dest, dest_cont_size, dest_live);
     auto rst = solver.solve();
-    if (rst.err) {
-        LOG3("solver error: " << rst.err->msg);
-    } else {
-        LOG3("solver result: okay.");
-    }
     if (!rst.ok()) {
-        auto err_msg = (boost::format("impossible to synthesize instruction for destination"
-                                      " %1% in action %2%") %
-                        sl % action->externalName()).str();
-        auto rst = Result(Code::BAD, err_msg);
-        rst.invalid_action = action;
-        rst.invalid_packing = involved_lists;
-        return rst;
+        return Result(Code::BAD,
+                      (boost::format("impossible to synthesize %1% for action %2%") % sl %
+                                     action->externalName()).str());
     }
     return Result(Code::OK);
 }
 
-boost::optional<const SuperCluster::SliceList*> find_the_only_floating_src_sl(
-    const SliceListGroupProp& prop,
-    const SuperCluster::SliceList* sl,
-    const IR::MAU::Action* action) {
-    ordered_set<const SuperCluster::SliceList*> floating_src_slice_lists;
-    ordered_set<const SuperCluster::SliceList*> fixed_src_slice_lists;
-    for (const auto& fs : *sl) {
-        // skip fs not written in @p action.
-        if (!prop.fs_sources.at(fs).count(action)) {
-            continue;
-        }
-        const auto& sources = prop.fs_sources.at(fs).at(action);
-        // currently we support move-based instruction only.
-        if (sources.size() > 1 || sources.front().t != SourceOp::OpType::move) {
-            continue;
-        }
-        const auto& src = sources.front();
-        if (src.ad_or_const) {
-            continue;
-        }
-        const auto& src_fs = *src.phv_src;
-        auto enclosing_fs = prop.find_enclosing_settled_fs(src_fs);
-        if (!enclosing_fs) {
-            continue;
-        }
-        auto* enclosing_sl = prop.fs_sl.at(*enclosing_fs);
-        const auto alloc_container = prop.container(*enclosing_fs);
-        if (!alloc_container) {
-            continue;
-        }
-        if (prop.floating_range(enclosing_sl) == 0) {
-            fixed_src_slice_lists.insert(enclosing_sl);
-            continue;
-        }
-        // found a floating.
-        floating_src_slice_lists.insert(enclosing_sl);
-    }
-    if (floating_src_slice_lists.empty()) {
-        LOG3("no floating source slice list.");
-        return boost::none;
-    }
-    if (floating_src_slice_lists.size() > 1) {
-        LOG3("found too many floating slice lists: " << floating_src_slice_lists.size());
-        return boost::none;
-    }
-    // if this floating_sl might be packed with other source slice lists, we do not
-    // check further, because the number of packing combinations can be huge.
-    const auto* floating_sl = floating_src_slice_lists.front();
-    LOG3("Found only one floating slice lists: " << floating_sl);
-    const int floating_sl_bits = PHV::SuperCluster::slice_list_total_bits(*floating_sl);
-    for (const auto* fixed_src : fixed_src_slice_lists) {
-        if (max_slice_list_packable_bits(fixed_src) >= floating_sl_bits) {
-            LOG3("not sure whether we should we pack " << fixed_src << " with above floating sl");
-            return boost::none;
-        }
-    }
-    return floating_sl;
-}
-
-Result validate_slicelist_for_action_allow_one_floating_src(
-    const PhvUse& uses, const SliceListGroupProp& prop, const solver::ContainerID dest,
-    const int dest_cont_size, const int dest_offset, const SuperCluster::SliceList* sl,
-    const IR::MAU::Action* action, bool loose_mode) {
-    const auto the_only_floating_src_sl = find_the_only_floating_src_sl(prop, sl, action);
-    if (!the_only_floating_src_sl) {
-        return validate_slicelist_for_action(
-                uses, prop, dest, dest_cont_size, dest_offset, sl, action, loose_mode);
-    }
-    const int step = slice_list_alignment(sl) ? 8 : 1;
-    const int floating_range = prop.floating_range(*the_only_floating_src_sl);
-    Result rst;
-    for (int offset = 0; offset <= floating_range; offset += step) {
-        LOG3("Verify with assigning " << *the_only_floating_src_sl << " to start at " << offset);
-        SliceListAssignedStarts assigned_starts;
-        assigned_starts[*the_only_floating_src_sl] = offset;
-        rst = validate_slicelist_for_action(uses, prop, dest, dest_cont_size, dest_offset, sl,
-                                            action, loose_mode, assigned_starts);
-        if (rst.code == Code::OK || rst.code == Code::UNKNOWN) {
-            return rst;
-        }
-    }
-    return rst;
-}
-
-Result validate_one_byte_slice_list(const PhvUse& uses,
-                                    const SliceListGroupProp& prop,
+Result validate_one_byte_slice_list(const SliceListGroupProp& prop,
                                     const SuperCluster::SliceList* byte_list) {
     // find the cont size for this byte.
     boost::optional<int> cont_size = boost::make_optional(false, int());
@@ -739,7 +539,7 @@ Result validate_one_byte_slice_list(const PhvUse& uses,
         for (int offset = 0; offset <= *cont_size - byte_list_sz; offset += step) {
             LOG5("check action: " << action->externalName() << ", dest alloc offset: " << offset);
             rst = validate_slicelist_for_action(
-                    uses, prop, "byte_dest", *cont_size, offset, byte_list, action, false);
+                    prop, "byte_dest", *cont_size, offset, byte_list, action);
             if (rst.code == Code::OK || rst.code == Code::UNKNOWN) {
                 LOG5("found valid allocation at offset " << offset);
                 break;
@@ -760,6 +560,7 @@ Result ActionPackingValidator::can_pack(
     const ordered_set<const SuperCluster::SliceList*>& slice_lists,
     const ordered_set<const SuperCluster::SliceList*>& can_be_split_further,
     const bool loose_mode) const {
+    BUG_CHECK(loose_mode, "legacy validator can only do loose_mode checks");
     // NOTE: do not skip even if slice_lists.size() is 1. It can be useful later when
     // checking @p can_be_split_further.
     if (LOGGING(6) && slice_lists.size() > 0) {
@@ -808,9 +609,8 @@ Result ActionPackingValidator::can_pack(
             for (int offset = 0; offset <= floating_range; offset += step) {
                 LOG5("check action: " << action->externalName()
                                       << ", dest alloc offset: " << offset);
-                rst = validate_slicelist_for_action_allow_one_floating_src(
-                    uses_i, prop, *prop.container(sl), *prop.container_size(sl), offset, sl,
-                    action, loose_mode);
+                rst = validate_slicelist_for_action(prop, *prop.container(sl),
+                                                    *prop.container_size(sl), offset, sl, action);
                 if (rst.code == Code::OK || rst.code == Code::UNKNOWN) {
                     break;
                 }
@@ -825,7 +625,7 @@ Result ActionPackingValidator::can_pack(
     // validate same-byte-packing fieldslices in @p can_be_split_further list.
     for (const auto* byte_sl : prop.unsettled_byte_sl) {
         LOG5("validate same-byte packing: " << byte_sl);
-        auto rst = validate_one_byte_slice_list(uses_i, prop, byte_sl);
+        auto rst = validate_one_byte_slice_list(prop, byte_sl);
         if (rst.code == Code::BAD) {
             return rst;
         } else if (rst.code == Code::UNKNOWN) {
@@ -835,5 +635,5 @@ Result ActionPackingValidator::can_pack(
     return Result(Code::OK);
 }
 
-}  // namespace v2
+}  // namespace legacy
 }  // namespace PHV
