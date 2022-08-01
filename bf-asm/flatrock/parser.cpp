@@ -954,6 +954,8 @@ void FlatrockParser::alu0_instruction::input(VECTOR(value_t) args, value_t data)
 }
 
 uint32_t FlatrockParser::alu0_instruction::build_opcode() const {
+    BUG_CHECK(!is_invalid(), "building opcode from invalid ALU0 instruction");
+
     uint32_t op0 = 0;
     switch (opcode) {
     case Flatrock::alu0_instruction::OPCODE_NOOP:
@@ -1192,6 +1194,8 @@ void FlatrockParser::alu1_instruction::input(VECTOR(value_t) args, value_t data)
 }
 
 uint32_t FlatrockParser::alu1_instruction::build_opcode() const {
+    BUG_CHECK(!is_invalid(), "building opcode from invalid ALU1 instruction");
+
     uint32_t op1 = 0;
     switch (opcode) {
     case Flatrock::alu1_instruction::OPCODE_NOOP:
@@ -1487,6 +1491,10 @@ void FlatrockParser::Profile::input_metadata_select(VECTOR(value_t) args, value_
 void FlatrockParser::Profile::input(VECTOR(value_t) args, value_t data) {
     if (!CHECKTYPE(data, tMAP)) return;
 
+    /* -- Set initial ALU instructions to noop by default. */
+    initial_alu0_instruction.opcode = alu0_instruction::OPCODE_NOOP;
+    initial_alu1_instruction.opcode = alu1_instruction::OPCODE_NOOP;
+    
     /* -- Require match attributes to be present in the ASM file. The default values that the
      * compiler sets for them is "match everything" already, so them not being present in the ASM
      * file is most likely a bug. */
@@ -1877,9 +1885,15 @@ void FlatrockParser::AnalyzerStage::write_config(RegisterSetBase &regs, json::ma
             fr_regs.prsr_mem.parser_ana_s.ana_s[*stage][rule_idx].state_mask_31_0);
 
         /* -- ALU0 and ALU1 instructions */
-        fr_regs.prsr_mem.parser_ana_a.ana_a[*stage][rule_idx].next_op0 =
-            rule.next_alu0_instruction.build_opcode();
-        const uint32_t next_op1(rule.next_alu1_instruction.build_opcode());
+        fr_regs.prsr_mem.parser_ana_a.ana_a[*stage][rule_idx].next_op0 = 0;
+        if (!rule.next_alu0_instruction.is_invalid()) {
+            fr_regs.prsr_mem.parser_ana_a.ana_a[*stage][rule_idx].next_op0 =
+                rule.next_alu0_instruction.build_opcode();
+        }
+        uint32_t next_op1 = 0;
+        if (!rule.next_alu1_instruction.is_invalid()) {
+            next_op1 = rule.next_alu1_instruction.build_opcode();
+        }
         fr_regs.prsr_mem.parser_ana_a.ana_a[*stage][rule_idx].next_op1_0 = next_op1;
         fr_regs.prsr_mem.parser_ana_a.ana_a[*stage][rule_idx].next_op1_1 = next_op1 >> 16;
 
