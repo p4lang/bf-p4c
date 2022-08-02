@@ -1542,12 +1542,35 @@ bool CoreAllocation::satisfies_constraints(
         }
     }
 
+    boost::optional<IR::BFN::ParserWriteMode> write_mode;
+
+    if (isExtracted) {
+        if (utils_i.field_to_parser_states.field_to_extracts.count(f)) {
+            for (auto e : utils_i.field_to_parser_states.field_to_extracts.at(f)) {
+                write_mode = e->write_mode;
+            }
+        }
+
+        // W0 is not allowed to be used with clear_on_write due to a hardware issue (P4C-4589).
+        // W0 is a 32-bit container, and it will be the only container of its parser group,
+        // so we do not need to check other containers of its parser group.
+        if ((Device::currentDevice() == Device::JBAY
+#if HAVE_CLOUDBREAK
+             || Device::currentDevice() == Device::CLOUDBREAK
+#endif
+) &&
+            c == PHV::Container({PHV::Kind::normal, PHV::Size::b32}, 0) &&
+            write_mode == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE) {
+            LOG_DEBUG5(TAB1 "W0 is not allowed to be used with clear_on_write due to hw bug.");
+            return false;
+        }
+    }
+
     // Check 2: all constainers within parser group must have same parser write mode
     if (isExtracted && parserGroupGress) {
         const PhvSpec& phvSpec = Device::phvSpec();
         unsigned slice_cid = phvSpec.containerToId(slice.container());
 
-        boost::optional<IR::BFN::ParserWriteMode> write_mode;
         for (auto sl : (*container_status).slices) {
             auto container_field = sl.field();
             if (container_field == f) {
@@ -1572,26 +1595,7 @@ bool CoreAllocation::satisfies_constraints(
             }
         }
 
-        if (utils_i.field_to_parser_states.field_to_extracts.count(f)) {
-            for (auto e : utils_i.field_to_parser_states.field_to_extracts.at(f)) {
-                write_mode = e->write_mode;
-            }
-        }
-
         BUG_CHECK(write_mode, "parser write mode not exist for extracted field %1%", f->name);
-
-        // W0 is not allowed to be used with clear_on_write due to a hardware issue (P4C-4589).
-        // W0 is a 32-bit container, and it will be the only container of its parser group,
-        // so we do not need to check other containers of its parser group.
-        if ((Device::currentDevice() == Device::JBAY
-#if HAVE_CLOUDBREAK
-             || Device::currentDevice() == Device::CLOUDBREAK
-#endif
-) &&
-            c == PHV::Container({PHV::Kind::normal, PHV::Size::b32}, 0) &&
-            write_mode == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE) {
-            return false;
-        }
 
         for (unsigned cid : phvSpec.parserGroup(slice_cid)) {
             auto other = phvSpec.idToContainer(cid);
