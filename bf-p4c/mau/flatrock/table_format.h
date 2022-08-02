@@ -10,6 +10,7 @@ struct TableFormat : ::TableFormat {
     bool allocate_match_byte(const ByteInfo &info, safe_vector<ByteInfo> &alloced, int width_sect,
         bitvec &byte_attempt, bitvec &bit_attempt) override;
     bool allocate_match_with_algorithm(int group);
+    void find_bytes_to_allocate(int width_sect, safe_vector<ByteInfo> &unalloced) override;
  public:
     TableFormat(const LayoutOption &l, const IXBar::Use *mi, const IXBar::Use *phi,
                 const IR::MAU::Table *t, const bitvec im, bool gl, FindPayloadCandidates &fpc)

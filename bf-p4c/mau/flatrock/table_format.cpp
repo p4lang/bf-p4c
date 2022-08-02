@@ -25,7 +25,7 @@ bool TableFormat::allocate_match_byte(const ByteInfo &info, safe_vector<ByteInfo
     // Entry size = 1/2 1/4 of a set
     // Set size 1, 2, 4, 8, 16, 32, 64, 128 (sets per word)
     // Set enable 4 way lookup always
-    // for (int i = 0; i < SINGLE_RAM_BYTES; i+=((SINGLE_RAM_BITS/MAX_GROUPS_PER_LAMB)/8)) {
+    // for (int i = 0; i < SINGLE_RAM_BYTES; i+=((SINGLE_RAM_BITS/MAX_GROUPS_PER_LAMB)/8))
     for (int i = 0; i < SINGLE_RAM_BYTES; i++) {
        if (initialize_byte(i, width_sect, info, alloced, byte_attempt, bit_attempt))
            return true;
@@ -157,6 +157,22 @@ bool TableFormat::allocate_sram_match() {
             << ", per_group_width: " << per_group_width);
     if (group == total_groups) return true;
     return false;
+}
+
+/** Pull out all bytes that coordinate to a particular search bus
+ */
+void TableFormat::find_bytes_to_allocate(int width_sect, safe_vector<ByteInfo> &unalloced) {
+    int search_bus = search_bus_per_width[width_sect];
+    for (const auto& info : match_bytes) {
+        if (info.byte.search_bus != search_bus)
+            continue;
+        unalloced.push_back(info);
+    }
+    // FIXME
+    // flatrock needs these ordered based on how they are in the input_xbar -- so sorting
+    // by size (as tofino does) is bad.  Do we need to reorder to get the word_xbar match
+    // first, followed by byte_xbar?  Do we need to ensure they're densely packed on the
+    // ixbar or insert gaps?  Not clear what exactly is required here.
 }
 
 }

@@ -313,7 +313,7 @@ struct TableFormat {
     bool allocate_selector_length();
     bool allocate_indirect_ptr(int total, type_t type, int group, int RAM);
 
-    void find_bytes_to_allocate(int width_sect, safe_vector<ByteInfo> &unalloced);
+    virtual void find_bytes_to_allocate(int width_sect, safe_vector<ByteInfo> &unalloced);
     bool allocate_interleaved_byte(const ByteInfo &info, safe_vector<ByteInfo> &alloced,
         int width_sect, int entry, bitvec &byte_attempt, bitvec &bit_attempt);
     bool allocate_version(int width_sect, const safe_vector<ByteInfo> &alloced,
