@@ -53,7 +53,7 @@ class EvaluatorPass final : public PassManager, public P4::IHasBlock {
     P4::Evaluator* evaluator;
 
  public:
-    IR::ToplevelBlock* getToplevelBlock() override { return evaluator->getToplevelBlock(); }
+    IR::ToplevelBlock* getToplevelBlock() const override { return evaluator->getToplevelBlock(); }
     EvaluatorPass(P4::ReferenceMap* refMap, P4::TypeMap* typeMap, bool doListConv = false);
 };
 

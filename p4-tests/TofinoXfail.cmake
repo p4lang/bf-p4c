@@ -2067,3 +2067,11 @@ p4c_add_xfail_reason("tofino"
   "AssertionError: Expected packet was not received on"
   p4c_4366
 )
+
+# p4c update 2022-08-01
+# The error happens in FrontEnd pass TypeInference and is probably caused
+# by different definitions in psa.p4 in bf-p4c (for Tofino) and in p4c
+p4c_add_xfail_reason("tofino"
+  "Cannot unify type 'PortId_t' with type 'bit<32>'"
+  testdata/p4_16_samples/psa-subtract-inst1.p4
+)
