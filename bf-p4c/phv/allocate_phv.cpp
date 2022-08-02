@@ -1730,8 +1730,8 @@ bool CoreAllocation::satisfies_constraints(
         hasOtherUninitializedRead = slc.field()->pov ||
             (utils_i.defuse.hasUninitializedRead(slc.field()->id) &&
              !initFieldSlices.count(slc));
-        hasOtherExtracted = !slc.field()->pov && utils_i.uses.is_extracted(slc.field()) &
-            !utils_i.uses.is_extracted_from_constant(slc.field());
+        hasOtherExtracted = !slc.field()->pov && utils_i.uses.is_extracted(slc.field()) &&
+            utils_i.uses.is_extracted_from_pkt(slc.field());
         hasExtractedTogether = utils_i.phv.are_bridged_extracted_together(slice.field(),
                                                                           slc.field());
 
