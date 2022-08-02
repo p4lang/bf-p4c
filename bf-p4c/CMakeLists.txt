@@ -780,6 +780,7 @@ set (BF_P4C_BACKEND_ARCH_SRCS
   arch/bridge_metadata.cpp
   arch/check_extern_invocation.cpp
   arch/collect_bridged_fields.cpp
+  arch/collect_hardware_constrained_fields.cpp
   arch/helpers.cpp
   arch/program_structure.cpp
   arch/psa/psa.cpp
@@ -825,6 +826,7 @@ set (BF_P4C_BACKEND_ARCH_HDRS
   arch/bridge_metadata.h
   arch/check_extern_invocation.h
   arch/collect_bridged_fields.h
+  arch/collect_hardware_constrained_fields.h
   arch/helpers.h
   arch/program_structure.h
   arch/psa/psa.h

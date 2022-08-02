@@ -386,6 +386,7 @@ PackFlexibleHeaders::PackFlexibleHeaders(const BFN_Options& options,
     PragmaAlias *pragmaAlias = new PragmaAlias(phv);
     addPasses({
         new CreateThreadLocalInstances,
+        new BFN::CollectHardwareConstrainedFields,
         new CheckForUnimplementedFeatures(),
         new RemoveEmptyControls,
         // new MultipleApply(options, boost::none, false, false),

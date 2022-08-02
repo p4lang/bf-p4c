@@ -38,6 +38,7 @@ class ReplaceAllAliases : public Transform {
     const ordered_map<cstring, const IR::Member*>&    fieldExpressions;
 
     profile_t init_apply(const IR::Node* root) override;
+    IR::Node* preorder(IR::BFN::Pipe*) override;
     IR::Node* preorder(IR::Expression* expr) override;
 
  public:

@@ -1602,38 +1602,11 @@ struct ComputeFieldAlignments : public Inspector {
 
 class AddIntrinsicConstraints : public Inspector {
     PhvInfo& phv;
-    bool disable_reserved_i2e_drop_implementation = false;
-
-    std::vector<cstring> invalidate_fields_from_arch() {
-        static std::vector<cstring> rv = {
-            "ig_intr_md_for_tm.mcast_grp_a",
-            "ig_intr_md_for_tm.mcast_grp_b",
-            "ig_intr_md_for_tm.ucast_egress_port",
-            "ig_intr_md_for_dprsr.resubmit_type",
-            "ig_intr_md_for_dprsr.digest_type",
-            "eg_intr_md_for_dprsr.mirror_type"
-           };
-
-        return rv;
-    }
-
-    // field that are required to be initialized to zero based on requirement
-    // from architecture. ig_intr_md_for_dprsr.mirror_type must be init to zero
-    // to workaround ibuf hardware bug in P4C-4507. It is validated by default
-    // in parser, unless explicitly disabled by the pragma
-    // @disable_reserved_i2e_drop_implementation.
-    std::vector<cstring> valid_fields_from_arch() {
-        static std::vector<cstring> rv = {
-            "ig_intr_md_for_dprsr.mirror_type",  /// special field that can be validated to zero.
-        };
-        return rv;
-    }
 
     bool preorder(const IR::BFN::Pipe *pipe) override {
-        for (auto anno : pipe->global_pragmas) {
-            if (anno->name != PragmaDisableI2EReservedDropImplementation::name) continue;
-            disable_reserved_i2e_drop_implementation = true;
-        }
+        // make hw_constrained_fields visible to this Inspector
+        visit(pipe->thread[INGRESS].hw_constrained_fields);
+        visit(pipe->thread[EGRESS].hw_constrained_fields);
         return true;
     }
 
@@ -1648,28 +1621,31 @@ class AddIntrinsicConstraints : public Inspector {
                     LOG3("\tMarking field " << f.name << " as intrinsic");
                 }
             }
-
-            if (Device::currentDevice() == Device::TOFINO) {
-                for (auto& meta : invalidate_fields_from_arch()) {
-                    std::string f_name(f.name.c_str());
-                    if (f_name.find(meta) != std::string::npos) {
-                        f.set_solitary(PHV::SolitaryReason::ARCH);
-                        f.set_invalidate_from_arch(true);
-                        LOG3("\tMarking field " << f.name << " as invalidate from arch");
-                    }
-                }
-                for (auto& meta : valid_fields_from_arch()) {
-                    std::string f_name(f.name.c_str());
-                    if (f_name.find(meta) != std::string::npos) {
-                        f.set_solitary(PHV::SolitaryReason::ARCH);
-                        if (disable_reserved_i2e_drop_implementation) {
-                            f.set_invalidate_from_arch(true);
-                            LOG3("\tMarking field " << f.name << " as invalidate from arch");
-                        }
-                    }
-                }
-            }
         }
+    }
+
+    bool preorder(const IR::BFN::HardwareConstrainedField *hw_constrained_field) override {
+        auto set_invalidate_from_arch = [&](const IR::Expression* expr) {
+            BUG_CHECK(expr->is<IR::Member>() || expr->is<IR::Slice>(),
+                "invalidate from arch field %1% cannot be found", expr);
+            auto f = phv.field(expr);
+            if (!f) return;
+            f->set_solitary(PHV::SolitaryReason::ARCH);
+            f->set_invalidate_from_arch(true);
+            LOG3("\tMarking field " << f->name << " as invalidate from arch");
+        };
+
+        if (!(hw_constrained_field->constraint_type.getbit(
+            IR::BFN::HardwareConstrainedField::INVALIDATE_FROM_ARCH))) return false;
+
+        set_invalidate_from_arch(hw_constrained_field->expr);
+
+        if (auto alias_member = hw_constrained_field->expr->to<IR::BFN::AliasMember>()) {
+            set_invalidate_from_arch(alias_member->source);
+        } else if (auto alias_slice = hw_constrained_field->expr->to<IR::BFN::AliasSlice>()) {
+            set_invalidate_from_arch(alias_slice->source);
+        }
+        return false;
     }
 
  public:
@@ -1877,6 +1853,39 @@ class CollectPardeConstraints : public Inspector {
         return rv;
     }
 
+    // make hw_constrained_fields visible to this Inspector
+    bool preorder(const IR::BFN::Pipe* pipe) override {
+        visit(pipe->thread[INGRESS].hw_constrained_fields);
+        visit(pipe->thread[EGRESS].hw_constrained_fields);
+        return true;
+    }
+
+    bool preorder(const IR::BFN::HardwareConstrainedField *hw_constrained_field) override {
+        auto set_deparsed_bottom_bits = [&](const IR::Expression* expr) {
+            BUG_CHECK(expr->is<IR::Member>() || expr->is<IR::Slice>(),
+                "deparsed bottom bits field %1% cannot be found", expr);
+            auto f = phv.field(expr);
+            if (!f) return;
+            LOG3("D. Updating alignment of " << f->name << " to " <<
+                FieldAlignment(le_bitrange(StartLen(0, f->size))));
+            f->updateAlignment(PHV::AlignmentReason::DEPARSER,
+                FieldAlignment(le_bitrange(StartLen(0, f->size))),
+                hw_constrained_field->expr->getSourceInfo());
+            f->set_deparsed_bottom_bits(true);
+        };
+
+        if (!(hw_constrained_field->constraint_type.getbit(
+            IR::BFN::HardwareConstrainedField::DEPARSED_BOTTOM_BITS))) return false;
+
+        set_deparsed_bottom_bits(hw_constrained_field->expr);
+        if (auto alias_member = hw_constrained_field->expr->to<IR::BFN::AliasMember>()) {
+            set_deparsed_bottom_bits(alias_member->source);
+        } else if (auto alias_slice = hw_constrained_field->expr->to<IR::BFN::AliasSlice>()) {
+            set_deparsed_bottom_bits(alias_slice->source);
+        }
+        return false;
+    }
+
     void postorder(const IR::BFN::DeparserParameter* param) override {
         if (!param->source) return;
 
@@ -1887,18 +1896,6 @@ class CollectPardeConstraints : public Inspector {
 
         f->set_deparsed_to_tm(true);
         f->set_no_split(true);
-
-        for (auto& meta : bottom_bit_aligned_deparser_params()) {
-            std::string f_name(f->name.c_str());
-            if (f_name.find(meta) != std::string::npos) {
-                LOG3("D. Updating alignment of " << f->name << " to " <<
-                        FieldAlignment(le_bitrange(StartLen(0, f->size))));
-                f->updateAlignment(PHV::AlignmentReason::DEPARSER,
-                        FieldAlignment(le_bitrange(StartLen(0, f->size))),
-                        param->source->field->getSourceInfo());
-                f->set_deparsed_bottom_bits(true);
-            }
-        }
 
         if (!f->deparsed_bottom_bits()) {
             // The lsb of DeparserParameter field must in the bottom byte.

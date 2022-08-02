@@ -18,6 +18,24 @@ const IR::Node* DisableAutoInitMetadata::preorder(IR::BFN::Pipe* pipe) {
 
     prune();
 
+    ordered_set<cstring> init_by_arch_fields;
+    for (auto gress : {INGRESS, EGRESS}) {
+        for (auto field : pipe->thread[gress].hw_constrained_fields) {
+            if (!(field->constraint_type.getbit(IR::BFN::HardwareConstrainedField::INIT_BY_ARCH)))
+                continue;
+            auto f = phv.field(field->expr);
+            if (!f) continue;
+            init_by_arch_fields.insert(f->name);
+            if (auto alias_member = field->expr->to<IR::BFN::AliasMember>()) {
+                auto alias_f = phv.field(alias_member->source);
+                init_by_arch_fields.insert(alias_f->name);
+            } else if (auto alias_slice = field->expr->to<IR::BFN::AliasSlice>()) {
+                auto alias_f = phv.field(alias_slice->source);
+                init_by_arch_fields.insert(alias_f->name);
+            }
+        }
+    }
+
     for (auto field : defuse.getUninitializedFields()) {
         // Ensure we have a non-POV metadata field.
         if (!field->metadata || field->pov) continue;
@@ -37,8 +55,17 @@ const IR::Node* DisableAutoInitMetadata::preorder(IR::BFN::Pipe* pipe) {
         // after t2na, phv containers do not come with a implicit validity bit. A explicit validity
         // bit is needed, see add_metdata_pov.h
         if (field->is_intrinsic()) {
-            if (field->name.endsWith("ig_intr_md_for_dprsr.drop_ctl")) continue;
-            if (field->name.endsWith("ig_intr_md_for_dprsr.mirror_type")) continue;
+            bool found = false;
+            for (auto f_name : init_by_arch_fields) {
+                if (field->name.endsWith(f_name)) {
+                    found = true;
+                    break;
+                }
+            }
+            if (found) {
+                LOG2("Skipping pa_no_init annotation for " << field->name);
+                continue;
+            }
         }
 
         auto annotation = new IR::Annotation(PragmaNoInit::name,

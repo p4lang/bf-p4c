@@ -148,3 +148,8 @@ p4c_add_xfail_reason("tofino"
   "error: Two or more assignments of .* inside the register action .* are not mutually exclusive"
   extensions/p4_tests/p4_16/errors/p4c-4600.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "error: invalid SuperCluster was formed"
+  extensions/p4_tests/p4_16/errors/p4c-4720.p4
+)

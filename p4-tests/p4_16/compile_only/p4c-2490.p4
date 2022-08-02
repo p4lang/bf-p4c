@@ -1844,10 +1844,6 @@ struct Ocracoke {
     bit<2>  Lynch;
 }
 
-// Compiler should automatically initialize drop_ctl and mirror_type even without auto_init_metadata
-// after P4C-4228. Adding pa_no_init for these two fields is due to fitting issue.
-@pa_no_init("ingress", "ig_intr_md_for_dprsr.drop_ctl")
-@pa_no_init("ingress", "ig_intr_md_for_dprsr.mirror_type")
 parser Sanford(packet_in BealCity, out Shirley Barnhill, out Lamona NantyGlo, out ingress_intrinsic_metadata_t Grays) {
     @name(".Toluca") Checksum() Toluca;
     @name(".Goodwin") Checksum() Goodwin;

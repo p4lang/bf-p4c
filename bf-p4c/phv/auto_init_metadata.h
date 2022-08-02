@@ -15,9 +15,11 @@
 /// metadata fields that might not be explicitly written by the time they are read.
 class DisableAutoInitMetadata : public Transform {
     const FieldDefUse& defuse;
+    const PhvInfo& phv;
 
  public:
-    explicit DisableAutoInitMetadata(const FieldDefUse& defuse) : defuse(defuse) { }
+    explicit DisableAutoInitMetadata(const FieldDefUse& defuse, const PhvInfo & phv) :
+      defuse(defuse), phv(phv) { }
 
     const IR::Node* preorder(IR::BFN::Pipe* pipe) override;
 

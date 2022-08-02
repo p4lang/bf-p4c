@@ -29,6 +29,25 @@ struct HeaderStackInfo;
 #include "bf-p4c/ir/thread_visitor.h"
 #end
 
+// Adding this class in ingress and egress thread so that Alias can replace special hardware
+// constrained fields with AliasMember and AliasSlice. And CollectPhvInfo can use this information
+// to update Field's properly for alias fields of hardware constrained fields.
+class BFN::HardwareConstrainedField {
+    Expression expr;
+    bitvec constraint_type = {};
+#emit
+    enum {
+        // see phv_fields.cpp
+        INVALIDATE_FROM_ARCH,
+        // see phv_fields.cpp
+        DEPARSED_BOTTOM_BITS,
+        // see auto_init_metadata.cpp
+        INIT_BY_ARCH
+    };
+#end
+#nodbprint
+}
+
 class BFN::Pipe {
     ID name;   // name specified in P4.
     int id;  // logical pipe id in a multi-pipe architecture
@@ -39,19 +58,28 @@ class BFN::Pipe {
     Pipe(cstring name) : name(name), id(0) {}
     Pipe(cstring name, int id) : name(name), id(id) {}
     class thread_t {
+        // not visible in IR, because some passes checks parent nodes of a IR::Member and
+        // HardwareConstrainedField is an unexpected case.
+        inline Vector<BFN::HardwareConstrainedField> hw_constrained_fields = {};
         inline Vector<BFN::AbstractParser> parsers = {};
+
         MAU::TableSeq mau = nullptr;
         BFN::AbstractDeparser deparser = nullptr;
-        operator== { return parsers == a.parsers && mau == a.mau && deparser == a.deparser; }
+        operator== {
+            return parsers == a.parsers && mau == a.mau && deparser == a.deparser &&
+                hw_constrained_fields == a.hw_constrained_fields;
+        }
         toJSON {
             json << json.indent << "\"parser\" : " << parsers << "," << std::endl
                  << json.indent << "\"mau\" : " << mau << "," << std::endl
-                 << json.indent << "\"deparser\" : " << deparser; }
+                 << json.indent << "\"deparser\" : " << deparser << std::endl
+                 << json.indent << "\"hw_constrained_fields\" : " <<  hw_constrained_fields; }
         fromJSON {
             IR::BFN::Pipe::thread_t * thread = new IR::BFN::Pipe::thread_t();
             json.load("parsers", thread->parsers);
             json.load("mau", thread->mau);
             json.load("deparser", thread->deparser);
+            json.load("hw_constrained_fields", thread->hw_constrained_fields);
             return thread;
         }
     }

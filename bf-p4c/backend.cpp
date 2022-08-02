@@ -47,6 +47,7 @@
 #include "ir/pass_manager.h"
 #include "lib/indent.h"
 
+#include "bf-p4c/arch/collect_hardware_constrained_fields.h"
 #include "bf-p4c/common/alias.h"
 #include "bf-p4c/common/check_field_corruption.h"
 #include "bf-p4c/common/check_for_unimplemented_features.h"
@@ -181,6 +182,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         Device::currentDevice() == Device::FLATROCK ? nullptr :
 #endif
         new CreateThreadLocalInstances,
+        new CollectHardwareConstrainedFields,
         new CheckForUnimplementedFeatures(),
         new RemoveEmptyControls,
         new CatchBacktrack<LongBranchAllocFailed>([this] {
@@ -222,7 +224,6 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         new FindDependencyGraph(phv, deps, &options, "program_graph",
                                 "After Instruction Selection"),
         options.decaf ? &decaf : nullptr,
-
         new CollectPhvInfo(phv),
         // Aliasing replaces all uses of the alias source field with the alias destination field.
         // Therefore, run it first in the backend to ensure that all other passes use a union of the
@@ -260,7 +261,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
         (options.no_deadcode_elimination == false) ? new ElimUnusedHeaderStackInfo : nullptr,
         (options.disable_parser_state_merging == false) ? new MergeParserStates : nullptr,
-        options.auto_init_metadata ? nullptr : new DisableAutoInitMetadata(defuse),
+        options.auto_init_metadata ? nullptr : new DisableAutoInitMetadata(defuse, phv),
         new RemoveMetadataInits(phv, defuse),
         new CollectPhvInfo(phv),
         &defuse,

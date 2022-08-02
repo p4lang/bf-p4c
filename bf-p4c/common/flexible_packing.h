@@ -13,6 +13,7 @@
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/constraints/constraints.h"
 #include "bf-p4c/common/bridged_packing.h"
+#include "bf-p4c/arch/collect_hardware_constrained_fields.h"
 
 bool findFlexibleAnnotation(const IR::Type_StructLike*);
 

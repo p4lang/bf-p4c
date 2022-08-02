@@ -80,6 +80,13 @@ Visitor::profile_t ReplaceAllAliases::init_apply(const IR::Node* root) {
     return Transform::init_apply(root);
 }
 
+// make hw_constrained_fields visible to this Transform
+IR::Node* ReplaceAllAliases::preorder(IR::BFN::Pipe* pipe) {
+    visit(pipe->thread[INGRESS].hw_constrained_fields);
+    visit(pipe->thread[EGRESS].hw_constrained_fields);
+    return pipe;
+}
+
 IR::Node* ReplaceAllAliases::preorder(IR::Expression* expr) {
     auto* f = phv.field(expr);
     if (!f) {
