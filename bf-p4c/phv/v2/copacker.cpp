@@ -41,8 +41,10 @@ std::ostream& operator<<(std::ostream& out, const SrcPackVec& v) {
 }
 
 std::ostream& operator<<(std::ostream& out, const SrcPackVec* v) {
-    if (!v) out << "null";
-    out << *v;
+    if (!v)
+        out << "null";
+    else
+        out << *v;
     return out;
 }
 
@@ -56,8 +58,10 @@ std::ostream& operator<<(std::ostream& out, const CoPackHint& v) {
 }
 
 std::ostream& operator<<(std::ostream& out, const CoPackHint* v) {
-    if (!v) out << "null";
-    out << *v;
+    if (!v)
+        out << "null";
+    else
+        out << *v;
     return out;
 }
 
@@ -75,8 +79,10 @@ std::ostream& operator<<(std::ostream& out, const ActionSourceCoPackMap& v) {
 }
 
 std::ostream& operator<<(std::ostream& out, const ActionSourceCoPackMap* v) {
-    if (!v) out << "null";
-    out << *v;
+    if (!v)
+        out << "null";
+    else
+        out << *v;
     return out;
 }
 
