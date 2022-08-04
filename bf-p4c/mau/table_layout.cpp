@@ -52,6 +52,8 @@ class DoTableLayout : public MauModifier, Backtrack {
     friend class LayoutChoices;
 
     static bool can_be_hash_action(const IR::MAU::Table *tbl, std::string &reason);
+    void check_atcam_parameters(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
+                                const bool partition_found, const cstring &index_name);
     void check_for_alpm(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
         cstring &partition_index);
     void check_for_proxy_hash(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl);
@@ -411,6 +413,42 @@ void DoTableLayout::determine_byte_impacts(const IR::MAU::Table *tbl,
     }
 }
 
+void DoTableLayout::check_atcam_parameters(IR::MAU::Table::Layout &layout,
+                                           const IR::MAU::Table *tbl, const bool partition_found,
+                                           const cstring &index_name) {
+    ERROR_CHECK(partition_found, ErrorType::ERR_INVALID,
+                "partition index %2%. Table %1% is specified to be an atcam, but partition "
+                "index %2% is not found within the table key.",
+                tbl, index_name);
+    if (partition_found) {
+        const int possible_partitions = 1 << layout.partition_bits;
+        ERROR_CHECK(layout.partition_count <= possible_partitions, ErrorType::ERR_INSUFFICIENT,
+                    "the number of partitions to be %3% due to the number of bits specified "
+                    "in the partition. However table %1% has specified %2% partitions.",
+                    tbl, layout.partition_count, possible_partitions);
+        if (layout.partition_count == 0) {
+            layout.partition_count = possible_partitions;
+        }
+
+        const auto index =
+            std::find_if(tbl->match_key.begin(), tbl->match_key.end(),
+                         [](const IR::MAU::TableKey *key) { return key->partition_index; });
+        BUG_CHECK(index != tbl->match_key.end(),
+                  "found partition but no key set as partition_index");
+
+        // Maximum possible partitions ignoring partition_count set in table definition
+        const int max_partitions = 1 << (*index)->expr->type->width_bits();
+
+        // Check if specified number of partitions may lead to suboptimal resource allocation
+        const int optimal_partitions = std::min(max_partitions, layout.get_sram_depth());
+        WARN_CHECK(layout.partition_count >= optimal_partitions,
+                   BFN::ErrorType::WARN_TABLE_PLACEMENT,
+                   "specified number of partitions %2% for table %1% is less than the optimal "
+                   "value of %3%. This may lead to suboptimal resource allocation.",
+                   tbl, layout.partition_count, optimal_partitions);
+    }
+}
+
 void DoTableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl) {
     if (tbl->layout.pre_classifier)
         layout.entries = tbl->layout.pre_classifer_number_entries;
@@ -495,18 +533,7 @@ void DoTableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR:
          << layout.match_width_bits);
 
     if (layout.atcam) {
-        ERROR_CHECK(partition_found, ErrorType::ERR_INVALID,
-                    "partition index %2%. Table %1% is specified to be an atcam, but partition "
-                    "index %2% is not found within the table key.", tbl, partition_index);
-        if (partition_found) {
-            int possible_partitions = 1 << layout.partition_bits;
-            ERROR_CHECK(layout.partition_count <= possible_partitions, ErrorType::ERR_INSUFFICIENT,
-                        "the number of partitions to be %3% due to the number of bits specified "
-                        "in the partition. However table %1% has specified %2% partitions.",
-                        tbl, layout.partition_count, possible_partitions);
-            if (layout.partition_count == 0)
-                layout.partition_count = possible_partitions;
-        }
+        check_atcam_parameters(layout, tbl, partition_found, partition_index);
     }
 
 #ifdef HAVE_FLATROCK
