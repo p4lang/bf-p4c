@@ -5,6 +5,8 @@
 
 namespace Flatrock {
 struct TableFormat : ::TableFormat {
+    static constexpr int LOCAL_TIND_OVERHEAD_BITS = 32;
+
     void classify_match_bits() override;
     bool allocate_sram_match() override;
     bool allocate_match_byte(const ByteInfo &info, safe_vector<ByteInfo> &alloced, int width_sect,

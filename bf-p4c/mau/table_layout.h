@@ -21,6 +21,7 @@ class LayoutOption {
     int entries = 0;
     int srams = 0, maprams = 0, tcams = 0;
     int lambs = 0;  // Tofino5 specific
+    int local_tinds = 0;  // Tofino5 specific
     int select_bus_split = -1;
     int action_format_index = -1;
     bool previously_widened = false;
@@ -33,6 +34,7 @@ class LayoutOption {
     void clear_mems() {
         srams = 0;
         lambs = 0;  // Tofino5 specific
+        local_tinds = 0;  // Tofino5 specific
         maprams = 0;
         tcams = 0;
         entries = 0;
@@ -68,6 +70,9 @@ class LayoutChoices {
             int action_data_bytes_in_table, int immediate_bits, int index);
     virtual void setup_layout_option_no_match(const IR::MAU::Table *tbl,
             const IR::MAU::Table::Layout &layout, ActionData::FormatType_t format_type);
+    virtual void setup_ternary_layout(const IR::MAU::Table *tbl,
+            const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type,
+            int action_data_bytes_in_table, int immediate_bits, int index);
     void compute_action_formats(const IR::MAU::Table *t, ActionData::FormatType_t type);
     void compute_layout_options(const IR::MAU::Table *t, ActionData::FormatType_t type);
 

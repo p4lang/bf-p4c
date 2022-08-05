@@ -122,6 +122,7 @@ class Table : BFN::Unit, IAnnotated  {
         bool  requires_versioning          = true;
         bool  is_lamb                      = false;  // Tofino5 specific
         bool  is_direct                    = false;  // Tofino5 specific
+        bool  is_local_tind                = false;  // Tofino5 specific
         int   entries_per_set              = 0;      // Tofino5 specific
         int   sets_per_word                = 0;      // Tofino5 specific
         int   ixbar_bytes                  = 0;

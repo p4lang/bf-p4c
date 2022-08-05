@@ -666,7 +666,7 @@ void IXBar::dbprint(std::ostream &out) const {
     add_names(xcmp_byte_use, fields);
     add_names(xcmp_word_use, fields);
     sort_names(fields);
-    out << "ew e bytes    ternary ixbar                  gw   x wds  x bytes" << Log::endl;
+    out << "ew e bytes  ternary ixbar                            gw   x wds  x bytes" << Log::endl;
     for (int r = 0; r < 5; r++) {
         write_one(out, exact_word_use[r], fields);
         out << ' ';

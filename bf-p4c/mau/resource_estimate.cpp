@@ -125,12 +125,17 @@ int ActionDataVPNIncrement(const IR::MAU::Table::Layout *layout) {
     return (1 << ceil_log2(width));
 }
 
+int LocalTernaryIndirectPerWord(const IR::MAU::Table::Layout *layout, const IR::MAU::Table *tbl) {
+    int indir_size = ceil_log2(layout->overhead_bits);
+    if (indir_size > 5)
+        BUG("can't have more than 32 bits of overhead in local ternary table %s", tbl->name);
+    return (64 >> indir_size);
+}
 
 int TernaryIndirectPerWord(const IR::MAU::Table::Layout *layout, const IR::MAU::Table *tbl) {
     int indir_size = ceil_log2(layout->overhead_bits);
-    if (indir_size > 8)
-        BUG("can't have more than 64 bits of overhead in "
-                                        "ternary table %s", tbl->name);
+    if (indir_size > 6)
+        BUG("can't have more than 64 bits of overhead in ternary table %s", tbl->name);
     if (indir_size < 3) indir_size = 3;
     return (128 >> indir_size);
 }
@@ -295,6 +300,7 @@ cstring StageUseEstimate::ran_out() const {
     if (logical_ids > StageUse::MAX_LOGICAL_IDS) return "logical_ids";
     if (srams > StageUse::MAX_SRAMS) return "srams";
     if (tcams > StageUse::MAX_TCAMS) return "tcams";
+    if (local_tinds > MAX_LOCAL_TINDS) return "local_tinds";
     if (maprams > StageUse::MAX_MAPRAMS) return "maprams";
     // For exact and ternary ixbar allocation, tables can share ixbar bytes.
     // However stage use estimate simply adds the ixbar bytes on the tables and
@@ -689,13 +695,19 @@ void StageUseEstimate::options_to_ternary_entries(const IR::MAU::Table *tbl, int
         int depth = (entries + 511u)/512u;
         int bytes = tbl->layout.match_bytes;
         int width = 0;
+#ifdef HAVE_FLATROCK
+        if (Device::currentDevice() == Device::FLATROCK) {
+            width = (bytes + IXBar::TERNARY_BYTES_PER_GROUP - 1) / IXBar::TERNARY_BYTES_PER_GROUP;
+            bytes = 0;
+        }
+#endif
         while (bytes > 11) {
             bytes -= 11;
             width += 2;
         }
         if (bytes > 6)
             width += 2;
-        else
+        else if (bytes || !width)
             width++;
         lo.tcams = depth * width;
         lo.srams = 0;
@@ -871,11 +883,25 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
                 << ", units: " << units);
     }
     if (lo->layout.ternary_indirect_required()) {
-        int per_word = TernaryIndirectPerWord(&lo->layout, tbl);
-        int attached_entries = lo->entries;
-        int entries_per_sram = lo->layout.get_sram_depth() * per_word;
-        int units = (attached_entries + entries_per_sram - 1) / entries_per_sram;
-        lo->srams += units;
+        if (lo->layout.is_local_tind) {
+            int per_word = LocalTernaryIndirectPerWord(&lo->layout, tbl);
+            int attached_entries = lo->entries;
+            int entries_per_sram = Memories::LOCAL_TIND_DEPTH * per_word;
+            int units = (attached_entries + entries_per_sram - 1) / entries_per_sram;
+            lo->local_tinds += units;
+            LOG5("Local Ternary Indirect Reqd: per_word: " << per_word << ", attached_entries: "
+                    << attached_entries << ", entries_per_sram: " << entries_per_sram
+                    << ", units: " << units);
+        } else {
+            int per_word = TernaryIndirectPerWord(&lo->layout, tbl);
+            int attached_entries = lo->entries;
+            int entries_per_sram = lo->layout.get_sram_depth() * per_word;
+            int units = (attached_entries + entries_per_sram - 1) / entries_per_sram;
+            lo->srams += units;
+            LOG5("Ternary Indirect Reqd: per_word: " << per_word << ", attached_entries: "
+                    << attached_entries << ", entries_per_sram: " << entries_per_sram
+                    << ", units: " << units);
+        }
     }
 }
 
@@ -943,6 +969,7 @@ void StageUseEstimate::select_best_option_ternary() {
         [=](const LayoutOption &a, const LayoutOption &b) {
         int t;
         if ((t = a.srams - b.srams) != 0) return t < 0;
+        if ((t = a.local_tinds - b.local_tinds) != 0) return t < 0;
         if (!a.layout.ternary_indirect_required()) return true;
         if (!b.layout.ternary_indirect_required()) return false;
         if (!a.layout.direct_ad_required()) return true;
@@ -952,6 +979,7 @@ void StageUseEstimate::select_best_option_ternary() {
 
     for (auto &lo : layout_options) {
         LOG3("entries " << lo.entries << " srams " << lo.srams << " tcams " << lo.tcams
+              << " local ternary indirect " << lo.local_tinds
               << " action data " << lo.layout.action_data_bytes_in_table
               << " immediate " << lo.layout.immediate_bits
               << " ternary indirect " << lo.layout.ternary_indirect_required());
@@ -964,6 +992,7 @@ void StageUseEstimate::select_best_option_ternary() {
 void StageUseEstimate::fill_estimate_from_option(int &entries) {
     logical_ids = preferred()->logical_tables();
     tcams = preferred()->tcams;
+    local_tinds = preferred()->local_tinds;
     srams = preferred()->srams;
     maprams = preferred()->maprams;
     entries = preferred()->entries;
@@ -1123,6 +1152,7 @@ bool StageUseEstimate::adjust_choices(const IR::MAU::Table *tbl, int &entries,
 int StageUseEstimate::stages_required() const {
     return std::max({(srams + StageUse::MAX_SRAMS - 1) / StageUse::MAX_SRAMS,
                     (tcams + StageUse::MAX_TCAMS - 1) / StageUse::MAX_TCAMS,
+                    (local_tinds + MAX_LOCAL_TINDS - 1) / MAX_LOCAL_TINDS,
                     (maprams + StageUse::MAX_MAPRAMS - 1) / StageUse::MAX_MAPRAMS});
 }
 
@@ -1668,6 +1698,6 @@ std::ostream &operator<<(std::ostream &out, const StageUseEstimate &sue) {
     out << "{ id=" << sue.logical_ids << " ram=" << sue.srams << " tcam=" << sue.tcams
         << " mram=" << sue.maprams << " eixb=" << sue.exact_ixbar_bytes
         << " tixb=" << sue.ternary_ixbar_groups << " malu=" << sue.meter_alus
-        << " salu=" << sue.stats_alus << " }";
+        << " salu=" << sue.stats_alus << " local_tinds=" << sue.local_tinds << " }";
     return out;
 }

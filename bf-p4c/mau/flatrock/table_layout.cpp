@@ -1,5 +1,5 @@
+#include "bf-p4c/mau/flatrock/table_format.h"
 #include "bf-p4c/mau/flatrock/table_layout.h"
-#include "bf-p4c/mau/table_format.h"
 #include "bf-p4c/mau/memories.h"
 
 namespace Flatrock {
@@ -147,6 +147,23 @@ void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
     }
 
     // TODO: STM Based LayoutChoices
+}
+
+void LayoutChoices::setup_ternary_layout(const IR::MAU::Table *tbl,
+        const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type,
+        int action_data_bytes_in_table, int immediate_bits, int index) {
+    IR::MAU::Table::Layout layout = layout_proto;
+    layout.action_data_bytes_in_table = action_data_bytes_in_table;
+    layout.immediate_bits = immediate_bits;
+    layout.overhead_bits += immediate_bits;
+    LayoutOption lo(layout, index);
+    cache_layout_options[std::make_pair(tbl->name, format_type)].push_back(lo);
+    if (layout.overhead_bits &&
+        layout.overhead_bits <= Flatrock::TableFormat::LOCAL_TIND_OVERHEAD_BITS) {
+        // This layout is eligible to be tried on local tind.
+        lo.layout.is_local_tind = true;
+        cache_layout_options[std::make_pair(tbl->name, format_type)].push_back(lo);
+    }
 }
 
 void LayoutChoices::add_layout_option(const IR::MAU::Table *tbl,

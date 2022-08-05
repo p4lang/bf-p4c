@@ -400,6 +400,7 @@ IR::MAU::Table::Layout &IR::MAU::Table::Layout::operator +=(const IR::MAU::Table
     requires_versioning |= a.requires_versioning;
     is_lamb             |= a.is_lamb;
     is_direct           |= a.is_direct;
+    is_local_tind       |= a.is_local_tind;
     if (a.action_data_bytes > action_data_bytes)
         action_data_bytes = a.action_data_bytes;
     if (a.action_data_bytes_in_table > action_data_bytes_in_table)

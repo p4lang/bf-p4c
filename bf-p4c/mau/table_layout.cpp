@@ -622,6 +622,17 @@ void LayoutChoices::compute_action_formats(const IR::MAU::Table *tbl,
     af.allocate_format(imm_ctrl, format_type);
 }
 
+void LayoutChoices::setup_ternary_layout(const IR::MAU::Table *tbl,
+        const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type,
+        int action_data_bytes_in_table, int immediate_bits, int index) {
+    IR::MAU::Table::Layout layout = layout_proto;
+    layout.action_data_bytes_in_table = action_data_bytes_in_table;
+    layout.immediate_bits = immediate_bits;
+    layout.overhead_bits += immediate_bits;
+    LayoutOption lo(layout, index);
+    cache_layout_options[std::make_pair(tbl->name, format_type)].push_back(lo);
+}
+
 /* Setting up the potential layouts for ternary, either with or without immediate
    data if immediate is possible */
 void LayoutChoices::setup_ternary_layout_options(const IR::MAU::Table *tbl,
@@ -631,12 +642,9 @@ void LayoutChoices::setup_ternary_layout_options(const IR::MAU::Table *tbl,
     LOG2("Setup TCAM match layouts " << tbl->name << ":" << format_type);
     int index = 0;
     for (auto &use : get_action_formats(tbl, format_type)) {
-        IR::MAU::Table::Layout layout = layout_proto;
-        layout.action_data_bytes_in_table = use.bytes_per_loc[ActionData::ACTION_DATA_TABLE];
-        layout.immediate_bits = use.immediate_bits();
-        layout.overhead_bits += use.immediate_bits();
-        LayoutOption lo(layout, index);
-        cache_layout_options[std::make_pair(tbl->name, format_type)].push_back(lo);
+        setup_ternary_layout(tbl, layout_proto, format_type,
+                             use.bytes_per_loc[ActionData::ACTION_DATA_TABLE],
+                             use.immediate_bits(), index);
         index++;
     }
 }
@@ -1635,6 +1643,7 @@ std::ostream &operator<<(std::ostream &out, const LayoutOption &lo) {
     if (!empty) out << Log::endl;
     out << "entries:" << lo.entries;
     out << " lambs: " << lo.lambs;
+    out << " local_tinds: " << lo.local_tinds;
     if (layout.is_direct) {
         out << " (direct - " << layout.entries_per_set
                       << "/" << layout.sets_per_word;

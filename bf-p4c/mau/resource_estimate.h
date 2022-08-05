@@ -11,6 +11,7 @@ struct StageUseEstimate {
     static constexpr int MAX_WAYS = 8;
     static constexpr int MAX_METER_ALUS = 4;
     static constexpr int MAX_STATS_ALUS = 4;
+    static constexpr int MAX_LOCAL_TINDS = 16;  // Tofino5 specific
     // FIXME: This is a quick workaround that will need to change as the tables need to expand
     static constexpr int MAX_DLEFT_HASH_SIZE = 23;
     static constexpr int COMPILER_DEFAULT_SELECTOR_POOLS = 4;
@@ -23,6 +24,7 @@ struct StageUseEstimate {
     int logical_ids = 0;
     int srams = 0;
     int tcams = 0;
+    int local_tinds = 0;  // Tofino5 specific
     int maprams = 0;
     int exact_ixbar_bytes = 0;
     int ternary_ixbar_groups = 0;
@@ -48,6 +50,7 @@ struct StageUseEstimate {
         logical_ids += a.logical_ids;
         srams += a.srams;
         tcams += a.tcams;
+        local_tinds += a.local_tinds;
         maprams += a.maprams;
         exact_ixbar_bytes += a.exact_ixbar_bytes;
         ternary_ixbar_groups += a.ternary_ixbar_groups;
@@ -64,6 +67,7 @@ struct StageUseEstimate {
         rv.logical_ids = StageUse::MAX_LOGICAL_IDS;
         rv.srams = StageUse::MAX_SRAMS;
         rv.tcams = StageUse::MAX_TCAMS;
+        rv.local_tinds = MAX_LOCAL_TINDS;
         rv.maprams = StageUse::MAX_MAPRAMS;
         rv.exact_ixbar_bytes = StageUse::MAX_IXBAR_BYTES;
         rv.ternary_ixbar_groups = StageUse::MAX_TERNARY_GROUPS;
@@ -74,11 +78,11 @@ struct StageUseEstimate {
         return logical_ids <= a.logical_ids && srams <= a.srams && tcams <= a.tcams &&
                maprams <= a.maprams && exact_ixbar_bytes <= a.exact_ixbar_bytes &&
                ternary_ixbar_groups <= a.ternary_ixbar_groups && meter_alus < a.meter_alus &&
-               stats_alus <= a.stats_alus; }
+               stats_alus <= a.stats_alus && local_tinds <= a.local_tinds; }
     void clear() {
         logical_ids = 0; srams = 0; tcams = 0; maprams = 0;
         exact_ixbar_bytes = 0; ternary_ixbar_groups = 0;
-        meter_alus = 0; stats_alus = 0; }
+        meter_alus = 0; stats_alus = 0; local_tinds = 0; }
     cstring ran_out() const;
 
     void options_to_ways(const IR::MAU::Table *tbl, int entries);
@@ -163,6 +167,7 @@ int ActionDataPerWord(const IR::MAU::Table::Layout *layout, int *width);
 int ActionDataHuffmanVPNBits(const IR::MAU::Table::Layout *layout);
 int ActionDataVPNStartPosition(const IR::MAU::Table::Layout *layout);
 int ActionDataVPNIncrement(const IR::MAU::Table::Layout *layout);
+int LocalTernaryIndirectPerWord(const IR::MAU::Table::Layout *layout, const IR::MAU::Table *tbl);
 int TernaryIndirectPerWord(const IR::MAU::Table::Layout *layout, const IR::MAU::Table *tbl);
 int IdleTimePerWord(const IR::MAU::IdleTime *idletime);
 int SelectorRAMLinesPerEntry(const IR::MAU::Selector *sel);

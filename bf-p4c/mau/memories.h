@@ -31,6 +31,8 @@ struct Memories {
     static constexpr int TCAM_ROWS = 12;
     static constexpr int TCAM_COLUMNS = 2;
     static constexpr int TCAM_DEPTH = 512;
+    static constexpr int LOCAL_TIND_DEPTH = 64;
+    static constexpr int TOTAL_LOCAL_TIND = 16;
     static constexpr int TABLES_MAX = 16;
     static constexpr int TERNARY_TABLES_MAX = 8;
     static constexpr int ACTION_TABLES_MAX = 16;

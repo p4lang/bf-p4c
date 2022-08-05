@@ -13,6 +13,9 @@ class LayoutChoices : public ::LayoutChoices {
             int immediate_bits, int index) override;
     void setup_layout_option_no_match(const IR::MAU::Table *tbl,
             const IR::MAU::Table::Layout &layout, ActionData::FormatType_t format_type) override;
+    void setup_ternary_layout(const IR::MAU::Table *tbl,
+            const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type,
+            int action_data_bytes_in_table, int immediate_bits, int index) override;
     void add_layout_option(const IR::MAU::Table *tbl, const IR::MAU::Table::Layout &layout,
             const IR::MAU::Table::Way &way, ActionData::FormatType_t format_type,
             const int entries, const int single_entry_bits,
