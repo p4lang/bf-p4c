@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_BAREMETAL=1 -Ibf_arista_switch_baremetal/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'   --target tofino-tna --o bf_arista_switch_baremetal --bf-rt-schema bf_arista_switch_baremetal/context/bf-rt.json
-// p4c 9.7.2 (SHA: ddd29e0)
+// p4c 9.7.3 (SHA: dc177f3)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -1341,7 +1341,18 @@ parser Dwight(packet_in RockHill, out Frederika Westoak, out WebbCity Lefor, out
             default: Hemlock;
         }
     }
+    state Oskawalik {
+        Lefor.Ekwok.Bennet = (bit<3>)3w2;
+        transition Flippen;
+    }
+    state Hillcrest {
+        transition select((RockHill.lookahead<bit<132>>())[3:0]) {
+            4w0xe: Flippen;
+            default: Oskawalik;
+        }
+    }
     state Luning {
+        Lefor.Ekwok.Bennet = (bit<3>)3w2;
         RockHill.extract<Dowell>(Westoak.RichBar);
         RockHill.extract<Killen>(Westoak.Harding);
         Lefor.Ekwok.Glendevey = Westoak.RichBar.Glendevey;
@@ -1369,11 +1380,10 @@ parser Dwight(packet_in RockHill, out Frederika Westoak, out WebbCity Lefor, out
         }
     }
     state Potosi {
-        Lefor.Ekwok.Bennet = (bit<3>)3w2;
         RockHill.extract<Beaverdam>(Westoak.Rienzi);
         transition select(Westoak.Rienzi.ElVerano, Westoak.Rienzi.Brinkman) {
             (16w0x2000, 16w0 &&& 16w0): Mulvane;
-            (16w0, 16w0x800): Flippen;
+            (16w0, 16w0x800): Hillcrest;
             (16w0, 16w0x86dd): Cadwell;
             default: accept;
         }
@@ -3318,7 +3328,7 @@ control Issaquah(inout Frederika Westoak, inout WebbCity Lefor, in ingress_intri
         size = 512;
     }
     apply {
-        if (Lefor.Picabo.Wauconda == 1w0 && Lefor.Ekwok.Etter == 1w0 && Lefor.Picabo.Kenney == 1w0 && Lefor.Ekwok.Tilton == 1w0 && Lefor.Ekwok.Wetonka == 1w0 && Lefor.Longwood.Savery == 1w0 && Lefor.Longwood.Quinault == 1w0) {
+        if (Lefor.Picabo.Wauconda == 1w0 && Lefor.Ekwok.Etter == 1w0 && Lefor.Ekwok.Tilton == 1w0 && !(Lefor.Alstown.Maddock == 1w1 && Lefor.Ekwok.Madera == 1w1) && Lefor.Ekwok.Wetonka == 1w0 && Lefor.Longwood.Savery == 1w0 && Lefor.Longwood.Quinault == 1w0) {
             if (Lefor.Ekwok.Aguilita == Lefor.Picabo.Vergennes || Lefor.Picabo.Townville == 3w1 && Lefor.Picabo.Pajaros == 3w5) {
                 DeBeque.apply();
             } else if (Lefor.Millstone.Mausdale == 2w2 && Lefor.Picabo.Vergennes & 20w0xff800 == 20w0x3800) {

@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_VXLAN_EVPN_SCALE=1 -Ibf_arista_switch_vxlan_evpn_scale/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'   --target tofino-tna --o bf_arista_switch_vxlan_evpn_scale --bf-rt-schema bf_arista_switch_vxlan_evpn_scale/context/bf-rt.json
-// p4c 9.7.2 (SHA: ddd29e0)
+// p4c 9.7.3 (SHA: dc177f3)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -1280,7 +1280,18 @@ parser Lefor(packet_in Starkey, out Wanamassa Lindy, out Talco Brady, out ingres
             default: Nason;
         }
     }
+    state Earlsboro {
+        Brady.HighRock.Placedo = (bit<3>)3w2;
+        transition Mattapex;
+    }
+    state Careywood {
+        transition select((Starkey.lookahead<bit<132>>())[3:0]) {
+            4w0xe: Mattapex;
+            default: Earlsboro;
+        }
+    }
     state Nixon {
+        Brady.HighRock.Placedo = (bit<3>)3w2;
         Starkey.extract<Quogue>(Lindy.Olmitz);
         Starkey.extract<Glendevey>(Lindy.Baker);
         Brady.HighRock.Findlay = Lindy.Olmitz.Findlay;
@@ -1308,11 +1319,10 @@ parser Lefor(packet_in Starkey, out Wanamassa Lindy, out Talco Brady, out ingres
         }
     }
     state Castle {
-        Brady.HighRock.Placedo = (bit<3>)3w2;
         Starkey.extract<Fairland>(Lindy.Palouse);
         transition select(Lindy.Palouse.Juniata, Lindy.Palouse.Beaverdam) {
             (16w0x2000, 16w0 &&& 16w0): Aguila;
-            (16w0, 16w0x800): Mattapex;
+            (16w0, 16w0x800): Careywood;
             (16w0, 16w0x86dd): Midas;
             default: accept;
         }
@@ -3224,7 +3234,7 @@ control Clinchco(inout Wanamassa Lindy, inout Talco Brady, in ingress_intrinsic_
         size = 512;
     }
     apply {
-        if (Brady.Ekwok.RedElm == 1w0 && Brady.HighRock.Onycha == 1w0 && Brady.Ekwok.Miranda == 1w0 && Brady.HighRock.LakeLure == 1w0 && Brady.HighRock.Grassflat == 1w0 && Brady.Millstone.Edwards == 1w0 && Brady.Millstone.Mausdale == 1w0) {
+        if (Brady.Ekwok.RedElm == 1w0 && Brady.HighRock.Onycha == 1w0 && Brady.HighRock.LakeLure == 1w0 && !(Brady.Jayton.Sunflower == 1w1 && Brady.HighRock.Dolores == 1w1) && Brady.HighRock.Grassflat == 1w0 && Brady.Millstone.Edwards == 1w0 && Brady.Millstone.Mausdale == 1w0) {
             if (Brady.HighRock.Aguilita == Brady.Ekwok.Wauconda || Brady.Ekwok.FortHunt == 3w1 && Brady.Ekwok.Satolah == 3w5) {
                 Havertown.apply();
             } else if (Brady.Picabo.Ovett == 2w2 && Brady.Ekwok.Wauconda & 20w0xff800 == 20w0x3800) {

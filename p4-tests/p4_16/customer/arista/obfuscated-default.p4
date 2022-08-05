@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_DEFAULT=1 -Ibf_arista_switch_default/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'   --target tofino-tna --o bf_arista_switch_default --bf-rt-schema bf_arista_switch_default/context/bf-rt.json
-// p4c 9.7.2 (SHA: ddd29e0)
+// p4c 9.7.3 (SHA: dc177f3)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -7,7 +7,6 @@
 #include <tofino1_arch.p4>
 
 @pa_auto_init_metadata
-@pa_container_size("ingress", "Aguila.Skillman.Ledoux", 32)  // table fitting hack
 @pa_mutually_exclusive("egress" , "Nixon.Hillside.Newfane" , "Aguila.Olcott.Newfane")
 @pa_mutually_exclusive("egress" , "Aguila.Skillman.Eldred" , "Aguila.Olcott.Newfane")
 @pa_mutually_exclusive("egress" , "Aguila.Olcott.Newfane" , "Nixon.Hillside.Newfane")
@@ -20,9 +19,9 @@
 @pa_no_init("ingress" , "Nixon.Bronwood.Ipava")
 @pa_atomic("ingress" , "Nixon.Bronwood.Ipava")
 @pa_atomic("ingress" , "Nixon.Neponset.Lecompte")
-//@pa_container_size("egress" , "Aguila.Olcott.Kalida" , 32)
-//@pa_container_size("egress" , "Nixon.Hillside.McAllen" , 16)
-//@pa_container_size("egress" , "Aguila.Ossining.Whitten" , 32)
+@pa_container_size("egress" , "Aguila.Olcott.Kalida" , 32)
+@pa_container_size("egress" , "Nixon.Hillside.McAllen" , 16)
+@pa_container_size("egress" , "Aguila.Ossining.Whitten" , 32)
 @pa_atomic("ingress" , "Nixon.Hillside.Candle")
 @pa_atomic("ingress" , "Nixon.Hillside.Juneau")
 @pa_atomic("ingress" , "Nixon.Flaherty.Maumee")
@@ -31,11 +30,11 @@
 @pa_no_init("ingress" , "Nixon.Bronwood.Tombstone")
 @pa_no_init("ingress" , "Nixon.Casnovia.Livonia")
 @pa_no_init("ingress" , "Nixon.Casnovia.Bernice")
-//@pa_container_size("ingress" , "Aguila.Indios.Whitten" , 32)
-//@pa_container_size("ingress" , "Nixon.Bronwood.Parkville" , 8)
-//@pa_container_size("ingress" , "Nixon.Lemont.Joslin" , 16)
-//@pa_container_size("ingress" , "Nixon.Lemont.Whitten" , 16)
-//@pa_container_size("ingress" , "Nixon.Lemont.Ekron" , 8)
+@pa_container_size("ingress" , "Aguila.Indios.Whitten" , 32)
+@pa_container_size("ingress" , "Nixon.Bronwood.Parkville" , 8)
+@pa_container_size("ingress" , "Nixon.Lemont.Joslin" , 16)
+@pa_container_size("ingress" , "Nixon.Lemont.Whitten" , 16)
+@pa_container_size("ingress" , "Nixon.Lemont.Ekron" , 8)
 @pa_atomic("ingress" , "Nixon.Saugatuck.Sopris")
 @pa_mutually_exclusive("ingress" , "Nixon.Wabbaseka.Nuyaka" , "Nixon.Kinde.Hoven")
 @pa_atomic("ingress" , "Nixon.Bronwood.Lapoint")
@@ -1409,6 +1408,16 @@ parser Vanoss(packet_in Potosi, out Emden Aguila, out Cranbury Nixon, out ingres
             default: FairOaks;
         }
     }
+    state Suwanee {
+        Nixon.Bronwood.Fristoe = (bit<3>)3w2;
+        transition Oconee;
+    }
+    state Grovetown {
+        transition select((Potosi.lookahead<bit<132>>())[3:0]) {
+            4w0xe: Oconee;
+            default: Suwanee;
+        }
+    }
     state Salitpa {
         transition select((Potosi.lookahead<bit<4>>())[3:0]) {
             4w0x6: Baranof;
@@ -1416,10 +1425,9 @@ parser Vanoss(packet_in Potosi, out Emden Aguila, out Cranbury Nixon, out ingres
         }
     }
     state Yulee {
-        Nixon.Bronwood.Fristoe = (bit<3>)3w2;
         Potosi.extract<Chaffee>(Aguila.Larwill);
         transition select(Aguila.Larwill.Brinklow, Aguila.Larwill.Kremlin) {
-            (16w0, 16w0x800): Oconee;
+            (16w0, 16w0x800): Grovetown;
             (16w0, 16w0x86dd): Salitpa;
             default: accept;
         }
@@ -2940,7 +2948,7 @@ control Shelby(inout Emden Aguila, inout Cranbury Nixon, in ingress_intrinsic_me
         size = 512;
     }
     apply {
-        if (Nixon.Hillside.Kalkaska == 1w0 && Nixon.Bronwood.Traverse == 1w0 && Nixon.Hillside.Hackett == 1w0 && Nixon.Bronwood.Pittsboro == 1w0 && Nixon.Bronwood.Ericsburg == 1w0 && Nixon.Sunbury.Rainelle == 1w0 && Nixon.Sunbury.Paulding == 1w0) {
+        if (Nixon.Hillside.Kalkaska == 1w0 && Nixon.Bronwood.Traverse == 1w0 && Nixon.Bronwood.Pittsboro == 1w0 && !(Nixon.Flaherty.Grays == 1w1 && Nixon.Bronwood.Norland == 1w1) && Nixon.Bronwood.Ericsburg == 1w0 && Nixon.Sunbury.Rainelle == 1w0 && Nixon.Sunbury.Paulding == 1w0) {
             if ((Nixon.Bronwood.Exton == Nixon.Hillside.Candle || Nixon.Hillside.Basalt == 3w1 && Nixon.Hillside.Arvada == 3w5) && Nixon.Rienzi.Earling == 1w0) {
                 Clinchco.apply();
             } else if (Nixon.Frederika.Pawtucket == 2w2 && Nixon.Hillside.Candle & 20w0xff800 == 20w0x3800) {

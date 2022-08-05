@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MSEE_TOFINO2=1 -Ibf_arista_switch_msee_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'   --target tofino2-t2na --o bf_arista_switch_msee_tofino2 --bf-rt-schema bf_arista_switch_msee_tofino2/context/bf-rt.json
-// p4c 9.7.2 (SHA: ddd29e0)
+// p4c 9.7.3 (SHA: dc177f3)
 
 #include <core.p4>
 #include <tofino2_specs.p4>
@@ -7,9 +7,7 @@
 #include <tofino2_arch.p4>
 
 @pa_auto_init_metadata
-
 @pa_container_size("egress", "Westoak.Peoria.Garibaldi", 16)
-// @pa_container_size("egress", "Westoak.Peoria.Eldred", 16)
 @pa_parser_group_monogress
 @pa_mutually_exclusive("egress" , "Lefor.Ekwok.Conner" , "Westoak.Flaherty.Conner")
 @pa_mutually_exclusive("egress" , "Westoak.Flaherty.Conner" , "Lefor.Ekwok.Conner")
@@ -2142,7 +2140,7 @@ control Leoma(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_m
         size = 512;
     }
     apply {
-        if (Lefor.Ekwok.RedElm == 1w0 && Lefor.HighRock.RockPort == 1w0 && Lefor.Ekwok.Miranda == 1w0 && Lefor.HighRock.Lenexa == 1w0 && Lefor.HighRock.Rudolph == 1w0 && Lefor.Millstone.Edwards == 1w0 && Lefor.Millstone.Mausdale == 1w0) {
+        if (Lefor.Ekwok.RedElm == 1w0 && Lefor.HighRock.RockPort == 1w0 && Lefor.HighRock.Lenexa == 1w0 && !(Lefor.Jayton.Sunflower == 1w1 && Lefor.HighRock.Grassflat == 1w1) && Lefor.HighRock.Rudolph == 1w0 && Lefor.Millstone.Edwards == 1w0 && Lefor.Millstone.Mausdale == 1w0) {
             if (Lefor.HighRock.Harbor == Lefor.Ekwok.Wauconda || Lefor.Ekwok.FortHunt == 3w1 && Lefor.Ekwok.Satolah == 3w5) {
                 Asharoken.apply();
             } else if (Lefor.Picabo.Ovett == 2w2 && Lefor.Ekwok.Wauconda & 21w0xff800 == 21w0x3800) {
@@ -2998,11 +2996,11 @@ control Brule(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_m
         Durant((bit<5>)Millston);
         Lefor.Lookeba.HillTop = (bit<1>)Kingsdale.execute(Millston, Lefor.Lookeba.Dateland, 32w0);
     }
-    @name(".Clermont") DirectMeter(MeterType_t.PACKETS) Clermont;
+    @name(".Clermont") Meter<bit<13>>(32w8192, MeterType_t.PACKETS) Clermont;
     @name(".Blanding") action Blanding() {
-        Lefor.Lookeba.Dateland = (MeterColor_t)Clermont.execute();
+        Lefor.Lookeba.Dateland = (MeterColor_t)Clermont.execute(Lefor.HighRock.Eastwood);
     }
-    @lrt_enable(0) @name(".Ocilla") DirectCounter<bit<13>>(CounterType_t.PACKETS) Ocilla;
+    @name(".Ocilla") DirectCounter<bit<32>>(CounterType_t.PACKETS) Ocilla;
     @name(".Shelby") action Shelby() {
         Ocilla.count();
     }
@@ -3034,7 +3032,6 @@ control Brule(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_m
         }
         size = 8192;
         const default_action = Blanding();
-        meters = Clermont;
     }
     @disable_atomic_modify(1) @name(".Clinchco") table Clinchco {
         actions = {
@@ -3063,7 +3060,6 @@ control Snook(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_m
     @name(".Havertown") action Havertown(bit<32> Toluca) {
         OjoFeliz.count((bit<32>)Toluca);
     }
-    @name(".Clermont") DirectMeter(MeterType_t.PACKETS) Clermont;
     @disable_atomic_modify(1) @name(".Napanoch") table Napanoch {
         actions = {
             Havertown();
@@ -4089,6 +4085,10 @@ control Cidra(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_m
 }
 
 control Keller(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_metadata_t Moultrie, in ingress_intrinsic_metadata_from_parser_t Starkey, inout ingress_intrinsic_metadata_for_deparser_t Volens, inout ingress_intrinsic_metadata_for_tm_t Pinetop) {
+    @name(".Newsoms") action Newsoms(bit<1> Mentone) {
+        Pinetop.mcast_grp_a = (bit<16>)16w0;
+        Pinetop.copy_to_cpu = Mentone;
+    }
     @name(".Elysburg") action Elysburg() {
         Pinetop.rid = Pinetop.mcast_grp_a;
     }
@@ -4130,6 +4130,8 @@ control Keller(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_
     apply {
         if (Lefor.Ekwok.RedElm == 1w0) {
             Mapleton.apply();
+        } else {
+            Newsoms(1w0);
         }
     }
 }
@@ -5847,7 +5849,7 @@ control Easley(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_
         size = 2048;
         const default_action = Robstown();
     }
-    @atcam_partition_index("PeaRidge.Amenia") @atcam_number_partitions(( 2 * 1024 )) @force_immediate(1) @disable_atomic_modify(1) @name(".Cataract") table Cataract {
+    @atcam_partition_index("PeaRidge.Amenia") @atcam_number_partitions(( 2 * 1024 )) @force_immediate(1) @pack(2) @disable_atomic_modify(1) @name(".Cataract") table Cataract {
         actions = {
             @tableonly Alberta();
             @tableonly Lakefield();
@@ -5939,7 +5941,7 @@ control Easley(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_
         size = 32768;
         const default_action = Hartwick();
     }
-    @atcam_partition_index("PeaRidge.Amenia") @atcam_number_partitions(( 2 * 1024 )) @force_immediate(1) @disable_atomic_modify(1) @name(".Wildell") table Wildell {
+    @atcam_partition_index("PeaRidge.Amenia") @atcam_number_partitions(( 2 * 1024 )) @force_immediate(1) @pack(2) @disable_atomic_modify(1) @name(".Wildell") table Wildell {
         actions = {
             @tableonly Switzer();
             @tableonly BigBay();
@@ -5958,7 +5960,7 @@ control Easley(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_
         size = 32768;
         const default_action = Netarts();
     }
-    @atcam_partition_index("Cranbury.Amenia") @atcam_number_partitions(( 2 * 1024 )) @force_immediate(1) @disable_atomic_modify(1) @name(".Conda") table Conda {
+    @atcam_partition_index("Cranbury.Amenia") @atcam_number_partitions(( 2 * 1024 )) @force_immediate(1) @pack(2) @disable_atomic_modify(1) @name(".Conda") table Conda {
         actions = {
             @tableonly Sheyenne();
             @tableonly McKenna();
@@ -5977,7 +5979,7 @@ control Easley(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_
         size = 32768;
         const default_action = Hartwick();
     }
-    @atcam_partition_index("PeaRidge.Amenia") @atcam_number_partitions(( 2 * 1024 )) @force_immediate(1) @disable_atomic_modify(1) @name(".Waukesha") table Waukesha {
+    @atcam_partition_index("PeaRidge.Amenia") @atcam_number_partitions(( 2 * 1024 )) @force_immediate(1) @pack(2) @disable_atomic_modify(1) @name(".Waukesha") table Waukesha {
         actions = {
             @tableonly Switzer();
             @tableonly BigBay();
@@ -14384,13 +14386,23 @@ parser Shawville(packet_in Kinsley, out Wanamassa Westoak, out Talco Lefor, out 
             default: Mellott;
         }
     }
+    state Elwood {
+        Lefor.HighRock.Jenners = (bit<3>)3w2;
+        transition Fairborn;
+    }
+    state Homeworth {
+        transition select((Kinsley.lookahead<bit<132>>())[3:0]) {
+            4w0xe: Fairborn;
+            default: Elwood;
+        }
+    }
     state Tryon {
         Kinsley.extract<Knierim>(Westoak.Monrovia);
         Lefor.HighRock.Orrick = Westoak.Monrovia.Montross[31:24];
         Lefor.HighRock.Higginson = Westoak.Monrovia.Montross[23:8];
         Lefor.HighRock.Oriskany = Westoak.Monrovia.Montross[7:0];
         transition select(Westoak.Wagener.Elderon) {
-            16w0x800: Fairborn;
+            16w0x800: Homeworth;
             default: accept;
         }
     }
@@ -14401,11 +14413,10 @@ parser Shawville(packet_in Kinsley, out Wanamassa Westoak, out Talco Lefor, out 
         }
     }
     state Maybee {
-        Lefor.HighRock.Jenners = (bit<3>)3w2;
         Kinsley.extract<Boerne>(Westoak.Wagener);
         transition select(Westoak.Wagener.Alamosa, Westoak.Wagener.Elderon) {
             (16w0x2000, 16w0 &&& 16w0): Tryon;
-            (16w0, 16w0x800): Fairborn;
+            (16w0, 16w0x800): Homeworth;
             (16w0, 16w0x86dd): China;
             default: accept;
         }
@@ -14690,7 +14701,7 @@ control Simla(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_m
     @name(".Tennessee") action Tennessee() {
         Lefor.HighRock.Lecompte = (bit<1>)1w1;
     }
-    @force_immediate(1) @ways(4) @disable_atomic_modify(1) @name(".Brazil") table Brazil {
+    @force_immediate(1) @ways(4) @disable_atomic_modify(1) @pack(2) @name(".Brazil") table Brazil {
         actions = {
             Vincent();
             Stratton();
@@ -15260,6 +15271,10 @@ control Geeville(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic
                         (false, true, true, false, false, false, default, default, 3w6, 16w0 .. 16w95) : Annette();
 
                         (false, default, default, false, false, false, default, default, 3w6, default) : Powelton();
+
+                        (false, default, default, false, false, false, default, default, 3w2, 16w0 .. 16w103) : Annette();
+
+                        (false, default, default, false, false, false, default, default, 3w2, default) : Powelton();
 
                         (false, false, false, false, false, false, 1w0, false, default, 16w0 .. 16w103) : Annette();
 

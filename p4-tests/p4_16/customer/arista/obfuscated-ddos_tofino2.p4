@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_DDOS_TOFINO2=1 -Ibf_arista_switch_ddos_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'   --target tofino2-t2na --o bf_arista_switch_ddos_tofino2 --bf-rt-schema bf_arista_switch_ddos_tofino2/context/bf-rt.json
-// p4c 9.7.2 (SHA: ddd29e0)
+// p4c 9.7.3 (SHA: dc177f3)
 
 #include <core.p4>
 #include <tofino2_specs.p4>
@@ -2113,7 +2113,7 @@ control Weissert(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intri
         size = 512;
     }
     apply {
-        if (Dwight.Lookeba.Tornillo == 1w0 && Dwight.Circle.Etter == 1w0 && Dwight.Lookeba.Heuvelton == 1w0 && Dwight.Circle.Wetonka == 1w0 && Dwight.Circle.Lecompte == 1w0 && Dwight.Armagh.Ovett == 1w0 && Dwight.Armagh.Murphy == 1w0) {
+        if (Dwight.Lookeba.Tornillo == 1w0 && Dwight.Circle.Etter == 1w0 && Dwight.Circle.Wetonka == 1w0 && !(Dwight.Humeston.SourLake == 1w1 && Dwight.Circle.Cardenas == 1w1) && Dwight.Circle.Lecompte == 1w0 && Dwight.Armagh.Ovett == 1w0 && Dwight.Armagh.Murphy == 1w0) {
             if (Dwight.Circle.Harbor == Dwight.Lookeba.Renick || Dwight.Lookeba.Vergennes == 3w1 && Dwight.Lookeba.Oilmont == 3w5) {
                 Wardville.apply();
             } else if (Dwight.Yorkshire.Lamona == 2w2 && Dwight.Lookeba.Renick & 21w0xff800 == 21w0x3800) {
@@ -3753,6 +3753,10 @@ control Tillicum(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intri
 }
 
 control Batchelor(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrinsic_metadata_t Nooksack, in ingress_intrinsic_metadata_from_parser_t RockHill, inout ingress_intrinsic_metadata_for_deparser_t Robstown, inout ingress_intrinsic_metadata_for_tm_t Courtdale) {
+    @name(".Ferndale") action Ferndale(bit<1> Nuyaka) {
+        Courtdale.mcast_grp_a = (bit<16>)16w0;
+        Courtdale.copy_to_cpu = Nuyaka;
+    }
     @name(".Dundee") action Dundee() {
         Courtdale.rid = Courtdale.mcast_grp_a;
     }
@@ -3794,6 +3798,8 @@ control Batchelor(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intr
     apply {
         if (Dwight.Lookeba.Tornillo == 1w0) {
             Tulalip.apply();
+        } else {
+            Ferndale(1w0);
         }
     }
 }
@@ -5055,7 +5061,7 @@ control Elliston(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intri
         }
         const default_action = Manakin();
         counters = Moapa;
-        size = 1024;
+        size = 1536;
     }
     apply {
         Tontogany.apply();
@@ -5819,6 +5825,16 @@ parser Poteet(packet_in Blakeslee, out Almota Virgilina, out Wyndmoor Dwight, ou
             default: Roseville;
         }
     }
+    state Ossineke {
+        Dwight.Circle.Bennet = (bit<3>)3w2;
+        transition Cross;
+    }
+    state Molino {
+        transition select((Blakeslee.lookahead<bit<132>>())[3:0]) {
+            4w0xe: Cross;
+            default: Ossineke;
+        }
+    }
     state Snowflake {
         transition select((Blakeslee.lookahead<bit<4>>())[3:0]) {
             4w0x6: Colburn;
@@ -5826,10 +5842,9 @@ parser Poteet(packet_in Blakeslee, out Almota Virgilina, out Wyndmoor Dwight, ou
         }
     }
     state Denning {
-        Dwight.Circle.Bennet = (bit<3>)3w2;
         Blakeslee.extract<ElVerano>(Virgilina.Thurmond);
         transition select(Virgilina.Thurmond.Brinkman, Virgilina.Thurmond.Boerne) {
-            (16w0, 16w0x800): Cross;
+            (16w0, 16w0x800): Molino;
             (16w0, 16w0x86dd): Snowflake;
             default: accept;
         }
@@ -6612,6 +6627,10 @@ control Coalton(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrins
                         (false, true, true, false, false, false, default, default, 3w6, 16w0 .. 16w92) : Hilltop();
 
                         (false, default, default, false, false, false, default, default, 3w6, default) : Herald();
+
+                        (false, default, default, false, false, false, default, default, 3w2, 16w0 .. 16w100) : Hilltop();
+
+                        (false, default, default, false, false, false, default, default, 3w2, default) : Herald();
 
                         (false, false, false, false, false, false, 1w0, false, default, 16w0 .. 16w100) : Hilltop();
 

@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT=1 -Ibf_arista_switch_nat/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid' -Xp4c=--traffic-limit 95 --excludeBackendPasses=ResetInvalidatedChecksumHeaders  --target tofino-tna --o bf_arista_switch_nat --bf-rt-schema bf_arista_switch_nat/context/bf-rt.json
-// p4c 9.7.2 (SHA: ddd29e0)
+// p4c 9.7.3 (SHA: dc177f3)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -1287,6 +1287,16 @@ parser Boyle(packet_in Ackerly, out Monrovia Philip, out Orting Levasy, out ingr
             default: Kapowsin;
         }
     }
+    state Kinsley {
+        Levasy.Thawville.Etter = (bit<3>)3w2;
+        transition Cheyenne;
+    }
+    state Shawville {
+        transition select((Ackerly.lookahead<bit<132>>())[3:0]) {
+            4w0xe: Cheyenne;
+            default: Kinsley;
+        }
+    }
     state Pacifica {
         transition select((Ackerly.lookahead<bit<4>>())[3:0]) {
             4w0x6: Vanoss;
@@ -1294,10 +1304,9 @@ parser Boyle(packet_in Ackerly, out Monrovia Philip, out Orting Levasy, out ingr
         }
     }
     state Lattimore {
-        Levasy.Thawville.Etter = (bit<3>)3w2;
         Ackerly.extract<Beaverdam>(Philip.Jerico);
         transition select(Philip.Jerico.ElVerano, Philip.Jerico.Brinkman) {
-            (16w0, 16w0x800): Cheyenne;
+            (16w0, 16w0x800): Shawville;
             (16w0, 16w0x86dd): Pacifica;
             default: accept;
         }
@@ -1552,7 +1561,7 @@ control Anita(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsic_m
         const default_action = Exeter();
         size = 4096;
     }
-    @disable_atomic_modify(1) @ways(2) @name(".Aynor") table Aynor {
+    @disable_atomic_modify(1) @name(".Aynor") table Aynor {
         actions = {
             @tableonly Cairo();
             @defaultonly Notus();
@@ -1564,7 +1573,7 @@ control Anita(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsic_m
             Levasy.Thawville.Aguilita: exact @name("Thawville.Aguilita") ;
         }
         const default_action = Notus();
-        size = 8192;
+        size = 16384;
         idle_timeout = true;
     }
     @disable_atomic_modify(1) @ways(3) @name(".McIntyre") table McIntyre {
@@ -1982,6 +1991,15 @@ control Luttrell(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsi
         Levasy.Bratt.Kalkaska[0:0] = Rockham;
         Levasy.Bratt.Arvada[0:0] = Hiland;
     }
+    @name(".Ludell") action Ludell(bit<20> Petroleum, bit<24> Glendevey, bit<24> Littleton, bit<12> Buncombe) {
+        Levasy.Bratt.Pettry = Petroleum;
+        Levasy.Bratt.Daleville = (bit<1>)1w0;
+        Levasy.Garrison.McCaskill = (bit<1>)1w0;
+        Levasy.Bratt.Kenney = (bit<1>)1w0;
+        Levasy.Bratt.Glendevey = Glendevey;
+        Levasy.Bratt.Littleton = Littleton;
+        Levasy.Bratt.Buncombe = Buncombe;
+    }
     @name(".Oregon") action Oregon(bit<8> StarLake) {
         Levasy.Bratt.Kenney = (bit<1>)1w1;
         Levasy.Bratt.StarLake = StarLake;
@@ -2049,6 +2067,7 @@ control Luttrell(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsi
         actions = {
             Wardville();
             NorthRim();
+            Ludell();
             Exeter();
         }
         key = {
@@ -2440,6 +2459,22 @@ control Faulkton(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsi
         size = 1024;
         idle_timeout = true;
     }
+    @idletime_precision(1) @force_immediate(1) @ways(4) @disable_atomic_modify(1) @name(".Frederic") table Frederic {
+        actions = {
+            Neosho();
+            Swandale();
+            Willette();
+            Mayview();
+            Exeter();
+        }
+        key = {
+            Levasy.Garrison.Moose : exact @name("Garrison.Moose") ;
+            Levasy.Harriet.Commack: exact @name("Harriet.Commack") ;
+        }
+        const default_action = Exeter();
+        size = 16384;
+        idle_timeout = true;
+    }
     @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @name(".Heaton") table Heaton {
         actions = {
             Neosho();
@@ -2469,7 +2504,9 @@ control Faulkton(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsi
                                             Exeter: {
                                                 switch (BarNunn.apply().action_run) {
                                                     Exeter: {
-                                                        Heaton.apply();
+                                                        if (!Frederic.apply().hit) {
+                                                            Heaton.apply();
+                                                        }
                                                     }
                                                 }
 
@@ -2483,7 +2520,9 @@ control Faulkton(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsi
                         }
 
                     } else {
-                        Heaton.apply();
+                        if (!Frederic.apply().hit) {
+                            Heaton.apply();
+                        }
                     }
                 }
             }
@@ -3318,7 +3357,7 @@ control Cornwall(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsi
             Levasy.Bratt.Buncombe : exact @name("Bratt.Buncombe") ;
         }
         const default_action = Exeter();
-        size = 8192;
+        size = 16384;
     }
     apply {
         switch (Catlin.apply().action_run) {
@@ -3360,7 +3399,7 @@ control Antoine(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsic
         size = 512;
     }
     apply {
-        if (Levasy.Bratt.Kenney == 1w0 && Levasy.Thawville.Jenners == 1w0 && Levasy.Bratt.Daleville == 1w0 && Levasy.Thawville.Grassflat == 1w0 && Levasy.Thawville.Whitewood == 1w0 && Levasy.Milano.Calabash == 1w0 && Levasy.Milano.Wondervu == 1w0) {
+        if (Levasy.Bratt.Kenney == 1w0 && Levasy.Thawville.Jenners == 1w0 && Levasy.Thawville.Grassflat == 1w0 && Levasy.Bratt.Daleville == 1w0 && Levasy.Thawville.Whitewood == 1w0 && Levasy.Milano.Calabash == 1w0 && Levasy.Milano.Wondervu == 1w0) {
             if (Levasy.Thawville.Aguilita == Levasy.Bratt.Pettry) {
                 Norridge.apply();
             } else if (Levasy.Moultrie.Belgrade == 2w2 && Levasy.Bratt.Pettry & 20w0xff800 == 20w0x3800) {
@@ -4821,7 +4860,7 @@ control Finlayson(inout Monrovia Philip, inout Orting Levasy, in ingress_intrins
         const default_action = Exeter();
         size = 512;
     }
-    @disable_atomic_modify(1) @disable_atomic_modify(1) @ways(2) @pack(4) @name(".Leetsdale") table Leetsdale {
+    @disable_atomic_modify(1) @disable_atomic_modify(1) @ways(5) @name(".Leetsdale") table Leetsdale {
         actions = {
             @tableonly Lovett();
             @defaultonly NoAction();

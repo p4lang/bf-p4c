@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_STATELESS_LOAD_BALANCE_V4V6=1 -Ibf_arista_switch_stateless_load_balance_v4v6/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'   --target tofino-tna --o bf_arista_switch_stateless_load_balance_v4v6 --bf-rt-schema bf_arista_switch_stateless_load_balance_v4v6/context/bf-rt.json
-// p4c 9.7.2 (SHA: ddd29e0)
+// p4c 9.7.3 (SHA: dc177f3)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -1416,6 +1416,16 @@ parser Ackerly(packet_in Noyack, out Hookdale Levasy, out Jayton Indios, out ing
             default: Lattimore;
         }
     }
+    state Quamba {
+        Indios.Lookeba.Lecompte = (bit<3>)3w2;
+        transition Forepaugh;
+    }
+    state Waimalu {
+        transition select((Noyack.lookahead<bit<132>>())[3:0]) {
+            4w0xe: Forepaugh;
+            default: Quamba;
+        }
+    }
     state Chewalla {
         transition select((Noyack.lookahead<bit<4>>())[3:0]) {
             4w0x6: Cheyenne;
@@ -1423,10 +1433,9 @@ parser Ackerly(packet_in Noyack, out Hookdale Levasy, out Jayton Indios, out ing
         }
     }
     state SanPablo {
-        Indios.Lookeba.Lecompte = (bit<3>)3w2;
         Noyack.extract<Tenino>(Levasy.Tofte);
         transition select(Levasy.Tofte.Pridgen, Levasy.Tofte.Fairland) {
-            (16w0, 16w0x800): Forepaugh;
+            (16w0, 16w0x800): Waimalu;
             (16w0, 16w0x86dd): Chewalla;
             default: accept;
         }
@@ -1742,6 +1751,9 @@ control Skene(inout Hookdale Levasy, inout Jayton Indios, in ingress_intrinsic_m
     @name(".Elkton") action Elkton() {
         Indios.Cotter.NewMelle = Indios.Cotter.NewMelle >> 2;
     }
+    @name(".Pettigrew") action Pettigrew() {
+        Indios.Cotter.NewMelle = Indios.Cotter.NewMelle >> 1;
+    }
     @disable_atomic_modify(1) @name(".Penzance") table Penzance {
         actions = {
             Flynn();
@@ -1749,12 +1761,13 @@ control Skene(inout Hookdale Levasy, inout Jayton Indios, in ingress_intrinsic_m
             Beatrice();
             Morrow();
             Elkton();
+            Pettigrew();
             @defaultonly NoAction();
         }
         key = {
             Indios.Cotter.Bennet: exact @name("Cotter.Bennet") ;
         }
-        size = 5;
+        size = 6;
         const default_action = NoAction();
     }
     @name(".Shasta") action Shasta() {
@@ -3064,7 +3077,7 @@ control Protivin(inout Hookdale Levasy, inout Jayton Indios, in ingress_intrinsi
         size = 256;
     }
     apply {
-        if (Indios.Yorkshire.Monahans == 1w0 && Indios.Lookeba.Lenexa == 1w0 && Indios.Yorkshire.Cuprum == 1w0 && Indios.Lookeba.Standish == 1w0 && Indios.Lookeba.Blairsden == 1w0 && Indios.Orting.Sherack == 1w0 && Indios.Orting.Plains == 1w0) {
+        if (Indios.Yorkshire.Monahans == 1w0 && Indios.Lookeba.Lenexa == 1w0 && Indios.Lookeba.Standish == 1w0 && !(Indios.Gamaliel.Edwards == 1w1 && Indios.Lookeba.Fristoe == 1w1) && Indios.Lookeba.Blairsden == 1w0 && Indios.Orting.Sherack == 1w0 && Indios.Orting.Plains == 1w0) {
             if (Indios.Lookeba.Aguilita == Indios.Yorkshire.Corydon) {
                 Haugen.apply();
             } else if (Indios.Armagh.Stennett == 2w2 && Indios.Yorkshire.Corydon & 20w0xff800 == 20w0x3800) {
@@ -5254,6 +5267,29 @@ control Wyanet(inout Hookdale Levasy, inout Jayton Indios, in ingress_intrinsic_
         Indios.Cotter.Bennet = (bit<3>)3w2;
         Indios.Cotter.Chatmoss = Indios.Cotter.Chatmoss >> 2;
     }
+    @name(".Hartford") action Hartford(bit<10> Gasport, bit<18> Flats, bit<2> Lakehills) {
+        BigBay(Gasport, Lakehills, Flats);
+        Indios.Cotter.NewMelle = Indios.Cotter.Chatmoss;
+        Indios.Cotter.Bennet = (bit<3>)3w1;
+        Indios.Cotter.Chatmoss = Indios.Cotter.Chatmoss >> 3;
+    }
+    @name(".Halstead") action Halstead(bit<10> Gasport, bit<18> Flats, bit<2> Lakehills) {
+        BigBay(Gasport, Lakehills, Flats);
+        Indios.Cotter.NewMelle = Indios.Cotter.Chatmoss;
+        Indios.Cotter.Bennet = (bit<3>)3w1;
+        Indios.Cotter.Chatmoss = Indios.Cotter.Chatmoss >> 1;
+    }
+    @name(".Draketown") action Draketown(bit<10> Gasport, bit<18> Flats, bit<2> Lakehills) {
+        BigBay(Gasport, Lakehills, Flats);
+        Indios.Cotter.NewMelle = Indios.Cotter.Chatmoss;
+        Indios.Cotter.Bennet = (bit<3>)3w0;
+        Indios.Cotter.Chatmoss = Indios.Cotter.Chatmoss >> 2;
+    }
+    @name(".FlatLick") action FlatLick(bit<10> Gasport, bit<18> Flats, bit<2> Lakehills) {
+        BigBay(Gasport, Lakehills, Flats);
+        Indios.Cotter.NewMelle = Indios.Cotter.Chatmoss;
+        Indios.Cotter.Bennet = (bit<3>)3w0;
+    }
     @name(".Paradise") action Paradise() {
         BigBay(10w0, 2w0, 18w0);
     }
@@ -5269,6 +5305,10 @@ control Wyanet(inout Hookdale Levasy, inout Jayton Indios, in ingress_intrinsic_
             Poteet();
             Blakeslee();
             Margie();
+            Hartford();
+            Halstead();
+            Draketown();
+            FlatLick();
             Paradise();
             Patchogue();
         }
@@ -5378,7 +5418,7 @@ control Wyanet(inout Hookdale Levasy, inout Jayton Indios, in ingress_intrinsic_
     @name(".Motley") action Motley() {
         Indios.Cotter.Etter = 8w3;
     }
-    @hidden @disable_atomic_modify(1) @name(".Etter") table Etter {
+    @hidden @disable_atomic_modify(1) @stage(1) @name(".Etter") table Etter {
         actions = {
             @tableonly Gonzalez();
             @tableonly Motley();

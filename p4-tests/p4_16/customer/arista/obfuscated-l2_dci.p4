@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_L2_DCI=1 -Ibf_arista_switch_l2_dci/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'   --target tofino2-t2na --o bf_arista_switch_l2_dci --bf-rt-schema bf_arista_switch_l2_dci/context/bf-rt.json
-// p4c 9.7.2 (SHA: ddd29e0)
+// p4c 9.7.3 (SHA: dc177f3)
 
 #include <core.p4>
 #include <tofino2_specs.p4>
@@ -2085,7 +2085,7 @@ control BigRock(inout Frederika Olcott, inout HighRock Westoak, in ingress_intri
         size = 512;
     }
     apply {
-        if (Westoak.Wyndmoor.Pajaros == 1w0 && Westoak.Covert.RioPecos == 1w0 && Westoak.Wyndmoor.Wellton == 1w0 && Westoak.Covert.Rockham == 1w0 && Westoak.Covert.Hiland == 1w0 && Westoak.Alstown.Bessie == 1w0 && Westoak.Alstown.Savery == 1w0) {
+        if (Westoak.Wyndmoor.Pajaros == 1w0 && Westoak.Covert.RioPecos == 1w0 && Westoak.Covert.Rockham == 1w0 && !(Westoak.Lookeba.RossFork == 1w1 && Westoak.Covert.Wetonka == 1w1) && Westoak.Covert.Hiland == 1w0 && Westoak.Alstown.Bessie == 1w0 && Westoak.Alstown.Savery == 1w0) {
             if (Luttrell.apply().hit) {
                 {
                     Plano.apply();
@@ -3731,6 +3731,10 @@ control Wells(inout Frederika Olcott, inout HighRock Westoak, in ingress_intrins
 }
 
 control Ferndale(inout Frederika Olcott, inout HighRock Westoak, in ingress_intrinsic_metadata_t Garrison, in ingress_intrinsic_metadata_from_parser_t Lefor, inout ingress_intrinsic_metadata_for_deparser_t Starkey, inout ingress_intrinsic_metadata_for_tm_t Milano) {
+    @name(".Walland") action Walland(bit<1> Elkville) {
+        Milano.mcast_grp_a = (bit<16>)16w0;
+        Milano.copy_to_cpu = Elkville;
+    }
     @name(".Broadford") action Broadford() {
         Milano.rid = Milano.mcast_grp_a;
     }
@@ -3772,6 +3776,8 @@ control Ferndale(inout Frederika Olcott, inout HighRock Westoak, in ingress_intr
     apply {
         if (Westoak.Wyndmoor.Pajaros == 1w0) {
             Batchelor.apply();
+        } else {
+            Walland(1w0);
         }
     }
 }
@@ -13279,6 +13285,16 @@ parser Vincent(packet_in Cowan, out Frederika Olcott, out HighRock Westoak, out 
             default: Haena;
         }
     }
+    state Lamboglia {
+        Westoak.Covert.Stratford = (bit<3>)3w2;
+        transition Ellicott;
+    }
+    state Timken {
+        transition select((Cowan.lookahead<bit<132>>())[3:0]) {
+            4w0xe: Ellicott;
+            default: Lamboglia;
+        }
+    }
     state Parmalee {
         transition select((Cowan.lookahead<bit<4>>())[3:0]) {
             4w0x6: Hooven;
@@ -13286,10 +13302,9 @@ parser Vincent(packet_in Cowan, out Frederika Olcott, out HighRock Westoak, out 
         }
     }
     state Ironside {
-        Westoak.Covert.Stratford = (bit<3>)3w2;
         Cowan.extract<Elderon>(Olcott.Monrovia);
         transition select(Olcott.Monrovia.Knierim, Olcott.Monrovia.Montross) {
-            (16w0, 16w0x800): Ellicott;
+            (16w0, 16w0x800): Timken;
             (16w0, 16w0x86dd): Parmalee;
             default: accept;
         }
@@ -14133,6 +14148,10 @@ control Seabrook(inout Frederika Olcott, inout HighRock Westoak, in egress_intri
                         (false, true, true, false, false, false, default, default, 3w6, 16w0 .. 16w99) : Jigger();
 
                         (false, default, default, false, false, false, default, default, 3w6, default) : McFaddin();
+
+                        (false, default, default, false, false, false, default, default, 3w2, 16w0 .. 16w107) : Jigger();
+
+                        (false, default, default, false, false, false, default, default, 3w2, default) : McFaddin();
 
                         (false, false, false, false, false, false, 1w0, false, default, 16w0 .. 16w107) : Jigger();
 

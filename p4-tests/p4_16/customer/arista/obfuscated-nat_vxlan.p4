@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_VXLAN=1 -Ibf_arista_switch_nat_vxlan/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'   --target tofino-tna --o bf_arista_switch_nat_vxlan --bf-rt-schema bf_arista_switch_nat_vxlan/context/bf-rt.json
-// p4c 9.7.2 (SHA: ddd29e0)
+// p4c 9.7.3 (SHA: dc177f3)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -95,7 +95,6 @@
 @pa_alias("ingress" , "Castle.Ravinia.Hackett" , "Aguila.Frederika.Pathfork")
 @pa_alias("ingress" , "Castle.Ravinia.Kaluaaha" , "Aguila.Frederika.Clarion")
 @pa_alias("ingress" , "Castle.Ravinia.Calcasieu" , "Aguila.Frederika.SomesBar")
-@pa_alias("ingress" , "Castle.Ravinia.Levittown" , "Aguila.Frederika.Corydon")
 @pa_alias("ingress" , "Castle.Ravinia.Maryhill" , "Aguila.Frederika.Norland")
 @pa_alias("ingress" , "Castle.Ravinia.Norwood" , "Aguila.Frederika.Barrow")
 @pa_alias("ingress" , "Castle.Ravinia.Dassel" , "Aguila.Frederika.Tilton")
@@ -303,8 +302,6 @@ struct Blencoe {
     bit<12> Kaluaaha;
     @flexible 
     bit<8>  Calcasieu;
-    @flexible 
-    bit<16> Levittown;
     @flexible 
     bit<16> Maryhill;
     @flexible 
@@ -1485,15 +1482,14 @@ control Sunman(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrinsi
             @defaultonly NoAction();
         }
         key = {
-            Aguila.Sunbury.Woodfield            : ternary @name("Sunbury.Woodfield") ;
-            Aguila.Frederika.Ayden              : ternary @name("Frederika.Ayden") ;
-            Aguila.Frederika.Raiford            : ternary @name("Frederika.Raiford") ;
-            Aguila.Frederika.Corydon & 16w0xffff: ternary @name("Frederika.Corydon") ;
-            Castle.Larwill.isValid()            : ternary @name("Larwill") ;
-            Castle.Hettinger.isValid()          : ternary @name("Hettinger") ;
-            Castle.Ackerly.isValid()            : ternary @name("Ackerly") ;
-            Castle.Hettinger.DonaAna            : ternary @name("Hettinger.DonaAna") ;
-            Aguila.Sunbury.Lewiston             : ternary @name("Sunbury.Lewiston") ;
+            Aguila.Sunbury.Woodfield  : ternary @name("Sunbury.Woodfield") ;
+            Aguila.Frederika.Ayden    : ternary @name("Frederika.Ayden") ;
+            Aguila.Frederika.Raiford  : ternary @name("Frederika.Raiford") ;
+            Castle.Larwill.isValid()  : ternary @name("Larwill") ;
+            Castle.Hettinger.isValid(): ternary @name("Hettinger") ;
+            Castle.Ackerly.isValid()  : ternary @name("Ackerly") ;
+            Castle.Hettinger.DonaAna  : ternary @name("Hettinger.DonaAna") ;
+            Aguila.Sunbury.Lewiston   : ternary @name("Sunbury.Lewiston") ;
         }
         const default_action = NoAction();
         size = 512;
@@ -2351,7 +2347,7 @@ control Bammel(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrinsi
         size = 512;
     }
     apply {
-        if (Aguila.Sunbury.Juneau == 1w0 && Aguila.Frederika.Wetonka == 1w0 && Aguila.Sunbury.Moose == 1w0 && Aguila.Frederika.Pachuta == 1w0 && Aguila.Frederika.Whitefish == 1w0 && Aguila.Funston.Thaxton == 1w0 && Aguila.Funston.Lawai == 1w0) {
+        if (Aguila.Sunbury.Juneau == 1w0 && Aguila.Frederika.Wetonka == 1w0 && Aguila.Frederika.Pachuta == 1w0 && !(Aguila.Hookdale.Bergton == 1w1 && Aguila.Frederika.Lapoint == 1w1) && Aguila.Frederika.Whitefish == 1w0 && Aguila.Funston.Thaxton == 1w0 && Aguila.Funston.Lawai == 1w0) {
             if (Aguila.Frederika.Aguilita == Aguila.Sunbury.RossFork) {
                 DeRidder.apply();
             } else if (Aguila.Almota.Emida == 2w2 && Aguila.Sunbury.RossFork & 20w0xff800 == 20w0x3800) {
@@ -3614,6 +3610,10 @@ control Dundee(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrinsi
 }
 
 control Oakley(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrinsic_metadata_t RichBar, in ingress_intrinsic_metadata_from_parser_t Nixon, inout ingress_intrinsic_metadata_for_deparser_t Mattapex, inout ingress_intrinsic_metadata_for_tm_t Harding) {
+    @name(".Trail") action Trail(bit<1> Swisshome) {
+        Harding.mcast_grp_a = (bit<16>)16w0;
+        Harding.copy_to_cpu = Swisshome;
+    }
     @name(".Ontonagon") action Ontonagon() {
         Harding.rid = Harding.mcast_grp_a;
     }
@@ -3655,6 +3655,8 @@ control Oakley(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrinsi
     apply {
         if (Aguila.Sunbury.Juneau == 1w0) {
             Osakis.apply();
+        } else {
+            Trail(1w0);
         }
     }
 }
@@ -4561,7 +4563,6 @@ control Naguabo(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrins
 
     }
     @name(".Arion") action Arion(PortId_t Palmhurst) {
-        Aguila.Frederika.Corydon[15:0] = (bit<16>)16w0;
         {
             Castle.Ravinia.setValid();
             Harding.bypass_egress = (bit<1>)1w1;
@@ -4958,6 +4959,16 @@ parser Calverton(packet_in Longport, out Westoak Castle, out Wanamassa Aguila, o
             default: Folcroft;
         }
     }
+    state Mellott {
+        Aguila.Frederika.Tilton = (bit<3>)3w2;
+        transition Waxhaw;
+    }
+    state Alderson {
+        transition select((Longport.lookahead<bit<132>>())[3:0]) {
+            4w0xe: Waxhaw;
+            default: Mellott;
+        }
+    }
     state Gerster {
         transition select((Longport.lookahead<bit<4>>())[3:0]) {
             4w0x6: Moapa;
@@ -4965,10 +4976,9 @@ parser Calverton(packet_in Longport, out Westoak Castle, out Wanamassa Aguila, o
         }
     }
     state Elbing {
-        Aguila.Frederika.Tilton = (bit<3>)3w2;
         Longport.extract<Crozet>(Castle.Chatanika);
         transition select(Castle.Chatanika.Laxon, Castle.Chatanika.Chaffee) {
-            (16w0, 16w0x800): Waxhaw;
+            (16w0, 16w0x800): Alderson;
             (16w0, 16w0x86dd): Gerster;
             default: accept;
         }
@@ -6138,6 +6148,15 @@ control Rixford(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrins
         Aguila.Sunbury.Edwards[0:0] = Raiford;
         Aguila.Sunbury.Murphy[0:0] = Ayden;
     }
+    @name(".CruzBay") action CruzBay(bit<20> Tanana, bit<24> Hampton, bit<24> Tallassee, bit<12> Aldan) {
+        Aguila.Sunbury.RossFork = Tanana;
+        Aguila.Sunbury.Moose = (bit<1>)1w0;
+        Aguila.Hookdale.Bergton = (bit<1>)1w0;
+        Aguila.Sunbury.Juneau = (bit<1>)1w0;
+        Aguila.Sunbury.Hampton = Hampton;
+        Aguila.Sunbury.Tallassee = Tallassee;
+        Aguila.Sunbury.Aldan = Aldan;
+    }
     @disable_atomic_modify(1) @name(".Thistle") table Thistle {
         actions = {
             LaPointe();
@@ -6155,6 +6174,7 @@ control Rixford(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrins
     @disable_atomic_modify(1) @name(".Overton") table Overton {
         actions = {
             Millett();
+            CruzBay();
             Potosi();
         }
         key = {

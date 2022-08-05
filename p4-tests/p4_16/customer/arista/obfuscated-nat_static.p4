@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_STATIC=1 -Ibf_arista_switch_nat_static/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid' -Xp4c=--traffic-limit 95 --excludeBackendPasses=ResetInvalidatedChecksumHeaders  --target tofino-tna --o bf_arista_switch_nat_static --bf-rt-schema bf_arista_switch_nat_static/context/bf-rt.json
-// p4c 9.7.2 (SHA: ddd29e0)
+// p4c 9.7.3 (SHA: dc177f3)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -1319,6 +1319,16 @@ parser Moosic(packet_in Ossining, out Baker Noyack, out Harriet Hettinger, out i
             default: Nucla;
         }
     }
+    state BoyRiver {
+        Hettinger.Bratt.Jenners = (bit<3>)3w2;
+        transition WildRose;
+    }
+    state Ellinger {
+        transition select((Ossining.lookahead<bit<132>>())[3:0]) {
+            4w0xe: WildRose;
+            default: BoyRiver;
+        }
+    }
     state Kellner {
         transition select((Ossining.lookahead<bit<4>>())[3:0]) {
             4w0x6: Micro;
@@ -1326,10 +1336,9 @@ parser Moosic(packet_in Ossining, out Baker Noyack, out Harriet Hettinger, out i
         }
     }
     state Chewalla {
-        Hettinger.Bratt.Jenners = (bit<3>)3w2;
         Ossining.extract<ElVerano>(Noyack.Geistown);
         transition select(Noyack.Geistown.Brinkman, Noyack.Geistown.Boerne) {
-            (16w0, 16w0x800): WildRose;
+            (16w0, 16w0x800): Ellinger;
             (16w0, 16w0x86dd): Kellner;
             default: accept;
         }
@@ -2080,6 +2089,15 @@ control Danbury(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsi
         Hettinger.Moultrie.Newfolden[0:0] = Hiland;
         Hettinger.Moultrie.Kalkaska[0:0] = Manilla;
     }
+    @name(".Waukegan") action Waukegan(bit<20> Clintwood, bit<24> Littleton, bit<24> Killen, bit<12> Pettry) {
+        Hettinger.Moultrie.Montague = Clintwood;
+        Hettinger.Moultrie.Basalt = (bit<1>)1w0;
+        Hettinger.Biggers.Sherack = (bit<1>)1w0;
+        Hettinger.Moultrie.Crestone = (bit<1>)1w0;
+        Hettinger.Moultrie.Littleton = Littleton;
+        Hettinger.Moultrie.Killen = Killen;
+        Hettinger.Moultrie.Pettry = Pettry;
+    }
     @name(".Kalaloch") action Kalaloch(bit<8> Rains) {
         Hettinger.Moultrie.Crestone = (bit<1>)1w1;
         Hettinger.Moultrie.Rains = Rains;
@@ -2146,6 +2164,7 @@ control Danbury(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsi
     @disable_atomic_modify(1) @name(".Philmont") table Philmont {
         actions = {
             Gilman();
+            Waukegan();
             Millikin();
         }
         key = {
@@ -3979,7 +3998,7 @@ control Melrose(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsi
         size = 512;
     }
     apply {
-        if (Hettinger.Moultrie.Crestone == 1w0 && Hettinger.Bratt.RockPort == 1w0 && Hettinger.Moultrie.Basalt == 1w0 && Hettinger.Bratt.Whitewood == 1w0 && Hettinger.Bratt.Tilton == 1w0 && Hettinger.Pineville.Maumee == 1w0 && Hettinger.Pineville.Broadwell == 1w0) {
+        if (Hettinger.Moultrie.Crestone == 1w0 && Hettinger.Bratt.RockPort == 1w0 && Hettinger.Bratt.Whitewood == 1w0 && !(Hettinger.Biggers.Sherack == 1w1 && Hettinger.Bratt.Panaca == 1w1) && Hettinger.Bratt.Tilton == 1w0 && Hettinger.Pineville.Maumee == 1w0 && Hettinger.Pineville.Broadwell == 1w0) {
             if (Hettinger.Bratt.Aguilita == Hettinger.Moultrie.Montague) {
                 Wells.apply();
             } else if (Hettinger.Milano.Wondervu == 2w2 && Hettinger.Moultrie.Montague & 20w0xff800 == 20w0x3800) {
@@ -5902,7 +5921,7 @@ control Alvwood(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic
         Bagwell = Burtrum.get<tuple<bit<9>, bit<5>>>({ Hookdale.egress_port, Hookdale.egress_qid[4:0] });
         Glenpool.count((bit<12>)Bagwell);
     }
-    @disable_atomic_modify(1) @name(".Gonzalez") table Gonzalez {
+    @disable_atomic_modify(1) @stage(0) @name(".Gonzalez") table Gonzalez {
         actions = {
             Blanchard();
         }

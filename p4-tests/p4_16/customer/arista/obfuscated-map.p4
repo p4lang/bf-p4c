@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MAP=1 -Ibf_arista_switch_map/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'   --target tofino-tna --o bf_arista_switch_map --bf-rt-schema bf_arista_switch_map/context/bf-rt.json
-// p4c 9.7.2 (SHA: ddd29e0)
+// p4c 9.7.3 (SHA: dc177f3)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -1240,6 +1240,16 @@ parser Lefor(packet_in Starkey, out Lemont Lindy, out Wyndmoor Brady, out ingres
             default: Oneonta;
         }
     }
+    state Belcher {
+        Brady.Circle.Etter = (bit<3>)3w2;
+        transition Uniopolis;
+    }
+    state Warsaw {
+        transition select((Starkey.lookahead<bit<132>>())[3:0]) {
+            4w0xe: Uniopolis;
+            default: Belcher;
+        }
+    }
     state Sneads {
         transition select((Starkey.lookahead<bit<4>>())[3:0]) {
             4w0x6: Hemlock;
@@ -1247,10 +1257,9 @@ parser Lefor(packet_in Starkey, out Lemont Lindy, out Wyndmoor Brady, out ingres
         }
     }
     state Tularosa {
-        Brady.Circle.Etter = (bit<3>)3w2;
         Starkey.extract<Boerne>(Lindy.Rienzi);
         transition select(Lindy.Rienzi.Alamosa, Lindy.Rienzi.Elderon) {
-            (16w0, 16w0x800): Uniopolis;
+            (16w0, 16w0x800): Warsaw;
             (16w0, 16w0x86dd): Sneads;
             default: accept;
         }
@@ -2320,7 +2329,7 @@ control Somis(inout Lemont Lindy, inout Wyndmoor Brady, in ingress_intrinsic_met
         size = 512;
     }
     apply {
-        if (Brady.Lookeba.Marcus == 1w0 && Brady.Circle.Jenners == 1w0 && Brady.Lookeba.Exton == 1w0 && Brady.Circle.Grassflat == 1w0 && Brady.Circle.Whitewood == 1w0 && Brady.Armagh.Aldan == 1w0 && Brady.Armagh.RossFork == 1w0) {
+        if (Brady.Lookeba.Marcus == 1w0 && Brady.Circle.Jenners == 1w0 && Brady.Circle.Grassflat == 1w0 && !(Brady.Humeston.Candle == 1w1 && Brady.Circle.Atoka == 1w1) && Brady.Circle.Whitewood == 1w0 && Brady.Armagh.Aldan == 1w0 && Brady.Armagh.RossFork == 1w0) {
             if (Brady.Circle.Aguilita == Brady.Lookeba.Ericsburg) {
                 Clifton.apply();
             } else if (Brady.Yorkshire.Juneau == 2w2 && Brady.Lookeba.Ericsburg & 20w0xff800 == 20w0x3800) {
@@ -4020,6 +4029,9 @@ control Kinard(inout Lemont Lindy, inout Wyndmoor Brady, in ingress_intrinsic_me
     @name(".Fittstown") action Fittstown() {
         Belmore();
     }
+    @name(".Stratton") action Stratton() {
+        Belmore();
+    }
     @name(".English") Register<bit<32>, bit<32>>(32w1024, 32w0) English;
     @name(".Rotonda") RegisterAction<bit<32>, bit<32>, bit<32>>(English) Rotonda = {
         void apply(inout bit<32> Ranburne, out bit<32> Barnsboro) {
@@ -4046,6 +4058,19 @@ control Kinard(inout Lemont Lindy, inout Wyndmoor Brady, in ingress_intrinsic_me
     };
     @name(".DewyRose") action DewyRose() {
         Brady.Jayton.Loris = Kiron.execute(32w0);
+    }
+    @name(".Vincent") Register<bit<32>, bit<32>>(32w1024, 32w0) Vincent;
+    @name(".Cowan") RegisterAction<bit<32>, bit<32>, bit<32>>(Vincent) Cowan = {
+        void apply(inout bit<32> Ranburne, out bit<32> Barnsboro) {
+            Barnsboro = 32w0;
+            bit<32> Standard;
+            Standard = Ranburne;
+            Ranburne = (bit<32>)(Lindy.Monrovia.Loris[95:64] + 32w0);
+            Barnsboro = Ranburne;
+        }
+    };
+    @name(".Wegdahl") action Wegdahl() {
+        Brady.Jayton.Loris = Cowan.execute(32w0);
     }
     @name(".Minetto") DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) Minetto;
     @name(".August") action August(bit<5> Pendleton, bit<32> Kinston, bit<32> Earling) {
@@ -4077,6 +4102,7 @@ control Kinard(inout Lemont Lindy, inout Wyndmoor Brady, in ingress_intrinsic_me
         actions = {
             Fittstown();
             Newcomb();
+            Stratton();
             @defaultonly NoAction();
         }
         key = {
@@ -4091,6 +4117,13 @@ control Kinard(inout Lemont Lindy, inout Wyndmoor Brady, in ingress_intrinsic_me
             DewyRose();
         }
         default_action = DewyRose();
+        size = 1;
+    }
+    @disable_atomic_modify(1) @name(".Denning") table Denning {
+        actions = {
+            Wegdahl();
+        }
+        default_action = Wegdahl();
         size = 1;
     }
     @disable_atomic_modify(1) @name(".Idylside") table Idylside {
@@ -4117,6 +4150,10 @@ control Kinard(inout Lemont Lindy, inout Wyndmoor Brady, in ingress_intrinsic_me
                         Idylside.apply();
                     }
                     Newcomb: {
+                        Idylside.apply();
+                    }
+                    Stratton: {
+                        Denning.apply();
                         Idylside.apply();
                     }
                 }
@@ -4181,10 +4218,18 @@ control Skiatook(inout Lemont Lindy, inout Wyndmoor Brady, in ingress_intrinsic_
         Lindy.Monrovia.Pilar[31:0] = Lindy.Wagener.Pilar << 24;
         Lindy.Wagener.Pilar = (bit<32>)32w0;
     }
+    @name(".Cross") action Cross(bit<32> Turney) {
+        Lindy.Monrovia.Pilar[127:96] = Turney[31:0];
+        Lindy.Monrovia.Pilar[95:64] = Lindy.Wagener.Pilar;
+        Lindy.Monrovia.Pilar[63:32] = (bit<32>)32w0;
+        Lindy.Monrovia.Pilar[31:0] = (bit<32>)32w0;
+        Lindy.Wagener.Pilar = (bit<32>)32w0;
+    }
     @disable_atomic_modify(1) @name(".Veradale") table Veradale {
         actions = {
             DuPont();
             Telegraph();
+            Cross();
             @defaultonly NoAction();
         }
         key = {

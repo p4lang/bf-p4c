@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_SMALL_SCALE_TEST=1 -Ibf_arista_switch_small_scale_test/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'   --target tofino-tna --o bf_arista_switch_small_scale_test --bf-rt-schema bf_arista_switch_small_scale_test/context/bf-rt.json
-// p4c 9.7.2 (SHA: ddd29e0)
+// p4c 9.7.3 (SHA: dc177f3)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -1199,6 +1199,16 @@ parser Harding(packet_in Nephi, out Milano Olmitz, out Sequim Baker, out ingress
             default: Chatanika;
         }
     }
+    state Loyalton {
+        Baker.Empire.Nenana = (bit<3>)3w2;
+        transition Bellamy;
+    }
+    state Hooven {
+        transition select((Nephi.lookahead<bit<132>>())[3:0]) {
+            4w0xe: Bellamy;
+            default: Loyalton;
+        }
+    }
     state Tularosa {
         transition select((Nephi.lookahead<bit<4>>())[3:0]) {
             4w0x6: Boyle;
@@ -1206,10 +1216,9 @@ parser Harding(packet_in Nephi, out Milano Olmitz, out Sequim Baker, out ingress
         }
     }
     state Coryville {
-        Baker.Empire.Nenana = (bit<3>)3w2;
         Nephi.extract<Kapalua>(Olmitz.Frederika);
         transition select(Olmitz.Frederika.Halaula, Olmitz.Frederika.Uvalde) {
-            (16w0, 16w0x800): Bellamy;
+            (16w0, 16w0x800): Hooven;
             (16w0, 16w0x86dd): Tularosa;
             default: accept;
         }
@@ -2688,7 +2697,7 @@ control Barnwell(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_m
         size = 512;
     }
     apply {
-        if (Baker.Earling.Norland == 1w0 && Baker.Empire.Morstein == 1w0 && Baker.Earling.Richvale == 1w0 && Baker.Empire.Lovewell == 1w0 && Baker.Empire.Dolores == 1w0 && Baker.Magasco.SourLake == 1w0 && Baker.Magasco.Juneau == 1w0) {
+        if (Baker.Earling.Norland == 1w0 && Baker.Empire.Morstein == 1w0 && Baker.Empire.Lovewell == 1w0 && !(Baker.Lindsborg.Arvada == 1w1 && Baker.Empire.DeGraff == 1w1) && Baker.Empire.Dolores == 1w0 && Baker.Magasco.SourLake == 1w0 && Baker.Magasco.Juneau == 1w0) {
             if (Baker.Empire.Aguilita == Baker.Earling.Subiaco || Baker.Earling.Goulds == 3w1 && Baker.Earling.Gause == 3w5) {
                 Beeler.apply();
             } else if (Baker.Aniak.Darien == 2w2 && Baker.Earling.Subiaco & 20w0xff800 == 20w0x3800) {

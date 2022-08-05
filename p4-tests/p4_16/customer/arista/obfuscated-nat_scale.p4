@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_SCALE=1 -Ibf_arista_switch_nat_scale/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'   --target tofino-tna --o bf_arista_switch_nat_scale --bf-rt-schema bf_arista_switch_nat_scale/context/bf-rt.json
-// p4c 9.7.2 (SHA: ddd29e0)
+// p4c 9.7.3 (SHA: dc177f3)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -304,7 +304,7 @@ struct Blencoe {
     @flexible 
     bit<8>  Levittown;
     @flexible 
-    bit<16> Maryhill;
+    bit<8>  Maryhill;
     @flexible 
     bit<1>  Norwood;
     @flexible 
@@ -744,7 +744,7 @@ struct Lovewell {
     bit<1>    LaLuz;
     bit<1>    Townville;
     bit<1>    Monahans;
-    bit<16>   Pinole;
+    bit<8>    Pinole;
     bit<16>   Bells;
     bit<2>    Corydon;
     bit<3>    Heuvelton;
@@ -1559,15 +1559,14 @@ control Aynor(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intrins
             @defaultonly NoAction();
         }
         key = {
-            Tenstrike.Saugatuck.Woodfield         : ternary @name("Saugatuck.Woodfield") ;
-            Tenstrike.Wanamassa.Ayden             : ternary @name("Wanamassa.Ayden") ;
-            Tenstrike.Wanamassa.Raiford           : ternary @name("Wanamassa.Raiford") ;
-            Tenstrike.Wanamassa.Pinole & 16w0xffff: ternary @name("Wanamassa.Pinole") ;
-            BigPoint.Levasy.isValid()             : ternary @name("Levasy") ;
-            BigPoint.Ackerly.isValid()            : ternary @name("Ackerly") ;
-            BigPoint.Chatanika.isValid()          : ternary @name("Chatanika") ;
-            BigPoint.Ackerly.DonaAna              : ternary @name("Ackerly.DonaAna") ;
-            Tenstrike.Saugatuck.Wisdom            : ternary @name("Saugatuck.Wisdom") ;
+            Tenstrike.Saugatuck.Woodfield: ternary @name("Saugatuck.Woodfield") ;
+            Tenstrike.Wanamassa.Ayden    : ternary @name("Wanamassa.Ayden") ;
+            Tenstrike.Wanamassa.Raiford  : ternary @name("Wanamassa.Raiford") ;
+            BigPoint.Levasy.isValid()    : ternary @name("Levasy") ;
+            BigPoint.Ackerly.isValid()   : ternary @name("Ackerly") ;
+            BigPoint.Chatanika.isValid() : ternary @name("Chatanika") ;
+            BigPoint.Ackerly.DonaAna     : ternary @name("Ackerly.DonaAna") ;
+            Tenstrike.Saugatuck.Wisdom   : ternary @name("Saugatuck.Wisdom") ;
         }
         const default_action = NoAction();
         size = 512;
@@ -2289,7 +2288,7 @@ control Rhine(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intrins
         size = 512;
     }
     apply {
-        if (Tenstrike.Saugatuck.Norma == 1w0 && Tenstrike.Wanamassa.Wetonka == 1w0 && Tenstrike.Saugatuck.Komatke == 1w0 && Tenstrike.Wanamassa.Pachuta == 1w0 && Tenstrike.Wanamassa.Whitefish == 1w0 && Tenstrike.Lemont.Emida == 1w0 && Tenstrike.Lemont.Sopris == 1w0) {
+        if (Tenstrike.Saugatuck.Norma == 1w0 && Tenstrike.Wanamassa.Wetonka == 1w0 && Tenstrike.Wanamassa.Pachuta == 1w0 && !(Tenstrike.Almota.Ramos == 1w1 && Tenstrike.Wanamassa.Lapoint == 1w1) && Tenstrike.Wanamassa.Whitefish == 1w0 && Tenstrike.Lemont.Emida == 1w0 && Tenstrike.Lemont.Sopris == 1w0) {
             if (Tenstrike.Wanamassa.Aguilita == Tenstrike.Saugatuck.Sunflower) {
                 Mendoza.apply();
             } else if (Tenstrike.Casnovia.Dateland == 2w2 && Tenstrike.Saugatuck.Sunflower & 20w0xff800 == 20w0x3800) {
@@ -3539,6 +3538,10 @@ control McDougal(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intr
 }
 
 control Tunis(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intrinsic_metadata_t Thurmond, in ingress_intrinsic_metadata_from_parser_t Castle, inout ingress_intrinsic_metadata_for_deparser_t Aguila, inout ingress_intrinsic_metadata_for_tm_t Lauada) {
+    @name(".Konnarock") action Konnarock(bit<1> Baudette) {
+        Lauada.mcast_grp_a = (bit<16>)16w0;
+        Lauada.copy_to_cpu = Baudette;
+    }
     @name(".Pound") action Pound() {
         Lauada.rid = Lauada.mcast_grp_a;
     }
@@ -3580,6 +3583,8 @@ control Tunis(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intrins
     apply {
         if (Tenstrike.Saugatuck.Norma == 1w0) {
             Upalco.apply();
+        } else {
+            Konnarock(1w0);
         }
     }
 }
@@ -3747,7 +3752,7 @@ control LaMarque(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intr
         const default_action = Crown();
         size = 512;
     }
-    @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Weimar") table Weimar {
+    @disable_atomic_modify(1) @disable_atomic_modify(1) @stage(1) @name(".Weimar") table Weimar {
         actions = {
             @tableonly Claypool();
             @defaultonly NoAction();
@@ -4529,7 +4534,7 @@ control Clarinda(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intr
 
     }
     @name(".Burnett") action Burnett(PortId_t Palmhurst) {
-        Tenstrike.Wanamassa.Pinole[15:0] = (bit<16>)16w0;
+        Tenstrike.Wanamassa.Pinole = (bit<8>)8w0;
         {
             BigPoint.Starkey.setValid();
             Lauada.bypass_egress = (bit<1>)1w1;
@@ -5122,6 +5127,16 @@ parser Pearce(packet_in Belfalls, out Skillman BigPoint, out Kinde Tenstrike, ou
             default: Gerster;
         }
     }
+    state Simla {
+        Tenstrike.Wanamassa.Tilton = (bit<3>)3w2;
+        transition Chunchula;
+    }
+    state Lovilia {
+        transition select((Belfalls.lookahead<bit<132>>())[3:0]) {
+            4w0xe: Chunchula;
+            default: Simla;
+        }
+    }
     state Darden {
         transition select((Belfalls.lookahead<bit<4>>())[3:0]) {
             4w0x6: Hookstown;
@@ -5129,10 +5144,9 @@ parser Pearce(packet_in Belfalls, out Skillman BigPoint, out Kinde Tenstrike, ou
         }
     }
     state Wyanet {
-        Tenstrike.Wanamassa.Tilton = (bit<3>)3w2;
         Belfalls.extract<Crozet>(BigPoint.Larwill);
         transition select(BigPoint.Larwill.Laxon, BigPoint.Larwill.Chaffee) {
-            (16w0, 16w0x800): Chunchula;
+            (16w0, 16w0x800): Lovilia;
             (16w0, 16w0x86dd): Darden;
             default: accept;
         }
@@ -6440,6 +6454,15 @@ control Cavalier(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intr
         Tenstrike.Saugatuck.Ovett[0:0] = Raiford;
         Tenstrike.Saugatuck.Naubinway[0:0] = Ayden;
     }
+    @name(".LaCenter") action LaCenter(bit<20> Maryville, bit<24> Hampton, bit<24> Tallassee, bit<12> Juneau) {
+        Tenstrike.Saugatuck.Sunflower = Maryville;
+        Tenstrike.Saugatuck.Komatke = (bit<1>)1w0;
+        Tenstrike.Almota.Ramos = (bit<1>)1w0;
+        Tenstrike.Saugatuck.Norma = (bit<1>)1w0;
+        Tenstrike.Saugatuck.Hampton = Hampton;
+        Tenstrike.Saugatuck.Tallassee = Tallassee;
+        Tenstrike.Saugatuck.Juneau = Juneau;
+    }
     @disable_atomic_modify(1) @name(".Armstrong") table Armstrong {
         actions = {
             Ludell();
@@ -6457,6 +6480,7 @@ control Cavalier(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intr
     @disable_atomic_modify(1) @name(".Anaconda") table Anaconda {
         actions = {
             Sargent();
+            LaCenter();
             Crown();
         }
         key = {
@@ -6652,6 +6676,9 @@ control Cavalier(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intr
     }
     apply {
         ;
+        if (Tenstrike.Wanamassa.Pinole == 8w0) {
+            Tenstrike.Wanamassa.Pinole = (bit<8>)8w0;
+        }
         {
             Lauada.copy_to_cpu = BigPoint.Starkey.Horton;
             Lauada.mcast_grp_a = BigPoint.Starkey.Lacona;

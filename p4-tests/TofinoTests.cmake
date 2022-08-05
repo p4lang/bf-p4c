@@ -219,11 +219,15 @@ set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/ruijie/p4c-2992.
 # Disable power check on these Arista profiles
 # P4C-3039
 set (P16_TNA_ARISTA_SET_MAX_POWER_FILES
-  "obfuscated-nat.p4"
   "obfuscated-nat_scale.p4"
-  "obfuscated-nat_static.p4"
   "obfuscated-nat_vxlan.p4"
   "obfuscated-media.p4"
+)
+
+# Add extra flags for nat and nat_static profiles
+set (P16_TNA_ARISTA_EXCL_PASS_TF_CHK
+  "obfuscated-nat.p4"
+  "obfuscated-nat_static.p4"
 )
 
 cmake_policy(SET CMP0057 NEW)
@@ -232,7 +236,9 @@ set(DEFAULT_TIMEOUT_ARISTA ${extended_timeout_4times})
 math(EXPR EXTENDED_TIMEOUT_ARISTA "${DEFAULT_TIMEOUT_ARISTA} + ${default_test_timeout}")
 foreach (t IN LISTS P16_TNA_ARISTA_FILES)
   if (${t} IN_LIST P16_TNA_ARISTA_SET_MAX_POWER_FILES)
-      set (POWER_CHECK_ARG "-Xp4c=\"--set-max-power 65.0 --traffic-limit 95.0 --excludeBackendPasses=ResetInvalidatedChecksumHeaders\"")
+      set (POWER_CHECK_ARG "-Xp4c=\"--set-max-power 65.0\"")
+  elseif (${t} IN_LIST P16_TNA_ARISTA_EXCL_PASS_TF_CHK)
+      set (POWER_CHECK_ARG "-Xp4c=\"--set-max-power 68.0 --traffic-limit 95.0 --excludeBackendPasses=ResetInvalidatedChecksumHeaders\"")
   else()
       set (POWER_CHECK_ARG "-Xp4c=\"--disable-power-check\"")
   endif()

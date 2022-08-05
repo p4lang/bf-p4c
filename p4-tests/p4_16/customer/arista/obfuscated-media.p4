@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MEDIA=1 -Ibf_arista_switch_media/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'   --target tofino-tna --o bf_arista_switch_media --bf-rt-schema bf_arista_switch_media/context/bf-rt.json
-// p4c 9.7.2 (SHA: ddd29e0)
+// p4c 9.7.3 (SHA: dc177f3)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -1361,6 +1361,16 @@ parser Boring(packet_in Nucla, out Fishers Vanoss, out Sunbury Potosi, out ingre
             default: Salitpa;
         }
     }
+    state Point {
+        Potosi.Sedan.Wetonka = (bit<3>)3w2;
+        transition FairOaks;
+    }
+    state Shorter {
+        transition select((Nucla.lookahead<bit<132>>())[3:0]) {
+            4w0xe: FairOaks;
+            default: Point;
+        }
+    }
     state Spanaway {
         transition select((Nucla.lookahead<bit<4>>())[3:0]) {
             4w0x6: Notus;
@@ -1368,10 +1378,9 @@ parser Boring(packet_in Nucla, out Fishers Vanoss, out Sunbury Potosi, out ingre
         }
     }
     state Sunman {
-        Potosi.Sedan.Wetonka = (bit<3>)3w2;
         Nucla.extract<Elderon>(Vanoss.Moosic);
         transition select(Vanoss.Moosic.Knierim, Vanoss.Moosic.Montross) {
-            (16w0, 16w0x800): FairOaks;
+            (16w0, 16w0x800): Shorter;
             (16w0, 16w0x86dd): Spanaway;
             default: accept;
         }
@@ -3145,7 +3154,7 @@ control Trion(inout Fishers Vanoss, inout Sunbury Potosi, in ingress_intrinsic_m
         size = 512;
     }
     apply {
-        if (Potosi.Hookdale.Rocklake == 1w0 && Potosi.Sedan.Lecompte == 1w0 && Potosi.Hookdale.Exton == 1w0 && Potosi.Sedan.Ralls == 1w0 && Potosi.Sedan.Standish == 1w0 && Potosi.Parkway.Gotham == 1w0 && Potosi.Parkway.Osyka == 1w0) {
+        if (Potosi.Hookdale.Rocklake == 1w0 && Potosi.Sedan.Lecompte == 1w0 && Potosi.Sedan.Ralls == 1w0 && !(Potosi.Arapahoe.Tiburon == 1w1 && Potosi.Sedan.Brainard == 1w1) && Potosi.Sedan.Standish == 1w0 && Potosi.Parkway.Gotham == 1w0 && Potosi.Parkway.Osyka == 1w0) {
             if (Potosi.Sedan.Aguilita == Potosi.Hookdale.Stilwell && Potosi.Clearmont.Millhaven == 1w0) {
                 Ivanpah.apply();
             } else if (Potosi.Halltown.Broadwell == 2w2 && Potosi.Hookdale.Stilwell & 20w0xff800 == 20w0x3800) {
