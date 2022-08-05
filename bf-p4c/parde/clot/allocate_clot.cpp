@@ -7,7 +7,7 @@
  * \ingroup parde
  * This implements a greedy CLOT-allocation algorithm, as described in
  * \ref clot_alloc_and_metric "CLOT allocator and metric" (README.md).
- * 
+ *
  */
 class GreedyClotAllocator : public Visitor {
     ClotInfo& clotInfo;
@@ -267,7 +267,7 @@ class GreedyClotAllocator : public Visitor {
         auto gaps = c1->byte_gaps(parserInfo, c2);
         if (gaps.empty()) {
             LOG5("    Candidate " << c1->id << " is never parsed before candidate " << c2->id);
-            return true;
+            return (c1->pseudoheader != c2->pseudoheader) ? true : false;
         }
 
         LOG5("    Candidate " << c1->id << " might be parsed before candidate " << c2->id);

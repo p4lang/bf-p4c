@@ -177,11 +177,6 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "error: Ran out of chunks in field dictionary"
-  extensions/p4_tests/p4_16/compile_only/p4c-1757-neg.p4
-)
-
-p4c_add_xfail_reason("tofino2"
   "Destination of saturation add was allocated to bigger container than the field itself.*"
   extensions/p4_tests/p4_16/compile_only/p4c-3172-xfail.p4
 )

@@ -171,11 +171,6 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/customer/kaloom/spine-app.p4
 )
 
-p4c_add_xfail_reason("tofino3"
-  "error: Ran out of chunks in field dictionary"
-  extensions/p4_tests/p4_16/compile_only/p4c-1757-neg.p4
-)
-
 # These tests fail at runtime with the driver
 if (PTF_REQUIREMENTS_MET)
 
