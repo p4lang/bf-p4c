@@ -55,6 +55,8 @@ class Backend : public PassManager {
 
     // Identify the header sequences extracted in the parser
     ParserHeaderSequences parserHeaderSeqs;
+    // Disable long branches
+    bool longBranchDisabled;
 
  protected:
     profile_t init_apply(const IR::Node *root) override {

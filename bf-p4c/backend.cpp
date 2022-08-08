@@ -149,7 +149,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
     decaf(phv, uses, defuse, deps),
     table_summary(pipe_id, deps, phv),
     table_alloc(options, phv, deps, table_summary, &jsonGraph, mau_backtracker),
-    mau_backtracker(&table_summary), parserHeaderSeqs(phv) {
+    mau_backtracker(&table_summary), parserHeaderSeqs(phv), longBranchDisabled() {
     BUG_CHECK(pipe_id >= 0, "Invalid pipe id in backend : %d", pipe_id);
     flexibleLogging = new LogFlexiblePacking(phv);
     phvLoggingInfo = new CollectPhvLoggingInfo(phv, uses);
@@ -157,10 +157,12 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
                                               defuse, deps, decaf, mau_backtracker,
                                               phvLoggingInfo /*, &jsonGraph */);
     // Collect next table info if we're using LBs
-    if (Device::numLongBranchTags() > 0 && !options.disable_long_branch)
+    if (Device::numLongBranchTags() > 0 && !options.disable_long_branch) {
         nextTblProp.setVisitor(new JbayNextTable);
-    else
-        nextTblProp.setVisitor(new DefaultNext(true));
+    } else {
+        longBranchDisabled = true;
+        nextTblProp.setVisitor(new DefaultNext(longBranchDisabled));
+    }
 
     // Create even if Tofino, since this checks power is within limits.
     power_and_mpr = new MauPower::FinalizeMauPredDepsPower(phv, deps, &nextTblProp, options);
@@ -190,7 +192,8 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
                 options.table_placement_long_branch_backtrack = true;
             } else {
                 options.disable_long_branch = true;
-                nextTblProp.setVisitor(new DefaultNext(true)); }
+                longBranchDisabled = true;
+                nextTblProp.setVisitor(new DefaultNext(longBranchDisabled)); }
             mau_backtracker.clear();
             table_summary.resetPlacement();
         }),
