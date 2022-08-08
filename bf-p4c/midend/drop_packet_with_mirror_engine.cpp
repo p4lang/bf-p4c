@@ -4,8 +4,14 @@
 namespace BFN {
 
 #if 0
-// FIXME: ig_intr_md_for_dprsr.mirror_type is always initialized to zero by phv alloc
 const IR::Node* DropPacketWithMirrorEngine_::preorder(IR::BFN::TnaControl *control) {
+    // ig_intr_md_for_dprsr.mirror_type is always initialized to zero by parser
+    // in tofino1
+    if (Device::currentDevice() != Device::JBAY &&
+        Device::currentDevice() != Device::CLOUDBREAK) {
+        prune();
+        return control; }
+
     if (control->thread != INGRESS) {
         prune();
         return control; }
@@ -37,7 +43,7 @@ const IR::Node* DropPacketWithMirrorEngine_::preorder(IR::BFN::TnaControl *contr
     // to the end of ingress control
     IR::IndexedVector<IR::StatOrDecl> comp;
     comp.append(control->body->components);
-    // comp.push_back(check_is_validated_mirror_type);
+    comp.push_back(check_is_validated_mirror_type);
     auto body = new IR::BlockStatement(
         control->body->srcInfo, control->body->getAnnotations(), comp);
 

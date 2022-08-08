@@ -2,6 +2,9 @@
 #include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/common/ir_utils.h"
+#include "bf-p4c/common/pragma/all_pragmas.h"
+#include "bf-p4c/common/pragma/collect_global_pragma.h"
+#include "bf-p4c/common/pragma/pragma.h"
 #include "lib/exceptions.h"
 
 bool AddParserMetadata::preorder(IR::BFN::Parser *parser) {
@@ -43,6 +46,24 @@ void AddParserMetadata::addTofinoIngressParserEntryPoint(IR::BFN::Parser* parser
                 new IR::BFN::MetadataRVal(StartLen(400, 48))));
         prim->push_back(new IR::BFN::Extract(globalVersion,
                 new IR::BFN::MetadataRVal(StartLen(448, 32))));
+    }
+
+    // Initialize mirror_type.$valid to 1 to workaround ingress drop issue in
+    // tofino2 and tofino3.
+    if (Device::currentDevice() == Device::JBAY ||
+        Device::currentDevice() == Device::CLOUDBREAK) {
+        // can be disabled with a pragma
+        if (!pipe->has_pragma(PragmaDisableI2EReservedDropImplementation::name)) {
+            auto *igDeparserMeta =
+                    getMetadataType(pipe, "ingress_intrinsic_metadata_for_deparser");
+            auto *mirrorType =
+                    gen_fieldref(igDeparserMeta, "mirror_type");
+            auto povBit =
+                    new IR::BFN::FieldLVal(new IR::TempVar(
+                        IR::Type::Bits::get(1), true, mirrorType->toString() + ".$valid"));
+            prim->push_back(new IR::BFN::Extract(povBit,
+                    new IR::BFN::ConstantRVal(1)));
+        }
     }
 
     parser->start =

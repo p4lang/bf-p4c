@@ -64,3 +64,10 @@ int IR::TempVar::uid = 0;
 
 int IR::Padding::uid = 0;
 
+bool IR::BFN::Pipe::has_pragma(const char *name) const {
+    for (const auto* annotation : global_pragmas) {
+        if (annotation->name.name == name)
+            return true;
+    }
+    return false;
+}

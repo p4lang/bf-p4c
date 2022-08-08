@@ -102,6 +102,10 @@ class BFN::Pipe {
     ::BFN::HeaderStackInfo* headerStackInfo = nullptr;
 #end
 
+#emit
+    bool has_pragma(const char *pragma) const;
+#end
+
 #apply
     operator== { return metadata == a.metadata
                         && global_pragmas == a.global_pragmas
@@ -512,4 +516,3 @@ class BFN::SignExtend : Cast {
     toString{ return "sign_extend"; }
     validate{ BUG_CHECK(!destType->is<Type_Unknown>(), "%1%: Cannot cast to unknown type", this); }
 }
-
