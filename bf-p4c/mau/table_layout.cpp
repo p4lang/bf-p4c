@@ -649,28 +649,10 @@ void LayoutChoices::setup_ternary_layout_options(const IR::MAU::Table *tbl,
     }
 }
 
-/**
- * Responsible for the calculation of the potential layouts to try, and later adapt
- * if necessary in the try_place_table algorithm.
- *
- * Constraints generally come from the following:
- *    1. 128 bits maximally can be packed per RAM
- *    2. 16 individual bytes / (with some exceptions for the upper nibbles), can be
- *       matched in the algorithm.
- *    3. 64 bits of overhead are allowed maximally per RAM.  Overhead is any information
- *       that has to head to match central.
- *    4. At most 5 entries can be packed per RAM line.
- *
- * Lastly, the width <= 8, as that is the maximal width of the RAM array on which to
- * perform a wide match.
- */
-void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
-        const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type,
-        int action_data_bytes_in_table, int immediate_bits, int index) {
-    BUG_CHECK(format_type.valid(), "invalid format type in LayoutChoices::setup_exact_match");
+int LayoutChoices::get_pack_pragma_val(const IR::MAU::Table *tbl,
+        const IR::MAU::Table::Layout &layout_proto) {
     auto MIN_PACK = Device::sramMinPackEntries();
     auto MAX_PACK = Device::sramMaxPackEntries();
-    auto MAX_ENTRIES_PER_ROW = Device::sramMaxPackEntriesPerRow();
 
     auto annot = tbl->match_table->getAnnotations();
     int pack_val = 0;
@@ -696,8 +678,39 @@ void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
         ::error(ErrorType::ERR_INVALID,
                 "table %1%. It has a pack value of %2% provided, but also uses a wide selector, "
                 "which requires a pack of 1.", tbl, pack_val);
-        return;
+        return 0;
     }
+
+    if (pack_val > 0) {
+        LOG2("Using packing pragma on table set to " << pack_val);
+    }
+
+    return pack_val;
+}
+/**
+ * Responsible for the calculation of the potential layouts to try, and later adapt
+ * if necessary in the try_place_table algorithm.
+ *
+ * Constraints generally come from the following:
+ *    1. 128 bits maximally can be packed per RAM
+ *    2. 16 individual bytes / (with some exceptions for the upper nibbles), can be
+ *       matched in the algorithm.
+ *    3. 64 bits of overhead are allowed maximally per RAM.  Overhead is any information
+ *       that has to head to match central.
+ *    4. At most 5 entries can be packed per RAM line.
+ *
+ * Lastly, the width <= 8, as that is the maximal width of the RAM array on which to
+ * perform a wide match.
+ */
+void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
+        const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type,
+        int action_data_bytes_in_table, int immediate_bits, int index) {
+    BUG_CHECK(format_type.valid(), "invalid format type in LayoutChoices::setup_exact_match");
+    auto MIN_PACK = Device::sramMinPackEntries();
+    auto MAX_PACK = Device::sramMaxPackEntries();
+    auto MAX_ENTRIES_PER_ROW = Device::sramMaxPackEntriesPerRow();
+
+    auto pack_val = get_pack_pragma_val(tbl, layout_proto);
 
     auto lo_key = std::make_pair(tbl->name, format_type);
     for (int entry_count = MIN_PACK; entry_count <= MAX_PACK; entry_count++) {
@@ -1053,8 +1066,7 @@ bool DoTableLayout::preorder(IR::MAU::Table *tbl) {
         int possible_pack_formats = layouts.size();
         ERROR_CHECK(possible_pack_formats > 0, ErrorType::ERR_UNSUPPORTED_ON_TARGET,
                     "The table %1% cannot find a valid packing, and cannot be placed. "
-                    "Possibly the match key is too wide given the constraints of "
-                    "Barefoot hardware.", tbl); }
+                    "Possibly the match key is too wide given the hardware constraints", tbl); }
     return true;
 }
 
@@ -1642,14 +1654,15 @@ std::ostream &operator<<(std::ostream &out, const LayoutOption &lo) {
             sep = "/"; } }
     if (!empty) out << Log::endl;
     out << "entries:" << lo.entries;
-    out << " lambs: " << lo.lambs;
-    out << " local_tinds: " << lo.local_tinds;
+    if (layout.is_lamb)
+        out << " lambs: " << lo.lambs;
     if (layout.is_direct) {
         out << " (direct - " << layout.entries_per_set
                       << "/" << layout.sets_per_word;
         out << ")";
     }
     out << " srams:" << lo.srams;
+    out << " local_tinds: " << lo.local_tinds;
     out << " maprams:" << lo.maprams << " tcams:" << lo.tcams;
     if (lo.select_bus_split >= 0) out << " sbs:" << lo.select_bus_split;
     if (lo.action_format_index >= 0) out << " afi:" << lo.action_format_index;

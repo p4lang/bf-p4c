@@ -46,6 +46,11 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/flatrock/ternary1.p4
   )
 
+p4c_add_xfail_reason("tofino5"
+  "error: invalid ram in way"
+  extensions/p4_tests/p4_16/flatrock/direct-stm0.p4
+  )
+
 # invalid assembly code
 #p4c_add_xfail_reason("tofino5"
 #  "Invalid slice of 7 bit field immediate"
@@ -89,7 +94,6 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/stf/header_stack_strided_alloc2.p4
   extensions/p4_tests/p4_16/stf/lookahead1.p4
   extensions/p4_tests/p4_16/stf/parser_counter_12.p4
-  extensions/p4_tests/p4_16/stf/parser_extract_upcast.p4
   extensions/p4_tests/p4_16/stf/parser_loop_1.p4
   extensions/p4_tests/p4_16/stf/parser_loop_2.p4
   extensions/p4_tests/p4_16/stf/parser_loop_3.p4
@@ -115,6 +119,9 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/stf/p4c-1513.p4
   extensions/p4_tests/p4_16/stf/p4c-3089.p4
   extensions/p4_tests/p4_16/stf/zeros_as_ones.p4
+  extensions/p4_tests/p4_16/stf/p4c-2772.p4
+  extensions/p4_tests/p4_16/stf/auto_init_meta2.p4
+  extensions/p4_tests/p4_16/stf/parser_extract_upcast.p4
   )
 
 p4c_add_xfail_reason("tofino5"
@@ -136,11 +143,6 @@ p4c_add_xfail_reason("tofino5"
 p4c_add_xfail_reason("tofino5"
   "Compiler Bug: Trying to allocate field .* with .* source to container .* with .* source"
   extensions/p4_tests/p4_16/stf/bit_or_in_same_state.p4
-  )
-
-p4c_add_xfail_reason("tofino5"
-  "Compiler Bug: Cannot allocate wide RAMS in Flatrock. Invalid size 2"
-  extensions/p4_tests/p4_16/stf/auto_init_meta2.p4
   )
 
 p4c_add_xfail_reason("tofino5"
@@ -265,11 +267,6 @@ p4c_add_xfail_reason("tofino5"
 p4c_add_xfail_reason("tofino5"
   "error: Unknown instruction or table add"
   extensions/p4_tests/p4_16/stf/p4c-1504.p4
-  )
-
-p4c_add_xfail_reason("tofino5"
-  "error: No format field or table named immediate"
-  extensions/p4_tests/p4_16/stf/p4c-2772.p4
   )
 
 p4c_add_xfail_reason("tofino5"

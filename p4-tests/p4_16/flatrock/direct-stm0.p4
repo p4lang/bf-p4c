@@ -23,11 +23,15 @@ control ingress(in headers hdrs, inout metadata meta,
     }
     action noop() { }
 
-    @pack(8)
+    // 10 bit match key -> 1024 entries packed
+    // 1 entry per word should take up exactly 1 SRAM
+    @pack(1)
     table test1 {
-        key = { hdrs.data.b1 : exact; }
+        key = {
+            hdrs.data.h1[9:0] : exact;
+        }
         actions = { noop; setport; }
-        size = 256;
+        size = 1024;
         const default_action = noop();
     }
 

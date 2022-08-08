@@ -91,6 +91,7 @@ class LayoutChoices {
     template<class T> using cache_t = std::map<key_t, safe_vector<T>>;
     cache_t<LayoutOption>               cache_layout_options;
     cache_t<ActionData::Format::Use>    cache_action_formats;
+    int get_pack_pragma_val(const IR::MAU::Table *tbl, const IR::MAU::Table::Layout &layout_proto);
 
  public:
     const safe_vector<LayoutOption> &

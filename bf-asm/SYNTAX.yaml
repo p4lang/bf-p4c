@@ -777,6 +777,8 @@ stage <constant> <thread>:
         ways:
             - '{' < way description '}'
             # description of one way of the table
+                xme: <int>
+                    # 0 - 7 (lambs) , 8 - 15 (stms)
                 group: <int>
                     # hash group or XME used for this way
                 index: <range> | <int>
