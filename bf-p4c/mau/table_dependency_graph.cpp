@@ -409,12 +409,11 @@ std::pair<typename DependencyGraph::Graph::edge_descriptor*, bool> DependencyGra
         return { e, false };
     }
 
-    auto maybe_new_e = boost::add_edge(src_v, dst_v, g);
+    auto maybe_new_e = boost::add_edge(src_v, dst_v, edge_label, g);
     if (!maybe_new_e.second)
         // A vector-based adjacency_list (i.e. Graph) is a multigraph.
         // Inserting edges should always create new edges.
         BUG("Boost Graph Library failed to add edge.");
-    g[maybe_new_e.first] = edge_label;
 
     // Check if the edge introduced a cycle in the graph
     if (has_cycle()) {
