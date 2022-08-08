@@ -48,9 +48,12 @@ const AllocError* ParserPackingValidator::will_buf_extract_clobber_the_other(
     const FieldSlice& other_fs, const StateExtractMap& other_extracts,
     const int other_cont_idx, const boost::optional<Container>& c) const {
     // TODO(yumin): support W-sized container fancy 2 half-word packing.
-    const bool half_word_extract =
-        (Device::currentDevice() == Device::JBAY || Device::currentDevice() ==
-        Device::CLOUDBREAK) && c && c->type().size() == PHV::Size::b32;
+    const bool half_word_extract = (Device::currentDevice() == Device::JBAY
+#if HAVE_CLOUDBREAK
+        || Device::currentDevice() == Device::CLOUDBREAK
+#endif
+)
+        && c && c->type().size() == PHV::Size::b32;
     if (half_word_extract) {
         LOG5("half_word_extract is possible but not implemented.");
     }
