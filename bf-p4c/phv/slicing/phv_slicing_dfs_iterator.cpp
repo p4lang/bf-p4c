@@ -1582,8 +1582,15 @@ bool DfsItrContext::collect_implicit_container_sz_constraint(
             }
             // deparsed_bottom_bits + valid_container_range
             // This special case is mostly for egress::eg_intr_md.egress_port.
+            // NOTE: when a field slide does not have valid container range,
+            // its validContainer range is ZeroToMax(). So it is dangerous to do addition on
+            // the `hi` field (although when it's ClosedRange it should be safe because the
+            // implementation of ClosedRange::ZeroToMax's hi is
+            // std::numeric_limits<int>::max() - 1).
+            // Anyway, so we guard it with range <= 32, which is the max of container width.
             if (fs.field()->deparsed_bottom_bits() && fs.range().lo == 0) {
-                if (n > fs.validContainerRange().hi + 1) {
+                if (fs.validContainerRange().hi <= 32 &&
+                    n > fs.validContainerRange().hi + 1) {
                     return true;
                 }
             }
