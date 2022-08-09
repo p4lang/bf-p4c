@@ -655,6 +655,26 @@ set_tests_properties("tofino2/extensions/p4_tests/p4_16/stf/MODEL-1095.p4" PROPE
 p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/jbay/p4c-4072.p4" "-to 1200")
 set_tests_properties("tofino2/extensions/p4_tests/p4_16/jbay/p4c-4072.p4" PROPERTIES TIMEOUT 1200)
 
+# P4C-4718
+set(TOFINO2_DETERMINISM_TESTS_14
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/decaf_10/decaf_10.p4
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/stf/decaf_3.p4
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/stf/decaf_8.p4
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/ptf/inner_checksum_l4.p4
+  )
+foreach(t IN LISTS TOFINO2_DETERMINISM_TESTS_14)
+  bfn_add_determinism_test_with_args("tofino2" "${P414_TEST_ARCH}" ${t} "--std=p4-14")
+endforeach()
+
+set(TOFINO2_DETERMINISM_TESTS_16
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/jbay/wide_arith.p4
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/hdr_len_inc_stop_2.p4
+  )
+foreach(t IN LISTS TOFINO2_DETERMINISM_TESTS_16)
+  get_filename_component(_base_name ${t} NAME_WE)
+  bfn_add_determinism_test_with_args("tofino2" "t2na" ${t} "")
+endforeach()
+
 include(SwitchJBay.cmake)
 include(JBayXfail.cmake)
 include(JBayErrors.cmake)

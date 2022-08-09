@@ -42,7 +42,7 @@ struct FieldListInfo {
     // Checksum engines cannot compute a field that appears more than once in calculations
     // Hence, a metadata with the same value would be inserted in the duplicate field's
     // place.
-    std::map<const IR::Member*, const IR::TempVar*> duplicatedFields;
+    ordered_map<const IR::Member*, const IR::TempVar*> duplicatedFields;
 
     // Information regarding update conditions
     ordered_set<UpdateConditionInfo*> updateConditions;
@@ -100,7 +100,7 @@ struct ChecksumUpdateInfo {
 
 using ChecksumUpdateInfoMap = ordered_map<cstring, ChecksumUpdateInfo*>;
 
-using ParserStateChecksumMap = std::map<const IR::ParserState*,
+using ParserStateChecksumMap = assoc::map<const IR::ParserState*,
     std::vector<const IR::MethodCallExpression*>>;
 
 void checkDestHeader(const IR::Member* destField) {
@@ -265,7 +265,7 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment,
     }
     const IR::HeaderOrMetadata* currentFieldHeaderRef = nullptr;
     const IR::HeaderOrMetadata* lastFieldHeaderRef = nullptr;
-    std::map<const IR::Member*, int> duplicateMap;
+    ordered_map<const IR::Member*, int> duplicateMap;
     ChecksumHeaderToFieldInfo headerToFields;
     int offset = 0;
     std::stringstream msg;
@@ -323,7 +323,7 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment,
         }
     }
     auto listInfo = reorderFields(headerToFields, destField);
-    std::map<const IR::Member*, const IR::TempVar*> duplicatedFields;
+    ordered_map<const IR::Member*, const IR::TempVar*> duplicatedFields;
     for (auto&dupField : duplicateMap) {
         auto fieldSize = dupField.first->type->width_bits();
         const IR::TempVar* dupf = new IR::TempVar(IR::Type::Bits::get(fieldSize), true,
@@ -599,7 +599,7 @@ struct SubstituteUpdateChecksums : public Transform {
         return emitChecksums;
     }
 
-    std::map<const IR::Member*, const IR::Member*> negatedUpdateConditions;
+    assoc::map<const IR::Member*, const IR::Member*> negatedUpdateConditions;
 
     const ChecksumUpdateInfoMap& checksums;
 };
@@ -823,8 +823,8 @@ struct CollectNestedChecksumInfo : public Inspector {
     const IR::BFN::ParserGraph& graph;
     const std::map<cstring, ordered_set<const IR::BFN::ParserState*>>& field_to_state;
     ChecksumUpdateInfoMap checksumsMap;
-    std::map<cstring, std::set<const IR::BFN::EmitChecksum*>> dest_to_nested_csum;
-    std::set<const IR::BFN::EmitChecksum*> visited;
+    std::map<cstring, ordered_set<const IR::BFN::EmitChecksum*>> dest_to_nested_csum;
+    ordered_set<const IR::BFN::EmitChecksum*> visited;
 
     explicit CollectNestedChecksumInfo(const IR::BFN::ParserGraph& graph,
             const std::map<cstring, ordered_set<const IR::BFN::ParserState*>>& field_to_state,
@@ -933,10 +933,10 @@ struct CollectNestedChecksumInfo : public Inspector {
  */
 struct AbsorbNestedChecksum : public Transform {
     ChecksumUpdateInfoMap checksumUpdateInfoMap;
-    std::map<cstring, std::set<const IR::BFN::EmitChecksum*>> dest_to_nested_csum;
+    std::map<cstring, ordered_set<const IR::BFN::EmitChecksum*>> dest_to_nested_csum;
     std::map<cstring, std::set<cstring>> dest_to_delete_entries;
     AbsorbNestedChecksum(ChecksumUpdateInfoMap checksumUpdateInfoMap,
-         std::map<cstring, std::set<const IR::BFN::EmitChecksum*>> dest_to_nested_csum) :
+         std::map<cstring, ordered_set<const IR::BFN::EmitChecksum*>> dest_to_nested_csum) :
        checksumUpdateInfoMap(checksumUpdateInfoMap), dest_to_nested_csum(dest_to_nested_csum) { }
 
     void print_error(const IR::BFN::EmitChecksum* a, const IR::BFN::EmitChecksum* b) {

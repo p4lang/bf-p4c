@@ -113,7 +113,7 @@ class ComputeDeadParserChecksums : public ParserInspector {
     }
 
     ordered_map<const IR::BFN::ParserState*,
-        std::set<const IR::BFN::ParserState*>> state_to_descendants;
+        ordered_set<const IR::BFN::ParserState*>> state_to_descendants;
 
     const CollectParserInfo& parser_info;
     const CollectParserChecksums& checksum_info;
@@ -531,7 +531,7 @@ struct InsertParserClotChecksums : public PassManager {
             for (auto source : emitChecksum->sources) {
                 le_bitrange field_range;
                 auto field = phv.field(source->field->field, &field_range);
-                std::map<const PHV::FieldSlice*, Clot*,
+                assoc::map<const PHV::FieldSlice*, Clot*,
                          PHV::FieldSlice::Greater>* clot_map = nullptr;
                 if (clotInfo.is_readonly(field)) {
                     clot_map = clotInfo.slice_clots(field);

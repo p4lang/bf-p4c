@@ -13,6 +13,7 @@
 
 namespace Logging {
 
+/// \enum Mode specifies how the log file is created and/or reused.
 enum Mode {
     /// Appends to a log. Creates a new log if it doesn't already exist.
     APPEND,
@@ -58,6 +59,7 @@ class FileLog {
         }
     }
 
+    /// Closes the log using close
     ~FileLog() {
         close();
     }

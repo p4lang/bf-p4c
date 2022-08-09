@@ -8,6 +8,7 @@
 #include "field_slice_set.h"
 #include "pseudoheader.h"
 #include "lib/ordered_map.h"
+#include "bf-p4c/lib/assoc.h"
 #include "bf-p4c/lib/cmp.h"
 #include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/parde/dump_parser.h"
@@ -222,7 +223,7 @@ class ClotInfo {
     /// @return nullptr if the @p field is read-only or modified. Otherwise, if the @p field is
     /// unused, returns a map from each CLOT-allocated slice for the field to its corresponding
     /// CLOT.
-    std::map<const PHV::FieldSlice*, Clot*, PHV::FieldSlice::Greater>*
+    assoc::map<const PHV::FieldSlice*, Clot*, PHV::FieldSlice::Greater>*
     allocated_slices(const PHV::Field* field) const {
         return is_unused(field) ? slice_clots(field) : nullptr;
     }
@@ -238,7 +239,7 @@ class ClotInfo {
     //
     // If we had more precise slice-level usage information, we could instead return a non-null
     // result if the given slice were unused.
-    std::map<const PHV::FieldSlice*, Clot*, PHV::FieldSlice::Greater>*
+    assoc::map<const PHV::FieldSlice*, Clot*, PHV::FieldSlice::Greater>*
     allocated_slices(const PHV::FieldSlice* slice) const {
         return is_unused(slice->field()) ? slice_clots(slice) : nullptr;
     }
@@ -339,12 +340,12 @@ class ClotInfo {
 
     /// @return the CLOT-allocated slices that overlap with the given @p slice, mapped to the
     /// corresponding CLOTs.
-    std::map<const PHV::FieldSlice*, Clot*, PHV::FieldSlice::Greater>*
+    assoc::map<const PHV::FieldSlice*, Clot*, PHV::FieldSlice::Greater>*
     slice_clots(const PHV::FieldSlice* slice) const;
 
     /// @return the CLOT-allocated slices of the given @p field, mapped to the CLOTs containing
     /// those slices.
-    std::map<const PHV::FieldSlice*, Clot*, PHV::FieldSlice::Greater>*
+    assoc::map<const PHV::FieldSlice*, Clot*, PHV::FieldSlice::Greater>*
     slice_clots(const PHV::Field* field) const {
         return slice_clots(new PHV::FieldSlice(field));
     }

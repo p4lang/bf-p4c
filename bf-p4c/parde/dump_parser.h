@@ -15,7 +15,7 @@ class DotDumper {
 
     // use this to override the default color for nodes and edges
     // each group will be assign an unique color
-    std::vector<std::set<void*>>* color_groups = nullptr;
+    std::vector<assoc::set<void*>>* color_groups = nullptr;
 
     bool detail = true;
 
@@ -30,7 +30,7 @@ class DotDumper {
         : filename(filename), detail(detail) {}
 
     DotDumper(cstring filename,
-              std::vector<std::set<void*>>& color_groups,
+              std::vector<assoc::set<void*>>& color_groups,
               bool detail)
         : filename(filename),
           color_groups(&color_groups),
@@ -290,7 +290,7 @@ class DumpParser : public Visitor, public DotDumper {
         : DotDumper(filename, detail || LOGGING(4)) { }
 
     DumpParser(cstring filename,
-              std::vector<std::set<void*>>& color_groups,
+              std::vector<assoc::set<void*>>& color_groups,
               bool detail = false)
         : DotDumper(filename, color_groups, detail || LOGGING(4)) { }
 

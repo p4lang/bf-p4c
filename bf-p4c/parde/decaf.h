@@ -1,6 +1,7 @@
 #ifndef BF_P4C_PARDE_DECAF_H_
 #define BF_P4C_PARDE_DECAF_H_
 
+#include "bf-p4c/lib/assoc.h"
 #include "bf-p4c/logging/pass_manager.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/parde/create_pov_encoder.h"
@@ -209,13 +210,13 @@ struct FieldGroup : public ordered_set<const PHV::Field*> {
 struct CollectHeaderValidity : public Inspector {
     const PhvInfo &phv;
 
-    std::map<const PHV::Field*, const IR::Expression*> field_to_expr;
+    assoc::map<const PHV::Field*, const IR::Expression*> field_to_expr;
 
-    std::map<const PHV::Field*, const PHV::Field*> field_to_valid_bit;
+    ordered_map<const PHV::Field*, const PHV::Field*> field_to_valid_bit;
 
-    std::map<const PHV::Field*, ordered_set<const IR::MAU::Action*>> validate_to_action;
-    std::map<const PHV::Field*, ordered_set<const IR::BFN::ParserState*>> validate_to_extract;
-    std::map<const PHV::Field*, ordered_set<const IR::MAU::Action*>> invalidate_to_action;
+    assoc::map<const PHV::Field*, ordered_set<const IR::MAU::Action*>> validate_to_action;
+    assoc::map<const PHV::Field*, ordered_set<const IR::BFN::ParserState*>> validate_to_extract;
+    assoc::map<const PHV::Field*, ordered_set<const IR::MAU::Action*>> invalidate_to_action;
 
     explicit CollectHeaderValidity(const PhvInfo &phv) : phv(phv) { }
 
@@ -427,7 +428,7 @@ class CollectWeakFields : public MauInspector, BFN::ControlFlowVisitor {
     // returns true if all defs of src happen before dst
     bool all_defs_happen_before(const PHV::Field* src, const PHV::Field* dst);
     bool is_strong_by_transitivity(const PHV::Field* dst, const PHV::Field* src,
-                                   std::set<const PHV::Field*>& visited);
+                                   assoc::set<const PHV::Field*>& visited);
     bool is_strong_by_transitivity(const PHV::Field* dst);
 
     void add_read_only_weak_fields();
@@ -467,10 +468,10 @@ class ComputeValuesAtDeparser : public Inspector {
  private:
     Visitor::profile_t init_apply(const IR::Node* root) override;
 
-    std::set<const Value*> get_all_weak_srcs(const PHV::Field* field,
-                                      std::set<const PHV::Field*>& visited);
+    ordered_set<const Value*> get_all_weak_srcs(const PHV::Field* field,
+                                      assoc::set<const PHV::Field*>& visited);
 
-    std::set<const Value*> get_all_weak_srcs(const PHV::Field* field);
+    ordered_set<const Value*> get_all_weak_srcs(const PHV::Field* field);
 
     // Group fields that have transitive assignment to one another. Basically members
     // in a group can only take on the value of other members in the group, or constant.
@@ -531,13 +532,13 @@ class SynthesizePovEncoder : public MauTransform {
 
     std::map<gress_t, std::vector<IR::MAU::Table*>> tables_to_insert;
 
-    std::map<const FieldGroup*,
+    assoc::map<const FieldGroup*,
              std::vector<const IR::Expression*>> group_to_vld_bits;
 
-    std::map<const FieldGroup*,
+    assoc::map<const FieldGroup*,
              std::vector<const IR::TempVar*>> group_to_ctl_bits;
 
-    std::map<const FieldGroup*, VersionMap> group_to_version_map;
+    ordered_map<const FieldGroup*, VersionMap> group_to_version_map;
 
  public:
     ordered_map<const IR::MAU::Action*, const IR::TempVar*> action_to_ctl_bit;
@@ -688,9 +689,9 @@ class RewriteWeakFieldWrites : public MauTransform {
     const ComputeValuesAtDeparser& values_at_deparser;
     const SynthesizePovEncoder& synth_pov_encoder;
 
-    std::map<const IR::MAU::Action*, const IR::MAU::Action*> curr_to_orig;
+    assoc::map<const IR::MAU::Action*, const IR::MAU::Action*> curr_to_orig;
 
-    std::map<const IR::MAU::Action*, const IR::MAU::Instruction*> orig_action_to_new_instr;
+    assoc::map<const IR::MAU::Action*, const IR::MAU::Instruction*> orig_action_to_new_instr;
 
  public:
     RewriteWeakFieldWrites(const ComputeValuesAtDeparser& values_at_deparser,
@@ -747,16 +748,16 @@ class RewriteDeparser : public DeparserModifier {
     const IR::Expression* find_emit_source(const PHV::Field* field,
                                            const IR::Vector<IR::BFN::Emit>& emits);
 
-    std::set<std::set<const IR::Expression*>> get_all_disjoint_pov_bit_sets();
+    ordered_set<ordered_set<const IR::Expression*>> get_all_disjoint_pov_bit_sets();
 
     std::vector<const IR::BFN::Emit*>
     coalesce_disjoint_emits(const std::vector<const IR::BFN::Emit*>& disjoint_emits);
 
     void coalesce_emits_for_packing(IR::BFN::Deparser* deparser,
-                       const std::set<std::set<const IR::Expression*>>& disjoint_pov_sets);
+                       const ordered_set<ordered_set<const IR::Expression*>>& disjoint_pov_sets);
 
     void infer_deparser_no_repeat_constraint(IR::BFN::Deparser* deparser,
-                       const std::set<std::set<const IR::Expression*>>& disjoint_pov_sets);
+                       const ordered_set<ordered_set<const IR::Expression*>>& disjoint_pov_sets);
 
     bool preorder(IR::BFN::Deparser* deparser) override;
 };

@@ -195,6 +195,28 @@ bfn_set_ptf_ports_json_file("tofino3" "p4_16_programs_tna_idletimeout" "${CMAKE_
 set_tests_properties("tofino3/p4_16_programs_tna_exact_match" PROPERTIES TIMEOUT ${extended_timeout_2times})
 set_tests_properties("tofino3/p4_16_programs_tna_ternary_match" PROPERTIES TIMEOUT ${extended_timeout_4times})
 
+
+# P4C-4718
+set(TOFINO3_DETERMINISM_TESTS_14
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/decaf_10/decaf_10.p4
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/stf/decaf_3.p4
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/stf/decaf_8.p4
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/ptf/inner_checksum_l4.p4
+  )
+foreach(t IN LISTS TOFINO3_DETERMINISM_TESTS_14)
+  get_filename_component(_base_name ${t} NAME_WE)
+  bfn_add_determinism_test_with_args("tofino3" "${P414_TEST_ARCH}" ${t} "--std=p4-14")
+endforeach()
+
+set(TOFINO3_DETERMINISM_TESTS_16
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/jbay/wide_arith.p4
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/hdr_len_inc_stop_2.p4
+  )
+foreach(t IN LISTS TOFINO3_DETERMINISM_TESTS_16)
+  get_filename_component(_base_name ${t} NAME_WE)
+  bfn_add_determinism_test_with_args("tofino3" "t3na" ${t} "")
+endforeach()
+
 include(SwitchCloudbreak.cmake)
 include(CloudbreakXfail.cmake)
 include(CloudbreakErrors.cmake)

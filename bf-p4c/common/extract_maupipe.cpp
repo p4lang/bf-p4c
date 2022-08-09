@@ -1495,8 +1495,8 @@ class GetBackendTables : public MauInspector {
     StatefulSelectors                           &stateful_selectors;
     DeclarationConversions                      assoc_profiles;
     std::set<cstring>                                unique_names;
-    std::map<const IR::Node *, IR::MAU::Table *>     tables;
-    std::map<const IR::Node *, IR::MAU::TableSeq *>  seqs;
+    assoc::map<const IR::Node *, IR::MAU::Table *>     tables;
+    assoc::map<const IR::Node *, IR::MAU::TableSeq *>  seqs;
     CollectSourceInfoLogging& sourceInfoLogging;
     IR::MAU::TableSeq *getseq(const IR::Node *n) {
         if (!seqs.count(n) && tables.count(n))

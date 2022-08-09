@@ -2,6 +2,7 @@
 
 #include <boost/range/adaptor/reversed.hpp>
 #include "bf-p4c/device.h"
+#include "bf-p4c/lib/assoc.h"
 #include "bf-p4c/parde/dump_parser.h"
 #include "bf-p4c/parde/parde_utils.h"
 #include "bf-p4c/parde/parser_info.h"
@@ -38,7 +39,7 @@ using StateSet = ordered_set<const IR::BFN::ParserState*>;
 class FindParsingFrontier : public ParserInspector {
  public:
     struct CutSet {
-        std::map<const IR::BFN::ParserState*, StateSet> transitions;
+        ordered_map<const IR::BFN::ParserState*, StateSet> transitions;
         StateSet transitions_to_pipe;
 
         StateSet
@@ -117,7 +118,7 @@ class FindParsingFrontier : public ParserInspector {
     const CollectParserInfo& parserInfo;
     const GetAllChecksumDest& checksumDest;
 
-    std::map<const IR::BFN::Parser*, StateSet> mutable_field_states;
+    ordered_map<const IR::BFN::Parser*, StateSet> mutable_field_states;
 
     bool preorder(const IR::BFN::Parser* parser) override {
         mutable_field_states[parser] = {};
@@ -295,7 +296,7 @@ class FindParsingFrontier : public ParserInspector {
         auto& graph = parserInfo.graph(parser);
         auto& front = parser_to_frontier[parser->gress];
 
-        std::set<void*> cg;
+        assoc::set<void*> cg;
         for (auto s : front.states)
             cg.insert((void*)s);  // NOLINT
 
@@ -325,8 +326,8 @@ class FindParsingFrontier : public ParserInspector {
     }
 
  public:
-    std::map<gress_t, Frontier> parser_to_frontier;
-    std::vector<std::set<void*>> color_groups;  // for DumpParser
+    assoc::map<gress_t, Frontier> parser_to_frontier;
+    std::vector<assoc::set<void*>> color_groups;  // for DumpParser
 
     FindParsingFrontier(const PhvInfo& phv,
                        const FieldDefUse& defuse,
@@ -404,7 +405,7 @@ class InsertFrontierStates : public ParserTransform {
     const FindParsingFrontier& frontier;
 
  public:
-    std::map<gress_t, std::set<cstring>> parser_to_frontier_state_names;
+    assoc::map<gress_t, std::set<cstring>> parser_to_frontier_state_names;
 
     explicit InsertFrontierStates(const FindParsingFrontier& frontier) : frontier(frontier) {}
 };
@@ -631,9 +632,9 @@ class RewriteParde : public PardeTransform {
     }
 
     struct MapNameToState : Inspector {
-        std::map<cstring, const IR::BFN::ParserState*>& name_to_state;
+        assoc::map<cstring, const IR::BFN::ParserState*>& name_to_state;
 
-        explicit MapNameToState(std::map<cstring, const IR::BFN::ParserState*>& n2s) :
+        explicit MapNameToState(assoc::map<cstring, const IR::BFN::ParserState*>& n2s) :
             name_to_state(n2s) {}
 
         bool preorder(const IR::BFN::ParserState* state) override {
@@ -653,10 +654,10 @@ class RewriteParde : public PardeTransform {
         }
 
         if (LOGGING(3)) {
-            std::vector<std::set<void*>> color_groups;
+            std::vector<assoc::set<void*>> color_groups;
 
             for (auto& kv : parser_to_frontier_states) {
-                std::set<void*> cg;
+                assoc::set<void*> cg;
 
                 std::clog << kv.first << " frontier states:" << std::endl;
                 for (auto s : kv.second) {
@@ -672,10 +673,10 @@ class RewriteParde : public PardeTransform {
         return PardeTransform::init_apply(root);
     }
 
-    std::map<gress_t, StateSet> parser_to_frontier_states;
-    std::map<cstring, const IR::BFN::ParserState*> name_to_state;
-    std::set<const PHV::Field*> fields_above_frontier;
-    std::set<const PHV::Field*> fields_below_frontier;
+    assoc::map<gress_t, StateSet> parser_to_frontier_states;
+    assoc::map<cstring, const IR::BFN::ParserState*> name_to_state;
+    assoc::set<const PHV::Field*> fields_above_frontier;
+    assoc::set<const PHV::Field*> fields_below_frontier;
 
     const IR::BFN::Parser* orig_parser = nullptr;
 
@@ -689,13 +690,13 @@ class RewriteParde : public PardeTransform {
 
  public:
     // Maps state name to hdr_len_inc_stop statement
-    std::map<cstring, const IR::BFN::HdrLenIncStop*> state_to_hdr_len_inc_stop;
+    assoc::map<cstring, const IR::BFN::HdrLenIncStop*> state_to_hdr_len_inc_stop;
 
     // For cloudbreak, a new state needs to be added after the state with hdr_len_inc_stop
     // This map contains the info needed
     // Key : State name with hdr_len_inc_stop
     // Value : statements for new state
-    std::map <cstring,
+    assoc::map <cstring,
         IR::Vector<IR::BFN::ParserPrimitive>> orig_state_to_new_state_stmts;
 
     RewriteParde(const PhvInfo& phv, const PhvUse& uses,

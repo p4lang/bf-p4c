@@ -8,6 +8,7 @@
 #include "bf-p4c/arch/fromv1.0/add_metadata_parser_states.h"
 #include "bf-p4c/arch/fromv1.0/checksum.h"
 #include "bf-p4c/common/utils.h"
+#include "bf-p4c/lib/assoc.h"
 #include "bf-p4c/midend/path_linearizer.h"
 #include "bf-p4c/midend/parser_graph.h"
 #include "frontends/p4/cloner.h"
@@ -43,8 +44,8 @@ class TNA_ProgramStructure : public ProgramStructure {
 };
 // ** END **
 
-using StateToExtracts = std::map<const IR::ParserState*, std::vector<const IR::Member*> >;
-using ExtractToState = std::map<const IR::Member*, const IR::ParserState*>;
+using StateToExtracts = assoc::map<const IR::ParserState*, std::vector<const IR::Member*> >;
+using ExtractToState = assoc::map<const IR::Member*, const IR::ParserState*>;
 using DigestFieldList = std::map<cstring,
       std::map<unsigned, std::pair<boost::optional<cstring>, const IR::Expression*>>>;
 /**
@@ -214,9 +215,9 @@ class TnaProgramStructure : public ProgramStructure {
     std::vector<ChecksumInfo> residualChecksums;
     std::vector<ChecksumInfo> verifyChecksums;
 
-    std::map<const IR::FieldList*, cstring> residualChecksumNames;
+    assoc::map<const IR::FieldList*, cstring> residualChecksumNames;
 
-    std::map<cstring, std::set<cstring>> ingressVerifyChecksumToStates;
+    ordered_map<cstring, ordered_set<cstring>> ingressVerifyChecksumToStates;
 
     std::map<gress_t,
           std::map<cstring, IR::Statement*>> checksumDepositToHeader;
@@ -909,7 +910,7 @@ class ModifyParserForChecksum : public Modifier {
     P4::TypeMap      *typeMap;
     TnaProgramStructure* structure;
     P4ParserGraphs *graph;
-    std::map<cstring, cstring> checksum;
+    ordered_map<cstring, cstring> checksum;
     std::map<cstring, std::set<cstring>> need_checksum;
     std::map<cstring, ordered_set<const IR::Member*>> residualChecksumPayloadFields;
 
@@ -988,7 +989,7 @@ class ModifyParserForChecksum : public Modifier {
     void createSubtractCallsForResidualChecksum(
             IR::IndexedVector<IR::StatOrDecl>* statements,
             std::vector<ChecksumInfo>& checksum_fields, const IR::Member* member,
-            std::map<cstring, cstring>& checksum, gress_t gress) {
+            ordered_map<cstring, cstring>& checksum, gress_t gress) {
         if (checksum_fields.empty())
             return;
         P4::ClonePathExpressions cloner;
@@ -1080,7 +1081,7 @@ class ModifyParserForChecksum : public Modifier {
     void createAddCallsForVerifyChecksum(
             IR::IndexedVector<IR::StatOrDecl>* statements,
             std::vector<ChecksumInfo>& checksum_fields, const IR::Member* member,
-            std::map<cstring, cstring>& checksum, gress_t gress,
+            ordered_map<cstring, cstring>& checksum, gress_t gress,
             cstring state) {
         P4::ClonePathExpressions cloner;
         for (auto csum : checksum_fields) {
@@ -1200,7 +1201,7 @@ class ModifyParserForChecksum : public Modifier {
     }
 };
 
-using EndStates = std::map<cstring, std::map<cstring, std::set<cstring>>>;
+using EndStates = std::map<cstring, ordered_map<cstring, ordered_set<cstring>>>;
 
 static IR::AssignmentStatement*
 createChecksumError(cstring decl, gress_t gress) {
@@ -1270,19 +1271,19 @@ class InsertChecksumError : public PassManager {
                 const P4ParserGraphs* graph, EndStates& endStates) :
             structure(structure), graph(graph), endStates(endStates) { }
 
-        void printStates(const std::set<cstring>& states) {
+        void printStates(const ordered_set<cstring>& states) {
             for (auto s : states)
                 std::cout << "   " << s << std::endl;
         }
 
-        std::set<cstring>
-        computeChecksumEndStates(const std::set<cstring>& calcStates) {
+        ordered_set<cstring>
+        computeChecksumEndStates(const ordered_set<cstring>& calcStates) {
             if (LOGGING(3)) {
                 std::cout << "calc states are:" << std::endl;
                 printStates(calcStates);
             }
 
-            std::set<cstring> endStates;
+            ordered_set<cstring> endStates;
 
             // A calculation state is a verification end state if no other state of the
             // same calculation is its descendant. Otherwise, include all of the state's

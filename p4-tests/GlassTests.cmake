@@ -227,6 +227,11 @@ foreach(t IN LISTS GTS_NOVIFLOW)
   p4c_add_test_label("tofino" "GTS_WEEKLY" ${test_path})
 endforeach()
 
+# P4C-4718
+bfn_add_determinism_test_with_args("tofino" "${TOFINO_P414_TEST_ARCH}"
+  ${CMAKE_CURRENT_SOURCE_DIR}/glass/noviflow/COMPILER-1186/case9213b.p4
+  "--std=p4-14 -I${BFN_P4C_SOURCE_DIR}/glass/p4c_tofino/target/tofino/p4_lib")
+
 set (GTS_ALIBABA
   ${CMAKE_CURRENT_SOURCE_DIR}/glass/alibaba/COMPILER-1039/comp_1039.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/glass/alibaba/COMPILER-1129/comp_1129.p4

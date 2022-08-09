@@ -807,9 +807,9 @@ bool ClotInfo::is_added_by_mau(cstring h) const {
     return headers_added_by_mau_.count(h);
 }
 
-std::map<const PHV::FieldSlice*, Clot*, PHV::FieldSlice::Greater>*
+assoc::map<const PHV::FieldSlice*, Clot*, PHV::FieldSlice::Greater>*
 ClotInfo::slice_clots(const PHV::FieldSlice* slice) const {
-    auto result = new std::map<const PHV::FieldSlice*, Clot*, PHV::FieldSlice::Greater>();
+    auto result = new assoc::map<const PHV::FieldSlice*, Clot*, PHV::FieldSlice::Greater>();
     auto field = slice->field();
     for (auto c : clots_) {
         const auto& fields_to_slices = c->fields_to_slices();

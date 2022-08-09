@@ -92,8 +92,8 @@ class BFN::Pipe {
                         && ghost_parser == a.ghost_parser; }
         dump_fields { out << "ghost_mau=" << ghost_mau;
                       out << "ghost_parser=" << ghost_parser; }
-        dbprint { out << "ghost_mau=" << ghost_mau;
-                      out << "ghost_parser=" << ghost_parser; }
+        dbprint { out << "ghost_mau=" << ghost_mau << " "
+                      << "ghost_parser=" << ghost_parser; }
     }
     ghost_thread_t ghost_thread;
 

@@ -477,9 +477,9 @@ lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
     // reference.
     for (auto* fieldRef : fields) {
         auto field = phv.field(fieldRef->field);
-        std::map<const PHV::FieldSlice*, Clot*, PHV::FieldSlice::Greater>* slice_clots = nullptr;
+        assoc::map<const PHV::FieldSlice*, Clot*, PHV::FieldSlice::Greater>* slice_clots = nullptr;
         if (clotInfo.is_readonly(field) && is_checksum) {
-            slice_clots =  clotInfo.slice_clots(field);
+            slice_clots = clotInfo.slice_clots(field);
         } else {
             slice_clots = clotInfo.allocated_slices(field);
         }

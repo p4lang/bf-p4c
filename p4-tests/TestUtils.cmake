@@ -275,6 +275,24 @@ function(bfn_add_test_with_args device toolsdevice alias p4file test_args cmake_
   endif(HARLYN_STF_${toolsdevice})
 endfunction(bfn_add_test_with_args)
 
+# Test that the compilation is deterministic by comparing PHV and table allocation summaries.
+# This function accepts one additional optional argument that is the number of repeats to run.
+function(bfn_add_determinism_test_with_args device arch p4file test_args) # + repeats
+    # There can be test of the same p4 file for the same device, we need to make sure this gets a
+    # distinct .test file. The only way to do that without larger changes to frontend's test macros
+    # is to abuse the tag string that usually containes just the device.
+    set(tag "${device}/determinism")
+    set(_repeats "")
+    if (ARGN)
+        set(_repeats "--repeats ${ARGN}")
+    endif()
+    file (RELATIVE_PATH _relpath ${P4C_SOURCE_DIR} ${p4file})
+    p4c_add_test_with_args(${tag} ${CMAKE_CURRENT_SOURCE_DIR}/tools/test_compilation_is_deterministic.py
+        FALSE ${_relpath} ${_relpath} "-b ${device} -a ${arch} ${test_args}" "${_repeats}")
+    p4c_add_test_label(${tag} "determinism" ${_relpath})
+    set_tests_properties("${tag}/${_relpath}" PROPERTIES TIMEOUT ${extended_timeout_2times})
+endfunction()
+
 # extra test args can be passed as unamed arguments
 macro(p4c_add_bf_backend_tests device toolsdevice arch label tests)
   set (_testExtraArgs "${ARGN}")

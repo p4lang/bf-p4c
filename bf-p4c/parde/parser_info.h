@@ -13,6 +13,7 @@
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/ir/control_flow_visitor.h"
 #include "bf-p4c/parde/parde_visitor.h"
+#include "bf-p4c/lib/assoc.h"
 
 namespace boost {
     enum vertex_state_t { vertex_state };
@@ -183,31 +184,33 @@ class ParserGraphImpl : public DirectedGraph {
 
     const State* const root;
 
-    const std::set<const State*>& states() const { return _states; }
+    const ordered_set<const State*>& states() const { return _states; }
 
     const ParserStateMap<State>& successors() const { return _succs; }
 
     const ParserStateMap<State>& predecessors() const { return _preds; }
 
-    const std::map<const State*,
-                   std::set<const Transition*>>& to_pipe() const { return _to_pipe; }
+    const ordered_map<const State*,
+                      ordered_set<const Transition*>>& to_pipe() const { return _to_pipe; }
 
-    std::set<const Transition*>
+    ordered_set<const Transition*>
     transitions(const State* src, const State* dst) const {
-        if (_transitions.count({src, dst}))
-            return _transitions.at({src, dst});
+        auto it = _transitions.find({src, dst});
+        if (it != _transitions.end())
+            return it->second;
 
         return {};
     }
 
-    std::set<const Transition*> to_pipe(const State* src) const {
+    ordered_set<const Transition*> to_pipe(const State* src) const {
         if (_to_pipe.count(src))
             return _to_pipe.at(src);
 
         return {};
     }
 
-    std::map<std::pair<const State*, cstring>, std::set<const Transition*>> loopbacks() const {
+    ordered_map<std::pair<const State*, cstring>, ordered_set<const Transition*>>
+    loopbacks() const {
         return _loopbacks;
     }
 
@@ -231,7 +234,7 @@ class ParserGraphImpl : public DirectedGraph {
 
  private:
     /// Memoization table.
-    mutable std::map<const State*, std::map<const State*, bool>> is_ancestor_;
+    mutable assoc::map<const State*, assoc::map<const State*, bool>> is_ancestor_;
 
  public:
     /// Is "src" an ancestor of "dst"?
@@ -468,9 +471,9 @@ class ParserGraphImpl : public DirectedGraph {
         return true;
     }
 
-    std::set<const State*>
+    ordered_set<const State*>
     get_all_descendants(const State* src) const {
-        std::set<const State*> rv;
+        ordered_set<const State*> rv;
         get_all_descendants_impl(src, rv);
         return rv;
     }
@@ -485,33 +488,33 @@ class ParserGraphImpl : public DirectedGraph {
 
     // longest path (in states) from src to end of parser
     std::vector<const State*> longest_path_states(const State* src) const {
-        std::map<const State*, std::pair<unsigned, std::vector<const State*>>> path_map;
+        assoc::map<const State*, std::pair<unsigned, std::vector<const State*>>> path_map;
         return min_max_path_impl(src, path_map, true, true, true).second;
     }
 
     // shortest path from src to end of parser
     std::vector<const State*> shortest_path_states(const State* src) const {
-        std::map<const State*, std::pair<unsigned, std::vector<const State*>>> path_map;
+        assoc::map<const State*, std::pair<unsigned, std::vector<const State*>>> path_map;
         return min_max_path_impl(src, path_map, false, true, true).second;
     }
 
     // longest path (in bytes) from src to end of parser
     std::pair<unsigned, std::vector<const State*>> longest_path_bytes(const State* src) const {
-        std::map<const State*, std::pair<unsigned, std::vector<const State*>>> path_map;
+        assoc::map<const State*, std::pair<unsigned, std::vector<const State*>>> path_map;
         return min_max_path_impl(src, path_map, true, true, false);
     }
 
     // shortest path (in bytes) from src to end of parser
     std::pair<unsigned, std::vector<const State*>> shortest_path_bytes(const State* src) const {
-        std::map<const State*, std::pair<unsigned, std::vector<const State*>>> path_map;
+        assoc::map<const State*, std::pair<unsigned, std::vector<const State*>>> path_map;
         return min_max_path_impl(src, path_map, false, true, false);
     }
 
     // shortest path (in bytes) from src to end of parser
     std::pair<unsigned, std::vector<const State*>> shortest_path_thru_bytes(
             const State* src) const {
-        std::map<const State*, std::pair<unsigned, std::vector<const State*>>> path_map_from;
-        std::map<const State*, std::pair<unsigned, std::vector<const State*>>> path_map_to;
+        assoc::map<const State*, std::pair<unsigned, std::vector<const State*>>> path_map_from;
+        assoc::map<const State*, std::pair<unsigned, std::vector<const State*>>> path_map_to;
 
         auto from = min_max_path_impl(src, path_map_from, false, true, false);
         auto to = min_max_path_impl(src, path_map_to, false, false, false);
@@ -523,7 +526,7 @@ class ParserGraphImpl : public DirectedGraph {
     }
 
     const State* get_src(const Transition* t) const {
-        for (auto& kv : _transitions) {
+        for (auto& kv : _transitions.unstable_iterable()) {
             if (kv.second.count(t))
                 return kv.first.first;
         }
@@ -542,7 +545,7 @@ class ParserGraphImpl : public DirectedGraph {
     }
 
     const State* get_dst(const Transition* t) const {
-        for (auto& kv : _transitions) {
+        for (auto& kv : _transitions.unstable_iterable()) {
             if (kv.second.count(t))
                 return kv.first.second;
         }
@@ -579,7 +582,7 @@ class ParserGraphImpl : public DirectedGraph {
     }
 
     std::vector<const State*> longest_or_shortest_path_states_impl(const State* src,
-            std::map<const State*, std::vector<const State*>>& path_map, bool longest) const {
+            assoc::map<const State*, std::vector<const State*>>& path_map, bool longest) const {
         if (path_map.count(src))
             return path_map.at(src);
 
@@ -617,7 +620,7 @@ class ParserGraphImpl : public DirectedGraph {
      */
     std::pair<unsigned, std::vector<const State*>> min_max_path_impl(
             const State* state,
-            std::map<const State*, std::pair<unsigned, std::vector<const State*>>>& path_map,
+            assoc::map<const State*, std::pair<unsigned, std::vector<const State*>>>& path_map,
             bool longest, bool origin, bool states) const {
         if (path_map.count(state))
             return path_map.at(state);
@@ -630,7 +633,7 @@ class ParserGraphImpl : public DirectedGraph {
         auto min = [](unsigned v, const Transition* t) { return v < t->shift ? v : t->shift; };
 
         auto next_map = origin ? successors() : predecessors();
-        auto exit_trans = origin ? to_pipe(state) : std::set<const Transition*>({});
+        auto exit_trans = origin ? to_pipe(state) : ordered_set<const Transition*>();
 
         if ((longest || exit_trans.size() == 0) && next_map.count(state)) {
             for (auto next : next_map.at(state)) {
@@ -663,7 +666,7 @@ class ParserGraphImpl : public DirectedGraph {
     }
 
     void get_all_descendants_impl(const State* src,
-                                  std::set<const State*>& rv) const {
+                                  ordered_set<const State*>& rv) const {
         if (!successors().count(src))
             return;
 
@@ -714,21 +717,25 @@ class ParserGraphImpl : public DirectedGraph {
         return _id_to_state.at(id);
     }
 
-    std::set<const State*> _states;
+    ordered_set<const State*> _states;
 
     ParserStateMap<State> _succs, _preds;
 
-    std::map<std::pair<const State*, const State*>,
-             std::set<const Transition*>> _transitions;
+    assoc::map<std::pair<const State*, const State*>,
+             ordered_set<const Transition*>> _transitions;
 
-    std::map<std::pair<const State*, cstring>,
-             std::set<const Transition*>> _loopbacks;
+    // the iteration order is not actually needed to be fixed except for
+    // dump_parser
+    ordered_map<std::pair<const State*, cstring>,
+                ordered_set<const Transition*>> _loopbacks;
 
-    std::map<const State*,
-             std::set<const Transition*>> _to_pipe;
+    // the iteration order is not actually needed to be fixed except for
+    // dump_parser
+    ordered_map<const State*,
+                ordered_set<const Transition*>> _to_pipe;
 
-    std::map<const State*, int> _state_to_id;
-    std::map<int, const State*> _id_to_state;
+    assoc::map<const State*, int> _state_to_id;
+    assoc::map<int, const State*> _id_to_state;
 };
 
 namespace IR {
@@ -794,8 +801,8 @@ class CollectParserInfoImpl : public PardeInspector {
     }
 
     // Memoization table. Only contains results for forward paths in the graph.
-    mutable std::map<const State*,
-                     std::map<const State*, const std::set<int>*>> all_shift_amounts_;
+    mutable assoc::map<const State*,
+                     assoc::map<const State*, const std::set<int>*>> all_shift_amounts_;
 
  public:
     /// @return all possible shift amounts, in bits, for all paths from the start state to @p dst .
@@ -884,7 +891,7 @@ class CollectParserInfoImpl : public PardeInspector {
     }
 
     ordered_map<const Parser*, GraphType*> _graphs;
-    std::map<const State*, const Parser*> _state_to_parser;
+    assoc::map<const State*, const Parser*> _state_to_parser;
 };
 
 using CollectParserInfo = CollectParserInfoImpl<IR::BFN::Parser,

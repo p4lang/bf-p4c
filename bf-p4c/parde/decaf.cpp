@@ -178,7 +178,7 @@ bool CollectWeakFields::all_defs_happen_before(const PHV::Field* src, const PHV:
 }
 
 bool CollectWeakFields::is_strong_by_transitivity(const PHV::Field* dst, const PHV::Field* src,
-                                                  std::set<const PHV::Field*>& visited) {
+                                                  assoc::set<const PHV::Field*>& visited) {
     if (visited.count(src))
         return false;
 
@@ -214,7 +214,7 @@ bool CollectWeakFields::is_strong_by_transitivity(const PHV::Field* dst, const P
 }
 
 bool CollectWeakFields::is_strong_by_transitivity(const PHV::Field* dst) {
-    std::set<const PHV::Field*> visited;
+    assoc::set<const PHV::Field*> visited;
 
     for (auto assign : field_to_weak_assigns.at(dst)) {
         if (assign->src->field) {
@@ -272,7 +272,7 @@ void CollectWeakFields::get_all_constants() {
 void CollectWeakFields::elim_by_strong_transitivity() {
     // elim all fields that have a strong source (directly or transitively)
 
-    std::set<const PHV::Field*> to_delete;
+    ordered_set<const PHV::Field*> to_delete;
 
     for (auto& kv : field_to_weak_assigns) {
         auto f = kv.first;
@@ -289,7 +289,7 @@ void CollectWeakFields::elim_non_byte_aligned_fields() {
     // share same decaf pov bit in order to pack them (TODO). Elim these
     // for now.
 
-    std::set<const PHV::Field*> to_delete;
+    ordered_set<const PHV::Field*> to_delete;
 
     for (auto f : read_only_weak_fields) {
         if (f->size % 8 != 0 ||
@@ -492,10 +492,10 @@ ComputeValuesAtDeparser::init_apply(const IR::Node* root) {
     return rv;
 }
 
-std::set<const Value*>
+ordered_set<const Value*>
 ComputeValuesAtDeparser::get_all_weak_srcs(const PHV::Field* field,
-                                           std::set<const PHV::Field*>& visited) {
-    std::set<const Value*> rv;
+                                           assoc::set<const PHV::Field*>& visited) {
+    ordered_set<const Value*> rv;
 
     if (visited.count(field))
         return rv;
@@ -517,9 +517,9 @@ ComputeValuesAtDeparser::get_all_weak_srcs(const PHV::Field* field,
     return rv;
 }
 
-std::set<const Value*>
+ordered_set<const Value*>
 ComputeValuesAtDeparser::get_all_weak_srcs(const PHV::Field* field) {
-    std::set<const PHV::Field*> visited;
+    assoc::set<const PHV::Field*> visited;
     return get_all_weak_srcs(field, visited);
 }
 
@@ -1113,7 +1113,7 @@ SynthesizePovEncoder::create_match_action(const FieldGroup& group) {
 
             unsigned ctl = encode(ctl_bits_onset, ctl_bits);
 
-            std::map<unsigned, std::set<const PHV::Field*>> on_set;
+            std::map<unsigned, assoc::set<const PHV::Field*>> on_set;
 
             for (auto f : group) {
                 if (weak_fields.read_only_weak_fields.count(f))
@@ -1219,7 +1219,7 @@ SynthesizePovEncoder::num_coalesced_match_bits(const FieldGroup& a, const FieldG
     auto bv = get_valid_bits(b);
     auto ba = get_all_actions(b);
 
-    std::set<const IR::Expression*> vs;
+    assoc::set<const IR::Expression*> vs;
     ordered_set<const IR::MAU::Action*> as;
 
     for (auto x : av) vs.insert(x);
@@ -1597,15 +1597,15 @@ RewriteDeparser::find_emit_source(const PHV::Field* field,
     return nullptr;
 }
 
-std::set<std::set<const IR::Expression*>>
+ordered_set<ordered_set<const IR::Expression*>>
 RewriteDeparser::get_all_disjoint_pov_bit_sets() {
-    std::set<std::set<const IR::Expression*>> rv;
+    ordered_set<ordered_set<const IR::Expression*>> rv;
 
     auto& value_to_pov_bit = synth_pov_encoder.value_to_pov_bit;
     auto& default_pov_bit = synth_pov_encoder.default_pov_bit;
 
     for (auto& fb : default_pov_bit) {
-        std::set<const IR::Expression*> disjoint_set;
+        ordered_set<const IR::Expression*> disjoint_set;
         disjoint_set.insert(fb.second);
 
         for (auto vb : value_to_pov_bit.at(fb.first))
@@ -1657,10 +1657,10 @@ RewriteDeparser::coalesce_disjoint_emits(const std::vector<const IR::BFN::Emit*>
 }
 
 // check if emit belongs to a disjoint set
-static const std::set<const IR::Expression*>*
+static const ordered_set<const IR::Expression*>*
 belongs_to(const IR::BFN::EmitField* emit,
-        const std::set<std::set<const IR::Expression*>>& disjoint_pov_sets) {
-    const std::set<const IR::Expression*>* disjoint_set = nullptr;
+        const ordered_set<ordered_set<const IR::Expression*>>& disjoint_pov_sets) {
+    const ordered_set<const IR::Expression*>* disjoint_set = nullptr;
     auto pov_bit = emit->povBit->field;
 
     for (auto& ds : disjoint_pov_sets) {
@@ -1674,7 +1674,7 @@ belongs_to(const IR::BFN::EmitField* emit,
 }
 
 void RewriteDeparser::coalesce_emits_for_packing(IR::BFN::Deparser* deparser,
-                       const std::set<std::set<const IR::Expression*>>& disjoint_pov_sets) {
+                       const ordered_set<ordered_set<const IR::Expression*>>& disjoint_pov_sets) {
     IR::Vector<IR::BFN::Emit> rv;
 
     for (auto it = deparser->emits.begin(); it != deparser->emits.end(); it++) {
@@ -1713,7 +1713,7 @@ void RewriteDeparser::coalesce_emits_for_packing(IR::BFN::Deparser* deparser,
 }
 
 void RewriteDeparser::infer_deparser_no_repeat_constraint(IR::BFN::Deparser* deparser,
-                       const std::set<std::set<const IR::Expression*>>& disjoint_pov_sets) {
+                       const ordered_set<ordered_set<const IR::Expression*>>& disjoint_pov_sets) {
     for (auto it = deparser->emits.begin(); it != deparser->emits.end(); it++) {
         auto ei = (*it)->to<IR::BFN::EmitField>();
         if (!ei) continue;

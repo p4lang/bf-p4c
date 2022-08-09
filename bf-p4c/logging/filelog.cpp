@@ -20,6 +20,7 @@ const cstring& Logging::FileLog::name2type(cstring logName) {
         {"table_",                      "mau"},
         {"pragmas",                     "phv"},
         {"live_range_split",            "phv"},
+        {"backend_passes",              "text"}
     };
 
     for (auto &logType : logNames2Type)

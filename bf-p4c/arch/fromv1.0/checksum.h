@@ -4,8 +4,9 @@
 #include "v1_program_structure.h"
 #include "bf-p4c/midend/parser_graph.h"
 #include "bf-p4c/arch/intrinsic_metadata.h"
+#include "bf-p4c/lib/assoc.h"
 
-typedef std::map<const IR::Declaration*, std::set<cstring>> DeclToStates;
+using DeclToStates = ordered_map<const IR::Declaration*, ordered_set<cstring>>;
 
 struct ChecksumInfo {
     bool with_payload;
@@ -22,11 +23,11 @@ namespace V1 {
 
 class TranslateParserChecksums : public PassManager {
  public:
-    std::map<const IR::Expression*, IR::Member*> residualChecksums;
-    std::set<const IR::Expression*> needBridging;
-    std::map<const IR::Expression*,
+    ordered_map<const IR::Expression*, IR::Member*> residualChecksums;
+    assoc::set<const IR::Expression*> needBridging;
+    assoc::map<const IR::Expression*,
         ordered_set<const IR::Expression*>> residualChecksumPayloadFields;
-    std::map<const IR::Expression*,
+    ordered_map<const IR::Expression*,
         std::map<gress_t, const IR::ParserState*>> destToGressToState;
     std::map<gress_t,
           std::map<cstring, IR::Statement*>> checksumDepositToHeader;
@@ -156,8 +157,8 @@ class CollectParserChecksums : public Inspector {
  public:
     std::vector<const IR::MethodCallStatement*> verifyChecksums;
     std::vector<const IR::MethodCallStatement*> residualChecksums;
-    std::map<const IR::MethodCallStatement*, std::vector<gress_t>> parserUpdateLocations;
-    std::map<const IR::MethodCallStatement*, std::vector<gress_t>> deparserUpdateLocations;
+    ordered_map<const IR::MethodCallStatement*, std::vector<gress_t>> parserUpdateLocations;
+    ordered_map<const IR::MethodCallStatement*, std::vector<gress_t>> deparserUpdateLocations;
 
     CollectParserChecksums(P4::ReferenceMap *refMap, P4::TypeMap *typeMap)
             : refMap(refMap), typeMap(typeMap) {
@@ -206,15 +207,15 @@ class InsertParserChecksums : public Inspector {
     const P4ParserGraphs* graph;
     ProgramStructure *structure;
 
-    std::map<const IR::MethodCallStatement*, const IR::Declaration*> verifyDeclarationMap;
+    assoc::map<const IR::MethodCallStatement*, const IR::Declaration*> verifyDeclarationMap;
 
-    std::map<const IR::MethodCallStatement*, IR::Declaration_Instance*>
+    assoc::map<const IR::MethodCallStatement*, IR::Declaration_Instance*>
         ingressParserResidualChecksumDecls, egressParserResidualChecksumDecls;
 
     unsigned residualChecksumCnt = 0;
 
-    typedef std::map<const IR::ParserState*, std::vector<const IR::Expression*> > StateToExtracts;
-    typedef std::map<const IR::Expression*, const IR::ParserState*> ExtractToState;
+    typedef assoc::map<const IR::ParserState*, std::vector<const IR::Expression*> > StateToExtracts;
+    typedef assoc::map<const IR::Expression*, const IR::ParserState*> ExtractToState;
 
     StateToExtracts stateToExtracts;
     ExtractToState extractToState;
@@ -411,7 +412,7 @@ class InsertParserChecksums : public Inspector {
             std::vector<const IR::Declaration *>* parserDeclarations = nullptr;
             std::vector<const IR::StatOrDecl *>* parserStatements = nullptr;
 
-            std::map<const IR::MethodCallStatement*,
+            assoc::map<const IR::MethodCallStatement*,
                     IR::Declaration_Instance*>* parserResidualChecksumDecls = nullptr;
 
             if (location == INGRESS) {
@@ -574,21 +575,21 @@ class InsertChecksumDeposit : public Transform {
 class InsertChecksumError : public PassManager {
  public:
     std::map<cstring,
-        std::map<const IR::Declaration*,
-            std::set<cstring>>> endStates;
+        ordered_map<const IR::Declaration*,
+            ordered_set<cstring>>> endStates;
 
     struct ComputeEndStates : public Inspector {
         InsertChecksumError* self;
 
         explicit ComputeEndStates(InsertChecksumError* self) : self(self) { }
 
-        void printStates(const std::set<cstring>& states) {
+        void printStates(const ordered_set<cstring>& states) {
             for (auto s : states)
                 std::cout << "   " << s << std::endl;
         }
 
-        std::set<cstring>
-        computeChecksumEndStates(const std::set<cstring>& calcStates) {
+        ordered_set<cstring>
+        computeChecksumEndStates(const ordered_set<cstring>& calcStates) {
             auto& parserGraphs = self->translate->parserGraphs;
 
             if (LOGGING(3)) {
@@ -596,7 +597,7 @@ class InsertChecksumError : public PassManager {
                 printStates(calcStates);
             }
 
-            std::set<cstring> endStates;
+            ordered_set<cstring> endStates;
 
             // A calculation state is a verification end state if no other state of the
             // same calculation is its descendant. Otherwise, include all of the state's

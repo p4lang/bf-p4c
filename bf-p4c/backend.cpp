@@ -133,9 +133,10 @@ static void debug_hook(const char *parent, unsigned idx, const char *pass, const
     using namespace IndentCtl;
 
     if (LOGGING(5)) {
-        LOG5(pass << " [" << parent << " (" << idx << ")]:");
+        const int pipeId = n->to<IR::BFN::Pipe>()->id;
+        Logging::FileLog fileLog(pipeId, "backend_passes.log");
+        LOG5("PASS: " << pass << " [" << parent << " (" << idx << ")]:");
         ::dump(std::clog, n);
-        LOG5(std::endl);
     } else {
         LOG4(pass << " [" << parent << " (" << idx << ")]:" << indent << endl <<
              *n << unindent << endl); }
@@ -173,8 +174,8 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
     liveRangeReport = new LiveRangeReport(phv, table_summary, defuse);
     auto *pragmaAlias = new PragmaAlias(phv);
     addPasses({
-        flexibleLogging,
         new DumpPipe("Initial table graph"),
+        flexibleLogging,
         LOGGING(4) ? new DumpParser("begin_backend") : nullptr,
         new AdjustByteCountSetup,
 #if HAVE_FLATROCK

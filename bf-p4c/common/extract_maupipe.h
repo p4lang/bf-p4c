@@ -8,6 +8,7 @@
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/externInstance.h"
 #include "frontends/p4/typeMap.h"
+#include "bf-p4c/lib/assoc.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/midend/param_binding.h"
 #include "bf-p4c/arch/fromv1.0/resubmit.h"
@@ -40,10 +41,10 @@ const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *, BFN_Options& options
  *  map for the entire gress.  Depending on how complicated cases get, this may have to
  *  expanded at somepoint.
  */
-typedef std::map<const IR::Declaration_Instance *,
+typedef assoc::map<const IR::Declaration_Instance *,
                  const IR::MAU::AttachedMemory *> DeclarationConversions;
 // a mapping from Registers to the (converted) ActionSelectors that are bound to them
-typedef std::map<const IR::Declaration_Instance *, const IR::MAU::Selector *> StatefulSelectors;
+typedef assoc::map<const IR::Declaration_Instance *, const IR::MAU::Selector *> StatefulSelectors;
 
 class AttachTables : public PassManager {
     P4::ReferenceMap *refMap;
@@ -51,7 +52,7 @@ class AttachTables : public PassManager {
     // Have to keep all non StatefulAlus separate from other Declaration_Instances, because
     // selectors and StatefulAlus may have the same Declaration
     DeclarationConversions &converted;
-    std::map<const IR::Declaration_Instance *,
+    assoc::map<const IR::Declaration_Instance *,
              IR::MAU::StatefulAlu *> salu_inits;  // Register -> StatefulAlu
     StatefulSelectors   stateful_selectors;
 
@@ -102,7 +103,7 @@ class AttachTables : public PassManager {
      */
     class InitializeRegisterParams : public MauInspector {
         AttachTables &self;
-        std::map<const IR::Declaration_Instance *,
+        ordered_map<const IR::Declaration_Instance *,
              IR::MAU::StatefulAlu *> param_salus;  // RegisterParam -> StatefulAlu
         bool preorder(const IR::MAU::Primitive *prim) override;
         void end_apply() override;
@@ -125,8 +126,8 @@ class AttachTables : public PassManager {
      */
     class InitializeStatefulInstructions : public MauInspector {
         AttachTables &self;
-        std::set<const IR::Declaration_Instance *> register_actions;
-        std::map<const IR::MAU::StatefulAlu *, CreateSaluInstruction *> inst_ctor;
+        assoc::set<const IR::Declaration_Instance *> register_actions;
+        assoc::map<const IR::MAU::StatefulAlu *, CreateSaluInstruction *> inst_ctor;
 
         void postorder(const IR::Expression *) override { visitAgain(); }
         void postorder(const IR::GlobalRef *gref) override;
@@ -147,7 +148,7 @@ class AttachTables : public PassManager {
         P4::ReferenceMap *refMap;
         P4::TypeMap* typeMap;
 
-        std::map<cstring, safe_vector<const IR::MAU::BackendAttached *>> attached;
+        assoc::map<cstring, safe_vector<const IR::MAU::BackendAttached *>> attached;
         bool preorder(IR::MAU::Table *) override;
         bool preorder(IR::MAU::Action *) override;
         void postorder(IR::MAU::Table *) override;

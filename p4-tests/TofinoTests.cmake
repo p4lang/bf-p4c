@@ -1238,6 +1238,22 @@ p4c_add_tofino_success_reason(
   phase0_pragma_test
   )
 
+# P4C-4718
+set(TOFINO_DETERMINISM_TESTS_14
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/decaf_10/decaf_10.p4
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/stf/decaf_3.p4
+    ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/stf/decaf_8.p4
+  )
+foreach(t IN LISTS TOFINO_DETERMINISM_TESTS_14)
+  bfn_add_determinism_test_with_args("tofino" "${P414_TEST_ARCH}" ${t} "--std=p4-14")
+endforeach()
+
+set(TOFINO_DETERMINISM_TESTS_16 )
+foreach(t IN LISTS TOFINO_DETERMINISM_TESTS_16)
+  bfn_add_determinism_test_with_args("tofino" "tna" ${t} "")
+endforeach()
+
+
 set (NON_PR_ARISTA)
 foreach (t IN LISTS P16_TNA_ARISTA_FILES)
   list (APPEND NON_PR_ARISTA
