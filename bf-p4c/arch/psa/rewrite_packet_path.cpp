@@ -1,4 +1,4 @@
-#include "p4/methodInstance.h"
+#include "frontends/p4/methodInstance.h"
 #include "ir/ir.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
 #include "frontends/p4/coreLibrary.h"

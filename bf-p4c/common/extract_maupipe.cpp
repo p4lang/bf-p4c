@@ -3,7 +3,7 @@
 #include "slice.h"
 #include "ir/ir.h"
 #include "ir/dbprint.h"
-#include "common/name_gateways.h"
+#include "frontends/common/name_gateways.h"
 #include "frontends/p4-14/inline_control_flow.h"
 #include "frontends/p4/methodInstance.h"
 #include "frontends/p4/externInstance.h"

@@ -2,7 +2,7 @@
 #define BF_P4C_MIDEND_DEFUSE_H_
 
 #include "ir/ir.h"
-#include "common/resolveReferences/resolveReferences.h"
+#include "frontends/common/resolveReferences/resolveReferences.h"
 
 /** Compute defuse info within P4Parser and P4Control blocks in the midend.
  * This pass finds all uses and definitions of field/slice values in all controls
