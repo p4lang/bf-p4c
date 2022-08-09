@@ -10,6 +10,10 @@
 #include "lib/safe_vector.h"
 #include "bf-p4c/common/alloc.h"
 
+// FIXME -- should be in algorithm.h
+template<class C, class Pred> inline bool any_of(C c, Pred pred) {
+    return std::any_of(std::begin(c), std::end(c), pred); }
+
 struct Memories {
     /* track memory allocations within a single stage */
     // FIXME -- these constants likely all need to change for Flatrock, so they need

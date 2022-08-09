@@ -1,7 +1,7 @@
 #include <functional>
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/device.h"
-#include "bf-p4c/mau/tofino/memories.h"
+#include "bf-p4c/mau/flatrock/memories.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/mau/payload_gateway.h"
 #include "bf-p4c/mau/resource.h"
@@ -10,9 +10,10 @@
 #include "lib/log.h"
 #include "lib/range.h"
 
-namespace Tofino {
-// Despite the namespace name, this code is shared for Tofino, JBay and Cloudbreak
-// tofino1/2/3
+namespace Flatrock {
+// This code mimics Tofino for the large part and is a baseline to work with for Flatrock
+// As Flatrock memory internals are figured out it should be modified / fixed / updated to reflect
+// Flatrock HW
 
 static const char *use_type_to_str[] = {
     "EXACT", "ATCAM", "TERNARY", "GATEWAY", "TIND", "IDLETIME",
@@ -968,29 +969,9 @@ safe_vector<int> Memories::available_match_SRAMs_per_row(unsigned selected_colum
    select masks are initialized and provided to the way allocation algorithm */
 void Memories::break_exact_tables_into_ways() {
     exact_match_ways.clear();
-    for (auto *ta : exact_tables) {
-        auto match_ixbar = dynamic_cast<const IXBar::Use *>(ta->match_ixbar);
-        BUG_CHECK(match_ixbar, "No match ixbar allocated?");
-        for (auto u_id : ta->allocation_units()) {
-            (*ta->memuse)[u_id].ways.clear();
-            (*ta->memuse)[u_id].row.clear();
-            int index = 0;
-            for (auto &way : match_ixbar->way_use) {
-                SRAM_group *wa
-                      = new SRAM_group(ta, ta->layout_option->way_sizes[index],
-                                       ta->layout_option->way.width, index, way.source,
-                                       SRAM_group::EXACT);
-                wa->logical_table = u_id.logical_table;
-
-                exact_match_ways.push_back(wa);
-                (*ta->memuse)[u_id].ways.emplace_back(ta->layout_option->way_sizes[index],
-                                                      way.select_mask);
-                index++;
-            }
-        }
-        BUG_CHECK(match_ixbar->way_use.size() == ta->layout_option->way_sizes.size(),
-                  "Mismatch of memory ways and ixbar ways");
-    }
+    // for (auto *ta : exact_tables) {
+    //     // TODO
+    // }
 
     std::sort(exact_match_ways.begin(), exact_match_ways.end(),
               [=](const SRAM_group *a, const SRAM_group *b) {
@@ -1465,14 +1446,7 @@ void Memories::break_atcams_into_partitions() {
                 part->logical_table = lt;
                 atcam_partitions.push_back(part);
             }
-            auto match_ixbar = dynamic_cast<const IXBar::Use *>(ta->match_ixbar);
-            BUG_CHECK(match_ixbar, "No match ixbar allocated?");
-            BUG_CHECK(match_ixbar->way_use.size() == 1, "Somehow multiple ixbar ways "
-                      "calculated for an ATCAM table");
-            auto way = match_ixbar->way_use[0];
-            for (int j = 0; j < ta->layout_option->partition_sizes[lt]; j++) {
-                (*ta->memuse)[u_id].ways.emplace_back(search_bus_per_lt, way.select_mask);
-            }
+            // TODO
         }
     }
     std::sort(atcam_partitions.begin(), atcam_partitions.end(),
@@ -3563,28 +3537,6 @@ bool Memories::allocate_all_swbox_users() {
                 }
             }
         }
-
-#ifdef HAVE_JBAY
-        // JBay has no overflow bus between logical row 7 and 8
-        if ((Device::isMemoryCoreSplit()) && i == MATCH_CENTRAL_ROW) {
-            for (auto group : must_place_in_half) {
-                if (!(group->all_placed() && group->cm.all_placed())) {
-                    LOG4("    Group not finished " << group);
-                    // FIXME -- we started placing some synth2port and/or selector table(s) in
-                    // the upper half and didn't manage to fully place them.  This suggests a
-                    // problem in Memories::can_be_placed_in_half where it either incorrectly
-                    // computes the number of availble memories in the half, or doesn't
-                    // consider interactions between multiple tables.  The example in
-                    // P4C-3205 has both a selector and a register in the stage.
-                    // As a stopgap, we just fail memory allocation instead of aborting
-                    failure_reason = "syth2port failed over center on jbay";
-                    return false;
-                }
-            }
-            curr_oflow = nullptr;
-            must_place_in_half.clear();
-        }
-#endif /* HAVE_JBAY */
     }
 
     if (!action_bus_users.empty() || !synth_bus_users.empty()) {
@@ -3634,14 +3586,10 @@ bool Memories::gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int row
     if (ixbar_group != ta->match_ixbar->gateway_group())
         return false;
 
-    int lo = TableFormat::SINGLE_RAM_BYTES * search_bus.width_section;
+    // int lo = TableFormat::SINGLE_RAM_BYTES * search_bus.width_section;
 
     auto avail_bytes = exact_ta->table_format->avail_sb_bytes;
-    auto match_ixbar = dynamic_cast<const IXBar::Use *>(ta->match_ixbar);
-    BUG_CHECK(match_ixbar, "No match ixbar allocated?");
-    if (avail_bytes.getslice(lo, match_ixbar->gw_search_bus_bytes).popcount()
-        != match_ixbar->gw_search_bus_bytes)
-        return false;
+    // TODO
     return true;
 }
 
@@ -3671,48 +3619,8 @@ bool Memories::find_unit_gw(Memories::Use &alloc, cstring name, bool requires_se
  *  to see if it can reuse a search bus on the table.  If it cannot find a search bus to
  *  share, then it finds the first free search bus to use
  */
-bool Memories::find_search_bus_gw(table_alloc *ta, Memories::Use &alloc, cstring name) {
-    auto match_ixbar = dynamic_cast<const IXBar::Use *>(ta->match_ixbar);
-    BUG_CHECK(match_ixbar, "No match ixbar allocated?");
-    for (int i = 0; i < SRAM_ROWS; i++) {
-        for (int j = 0; j < GATEWAYS_PER_ROW; j++) {
-            if (gateway_use[i][j]) continue;
-            for (int k = 0; k < BUS_COUNT; k++) {
-                auto search = sram_search_bus[i][k];
-                if (search.free()) continue;
-                table_alloc *exact_ta = find_corresponding_exact_match(search.name);
-                if (exact_ta == nullptr) continue;
-                // FIXME: currently we have to fold in the table format to this equation
-                // in order to share a format
-                if (match_ixbar->gw_search_bus) {
-                    if (gw_bytes_reserved[i][k])
-                        continue;
-                    if (!gw_search_bus_fit(ta, exact_ta, i, k))
-                        continue;
-                }
-                // Because multiple ways could have different hash groups, this check is no
-                // longer valid
-                if (match_ixbar->gw_hash_group) {
-                    auto sbi = sram_search_bus[i][k];
-                    if (sbi.hash_group != match_ixbar->bit_use[0].group)
-                        continue;
-                    // FIXME: Currently all ways do not share the same hash_group
-                    // if (match_ixbar->bit_use[0].group
-                       //  != exact_match_ixbar->way_use[0].group)
-                         // continue;
-                }
-                exact_ta->attached_gw_bytes += match_ixbar->gw_search_bus_bytes;
-                gw_bytes_reserved[i][k] = true;
-                alloc.row.clear();
-                alloc.row.emplace_back(i, k);
-                alloc.gateway.unit = j;
-                gateway_use[i][j] = name;
-                return true;
-            }
-        }
-    }
-
-    return find_unit_gw(alloc, name, true);
+bool Memories::find_search_bus_gw(table_alloc *, Memories::Use &, cstring) {
+    return true;  // TODO
 }
 
 /** Finding a result bus for the gateway.  Will save associated information, such as payload
@@ -3868,47 +3776,9 @@ uint64_t Memories::determine_payload(table_alloc *ta) {
 bool Memories::allocate_all_payload_gw(bool alloc_search_bus) {
     LOG3("Allocate all payload gateways with alloc search bus set to "
                                         << (alloc_search_bus ? "true" : "false"));
-    for (auto *ta : payload_gws) {
-        auto match_ixbar = dynamic_cast<const IXBar::Use *>(ta->match_ixbar);
-        BUG_CHECK(match_ixbar, "No match ixbar allocated?");
-        safe_vector<UniqueId> u_ids;
-        UniqueId unique_id;
-        if (ta->table_link) {
-            u_ids = ta->table_link->allocation_units(nullptr, true);
-        } else {
-            BUG_CHECK(ta->layout_option->layout.gateway_match, "Payload requiring gateway must "
-                "have been originally a match table");
-            u_ids = ta->allocation_units(nullptr, true);
-        }
-
-        for (auto u_id : u_ids) {
-            auto &alloc = (*ta->memuse)[u_id];
-            alloc.type = Use::GATEWAY;
-            alloc.used_by = ta->table->build_gateway_name();
-            if (alloc_search_bus != match_ixbar->search_data())
-                continue;
-
-            bool gw_found = false;
-            if (alloc_search_bus)
-                gw_found = find_search_bus_gw(ta, alloc, u_id.build_name());
-            else
-                gw_found = find_unit_gw(alloc, u_id.build_name(), false);
-
-
-            table_alloc *payload_ta = ta->table_link ? ta->table_link : ta;
-            uint64_t payload_value = determine_payload(payload_ta);
-            bool result_bus_found = find_result_bus_gw(alloc, payload_value, u_id.build_name(),
-                                                       // Change this in a little bit
-                                                       payload_ta);
-            if (!(gw_found && result_bus_found)) {
-                if (!gw_found) LOG3("  failed to find gw for " << u_id);
-                if (!result_bus_found) LOG3("  failed to find result_bus for " << u_id);
-                failure_reason = "failed to place payload gw " + u_id.build_name()
-                               + (alloc_search_bus ? " with search bus" : " no search bus");
-                return false; }
-            BUG_CHECK(alloc.row.size() == 1, "Help me payload");
-        }
-    }
+    // for (auto *ta : payload_gws) {
+    //     // TODO
+    // }
     return true;
 }
 
@@ -3919,8 +3789,8 @@ bool Memories::allocate_all_payload_gw(bool alloc_search_bus) {
 bool Memories::allocate_all_normal_gw(bool alloc_search_bus) {
     for (auto *ta : normal_gws) {
         bool need_search_bus = false;
-        if (auto match_ixbar = dynamic_cast<const IXBar::Use *>(ta->match_ixbar)) {
-            need_search_bus = match_ixbar->search_data(); }
+        // if (auto match_ixbar = dynamic_cast<const IXBar::Use *>(ta->match_ixbar)) {
+        //     need_search_bus = match_ixbar->search_data(); }
         safe_vector<UniqueId> u_ids = ta->table_link
                                           ? ta->table_link->allocation_units(nullptr, true)
                                           : ta->allocation_units(nullptr, true);
@@ -4484,17 +4354,4 @@ std::ostream &operator<<(std::ostream &out, const safe_vector<Memories::table_al
     return out;
 }
 
-}  // end namespace Tofino
-
-template<int R, int C>
-std::ostream &operator<<(std::ostream& out, const BFN::Alloc2D<cstring, R, C>& alloc2d) {
-    for (int i = 0; i < R; i++) {
-        for (int j = 0; j < C; j++) {
-            cstring val = alloc2d[i][j];
-            if (!val) val = "-";
-            out << std::setw(10) << val << " ";
-        }
-        out << Log::endl;
-    }
-    return out;
-}
+}  // end namespace Flatrock

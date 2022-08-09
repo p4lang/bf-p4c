@@ -7,6 +7,7 @@
 #include "lib/bitops.h"
 #include "lib/range.h"
 #include "bf-p4c/mau/tofino/memories.h"
+#include "bf-p4c/mau/flatrock/memories.h"
 
 constexpr int Memories::SRAM_DEPTH;
 
@@ -55,4 +56,10 @@ std::ostream &operator<<(std::ostream &out, const Memories::Use::Way &w) {
     return out << std::endl;
 }
 
-Memories *Memories::create() { return new Tofino::Memories; }
+Memories *Memories::create() {
+#ifdef HAVE_FLATROCK
+    if (Device::currentDevice() == Device::FLATROCK)
+        return new Flatrock::Memories;
+#endif
+    return new Tofino::Memories;
+}

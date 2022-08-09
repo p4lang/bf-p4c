@@ -1,10 +1,10 @@
-#ifndef BF_P4C_MAU_TOFINO_MEMORIES_H_
-#define BF_P4C_MAU_TOFINO_MEMORIES_H_
+#ifndef BF_P4C_MAU_FLATROCK_MEMORIES_H_
+#define BF_P4C_MAU_FLATROCK_MEMORIES_H_
 
 #include <algorithm>
 #include "bf-p4c/mau/attached_entries.h"
-#include "bf-p4c/mau/tofino/input_xbar.h"
-#include "bf-p4c/mau/table_format.h"
+#include "bf-p4c/mau/flatrock/input_xbar.h"
+#include "bf-p4c/mau/flatrock/table_format.h"
 #include "bf-p4c/mau/instruction_memory.h"
 #include "bf-p4c/mau/action_format.h"
 #include "bf-p4c/mau/memories.h"
@@ -12,12 +12,110 @@
 #include "lib/alloc.h"
 #include "lib/safe_vector.h"
 
-namespace Tofino {
-// Despite the namespace name, this code is shared for Tofino, JBay and Cloudbreak
-// tofino1/2/3
+namespace Flatrock {
+
+/*
+ * -------------------------
+ * STM (Shared Table Memory)
+ * -------------------------
+ * An array of RAM used by PPU stages to store stateless and stateful tables.
+ * The STM is used for most SRAM-based table data that directly scales with the number of table
+ * entries. This includes hashtable entries, BPH descriptors, sparse trie bucket descriptors and
+ * buckets, action entries, stateful entries, etc.
+ *
+ * FPP = 1 iSTM (Ingress) + 1 eSTM (Egress)
+ *
+ * N_ISTM_ROWS
+ * N_ESTM_ROWS
+ * N_IPPU_STAGES
+ * N_EPPU_STAGES
+ * N_ISTM_ROWS / N_ESTM_ROWS != N_IPPU_STAGES / N_EPPU_STAGES
+ *
+ * 1 STM stage per PPU stage
+ * Each STM connected to previous and next STM stage
+ * Pipleline flops added between groups
+ *
+ * 2 STM Stages in a STM group
+ * All RAMs in a group are in the same pipeline stage
+ * STM_STAGES_PER_GROUP = 2
+ *
+ * STM_COLS_PER_STAGE
+ * Each column contains 1 RAM pair (STM UNIT) per row
+ * RAM = 1024 entries x 137 bit (128 + 9 ECC)
+ * 1 port for r/w
+ * ECC handled by users of RAM
+ *
+ * Interfaces
+ * 6 x Read requests      : 1 bit valid, 20 bit address
+ * 6 x Read response      : 1 bit valid,                 137 bit data
+ * 1 x Write request      : 1 bit valid, 20 bit address, 137 bit data
+ * 1 x Spare read request : 1 bit valid, 11 bit address
+ * 1 x Spare read response: 1 bit valid,                 137 bit data
+ * 1 x Spare write request: 1 bit valid, 11 bit address, 137 bit data
+ *
+ * 20 bit Address = Full Array in max config
+ * - 10 MSBs : RAM access (VPN) - 1024 RAMs?
+ * - 10 LSBs : Address for selected RAM
+ * - Address broadcase to all RAMs on a request
+ * - No match scenario : valid = 0, data = 0x0
+ * - Less bits required in egress as it has a smaller config
+ *
+ * Q.The PPU restricts tables with read/write access to only use RAMs with the same delay, which
+ * means that only 18 bits are needed on the write ports to handle the maximum size table, but these
+ * are also kept at the same size. - Why 18 bits?
+ *
+ * Spare R/W
+ * - Only access top RAM pair within each column
+ * - 11 bit address : 1 MSB (Choose from RAM pair) + 10 LSBs for RAM access
+ *
+ * Q. What purpose does spare ram r/w serve?
+ * Q. What if the table has multiple columns assigned within a stage? Which one os the first RAM
+ * pair?
+ * A. The 10 LSBs will address a RAM pair, so this is not table specific but RAM specific request
+ *
+ * STM UNIT:
+ * - A pair of RAMs
+ * - Each RAM has 1024 entries x 137 bit data (128 + 9 ECC)
+ * - Logic to propogate vertical and Horizontal buses
+ *
+ * Requests / Responses:
+ * - Configured variable delay ensures read responses from RAMs in different stages arrive at the
+ *   final STM output port at the same cycle
+ * - For spare rd/wr VPN RAM 0 = 0 and VPN RAM1 = 1
+ *
+ * Delays:
+ * - STM_RAM_CFG_DEL (0 <= x <= 16)
+ *   16 = 1 cycle off bus + 1 cycle on bus + 14 (2 x 7 (Ingress stages) / 2(stages per group) - 1)
+ *
+ * Q. How is the distance (in cycles) from PPU stage to its RAMs calculated?
+ * A. Same cycles to reach an STM group i.e. 2 stages
+ *
+ * Q. What is an STM management used for?
+ * A. How CPU accesses the RAMs, driver adds entries. Stashes not used, atomic way of doing it
+ * otherwise.
+ *
+ * Q. Can an STM unit be added to a table dynamically by reconfiguring delays / addresses ?
+ *
+ * Q. Separate files for STM / SCM ?
+ *
+ * - Use vertical bus to allocate as many RAMs required and then use horizontal bus to add more RAMs
+ *   from other columns
+ * - DPU's used for dual port stats / meter / counter memorys allocated as RAMs
+ * - Spare bank has less latency and has an extra rd/wr port to it (2 rd / 2 wr in same cycle)
+ * - DPU's need to be allocated the spare bank row (top row) - place them first as they are most
+ *   constrained
+ * - No delays on vertical buses within a stage
+ * - 2 Horizontal buses on each row
+ *
+ * - P4 logical tables mapped to difference physical table
+ *   Sequence of 16 tables per stage used for predication
+ * - Dynamic config - multiple p4 tables map to same physical table
+ */
 
 struct Memories : public ::Memories {
     /* track memory allocations within a single stage */
+    // FIXME -- these constants likely all need to change for Flatrock, so they need
+    // to become virtual params of some kind.
     static constexpr int SRAM_ROWS = 8;
     static constexpr int SRAM_COLUMNS = 10;
     static constexpr int STASH_UNITS = 2;
@@ -667,6 +765,6 @@ struct Memories : public ::Memories {
     void visitUse(const Use &, std::function<void(cstring &, update_type_t)> fn);
 };
 
-}  // namespace Tofino
+}  // namespace Flatrock
 
-#endif /* BF_P4C_MAU_TOFINO_MEMORIES_H_ */
+#endif /* BF_P4C_MAU_FLATROCK_MEMORIES_H_ */
