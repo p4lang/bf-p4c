@@ -1,8 +1,10 @@
 #ifndef BF_P4C_PARDE_FLATROCK_H_
 #define BF_P4C_PARDE_FLATROCK_H_
 
-#include "bf-p4c/common/flatrock_parser.h"
 #include <iostream>
+#include "bf-p4c/common/flatrock_parser.h"
+#include "lib/cstring.h"
+#include "lib/exceptions.h"
 
 /*
  * Output ALU0 instruction in the form e.g. { opcode: 2, msb: 5, lsb: 2 }.
@@ -273,6 +275,78 @@ inline std::ostream& operator<<(std::ostream& out, const Flatrock::metadata_sele
         BUG("Invalid metadata selection");
     }
     return out;
+}
+
+namespace Flatrock {
+
+enum class ExtractType {
+    None = 0,
+    Packet,
+    Other,
+};
+
+enum class ExtractSubtype {
+    None = 0,
+    Constant,
+    PovFlags,
+    PovState,
+    ChecksumError,
+    Udf0,
+    Udf1,
+    Udf2,
+    Udf3,
+    Ghost,
+    Tm,
+    Bridge,
+};
+
+struct ExtractInfo {
+    cstring container;
+    int value;
+    ExtractSubtype subtype;
+};
+}  // namespace Flatrock
+
+inline std::ostream& operator<<(std::ostream& os, const Flatrock::ExtractType type) {
+#define CASE(VAL)                    \
+    case Flatrock::ExtractType::VAL: \
+        return os << #VAL
+
+    switch (type) {
+        CASE(None);
+        CASE(Packet);
+        CASE(Other);
+        default:
+            BUG("Unexpected ExtractType");
+    }
+
+#undef CASE
+}
+
+inline std::ostream& operator<<(std::ostream& os, const Flatrock::ExtractSubtype subtype) {
+#define CASE(VAL)                       \
+    case Flatrock::ExtractSubtype::VAL: \
+        return os << #VAL
+
+    switch (subtype) {
+        CASE(None);
+        CASE(Constant);
+        CASE(PovFlags);
+        CASE(PovState);
+        CASE(ChecksumError);
+        CASE(Udf0);
+        CASE(Udf1);
+        CASE(Udf2);
+        CASE(Udf3);
+        CASE(Ghost);
+        CASE(Tm);
+        CASE(Bridge);
+
+        default:
+            BUG("Unexpected ExtractSubtype");
+    }
+
+#undef CASE
 }
 
 #endif  /* BF_P4C_PARDE_FLATROCK_H_ */

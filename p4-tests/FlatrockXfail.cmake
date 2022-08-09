@@ -101,14 +101,18 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/stf/varbit_constant.p4
   )
 
+p4c_add_xfail_reason("tofino5"
+  "3 expected packets on port 2 not seen"
+  extensions/p4_tests/p4_16/flatrock/parser_constant.p4
+  )
+
 # *********************************************************************************************** #
 # ** TNA tests that "should" work *************************************************************** #
 # *********************************************************************************************** #
 p4c_add_xfail_reason("tofino5"
-  "Compiler Bug: .* Null member"
+  "Compiler Bug: Could not find hdr_id"
   extensions/p4_tests/p4_16/stf/failed_elim_valid_bit.p4
   extensions/p4_tests/p4_16/stf/p4c-2638.p4
-  extensions/p4_tests/p4_16/stf/p4c-2695.p4
   extensions/p4_tests/p4_16/stf/wide_arith_non_64.p4
   )
 
@@ -154,7 +158,7 @@ p4c_add_xfail_reason("tofino5"
   "error: Constant literals only useable on 8-bit PHEs"
   extensions/p4_tests/p4_16/stf/backend_bug1c.p4
 #  extensions/p4_tests/p4_16/stf/bit_or_in_same_state.p4
-#  extensions/p4_tests/p4_16/stf/p4c-2695.p4
+  extensions/p4_tests/p4_16/stf/p4c-2695.p4
 #  extensions/p4_tests/p4_16/stf/p4c-2638.p4
   )
 
@@ -273,14 +277,10 @@ p4c_add_xfail_reason("tofino5"
   "Compiler Bug: No memory allocation for gateway"
   extensions/p4_tests/p4_16/stf/p4c-2772-c.p4
   )
-
-p4c_add_xfail_reason("tofino5"
-  "error: Duplicate element"
-  extensions/p4_tests/p4_16/stf/update_checksum_4.p4
-  )
-
+  
 p4c_add_xfail_reason("tofino5"
   "Assembler BUG"
+  extensions/p4_tests/p4_16/stf/update_checksum_4.p4
   extensions/p4_tests/p4_16/stf/update_checksum_6.p4
   )
 

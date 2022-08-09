@@ -308,16 +308,17 @@ class PhvBuilderExtract {
     match_t match = {match_all, match_all};
 #emit
     PHV::Size size = PHV::Size::null;
+    ::Flatrock::ExtractType type1 = ::Flatrock::ExtractType::None;
+    ::Flatrock::ExtractType type2 = ::Flatrock::ExtractType::None;
+
+    std::vector<::Flatrock::ExtractInfo> offsets1 = {};
+    std::vector<::Flatrock::ExtractInfo> offsets2 = {};
 #end
-    unsigned type1;
     boost::optional<int> hdr1_id = boost::none;
     boost::optional<cstring> hdr1_name = boost::none;
-    std::vector<std::pair<cstring, int>> offsets1 = {};
 
-    unsigned type2;
     boost::optional<int> hdr2_id = boost::none;
     boost::optional<cstring> hdr2_name = boost::none;
-    std::vector<std::pair<cstring, int>> offsets2 = {};
 #emit
     ::BFN::DebugInfo debug;
 #end
@@ -356,7 +357,8 @@ class PhvBuilderExtract {
         out << IndentCtl::endl << "offsets=[";
         std::string sep = "";
         for (auto &offset : offsets1) {
-            out << sep << '(' << offset.first << ", " << offset.second << ')';
+            out << sep << '(' << offset.container << ", " << offset.subtype << ", " << offset.value
+                << ')';
             sep = ", ";
         }
         out << ']';
@@ -366,7 +368,8 @@ class PhvBuilderExtract {
         out << IndentCtl::endl << "offsets=[";
         sep = "";
         for (auto &offset : offsets2) {
-            out << sep << '(' << offset.first << ", " << offset.second << ')';
+            out << sep << '(' << offset.container << ", " << offset.subtype << ", " << offset.value
+                << ')';
             sep = ", ";
         }
         out << ']';
@@ -415,6 +418,8 @@ class Parser : BFN::BaseLoweredParser {
     inline Vector<Profile> profiles;
     inline Vector<AnalyzerStage> analyzer;
     inline Vector<PhvBuilderGroup> phv_builder;
+    // FIXME: Most likely not needed once hdr_id list is properly set up.
+    inline int payload_offset;          
 #noconstructor
     Parser() : BaseLoweredParser(INGRESS) {}
     visit_children {

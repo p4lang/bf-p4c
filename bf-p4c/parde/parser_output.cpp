@@ -236,10 +236,10 @@ struct ParserAsmSerializer : public ParserInspector {
         }
 
         auto output_extract = [this, &phv_builder_extract, &source](
-                const unsigned int type,
+                const Flatrock::ExtractType type,
                 const boost::optional<int> &hdr_id, const boost::optional<cstring> &hdr_name,
-                const PHV::Size size, const std::vector<std::pair<cstring, int>> &offsets) {
-            if (type == 0) {
+                const PHV::Size size, const std::vector<Flatrock::ExtractInfo> &offsets) {
+            if (type == Flatrock::ExtractType::Packet) {
                 if (hdr_id)
                     out << indent << "- " << source << ' ' << *hdr_id;
                 else if (hdr_name)
@@ -252,31 +252,27 @@ struct ParserAsmSerializer : public ParserInspector {
                         out << "[ ";
                     std::string sep = "";
                     for (auto &offset : offsets) {
-                        out << sep << offset.first;
+                        out << sep << offset.container;
                         if (size != PHV::Size::b8)
                             out << " msb_offset ";
                         else
                             out << " offset ";
-                        out << offset.second;
+                        out << offset.value;
                         sep = ", ";
                     }
                     if (size != PHV::Size::b32)
                         out << " ]";
                 }
             } else {
-                out << indent << "- ";
-                if (size != PHV::Size::b32)
-                    out << "{ ";
+                out << indent << "- { ";
                 std::string sep = "";
                 for (auto &offset : offsets) {
-                    out << sep << offset.first;
-                    // FIXME:: handle the subtypes
-                    out << ": constant ";
-                    out << offset.second;
+                    out << sep << offset.container;
+                    out << ": " << get_subtype_label(offset.subtype) << " ";
+                    out << offset.value;
                     sep = ", ";
                 }
-                if (size != PHV::Size::b32)
-                    out << " }";
+                out << " }";
             }
         };
 
@@ -310,6 +306,37 @@ struct ParserAsmSerializer : public ParserInspector {
 
         indent--;
         return true;
+    }
+
+    const char* get_subtype_label(const Flatrock::ExtractSubtype subtype) const {
+        using namespace Flatrock;
+
+        switch (subtype) {
+            case ExtractSubtype::Constant:
+                return "constant";
+            case ExtractSubtype::PovFlags:
+                return "pov_flags";
+            case ExtractSubtype::PovState:
+                return "pov_state";
+            case ExtractSubtype::ChecksumError:
+                return "checksum_and_error";
+            case ExtractSubtype::Udf0:
+                return "udf0";
+            case ExtractSubtype::Udf1:
+                return "udf1";
+            case ExtractSubtype::Udf2:
+                return "udf2";
+            case ExtractSubtype::Udf3:
+                return "udf3";
+            case ExtractSubtype::Ghost:
+                return "ghost";
+            case ExtractSubtype::Tm:
+                return "tm";
+            case ExtractSubtype::Bridge:
+                return "bridge";
+            default:
+                BUG("Unexpected ExtractSubtype");
+        }
     }
 
     bool preorder(const IR::Flatrock::PseudoParser* /*pparser*/) override {

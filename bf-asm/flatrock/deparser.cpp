@@ -103,15 +103,21 @@ struct ftr_str_info_t {
 
 typedef std::map<const Phv::Register *, unsigned> pov_map_t;
 
-template<class REG, class ITER>
-void fill_string(int idx, int seq, ITER begin, ITER end, const pov_map_t &pov_map, REG &reg) {
+template <class REG, class ITER>
+void fill_string(int idx, int seq, ITER begin, ITER end, const pov_map_t &pov_map, REG &reg,
+                 unsigned int bytes) {
     unsigned i = 0;
     reg.sel[idx].seq = seq;
+    // FIXME: Change to actual header_id of the string, for now sets 0xfe (payload) because it's
+    // always valid.
+    reg.sel[idx].hdr = 0xfe;
+    reg.sel[idx].str_len_type = 0;
+    reg.sel[idx].str_len = bytes;
     for (auto &pov : begin->pov)
         reg.sel[idx].pov_sel[i++] = pov_map.at(&pov->reg) + pov->lo;
     i = 0;
     for (auto it = begin; it != end; ++it) {
-        for (int j = 0; j < it->what->size(); ++j) {
+        for (int j = it->what->size() - 1; j >= 0; --j) {
             reg.el_type[idx].el_type[i] = 1;  // PHV only for now
             BUG_CHECK(it->what->template is<Deparser::FDEntry::Phv>(), "not PHV");
             reg.el_value[idx].value[i] = it->what->encode() + j;
@@ -262,6 +268,16 @@ template<> void Deparser::write_config(Target::Flatrock::deparser_regs &regs) {
         { 32, 0, phvxb.str32.str32_cfg[0].en, phvxb.str32.str32_cfg[0].sel },
     };
 
+    // FIXME: Select the desired config, for now always config 0.
+    phvxb.str8.key[0].key_wh = 0xFFFFFFFFUL;
+    phvxb.str8.key[0].key_wl = 0xFFFFFFFFUL;
+
+    phvxb.str16.key[0].key_wh = 0xFFFFFFFFUL;
+    phvxb.str16.key[0].key_wl = 0xFFFFFFFFUL;
+
+    phvxb.str32.key[0].key_wh = 0xFFFFFFFFUL;
+    phvxb.str32.key[0].key_wl = 0xFFFFFFFFUL;
+
     auto next = dictionary[EGRESS].begin();
     unsigned max_bytes = 32;
     int seq = 0;
@@ -280,9 +296,9 @@ template<> void Deparser::write_config(Target::Flatrock::deparser_regs &regs) {
         i->en[i->use] = 1;
         i->sel[i->use] = 0;
         switch (i->len) {
-        case 8: fill_string(i->use*4, seq, it, next, e_pov_map, strings.str8); break;
-        case 16: fill_string(i->use*4, seq, it, next, e_pov_map, strings.str16); break;
-        case 32: fill_string(i->use*4, seq, it, next, e_pov_map, strings.str32); break;
+        case 8: fill_string(i->use*4, seq, it, next, e_pov_map, strings.str8, bytes); break;
+        case 16: fill_string(i->use*4, seq, it, next, e_pov_map, strings.str16, bytes); break;
+        case 32: fill_string(i->use*4, seq, it, next, e_pov_map, strings.str32, bytes); break;
         default: BUG("bad size"); }
         ++seq;
         ++i->use;

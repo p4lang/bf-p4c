@@ -41,6 +41,7 @@ struct DeparserAsmOutput {
     DeparserAsmOutput(const IR::BFN::Pipe* pipe, const PhvInfo &phv, const ClotInfo &clot,
                       gress_t);
 
+    const IR::BFN::Pipe*        pipe;
     const PhvInfo               &phv;
     const ClotInfo              &clot;
 

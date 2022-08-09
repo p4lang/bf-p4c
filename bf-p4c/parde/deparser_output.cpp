@@ -390,16 +390,26 @@ struct OutputDigests : public Inspector {
 
 /// Generate the assembly for packet body offset
 struct OutputPacketBodyOffset : public Inspector {
-    explicit OutputPacketBodyOffset(std::ostream& out) : out(out), indent(1) { }
+    explicit OutputPacketBodyOffset(std::ostream& out, const IR::BFN::Pipe* pipe)
+        : out(out), pipe(pipe), indent(1) {}
 
     bool preorder(BFN_MAYBE_UNUSED const IR::BFN::LoweredDeparser* deparser) override {
 #if HAVE_FLATROCK
         if (Device::currentDevice() == Device::FLATROCK && deparser->gress == EGRESS) {
+            // FIXME: Most likely not needed once hdr_id list is properly set up.
+            BUG_CHECK(pipe != nullptr, "No pipe");
+
+            const auto parsers = pipe->thread[INGRESS].parsers;
+            BUG_CHECK(parsers.size() == 1, "Expected exactly one ingress parser");
+
+            const auto* parser = parsers.front()->to<IR::Flatrock::Parser>();
+            BUG_CHECK(parser != nullptr, "Expected a lowered parser");
+
             out << indent << "packet_body_offset:" << std::endl;
             AutoIndent pboIndent(indent);
 
             out << indent << "hdr: " << payloadHeaderName << std::endl;
-            out << indent << "offset: " << 0 << std::endl;
+            out << indent << "offset: " << parser->payload_offset << std::endl;
             out << indent << "var_off_pos: " << 0 << std::endl;
             out << indent << "var_off_len: " << 0 << std::endl;
         }
@@ -410,6 +420,7 @@ struct OutputPacketBodyOffset : public Inspector {
 
  private:
     std::ostream& out;
+    const IR::BFN::Pipe* pipe;
     indent_t indent;
 };
 
@@ -420,7 +431,7 @@ struct OutputPacketBodyOffset : public Inspector {
 DeparserAsmOutput::DeparserAsmOutput(const IR::BFN::Pipe* pipe,
                                      const PhvInfo &phv, const ClotInfo &clot,
                                      gress_t gress)
-        : phv(phv), clot(clot), deparser(nullptr) {
+        : pipe(pipe), phv(phv), clot(clot), deparser(nullptr) {
     auto* abstractDeparser = pipe->thread[gress].deparser;
     BUG_CHECK(abstractDeparser != nullptr, "No deparser?");
     deparser = abstractDeparser->to<IR::BFN::LoweredDeparser>();
@@ -435,7 +446,7 @@ operator<<(std::ostream& out, const DeparserAsmOutput& deparserOut) {
     deparserOut.deparser->apply(OutputChecksums(out));
     deparserOut.deparser->apply(OutputParameters(out));
     deparserOut.deparser->apply(OutputDigests(out, deparserOut.phv));
-    deparserOut.deparser->apply(OutputPacketBodyOffset(out));
+    deparserOut.deparser->apply(OutputPacketBodyOffset(out, deparserOut.pipe));
 
     return out;
 }
