@@ -5,7 +5,7 @@ import subprocess
 import sys
 import threading
 
-class RunCmd(threading.Thread):
+class RunCmd:
     def __init__(self, cmd, timeout):
         threading.Thread.__init__(self)
         self.cmd = cmd
@@ -13,21 +13,19 @@ class RunCmd(threading.Thread):
         self.return_code = None
         self.out = None
         self.err = None
-        self.is_timed_out = False
-        self.Run()
+        self.run()
 
     def run(self):
-        self.p = subprocess.Popen(self.cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8")
-        self.out, self.err = self.p.communicate()
-        self.return_code = self.p.returncode
-
-    def Run(self):
-        self.start()
-        self.join(self.timeout)
-
-        if self.is_alive():
-            print('\nTerminating process for command:', self.cmd)
-            self.is_timed_out = True
-            self.p.terminate()
-            self.join(10)
-            print('Process terminated')
+        try:
+            result = subprocess.run(self.cmd, shell=True, capture_output=True,
+                                    encoding="utf-8", timeout=self.timeout)
+            self.out = result.stdout
+            self.err = result.stderr
+            self.return_code = result.returncode
+        except subprocess.TimeoutExpired as to:
+            print("Timeout, process killed")
+            if to.stdout is not None:
+                print("stdout:\n", to.stdout)
+            if to.stderr is not None:
+                print("stderr:\n", to.stderr)
+            raise

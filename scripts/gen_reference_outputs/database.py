@@ -127,8 +127,13 @@ def test_metrics(db_curr, db_master):
             if curr in db_master:
                 master_info = db_master[curr]
                 master_metrics = extract_info(master_info)
-                for i, cmetric in enumerate(curr_metrics):
-                    result += compare_metrics(cmetric, master_metrics[i])
+                if len(curr_metrics) != len(master_metrics):
+                    result = -1
+                    print('Got different set of metrics in current run and in master '
+                          f'({len(curr_metrics)} vs. {len(master_metrics)})')
+                else:
+                    for i, cmetric in enumerate(curr_metrics):
+                        result += compare_metrics(cmetric, master_metrics[i])
             else:
             	print('Nothing to compare, possibly new test added')
             	for i, cmetric in enumerate(curr_metrics):
