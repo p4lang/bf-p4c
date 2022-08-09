@@ -2075,3 +2075,9 @@ p4c_add_xfail_reason("tofino"
   "Cannot unify type 'PortId_t' with type 'bit<32>'"
   testdata/p4_16_samples/psa-subtract-inst1.p4
 )
+
+# p4c update 2022-08-09
+p4c_add_xfail_reason("tofino"
+  "Currently in p4c, the table .* cannot perform a range match on key .* as the key does not fit in under 5 PHV nibbles"
+  testdata/p4_16_samples/psa-example-range-match.p4
+)
