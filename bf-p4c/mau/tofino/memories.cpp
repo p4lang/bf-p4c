@@ -4486,15 +4486,3 @@ std::ostream &operator<<(std::ostream &out, const safe_vector<Memories::table_al
 
 }  // end namespace Tofino
 
-template<int R, int C>
-std::ostream &operator<<(std::ostream& out, const BFN::Alloc2D<cstring, R, C>& alloc2d) {
-    for (int i = 0; i < R; i++) {
-        for (int j = 0; j < C; j++) {
-            cstring val = alloc2d[i][j];
-            if (!val) val = "-";
-            out << std::setw(10) << val << " ";
-        }
-        out << Log::endl;
-    }
-    return out;
-}
