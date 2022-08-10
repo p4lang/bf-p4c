@@ -3,6 +3,18 @@
  */
 @Library('bf-jenkins-utils@master')_
 
+properties([
+     buildDiscarder(BuildHistoryManager([
+     [
+         matchAtMost: 10,
+         continueAfterMatch: false
+     ],
+     [
+         actions: [DeleteBuild()]
+     ]
+     ]))
+])
+
 node {
     // kill any previous runs of the same PR that may be in progress
     stopPreviousRuns(this)
