@@ -161,22 +161,23 @@ template <> int Parser::State::Match::Save::write_output_config(Target::JBay::pa
     int dest = where->reg.parser_id();
     int mask = (1 << (1 + where->hi/8U)) - (1 << (where->lo/8U));
     int lo = this->lo;
+    // 8b containers are paired in 16b chunks in the parser
+    // If we're extracting to the upper half of a chunk (the odd 8b register) then
+    // adjust the extract type to be to the upper half
     if (where->reg.size == 8 && mask == 1) {
         if (where->reg.index & 1) {
-            mask <<= 1;
-            --lo; } }
+            mask <<= 1; } }
     if (flags & ROTATE) error(where.lineno, "no rotate support in Tofino2");
 
+    // All containers are 16b in the parser. 32b container extracts are implemented as
+    // a pair of 16b extracts.
     int bytemask = (mask >> 2) & 3;
     if (bytemask) {
-        write_output_slot(where.lineno, row, used, lo + (bytemask == 2), dest+1, bytemask,
-                                                                          flags & OFFSET);
+        write_output_slot(where.lineno, row, used, lo, dest + 1, bytemask, flags & OFFSET);
         lo += bitcount(mask & 0xc); }
 
     bytemask = mask & 3;
-    if (bytemask)
-        write_output_slot(where.lineno, row, used, lo + (bytemask == 2), dest, bytemask,
-                                                                         flags & OFFSET);
+    if (bytemask) write_output_slot(where.lineno, row, used, lo, dest, bytemask, flags & OFFSET);
     return hi;
 }
 

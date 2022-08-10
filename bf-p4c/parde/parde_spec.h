@@ -207,6 +207,9 @@ class PardeSpec {
     /// The maximum parse depth for the given gress
     virtual size_t maxParseDepth(gress_t /*gress*/) const { return SIZE_MAX; }
 
+    /// Do all extractors support single-byte extracts?
+    virtual bool parserAllExtractorsSupportSingleByte() const = 0;
+
     // Number of deparser consant bytes available
     virtual unsigned numDeparserConstantBytes() const = 0;
 
@@ -277,6 +280,8 @@ class TofinoPardeSpec : public PardeSpec {
     size_t minParseDepth(gress_t gress) const override { return gress == EGRESS ? 65 : 0; }
 
     size_t maxParseDepth(gress_t gress) const override { return gress == EGRESS ? 160 : SIZE_MAX; }
+
+    bool parserAllExtractorsSupportSingleByte() const override { return false; }
 
     unsigned numDeparserConstantBytes() const override { return 0; }
     unsigned numDeparserChecksumUnits() const override { return 6; }
@@ -350,6 +355,7 @@ class JBayPardeSpec : public PardeSpec {
     unsigned maxClotsLivePerGress() const override { return 16; }
     unsigned byteInterClotGap() const override { return 3; }
     unsigned bitMaxClotPos() const override { return 384 * 8; /* 384 bytes */ }
+    bool parserAllExtractorsSupportSingleByte() const override { return true; }
 
     unsigned numDeparserConstantBytes() const override { return 8; }
     unsigned numDeparserChecksumUnits() const override { return 8; }

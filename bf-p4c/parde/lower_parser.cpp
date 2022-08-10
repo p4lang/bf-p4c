@@ -198,6 +198,9 @@ struct ExtractSimplifier {
                 // Shift the slice to its proper place in the input buffer.
                 auto bufferRange = bufferSource->range;
 
+                // Mask to round bit positions down to the nearest byte boundary
+                const int byteMask = ~(8 - 1);
+
                 // Expand the buffer slice so that it will write to the entire
                 // destination container, with this slice in the proper place.
                 // If the slice didn't fit the container exactly, this will
@@ -210,8 +213,12 @@ struct ExtractSimplifier {
                   slice.container_slice().toOrder<Endian::Network>(slice.container().size());
 
                 const nw_bitrange finalBufferRange =
-                  bufferRange.shiftedByBits(-containerRange.lo)
-                             .resizedToBits(slice.container().size());
+                    Device::pardeSpec().parserAllExtractorsSupportSingleByte()
+                        ? bufferRange.shiftedByBits(-(containerRange.lo % 8))
+                              .resizedToBits(((containerRange.hi & byteMask) + 7) -
+                                             (containerRange.lo & byteMask) + 1)
+                        : bufferRange.shiftedByBits(-containerRange.lo)
+                              .resizedToBits(slice.container().size());
 
                 LOG4("mapping input buffer field slice " << bufferRange
                       << " into " << slice.container() << " " << containerRange
@@ -228,7 +235,14 @@ struct ExtractSimplifier {
                 else
                     newSource = new IR::BFN::LoweredMetadataRVal(byteFinalBufferRange);
 
-                auto* newExtract = new IR::BFN::LoweredExtractPhv(slice.container(), newSource);
+                auto containerRef = new IR::BFN::ContainerRef(slice.container());
+                if (Device::pardeSpec().parserAllExtractorsSupportSingleByte()) {
+                    nw_bitrange newRange;
+                    newRange.lo = containerRange.lo & byteMask;
+                    newRange.hi = (containerRange.hi & byteMask) + 7;
+                    containerRef->range = newRange;
+                }
+                auto* newExtract = new IR::BFN::LoweredExtractPhv(newSource, containerRef);
 
                 newExtract->write_mode = extract->write_mode;
                 newExtract->debug.info.push_back(debugInfoFor(extract, slice,
@@ -271,18 +285,58 @@ struct ExtractSimplifier {
         }
     }
 
+    /// Create a new merged extract from a sequence of extracts.
+    /// The buffer range must have been identified already.
+    /// All extracts should have the same write mode.
+    ///
+    /// @param container   The container to create the merged extract for
+    /// @param extracts    The extracts to merge
+    /// @param bufferRange The calculated range of buffer bytes to extract
     template <typename InputBufferRValType>
-    static const IR::BFN::LoweredExtractPhv*
+    static const IR::BFN::LoweredExtractPhv* createMergedExtract(PHV::Container container,
+                                                                 const ExtractSequence& extracts,
+                                                                 nw_byteinterval bufferRange) {
+        // Create a single combined extract that implements all of the
+        // component extracts. Each merged extract writes to an entire container.
+        const auto* finalBufferValue = new InputBufferRValType(*toClosedRange(bufferRange));
+
+        auto containerRef = new IR::BFN::ContainerRef(container);
+
+        auto extractedSizeBits = bufferRange.toUnit<RangeUnit::Bit>().size();
+        if (size_t(extractedSizeBits) != container.size()) {
+            nw_bitrange newRange;
+            newRange.lo = extracts[0]->dest->range->lo;
+            newRange.hi = newRange.lo + extractedSizeBits - 1;
+            containerRef->range = newRange;
+        }
+
+        auto* mergedExtract = new IR::BFN::LoweredExtractPhv(finalBufferValue, containerRef);
+
+        mergedExtract->write_mode = extracts[0]->write_mode;
+
+        for (auto* extract : extracts)
+            mergedExtract->debug.mergeWith(extract->debug);
+
+        return mergedExtract;
+    }
+
+    template <typename InputBufferRValType>
+    static const ExtractSequence
     mergeExtractsFor(PHV::Container container, const ExtractSequence& extracts) {
         BUG_CHECK(!extracts.empty(), "Trying merge an empty sequence of extracts?");
 
-        if (extracts.size() == 1)
-            return extracts[0];
+        ExtractSequence rv;
+
+        if (extracts.size() == 1) {
+            rv.push_back(extracts[0]);
+            return rv;
+        }
 
         // Merge the input buffer range for every extract that writes to
         // this container. They should all be the same, but if they aren't
         // we want to know about it.
         nw_byteinterval bufferRange;
+        std::map<int, std::map<int, ordered_set<const IR::BFN::LoweredExtractPhv*>>> extractDstSrcs;
 
         const IR::BFN::LoweredExtractPhv* prev = nullptr;
 
@@ -291,7 +345,8 @@ struct ExtractSimplifier {
 
             BUG_CHECK(bufferSource, "Unexpected non-buffer source");
 
-            if (std::is_same<InputBufferRValType, IR::BFN::LoweredMetadataRVal>::value)
+            if (std::is_same<InputBufferRValType, IR::BFN::LoweredMetadataRVal>::value &&
+                !Device::pardeSpec().parserAllExtractorsSupportSingleByte())
                 BUG_CHECK(toHalfOpenRange(Device::pardeSpec().byteInputBufferMetadataRange())
                           .contains(bufferSource->byteInterval()),
                           "Extract from out of the input buffer range: %1%",
@@ -301,31 +356,65 @@ struct ExtractSimplifier {
                 BUG("Inconsistent parser write semantic on %1%", container);
 
             bufferRange = bufferSource->byteInterval().unionWith(bufferRange);
+            unsigned int lo =
+                extract->dest->range ? (unsigned int)(extract->dest->range->lo / 8) : 0;
+            unsigned int hi = extract->dest->range ? (unsigned int)(extract->dest->range->hi / 8)
+                                                   : (unsigned int)(container.size() / 8 - 1);
+            for (unsigned int i = 0; i < hi - lo + 1; i++) {
+                extractDstSrcs[lo + i][bufferSource->byteInterval().lo + i].emplace(extract);
+            }
 
             prev = extract;
         }
 
         BUG_CHECK(!bufferRange.empty(), "Extracting zero bytes?");
 
-        auto extractedSizeBits = bufferRange.toUnit<RangeUnit::Bit>().size();
 
-        BUG_CHECK(size_t(extractedSizeBits) == container.size(),
-            "PHV allocation is invalid for container %1%"
-            " (number of extracted bits does not match container size).", container);
+        if (Device::pardeSpec().parserAllExtractorsSupportSingleByte()) {
+            // The device supports single-byte extracts from all extractors, so merge byte extracts
+            // where possible.
+            while (extractDstSrcs.size()) {
+                ExtractSequence currExtracts;
+                std::set<const IR::BFN::LoweredExtractPhv*> currExtractsSet;
+                int dest = extractDstSrcs.begin()->first;
+                int src = extractDstSrcs.at(dest).begin()->first;
 
-        // Create a single combined extract that implements all of the
-        // component extracts. Each merged extract writes to an entire container.
-        const auto* finalBufferValue =
-          new InputBufferRValType(*toClosedRange(bufferRange));
+                nw_byteinterval newBufferRange(src, src);
+                while (extractDstSrcs.count(dest) && extractDstSrcs.at(dest).count(src)) {
+                    for (const auto* extract : extractDstSrcs.at(dest).at(src)) {
+                        if (!currExtractsSet.count(extract)) {
+                            currExtracts.push_back(extract);
+                            currExtractsSet.emplace(extract);
+                        }
+                    }
+                    newBufferRange.hi += 1;
+                    extractDstSrcs.at(dest).erase(src);
+                    if (!extractDstSrcs.at(dest).size()) extractDstSrcs.erase(dest);
+                    dest += 1;
+                    src += 1;
+                }
 
-        auto* mergedExtract = new IR::BFN::LoweredExtractPhv(container, finalBufferValue);
+                // Create a single combined extract that implements all of the
+                // component extracts. Each merged extract writes to an entire container.
+                rv.push_back(createMergedExtract<InputBufferRValType>(container, currExtracts,
+                                                                      newBufferRange));
+            }
+        } else {
+            // The device only supports full-container extractions. Veryfy that the extracts
+            // consume the full container and merge.
+            auto extractedSizeBits = bufferRange.toUnit<RangeUnit::Bit>().size();
 
-        mergedExtract->write_mode = extracts[0]->write_mode;
+            BUG_CHECK(size_t(extractedSizeBits) == container.size(),
+                "PHV allocation is invalid for container %1%"
+                " (number of extracted bits does not match container size).", container);
 
-        for (auto* extract : extracts)
-            mergedExtract->debug.mergeWith(extract->debug);
+            // Create a single combined extract that implements all of the
+            // component extracts. Each merged extract writes to an entire container.
+            rv.push_back(
+                createMergedExtract<InputBufferRValType>(container, extracts, bufferRange));
+        }
 
-        return mergedExtract;
+        return rv;
     }
 
     void sortExtractPhvs(IR::Vector<IR::BFN::LoweredParserPrimitive>& loweredExtracts) {
@@ -382,8 +471,8 @@ struct ExtractSimplifier {
         for (auto& item : extractFromPacketByContainer) {
             auto container = item.first;
             auto& extracts = item.second;
-            auto* merged = mergeExtractsFor<IR::BFN::LoweredPacketRVal>(container, extracts);
-            loweredExtracts.push_back(merged);
+            auto& merged = mergeExtractsFor<IR::BFN::LoweredPacketRVal>(container, extracts);
+            loweredExtracts.insert(loweredExtracts.end(), merged.begin(), merged.end());
         }
 
         sortExtractPhvs(loweredExtracts);
@@ -391,8 +480,8 @@ struct ExtractSimplifier {
         for (auto& item : extractFromBufferByContainer) {
             auto container = item.first;
             auto& extracts = item.second;
-            auto* merged = mergeExtractsFor<IR::BFN::LoweredMetadataRVal>(container, extracts);
-            loweredExtracts.push_back(merged);
+            auto& merged = mergeExtractsFor<IR::BFN::LoweredMetadataRVal>(container, extracts);
+            loweredExtracts.insert(loweredExtracts.end(), merged.begin(), merged.end());
         }
 
         for (auto& item : extractConstantByContainer) {

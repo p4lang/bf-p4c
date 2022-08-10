@@ -373,12 +373,6 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/stf/auto_init_meta2.p4
 )
 
-# P4C-3059
-p4c_add_xfail_reason("tofino2"
-  "Expected packet was not received on device 0, port 2"
-  p4c_1587
-)
-
 # P4C-3070
 # This is a MustPass test, so we add an -Xp4c=--disable_split_attached in JBayTests.cmake
 # to make it pass.  If that is removed, this failure will occur.
