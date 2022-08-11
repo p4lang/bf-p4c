@@ -58,7 +58,6 @@ export P4C_DEPS="autoconf \
                  flex \
                  lld \
                  graphviz \
-                 libboost1.71-all-dev \
                  libfl-dev \
                  libatomic-ops-dev
                  libgmp-dev \
@@ -180,9 +179,6 @@ fi
 
 # Install dependencies and configure the build environment.
 if [[ "${BUILD_FOR}" != 'jenkins-final' ]] ; then
-  # Clean up default instance of libboost1.58 from base Ubuntu image.
-  apt-get --purge remove -y 'libboost*' || true
-
   apt-get update
 
   # Install packages.
@@ -213,23 +209,6 @@ if [[ "${BUILD_FOR}" != 'jenkins-final' ]] ; then
     make install -$MAKEFLAGS
     ldconfig
   }
-
-  # Download, configure, build, and install Boost if needed.
-  WORKDIR /tmp
-  if [[ "${BUILD_FOR}" == "release" ]] ; then
-    BOOST='boost_1_71_0'
-    BOOST_TARBALL="${BOOST}.tar.bz2"
-    wget https://boostorg.jfrog.io/artifactory/main/release/1.71.0/source/"$BOOST_TARBALL"
-    tar xjf "${BOOST_TARBALL}"
-
-    cd "${BOOST}"
-    ./bootstrap.sh --prefix=/usr/local
-    ./b2 -$MAKEFLAGS --build-type=minimal variant=release runtime-link=static link=static
-    ./b2 install -$MAKEFLAGS --build-type=minimal variant=release runtime-link=static link=static
-
-    cd /tmp
-    rm -rf "${BOOST}" "${BOOST_TARBALL}"
-  fi
 
   # Dependencies for benchmarks
   apt-get install -y time
