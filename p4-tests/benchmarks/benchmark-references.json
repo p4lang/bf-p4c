@@ -1,11 +1,11 @@
 {
     "arista-default": {
         "threshold_pct": 5,
-        "compile_time": 354.17
+        "compile_time": 493.45
     },
     "arista-msee": {
         "threshold_pct": 5,
-        "compile_time": 1080.04
+        "compile_time": 792.09
     },
     "extreme-npb": {
         "threshold_pct": 5,
