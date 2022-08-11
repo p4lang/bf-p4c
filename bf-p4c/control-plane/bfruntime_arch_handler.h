@@ -32,6 +32,7 @@
 #include "frontends/p4/methodInstance.h"
 #include "frontends/p4/typeMap.h"
 
+#include "ir/ir-generated.h"
 #include "midend/eliminateTypedefs.h"
 
 #include "p4/config/v1/p4info.pb.h"
@@ -1161,8 +1162,9 @@ class BFRuntimeArchHandlerCommon: public P4::ControlPlaneAPI::P4RuntimeArchHandl
             LOG4("FieldList for Hash: " << fieldListArg);
             auto *typeArgs = new IR::Vector<IR::Type>();
             std::vector<DynHash::hashField> hashFieldInfo;
-            if (auto fieldListExpr = fieldListArg->expression->to<IR::ListExpression>()) {
-                for (auto f : fieldListExpr->components) {
+            if (fieldListArg->expression->is<IR::ListExpression>()
+                || fieldListArg->expression->is<IR::StructExpression>()) {
+                for (auto f : *getListExprComponents(*fieldListArg->expression)) {
                     if (auto c = f->to<IR::Concat>()) {
                         for (auto e : convertConcatToList(c)) {
                             hashFieldInfo.push_back({ e->toString(), e->is<IR::Constant>() });

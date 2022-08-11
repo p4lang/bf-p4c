@@ -1003,8 +1003,8 @@ struct RewriteParserStatements : public Transform {
         }
         auto src = (*call->arguments)[0]->expression;
         IR::Vector<IR::Expression> srcList;
-        if (auto listExpr = src->to<IR::ListExpression>()) {
-            srcList = listExpr->components;
+        if (src->is<IR::ListExpression>() || src->is<IR::StructExpression>()) {
+            srcList = *getListExprComponents(*src);
         } else {
             srcList.push_back(src);
         }
@@ -1521,8 +1521,8 @@ static match_t buildMatch(int match_size, const IR::Expression *key,
     } else if (auto mask = key->to<IR::Mask>())
         return match_t(match_size, mask->left->to<IR::Constant>()->asUnsigned(),
                                    mask->right->to<IR::Constant>()->asUnsigned());
-    else if (auto list = key->to<IR::ListExpression>())
-        return buildListMatch(&list->components, selectExprs);
+    else if (key->is<IR::ListExpression>() || key->is<IR::StructExpression>())
+        return buildListMatch(getListExprComponents(*key), selectExprs);
     else
         BUG("Invalid select case expression %1%", key);
     return match_t();

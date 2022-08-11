@@ -153,17 +153,9 @@ class StructExprToListExpr: public Transform {
 };
 
 // similarly, it might be better to avoid code duplication here.
-EvaluatorPass::EvaluatorPass(P4::ReferenceMap* refMap, P4::TypeMap* typeMap, bool doListConv) {
+EvaluatorPass::EvaluatorPass(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
     evaluator = new P4::Evaluator(refMap, typeMap);
     passes.emplace_back(new BFN::TypeChecking(refMap, typeMap));
-    if (doListConv) {
-        // Convert StructExpressions back to ListExpression for the backend
-        // to work properly
-        // TODO(MichalKekely) This should be removed and all of the backend
-        // passes changed to accept StructExpression
-        passes.emplace_back(new StructExprToListExpr(refMap, typeMap));
-        passes.emplace_back(new P4::ResolveReferences(refMap));
-    }
     passes.emplace_back(evaluator);
 }
 

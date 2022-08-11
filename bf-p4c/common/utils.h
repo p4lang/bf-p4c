@@ -47,4 +47,6 @@ bool ghost_only_on_other_pipes(int pipe_id);
 /// Input: "vrf & 0xff0f", Output: std::pair<"vrf", "0xff0f">
 std::pair<cstring, cstring> get_key_and_mask(const cstring &input);
 
+const IR::Vector<IR::Expression>* getListExprComponents(const IR::Node& node);
+
 #endif /* EXTENSIONS_BF_P4C_COMMON_UTILS_H_ */

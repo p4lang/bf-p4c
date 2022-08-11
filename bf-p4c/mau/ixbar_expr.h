@@ -1,6 +1,8 @@
 #ifndef BF_P4C_MAU_IXBAR_EXPR_H_
 #define BF_P4C_MAU_IXBAR_EXPR_H_
 
+#include "bf-p4c/common/utils.h"
+#include "ir/ir-generated.h"
 #include "ir/ir.h"
 #include "boost/range/adaptor/reversed.hpp"
 #include "lib/bitvec.h"
@@ -126,6 +128,10 @@ class IXBarExprSeed : public Inspector {
             shift -= rwidth; }
         slice = tmp;
         return false; }
+    bool preorder(const IR::StructExpression *fl) {
+        // delegate to the ListExpression case
+        IR::ListExpression listExpr(*getListExprComponents(*fl));
+        return preorder(&listExpr); }
     bool preorder(const IR::ListExpression *fl) {
         auto tmp = slice;
         auto old_shift = shift;
@@ -259,6 +265,7 @@ class BuildP4HashFunction : public PassManager {
         bool preorder(const IR::Mask *) override;
         bool preorder(const IR::Cast *) override;
         bool preorder(const IR::Concat*) override;
+        bool preorder(const IR::StructExpression*) override;
         bool preorder(const IR::ListExpression*) override;
         void postorder(const IR::BFN::SignExtend *) override;
         void postorder(const IR::MAU::HashGenExpression *) override;

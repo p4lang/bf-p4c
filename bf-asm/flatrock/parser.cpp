@@ -1494,7 +1494,7 @@ void FlatrockParser::Profile::input(VECTOR(value_t) args, value_t data) {
     /* -- Set initial ALU instructions to noop by default. */
     initial_alu0_instruction.opcode = alu0_instruction::OPCODE_NOOP;
     initial_alu1_instruction.opcode = alu1_instruction::OPCODE_NOOP;
-    
+
     /* -- Require match attributes to be present in the ASM file. The default values that the
      * compiler sets for them is "match everything" already, so them not being present in the ASM
      * file is most likely a bug. */

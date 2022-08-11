@@ -1176,12 +1176,13 @@ void AttachTables::InitializeStatefulAlus
                 // for error messages here
                 if (auto *k = init->to<IR::Constant>()) {
                     salu->init_reg_lo = k->asInt();
-                } else if (auto *l = init->to<IR::ListExpression>()) {
-                    if (l->size() >= 1) {
-                        if (auto *k = l->components.at(0)->to<IR::Constant>())
+                } else if (init->is<IR::ListExpression>() || init->is<IR::StructExpression>()) {
+                    auto components = *getListExprComponents(*init);
+                    if (components.size() >= 1) {
+                        if (auto *k = components.at(0)->to<IR::Constant>())
                             salu->init_reg_lo = k->asInt(); }
-                    if (l->size() >= 2) {
-                        if (auto *k = l->components.at(1)->to<IR::Constant>())
+                    if (components.size() >= 2) {
+                        if (auto *k = components.at(1)->to<IR::Constant>())
                             salu->init_reg_hi = k->asInt(); } } }
         } else {
             salu->width = 1; }
@@ -1877,7 +1878,7 @@ cstring BackendConverter::getPipelineName(const IR::P4Program* program, int inde
 // custom visitor to the main package block to generate the
 // toplevel pipeline structure.
 bool BackendConverter::preorder(const IR::P4Program* program) {
-    ApplyEvaluator eval(refMap, typeMap, true);
+    ApplyEvaluator eval(refMap, typeMap);
     auto new_program = program->apply(eval);
 
     toplevel = eval.getToplevelBlock();

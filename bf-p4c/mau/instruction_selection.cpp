@@ -143,6 +143,57 @@ void HashGenSetup::CreateHashGenExprs::check_for_symmetric(const IR::Declaration
 }
 
 /**
+ * @brief Construct a field list expression from a hash list and update the relevant properties.
+ * @see HashGenSetup::CreateHashGenExprs::preorder.
+ */
+void load_hash_details(const BFN_Options &options, const IR::Expression *orig_hash_list,
+                        int &hash_output_width, cstring &hash_name,
+                        IR::NameList const* &alg_names, IR::MAU::FieldListExpression *&fle) {
+    if (options.langVersion == CompilerOptions::FrontendVersion::P4_14) {
+        if (orig_hash_list->is<IR::HashListExpression>()) {
+            auto hle = orig_hash_list->to<IR::HashListExpression>();
+
+            IR::ID fl_id(hle->fieldListNames->names[0]);
+            fle = new IR::MAU::FieldListExpression(hle->srcInfo, hle->components, fl_id);
+            hash_name = hle->fieldListCalcName;
+            hash_output_width = hle->outputWidth;
+            alg_names = hle->algorithms;
+        } else if (orig_hash_list->is<IR::HashStructExpression>()) {
+            auto hse = orig_hash_list->to<IR::HashStructExpression>();
+
+            IR::ID fl_id(hse->fieldListNames->names[0]);
+            fle = new IR::MAU::FieldListExpression(hse->srcInfo,
+                                                   *getListExprComponents(*orig_hash_list), fl_id);
+            hash_name = hse->fieldListCalcName;
+            hash_output_width = hse->outputWidth;
+            alg_names = hse->algorithms;
+        } else {
+            BUG("Hash not converted correctly in the midend");
+        }
+    } else {
+        const IR::ListExpression *le = orig_hash_list->to<IR::ListExpression>();
+        if (le == nullptr) {
+            if (orig_hash_list->is<IR::StructExpression>()) {
+                le = new IR::ListExpression(orig_hash_list->srcInfo,
+                                            *getListExprComponents(*orig_hash_list));
+            } else if (orig_hash_list->is<IR::Expression>()) {
+                IR::Vector<IR::Expression> le_vec;
+                le_vec.push_back(orig_hash_list);
+                le = new IR::ListExpression(orig_hash_list->srcInfo, le_vec);
+            }
+        }
+
+        BUG_CHECK(le != nullptr, "Hash.get calls must have a valid input or list of inputs");
+
+        IR::ID fl_id("$field_list_1");
+        fle = new IR::MAU::FieldListExpression(le->srcInfo, le->components, fl_id);
+        fle->rotateable = true;
+        fle->permutable = true;
+        hash_name += ".configure";
+    }
+}
+
+/**
  * The Hash.get function has different IR for P4-14 and P4-16.  This function converts all
  * of these to HashGenExpression, which currently is language dependent, as there is currently
  * no unified way of handling all of the expressivity of Hash in the p4-16 language yet through
@@ -219,34 +270,8 @@ bool HashGenSetup::CreateHashGenExprs::preorder(const IR::MAU::Primitive *prim) 
     }
 
     const IR::NameList *alg_names = nullptr;
-    if (self.options.langVersion == CompilerOptions::FrontendVersion::P4_14) {
-        auto hle = orig_hash_list->to<IR::HashListExpression>();
-
-        BUG_CHECK(hle != nullptr, "Hash not converted correctly in the midend");
-
-        IR::ID fl_id(hle->fieldListNames->names[0]);
-        fle = new IR::MAU::FieldListExpression(hle->srcInfo, hle->components, fl_id);
-        hash_name = hle->fieldListCalcName;
-        hash_output_width = hle->outputWidth;
-        alg_names = hle->algorithms;
-    } else {
-        const IR::ListExpression *le = orig_hash_list->to<IR::ListExpression>();
-        if (le == nullptr) {
-            if (orig_hash_list->is<IR::Expression>()) {
-                IR::Vector<IR::Expression> le_vec;
-                le_vec.push_back(orig_hash_list);
-                le = new IR::ListExpression(orig_hash_list->srcInfo, le_vec);
-            }
-        }
-
-        BUG_CHECK(le != nullptr, "Hash.get calls must have a valid input or list of inputs");
-
-        IR::ID fl_id("$field_list_1");
-        fle = new IR::MAU::FieldListExpression(le->srcInfo, le->components, fl_id);
-        fle->rotateable = true;
-        fle->permutable = true;
-        hash_name += ".configure";
-    }
+    load_hash_details(self.options, orig_hash_list, hash_output_width,
+                                hash_name, alg_names, fle);
 
     check_for_symmetric(decl, fle, algorithm, &fle->symmetric_keys);
     auto *type = IR::Type::Bits::get(bit_size);
@@ -2381,7 +2406,8 @@ class VerifyInstructionParams : public Inspector {
     bool preorder(const IR::MAU::HashDist* hd_) override;
     bool preorder(const IR::MAU::HashGenExpression* hge_) override;
     bool preorder(const IR::ListExpression* le_) override;
-    bool preorder(const IR::Expression* expr_) override;
+    bool preorder(const IR::StructExpression *se_) override;
+    bool preorder(const IR::Expression *expr_) override;
 
  private:
     bool isParallel(
@@ -2411,6 +2437,10 @@ bool VerifyInstructionParams::preorder(const IR::MAU::HashGenExpression*) {
 }
 
 bool VerifyInstructionParams::preorder(const IR::ListExpression*) {
+    return true;
+}
+
+bool VerifyInstructionParams::preorder(const IR::StructExpression*) {
     return true;
 }
 

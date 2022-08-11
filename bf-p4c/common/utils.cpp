@@ -31,3 +31,23 @@ get_key_and_mask(const cstring &input) {
     }
     return std::make_pair(key, mask);
 }
+
+const IR::Vector<IR::Expression>* getListExprComponents(const IR::Node& node) {
+    const IR::Vector<IR::Expression>* components;
+
+    if (node.is<IR::StructExpression>()) {
+        auto freshVec = new IR::Vector<IR::Expression>();
+        // sadly no .reserve() on IR::Vector
+        for (auto named : node.to<IR::StructExpression>()->components) {
+            freshVec->push_back(named->expression);
+        }
+        components = freshVec;
+    } else if (node.is<IR::ListExpression>()) {
+        const IR::ListExpression* sourceListExpr = node.to<IR::ListExpression>();
+        components = &(sourceListExpr->components);
+    } else {
+        BUG("getListExprComponents called with a non-list-like expression %s", IR::dbp(&node));
+    }
+
+    return components;
+}

@@ -13,6 +13,7 @@ bool TofinoWriteContext::isWrite(bool root_value) {
              ctxt->node->is<IR::HeaderStackItemRef>() ||
              ctxt->node->is<IR::MAU::MultiOperand>() ||
              ctxt->node->is<IR::ListExpression>() ||
+             ctxt->node->is<IR::StructExpression>() ||
              ctxt->node->is<IR::Slice>() ||
              ctxt->node->is<IR::Member>())) {
         ctxt = ctxt->parent;

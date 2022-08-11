@@ -237,6 +237,10 @@ bool BuildP4HashFunction::InsideHashGenExpr::preorder(const IR::ListExpression*)
     return true;
 }
 
+bool BuildP4HashFunction::InsideHashGenExpr::preorder(const IR::StructExpression*) {
+    return true;
+}
+
 bool BuildP4HashFunction::InsideHashGenExpr::preorder(const IR::Expression *expr) {
     if (state == State::OUTSIDE)
         return true;

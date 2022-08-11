@@ -632,7 +632,17 @@ void IXBar::create_alloc(ContByteConversion &map_alloc, IXBar::Use &alloc) {
 
 /** IXBar::FieldManagement: This is for adding fields to be allocated in the ixbar
   * allocation scheme.  Used by match tables, selectors, and hash distribution */
+// BEWARE: The preorder implementations for ListExpression and StructExpression
+//         MUST be kept in sync. For future extensions, getListExprComponents()
+//         may come in handy.
 bool IXBar::FieldManagement::preorder(const IR::ListExpression *) {
+    if (!ki.hash_dist)
+        BUG("A field list is somehow contained within the reads in table %s", tbl->name);
+    return true;
+}
+
+// See the preorder implementation for ListExpression.
+bool IXBar::FieldManagement::preorder(const IR::StructExpression *) {
     if (!ki.hash_dist)
         BUG("A field list is somehow contained within the reads in table %s", tbl->name);
     return true;

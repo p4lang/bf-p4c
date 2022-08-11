@@ -102,7 +102,7 @@ class PostMidEndLast : public PassManager {
  * provide a mechanism to iterate directly on TNA pipelines.
  */
 bool ExtractBridgeInfo::preorder(const IR::P4Program* program) {
-    ApplyEvaluator eval(refMap, typeMap, true);
+    ApplyEvaluator eval(refMap, typeMap);
     auto new_program = program->apply(eval);
 
     auto toplevel = eval.getToplevelBlock();
@@ -239,7 +239,7 @@ BridgedPacking::BridgedPacking(BFN_Options& options, RepackedHeaderTypes& map,
     bindings = new ParamBinding(&typeMap,
         options.langVersion == CompilerOptions::FrontendVersion::P4_14);
     conv = new BackendConverter(&refMap, &typeMap, bindings, pipe, pipes, sourceInfoLogging);
-    evaluator = new BFN::ApplyEvaluator(&refMap, &typeMap, false);
+    evaluator = new BFN::ApplyEvaluator(&refMap, &typeMap);
     extractBridgeInfo = new ExtractBridgeInfo(options, &refMap, &typeMap, conv, bindings, map);
     auto typeChecking = new BFN::TypeChecking(&refMap, &typeMap, true);
 
@@ -272,7 +272,7 @@ SubstitutePackedHeaders::SubstitutePackedHeaders(BFN_Options& options,
     bindings = new ParamBinding(&typeMap,
         options.langVersion == CompilerOptions::FrontendVersion::P4_14);
     conv = new BackendConverter(&refMap, &typeMap, bindings, pipe, pipes, sourceInfoLogging);
-    evaluator = new BFN::ApplyEvaluator(&refMap, &typeMap, false);
+    evaluator = new BFN::ApplyEvaluator(&refMap, &typeMap);
     auto typeChecking = new BFN::TypeChecking(&refMap, &typeMap, true);
 
     addPasses({

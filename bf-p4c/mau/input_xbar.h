@@ -450,6 +450,7 @@ struct IXBar {
         const IR::MAU::Table* tbl;
 
         bool preorder(const IR::ListExpression *) override;
+        bool preorder(const IR::StructExpression *) override;
         bool preorder(const IR::Mask *) override;
         bool preorder(const IR::MAU::TableKey *read) override;
         bool preorder(const IR::Constant *c) override;

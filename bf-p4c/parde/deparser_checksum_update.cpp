@@ -148,15 +148,15 @@ static bool checksumUpdateSanityCheck(const IR::AssignmentStatement* assignment)
         return false;
     }
 
-    const IR::ListExpression* sourceList =
-        (*methodCall->arguments)[0]->expression->to<IR::ListExpression>();
+    const IR::Vector<IR::Expression>* components =
+        getListExprComponents(*(*methodCall->arguments)[0]->expression);
 
-    if (!sourceList || sourceList->components.empty()) {
+    if (!components || components->empty()) {
         ::error("Invalid list of fields for checksum calculation: %1%", methodCall);
-            return false;
+        return false;
     }
 
-    for (auto* source : sourceList->components) {
+    for (auto* source : *components) {
         if (auto* member = source->to<IR::Member>()) {
             if (!member->expr->is<IR::HeaderRef>()) {
                 ::error("Invalid field in the checksum calculation: %1%", source);
@@ -167,7 +167,7 @@ static bool checksumUpdateSanityCheck(const IR::AssignmentStatement* assignment)
         }
     }
 
-    if (sourceList->components.empty()) {
+    if (components->empty()) {
         ::error("Expected at least one field in the checksum calculation: %1%",
                 methodCall);
         return false;
@@ -258,8 +258,6 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment,
     auto destField = assignment->left->to<IR::Member>();
     auto methodCall = assignment->right->to<IR::MethodCallExpression>();
     bool zerosAsOnes = false;
-    const IR::ListExpression* sourceList =
-        (*methodCall->arguments)[0]->expression->to<IR::ListExpression>();
     if ((*methodCall->arguments).size() == 2) {
          zerosAsOnes = (*methodCall->arguments)[1]->expression->to<IR::BoolLiteral>()->value;
     }
@@ -273,7 +271,7 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment,
     // * Fields of a header should always be byte aligned. This rule is relaxed for metadata.
     // * Sum of all the bits in the checksum list should be equal to a multiple of 8.
 
-    for (auto* source : sourceList->components) {
+    for (auto* source : *getListExprComponents(*(*methodCall->arguments)[0]->expression)) {
         if (source->is<IR::Member>() || source->is<IR::Constant>()) {
             if (auto* constant = source->to<IR::Constant>()) {
                 if (constant->asInt() != 0) {

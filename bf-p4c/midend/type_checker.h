@@ -54,7 +54,7 @@ class EvaluatorPass final : public PassManager, public P4::IHasBlock {
 
  public:
     IR::ToplevelBlock* getToplevelBlock() const override { return evaluator->getToplevelBlock(); }
-    EvaluatorPass(P4::ReferenceMap* refMap, P4::TypeMap* typeMap, bool doListConv = false);
+    EvaluatorPass(P4::ReferenceMap* refMap, P4::TypeMap* typeMap);
 };
 
 }  // namespace BFN
