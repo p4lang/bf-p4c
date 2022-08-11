@@ -1704,10 +1704,8 @@ bool TablePlacement::try_alloc_ixbar(Placed *next, std::vector<Placed *> allocat
         table = table->apply(RewriteForSplitAttached(*this, next));
     }
 
-    if (!current_ixbar->allocTable(table, phv, next->resources, next->use.preferred(),
-                                   action_format, next->attached_entries) ||
-        !current_ixbar->allocTable(next->gw, phv, next->resources, next->use.preferred(),
-                                   nullptr, next->attached_entries)) {
+    if (!current_ixbar->allocTable(table, next->gw, phv, next->resources, next->use.preferred(),
+                                   action_format, next->attached_entries)) {
         next->resources.clear_ixbar();
         error_message = "The table " + next->table->name + " could not fit within a single "
                         "input crossbar in an MAU stage";

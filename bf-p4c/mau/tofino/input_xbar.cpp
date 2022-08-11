@@ -4092,6 +4092,18 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
     return true;
 }
 
+/* Allocate the match table first, then any gateway being merged with it
+ * this allows better sharing of search busses?  maybe.  perhaps doesn't matter
+ * TODO -- investigate what effect this ordering actually has and see if there's
+ * an opportunity for improvement */
+bool IXBar::allocTable(const IR::MAU::Table *tbl, const IR::MAU::Table *gw, const PhvInfo &phv,
+                       TableResourceAlloc &alloc, const LayoutOption *lo,
+                       const ActionData::Format::Use *af,
+                       const attached_entries_t &attached_entries) {
+    return allocTable(tbl, phv, alloc, lo, af, attached_entries) &&
+           allocTable(gw, phv, alloc, lo, nullptr, attached_entries);
+}
+
 /** Fill in the information contained in the IXBar::Use object of a TableResourceAlloc into the
  *  IXBar structure, so that when a new table is allocated to the IXBar, the previous stage table
  *  resources are known

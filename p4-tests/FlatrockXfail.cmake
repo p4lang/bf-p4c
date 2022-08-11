@@ -20,7 +20,7 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
-  "WARNING:.*binary.*does not match model version|mismatch from expected"
+  "WARNING:.*binary.*does not match model version|packet output on port 2"
   extensions/p4_tests/p4_16/flatrock/direct1.p4
   extensions/p4_tests/p4_16/flatrock/exact1.p4
   )
@@ -34,11 +34,14 @@ p4c_add_xfail_reason("tofino5"
 p4c_add_xfail_reason("tofino5"
   "WARNING:.*binary.*does not match model version|mismatch from expected"
   extensions/p4_tests/p4_16/flatrock/gateway1.p4
+  extensions/p4_tests/p4_16/flatrock/gateway2.p4
   )
 
 p4c_add_xfail_reason("tofino5"
+  #"WARNING:.*binary.*does not match model version|unexpected packet output on port 2"
   "WARNING:.*binary.*does not match model version|mismatch from expected"
-  extensions/p4_tests/p4_16/flatrock/gateway2.p4
+  extensions/p4_tests/p4_16/flatrock/gateway1i.p4
+  extensions/p4_tests/p4_16/flatrock/gateway2i.p4
   )
 
 p4c_add_xfail_reason("tofino5"
@@ -102,7 +105,7 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
-  "3 expected packets on port 2 not seen"
+  "WARNING:.*binary.*does not match model version|packet output on port 2"
   extensions/p4_tests/p4_16/flatrock/parser_constant.p4
   )
 
@@ -155,11 +158,13 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
-  "error: Constant literals only useable on 8-bit PHEs"
+  "error: No phv record ig_md"
   extensions/p4_tests/p4_16/stf/backend_bug1c.p4
-#  extensions/p4_tests/p4_16/stf/bit_or_in_same_state.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "WARNING:.*binary.*does not match model version|mismatch from expected"
   extensions/p4_tests/p4_16/stf/p4c-2695.p4
-#  extensions/p4_tests/p4_16/stf/p4c-2638.p4
   )
 
 #p4c_add_xfail_reason("tofino5"
@@ -257,7 +262,7 @@ p4c_add_xfail_reason("tofino5"
 #   )
 
 p4c_add_xfail_reason("tofino5"
-  ".* expected packet on port .* not seen"
+  "WARNING:.*binary.*does not match model version|mismatch from expected"
   extensions/p4_tests/p4_16/stf/lookahead2.p4
   extensions/p4_tests/p4_16/stf/lookahead3.p4
   extensions/p4_tests/p4_16/stf/update_checksum_3.p4

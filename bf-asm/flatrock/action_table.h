@@ -7,15 +7,11 @@
 
 template<> void ActionTable::write_regs_vt(Target::Flatrock::mau_regs &regs);
 
-namespace Flatrock {
-
-class ActionTable : public ::ActionTable {
+class Target::Flatrock::ActionTable : public ::ActionTable {
  public:
     ActionTable(int line, const char *n, gress_t gr, Stage *s, int lid) :
         ::ActionTable(line, n, gr, s, lid) { }
 };
-
-}  // namespace Flatrock
 
 #endif
 

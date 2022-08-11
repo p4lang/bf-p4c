@@ -2251,7 +2251,7 @@ void Table::Actions::add_immediate_mapping(json::map &tbl) {
 #if HAVE_FLATROCK
 template<> void Table::write_mapram_regs(Target::Flatrock::mau_regs &regs,
                                          int row, int col, int vpn, int type) {
-    error(lineno, "%s:%d: Flatrock has no mapram?", __FILE__, __LINE__);
+    error(lineno, "%s:%d: Flatrock has no mapram?", SRCFILE, __LINE__);
 }
 #endif  /* HAVE_FLATROCK */
 template<class REGS>

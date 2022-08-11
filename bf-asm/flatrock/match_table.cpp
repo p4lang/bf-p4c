@@ -1,7 +1,29 @@
 /* mau table template specializations for flatrock -- #included directly in match_tables.cpp */
 
 template<> void MatchTable::write_next_table_regs(Target::Flatrock::mau_regs &regs, Table *tbl) {
-    error(lineno, "%s:%d: Flatrock match_table not implemented yet!", __FILE__, __LINE__);
+    auto &mrd = regs.ppu_mrd;
+    auto &pred_map = mrd.mrd_pred_map_erf.mrd_pred_map;
+    if (!hit_next.empty() || !extra_next_lut.empty()) {
+        int i = 0;
+        for (auto &n : hit_next) {
+            pred_map[logical_id][i].gl_pred_vec = n.next_in_stage(stage->stageno + 1);
+            pred_map[logical_id][i].long_branch |= n.long_branch_tags();
+            pred_map[logical_id][i].next_table = n.next_table_id();
+            pred_map[logical_id][i].pred_vec = n.next_in_stage(stage->stageno) >> 1;
+            ++i; }
+        for (auto &n : extra_next_lut) {
+            pred_map[logical_id][i].gl_pred_vec = n.next_in_stage(stage->stageno + 1);
+            pred_map[logical_id][i].long_branch |= n.long_branch_tags();
+            pred_map[logical_id][i].next_table = n.next_table_id();
+            pred_map[logical_id][i].pred_vec = n.next_in_stage(stage->stageno) >> 1;
+            ++i; }
+        // is this needed?  The model complains if we leave the unused slots as 0
+        while (i < Target::NEXT_TABLE_SUCCESSOR_TABLE_DEPTH())
+            pred_map[logical_id][i++].next_table = 0x1ff; }
+    pred_map[logical_id][16].gl_pred_vec = miss_next.next_in_stage(stage->stageno + 1);
+    pred_map[logical_id][16].long_branch |= miss_next.long_branch_tags();
+    pred_map[logical_id][16].next_table = miss_next.next_table_id();
+    pred_map[logical_id][16].pred_vec = miss_next.next_in_stage(stage->stageno) >> 1;
 }
 
 template<> void MatchTable::write_regs(Target::Flatrock::mau_regs &regs, int type, Table *result) {
@@ -23,16 +45,23 @@ template<> void MatchTable::write_regs(Target::Flatrock::mau_regs &regs, int typ
     } else {
         mrd.mrd_pred_cfg.main_tables |= 1 << logical_id;
         minput.minput_mpr.main_tables |= 1 << logical_id; }
-    if (always_run || pred.empty())
-        minput.minput_mpr.always_run = 1;
+    if (always_run || pred.empty()) {
+        minput.minput_mpr.always_run = 1 << logical_id;
+    } else {
+        // FIXME -- need to figure out when the table needs to be powered due to a predecessor
+        // that might enable it.  For now power all
+        minput.minput_mpr.always_run = 1 << logical_id;
+    }
+
     // these xbars are "backwards" (because they are oxbars?) -- l2p maps physical to logical
     // and p2l maps logical to physical
     mrd.mrd_l2p_xbar[physical_id].en = 1;
     mrd.mrd_l2p_xbar[physical_id].logical_table = logical_id;
     mrd.mrd_p2l_xbar[logical_id].en = 1;
     mrd.mrd_p2l_xbar[logical_id].phy_table = physical_id;
-    if (get_actions())
+    if (get_actions()) {
         mrd.mrd_imem_cfg.active_en |= 1 << physical_id;
+        mrd.mrd_imem_delay[physical_id].delay = 1; }   // FIXME -- what is the delay?
     minput.minput_mpr_act[logical_id].activate = 1 << physical_id;
 
     /* action/imem setup */
@@ -60,5 +89,5 @@ template<> void MatchTable::write_regs(Target::Flatrock::mau_regs &regs, int typ
 
     if (action_bus) action_bus->write_regs(regs, this);
 
-    // write_next_table_regs(regs, result); -- TBD
+    write_next_table_regs(regs, result);
 }

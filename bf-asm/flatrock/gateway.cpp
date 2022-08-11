@@ -1,6 +1,25 @@
 #include "gateway.h"
 #include "input_xbar.h"  // FIXME needed only in unified build to ensure proper specialization
 
+void Target::Flatrock::GatewayTable::pass1() {
+    ::GatewayTable::pass1();
+    if (layout.size() != 1 || layout[0].row < 0) {
+        error(lineno, "No row specified in gateway");
+    } else if (layout[0].bus >= 0) {
+        // should be error?
+        warning(lineno, "No search bus needed for gateway on %s", Target::name()); }
+}
+
+#if 0
+void Target::Flatrock::GatewayTable::pass2() {
+    ::GatewayTable::pass2();
+}
+
+void Target::Flatrock::GatewayTable::pass3() {
+    ::GatewayTable::pass2();
+}
+#endif
+
 template<> void GatewayTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
     LOG1("### Gateway table " << name() << " write_regs " << loc());
     for (auto &ixb : input_xbar)
@@ -29,6 +48,10 @@ template<> void GatewayTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
     minput.minput_gw_comp_vect[match_table->physical_id].comp_idx = first_row.row;
     mrd.mrd_inhibit_ix.en[match_table->physical_id] = 1;
 
+    // FIXME -- model needs these non-zero to avoid error message, but what should they be?
+    mrd.mrd_pld_delay[match_table->physical_id].delay = 1;
+    mrd.mrd_gwres_delay[match_table->physical_id].delay = 1;
+
     // FIXME -- write payload?
     // mrd.mrd_aram_pld[physical action ram].dconfig_sel_lo = 0;
     // mrd.mrd_aram_pld[physical action ram].dconfig_sel_hi = 0;
@@ -55,6 +78,6 @@ template<> void GatewayTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
     mrd.mrd_pred_pld[match_table->physical_id].map_en[0] = 0;
     mrd.mrd_pred_pld[match_table->physical_id].map_en_gw_inh[0] = 0;
 
-    // error(lineno, "%s:%d: Flatrock gateway not implemented yet!", __FILE__, __LINE__);
+    // error(lineno, "%s:%d: Flatrock gateway not implemented yet!", SRCFILE, __LINE__);
 }
 template void GatewayTable::write_regs_vt(Target::Flatrock::mau_regs &regs);

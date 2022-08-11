@@ -1,12 +1,12 @@
 #ifndef BF_ASM_BFAS_H_
 #define BF_ASM_BFAS_H_
 
+#include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
 #include <iostream>
 #include <memory>
 #include <string>
-
-#include "stdarg.h"
-#include "stdio.h"
 
 enum config_version_t { CONFIG_OLD = 1, CONFIG_NEW = 2, CONFIG_BOTH = 3 };
 enum target_t { NO_TARGET = 0, TOFINO, TOFINO2, JBAY = TOFINO2, TOFINO2H, TOFINO2U, TOFINO2M,
@@ -91,6 +91,9 @@ inline void warning(int lineno, const char *fmt, ...) {
 #endif  /* BAREFOOT_INTERNAL */
 }
 
+inline const char *strip_prefix(const char *str, const char *pfx) {
+    if (const char *p = strstr(str, pfx)) return p+strlen(pfx);
+    return str; }
 void bug(const char *, int, const char * = 0, ...)
 __attribute__((format(printf, 3, 4))) __attribute__((noreturn));
 inline void bug(const char* fname, int lineno, const char *fmt, ...) {
@@ -111,7 +114,8 @@ inline void bug(const char* fname, int lineno, const char *fmt, ...) {
 extern std::unique_ptr<std::ostream> open_output(const char *,
         ...) __attribute__((format(printf, 1, 2)));
 
-#define BUG(...) do { bug(__FILE__, __LINE__, ##__VA_ARGS__); } while (0)
+#define SRCFILE strip_prefix(__FILE__, "bf-asm/")
+#define BUG(...) do { bug(SRCFILE, __LINE__, ##__VA_ARGS__); } while (0)
 #define BUG_CHECK(e, ...) do { if (!(e)) BUG(__VA_ARGS__); } while (0)
 
 class VersionIter {

@@ -42,7 +42,7 @@ void ComputeDefUse::def_info_t::flow_merge(def_info_t &a) {
 class ComputeDefUse::SetupJoinPoints : public ControlFlowVisitor::SetupJoinPoints,
                                        public P4::ResolutionContext {
     bool preorder(const IR::ParserState *n) override {
-        LOG6("SetupJoinPoints(ParserState " << n->name << ")" << IndentCtl::indent);
+        LOG6("SetupJoinPoints(ParserState " << n->name << ")" << Log::indent);
         return true; }
     void revisit(const IR::ParserState *n) override {
         ++join_points[n].second;
@@ -62,10 +62,10 @@ class ComputeDefUse::SetupJoinPoints : public ControlFlowVisitor::SetupJoinPoint
             visit(ps, "transition"); }
         return false; }
     bool preorder(const IR::P4Parser *p) override {
-        LOG6("SetupJoinPoints(P4Parser " << p->name << ")" << IndentCtl::indent);
+        IndentCtl::TempIndent indent;
+        LOG6("SetupJoinPoints(P4Parser " << p->name << ")" << indent);
         if (auto start = p->states.getDeclaration<IR::ParserState>("start"))
             visit(start, "start");
-        LOG6_UNINDENT;
         return false; }
     bool preorder(const IR::P4Control *) override { return false; }
     bool preorder(const IR::Type *) override { return false; }
@@ -170,7 +170,8 @@ void ComputeDefUse::def_info_t::split_slice(le_bitrange range) {
 
 bool ComputeDefUse::preorder(const IR::P4Control *c) {
     BUG_CHECK(state == SKIPPING, "Nested %s not supported in ComputeDefUse", c);
-    LOG5("ComputeDefUse(P4Control " << c->name << ")" << IndentCtl::indent);
+    IndentCtl::TempIndent indent;
+    LOG5("ComputeDefUse(P4Control " << c->name << ")" << indent);
     for (auto *p : c->getApplyParameters()->parameters)
         if (p->direction == IR::Direction::In || p->direction == IR::Direction::InOut)
             def_info[p].defs.insert(getLoc(p));
@@ -181,20 +182,19 @@ bool ComputeDefUse::preorder(const IR::P4Control *c) {
             add_uses(getLoc(p), def_info[p]);
     def_info.clear();
     state = SKIPPING;
-    LOG5_UNINDENT;
     return false;
 }
 
 bool ComputeDefUse::preorder(const IR::P4Table *tbl) {
     if (state == SKIPPING) return false;
-    LOG5("ComputeDefUse(P4Table " << tbl->name << ")" << IndentCtl::indent);
+    IndentCtl::TempIndent indent;
+    LOG5("ComputeDefUse(P4Table " << tbl->name << ")" << indent);
     if (auto key = tbl->getKey())
         visit(key, "key");
     if (auto actions = tbl->getActionList()) {
         parallel_visit(actions->actionList, "actions");
     } else {
         BUG("No actions in %s", tbl); }
-    LOG5_UNINDENT;
     return false;
 }
 
@@ -202,15 +202,16 @@ bool ComputeDefUse::preorder(const IR::P4Action *act) {
     if (state == SKIPPING) return false;
     for (auto *p : *act->parameters)
         def_info[p].defs.insert(getLoc(p));
-    LOG5("ComputeDefUse(P4Action " << act->name << ")" << IndentCtl::indent);
+    IndentCtl::TempIndent indent;
+    LOG5("ComputeDefUse(P4Action " << act->name << ")" << indent);
     visit(act->body, "body");
-    LOG5_UNINDENT;
     return false;
 }
 
 bool ComputeDefUse::preorder(const IR::P4Parser *p) {
     BUG_CHECK(state == SKIPPING, "Nested %s not supported in ComputeDefUse", p);
-    LOG5("ComputeDefUse(P4Parser " << p->name << ")" << IndentCtl::indent);
+    IndentCtl::TempIndent indent;
+    LOG5("ComputeDefUse(P4Parser " << p->name << ")" << indent);
     for (auto *a : p->getApplyParameters()->parameters)
         if (a->direction == IR::Direction::In || a->direction == IR::Direction::InOut)
             def_info[a].defs.insert(getLoc(a));
@@ -224,11 +225,10 @@ bool ComputeDefUse::preorder(const IR::P4Parser *p) {
             add_uses(getLoc(a), def_info[a]);
     def_info.clear();
     state = SKIPPING;
-    LOG5_UNINDENT;
     return false;
 }
 bool ComputeDefUse::preorder(const IR::ParserState *p) {
-    LOG5("ComputeDefUse(ParserState " << p->name << ")" << IndentCtl::indent);
+    LOG5("ComputeDefUse(ParserState " << p->name << ")" << Log::indent);
     return true;
 }
 void ComputeDefUse::loop_revisit(const IR::ParserState *p) {
@@ -524,11 +524,11 @@ std::ostream &operator<<(std::ostream &out,
 }
 
 std::ostream &operator<<(std::ostream &out, const ComputeDefUse::defuse_t &du) {
-    out << "defs:" << IndentCtl::indent;
+    out << "defs:" << Log::indent;
     for (auto &p : du.defs) out << p;
-    out << IndentCtl::unindent << Log::endl << "uses:" << IndentCtl::indent;
+    out << Log::unindent << Log::endl << "uses:" << Log::indent;
     for (auto &p : du.uses) out << p;
-    out << IndentCtl::unindent;
+    out << Log::unindent;
     return out;
 }
 
@@ -541,21 +541,21 @@ void dump(const ComputeDefUse::def_info_t &di) {
             sep = ", "; }
         std::cout << " }"; }
     for (auto &f : di.fields) {
-        std::cout << IndentCtl::endl << '.' << f.first << ": " << IndentCtl::indent;
+        std::cout << Log::endl << '.' << f.first << ": " << Log::indent;
         dump(f.second);
-        std::cout << IndentCtl::unindent; }
+        std::cout << Log::unindent; }
     for (auto &sl : di.slices) {
-        std::cout << IndentCtl::endl
-                  << "[" << sl.first.hi << ":" << sl.first.lo << "]: " << IndentCtl::indent;
+        std::cout << Log::endl
+                  << "[" << sl.first.hi << ":" << sl.first.lo << "]: " << Log::indent;
         dump(sl.second);
-        std::cout << IndentCtl::unindent; }
+        std::cout << Log::unindent; }
 }
 
 void dump(const ordered_map<const IR::IDeclaration *, ComputeDefUse::def_info_t> &def_info) {
     for (auto &d : def_info) {
-        std::cout << d.first << ": " << IndentCtl::indent;
+        std::cout << d.first << ": " << Log::indent;
         dump(d.second);
-        std::cout << IndentCtl::unindent << IndentCtl::endl;
+        std::cout << Log::unindent << Log::endl;
     }
 }
 

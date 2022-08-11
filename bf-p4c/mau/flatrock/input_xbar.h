@@ -36,11 +36,19 @@ class IXBar : public ::IXBar {
     struct Use : public ::IXBar::Use {
         unsigned        xme_units = 0;
         int             output_unit = -1;
+        int             first_gw_row = -1, num_gw_rows = 0;
 
         void clear() override {
             ::IXBar::Use::clear();
             xme_units = 0; }
-        Use *clone() const { return new Use(*this); }
+        Use *clone() const override { return new Use(*this); }
+        bool empty() const override {
+            return ::IXBar::Use::empty() && xme_units == 0 &&
+                output_unit < 0 && num_gw_rows == 0; }
+        void dbprint(std::ostream &) const override;
+
+        bool emit_gateway_asm(const MauAsmOutput &, std::ostream &, indent_t,
+                              const IR::MAU::Table *) const override;
         void emit_salu_bytemasks(std::ostream &, indent_t) const { BUG(""); }
         void emit_ixbar_asm(const PhvInfo &phv, std::ostream& out, indent_t indent,
                             const TableMatch *fmt, const IR::MAU::Table *) const;
@@ -71,9 +79,6 @@ class IXBar : public ::IXBar {
      * Word use are set to just the (first) container as the bit offset is always 0.
      * NOTE: Changes here require changes to .gdbinit pretty printer */
     BFN::Alloc1D<std::pair<PHV::Container, int>, GATEWAY_VEC_BYTES>                 gateway_use;
-    // FIXME -- maybe allocate gateway rows as part of memory alloc (as was done for
-    // gateway units on tofino1/2/3) rather than here?
-    BFN::Alloc1D<std::pair<PHV::Container, int>, GATEWAY_ROWS>                      gateway_rows;
     // FIXME -- each exact/ternary can select between 8 sources based on gateway output
     BFN::Alloc1D<std::pair<PHV::Container, int>, EXACT_BYTES>                       exact_byte_use;
     BFN::Alloc1D<PHV::Container, EXACT_WORDS>                                       exact_word_use;
@@ -92,6 +97,7 @@ class IXBar : public ::IXBar {
     BFN::Alloc1D<cstring, XME_UNITS>            xme_use;        // 1:2 mapping between hash
     unsigned                                    xme_inuse = 0;  // and XME units
     BFN::Alloc1D<cstring, XMU_UNITS>            xmu_output_use;
+    BFN::Alloc1D<cstring, GATEWAY_ROWS>         gateway_rows;
 
     BFN::Alloc2D<cstring, EXACT_HASH_TABLES, EXACT_HASH_BITS>   exact_hash_use;
     bitvec                      exact_hash_inuse[EXACT_HASH_TABLES];
@@ -147,6 +153,9 @@ class IXBar : public ::IXBar {
     bool allocTable(const IR::MAU::Table *, const PhvInfo &, TableResourceAlloc &,
                     const LayoutOption *, const ActionData::Format::Use *,
                     const attached_entries_t &);
+    bool allocTable(const IR::MAU::Table *tbl, const IR::MAU::Table *gw, const PhvInfo &,
+                    TableResourceAlloc &, const LayoutOption *, const ActionData::Format::Use *,
+                    const attached_entries_t &) override;
     void update(cstring name, const ::IXBar::Use &alloc);
     void add_collisions();
     void verify_hash_matrix() const;

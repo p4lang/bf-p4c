@@ -23,6 +23,7 @@
 class IXBarRealign;
 struct TableResourceAlloc;
 class TableMatch;
+class MauAsmOutput;
 
 namespace BFN {
 namespace Resources {
@@ -369,6 +370,8 @@ struct IXBar {
         virtual safe_vector<Byte> atcam_partition(int *hash_group = nullptr) const;
         virtual safe_vector<TotalInfo> bits_per_search_bus() const;
         virtual unsigned compute_hash_tables();
+        virtual bool emit_gateway_asm(const MauAsmOutput &, std::ostream &, indent_t,
+                                      const IR::MAU::Table *) const = 0;
         virtual void emit_ixbar_asm(const PhvInfo &phv, std::ostream& out, indent_t indent,
                                     const TableMatch *fmt, const IR::MAU::Table *) const = 0;
         virtual void emit_salu_bytemasks(std::ostream &out, indent_t indent) const = 0;
@@ -465,9 +468,9 @@ struct IXBar {
     };
 
  public:
-    virtual bool allocTable(const IR::MAU::Table *, const PhvInfo &, TableResourceAlloc &,
-                            const LayoutOption *, const ActionData::Format::Use *,
-                            const attached_entries_t &) = 0;
+    virtual bool allocTable(const IR::MAU::Table *tbl, const IR::MAU::Table *gw, const PhvInfo &,
+                            TableResourceAlloc &, const LayoutOption *,
+                            const ActionData::Format::Use *, const attached_entries_t &) = 0;
     virtual void update(cstring name, const Use &alloc) = 0;
     virtual void update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc);
     // virtual void update(cstring name, const TableResourceAlloc *alloc) = 0;

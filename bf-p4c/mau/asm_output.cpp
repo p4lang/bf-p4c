@@ -2722,9 +2722,9 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
         if (!tbl->conditional_gateway_only())
             out << gw_indent++ << "gateway:" << std::endl;
         out << gw_indent << "name: " <<  tbl->build_gateway_name() << std::endl;
-        emit_ixbar(out, gw_indent, tbl->resources->gateway_ixbar.get(), nullptr, nullptr, nullptr,
-                   nullptr, tbl, false);
-        bool ok = false;
+        auto *ixb = tbl->resources->gateway_ixbar.get();
+        emit_ixbar(out, gw_indent, ixb, nullptr, nullptr, nullptr, nullptr, tbl, false);
+        bool ok = ixb ? ixb->emit_gateway_asm(*this, out, gw_indent, tbl) : false;
         for (auto &use : Values(tbl->resources->memuse)) {
             if (use.type == Memories::Use::GATEWAY) {
                 if (!use.row.empty()) {

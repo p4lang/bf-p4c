@@ -764,7 +764,7 @@ int ActionBus::find(Stage *stage, ActionBusSource src, int lo, int hi, int size,
 #if HAVE_FLATROCK
 template<> void ActionBus::write_action_regs(Target::Flatrock::mau_regs &regs, Table *tbl,
                                                     int home_row, unsigned action_slice) {
-    error(lineno, "%s:%d: Flatrock action bus not implemented yet!", __FILE__, __LINE__);
+    error(lineno, "%s:%d: Flatrock action bus not implemented yet!", SRCFILE, __LINE__);
 }
 #endif  /* HAVE_FLATROCK */
 template<class REGS> void ActionBus::write_action_regs(REGS &regs, Table *tbl,
@@ -935,7 +935,7 @@ FOR_ALL_REGISTER_SETS(INSTANTIATE_TARGET_TEMPLATE,
 
 #if HAVE_FLATROCK
 template<> void ActionBus::write_immed_regs(Target::Flatrock::mau_regs &, Table *) {
-    error(lineno, "%s:%d: Flatrock action bus not implemented yet!", __FILE__, __LINE__);
+    error(lineno, "%s:%d: Flatrock action bus not implemented yet!", SRCFILE, __LINE__);
 }
 #endif  /* HAVE_FLATROCK */
 template<class REGS> void ActionBus::write_immed_regs(REGS &regs, Table *tbl) {

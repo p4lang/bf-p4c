@@ -106,6 +106,18 @@ void IXBar::Use::emit_ixbar_asm(const PhvInfo &phv, std::ostream &out, indent_t 
         out << indent << "output unit: " << output_unit << std::endl;
 }
 
+bool IXBar::Use::emit_gateway_asm(const MauAsmOutput &mauasm, std::ostream &out, indent_t indent,
+                                  const IR::MAU::Table *tbl) const {
+    if (num_gw_rows <= 0) return false;
+    out << indent << "row: " << first_gw_row << std::endl;
+    if (tbl->layout.gateway && (tbl->layout.gateway_match || tbl->layout.hash_action) &&
+        tbl->resources->table_format.has_overhead()) {
+        auto payload = FindPayloadCandidates::determine_payload(tbl, tbl->resources, &tbl->layout);
+        out << indent << "payload: 0x" << hex(payload.getrange(0,64)) << std::endl;
+        mauasm.emit_table_format(out, indent, tbl->resources->table_format, nullptr, false, true); }
+    return true;
+}
+
 bool ActionDataBus::Use::emit_adb_asm(std::ostream &out, const IR::MAU::Table *tbl,
                                       bitvec source) const {
     LOG1("Emitting action data bus asm for table " << tbl->name);

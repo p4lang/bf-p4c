@@ -938,10 +938,10 @@ class AddParserPad : public Modifier {
         prsr->states.push_back(stateInitial);
         prsr->states.push_back(stateLoop);
 
-        LOG5("Added states to parser " << prsr->externalName() << ":" << IndentCtl::indent);
+        IndentCtl::TempIndent indent;
+        LOG5("Added states to parser " << prsr->externalName() << ":" << indent);
         LOG5(stateInitial);
         LOG5(stateLoop);
-        LOG5_UNINDENT;
     }
 
     void postorder(IR::P4Parser *prsr) override {

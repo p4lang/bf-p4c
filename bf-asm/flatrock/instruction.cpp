@@ -44,13 +44,23 @@ struct operand {
                 return value == a->value;
             } else { return false; } }
         Const *clone() override { return new Const(*this); }
-        int bits(int) override { return value & 0xff; }
+        int bits(int slot) override {
+            switch (::Phv::reg(slot)->size) {
+            case 8: return (value & 0xff) | 0x100;
+            case 16: return (value & 0x1f) | 0x20;
+            case 32: return (value & 0xf) | 0x10;
+            default: BUG("invalid register size %d", ::Phv::reg(slot)->size); } }
         int bit_offset(int) override { return 0; }
         void pass1(Table *tbl, int slot) override {
-            if (::Phv::reg(slot)->size != 8)
-                error(lineno, "Constant literals only useable on 8-bit PHEs");
-            if (value > 255 || value < -128)
-                error(lineno, "Constant value %" PRId64 " out of range", value); }
+            int min, max;
+            switch (::Phv::reg(slot)->size) {
+            case 8:  min = -128; max = 255; break;
+            case 16: min =  -16; max =  15; break;
+            case 32: min =   -8; max =   7; break;
+            default: BUG("invalid register size %d", ::Phv::reg(slot)->size); }
+            if (value > max || value < min)
+                error(lineno, "Constant value %" PRId64 " out of range for PHE%d",
+                      value, ::Phv::reg(slot)->size); }
         void dbprint(std::ostream &out) const override { out << value; }
     };
     struct Phv : Base {
@@ -461,7 +471,7 @@ struct VLIWInstruction : InstructionShim {
 
 struct PhvWrite : VLIWInstruction {
     struct Decode : Instruction::Decode {
-        enum opcodes { NOOP, SET, ANDC, OR, SETBM=4, LDC=4, DPF=8 };
+        enum opcodes { NOOP=0, SET=1, ANDC=2, OR=3, SETBM=4, LDC=4, DPF=8 };
         std::string name;
         unsigned opcode;
         Decode(const char *n, target_t targ, unsigned op)
@@ -532,13 +542,13 @@ struct LoadConst : PhvWrite {
     uint32_t encode();
 };
 
-static Noop                     opNoop("noop",          FLATROCK);                      // NOLINT
-static PhvWrite::Decode         opSet ("set",           FLATROCK, 1),                   // NOLINT
-                                opAndc("andc",          FLATROCK, 2),                   // NOLINT
-                                opOr  ("or",            FLATROCK, 3);                   // NOLINT
-static BitmaskSet::Decode       opSetm("bitmasked-set", FLATROCK);                      // NOLINT
-static DepositField::Decode     opDpf ("deposit-field", FLATROCK);                      // NOLINT
-static LoadConst::Decode        opLdc ("load-const",    FLATROCK);                      // NOLINT
+static Noop                 opNoop("noop",          FLATROCK);                            // NOLINT
+static PhvWrite::Decode     opSet ("set",           FLATROCK, PhvWrite::Decode::SET),     // NOLINT
+                            opAndc("andc",          FLATROCK, PhvWrite::Decode::ANDC),    // NOLINT
+                            opOr  ("or",            FLATROCK, PhvWrite::Decode::OR);      // NOLINT
+static BitmaskSet::Decode   opSetm("bitmasked-set", FLATROCK);                            // NOLINT
+static DepositField::Decode opDpf ("deposit-field", FLATROCK);                            // NOLINT
+static LoadConst::Decode    opLdc ("load-const",    FLATROCK);                            // NOLINT
 
 BitmaskSet::BitmaskSet(PhvWrite &wr, int m) : PhvWrite(wr), mask(m) { opc = &opSetm; }
 DepositField::DepositField(PhvWrite &wr) : PhvWrite(wr) { opc = &opDpf; }
@@ -636,14 +646,29 @@ Instruction *PhvWrite::pass1(Table *tbl, Table::Actions::Action *act) {
     if (k && opc->opcode != Decode::LDC && (k->value >= maxconst || k->value < -maxconst))
         error(k->lineno, "%" PRId64 " too large for operand of %s", k->value, opc->name.c_str());
     tbl->stage->action_set[tbl->gress][dest->reg.uid] = true;
-    src->pass1(tbl, slot);
+    if (opc->opcode != Decode::LDC) {
+        // loadconst has different limits on the size of the constant, checked below
+        src->pass1(tbl, slot); }
     return this;
 }
 Instruction *LoadConst::pass1(Table *tbl, Table::Actions::Action *act) {
     PhvWrite::pass1(tbl, act);
     if (auto *k = src.to<operand::Const>()) {
-        if (k->value > 0x3ffff || k->value < 0)
-            error(src->lineno, "constant value %" PRId64 " out of range for load-const", k->value);
+        switch (Phv::reg(slot)->size) {
+        case 8:
+            error(dest.lineno, "load-const not usable on 8-bit containers"
+                  " (use setbm with all ones mask instead)");
+            break;
+        case 16:
+            if (k->value < -32768 || k->value > 65535)
+                error(src->lineno, "%" PRId64 " out of range for load-const", k->value);
+            break;
+        case 32:
+            if (k->value < 0 || k->value >= 0x80000)
+                error(src->lineno, "%" PRId64 " out of range for load-const", k->value);
+            break;
+        default:
+            BUG("invalid PHE size %d", Phv::reg(slot)->size); }
     } else {
         error(src->lineno, "load-const source is not a constant?"); }
     return this;
@@ -661,18 +686,14 @@ uint32_t PhvWrite::encode() {
     uint32_t rv = src->bits(slot);
     int merge_dest = dest->reg.mau_id() - slot;
     BUG_CHECK(merge_dest == 0, "merge in PHV write not supported");
-    int is_immed = src.to<operand::Const>() != nullptr;
     switch (Phv::reg(slot)->size) {
     case 8:
-        rv |= is_immed << 8;
         rv |= opc->opcode << 15;
         break;
     case 16:
-        rv |= is_immed << 5;
         rv |= opc->opcode << 15;
         break;
     case 32:
-        rv |= is_immed << 4;
         rv |= opc->opcode << 17;
         break;
     default:
@@ -710,17 +731,16 @@ uint32_t DepositField::encode() {
     return rv;
 }
 uint32_t LoadConst::encode() {
-    uint32_t rv = src->bits(slot);
+    uint32_t rv = src.to<operand::Const>()->value;
     int merge_dest = dest->reg.mau_id() - slot;
     BUG_CHECK(merge_dest == 0, "merge in PHV write not supported");
     switch (Phv::reg(slot)->size) {
-    case 8:
-        rv |= opc->opcode << 15;
-        break;
     case 16:
+        rv &= 0xffff;
         rv |= opc->opcode << 15;
         break;
     case 32:
+        rv &= 0x7ffff;
         rv |= opc->opcode << 17;
         break;
     default:

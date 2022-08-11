@@ -541,6 +541,10 @@ class IXBarUsePrinter(object):
                         int(way['select_mask']))
             if any(field.name == 'xme_units' for field in self.val.type.fields()):
                 rv += "\n  xme_units = 0x%x" % int(self.val['xme_units'])
+            if any(field.name == 'num_gw_rows' for field in self.val.type.fields()):
+                if int(self.val['num_gw_rows']) > 0:
+                    rv += " gw = %d..%d" % ( int(self.val['first_gw_row']),
+                        int(self.val['first_gw_row']) + int(self.val['num_gw_rows']) - 1)
             #for i in range(0, vec_size(self.val['select_use'])):
             #    rv += "\n   sel_use[" + str(i) +"]: "
             #    sel = vec_at(self.val['select_use'], i)

@@ -50,14 +50,15 @@ void HashActionTable::pass1() {
 void HashActionTable::pass2() {
     LOG1("### Hash Action " << name() << " pass2 " << loc());
     if (logical_id < 0) choose_logical_id();
-    if (layout.size() != 1 || (layout[0].bus < 0 && layout[0].result_bus < 0))
-        error(lineno, "Need explicit row/bus in hash_action table");
-    else if (layout[0].bus >= 0 && layout[0].result_bus >= 0)
-        error(lineno, "Can't have both bus and result_bus in hash_action table");
-    else if (layout[0].bus < 0)
-        layout[0].bus = layout[0].result_bus;
-    else if (layout[0].result_bus < 0)
-        layout[0].result_bus = layout[0].bus;
+    if (Target::GATEWAY_NEEDS_SEARCH_BUS()) {
+        if (layout.size() != 1 || (layout[0].bus < 0 && layout[0].result_bus < 0))
+            error(lineno, "Need explicit row/bus in hash_action table");
+        else if (layout[0].bus >= 0 && layout[0].result_bus >= 0)
+            error(lineno, "Can't have both bus and result_bus in hash_action table");
+        else if (layout[0].bus < 0)
+            layout[0].bus = layout[0].result_bus;
+        else if (layout[0].result_bus < 0)
+            layout[0].result_bus = layout[0].bus; }
     allocate_physical_id();
     determine_word_and_result_bus();
     for (auto &ixb : input_xbar)

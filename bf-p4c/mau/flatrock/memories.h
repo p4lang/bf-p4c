@@ -726,17 +726,7 @@ struct Memories : public ::Memories {
     void log_allocation(safe_vector<table_alloc *> *tas, UniqueAttachedId::type_t type);
     void log_allocation(safe_vector<table_alloc *> *tas, UniqueAttachedId::pre_placed_type_t ppt);
     void action_bus_users_log();
-    bool find_unit_gw(Memories::Use &alloc, cstring name, bool requires_search_bus);
-    bool find_search_bus_gw(table_alloc *ta, Memories::Use &alloc, cstring name);
-    bool find_result_bus_gw(Memories::Use &alloc, uint64_t payload, cstring name,
-                            table_alloc *ta_no_match, int logical_table = -1);
-    uint64_t determine_payload(table_alloc *ta);
-    bool allocate_all_gw();
-    bool allocate_all_payload_gw(bool alloc_search_bus);
-    bool allocate_all_normal_gw(bool alloc_search_bus);
-    bool allocate_all_no_match_gw();
     table_alloc *find_corresponding_exact_match(cstring name);
-    bool gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int row, int col);
     bool allocate_all_no_match_miss();
     bool allocate_all_tind_result_bus_tables();
 

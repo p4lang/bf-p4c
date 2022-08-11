@@ -22,11 +22,17 @@ template<> void Stage::write_regs(Target::Flatrock::mau_regs &regs, bool egress_
     if (tables.empty()) {
         /* no tables in this stage, so bypass */
         regs.rf.ppu_cfg.bypass = 1;
+    } else {
+        // FIXME -- needs to be 1-16
+        auto &nt_delay = regs.ppu_mrd.rf.mrd_nt_delay;
+        nt_delay.pinfo_in_delay = 1;
+        nt_delay.pinfo_out_delay = 1;
+        nt_delay.pred_vec_delay = 1;
     }
     regs.rf.ppu_phvfifo_cfg.delay = 8;  // FIXME -- needs to be 8-31
     regs.rf.ppu_pktdly_cfg.delay = 2;   // FIXME -- needs to be 2-31
 }
 
 void AlwaysRunTable::write_regs(Target::Flatrock::mau_regs &regs) {
-    error(lineno, "%s:%d: Flatrock always run not implemented yet!", __FILE__, __LINE__);
+    error(lineno, "%s:%d: Flatrock always run not implemented yet!", SRCFILE, __LINE__);
 }

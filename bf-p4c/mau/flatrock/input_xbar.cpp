@@ -203,72 +203,87 @@ bool IXBar::xcmp_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
 }
 
 bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
-                       const LayoutOption *lo) {
-    if (tbl->gateway_rows.empty()) return true;
-    LOG1("IXBar::allocGateway(" << tbl->name << ")");
+                         const LayoutOption *lo) {
+    if (lo->layout.hash_action && alloc.empty()) {
+        // hash_action requires a gateway, so we need to allocate a dummy if there isn't
+        // one yet
+    } else if (tbl->gateway_rows.empty()) {
+        return true; }
+    IndentCtl::TempIndent indent;
+    LOG1("IXBar::allocGateway(" << tbl->name << ")" << indent);
     alloc.type = Use::GATEWAY;
     alloc.used_by = tbl->build_gateway_name();
     CollectGatewayFields *collect;
 
+    int rows = tbl->gateway_rows.size();
     if (lo && lo->layout.gateway_match) {
         collect = new CollectMatchFieldsAsGateway(phv, &alloc);
+        rows = tbl->entries_list->entries.size();
     } else {
         collect = new CollectGatewayFields(phv, &alloc);
     }
 
     tbl->apply(*collect);
-    if (collect->info.empty()) return true;
+    if (!collect->info.empty()) {
+        ContByteConversion map_alloc;
+        xor_map_t   xor_map;
+        PHV::FieldUse use_read(PHV::FieldUse::READ);
 
-    ContByteConversion map_alloc;
-    xor_map_t   xor_map;
-    PHV::FieldUse use_read(PHV::FieldUse::READ);
+        for (auto &info : collect->info) {
+            int flags = 0;
+            if (info.second.need_range) {
+                error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%sTofino5 does not support "
+                      "range comparisons in a condition", tbl->srcInfo);
+                return false; }
+            if (!info.second.xor_with.empty()) {
+                flags |= IXBar::Use::NeedXor;  // not needed?  xor_map used instead
+                std::vector<std::pair<PHV::Container, int>>  bytes;
+                info.first.foreach_byte(tbl, &use_read, [&](const PHV::AllocSlice &sl) {
+                    bytes.push_back(sl.container_byte()); });
+                bool err = false;
+                for (auto &with : info.second.xor_with) {
+                    auto it = bytes.begin();
+                    with.foreach_byte(tbl, &use_read, [&](const PHV::AllocSlice &sl) {
+                        if (it == bytes.end() || xor_map.count(*it) ||
+                            xor_map.count(sl.container_byte())) {
+                            error("%scomplex comparison not supported", tbl->srcInfo);
+                            err = true;
+                            return; }
+                        xor_map[*it] = sl.container_byte();
+                        xor_map[sl.container_byte()] = *it;
+                        ++it; });
+                    if (err) return false; } }
 
-    for (auto &info : collect->info) {
-        int flags = 0;
-        if (info.second.need_range) {
-            error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%sTofino5 does not support "
-                  "range comparisons in a condition", tbl->srcInfo);
-            return false; }
-        if (!info.second.xor_with.empty()) {
-            flags |= IXBar::Use::NeedXor;  // not needed?  xor_map used instead
-            std::vector<std::pair<PHV::Container, int>>  bytes;
-            info.first.foreach_byte(tbl, &use_read, [&](const PHV::AllocSlice &sl) {
-                bytes.push_back(sl.container_byte()); });
-            bool err = false;
-            for (auto &with : info.second.xor_with) {
-                auto it = bytes.begin();
-                with.foreach_byte(tbl, &use_read, [&](const PHV::AllocSlice &sl) {
-                    if (it == bytes.end() || xor_map.count(*it) ||
-                        xor_map.count(sl.container_byte())) {
-                        error("%scomplex comparison not supported", tbl->srcInfo);
-                        err = true;
-                        return; }
-                    xor_map[*it] = sl.container_byte();
-                    xor_map[sl.container_byte()] = *it;
-                    ++it; });
-                if (err) return false; } }
-
-        cstring aliasSourceName;
-        if (collect->info_to_uses.count(&info.second)) {
-            LOG5("Found gateway alias source name");
-            aliasSourceName = collect->info_to_uses[&info.second];
+            cstring aliasSourceName;
+            if (collect->info_to_uses.count(&info.second)) {
+                LOG5("Found gateway alias source name");
+                aliasSourceName = collect->info_to_uses[&info.second];
+            }
+            if (aliasSourceName)
+                add_use(map_alloc, info.first.field(), phv, tbl, aliasSourceName,
+                        &info.first.range(), flags);
+            else
+                add_use(map_alloc, info.first.field(), phv, tbl, boost::none,
+                        &info.first.range(), flags);
         }
-        if (aliasSourceName)
-            add_use(map_alloc, info.first.field(), phv, tbl, aliasSourceName,
-                    &info.first.range(), flags);
-        else
-            add_use(map_alloc, info.first.field(), phv, tbl, boost::none,
-                    &info.first.range(), flags);
+        safe_vector<IXBar::Use::Byte *> xbar_alloced;  // FIXME -- not needed?
+        create_alloc(map_alloc, alloc);
+        if (!gateway_find_alloc(alloc.use, xbar_alloced, xor_map)) {
+            alloc.clear();
+            return false; }
+        if (!collect->compute_offsets()) {
+            alloc.clear();
+            LOG3("collect.compute_offsets failed?");
+            return false; }
     }
-    safe_vector<IXBar::Use::Byte *> xbar_alloced;  // FIXME -- not needed?
-    create_alloc(map_alloc, alloc);
-    if (!gateway_find_alloc(alloc.use, xbar_alloced, xor_map)) {
-        alloc.clear();
-        return false; }
-    if (!collect->compute_offsets()) {
-        alloc.clear();
-        LOG3("collect.compute_offsets failed?");
-        return false; }
+    if (rows < 1) rows = 1;
+    alloc.num_gw_rows = rows;
+    for (int i = 0; i <= GATEWAY_ROWS-rows; ++i) {
+        if (!gateway_rows[i]) {
+            LOG5("alloc " << rows << " gateway rows starting at " << i);
+            alloc.first_gw_row = i;
+            break; } }
+    if (alloc.first_gw_row < 0) return false;
 
     // FIXME -- different, inconsistent name from alloc.used_by here?
     update(tbl->name + "$gw", alloc);   //  Comes from tofino/input_xbar.cpp org
@@ -459,7 +474,8 @@ bool IXBar::allocTernary(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
 }
 
 bool IXBar::allocActions(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc) {
-    LOG1("IXBar::allocActions(" << tbl->name << ")");
+    IndentCtl::TempIndent indent;
+    LOG1("IXBar::allocActions(" << tbl->name << ")" << indent);
     ContByteConversion map_alloc;
     setupActionAlloc(tbl, phv, map_alloc, alloc);
     if (!alloc.use.empty()) {
@@ -474,7 +490,8 @@ bool IXBar::allocActions(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
 
 bool IXBar::allocSelector(const IR::MAU::Selector *sel, const IR::MAU::Table *tbl,
                           const PhvInfo &phv, Use &alloc, cstring name) {
-    LOG1("IXBar::allocSelector(" << tbl->name << ")");
+    IndentCtl::TempIndent indent;
+    LOG1("IXBar::allocSelector(" << tbl->name << ")" << indent);
     if (sel || tbl || phv.field(0) || alloc.type || name)
         error("flatrock selector not implemented yet");
     return false;
@@ -482,7 +499,8 @@ bool IXBar::allocSelector(const IR::MAU::Selector *sel, const IR::MAU::Table *tb
 
 bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const IR::MAU::Table *tbl,
                           const PhvInfo &phv, Use &alloc) {
-    LOG1("IXBar::allocStateful(" << tbl->name << ")");
+    IndentCtl::TempIndent indent;
+    LOG1("IXBar::allocStateful(" << tbl->name << ")" << indent);
     if (salu || tbl || phv.field(0) || alloc.type)
         error("flatrock stateful not implemented yet");
     return false;
@@ -490,7 +508,8 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const IR::MAU::Table
 
 bool IXBar::allocMeter(const IR::MAU::Meter *meter, const IR::MAU::Table *tbl,
                        const PhvInfo &phv, Use &alloc) {
-    LOG1("IXBar::allocMeter(" << tbl->name << ")");
+    IndentCtl::TempIndent indent;
+    LOG1("IXBar::allocMeter(" << tbl->name << ")" << indent);
     if (meter || tbl || phv.field(0) || alloc.type)
         error("flatrock meter not implemented yet");
     return false;
@@ -500,7 +519,8 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
                        const LayoutOption *lo, const ActionData::Format::Use *af,
                        const attached_entries_t &attached_entries) {
     if (!tbl) return true;
-    LOG1("IXBar::allocTable(" << tbl->name << ")");
+    IndentCtl::TempIndent indent;
+    LOG1("IXBar::allocTable(" << tbl->name << ")" << indent);
     if (tbl->layout.atcam) {
         BUG("flatrock ATCAM todo");
     } else if (tbl->layout.proxy_hash) {
@@ -550,6 +570,16 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
         alloc.clear_ixbar();
         return false; }
     return true;
+}
+
+/* Allocate the gateway (if any) first, as if the match table requires a gateway and there
+ * isn't one attached, we'll need to allocate a dummy (always match) gateway */
+bool IXBar::allocTable(const IR::MAU::Table *tbl, const IR::MAU::Table *gw, const PhvInfo &phv,
+                       TableResourceAlloc &alloc, const LayoutOption *lo,
+                       const ActionData::Format::Use *af,
+                       const attached_entries_t &attached_entries) {
+    return allocTable(gw, phv, alloc, lo, nullptr, attached_entries) &&
+           allocTable(tbl, phv, alloc, lo, af, attached_entries);
 }
 
 void IXBar::update(cstring table_name, const ::IXBar::Use &use_) {
@@ -645,6 +675,11 @@ void IXBar::update(cstring table_name, const ::IXBar::Use &use_) {
                 BUG("conflicting use of exact hash %d bit %d between %s and %s",
                     way.source, bit, u, table_name); }
     }
+    for (int i = use.first_gw_row; i < use.first_gw_row + use.num_gw_rows; ++i) {
+        if (gateway_rows[i] && gateway_rows[i] != table_name)
+            BUG("conflicting use of gateway row %d between %s and %s", i,
+                gateway_rows[i], table_name);
+        gateway_rows[i] = table_name; }
 }
 
 void IXBar::add_collisions() {
@@ -698,5 +733,10 @@ void IXBar::dbprint(std::ostream &out) const {
 
     // TODO -- hash functions
 }
+
+void IXBar::Use::dbprint(std::ostream &out) const {
+    ::IXBar::Use::dbprint(out);
+}
+
 
 }  // namespace Flatrock

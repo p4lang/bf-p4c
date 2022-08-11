@@ -87,7 +87,7 @@ void SRamMatchTable::verify_format_pass2(Target::Flatrock) {
 
 template<> void SRamMatchTable::write_attached_merge_regs(Target::Flatrock::mau_regs &regs,
             int bus, int word, int word_group) {
-    error(lineno, "%s:%d: Flatrock sram match not implemented yet!", __FILE__, __LINE__);
+    error(lineno, "%s:%d: Flatrock sram match not implemented yet!", SRCFILE, __LINE__);
 }
 template<> void SRamMatchTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
     LOG1("### SRam match table " << name() << " write_regs " << loc());
@@ -96,7 +96,7 @@ template<> void SRamMatchTable::write_regs_vt(Target::Flatrock::mau_regs &regs) 
         ixb->write_xmu_regs(regs);
 
     for (auto &row : layout) {
-        error(lineno, "%s:%d: Flatrock STM not implemented yet!", __FILE__, __LINE__);
+        error(lineno, "%s:%d: Flatrock STM not implemented yet!", SRCFILE, __LINE__);
     }
 
     if (actions) actions->write_regs(regs, this);

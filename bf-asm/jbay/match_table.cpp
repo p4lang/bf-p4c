@@ -24,7 +24,7 @@ template<> void MatchTable::write_next_table_regs(Target::JBay::mau_regs &regs, 
             merge.pred_map_glob[logical_id][i].pred_map_long_brch |= n.long_branch_tags();
             ++i; }
         // is this needed?  The model complains if we leave the unused slots as 0
-        while(i < NEXT_TABLE_SUCCESSOR_TABLE_DEPTH)
+        while (i < Target::NEXT_TABLE_SUCCESSOR_TABLE_DEPTH())
             merge.pred_map_loca[logical_id][i++].pred_map_loca_next_table = 0x1ff; }
 
     merge.next_table_format_data[logical_id].match_next_table_adr_mask = next_table_adr_mask;

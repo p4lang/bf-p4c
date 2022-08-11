@@ -126,6 +126,7 @@
     M(int, END_OF_PIPE) \
     M(int, GATEWAY_PAYLOAD_GROUPS) \
     M(bool, GATEWAY_SINGLE_XBAR_GROUP) \
+    M(bool, GATEWAY_NEEDS_SEARCH_BUS) \
     M(bool, HAS_MPR) \
     M(int, INSTR_SRC2_BITS) \
     M(int, IMEM_COLORS) \
@@ -142,6 +143,7 @@
     M(int, METER_ALU_GROUP_DATA_DELAY) \
     M(int, MINIMUM_INSTR_CONSTANT) \
     M(bool, NEXT_TABLE_EXEC_COMBINED) \
+    M(int, NEXT_TABLE_SUCCESSOR_TABLE_DEPTH) \
     M(int, NUM_MAU_STAGES_PRIVATE) \
     M(int, NUM_EGRESS_STAGES_PRIVATE) \
     M(int, NUM_PARSERS) \
@@ -182,6 +184,12 @@
     M(bool, TABLES_REQUIRE_ROW) \
 
 #define DECLARE_PER_TARGET_CONSTANT(TYPE, NAME) static TYPE NAME();
+
+#define TARGET_CLASS_SPECIFIC_CLASSES   \
+    class ActionTable;                  \
+    class GatewayTable;
+#define REGISTER_SET_SPECIFIC_CLASSES   /* none */
+#define TARGET_SPECIFIC_CLASSES         /* none */
 
 class Target {
  public:
@@ -297,6 +305,7 @@ class Target::Tofino : public Target {
         END_OF_PIPE = 0xff,
         GATEWAY_PAYLOAD_GROUPS = 1,
         GATEWAY_SINGLE_XBAR_GROUP = true,
+        GATEWAY_NEEDS_SEARCH_BUS = true,
         SUPPORT_TRUE_EOP = 0,
         INSTR_SRC2_BITS = 4,
         IMEM_COLORS = 2,
@@ -310,6 +319,7 @@ class Target::Tofino : public Target {
         // To avoid under run scenarios, there is a minimum egress pipeline latency required
         MINIMUM_REQUIRED_EGRESS_PIPELINE_LATENCY = 160,
         NEXT_TABLE_EXEC_COMBINED = false,  // no next_exec on tofino1 at all
+        NEXT_TABLE_SUCCESSOR_TABLE_DEPTH = 8,
         PHASE0_FORMAT_WIDTH = 64,
         REQUIRE_TCAM_ID = false,   // miss-only tables do not need a tcam id
         SRAM_EGRESS_ROWS = 8,
@@ -347,6 +357,9 @@ class Target::Tofino : public Target {
     static int encodeConst(int src) {
         return (src >> 10 << 15) | (0x8 << 10) | (src & 0x3ff);
     }
+    TARGET_SPECIFIC_CLASSES
+    REGISTER_SET_SPECIFIC_CLASSES
+    TARGET_CLASS_SPECIFIC_CLASSES
 };
 
 void declare_registers(const Target::Tofino::top_level_regs *regs);
@@ -447,6 +460,7 @@ class Target::JBay : public Target {
         END_OF_PIPE = 0x1ff,
         GATEWAY_PAYLOAD_GROUPS = 5,
         GATEWAY_SINGLE_XBAR_GROUP = true,
+        GATEWAY_NEEDS_SEARCH_BUS = true,
         SUPPORT_TRUE_EOP = 1,
         INSTR_SRC2_BITS = 5,
         IMEM_COLORS = 2,
@@ -458,6 +472,7 @@ class Target::JBay : public Target {
         MAU_BASE_PREDICATION_DELAY = 13,
         METER_ALU_GROUP_DATA_DELAY = 15,
         NEXT_TABLE_EXEC_COMBINED = true,
+        NEXT_TABLE_SUCCESSOR_TABLE_DEPTH = 8,
         PHASE0_FORMAT_WIDTH = 128,
         REQUIRE_TCAM_ID = false,   // miss-only tables do not need a tcam id
         SRAM_EGRESS_ROWS = 8,
@@ -494,6 +509,8 @@ class Target::JBay : public Target {
     static int encodeConst(int src) {
         return (src >> 11 << 16) | (0x8 << 11) | (src & 0x7ff);
     }
+    TARGET_SPECIFIC_CLASSES
+    REGISTER_SET_SPECIFIC_CLASSES
 };
 void declare_registers(const Target::JBay::top_level_regs *regs);
 void undeclare_registers(const Target::JBay::top_level_regs *regs);
@@ -513,6 +530,7 @@ class Target::Tofino2H : public Target::JBay {
         NUM_EGRESS_STAGES_PRIVATE = NUM_MAU_STAGES_PRIVATE,
         OUTPUT_STAGE_EXTENSION_PRIVATE = 1,
     };
+    TARGET_SPECIFIC_CLASSES
 };
 
 class Target::Tofino2M : public Target::JBay {
@@ -526,6 +544,7 @@ class Target::Tofino2M : public Target::JBay {
         NUM_EGRESS_STAGES_PRIVATE = NUM_MAU_STAGES_PRIVATE,
         OUTPUT_STAGE_EXTENSION_PRIVATE = 1,
     };
+    TARGET_SPECIFIC_CLASSES
 };
 
 class Target::Tofino2U : public Target::JBay {
@@ -538,6 +557,7 @@ class Target::Tofino2U : public Target::JBay {
         NUM_MAU_STAGES_PRIVATE = 20,
         NUM_EGRESS_STAGES_PRIVATE = NUM_MAU_STAGES_PRIVATE,
     };
+    TARGET_SPECIFIC_CLASSES
 };
 
 class Target::Tofino2A0 : public Target::JBay {
@@ -550,6 +570,7 @@ class Target::Tofino2A0 : public Target::JBay {
         NUM_MAU_STAGES_PRIVATE = 20,
         NUM_EGRESS_STAGES_PRIVATE = NUM_MAU_STAGES_PRIVATE,
     };
+    TARGET_SPECIFIC_CLASSES
 };
 
 void emit_parser_registers(const Target::JBay::top_level_regs *regs, std::ostream &);
@@ -645,6 +666,7 @@ class Target::Cloudbreak : public Target {
         END_OF_PIPE = 0x1ff,
         GATEWAY_PAYLOAD_GROUPS = 5,
         GATEWAY_SINGLE_XBAR_GROUP = true,
+        GATEWAY_NEEDS_SEARCH_BUS = true,
         INSTR_SRC2_BITS = 5,
         IMEM_COLORS = 2,
         IXBAR_HASH_GROUPS = 8,
@@ -655,6 +677,7 @@ class Target::Cloudbreak : public Target {
         MAU_BASE_PREDICATION_DELAY = 13,
         METER_ALU_GROUP_DATA_DELAY = 15,
         NEXT_TABLE_EXEC_COMBINED = true,
+        NEXT_TABLE_SUCCESSOR_TABLE_DEPTH = 8,
         PHASE0_FORMAT_WIDTH = 128,
         REQUIRE_TCAM_ID = false,   // miss-only tables do not need a tcam id
         SRAM_EGRESS_ROWS = 8,
@@ -700,6 +723,8 @@ class Target::Cloudbreak : public Target {
     static int encodeConst(int src) {
         return (src >> 11 << 16) | (0x8 << 11) | (src & 0x7ff);
     }
+    TARGET_SPECIFIC_CLASSES
+    REGISTER_SET_SPECIFIC_CLASSES
 };
 void declare_registers(const Target::Cloudbreak::top_level_regs *regs);
 void undeclare_registers(const Target::Cloudbreak::top_level_regs *regs);
@@ -788,6 +813,7 @@ class Target::Flatrock : public Target {
         END_OF_PIPE = 0xff,
         GATEWAY_PAYLOAD_GROUPS = 4,
         GATEWAY_SINGLE_XBAR_GROUP = false,
+        GATEWAY_NEEDS_SEARCH_BUS = false,
         INSTR_SRC2_BITS = 0,
         IMEM_COLORS = 4,
         IXBAR_HASH_GROUPS = 16,  // actually XME indexes
@@ -800,6 +826,7 @@ class Target::Flatrock : public Target {
         MAX_OVERHEAD_OFFSET_NEXT = 128,
         METER_ALU_GROUP_DATA_DELAY = 15,
         NEXT_TABLE_EXEC_COMBINED = false,
+        NEXT_TABLE_SUCCESSOR_TABLE_DEPTH = 16,
         PHASE0_FORMAT_WIDTH = 128,  // FIXME -- what should it be?
         REQUIRE_TCAM_ID = true,
         SRAM_EGRESS_ROWS = 4,
@@ -921,6 +948,9 @@ class Target::Flatrock : public Target {
     static int encodeConst(int src) {
         return src;
     }
+    TARGET_SPECIFIC_CLASSES
+    REGISTER_SET_SPECIFIC_CLASSES
+    TARGET_CLASS_SPECIFIC_CLASSES
 };
 void declare_registers(const Target::Flatrock::top_level_regs *regs);
 void undeclare_registers(const Target::Flatrock::top_level_regs *regs);
@@ -944,6 +974,17 @@ void emit_parser_registers(const Target::Flatrock::top_level_regs *regs, std::os
         case Target::TARGET_::tag: {                            \
             typedef Target::TARGET_  TARGET;                    \
             __VA_ARGS__                                         \
+            break; }
+
+#define SWITCH_FOREACH_REGISTER_SET(VAR, ...)                                   \
+        switch (VAR) {                                                          \
+        FOR_ALL_TARGET_CLASSES(DO_SWITCH_FOREACH_REGISTER_SET, __VA_ARGS__)     \
+        default: BUG("invalid target"); }
+
+#define DO_SWITCH_FOREACH_REGISTER_SET(REGS_, ...)                              \
+        TARGETS_USING_REGS(REGS_, CASE_FOR_TARGET) {                            \
+            typedef Target::REGS_  TARGET;                                      \
+            __VA_ARGS__                                                         \
             break; }
 
 #define SWITCH_FOREACH_TARGET_CLASS(VAR, ...)                                   \

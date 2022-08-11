@@ -84,12 +84,12 @@ DEPARSER_INTRINSIC(Flatrock, EGRESS, egress_unicast_port, 1) { }
 #undef DPR_INTRINSIC_RENAME
 
 template<> unsigned Deparser::FDEntry::Checksum::encode<Target::Flatrock>() {
-    error(-1, "%s:%d: Flatrock deparser not implemented yet!", __FILE__, __LINE__);
+    error(-1, "%s:%d: Flatrock deparser not implemented yet!", SRCFILE, __LINE__);
     return 0;
 }
 
 template<> unsigned Deparser::FDEntry::Constant::encode<Target::Flatrock>() {
-    error(lineno, "%s:%d: Flatrock deparser not implemented yet!", __FILE__, __LINE__);
+    error(lineno, "%s:%d: Flatrock deparser not implemented yet!", SRCFILE, __LINE__);
     return 0;
 }
 

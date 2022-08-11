@@ -154,7 +154,7 @@ void HashDistribution::pass2(Table *tbl) {
 
 #if HAVE_FLATROCK
 template<> void HashDistribution::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl) {
-    error(lineno, "%s:%d: Flatrock hash dist not implemented yet!", __FILE__, __LINE__);
+    error(lineno, "%s:%d: Flatrock hash dist not implemented yet!", SRCFILE, __LINE__);
 }
 #endif  /* HAVE_FLATROCK */
 template<class REGS>

@@ -150,7 +150,7 @@ unsigned SelectionTable::determine_shiftcount(Table::Call &call, int group, unsi
 #if HAVE_FLATROCK
 template<> void SelectionTable::write_merge_regs_vt(Target::Flatrock::mau_regs &regs,
             MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args) {
-    error(lineno, "%s:%d: Flatrock selector not implemented yet!", __FILE__, __LINE__);
+    error(lineno, "%s:%d: Flatrock selector not implemented yet!", SRCFILE, __LINE__);
 }
 #endif  /* HAVE_FLATROCK */
 template<class REGS> void SelectionTable::write_merge_regs_vt(REGS &regs, MatchTable *match,
@@ -276,7 +276,7 @@ template<> void SelectionTable::setup_physical_alu_map(Target::Cloudbreak::mau_r
 
 #if HAVE_FLATROCK
 template<> void SelectionTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
-    error(lineno, "%s:%d: Flatrock selector not implemented yet!", __FILE__, __LINE__);
+    error(lineno, "%s:%d: Flatrock selector not implemented yet!", SRCFILE, __LINE__);
 }
 #endif  /* HAVE_FLATROCK */
 template<class REGS>

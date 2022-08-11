@@ -88,7 +88,7 @@ void ProxyHashMatchTable::pass3() {
 
 #if HAVE_FLATROCK
 template<> void ProxyHashMatchTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
-    error(lineno, "%s:%d: Flatrock proxy hash not implemented yet!", __FILE__, __LINE__);
+    error(lineno, "%s:%d: Flatrock proxy hash not implemented yet!", SRCFILE, __LINE__);
 }
 #endif  /* HAVE_FLATROCK */
 template<class REGS> void ProxyHashMatchTable::write_regs_vt(REGS &regs) {

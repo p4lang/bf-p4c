@@ -26,7 +26,7 @@ template<> void MatchTable::write_next_table_regs(Target::Cloudbreak::mau_regs &
             merge.pred_map_glob[logical_id][i].pred_map_long_brch |= n.long_branch_tags();
             ++i; }
         // is this needed?  The model complains if we leave the unused slots as 0
-        while(i < NEXT_TABLE_SUCCESSOR_TABLE_DEPTH)
+        while (i < Target::NEXT_TABLE_SUCCESSOR_TABLE_DEPTH())
             merge.pred_map_loca[logical_id][i++].pred_map_loca_next_table = 0x1ff; }
 
     merge.next_table_format_data[logical_id].match_next_table_adr_mask = next_table_adr_mask;
@@ -39,7 +39,8 @@ template<> void MatchTable::write_next_table_regs(Target::Cloudbreak::mau_regs &
     merge.pred_miss_long_brch[logical_id] = miss_next.long_branch_tags();
 }
 
-template<> void MatchTable::write_regs(Target::Cloudbreak::mau_regs &regs, int type, Table *result) {
+template<> void MatchTable::write_regs(Target::Cloudbreak::mau_regs &regs, int type, Table *result)
+{
     write_common_regs<Target::Cloudbreak>(regs, type, result);
     // FIXME -- factor this with Cloudbreak GatewayTable::standalone_write_regs
     auto &merge = regs.rams.match.merge;

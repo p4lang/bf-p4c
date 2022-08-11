@@ -7,17 +7,17 @@
 
 void DivMod::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl,
                         Table::Actions::Action *act) {
-    error(lineno, "%s:%d: Flatrock SALU not implemented yet!", __FILE__, __LINE__);
+    error(lineno, "%s:%d: Flatrock SALU not implemented yet!", SRCFILE, __LINE__);
 }
 void MinMax::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl_,
         Table::Actions::Action *act) {
-    error(lineno, "%s:%d: Flatrock SALU not implemented yet!", __FILE__, __LINE__);
+    error(lineno, "%s:%d: Flatrock SALU not implemented yet!", SRCFILE, __LINE__);
 }
 
 template<>
 void AluOP::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl_,
         Table::Actions::Action *act) {
-    error(lineno, "%s:%d: Flatrock SALU not implemented yet!", __FILE__, __LINE__);
+    error(lineno, "%s:%d: Flatrock SALU not implemented yet!", SRCFILE, __LINE__);
 }
 void AluOP::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl,
         Table::Actions::Action *act) {
@@ -26,7 +26,7 @@ void AluOP::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl,
 template<>
 void BitOP::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl,
         Table::Actions::Action *act) {
-    error(lineno, "%s:%d: Flatrock SALU not implemented yet!", __FILE__, __LINE__);
+    error(lineno, "%s:%d: Flatrock SALU not implemented yet!", SRCFILE, __LINE__);
 }
 void BitOP::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl,
         Table::Actions::Action *act) {
@@ -35,7 +35,7 @@ void BitOP::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl,
 template<>
 void CmpOP::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl_,
         Table::Actions::Action *act) {
-    error(lineno, "%s:%d: Flatrock SALU not implemented yet!", __FILE__, __LINE__);
+    error(lineno, "%s:%d: Flatrock SALU not implemented yet!", SRCFILE, __LINE__);
 }
 void CmpOP::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl,
         Table::Actions::Action *act) {
@@ -44,7 +44,7 @@ void CmpOP::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl,
 template<>
 void TMatchOP::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl_,
         Table::Actions::Action *act) {
-    error(lineno, "%s:%d: Flatrock SALU not implemented yet!", __FILE__, __LINE__);
+    error(lineno, "%s:%d: Flatrock SALU not implemented yet!", SRCFILE, __LINE__);
 }
 void TMatchOP::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl,
         Table::Actions::Action *act) {
@@ -53,17 +53,17 @@ void TMatchOP::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl,
 template<>
 void OutOP::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl_,
         Table::Actions::Action *act) {
-    error(lineno, "%s:%d: Flatrock SALU not implemented yet!", __FILE__, __LINE__);
+    error(lineno, "%s:%d: Flatrock SALU not implemented yet!", SRCFILE, __LINE__);
 }
 void OutOP::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl,
         Table::Actions::Action *act) {
     write_regs<Target::Flatrock::mau_regs>(regs, tbl, act); }
 
 void OutOP::decode_output_mux(Target::Flatrock, Table *tbl, value_t &op) {
-    error(lineno, "%s:%d: Flatrock SALU not implemented yet!", __FILE__, __LINE__);
+    error(lineno, "%s:%d: Flatrock SALU not implemented yet!", SRCFILE, __LINE__);
 }
 
 int OutOP::decode_output_option(Target::Flatrock, value_t &op) {
-    error(lineno, "%s:%d: Flatrock SALU not implemented yet!", __FILE__, __LINE__);
+    error(lineno, "%s:%d: Flatrock SALU not implemented yet!", SRCFILE, __LINE__);
     return 0;
 }

@@ -6,6 +6,7 @@
 #include "tables.h"
 
 // template specialization declarations
+#include "tofino/action_table.h"
 #include "flatrock/action_table.h"
 
 /// See 6.2.8.4.3 of the MAU Micro-Architecture document.
@@ -751,9 +752,4 @@ void ActionTable::gen_tbl_cfg(json::vector &out) const {
     merge_context_json(tbl, stage_tbl);
 }
 
-#if HAVE_FLATROCK
-DEFINE_TABLE_TYPE_WITH_TF5_SPECIALIZATION(ActionTable)   // NOLINT(readability/fn_size)
-#else
-DEFINE_TABLE_TYPE(ActionTable)
-#endif
-
+DEFINE_TABLE_TYPE_WITH_SPECIALIZATION(ActionTable, TARGET_CLASS)   // NOLINT(readability/fn_size)

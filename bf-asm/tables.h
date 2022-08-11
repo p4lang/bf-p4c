@@ -994,17 +994,14 @@ FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,                                  \
         write_regs_vt(regs); })
 
 /* Used to create a subclass for a table type */
-#define DEFINE_TABLE_TYPE_WITH_TF5_SPECIALIZATION(TYPE)                 \
+#define DEFINE_TABLE_TYPE_WITH_SPECIALIZATION(TYPE, KIND)               \
 TYPE::Type TYPE::table_type_singleton;                                  \
 TYPE *TYPE::Type::create(int lineno, const char *name, gress_t gress,   \
                           Stage *stage, int lid, VECTOR(pair_t) &data) {\
-    if (options.target == TOFINO5) {                                    \
-        TYPE *rv = new Flatrock::TYPE(lineno, name, gress, stage, lid); \
+    SWITCH_FOREACH_##KIND(options.target,                               \
+        auto *rv = new TARGET::TYPE(lineno, name, gress, stage, lid);   \
         rv->setup(data);                                                \
-        return rv; }                                                    \
-    TYPE *rv = new TYPE(lineno, name, gress, stage, lid);               \
-    rv->setup(data);                                                    \
-    return rv;                                                          \
+        return rv; )                                                    \
 }                                                                       \
 FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,                                  \
     void TYPE::write_regs, (mau_regs &regs), {                          \
@@ -1071,6 +1068,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam,
                                                 // match group in each word
     int         mgm_lineno = -1;                // match_group_map lineno
     friend class GatewayTable;      // Gateway needs to examine word group details for compat
+    friend class Target::Tofino::GatewayTable;
     bitvec version_nibble_mask;
     // Which hash groups are assigned to the hash_function_number in the hash_function json node
     // This is to coordinate with the hash_function_id in the ways
@@ -1588,6 +1586,7 @@ DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
 )
 
 DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
+ protected:
     MatchTable                  *match_table = 0;
     uint64_t                    payload = -1;
     int                         have_payload = -1;
@@ -1615,7 +1614,7 @@ DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
             offset(off), val(gr, stg, v), valid(vld) {}
         bool operator<(const MatchKey &a) const { return offset < a.offset; }
     };
- private:
+ protected:
     std::vector<MatchKey>       match, xor_match;
     struct Match {
         int                     lineno = 0;
@@ -1668,6 +1667,7 @@ DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
     bool is_branch() const;   // Tofino2/3 needs is_a_brnch set to use next_table
     void verify_format();
     bool is_always_run() const override { return always_run; }
+    virtual int gw_memory_unit() const = 0;
 )
 
 DECLARE_TABLE_TYPE(SelectionTable, AttachedTable, "selection",

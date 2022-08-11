@@ -491,7 +491,7 @@ void IXBar::add_use(ContByteConversion &map_alloc, const PHV::Field *field,
                     const PhvInfo &phv, const IR::MAU::Table *ctxt,
                     boost::optional<cstring> aliasSourceName, const le_bitrange *bits,
                     int flags, byte_type_t byte_type, unsigned extra_align, int range_index) {
-    LOG5("Adding IXBar Use for field - " << field << "on table : " << ctxt->name
+    LOG5("Adding IXBar Use for field - " << field << Log::endl << "  on table : " << ctxt->name
             << ", flags : " << flags << ", byte_type: " << byte_type
             << ", extra_align: " << extra_align << ", range_index: " << range_index);
 
@@ -611,9 +611,10 @@ void IXBar::create_alloc(ContByteConversion &map_alloc, safe_vector<Use::Byte> &
         });
     }
 
-    // Used to print initialization information for gtest
     for (auto &byte : bytes) {
-        LOG5("Allocate " << byte.container << " lo " << byte.lo
+        LOG5("Allocate " << byte);
+        // Used to print initialization information for gtest
+        LOG_FEATURE("gtest", 2, "Allocate " << byte.container << " lo " << byte.lo
              << " bit_use " << byte.bit_use
              << " flag " << byte.flags
              << " non_zero_bits " << byte.non_zero_bits

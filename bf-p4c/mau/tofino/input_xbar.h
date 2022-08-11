@@ -257,7 +257,7 @@ struct IXBar : public ::IXBar {
         safe_vector<const IR::Expression *> field_list_order;
         LTBitMatrix symmetric_keys;
 
-        void clear() {
+        void clear() override {
             ::IXBar::Use::clear();
             gw_search_bus = false;
             gw_search_bus_bytes = 0;
@@ -273,15 +273,17 @@ struct IXBar : public ::IXBar {
             salu_input_source.clear();
             field_list_order.clear();
         }
-        Use *clone() const { return new Use(*this); }
-        bool empty() const {
+        Use *clone() const override { return new Use(*this); }
+        bool empty() const override {
             return ::IXBar::Use::empty() && bit_use.empty() &&
                 !meter_alu_hash.allocated && !hash_dist_hash.allocated &&
                 !proxy_hash_key_use.allocated && salu_input_source.empty(); }
-        void dbprint(std::ostream &) const;
+        void dbprint(std::ostream &) const override;
 
         void add(const Use &alloc);
         safe_vector<Byte> atcam_partition(int *hash_group = nullptr) const;
+        bool emit_gateway_asm(const MauAsmOutput &, std::ostream &, indent_t,
+                              const IR::MAU::Table *) const override { return false; }
         void emit_ixbar_asm(const PhvInfo &phv, std::ostream& out, indent_t indent,
                             const TableMatch *fmt, const IR::MAU::Table *) const;
         void emit_salu_bytemasks(std::ostream &out, indent_t indent) const;
@@ -567,6 +569,9 @@ struct IXBar : public ::IXBar {
     bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResourceAlloc &alloc,
                     const LayoutOption *lo, const ActionData::Format::Use *af,
                     const attached_entries_t &ae);
+    bool allocTable(const IR::MAU::Table *tbl, const IR::MAU::Table *gw, const PhvInfo &phv,
+                    TableResourceAlloc &alloc, const LayoutOption *lo,
+                    const ActionData::Format::Use *af, const attached_entries_t &ae) override;
 
     void update(cstring name, const ::IXBar::Use &alloc);
     void update(cstring name, const HashDistUse &hash_dist_alloc);
