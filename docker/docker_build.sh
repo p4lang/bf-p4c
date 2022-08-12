@@ -59,7 +59,6 @@ export P4C_DEPS="autoconf \
                  lld \
                  graphviz \
                  libfl-dev \
-                 libatomic-ops-dev
                  libgmp-dev \
                  libssl-dev \
                  libtool \
@@ -196,19 +195,6 @@ if [[ "${BUILD_FOR}" != 'jenkins-final' ]] ; then
     apt install -y ${REL_PKGS}
     ;;
   esac
-
-  # Download, configure, build GC with large config
-  WORKDIR /tmp
-  {
-    curl -o gc-7.4.2.tar.gz https://hboehm.info/gc/gc_source/gc-7.4.2.tar.gz
-    tar -xvf gc-7.4.2.tar.gz
-    cd gc-7.4.2
-    ./autogen.sh
-    ./configure --enable-large-config --enable-cplusplus --enable-shared
-    make -$MAKEFLAGS
-    make install -$MAKEFLAGS
-    ldconfig
-  }
 
   # Dependencies for benchmarks
   apt-get install -y time
