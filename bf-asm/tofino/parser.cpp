@@ -1355,7 +1355,13 @@ void Parser::write_config(Target::Tofino::parser_regs &regs, json::map &ctxt_jso
         regs.egress.prsr_reg.hdr_len_adj.amt = hdr_len_adj;
     }
 
-    if (options.match_compiler) {
+    // FIXME: The "|| 1" causes the PHV use information to be unconditionally copied
+    // into the PHV ownership. This forces the parser ownership to be identical to that
+    // in the pipe.
+    // Remove to allow different ownership, but make sure that header stacks
+    // are processed correctly. All stack elements writeable by the parser must
+    // be owned by the parser.
+    if (options.match_compiler || 1) {
         phv_use[INGRESS] |= Phv::use(INGRESS);
         phv_use[EGRESS] |= Phv::use(EGRESS);
     }
