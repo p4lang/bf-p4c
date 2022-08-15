@@ -25,15 +25,15 @@ control IngressMirror(
                 ig_md.mirror.src,
                 ig_md.mirror.type,
                 0,
-                ig_md.port,
+                ig_md.ingress_port,
                 ig_md.bd,
                 0,
     #ifdef CPU_HDR_CONTAINS_EG_PORT
                 ig_md.egress_port,
     #else
-                ig_md.port_lag_index,
+                ig_md.ingress_port_lag_index,
     #endif
-                ig_md.timestamp,
+                ig_md.ingress_timestamp,
 //  #if __TARGET_TOFINO__ == 1
 //               0,
 //  #endif
@@ -53,15 +53,15 @@ control IngressMirror(
                 ig_md.mirror.src,
                 ig_md.mirror.type,
                 0,
-                ig_md.port,
+                ig_md.ingress_port,
                 ig_md.bd,
                 0,
     #ifdef CPU_HDR_CONTAINS_EG_PORT
                 ig_md.egress_port,
     #else
-                ig_md.port_lag_index,
+                ig_md.ingress_port_lag_index,
     #endif
-                ig_md.timestamp,
+                ig_md.ingress_timestamp,
                 ig_md.cpu_reason
 /*
 				,
@@ -78,7 +78,7 @@ control IngressMirror(
             mirror.emit<switch_dtel_drop_mirror_metadata_h>(ig_md.dtel.session_id, {
                 ig_md.mirror.src,
                 ig_md.mirror.type,
-                ig_md.timestamp,
+                ig_md.ingress_timestamp,
 #if __TARGET_TOFINO__ == 1
                 0,
 #endif
@@ -86,7 +86,7 @@ control IngressMirror(
                 ig_md.hash,
                 ig_md.dtel.report_type,
                 0,
-                ig_md.port,
+                ig_md.ingress_port,
                 0,
                 ig_md.egress_port,
                 0,

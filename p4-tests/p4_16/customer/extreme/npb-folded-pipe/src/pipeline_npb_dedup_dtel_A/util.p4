@@ -14,18 +14,18 @@ control AddBridgedMd(
 		bridged_md.setValid();
 		bridged_md.src = SWITCH_PKT_SRC_BRIDGED;
 		bridged_md.base = {
-			ig_md.port,
+			ig_md.ingress_port,
 #ifdef CPU_HDR_CONTAINS_EG_PORT
 //			ig_md.egress_port, // derek added
 #else
-			ig_md.port_lag_index,
+			ig_md.ingress_port_lag_index,
 #endif
 //			ig_md.bd,
 			ig_md.nexthop,
 //			ig_md.lkp.pkt_type,
 			ig_md.flags.bypass_egress,
 			ig_md.cpu_reason,
-			ig_md.timestamp,
+			ig_md.ingress_timestamp,
 			ig_md.qos.qid,
 
 			// Add more fields here.
@@ -80,6 +80,11 @@ control AddBridgedMdFolded(
 		bridged_md.src = SWITCH_PKT_SRC_BRIDGED;
 		bridged_md.base = {
 			eg_md.ingress_port,
+#ifdef CPU_HDR_CONTAINS_EG_PORT
+//			eg_md.egress_port, // derek added
+#else
+			eg_md.egress_port_lag_index,
+#endif
 //			eg_md.bd,
 			eg_md.nexthop,
 //			eg_md.lkp.pkt_type,
@@ -142,15 +147,13 @@ action set_ig_intr_md(
 #else
 	hash =          ig_md.hash[switch_hash_width/2+12:switch_hash_width/2]; // cap  at 13 bits
 #endif
-
-//	ig_intr_md_for_tm.level1_mcast_hash = ig_md.hash[12:0];
 //	ig_intr_md_for_tm.level2_mcast_hash = ig_md.hash[28:16];
 	ig_intr_md_for_tm.level2_mcast_hash = hash;
-#if __TARGET_TOFINO__ == 2 || __TARGET_TOFINO__ == 3
-//	ig_intr_md_for_dprsr.mirror_type = (bit<4>) ig_md.mirror.type;
-#else
-//	ig_intr_md_for_dprsr.mirror_type = (bit<3>) ig_md.mirror.type;
-#endif
+
+//#ifdef QOS_ENABLE
+	ig_intr_md_for_tm.qid = ig_md.qos.qid;
+//	ig_intr_md_for_tm.ingress_cos = ig_md.qos.icos;
+//#endif
 }
 
 // -----------------------------------------------------------------------------

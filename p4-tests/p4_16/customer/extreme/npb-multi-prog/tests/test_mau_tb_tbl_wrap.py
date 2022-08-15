@@ -820,10 +820,12 @@ def npb_tunnel_dmac_del(self, target, ig_pipe, ig_port_lag_ptr, ethertype, ether
 # ing sfc: decap 0 (transport)
 
 def npb_tunnel_network_dst_vtep_add(self, target, ig_pipe,
-		l3_src   = '0.0.0.0', l3_src_mask   = 0,
-		l3_dst   = '0.0.0.0', l3_dst_mask   = 0,
-		tun_type = 0,         tun_type_mask = 0,
-		tun_id   = 0,         tun_id_mask   = 0,
+		l2_dst   = '0:0:0:0:0:0', l2_dst_mask   = 0,
+		l2_vid   = 0,             l2_vid_mask   = 0,
+		l3_src   = '0.0.0.0',     l3_src_mask   = 0,
+		l3_dst   = '0.0.0.0',     l3_dst_mask   = 0,
+		tun_type = 0,             tun_type_mask = 0,
+		tun_id   = 0,             tun_id_mask   = 0,
 		# results
 		sap           = 0,
 		vpn           = 0,
@@ -837,10 +839,12 @@ def npb_tunnel_network_dst_vtep_add(self, target, ig_pipe,
 			table.entry_add(
 				target,
 				[table.make_key(
-					[gc.KeyTuple('src_addr',                                  gc.ipv4_to_bytes(l3_src), l3_src_mask),
+					[gc.KeyTuple('mac_dst_addr',                              gc.mac_to_bytes(l2_dst), l2_dst_mask),
+					 gc.KeyTuple('vid',                                       l2_vid, l2_vid_mask),
+					 gc.KeyTuple('src_addr',                                  gc.ipv4_to_bytes(l3_src), l3_src_mask),
 					 gc.KeyTuple('dst_addr',                                  gc.ipv4_to_bytes(l3_dst), l3_dst_mask),
 					 gc.KeyTuple('tunnel_type',                               tun_type, tun_type_mask),
-					 gc.KeyTuple('tunnel_id',                               tun_id, tun_id_mask)],
+					 gc.KeyTuple('tunnel_id',                                 tun_id, tun_id_mask)],
 				)],
 				[table.make_data(
 					[gc.DataTuple('sap',                                      sap),
@@ -1178,7 +1182,7 @@ def npb_npb_sfc_sf_sel_del(self, target, ig_pipe, spi, si):
 
 ########################################
 
-def npb_sfc_sf_sel_nsh_xlate_add(self, target, ig_pipe, ta, ttl, spi, si, si_predec):
+def npb_sfc_sf_sel_nsh_xlate_add(self, target, ig_pipe, ta, spi, si, sf_bitmask):
 
 		for ig_pipe2 in ig_pipes:
 			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.ing_sfc_sf_sel_nsh_xlate' % ictl_s[ig_pipe2])
@@ -1188,10 +1192,10 @@ def npb_sfc_sf_sel_nsh_xlate_add(self, target, ig_pipe, ta, ttl, spi, si, si_pre
 					[gc.KeyTuple('tool_address',                     ta)],
 				)],
 				[table.make_data(
-					[gc.DataTuple('ttl',                             ttl),
+					[gc.DataTuple('ttl',                             63),
 					 gc.DataTuple('spi',                             spi),
 					 gc.DataTuple('si',                              si),
-					 gc.DataTuple('si_predec',                      si_predec)],
+					 gc.DataTuple('si_predec',                      si-(popcount(sf_bitmask&6)))],
 					'%s.npb_ing_top.npb_ing_sfc_top.ing_sfc_sf_sel_nsh_xlate_hit' % ictl_s[ig_pipe2]
 				)]
 			)
@@ -1358,7 +1362,8 @@ def npb_npb_sf0_policy_l2_add(self, target, ig_pipe,
 		mirror_enable  = 0, mirror_id   = 0,
 		cpu_reason_code= 0,
 		sfc_enable     = 0,
-		sfc            = 0
+		sfc            = 0,
+		queue          = 0
 		):
 
 		# ensure that whenever "terminate" is set, "scope" is also set
@@ -1389,7 +1394,8 @@ def npb_npb_sf0_policy_l2_add(self, target, ig_pipe,
 					 gc.DataTuple('mirror_session_id',               mirror_id),
 					 gc.DataTuple('cpu_reason_code',                 cpu_reason_code),
 					 gc.DataTuple('sfc_enable',                      sfc_enable),
-					 gc.DataTuple('sfc',                             sfc)],
+					 gc.DataTuple('sfc',                             sfc),
+					 gc.DataTuple('qid',                             queue)],
 					'%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.mac_acl.hit' % ictl_s[ig_pipe2]
 				)]
 			)
@@ -1477,7 +1483,8 @@ def npb_npb_sf0_policy_l34_v4_add(self, target, ig_pipe,
 		mirror_enable  = 0, mirror_id           = 0,
 		cpu_reason_code= 0,
 		sfc_enable     = 0,
-		sfc            = 0
+		sfc            = 0,
+		queue          = 0
 		):
 
 		# ensure that whenever "terminate" is set, "scope" is also set
@@ -1515,7 +1522,8 @@ def npb_npb_sf0_policy_l34_v4_add(self, target, ig_pipe,
 					 gc.DataTuple('mirror_session_id',               mirror_id),
 					 gc.DataTuple('cpu_reason_code',                 cpu_reason_code),
 					 gc.DataTuple('sfc_enable',                      sfc_enable),
-					 gc.DataTuple('sfc',                             sfc)],
+					 gc.DataTuple('sfc',                             sfc),
+					 gc.DataTuple('qid',                             queue)],
 					'%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.ipv4_acl.hit' % ictl_s[ig_pipe2]
 				)]
 			)
@@ -1627,7 +1635,8 @@ def npb_npb_sf0_policy_l34_v6_add(self, target, ig_pipe,
 		mirror_enable  = 0, mirror_id           = 0,
 		cpu_reason_code= 0,
 		sfc_enable     = 0,
-		sfc            = 0
+		sfc            = 0,
+		queue          = 0
 		):
 
 		# ensure that whenever "terminate" is set, "scope" is also set
@@ -1672,7 +1681,8 @@ def npb_npb_sf0_policy_l34_v6_add(self, target, ig_pipe,
 					 gc.DataTuple('mirror_session_id',               mirror_id),
 					 gc.DataTuple('cpu_reason_code',                 cpu_reason_code),
 					 gc.DataTuple('sfc_enable',                      sfc_enable),
-					 gc.DataTuple('sfc',                             sfc)],
+					 gc.DataTuple('sfc',                             sfc),
+					 gc.DataTuple('qid',                             queue)],
 					'%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.ipv6_acl.hit' % ictl_s[ig_pipe2]
 				)]
 			)
@@ -5125,7 +5135,7 @@ def npb_nsh_chain_middle_add(self, target, ig_pipe,
 	npb_tunnel_rmac_add       (self, target, ig_pipe, rmac);
 
 	npb_npb_sfc_sf_sel_add    (self, target, ig_pipe, spi, si, si-(popcount(sf_bitmask&6))) # only 'and' with sf's that are after the sff
-	npb_sfc_sf_sel_nsh_xlate_add(self, target, ig_pipe, ta, 63, spi, si, si-(popcount(sf_bitmask&6)) )
+#	npb_sfc_sf_sel_nsh_xlate_add(self, target, ig_pipe, ta, 63, spi, si, si-(popcount(sf_bitmask&6)) )
 
 	if(sf_bitmask&1):
 		npb_npb_sf0_action_sel_add(self, target, ig_pipe, spi, si-(popcount(sf_bitmask&0)), 0)
@@ -5151,7 +5161,7 @@ def npb_nsh_chain_middle_del(self, target, ig_pipe,
 	npb_ing_port_del          (self, target, ig_pipe, ig_port, ig_port_lag_ptr)
 	npb_tunnel_rmac_del       (self, target, ig_pipe, rmac);
 	npb_npb_sfc_sf_sel_del    (self, target, ig_pipe, spi, si)
-	npb_sfc_sf_sel_nsh_xlate_del(self, target, ig_pipe, ta)
+#	npb_sfc_sf_sel_nsh_xlate_del(self, target, ig_pipe, ta)
 	if(sf_bitmask&1):
 		npb_npb_sf0_action_sel_del(self, target, ig_pipe, spi, si-(popcount(sf_bitmask&0)))
 	npb_npb_sff_fib_del       (self, target, ig_pipe, spi, si-(popcount(sf_bitmask)))
@@ -5178,7 +5188,7 @@ def npb_nsh_chain_end_add(self, target, ig_pipe,
 	npb_ing_port_add          (self, target, ig_pipe, ig_port, ig_port_lag_ptr, bridging_enable, 0, 0, 0, 0, 0)
 	npb_tunnel_rmac_add       (self, target, ig_pipe, rmac);
 	npb_npb_sfc_sf_sel_add    (self, target, ig_pipe, spi, si, si-(popcount(sf_bitmask&6))) # only 'and' with sf's that are after the sff
-	npb_sfc_sf_sel_nsh_xlate_add(self, target, ig_pipe, ta, 63, spi, si, si-(popcount(sf_bitmask&6)) )
+#	npb_sfc_sf_sel_nsh_xlate_add(self, target, ig_pipe, ta, 63, spi, si, si-(popcount(sf_bitmask&6)) )
 	if(sf_bitmask&1):
 		npb_npb_sf0_action_sel_add(self, target, ig_pipe, spi, si-(popcount(sf_bitmask&0)), 0)
 	npb_npb_sff_fib_add       (self, target, ig_pipe, spi, si-(popcount(sf_bitmask)), nexthop_ptr, 1) # 1 = end of chain
@@ -5200,7 +5210,7 @@ def npb_nsh_chain_end_del(self, target, ig_pipe,
 	npb_ing_port_del          (self, target, ig_pipe, ig_port, ig_port_lag_ptr)
 	npb_tunnel_rmac_del       (self, target, ig_pipe, rmac);
 	npb_npb_sfc_sf_sel_del    (self, target, ig_pipe, spi, si)
-	npb_sfc_sf_sel_nsh_xlate_del(self, target, ig_pipe, ta)
+#	npb_sfc_sf_sel_nsh_xlate_del(self, target, ig_pipe, ta)
 	if(sf_bitmask&1):
 		npb_npb_sf0_action_sel_del(self, target, ig_pipe, spi, si-(popcount(sf_bitmask&0)))
 	npb_npb_sff_fib_del       (self, target, ig_pipe, spi, si-(popcount(sf_bitmask)))

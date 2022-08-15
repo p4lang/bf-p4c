@@ -29,11 +29,11 @@ parser IngressParser(
 
     state start {
         pkt.extract(ig_intr_md);
-        ig_md.port           = ig_intr_md.ingress_port;
+        ig_md.ingress_port           = ig_intr_md.ingress_port;
 #if defined(PTP_ENABLE) || defined(INT_V2)
-        ig_md.timestamp = ig_intr_md.ingress_mac_tstamp;
+        ig_md.ingress_timestamp = ig_intr_md.ingress_mac_tstamp;
 #else
-        ig_md.timestamp = ig_intr_md.ingress_mac_tstamp[31:0];
+        ig_md.ingress_timestamp = ig_intr_md.ingress_mac_tstamp[31:0];
 #endif
         // Check for resubmit flag if packet is resubmitted.
         // transition select(ig_intr_md.resubmit_flag) {
@@ -66,7 +66,7 @@ parser IngressParser(
         pkt.advance(PORT_METADATA_SIZE);
 #else
         switch_port_metadata_t port_md = port_metadata_unpack<switch_port_metadata_t>(pkt);
-        ig_md.port_lag_index = port_md.port_lag_index;
+        ig_md.ingress_port_lag_index = port_md.port_lag_index;
         ig_md.nsh_md.l2_fwd_en = (bool)port_md.l2_fwd_en;
 #endif
         transition select(FOLDED_ENABLE) {
@@ -84,17 +84,17 @@ parser IngressParser(
 //      ig_md.pkt_src = SWITCH_PKT_SRC_BRIDGED;
 
         // ---- extract base bridged metadata -----
-//      ig_md.port                 = hdr.bridged_md_folded.base.ingress_port;
+//      ig_md.ingress_port         = hdr.bridged_md_folded.base.ingress_port;
 #ifdef CPU_HDR_CONTAINS_EG_PORT
 #else
-        ig_md.port_lag_index       = hdr.bridged_md_folded.base.ingress_port_lag_index;
+        ig_md.ingress_port_lag_index = hdr.bridged_md_folded.base.ingress_port_lag_index;
 #endif
 //      ig_md.bd                   = hdr.bridged_md_folded.base.ingress_bd;
         ig_md.nexthop              = hdr.bridged_md_folded.base.nexthop;
 //      ig_md.pkt_type             = hdr.bridged_md_folded.base.pkt_type;
 //      ig_md.flags.bypass_egress  = hdr.bridged_md_folded.base.bypass_egress;
         ig_md.cpu_reason           = hdr.bridged_md_folded.base.cpu_reason;
-        ig_md.timestamp            = hdr.bridged_md_folded.base.timestamp;
+        ig_md.ingress_timestamp    = hdr.bridged_md_folded.base.timestamp;
 //      ig_md.qos.qid              = hdr.bridged_md_folded.base.qid; // can't do in parser for some reason.
 
         ig_md.hash                 = hdr.bridged_md_folded.base.hash;
@@ -197,6 +197,7 @@ parser IngressParser(
     // be presented to dest-vtep table (transport) instead of the traditional
     // inner-sap table (outer).
     //
+    //    spbm
     //    enet / mpls-sr
     //    enet / ipv4 / udp / vxlan
     //    enet / ipv4 / udp / geneve
@@ -208,16 +209,32 @@ parser IngressParser(
     // will start down this path and be subjected to additional parsing states.
     //--------------------------------------------------------------------------
 
+    // state construct_transport_special_case_a {
+    //     transition select(
+    //         TRANSPORT_INGRESS_ENABLE,
+    //         TRANSPORT_IPV4_VXLAN_INGRESS_ENABLE,
+    //         TRANSPORT_IPV4_GENEVE_INGRESS_ENABLE,
+    //         TRANSPORT_EoMPLS_INGRESS_ENABLE) {
+    //         (false,    _,    _,    _): parse_outer_ethernet;
+    //         ( true,    _,    _, true): check_special_case_enet_ipv4_mpls;
+    //         ( true,    _, true,    _): check_special_case_enet_ipv4_nompls;
+    //         ( true, true,    _,    _): check_special_case_enet_ipv4_nompls;
+    //         default: parse_outer_ethernet;
+    //     }
+    // }
     state construct_transport_special_case_a {
         transition select(
             TRANSPORT_INGRESS_ENABLE,
             TRANSPORT_IPV4_VXLAN_INGRESS_ENABLE,
             TRANSPORT_IPV4_GENEVE_INGRESS_ENABLE,
-            TRANSPORT_EoMPLS_INGRESS_ENABLE) {
-            (false,    _,    _,    _): parse_outer_ethernet;
-            ( true,    _,    _, true): check_special_case_enet_ipv4_mpls;
-            ( true,    _, true,    _): check_special_case_enet_ipv4_nompls;
-            ( true, true,    _,    _): check_special_case_enet_ipv4_nompls;
+            TRANSPORT_EoMPLS_INGRESS_ENABLE,
+            TRANSPORT_SPBM_INGRESS_ENABLE) {
+            (false,    _,    _,    _,    _): parse_outer_ethernet;
+            ( true,    _,    _, true, true): check_special_case_enet_ipv4_mpls_spbm;
+            ( true,    _,    _, true,    _): check_special_case_enet_ipv4_mpls_nospbm;
+            ( true,    _,    _,    _, true): check_special_case_enet_ipv4_nompls_spbm;
+            ( true,    _, true,    _,    _): check_special_case_enet_ipv4_nompls_nospbm;
+            ( true, true,    _,    _,    _): check_special_case_enet_ipv4_nompls_nospbm;
             default: parse_outer_ethernet;
         }
     }
@@ -235,7 +252,28 @@ parser IngressParser(
     //     }
     // }
     
-    state check_special_case_enet_ipv4_mpls {
+    state check_special_case_enet_ipv4_mpls_spbm {
+        transition select(
+            pkt.lookahead<snoop_head_enet_ipv4_h>().enet_ether_type,
+            pkt.lookahead<snoop_head_enet_ipv4_h>().ipv4_protocol) {    
+            (ETHERTYPE_QINQ, _               ): check_special_case_qinq_minm;
+            (ETHERTYPE_MPLS, _               ): parse_transport_ethernet;
+            (ETHERTYPE_IPV4, IP_PROTOCOLS_UDP): construct_transport_special_case_b;
+            default                           : parse_outer_ethernet;
+        }
+    }
+
+    // Need to look at 2nd tag to differentiate between Q-in-Q and MAC-in-MAC
+    // (both start w/ 0x88a8)
+    state check_special_case_qinq_minm {
+        transition select(
+            pkt.lookahead<snoop_head_enet_vlan_h>().vlan_ether_type) {
+            ETHERTYPE_MINM: parse_transport_ethernet;
+            default: parse_outer_ethernet;
+        }
+    }
+
+    state check_special_case_enet_ipv4_mpls_nospbm {
         transition select(
             pkt.lookahead<snoop_head_enet_ipv4_h>().enet_ether_type,
             pkt.lookahead<snoop_head_enet_ipv4_h>().ipv4_protocol) {    
@@ -245,7 +283,17 @@ parser IngressParser(
         }
     }
 
-    state check_special_case_enet_ipv4_nompls {
+    state check_special_case_enet_ipv4_nompls_spbm {
+        transition select(
+            pkt.lookahead<snoop_head_enet_ipv4_h>().enet_ether_type,
+            pkt.lookahead<snoop_head_enet_ipv4_h>().ipv4_protocol) {    
+            (ETHERTYPE_QINQ, _               ): parse_transport_ethernet;
+            (ETHERTYPE_IPV4, IP_PROTOCOLS_UDP): construct_transport_special_case_b;
+            default                           : parse_outer_ethernet;
+        }
+    }
+
+    state check_special_case_enet_ipv4_nompls_nospbm {
         transition select(
             pkt.lookahead<snoop_head_enet_ipv4_h>().enet_ether_type,
             pkt.lookahead<snoop_head_enet_ipv4_h>().ipv4_protocol) {
@@ -253,7 +301,7 @@ parser IngressParser(
             default                           : parse_outer_ethernet;
         }
     }
-
+    
     // todo: Insert new state check_special_case_enet_vlan_ipv4 here?
     
     state construct_transport_special_case_b {
@@ -426,6 +474,7 @@ parser IngressParser(
         transition select(hdr.transport.ethernet.ether_type) {
             ETHERTYPE_NSH:  parse_transport_nsh;
             ETHERTYPE_VLAN: parse_transport_vlan_0;
+            ETHERTYPE_QINQ: construct_transport_spbm;
             default: construct_transport_nsh_only;
         }
     }
@@ -443,7 +492,7 @@ parser IngressParser(
 #ifdef CPU_IG_BYPASS_ENABLE
         ig_md.bypass = (bit<8>)hdr.cpu.reason_code;
 #endif
-        ig_md.port = (switch_port_t) hdr.cpu.ingress_port;
+        ig_md.ingress_port = (switch_port_t) hdr.cpu.ingress_port;
         //ig_md.egress_port_lag_index = (switch_port_lag_index_t) hdr.cpu.port_lag_index;
         ig_md.flags.bypass_egress = (bool) hdr.cpu.tx_bypass;
         //ig_md.bd = (switch_bd_t)hdr.cpu.ingress_bd;
@@ -544,6 +593,65 @@ parser IngressParser(
             ETHERTYPE_IPV6: construct_transport_ipv6;
             default: accept;
         }
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Layer2 - Transport - SPBM
+    ////////////////////////////////////////////////////////////////////////////
+    // For the initial crack at this:
+    //   - B-DA and B-SA were extracted into transport.hdr.ethernet
+    //   - Use hdr.transport.vlan_tag[0] for both btag and itag extraction.
+    //       (itag extraction will overwrite btag extraction)
+    //   - Populate lkp.vid w/ btag.vid. (for both lkp[0] and lkp[1])
+    //   - Populate lkp.tunnel-id w/ i-sid. (for both lkp[0] and lkp[1])
+    //       (we're actually populating tunnel-id w/ whole 32bit i-tci)
+    //   - All other lkp fields will be populated in MAU as needed:
+    //       We want to overload L3 SIP/DIP w/ { B-VID[11:0], B-DA[47:0] }
+    //       but we're having trouble trying to get this to work in parser.
+
+    state construct_transport_spbm {
+        transition select(TRANSPORT_INGRESS_ENABLE,
+                          TRANSPORT_SPBM_INGRESS_ENABLE) {
+            (false,     _): reject;
+            ( true, false): parse_transport_vlan_unsupported;
+            ( true,  true): parse_transport_spbm_btag;
+        }
+    }
+    
+    state parse_transport_spbm_btag {
+        pkt.extract(hdr.transport.vlan_tag[0]);
+
+        ig_md.lkp_0.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+        ig_md.lkp_0.tunnel_id = pkt.lookahead<bit<32>>(); // whole i-tci
+        ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_UNSUPPORTED;
+        ig_md.lkp_1.tunnel_id = pkt.lookahead<bit<32>>(); // whole i-tci
+
+        ig_md.lkp_0.vid = hdr.transport.vlan_tag[0].vid; // goes nowhere
+        ig_md.lkp_1.vid = hdr.transport.vlan_tag[0].vid;
+
+        // Overload L3 SIP/DIP w/ { B-VID[11:0], B-DA[47:0] }
+        // (didn't fit, so vid and da was run to dst-vtep directly in MAU)
+        // ig_md.lkp_0.ip_src_addr[31:0] = hdr.transport.ethernet.dst_addr[31:0];
+        // ig_md.lkp_0.ip_dst_addr[31:0] = 4w0 \
+        //                                 ++ ig_md.lkp_1.vid \
+        //                                 ++ hdr.transport.ethernet.dst_addr[47:32];
+        
+        transition select(hdr.transport.vlan_tag[0].ether_type) {
+            ETHERTYPE_MINM: parse_transport_spbm_itag;
+            default: parse_transport_vlan_unsupported;
+        }
+    }
+
+    state parse_transport_spbm_itag {
+        // todo: should we simply skip ahead here and not extract/overwrite?
+        //       (since we already have i-tci fields captured in tunnel-id)
+        pkt.extract(hdr.transport.vlan_tag[0]); // overwrite b-tag extraction
+        ig_md.lkp_0.tunnel_type = SWITCH_TUNNEL_TYPE_SPBM;
+        //ig_md.lkp_0.tunnel_id = // set via lookahead in previous state
+        ig_md.lkp_1.tunnel_type = SWITCH_TUNNEL_TYPE_SPBM;
+        //ig_md.lkp_1.tunnel_id = // set via lookahead in previous state
+
+        transition parse_outer_ethernet;
     }
 
     
@@ -1032,7 +1140,7 @@ parser IngressParser(
 #ifdef CPU_IG_BYPASS_ENABLE
         ig_md.bypass = (bit<8>)hdr.cpu.reason_code;
 #endif
-        ig_md.port = (switch_port_t) hdr.cpu.ingress_port;
+        ig_md.ingress_port = (switch_port_t) hdr.cpu.ingress_port;
         // ig_md.egress_port_lag_index = (switch_port_lag_index_t) hdr.cpu.port_lag_index;
         ig_md.flags.bypass_egress = (bool)hdr.cpu.tx_bypass;
         // ig_md.bd = (switch_bd_t)hdr.cpu.ingress_bd;

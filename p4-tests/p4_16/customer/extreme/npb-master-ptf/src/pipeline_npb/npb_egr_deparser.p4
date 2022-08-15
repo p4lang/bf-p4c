@@ -27,9 +27,9 @@ control EgressMirror(
                 eg_md.bd,
                 0,
     #ifdef CPU_HDR_CONTAINS_EG_PORT
-                eg_md.port,
+                eg_md.egress_port,
     #else
-                eg_md.port_lag_index,
+                eg_md.egress_port_lag_index,
     #endif
                 eg_md.ingress_timestamp,
 //  #if __TARGET_TOFINO__ == 1
@@ -56,9 +56,9 @@ control EgressMirror(
                 eg_md.bd,
                 0,
     #ifdef CPU_HDR_CONTAINS_EG_PORT
-                eg_md.port,
+                eg_md.egress_port,
     #else
-                eg_md.port_lag_index,
+                eg_md.egress_port_lag_index,
     #endif
                 eg_md.ingress_timestamp,
                 eg_md.cpu_reason
@@ -84,12 +84,12 @@ control EgressMirror(
                 0,
                 eg_md.ingress_port,
                 0,
-                eg_md.port,
+                eg_md.egress_port,
                 0,
                 eg_md.qos.qid,
                 0,
                 eg_md.qos.qdepth,
-                eg_md.timestamp
+                eg_md.egress_timestamp
             });
   #endif // DTEL_ENABLE
         } else if (eg_intr_md_for_dprsr.mirror_type == SWITCH_MIRROR_TYPE_DTEL_DROP) {
@@ -107,7 +107,7 @@ control EgressMirror(
                 0,
                 eg_md.ingress_port,
                 0,
-                eg_md.port,
+                eg_md.egress_port,
                 0,
                 eg_md.qos.qid,
                 eg_md.drop_reason

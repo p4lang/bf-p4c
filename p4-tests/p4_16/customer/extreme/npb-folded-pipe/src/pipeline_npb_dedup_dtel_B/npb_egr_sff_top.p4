@@ -216,7 +216,7 @@ control Npb_Egr_Sff_Top (
                 sap        = (bit<16>)eg_md.nsh_md.sap,
 
 #ifdef SFC_TIMESTAMP_ENABLE
-                timestamp = eg_md.timestamp[31:0]
+                timestamp = eg_md.egress_timestamp[31:0]
 #else
                 timestamp = 0
 #endif

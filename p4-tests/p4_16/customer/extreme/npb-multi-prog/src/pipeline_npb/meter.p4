@@ -38,7 +38,7 @@ control StormControl(inout switch_ingress_metadata_t ig_md,
         key = {
             ig_md.qos.storm_control_color: exact;
             pkt_type : ternary;
-            ig_md.port: exact;
+            ig_md.ingress_port: exact;
             ig_md.flags.dmac_miss : ternary;
         }
 
@@ -59,7 +59,7 @@ control StormControl(inout switch_ingress_metadata_t ig_md,
 
     table storm_control {
         key =  {
-            ig_md.port : exact;
+            ig_md.ingress_port : exact;
             pkt_type : ternary;
             ig_md.flags.dmac_miss : ternary;
         }

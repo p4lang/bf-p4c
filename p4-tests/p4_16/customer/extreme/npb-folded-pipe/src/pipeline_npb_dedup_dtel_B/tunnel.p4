@@ -119,7 +119,7 @@ control IngressTunnel(
 	) {
 		stats_src_vtep.count();
 
-//		ig_md.port_lag_index = port_lag_index;
+//		ig_md.ingress_port_lag_index = port_lag_index;
 		ig_md.nsh_md.sap     = sap;
 		ig_md.nsh_md.vpn     = vpn;
 	}
@@ -164,7 +164,7 @@ control IngressTunnel(
 	) {
 		stats_src_vtepv6.count();
 
-//		ig_md.port_lag_index = port_lag_index;
+//		ig_md.ingress_port_lag_index = port_lag_index;
 		ig_md.nsh_md.sap     = sap;
 		ig_md.nsh_md.vpn     = vpn;
 	}
@@ -238,7 +238,7 @@ control IngressTunnel(
 		drop_                  = drop;
   #endif
   #ifdef SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE
-//		ig_md.port_lag_index   = port_lag_index;
+//		ig_md.ingress_port_lag_index   = port_lag_index;
 		ig_md.nsh_md.sap       = sap;
 		ig_md.nsh_md.vpn       = vpn;
   #endif
@@ -297,6 +297,9 @@ control IngressTunnel(
 #ifndef SFC_TRANSPORT_NETSAP_TABLE_ENABLE
 			lkp_0.tunnel_id         : ternary @name("tunnel_id");
 #endif
+			// l2 (putting these at the bottom, so as not to change the order for firmware)
+			lkp_0.mac_dst_addr      : ternary @name("mac_dst_addr");
+			lkp_0.vid               : ternary @name("vid");
 		}
 
 		actions = {
@@ -348,7 +351,7 @@ control IngressTunnel(
 		drop_                  = drop;
   #endif
   #ifdef SFC_TRANSPORT_TUNNEL_SHARED_TABLE_ENABLE
-//		ig_md.port_lag_index   = port_lag_index;
+//		ig_md.ingress_port_lag_index   = port_lag_index;
 		ig_md.nsh_md.sap       = sap;
 		ig_md.nsh_md.vpn       = vpn;
   #endif
@@ -405,6 +408,9 @@ control IngressTunnel(
 #ifndef SFC_TRANSPORT_NETSAP_TABLE_ENABLE
 			lkp_0.tunnel_id         : ternary @name("tunnel_id");
 #endif
+			// l2 (putting these at the bottom, so as not to change the order for firmware)
+			lkp_0.mac_dst_addr      : ternary @name("mac_dst_addr");
+			lkp_0.vid               : ternary @name("vid");
 		}
 
 		actions = {
@@ -2113,7 +2119,7 @@ control TunnelNexthop(
 
 	// ---------------------------------------------
 
-	table nexthop_rewrite { // aka tunnel_nextuop
+	table nexthop_rewrite { // aka tunnel_nexthop
 		key = { eg_md.nexthop : exact; }
 		actions = {
 #if defined(TUNNEL_ENABLE) || defined(MULTICAST_ENABLE)

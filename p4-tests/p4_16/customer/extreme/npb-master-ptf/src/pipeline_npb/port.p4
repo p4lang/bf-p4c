@@ -76,10 +76,11 @@ control IngressPortMapping(
 
 	action terminate_cpu_packet() {
 		// ig_md.bypass = (bit<8>) hdr.cpu.reason_code;                                 // Done in parser
-//		ig_md.port = (switch_port_t) hdr.cpu.ingress_port;                              // Done in parser
+//		ig_md.ingress_port = (switch_port_t) hdr.cpu.ingress_port;                      // Done in parser
 //		ig_md.egress_port_lag_index = (switch_port_lag_index_t) hdr.cpu.port_lag_index; // Done in parser
 		ig_intr_md_for_tm.ucast_egress_port = (bit<9>) hdr.cpu.port_lag_index;          // Not done in parser, since ig_intr_md_for_tm doesn't exist there.
-		ig_intr_md_for_tm.qid = (switch_qid_t) hdr.cpu.egress_queue;                    // Not done in parser, since ig_intr_md_for_tm doesn't exist there.
+//		ig_intr_md_for_tm.qid = (switch_qid_t) hdr.cpu.egress_queue;                    // Not done in parser, since ig_intr_md_for_tm doesn't exist there.
+		ig_md.qos.qid = (switch_qid_t) hdr.cpu.egress_queue;                            // Not done in parser, since ig_intr_md_for_tm doesn't exist there.
 #ifdef CPU_TX_BYPASS_ENABLE
 //		ig_md.flags.bypass_egress = (bool) hdr.cpu.tx_bypass;                           // Done in parser
 //		DEREK: This next line should be deleted, but doing so causes us not to fit!?!?  ¯\_('')_/¯
@@ -105,8 +106,8 @@ control IngressPortMapping(
 #ifdef CPU_ENABLE
 		stats.count();
 
-		ig_md.port_lag_index = port_lag_index;
-//		ig_md.port_lag_label = port_lag_label;
+		ig_md.ingress_port_lag_index = port_lag_index;
+//		ig_md.ingress_port_lag_label = port_lag_label;
 //		ig_md.qos.trust_mode = trust_mode;
 //		ig_md.qos.group = qos_group;
 //		ig_md.qos.color = color;
@@ -134,7 +135,7 @@ control IngressPortMapping(
 
 		ig_intr_md_for_tm.level2_exclusion_id = exclusion_id;
 #ifdef CPU_HDR_CONTAINS_EG_PORT
-		ig_md.port_lag_index = port_lag_index;
+		ig_md.ingress_port_lag_index = port_lag_index;
 //		ig_md.nsh_md.l2_fwd_en = l2_fwd_en;
 #else
 #endif
@@ -147,7 +148,7 @@ control IngressPortMapping(
 
 	table port_mapping {
 		key = {
-			ig_md.port : exact;
+			ig_md.ingress_port : exact @name("ig_md.port");
 #ifdef CPU_BD_MAP_ENABLE
 			hdr.cpu.isValid() : exact;
 //			hdr.cpu.ingress_port : exact; // DEREK: IS THIS NEEDED / WHAT IS IT FOR?
@@ -197,7 +198,7 @@ control IngressPortMapping(
 
 	table port_vlan_to_bd_mapping {
 		key = {
-			ig_md.port_lag_index : exact;
+			ig_md.ingress_port_lag_index : exact;
 //			hdr.transport.vlan_tag[0].isValid() : ternary;
 //			hdr.transport.vlan_tag[0].vid : ternary;
 			hdr.outer.vlan_tag[0].isValid() : ternary;
@@ -291,7 +292,7 @@ control IngressPortMapping(
 		}
 
 #ifdef MIRROR_INGRESS_PORT_ENABLE
-		port_mirror.apply(ig_md.port, SWITCH_PKT_SRC_CLONED_INGRESS, ig_md.mirror, SWITCH_CPU_REASON_IG_PORT_MIRROR, ig_md.cpu_reason);
+		port_mirror.apply(ig_md.ingress_port, SWITCH_PKT_SRC_CLONED_INGRESS, ig_md.mirror, SWITCH_CPU_REASON_IG_PORT_MIRROR, ig_md.cpu_reason);
 #endif
 	}
 }
@@ -436,9 +437,9 @@ control EgressPortMapping(
 		hdr.cpu.reserved = 0;
 		hdr.cpu.ingress_port = (bit<16>) eg_md.ingress_port;
   #ifdef CPU_HDR_CONTAINS_EG_PORT
-		hdr.cpu.port_lag_index = (bit<16>) eg_md.port;
+		hdr.cpu.port_lag_index = (bit<16>) eg_md.egress_port;
   #else
-		hdr.cpu.port_lag_index = (bit<16>) eg_md.port_lag_index;
+		hdr.cpu.port_lag_index = (bit<16>) eg_md.egress_port_lag_index;
   #endif
 		hdr.cpu.ingress_bd = (bit<16>) eg_md.bd;
 		hdr.cpu.reason_code = (bit<16>) eg_md.cpu_reason;
@@ -456,7 +457,7 @@ control EgressPortMapping(
 	) {
 		stats.count();
 
-		eg_md.port_lag_index = port_lag_index;
+		eg_md.egress_port_lag_index = port_lag_index;
 	}
 
 	action port_cpu(
@@ -544,9 +545,9 @@ control EgressCpuRewrite(
 		hdr.cpu.reserved = 0;
 		hdr.cpu.ingress_port = (bit<16>) eg_md.ingress_port;
   #ifdef CPU_HDR_CONTAINS_EG_PORT
-		hdr.cpu.port_lag_index = (bit<16>) eg_md.port;
+		hdr.cpu.port_lag_index = (bit<16>) eg_md.egress_port;
   #else
-		hdr.cpu.port_lag_index = (bit<16>) eg_md.port_lag_index;
+		hdr.cpu.port_lag_index = (bit<16>) eg_md.egress_port_lag_index;
   #endif
 		hdr.cpu.ingress_bd = (bit<16>) eg_md.bd;
 		hdr.cpu.reason_code = (bit<16>) eg_md.cpu_reason;

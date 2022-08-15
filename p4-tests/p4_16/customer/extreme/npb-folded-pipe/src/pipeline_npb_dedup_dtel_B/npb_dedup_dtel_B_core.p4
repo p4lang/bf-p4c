@@ -55,10 +55,11 @@ control IngressControl_B(
 		// extract brided metadata here (for stuff we can't do in the parser)
 
 		// set egress port
-		ig_intr_md_for_tm.ucast_egress_port = ig_md.port; // by default, set ingress port equal to egress port -- for testing
-		ig_md.port                          = hdr.bridged_md_folded.base.ingress_port; // set ingress port to original ingress port
+		ig_intr_md_for_tm.ucast_egress_port = ig_md.ingress_port; // by default, set ingress port equal to egress port -- for testing
+		ig_md.ingress_port                  = hdr.bridged_md_folded.base.ingress_port; // set ingress port to original ingress port
 
 		ig_md.qos.qid              = hdr.bridged_md_folded.base.qid; // can't be done in parser, for some reason
+//		ig_md.qos.qid = 0x8;
 		ig_md.nsh_md.dedup_en      = hdr.bridged_md_folded.base.nsh_md_dedup_en; // can't be done in parser, for some reason
 
 		// -----------------------------------------------------
@@ -84,9 +85,6 @@ control IngressControl_B(
 			};
 		}
 */
-		// for testing -- emulate the npb bridge path
-		ig_md.qos.qid = 0x8; // for testing
-
 		// -----------------------------------------------------
 
 		// set initial scope
@@ -175,7 +173,7 @@ control IngressControl_B(
 				ig_md.hash,
 				ig_md.nsh_md.sap,
 				ig_md.nsh_md.vpn,
-				ig_md.port,
+				ig_md.ingress_port,
 				ig_intr_md_for_dprsr.drop_ctl
 			);
 #ifdef BRIDGING_ENABLE
@@ -254,9 +252,9 @@ control EgressControl_B(
 
 //		eg_intr_md_for_dprsr.drop_ctl = 0;
 #ifdef INT_V2
-		eg_md.timestamp = eg_intr_md_from_prsr.global_tstamp;
+		eg_md.egress_timestamp = eg_intr_md_from_prsr.global_tstamp;
 #else
-		eg_md.timestamp = eg_intr_md_from_prsr.global_tstamp[31:0];
+		eg_md.egress_timestamp = eg_intr_md_from_prsr.global_tstamp[31:0];
 #endif
 #ifdef PA_NO_INIT
 		eg_intr_md_for_dprsr.mirror_type = SWITCH_MIRROR_TYPE_INVALID;// for barefoot reset bug
@@ -325,12 +323,12 @@ control EgressControl_B(
 //			dtel.apply(hdr.transport, eg_md, eg_intr_md, eg_md.dtel.hash);
 //			dtel_config.apply(hdr.transport, eg_md, eg_intr_md_for_dprsr);
 #endif
-		}
 
-		// ----------------------------------
+			// ----------------------------------
 
-		if(FOLDED_ENABLE) {
-			add_bridged_md_folded.apply(hdr.bridged_md_folded, eg_md);
+			if(FOLDED_ENABLE) {
+				add_bridged_md_folded.apply(hdr.bridged_md_folded, eg_md);
+			}
 		}
 
 		// ----------------------------------

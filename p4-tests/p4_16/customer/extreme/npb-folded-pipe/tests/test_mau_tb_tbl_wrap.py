@@ -226,7 +226,7 @@ def cpu_port_del(self, target, ig_pipe, port):
 
 def npb_tunnel_rmac_add(self, target, ig_pipe, dst_addr):
 	# for our all-to-one program, need to edit the path to this table
-	if(p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top'):
+	if((p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top') or (p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top')):
 		ig_pipes2 = ig_pipes.copy()
 		ig_pipes2.insert(0, 0)
 	else:
@@ -268,7 +268,7 @@ def npb_tunnel_rmac_add(self, target, ig_pipe, dst_addr):
 
 def npb_tunnel_rmac_del(self, target, ig_pipe, dst_addr):
 	# for our all-to-one program, need to edit the path to this table
-	if(p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top'):
+	if((p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top') or (p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top')):
 		ig_pipes2 = ig_pipes.copy()
 		ig_pipes2.insert(0, 0)
 	else:
@@ -308,7 +308,7 @@ def npb_tunnel_rmac_del(self, target, ig_pipe, dst_addr):
 
 def npb_ing_port_add(self, target, ig_pipe, port, port_lag_ptr, bridging_enable, sap, vpn, spi, si, si_predec):
 	# for our all-to-one program, need to edit the path to this table
-	if(p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top'):
+	if((p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top') or (p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top')):
 		ig_pipes2 = ig_pipes.copy()
 		ig_pipes2.insert(0, 0)
 	else:
@@ -445,7 +445,7 @@ def npb_ing_port_add(self, target, ig_pipe, port, port_lag_ptr, bridging_enable,
 
 def npb_ing_port_del(self, target, ig_pipe, port, port_lag_ptr):
 	# for our all-to-one program, need to edit the path to this table
-	if(p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top'):
+	if((p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top') or (p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top')):
 		ig_pipes2 = ig_pipes.copy()
 		ig_pipes2.insert(0, 0)
 	else:
@@ -820,10 +820,12 @@ def npb_tunnel_dmac_del(self, target, ig_pipe, ig_port_lag_ptr, ethertype, ether
 # ing sfc: decap 0 (transport)
 
 def npb_tunnel_network_dst_vtep_add(self, target, ig_pipe,
-		l3_src   = '0.0.0.0', l3_src_mask   = 0,
-		l3_dst   = '0.0.0.0', l3_dst_mask   = 0,
-		tun_type = 0,         tun_type_mask = 0,
-		tun_id   = 0,         tun_id_mask   = 0,
+		l2_dst   = '0:0:0:0:0:0', l2_dst_mask   = 0,
+		l2_vid   = 0,             l2_vid_mask   = 0,
+		l3_src   = '0.0.0.0',     l3_src_mask   = 0,
+		l3_dst   = '0.0.0.0',     l3_dst_mask   = 0,
+		tun_type = 0,             tun_type_mask = 0,
+		tun_id   = 0,             tun_id_mask   = 0,
 		# results
 		sap           = 0,
 		vpn           = 0,
@@ -837,10 +839,12 @@ def npb_tunnel_network_dst_vtep_add(self, target, ig_pipe,
 			table.entry_add(
 				target,
 				[table.make_key(
-					[gc.KeyTuple('src_addr',                                  gc.ipv4_to_bytes(l3_src), l3_src_mask),
+					[gc.KeyTuple('mac_dst_addr',                              gc.mac_to_bytes(l2_dst), l2_dst_mask),
+					 gc.KeyTuple('vid',                                       l2_vid, l2_vid_mask),
+					 gc.KeyTuple('src_addr',                                  gc.ipv4_to_bytes(l3_src), l3_src_mask),
 					 gc.KeyTuple('dst_addr',                                  gc.ipv4_to_bytes(l3_dst), l3_dst_mask),
 					 gc.KeyTuple('tunnel_type',                               tun_type, tun_type_mask),
-					 gc.KeyTuple('tunnel_id',                               tun_id, tun_id_mask)],
+					 gc.KeyTuple('tunnel_id',                                 tun_id, tun_id_mask)],
 				)],
 				[table.make_data(
 					[gc.DataTuple('sap',                                      sap),
@@ -1178,7 +1182,7 @@ def npb_npb_sfc_sf_sel_del(self, target, ig_pipe, spi, si):
 
 ########################################
 
-def npb_sfc_sf_sel_nsh_xlate_add(self, target, ig_pipe, ta, ttl, spi, si, si_predec):
+def npb_sfc_sf_sel_nsh_xlate_add(self, target, ig_pipe, ta, spi, si, sf_bitmask):
 
 		for ig_pipe2 in ig_pipes:
 			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.ing_sfc_sf_sel_nsh_xlate' % ictl_s[ig_pipe2])
@@ -1188,10 +1192,10 @@ def npb_sfc_sf_sel_nsh_xlate_add(self, target, ig_pipe, ta, ttl, spi, si, si_pre
 					[gc.KeyTuple('tool_address',                     ta)],
 				)],
 				[table.make_data(
-					[gc.DataTuple('ttl',                             ttl),
+					[gc.DataTuple('ttl',                             63),
 					 gc.DataTuple('spi',                             spi),
 					 gc.DataTuple('si',                              si),
-					 gc.DataTuple('si_predec',                      si_predec)],
+					 gc.DataTuple('si_predec',                      si-(popcount(sf_bitmask&6)))],
 					'%s.npb_ing_top.npb_ing_sfc_top.ing_sfc_sf_sel_nsh_xlate_hit' % ictl_s[ig_pipe2]
 				)]
 			)
@@ -1358,7 +1362,8 @@ def npb_npb_sf0_policy_l2_add(self, target, ig_pipe,
 		mirror_enable  = 0, mirror_id   = 0,
 		cpu_reason_code= 0,
 		sfc_enable     = 0,
-		sfc            = 0
+		sfc            = 0,
+		queue          = 0
 		):
 
 		# ensure that whenever "terminate" is set, "scope" is also set
@@ -1389,7 +1394,8 @@ def npb_npb_sf0_policy_l2_add(self, target, ig_pipe,
 					 gc.DataTuple('mirror_session_id',               mirror_id),
 					 gc.DataTuple('cpu_reason_code',                 cpu_reason_code),
 					 gc.DataTuple('sfc_enable',                      sfc_enable),
-					 gc.DataTuple('sfc',                             sfc)],
+					 gc.DataTuple('sfc',                             sfc),
+					 gc.DataTuple('qid',                             queue)],
 					'%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.mac_acl.hit' % ictl_s[ig_pipe2]
 				)]
 			)
@@ -1477,7 +1483,8 @@ def npb_npb_sf0_policy_l34_v4_add(self, target, ig_pipe,
 		mirror_enable  = 0, mirror_id           = 0,
 		cpu_reason_code= 0,
 		sfc_enable     = 0,
-		sfc            = 0
+		sfc            = 0,
+		queue          = 0
 		):
 
 		# ensure that whenever "terminate" is set, "scope" is also set
@@ -1515,7 +1522,8 @@ def npb_npb_sf0_policy_l34_v4_add(self, target, ig_pipe,
 					 gc.DataTuple('mirror_session_id',               mirror_id),
 					 gc.DataTuple('cpu_reason_code',                 cpu_reason_code),
 					 gc.DataTuple('sfc_enable',                      sfc_enable),
-					 gc.DataTuple('sfc',                             sfc)],
+					 gc.DataTuple('sfc',                             sfc),
+					 gc.DataTuple('qid',                             queue)],
 					'%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.ipv4_acl.hit' % ictl_s[ig_pipe2]
 				)]
 			)
@@ -1627,7 +1635,8 @@ def npb_npb_sf0_policy_l34_v6_add(self, target, ig_pipe,
 		mirror_enable  = 0, mirror_id           = 0,
 		cpu_reason_code= 0,
 		sfc_enable     = 0,
-		sfc            = 0
+		sfc            = 0,
+		queue          = 0
 		):
 
 		# ensure that whenever "terminate" is set, "scope" is also set
@@ -1672,7 +1681,8 @@ def npb_npb_sf0_policy_l34_v6_add(self, target, ig_pipe,
 					 gc.DataTuple('mirror_session_id',               mirror_id),
 					 gc.DataTuple('cpu_reason_code',                 cpu_reason_code),
 					 gc.DataTuple('sfc_enable',                      sfc_enable),
-					 gc.DataTuple('sfc',                             sfc)],
+					 gc.DataTuple('sfc',                             sfc),
+					 gc.DataTuple('qid',                             queue)],
 					'%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.ipv6_acl.hit' % ictl_s[ig_pipe2]
 				)]
 			)
@@ -2419,35 +2429,37 @@ def npb_lag_single_add(self, target, ig_pipe, port_lag_ptr, port_lag_member_ptr,
 			ig_pipes2 = ig_pipes.copy()
 
 		try:
-			# bottom
-#			table = self.bfrt_info.table_get('%s.lag.lag_selector' % ictl_s[ig_pipe])
-			table = self.bfrt_info.table_get('%s.lag.lag_action_profile' % ictl_s[ig_pipe])
-			table.entry_add(
-				target,
-				[table.make_key(
-					[gc.KeyTuple('$ACTION_MEMBER_ID',                port_lag_member_ptr)],
-				)],
-				[table.make_data(
-					[gc.DataTuple('port',                            port)],
-					'%s.lag.set_lag_port' % ictl_s[ig_pipe]
-				)]
-			)		
+			for ig_pipe2 in ig_pipes2:
 
-			# top
-			table = self.bfrt_info.table_get('%s.lag.lag' % ictl_s[ig_pipe])
-			table.entry_add(
-				target,
-				[table.make_key(
+				# bottom
+#				table = self.bfrt_info.table_get('%s.lag.lag_selector' % ictl_s[ig_pipe2])
+				table = self.bfrt_info.table_get('%s.lag.lag_action_profile' % ictl_s[ig_pipe2])
+				table.entry_add(
+					target,
+					[table.make_key(
+						[gc.KeyTuple('$ACTION_MEMBER_ID',                port_lag_member_ptr)],
+					)],
+					[table.make_data(
+						[gc.DataTuple('port',                            port)],
+						'%s.lag.set_lag_port' % ictl_s[ig_pipe2]
+					)]
+				)		
+
+				# top
+				table = self.bfrt_info.table_get('%s.lag.lag' % ictl_s[ig_pipe2])
+				table.entry_add(
+					target,
+					[table.make_key(
 					[gc.KeyTuple('port_lag_index',                   port_lag_ptr)],
-				)],
-				[table.make_data(
-					[gc.DataTuple('$ACTION_MEMBER_ID',               port_lag_member_ptr)],
-					None
-				)]
-			)
+					)],
+					[table.make_data(
+						[gc.DataTuple('$ACTION_MEMBER_ID',               port_lag_member_ptr)],
+						None
+					)]
+				)
 
 		except:
-			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 12.")
+			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 12a.")
 
 def npb_lag_single_del(self, target, ig_pipe, port_lag_ptr, port_lag_member_ptr):
 		# for our all-to-one program, need to edit the path to this table
@@ -2458,27 +2470,29 @@ def npb_lag_single_del(self, target, ig_pipe, port_lag_ptr, port_lag_member_ptr)
 			ig_pipes2 = ig_pipes.copy()
 
 		try:
-			# top
-			table = self.bfrt_info.table_get('%s.lag.lag' % ictl_s[ig_pipe])
-			table.entry_del(
-				target,
-				[table.make_key(
-					[gc.KeyTuple('port_lag_index',                   port_lag_ptr)],
-				)]
-			)
+			for ig_pipe2 in ig_pipes2:
 
-			# bottom
-#			table = self.bfrt_info.table_get('%s.lag.lag_selector' % ictl_s[ig_pipe])
-			table = self.bfrt_info.table_get('%s.lag.lag_action_profile' % ictl_s[ig_pipe])
-			table.entry_del(
-				target,
-				[table.make_key(
-					[gc.KeyTuple('$ACTION_MEMBER_ID',                port_lag_member_ptr)],
-				)],
-			)
+				# top
+				table = self.bfrt_info.table_get('%s.lag.lag' % ictl_s[ig_pipe2])
+				table.entry_del(
+					target,
+					[table.make_key(
+						[gc.KeyTuple('port_lag_index',                   port_lag_ptr)],
+					)]
+				)
+
+				# bottom
+#				table = self.bfrt_info.table_get('%s.lag.lag_selector' % ictl_s[ig_pipe2])
+				table = self.bfrt_info.table_get('%s.lag.lag_action_profile' % ictl_s[ig_pipe2])
+				table.entry_del(
+					target,
+					[table.make_key(
+						[gc.KeyTuple('$ACTION_MEMBER_ID',                port_lag_member_ptr)],
+					)],
+				)
 
 		except:
-			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 12.")
+			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 12a.")
 
 ########################################
 
@@ -2490,57 +2504,63 @@ def npb_lag_multi_add(self, target, ig_pipe, port_lag_ptr, port_lag_group_ptr, p
 		else:
 			ig_pipes2 = ig_pipes.copy()
 
-		port_lag_member_ptr_list = []
-		port_lag_member_sts_list = []
+		try:
+			for ig_pipe2 in ig_pipes2:
 
-		for i in range(len(port)):
-			port_lag_member_ptr_list.append(port_lag_member_ptr+i)
-			port_lag_member_sts_list.append(True)
+				port_lag_member_ptr_list = []
+				port_lag_member_sts_list = []
 
-		for i in range(len(port)):
+				for i in range(len(port)):
+					port_lag_member_ptr_list.append(port_lag_member_ptr+i)
+					port_lag_member_sts_list.append(True)
 
-			# bottom
-#			table = self.bfrt_info.table_get('%s.lag.lag_selector' % ictl_s[ig_pipe])
-			table = self.bfrt_info.table_get('%s.lag.lag_action_profile' % ictl_s[ig_pipe])
-			table.entry_add(
-				target,
-				[table.make_key(
-					[gc.KeyTuple('$ACTION_MEMBER_ID',                port_lag_member_ptr_list[i])],
-				)],
-				[table.make_data(
-					[gc.DataTuple('port',                            port[i])],
-					'%s.lag.set_lag_port' % ictl_s[ig_pipe]
-				)]
-			)
+				for i in range(len(port)):
 
-		# middle
-#		table = self.bfrt_info.table_get('%s.lag.lag_selector_sel' % ictl_s[ig_pipe])
-		table = self.bfrt_info.table_get('%s.lag.lag_selector' % ictl_s[ig_pipe])
-		table.entry_add(
-			target,
-			[table.make_key(
-				[gc.KeyTuple('$SELECTOR_GROUP_ID',               port_lag_group_ptr)],
-			)],
-			[table.make_data(
-				[gc.DataTuple('$ACTION_MEMBER_ID',               int_arr_val=port_lag_member_ptr_list), # needs to be a list!
-				 gc.DataTuple('$ACTION_MEMBER_STATUS',           bool_arr_val=port_lag_member_sts_list), # needs to be a list!
-				 gc.DataTuple('$MAX_GROUP_SIZE',                 len(port))],
-				None
-			)]
-		)
+					# bottom
+#					table = self.bfrt_info.table_get('%s.lag.lag_selector' % ictl_s[ig_pipe2])
+					table = self.bfrt_info.table_get('%s.lag.lag_action_profile' % ictl_s[ig_pipe2])
+					table.entry_add(
+						target,
+						[table.make_key(
+							[gc.KeyTuple('$ACTION_MEMBER_ID',                port_lag_member_ptr_list[i])],
+						)],
+							[table.make_data(
+							[gc.DataTuple('port',                            port[i])],
+							'%s.lag.set_lag_port' % ictl_s[ig_pipe2]
+						)]
+					)
 
-		# top
-		table = self.bfrt_info.table_get('%s.lag.lag' % ictl_s[ig_pipe])
-		table.entry_add(
-			target,
-			[table.make_key(
-				[gc.KeyTuple('port_lag_index',                   port_lag_ptr)],
-			)],
-			[table.make_data(
-				[gc.DataTuple('$SELECTOR_GROUP_ID',              port_lag_group_ptr)],
-				None
-			)]
-		)
+				# middle
+#				table = self.bfrt_info.table_get('%s.lag.lag_selector_sel' % ictl_s[ig_pipe2])
+				table = self.bfrt_info.table_get('%s.lag.lag_selector' % ictl_s[ig_pipe2])
+				table.entry_add(
+					target,
+					[table.make_key(
+						[gc.KeyTuple('$SELECTOR_GROUP_ID',               port_lag_group_ptr)],
+					)],
+					[table.make_data(
+						[gc.DataTuple('$ACTION_MEMBER_ID',               int_arr_val=port_lag_member_ptr_list), # needs to be a list!
+						 gc.DataTuple('$ACTION_MEMBER_STATUS',           bool_arr_val=port_lag_member_sts_list), # needs to be a list!
+						 gc.DataTuple('$MAX_GROUP_SIZE',                 len(port))],
+						None
+					)]
+				)
+
+				# top
+				table = self.bfrt_info.table_get('%s.lag.lag' % ictl_s[ig_pipe2])
+				table.entry_add(
+					target,
+					[table.make_key(
+						[gc.KeyTuple('port_lag_index',                   port_lag_ptr)],
+					)],
+					[table.make_data(
+						[gc.DataTuple('$SELECTOR_GROUP_ID',              port_lag_group_ptr)],
+						None
+					)]
+				)
+
+		except:
+			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 12b.")
 
 def npb_lag_multi_del(self, target, ig_pipe, port_lag_ptr, port_lag_group_ptr, port_lag_member_ptr, port):
 		# for our all-to-one program, need to edit the path to this table
@@ -2550,41 +2570,47 @@ def npb_lag_multi_del(self, target, ig_pipe, port_lag_ptr, port_lag_group_ptr, p
 		else:
 			ig_pipes2 = ig_pipes.copy()
 
-		port_lag_member_ptr_list = []
+		try:
+			for ig_pipe2 in ig_pipes2:
 
-		for i in range(0, len(port)):
-			port_lag_member_ptr_list.append(port_lag_member_ptr+i)
+				port_lag_member_ptr_list = []
 
-		# top
-		table = self.bfrt_info.table_get('%s.lag.lag' % ictl_s[ig_pipe])
-		table.entry_del(
-			target,
-			[table.make_key(
-				[gc.KeyTuple('port_lag_index',                   port_lag_ptr)],
-			)],
-		)
+				for i in range(0, len(port)):
+					port_lag_member_ptr_list.append(port_lag_member_ptr+i)
 
-		# middle
-#		table = self.bfrt_info.table_get('%s.lag.lag_selector_sel' % ictl_s[ig_pipe])
-		table = self.bfrt_info.table_get('%s.lag.lag_selector' % ictl_s[ig_pipe])
-		table.entry_del(
-			target,
-			[table.make_key(
-				[gc.KeyTuple('$SELECTOR_GROUP_ID',               port_lag_group_ptr)],
-			)],
-		)
+				# top
+				table = self.bfrt_info.table_get('%s.lag.lag' % ictl_s[ig_pipe2])
+				table.entry_del(
+					target,
+					[table.make_key(
+						[gc.KeyTuple('port_lag_index',                   port_lag_ptr)],
+					)],
+				)
 
-		for i in range(0, len(port)):
+				# middle
+#				table = self.bfrt_info.table_get('%s.lag.lag_selector_sel' % ictl_s[ig_pipe2])
+				table = self.bfrt_info.table_get('%s.lag.lag_selector' % ictl_s[ig_pipe2])
+				table.entry_del(
+					target,
+					[table.make_key(
+						[gc.KeyTuple('$SELECTOR_GROUP_ID',               port_lag_group_ptr)],
+					)],
+				)
 
-			# bottom
-#			table = self.bfrt_info.table_get('%s.lag.lag_selector' % ictl_s[ig_pipe])
-			table = self.bfrt_info.table_get('%s.lag.lag_action_profile' % ictl_s[ig_pipe])
-			table.entry_del(
-				target,
-				[table.make_key(
-					[gc.KeyTuple('$ACTION_MEMBER_ID',                port_lag_member_ptr_list[i])],
-				)],
-			)
+				for i in range(0, len(port)):
+
+					# bottom
+#					table = self.bfrt_info.table_get('%s.lag.lag_selector' % ictl_s[ig_pipe2])
+					table = self.bfrt_info.table_get('%s.lag.lag_action_profile' % ictl_s[ig_pipe2])
+					table.entry_del(
+						target,
+						[table.make_key(
+							[gc.KeyTuple('$ACTION_MEMBER_ID',                port_lag_member_ptr_list[i])],
+						)],
+					)
+
+		except:
+			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 12b.")
 
 ########################################
 # TM: Multicast Node & MGID Tables
@@ -2717,6 +2743,12 @@ def npb_pre_mirror_del(self, target, ig_pipe, session_id):
 
 def npb_egr_port_add(self, target, ig_pipe, port, eg_port_is_cpu, port_lag_ptr):
 
+	# for our folded program, need to edit the path to this table
+	if(p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top'):
+		ectl_F_ = ectl_F.replace("_A_0", "_B_0")
+	else:
+		ectl_F_ = ectl_F
+
 	for i in range(len(port)):
 
 		try:
@@ -2781,6 +2813,12 @@ def npb_egr_port_add(self, target, ig_pipe, port, eg_port_is_cpu, port_lag_ptr):
 
 def npb_egr_port_del(self, target, ig_pipe, port):
 
+	# for our folded program, need to edit the path to this table
+	if(p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top'):
+		ectl_F_ = ectl_F.replace("_A_0", "_B_0")
+	else:
+		ectl_F_ = ectl_F
+
 	for i in range(len(port)):
 
 		try:
@@ -2809,129 +2847,165 @@ def npb_egr_port_del(self, target, ig_pipe, port):
 
 def npb_egr_port_mirror_add(self, target, ig_pipe, port, session_id):
 
-		table = self.bfrt_info.table_get('%s.egress_port_mapping.port_mirror.port_mirror' % ectl_F)
-		table.entry_add(
-			target,
-			[table.make_key(
-				[gc.KeyTuple('port',                             port)],
-			)],
-			[table.make_data(
-				[gc.DataTuple('session_id',                      session_id)],
-				'%s.egress_port_mapping.port_mirror.set_mirror_id' % ectl_F,
-			)]
-		)
+	# for our folded program, need to edit the path to this table
+	if(p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top'):
+		ectl_F_ = ectl_F.replace("_A_0", "_B_0")
+	else:
+		ectl_F_ = ectl_F
+
+	table = self.bfrt_info.table_get('%s.egress_port_mapping.port_mirror.port_mirror' % ectl_F)
+	table.entry_add(
+		target,
+		[table.make_key(
+			[gc.KeyTuple('port',                             port)],
+		)],
+		[table.make_data(
+			[gc.DataTuple('session_id',                      session_id)],
+			'%s.egress_port_mapping.port_mirror.set_mirror_id' % ectl_F,
+		)]
+	)
 
 def npb_egr_port_mirror_del(self, target, ig_pipe, port):
 
-		table = self.bfrt_info.table_get('%s.egress_port_mapping.port_mirror.port_mirror' % ectl_F)
-		table.entry_del(
-			target,
-			[table.make_key(
-				[gc.KeyTuple('port',                             port)],
-			)],
-		)
+	# for our folded program, need to edit the path to this table
+	if(p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top'):
+		ectl_F_ = ectl_F.replace("_A_0", "_B_0")
+	else:
+		ectl_F_ = ectl_F
+
+	table = self.bfrt_info.table_get('%s.egress_port_mapping.port_mirror.port_mirror' % ectl_F)
+	table.entry_del(
+		target,
+		[table.make_key(
+			[gc.KeyTuple('port',                             port)],
+		)],
+	)
 
 ########################################
 
 def npb_mult_rid_identical_add(self, target, ig_pipe, rid, bd):
 
-		table = self.bfrt_info.table_get('%s.multicast_replication.rid' % ectl_F)
-		table.entry_add(
-			target,
-			[table.make_key(
-				[gc.KeyTuple('replication_id',                   rid)],
-			)],
-			[table.make_data(
-				[gc.DataTuple('bd',                              bd)],
-				'%s.multicast_replication.rid_hit_identical_copies' % ectl_F,
-			)]
-		)
+	# for our folded program, need to edit the path to this table
+	if(p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top'):
+		ectl_F_ = ectl_F.replace("_A_0", "_B_0")
+	else:
+		ectl_F_ = ectl_F
+
+	table = self.bfrt_info.table_get('%s.multicast_replication.rid' % ectl_F_)
+	table.entry_add(
+		target,
+		[table.make_key(
+			[gc.KeyTuple('replication_id',                   rid)],
+		)],
+		[table.make_data(
+			[gc.DataTuple('bd',                              bd)],
+			'%s.multicast_replication.rid_hit_identical_copies' % ectl_F_,
+		)]
+	)
 
 def npb_mult_rid_identical_del(self, target, ig_pipe, rid):
 
-		table = self.bfrt_info.table_get('%s.multicast_replication.rid' % ectl_F)
+	# for our folded program, need to edit the path to this table
+	if(p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top'):
+		ectl_F_ = ectl_F.replace("_A_0", "_B_0")
+	else:
+		ectl_F_ = ectl_F
 
-		# read counter
-		resp = table.entry_get(
-			target,
-			[table.make_key(
-				[gc.KeyTuple('replication_id',                   rid)],
-			)],
-			{"from_hw": True},
-			table.make_data(
-				[gc.DataTuple("$COUNTER_SPEC_BYTES"),
-				 gc.DataTuple("$COUNTER_SPEC_PKTS")],
-				'%s.multicast_replication.rid_hit_identical_copies' % ectl_F,
-				get=True
-			)
+	table = self.bfrt_info.table_get('%s.multicast_replication.rid' % ectl_F_)
+
+	# read counter
+	resp = table.entry_get(
+		target,
+		[table.make_key(
+			[gc.KeyTuple('replication_id',                   rid)],
+		)],
+		{"from_hw": True},
+		table.make_data(
+			[gc.DataTuple("$COUNTER_SPEC_BYTES"),
+			 gc.DataTuple("$COUNTER_SPEC_PKTS")],
+			'%s.multicast_replication.rid_hit_identical_copies' % ectl_F_,
+			get=True
 		)
+	)
 
-		data_dict = next(resp)[0].to_dict()
-		recv_pkts = data_dict["$COUNTER_SPEC_PKTS"]
-		recv_bytes = data_dict["$COUNTER_SPEC_BYTES"]
+	data_dict = next(resp)[0].to_dict()
+	recv_pkts = data_dict["$COUNTER_SPEC_PKTS"]
+	recv_bytes = data_dict["$COUNTER_SPEC_BYTES"]
 
-		print("Dumping npb_npb_sf1_multicast (egress) counters: pkts", recv_pkts, "bytes", recv_bytes)
+	print("Dumping npb_npb_sf1_multicast (egress) counters: pkts", recv_pkts, "bytes", recv_bytes)
 
-		table.entry_del(
-			target,
-			[table.make_key(
-				[gc.KeyTuple('replication_id',                   rid)],
-			)],
-		)
+	table.entry_del(
+		target,
+		[table.make_key(
+			[gc.KeyTuple('replication_id',                   rid)],
+		)],
+	)
 
 ########################################
 
 def npb_mult_rid_unique_add(self, target, ig_pipe, rid, bd, spi, si, nexthop_index, tunnel_index, outer_nexthop_index):
 
-		table = self.bfrt_info.table_get('%s.multicast_replication.rid' % ectl_F)
-		table.entry_add(
-			target,
-			[table.make_key(
-				[gc.KeyTuple('replication_id',                   rid)],
-			)],
-			[table.make_data(
-				[gc.DataTuple('bd',                              bd),
-				 gc.DataTuple('spi',                             spi),
-				 gc.DataTuple('si',                              si),
-				 gc.DataTuple('nexthop_index',                   nexthop_index),
-				 gc.DataTuple('tunnel_index',                    tunnel_index),
-				 gc.DataTuple('outer_nexthop_index',             outer_nexthop_index)],
-				'%s.multicast_replication.rid_hit_unique_copies' % ectl_F,
-			)]
-		)
+	# for our folded program, need to edit the path to this table
+	if(p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top'):
+		ectl_F_ = ectl_F.replace("_A_0", "_B_0")
+	else:
+		ectl_F_ = ectl_F
+
+	table = self.bfrt_info.table_get('%s.multicast_replication.rid' % ectl_F_)
+	table.entry_add(
+		target,
+		[table.make_key(
+			[gc.KeyTuple('replication_id',                   rid)],
+		)],
+		[table.make_data(
+			[gc.DataTuple('bd',                              bd),
+			 gc.DataTuple('spi',                             spi),
+			 gc.DataTuple('si',                              si),
+			 gc.DataTuple('nexthop_index',                   nexthop_index),
+			 gc.DataTuple('tunnel_index',                    tunnel_index),
+			 gc.DataTuple('outer_nexthop_index',             outer_nexthop_index)],
+			'%s.multicast_replication.rid_hit_unique_copies' % ectl_F_,
+		)]
+	)
 
 def npb_mult_rid_unique_del(self, target, ig_pipe, rid):
 
-		table = self.bfrt_info.table_get('%s.multicast_replication.rid' % ectl_F)
+	# for our folded program, need to edit the path to this table
+	if(p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top'):
+		ectl_F_ = ectl_F.replace("_A_0", "_B_0")
+	else:
+		ectl_F_ = ectl_F
 
-		# read counter
-		resp = table.entry_get(
-			target,
-			[table.make_key(
-				[gc.KeyTuple('replication_id',                   rid)],
-			)],
-			{"from_hw": True},
-			table.make_data(
-				[gc.DataTuple("$COUNTER_SPEC_BYTES"),
-				 gc.DataTuple("$COUNTER_SPEC_PKTS")],
-				'%s.multicast_replication.rid_hit_unique_copies' % ectl_F,
-				get=True
-			)
+	table = self.bfrt_info.table_get('%s.multicast_replication.rid' % ectl_F_)
+
+	# read counter
+	resp = table.entry_get(
+		target,
+		[table.make_key(
+			[gc.KeyTuple('replication_id',                   rid)],
+		)],
+		{"from_hw": True},
+		table.make_data(
+			[gc.DataTuple("$COUNTER_SPEC_BYTES"),
+			 gc.DataTuple("$COUNTER_SPEC_PKTS")],
+			'%s.multicast_replication.rid_hit_unique_copies' % ectl_F_,
+			get=True
 		)
+	)
 
-		data_dict = next(resp)[0].to_dict()
-		recv_pkts = data_dict["$COUNTER_SPEC_PKTS"]
-		recv_bytes = data_dict["$COUNTER_SPEC_BYTES"]
+	data_dict = next(resp)[0].to_dict()
+	recv_pkts = data_dict["$COUNTER_SPEC_PKTS"]
+	recv_bytes = data_dict["$COUNTER_SPEC_BYTES"]
 
-		print("Dumping npb_npb_sf1_multicast (egress) counters: pkts", recv_pkts, "bytes", recv_bytes)
+	print("Dumping npb_npb_sf1_multicast (egress) counters: pkts", recv_pkts, "bytes", recv_bytes)
 
-		# delete entry
-		table.entry_del(
-			target,
-			[table.make_key(
-				[gc.KeyTuple('replication_id',                   rid)],
-			)],
-		)
+	# delete entry
+	table.entry_del(
+		target,
+		[table.make_key(
+			[gc.KeyTuple('replication_id',                   rid)],
+		)],
+	)
 
 ########################################
 
@@ -5061,7 +5135,7 @@ def npb_nsh_chain_middle_add(self, target, ig_pipe,
 	npb_tunnel_rmac_add       (self, target, ig_pipe, rmac);
 
 	npb_npb_sfc_sf_sel_add    (self, target, ig_pipe, spi, si, si-(popcount(sf_bitmask&6))) # only 'and' with sf's that are after the sff
-	npb_sfc_sf_sel_nsh_xlate_add(self, target, ig_pipe, ta, 63, spi, si, si-(popcount(sf_bitmask&6)) )
+#	npb_sfc_sf_sel_nsh_xlate_add(self, target, ig_pipe, ta, 63, spi, si, si-(popcount(sf_bitmask&6)) )
 
 	if(sf_bitmask&1):
 		npb_npb_sf0_action_sel_add(self, target, ig_pipe, spi, si-(popcount(sf_bitmask&0)), 0)
@@ -5087,7 +5161,7 @@ def npb_nsh_chain_middle_del(self, target, ig_pipe,
 	npb_ing_port_del          (self, target, ig_pipe, ig_port, ig_port_lag_ptr)
 	npb_tunnel_rmac_del       (self, target, ig_pipe, rmac);
 	npb_npb_sfc_sf_sel_del    (self, target, ig_pipe, spi, si)
-	npb_sfc_sf_sel_nsh_xlate_del(self, target, ig_pipe, ta)
+#	npb_sfc_sf_sel_nsh_xlate_del(self, target, ig_pipe, ta)
 	if(sf_bitmask&1):
 		npb_npb_sf0_action_sel_del(self, target, ig_pipe, spi, si-(popcount(sf_bitmask&0)))
 	npb_npb_sff_fib_del       (self, target, ig_pipe, spi, si-(popcount(sf_bitmask)))
@@ -5114,7 +5188,7 @@ def npb_nsh_chain_end_add(self, target, ig_pipe,
 	npb_ing_port_add          (self, target, ig_pipe, ig_port, ig_port_lag_ptr, bridging_enable, 0, 0, 0, 0, 0)
 	npb_tunnel_rmac_add       (self, target, ig_pipe, rmac);
 	npb_npb_sfc_sf_sel_add    (self, target, ig_pipe, spi, si, si-(popcount(sf_bitmask&6))) # only 'and' with sf's that are after the sff
-	npb_sfc_sf_sel_nsh_xlate_add(self, target, ig_pipe, ta, 63, spi, si, si-(popcount(sf_bitmask&6)) )
+#	npb_sfc_sf_sel_nsh_xlate_add(self, target, ig_pipe, ta, 63, spi, si, si-(popcount(sf_bitmask&6)) )
 	if(sf_bitmask&1):
 		npb_npb_sf0_action_sel_add(self, target, ig_pipe, spi, si-(popcount(sf_bitmask&0)), 0)
 	npb_npb_sff_fib_add       (self, target, ig_pipe, spi, si-(popcount(sf_bitmask)), nexthop_ptr, 1) # 1 = end of chain
@@ -5136,7 +5210,7 @@ def npb_nsh_chain_end_del(self, target, ig_pipe,
 	npb_ing_port_del          (self, target, ig_pipe, ig_port, ig_port_lag_ptr)
 	npb_tunnel_rmac_del       (self, target, ig_pipe, rmac);
 	npb_npb_sfc_sf_sel_del    (self, target, ig_pipe, spi, si)
-	npb_sfc_sf_sel_nsh_xlate_del(self, target, ig_pipe, ta)
+#	npb_sfc_sf_sel_nsh_xlate_del(self, target, ig_pipe, ta)
 	if(sf_bitmask&1):
 		npb_npb_sf0_action_sel_del(self, target, ig_pipe, spi, si-(popcount(sf_bitmask&0)))
 	npb_npb_sff_fib_del       (self, target, ig_pipe, spi, si-(popcount(sf_bitmask)))
@@ -5300,45 +5374,44 @@ def cleanUpGlobal(self):
 		except:
 			pass
 
-	for lag_action_path in lag_action_paths:
-		if(lag_action_path in lag_action_paths):
-			lag_action_table = self.bfrt_info.table_get(lag_action_path)
-			#print("  Clearing Table {}".format(lag_action_table.info.name_get()))
-			for ami in range(0, 32) : #lag_action_table.info.size):
-				try:
-					#print("Lag action profile cleared1")
-					lag_action_table.entry_del(self.target, [lag_action_table.make_key([gc.KeyTuple('$ACTION_MEMBER_ID', ami)])])
-				except:
-					#print("Lag action profile not cleared1")
-					pass
-
-			try:
-				#print("Lag action profile cleared2")
-				lag_action_table.entry_del(self.target, [])
-			except:
-				#print("Lag action profile not cleared2")
-				pass
-
-
 	for lag_selector_path in lag_selector_paths:
 		if(lag_selector_path in table_names):
 			lag_selector_table = self.bfrt_info.table_get(lag_selector_path)
 			#print("  Clearing Table {}".format(lag_selector_table.info.name_get()))
 			try:
-				#print("Lag selector cleared")
 				lag_selector_table.entry_del(self.target, [])
+				#print("Lag selector cleared")
 			except:
 				#print("Lag selector not cleared")
 				pass
 
-	
+	for lag_action_path in lag_action_paths:
+		if(lag_action_path in lag_action_paths):
+			lag_action_table = self.bfrt_info.table_get(lag_action_path)
+			#print("  Clearing Table {}".format(lag_action_table.info.name_get()))
+
+			try:
+				lag_action_table.entry_del(self.target, [])
+				#print("Lag action profile cleared2")
+			except:
+				#print("Lag action profile not cleared2")
+				pass
+
+			for ami in range(0, 32) : #lag_action_table.info.size):
+				try:
+					lag_action_table.entry_del(self.target, [lag_action_table.make_key([gc.KeyTuple('$ACTION_MEMBER_ID', ami)])])
+					#print("Lag action profile cleared1")
+				except:
+					#print("Lag action profile not cleared1")
+					pass
+
 	for my_mac_lo_path in my_mac_lo_paths:
 		if(my_mac_lo_path in table_names):
 			my_mac_lo_table = self.bfrt_info.table_get(my_mac_lo_path)
 			#print("  Clearing Table {}".format(my_mac_lo_table.info.name_get()))
 			try:
-				#print("My Mac lo cleared")
 				my_mac_lo_table.entry_del(self.target, [])
+				#print("My Mac lo cleared")
 			except:
 				#print("My Mac lo not cleared")
 				pass
@@ -5348,8 +5421,8 @@ def cleanUpGlobal(self):
 			my_mac_hi_table = self.bfrt_info.table_get(my_mac_hi_path)
 			#print("  Clearing Table {}".format(my_mac_hi_table.info.name_get()))
 			try:
-				#print("My Mac hi cleared")
 				my_mac_hi_table.entry_del(self.target, [])
+				#print("My Mac hi cleared")
 			except:
 				#print("My Mac hi not cleared")
 				pass
@@ -5359,9 +5432,9 @@ def cleanUpGlobal(self):
 		#print("  Clearing Table {}".format(node_table.info.name_get()))
 		for node in range(0, 32):#node_table.info.size):
 			try:
-				#print("Pre Node cleared", node)
 				#table.entry_del(self.target, [gc.KeyTuple('$MULTICAST_NODE_ID',            node)])
 				npb_pre_node_del(self, self.target, ig_pipe, node) # lower
+				#print("Pre Node cleared", node)
 			except:
 				#print("Pre Node not cleared", node)
 				pass
@@ -5371,9 +5444,9 @@ def cleanUpGlobal(self):
 		#print("  Clearing Table {}".format(mgid_table.info.name_get()))
 		for mgid in range(0, 32): #mgid_table.info.size):
 			try:
-				#print("Pre MGID cleared", mgid)
 				#table.entry_del(self.target, [gc.KeyTuple('$MGID',                         mgid)])
 				npb_pre_mgid_del(self, self.target, ig_pipe, mgid=mgid)                                 # upper
+				#print("Pre MGID cleared", mgid)
 			except:
 				#print("Pre MGID not cleared", mgid)
 				pass

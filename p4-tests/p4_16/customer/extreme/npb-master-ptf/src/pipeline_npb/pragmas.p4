@@ -44,4 +44,6 @@
 // @pa_container_size("ingress", "ig_intr_md_for_dprsr.mtu_trunc_len", 16)
 // @pa_container_size("egress", "eg_intr_md_for_dprsr.mtu_trunc_len", 16) 
 
+//@pa_prioritize_ara_inits
+
 #endif // _P4_PRAGMAS_

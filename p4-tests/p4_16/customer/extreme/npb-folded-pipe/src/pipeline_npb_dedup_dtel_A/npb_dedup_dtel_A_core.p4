@@ -279,9 +279,9 @@ control EgressControl_A(
 
 //      eg_intr_md_for_dprsr.drop_ctl = 0;
 #ifdef INT_V2
-		eg_md.timestamp = eg_intr_md_from_prsr.global_tstamp;
+		eg_md.egress_timestamp = eg_intr_md_from_prsr.global_tstamp;
 #else
-		eg_md.timestamp = eg_intr_md_from_prsr.global_tstamp[31:0];
+		eg_md.egress_timestamp = eg_intr_md_from_prsr.global_tstamp[31:0];
 #endif
 #ifdef PA_NO_INIT
 		eg_intr_md_for_dprsr.mirror_type = SWITCH_MIRROR_TYPE_INVALID;// for barefoot reset bug
@@ -364,7 +364,7 @@ control EgressControl_A(
 
 			// 1st & 2nd packet: run dtel
 #ifdef DTEL_ENABLE
-			dtel.apply(hdr.transport, eg_md, eg_intr_md, eg_md.dtel.hash);
+			dtel.apply(hdr.transport, eg_md, eg_intr_md, eg_intr_md_from_prsr, eg_md.dtel.hash);
 			dtel_config.apply(hdr.transport, eg_md, eg_intr_md_for_dprsr);
 #endif
 			// ----------------------------------

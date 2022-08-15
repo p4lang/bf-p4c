@@ -99,7 +99,7 @@ class test(BfRuntimeTest):
 			sfc                     = 6 # Arbitrary value
 			dsap                    = 7 # Arbitrary value
 
-			sf_bitmask              = 0 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
+			sf_bitmask              = 1 # Bit 0 = ingress, bit 1 = multicast, bit 2 = egress
 
 			nexthop_ptr             = 1 # Arbitrary value
 			bd                      = 2 # Arbitrary value
@@ -125,6 +125,12 @@ class test(BfRuntimeTest):
 			)
 
 #			npb_pre_mirror_add(self, self.target, ig_pipe, 4, "EGRESS", eg_port2) # for mirrored packet
+
+			# -----------------
+			# Ingress SF(s)
+			# -----------------
+
+			npb_npb_sf0_policy_l2_add(self, self.target, ig_pipe, sap=sap, vpn=vpn, flow_class=flow_class_acl, queue=qid)
 
 			# -----------------
 

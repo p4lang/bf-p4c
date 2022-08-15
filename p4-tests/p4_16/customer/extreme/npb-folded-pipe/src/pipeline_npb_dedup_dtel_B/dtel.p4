@@ -213,7 +213,7 @@ control QueueReport(inout switch_egress_metadata_t eg_md,
     table queue_alert {
         key = {
             eg_md.qos.qid : exact @name("qid");
-            eg_md.port : exact @name("port");
+            eg_md.egress_port : exact @name("port");
         }
 
         actions = {
@@ -290,7 +290,7 @@ control QueueReport(inout switch_egress_metadata_t eg_md,
             eg_md.pkt_src : exact;
             qalert : exact;
             eg_md.qos.qid : exact @name("qid");
-            eg_md.port : exact @name("port");
+            eg_md.egress_port : exact @name("port");
         }
 
         actions = {
@@ -361,7 +361,7 @@ control FlowReport(in switch_egress_metadata_t eg_md, out bit<2> flag) {
 #ifndef DTEL_QUEUE_REPORT_ENABLE
         // TODO: Add table with action set_qmask
 #endif
-        digest = hash.get({eg_md.dtel.latency, eg_md.ingress_port, eg_md.port, eg_md.dtel.hash});
+        digest = hash.get({eg_md.dtel.latency, eg_md.ingress_port, eg_md.egress_port, eg_md.dtel.hash});
 
         if (eg_md.dtel.report_type & (SWITCH_DTEL_REPORT_TYPE_FLOW | SWITCH_DTEL_SUPPRESS_REPORT) == SWITCH_DTEL_REPORT_TYPE_FLOW
             && eg_md.pkt_src == SWITCH_PKT_SRC_BRIDGED)
@@ -841,7 +841,7 @@ control IntEdge(inout switch_egress_metadata_t eg_md)(
 
     table port_lookup {
         key = {
-            eg_md.port : exact;
+            eg_md.egress_port : exact;
         }
         actions = {
             NoAction;
@@ -868,6 +868,7 @@ control IntEdge(inout switch_egress_metadata_t eg_md)(
 control EgressDtel(inout switch_header_transport_t hdr,
                    inout switch_egress_metadata_t eg_md,
                    in egress_intrinsic_metadata_t eg_intr_md,
+                   in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
                    in bit<32> hash) {
 
     DropReport() drop_report;
@@ -948,15 +949,24 @@ control EgressDtel(inout switch_header_transport_t hdr,
 
 	// ------------------------------------------------
 
+    action update_dtel_timestamps() {
+        eg_md.dtel.latency = eg_intr_md_from_prsr.global_tstamp[31:0] -
+                             eg_md.ingress_timestamp[31:0];
+#ifdef INT_V2
+        eg_md.egress_timestamp = eg_intr_md_from_prsr.global_tstamp;
+#else
+        eg_md.egress_timestamp = eg_intr_md_from_prsr.global_tstamp[31:0];
+#endif
+    }
+
     apply {
 #ifdef DTEL_ENABLE
-        eg_md.dtel.latency =
-            eg_md.timestamp[31:0] - eg_md.ingress_timestamp[31:0];
+        update_dtel_timestamps();
         if (eg_md.pkt_src == SWITCH_PKT_SRC_DEFLECTED && hdr.dtel_drop_report.isValid())
 #ifdef INT_V2
-            eg_md.port = hdr.dtel_metadata_1.egress_port;
+            eg_md.egress_port = hdr.dtel_metadata_1.egress_port;
 #else
-            eg_md.port = hdr.dtel_report.egress_port;
+            eg_md.egress_port = hdr.dtel_report.egress_port;
 #endif
         ingress_port_conversion.apply();
         egress_port_conversion.apply();

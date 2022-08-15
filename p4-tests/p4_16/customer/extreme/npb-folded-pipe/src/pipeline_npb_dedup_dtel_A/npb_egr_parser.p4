@@ -27,7 +27,7 @@ parser EgressParser(
         pkt.extract(eg_intr_md);
 //      eg_md.pkt_length = eg_intr_md.pkt_length;
         eg_md.payload_len = eg_intr_md.pkt_length; // initially populate with pkt length...we will fix later
-        eg_md.port = eg_intr_md.egress_port;
+        eg_md.egress_port = eg_intr_md.egress_port;
 		eg_md.qos.qdepth = eg_intr_md.deq_qdepth;
 
 #ifdef PA_NO_INIT
@@ -94,7 +94,7 @@ parser EgressParser(
         eg_md.ingress_port         = hdr.bridged_md.base.ingress_port;
 #ifdef CPU_HDR_CONTAINS_EG_PORT
 #else
-        eg_md.port_lag_index       = hdr.bridged_md.base.ingress_port_lag_index;
+        eg_md.egress_port_lag_index = hdr.bridged_md.base.ingress_port_lag_index;
 #endif
 //      eg_md.bd                   = hdr.bridged_md.base.ingress_bd;
         eg_md.nexthop              = hdr.bridged_md.base.nexthop;
@@ -157,9 +157,9 @@ parser EgressParser(
         eg_md.bd = port_md.bd;                                // for cpu header (derek added)
 		eg_md.ingress_port = port_md.port;                    // for cpu header (derek added)
 #ifdef CPU_HDR_CONTAINS_EG_PORT
-        eg_md.port = port_md.eg_port;                         // for cpu header (derek added)
+        eg_md.egress_port = port_md.eg_port;                  // for cpu header (derek added)
 #else
-        eg_md.port_lag_index = port_md.port_lag_index;        // for cpu header (derek added)
+        eg_md.egress_port_lag_index = port_md.port_lag_index; // for cpu header (derek added)
 #endif
 //		eg_md.cpu_reason = SWITCH_CPU_REASON_IG_PORT_MIRROR;  // for cpu header (derek added)
 		eg_md.cpu_reason = port_md.reason_code;               // for cpu header
@@ -187,9 +187,9 @@ parser EgressParser(
         eg_md.bd = port_md.bd;                                // for cpu header (derek added)
 		eg_md.ingress_port = port_md.port;                    // for cpu header (derek added)
 #ifdef CPU_HDR_CONTAINS_EG_PORT
-        eg_md.port = port_md.eg_port;                         // for cpu header (derek added)
+        eg_md.egress_port = port_md.eg_port;                  // for cpu header (derek added)
 #else
-        eg_md.port_lag_index = port_md.port_lag_index;        // for cpu header (derek added)
+        eg_md.egress_port_lag_index = port_md.port_lag_index; // for cpu header (derek added)
 #endif
 //		eg_md.cpu_reason = SWITCH_CPU_REASON_EG_PORT_MIRROR;  // for cpu header (derek added)
 		eg_md.cpu_reason = port_md.reason_code;               // for cpu header
@@ -217,9 +217,9 @@ parser EgressParser(
         eg_md.bd = cpu_md.bd;                                 // for cpu header
         eg_md.ingress_port = cpu_md.port;                     // for cpu header
 #ifdef CPU_HDR_CONTAINS_EG_PORT
-        eg_md.port = cpu_md.eg_port;                          // for cpu header (derek added)
+        eg_md.egress_port = cpu_md.eg_port;                   // for cpu header (derek added)
 #else
-        eg_md.port_lag_index = cpu_md.port_lag_index;         // for cpu header (derek added)
+        eg_md.egress_port_lag_index = cpu_md.port_lag_index;  // for cpu header (derek added)
 #endif
         eg_md.ingress_timestamp = cpu_md.timestamp;           // for ??? header
         eg_md.cpu_reason = cpu_md.reason_code;                // for cpu header
@@ -246,9 +246,9 @@ parser EgressParser(
         eg_md.bd = cpu_md.bd;                                 // for cpu header
         eg_md.ingress_port = cpu_md.port;                     // for cpu header
 #ifdef CPU_HDR_CONTAINS_EG_PORT
-        eg_md.port = cpu_md.eg_port;                          // for cpu header (derek added)
+        eg_md.egress_port = cpu_md.eg_port;                   // for cpu header (derek added)
 #else
-        eg_md.port_lag_index = cpu_md.port_lag_index;         // for cpu header (derek added)
+        eg_md.egress_port_lag_index = cpu_md.port_lag_index;  // for cpu header (derek added)
 #endif
         eg_md.ingress_timestamp = cpu_md.timestamp;           // for ??? header
         eg_md.cpu_reason = cpu_md.reason_code;                // for cpu header

@@ -142,7 +142,7 @@ class test(BfRuntimeTest):
 
 			src_pkt, exp_pkt = npb_simple_2lyr_mpls_sr_udp(
 				dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
-				dmac=dmac, smac=smac,mpls_label=mpls_label,#mpls_tags=[mpls_tags],
+				dmac=dmac, smac=smac, mpls_label=mpls_label, #mpls_tags=[mpls_tags],
 				transport_decap=True, sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
 				spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
 			)
@@ -165,7 +165,7 @@ class test(BfRuntimeTest):
 
 			src_pkt, exp_pkt = npb_simple_2lyr_mpls_sr_udp(
 				dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
-				dmac=dmac, smac=smac,mpls_label=mpls_label,#mpls_tags=[mpls_tags],
+				dmac=dmac, smac=smac, mpls_label=mpls_label, #mpls_tags=[mpls_tags],
 				transport_decap=True, sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
 				spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
 			)
@@ -188,7 +188,7 @@ class test(BfRuntimeTest):
 
 			src_pkt, exp_pkt = npb_simple_2lyr_mpls_sr_udp(
 				dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
-				dmac=dmac, smac=smac,mpls_label=mpls_label,#mpls_tags=[mpls_tags],
+				dmac=dmac, smac=smac, mpls_label=mpls_label, #mpls_tags=[mpls_tags],
 				transport_decap=True, sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
 				spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
 			)
@@ -211,7 +211,7 @@ class test(BfRuntimeTest):
 
 			src_pkt, exp_pkt = npb_simple_2lyr_mpls_sr_udp(
 				dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
-				dmac=dmac, smac=smac,mpls_label=mpls_label,#mpls_tags=[mpls_tags],
+				dmac=dmac, smac=smac, mpls_label=mpls_label, #mpls_tags=[mpls_tags],
 				transport_decap=True, sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
 				spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
 			)

@@ -38,20 +38,20 @@
 #define IP_PROTOCOLS_ESP    0x32  // 50
 #define IP_PROTOCOLS_SCTP   0x84  // 132
 
+#define UDP_PORT_VXLAN_GPE 4788
 #define UDP_PORT_VXLAN  4789
 #define UDP_PORT_ROCEV2 4791
 #define UDP_PORT_GENV   6081
 #define UDP_PORT_SFLOW  6343
 #define UDP_PORT_MPLS   6635
-#define UDP_PORT_GTP_C  2123
 #define UDP_PORT_GTP_U  2152
-#define UDP_PORT_GTP_PRIME 3386
+#define UDP_PORT_GTP_C  2123
 
 #define GRE_PROTOCOLS_ERSPAN_TYPE_3 0x22EB
 #define GRE_PROTOCOLS_NVGRE         0x6558  // transparent enet bridging (L2 GRE)
 #define GRE_PROTOCOLS_IP            0x0800
-#define GRE_PROTOCOLS_IPV6          0x86DD
 #define GRE_PROTOCOLS_ERSPAN_TYPE_2 0x88BE
+#define GRE_PROTOCOLS_IPV6          0x86DD
 #define GRE_FLAGS_PROTOCOL_NVGRE    0x20006558
 
 #define NSH_PROTOCOLS_IPV4 0x1
@@ -454,6 +454,7 @@ const switch_tunnel_type_t SWITCH_TUNNEL_TYPE_VLAN   = 9;
 const switch_tunnel_type_t SWITCH_TUNNEL_TYPE_MPLS   = 10;
 const switch_tunnel_type_t SWITCH_TUNNEL_TYPE_UNSUPPORTED = 11;
 const switch_tunnel_type_t SWITCH_TUNNEL_TYPE_GENEVE = 12;
+const switch_tunnel_type_t SWITCH_TUNNEL_TYPE_SPBM = 13;
 
 //#ifndef switch_tunnel_index_width
 //#define switch_tunnel_index_width 16
@@ -472,8 +473,8 @@ typedef bit<switch_tunnel_id_width> switch_tunnel_vni_t;
 struct switch_tunnel_metadata_t { // for transport
 	// note: in addition to tunnel stuff, this structure serves as a catch-all for all non-scoped signals (tunnel related or not)
 	// --------------------------------
-    switch_tunnel_type_t type; // only used by egress encap code (parser does not set)
-	switch_tunnel_index_t index;
+    switch_tunnel_type_t type;
+	switch_tunnel_index_t index; // Egress only.
     switch_tunnel_ip_index_t dip_index;
     switch_tunnel_vni_t vni;
 //  switch_ifindex_t ifindex;
@@ -484,10 +485,10 @@ struct switch_tunnel_metadata_t { // for transport
 	bool unsupported_tunnel;
 }
 
-struct switch_tunnel_metadata_reduced_t { // for outer and inner
+struct switch_tunnel_metadata_reduced_t { // for outer, inner, and inner-inner
 	// note: in addition to tunnel stuff, this structure serves as a catch-all for all non-scoped signals (tunnel related or not)
 	// --------------------------------
-//	switch_tunnel_type_t type; // not used (parser does not set)
+//	switch_tunnel_type_t type;
 //	switch_tunnel_index_t index;
 //  switch_tunnel_ip_index_t dip_index;
 //  switch_tunnel_vni_t vni;
@@ -677,7 +678,6 @@ struct nsh_metadata_t {
 //-----------------------------------------------------------------------------
 
 // Flags
-//XXX Force the fields that are XORd to NOT share containers.
 struct switch_ingress_flags_t {
 //  bool ipv4_checksum_err_0;
 //  bool ipv4_checksum_err_1;
@@ -703,13 +703,13 @@ struct switch_egress_flags_t {
 }
 
 // Checks
-struct switch_ingress_checks_t {
+struct switch_checks_t {
     // Add more checks here.
 }
 
-struct switch_egress_checks_t {
-    // Add more checks here.
-}
+//struct switch_egress_checks_t {
+//    // Add more checks here.
+//}
 
 struct switch_lookup_fields_t {
 	// l2
@@ -895,6 +895,11 @@ header switch_bridged_metadata_h {
 struct switch_bridged_metadata_folded_t {
 	// user-defined metadata carried over from egress to ingress.
     switch_port_t ingress_port;
+#ifdef CPU_HDR_CONTAINS_EG_PORT
+//  switch_port_t egress_port; // derek added
+#else
+    switch_port_lag_index_t ingress_port_lag_index;
+#endif
 //  switch_bd_t ingress_bd;
     switch_nexthop_t nexthop;
 //  switch_pkt_type_t pkt_type;
@@ -979,30 +984,24 @@ struct switch_port_metadata_t {
 #endif
 
 struct switch_ingress_metadata_t {
-    switch_port_t port;                               /* ingress port */
+    switch_port_t ingress_port;                       /* ingress port */
     switch_port_t egress_port;                        /* egress  port */
-    switch_port_lag_index_t port_lag_index;           /* ingress port/lag index */
+    switch_port_lag_index_t ingress_port_lag_index;   /* ingress port/lag index */
     switch_port_lag_index_t egress_port_lag_index;    /* egress  port/lag index */    /* derek: passed to egress */
     switch_bd_t bd;
-    switch_nexthop_t nexthop;                                                     /* derek: egress table pointer #1 */
-    switch_tunnel_nexthop_t tunnel_nexthop;                                       /* derek: egress table pointer #2 */
+    switch_nexthop_t nexthop;                                                         /* derek: egress table pointer #1 */
+    switch_tunnel_nexthop_t tunnel_nexthop;                                           /* derek: egress table pointer #2 */
 //  switch_nexthop_t acl_nexthop;
 //  bool acl_redirect;
 	switch_nexthop_t unused_nexthop;
-
-#if defined(PTP_ENABLE) || defined(INT_V2)
-    bit<48> timestamp;
-#else
-    bit<32> timestamp;
-#endif
     switch_hash_t hash;
 
     switch_ingress_flags_t flags;
-//  switch_ingress_checks_t checks;
+//  switch_checks_t checks;
 	switch_ingress_bypass_t bypass;
 
-	switch_cpu_reason_t cpu_reason;
     switch_drop_reason_t drop_reason; // used by dtel code
+	switch_cpu_reason_t cpu_reason;
 
 //#ifdef INGRESS_PARSER_POPULATES_LKP_0
     switch_lookup_fields_t              lkp_0;
@@ -1014,20 +1013,19 @@ struct switch_ingress_metadata_t {
     switch_multicast_metadata_t multicast;
 	switch_qos_metadata_t qos;
 	switch_mirror_metadata_t mirror;
-
     switch_tunnel_metadata_t         tunnel_0;  // non-scoped version of fields /* derek: egress table pointer #3 (tunnel_0.dip_index) */
     switch_tunnel_metadata_reduced_t tunnel_1;  // non-scoped version of fields
     switch_tunnel_metadata_reduced_t tunnel_2;  // non-scoped version of fields
     switch_tunnel_metadata_reduced_t tunnel_3;  // non-scoped version of fields
-
 	switch_dtel_metadata_t dtel;
 
+#if defined(PTP_ENABLE) || defined(INT_V2)
+    bit<48> ingress_timestamp;
+#else
+    bit<32> ingress_timestamp;
+#endif
+
     nsh_metadata_t nsh_md;
-
-//	bool copp_enable;
-//	switch_copp_meter_id_t copp_meter_id;
-
-//	switch_header_inner_inner_t inner_inner;
 }
 
 // --------------------------------------------------------------------------------
@@ -1042,39 +1040,21 @@ struct switch_ingress_metadata_t {
 #endif
 
 struct switch_egress_metadata_t {
-    switch_pkt_src_t pkt_src;
-//  switch_pkt_type_t pkt_type;
-//  switch_pkt_length_t pkt_length;
-    switch_pkt_length_t payload_len;
-
-    switch_port_lag_index_t port_lag_index;     /* egress port/lag index */
-    switch_port_t port;                         /* Mutable copy of egress port */
-#ifdef CPU_HDR_CONTAINS_EG_PORT
-//  switch_port_t port_orig;                    /* Mutable copy of egress port */
-#endif
-    switch_port_t ingress_port;                 /* ingress port */
+    switch_port_t ingress_port;                       /* ingress port */
+    switch_port_t egress_port;                        /* egress port (mutable copy) */
+    switch_port_lag_index_t egress_port_lag_index;    /* egress port/lag index */
     switch_bd_t bd;
     switch_nexthop_t nexthop;
     switch_tunnel_nexthop_t tunnel_nexthop;
-
-#ifdef INT_V2
-    bit<48> timestamp;
-    bit<48> ingress_timestamp;
-#else
-    bit<32> timestamp;
-    bit<32> ingress_timestamp;
-#endif
     switch_hash_t hash;
 
     switch_egress_flags_t flags;
-//  switch_egress_checks_t checks;
+//  switch_checks_t checks;
 
-	switch_cpu_reason_t cpu_reason;
     switch_drop_reason_t drop_reason; // used by dtel code
+	switch_cpu_reason_t cpu_reason;
 
     switch_lookup_fields_t              lkp_1;    //     scoped version of fields
-//  switch_tunnel_type_t   lkp_1_tunnel_outer_type;
-//  switch_tunnel_type_t   lkp_1_tunnel_inner_type;
 	switch_qos_metadata_t qos;
     switch_tunnel_metadata_t         tunnel_0;  // non-scoped version of fields
     switch_tunnel_metadata_reduced_t tunnel_1;  // non-scoped version of fields
@@ -1083,17 +1063,19 @@ struct switch_egress_metadata_t {
 	switch_mirror_metadata_t mirror;
 	switch_dtel_metadata_t dtel;
 
+    switch_pkt_src_t pkt_src;
+//  switch_pkt_length_t pkt_length;
+//  switch_pkt_type_t pkt_type;
+    switch_pkt_length_t payload_len;
+#ifdef INT_V2
+    bit<48> egress_timestamp;
+    bit<48> ingress_timestamp;
+#else
+    bit<32> egress_timestamp;
+    bit<32> ingress_timestamp;
+#endif
+
     nsh_metadata_t nsh_md;
-
-//	bool copp_enable;
-//	switch_copp_meter_id_t copp_meter_id;
-
-//  bit<6>                                          action_bitmask;
-//  bit<NPB_EGR_SF_EGRESS_SFP_SFF_TABLE_DEPTH_POW2> action_3_meter_id;
-//  bit<10>                                         action_3_meter_id;
-//  bit<8>                                          action_3_meter_overhead;
-
-//	switch_header_inner_inner_t inner_inner;
 }
 
 // --------------------------------------------------------------------------

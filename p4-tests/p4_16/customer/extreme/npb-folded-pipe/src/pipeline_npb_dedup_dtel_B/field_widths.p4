@@ -45,10 +45,12 @@
     #define UDF_WIDTH                      128 // 16B
 
   #ifdef BUG_00593008_WORKAROUND
-	#define BRIDGED_METADATA_WIDTH          37 // number of bytes in the bridged metadata -- must be set manually -- can change between compiler runs
+	#define BRIDGED_METADATA_WIDTH          40 // number of bytes in the bridged metadata -- must be set manually -- can change between compiler runs
   #else
-	#define BRIDGED_METADATA_WIDTH          36 // number of bytes in the bridged metadata -- must be set manually -- can change between compiler runs
+	#define BRIDGED_METADATA_WIDTH          39 // number of bytes in the bridged metadata -- must be set manually -- can change between compiler runs
   #endif
+
+	#define BRIDGED_METADATA_WIDTH_EG       36 // number of bytes in the bridged metadata -- must be set manually -- can change between compiler runs
 
 #else // Full field widths
 
@@ -98,6 +100,8 @@
   #else
 	#define BRIDGED_METADATA_WIDTH          36 // number of bytes in the bridged metadata -- must be set manually -- can change between compiler runs
   #endif
+
+	#define BRIDGED_METADATA_WIDTH_EG       36 // number of bytes in the bridged metadata -- must be set manually -- can change between compiler runs
 
 #endif // FIELD_WIDTHS_REDUCED
 

@@ -1085,7 +1085,8 @@ control IngressAcl(
 
 		// ----- qid -----
 #ifdef SF_0_QID_ENABLE
-		ig_intr_md_for_tm.qid = (switch_qid_t) qid;
+//		ig_intr_md_for_tm.qid = (switch_qid_t) qid;
+		ig_md.qos.qid = (switch_qid_t) qid;
 #endif
 
 		// ----- copy to cpu -----
@@ -1118,7 +1119,7 @@ control IngressAcl(
 #endif
 
 #ifdef SF_0_INDIRECT_COUNTERS
-		indirect_counter.count(ig_md.port ++ indirect_counter_index);
+		indirect_counter.count(ig_md.ingress_port ++ indirect_counter_index);
 #endif
 	}
 }
@@ -1882,7 +1883,7 @@ control EgressAcl(
 
 		if(eg_md.nsh_md.truncate_enable) {
 #if __TARGET_TOFINO__ == 2
-			eg_intr_md_for_dprsr.mtu_trunc_len = eg_md.nsh_md.truncate_len;
+			eg_intr_md_for_dprsr.mtu_trunc_len = eg_md.nsh_md.truncate_len + BRIDGED_METADATA_WIDTH_EG;
   #ifdef PA_NO_INIT
 		} else {
 			eg_intr_md_for_dprsr.mtu_trunc_len = 0x3fff;
@@ -1914,7 +1915,7 @@ control EgressAcl(
 #endif // CPU_ACL_EGRESS_ENABLE
 
 #ifdef SF_2_INDIRECT_COUNTERS
-		indirect_counter.count(eg_md.port ++ indirect_counter_index);
+		indirect_counter.count(eg_md.egress_port ++ indirect_counter_index);
 #endif
 	}
 }

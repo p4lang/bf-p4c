@@ -31,6 +31,8 @@
 //@pa_atomic("egress" , "eg_md.bypass")
 @pa_container_size("egress", "eg_md.flags.bypass_egress", 8)
 @pa_solitary("egress" , "eg_md.lkp_1.ip_flags")
+
+// comment these to get uni-dir p4-program to compile w/ SDE v9.9.0-pr10985 (see case 00678071)
 @pa_container_size("egress" , "protocol_outer_0" , 8)
 @pa_container_size("egress" , "protocol_inner_0" , 8)
 @pa_container_size("egress" , "eg_md.lkp_1.tcp_flags", 8)
@@ -41,5 +43,7 @@
 @pa_container_size("ingress", "ig_intr_md_for_tm.rid", 16)
 @pa_container_size("ingress", "ig_intr_md_for_dprsr.mtu_trunc_len", 16)
 @pa_container_size("egress", "eg_intr_md_for_dprsr.mtu_trunc_len", 16)
+
+//@pa_prioritize_ara_inits
 
 #endif // _P4_PRAGMAS_

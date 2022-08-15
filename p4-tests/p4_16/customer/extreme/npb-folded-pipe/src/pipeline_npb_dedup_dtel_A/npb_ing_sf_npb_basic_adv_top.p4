@@ -283,7 +283,7 @@ control Npb_Ing_Sf_Npb_Basic_Adv_Top (
 				lkp,                 // for hash
 				(bit<VPN_ID_WIDTH>)ig_md.nsh_md.vpn, // for hash
 				ig_md.nsh_md.hash_2,
-//				ig_md.port,          // for dedup
+//				ig_md.ingress_port,          // for dedup
 				ig_md.nsh_md.sap,    // for dedup
 				ig_intr_md_for_dprsr.drop_ctl
 			);

@@ -152,3 +152,13 @@ if not config.get("disable_geneve", False):
 #     except:
 #         logging.warn("VXLAN support not found in Scapy")
 #         pass
+
+SPBM = None
+if not config.get("disable_spbm", False):
+    try:
+        scapy.main.load_contrib("spbm")
+        SPBM = scapy.contrib.spbm.SPBM
+        logging.info("SPBM support found in Scapy")
+    except:
+        logging.warn("SPBM support not found in Scapy")
+        pass

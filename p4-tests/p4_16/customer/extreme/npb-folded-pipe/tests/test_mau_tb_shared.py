@@ -88,6 +88,7 @@ class IngressTunnelType(Enum):
 	MPLS        = 10;
 	UNSUPPORTED = 11;
 	GENEVE      = 12;
+	SPBM        = 13;
 
 class EgressTunnelType(Enum):
 	# these are arbitrary, and don't need to match anything in the p4 code.

@@ -176,8 +176,8 @@ control Npb_Ing_Sfc_Top (
 
 	table port_mapping {
 		key = {
-			ig_md.port : exact @name("port");
-//			ig_md.port_lag_index : exact @name("port_lag_index");
+			ig_md.ingress_port : exact @name("port");
+//			ig_md.ingress_port_lag_index : exact @name("port_lag_index");
 		}
 
 		actions = {
@@ -305,7 +305,7 @@ control Npb_Ing_Sfc_Top (
 				sap        = 0x0,
 
 #ifdef SFC_TIMESTAMP_ENABLE
-				timestamp = ig_md.timestamp[31:0]
+				timestamp = ig_md.ingress_timestamp[31:0]
 #else
 				timestamp = 0
 #endif

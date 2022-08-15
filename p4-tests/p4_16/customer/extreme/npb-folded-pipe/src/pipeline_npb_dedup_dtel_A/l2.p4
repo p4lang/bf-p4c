@@ -95,10 +95,10 @@ control DMAC(
 //			ig_md.bd : exact;
 //			dst_addr : exact;
 
-			lkp.mac_dst_addr     : ternary @name("mac_dst_addr");
-			lkp.vid              : ternary @name("vid");
-			lkp.mac_type         : ternary @name("mac_type");
-			ig_md.port_lag_index : ternary @name("port_lag_index");
+			lkp.mac_dst_addr             : ternary @name("mac_dst_addr");
+			lkp.vid                      : ternary @name("vid");
+			lkp.mac_type                 : ternary @name("mac_type");
+			ig_md.ingress_port_lag_index : ternary @name("port_lag_index");
 		}
 
 		actions = {
@@ -341,7 +341,7 @@ control VlanXlate(
 
 	table port_bd_to_vlan_mapping {
 		key = {
-			eg_md.port_lag_index : exact @name("port_lag_index");
+			eg_md.egress_port_lag_index : exact @name("port_lag_index");
 			eg_md.bd : exact @name("bd");
 		}
 

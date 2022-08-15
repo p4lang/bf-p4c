@@ -22,7 +22,7 @@ from   bfruntime_client_base_tests import BfRuntimeTest
 ####### PTF modules for Fixed APIs (Thrift) #######
 import pd_base_tests
 from   ptf.thriftutils import *
-from   res_pd_rpc      import * # Common data types
+from   res_pd_rpc      import * # Common daea types
 from   mc_pd_rpc       import * # Multicast-specific data types
 from   mirror_pd_rpc   import * # Mirror-specific data types
 
@@ -949,6 +949,142 @@ def npb_simple_2lyr_mpls_sr_udp(
 		model_pkt = npb_model(
 			# possible result packets
 			[exp_pkt_base, exp_pkt_inner, exp_pkt_inner],
+
+			# nsh values
+			spi_exp,
+			si_exp,
+			ta_exp,
+			nshtype_exp,
+			sap_exp,
+			vpn_exp,
+			ttl,
+			scope,
+
+			# model flags
+			bridged_pkt,
+			transport_decap,
+			sf_bitmask,
+			start_of_chain,
+			end_of_chain,
+			scope_term_list,
+			transport_encap,
+
+			# encap values
+			dmac_nsh,
+			smac_nsh,
+			vlan_en_nsh_exp,
+			vlan_pcp_nsh,
+			vlan_vid_nsh
+		)
+
+		# -----------------
+		# exp: add nsh hdr
+		# -----------------
+
+		exp_pkt = model_pkt
+
+		# -----------------
+
+		#print("---------- Debug ----------")
+		#print(testutils.format_packet(src_pkt))
+		#print("---------- Debug ----------")
+
+		return src_pkt, exp_pkt
+
+################################################################################
+# 2 layers: Simple SPBM / TCP
+################################################################################
+
+def npb_simple_2lyr_spbm_tcp(
+	#transport source variables (only used when start_of_chain=False)
+	dmac_nsh       = '00:01:02:03:04:05',
+	smac_nsh       = '00:06:07:08:09:0a',
+	vlan_en_nsh    = False,
+	vlan_pcp_nsh   = 0,
+	vlan_vid_nsh   = 0,
+	spi            = 0,
+	si             = 0,
+	ta             = 0,
+	nshtype        = 2,
+	sap            = 0,
+	vpn            = 0,
+	ttl            = 63, # new packets will have a value of 63
+	scope          = 0,
+
+	#outer source variables
+	dmac           = '00:01:02:03:04:05',
+	smac           = '00:06:07:08:09:0a',
+	vlan_en        = False, vlan_en_vid = 0, vlan_en_pcp = 0,
+	e_en           = False,
+	vn_en          = False,
+	pktlen         = 100,
+
+	#model flags
+	transport_decap= False,
+	sf_bitmask     = 0,
+	start_of_chain = True,
+	end_of_chain   = False,
+	scope_term_list = [], # an ordered list scopes and terminates that occur (0 = scope, 1 = term)
+	transport_encap= EgressTunnelType.NONE.value,
+	bridged_pkt    = False,
+
+	#transport expected variables (only used when end_of_chain=False)
+	vlan_en_nsh_exp= None,
+	spi_exp        = None,
+	si_exp         = None,
+	ta_exp         = None,
+	nshtype_exp    = None,
+	sap_exp        = None,
+	vpn_exp        = None,
+
+	#outer expected variables
+	vlan_en_exp    = None, vlan_en_exp_vid = 0, vlan_en_exp_pcp = 0,
+	e_en_exp       = None,
+	vn_en_exp      = None,
+	pktlen_exp     = None):
+
+		# -----------------
+
+		if vlan_en_nsh_exp is None: vlan_en_nsh_exp = vlan_en_nsh
+		if spi_exp         is None: spi_exp         = spi
+		if si_exp          is None: si_exp          = si
+		if ta_exp          is None: ta_exp          = ta
+		if nshtype_exp     is None: nshtype_exp     = nshtype
+		if sap_exp         is None: sap_exp         = sap
+		if vpn_exp         is None: vpn_exp         = vpn
+
+		if vlan_en_exp     is None: vlan_en_exp     = vlan_en;  vlan_en_exp_vid = vlan_en_vid;  vlan_en_exp_pcp = vlan_en_pcp
+		if e_en_exp        is None: e_en_exp        = e_en
+		if vn_en_exp       is None: vn_en_exp       = vn_en
+		if pktlen_exp      is None: pktlen_exp      = pktlen
+
+		# -----------------
+
+#		ptklen_exp = pktlen_exp - 22
+		pktlen_exp_2 = pktlen_exp - 22
+
+		# -----------------
+
+		exp_pkt_base = testutils.simple_tcp_packet(eth_dst=dmac, eth_src=smac, pktlen=pktlen_exp_2)
+
+		src_pkt_base = simple_spbm_tcp_packet(eth_dst=dmac, eth_src=smac, pktlen=pktlen)
+		
+		# -----------------
+		# src: add nsh hdr
+		# -----------------
+
+		if(start_of_chain == False):
+			src_pkt = npb_model_mac_encap(dmac_nsh, smac_nsh, vlan_en_nsh, vlan_pcp_nsh, vlan_vid_nsh, spi, si, ta, nshtype, scope, sap, vpn, ttl, src_pkt_base)
+		else:
+			src_pkt = src_pkt_base
+
+		# -----------------
+		# model
+		# -----------------
+
+		model_pkt = npb_model(
+			# possible result packets
+			[exp_pkt_base, exp_pkt_base, exp_pkt_base],
 
 			# nsh values
 			spi_exp,
@@ -5371,7 +5507,7 @@ def simple_ipv6_packet(pktlen=100,
 
 # a missing Barefoot routine for ipv6
 
-#		simple_ipv6_only_packet =      l3 ipv4 / l6 tcp
+# simple_ipv6_only_packet =      l3 ipv4 / l6 tcp
 
 def simple_ipv6_only_packet(pktlen=100,
                        ipv6_src='2001:db8:85a3::8a2e:370:7334',
@@ -5421,6 +5557,7 @@ def simple_ipv6_only_packet(pktlen=100,
 
 
     return pkt
+
 ################################################################################
 
 # a missing Barefoot routine for VXLAN with no L2
@@ -5473,7 +5610,7 @@ def simple_vxlan_packet_no_l2(pktlen=300,
     #    return None
 
     if testutils.MINSIZE > pktlen:
-        pktlen = MINSIZE
+        pktlen = testutils.MINSIZE
 
     if with_udp_chksum:
         udp_hdr = scapy.UDP(sport=udp_sport, dport=udp_dport)
@@ -5500,4 +5637,77 @@ def simple_vxlan_packet_no_l2(pktlen=300,
     else:
         pkt = pkt / testutils.simple_tcp_packet(pktlen=pktlen - len(pkt))
 
+    return pkt
+
+################################################################################
+
+# a missing Barefoot routine for VXLAN with no L2
+
+def simple_spbm_tcp_packet(
+    pktlen=100,
+    eth_dst="00:01:02:03:04:05",
+    eth_src="00:06:07:08:09:0a",
+    dl_vlan_outer=20,
+    dl_vlan_pcp_outer=0,
+    dl_vlan_cfi_outer=0,
+    vlan_vid=10,
+    vlan_pcp=0,
+    dl_vlan_cfi=0,
+    ip_src="192.168.0.1",
+    ip_dst="192.168.0.2",
+    ip_tos=0,
+    ip_ecn=None,
+    ip_dscp=None,
+    ip_ttl=64,
+    tcp_sport=1234,
+    tcp_dport=80,
+    ip_ihl=None,
+    ip_options=False,
+):
+    """
+    Return a doubly tagged dataplane TCP packet
+
+    Supports a few parameters:
+    @param len Length of packet in bytes w/o CRC
+    @param eth_dst Destinatino MAC
+    @param eth_src Source MAC
+    @param dl_vlan_outer Outer VLAN ID
+    @param dl_vlan_pcp_outer Outer VLAN priority
+    @param dl_vlan_cfi_outer Outer VLAN cfi bit
+    @param vlan_vid Inner VLAN ID
+    @param vlan_pcp VLAN priority
+    @param dl_vlan_cfi VLAN cfi bit
+    @param ip_src IP source
+    @param ip_dst IP destination
+    @param ip_tos IP ToS
+    @param ip_ecn IP ToS ECN
+    @param ip_dscp IP ToS DSCP
+    @param tcp_dport TCP destination port
+    @param ip_sport TCP source port
+
+    Generates a TCP request.  Users
+    shouldn't assume anything about this packet other than that
+    it is a valid ethernet/IP/TCP frame.
+    """
+
+    if testutils.MINSIZE > pktlen:
+        pktlen = testutils.MINSIZE
+
+    ip_tos = testutils.ip_make_tos(ip_tos, ip_ecn, ip_dscp)
+
+    # Note Dot1Q.id is really CFI
+    pkt = (
+        scapy.Ether(dst=eth_dst, src=eth_src, type=0x88a8)
+        / scapy.Dot1Q(prio=dl_vlan_pcp_outer, id=dl_vlan_cfi_outer, vlan=dl_vlan_outer, type=0x88e7)
+#       / scapy.Dot1Q(prio=vlan_pcp, id=dl_vlan_cfi, vlan=vlan_vid) # derek removed
+        / scapy.SPBM(prio=1,isid=20011) # derek added
+        / scapy.Ether(dst=eth_dst, src=eth_src)
+        / scapy.IP(src=ip_src, dst=ip_dst, tos=ip_tos, ttl=ip_ttl, ihl=ip_ihl)
+        / scapy.TCP(sport=tcp_sport, dport=tcp_dport)
+    )
+    
+    pkt = pkt / codecs.decode(
+        "".join(["%02x" % (x % 256) for x in range(pktlen - len(pkt))]), "hex"
+    )
+    
     return pkt

@@ -62,7 +62,8 @@ class test(BfRuntimeTest):
 	def runTest(self):
 
 		for ig_pipe in ig_pipes:
-		# -------------------------------------------------------------
+
+			# -------------------------------------------------------------
 
 			ig_port = ig_swports[ig_pipe][1]
 			eg_port = eg_swports[1]
