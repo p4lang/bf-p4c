@@ -143,6 +143,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         Alignment(le_bitrange wb, le_bitrange rb) : write_bits(wb), read_bits(rb) {}
 
         int right_shift(PHV::Container container) const;
+        friend std::ostream &operator<<(std::ostream &out, const Alignment&);
     };
 
     /** Information on all PHV reads affecting a single container.  Again used for verification
@@ -297,33 +298,36 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         ///> Eventually we want to craft correct backtrack/error messages from all
         ///> of these error messages.  In the meantime, used for tracking action
         ///> data issues
-        enum error_code_t { NO_PROBLEM = 0,
-                            MULTIPLE_CONTAINER_ACTIONS = 1,
-                            READ_PHV_MISMATCH = (1 << 1),
-                            ACTION_DATA_MISMATCH = (1 << 2),
-                            CONSTANT_MISMATCH = (1 << 3),
-                            TOO_MANY_PHV_SOURCES = (1 << 4),
-                            IMPOSSIBLE_ALIGNMENT = (1 << 5),
-                            CONSTANT_TO_ACTION_DATA = (1 << 6),
-                            MULTIPLE_ACTION_DATA = (1 << 7),
-                            ILLEGAL_OVERWRITE = (1 << 8),
-                            BIT_COLLISION = (1 << 9),
-                            OPERAND_MISMATCH = (1 << 10),
-                            UNHANDLED_ACTION_DATA = (1 << 11),
-                            DIFFERENT_READ_SIZE = (1 << 12),
-                            MAU_GROUP_MISMATCH = (1 << 13),
-                            PHV_AND_ACTION_DATA = (1 << 14),
-                            PARTIAL_OVERWRITE = (1 << 15),
-                            MULTIPLE_SHIFTS = (1 << 16),
-                            ILLEGAL_ACTION_DATA = (1 << 17),
-                            REFORMAT_CONSTANT = (1 << 18),
-                            UNRESOLVED_REPEATED_ACTION_DATA = (1 << 19),
-                            ATTACHED_OUTPUT_ILLEGAL_ALIGNMENT = (1 << 20),
-                            CONSTANT_TO_HASH = (1 << 21),
-                            ILLEGAL_MOCHA_OR_DARK_WRITE = (1 << 22),
-                            BIT_COLLISION_SET = (1 << 23)
-                         };
+        enum error_code_t {
+            NO_PROBLEM                          = 0,
+            MULTIPLE_CONTAINER_ACTIONS          = (1 << 0),
+            READ_PHV_MISMATCH                   = (1 << 1),
+            ACTION_DATA_MISMATCH                = (1 << 2),
+            CONSTANT_MISMATCH                   = (1 << 3),
+            TOO_MANY_PHV_SOURCES                = (1 << 4),
+            IMPOSSIBLE_ALIGNMENT                = (1 << 5),
+            CONSTANT_TO_ACTION_DATA             = (1 << 6),
+            MULTIPLE_ACTION_DATA                = (1 << 7),
+            ILLEGAL_OVERWRITE                   = (1 << 8),
+            BIT_COLLISION                       = (1 << 9),
+            OPERAND_MISMATCH                    = (1 << 10),
+            UNHANDLED_ACTION_DATA               = (1 << 11),
+            DIFFERENT_READ_SIZE                 = (1 << 12),
+            MAU_GROUP_MISMATCH                  = (1 << 13),
+            PHV_AND_ACTION_DATA                 = (1 << 14),
+            PARTIAL_OVERWRITE                   = (1 << 15),
+            MULTIPLE_SHIFTS                     = (1 << 16),
+            ILLEGAL_ACTION_DATA                 = (1 << 17),
+            REFORMAT_CONSTANT                   = (1 << 18),
+            UNRESOLVED_REPEATED_ACTION_DATA     = (1 << 19),
+            ATTACHED_OUTPUT_ILLEGAL_ALIGNMENT   = (1 << 20),
+            CONSTANT_TO_HASH                    = (1 << 21),
+            ILLEGAL_MOCHA_OR_DARK_WRITE         = (1 << 22),
+            BIT_COLLISION_SET                   = (1 << 23)
+        };
         unsigned error_code = NO_PROBLEM;
+        static const std::vector<cstring> error_code_string_t;
+
         cstring name;
         const IR::MAU::Table *table_context = nullptr;
         ActionDataInfo adi;

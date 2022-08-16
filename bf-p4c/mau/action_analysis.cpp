@@ -319,6 +319,11 @@ const IR::MAU::ActionArg *ActionAnalysis::isActionArg(const IR::Expression *e,
 }
 
 
+std::ostream &operator<<(std::ostream &out, const ActionAnalysis::Alignment& a) {
+    out << "align [ R: " << a.read_bits << ", W: " << a.write_bits << " ]";
+    return out;
+}
+
 std::ostream &operator<<(std::ostream &out, const ActionAnalysis::ActionParam &ap) {
     out << ap.expr;
     return out;
@@ -342,12 +347,53 @@ std::ostream &operator<<(std::ostream &out, const ActionAnalysis::FieldAction &f
     return out;
 }
 
+const std::vector<cstring> ActionAnalysis::ContainerAction::error_code_string_t = {
+    // "NO_PROBLEM", // Set to 0 so not indexed
+    "MULTIPLE_CONTAINER_ACTIONS",
+    "READ_PHV_MISMATCH",
+    "ACTION_DATA_MISMATCH",
+    "CONSTANT_MISMATCH",
+    "TOO_MANY_PHV_SOURCES",
+    "IMPOSSIBLE_ALIGNMENT",
+    "CONSTANT_TO_ACTION_DATA",
+    "MULTIPLE_ACTION_DATA",
+    "ILLEGAL_OVERWRITE",
+    "BIT_COLLISION",
+    "OPERAND_MISMATCH",
+    "UNHANDLED_ACTION_DATA",
+    "DIFFERENT_READ_SIZE",
+    "MAU_GROUP_MISMATCH",
+    "PHV_AND_ACTION_DATA",
+    "PARTIAL_OVERWRITE",
+    "MULTIPLE_SHIFTS",
+    "ILLEGAL_ACTION_DATA",
+    "REFORMAT_CONSTANT",
+    "UNRESOLVED_REPEATED_ACTION_DATA",
+    "ATTACHED_OUTPUT_ILLEGAL_ALIGNMENT",
+    "CONSTANT_TO_HASH",
+    "ILLEGAL_MOCHA_OR_DARK_WRITE",
+    "BIT_COLLISION_SET",
+};
+
+
 std::ostream &operator<<(std::ostream &out, const ActionAnalysis::ContainerAction &ca) {
-    out << "{ ";
+    out << "{ Field Actions : ";
     for (auto &fa : ca.field_actions) {
         out << fa << "; ";
     }
-    out << "}";
+    out << ", error_code: " << std::hex << ca.error_code;
+    out << " - [ ";
+    int i = 0;
+    unsigned error_code = ca.error_code;
+    while (error_code>>i) {
+        if ((error_code>>i) & 0x1) {
+            out << " " << ActionAnalysis::ContainerAction::error_code_string_t[i];
+        }
+       i++;
+       if (i>=(int)ActionAnalysis::ContainerAction::error_code_string_t.size()) break;
+    }
+    out << " ]";
+    out << " }";
     return out;
 }
 
@@ -1107,6 +1153,7 @@ bool ActionAnalysis::init_simple_alignment(const ActionParam &read,
         initialize_constant(read, cont_action, write_bits, read_bits_brs);
     }
     cont_action.counts[read.type]++;
+    LOG5("Updating counts for " << read.type << " " << cont_action.counts[read.type]);
     return true;
 }
 
@@ -1115,11 +1162,14 @@ bool ActionAnalysis::init_simple_alignment(const ActionParam &read,
  * splits the sources if a PHV alignment requirements have different right shift requirements
  */
 void ActionAnalysis::build_phv_alignment(PHV::Container container, ContainerAction &cont_action) {
+    LOG3("Building phv alignment");
     for (auto entry : cont_action.initialization_phv_alignment) {
         std::map<int, safe_vector<Alignment>> alignment_per_right_shift;
         for (auto alignment : entry.second) {
             int right_shift = alignment.right_shift(container);
             alignment_per_right_shift[right_shift].emplace_back(alignment);
+            LOG4(" Adding alignment_per_right_shift : " << alignment
+                    << ", right_shift: " << right_shift);
         }
         for (auto apr_entry : alignment_per_right_shift) {
             TotalAlignment ta;
@@ -1127,6 +1177,7 @@ void ActionAnalysis::build_phv_alignment(PHV::Container container, ContainerActi
                 ta.add_alignment(alignment.write_bits, alignment.read_bits);
             }
             cont_action.counts[ActionParam::PHV]++;
+            LOG5("Updating counts for ActionParam::PHV " << cont_action.counts[ActionParam::PHV]);
             cont_action.phv_alignment.emplace(entry.first, ta);
         }
     }
@@ -1913,6 +1964,7 @@ void ActionAnalysis::ContainerAction::determine_implicit_bits(PHV::Container con
 }
 
 bool ActionAnalysis::ContainerAction::verify_alignment(PHV::Container &container) {
+    LOG3("Verifying alignment");
     TotalAlignment ad_alignment = adi.alignment | ci.alignment;
     if (ad_sources())
         if (!ad_alignment.verify_individual_alignments(container))
@@ -2221,6 +2273,7 @@ void ActionAnalysis::ContainerAction::move_source_to_bit(safe_vector<int> &bit_u
  */
 bool ActionAnalysis::ContainerAction::verify_source_to_bit(int operands,
         PHV::Container container) {
+    LOG5("Verifying source to bit for container " << container << ", operands: " << operands);
     /**
      * When combining a conditional-set with another set, the number of operands is not perfect
      * here, as the operands can be either one or two bits, i.e.
@@ -2244,11 +2297,13 @@ bool ActionAnalysis::ContainerAction::verify_source_to_bit(int operands,
     move_source_to_bit(bit_uses, ci.alignment);
     move_source_to_bit(bit_uses, extra_resize_reads);
 
+    LOG5("  Bit uses: " << bit_uses);
     for (size_t i = 0; i < container.size(); i++) {
         if (!(bit_uses[i] == operands || bit_uses[i] == 0))
             return false;
     }
 
+    LOG5("  Verified");
     return true;
 }
 
@@ -2453,6 +2508,8 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
 
     int actual_ad = ad_sources();
     int sources_needed = counts[ActionParam::PHV] + actual_ad;
+    LOG3("Sources needed: " << sources_needed << "[ PHV: "
+        << counts[ActionParam::PHV] << ", AD: " << actual_ad << " ]");
 
     if (sources_needed > 2) {
         if (actual_ad) {  // If action data as a source
@@ -2483,8 +2540,26 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
 
 
     if (!is_from_set() && sources_needed != operands()) {
+        // P4C-4757
+        // Some 2/3 operand instructions can have a source which is an uninitialized read. In this
+        // case phv may allocate src/dst operands to the same PHV container slice
+        // E.g.
+        // Container H17(0..14) is occupied by both Field eg_md.txpgid & eg_md.pgid_16x3.cntrA_data
+        // - or eg_md.txpgid, eg_md.txpgid, eg_md.pgid_16x2.cntrA_data
+        // If eg_md.txpgid is an uninitialized read, then this phv allocation is valid, the
+        // container is basically OR'ing itself which is a Noop and ideally should be eliminated
+        //
+        // However when code reaches here, it equates sources needed (PHV) as 1 and operands
+        // required as 2 and flags an operand mismatch. This eventually causes the merge instruction
+        // to fail and can create an "ALU ops cannot operate on slices" error.
+        //
+        // A new EliminateNoopInstructions (InstructionAdjustment) pass is now added to identify and
+        // remove these operations as they are effectively Noops. This pass is invoked at the
+        // beginning of InstructionAdjustment which should prevent the code from reaching here with
+        // the invalid instruction
         error_code |= OPERAND_MISMATCH;
-        error_message += "the number of operands does not match the number of sources";
+        error_message += ("the number of operands(" + std::to_string(operands())
+            + ") does not match the number of sources(" + std::to_string(sources_needed) + ")");
         return false;
     }
 

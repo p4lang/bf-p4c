@@ -798,7 +798,11 @@ const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
     for (auto &container_action : container_actions_map) {
         auto container = container_action.first;
         auto &cont_action = container_action.second;
+        LOG5(" Container Action: " << cont_action
+                << ", error_mask: " << (ActionAnalysis::ContainerAction::error_code_t)error_mask);
         if ((cont_action.error_code & error_mask) != 0) continue;
+        LOG5(" Container Action ops: " << cont_action.operands()
+                << ", alignment_counts: " << cont_action.alignment_counts());
         if (cont_action.operands() == cont_action.alignment_counts()) {
             if (!cont_action.convert_instr_to_deposit_field
                 && !cont_action.convert_instr_to_bitmasked_set
@@ -810,6 +814,7 @@ const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
         // Currently skip unresolved ActionAnalysis issues
         }
         merged_fields.insert(container);
+        LOG4("  Adding merged field: " << container);
     }
 
     if (merged_fields.empty())
@@ -1124,6 +1129,7 @@ void MergeInstructions::fill_out_write_multi_operand(ActionAnalysis::ContainerAc
  */
 IR::MAU::Instruction *MergeInstructions::dest_slice_to_container(PHV::Container container,
         ActionAnalysis::ContainerAction &cont_action) {
+    LOG3("Convert destination slice to container");
     BUG_CHECK(cont_action.field_actions.size() == 1, "Can only call this function on an operation "
                                                      "that has one field action");
     IR::MAU::Instruction *rv = new IR::MAU::Instruction(cont_action.name);
@@ -1134,6 +1140,7 @@ IR::MAU::Instruction *MergeInstructions::dest_slice_to_container(PHV::Container 
     for (auto &read : cont_action.field_actions[0].reads) {
         rv->operands.push_back(read.expr);
     }
+    LOG3("  New instruction : " << rv);
     return rv;
 }
 
@@ -1257,6 +1264,7 @@ void MergeInstructions::build_phv_source(ActionAnalysis::ContainerAction &cont_a
  */
 IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container container,
          ActionAnalysis::ContainerAction &cont_action) {
+    LOG3("Building merge instruction : " << container << " - " << cont_action);
     if (cont_action.is_shift()) {
         unsigned error_mask = ActionAnalysis::ContainerAction::PARTIAL_OVERWRITE;
         BUG_CHECK((cont_action.error_code & error_mask) != 0,
@@ -1564,9 +1572,88 @@ const IR::Expression *AdjustStatefulInstructions::preorder(IR::Expression *expr)
     return rv;
 }
 
+/** Eliminate Instructions */
+const IR::MAU::Synth2Port* EliminateNoopInstructions::preorder(IR::MAU::Synth2Port *s) {
+    LOG3("EliminateNoopInstructions preorder on synth2port: " << s);
+    // Skip these tables
+    prune();
+    return s;
+}
+
+bool EliminateNoopInstructions::get_alloc_slice(IR::MAU::Instruction *ins,
+                                    OP_TYPE type, AllocContainerSlice &op_alloc) const {
+    le_bitrange op_bits;
+    auto op = ins->operands[type];
+
+    auto *field = phv.field(op, &op_bits);
+    if (!field) return false;
+
+    PHV::FieldUse use(type == DST ? PHV::FieldUse::WRITE : PHV::FieldUse::READ);
+
+    auto tbl = findContext<IR::MAU::Table>();
+    field->foreach_alloc(op_bits, tbl, &use, [&](const PHV::AllocSlice& sl) {
+        le_bitrange cs = sl.container_slice();
+        PHV::Container cont = sl.container();
+        if (op_bits.lo <= cs.lo && op_bits.hi >= cs.hi)
+            op_alloc.insert(std::make_pair(cont, cs));
+    });
+
+    if (op_alloc.empty()) return false;
+
+    for (auto s : op_alloc)
+        LOG4("  OP: " << op << " type: " << toString(type)
+                        << " " << s.first << ":" << s.second);
+
+    return true;
+}
+
+const IR::MAU::Instruction*
+EliminateNoopInstructions::preorder(IR::MAU::Instruction *ins) {
+    LOG3("EliminateNoopInstructions preorder on instruction: " << ins);
+
+    int numOps = ins->operands.size();
+    bool opsWithSameAlloc = false;
+    auto tbl = findContext<IR::MAU::Table>();
+    if (!tbl) return ins;
+    if (numOps >= 2) {
+        AllocContainerSlice dst_alloc, src1_alloc;
+
+        if (!get_alloc_slice(ins, DST, dst_alloc)) return ins;
+        if (!get_alloc_slice(ins, SRC1, src1_alloc)) return ins;
+
+        opsWithSameAlloc = (dst_alloc == src1_alloc);
+
+        if (numOps == 3) {
+            AllocContainerSlice src2_alloc;
+            if (!get_alloc_slice(ins, SRC2, src2_alloc)) return ins;
+
+            opsWithSameAlloc &= (src1_alloc == src2_alloc);
+        }
+    }
+
+    LOG4("  NumOps: " << numOps << " opsWithSameAlloc: "
+            << opsWithSameAlloc << " ins name: " << ins->name);
+
+    bool eliminateIns = false;
+    // DST = SRC1 OR SRC2
+    if (numOps == 3 && opsWithSameAlloc && ins->name == "or")   eliminateIns = true;
+    // DST = SRC1 AND SRC2
+    if (numOps == 3 && opsWithSameAlloc && ins->name == "and")  eliminateIns = true;
+    // DST = SRC1
+    if (numOps == 2 && opsWithSameAlloc && ins->name == "set")  eliminateIns = true;
+
+    if (eliminateIns) {
+        LOG3("  Instruction eliminated");
+        return nullptr;
+    }
+
+    return ins;
+}
+
 /** Instruction Adjustment */
 InstructionAdjustment::InstructionAdjustment(const PhvInfo &phv) {
     addPasses({
+        new EliminateNoopInstructions(phv),
         new AdjustShiftInstructions(phv),
         new SplitInstructions(phv),
         new ConstantsToActionData(phv),

@@ -265,6 +265,29 @@ class AdjustStatefulInstructions : public MauTransform {
     explicit AdjustStatefulInstructions(const PhvInfo &p) : phv(p) {}
 };
 
+// Remove instructions which are effectively Noops in the code
+// This class is when run post phv allocation can determine if an instruction is not performing an
+// actual operation e.g. OR A, A, A / AND A, A, A
+class EliminateNoopInstructions: public MauTransform {
+ private:
+    enum OP_TYPE { DST = 0, SRC1 = 1, SRC2 = 2 };
+    const PhvInfo &phv;
+    typedef std::set<std::pair<PHV::Container, le_bitrange>> AllocContainerSlice;
+    bool get_alloc_slice(IR::MAU::Instruction *ins, OP_TYPE type,
+                                AllocContainerSlice &op_alloc) const;
+    const IR::MAU::Instruction *preorder(IR::MAU::Instruction *) override;
+    const IR::MAU::Synth2Port *preorder(IR::MAU::Synth2Port *s) override;
+    cstring toString(OP_TYPE ot) const {
+        if (ot == DST) return "DST";
+        else if (ot == SRC1) return "SRC1";
+        else if (ot == SRC2) return "SRC2";
+        return "-";
+    }
+
+ public:
+    explicit EliminateNoopInstructions(const PhvInfo &p) : phv(p) {}
+};
+
 class InstructionAdjustment : public PassManager {
  public:
     explicit InstructionAdjustment(const PhvInfo &p);

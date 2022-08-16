@@ -1456,7 +1456,9 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
                 is_empty = false;
             }
         }
-        return false; }
+        return false;
+    }
+
     bool preorder(const IR::MAU::SaluAction *act) override {
         LOG5("EmitAction preorder SaluAction : " << act->name);
         out << indent << canon_name(act->name);
@@ -1490,6 +1492,7 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
         if (sep) {
             le_bitrange bits;
             if (auto field = self.phv.field(expr, &bits)) {
+                LOG5("    field : " << field << ", name: " << canon_name(field->externalName()));
                 out << sep << canon_name(field->externalName());
                 int count = 0;
                 field->foreach_alloc(bits, table, &use, [&](const PHV::AllocSlice &) {
