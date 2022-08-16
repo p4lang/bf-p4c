@@ -184,6 +184,20 @@ unsigned match_t::dirtcam(unsigned width, unsigned bit) {
     return rv;
 }
 
+unsigned wmatch_t::dirtcam(unsigned width, unsigned bit) {
+    static unsigned masks[] = { 0x5555, 0x3333, 0xf0f0, 0xffff };
+    BUG_CHECK(width <= 4, "dirtcam of more than 4 bits?");
+    unsigned rv = (1U << (1U << width)) - 1;
+    for (unsigned i = 0; i < width; ++i, ++bit) {
+        // treat both bits 0 as don't care rather than never match
+        if (!word0[bit] && !word1[bit]) continue;
+        if (!word0[bit])
+            rv &= ~masks[i];
+        if (!word1[bit])
+            rv &= masks[i]; }
+    return rv;
+}
+
 bool require_keys(const value_t &data, std::set<const char *> keys) {
     for (auto key : keys) {
         pair_t *kv = data.map[key];

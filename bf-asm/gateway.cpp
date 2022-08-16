@@ -38,10 +38,18 @@ GatewayTable::Match::Match(value_t *v, value_t &data, range_match_t range_match)
                         error(lineno, "range match set too large");
                     range[i] = (*v)[last-i-1].i; }
             v = &(*v)[last]; }
-        if (v->type == tINT || v->type == tBIGINT) {
-            val.word0 = ~(val.word1 = get_int64(*v, 64, "Gateway key too large"));
+        if (v->type == tINT) {
+            val.word1 = bitvec(v->i);
+            val.word0.setrange(0, 64);
+            val.word0 -= val.word1;
+        } else if (v->type == tBIGINT) {
+            val.word1.setraw(v->bigi.data, v->bigi.size);
+            val.word0.setrange(0, v->bigi.size * 64);
+            val.word0 -= val.word1;
         } else if (v->type == tMATCH) {
-            val = v->m; } }
+            val = v->m;
+        } else if (v->type == tBIGMATCH) {
+            val = v->bigm; } }
     if (data == "run_table") {
         run_table = true;
     } else if (data.type == tSTR || data.type == tVEC) {
@@ -357,6 +365,29 @@ void GatewayTable::pass1() {
     check_next(cond_true.next);
     if (format)
         verify_format();
+
+    if (error_count > 0) return;
+    /* FIXME -- the rest of this function is a hack -- sometimes the compiler wants to
+     * generate matches just covering the bits it names in the match and other times it wants
+     * to create the whole tcam value.  Need to fix the asm syntax to be sensible and fix the
+     * compiler's output */
+    uint64_t ignore = UINT64_MAX;
+    int shift = -1;
+    for (auto &r : match) {
+        if (range_match && r.offset >= 32) {
+            continue; }
+        if (r.offset >= 64) continue;
+        ignore ^= bitMask(r.val->size()) << r.offset;
+        if (shift < 0 || shift > r.offset) shift = r.offset; }
+    if (shift < 0) shift = 0;
+    LOG3("shift=" << shift << " ignore=0x" << hex(ignore));
+    for (auto &line : table) {
+        uint64_t ign = ~(line.val.word0 ^ line.val.word1).getrange(0, 64);
+        if (ign == 0) ign = line.val.word0.getrange(0, 64);
+        if ((ign & ~(~ignore >> shift)) != ~(~ignore >> shift))
+            warning(line.lineno, "Trying to match on bits not in match of gateway");
+        line.val.word0 = (line.val.word0 << shift) | ignore;
+        line.val.word1 = (line.val.word1 << shift) | ignore; }
 }
 
 static int find_next_lut_entry(Table *tbl, const Table::NextTables &next) {
@@ -645,8 +676,8 @@ void GatewayTable::write_regs_vt(REGS &regs) {
         /* FIXME -- hardcoding version/valid to always */
         gw_reg.gateway_table_vv_entry[idx].gateway_table_entry_versionvalid0 = 0x3;
         gw_reg.gateway_table_vv_entry[idx].gateway_table_entry_versionvalid1 = 0x3;
-        gw_reg.gateway_table_entry_matchdata[idx][0] = line.val.word0 & 0xffffffff;
-        gw_reg.gateway_table_entry_matchdata[idx][1] = line.val.word1 & 0xffffffff;
+        gw_reg.gateway_table_entry_matchdata[idx][0] = line.val.word0.getrange(0, 32);
+        gw_reg.gateway_table_entry_matchdata[idx][1] = line.val.word1.getrange(0, 32);
         if (range_match) {
             auto &info = range_match_info[range_match];
             for (unsigned i = 0; i < range_match_info[range_match].units; i++) {
@@ -655,8 +686,8 @@ void GatewayTable::write_regs_vt(REGS &regs) {
                 gw_reg.gateway_table_data_entry[idx][1] |=
                     ((line.range[i] >> info.half_shift) & info.half_mask) << (i * info.bits); }
         } else {
-            gw_reg.gateway_table_data_entry[idx][0] = (line.val.word0 >> 32) & 0xffffff;
-            gw_reg.gateway_table_data_entry[idx][1] = (line.val.word1 >> 32) & 0xffffff; }
+            gw_reg.gateway_table_data_entry[idx][0] = line.val.word0.getrange(32, 24);
+            gw_reg.gateway_table_data_entry[idx][1] = line.val.word1.getrange(32, 24); }
         if (!line.run_table) {
             merge.gateway_inhibit_lut[logical_id] |= 1 << idx; }
         idx--; }

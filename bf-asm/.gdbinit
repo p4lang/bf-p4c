@@ -103,11 +103,13 @@ class value_t_Printer(object):
             return self.val['s']
         elif typ == 4:  # tMATCH
             return self.val['m']
-        elif typ == 5:  # tVEC
+        elif typ == 5:  # tBIGMATCH
+            return self.val['bigm']
+        elif typ == 6:  # tVEC
             return "vector of %d elements" % self.val['vec']['size']
-        elif typ == 6:  # tMAP
+        elif typ == 7:  # tMAP
             return "map of %d elements" % self.val['map']['size']
-        elif typ == 7:  # tCMD
+        elif typ == 8:  # tCMD
             cmd = self.val['vec']['data']
             count = self.val['vec']['size']
             rv = str(cmd.dereference())
@@ -162,10 +164,10 @@ class value_t_Printer(object):
         def next(self): return self.__next__()
     def children(self):
         typ = self.val['type']
-        if typ == 5:
+        if typ == 6:
             vec = self.val['vec']
             return self._vec_iter(vec['data'], vec['size'])
-        elif typ == 6:
+        elif typ == 7:
             map = self.val['map']
             return self._map_iter(map['data'], map['size'])
         else:

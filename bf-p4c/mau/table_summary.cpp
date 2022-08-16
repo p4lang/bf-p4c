@@ -105,10 +105,11 @@ Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
 
     auto rv = MauInspector::init_apply(root);
     order.clear();
-    for (auto gress : { INGRESS, EGRESS }) ixbar[gress].clear();
-    memory.clear();
-    action_data_bus.clear();
-    imems.clear();
+    for (auto gress : { INGRESS, EGRESS }) {
+        ixbar[gress].clear();
+        memory[gress].clear();
+        action_data_bus[gress].clear();
+        imems[gress].clear(); }
     tables.clear();
     tableAlloc.clear();
     internalTableAlloc.clear();
@@ -208,12 +209,14 @@ bool TableSummary::preorder(const IR::MAU::Table *t) {
         if (!ixbar[gress][t->stage()])
             ixbar[gress][t->stage()].reset(IXBar::create());
         ixbar[gress][t->stage()]->update(t);
-        if (!memory[t->stage()]) memory[t->stage()].reset(Memories::create());
-        memory[t->stage()]->update(t->resources->memuse);
-        if (!action_data_bus[t->stage()])
-            action_data_bus[t->stage()].reset(ActionDataBus::create());
-        action_data_bus[t->stage()]->update(t);
-        imems[t->stage()].update(t);
+        if (!memory[gress][t->stage()]) memory[gress][t->stage()].reset(Memories::create());
+        memory[gress][t->stage()]->update(t->resources->memuse);
+        if (!action_data_bus[gress][t->stage()])
+            action_data_bus[gress][t->stage()].reset(ActionDataBus::create());
+        action_data_bus[gress][t->stage()]->update(t);
+        if (!imems[gress][t->stage()])
+            imems[gress][t->stage()].reset(InstructionMemory::create());
+        imems[gress][t->stage()]->update(t);
         tables[t->stage()].insert(t); }
     auto stage_pragma = t->get_provided_stage();
     if (t->match_table && t->stage_split <= 0 && stage_pragma >= 0 && t->stage() != stage_pragma) {
@@ -639,13 +642,13 @@ std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
     tp.print();
 
     if (LOGGING(3)) {
-        for (auto &i : ts.ixbar[0])
-            out << "Stage " << i.first << std::endl << *i.second << *ts.memory.at(i.first);
-#if HAVE_FLATROCK
-        if (!Device::threadsSharePipe(INGRESS, EGRESS)) {
-            for (auto &i : ts.ixbar[1])
-                out << "Stage " << i.first << std::endl << *i.second << *ts.memory.at(i.first); }
-#endif
+        for (auto gress : { INGRESS, EGRESS }) {
+            for (auto &i : ts.ixbar[gress]) {
+                if (!Device::threadsSharePipe(INGRESS, EGRESS)) out << gress << " ";
+                out << "Stage " << i.first << std::endl << *i.second
+                    << *ts.memory[gress].at(i.first); }
+            if (Device::threadsSharePipe(INGRESS, EGRESS)) break;
+        }
     }
 
     return out;

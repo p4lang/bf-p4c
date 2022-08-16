@@ -4,6 +4,11 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/device.h"
 
+#include "bf-p4c/mau/tofino/instruction_memory.h"
+#if HAVE_FLATROCK
+#include "bf-p4c/mau/flatrock/instruction_memory.h"
+#endif
+
 GenerateVLIWInstructions::GenerateVLIWInstructions(PhvInfo &p, ActionData::FormatType_t ft,
         SplitAttachedInfo &sai, const IR::MAU::Table* tbl)
     : phv(p)
@@ -116,7 +121,7 @@ bool InstructionMemory::find_row_and_color(bitvec current_bv, gress_t gress,
         if (!has_unalloc_temp) {
             row = NOOP_ROW;
             color = NOOP_COLOR;
-            int addr = (row << ROW_ADDR_SHIFT) | (color << COLOR_ADDR_SHIFT);
+            int addr = (row << spec.color_bits()) | color;
             LOG2("\tFixing row " << row << ", color " << color
                     << ", addr " << addr << " for first noop");
             first_noop = false;
@@ -124,10 +129,10 @@ bool InstructionMemory::find_row_and_color(bitvec current_bv, gress_t gress,
         }
     }
 
-    for (int i = 0; i < IMEM_ROWS; i++) {
+    for (int i = 0; i < spec.rows(); i++) {
         bitvec current_row;
         bool occupied = true;
-        for (int j = 0; j < IMEM_COLORS; j++) {
+        for (int j = 0; j < spec.colors(); j++) {
             if (is_noop_slot(i, j))
                 continue;
 
@@ -142,7 +147,7 @@ bool InstructionMemory::find_row_and_color(bitvec current_bv, gress_t gress,
         if (!(current_row & current_bv).empty())
             continue;
 
-        for (int j = 0; j < IMEM_COLORS; j++) {
+        for (int j = 0; j < spec.colors(); j++) {
             if (is_noop_slot(i, j))
                 continue;
             if (!use[i][j].isNull())
@@ -150,7 +155,7 @@ bool InstructionMemory::find_row_and_color(bitvec current_bv, gress_t gress,
 
             row = i;
             color = j;
-            int addr = (row << ROW_ADDR_SHIFT) | (color << COLOR_ADDR_SHIFT);
+            int addr = (row << spec.color_bits()) | color;
             LOG2("\tFixing row " << i << ", color " << j << ", addr " << addr);
             if (Device::hasAlwaysRunInstr() && Device::alwaysRunIMemAddr() == addr)
                 continue;
@@ -401,3 +406,11 @@ void InstructionMemory::update(const IR::MAU::Table *tbl) {
     update(tbl->name, tbl->resources, tbl);
 }
 
+InstructionMemory *InstructionMemory::create() {
+#if HAVE_FLATROCK
+    // FIXME -- add Device::newIXBar() method?
+    if (Device::currentDevice() == Device::FLATROCK)
+        return new Flatrock::InstructionMemory();
+#endif
+    return new Tofino::InstructionMemory();
+}

@@ -2,6 +2,7 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "ir/dbprint.h"
 #include "lib/indent.h"
+#include "lib/log.h"
 
 using namespace DBPrint;
 using namespace IndentCtl;
@@ -19,11 +20,11 @@ std::ostream &operator<<(std::ostream &out, const CollectGatewayFields &gwf) {
     auto flags = dbgetflags(out);
     out << Brief << indent;
     for (auto &i : gwf.info) {
-        out << endl << i.first << i.second;
+        out << Log::endl << i.first << i.second;
         for (auto x : i.second.xor_with)
             out << " xor " << x; }
     if (gwf.bytes || gwf.bits)
-        out << endl << "bytes=" << gwf.bytes << " bits=" << gwf.bits;
+        out << Log::endl << "bytes=" << gwf.bytes << " bits=" << gwf.bits;
     out << unindent;
     dbsetflags(out, flags);
     return out;

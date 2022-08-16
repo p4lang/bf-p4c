@@ -53,6 +53,13 @@ class IXBarSpec {
     virtual int xcmpWords() const { UNSUPPORTED };
 };
 
+class IMemSpec {
+ public:
+    virtual int rows() const { UNSUPPORTED };
+    virtual int colors() const { UNSUPPORTED };
+    virtual int color_bits() const { UNSUPPORTED };
+};
+
 class TofinoIXBarSpec : public IXBarSpec {
  public:
     TofinoIXBarSpec() {}
@@ -88,6 +95,12 @@ class TofinoIXBarSpec : public IXBarSpec {
     int tofinoMeterAluByteOffset() const override { return 8; }
 };
 
+class TofinoIMemSpec : public IMemSpec {
+    int rows() const override { return 32; };
+    int colors() const override { return 2; };
+    int color_bits() const override { return 1; };
+};
+
 class FlatrockIXBarSpec : public IXBarSpec {
  public:
     FlatrockIXBarSpec() {}
@@ -106,42 +119,57 @@ class FlatrockIXBarSpec : public IXBarSpec {
     int xcmpWords() const override { return 12; }
 };
 
+class FlatrockIMemSpec : public IMemSpec {
+    int rows() const override { return 8; };
+    int colors() const override { return 4; };
+    int color_bits() const override { return 2; };
+};
+
 class MauSpec {
  public:
     virtual const IXBarSpec& getIXBarSpec() const = 0;
+    virtual const IMemSpec& getIMemSpec() const = 0;
 };
 
 
 class TofinoMauSpec : public MauSpec {
     const TofinoIXBarSpec ixbar_;
+    const TofinoIMemSpec imem_;
 
  public:
     TofinoMauSpec() {}
     const IXBarSpec& getIXBarSpec() const override { return ixbar_; }
+    const IMemSpec& getIMemSpec() const override { return imem_; }
 };
 
 class JBayMauSpec : public MauSpec {
     const TofinoIXBarSpec ixbar_;
+    const TofinoIMemSpec imem_;
 
  public:
     JBayMauSpec() {}
     const IXBarSpec& getIXBarSpec() const override { return ixbar_; }
+    const IMemSpec& getIMemSpec() const override { return imem_; }
 };
 
 class CloudbreakMauSpec : public MauSpec {
     const TofinoIXBarSpec ixbar_;
+    const TofinoIMemSpec imem_;
 
  public:
     CloudbreakMauSpec() {}
     const IXBarSpec& getIXBarSpec() const override { return ixbar_; }
+    const IMemSpec& getIMemSpec() const override { return imem_; }
 };
 
 class FlatrockMauSpec : public MauSpec {
     const FlatrockIXBarSpec ixbar_;
+    const FlatrockIMemSpec imem_;
 
  public:
     FlatrockMauSpec() {}
     const IXBarSpec& getIXBarSpec() const override { return ixbar_; }
+    const IMemSpec& getIMemSpec() const override { return imem_; }
 };
 
 #endif  /* EXTENSIONS_BF_P4C_MAU_MAU_SPEC_H_ */

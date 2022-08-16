@@ -638,7 +638,7 @@ ResourcesLogging::VliwResourceUsage* ResourcesLogging::logVliw(unsigned int stag
     using VliwElementUsage = Resources_Schema_Logger::VliwColorUsage::Usages;
     using VliwUsage = Resources_Schema_Logger::VliwUsage;
 
-    const int size = InstructionMemory::IMEM_ROWS;
+    const int size = Device::imemSpec().rows();
 
     auto vru = new VliwResourceUsage(size);
 

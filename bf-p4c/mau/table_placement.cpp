@@ -1898,12 +1898,12 @@ bool TablePlacement::try_alloc_imem(const gress_t &gress, std::vector<Placed *> 
                                     std::vector<Placed *> tables_placed) {
     LOG3("Trying to allocate imem for " << tables_to_allocate);
 
-    InstructionMemory imem;
+    std::unique_ptr<InstructionMemory> imem(InstructionMemory::create());
 
     for (auto *p : boost::adaptors::reverse(tables_placed)) {
         if (!Device::threadsSharePipe(p->table->gress, gress)) continue;
         if (p->table->conditional_gateway_only()) continue;
-        imem.update(p->name, &p->resources, p->table);
+        imem->update(p->name, &p->resources, p->table);
     }
 
     for (auto *p : boost::adaptors::reverse(tables_to_allocate)) {
@@ -1912,8 +1912,8 @@ bool TablePlacement::try_alloc_imem(const gress_t &gress, std::vector<Placed *> 
         p->resources.instr_mem.clear();
         bool gw_linked = p->gw != nullptr;
         gw_linked |= p->use.preferred()->layout.gateway_match;
-        if (!imem.allocate_imem(p->table, p->resources.instr_mem, phv, gw_linked,
-                                p->use.format_type, att_info)) {
+        if (!imem->allocate_imem(p->table, p->resources.instr_mem, phv, gw_linked,
+                                 p->use.format_type, att_info)) {
             error_message = "The table " + p->table->name + " could not fit within the "
                             "instruction memory";
             LOG3("    " << error_message);
@@ -1922,14 +1922,14 @@ bool TablePlacement::try_alloc_imem(const gress_t &gress, std::vector<Placed *> 
             return false; }
     }
 
-    InstructionMemory verify_imem;
+    std::unique_ptr<InstructionMemory> verify_imem(InstructionMemory::create());
     for (auto p : tables_placed) {
         if (!Device::threadsSharePipe(p->table->gress, gress)) continue;
-        verify_imem.update(p->name, &p->resources, p->table);
+        verify_imem->update(p->name, &p->resources, p->table);
     }
     for (auto p : tables_to_allocate) {
         if (!Device::threadsSharePipe(p->table->gress, gress)) continue;
-        verify_imem.update(p->name, &p->resources, p->table);
+        verify_imem->update(p->name, &p->resources, p->table);
     }
     return true;
 }

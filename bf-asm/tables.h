@@ -1619,7 +1619,7 @@ DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
     struct Match {
         int                     lineno = 0;
         uint16_t                range[6] = { 0, 0, 0, 0, 0, 0 };
-        match_t                 val = { 0, 0 };
+        wmatch_t                val;
         bool                    run_table = false;
         NextTables              next;
         int                     next_map_lut = -1;

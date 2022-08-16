@@ -86,27 +86,6 @@ void Target::Tofino::GatewayTable::pass1() {
                   "%s and %s", layout[1].result_bus, layout[1].row, name(), old->name());
         result_bus[layout[1].row][layout[1].result_bus & 1] = tbl;
     }
-    if (error_count > 0) return;
-    /* FIXME -- the rest of this function is a hack -- sometimes the compiler wants to
-     * generate matches just covering the bits it names in the match and other times it wants
-     * to create the whole tcam value.  Need to fix the asm syntax to be sensible and fix the
-     * compiler's output */
-    uint64_t ignore = UINT64_MAX;
-    int shift = -1;
-    for (auto &r : match) {
-        if (range_match && r.offset >= 32) {
-            continue; }
-        ignore ^= bitMask(r.val->size()) << r.offset;
-        if (shift < 0 || shift > r.offset) shift = r.offset; }
-    if (shift < 0) shift = 0;
-    LOG3("shift=" << shift << " ignore=0x" << hex(ignore));
-    for (auto &line : table) {
-        auto ign = ~(line.val.word0 ^ line.val.word1);
-        if (ign == 0) ign = line.val.word0;
-        if ((ign & ~(~ignore >> shift)) != ~(~ignore >> shift))
-            warning(line.lineno, "Trying to match on bits not in match of gateway");
-        line.val.word0 = (line.val.word0 << shift) | ignore;
-        line.val.word1 = (line.val.word1 << shift) | ignore; }
 }
 
 void Target::Tofino::GatewayTable::pass2() {

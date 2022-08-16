@@ -48,6 +48,7 @@ class Device {
     static const MauPowerSpec& mauPowerSpec() { return Device::get().getMauPowerSpec(); }
     static const MauSpec& mauSpec() { return Device::get().getMauSpec(); }
     static const IXBarSpec& ixbarSpec() { return Device::get().getMauSpec().getIXBarSpec(); }
+    static const IMemSpec& imemSpec() { return Device::get().getMauSpec().getIMemSpec(); }
     static int numPipes() { return Device::get().getNumPipes(); }
     static int numStages() {
         return numStagesRuntimeOverride_ ? numStagesRuntimeOverride_ : Device::get().getNumStages();

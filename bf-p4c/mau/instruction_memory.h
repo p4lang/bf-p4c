@@ -60,19 +60,15 @@ class GenerateVLIWInstructions {
  *  is all 0s, the instruction just runs a noop
  */
 struct InstructionMemory {
-    static constexpr int IMEM_ROWS = 32;
-    static constexpr int IMEM_COLORS = 2;
     static constexpr int NOOP_ROW = 0;
     static constexpr int NOOP_COLOR = 0;
-    static constexpr int ROW_ADDR_SHIFT = 1;
-    static constexpr int COLOR_ADDR_SHIFT = 0;
+    const IMemSpec &spec;
+
+ protected:
+    explicit InstructionMemory(const IMemSpec &s) : spec(s) {}
+
+ public:
     std::set<cstring> atcam_updates;
-
-    BFN::Alloc2D<cstring, IMEM_ROWS, IMEM_COLORS> ingress_imem_use;
-    BFN::Alloc2D<cstring, IMEM_ROWS, IMEM_COLORS> egress_imem_use;
-
-    BFN::Alloc2D<bitvec, IMEM_ROWS, IMEM_COLORS> ingress_imem_slot_inuse;
-    BFN::Alloc2D<bitvec, IMEM_ROWS, IMEM_COLORS> egress_imem_slot_inuse;
 
     /** Instruction Memory requires two things:
      *    1. The RAM line position/color of a word
@@ -96,7 +92,7 @@ struct InstructionMemory {
 
             // The address for the RAM line is in this format
             unsigned gen_addr() const {
-                return (color << COLOR_ADDR_SHIFT) | (row << ROW_ADDR_SHIFT);
+                return color | row << Device::imemSpec().color_bits();
             }
             VLIW_Instruction(bitvec nni, int r, int c)
                 : non_noop_instructions(nni), row(r), color(c) {}
@@ -131,17 +127,13 @@ struct InstructionMemory {
     std::map<const IR::MAU::ActionData *, const Use *> shared_action_profiles;
         // std::map<cstring, InstructionMemory::Use::VLIW_Instruction>> shared_action_profiles;
 
-    BFN::Alloc2Dbase<cstring> &imem_use(gress_t gress) {
-        if (gress == INGRESS || gress == GHOST)
-            return ingress_imem_use;
-        return egress_imem_use;
-    }
+    virtual BFN::Alloc2Dbase<cstring> &imem_use(gress_t gress) = 0;
+    const BFN::Alloc2Dbase<cstring> &imem_use(gress_t gress) const {
+        return const_cast<InstructionMemory *>(this)->imem_use(gress); }
+    virtual BFN::Alloc2Dbase<bitvec> &imem_slot_inuse(gress_t gress) = 0;
+    const BFN::Alloc2Dbase<bitvec> &imem_slot_inuse(gress_t gress) const {
+        return const_cast<InstructionMemory *>(this)->imem_slot_inuse(gress); }
 
-    BFN::Alloc2Dbase<bitvec> &imem_slot_inuse(gress_t gress) {
-        if (gress == INGRESS || gress == GHOST)
-            return ingress_imem_slot_inuse;
-        return egress_imem_slot_inuse;
-    }
     bool is_noop_slot(int row, int color);
     bool find_row_and_color(bitvec current_bv, gress_t gress, int &row, int &color,
                             bool &first_noop, bool has_unalloc_temp = false);
@@ -156,6 +148,8 @@ struct InstructionMemory {
     void update(cstring name, const TableResourceAlloc *alloc, gress_t gress);
     void update(cstring name, const TableResourceAlloc *alloc, const IR::MAU::Table *tbl);
     void update(const IR::MAU::Table *tbl);
+
+    static InstructionMemory *create();
 };
 
 #endif /* BF_P4C_MAU_INSTRUCTION_MEMORY_H_ */

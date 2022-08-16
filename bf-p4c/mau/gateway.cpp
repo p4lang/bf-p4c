@@ -1120,6 +1120,10 @@ bool CheckGatewayExpr::needConstOperand(const IR::Operation::Binary *e) {
 
 BuildGatewayMatch::BuildGatewayMatch(const PhvInfo &phv, CollectGatewayFields &f)
 : phv(phv), fields(f) {
+    // FIXME -- we need to shift down the match so bit 0 of the match is the lowest
+    // valid bit in the match: format.  This is to match up with the hack in the assembler
+    // to ignore all bits that are not part of the match: format.  See FIXME in
+    // GatewayTable::pass1 in the assembler
     shift = INT_MAX;
     for (auto &info : fields.info)
         for (auto &off : info.second.offsets)

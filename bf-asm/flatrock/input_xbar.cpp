@@ -228,6 +228,7 @@ template<class REG> void Flatrock::InputXbar::setup_byte_ixbar_gw(REG &reg, cons
     for (auto i = slice.lo/8U; i <= slice.hi/8U; ++i, ++byte) {
         BUG_CHECK(slice.reg.size == 8 || ((i ^ byte) & 1) == 0,
                   "%s needs 16-bit alignment on ixbar", slice.reg.name);
+        reg[byte].used = 1;
         reg[byte].vgd = slice.reg.ixbar_id() + (i&2);
     }
 }

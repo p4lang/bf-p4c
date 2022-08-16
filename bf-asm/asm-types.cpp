@@ -197,7 +197,7 @@ void print_match(FILE *fp, match_t m) {
 }
 
 const char *value_type_desc[] = {
-    "integer", "bigint", "range", "identifier", "match pattern", "list",
+    "integer", "bigint", "range", "identifier", "match pattern", "big match", "list",
     "key: value pairs", "operation"
 };
 

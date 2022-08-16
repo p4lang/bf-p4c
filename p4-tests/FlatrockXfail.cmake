@@ -153,7 +153,7 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
-  "Compiler Bug: Conflicting alloc on the action data bus"
+  "error: No format field or table named immediate"
   extensions/p4_tests/p4_16/stf/p4c-4107.p4
   )
 

@@ -31,6 +31,8 @@ template<> void Stage::write_regs(Target::Flatrock::mau_regs &regs, bool egress_
     }
     regs.rf.ppu_phvfifo_cfg.delay = 8;  // FIXME -- needs to be 8-31
     regs.rf.ppu_pktdly_cfg.delay = 2;   // FIXME -- needs to be 2-31
+    for (auto &delay : regs.ppu_mrd.rf.mrd_iad_delay)
+        delay.delay = 1;   // FIXME -- needs to be set even for non-enabled tables?
 }
 
 void AlwaysRunTable::write_regs(Target::Flatrock::mau_regs &regs) {

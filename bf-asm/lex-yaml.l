@@ -212,15 +212,31 @@ int parse_num(YYSTYPE *val, const char *s, int base) {
 
 int parse_match(YYSTYPE *val, const char *s, int bits_per_digit) {
     val->match.word0 = val->match.word1 = 0;
-    if (*s == '*' && bits_per_digit == 0) return MATCH;
+    int rv = MATCH;
+    VECTOR(match_t) bigm = EMPTY_VECTOR_INIT;
+    if (*s == '*' && bits_per_digit == 0) return rv;
     unsigned digit = 0, digit_mask = (1U << bits_per_digit) - 1;
     decltype(val->match.word0) overflow_mask = digit_mask;
     overflow_mask <<= sizeof(val->match.word0) * 8 - bits_per_digit;
     s--;
     while (*++s) {
         if (*s == '_') continue;
-        if ((val->match.word0 | val->match.word1) & overflow_mask)
-            error(lineno, "integer overflow in match constant");
+        if (rv == BIGMATCH || ((val->match.word0 | val->match.word1) & overflow_mask)) {
+            rv = BIGMATCH;
+            if (bigm.size < 2) {
+                VECTOR_resize(bigm, 2);
+                bigm.data[0].word0 = bigm.data[0].word1 = 
+                bigm.data[1].word0 = bigm.data[1].word1 = 0; }
+            if ((bigm.data[bigm.size-1].word0 | bigm.data[bigm.size-1].word1) & overflow_mask) {
+                VECTOR_resize(bigm, bigm.size+1);
+                bigm.data[bigm.size-1].word0 = bigm.data[bigm.size-1].word1 = 0; }
+            for (int i = bigm.size-1; i > 0; --i) {
+                bigm.data[i].word0 <<= bits_per_digit;
+                bigm.data[i].word0 |= bigm.data[i].word0 >> (64 - bits_per_digit);
+                bigm.data[i].word1 <<= bits_per_digit;
+                bigm.data[i].word1 |= bigm.data[i].word1 >> (64 - bits_per_digit); }
+            bigm.data[1].word0 |= val->match.word0 >> (64 - bits_per_digit);
+            bigm.data[1].word1 |= val->match.word1 >> (64 - bits_per_digit); }
         val->match.word0 <<= bits_per_digit;
         val->match.word1 <<= bits_per_digit;
         switch (*s) {
@@ -243,5 +259,8 @@ int parse_match(YYSTYPE *val, const char *s, int bits_per_digit) {
         assert((digit & ~digit_mask) == 0);
         val->match.word1 |= digit;
         val->match.word0 |= digit_mask & ~digit; }
-    return MATCH;
+    if (rv == BIGMATCH) {
+        bigm.data[0] = val->match;
+        val->bigm = bigm; }
+    return rv;
 }

@@ -41,7 +41,31 @@ struct match_t {
 #endif /* __cplusplus */
 };
 
-enum value_type { tINT, tBIGINT, tRANGE, tSTR, tMATCH, tVEC, tMAP, tCMD };
+DECLARE_VECTOR(match_t);
+
+struct wmatch_t {
+    bitvec       word0, word1;
+#ifdef __cplusplus
+    wmatch_t() = default;
+    wmatch_t(const wmatch_t &) = default;
+    wmatch_t(wmatch_t &&) = default;
+    wmatch_t &operator=(const wmatch_t &) = default;
+    wmatch_t &operator=(wmatch_t &&) = default;
+    wmatch_t(const match_t &v) : word0(v.word0), word1(v.word1) {}      // NOLINT(runtime/explicit)
+    wmatch_t(const VECTOR(match_t) &v) {                                // NOLINT(runtime/explicit)
+        for (int i = 0; i < v.size; ++i) {
+            word0.putrange(i*64, 64, v.data[i].word0);
+            word1.putrange(i*64, 64, v.data[i].word1); } }
+    operator bool() const { return word0 || word1; }
+    bool operator==(const wmatch_t &a) const { return word0 == a.word0 && word1 == a.word1; }
+    bool matches(bitvec v) const {
+        return (v | word1) == word1 && ((word1 - v) | word0) == word0; }
+    bool matches(const wmatch_t &v) const { assert(0); return false; }
+    unsigned dirtcam(unsigned width, unsigned bit);
+#endif /* __cplusplus */
+};
+
+enum value_type { tINT, tBIGINT, tRANGE, tSTR, tMATCH, tBIGMATCH, tVEC, tMAP, tCMD };
 extern const char *value_type_desc[];
 
 struct value_t;
@@ -84,6 +108,7 @@ struct value_t {
         };
         char                    *s;
         match_t                 m;
+        VECTOR(match_t)         bigm;
         VECTOR(value_t)         vec;
         VECTOR(pair_t)          map;
     };
