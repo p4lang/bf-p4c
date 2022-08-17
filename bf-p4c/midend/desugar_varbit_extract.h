@@ -193,6 +193,7 @@ class CollectVarbitExtract : public Inspector {
  */
 class RewriteVarbitUses : public Modifier {
     const CollectVarbitExtract& cve;
+    int tcam_row_usage_estimation = 0;
 
     std::map<const IR::ParserState*,
              ordered_map<unsigned, const IR::ParserState*>> state_to_branch_states;
@@ -231,6 +232,7 @@ class RewriteVarbitUses : public Modifier {
                      cstring orig_hdr_name);
 
     bool preorder(IR::BFN::TnaParser*) override;
+    void postorder(IR::BFN::TnaParser*) override;
     bool preorder(IR::ParserState*) override;
 
     bool preorder(IR::MethodCallExpression*) override;

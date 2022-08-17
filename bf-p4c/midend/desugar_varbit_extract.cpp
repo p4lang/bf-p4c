@@ -176,8 +176,8 @@ bool CollectVarbitExtract::enumerate_varbit_field_values(
 
     if (too_many_branches) {
         ::fatal_error("Varbit extract requires too many parser branches to implement. "
-                  "Consider rewriting the variable length expression to reduce "
-                  "the number of possible runtime values: %1%", call);
+                  "Consider rewriting the variable length expression or shrink the varbit size "
+                  "to reduce the number of possible runtime values: %1%", call);
         return false;
     }
 
@@ -614,6 +614,7 @@ void RewriteVarbitUses::create_branches(const IR::ParserState* state,
 
 
 bool RewriteVarbitUses::preorder(IR::BFN::TnaParser* parser) {
+    tcam_row_usage_estimation = 0;
     auto orig = getOriginal<IR::P4Parser>();
 
     bool has_varbit = false;
@@ -647,6 +648,23 @@ bool RewriteVarbitUses::preorder(IR::BFN::TnaParser* parser) {
         parser->states.push_back(s);
 
     return true;
+}
+
+void RewriteVarbitUses::postorder(IR::BFN::TnaParser* p) {
+    LOG5("Total expected tcam usage by varbit extracts: " << tcam_row_usage_estimation);
+    // Desugaring varbit extracts has potential to inflate the IR significantly, making
+    // the rest of the compilation very slow. For user's convenience, we try to estimate
+    // the TCAM rows usage by counting all parser select branches we generate for varbit
+    // extracts. If this estimation is already much larger than TCAM rows count available
+    // on the device we bail out early.
+    if (tcam_row_usage_estimation > Device::pardeSpec().numTcamRows() * 2) {
+        ::fatal_error("Varbit extracts require too many parser branches to implement. "
+                      "Parser %1% needs %2% transitions for varbit extracts, which is more than "
+                      "%3% TCAM rows available. "
+                      "Consider rewriting the variable length expression or shrink the varbit "
+                      "sizes to reduce the total number of possible runtime values.",
+                      p->name, tcam_row_usage_estimation, Device::pardeSpec().numTcamRows());
+    }
 }
 
 static IR::SelectCase *
@@ -760,6 +778,8 @@ bool RewriteVarbitUses::preorder(IR::ParserState* state) {
 
         IR::Vector<IR::Expression> select_on;
         select_on.push_back(encode_var);
+
+        tcam_row_usage_estimation += select_cases.size();
 
         auto select = new IR::SelectExpression(new IR::ListExpression(select_on), select_cases);
         state->selectExpression = select;
