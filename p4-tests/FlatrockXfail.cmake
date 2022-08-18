@@ -13,27 +13,6 @@ set (FLATROCK_XFAIL_TESTS
   # or open a new one.
   )
 
-# All of these tests currently passing (with up-to-date model)
-p4c_add_xfail_reason("tofino5"
-  "WARNING:.*binary.*does not match model version|packet output on port 3"
-  extensions/p4_tests/p4_16/flatrock/direct0.p4
-  extensions/p4_tests/p4_16/flatrock/exact0.p4
-  )
-
-# All of these tests currently passing (with up-to-date model)
-p4c_add_xfail_reason("tofino5"
-  "WARNING:.*binary.*does not match model version|packet output on port 2"
-  extensions/p4_tests/p4_16/flatrock/direct1.p4
-  extensions/p4_tests/p4_16/flatrock/exact1.p4
-  extensions/p4_tests/p4_16/flatrock/passthrough.p4
-  extensions/p4_tests/p4_16/flatrock/cuckoo-lamb-default1.p4
-  extensions/p4_tests/p4_16/flatrock/gateway1.p4
-  extensions/p4_tests/p4_16/flatrock/gateway1i.p4
-  extensions/p4_tests/p4_16/flatrock/gateway2.p4
-  extensions/p4_tests/p4_16/flatrock/gateway2i.p4
-  extensions/p4_tests/p4_16/flatrock/gateway3.p4
-  )
-
 p4c_add_xfail_reason("tofino5"
   "Assembler BUG"
   extensions/p4_tests/p4_16/flatrock/ternary1.p4
@@ -99,11 +78,6 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
-  "WARNING:.*binary.*does not match model version|packet output on port 2"
-  extensions/p4_tests/p4_16/flatrock/parser_constant.p4
-  )
-
-p4c_add_xfail_reason("tofino5"
   "Compiler Bug: Field not created in PhvInfo"
   extensions/p4_tests/p4_16/flatrock/mirror_simple.p4
   )
@@ -162,7 +136,7 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
-  "WARNING:.*binary.*does not match model version|mismatch from expected"
+  "mismatch from expected"
   extensions/p4_tests/p4_16/stf/p4c-2695.p4
   )
 
@@ -272,7 +246,7 @@ p4c_add_xfail_reason("tofino5"
 #   )
 
 p4c_add_xfail_reason("tofino5"
-  "WARNING:.*binary.*does not match model version|mismatch from expected"
+  "mismatch from expected"
   extensions/p4_tests/p4_16/stf/lookahead2.p4
   extensions/p4_tests/p4_16/stf/lookahead3.p4
   extensions/p4_tests/p4_16/stf/update_checksum_3.p4
