@@ -2488,7 +2488,9 @@ bool CoreAllocation::try_place_wide_arith_hi(
                             << next_container);
                 LOG_DEBUG5(TAB1 << hi_slice);
                 can_alloc_hi = true;
-                // XXX(yumin): try_hi is not commited???
+                // this allocation for high has to be commited together with low as they cannot be
+                // separated, otherwise we risk allocation of high will fail later
+                this_alloc.commit(*try_hi);
                 break;
             }
         }
