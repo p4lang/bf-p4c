@@ -463,9 +463,3 @@ p4c_add_xfail_reason("tofino2"
   "error: table .* should not have empty const entries list."
   extensions/p4_tests/p4_16/compile_only/p4c-4498.p4
 )
-
-# Temporary Xfail
-p4c_add_xfail_reason("tofino2"
-  "test-spec element standard did not match any tests"
-  npb-multi-prog
-)
