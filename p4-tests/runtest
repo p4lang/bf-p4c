@@ -629,7 +629,11 @@ if $run_stf && [ -r ${file%.p4}.stf ]; then
         fi
     fi
 
-    run $STF -l $output_dir $test | \
+    stf_flags=""
+    if [[ $ENABLE_MODEL_LOG ]] || [[ $VERBOSE_MODEL_LOG ]]; then
+        stf_flags="-v"
+    fi
+    run $STF $stf_flags -l $output_dir $test | \
         grep -v 'WARN MAU::[a-z_]* Time gone backwards!' \
         || die
 fi

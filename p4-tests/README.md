@@ -52,6 +52,9 @@ as follows:
 Note that the re-configuration should not affect any dependencies, and
 thus, there should be no recompilation.
 
+To show logs from STF tests, export `ENABLE_MODEL_LOG` or `VERBOSE_MODEL_LOG`
+environment variable. Logs are produced to terminal unless redirected.
+
 Debugging a PTF test:
 =====================
 
@@ -74,6 +77,8 @@ the ctest command as-is:
     ctest -L ptf [-R <test>]
 
 To enable *verbose* model log, set the `VERBOSE_MODEL_LOG` environment variable.
+To keep the logs even if the test succeeds, set the `KEEP_LOGS` environment
+variable.
 
 In some cases, these logs are not enough and you want to have more control over
 the execution of a PTF test. In this case, you can run the test in "3-window
