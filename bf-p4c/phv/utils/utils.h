@@ -7,6 +7,7 @@
 #include "bf-p4c/phv/error.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/phv/pragma/pa_no_init.h"
 #include "bf-p4c/phv/utils/slice_alloc.h"
 #include "lib/bitvec.h"
 #include "lib/symbitmatrix.h"
@@ -358,7 +359,8 @@ class Allocation {
     virtual MutuallyLiveSlices slicesByLiveness(const PHV::Container c,
                                                 const AllocSlice& sl) const;
     virtual MutuallyLiveSlices byteSlicesByLiveness(const PHV::Container c,
-                                                    const AllocSlice& sl) const;
+                                                    const AllocSlice& sl,
+                                                    const PragmaNoInit& noInit) const;
     virtual MutuallyLiveSlices slicesByLiveness(const PHV::Container c,
                                                 std::vector<AllocSlice>& slices) const;
 

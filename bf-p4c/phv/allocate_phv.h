@@ -505,7 +505,8 @@ class CoreAllocation {
     bool satisfies_constraints(
             const PHV::Allocation& alloc,
             const PHV::AllocSlice& slice,
-            ordered_set<PHV::AllocSlice>& initFields) const;
+            ordered_set<PHV::AllocSlice>& initFields,
+            std::vector<PHV::AllocSlice>& candidate_slices) const;
 
     /// @returns true if @p container_group and @p cluster_group satisfy constraints.
     /// XXX(cole): figure out what, if any, constraints should go here.

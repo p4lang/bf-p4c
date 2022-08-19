@@ -196,11 +196,11 @@ bool DetermineCandidateFields::preorder(const IR::MAU::Instruction* inst) {
 }
 
 void DetermineCandidateFields::end_apply() {
-    LOG3("\tFinal candidate set:");
+    LOG3("\tFinal auto-alias candidate set:");
     for (const auto* f : initialCandidateSet) {
         if (!candidateSources.count(f)) continue;
         std::stringstream ss;
-        ss << "\t  " << f->name << ", ";
+        ss << "\t  auto-alias: " << f->name << ", ";
         if (candidateSources.at(f).size() > 1) continue;
         const PHV::Field* srcField = nullptr;
         for (auto& kv : candidateSources.at(f)) {

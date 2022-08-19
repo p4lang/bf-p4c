@@ -65,7 +65,7 @@ AllocSlice& AllocSlice::operator=(const AllocSlice& other) {
     width_i = other.width();
     init_points_i = other.getInitPoints();
     shadow_always_run_i = other.getShadowAlwaysRun();
-    shadow_zero_init_i = other.is_zero_initialized();
+    shadow_init_i = other.is_initialized();
     has_meta_init_i = other.hasMetaInit();
     is_physical_stage_based_i = other.is_physical_stage_based_i;
     physical_deparser_stage_i = other.physical_deparser_stage_i;
@@ -411,10 +411,11 @@ le_bitrange AllocSlice::container_bytes() const {
     return StartLen(byte_lo, (byte_hi - byte_lo + 1));
 }
 
-bool AllocSlice::is_zero_initialized() const {
+bool AllocSlice::is_initialized() const {
     if (init_points_i.size() ||
         init_i.destAssignedToZero() ||
-        shadow_zero_init_i)
+        init_i.getInitPoints().size() ||
+        shadow_init_i)
         return true;
 
     return false;
@@ -522,14 +523,18 @@ std::ostream& operator<<(std::ostream& out, const AllocSlice& slice) {
     out << " live at " << (slice.isPhysicalStageBased() ? "P" : "") << "[";
     out << slice.getEarliestLiveness() << ", " << slice.getLatestLiveness() << "]";
     if (!slice.getInitPrimitive().isEmpty()) {
+        out << " { Init: " << slice.is_initialized() << " ";
         if (slice.getInitPrimitive().isNOP())
-            out << " { NOP }";
+            out << " NOP ";
         else if (slice.getInitPrimitive().mustInitInLastMAUStage())
-            out << " { last stage ara; " << slice.getInitPrimitive().getInitPoints().size()
+            out << " last-stage-ARA; " << slice.getInitPrimitive().getInitPoints().size()
                 << " dark actions }";
+        else if (slice.getInitPrimitive().isAlwaysRunActionPrim())
+            out << " ARA ";
         else if (slice.getInitPrimitive().getInitPoints().size() > 0)
             out << " { " << slice.getInitPrimitive().getInitPoints().size() << " dark actions }";
     }
+    out << " }";
 
     auto units = slice.getRefs();
     out << units.size() << " units {";

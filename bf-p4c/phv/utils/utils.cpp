@@ -272,21 +272,35 @@ PHV::Allocation::slicesByLiveness(const PHV::Container c, const AllocSlice& sl) 
     return rs;
 }
 
+// This is the same as slicesByLiveness with the addition that it
+// handles the liverange overlap from implicit parser initialization
+// Note: Implicit parser initialization is not reflected in the slice liverange.
 PHV::Allocation::MutuallyLiveSlices
-PHV::Allocation::byteSlicesByLiveness(const PHV::Container c, const AllocSlice& sl) const {
+PHV::Allocation::byteSlicesByLiveness(const PHV::Container c, const AllocSlice& sl,
+                                      const PragmaNoInit& noInit) const {
     PHV::Allocation::MutuallyLiveSlices rs;
     auto slices = this->slices(c);
-    bool sl_is_extracted = uses_i->is_extracted(sl.field());
+    bool sl_is_extracted = uses_i->is_extracted_from_pkt(sl.field());
     for (auto& slice : slices) {
         bool mutex = phv_i->field_mutex()(slice.field()->id, sl.field()->id);
         // *ALEX* Checking disjoint liveranges may be too conservative due to
         // default [parser, deparser] liveranges - See P4C-4467
         bool liverange_mutex = slice.isLiveRangeDisjoint(sl);
-        bool same_bytes = sl.container_bytes().overlaps(slice.container_bytes());
+        // In TF2/3 extraction can be done at byte granularity compared
+        // to container-granularity in TF1.
+        bool same_bytes = (Device::currentDevice() == Device::TOFINO) ||
+                           sl.container_bytes().overlaps(slice.container_bytes());
         bool extr_in_uninit_byte = false;
+
+        // When slices share bytes check for extraction on non-initialized metadata slice bytes
+        // (useful when container slices do not overlap)
         if (same_bytes) {
-            extr_in_uninit_byte = (sl_is_extracted && !slice.is_zero_initialized()) ||
-                (uses_i->is_extracted(slice.field()) && !sl.is_zero_initialized());
+            // Check if metadata is uninitialized and not marked as pa_no_init
+            extr_in_uninit_byte = (sl_is_extracted &&
+                                   !(slice.is_initialized() ||
+                                     noInit.getFields().count(slice.field()))) ||
+                (uses_i->is_extracted_from_pkt(slice.field()) &&
+                 !(sl.is_initialized() || noInit.getFields().count(sl.field())));
         }
 
         if (!mutex && (!liverange_mutex || extr_in_uninit_byte)) rs.insert(slice);

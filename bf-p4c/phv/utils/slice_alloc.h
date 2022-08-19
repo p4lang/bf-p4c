@@ -124,7 +124,7 @@ class AllocSlice {
     bool shadow_always_run_i = false;
 
     // Is true if the alloc is copied from an alias destination alloc that is zero-initialized
-    bool shadow_zero_init_i = false;
+    bool shadow_init_i = false;
 
     bool has_meta_init_i = false;
 
@@ -169,7 +169,7 @@ class AllocSlice {
     le_bitrange field_slice() const         { return StartLen(field_bit_lo_i, width_i); }
     le_bitrange container_slice() const     { return StartLen(container_bit_lo_i, width_i); }
     le_bitrange container_bytes() const;
-    bool is_zero_initialized() const;
+    bool is_initialized() const;
     int width() const                       { return width_i; }
     const DarkInitPrimitive& getInitPrimitive() const { return init_i; }
     DarkInitPrimitive& getInitPrimitive() { return init_i; }
@@ -229,8 +229,8 @@ class AllocSlice {
     void setInitPoints(const ActionSet init_points) { init_points_i = init_points; }
     void setShadowAlwaysRun(bool val) { shadow_always_run_i = val; }
     bool getShadowAlwaysRun() const { return shadow_always_run_i; }
-    void setShadowZeroInit(bool val) { shadow_zero_init_i = val; }
-    bool getShadowZeroInit() const { return shadow_zero_init_i; }
+    void setShadowInit(bool val) { shadow_init_i = val; }
+    bool getShadowInit() const { return shadow_init_i; }
     const ordered_map<cstring, FieldUse>& getRefs() const { return refs; }
     void clearRefs() { refs.clear(); }
     void addRefs(const ordered_map<cstring, FieldUse>& sl_refs, bool clear_refs = false) {

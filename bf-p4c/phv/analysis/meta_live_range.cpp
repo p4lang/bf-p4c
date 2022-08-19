@@ -117,7 +117,7 @@ void MetadataLiveRange::setFieldLiveMap(const PHV::Field* f) {
                 LOG4("\t\tIgnoring implicit parser init.");
                 continue;
             }
-            if (!notParsedFields.count(f) && !(f->bridged && f->gress == INGRESS)) {
+            if (!notParsedFields.count(f)) {
                 LOG4("\t  Field defined in parser.");
                 minDef = -1;
                 minDefAccess = WRITE;

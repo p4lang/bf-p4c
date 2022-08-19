@@ -144,11 +144,10 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
             PHV::StageAndAccess max = std::make_pair(physDeparser, write);
             alloc.setLatestLiveness(max);
             alloc.setPhysicalDeparserStage(true);
-            LOG5(ss.str() << "\tIgnoring field slice: " << alloc << ",  zero_init: " <<
-                 alloc.is_zero_initialized());
+            LOG5(ss.str() << "\tIgnoring field slice: " << alloc);
             continue;
         } else {
-            LOG3("\t  Slice: " << alloc << ",  zero_init: " << alloc.is_zero_initialized());
+            LOG3("\t  Slice: " << alloc);
             LOG5("\t\tNot ignoring for parserMin " << parserMin.first << parserMin.second <<
                  " and deparserMax " << deparserMax.first << deparserMax.second);
             LOG5("\t\talloc min: " << alloc.getEarliestLiveness().first <<

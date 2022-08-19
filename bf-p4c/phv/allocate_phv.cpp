@@ -1503,7 +1503,8 @@ bool CoreAllocation::satisfies_constraints(
 bool CoreAllocation::satisfies_constraints(
         const PHV::Allocation& alloc,
         const PHV::AllocSlice& slice,
-        ordered_set<PHV::AllocSlice>& initFields) const {
+        ordered_set<PHV::AllocSlice>& initFields,
+        std::vector<PHV::AllocSlice>& candidate_slices) const {
     const PHV::Field* f = slice.field();
     PHV::Container c = slice.container();
     const auto* container_status = alloc.getStatus(c);
@@ -1673,27 +1674,30 @@ bool CoreAllocation::satisfies_constraints(
             b.container_slice().lo - a.container_slice().hi;
     };
     // Check no pack for this field.
-    const auto& byte_slices = alloc.byteSlicesByLiveness(c, slice);
-    std::vector<PHV::FieldSlice> liveFieldSlices;
-    ordered_set<PHV::FieldSlice> initFieldSlices;
+    const auto& byte_slices = alloc.byteSlicesByLiveness(c, slice, utils_i.pragmas.pa_no_init());
+    std::vector<PHV::AllocSlice> liveSlices;
+    ordered_set<PHV::AllocSlice> initSlices;
+
     for (auto& sl : byte_slices) {
         // XXX(yumin): aligned fieldslice from the same field can be ignored
         if (is_aligned_same_field_alloc(slice, sl)) {
             continue;
         }
-        liveFieldSlices.push_back(PHV::FieldSlice(sl.field(), sl.field_slice()));
+        liveSlices.push_back(sl);
     }
+
     for (auto& sl : initFields) {
         // XXX(yumin): aligned fieldslice from the same field can be ignored
         if (is_aligned_same_field_alloc(slice, sl)) {
             continue;
         }
-        initFieldSlices.insert(PHV::FieldSlice(sl.field(), sl.field_slice()));
+        initSlices.insert(sl);
     }
-    LOG_DEBUG7(TAB2 "liveFieldSlices:");
-    for (auto& sl : liveFieldSlices) LOG_DEBUG7(TAB2 "  " << sl);
-    LOG_DEBUG7(TAB2 "initFieldsSlices:");
-    for (auto& sl : initFieldSlices) LOG_DEBUG7(TAB2 "  " << sl);
+
+    LOG_DEBUG7(TAB2 "liveSlices:");
+    for (auto& sl : liveSlices) LOG_DEBUG7(TAB2 "  " << sl);
+    LOG_DEBUG7(TAB2 "initSlices:");
+    for (auto& sl : initSlices) LOG_DEBUG7(TAB2 "  " << sl);
 
     for (auto &sl : byte_slices) {
         bool disjoint = slice.isLiveRangeDisjoint(sl) ||
@@ -1718,29 +1722,32 @@ bool CoreAllocation::satisfies_constraints(
     // discount slices that are going to be initialized through metadata initialization from being
     // considered uninitialized reads.
 
+    // *TODO* Replacing here is_extracted() with is_extracted_from_packet()
+    //        causes table placement fitting regressions. Revisit in the future.
     bool isThisSliceExtracted = !slice.field()->pov && utils_i.uses.is_extracted(slice.field());
     bool isThisSliceUninitialized =
         (slice.field()->pov ||
          (utils_i.defuse.hasUninitializedRead(slice.field()->id) && !initFields.count(slice) &&
           !utils_i.pragmas.pa_no_init().getFields().count(slice.field())));
 
+    LOG_DEBUG7(TAB1 "  slice: " << slice << std::endl <<
+               TAB2 "isThisSliceUninitialized:" << isThisSliceUninitialized << std::endl <<
+               TAB2 "isThisSliceExtracted:" << isThisSliceExtracted);
+
     bool hasOtherUninitializedRead, hasOtherExtracted, hasExtractedTogether;
 
-    for (auto slc : liveFieldSlices) {
+    for (auto slc : liveSlices) {
         hasOtherUninitializedRead = slc.field()->pov ||
-            (utils_i.defuse.hasUninitializedRead(slc.field()->id) &&
-             !initFieldSlices.count(slc));
-        hasOtherExtracted = !slc.field()->pov && utils_i.uses.is_extracted(slc.field()) &&
-            utils_i.uses.is_extracted_from_pkt(slc.field());
+            (utils_i.defuse.hasUninitializedRead(slc.field()->id) && !slc.is_initialized() &&
+             !initSlices.count(slc));
+        hasOtherExtracted = !slc.field()->pov && utils_i.uses.is_extracted_from_pkt(slc.field());
         hasExtractedTogether = utils_i.phv.are_bridged_extracted_together(slice.field(),
                                                                           slc.field());
 
-        LOG_DEBUG7(TAB1 "  slice: " << slice << "  \n\tlfs: " << slc << std::endl <<
+        LOG_DEBUG7(TAB1 "   liveSlice: " << slc << std::endl <<
                    TAB2 "hasOtherUninitialized:" << hasOtherUninitializedRead << std::endl <<
                    TAB2 "hasOtherExtracted:" << hasOtherExtracted << std::endl <<
-                   TAB2 "hasExtractedTogether:" << hasExtractedTogether << std::endl <<
-                   TAB2 "isThisSliceUninitialized:" << isThisSliceUninitialized << std::endl <<
-                   TAB2 "isThisSliceExtracted:" << isThisSliceExtracted);
+                   TAB2 "hasExtractedTogether:" << hasExtractedTogether);
 
         if (hasOtherExtracted && !hasExtractedTogether &&
             (isThisSliceUninitialized || isThisSliceExtracted)) {
@@ -1751,11 +1758,48 @@ bool CoreAllocation::satisfies_constraints(
 
         // Account for metadata initialization and ensure that initialized fields are not considered
         // uninitialized any more.
-        if (isThisSliceExtracted && (hasOtherUninitializedRead || hasOtherExtracted) &&
-            (!hasExtractedTogether || !hasOtherUninitializedRead)) {
+        if (isThisSliceExtracted && !hasExtractedTogether &&
+            (hasOtherExtracted || hasOtherUninitializedRead)) {
             LOG_DEBUG5(TAB1
                        "Constraint violation: This slice is extracted, can't be packed because "
                        "allocated fields have: "
+                       << (hasOtherExtracted ? "extracted" : "uninitialized"));
+            return false; }
+    }
+
+    for (auto cand_sl : candidate_slices) {
+        if (slice == cand_sl) break;
+        if (slice.container() != cand_sl.container()) continue;
+        if (!slice.container_bytes().overlaps(cand_sl.container_bytes())) continue;
+
+        hasOtherUninitializedRead = cand_sl.field()->pov ||
+            (utils_i.defuse.hasUninitializedRead(cand_sl.field()->id) &&
+             !cand_sl.is_initialized() && !initSlices.count(cand_sl));
+        hasOtherExtracted = !cand_sl.field()->pov &&
+            utils_i.uses.is_extracted_from_pkt(cand_sl.field());
+        hasExtractedTogether = utils_i.phv.are_bridged_extracted_together(slice.field(),
+                                                                          cand_sl.field()) ||
+            slice.field()->header() == cand_sl.field()->header();
+
+        LOG_DEBUG7(TAB1 "  candidate slice: " << cand_sl << std::endl <<
+                   TAB2 "hasOtherUninitialized:" << hasOtherUninitializedRead << std::endl <<
+                   TAB2 "hasOtherExtracted:" << hasOtherExtracted << std::endl <<
+                   TAB2 "hasExtractedTogether:" << hasExtractedTogether << std::endl);
+
+        if (hasOtherExtracted && !hasExtractedTogether &&
+            (isThisSliceUninitialized || isThisSliceExtracted)) {
+            LOG_DEBUG5(TAB1 "Constraint violation: Other candidate slice is extracted; "
+                       "can't be packed because this slice is: "
+                       << (isThisSliceExtracted ? "extracted" : "uninitialized"));
+            return false; }
+
+        // Account for metadata initialization and ensure that initialized fields are not considered
+        // uninitialized any more.
+        if (isThisSliceExtracted && !hasExtractedTogether &&
+            (hasOtherUninitializedRead || hasOtherExtracted)) {
+            LOG_DEBUG5(TAB1
+                       "Constraint violation: This slice is extracted, can't be packed because "
+                       "other candidate fields are: "
                        << (hasOtherExtracted ? "extracted" : "uninitialized"));
             return false; }
     }
@@ -2826,7 +2870,8 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
                     bool alloced = previous_allocations.find(PHV::FieldSlice(fs)) !=
                                    previous_allocations.end();
                     return alloced ? true : satisfies_constraints(perContainerAlloc, slice,
-                            metaInitSlices); });
+                                                                  metaInitSlices,
+                                                                  candidate_slices); });
         if (!constraints_ok) {
             initNodes = boost::none;
             allocedSlices = boost::none;
