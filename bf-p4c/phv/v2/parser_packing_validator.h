@@ -35,7 +35,8 @@ class ParserPackingValidator : public ParserPackingValidatorInterface {
     /// @returns all extracts to @p f, grouped by states.
     StateExtractMap get_extracts(const Field* f) const;
 
-    /// @returns true if the field needs to be zero when it left parser.
+    /// @returns true if the field needs to be the default value when it left parser.
+    /// The default value is zero and the container validity bit (in Tofino) is zero.
     bool parser_zero_init(const Field* f) const {
         return (defuse_i.hasUninitializedRead(f->id) && !pa_no_init_i.getFields().count(f));
     }

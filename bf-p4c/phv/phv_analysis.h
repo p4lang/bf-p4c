@@ -23,6 +23,7 @@
 #include "bf-p4c/phv/fieldslice_live_range.h"
 #include "bf-p4c/phv/make_clusters.h"
 #include "bf-p4c/phv/mau_backtracker.h"
+#include "bf-p4c/phv/collect_table_keys.h"
 #include "bf-p4c/phv/action_source_tracker.h"
 #include "bf-p4c/phv/analysis/critical_path_clusters.h"
 #include "bf-p4c/phv/analysis/dark_live_range.h"
@@ -91,6 +92,8 @@ class PHV_AnalysisPass : public Logging::PassManager {
     /// Collect header stacks that need strided allocation
     CollectStridedHeaders strided_headers;
     CollectParserInfo  parser_info;
+    // table key properties.
+    PHV::CollectTableKeys tb_keys;
     // physical live ranges of field slices.
     PHV::FieldSliceLiveRangeDB physical_liverange_db;
     // sources of any field slices classified by actions.

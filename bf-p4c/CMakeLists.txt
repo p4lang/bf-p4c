@@ -597,6 +597,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/auto_init_metadata.cpp
   phv/cluster_phv_operations.cpp
   phv/create_thread_local_instances.cpp
+  phv/collect_table_keys.cpp
   phv/finalize_physical_liverange.cpp
   phv/finalize_stage_allocation.cpp
   phv/live_range_split.cpp
@@ -610,7 +611,6 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/phv_fields.cpp
   phv/phv_parde_mau_use.cpp
   phv/phv_spec.cpp
-  phv/smart_fieldslice_packing.cpp
   phv/table_phv_constraints.cpp
   phv/validate_allocation.cpp
   phv/analysis/build_mutex.cpp
@@ -665,6 +665,8 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/v2/greedy_tx_score.cpp
   phv/v2/utils_v2.cpp
   phv/v2/metadata_initialization.cpp
+  phv/v2/smart_packing.cpp
+  phv/v2/types.cpp
   )
 if (ENABLE_JBAY)
   list (APPEND BF_P4C_BACKEND_PHV_SRCS
@@ -690,6 +692,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/check_unallocated.h
   phv/cluster_phv_operations.h
   phv/collect_strided_headers.h
+  phv/collect_table_keys.h
   phv/create_thread_local_instances.h
   phv/parser_extract_balance_score.h
   phv/finalize_physical_liverange.h
@@ -707,7 +710,6 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/phv_fields.h
   phv/phv_parde_mau_use.h
   phv/phv_spec.h
-  phv/smart_fieldslice_packing.h
   phv/table_phv_constraints.h
   phv/validate_allocation.h
   phv/analysis/build_mutex.h
@@ -766,6 +768,8 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/v2/utils_v2.h
   phv/v2/sort_macros.h
   phv/v2/metadata_initialization.h
+  phv/v2/smart_packing.h
+  phv/v2/types.h
   )
 if (ENABLE_JBAY)
   list (APPEND BF_P4C_BACKEND_PHV_HDRS

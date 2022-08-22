@@ -22,7 +22,6 @@
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "bf-p4c/phv/slicing/types.h"
-#include "bf-p4c/phv/smart_fieldslice_packing.h"
 #include "bf-p4c/phv/table_phv_constraints.h"
 #include "bf-p4c/phv/utils/slice_alloc.h"
 #include "bf-p4c/phv/utils/tables_to_ids.h"

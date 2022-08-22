@@ -15,21 +15,11 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/utils/utils.h"
 #include "bf-p4c/phv/v2/tx_score.h"
+#include "bf-p4c/phv/v2/types.h"
 
 
 namespace PHV {
 namespace v2 {
-
-/// map field slices to their starting position in a container.
-using FieldSliceStart = std::pair<PHV::FieldSlice, int>;
-using FieldSliceAllocStartMap = ordered_map<PHV::FieldSlice, int>;
-std::ostream& operator<<(std::ostream& out, const FieldSliceAllocStartMap& fs);
-
-/// type of container groups grouped by sizes.
-using ContainerGroupsBySize = std::map<PHV::Size, std::vector<ContainerGroup>>;
-
-/// Map container to container status.
-using TxContStatus = ordered_map<PHV::Container, Transaction::ContainerStatus>;
 
 /// ErrorCode classifies all kinds of PHV allocation error.
 /// NOTE: when adding a new error, remember to update to_str function.

@@ -312,5 +312,35 @@ void PhvKit::sort_and_merge_alloc_slices(PhvInfo& phv) {
     }
 }
 
+bool PhvKit::is_ternary(const IR::MAU::Table* tbl) {
+    auto annot = tbl->match_table->getAnnotations();
+    if (auto s = annot->getSingle("ternary")) {
+        if (s->expr.size() <= 0) {
+            return false;
+        } else {
+            auto* pragma_val = s->expr.at(0)->to<IR::Constant>();
+            ERROR_CHECK(pragma_val != nullptr, ErrorType::ERR_UNKNOWN,
+                        "unknown ternary pragma %1% on table %2%.", s, tbl->externalName());
+            if (pragma_val->asInt() == 1) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+    } else {
+        for (auto ixbar_read : tbl->match_key) {
+            if (ixbar_read->match_type.name == "ternary" || ixbar_read->match_type.name == "lpm") {
+                return true;
+            }
+        }
+        for (auto ixbar_read : tbl->match_key) {
+            if (ixbar_read->match_type == "range") {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 }  // namespace v2
 }  // namespace PHV

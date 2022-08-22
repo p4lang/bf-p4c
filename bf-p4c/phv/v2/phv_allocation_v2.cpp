@@ -1,9 +1,10 @@
 #include "bf-p4c/phv/v2/phv_allocation_v2.h"
 
-#include "bf-p4c/phv/v2/greedy_allocator.h"
 #include "lib/error.h"
+
+#include "bf-p4c/phv/v2/greedy_allocator.h"
 #include "bf-p4c/phv/v2/trivial_allocator.h"
-#include "bf-p4c/phv/smart_fieldslice_packing.h"
+#include "bf-p4c/phv/v2/smart_packing.h"
 
 namespace PHV {
 namespace v2 {
@@ -27,7 +28,11 @@ const IR::Node* PhvAllocation::apply_visitor(const IR::Node* root_, const char *
     const auto alloc_verifier = [&](const PHV::SuperCluster* sc) {
         return trivial_allocator->can_be_allocated(alloc.makeTransaction(), sc);
     };
-    clusters = get_packed_cluster_group(clusters, kit_i.table_pack_opt, alloc_verifier, phv_i);
+    IxbarFriendlyPacking packing(phv_i, kit_i.tb_keys, kit_i.table_mutex, kit_i.defuse, kit_i.deps,
+                                 kit_i.get_has_pack_conflict(), kit_i.parser_packing_validator,
+                                 alloc_verifier);
+    clusters = packing.pack(clusters);
+    // clusters = get_packed_cluster_group(clusters, kit_i.table_pack_opt, alloc_verifier, phv_i);
 
     if (kit_i.settings.trivial_alloc) {
         if (!trivial_allocator->allocate(clusters)) {

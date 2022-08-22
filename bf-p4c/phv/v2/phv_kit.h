@@ -2,12 +2,14 @@
 #define BF_P4C_PHV_V2_PHV_KIT_H_
 
 #include "bf-p4c/common/field_defuse.h"
+#include "bf-p4c/mau/table_mutex.h"
 #include "bf-p4c/parde/clot/clot_info.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/phv/action_source_tracker.h"
 #include "bf-p4c/phv/alloc_setting.h"
 #include "bf-p4c/phv/analysis/critical_path_clusters.h"
 #include "bf-p4c/phv/collect_strided_headers.h"
+#include "bf-p4c/phv/collect_table_keys.h"
 #include "bf-p4c/phv/fieldslice_live_range.h"
 #include "bf-p4c/phv/make_clusters.h"
 #include "bf-p4c/phv/v2/action_packing_validator.h"
@@ -17,7 +19,6 @@
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "bf-p4c/phv/slicing/types.h"
-#include "bf-p4c/phv/smart_fieldslice_packing.h"
 
 namespace PHV {
 namespace v2 {
@@ -39,6 +40,9 @@ struct PhvKit {
     // action-related constraints
     const ActionPhvConstraints& actions;
     const ActionSourceTracker& source_tracker;
+    const CollectTableKeys& tb_keys;
+    const TablesMutuallyExclusive& table_mutex;
+    const DependencyGraph &deps;
 
     // packing validator that checks whether a set of packing is valid
     // in terms of action phv constraints.
@@ -62,20 +66,22 @@ struct PhvKit {
     // misc allocation settings.
     const AllocSetting& settings;
 
-    // Collect field packing that table/ixbar would benefit from.
-    const TableFieldPackOptimization& table_pack_opt;
-
     // provide access to information of last round of table placement.
     const MauBacktracker& mau;
 
     PhvKit(const PhvInfo& phv, const ClotInfo& clot, const Clustering& clustering,
            const PhvUse& uses, const FieldDefUse& defuse, const ActionPhvConstraints& actions,
            const MapFieldToParserStates& field_to_parser_states,
-           const CalcParserCriticalPath& parser_critical_path, const CollectParserInfo& parser_info,
+           const CalcParserCriticalPath& parser_critical_path,
+           const CollectParserInfo& parser_info,
            const CollectStridedHeaders& strided_headers,
            const FieldSliceLiveRangeDB& physical_liverange_db,
-           const ActionSourceTracker& source_tracker, const Pragmas& pragmas,
-           const AllocSetting& settings, const TableFieldPackOptimization& table_pack_opt,
+           const ActionSourceTracker& source_tracker,
+           const CollectTableKeys& tb_keys,
+           const TablesMutuallyExclusive& table_mutex,
+           const DependencyGraph &deps,
+           const Pragmas& pragmas,
+           const AllocSetting& settings,
            const MauBacktracker& mau)
         : phv(phv),
           clot(clot),
@@ -84,6 +90,9 @@ struct PhvKit {
           defuse(defuse),
           actions(actions),
           source_tracker(source_tracker),
+          tb_keys(tb_keys),
+          table_mutex(table_mutex),
+          deps(deps),
           packing_validator(new ActionPackingValidator(source_tracker, uses)),
           parser_packing_validator(new ParserPackingValidator(
               phv, field_to_parser_states, parser_info, defuse, pragmas.pa_no_init())),
@@ -94,7 +103,6 @@ struct PhvKit {
           physical_liverange_db(physical_liverange_db),
           pragmas(pragmas),
           settings(settings),
-          table_pack_opt(table_pack_opt),
           mau(mau) {}
 
     const SymBitMatrix& mutex() const {
@@ -104,6 +112,12 @@ struct PhvKit {
     // has_pack_conflict should be used as the only source of pack conflict checks.
     // It checks mutex + pack conflict from mau + no pack constraint from cluster.
     bool has_pack_conflict(const PHV::FieldSlice &fs1, const PHV::FieldSlice &fs2) const;
+
+    HasPackConflict get_has_pack_conflict() const {
+        return [this](const PHV::FieldSlice& fs1, const PHV::FieldSlice& fs2) {
+            return this->has_pack_conflict(fs1, fs2);
+        };
+    }
 
     // return true if field is used and not padding.
     bool is_referenced(const PHV::Field* f) const { return !f->padding && uses.is_referenced(f); };
@@ -164,6 +178,9 @@ struct PhvKit {
     static std::list<PHV::SuperCluster*> create_strided_clusters(
             const CollectStridedHeaders& strided_headers,
             const std::list<PHV::SuperCluster*>& cluster_groups);
+
+    /// @returns true is @p tbl is a ternary match.
+    static bool is_ternary(const IR::MAU::Table* tbl);
 };
 
 }  // namespace v2

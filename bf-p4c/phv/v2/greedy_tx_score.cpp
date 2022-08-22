@@ -78,37 +78,6 @@ void deduped_iterate(const T& alloc_slices,
     }
 }
 
-/// XXX(yumin): duplicated from TableLayout::check_for_ternary().
-bool is_ternary(const IR::MAU::Table* tbl) {
-    auto annot = tbl->match_table->getAnnotations();
-    if (auto s = annot->getSingle("ternary")) {
-        if (s->expr.size() <= 0) {
-            return false;
-        } else {
-            auto* pragma_val = s->expr.at(0)->to<IR::Constant>();
-            ERROR_CHECK(pragma_val != nullptr, ErrorType::ERR_UNKNOWN,
-                        "unknown ternary pragma %1% on table %2%.", s, tbl->externalName());
-            if (pragma_val->asInt() == 1) {
-                return true;
-            } else {
-                return false;
-            }
-        }
-    } else {
-        for (auto ixbar_read : tbl->match_key) {
-            if (ixbar_read->match_type.name == "ternary" || ixbar_read->match_type.name == "lpm") {
-                return true;
-            }
-        }
-        for (auto ixbar_read : tbl->match_key) {
-            if (ixbar_read->match_type == "range") {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
 void update_table_stage_ixbar_bytes(const PhvKit& kit, const Container& c,
                                     const ordered_set<AllocSlice>& slices,
                                     TableIxbarContBytesMap& table_ixbar_cont_bytes,
@@ -122,7 +91,7 @@ void update_table_stage_ixbar_bytes(const PhvKit& kit, const Container& c,
                 const auto cont_byte = std::make_pair(c, i);
                 table_ixbar_cont_bytes[tb].insert(cont_byte);
                 for (const auto& stage : kit.mau.stage(tb, true)) {
-                    if (is_ternary(tb)) {
+                    if (PhvKit::is_ternary(tb)) {
                         stage_tcam_ixbar_cont_bytes[stage].insert(cont_byte);
                     } else {
                         stage_sram_ixbar_cont_bytes[stage].insert(cont_byte);

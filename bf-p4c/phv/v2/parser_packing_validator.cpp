@@ -34,8 +34,8 @@ ParserPackingValidator::StateExtractMap ParserPackingValidator::get_extracts(
 bool ParserPackingValidator::allow_clobber(const Field* f) const {
     if (f->is_ignore_alloc() || f->is_padding()) return true;
     const bool parser_def = parser_i.field_to_extracts.count(f) || f->pov || f->isGhostField();
-    // TODO(yumin): is_invalidate_from_arch, parser_error
-    return !parser_def && !parser_zero_init(f);
+    // TODO(yumin): parser_error?
+    return !parser_def && !parser_zero_init(f) && !f->is_invalidate_from_arch();
 }
 
 // XXX(yumin): strided header fields are handled in the same way as normal fields,
@@ -94,28 +94,7 @@ const AllocError* ParserPackingValidator::will_buf_extract_clobber_the_other(
             }
         }
     }
-    // This extract will not clobber bits of others only when
-    // 1. the other field is not parser zero initialized, and
-    // 2. all other extracts are mutex.
-    bool okay_to_pack =
-        !parser_zero_init(other_fs.field()) && !other_fs.field()->is_invalidate_from_arch();
-    for (const auto& other_state_extract : other_extracts) {
-        const auto* other_state = other_state_extract.first;
-        if (other_state == state) continue;
-        const auto* other_parser = parser_i.state_to_parser.at(other_state);
-        LOG5("Check extract: " << other_state->name << ": " << other_state_extract.second);
-        if (other_parser != parser) {
-            continue;
-        }
-        if (!parser_info_i.graph(parser).is_mutex(state, other_state)) {
-            okay_to_pack = false;
-            break;
-        }
-    }
-    if (okay_to_pack) {
-        LOG5("All others' extracts are mutex with this extract");
-        return (AllocError*)nullptr;
-    }
+
     // XXX(yumin): THIS is not required! BUT there are some P4 tests in our CI
     // that are incorrect: the manual extraction they wrote will corrupt other
     // fields! Example:
@@ -131,10 +110,35 @@ const AllocError* ParserPackingValidator::will_buf_extract_clobber_the_other(
         LOG5("Packing is unavoidable.");
         return (AllocError*)nullptr;
     }
-    *err << "cannot pack " << fs << " with " << other_fs << " because the former "
-         << "slice is extracted in " << state->name << ": " << extract << ", but "
-         << "the latter is not extracted in that state.";
-    return err;
+
+    // This extract will not clobber bits of others only when
+    // 1. if the other field is extracted in the same way in this state, then
+    //    a. all other extracts are mutex.
+    // 2. if the other field is not extracted in this state
+    //    a. the other field cannot be parser zero initialized.
+    //    b. all other extracts are mutex.
+    if (!other_extracts.count(state) && parser_zero_init(other_fs.field())) {
+        *err << "cannot pack " << fs << " with " << other_fs << " because the former "
+             << "slice is extracted in " << state->name << ": " << extract << ", but "
+             << "the latter field requires parser zero initialization.";
+        return err;
+    }
+    for (const auto& other_state_extract : other_extracts) {
+        const auto* other_state = other_state_extract.first;
+        if (other_state == state) continue;
+        const auto* other_parser = parser_i.state_to_parser.at(other_state);
+        LOG5("Check extract: " << other_state->name << ": " << other_state_extract.second);
+        if (other_parser != parser) {
+            continue;
+        }
+        if (!parser_info_i.graph(parser).is_mutex(state, other_state)) {
+            *err << "cannot pack " << fs << " with " << other_fs << " because the former "
+                 << "slice is extracted in " << state->name << ": " << extract << ", but "
+                 << "the latter is extracted in this non-mutex state: " << other_state->name;
+            return err;
+        }
+    }
+    return (AllocError*)nullptr;
 };
 
 const AllocError* ParserPackingValidator::will_a_extracts_clobber_b(
@@ -148,6 +152,13 @@ const AllocError* ParserPackingValidator::will_a_extracts_clobber_b(
     // because a is fine-sliced, each parser state will have at most 1 extract to the slice,
     // we do not need to check extract withinthe a_extracts,
     for (const auto& state_extracts : a_extracts) {
+        // extractions will set container validity bit to 1 (including const), so we cannot
+        // pack is_invalidate_from_arch with any extracted field.
+        if (b.first.field()->is_invalidate_from_arch()) {
+            auto* err = new AllocError(ErrorCode::CONTAINER_PARSER_PACKING_INVALID);
+            *err << "cannot pack with invalidate from arch field: " << b.first;
+            return err;
+        }
         if (allow_clobber(b_fs.field())) break;
         for (const auto& extract : state_extracts.second) {
             StateExtract state_extract{state_extracts.first, extract};

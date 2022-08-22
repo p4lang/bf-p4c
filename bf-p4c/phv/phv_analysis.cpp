@@ -88,6 +88,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
       clustering(phv, uses, pack_conflicts, pragmas.pa_container_sizes(), pragmas.pa_byte_pack(),
                  action_constraints),
       strided_headers(phv),
+      tb_keys(phv),
       physical_liverange_db(&alloc, &defuse, phv, clot, pragmas),
       source_tracker(phv),
       tablePackOpt(phv),
@@ -95,8 +96,9 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             field_to_parser_states, parser_critical_path, parser_info, strided_headers,
             physical_liverange_db, source_tracker, pragmas, settings, tablePackOpt),
       kit(phv, clot, clustering, uses, defuse, action_constraints,
-            field_to_parser_states, parser_critical_path, parser_info, strided_headers,
-            physical_liverange_db, source_tracker, pragmas, settings, tablePackOpt, alloc),
+          field_to_parser_states, parser_critical_path, parser_info, strided_headers,
+          physical_liverange_db, source_tracker, tb_keys, table_mutex, deps,
+          pragmas, settings, alloc),
       allocate_phv(utils, alloc, phv, unallocated) {
         auto* validate_allocation = new PHV::ValidateAllocation(phv, clot, physical_liverange_db);
         addPasses({
@@ -138,6 +140,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             // allocation)
             &pack_conflicts,
             &action_constraints,
+            &tb_keys,
             // Collect constraints related to the way fields are used in tables.
             new TablePhvConstraints(phv, action_constraints, pack_conflicts),
             // Collect constraints related to the way fields are used in the parser/deparser.
