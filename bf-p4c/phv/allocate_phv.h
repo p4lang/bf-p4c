@@ -455,6 +455,11 @@ class CoreAllocation {
         PHV::Transaction &this_alloc,
         const ScoreContext& score_ctx) const;
 
+    /// Collects previous container and previous_allocations for the specified slices.
+    /// The previous_container argument is filled if some of the fields in slices is already
+    /// allocated, or if some start_positions require particular field for allocation.
+    /// @returns true if and only if the previous allocation allows placement of slices into this
+    /// group (i.e. when the previous allocation was not in a different group).
     bool find_previous_allocation(
         PHV::Container &previous_container,
         ordered_map<PHV::FieldSlice, PHV::AllocSlice> &previous_allocations,

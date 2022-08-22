@@ -650,6 +650,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/utils/slice_alloc.cpp
   phv/utils/utils.cpp
   phv/utils/liverange_opti_utils.cpp
+  phv/utils/container_equivalence.cpp
   phv/fieldslice_live_range.cpp
   phv/v2/phv_kit.cpp
   phv/v2/allocator_base.cpp

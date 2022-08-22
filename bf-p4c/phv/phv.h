@@ -13,8 +13,8 @@ class JSONLoader;
 
 namespace PHV {
 
-// all possible PHV container kinds in BFN devices
-// The values here are used to define operator< on Kinds.
+/// all possible PHV container kinds in BFN devices
+/// The values here are used to define operator< on Kinds.
 enum class Kind : unsigned short {
     tagalong = 0,
     dark     = 1,
@@ -93,7 +93,7 @@ inline bool operator>=(Kind left, Kind right) {
     return left == right || left > right;
 }
 
-// all possible PHV container sizes in BFN devices
+/// all possible PHV container sizes in BFN devices
 enum class Size : unsigned short {
     null = 0,
     b8   = 8,

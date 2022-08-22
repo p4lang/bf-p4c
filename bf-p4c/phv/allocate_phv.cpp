@@ -24,6 +24,7 @@
 #include "bf-p4c/phv/utils/slice_alloc.h"
 #include "bf-p4c/phv/utils/utils.h"
 #include "bf-p4c/phv/legacy_action_packing_validator.h"
+#include "bf-p4c/phv/utils/container_equivalence.h"
 #include "bf-p4c/common/pragma/all_pragmas.h"
 #include "bf-p4c/logging/event_logger.h"
 #include "lib/error.h"
@@ -270,7 +271,7 @@ bool default_alloc_score_is_better(const AllocScore& left, const AllocScore& rig
     }
     auto rst = prioritized_cmp(conds);
     if (rst.second != "equal") {
-        LOG_DEBUG6((rst.first ? "better" : "worse") << ", because: " << rst.second);
+        LOG_DEBUG6(TAB2 << (rst.first ? "better" : "worse") << ", because: " << rst.second);
     }
 
     return rst.first;
@@ -1016,18 +1017,30 @@ AllocScore::AllocScore(
         // Slices are counted twice in the above loop, so divide by 2.
         by_kind[kind][n_overlay_bits] += (overlay_bits / 2);
 
+        LOG_FEATURE("alloc_progress", 9, TAB2 "Score for gress = " << gress
+                    << " parserGroupGress = " << parserGroupGress
+                    << " deparserGroupGress = " << deparserGroupGress);
         // gress
         if (!parent->gress(container) && gress) {
+            LOG_FEATURE("alloc_progress", 9, TAB2 "Increasing n_set_gress for " << container);
             by_kind[kind][n_set_gress]++;
-            if (gress != deparserGroupGress)
-                by_kind[kind][n_mismatched_deparser_gress]++; }
+            if (gress != deparserGroupGress) {
+                LOG_FEATURE("alloc_progress", 9, TAB2 "Increasing n_mismatched_deparser_gress for "
+                            << container << " (" << gress << " x " << deparserGroupGress << ")");
+                by_kind[kind][n_mismatched_deparser_gress]++;
+            }
+        }
 
         // Parser group gress
         if (!parent->parserGroupGress(container) && parserGroupGress) {
+            LOG_FEATURE("alloc_progress", 9, TAB2 "Increasing n_set_parser_group_gress for "
+                        << container);
             by_kind[kind][n_set_parser_group_gress]++; }
 
         // Deparser group gress
         if (!parent->deparserGroupGress(container) && deparserGroupGress) {
+            LOG_FEATURE("alloc_progress", 9, TAB2 "Increasing n_set_deparser_group_gress for "
+                        << container);
             by_kind[kind][n_set_deparser_group_gress]++; }
 
         // Parser extract group source
@@ -2542,10 +2555,10 @@ bool CoreAllocation::try_place_wide_arith_hi(
     }
     if (!can_alloc_hi) {
         LOG_FEATURE("alloc_progress", 5,
-                    "Failed: Wide arithmetic hi slice could not be allocated.");
+                    TAB1 "Failed: Wide arithmetic hi slice could not be allocated.");
         return false;
     } else {
-        LOG_FEATURE("alloc_progress", 5, "Wide arithmetic hi slice could be allocated.");
+        LOG_FEATURE("alloc_progress", 5, TAB1 "Wide arithmetic hi slice could be allocated.");
         return true;
     }
 }
@@ -2657,6 +2670,7 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
 
     PHV::Transaction alloc_attempt = alloc.makeTransaction();
     const int container_size = int(group.width());
+    PHV::ContainerEquivalenceTracker cet(alloc);
 
     // Set previous_container to the container provided as part of start_positions, if any.
     PHV::Container previous_container;
@@ -2670,6 +2684,12 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
         previous_container, previous_allocations, start_positions, slices, group, alloc)) {
         return boost::none;
     }
+    // If we have already allocated some fields of our slices to previous_container, we need to
+    // consider it non-equivalent to all other containers. The same holds if the container is
+    // explicitly asked for by some of start_positions (which is also reflected to
+    // previous_container by find_previous_allocation)
+    cet.exclude(previous_container);
+    LOG_FEATURE("alloc_progress", 5, TAB1 "Got previous allocations: " << previous_allocations);
 
     // Check FIELD<-->GROUP constraints for each field.
     LOG_DEBUG5("Checking constraints for each field");
@@ -2686,8 +2706,10 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
     PHV::SuperCluster::SliceList *hi_slice = nullptr;
     for (const auto& slice : slices) {
         if (slice.field()->bit_used_in_wide_arith(slice.range().lo)) {
+            cet.set_is_wide_arith();
             if (slice.field()->bit_is_wide_arith_lo(slice.range().lo)) {
                 wide_arith_lo = true;
+                cet.set_is_wide_arith_low();
                 hi_slice = super_cluster.findLinkedWideArithSliceList(&slices);
                 BUG_CHECK(hi_slice, "Unable to find hi field slice associated with"
                           " wide arithmetic operation in the cluster %1%", super_cluster);
@@ -2715,6 +2737,11 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
     boost::optional<PHV::Transaction> best_candidate = boost::none;
     for (const PHV::Container& c : group) {
         LOG_FEATURE("alloc_progress", 5, "Trying to allocate to " << c);
+        if (auto equivalent_c = cet.find_equivalent_tried_container(c)) {
+            LOG_FEATURE("alloc_progress", 5, TAB1 "Container " << c << " is indistinguishible "
+                        "from an already tried container " << equivalent_c << ", skipping");
+            continue;
+        }
 
         // If any slices were already allocated, ensure that unallocated slices
         // are allocated to the same container.
@@ -2923,6 +2950,11 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
         bool conditional_constraints_satisfied = true;
         for (auto kv : *action_constraints) {
             if (kv.second.empty()) continue;
+            // If we actually call allocation recursively we cannot use cache due to possibility
+            // of different recursive allocations resulting in different scores even if the
+            // containers at this level are equivalent
+            LOG_FEATURE("alloc_progress", 9, TAB2 "Invalidating equivalence for " << c);
+            cet.invalidate(c);
             auto action_alloc =
                 tryAllocSliceList(this_alloc, group, super_cluster, kv.second, score_ctx);
             if (!action_alloc) {
@@ -2944,6 +2976,8 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
         // adjacent container -- either the container is free or can overlay.
         // Do this here, after lo slice has been committed to transaction.
         if (wide_arith_lo) {
+            LOG_FEATURE("alloc_progress", 9, TAB1 "If wide arithmetic low is allocated to "
+                        << c << " the high " << hi_slice << " needs to be placed next:");
             if (!try_place_wide_arith_hi(group, c, hi_slice, super_cluster, this_alloc, score_ctx))
                 continue;
         }
