@@ -1,0 +1,10 @@
+#command port payload
+
+packet   3    0000
+expect   3    0000
+
+packet   3    12345678
+expect   3    12345678
+
+packet   3    ffffffffffffffff
+expect   3    ffffffffffffffff
