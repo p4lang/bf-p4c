@@ -153,3 +153,9 @@ p4c_add_xfail_reason("tofino"
   "error: invalid SuperCluster was formed"
   extensions/p4_tests/p4_16/errors/p4c-4720.p4
 )
+
+# P4C-4607
+p4c_add_xfail_reason("tofino"
+  "error: slice of register value in condition is not supported"
+  extensions/p4_tests/p4_16/errors/p4c-4607.p4
+)

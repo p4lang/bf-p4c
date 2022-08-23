@@ -5457,7 +5457,7 @@ control Powhatan(inout Emden Aguila, inout Cranbury Nixon, in egress_intrinsic_m
     @name(".Netarts") Register<Tenstrike, bit<32>>(32w1) Netarts;
     @name(".Hartwick") RegisterAction<Tenstrike, bit<32>, bit<1>>(Netarts) Hartwick = {
         void apply(inout Tenstrike Brownson, out bit<1> Punaluu) {
-            if (Brownson.Freeny <= Nixon.Arapahoe.Freeny || (bit<19>)Brownson.Glassboro <= Nixon.Thurmond.Higginson) {
+            if (Brownson.Freeny <= Nixon.Arapahoe.Freeny || Brownson.Glassboro <= (bit<32>)Nixon.Thurmond.Higginson) {
                 Punaluu = (bit<1>)1w1;
             }
         }

@@ -882,6 +882,23 @@ bool CreateSaluInstruction::preorder(const IR::Slice *sl) {
     } else {
         negate = false;
         keep_slice = true; }
+    if (etype == IF) {
+        const IR::PathExpression *pe = nullptr;
+        if (auto mem = sl->e0->to<IR::Member>()) {
+            pe = mem->expr->to<IR::PathExpression>();
+        } else {
+            pe = sl->e0->to<IR::PathExpression>();
+        }
+        if (pe) {
+            for (auto p : params->parameters) {
+                if (p->name == pe->path->name) {
+                    // slice of register value used in condition is not allowed
+                    error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                            "%sslice of register value in condition is not supported", sl->srcInfo);
+                }
+            }
+        }
+    }
     auto num_ops = operands.size();
     visit(sl->e0, "e0");
     if (keep_slice) {

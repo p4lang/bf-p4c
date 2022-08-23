@@ -5172,7 +5172,7 @@ control Humble(inout Mayflower Virgilina, inout Alstown Dwight, in egress_intrin
     @name(".Skokomish") Register<Volens, bit<32>>(32w1) Skokomish;
     @name(".Freetown") RegisterAction<Volens, bit<32>, bit<1>>(Skokomish) Freetown = {
         void apply(inout Volens Eaton, out bit<1> Trevorton) {
-            if (Eaton.Lamona <= Dwight.Biggers.Lamona || (bit<19>)Eaton.Lathrop <= Dwight.Wanamassa.Floyd) {
+            if (Eaton.Lamona <= Dwight.Biggers.Lamona || Eaton.Lathrop <= (bit<32>)Dwight.Wanamassa.Floyd) {
                 Trevorton = (bit<1>)1w1;
             }
         }

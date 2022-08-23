@@ -5167,7 +5167,7 @@ control Millett(inout Murphy Gotham, inout Fredonia Osyka, in egress_intrinsic_m
     @name(".Overton") Register<Panola, bit<32>>(32w1) Overton;
     @name(".Karluk") RegisterAction<Panola, bit<32>, bit<1>>(Overton) Karluk = {
         void apply(inout Panola Levasy, out bit<1> Indios) {
-            if (Levasy.Hartville <= Osyka.Motley.Hartville || (bit<19>)Levasy.Clarendon <= Osyka.Ovett.Corder) {
+            if (Levasy.Hartville <= Osyka.Motley.Hartville || Levasy.Clarendon <= (bit<32>)Osyka.Ovett.Corder) {
                 Indios = (bit<1>)1w1;
             }
         }
