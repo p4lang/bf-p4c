@@ -70,6 +70,23 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
 
         // void dbprint(std::ostream &out) const;
         const IR::Expression *unsliced_expr() const;
+
+        cstring get_type_string() const {
+            if (type == PHV)             return "PHV";
+            else if (type == ACTIONDATA) return "ACTIONDATA";
+            else if (type == CONSTANT)   return "CONSTANT";
+            return "INVALID_TYPE";
+        }
+
+        cstring get_speciality_string() const {
+            if (speciality == NO_SPECIAL)         return "NO_SPECIAL";
+            else if (speciality == HASH_DIST)     return "HASH_DIST";
+            else if (speciality == METER_COLOR)   return "METER_COLOR";
+            else if (speciality == RANDOM)        return "RANDOM";
+            else if (speciality == METER_ALU)     return "METER_ALU";
+            else if (speciality == STFUL_COUNTER) return "STFUL_COUNTER";
+            return "INVALID_SPECIALITY";
+        }
     };
 
     /** Information on the entire instruction, essentially what field is written and from which
@@ -223,6 +240,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
             rv.verbose = verbose | ta.verbose;
             return rv;
         }
+        friend std::ostream &operator<<(std::ostream &out, const TotalAlignment&);
     };
 
     /** Information on the action data field contained within the instruction.  The action data
@@ -283,6 +301,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         bool convert_instr_to_deposit_field = false;  ///> determined by tofino_compliance check
         bool convert_instr_to_bitmasked_set = false;  ///> determined by tofino_compliance_check
         bool convert_instr_to_byte_rotate_merge = false;
+        bool total_overwrite_possible = false;
 
         bool is_deposit_field_variant = false;
         // If the src1 = dest, but isn't directly specified by the parameters.  Only necessary
@@ -352,8 +371,9 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         ContainerAction(cstring n, const IR::MAU::Table *tbl) : name(n), table_context(tbl) {}
 
         int total_types() {
-            return counts[ActionParam::PHV] + counts[ActionParam::ACTIONDATA]
-                   + counts[ActionParam::CONSTANT];
+            return counts[ActionParam::PHV]
+                 + counts[ActionParam::ACTIONDATA]
+                 + counts[ActionParam::CONSTANT];
         }
 
         bool is_single_shift() const {

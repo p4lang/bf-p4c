@@ -563,6 +563,12 @@ bitvec PhvInfo::bits_allocated(
     return result;
 }
 
+
+// Check which bits are allocated in Container (c) which contain field slices (writes) Based on the
+// context (ctxt), slices in container are filtered and compared against field slices to check for
+// container occupancy giving consideration to mutual exclusiveness, uninitialed read behavior,
+// aliasing and dark overlay.
+// The function returns a bitvec which sets occupied bits.
 bitvec PhvInfo::bits_allocated(
         const PHV::Container c,
         const ordered_set<const PHV::Field*>& writes,
@@ -588,7 +594,10 @@ bitvec PhvInfo::bits_allocated(
         LOG3("\t   Container field: " << field->name);
 
         field->foreach_alloc(ctxt, use, [&](const PHV::AllocSlice &alloc) {
+            // Filter out alloc slices not in container
             if (alloc.container() != c) return;
+            // If a slice is an uninitialized read then no bits are effectively occupied by that
+            // slice within the container
             if (alloc.isUninitializedRead()) return;
             le_bitrange bits = alloc.container_slice();
 

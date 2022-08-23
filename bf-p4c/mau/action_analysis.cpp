@@ -1,4 +1,5 @@
 #include "action_analysis.h"
+#include "lib/log.h"
 #include "resource.h"
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/device.h"
@@ -113,6 +114,15 @@ std::string ActionAnalysis::ActionParam::to_string() const {
     return str.str();
 }
 
+const IR::Expression *ActionAnalysis::ActionParam::unsliced_expr() const {
+    if (expr == nullptr)
+        return expr;
+    if (auto *sl = expr->to<IR::Slice>())
+        return sl->e0;
+    return expr;
+}
+
+
 std::string ActionAnalysis::FieldAction::to_string() const {
     std::stringstream str;
     str << *this;
@@ -216,21 +226,23 @@ void ActionAnalysis::initialize_phv_field(const IR::Expression *expr) {
 }
 
 void ActionAnalysis::initialize_action_data(const IR::Expression *expr) {
+    Log::TempIndent indent;
+    LOG5("Initialize action data for expr : " << expr << indent);
     field_action.reads.emplace_back(ActionParam::ACTIONDATA, expr);
     if (auto *ao = field_action.reads.back().unsliced_expr()->to<IR::MAU::AttachedOutput>()) {
-        LOG5("\t\t Action Data is Attached Output");
+        LOG5("Action Data is Attached Output");
         field_action.reads.back().speciality = classify_attached_output(ao); }
     if (field_action.reads.back().unsliced_expr()->is<IR::MAU::HashDist>()) {
-        LOG5("\t\t Action Data is HASH_DIST");
+        LOG5("Action Data is HASH_DIST");
         field_action.reads.back().speciality = ActionParam::HASH_DIST; }
     if (field_action.reads.back().unsliced_expr()->is<IR::MAU::StatefulCounter>()) {
-        LOG5("\t\t Action Data is STFUL_COUNTER");
+        LOG5("Action Data is STFUL_COUNTER");
         field_action.reads.back().speciality = ActionParam::STFUL_COUNTER; }
     if (field_action.reads.back().unsliced_expr()->is<IR::MAU::RandomNumber>()) {
-        LOG5("\t\t Action Data is RANDOM");
+        LOG5("Action Data is RANDOM");
         field_action.reads.back().speciality = ActionParam::RANDOM; }
     if (field_action.reads.back().unsliced_expr()->is<IR::MAU::ConditionalArg>()) {
-        LOG5("\t\t Action Data is Conditional");
+        LOG5("Action Data is Conditional");
         field_action.reads.back().is_conditional = true;
     }
 }
@@ -319,93 +331,15 @@ const IR::MAU::ActionArg *ActionAnalysis::isActionArg(const IR::Expression *e,
 }
 
 
-std::ostream &operator<<(std::ostream &out, const ActionAnalysis::Alignment& a) {
-    out << "align [ R: " << a.read_bits << ", W: " << a.write_bits << " ]";
-    return out;
-}
-
-std::ostream &operator<<(std::ostream &out, const ActionAnalysis::ActionParam &ap) {
-    out << ap.expr;
-    return out;
-}
-
-
-const IR::Expression *ActionAnalysis::ActionParam::unsliced_expr() const {
-    if (expr == nullptr)
-        return expr;
-    if (auto *sl = expr->to<IR::Slice>())
-        return sl->e0;
-    return expr;
-}
-
-
-std::ostream &operator<<(std::ostream &out, const ActionAnalysis::FieldAction &fa) {
-    out << fa.name << " ";
-    out << fa.write;
-    for (auto &read : fa.reads)
-        out << ", " << read;
-    return out;
-}
-
-const std::vector<cstring> ActionAnalysis::ContainerAction::error_code_string_t = {
-    // "NO_PROBLEM", // Set to 0 so not indexed
-    "MULTIPLE_CONTAINER_ACTIONS",
-    "READ_PHV_MISMATCH",
-    "ACTION_DATA_MISMATCH",
-    "CONSTANT_MISMATCH",
-    "TOO_MANY_PHV_SOURCES",
-    "IMPOSSIBLE_ALIGNMENT",
-    "CONSTANT_TO_ACTION_DATA",
-    "MULTIPLE_ACTION_DATA",
-    "ILLEGAL_OVERWRITE",
-    "BIT_COLLISION",
-    "OPERAND_MISMATCH",
-    "UNHANDLED_ACTION_DATA",
-    "DIFFERENT_READ_SIZE",
-    "MAU_GROUP_MISMATCH",
-    "PHV_AND_ACTION_DATA",
-    "PARTIAL_OVERWRITE",
-    "MULTIPLE_SHIFTS",
-    "ILLEGAL_ACTION_DATA",
-    "REFORMAT_CONSTANT",
-    "UNRESOLVED_REPEATED_ACTION_DATA",
-    "ATTACHED_OUTPUT_ILLEGAL_ALIGNMENT",
-    "CONSTANT_TO_HASH",
-    "ILLEGAL_MOCHA_OR_DARK_WRITE",
-    "BIT_COLLISION_SET",
-};
-
-
-std::ostream &operator<<(std::ostream &out, const ActionAnalysis::ContainerAction &ca) {
-    out << "{ Field Actions : ";
-    for (auto &fa : ca.field_actions) {
-        out << fa << "; ";
-    }
-    out << ", error_code: " << std::hex << ca.error_code;
-    out << " - [ ";
-    int i = 0;
-    unsigned error_code = ca.error_code;
-    while (error_code>>i) {
-        if ((error_code>>i) & 0x1) {
-            out << " " << ActionAnalysis::ContainerAction::error_code_string_t[i];
-        }
-       i++;
-       if (i>=(int)ActionAnalysis::ContainerAction::error_code_string_t.size()) break;
-    }
-    out << " ]";
-    out << " }";
-    return out;
-}
-
 bool ActionAnalysis::preorder(const IR::MAU::Instruction *instr) {
-    LOG5("ActionAnalysis preorder on instruction : " << *instr);
+    LOG4("ActionAnalysis preorder on instruction : " << *instr);
     field_action.clear();
     field_action.name = instr->name;
     return true;
 }
 
 bool ActionAnalysis::preorder(const IR::MAU::ActionArg *arg) {
-    LOG5("ActionAnalysis preorder on ActionArg : " << *arg);
+    LOG4("ActionAnalysis preorder on ActionArg : " << *arg);
     if (!findContext<IR::MAU::Instruction>())
         return false;
 
@@ -414,7 +348,7 @@ bool ActionAnalysis::preorder(const IR::MAU::ActionArg *arg) {
 }
 
 bool ActionAnalysis::preorder(const IR::MAU::ConditionalArg *ca) {
-    LOG5("ActionAnalysis preorder on ConditionalArg : " << *ca);
+    LOG4("ActionAnalysis preorder on ConditionalArg : " << *ca);
     initialize_action_data(ca);
     return false;
 }
@@ -427,13 +361,13 @@ bool ActionAnalysis::preorder(const IR::BFN::ReinterpretCast*) {
 }
 
 bool ActionAnalysis::preorder(const IR::Constant *constant) {
-    LOG5("ActionAnalysis preorder on const : " << *constant);
+    LOG4("ActionAnalysis preorder on const : " << *constant);
     field_action.reads.emplace_back(ActionParam::CONSTANT, constant);
     return false;
 }
 
 bool ActionAnalysis::preorder(const IR::MAU::ActionDataConstant *adc) {
-    LOG5("ActionAnalysis preorder on ADConst : " << *adc);
+    LOG4("ActionAnalysis preorder on ADConst : " << *adc);
     field_action.reads.emplace_back(ActionParam::ACTIONDATA, adc);
     return false;
 }
@@ -449,12 +383,14 @@ bool ActionAnalysis::preorder(const IR::MAU::IXBarExpression *) {
 }
 
 bool ActionAnalysis::preorder(const IR::MAU::AttachedOutput *ao) {
+    LOG4("ActionAnalysis preorder on AttachedOutput: " << *ao);
     auto speciality = classify_attached_output(ao);
     field_action.reads.emplace_back(ActionParam::ACTIONDATA, ao, speciality);
     return false;
 }
 
 bool ActionAnalysis::preorder(const IR::MAU::RandomNumber *rn) {
+    LOG4("ActionAnalysis preorder on RandomNumber: " << *rn);
     field_action.reads.emplace_back(ActionParam::ACTIONDATA, rn, ActionParam::RANDOM);
     return false;
 }
@@ -473,7 +409,7 @@ bool ActionAnalysis::preorder(const IR::MAU::StatefulCounter *sc) {
 }
 
 bool ActionAnalysis::preorder(const IR::Slice *sl) {
-    LOG5("ActionAnalysis preorder on Slice : " << *sl);
+    LOG4("ActionAnalysis preorder on Slice : " << *sl);
     if (phv.field(sl)) {
         initialize_phv_field(sl);
     } else if (isActionParam(sl)) {
@@ -481,7 +417,7 @@ bool ActionAnalysis::preorder(const IR::Slice *sl) {
     } else if (isStrengthReducible(sl)) {
         // ignore, will be strength reduced
     } else {
-        LOG1("ERROR: Slice is of IR structure not handled by ActionAnalysis");
+        LOG1("ERROR: Slice is of IR structure not handled by ActionAnalysis: " << sl);
     }
     // Constants should not be in slices ever, they should just be either refactored into
     // action data, or already separately split constants with different values
@@ -493,14 +429,14 @@ bool ActionAnalysis::preorder(const IR::Cast *) {
 }
 
 bool ActionAnalysis::preorder(const IR::MAU::Primitive *prim) {
-    LOG5("ActionAnalysis preorder on Primitive : " << *prim);
+    LOG4("ActionAnalysis preorder on Primitive : " << *prim);
     BUG("%s: Primitive %s was not correctly converted in Instruction Selection", prim->srcInfo,
         prim);
     return false;
 }
 
 bool ActionAnalysis::preorder(const IR::Expression *expr) {
-    LOG5("ActionAnalysis preorder on Expression : " << *expr);
+    LOG4("ActionAnalysis preorder on Expression : " << *expr);
     if (phv.field(expr)) {
         initialize_phv_field(expr);
     } else {
@@ -518,6 +454,7 @@ bool ActionAnalysis::preorder(const IR::Mux *mux) {
 }
 
 bool ActionAnalysis::preorder(const IR::Member *mem) {
+    LOG4("ActionAnalysis postorder on member: " << mem);
     if (mem->expr->is<IR::MAU::AttachedOutput>()) return true;
     return preorder(static_cast<const IR::Expression *>(mem));
 }
@@ -527,7 +464,8 @@ bool ActionAnalysis::preorder(const IR::Member *mem) {
  *  later.
  */
 void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
-    LOG5("ActionAnalysis postorder on instruction : " << instr);
+    Log::TempIndent indent;
+    LOG4("ActionAnalysis postorder on instruction : " << instr << indent);
     if (!field_action.write_found) {
         LOG1("ERROR: Nothing written in the instruction " << instr);
     }
@@ -548,11 +486,11 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
             if (container_actions_map->find(container) == container_actions_map->end()) {
                 ContainerAction cont_action(instr->name, tbl);
                 container_actions_map->emplace(container, cont_action);
-                LOG5("  Adding container " << container << " to container_action_map");
+                LOG5("Adding container " << container << " to container_action_map");
             }
             if (!split) {
                 (*container_actions_map)[container].field_actions.push_back(field_action);
-                LOG5("  Adding field action " << field_action << " to container " << container);
+                LOG5("Adding field action " << field_action << " to container " << container);
             } else {
                 FieldAction field_action_split;
                 field_action_split.name = field_action.name;
@@ -569,7 +507,7 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
                     field_action_split.reads.back().is_conditional = read.is_conditional;
                 }
                 (*container_actions_map)[container].field_actions.push_back(field_action_split);
-                LOG5("  Adding field action split " << field_action_split
+                LOG5("Adding field action split " << field_action_split
                                 << " to container " << container);
             }
         });
@@ -601,6 +539,7 @@ void ActionAnalysis::verify_conditional_set_without_phv(cstring action_name, Fie
                  fa.to_string(), action_name);
        warning = true;
        fa.error_code |= FieldAction::BAD_CONDITIONAL_SET;
+       LOG4("Error Code Update: BAD_CONDITIONAL_SET");
        return;
     }
     op_idx++;
@@ -619,6 +558,8 @@ void ActionAnalysis::verify_conditional_set_without_phv(cstring action_name, Fie
  *  If this check is post BackendCopyPropagation, we have gone from sequential to parallel.
  */
 bool ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
+    Log::TempIndent indent;
+    LOG4("Verifying P4 Action without phv for : " << action_name << indent);
     ordered_map<const PHV::Field *, bitvec> written_fields;
 
     for (auto& field_action_info : *field_actions_map) {
@@ -640,6 +581,7 @@ bool ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
                                   action_name, cstring::to_cstring(read));
                     }
                     field_action.error_code |= FieldAction::READ_AFTER_WRITES;
+                    LOG4("Error Code Update: READ_AFTER_WRITES");
                     warning = true;
                 }
             }
@@ -655,6 +597,7 @@ bool ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
                     ::warning("Action %s has repeated lvalue %s", action_name, field->name);
                 }
                 field_action.error_code |= FieldAction::REPEATED_WRITES;
+                LOG4("Error Code Update: REPEATED_WRITES");
                 warning = true;
             }
             written_fields[field] |= write_bits;
@@ -677,6 +620,7 @@ bool ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
                                   action_name, cstring::to_cstring(field_action));
                     }
                     field_action.error_code |= FieldAction::MULTIPLE_ACTION_DATA;
+                    LOG4("Error Code Update: MULTIPLE_ACTION_DATA");
                     warning = true;
                 }
             }
@@ -691,6 +635,7 @@ bool ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
                                   cstring::to_cstring(read));
                     }
                     field_action.error_code |= FieldAction::DIFFERENT_OP_SIZE;
+                    LOG4("Error Code Update: DIFFERENT_OP_SIZE");
                     warning = true;
                 }
             }
@@ -761,6 +706,7 @@ bool ActionAnalysis::initialize_alignment(const ActionParam &write, const Action
         && !cont_action.is_shift()) {
         error_message += "the number of bits in the write and read aren't equal";
         cont_action.error_code |= ContainerAction::DIFFERENT_READ_SIZE;
+        LOG4("Error Code Update: DIFFERENT_READ_SIZE");
         if (read.type == ActionParam::ACTIONDATA)
             cont_action.adi.specialities.setbit(read.speciality);
         return false;
@@ -813,6 +759,8 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, ContainerAction
         le_bitrange write_bits, const PHV::Container container, cstring &error_message) {
     le_bitrange range;
     auto *field = phv.field(read.expr, &range);
+    Log::TempIndent indent;
+    LOG3("Init PHV Alignment for read field :" << field << indent);
 
     BUG_CHECK(field, "%1%: Operand %2% of instruction %3% operating on container %4% must be "
               "a PHV.", read.expr->srcInfo, read.expr, cont_action, container);
@@ -844,12 +792,16 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, ContainerAction
              hi = write_bits.hi;
          }
          le_bitrange mini_write_bits(lo, hi);
+         LOG3("Read Bits: " << read_bits << " Write Bits: " << write_bits);
          auto &init_phv_alignment = cont_action.initialization_phv_alignment;
-         if (init_phv_alignment.find(alloc.container()) == init_phv_alignment.end()) {
-             init_phv_alignment[alloc.container()].emplace_back(mini_write_bits, read_bits);
+         auto c = alloc.container();
+         if (init_phv_alignment.find(c) == init_phv_alignment.end()) {
+             init_phv_alignment[c].emplace_back(mini_write_bits, read_bits);
          } else {
-             init_phv_alignment[alloc.container()].emplace_back(mini_write_bits, read_bits);
+             init_phv_alignment[c].emplace_back(mini_write_bits, read_bits);
          }
+         LOG3("Updated PHV alignment for container " << c
+                 << " - " << init_phv_alignment[alloc.container()]);
     });
 
     // Check if this is read in a form of "0 ++ <PHV_field>"
@@ -1063,7 +1015,6 @@ void ActionAnalysis::initialize_constant(const ActionParam &read,
         le_bitrange mini_write_bits = { write_lo, write_hi };
         bits_seen += read_bits.size();
 
-
         cont_action.ci.alignment.add_alignment(mini_write_bits, read_bits);
         uint32_t shift = write_bits.size() - bits_seen;
         uint32_t mask = read_bits.size() == 32 ? 0xffffffff
@@ -1136,6 +1087,9 @@ bool ActionAnalysis::init_constant_alignment(const ActionParam &read,
  */
 bool ActionAnalysis::init_simple_alignment(const ActionParam &read,
          ContainerAction &cont_action, le_bitrange write_bits) {
+    Log::TempIndent indent;
+    LOG5("Init simple alignment for read param " << read
+            << " and write bits "<< write_bits << indent);
     if (read.type == ActionParam::ACTIONDATA)
         BUG_CHECK(isActionParam(read.expr), "Action Data parameter not configured properly "
                                              "in ActionAnalysis pass");
@@ -1144,6 +1098,12 @@ bool ActionAnalysis::init_simple_alignment(const ActionParam &read,
                                                   "in ActionAnalysis pass");
 
     le_bitrange read_bits = write_bits;
+    // FIXME: This looks wrong, read and write bits are assigned the same here.
+    // It will cover up any issues with misaligned operands.
+    // One possible explanation is to allow deposit field instructions to work since they can be
+    // misaligned. But that should be fixed via checks (which exist?) to verify deposit fields
+    // Below fix sets the read bits correctly.
+    // le_bitrange read_bits = read.range();
     if (read.type == ActionParam::ACTIONDATA) {
         cont_action.adi.alignment.add_alignment(write_bits, read_bits);
         cont_action.adi.initialized = true;
@@ -1153,7 +1113,8 @@ bool ActionAnalysis::init_simple_alignment(const ActionParam &read,
         initialize_constant(read, cont_action, write_bits, read_bits_brs);
     }
     cont_action.counts[read.type]++;
-    LOG5("Updating counts for " << read.type << " " << cont_action.counts[read.type]);
+    LOG5("Updating counts for " << read.get_type_string()
+                << " = " << cont_action.counts[read.type]);
     return true;
 }
 
@@ -1227,15 +1188,18 @@ void ActionAnalysis::determine_unused_bits(PHV::Container container,
  *  mark an instruction currently impossible or not yet implemented if it is either.
  */
 bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
+    Log::TempIndent indent;
     if (verbose)
-        LOG2("Action " << action_name << " in table " << tbl->name);
+        LOG2("Action " << action_name << " in table " << tbl->name << indent);
     for (auto &container_action : *container_actions_map) {
         auto &container = container_action.first;
         auto &cont_action = container_action.second;
         cont_action.verbose = verbose;
 
-        if (verbose)
-            LOG2("  Action over container " << container.toString() << ": " << cont_action);
+        if (verbose) {
+            LOG2("container :" << container);
+            LOG2("Field Actions:" << cont_action.field_actions);
+        }
         cstring instr_name;
         bool same_action = true;
         BUG_CHECK(cont_action.field_actions.size() > 0, "Somehow a container action has no "
@@ -1257,10 +1221,12 @@ bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
             if (instr_name == "to-bitmasked-set") {
                 if (field_action.name != "set" && field_action.name != "conditionally-set") {
                     cont_action.error_code |= ContainerAction::MULTIPLE_CONTAINER_ACTIONS;
+                    LOG4("Error Code Update: MULTIPLE_CONTAINER_ACTIONS");
                     same_action = false;
                 }
             } else if (instr_name != field_action.name) {
                 cont_action.error_code |= ContainerAction::MULTIPLE_CONTAINER_ACTIONS;
+                LOG4("Error Code Update: MULTIPLE_CONTAINER_ACTIONS");
                 same_action = false;
             }
         }
@@ -1274,6 +1240,7 @@ bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
         if (!same_action) continue;
 
         cont_action.name = instr_name;
+        // FIXME: total_init value set but unused
         bool total_init = true;
         for (auto &field_action : cont_action.field_actions) {
             auto &write = field_action.write;
@@ -1504,21 +1471,29 @@ bool ActionAnalysis::TotalAlignment::is_wrapped_shift(PHV::Container container, 
  *    - Sources are not both non-contiguous and non-aligned
  */
 bool ActionAnalysis::TotalAlignment::verify_individual_alignments(PHV::Container &container) {
-    LOG3("ActionAnalysis::TotalAlignment::verify_individual_alignments on container : "
-            << container);
+    Log::TempIndent indent;
+    LOG4("ActionAnalysis::TotalAlignment::verify_individual_alignments on container : "
+            << container << indent);
     bool right_shift_set = false;
     for (auto indiv_align : indiv_alignments) {
         int possible_right_shift = indiv_align.right_shift(container);
-        if (right_shift_set && possible_right_shift != right_shift)
+        LOG5("Checking indiv_alignment: " << indiv_align
+                << ", possible_right_shift: " << possible_right_shift);
+        if (right_shift_set && possible_right_shift != right_shift) {
+            LOG4("Right shift not possible on alignment");
             return false;
+        }
         right_shift = possible_right_shift;
         right_shift_set = true;
     }
     // For mocha and dark containers, individual writes need to be aligned with their sources.
     if (container.is(PHV::Kind::mocha) || container.is(PHV::Kind::dark)) {
-        if (!aligned())
+        if (!aligned()) {
+            LOG4("Individual writes not aligned on mocha or dark containers");
             return false;
+        }
     }
+    LOG4("Verified");
     return true;
 }
 
@@ -1630,6 +1605,8 @@ bool ActionAnalysis::ContainerAction::is_byte_rotate_merge(PHV::Container contai
  */
 bool ActionAnalysis::ContainerAction::verify_deposit_field_variant(PHV::Container container,
         TotalAlignment &ad_alignment) {
+    Log::TempIndent indent;
+    LOG5("Verifying deposit field variant for container: " << container << indent);
     TotalAlignment *single_src_alignment = nullptr;
     if (ad_sources()) {
         single_src_alignment = &ad_alignment;
@@ -1639,8 +1616,10 @@ bool ActionAnalysis::ContainerAction::verify_deposit_field_variant(PHV::Containe
     }
 
     if (ad_sources()) {
-        if (!ad_alignment.contiguous())
+        if (!ad_alignment.contiguous()) {
+            LOG5("AD alignment is not contiguous");
             return false;
+        }
     }
 
     int max_phv_non_aligned = ad_sources() ? 0 : 1;
@@ -1649,12 +1628,17 @@ bool ActionAnalysis::ContainerAction::verify_deposit_field_variant(PHV::Containe
     int phv_non_aligned = 0;
     int phv_non_contiguous = 0;
     for (auto phv_ta : Values(phv_alignment)) {
-        if (!phv_ta.aligned() && !phv_ta.contiguous())
+        LOG5("PHV alignment: " << phv_ta);
+        if (!phv_ta.aligned() && !phv_ta.contiguous()) {
+            LOG5("PHV is not aligned or contiguous");
             return false;
+        }
         phv_non_contiguous += phv_ta.contiguous() ? 0 : 1;
         phv_non_aligned += phv_ta.aligned() ? 0 : 1;
     }
 
+    LOG5("Read sources: " << read_sources() << ", single_src_alignment: "
+            << (single_src_alignment ? *single_src_alignment : TotalAlignment()));
     if (read_sources() == 2) {
         convert_instr_to_deposit_field = true;
         LOG5("  A. Convert instr to deposit field");
@@ -1934,7 +1918,6 @@ void ActionAnalysis::ContainerAction::determine_implicit_bits(PHV::Container con
             }
         }
 
-
         BUG_CHECK((src1_mask & src2_mask).empty() &&
                   (src1_mask | src2_mask).popcount() == static_cast<int>(container.size()) &&
                   (src1_mask | src2_mask).is_contiguous(), "Byte rotate merge implicit bits "
@@ -1964,11 +1947,18 @@ void ActionAnalysis::ContainerAction::determine_implicit_bits(PHV::Container con
 }
 
 bool ActionAnalysis::ContainerAction::verify_alignment(PHV::Container &container) {
-    LOG3("Verifying alignment");
+    Log::TempIndent indent;
+    LOG3("Verifying alignment" << indent);
+    LOG4("ADI: " << adi.alignment);
+    LOG4("CI: " << ci.alignment);
     TotalAlignment ad_alignment = adi.alignment | ci.alignment;
-    if (ad_sources())
-        if (!ad_alignment.verify_individual_alignments(container))
+    if (ad_sources()) {
+        LOG4("Checking action data sources " << ad_alignment);
+        if (!ad_alignment.verify_individual_alignments(container)) {
+            LOG3("Cannot verify individual alignments on Action Data");
             return false;
+        }
+    }
 
     if (adi.initialized)
         adi.alignment.right_shift = ad_alignment.right_shift;
@@ -1976,27 +1966,40 @@ bool ActionAnalysis::ContainerAction::verify_alignment(PHV::Container &container
         ci.alignment.right_shift = ad_alignment.right_shift;
 
 
-    for (auto &ta : Values(phv_alignment))
-        if (!ta.verify_individual_alignments(container))
+    for (auto &ta : Values(phv_alignment)) {
+        LOG4("Checking phv source " << ta);
+        if (!ta.verify_individual_alignments(container)) {
+            LOG3("Cannot verify individual alignments on PHV");
             return false;
+        }
+    }
 
     if (is_from_set()) {
+        LOG4("Checking set ");
         if (container.is(PHV::Kind::normal)) {
-            if (!verify_set_alignment(container, ad_alignment))
+            if (!verify_set_alignment(container, ad_alignment)) {
+                LOG3("Cannot verify set alignment");
                 return false;
+            }
         }
     } else {
-        if (!ad_alignment.aligned())
+        LOG4("Checking non set ");
+        if (!ad_alignment.aligned()) {
+            LOG3("Cannot verify non set alignment on Action Data");
             return false;
+        }
         for (auto &ta : Values(phv_alignment)) {
-            if (!ta.aligned())
+            if (!ta.aligned()) {
+                LOG3("Cannot verify non set alignment on PHV");
                 return false;
+            }
         }
     }
     determine_src1();
     ad_alignment.is_src1 = ci.alignment.is_src1 | adi.alignment.is_src1;
 
     determine_implicit_bits(container, ad_alignment);
+    LOG3("Verified all alignments");
     return true;
 }
 
@@ -2021,13 +2024,15 @@ bitvec ActionAnalysis::ContainerAction::specialities() const {
  */
 bool ActionAnalysis::ContainerAction::verify_overwritten(const PHV::Container container,
                                                          const PhvInfo &phv) {
+    Log::TempIndent indent;
+    LOG3("Verify_overwritten for container " << container << indent);
     ordered_set<const PHV::Field*> fieldsWritten;
     for (auto& field_action : field_actions) {
         const PHV::Field* write_field = phv.field(field_action.write.expr);
         if (write_field == nullptr)
             BUG("Verify Overwritten: Action does not have a write?");
         fieldsWritten.insert(write_field);
-        LOG4("\t Overwrite: Adding written field " << write_field->name << " for expr " <<
+        LOG4("Overwrite: Adding written field " << write_field->name << " for expr " <<
              field_action.write.expr);
     }
 
@@ -2035,20 +2040,21 @@ bool ActionAnalysis::ContainerAction::verify_overwritten(const PHV::Container co
     // Collect bitvec of non (mutually/meta/dark) exclusive fieldslices on @container
     // for fields in @fieldWritten
     bitvec container_occupancy = phv.bits_allocated(container, fieldsWritten, table_context, &use);
-    if (container_occupancy.empty()) {
-        LOG4("Verify_overwritten: container_occupancy is empty");
-        return true;
-    }
 
     bitvec total_write_bits;
     for (auto &tot_align_info : phv_alignment) {
         total_write_bits |= tot_align_info.second.direct_write_bits;
     }
 
-    LOG4("\t Overwrite masks - container:" << container_occupancy << " total_write: " <<
+    LOG4("Overwrite masks - container:" << container_occupancy << " total_write: " <<
          total_write_bits);
-    LOG4("\t Overwrite masks - adi:" << adi.alignment.direct_write_bits <<
+    LOG4("Overwrite masks - adi:" << adi.alignment.direct_write_bits <<
          " ci: " << ci.alignment.direct_write_bits << " invalid: " << invalidate_write_bits);
+
+    if (container_occupancy.empty()) {
+        LOG3("container_occupancy is empty");
+        return true;
+    }
 
     total_write_bits |= adi.alignment.direct_write_bits;
     total_write_bits |= ci.alignment.direct_write_bits;
@@ -2075,11 +2081,13 @@ bool ActionAnalysis::ContainerAction::verify_overwritten(const PHV::Container co
     }
 
     if ((total_write_bits | preserved_bits) != container_occupancy) {
+        LOG3("Total write bits or preserved bits not equal to container occupancy");
         return false;
     }
 
     if (static_cast<size_t>(total_write_bits.popcount()) != container.size()) {
         error_code |= PARTIAL_OVERWRITE;
+        LOG4("Error Code Update: PARTIAL_OVERWRITE");
     }
     return true;
 }
@@ -2140,6 +2148,7 @@ void ActionAnalysis::check_single_ad_params(ContainerAction &cont_action) {
             continue;
         if (multiple_ad_params.count(std::make_pair(aa->name, aa_range)) > 0)
             cont_action.error_code |= ContainerAction::UNRESOLVED_REPEATED_ACTION_DATA;
+            LOG4("Error Code Update: UNRESOLVED_REPEATED_ACTION_DATA");
     }
 }
 
@@ -2171,6 +2180,7 @@ void ActionAnalysis::check_constant_to_actiondata(ContainerAction &cont_action,
     auto &counts = cont_action.counts;
     if (counts[ActionParam::ACTIONDATA] > 1 && ad_alloc) {
         cont_action.error_code |= ContainerAction::MULTIPLE_ACTION_DATA;
+        LOG4("Error Code Update: MULTIPLE_ACTION_DATA");
     }
 
     if (counts[ActionParam::CONSTANT] == 0)
@@ -2181,11 +2191,13 @@ void ActionAnalysis::check_constant_to_actiondata(ContainerAction &cont_action,
 
     if (cont_action.specialities().getbit(ActionParam::HASH_DIST)) {
         cont_action.error_code |= ContainerAction::CONSTANT_TO_HASH;
+        LOG4("Error Code Update: CONSTANT_TO_HASH");
         return;
     }
 
     if (counts[ActionParam::ACTIONDATA] > 0 && counts[ActionParam::CONSTANT] > 0) {
         cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
+        LOG4("Error Code Update: CONSTANT_TO_ACTION_DATA");
         return;
     }
     unsigned constant_value;
@@ -2207,6 +2219,7 @@ void ActionAnalysis::check_constant_to_actiondata(ContainerAction &cont_action,
         cont_action.convert_instr_to_byte_rotate_merge) {
         // Bitmasked-set or Byte-rotate-merge must be converted to action data
         cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
+        LOG4("Error Code Update: CONSTANT_TO_ACTION_DATA");
         return;
     } else if (container.is(PHV::Kind::mocha)) {
         constant_value = cont_action.ci.build_constant();
@@ -2214,6 +2227,7 @@ void ActionAnalysis::check_constant_to_actiondata(ContainerAction &cont_action,
                                                 const_src_min, container.size());
         if (valid == EncodeConstant::NotPossible) {
              cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
+             LOG4("Error Code Update: CONSTANT_TO_ACTION_DATA");
              return;
         }
         cont_action.ci.signExtend = valid == EncodeConstant::WithSignExtend;
@@ -2226,6 +2240,7 @@ void ActionAnalysis::check_constant_to_actiondata(ContainerAction &cont_action,
         constant_value = cont_action.ci.build_constant();
         if (constant_value >= (1U << LOADCONST_MAX)) {
             cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
+            LOG4("Error Code Update: CONSTANT_TO_ACTION_DATA");
             return;
         }
     } else if (cont_action.name != "set") {
@@ -2235,6 +2250,7 @@ void ActionAnalysis::check_constant_to_actiondata(ContainerAction &cont_action,
                                                 const_src_min, container.size());
         if (valid == EncodeConstant::NotPossible) {
             cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
+            LOG4("Error Code Update: CONSTANT_TO_ACTION_DATA");
             return;
         }
         cont_action.ci.signExtend = valid == EncodeConstant::WithSignExtend;
@@ -2246,11 +2262,13 @@ void ActionAnalysis::check_constant_to_actiondata(ContainerAction &cont_action,
                                                     container.size(), constant_size);
         if (valid == EncodeConstant::NotPossible) {
             cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
+            LOG4("Error Code Update: CONSTANT_TO_ACTION_DATA");
         } else {
             cont_action.ci.signExtend = valid == EncodeConstant::WithSignExtend;
         }
         if (constant_value > ((1U << CONST_SRC_MAX) - 1)) {
             cont_action.error_code |= ContainerAction::REFORMAT_CONSTANT;
+            LOG4("Error Code Update: REFORMAT_CONSTANT");
         }
     }
     cont_action.ci.constant_value = constant_value;
@@ -2399,6 +2417,7 @@ bool ActionAnalysis::ContainerAction::verify_speciality(cstring &error_message,
                              "data for the ALU operation to go to multiple action data bus "
                              "slots, while the ALU operation can only pull from one.";
             error_code |= ATTACHED_OUTPUT_ILLEGAL_ALIGNMENT;
+            LOG4("Error Code Update: ATTACHED_OUTPUT_ILLEGAL_ALIGNMENT");
             return false;
         }
     }
@@ -2419,12 +2438,14 @@ bool ActionAnalysis::ContainerAction::verify_shift(cstring &error_message,
                                                    const PhvInfo &phv) {
     if (field_actions.size() > 1) {
         error_code |= MULTIPLE_SHIFTS;
+        LOG4("Error Code Update: MULTIPLE_SHIFTS");
         error_message += "p4c cannot support multiple shift instructions in one container";
         return false;
     }
 
     if (has_ad_or_constant()) {
         error_code |= ILLEGAL_ACTION_DATA;
+        LOG4("Error Code Update: ILLEGAL_ACTION_DATA");
         error_message += "no action data or constant field is allowed in a shift function";
         return false;
     }
@@ -2432,16 +2453,18 @@ bool ActionAnalysis::ContainerAction::verify_shift(cstring &error_message,
     int max_source = is_funnel_shift() ? 2 : 1;
     if (counts[ActionParam::PHV] > max_source) {
         error_code |= TOO_MANY_PHV_SOURCES;
+        LOG4("Error Code Update: TOO_MANY_PHV_SOURCES");
         error_message += "this shift operation can't have more than " +
             cstring::to_cstring(max_source) + " PHV source(s)";
         return false;
     }
 
     LOG4("VERIFY SHIFT");
-    bool total_overwrite_possible = verify_overwritten(container, phv);
+    total_overwrite_possible = verify_overwritten(container, phv);
     total_overwrite_possible |= verify_only_read(phv, max_source);
     if (!total_overwrite_possible) {
         error_code |= ILLEGAL_OVERWRITE;
+        LOG4("Error Code Update: ILLEGAL_OVERWRITE");
         error_message += "either a read or write in a shift operation is not the only field "
                          "within a container";
     }
@@ -2457,6 +2480,7 @@ bool ActionAnalysis::ContainerAction::verify_mocha_and_dark(cstring &error_messa
     int sources_needed = ad_sources() + counts[ActionParam::PHV];
     if (!(sources_needed == 1 && name == "set")) {
         error_code |= ILLEGAL_MOCHA_OR_DARK_WRITE;
+        LOG4("Error Code Update: ILLEGAL_MOCHA_OR_DARK_WRITE");
         error_message += cont_type_name + " containers can only perform assignment operations "
             "from a single source";
         return false;
@@ -2464,6 +2488,7 @@ bool ActionAnalysis::ContainerAction::verify_mocha_and_dark(cstring &error_messa
 
     if (container.is(PHV::Kind::dark) && ad_sources() > 0) {
         error_code |= ILLEGAL_MOCHA_OR_DARK_WRITE;
+        LOG4("Error Code Update: ILLEGAL_MOCHA_OR_DARK_WRITE");
         error_message += "dark containers can only be sourced from PHV containers";
         return false;
     }
@@ -2493,6 +2518,7 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
         bool phv_group_correct = verify_phv_mau_group(container);
         if (!phv_group_correct) {
             error_code |= MAU_GROUP_MISMATCH;
+            LOG4("Error Code Update: MAU_GROUP_MISMATCH");
             error_message += "a read phv is in an incompatible PHV group";
             return false;
         }
@@ -2514,10 +2540,12 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
     if (sources_needed > 2) {
         if (actual_ad) {  // If action data as a source
             error_code |= PHV_AND_ACTION_DATA;
+            LOG4("Error Code Update: PHV_AND_ACTION_DATA");
             error_message += "Action " + action_name + " writes fields using the same assignment "
                 "type but different source operands (both action parameter and phv)";
         } else {          // no action data sources
             error_code |= TOO_MANY_PHV_SOURCES;
+            LOG4("Error Code Update: TOO_MANY_PHV_SOURCES");
             error_message += "over 2 PHV sources for the ALU operation are required, thus rendering"
                 " the action impossible";
         }
@@ -2529,15 +2557,17 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
 
     bool source_to_bit_correct = verify_source_to_bit(operands(), container);
     if (!source_to_bit_correct) {
-        if (is_from_set())
+        if (is_from_set()) {
             error_code |= BIT_COLLISION_SET;
-        else
+            LOG4("Error Code Update: BIT_COLLISION_SET");
+        } else {
             error_code |= BIT_COLLISION;
+            LOG4("Error Code Update: BIT_COLLISION");
+        }
         error_message += "every write bit does not have a corresponding "
                          + cstring::to_cstring(operands()) + " or 0 read bits.";
         return false;
     }
-
 
     if (!is_from_set() && sources_needed != operands()) {
         // P4C-4757
@@ -2558,6 +2588,7 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
         // beginning of InstructionAdjustment which should prevent the code from reaching here with
         // the invalid instruction
         error_code |= OPERAND_MISMATCH;
+        LOG4("Error Code Update: OPERAND_MISMATCH");
         error_message += ("the number of operands(" + std::to_string(operands())
             + ") does not match the number of sources(" + std::to_string(sources_needed) + ")");
         return false;
@@ -2566,6 +2597,7 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
     bool aligned = verify_alignment(container);
     if (!aligned) {
         error_code |= IMPOSSIBLE_ALIGNMENT;
+        LOG4("Error Code Update: IMPOSSIBLE_ALIGNMENT");
         error_message += "the alignment of fields within the container renders the action "
                          "impossible";
         return false;
@@ -2575,10 +2607,11 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
     check_overwrite |= (is_from_set() && read_sources() == 2);
 
     if (check_overwrite) {
-        LOG4("CHECK OVERWRITE");
-        bool total_overwrite_possible = verify_overwritten(container, phv);
+        LOG4("Checking overwrite");
+        total_overwrite_possible = verify_overwritten(container, phv);
         if (!total_overwrite_possible) {
             error_code |= ILLEGAL_OVERWRITE;
+            LOG4("Error Code Update: ILLEGAL_OVERWRITE");
             error_message += "the container is not completely overwritten when the operand is "
                              "over the entire container";
             return false;
@@ -2586,14 +2619,129 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
     }
     if (convert_instr_to_bitmasked_set || convert_instr_to_byte_rotate_merge) {
         error_code |= PARTIAL_OVERWRITE;
+        LOG4("Error Code Update: PARTIAL_OVERWRITE");
     }
 
     return true;
 }
 
 void ActionAnalysis::postorder(const IR::MAU::Action *act) {
+    Log::TempIndent indent;
+    LOG3("ActionAnalysis postorder on action: " << act << indent);
     if (phv_alloc)
         verify_P4_action_with_phv(act->name);
     else
         verify_P4_action_without_phv(act->name);
 }
+
+std::ostream &operator<<(std::ostream &out, const ActionAnalysis::Alignment& a) {
+    out << "align [ R: " << a.read_bits << ", W: " << a.write_bits << " ]";
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const ActionAnalysis::ActionParam &ap) {
+    out << "ActionParam: " << ap.expr
+        << ", type: " << ap.get_type_string()
+        << ", speciality: " << ap.get_speciality_string()
+        << ", is cond: " << ap.is_conditional;
+    return out;
+}
+
+
+std::ostream &operator<<(std::ostream &out, const ActionAnalysis::FieldAction &fa) {
+    out << fa.name << " ";
+    out << fa.write;
+    for (auto &read : fa.reads)
+        out << ", " << read;
+    return out;
+}
+
+const std::vector<cstring> ActionAnalysis::ContainerAction::error_code_string_t = {
+    // "NO_PROBLEM", // Set to 0 so not indexed
+    "MULTIPLE_CONTAINER_ACTIONS",
+    "READ_PHV_MISMATCH",
+    "ACTION_DATA_MISMATCH",
+    "CONSTANT_MISMATCH",
+    "TOO_MANY_PHV_SOURCES",
+    "IMPOSSIBLE_ALIGNMENT",
+    "CONSTANT_TO_ACTION_DATA",
+    "MULTIPLE_ACTION_DATA",
+    "ILLEGAL_OVERWRITE",
+    "BIT_COLLISION",
+    "OPERAND_MISMATCH",
+    "UNHANDLED_ACTION_DATA",
+    "DIFFERENT_READ_SIZE",
+    "MAU_GROUP_MISMATCH",
+    "PHV_AND_ACTION_DATA",
+    "PARTIAL_OVERWRITE",
+    "MULTIPLE_SHIFTS",
+    "ILLEGAL_ACTION_DATA",
+    "REFORMAT_CONSTANT",
+    "UNRESOLVED_REPEATED_ACTION_DATA",
+    "ATTACHED_OUTPUT_ILLEGAL_ALIGNMENT",
+    "CONSTANT_TO_HASH",
+    "ILLEGAL_MOCHA_OR_DARK_WRITE",
+    "BIT_COLLISION_SET",
+};
+
+
+std::ostream &operator<<(std::ostream &out, const ActionAnalysis::ContainerAction &ca) {
+    Log::TempIndent indent;
+    out << "Container Action : " << ca.name << indent;
+    out << Log::endl;
+
+    out << "  Field Actions : [";
+    for (auto &fa : ca.field_actions) {
+        out << fa << "; ";
+    }
+    out << " ] " << Log::endl;
+
+    out << "Error_code: " << std::hex << ca.error_code << std::dec;
+    out << " - [ ";
+    int i = 0;
+    unsigned error_code = ca.error_code;
+    while (error_code>>i) {
+        if ((error_code>>i) & 0x1) {
+            out << " " << ActionAnalysis::ContainerAction::error_code_string_t[i];
+        }
+       i++;
+       if (i>=(int)ActionAnalysis::ContainerAction::error_code_string_t.size()) break;
+    }
+    out << " ]" << Log::endl;
+
+    out << "Convert to [ Bitmasked Set : " << ca.convert_instr_to_bitmasked_set
+        << " Deposit Field : " << ca.convert_instr_to_deposit_field
+        << " Byte Rotate Merge : " << ca.convert_instr_to_byte_rotate_merge
+        << " ]" << Log::endl;
+
+    auto adi_specs = ca.adi.specialities;
+    out << "Action Data ["
+        << " HASH_DIST: " << adi_specs.getbit(ActionAnalysis::ActionParam::HASH_DIST)
+        << " METER COLOR: " << adi_specs.getbit(ActionAnalysis::ActionParam::METER_COLOR)
+        << " RANDOM: " << adi_specs.getbit(ActionAnalysis::ActionParam::RANDOM)
+        << " METER_ALU: " << adi_specs.getbit(ActionAnalysis::ActionParam::METER_ALU)
+        << " STFUL_COUNTER: " << adi_specs.getbit(ActionAnalysis::ActionParam::STFUL_COUNTER)
+        << " ]";
+
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const ActionAnalysis::TotalAlignment &ta) {
+    out << "Total Alignment : ["
+        << " DRB : " << ta.direct_write_bits
+        << " DWB : " << ta.direct_write_bits
+        << " IRB : " << ta.implicit_read_bits
+        << " IWB : " << ta.implicit_write_bits
+        << " UCB : " << ta.unused_container_bits
+        << " ]";
+    out << " contiguous: " << (ta.contiguous() ? "Y" : "N");
+    out << " aligned: " << (ta.aligned() ? "Y" : "N");
+    for (int i = 0; i < (int)ta.indiv_alignments.size(); i++) {
+        if (i == 0) out << Log::endl;
+        out << " - " << ta.indiv_alignments[i];
+        if (i < ((int)ta.indiv_alignments.size() - 1))
+            out << Log::endl;
+    }
+    return out;
+}
+

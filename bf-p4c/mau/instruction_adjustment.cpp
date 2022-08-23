@@ -8,6 +8,8 @@
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/common/asm_output.h"
+#include "lib/indent.h"
+#include "lib/log.h"
 
 /** Splitting shift left instruction when the fields span on multiple
  *  containers. This function try to handle various corner cases relative to
@@ -779,7 +781,8 @@ const IR::MAU::Instruction *ExpressionsToHash::preorder(IR::MAU::Instruction *in
  *  over a container
  */
 const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
-    LOG5("MergeInstructions preorder on action: " << act);
+    Log::TempIndent indent;
+    LOG5("MergeInstructions preorder on action: " << act << indent);
     container_actions_map.clear();
     merged_fields.clear();
     auto tbl = findContext<IR::MAU::Table>();
@@ -798,8 +801,8 @@ const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
     for (auto &container_action : container_actions_map) {
         auto container = container_action.first;
         auto &cont_action = container_action.second;
-        LOG5(" Container Action: " << cont_action
-                << ", error_mask: " << (ActionAnalysis::ContainerAction::error_code_t)error_mask);
+        LOG5(cont_action << ", error_mask: "
+            << (ActionAnalysis::ContainerAction::error_code_t)error_mask);
         if ((cont_action.error_code & error_mask) != 0) continue;
         LOG5(" Container Action ops: " << cont_action.operands()
                 << ", alignment_counts: " << cont_action.alignment_counts());
@@ -809,6 +812,7 @@ const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
                 && !cont_action.convert_instr_to_byte_rotate_merge
                 && !cont_action.adi.specialities.getbit(ActionAnalysis::ActionParam::HASH_DIST)
                 && !cont_action.adi.specialities.getbit(ActionAnalysis::ActionParam::RANDOM)
+                && !cont_action.adi.specialities.getbit(ActionAnalysis::ActionParam::METER_ALU)
                 && (cont_action.error_code & ~error_mask) == 0)
                 continue;
         // Currently skip unresolved ActionAnalysis issues
@@ -829,6 +833,7 @@ const IR::Node *MergeInstructions::preorder(IR::Node *node) {
 }
 
 const IR::MAU::Instruction *MergeInstructions::preorder(IR::MAU::Instruction *instr) {
+    LOG5("MergeInstructions preorder on Instruction: " << instr);
     merged_location = merged_fields.end();
     write_found = false;
     if (instr->name == "sadds" || instr->name == "saddu") {
@@ -927,6 +932,7 @@ const IR::MAU::HashDist *MergeInstructions::preorder(IR::MAU::HashDist *hd) {
 /** If marked for a merge, remove the original instruction to be added back later
  */
 const IR::MAU::Instruction *MergeInstructions::postorder(IR::MAU::Instruction *instr) {
+    LOG5("MergeInstructions::postorder on Instruction: " << instr);
     saturationArith = false;
 
     if (!write_found)
@@ -943,15 +949,19 @@ const IR::MAU::Instruction *MergeInstructions::postorder(IR::MAU::Instruction *i
  *  as a multi-operand
  */
 const IR::MAU::Action *MergeInstructions::postorder(IR::MAU::Action *act) {
-    if (merged_fields.empty())
+    Log::TempIndent indent;
+    LOG5("MergeInstructions::postorder on Action : " << act->name << indent);
+    if (merged_fields.empty()) {
+        LOG5("No merged fields");
         return act;
+    }
 
     for (auto &container_action_info : container_actions_map) {
         auto container = container_action_info.first;
         auto &cont_action = container_action_info.second;
         if (!merged_fields.count(container)) continue;
         act->action.push_back(build_merge_instruction(container, cont_action));
-        LOG5("      Merged instr: " << *(act->action.rbegin()));
+        LOG5("Merged instr: " << *(act->action.rbegin()));
     }
     return act;
 }
@@ -1264,7 +1274,10 @@ void MergeInstructions::build_phv_source(ActionAnalysis::ContainerAction &cont_a
  */
 IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container container,
          ActionAnalysis::ContainerAction &cont_action) {
-    LOG3("Building merge instruction : " << container << " - " << cont_action);
+    Log::TempIndent indent;
+    LOG3("Building merge instruction for container : " << std::dec
+            << container << " on container action : " << cont_action << indent);
+    LOG3(cont_action);
     if (cont_action.is_shift()) {
         unsigned error_mask = ActionAnalysis::ContainerAction::PARTIAL_OVERWRITE;
         BUG_CHECK((cont_action.error_code & error_mask) != 0,
@@ -1272,11 +1285,8 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
         return dest_slice_to_container(container, cont_action);
     }
 
-    const IR::Expression *dst = nullptr;
-    const IR::Expression *src1 = nullptr;
-    const IR::Expression *src2 = nullptr;
-    bitvec src1_writebits;
-    bitvec src2_writebits;
+    const IR::Expression *dst = nullptr, *src1 = nullptr, *src2 = nullptr;
+    bitvec src1_writebits, src2_writebits;
     IR::Vector<IR::Expression> components;
     ByteRotateMergeInfo brm_info;
 
@@ -1301,7 +1311,8 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
             width_bits = container.size();
         src1 = new IR::Constant(IR::Type::Bits::get(width_bits), constant_value);
         src1_writebits = cont_action.ci.alignment.write_bits();
-        LOG5("\t CONSTANT SOURCE for " << cont_action.name << " : " << src1_writebits);
+        LOG5("\t CONSTANT SOURCE for " << cont_action.name
+                << " : " << src1_writebits << ", value: " << src1);
     }
 
 
@@ -1312,7 +1323,7 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
     LOG5("\t PHV SOURCE for " << cont_action.name << " : " << src1_writebits);
 
 
-    // Src1 is not sources from parameters, but instead is equal to the destination: BRIG-914
+    // Src1 is not sourced from parameters, but instead is equal to the destination: P4C-914
     if (cont_action.implicit_src1) {
         BUG_CHECK(src1 == nullptr, "Src1 found in an implicit_src1 calculation");
         src1 = new IR::MAU::MultiOperand(components, container.toString(), true);
@@ -1331,8 +1342,13 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
     auto *dst_mo = new IR::MAU::MultiOperand(components, container.toString(), true);
     fill_out_write_multi_operand(cont_action, dst_mo);
     dst = dst_mo;
-    if (!cont_action.partial_overwrite() && src1_writebits.popcount()
-                                          != static_cast<int>(container.size())) {
+    LOG5("Partial overwrite: " << cont_action.partial_overwrite()
+        << " total overwrite: " << cont_action.total_overwrite_possible
+        << " write bits: " << src1_writebits.popcount()
+        << " container size: " << std::dec << container.size());
+    // Deposit field is the only case which should allow for a slice to be generated
+    if (cont_action.convert_instr_to_deposit_field
+            || cont_action.is_deposit_field_variant) {
         dst = MakeSlice(dst, src1_writebits.min().index(), src1_writebits.max().index());
         LOG5("\t DESTINATION for " << cont_action.name << " : " << dst);
     }
