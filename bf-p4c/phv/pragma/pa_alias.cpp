@@ -82,6 +82,27 @@ boost::optional<std::pair<const PHV::Field*, const PHV::Field*>> PragmaAlias::ma
         return boost::none;
     }
 
+    if (no_overlay.get_no_overlay_fields().count(field1)) {
+        WARN_CHECK(suppressWarning,
+                   "@pragma pa_alias on field %1% which has pa_no_overlay @pragma. "
+                   "@pragma pa_no_overlay will not affect pa_alias @pragma",
+                   field1->name);
+    }
+
+    if (no_overlay.get_no_overlay_fields().count(field2)) {
+        WARN_CHECK(suppressWarning,
+                   "@pragma pa_alias on field %1% which has pa_no_overlay @pragma. "
+                   "@pragma pa_no_overlay will not affect pa_alias @pragma",
+                   field2->name);
+    }
+
+    if (!no_overlay.can_overlay(field1, field2)) {
+        WARN_CHECK(suppressWarning,
+                   "@pragma pa_alias on field pair (%1%, %2%) which have pa_no_overlay @pragma. "
+                   "@pragma pa_no_overlay will not affect pa_alias @pragma",
+                   field1->name, field2->name);
+    }
+
     const PHV::Field* aliasSrc = nullptr;
     const PHV::Field* aliasDest = nullptr;
     if (field2->metadata && !field1->metadata) {

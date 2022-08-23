@@ -94,6 +94,7 @@
 #include "bf-p4c/parde/rewrite_parser_locals.h"
 #include "bf-p4c/parde/stack_push_shims.h"
 #include "bf-p4c/phv/analysis/dark.h"
+#include "bf-p4c/phv/pragma/pa_no_overlay.h"
 #include "bf-p4c/phv/add_alias_allocation.h"
 #include "bf-p4c/phv/allocate_temps_and_finalize_liverange.h"
 #include "bf-p4c/phv/auto_init_metadata.h"
@@ -172,7 +173,8 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         new AllocateClot(clot, phv, uses) : nullptr;
 
     liveRangeReport = new LiveRangeReport(phv, table_summary, defuse);
-    auto *pragmaAlias = new PragmaAlias(phv);
+    auto *noOverlay = new PragmaNoOverlay(phv);
+    auto *pragmaAlias = new PragmaAlias(phv, *noOverlay);
     addPasses({
         new DumpPipe("Initial table graph"),
         flexibleLogging,
@@ -229,11 +231,15 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
                                 "After Instruction Selection"),
         options.decaf ? &decaf : nullptr,
         new CollectPhvInfo(phv),
+        // Collect pa_no_overlay pragmas to find conflicts with PragmaAlias and AutoAlias.
+        // Conflicts with PragmaAlias will generate warnings.
+        // Conflicts with AutoAlias will cancel AutoAlias for conflicting fields or field pairs
+        noOverlay,
         // Aliasing replaces all uses of the alias source field with the alias destination field.
         // Therefore, run it first in the backend to ensure that all other passes use a union of the
         // constraints of the alias source and alias destination fields.
         pragmaAlias,
-        new AutoAlias(phv, *pragmaAlias),
+        new AutoAlias(phv, *pragmaAlias, *noOverlay),
         new Alias(phv, *pragmaAlias),
         new CollectPhvInfo(phv),
         new DumpPipe("After Alias"),

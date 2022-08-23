@@ -7,6 +7,7 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/utils/utils.h"
 #include "bf-p4c/phv/pragma/pretty_print.h"
+#include "bf-p4c/phv/pragma/pa_no_overlay.h"
 
 /** pa_alias pragma support.
  *
@@ -39,6 +40,7 @@ class PragmaAlias : public Inspector, public Pragma::PrettyPrint {
  private:
     const PhvInfo& phv_i;
     AliasMap aliasMap;
+    PragmaNoOverlay& no_overlay;
 
     /// All PHV::Field objects that have expressions associated with them.
     /// This is used to replace IR::Expression objects for aliased fields later.
@@ -55,7 +57,8 @@ class PragmaAlias : public Inspector, public Pragma::PrettyPrint {
     void postorder(const IR::BFN::Pipe* pipe) override;
 
  public:
-    explicit PragmaAlias(PhvInfo& phv) : phv_i(phv) { }
+    explicit PragmaAlias(PhvInfo& phv, PragmaNoOverlay& no_ovrl) :
+        phv_i(phv), no_overlay(no_ovrl) { }
     const AliasMap& getAliasMap() const { return aliasMap; }
 
     /// BFN::Pragma interface

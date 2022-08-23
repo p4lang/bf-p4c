@@ -4,6 +4,7 @@
 #include "lib/bitvec.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/pragma/pa_alias.h"
+#include "bf-p4c/phv/pragma/pa_no_overlay.h"
 
 class DetermineCandidateHeaders : public Inspector {
  private:
@@ -58,6 +59,7 @@ class DetermineCandidateFields : public Inspector {
     const PhvInfo& phv;
     const DetermineCandidateHeaders& headers;
     PragmaAlias& pragma;
+    PragmaNoOverlay& no_overlay;
     const MapDestToInstruction& d2i;
 
     ordered_set<const PHV::Field*> initialCandidateSet;
@@ -77,8 +79,9 @@ class DetermineCandidateFields : public Inspector {
             const PhvInfo& p,
             const DetermineCandidateHeaders& h,
             PragmaAlias& pa,
+            PragmaNoOverlay& no_ovrl,
             const MapDestToInstruction& d)
-        : phv(p), headers(h), pragma(pa), d2i(d) { }
+        : phv(p), headers(h), pragma(pa), no_overlay(no_ovrl), d2i(d) { }
 };
 
 class AutoAlias : public PassManager {
@@ -89,8 +92,8 @@ class AutoAlias : public PassManager {
     DetermineCandidateFields    fields;
 
  public:
-    explicit AutoAlias(const PhvInfo& phv, PragmaAlias& pa)
-    : d2i(phv), headers(phv), fields(phv, headers, pa, d2i) {
+    explicit AutoAlias(const PhvInfo& phv, PragmaAlias& pa, PragmaNoOverlay& no_ovrl)
+    : d2i(phv), headers(phv), fields(phv, headers, pa, no_ovrl, d2i) {
         addPasses({
             &d2i,
             &headers,

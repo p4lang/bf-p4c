@@ -141,6 +141,7 @@ bool DetermineCandidateFields::preorder(const IR::MAU::Instruction* inst) {
     if (inst->operands.empty()) return true;
     const PHV::Field* destField = phv.field(inst->operands[0]);
     if (!destField) return true;
+
     for (auto &candidate : candidateSources) {
         //  see if the destination of the current instruction has been selected
         //  as the source for an alias previously
@@ -180,6 +181,13 @@ bool DetermineCandidateFields::preorder(const IR::MAU::Instruction* inst) {
              << srcField->name);
         return true;
     }
+    if (!no_overlay.can_overlay(destField, srcField)) {
+        dropFromCandidateSet(destField);
+        LOG3("\tDrop " << destField->name << " because of non-overlay pragma for source "
+             << srcField->name);
+        return true;
+    }
+
     auto& validationActions = headers.getActionsForCandidateHeader(destField->header());
     LOG3("\t  Found " << validationActions.size() << " actions");
     BUG_CHECK(action != nullptr,

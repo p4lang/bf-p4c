@@ -2425,7 +2425,8 @@ bool CoreAllocation::check_metadata_and_dark_overlay(
                                                 " Will try after placing other candidates...");
             dark_slices.push_back(slice);
         } else {
-            LOG_DEBUG5(TAB1 "Failed: " << c << " already contains slices at this position");
+            LOG_FEATURE("alloc_progress", 5,
+                        TAB1 "Failed: " << c << " already contains slices at this position");
             return false;
         }
     }

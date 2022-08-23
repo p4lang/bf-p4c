@@ -27,6 +27,7 @@
 #include "bf-p4c/parde/add_metadata_pov.h"
 #include "bf-p4c/parde/stack_push_shims.h"
 #include "bf-p4c/phv/create_thread_local_instances.h"
+#include "bf-p4c/phv/pragma/pa_no_overlay.h"
 #include "bf-p4c/parde/reset_invalidated_checksum_headers.h"
 
 // helper function
@@ -383,7 +384,8 @@ PackFlexibleHeaders::PackFlexibleHeaders(const BFN_Options& options,
     flexiblePacking = new FlexiblePacking(phv, uses, deps, options,
             packWithConstraintSolver);
     flexiblePacking->addDebugHook(options.getDebugHook(), true);
-    PragmaAlias *pragmaAlias = new PragmaAlias(phv);
+    PragmaNoOverlay *noOverlay = new PragmaNoOverlay(phv);
+    PragmaAlias *pragmaAlias = new PragmaAlias(phv, *noOverlay);
     addPasses({
         new CreateThreadLocalInstances,
         new BFN::CollectHardwareConstrainedFields,
@@ -408,7 +410,7 @@ PackFlexibleHeaders::PackFlexibleHeaders(const BFN_Options& options,
         new FindDependencyGraph(phv, deps, &options, "program_graph", "Pack Flexible Headers"),
         new CollectPhvInfo(phv),
         pragmaAlias,
-        new AutoAlias(phv, *pragmaAlias),
+        new AutoAlias(phv, *pragmaAlias, *noOverlay),
         new Alias(phv, *pragmaAlias),
         new CollectPhvInfo(phv),
         // Run after InstructionSelection, before deadcode elimination.
