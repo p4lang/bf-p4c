@@ -4,8 +4,8 @@
 bool BFN::CheckExternValidity::preorder(const IR::MethodCallExpression* expr) {
     auto* mi = P4::MethodInstance::resolve(expr, refMap, typeMap, true);
 
-    std::set<cstring> externsToCheck = {"Mirror", "Resubmit", "Digest", "Pktgen", "Hash"};
-    std::set<cstring> methodToCheck = {"emit", "pack", "get"};
+    std::set<cstring> externsToCheck = {"Hash"};
+    std::set<cstring> methodToCheck = {"get"};
 
     // size_t is the number of parameters in emit/pack call that uses field list.
     std::map<cstring, size_t> expectedFieldListPos = {
