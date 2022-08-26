@@ -165,3 +165,9 @@ p4c_add_xfail_reason("tofino"
   "error: hash.get: field list cannot be empty"
   extensions/p4_tests/p4_16/errors/externs_hash_empty_list.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "error: Only simple assignments are supported for one-bit registers."
+  extensions/p4_tests/p4_16/errors/p4c-4522.p4
+)
+

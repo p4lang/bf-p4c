@@ -386,7 +386,7 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
             e = local->regfile;
             negate_regfile = negate;
         } else {
-            e = new IR::MAU::SaluReg(argType, name, field_idx > 0);
+            e = new IR::MAU::SaluReg(pe->srcInfo, argType, name, field_idx > 0);
         }
         break;
     case param_t::OUTPUT:       /* out rv; */
@@ -405,13 +405,13 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
         if (islvalue(etype)) {
             error("Writing in param %s in %s not supported", pe, action_type_name);
             return false; }
-        e = new IR::MAU::SaluReg(argType, "phv_" + name, field_idx > 0);
+        e = new IR::MAU::SaluReg(pe->srcInfo, argType, "phv_" + name, field_idx > 0);
         break;
     case param_t::LEARN:        /* in learn */
         if (islvalue(etype)) {
             error("Writing in param %s in %s not supported", pe, action_type_name);
             return false; }
-        e = new IR::MAU::SaluReg(argType, "learn", false);
+        e = new IR::MAU::SaluReg(pe->srcInfo, argType, "learn", false);
         break;
     case param_t::MATCH:        /* out match */
         if (!islvalue(etype)) {
@@ -603,10 +603,11 @@ void CreateSaluInstruction::doAssignment(const Util::SourceInfo &srcInfo) {
         if (etype == OUTPUT_ALUHI) {
             etype = VALUE;
             auto *val = operands.at(0);
-            operands.insert(operands.begin(), new IR::MAU::SaluReg(val->type, "hi", true));
+            operands.insert(operands.begin(),
+                            new IR::MAU::SaluReg(val->srcInfo, val->type, "hi", true));
             createInstruction();
             operands.clear();
-            operands.push_back(new IR::MAU::SaluReg(val->type, "alu_hi", true));
+            operands.push_back(new IR::MAU::SaluReg(val->srcInfo, val->type, "alu_hi", true));
             etype = OUTPUT; }
         createInstruction();
     } else if (dest->use == LocalVar::ALUHI) {
@@ -633,7 +634,7 @@ void CreateSaluInstruction::captureAssigstateProps() {
     // Backup statement & predicate for the checkWriteAfterWrite method
     assig_st = assig;
     assig_pred = predicate;
-    LOG4("Caputred assignment statement: " << assig_st);
+    LOG4("Captured assignment statement: " << assig_st);
     LOG4("Captured predicate statement: " << assig_pred);
 }
 
@@ -1025,7 +1026,7 @@ bool CreateSaluInstruction::preorder(const IR::MAU::Primitive *prim) {
             error("%s is not a %s", mu->arguments->at(i)->expression,
                   i > 1 ? "list expression" : "constant"); }
     } else if (method == "address") {
-        operands.push_back(new IR::MAU::SaluReg(prim->type, "address", false));
+        operands.push_back(new IR::MAU::SaluReg(prim->srcInfo, prim->type, "address", false));
         address_subword = 0;
         if (prim->operands.size() == 2) {
             auto k = prim->operands.at(1)->to<IR::Constant>();
@@ -1375,6 +1376,10 @@ void CreateSaluInstruction::postorder(const IR::BAnd *e) {
         error("%sexpression too complex for stateful alu", e->srcInfo); }
 }
 void CreateSaluInstruction::checkAndReportComplexInstrution(const IR::Operation_Binary* op) const {
+    if (regtype->width_bits() == 1) {
+        error("%sOnly simple assignments are supported for one-bit registers.", op->srcInfo);
+        return;
+    }
     if (!isComplexInstruction(op)) return;
 
     error("You can only have more than one binary operator in a statement if "
@@ -1393,6 +1398,7 @@ bool CreateSaluInstruction::isComplexInstruction(const IR::Operation_Binary *op)
     // The method returns true if so, false otherwise
     //
     // IR::L* operators (LAnd, LOr, etc.) are working with predicates
+
     bool ret = false;
     for (auto oper : {op->left, op->right}) {
         ret |= oper->is<IR::Add>()  | oper->is<IR::AddSat>();
@@ -1586,11 +1592,14 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
     case MATCH:
         checkWriteAfterWrite();
         if (regtype->width_bits() == 1) {
+            BUG_CHECK(operands.size() == 2, "one-bit register VALUE instruction should have two"
+                                            " operands only (output and a constant)");
             opcode = "clr_bit";
             if (predicate)
-                error("%1%can't have condition in a RegisterAction<bit<1>>", predicate->srcInfo);
+                error("%scan't have condition in a RegisterAction<bit<1>>", predicate->srcInfo);
             else if (!k)
-                error("can't write %1% to Register<bit<1>>", operands.back());
+                error("%scan't write non-constant value to Register<bit<1>>",
+                      operands.back()->srcInfo);
             else if (k->value)
                 opcode = "set_bit";
             if (onebit_cmpl) opcode += 'c';
@@ -1614,7 +1623,11 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
     case OUTPUT:
         checkWriteAfterWrite();
         if (regtype->width_bits() == 1) {
-            BUG_CHECK(!predicate, "can't have predicate on 1-bit instruction");
+            BUG_CHECK(operands.size() == 1, "one-bit register OUTPUT instruction should have one"
+                                            " operand only (the output)");
+            if (predicate) {
+                error("%scan't have predicate on 1-bit instruction", predicate->srcInfo);
+            }
             opcode = onebit ? onebit->name : "read_bit";
             if (onebit_cmpl) opcode += "c";
             rv = onebit = new IR::MAU::SaluInstruction(opcode);
@@ -1635,12 +1648,14 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
             auto *val = operands.at(0);
             if (predicate)
                 insert_instruction(new IR::MAU::SaluInstruction(
-                        "alu_a", 1, predicate, new IR::MAU::SaluReg(val->type, "hi", true), val));
+                        "alu_a", 1, predicate,
+                        new IR::MAU::SaluReg(val->srcInfo, val->type, "hi", true), val));
             else
                 insert_instruction(new IR::MAU::SaluInstruction(
-                        "alu_a", 0, new IR::MAU::SaluReg(val->type, "hi", true), val));
+                        "alu_a", 0,
+                        new IR::MAU::SaluReg(val->srcInfo, val->type, "hi", true), val));
             LOG3("  add " << *action->action.back());
-            operands.at(0) = new IR::MAU::SaluReg(val->type, "alu_hi", true);
+            operands.at(0) = new IR::MAU::SaluReg(val->srcInfo, val->type, "alu_hi", true);
         } else if (k && (k->value & (k->value-1)) == 0) {
             // use the predicate output shifted to the appropriate spot for a power of 2 constant
             // no predicate means unconditional, which will output 1 unconditionally
@@ -1655,7 +1670,7 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
                     error("conflicting predicate output use in %s", salu);
             } else {
                 salu->pred_shift = 28; }
-            operands.at(0) = new IR::MAU::SaluReg(k->type, "predicate", false);
+            operands.at(0) = new IR::MAU::SaluReg(k->srcInfo, k->type, "predicate", false);
         } else if (outputEnumAsPredicate(operands.at(0)->to<IR::Member>())) {
             auto psize = 1 << Device::statefulAluSpec().CmpUnits.size();
             // FIXME -- should shift up to the top 16 bits of the word to maximize space
@@ -1664,7 +1679,8 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
             if (salu->pred_comb_shift >= 0) {
                 if (comb_pred_width > salu->pred_shift + 4)
                     error("conflicting predicate output use in %s", salu); }
-            operands.at(0) = new IR::MAU::SaluReg(IR::Type::Bits::get(psize), "predicate", false);
+            operands.at(0) = new IR::MAU::SaluReg(operands.at(0)->srcInfo,
+                                                  IR::Type::Bits::get(psize), "predicate", false);
             action->return_predicate_words |= 1 << output_index;
         } else {
             error("can't output %1% from a RegisterAction", operands.at(0)); }
