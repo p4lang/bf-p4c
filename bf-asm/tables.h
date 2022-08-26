@@ -242,7 +242,7 @@ class Table {
              * returns the bit in the post-extract immediate containing bit i */
             unsigned immed_bit(unsigned i) {
                 auto rv = bit(i);
-                if (fmt->immed) rv -= fmt->immed->by_group[group]->bit(0);
+                if (fmt && fmt->immed) rv -= fmt->immed->by_group[group]->bit(0);
                 return rv; }
             unsigned hi(unsigned bit) {
                 for (auto &chunk : bits)
@@ -601,7 +601,6 @@ class Table {
     virtual const AttachedTables *get_attached() const { return 0; }
     virtual AttachedTables *get_attached() { return 0; }
     virtual const GatewayTable *get_gateway() const { return 0; }
-    virtual GatewayTable *get_table_gateway() { return 0; }
     virtual SelectionTable *get_selector() const { return 0; }
     virtual MeterTable* get_meter() const { return 0; }
     virtual void set_stateful(StatefulTable *s) { BUG(); }
@@ -1622,6 +1621,7 @@ DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
         wmatch_t                val;
         bool                    run_table = false;
         NextTables              next;
+        std::string             action;  // FIXME -- need arguments?
         int                     next_map_lut = -1;
         Match() {}
         Match(value_t *v, value_t &data, range_match_t range_match);
@@ -1630,7 +1630,8 @@ DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
     bool                        need_next_map_lut = false;
     template<class REGS> void payload_write_regs(REGS &, int row, int type, int bus);
     template<class REGS> void standalone_write_regs(REGS &regs);
-    template<class REGS> void write_next_table_regs(REGS &);
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
+        virtual void write_next_table_regs, (mau_regs &), { BUG(); })
     bool gateway_needs_ixbar_group() {
         for (auto& m : match)
             if (m.offset < 32)
@@ -1638,6 +1639,7 @@ DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
         return !xor_match.empty(); }
  public:
     table_type_t table_type() const override { return GATEWAY; }
+    virtual int find_next_lut_entry(Table *tbl, const Match &match);
     const MatchTable *get_match_table() const override { return match_table; }
     MatchTable *get_match_table() override { return match_table; }
     std::set<MatchTable *> get_match_tables() override {
@@ -1648,6 +1650,7 @@ DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
         match_table = m;
         if ((unsigned)m->logical_id < (unsigned)logical_id) logical_id = m->logical_id;
         return GATEWAY; }
+    virtual void setup_map_indexing(Table *tbl) { return; }
     static GatewayTable *create(int lineno, const std::string &name, gress_t gress,
                                 Stage *stage, int lid, VECTOR(pair_t) &data)
         { return table_type_singleton.create(lineno, name.c_str(), gress, stage, lid, data); }

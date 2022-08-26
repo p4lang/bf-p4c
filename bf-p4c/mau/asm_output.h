@@ -120,6 +120,7 @@ class MauAsmOutput : public MauInspector {
     void emit_indirect_res_context_json(std::ostream &, indent_t indent,
             const IR::MAU::Table *tbl,
             std::stringstream &context_json_entries) const;
+    virtual bool gateway_uses_inhibit_index(const IR::MAU::Table *) const { return false; }
     std::string indirect_address(const IR::MAU::AttachedMemory *) const;
     std::string indirect_pfe(const IR::MAU::AttachedMemory *) const;
     std::string stateful_counter_addr(IR::MAU::StatefulUse use) const;

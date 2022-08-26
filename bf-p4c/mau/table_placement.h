@@ -255,6 +255,7 @@ class TransformTables : public MauTransform {
     IR::Node *preorder(IR::MAU::TableSeq *) override;
     IR::Node *postorder(IR::MAU::TableSeq *) override;
     IR::Node *preorder(IR::MAU::Table *) override;
+    IR::Node *postorder(IR::MAU::Table *) override;
     IR::Node *preorder(IR::MAU::BackendAttached *) override;
     IR::Node *preorder(IR::BFN::Pipe *pipe) override;
     IR::Node *postorder(IR::BFN::Pipe *pipe) override;

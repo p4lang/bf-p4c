@@ -154,17 +154,18 @@ void Table::visit_gateway_inhibited(THIS* self, Visitor& v, payload_info_t &payl
         // from running.  When a gateway inhibits, it can possibly run an action.  This is the
         // action mapped in the gateway payload, from next to action
         if (self->gateway_payload.count(tag)) {
-            cstring act_name = self->gateway_payload.at(tag).first;
-            if (!current) current = &saved->flow_clone();
-            for (auto &con : self->gateway_payload.at(tag).second)
-                current->visit(con, "gateway_payload");
-            if (payload_info.action_info.count(act_name))
-                payload_info.action_info.at(act_name).flow_state->flow_merge(*current);
-            else
-                payload_info.action_info[act_name].flow_state = current;
-            payload_info.action_info.at(act_name).tags.insert(tag);
-            current = nullptr;
-            continue;
+            if (cstring act_name = self->gateway_payload.at(tag).first) {
+                if (!current) current = &saved->flow_clone();
+                for (auto &con : self->gateway_payload.at(tag).second)
+                    current->visit(con, "gateway_payload");
+                if (payload_info.action_info.count(act_name))
+                    payload_info.action_info.at(act_name).flow_state->flow_merge(*current);
+                else
+                    payload_info.action_info[act_name].flow_state = current;
+                payload_info.action_info.at(act_name).tags.insert(tag);
+                current = nullptr;
+                continue;
+            }
         }
 
         if (self->next.count(tag)) {
@@ -380,6 +381,10 @@ bool IR::MAU::Table::operator==(const IR::MAU::Table &a) const {
 cstring IR::MAU::Table::get_table_type_string() const {
     cstring tbl_type = "gateway";
     bool no_match_hit = layout.no_match_hit_path() && !conditional_gateway_only();
+    // FIXME -- "no_match_hit" is a bit of a misnomer -- it includes "direct" lookup
+    // match tables where the match has been changed to an identity hash used to index
+    // an action data table.  It really just means a table with no match rams or tcams
+    // using a gateway to supply a hit signal
     if (!conditional_gateway_only())
         tbl_type = layout.ternary || layout.no_match_miss_path()
                    ? "ternary_match" : "exact_match";
@@ -560,6 +565,12 @@ bool IR::MAU::Table::is_exit_table() const {
         return true;
     }
     return false;
+}
+
+const IR::MAU::Action *IR::MAU::Table::get_default_action() const {
+    for (auto *act : Values(actions))
+        if (act->init_default) return act;
+    return nullptr;
 }
 
 std::vector<const IR::MAU::Action*> IR::MAU::Table::get_exit_actions() const {

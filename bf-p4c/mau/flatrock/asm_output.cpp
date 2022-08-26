@@ -106,15 +106,23 @@ void IXBar::Use::emit_ixbar_asm(const PhvInfo &phv, std::ostream &out, indent_t 
         out << indent << "output unit: " << output_unit << std::endl;
 }
 
-bool IXBar::Use::emit_gateway_asm(const MauAsmOutput &mauasm, std::ostream &out, indent_t indent,
-                                  const IR::MAU::Table *tbl) const {
+bool IXBar::Use::emit_gateway_asm(const MauAsmOutput &, std::ostream &out, indent_t indent,
+                                  const IR::MAU::Table *) const {
     if (num_gw_rows <= 0) return false;
     out << indent << "row: " << first_gw_row << std::endl;
+#if 0
+    // FIXME -- we need this code if we want to use the gateway payload to specify the
+    // action/indirect pointers/immediate data/next table instead of the inhibit index
+    // We probably want that when there's only one thing the gateway does, as that allows
+    // us to merge with a match table and share overhead format.
+    // FIXME -- the decision on which to use (payload or inhibit_index) should probably be
+    // stored in the layout somewhere.
     if (tbl->layout.gateway && (tbl->layout.gateway_match || tbl->layout.hash_action) &&
         tbl->resources->table_format.has_overhead()) {
         auto payload = FindPayloadCandidates::determine_payload(tbl, tbl->resources, &tbl->layout);
         out << indent << "payload: 0x" << hex(payload.getrange(0,64)) << std::endl;
         mauasm.emit_table_format(out, indent, tbl->resources->table_format, nullptr, false, true); }
+#endif
     return true;
 }
 
@@ -234,6 +242,17 @@ void PpuAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
         const TableFormat::Use &use, const TableMatch *tm, bool ternary,
         bool no_match) const {
     MauAsmOutput::emit_table_format(out, indent, use, tm, ternary, no_match);
+}
+
+bool PpuAsmOutput::gateway_uses_inhibit_index(const IR::MAU::Table *tbl) const {
+    // FIXME -- the decision on which to use (payload or inhibit_index) should probably be
+    // stored in the layout somewhere.  For now we use inhibit_index when there are 2+
+    // choices as the payload can only provide one.
+    std::set<cstring> gw_tags;
+    for (auto &gw : tbl->gateway_rows) {
+        if (gw.second)
+            gw_tags.insert(gw.second); }
+    return gw_tags.size() > 1;
 }
 
 }  // end namespace Flatrock

@@ -272,6 +272,7 @@ apply {
 
     // Create the table to be inserted and its constraints.
     auto* to_insert = new IR::MAU::Table("always_run", INGRESS);
+    to_insert->created_during_tp = true;  // suppress BUGs about invalid do-nothing tables
     ordered_map<gress_t, ConstraintMap> tablesToAdd;
     tablesToAdd[INGRESS][to_insert].first.insert(tables.at(INGRESS).at("mau.t2"));
     tablesToAdd[INGRESS][to_insert].second.insert(tables.at(INGRESS).at("mau.t3"));
@@ -384,6 +385,7 @@ apply {
 
     // Create the table to be inserted and its constraints.
     auto* to_insert = new IR::MAU::Table("always_run", INGRESS);
+    to_insert->created_during_tp = true;  // suppress BUGs about invalid do-nothing tables
     ordered_map<gress_t, ConstraintMap> tablesToAdd;
     tablesToAdd[INGRESS][to_insert].first.insert(tables.at(INGRESS).at("mau.t5"));
     tablesToAdd[INGRESS][to_insert].second.insert(tables.at(INGRESS).at("mau.t6"));
@@ -453,6 +455,7 @@ apply {
 
     // Create the table to be inserted and its constraints.
     auto* to_insert = new IR::MAU::Table("always_run", INGRESS);
+    to_insert->created_during_tp = true;  // suppress BUGs about invalid do-nothing tables
     ordered_map<gress_t, ConstraintMap> tablesToAdd;
     tablesToAdd[INGRESS][to_insert].first.insert(tables.at(INGRESS).at("mau.t2"));
     tablesToAdd[INGRESS][to_insert].second.insert(tables.at(INGRESS).at("mau.t3"));
@@ -519,6 +522,7 @@ apply {
 
     auto tables = getTables(test);
     auto* to_insert = new IR::MAU::Table("always_run", INGRESS);
+    to_insert->created_during_tp = true;  // suppress BUGs about invalid do-nothing tables
     ordered_map<gress_t, ConstraintMap> tablesToAdd;
     tablesToAdd[INGRESS][to_insert].first.insert(tables.at(INGRESS).at("mau.t2"));
     tablesToAdd[INGRESS][to_insert].second.insert(tables.at(INGRESS).at("mau.t3"));
@@ -619,6 +623,7 @@ apply {
 
     auto tables = getTables(test);
     auto* to_insert = new IR::MAU::Table("always_run", INGRESS);
+    to_insert->created_during_tp = true;  // suppress BUGs about invalid do-nothing tables
     ordered_map<gress_t, ConstraintMap> tablesToAdd;
     tablesToAdd[INGRESS][to_insert].first.insert(tables.at(INGRESS).at("mau.t4"));
     tablesToAdd[INGRESS][to_insert].second.insert(tables.at(INGRESS).at("mau.t5"));
@@ -689,6 +694,7 @@ apply {
 
     auto tables = getTables(test);
     auto* to_insert = new IR::MAU::Table("always_run", INGRESS);
+    to_insert->created_during_tp = true;  // suppress BUGs about invalid do-nothing tables
     ordered_map<gress_t, ConstraintMap> tablesToAdd;
     tablesToAdd[INGRESS][to_insert].first.insert(tables.at(INGRESS).at("mau.t1"));
     tablesToAdd[INGRESS][to_insert].second.insert(tables.at(INGRESS).at("mau.t2"));

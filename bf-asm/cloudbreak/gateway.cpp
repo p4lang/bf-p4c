@@ -3,7 +3,7 @@
 #include <stage.h>
 
 // FIXME -- factor better with JBay code
-template<> void GatewayTable::write_next_table_regs(Target::Cloudbreak::mau_regs &regs) {
+void Target::Tofino::GatewayTable::write_next_table_regs(Target::Cloudbreak::mau_regs &regs) {
     auto &merge = regs.rams.match.merge;
     if (need_next_map_lut)
         merge.next_table_map_en_gateway |= 1U << logical_id;
@@ -37,7 +37,6 @@ template<> void GatewayTable::write_next_table_regs(Target::Cloudbreak::mau_regs
         while (i < Target::NEXT_TABLE_SUCCESSOR_TABLE_DEPTH())
             merge.pred_map_loca[logical_id][i++].pred_map_loca_next_table = 0x1ff; }
 }
-template void GatewayTable::write_next_table_regs(Target::Cloudbreak::mau_regs &regs);
 
 template<> void GatewayTable::standalone_write_regs(Target::Cloudbreak::mau_regs &regs) {
     // FIXME -- factor this with Cloudbreak MatchTable::write_regs

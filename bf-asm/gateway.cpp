@@ -65,6 +65,9 @@ GatewayTable::Match::Match(value_t *v, value_t &data, range_match_t range_match)
                     run_table = false;
                 else
                     error(kv.value.lineno, "Syntax error, expecting boolean");
+            } else if (kv.key == "action") {
+                if (CHECKTYPE(kv.value, tSTR))
+                    action = kv.value.s;
             } else {
                 error(kv.key.lineno, "Syntax error, expecting gateway action description"); }
             }
@@ -333,6 +336,10 @@ void GatewayTable::verify_format() {
 
 void GatewayTable::pass1() {
     LOG1("### Gateway table " << name() << " pass1 " << loc());
+    if (!match_table) {
+        // needs to happen before Actions::pass1, but will have been called from the
+        // match table if this gateway is attached to one.
+        setup_map_indexing(this); }
     Table::pass1();
 #if 0
     // redundant with (and supercedes) choose_logical_id in pass2.  That function is much
@@ -390,15 +397,15 @@ void GatewayTable::pass1() {
         line.val.word1 = (line.val.word1 << shift) | ignore; }
 }
 
-static int find_next_lut_entry(Table *tbl, const Table::NextTables &next) {
+int GatewayTable::find_next_lut_entry(Table *tbl, const Match &match) {
     int rv = 0;
     for (auto &e : tbl->hit_next) {
-        if (e == next) return rv;
+        if (e == match.next) return rv;
         ++rv; }
     for (auto &e : tbl->extra_next_lut) {
-        if (e == next) return rv;
+        if (e == match.next) return rv;
         ++rv; }
-    tbl->extra_next_lut.push_back(next);
+    tbl->extra_next_lut.push_back(match.next);
     if (rv == Target::NEXT_TABLE_SUCCESSOR_TABLE_DEPTH())
         error(tbl->lineno, "Too many next table map entries in table %s", tbl->name());
     return rv;
@@ -420,10 +427,10 @@ void GatewayTable::pass2() {
         Table *tbl = match_table;
         if (!tbl) tbl = this;
         for (auto &e : table)
-            if (!e.run_table)
-                e.next_map_lut = find_next_lut_entry(tbl, e.next);
-        if (!miss.run_table)
-            miss.next_map_lut = find_next_lut_entry(tbl, miss.next); }
+            if (!e.run_table && e.next_map_lut < 0)
+                e.next_map_lut = find_next_lut_entry(tbl, e);
+        if (!miss.run_table && miss.next_map_lut < 0)
+            miss.next_map_lut = find_next_lut_entry(tbl, miss); }
 }
 
 void GatewayTable::pass3() {

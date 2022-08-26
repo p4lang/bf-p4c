@@ -54,8 +54,11 @@ TEST(PayloadGateway, KeyValueMask) {
         "gateway:",
         "`.*`",
         "match: { 0: hdr.h.f1(0..7), 8: hdr.h.f1(8..15) }",
-        "0b*************001: END",  // (1 &&& 7)
-        "miss: run_table"
+        "0b*************001:",
+        "next: END",  // (1 &&& 7)
+        "action: hit",
+        "miss:",
+        "run_table: true"
      };
     RUN_CHECK(input, expected);
 }
@@ -82,8 +85,11 @@ TEST(PayloadGateway, KeyValueMaskSingleBit) {
         "gateway:",
         "`.*`",
         "match: { 0: hdr.h.f1(0..7), 8: hdr.h.f1(8..15) }",
-        "0o1*****: END",    // 0x8000
-        "miss: run_table"
+        "0o1*****:",
+        "next: END",    // 0x8000
+        "action: hit",
+        "miss:",
+        "run_table: true"
     };
     RUN_CHECK(input, expected);
 }
@@ -113,8 +119,11 @@ TEST(PayloadGateway, DoubleKeyValueMask) {
                  "8: hdr.h.f2(8..15),",     // 0b********
                 "16: hdr.h.f1(0..7),",      // 0b*****001
                 "24: hdr.h.f1(8..15) }",    // 0b********
-        "0b*************001*************010: END",  // (1 &&& 7, 2 &&& 7)
-        "miss: run_table"
+        "0b*************001*************010:",
+        "next: END",  // (1 &&& 7, 2 &&& 7)
+        "action: hit",
+        "miss:",
+        "run_table: true"
     };
     RUN_CHECK(input, expected);
 }

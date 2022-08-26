@@ -44,7 +44,7 @@ class InputXbar : public ::InputXbar {
     static void write_global_regs(Target::Flatrock::mau_regs &regs, gress_t gress);
     std::vector<const Input *> find_hash_inputs(Phv::Slice sl, int hash_table) const override {
         return find_all(sl, Group(Group::EXACT, hash_table)); }
-    int find_match_offset(const MatchSource *) const override;
+    int find_offset(const MatchSource *, Group) const override;
     int global_bit_position_adjust(int hash_table) const {
         return hash_table * EXACT_HASH_SIZE; }
     bitvec global_column0_extract(int hash_table,

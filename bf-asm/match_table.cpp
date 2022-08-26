@@ -174,6 +174,9 @@ void MatchTable::pass0() {
 }
 
 void MatchTable::pass1() {
+    if (gateway) {
+        // needs to happen before Actions::pass1 so that extra_next_lut is setup
+        gateway->setup_map_indexing(this); }
     Table::pass1();
     if (!p4_table)
         p4_table = P4Table::alloc(P4Table::MatchEntry, this);

@@ -372,6 +372,9 @@ void Table::setup_maprams(value_t &v) {
  * location.  The second argument is a per flow enable bit location.  These are both required.
  * Additionally, the keyword $DEFAULT means that that particular portion of the address comes
  * from the default register.
+ *
+ * FIXME -- this code is a messy hack -- various target-specific special cases.  Should try
+ * to figure out a better way to organize this.
  */
 bool Table::validate_instruction(Table::Call &call) const {
     if (call.args.size() != 2) {
@@ -382,7 +385,9 @@ bool Table::validate_instruction(Table::Call &call) const {
     bool field_address = false;
 
     if (call.args[0].name()) {
-        if (strcmp(call.args[0].name(), "$DEFAULT") != 0) {
+        if (Target::GATEWAY_INHIBIT_INDEX() && call.args[0] == "$GATEWAY_IDX") {
+            field_address = true;
+        } else if (call.args[0] != "$DEFAULT") {
             error(call.lineno, "Index %s for %s cannot be found", call.args[0].name(),
                   call->name());
             return false;
@@ -395,7 +400,7 @@ bool Table::validate_instruction(Table::Call &call) const {
     }
 
     if (call.args[1].name()) {
-        if (strcmp(call.args[1].name(), "$DEFAULT") != 0) {
+        if (call.args[1] != "$DEFAULT") {
             error(call.lineno, "Per flow enable %s for %s cannot be found", call.args[1].name(),
                   call->name());
             return false;
@@ -812,6 +817,8 @@ void Table::check_next() {
         }
     }
     for (auto &hn : hit_next)
+        check_next(hn);
+    for (auto &hn : extra_next_lut)
         check_next(hn);
     check_next(miss_next);
 }
@@ -1454,13 +1461,14 @@ void Table::Actions::Action::check_next_ref(Table *tbl, const Table::Ref &ref) c
  */
 void Table::Actions::Action::check_next(Table *tbl) {
     if (next_table_encode >= 0) {
-        if (next_table_encode >= tbl->get_hit_next().size()) {
-            error(lineno, "The encoding on action %s is outside the range of the hitmap in "
-                          "table %s", name.c_str(), tbl->name());
+        int idx = next_table_encode;
+        if (idx < tbl->get_hit_next().size()) {
+            next_table_ref = tbl->get_hit_next().at(idx);
+        } else if ((idx -= tbl->get_hit_next().size()) <  tbl->extra_next_lut.size()) {
+            next_table_ref = tbl->extra_next_lut.at(idx);
         } else {
-            next_table_ref = tbl->get_hit_next().at(next_table_encode);
-        }
-    }
+            error(lineno, "The encoding on action %s is outside the range of the hitmap in "
+                          "table %s", name.c_str(), tbl->name()); } }
 
     if (!next_table_miss_ref.set() && !next_table_ref.set()) {
         if (tbl->get_hit_next().size() != 1) {
@@ -2455,7 +2463,7 @@ json::map *Table::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) 
     stage_tbl["stage_table_type"] = type;
     stage_tbl["logical_table_id"] = logical_id;
     if (physical_id >= 0)
-        stage_tbl["physical_table_id"] = logical_id;
+        stage_tbl["physical_table_id"] = physical_id;
 
     if (this->to<MatchTable>()) {
         stage_tbl["has_attached_gateway"] = false;

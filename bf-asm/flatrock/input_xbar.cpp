@@ -132,23 +132,23 @@ void Flatrock::InputXbar::pass2() {
         first32 = num32 = 0; }
 }
 
-int Flatrock::InputXbar::find_match_offset(const MatchSource *ms) const {
+int Flatrock::InputXbar::find_offset(const MatchSource *ms, Group group) const {
     if (auto *phv = dynamic_cast<const Phv::Ref *>(ms)) {
-        Group group(Group::EXACT, -1);
         auto sl = **phv;
         if (auto *in = find(sl, group, &group)) {
             int offset = in->lo + sl.lo - in->what->lo;
-            switch (group.index) {
-            case 0:  // byte ixbar
-                offset += num32 * 32;
-                offset -= first8 * 8;
-                break;
-            case 1:  // word ixbar
-                offset -= first32 * 32;
-                break;
-            default:
-                BUG("invalid exact group %d", group.index); }
-            BUG_CHECK(offset >= 0, "computed invalid offset in InputXbar::find_match_offset");
+            if (group.type == Group::EXACT) {
+                switch (group.index) {
+                case 0:  // byte ixbar
+                    offset += num32 * 32;
+                    offset -= first8 * 8;
+                    break;
+                case 1:  // word ixbar
+                    offset -= first32 * 32;
+                    break;
+                default:
+                    BUG("invalid exact group %d", group.index); } }
+            BUG_CHECK(offset >= 0, "computed invalid offset in InputXbar::find_offset");
             return offset; }
     } else if (auto *hash = dynamic_cast<const HashMatchSource *>(ms)) {
         error(lineno, "HashMatchSource not supported on flatrock");

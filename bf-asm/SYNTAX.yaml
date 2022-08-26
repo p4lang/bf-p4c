@@ -630,6 +630,9 @@ stage <constant> <thread>:
                 output: <name> | '[' <name>,... ']'
                     # outputs to enable for this hast_dist unit
                     # 'lo' | 'hi' | 'meter' | 'stats' | 'action' | 'hashmod'
+        instruction: <table-name>(<instruction-loc>, <pfe-loc>)
+            # specifies where to get the action index and pfe for the instruction
+            # to run in a given table
         action: <table-name>(<action> [, <index>])
             # Action table to use -- action is a named field from the format
             # that determines which action to do.  Index is optional (for
@@ -1028,12 +1031,14 @@ stage <constant> <thread>:
             # do 2 or 4 bit range matches in the upper 12 bits of the gateway
         <match-constant>:
             # match row for gateway.  Value may be <table-name> (for next table)
-            # or "run_table" or a map with either or both of these keys.
+            # or "run_table" or a map with some or all of these keys.
             next: <table-name>
                 # next table for this match
             run_table: <true> | <false>
                 # disable the gateway (run the logical match normally)
                 # not applicable to bare gateways
+            action: <action-name>
+                # run the specified action when the line hits
         ? [ <int>, ..., <match-constant> ] :
             # Range match row for gateway.  Each value except the ladt is a
             # 2**n bit lookup table for a range match unit (so 4 bit values

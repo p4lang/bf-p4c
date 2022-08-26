@@ -70,7 +70,7 @@ template<> void MatchTable::write_regs(Target::Flatrock::mau_regs &regs, int typ
     /* action/imem setup */
     // FIXME -- factor with common code in MatchTable::write_common_regs
     auto &imem_map = regs.ppu_mrd.mrd_imem_map_erf.mrd_imem_map[physical_id];
-    Actions *actions = action && action->actions ? action->actions.get() : this->actions.get();
+    Actions *actions = action && action->actions ? action->actions.get() : result->actions.get();
     unsigned adr_default = 0;
     auto instr_call = instruction_call();
     if (instr_call.args[0] == "$DEFAULT") {
@@ -81,6 +81,9 @@ template<> void MatchTable::write_regs(Target::Flatrock::mau_regs &regs, int typ
             }
         }
         imem_map[12].data = adr_default;
+    } else if (instr_call.args[0] == "$GATEWAY_IDX") {
+        mrd.mrd_imem_ext[physical_id].ext_start[dconfig] = 62;
+        mrd.mrd_imem_ext[physical_id].ext_size[dconfig] = 2;
     } else if (auto *action_field = instr_call.args[0].field()) {
         if (actions->max_code < ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH) {
             mrd.mrd_imem_pld[physical_id].map_en[dconfig] = 1;

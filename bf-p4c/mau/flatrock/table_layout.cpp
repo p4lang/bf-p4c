@@ -6,7 +6,8 @@
 namespace Flatrock {
 /* FIXME: This function is for the setup of a table with no match data.  This is currently hacked
    together in order to pass many of the test cases.  This needs to have some standardization
-   within the assembly so that all tables that do not require match can possibly work */
+   within the assembly so that all tables that do not require match can possibly work
+   */
 void LayoutChoices::setup_layout_option_no_match(const IR::MAU::Table *tbl,
         const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type) {
     BUG_CHECK(format_type.valid(),
@@ -17,17 +18,18 @@ void LayoutChoices::setup_layout_option_no_match(const IR::MAU::Table *tbl,
     for (auto v : Values(tbl->actions))
         v->apply(ghdr);
     IR::MAU::Table::Layout layout = layout_proto;
+#if 0
     if (ghdr.is_hash_dist_needed() || ghdr.is_rng_needed()) {
         layout.hash_action = true;
     } else if (!format_type.matchThisStage()) {
         // post split gets index via hash_dist, so it needs to be hash_action
         layout.hash_action = true; }
+#endif
 
-    // Flatrock does not support no_match_miss tables, so force it to be hit path
-    // if we need to run an action.
-    if (!tbl->actions.empty()) {
-        // should use gateway table?  Needs table_layout/table_format updates for flatrock
-        layout.hash_action = true; }
+    // Flatrock does not support no_match_miss tables, so no match tables allways need
+    // to have the hash_action flag set (which is a bit of a misnomer and a hack) which
+    // causes them to be allocated as mo-match-hit tables (really just gateways)
+    layout.hash_action = true;
 
     // No match tables are required to have only one layout option in a later pass, so the
     // algorithm picks the action format that has the most immediate.  This is the option

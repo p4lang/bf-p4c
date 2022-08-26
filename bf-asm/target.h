@@ -69,6 +69,7 @@
 #if HAVE_FLATROCK
 #define TARGETS_IN_CLASS_Flatrock(M, ...) M(Flatrock, ##__VA_ARGS__)
 #define TARGETS_USING_REGS_Flatrock(M, ...) M(Flatrock, ##__VA_ARGS__)
+#define REGSETS_IN_CLASS_Flatrock(M, ...) M(Flatrock, ##__VA_ARGS__)
 #endif /* HAVE_FLATROCK */
 
 #if HAVE_CLOUDBREAK  /* for now also implies HAVE_JBAY */
@@ -80,6 +81,10 @@
     M(Tofino2U, ##__VA_ARGS__) \
     M(Tofino2A0, ##__VA_ARGS__) \
     M(Cloudbreak, ##__VA_ARGS__)
+#define REGSETS_IN_CLASS_Tofino(M, ...) \
+    M(Tofino, ##__VA_ARGS__)   \
+    M(JBay, ##__VA_ARGS__)     \
+    M(Cloudbreak, ##__VA_ARGS__)
 #define TARGETS_USING_REGS_Cloudbreak(M, ...) M(Cloudbreak, ##__VA_ARGS__)
 #elif HAVE_JBAY
 #define TARGETS_IN_CLASS_Tofino(M, ...) \
@@ -89,8 +94,12 @@
     M(Tofino2M, ##__VA_ARGS__) \
     M(Tofino2U, ##__VA_ARGS__) \
     M(Tofino2A0, ##__VA_ARGS__)
+#define REGSETS_IN_CLASS_Tofino(M, ...) \
+    M(Tofino, ##__VA_ARGS__)   \
+    M(JBay, ##__VA_ARGS__)
 #else
 #define TARGETS_IN_CLASS_Tofino(M, ...) M(Tofino, ##__VA_ARGS__)
+#define REGSETS_IN_CLASS_Tofino(M, ...) M(Tofino, ##__VA_ARGS__)
 #endif
 
 #if HAVE_JBAY
@@ -105,6 +114,7 @@
 
 #define TARGETS_IN_CLASS(CL, ...) TARGETS_IN_CLASS_##CL(__VA_ARGS__)
 #define TARGETS_USING_REGS(CL, ...) TARGETS_USING_REGS_##CL(__VA_ARGS__)
+#define REGSETS_IN_CLASS(CL, ...) REGSETS_IN_CLASS_##CL(__VA_ARGS__)
 
 #define EXPAND(...)     __VA_ARGS__
 #define INSTANTIATE_TARGET_TEMPLATE(TARGET, FUNC, ...)  template FUNC(Target::TARGET::__VA_ARGS__);
@@ -127,6 +137,7 @@
     M(int, GATEWAY_PAYLOAD_GROUPS) \
     M(bool, GATEWAY_SINGLE_XBAR_GROUP) \
     M(bool, GATEWAY_NEEDS_SEARCH_BUS) \
+    M(bool, GATEWAY_INHIBIT_INDEX) \
     M(bool, HAS_MPR) \
     M(int, INSTR_SRC2_BITS) \
     M(int, IMEM_COLORS) \
@@ -306,6 +317,7 @@ class Target::Tofino : public Target {
         GATEWAY_PAYLOAD_GROUPS = 1,
         GATEWAY_SINGLE_XBAR_GROUP = true,
         GATEWAY_NEEDS_SEARCH_BUS = true,
+        GATEWAY_INHIBIT_INDEX = false,
         SUPPORT_TRUE_EOP = 0,
         INSTR_SRC2_BITS = 4,
         IMEM_COLORS = 2,
@@ -461,6 +473,7 @@ class Target::JBay : public Target {
         GATEWAY_PAYLOAD_GROUPS = 5,
         GATEWAY_SINGLE_XBAR_GROUP = true,
         GATEWAY_NEEDS_SEARCH_BUS = true,
+        GATEWAY_INHIBIT_INDEX = false,
         SUPPORT_TRUE_EOP = 1,
         INSTR_SRC2_BITS = 5,
         IMEM_COLORS = 2,
@@ -667,6 +680,7 @@ class Target::Cloudbreak : public Target {
         GATEWAY_PAYLOAD_GROUPS = 5,
         GATEWAY_SINGLE_XBAR_GROUP = true,
         GATEWAY_NEEDS_SEARCH_BUS = true,
+        GATEWAY_INHIBIT_INDEX = false,
         INSTR_SRC2_BITS = 5,
         IMEM_COLORS = 2,
         IXBAR_HASH_GROUPS = 8,
@@ -814,6 +828,7 @@ class Target::Flatrock : public Target {
         GATEWAY_PAYLOAD_GROUPS = 4,
         GATEWAY_SINGLE_XBAR_GROUP = false,
         GATEWAY_NEEDS_SEARCH_BUS = false,
+        GATEWAY_INHIBIT_INDEX = true,
         INSTR_SRC2_BITS = 0,
         IMEM_COLORS = 4,
         IXBAR_HASH_GROUPS = 16,  // actually XME indexes

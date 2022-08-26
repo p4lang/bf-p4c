@@ -47,12 +47,17 @@ class Table : BFN::Unit, IAnnotated  {
     safe_vector<std::pair<Expression, cstring>> gateway_rows;
 
     /**
-     * if the gateway inhibits the match_table (gateway_row.second != NULL), then the gateway
+     * If the gateway inhibits the match_table (gateway_row.second != NULL), then the gateway
      * can also run an action directly, via the payload.  All rows must be the same action on
-     * tofino, but tofino2 allows different actions for different rows.
+     * tofino1, but tofino2/3 allows different actions for different rows.  Tofino5 is odd
+     * in that it only allows 1 payload, but up to 4 can be simulated by using the gateway
+     * inhibit index and extracting that as an index into the map table.  This can only work
+     * if the match table (if any) can use the default for action/params, as there can only
+     * be one extract for either case (either extract the inhibit index or extract the match
+     * overhead)
      *
      * The gateway payload key value pair is:
-     *     the key corresponds and gateway_row.second which inhibits the table.  These also
+     *     the key corresponds to gateway_row.second which inhibits the table.  These also
      *     appear as the keys in the next map.
      *     the value is a pair of two items.  The first item is the key of the corresponding
      *     action in the actions map.  The vector of Constants is the value of parameters
@@ -206,9 +211,6 @@ class Table : BFN::Unit, IAnnotated  {
         bool no_match_miss_path() const {
             return no_match_rams() && !no_match_hit_path() && !gateway_match;
         }
-
-
-
 #emit
         Layout &operator+=(const Layout &a);
 #end
@@ -234,6 +236,7 @@ class Table : BFN::Unit, IAnnotated  {
     int get_provided_stage(int geq_stage = -1, int *req_entries = 0, int *flags = 0) const;
     int hit_actions() const;
     bool has_exit_action() const;
+    Action get_default_action() const;
     std::vector<Action> get_exit_actions() const;
     bool has_non_exit_action() const;
     bool is_exit_table() const; // will the table always exit?
@@ -355,14 +358,25 @@ class Table : BFN::Unit, IAnnotated  {
             else if (gw.first)
                 gw_next.emplace(cstring());
             gw_next.emplace(gw.second); }
+        if (gateway_rows.empty())
+            gw_next.emplace(cstring());
         if (created_during_tp && !conditional_gateway_only())
             BUG("starter-pistol table %s cannot have a match table", name);
         if (created_during_tp && uses_gateway_payload())
             BUG("starter-pistol table %s cannot have a gateway payload", name);
-        if (conditional_gateway_only() && gw_next.count(cstring()))
+        if (!created_during_tp && conditional_gateway_only() && gw_next.count(cstring()))
             BUG("gateway with no match table wants to run match table");
         if (!is_a_gateway_table_only() && uses_gateway() && !gw_next.count(cstring()))
             BUG("gateway always overrides match table");
+        std::set<cstring> payload_act;
+        for (auto &payload : gateway_payload) {
+            BUG_CHECK(gw_next.count(payload.first), "payload tag %s not in gateway", payload.first);
+            payload_act.insert(payload.second.first); }
+        if (!gw_next.count(cstring()) && 0) {
+            // FIXME -- we currently sometimes get dead actions in tables.  They should
+            // eventually get deadcode eliminated, but might be in the IR until then
+            for (auto &act : actions)
+                BUG_CHECK(payload_act.count(act.first), "Unused action in gateway table"); }
         for (auto &nxt : next) {
             if (nxt.first == "$default") {
             } else if (nxt.first == "$hit" || nxt.first == "$miss"

@@ -326,11 +326,6 @@ bool Memories::single_allocation_balance(mem_info &mi, unsigned row) {
         return false;
     }
 
-    LOG3(" Allocate all no match miss");
-    if (!allocate_all_no_match_miss()) {
-        return false;
-    }
-
     return true;
 }
 
@@ -3557,42 +3552,6 @@ Memories::table_alloc *Memories::find_corresponding_exact_match(cstring name) {
             return ta;
     }
     return nullptr;
-}
-
-bool Memories::allocate_all_no_match_miss() {
-    // FIXME: Currently the assembler supports exact match to make calls to immediate here,
-    // so this is essentially what I'm doing.  More discussion is needed with the driver
-    // team in order to determine if this is correct, or if this has to go through ternary and
-    // tind tables
-    size_t no_match_tables_allocated = 0;
-    for (auto *ta : no_match_miss_tables) {
-        for (auto u_id : ta->allocation_units(nullptr, false, UniqueAttachedId::TIND_PP)) {
-            auto &alloc = (*ta->memuse)[u_id];
-            alloc.type = Use::TIND;
-            alloc.used_by = ta->table->externalName();
-            bool found = false;
-            for (int i = 0; i < SRAM_ROWS; i++) {
-                for (int j = 0; j < BUS_COUNT && j < PAYLOAD_COUNT; j++) {
-                    if (payload_use[i][j]) continue;
-                    if (tind_bus[i][j]) continue;
-                    alloc.row.emplace_back(i, j);
-                    alloc.row.back().result_bus = j;
-                    tind_bus[i][j] = u_id.build_name();
-                    payload_use[i][j] = u_id.build_name();
-                    found = true;
-                    break;
-                }
-                if (found) break;
-            }
-
-            if (!found) {
-                failure_reason = "failed to place no match miss " + u_id.build_name();
-                return false;
-            } else {
-                no_match_tables_allocated++; }
-        }
-    }
-    return true;
 }
 
 /**

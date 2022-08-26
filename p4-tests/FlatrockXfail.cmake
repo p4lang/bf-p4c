@@ -13,34 +13,23 @@ set (FLATROCK_XFAIL_TESTS
   # or open a new one.
   )
 
+# All of these tests currently passing (with up-to-date model)
 p4c_add_xfail_reason("tofino5"
   "WARNING:.*binary.*does not match model version|packet output on port 3"
   extensions/p4_tests/p4_16/flatrock/direct0.p4
   extensions/p4_tests/p4_16/flatrock/exact0.p4
   )
 
+# All of these tests currently passing (with up-to-date model)
 p4c_add_xfail_reason("tofino5"
   "WARNING:.*binary.*does not match model version|packet output on port 2"
   extensions/p4_tests/p4_16/flatrock/direct1.p4
   extensions/p4_tests/p4_16/flatrock/exact1.p4
-  )
-
-# model fails -- probably many other problems besides this message
-p4c_add_xfail_reason("tofino5"
-  "WARNING:.*binary.*does not match model version|packet output on port 2"
   extensions/p4_tests/p4_16/flatrock/passthrough.p4
-  )
-
-p4c_add_xfail_reason("tofino5"
-  "WARNING:.*binary.*does not match model version|mismatch from expected"
+  extensions/p4_tests/p4_16/flatrock/cuckoo-lamb-default1.p4
   extensions/p4_tests/p4_16/flatrock/gateway1.p4
-  extensions/p4_tests/p4_16/flatrock/gateway2.p4
-  )
-
-p4c_add_xfail_reason("tofino5"
-  #"WARNING:.*binary.*does not match model version|unexpected packet output on port 2"
-  "WARNING:.*binary.*does not match model version|mismatch from expected"
   extensions/p4_tests/p4_16/flatrock/gateway1i.p4
+  extensions/p4_tests/p4_16/flatrock/gateway2.p4
   extensions/p4_tests/p4_16/flatrock/gateway2i.p4
   )
 
@@ -279,7 +268,7 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
-  "Compiler Bug: No memory allocation for gateway"
+  "error: No phv record meta.__IngressP_extra_bridged_metadata.hdr_data_b1"
   extensions/p4_tests/p4_16/stf/p4c-2772-c.p4
   )
   

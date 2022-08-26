@@ -4634,6 +4634,20 @@ void TransformTables::merge_match_and_gateway(IR::MAU::Table *tbl,
     // Generate the correct table layout from the options
     gw_layout = tbl->layout;
 
+    // if a gateway is to be combined withe a match table, it can't be a hash_action
+    // unless the match table is.  This is only relevant for Flatrock (pre-flatrock,
+    // any gateway would have hash_action == false)
+    // FIXME -- this is definitely a hack, but we should get rid of the whole concept
+    // of "hash_action" as it makes little sense.
+#if HAVE_FLATROCK
+    BUG_CHECK(gw_layout.hash_action == (Device::currentDevice() == Device::FLATROCK),
+              "unexpected value for layout.hash_action on gateway");
+#else
+    BUG_CHECK(gw_layout.hash_action == false,
+              "unexpected value for layout.hash_action on gateway");
+#endif
+    gw_layout.hash_action = false;
+
     // Remove the conditional sequence under the branch
     auto *seq = tbl->next.at(placed->gw_result_tag)->clone();
     tbl->next.erase(placed->gw_result_tag);
@@ -4788,6 +4802,7 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
 
     // FIXME: Currently the gateway is laid out for every table, so I'm keeping the information
     // in split tables.  In the future, there should be no gw_layout for split tables
+    // FIXME -- gw_layout should be unnecessary and should go away completely
     IR::MAU::Table::Layout gw_layout;
     bool gw_only = true;
     bool gw_layout_used = false;
@@ -5023,6 +5038,10 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
     }
     BUG_CHECK(!rv->empty(), "Failed to place any stage tables for %s", tbl->name);
     return rv;
+}
+
+IR::Node *TransformTables::postorder(IR::MAU::Table *tbl) {
+    return Device::mauSpec().postTransformTables(tbl);
 }
 
 IR::Node *TransformTables::preorder(IR::MAU::BackendAttached *ba) {

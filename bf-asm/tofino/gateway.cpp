@@ -204,7 +204,7 @@ template<> void enable_gateway_payload_exact_shift_ovr(Target::Tofino::mau_regs 
 }
 template void enable_gateway_payload_exact_shift_ovr(Target::Tofino::mau_regs &regs, int bus);
 
-template<> void GatewayTable::write_next_table_regs(Target::Tofino::mau_regs &regs) {
+void Target::Tofino::GatewayTable::write_next_table_regs(Target::Tofino::mau_regs &regs) {
     auto &merge = regs.rams.match.merge;
     int idx = 3;
     if (need_next_map_lut)
@@ -217,4 +217,3 @@ template<> void GatewayTable::write_next_table_regs(Target::Tofino::mau_regs &re
     if (!miss.run_table)
         merge.gateway_next_table_lut[logical_id][4] = miss.next.next_table_id();
 }
-template void GatewayTable::write_next_table_regs(Target::Tofino::mau_regs &regs);

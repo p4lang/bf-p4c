@@ -889,8 +889,8 @@ const InputXbar::Input *InputXbar::find(Phv::Slice sl, Group grp, Group *found) 
     return rv;
 }
 
-int InputXbar::find_match_offset(const MatchSource *) const {
-    BUG("find_match_offset should not be needed on %s", Target::name());
+int InputXbar::find_offset(const MatchSource *, Group) const {
+    BUG("find_offset should not be needed on %s", Target::name());
 }
 
 std::vector<const InputXbar::Input *> InputXbar::find_all(Phv::Slice sl, Group grp) const {

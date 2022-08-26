@@ -2055,44 +2055,45 @@ bool MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
             out << gw_indent;
             if (line.first) {
                 line.first->apply(match);
-                out << match << ": ";
+                out << match << ":" << std::endl;
             } else {
-                out << "miss: ";
+                out << "miss:" << std::endl;
             }
             NextTableSet nxt_tbl;
             if (line.second) {
                 if (!tbl->gateway_payload.empty()) {
                     if (tbl->gateway_payload.count(line.second)) {
                         nxt_tbl = next_for(tbl, line.second);
-                        out << next_for(tbl, line.second);
+                        out << gw_indent << "  next: " << next_for(tbl, line.second) << std::endl;
+                        if (auto act = tbl->gateway_payload.at(line.second).first)
+                            out << gw_indent << "  action: " << act << std::endl;
                     } else {
-                        out << "run_table";
+                        out << gw_indent << "  run_table: true" << std::endl;
                         gw_miss = nxt_tbl = next_for(tbl, line.second);
                         gw_can_miss = true;
                     }
                 } else if (no_match) {
-                    out << "run_table";
+                    out << gw_indent << "  run_table : true" << std::endl;
                     gw_miss = nxt_tbl = next_for(tbl, line.second);
                     gw_can_miss = true;
                 } else {
                     nxt_tbl = next_for(tbl, line.second);
-                    out << next_for(tbl, line.second);
+                    out << gw_indent << "  next: " << next_for(tbl, line.second) << std::endl;
                 }
             } else {
                 if (!tbl->gateway_payload.empty()) {
-                   out << "run_table";
+                   out << gw_indent << "  run_table: true" << std::endl;
                    gw_miss = nxt_tbl = next_for(tbl, "$miss");
                    gw_can_miss = true;
                 } else if (no_match) {
-                    out << next_hit;
+                    out << gw_indent << "  next: " << next_hit << std::endl;
                     nxt_tbl = next_hit;
                 } else {
-                    out << "run_table";
+                    out << gw_indent << "  run_table: true" << std::endl;
                     nxt_tbl = tbl;
                     gw_can_miss = true;
                 }
             }
-            out << std::endl;
             bool split_gateway = (line.second == "$gwcont");
             auto cond = (line.second.isNullOrEmpty() || split_gateway) ?
                 "$torf" : line.second;
@@ -2174,8 +2175,11 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
             if (disable_atomic_modify) out << ", disable_atomic_modify : true";
         }
     }
+#if 0
+    // FIXME -- including this breaks context.json schema validation
     if (tbl->is_a_gateway_table_only())
-        out << ", stage_table_type: gateway_with_entries" << std::endl;
+        out << ", stage_table_type: gateway_with_entries";
+#endif
     out << " }" << std::endl;
 
     if (tbl->match_key.empty() && tbl->gateway_constant_entries_key.empty())
@@ -3065,10 +3069,13 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
 
     if (!tbl->actions.empty()) {
         out << indent << "instruction: " << tbl->unique_id(ti).build_name() << "(";
-        if (tbl->resources->table_format.instr_in_overhead())
-            out << "action";
-        else
-            out << "$DEFAULT";
+        if (tbl->resources->table_format.instr_in_overhead()) {
+            if (gateway_uses_inhibit_index(tbl))
+                out << "$GATEWAY_IDX";
+            else
+                out << "action";
+        } else {
+            out << "$DEFAULT"; }
         out << ", " << "$DEFAULT)" << std::endl;
 
         out << indent++ << "actions:" << std::endl;

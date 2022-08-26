@@ -129,6 +129,10 @@ class MauSpec {
  public:
     virtual const IXBarSpec& getIXBarSpec() const = 0;
     virtual const IMemSpec& getIMemSpec() const = 0;
+
+    // Called at the end of table rewriting in TablePlacement::TransformTables to do
+    // any target-specific fixups needed
+    virtual IR::Node *postTransformTables(IR::MAU::Table *tbl) const { return tbl; }
 };
 
 
@@ -170,6 +174,8 @@ class FlatrockMauSpec : public MauSpec {
     FlatrockMauSpec() {}
     const IXBarSpec& getIXBarSpec() const override { return ixbar_; }
     const IMemSpec& getIMemSpec() const override { return imem_; }
+
+    IR::Node *postTransformTables(IR::MAU::Table *tbl) const override;
 };
 
 #endif  /* EXTENSIONS_BF_P4C_MAU_MAU_SPEC_H_ */

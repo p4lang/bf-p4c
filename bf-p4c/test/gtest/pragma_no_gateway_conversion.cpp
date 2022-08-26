@@ -55,8 +55,11 @@ TEST(PragmaNoGatewayConversion, WithoutPragma) {
         "gateway:",
         "`.*`",
         "match: { 0: hdr.h.f1(0..7), 8: hdr.h.f1(8..15) }",
-        "0b*************001: END",  // (1 &&& 7)
-        "miss: run_table"
+        "0b*************001:",
+        "next: END",  // (1 &&& 7)
+        "action: hit",
+        "miss:",
+        "run_table: true"
      };
     RUN_CHECK(input, expected);
 }

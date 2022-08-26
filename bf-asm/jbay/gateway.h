@@ -2,9 +2,9 @@
 #define BF_ASM_JBAY_GATEWAY_H_
 
 #include <tables.h>
+#include <tofino/gateway.h>
 
 #if HAVE_JBAY
-template<> void GatewayTable::write_next_table_regs(Target::JBay::mau_regs &regs);
 template<> void GatewayTable::standalone_write_regs(Target::JBay::mau_regs &regs);
 #endif /* HAVE_JBAY */
 
