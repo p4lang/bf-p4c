@@ -164,7 +164,7 @@ class BFRuntimeSchemaGenerator : public BFRuntimeGenerator {
     void addDirectResources(const p4configv1::Table& table, Util::JsonArray* dataJson,
             Util::JsonArray* operationsJson, Util::JsonArray* attributesJson,
             P4Id maxActionParamId) const override;
-    void addValueSet(Util::JsonArray* tablesJson, const ValueSet& wred) const;
+    void addValueSet(Util::JsonArray* tablesJson, const ValueSet& valueSet) const;
     void addActionSelectorCommon(Util::JsonArray* tablesJson,
                                  const ActionSelector& actionProf) const;
     void addActionSelectorGetMemberCommon(Util::JsonArray* tablesJson,

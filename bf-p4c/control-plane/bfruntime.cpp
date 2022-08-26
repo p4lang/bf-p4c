@@ -203,7 +203,7 @@ TypeSpecParser TypeSpecParser::make(const p4configv1::P4Info& p4info,
             }
             addField(id++, fName, member);
         }
-    } else if (typeSpec.has_bitstring()) {
+    } else if (typeSpec.has_bitstring() || typeSpec.has_serializable_enum()) {
         // TODO(antonin): same as above, we need a way to pass name
         // annotations
         std::string fName;
@@ -224,16 +224,6 @@ TypeSpecParser TypeSpecParser::make(const p4configv1::P4Info& p4info,
         P4Id id = idOffset;
         for (const auto& member : p_it->second.members()) {
             auto* type = makeTypeBytes(member.type_spec().bit().bitwidth());
-            fields.push_back({prefix + member.name() + suffix, id++, type});
-        }
-    } else if (typeSpec.has_serializable_enum()) {
-        auto enumName = typeSpec.serializable_enum().name();
-        auto p_it = typeInfo.serializable_enums().find(enumName);
-        BUG_CHECK(p_it != typeInfo.serializable_enums().end(),
-                  "Serializable name '%1%' not found in P4Info map", enumName);
-        P4Id id = idOffset;
-        for (const auto& member : p_it->second.members()) {
-            auto* type = makeTypeBytes(p_it->second.underlying_type().bitwidth());
             fields.push_back({prefix + member.name() + suffix, id++, type});
         }
     } else {

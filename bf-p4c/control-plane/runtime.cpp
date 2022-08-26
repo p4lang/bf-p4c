@@ -13,23 +13,36 @@
 
 namespace BFN {
 
-// P4C-3520 : Certain names are reserved for BF-RT and cannot be used on
-// controls. Pass checks for control names overlapping restricted ones, append
-// to the list as required.
-class CheckReservedNames : public Inspector {
-    std::set<cstring> reservedNames = { "snapshot" };
-    bool preorder(const IR::Type_ArchBlock* b) override {
-        LOG3(" Checking block " << b);
-        auto name = b->name.toString();
-        if (reservedNames.count(name) > 0)
-            ::error("Block name in p4 cannot contain BF-RT reserved name (%s) : %s",
-                    name, b->toString());
-        return false;
-    }
+bool CheckReservedNames::preorder(const IR::Type_ArchBlock* b) {
+    LOG3(" Checking block " << b);
+    auto name = b->name.toString();
+    if (reservedNames.count(name) > 0)
+        ::error("Block name in p4 cannot contain BF-RT reserved name (%s) : %s",
+                name, b->toString());
+    return false;
+}
 
- public:
-    CheckReservedNames() {}
-};
+bool SetDefaultSize::preorder(IR::P4Table *table) {
+    LOG2("SetDefaultSize on table : " << table->name);
+    auto sizeProperty = table->getSizeProperty();
+    if (sizeProperty == nullptr) {
+        int defaultSize = 512;
+        if (auto k = table->getConstantProperty("min_size"))
+            defaultSize = k->asInt();
+        auto properties = new IR::TableProperties(table->properties->properties);
+        auto sizeProp = new IR::Property(IR::ID("size"),
+                new IR::ExpressionValue(new IR::Constant(defaultSize)), true);
+        properties->properties.push_back(sizeProp);
+        if (warn) {
+            auto hidden = table->getAnnotation("hidden");
+            if (!hidden)
+                ::warning("No size defined for table '%s', setting default size to %d",
+                        table->name, defaultSize);
+        }
+        table->properties = properties;
+    }
+    return false;
+}
 
 void generateRuntime(const IR::P4Program* program,
                        const BFN_Options& options) {

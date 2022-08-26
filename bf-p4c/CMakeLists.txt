@@ -1548,6 +1548,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/add_always_run.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/annotate_with_in_hash.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/attached_info.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/bfrt_pvs.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/bitrange.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/build_super_cluster.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/checksum.cpp
