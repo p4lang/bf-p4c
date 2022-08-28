@@ -24,10 +24,11 @@ class SearchAndReplaceExpr: public Transform {
 };
 
 // Action -> register -> read/write statements
-typedef std::unordered_map<const IR::P4Action *,
+// the action is either a P4Action or a Declaration_Instance representing a RegisterAction extern
+typedef std::unordered_map<const IR::Declaration *,
             std::unordered_map<const IR::Declaration_Instance *,  // Register declaration
                 ordered_set<const IR::Statement*>>> RegisterCallsByAction;
-typedef std::unordered_map<const IR::P4Action *,
+typedef std::unordered_map<const IR::Declaration *,
             std::unordered_map<const IR::Declaration_Instance *,  // Register declaration
                 IR::MethodCallExpression*>> RegisterExecuteCallByAction;
 typedef std::unordered_map<const IR::P4Control*,
@@ -59,7 +60,11 @@ class RegisterReadWrite : public PassManager {
         RegisterReadWrite &self;
         std::map<const IR::P4Control*, IR::Declaration_Instance*> register_actions;
         IR::Node *preorder(IR::P4Action*) override;
+        IR::Node *preorder(IR::Declaration_Instance*) override;
         IR::Node *postorder(IR::P4Control* ctrl) override;
+
+        bool processDeclaration(const IR::Declaration *action, const IR::BlockStatement *&body)
+            __attribute__((__warn_unused_result__));
 
      public:
         explicit UpdateRegisterActionsAndExecuteCalls(RegisterReadWrite &self) :
@@ -85,15 +90,15 @@ class RegisterReadWrite : public PassManager {
             IR::MethodCallExpression *reg_execute = nullptr;
             const IR::Expression *read_expr = nullptr;
         };
-        bool preorder(const IR::P4Action*) override;
+        bool preorder(const IR::Declaration*) override;
         void end_apply() override;
 
         IR::MethodCallExpression*
         createRegisterExecute(IR::MethodCallExpression *reg_execute,
-                              const IR::Statement *reg_stmt, const IR::P4Action *act);
+                              const IR::Statement *reg_stmt, cstring action_name);
         RegInfo
         createRegisterAction(RegInfo reg_info,
-                              const IR::Statement *reg_stmt, const IR::P4Action *act);
+                              const IR::Statement *reg_stmt, const IR::Declaration *act);
      public:
         explicit AnalyzeActionWithRegisterCalls(RegisterReadWrite &self) :
              self(self) {}
@@ -109,6 +114,7 @@ class RegisterReadWrite : public PassManager {
         RegisterReadWrite &self;
         bool preorder(const IR::MethodCallExpression*) override;
         void end_apply() override;
+        void collectRegReadWrite(const IR::MethodCallExpression*, const IR::Declaration*);
 
      public:
         explicit CollectRegisterReadsWrites(RegisterReadWrite &self) :

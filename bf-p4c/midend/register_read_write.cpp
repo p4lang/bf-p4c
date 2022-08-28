@@ -35,18 +35,12 @@ RegisterReadWrite::extractRegisterReadWrite(const IR::Statement *reg_stmt) {
                      const IR::Expression * /*read_expr*/>(call, read_expr);
 }
 
-/*
- * The execute call is placed at the position of the read call with assignment or,
- * if only the write call is present, at the end of the action.
- */
-IR::Node *RegisterReadWrite::UpdateRegisterActionsAndExecuteCalls::preorder(IR::P4Action* act) {
-    LOG1(" P4 Action: " << act);
+bool RegisterReadWrite::UpdateRegisterActionsAndExecuteCalls::processDeclaration(
+    const IR::Declaration *orig_act, const IR::BlockStatement *&src_body) {
+    // src_body is being updated iteratively for each register used in the action
+    LOG1(" updating action: " << orig_act);
 
-    auto orig_act = getOriginal<IR::P4Action>();
-    if (self.action_register_calls.count(orig_act) == 0) return act;
-
-    // Temporary body being updated; iteratively being updated for each register used in the action
-    auto src_body = orig_act->body;
+    if (self.action_register_calls.count(orig_act) == 0) return false;
 
     // Iterate over registers used in the action
     for (auto reg : self.action_register_calls[orig_act]) {
@@ -62,12 +56,15 @@ IR::Node *RegisterReadWrite::UpdateRegisterActionsAndExecuteCalls::preorder(IR::
         // Remove register read & write calls in action and remember the read assignment
         while (src_body_it != src_body->components.end() && assign_stmt == nullptr) {
             auto inst = *src_body_it;
-            LOG1(" P4 Action Statement: " << inst);
+            LOG2(" updating action statement: " << inst);
+            LOG2(" it's a " << inst->node_type_name());
             if (calls.count(inst->to<IR::Statement>()) == 0) {
                 // Add non-read & write statements
+                LOG2("  adding a " << inst->to<IR::Statement>() << " to the body");
                 body->push_back(inst);
             } else if (assign_stmt == nullptr) {
                 // Skip read & write statements and remember the read assignment
+                LOG2("  setting the assign_stmt to " << inst->to<IR::AssignmentStatement>());
                 assign_stmt = inst->to<IR::AssignmentStatement>();
             }
             src_body_it++;
@@ -105,7 +102,43 @@ IR::Node *RegisterReadWrite::UpdateRegisterActionsAndExecuteCalls::preorder(IR::
         src_body = body;
     }
 
-    return new IR::P4Action(act->srcInfo, act->name, act->annotations, act->parameters, src_body);
+    return true;
+}
+
+IR::Node *RegisterReadWrite::UpdateRegisterActionsAndExecuteCalls::preorder(IR::P4Action* act) {
+    auto p4act = getOriginal<IR::P4Action>();
+    auto src_body = p4act->body;
+    if (!processDeclaration(p4act, src_body)) return act;
+
+    LOG2(" -> replacing p4 action");
+    return new IR::P4Action(act->srcInfo, act->name,
+        p4act->annotations, p4act->parameters, src_body);
+}
+
+/*
+ * The execute call is placed at the position of the read call with assignment or,
+ * if only the write call is present, at the end of the action.
+ */
+IR::Node *RegisterReadWrite::UpdateRegisterActionsAndExecuteCalls::preorder(
+    IR::Declaration_Instance* act) {
+    // this pass expects a P4 action or a register action
+    auto inst = dynamic_cast<P4::ExternInstantiation*>(
+        P4::ExternInstantiation::resolve(act, self.refMap, self.typeMap));
+    if (!inst || inst->type->name != "RegisterAction") return act;
+
+    auto regAct = getOriginal<IR::Declaration_Instance>();
+    LOG2("regAct: " << regAct);
+    LOG2("initializer: " << regAct->initializer);
+    auto applyDecl = regAct->initializer->components[0]->to<IR::Declaration>();
+    LOG2("apply: " << applyDecl);
+    LOG2("apply: " << applyDecl->node_type_name());
+
+    const IR::BlockStatement *src_body = applyDecl->to<IR::Function>()->body;
+    if (!processDeclaration(regAct, src_body)) return act;
+
+    LOG2(" -> replacing decl inst.");
+    return new IR::Declaration_Instance(act->name, regAct->annotations,
+        regAct->type, regAct->arguments, regAct->initializer);
 }
 
 IR::Node *RegisterReadWrite::UpdateRegisterActionsAndExecuteCalls::postorder(IR::P4Control* ctrl) {
@@ -177,14 +210,15 @@ IR::MethodCallExpression*
 RegisterReadWrite::AnalyzeActionWithRegisterCalls::createRegisterExecute(
                                         IR::MethodCallExpression *reg_execute,
                                         const IR::Statement *reg_stmt,
-                                        const IR::P4Action *act) {
-    BUG_CHECK(reg_stmt, "No register call statment present to analyze in action - %1%", act);
+                                        cstring action_name) {
+    BUG_CHECK(
+        reg_stmt, "No register call statment present to analyze in action - %1%", action_name);
 
     auto rv = extractRegisterReadWrite(reg_stmt);
     auto *call = rv.first;
     if (!call) return nullptr;
 
-    LOG1(" MethodCallExpression: " << call);
+    LOG1(" creating register execute call for MethodCallExpression: " << call);
 
     // Create Register Action - Add to declaration
     auto member = call->method->to<IR::Member>();
@@ -231,7 +265,7 @@ RegisterReadWrite::AnalyzeActionWithRegisterCalls::createRegisterExecute(
         } else {
             utype = rtype; } }
 
-    auto apply_name = reg_path->name + "_" + act->name;
+    auto apply_name = reg_path->name + "_" + action_name;
 
     if (!reg_execute) {
         // Create Execute Method Call Expression
@@ -250,7 +284,7 @@ RegisterReadWrite::AnalyzeActionWithRegisterCalls::RegInfo
 RegisterReadWrite::AnalyzeActionWithRegisterCalls::createRegisterAction(
                                             RegInfo reg_info,
                                             const IR::Statement *reg_stmt,
-                                            const IR::P4Action *act) {
+                                            const IR::Declaration *act) {
     BUG_CHECK(reg_stmt, "No register call statment present to analyze in action - ", act);
 
     auto rv = extractRegisterReadWrite(reg_stmt);
@@ -262,7 +296,7 @@ RegisterReadWrite::AnalyzeActionWithRegisterCalls::createRegisterAction(
         reg_info.read_expr = rv.second;
     }
 
-    LOG1(" MethodCallExpression: " << call);
+    LOG1(" creating register action for MethodCallExpression: " << call);
 
     // Register read/write calls don not have an index argument for direct
     // registers. This is currently unsupported.
@@ -380,19 +414,24 @@ RegisterReadWrite::AnalyzeActionWithRegisterCalls::createRegisterAction(
     return reg_info;
 }
 
-bool RegisterReadWrite::AnalyzeActionWithRegisterCalls::preorder(const IR::P4Action * act) {
-    LOG1(" P4 Action : " << act);
+bool RegisterReadWrite::AnalyzeActionWithRegisterCalls::preorder(const IR::Declaration *act) {
+    if (!act->is<IR::P4Action>() && !act->is<IR::Declaration_Instance>()) {
+        return true;
+    }
+
+    LOG1(" analysing action: " << act);
 
     if (self.action_register_calls.count(act) == 0) return false;
 
     auto control = findContext<IR::P4Control>();
     BUG_CHECK(control, "No control found for P4 Action ", act);
 
+    LOG1("self.action_register_call " << self.action_register_calls.size());
     for (auto reg : self.action_register_calls[act]) {
         RegInfo reg_info;
         for (auto call : reg.second) {
             reg_info = createRegisterAction(reg_info, call, act);
-            reg_info.reg_execute = createRegisterExecute(reg_info.reg_execute, call, act);
+            reg_info.reg_execute = createRegisterExecute(reg_info.reg_execute, call, act->name);
         }
 
         auto reg_action = reg_info.reg_action;
@@ -437,45 +476,45 @@ void RegisterReadWrite::AnalyzeActionWithRegisterCalls::end_apply() {
     }
 }
 
+void RegisterReadWrite::CollectRegisterReadsWrites::collectRegReadWrite(
+                                        const IR::MethodCallExpression* call,
+                                        const IR::Declaration* act) {
+    auto mi = P4::MethodInstance::resolve(call, self.refMap, self.typeMap);
+    if (!mi->is<P4::ExternMethod>()) return;
+
+    auto em = mi->to<P4::ExternMethod>();
+    cstring externName = em->actualExternType->name;
+    LOG1(" BB: " << externName);
+    if (externName != "Register") return;
+
+    auto stmt = findContext<IR::Statement>();
+    if (!stmt) return;
+
+    auto reg = em->object->to<IR::Declaration_Instance>();
+    if (!reg) return;
+
+    LOG1(" Register extern found: " << em->method->name << " in action: " << act->name);
+    if (em->method->name == "read" || em->method->name == "write") {
+        self.action_register_calls[act][reg].insert(stmt);
+    }
+}
+
 bool RegisterReadWrite::CollectRegisterReadsWrites::preorder(
                                         const IR::MethodCallExpression* call) {
     LOG1(" MethodCallExpression: " << call);
 
     // Check for register read/write extern calls
     auto act = findContext<IR::P4Action>();
-    if (!act) return false;
-
-    auto method = P4::MethodInstance::resolve(call, self.refMap, self.typeMap);
-    if (!method) return false;
-
-    auto member = call->method->to<IR::Member>();
-    if (!member) return false;
-
-    auto path = member->expr->to<IR::PathExpression>();
-    if (!path) return false;
-
-    const IR::Type_Extern* typeEx = nullptr;
-    auto type = path->type->to<IR::Type_SpecializedCanonical>();
-
-    typeEx = type ? type->baseType->to<IR::Type_Extern>()
-                  : path->type->to<IR::Type_Extern>();
-
-    if (!typeEx) return false;
-
-    if (typeEx->name != "Register") return false;
-
-    auto stmt = findContext<IR::Statement>();
-    if (auto em = method->to<P4::ExternMethod>()) {
-        auto reg = em->object->to<IR::Declaration_Instance>();
-        if (member->member == "read") {
-            LOG1(" Register extern found: " << member << " in action : " << act->name);
-            self.action_register_calls[act][reg].insert(stmt);
-        }
-        if (member->member == "write") {
-            LOG1(" Register extern found: " << member << " in action : " << act->name);
-            self.action_register_calls[act][reg].insert(stmt);
+    if (act) {
+        collectRegReadWrite(call, act);
+    } else {
+        auto regAct = findContext<IR::Declaration_Instance>();
+        if (regAct) {
+            LOG1("no P4Action context, but there is a Declaration_Instance: " << regAct);
+            collectRegReadWrite(call, regAct);
         }
     }
+
     return false;
 }
 

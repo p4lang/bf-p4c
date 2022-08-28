@@ -154,6 +154,12 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/errors/p4c-4720.p4
 )
 
+# P4C-4524
+p4c_add_xfail_reason("tofino"
+  "error: .* uses of all registers within a single action have to use the same addressing.*"
+  extensions/p4_tests/p4_16/errors/p4c-4524.p4
+)
+
 # P4C-4607
 p4c_add_xfail_reason("tofino"
   "error: slice of register value in condition is not supported"
