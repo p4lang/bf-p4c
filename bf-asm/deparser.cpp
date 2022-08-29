@@ -382,81 +382,6 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
     }
 }
 
-void Deparser::process() {
-    bitvec pov_use[2];
-    for (gress_t gress : Range(INGRESS, EGRESS)) {
-        for (auto &ent : pov_order[gress])
-            if (ent.check()) {
-                pov_use[gress][ent->reg.uid] = 1;
-                phv_use[gress][ent->reg.uid] = 1; }
-        for (auto &ent : dictionary[gress]) {
-            ent.check(phv_use[gress]);
-            for (auto &pov : ent.pov) {
-                if (!pov.check()) continue;
-                phv_use[gress][pov->reg.uid] = 1;
-                if (pov->lo != pov->hi)
-                    error(pov.lineno, "POV bits should be single bits");
-                if (!pov_use[gress][pov->reg.uid]) {
-                    pov_order[gress].emplace_back(pov->reg, gress);
-                    pov_use[gress][pov->reg.uid] = 1; } } }
-        for (int i = 0; i < MAX_DEPARSER_CHECKSUM_UNITS; i++)
-            for (auto &ent : full_checksum_unit[gress][i].entries) {
-                for (auto entry : ent.second) {
-                    if (!entry.check())
-                        error(entry.lineno, "Invalid checksum entry"); }}
-    }
-    for (auto &intrin : intrinsics) {
-        for (auto &el : intrin.vals) {
-            if (el.check())
-                phv_use[intrin.type->gress][el->reg.uid] = 1;
-            for (auto &pov : el.pov) {
-                if (pov.check()) {
-                    phv_use[intrin.type->gress][pov->reg.uid] = 1;
-                    if (pov->lo != pov->hi)
-                        error(pov.lineno, "POV bits should be single bits");
-                    if (!pov_use[intrin.type->gress][pov->reg.uid]) {
-                        pov_order[intrin.type->gress].emplace_back(pov->reg, intrin.type->gress);
-                        pov_use[intrin.type->gress][pov->reg.uid] = 1; } } } }
-        if (intrin.vals.size() > (size_t)intrin.type->max)
-            error(intrin.lineno, "Too many values for %s", intrin.type->name.c_str()); }
-    if (phv_use[INGRESS].intersects(phv_use[EGRESS])
-#ifdef HAVE_FLATROCK
-        && options.target != Target::Flatrock::tag
-#endif  /* HAVE_FLATROCK */
-            )
-        error(lineno[INGRESS], "Registers used in both ingress and egress in deparser: %s",
-              Phv::db_regset(phv_use[INGRESS] & phv_use[EGRESS]).c_str());
-    for (auto &digest : digests) {
-        if (digest.select.check()) {
-            phv_use[digest.type->gress][digest.select->reg.uid] = 1;
-            if (digest.select->lo > 0 && !digest.type->can_shift)
-                error(digest.select.lineno, "%s digest selector must be in bottom bits of phv",
-                      digest.type->name.c_str()); }
-        for (auto &pov : digest.select.pov) {
-            if (pov.check()) {
-                phv_use[digest.type->gress][pov->reg.uid] = 1;
-                if (pov->lo != pov->hi)
-                    error(pov.lineno, "POV bits should be single bits");
-                if (!pov_use[digest.type->gress][pov->reg.uid]) {
-                    pov_order[digest.type->gress].emplace_back(pov->reg, digest.type->gress);
-                    pov_use[digest.type->gress][pov->reg.uid] = 1; } } }
-        for (auto &set : digest.layout)
-            for (auto &reg : set.second)
-                if (reg.check())
-                    phv_use[digest.type->gress][reg->reg.uid] = 1; }
-    if (options.match_compiler || 1) {  /* FIXME -- need proper liveness analysis */
-        Phv::setuse(INGRESS, phv_use[INGRESS]);
-        Phv::setuse(EGRESS, phv_use[EGRESS]); }
-    for (gress_t gress : Range(INGRESS, EGRESS)) {
-        int pov_byte = 0, pov_size = 0;
-        for (auto &ent : pov_order[gress])
-            if (pov[gress].count(&ent->reg) == 0) {
-                pov[gress][&ent->reg] = pov_size;
-                pov_size += ent->reg.size; }
-        if (pov_size > 8*Target::DEPARSER_MAX_POV_BYTES())
-            error(lineno[gress], "Ran out of space in POV in deparser"); }
-}
-
 template<class ENTRIES> static
 void write_checksum_entry(ENTRIES &entry, unsigned mask, int swap, int id,
         const char* name = "entry") {
@@ -699,6 +624,89 @@ void Deparser::report_resources_deparser_json(json::vector& fde_entries_i,
 #endif  /* HAVE_FLATROCK */
 
 /* The following uses of specialized templates must be after the specialization... */
+void Deparser::process() {
+    bitvec pov_use[2];
+    for (gress_t gress : Range(INGRESS, EGRESS)) {
+        for (auto &ent : pov_order[gress])
+            if (ent.check()) {
+                pov_use[gress][ent->reg.uid] = 1;
+                phv_use[gress][ent->reg.uid] = 1; }
+        for (auto &ent : dictionary[gress]) {
+            ent.check(phv_use[gress]);
+            for (auto &pov : ent.pov) {
+                if (!pov.check()) continue;
+                phv_use[gress][pov->reg.uid] = 1;
+                if (pov->lo != pov->hi)
+                    error(pov.lineno, "POV bits should be single bits");
+                if (!pov_use[gress][pov->reg.uid]) {
+                    pov_order[gress].emplace_back(pov->reg, gress);
+                    pov_use[gress][pov->reg.uid] = 1; } } }
+        for (int i = 0; i < MAX_DEPARSER_CHECKSUM_UNITS; i++)
+            for (auto &ent : full_checksum_unit[gress][i].entries) {
+                for (auto entry : ent.second) {
+                    if (!entry.check())
+                        error(entry.lineno, "Invalid checksum entry"); }}
+    }
+    for (auto &intrin : intrinsics) {
+        for (auto &el : intrin.vals) {
+            if (el.check())
+                phv_use[intrin.type->gress][el->reg.uid] = 1;
+            for (auto &pov : el.pov) {
+                if (pov.check()) {
+                    phv_use[intrin.type->gress][pov->reg.uid] = 1;
+                    if (pov->lo != pov->hi)
+                        error(pov.lineno, "POV bits should be single bits");
+                    if (!pov_use[intrin.type->gress][pov->reg.uid]) {
+                        pov_order[intrin.type->gress].emplace_back(pov->reg, intrin.type->gress);
+                        pov_use[intrin.type->gress][pov->reg.uid] = 1; } } } }
+        if (intrin.vals.size() > (size_t)intrin.type->max)
+            error(intrin.lineno, "Too many values for %s", intrin.type->name.c_str()); }
+    if (phv_use[INGRESS].intersects(phv_use[EGRESS])
+#ifdef HAVE_FLATROCK
+        && options.target != Target::Flatrock::tag
+#endif  /* HAVE_FLATROCK */
+            )
+        error(lineno[INGRESS], "Registers used in both ingress and egress in deparser: %s",
+              Phv::db_regset(phv_use[INGRESS] & phv_use[EGRESS]).c_str());
+    for (auto &digest : digests) {
+        if (digest.select.check()) {
+            phv_use[digest.type->gress][digest.select->reg.uid] = 1;
+            if (digest.select->lo > 0 && !digest.type->can_shift)
+                error(digest.select.lineno, "%s digest selector must be in bottom bits of phv",
+                      digest.type->name.c_str()); }
+        for (auto &pov : digest.select.pov) {
+            if (pov.check()) {
+                phv_use[digest.type->gress][pov->reg.uid] = 1;
+                if (pov->lo != pov->hi)
+                    error(pov.lineno, "POV bits should be single bits");
+                if (!pov_use[digest.type->gress][pov->reg.uid]) {
+                    pov_order[digest.type->gress].emplace_back(pov->reg, digest.type->gress);
+                    pov_use[digest.type->gress][pov->reg.uid] = 1; } } }
+        for (auto &set : digest.layout)
+            for (auto &reg : set.second)
+                if (reg.check())
+                    phv_use[digest.type->gress][reg->reg.uid] = 1; }
+    SWITCH_FOREACH_REGISTER_SET(Target::register_set(),
+        TARGET *t = nullptr;
+        // process(t);
+        process((TARGET*)nullptr);
+    )
+
+    if (options.match_compiler || 1) {  /* FIXME -- need proper liveness analysis */
+        Phv::setuse(INGRESS, phv_use[INGRESS]);
+        Phv::setuse(EGRESS, phv_use[EGRESS]);
+    }
+    for (gress_t gress : Range(INGRESS, EGRESS)) {
+        int pov_byte = 0, pov_size = 0;
+        for (auto &ent : pov_order[gress])
+            if (pov[gress].count(&ent->reg) == 0) {
+                pov[gress][&ent->reg] = pov_size;
+                pov_size += ent->reg.size; }
+        if (pov_size > 8*Target::DEPARSER_MAX_POV_BYTES())
+            error(lineno[gress], "Ran out of space in POV in deparser"); }
+}
+
+/* The following uses of specialized templates must be after the specialization... */
 void Deparser::output(json::map& map) {
     SWITCH_FOREACH_TARGET(options.target,
         auto *regs = new TARGET::deparser_regs;
@@ -761,4 +769,18 @@ unsigned Deparser::FDEntry::Checksum::encode() {
 unsigned Deparser::FDEntry::Constant::encode() {
     SWITCH_FOREACH_TARGET(options.target, return encode<TARGET::register_type>(); );
     return -1;
+}
+
+void Deparser::gtest_clear() {
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < MAX_DEPARSER_CHECKSUM_UNITS; j++)
+            checksum_entries[i][j].clear();
+        dictionary[i].clear();
+        pov_order[i].clear();
+        pov[i].clear();
+        phv_use[i].clear();
+        constants[i].clear();
+    }
+    intrinsics.clear();
+    digests.clear();
 }

@@ -103,7 +103,7 @@
 #endif
 
 #if HAVE_JBAY
-#define TARGETS_USING_REGS_Jbay(M, ...) \
+#define TARGETS_USING_REGS_JBay(M, ...) \
     M(JBay, ##__VA_ARGS__)     \
     M(Tofino2H, ##__VA_ARGS__) \
     M(Tofino2M, ##__VA_ARGS__) \
@@ -993,7 +993,7 @@ void emit_parser_registers(const Target::Flatrock::top_level_regs *regs, std::os
 
 #define SWITCH_FOREACH_REGISTER_SET(VAR, ...)                                   \
         switch (VAR) {                                                          \
-        FOR_ALL_TARGET_CLASSES(DO_SWITCH_FOREACH_REGISTER_SET, __VA_ARGS__)     \
+        FOR_ALL_REGISTER_SETS(DO_SWITCH_FOREACH_REGISTER_SET, __VA_ARGS__)     \
         default: BUG("invalid target"); }
 
 #define DO_SWITCH_FOREACH_REGISTER_SET(REGS_, ...)                              \

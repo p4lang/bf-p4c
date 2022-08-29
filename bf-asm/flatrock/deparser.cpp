@@ -64,11 +64,22 @@ MDP_INTRINSIC_BP_RENAME(hash_lag_ecmp_mcast_1, tmm_ext_ram.tmm_ext[0], hash2, YE
 // TODO: b1_pkt_len
 
 DEPARSER_INTRINSIC(Flatrock, INGRESS, valid_vec, 2) {
-    // FIXME: b0_sel/b1_sel should be from the extracted POV
-    // Works with either 1 x 16b container or 2 x 8b containers
-    regs.mdp.vld_vec_ext.b1_sel = intrin.vals.front().val->reg.deparser_id();
-    regs.mdp.vld_vec_ext.b0_sel = intrin.vals.back().val->reg.deparser_id();
-    regs.mdp.vld_vec_ext.shift_amt = intrin.vals.back().val->lo;
+    // Works with either 1 x 16b/32b container or 2 x 8b containers
+    const auto* reg_b0 = &intrin.vals.back().val->reg;
+    const auto* reg_b1 = &intrin.vals.front().val->reg;
+
+    BUG_CHECK(deparser.pov[INGRESS].count(reg_b0), "Cannot find register %s in POV map",
+              reg_b0->name);
+    BUG_CHECK(deparser.pov[INGRESS].count(reg_b1), "Cannot find register %s in POV map",
+              reg_b1->name);
+
+    // POV bytes: lo = reg_b0 + number of bytes offset in val->lo
+    //            hi = reg_b0 == reg_b1 ? lo + 1 : reg_b1
+    regs.mdp.vld_vec_ext.b0_sel =
+        deparser.pov[INGRESS].at(reg_b0) / 8 + intrin.vals.back().val->lo / 8;
+    regs.mdp.vld_vec_ext.b1_sel = deparser.pov[INGRESS].at(reg_b1) / 8 +
+                                  (reg_b0 == reg_b1 ? 1 + intrin.vals.back().val->lo / 8 : 0);
+    regs.mdp.vld_vec_ext.shift_amt = intrin.vals.back().val->lo % 8;
 }
 
 // FIXME: egress_unicast_port should be removed from EGRESS
@@ -100,8 +111,8 @@ struct ftr_str_info_t {
     checked_array_base<ubits<2>>        &sel;
 };
 
-
-typedef std::map<const Phv::Register *, unsigned> pov_map_t;
+// Register to POV byte index mappings
+typedef ordered_map<const Phv::Register *, unsigned> pov_map_t;
 
 template <class REG, class ITER>
 void fill_string(int idx, int seq, ITER begin, ITER end, const pov_map_t &pov_map, REG &reg,
@@ -124,6 +135,22 @@ void fill_string(int idx, int seq, ITER begin, ITER end, const pov_map_t &pov_ma
             ++i; } }
 }
 
+/// @brief Flatrock-specific additions to the process method.
+///
+/// Populates the @p pov_order vector with Phv::Ref objects that represent the 128b POV
+template<> void Deparser::process(Target::Flatrock*) {
+    // Intrinsics that must be extracted from the POV vector
+    static std::set<Deparser::Intrinsic::Type *> povIntrinsics = {
+        Deparser::Intrinsic::Type::all[Target::Flatrock::tag][INGRESS]["valid_vec"],
+    };
+
+    for (auto &intrin : intrinsics) {
+        if (povIntrinsics.count(intrin.type)) {
+            for (auto &val : intrin.vals) pov_order[intrin.type->gress].push_back(val.val);
+        }
+    }
+}
+
 template<> void Deparser::write_config(Target::Flatrock::deparser_regs &regs) {
     // NOTE: Some of the sections listed below may be programmed via intrinsics (see above)
 
@@ -133,10 +160,10 @@ template<> void Deparser::write_config(Target::Flatrock::deparser_regs &regs) {
     // See: https://wiki.ith.intel.com/pages/viewpage.action?pageId=1767709001
 
     // POV extraction
+    //
+    // Ensure the MSB of the POVs is all zero as we need a zero-byte for some things
     auto &mdp_pov_ext = regs.mdp.pov_ext;
-    unsigned i = 0;
-    pov_map_t i_pov_map;
-    ubits<8>* mdp_pov_ext_bytes[16] = {
+    ubits<8>* mdp_pov_ext_bytes[Target::Flatrock::POV_WIDTH] = {
         &mdp_pov_ext.b0_src_iphv_num,
         &mdp_pov_ext.b1_src_iphv_num,
         &mdp_pov_ext.b2_src_iphv_num,
@@ -154,17 +181,28 @@ template<> void Deparser::write_config(Target::Flatrock::deparser_regs &regs) {
         &mdp_pov_ext.b14_src_iphv_num,
         &mdp_pov_ext.b15_src_iphv_num,
     };
-    for (auto &ent : pov_order[INGRESS]) {
-        i_pov_map.emplace(&ent->reg, i*8);
-        for (unsigned j = 0; j < ent->reg.size/8; ++j) {
-            *mdp_pov_ext_bytes[i++] = ent->reg.deparser_id() + j; }
+    int idx = 0;
+    for (auto &kv : pov[INGRESS]) {
+        auto *reg = kv.first;
+        idx = kv.second / 8;
+        for (unsigned j = 0; j < reg->size / 8; ++j) {
+            *mdp_pov_ext_bytes[idx++] = reg->deparser_id() + j;
+        }
     }
+    // Verify that we haven't written the _last_ entry (keep for zero byte)
+    BUG_CHECK(idx <= Target::Flatrock::POV_WIDTH - 1, "Too many POV bytes being extracted");
 
-    // Valid vector
-    // TODO: regs.mdp.vld_vec_ext
+    // TODO: write the final (b15) extraction
+    // TODO: consider pushing the zero-byte into the pov_order list in the Flatrock process method
+    // *mdp_pov_ext_bytes[Target::Flatrock::POV_WIDTH - 1] = ??;
+
+    // Valid vector -- handled in valid_vec intrinsic above
 
     // Default select vector
-    // TODO: regs.mdp.dflt_vec_ext
+    // Take everything from PHV -- point to a zero-POV byte for all 3 entries
+    regs.mdp.dflt_vec_ext.b0_sel = 15;
+    regs.mdp.dflt_vec_ext.b1_sel = 15;
+    regs.mdp.dflt_vec_ext.b2_sel = 15;
 
     // Bridge metadata
     // TODO: regs.mdp.brm_ext
@@ -227,13 +265,13 @@ template<> void Deparser::write_config(Target::Flatrock::deparser_regs &regs) {
     auto &phvxb = regs.dprsr.dprsr_phvxb_rspec;
 
     // POV extraction
-    i = 0;
-    pov_map_t e_pov_map;
-    for (auto &ent : pov_order[EGRESS]) {
-        e_pov_map.emplace(&ent->reg, i*8);
-        for (unsigned j = 0; j < ent->reg.size/8; ++j) {
-            phvxb.phe2pov[i/4].phe_byte[i%4] = ent->reg.deparser_id() + j;
-            ++i; } }
+    for (auto &kv : pov[EGRESS]) {
+        auto *reg = kv.first;
+        int idx = kv.second / 8;
+        for (unsigned j = 0; j < reg->size/8; ++j) {
+            phvxb.phe2pov[idx / 4].phe_byte[idx % 4] = reg->deparser_id() + j;
+            ++idx; } }
+
 
     // Content memory
     // TODO: regs.dprsr.dprsr_phvxb_rspec.cm
@@ -296,9 +334,9 @@ template<> void Deparser::write_config(Target::Flatrock::deparser_regs &regs) {
         i->en[i->use] = 1;
         i->sel[i->use] = 0;
         switch (i->len) {
-        case 8: fill_string(i->use*4, seq, it, next, e_pov_map, strings.str8, bytes); break;
-        case 16: fill_string(i->use*4, seq, it, next, e_pov_map, strings.str16, bytes); break;
-        case 32: fill_string(i->use*4, seq, it, next, e_pov_map, strings.str32, bytes); break;
+        case 8: fill_string(i->use*4, seq, it, next, pov[EGRESS], strings.str8, bytes); break;
+        case 16: fill_string(i->use*4, seq, it, next, pov[EGRESS], strings.str16, bytes); break;
+        case 32: fill_string(i->use*4, seq, it, next, pov[EGRESS], strings.str32, bytes); break;
         default: BUG("bad size"); }
         ++seq;
         ++i->use;

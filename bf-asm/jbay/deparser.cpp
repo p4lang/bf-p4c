@@ -1041,3 +1041,8 @@ template<> unsigned Deparser::FDEntry::Constant::encode<Target::JBay>() {
 template<> void Deparser::gen_learn_quanta(Target::JBay::parser_regs &regs,
                                            json::vector &learn_quanta) {
 }
+
+template<> void Deparser::process(Target::JBay*) {
+    // Chip-specific code for process method
+    // None for JBay
+}

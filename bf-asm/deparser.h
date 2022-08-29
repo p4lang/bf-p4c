@@ -15,7 +15,7 @@ enum {
 };
 
 /**
- * \ingroup parde 
+ * \ingroup parde
  */
 class Deparser : public Section {
     static Deparser singleton_object;
@@ -174,6 +174,7 @@ class Deparser : public Section {
     void start(int lineno, VECTOR(value_t) args);
     void input(VECTOR(value_t) args, value_t data);
     void process();
+    template<class TARGET> void process(TARGET*);
     void output(json::map &);
     template<class REGS> void gen_learn_quanta(REGS &, json::vector&);
     template<class REGS> void write_config(REGS &);
@@ -234,6 +235,14 @@ class Deparser : public Section {
     static unsigned next_handle() {
         return unique_field_list_handle++ | unique_table_offset << 20 | FIELD_HANDLE_START;
     }
+
+    // gtest methods
+
+    /// @brief Get the singleton object for use in gtest
+    static Deparser* gtest_get_deparser() { return &singleton_object; }
+
+    /// @brief Clear/reset the deparser object
+    void gtest_clear();
 
  private:
     // Report deparser resources to JSON file

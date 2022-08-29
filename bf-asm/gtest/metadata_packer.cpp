@@ -12,6 +12,7 @@ namespace {
 void resetTarget() {
     options.target = NO_TARGET;
     Phv::test_clear();
+    Deparser::gtest_get_deparser()->gtest_clear();
 }
 
 // Basic test that the metadata packer (using "deparser ingress") is correctly processed
@@ -31,6 +32,7 @@ deparser ingress:
 
     Target::Flatrock::deparser_regs regs;
     Deparser* dprsr = dynamic_cast<Deparser*>(Section::test_get("deparser"));
+    dprsr->process();
     dprsr->write_config(regs);
 
     EXPECT_EQ(regs.mdp_mem.tmm_ext_ram.tmm_ext[0].phv_n_epipe_id, 2);
@@ -48,6 +50,8 @@ version:
   target: Tofino5
 deparser ingress:
   dictionary: {}
+  # pov: dummy values to force valid_vec to non-zero offsets
+  pov: [ H2, B9, B9, B9, H2 ]
   valid_vec: [B0(0..6), B1]
 )MDP_CFG";
 
@@ -57,10 +61,11 @@ deparser ingress:
 
     Target::Flatrock::deparser_regs regs;
     Deparser* dprsr = dynamic_cast<Deparser*>(Section::test_get("deparser"));
+    dprsr->process();
     dprsr->write_config(regs);
 
-    EXPECT_EQ(regs.mdp.vld_vec_ext.b1_sel, 0);
-    EXPECT_EQ(regs.mdp.vld_vec_ext.b0_sel, 1);
+    EXPECT_EQ(regs.mdp.vld_vec_ext.b1_sel, 3);
+    EXPECT_EQ(regs.mdp.vld_vec_ext.b0_sel, 4);
     EXPECT_EQ(regs.mdp.vld_vec_ext.shift_amt, 0);
 }
 
@@ -70,6 +75,8 @@ version:
   target: Tofino5
 deparser ingress:
   dictionary: {}
+  # pov: dummy values to force valid_vec to non-zero offsets
+  pov: [ H2, B9 ]
   valid_vec: [B2, B3(1..7)]
 )MDP_CFG";
 
@@ -79,20 +86,23 @@ deparser ingress:
 
     Target::Flatrock::deparser_regs regs;
     Deparser* dprsr = dynamic_cast<Deparser*>(Section::test_get("deparser"));
+    dprsr->process();
     dprsr->write_config(regs);
 
-    EXPECT_EQ(regs.mdp.vld_vec_ext.b1_sel, 2);
-    EXPECT_EQ(regs.mdp.vld_vec_ext.b0_sel, 3);
+    EXPECT_EQ(regs.mdp.vld_vec_ext.b1_sel, 3);
+    EXPECT_EQ(regs.mdp.vld_vec_ext.b0_sel, 4);
     EXPECT_EQ(regs.mdp.vld_vec_ext.shift_amt, 1);
 }
 
-/*
+
 TEST(metadata_packer, valid_vec_3) {
     const char* deparser_str = R"MDP_CFG(
 version:
   target: Tofino5
 deparser ingress:
   dictionary: {}
+  # pov: dummy values to force valid_vec to non-zero offsets
+  pov: [ H2, B9 ]
   valid_vec: [H0(0..14)]
 )MDP_CFG";
 
@@ -102,13 +112,13 @@ deparser ingress:
 
     Target::Flatrock::deparser_regs regs;
     Deparser* dprsr = dynamic_cast<Deparser*>(Section::test_get("deparser"));
+    dprsr->process();
     dprsr->write_config(regs);
 
-    EXPECT_EQ(regs.mdp.vld_vec_ext.b1_sel, 128);
-    EXPECT_EQ(regs.mdp.vld_vec_ext.b0_sel, 129);
+    EXPECT_EQ(regs.mdp.vld_vec_ext.b1_sel, 4);
+    EXPECT_EQ(regs.mdp.vld_vec_ext.b0_sel, 3);
     EXPECT_EQ(regs.mdp.vld_vec_ext.shift_amt, 0);
 }
-*/
 
 // Verify that the bridge metadata is not overwriting header pointers
 TEST(metadata_packer, bridge_meta_start) {
@@ -132,6 +142,7 @@ deparser ingress:
 
     Target::Flatrock::deparser_regs regs;
     Deparser* dprsr = dynamic_cast<Deparser*>(Section::test_get("deparser"));
+    dprsr->process();
     dprsr->write_config(regs);
 
     EXPECT_GE(regs.mdp_mem.rem_brm_ext_ram.rem_brm_ext[0].rem_brm_start, min_start);

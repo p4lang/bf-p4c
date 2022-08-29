@@ -485,3 +485,8 @@ template<> unsigned Deparser::FDEntry::Constant::encode<Target::Cloudbreak>() {
 template<> void Deparser::gen_learn_quanta(Target::Cloudbreak::parser_regs &regs,
                                            json::vector &learn_quanta) {
 }
+
+template<> void Deparser::process(Target::Cloudbreak*) {
+    // Chip-specific code for process method
+    // None for Cloudbreak
+}

@@ -564,3 +564,8 @@ template<> unsigned Deparser::FDEntry::Constant::encode<Target::Tofino>() {
 template<> void Deparser::gen_learn_quanta(Target::Tofino::parser_regs &regs,
                                             json::vector &learn_quanta) {
 }
+
+template<> void Deparser::process(Target::Tofino*) {
+    // Chip-specific code for process method
+    // None for Tofino
+}
