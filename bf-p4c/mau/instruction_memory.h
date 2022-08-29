@@ -67,7 +67,12 @@ struct InstructionMemory {
  protected:
     explicit InstructionMemory(const IMemSpec &s) : spec(s) {}
 
+    InstructionMemory(const InstructionMemory &) = delete;
+    InstructionMemory &operator=(const InstructionMemory &) = delete;
+
  public:
+    virtual ~InstructionMemory() = default;
+
     std::set<cstring> atcam_updates;
 
     /** Instruction Memory requires two things:
