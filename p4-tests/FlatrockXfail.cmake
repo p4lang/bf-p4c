@@ -72,8 +72,12 @@ p4c_add_xfail_reason("tofino5"
 #  )
 
 p4c_add_xfail_reason("tofino5"
-  "invalid gateway group"
+  "Only one parser state transition supported"
   extensions/p4_tests/p4_16/flatrock/pac_shallow_branch.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "The table tbl_pac_wide_branch119 could not fit within .* input crossbar"
   extensions/p4_tests/p4_16/flatrock/pac_wide_branch.p4
   )
 
@@ -163,13 +167,23 @@ p4c_add_xfail_reason("tofino5"
 #  )
 
 p4c_add_xfail_reason("tofino5"
-  "invalid gateway group"
+  "Assembler BUG"  # Looping trying to get a valid RANDOM_DYN matrix
   extensions/p4_tests/p4_16/flatrock/dconfig1.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "Compiler Bug: Could not find hdr_id"
   extensions/p4_tests/p4_16/stf/extract_slice_2.p4
-  #extensions/p4_tests/p4_16/stf/metadata_extract.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "Compiler Bug: conflicting use of gateway row . between .* and"
   extensions/p4_tests/p4_16/stf/p4c-3055-2.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "Compiler Bug: Only one parser state transition supported"
   extensions/p4_tests/p4_16/stf/p4c-3551.p4
-  extensions/p4_tests/p4_16/stf/p4c-3659.p4
   extensions/p4_tests/p4_16/stf/parse_depth_1.p4
   extensions/p4_tests/p4_16/stf/parser_counter_6.p4
   extensions/p4_tests/p4_16/stf/parser_counter_8.p4
@@ -179,6 +193,15 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/stf/parser_multi_write_5.p4
   extensions/p4_tests/p4_16/stf/parser_multi_write_8.p4
   extensions/p4_tests/p4_16/stf/simple_l3_acl_disappearing_options.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "Compiler Bug: Cannot allocate wide RAMS in Flatrock"
+  extensions/p4_tests/p4_16/stf/p4c-3659.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "Compiler Bug: conflicting use of gateway row"
   extensions/p4_tests/p4_16/stf/p4c-1179.p4
   )
 

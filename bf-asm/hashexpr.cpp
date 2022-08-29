@@ -65,6 +65,7 @@ void HashExpr::gen_data(bitvec &data, int logical_hash_bit, InputXbar *ix, int h
     gen_ixbar_init(&ixbar_init, inputs, outputs, logical_hash_bit, ix, hash_table);
 
     bool non_zero = false;
+    int loops = 0;
     // It is possible that a hash column can be genereated as all 0s if using RANDOM_DYN algo, so
     // regeneration is required if a hash column is all 0s and using RANDOM_DYN.
     while (!non_zero) {
@@ -74,6 +75,7 @@ void HashExpr::gen_data(bitvec &data, int logical_hash_bit, InputXbar *ix, int h
             ix->global_column0_extract(hash_table, hash_matrix)) {
             non_zero = true;
         }
+        BUG_CHECK(loops++ < 1000, "Looping trying to get a valid RANDOM_DYN matrix");
     }
     data |= ix->global_column0_extract(hash_table, hash_matrix);
 }

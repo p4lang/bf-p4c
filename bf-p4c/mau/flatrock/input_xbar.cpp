@@ -637,12 +637,17 @@ void IXBar::update(cstring table_name, const ::IXBar::Use &use_) {
         break;
     case Use::GATEWAY:
         for (auto &byte : use.use) {
-            BUG_CHECK(byte.loc.group == 0, "invalid gateway group %d", byte.loc.group);
-            if (byte == gateway_use[byte.loc.byte]) continue;
-            if (gateway_use[byte.loc.byte].first)
-                BUG("conflicting ixbar allocation at gateway byte %d", byte.loc.byte);
-            gateway_use[byte.loc.byte] = byte;
-            gateway_fields.emplace(byte.container, byte.loc); }
+            if (byte.loc.group == 0)  {
+                if (byte == gateway_use[byte.loc.byte]) continue;
+                if (gateway_use[byte.loc.byte].first)
+                    BUG("conflicting ixbar allocation at gateway byte %d", byte.loc.byte);
+                gateway_use[byte.loc.byte] = byte;
+                gateway_fields.emplace(byte.container, byte.loc);
+            } else {
+                BUG_CHECK(byte.loc.group == 1, "invalid gateway group %d", byte.loc.group);
+                BUG_CHECK(byte.container == PHV::Container(PHV::Type::B, byte.loc.byte),
+                          "wrong container %s in gateway fixed byte %d",
+                          byte.container, byte.loc.byte); } }
         break;
     default:
         BUG("Unhandled use type %d (%s)", use.type, use.used_for()); }
