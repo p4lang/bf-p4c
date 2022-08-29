@@ -1895,6 +1895,11 @@ bool IXBar::allocProxyHash(const IR::MAU::Table *tbl, const PhvInfo &phv, const 
         alloc.add(a);
     }
 
+    //  P4C-4604
+    //  --------
+    this->add_collisions();  //  added 8/19/2022 ~10pm NY time
+                             //  based on a pair-debugging session with Chris
+
     hash_matrix_reqs ph_hm_reqs;
     ph_hm_reqs.index_groups = max_index_group(lo->layout.match_width_bits);
     ph_hm_reqs.select_bits = max_index_single_bit(lo->layout.match_width_bits);
