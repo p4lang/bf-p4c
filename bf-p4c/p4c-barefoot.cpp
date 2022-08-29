@@ -341,8 +341,8 @@ static void reportStats_alwaysCallThisONCEshortlyBeforeExiting() {
     }
 
     cerr << endl;
-    cerr << "Number of ERRORs: "   <<   error_count << endl;
-    cerr << "Number of WARNINGs: " << warning_count << endl;
+    cerr << "Number of P4 compiler-proper ERRORs: "   <<   error_count << endl;
+    cerr << "Number of P4 compiler-proper WARNINGs: " << warning_count << endl;
     cerr << endl;
 }  //  end of reporting procedure
 
