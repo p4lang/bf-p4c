@@ -102,6 +102,11 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/flatrock/parser_constant.p4
   )
 
+p4c_add_xfail_reason("tofino5"
+  "Compiler Bug: Field not created in PhvInfo"
+  extensions/p4_tests/p4_16/flatrock/mirror_simple.p4
+  )
+
 # *********************************************************************************************** #
 # ** TNA tests that "should" work *************************************************************** #
 # *********************************************************************************************** #
