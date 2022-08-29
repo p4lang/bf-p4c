@@ -419,7 +419,7 @@ class Parser : BFN::BaseLoweredParser {
     inline Vector<AnalyzerStage> analyzer;
     inline Vector<PhvBuilderGroup> phv_builder;
     // FIXME: Most likely not needed once hdr_id list is properly set up.
-    inline int payload_offset;          
+    inline int payload_offset = 0;          
 #noconstructor
     Parser() : BaseLoweredParser(INGRESS) {}
     visit_children {

@@ -204,7 +204,7 @@ bool IXBar::xcmp_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
 
 bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
                          const LayoutOption *lo) {
-    if (lo->layout.no_match_rams()) {
+    if (lo && lo->layout.no_match_rams()) {
         // tables with no memories require a gateway, so we need to allocate a dummy if
         // there isn't one yet.
     } else if (tbl->gateway_rows.empty()) {
