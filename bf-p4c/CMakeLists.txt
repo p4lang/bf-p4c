@@ -1595,6 +1595,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_byte_pack.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_mutually_exclusive_pragma.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_no_overlay.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_container_valid.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_constant_extract.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_critical_path.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_enforce_depth_req.cpp

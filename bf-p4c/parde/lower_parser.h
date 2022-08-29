@@ -33,6 +33,9 @@ class FieldDefUse;
  * @post The parser and deparser IR are replaced by lowered versions.
  */
 class LowerParser : public Logging::PassManager {
+ private:
+    /// Containers in the original/non-lowered parser with zero inits
+    std::map<gress_t, std::set<PHV::Container>> origParserZeroInitContainers;
  public:
     explicit LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &defuse,
         const ParserHeaderSequences &parserHeaderSeqs);

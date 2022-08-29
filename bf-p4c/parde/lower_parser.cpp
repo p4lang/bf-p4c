@@ -685,10 +685,13 @@ lowerUnsplittableField(const PhvInfo& phv,
 /// Note that the new IR is just constructed here; ReplaceParserIR is what
 /// actually replaces the high-level IR with the lowered version.
 struct ComputeLoweredParserIR : public ParserInspector {
-    ComputeLoweredParserIR(const PhvInfo& phv,
-                           ClotInfo& clotInfo,
-                           const AllocateParserChecksums& checksumAlloc) :
-        phv(phv), clotInfo(clotInfo), checksumAlloc(checksumAlloc) {
+    ComputeLoweredParserIR(
+        const PhvInfo& phv, ClotInfo& clotInfo, const AllocateParserChecksums& checksumAlloc,
+        std::map<gress_t, std::set<PHV::Container>>& origParserZeroInitContainers)
+        : phv(phv),
+          clotInfo(clotInfo),
+          checksumAlloc(checksumAlloc),
+          origParserZeroInitContainers(origParserZeroInitContainers) {
         // Initialize the map from high-level parser states to low-level parser
         // states so that null, which represents the end of the parser program
         // in the high-level IR, is mapped to null, which conveniently enough
@@ -959,6 +962,12 @@ struct ComputeLoweredParserIR : public ParserInspector {
                 BUG_CHECK(!stopper,
                           "more than one hdr_len_inc_stop in %1%?", state->name);
                 stopper = stop;
+            } else if (auto* zeroInit = prim->to<IR::BFN::ParserZeroInit>()) {
+                if (Device::currentDevice() == Device::TOFINO) {
+                    auto ctxt = PHV::AllocContext::PARSER;
+                    for (auto& alloc : phv.get_alloc(zeroInit->field->field, ctxt))
+                        origParserZeroInitContainers[state->thread()].emplace(alloc.container());
+                }
             } else if (!prim->is<IR::BFN::ParserZeroInit>()){
                 P4C_UNIMPLEMENTED("unhandled parser primitive %1%", prim);
             }
@@ -1063,6 +1072,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
     const PhvInfo& phv;
     ClotInfo& clotInfo;
     const AllocateParserChecksums& checksumAlloc;
+    std::map<gress_t, std::set<PHV::Container>>& origParserZeroInitContainers;
     // Maps clot tag to checksum unit whose output will be deposited in that CLOT for each gress
     std::map<gress_t, std::map<unsigned, unsigned>> clotTagToCsumUnit;
 };
@@ -1861,13 +1871,17 @@ struct MergeLoweredParserStates : public ParserTransform {
 /// Generate a lowered version of the parser IR in this program and swap it in
 /// for the existing representation.
 struct LowerParserIR : public PassManager {
+    std::map<gress_t, std::set<PHV::Container>>& origParserZeroInitContainers;
+
     LowerParserIR(const PhvInfo& phv,
                   BFN_MAYBE_UNUSED const FieldDefUse& defuse,
                   ClotInfo& clotInfo,
-                  BFN_MAYBE_UNUSED const ParserHeaderSequences &parserHeaderSeqs) {
+                  BFN_MAYBE_UNUSED const ParserHeaderSequences& parserHeaderSeqs,
+                  std::map<gress_t, std::set<PHV::Container>>& origParserZeroInitContainers)
+        : origParserZeroInitContainers(origParserZeroInitContainers) {
         auto* allocateParserChecksums = new AllocateParserChecksums(phv, clotInfo);
-        auto* computeLoweredParserIR =
-            new ComputeLoweredParserIR(phv, clotInfo, *allocateParserChecksums);
+        auto* computeLoweredParserIR = new ComputeLoweredParserIR(
+            phv, clotInfo, *allocateParserChecksums, origParserZeroInitContainers);
 #ifdef HAVE_FLATROCK
         auto* computeFlatrockParserIR = new ComputeFlatrockParserIR(phv, defuse, parserHeaderSeqs);
 #endif  // HAVE_FLATROCK
@@ -3035,6 +3049,10 @@ class ComputeInitZeroContainers : public ParserModifier {
             }
         }
 
+        if (origParserZeroInitContainers.count(parser->gress))
+            for (auto& c : origParserZeroInitContainers.at(parser->gress))
+                zero_init_containers.insert(c);
+
         for (auto& c : zero_init_containers) {
             // Containers for intrinsic invalidate_from_arch metadata should be left
             // uninitialized, therefore skip zero-initialization
@@ -3058,12 +3076,15 @@ class ComputeInitZeroContainers : public ParserModifier {
     ComputeInitZeroContainers(
             const PhvInfo& phv,
             const FieldDefUse& defuse,
-            const ordered_set<const PHV::Field*>& no_init)
-        : phv(phv), defuse(defuse), no_init_fields(no_init) {}
+            const ordered_set<const PHV::Field*>& no_init,
+            const std::map<gress_t, std::set<PHV::Container>>& origParserZeroInitContainers)
+        : phv(phv), defuse(defuse), no_init_fields(no_init),
+          origParserZeroInitContainers(origParserZeroInitContainers) {}
 
     const PhvInfo& phv;
     const FieldDefUse& defuse;
     const ordered_set<const PHV::Field*>& no_init_fields;
+    const std::map<gress_t, std::set<PHV::Container>>& origParserZeroInitContainers;
 };
 
 /// Compute the number of bytes which must be available for each parser match to
@@ -3128,13 +3149,13 @@ LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &
         const ParserHeaderSequences &parserHeaderSeqs) :
     Logging::PassManager("parser", Logging::Mode::AUTO) {
     auto pragma_no_init = new PragmaNoInit(phv);
-    auto compute_init_valid =
-        new ComputeInitZeroContainers(phv, defuse, pragma_no_init->getFields());
+    auto compute_init_valid = new ComputeInitZeroContainers(
+        phv, defuse, pragma_no_init->getFields(), origParserZeroInitContainers);
     auto parser_info = new CollectLoweredParserInfo;
 
     addPasses({
         pragma_no_init,
-        new LowerParserIR(phv, defuse, clot, parserHeaderSeqs),
+        new LowerParserIR(phv, defuse, clot, parserHeaderSeqs, origParserZeroInitContainers),
         new LowerDeparserIR(phv, clot),
         new WarnTernaryMatchFields(phv),
         Device::currentDevice() == Device::TOFINO ? compute_init_valid : nullptr,

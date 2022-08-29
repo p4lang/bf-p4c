@@ -123,7 +123,8 @@ Result match(const CheckList& exprs,
     }
     if (std::regex_search(from, to, sm, std::regex(regex))
         && !sm.prefix().length())
-        return Result{.success = true, .pos = pos+sm[0].length(), .count = exprs.size()};
+        return Result{
+            .success = true, .pos = pos + sm[0].length(), .count = exprs.size(), .match = sm};
 
     // Re-run to find out where we failed. Linear search is good enough.
     Result res = {.success = false, .pos = pos, .count = 0};

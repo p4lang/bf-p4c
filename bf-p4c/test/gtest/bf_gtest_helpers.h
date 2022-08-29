@@ -85,8 +85,14 @@ struct Result : boost::equality_comparable<Result> {
     size_t pos;         ///< the position in 'str' the match was successful to.
                         ///< N.B. 'pos' may be (one) beyond the end of 'str'!
     size_t count;       ///< tHe number of 'CheckList' item successfully matched.
+    /// Match strings
+    std::vector<std::string> matches;
     Result(bool success, size_t pos, size_t count) :
             success(success), pos(pos), count(count) {}
+    Result(bool success, size_t pos, size_t count, std::smatch match)
+        : success(success), pos(pos), count(count) {
+        for (std::size_t n = 0; n < match.size(); ++n) matches.push_back(match[n]);
+    }
     friend bool operator==(const Result& l, const Result& r) {
         return l.success == r.success && l.pos == r.pos && l.count == r.count;
     }
