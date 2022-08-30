@@ -64,7 +64,8 @@ set (P16_TNA_EXCLUDE_FILES "digest_tna\\.p4" "p4c-1323-b\\.p4" "p4c-2143\\.p4"
     "p4c-3241\\.p4" "p4c-3139\\.p4" "p4c-3254\\.p4" "p4c-3255\\.p4" "p4c-2423\\.p4"
     "p4c-2534\\.p4" "p4c-3678-leaf\\.p4" "p4c-2722\\.p4" "p4c-3920-b\\.p4" "p4c_3926\\.p4"
     "p4c_4158\\.p4" "p4c-4064\\.p4" "forensics\\.p4" "mirror_constants\\.p4" "p4c_2601\\.p4"
-    "hash_extern_xor\\.p4" "hash_field_expression\\.p4" "hash_field_expression_sym\\.p4")
+    "hash_extern_xor\\.p4" "hash_field_expression\\.p4" "hash_field_expression_sym\\.p4"
+    "p4c-4770\\.p4")
 set (P16_TNA_EXCLUDE_FILES "${P16_TNA_EXCLUDE_FILES}" "${P16_TNA_ARISTA_FILES}")
 set (P16_TNA_FOR_TOFINO
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*/*.p4"
@@ -303,6 +304,11 @@ set_tests_properties("tofino/extensions/p4_tests/p4_16/compile_only/p4c-3254.p4"
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base"
   "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/p4c-3255.p4"
   "-Xp4c=\"--no-dead-code-elimination\"")
+
+#p4_16/compile_only/p4c-4770.p4
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base"
+  "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/p4c-4770.p4"
+  "-Xp4c=\"--disable-power-check --disable-parse-depth-limit\"")
 
 # p4_16/customer/kaloom/p4c-3678-leaf.p4
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base"

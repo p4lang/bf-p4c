@@ -2635,11 +2635,7 @@ TablePlacement::Placed *DecidePlacement::try_backfill_table(
     for (auto &ae : pl->attached_entries)
         if (ae.second.entries == 0 || ae.second.need_more)
             return nullptr;
-    int lts = pl->use.preferred()->logical_tables();
-    if (lts + (done->logical_id % StageUse::MAX_LOGICAL_IDS) >= StageUse::MAX_LOGICAL_IDS)
-        return nullptr;
     for (auto *p : whole_stage) {
-        p->logical_id += lts;
         p->placed[self.uid(tbl)] = 1;
         p->match_placed[self.uid(tbl)] = 1;
         if (p == place_before)
@@ -2647,7 +2643,13 @@ TablePlacement::Placed *DecidePlacement::try_backfill_table(
     pl->update_formats();
     for (auto *p : whole_stage)
         p->update_formats();
-    pl->setup_logical_id();
+    // The new allocation may change how many logical tables the already placed tables require,
+    // so we recalculate logical IDs for every table in the stage.
+    for (auto *p : boost::adaptors::reverse(whole_stage)) {
+        if (p->prev == pl) pl->setup_logical_id();
+        p->setup_logical_id();
+        if (p->logical_id / StageUse::MAX_LOGICAL_IDS != p->stage) return nullptr;
+    }
     pl->placed[self.uid(tbl)] = 1;
     pl->match_placed[self.uid(tbl)] = 1;
     LOG1("placing " << pl->entries << " entries of " << pl->name << (pl->gw ? " (with gw " : "") <<
