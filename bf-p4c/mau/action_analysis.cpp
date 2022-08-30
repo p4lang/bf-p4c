@@ -129,13 +129,22 @@ std::string ActionAnalysis::FieldAction::to_string() const {
     return str.str();
 }
 
-auto ActionAnalysis::FieldAction::container_write_type() const -> container_overwrite_t {
-    auto is_expr_const = [] (const IR::Expression* expr) {
-        return expr->is<IR::MAU::ActionDataConstant>()
-            || expr->is<IR::Constant>();
+auto ActionAnalysis::FieldAction::container_write_type() const
+    -> std::pair<container_overwrite_t, source_type_t> {
+    auto source = source_type_t::OTHER;
+    auto is_expr_const = [&](const IR::Expression *expr) {
+        if (expr->is<IR::MAU::ActionDataConstant>()) {
+            source = source_type_t::ACTION_DATA_CONSTANT;
+            return true;
+        }
+        if (expr->is<IR::Constant>()) {
+            source = source_type_t::CONSTANT;
+            return true;
+        }
+        return false;
     };
 
-    if (name == "add") {
+    if (name == "add" || is_bitwise_overwritable()) {
         auto src1 = reads.at(0).expr;
         auto src2 = reads.at(1).expr;
 
@@ -144,17 +153,16 @@ auto ActionAnalysis::FieldAction::container_write_type() const -> container_over
         }
 
         if (src1->equiv(*write.expr) && is_expr_const(src2)) {
-            // Instruction in form `x=x+const` overwrites only field slices that are packed
+            // Instruction in form `x = x + const` overwrites only field slices that are packed
             // with destination into more significant bits of a container.
-            return container_overwrite_t::HIGHER_BITS;
+            // Bitwise instructions in form `x = x op const` do not overwrite any other field slices
+            // packed in the same container as destination.
+            if (name == "add") return std::make_pair(container_overwrite_t::HIGHER_BITS, source);
+            return std::make_pair(container_overwrite_t::DST_ONLY, source);
         }
     }
 
-    // TODO: support other cases, e.g. `x=x|const` or `x=x^const` as DST_ONLY.
-    // note: some instructions may require additional logic implemented into InstructionAdjustment
-    // to be supported here. For example, `x = x & 0x1` could be DST_ONLY, but the constant
-    // src argument needs to be extended by ones instead of zeroes.
-    return container_overwrite_t::ALL_BITS;
+    return std::make_pair(container_overwrite_t::ALL_BITS, source);
 }
 
 std::string ActionAnalysis::ContainerAction::to_string() const {
@@ -2066,19 +2074,40 @@ bool ActionAnalysis::ContainerAction::verify_overwritten(const PHV::Container co
         le_bitrange dst_bits;
         auto dst_f = phv.field(fa.write.expr, &dst_bits);
         CHECK_NULL(dst_f);
-        switch (fa.container_write_type()) {
-            case ActionAnalysis::FieldAction::ALL_BITS:
+        const auto write_type = fa.container_write_type();
+        switch (write_type.first) {
+            case ActionAnalysis::FieldAction::ALL_BITS: {
                 preserved_bits.clear();
                 break;
+            }
             case ActionAnalysis::FieldAction::HIGHER_BITS: {
-                bitvec container_w = phv.bits_allocated(
-                        container, dst_f, table_context, &use);
+                bitvec container_w = phv.bits_allocated(container, dst_f, table_context, &use);
                 preserved_bits &= bitvec(0, container_w.ffs() + dst_bits.lo);
                 break;
-           } case ActionAnalysis::FieldAction::DST_ONLY:
+            }
+            case ActionAnalysis::FieldAction::DST_ONLY: {
                 break;
+            }
+        }
+        if (fa.name == "and" || fa.name == "xnor") {
+            // AND/XNOR instructions may need additional bits to be set to 1 in the constant source,
+            // in order to guarantee that fields that are packed into the same container but are
+            // not ANDed/XNORed will not be modified. Because of these additional bits set to 1, the
+            // constant source may no longer fit into an immediate constant, so we force it to
+            // be changed to an action data constant.
+            switch (write_type.second) {
+                case FieldAction::CONSTANT:
+                    error_code |= CONSTANT_TO_ACTION_DATA;
+                    // fall-through
+                case FieldAction::ACTION_DATA_CONSTANT:
+                    error_code |= UNRESOLVED_REPEATED_ACTION_DATA;
+                    break;
+                default:
+                    break;
+            }
         }
     }
+    LOG4("\t Overwrite masks - preserved:" << preserved_bits);
 
     if ((total_write_bits | preserved_bits) != container_occupancy) {
         LOG3("Total write bits or preserved bits not equal to container occupancy");

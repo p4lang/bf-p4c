@@ -1201,8 +1201,8 @@ void MergeInstructions::build_actiondata_source(ActionAnalysis::ContainerAction 
     if (cont_action.convert_instr_to_byte_rotate_merge) {
         brm_info.src1_shift = adi.alignment.right_shift / 8;
         brm_info.src1_byte_mask = adi.alignment.byte_rotate_merge_byte_mask(container);
-    } else if (!cont_action.convert_instr_to_bitmasked_set
-        && adi.alignment.is_wrapped_shift(container, &wrapped_lo, &wrapped_hi)) {
+    } else if (!cont_action.convert_instr_to_bitmasked_set && adi.alignment.contiguous() &&
+               adi.alignment.is_wrapped_shift(container, &wrapped_lo, &wrapped_hi)) {
         // The alias begins at the first bit used in the action bus slot
         wrapped_lo -= adi.alignment.direct_read_bits.min().index();
         wrapped_hi -= adi.alignment.direct_read_bits.min().index();

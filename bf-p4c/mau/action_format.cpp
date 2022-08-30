@@ -2303,10 +2303,10 @@ void Format::create_argument(ALUOperation &alu,
  * Creates a Constant from an IR::Constant.  Assume to be <= 32 bits as all operations
  * at most are 32 bit ALU operations.
  */
-void Format::create_constant(ALUOperation &alu, ActionAnalysis::ActionParam &read,
+void Format::create_constant(ALUOperation &alu, const IR::Expression *read,
         le_bitrange container_bits, int &constant_alias_index,
         const IR::MAU::ConditionalArg *cond_arg) {
-    auto ir_con = read.unsliced_expr()->to<IR::Constant>();
+    auto ir_con = read->to<IR::Constant>();
     BUG_CHECK(ir_con != nullptr, "Cannot create constant");
 
     uint32_t constant_value = 0U;
@@ -2316,7 +2316,7 @@ void Format::create_constant(ALUOperation &alu, ActionAnalysis::ActionParam &rea
         constant_value = static_cast<uint32_t>(ir_con->asUnsigned());
     else
         BUG("Any constant used in an ALU operation would by definition have to be < 32 bits");
-    Constant *con = new Constant(constant_value, read.size());
+    Constant *con = new Constant(constant_value, read->type->width_bits());
     if (cond_arg)
         con->set_cond(VALUE, cond_arg->orig_arg->name.toString());
     con->set_alias("$constant" + std::to_string(constant_alias_index++));
@@ -2428,6 +2428,69 @@ void Format::create_mask_constant(ALUOperation &alu, bitvec value, le_bitrange c
 }
 
 /**
+ * If an action contains a bitwise operation with a PHV source and a constant source, there may be
+ * fields packed together with the PHV source in the container that are not meant to be modified by
+ * the bitwise operation. In this case, if the bitwise operation is AND or XNOR, the bits
+ * corresponding to the overwritten fields in the constant source should be set to 1, so there is no
+ * modification. For OR and XOR, no changes are needed because the constant source is zeroed-out by
+ * default.
+ *
+ * As an example, consider the following header packed into the container B1:
+ *
+ *  header hdr {
+ *      bit<2>  x1;
+ *      bit<1>  x2;
+ *      bit<1>  x3;
+ *      bit<4>  x4;
+ *  }
+ *
+ * and an action:
+ *
+ *  - and hdr.x1, hdr.x1, 0x2
+ *  - and hdr.x4, hdr.x4, 0xd
+ *
+ * After this function, the action will effectively be changed to:
+ *
+ *  - and hdr.x1, hdr.x1, 0x2
+ *  - and hdr.x2, hdr.x2, 0x1
+ *  - and hdr.x3, hdr.x3, 0x1
+ *  - and hdr.x4, hdr.x4, 0xd
+ */
+bool Format::fix_bitwise_overwrite(ALUOperation &alu,
+                                   const ActionAnalysis::ContainerAction &cont_action,
+                                   const size_t container_size, const bitvec &total_write_bits,
+                                   int &constant_alias_index, int &alias_required_reads) {
+    const auto is_phv_and_const = cont_action.counts[ActionAnalysis::ActionParam::PHV] > 0 &&
+                                  cont_action.counts[ActionAnalysis::ActionParam::CONSTANT] > 0 &&
+                                  cont_action.counts[ActionAnalysis::ActionParam::ACTIONDATA] == 0;
+    bool contains_action_data = false;
+    if ((cont_action.name == "and" || cont_action.name == "xnor") && is_phv_and_const) {
+        size_t start = 0;
+        while (start < container_size) {
+            while (start < container_size && total_write_bits.getbit(start) == 1) ++start;
+            if (start >= container_size) break;
+            size_t end = start + 1;
+            while (end < container_size && total_write_bits.getbit(end) == 0) ++end;
+
+            const auto container_bits = le_bitrange(FromTo(start, end - 1));
+            const auto read_size = end - start;
+            const auto type = IR::Type_Bits::get(read_size);
+
+            constexpr unsigned int fill = 0xffffffff;
+            constexpr size_t fill_size_bits = sizeof(fill) * 8;
+
+            const auto constant = new IR::Constant(type, fill >> (fill_size_bits - read_size));
+            create_constant(alu, constant, container_bits, constant_alias_index, nullptr);
+
+            alias_required_reads++;
+            contains_action_data = true;
+            start = end + 1;
+        }
+    }
+    return contains_action_data;
+}
+
+/**
  * Looks through the ActionAnalysis maps, and builds Parameters and ALUOperation
  * structures.  This will then add a RamSection to potentially be condensed through the
  * algorithm.
@@ -2459,6 +2522,7 @@ void Format::create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_m
 
         bitvec specialities = cont_action.specialities();
         bitvec rand_num_write_bits;
+        bitvec total_write_bits;
 
         for (auto &field_action : cont_action.field_actions) {
             le_bitrange bits;
@@ -2475,6 +2539,7 @@ void Format::create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_m
                     LOG1("ERROR: Phv field " << write_field->name << " written in action "
                           << action_name << " is not allocated?");
             });
+            total_write_bits |= bitvec(container_bits.lo, container_bits.size());
 
             if (write_count > 1)
                 BUG("Splitting of writes handled incorrectly");
@@ -2513,8 +2578,8 @@ void Format::create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_m
                     alias_required_reads++;
                 } else if (read.type == ActionAnalysis::ActionParam::CONSTANT) {
                     if (cont_action.convert_constant_to_actiondata()) {
-                        create_constant(*alu, read, container_bits, constant_alias_index,
-                            cond_arg);
+                        create_constant(*alu, read.unsliced_expr(), container_bits,
+                                        constant_alias_index, cond_arg);
                         alias_required_reads++;
                     } else if (cont_action.convert_constant_to_hash()) {
                         create_hash_constant(*alu, read, container_bits);
@@ -2561,6 +2626,10 @@ void Format::create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_m
             }
             alu->set_mask_alias("$mask" + std::to_string(mask_alias_index++));
         }
+
+        if (fix_bitwise_overwrite(*alu, cont_action, container.size(), total_write_bits,
+                                  constant_alias_index, alias_required_reads))
+            contains_action_data = true;
 
         if (contains_action_data) {
             LOG5("\t    Created Action Data Packing for container action");

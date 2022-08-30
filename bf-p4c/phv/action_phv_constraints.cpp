@@ -145,12 +145,14 @@ void ActionPhvConstraints::ConstraintTracker::add_action(
         fw.operation = field_action.name;
         if (field_action.name == "set") {
             fw.flags |= OperandInfo::MOVE;
-        } else if (field_action.container_write_type() != ActionAnalysis::FieldAction::ALL_BITS) {
+        } else if (field_action.container_write_type().first !=
+                   ActionAnalysis::FieldAction::ALL_BITS) {
             fw.flags |= OperandInfo::PART_OF_CONTAINER;
         } else if (PHV_Field_Operations::BITWISE_OPS.count(field_action.name)) {
             fw.flags |= OperandInfo::BITWISE;
         } else {
-            fw.flags |= OperandInfo::WHOLE_CONTAINER; }
+            fw.flags |= OperandInfo::WHOLE_CONTAINER;
+        }
 
         fw.action_name = field_action.name;
         LOG5("    ...write: " << fw);
@@ -1259,7 +1261,11 @@ ActionPhvConstraints::container_operation_type(
                         : OperandInfo::PART_OF_CONTAINER;
         }
 
-        return OperandInfo::WHOLE_CONTAINER; }
+        if (type_of_operation == OperandInfo::PART_OF_CONTAINER)
+            return OperandInfo::PART_OF_CONTAINER;
+
+        return OperandInfo::WHOLE_CONTAINER;
+    }
 
     // For BITWISE operations, we have already checked above that the bitwise operation used per
     // action is the same for all slices in the proposed packing. We also must make sure that no

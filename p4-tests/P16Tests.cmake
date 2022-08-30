@@ -291,6 +291,7 @@ p4c_add_xfail_reason("p4"
   extensions/p4_tests/p4_16/stf/wide_arith_non_64.p4
   extensions/p4_tests/p4_16/stf/failed_elim_valid_bit.p4
   extensions/p4_tests/p4_16/stf/funnel_shift.p4
+  extensions/p4_tests/p4_16/stf/overwriting_bitwise.p4
   extensions/p4_tests/p4_16/ptf/static_entries.p4
   extensions/p4_tests/p4_16/ptf/checksum_if_else_cond.p4
   extensions/p4_tests/p4_16/ptf/checksum_splitting.p4

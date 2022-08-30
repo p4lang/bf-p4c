@@ -999,7 +999,7 @@ class Format {
 
     void create_argument(ALUOperation &alu, ActionAnalysis::ActionParam &read,
         le_bitrange container_bits, const IR::MAU::ConditionalArg *ca);
-    void create_constant(ALUOperation &alu, ActionAnalysis::ActionParam &read,
+    void create_constant(ALUOperation &alu, const IR::Expression *read,
         le_bitrange container_bits, int &constant_alias_index, const IR::MAU::ConditionalArg *ca);
     void create_hash(ALUOperation &alu, ActionAnalysis::ActionParam &read,
         le_bitrange container_bits);
@@ -1014,6 +1014,11 @@ class Format {
         le_bitrange container_bits);
     void create_mask_constant(ALUOperation &alu, bitvec value, le_bitrange container_bits,
         int &constant_alias_index);
+
+    bool fix_bitwise_overwrite(ALUOperation &alu,
+                               const ActionAnalysis::ContainerAction &cont_action,
+                               const size_t container_size, const bitvec &total_write_bits,
+                               int &constant_alias_index, int &alias_required_reads);
 
     void create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_map,
         cstring action_name);

@@ -111,6 +111,13 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         bool requires_split = false;
         bool constant_to_ad = false;
 
+        // These instructions can be used on partially-overwritten containers in form
+        // `X = X op const`, because inserting all 0s or all 1s in parts of the constant source
+        // corresponding to the overwritten fields preserves their contents.
+        bool is_bitwise_overwritable() const {
+            return name == "and" || name == "or" || name == "xor" || name == "xnor";
+        }
+
         bool is_single_shift() const {
             return name == "shru" || name == "shrs" || name == "shl";
         }
@@ -132,7 +139,9 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
             ALL_BITS
         };
 
-        container_overwrite_t container_write_type() const;
+        enum source_type_t { CONSTANT, ACTION_DATA_CONSTANT, OTHER };
+
+        std::pair<container_overwrite_t, source_type_t> container_write_type() const;
 
         enum error_code_t {
             NO_PROBLEM = 0,
@@ -476,6 +485,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
             int &non_contiguous_count);
         void move_source_to_bit(safe_vector<int> &bit_uses, TotalAlignment &ta);
         bool verify_source_to_bit(int operands, PHV::Container container);
+
         bool verify_overwritten(PHV::Container container, const PhvInfo &phv);
         bool verify_only_read(const PhvInfo &phv, int num_source);
         bool verify_possible(cstring &error_message, PHV::Container container,
