@@ -29,6 +29,21 @@ class ImplicitParserInit : public IR::Expression {
         out << "ImplicitParserInit"; }
 };
 
+/** Represent a parser error write. TODO(yumin): move to actual IR.
+ */
+class WriteParserError : public IR::Expression {
+ private:
+    IR::Expression *clone() const override {
+        auto *new_expr = new WriteParserError(*this);
+        return new_expr;
+    }
+
+ public:
+    explicit WriteParserError(const PHV::Field *f) : field(f) {}
+    const PHV::Field *field;
+    void dbprint(std::ostream &out) const override { out << "write parser error to " << field; }
+};
+
 class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWriteContext {
  public:
     /** A given expression for a field might appear multiple places in the IR dag (eg, an

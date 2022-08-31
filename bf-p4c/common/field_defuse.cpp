@@ -15,21 +15,6 @@ const std::unordered_set<cstring> write_by_parser = {
     "egress::eg_intr_md_from_prsr.parser_err"
 };
 
-class WriteParserError : public IR::Expression {
- private:
-    IR::Expression *clone() const override {
-        auto *new_expr = new WriteParserError(*this);
-        return new_expr;
-    }
-
- public:
-    explicit WriteParserError(const PHV::Field *f) : field(f) {
-        BUG_CHECK(write_by_parser.count(f->name), "incorrect parser error name");
-    }
-    const PHV::Field *field;
-    void dbprint(std::ostream &out) const override { out << "write parser error to " << field; }
-};
-
 }  // namespace
 
 static std::ostream &operator<<(std::ostream &out, const FieldDefUse::locpair &loc) {

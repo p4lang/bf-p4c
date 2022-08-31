@@ -44,6 +44,9 @@ class ParserPackingValidator : public ParserPackingValidatorInterface {
     /// @returns true if it is okay to write random bits to @p in parser.
     bool allow_clobber(const Field* f) const;
 
+    /// @returns true if @p f is parser error
+    bool is_parser_error(const Field* f) const;
+
     /// @returns an error if @p state_extract will clobber value of other_fs in parser.
     const AllocError* will_buf_extract_clobber_the_other(
             const FieldSlice& fs, const StateExtract& state_extract, const int cont_idx,

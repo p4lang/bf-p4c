@@ -5,6 +5,7 @@
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "ir/ir.h"
+#include "lib/algorithm.h"
 
 namespace PHV {
 namespace v2 {
@@ -17,6 +18,12 @@ nw_bitrange slice_extract_range(const FieldSlice& fs, const IR::BFN::Extract* e)
     const auto& buf_range = e->source->to<IR::BFN::PacketRVal>()->range;
     return nw_bitrange(
         StartLen(buf_range.hi - fs.range().lo - fs.range().size() + 1, fs.range().size()));
+}
+
+le_bitrange expand_to_byte_range(int cont_idx, int size) {
+    int start_byte = cont_idx / 8;
+    int end_byte = ROUNDUP(cont_idx + size, 8);
+    return le_bitrange(FromTo(start_byte * 8, end_byte * 8 - 1));
 }
 
 }  // namespace
@@ -41,29 +48,38 @@ bool ParserPackingValidator::allow_clobber(const Field* f) const {
 // XXX(yumin): strided header fields are handled in the same way as normal fields,
 // but in the old allocator, strided header fields are skipped in these checks.
 // TODO(yumin): enable strict mode.
-// TODO(yumin): w container half-word write, future optimization.
-// TODO(yumin): a is clear-on-write and b is okay to be 0 after the state.
+// TODO(yumin): allow a and b to be packed together when
+// a is extracted by clear-on-write and b is okay to be 0 after the state.
 const AllocError* ParserPackingValidator::will_buf_extract_clobber_the_other(
     const FieldSlice& fs, const StateExtract& state_extract, const int cont_idx,
     const FieldSlice& other_fs, const StateExtractMap& other_extracts,
-    const int other_cont_idx, const boost::optional<Container>& c) const {
-    // TODO(yumin): support W-sized container fancy 2 half-word packing.
-    const bool half_word_extract = (Device::currentDevice() == Device::JBAY
-#if HAVE_CLOUDBREAK
-        || Device::currentDevice() == Device::CLOUDBREAK
-#endif
-)
-        && c && c->type().size() == PHV::Size::b32;
-    if (half_word_extract) {
-        LOG5("half_word_extract is possible but not implemented.");
-    }
+    const int other_cont_idx, const boost::optional<Container>&) const {
     auto* err = new AllocError(ErrorCode::CONTAINER_PARSER_PACKING_INVALID);
     const auto* state = state_extract.first;
     const auto* extract = state_extract.second;
     const auto* parser = parser_i.state_to_parser.at(state);
     const auto& buf_range = slice_extract_range(fs, extract);
+    const bool is_clear_on_write =
+        (extract->write_mode == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE);
+    bool support_byte_extract = Device::currentDevice() == Device::JBAY;
+#if HAVE_CLOUDBREAK
+    support_byte_extract |= Device::currentDevice() == Device::CLOUDBREAK;
+#endif
+    const bool is_byte_extract = !is_clear_on_write && support_byte_extract;
+    bool write_overlap = true;
+    if (is_byte_extract) {
+        le_bitrange write_range = expand_to_byte_range(cont_idx, fs.size());
+        le_bitrange other_write = expand_to_byte_range(other_cont_idx, other_fs.size());
+        write_overlap = write_range.overlaps(other_write);
+    }
+    if (!write_overlap) {
+        LOG5("destination bytes do not overlap, skip parser checks: "
+             << fs << "@" << cont_idx << " v.s. " << other_fs << "2" << other_cont_idx);
+        return nullptr;
+    }
+
     LOG5("check if " << extract << " in " << state->name
-         << " will clobber the other: " << other_fs);
+                     << " will clobber the other: " << other_fs);
 
     // For extracts in the same state, other input buffer offsets need to be the same as their
     // PHV container offset: must be extracted together in the same state.
@@ -111,13 +127,12 @@ const AllocError* ParserPackingValidator::will_buf_extract_clobber_the_other(
         return (AllocError*)nullptr;
     }
 
-    // This extract will not clobber bits of others only when
-    // 1. if the other field is extracted in the same way in this state, then
-    //    a. all other extracts are mutex.
-    // 2. if the other field is not extracted in this state
-    //    a. the other field cannot be parser zero initialized.
+    // if the other field is not extracted in this state, then
+    //    a. the other field cannot be parser zero initialized, unless
+    //       this extract is clear-on-write extract.
     //    b. all other extracts are mutex.
-    if (!other_extracts.count(state) && parser_zero_init(other_fs.field())) {
+    if (!other_extracts.count(state) &&
+        (!is_clear_on_write && parser_zero_init(other_fs.field()))) {
         *err << "cannot pack " << fs << " with " << other_fs << " because the former "
              << "slice is extracted in " << state->name << ": " << extract << ", but "
              << "the latter field requires parser zero initialization.";
@@ -125,13 +140,14 @@ const AllocError* ParserPackingValidator::will_buf_extract_clobber_the_other(
     }
     for (const auto& other_state_extract : other_extracts) {
         const auto* other_state = other_state_extract.first;
+        const auto& other_extracts = other_state_extract.second;
         if (other_state == state) continue;
         const auto* other_parser = parser_i.state_to_parser.at(other_state);
-        LOG5("Check extract: " << other_state->name << ": " << other_state_extract.second);
         if (other_parser != parser) {
             continue;
         }
-        if (!parser_info_i.graph(parser).is_mutex(state, other_state)) {
+        LOG5("Check extract: " << other_state->name << ": " << other_extracts);
+        if (write_overlap && !parser_info_i.graph(parser).is_mutex(state, other_state)) {
             *err << "cannot pack " << fs << " with " << other_fs << " because the former "
                  << "slice is extracted in " << state->name << ": " << extract << ", but "
                  << "the latter is extracted in this non-mutex state: " << other_state->name;
@@ -150,7 +166,7 @@ const AllocError* ParserPackingValidator::will_a_extracts_clobber_b(
     const auto a_extracts = get_extracts(a_fs.field());
     const auto b_extracts = get_extracts(b_fs.field());
     // because a is fine-sliced, each parser state will have at most 1 extract to the slice,
-    // we do not need to check extract withinthe a_extracts,
+    // we do not need to check extract within the a_extracts,
     for (const auto& state_extracts : a_extracts) {
         // extractions will set container validity bit to 1 (including const), so we cannot
         // pack is_invalidate_from_arch with any extracted field.
@@ -177,9 +193,26 @@ const AllocError* ParserPackingValidator::will_a_extracts_clobber_b(
     return nullptr;
 }
 
+bool ParserPackingValidator::is_parser_error(const Field* f) const {
+    const auto& defs = defuse_i.getAllDefs(f->id);
+    for (const auto& def : defs) {
+        if (def.second->is<WriteParserError>()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 const AllocError* ParserPackingValidator::can_pack(const FieldSliceStart& a,
                                                    const FieldSliceStart& b,
                                                    const boost::optional<Container>& c) const {
+    const auto* f_a = a.first.field();
+    const auto* f_b = b.first.field();
+    if (f_a != f_b && (is_parser_error(f_a) || is_parser_error(f_b))) {
+        auto* err = new AllocError(ErrorCode::CONTAINER_PARSER_PACKING_INVALID);
+        *err << "do not support parser error packing with other fields for now";
+        return err;
+    }
     if (phv_i.field_mutex()(a.first.field()->id, b.first.field()->id)) {
         LOG5("field_mutex is true: " << a.first << " and " << b.first);
         return nullptr;
