@@ -346,7 +346,7 @@ bool TrivialAllocator::allocate(const std::list<PHV::SuperCluster*>& clusters) {
                 pre_sliced.invalid);
             const cstring err_log = make_error_msg(unsliced_sc, err);
             history << err_log;
-            ::error(err_log);
+            ::error(err_log, cstring::to_cstring(pre_sliced.invalid));
             ok = false;
             break;
         }

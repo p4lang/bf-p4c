@@ -170,7 +170,7 @@ const AllocError* ParserPackingValidator::will_a_extracts_clobber_b(
     for (const auto& state_extracts : a_extracts) {
         // extractions will set container validity bit to 1 (including const), so we cannot
         // pack is_invalidate_from_arch with any extracted field.
-        if (b.first.field()->is_invalidate_from_arch()) {
+        if (b_fs.field()->is_invalidate_from_arch() && a_fs.field() != b_fs.field()) {
             auto* err = new AllocError(ErrorCode::CONTAINER_PARSER_PACKING_INVALID);
             *err << "cannot pack with invalidate from arch field: " << b.first;
             return err;
