@@ -212,7 +212,7 @@ class CreateSaluInstruction : public Inspector {
     void checkWriteAfterWrite();
 
     bool isComplexInstruction(const IR::Operation_Binary *op) const;
-    void checkAndReportComplexInstrution(const IR::Operation_Binary* op) const;
+    void checkAndReportComplexInstruction(const IR::Operation_Binary* op) const;
 
     /**
      * @brief Insert the instruction into the SALU body.

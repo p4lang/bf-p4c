@@ -1304,7 +1304,7 @@ void CreateSaluInstruction::postorder(const IR::LOr *e) {
 }
 
 bool CreateSaluInstruction::preorder(const IR::Add *e) {
-    checkAndReportComplexInstrution(e);
+    checkAndReportComplexInstruction(e);
     if (etype == IF)
         return true;
     if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
@@ -1315,7 +1315,7 @@ bool CreateSaluInstruction::preorder(const IR::Add *e) {
     return false;
 }
 bool CreateSaluInstruction::preorder(const IR::AddSat *e) {
-    checkAndReportComplexInstrution(e);
+    checkAndReportComplexInstruction(e);
     if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
         opcode = isSigned(e->type) ? "sadds" : "saddu";
         if (etype == OUTPUT) etype = OUTPUT_ALUHI;
@@ -1326,7 +1326,7 @@ bool CreateSaluInstruction::preorder(const IR::AddSat *e) {
 }
 
 bool CreateSaluInstruction::preorder(const IR::Sub *e) {
-    checkAndReportComplexInstrution(e);
+    checkAndReportComplexInstruction(e);
     if (etype == IF) {
         visit(e->left, "left");
         negate = !negate;
@@ -1341,7 +1341,7 @@ bool CreateSaluInstruction::preorder(const IR::Sub *e) {
     return false;
 }
 bool CreateSaluInstruction::preorder(const IR::SubSat *e) {
-    checkAndReportComplexInstrution(e);
+    checkAndReportComplexInstruction(e);
     if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
         opcode = isSigned(e->type) ? "ssubs" : "ssubu";
         if (etype == OUTPUT) etype = OUTPUT_ALUHI;
@@ -1352,7 +1352,7 @@ bool CreateSaluInstruction::preorder(const IR::SubSat *e) {
 }
 
 void CreateSaluInstruction::postorder(const IR::BAnd *e) {
-    checkAndReportComplexInstrution(e);
+    checkAndReportComplexInstruction(e);
     if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
         if (e->left->is<IR::Cmpl>())
             opcode = "andca";
@@ -1375,11 +1375,13 @@ void CreateSaluInstruction::postorder(const IR::BAnd *e) {
     } else {
         error("%sexpression too complex for stateful alu", e->srcInfo); }
 }
-void CreateSaluInstruction::checkAndReportComplexInstrution(const IR::Operation_Binary* op) const {
+
+void CreateSaluInstruction::checkAndReportComplexInstruction(const IR::Operation_Binary* op) const {
     if (regtype->width_bits() == 1) {
         error("%sOnly simple assignments are supported for one-bit registers.", op->srcInfo);
         return;
     }
+
     if (!isComplexInstruction(op)) return;
 
     error("You can only have more than one binary operator in a statement if "
@@ -1409,23 +1411,27 @@ bool CreateSaluInstruction::isComplexInstruction(const IR::Operation_Binary *op)
 
     return ret;
 }
+
 bool CreateSaluInstruction::preorder(const IR::BOr *e) {
     if (isComplexInstruction(e)) {
-        BUG_CHECK(etype == VALUE, "The etype should be the VALUE instead of %1%, failing on "
-            "following expression %2%", etype, e->srcInfo);
-        BUG_CHECK(operands.size() == 1, "One operand is expected at this place! Failing on "
-            "following expression %1%", e->srcInfo);
-        // Collect & dump data for the left subtree
-        auto old_opcode = opcode;
-        auto old_operands = operands;
-        visit(e->left);
-        doAssignment(e->left->srcInfo);
-        // Collect & dump data for the right subtree
-        etype  = VALUE;
-        opcode = old_opcode;
-        operands = old_operands;
-        visit(e->right);
-        doAssignment(e->right->srcInfo);
+        if (etype == VALUE && operands.size() == 1) {
+            // Collect & dump data for the left subtree
+            auto old_opcode = opcode;
+            auto old_operands = operands;
+            visit(e->left);
+            doAssignment(e->left->srcInfo);
+            // Collect & dump data for the right subtree
+            etype = VALUE;
+            opcode = old_opcode;
+            operands = old_operands;
+            visit(e->right);
+            doAssignment(e->right->srcInfo);
+        } else if (etype == IF) {
+            error("%stoo complex bitwise operation used in comparison", e->srcInfo);
+        } else {
+            // All other cases are too complex
+            checkAndReportComplexInstruction(e);
+        }
     }
 
     return true;
@@ -1461,7 +1467,7 @@ bool CreateSaluInstruction::preorder(const IR::Concat *e) {
     return false;
 }
 void CreateSaluInstruction::postorder(const IR::BXor *e) {
-    checkAndReportComplexInstrution(e);
+    checkAndReportComplexInstruction(e);
     if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
         if (e->left->is<IR::Cmpl>() || e->right->is<IR::Cmpl>())
             opcode = "xnor";

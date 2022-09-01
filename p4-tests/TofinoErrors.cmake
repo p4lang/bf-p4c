@@ -177,3 +177,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/errors/p4c-4522.p4
 )
 
+p4c_add_xfail_reason("tofino"
+  "error: too complex bitwise operation used in comparison"
+  extensions/p4_tests/p4_16/errors/p4c-4705.p4
+)
