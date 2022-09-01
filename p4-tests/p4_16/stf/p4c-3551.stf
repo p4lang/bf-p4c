@@ -7,3 +7,8 @@ expect 2   AABBCCDDEEFF     00000000FFFF    EECC        00000000 FFFF           
 packet 0   110022334455     AABBCCDDEEFF    EECC        00000000 FFFF               AAAAAAAA FFFF BBBBBBBB CCCC                         C0C0                            EF
 expect 4   110022334455     AABBCCDDEEFF    EECC        00000000 FFFF               AAAAAAAA FFFF BBBBBBBB CCCC                         C0C0                            EF
 
+
+# And one frame which doesn't go through prt5 nor prt4 (just prt1, then accept)     PAYLOAD
+packet 0   110022334455     AABBCCDDEEFF    EECC        00000003 FFFF               AAAAAAAA
+expect 0   110022334455     AABBCCDDEEFF    EECC        00000003 FFFF               AAAAAAAA
+

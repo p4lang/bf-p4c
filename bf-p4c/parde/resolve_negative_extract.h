@@ -20,18 +20,21 @@ struct ResolveNegativeExtract : public PassManager {
 
         /**
          * @brief In-buffer offsets of states
-         *
          */
         std::map<cstring, unsigned> state_to_shift;
 
         /**
          * @brief Output shift values for given transitions - key is the
          * source node and value is a map transition -> value
-         *
          */
         std::map<cstring,
             std::map<const IR::BFN::ParserMatchValue*,
                      unsigned>> transition_shift;
+
+        /**
+         * @brief Transitions exiting parser with unconsumed bytes in the packet buffer.
+         */
+        std::map<const IR::BFN::Transition*, unsigned> remainder_before_exit;
 
         explicit CollectNegativeExtractStates(const CollectParserInfo& pi) : parserInfo(pi) { }
 
@@ -156,7 +159,13 @@ struct ResolveNegativeExtract : public PassManager {
                 LOG4("Adding transition { " << state_trans->value << " } shift value " <<
                     tr_shift << " B from state " << state->name);
 
-                if (!state_succ) continue;
+                if (!state_succ) {
+                    // This transition exits parser, but we need to shift `state_shift` bytes
+                    // from the packet. Remember this transition, AdjustShift will add
+                    // auxiliary state which is used to extract the remaining bytes.
+                    remainder_before_exit[state_trans] = state_shift;
+                    continue;
+                };
                 state_to_shift[state_succ->name] = state_shift;
                 LOG4("Setting shift value " << state_shift << " B for state " << state_succ->name);
 
@@ -266,6 +275,23 @@ struct ResolveNegativeExtract : public PassManager {
                 transition->shift = tr_map.at(orig_transition->value);
                 LOG3("Adjusting transition from " << state->name << ", match { " <<
                     orig_transition->value << " } to shift value = " << transition->shift);
+            }
+
+            if (collectNegative.remainder_before_exit.count(orig_transition)) {
+                // The transition exits parser but needs to push a shift to the target
+                // state (which is empty in this case). We generate new auxiliary state
+                // for this purpose.
+                unsigned state_shift = collectNegative.remainder_before_exit.at(orig_transition);
+
+                auto remainder_state = new IR::BFN::ParserState(state->p4State,
+                                                          state->name + "$final_shift",
+                                                          state->gress);
+                transition->next = remainder_state;
+                auto end_transition = new IR::BFN::Transition(match_t(), state_shift);
+                remainder_state->transitions.push_back(end_transition);
+                LOG5("Transition from state " << state->name << " with match value "
+                     << orig_transition->value << " leads to exit, adding new state "
+                     << remainder_state->name << " to consume " << state_shift << " bytes.");
             }
 
             return true;
