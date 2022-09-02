@@ -1619,8 +1619,7 @@ bool ActionAnalysis::ContainerAction::verify_deposit_field_variant(PHV::Containe
     if (ad_sources()) {
         single_src_alignment = &ad_alignment;
     } else if (phv_alignment.size() == 1) {
-        for (auto phv_ta : Values(phv_alignment))
-            single_src_alignment = &phv_ta;
+        single_src_alignment = &phv_alignment.begin()->second;
     }
 
     if (ad_sources()) {
