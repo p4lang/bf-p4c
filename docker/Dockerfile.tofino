@@ -5,60 +5,45 @@ ARG DOCKER_PROJECT=amr-registry.caas.intel.com/bxd-sw
 # p4factory_git_commit=0fc1e9187b7cb0b894165edbf4c5dbd92108ecf7
 ARG P4FACTORY_IMAGE=p4factory@sha256:9f1e366d8bdcc507ef8bed9b67b636bc1c4847ef03b2fd180c5c679c256b4f46
 
-FROM ${DOCKER_PROJECT}/${P4FACTORY_IMAGE}
+FROM ${DOCKER_PROJECT}/${P4FACTORY_IMAGE} AS environment
 
 MAINTAINER bfn-docker <bfn-docker@barefootnetworks.com>
 
-# Default to using 2 make jobs, which is a good default for CI. If you're
-# building locally or you know there are more cores available, you may want to
-# override this.
-ARG MAKEFLAGS=j2
-ARG BFN_P4C_GIT_SHA="UNKNOWN"
-
-# Use 'jarvis' to build a jarvis image
-#     'release' to build a release image
-#     'glass' to build a base image for glass
-ARG BUILD_FOR="tofino"
-
-# Use 'release' if you don't wish to keep the build artifacts
-# Use 'doc' to build only documentation
-ARG IMAGE_TYPE=test
-# Use 'true' if you wish to build glass for p4v or p4i
-ARG BUILD_GLASS=false
-# Use 'true' if you wish to generate ref outputs for p4i
-ARG GEN_REF_OUTPUTS=false
-# Use 'true' if you want to test P4-14 programs for Tofino with TNA architecture
-ARG TOFINO_P414_TEST_ARCH_TNA=false
+# Set to true to setup CI-specific configuration (e.g. path to ccache directory)
+ARG BUILDING_IN_CI="true"
 
 # Set up environment variables.
 
-  # Set things up for distcc.
-  ENV CC="distcc gcc"
-  ENV CXX="distcc g++"
-  ENV DISTCC_IO_TIMEOUT="450"
+# Set things up for distcc.
+ENV DISTCC_IO_TIMEOUT="450"
 
-  # Set up Intel proxies.
-  ENV http_proxy='http://proxy-dmz.intel.com:911'
-  ENV https_proxy='http://proxy-dmz.intel.com:912'
-  ENV ftp_proxy='http://proxy-dmz.intel.com:21'
-  ENV socks_proxy='proxy-dmz.intel.com:1080'
-  ENV no_proxy='intel.com,*.intel.com,localhost,127.0.0.1,10.0.0.0/8,192.168.0.0/16,172.16.0.0/12'
-  ENV ALL_PROXY='socks5://proxy-us.intel.com'
+# Set up Intel proxies.
+ENV http_proxy='http://proxy-dmz.intel.com:911'
+ENV https_proxy='http://proxy-dmz.intel.com:912'
+ENV ftp_proxy='http://proxy-dmz.intel.com:21'
+ENV socks_proxy='proxy-dmz.intel.com:1080'
+ENV no_proxy='intel.com,*.intel.com,localhost,127.0.0.1,10.0.0.0/8,192.168.0.0/16,172.16.0.0/12'
+ENV ALL_PROXY='socks5://proxy-us.intel.com'
 
-  ENV PYTHONPATH="/p4factory/install/lib/python3.8/site-packages"
-
-RUN rm -rf /root/.ssh/id_*
-
-COPY . /bfn/bf-p4c-compilers/
-
-RUN /bfn/bf-p4c-compilers/docker/docker_build.sh
+ENV PYTHONPATH="/p4factory/install/lib/python3.8/site-packages"
 
 # Setup PTF environment (Use bf-pktpy by default)
 ENV PKTPY='True'
 
+RUN rm -rf /root/.ssh/id_*
+
+# Copy directories needed to environment preparation separately to
+# allow env preparation to be cached.
 WORKDIR /bfn/bf-p4c-compilers
+ADD docker docker
+ADD scripts scripts
+ADD p4-tests/p4testutils p4-tests/p4testutils
+
+RUN docker/docker_prepare_env.sh
+
+# Copy rest of the source tree.
+COPY . /bfn/bf-p4c-compilers/
+
 CMD ["/bin/bash"]
 ENTRYPOINT ["/bfn/docker_entry_point.sh"]
 
-# Expose port 80 for accessing Doxygen-generated documentation
-EXPOSE 80

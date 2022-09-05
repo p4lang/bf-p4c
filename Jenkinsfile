@@ -92,8 +92,18 @@ node ('compiler-travis') {
                             ${DOCKER_REGISTRY}
                     """
                 }
-                image_tag = "${env.BRANCH_NAME.toLowerCase()}_${bf_p4c_compilers_rev}"
+                image_tag_branch = "${env.BRANCH_NAME.toLowerCase()}"
+                image_tag = "${image_tag_branch}_${bf_p4c_compilers_rev}"
                 try {
+                    // Try to pull any image of this branch first. The intermediate image build
+                    // attempts to reuse docker layers from it, even if the revisions are not
+                    // exactly the same.
+                    sh "docker pull ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag_branch}"
+                    echo "Pulled image bf-p4c-compilers:${image_tag_branch}"
+
+                    // Then try to pull the image for this specific git revision, which
+                    // might be available if pipeline is being re-run. We don't have to build the
+                    // image in such case.
                     sh "docker pull ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag}"
                     image_pulled = 'true'
                     echo "Pulled image bf-p4c-compilers:${image_tag}"
@@ -111,17 +121,21 @@ node ('compiler-travis') {
                 // The first stage uses `docker build` to install dependencies and set
                 // up the build environment. The second stage does the actual build in
                 // a Docker container and cleans up.
+                //
+                // Build this image even if we've pulled image from registry successfully.
+                // We may use it for nonstandard builds.
 
                 echo 'Building intermediate Docker image'
                 sh """
                     mkdir -p ~/.ccache_bf-p4c-compilers
                     docker build \
                         --pull \
+                        --cache-from ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag_branch} \
                         -f docker/Dockerfile.tofino \
                         -t bf-p4c-compilers_intermediate_${image_tag} \
                         --build-arg DOCKER_PROJECT=${DOCKER_PROJECT} \
                         --build-arg MAKEFLAGS=j16 \
-                        --build-arg BUILD_FOR=jenkins-intermediate \
+                        --target=environment \
                         .
                 """
             }
@@ -137,13 +151,8 @@ node ('compiler-travis') {
                                 docker run \
                                     --name bf-p4c-compilers_build_${image_tag} \
                                     -v ~/.ccache_bf-p4c-compilers:/root/.ccache \
+                                    -e UNIFIED_BUILD=true \
                                     -e MAKEFLAGS=j16 \
-                                    -e BUILD_FOR=jenkins-final \
-                                    -e IMAGE_TYPE=test \
-                                    -e BUILD_GLASS=false \
-                                    -e GEN_REF_OUTPUTS=false \
-                                    -e TOFINO_P414_TEST_ARCH_TNA=false \
-                                    -e BFN_P4C_GIT_SHA=${bf_p4c_compilers_rev_short} \
                                     bf-p4c-compilers_intermediate_${image_tag} \
                                     /bfn/bf-p4c-compilers/docker/docker_build.sh
                                 docker commit \
@@ -159,13 +168,8 @@ node ('compiler-travis') {
                             sh """
                                 docker run --rm \
                                     -v ~/.ccache_bf-p4c-compilers:/root/.ccache \
+                                    -e UNIFIED_BUILD=false \
                                     -e MAKEFLAGS=j16 \
-                                    -e BUILD_FOR=jenkins-final \
-                                    -e IMAGE_TYPE=non-unified \
-                                    -e BUILD_GLASS=false \
-                                    -e GEN_REF_OUTPUTS=false \
-                                    -e TOFINO_P414_TEST_ARCH_TNA=false \
-                                    -e BFN_P4C_GIT_SHA=${bf_p4c_compilers_rev_short} \
                                     bf-p4c-compilers_intermediate_${image_tag} \
                                     /bfn/bf-p4c-compilers/docker/docker_build.sh
                             """
@@ -178,15 +182,17 @@ node ('compiler-travis') {
                     echo "Pushing the built Docker image bf-p4c-compilers:${image_tag}"
                     try {
                         sh "docker push ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag}"
+                        sh "docker tag ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag} \
+                                       ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag_branch}"
+                        sh "docker push ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag_branch}"
                     } catch (err) {
                         echo "Pushing of the built Docker image failed. Notifying the maintainers and continuing."
                         emailext subject: "${env.JOB_NAME} failed to push build Docker image",
                                     body: "Check console output at '${env.RUN_DISPLAY_URL}'",
-                                    to: "tomas.zavodnik@intel.com,prathima.kotikalapudi@intel.com",
+                                    to: "vojtech.havel@intel.com,prathima.kotikalapudi@intel.com",
                                     attachLog: true
                     }
                 }
-
             }
 
             stage ('Test') {
@@ -512,13 +518,12 @@ node ('compiler-travis') {
                     'Packaging' : {
                         sh """
                             mkdir -p ~/.ccache_bf-p4c-compilers
-                            docker build \
-                                --pull \
-                                -f docker/Dockerfile.tofino \
-                                --build-arg DOCKER_PROJECT=${DOCKER_PROJECT} \
-                                --build-arg MAKEFLAGS=j2 \
-                                --build-arg BUILD_FOR=release \
-                                .
+                            docker run \
+                                -v ~/.ccache_bf-p4c-compilers:/root/.ccache \
+                                -e MAKEFLAGS=j2 \
+                                -e UNIFIED_BUILD=true \
+                                bf-p4c-compilers_intermediate_${image_tag} \
+                                scripts/package_p4c_for_tofino.sh --build-dir build --enable-cb
                         """
                     },
 
@@ -528,11 +533,7 @@ node ('compiler-travis') {
                                 --rm \
                                 -v ~/.ccache_bf-p4c-compilers:/root/.ccache \
                                 -e MAKEFLAGS=j2 \
-                                -e BUILD_FOR=jenkins-final \
-                                -e IMAGE_TYPE=test \
-                                -e BUILD_GLASS=false \
-                                -e GEN_REF_OUTPUTS=false \
-                                -e TOFINO_P414_TEST_ARCH_TNA=false \
+                                -e UNIFIED_BUILD=true \
                                 -e CC=gcc-6 \
                                 -e CXX=g++-6 \
                                 bf-p4c-compilers_intermediate_${image_tag} \
