@@ -42,7 +42,7 @@ node ('compiler-nodes') {
                 sh "git submodule update --init --recursive"
             }
 
-            stage ('Build') {
+            stage ('Build Intermediate') {
                 echo 'Building Docker image'
                 sh """
                     docker build \
@@ -50,22 +50,23 @@ node ('compiler-nodes') {
                         -f docker/Dockerfile.tofino \
                         -t bf-p4c-compilers_doc_${BRANCH_ID} \
                         --build-arg DOCKER_PROJECT=${DOCKER_PROJECT} \
-                        --build-arg MAKEFLAGS=j16 \
-                        --build-arg IMAGE_TYPE=doc \
                         .
                 """
             }
 
-            stage ('Publish') {
-                echo 'Extracting documentation'
+            stage ('Build documentation and Publish') {
+                echo 'Building and Extracting documentation'
                 def curr_pwd = pwd()
                 sh """
                     mkdir -p doc
                     docker run --rm \
-                        -w /bfn/bf-p4c-compilers/build \
+                        -w /bfn/bf-p4c-compilers \
                         -v ${curr_pwd}/doc:/mnt \
                         bf-p4c-compilers_doc_${BRANCH_ID} \
-                            tar czf /mnt/html.tar.gz html
+                            bash -c "./bootstrap_bfn_compilers.sh && \
+                                     cd build && \
+                                     make doc && \
+                                     tar czf /mnt/html.tar.gz html"
                 """
 
                 echo 'Archiving artifact'
