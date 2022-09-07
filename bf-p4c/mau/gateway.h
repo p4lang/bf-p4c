@@ -173,7 +173,7 @@ class BuildGatewayMatch : public Inspector {
     friend std::ostream &operator<<(std::ostream &, const BuildGatewayMatch &);
     PHV::FieldSlice             match_field;
     uint64_t                    andmask = 0, ormask = 0, cmplmask = 0;
-    int                         shift = 0;
+    int                         shift = 0, maxbit = 0;
 
  public:
     BuildGatewayMatch(const PhvInfo &phv, CollectGatewayFields &f);

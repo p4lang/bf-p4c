@@ -1653,14 +1653,20 @@ void Table::Actions::pass1(Table *tbl) {
         slot_use |= act.slot_use; }
 }
 
-static void find_pred_in_stage(int stageno,
-        std::map<MatchTable *, std::set<Table::Actions::Action *>> &pred,
-        Table *tbl, const std::set<Table::Actions::Action *> &acts) {
-    for (auto *mt : tbl->get_match_tables()) {
-        if (mt->stage->stageno != stageno) continue;
-        pred[mt].insert(acts.begin(), acts.end());
-        for (auto &p : tbl->pred)
-            find_pred_in_stage(stageno, pred, p.first, p.second); }
+std::map<Table *, std::set<Table::Actions::Action *>>
+Table::find_pred_in_stage(int stageno, const std::set<Actions::Action *> &acts) {
+    std::map<Table *, std::set<Actions::Action *>> rv;
+    if (stage->stageno < stageno) return rv;
+    if (stage->stageno == stageno) {
+        rv[this].insert(acts.begin(), acts.end()); }
+    for (auto &p : pred) {
+        for (auto &kv : p.first->find_pred_in_stage(stageno, p.second)) {
+            rv[kv.first].insert(kv.second.begin(), kv.second.end()); } }
+    for (auto *mt : get_match_tables()) {
+        if (mt != this) {
+            for (auto &kv : mt->find_pred_in_stage(stageno, acts)) {
+                rv[kv.first].insert(kv.second.begin(), kv.second.end()); } } }
+    return rv;
 }
 
 void Table::Actions::pass2(Table *tbl) {
@@ -1765,8 +1771,7 @@ void Table::Actions::pass2(Table *tbl) {
                 warning(tbl->default_action_lineno, "default action %s in table %s is not allowed "
                         "to be default?", tbl->default_action.c_str(), tbl->name());
                 defact.default_allowed = true; } } }
-    std::map<MatchTable *, std::set<Action *>> pred;
-    find_pred_in_stage(tbl->stage->stageno, pred, tbl, std::set<Action *>());
+    auto pred = tbl->find_pred_in_stage(tbl->stage->stageno);
     for (auto &p : pred) {
         auto *actions = p.first->get_actions();
         if (!actions || actions == this) continue;

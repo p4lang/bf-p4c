@@ -33,6 +33,11 @@ template<> void Stage::write_regs(Target::Flatrock::mau_regs &regs, bool egress_
     regs.rf.ppu_pktdly_cfg.delay = 2;   // FIXME -- needs to be 2-31
     for (auto &delay : regs.ppu_mrd.rf.mrd_iad_delay)
         delay.delay = 1;   // FIXME -- needs to be set even for non-enabled tables?
+
+    // FIXME -- this should be based on the number of logical tables in the stage or
+    // perhaps less if there are multiple that have the same control deps, but for
+    // now we hardcode to 16 to match jbay/cloudbreak
+    regs.ppu_mrd.rf.mrd_pred_cfg.pv_shr = 16;
 }
 
 void AlwaysRunTable::write_regs(Target::Flatrock::mau_regs &regs) {

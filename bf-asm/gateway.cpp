@@ -93,7 +93,7 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
                 gateway_name = kv.value.s;
         } else if (kv.key == "row") {
             if (!CHECKTYPE(kv.value, tINT)) continue;
-            if (kv.value.i < 0 || kv.value.i > 7)
+            if (kv.value.i < 0 || kv.value.i > Target::GATEWAY_ROWS())
                 error(kv.value.lineno, "row %" PRId64 " out of range", kv.value.i);
             if (layout.empty()) layout.resize(1);
             layout[0].row = kv.value.i;
@@ -223,43 +223,25 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
     }
 }
 
-static void check_match_key(Table *tbl, std::vector<GatewayTable::MatchKey> &vec,
-                            const char *name, unsigned max) {
-    for (unsigned i = 0; i < vec.size(); i++) {
-        if (!vec[i].val.check())
-            break;
-        if (vec[i].val->reg.mau_id() < 0)
-            error(vec[i].val.lineno, "%s not accessable in mau", vec[i].val->reg.name);
-        if (vec[i].offset >= 0) {
-            for (unsigned j = 0; j < i; ++j) {
-                if (vec[i].offset < vec[j].offset + static_cast<int>(vec[j].val->size()) &&
-                    vec[j].offset < vec[i].offset + static_cast<int>(vec[i].val->size()))
-                    error(vec[i].val.lineno, "Gateway %s key at offset %d overlaps previous "
-                          "value at offset %d", name, vec[i].offset, vec[j].offset); }
-        } else {
-            vec[i].offset = i ? vec[i-1].offset + vec[i-1].val->size() : 0;
-        }
-        if (vec[i].offset < 32 && (vec[i].offset & 7) != (vec[i].val->lo & 7))
-            error(vec[i].val.lineno, "Gateway %s key %s misaligned within byte", name,
-                  vec[i].val.name());
-
-        if (vec[i].offset + vec[i].val->size() > max) {
-            error(vec[i].val.lineno, "Gateway %s key too big", name);
-            break; }
-        if (vec[i].offset >= 32 && !tbl->input_xbar.empty()) {
-            BUG_CHECK(tbl->input_xbar.size() == 1, "%s does not have one input xbar", tbl->name());
-            auto hash = tbl->input_xbar[0]->hash_column(vec[i].offset + 8);
-            if (hash.size() != 1 || hash[0]->bit || !hash[0]->fn ||
-                !hash[0]->fn->match_phvref(vec[i].val)) {
-                // FIXME: hash.size() maybe zero when vec[i].valid is true.
-                // which means the vec[i].offset is incorrect.
-                if (vec[i].valid)
-                    continue;
-                error(vec[i].val.lineno, "Gateway %s key %s not in matching hash column", name,
-                          vec[i].val.name());
-            }
-        }
-    }
+bool GatewayTable::check_match_key(MatchKey &key, const std::vector<MatchKey> &vec,
+                                   bool is_xor) {
+    if (!key.val.check())
+        return false;
+    if (key.val->reg.mau_id() < 0)
+        error(key.val.lineno, "%s not accessable in mau", key.val->reg.name);
+    if (key.offset >= 0) {
+        for (auto &okey : vec) {
+            if (&okey == &key) break;
+            if (key.offset < okey.offset + static_cast<int>(okey.val->size()) &&
+                okey.offset < key.offset + static_cast<int>(key.val->size()))
+                error(key.val.lineno, "Gateway %s key at offset %d overlaps previous "
+                      "value at offset %d", is_xor ? "xor" : "match", key.offset, okey.offset); }
+    } else if (&key == &vec[0]) {
+        key.offset = 0;
+    } else {
+        auto *prev = &key - 1;
+        key.offset = prev->offset + prev->val->size(); }
+    return true;
 }
 
 void GatewayTable::verify_format() {
@@ -359,8 +341,10 @@ void GatewayTable::pass1() {
         ixb->pass1();
         if (Target::GATEWAY_SINGLE_XBAR_GROUP() && ixb->match_group() < 0)
             error(ixb->lineno, "Gateway match keys must be in a single ixbar group"); }
-    check_match_key(this, match, "match", 44);
-    check_match_key(this, xor_match, "xor", 32);
+    for (auto &k : match)
+        if (!check_match_key(k, match, false)) break;
+    for (auto &k : xor_match)
+        if (!check_match_key(k, xor_match, true)) break;
     std::sort(match.begin(), match.end());
     std::sort(xor_match.begin(), xor_match.end());
     if (table.size() > 4)
@@ -377,21 +361,28 @@ void GatewayTable::pass1() {
     /* FIXME -- the rest of this function is a hack -- sometimes the compiler wants to
      * generate matches just covering the bits it names in the match and other times it wants
      * to create the whole tcam value.  Need to fix the asm syntax to be sensible and fix the
-     * compiler's output */
-    uint64_t ignore = UINT64_MAX;
+     * compiler's output.
+     * Part of the issue is that in tofino1/2/3 we copy the word0/word1 bits directly to
+     * the tcam, so we need to treat unspecified bits as don't care.  Another part is that
+     * integer constants used as matches get padded with 0 out to a mulitple of 64 bits,
+     * and those should also be don't care where they don't get matched.
+     */
+    bitvec ignore(0, Target::GATEWAY_MATCH_BITS());
     int shift = -1;
+    int maxbit = 0;
     for (auto &r : match) {
         if (range_match && r.offset >= 32) {
             continue; }
         if (r.offset >= 64) continue;
-        ignore ^= bitMask(r.val->size()) << r.offset;
-        if (shift < 0 || shift > r.offset) shift = r.offset; }
+        ignore.clrrange(r.offset, r.val->size());
+        if (shift < 0 || shift > r.offset) shift = r.offset;
+        if (maxbit < r.offset + r.val->size()) maxbit = r.offset + r.val->size(); }
     if (shift < 0) shift = 0;
-    LOG3("shift=" << shift << " ignore=0x" << hex(ignore));
+    LOG3("shift=" << shift << " ignore=0x" << ignore);
     for (auto &line : table) {
-        uint64_t ign = ~(line.val.word0 ^ line.val.word1).getrange(0, 64);
-        if (ign == 0) ign = line.val.word0.getrange(0, 64);
-        if ((ign & ~(~ignore >> shift)) != ~(~ignore >> shift))
+        bitvec matching = (line.val.word0 ^ line.val.word1) << shift;
+        matching -= (line.val.word0 << shift) - bitvec(0, maxbit);  // ignore leading 0s
+        if (matching & ignore)
             warning(line.lineno, "Trying to match on bits not in match of gateway");
         line.val.word0 = (line.val.word0 << shift) | ignore;
         line.val.word1 = (line.val.word1 << shift) | ignore; }
@@ -435,6 +426,10 @@ void GatewayTable::pass2() {
 
 void GatewayTable::pass3() {
     LOG1("### Gateway table " << name() << " pass3 " << loc());
+    if (match_table)
+        physical_id = match_table->physical_id;
+    else
+        allocate_physical_id();
 }
 
 static unsigned match_input_use(const std::vector<GatewayTable::MatchKey> &match) {

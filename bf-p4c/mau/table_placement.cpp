@@ -1685,9 +1685,11 @@ struct TablePlacement::RewriteForSplitAttached : public Transform {
 bool TablePlacement::try_alloc_ixbar(Placed *next, std::vector<Placed *> allocated_layout) {
     next->resources.clear_ixbar();
     std::unique_ptr<IXBar> current_ixbar(IXBar::create());
+    int tables_already_in_stage = 0;
     for (auto *p : boost::adaptors::reverse(allocated_layout)) {
         if (!Device::threadsSharePipe(p->table->gress, next->table->gress)) continue;
         current_ixbar->update(p->table, &p->resources);
+        tables_already_in_stage++;
     }
     current_ixbar->add_collisions();
 
@@ -1707,8 +1709,12 @@ bool TablePlacement::try_alloc_ixbar(Placed *next, std::vector<Placed *> allocat
     if (!current_ixbar->allocTable(table, next->gw, phv, next->resources, next->use.preferred(),
                                    action_format, next->attached_entries)) {
         next->resources.clear_ixbar();
-        error_message = "The table " + next->table->name + " could not fit within a single "
-                        "input crossbar in an MAU stage";
+        error_message = "The table " + next->table->name + " could not fit within the "
+                        "input crossbar";
+        if (tables_already_in_stage)
+            error_message += " with " + std::to_string(tables_already_in_stage) + " other tables";
+        else
+            error_message += " by itself";
         LOG3("    " << error_message);
         return false;
     }

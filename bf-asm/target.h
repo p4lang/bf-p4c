@@ -134,10 +134,12 @@
     M(int, DYNAMIC_CONFIG_INPUT_BITS) \
     M(bool, EGRESS_SEPARATE) \
     M(int, END_OF_PIPE) \
-    M(int, GATEWAY_PAYLOAD_GROUPS) \
-    M(bool, GATEWAY_SINGLE_XBAR_GROUP) \
-    M(bool, GATEWAY_NEEDS_SEARCH_BUS) \
     M(bool, GATEWAY_INHIBIT_INDEX) \
+    M(int, GATEWAY_MATCH_BITS) \
+    M(bool, GATEWAY_NEEDS_SEARCH_BUS) \
+    M(int, GATEWAY_PAYLOAD_GROUPS) \
+    M(int, GATEWAY_ROWS) \
+    M(bool, GATEWAY_SINGLE_XBAR_GROUP) \
     M(bool, HAS_MPR) \
     M(int, INSTR_SRC2_BITS) \
     M(int, IMEM_COLORS) \
@@ -314,10 +316,12 @@ class Target::Tofino : public Target {
         DYNAMIC_CONFIG_INPUT_BITS = 0,
         EGRESS_SEPARATE = false,
         END_OF_PIPE = 0xff,
-        GATEWAY_PAYLOAD_GROUPS = 1,
-        GATEWAY_SINGLE_XBAR_GROUP = true,
-        GATEWAY_NEEDS_SEARCH_BUS = true,
         GATEWAY_INHIBIT_INDEX = false,
+        GATEWAY_MATCH_BITS = 56,  // includes extra expansion for range match
+        GATEWAY_NEEDS_SEARCH_BUS = true,
+        GATEWAY_PAYLOAD_GROUPS = 1,
+        GATEWAY_ROWS = 8,
+        GATEWAY_SINGLE_XBAR_GROUP = true,
         SUPPORT_TRUE_EOP = 0,
         INSTR_SRC2_BITS = 4,
         IMEM_COLORS = 2,
@@ -378,7 +382,7 @@ void declare_registers(const Target::Tofino::top_level_regs *regs);
 void undeclare_registers(const Target::Tofino::top_level_regs *regs);
 void declare_registers(const Target::Tofino::parser_regs *regs);
 void undeclare_registers(const Target::Tofino::parser_regs *regs);
-void declare_registers(const Target::Tofino::mau_regs *regs, int stage);
+void declare_registers(const Target::Tofino::mau_regs *regs, bool ignore, int stage);
 void declare_registers(const Target::Tofino::deparser_regs *regs);
 void undeclare_registers(const Target::Tofino::deparser_regs *regs);
 void emit_parser_registers(const Target::Tofino::top_level_regs *regs, std::ostream &);
@@ -470,10 +474,12 @@ class Target::JBay : public Target {
         DYNAMIC_CONFIG_INPUT_BITS = 0,
         EGRESS_SEPARATE = false,
         END_OF_PIPE = 0x1ff,
-        GATEWAY_PAYLOAD_GROUPS = 5,
-        GATEWAY_SINGLE_XBAR_GROUP = true,
-        GATEWAY_NEEDS_SEARCH_BUS = true,
         GATEWAY_INHIBIT_INDEX = false,
+        GATEWAY_MATCH_BITS = 56,  // includes extra expansion for range match
+        GATEWAY_NEEDS_SEARCH_BUS = true,
+        GATEWAY_PAYLOAD_GROUPS = 5,
+        GATEWAY_ROWS = 8,
+        GATEWAY_SINGLE_XBAR_GROUP = true,
         SUPPORT_TRUE_EOP = 1,
         INSTR_SRC2_BITS = 5,
         IMEM_COLORS = 2,
@@ -529,7 +535,7 @@ void declare_registers(const Target::JBay::top_level_regs *regs);
 void undeclare_registers(const Target::JBay::top_level_regs *regs);
 void declare_registers(const Target::JBay::parser_regs *regs);
 void undeclare_registers(const Target::JBay::parser_regs *regs);
-void declare_registers(const Target::JBay::mau_regs *regs, int stage);
+void declare_registers(const Target::JBay::mau_regs *regs, bool ignore, int stage);
 void declare_registers(const Target::JBay::deparser_regs *regs);
 
 class Target::Tofino2H : public Target::JBay {
@@ -677,10 +683,12 @@ class Target::Cloudbreak : public Target {
         DYNAMIC_CONFIG_INPUT_BITS = 0,
         EGRESS_SEPARATE = false,
         END_OF_PIPE = 0x1ff,
-        GATEWAY_PAYLOAD_GROUPS = 5,
-        GATEWAY_SINGLE_XBAR_GROUP = true,
-        GATEWAY_NEEDS_SEARCH_BUS = true,
         GATEWAY_INHIBIT_INDEX = false,
+        GATEWAY_MATCH_BITS = 56,  // includes extra expansion for range match
+        GATEWAY_NEEDS_SEARCH_BUS = true,
+        GATEWAY_PAYLOAD_GROUPS = 5,
+        GATEWAY_ROWS = 8,
+        GATEWAY_SINGLE_XBAR_GROUP = true,
         INSTR_SRC2_BITS = 5,
         IMEM_COLORS = 2,
         IXBAR_HASH_GROUPS = 8,
@@ -744,7 +752,7 @@ void declare_registers(const Target::Cloudbreak::top_level_regs *regs);
 void undeclare_registers(const Target::Cloudbreak::top_level_regs *regs);
 void declare_registers(const Target::Cloudbreak::parser_regs *regs);
 void undeclare_registers(const Target::Cloudbreak::parser_regs *regs);
-void declare_registers(const Target::Cloudbreak::mau_regs *regs, int stage);
+void declare_registers(const Target::Cloudbreak::mau_regs *regs, bool ignore, int stage);
 void declare_registers(const Target::Cloudbreak::deparser_regs *regs);
 
 void emit_parser_registers(const Target::Cloudbreak::top_level_regs *regs, std::ostream &);
@@ -825,10 +833,12 @@ class Target::Flatrock : public Target {
         DYNAMIC_CONFIG_INPUT_BITS = 8,
         EGRESS_SEPARATE = true,
         END_OF_PIPE = 0xff,
-        GATEWAY_PAYLOAD_GROUPS = 4,
-        GATEWAY_SINGLE_XBAR_GROUP = false,
-        GATEWAY_NEEDS_SEARCH_BUS = false,
         GATEWAY_INHIBIT_INDEX = true,
+        GATEWAY_MATCH_BITS = 104,
+        GATEWAY_NEEDS_SEARCH_BUS = false,
+        GATEWAY_PAYLOAD_GROUPS = 4,
+        GATEWAY_ROWS = 24,
+        GATEWAY_SINGLE_XBAR_GROUP = false,
         INSTR_SRC2_BITS = 0,
         IMEM_COLORS = 4,
         IXBAR_HASH_GROUPS = 16,  // actually XME indexes
@@ -971,7 +981,7 @@ void declare_registers(const Target::Flatrock::top_level_regs *regs);
 void undeclare_registers(const Target::Flatrock::top_level_regs *regs);
 void declare_registers(const Target::Flatrock::parser_regs *regs);
 void undeclare_registers(const Target::Flatrock::parser_regs *regs);
-void declare_registers(const Target::Flatrock::mau_regs *regs, int stage);
+void declare_registers(const Target::Flatrock::mau_regs *regs, bool egress, int stage);
 void declare_registers(const Target::Flatrock::deparser_regs *regs);
 
 void emit_parser_registers(const Target::Flatrock::top_level_regs *regs, std::ostream &);

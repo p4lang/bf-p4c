@@ -213,7 +213,7 @@ void MatchTable::pass1() {
         gateway->pass1(); }
 }
 
-void MatchTable::allocate_physical_id(unsigned usable) {
+void Table::allocate_physical_id(unsigned usable) {
     if (physical_id >= 0) {
         BUG_CHECK((usable >> physical_id) & 1, "table %s has physical id %d which appears to be "
                   "invalid", name(), physical_id);

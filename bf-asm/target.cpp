@@ -60,7 +60,7 @@ void undeclare_registers(const Target::Tofino::parser_regs *regs) {
     undeclare_registers(&regs->egress);
     undeclare_registers(&regs->merge);
 }
-void declare_registers(const Target::Tofino::mau_regs *regs, int stage) {
+void declare_registers(const Target::Tofino::mau_regs *regs, bool, int stage) {
     declare_registers(regs, sizeof *regs,
         [=](std::ostream &out, const char *addr, const void *end) {
             out << "mau[" << stage << "]";
@@ -181,7 +181,7 @@ void undeclare_registers(const Target::JBay::parser_regs *regs) {
     undeclare_registers(&regs->main[EGRESS]);
     undeclare_registers(&regs->merge);
 }
-void declare_registers(const Target::JBay::mau_regs *regs, int stage) {
+void declare_registers(const Target::JBay::mau_regs *regs, bool, int stage) {
     declare_registers(regs, sizeof *regs,
         [=](std::ostream &out, const char *addr, const void *end) {
             out << "mau[" << stage << "]";
@@ -293,7 +293,7 @@ void undeclare_registers(const Target::Cloudbreak::parser_regs *regs) {
     undeclare_registers(&regs->main[EGRESS]);
     undeclare_registers(&regs->merge);
 }
-void declare_registers(const Target::Cloudbreak::mau_regs *regs, int stage) {
+void declare_registers(const Target::Cloudbreak::mau_regs *regs, bool, int stage) {
     declare_registers(regs, sizeof *regs,
         [=](std::ostream &out, const char *addr, const void *end) {
             out << "mau[" << stage << "]";
@@ -380,10 +380,10 @@ void undeclare_registers(const Target::Flatrock::parser_regs *regs) {
     undeclare_registers(&regs->prsr_mem);
     undeclare_registers(&regs->prsr);
 }
-void declare_registers(const Target::Flatrock::mau_regs *regs, int stage) {
+void declare_registers(const Target::Flatrock::mau_regs *regs, bool egress, int stage) {
     declare_registers(regs, sizeof *regs,
         [=](std::ostream &out, const char *addr, const void *end) {
-            out << "mau[" << stage << "]";
+            out << (egress ? 'e' : 'i') << "ppu[" << stage << "]";
             regs->emit_fieldname(out, addr, end); });
 }
 void declare_registers(const Target::Flatrock::deparser_regs *regs) {

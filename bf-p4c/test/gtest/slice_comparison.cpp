@@ -43,7 +43,8 @@ TEST(SliceComparison, SliceComparison1) {
         "`.*`",
         "match: { 3: hdr.h.pri1(3), 11: hdr.h.pri1(3) }",
         "xor: { 3: hdr.h.pri2(3) }",
-        "0b****1*******1: run_table",
+        "0b1*******1:",
+        "run_table: true",
     };
     RUN_CHECK(input, expected);
 }
@@ -65,7 +66,8 @@ TEST(SliceComparison, SliceComparison2) {
         "`.*`",
         "match: { 3: hdr.h.pri1(3), 11: hdr.h.pri2(3) }",
         "xor: { 3: hdr.h.pri2(3) }",
-        "0b****1*******1: run_table",
+        "0b1*******1:",
+        "run_table: true",
     };
     RUN_CHECK(input, expected);
 }

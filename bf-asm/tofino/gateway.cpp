@@ -2,6 +2,32 @@
 #include "stage.h"
 #include "hex.h"
 
+bool Target::Tofino::GatewayTable::check_match_key(MatchKey &key,
+        const std::vector<MatchKey> &vec, bool is_xor) {
+    if (!::GatewayTable::check_match_key(key, vec, is_xor)) return false;
+    if (key.offset < 32 && (key.offset & 7) != (key.val->lo & 7))
+        error(key.val.lineno, "Gateway %s key %s misaligned within byte",
+              is_xor ? "xor" : "match", key.val.name());
+    if (key.offset + key.val->size() > (is_xor ? 32 : 44)) {
+        error(key.val.lineno, "Gateway %s key too big", is_xor ? "xor" : "match");
+        return false; }
+    if (key.offset >= 32 && !input_xbar.empty()) {
+        BUG_CHECK(input_xbar.size() == 1, "%s does not have one input xbar", name());
+        auto hash = input_xbar[0]->hash_column(key.offset + 8);
+        if (hash.size() != 1 || hash[0]->bit || !hash[0]->fn ||
+            !hash[0]->fn->match_phvref(key.val)) {
+            // FIXME: hash.size() maybe zero when key.valid is true.
+            // which means the key.offset is incorrect.
+            if (!key.valid) {
+                error(key.val.lineno, "Gateway %s key %s not in matching hash column",
+                      is_xor ? "xor" : "match", key.val.name());
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 void Target::Tofino::GatewayTable::pass1() {
     ::GatewayTable::pass1();
     /* in a gateway, the layout has one or two rows -- layout[0] specifies the gateway, and

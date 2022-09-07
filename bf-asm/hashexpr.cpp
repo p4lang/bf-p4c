@@ -88,7 +88,7 @@ class HashExpr::PhvRef : HashExpr {
         return ::check_ixbar(what, ix, hash_table); }
     int width() override { return what.size(); }
     int input_size() override { return what.size(); }
-    bool match_phvref(Phv::Ref &ref) override {
+    bool match_phvref(const Phv::Ref &ref) override {
         if (what->reg != ref->reg || what->lo != ref->lo)
             return false;
         return true; }

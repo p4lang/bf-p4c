@@ -771,7 +771,7 @@ void Stage::fixup_regs(REGS &regs) {
 template<class TARGET>
 void Stage::output(json::map &ctxt_json, bool egress_only) {
     auto *regs = new typename TARGET::mau_regs();
-    declare_registers(regs, stageno);
+    declare_registers(regs, egress_only, stageno);
     json::vector &ctxt_tables = ctxt_json["tables"];
     for (auto table : tables) {
         table->write_regs(*regs);

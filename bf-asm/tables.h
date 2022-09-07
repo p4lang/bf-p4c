@@ -588,6 +588,7 @@ class Table {
     virtual void common_tbl_cfg(json::map &tbl) const;
     void add_match_key_cfg(json::map& tbl) const;
     bool add_json_node_to_table(json::map &tbl, const char *name) const;
+    void allocate_physical_id(unsigned usable = ~0U);
     template<typename T> void init_json_node(json::map &tbl, const char *name) const;
     enum table_type_t { OTHER = 0, TERNARY_INDIRECT, GATEWAY, ACTION, SELECTION, COUNTER,
                         METER, IDLETIME, STATEFUL, HASH_ACTION, EXACT, TERNARY, PHASE0, ATCAM,
@@ -777,6 +778,12 @@ class Table {
     void check_next(NextTables &next);
     void check_next();
     virtual void set_pred();
+    /* find the predecessors in the given stage that must run iff this table runs.
+     * includes `this` if it is in the stage.  The values are the set of actions that
+     * (lead to) triggering this table, or empty if any action might */
+    std::map<Table *, std::set<Actions::Action *>> find_pred_in_stage(int stageno,
+                const std::set<Actions::Action *> &acts = std::set<Actions::Action *>());
+
     bool choose_logical_id(const slist<Table *> *work = nullptr);
     virtual int hit_next_size() const { return hit_next.size(); }
     virtual int get_tcam_id() const { BUG("%s not a TCAM table", name()); }
@@ -923,7 +930,6 @@ public:
         }
         return false;
     }
-    void allocate_physical_id(unsigned usable = ~0U);
     bool is_attached(const Table *tbl) const override;
     const Table::Call *get_call(const Table *tbl) const { return get_attached()->get_call(tbl); }
     const AttachedTables *get_attached() const override { return &attached; }
@@ -1670,6 +1676,7 @@ DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
     bool is_branch() const;   // Tofino2/3 needs is_a_brnch set to use next_table
     void verify_format();
     bool is_always_run() const override { return always_run; }
+    virtual bool check_match_key(MatchKey &, const std::vector<MatchKey> &, bool);
     virtual int gw_memory_unit() const = 0;
 )
 

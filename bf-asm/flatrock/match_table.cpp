@@ -51,10 +51,14 @@ template<> void MatchTable::write_regs(Target::Flatrock::mau_regs &regs, int typ
         minput.minput_mpr.main_tables |= 1 << logical_id; }
     if (always_run || pred.empty()) {
         minput.minput_mpr.always_run = 1 << logical_id;
+        minput.minput_mpr_act[logical_id].activate |= 1 << physical_id;
     } else {
-        for (auto &p : pred)
-            minput.minput_mpr_act[p.first->logical_id].activate |= 1 << physical_id;
+        for (auto tbl : Keys(find_pred_in_stage(stage->stageno)))
+            minput.minput_mpr_act[tbl->logical_id].activate |= 1 << physical_id;
     }
+    if (long_branch_input >= 0) {
+        minput.minput_mpr_act[logical_id].long_branch_en = 1;
+        minput.minput_mpr_act[logical_id].long_branch_sel = long_branch_input; }
 
     // these xbars are "backwards" (because they are oxbars?) -- l2p maps physical to logical
     // and p2l maps logical to physical

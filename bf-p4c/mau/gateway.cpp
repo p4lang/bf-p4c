@@ -1124,11 +1124,16 @@ BuildGatewayMatch::BuildGatewayMatch(const PhvInfo &phv, CollectGatewayFields &f
     // valid bit in the match: format.  This is to match up with the hack in the assembler
     // to ignore all bits that are not part of the match: format.  See FIXME in
     // GatewayTable::pass1 in the assembler
-    shift = INT_MAX;
-    for (auto &info : fields.info)
-        for (auto &off : info.second.offsets)
+    shift = INT_MAX;    // lowest bit being matched
+    maxbit = 0;         // one more than highest bit being matched
+    for (auto &info : fields.info) {
+        for (auto &off : info.second.offsets) {
             if (off.first < shift)
                 shift = off.first;
+            if (off.first + off.second.size() > maxbit)
+                maxbit = off.first + off.second.size();
+        }
+    }
 }
 
 Visitor::profile_t BuildGatewayMatch::init_apply(const IR::Node *root) {
@@ -1136,7 +1141,7 @@ Visitor::profile_t BuildGatewayMatch::init_apply(const IR::Node *root) {
     match.setwidth(0);  // clear out old value
     if (fields.need_range || !fields.bits) {
         if (fields.bytes)
-            match.setwidth(fields.bytes*8 - shift);
+            match.setwidth(maxbit - shift);
     } else {
         match.setwidth(32 + fields.bits - shift); }
     range_match.clear();

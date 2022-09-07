@@ -33,7 +33,7 @@ template<class K, class T, class V, class Comp, class Alloc>
 inline const V *getref(const std::map<K, V, Comp, Alloc> *m, T key) {
     return m ? getref(*m, key) : 0; }
 
-/* iterate over the values in a map */
+/* iterate over the keys in a map */
 template<class PairIter>
 struct IterKeys {
     class iterator : public std::iterator<
@@ -44,7 +44,9 @@ struct IterKeys {
         typename std::iterator_traits<PairIter>::reference> {
         PairIter                it;
      public:
+        iterator() {}
         explicit iterator(PairIter i) : it(i) {}
+        iterator &operator=(PairIter i) { it = i; return *this; }
         iterator &operator++() { ++it; return *this; }
         iterator &operator--() { --it; return *this; }
         iterator operator++(int) { auto copy = *this; ++it; return copy; }
@@ -59,6 +61,18 @@ struct IterKeys {
     IterKeys(PairIter b, PairIter e) : b(b), e(e) {}
     iterator begin() const { return b; }
     iterator end() const { return e; }
+
+ protected:
+    IterKeys() {}
+};
+
+template<class Map>
+struct IterKeysCopy : IterKeys<typename Map::const_iterator> {
+    Map         m;
+    explicit IterKeysCopy(Map &&map) : m(std::move(map)) {
+        // move the map into this object, then setup the iterators
+        this->b = m.begin();
+        this->e = m.end(); }
 };
 
 template<class Map> IterKeys<typename Map::iterator>
@@ -66,6 +80,9 @@ Keys(Map &m) { return IterKeys<typename Map::iterator>(m); }
 
 template<class Map> IterKeys<typename Map::const_iterator>
 Keys(const Map &m) { return IterKeys<typename Map::const_iterator>(m); }
+
+template<class Map> IterKeysCopy<Map>
+Keys(Map &&m) { return IterKeysCopy<Map>(std::move(m)); }
 
 template<class PairIter> IterKeys<PairIter>
 Keys(std::pair<PairIter, PairIter> range) {
@@ -82,7 +99,9 @@ struct IterValues {
         typename std::iterator_traits<PairIter>::reference> {
         PairIter                it;
      public:
+        iterator() {}
         explicit iterator(PairIter i) : it(i) {}
+        iterator &operator=(PairIter i) { it = i; return *this; }
         iterator &operator++() { ++it; return *this; }
         iterator &operator--() { --it; return *this; }
         iterator operator++(int) { auto copy = *this; ++it; return copy; }
@@ -97,6 +116,18 @@ struct IterValues {
     IterValues(PairIter b, PairIter e) : b(b), e(e) {}
     iterator begin() const { return b; }
     iterator end() const { return e; }
+
+ protected:
+    IterValues() {}
+};
+
+template<class Map>
+struct IterValuesCopy : IterValues<typename Map::const_iterator> {
+    Map         m;
+    explicit IterValuesCopy(Map &&map) : m(std::move(map)) {
+        // move the map into this object, then setup the iterators
+        this->b = m.begin();
+        this->e = m.end(); }
 };
 
 template<class Map> IterValues<typename Map::iterator>
@@ -104,6 +135,9 @@ Values(Map &m) { return IterValues<typename Map::iterator>(m); }
 
 template<class Map> IterValues<typename Map::const_iterator>
 Values(const Map &m) { return IterValues<typename Map::const_iterator>(m); }
+
+template<class Map> IterValuesCopy<Map>
+Values(Map &&m) { return IterValuesCopy<Map>(std::move(m)); }
 
 template<class PairIter> IterValues<PairIter>
 Values(std::pair<PairIter, PairIter> range) {

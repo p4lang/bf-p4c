@@ -10,9 +10,12 @@ class Slice;
 namespace Flatrock {
 
 class IXBar : public ::IXBar {
+    enum xor_enable_state { UNUSED, OFF, ON };
+
  public:
     static constexpr int GATEWAY_FIXED_BYTES = 5;
     static constexpr int GATEWAY_VEC_BYTES = 8;
+    static constexpr int GATEWAY_XOR_BYTES = GATEWAY_VEC_BYTES/2;
     static constexpr int GATEWAY_ROWS = 24;
     static constexpr int EXACT_BYTES = 20;
     static constexpr int EXACT_WORDS = 5;
@@ -34,9 +37,11 @@ class IXBar : public ::IXBar {
     using FieldInfo = ::IXBar::FieldInfo;
 
     struct Use : public ::IXBar::Use {
-        unsigned        xme_units = 0;
-        int             output_unit = -1;
-        int             first_gw_row = -1, num_gw_rows = 0;
+        unsigned                xme_units = 0;
+        int                     output_unit = -1;
+        int                     first_gw_row = -1, num_gw_rows = 0;
+        xor_enable_state        gateway_xor[GATEWAY_XOR_BYTES] = { UNUSED };
+        std::map<int, match_t>  gateway_match_bytes;
 
         void clear() override {
             ::IXBar::Use::clear();
@@ -79,6 +84,8 @@ class IXBar : public ::IXBar {
      * Word use are set to just the (first) container as the bit offset is always 0.
      * NOTE: Changes here require changes to .gdbinit pretty printer */
     BFN::Alloc1D<std::pair<PHV::Container, int>, GATEWAY_VEC_BYTES>                 gateway_use;
+    BFN::Alloc1D<xor_enable_state, GATEWAY_XOR_BYTES>                               gateway_xor;
+    std::map<int, match_t>                                      gateway_match_bytes;
     // FIXME -- each exact/ternary can select between 8 sources based on gateway output
     BFN::Alloc1D<std::pair<PHV::Container, int>, EXACT_BYTES>                       exact_byte_use;
     BFN::Alloc1D<PHV::Container, EXACT_WORDS>                                       exact_word_use;
@@ -107,22 +114,30 @@ class IXBar : public ::IXBar {
 
     // pairs of container bytes that need to be xor'd to do a gateway match
     typedef std::map<std::pair<PHV::Container, int>, std::pair<PHV::Container, int>> xor_map_t;
+    friend std::ostream &operator<<(std::ostream &, const xor_map_t &);
+    // container bytes that need to be matched against a byte the vector match
+    typedef std::map<std::pair<PHV::Container, int>, match_t>                        cmp_map_t;
+    friend std::ostream &operator<<(std::ostream &, const cmp_map_t &);
+    class SetupCmpMap;
 
     // FIXME -- figure out some way to refactor these `find_alloc` routines together
     void find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                     safe_vector<IXBar::Use::Byte *> &alloced,
                     std::multimap<PHV::Container, Loc> &fields,
                     BFN::Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use,
-                    bool allow_word, const xor_map_t *xor_map = nullptr);
+                    bool allow_word, const cmp_map_t *cmp_map = nullptr,
+                    const xor_map_t *xor_map = nullptr);
     bool do_alloc(safe_vector<IXBar::Use::Byte *> &alloced,
                   BFN::Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use,
-                  const xor_map_t *xor_map = nullptr);
+                  const cmp_map_t *cmp_map = nullptr, const xor_map_t *xor_map = nullptr);
     bool do_alloc(safe_vector<IXBar::Use::Byte *> &alloced,
                   BFN::Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use,
                   BFN::Alloc1Dbase<PHV::Container> &word_use);
     bool gateway_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                             safe_vector<IXBar::Use::Byte *> &alloced,
-                            const xor_map_t &xor_map);
+                            const cmp_map_t &cmp_map, const xor_map_t &xor_map);
+    bool gateway_setup_cmp(Use &alloc, const cmp_map_t &cmp_map);
+    bool gateway_setup_xor(Use &alloc, const xor_map_t &xor_map);
     bool exact_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                           safe_vector<IXBar::Use::Byte *> &alloced,
                           bool allow_word);

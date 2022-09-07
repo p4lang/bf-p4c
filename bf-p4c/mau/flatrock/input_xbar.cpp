@@ -1,10 +1,28 @@
 #include "input_xbar.h"
+#include "bf-p4c/common/ir_utils.h"
 #include "bf-p4c/logging/resources.h"
 #include "bf-p4c/mau/gateway.h"
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/phv/phv.h"
 
 namespace Flatrock {
+
+std::ostream &operator<<(std::ostream &out, const IXBar::xor_map_t &xor_map) {
+    const char *sep = "";
+    for (auto &p : xor_map) {
+        out << sep << p.first.first << '[' << p.first.second << "]^" << p.second.first
+            << '[' << p.second.second << ']';
+        sep = ", "; }
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const IXBar::cmp_map_t &cmp_map) {
+    const char *sep = "";
+    for (auto &p : cmp_map) {
+        out << sep << p.first.first << '[' << p.first.second << "]~" << p.second;
+        sep = ", "; }
+    return out;
+}
 
 IXBar::Use &IXBar::getUse(autoclone_ptr<::IXBar::Use> &ac) {
     Use *rv;
@@ -76,14 +94,22 @@ void IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                        safe_vector<IXBar::Use::Byte *> &alloced,
                        std::multimap<PHV::Container, Loc> &fields,
                        BFN::Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use,
-                       bool allow_word, const xor_map_t *xor_map) {
+                       bool allow_word, const cmp_map_t *cmp_map, const xor_map_t *xor_map) {
     // for gateways, 'allow_word' allows use of the fixed bytes as they are set up
     // as group 1 (no actual word inputs to gateway)
     for (auto &byte : alloc_use) {
         for (auto &l : ValuesForKey(fields, byte.container)) {
             if (l.group == 0 && byte_use[l.byte].second == byte.lo) {
-                if (xor_map && xor_map->count(byte) &&
-                    byte_use[4^l.byte].first && byte_use[4^l.byte] != xor_map->at(byte))
+                if (xor_map && xor_map->count(byte)) {
+                    if (l.byte < GATEWAY_XOR_BYTES && gateway_xor[l.byte] == OFF)
+                        continue;
+                    if (byte_use[4^l.byte].first && byte_use[4^l.byte] != xor_map->at(byte))
+                        continue;
+                } else if (xor_map) {
+                    if (l.byte < GATEWAY_XOR_BYTES && gateway_xor[l.byte] == ON)
+                        continue; }
+                if (cmp_map && gateway_match_bytes.count(l.byte) && cmp_map->count(byte) &&
+                    cmp_map->at(byte) != gateway_match_bytes.at(l.byte))
                     continue;
                 byte.loc = Loc(0, l.byte);
                 break; }
@@ -97,7 +123,7 @@ void IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
 
 bool IXBar::do_alloc(safe_vector<IXBar::Use::Byte *> &to_alloc,
                      BFN::Alloc1Dbase<std::pair<PHV::Container, int>> &byte_use,
-                     const xor_map_t *xor_map) {
+                     const cmp_map_t *, const xor_map_t *xor_map) {
     // Find the free byte slots
     bitvec byte_free;
     int i = 0;
@@ -113,6 +139,7 @@ bool IXBar::do_alloc(safe_vector<IXBar::Use::Byte *> &to_alloc,
             for (i = GATEWAY_VEC_BYTES-1; i >= 0; --i) {
                 if (byte_use[i^4] == xor_map->at(*byte)) {
                     if (!byte_free[i]) return false;
+                    if (gateway_xor[i & 3] == OFF) return false;
                     break; } }
             if (i < 0)
                 i = find_free_byte(pair_free, byte);
@@ -166,10 +193,36 @@ bool IXBar::do_alloc(safe_vector<IXBar::Use::Byte *> &to_alloc,
 
 bool IXBar::gateway_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                                safe_vector<IXBar::Use::Byte *> &alloced,
-                               const xor_map_t &xor_map) {
-    const xor_map_t *xmap = xor_map.empty() ? nullptr : &xor_map;
-    find_alloc(alloc_use, alloced, gateway_fields, gateway_use, true, xmap);
-    return do_alloc(alloced, gateway_use, xmap);
+                               const cmp_map_t &cmp_map, const xor_map_t &xor_map) {
+    find_alloc(alloc_use, alloced, gateway_fields, gateway_use, true, &cmp_map, &xor_map);
+    return do_alloc(alloced, gateway_use, &cmp_map, &xor_map);
+}
+
+bool IXBar::gateway_setup_cmp(Use &alloc, const cmp_map_t &cmp_map) {
+    alloc.gateway_match_bytes.clear();
+    for (auto &use : alloc.use) {
+        if (use.loc.group) continue;
+        if (cmp_map.count(use)) {
+            if (gateway_match_bytes.count(use.loc.byte) &&
+                gateway_match_bytes.at(use.loc.byte) != cmp_map.at(use))
+                return false;
+            alloc.gateway_match_bytes.emplace(use.loc.byte, cmp_map.at(use)); } }
+    return true;
+}
+
+
+bool IXBar::gateway_setup_xor(Use &alloc, const xor_map_t &xor_map) {
+    for (auto &xu : alloc.gateway_xor) xu = UNUSED;
+    for (auto &use : alloc.use) {
+        if (xor_map.count(use)) {
+            if (gateway_xor[use.loc.byte & 3] == OFF) return false;
+            if (alloc.gateway_xor[use.loc.byte & 3] == OFF) return false;
+            alloc.gateway_xor[use.loc.byte & 3] = ON;
+        } else if (use.loc.byte < GATEWAY_XOR_BYTES) {
+            if (gateway_xor[use.loc.byte] == ON) return false;
+            if (alloc.gateway_xor[use.loc.byte] == ON) return false;
+            alloc.gateway_xor[use.loc.byte] = OFF; } }
+    return true;
 }
 
 bool IXBar::exact_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
@@ -202,6 +255,79 @@ bool IXBar::xcmp_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
     return do_alloc(alloced, xcmp_byte_use, xcmp_word_use);
 }
 
+/* compute the match_t values needed in the cmp_map to compare against each byte in
+ * the gateway vector compare.  It relies on the expressions visted having been
+ * successfully processed by CanonGatewayExpr without being flagged as too complex
+ * for a gateway.  That means the expressions will be in disjunctive normal form with
+ * each conjunct on a separate gateway row, and each term will be one of the limited
+ * forms it allows */
+class IXBar::SetupCmpMap : public Inspector {
+    const PhvInfo               &phv;
+    const IR::MAU::Table        *tbl;
+    cmp_map_t                   &cmp_map;
+    const PHV::Field            *field = nullptr;
+    le_bitrange                 bits;
+    uint64_t                    value = 0, mask = 0;
+
+    // This is where all the work happens -- we've found a (possibly masked) comparison
+    // of a field slice with a constant that needs to go into the vector compare
+    void add_relation() {
+        PHV::FieldUse READ(PHV::FieldUse::READ);
+        field->foreach_byte(bits, tbl, &READ, [this](const PHV::AllocSlice &sl) {
+            IXBar::Use::Byte byte(sl.container(), (sl.container_slice().lo/8U) * 8U);
+            int offset = sl.field_slice().lo - bits.lo;
+            unsigned m = (mask >> offset) & bitMask(sl.width());
+            unsigned v = value >> offset;
+            unsigned shift = sl.container_slice().lo % 8U;
+            cmp_map[byte] = match_t(8, v << shift, m << shift);
+        });
+    }
+
+    bool preorder(const IR::Constant *k) {
+        if (k->value < 0)
+            value = ~static_cast<uint64_t>(-k->value - 1);   // 2s complement
+        else
+            value = static_cast<uint64_t>(k->value);
+        return false; }
+
+    bool preorder(const IR::BoolLiteral *k) {
+        value = k->value ? 1 : 0;
+        return false; }
+
+    bool preorder(const IR::Expression *e) {
+        if (!(field = phv.field(e, &bits))) return true;
+        if (!findContext<IR::Operation::Relation>()) {
+            // bare boolean test
+            BUG_CHECK(bits.size() == 1, "not a boolean test?");
+            value = mask = 1;
+            add_relation(); }
+        return false; }
+
+    bool preorder(const IR::Operation::Relation *) {
+        field = nullptr;
+        value = 0;
+        mask = ~UINT64_C(0);
+        return true; }
+
+    void postorder(const IR::BAnd *) {
+        mask = value;
+        value = 0; }
+
+    void postorder(const IR::BOr *) {
+        mask = value ^ ~UINT64_C(0);
+        value = 0; }
+
+    void postorder(const IR::Operation::Relation *) {
+        BUG_CHECK(field, "should have been rejected in CollectGatewayFields");
+        add_relation(); }
+
+ public:
+    SetupCmpMap(const PhvInfo &phv, const IR::MAU::Table *tbl, cmp_map_t &cm)
+    : phv(phv), tbl(tbl), cmp_map(cm) {
+        for (auto &gw : tbl->gateway_rows)
+            gw.first->apply(*this); }
+};
+
 bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
                          const LayoutOption *lo) {
     if (lo && lo->layout.no_match_rams()) {
@@ -226,6 +352,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     tbl->apply(*collect);
     if (!collect->info.empty()) {
         ContByteConversion map_alloc;
+        cmp_map_t   cmp_map;
         xor_map_t   xor_map;
         PHV::FieldUse use_read(PHV::FieldUse::READ);
 
@@ -268,7 +395,11 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
         }
         safe_vector<IXBar::Use::Byte *> xbar_alloced;  // FIXME -- not needed?
         create_alloc(map_alloc, alloc);
-        if (!gateway_find_alloc(alloc.use, xbar_alloced, xor_map)) {
+        SetupCmpMap(phv, tbl, cmp_map);
+        LOG4("cmp_map: " << cmp_map);
+        if (!xor_map.empty()) LOG4("xor_map: " << xor_map);
+        if (!gateway_find_alloc(alloc.use, xbar_alloced, cmp_map, xor_map) ||
+            !gateway_setup_cmp(alloc, cmp_map) || !gateway_setup_xor(alloc, xor_map)) {
             alloc.clear();
             return false; }
         if (!collect->compute_offsets()) {
@@ -278,12 +409,16 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     }
     if (rows < 1) rows = 1;
     alloc.num_gw_rows = rows;
+    int start = -1;
     for (int i = 0; i <= GATEWAY_ROWS-rows; ++i) {
-        if (!gateway_rows[i]) {
-            LOG5("alloc " << rows << " gateway rows starting at " << i);
-            alloc.first_gw_row = i;
-            break; } }
-    if (alloc.first_gw_row < 0) return false;
+        if (start >= 0 && i > start+rows) break;
+        if (gateway_rows[i])
+            start = -1;
+        else if (start < 0)
+            start = i; }
+    if (start < 0) return false;
+    LOG5("alloc " << rows << " gateway rows starting at " << start);
+    alloc.first_gw_row = start;
 
     // FIXME -- different, inconsistent name from alloc.used_by here?
     update(tbl->name + "$gw", alloc);   //  Comes from tofino/input_xbar.cpp org
@@ -648,9 +783,25 @@ void IXBar::update(cstring table_name, const ::IXBar::Use &use_) {
                 BUG_CHECK(byte.container == PHV::Container(PHV::Type::B, byte.loc.byte),
                           "wrong container %s in gateway fixed byte %d",
                           byte.container, byte.loc.byte); } }
+        for (int i = 0; i < GATEWAY_XOR_BYTES; ++i) {
+            if (use.gateway_xor[i] == UNUSED) continue;
+            BUG_CHECK(gateway_xor[i] == UNUSED || gateway_xor[i] == use.gateway_xor[i],
+                      "conflicting gateway xor use at byte %d", i);
+            gateway_xor[i] = use.gateway_xor[i]; }
+        for (auto &mb : use.gateway_match_bytes) {
+            if (gateway_match_bytes.count(mb.first)) {
+                BUG_CHECK(mb.second == gateway_match_bytes.at(mb.first),
+                        "conflicting gateway vector match at byte %d", mb.first);
+            } else {
+                gateway_match_bytes.emplace(mb.first, mb.second); } }
         break;
     default:
         BUG("Unhandled use type %d (%s)", use.type, use.used_for()); }
+
+    if (use.type != Use::GATEWAY) {
+        for (auto xu : use.gateway_xor)
+            BUG_CHECK(xu == UNUSED, "gateway match info in %s", use.type);
+        BUG_CHECK(use.gateway_match_bytes.empty(), "gateway match info in %s", use.type); }
 
     xme_inuse |= use.xme_units;
     for (auto xme : bitvec(use.xme_units)) {
@@ -706,7 +857,7 @@ void IXBar::dbprint(std::ostream &out) const {
     add_names(xcmp_byte_use, fields);
     add_names(xcmp_word_use, fields);
     sort_names(fields);
-    out << "ew e bytes  ternary ixbar                            gw   x wds  x bytes" << Log::endl;
+    out << "ew e bytes  ternary ixbar                            gw    x wds  x bytes" << Log::endl;
     for (int r = 0; r < 5; r++) {
         write_one(out, exact_word_use[r], fields);
         out << ' ';
@@ -717,8 +868,9 @@ void IXBar::dbprint(std::ostream &out) const {
             write_one(out, ternary_use[c][r], fields);
         if (r < 4) {  // onlye 4 rows for gw/xcmp
             out << ' ';
-            for (auto c = 0; c < GATEWAY_VEC_BYTES; c += 4)
-                write_one(out, gateway_use[c+r], fields);
+            write_one(out, gateway_use[r], fields);
+            out << ".|x"[gateway_xor[r]];
+            write_one(out, gateway_use[r+4], fields);
             out << ' ';
             for (auto c = 0; c < XCMP_WORDS; c += 4)
                 write_one(out, xcmp_word_use[c+r], fields);
@@ -742,6 +894,5 @@ void IXBar::dbprint(std::ostream &out) const {
 void IXBar::Use::dbprint(std::ostream &out) const {
     ::IXBar::Use::dbprint(out);
 }
-
 
 }  // namespace Flatrock

@@ -31,6 +31,7 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/flatrock/gateway1i.p4
   extensions/p4_tests/p4_16/flatrock/gateway2.p4
   extensions/p4_tests/p4_16/flatrock/gateway2i.p4
+  extensions/p4_tests/p4_16/flatrock/gateway3.p4
   )
 
 p4c_add_xfail_reason("tofino5"
@@ -182,12 +183,9 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
-  "Compiler Bug: conflicting use of gateway row . between .* and"
-  extensions/p4_tests/p4_16/stf/p4c-3055-2.p4
-  )
-
-p4c_add_xfail_reason("tofino5"
   "Compiler Bug: Only one parser state transition supported"
+  extensions/p4_tests/p4_16/stf/p4c-1179.p4
+  extensions/p4_tests/p4_16/stf/p4c-3055-2.p4
   extensions/p4_tests/p4_16/stf/p4c-3551.p4
   extensions/p4_tests/p4_16/stf/parse_depth_1.p4
   extensions/p4_tests/p4_16/stf/parser_counter_6.p4
@@ -203,11 +201,6 @@ p4c_add_xfail_reason("tofino5"
 p4c_add_xfail_reason("tofino5"
   "Compiler Bug: Cannot allocate wide RAMS in Flatrock"
   extensions/p4_tests/p4_16/stf/p4c-3659.p4
-  )
-
-p4c_add_xfail_reason("tofino5"
-  "Compiler Bug: conflicting use of gateway row"
-  extensions/p4_tests/p4_16/stf/p4c-1179.p4
   )
 
 p4c_add_xfail_reason("tofino5"
@@ -286,7 +279,7 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
-  "Could not place table .*: The table .* could not fit within a single input crossbar in an MAU stage"
+  "Could not place table .*: The table .* could not fit within the input crossbar"
   extensions/p4_tests/p4_16/stf/metadata_extract.p4
   )
 

@@ -38,7 +38,7 @@ class HashExpr {
         return rv; }
     virtual int width() = 0;
     virtual int input_size() = 0;
-    virtual bool match_phvref(Phv::Ref &ref) { return false; }
+    virtual bool match_phvref(const Phv::Ref &ref) { return false; }
     virtual bool operator==(const HashExpr &) const = 0;
     void find_input(Phv::Ref what, std::vector<ixbar_input_t> &inputs, InputXbar *ix,
         int hash_table);

@@ -1,5 +1,18 @@
 #include "gateway.h"
 #include "input_xbar.h"  // FIXME needed only in unified build to ensure proper specialization
+#include "stage.h"
+
+bool Target::Flatrock::GatewayTable::check_match_key(MatchKey &key,
+        const std::vector<MatchKey> &vec, bool is_xor) {
+    if (!::GatewayTable::check_match_key(key, vec, is_xor)) return false;
+    if ((key.offset & 7) != (key.val->lo & 7))
+        error(key.val.lineno, "Gateway %s key %s misaligned within byte",
+              is_xor ? "xor" : "match", key.val.name());
+    if (key.offset + key.val->size() > (is_xor ? 32 : 104)) {
+        error(key.val.lineno, "Gateway %s key too big", is_xor ? "xor" : "match");
+        return false; }
+    return true;
+}
 
 int Target::Flatrock::GatewayTable::find_next_lut_entry(Table *tbl, const Match &match) {
     int rv = 0;
@@ -72,12 +85,49 @@ void Target::Flatrock::GatewayTable::pass2() {
             if (offset != xkey.offset + 32)
                 error(xkey.val.lineno, "%s in xor does not line up with ixbar",
                       xkey.val.desc().c_str()); } }
-    while (xor_bits) {
+    unsigned byte = 1;
+    while (xor_bits || match_bits) {
+        if (xor_bits.getrange(0, 8)) {
+            byte_use |= byte;
+            byte_xor_value |= byte; }
+        if (match_bits.getrange(0, 8))
+            byte_use |= byte;
         if (xor_bits.getrange(0, 8) && match_bits.getrange(0, 8) != xor_bits.getrange(0, 8)) {
-            error(lineno, "Can't mix xor and non-xor match with a byte");
+            error(lineno, "Can't mix xor and non-xor match within a byte");
             break; }
         xor_bits >>= 8;
-        match_bits >>= 8; }
+        match_bits >>= 8;
+        byte <<= 1; }
+
+    for (auto &line : table) {
+        for (int i = 0; i < 8; ++i) {
+            uint8_t word0 = line.val.word0.getrange(8*i, 8);
+            uint8_t word1 = line.val.word1.getrange(8*i, 8);
+            if (word0 == word1) {
+                // don't care on whole byte
+            } else if (byte_matches.count(i)) {
+                if (byte_matches.at(i).word0 != word0 || byte_matches.at(i).word1 != word1) {
+                    error(byte_matches.at(i).lineno, "Different matching in byte %d of "
+                          "vector match in %s", i, name());
+                    error(line.lineno, "and here"); }
+            } else {
+                byte_matches.emplace(i, byte_match_t{ line.lineno, word0, word1 }); } } }
+
+    for (auto *tbl : stage->tables) {
+        if (auto *gw = dynamic_cast<const GatewayTable *>(tbl->get_gateway())) {
+            auto overlap = byte_use & gw->byte_use;
+            if ((byte_xor_value & overlap) != (gw->byte_xor_value & overlap)) {
+                error(lineno, "%s xor use conflict with %s", name(), gw->name());
+                error(gw->lineno, "%s defined here", gw->name()); }
+            for (auto &bm : byte_matches) {
+                if (gw->byte_matches.count(bm.first)) {
+                    auto &prev = gw->byte_matches.at(bm.first);
+                    if (bm.second.word0 != prev.word0 || bm.second.word1 != prev.word1) {
+                        error(bm.second.lineno, "Conflict in gateway vector byte %d between %s",
+                              bm.first, name());
+                        error(prev.lineno, "and %s", gw->name()); } } }
+        } else {
+            BUG_CHECK(!tbl->get_gateway(), "gateway is not a flatrock gateway?"); } }
 }
 
 #if 0
@@ -87,39 +137,110 @@ void Target::Flatrock::GatewayTable::pass3() {
 #endif
 
 void Target::Flatrock::GatewayTable::write_next_table_regs(Target::Flatrock::mau_regs &regs) {
-    if (match_table && inhibit_idx_action.size() > 1) {
+    auto &mrd = regs.ppu_mrd;
+    bitvec dconfig(1);  // FIXME could select different bits based on dconfig, but for
+                        // now just using set 0
+
+    if (!match_table) {
+        // FIXME -- duplicates MatchTable::write_next_table_regs, as that is needed for
+        // standalone gateways
+        auto &mrd = regs.ppu_mrd;
+        auto &pred_map = mrd.mrd_pred_map_erf.mrd_pred_map;
+        if (!hit_next.empty() || !extra_next_lut.empty()) {
+            int i = 0;
+            for (auto &n : hit_next) {
+                pred_map[logical_id][i].gl_pred_vec = n.next_in_stage(stage->stageno + 1);
+                pred_map[logical_id][i].long_branch |= n.long_branch_tags();
+                pred_map[logical_id][i].next_table = n.next_table_id();
+                pred_map[logical_id][i].pred_vec = n.next_in_stage(stage->stageno) >> 1;
+                ++i; }
+            for (auto &n : extra_next_lut) {
+                pred_map[logical_id][i].gl_pred_vec = n.next_in_stage(stage->stageno + 1);
+                pred_map[logical_id][i].long_branch |= n.long_branch_tags();
+                pred_map[logical_id][i].next_table = n.next_table_id();
+                pred_map[logical_id][i].pred_vec = n.next_in_stage(stage->stageno) >> 1;
+                ++i; }
+            // is this needed?  The model complains if we leave the unused slots as 0
+            while (i < Target::NEXT_TABLE_SUCCESSOR_TABLE_DEPTH())
+                pred_map[logical_id][i++].next_table = Target::Flatrock::END_OF_PIPE; }
+        pred_map[logical_id][16].gl_pred_vec = miss_next.next_in_stage(stage->stageno + 1);
+        pred_map[logical_id][16].long_branch |= miss_next.long_branch_tags();
+        pred_map[logical_id][16].next_table = miss_next.next_table_id();
+        pred_map[logical_id][16].pred_vec = miss_next.next_in_stage(stage->stageno) >> 1;
+
+        // FIXME -- need to set delay regs correctly -- this just avoids model errors
+        mrd.rf.mrd_ntt_delay[logical_id].pre_delay = 1;
+        mrd.rf.mrd_ntt_delay[logical_id].post_delay = 1;
+    }
+
+    if (!match_table || inhibit_idx_action.size() > 1) {
         // In this case we definitely need to use the inhibit_index to select, but
         // otherwise will use the payload
-        auto &mrd = regs.ppu_mrd;
-        bitvec dconfig(1);  // FIXME could select different bits based on dconfig, but for
-        // now just using set 0
         for (int d : dconfig) {
-            mrd.rf.mrd_nt_ext[match_table->physical_id].ext_start[d] = 62;
-            mrd.rf.mrd_nt_ext[match_table->physical_id].ext_size[d] = 2;
-            mrd.rf.mrd_pred_pld[match_table->physical_id].map_en_gw_inh[d] = 1;
+            mrd.rf.mrd_nt_ext[physical_id].ext_start[d] = 62;
+            mrd.rf.mrd_nt_ext[physical_id].ext_size[d] = 2;
+            mrd.rf.mrd_pred_pld[logical_id].map_en_gw_inh[d] = 1;
         }
+    }
 
+    Actions *actions = match_table ? match_table->actions.get() : this->actions.get();
+    if (actions && inhibit_idx_action.size() > (match_table ? 1 : 0)) {
         // FIXME -- maybe this belongs elsewhere?  In MatchTable::write_regs?  Or that should
         // call some gateway method?  Needs access to the Flatrock::GatewayTable object
-        auto &imem_map = mrd.mrd_imem_map_erf.mrd_imem_map[match_table->physical_id];
+        auto &imem_map = mrd.mrd_imem_map_erf.mrd_imem_map[physical_id];
         for (auto &act : inhibit_idx_action) {
-            auto *action = match_table->actions->action(act.second);
+            auto *action = actions->action(act.second);
             BUG_CHECK(action || act.second == "", "Can't find action %s in table %s",
                       act.second.c_str(), match_table->name());
             // FIXME -- this assumes addr 0 is always a noop.
             imem_map[act.first].data = action ? action->addr : 0;
         }
         for (int d : dconfig)
-            mrd.rf.mrd_imem_pld[match_table->physical_id].map_en_gw_inh[d] = 1;
+            mrd.rf.mrd_imem_pld[physical_id].map_en_gw_inh[d] = 1;
     }
 }
 
-template<> void GatewayTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
+void Target::Flatrock::GatewayTable::write_regs(Target::Flatrock::mau_regs &regs) {
     LOG1("### Gateway table " << name() << " write_regs " << loc());
-    for (auto &ixb : input_xbar)
-        ixb->write_regs(regs);
     auto &minput = regs.ppu_minput.rf;
     auto &mrd = regs.ppu_mrd.rf;
+    if (!match_table) {
+        // FIXME -- mostly just duplicates what is in MatchTable::write_regs, as we need
+        // all that basic logical/physical setup for standalone gateways too.
+        if (gress == GHOST) {
+            mrd.mrd_pred_cfg.gst_tables |= 1 << logical_id;
+            minput.minput_mpr.gst_tables |= 1 << logical_id;
+        } else {
+            mrd.mrd_pred_cfg.main_tables |= 1 << logical_id;
+            minput.minput_mpr.main_tables |= 1 << logical_id; }
+        if (always_run || pred.empty()) {
+            minput.minput_mpr.always_run = 1 << logical_id;
+            minput.minput_mpr_act[logical_id].activate |= 1 << physical_id;
+        } else {
+            for (auto tbl : Keys(find_pred_in_stage(stage->stageno)))
+                minput.minput_mpr_act[tbl->logical_id].activate |= 1 << physical_id;
+        }
+        if (long_branch_input >= 0) {
+            minput.minput_mpr_act[logical_id].long_branch_en = 1;
+            minput.minput_mpr_act[logical_id].long_branch_sel = long_branch_input; }
+
+
+        // these xbars are "backwards" (because they are oxbars?) -- l2p maps physical to logical
+        // and p2l maps logical to physical
+        mrd.mrd_l2p_xbar[physical_id].en = 1;
+        mrd.mrd_l2p_xbar[physical_id].logical_table = logical_id;
+        mrd.mrd_p2l_xbar[logical_id].en = 1;
+        mrd.mrd_p2l_xbar[logical_id].phy_table = physical_id;
+        if (get_actions()) {
+            mrd.mrd_imem_cfg.active_en |= 1 << physical_id;
+            mrd.mrd_imem_delay[physical_id].delay = 1; }   // FIXME -- what is the delay?
+        minput.minput_mpr_act[logical_id].activate |= 1 << physical_id;
+
+        // FIXME -- need action/imem setup from MatchTable::write_regs if the gateway has actions?
+    }
+
+    for (auto &ixb : input_xbar)
+        ixb->write_regs(regs);
     auto &first_row = layout.at(0);
     int row = first_row.row;
     for (auto &line : table) {
@@ -157,23 +278,28 @@ template<> void GatewayTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
     } else if (!match_table || match_table->table_type() == HASH_ACTION) {
         BUG("Flatrock can't run_table on hash_action"); }
 
-    for (auto &xkey : xor_match)
-        for (auto byte = xkey.offset/8U; byte <= (xkey.offset + xkey.val->size() - 1)/8U; ++byte)
-            minput.minput_gw_vtst.xor_en[byte] = 1;
+    for (auto byte : bitvec(byte_use)) {
+        if (byte < minput.minput_gw_vtst.xor_en.size())
+            minput.minput_gw_vtst.xor_en[byte] = (byte_xor_value >> byte) & 1;
+        else
+            BUG_CHECK(((byte_xor_value >> byte) & 1) == 0, "invalid byte xor value"); }
 
-    minput.minput_gw_comp_vect[match_table->physical_id].comp_idx = first_row.row;
-    mrd.mrd_inhibit_ix.en[match_table->physical_id] = 1;
+    minput.minput_gw_comp_vect[physical_id].comp_idx = first_row.row;
+    mrd.mrd_inhibit_ix.en[physical_id] = 1;
 
     // FIXME -- model needs these non-zero to avoid error message, but what should they be?
-    mrd.mrd_pld_delay[match_table->physical_id].delay = 1;
-    mrd.mrd_gwres_delay[match_table->physical_id].delay = 1;
+    mrd.mrd_pld_delay[physical_id].delay = 1;
+    mrd.mrd_gwres_delay[physical_id].delay = 1;
 
     if (have_payload) {
-        mrd.mrd_inhibit_pld[match_table->physical_id].pld0 = payload & 0xffffffff;
-        mrd.mrd_inhibit_pld[match_table->physical_id].pld1 = payload >> 32; }
+        mrd.mrd_inhibit_pld[physical_id].pld0 = payload & 0xffffffff;
+        mrd.mrd_inhibit_pld[physical_id].pld1 = payload >> 32; }
     // FIXME -- when to enable inserting the inhibit index?  For now do it unconditionally
     // as it just uses the upper two bits of payload which are otherwise useless.
-    mrd.mrd_inhibit_ix.en[match_table->physical_id] = 1;
+    mrd.mrd_inhibit_ix.en[physical_id] = 1;
     write_next_table_regs(regs);
 }
+
+// never called as we override write_regs, but needs to be defined to satisfy the linker
+template<> void GatewayTable::write_regs_vt(Target::Flatrock::mau_regs &regs) { BUG(); }
 template void GatewayTable::write_regs_vt(Target::Flatrock::mau_regs &regs);
