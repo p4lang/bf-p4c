@@ -128,6 +128,21 @@ bool FinalizePhysicalLiverange::preorder(const IR::Expression* e) {
 }
 
 void FinalizePhysicalLiverange::end_apply() {
+    for (auto field : defuse_i.getUninitializedFields()) {
+        if (pa_no_init.getFields().count(field)) continue;
+        bool found_implicit_parser_init = false;
+        for (auto locpair : defuse_i.getAllDefs(field->id)) {
+            auto location = locpair.first;
+            auto exp = locpair.second;
+            if (exp->is<ImplicitParserInit>()) {
+                BUG_CHECK(location->is<IR::BFN::ParserState>(), "ImplicitParserInit not in parser");
+                mark_access(field, le_bitrange(0, field->size - 1), location, true, true);
+                found_implicit_parser_init = true;
+            }
+        }
+        BUG_CHECK(found_implicit_parser_init, "ImplicitParserInit not found");
+    }
+
     // update AllocSlices' live range.
     for (auto& f : phv_i) {
         for (auto& slice : f.get_alloc()) {

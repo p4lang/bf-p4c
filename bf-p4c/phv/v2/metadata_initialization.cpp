@@ -529,7 +529,7 @@ class ComputeMetadataInit : public Inspector {
     const TableFlowGraph&          graph;
     const MauBacktracker&          backtracker;
     const TablesMutuallyExclusive& mutex;
-    const ordered_set<cstring>&    pa_no_inits;
+    const PragmaNoInit&            pa_no_init;
     const ordered_set<const PHV::Field*>& pov_protected_fields;
 
     std::vector<const PHV::Field*> to_be_inited;
@@ -555,7 +555,7 @@ class ComputeMetadataInit : public Inspector {
             if (f.deparsed_to_tm()) continue;
             if (f.bridged) continue;
             if (!defuse.hasUninitializedRead(f.id)) continue;
-            if (pa_no_inits.count(f.name)) continue;
+            if (pa_no_init.getFields().count(&f)) continue;
 
             auto& defs = defuse.getAllDefs(f.id);
             bool defined_in_parser =
@@ -593,10 +593,10 @@ class ComputeMetadataInit : public Inspector {
                         const WriteTableInfo& table_write_info,
                         const MauBacktracker &backtracker,
                         const TablesMutuallyExclusive& mutex,
-                        const ordered_set<cstring>& pa_no_inits,
+                        const PragmaNoInit& pa_no_init,
                         const ordered_set<const PHV::Field*>& pov_protected_fields)
         :phv(phv), defuse(defuse), table_write_info(table_write_info), graph(graph),
-        backtracker(backtracker), mutex(mutex), pa_no_inits(pa_no_inits),
+        backtracker(backtracker), mutex(mutex), pa_no_init(pa_no_init),
         pov_protected_fields(pov_protected_fields) { }
 
     std::map<const IR::MAU::Table*, std::vector<const PHV::Field*>> init_summay;
@@ -727,35 +727,6 @@ class ApplyMetadataInitialization : public MauTransform {
     }
 };
 
-class CollectPragmaNoInits : public Inspector {
- public:
-    ordered_set<cstring> pa_no_inits;
-    bool preorder(const IR::BFN::Pipe* pipe) override {
-        pa_no_inits.clear();
-
-        // Populate pa_no_inits.
-        for (auto anno : pipe->global_pragmas) {
-            if (anno->name != PragmaNoInit::name) continue;
-
-            BUG_CHECK(anno->expr.size() == 2,
-                    "%1% pragma expects two arguments, but got %2%: %3%",
-                    PragmaNoInit::name, anno->expr.size(), anno);
-
-            auto gress = anno->expr.at(0)->to<IR::StringLiteral>();
-            BUG_CHECK(gress,
-                    "First argument to %1% is not a string: %2%",
-                    PragmaNoInit::name, anno->expr.at(0));
-
-            auto field = anno->expr.at(1)->to<IR::StringLiteral>();
-            BUG_CHECK(field,
-                    "Second argument to %1% is not a string: %2%",
-                    PragmaNoInit::name, anno->expr.at(1));
-
-            pa_no_inits.insert(gress->value + "::" + field->value);
-        }
-        return false;
-    }
-};
 
 }  // unnamed namespace
 
@@ -764,20 +735,20 @@ PHV::v2::MetadataInitialization::MetadataInitialization(MauBacktracker& backtrac
     const PhvInfo &phv, FieldDefUse& defuse):
     backtracker(backtracker) {
     auto* collect_pov_protected_field = new CollectPOVProtectedField(phv);
-    auto* collect_pa_no_inits = new CollectPragmaNoInits();
+    auto* pa_no_init = new PragmaNoInit(phv);
     auto* mutex = new TablesMutuallyExclusive();
     auto* tfg_builder = new TableFlowGraphBuilder(backtracker);
     auto* field_to_expr = new MapFieldToExpr(phv);
     auto* table_write_info = new WriteTableInfo(phv);
     auto* gen_init_plans = new ComputeMetadataInit(tfg_builder->graph, phv, defuse,
-        *table_write_info, backtracker, *mutex, collect_pa_no_inits->pa_no_inits,
+        *table_write_info, backtracker, *mutex, *pa_no_init,
         collect_pov_protected_field->pov_protected_fields);
     auto* apply_init_insert =
         new ApplyMetadataInitialization(*gen_init_plans, *field_to_expr, *table_write_info);
     addPasses({
         new DumpPipe("before v2 metadata initialization"),
         collect_pov_protected_field,
-        collect_pa_no_inits,
+        pa_no_init,
         mutex,
         tfg_builder,
         field_to_expr,

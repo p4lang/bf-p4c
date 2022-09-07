@@ -111,10 +111,13 @@ AllocateTempsAndFinalizeLiverange::AllocateTempsAndFinalizeLiverange(
     PhvInfo& phv, const ClotInfo& clot, const FieldDefUse& defuse)
     : phv_i(phv), clot_i(clot), defuse_i(defuse) {
     auto* tb_mutex = new TablesMutuallyExclusive();
-    auto* finalize_lr = new PHV::FinalizePhysicalLiverange(phv, clot, *tb_mutex, defuse);
+    auto pragma_no_init = new PragmaNoInit(phv);
+    auto* finalize_lr = new PHV::FinalizePhysicalLiverange(
+        phv, clot, *tb_mutex, defuse, *pragma_no_init);
     const auto get_temp_vars = [finalize_lr]() {
             return finalize_lr->unallocated_temp_var_live_ranges(); };
     addPasses({
+        pragma_no_init,
         tb_mutex,
         finalize_lr,
         new PassIf([get_temp_vars]() { return !get_temp_vars().empty(); }, {

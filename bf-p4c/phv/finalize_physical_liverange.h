@@ -7,7 +7,9 @@
 #include "bf-p4c/parde/clot/clot_info.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/phv/pragma/pa_no_init.h"
 #include "ir/ir.h"
+
 
 namespace PHV {
 
@@ -34,6 +36,8 @@ class FinalizePhysicalLiverange : public Inspector, TofinoWriteContext {
     /// temp vars that do not have allocation.
     ordered_map<const PHV::Field*, LiveRange> temp_var_live_ranges_i;
 
+    const PragmaNoInit& pa_no_init;
+
     /// mark or extends live range of AllocSlices of (@p f, @p bits) to @p unit.
     /// When @p allow_unallocated is false, it will also run a BUG_CHECK to make sure that
     /// we can find a AllocSlice of (@p f, @p bits).
@@ -50,6 +54,7 @@ class FinalizePhysicalLiverange : public Inspector, TofinoWriteContext {
         tables_i.clear();
         table_stages_i.clear();
         temp_var_live_ranges_i.clear();
+
         return Inspector::init_apply(root);
     }
 
@@ -77,8 +82,9 @@ class FinalizePhysicalLiverange : public Inspector, TofinoWriteContext {
     explicit FinalizePhysicalLiverange(PhvInfo& phv,
                                        const ClotInfo& clot,
                                        const TablesMutuallyExclusive& tb_mutex,
-                                       const FieldDefUse& defuse)
-        : phv_i(phv), clot_i(clot), tb_mutex_i(tb_mutex), defuse_i(defuse) {
+                                       const FieldDefUse& defuse,
+                                       const PragmaNoInit& pa_no_init)
+        : phv_i(phv), clot_i(clot), tb_mutex_i(tb_mutex), defuse_i(defuse), pa_no_init(pa_no_init) {
         visitDagOnce = false;
     }
 
