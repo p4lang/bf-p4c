@@ -314,10 +314,13 @@ def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform
 def start_model(model, out=None, context_json=None, config=None, port_map_path=None,
                 device=None, extra_ptf_args=None, disable_logging=None):
     cmd = [model]
-    if context_json is not None:
-        cmd.extend(['-l', context_json])
+    # p4-target-config deprecates -l, so use that if possible
     if config is not None:
         cmd.extend(['--p4-target-config', config])
+    # Use context_json only as a fallback if config does not contain path
+    # to context jsons (= pdtest)
+    if context_json is not None:
+        cmd.extend(['-l', context_json])
     if port_map_path is not None:
         cmd.extend(['-f', port_map_path])
         if '2pipe' in port_map_path or 'folded-pipe' in port_map_path:
@@ -466,7 +469,12 @@ def main():
         info("Using P4Info file {}".format(p4info_path))
 
     conf_path = os.path.join(compiler_out_dir, args.name + '.conf')
-    if args.bfrt_test and not os.path.exists(conf_path):
+    if args.pdtest is not None:
+        conf_path = args.pdtest
+    elif args.bfrt_test is None and args.run_bfrt_as_pi is None:
+        conf_path = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), args.device + '.conf')
+    if not os.path.exists(conf_path):
         error("Config file {} not found".format(conf_path))
         sys.exit(1)
 
@@ -693,13 +701,8 @@ def main():
         if args.enable_model_logging:
             disable_model_logging = False
 
-        if args.pdtest is not None:
-            conf_path = args.pdtest
-        elif args.bfrt_test is not None:
-            conf_path = os.path.join(compiler_out_dir, args.name + '.conf')
-        else:
-            conf_path = os.path.join(
-                os.path.dirname(os.path.realpath(__file__)), args.device + '.conf')
+        # conf_path is already set
+        nonlocal conf_path
         info("conf at {}".format(conf_path))
         assert(os.path.exists(conf_path))
 

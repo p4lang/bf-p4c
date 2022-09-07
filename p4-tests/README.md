@@ -91,24 +91,42 @@ outputs for the P4 program. In general, `$P4C_OUTPUT` corresponds to
 `build/p4c/tofino/extensions/p4_tests/p4_<version>/<prog_name>.out`. We use
 `$PTF_DIR` for the directory containing the PTF tests for your P4 program. In
 general, `$PTF_DIR` corresponds to `p4-tests/p4_<version>/<prog_name>.ptf`.
+Also for better troubleshooting look into the output from
+running the PTF test - it should contain the actual commands with parameters
+that were invoked (for starting model, switchd, ...) and also paths to
+`$P4C_OUTPUT` and individual conf/json files that were used.
+
 
 1. **Start the Tofino model**
 
     ```bash
-    sudo tofino-model -l $P4C_OUTPUT/context.json
+    [sudo] tofino-model --p4-target-config $P4C_OUTPUT/<prog_name>.conf [-l $P4C_OUTPUT/[pipe/]context.json]
     ```
 
 1. **Start bf_switchd**
 
     ```bash
-    sudo bf_switchd --install-dir /usr/local --conf-file p4-tests/tofino.conf --skip-p4
+    [sudo] [LD_LIBRARY_PATH=/usr/local/lib] bf_switchd --install-dir /usr/local --conf-file $P4C_OUTPUT/<prog_name>.conf --skip-p4 [--p4rt-server 0.0.0.0:50051]
     ```
+
+    Alternatively for P4_14 programs (or others where the config file does not
+    contain pointers to appropriate files):
+    
+    ```bash
+    [sudo] [LD_LIBRARY_PATH=/usr/local/lib] bf_switchd --install-dir /usr/local --conf-file p4-tests/tofino.conf --skip-p4 [--p4rt-server 0.0.0.0:50051]
+    ```
+
 
 1. **Push P4 config to model / driver**
 
     ```bash
-    ./p4-tests/ptf_runner.py [--run-bfrt-as-pi pipe] --testdir $P4C_OUTPUT/ --name <prog_name> --update-config-only
+    [sudo] ./p4-tests/ptf_runner.py [--run-bfrt-as-pi pipe] --testdir $P4C_OUTPUT/ --name <prog_name> --update-config-only
     ```
+    Note: `sudo` might reset environment variables, therefore it is possible
+    that `PYTHONPATH` will not be properly set under `sudo` (leading to errors
+    with the imports in the Python script). Either omit the `sudo` or preserve
+    the `PYTHONPATH` via prefixing the command with
+    `sudo env "PYTHONPATH=$PYTHONPATH" ./p4-tests/ptf_runner.py ...`.
 
 1. *(Optional) Turn on model debug output*
 
@@ -122,12 +140,12 @@ general, `$PTF_DIR` corresponds to `p4-tests/p4_<version>/<prog_name>.ptf`.
 1.  **Run PTF tests**
 
     ```bash
-    sudo ./p4-tests/ptf_runner.py [--run-bfrt-as-pi pipe] --testdir $P4C_OUTPUT/ --name <prog_name> --ptfdir $PTF_DIR --test-only
+    [sudo] ./p4-tests/ptf_runner.py [--run-bfrt-as-pi pipe] --testdir $P4C_OUTPUT/ --name <prog_name> --ptfdir $PTF_DIR --test-only
     ```
 
 1. **Run PD tests**
     ```bash
-    sudo ./p4-tests/ptf_runner.py --testdir $P4C_OUTPUT/ --name <prog_name> --ptfdir ${PTF_DIR} --pdtest <prog_config_file>
+    [sudo] ./p4-tests/ptf_runner.py --testdir $P4C_OUTPUT/ --name <prog_name> --ptfdir $PTF_DIR --pdtest <prog_config_file>
     ```
     Where `<prog_config_file>` is the .conf file generated for this run.
     It can be manually generated using:
@@ -139,7 +157,7 @@ Any extra argument that you pass to ptf_runner.py will be forwarded to PTF. In
 practice this is convenient when you want to run a single PTF test in the
 test suite for that P4 program. For example:
 
-    sudo ./p4-tests/ptf_runner.py --testdir build/p4c/tofino/extensions/p4_tests/p4_14/easy_ternary.out \
+    [sudo] ./p4-tests/ptf_runner.py --testdir build/p4c/tofino/extensions/p4_tests/p4_14/easy_ternary.out \
       --name easy_ternary --ptfdir p4-tests/p4_14/easy_ternary.ptf \
       --test-only test.SimpleTest
 
@@ -147,7 +165,7 @@ When running a STF test with PTF (aka STF2PTF), you need to use
 `p4-tests/tools/stf/` as the `--ptfdir` and provide the path to the .stf file
 with `--stftest`:
 
-    sudo ./p4-tests/ptf_runner.py --testdir $P4C_OUTPUT/ --name <prog_name> \
+    [sudo] ./p4-tests/ptf_runner.py --testdir $P4C_OUTPUT/ --name <prog_name> \
       --ptfdir p4-tests/tools/stf/ --test-only --stftest <path to .stf file>
 
 Often you may need to run bf_switchd in GDB. Because of the P4Runtime gRPC
