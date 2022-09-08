@@ -2,6 +2,7 @@
 #include "lib/log.h"
 #include "resource.h"
 #include "bf-p4c/common/slice.h"
+#include "bf-p4c/common/utils.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/bitrange.h"
@@ -2097,7 +2098,7 @@ bool ActionAnalysis::ContainerAction::verify_overwritten(const PHV::Container co
             switch (write_type.second) {
                 case FieldAction::CONSTANT:
                     error_code |= CONSTANT_TO_ACTION_DATA;
-                    // fall-through
+                    BFN_FALLTHROUGH;
                 case FieldAction::ACTION_DATA_CONSTANT:
                     error_code |= UNRESOLVED_REPEATED_ACTION_DATA;
                     break;
