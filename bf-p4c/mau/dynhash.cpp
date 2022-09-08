@@ -533,14 +533,13 @@ void GenerateDynamicHashJson::gen_ixbar_json(const IXBar::Use *ixbar_use_,
     _field_list->emplace("crossbar_configuration", _xbar_cfgs);
     _field_lists->append(_field_list);
     _dhc->emplace("field_lists", _field_lists);
-    IR::MAU::HashFunction *hashAlgo = nullptr;
     int hashGroup = -1;
     Util::JsonArray *_hash_bits = new Util::JsonArray();
     int num_hash_bits = 0;
     int hash_bit_width = -1;
     if (ixbar_use->meter_alu_hash.allocated) {
-        auto mah = ixbar_use->meter_alu_hash;
-        hashAlgo = &mah.algorithm;
+        auto &mah = ixbar_use->meter_alu_hash;
+        const IR::MAU::HashFunction *hashAlgo = &mah.algorithm;
         hashGroup = mah.group;
         hash_bit_width = hash_width <= 0 ? hashAlgo->size : hash_width;
         num_hash_bits = mah.bit_mask.is_contiguous() && (mah.bit_mask.min().index() == 0) ?
@@ -561,7 +560,9 @@ void GenerateDynamicHashJson::gen_ixbar_json(const IXBar::Use *ixbar_use_,
         for (auto a : algorithms->names) {
             // Call Dyn Hash Library and generate a hash function object for
             // given algorithm
-            auto srcInfo = hashAlgo ? &hashAlgo->srcInfo : new Util::SourceInfo();
+            auto srcInfo = ixbar_use->meter_alu_hash.allocated
+                               ? &ixbar_use->meter_alu_hash.algorithm.srcInfo
+                               : new Util::SourceInfo();
             auto algoExpr = IR::MAU::HashFunction::convertHashAlgorithmBFN(*srcInfo, a.name);
             auto algorithm = new IR::MAU::HashFunction();
             if (algorithm->setup(algoExpr)) {
