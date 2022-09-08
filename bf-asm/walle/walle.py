@@ -248,15 +248,127 @@ def generate_templates (args, schema):
             with open(os.path.join(args.o, size_name), "wb") as outfile:
                 json.dump(sizes, outfile, indent=4, sort_keys=True)
 
-def generate_cpp_file(outfile, top_level, args, schema):
+
+def arbitrary_ASCII_text_to_52digit_decimal_hash(input):
+    import hashlib
+    # 52 characters left in 63 after the prefix "IDENTIFIER_",
+    # and math.log2(10**52) => 172.74026093414284,
+    # and math.log2(10**52)/8 => 21.592532616767855,
+    # so going to request 22 bytes of hash digest.
+
+    # the next line of commented-out code is _fantastic_ in/on Python 3.8.10,
+    #   but fails in/on Python 3.5.2 [as present in/on the Jarvis image on my old BXDSW VM as of Sept. 7 2022 1:40am NY time]
+    ### hash_digest_as_bytes = hashlib.shake_256( bytes(input, "ASCII") ).digest(22)
+    hash_digest_as_bytes = hashlib.sha224( bytes(input, "ASCII") ).digest()
+    # sha224 => 28 bytes of digest, the closest match that is >= 22 bytes and available in/on Python 3.5.2 
+
+    hash_digest_as_int = int.from_bytes(hash_digest_as_bytes, "big")
+    return ("%052d" % hash_digest_as_int)[:52]
+
+
+
+def arbitrary_text_to_valid_C_identifier(input_iterable_of_characters, dry_run_to_get_hash_input = False):
+    """Takes a single input, which must be an iterable of characters for correct behavior to be
+       promised.  When given valid input, returns a string that is a valid C and C++ identifier,
+       regardless of what characters are used in the input.
+
+       _Intentionally_ *not* considering [ASCII] underscores as OK to copy untranslated as-is,
+       since _both_ leading underscores _and_ 2-or-more underscores in a row are considered as
+       ''reserved'' by the ISO C++ standard [and probably also by the ISO C standard].
+
+       _Only_ ASCII alphanumerics are ''OK as is''.
+
+       Quoting <https://gcc.gnu.org/onlinedocs/cpp/Implementation-limits.html>:
+
+           "The C standard requires only that the first 63 be significant"
+
+       In other words, the first 63 characters are definitely going to be "paid attention to",
+       and the rest may be handled as "comments".  I think we are probably safe with shifting
+       our upper bound to 200 or 999 characters.
+
+       Using a decimal hash to almost-guarantee uniqueness in the first 63 characters."""
+
+    if (not input_iterable_of_characters) or (len(input_iterable_of_characters)<1):
+        raise ValueError("This function requires an input of positive length.")
+
+    INCLUSIVE_MAX_OUTPUT_LENGTH = 255 # D. R. Y.
+
+    temp_ASCIIonly_string = ""
+    for char in input_iterable_of_characters:
+        if len(temp_ASCIIonly_string) > 999: # there`s not much good in letting it go on for an arbitrarily-long time
+            break
+        if '/' == char: # {part 1 of 3} of a kludge so that we can include path separators in the hash input
+            temp_ASCIIonly_string += char
+        if char.isalnum() and (ord(char)>=32) and (ord(char)<=126):
+                            # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                            # "char.isascii()" does _not_ always work
+            temp_ASCIIonly_string += char
+        elif not ( temp_ASCIIonly_string.endswith('_') or temp_ASCIIonly_string.endswith('/') ):
+                       #                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                       # {part 2 of 3} of a kludge so that we can include path separators in the hash input
+            temp_ASCIIonly_string += '_'
+
+    if dry_run_to_get_hash_input:
+        return temp_ASCIIonly_string
+
+    result = "IDENTIFIER_" + arbitrary_ASCII_text_to_52digit_decimal_hash(temp_ASCIIonly_string)
+    if not temp_ASCIIonly_string.startswith('_'):
+        result += '_'
+    result += temp_ASCIIonly_string
+
+    result = result[:INCLUSIVE_MAX_OUTPUT_LENGTH]
+    result = result.replace('/', '_') # {part 3 of 3} of a kludge so that we can include path separators in the hash input
+    return result
+
+
+
+def pathname_to_valid_C_identifier(file_pathname, dry_run_to_get_hash_input = False):
+    """This makes the assumption that the input is a string
+       [or at least "string-like object"]
+       with the data in a format along the lines of "/a/b/c/d/e/file"
+    """
+    assert len(file_pathname) > 0
+
+    first_char_upper_case = lambda x: "" if (len(x)<1) else x[0].upper() + x[1:].lower()
+
+    # somewhat hackish...  does anybody want to propose an "elegant" alternative for the next 3 lines?
+    if file_pathname.endswith(".cpp"):  file_pathname = file_pathname[:-4]
+    if file_pathname.endswith(".hpp"):  file_pathname = file_pathname[:-4]
+    if file_pathname.endswith(".h"  ):  file_pathname = file_pathname[:-2]
+
+    split = file_pathname.split('/') # POSIXism warning re '/'
+    file = first_char_upper_case(split[-1])
+    last_4_dirs_if_possible = [ first_char_upper_case(x) for x in split[-5:-1] ] # worst-case scenario, this is an empty list
+
+    return arbitrary_text_to_valid_C_identifier('/'.join(last_4_dirs_if_possible+[file]), dry_run_to_get_hash_input)
+
+
+
+def generate_cPlusPlus_file(outfile, top_level, args, schema, file_basename):
     outfile.write("/* Autogenerated from %s and %s -- DO NOT EDIT */\n" % (
                   args.schema, args.generate_cpp))
-    invalid_chars_replace = {'/' : "_", "-" : "_", "." : "_"}
+
+    fake_pathname = args.o + '/' + top_level.name + '/' + file_basename
+
+    synthetic_identifier = pathname_to_valid_C_identifier(fake_pathname)
+    outfile.write("/* --- vvv --- DEBUG  --- vvv ---\n")
+    outfile.write("DEBUG: args.o = ''%s''\n" % args.o)
+    outfile.write("DEBUG: file_basename = ''%s''\n" % file_basename)
+    outfile.write("\n")
+    outfile.write("DEBUG: args.schema = ''%s''\n" % args.schema)
+    outfile.write("DEBUG: top_level.name = ''%s''\n" % top_level.name)
+    outfile.write("DEBUG: top_level.parent = ''%s''\n" % top_level.parent)
+    outfile.write("\n")
+    outfile.write("DEBUG: fake_pathname = ''%s''\n" % fake_pathname)
+    outfile.write("\n")
+    outfile.write( "DEBUG: input to hash algo.: ''%s''\n" % pathname_to_valid_C_identifier(fake_pathname, dry_run_to_get_hash_input = True) )
+    outfile.write("   --- ^^^ --- DEBUG  --- ^^^ --- */\n")
+    del fake_pathname
+
     if args.gen_decl == 'decl':
-        fixed_path = args.o.upper().translate(str.maketrans(invalid_chars_replace))
-        parent = top_level.parent.upper()
-        outfile.write('#ifndef %s_%s_%s\n' % (fixed_path, parent, top_level.name.upper()))
-        outfile.write('#define %s_%s_%s\n\n' % (fixed_path, parent, top_level.name.upper()))
+        outfile.write('#ifndef %s\n'     % synthetic_identifier)
+        outfile.write('#define %s 1\n\n' % synthetic_identifier)
+
     for incl in args.include:
         outfile.write('#include "%s"\n' % incl)
     if args.emit_json or args.emit_fieldname or args.dump_unread:
@@ -284,9 +396,7 @@ def generate_cpp_file(outfile, top_level, args, schema):
     if args.namespace:
         outfile.write('\n}  // end namespace %s\n\n' % args.namespace)
     if args.gen_decl == 'decl':
-        fixed_path = args.o.upper().translate(str.maketrans(invalid_chars_replace))
-        parent = top_level.parent.upper()
-        outfile.write('\n#endif /* %s_%s_%s */' % (fixed_path, parent, top_level.name.upper()))
+        outfile.write('\n#endif /* end of "ifndef %s" */\n' % synthetic_identifier)
 
 def extend_args(args, params):
     """
@@ -318,8 +428,16 @@ def generate_cpp (args, schema):
             for generate_file,params in list(files.items()):
                 if generate_file == 'args': continue
                 if generate_file == 'rewrite': continue
-                generate_cpp_file(open(os.path.join(args.o, generate_file), "w"),
-                                  section[top_level_obj], extend_args(args, params), schema)
+                if (("DEBUG" in globals().keys()) and globals()["DEBUG"]) or ("DEBUG" in locals().keys()) and locals()["DEBUG"]:
+                    print ("===vvv=== DEBUG ===vvv===")
+                    print ("globals:", globals())
+                    print ("locals:", locals())
+                    print ("===^^^=== DEBUG ===^^^===")
+                generate_cPlusPlus_file(open(os.path.join(args.o, generate_file), "w"),
+                                        section[top_level_obj],
+                                        extend_args(args, params),
+                                        schema,
+                                        generate_file)
 
 def print_schema_text(args, schema):
     def do_print(indent, obj):
