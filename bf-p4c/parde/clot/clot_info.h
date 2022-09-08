@@ -12,6 +12,7 @@
 #include "bf-p4c/lib/cmp.h"
 #include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/parde/dump_parser.h"
+#include "bf-p4c/parde/clot/pragma/do_not_use_clot.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/parde/parde_visitor.h"
 
@@ -26,6 +27,9 @@ class ClotInfo {
     friend class GreedyClotAllocator;
 
     PhvUse &uses;
+
+    /// Fields that are ineligible for CLOTs due to pragma do_not_use_clot
+    ordered_set<const PHV::Field*> do_not_use_clot_fields;
 
     /// Maps parser states to all fields extracted in that state, regardless of source.
     ordered_map<const IR::BFN::ParserState*,
@@ -388,11 +392,13 @@ class ClotInfo {
 class CollectClotInfo : public Inspector {
     const PhvInfo& phv;
     ClotInfo& clotInfo;
+    const PragmaDoNotUseClot& pragmaDoNotUseClot;
     Logging::FileLog* log = nullptr;
 
  public:
-    explicit CollectClotInfo(const PhvInfo& phv, ClotInfo& clotInfo) :
-        phv(phv), clotInfo(clotInfo) {}
+    explicit CollectClotInfo(const PhvInfo& phv, ClotInfo& clotInfo,
+                             const PragmaDoNotUseClot& pragmaDoNotUseClot) :
+        phv(phv), clotInfo(clotInfo), pragmaDoNotUseClot(pragmaDoNotUseClot) {}
 
  private:
     Visitor::profile_t init_apply(const IR::Node* root) override;

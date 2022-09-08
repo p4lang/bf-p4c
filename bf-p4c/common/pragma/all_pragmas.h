@@ -2,6 +2,7 @@
 #define EXTENSIONS_BF_P4C_COMMON_PRAGMA_ALL_PRAGMAS_H_
 
 #include "bf-p4c/common/pragma/pragma.h"
+#include "bf-p4c/parde/clot/pragma/do_not_use_clot.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 
 #define DEFINE_PRAGMA_CLASS(cname)      \

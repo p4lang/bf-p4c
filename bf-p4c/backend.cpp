@@ -85,6 +85,7 @@
 #include "bf-p4c/parde/adjust_extract.h"
 #include "bf-p4c/parde/check_parser_multi_write.h"
 #include "bf-p4c/parde/clot/allocate_clot.h"
+#include "bf-p4c/parde/clot/pragma/do_not_use_clot.h"
 #include "bf-p4c/parde/collect_parser_usedef.h"
 #include "bf-p4c/parde/infer_payload_offset.h"
 #include "bf-p4c/parde/lower_parser.h"
@@ -169,8 +170,9 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
     // Create even if Tofino, since this checks power is within limits.
     power_and_mpr = new MauPower::FinalizeMauPredDepsPower(phv, deps, &nextTblProp, options);
 
+    auto* pragmaDoNotUseClot = new PragmaDoNotUseClot(phv);
     auto* allocateClot = Device::numClots() > 0 && options.use_clot ?
-        new AllocateClot(clot, phv, uses) : nullptr;
+        new AllocateClot(clot, phv, uses, *pragmaDoNotUseClot) : nullptr;
 
     liveRangeReport = new LiveRangeReport(phv, table_summary, defuse);
     auto *noOverlay = new PragmaNoOverlay(phv);
@@ -281,6 +283,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         new CheckParserMultiWrite(phv),
         new CollectPhvInfo(phv),
         new CheckForHeaders(),
+        pragmaDoNotUseClot,
         allocateClot,
         // Can't (re)run CollectPhvInfo after this point as it will corrupt clot allocation
         &defuse,

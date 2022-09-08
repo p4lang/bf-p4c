@@ -7,7 +7,8 @@ class AllocateClot : public PassManager {
     ClotInfo clotInfo;
 
  public:
-    explicit AllocateClot(ClotInfo &clotInfo, const PhvInfo &phv, PhvUse &uses, bool log = true);
+    explicit AllocateClot(ClotInfo &clotInfo, const PhvInfo &phv, PhvUse &uses,
+                          PragmaDoNotUseClot& pragmaDoNotUseClot, bool log = true);
 };
 
 /**

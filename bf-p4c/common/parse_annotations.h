@@ -54,6 +54,7 @@ class ParseAnnotations : public P4::ParseAnnotations {
         BFN_PARSE(PragmaAtcamPartitionIndex, PARSE, StringLiteral, extPragma);
         BFN_PARSE_EMPTY(PragmaAlpmAtcamExcludeFieldMsbs, PARSE_EXPRESSION_LIST, extPragma);
         BFN_PARSE(PragmaCalculatedFieldUpdateLocation, PARSE, StringLiteral, extPragma);
+        BFN_PARSE_EMPTY(PragmaBackwardCompatible, PARSE_EMPTY, extPragma);
         BFN_PARSE_EMPTY(PragmaChainAddress, PARSE_EMPTY, intPragma);
         BFN_PARSE(PragmaChainTotalSize, PARSE, Expression, intPragma);
         BFN_PARSE_EMPTY(PragmaCommandLine, PARSE_CONSTANT_OR_STRING_LITERAL_LIST, extPragma);
@@ -61,7 +62,11 @@ class ParseAnnotations : public P4::ParseAnnotations {
         BFN_PARSE_EMPTY(PragmaDefaultPortmap, PARSE_EXPRESSION_LIST, intPragma);
         BFN_PARSE(PragmaDisableAtomicModify, PARSE, Expression, extPragma);
         BFN_PARSE_EMPTY(PragmaDisableI2EReservedDropImplementation, PARSE_EMPTY, extPragma);
+        BFN_PARSE(PragmaDoNotBridge, PARSE_PAIR, StringLiteral, extPragma);
+        BFN_PARSE_EMPTY(PragmaDoNotUseClot, PARSE_STRING_LITERAL_LIST, extPragma);
         BFN_PARSE(PragmaDontTranslateExternMethod, PARSE, StringLiteral, intPragma);
+        BFN_PARSE(PragmaDontMerge, PARSE, Expression, extPragma);
+        BFN_PARSE_EMPTY(PragmaDontUnroll, PARSE_EMPTY, extPragma);
         BFN_PARSE(PragmaDynamicTableKeyMasks, PARSE, Expression, extPragma);
         BFN_PARSE_EMPTY(PragmaEgressIntrinsicMetadataOpt, PARSE_EMPTY, extPragma);
         BFN_PARSE(PragmaEntriesWithRanges, PARSE, Expression, extPragma);
@@ -85,17 +90,16 @@ class ParseAnnotations : public P4::ParseAnnotations {
         BFN_PARSE(PragmaMaxLoopDepth, PARSE, Expression, extPragma);
         BFN_PARSE(PragmaMinWidth, PARSE, Expression, extPragma);
         BFN_PARSE(PragmaMode, PARSE, StringLiteral, intPragma);
-        BFN_PARSE_EMPTY(PragmaNotExtractedInEgress, PARSE_EMPTY, intPragma);
-        BFN_PARSE(PragmaDontMerge, PARSE, Expression, extPragma);
-        BFN_PARSE(PragmaDoNotBridge, PARSE_PAIR, StringLiteral, extPragma);
+        BFN_PARSE_EMPTY(PragmaNoFieldInits, PARSE_EMPTY, extPragma);
         BFN_PARSE_EMPTY(PragmaNoGatewayConversion, PARSE_EMPTY, extPragma);
+        BFN_PARSE_EMPTY(PragmaNotExtractedInEgress, PARSE_EMPTY, intPragma);
+        BFN_PARSE(PragmaOverridePhase0ActionName, PARSE, StringLiteral, extPragma);
+        BFN_PARSE(PragmaOverridePhase0TableName, PARSE, StringLiteral, extPragma);
         BFN_PARSE(PragmaPack, PARSE, Expression, extPragma);
         BFN_PARSE_EMPTY(PragmaPadding, PARSE_EMPTY, extPragma);
         BFN_PARSE_EMPTY(PragmaPacketEntry, PARSE_EMPTY, extPragma);
         BFN_PARSE(PragmaPhase0, PARSE_TRIPLE, Expression, extPragma);
         BFN_PARSE_EMPTY(PragmaPlacementPriority, PARSE_EXPRESSION_LIST, extPragma);
-        BFN_PARSE(PragmaOverridePhase0TableName, PARSE, StringLiteral, extPragma);
-        BFN_PARSE(PragmaOverridePhase0ActionName, PARSE, StringLiteral, extPragma);
         BFN_PARSE(PragmaPreColor, PARSE, Expression, intPragma);
         BFN_PARSE(PragmaProxyHashAlgorithm, PARSE, StringLiteral, extPragma);
         BFN_PARSE(PragmaProxyHashWidth, PARSE, Expression, extPragma);
@@ -107,54 +111,49 @@ class ParseAnnotations : public P4::ParseAnnotations {
         BFN_PARSE(PragmaSelectorMaxGroupSize, PARSE, Expression, extPragma);
         BFN_PARSE(PragmaSelectorNumMaxGroups, PARSE, Expression, extPragma);
         BFN_PARSE(PragmaSelectorEnableScramble, PARSE, Expression, extPragma);
-        BFN_PARSE(PragmaSymmetric, PARSE_PAIR, Expression, extPragma);
+        BFN_PARSE_EMPTY(PragmaSeparateGateway, PARSE_EMPTY, extPragma);
         BFN_PARSE_EMPTY(PragmaStage, PARSE_EXPRESSION_LIST, extPragma);
+        BFN_PARSE(PragmaSymmetric, PARSE_PAIR, Expression, extPragma);
         BFN_PARSE(PragmaTerminateParsing, PARSE, StringLiteral, extPragma);
-        BFN_PARSE_EMPTY(PragmaDontUnroll,  PARSE_EMPTY, extPragma);
-
         BFN_PARSE(PragmaTernary, PARSE, Expression, intPragma);  // unlikely to need it
         BFN_PARSE(PragmaUseHashAction, PARSE, Expression, extPragma);
         BFN_PARSE_EMPTY(PragmaUserAnnotation, PARSE_STRING_LITERAL_LIST, extPragma);
         BFN_PARSE(PragmaWays, PARSE, Expression, extPragma);
-        BFN_PARSE_EMPTY(PragmaNoFieldInits, PARSE_EMPTY, extPragma);
-        BFN_PARSE_EMPTY(PragmaSeparateGateway, PARSE_EMPTY, extPragma);
 
-        BFN_PARSE(PragmaRed,    PARSE, Expression, intPragma);
+        BFN_PARSE(PragmaRed, PARSE, Expression, intPragma);
         BFN_PARSE(PragmaYellow, PARSE, Expression, intPragma);
-        BFN_PARSE(PragmaGreen,  PARSE, Expression, intPragma);
+        BFN_PARSE(PragmaGreen, PARSE, Expression, intPragma);
         BFN_PARSE_EMPTY(PragmaTrueEgressAccounting,  PARSE_EMPTY, extPragma);
 
         BFN_PARSE_EMPTY(PragmaHeaderChecksum,  PARSE_EMPTY, intPragma);
         BFN_PARSE_EMPTY(PragmaPayloadChecksum, PARSE_EMPTY, intPragma);
 
-        BFN_PARSE_EMPTY(PragmaBackwardCompatible, PARSE_EMPTY, extPragma);
-
         // pa_ pragmas
         BFN_PARSE_EMPTY(PragmaAlias, PARSE_STRING_LITERAL_LIST, extPragma);
-        BFN_PARSE_EMPTY(PragmaAutoInitMetadata, PARSE_EMPTY, extPragma);
-        BFN_PARSE_EMPTY(PragmaQuickPhvAlloc, PARSE_EMPTY, extPragma);
-        BFN_PARSE_EMPTY(PragmaParserBandwidthOpt, PARSE_EMPTY, extPragma);
-        BFN_PARSE_EMPTY(PragmaParserGroupMonogress, PARSE_EMPTY, extPragma);
-        BFN_PARSE_EMPTY(PragmaPrioritizeARAinits, PARSE_EMPTY, extPragma);
         BFN_PARSE_EMPTY(PragmaAtomic, PARSE_STRING_LITERAL_LIST, extPragma);
+        BFN_PARSE_EMPTY(PragmaAutoInitMetadata, PARSE_EMPTY, extPragma);
+        BFN_PARSE_EMPTY(PragmaBytePack, PARSE_EXPRESSION_LIST, extPragma);
         BFN_PARSE_EMPTY(PragmaContainerSize, PARSE_EXPRESSION_LIST, extPragma);
         BFN_PARSE_EMPTY(PragmaContainerType, PARSE_STRING_LITERAL_LIST, extPragma);
+        // FIXME: is DisableDeparseZero internal?
+        BFN_PARSE_EMPTY(PragmaDisableDeparseZero, PARSE_STRING_LITERAL_LIST, intPragma);
         BFN_PARSE_EMPTY(PragmaMutuallyExclusive, PARSE_STRING_LITERAL_LIST, extPragma);
         BFN_PARSE_EMPTY(PragmaNoInit, PARSE_STRING_LITERAL_LIST, extPragma);
         BFN_PARSE_EMPTY(PragmaNoOverlay, PARSE_STRING_LITERAL_LIST, extPragma);
         BFN_PARSE_EMPTY(PragmaNoPack, PARSE_STRING_LITERAL_LIST, extPragma);
-        BFN_PARSE_EMPTY(PragmaBytePack, PARSE_EXPRESSION_LIST, extPragma);
-        BFN_PARSE_EMPTY(PragmaSolitary, PARSE_STRING_LITERAL_LIST, extPragma);
-        // FIXME: is DisableDeparseZero internal?
-        BFN_PARSE_EMPTY(PragmaDisableDeparseZero, PARSE_STRING_LITERAL_LIST, intPragma);
         BFN_PARSE_EMPTY(PragmaNotDeparsed, PARSE_STRING_LITERAL_LIST, extPragma);
         BFN_PARSE_EMPTY(PragmaNotParsed, PARSE_STRING_LITERAL_LIST, extPragma);
+        BFN_PARSE_EMPTY(PragmaParserBandwidthOpt, PARSE_EMPTY, extPragma);
+        BFN_PARSE_EMPTY(PragmaParserGroupMonogress, PARSE_EMPTY, extPragma);
+        BFN_PARSE_EMPTY(PragmaPrioritizeARAinits, PARSE_EMPTY, extPragma);
+        BFN_PARSE_EMPTY(PragmaQuickPhvAlloc, PARSE_EMPTY, extPragma);
+        BFN_PARSE_EMPTY(PragmaSolitary, PARSE_STRING_LITERAL_LIST, extPragma);
 
         // internal annotation to be removed
         BFN_PARSE(PragmaActionSelectorHashFieldCalcName, PARSE, StringLiteral, intPragma);
+        BFN_PARSE(PragmaActionSelectorHashFieldCalcOutputWidth, PARSE, Expression, intPragma);
         BFN_PARSE(PragmaActionSelectorHashFieldListName, PARSE, StringLiteral, intPragma);
         BFN_PARSE(PragmaAlgorithm, PARSE, StringLiteral, intPragma);
-        BFN_PARSE(PragmaActionSelectorHashFieldCalcOutputWidth, PARSE, Expression, intPragma);
     }
 };
 

@@ -330,6 +330,12 @@ bool ClotInfo::extracted_with_pov(const PHV::Field* field) const {
 }
 
 bool ClotInfo::can_be_in_clot(const PHV::Field* field) const {
+    if (do_not_use_clot_fields.count(field)) {
+        LOG5("  Field " << field->name << " can't be in a CLOT: "
+             << "it is marked by @pragma do_not_use_clot");
+        return false;
+    }
+
     if (is_added_by_mau(field->header())) {
         LOG5("  Field " << field->name << " can't be in a CLOT: its header might be added by MAU");
         return false;
@@ -1036,6 +1042,7 @@ void ClotInfo::add_alias(const PHV::Field* f1, const PHV::Field* f2) {
 
 void ClotInfo::clear() {
     is_modified_.clear();
+    do_not_use_clot_fields.clear();
     parser_state_to_fields_.clear();
     field_to_parser_states_.clear();
     fields_to_pov_bits_.clear();
@@ -1101,6 +1108,7 @@ std::pair<unsigned, ordered_set<const IR::BFN::ParserState*>*>* ClotInfo::find_l
 Visitor::profile_t CollectClotInfo::init_apply(const IR::Node* root) {
     auto rv = Inspector::init_apply(root);
     clotInfo.clear();
+    clotInfo.do_not_use_clot_fields = pragmaDoNotUseClot.do_not_use_clot_fields();
 
     // Configure logging for this visitor.
     if (BackendOptions().verbose > 0) {

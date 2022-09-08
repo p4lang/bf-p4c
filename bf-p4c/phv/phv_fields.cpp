@@ -272,7 +272,7 @@ void PhvInfo::get_hdr_fields(cstring name_, ordered_set<const PHV::Field*> & fld
  * @param name_ Partial or complete name of a field, or a header or metadata collection
  * @return const PhvInfo::StructInfo* Information about collection
  */
-const PhvInfo::StructInfo *PhvInfo::hdr(const cstring& name_) const {
+const PhvInfo::StructInfo* PhvInfo::hdr(const cstring& name_) const {
     cstring full_name = full_hdr_name(name_);
     if (full_name.size() && all_structs.count(full_name))
         return &(all_structs.at(full_name));

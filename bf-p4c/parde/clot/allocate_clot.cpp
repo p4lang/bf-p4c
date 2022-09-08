@@ -1003,7 +1003,8 @@ class GreedyClotAllocator : public Visitor {
     }
 };
 
-AllocateClot::AllocateClot(ClotInfo &clotInfo, const PhvInfo &phv, PhvUse &uses, bool log) :
+AllocateClot::AllocateClot(ClotInfo &clotInfo, const PhvInfo &phv, PhvUse &uses,
+                           PragmaDoNotUseClot& pragmaDoNotUseClot, bool log) :
 clotInfo(clotInfo) {
     addPasses({
         &uses,
@@ -1012,7 +1013,7 @@ clotInfo(clotInfo) {
         /// FieldPovAnalysis runs a data flow analysis on parser and fills result in
         /// clotInfo.pov_extracted_without_fields
         new FieldPovAnalysis(clotInfo, phv),
-        new CollectClotInfo(phv, clotInfo),
+        new CollectClotInfo(phv, clotInfo, pragmaDoNotUseClot),
         new GreedyClotAllocator(phv, clotInfo, log)
     });
 }

@@ -1,6 +1,7 @@
 #include "collect_global_pragma.h"
 #include <algorithm>
 #include "bf-p4c/common/pragma/all_pragmas.h"
+#include "bf-p4c/parde/clot/pragma/do_not_use_clot.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 
 const std::vector<cstring>*
@@ -8,23 +9,24 @@ CollectGlobalPragma::g_global_pragma_names = new std::vector<cstring>{
     PragmaAlias::name,
     PragmaAtomic::name,
     PragmaAutoInitMetadata::name,
-    PragmaQuickPhvAlloc::name,
-    PragmaParserBandwidthOpt::name,
     PragmaBackwardCompatible::name,
-    PragmaParserGroupMonogress::name,
-    PragmaPrioritizeARAinits::name,
+    PragmaBytePack::name,
     PragmaContainerSize::name,
     PragmaContainerType::name,
     PragmaDisableI2EReservedDropImplementation::name,
+    PragmaDoNotUseClot::name,
     PragmaEgressIntrinsicMetadataOpt::name,
     PragmaGFMParityEnable::name,
     PragmaMutuallyExclusive::name,
     PragmaNoInit::name,
     PragmaNoOverlay::name,
-    PragmaSolitary::name,
-    PragmaPhvLimit::name,
     PragmaNoPack::name,
-    PragmaBytePack::name,
+    PragmaParserBandwidthOpt::name,
+    PragmaParserGroupMonogress::name,
+    PragmaPhvLimit::name,
+    PragmaPrioritizeARAinits::name,
+    PragmaQuickPhvAlloc::name,
+    PragmaSolitary::name,
     PHV::pragma::DISABLE_DEPARSE_ZERO
 };
 

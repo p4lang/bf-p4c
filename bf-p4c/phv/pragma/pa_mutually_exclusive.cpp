@@ -7,7 +7,7 @@
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 
-/// BFN::Pragma interface
+// BFN::Pragma interface
 const char *PragmaMutuallyExclusive::name = "pa_mutually_exclusive";
 const char *PragmaMutuallyExclusive::description =
     "Specifies that the two fields/headers are mutually exclusive with each other.";
@@ -30,11 +30,11 @@ const char *PragmaMutuallyExclusive::help =
 
 bool PragmaMutuallyExclusive::preorder(const IR::BFN::Pipe* pipe) {
     auto global_pragmas = pipe->global_pragmas;
-    for (const auto* annotation : global_pragmas) {
+    for (const auto& annotation : global_pragmas) {
         if (annotation->name.name != PragmaMutuallyExclusive::name)
             continue;
 
-        auto& exprs = annotation->expr;
+        const IR::Vector<IR::Expression>& exprs = annotation->expr;
 
         if (!PHV::Pragmas::checkStringLiteralArgs(exprs)) {
             continue;
@@ -43,8 +43,8 @@ bool PragmaMutuallyExclusive::preorder(const IR::BFN::Pipe* pipe) {
         const unsigned min_required_arguments = 3;  // gress, node1, node2
         unsigned required_arguments = min_required_arguments;
         unsigned expr_index = 0;
-        const IR::StringLiteral *pipe_arg = nullptr;
-        const IR::StringLiteral *gress_arg = nullptr;
+        const IR::StringLiteral* pipe_arg = nullptr;
+        const IR::StringLiteral* gress_arg = nullptr;
 
         if (!PHV::Pragmas::determinePipeGressArgs(exprs, expr_index,
                 required_arguments, pipe_arg, gress_arg)) {
@@ -61,27 +61,23 @@ bool PragmaMutuallyExclusive::preorder(const IR::BFN::Pipe* pipe) {
             continue;
         }
 
-        auto node1_ir = exprs[expr_index++]->to<IR::StringLiteral>();
-        auto node2_ir = exprs[expr_index++]->to<IR::StringLiteral>();
+        const IR::StringLiteral* node1_ir = exprs[expr_index++]->to<IR::StringLiteral>();
+        const IR::StringLiteral* node2_ir = exprs[expr_index++]->to<IR::StringLiteral>();
 
-        LOG4(" @pragma pa_mutually_exclusive's arguments << " << gress_arg->value << ", "
-             << node1_ir->value << ", " << node2_ir->value);
+        LOG4("@pragma pa_mutually_exclusive's arguments: "
+             << (pipe_arg ? pipe_arg->value + ", " : "")
+             << gress_arg->value << ", "
+             << node1_ir->value << ", "
+             << node2_ir->value);
 
-        auto node1_name = gress_arg->value + "::" + node1_ir->value;
-        auto node2_name = gress_arg->value + "::" + node2_ir->value;
-        auto field1 = phv_i.field(node1_name);
-        auto field2 = phv_i.field(node2_name);
-        auto hdr1 = field1 ? nullptr : phv_i.hdr(node1_name);
-        auto hdr2 = field2 ? nullptr : phv_i.hdr(node2_name);
-        auto n1_flds = ordered_set<const PHV::Field*>();
-        auto n2_flds = ordered_set<const PHV::Field*>();
-
-        LOG4("node1_name = " << node1_name);
-        LOG4("node2_name = " << node2_name);
-        LOG4("field1 = " << field1);
-        LOG4("field2 = " << field2);
-        LOG4("hdr1 = " << hdr1);
-        LOG4("hdr2 = " << hdr2);
+        cstring node1_name = gress_arg->value + "::" + node1_ir->value;
+        cstring node2_name = gress_arg->value + "::" + node2_ir->value;
+        const PHV::Field* field1 = phv_i.field(node1_name);
+        const PHV::Field* field2 = phv_i.field(node2_name);
+        const PhvInfo::StructInfo* hdr1 = field1 ? nullptr : phv_i.hdr(node1_name);
+        const PhvInfo::StructInfo* hdr2 = field2 ? nullptr : phv_i.hdr(node2_name);
+        ordered_set<const PHV::Field*> n1_flds;
+        ordered_set<const PHV::Field*> n2_flds;
 
         if (field1)
             n1_flds.insert(field1);
@@ -92,8 +88,6 @@ bool PragmaMutuallyExclusive::preorder(const IR::BFN::Pipe* pipe) {
             continue;
         }
 
-        LOG4("n1_flds = " << n1_flds);
-
         if (field2)
             n2_flds.insert(field2);
         if (hdr2)
@@ -103,20 +97,19 @@ bool PragmaMutuallyExclusive::preorder(const IR::BFN::Pipe* pipe) {
             continue;
         }
 
-        LOG4("n2_flds = " << n2_flds);
-
         if (hdr1 && hdr2) {
-            auto hdr1_name = phv_i.full_hdr_name(node1_name);
-            auto hdr2_name = phv_i.full_hdr_name(node2_name);
-            LOG3("Adding into mutually exclusive headers: " << hdr1_name << " <--> " << hdr2_name);
+            cstring hdr1_name = phv_i.full_hdr_name(node1_name);
+            cstring hdr2_name = phv_i.full_hdr_name(node2_name);
+            LOG3("Adding into mutually exclusive headers: ("
+                 << hdr1_name << ", " << hdr2_name << ")");
             mutually_exclusive_headers[hdr1_name].insert(hdr2_name);
             mutually_exclusive_headers[hdr2_name].insert(hdr1_name);
         }
 
-        for (auto fld1 : n1_flds) {
-            for (auto fld2 : n2_flds) {
-                LOG4("Adding into mutually exclusive pairs: " << fld1->name << " <--> " <<
-                     fld2->name);
+        for (const auto& fld1 : n1_flds) {
+            for (const auto& fld2 : n2_flds) {
+                LOG4("Adding into mutually exclusive pairs: ("
+                     << fld1->name << ", " << fld2->name << ")");
 
                 pa_mutually_exclusive_i[fld1].insert(fld2);
                 pa_mutually_exclusive_i[fld2].insert(fld1);
@@ -128,12 +121,13 @@ bool PragmaMutuallyExclusive::preorder(const IR::BFN::Pipe* pipe) {
 
 std::ostream& operator<<(std::ostream& out, const PragmaMutuallyExclusive& pa_me) {
     std::stringstream logs;
-    logs <<  "Printing all fields marked mutually exclusive by @pragma pa_mutually_exclusive" <<
+    logs << "Printing all fields marked mutually exclusive by @pragma pa_mutually_exclusive:" <<
         std::endl;
-    for (auto entry : pa_me.mutex_fields()) {
-        for (auto f : entry.second) {
-            logs << "Fields " << entry.first->name << " and " << f->name << " are marked mutually "
-                "exclusive." << std::endl; } }
+    for (const auto& entry : pa_me.mutex_fields()) {
+        for (const auto& field : entry.second) {
+            logs << "  (" << entry.first->name << ", " << field->name << ")" << std::endl;
+        }
+    }
     out << logs.str();
     return out;
 }

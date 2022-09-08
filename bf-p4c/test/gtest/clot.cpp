@@ -5,6 +5,7 @@
 #include "bf-p4c/mau/instruction_selection.h"
 #include "bf-p4c/parde/clot/allocate_clot.h"
 #include "bf-p4c/parde/clot/clot_info.h"
+#include "bf-p4c/parde/clot/pragma/do_not_use_clot.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
@@ -17,12 +18,15 @@ class ClotTest : public JBayBackendTest {};
 namespace {
 
 boost::optional<TofinoPipeTestCase>
-createClotTest(const std::string& headerTypes,
+createClotTest(const std::string& doNotUseClotPragmas,
+               const std::string& headerTypes,
                const std::string& headerInstances,
                const std::string& parser,
                const std::string& mau,
                const std::string& deparser) {
     auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
+%DO_NOT_USE_CLOT_PRAGMAS%
+
 %HEADER_TYPES%
 
 struct Headers {
@@ -58,6 +62,7 @@ control computeChecksum(inout Headers hdr, inout Metadata meta) {
 
 V1Switch(parse(), verifyChecksum(), mau(), mau(), computeChecksum(), deparse()) main;)");
 
+    boost::replace_first(source, "%DO_NOT_USE_CLOT_PRAGMAS%", doNotUseClotPragmas);
     boost::replace_first(source, "%HEADER_TYPES%", headerTypes);
     boost::replace_first(source, "%HEADER_INSTANCES%", headerInstances);
     boost::replace_first(source, "%PARSER%", parser);
@@ -125,13 +130,17 @@ void runTest(boost::optional<TofinoPipeTestCase> test,
 
     CollectHeaderStackInfo collectHeaderStackInfo;
     CollectPhvInfo collectPhvInfo(phvInfo);
+    PragmaDoNotUseClot pragmaDoNotUseClot(phvInfo);
+    CollectClotInfo collectClotInfo(phvInfo, clotInfo, pragmaDoNotUseClot);
     InstructionSelection instructionSelection(BackendOptions(), phvInfo);
-    AllocateClot allocateClot(clotInfo, phvInfo, phvUse, false);
+    AllocateClot allocateClot(clotInfo, phvInfo, phvUse, pragmaDoNotUseClot, false);
 
     PassManager passes = {
       &collectHeaderStackInfo,
       &collectPhvInfo,
       &instructionSelection,
+      &pragmaDoNotUseClot,
+      &collectClotInfo,
       &allocateClot,
     };
 
@@ -177,6 +186,7 @@ void runTest(boost::optional<TofinoPipeTestCase> test,
 
 TEST_F(ClotTest, Basic1) {
     auto test = createClotTest(P4_SOURCE(R"(
+        )"), P4_SOURCE(R"(
             header H {
                 bit<64> f1;
                 bit<8> f2;
@@ -213,6 +223,7 @@ TEST_F(ClotTest, Basic1) {
 
 TEST_F(ClotTest, AdjacentClot1) {
     auto test = createClotTest(P4_SOURCE(R"(
+        )"), P4_SOURCE(R"(
             header H {
                 bit<64> f1;
                 bit<8> f2;
@@ -258,6 +269,7 @@ TEST_F(ClotTest, AdjacentClot1) {
 
 TEST_F(ClotTest, HeaderRemoval1) {
     auto test = createClotTest(P4_SOURCE(R"(
+        )"), P4_SOURCE(R"(
             header H1 {
                 bit<32> f;
             }
@@ -320,6 +332,7 @@ TEST_F(ClotTest, HeaderRemoval1) {
 
 TEST_F(ClotTest, HeaderRemoval2) {
     auto test = createClotTest(P4_SOURCE(R"(
+        )"), P4_SOURCE(R"(
             header H1 {
                 bit<32> f;
             }
@@ -381,6 +394,7 @@ TEST_F(ClotTest, HeaderRemoval2) {
 
 TEST_F(ClotTest, MutualExclusion1) {
     auto test = createClotTest(P4_SOURCE(R"(
+        )"), P4_SOURCE(R"(
             header H1 {
                 bit<32> f1;
                 bit<8> f2;
@@ -463,6 +477,7 @@ TEST_F(ClotTest, MutualExclusion1) {
 
 TEST_F(ClotTest, Insertion1) {
     auto test = createClotTest(P4_SOURCE(R"(
+        )"), P4_SOURCE(R"(
             header H1 {
                 bit<32> f1;
                 bit<8> f2;
@@ -545,6 +560,7 @@ TEST_F(ClotTest, Insertion1) {
 
 TEST_F(ClotTest, Insertion2) {
     auto test = createClotTest(P4_SOURCE(R"(
+        )"), P4_SOURCE(R"(
             header H1 {
                 bit<32> f1;
                 bit<8> f2;
@@ -629,6 +645,7 @@ TEST_F(ClotTest, Insertion2) {
 
 TEST_F(ClotTest, Reorder1) {
     auto test = createClotTest(P4_SOURCE(R"(
+        )"), P4_SOURCE(R"(
             header H1 {
                 bit<32> f;
             }
@@ -702,6 +719,7 @@ TEST_F(ClotTest, Reorder1) {
 
 TEST_F(ClotTest, Reorder2) {
     auto test = createClotTest(P4_SOURCE(R"(
+        )"), P4_SOURCE(R"(
             header H1 {
                 bit<32> f;
             }
@@ -773,6 +791,7 @@ TEST_F(ClotTest, Reorder2) {
 
 TEST_F(ClotTest, Resize1) {
     auto test = createClotTest(P4_SOURCE(R"(
+        )"), P4_SOURCE(R"(
             header H1 {
                 bit<96> f1;
                 bit<8> f2;
@@ -855,6 +874,88 @@ TEST_F(ClotTest, Resize1) {
         {"h3.f"},
         {{"h4.f1", FromTo(0, 7)}},
     });
+}
+
+TEST_F(ClotTest, FieldPragma) {
+    auto test = createClotTest(P4_SOURCE(R"(
+            @do_not_use_clot("ingress", "hdr.h.f1")
+            @do_not_use_clot("egress", "hdr.h.f1")
+        )"), P4_SOURCE(R"(
+            header H {
+                bit<64> f1;
+                bit<64> f2;
+                bit<8> f3;
+            }
+        )"), P4_SOURCE(R"(
+            H h;
+        )"), P4_SOURCE(R"(
+            state start {
+                pkt.extract(hdr.h);
+                transition accept;
+            }
+        )"), P4_SOURCE(R"(
+            action act1() { hdr.h.f3 = 0; }
+
+            table t1 {
+                key = { hdr.h.f3 : exact; }
+                actions = { act1; }
+                size = 256;
+            }
+
+            apply {
+                t1.apply();
+            }
+        )"), P4_SOURCE(R"(
+            pkt.emit(hdr.h);
+        )"));
+
+    // -----
+    // h.f1  @pragma do_not_use_clot
+    // h.f2  CLOT
+    // h.f3  written
+    // -----
+    runTest(test, {{"h.f2"}});
+}
+
+TEST_F(ClotTest, HeaderPragma) {
+    auto test = createClotTest(P4_SOURCE(R"(
+            @do_not_use_clot("ingress", "hdr.h")
+            @do_not_use_clot("egress", "hdr.h")
+        )"), P4_SOURCE(R"(
+            header H {
+                bit<64> f1;
+                bit<64> f2;
+                bit<8> f3;
+            }
+        )"), P4_SOURCE(R"(
+            H h;
+        )"), P4_SOURCE(R"(
+            state start {
+                pkt.extract(hdr.h);
+                transition accept;
+            }
+        )"), P4_SOURCE(R"(
+            action act1() { hdr.h.f3 = 0; }
+
+            table t1 {
+                key = { hdr.h.f3 : exact; }
+                actions = { act1; }
+                size = 256;
+            }
+
+            apply {
+                t1.apply();
+            }
+        )"), P4_SOURCE(R"(
+            pkt.emit(hdr.h);
+        )"));
+
+    // -----
+    // h.f1  @pragma do_not_use_clot
+    // h.f2  @pragma do_not_use_clot
+    // h.f3  written, @pragma do_not_use_clot
+    // -----
+    runTest(test, {});
 }
 
 }  // namespace Test
