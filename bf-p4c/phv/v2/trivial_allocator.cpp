@@ -343,10 +343,10 @@ bool TrivialAllocator::allocate(const std::list<PHV::SuperCluster*>& clusters) {
                 "Compiler failed to find PHV allocation for the following cluster, but the "
                 "diagnose process has proved that it actually can be allocated. This is a rare but "
                 "possible case because diagnose algorithm searches differently. Cluster: %1%",
-                pre_sliced.invalid);
+                cstring::to_cstring(pre_sliced.invalid));
             const cstring err_log = make_error_msg(unsliced_sc, err);
             history << err_log;
-            ::error(err_log, cstring::to_cstring(pre_sliced.invalid));
+            ::error("%s", err_log);
             ok = false;
             break;
         }
@@ -359,7 +359,7 @@ bool TrivialAllocator::allocate(const std::list<PHV::SuperCluster*>& clusters) {
             if (!rst->ok()) {
                 const cstring err_log = make_error_msg(sc, rst->err);
                 history << err_log;
-                ::error(err_log);
+                ::error("%s", err_log);
                 ok = false;
                 break;
             }
