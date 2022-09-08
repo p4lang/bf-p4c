@@ -533,6 +533,10 @@ void MeterTable::write_mapram_color_regs(REGS &regs, bool &push_on_overflow) {
 
     for (Layout &row : color_maprams) {
         curr_home_row = get_home_row_for_row(row.row*2);
+        // Allocating color maprams above home row is invalid
+        // as color writes can only be distributed to maprams
+        // via buses going on the home row or below
+        BUG_CHECK(curr_home_row/4U >= row.row/2U);
 
         int color_map_color = color_maprams.empty() ? 0 : (curr_home_row / 4U) & 1;
         if (row.row == curr_home_row/2) { /* on the home row */
@@ -553,19 +557,122 @@ void MeterTable::write_mapram_color_regs(REGS &regs, bool &push_on_overflow) {
             map_alu.mapram_color_switchbox.row[row.row].ctl.t_oflo_color_o_mux_select = 1;
             merge.mau_match_central_mapram_read_color_oflo_ctl |= 1U << color_map_color;
         }
+
+        /*
+         * Below diagrams show how select bits are set to
+         * route color data from meter alu located on the home
+         * row down to the color maprams
+         * *********************************************
+         * - ROUTE FROM RIGHT TO BOTTOM
+         * Bus coming from Meter ALU on current home row
+         *   .------------
+         *   | r_color_write_i
+         *   v
+         * .---.
+         * |   |<---- (select = 1'b1)
+         * |   | b_oflo_color_write_o_sel_r_color_write_i
+         * .___.
+         *   |
+         *   | b_oflo_color_write_o
+         *   v
+         * Bus going to color map rams below
+         *
+         * *********************************************
+         * - ROUTE FROM TOP TO BOTTOM
+         * Bus coming from home row above
+         *   |
+         *   | t_oflo_color_write_i
+         *   v
+         * .---.
+         * |   |<---- (select = 1'b1)
+         * |   | b_oflo_color_write_o_sel_t_oflo_color_write_i
+         * .___.
+         *   |
+         *   | b_oflo_color_write_o
+         *   v
+         * Bus going to color map rams below
+         *
+         * *********************************************
+         * - ROUTE FROM TOP TO RIGHT
+         * Bus coming from home row above
+         *   |
+         *   | t_oflo_color_write_i
+         *   v
+         * .---.
+         * |   |<---- (select = 1'b1)
+         * |   | r_oflo_color_write_o_mux_select
+         * .___.
+         *   |
+         *   | r_oflo_color_write_o
+         *   .---------------->
+         * Bus going to color map rams on right
+         *
+         * *********************************************
+         * Example (P4C-3781)
+         *
+         * A - Meter 1 Map Rams
+         * a - Meter 1 Color Map Rams
+         * B - Meter 1 Map Rams
+         * b - Meter 1 Color Map Rams
+         *
+         * Log Phy            Columns            SW   Mtr
+         * Row Row   0    1    2    3    4    5  Box  ALU
+         *         .---..---..---..---..---..---.
+         *  15  7  | A || A || A || A || A || A | 3    3
+         *         .___..___..___..___..___..___.
+         *         .---..---..---..---..---..---.
+         *  13  6  | A || A || A || A || a || a |
+         *         .___..___..___..___..___..___.
+         *         .---..---..---..---..---..---.
+         *  11  5  | B || B || B || B || B || a | 2    2
+         *         .___..___..___..___..___..___.
+         *         .---..---..---..---..---..---.
+         *   9  4  | B || B || B || B || B || b |
+         *         .___..___..___..___..___..___.
+         *         .---..---..---..---..---..---.
+         *   7  3  | b || b || - || - || - || - | 1    1
+         *         .___..___..___..___..___..___.
+         *
+         * Meter Color Write Switchbox is configured to
+         * - set b_oflo_color_write_o_sel_r_color_write_i (1'b1)
+         *   This routes meter alu 3 data down to rows 6 & 5 where
+         *   meter 1 color maprams are located [6,4] [6,5] [5,5]
+         *
+         * Meter ALU 2 is configured to
+         * - set b_oflo_color_write_o_sel_t_oflo_color_write_i (1'b1)
+         *   This routes meter alu data from above to the
+         *   meter 1 color mapram located at [5,5]
+         * - set b_oflo_color_write_o_sel_r_color_write_i (1'b1)
+         *   This routes meter alu 2 data down to rows 4 & 3 where
+         *   meter 2 color maprams are located [4,5] [3,0] [3,1]
+         */
         if (row.row != curr_home_row/2) { /* ALU home row */
             map_alu.mapram_color_write_switchbox[curr_home_row/4U]
                 .ctl.b_oflo_color_write_o_mux_select
                 .b_oflo_color_write_o_sel_r_color_write_i = 1;
-            map_alu.mapram_color_write_switchbox[row.row/2U].ctl.r_oflo_color_write_o_mux_select
-                = 1;
+            map_alu.mapram_color_write_switchbox[row.row/2U]
+                .ctl.r_oflo_color_write_o_mux_select = 1;
             BUG_CHECK(curr_home_row/4U >= row.row/2U);
-            for (int i = curr_home_row/4U - 1; i >= static_cast<int>(row.row/2U); i--) {
-                /* b_oflo_color_write_o_sel_t_oflo_color_write_i must be set of all
-                 * switchboxes below the homerow
-                 */
-                map_alu.mapram_color_write_switchbox[i].ctl.b_oflo_color_write_o_mux_select
-                    .b_oflo_color_write_o_sel_t_oflo_color_write_i = 1; } }
+            /* b_oflo_color_write_o_sel_t_oflo_color_write_i must be set for all
+             * switchboxes below the homerow and above current row
+	     * It should never be set for a switchbox above the home row
+             * It should never be set on the switchbox on the current row
+             * as that would drive the top overflow down to any color maprams below.
+             * This is invalid and can cause corruption if there is another meter occupying
+             * color maprams on the below row. (P4C-4781)
+             */
+            // Switch box below home row
+            int switchbox_upper = curr_home_row/4U - 1;
+            // Switch box above current row
+            int switchbox_lower = row.row % 2 ? (int)row.row/2U + 1 : (int)row.row/2U;
+            for (int i = switchbox_upper; i >= switchbox_lower; i--) {
+                 if (i == 3) continue;  // Never set on top switchbox
+
+                 map_alu.mapram_color_write_switchbox[i]
+                     .ctl.b_oflo_color_write_o_mux_select
+                     .b_oflo_color_write_o_sel_t_oflo_color_write_i = 1;
+            }
+        }
         auto &map_alu_row =  map_alu.row[row.row];
         auto vpn = row.vpns.begin();
         if (color_mapram_addr == STATS_MAP_ADDR) {
@@ -642,7 +749,38 @@ void MeterTable::write_mapram_color_regs(REGS &regs, bool &push_on_overflow) {
             }
             if (gress)
                 regs.cfg_regs.mau_cfg_mram_thread[col/3U] |= 1U << (col%3U*8U + row.row);
-            ++vpn; } }
+            ++vpn;
+	}
+    }
+
+    // Additional BUG_CHECK to verify that both these regs are not set on a switchbox
+    // - map_alu.mapram_color_write_switchbox[x].ctl.b_oflo_color_write_o_sel_r_color_write_i
+    // - map_alu.mapram_color_write_switchbox[x].ctl.b_oflo_color_write_o_sel_t_oflo_color_write_i
+    // Both these regs should never be set on a swithbox as it implies routing from both top and
+    // right map alu to the bottom rows. This leads to corruption of color data (P4C-4781)
+    // Additional BUG_CHECK to verify that top row switchbox does not have
+    // this regs set
+    // - map_alu.mapram_color_write_switchbox[x].ctl.b_oflo_color_write_o_sel_t_oflo_color_write_i
+    for (int i = 0; i <= 3; i++) {
+        auto t_oflo_write_i =
+            map_alu.mapram_color_write_switchbox[i]
+             .ctl.b_oflo_color_write_o_mux_select
+             .b_oflo_color_write_o_sel_t_oflo_color_write_i == 1;
+        if (i == 3) {
+            BUG_CHECK(!t_oflo_write_i,
+                     "Color maprams have invalid configuration"
+                     " may cause corruption of color data from meter");
+        }
+        auto r_oflo_write_i =
+            map_alu.mapram_color_write_switchbox[i]
+             .ctl.b_oflo_color_write_o_mux_select
+             .b_oflo_color_write_o_sel_r_color_write_i == 1;
+        LOG5("i: " << i << "t_oflo: " << t_oflo_write_i 
+		        << ", r_oflo: " << r_oflo_write_i);
+        BUG_CHECK(!(t_oflo_write_i & r_oflo_write_i),
+                 "Color maprams have invalid configuration"
+                 " may cause corruption of color data from meter");
+    }
 }
 
 template<class REGS>
