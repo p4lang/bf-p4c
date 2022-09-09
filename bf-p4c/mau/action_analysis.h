@@ -32,6 +32,7 @@ struct TableResourceAlloc;
  */
 class ActionAnalysis : public MauInspector, TofinoWriteContext {
  public:
+    enum op_type_t { NONE=0, DST, SRC1, SRC2, SRC3 };
     static constexpr int LOADCONST_MAX = 21;
     static constexpr int CONST_SRC_MAX = 3;
     static constexpr int JBAY_CONST_SRC_MIN = 2;
@@ -166,7 +167,9 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     struct Alignment {
         le_bitrange write_bits;
         le_bitrange read_bits;
-        Alignment(le_bitrange wb, le_bitrange rb) : write_bits(wb), read_bits(rb) {}
+        op_type_t read_src;
+        Alignment(le_bitrange wb, le_bitrange rb, op_type_t rs = NONE)
+            : write_bits(wb), read_bits(rb), read_src(rs) {}
 
         int right_shift(PHV::Container container) const;
         friend std::ostream &operator<<(std::ostream &out, const Alignment&);
@@ -366,7 +369,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         TotalAlignment extra_resize_reads;
 
 
-        std::map<PHV::Container, safe_vector<Alignment>> initialization_phv_alignment;
+        ordered_map<PHV::Container, safe_vector<Alignment>> initialization_phv_alignment;
         // A container can be sourced multiple times, and thus this has become a multimap
         std::multimap<PHV::Container, TotalAlignment> phv_alignment;
 
@@ -472,6 +475,10 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
             return true;
         }
 
+        bool is_total_overwrite_possible() {
+            return total_overwrite_possible && !is_shift();
+        }
+
         // FIXME: Can potentially use rotational shifts at some point
         // bool is_contig_rotate(bitvec check, int &shift, int size);
         // bitvec rotate_contig(bitvec orig, int shift, int size);
@@ -507,6 +514,26 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         bool convert_constant_to_hash() const {
             return (error_code & CONSTANT_TO_HASH) != 0;
         }
+
+        bool is_commutative() const {
+            if ((name == "sub")
+               || (name == "subc")
+               || (name == "ssubu")
+               || (name == "ssubs")
+               // JBAY / CLOUDBREAK
+               || (name == "gtequ")
+               || (name == "gteqs")
+               || (name == "gtu")
+               || (name == "gts")
+               || (name == "ltu")
+               || (name == "lts")
+               || (name == "lequ")
+               || (name == "leqs")
+               // JBAY / CLOUDBREAK
+               ) return false;
+            return true;
+        }
+
         friend std::ostream &operator<<(std::ostream &out, const ContainerAction&);
         std::string to_string() const;
     };
@@ -566,11 +593,11 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
 
     bool initialize_invalidate_alignment(const ActionParam &write, ContainerAction &cont_action);
     bool initialize_alignment(const ActionParam &write, const ActionParam &read,
-        ContainerAction &cont_action, cstring &error_message, PHV::Container container,
-        cstring action_name);
-    bool init_phv_alignment(const ActionParam &read, ContainerAction &cont_action,
-                            le_bitrange write_bits, PHV::Container container,
-                            cstring &error_message);
+        const op_type_t read_src, ContainerAction &cont_action, cstring &error_message,
+        PHV::Container container, cstring action_name);
+    bool init_phv_alignment(const ActionParam &read, const op_type_t read_src,
+                            ContainerAction &cont_action, le_bitrange write_bits,
+                            PHV::Container container, cstring &error_message);
     bool init_special_alignment(const ActionParam &read, ContainerAction &cont_action,
         le_bitrange write_bits, cstring action_name, PHV::Container container);
     bool init_ad_alloc_alignment(const ActionParam &read, ContainerAction &cont_action,
@@ -593,8 +620,8 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     void verify_conditional_set_without_phv(cstring action_name, FieldAction &fa);
 
     void verify_P4_action_for_tofino(cstring action_name);
-    bool verify_P4_action_without_phv(cstring action_name);
-    bool verify_P4_action_with_phv(cstring action_name);
+    void verify_P4_action_without_phv(cstring action_name);
+    void verify_P4_action_with_phv(cstring action_name);
 
     bool is_allowed_unalloc(const IR::Expression *e) {
         if (!allow_unalloc) return false;

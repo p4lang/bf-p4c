@@ -801,8 +801,7 @@ const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
     for (auto &container_action : container_actions_map) {
         auto container = container_action.first;
         auto &cont_action = container_action.second;
-        LOG5(cont_action << ", error_mask: "
-            << (ActionAnalysis::ContainerAction::error_code_t)error_mask);
+        LOG5(cont_action << ", error_mask: " << std::hex << error_mask << std::dec);
         if ((cont_action.error_code & error_mask) != 0) continue;
         LOG5(" Container Action ops: " << cont_action.operands()
                 << ", alignment_counts: " << cont_action.alignment_counts());
@@ -810,6 +809,7 @@ const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
             if (!cont_action.convert_instr_to_deposit_field
                 && !cont_action.convert_instr_to_bitmasked_set
                 && !cont_action.convert_instr_to_byte_rotate_merge
+                && !cont_action.is_total_overwrite_possible()
                 && !cont_action.adi.specialities.getbit(ActionAnalysis::ActionParam::HASH_DIST)
                 && !cont_action.adi.specialities.getbit(ActionAnalysis::ActionParam::RANDOM)
                 && !cont_action.adi.specialities.getbit(ActionAnalysis::ActionParam::METER_ALU)
@@ -1157,26 +1157,25 @@ IR::MAU::Instruction *MergeInstructions::dest_slice_to_container(PHV::Container 
 void MergeInstructions::build_actiondata_source(ActionAnalysis::ContainerAction &cont_action,
         const IR::Expression **src1_p, bitvec &src1_writebits, ByteRotateMergeInfo &brm_info,
         PHV::Container container) {
+    Log::TempIndent indent;
+    LOG5("Building action data source " << indent);
     IR::Vector<IR::Expression> components;
     auto &adi = cont_action.adi;
     if (adi.specialities.getbit(ActionAnalysis::ActionParam::HASH_DIST)) {
         *src1_p = fill_out_hash_operand(container, cont_action);
         src1_writebits = adi.alignment.write_bits();
-        LOG5("\t\tbuild_actiondata_source for hashdist " << cont_action.name <<
-             "  writebits:" << src1_writebits);
+        LOG5("hashdist " << cont_action.name << "  writebits:" << src1_writebits);
     } else if (adi.specialities.getbit(ActionAnalysis::ActionParam::RANDOM)) {
         *src1_p = fill_out_rand_operand(container, cont_action);
         src1_writebits = adi.alignment.write_bits();
-        LOG5("\t\tbuild_actiondata_source for ramdom " << cont_action.name <<
-             "  writebits:" << src1_writebits);
+        LOG5("random " << cont_action.name << "  writebits:" << src1_writebits);
     } else if (cont_action.ad_renamed()) {
         auto mo = new IR::MAU::MultiOperand(components, adi.action_data_name, false);
         fill_out_read_multi_operand(cont_action, ActionAnalysis::ActionParam::ACTIONDATA,
                                     adi.action_data_name, mo);
         *src1_p = mo;
         src1_writebits = adi.alignment.write_bits();
-        LOG5("\t\tbuild_actiondata_source for multiOp " << adi.action_data_name <<
-             "  writebits:" << src1_writebits);
+        LOG5("multiOp " << adi.action_data_name << "  writebits:" << src1_writebits);
     } else {
         bool single_action_data = true;
         for (auto &field_action : cont_action.field_actions) {
@@ -1189,8 +1188,7 @@ void MergeInstructions::build_actiondata_source(ActionAnalysis::ContainerAction 
                           "does require an alias");
                 *src1_p = read.expr;
                 src1_writebits = adi.alignment.write_bits();
-                LOG5("\t\tbuild_actiondata_source for field " << field_action.name <<
-                     "  writebits:" << src1_writebits);
+                LOG5("field " << field_action.name << "  writebits:" << src1_writebits);
 
                 single_action_data = false;
             }
@@ -1213,10 +1211,13 @@ void MergeInstructions::build_actiondata_source(ActionAnalysis::ContainerAction 
 void MergeInstructions::build_phv_source(ActionAnalysis::ContainerAction &cont_action,
         const IR::Expression **src1_p, const IR::Expression **src2_p, bitvec &src1_writebits,
         bitvec &src2_writebits, ByteRotateMergeInfo &brm_info, PHV::Container container) {
+    Log::TempIndent indent;
+    LOG5("Building PHV Source on container " << container << indent);
     IR::Vector<IR::Expression> components;
     for (auto &phv_ta : cont_action.phv_alignment) {
         auto read_container = phv_ta.first;
         auto read_alignment = phv_ta.second;
+        LOG5("PHV Align: " << read_container << ":" << read_alignment);
         if (read_alignment.is_src1) {
             auto mo = new IR::MAU::MultiOperand(components, read_container.toString(), true);
             fill_out_read_multi_operand(cont_action, ActionAnalysis::ActionParam::PHV,
@@ -1236,6 +1237,7 @@ void MergeInstructions::build_phv_source(ActionAnalysis::ContainerAction &cont_a
                                         src1_read_bits.max().index());
                 }
             }
+            LOG5("Src1: " << *src1_p);
         } else {
             auto mo = new IR::MAU::MultiOperand(components, read_container.toString(), true);
             fill_out_read_multi_operand(cont_action, ActionAnalysis::ActionParam::PHV,
@@ -1244,6 +1246,7 @@ void MergeInstructions::build_phv_source(ActionAnalysis::ContainerAction &cont_a
             src2_writebits = read_alignment.write_bits();
             if (cont_action.convert_instr_to_byte_rotate_merge)
                 brm_info.src2_shift = read_alignment.right_shift / 8;
+            LOG5("Src2: " << *src2_p);
         }
     }
 }
@@ -1277,7 +1280,6 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
     Log::TempIndent indent;
     LOG3("Building merge instruction for container : " << std::dec
             << container << " on container action : " << cont_action << indent);
-    LOG3(cont_action);
     if (cont_action.is_shift()) {
         unsigned error_mask = ActionAnalysis::ContainerAction::PARTIAL_OVERWRITE;
         BUG_CHECK((cont_action.error_code & error_mask) != 0,
@@ -1297,31 +1299,42 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
                 cont_action.counts[ActionAnalysis::ActionParam::CONSTANT] >= 1), "Before "
               "merge instructions, some constant was not converted to action data");
 
-    if (cont_action.counts[ActionAnalysis::ActionParam::ACTIONDATA] == 1) {
-        build_actiondata_source(cont_action, &src1, src1_writebits, brm_info, container);
-        LOG5("\t ACTION DATA SOURCE for " << cont_action.name << " : " << src1_writebits);
-    } else if (cont_action.counts[ActionAnalysis::ActionParam::CONSTANT] > 0) {
-        // Constant merged into a single constant over the entire container
-        unsigned constant_value = cont_action.ci.valid_instruction_constant(container.size());
-        int width_bits;
-        if ((cont_action.error_code & ActionAnalysis::ContainerAction::REFORMAT_CONSTANT) == 0
-          && (cont_action.error_code & ActionAnalysis::ContainerAction::PARTIAL_OVERWRITE) == 0)
-            width_bits = cont_action.ci.alignment.bitrange_size();
-        else
-            width_bits = container.size();
-        src1 = new IR::Constant(IR::Type::Bits::get(width_bits), constant_value);
-        src1_writebits = cont_action.ci.alignment.write_bits();
-        LOG5("\t CONSTANT SOURCE for " << cont_action.name
-                << " : " << src1_writebits << ", value: " << src1);
-    }
-
-
     // Go through all PHV sources and create src1/src2 if a source is contained within these
     // PHV fields
     build_phv_source(cont_action, &src1, &src2, src1_writebits, src2_writebits, brm_info,
                      container);
-    LOG5("\t PHV SOURCE for " << cont_action.name << " : " << src1_writebits);
 
+    auto build_non_phv_source = [&](const IR::Expression **src, bitvec &src_writebits) {
+        if (cont_action.counts[ActionAnalysis::ActionParam::ACTIONDATA] == 1) {
+            build_actiondata_source(cont_action, src, src_writebits, brm_info, container);
+            LOG5("ACTION DATA SOURCE for " << cont_action.name << " : " << src1_writebits);
+        } else if (cont_action.counts[ActionAnalysis::ActionParam::CONSTANT] > 0) {
+            // Constant merged into a single constant over the entire container
+            unsigned constant_value = cont_action.ci.valid_instruction_constant(container.size());
+            int width_bits;
+            if ((cont_action.error_code & ActionAnalysis::ContainerAction::REFORMAT_CONSTANT) == 0
+              && (cont_action.error_code & ActionAnalysis::ContainerAction::PARTIAL_OVERWRITE) == 0)
+                width_bits = cont_action.ci.alignment.bitrange_size();
+            else
+                width_bits = container.size();
+            *src = new IR::Constant(IR::Type::Bits::get(width_bits), constant_value);
+            src_writebits = cont_action.ci.alignment.write_bits();
+            LOG5("CONSTANT SOURCE for " << cont_action.name
+                    << " : " << src1_writebits << ", value: " << src1);
+        }
+    };
+
+    // For non commutative actions, src1 and src2 positions are fixed. Check is_commutative() on
+    // ContainerAction for a list of these instructions. build_phv_source will set a source in that
+    // case and we use the other source for action data / constant
+    if (src1) {
+        build_non_phv_source(&src2, src2_writebits);
+    } else {
+        build_non_phv_source(&src1, src1_writebits);
+    }
+    LOG5("PHV / ACTIONDATA / CONSTANT SOURCE for " << cont_action.name
+            << " SRC1: " << src1 << "(" << src1_writebits << ")"
+            << " SRC2: " << src2 << "(" << src2_writebits << ")");
 
     // Src1 is not sourced from parameters, but instead is equal to the destination: P4C-914
     if (cont_action.implicit_src1) {
@@ -1330,7 +1343,7 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
         bitvec reverse = bitvec(0, container.size()) - src2_writebits;
         src1 = MakeSlice(src1, reverse.min().index(), reverse.max().index());
         src1_writebits = reverse;
-        LOG5("\t IMPLICIT SOURCE for " << cont_action.name << " : " << src1_writebits);
+        LOG5("IMPLICIT SOURCE for " << cont_action.name << " : " << src1_writebits);
     }
 
     // Src2 is not sources from parameters, but instead is equal to the destination: BRIG-883
@@ -1350,7 +1363,7 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
     if (cont_action.convert_instr_to_deposit_field
             || cont_action.is_deposit_field_variant) {
         dst = MakeSlice(dst, src1_writebits.min().index(), src1_writebits.max().index());
-        LOG5("\t DESTINATION for " << cont_action.name << " : " << dst);
+        LOG5("DESTINATION for " << cont_action.name << " : " << dst);
     }
 
     cstring instr_name = cont_action.name;
@@ -1363,17 +1376,22 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
 
     IR::MAU::Instruction *merged_instr = new IR::MAU::Instruction(instr_name);
     merged_instr->operands.push_back(dst);
-    LOG5("\t PUSHED DESTINATION for " << cont_action.name << " : " << dst);
+    LOG5("PUSHED DESTINATION for " << cont_action.name << " : " << dst);
 
     if (!cont_action.no_sources()) {
         BUG_CHECK(src1 != nullptr, "No src1 in a merged instruction");
         merged_instr->operands.push_back(src1);
+        LOG5("PUSHED SRC1 for " << cont_action.name << " : " << src1);
     }
-    if (src2)
+    if (src2) {
         merged_instr->operands.push_back(src2);
+        LOG5("PUSHED SRC2 for " << cont_action.name << " : " << src2);
+    }
     // Currently bitmasked-set requires at least 2 source operands, or it crashes
-    if (cont_action.convert_instr_to_bitmasked_set && !src2)
+    if (cont_action.convert_instr_to_bitmasked_set && !src2) {
         merged_instr->operands.push_back(dst);
+        LOG5("A. PUSHED DESTINATION for " << cont_action.name << " (Bitmasked-Set) : " << dst);
+    }
 
     // For a byte-rotate-merge, the last 3 opcodes are the src1 shift, the src2 shift,
     // and the src1 byte mask

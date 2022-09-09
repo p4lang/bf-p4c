@@ -574,11 +574,13 @@ bitvec PhvInfo::bits_allocated(
         const ordered_set<const PHV::Field*>& writes,
         const PHV::AllocContext *ctxt,
         const PHV::FieldUse* use) const {
+    Log::TempIndent indent;
+    LOG3("Allocating bits for continer : " << c << ", writes: " << writes
+            << ", ctxt: " << *ctxt << ", use: " << *use << indent);
     bitvec ret_bitvec;
     auto& fields = fields_in_container(c);
 
     if (fields.size() == 0) return ret_bitvec;
-    LOG5("\t Write fields: " << writes);
 
     // Gather all the slices of written fields allocated to container c
     std::vector<PHV::AllocSlice> write_slices_in_container;
@@ -588,12 +590,15 @@ bitvec PhvInfo::bits_allocated(
             write_slices_in_container.push_back(alloc);
         });
     }
-    LOG5("\t Write slices in container: " << write_slices_in_container);
+    LOG5("Write slices in container: " << write_slices_in_container);
     for (auto* field : fields) {
         if (field->padding) continue;
-        LOG3("\t   Container field: " << field->name);
+        LOG3("Container field: " << field->name);
 
         field->foreach_alloc(ctxt, use, [&](const PHV::AllocSlice &alloc) {
+            LOG3("Alloc Container: " << alloc.container()
+                << ", isUninitializedRead: " << (alloc.isUninitializedRead() ? "Y" : "N")
+                << ", slice: " << alloc.container_slice());
             // Filter out alloc slices not in container
             if (alloc.container() != c) return;
             // If a slice is an uninitialized read then no bits are effectively occupied by that
@@ -622,7 +627,7 @@ bitvec PhvInfo::bits_allocated(
             bool dark_overlay = std::any_of(
                 write_slices_in_container.begin(), write_slices_in_container.end(),
                 [&](const PHV::AllocSlice& slice) {
-                    LOG5("\t\t\t Dark Mutex with " << slice.field()->name << " is " <<
+                    LOG5("Dark Mutex with " << slice.field()->name << " is " <<
                         dark_mutex_i(slice.field()->id, alloc.field()->id));
                     return bits.overlaps(slice.container_slice()) &&
                         dark_mutex_i(slice.field()->id, alloc.field()->id);
@@ -633,8 +638,9 @@ bitvec PhvInfo::bits_allocated(
             if (Device::phvSpec().hasContainerKind(PHV::Kind::dark) && !c.is(PHV::Kind::dark))
                 noMutex = noMutex && !dark_overlay;
 
-            LOG3("\t\t For field " << field->name << "  mutex control:" << mutually_exclusive <<
-                 " meta:" << meta_overlay << " dark:" << dark_overlay << " is_alias:" << is_alias);
+            LOG3("For field " << field->name << "  mutex control:" << mutually_exclusive <<
+                 " meta:" << meta_overlay << " dark:" << dark_overlay << " is_alias:" << is_alias
+                 << " noMutex: " << noMutex << " bits: " << bits);
 
             if (noMutex) {
                 ret_bitvec.setrange(bits.lo, bits.size());
@@ -2258,6 +2264,13 @@ CollectPhvInfo::CollectPhvInfo(PhvInfo& phv) {
 //
 //***********************************************************************************
 //
+
+std::ostream &PHV::operator<<(std::ostream &out, const PHV::AllocContext &ac) {
+    out << "Context [ " << ac.typeStr();
+    if (ac.is_table() && ac.table) out << " " << ac.table->name;
+    out << " ]";
+    return out;
+}
 
 std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
     out << field.id << ':' << field.name << '<' << field.size << '>';

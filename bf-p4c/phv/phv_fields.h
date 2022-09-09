@@ -78,9 +78,15 @@ class AllocContext {
     }
 
  public:
-    bool is_parser() { return type == Type::PARSER; }
-    bool is_deparser() { return type == Type::DEPARSER; }
-    bool is_table() { return type == Type::TABLE; }
+    bool is_parser() const { return type == Type::PARSER; }
+    bool is_deparser() const { return type == Type::DEPARSER; }
+    bool is_table() const { return type == Type::TABLE; }
+    cstring typeStr() const {
+        if (is_parser()) return "PARSER";
+        else if (is_deparser()) return "DEPARSER";
+        else if (is_table()) return "TABLE";
+        return "NONE";
+    }
 
     static const AllocContext* PARSER;
     static const AllocContext* DEPARSER;
@@ -99,6 +105,7 @@ class AllocContext {
             unit);
     }
 };
+std::ostream& operator<<(std::ostream&, const AllocContext&);
 
 struct FieldOperation {
     bool is_bitwise_op;
