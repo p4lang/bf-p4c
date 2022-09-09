@@ -38,8 +38,12 @@ typedef std::unordered_map<const IR::P4Control*,
  * \ingroup stateful_alu
  * \brief The pass replaces the Register.read/write() calls with register actions.
  *
- *  The pass must be invoked prefereably towards the end of mid-end to account for
- *  any mid-end optimizations like constant folding, propogation, etc.
+ * The pass must be invoked prefereably towards the end of mid-end to account for
+ * any mid-end optimizations like constant folding, propogation, etc.
+ *
+ * The subpass CheckRegisterActions checks the limit of number of %RegisterActions attached
+ * to a single %Register; <b>not only of the %RegisterActions introduced
+ * by the RegisterReadWrite pass</b>.
  */
 class RegisterReadWrite : public PassManager {
     P4::ReferenceMap *refMap;
@@ -51,12 +55,32 @@ class RegisterReadWrite : public PassManager {
 
     /**
      * \ingroup stateful_alu
+     * \brief The pass checks the limit of number of %RegisterActions attached
+     * to a single %Register.
+     *
+     * The check is performed for all %RegisterActions, not only for those introduced
+     * by the RegisterReadWrite pass.
+     */
+    class CheckRegisterActions : public Inspector {
+        RegisterReadWrite &self;
+        std::unordered_map<const IR::Declaration_Instance *, int> reg_act_cnt;
+
+     public:
+        explicit CheckRegisterActions(RegisterReadWrite &self) :
+             self(self) {}
+
+        bool preorder(const IR::Declaration_Instance* di) override;
+        void end_apply() override;
+    };
+
+    /**
+     * \ingroup stateful_alu
      * \brief Using maps built in BFN::RegisterReadWrite::CollectRegisterReadsWrites
      * and BFN::RegisterReadWrite::AnalyzeActionWithRegisterCalls passes, it adds newly
      * created register actions to the IR and replaces Register.read/write() calls with
      * RegisterAction.execute() calls.
      */
-    class UpdateRegisterActionsAndExecuteCalls: public Transform {
+    class UpdateRegisterActionsAndExecuteCalls : public Transform {
         RegisterReadWrite &self;
         std::map<const IR::P4Control*, IR::Declaration_Instance*> register_actions;
         IR::Node *preorder(IR::P4Action*) override;
@@ -91,7 +115,6 @@ class RegisterReadWrite : public PassManager {
             const IR::Expression *read_expr = nullptr;
         };
         bool preorder(const IR::Declaration*) override;
-        void end_apply() override;
 
         IR::MethodCallExpression*
         createRegisterExecute(IR::MethodCallExpression *reg_execute,
@@ -157,6 +180,8 @@ class RegisterReadWrite : public PassManager {
             new P4::ClearTypeMap(typeMap),
             new CopyHeaders(refMap, typeMap, typeChecking),
             new P4::ClearTypeMap(typeMap),
+            typeChecking,
+            new CheckRegisterActions(*this)
         });
     }
 

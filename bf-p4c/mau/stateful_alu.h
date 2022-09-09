@@ -57,6 +57,7 @@
  *   2. BFN::RegisterReadWrite::CollectRegisterReadsWrites
  *   3. BFN::RegisterReadWrite::AnalyzeActionWithRegisterCalls
  *   4. BFN::RegisterReadWrite::UpdateRegisterActionsAndExecuteCalls
+ *   5. BFN::RegisterReadWrite::CheckRegisterActions
  *
  * Post-mid-end passes involved:
  *

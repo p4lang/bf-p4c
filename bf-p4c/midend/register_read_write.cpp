@@ -3,8 +3,36 @@
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/mau/stateful_alu.h"
 #include "bf-p4c/device.h"
+#include "bf-p4c/arch/helpers.h"
 
 namespace BFN {
+
+bool RegisterReadWrite::CheckRegisterActions::preorder(const IR::Declaration_Instance* di) {
+    auto inst = dynamic_cast<P4::ExternInstantiation*>(
+        P4::ExternInstantiation::resolve(di, self.refMap, self.typeMap));
+    if (!inst || inst->type->name != "RegisterAction") return true;
+    auto *path_expr = inst->constructorArguments->at(0)->expression->to<IR::PathExpression>();
+    BUG_CHECK(path_expr != nullptr, "Expected PathExpression");
+    auto *decl_inst = getDeclInst(self.refMap, path_expr);
+    BUG_CHECK(decl_inst != nullptr, "Expected Declaration_Instance");
+    // If there is no item, add it and init the counter to 1
+    reg_act_cnt[decl_inst]++;
+    return false;
+}
+
+/*
+ * Check the number of register actions attached to registers. It cannot exceed 4.
+ * This is a Tofino 1/2/3 HW restriction.
+ */
+void RegisterReadWrite::CheckRegisterActions::end_apply() {
+    for (auto &item : reg_act_cnt) {
+        if (item.second > Device::statefulAluSpec().MaxInstructions)
+            ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                "%1%: too many actions try to access the register. The target limits the number "
+                "of actions accessing a single register to %2%. Reorganize your code to meet "
+                "this restriction.", item.first, Device::statefulAluSpec().MaxInstructions);
+    }
+}
 
 /**
  * The method checks whether the form of the read/write register call is correct,
@@ -450,30 +478,6 @@ bool RegisterReadWrite::AnalyzeActionWithRegisterCalls::preorder(const IR::Decla
     }
 
     return false;
-}
-
-/*
- * Check the number of register actions attached to registers. It cannot exceed 4.
- * This is a Tofino 1/2/3 HW restriction.
- */
-void RegisterReadWrite::AnalyzeActionWithRegisterCalls::end_apply() {
-    std::map<const IR::Declaration_Instance *, int> count;
-    for (auto act_map : self.action_register_exec_calls) {
-        for (auto reg_map : act_map.second) {
-            auto reg = reg_map.first;
-            if (count.count(reg) == 0)
-                count[reg] = 1;
-            else
-                count[reg]++;
-        }
-    }
-    for (auto count_item : count) {
-        if (count_item.second > Device::statefulAluSpec().MaxInstructions)
-            ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
-                "%1%: too many actions try to access the register. The target limits the number "
-                "of actions accessing a single register to %2%. Reorganize your code to meet "
-                "this restriction.", count_item.first, Device::statefulAluSpec().MaxInstructions);
-    }
 }
 
 void RegisterReadWrite::CollectRegisterReadsWrites::collectRegReadWrite(
