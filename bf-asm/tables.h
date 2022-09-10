@@ -1114,12 +1114,8 @@ DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam,
  public:
     Format::Field *lookup_field(const std::string &n, const std::string &act = "") const override;
     virtual void setup_word_ixbar_group();
-    virtual void verify_format(Target::Tofino);
-    virtual void verify_format_pass2(Target::Tofino);
-#if HAVE_FLATROCK
-    virtual void verify_format(Target::Flatrock);
-    virtual void verify_format_pass2(Target::Flatrock);
-#endif
+    OVERLOAD_FUNC_FOREACH(TARGET_CLASS, virtual void, verify_format, (), ())
+    OVERLOAD_FUNC_FOREACH(TARGET_CLASS, virtual void, verify_format_pass2, (), ())
     virtual bool verify_match_key();
     void verify_match(unsigned fmt_width);
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) const override {
@@ -1990,17 +1986,10 @@ DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
     void parse_register_params(int idx, const value_t &val);
     int64_t get_const_val(int index) const { return const_vals.at(index).value; }
     Actions::Action *action_for_table_action(const MatchTable *tbl, const Actions::Action *) const;
-    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
-        static int parse_counter_mode, (target_type, const value_t &))
-    static int parse_counter_mode(const value_t &v) {
-        SWITCH_FOREACH_TARGET(options.target, return parse_counter_mode(TARGET(), v););
-        return 0;  // should not reach here, but avoid warning
-    }
-    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD, void set_counter_mode, (target_type, int))
-    void set_counter_mode(int mode) {
-        SWITCH_FOREACH_TARGET(options.target, set_counter_mode(TARGET(), mode);); }
-    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
-        void gen_tbl_cfg, (target_type, json::map &, json::map &), const)
+    OVERLOAD_FUNC_FOREACH(REGISTER_SET, static int, parse_counter_mode, (const value_t &v), (v))
+    OVERLOAD_FUNC_FOREACH(REGISTER_SET, void, set_counter_mode, (int mode), (mode))
+    OVERLOAD_FUNC_FOREACH(REGISTER_SET,
+        void, gen_tbl_cfg, (json::map &tbl, json::map &stage_tbl) const, (tbl, stage_tbl))
 #if HAVE_JBAY
     BFN::Alloc1D<StatefulAlu::TMatchInfo, Target::JBay::STATEFUL_TMATCH_UNITS>       tmatch_use;
 #endif  /* HAVE_JBAY */

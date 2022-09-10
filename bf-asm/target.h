@@ -10,6 +10,8 @@
 /** FOR_ALL_TARGETS -- metamacro that expands a macro for each defined target
  *  FOR_ALL_REGISTER_SETS -- metamacro that expands for each distinct register set;
  *              basically a subset of targets with one per distinct register set
+ *  FOR_ALL_TARGET_CLASSES -- metamacro that expands for each distinct target class
+ *              a subset of the register sets
  */
 #if HAVE_FLATROCK  /* for now also implies HAVE_CLOUDBREAK and HAVE_JBAY */
 #define FOR_ALL_TARGETS(M, ...) \
@@ -65,6 +67,10 @@
 #define FOR_ALL_TARGET_CLASSES(M, ...) \
     M(Tofino, ##__VA_ARGS__)
 #endif  /* !HAVE_FLATROCK && !HAVE_CLOUBREAK && !HAVE_JBAY */
+// alias FOR_ALL -> FOR_EACH so the the group name does need to be plural
+#define FOR_EACH_TARGET         FOR_ALL_TARGETS
+#define FOR_EACH_REGISTER_SET   FOR_ALL_REGISTER_SETS
+#define FOR_EACH_TARGET_CLASS   FOR_ALL_TARGET_CLASSES
 
 #if HAVE_FLATROCK
 #define TARGETS_IN_CLASS_Flatrock(M, ...) M(Flatrock, ##__VA_ARGS__)
@@ -116,7 +122,9 @@
 #define TARGETS_USING_REGS(CL, ...) TARGETS_USING_REGS_##CL(__VA_ARGS__)
 #define REGSETS_IN_CLASS(CL, ...) REGSETS_IN_CLASS_##CL(__VA_ARGS__)
 
-#define EXPAND(...)     __VA_ARGS__
+#define EXPAND(...)             __VA_ARGS__
+#define EXPAND_COMMA(...)       ,##__VA_ARGS__
+#define EXPAND_COMMA_CLOSE(...) ,##__VA_ARGS__ )
 #define INSTANTIATE_TARGET_TEMPLATE(TARGET, FUNC, ...)  template FUNC(Target::TARGET::__VA_ARGS__);
 #define DECLARE_TARGET_CLASS(TARGET, ...)       class TARGET __VA_ARGS__;
 #define FRIEND_TARGET_CLASS(TARGET, ...)        friend class Target::TARGET __VA_ARGS__;
@@ -1029,5 +1037,24 @@ void emit_parser_registers(const Target::Flatrock::top_level_regs *regs, std::os
             break; }
 
 #define CASE_FOR_TARGET(TARGET) case Target::TARGET::tag:
+
+/* macro to define a function that overloads over a GROUP of types -- will declare all the
+ * functions that overload on a Target::type argument and a 'generic' overload that calls
+ * the right specific overload based on options.target
+ * GROUP can be one of
+ *    TARGET -- overload on all the different targets
+ *    REGISTER_SET -- overload just on the register sets (targets that share a register
+ *                    set will only have one overload)
+ *    TARGET_CLASS -- overload based on the CLASS (currently just Tofino or Flatrock)
+ * RTYPE NAME ARGDECL together make the declaration of the (generic) function, the overloads
+ * will all have a Target::type argument prepended.  The final ARGS argument is the argument
+ * list that that will be forwarded (basically ARGDECL without the types)
+ */
+#define DECL_OVERLOAD_FUNC(TARGET, RTYPE, NAME, ARGDECL, ARGS)                          \
+    RTYPE NAME(Target::TARGET EXPAND_COMMA_CLOSE ARGDECL;
+#define OVERLOAD_FUNC_FOREACH(GROUP, RTYPE, NAME, ARGDECL, ARGS)                        \
+    FOR_EACH_##GROUP(DECL_OVERLOAD_FUNC, RTYPE, NAME, ARGDECL, ARGS)                    \
+    RTYPE NAME ARGDECL {                                                                \
+        SWITCH_FOREACH_##GROUP(options.target, return NAME(TARGET() EXPAND_COMMA ARGS); ) }
 
 #endif /* BF_ASM_TARGET_H_ */

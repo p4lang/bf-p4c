@@ -732,7 +732,7 @@ void SRamMatchTable::pass1() {
     LOG1("### SRam match table " << name() << " pass1 " << loc());
     alloc_busses(stage->sram_search_bus_use);
     if (format) {
-        SWITCH_FOREACH_TARGET_CLASS(options.target, verify_format(TARGET()); )
+        verify_format();
         setup_ways();
         determine_word_and_result_bus();
     }
