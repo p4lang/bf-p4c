@@ -17,6 +17,15 @@
 #include "cloudbreak/input_xbar.h"
 #include "flatrock/input_xbar.h"
 
+void HashCol::dbprint(std::ostream & out) const {
+    out << "HashCol: " <<
+           " lineno: " << lineno <<
+           " bit: " << bit <<
+           " data: " << data <<
+           " valid: " << valid;
+    if (fn) out << " fn: " << *fn << std::endl;
+}
+
 DynamicIXbar::DynamicIXbar(const Table *tbl, const pair_t &data) {
     if (CHECKTYPE(data.key, tINT)) {
         bit = data.key.i;
@@ -162,14 +171,14 @@ void InputXbar::parse_hash_group(HashGrp &hash_group, const value_t &value) {
     }
 }
 
-void InputXbar::parse_hash_table(Table *t, unsigned index, const value_t &value) {
+void InputXbar::parse_hash_table(Table *t, HashTable ht, const value_t &value) {
     if (!CHECKTYPE(value, tMAP)) return;
     for (auto &c : value.map) {
         if (c.key.type == tINT) {
-            setup_hash(hash_tables[index], index, t->gress, t->stage->stageno, c.value,
+            setup_hash(hash_tables[ht], ht, t->gress, t->stage->stageno, c.value,
                        c.key.lineno, c.key.i, c.key.i);
         } else if (c.key.type == tRANGE) {
-            setup_hash(hash_tables[index], index, t->gress, t->stage->stageno, c.value,
+            setup_hash(hash_tables[ht], ht, t->gress, t->stage->stageno, c.value,
                        c.key.lineno, c.key.lo, c.key.hi);
         } else if (CHECKTYPEM(c.key, tCMD, "hash column decriptor")) {
             if (c.key.vec.size != 2 || c.key[0] != "valid" || c.key[1].type != tINT
@@ -181,16 +190,16 @@ void InputXbar::parse_hash_table(Table *t, unsigned index, const value_t &value)
                 error(c.key.lineno, "Hash column out of range");
                 continue; }
             if (!CHECKTYPE(c.value, tINT)) continue;
-            if (hash_tables[index][col].valid)
+            if (hash_tables[ht][col].valid)
                 error(c.key.lineno, "Hash table %d column %d valid duplicated",
-                      index, col);
+                      ht.index, col);
             else if (c.value.i >= 0x10000)
                 error(c.value.lineno, "Hash valid value out of range");
             else
-                hash_tables[index][col].valid = c.value.i; } }
+                hash_tables[ht][col].valid = c.value.i; } }
 }
 
-void InputXbar::setup_hash(std::map<int, HashCol> &hash_table, int id,
+void InputXbar::setup_hash(std::map<int, HashCol> &hash_table, HashTable ht,
                            gress_t gress, int stage, value_t &what, int lineno, int lo, int hi) {
     if (lo < 0 || lo >= 52 || hi < 0 || hi >= 52) {
         error(lineno, "Hash column out of range");
@@ -201,7 +210,7 @@ void InputXbar::setup_hash(std::map<int, HashCol> &hash_table, int id,
             return;
         } else if ((what.type == tSTR) && (what == "parity")) {
             options.disable_gfm_parity = false;
-            hash_table_parity[id] = lo;
+            hash_table_parity[ht] = lo;
             return;
         }
     } else if (what.type == tINT && what.i == 0) {
@@ -222,10 +231,11 @@ void InputXbar::setup_hash(std::map<int, HashCol> &hash_table, int id,
             if (errlo < 0) errlo = col;
         } else {
             if (errlo >= 0) {
-                if (errlo == col-1)
-                    error(lineno, "Hash table %d column %d duplicated", id, errlo);
-                else
-                    error(lineno, "Hash table %d column %d..%d duplicated", id, errlo, col-1);
+                if (errlo == col-1) {
+                    error(lineno, "%s column %d duplicated", ht.toString().c_str(), errlo);
+                } else {
+                    error(lineno, "%s column %d..%d duplicated", ht.toString().c_str(),
+                          errlo, col-1); }
                 errlo = -1; }
             hash_table[col].lineno = what.lineno;
             hash_table[col].fn = fn;
@@ -237,7 +247,7 @@ void InputXbar::setup_hash(std::map<int, HashCol> &hash_table, int id,
     if (!fn_assigned) delete fn;
 
     if (errlo >= 0) {
-        error(lineno, "Hash table %d column %d..%d duplicated", id, errlo, hi);
+        error(lineno, "%s column %d..%d duplicated", ht.toString().c_str(), errlo, hi);
     }
 }
 
@@ -270,7 +280,7 @@ void InputXbar::input(Table *t, bool tern, const VECTOR(pair_t) &data) {
             } else if (index >= HASH_TABLES) {
                 error(kv.key.lineno, "invalid hash descriptor");
             } else {
-                parse_hash_table(t, index, kv.value); }
+                parse_hash_table(t, HashTable(HashTable::EXACT, index), kv.value); }
         } else {
             error(kv.key.lineno, "expecting a group or hash descriptor"); }
     }
@@ -332,10 +342,10 @@ int InputXbar::tcam_word_group(int idx) {
     return -1;
 }
 
-const std::map<int, HashCol>& InputXbar::get_hash_table(unsigned id) {
+const std::map<int, HashCol>& InputXbar::get_hash_table(HashTable id) {
     for (auto &ht : hash_tables)
         if (ht.first == id) return ht.second;
-    warning(lineno, "Hash Table for index %d does not exist in table %s", id, table->name());
+    warning(lineno, "%s does not exist in table %s", id.toString().c_str(), table->name());
     static const std::map<int, HashCol> empty_hash_table = {};
     return empty_hash_table;
 }
@@ -370,7 +380,7 @@ bool InputXbar::conflict(const HashGrp &a, const HashGrp &b) {
     return false;
 }
 
-uint64_t InputXbar::hash_columns_used(unsigned hash) {
+uint64_t InputXbar::hash_columns_used(HashTable hash) {
     uint64_t rv = 0;
     if (hash_tables.count(hash))
         for (auto &col : hash_tables[hash])
@@ -504,11 +514,11 @@ void InputXbar::check_input(InputXbar::Group group, Input &input, TcamUseCache &
             table->stage->tcam_ixbar_input[in_byte] = tbl; } }
 }
 
-bool InputXbar::copy_existing_hash(int group, std::pair<const int, HashCol> &col) {
-    for (InputXbar *other : table->stage->hash_table_use[group]) {
+bool InputXbar::copy_existing_hash(HashTable ht, std::pair<const int, HashCol> &col) {
+    for (InputXbar *other : table->stage->hash_table_use[ht.index]) {
         if (other == this) continue;
-        if (other->hash_tables.count(group)) {
-            auto &o = other->hash_tables.at(group);
+        if (other->hash_tables.count(ht)) {
+            auto &o = other->hash_tables.at(ht);
             if (o.count(col.first)) {
                 auto ocol = o.at(col.first);
                 if (ocol.fn && *ocol.fn == *col.second.fn) {
@@ -517,9 +527,8 @@ bool InputXbar::copy_existing_hash(int group, std::pair<const int, HashCol> &col
     return false;
 }
 
-void InputXbar::gen_hash_column(
-    std::pair<const int, HashCol> &col,
-    std::pair<const unsigned int, std::map<int, HashCol>> &hash) {
+void InputXbar::gen_hash_column(std::pair<const int, HashCol> &col,
+                                std::pair<const HashTable, std::map<int, HashCol>> &hash) {
     col.second.fn->gen_data(col.second.data, col.second.bit, this, hash.first);
 }
 
@@ -565,19 +574,19 @@ void InputXbar::pass1() {
             }
         }
         bool add_to_use = true;
-        for (InputXbar *other : table->stage->hash_table_use[hash.first]) {
+        for (InputXbar *other : table->stage->hash_table_use[hash.first.uid()]) {
             if (other == this) {
                 add_to_use = false;
                 continue; }
             int column;
             if (other->hash_tables.count(hash.first) &&
                 conflict(other->hash_tables[hash.first], hash.second, &column)) {
-                error(hash.second.at(column).lineno, "Input xbar hash table %d column %d conflict"
-                      " in stage %d", hash.first, column, table->stage->stageno);
-                warning(other->hash_tables[hash.first].at(column).lineno,
-                        "conflicting hash definition here"); } }
+                error(hash.second.at(column).lineno, "%s column %d conflict in stage %d",
+                      hash.first.toString().c_str(), column, table->stage->stageno);
+                error(other->hash_tables[hash.first].at(column).lineno,
+                      "conflicting hash definition here"); } }
         if (add_to_use)
-            table->stage->hash_table_use[hash.first].push_back(this); }
+            table->stage->hash_table_use[hash.first.uid()].push_back(this); }
     for (auto &group : hash_groups) {
         bool add_to_use = true;
         for (InputXbar *other : table->stage->hash_group_use[group.first]) {
@@ -818,13 +827,14 @@ void InputXbar::write_regs(REGS &regs) {
             // Enable check if parity bit is set on all tables in hash group
             int parity_bit = -1;
             for (int index : bitvec(hg.second.tables)) {
-                if (!hash_table_parity.count(index)) {
+                HashTable ht(HashTable::EXACT, index);
+                if (!hash_table_parity.count(ht)) {
                     continue;
                 } else {
                     if (parity_bit == -1) {
-                        parity_bit = hash_table_parity[index];
+                        parity_bit = hash_table_parity[ht];
                     } else {
-                        if (hash_table_parity[index] != parity_bit)
+                        if (hash_table_parity[ht] != parity_bit)
                             error(hg.second.lineno, "Hash tables within a hash group "
                                     "do not have the same parity bit - %d", grp);
                     }
@@ -918,12 +928,13 @@ std::vector<const InputXbar::Input *> InputXbar::find_all(Phv::Slice sl, Group g
  * @param hash_table    which hash table we want the input for (-1 for all hash tables)
  */
 std::vector<const InputXbar::Input *>
-InputXbar::find_hash_inputs(Phv::Slice sl, int hash_table) const {
+InputXbar::find_hash_inputs(Phv::Slice sl, HashTable ht) const {
     /* code for tofino1/2/3 -- all hash tables take input from exact ixbar groups, with
      * two hash tables per group (even in lower bits and odd in upper bits) */
-    auto rv = find_all(sl, Group(Group::EXACT, hash_table >= 0 ? hash_table/2 : -1));
-    if (hash_table >= 0) {
-        unsigned upper = hash_table % 2;
+    BUG_CHECK(ht.type == HashTable::EXACT, "not an exact hash table: %s", ht.toString().c_str());
+    auto rv = find_all(sl, Group(Group::EXACT, ht.index >= 0 ? ht.index/2 : -1));
+    if (ht.index >= 0) {
+        unsigned upper = ht.index % 2;
         for (auto it = rv.begin(); it != rv.end();) {
             unsigned bit = (*it)->lo + (sl.lo - (*it)->what->lo);
             if (bit / 64 != upper || (bit + sl.size() - 1) / 64 != upper)
@@ -941,7 +952,8 @@ bitvec InputXbar::hash_group_bituse(int grp) const {
             tables |= g.second.tables;
             rv |= g.second.seed; } }
     for (auto &tbl : hash_tables) {
-        if (!((tables >> tbl.first) & 1)) continue;
+        if (tbl.first.type != HashTable::EXACT) continue;
+        if (!((tables >> tbl.first.index) & 1)) continue;
         // Skip parity bit if set on hash table
         auto hash_parity_bit = -1;
         if (hash_table_parity.count(tbl.first)) {
@@ -980,7 +992,8 @@ std::vector<const HashCol *> InputXbar::hash_column(int col, int grp) const {
         if (grp == -1 || static_cast<int>(g.first) == grp)
             tables |= g.second.tables;
     for (auto &tbl : hash_tables) {
-        if (!((tables >> tbl.first) & 1)) continue;
+        if (tbl.first.type != HashTable::EXACT) continue;
+        if (!((tables >> tbl.first.index) & 1)) continue;
         if (const HashCol *c = getref(tbl.second, col))
             rv.push_back(c); }
     return rv;
@@ -989,16 +1002,16 @@ std::vector<const HashCol *> InputXbar::hash_column(int col, int grp) const {
 bool InputXbar::log_hashes(std::ofstream& out) const {
   bool logged = false;
   for (auto &ht : hash_tables) {
-    // ht.first is hash ID
+    // ht.first is HashTable
     // ht.second is std::map<int, HashCol>, key is col
     if (ht.second.empty()) continue;
-    out << std::endl << "Hash " << ht.first << std::endl;
+    out << std::endl << ht.first << std::endl;
     logged = true;
     for (auto &col : ht.second) {
       // col.first is hash result bit
       // col.second is bits XOR'd in
       out << "result[" << col.first << "] = ";
-      out << get_seed_bit(ht.first, col.first);
+      out << get_seed_bit(ht.first.index/2, col.first);
       for (const auto &bit : col.second.data) {
         if (auto ref = get_hashtable_bit(ht.first, bit)) {
           std::string field_name = ref.name();
@@ -1008,4 +1021,22 @@ bool InputXbar::log_hashes(std::ofstream& out) const {
       out << std::endl;
   } }
   return logged;
+}
+
+std::string InputXbar::HashTable::toString() const {
+    std::stringstream        tmp;
+    tmp << *this;
+    return tmp.str();
+}
+
+unsigned InputXbar::HashTable::uid() const {
+    switch (type) {
+    case EXACT:
+        BUG_CHECK(index < Target::EXACT_HASH_TABLES(), "index too large: %s", toString().c_str());
+        return index;
+    case XCMP:
+        return index + Target::EXACT_HASH_TABLES();
+    default:
+        BUG("invalid type: %s", toString().c_str());
+    }
 }

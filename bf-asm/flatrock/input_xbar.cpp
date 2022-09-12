@@ -132,6 +132,14 @@ void Flatrock::InputXbar::pass2() {
         first32 = num32 = 0; }
 }
 
+std::vector<const InputXbar::Input *> Flatrock::InputXbar::find_hash_inputs(
+            Phv::Slice sl, HashTable ht) const {
+    BUG_CHECK(ht.type == HashTable::EXACT || ht.type == HashTable::XCMP,
+              "invalid ht.type: %s", ht.toString().c_str());
+    Group group(ht.type == HashTable::EXACT ? Group::EXACT : Group::XCMP, ht.index);
+    return find_all(sl, group);
+}
+
 int Flatrock::InputXbar::find_offset(const MatchSource *ms, Group group) const {
     if (auto *phv = dynamic_cast<const Phv::Ref *>(ms)) {
         auto sl = **phv;
@@ -164,12 +172,13 @@ int Flatrock::InputXbar::find_offset(const MatchSource *ms, Group group) const {
  * each element.  We only care about column 0 (since we always map stuff there), but
  * flatrock hash functions are more than 64 bits.  So we assemble the entire 1024
  * bit column and then extract from that */
-bitvec Flatrock::InputXbar::global_column0_extract(int hash_table,
+bitvec Flatrock::InputXbar::global_column0_extract(HashTable ht,
         const hash_column_t matrix[PARITY_GROUPS_DYN][HASH_MATRIX_WIDTH_DYN]) const {
+    BUG_CHECK(ht.type == HashTable::EXACT, "not an exact hash table");
     bitvec column0;
     for (int i = PARITY_GROUPS_DYN-1; i >= 0; --i)
         column0.putrange(i*64, 64, matrix[i][0].column_value);
-    return column0.getslice(hash_table*EXACT_HASH_SIZE, EXACT_HASH_SIZE);
+    return column0.getslice(ht.index*EXACT_HASH_SIZE, EXACT_HASH_SIZE);
 }
 
 // tables mapping PHEs to the bit indexes used for their power gating.
@@ -317,62 +326,68 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
         }
     }
     for (auto &hash : hash_tables) {
-        switch (hash.first) {
-        case 0: {  // exact byte hash
-            unsigned byte = 0;
-            for (auto &col : hash.second) {
-                for (int i = 0; i < EXACT_HASH_SIZE/32; ++i) {
-                    uint32_t bits = col.second.data.getrange(i*32, 32);
-                    if (!bits) continue;
-                    auto &row = minput.minput_em_bhash1_erf.minput_em_bhash1[i];
-                    for (auto b = 0; b < 4; ++b) {
-                        if ((bits >> (b*8)) & 0xff)
-                            byte |= 1 << (i*4 + b); }
-                    uint32_t delta = bits & ~row[col.first].gf;
-                    row[col.first].gf |= bits;
-                    row[45].gf ^= delta; } }  // parity;
-            int prev_xmu = -1;
-            for (int xme : xme_units) {
-                int xmu = xme/2;
-                if (prev_xmu == xmu) continue;
-                auto &bhash2 = minput.minput_em_bhash2_erf.minput_em_bhash2;
-                for (unsigned shift = 0; shift < 20; shift += 4) {
-                    switch (xmu) {
-                    // DANGER -- for this config lambs/stms are SWAPPED (0-3 are stms
-                    // and 4-7 are lambs)
-                    case 0: bhash2[shift/4].data_chain4 |= (byte >> shift) & 0xf; break;
-                    case 1: bhash2[shift/4].data_chain5 |= (byte >> shift) & 0xf; break;
-                    case 2: bhash2[shift/4].data_chain6 |= (byte >> shift) & 0xf; break;
-                    case 3: bhash2[shift/4].data_chain7 |= (byte >> shift) & 0xf; break;
-                    case 4: bhash2[shift/4].data_chain0 |= (byte >> shift) & 0xf; break;
-                    case 5: bhash2[shift/4].data_chain1 |= (byte >> shift) & 0xf; break;
-                    case 6: bhash2[shift/4].data_chain2 |= (byte >> shift) & 0xf; break;
-                    case 7: bhash2[shift/4].data_chain3 |= (byte >> shift) & 0xf; break;
-                    default: BUG("invalid xmu %d", xmu); } }
-                prev_xmu = xmu; }
-            break; }
-        case 1: {  // exact word hash
-            unsigned word = 0;
-            for (auto &col : hash.second) {
-                for (int i = 0; i < EXACT_HASH_SIZE/32; ++i) {
-                    uint32_t bits = col.second.data.getrange(i*32, 32);
-                    if (!bits) continue;
-                    auto &row = minput.minput_em_whash1_erf.minput_em_whash1[i];
-                    word |= 1 << i;
-                    uint32_t delta = bits & ~row[col.first].gf;
-                    row[col.first].gf |= bits;
-                    row[45].gf ^= delta; } }  // parity;
-            int prev_xmu = -1;
-            for (int xme : xme_units) {
-                if (xme < FIRST_STM_XME) continue;
-                int xmu = xme/2;
-                if (prev_xmu == xmu) continue;
-                minput.rf.minput_em_whash2[xmu-4].enable_ |= word;
-                prev_xmu = xmu; }
-            break; }
-        // FIXME -- xcmp hashes here?
+        switch (hash.first.type) {
+        case InputXbar::HashTable::EXACT:
+            switch (hash.first.index) {
+            case 0: {  // exact byte hash
+                unsigned byte = 0;
+                for (auto &col : hash.second) {
+                    for (int i = 0; i < EXACT_HASH_SIZE/32; ++i) {
+                        uint32_t bits = col.second.data.getrange(i*32, 32);
+                        if (!bits) continue;
+                        auto &row = minput.minput_em_bhash1_erf.minput_em_bhash1[i];
+                        for (auto b = 0; b < 4; ++b) {
+                            if ((bits >> (b*8)) & 0xff)
+                                byte |= 1 << (i*4 + b); }
+                        uint32_t delta = bits & ~row[col.first].gf;
+                        row[col.first].gf |= bits;
+                        row[45].gf ^= delta; } }  // parity;
+                int prev_xmu = -1;
+                for (int xme : xme_units) {
+                    int xmu = xme/2;
+                    if (prev_xmu == xmu) continue;
+                    auto &bhash2 = minput.minput_em_bhash2_erf.minput_em_bhash2;
+                    for (unsigned shift = 0; shift < 20; shift += 4) {
+                        switch (xmu) {
+                        // DANGER -- for this config lambs/stms are SWAPPED (0-3 are stms
+                        // and 4-7 are lambs)
+                        case 0: bhash2[shift/4].data_chain4 |= (byte >> shift) & 0xf; break;
+                        case 1: bhash2[shift/4].data_chain5 |= (byte >> shift) & 0xf; break;
+                        case 2: bhash2[shift/4].data_chain6 |= (byte >> shift) & 0xf; break;
+                        case 3: bhash2[shift/4].data_chain7 |= (byte >> shift) & 0xf; break;
+                        case 4: bhash2[shift/4].data_chain0 |= (byte >> shift) & 0xf; break;
+                        case 5: bhash2[shift/4].data_chain1 |= (byte >> shift) & 0xf; break;
+                        case 6: bhash2[shift/4].data_chain2 |= (byte >> shift) & 0xf; break;
+                        case 7: bhash2[shift/4].data_chain3 |= (byte >> shift) & 0xf; break;
+                        default: BUG("invalid xmu %d", xmu); } }
+                    prev_xmu = xmu; }
+                break; }
+            case 1: {  // exact word hash
+                unsigned word = 0;
+                for (auto &col : hash.second) {
+                    for (int i = 0; i < EXACT_HASH_SIZE/32; ++i) {
+                        uint32_t bits = col.second.data.getrange(i*32, 32);
+                        if (!bits) continue;
+                        auto &row = minput.minput_em_whash1_erf.minput_em_whash1[i];
+                        word |= 1 << i;
+                        uint32_t delta = bits & ~row[col.first].gf;
+                        row[col.first].gf |= bits;
+                        row[45].gf ^= delta; } }  // parity;
+                int prev_xmu = -1;
+                for (int xme : xme_units) {
+                    if (xme < FIRST_STM_XME) continue;
+                    int xmu = xme/2;
+                    if (prev_xmu == xmu) continue;
+                    minput.rf.minput_em_whash2[xmu-4].enable_ |= word;
+                    prev_xmu = xmu; }
+                break; }
+            // FIXME -- xcmp hashes here?
+            default:
+                BUG("invalid hash table %s", hash.first.toString().c_str());
+            }
+            break;
         default:
-            BUG("invalid hash table %d", hash.first);
+            BUG("invalid hash table %s", hash.first.toString().c_str());
         }
     }
 }

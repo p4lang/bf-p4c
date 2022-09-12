@@ -42,13 +42,13 @@ class InputXbar : public ::InputXbar {
 
  public:
     static void write_global_regs(Target::Flatrock::mau_regs &regs, gress_t gress);
-    std::vector<const Input *> find_hash_inputs(Phv::Slice sl, int hash_table) const override {
-        return find_all(sl, Group(Group::EXACT, hash_table)); }
+    std::vector<const Input *> find_hash_inputs(Phv::Slice sl, HashTable ht) const override;
     int find_offset(const MatchSource *, Group) const override;
-    int global_bit_position_adjust(int hash_table) const {
-        return hash_table * EXACT_HASH_SIZE; }
-    bitvec global_column0_extract(int hash_table,
-        const hash_column_t matrix[PARITY_GROUPS_DYN][HASH_MATRIX_WIDTH_DYN]) const;
+    int global_bit_position_adjust(HashTable ht) const override {
+        BUG_CHECK(ht.type == HashTable::EXACT, "not an exact hash table %d", ht.type);
+        return ht.index * EXACT_HASH_SIZE; }
+    bitvec global_column0_extract(HashTable ht,
+        const hash_column_t matrix[PARITY_GROUPS_DYN][HASH_MATRIX_WIDTH_DYN]) const override;
 };
 
 }

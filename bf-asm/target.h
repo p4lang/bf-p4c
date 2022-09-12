@@ -134,6 +134,7 @@
     M(int, DYNAMIC_CONFIG_INPUT_BITS) \
     M(bool, EGRESS_SEPARATE) \
     M(int, END_OF_PIPE) \
+    M(int, EXACT_HASH_TABLES) \
     M(bool, GATEWAY_INHIBIT_INDEX) \
     M(int, GATEWAY_MATCH_BITS) \
     M(bool, GATEWAY_NEEDS_SEARCH_BUS) \
@@ -316,6 +317,7 @@ class Target::Tofino : public Target {
         DYNAMIC_CONFIG_INPUT_BITS = 0,
         EGRESS_SEPARATE = false,
         END_OF_PIPE = 0xff,
+        EXACT_HASH_TABLES = 16,
         GATEWAY_INHIBIT_INDEX = false,
         GATEWAY_MATCH_BITS = 56,  // includes extra expansion for range match
         GATEWAY_NEEDS_SEARCH_BUS = true,
@@ -474,6 +476,7 @@ class Target::JBay : public Target {
         DYNAMIC_CONFIG_INPUT_BITS = 0,
         EGRESS_SEPARATE = false,
         END_OF_PIPE = 0x1ff,
+        EXACT_HASH_TABLES = 16,
         GATEWAY_INHIBIT_INDEX = false,
         GATEWAY_MATCH_BITS = 56,  // includes extra expansion for range match
         GATEWAY_NEEDS_SEARCH_BUS = true,
@@ -683,6 +686,7 @@ class Target::Cloudbreak : public Target {
         DYNAMIC_CONFIG_INPUT_BITS = 0,
         EGRESS_SEPARATE = false,
         END_OF_PIPE = 0x1ff,
+        EXACT_HASH_TABLES = 16,
         GATEWAY_INHIBIT_INDEX = false,
         GATEWAY_MATCH_BITS = 56,  // includes extra expansion for range match
         GATEWAY_NEEDS_SEARCH_BUS = true,
@@ -833,6 +837,7 @@ class Target::Flatrock : public Target {
         DYNAMIC_CONFIG_INPUT_BITS = 8,
         EGRESS_SEPARATE = true,
         END_OF_PIPE = 0xff,
+        EXACT_HASH_TABLES = 2,
         GATEWAY_INHIBIT_INDEX = true,
         GATEWAY_MATCH_BITS = 104,
         GATEWAY_NEEDS_SEARCH_BUS = false,

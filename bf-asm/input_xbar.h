@@ -6,9 +6,10 @@
 #include "constants.h"
 #include "phv.h"
 #include "ordered_map.h"
-#include "hashexpr.h"
+#include "dynamic_hash/dynamic_hash.h"
 
 class Table;
+class HashExpr;
 
 struct HashCol {
     int                     lineno = -1;
@@ -16,14 +17,7 @@ struct HashCol {
     int                     bit = 0;
     bitvec                  data;
     unsigned                valid = 0;  // Used only in Tofino
-    void dbprint(std::ostream & out) const {
-        out << "HashCol: " <<
-               " lineno: " << lineno <<
-               " bit: " << bit <<
-               " data: " << data <<
-               " valid: " << valid;
-        if (fn) out << " fn: " << *fn << std::endl;
-    }
+    void dbprint(std::ostream & out) const;
 };
 
 inline std::ostream &operator<<(std::ostream &out, HashCol &col) {
@@ -50,11 +44,24 @@ class InputXbar {
         short                                   index;
         enum type_t { INVALID, EXACT, TERNARY, BYTE, GATEWAY, XCMP }
                                                 type;
+        Group() : index(-1), type(INVALID) {}
         Group(Group::type_t t, int i) : index(i), type(t) {}
         explicit operator bool() const { return type != INVALID; }
         bool operator==(const Group &a) const { return type == a.type && index == a.index; }
         bool operator<(const Group &a) const {
             return (type << 16) + index < (a.type << 16) + a.index; }
+    };
+    struct HashTable {
+        short                                   index;
+        enum type_t { INVALID, EXACT, XCMP }    type;
+        HashTable() : index(-1), type(INVALID) {}
+        HashTable(type_t t, int i) : index(i), type(t) {}
+        explicit operator bool() const { return type != INVALID; }
+        bool operator==(const HashTable &a) const { return type == a.type && index == a.index; }
+        bool operator<(const HashTable &a) const {
+            return (type << 16) + index < (a.type << 16) + a.index; }
+        std::string toString() const;
+        unsigned uid() const;
     };
 
  protected:
@@ -74,15 +81,18 @@ class InputXbar {
     };
     Table       *table;
     ordered_map<Group, std::vector<Input>>              groups;
-    std::map<unsigned, std::map<int, HashCol>>          hash_tables;
+    std::map<HashTable, std::map<int, HashCol>>         hash_tables;
     // Map of hash table index to parity bit set on the table
-    std::map<unsigned, unsigned>                        hash_table_parity;
+    std::map<HashTable, unsigned>                       hash_table_parity;
     std::map<unsigned, HashGrp>                         hash_groups;
     static bool conflict(const std::vector<Input> &a, const std::vector<Input> &b);
     static bool conflict(const std::map<int, HashCol> &, const std::map<int, HashCol> &, int * = 0);
     static bool conflict(const HashGrp &a, const HashGrp &b);
-    bool copy_existing_hash(int group, std::pair<const int, HashCol> &col);
-    uint64_t hash_columns_used(unsigned hash);
+    bool copy_existing_hash(HashTable ht, std::pair<const int, HashCol> &col);
+    uint64_t hash_columns_used(HashTable hash);
+    uint64_t hash_columns_used(unsigned id) {
+        BUG_CHECK(id < Target::EXACT_HASH_TABLES(), "%d out of range for exact hash", id);
+        return hash_columns_used(HashTable(HashTable::EXACT, id)); }
     bool can_merge(HashGrp &a, HashGrp &b);
     void add_use(unsigned &byte_use, std::vector<Input> &a);
     virtual int group_max_index(Group::type_t t) const;
@@ -91,9 +101,9 @@ class InputXbar {
     const char *group_type(Group::type_t t) const;
     void parse_group(Table *t, Group gr, const value_t &value);
     void parse_hash_group(HashGrp &hash_group, const value_t &value);
-    void parse_hash_table(Table *t, unsigned index, const value_t &value);
+    void parse_hash_table(Table *t, HashTable ht, const value_t &value);
     virtual bool parse_unit(Table *t, const pair_t &kv) { return false; }
-    void setup_hash(std::map<int, HashCol> &, int id, gress_t, int stage, value_t &,
+    void setup_hash(std::map<int, HashCol> &, HashTable ht, gress_t, int stage, value_t &,
                     int lineno, int lo, int hi);
     struct TcamUseCache {
        std::map<int, std::pair<const Input &, int>>     tcam_use;
@@ -103,7 +113,7 @@ class InputXbar {
     int tcam_input_use(int out_byte, int phv_byte, int phv_size);
     void tcam_update_use(TcamUseCache &use);
     void gen_hash_column(std::pair<const int, HashCol> &col,
-        std::pair<const unsigned int, std::map<int, HashCol>> &hash);
+                         std::pair<const HashTable, std::map<int, HashCol>> &hash);
 
     struct GroupSet {
         Group           group;
@@ -135,7 +145,7 @@ class InputXbar {
     virtual void write_xmu_regs_v(Target::Flatrock::mau_regs &regs) { BUG(); }
 #endif
     template<class REGS> void write_galois_matrix(REGS &regs,
-            int id, const std::map<int, HashCol> &mat);
+            HashTable id, const std::map<int, HashCol> &mat);
     bool have_exact() const {
         for (auto &grp : groups) if (grp.first.type == Group::EXACT) return true;
         return false; }
@@ -157,10 +167,15 @@ class InputXbar {
     unsigned tcam_width();
     int tcam_byte_group(int n);
     int tcam_word_group(int n);
-    std::map<unsigned, std::map<int, HashCol>>& get_hash_tables() { return hash_tables; }
-    const std::map<int, HashCol>& get_hash_table(unsigned id = 0);
+    std::map<HashTable, std::map<int, HashCol>>& get_hash_tables() { return hash_tables; }
+    const std::map<int, HashCol>& get_hash_table(HashTable id);
+    const std::map<int, HashCol>& get_hash_table(unsigned id = 0) {
+        return get_hash_table(HashTable(HashTable::EXACT, id)); }
+    Phv::Ref get_hashtable_bit(HashTable id, unsigned bit) const {
+        BUG_CHECK(id.type == HashTable::EXACT, "not an exact hash table");
+        return get_group_bit(Group(Group::EXACT, id.index/2), bit + 64*(id.index & 0x1)); }
     Phv::Ref get_hashtable_bit(unsigned id, unsigned bit) const {
-        return get_group_bit(Group(Group::EXACT, id/2), bit + 64*(id & 0x1)); }
+        return get_hashtable_bit(HashTable(HashTable::EXACT, id), bit); }
     Phv::Ref get_group_bit(Group grp, unsigned bit) const {
         if (groups.count(grp))
             for (auto &in : groups.at(grp))
@@ -250,12 +265,14 @@ class InputXbar {
         return find_offset(ms, Group(Group::EXACT, -1)); }
 
     std::vector<const Input *> find_all(Phv::Slice sl, Group grp) const;
-    virtual std::vector<const Input *> find_hash_inputs(Phv::Slice sl, int hash_table) const;
-    virtual int global_bit_position_adjust(int hash_table) const {
-        return (hash_table / 2) * 128; }
-    virtual bitvec global_column0_extract(int hash_table,
+    virtual std::vector<const Input *> find_hash_inputs(Phv::Slice sl, HashTable ht) const;
+    virtual int global_bit_position_adjust(HashTable ht) const {
+        BUG_CHECK(ht.type == HashTable::EXACT, "not an exact hash table");
+        return (ht.index / 2) * 128; }
+    virtual bitvec global_column0_extract(HashTable ht,
         const hash_column_t matrix[PARITY_GROUPS_DYN][HASH_MATRIX_WIDTH_DYN]) const {
-            return bitvec(matrix[hash_table][0].column_value); }
+            BUG_CHECK(ht.type == HashTable::EXACT, "not an exact hash table");
+            return bitvec(matrix[ht.index][0].column_value); }
 };
 
 inline std::ostream &operator<<(std::ostream &out, InputXbar::Group gr) {
@@ -263,7 +280,16 @@ inline std::ostream &operator<<(std::ostream &out, InputXbar::Group gr) {
     case InputXbar::Group::EXACT: out << "exact"; break;
     case InputXbar::Group::TERNARY: out << "ternary"; break;
     case InputXbar::Group::BYTE: out << "byte"; break;
+    case InputXbar::Group::GATEWAY: out << "gateway"; break;
+    case InputXbar::Group::XCMP: out << "xcmp"; break;
     default: out << "<type=" << static_cast<int>(gr.type) << ">"; }
     return out << " ixbar group " << gr.index; }
+
+inline std::ostream &operator<<(std::ostream &out, InputXbar::HashTable ht) {
+    switch (ht.type) {
+    case InputXbar::HashTable::EXACT: out << "exact"; break;
+    case InputXbar::HashTable::XCMP: out << "xcmp"; break;
+    default: out << "<type=" << static_cast<int>(ht.type) << ">"; }
+    return out << " hashtable " << ht.index; }
 
 #endif /* BF_ASM_INPUT_XBAR_H_ */

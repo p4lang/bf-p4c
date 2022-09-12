@@ -1,6 +1,7 @@
 #include "gateway.h"
 #include "stage.h"
 #include "hex.h"
+#include "hashexpr.h"
 
 bool Target::Tofino::GatewayTable::check_match_key(MatchKey &key,
         const std::vector<MatchKey> &vec, bool is_xor) {

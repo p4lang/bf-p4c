@@ -948,9 +948,9 @@ public:
     virtual bool is_ternary() { return false; }
     void gen_idletime_tbl_cfg(json::map &stage_tbl) const;
     int direct_shiftcount() const override { return 64; }
-    void gen_hash_bits(const std::map<int, HashCol> &hash_table,
-        unsigned hash_table_id, json::vector &hash_bits, unsigned hash_group_no,
-        bitvec hash_bits_used) const;
+    void gen_hash_bits(const std::map<int, HashCol> &hash_table, InputXbar::HashTable ht_id,
+                       json::vector &hash_bits, unsigned hash_group_no,
+                       bitvec hash_bits_used) const;
     virtual void add_hash_functions(json::map &stage_tbl) const;
     void add_all_reference_tables(json::map &tbl, Table *math_table = nullptr) const;
     METER_ACCESS_TYPE default_meter_access_type(bool for_stateful);

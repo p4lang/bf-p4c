@@ -3,8 +3,7 @@
 
 #include "phv.h"
 #include "dynamic_hash/dynamic_hash.h"
-
-class InputXbar;
+#include "input_xbar.h"
 
 class HashExpr {
     class PhvRef;
@@ -24,13 +23,13 @@ class HashExpr {
     bfn_hash_algorithm_t hash_algorithm = {};  // Zero-init to make Klockwork happy
     static HashExpr *create(gress_t, int stage, const value_t &);
     virtual void build_algorithm() = 0;
-    virtual bool check_ixbar(InputXbar *ix, int hash_table) = 0;
-    virtual void gen_data(bitvec &data, int bit, InputXbar *ix, int hash_table);
+    virtual bool check_ixbar(InputXbar *ix, InputXbar::HashTable ht) = 0;
+    virtual void gen_data(bitvec &data, int bit, InputXbar *ix, InputXbar::HashTable hash_table);
     void gen_ixbar_init(ixbar_init_t *ixbar_init, std::vector<ixbar_input_t> &inputs,
         std::vector<hash_matrix_output_t> &outputs, int logical_hash_bit, InputXbar *ix,
-        int hash_table);
+        InputXbar::HashTable hash_table);
     virtual void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
-        int hash_table) = 0;
+        InputXbar::HashTable hash_table) = 0;
     virtual void get_sources(int bit, std::vector<Phv::Ref> &) const = 0;
     std::vector<Phv::Ref> get_sources(int bit) const {
         std::vector<Phv::Ref> rv;
@@ -41,7 +40,7 @@ class HashExpr {
     virtual bool match_phvref(const Phv::Ref &ref) { return false; }
     virtual bool operator==(const HashExpr &) const = 0;
     void find_input(Phv::Ref what, std::vector<ixbar_input_t> &inputs, InputXbar *ix,
-        int hash_table);
+        InputXbar::HashTable hash_table);
     bool operator!=(const HashExpr &a) const { return !operator==(a); }
     virtual void dbprint(std::ostream & out) const {}
     virtual Phv::Ref *get_ghost_slice() { return nullptr; }
@@ -50,7 +49,7 @@ class HashExpr {
  private:
     void generate_ixbar_inputs_with_gaps(const std::multimap<unsigned, Phv::Ref> &what,
                                          std::vector<ixbar_input_t> &inputs, InputXbar *ix,
-                                         int hash_table);
+                                         InputXbar::HashTable hash_table);
 };
 
 extern void dump(const HashExpr *);

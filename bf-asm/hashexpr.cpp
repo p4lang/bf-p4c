@@ -13,16 +13,16 @@ static bitvec crc(bitvec poly, bitvec val) {
     return val;
 }
 
-static bool check_ixbar(Phv::Ref &ref, InputXbar *ix, int hash_table) {
+static bool check_ixbar(Phv::Ref &ref, InputXbar *ix, InputXbar::HashTable hash_table) {
     if (!ref.check()) return false;
     if (ref->reg.mau_id() < 0) {
         error(ref.lineno, "%s not accessable in mau", ref->reg.name);
         return false; }
-    if (hash_table < 0) return true;
+    if (!hash_table) return true;
     for (auto in : ix->find_hash_inputs(*ref, hash_table)) {
         BUG_CHECK(in->lo >= 0, "invalid lo in IXBar::Input");
         return true; }
-    error(ref.lineno, "%s not in hash table %d input", ref.name(), hash_table);
+    error(ref.lineno, "%s not in %s input", ref.name(), hash_table.toString().c_str());
     return false;
 }
 
@@ -33,7 +33,7 @@ static bool check_ixbar(Phv::Ref &ref, InputXbar *ix, int hash_table) {
  */
 void HashExpr::gen_ixbar_init(ixbar_init_t *ixbar_init, std::vector<ixbar_input_t> &inputs,
         std::vector<hash_matrix_output_t> &outputs, int logical_hash_bit, InputXbar *ix,
-        int hash_table) {
+        InputXbar::HashTable hash_table) {
     inputs.clear();
     outputs.clear();
 
@@ -56,7 +56,8 @@ void HashExpr::gen_ixbar_init(ixbar_init_t *ixbar_init, std::vector<ixbar_input_
  * initialized, and the data returned writes out a vector of inputs.  For Stripe,
  * Slice, and others, they recursively will call this function
  */
-void HashExpr::gen_data(bitvec &data, int logical_hash_bit, InputXbar *ix, int hash_table) {
+void HashExpr::gen_data(bitvec &data, int logical_hash_bit, InputXbar *ix,
+                        InputXbar::HashTable hash_table) {
     ixbar_init_t ixbar_init;
     hash_column_t hash_matrix[PARITY_GROUPS_DYN][HASH_MATRIX_WIDTH_DYN] = {};
     std::vector<ixbar_input_t> inputs;
@@ -84,7 +85,7 @@ class HashExpr::PhvRef : HashExpr {
     Phv::Ref what;
     PhvRef(gress_t gr, int stg, const value_t &v) : HashExpr(v.lineno), what(gr, stg, v) {}
     friend class HashExpr;
-    bool check_ixbar(InputXbar *ix, int hash_table) override {
+    bool check_ixbar(InputXbar *ix, InputXbar::HashTable hash_table) override {
         return ::check_ixbar(what, ix, hash_table); }
     int width() override { return what.size(); }
     int input_size() override { return what.size(); }
@@ -107,7 +108,7 @@ class HashExpr::PhvRef : HashExpr {
     }
 
     void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
-            int hash_table) override;
+            InputXbar::HashTable hash_table) override;
     void get_sources(int bit, std::vector<Phv::Ref> &rv) const override {
         if (bit >= 0)
             rv.emplace_back(what, bit, bit);
@@ -132,7 +133,7 @@ class HashExpr::Random : HashExpr {
     std::vector<Phv::Ref>       what;
     explicit Random(int lineno) : HashExpr(lineno) {}
     friend class HashExpr;
-    bool check_ixbar(InputXbar *ix, int hash_table) override {
+    bool check_ixbar(InputXbar *ix, InputXbar::HashTable hash_table) override {
         bool rv = true;
         for (auto &ref : what)
             rv &= ::check_ixbar(ref, ix, hash_table);
@@ -160,7 +161,7 @@ class HashExpr::Random : HashExpr {
         hash_algorithm.reverse = false;
     }
     void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
-            int hash_table) override;
+            InputXbar::HashTable hash_table) override;
     void get_sources(int, std::vector<Phv::Ref> &rv) const override {
         rv.insert(rv.end(), what.begin(), what.end()); }
     void dbprint(std::ostream & out) const override {
@@ -191,7 +192,7 @@ class HashExpr::Crc : HashExpr {
     int                                 total_input_bits = -1;
     explicit Crc(int lineno) : HashExpr(lineno) {}
     friend class HashExpr;
-    bool check_ixbar(InputXbar *ix, int hash_table) override;
+    bool check_ixbar(InputXbar *ix, InputXbar::HashTable hash_table) override;
     int width() override { return poly.max().index(); }
     int input_size() override {
         if (total_input_bits >= 0)
@@ -230,7 +231,7 @@ class HashExpr::Crc : HashExpr {
     }
 
     void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
-            int hash_table) override;
+            InputXbar::HashTable hash_table) override;
     void get_sources(int, std::vector<Phv::Ref> &rv) const override {
         rv.insert(rv.end(), vec_what.begin(), vec_what.end()); }
 };
@@ -256,13 +257,13 @@ class HashExpr::XorHash : public HashExpr {
     /* -- avoid copying */
     XorHash &operator=(XorHash &&) = delete;
 
-    bool check_ixbar(InputXbar *ix, int hash_table) override;
+    bool check_ixbar(InputXbar *ix, InputXbar::HashTable hash_table) override;
     int width() override;
     int input_size() override;
     bool operator==(const HashExpr &a_) const override;
     void build_algorithm() override;
     void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
-                          int hash_table) override;
+                          InputXbar::HashTable hash_table) override;
     void get_sources(int, std::vector<Phv::Ref> &rv) const override;
 };
 
@@ -270,12 +271,13 @@ class HashExpr::Xor : HashExpr {
     std::vector<HashExpr *>     what;
     explicit Xor(int lineno) : HashExpr(lineno) {}
     friend class HashExpr;
-    bool check_ixbar(InputXbar *ix, int hash_table) override {
+    bool check_ixbar(InputXbar *ix, InputXbar::HashTable hash_table) override {
         bool rv = true;
         for (auto *e : what)
             rv |= e->check_ixbar(ix, hash_table);
         return rv; }
-    void gen_data(bitvec &data, int logical_hash_bit, InputXbar *ix, int hash_table) override;
+    void gen_data(bitvec &data, int logical_hash_bit, InputXbar *ix,
+                  InputXbar::HashTable hash_table) override;
     int width() override {
         int rv = 0;
         for (auto *e : what) {
@@ -301,7 +303,7 @@ class HashExpr::Xor : HashExpr {
     }
 
     void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
-            int hash_table) override { }
+            InputXbar::HashTable hash_table) override { }
     void get_sources(int bit, std::vector<Phv::Ref> &rv) const override {
         for (auto *e : what) e->get_sources(bit, rv); }
     Phv::Ref* get_ghost_slice() override {
@@ -323,9 +325,9 @@ class HashExpr::Mask : HashExpr {
     bitvec              mask;
     Mask(int lineno, HashExpr *w, bitvec m) : HashExpr(lineno), what(w), mask(m) {}
     friend class HashExpr;
-    bool check_ixbar(InputXbar *ix, int hash_table) override {
+    bool check_ixbar(InputXbar *ix, InputXbar::HashTable hash_table) override {
         return what->check_ixbar(ix, hash_table); }
-    void gen_data(bitvec &data, int bit, InputXbar *ix, int hash_table) override {
+    void gen_data(bitvec &data, int bit, InputXbar *ix, InputXbar::HashTable hash_table) override {
         if (mask[bit])
             what->gen_data(data, bit, ix, hash_table); }
     int width() override { return what->width(); }
@@ -337,7 +339,7 @@ class HashExpr::Mask : HashExpr {
     void build_algorithm() override { what->build_algorithm(); }
 
     void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
-            int hash_table) override { }
+            InputXbar::HashTable hash_table) override { }
     void get_sources(int bit, std::vector<Phv::Ref> &rv) const override {
         if (mask[bit]) what->get_sources(bit, rv); }
     Phv::Ref* get_ghost_slice() override { return what->get_ghost_slice(); }
@@ -351,12 +353,13 @@ class HashExpr::Stripe : HashExpr {
     bool supress_error_cascade = false;
     explicit Stripe(int lineno) : HashExpr(lineno) {}
     friend class HashExpr;
-    bool check_ixbar(InputXbar *ix, int hash_table) override {
+    bool check_ixbar(InputXbar *ix, InputXbar::HashTable hash_table) override {
         bool rv = true;
         for (auto *e : what)
             rv |= e->check_ixbar(ix, hash_table);
         return rv; }
-    void gen_data(bitvec &data, int logical_hash_bit, InputXbar *ix, int hash_table) override;
+    void gen_data(bitvec &data, int logical_hash_bit, InputXbar *ix,
+                  InputXbar::HashTable hash_table) override;
     int width() override { return 0; }
     int input_size() override {
         int rv = 0;
@@ -379,7 +382,7 @@ class HashExpr::Stripe : HashExpr {
     }
 
     void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
-            int hash_table) override { }
+            InputXbar::HashTable hash_table) override { }
     void get_sources(int bit, std::vector<Phv::Ref> &rv) const override {
         for (auto *e : what) {
             if (bit >= 0) {
@@ -406,9 +409,10 @@ class HashExpr::Slice : HashExpr {
     int         start = 0, _width = 0;
     explicit Slice(int lineno) : HashExpr(lineno) {}
     friend class HashExpr;
-    bool check_ixbar(InputXbar *ix, int hash_table) override {
+    bool check_ixbar(InputXbar *ix, InputXbar::HashTable hash_table) override {
         return what->check_ixbar(ix, hash_table); }
-    void gen_data(bitvec &data, int logical_hash_bit, InputXbar *ix, int hash_table) override {
+    void gen_data(bitvec &data, int logical_hash_bit, InputXbar *ix,
+                  InputXbar::HashTable hash_table) override {
         what->gen_data(data, logical_hash_bit + start, ix, hash_table); }
     int width() override {
         if (_width == 0) {
@@ -428,7 +432,7 @@ class HashExpr::Slice : HashExpr {
          what->build_algorithm();
     }
     void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
-            int hash_table) override { }
+            InputXbar::HashTable hash_table) override { }
     void get_sources(int bit, std::vector<Phv::Ref> &rv) const override {
         if (bit >= start)
             what->get_sources(bit - start, rv);
@@ -446,9 +450,9 @@ class HashExpr::SExtend : HashExpr {
     HashExpr    *what;
     SExtend(int lineno, HashExpr *w) : HashExpr(lineno), what(w) {}
     friend class HashExpr;
-    bool check_ixbar(InputXbar *ix, int hash_table) override {
+    bool check_ixbar(InputXbar *ix, InputXbar::HashTable hash_table) override {
         return what->check_ixbar(ix, hash_table); }
-    void gen_data(bitvec &data, int bit, InputXbar *ix, int hash_table) override {
+    void gen_data(bitvec &data, int bit, InputXbar *ix, InputXbar::HashTable hash_table) override {
         int width = what->width();
         if (width > 0 && bit >= width)
             bit = width - 1;
@@ -464,7 +468,7 @@ class HashExpr::SExtend : HashExpr {
          what->build_algorithm();
     }
     void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
-            int hash_table) override { }
+            InputXbar::HashTable hash_table) override { }
     void get_sources(int bit, std::vector<Phv::Ref> &rv) const override {
         int width = what->width();
         if (width > 0 && bit >= width)
@@ -604,7 +608,7 @@ HashExpr *HashExpr::create(gress_t gress, int stage, const value_t &what) {
 }
 
 void HashExpr::find_input(Phv::Ref what, std::vector<ixbar_input_t> &inputs, InputXbar *ix,
-        int hash_table) {
+        InputXbar::HashTable hash_table) {
     bool found = false;
     auto vec = ix->find_hash_inputs(*what, hash_table);
     for (auto *in : vec) {
@@ -620,14 +624,14 @@ void HashExpr::find_input(Phv::Ref what, std::vector<ixbar_input_t> &inputs, Inp
         break;
     }
     if (!found) {
-        error(ix->lineno, "Cannot find associated field %s[%d:%d] in hash_table %d",
-              what->reg.name, what->hi, what->lo, hash_table);
+        error(ix->lineno, "Cannot find associated field %s[%d:%d] in %s",
+              what->reg.name, what->hi, what->lo, hash_table.toString().c_str());
     }
 }
 
 void HashExpr::generate_ixbar_inputs_with_gaps(const std::multimap<unsigned, Phv::Ref> &what,
                                                std::vector<ixbar_input_t> &inputs, InputXbar *ix,
-                                               int hash_table) {
+                                               InputXbar::HashTable hash_table) {
     unsigned previous_range_hi = 0;
     for (auto &entry : what) {
         if (previous_range_hi != entry.first) {
@@ -659,7 +663,7 @@ void HashExpr::generate_ixbar_inputs_with_gaps(const std::multimap<unsigned, Phv
  * Creates a vector with a single entry corresponding to the identity input
  */
 void HashExpr::PhvRef::gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
-        int hash_table) {
+        InputXbar::HashTable hash_table) {
     find_input(what, inputs, ix, hash_table);
 }
 
@@ -668,7 +672,7 @@ void HashExpr::PhvRef::gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, Inpu
  * dynamic hash library
  */
 void HashExpr::Random::gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
-        int hash_table) {
+        InputXbar::HashTable hash_table) {
     for (auto &ref : what) {
         find_input(ref, inputs, ix, hash_table);
     }
@@ -679,20 +683,21 @@ void HashExpr::Random::gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, Inpu
  * These are marked as invalid, so that the hash calculation will be correct
  */
 void HashExpr::Crc::gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
-                                     int hash_table) {
+                                     InputXbar::HashTable hash_table) {
     generate_ixbar_inputs_with_gaps(what, inputs, ix, hash_table);
 }
 
-bool HashExpr::Crc::check_ixbar(InputXbar *ix, int hash_table) {
+bool HashExpr::Crc::check_ixbar(InputXbar *ix, InputXbar::HashTable hash_table) {
     bool rv = true;
     if (!vec_what.empty()) {
         int off = 0;
         for (auto &ref : vec_what) {
-            rv &= ::check_ixbar(ref, ix, -1);
+            rv &= ::check_ixbar(ref, ix, InputXbar::HashTable());
             if (ref) {
-                if (auto *in = ix->find_exact(*ref, hash_table/2U))
-                    if (in->lo >= 0)
+                for (auto *in : ix->find_hash_inputs(*ref, hash_table)) {
+                    if (in->lo >= 0) {
                         what.emplace(off, ref);
+                        break; } }
                 off += ref.size(); } }
         vec_what.clear();
     } else {
@@ -704,7 +709,7 @@ bool HashExpr::Crc::check_ixbar(InputXbar *ix, int hash_table) {
 
 HashExpr::XorHash::XorHash(int lineno, int bit_width_) : HashExpr(lineno), bit_width(bit_width_) {}
 
-bool HashExpr::XorHash::check_ixbar(InputXbar *ix, int hash_table) {
+bool HashExpr::XorHash::check_ixbar(InputXbar *ix, InputXbar::HashTable hash_table) {
     bool rv(true);
     for (auto &ref : what) {
         rv = ::check_ixbar(ref.second, ix, hash_table) && rv;
@@ -745,18 +750,20 @@ void HashExpr::XorHash::build_algorithm() {
 }
 
 void HashExpr::XorHash::gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
-                                         int hash_table) {
+                                         InputXbar::HashTable hash_table) {
     generate_ixbar_inputs_with_gaps(what, inputs, ix, hash_table);
 }
 
 void HashExpr::XorHash::get_sources(int, std::vector<Phv::Ref> &rv) const {}
 
-void HashExpr::Xor::gen_data(bitvec &data, int bit, InputXbar *ix, int hash_table) {
+void HashExpr::Xor::gen_data(bitvec &data, int bit, InputXbar *ix,
+                             InputXbar::HashTable hash_table) {
     for (auto *e : what)
         e->gen_data(data, bit, ix, hash_table);
 }
 
-void HashExpr::Stripe::gen_data(bitvec &data, int bit, InputXbar *ix, int hash_table) {
+void HashExpr::Stripe::gen_data(bitvec &data, int bit, InputXbar *ix,
+                                InputXbar::HashTable hash_table) {
     while (1) {
         int total_size = 0;
         for (auto *e : what) {

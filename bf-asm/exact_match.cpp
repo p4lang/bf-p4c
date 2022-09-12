@@ -1,6 +1,7 @@
 #include "action_bus.h"
 #include "algorithm.h"
 #include "hex.h"
+#include "hashexpr.h"
 #include "input_xbar.h"
 #include "instruction.h"
 #include "misc.h"
@@ -140,8 +141,9 @@ void ExactMatchTable::determine_ghost_bits() {
             if (auto *hash_group = ixb->get_hash_group(way.group_xme)) {
                 hash_tables = bitvec(hash_group->tables);
             } else {
-                for (auto &ht : ixb->get_hash_tables())
-                    hash_tables[ht.first] = 1; }
+                for (auto &ht : ixb->get_hash_tables()) {
+                    BUG_CHECK(ht.first.type == InputXbar::HashTable::EXACT);
+                    hash_tables[ht.first.index] = 1; } }
 
             // key is the field name/field bit that is the ghost bit
             // value is the bits that the ghost bit appears in within this way

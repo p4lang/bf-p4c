@@ -425,9 +425,10 @@ void SRamMatchTable::add_hash_functions(json::map &stage_tbl) const {
             // Get the hash group data
         if (auto *hash_group = input_xbar[0]->get_hash_group(hash_group_no)) {
             // Process only hash tables used per hash group
-            for (unsigned hash_table_id : bitvec(hash_group->tables)) {
-                auto hash_table = input_xbar[0]->get_hash_table(hash_table_id);
-                gen_hash_bits(hash_table, hash_table_id, hash_bits, hash_group_no, entry.second); }
+            for (unsigned id : bitvec(hash_group->tables)) {
+                auto hash_table = input_xbar[0]->get_hash_table(id);
+                gen_hash_bits(hash_table, InputXbar::HashTable(InputXbar::HashTable::EXACT, id),
+                              hash_bits, hash_group_no, entry.second); }
         } else {
             for (auto &ht : input_xbar[0]->get_hash_tables())
                 gen_hash_bits(ht.second, ht.first, hash_bits, hash_group_no, entry.second); }

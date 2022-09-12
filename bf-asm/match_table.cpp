@@ -542,7 +542,7 @@ int MatchTable::get_address_mau_actiondata_adr_default(unsigned log2size, bool p
  *         - hash_match_group_bit - The bit offset within the 128 bit input xbar group.
  */
 void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
-        unsigned hash_table_id, json::vector &hash_bits, unsigned hash_group_no,
+        InputXbar::HashTable hash_table_id, json::vector &hash_bits, unsigned hash_group_no,
         bitvec hash_bits_used) const {
     for (auto &col : hash_table) {
         if (!hash_bits_used.getbit(col.first))
@@ -583,8 +583,8 @@ void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
                     {"field_bit", json::number(field_bit)},
                     {"field_name", json::string(field_name)},
                     {"global_name", json::string(global_name)},
-                    {"hash_match_group", json::number(hash_table_id / 2)},
-                    {"hash_match_group_bit", json::number((hash_table_id % 2) * 64 + bit)}
+                    {"hash_match_group", json::number(hash_table_id.index / 2)},
+                    {"hash_match_group_bit", json::number((hash_table_id.index % 2) * 64 + bit)}
                     });
             }
         }
@@ -617,9 +617,9 @@ void MatchTable::add_hash_functions(json::map &stage_tbl) const {
             for (const auto hash_table : ht) {
                 json::map hash_function;
                 json::vector &hash_bits = hash_function["hash_bits"] = json::vector();
-                hash_function["hash_function_number"] = hash_table.first;
-                gen_hash_bits(hash_table.second, hash_table.first, hash_bits, hash_table.first,
-                              hash_matrix_req);
+                hash_function["hash_function_number"] = hash_table.first.uid();
+                gen_hash_bits(hash_table.second, hash_table.first, hash_bits,
+                              hash_table.first.uid(), hash_matrix_req);
             hash_functions.push_back(std::move(hash_function)); } } }
 }
 

@@ -1,8 +1,9 @@
 #include "input_xbar.h"
 
 template<> void InputXbar::write_galois_matrix(Target::Tofino::mau_regs &regs,
-                                               int id, const std::map<int, HashCol> &mat) {
+                                               HashTable id, const std::map<int, HashCol> &mat) {
     int parity_col = -1;
+    BUG_CHECK(id.type == HashTable::EXACT, "not an exact hash table %d", id.type);
     if (hash_table_parity.count(id) && !options.disable_gfm_parity) {
         parity_col = hash_table_parity[id];
     }
@@ -18,12 +19,12 @@ template<> void InputXbar::write_galois_matrix(Target::Tofino::mau_regs &regs,
             unsigned data = h.data.getrange(word*16, 16);
             unsigned valid = (h.valid >> word*2) & 3;
             if (data == 0 && valid == 0) continue;
-            auto &w = hash.galois_field_matrix[id*4 + word][c];
+            auto &w = hash.galois_field_matrix[id.index*4 + word][c];
             w.byte0 = data & 0xff;
             w.byte1 = (data >> 8) & 0xff;
             w.valid0 = valid & 1;
             w.valid1 = (valid >> 1) & 1;
-            gfm_rows.insert(id*4 + word);
+            gfm_rows.insert(id.index*4 + word);
         }
     }
     // A GFM row can be shared by multiple tables. In most cases the columns are
@@ -58,4 +59,4 @@ template<> void InputXbar::write_galois_matrix(Target::Tofino::mau_regs &regs,
 }
 
 template void InputXbar::write_galois_matrix(Target::Tofino::mau_regs &regs,
-                                             int id, const std::map<int, HashCol> &mat);
+                                             HashTable id, const std::map<int, HashCol> &mat);
