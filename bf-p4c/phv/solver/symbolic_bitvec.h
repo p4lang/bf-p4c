@@ -17,67 +17,26 @@ namespace symbolic_bitvec {
 /// > 1  represents a boolean variable.
 using BitID = int;
 
-/// base class for bit expression.
+enum ExprNodeType {
+  BIT_NODE,
+  AND_NODE,
+  OR_NODE,
+  NEG_NODE
+};
+
 class Expr {
  public:
-    // The returned expression will not have any constant value.
-    virtual const Expr* eval() const = 0;
-    // eq returns true ONLY when two expressions have the exact
-    // same construct or are commutatively same.
-    // For example
-    // (A & B) & C == A & (B & C) is False,
-    // (B & A) & C == (A & B) & C is True,
-    // B & (A & C) == (C & A) & B is True,
-    // The reason is because that we do not convert expression to
-    // CNF or DNF as the worst case complexity is O(2^n), the same
-    // as trying all combination of possible values for all variables.
-    // This limited version of equality, with O(n) time complexity,
-    // is enough for Tofino as we have at most two sources and we
-    // know the order of evaluation.
-    virtual bool eq(const Expr* other) const = 0;
-    virtual cstring to_cstring() const = 0;
-};
+    const Expr *left;
+    const Expr *right;
+    ExprNodeType type;
+    BitID value;
 
-/// Bit can be: 0, 1 or a variable.
-class Bit : public Expr {
- public:
-    BitID id;
-    explicit Bit(int id) : id(id) {}
-    const Expr* eval() const override { return this; };
-    bool eq(const Expr* other) const override;
-    cstring to_cstring() const override;
-};
-
-// Logical And
-class And : public Expr {
- public:
-    const Expr* left;
-    const Expr* right;
-    And(const Expr* l, const Expr* r) : left(l), right(r) {}
-    const Expr* eval() const override;
-    bool eq(const Expr* other) const override;
-    cstring to_cstring() const override;
-};
-
-// Logical Or
-class Or : public Expr {
- public:
-    const Expr* left;
-    const Expr* right;
-    Or(const Expr* l, const Expr* r) : left(l), right(r) {}
-    const Expr* eval() const override;
-    bool eq(const Expr* other) const override;
-    cstring to_cstring() const override;
-};
-
-// Logical Neg
-class Neg : public Expr {
- public:
-    const Expr* term;
-    explicit Neg(const Expr* e): term(e) {}
-    const Expr* eval() const override;
-    bool eq(const Expr* other) const override;
-    cstring to_cstring() const override;
+    Expr(const Expr *left, const Expr *right, ExprNodeType type, BitID value=-1);
+    Expr(ExprNodeType type, BitID value, const Expr *left=nullptr, const Expr *right=nullptr);
+    bool eq(const Expr *other) const;
+    cstring to_cstring() const;
+ private:
+    void simplify();
 };
 
 // Bitvec is a vector of Bits. The size is fixed after construction.
@@ -88,12 +47,13 @@ class BitVec {
  private:
     void size_check(const BitVec& other) const;
 
-    template <typename T>
-    BitVec bin_op(const BitVec& other) const;
+    BitVec bin_op(const BitVec& other, ExprNodeType type) const;
 
  public:
-    explicit BitVec(const std::vector<const Expr*>& bits) : bits(bits) {}
-    void set(int i, bool value) { bits[i] = new Bit(int(value)); }
+    explicit BitVec(std::vector<const Expr*>& bits) : bits(bits) {}
+    void set(int i, bool value) {
+       bits[i] = new Expr(ExprNodeType::BIT_NODE, int(value));
+    }
     const Expr* get(int i) const { return bits[i]; }
     BitVec slice(int start, int sz) const;
     bool eq(const BitVec& other) const;
