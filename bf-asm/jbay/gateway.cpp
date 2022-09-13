@@ -49,7 +49,7 @@ template<> void GatewayTable::standalone_write_regs(Target::JBay::mau_regs &regs
     if (long_branch_input >= 0)
         setup_muxctl(merge.pred_long_brch_lt_src[logical_id], long_branch_input);
 
-    bool is_branch = (miss_next.next_table() != nullptr);
+    bool is_branch = (miss.next.next_table() != nullptr);
     if (!is_branch && !need_next_map_lut) {
         for (auto &line : table) {
             if (line.next.next_table() != nullptr) {
