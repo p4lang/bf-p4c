@@ -225,7 +225,7 @@ class ExcludeDeparserOverlays : public Inspector {
  *  all the checksum fields same mutex constraint as that of checksum
  *  destination. Note: This contraint is added only for tofino because tofino's
  *  checksum engine cannot dynamically predicate entries based on header
- *  validity.
+ *  validity.  Instead, it relies on the PHV Validity bit.
  *  P4C-3064 - Avoid overlay of checksum fields with other fields that may be
  *  present. The pass was updated to detect if checksum source field might come
  *  from a new header being added in MAU. In that case, all of the checksum
@@ -240,6 +240,24 @@ class ExcludeCsumOverlays : public Inspector {
     bool preorder(const IR::BFN::EmitChecksum* emitChecksum) override;
  public:
     explicit ExcludeCsumOverlays(PhvInfo& p, const FindAddedHeaderFields& a, const PhvUse& u)
+        : phv(p), addedFields(a), use(u) { }
+};
+
+/** For checksums that rely on POV bits (Tofino2/3), make sure that none of
+ *  the source fields are mutually exclusive with each other.
+ *
+ *  Note that source fields in POV-based checksums can be mutually exclusive
+ *  with fields that are not used in checksums or that are used in a different
+ *  checksum unit.
+ */
+class ExcludeCsumOverlaysPOV : public Inspector {
+ private:
+    PhvInfo& phv;
+    const FindAddedHeaderFields& addedFields;
+    const PhvUse& use;
+    bool preorder(const IR::BFN::EmitChecksum* emitChecksum) override;
+ public:
+    explicit ExcludeCsumOverlaysPOV(PhvInfo& p, const FindAddedHeaderFields& a, const PhvUse& u)
         : phv(p), addedFields(a), use(u) { }
 };
 
@@ -270,6 +288,17 @@ class MutexOverlay : public PassManager {
             const PHV::Pragmas& pragmas,
             const PhvUse& use)
     : addedFields(phv), fieldToParserStates(phv) {
+        Visitor * exclude_csum_overlays = nullptr;
+        if (Device::currentDevice() == Device::TOFINO) {
+            exclude_csum_overlays = new ExcludeCsumOverlays(phv, addedFields, use);
+        } else if (Device::currentDevice() == Device::JBAY) {
+            exclude_csum_overlays = new ExcludeCsumOverlaysPOV(phv, addedFields, use);
+#if HAVE_CLOUDBREAK
+        } else if (Device::currentDevice() == Device::CLOUDBREAK) {
+            exclude_csum_overlays = new ExcludeCsumOverlaysPOV(phv, addedFields, use);
+#endif
+        }
+
         addPasses({
             new ExcludeDeparsedIntrinsicMetadata(phv, neverOverlay),
             new ExcludePragmaNoOverlayFields(neverOverlay, pragmas.pa_no_overlay()),
@@ -280,8 +309,7 @@ class MutexOverlay : public PassManager {
             &parserInfo,
             &fieldToParserStates,
             new ExcludeParserLoopReachableFields(phv, fieldToParserStates, parserInfo),
-            Device::currentDevice() == Device::TOFINO ?
-                new ExcludeCsumOverlays(phv, addedFields, use) : nullptr,
+            exclude_csum_overlays,
             new ExcludeMAUOverlays(phv, addedFields),
             new ExcludeDeparserOverlays(phv),
             new HeaderMutex(phv, neverOverlay, pragmas),

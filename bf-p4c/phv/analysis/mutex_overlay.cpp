@@ -164,11 +164,30 @@ bool ExcludeCsumOverlays::preorder(const IR::BFN::EmitChecksum* emitChecksum) {
             for (auto sourceField : emitChecksum->sources) {
                 auto csumPhvField = phv.field(sourceField->field->field);
                 LOG3("\t  Mark as non mutually exclusive: " << csumPhvField->name <<
-                    ", " << field.first << " due to " << checksumDest->name  << " checksum update");
+                    ", " << field.first << " due to " << checksumDest->name  <<
+                    " PHV validitity-based checksum update");
                 phv.removeFieldMutex(csumPhvField, fieldRef);
             }
         }
     }
+    return false;
+}
+
+bool ExcludeCsumOverlaysPOV::preorder(const IR::BFN::EmitChecksum* emitChecksum) {
+    for (const auto& source1 : emitChecksum->sources) {
+        const PHV::Field *sourceField1 = phv.field(source1->field->field);
+        for (const auto& source2 : emitChecksum->sources) {
+            const PHV::Field *sourceField2 = phv.field(source2->field->field);
+            if (phv.isFieldMutex(sourceField1, sourceField2)) {
+                LOG3("\t  Mark as non mutually exclusive: " << sourceField1->name <<
+                    ", " << sourceField2->name << " due to " <<
+                     phv.field(emitChecksum->dest->field)->name <<
+                    " POV-based checksum update");
+                phv.removeFieldMutex(sourceField1, sourceField2);
+            }
+        }
+    }
+
     return false;
 }
 
