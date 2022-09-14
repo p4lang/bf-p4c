@@ -28,7 +28,7 @@ class ParserHeaderSequences : public BFN::ControlFlowVisitor, public PardeInspec
     /**
      * @brief Record that @p header was parsed in @p gress
      */
-    void record_header(gress_t gress, cstring header);
+    void record_header(gress_t gress, cstring header, size_t size);
 
  public:
     /** Headers extracted in the parser */
@@ -38,6 +38,9 @@ class ParserHeaderSequences : public BFN::ControlFlowVisitor, public PardeInspec
 
     /** Header sequences extracted in the parser */
     std::map<gress_t, ordered_set<ordered_set<cstring>>> sequences;
+    // Name to size in bits of headers extracted in the ingress.
+    // Needed for the Hdr section in the assembly for Flatrock.
+    std::map<cstring, size_t> header_sizes;
 
     explicit ParserHeaderSequences(PhvInfo& phv) : phv(phv) {}
 

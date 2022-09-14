@@ -64,8 +64,12 @@ std::ostream& operator<<(std::ostream& out, const HeaderAsmOutput& headerOut) {
     // FIXME: Variable-length headers are currently split; current code ignores this so all
     // headers have been converted to fixed-length.
     out << indent++ << "len:" << std::endl;
-    for (const auto& hdr : seqs.headers.at(INGRESS))
-        out << indent << hdr << ": { base_len: 0, num_comp_bits: 0, scale: 0 }" << std::endl;
+    for (const auto& hdr : seqs.headers.at(INGRESS)) {
+        const auto it = seqs.header_sizes.find(hdr);
+        BUG_CHECK(it != seqs.header_sizes.end(), "Could not find size for header %1%", hdr);
+        out << indent << hdr << ": { base_len: " << it->second / 8
+            << ", num_comp_bits: 0, scale: 0 }" << std::endl;
+    }
     indent--;
 
     // Simple implementation: take the first numHeaderSeq header sequences

@@ -1110,7 +1110,6 @@ struct ComputeFlatrockParserIR : public ParserInspector {
 
     std::vector<const IR::BFN::ParserState*> states;
     std::map<const IR::BFN::ParserState*, std::set<cstring>> headers;
-    std::set<cstring> allHeaders;
     // state -> header, width
     std::map<const IR::BFN::ParserState*, std::vector<std::pair<cstring, int>>> header_widths;
     // textual information about extracts performed in parser
@@ -1119,8 +1118,6 @@ struct ComputeFlatrockParserIR : public ParserInspector {
     std::map<gress_t, std::set<ParserExtract>> extracts;
     // Ingress intrinsic metadata has been extracted
     bool igMetaExtracted;
-    // FIXME: Most likely not needed once hdr_id list is properly set up.
-    int payload_offset;
 
  private:
     const PhvInfo& phv;
@@ -1129,7 +1126,6 @@ struct ComputeFlatrockParserIR : public ParserInspector {
 
     profile_t init_apply(const IR::Node *node) override {
         igMetaExtracted = false;
-        payload_offset = 0;
         extracts.clear();
         states.clear();
         headers.clear();
@@ -1175,11 +1171,11 @@ struct ComputeFlatrockParserIR : public ParserInspector {
         CHECK_NULL(member);
         CHECK_NULL(member->expr);
 
-        const auto hdr_ref = member->expr->to<IR::ConcreteHeaderRef>();
+        const auto hdr_ref = member->expr->to<IR::HeaderRef>();
         CHECK_NULL(hdr_ref);
-        CHECK_NULL(hdr_ref->ref);
+        CHECK_NULL(hdr_ref->baseRef());
 
-        const size_t width = hdr_ref->ref->type->width_bits();
+        const size_t width = hdr_ref->baseRef()->type->width_bits();
 
         bool used_in_ingress = false;
         bool used_in_egress = false;
@@ -1233,12 +1229,7 @@ struct ComputeFlatrockParserIR : public ParserInspector {
                 bool igMeta = (field->header() == igMetaName);
                 header_widths[state].push_back({ field->header(), igMeta ?
                     Flatrock::PARSER_PROFILE_MD_SEL_NUM * 8 : width });
-                if (igMeta)
-                    igMetaExtracted = true;
-                else if (allHeaders.count(field->header()) == 0) {
-                    allHeaders.insert(field->header());
-                    payload_offset += width / 8;
-                }
+                if (igMeta) igMetaExtracted = true;
             }
         }
 
@@ -1310,7 +1301,6 @@ class ReplaceFlatrockParserIR : public Transform {
 
         build_phv_builder(lowered_parser->phv_builder, INGRESS);
 
-        lowered_parser->payload_offset = computed.payload_offset;
         return lowered_parser;
     }
 

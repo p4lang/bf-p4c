@@ -2435,6 +2435,18 @@ void FlatrockPseudoParser::input(VECTOR(value_t) args, value_t data) {
     }
 }
 
+void FlatrockPseudoParser::write_hdr_config(Target::Flatrock::parser_regs &regs){
+    for (const auto &kv : Hdr::hdr.len) {
+        const int id = kv.first;
+        const auto enc = kv.second;
+
+        auto &mem = regs.pprsr_mem.hdr_len_tbl.hdr_len_mem[id];
+        mem.base_len = enc.base_len;
+        mem.num_comp_bits = enc.num_comp_bits;
+        mem.scale = enc.scale;
+    }
+}
+
 void FlatrockPseudoParser::write_config(RegisterSetBase &regs, json::map &json, bool legacy) {
     auto &_regs = dynamic_cast<Target::Flatrock::parser_regs &>(regs);
     _regs.pprsr.pprsr_pov_bmd_ext.st_start = pov_state_pos;
@@ -2447,6 +2459,7 @@ void FlatrockPseudoParser::write_config(RegisterSetBase &regs, json::map &json, 
         phv_builder[i].write_config(regs, json, legacy);
     }
     initial_predication_vector.write_config(regs, json, legacy);
+    write_hdr_config(_regs);
     if (auto *top = TopLevel::regs<Target::Flatrock>()) {
         top->mem_pipe.pprsr_mem.set("mem.pprsr_mem", &_regs.pprsr_mem);
         top->reg_pipe.pprsr.set("reg.pprsr", &_regs.pprsr);

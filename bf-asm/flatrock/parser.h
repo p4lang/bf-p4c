@@ -422,6 +422,7 @@ class FlatrockPseudoParser : virtual public Parsable, virtual public Configurabl
     InitialPredicationVector initial_predication_vector;
 
     void input(VECTOR(value_t) args, value_t data) override;
+    void write_hdr_config(Target::Flatrock::parser_regs &regs);
     void write_config(RegisterSetBase &regs, json::map &json, bool legacy = true) override;
 
     FlatrockPseudoParser() {

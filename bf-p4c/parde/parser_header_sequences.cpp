@@ -5,6 +5,7 @@ Visitor::profile_t ParserHeaderSequences::init_apply(const IR::Node *node) {
     headers.clear();
     header_ids.clear();
     sequences.clear();
+    header_sizes.clear();
     return Inspector::init_apply(node);
 }
 
@@ -17,6 +18,7 @@ void ParserHeaderSequences::flow_merge(Visitor& other_) {
         sequences[kv.first].insert(kv.second.begin(), kv.second.end());
     }
     header_ids.insert(other.header_ids.begin(), other.header_ids.end());
+    header_sizes.insert(other.header_sizes.begin(), other.header_sizes.end());
 }
 
 /** @brief Create an empty set of sequences for each parser */
@@ -25,10 +27,15 @@ bool ParserHeaderSequences::preorder(const IR::BFN::Parser* parser) {
     return true;
 }
 
-void ParserHeaderSequences::record_header(gress_t gress, cstring header) {
+void ParserHeaderSequences::record_header(gress_t gress, cstring header, size_t size) {
     if (!headers[gress].count(header)) LOG1("Found header: " << header);
     // Assign a unique header ID
     if (!headers[gress].count(header)) header_ids[{gress, header}] = header_id_cnt++;
+    const auto prev_size = header_sizes.find(header);
+    BUG_CHECK(prev_size == header_sizes.end() || prev_size->second == size,
+              "Header %1% added with conflicting sizes %2% and %3%", header, prev_size->second,
+              size);
+    if (gress == INGRESS) header_sizes[header] = size;
     headers[gress].emplace(header);
     for (auto& seq : sequences[gress]) seq.emplace(header);
 }
@@ -50,6 +57,13 @@ bool ParserHeaderSequences::preorder(const IR::BFN::Extract* extract) {
 
     // Stack valid ($stkvalid) processing
     const auto* member = lval->field->to<IR::Member>();
+    size_t size = 0;
+    if (member && member->expr) {
+        if (const auto* hdr_ref = member->expr->to<IR::HeaderRef>()) {
+            const auto* base_ref = hdr_ref->baseRef();
+            if (base_ref && base_ref->type) size = base_ref->type->width_bits();
+        }
+    }
     if (member && member->member == "$stkvalid") {
         const auto* ir = member->expr->to<IR::InstanceRef>();
         const auto* tb = member->type->to<IR::Type_Bits>();
@@ -69,7 +83,7 @@ bool ParserHeaderSequences::preorder(const IR::BFN::Extract* extract) {
                         if (bit < depth + shift && bit >= shift) {
                             int idx = depth - (bit - shift) - 1;
                             cstring stack_instance = header + "[" + std::to_string(idx) + "]";
-                            record_header(field->gress, stack_instance);
+                            record_header(field->gress, stack_instance, size);
                         }
                     }
                 }
@@ -80,7 +94,7 @@ bool ParserHeaderSequences::preorder(const IR::BFN::Extract* extract) {
 
     // Regular field processing
     if (field->pov || field->metadata) return false;
-    record_header(field->gress, field->header());
+    record_header(field->gress, field->header(), size);
     return false;
 }
 
@@ -88,6 +102,7 @@ void ParserHeaderSequences::end_apply() {
     for (auto& seq : sequences[INGRESS]) seq.emplace(payloadHeaderName);
     headers[INGRESS].insert(payloadHeaderName);
     header_ids[{INGRESS, payloadHeaderName}] = payloadHeaderID;
+    header_sizes[payloadHeaderName] = 0;
     if (LOGGING(1)) {
         LOG1("Headers:");
         for (auto gress : {INGRESS, EGRESS}) {

@@ -417,9 +417,7 @@ class Parser : BFN::BaseLoweredParser {
     inline PortMetadata port_metadata;
     inline Vector<Profile> profiles;
     inline Vector<AnalyzerStage> analyzer;
-    inline Vector<PhvBuilderGroup> phv_builder;
-    // FIXME: Most likely not needed once hdr_id list is properly set up.
-    inline int payload_offset = 0;          
+    inline Vector<PhvBuilderGroup> phv_builder;          
 #noconstructor
     Parser() : BaseLoweredParser(INGRESS) {}
     visit_children {
