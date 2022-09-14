@@ -102,6 +102,7 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/stf/p4c-2772.p4
   extensions/p4_tests/p4_16/stf/auto_init_meta2.p4
   extensions/p4_tests/p4_16/stf/parser_extract_upcast.p4
+  extensions/p4_tests/p4_16/stf/p4c-4855.p4
   )
 
 p4c_add_xfail_reason("tofino5"

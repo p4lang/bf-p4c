@@ -1,0 +1,64 @@
+add Ingress1.t8bit hdr.ipv4.f:0x00 Ingress1.a8bit_add(value:0x01)
+add Ingress1.t8bit hdr.ipv4.f:0x01 Ingress1.a8bit_bit_and(value:0x03)
+add Ingress1.t8bit hdr.ipv4.f:0x02 Ingress1.a8bit_bit_andca(value:0x02)
+add Ingress1.t8bit hdr.ipv4.f:0x03 Ingress1.a8bit_bit_andcb(value:0x02)
+
+add Ingress1.t8bit hdr.ipv4.f:0x04 Ingress1.a8bit_bit_nand(value:0x0e)
+add Ingress1.t8bit hdr.ipv4.f:0x05 Ingress1.a8bit_bit_nor(value:0x03)
+add Ingress1.t8bit hdr.ipv4.f:0x06 Ingress1.a8bit_bit_not()
+add Ingress1.t8bit hdr.ipv4.f:0x07 Ingress1.a8bit_bit_or(value:0x02)
+
+add Ingress1.t8bit hdr.ipv4.f:0x08 Ingress1.a8bit_bit_orca(value:0x07)
+add Ingress1.t8bit hdr.ipv4.f:0x09 Ingress1.a8bit_bit_orcb(value:0xf1)
+add Ingress1.t8bit hdr.ipv4.f:0x0a Ingress1.a8bit_bit_xnor(value:0x0f)
+add Ingress1.t8bit hdr.ipv4.f:0x0b Ingress1.a8bit_bit_xor(value:0x02)
+
+# add(value:0x1)
+packet 0 0001
+expect 8 0002
+
+# and(value:0x03)
+packet 0 0107
+expect 8 0103
+
+# andca(value:0x02)
+packet 0 0201
+expect 8 0202
+
+# andcb(value:0x02)
+packet 0 0301
+expect 8 0301
+
+# nand(value:0x0e)
+packet 0 040f
+expect 8 04f1
+
+# nor(value:0x03)
+packet 0 0504
+expect 8 05f8
+
+# not()
+packet 0 060f
+expect 8 06f0
+
+# or(value:0x02)
+packet 0 0703
+expect 8 0703
+
+
+# orca(value:0x07)
+packet 0 08f1
+expect 8 080f
+
+# orcb(value:0xf1)
+packet 0 0907
+expect 8 090f
+
+# xnor(value:0x0f)
+packet 0 0a01
+expect 8 0af1
+
+# xor(value:0x02)
+packet 0 0b07
+expect 8 0b05
+

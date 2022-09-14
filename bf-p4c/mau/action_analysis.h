@@ -516,22 +516,22 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         }
 
         bool is_commutative() const {
-            if ((name == "sub")
-               || (name == "subc")
-               || (name == "ssubu")
-               || (name == "ssubs")
-               // JBAY / CLOUDBREAK
-               || (name == "gtequ")
-               || (name == "gteqs")
-               || (name == "gtu")
-               || (name == "gts")
-               || (name == "ltu")
-               || (name == "lts")
-               || (name == "lequ")
-               || (name == "leqs")
-               // JBAY / CLOUDBREAK
-               ) return false;
-            return true;
+            return (name == "add")
+               ||  (name == "addc")
+               ||  (name == "saddu")
+               ||  (name == "sadds")
+               ||  (name == "minu")
+               ||  (name == "mins")
+               ||  (name == "maxu")
+               ||  (name == "maxs")
+               ||  (name == "setz")
+               ||  (name == "nor")
+               ||  (name == "xor")
+               ||  (name == "nand")
+               ||  (name == "and")
+               ||  (name == "xnor")
+               ||  (name == "or")
+               ||  (name == "sethi");
         }
 
         friend std::ostream &operator<<(std::ostream &out, const ContainerAction&);

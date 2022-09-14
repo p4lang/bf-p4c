@@ -1144,7 +1144,7 @@ void ActionAnalysis::build_phv_alignment(PHV::Container container, ContainerActi
             for (auto alignment : apr_entry.second) {
                 ta.add_alignment(alignment.write_bits, alignment.read_bits);
                 // For non commutative actions (e.g. sub) src operand order is fixed
-                if (!cont_action.is_commutative()) {
+                if (!cont_action.is_commutative() && cont_action.operands() == 2) {
                     ta.is_src1 = (alignment.read_src == SRC1);
                     LOG5("Setting alignment to SRC1 as operation is non commutative");
                 }
