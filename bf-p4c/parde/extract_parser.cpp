@@ -331,6 +331,11 @@ struct AncestorStates {
     }
 };
 
+using ChecksumOffsetMap = std::unordered_map<cstring, std::unordered_map<cstring, int>>;
+using ExtractedFieldsMap = ordered_map<const IR::Member*, const IR::BFN::PacketRVal*>;
+using BitOffsetMap = std::unordered_map<const IR::MethodCallExpression*, unsigned>;
+using ChecksumInstrMap = std::unordered_map<cstring, const IR::MethodCallExpression*>;
+
 /// Converts frontend parser IR into backend IR
 class GetBackendParser {
  public:
@@ -352,6 +357,9 @@ class GetBackendParser {
     IR::BFN::ParserState* convertBody(IR::BFN::ParserState* state);
 
     IR::BFN::ParserState* convertState(cstring name, bool& isLoopState);
+
+    void applyRewrite(IR::BFN::ParserState* state, Transform& rewrite);
+    void rewriteChecksums(IR::BFN::Parser* parser, IR::BFN::ParserState* startState);
 
     cstring
     getName(const IR::ParserState* state) {
@@ -400,8 +408,13 @@ class GetBackendParser {
     ParserPragmas parserPragmas;
     ParserLoopsInfo parserLoopsInfo;
 
+    std::vector<std::vector<const IR::BFN::ParserState*>> backendLoops;
     // used to keep track of visiter ancestor states at the current state
     AncestorStates ancestors;
+    // maps below are used in both RewriteParserStatements and RewriteParserChecksums, they are
+    // defined here so we can pass them to both passes
+    std::unordered_map<const IR::BFN::ParserState*, ExtractedFieldsMap> extractedFields;
+    BitOffsetMap bitOffsets;
 };
 
 /// Resolves the "next" and "last" stack references according to the spec.
@@ -719,6 +732,10 @@ GetBackendParser::createBackendParser() {
         parserName = multiParserName;
     }
 
+    auto* backendParser = new IR::BFN::Parser(parser->thread, startState, parserName,
+                                              parser->phase0, parser->portmap);
+    rewriteChecksums(backendParser, startState);
+
     if (parser->phase0 && !parser->phase0->namedByAnnotation) {
         auto phase0 = parser->phase0->clone();
         // V1Model adds an arch name 'ingressParserImpl' or 'egressParserImpl'
@@ -729,11 +746,10 @@ GetBackendParser::createBackendParser() {
         // in the multi parser name generated through block info mapping
         else if (arch->hasMultipleParsers)
             phase0->tableName = multiParserName + "." + phase0->tableName;
-        return new IR::BFN::Parser(parser->thread, startState, parserName, phase0, parser->portmap);
+        backendParser->phase0 = phase0;
     }
 
-    return new IR::BFN::Parser(parser->thread, startState, parserName,
-                               parser->phase0, parser->portmap);
+    return backendParser;
 }
 
 void GetBackendParser::addTransition(IR::BFN::ParserState* state, match_t matchVal,
@@ -880,8 +896,13 @@ resolveLookahead(P4::TypeMap* typeMap, const IR::Expression* expr, int currentBi
 
 /// Rewrites frontend parser IR statements to the backend ones.
 struct RewriteParserStatements : public Transform {
-    RewriteParserStatements(P4::TypeMap* typeMap, cstring stateName, gress_t gress)
-        : typeMap(typeMap), stateName(stateName), gress(gress) { }
+    RewriteParserStatements(P4::TypeMap* typeMap, cstring stateName, gress_t gress,
+                            ExtractedFieldsMap& extractedFields, BitOffsetMap& bitOffsets)
+        : typeMap(typeMap),
+          stateName(stateName),
+          gress(gress),
+          extractedFields(extractedFields),
+          bitOffsets(bitOffsets) {}
 
     /// @return the cumulative shift in bits from all statements rewritten up to
     /// this point.
@@ -970,158 +991,6 @@ struct RewriteParserStatements : public Transform {
         }
 
         currentBit += bitOffset;
-        return nullptr;
-    }
-
-    // check if member is header/payload checksum field itself
-    // (annotated with @header_checksum/@payload_checksum)
-    bool isChecksumField(const IR::Member* member, cstring which) {
-        const IR::HeaderOrMetadata* header = nullptr;
-        if (auto headerRef = member->expr->to<IR::ConcreteHeaderRef>()) {
-            header = headerRef->baseRef();
-        } else if (auto headerRef = member->expr->to<IR::HeaderStackItemRef>()) {
-            header = headerRef->baseRef();
-        } else {
-            ::error("Unhandled checksum expression %1%", member);
-        }
-        for (auto field : header->type->fields) {
-            if (field->name == member->member) {
-                auto annot = field->annotations->getSingle(which);
-                if (annot) return true;
-            }
-        }
-        return false;
-    }
-
-    const IR::Vector<IR::BFN::ParserPrimitive>*
-    rewriteChecksumAddOrSubtract(const IR::MethodCallExpression* call) {
-        auto* method = call->method->to<IR::Member>();
-        auto* path = method->expr->to<IR::PathExpression>()->path;
-        cstring declName = path->name;
-        if (!declNameToOffset.count(declName)) {
-            declNameToOffset[declName] = 0;
-        }
-        auto src = (*call->arguments)[0]->expression;
-        IR::Vector<IR::Expression> srcList;
-        if (src->is<IR::ListExpression>() || src->is<IR::StructExpression>()) {
-            srcList = *getListExprComponents(*src);
-        } else {
-            srcList.push_back(src);
-        }
-        bool isAdd = method->member == "add";
-
-        auto rv = new IR::Vector<IR::BFN::ParserPrimitive>;
-        IR::Vector<IR::Expression> list;
-        for (auto srcComp : srcList) {
-            if (auto member = srcComp->to<IR::Member>()) {
-                list.push_back(member);
-            } else if (auto constant = srcComp->to<IR::Constant>()) {
-                list.push_back(constant);
-            }
-        }
-
-        for (auto expr : list) {
-            bool swap = false;
-            if (auto* constant = expr->to<IR::Constant>()) {
-                if (constant->asInt() != 0) {
-                   P4C_UNIMPLEMENTED(
-                   "Non-zero constant entry is not supported in checksum calculation %1%", expr);
-                }
-                declNameToOffset[declName] += constant->type->width_bits();
-                continue;
-            }
-            auto member = expr->to<IR::Member>();
-            BUG_CHECK(member != nullptr,
-                      "Invalid field in the checksum calculation : %1%",
-                      expr->srcInfo);
-            auto hdr = member->expr->to<IR::HeaderRef>();
-            BUG_CHECK(hdr != nullptr,
-                      "Invalid field in the checksum calculation."
-                      " Expecting a header field : %1%", member->srcInfo);
-            auto hdr_type = hdr->type->to<IR::Type_StructLike>();
-            BUG_CHECK(hdr_type != nullptr,
-                      "Header type isn't a structlike: %1%", hdr_type);
-
-            const IR::BFN::PacketRVal* rval = nullptr;
-            for (auto kv : extractedFields) {
-                auto* extracted = kv.first;
-                if (member->member == extracted->member &&
-                    member->expr->equiv(*(extracted->expr))) {
-                    rval = kv.second;
-                    // If a field is on an even byte in the checksum operation field list
-                    // but on an odd byte in the input buffer and vice-versa then swap is true.
-                    if ((declNameToOffset[declName]/8) % 2 != rval->range.loByte() % 2) {
-                        swap = true;
-                    }
-                    break;
-                }
-            }
-            if (!rval) {
-                std::stringstream msg;
-                msg << "field in " << declName << " is not extracted in "
-                    << stateName <<"."
-                    << " Operations on the checksum fields must be in the same parser state "
-                    << "where the fields are extracted.";
-                ::fatal_error("%1% %2%", expr, msg.str());
-            }
-            declNameToOffset[declName] += rval->range.size();
-            if (isAdd) {
-                bool isChecksum = isChecksumField(member, "header_checksum");
-                auto* add = new IR::BFN::ChecksumAdd(declName, rval, swap, isChecksum);
-                rv->push_back(add);
-            } else {
-                bool isChecksum = isChecksumField(member, "payload_checksum");
-                auto* subtract = new IR::BFN::ChecksumSubtract(declName, rval,
-                                                               swap, isChecksum);
-                lastChecksumSubtract = subtract;
-                lastSubtractField = member;
-                rv->push_back(subtract);
-            }
-        }
-        return rv;
-    }
-
-    const IR::Vector<IR::BFN::ParserPrimitive>*
-    rewriteChecksumVerify(const IR::MethodCallExpression* call) {
-        auto* method = call->method->to<IR::Member>();
-        auto* path = method->expr->to<IR::PathExpression>()->path;
-        cstring declName = path->name;
-
-        auto* rv = new IR::Vector<IR::BFN::ParserPrimitive>;
-        rv->push_back(new IR::BFN::ChecksumVerify(declName));
-        return rv;
-    }
-
-    const IR::Vector<IR::BFN::ParserPrimitive>*
-    rewriteSubtractAllAndDeposit(const IR::MethodCallExpression* call) {
-        auto* method = call->method->to<IR::Member>();
-        auto* path = method->expr->to<IR::PathExpression>()->path;
-        cstring declName = path->name;
-        auto* rv = new IR::Vector<IR::BFN::ParserPrimitive>;
-        auto deposit = (*call->arguments)[0]->expression;
-        auto mem = deposit->to<IR::Member>();
-        auto endByte = new IR::BFN::PacketRVal(StartLen(currentBit - 8, 8));
-        auto get = new IR::BFN::ChecksumResidualDeposit(declName,
-                                              new IR::BFN::FieldLVal(mem), endByte);
-        rv->push_back(get);
-        return rv;
-    }
-
-    const IR::Vector<IR::BFN::ParserPrimitive>*
-    rewriteChecksumCall(IR::MethodCallStatement* statement) {
-        auto* call = statement->methodCall;
-        auto* method = call->method->to<IR::Member>();
-
-        if (method->member == "add" || method->member == "subtract") {
-            return rewriteChecksumAddOrSubtract(call);
-        } else if (method->member == "subtract_all_and_deposit") {
-            return rewriteSubtractAllAndDeposit(call);
-        } else if (method->member == "verify") {
-            return rewriteChecksumVerify(call);
-        } else {
-            BUG("Unhandled parser checksum call: %1%", statement);
-        }
-
         return nullptr;
     }
 
@@ -1285,7 +1154,10 @@ struct RewriteParserStatements : public Transform {
         auto* call = statement->methodCall;
         if (auto* method = call->method->to<IR::Member>()) {
             if (isExtern(method, "Checksum")) {
-                return rewriteChecksumCall(statement);
+                // checksums are rewritten in RewriteParserChecksums, we save the bit offset for
+                // subtract_all_and_deposit()
+                bitOffsets[call] = currentBit;
+                return nullptr;
             } else if (isExtern(method, "ParserCounter")) {
                 return rewriteParserCounterCall(statement);
             } else if (isExtern(method, "ParserPriority")) {
@@ -1335,30 +1207,7 @@ struct RewriteParserStatements : public Transform {
         return e;
     }
 
-    int getHeaderEndPos(const IR::BFN::ChecksumSubtract* lastSubtract,
-                        const IR::Member* lastSubtractField) {
-        auto v = lastSubtract->source->to<IR::BFN::PacketRVal>();
-        int lastBitSubtract = v->range.toUnit<RangeUnit::Bit>().hi;
-        if (lastBitSubtract % 8 != 7) {
-            ::fatal_error("Checksum subtract ends at non-byte-aligned field %1%",
-                          lastSubtractField);
-        }
-
-        auto* headerRef = lastSubtractField->expr->to<IR::ConcreteHeaderRef>();
-        auto header = headerRef->baseRef();
-        int endPos = 0;
-        for (auto field :  header->type->fields) {
-            if (field->name == lastSubtractField->member) {
-                endPos = lastBitSubtract;
-            } else if (endPos > 0) {
-                endPos += field->type->width_bits();
-            }
-        }
-        return endPos;
-    }
-
-    const IR::BFN::ParserPrimitive*
-    preorder(IR::AssignmentStatement* s) override {
+    const IR::BFN::ParserPrimitive* preorder(IR::AssignmentStatement* s) override {
         if (s->left->type->is<IR::Type::Varbits>())
             BUG("Extraction to varbit field should have been de-sugared in midend.");
 
@@ -1371,26 +1220,8 @@ struct RewriteParserStatements : public Transform {
         if (auto mc = rhs->to<IR::MethodCallExpression>()) {
             if (auto* method = mc->method->to<IR::Member>()) {
                 if (isExtern(method, "Checksum")) {
-                    auto* path = method->expr->to<IR::PathExpression>()->path;
-                    cstring declName = path->name;
-
-                    if (method->member == "verify") {
-                        auto verify = new IR::BFN::ChecksumVerify(declName);
-                        verify->dest = new IR::BFN::FieldLVal(lhs);
-                        return verify;
-                    } else if (method->member == "get") {
-                        ::warning("checksum.get() will deprecate in future versions. Please use"
-                                  " void subtract_all_and_deposit(bit<16>) instead");
-                        if (!lastChecksumSubtract || !lastSubtractField) {
-                            ::fatal_error("Checksum \"get\" must have preceding \"subtract\""
-                                          " call in the same parser state");
-                        }
-                        auto endPos = getHeaderEndPos(lastChecksumSubtract, lastSubtractField);
-                        auto endByte = new IR::BFN::PacketRVal(StartLen(endPos, 8));
-                        auto get = new IR::BFN::ChecksumResidualDeposit(declName,
-                                              new IR::BFN::FieldLVal(lhs), endByte);
-                        return get;
-                    }
+                    // checksums are rewritten in RewriteParserChecksums
+                    return nullptr;
                 }
             }
         }
@@ -1462,11 +1293,339 @@ struct RewriteParserStatements : public Transform {
 
     unsigned currentBit = 0;
 
-    // A bit offset counter for each checksum operation
-    std::map<cstring, int> declNameToOffset;
-    ordered_map<const IR::Member*, const IR::BFN::PacketRVal*> extractedFields;
+    ExtractedFieldsMap& extractedFields;
+    BitOffsetMap& bitOffsets;
+};
+
+/**
+ * Checksum conversion is split into its own pass because in order to calculate byte offsets inside
+ * checksums operations, all preceding states must be visited first, which is not necessarily the
+ * case with DFS. Instead, this pass should be applied on states in topological order.
+ */
+struct RewriteParserChecksums : public Transform {
+    RewriteParserChecksums(const cstring& stateName,
+                           const ordered_set<const IR::BFN::ParserState*>& ancestors,
+                           ChecksumOffsetMap& declNameToOffset,
+                           ordered_map<cstring, int>& stateChecksumOffset,
+                           const ExtractedFieldsMap& extractedFields,
+                           const BitOffsetMap& bitOffsets, std::unordered_set<cstring>& errors,
+                           ChecksumInstrMap& checksumInstrMap)
+        : stateName(stateName),
+          ancestors(ancestors),
+          declNameToOffset(declNameToOffset),
+          stateChecksumOffset(stateChecksumOffset),
+          extractedFields(extractedFields),
+          bitOffsets(bitOffsets),
+          errors(errors),
+          checksumInstrMap(checksumInstrMap) {
+        getOffsets();
+    }
+
+ private:
+    // check if member is header/payload checksum field itself
+    // (annotated with @header_checksum/@payload_checksum)
+    bool isChecksumField(const IR::Member* member, const cstring &which) const {
+        const IR::HeaderOrMetadata* header = nullptr;
+        if (auto headerRef = member->expr->to<IR::ConcreteHeaderRef>()) {
+            header = headerRef->baseRef();
+        } else if (auto headerRef = member->expr->to<IR::HeaderStackItemRef>()) {
+            header = headerRef->baseRef();
+        } else {
+            ::error("Unhandled checksum expression %1%", member);
+        }
+        for (auto field : header->type->fields) {
+            if (field->name == member->member) {
+                auto annot = field->annotations->getSingle(which);
+                if (annot) return true;
+            }
+        }
+        return false;
+    }
+
+    int getHeaderEndPos() const {
+        auto v = lastChecksumSubtract->source->to<IR::BFN::PacketRVal>();
+        int lastBitSubtract = v->range.toUnit<RangeUnit::Bit>().hi;
+        if (lastBitSubtract % 8 != 7) {
+            ::fatal_error("Checksum subtract ends at non-byte-aligned field %1%",
+                          lastSubtractField);
+        }
+
+        auto* headerRef = lastSubtractField->expr->to<IR::ConcreteHeaderRef>();
+        auto header = headerRef->baseRef();
+        int endPos = 0;
+        for (auto field : header->type->fields) {
+            if (field->name == lastSubtractField->member) {
+                endPos = lastBitSubtract;
+            } else if (endPos > 0) {
+                endPos += field->type->width_bits();
+            }
+        }
+        return endPos;
+    }
+
+    /**
+     * Forward bit offsets of checksum operation from directly preceding states to this one.
+     * Without forwarding all of them, offsets for checksums that skip a state would be wrong.
+     * While calculating offsets, we check if byte offsets of checksum operations have the same
+     * parity regardless of path through the parser, otherwise we report an error.
+     */
+    void getOffsets() {
+        struct PrevStateParity {
+            bool evenFound;
+            bool oddFound;
+        };
+        std::unordered_map<cstring, PrevStateParity> prev;
+
+        auto& currState = declNameToOffset[stateName];
+        for (const auto anc : ancestors) {
+            for (const auto& kv : declNameToOffset[anc->p4State->controlPlaneName()]) {
+                const auto declName = kv.first;
+                const int ancOffset = kv.second;
+
+                auto& parity = prev[declName];
+                auto& offset = currState[declName];
+                if ((ancOffset / 8) % 2 == 0)
+                    parity.evenFound = true;
+                else
+                    parity.oddFound = true;
+                // We only report an error if another add/subtract is called on this checksum, so
+                // just store for now.
+                if (parity.evenFound && parity.oddFound) {
+                    errors.insert(declName);
+                }
+                offset = std::max(offset, ancOffset);
+            }
+        }
+    }
+
+    const IR::Vector<IR::BFN::ParserPrimitive>*
+    rewriteChecksumAddOrSubtract(const IR::MethodCallExpression* call) {
+        auto* method = call->method->to<IR::Member>();
+        auto* path = method->expr->to<IR::PathExpression>()->path;
+        cstring declName = path->name;
+
+        auto& totalOffset = declNameToOffset[stateName][declName];
+        auto& stateOffset = stateChecksumOffset[declName];
+
+        const bool isAdd = method->member == "add";
+        if (errors.count(declName)) {
+            std::stringstream msg;
+            msg << "Before instruction %1% in state " << stateName << ", checksum " << declName
+                << " operates on either an odd or an even number of bytes, depending on path "
+                   "through the parser. This makes it impossible to implement on Tofino. Consider "
+                   "adding "
+                << (isAdd ? "an add" : "a subtract")
+                << " instruction with a constant argument 8w0 in a preceding state to make the "
+                   "checksum always operate on either an odd or an even number of bytes.";
+            ::error(ErrorType::ERR_UNSUPPORTED, msg.str().c_str(), call);
+        }
+        auto src = (*call->arguments)[0]->expression;
+        IR::Vector<IR::Expression> srcList;
+        if (src->is<IR::ListExpression>() || src->is<IR::StructExpression>()) {
+            srcList = *getListExprComponents(*src);
+        } else {
+            srcList.push_back(src);
+        }
+
+        auto rv = new IR::Vector<IR::BFN::ParserPrimitive>;
+        IR::Vector<IR::Expression> list;
+        for (auto srcComp : srcList) {
+            if (auto member = srcComp->to<IR::Member>()) {
+                list.push_back(member);
+            } else if (auto constant = srcComp->to<IR::Constant>()) {
+                list.push_back(constant);
+            }
+        }
+
+        for (auto expr : list) {
+            bool swap = false;
+            if (auto* constant = expr->to<IR::Constant>()) {
+                if (constant->asInt() != 0) {
+                   P4C_UNIMPLEMENTED(
+                   "Non-zero constant entry is not supported in checksum calculation %1%", expr);
+                }
+                stateOffset += constant->type->width_bits();
+                totalOffset += constant->type->width_bits();
+                continue;
+            }
+            auto member = expr->to<IR::Member>();
+            BUG_CHECK(member != nullptr,
+                      "Invalid field in the checksum calculation : %1%",
+                      expr->srcInfo);
+            auto hdr = member->expr->to<IR::HeaderRef>();
+            BUG_CHECK(hdr != nullptr,
+                      "Invalid field in the checksum calculation."
+                      " Expecting a header field : %1%", member->srcInfo);
+            auto hdr_type = hdr->type->to<IR::Type_StructLike>();
+            BUG_CHECK(hdr_type != nullptr,
+                      "Header type isn't a structlike: %1%", hdr_type);
+
+            const IR::BFN::PacketRVal* rval = nullptr;
+            for (auto kv : extractedFields) {
+                auto* extracted = kv.first;
+                if (member->member == extracted->member &&
+                    member->expr->equiv(*(extracted->expr))) {
+                    rval = kv.second;
+                    // If a field is on an even byte in the checksum operation field list
+                    // but on an odd byte in the input buffer and vice-versa then swap is true.
+                    if ((totalOffset / 8) % 2 != rval->range.loByte() % 2) {
+                        swap = true;
+                    }
+                    break;
+                }
+            }
+            if (!rval) {
+                std::stringstream msg;
+                msg << "field in " << declName << " is not extracted in "
+                    << stateName <<"."
+                    << " Operations on the checksum fields must be in the same parser state "
+                    << "where the fields are extracted.";
+                ::fatal_error("%1% %2%", expr, msg.str());
+            }
+            totalOffset += rval->range.size();
+            stateOffset += rval->range.size();
+            if (isAdd) {
+                bool isChecksum = isChecksumField(member, "header_checksum");
+                auto* add = new IR::BFN::ChecksumAdd(declName, rval, swap, isChecksum);
+                rv->push_back(add);
+            } else {
+                bool isChecksum = isChecksumField(member, "payload_checksum");
+                auto* subtract = new IR::BFN::ChecksumSubtract(declName, rval,
+                                                               swap, isChecksum);
+                lastChecksumSubtract = subtract;
+                lastSubtractField = member;
+                rv->push_back(subtract);
+            }
+            if (!checksumInstrMap.count(declName)) {
+                checksumInstrMap[declName] = call;
+            }
+        }
+        return rv;
+    }
+
+    const IR::Vector<IR::BFN::ParserPrimitive>*
+    rewriteChecksumVerify(const IR::MethodCallExpression* call) {
+        auto* method = call->method->to<IR::Member>();
+        auto* path = method->expr->to<IR::PathExpression>()->path;
+        cstring declName = path->name;
+
+        auto* rv = new IR::Vector<IR::BFN::ParserPrimitive>;
+        rv->push_back(new IR::BFN::ChecksumVerify(declName));
+        return rv;
+    }
+
+    const IR::Vector<IR::BFN::ParserPrimitive>*
+    rewriteSubtractAllAndDeposit(const IR::MethodCallExpression* call) {
+        auto* method = call->method->to<IR::Member>();
+        auto* path = method->expr->to<IR::PathExpression>()->path;
+        cstring declName = path->name;
+        auto* rv = new IR::Vector<IR::BFN::ParserPrimitive>;
+        auto deposit = (*call->arguments)[0]->expression;
+        auto mem = deposit->to<IR::Member>();
+        const auto it = bitOffsets.find(call);
+        BUG_CHECK(it != bitOffsets.end(), "Bit offset for %1% not available");
+        auto endByte = new IR::BFN::PacketRVal(StartLen(it->second - 8, 8));
+        auto get = new IR::BFN::ChecksumResidualDeposit(declName,
+                                              new IR::BFN::FieldLVal(mem), endByte);
+        rv->push_back(get);
+        return rv;
+    }
+
+    const IR::Vector<IR::BFN::ParserPrimitive>*
+    rewriteChecksumCall(IR::MethodCallStatement* statement) {
+        auto* call = statement->methodCall;
+        auto* method = call->method->to<IR::Member>();
+
+        if (method->member == "add" || method->member == "subtract") {
+            return rewriteChecksumAddOrSubtract(call);
+        } else if (method->member == "subtract_all_and_deposit") {
+            return rewriteSubtractAllAndDeposit(call);
+        } else if (method->member == "verify") {
+            return rewriteChecksumVerify(call);
+        } else {
+            BUG("Unhandled parser checksum call: %1%", statement);
+        }
+
+        return nullptr;
+    }
+
+    const IR::Vector<IR::BFN::ParserPrimitive>*
+    preorder(IR::MethodCallStatement* statement) override {
+        auto* call = statement->methodCall;
+        if (auto* method = call->method->to<IR::Member>()) {
+            if (isExtern(method, "Checksum")) {
+                return rewriteChecksumCall(statement);
+            }
+        }
+
+        return nullptr;
+    }
+
+    const IR::BFN::ParserPrimitive*
+    preorder(IR::AssignmentStatement* s) override {
+        if (s->left->type->is<IR::Type::Varbits>())
+            BUG("Extraction to varbit field should have been de-sugared in midend.");
+
+        auto lhs = s->left;
+        auto rhs = s->right;
+        // no bits are lost by throwing away IR::BFN::ReinterpretCast.
+        if (rhs->is<IR::BFN::ReinterpretCast>())
+            rhs = rhs->to<IR::BFN::ReinterpretCast>()->expr;
+
+        if (auto mc = rhs->to<IR::MethodCallExpression>()) {
+            if (auto* method = mc->method->to<IR::Member>()) {
+                if (isExtern(method, "Checksum")) {
+                    auto* path = method->expr->to<IR::PathExpression>()->path;
+                    cstring declName = path->name;
+
+                    if (method->member == "verify") {
+                        auto verify = new IR::BFN::ChecksumVerify(declName);
+                        verify->dest = new IR::BFN::FieldLVal(lhs);
+                        return verify;
+                    } else if (method->member == "get") {
+                        ::warning(
+                            "checksum.get() will deprecate in future versions. Please use"
+                            " void subtract_all_and_deposit(bit<16>) instead");
+                        if (!lastChecksumSubtract || !lastSubtractField) {
+                            ::fatal_error(
+                                "Checksum \"get\" must have preceding \"subtract\""
+                                " call in the same parser state");
+                        }
+                        auto endPos = getHeaderEndPos();
+                        auto endByte = new IR::BFN::PacketRVal(StartLen(endPos, 8));
+                        auto get = new IR::BFN::ChecksumResidualDeposit(
+                            declName, new IR::BFN::FieldLVal(lhs), endByte);
+                        return get;
+                    }
+                }
+            }
+        }
+
+        return nullptr;
+    }
+
+    const IR::Expression* preorder(IR::Statement* s) override {
+        BUG("Unhandled statement kind: %1%", s);
+    }
+
+    const cstring stateName;
+    // States that directly precede this one
+    const ordered_set<const IR::BFN::ParserState*>& ancestors;
+    // A bit offset counter for each checksum operation in each state, calculated across states
+    ChecksumOffsetMap& declNameToOffset;
+    // bit offset counter for each checksum operation within current state
+    ordered_map<cstring, int>& stateChecksumOffset;
+    // Fields extracted by RewriteParserStatements
+    const ExtractedFieldsMap& extractedFields;
+    // Bit offsets saved by RewriteParserStatements
+    const BitOffsetMap& bitOffsets;
+
     const IR::Member* lastSubtractField = nullptr;
     const IR::BFN::ChecksumSubtract* lastChecksumSubtract = nullptr;
+    // Checksums operations that will error if another add() or subtract() is called
+    std::unordered_set<cstring>& errors;
+    // Map from declaration name to checksum instructions for error reporting
+    ChecksumInstrMap& checksumInstrMap;
 };
 
 static match_t buildListMatch(const IR::Vector<IR::Expression> *list,
@@ -1595,6 +1754,11 @@ IR::BFN::ParserState* GetBackendParser::convertState(cstring name, bool& isLoopS
         if (parserLoopsInfo.dont_unroll(name)) {
             LOG3("keeping " << name << " as a loop");
             isLoopState = true;
+
+            const auto begin = std::find(ancestors.stack.begin(), ancestors.stack.end(), state);
+            const std::vector<const IR::BFN::ParserState*> loop(begin, ancestors.stack.end());
+            backendLoops.push_back(loop);
+
             return state;
         }
 
@@ -1637,8 +1801,7 @@ IR::BFN::ParserState* GetBackendParser::convertState(cstring name, bool& isLoopS
     return convertBody(state);
 }
 
-IR::BFN::ParserState*
-GetBackendParser::convertBody(IR::BFN::ParserState* state) {
+IR::BFN::ParserState* GetBackendParser::convertBody(IR::BFN::ParserState* state) {
     ResolveHeaderStackIndex resolveHeaderStackIndex(state, &ancestors);
     auto resolved = state->p4State->apply(resolveHeaderStackIndex)->to<IR::ParserState>();
 
@@ -1653,20 +1816,9 @@ GetBackendParser::convertBody(IR::BFN::ParserState* state) {
               "Converting a parser state that didn't come from the frontend?");
 
     // Lower the parser statements from frontend IR to backend IR.
-    RewriteParserStatements rewriteStatements(typeMap,
-                                    state->p4State->controlPlaneName(),
-                                    state->gress);
-
-    for (auto* statement : state->p4State->components) {
-        // Checksum add might have added a BlockStatement
-        if (auto* bs = statement->to<IR::BlockStatement>()) {
-            for (auto* s : bs->components) {
-                state->statements.pushBackOrAppend(s->apply(rewriteStatements));
-            }
-        } else {
-            state->statements.pushBackOrAppend(statement->apply(rewriteStatements));
-        }
-    }
+    RewriteParserStatements rewriteStatements(typeMap, state->p4State->controlPlaneName(),
+                                              state->gress, extractedFields[state], bitOffsets);
+    applyRewrite(state, rewriteStatements);
 
     // Compute the new state's shift.
     auto bitShift = rewriteStatements.bitTotalShift();
@@ -1733,6 +1885,74 @@ GetBackendParser::convertBody(IR::BFN::ParserState* state) {
     }
 
     return state;
+}
+
+void GetBackendParser::applyRewrite(IR::BFN::ParserState* state, Transform& rewrite) {
+    for (auto* statement : state->p4State->components) {
+        // Checksum add might have added a BlockStatement
+        if (auto* bs = statement->to<IR::BlockStatement>()) {
+            for (auto* s : bs->components) {
+                state->statements.pushBackOrAppend(s->apply(rewrite));
+            }
+        } else {
+            state->statements.pushBackOrAppend(statement->apply(rewrite));
+        }
+    }
+}
+
+void GetBackendParser::rewriteChecksums(IR::BFN::Parser* parser, IR::BFN::ParserState* startState) {
+    CollectParserInfo cpi;
+    parser->apply(cpi);
+    const auto& graph = cpi.graph(startState);
+    const auto topoSort = graph.topological_sort();
+
+    std::unordered_set<cstring> checksumErrors;
+    ChecksumOffsetMap declNameToOffset;
+    std::unordered_map<const IR::BFN::ParserState*, ordered_map<cstring, int>> offsetsPerState;
+    ChecksumInstrMap checksums;
+    for (auto* state : topoSort) {
+        const auto preds = graph.predecessors().find(state);
+        ordered_set<const IR::BFN::ParserState*> ancestors;
+        if (preds != graph.predecessors().end()) {
+            ancestors = preds->second;
+        }
+
+        const auto name = state->p4State->controlPlaneName();
+        RewriteParserChecksums rpc(name, ancestors, declNameToOffset, offsetsPerState[state],
+                                   extractedFields[state], bitOffsets, checksumErrors, checksums);
+
+        // Using const_cast because CollectParserInfo always stores pointers to const.
+        // rewriteChecksums() does not promise to keep anything const via its parameters and the
+        // CollectParserInfo object is used only locally, so this should not cause any trouble.
+        applyRewrite(const_cast<IR::BFN::ParserState*>(state), rpc);
+    }
+
+    for (const auto loop : backendLoops) {
+        ordered_map<cstring, int> offsetInsideLoop;
+
+        for (const auto* state : loop) {
+            for (const auto& kv : offsetsPerState[state]) {
+                const auto declName = kv.first;
+                const int stateOffset = kv.second;
+                offsetInsideLoop[declName] += stateOffset;
+            }
+        }
+
+        for (const auto& kv : offsetInsideLoop) {
+            if ((kv.second / 8) % 2 == 1) {
+                std::stringstream msg;
+                msg << "Checksum %1% operates on an odd number of bytes inside a loop consisting "
+                       "of states [ ";
+                for (const auto state : loop) {
+                    msg << state->p4State->controlPlaneName() << " ";
+                }
+                msg << "] which makes it impossible to implement on Tofino. Consider adding an add "
+                       "/ subtract instruction with a constant argument 8w0 in one of the states "
+                       "in the loop to make the checksum operate on an even number of bytes.";
+                ::error(ErrorType::ERR_UNSUPPORTED, msg.str().c_str(), checksums[kv.first]);
+            }
+        }
+    }
 }
 
 void ExtractParser::postorder(const IR::BFN::TnaParser* parser) {

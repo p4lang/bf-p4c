@@ -182,3 +182,20 @@ p4c_add_xfail_reason("tofino"
   "error: too complex bitwise operation used in comparison"
   extensions/p4_tests/p4_16/errors/p4c-4705.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "error: Before instruction .* in state .*, checksum .* operates on either an \
+odd or an even number of bytes, depending on path through the parser. This makes it \
+impossible to implement on Tofino. Consider adding a subtract instruction with a constant \
+argument 8w0 in a preceding state to make the checksum always operate on either an odd or an \
+even number of bytes."
+  extensions/p4_tests/p4_16/errors/p4c-4771-error.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: Checksum .* operates on an odd number of bytes inside a loop consisting of states .* \
+which makes it impossible to implement on Tofino. Consider adding an add / subtract instruction \
+with a constant argument 8w0 in one of the states in the loop to make the checksum operate on an \
+even number of bytes."
+  extensions/p4_tests/p4_16/errors/p4c-4771-error-loop.p4
+)

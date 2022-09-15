@@ -1,0 +1,5 @@
+packet 0 42 0000 0000 05 abcdef
+expect 0 00 4200 4200 05 abcdef
+
+packet 0 ff 0000 0000 8005 abcdef
+expect 0 00 ff00 ff00 8005 abcdef
