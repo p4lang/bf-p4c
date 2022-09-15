@@ -13,10 +13,9 @@ namespace v2 {
 /// @returns true if stages of writes to a overlapped with @p b's writing stages.
 /// When @p n_stages is not zero, they are considered as overlapped if
 /// there is a write within @p n_stages stages of a write to the other.
-bool may_create_container_conflict(const FieldSlice& a, const FieldSlice& b,
-                                   const FieldDefUse& defuse, const DependencyGraph& deps,
-                                   const TablesMutuallyExclusive& table_mutex,
-                                   int n_stages) {
+bool IxbarFriendlyPacking::may_create_container_conflict(
+    const FieldSlice& a, const FieldSlice& b, const FieldDefUse& defuse,
+    const DependencyGraph& deps, const TablesMutuallyExclusive& table_mutex, int n_stages) {
     // TODO(yumin): change to field-slice level check when we support it in defuse.
     if (a.field() == b.field()) return false;
     for (const auto& a_def : defuse.getAllDefs(a.field()->id)) {

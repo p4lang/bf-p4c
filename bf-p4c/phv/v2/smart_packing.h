@@ -61,6 +61,11 @@ class IxbarFriendlyPacking {
           can_alloc_i(can_alloc) {}
 
     std::list<SuperCluster*> pack(const std::list<SuperCluster *> &clusters);
+    static bool may_create_container_conflict(const FieldSlice& a, const FieldSlice& b,
+                                              const FieldDefUse& defuse,
+                                              const DependencyGraph& deps,
+                                              const TablesMutuallyExclusive& table_mutex,
+                                              int n_stages);
 };
 
 }  // namespace v2

@@ -8,10 +8,12 @@
 #include "lib/ordered_map.h"
 #include "lib/ordered_set.h"
 #include "lib/range.h"
+#include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/ir/thread_visitor.h"
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/lib/union_find.hpp"
 #include "bf-p4c/phv/action_phv_constraints.h"
+#include "bf-p4c/phv/alloc_setting.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/analysis/pack_conflicts.h"
@@ -19,6 +21,8 @@
 #include "bf-p4c/phv/pragma/pa_byte_pack.h"
 #include "bf-p4c/phv/utils/utils.h"
 #include "bf-p4c/mau/gateway.h"
+#include "bf-p4c/mau/table_dependency_graph.h"
+#include "bf-p4c/mau/table_mutex.h"
 
 namespace PHV {
 class Field;
@@ -48,6 +52,10 @@ class Clustering : public PassManager {
     const PackConflicts& conflicts_i;
     const PragmaContainerSize& pa_container_sizes_i;
     const PragmaBytePack& pa_byte_pack_i;
+    const FieldDefUse& defuse_i;
+    const DependencyGraph &deps_i;
+    const TablesMutuallyExclusive& table_mutex_i;
+    const PHV::AllocSetting& settings_i;
 
     /// Holds all aligned clusters.  Every slice is in exactly one cluster.
     std::list<PHV::AlignedCluster *> aligned_clusters_i;
@@ -485,12 +493,13 @@ class Clustering : public PassManager {
     };
 
  public:
-    Clustering(PhvInfo& p, PhvUse& u, const PackConflicts& c,
-               const PragmaContainerSize& pa_sz,
-               const PragmaBytePack& pa_byte_pack,
-               const ActionPhvConstraints& a)
+    Clustering(PhvInfo& p, PhvUse& u, const PackConflicts& c, const PragmaContainerSize& pa_sz,
+               const PragmaBytePack& pa_byte_pack, const ActionPhvConstraints& a,
+               const FieldDefUse& defuse, const DependencyGraph &deps,
+               const TablesMutuallyExclusive& table_mutex, const PHV::AllocSetting& settings)
         : phv_i(p), uses_i(u), conflicts_i(c), pa_container_sizes_i(pa_sz),
-          pa_byte_pack_i(pa_byte_pack), slice_i(*this, pa_sz) {
+          pa_byte_pack_i(pa_byte_pack), defuse_i(defuse), deps_i(deps),
+          table_mutex_i(table_mutex), settings_i(settings), slice_i(*this, pa_sz) {
         auto* inconsistent_extracts =
             new CollectInconsistentFlexibleFieldExtract(*this, this->phv_i);
         auto* place_togethers =

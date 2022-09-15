@@ -6,6 +6,7 @@
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/utils/utils.h"
+#include "bf-p4c/phv/v2/smart_packing.h"
 #include "lib/algorithm.h"
 #include "lib/log.h"
 #include "lib/ordered_set.h"
@@ -723,6 +724,15 @@ void Clustering::CollectPlaceTogetherConstraints::pack_pov_bits() {
                 if (slice1 == slice2) continue;
                 if (conflicts_i.hasPackConflict(slice1, slice2))
                     any_pack_conflicts = true;
+
+                // Trivial allocation must avoid packing POV bit in the same container if the
+                // minstage of two writes regarding these bits are too close. For now we do not
+                // allow definition of these bits withing 1 minstage.
+                if (self.settings_i.trivial_alloc) {
+                    if (PHV::v2::IxbarFriendlyPacking::may_create_container_conflict(slice1,
+                        slice2, self.defuse_i, self.deps_i, self.table_mutex_i, 1))
+                        any_pack_conflicts = true;
+                }
             }
         }
         if (any_pack_conflicts) {
