@@ -44,15 +44,16 @@ bool HeaderRemovalAnalysis::preorder(const IR::MAU::Instruction* instruction) {
     auto dstField = phvInfo.field(dst, &bitrange);
     if (!dstField || !dstField->pov) return true;
 
-    // Ignore if the validity bit is uninteresting to the client.
-    const auto* povBit = new PHV::FieldSlice(dstField, bitrange);
-    if (!interestedCorrelations->count(povBit)) return true;
-
     // Handle case where we are assigning a non-zero constant to the validity bit. Conservatively,
     // we assume that assigning a non-constant value to the POV bit can clear the bit.
     if (auto constant = src->to<IR::Constant>()) {
         if (constant->value != 0) return true;
     }
+    povBitsSetInvalidInMau.insert(dstField);
+
+    // Ignore if the validity bit is uninteresting to the client.
+    const auto* povBit = new PHV::FieldSlice(dstField, bitrange);
+    if (!interestedCorrelations->count(povBit)) return true;
 
     // Mark the POV bit as being cleared.
     for (auto& interestedCorrelation : interestedCorrelations->at(povBit)) {

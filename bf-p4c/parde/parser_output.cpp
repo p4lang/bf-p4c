@@ -10,6 +10,7 @@
 #include "bf-p4c/common/debug_info.h"
 #include "bf-p4c/parde/asm_output.h"
 #include "bf-p4c/parde/parde_visitor.h"
+#include "bf-p4c/parde/clot/clot_info.h"
 #include "bf-p4c/phv/phv_fields.h"
 
 namespace {
@@ -32,8 +33,8 @@ namespace {
 static int pvs_handle = 512;
 static std::map<cstring, int> pvs_handles;
 struct ParserAsmSerializer : public ParserInspector {
-    explicit ParserAsmSerializer(std::ostream& out, const PhvInfo &phv)
-       : out(out), phv(phv) {
+    explicit ParserAsmSerializer(std::ostream& out, const PhvInfo& phv, const ClotInfo& clot_info)
+       : out(out), phv(phv), clot_info(clot_info) {
         is_v1Model = (BackendOptions().arch == "v1model"); }
 
  private:
@@ -626,19 +627,21 @@ struct ParserAsmSerializer : public ParserInspector {
 
     void outputExtractClot(const IR::BFN::LoweredExtractClot* extract) {
         if (extract->is_start) {
-            out << indent << "clot " << extract->dest.tag << " :" << std::endl;
+            out << indent << "clot " << extract->dest->tag << " :" << std::endl;
             AutoIndent ai(indent, 1);
 
             auto* source = extract->source->to<IR::BFN::LoweredPacketRVal>();
+            cstring name = clot_info.sanitize_state_name(extract->higher_parser_state->name,
+                                                         extract->higher_parser_state->gress);
 
             out << indent << "start: " << source->range.lo << std::endl;
-            out << indent << "length: " << extract->dest.length_in_byte() << std::endl;
+            out << indent << "length: " << extract->dest->length_in_bytes(name) << std::endl;
 
-            if (extract->dest.csum_unit) {
-                out << indent << "checksum: " << extract->dest.csum_unit << std::endl;
+            if (extract->dest->csum_unit) {
+                out << indent << "checksum: " << extract->dest->csum_unit << std::endl;
             }
         } else {
-            out << indent << "# clot " << extract->dest.tag << " (spilled)" << std::endl;
+            out << indent << "# clot " << extract->dest->tag << " (spilled)" << std::endl;
         }
     }
 
@@ -673,7 +676,7 @@ struct ParserAsmSerializer : public ParserInspector {
             else if (csum->type == IR::BFN::ChecksumMode::RESIDUAL && csum->phv_dest)
                 out << indent << "dest: " << csum->phv_dest << std::endl;
             else if (csum->type == IR::BFN::ChecksumMode::CLOT)
-                out << indent << "dest: " << csum->clot_dest << std::endl;
+                out << indent << "dest: clot " << csum->clot_dest.tag << std::endl;
 
             if (csum->type == IR::BFN::ChecksumMode::RESIDUAL)
                 out << indent << "end_pos: " << csum->end_pos  << std::endl;
@@ -743,14 +746,16 @@ struct ParserAsmSerializer : public ParserInspector {
     }
 
     std::ostream& out;
-    const PhvInfo &phv;
+    const PhvInfo& phv;
+    const ClotInfo& clot_info;
     indent_t indent;
 };
 
 }  // namespace
 
-ParserAsmOutput::ParserAsmOutput(const IR::BFN::Pipe* pipe, const PhvInfo &phv, gress_t gress)
-    : phv(phv) {
+ParserAsmOutput::ParserAsmOutput(const IR::BFN::Pipe* pipe, const PhvInfo& phv,
+                                 const ClotInfo& clot_info, gress_t gress)
+        : phv(phv), clot_info(clot_info) {
     BUG_CHECK(pipe->thread[gress].parsers.size() != 0, "No parser?");
     for (auto parser : pipe->thread[gress].parsers) {
         auto lowered_parser = parser->to<IR::BFN::BaseLoweredParser>();
@@ -760,7 +765,7 @@ ParserAsmOutput::ParserAsmOutput(const IR::BFN::Pipe* pipe, const PhvInfo &phv, 
 }
 
 std::ostream& operator<<(std::ostream& out, const ParserAsmOutput& parserOut) {
-    ParserAsmSerializer serializer(out, parserOut.phv);
+    ParserAsmSerializer serializer(out, parserOut.phv, parserOut.clot_info);
     for (auto p : parserOut.parsers) {
         LOG1("write asm for " << p);
         p->apply(serializer);

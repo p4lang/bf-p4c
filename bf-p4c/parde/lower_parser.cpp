@@ -492,9 +492,9 @@ struct ExtractSimplifier {
         }
 
         for (auto cx : clotExtracts) {
-            auto clot = cx.first;
-            auto first_slice = clot->all_slices().front();
-            auto first_field = first_slice->field();
+            auto* clot = cx.first;
+            const auto* first_slice = clot->parser_state_to_slices().begin()->second.front();
+            const auto* first_field = first_slice->field();
 
             bool is_start = false;
             nw_bitinterval bitInterval;
@@ -504,7 +504,6 @@ struct ExtractSimplifier {
                 bitInterval = bitInterval.unionWith(rval->interval());
 
                 // Figure out if the current extract includes the first bit in the CLOT.
-
                 if (is_start) continue;
 
                 // Make sure we're extracting the first field.
@@ -529,10 +528,11 @@ struct ExtractSimplifier {
             nw_bitrange bitrange = *toClosedRange(bitInterval);
             nw_byterange byterange = bitrange.toUnit<RangeUnit::Byte>();
 
-            auto rval = new IR::BFN::LoweredPacketRVal(byterange);
-            auto extractClot = new IR::BFN::LoweredExtractClot(is_start, rval, *(cx.first));
+            auto* rval = new IR::BFN::LoweredPacketRVal(byterange);
+            auto* extractClot = new IR::BFN::LoweredExtractClot(is_start, rval, clot);
+            extractClot->higher_parser_state = cx.second.front()->original_state;
             if (clotTagToCsumUnit[clot->gress].count(clot->tag)) {
-                extractClot->dest.csum_unit = clotTagToCsumUnit[clot->gress][clot->tag];
+                clot->csum_unit = clotTagToCsumUnit[clot->gress][clot->tag];
             }
             loweredExtracts.push_back(extractClot);
         }
@@ -547,18 +547,18 @@ struct ExtractSimplifier {
     ordered_map<PHV::Container, ExtractSequence> extractFromBufferByContainer;
     ordered_map<PHV::Container, ExtractSequence> extractConstantByContainer;
 
-    ordered_map<const Clot*, std::vector<const IR::BFN::ExtractClot*>> clotExtracts;
+    ordered_map<Clot*, std::vector<const IR::BFN::ExtractClot*>> clotExtracts;
 };
 
 /// Maps a sequence of fields to a sequence of PHV containers. The sequence of
 /// fields is treated as ordered and non-overlapping; the resulting container
 /// sequence is the shortest one which maintains these properties.
-std::pair<IR::Vector<IR::BFN::ContainerRef>, std::vector<Clot> >
+std::pair<IR::Vector<IR::BFN::ContainerRef>, std::vector<Clot*>>
 lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
             const IR::Vector<IR::BFN::FieldLVal>& fields,
             bool is_checksum = false) {
     IR::Vector<IR::BFN::ContainerRef> containers;
-    std::vector<Clot> clots;
+    std::vector<Clot*> clots;
 
     IR::BFN::ContainerRef* last = nullptr;
     // Perform a left fold over the field sequence and merge contiguous fields
@@ -575,8 +575,8 @@ lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
         if (slice_clots) {
            for (auto entry : *slice_clots) {
                 auto clot = entry.second;
-                if (clots.empty() || clots.back() != *clot)
-                    clots.push_back(*clot);
+                if (clots.empty() || clots.back() != clot)
+                    clots.push_back(clot);
             }
 
             if (clotInfo.fully_allocated(field) ||
@@ -1570,7 +1570,7 @@ class ResolveParserConstants : public ParserTransform {
 
     IR::BFN::ConstantRVal* preorder(IR::BFN::TotalContainerSize* tcs) override {
         IR::Vector<IR::BFN::ContainerRef> containers;
-        std::vector<Clot> clots;
+        std::vector<Clot*> clots;
 
         std::tie(containers, clots) = lowerFields(phv, clotInfo, tcs->fields);
 
@@ -1780,7 +1780,7 @@ struct MergeLoweredParserStates : public ParserTransform {
     }
 
     void do_merge(IR::BFN::LoweredParserMatch* match,
-                   const IR::BFN::LoweredParserMatch* next) {
+                  const IR::BFN::LoweredParserMatch* next) {
         RightShiftPacketRVal shifter(match->shift);
 
         for (auto e : next->extracts) {
@@ -2021,32 +2021,45 @@ struct RewriteEmitClot : public DeparserModifier {
 
         IR::Vector<IR::BFN::Emit> newEmits;
 
-        // The next field slices we expect to see being emitted, represented as a stack. These are
-        // field slices left over from the last emitted CLOT.
-        std::vector<const PHV::FieldSlice*> expectedNextSlices;
-
-        const PHV::FieldSlice* lastPhvPovBit = nullptr;
+        // The next field slices we expect to see being emitted, represented as a vector of stacks.
+        // Each stack represents the field slices in a CLOT, which can differ depending on which
+        // parser state extracted the CLOT. For every emit, we try to pop an element from the top of
+        // all the stacks if the slice being emitted matches the top element. As long as an emit
+        // causes at least 1 stack to pop its top element, the contents of the CLOT is valid; else,
+        // something went wrong. Once all stacks are empty, we are done emitting that CLOT.
+        //
+        // For example, given the following CLOT, where each uppercase letter represents a field
+        // slice that belongs to 1 or more different headers:
+        //
+        // CLOT 0: {
+        //     state_0: AB
+        //     state_1: AXY
+        //     state_2: ABCDEFG
+        // }
+        //
+        // There are many different orders in which the deparser could emit each field slice. For
+        // example: ABCDEFGXY, AXYBCDEFG, AXBYCDEFG, AXBCDEFG, AXBYCDEFG, ABXYCDEFG, etc. All these
+        // combinations would lead to the 3 stacks being emptied.
+        std::vector<std::stack<const PHV::FieldSlice*>> expectedNextSlices;
         const Clot* lastClot = nullptr;
 
+        LOG4("[RewriteEmitClot] Rewriting EmitFields and EmitChecksums as EmitClots for "
+             << deparser->gress);
         for (auto emit : deparser->emits) {
+            LOG6("  Evaluating emit: " << emit);
             auto irPovBit = emit->povBit;
 
-            le_bitrange slice;
-            auto phvPovBitField = phv.field(irPovBit->field, &slice);
-
-            BUG_CHECK(phvPovBitField, "No PHV field for %1%", irPovBit);
-            PHV::FieldSlice* phvPovBit = new PHV::FieldSlice(phvPovBitField, slice);
-
+            // For each derived Emit class, assign the member that represents the field being
+            // emitted to "source".
             const IR::Expression* source = nullptr;
+            if (auto emitField = emit->to<IR::BFN::EmitField>()) {
+                source = emitField->source->field;
+            } else if (auto emitChecksum = emit->to<IR::BFN::EmitChecksum>()) {
+                source = emitChecksum->dest->field;
+            } else if (auto emitConstant = emit->to<IR::BFN::EmitConstant>()) {
+                newEmits.pushBackOrAppend(emitConstant);
 
-            if (auto ef = emit->to<IR::BFN::EmitField>()) {
-                source = ef->source->field;
-            } else if (auto ec = emit->to<IR::BFN::EmitChecksum>()) {
-                source = ec->dest->field;
-            } else if (auto cc = emit->to<IR::BFN::EmitConstant>()) {
-                newEmits.pushBackOrAppend(cc);
-
-                // we disallow CLOTs from being overwritten by deparser constants
+                // Disallow CLOTs from being overwritten by deparser constants
                 BUG_CHECK(expectedNextSlices.empty(), "CLOT slices not re-written?");
 
                 continue;
@@ -2077,28 +2090,43 @@ struct RewriteEmitClot : public DeparserModifier {
 
             // Handle any slices left over from the last emitted CLOT.
             if (!expectedNextSlices.empty()) {
-                // The current slice being emitted had better line up with the next expected slice,
-                // and the expected POV bit had better match.
-                auto nextSlice = expectedNextSlices.back();
+                // The current slice being emitted had better line up with the next expected slice.
+                const PHV::FieldSlice* nextSlice = nullptr;
+                for (auto& stack : expectedNextSlices) {
+                    if (stack.top()->field() != field) continue;
 
-                BUG_CHECK(nextSlice->field() == field,
-                          "Emitted field %1% does not match expected slice %2% in CLOT %3%",
-                          field->name, nextSlice->shortString(), lastClot->tag);
+                    BUG_CHECK(!(nextSlice != nullptr && *nextSlice != *stack.top()),
+                        "Expected next slice of field %1% in %2% is inconsistent: "
+                        "%3% != %4%",
+                        field->name,
+                        *lastClot,
+                        nextSlice->shortString(),
+                        stack.top()->shortString());
+                    nextSlice = stack.top();
+                    stack.pop();
+                }
+                BUG_CHECK(nextSlice,
+                    "Emitted field %1% does not match any slices expected next in %2%",
+                    field->name,
+                    *lastClot);
                 BUG_CHECK(nextSlice->range().hi == nextFieldBit,
-                          "Emitted slice %1% does not line up with expected slice %2% in CLOT %3%",
-                          PHV::FieldSlice(field, StartLen(0, nextFieldBit + 1)).shortString(),
-                          nextSlice->shortString(),
-                          lastClot->tag);
-                BUG_CHECK(*phvPovBit == *lastPhvPovBit,
-                          "POV bit %1% for emit of %2% does not match expected POV bit %3% for "
-                          "CLOT %4%",
-                          phvPovBit->shortString(),
-                          field->name,
-                          lastPhvPovBit->shortString(),
-                          lastClot->tag);
+                    "Emitted slice %1% does not line up with expected slice %2% in %3%",
+                    PHV::FieldSlice(field, StartLen(0, nextFieldBit + 1)).shortString(),
+                    nextSlice->shortString(),
+                    *lastClot);
+
+                LOG6("    " << nextSlice->shortString()
+                     << " is the next expected slice in " << *lastClot);
+                LOG6("    It is covered by existing EmitClot: " << newEmits.back());
 
                 nextFieldBit = nextSlice->range().lo - 1;
-                expectedNextSlices.pop_back();
+                // Erase empty stacks from vector of stacks.
+                for (auto it = expectedNextSlices.begin(); it != expectedNextSlices.end(); ) {
+                    if (!it->empty())
+                        ++it;
+                    else
+                        it = expectedNextSlices.erase(it);
+                }
             }
 
             // If we've covered all bits in the current field, move on to the next emit.
@@ -2108,21 +2136,20 @@ struct RewriteEmitClot : public DeparserModifier {
             // be in a new CLOT, if it is covered by a CLOT at all. There had better not be any
             // slices left over from the last emitted CLOT.
             BUG_CHECK(expectedNextSlices.empty(),
-                "Emitted slice %1% does not match expected slice %2% in CLOT %3%",
+                "Emitted slice %1% does not match any expected next slice in %2%",
                 PHV::FieldSlice(field, StartLen(0, nextFieldBit + 1)).shortString(),
-                expectedNextSlices.back()->shortString(),
-                lastClot->tag);
+                *lastClot);
 
             if (sliceClots->empty()) {
                 // None of this field should have come from CLOTs.
                 BUG_CHECK(nextFieldBit == field->size - 1,
                           "Field %1% has no slices allocated to CLOTs, but %2% somehow came from "
-                          "CLOT %3%",
+                          "%3%",
                           field->name,
                           PHV::FieldSlice(field,
                                           StartLen(nextFieldBit + 1,
                                                    field->size - nextFieldBit)).shortString(),
-                          lastClot->tag);
+                          *lastClot);
 
                 newEmits.pushBackOrAppend(emit);
                 continue;
@@ -2146,48 +2173,71 @@ struct RewriteEmitClot : public DeparserModifier {
                     // containing just that part.
                     auto irSlice = new IR::Slice(source, nextFieldBit, slice->range().hi + 1);
                     auto sliceEmit = new IR::BFN::EmitField(irSlice, irPovBit->field);
+                    LOG6("    " << field->name << " is partially stored in PHV");
+                    LOG4("  Created new EmitField: " << sliceEmit);
                     newEmits.pushBackOrAppend(sliceEmit);
 
                     nextFieldBit = slice->range().hi;
                 }
 
                 // Make sure the first slice in the CLOT lines up with the slice we're expecting.
-                auto clotSlices = clot->all_slices();
-                auto firstSlice = clotSlices.front();
+                // Though the slices in a multiheader CLOT can differ depending on which parser
+                // state it begins in, the first slice should always be the same across all states.
+                auto clotSlices = clot->parser_state_to_slices();
+                auto firstSlice = *clotSlices.begin()->second.begin();
                 BUG_CHECK(firstSlice->field() == field,
-                          "First field in CLOT %1% is %2%, but expected %3%",
-                          clot->tag, firstSlice->field()->name, field->name);
+                          "First field in %1% is %2%, but expected %3%",
+                          *clot, firstSlice->field()->name, field->name);
                 BUG_CHECK(firstSlice->range().hi == nextFieldBit,
-                          "First slice %1% in CLOT %2% does not match expected slice %3%",
+                          "First slice %1% in %2% does not match expected slice %3%",
                           firstSlice->shortString(),
-                          clot->tag,
+                          *clot,
                           PHV::FieldSlice(field, StartLen(0, nextFieldBit + 1)).shortString());
 
                 // Produce an emit for the CLOT.
                 auto clotEmit = new IR::BFN::EmitClot(irPovBit);
                 clotEmit->clot = clot;
+                clot->pov_bit = irPovBit;
                 newEmits.pushBackOrAppend(clotEmit);
-                lastPhvPovBit = phvPovBit;
                 lastClot = clot;
+                LOG6("    " << field->name << " is the first field in " << *clot);
+                LOG4("  Created new EmitClot: " << clotEmit);
 
                 nextFieldBit = firstSlice->range().lo - 1;
 
-                if (clotSlices.size() == 1) continue;
+                if (std::all_of(clotSlices.begin(), clotSlices.end(),
+                        [](std::pair<const cstring, std::vector<const PHV::FieldSlice*>> pair) {
+                            return pair.second.size() == 1;
+                        }))
+                    continue;
 
                 // There are more slices in the CLOT. We had better be done with the current field.
                 BUG_CHECK(nextFieldBit == -1,
-                          "CLOT %1% is missing slice %2%",
-                          clot->tag,
+                          "%1% is missing slice %2%",
+                          *clot,
                           PHV::FieldSlice(field, StartLen(0, nextFieldBit + 1)).shortString());
 
-                std::copy(clotSlices.rbegin(), --clotSlices.rend(),
-                          std::back_inserter(expectedNextSlices));
+                for (const auto& kv : clotSlices) {
+                    // Don't add empty stacks to expectedNextSlices. A stack of size = 1 is
+                    // considered empty since the element currently being processed will
+                    // immediately be popped below.
+                    if (kv.second.size() < 2) continue;
+
+                    // Make a std::deque that is a reversed copy of
+                    // clot->parser_state_to_slices().second.
+                    std::deque<const PHV::FieldSlice*> deq;
+                    std::copy(kv.second.rbegin(), kv.second.rend(), std::back_inserter(deq));
+                    deq.pop_back();
+                    // The std::deque is used to construct a std::stack where the first field
+                    // slices in the CLOT are at the top.
+                    expectedNextSlices.emplace_back(deq);
+                }
             }
 
             if (nextFieldBit != -1) {
                 BUG_CHECK(expectedNextSlices.empty(),
-                          "CLOT %1% is missing slice %2%",
-                          lastClot->tag,
+                          "%1% is missing slice %2%",
+                          *lastClot,
                           PHV::FieldSlice(field, StartLen(0, nextFieldBit + 1)).shortString());
 
                 // The last few bits of the field comes from PHVs. Produce an emit of the slice
@@ -2200,14 +2250,22 @@ struct RewriteEmitClot : public DeparserModifier {
 
         if (!expectedNextSlices.empty()) {
             std::stringstream out;
-            out << "CLOT " << lastClot->tag << " has extra field slices not covered by the "
+            out << *lastClot << " has extra field slices not covered by the "
                 << "deparser before RewriteEmitClot: ";
             for (auto it = expectedNextSlices.rbegin(); it != expectedNextSlices.rend(); ++it) {
                 if (it != expectedNextSlices.rbegin()) out << ", ";
-                out << (*it)->shortString();
+                std::stack<const PHV::FieldSlice*>& stack = *it;
+                while (!stack.empty()) {
+                    out << stack.top()->shortString();
+                    if (stack.size() > 1) out << ", ";
+                    stack.pop();
+                }
             }
             BUG("%s", out.str());
         }
+        LOG4("Rewriting complete. Deparser emits for " << deparser->gress << " are now:");
+        for (const auto* emit : newEmits)
+            LOG4("  " << emit);
 
         deparser->emits = newEmits;
         return false;
@@ -2314,7 +2372,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
         auto containerToSwap = getChecksumPhvSwap(phv, emitChecksum);
         checksumInfo[gress][emitChecksum] = unitConfig->unit;
         IR::Vector<IR::BFN::ContainerRef> phvSources;
-        std::vector<Clot> clotSources;
+        std::vector<Clot*> clotSources;
         std::vector<IR::BFN::ChecksumClotInput*> clots;
 
         if (Device::currentDevice() == Device::TOFINO) {
@@ -2329,7 +2387,11 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
                 input->swap = containerToSwap[source->container];
                 unitConfig->phvs.push_back(input);
             }
-        } else if (Device::currentDevice() != Device::TOFINO) {
+        } else if (Device::currentDevice() == Device::JBAY
+#if HAVE_CLOUDBREAK
+                || Device::currentDevice() == Device::CLOUDBREAK
+#endif
+        ) {
             std::vector<const IR::BFN::FieldLVal*> groupPov;
             ordered_map<IR::Vector<IR::BFN::FieldLVal>*, const IR::BFN::FieldLVal*> groups;
             const IR::BFN::FieldLVal* lastPov = nullptr;
@@ -2368,8 +2430,12 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
                     unitConfig->phvs.push_back(input);
                 }
                 for (auto source : clotSources) {
-                    auto* input = new IR::BFN::ChecksumClotInput(source, povBit);
-                    clots.push_back(input);
+                    if (clots.empty() || clots.back()->clot != source) {
+                        auto povBit = lowerSingleBit(phv, source->pov_bit,
+                                                     PHV::AllocContext::DEPARSER);
+                        auto* input = new IR::BFN::ChecksumClotInput(source, povBit);
+                        clots.push_back(input);
+                    }
                 }
                 groupidx++;
             }
@@ -2535,7 +2601,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
                     for (auto emitChecksum : emitChecksumVec) {
                         auto f = phv.field(emitChecksum->dest->field);
                         auto unitConfig = lowerChecksum(emitChecksum, deparser->gress);
-                        cl->csum_field_to_csum_id[f] = unitConfig->unit;
+                        cl->checksum_field_to_checksum_id[f] = unitConfig->unit;
                         loweredDeparser->checksums.push_back(unitConfig);
                     }
                 }
@@ -2713,7 +2779,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
             // bit more metadata than other kinds of digests.
             for (auto fieldList : digest->fieldLists) {
                 IR::Vector<IR::BFN::ContainerRef> phvSources;
-                std::vector<Clot> clotSources;
+                std::vector<Clot*> clotSources;
 
                 LOG3("\temit fieldlist " << fieldList);
                 // XXX(hanw): filter out padding fields inside the field list which

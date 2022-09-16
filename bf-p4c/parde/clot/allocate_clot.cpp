@@ -7,7 +7,6 @@
  * \ingroup parde
  * This implements a greedy CLOT-allocation algorithm, as described in
  * \ref clot_alloc_and_metric "CLOT allocator and metric" (README.md).
- *
  */
 class GreedyClotAllocator : public Visitor {
     ClotInfo& clotInfo;
@@ -105,9 +104,45 @@ class GreedyClotAllocator : public Visitor {
         // Trim the first extract so that it is byte-aligned.
         extracts[0] = extracts.front()->trim_head_to_byte();
 
-        // Remove extracts until we find one that can end a CLOT.
-        while (!extracts.empty() && !clotInfo.can_end_clot(extracts.back()))
-            extracts.pop_back();
+        if (pseudoheader) {
+            // Remove extracts until we find one that can end a CLOT.
+            while (!extracts.empty() && !clotInfo.can_end_clot(extracts.back()))
+                extracts.pop_back();
+        } else {
+            // For multiheader CLOTs, they share the same first slice in every parser state, but
+            // all other slices could be different. Therefore, we need to make sure that, after we
+            // remove extracts in each state, the extract sequence from the deparser remains
+            // contiguous.
+            std::map<const IR::BFN::ParserState*, std::vector<const FieldSliceExtractInfo*>>
+                state_to_extracts;
+            for (const auto& state : extracts.front()->states()) {
+                std::vector<const FieldSliceExtractInfo*> extracts_copy(extracts);
+
+                while (!extracts_copy.empty() &&
+                       (!clotInfo.can_end_clot(extracts_copy.back()) ||
+                        !extracts_copy.back()->states().count(state)))
+                    extracts_copy.pop_back();
+
+                // If no extracts are left in any of the states, forming a CLOT with these
+                // extracts is impossible. Therefore, do not create a ClotCandidate.
+                if (extracts_copy.empty()) return;
+
+                state_to_extracts[state] = extracts_copy;
+            }
+            for (auto it = std::next(extracts.begin()); it != extracts.end(); ) {
+                bool any_extracts_contains_it = false;
+                for (const auto& kv : state_to_extracts) {
+                    if (std::find(kv.second.begin(), kv.second.end(), *it) != kv.second.end()) {
+                        any_extracts_contains_it = true;
+                        break;
+                    }
+                }
+                if (any_extracts_contains_it)
+                    ++it;
+                else
+                    it = extracts.erase(it);
+            }
+        }
 
         // If we still have extracts, create a CLOT candidate out of those.
         if (!extracts.empty()) {
@@ -117,6 +152,20 @@ class GreedyClotAllocator : public Visitor {
             // Further trim the last extract so that it does not extend past the maximum CLOT
             // position.
             extracts.back()->trim_tail_to_max_clot_pos();
+
+            for (const auto& existing_candidate : *candidates) {
+                if (existing_candidate->extracts().size() == extracts.size() &&
+                    std::equal(existing_candidate->extracts().begin(),
+                               existing_candidate->extracts().end(), extracts.begin(),
+                               [](const FieldSliceExtractInfo* a,
+                                  const FieldSliceExtractInfo* b) {
+                                    return *a == *b;
+                               })) {
+                    LOG4("Tried to add a candidate with the same extracts "
+                         << "as an existing candidate.");
+                    return;
+                }
+            }
 
             const ClotCandidate* candidate = new ClotCandidate(clotInfo, pseudoheader, extracts);
             candidates->insert(candidate);
@@ -289,8 +338,8 @@ class GreedyClotAllocator : public Visitor {
         }
 
         // Need gap if c1 can become invalid in MAU when c2 is still valid.
-        auto c1_pov_bits = c1->pseudoheader->pov_bits;
-        auto c2_pov_bits = c2->pseudoheader->pov_bits;
+        auto c1_pov_bits = c1->pov_bits;
+        auto c2_pov_bits = c2->pov_bits;
         auto check = [&](const PHV::FieldSlice* f1) {
             auto check = [&](const PHV::FieldSlice* f2) {
                 return f1 != f2 && header_removals.at({f1, f2}).count({f1});
@@ -615,8 +664,10 @@ class GreedyClotAllocator : public Visitor {
 
             result->insert(to_adjust->mark_adjacencies(!allocatedNeedsPostGap,
                                                        !allocatedNeedsPreGap));
-        } else if (!extract_map.empty()) {
+        } else if (!extract_map.empty() && to_adjust->pseudoheader) {
             add_clot_candidates(result, to_adjust->pseudoheader, extract_map);
+        } else if (!to_adjust->pseudoheader) {
+            result->erase(to_adjust);
         }
 
         return result;
@@ -754,15 +805,18 @@ class GreedyClotAllocator : public Visitor {
             auto candidate = *(candidates->begin());
 
             // Resize the candidate before allocating.
-            auto resized = resize(candidate);
-            if (!resized) {
-                // Resizing failed.
-                LOG3("Couldn't fit candidate " << candidate->id << " into a CLOT");
-                candidates->erase(candidate);
-                continue;
-            }
+            // Multiheader candidates are not resized.
+            if (candidate->pseudoheader != nullptr) {
+                auto resized = resize(candidate);
+                if (!resized) {
+                    // Resizing failed.
+                    LOG3("Couldn't fit candidate " << candidate->id << " into a CLOT");
+                    candidates->erase(candidate);
+                    continue;
+                }
 
-            candidate = resized;
+                candidate = resized;
+            }
 
             // Allocate the candidate.
             BUG_CHECK(candidate->bit_in_byte_offset() == 0,
@@ -783,7 +837,6 @@ class GreedyClotAllocator : public Visitor {
             clotInfo.add_clot(clot, states);
 
             // Add field slices.
-            int offset = 0;
             for (auto extract : candidate->extracts()) {
                 auto slice = extract->slice();
 
@@ -797,25 +850,26 @@ class GreedyClotAllocator : public Visitor {
                 else
                     kind = Clot::FieldKind::UNUSED;
 
-                if (LOGGING(4)) {
-                    std::string kind_str;
-                    switch (kind) {
-                    case Clot::FieldKind::CHECKSUM:
-                        kind_str = "checksum field"; break;
-                    case Clot::FieldKind::MODIFIED:
-                        kind_str = "modified phv field"; break;
-                    case Clot::FieldKind::READONLY:
-                        kind_str = "read-only phv field"; break;
-                    case Clot::FieldKind::UNUSED:
-                        kind_str = "field"; break;
+                for (const auto& state : extract->states()) {
+                    cstring state_name = clotInfo.sanitize_state_name(state->name, gress);
+                    clot->add_slice(state_name, kind, slice);
+                    if (LOGGING(4)) {
+                        std::string kind_str;
+                        switch (kind) {
+                        case Clot::FieldKind::CHECKSUM:
+                            kind_str = "checksum field"; break;
+                        case Clot::FieldKind::MODIFIED:
+                            kind_str = "modified phv field"; break;
+                        case Clot::FieldKind::READONLY:
+                            kind_str = "read-only phv field"; break;
+                        case Clot::FieldKind::UNUSED:
+                            kind_str = "field"; break;
+                        }
+                        LOG4("  Added " << kind_str << " " << slice->shortString() << " at bit "
+                             << clot->bit_offset(state_name, slice) << " in parser state "
+                             << state_name);
                     }
-
-                    LOG4("  Adding " << kind_str << " " << slice->shortString() << " at bit "
-                         << offset);
                 }
-                clot->add_slice(kind, slice);
-
-                offset += slice->size();
             }
 
             // Done allocating the candidate. Remove any candidates that would violate
@@ -912,8 +966,8 @@ class GreedyClotAllocator : public Visitor {
                         && !c2->byte_gaps(parserInfo, c1).count(0))
                     continue;
 
-                for (const auto* pov1 : c1->pseudoheader->pov_bits) {
-                    for (const auto* pov2 : c2->pseudoheader->pov_bits) {
+                for (const auto* pov1 : c1->pov_bits) {
+                    for (const auto* pov2 : c2->pov_bits) {
                         FieldSliceSet set = {pov1, pov2};
                         correlations.emplace(set);
                     }
@@ -964,8 +1018,20 @@ class GreedyClotAllocator : public Visitor {
                 LOG4("");
             }
 
-            // Identify CLOT candidates.
+            // Identify CLOT candidates (using older pseudoheader technique)
             auto candidates = find_clot_candidates(field_extract_info->pseudoheaderMap);
+            // Identify additional CLOT candidates (using deparser analysis)
+            const auto* deparser = pipe->thread[parser->gress].deparser->to<IR::BFN::Deparser>();
+            const auto* mau = pipe->thread[parser->gress].mau;
+            HeaderRemovalAnalysis hra(phvInfo, {});
+            mau->apply(hra);
+            auto sequences = find_multiheader_sequences(deparser,
+                                                        field_extract_info->fieldMap,
+                                                        hra.povBitsSetInvalidInMau);
+            for (auto& sequence : sequences)
+                if (!sequence.empty())
+                    try_add_clot_candidate(candidates, nullptr, sequence);
+
             if (LOGGING(3)) {
                 if (candidates->empty()) {
                     LOG3("No CLOT candidates found.");
@@ -977,7 +1043,6 @@ class GreedyClotAllocator : public Visitor {
             }
 
             // Do header-removal analysis.
-            const auto* mau = pipe->thread[parser->gress].mau;
             auto header_removals = analyze_header_removals(candidates, mau);
 
             // Perform allocation.
@@ -1000,6 +1065,187 @@ class GreedyClotAllocator : public Visitor {
     }
 
     void clear() {
+    }
+
+    const std::set<const PHV::Field*> get_fields_emitted_more_than_once(
+            const IR::BFN::Deparser* deparser) {
+        std::set<const PHV::Field*> fields_emitted;
+        std::set<const PHV::Field*> fields_emitted_more_than_once;
+        for (auto emit : deparser->emits) {
+            if (auto emit_field = emit->to<IR::BFN::EmitField>()) {
+                const PHV::Field* field = phvInfo.field(emit_field->source->field);
+                auto pair = fields_emitted.insert(field);
+                if (pair.second == true) continue;
+                fields_emitted_more_than_once.insert(field);
+            }
+        }
+        return fields_emitted_more_than_once;
+    }
+
+    std::vector<std::vector<const FieldSliceExtractInfo*>> find_multiheader_sequences(
+            const IR::BFN::Deparser* deparser,
+            ordered_map<const PHV::Field*, FieldSliceExtractInfo*> field_map,
+            std::set<const PHV::Field*> pov_bits_set_invalid_in_mau) {
+        LOG4("Finding multiheader extract sequences based on deparser emits");
+
+        const auto* clot_eligible_fields = clotInfo.clot_eligible_fields();
+        auto is_clot_eligible = [&clot_eligible_fields](const PHV::Field* field) -> bool {
+            return clot_eligible_fields->find(field) != clot_eligible_fields->end();
+        };
+
+        const auto fields_emitted_more_than_once = get_fields_emitted_more_than_once(deparser);
+        auto is_emitted_more_than_once =
+            [&fields_emitted_more_than_once](const PHV::Field* field) -> bool {
+                return fields_emitted_more_than_once.count(field);
+            };
+
+        std::vector<const IR::BFN::EmitChecksum*> checksum_updates;
+        auto get_checksum_updates = [&](const PHV::Field* field) {
+            return clotInfo.field_to_checksum_updates().count(field) ?
+                clotInfo.field_to_checksum_updates().at(field) :
+                std::vector<const IR::BFN::EmitChecksum*>();
+        };
+
+        std::vector<std::vector<const FieldSliceExtractInfo*>> sequences;
+        std::vector<const FieldSliceExtractInfo*> sequence;
+        std::map<const IR::BFN::ParserState*, int> state_to_size_in_bits;
+
+        for (auto emit : deparser->emits) {
+            const PHV::Field* field = nullptr;
+            const PHV::Field* pov_bit = nullptr;
+            if (auto emit_field = emit->to<IR::BFN::EmitField>()) {
+                field = phvInfo.field(emit_field->source->field);
+                pov_bit = phvInfo.field(emit_field->povBit->field);
+            }
+
+            // Do not consider fields that are ineligible for multiheader CLOTs.
+            if (field == nullptr || !is_clot_eligible(field) ||
+                is_emitted_more_than_once(field) ||
+                clotInfo.is_extracted_in_multiple_non_mutex_states(pov_bit) ||
+                pov_bits_set_invalid_in_mau.count(pov_bit)) {
+                if (sequence.empty()) continue;
+
+                if (field == nullptr)
+                    LOG4("  Ended sequence: emit is not an EmitField");
+                else
+                    LOG4("  Ended sequence: " << field->name << " is ineligible for multiheader "
+                         "extract sequences");
+                sequences.push_back(sequence);
+                sequence.clear();
+                state_to_size_in_bits.clear();
+                checksum_updates.clear();
+                continue;
+            }
+
+            // Additionally, each eligible field in a multiheader CLOT must be used
+            // in the same checksum updates.
+            if (!sequence.empty() && !checksum_updates.empty() &&
+                !get_checksum_updates(field).empty() &&
+                checksum_updates != get_checksum_updates(field)) {
+                LOG4("  Ended sequence: " << field->name << " is involved in different checksum "
+                     "updates than last field in sequence");
+                sequences.push_back(sequence);
+                sequence.clear();
+                state_to_size_in_bits.clear();
+                checksum_updates = get_checksum_updates(field);
+            } else if (checksum_updates.empty()) {
+                checksum_updates = get_checksum_updates(field);
+            }
+
+            auto try_start_new_sequence = [&](FieldSliceExtractInfo* extract_info) {
+                bool can_start_new_sequence = clotInfo.can_start_clot(extract_info) &&
+                                              parserInfo.graph(*extract_info->states().begin())
+                                                  .is_mutex(extract_info->states());
+                if (can_start_new_sequence) {
+                    LOG4("  Started a sequence with field: " << field->name);
+                    sequence.push_back(extract_info);
+                    state_to_size_in_bits.clear();
+                    for (const auto& state : extract_info->states())
+                        state_to_size_in_bits[state] = extract_info->slice()->size();
+                };
+            };
+
+            auto extract_info = field_map[field];
+            if (sequence.empty()) {
+                try_start_new_sequence(extract_info);
+            } else if (!sequence.empty()) {
+                // Special case for back to back emits of the same checksum PHV::Field*
+                if (*extract_info == *sequence.back()) continue;
+
+                if (contains(sequence.front()->states(), extract_info->states())) {
+                    bool extracts_are_adjacent_in_all_states = true;
+                    for (const auto& state : extract_info->states()) {
+                        auto previous_extract_info =
+                            std::find_if(sequence.rbegin(), sequence.rend(),
+                                         [&state](const FieldSliceExtractInfo* extract_info) {
+                                             return extract_info->states().count(state);
+                                         });
+                        unsigned expected_bit_offset =
+                            (*previous_extract_info)->state_bit_offset(state) +
+                            (*previous_extract_info)->slice()->size();
+                        if (extract_info->state_bit_offset(state) != expected_bit_offset) {
+                            extracts_are_adjacent_in_all_states = false;
+                            break;
+                        }
+                    }
+                    if (extracts_are_adjacent_in_all_states) {
+                        LOG4("    Added " << field->name << " to sequence");
+                        sequence.push_back(extract_info);
+                        for (const auto& state : extract_info->states())
+                            state_to_size_in_bits[state] += extract_info->slice()->size();
+                    } else {
+                        LOG4("  Ended sequence: extracts for " << field->name
+                             << " are not adjacent to the last field in the sequence in all parser "
+                             "states");
+                        sequences.push_back(sequence);
+                        sequence.clear();
+                        try_start_new_sequence(extract_info);
+                    }
+                } else {
+                    LOG4("  Ended sequence: " << field->name
+                         << " is not extracted in the same parser states as the first field in "
+                         "the sequence");
+                    sequences.push_back(sequence);
+                    sequence.clear();
+                    try_start_new_sequence(extract_info);
+                }
+            }
+
+            const int MAX_SIZE = Device::pardeSpec().byteMaxClotSize() * 8;
+            auto it = std::find_if(state_to_size_in_bits.begin(), state_to_size_in_bits.end(),
+                [&MAX_SIZE](const std::pair<const IR::BFN::ParserState*, int>& pair) {
+                    return pair.second > MAX_SIZE;
+                });
+
+            if (it != state_to_size_in_bits.end()) {
+                sequence.pop_back();
+                sequences.push_back(sequence);
+                sequence.clear();
+                LOG4("  Ended sequence: sequence is larger than " << MAX_SIZE / 8 << " bytes");
+                if (extract_info->slice()->size() < MAX_SIZE) {
+                    try_start_new_sequence(extract_info);
+                }
+            }
+        }
+        if (!sequence.empty()) {
+            sequences.push_back(sequence);
+            sequence.clear();
+        }
+
+        LOG4("Multiheader extract sequences found: " << sequences.size());
+        for (const auto& sequence : sequences) {
+            std::stringstream out;
+            out << "[ ";
+            std::string delimiter = "";
+            for (const auto& extract : sequence) {
+                out << delimiter << extract->slice()->shortString();
+                delimiter = ", ";
+            }
+            out << " ]";
+            LOG4("  " << out);
+            LOG4("");
+        }
+        return sequences;
     }
 };
 

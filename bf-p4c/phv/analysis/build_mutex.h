@@ -67,13 +67,11 @@ class BuildMutex : public BFN::ControlFlowVisitor, public Inspector {
 
     virtual void mark(const PHV::Field*);
 
+    profile_t init_apply(const IR::Node* root) override;
     bool preorder(const IR::Expression*) override;
     bool preorder(const IR::MAU::Action *act) override;
     void flow_merge(Visitor &) override;
     void end_apply() override;
-
- protected:
-    profile_t init_apply(const IR::Node* root) override;
 
  public:
     BuildMutex(PhvInfo& phv, const bitvec& neverOverlay, const PragmaNoOverlay& pragma,

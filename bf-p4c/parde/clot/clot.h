@@ -12,6 +12,7 @@
 namespace IR {
 namespace BFN {
 class ParserState;
+class FieldLVal;
 }
 }
 
@@ -33,7 +34,7 @@ class Clot final : public LiftCompare<Clot> {
     /// JSON deserialization constructor
     Clot() : tag(0), gress(INGRESS) {}
 
-    explicit Clot(gress_t gress) : tag(tagCnt[gress]++), gress(gress) {
+    explicit Clot(gress_t gress) : tag(tag_count[gress]++), gress(gress) {
         BUG_CHECK(gress != GHOST, "Cannot assign CLOTs to ghost gress.");
     }
 
@@ -42,19 +43,19 @@ class Clot final : public LiftCompare<Clot> {
     cstring toString() const;
 
     /// Equality based on gress and tag.
-    bool operator==(const Clot& c) const {
-        return tag == c.tag && gress == c.gress;
+    bool operator==(const Clot& clot) const {
+        return tag == clot.tag && gress == clot.gress;
     }
 
     /// Lexicographic ordering according to (gress, tag).
-    bool operator<(const Clot& c) const {
-        if (gress != c.gress) return gress < c.gress;
-        return tag < c.tag;
+    bool operator<(const Clot& clot) const {
+        if (gress != clot.gress) return gress < clot.gress;
+        return tag < clot.tag;
     }
 
     /// JSON serialization/deserialization.
     void toJSON(JSONGenerator& json) const;
-    static Clot fromJSON(JSONLoader& json);
+    static Clot* fromJSON(JSONLoader& json);
 
     /// Identifies the hardware CLOT associated with this object.
     unsigned tag;
@@ -62,35 +63,41 @@ class Clot final : public LiftCompare<Clot> {
     /// The gress to which this CLOT is assigned.
     gress_t gress;
 
-    unsigned length_in_byte() const;
+    const IR::BFN::FieldLVal* pov_bit = nullptr;
+
+    unsigned length_in_bytes(cstring parser_state) const;
 
     /// Returns the bit offset of a field slice within this CLOT. An error occurs if the CLOT does
     /// not contain the exact field slice (i.e., if the given field slice is not completely covered
     /// by this CLOT, or if the CLOT contains a larger slice of the field).
-    unsigned bit_offset(const PHV::FieldSlice* slice) const;
+    unsigned bit_offset(cstring parser_state,
+                        const PHV::FieldSlice* slice) const;
 
     /// Returns the byte offset of a field slice within this CLOT. An error occurs if the CLOT does
     /// not contain the exact field slice (i.e., if the given field slice is not completely covered
     /// by this CLOT, or if the CLOT contains a larger slice of the field).
-    unsigned byte_offset(const PHV::FieldSlice* slice) const;
+    unsigned byte_offset(cstring parser_state,
+                         const PHV::FieldSlice* slice) const;
 
-    /// @return true when @p f is a PHV-allocated field, and this CLOT has (a slice of) @p f.
-    bool is_phv_field(const PHV::Field* f) const;
+    /// @return true when @p field is a PHV-allocated field, and this CLOT has (a slice of)
+    /// @p field.
+    bool is_phv_field(const PHV::Field* field) const;
 
-    /// @return true when @p f is a checksum field, and this CLOT has (a slice of) @p f.
-    bool is_csum_field(const PHV::Field* f) const;
+    /// @return true when @p field is a checksum field, and this CLOT has (a slice of) @p field.
+    bool is_checksum_field(const PHV::Field* field) const;
 
     /// @return true when this CLOT has the exact @p slice.
     bool has_slice(const PHV::FieldSlice* slice) const;
 
-    /// @return true when the first slice in this CLOT is part of the given field @p f.
-    bool is_first_field_in_clot(const PHV::Field* f) const;
+    /// @return true when the first slice in this CLOT is part of the given field @p field.
+    bool is_first_field_in_clot(const PHV::Field* field) const;
 
     /// Indicates the checksum engine (if any) that will deposit in this CLOT
     boost::optional<unsigned> csum_unit;
 
  private:
-    void set_slices(const std::vector<const PHV::FieldSlice*> slices);
+    void set_slices(cstring parser_state,
+                    const std::vector<const PHV::FieldSlice*>& slices);
 
     enum FieldKind {
         // Designates a modified field.
@@ -106,10 +113,16 @@ class Clot final : public LiftCompare<Clot> {
     };
 
     /// Adds a field slice to this CLOT.
-    void add_slice(FieldKind kind, const PHV::FieldSlice* slice);
+    void add_slice(cstring parser_state, FieldKind kind,
+                   const PHV::FieldSlice* slice);
 
-    /// All field slices in this CLOT, in the order in which they were added.
-    std::vector<const PHV::FieldSlice*> all_slices_;
+    /// Field slices in this CLOT, depending on which parser state it begins in.
+    /// Field slices present in one parser state may not be present in an other, except
+    /// for the first field slice which will always be the same in all parser states.
+    std::map<cstring,
+             std::vector<const PHV::FieldSlice*>> parser_state_to_slices_;
+
+    std::map<const PHV::FieldSlice*, cstring> slice_to_parser_state_;
 
     /// All fields that have slices in this CLOT, mapped to their corresponding slice.
     std::map<const PHV::Field*, const PHV::FieldSlice*> fields_to_slices_;
@@ -119,12 +132,21 @@ class Clot final : public LiftCompare<Clot> {
     std::set<const PHV::Field*> phv_fields_;
 
     /// Fields that need to be replaced by a checksum when deparsed.
-    std::set<const PHV::Field*> csum_fields_;
+    std::set<const PHV::Field*> checksum_fields_;
 
  public:
-    /// Returns all field slices covered by this CLOT.
-    const std::vector<const PHV::FieldSlice*>& all_slices() const {
-        return all_slices_;
+    /// Returns all field slices covered by this CLOT in order of appearance. If the CLOT was
+    /// generated from a pseudoheader "hdr" with fields "A, B, C", then the function will return
+    /// [ {hdr.A}, {hdr.B}, {hdr.C} ]. However, if the CLOT is a multiheader or variable length
+    /// CLOT, an element in the vector might have more than 1 slice, such as
+    /// [ {hdr1.A}, {hdr2.A, hdr3.B} ], indicating that the CLOT will either contain
+    /// hdr1.A and hdr_2_.A OR hdr1.A and hdr_3_.A.
+    std::vector<std::set<const PHV::FieldSlice*>> all_slices() const;
+
+    /// Return map which contains the field slices in the CLOT depending on which parser state
+    /// the CLOT began in.
+    const std::map<cstring, std::vector<const PHV::FieldSlice*>>& parser_state_to_slices() const {
+        return parser_state_to_slices_;
     }
 
     /// Returns all fields that have slices in this CLOT, mapped to their corresponding slice.
@@ -133,16 +155,18 @@ class Clot final : public LiftCompare<Clot> {
     }
 
     /// Returns all fields that need to be replaced by a checksum when deparsed.
-    const std::set<const PHV::Field*>& csum_fields() const {
-        return csum_fields_;
+    const std::set<const PHV::Field*>& checksum_fields() const {
+        return checksum_fields_;
     }
 
-    std::map<const PHV::Field*, unsigned> csum_field_to_csum_id;
+    std::map<const PHV::Field*, unsigned> checksum_field_to_checksum_id;
 
-    static std::map<gress_t, int> tagCnt;
+    static std::map<gress_t, int> tag_count;
 };
 
-std::ostream& operator<<(std::ostream& out, const Clot c);
-JSONGenerator& operator<<(JSONGenerator& out, const Clot c);
+std::ostream& operator<<(std::ostream& out, const Clot& clot);
+std::ostream& operator<<(std::ostream& out, const Clot* clot);
+JSONGenerator& operator<<(JSONGenerator& out, const Clot& clot);
+JSONGenerator& operator<<(JSONGenerator& out, const Clot* clot);
 
 #endif /* EXTENSIONS_BF_P4C_PARDE_CLOT_CLOT_H_ */

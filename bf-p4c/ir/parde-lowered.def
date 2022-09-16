@@ -100,9 +100,12 @@ class LoweredExtractClot : LoweredParserPrimitive {
     /// The location that will be read from.
     LoweredPacketRVal source;
 
-    /// The clot this extract writes to.
-    Clot dest;
+    /// The CLOT this extract writes to.
+    Clot* dest;
 
+    /// The higher order parser state this CLOT started in.
+    /// Used to get the proper length of the CLOT from dest->length_in_bytes(parser_state).
+    const ParserState* higher_parser_state = nullptr;
 #emit
     /// Debugging information about the high-level operations that are
     /// implemented by this low-level extract.
@@ -489,7 +492,7 @@ class ChecksumPhvInput {
 }
 
 class ChecksumClotInput {
-    Clot clot;
+    Clot* clot;
     bool invert = false;
     BFN::ContainerBitRef povBit;
 }

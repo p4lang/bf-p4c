@@ -68,6 +68,8 @@ class HeaderRemovalAnalysis : public MauInspector {
              std::set<FieldSliceSet>,
              PHV::FieldSlice::Less>* interestedCorrelations;
 
+    std::set<const PHV::Field*> povBitsSetInvalidInMau;
+
     /// The output of this analysis.
     ResultMap resultMap;
 

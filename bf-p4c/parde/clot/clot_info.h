@@ -86,7 +86,7 @@ class ClotInfo {
     explicit ClotInfo(PhvUse& uses) : uses(uses) {}
 
  private:
-    unsigned num_clots_allocated(gress_t gress) const { return Clot::tagCnt.at(gress); }
+    unsigned num_clots_allocated(gress_t gress) const { return Clot::tag_count.at(gress); }
 
     /// The extracted packet range of a given field for a given parser state.
     boost::optional<nw_bitrange> field_range(const IR::BFN::ParserState* state,
@@ -96,6 +96,7 @@ class ClotInfo {
     boost::optional<unsigned> offset(const IR::BFN::ParserState* state,
                                      const PHV::Field* field) const;
 
+ public:
     /// Sanitizes state name before lookup in the parser_state_to_clots_
     ///
     /// If state name is not prefixed with gress, then it will be prefixed
@@ -104,8 +105,12 @@ class ClotInfo {
     /// regenerate original state name.
     cstring sanitize_state_name(cstring state_name, gress_t gress) const;
 
- public:
     CollectParserInfo parserInfo;
+
+    const ordered_map<const IR::BFN::ParserState*, std::vector<const PHV::Field*>>&
+            parser_state_to_fields() const {
+        return parser_state_to_fields_;
+    };
 
     /// A POV is in this set if there is a path through the parser in which the field is not
     /// extracted, but its POV bit is set.
@@ -127,6 +132,11 @@ class ClotInfo {
     const Clot* parser_state_to_clot(const IR::BFN::LoweredParserState *state, unsigned tag) const;
 
     const std::vector<Clot*>& clots() { return clots_; }
+
+    const std::map<const PHV::Field*, std::vector<const IR::BFN::EmitChecksum*>>&
+            field_to_checksum_updates() {
+        return field_to_checksum_updates_;
+    }
 
     /// @return a map from overwrite offsets to corresponding containers.
     std::map<int, PHV::Container>
@@ -290,9 +300,9 @@ class ClotInfo {
     bool adjust(const PhvInfo& phv, Clot* clot);
 
     /// Removes bits from the start and end of the given @p clot.
-    void crop(Clot* clot, unsigned start_bits, unsigned end_bits);
+    void crop(Clot* clot, cstring parser_state, unsigned start_bits, unsigned end_bits);
 
-    void crop(Clot* clot, unsigned num_bits, bool from_start);
+    void crop(Clot* clot, cstring parser_state, unsigned num_bits, bool from_start);
 
  public:
     /// Determines whether a field slice in a CLOT will be overwritten by a PHV container or a

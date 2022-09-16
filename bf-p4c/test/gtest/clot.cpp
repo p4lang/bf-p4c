@@ -169,8 +169,10 @@ void runTest(boost::optional<TofinoPipeTestCase> test,
     for (const auto* clot : clotInfo.clots()) {
         // Convert the actual CLOT into an ExpectedClot.
         ExpectedClot expectedClot;
-        for (const auto* slice : clot->all_slices()) {
-            expectedClot.emplace_back(slice->field()->name, slice->range());
+        for (const auto& slices : clot->all_slices()) {
+            for (const auto& slice : slices) {
+                expectedClot.emplace_back(slice->field()->name, slice->range());
+            }
         }
 
         EXPECT_NE(expectedClot.size(), 0UL);
@@ -221,7 +223,7 @@ TEST_F(ClotTest, Basic1) {
     runTest(test, {{"h.f1"}});
 }
 
-TEST_F(ClotTest, AdjacentClot1) {
+TEST_F(ClotTest, AdjacentHeaders1) {
     auto test = createClotTest(P4_SOURCE(R"(
         )"), P4_SOURCE(R"(
             header H {
@@ -257,13 +259,12 @@ TEST_F(ClotTest, AdjacentClot1) {
     // -----
     // h1.f1  CLOT
     // h1.f2  CLOT
-    // -----
     // h2.f1  CLOT
+    // -----
     // h2.f2  written
     // -----
     runTest(test, {
-        {"h1.f1", "h1.f2"},
-        {"h2.f1"},
+        {"h1.f1", "h1.f2", "h2.f1"}
     });
 }
 
@@ -789,7 +790,7 @@ TEST_F(ClotTest, Reorder2) {
     });
 }
 
-TEST_F(ClotTest, Resize1) {
+TEST_F(ClotTest, AdjacentHeaders2) {
     auto test = createClotTest(P4_SOURCE(R"(
         )"), P4_SOURCE(R"(
             header H1 {
@@ -854,25 +855,41 @@ TEST_F(ClotTest, Resize1) {
             pkt.emit(hdr.h4);
         )"));
 
+    // Before the introduction of multiheader CLOTs, CLOT allocation would have returned the
+    // following result:
+    //
     // -----
-    // h1.f1        CLOT
-    // h1.f2        CLOT
+    // h1.f1        CLOT 0
+    // h1.f2        CLOT 0
     // -----
-    //   | h2.f     CLOT
+    //   | h2.f     CLOT 1
     //   | ----
-    //   | h3.f     CLOT
+    //   | h3.f     CLOT 2
     // -----
     // h4.f1[31:8]  3-byte gap. Slice [31:24] needed because h2 and h4 need to be separated by at
     //                          least 3 bytes, and h3 is only 2 bytes long. This induces slice
     //                          [31:8] to satisfy gap requirement between h3 and h4, and h1 and h4.
-    // h4.f1[7:0]   CLOT
+    // h4.f1[7:0]   CLOT 3
     // h4.f2        written
     // -----
+    //
+    // However, since h2 and h3 are immediately adjacent in the parser and deparser, they are now
+    // grouped in a multiheader CLOT, making the gap unnecessary. This leads to the following
+    // CLOT allocation:
+    //
+    // -----
+    // h1.f1        CLOT 0
+    // h1.f2        CLOT 0
+    // -----
+    // h2.f         CLOT 1
+    // h3.f         CLOT 1
+    // -----
+    // h4.f1        CLOT 2
+    // h4.f2        written
     runTest(test, {
         {"h1.f1", "h1.f2"},
-        {"h2.f"},
-        {"h3.f"},
-        {{"h4.f1", FromTo(0, 7)}},
+        {"h2.f", "h3.f"},
+        {"h4.f1"}
     });
 }
 

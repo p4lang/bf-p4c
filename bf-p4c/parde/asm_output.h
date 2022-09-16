@@ -12,13 +12,15 @@ class ClotInfo;
 ///
 /// Helper that can generate parser assembly and write it to an output stream.
 struct ParserAsmOutput {
-    ParserAsmOutput(const IR::BFN::Pipe* pipe, const PhvInfo &phv, gress_t gress);
+    ParserAsmOutput(const IR::BFN::Pipe* pipe, const PhvInfo& phv, const ClotInfo& clot_info,
+                    gress_t gress);
 
  private:
     friend std::ostream& operator<<(std::ostream&, const ParserAsmOutput&);
 
     std::vector<const IR::BFN::BaseLoweredParser*> parsers;
-    const PhvInfo               &phv;
+    const PhvInfo& phv;
+    const ClotInfo& clot_info;
 };
 
 /// \ingroup AsmOutput parde

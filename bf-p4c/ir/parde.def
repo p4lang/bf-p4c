@@ -147,6 +147,9 @@ class Extract : ParserPrimitive {
 
     ParserWriteMode write_mode = ParserWriteMode::SINGLE_WRITE;
 
+    /// The original state this extract originated from (before parser state splitting).
+    const ParserState* original_state = nullptr;
+
     /// This extract expects that data on the wire is marshaled from a `field`.
     optional boost::optional<MarshaledFrom> marshaled_from;  // not visited
 }
@@ -164,7 +167,10 @@ class ExtractPhv : Extract {
 /// Instances are introduced during state splitting, and are eliminated once
 /// the parser IR is lowered.
 class ExtractClot : Extract {
-    dbprint { out << "extract " << source << " to CLOT-allocated " << dest; }
+    dbprint {
+        out << "extract " << source << " to CLOT-allocated " << dest << " from "
+            << (original_state ? original_state->name : "(nullptr)");
+    }
 
     validate {
         BUG_CHECK(source->to<IR::BFN::PacketRVal>(),

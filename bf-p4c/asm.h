@@ -136,7 +136,7 @@ class AsmOutput : public Inspector {
                 if (Device::currentDevice() == Device::FLATROCK)
                     out << HeaderAsmOutput(prsr_header_seqs);
 #endif
-                out << ParserAsmOutput(pipe, phv, INGRESS);
+                out << ParserAsmOutput(pipe, phv, clot, INGRESS);
                 // Flatrock metadata packer is output as "ingress deparser" section
                 out << DeparserAsmOutput(pipe, phv, clot, INGRESS);
                 if (pipe->ghost_thread.ghost_parser != nullptr) {
@@ -149,7 +149,7 @@ class AsmOutput : public Inspector {
                         out << "  pipe_mask: 0" << std::endl;
                     }
                 }
-                out << ParserAsmOutput(pipe, phv, EGRESS);
+                out << ParserAsmOutput(pipe, phv, clot, EGRESS);
                 out << DeparserAsmOutput(pipe, phv, clot, EGRESS)
                     << *mauasm << std::endl
                     << flex->asm_output() << std::endl;

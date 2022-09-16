@@ -5,6 +5,7 @@
 #include "ir/visitor.h"
 #include "bf-p4c/ir/gateway_control_flow.h"
 #include "bf-p4c/mau/mau_visitor.h"
+#include "bf-p4c/parde/parser_dominator_builder.h"
 #include "bf-p4c/parde/parser_info.h"
 #include "bf-p4c/phv/analysis/build_mutex.h"
 
@@ -172,23 +173,10 @@ class RemoveHeaderMutexesIfAllFieldsNotMutex : public Inspector {
  * have also surely been encountered if a given header has been encountered and which other headers
  * have not been encountered if a given header has not been encountered.
  */
-class FindParserHeaderEncounterInfo : public PardeInspector {
- public:
-    using ImmediateDominatorMap = ordered_map<const IR::BFN::ParserState*,
-                                              const IR::BFN::ParserState*>;
-    using Graph = ReversibleParserGraph::Graph;
-    using Vertex = boost::graph_traits<Graph>::vertex_descriptor;
-    using IndexMap = boost::property_map<Graph, boost::vertex_index_t>::type;
-    using PredMap = boost::iterator_property_map<std::vector<Vertex>::iterator, IndexMap>;
-
- private:
+class FindParserHeaderEncounterInfo : public ParserDominatorBuilder {
     PhvInfo& phv;
     HeaderInfo& header_info;
 
-    ordered_map<gress_t, ReversibleParserGraph> parser_graphs;
-    ordered_map<gress_t, ImmediateDominatorMap> immediate_dominators;
-    ordered_map<gress_t, ImmediateDominatorMap> immediate_post_dominators;
-    std::set<const IR::BFN::ParserState*> states;
     ordered_map<gress_t,
                 ordered_map<const IR::BFN::ParserState*,
                             ordered_set<cstring>>> state_to_headers;
@@ -199,34 +187,14 @@ class FindParserHeaderEncounterInfo : public PardeInspector {
     static bool ignore_field(const PHV::Field* field) {
         return !field || field->pov || field->metadata;
     }
-
-    ordered_map<int, int> get_immediate_dominators(Graph graph, Vertex entry);
-    ordered_map<int, int> get_immediate_post_dominators(boost::reverse_graph<Graph> graph,
-                                                        Vertex entry);
-    ImmediateDominatorMap int_map_to_state_map(ordered_map<int, int> idom,
-                                               ReversibleParserGraph& rpg);
-    std::set<const IR::BFN::ParserState*> get_all_dominatees(const IR::BFN::ParserState* state,
-                                                             gress_t gress);
-    std::set<const IR::BFN::ParserState*> get_all_dominators(const IR::BFN::ParserState* state,
-                                                             gress_t gress);
-    std::set<const IR::BFN::ParserState*> get_all_post_dominatees(const IR::BFN::ParserState* state,
-                                                                  gress_t gress);
-    std::set<const IR::BFN::ParserState*> get_all_post_dominators(const IR::BFN::ParserState* state,
-                                                                  gress_t gress);
     bitvec get_headers_extracted_in_states(std::set<const IR::BFN::ParserState*> states);
     bitvec get_surely_not_extracted(std::set<const IR::BFN::ParserState*> not_visited_states);
     bitvec get_always_extracted();
     SymBitMatrix get_flipped_bit_matrix(SymBitMatrix matrix);
 
     profile_t init_apply(const IR::Node* root) override;
-    FindParserHeaderEncounterInfo *clone() const override {
-        return new FindParserHeaderEncounterInfo(*this);
-    }
-    bool preorder(const IR::BFN::Parser* parser) override;
-    bool preorder(const IR::BFN::ParserState* parser_state) override;
     bool preorder(const IR::BFN::Extract* extract) override;
 
-    void build_dominator_maps();
     void build_header_encounter_maps();
     void end_apply() override;
 

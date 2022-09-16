@@ -13,6 +13,7 @@ class FieldSliceExtractInfo;
 class ClotCandidate : public LiftLess<ClotCandidate> {
  public:
     const Pseudoheader* pseudoheader;
+    PovBitSet pov_bits;
 
  private:
     /// Information relating to the extracts of the candidate's field slices, ordered by position

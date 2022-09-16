@@ -75,6 +75,8 @@ struct SliceExtracts : public ParserModifier {
     const PhvInfo& phv;
     const ClotInfo& clot;
 
+    const IR::BFN::ParserState* state = nullptr;
+
     SliceExtracts(const PhvInfo& phv, const ClotInfo& clot) : phv(phv), clot(clot) { }
 
     /// Rewrites an extract so that it extracts exactly the slice specified by @p le_low_idx and
@@ -90,7 +92,7 @@ struct SliceExtracts : public ParserModifier {
     /// make_slice, le_low_idx is 64, width is 32 and extract_base is 32.
     template <class Extract>
     const Extract* make_slice(const IR::BFN::Extract* extract, int le_low_idx, int width,
-        int extract_base) {
+                              int extract_base) {
         auto slice_lo = le_low_idx;
         auto slice_hi = slice_lo + width - 1;
 
@@ -132,6 +134,7 @@ struct SliceExtracts : public ParserModifier {
 
         auto sliced = new Extract(dest_lval, src_slice);
         sliced->write_mode = extract->write_mode;
+        sliced->original_state = state;
         return sliced;
     }
 
@@ -193,6 +196,7 @@ struct SliceExtracts : public ParserModifier {
     }
 
     bool preorder(IR::BFN::ParserState* state) override {
+        this->state = state;
         IR::Vector<IR::BFN::ParserPrimitive> new_statements;
 
         for (auto stmt : state->statements) {
@@ -837,7 +841,9 @@ struct AllocateParserState : public ParserTransform {
         struct ClotAllocator : Allocator {
             const IR::BFN::ExtractClot*
             create_extract(const IR::BFN::FieldLVal* dest, const IR::BFN::PacketRVal* rval) {
-                return new IR::BFN::ExtractClot(dest, rval);
+                auto* extract_clot = new IR::BFN::ExtractClot(dest, rval);
+                extract_clot->original_state = sa.state;
+                return extract_clot;
             }
 
             const IR::BFN::FieldLVal*

@@ -522,6 +522,7 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/infer_payload_offset.cpp
   parde/lower_parser.cpp
   parde/merge_parser_state.cpp
+  parde/parser_dominator_builder.cpp
   parde/parser_header_sequences.cpp
   parde/parser_output.cpp
   parde/phase0.cpp
@@ -566,6 +567,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/match_register.h
   parde/merge_parser_state.h
   parde/parde_spec.h
+  parde/parser_dominator_builder.h
   parde/parser_header_sequences.h
   parde/phase0.h
   parde/parde_utils.h

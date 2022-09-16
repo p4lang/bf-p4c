@@ -9,8 +9,8 @@
  *
  * The analysis proceeds in topological sorted order.
  * Every state has two bitvectors :
- *    1. field_vec : Contains fields that are definitely extracted until the current state
- *    2. pov_vec : Valid bits that are set until the current state and are waiting for
+ *    1. field_vec : Contains fields that are definitely extracted before the current state
+ *    2. pov_vec : Valid bits that are set before the current state and are waiting for
                    corresponding fields to be extracted.
  *
  * The current state will add a field in its field_vec if any of these conditions are met:

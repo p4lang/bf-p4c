@@ -34,17 +34,15 @@ class ClotResourcesLogging : public ParserInspector {
     void end_apply() override;
 
     void collectClotUsages(const IR::BFN::LoweredParserMatch* match,
-                       const IR::BFN::LoweredParserState* state,
-                       gress_t gress);
+                           const IR::BFN::LoweredParserState* state, gress_t gress);
 
     void collectExtractClotInfo(const IR::BFN::LoweredExtractClot* extract,
-                                const IR::BFN::LoweredParserState *state,
-                                gress_t gress);
+                                const IR::BFN::LoweredParserState* state, gress_t gress);
 
     void logClotUsages();
 
-    ClotUsage* logExtractClotInfo(bool hasChecksum, int length, int offset,
-                                  unsigned tag, const Clot *clot);
+    ClotUsage* logExtractClotInfo(cstring parser_state, bool hasChecksum,
+                                  int length, int offset, unsigned tag, const Clot* clot);
 
  public:
     std::vector<ClotResourceUsage*> getLoggers();

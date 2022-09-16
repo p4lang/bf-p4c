@@ -78,30 +78,39 @@ static bool areClotUsagesEqual(ClotResourcesLogging::ClotUsage *u1,
 }
 
 void ClotResourcesLogging::collectExtractClotInfo(const IR::BFN::LoweredExtractClot* extract,
-                                                  const IR::BFN::LoweredParserState *state,
+                                                  const IR::BFN::LoweredParserState* state,
                                                   gress_t gress) {
-    const auto tag = extract->dest.tag;
+    const auto tag = extract->dest->tag;
     const bool hasChecksum = clotTagToChecksumUnit.count(tag) > 0;
     const auto* source = extract->source->to<IR::BFN::LoweredPacketRVal>();
     const auto bytes = source->range;
     const auto currentExtractLength = bytes.size();
     const auto offset = bytes.lo;
     const std::string issueState = state->name.c_str();
-    const Clot *clot = clotInfo.parser_state_to_clot(state, tag);
+    const Clot* clot = clotInfo.parser_state_to_clot(state, tag);
     BUG_CHECK(clot, "No fields extracted to this tag %1%", tag);
 
+    cstring state_name = clotInfo.sanitize_state_name(extract->higher_parser_state->name, gress);
+    BUG_CHECK(clot->parser_state_to_slices().count(state_name),
+              "Tried to get field slices in %1% from a parser state it is not present in (%2%)",
+              *clot, state_name);
+    const std::vector<const PHV::FieldSlice*> slices = clot->parser_state_to_slices()
+        .at(state_name);
+
     // Aggregate lengths of extracted fields in bytes
-    const auto length = std::accumulate(clot->all_slices().begin(),
-                                        clot->all_slices().end(), 0,
-                                        [] (int r, const PHV::FieldSlice *const s) -> int {
-                                            return r + s->size(); }) / 8;
+    const auto length = std::accumulate(slices.begin(),
+                                        slices.end(), 0,
+                                        [] (int r, const PHV::FieldSlice* const slice) -> int {
+                                            return r + slice->size();
+                                        }) / 8;
+
     const bool spilledExtraction = length > currentExtractLength;
 
     if (spilledExtraction) {
         LOG6("Spilled CLOT extraction detected for " << gress << "::CLOT" << tag);
         LOG6("  State extracts: " << currentExtractLength << "B, total length: " << length << "B");
         LOG7("  Fields extracted:");
-        for (auto *s : clot->all_slices()) {
+        for (auto *s : slices) {
             LOG7("    " << *s);
         }
         // We might want to log extra info about spilled CLOTs in the future
@@ -116,7 +125,7 @@ void ClotResourcesLogging::collectExtractClotInfo(const IR::BFN::LoweredExtractC
      mutually exclusive data to the same CLOT tag, so create new entry
      for it.
      */
-    auto newUsage = logExtractClotInfo(hasChecksum, length, offset, tag, clot);
+    auto newUsage = logExtractClotInfo(state_name, hasChecksum, length, offset, tag, clot);
     auto &usages = getUsageData(gress, tag);
 
     for (auto &usage : usages) {
@@ -141,18 +150,18 @@ void ClotResourcesLogging::logClotUsages() {
     }
 }
 
-ClotResourcesLogging::ClotUsage*
-ClotResourcesLogging::logExtractClotInfo(bool hasChecksum, int length, int offset,
-                                         unsigned tag, const Clot *clot) {
+ClotResourcesLogging::ClotUsage* ClotResourcesLogging::logExtractClotInfo(
+        cstring parser_state, bool hasChecksum, int length, int offset,
+        unsigned tag, const Clot *clot) {
     auto usage = new ClotUsage(hasChecksum, length, offset, tag);
 
-    for (auto *f : clot->all_slices()) {
-        const std::string name = cstring(canon_name(f->field()->name)).c_str();
-        const auto msb = f->range().hi;
-        const auto lsb = f->range().lo;
-        const auto clotOffset = clot->bit_offset(f);
-        auto cf = new ClotField(clotOffset, lsb, msb, name);
-        usage->append_field_lists(cf);
+    for (auto *slice : clot->parser_state_to_slices().at(parser_state)) {
+        const std::string name = cstring(canon_name(slice->field()->name)).c_str();
+        const auto msb = slice->range().hi;
+        const auto lsb = slice->range().lo;
+        const auto clot_offset = clot->bit_offset(parser_state, slice);
+        auto clot_field = new ClotField(clot_offset, lsb, msb, name);
+        usage->append_field_lists(clot_field);
     }
 
     return usage;

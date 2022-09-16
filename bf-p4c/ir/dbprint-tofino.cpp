@@ -357,7 +357,7 @@ void IR::BFN::ChecksumPhvInput::dbprint(std::ostream &out) const {
 }
 
 void IR::BFN::ChecksumClotInput::dbprint(std::ostream &out) const {
-    out << clot;
+    out << "clot " << clot->tag;
     if (povBit) out << " if " << povBit;
 }
 
@@ -380,7 +380,7 @@ void IR::BFN::FullChecksumUnitConfig::dbprint(std::ostream &out) const {
 }
 
 void IR::BFN::LoweredEmitClot::dbprint(std::ostream &out) const {
-    out << "emit clot " << clot->clot;
+    out << "emit clot " << clot->clot->tag;
 }
 
 void IR::BFN::LoweredDeparser::dbprint(std::ostream &out) const {

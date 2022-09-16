@@ -78,44 +78,48 @@ std::map<int, PHV::Container>
 ClotInfo::get_overwrite_containers(const Clot* clot, const PhvInfo& phv) const {
     std::map<int, PHV::Container> containers;
 
-    for (auto slice : clot->all_slices()) {
-        auto field = slice->field();
-        auto range = slice->range();
-        if (slice_overwritten_by_phv(phv, clot, slice)) {
-            field->foreach_alloc(range, PHV::AllocContext::DEPARSER, nullptr,
-                    [&](const PHV::AllocSlice &alloc) {
-                auto container = alloc.container();
-                auto net_range = range.toOrder<Endian::Network>(field->size);
-                int field_in_clot_offset = clot->bit_offset(slice) - net_range.lo;
+    for (const auto& kv : clot->parser_state_to_slices()) {
+        cstring parser_state = kv.first;
+        const std::vector<const PHV::FieldSlice*> slices = kv.second;
+        for (const auto* slice : slices) {
+            auto field = slice->field();
+            auto range = slice->range();
+            if (slice_overwritten_by_phv(phv, clot, slice)) {
+                field->foreach_alloc(range, PHV::AllocContext::DEPARSER, nullptr,
+                        [&](const PHV::AllocSlice &alloc) {
+                    auto container = alloc.container();
+                    auto net_range = range.toOrder<Endian::Network>(field->size);
+                    int field_in_clot_offset = clot->bit_offset(parser_state, slice) - net_range.lo;
 
-                auto field_range = alloc.field_slice().toOrder<Endian::Network>(field->size);
+                    auto field_range = alloc.field_slice().toOrder<Endian::Network>(field->size);
 
-                auto container_range =
-                    alloc.container_slice().toOrder<Endian::Network>(alloc.container().size());
+                    auto container_range =
+                        alloc.container_slice().toOrder<Endian::Network>(alloc.container().size());
 
-                auto container_offset = field_in_clot_offset - container_range.lo +
-                                        field_range.lo;
+                    auto container_offset = field_in_clot_offset - container_range.lo +
+                                            field_range.lo;
 
-                BUG_CHECK(container_offset % 8 == 0,
-                          "CLOT %d container overwrite offset for %s is not byte-aligned",
-                          clot->tag,
-                          slice->shortString());
+                    BUG_CHECK(container_offset % 8 == 0,
+                            "CLOT %d container overwrite offset for %s is not byte-aligned",
+                            clot->tag,
+                            slice->shortString());
 
-                auto container_offset_in_byte = container_offset / 8;
+                    auto container_offset_in_byte = container_offset / 8;
 
-                if (containers.count(container_offset_in_byte)) {
-                    auto other_container = containers.at(container_offset_in_byte);
-                    BUG_CHECK(container == other_container,
-                        "CLOT %d has more than one container at overwrite offset %d: "
-                        "%s and %s",
-                        clot->tag,
-                        container_offset_in_byte,
-                        container,
-                        other_container);
-                } else {
-                    containers[container_offset_in_byte] = container;
-                }
-            });
+                    if (containers.count(container_offset_in_byte)) {
+                        auto other_container = containers.at(container_offset_in_byte);
+                        BUG_CHECK(container == other_container,
+                            "CLOT %d has more than one container at overwrite offset %d: "
+                            "%s and %s",
+                            clot->tag,
+                            container_offset_in_byte,
+                            container,
+                            other_container);
+                    } else {
+                        containers[container_offset_in_byte] = container;
+                    }
+                });
+            }
         }
     }
 
@@ -123,21 +127,23 @@ ClotInfo::get_overwrite_containers(const Clot* clot, const PhvInfo& phv) const {
 }
 
 std::map<int, const PHV::Field*> ClotInfo::get_csum_fields(const Clot* clot) const {
-    std::map<int, const PHV::Field*> csum_fields;
+    std::map<int, const PHV::Field*> checksum_fields;
+    for (const auto& kv : clot->parser_state_to_slices()) {
+        cstring parser_state = kv.first;
+        for (const auto* checksum_field : clot->checksum_fields()) {
+            auto offset = clot->byte_offset(parser_state, new PHV::FieldSlice(checksum_field));
+            if (checksum_fields.count(offset)) {
+                auto other_field = checksum_fields.at(offset);
+                BUG_CHECK(checksum_field == other_field,
+                    "CLOT %d has more than one checksum field at overwrite offset %d: %s and %s",
+                    checksum_field->name, other_field->name);
+            }
 
-    for (auto f : clot->csum_fields()) {
-        auto offset = clot->byte_offset(new PHV::FieldSlice(f));
-        if (csum_fields.count(offset)) {
-            auto other_field = csum_fields.at(offset);
-            BUG_CHECK(false,
-                "CLOT %d has more than one checksum field at overwrite offset %d: %s and %s",
-                f->name, other_field->name);
+            checksum_fields[offset] = checksum_field;
         }
-
-        csum_fields[offset] = f;
     }
 
-    return csum_fields;
+    return checksum_fields;
 }
 
 void ClotInfo::merge_parser_states(gress_t gress, cstring dst_state_name, cstring src_state_name) {
@@ -150,10 +156,10 @@ void ClotInfo::merge_parser_states(gress_t gress, cstring dst_state_name, cstrin
     // Bind clots from src to dst
     // dst might not even exist, but this will create appropriate record
     auto& src_clots = state_to_clot.at(src_name);
-    for (auto *c : src_clots) {
-        parser_state_to_clots(gress)[dst_name].insert(c);
-        clot_to_parser_states_[c].first = gress;
-        clot_to_parser_states_[c].second.insert(dst_name);
+    for (const auto* clot : src_clots) {
+        parser_state_to_clots(gress)[dst_name].insert(clot);
+        clot_to_parser_states_[clot].first = gress;
+        clot_to_parser_states_[clot].second.insert(dst_name);
     }
 }
 
@@ -266,7 +272,7 @@ bool ClotInfo::is_used_in_multiple_checksum_update_sets(const PHV::Field* field)
       return field_to_checksum_updates_.at(field).size() > 1;
 
      // TODO it's probably still ok to allocate field to CLOT
-     // if the checksum updates it involves in are such that
+     // if the checksum updates it is involved in are such that
      // one's source list is a subset of the update?
 }
 
@@ -280,7 +286,7 @@ bool ClotInfo::is_extracted_in_multiple_non_mutex_states(const PHV::Field* f) co
 
     // Collect the states in a set and check that they all come from the same parser.
     const IR::BFN::Parser* parser = nullptr;
-    std::set<const IR::BFN::ParserState*> states;
+    ordered_set<const IR::BFN::ParserState*> states;
     for (auto state : Keys(states_to_sources)) {
         states.insert(state);
 
@@ -625,49 +631,59 @@ void ClotInfo::adjust_clots(const PhvInfo& phv) {
 }
 
 bool ClotInfo::adjust(const PhvInfo& phv, Clot* clot) {
-    auto& all_slices = clot->all_slices();
-
-    // Figure out how many bits are overwritten at the start of the CLOT.
-    unsigned num_start_bits_overwritten = 0;
-    for (auto slice : all_slices) {
-        auto overwrite_mask = bits_overwritten(phv, clot, slice);
-        int first_zero_idx = overwrite_mask.ffz(0);
-        num_start_bits_overwritten += first_zero_idx;
-        if (first_zero_idx < slice->size()) break;
-    }
-
-    BUG_CHECK(num_start_bits_overwritten % 8 == 0,
-              "CLOT %d starts with %d overwritten bits, which is not byte-aligned",
-              clot->tag, num_start_bits_overwritten);
-
-    // Figure out how many bits are overwritten at the end of the CLOT.
-    unsigned num_end_bits_overwritten = 0;
-    if (num_start_bits_overwritten < clot->length_in_byte() * 8) {
-        for (auto slice : boost::adaptors::reverse(all_slices)) {
-            auto overwrite_mask = bits_overwritten<Endian::Little>(phv, clot, slice);
-            int last_zero_idx = overwrite_mask.ffz(0);
-            num_end_bits_overwritten += last_zero_idx;
-            if (last_zero_idx < slice->size()) break;
+    unsigned length_in_bytes = 0;
+    for (const auto& kv : clot->parser_state_to_slices()) {
+        cstring parser_state = kv.first;
+        std::vector<const PHV::FieldSlice*> slices = kv.second;
+        // Figure out how many bits are overwritten at the start of the CLOT.
+        unsigned num_start_bits_overwritten = 0;
+        for (auto slice : slices) {
+            auto overwrite_mask = bits_overwritten(phv, clot, slice);
+            int first_zero_idx = overwrite_mask.ffz(0);
+            num_start_bits_overwritten += first_zero_idx;
+            if (first_zero_idx < slice->size()) break;
         }
+
+        BUG_CHECK(num_start_bits_overwritten % 8 == 0,
+                  "CLOT %d starts with %d overwritten bits, which is not byte-aligned", clot->tag,
+                  num_start_bits_overwritten);
+
+        // Figure out how many bits are overwritten at the end of the CLOT.
+        unsigned num_end_bits_overwritten = 0;
+        if (num_start_bits_overwritten < clot->length_in_bytes(parser_state) * 8) {
+            for (auto slice : boost::adaptors::reverse(slices)) {
+                auto overwrite_mask = bits_overwritten<Endian::Little>(phv, clot, slice);
+                int last_zero_idx = overwrite_mask.ffz(0);
+                num_end_bits_overwritten += last_zero_idx;
+                if (last_zero_idx < slice->size()) break;
+            }
+        }
+
+        BUG_CHECK(num_end_bits_overwritten % 8 == 0,
+                "CLOT %d ends with %d overwritten bits, which is not byte-aligned",
+                clot->tag, num_end_bits_overwritten);
+
+        crop(clot, parser_state, num_start_bits_overwritten, num_end_bits_overwritten);
+
+        length_in_bytes += clot->length_in_bytes(parser_state);
     }
 
-    BUG_CHECK(num_end_bits_overwritten % 8 == 0,
-              "CLOT %d ends with %d overwritten bits, which is not byte-aligned",
-              clot->tag, num_end_bits_overwritten);
-
-    crop(clot, num_start_bits_overwritten, num_end_bits_overwritten);
-
-    return clot->length_in_byte() > 0;
+    return length_in_bytes > 0;
 }
 
-void ClotInfo::crop(Clot* clot, unsigned num_bits, bool from_start) {
+void ClotInfo::crop(Clot* clot, cstring parser_state, unsigned num_bits,
+                    bool from_start) {
     if (num_bits == 0) return;
 
     unsigned num_bits_skipped = 0;
-    std::vector<const PHV::FieldSlice*> cur_slices = clot->all_slices();
-    if (!from_start) std::reverse(cur_slices.begin(), cur_slices.end());
+    BUG_CHECK(clot->parser_state_to_slices_.count(parser_state),
+              "Tried to crop %1% in a parser state it is not present in (%2%)",
+              *clot, parser_state);
+    std::vector<const PHV::FieldSlice*> current_slices =
+        clot->parser_state_to_slices().at(parser_state);
+    if (!from_start) std::reverse(current_slices.begin(), current_slices.end());
     std::vector<const PHV::FieldSlice*> new_slices;
-    for (auto slice : cur_slices) {
+    for (auto slice : current_slices) {
         if (num_bits_skipped == num_bits) {
             new_slices.push_back(slice);
             continue;
@@ -683,7 +699,7 @@ void ClotInfo::crop(Clot* clot, unsigned num_bits, bool from_start) {
 
         // Replace with a sub-slice of the current slice. We better not have a checksum field,
         // since we can only overwrite whole checksum fields.
-        BUG_CHECK(!clot->is_csum_field(field),
+        BUG_CHECK(!clot->is_checksum_field(field),
                   "Attempted to remove a slice of checksum field %s from CLOT %d",
                   field->name, clot->tag);
 
@@ -700,16 +716,16 @@ void ClotInfo::crop(Clot* clot, unsigned num_bits, bool from_start) {
     }
 
     if (!from_start) std::reverse(new_slices.begin(), new_slices.end());
-    clot->set_slices(new_slices);
+    clot->set_slices(parser_state, new_slices);
 }
 
-void ClotInfo::crop(Clot* clot, unsigned start_bits, unsigned end_bits) {
-    BUG_CHECK(start_bits + end_bits <= clot->length_in_byte() * 8,
+void ClotInfo::crop(Clot* clot, cstring parser_state, unsigned start_bits, unsigned end_bits) {
+    BUG_CHECK(start_bits + end_bits <= clot->length_in_bytes(parser_state) * 8,
               "Cropping %d bits from CLOT %d, which is only %d bits long",
-              start_bits + end_bits, clot->tag, clot->length_in_byte() * 8);
+              start_bits + end_bits, clot->tag, clot->length_in_bytes(parser_state) * 8);
 
-    crop(clot, start_bits, true);
-    crop(clot, end_bits, false);
+    crop(clot, parser_state, start_bits, true);
+    crop(clot, parser_state, end_bits, false);
 }
 
 bool ClotInfo::slice_overwritten(const PhvInfo& phv,
@@ -817,22 +833,22 @@ assoc::map<const PHV::FieldSlice*, Clot*, PHV::FieldSlice::Greater>*
 ClotInfo::slice_clots(const PHV::FieldSlice* slice) const {
     auto result = new assoc::map<const PHV::FieldSlice*, Clot*, PHV::FieldSlice::Greater>();
     auto field = slice->field();
-    for (auto c : clots_) {
-        const auto& fields_to_slices = c->fields_to_slices();
+    for (auto clot : clots_) {
+        const auto& fields_to_slices = clot->fields_to_slices();
         if (!fields_to_slices.count(field)) continue;
 
         auto clot_slice = fields_to_slices.at(field);
         if (clot_slice->range().overlaps(slice->range()))
-            (*result)[clot_slice] = c;
+            (*result)[clot_slice] = clot;
     }
 
     return result;
 }
 
 Clot* ClotInfo::whole_field_clot(const PHV::Field* field) const {
-    for (auto c : clots_)
-        if (c->has_slice(new PHV::FieldSlice(field)))
-            return c;
+    for (auto clot : clots_)
+        if (clot->has_slice(new PHV::FieldSlice(field)))
+            return clot;
     return nullptr;
 }
 
@@ -861,59 +877,62 @@ std::string ClotInfo::print(const PhvInfo* phvInfo) const {
                               TablePrinter::Align::CENTER);
 
         for (auto entry : clot_to_parser_states()) {
-            auto* c = entry.first;
+            auto* clot = entry.first;
             auto& pair = entry.second;
             if (gress != pair.first) continue;
-            auto& states = pair.second;
 
-            std::vector<std::vector<std::string>> rows;
             unsigned bits_in_clot = 0;
 
-            for (auto f : c->all_slices()) {
-                if (is_unused(f)) {
-                    total_unused_fields_in_clots++;
-                    total_unused_bits_in_clots += f->size();
+            std::set<const PHV::FieldSlice*> counted_slices;
+            const auto state_to_slices = clot->parser_state_to_slices();
+            for (auto it = state_to_slices.begin(); it != state_to_slices.end(); ++it) {
+                bool first_row = (it == clot->parser_state_to_slices().begin());
+                cstring parser_state = it->first;
+
+                tp.addRow({first_row ? std::to_string(clot->tag) : "",
+                "state " + std::string(parser_state),
+                std::to_string(clot->length_in_bytes(parser_state)) + " bytes",
+                ""});
+                tp.addBlank();
+
+                std::vector<const PHV::FieldSlice*> slices = it->second;
+                for (const auto* slice : slices) {
+                    if (counted_slices.insert(slice).second && is_unused(slice)) {
+                        total_unused_fields_in_clots++;
+                        total_unused_bits_in_clots += slice->size();
+                    }
+
+                    std::stringstream bits;
+                    bits << slice->size()
+                         << " [" << clot->bit_offset(parser_state, slice) << ".."
+                         << (clot->bit_offset(parser_state, slice) + slice->size() - 1)
+                         << "]";
+
+                    bool is_phv = clot->is_phv_field(slice->field());
+                    bool is_checksum = clot->is_checksum_field(slice->field());
+                    bool is_phv_overwrite = phvInfo &&
+                        slice_overwritten_by_phv(*phvInfo, clot, slice);
+
+                    std::string attr;
+                    if (is_phv || is_checksum) {
+                        attr += " (";
+                        if (is_phv) attr += " phv";
+                        if (is_phv_overwrite) attr += "*";
+                        if (is_checksum) attr += " csum";
+                        attr += " ) ";
+                    }
+
+                    tp.addRow({"", std::string(slice->shortString()), bits.str(), attr});
+                    bits_in_clot = std::max(bits_in_clot,
+                        clot->bit_offset(parser_state, slice) + slice->size());
                 }
-
-                std::stringstream bits;
-                bits << f->size()
-                     << " [" << c->bit_offset(f) << ".." << (c->bit_offset(f) + f->size() - 1)
-                     << "]";
-
-                bool is_phv = c->is_phv_field(f->field());
-                bool is_csum = c->is_csum_field(f->field());
-                bool is_phv_overwrite = phvInfo && slice_overwritten_by_phv(*phvInfo, c, f);
-
-                std::string attr;
-                if (is_phv || is_csum) {
-                    attr += " (";
-                    if (is_phv) attr += " phv";
-                    if (is_phv_overwrite) attr += "*";
-                    if (is_csum) attr += " csum";
-                    attr += " ) ";
-                }
-
-                rows.push_back({"", std::string(f->shortString()), bits.str(), attr});
-                bits_in_clot = std::max(bits_in_clot, c->bit_offset(f) + f->size());
+                bool last_row = (std::next(it) == clot->parser_state_to_slices().end());
+                if (!last_row)
+                    tp.addBlank();
             }
-
             total_bits += bits_in_clot;
-
-            if (bits_in_clot % 8 != 0) unaligned_clots.insert(c->tag);
-            unsigned bytes = bits_in_clot / 8;
-
-            bool first_state = true;
-            for (auto& state : states) {
-                tp.addRow({first_state ? std::to_string(c->tag) : "",
-                           "state " + std::string(state),
-                           first_state ? (std::to_string(bytes) + " bytes") : "",
-                           ""});
-                first_state = false;
-            }
-            tp.addBlank();
-
-            for (const auto& row : rows)
-                tp.addRow(row);
+            if (bits_in_clot % 8 != 0)
+                unaligned_clots.insert(clot->tag);
 
             tp.addSep();
         }
@@ -1059,7 +1078,7 @@ void ClotInfo::clear() {
     headers_added_by_mau_.clear();
     field_to_pseudoheaders_.clear();
     deparse_graph_.clear();
-    Clot::tagCnt.clear();
+    Clot::tag_count.clear();
     Pseudoheader::nextId = 0;
 }
 
@@ -1327,12 +1346,12 @@ void CollectClotInfo::end_apply(const IR::Node* root) {
 }
 
 #if BAREFOOT_INTERNAL
-void dump(std::ostream &out, const Clot &c) {
-    for (auto &fs : c.fields_to_slices())
+void dump(std::ostream &out, const Clot &clot) {
+    for (auto &fs : clot.fields_to_slices())
         out << fs.first->name << ": " << *fs.second << std::endl;
 }
-void dump(const Clot &c) { dump(std::cout, c); }
-void dump(const Clot *c) { dump(std::cout, *c); }
+void dump(const Clot &clot) { dump(std::cout, clot); }
+void dump(const Clot *clot) { dump(std::cout, *clot); }
 
 void dump(const ClotInfo &ci) { std::cout << ci.print(); }
 void dump(const ClotInfo *ci) { std::cout << ci->print(); }

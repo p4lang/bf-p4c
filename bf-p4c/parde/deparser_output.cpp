@@ -127,15 +127,15 @@ struct OutputDictionary : public Inspector {
         for (auto entry : containers)
             out << indent << entry.first << " : " << entry.second << std::endl;
 
-        auto csum_fields = clot.get_csum_fields(emit->clot);
+        auto checksum_fields = clot.get_csum_fields(emit->clot);
 
-        for (auto entry : csum_fields) {
+        for (auto entry : checksum_fields) {
             auto offset = entry.first;
             auto f = entry.second;
-            BUG_CHECK(emit->clot->csum_field_to_csum_id.count(f),
+            BUG_CHECK(emit->clot->checksum_field_to_checksum_id.count(f),
                       "Checksum field %s is missing a checksum ID in the deparser", f->name);
             out << indent << offset << " : full_checksum " <<
-                emit->clot->csum_field_to_csum_id.at(f) << std::endl;
+                emit->clot->checksum_field_to_checksum_id.at(f) << std::endl;
         }
 
         return false;
@@ -199,7 +199,7 @@ struct OutputChecksums : public Inspector {
             }
         }
         for (auto* clot : checksum->clots) {
-            out << indent << "- clot " << clot->clot.tag << ": {";
+            out << indent << "- clot " << clot->clot->tag << ": {";
             out << " pov: " << clot->povBit;
             if (clot->invert) {
                 out << " , invert: true";

@@ -25,23 +25,16 @@ class FieldSliceExtractInfo {
     const PHV::FieldSlice* slice_;
 
  public:
-    FieldSliceExtractInfo(
-        ordered_map<const IR::BFN::ParserState*, unsigned> state_bit_offsets,
-        unsigned max_packet_bit_offset,
-        const PHV::Field* field) :
-    FieldSliceExtractInfo(state_bit_offsets,
-                          max_packet_bit_offset,
-                          new PHV::FieldSlice(field)) {
-    }
+    FieldSliceExtractInfo(ordered_map<const IR::BFN::ParserState*, unsigned> state_bit_offsets,
+                          unsigned max_packet_bit_offset, const PHV::Field* field)
+        : FieldSliceExtractInfo(state_bit_offsets, max_packet_bit_offset,
+                                new PHV::FieldSlice(field)) {}
 
-    FieldSliceExtractInfo(
-        ordered_map<const IR::BFN::ParserState*, unsigned> state_bit_offsets,
-        unsigned max_packet_bit_offset,
-        const PHV::FieldSlice* slice) :
-    state_bit_offsets_(state_bit_offsets),
-    max_packet_bit_offset_(max_packet_bit_offset),
-    slice_(slice) {
-    }
+    FieldSliceExtractInfo(ordered_map<const IR::BFN::ParserState*, unsigned> state_bit_offsets,
+                          unsigned max_packet_bit_offset, const PHV::FieldSlice* slice)
+        : state_bit_offsets_(state_bit_offsets),
+          max_packet_bit_offset_(max_packet_bit_offset),
+          slice_(slice) {}
 
     /// Updates this object for this field being extracted in a newly discovered parser state.
     ///
@@ -138,6 +131,12 @@ class FieldSliceExtractInfo {
     /// the second component is the state containing @p other.
     const std::map<unsigned, StatePairSet> bit_gaps(const CollectParserInfo& parserInfo,
                                                     const FieldSliceExtractInfo* other) const;
+
+    friend bool operator==(const FieldSliceExtractInfo&, const FieldSliceExtractInfo&);
+
+ private:
+    friend std::ostream& operator<<(std::ostream&, const FieldSliceExtractInfo&);
+    friend std::ostream& operator<<(std::ostream&, const FieldSliceExtractInfo*);
 };
 
 /// Summarizes parser extracts for all fields.

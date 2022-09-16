@@ -11,7 +11,7 @@
 #include "ir/json_loader.h"
 #include "bf-p4c/phv/phv_fields.h"
 
-std::map<gress_t, int> Clot::tagCnt;
+std::map<gress_t, int> Clot::tag_count;
 
 cstring Clot::toString() const {
     std::stringstream tmp;
@@ -36,20 +36,20 @@ Clot::Clot(cstring name) {
         "Invalid CLOT: '%s'", name);
 
     // Parse out the gress.
-    gress_t g;
-    BUG_CHECK(identifier.substr(0, sep_pos) >> g, "Invalid CLOT: '%s'", name);
+    gress_t gress;
+    BUG_CHECK(identifier.substr(0, sep_pos) >> gress, "Invalid CLOT: '%s'", name);
 
     // Parse out the CLOT id.
     char* end = nullptr;
     auto v = std::strtol(identifier.substr(sep_pos + 2).c_str(), &end, 10);
     if (*end) BUG("Invalid CLOT: '%s'", name);
 
-    gress = g;
-    tag = v;
+    this->gress = gress;
+    this->tag = v;
 }
 
-void Clot::add_slice(FieldKind kind, const PHV::FieldSlice* slice) {
-    auto field = slice->field();
+void Clot::add_slice(cstring parser_state, FieldKind kind, const PHV::FieldSlice* slice) {
+    const PHV::Field* field = slice->field();
 
     switch (kind) {
     case MODIFIED:
@@ -65,22 +65,40 @@ void Clot::add_slice(FieldKind kind, const PHV::FieldSlice* slice) {
                   "Attempted to allocate checksum slice to CLOT %d: %s",
                   tag,
                   slice->shortString());
-        csum_fields_.insert(field);
+        checksum_fields_.insert(field);
         break;
 
     case UNUSED:
         break;
     }
 
-    all_slices_.push_back(slice);
-    BUG_CHECK(!fields_to_slices_.count(field), "CLOT %d already has field %s", tag, field->name);
+    parser_state_to_slices_[parser_state].push_back(slice);
     fields_to_slices_[field] = slice;
 }
 
-unsigned Clot::length_in_byte() const {
+std::vector<std::set<const PHV::FieldSlice*>> Clot::all_slices() const {
+    std::vector<std::set<const PHV::FieldSlice*>> all_slices;
+    for (const auto& kv : parser_state_to_slices_) {
+        auto slices = kv.second;
+        auto it = all_slices.begin();
+        for (const auto& slice : slices) {
+            if (it == all_slices.end()) {
+                it = all_slices.insert(it, std::set<const PHV::FieldSlice*>());
+            }
+            it->insert(slice);
+            ++it;
+        }
+    }
+    return all_slices;
+}
+
+unsigned Clot::length_in_bytes(cstring parser_state) const {
     unsigned length_in_bits = 0;
-    for (auto f : all_slices_)
-        length_in_bits += f->range().size();
+    BUG_CHECK(parser_state_to_slices_.count(parser_state),
+              "CLOT %d is not present in parser state %s",
+              tag, parser_state);
+    for (const auto* slice : parser_state_to_slices_.at(parser_state))
+        length_in_bits += slice->range().size();
 
     BUG_CHECK(length_in_bits % 8 == 0,
               "CLOT %d has %d bits, which is not a whole number of bytes",
@@ -89,29 +107,32 @@ unsigned Clot::length_in_byte() const {
     return length_in_bits / 8;
 }
 
-unsigned Clot::bit_offset(const PHV::FieldSlice* slice) const {
-    // XXX This should really use an std::map<FieldSlice*, unsigned, FieldSlice::Less>, but we
-    // can't declare a field of this type, since we don't have access to FieldSlice::Less in clot.h
-
+unsigned Clot::bit_offset(cstring parser_state,
+                          const PHV::FieldSlice* slice) const {
     unsigned offset = 0;
-    for (auto mem : all_slices_) {
+    BUG_CHECK(parser_state_to_slices_.count(parser_state),
+              "CLOT %d is not present in parser state %s",
+              tag, parser_state);
+    for (const auto* mem : parser_state_to_slices_.at(parser_state)) {
         if (PHV::FieldSlice::equal(slice, mem)) return offset;
         offset += mem->range().size();
     }
 
-    BUG("Field %s not in %s", slice->shortString(), toString());
+    BUG("Field %s not in %s when issued by parser state %s",
+        slice->shortString(), toString(), parser_state);
 }
 
-unsigned Clot::byte_offset(const PHV::FieldSlice* slice) const {
-    return bit_offset(slice) / 8;
+unsigned Clot::byte_offset(cstring parser_state,
+                           const PHV::FieldSlice* slice) const {
+    return bit_offset(parser_state, slice) / 8;
 }
 
 bool Clot::is_phv_field(const PHV::Field* field) const {
     return phv_fields_.count(field);
 }
 
-bool Clot::is_csum_field(const PHV::Field* field) const {
-    return csum_fields_.count(field);
+bool Clot::is_checksum_field(const PHV::Field* field) const {
+    return checksum_fields_.count(field);
 }
 
 bool Clot::has_slice(const PHV::FieldSlice* slice) const {
@@ -121,11 +142,16 @@ bool Clot::has_slice(const PHV::FieldSlice* slice) const {
 }
 
 bool Clot::is_first_field_in_clot(const PHV::Field* field) const {
-    return all_slices_.at(0)->field() == field;
+    for (const auto& kv : parser_state_to_slices_) {
+        const PHV::Field* first_field = kv.second.at(0)->field();
+        if (first_field == field)
+            return true;
+    }
+    return false;
 }
 
-void Clot::set_slices(const std::vector<const PHV::FieldSlice*> slices) {
-    all_slices_ = slices;
+void Clot::set_slices(cstring parser_state, const std::vector<const PHV::FieldSlice*>& slices) {
+    parser_state_to_slices_[parser_state] = slices;
 
     // Check that all fields in the slices we were given is a subset of the existing fields. At the
     // same time, start fixing up fields_to_slices_.
@@ -140,28 +166,39 @@ void Clot::set_slices(const std::vector<const PHV::FieldSlice*> slices) {
         fields_to_slices_[field] = slice;
     }
 
+    std::set<const PHV::Field*> fields_from_other_parser_states;
+    for (const auto& kv : parser_state_to_slices_) {
+        if (kv.first == parser_state) continue;
+
+        auto slices = kv.second;
+        for (const auto& slice : slices) {
+            auto field = slice->field();
+            fields_from_other_parser_states.insert(field);
+        }
+    }
+
     // Finish fixing up fields_to_slices_.
     for (auto it = fields_to_slices_.begin(); it != fields_to_slices_.end(); ) {
-        if (fields.count(it->first))
-          ++it;
+        if (fields.count(it->first) || fields_from_other_parser_states.count(it->first))
+            ++it;
         else
-          it = fields_to_slices_.erase(it);
+            it = fields_to_slices_.erase(it);
     }
 
     // Fix up phv_fields_.
     for (auto it = phv_fields_.begin(); it != phv_fields_.end(); ) {
-        if (fields.count(*it))
+        if (fields.count(*it) || fields_from_other_parser_states.count(*it))
             ++it;
         else
             it = phv_fields_.erase(it);
     }
 
-    // Fix up csum_fields_.
-    for (auto it = csum_fields_.begin(); it != csum_fields_.end(); ) {
-        if (fields.count(*it))
+    // Fix up checksum_fields_.
+    for (auto it = checksum_fields_.begin(); it != checksum_fields_.end(); ) {
+        if (fields.count(*it) || fields_from_other_parser_states.count(*it))
             ++it;
         else
-            it = csum_fields_.erase(it);
+            it = checksum_fields_.erase(it);
     }
 }
 
@@ -169,17 +206,31 @@ void Clot::toJSON(JSONGenerator& json) const {
     json << *this;
 }
 
-/* static */ Clot Clot::fromJSON(JSONLoader& json) {
+/* static */ Clot* Clot::fromJSON(JSONLoader& json) {
     if (auto* v = json.json->to<JsonString>())
-        return Clot(v->c_str());
+        return new Clot(v->c_str());
     BUG("Couldn't decode JSON value to clot");
-    return Clot();
+    return new Clot();
 }
 
-std::ostream& operator<<(std::ostream& out, const Clot c) {
-    return out << "clot " << c.tag;
+std::ostream& operator<<(std::ostream& out, const Clot& clot) {
+    return out << "CLOT " << clot.tag;
 }
 
-JSONGenerator& operator<<(JSONGenerator& out, const Clot c) {
-    return out << c.toString();
+std::ostream& operator<<(std::ostream& out, const Clot* clot) {
+    if (clot)
+        return out << *clot;
+    else
+        return out << "(nullptr)";
+}
+
+JSONGenerator& operator<<(JSONGenerator& out, const Clot& clot) {
+    return out << clot.toString();
+}
+
+JSONGenerator& operator<<(JSONGenerator& out, const Clot* clot) {
+    if (clot)
+        return out << *clot;
+    else
+        return out << "(nullptr)";
 }

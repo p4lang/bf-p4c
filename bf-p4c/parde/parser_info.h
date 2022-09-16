@@ -41,7 +41,7 @@ class ReversibleParserGraph {
     > Graph;
 
     Graph graph;
-    const IR::BFN::Parser* parser;
+    const IR::BFN::Parser* parser = nullptr;
     boost::optional<gress_t> gress;
 
     typename Graph::vertex_descriptor get_entry_point() {
@@ -438,7 +438,7 @@ class ParserGraphImpl : public DirectedGraph {
 
     /// Determines whether the states in the given set are all mutually exclusive on all paths
     /// through the parser graph.
-    bool is_mutex(const std::set<const State*>& states) const {
+    bool is_mutex(const ordered_set<const State*>& states) const {
         for (auto it1 = states.begin(); it1 != states.end(); ++it1) {
             for (auto it2 = it1; it2 != states.end(); ++it2) {
                 if (it1 == it2) continue;

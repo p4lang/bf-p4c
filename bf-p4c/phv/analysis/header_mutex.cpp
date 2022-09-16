@@ -343,44 +343,11 @@ Visitor::profile_t RemoveHeaderMutexesIfAllFieldsNotMutex::init_apply(const IR::
 }
 
 Visitor::profile_t FindParserHeaderEncounterInfo::init_apply(const IR::Node* root) {
-    auto rv = Inspector::init_apply(root);
-
-    parser_graphs.clear();
-    immediate_dominators.clear();
-    immediate_post_dominators.clear();
-    states.clear();
+    auto rv = ParserDominatorBuilder::init_apply(root);
     state_to_headers.clear();
     header_to_states.clear();
 
     return rv;
-}
-
-/**
- * @brief Associate graph data structure to its parser.
- */
-bool FindParserHeaderEncounterInfo::preorder(const IR::BFN::Parser* parser) {
-    parser_graphs[parser->gress].parser = parser;
-    return true;
-}
-
-/**
- * @brief Build ReversibleParserGraph for use with Boost Graph Library algorithms.
- */
-bool FindParserHeaderEncounterInfo::preorder(const IR::BFN::ParserState* parser_state) {
-    states.insert(parser_state);
-    for (auto transition : parser_state->transitions)
-        parser_graphs[parser_state->gress].add_edge(parser_state, transition->next, transition);
-
-    // TODO(ylavoie): Workaround for edge case caused by compiler generated state egress::$mirror
-    // not having any transitions and therefore not leading to End of Parser (EOP, nullptr) when
-    // compiling some P4_14 programs. This is most likely a bug, as all states in the parser should
-    // have a path leading to EOP.
-    //
-    // This fixes "tofino/extensions/p4_tests/p4_14/customer/rdp/case9757.p4" failing in CI/CD.
-    if (parser_state->transitions.empty())
-        parser_graphs[parser_state->gress].add_edge(parser_state, nullptr, nullptr);
-
-    return true;
 }
 
 /**
@@ -405,218 +372,6 @@ bool FindParserHeaderEncounterInfo::preorder(const IR::BFN::Extract* extract) {
         header_to_states[state->gress][header].insert(state);
     }
     return false;
-}
-
-/**
- * @brief Using the Boost Graph Library, get a vertex index (int) to vertex index (int) immediate
- * dominator map of a parser graph (key is immediately dominated by value).
- *
- * @param graph The underlying Boost Graph representing the parser graph
- * @param entry Vertex representing the entry point (root) vertex of the graph, usually $entry_point
- * @return ordered_map<int, int> Vertex index to vertex index immediate dominator map
- */
-ordered_map<int, int> FindParserHeaderEncounterInfo::get_immediate_dominators(Graph graph,
-                                                                              Vertex entry) {
-    std::vector<Vertex> dom_tree_pred_vector;
-    IndexMap index_map(boost::get(boost::vertex_index, graph));
-    dom_tree_pred_vector = std::vector<Vertex>(
-        boost::num_vertices(graph),
-        boost::graph_traits<Graph>::null_vertex());
-    PredMap dom_tree_pred_map = boost::make_iterator_property_map(
-        dom_tree_pred_vector.begin(), index_map);
-    boost::lengauer_tarjan_dominator_tree(graph, entry, dom_tree_pred_map);
-
-    boost::graph_traits<Graph>::vertex_iterator it, end;
-    ordered_map<int, int> idom;
-    LOG7("Building dominator int map");
-    for (boost::tie(it, end) = boost::vertices(graph); it != end; ++it) {
-        if (boost::get(dom_tree_pred_map, *it) != boost::graph_traits<Graph>::null_vertex()) {
-            idom[boost::get(index_map, *it)] =
-                boost::get(index_map, boost::get(dom_tree_pred_map, *it));
-            LOG7(TAB1 << "Setting dominator for "
-                 << boost::get(index_map, *it)
-                 << " to "
-                 << boost::get(index_map, boost::get(dom_tree_pred_map, *it)));
-        } else {
-            idom[boost::get(index_map, *it)] = -1;
-            LOG7(TAB1 << "Setting dominator for " << boost::get(index_map, *it) << " to -1");
-        }
-    }
-    return idom;
-}
-
-/**
- * @brief Using the Boost Graph Library, get a vertex index (int) to vertex index (int) immediate
- * dominator map of a **reversed** parser graph (key is immediately dominated by value). These are
- * the immediate post-dominators of the original parser graph.
- *
- * @param graph The **reversed** underlying Boost Graph representing the parser graph
- * @param entry Vertex representing the entry point (root) vertex of the graph, usually nullptr
- * @return ordered_map<int, int> Vertex index to vertex index immediate post-dominator map
- */
-ordered_map<int, int> FindParserHeaderEncounterInfo::get_immediate_post_dominators(
-        boost::reverse_graph<Graph> graph,
-        Vertex entry) {
-    std::vector<Vertex> dom_tree_pred_vector;
-    IndexMap index_map(boost::get(boost::vertex_index, graph));
-    dom_tree_pred_vector = std::vector<Vertex>(
-        boost::num_vertices(graph),
-        boost::graph_traits<Graph>::null_vertex());
-    PredMap dom_tree_pred_map = boost::make_iterator_property_map(
-        dom_tree_pred_vector.begin(), index_map);
-    boost::lengauer_tarjan_dominator_tree(graph, entry, dom_tree_pred_map);
-
-    boost::graph_traits<Graph>::vertex_iterator it, end;
-    ordered_map<int, int> idom;
-    LOG7("Building post-dominator int map");
-    for (boost::tie(it, end) = boost::vertices(graph); it != end; ++it) {
-        if (boost::get(dom_tree_pred_map, *it) != boost::graph_traits<Graph>::null_vertex()) {
-            idom[boost::get(index_map, *it)] =
-                boost::get(index_map, boost::get(dom_tree_pred_map, *it));
-            LOG7(TAB1 << "Setting post-dominator for "
-                 << boost::get(index_map, *it)
-                 << " to "
-                 << boost::get(index_map, boost::get(dom_tree_pred_map, *it)));
-        } else {
-            idom[boost::get(index_map, *it)] = -1;
-            LOG7(TAB1 << "Setting post-dominator for " << boost::get(index_map, *it) << " to -1");
-        }
-    }
-    return idom;
-}
-
-/**
- * @brief Converts a vertex index to vertex index immediate dominator map to an const
- * IR::BFN::ParserState* to const IR::BFN::ParserState* immediate dominator map.
- *
- * @param idom Vertex index to vertex index immediate dominator map
- * @param rpg Class wrapping the underlying Boost Graph that contains a vertex index to parser
- * state map
- * @return FindParserHeaderEncounterInfo::ImmediateDominatorMap
- */
-FindParserHeaderEncounterInfo::ImmediateDominatorMap
-        FindParserHeaderEncounterInfo::int_map_to_state_map(ordered_map<int, int> idom,
-                                                            ReversibleParserGraph& rpg) {
-    LOG7("Converting from int map to a parser state map");
-    ImmediateDominatorMap idom_state;
-    for (auto &kv : idom) {
-        const IR::BFN::ParserState* state = rpg.vertex_to_state.at(kv.first);
-        const IR::BFN::ParserState* dominator;
-        if (kv.second == -1) {
-            dominator = state;
-        } else {
-            BUG_CHECK(rpg.vertex_to_state.count(kv.second),
-                      "Unknown parser state with index %1% not found", kv.second);
-            dominator = rpg.vertex_to_state.at(kv.second);
-        }
-        idom_state[state] = dominator;
-        LOG7(TAB1
-             << ((state) ? state->name : "END (nullptr)")
-             << " --> "
-             << ((dominator) ? dominator->name : "END (nullptr)"));
-    }
-    return idom_state;
-}
-
-/**
- * @brief Get all parser states that are dominated by @p state.
- *
- * @param state Parser state on which to perform search
- * @param gress Optional. Only used if @p state equals nullptr (End of Parser), as which gress the
- * End of Parser belongs to cannot be deduced without it
- * @return std::set<const IR::BFN::ParserState*> A set of all dominatees of @p state
- */
-std::set<const IR::BFN::ParserState*> FindParserHeaderEncounterInfo::get_all_dominatees(
-        const IR::BFN::ParserState* state,
-        gress_t gress = INGRESS) {
-    std::set<const IR::BFN::ParserState*> dominatees;
-    if (state != nullptr)
-        gress = state->gress;
-
-    for (const auto& kv : immediate_dominators.at(gress)) {
-        if (kv.second == state && kv.first != state && kv.first != nullptr) {
-            auto child_dominatees = get_all_dominatees(kv.first, gress);
-            dominatees.insert(kv.first);
-            dominatees.insert(child_dominatees.begin(), child_dominatees.end());
-        }
-    }
-    return dominatees;
-}
-
-/**
- * @brief Get all parser states that dominate @p state.
- *
- * @param state Parser state on which to perform search
- * @param gress Optional. Only used if @p state equals nullptr (End of Parser), as which gress the
- * End of Parser belongs to cannot be deduced without it
- * @return std::set<const IR::BFN::ParserState*> A set of all dominators of @p state
- */
-std::set<const IR::BFN::ParserState*> FindParserHeaderEncounterInfo::get_all_dominators(
-        const IR::BFN::ParserState* state,
-        gress_t gress = INGRESS) {
-    std::set<const IR::BFN::ParserState*> dominators;
-    if (state != nullptr)
-        gress = state->gress;
-
-    auto immediate_dominator = immediate_dominators.at(gress).at(state);
-    if (state == immediate_dominator)
-        return dominators;
-
-    dominators.insert(immediate_dominator);
-    auto idom_dominators = get_all_dominators(immediate_dominator, gress);
-    dominators.insert(idom_dominators.begin(), idom_dominators.end());
-    return dominators;
-}
-
-/**
- * @brief Get all parser states that are post-dominated by @p state.
- *
- * @param state Parser state on which to perform search
- * @param gress Optional. Only used if @p state equals nullptr (End of Parser), as which gress the
- * End of Parser belongs to cannot be deduced without it
- * @return std::set<const IR::BFN::ParserState*> A set of all post-dominatees of @p state
- */
-std::set<const IR::BFN::ParserState*> FindParserHeaderEncounterInfo::get_all_post_dominatees(
-        const IR::BFN::ParserState* state,
-        gress_t gress = INGRESS) {
-    std::set<const IR::BFN::ParserState*> post_dominatees;
-    if (state != nullptr)
-        gress = state->gress;
-
-    for (const auto& kv : immediate_post_dominators.at(gress)) {
-        if (kv.second == state && kv.first != state && kv.first != nullptr) {
-            auto child_post_dominatees = get_all_post_dominatees(kv.first, gress);
-            post_dominatees.insert(kv.first);
-            post_dominatees.insert(child_post_dominatees.begin(), child_post_dominatees.end());
-        }
-    }
-    return post_dominatees;
-}
-
-/**
- * @brief Get all post-dominators of a given parser @p state.
- *
- * @param state Parser state on which to perform search
- * @param gress Optional. Only used if @p state equals nullptr (End of Parser), as which gress the
- * End of Parser  belongs to cannot be deduced without it
- * @return std::set<const IR::BFN::ParserState*> A set of all post-dominators of @p state
- */
-std::set<const IR::BFN::ParserState*> FindParserHeaderEncounterInfo::get_all_post_dominators(
-        const IR::BFN::ParserState* state,
-        gress_t gress = INGRESS) {
-    std::set<const IR::BFN::ParserState*> post_dominators;
-    if (state != nullptr)
-        gress = state->gress;
-
-    auto immediate_post_dominator = immediate_post_dominators.at(gress).at(state);
-    if (state == immediate_post_dominator)
-        return post_dominators;
-
-    if (immediate_post_dominator != nullptr)
-        post_dominators.insert(immediate_post_dominator);
-    auto ipdom_post_dominators = get_all_post_dominators(immediate_post_dominator, gress);
-    post_dominators.insert(ipdom_post_dominators.begin(), ipdom_post_dominators.end());
-    return post_dominators;
 }
 
 /**
@@ -690,24 +445,6 @@ bitvec FindParserHeaderEncounterInfo::get_always_extracted() {
 }
 
 /**
- * @brief Build immediate dominator and post-dominator maps for all parser graphs.
- */
-void FindParserHeaderEncounterInfo::build_dominator_maps() {
-    LOG3("Building immediate dominator and post-dominator maps.");
-    for (auto &kv : parser_graphs) {
-        auto idoms = get_immediate_dominators(kv.second.graph, kv.second.get_entry_point());
-        auto idm = int_map_to_state_map(idoms, kv.second);
-
-        auto reversed_graph = boost::make_reverse_graph(kv.second.graph);
-        auto ipdoms = get_immediate_post_dominators(reversed_graph, *kv.second.end);
-        auto ipdm = int_map_to_state_map(ipdoms, kv.second);
-
-        immediate_dominators.emplace(kv.first, idm);
-        immediate_post_dominators.emplace(kv.first, ipdm);
-    }
-}
-
-/**
  * @brief For every header, build 3 bitvectors corresponding to which other headers are encountered
  * when the header is encountered (before and after) and those that are surely not encountered when
  * that header is not encountered.
@@ -772,7 +509,7 @@ void FindParserHeaderEncounterInfo::build_header_encounter_maps() {
 }
 
 void FindParserHeaderEncounterInfo::end_apply() {
-    build_dominator_maps();
+    ParserDominatorBuilder::end_apply();
     build_header_encounter_maps();
     header_info.print_header_encounter_info();
 }

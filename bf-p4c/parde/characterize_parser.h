@@ -97,7 +97,7 @@ class CharacterizeParser : public Inspector {
     void get_clot_usage(const IR::BFN::LoweredParserMatch* match) {
         for (auto stmt : match->extracts) {
             if (auto ec = stmt->to<IR::BFN::LoweredExtractClot>())
-                match_to_clot_usage[match].insert(ec->dest.tag);
+                match_to_clot_usage[match].insert(ec->dest->tag);
         }
     }
 

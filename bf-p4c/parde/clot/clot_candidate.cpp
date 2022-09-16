@@ -13,6 +13,14 @@ ClotCandidate::ClotCandidate(const ClotInfo& clotInfo,
                                beforeAllocatedClot(beforeAllocatedClot) {
     unsigned offset = 0;
     unsigned idx = 0;
+
+    if (pseudoheader != nullptr) {
+        pov_bits = pseudoheader->pov_bits;
+    } else {
+        auto first_field = extract_infos.front()->slice()->field();
+        pov_bits = clotInfo.fields_to_pov_bits_.at(first_field);
+    }
+
     for (auto extract_info : extract_infos) {
         auto slice = extract_info->slice();
 

@@ -232,3 +232,28 @@ FieldSliceExtractInfo::bit_gaps(const CollectParserInfo& parserInfo,
 
     return result;
 }
+
+bool operator==(const FieldSliceExtractInfo& a, const FieldSliceExtractInfo& b) {
+    return a.state_bit_offsets_ == b.state_bit_offsets_ &&
+        a.max_packet_bit_offset_ == b.max_packet_bit_offset_ &&
+        *a.slice_ == *b.slice_;
+}
+
+std::ostream& operator<<(std::ostream& out, const FieldSliceExtractInfo& field_slice_extract_info) {
+    out << "{ Field Slice: " << field_slice_extract_info.slice_->shortString() << ", ";
+    out << "Max Packet Bit Offset: " << field_slice_extract_info.max_packet_bit_offset_ << ", ";
+    out << "State Bit Offsets: [ ";
+    std::string delimiter = "";
+    for (const auto& kv : field_slice_extract_info.state_bit_offsets_) {
+        out << delimiter << "( " << kv.first->name << ", " << kv.second << " )";
+        delimiter = ", ";
+    }
+    out << " ] }";
+    return out;
+}
+
+std::ostream& operator<<(std::ostream& out,
+                         const FieldSliceExtractInfo* field_slice_extract_info) {
+    if (field_slice_extract_info) return out << *field_slice_extract_info;
+    return out << "(nullptr)";
+}

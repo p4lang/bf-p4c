@@ -640,13 +640,13 @@ std::string TestCode::extract_asm(CodeBlock blk_type) const {
             oss << HeaderAsmOutput(backend->get_parser_hdr_seqs());
             break;
         case CodeBlock::ParserIAsm:
-            oss << ParserAsmOutput(pipe, backend->get_phv(), INGRESS);
+            oss << ParserAsmOutput(pipe, backend->get_phv(), backend->get_clot(), INGRESS);
             break;
         case CodeBlock::DeparserIAsm:
             oss << DeparserAsmOutput(pipe, backend->get_phv(), backend->get_clot(), INGRESS);
             break;
         case CodeBlock::ParserEAsm:
-            oss << ParserAsmOutput(pipe, backend->get_phv(), EGRESS);
+            oss << ParserAsmOutput(pipe, backend->get_phv(), backend->get_clot(), EGRESS);
             break;
         case CodeBlock::DeparserEAsm:
             oss << DeparserAsmOutput(pipe, backend->get_phv(), backend->get_clot(), EGRESS);

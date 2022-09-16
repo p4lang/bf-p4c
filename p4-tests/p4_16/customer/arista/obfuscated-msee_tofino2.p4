@@ -183,7 +183,7 @@
 header Willard {
     bit<8> Bayshore;
     bit<8> Florien;
-    @flexible 
+    @flexible
     bit<9> Freeburg;
 }
 
@@ -294,59 +294,59 @@ struct AquaPark {
 }
 
 @pa_container_size("ingress" , "Westoak.Frederika.Osterdock" , 8) header Freeman {
-    @flexible 
+    @flexible
     bit<8>  Exton;
-    @flexible 
+    @flexible
     bit<3>  Floyd;
-    @flexible 
+    @flexible
     bit<21> Fayette;
-    @flexible 
+    @flexible
     bit<3>  Osterdock;
-    @flexible 
+    @flexible
     bit<1>  PineCity;
-    @flexible 
+    @flexible
     bit<9>  Alameda;
-    @flexible 
+    @flexible
     bit<16> Rexville;
-    @flexible 
+    @flexible
     bit<16> Quinwood;
-    @flexible 
+    @flexible
     bit<9>  Marfa;
-    @flexible 
+    @flexible
     bit<1>  Palatine;
-    @flexible 
+    @flexible
     bit<1>  Mabelle;
-    @flexible 
+    @flexible
     bit<13> Hoagland;
-    @flexible 
+    @flexible
     bit<13> Ocoee;
-    @flexible 
+    @flexible
     bit<1>  Hackett;
-    @flexible 
+    @flexible
     bit<1>  Kaluaaha;
-    @flexible 
+    @flexible
     bit<3>  Calcasieu;
-    @flexible 
+    @flexible
     bit<1>  Levittown;
-    @flexible 
+    @flexible
     bit<16> Maryhill;
-    @flexible 
+    @flexible
     bit<3>  Norwood;
-    @flexible 
+    @flexible
     bit<1>  Dassel;
-    @flexible 
+    @flexible
     bit<4>  Bushland;
-    @flexible 
+    @flexible
     bit<10> Loring;
-    @flexible 
+    @flexible
     bit<2>  Suwannee;
-    @flexible 
+    @flexible
     bit<1>  Dugger;
-    @flexible 
+    @flexible
     bit<1>  Laurelton;
-    @flexible 
+    @flexible
     bit<16> Ronda;
-    @flexible 
+    @flexible
     bit<7>  LaPalma;
 }
 
@@ -356,33 +356,33 @@ struct AquaPark {
 @pa_container_size("ingress" , "Westoak.Frederika.Quinwood" , 16)
 @pa_container_size("ingress" , "Westoak.Frederika.Floyd" , 8)
 @pa_atomic("egress" , "Westoak.Frederika.Quinwood") header Idalia {
-    @flexible 
+    @flexible
     bit<8>  Exton;
-    @flexible 
+    @flexible
     bit<3>  Floyd;
-    @flexible 
+    @flexible
     bit<24> Cecilton;
-    @flexible 
+    @flexible
     bit<24> Horton;
-    @flexible 
+    @flexible
     bit<13> Lacona;
-    @flexible 
+    @flexible
     bit<3>  Osterdock;
-    @flexible 
+    @flexible
     bit<9>  Albemarle;
-    @flexible 
+    @flexible
     bit<1>  Algodones;
-    @flexible 
+    @flexible
     bit<1>  Buckeye;
-    @flexible 
+    @flexible
     bit<32> Topanga;
-    @flexible 
+    @flexible
     bit<16> Quinwood;
-    @flexible 
+    @flexible
     bit<13> Hoagland;
-    @flexible 
+    @flexible
     bit<13> Ocoee;
-    @flexible 
+    @flexible
     bit<1>  Dugger;
 }
 
@@ -391,11 +391,11 @@ header Allison {
     bit<3> Spearman;
     bit<1> Chevak;
     bit<4> Mendocino;
-    @flexible 
+    @flexible
     bit<2> Eldred;
-    @flexible 
+    @flexible
     bit<3> Chloride;
-    @flexible 
+    @flexible
     bit<6> Garibaldi;
 }
 
@@ -3854,7 +3854,7 @@ control Broadford(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrins
         Westoak.Saugatuck.Laurelton = (bit<1>)1w1;
         Lefor.Ekwok.Conner = Conner;
     }
-    @disable_atomic_modify(1) @use_hash_action(1) @name(".RedBay") table RedBay {
+    @stage(17) @disable_atomic_modify(1) @use_hash_action(1) @name(".RedBay") table RedBay {
         actions = {
             Konnarock();
         }
@@ -5328,7 +5328,7 @@ control Rodessa(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic_
     @name(".Unity") action Unity(bit<32> Separ) {
         Lefor.Ekwok.Whitefish = (bit<1>)Hookstown.execute(Separ);
     }
-    @disable_atomic_modify(1) @name(".LaFayette") table LaFayette {
+    @stage(16) @disable_atomic_modify(1) @name(".LaFayette") table LaFayette {
         actions = {
             @tableonly Unity();
             @defaultonly NoAction();
@@ -5536,7 +5536,7 @@ control Almont(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_
     apply {
         if (Westoak.Rochert.isValid() && Westoak.Rochert.Fairmount == 3w1) {
             switch (NewRoads.apply().action_run) {
-                Bairoil: 
+                Bairoil:
                 Baroda: {
                     if (Westoak.Rochert.Mayday != 32w0 && (Lefor.HighRock.Armona == 8w255 || Lefor.HighRock.Welcome == 16w4784)) {
                         Newburgh.apply();
