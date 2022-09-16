@@ -343,6 +343,7 @@ if (ENABLE_GTESTS)
     gtest/deparser.cpp
     gtest/depositfield.cpp
     gtest/flatrock-parser.cpp
+    gtest/gateway.cpp
     gtest/hashexpr.cpp
     gtest/metadata_packer.cpp
     gtest/mirror.cpp

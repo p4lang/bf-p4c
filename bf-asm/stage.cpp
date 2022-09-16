@@ -18,34 +18,7 @@ extern std::string asmfile_name;
 unsigned char Stage::action_bus_slot_map[ACTION_DATA_BUS_BYTES];
 unsigned char Stage::action_bus_slot_size[ACTION_DATA_BUS_SLOTS];
 
-class AsmStage : public Section {
-    void start(int lineno, VECTOR(value_t) args);
-    void input(VECTOR(value_t) args, value_t data);
-    void process();
-    void output(json::map &);
-
-    /// Propagates group_table_use to adjacent stages that are not match-dependent.
-    void propagate_group_table_use();
-
-    unsigned compute_latency(gress_t gress);
-    AsmStage();
-    ~AsmStage() {}
-    std::vector<Stage>  pipe;
-#if HAVE_FLATROCK
-    std::vector<Stage>  epipe;   // for separate egress pipe
-#endif
-    static AsmStage     singleton_object;
-    bitvec              stages_seen[NUM_GRESS_T];
-
- public:
-    static int numstages() { return singleton_object.pipe.size(); }
-    static std::vector<Stage> &stages(gress_t gress) {
-#if HAVE_FLATROCK
-        if (gress == EGRESS && Target::EGRESS_SEPARATE())
-            return singleton_object.epipe;
-#endif
-        return singleton_object.pipe; }
-} AsmStage::singleton_object;
+AsmStage AsmStage::singleton_object;
 
 #include "tofino/stage.cpp"                             // NOLINT(build/include)
 #include "jbay/stage.cpp"                               // NOLINT(build/include)
