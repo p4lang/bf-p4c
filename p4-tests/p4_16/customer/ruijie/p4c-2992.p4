@@ -1006,6 +1006,8 @@ struct switch_ingress_common_metadata_t {
     bit<8>                  cpu_reason;
 }
 
+// This is to Workaround a fitting issue on alternative PHV mode
+@pa_container_size("egress", "eg_md.common.pkt_length", 16)
 struct switch_egress_common_metadata_t {
     bit<16>                ether_type;
     switch_pkt_type_t      pkt_type;
