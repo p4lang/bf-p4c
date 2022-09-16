@@ -10,12 +10,17 @@ import os.path
 import argparse
 import sys
 import json
-from packaging import version
 import re
 import time
 import p4c_src.bfn_version as p4c_version
 from p4c_src.util import find_file, find_bin
 from p4c_src.driver import BackendDriver
+
+def parse_version(value):
+    match = re.search(r"^(\d+)\.(\d+)\.(\d+)$", value)
+    if not match:
+        raise ValueError("Invalid version: '{}'".format(value))
+    return tuple(map(int, match.groups()))
 
 class CompilationError(Exception):
     """! Raised when a P4 program fails to compile"""
@@ -658,9 +663,9 @@ class BarefootBackend(BackendDriver):
                 self.exitWithError(error_msg)
 
         self._pipes = []
-        schema_version = version.parse(self._manifest['schema_version'])
+        schema_version = parse_version(self._manifest['schema_version'])
         pipe_name_label = 'pipe_name'
-        if schema_version == version.parse("1.0.0"): pipe_name_label = 'pipe'
+        if schema_version == parse_version("1.0.0"): pipe_name_label = 'pipe'
 
         programs = self._manifest['programs']
         if len(programs) > 1:
@@ -722,7 +727,7 @@ class BarefootBackend(BackendDriver):
 
         for prog in programs:
             p4_version = prog['p4_version']
-            if schema_version < version.parse("2.0.0"):
+            if schema_version < parse_version("2.0.0"):
                 __parseManifestBefore_2_0(prog, p4_version)
             else:
                 __parseManifestAfter_2_0(prog, p4_version)

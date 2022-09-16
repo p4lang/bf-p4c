@@ -5,8 +5,14 @@
 import os
 import sys
 import argparse
-from packaging import version
-import json, jsonschema
+import json
+import re
+
+def parse_version(value):
+    match = re.search(r"^(\d+)\.(\d+)\.(\d+)$", value)
+    if not match:
+        raise ValueError("Invalid version: '{}'".format(value))
+    return tuple(map(int, match.groups()))
 
 parser=argparse.ArgumentParser()
 
@@ -24,12 +30,12 @@ try:
         print("manifest-config only supports one program")
         sys.exit(1)
 
-    schema_version = version.parse(manifest_json['schema_version'])
+    schema_version = parse_version(manifest_json['schema_version'])
     pipe_name_label = 'pipe_name'
-    if schema_version == version.parse("1.0.0"): pipe_name_label = 'pipe'
+    if schema_version == parse_version("1.0.0"): pipe_name_label = 'pipe'
 
     pipe_names = []
-    if schema_version < version.parse("2.0.0"):
+    if schema_version < parse_version("2.0.0"):
         pipelines = programs[0]['contexts']
     else:
         pipelines = programs[0]['pipes']
