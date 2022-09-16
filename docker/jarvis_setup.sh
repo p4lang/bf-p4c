@@ -10,7 +10,8 @@ DEV_PKGS="distcc \
           telnet \
           ninja-build \
           tmux \
-          apache2"
+          apache2 \
+          python-is-python3"
 
 apt install -y ${DEV_PKGS}
 
