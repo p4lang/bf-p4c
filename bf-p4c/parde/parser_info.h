@@ -492,6 +492,13 @@ class ParserGraphImpl : public DirectedGraph {
         return min_max_path_impl(src, path_map, true, true, true).second;
     }
 
+    // longest path (in states) from start of parser to dest
+    std::vector<const State*>
+    longest_path_states_to(const State* dest) const {
+        assoc::map<const State*, std::pair<unsigned, std::vector<const State*>>> path_map;
+        return min_max_path_impl(dest, path_map, true, false, true).second;
+    }
+
     // shortest path from src to end of parser
     std::vector<const State*> shortest_path_states(const State* src) const {
         assoc::map<const State*, std::pair<unsigned, std::vector<const State*>>> path_map;

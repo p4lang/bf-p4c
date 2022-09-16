@@ -105,7 +105,7 @@ TEST(AsmHdrSectionTest, Simple) {
 TEST(AsmHdrSectionTest, HeaderStack) {
     std::string test_prog = R"(
     header stack_t {
-        bit<80> a;
+        bit<24> a;
     }
 
     struct headers {
@@ -177,9 +177,9 @@ TEST(AsmHdrSectionTest, HeaderStack) {
                             "seq:",
                             "0: [hdrs.stack[0], hdrs.stack[1], hdrs.stack[2], payload]",
                             "len:",
-                            "hdrs.stack[0]: { base_len: 10, num_comp_bits: 0, scale: 0 }",
-                            "hdrs.stack[1]: { base_len: 10, num_comp_bits: 0, scale: 0 }",
-                            "hdrs.stack[2]: { base_len: 10, num_comp_bits: 0, scale: 0 }",
+                            "hdrs.stack[0]: { base_len: 3, num_comp_bits: 0, scale: 0 }",
+                            "hdrs.stack[1]: { base_len: 3, num_comp_bits: 0, scale: 0 }",
+                            "hdrs.stack[2]: { base_len: 3, num_comp_bits: 0, scale: 0 }",
                             "payload: { base_len: 0, num_comp_bits: 0, scale: 0 }"});
     // clang-format on
     EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count << "\n'"

@@ -12,6 +12,24 @@
 namespace Flatrock {
 
 /**
+ * An extract node which is internally used to represent the extraction of
+ * payload pseudo header for %Flatrock.
+ */
+class ExtractPayloadHeader : BFN::ParserPrimitive {
+    /**
+     * Name of the payload pseudo header.
+     */
+    cstring payload_pseudo_header_name;
+
+    toString {
+        return "extract pseudo header name=" + payload_pseudo_header_name;
+    }
+    dbprint {
+        out << toString();
+    }
+}
+
+/**
  * A row of the %Flatrock parser port metadata table.
  *
  * The corresponding struct in assembler is FlatrockParser::PortMetadataItem.
@@ -230,6 +248,9 @@ class AnalyzerRule {
     match_t match_w1 = {match_w_all, match_w_all};  // all-match by default
     boost::optional<match_t> next_state;
     boost::optional<cstring> next_state_name;
+    boost::optional<int> next_w0_offset;
+    boost::optional<int> next_w1_offset;
+    boost::optional<int> next_w2_offset;
 #emit
     boost::optional<::Flatrock::alu0_instruction> next_alu0_instruction;
     boost::optional<::Flatrock::alu1_instruction> next_alu1_instruction;
@@ -248,6 +269,15 @@ class AnalyzerRule {
         else out << "<unset>";
         out << IndentCtl::endl << "next_state_name="
             << (next_state_name ? *next_state_name : "<unset>");
+        out << IndentCtl::endl << "next_w0_offset=";
+        if (next_w0_offset) out << *next_w0_offset;
+        else out << "<unset>";
+        out << IndentCtl::endl << "next_w1_offset=";
+        if (next_w1_offset) out << *next_w1_offset;
+        else out << "<unset>";
+        out << IndentCtl::endl << "next_w2_offset=";
+        if (next_w2_offset) out << *next_w2_offset;
+        else out << "<unset>";
         out << IndentCtl::endl << "next_alu0_instruction=";
         if (next_alu0_instruction) {
             out << "\"";

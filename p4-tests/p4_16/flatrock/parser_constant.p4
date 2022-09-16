@@ -22,7 +22,7 @@ parser ingressParser(packet_in packet, out headers hdrs,
     state start {
         // FIXME: update this for Tofino5
         packet.extract(ig_intr_md);
-        //packet.advance(PORT_METADATA_SIZE);
+        packet.advance(PORT_METADATA_SIZE);
         packet.extract(hdrs.data);
 
         hdrs.data.d1 = 0x12345678deadbeef;

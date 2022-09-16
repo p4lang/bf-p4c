@@ -52,6 +52,9 @@ parser ingressParser(packet_in packet, out headers hdrs,
                      out metadata meta, out ingress_intrinsic_metadata_t ig_intr_md)
 {
     state start {
+        // FIXME: update this for Tofino5
+        packet.extract(ig_intr_md);
+        packet.advance(PORT_METADATA_SIZE);
         packet.extract(hdrs.main);
         transition select(hdrs.main.ctrl) {
             0x00000001 &&& 0xffffffff : parse_b1;

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <numeric>
 #include <sstream>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -49,7 +50,7 @@ cstring sanitizeName(StringRef name) {
 }
 
 /**
- * Construct debugging debugging information describing a slice of a field.
+ * Construct debugging information describing a slice of a field.
  *
  * @param fieldRef  A reference to a field.
  * @param slice  An `alloc_slice` mapping a range of bits in the field to a
@@ -102,13 +103,17 @@ cstring debugInfoFor(const IR::BFN::ParserLVal* lval,
  * @param bufferRange  For extracts that read from the input buffer, an input
  *                     buffer range corresponding to the range of bits in the
  *                     `alloc_slice`.
+ * @param includeRangeInfo  If true, the range of bits being extracted into
+ *                          the destination container is printed even if it
+ *                          matches the size of the container exactly.
  * @return a string containing debugging info describing the mapping between the
  * field, the container, and the constant or input buffer region read by the
  * `Extract`.
  */
 cstring debugInfoFor(const IR::BFN::Extract* extract,
                      const PHV::AllocSlice& slice,
-                     const nw_bitrange& bufferRange = nw_bitrange()) {
+                     const nw_bitrange& bufferRange = nw_bitrange(),
+                     bool includeRangeInfo = false) {
     std::stringstream info;
 
     // Describe the value that's being written into the destination container.
@@ -119,7 +124,9 @@ cstring debugInfoFor(const IR::BFN::Extract* extract,
         // In the interest of brevity, don't print the range of bits being
         // extracted into the destination container if it matches the size of
         // the container exactly.
-        if (slice.container().size() != size_t(bufferRange.size()))
+        // This behaviour can be overridden by explicit true value of
+        // includeRangeInfo parameter in case we desire to print the range always.
+        if (includeRangeInfo || slice.container().size() != size_t(bufferRange.size()))
             info << bufferRange << " -> " << slice.container() << " "
                  << slice.container_slice() << ": ";
     } else if (extract->source->is<IR::BFN::MetadataRVal>()) {
@@ -1082,9 +1089,21 @@ struct ComputeLoweredParserIR : public ParserInspector {
 struct ParserExtract {
     // size of the PHV container of this extraction
     PHV::Size size;
-    // slice of the PHV container of this extraction; might not be the whole container if multiple
+    // slices of the PHV container of this extraction; might not be the whole container if multiple
     // extractions are packed into one PHV container
-    le_bitrange slice;
+    mutable std::vector<le_bitrange> slices;
+    /**
+     * @brief Container index (starting from 0 in each size category B/H/W)
+     *
+     * B0 -> 0
+     * B1 -> 1
+     * ...
+     * H0 -> 0
+     * H1 -> 1
+     * ...
+     * W0 -> 0
+     * W1 -> 1
+     */
     unsigned int index;
     Flatrock::ExtractType type;
     Flatrock::ExtractSubtype subtype;
@@ -1098,39 +1117,81 @@ struct ParserExtract {
     }
 };
 
-struct ComputeFlatrockParserIR : public ParserInspector {
-    ComputeFlatrockParserIR(const PhvInfo& phv, const FieldDefUse& defuse,
-            const ParserHeaderSequences &parserHeaderSeqs) :
-        parserHeaderSeqs(parserHeaderSeqs), phv(phv), defuse(defuse) {}
+/**
+ * @brief All information from a parser state needed to create corresponding analyzer rules.
+ */
+struct AnalyzerRuleInfo {
+    struct Header {
+        cstring name;  /**< header name */
+        int width;     /**< header width in bytes */
+        int offset;    /**< header offset from current pointer in bytes */
+    };
 
+    struct Transition {
+        struct NextMatchInfo {
+            int offset;  /**< offset of the match value from current pointer in bytes */
+            int size;    /**< size of the match value in bits */
+        };
+
+        /**
+         * @brief Match value.
+         */
+        match_t match;
+        /**
+         * @brief State for the next stage.
+         */
+        const IR::BFN::ParserState* next_state;
+        /**
+         * @brief Offsets of w0, w1, w2 values.
+         */
+        std::vector<NextMatchInfo> next_w;
+        /**
+         * @brief Number of bytes to move the packet header pointer
+         *        (used as immediate operand for ALU0 instruction).
+         */
+        int shift;
+
+        void log(void) {
+            LOG3("  match value: " << match);
+            int i = 0;
+            for (const auto& match : next_w) {
+                LOG3("  next w" << i << " offset (in bytes): " << match.offset <<
+                        ", size (in bits): " << match.size);
+                ++i;
+            }
+            LOG3("  next state: " << (next_state ? next_state->name : "-") << std::endl <<
+                    "  ptr shift: " << shift);
+        }
+    };
+
+    /**
+     * @brief Info about headers extracted in an associated state.
+     */
+    std::vector<Header> push_hdr;
+    /**
+     * @brief Info about transitions from a given state.
+     */
+    std::vector<Transition> transitions;
+};
+
+class ComputeFlatrockParserIR : public ParserInspector {
     typedef std::tuple<gress_t, PHV::Size, unsigned int /* index */, le_bitrange /* slice */>
         ExtractCommentInfo;
 
-    const ParserHeaderSequences &parserHeaderSeqs;
+    const PhvInfo& phv;
+    const FieldDefUse& defuse;
 
-    std::vector<const IR::BFN::ParserState*> states;
+    cstring igMetaName;
     std::map<const IR::BFN::ParserState*, std::set<cstring>> headers;
-    // state -> header, width
-    std::map<const IR::BFN::ParserState*, std::vector<std::pair<cstring, int>>> header_widths;
-    // textual information about extracts performed in parser
-    std::map<ExtractCommentInfo, std::vector<cstring>> comments;
-    // extracts performed in parser
-    std::map<gress_t, std::set<ParserExtract>> extracts;
     // Ingress intrinsic metadata has been extracted
     bool igMetaExtracted;
 
- private:
-    const PhvInfo& phv;
-    const FieldDefUse& defuse;
-    cstring igMetaName;
-
     profile_t init_apply(const IR::Node *node) override {
-        igMetaExtracted = false;
-        extracts.clear();
-        states.clear();
         headers.clear();
-        header_widths.clear();
+        rules_info.clear();
         comments.clear();
+        extracts.clear();
+        igMetaExtracted = false;
         return Inspector::init_apply(node);
     }
 
@@ -1138,29 +1199,54 @@ struct ComputeFlatrockParserIR : public ParserInspector {
         auto *igMeta = getMetadataType(pipe, "ingress_intrinsic_metadata");
         BUG_CHECK(igMeta, "Could not find ingress_intrinsic_metadata");
         igMetaName = igMeta->name;
-
         return true;
     }
 
-    bool preorder(const IR::BFN::ParserState* state) override {
-        LOG4("[ComputeFlatrockParserIR] lowering state " << state->name);
-
-        BUG_CHECK(state->transitions.size() <= 1, "Only one parser state transition supported");
-
-        states.push_back(state);
-
-        return true;
+    void add_extract(const gress_t gress, const IR::BFN::Extract *extract,
+            const PHV::AllocSlice& alloc, const ParserExtract& new_pe) {
+        // TODO check if the layout of slices in the container is the same as the layout
+        // of fields in the header in case of extract from packet
+        // TODO check the container with fields extracted from packet if it does not
+        // contain other types of slices
+        BUG_CHECK(new_pe.slices.size() == 1, "New extract should have exactly 1 slice");
+        auto pe = extracts[gress].find(new_pe);
+        if (pe == extracts[gress].end()) {
+            extracts[gress].insert(new_pe);
+        } else {
+            if (new_pe.type == Flatrock::ExtractType::Packet)
+                BUG_CHECK(new_pe.hdr == pe->hdr,
+                    "Fields from different headers (%1%, %2%)"
+                    " are not supported in the same container: %3%",
+                    new_pe.hdr, pe->hdr, alloc);
+            pe->slices.push_back(new_pe.slices.front());
+        }
+        comments[{gress, new_pe.size, new_pe.index, new_pe.slices.front()}].push_back(
+            debugInfoFor(extract, alloc, extract->source->is<IR::BFN::InputBufferRVal>() ?
+                extract->source->to<IR::BFN::InputBufferRVal>()->range : nw_bitrange{}, true));
     }
 
-    bool preorder(const IR::BFN::Extract* extract) {
+    bool preorder(const IR::BFN::Extract* extract) override {
+        // FIXME: Other extract sources are currently not mapped to HW resources,
+        // so we rather report it than ignore them.
+        BUG_CHECK(extract->source->is<IR::BFN::PacketRVal>() ||
+                extract->source->is<IR::BFN::ConstantRVal>(),
+                "Extract source: %1% is currently not supported!", extract->source);
         const auto* lval = extract->dest->to<IR::BFN::FieldLVal>();
         CHECK_NULL(lval);
 
-        const auto allocs = phv.get_alloc(lval->field);
-        const auto* field = phv.field(lval->field);
-        CHECK_NULL(field);
-        BUG_CHECK(!field->header().isNullOrEmpty(), "Unspecified header name");
-        BUG_CHECK(field->parsed(), "Processing non-parsed field");
+        const auto allocs = phv.get_alloc(lval->field, PHV::AllocContext::PARSER);
+        BUG_CHECK(allocs.size() <= 1, "Only one allocation allowed after PHV allocation");
+        const auto* phv_field = phv.field(lval->field);
+        CHECK_NULL(phv_field);
+        const cstring hdr_name = phv_field->header();
+        BUG_CHECK(!hdr_name.isNullOrEmpty(), "Unspecified header name");
+        BUG_CHECK(phv_field->parsed(), "Processing non-parsed field");
+
+        LOG5("lval->field: " << lval->field);
+        LOG5("phv_field: " << phv_field);
+        for (const auto &a : allocs) {
+            LOG5("alloc: " << a);
+        }
 
         auto *member = lval->field->to<IR::Member>();
         if (member == nullptr) {
@@ -1172,105 +1258,240 @@ struct ComputeFlatrockParserIR : public ParserInspector {
         CHECK_NULL(member->expr);
 
         const auto hdr_ref = member->expr->to<IR::HeaderRef>();
-        CHECK_NULL(hdr_ref);
+        BUG_CHECK(hdr_ref, "Unsupported header expression: %1%", member->expr);
         CHECK_NULL(hdr_ref->baseRef());
 
-        const size_t width = hdr_ref->baseRef()->type->width_bits();
+        const size_t hdr_bit_width = hdr_ref->baseRef()->type->width_bits();
 
         bool used_in_ingress = false;
         bool used_in_egress = false;
 
-        for (auto &u : defuse.getAllUses(field->id)) {
+        for (const auto& u : defuse.getAllUses(phv_field->id)) {
             if (u.first->thread() == INGRESS)
                 used_in_ingress = true;
             if (u.first->thread() == EGRESS)
                 used_in_egress = true;
         }
 
-        boost::optional<int> hdr_offset;
-        for (const auto &alloc : allocs) {
-            BUG_CHECK(!hdr_offset, "Only one allocation allowed after PHV allocation");
+        int hdr_offset_in_bits = 0;
+        if (allocs.size() > 0) {
+            const auto& alloc = allocs.front();
+            boost::optional<int> container_offset_in_bytes;
             Flatrock::ExtractType type = Flatrock::ExtractType::None;
             Flatrock::ExtractSubtype subtype = Flatrock::ExtractSubtype::None;
+
             if (extract->source->is<IR::BFN::PacketRVal>()) {
+                const int after_field_bits = phv_field->offset;
+                int field_offset_in_bits = hdr_bit_width - after_field_bits -
+                    (alloc.field_slice().hi + 1);
+                LOG5("field_offset_in_bits: " << field_offset_in_bits);
+
+                auto rval = extract->source->to<IR::BFN::PacketRVal>();
+                BUG_CHECK(rval->range.lo >= field_offset_in_bits,
+                        "Offset of extract (%1%) source in input buffer (%2%)"
+                        " is lower than offset of destination field (%3%)",
+                        extract, rval->range.lo, field_offset_in_bits);
+                hdr_offset_in_bits = rval->range.lo - field_offset_in_bits;
+
+                int container_offset_in_bits = field_offset_in_bits -
+                        (alloc.container().size() - (alloc.container_slice().hi + 1));
+                LOG5("container_offset_in_bits: " << container_offset_in_bits);
+                BUG_CHECK(container_offset_in_bits >= 0, "Invalid container allocation");
                 type = Flatrock::ExtractType::Packet;
-                hdr_offset = (width - field->offset -
-                              (alloc.container().size() - alloc.container_slice().lo)) / 8;
+                BUG_CHECK(container_offset_in_bits % 8 == 0,
+                        "Invalid position of slice in container");
+                container_offset_in_bytes = container_offset_in_bits / 8;
+                LOG5("container_offset_in_bytes: " << container_offset_in_bytes);
             } else if (auto* constantSource = extract->source->to<IR::BFN::ConstantRVal>()) {
                 type = Flatrock::ExtractType::Other;
                 subtype = Flatrock::ExtractSubtype::Constant;
-                hdr_offset = constantSource->constant->asUnsigned();
+                container_offset_in_bytes = constantSource->constant->asUnsigned();
             }
+
+            BUG_CHECK(container_offset_in_bytes, "Uninitialized header offset");
+
             const auto size = alloc.container().type().size();
             const auto index = alloc.container().index();
             const auto slice = alloc.container_slice();
 
-            BUG_CHECK(hdr_offset, "Uninitialized header offset");
             ParserExtract e = {.size = size,
-                               .slice = slice,
+                               .slices = std::vector<le_bitrange>{slice},
                                .index = index,
                                .type = type,
                                .subtype = subtype,
-                               .hdr = field->header(),
-                               .offset = *hdr_offset};
-            if (used_in_ingress) {
-                extracts[INGRESS].insert(e);
-                comments[{INGRESS, size, index, slice}].push_back(debugInfoFor(extract, alloc));
-            }
-            if (used_in_egress) {
-                extracts[EGRESS].insert(e);
-                comments[{EGRESS, size, index, slice}].push_back(debugInfoFor(extract, alloc));
-            }
+                               .hdr = hdr_name,
+                               .offset = *container_offset_in_bytes};
+            // FIXME If a header field is modified in ingress and then used in egress,
+            // extracting it again in egress would overwrite the changes from ingress.
+            // The PHEs from ingress should be copied to egress instead.
+            if (used_in_ingress)
+                add_extract(INGRESS, extract, alloc, e);
+            if (used_in_egress)
+                add_extract(EGRESS, extract, alloc, e);
         };
 
-        if (auto *state = findContext<IR::BFN::ParserState>()) {
-            if (headers[state].count(field->header()) == 0) {
-                headers[state].insert(field->header());
-                bool igMeta = (field->header() == igMetaName);
-                header_widths[state].push_back({ field->header(), igMeta ?
-                    Flatrock::PARSER_PROFILE_MD_SEL_NUM * 8 : width });
-                if (igMeta) igMetaExtracted = true;
+        const auto *state = findContext<IR::BFN::ParserState>();
+        CHECK_NULL(state);
+        if (headers[state].count(hdr_name) == 0) {
+            if (extract->source->is<IR::BFN::PacketRVal>()) {
+                BUG_CHECK(hdr_bit_width % 8 == 0,
+                        "Header %1% is not byte-aligned (%2% bits) during parser lowering",
+                        hdr_name, hdr_bit_width);
+                BUG_CHECK(hdr_offset_in_bits % 8 == 0,
+                        "Offset of header %1% is not byte-aligned (%2% bits)"
+                        " during parser lowering",
+                        hdr_name, hdr_offset_in_bits);
+                int push_hdr_width = hdr_bit_width / 8;
+                headers[state].insert(hdr_name);
+                LOG3("Collecting state[" << state->name << "] push_hdr: " << hdr_name <<
+                        ", width (in bytes): " << push_hdr_width <<
+                        ", offset (in bytes): " << (hdr_offset_in_bits / 8));
+                rules_info[state].push_hdr.push_back({
+                    hdr_name,
+                    push_hdr_width,
+                    hdr_offset_in_bits / 8
+                });
             }
+            if (hdr_name == igMetaName)
+                igMetaExtracted = true;
         }
 
         return true;
     }
 
-    void end_apply() override {
-        // Insert payload pseudo header
-        // TODO This can be done in some previous pass to form correct parser IR tree
-        auto *payload = new IR::BFN::ParserState(nullptr, "final", INGRESS);
-        states.push_back(payload);
-        headers[payload].insert(payloadHeaderName);
-        header_widths[payload].push_back({payloadHeaderName, 0});
+    bool preorder(const IR::Flatrock::ExtractPayloadHeader* extract) override {
+        auto* state = findContext<IR::BFN::ParserState>();
+        BUG_CHECK(state, "ExtractPayloadHeader: %1% out of state is invalid", extract);
 
+        if (headers[state].count(extract->payload_pseudo_header_name) == 0) {
+            headers[state].insert(extract->payload_pseudo_header_name);
+            LOG3("Collecting state[" << state->name << "] payload pseudo header push_hdr: " <<
+                    extract->payload_pseudo_header_name);
+            rules_info[state].push_hdr.push_back(
+                {extract->payload_pseudo_header_name, 0, 0});
+        }
+
+        return true;
+    }
+
+    bool preorder(const IR::BFN::Transition *t) override {
+        const auto* state = findContext<IR::BFN::ParserState>();
+        CHECK_NULL(state);
+
+        AnalyzerRuleInfo::Transition transition_info{};
+
+        // TODO support IR::BFN::ParserPvsMatchValue
+        const auto* match_value = t->value->to<IR::BFN::ParserConstMatchValue>();
+        BUG_CHECK(match_value, "Unsupported type of match value: %1%", t->value);
+
+        transition_info.match = match_value->value;
+        transition_info.next_state = t->next;
+        transition_info.shift = t->shift;
+
+        for (const auto* save : t->saves) {
+            const auto* packet_source = save->source->to<IR::BFN::PacketRVal>();
+            BUG_CHECK(packet_source, "Unsupported SaveToRegister source: %1%", save->source);
+
+            int offset_in_bits = packet_source->range.lo;
+            int size = packet_source->range.size();
+            BUG_CHECK(offset_in_bits % 8 == 0, "Unsupported offset of match value (in bits): %1%",
+                    offset_in_bits);
+            BUG_CHECK(size <= 16, "Unsupported size of match value (in bits): %1%", size);
+
+            BUG_CHECK(transition_info.next_w.size() == 0,
+                    "Only 1 16-bit match value is currently supported, can not collect: %1%", save);
+            transition_info.next_w.push_back({offset_in_bits / 8, size});
+        }
+
+        LOG3("Collecting state[" << state->name <<
+                "] transition[" << rules_info[state].transitions.size() << "]");
+        transition_info.log();
+
+        rules_info[state].transitions.push_back(transition_info);
+
+        return true;
+    }
+
+    bool preorder(const IR::BFN::ParserPrimitive *prim) override {
+        // FIXME: Other parser primitives are currently not mapped to HW resources,
+        // so we rather report it than ignore them.
+        if (!findContext<IR::BFN::Transition>())
+            BUG_CHECK(prim->is<IR::BFN::Extract>() ||
+                    prim->is<IR::Flatrock::ExtractPayloadHeader>(),
+                    "IR::BFN::ParserPrimitive: %1% is currently not supported!", prim);
+        return true;
+    }
+
+    bool preorder(const IR::BFN::ParserState* state) override {
+        LOG4("[ComputeFlatrockParserIR] lowering state " << state->name << ": " <<
+                dbp(state) << std::endl << state);
+        return true;
+    }
+
+    bool preorder(const IR::BFN::Parser* parser) override {
+        LOG4("[ComputeFlatrockParserIR] lowering Flatrock parser " << parser->name);
+
+        std::stringstream ss;
+        ::dump(ss, parser);
+        LOG4(ss.str());
+
+        return true;
+    }
+
+    void end_apply() override {
         auto log = [this](gress_t gress){
             if (extracts.count(gress) == 0) return;
-            for (auto &extract : extracts.at(gress)) {
-                LOG4("  size=" << extract.size
-                  << ", slice=" << extract.slice
+            for (const auto& extract : extracts.at(gress)) {
+                LOG3("  size=" << extract.size
                   << ", index=" << extract.index
                   << ", type=" << extract.type
                   << ", subtype=" << extract.subtype
                   << ", header=" << extract.hdr
                   << ", offset=" << extract.offset);
-                if (comments.count({gress, extract.size, extract.index, extract.slice}) == 0)
-                    continue;
-                for (auto& comment :
-                     comments.at({gress, extract.size, extract.index, extract.slice}))
-                    LOG4("    " << comment);
+                for (const auto& slice : extract.slices) {
+                    LOG3("    slice=" << slice);
+                    if (comments.count({gress, extract.size, extract.index, slice}) == 0)
+                        continue;
+                    for (const auto& comment :
+                         comments.at({gress, extract.size, extract.index, slice}))
+                        LOG3("      " << comment);
+                }
             }
         };
 
-        if (LOGGING(4)) {
-            LOG4("[ComputeFlatrockParserIR] parser extracts:");
+        if (LOGGING(3)) {
+            LOG3("[ComputeFlatrockParserIR] parser extracts:");
             log(INGRESS);
-            LOG4("[ComputeFlatrockParserIR] pseudo parser extracts:");
+            LOG3("[ComputeFlatrockParserIR] pseudo parser extracts:");
             log(EGRESS);
-            LOG4("[ComputeFlatrockParserIR] ingress_intrinsic_metadata has "
+            LOG3("[ComputeFlatrockParserIR] ingress_intrinsic_metadata has "
                 << (igMetaExtracted ? "" : "not ") << "been extracted");
         }
+
+        // FIXME when ingress intrinsic metadata were not extracted or no field from ingress
+        // intrinsic metadata is used, all the extracts of ingress intrinsic metadata header
+        // are optimized out and we do not generate push hdr for ingress intrinsic metadata
+        // which may be needed for correct function in model (model can fail with assert).
     }
+
+ public:
+    /**
+     * @brief Mapping of parser states to the structures containing all information
+     *        needed to create analyzer rules for the given parser states.
+     */
+    std::map<const IR::BFN::ParserState*, AnalyzerRuleInfo> rules_info;
+    /**
+     * @brief Textual information about extracts performed in parser
+     */
+    std::map<ExtractCommentInfo, std::vector<cstring>> comments;
+    /**
+     * @brief Information about extracts performed in parser needed to create
+     *        corresponding PHV builder extracts.
+     */
+    std::map<gress_t, std::set<ParserExtract>> extracts;
+
+    ComputeFlatrockParserIR(const PhvInfo& phv, const FieldDefUse& defuse) :
+        phv(phv), defuse(defuse) {}
 };
 
 /**
@@ -1281,7 +1502,7 @@ struct ComputeFlatrockParserIR : public ParserInspector {
  * Initial packet and segment length are set to the amount of ingress metadata.
  * All other profile properties and all other parser subcomponents are left unconfigured.
  */
-class ReplaceFlatrockParserIR : public Transform {
+class ReplaceFlatrockParserIR : public ParserTransform {
     static constexpr size_t PARSER_PHV_BUILDER_GROUP_PHES_TOTAL =
         Flatrock::PARSER_PHV_BUILDER_GROUP_PHE8_NUM + Flatrock::PARSER_PHV_BUILDER_GROUP_PHE16_NUM +
         Flatrock::PARSER_PHV_BUILDER_GROUP_PHE32_NUM;
@@ -1289,146 +1510,236 @@ class ReplaceFlatrockParserIR : public Transform {
         ExtractArray;
     typedef IR::Vector<IR::Flatrock::PhvBuilderGroup> PhvBuilder;
 
-    const IR::Flatrock::Parser* preorder(IR::BFN::Parser* parser) override {
-        LOG4("[ReplaceFlatrockParserIR] lowering Flatrock parser " << parser->name);
+    mutable cstring initial_state_name;
 
-        auto* lowered_parser = new IR::Flatrock::Parser;
-        make_analyzer_rules(lowered_parser);
+    void make_analyzer_rules(IR::Flatrock::Parser* lowered_parser,
+            const IR::BFN::Parser* parser) const {
+        auto graph = parser_info.graph(parser);
+        // At this point parser graph has to be an unrolled DAG
+        auto states = graph.topological_sort();
 
-        const auto initial_state_name = lowered_parser->analyzer.at(0)->name;
-        const auto* default_profile = get_default_profile(initial_state_name);
-        lowered_parser->profiles.push_back(default_profile);
+        std::vector<IR::Flatrock::AnalyzerStage*> analyzer_stages{};
 
-        build_phv_builder(lowered_parser->phv_builder, INGRESS);
+        unsigned int state_id = 0;
 
-        return lowered_parser;
-    }
+        unsigned int base_stage_id = 0;
+        // As a path length we consider the size of the vector of the states in the path,
+        // which is 1 for a start state.
+        unsigned int path_len = 1;
 
-    void make_analyzer_rules(IR::Flatrock::Parser* lowered_parser) const {
-        IR::Flatrock::AnalyzerRule* last_rule = nullptr;
+        unsigned int max_stage_inc = 0;
 
-        int stage = 0;
-        for (const auto* state : computed.states) {
-            if (computed.header_widths.count(state) == 0) continue;
-            for (const auto header_width : computed.header_widths.at(state)) {
-                const auto& header = header_width.first;
-                const auto& bit_width = header_width.second;
+        for (const auto* state : states) {
+            unsigned int state_path_len = graph.longest_path_states_to(state).size();
+            cstring state_name = sanitizeName(state->name);
+            // 0 -> 0x**************00, 1 -> 0x**************01, etc.
+            const match_t state_match = {.word0 = ~0ULL & ~(state_id & 0xffULL),
+                                         .word1 = ~0xffULL | state_id};
+            // Store mapping into the parser state map
+            lowered_parser->states[state_name] = state_match;
+            if (initial_state_name.isNullOrEmpty())
+                initial_state_name = state_name;
+
+            LOG5("state: " << dbp(state) << std::endl << state);
+            LOG5("state_name: " << state_name);
+            LOG5("state_match: " << state_match);
+            LOG5("state_path_len: " << state_path_len);
+
+            BUG_CHECK(computed.rules_info.count(state) > 0,
+                    "Missing information about state: %1%", state);
+
+            if (state_path_len > path_len) {
+                path_len = state_path_len;
+                base_stage_id += max_stage_inc + 1;
+                max_stage_inc = 0;
+            }
+
+            // TODO refactor the following to avoid code duplication
+
+            IR::Flatrock::AnalyzerStage* analyzer_stage;
+            auto state_info = computed.rules_info.at(state);
+            unsigned int stage_id = base_stage_id;
+            unsigned int hdr_id = 0;
+            // If there no transitions for a given state (final state),
+            // we create a stage (rule) for all headers (payload pseudo header
+            // in case of final state).
+            // If there are some transitions we use the last header in the rules
+            // created for the transitions.
+            for (; hdr_id + (state_info.transitions.size() > 0 ? 1 : 0) <
+                    state_info.push_hdr.size(); ++hdr_id, ++stage_id) {
                 // For each header extraction, there is a separate stage
-                cstring state_name = sanitizeName(state->name + "_" + header);
-                // 0 -> 0x**************00, 1 -> 0x**************01, etc.
-                const match_t state_match = {.word0 = ~0ULL & ~(stage & 0xff),
-                                             .word1 = ~0xffULL | stage};
-                // Store mapping into the parser state map
-                lowered_parser->states[state_name] = state_match;
+                // Create rule only with push_hdr_id
 
-                auto* analyzer_stage = new IR::Flatrock::AnalyzerStage(
-                    /* stage */ stage,
-                    /* name */ state_name);
-                lowered_parser->analyzer.push_back(analyzer_stage);
+                // FIXME when stages and rules allocation is optimized, this should
+                // be converted to a proper error message
+                BUG_CHECK(stage_id < ::Flatrock::PARSER_ANALYZER_STAGES,
+                        "Maximum number of analyzer stages (%1%) exceeded",
+                        ::Flatrock::PARSER_ANALYZER_STAGES);
 
-                if (last_rule != nullptr) last_rule->next_state_name = state_name;
-                const auto hdr_id = computed.parserHeaderSeqs.header_ids.find({INGRESS, header});
-                BUG_CHECK(hdr_id != computed.parserHeaderSeqs.header_ids.end(),
-                          "Could not find hdr_id");
+                if (stage_id >= analyzer_stages.size()) {
+                    analyzer_stage = new IR::Flatrock::AnalyzerStage(stage_id);
+                    analyzer_stages.push_back(analyzer_stage);
+                    LOG3("Added AnalyzerStage: " << stage_id);
+                } else {
+                    analyzer_stage = analyzer_stages[stage_id];
+                }
+
+                unsigned int rule_id = analyzer_stage->rules.size();
+
+                // FIXME when stages and rules allocation is optimized, this should
+                // be converted to a proper error message
+                BUG_CHECK(rule_id < ::Flatrock::PARSER_ANALYZER_STAGE_RULES,
+                        "Maximum number of analyzer rules (%1%) in stage %2% exceeded",
+                        ::Flatrock::PARSER_ANALYZER_STAGE_RULES, stage_id);
+
+                const auto hdr_id_map = parserHeaderSeqs.header_ids.find(
+                        {INGRESS, state_info.push_hdr[hdr_id].name});
+                BUG_CHECK(hdr_id_map != parserHeaderSeqs.header_ids.end(),
+                        "Could not find hdr_id for ingress header: %1%",
+                        state_info.push_hdr[hdr_id].name);
+
+                boost::optional<cstring> next_state_name{boost::none};
+                if (state_info.transitions.size() > 0)
+                    next_state_name = state_name;
 
                 auto* analyzer_rule = new IR::Flatrock::AnalyzerRule(
-                    /* id */ 0,
+                    /* id */ rule_id,
                     /* next_state */ boost::none,
-                    /* next_state_name */ boost::none,
-                    /* push_hdr_id_hdr_id */ hdr_id->second,
-                    /* push_hdr_id_offset */ 0);
-                if (bit_width == 0) {
-                    analyzer_rule->next_alu0_instruction =
-                        Flatrock::alu0_instruction(Flatrock::alu0_instruction::OPCODE_NOOP);
-                } else {
-                    analyzer_rule->next_alu0_instruction =
-                        Flatrock::alu0_instruction(Flatrock::alu0_instruction::OPCODE_0,
-                                                   std::vector<int>{/* add */ bit_width / 8});
-                }
-                analyzer_rule->next_alu1_instruction =
-                    Flatrock::alu1_instruction(Flatrock::alu1_instruction::OPCODE_NOOP);
+                    /* next_state_name */ next_state_name,
+                    /* next_w0_offset */ boost::none,
+                    /* next_w1_offset */ boost::none,
+                    /* next_w2_offset */ boost::none,
+                    /* push_hdr_id_hdr_id */ hdr_id_map->second,
+                    /* push_hdr_id_offset */ state_info.push_hdr[hdr_id].offset);
+                analyzer_rule->match_state = state_match;
+                analyzer_rule->next_alu0_instruction = Flatrock::alu0_instruction(
+                    Flatrock::alu0_instruction::OPCODE_NOOP);
+                analyzer_rule->next_alu1_instruction = Flatrock::alu1_instruction(
+                    Flatrock::alu1_instruction::OPCODE_NOOP);
                 analyzer_stage->rules.push_back(analyzer_rule);
+                LOG3("AnalyzerStage[" << analyzer_stage->stage << "] added " << analyzer_rule);
+            }
 
-                last_rule = analyzer_rule;
-                stage++;
+            if (state_info.transitions.size() > 0) {
+                // FIXME when stages and rules allocation is optimized, this should
+                // be converted to a proper error message
+                BUG_CHECK(stage_id < ::Flatrock::PARSER_ANALYZER_STAGES,
+                        "Maximum number of analyzer stages (%1%) exceeded",
+                        ::Flatrock::PARSER_ANALYZER_STAGES);
+
+                if (stage_id >= analyzer_stages.size()) {
+                    analyzer_stage = new IR::Flatrock::AnalyzerStage(stage_id);
+                    analyzer_stages.push_back(analyzer_stage);
+                    LOG3("Added AnalyzerStage: " << stage_id);
+                } else {
+                    analyzer_stage = analyzer_stages[stage_id];
+                }
+            }
+
+            for (const auto& transition : state_info.transitions) {
+                unsigned int rule_id = analyzer_stage->rules.size();
+
+                // FIXME when stages and rules allocation is optimized, this should
+                // be converted to a proper error message
+                BUG_CHECK(rule_id < ::Flatrock::PARSER_ANALYZER_STAGE_RULES,
+                        "Maximum number of analyzer rules (%1%) in stage %2% exceeded",
+                        ::Flatrock::PARSER_ANALYZER_STAGE_RULES, stage_id);
+
+                boost::optional<int> push_hdr_id{boost::none};
+                boost::optional<int> push_hdr_id_offset{boost::none};
+                if (hdr_id < state_info.push_hdr.size()) {
+                    const auto hdr_id_map = parserHeaderSeqs.header_ids.find(
+                            {INGRESS, state_info.push_hdr[hdr_id].name});
+                    BUG_CHECK(hdr_id_map != parserHeaderSeqs.header_ids.end(),
+                            "Could not find hdr_id for ingress header: %1%",
+                            state_info.push_hdr[hdr_id].name);
+                    push_hdr_id = hdr_id_map->second;
+                    push_hdr_id_offset = state_info.push_hdr[hdr_id].offset;
+                }
+
+                cstring next_state_name = sanitizeName(transition.next_state->name);
+
+                boost::optional<int> next_w0_offset{boost::none};
+                boost::optional<int> next_w1_offset{boost::none};
+                boost::optional<int> next_w2_offset{boost::none};
+
+                if (transition.next_w.size() > 0)
+                    next_w0_offset = transition.next_w[0].offset;
+                BUG_CHECK(transition.next_w.size() <= 1,
+                        "Only 1 next_w offset is currently supported!");
+
+                auto* analyzer_rule = new IR::Flatrock::AnalyzerRule(
+                    /* id */ rule_id,
+                    /* next_state */ boost::none,
+                    /* next_state_name */ next_state_name,
+                    /* next_w0_offset */ next_w0_offset,
+                    /* next_w1_offset */ next_w1_offset,
+                    /* next_w2_offset */ next_w2_offset,
+                    /* push_hdr_id_hdr_id */ push_hdr_id,
+                    /* push_hdr_id_offset */ push_hdr_id_offset);
+                analyzer_rule->match_state = state_match;
+                analyzer_rule->match_w0 = transition.match;
+                // TODO
+                // Check if the width of transition.match is correct, if not
+                // report error/bug.
+                // Currently a BUG_CHECK in ComputeFlatrockParserIR pass enforces
+                // that at most 16 bit wide match values can be processed.
+                analyzer_rule->match_w0.setwidth(16);
+                // TODO analyzer_rule->match_w1 when supporting more than
+                // just one 16 bit match value
+                analyzer_rule->next_alu0_instruction = Flatrock::alu0_instruction(
+                        Flatrock::alu0_instruction::OPCODE_0,
+                        std::vector<int>{/* add */ transition.shift});
+                analyzer_rule->next_alu1_instruction = Flatrock::alu1_instruction(
+                    Flatrock::alu1_instruction::OPCODE_NOOP);
+                analyzer_stage->rules.push_back(analyzer_rule);
+                LOG3("AnalyzerStage[" << analyzer_stage->stage << "] added " << analyzer_rule);
+            }
+
+            if (hdr_id > max_stage_inc)
+                max_stage_inc = hdr_id;
+            ++state_id;
+        }
+
+        /**
+         * Check all rules in a stage if they have the same state.
+         * If yes, that state can be used as a stage name.
+         */
+        for (auto* stage : analyzer_stages) {
+            BUG_CHECK(stage->rules.size() > 0, "Unexpected AnalyzerStage without rules: %1%",
+                    stage);
+            const match_t& match = stage->rules.front()->match_state;
+            if (std::all_of(stage->rules.begin(), stage->rules.end(),
+                    [&](const IR::Flatrock::AnalyzerRule* r){return r->match_state == match;})) {
+                auto it = std::find_if(lowered_parser->states.begin(), lowered_parser->states.end(),
+                    [&](const std::pair<const cstring, match_t>& kv){return kv.second == match;});
+                if (it != lowered_parser->states.end())
+                    stage->name = it->first;
             }
         }
-    }
 
-    IR::Flatrock::Profile* get_default_profile(const cstring& initial_state_name) const {
-        auto* default_profile = new IR::Flatrock::Profile(
-            /* index */ 0,
-            /* initial_pktlen */ 0,
-            /* initial_seglen */ 0,
-            /* initial_state */ boost::none,
-            /* initial_state_name */ initial_state_name,
-            /* initial_flags */ boost::none,
-            // If ingress intrinsic metadata has not been extracted,
-            // thus there is no analyzer rule advancing ptr over MD32,
-            // initial value of ptr needs to be set accordingly.
-            /* initial_ptr */ computed.igMetaExtracted ? 0 : Flatrock::PARSER_PROFILE_MD_SEL_NUM,
-            /* initial_w0_offset */ boost::none,
-            /* initial_w1_offset */ boost::none,
-            /* initial_w2_offset */ boost::none);
-        // {is_pktgen(1bit),port_id(7bit),8'b0}
-        default_profile->metadata_select.push_back(
-            Flatrock::metadata_select(Flatrock::metadata_select::LOGICAL_PORT_NUMBER, {}));
-        default_profile->metadata_select.push_back(
-            Flatrock::metadata_select(Flatrock::metadata_select::PORT_METADATA, {/* index */ 0}));
-        // timestamp
-        for (int i = Flatrock::PARSER_PROFILE_MD_SEL_TIMESTAMP_BYTE_OFFSET;
-             i < Flatrock::PARSER_PROFILE_MD_SEL_TIMESTAMP_BYTE_OFFSET +
-                     Flatrock::PARSER_PROFILE_MD_SEL_TIMESTAMP_BYTE_WIDTH;
-             i++) {
-            default_profile->metadata_select.push_back(Flatrock::metadata_select(
-                Flatrock::metadata_select::INBAND_METADATA, {/* index */ i}));
-        }
-
-        return default_profile;
-    }
-
-    void build_phv_builder(PhvBuilder& phv_builder, gress_t gress) {
-        const auto extracts = make_builder_extracts(gress);
-        make_builder_groups(extracts, phv_builder);
-    }
-
-    ExtractArray make_builder_extracts(gress_t gress) const {
-        ExtractArray extracts {};
-        if (computed.extracts.count(gress) == 0) return extracts;
-        for (const auto& extract : computed.extracts.at(gress)) {
-            const auto phe_info = get_phe_info(extract);
-
-            auto& phv_builder_extract = extracts[phe_info.extract_index];
-            if (phv_builder_extract == nullptr)
-                phv_builder_extract = new IR::Flatrock::PhvBuilderExtract(extract.size);
-
-            const auto comments =
-                computed.comments.at({gress, extract.size, extract.index, extract.slice});
-            phv_builder_extract->debug.info.insert(phv_builder_extract->debug.info.begin(),
-                                                   comments.begin(), comments.end());
-
-            phv_builder_extract->index = 0;
-            const auto index = extract.index;
-            const auto phe_sources = phe_info.phe_sources;
-            if ((index / phe_sources) % Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES == 0) {
-                // FIXME: clean up
-                phv_builder_extract->type1 = extract.type;
-                phv_builder_extract->hdr1_name = extract.hdr;
-                add_offsets(phv_builder_extract->offsets1, phe_info.container_name, extract);
-            } else {
-                // FIXME: clean up
-                phv_builder_extract->type2 = extract.type;
-                phv_builder_extract->hdr2_name = extract.hdr;
-                add_offsets(phv_builder_extract->offsets2, phe_info.container_name, extract);
-            }
-        }
-
-        return extracts;
+        lowered_parser->analyzer.insert(lowered_parser->analyzer.begin(),
+            analyzer_stages.begin(), analyzer_stages.end());
     }
 
     struct PheInfo {
+        /** Container name (B0, B1, ... , H0, H1, ... , W0, W1, ...) */
         std::string container_name;
-        size_t extract_index;
+        /** Index of the PHV builder group which the extract belongs to. */
+        size_t phv_builder_group_index;
+        /**
+         * @brief Number of PHEs per one source in a pair.
+         *
+         * Each action RAM record specify a pair of PHE sources:
+         * - 2x4 PHE8 sources or
+         * - 2x2 PHE16 sources or
+         * - 2x1 PHE32 sources
+         *
+         * This field is a number of PHEs per one source in a pair.
+         * PHE8 sources - 4
+         * PHE16 sources - 2
+         * PHE32 sources - 1
+         */
         size_t phe_sources;
     };
 
@@ -1456,10 +1767,10 @@ class ReplaceFlatrockParserIR : public Transform {
 
         const auto sub_group_offset =
             extract.index / phe_sources / Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES;
-        const auto extract_index = base_group_index + sub_group_offset;
+        const auto group_index = base_group_index + sub_group_offset;
         container_name += std::to_string(extract.index);
 
-        return PheInfo{container_name, extract_index, phe_sources};
+        return PheInfo{container_name, group_index, phe_sources};
     }
 
     void add_offsets(std::vector<Flatrock::ExtractInfo>& offsets, const std::string container_name,
@@ -1472,8 +1783,10 @@ class ReplaceFlatrockParserIR : public Transform {
         if (extract.subtype == Flatrock::ExtractSubtype::Constant && size > BYTE) {
             const auto constant = static_cast<unsigned int>(extract.offset);
             auto mask = 0xff;
-            for (auto i = extract.slice.lo; i < extract.slice.hi; i += BYTE) {
-                const auto offset = (constant & mask) >> (i - extract.slice.lo);
+            // FIXME we are processing only first slice, but there might be multiple slices
+            // with constants per container, we need process them all
+            for (auto i = extract.slices[0].lo; i < extract.slices[0].hi; i += BYTE) {
+                const auto offset = (constant & mask) >> (i - extract.slices[0].lo);
                 mask <<= BYTE;
 
                 const auto hi = i + BYTE - 1;
@@ -1487,7 +1800,58 @@ class ReplaceFlatrockParserIR : public Transform {
         }
     }
 
-    void make_builder_groups(const ExtractArray& extracts, PhvBuilder& phv_builder) const {
+    ExtractArray make_builder_extracts(gress_t gress) const {
+        // Array of extracts with index 0 for all PHV builder groups
+        // Index to this array is in fact PHV builder group index
+        ExtractArray extracts {};
+        if (computed.extracts.count(gress) == 0) return extracts;
+        for (const auto& extract : computed.extracts.at(gress)) {
+            const auto phe_info = get_phe_info(extract);
+
+            // Get extract with index 0 for a given PHV builder group
+            auto& phv_builder_extract = extracts[phe_info.phv_builder_group_index];
+            if (phv_builder_extract == nullptr)
+                phv_builder_extract = new IR::Flatrock::PhvBuilderExtract(extract.size);
+
+            for (const auto& slice : extract.slices) {
+                const auto comments = computed.comments.at(
+                    {gress, extract.size, extract.index, slice});
+                phv_builder_extract->debug.info.insert(phv_builder_extract->debug.info.begin(),
+                                                       comments.begin(), comments.end());
+            }
+
+            /**
+             * Each PHV builder group extract specifies a pair of PHE sources.
+             * Each PHE source specifies:
+             * - 4 PHE8 sources or
+             * - 2 PHE16 sources or
+             * - 1 PHE32 source
+             * Values for the first PHE source (4xPHE8 / 2xPHE16 / 1xPHE32) in the pair are
+             * stored in type1, hdr1_name, offsets1
+             * Values for the second PHE source (4xPHE8 / 2xPHE16 / 1xPHE32) in the pair are
+             * stored in type2, hdr2_name, offsets2
+             */
+            phv_builder_extract->index = 0;
+            const auto index = extract.index;
+            const auto phe_sources = phe_info.phe_sources;
+            if ((index / phe_sources) % Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES == 0) {
+                // FIXME: clean up
+                phv_builder_extract->type1 = extract.type;
+                phv_builder_extract->hdr1_name = extract.hdr;
+                add_offsets(phv_builder_extract->offsets1, phe_info.container_name, extract);
+            } else {
+                // FIXME: clean up
+                phv_builder_extract->type2 = extract.type;
+                phv_builder_extract->hdr2_name = extract.hdr;
+                add_offsets(phv_builder_extract->offsets2, phe_info.container_name, extract);
+            }
+        }
+
+        return extracts;
+    }
+
+    void build_phv_builder(PhvBuilder& phv_builder, gress_t gress) const {
+        const auto extracts = make_builder_extracts(gress);
         int id = 0;
         for (const auto* extract : extracts) {
             if (extract != nullptr) {
@@ -1500,26 +1864,73 @@ class ReplaceFlatrockParserIR : public Transform {
         }
     }
 
-    const IR::BFN::Pipe*
-    postorder(IR::BFN::Pipe* pipe) override {
-        // Create a pseudo parser
-        auto *pseudo_parser = new IR::Flatrock::PseudoParser;
+    IR::Flatrock::Profile* get_default_profile(const cstring& initial_state_name) const {
+        auto* default_profile = new IR::Flatrock::Profile(
+            /* index */ 0,
+            /* initial_pktlen */ 0,
+            /* initial_seglen */ 0,
+            /* initial_state */ boost::none,
+            /* initial_state_name */ initial_state_name,
+            /* initial_flags */ boost::none,
+            /* initial_ptr */ 0,  // Extraction of ingress intrinsic metadata is always expected
+            /* initial_w0_offset */ boost::none,
+            /* initial_w1_offset */ boost::none,
+            /* initial_w2_offset */ boost::none);
+        // {is_pktgen(1bit),port_id(7bit),8'b0}
+        default_profile->metadata_select.push_back(
+            Flatrock::metadata_select(Flatrock::metadata_select::LOGICAL_PORT_NUMBER, {}));
+        default_profile->metadata_select.push_back(
+            Flatrock::metadata_select(Flatrock::metadata_select::PORT_METADATA, {/* index */ 0}));
+        // timestamp
+        for (int i = Flatrock::PARSER_PROFILE_MD_SEL_TIMESTAMP_BYTE_OFFSET;
+             i < Flatrock::PARSER_PROFILE_MD_SEL_TIMESTAMP_BYTE_OFFSET +
+                     Flatrock::PARSER_PROFILE_MD_SEL_TIMESTAMP_BYTE_WIDTH;
+             i++) {
+            default_profile->metadata_select.push_back(Flatrock::metadata_select(
+                Flatrock::metadata_select::INBAND_METADATA, {/* index */ i}));
+        }
 
+        return default_profile;
+    }
+
+    void make_profiles(IR::Flatrock::Parser *lowered_parser) const {
+        BUG_CHECK(!initial_state_name.isNullOrEmpty(),
+                "Expecting at least 1 parser state, but no parser state is present");
+        lowered_parser->profiles.push_back(get_default_profile(initial_state_name));
+    }
+
+    const IR::Flatrock::Parser* preorder(IR::BFN::Parser* parser) override {
+        LOG4("[ReplaceFlatrockParserIR] lowering Flatrock parser " << parser->name);
+        const auto* orig_parser = getOriginal<IR::BFN::Parser>();
+
+        auto* lowered_parser = new IR::Flatrock::Parser;
+        make_analyzer_rules(lowered_parser, orig_parser);
+        build_phv_builder(lowered_parser->phv_builder, INGRESS);
+        make_profiles(lowered_parser);
+
+        return lowered_parser;
+    }
+
+    const IR::BFN::Pipe* postorder(IR::BFN::Pipe* pipe) override {
         BUG_CHECK(pipe->thread[EGRESS].parsers.size() == 0,
             "unexpected egress parser before lowering");
 
+        // Create a pseudo parser
+        auto *pseudo_parser = new IR::Flatrock::PseudoParser;
         build_phv_builder(pseudo_parser->phv_builder, EGRESS);
-
         pipe->thread[EGRESS].parsers.push_back(pseudo_parser);
 
         return pipe;
     }
 
     const ComputeFlatrockParserIR& computed;
+    const ParserHeaderSequences& parserHeaderSeqs;
+    const CollectParserInfo& parser_info;
 
  public:
-    explicit ReplaceFlatrockParserIR(const ComputeFlatrockParserIR& computed)
-      : computed(computed) { }
+    explicit ReplaceFlatrockParserIR(const ComputeFlatrockParserIR& computed,
+            const ParserHeaderSequences& phs, const CollectParserInfo& pi) :
+        computed(computed), parserHeaderSeqs(phs), parser_info(pi) {}
 };
 
 #endif  // HAVE_FLATROCK
@@ -1858,6 +2269,31 @@ struct MergeLoweredParserStates : public ParserTransform {
     }
 };
 
+class InsertPayloadPseudoHeaderState : public ParserTransform {
+    const IR::BFN::ParserState *payload_header_state;
+
+    profile_t init_apply(const IR::Node *node) override {
+        payload_header_state = new IR::BFN::ParserState(
+            payloadHeaderStateName, INGRESS,
+            IR::Vector<IR::BFN::ParserPrimitive>(
+                {new IR::Flatrock::ExtractPayloadHeader(payloadHeaderName)}),
+            IR::Vector<IR::BFN::Select>(),
+            IR::Vector<IR::BFN::Transition>());
+        return Transform::init_apply(node);
+    }
+
+    const IR::BFN::Transition* preorder(IR::BFN::Transition *t) override {
+        if (t->next == nullptr) {
+            t->next = payload_header_state;
+            LOG3("Inserting transition to payload pseudo header state from state: " <<
+                    findContext<IR::BFN::ParserState>());
+        }
+        return t;
+    }
+ public:
+    InsertPayloadPseudoHeaderState() {}
+};
+
 /// Generate a lowered version of the parser IR in this program and swap it in
 /// for the existing representation.
 struct LowerParserIR : public PassManager {
@@ -1870,17 +2306,18 @@ struct LowerParserIR : public PassManager {
                   std::map<gress_t, std::set<PHV::Container>>& origParserZeroInitContainers)
         : origParserZeroInitContainers(origParserZeroInitContainers) {
         auto* allocateParserChecksums = new AllocateParserChecksums(phv, clotInfo);
+        auto* parser_info = new CollectParserInfo;
+        auto* lower_parser_info = new CollectLoweredParserInfo;
         auto* computeLoweredParserIR = new ComputeLoweredParserIR(
             phv, clotInfo, *allocateParserChecksums, origParserZeroInitContainers);
 #ifdef HAVE_FLATROCK
-        auto* computeFlatrockParserIR = new ComputeFlatrockParserIR(phv, defuse, parserHeaderSeqs);
+        auto* computeFlatrockParserIR = new ComputeFlatrockParserIR(phv, defuse);
 #endif  // HAVE_FLATROCK
         auto* replaceLoweredParserIR = new ReplaceParserIR(*computeLoweredParserIR);
 #ifdef HAVE_FLATROCK
-        auto *replaceFlatrockParserIR = new ReplaceFlatrockParserIR(*computeFlatrockParserIR);
+        auto *replaceFlatrockParserIR = new ReplaceFlatrockParserIR(*computeFlatrockParserIR,
+                parserHeaderSeqs, *parser_info);
 #endif  // HAVE_FLATROCK
-        auto* parser_info = new CollectParserInfo;
-        auto* lower_parser_info = new CollectLoweredParserInfo;
 
         addPasses({
             LOGGING(4) ? new DumpParser("before_parser_lowering") : nullptr,
@@ -1894,6 +2331,11 @@ struct LowerParserIR : public PassManager {
             allocateParserChecksums,
             LOGGING(4) ? new DumpParser("after_alloc_parser_csums") : nullptr,
             LOGGING(4) ? new DumpParser("final_hlir_parser") : nullptr,
+#ifdef HAVE_FLATROCK
+            Device::currentDevice() == Device::FLATROCK ?
+            new InsertPayloadPseudoHeaderState() : nullptr,
+            parser_info,
+#endif
 #ifdef HAVE_FLATROCK
             Device::currentDevice() == Device::FLATROCK ?
                 static_cast<Visitor *>(computeFlatrockParserIR) :

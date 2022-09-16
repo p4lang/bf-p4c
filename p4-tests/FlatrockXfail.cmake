@@ -24,10 +24,11 @@ p4c_add_xfail_reason("tofino5"
   )
 
 # invalid assembly code
-#p4c_add_xfail_reason("tofino5"
+p4c_add_xfail_reason("tofino5"
 #  "Invalid slice of 7 bit field immediate"
-#  extensions/p4_tests/p4_16/flatrock/tf5_template.p4
-#  )
+  "error: Invalid field group"
+  extensions/p4_tests/p4_16/flatrock/tf5_template.p4
+  )
 
 p4c_add_xfail_reason("tofino5"
   "Compiler Bug.* not an always hit hash_action table"
@@ -45,35 +46,43 @@ p4c_add_xfail_reason("tofino5"
 #  extensions/p4_tests/p4_16/flatrock/pac_single_hdr.p4
 #  )
 
-#p4c_add_xfail_reason("tofino5"
-#  #"Flatrock .* not implemented yet"
-#  "No format field or table named immediate"
-#  extensions/p4_tests/p4_16/flatrock/pac_unbal_reconverge.p4
-#  )
-
 p4c_add_xfail_reason("tofino5"
-  "Only one parser state transition supported"
+  "error: No format field or table named immediate"
   extensions/p4_tests/p4_16/flatrock/pac_shallow_branch.p4
+  extensions/p4_tests/p4_16/flatrock/pac_unbal_reconverge.p4
   )
 
 p4c_add_xfail_reason("tofino5"
-  "The table tbl_pac_wide_branch119 could not fit within .* input crossbar"
+  "The table tbl_pac_wide_branch.* could not fit within .* input crossbar"
   extensions/p4_tests/p4_16/flatrock/pac_wide_branch.p4
   )
 
 p4c_add_xfail_reason("tofino5"
-  "Only one parser state transition supported"
-  extensions/p4_tests/p4_16/flatrock/pac_unbal_reconverge.p4
-  extensions/p4_tests/p4_16/flatrock/tf5_template.p4
+  "error: Syntax error, expecting identifier"
   extensions/p4_tests/p4_16/stf/header_stack_next.p4
   extensions/p4_tests/p4_16/stf/header_stack_strided_alloc1.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "Compiler Bug: Only 1 16-bit match value is currently supported"
   extensions/p4_tests/p4_16/stf/header_stack_strided_alloc2.p4
   extensions/p4_tests/p4_16/stf/lookahead1.p4
+  extensions/p4_tests/p4_16/stf/p4c-3551.p4
+  extensions/p4_tests/p4_16/stf/simple_l3_acl_disappearing_options.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "Compiler Bug: Transition cannot have both loop and non-loop next states"
+  # Loops are not supported during parser lowering
   extensions/p4_tests/p4_16/stf/parser_counter_12.p4
   extensions/p4_tests/p4_16/stf/parser_loop_1.p4
   extensions/p4_tests/p4_16/stf/parser_loop_2.p4
   extensions/p4_tests/p4_16/stf/parser_loop_3.p4
   extensions/p4_tests/p4_16/stf/parser_loop_4.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "Assertion .*unicast .*replicate"
   extensions/p4_tests/p4_16/stf/varbit_constant.p4
   )
 
@@ -86,10 +95,24 @@ p4c_add_xfail_reason("tofino5"
 # ** TNA tests that "should" work *************************************************************** #
 # *********************************************************************************************** #
 p4c_add_xfail_reason("tofino5"
-  "Compiler Bug: Could not find hdr_id"
+  "Compiler Bug: Invalid container allocation"
+  # Header field with offset 0 from current pointer is allocated to the middle of W container
+  # which means that we would need negative offset to extract the PHE.
+  # We can utilize the possibility to swap the bytes when extracting PHE16 or PHE32,
+  # but this is currently not implemented.
   extensions/p4_tests/p4_16/stf/failed_elim_valid_bit.p4
-  extensions/p4_tests/p4_16/stf/p4c-2638.p4
   extensions/p4_tests/p4_16/stf/wide_arith_non_64.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "Compiler Bug: Offset of extract .* source in input buffer .* is lower than offset of destination field"
+  # Implementation of extracts into PHEs currently require that the whole header
+  # from which we extract the field needs to be after the pointer even if some
+  # fields are not extracted
+  extensions/p4_tests/p4_16/stf/p4c-2638.p4
+  extensions/p4_tests/p4_16/stf/parse_depth_1.p4
+  extensions/p4_tests/p4_16/stf/update_checksum_4.p4
+  extensions/p4_tests/p4_16/stf/p4c-3055-2.p4
   )
 
 # Unimplemented - support for wide matches
@@ -136,11 +159,6 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/stf/backend_bug1c.p4
   )
 
-p4c_add_xfail_reason("tofino5"
-  "mismatch from expected"
-  extensions/p4_tests/p4_16/stf/p4c-2695.p4
-  )
-
 #p4c_add_xfail_reason("tofino5"
 #  "Flatrock .* not implemented yet"
 #  extensions/p4_tests/p4_16/stf/p4c-3470.p4
@@ -155,22 +173,28 @@ p4c_add_xfail_reason("tofino5"
 p4c_add_xfail_reason("tofino5"
   "Compiler Bug: Could not find hdr_id"
   extensions/p4_tests/p4_16/stf/extract_slice_2.p4
+  extensions/p4_tests/p4_16/stf/parser_multi_write_5.p4
+  extensions/p4_tests/p4_16/stf/parser_multi_write_8.p4
   )
 
 p4c_add_xfail_reason("tofino5"
-  "Compiler Bug: Only one parser state transition supported"
+  "error: Invalid offset for .* group"
   extensions/p4_tests/p4_16/stf/p4c-1179.p4
-  extensions/p4_tests/p4_16/stf/p4c-3055-2.p4
-  extensions/p4_tests/p4_16/stf/p4c-3551.p4
-  extensions/p4_tests/p4_16/stf/parse_depth_1.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "error: .* in match does not line up with ixbar"
   extensions/p4_tests/p4_16/stf/parser_counter_6.p4
   extensions/p4_tests/p4_16/stf/parser_counter_8.p4
   extensions/p4_tests/p4_16/stf/parser_local_register.p4
   extensions/p4_tests/p4_16/stf/parser_local_register_2.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "error: Duplicate element"
+  # Multiple writes to the same field generate currently multiple extracts
+  # which is wrong and assembler reports the error
   extensions/p4_tests/p4_16/stf/parser_multi_write_1.p4
-  extensions/p4_tests/p4_16/stf/parser_multi_write_5.p4
-  extensions/p4_tests/p4_16/stf/parser_multi_write_8.p4
-  extensions/p4_tests/p4_16/stf/simple_l3_acl_disappearing_options.p4
   )
 
 p4c_add_xfail_reason("tofino5"
@@ -247,10 +271,14 @@ p4c_add_xfail_reason("tofino5"
 #   )
 
 p4c_add_xfail_reason("tofino5"
-  "mismatch from expected"
+  "expected packet on port .* not seen"
+  # TNA architecture has different size of PORT_METADATA_SIZE than T5NA architecture.
+  # Extraction of ingress intrinsic metadata is currently not correctly supported in TNA programs
+  # when those metadata are not used anywhere.
   extensions/p4_tests/p4_16/stf/lookahead2.p4
   extensions/p4_tests/p4_16/stf/lookahead3.p4
   extensions/p4_tests/p4_16/stf/update_checksum_3.p4
+  extensions/p4_tests/p4_16/stf/p4c-2695.p4
   )
 
 p4c_add_xfail_reason("tofino5"
@@ -270,7 +298,6 @@ p4c_add_xfail_reason("tofino5"
   
 p4c_add_xfail_reason("tofino5"
   "Assembler BUG"
-  extensions/p4_tests/p4_16/stf/update_checksum_4.p4
   extensions/p4_tests/p4_16/stf/update_checksum_6.p4
   )
 

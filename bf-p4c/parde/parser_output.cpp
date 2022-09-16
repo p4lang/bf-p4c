@@ -184,6 +184,12 @@ struct ParserAsmSerializer : public ParserInspector {
         } else if (analyzer_rule->next_state) {
             out << indent << "next_state: " << *analyzer_rule->next_state << std::endl;
         }
+        if (analyzer_rule->next_w0_offset)
+            out << indent << "next_w0_offset: " << *analyzer_rule->next_w0_offset << std::endl;
+        if (analyzer_rule->next_w1_offset)
+            out << indent << "next_w1_offset: " << *analyzer_rule->next_w1_offset << std::endl;
+        if (analyzer_rule->next_w2_offset)
+            out << indent << "next_w2_offset: " << *analyzer_rule->next_w2_offset << std::endl;
         if (analyzer_rule->next_alu0_instruction) {
             out << indent << "next_alu0_instruction: ";
             print_params(out, *analyzer_rule->next_alu0_instruction);
