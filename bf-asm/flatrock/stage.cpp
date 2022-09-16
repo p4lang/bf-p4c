@@ -21,7 +21,7 @@ template<> void Stage::write_regs(Target::Flatrock::mau_regs &regs, bool egress_
     }
     if (tables.empty()) {
         /* no tables in this stage, so bypass */
-        regs.rf.ppu_cfg.bypass = 1;
+        regs.ppu_top.rf.ppu_cfg.bypass = 1;
     } else {
         // FIXME -- needs to be 1-16
         auto &nt_delay = regs.ppu_mrd.rf.mrd_nt_delay;
@@ -29,8 +29,8 @@ template<> void Stage::write_regs(Target::Flatrock::mau_regs &regs, bool egress_
         nt_delay.pinfo_out_delay = 1;
         nt_delay.pred_vec_delay = 1;
     }
-    regs.rf.ppu_phvfifo_cfg.delay = 8;  // FIXME -- needs to be 8-31
-    regs.rf.ppu_pktdly_cfg.delay = 2;   // FIXME -- needs to be 2-31
+    regs.ppu_top.rf.ppu_phvfifo_cfg.delay = 8;  // FIXME -- needs to be 8-31
+    regs.ppu_top.rf.ppu_pktdly_cfg.delay = 2;   // FIXME -- needs to be 2-31
     for (auto &delay : regs.ppu_mrd.rf.mrd_iad_delay)
         delay.delay = 1;   // FIXME -- needs to be set even for non-enabled tables?
 

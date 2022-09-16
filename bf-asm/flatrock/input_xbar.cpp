@@ -174,40 +174,37 @@ bitvec Flatrock::InputXbar::global_column0_extract(int hash_table,
 
 // tables mapping PHEs to the bit indexes used for their power gating.
 static unsigned short minput_byte_pwr_transpose[] = {
-/*B0*/     4,   5,   6,   7,   8,   9,  10,  11,  26,  27,  28,  29,  30,  31,  32,  33,
-/*B16*/   48,  49,  50,  51,  52,  53,  54,  55,  70,  71,  72,  73,  74,  75,  76,  77,
-/*B32*/   92,  93,  94,  95,  96,  97,  98,  99, 114, 115, 116, 117, 118, 119, 120, 121,
-/*B48*/  136, 137, 138, 139, 140, 141, 142, 143, 158, 159, 160, 161, 162, 163, 164, 165,
-/*B64*/  180, 181, 182, 183, 184, 185, 186, 187, 202, 203, 204, 205, 206, 207, 208, 209,
-/*B80*/   12,  13,  14,  15,  16,  17,  18,  19,  34,  35,  36,  37,  38,  39,  40,  41,
-/*B96*/   56,  57,  58,  59,  60,  61,  62,  63,  78,  79,  80,  81,  82,  83,  84,  85,
-/*B112*/ 100, 101, 102, 103, 104, 105, 106, 107, 122, 123, 124, 125, 136, 127, 128, 129,
-/*B128*/ 144, 145, 146, 147, 148, 149, 150, 151, 166, 167, 168, 169, 170, 171, 172, 173,
-/*B144*/ 188, 189, 190, 191, 192, 193, 194, 195, 210, 211, 212, 213, 214, 215, 216, 217,
-/*H0*/    20,  21,  22,  23,  42,  43,  44,  45,  64,  65,  66,  67,  86,  87,  88,  89,
-/*H16*/  108, 109, 110, 111, 130, 131, 132, 133, 152, 153, 154, 155, 174, 175, 176, 177,
-/*H32*/  196, 197, 198, 199, 218, 219, 220, 221,
-/*W0*/    24,  25,  46,  47,  68,  69,  90,  91, 112, 113, 134, 135, 156, 157, 178, 179,
-/*W16*/  200, 201, 222, 223 };
+/*B0*/     0,   1,   2,   3,   4,   5,   6,   7,  22,  23,  24,  25,  26,  27,  28,  29,
+/*B16*/   44,  45,  46,  47,  48,  49,  50,  51,  66,  67,  68,  69,  70,  71,  72,  73,
+/*B32*/   88,  89,  90,  91,  92,  93,  94,  95, 110, 111, 112, 113, 114, 115, 116, 117,
+/*B48*/  132, 133, 134, 135, 136, 137, 138, 139, 154, 155, 156, 157, 158, 159, 160, 161,
+/*B64*/  176, 177, 178, 179, 180, 181, 182, 183, 198, 199, 200, 201, 202, 203, 204, 205,
+/*B80*/    8,   9,  10,  11,  12,  13,  14,  15,  30,  31,  32,  33,  34,  35,  36,  37,
+/*B96*/   52,  53,  54,  55,  56,  57,  58,  59,  74,  75,  76,  77,  78,  79,  80,  81,
+/*B112*/  96,  97,  98,  99, 100, 101, 102, 103, 118, 119, 120, 121, 132, 123, 124, 125,
+/*B128*/ 140, 141, 142, 143, 144, 145, 146, 147, 162, 163, 164, 165, 166, 167, 168, 169,
+/*B144*/ 184, 185, 186, 187, 188, 189, 190, 191, 206, 207, 208, 209, 210, 211, 212, 213,
+/*H0*/    16,  17,  18,  19,  38,  39,  40,  41,  60,  61,  62,  63,  82,  83,  84,  85,
+/*H16*/  104, 105, 106, 107, 126, 127, 128, 129, 148, 149, 150, 151, 170, 171, 172, 173,
+/*H32*/  192, 193, 194, 195, 214, 215, 216, 217,
+/*W0*/    20,  21,  42,  43,  64,  65,  86,  87, 108, 109, 130, 131, 152, 153, 174, 175,
+/*W16*/  196, 197, 218, 219 };
 static unsigned short minput_word_pwr_transpose[] = {
-/*B0*/    16,  16,  16,  16,  17,  17,  17,  17,  24,  24,  24,  24,  25,  25,  25,  25,
-/*B16*/   32,  32,  32,  32,  33,  33,  33,  33,  40,  40,  40,  40,  41,  41,  41,  41,
-/*B32*/   48,  48,  48,  48,  49,  49,  49,  49,  56,  56,  56,  56,  57,  57,  57,  57,
-/*B48*/   64,  64,  64,  64,  65,  65,  65,  65,  72,  72,  72,  72,  73,  73,  73,  73,
-/*B64*/   80,  80,  80,  80,  81,  81,  81,  81,  88,  88,  88,  88,  89,  89,  89,  89,
-/*B80*/   18,  18,  18,  18,  19,  19,  19,  19,  26,  26,  26,  26,  27,  27,  27,  27,
-/*B96*/   34,  34,  34,  34,  35,  35,  35,  35,  42,  42,  42,  42,  43,  43,  43,  43,
-/*B112*/  50,  50,  50,  50,  51,  51,  51,  51,  58,  58,  58,  58,  59,  59,  59,  59,
-/*B128*/  66,  66,  66,  66,  67,  67,  67,  67,  74,  74,  74,  74,  75,  75,  75,  75,
-/*B144*/  82,  82,  82,  82,  83,  83,  83,  83,  90,  90,  90,  90,  91,  91,  91,  91,
-/*H0*/    20,  20,  21,  21,  28,  28,  29,  29,  36,  36,  37,  37,  44,  44,  45,  45,
-/*H16*/   52,  52,  53,  53,  60,  60,  61,  61,  68,  68,  69,  69,  76,  76,  77,  77,
-/*H32*/   84,  84,  85,  85,  92,  92,  93,  93,
-/*W0*/    22,  23,  30,  31,  38,  39,  46,  47,  54,  55,  62,  63,  70,  71,  78,  79,
-/*W16*/   86,  87,  94,  95 };
-template<class REG> static void set_bit(REG &reg, unsigned bit) {
-    reg[bit/reg[0].size()] |= 1UL << (bit % reg[0].size());
-}
+/*B0*/     0,   0,   0,   0,   1,   1,   1,   1,   8,   8,   8,   8,   9,   9,   9,   9,
+/*B16*/   16,  16,  16,  16,  17,  17,  17,  17,  24,  24,  24,  24,  25,  25,  25,  25,
+/*B32*/   32,  32,  32,  32,  33,  33,  33,  33,  40,  40,  40,  40,  41,  41,  41,  41,
+/*B48*/   48,  48,  48,  48,  49,  49,  49,  49,  56,  56,  56,  56,  57,  57,  57,  57,
+/*B64*/   64,  64,  64,  64,  65,  65,  65,  65,  72,  72,  72,  72,  73,  73,  73,  73,
+/*B80*/    2,   2,   2,   2,   3,   3,   3,   3,  10,  10,  10,  10,  11,  11,  11,  11,
+/*B96*/   18,  18,  18,  18,  19,  19,  19,  19,  26,  26,  26,  26,  27,  27,  27,  27,
+/*B112*/  34,  34,  34,  34,  35,  35,  35,  35,  42,  42,  42,  42,  43,  43,  43,  43,
+/*B128*/  50,  50,  50,  50,  51,  51,  51,  51,  58,  58,  58,  58,  59,  59,  59,  59,
+/*B144*/  66,  66,  66,  66,  67,  67,  67,  67,  74,  74,  74,  74,  75,  75,  75,  75,
+/*H0*/     4,   4,   5,   5,  12,  12,  13,  13,  20,  20,  21,  21,  28,  28,  29,  29,
+/*H16*/   36,  36,  37,  37,  44,  44,  45,  45,  52,  52,  53,  53,  60,  60,  61,  61,
+/*H32*/   68,  68,  69,  69,  76,  76,  77,  77,
+/*W0*/     6,   7,  14,  15,  22,  23,  30,  31,  38,  39,  46,  47,  54,  55,  62,  63,
+/*W16*/   70,  71,  78,  79, };
 
 template<class REG>
 void Flatrock::InputXbar::setup_byte_ixbar(REG &reg, const Input &input, int offset) {
@@ -245,8 +242,8 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
                 for (auto &input : group.second) {
                     for (int d : dconfig)
                         key32[input.lo/32U][d].key32 = input.what->reg.ixbar_id()/4U;
-                    set_bit(minput.minput_word_pwr[0],
-                            minput_word_pwr_transpose[input.what->reg.uid]);
+                    unsigned bit = minput_word_pwr_transpose[input.what->reg.uid];
+                    minput.minput_word_pwr_erf.minput_word_pwr[bit/4].data_chain1 |= 1U << (bit%4);
                     for (int x : xme_units) {
                         if (x < FIRST_STM_XME) continue;
                         minput.rf.minput_em_xb_stm_tab[(x-FIRST_STM_XME)/2].key32_used
@@ -255,8 +252,8 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
                 auto &key8 = em_key_cfg.minput_em_xb_key8;
                 for (auto &input : group.second) {
                     setup_byte_ixbar(key8, input, 0);
-                    set_bit(minput.minput_byte_pwr[0],
-                            minput_byte_pwr_transpose[input.what->reg.uid]);
+                    unsigned bit = minput_byte_pwr_transpose[input.what->reg.uid];
+                    minput.minput_byte_pwr_erf.minput_byte_pwr[bit/4].data_chain7 |= 1U << (bit%4);
                     for (int x : xme_units)
                         minput.rf.minput_em_xb_tab[x/2].key8_used |=
                             bitRange(input.lo/8U, input.hi/8U); } }
@@ -267,16 +264,33 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
             int base = group.first.index * 5;  // first byte for the group
             for (auto &input : group.second) {
                 setup_byte_ixbar(key8, input, base);
-                set_bit(minput.minput_byte_pwr[4 + group.first.index/4],
-                        minput_byte_pwr_transpose[input.what->reg.uid]); }
+                unsigned bit = minput_byte_pwr_transpose[input.what->reg.uid];
+                switch (group.first.index/4U) {
+                case 0:
+                    minput.minput_byte_pwr_erf.minput_byte_pwr[bit/4].data_chain2 |= 1U << (bit%4);
+                    break;
+                case 1:
+                    minput.minput_byte_pwr_erf.minput_byte_pwr[bit/4].data_chain3 |= 1U << (bit%4);
+                    break;
+                case 2:
+                    minput.minput_byte_pwr_erf.minput_byte_pwr[bit/4].data_chain4 |= 1U << (bit%4);
+                    break;
+                case 3:
+                    minput.minput_byte_pwr_erf.minput_byte_pwr[bit/4].data_chain5 |= 1U << (bit%4);
+                    break;
+                case 4:
+                    minput.minput_byte_pwr_erf.minput_byte_pwr[bit/4].data_chain6 |= 1U << (bit%4);
+                    break;
+                default:
+                    BUG("invalid ternary group %d", group.first.index); } }
             minput.rf.minput_scm_xb_tab[table->get_tcam_id()].key40_used |= 1U << group.first.index;
             break; }
         case Group::GATEWAY: {
             auto &gw_key_cfg = minput.rf.minput_gw_xb_vgd;
             for (auto &input : group.second) {
                 setup_byte_ixbar_gw(gw_key_cfg, input);
-                set_bit(minput.minput_byte_pwr[3],
-                        minput_byte_pwr_transpose[input.what->reg.uid]); }
+                unsigned bit = minput_byte_pwr_transpose[input.what->reg.uid];
+                minput.minput_byte_pwr_erf.minput_byte_pwr[bit/4].data_chain0 |= 1U << (bit%4); }
             break; }
         case Group::XCMP: {
             auto &xcmp_key_cfg = minput.minput_xcmp_xb_key_erf;
@@ -285,16 +299,16 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
                 for (auto &input : group.second) {
                     for (int d : dconfig)
                         key32[input.lo/32U][d].key32 = input.what->reg.ixbar_id()/4U;
-                    set_bit(minput.minput_word_pwr[1],
-                            minput_word_pwr_transpose[input.what->reg.uid]);
+                    unsigned bit = minput_word_pwr_transpose[input.what->reg.uid];
+                    minput.minput_word_pwr_erf.minput_word_pwr[bit/4].data_chain0 |= 1U << (bit%4);
                     minput.rf.minput_xcmp_xb_tab[table->physical_id].key32_used |=
                         bitRange(input.lo/32U, input.hi/32U); }
             } else {
                 auto &key8 = xcmp_key_cfg.minput_xcmp_xb_key8;
                 for (auto &input : group.second) {
                     setup_byte_ixbar(key8, input, 0);
-                    set_bit(minput.minput_byte_pwr[1],
-                            minput_byte_pwr_transpose[input.what->reg.uid]);
+                    unsigned bit = minput_byte_pwr_transpose[input.what->reg.uid];
+                    minput.minput_byte_pwr_erf.minput_byte_pwr[bit/4].data_chain1 |= 1U << (bit%4);
                     minput.rf.minput_xcmp_xb_tab[table->physical_id].key8_used |=
                         bitRange(input.lo/8U, input.hi/8U); } }
             break; }
@@ -321,13 +335,20 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
             for (int xme : xme_units) {
                 int xmu = xme/2;
                 if (prev_xmu == xmu) continue;
-                // DANGER -- for this config lambs/stms are SWAPPED (0-3 are stms
-                // and 4-7 are lambs) so we need ^4 to swap them
-                unsigned shift = (xmu ^ 4) * 20;
                 auto &bhash2 = minput.minput_em_bhash2_erf.minput_em_bhash2;
-                bhash2[shift/32] |= (byte << (shift%32)) & 0xffffffff;
-                if (shift%32 != 0)
-                    bhash2[shift/32 + 1] |= byte >> (32 - shift%32);
+                for (unsigned shift = 0; shift < 20; shift += 4) {
+                    switch (xmu) {
+                    // DANGER -- for this config lambs/stms are SWAPPED (0-3 are stms
+                    // and 4-7 are lambs)
+                    case 0: bhash2[shift/4].data_chain4 |= (byte >> shift) & 0xf; break;
+                    case 1: bhash2[shift/4].data_chain5 |= (byte >> shift) & 0xf; break;
+                    case 2: bhash2[shift/4].data_chain6 |= (byte >> shift) & 0xf; break;
+                    case 3: bhash2[shift/4].data_chain7 |= (byte >> shift) & 0xf; break;
+                    case 4: bhash2[shift/4].data_chain0 |= (byte >> shift) & 0xf; break;
+                    case 5: bhash2[shift/4].data_chain1 |= (byte >> shift) & 0xf; break;
+                    case 6: bhash2[shift/4].data_chain2 |= (byte >> shift) & 0xf; break;
+                    case 7: bhash2[shift/4].data_chain3 |= (byte >> shift) & 0xf; break;
+                    default: BUG("invalid xmu %d", xmu); } }
                 prev_xmu = xmu; }
             break; }
         case 1: {  // exact word hash
@@ -429,7 +450,7 @@ void Flatrock::InputXbar::write_xme_regs(Target::Flatrock::mau_regs::_ppu_eml &x
         match.entries_per_set = set_size;
         for (int i = 0; i < 16; ++i)
             match.key_mask[i] = key_mask.getrange(i*8, 8);
-        match.key_size = key_size;
+        match.key_and_v_size = key_size;
         match.sets_per_word = subword_bits;
         match.valid_en = valid_en;
         auto &payload = xmu.rf.eml_payload_cfg[xme%2U][d];
@@ -474,10 +495,12 @@ void InputXbar::write_xmu_regs(Target::Flatrock::mau_regs &regs) { write_xmu_reg
  * doing nothing */
 void Flatrock::InputXbar::write_global_regs(Target::Flatrock::mau_regs &regs, gress_t gress) {
     auto &minput = regs.ppu_minput;
-    for (auto reg : Phv::use(gress))
-        set_bit(minput.minput_byte_pwr[2], minput_byte_pwr_transpose[reg]);
-    // need all of bytes 0-4 to make gatewats work, if if they are unusued
+    for (auto reg : Phv::use(gress)) {
+        unsigned bit = minput_byte_pwr_transpose[reg];
+        minput.minput_dpreg_pwr_erf.minput_dpreg_pwr[bit/4].data_chain0 |= 1U << (bit%4); }
+    // need all of bytes 0-4 to make gateways work, if if they are unusued
     for (unsigned i = 0; i < 5; ++i) {
-        set_bit(minput.minput_byte_pwr[2], minput_byte_pwr_transpose[i]);
-        set_bit(minput.minput_byte_pwr[3], minput_byte_pwr_transpose[i]); }
+        unsigned bit = minput_byte_pwr_transpose[i];
+        minput.minput_dpreg_pwr_erf.minput_dpreg_pwr[bit/4].data_chain0 |= 1U << (bit%4);
+        minput.minput_byte_pwr_erf.minput_byte_pwr[bit/4].data_chain0 |= 1U << (bit%4); }
 }

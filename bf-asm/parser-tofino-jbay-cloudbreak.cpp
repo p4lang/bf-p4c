@@ -506,6 +506,9 @@ int Parser::get_prsr_max_dph() {
     prsr_dph_max = (prsr_dph_max + 0xf) & ~0xf;
     prsr_dph_max /= 16;
 
+    if (prsr_dph_max < 4)
+        prsr_dph_max = 4;
+
     return prsr_dph_max;
 }
 

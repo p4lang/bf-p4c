@@ -30,6 +30,12 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
   testdata/p4_16_samples/issue655-bmv2.p4
   )
 
+  # prsr_dph_max issue in model 20220910 update?
+  p4c_add_xfail_reason("tofino"
+    "mismatch from expected(.*) at byte .*"
+    extensions/p4_tests/p4_14/bf_p4c_samples/parser_dc_full.p4
+    )
+
   p4c_add_xfail_reason("tofino"
     "mismatch from expected(.*) at byte .*"
     # Needs stateful init regs support in simple test harness, this test passes

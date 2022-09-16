@@ -2451,10 +2451,6 @@ void FlatrockPseudoParser::write_config(RegisterSetBase &regs, json::map &json, 
     auto &_regs = dynamic_cast<Target::Flatrock::parser_regs &>(regs);
     _regs.pprsr.pprsr_pov_bmd_ext.st_start = pov_state_pos;
     _regs.pprsr.pprsr_pov_bmd_ext.flg_start = pov_flags_pos;
-    // _start registers should be hardcoded. Possible removal in future update.
-    _regs.pprsr.pprsr_comp_hdr_bmd_ext.off_start = 0;
-    _regs.pprsr.pprsr_comp_hdr_bmd_ext.id_start = 1;
-    _regs.pprsr.pprsr_comp_hdr_bmd_ext.len_start = 2;
     for (unsigned int i = 0; i < Target::Flatrock::PARSER_PHV_BUILDER_GROUPS; ++i) {
         phv_builder[i].write_config(regs, json, legacy);
     }

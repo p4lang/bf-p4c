@@ -51,18 +51,20 @@ generate:
       regs.mau_addrmap.h: [ decl ]
       regs.mau_addrmap.cpp: [ defn, -Iregs.mau_addrmap.h ]
       rewrite:
-        ppu_minput_rspec:
-          minput_phe_pwr_erf: [ scan_chain, minput_byte_pwr, [9, 7], rf.minput_phe_pwr_scnsl ]
-          minput_word_pwr_erf: [ scan_chain, minput_word_pwr, [2, 3], rf.minput_word_pwr_scnsl ]
+        #ppu_minput_rspec:
+        #  minput_phe_pwr_erf: [ scan_chain, minput_byte_pwr, [9, 7], rf.minput_phe_pwr_scnsl ]
+        #  minput_word_pwr_erf: [ scan_chain, minput_word_pwr, [2, 3], rf.minput_word_pwr_scnsl ]
         minput_em_bhash2_erf:
           minput_em_bhash2_scan: [ scan_chain, minput_em_bhash2, [5] ]
-        rf:
-          minput_phe_pwr_scnsl: [ delete ]
-          minput_word_pwr_scnsl: [ delete ]
-        #minput_byte_pwr_erf:
-        #  minput_phe_pwr_scan: [ scan_chain, minput_byte_pwr, [7] ]
-        #minput_word_pwr_erf:
-        #  minput_word_pwr_scan: [ scan_chain, minput_word_pwr, [3] ]
+        #rf:
+        #  minput_phe_pwr_scnsl: [ delete ]
+        #  minput_word_pwr_scnsl: [ delete ]
+        minput_dpreg_pwr_erf:
+          minput_dpreg_pwr_scan: [ scan_chain, minput_dpreg_pwr, [55] ]
+        minput_byte_pwr_erf:
+          minput_byte_pwr_scan: [ scan_chain, minput_byte_pwr, [55] ]
+        minput_word_pwr_erf:
+          minput_word_pwr_scan: [ scan_chain, minput_word_pwr, [20] ]
         #ppu_em_hu_rspec:
         #  em_bytehash_extrf: [ scan_chain, em_bytehash, [40, 12], em_bytehash_scansel ]
         #  em_bytehash_scansel: [ delete ]
@@ -99,12 +101,19 @@ ignore:
     # mdp_mem_rspec
   regs:
     # tfc_reg
+    - sys_addrmap
     - sbx_addrmap
-    - dvsl_addrmap
+    - tm_top_rspec
+    - ethp_rspec
     # fpp / fpp_rspec
-    - pbus_rspec
-    - prsr_pbus_regs_rspec
-    - pbus_station_regs_rspec
-    - mdp_pbus_regs_rspec
-    - pprsr_pbus_regs_rspec
-    - dprsr_pbus_regs_rspec
+    - ifcu_rspec
+    - pbus_station_regs_rspec  # prsr_pbus, mdp_pbus, pgr_pbus, pprsr_pbus, dprsr_pbus
+    - prsr_pbus_regs_rspec  # prsr_rings
+    - imrg_rspec
+    - mdp_pbus_regs_rspec  # mdp_rings
+    - pgr_pbus_regs_rspec  # pgr_rings
+    - lfltr_rspec
+    - mep_rspec
+    - pprsr_pbus_regs_rspec  # pprsr_rings
+    - emrg_rspec
+    - dprsr_pbus_regs_rspec  # dprsr_rings
