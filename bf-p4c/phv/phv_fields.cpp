@@ -1145,10 +1145,6 @@ PHV::FieldSlice::FieldSlice(
         le_bitrange slice_range = field_range.shiftedByBits(range_i.lo)
             .resizedToBits(range_i.size());
         alignment_i = FieldAlignment(slice_range);
-        if (field->name == "ingress::mtel_least_int.start_index" ||
-                field->name == "ingress::mtel_least_int.next_index")
-            LOG4("Adjusting alignment of field " << field->name << " to " << *alignment_i <<
-                    " for slice " << range);
     }
 
     // Calculate valid container range for this slice by shrinking
