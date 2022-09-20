@@ -226,6 +226,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     bool isUsedInParser(const PHV::Field* f) const;
     bool hasUseAt(const PHV::Field* f, const IR::BFN::Unit* u) const;
     bool hasDefAt(const PHV::Field* f, const IR::BFN::Unit* u) const;
+    bool hasDefInParser(const PHV::Field* f, boost::optional<le_bitrange> bits) const;
 };
 
 #endif /* _FIELD_DEFUSE_H_ */

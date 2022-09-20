@@ -91,7 +91,8 @@ bool RemoveMetadataInits::elim_assign(const IR::BFN::Unit* unit,
     if (b && b->value != false) return false;
 
     // Make sure the left side is a metadata field that is initially valid.
-    auto field = phv.field(left);
+    le_bitrange bits;
+    auto field = phv.field(left, &bits);
     if (!field) return false;
     if (!field->metadata) {
         LOG4("Unable to remove initialization of " << field->name
@@ -122,6 +123,22 @@ bool RemoveMetadataInits::elim_assign(const IR::BFN::Unit* unit,
                 LOG4("  " << output_dep.second);
         }
         return false;
+    }
+
+    // Handle case where field is defined in parser partially with zero-init def
+    // and partially with non-zero def. The two defs share byte bits.
+    // -----
+    // First check if zero-init is in parser
+    if (!(unit->is<IR::BFN::ParserState>() || unit->is<IR::BFN::Parser>())) return true;
+    // Second check byte alignment and look for other parser defs
+    if ((bits.lo % 8) || ((bits.hi % 8) && (field->size > bits.hi))) {
+        for (auto& def : defuse.getAllDefs(field->id)) {
+            if (def.first->is<IR::BFN::ParserState>() || def.first->is<IR::BFN::Parser>()) {
+                le_bitrange d_bits;
+                if (phv.field(def.second, &d_bits) && !d_bits.overlaps(bits))
+                    return false;
+            }
+        }
     }
 
     return true;

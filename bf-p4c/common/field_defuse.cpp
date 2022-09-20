@@ -200,6 +200,9 @@ void FieldDefUse::write(const PHV::Field *f, boost::optional<le_bitrange> range,
     // Update output_deps with the new def.
     locpair def(unit, e);
     for (auto old_def : info.def) {
+        le_bitrange old_range;
+        const PHV::Field *old_f = phv.field(old_def.second, &old_range);
+        if (old_f && range && !range->overlaps(old_range)) continue;
         LOG4("  " << def << " overwrites " << old_def);
         output_deps[def].insert(old_def);
     }
@@ -571,6 +574,26 @@ bool FieldDefUse::hasDefAt(const PHV::Field* f, const IR::BFN::Unit* u) const {
         if (def.first == u) return true;
     return false;
 }
+
+bool FieldDefUse::hasDefInParser(const PHV::Field* f, boost::optional<le_bitrange> bits) const {
+    le_bitrange range = bits ? *bits : StartLen(0, f->size);
+    LOG1("\thasDefInParser range: " << range);
+
+    auto parserRangeDef =
+        [&](const locpair& lp) {
+            le_bitrange rng;
+            if (!(lp.first->is<IR::BFN::ParserState>() || lp.first->is<IR::BFN::Parser>()))
+                return false;
+
+            // Cannot extract field - e.g. ImplicitParserInit
+            if (!phv.field(lp.second, &rng)) return false;
+            LOG1("\t  hasDefInParser rng: " << rng);
+            return (range.overlaps(rng));
+        };
+
+    return std::any_of(getAllDefs(f->id).begin(), getAllDefs(f->id).end(), parserRangeDef);
+}
+
 
 void FieldDefUse::end_apply(const IR::Node *) {
     // Get all uninitialized fields

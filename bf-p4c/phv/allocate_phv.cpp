@@ -1783,7 +1783,8 @@ bool CoreAllocation::satisfies_constraints(
     for (auto cand_sl : candidate_slices) {
         if (slice == cand_sl) break;
         if (slice.container() != cand_sl.container()) continue;
-        if (!slice.container_bytes().overlaps(cand_sl.container_bytes())) continue;
+        if (!(Device::currentDevice() == Device::TOFINO) &&
+            !slice.container_bytes().overlaps(cand_sl.container_bytes())) continue;
 
         hasOtherUninitializedRead = cand_sl.field()->pov ||
             (utils_i.defuse.hasUninitializedRead(cand_sl.field()->id) &&
@@ -1794,7 +1795,19 @@ bool CoreAllocation::satisfies_constraints(
                                                                           cand_sl.field()) ||
             slice.field()->header() == cand_sl.field()->header();
 
+        // Update defs of extracted if both slices belong to same field
+        if (slice.field()->id == cand_sl.field()->id) {
+            isThisSliceExtracted = !slice.field()->pov &&
+                utils_i.uses.is_extracted_from_pkt(slice.field()) &&
+                utils_i.defuse.hasDefInParser(slice.field(), slice.field_slice());
+            hasOtherExtracted = !cand_sl.field()->pov &&
+                utils_i.uses.is_extracted_from_pkt(cand_sl.field()) &&
+                utils_i.defuse.hasDefInParser(cand_sl.field(), cand_sl.field_slice());
+            hasExtractedTogether = (isThisSliceExtracted && hasOtherExtracted);
+        }
+
         LOG_DEBUG7(TAB1 "  candidate slice: " << cand_sl << std::endl <<
+                   TAB2 "isThisSliceExtracted:" << isThisSliceExtracted << std::endl <<
                    TAB2 "hasOtherUninitialized:" << hasOtherUninitializedRead << std::endl <<
                    TAB2 "hasOtherExtracted:" << hasOtherExtracted << std::endl <<
                    TAB2 "hasExtractedTogether:" << hasExtractedTogether << std::endl);
