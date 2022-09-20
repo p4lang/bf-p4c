@@ -1366,10 +1366,12 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/glass/embedway/COMPILER-765/parser_tcp_ip_option_mul.p4
 )
 
-p4c_add_xfail_reason("tofino"
-    "error: Ran out of tcam space in ingress parser"
-    extensions/p4_tests/p4_16/compile_only/simple_l3_nexthop_ipv6_options.p4
-)
+if (NOT ENABLE_ALT_PHV_ALLOC)
+    p4c_add_xfail_reason("tofino"
+      "error: Ran out of tcam space in ingress parser"
+      extensions/p4_tests/p4_16/compile_only/simple_l3_nexthop_ipv6_options.p4
+    )
+endif()
 
 p4c_add_xfail_reason("tofino"
   "Cannot unify type"
@@ -1830,13 +1832,16 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/p4c-2752.p4
 )
 
-# P4C-3914
-p4c_add_xfail_reason("tofino"
-  "error: Size of learning quanta is [0-9]+ bytes, greater than the maximum allowed 48 bytes.
+
+if (NOT ENABLE_ALT_PHV_ALLOC)
+    # P4C-3914
+    p4c_add_xfail_reason("tofino"
+      "error: Size of learning quanta is [0-9]+ bytes, greater than the maximum allowed 48 bytes.
 Compiler will improve allocation of learning fields in future releases.
 Temporary fix: try to apply @pa_container_size pragma to small fields allocated to large container in. Here are possible useful progmas you can try: .*"
-  extensions/p4_tests/p4_16/compile_only/p4c-3914.p4
-)
+      extensions/p4_tests/p4_16/compile_only/p4c-3914.p4
+    )
+endif()
 
 # P4C update 2021-07-12
 # At frontend because there is
@@ -2003,11 +2008,13 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-dpdk-errorcode-2.p4
 )
 
-# p4c update 03/03/2022 (new test)
-p4c_add_xfail_reason("tofino"
-  "error: PHV allocation was not successful"
-  testdata/p4_16_samples/structure-valued-expr-ok-1-bmv2.p4
-)
+if (NOT ENABLE_ALT_PHV_ALLOC)
+  # p4c update 03/03/2022 (new test)
+  p4c_add_xfail_reason("tofino"
+    "error: PHV allocation was not successful"
+    testdata/p4_16_samples/structure-valued-expr-ok-1-bmv2.p4
+  )
+endif()
 
 # p4c update (new test)
 p4c_add_xfail_reason("tofino"

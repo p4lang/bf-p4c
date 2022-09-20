@@ -243,11 +243,13 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/issue894.p4
 )
 
-# Failed after P4C-4507
-p4c_add_xfail_reason("tofino2"
-  "tofino2 supports up to 20 stages, using"
-  extensions/p4_tests/p4_16/compile_only/p4c-3175.p4
-)
+if (NOT ENABLE_ALT_PHV_ALLOC)
+    # Failed after P4C-4507
+    p4c_add_xfail_reason("tofino2"
+      "tofino2 supports up to 20 stages, using"
+      extensions/p4_tests/p4_16/compile_only/p4c-3175.p4
+    )
+endif()
 
 # Not being tracked by JBay regression yet
 p4c_add_xfail_reason("tofino2"
@@ -369,7 +371,7 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "PHV allocation was not successful"
+  "PHV allocation was not successful|PHV fitting failed, 1 clusters cannot be allocated."
   extensions/p4_tests/p4_16/stf/auto_init_meta2.p4
 )
 
@@ -426,13 +428,15 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_14/ptf/sful_split1.p4
 )
 
-# P4C-3914
-p4c_add_xfail_reason("tofino2"
-  "error: Size of learning quanta is [0-9]+ bytes, greater than the maximum allowed 48 bytes.
+if (NOT ENABLE_ALT_PHV_ALLOC)
+    # P4C-3914
+    p4c_add_xfail_reason("tofino2"
+      "error: Size of learning quanta is [0-9]+ bytes, greater than the maximum allowed 48 bytes.
 Compiler will improve allocation of learning fields in future releases.
 Temporary fix: try to apply @pa_container_size pragma to small fields allocated to large container in. Here are possible useful progmas you can try: .*"
-  extensions/p4_tests/p4_16/compile_only/p4c-3914.p4
-)
+      extensions/p4_tests/p4_16/compile_only/p4c-3914.p4
+    )
+endif()
 
 # P4C-3922 - Fail with both python3 + bf-pktpy and python2 + scapy environments
 p4c_add_xfail_reason("tofino2"

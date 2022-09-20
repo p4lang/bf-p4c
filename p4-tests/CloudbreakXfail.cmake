@@ -164,10 +164,14 @@ p4c_add_xfail_reason("tofino3"
 
 p4c_add_xfail_reason("tofino3"
   "error: This program violates action constraints imposed by Tofino3"
-  extensions/p4_tests/p4_16/ptf/int_transit.p4
   extensions/p4_tests/p4_16/customer/kaloom/p4c-2573-spine.p4
   extensions/p4_tests/p4_16/customer/kaloom/p4c-2410-spine.p4
   extensions/p4_tests/p4_16/customer/kaloom/spine-app.p4
+)
+
+p4c_add_xfail_reason("tofino3"
+  "error: This program violates action constraints imposed by Tofino3|error: Trivial allocator has found unsatisfiable constraints."
+  extensions/p4_tests/p4_16/ptf/int_transit.p4
 )
 
 # These tests fail at runtime with the driver
@@ -400,7 +404,7 @@ p4c_add_xfail_reason("tofino3"
 
 # P4C-2836
 p4c_add_xfail_reason("tofino3"
-  "error: Some fields cannot be allocated because of unsatisfiable constraints."
+  "error: Some fields cannot be allocated because of unsatisfiable constraints.|error: Trivial allocator has found unsatisfiable constraints."
   extensions/p4_tests/p4_16/compile_only/ssub_illegal_pack.p4
 )
 
@@ -431,7 +435,7 @@ p4c_add_xfail_reason("tofino3"
 )
 
 p4c_add_xfail_reason("tofino3"
-  "PHV allocation was not successful"
+  "PHV allocation was not successful|PHV fitting failed, 1 clusters cannot be allocated."
   extensions/p4_tests/p4_16/stf/auto_init_meta2.p4
 )
 

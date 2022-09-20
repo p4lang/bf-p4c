@@ -19,6 +19,7 @@ OPTION(ENABLE_GTESTS "Enable building and running GTest unit tests" ON)
 OPTION(ENABLE_DOXYGEN "Build Doxygen-based developer documentation" ON)
 OPTION(FIXED_LIBDYNHASH "Use future version of the Dynamic hash library" OFF)
 OPTION(INSTALL_LIBDYNHASH "Install the Dynamic hash library" OFF)
+OPTION(ENABLE_ALT_PHV_ALLOC "Enable the alternative PHV allocator" OFF)
 
 # BUILD_STATIC_BFP4C_LIBS should never be used directly, see BUILD_STATIC_BFP4C_LIBS_INTERNAL below
 OPTION(BUILD_STATIC_BFP4C_LIBS OFF "Build static libs (archives) of bf-p4c components \
