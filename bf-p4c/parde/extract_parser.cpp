@@ -1221,6 +1221,8 @@ struct RewriteParserStatements : public Transform {
             if (auto* method = mc->method->to<IR::Member>()) {
                 if (isExtern(method, "Checksum")) {
                     // checksums are rewritten in RewriteParserChecksums
+                    // we save the bit offset for get that is not preceded by subtract
+                    bitOffsets[mc] = currentBit;
                     return nullptr;
                 }
             }
@@ -1523,7 +1525,10 @@ struct RewriteParserChecksums : public Transform {
         auto deposit = (*call->arguments)[0]->expression;
         auto mem = deposit->to<IR::Member>();
         const auto it = bitOffsets.find(call);
-        BUG_CHECK(it != bitOffsets.end(), "Bit offset for %1% not available");
+        BUG_CHECK(it != bitOffsets.end(), "Bit offset for %1% not available", call);
+        // This can create negative endPos, which means that the csum computation
+        // should have ended a byte earlier
+        // This will be taken care of later by Find/RemoveNegativeDeposits
         auto endByte = new IR::BFN::PacketRVal(StartLen(it->second - 8, 8));
         auto get = new IR::BFN::ChecksumResidualDeposit(declName,
                                               new IR::BFN::FieldLVal(mem), endByte);
@@ -1586,12 +1591,20 @@ struct RewriteParserChecksums : public Transform {
                         ::warning(
                             "checksum.get() will deprecate in future versions. Please use"
                             " void subtract_all_and_deposit(bit<16>) instead");
-                        if (!lastChecksumSubtract || !lastSubtractField) {
-                            ::fatal_error(
-                                "Checksum \"get\" must have preceding \"subtract\""
-                                " call in the same parser state");
+                        int endPos = 0;
+                        // If there was a subtract set the endPos to the last one
+                        if (lastChecksumSubtract && lastSubtractField) {
+                            endPos = getHeaderEndPos();
+                        // Otherwise set it to the last byte given by the bitOffset
+                        } else {
+                            const auto it = bitOffsets.find(mc);
+                            BUG_CHECK(it != bitOffsets.end(),
+                                      "Bit offset for %1% not available", mc);
+                            // This can create negative endPos, which means that the csum
+                            // should have ended a byte earlier
+                            // This will be taken care of later by Find/RemoveNegativeDeposits
+                            endPos = it->second - 8;
                         }
-                        auto endPos = getHeaderEndPos();
                         auto endByte = new IR::BFN::PacketRVal(StartLen(endPos, 8));
                         auto get = new IR::BFN::ChecksumResidualDeposit(
                             declName, new IR::BFN::FieldLVal(lhs), endByte);

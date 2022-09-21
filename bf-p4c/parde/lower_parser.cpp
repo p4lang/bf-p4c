@@ -31,6 +31,7 @@
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/parde/dump_parser.h"
 #include "bf-p4c/parde/split_parser_state.h"
+#include "bf-p4c/parde/parde_utils.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/pragma/pa_no_init.h"
 #include "bf-p4c/mau/mau_visitor.h"
@@ -2080,6 +2081,101 @@ struct ElimEmptyState : public ParserTransform {
     }
 };
 
+/// Find all of the states that do a checksum deposit
+/// but also does not extract/shift before doing it
+/// (= the end_pos is negative) and also
+/// all of the states from which we can get via 0 shift to
+/// a state that does this negative checksum deposit
+struct FindNegativeDeposits : public ParserInspector {
+ public:
+    std::set<cstring> states_to_shift;
+
+    FindNegativeDeposits() { }
+
+ private:
+    // Find any csum deposit with negative transition and add it's parser state
+    void postorder(const IR::BFN::ChecksumResidualDeposit* crd) override {
+        auto ps = findContext<IR::BFN::ParserState>();
+        if (!ps)
+            return;
+        if (crd->header_end_byte && crd->header_end_byte->range.lo < 0) {
+            LOG5("FindNegativeDeposits: State "<< ps->name <<
+                    " tagged to be updated as it does negative deposit.");
+            states_to_shift.insert(ps->name);
+        }
+    }
+
+    // Tag also all of the parser states with zero shift leading to an added state
+    // (to find and include every state after the last extract)
+    void postorder(const IR::BFN::Transition* t) override {
+        if (t->shift != 0 || !t->next || !states_to_shift.count(t->next->name))
+            return;
+        auto ps = findContext<IR::BFN::ParserState>();
+        if (!ps)
+            return;
+        LOG5("FindZeroShiftDeposits: State "<< ps->name <<
+             " tagged to be updated since we can get to a negative deposit via 0 shift.");
+        states_to_shift.insert(ps->name);
+    }
+};
+
+/// Update the IR so that every checksum deposit can also
+/// shift by at least one.
+/// To do this for any state that does a negative deposit
+/// we change the shift to 1 and decrease any shifts in the states
+/// leading into this one.
+struct RemoveNegativeDeposits : public ParserTransform {
+    const FindNegativeDeposits& found;
+
+    explicit RemoveNegativeDeposits(const FindNegativeDeposits& found) :
+        found(found) { }
+
+ private:
+    // Update any transition leading to the tagged state to leave 1 byte
+    IR::Node* preorder(IR::BFN::Transition* tr) {
+        if (tr->shift == 0 || !tr->next || !found.states_to_shift.count(tr->next->name))
+            return tr;
+        auto new_tr = tr->clone();
+        new_tr->shift = tr->shift - 1;
+        auto ps = findContext<IR::BFN::ParserState>();
+        LOG4("RemoveNegativeDeposits: Transition from " << (ps ? ps->name : "--unknown--") <<
+             " to " << tr->next->name << " changed shift: " <<
+             tr->shift << "->" << new_tr->shift);
+        return new_tr;
+    }
+
+    // Shift PacketRVals in every state that was found by one byte
+    // Also update transitions from this state that lead outside of the tagged path
+    // to shift by one more byte (to get rid of the extra 1 byte left over)
+    IR::Node* preorder(IR::BFN::ParserState* ps) {
+        if (!found.states_to_shift.count(ps->name))
+            return ps;
+        const int shift_amt = -8;
+        auto new_ps = ps->clone();
+        LOG4("RemoveNegativeDeposits: Shifting every PacketRVal in state " << ps->name <<
+             " by one byte.");
+        new_ps->statements = *(new_ps->statements.apply(ShiftPacketRVal(shift_amt)));
+        new_ps->selects = *(new_ps->selects.apply(ShiftPacketRVal(shift_amt)));
+        IR::Vector<IR::BFN::Transition> new_transitions;
+        for (auto tr : ps->transitions) {
+            auto new_tr = tr->clone();
+            // Decrease only shifts leading outside of the tagged path
+            // Inside the tagged path (= shift of 0 to the actual csum state)
+            // we want to propagate the single extra unshifted byte
+            if (!tr->next || !found.states_to_shift.count(tr->next->name)) {
+                new_tr->shift = tr->shift - shift_amt/8;
+                LOG4("RemoveNegativeDeposits: Transition from " << ps->name << " to " <<
+                     (tr->next ? tr->next->name : "--END--") <<
+                     " changed: " << tr->shift << "->" << new_tr->shift);
+            }
+            new_tr->saves = *(new_tr->saves.apply(ShiftPacketRVal(shift_amt)));
+            new_transitions.push_back(new_tr);
+        }
+        new_ps->transitions = new_transitions;
+        return new_ps;
+    }
+};
+
 // After parser lowering, we have converted the parser IR from P4 semantic (action->match)
 // to HW semantic (match->action), there may still be opportunities where we can merge states
 // where we couldn't before lowering (without breaking the P4 semantic).
@@ -2124,7 +2220,7 @@ struct MergeLoweredParserStates : public ParserTransform {
         if (state->select->regs.empty() && state->select->counters.empty())
             return state->transitions[0];
 
-        // Detect if all transitions acutally do the same thing and branch/loop to
+        // Detect if all transitions actually do the same thing and branch/loop to
         // the same state.  That represents another type of unconditional match.
         auto first_transition = state->transitions[0];
         for (auto &transition : state->transitions) {
@@ -2144,6 +2240,66 @@ struct MergeLoweredParserStates : public ParserTransform {
             BUG_CHECK(rval->range.lo >= 0, "Shifting extract to negative position.");
             if (rval->range.hi >= Device::pardeSpec().byteInputBufferSize())
                 oob = true;
+            return true;
+        }
+    };
+
+    // Checksum also needs the masks to be shifted
+    struct RightShiftCsumMask : public Modifier {
+        int byteDelta = 0;
+        bool oob = false;
+        bool swapMalform = false;
+
+        explicit RightShiftCsumMask(int byteDelta) : byteDelta(byteDelta) { }
+
+        bool preorder(IR::BFN::LoweredParserChecksum* csum) override {
+            if (byteDelta == 0 || oob || swapMalform)
+                return false;
+            std::set<nw_byterange> new_masked_ranges;
+            for (auto m : csum->masked_ranges) {
+                nw_byterange new_m(m.lo, m.hi);
+                new_m = m.shiftedByBytes(byteDelta);
+                BUG_CHECK(new_m.lo >= 0, "Shifting csum mask to negative position.");
+                if (new_m.hi >= Device::pardeSpec().byteInputBufferSize()) {
+                    oob = true;
+                    return false;
+                }
+                new_masked_ranges.insert(new_m);
+            }
+            csum->masked_ranges = new_masked_ranges;
+            // We can only shift fullzero or fullones swap by odd number of bytes
+            // Let's assume we have the following csum computation:
+            // mask: [ 0, 1, 2..3, ...]
+            // swap: 0b0...01
+            // This essentially means that the actual computation should work with
+            // the following order of the bytes:
+            // 1 0 2 3
+            // Now we shift is by 1 byte:
+            // mask: [ 1, 2, 3..4, ...]
+            // This gives us the following order of bytes that we need:
+            // 2 1 3 4
+            // This means that byte 2 needs to be taken as the top byte, but
+            // also the byte 3 needs to be taken as the top byte, which is impossible.
+            // swap: 0b1...101 uses the wrong position of byte 3
+            // swap: 0b1...111 uses the wrong position of byte 2
+            if ((byteDelta % 2) && csum->swap != 0 && csum->swap != ~(unsigned)0) {
+                swapMalform = true;
+                return false;
+            }
+            // Update swap vector (it needs to be shifted by half of byteDelta)
+            csum->swap = csum->swap << byteDelta/2;
+            // Additionally if we shifted by an odd ammount we need to negate the swap
+            if (byteDelta % 2)
+                csum->swap = ~csum->swap;
+            if (csum->end) {
+                BUG_CHECK(-byteDelta <= (int)csum->end_pos,
+                          "Shifting csum end to negative position.");
+                csum->end_pos += byteDelta;
+                if (csum->end_pos >= (unsigned)Device::pardeSpec().byteInputBufferSize()) {
+                    oob = true;
+                    return false;
+                }
+            }
             return true;
         }
     };
@@ -2171,6 +2327,7 @@ struct MergeLoweredParserStates : public ParserTransform {
             return false;
 
         RightShiftPacketRVal shifter(a->shift);
+        RightShiftCsumMask csum_shifter(a->shift);
 
         for (auto e : b->extracts)
             e->apply(shifter);
@@ -2178,13 +2335,15 @@ struct MergeLoweredParserStates : public ParserTransform {
         for (auto e : b->saves)
             e->apply(shifter);
 
-        for (auto e : b->checksums)
+        for (auto e : b->checksums) {
             e->apply(shifter);
+            e->apply(csum_shifter);
+        }
 
         for (auto e : b->counters)
             e->apply(shifter);
 
-        if (shifter.oob)
+        if (shifter.oob || csum_shifter.oob || csum_shifter.swapMalform)
             return false;
 
         return true;
@@ -2193,6 +2352,7 @@ struct MergeLoweredParserStates : public ParserTransform {
     void do_merge(IR::BFN::LoweredParserMatch* match,
                   const IR::BFN::LoweredParserMatch* next) {
         RightShiftPacketRVal shifter(match->shift);
+        RightShiftCsumMask csum_shifter(match->shift);
 
         for (auto e : next->extracts) {
             auto s = e->apply(shifter);
@@ -2206,7 +2366,8 @@ struct MergeLoweredParserStates : public ParserTransform {
 
         for (auto e : next->checksums) {
             auto s = e->apply(shifter);
-            match->checksums.push_back(s->to<IR::BFN::LoweredParserChecksum>());
+            auto cs = s->apply(csum_shifter);
+            match->checksums.push_back(cs->to<IR::BFN::LoweredParserChecksum>());
         }
 
         for (auto e : next->counters) {
@@ -2308,6 +2469,7 @@ struct LowerParserIR : public PassManager {
         auto* allocateParserChecksums = new AllocateParserChecksums(phv, clotInfo);
         auto* parser_info = new CollectParserInfo;
         auto* lower_parser_info = new CollectLoweredParserInfo;
+        auto* find_negative_deposits = new FindNegativeDeposits;
         auto* computeLoweredParserIR = new ComputeLoweredParserIR(
             phv, clotInfo, *allocateParserChecksums, origParserZeroInitContainers);
 #ifdef HAVE_FLATROCK
@@ -2324,6 +2486,8 @@ struct LowerParserIR : public PassManager {
             new ResolveParserConstants(phv, clotInfo),
             new ParserCopyProp(phv),
             new SplitParserState(phv, clotInfo),
+            find_negative_deposits,
+            new RemoveNegativeDeposits(*find_negative_deposits),
             new AllocateParserMatchRegisters(phv),
             LOGGING(4) ? new DumpParser("before_elim_empty_states") : nullptr,
             parser_info,
