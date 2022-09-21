@@ -199,3 +199,8 @@ with a constant argument 8w0 in one of the states in the loop to make the checks
 even number of bytes."
   extensions/p4_tests/p4_16/errors/p4c-4771-error-loop.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "error: .*: Invalid local variable entry in checksum calculation .*"
+  extensions/p4_tests/p4_16/errors/p4c-3477.p4
+)

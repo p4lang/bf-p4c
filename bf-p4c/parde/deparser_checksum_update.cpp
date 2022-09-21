@@ -317,7 +317,13 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment,
             LOG4("checksum update includes field:" << source);
 
         } else {
-            :: error("Invalid entry in checksum calculation %1%", source);
+            cstring entry_type = " ";
+            if (source->is<IR::TempVar>())
+                entry_type = " local variable ";
+            ::error(ErrorType::ERR_UNSUPPORTED,
+                    "%1%: Invalid%2%entry in checksum calculation %3%\n"
+                    "  Currently only zero-constants and metadata/headers or their "
+                    "fields are supported as entries", methodCall, entry_type, source);
         }
     }
     auto listInfo = reorderFields(headerToFields, destField);
