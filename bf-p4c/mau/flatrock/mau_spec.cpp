@@ -6,8 +6,9 @@ IR::Node *FlatrockMauSpec::postTransformTables(IR::MAU::Table *tbl) const {
         // run_table miss action to do anything.
         for (auto &gw : tbl->gateway_rows) {
             if (!gw.second) {
-                gw.second = tbl->get_default_action()->name;
-                BUG_CHECK(gw.second, "No default action in %s", tbl); }
+                BUG_CHECK(tbl->get_default_action(), "No default action in %s", tbl);
+                gw.second = tbl->get_default_action()->name.name;
+                BUG_CHECK(gw.second, "No default action name in %s", tbl); }
             if (tbl->actions.count(gw.second))
                 tbl->gateway_payload[gw.second].first = gw.second;
             else

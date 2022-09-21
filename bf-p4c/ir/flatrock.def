@@ -330,7 +330,7 @@ class AnalyzerStage {
 }
 
 class PhvBuilderExtract {
-    int index;
+    int index = -1;
 #emit
     static constexpr decltype(match_t::word0) match_all =
         (1ULL << (::Flatrock::PARSER_POV_SELECT_NUM * 8)) - 1;  // all-match by default
