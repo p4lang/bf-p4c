@@ -222,10 +222,6 @@ void ActionDataBus::update(const IR::MAU::Table *tbl) {
     ::ActionDataBus::update(tbl->name, tbl->resources, tbl);
 }
 
-std::unique_ptr<::ActionDataBus> ActionDataBus::clone() const {
-    return std::unique_ptr<::ActionDataBus>(new ActionDataBus(*this));
-}
-
 std::ostream &operator<<(std::ostream &out, const ActionDataBus &adb) {
     // Outputs as "Word ADB | Byte ADB"
     auto ABUS8 = ActionDataBus::ABUS8;

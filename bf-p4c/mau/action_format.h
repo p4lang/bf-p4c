@@ -4,7 +4,6 @@
 #include <array>
 #include <iterator>
 #include <map>
-#include "lib/alloc.h"
 #include "lib/bitops.h"
 #include "lib/bitvec.h"
 #include "lib/ordered_set.h"

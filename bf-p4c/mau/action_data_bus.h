@@ -3,7 +3,6 @@
 
 #include "bf-p4c/mau/table_layout.h"
 #include "bf-p4c/mau/action_format.h"
-#include "lib/alloc.h"
 #include "lib/safe_vector.h"
 
 /** Algorithm for the allocation of the action data bus.  The action data bus is broken into
@@ -144,7 +143,6 @@ struct ActionDataBus {
 
     static ActionDataBus *create();
     static int getAdbSize();
-    virtual std::unique_ptr<ActionDataBus> clone() const = 0;
     friend std::ostream &operator<<(std::ostream &out, const ActionDataBus &adb);
 };
 

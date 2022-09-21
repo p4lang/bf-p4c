@@ -10,6 +10,8 @@ namespace BFN {
 template<class T> class Alloc1Dbase {
     int         size;
     T           *data;
+    Alloc1Dbase() = delete;
+    Alloc1Dbase(const Alloc1Dbase &) = delete;
 
  protected:
     explicit Alloc1Dbase(int sz) : size(sz) {
@@ -19,7 +21,6 @@ template<class T> class Alloc1Dbase {
     virtual ~Alloc1Dbase() { delete [] data; }
 
  public:
-    Alloc1Dbase(const Alloc1Dbase &) = default;
     typedef T *iterator;
     typedef T *const_iterator;
     T &operator[](int i) {
@@ -65,6 +66,8 @@ template<class T> class Alloc2Dbase {
         U *begin() const { return row; }
         U *end() const { return row + ncols; }
     };
+    Alloc2Dbase() = delete;
+    Alloc2Dbase(const Alloc2Dbase &) = delete;
 
  protected:
     Alloc2Dbase(int r, int c) : nrows(r), ncols(c) {
@@ -75,7 +78,6 @@ template<class T> class Alloc2Dbase {
     virtual ~Alloc2Dbase() { delete [] data; }
 
  public:
-    Alloc2Dbase(const Alloc2Dbase &) = default;
     rowref<T> operator[](int i) {
         if (i < 0 || i >= nrows) throw std::out_of_range("Alloc2D");
         return rowref<T>(data+i*ncols, ncols); }

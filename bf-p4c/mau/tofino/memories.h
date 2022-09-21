@@ -9,7 +9,6 @@
 #include "bf-p4c/mau/action_format.h"
 #include "bf-p4c/mau/memories.h"
 #include "ir/ir.h"
-#include "lib/alloc.h"
 #include "lib/safe_vector.h"
 
 namespace Tofino {

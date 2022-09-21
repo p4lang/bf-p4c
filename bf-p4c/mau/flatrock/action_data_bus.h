@@ -4,7 +4,6 @@
 #include "bf-p4c/mau/action_data_bus.h"
 #include "bf-p4c/mau/table_layout.h"
 #include "bf-p4c/mau/action_format.h"
-#include "lib/alloc.h"
 #include "lib/autoclone.h"
 #include "lib/safe_vector.h"
 #include "bf-p4c/common/alloc.h"
@@ -56,8 +55,6 @@ struct ActionDataBus : public ::ActionDataBus {
     void update(cstring name, const ::ActionDataBus::Use &) override;
     void update(cstring name, const Use::ReservedSpace &rs) override;
     void update(const IR::MAU::Table *tbl) override;
-
-    virtual std::unique_ptr<::ActionDataBus> clone() const;
 };
 
 std::ostream &operator<<(std::ostream &out, const ActionDataBus &adb);

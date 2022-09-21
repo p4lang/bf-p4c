@@ -31,10 +31,6 @@ void ActionDataBus::clear() {
     action_ixbars.clear();
 }
 
-std::unique_ptr<::ActionDataBus> ActionDataBus::clone() const {
-    return std::unique_ptr<::ActionDataBus>(new ActionDataBus(*this));
-}
-
 bool ActionDataBus::operator==(const ActionDataBus &adb) const {
     if (cont_use != adb.cont_use) return false;
     if (total_use != adb.total_use) return false;

@@ -11,7 +11,6 @@
 #include <unordered_map>
 
 #include "algorithm.h"
-#include "alloc.h"
 #include "asm-types.h"
 #include "bitvec.h"
 #include "constants.h"

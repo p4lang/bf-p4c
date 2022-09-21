@@ -6,7 +6,6 @@
 #include "bf-p4c/mau/input_xbar.h"
 #include "bf-p4c/mau/action_format.h"
 #include "ir/ir.h"
-#include "lib/alloc.h"
 #include "lib/safe_vector.h"
 #include "bf-p4c/common/alloc.h"
 

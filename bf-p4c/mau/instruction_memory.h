@@ -3,7 +3,6 @@
 
 #include "bf-p4c/mau/table_layout.h"
 #include "bf-p4c/ir/gress.h"
-#include "lib/alloc.h"
 #include "bf-p4c/common/alloc.h"
 
 class GenerateVLIWInstructions {

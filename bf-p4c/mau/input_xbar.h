@@ -15,7 +15,6 @@
 #include "bf-p4c/mau/table_layout.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "ir/ir.h"
-#include "lib/alloc.h"
 #include "lib/hex.h"
 #include "lib/safe_vector.h"
 

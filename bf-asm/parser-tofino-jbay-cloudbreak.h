@@ -8,7 +8,6 @@
 #include "parser.h"
 #include "sections.h"
 #include "phv.h"
-#include "alloc.h"
 #include "bitvec.h"
 #include "ubits.h"
 #include "target.h"

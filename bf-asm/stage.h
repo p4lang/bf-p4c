@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "tables.h"
-#include "alloc.h"
 #include "bitvec.h"
 #include "input_xbar.h"
 #include "bf-p4c/common/alloc.h"
