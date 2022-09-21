@@ -531,3 +531,8 @@ p4c_add_xfail_reason("tofino3"
   # Error during runtime, unknown reason.
   extensions/p4_tests/p4_16/ptf/clone_v1model.p4
 )
+
+p4c_add_xfail_reason("tofino3"
+  "error: Mixing non-greedy and greedy extracted fields in select statement is unsupported"
+  extensions/p4_tests/p4_16/cloudbreak/p4c-4841.p4
+)

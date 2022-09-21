@@ -800,10 +800,22 @@ void GetBackendParser::addTransition(IR::BFN::ParserState* state, match_t matchV
 /// If the input is not such an expression the result will contain nullptr as
 /// the first member of the tuple.
 boost::optional<nw_bitrange>
-lookaheadToExtractRange(P4::TypeMap* typeMap, const IR::Expression* expr, int currentBit) {
+lookaheadToExtractRange(P4::TypeMap* typeMap, const IR::Expression* expr, int currentBit,
+                        bool *partial_hdr_err_proc) {
+    *partial_hdr_err_proc = false;
     if (auto* call = expr->to<IR::MethodCallExpression>()) {
+        bool is_lookahead = false;
         if (auto* mem = call->method->to<IR::Member>()) {
             if (mem->member == "lookahead") {
+                is_lookahead = true;
+            }
+        } else if (auto* pathex = call->method->to<IR::PathExpression>()) {
+            if (pathex->path->name == "lookahead_greedy") {
+                is_lookahead = true;
+                *partial_hdr_err_proc = true;
+            }
+        }
+        if (is_lookahead) {
                 BUG_CHECK(call->typeArguments->size() == 1,
                           "Expected 1 type parameter for %1%", call);
 
@@ -818,11 +830,11 @@ lookaheadToExtractRange(P4::TypeMap* typeMap, const IR::Expression* expr, int cu
                 int width = typeMap->widthBits(expr->type, expr, false);
                 BUG_CHECK(width > 0, "Non-positive width for lookahead type %1%", expr->type);
                 return nw_bitrange(StartLen(currentBit, width));
-            }
         }
 
     } else if (auto* slice = expr->to<IR::Slice>()) {
-        auto range = lookaheadToExtractRange(typeMap, slice->e0, currentBit);
+        auto range = lookaheadToExtractRange(typeMap, slice->e0, currentBit,
+                                             partial_hdr_err_proc);
         if (!range)
             return boost::none;
 
@@ -838,7 +850,8 @@ lookaheadToExtractRange(P4::TypeMap* typeMap, const IR::Expression* expr, int cu
         return lookaheadInterval.shiftedByBits(currentBit);
 
     } else if (auto* member = expr->to<IR::Member>()) {
-        auto range = lookaheadToExtractRange(typeMap, member->expr, currentBit);
+        auto range = lookaheadToExtractRange(typeMap, member->expr, currentBit,
+                                             partial_hdr_err_proc);
         if (!range)
             return boost::none;
 
@@ -855,7 +868,8 @@ lookaheadToExtractRange(P4::TypeMap* typeMap, const IR::Expression* expr, int cu
         BUG("%1%: did not find field %2% in type %3%", expr, member->member, type->toString());
 
     } else if (auto *stack = expr->to<IR::HeaderStackItemRef>()) {
-        auto range = lookaheadToExtractRange(typeMap, stack->base(), currentBit);
+        auto range = lookaheadToExtractRange(typeMap, stack->base(), currentBit,
+                                             partial_hdr_err_proc);
         if (!range)
             return boost::none;
 
@@ -887,11 +901,11 @@ lookaheadToExtractRange(P4::TypeMap* typeMap, const IR::Expression* expr, int cu
 
 const IR::BFN::PacketRVal*
 resolveLookahead(P4::TypeMap* typeMap, const IR::Expression* expr, int currentBit) {
-    auto range = lookaheadToExtractRange(typeMap, expr, currentBit);
+    bool partial_hdr_err_proc = false;
+    auto range = lookaheadToExtractRange(typeMap, expr, currentBit, &partial_hdr_err_proc);
     if (!range)
         return nullptr;
-
-    return new IR::BFN::PacketRVal(*range);
+    return new IR::BFN::PacketRVal(*range, partial_hdr_err_proc);
 }
 
 /// Rewrites frontend parser IR statements to the backend ones.
@@ -910,12 +924,8 @@ struct RewriteParserStatements : public Transform {
 
  private:
     const IR::Vector<IR::BFN::ParserPrimitive>*
-    rewriteExtract(IR::MethodCallStatement* statement) {
-        auto* call = statement->methodCall;
-
-        Util::SourceInfo srcInfo = statement->srcInfo;
-        auto dest = (*call->arguments)[0]->expression;
-
+    rewriteExtract(const IR::Expression *dest, Util::SourceInfo srcInfo,
+                   bool partial_hdr_err_proc) {
         auto* hdr = dest->to<IR::HeaderRef>();
         auto* hdr_type = hdr->type->to<IR::Type_StructLike>();
 
@@ -936,7 +946,8 @@ struct RewriteParserStatements : public Transform {
 
             auto* fref = new IR::Member(field->type, hdr, field->name);
             auto width = field->type->width_bits();
-            auto* rval = new IR::BFN::PacketRVal(StartLen(currentBit, width));
+            auto* rval = new IR::BFN::PacketRVal(StartLen(currentBit, width),
+                                                 partial_hdr_err_proc);
             auto* extract = new IR::BFN::Extract(srcInfo, fref, rval);
 
             LOG5("add extract: " << extract);
@@ -966,6 +977,20 @@ struct RewriteParserStatements : public Transform {
         LOG5("add extract: " << extractValidBit);
         rv->push_back(extractValidBit);
         return rv;
+    }
+
+    const IR::Vector<IR::BFN::ParserPrimitive>*
+    rewriteExtractCall(IR::MethodCallStatement* statement) {
+        return rewriteExtract( (*statement->methodCall->arguments)[0]->expression,
+                                statement->srcInfo,
+                                false);
+    }
+
+    const IR::Vector<IR::BFN::ParserPrimitive>*
+    rewriteExtractGreedyCall(IR::MethodCallStatement* statement) {
+        return rewriteExtract( (*statement->methodCall->arguments)[1]->expression,
+                                statement->srcInfo,
+                                true);
     }
 
     const IR::Vector<IR::BFN::ParserPrimitive>*
@@ -1163,12 +1188,14 @@ struct RewriteParserStatements : public Transform {
             } else if (isExtern(method, "ParserPriority")) {
                 return rewriteParserPriorityCall(statement);
             } else if (method->member == "extract") {
-                return rewriteExtract(statement);
+                return rewriteExtractCall(statement);
             } else if (method->member == "advance") {
                 return rewriteAdvance(statement);
             }
         } else if (auto* method = call->method->to<IR::PathExpression>()) {
-            if (method->path->name == "verify") {
+            if (method->path->name == "extract_greedy") {
+                return rewriteExtractGreedyCall(statement);
+            } else if (method->path->name == "verify") {
                 // XXX(zma) allow this to go through to enable more testing
                 ::warning("Parser \"verify\" is currently unsupported %s", statement->srcInfo);
                 return nullptr;
@@ -1230,7 +1257,7 @@ struct RewriteParserStatements : public Transform {
 
         if (auto rval = resolveLookahead(typeMap, rhs, currentBit)) {
             auto e = new IR::BFN::Extract(s->srcInfo, lhs, rval);
-            LOG5("add extract: " << e);
+            LOG5("add extract (lookahead): " << e);
             return e;
         }
 
@@ -1529,7 +1556,7 @@ struct RewriteParserChecksums : public Transform {
         // This can create negative endPos, which means that the csum computation
         // should have ended a byte earlier
         // This will be taken care of later by Find/RemoveNegativeDeposits
-        auto endByte = new IR::BFN::PacketRVal(StartLen(it->second - 8, 8));
+        auto endByte = new IR::BFN::PacketRVal(StartLen(it->second - 8, 8), false);
         auto get = new IR::BFN::ChecksumResidualDeposit(declName,
                                               new IR::BFN::FieldLVal(mem), endByte);
         rv->push_back(get);
@@ -1605,7 +1632,7 @@ struct RewriteParserChecksums : public Transform {
                             // This will be taken care of later by Find/RemoveNegativeDeposits
                             endPos = it->second - 8;
                         }
-                        auto endByte = new IR::BFN::PacketRVal(StartLen(endPos, 8));
+                        auto endByte = new IR::BFN::PacketRVal(StartLen(endPos, 8), false);
                         auto get = new IR::BFN::ChecksumResidualDeposit(
                             declName, new IR::BFN::FieldLVal(lhs), endByte);
                         return get;

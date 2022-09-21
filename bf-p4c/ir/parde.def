@@ -37,6 +37,12 @@ abstract InputBufferRVal : ParserRVal {
 
 /// location in the packet data section of the input buffer
 class PacketRVal : InputBufferRVal {
+
+    /// Enables and disables the partial_hdr_err_proc bit in the parser
+    /// transition.  Controls the extraction behavior when packets
+    /// with incomplete headers are received (i.e. greedy extract).
+    bool partial_hdr_err_proc;
+
     dbprint {
         out << "inbuf " << range;
     }
@@ -183,7 +189,7 @@ class ExtractClot : Extract {
 class SaveToRegister : ParserPrimitive {
 #emit
     SaveToRegister(const MatchRegister& reg, nw_byterange source)
-      : source(new PacketRVal(source.toUnit<RangeUnit::Bit>())), dest(reg) { }
+      : source(new PacketRVal(source.toUnit<RangeUnit::Bit>(), false)), dest(reg) { }
 #end
     dbprint { out << "save " << source << " to " << dest.name; }
 

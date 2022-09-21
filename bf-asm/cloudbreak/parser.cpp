@@ -61,6 +61,7 @@ class RamEnGen {
                 return true;
         }
         if (m_po.disable_partial_hdr_err) return true;
+        if (m_po.partial_hdr_err_proc) return true;
 
         return false;
     }
@@ -443,6 +444,12 @@ template<> void Parser::State::Match::write_row_config(Target::Cloudbreak::parse
     // specific header, though its not clear why
     if (shift || (def && def->shift))
         action_row.hdr_len_inc = 1;
+
+    if (disable_partial_hdr_err > 0)
+        action_row.disable_partial_hdr_err = 1;
+
+    if (partial_hdr_err_proc > 0)
+        action_row.partial_hdr_err_proc = 1;
 
     // Enable the required number of RAM banks
     RamEnGen en_gen(action_row);

@@ -570,6 +570,9 @@ struct ParserAsmSerializer : public ParserInspector {
         if (match->offsetInc)
             out << indent << "offset_inc: " << *match->offsetInc << std::endl;
 
+        if (match->partialHdrErrProc)
+            out << indent << "partial_hdr_err_proc: 1" << std::endl;
+
         out << indent << "next: ";
         if (match->next)
             out << canon_name(match->next->name);

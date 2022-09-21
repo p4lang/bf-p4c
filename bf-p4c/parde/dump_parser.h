@@ -286,13 +286,13 @@ class DotDumper {
 // Dumps the entire parser graphs
 class DumpParser : public Visitor, public DotDumper {
  public:
-    explicit DumpParser(cstring filename, bool detail = false)
-        : DotDumper(filename, detail || LOGGING(4)) { }
+    explicit DumpParser(cstring filename, bool detail = false, bool to_log = false)
+        : DotDumper(filename, detail || LOGGING(4)), log(to_log) { }
 
     DumpParser(cstring filename,
               std::vector<assoc::set<void*>>& color_groups,
-              bool detail = false)
-        : DotDumper(filename, color_groups, detail || LOGGING(4)) { }
+              bool detail = false, bool to_log = false)
+        : DotDumper(filename, color_groups, detail || LOGGING(4)), log(to_log) { }
 
  private:
     const IR::Node *apply_visitor(const IR::Node *n, const char*) override { return n; }
@@ -315,8 +315,22 @@ class DumpParser : public Visitor, public DotDumper {
         for (auto g : cgl.graphs())
             dump_graph(*(g.second), (g.first)->gress, root->to<IR::BFN::Pipe>()->id);
 
+        if (log) {
+            // Use LOG level 1 as to let the caller decide on whether
+            // loogging should be done or not.
+            for (auto g : cg.graphs())
+                LOG1("Parser IR [" << filename << "] : " << std::endl << dumpToString(g.first)
+                     << std::endl);
+
+            for (auto g : cgl.graphs())
+                LOG1("Lowered Parser IR [" << filename << "] : " << std::endl
+                     << dumpToString(g.first) << std::endl);
+        }
+
         return rv;
     }
+
+    bool log;
 };
 
 #endif /* EXTENSIONS_BF_P4C_PARDE_DUMP_PARSER_H_ */

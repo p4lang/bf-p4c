@@ -324,6 +324,13 @@ parser [<thread>] [<port_use>, ...]:
                     max_length: <constant>
                 hdr_len_inc_stop: <constant>
                     # stop the header length counter, and use value as final increment amount (jbay only)
+                disable_partial_hdr_err: <constant>
+                    # specifies whether the partial header error is enabled or not for
+                    # the current state.  Cloudbreak and JBay only.
+                partial_hdr_err_proc: <constant>
+                    # specifies whether or not the best effort extraction (a.k.a. greedy extract)
+                    # is performed when insufficient data is available in the input buffer.
+                    # Cloudbreak only.
             value_set <name> <size>:
                 handle: <int> # pvs handle
                 field_mapping:

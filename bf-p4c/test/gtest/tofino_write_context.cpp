@@ -41,8 +41,8 @@ TEST(TofinoWriteContext, Read) {
     auto* oneLVal = new IR::Member(one, "one");
 
     IR::Vector<IR::BFN::ParserPrimitive> statements = {
-        new IR::BFN::Extract(zeroLVal, new IR::BFN::PacketRVal(StartLen(0, 1))),
-        new IR::BFN::Extract(oneLVal, new IR::BFN::PacketRVal(StartLen(1, 2))),
+        new IR::BFN::Extract(zeroLVal, new IR::BFN::PacketRVal(StartLen(0, 1), false)),
+        new IR::BFN::Extract(oneLVal, new IR::BFN::PacketRVal(StartLen(1, 2), false)),
         new IR::BFN::Extract(zeroLVal, new IR::BFN::MetadataRVal(StartLen(256, 1)))
     };
     auto *state = new IR::BFN::ParserState("foo", INGRESS, statements, { }, { });

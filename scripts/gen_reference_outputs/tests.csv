@@ -58,3 +58,5 @@ tofino2_lrn1,p4-tests/p4_16/compile_only/lrn1.p4,,"",tofino2,p4-16,t2na,skip_Gla
 tofino2_p4c_2091,p4-tests/p4_16/compile_only/p4c-2091.p4,,"",tofino2,p4-16,t2na,skip_Glass
 # Tofino 3 examples
 tofino3_t3na_multipipe,p4-tests/p4_16/stf/t3na_multipipe.p4,,,tofino3,p4-16,t3na
+tofino3_greedy_extracts-1,p4-tests/p4_16/stf/t3na_greedy_extracts-1.p4,,,tofino3,p4-16,t3na
+tofino3_greedy_extracts-2,p4-tests/p4_16/stf/t3na_greedy_extracts-2.p4,,,tofino3,p4-16,t3na

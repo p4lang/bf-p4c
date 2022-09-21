@@ -109,8 +109,9 @@ struct SliceExtracts : public ParserModifier {
             auto src_hi = src->range.hi - slice_lo + extract_base;
             auto src_lo = src_hi - width + 1;
 
-            if (src->is<IR::BFN::PacketRVal>())
-                src_slice = new IR::BFN::PacketRVal(nw_bitrange(src_lo, src_hi));
+            if (auto* pkt_rval = src->to<IR::BFN::PacketRVal>())
+                src_slice = new IR::BFN::PacketRVal(nw_bitrange(src_lo, src_hi),
+                                                    pkt_rval->partial_hdr_err_proc);
             else if (src->is<IR::BFN::MetadataRVal>())
                 src_slice = new IR::BFN::MetadataRVal(nw_bitrange(src_lo, src_hi));
             else
@@ -1218,7 +1219,7 @@ struct AllocateParserState : public ParserTransform {
 
             void check_sanity(const IR::BFN::ParserState* o,
                               const IR::BFN::ParserState* s) {
-                BUG_CHECK(orig && o && s, "uh-oh");
+                BUG_CHECK(orig && o && s, "Sanity check on split parser states failed.");
 
                 if (!o->selects.empty() && !s->selects.empty())
                     BUG("Selects not in one state?");

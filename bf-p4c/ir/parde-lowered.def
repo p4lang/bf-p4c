@@ -226,6 +226,9 @@ class LoweredParserMatch {
     /// there is no particular requirement; the assembler will choose a default.
     optional boost::optional<unsigned> bufferRequired;
 
+    // Controls partial header extraction.
+    bool partialHdrErrProc;
+
     /// Next state to transition to (null means terminal state)
     NullOK LoweredParserState next;
 

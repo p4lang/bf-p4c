@@ -836,6 +836,30 @@ class MatcherAllocator : public Visitor {
 
             unsigned bytes = 0;
 
+            bool partial_hdr_err_proc = false;
+            const IR::BFN::ParserState *state_next = transition->next;
+            while (state_next) {
+                if (state_next->selects.size()) {
+                    // Found the select() for which we're allocating this match register.
+                    auto select = state_next->selects.at(0);
+                    if (auto* saved_rval = select->source->to<IR::BFN::SavedRVal>()) {
+                        if (auto* pkt_rval = saved_rval->source->to<IR::BFN::PacketRVal>())
+                            partial_hdr_err_proc = pkt_rval->partial_hdr_err_proc;
+                    }
+                    break;
+                }
+
+                // If state_next doesn't have a select(), then it only has
+                // a single catch-all transition, most likely because it has been
+                // split.  Check the state referred by that transition to find
+                // the select() for which we're allocating this match register.
+                auto t = state_next->transitions.at(0);
+                if (t)
+                    state_next = t->next;
+                else
+                    break;
+            }
+
             for (auto reg : alloc_regs) {
                 unsigned lo = group_range.lo + bytes;
                 nw_byterange reg_range(lo, lo + reg.size - 1);
@@ -856,7 +880,9 @@ class MatcherAllocator : public Visitor {
                     scratch = true;
                 }
 
-                auto save = new IR::BFN::SaveToRegister(reg, reg_range);
+                auto save = new IR::BFN::SaveToRegister(new IR::BFN::PacketRVal(
+                                reg_range.toUnit<RangeUnit::Bit>(),
+                                partial_hdr_err_proc), reg);
 
                 bool saved = false;
                 for (auto s : result.transition_saves[transition]) {

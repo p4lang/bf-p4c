@@ -1248,6 +1248,28 @@ Parser::State::Match::Match(int l, gress_t gress, State* s, match_t m, VECTOR(pa
         } else if (kv.key == "handle") {
             if (CHECKTYPE(kv.value, tINT))
                 value_set_handle = kv.value.i;
+        }  else if (kv.key == "disable_partial_hdr_err") {
+            if (!CHECKTYPE(kv.value, tINT)) continue;
+            if (options.target != TOFINO2 && options.target != TOFINO3)
+                error(kv.key.lineno,
+                        "disable_partial_hdr_err only available for Tofino2 and Tofino3");
+            if (disable_partial_hdr_err != -1)
+                error(kv.key.lineno, "Multiple disable_partial_hdr_err settings in match");
+            if (kv.value.i < 0 || kv.value.i > 1)
+                error(kv.value.lineno, "disable_partial_hdr_err value %ld out of range",
+                      kv.value.i);
+            disable_partial_hdr_err = kv.value.i;
+        }  else if (kv.key == "partial_hdr_err_proc") {
+            if (!CHECKTYPE(kv.value, tINT)) continue;
+            if (options.target != TOFINO3)
+                error(kv.key.lineno,
+                        "partial_hdr_err_proc only available for Tofino3");
+            if (partial_hdr_err_proc != -1)
+                error(kv.key.lineno, "Multiple partial_hdr_err_proc settings in match");
+            if (kv.value.i < 0 || kv.value.i > 1)
+                error(kv.value.lineno, "partial_hdr_err_proc value %ld out of range",
+                      kv.value.i);
+            partial_hdr_err_proc = kv.value.i;
         } else if (kv.key.type == tCMD && kv.key == "clot" && kv.key.vec.size == 2) {
             clots.push_back(new Clot(gress, kv.key.vec[1], kv.value));
         } else if (kv.key.type == tINT) {

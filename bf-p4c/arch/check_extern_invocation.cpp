@@ -1,5 +1,6 @@
 #include "lib/bitvec.h"
 #include "check_extern_invocation.h"
+#include "bf-p4c/device.h"
 
 namespace BFN {
 
@@ -123,6 +124,14 @@ void CheckT2NAExternInvocation::initPipeConstraints() {
     bitvec validInIngressDeparser;
     validInIngressDeparser.setbit(genIndex(INGRESS, DEPARSER));
     setPipeConstraints("Pktgen", validInIngressDeparser);
+
+    if (Device::currentDevice() == Device::CLOUDBREAK) {
+        bitvec validInParsers;
+        validInParsers.setbit(genIndex(INGRESS, PARSER));
+        validInParsers.setbit(genIndex(EGRESS, PARSER));
+        setPipeConstraints("extract_greedy", validInParsers);
+        setPipeConstraints("lookahead_greedy", validInParsers);
+    }
 }
 
 }  // namespace BFN

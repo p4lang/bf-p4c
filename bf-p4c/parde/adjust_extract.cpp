@@ -95,7 +95,8 @@ void AdjustExtract::postorder(IR::BFN::ParserState* state) {
             adjusted_extract->marshaled_from = boost::none;
             adjusted_extract->source =
                 new IR::BFN::PacketRVal(nw_bitrange(old_source_range.lo + n_paddings,
-                                                    old_source_range.hi + n_paddings));
+                                                    old_source_range.hi + n_paddings),
+                                        old_source->partial_hdr_err_proc);
             adjusted_stmts.push_back(adjusted_extract);
             LOG3("Adjust [OLD]:" << extract << "\n" << " to [NEW]:" << adjusted_extract);
         } else {
@@ -124,7 +125,8 @@ void AdjustExtract::postorder(IR::BFN::ParserState* state) {
                 size_t n_paddings = aggregated[old_source_range.lo];
                 adjusted_save->source =
                     new IR::BFN::PacketRVal(nw_bitrange(old_source_range.lo + n_paddings,
-                                                        old_source_range.hi + n_paddings));
+                                                        old_source_range.hi + n_paddings),
+                                            buf->partial_hdr_err_proc);
             }
             adjusted_saves.push_back(save);
         }

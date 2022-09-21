@@ -103,7 +103,9 @@ p4c_add_ptf_test_with_ptfdir (
 bfn_needs_scapy("tofino3" "hash_field_expression_sym")
 
 set (CLOUDBREAK_JNA_TEST_SUITES
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/jbay/*.p4)
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/jbay/*.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/cloudbreak/*.p4
+  )
 p4c_find_tests("${CLOUDBREAK_JNA_TEST_SUITES}" cloudbreak_jna_tests INCLUDE "${P16_JNA_INCLUDE_PATTERNS}" EXCLUDE "${P16_JNA_EXCLUDE_PATTERNS}")
 set (cloudbreak_jna_tests ${cloudbreak_jna_tests} ${p16_jna_tests})
 p4c_add_bf_backend_tests("tofino3" "cb" "t3na" "base" "${cloudbreak_jna_tests}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")

@@ -951,6 +951,8 @@ struct ComputeLoweredParserIR : public ParserInspector {
 
         const IR::BFN::ParserPrioritySet* priority = nullptr;
         const IR::BFN::HdrLenIncStop* stopper = nullptr;
+        boost::optional<bool> partial_hdr_err_proc_extract =
+                                                    boost::make_optional<bool>(false, bool());
 
         // Collect all the extract operations; we'll lower them as a group so we
         // can merge extracts that write to the same PHV containers.
@@ -958,6 +960,15 @@ struct ComputeLoweredParserIR : public ParserInspector {
         for (auto prim : state->statements) {
             if (auto* extract = prim->to<IR::BFN::Extract>()) {
                 simplifier.add(extract);
+                if (auto* pkt_rval = extract->source->to<IR::BFN::PacketRVal>()) {
+                    // At this point, all possible conflicts with partial_hdr_err_proc
+                    // must have been resolved by pass SplitGreedyParserStates that ran previously.
+                    BUG_CHECK(!partial_hdr_err_proc_extract ||
+                              *partial_hdr_err_proc_extract == pkt_rval->partial_hdr_err_proc,
+                              "Parser state %1% has conflicting partial_hdr_err_proc",
+                              state->name);
+                    partial_hdr_err_proc_extract = pkt_rval->partial_hdr_err_proc;
+                }
             } else if (auto* csum = prim->to<IR::BFN::ParserChecksumPrimitive>()) {
                 checksums.push_back(csum);
             } else if (auto* cntr = prim->to<IR::BFN::ParserCounterPrimitive>()) {
@@ -1009,6 +1020,8 @@ struct ComputeLoweredParserIR : public ParserInspector {
                       "Didn't already lower state %1%?",
                       transition->next ? transition->next->name : cstring("(null)"));
 
+            boost::optional<bool> partial_hdr_err_proc_saves =
+                                                    boost::make_optional<bool>(false, bool());
             IR::Vector<IR::BFN::LoweredSave> saves;
 
             for (const auto* save : transition->saves) {
@@ -1018,12 +1031,39 @@ struct ComputeLoweredParserIR : public ParserInspector {
 
                 if (save->source->is<IR::BFN::MetadataRVal>())
                     source = new IR::BFN::LoweredMetadataRVal(range);
-                else if (save->source->is<IR::BFN::PacketRVal>())
+                else if (auto* sv = save->source->to<IR::BFN::PacketRVal>()) {
                     source = new IR::BFN::LoweredPacketRVal(range);
-                else
+                    // At this point, all possible conflicts with partial_hdr_err_proc
+                    // must have been resolved by pass SplitGreedyParserStates that ran previously.
+                    BUG_CHECK(!partial_hdr_err_proc_saves ||
+                              *partial_hdr_err_proc_saves == sv->partial_hdr_err_proc,
+                              "Parser state %1% has conflicting partial_hdr_err_proc",
+                              state->name);
+                    partial_hdr_err_proc_saves = sv->partial_hdr_err_proc;
+                } else
                     BUG("unexpected save source: %1%", save);
 
                 saves.push_back(new IR::BFN::LoweredSave(save->dest, source));
+            }
+
+            // Final check for any possible conflicts with partial_hdr_err_proc
+            // previously handled by SplitGreedyParserStates.
+            BUG_CHECK(!partial_hdr_err_proc_saves || !partial_hdr_err_proc_extract ||
+                      *partial_hdr_err_proc_saves == *partial_hdr_err_proc_extract,
+                      "Parser state %1% has conflicting partial_hdr_err_proc",
+                      state->name);
+
+            // At this point, both partial_hdr_err_proc_extract and
+            // partial_hdr_err_proc_saves are either set to boost::none
+            // or set to something other than boost::none, but equal to
+            // each other.
+            // Set partialHdrErrProc accordingly.
+            //
+            bool partialHdrErrProc = false;
+            if (partial_hdr_err_proc_extract) {
+                partialHdrErrProc = *partial_hdr_err_proc_extract;
+            } else if (partial_hdr_err_proc_saves) {
+                partialHdrErrProc = *partial_hdr_err_proc_saves;
             }
 
             auto* loweredMatch = new IR::BFN::LoweredParserMatch(
@@ -1035,6 +1075,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
                     loweredChecksums,
                     counters,
                     priority,
+                    partialHdrErrProc,
                     loweredStates[transition->next]);
 
             if (state->stride)
@@ -2206,6 +2247,7 @@ struct MergeLoweredParserStates : public ParserTransform {
                a->checksums == b->checksums &&
                a->counters == b->counters &&
                a->priority == b->priority &&
+               a->partialHdrErrProc == b->partialHdrErrProc &&
                a->bufferRequired == b->bufferRequired &&
                a->next == b->next &&
                a->offsetInc == b->offsetInc &&
@@ -2323,6 +2365,14 @@ struct MergeLoweredParserStates : public ParserTransform {
              !b->checksums.empty() || !b->counters.empty()))
             return false;
 
+        // Checking partialHdrErrProc in both parser match might be a bit
+        // restrictive given that two states that both have extracts
+        // and/or saves will not be merged (see check above), but it
+        // prevents merging two match with incompatible partial header
+        // settings.
+        if (a->partialHdrErrProc != b->partialHdrErrProc)
+            return false;
+
         if (int(a->shift + b->shift) > Device::pardeSpec().byteInputBufferSize())
             return false;
 
@@ -2381,6 +2431,8 @@ struct MergeLoweredParserStates : public ParserTransform {
 
         if (!match->priority)
             match->priority = next->priority;
+
+        match->partialHdrErrProc = next->partialHdrErrProc;
 
         if (!match->offsetInc)
             match->offsetInc = next->offsetInc;
@@ -2455,6 +2507,376 @@ class InsertPayloadPseudoHeaderState : public ParserTransform {
     InsertPayloadPseudoHeaderState() {}
 };
 
+/**
+ * @brief This pass is used to ensure that there will be no conflicting partial_hdr_err_proc
+ *        at the time the LoweredParserMatch is created.
+ *
+ * This pass makes sure that each parser state respects the following constraints:
+ *
+ *      1. A state includes only extract statements in which PacketRVal have same
+ *         partial_hdr_err_proc;
+ *
+ *      2. When a state includes both extracts and transitions, the partial_hdr_err_proc
+ *         from the extracts (which are all the same according to 1.) are the same
+ *         as the PacketRVal in select() statements from the next states.
+ *
+ * Constraint 1 is pretty simple; since there is only a single partial_hdr_err_proc
+ * in the LoweredParserMatch node, two extracts must have the same setting in order
+ * not to conflict.
+ *
+ * Constraint 2 exists because load operations issued from select statements in next
+ * states are typically moved up to the current state to prepare the data for the
+ * match that will occur in the next state.  The field that is referenced in these
+ * select statements must have the same partial_hdr_err_proc as the extracts in the
+ * current state in order not to conflict.
+ *
+ * States that do not respect these constraints are split in states that do, starting
+ * from the ones that are further down the tree and going upwards.  When a select is
+ * moved from the current state to a new state, to reduce the number of states created,
+ * extracts that are compatible with that select are moved also to that new state
+ * as long as the original extract order is respected.  In other words, if the compatible
+ * extracts are the last ones in the current state, before the select.
+ *
+ */
+struct SplitGreedyParserStates : public Transform {
+    SplitGreedyParserStates() {}
+
+ private:
+    /**
+     * @brief Creates a greedy stall state based on partial_hdr_err_proc settings
+     *        in the statements, selects and transitions.
+     *
+     * The state that is created comes after the state provided in input and is
+     * garanteed to include partial_hdr_err_proc settings that are compatible
+     * with each other.
+     *
+     * Checking that state has incompatible partial_hdr_err_proc settings
+     * has to be done prior to calling this function.
+     *
+     */
+    IR::BFN::ParserState* split_state(IR::BFN::ParserState* state, cstring new_state_name) {
+        LOG4("  Greedy split for state " << state->name << " --> " << new_state_name);
+        IR::Vector<IR::BFN::ParserPrimitive> first_statements;
+        IR::Vector<IR::BFN::ParserPrimitive> last_statements;
+        boost::optional<bool> last_statements_partial_proc = boost::none;
+        int last_statements_shift_bits = 0;
+
+        // Create "first" and "last" vectors and retrieve the last_statements_partial_proc
+        // which will be used to decide how to split the state.
+        //
+        split_statements(state->statements, first_statements, last_statements,
+                         last_statements_shift_bits, last_statements_partial_proc);
+
+        // Check if transitions refer to states that all have compatible
+        // partial_hdr_err_proc values.
+        //
+        boost::optional<bool> transitions_partial_proc = boost::none;
+        auto transitions_verify = partial_hdr_err_proc_verify(nullptr, nullptr,
+                                                              &state->transitions,
+                                                              &transitions_partial_proc);
+
+        IR::Vector<IR::BFN::ParserPrimitive> next_state_statements;
+        IR::Vector<IR::BFN::ParserPrimitive> new_state_statements;
+        int new_transitions_shift_bits = 0;
+
+        if (!transitions_verify ||
+            (last_statements_partial_proc && transitions_partial_proc &&
+             *transitions_partial_proc!=*last_statements_partial_proc)) {
+            // Here, either:
+            //
+            //  - the transition partial_hdr_err_proc values are incompatible with each other, or;
+            //  - the transition partial_hdr_err_proc values are all compatible with each other,
+            //    but incompatible with the last extract in the statements.
+            //
+            // In this case create a next state with only the select and the transitions.
+            // Keep all statements in the new state that will replace the current state.
+            //
+            next_state_statements = IR::Vector<IR::BFN::ParserPrimitive>();
+            new_state_statements = state->statements;
+            new_transitions_shift_bits = state->transitions.at(0)->shift<<3;
+        } else {
+            // Here, all transitions are compatible with each other and they are compatible
+            // with the last extract in the statements.
+            //
+            // Create a next state with the last statements, the select and the transitions.
+            // Add the first statements to the new state that will replace the current state.
+            //
+            next_state_statements = last_statements;
+            new_state_statements = first_statements;
+            new_transitions_shift_bits = (state->transitions.at(0)->shift<<3) -
+                                         last_statements_shift_bits;
+        }
+
+        // Create next_state guaranteed to have partial_hdr_err_proc compatible with
+        // each other.
+        //
+        IR::BFN::ParserState* next_state = new IR::BFN::ParserState(new_state_name,
+                                                            state->gress,
+                                                            IR::Vector<IR::BFN::ParserPrimitive>(),
+                                                            IR::Vector<IR::BFN::Select>(),
+                                                            IR::Vector<IR::BFN::Transition>());
+
+        // Add statements to next state, while adjusting range values
+        // when required.
+        for (auto& statement : next_state_statements) {
+            if (auto* extract = statement->to<IR::BFN::Extract>()) {
+                if (auto* pkt_rval = extract->source->to<IR::BFN::PacketRVal>()) {
+                    LOG4("  Adjusting extract from [" << pkt_rval->range.lo << ".."
+                            << pkt_rval->range.hi << "] to ["
+                            << pkt_rval->range.lo-new_transitions_shift_bits
+                            << ".." << pkt_rval->range.hi-new_transitions_shift_bits << "]");
+                    nw_bitrange next_range(pkt_rval->range.lo-new_transitions_shift_bits,
+                                           pkt_rval->range.hi-new_transitions_shift_bits);
+                    auto next_pkt_rval = new IR::BFN::PacketRVal(next_range,
+                                                            pkt_rval->partial_hdr_err_proc);
+                    auto next_extract = new IR::BFN::Extract(extract->dest, next_pkt_rval);
+                    next_state->statements.push_back(next_extract);
+                } else
+                    next_state->statements.push_back(statement);
+            } else
+                next_state->statements.push_back(statement);
+        }
+
+        // Add selects to next state and adjust ranges.
+        for (auto select : state->selects) {
+            if (auto* saved = select->source->to<IR::BFN::SavedRVal>()) {
+                if (auto* pkt_rval = saved->source->to<IR::BFN::PacketRVal>()) {
+                    LOG4("  Adjusting select from [" << pkt_rval->range.lo
+                            << ".." << pkt_rval->range.hi << "] to ["
+                            << pkt_rval->range.lo-new_transitions_shift_bits
+                            << ".." << pkt_rval->range.hi-new_transitions_shift_bits << "]");
+                    nw_bitrange next_range(pkt_rval->range.lo-new_transitions_shift_bits,
+                                           pkt_rval->range.hi-new_transitions_shift_bits);
+                    auto next_pkt_rval = new IR::BFN::PacketRVal(next_range,
+                                                                 pkt_rval->partial_hdr_err_proc);
+                    auto next_select = new IR::BFN::Select(new IR::BFN::SavedRVal(next_pkt_rval));
+                    next_state->selects.push_back(next_select);
+                } else {
+                    next_state->selects.push_back(select);
+                }
+            } else
+                next_state->selects.push_back(select);
+        }
+
+        // Add transitions to next state and adjust shifts.
+        for (auto transition : state->transitions) {
+            auto next_transition = new IR::BFN::Transition(transition->value,
+                                                transition->shift-(new_transitions_shift_bits>>3),
+                                                transition->next);
+            next_state->transitions.push_back(next_transition);
+        }
+
+        // Create new_state that replaces state that is provided in input and that includes
+        // the statements that were not moved to next_state.  The partial_hdr_err_proc
+        // might not be all compatible at this point, if that's the case this is going
+        // to be fixed on the next iteration.
+        //
+        IR::BFN::Transition* new_transition = new IR::BFN::Transition( match_t(),
+                                                                    new_transitions_shift_bits>>3,
+                                                                    next_state);
+        IR::BFN::ParserState* new_state = new IR::BFN::ParserState(state->name, state->gress,
+                                                new_state_statements, IR::Vector<IR::BFN::Select>(),
+                                                IR::Vector<IR::BFN::Transition>(new_transition));
+        return new_state;
+    }
+
+    /**
+     * @brief Split statements from vector "in" such that the "last" vector
+     *        contains only statements that have partial_hdr_err_proc settings
+     *        that are the same with each other.  Does not modify the statements
+     *        order.
+     *
+     * On return:
+     *
+     *      first: the statements from vector "in" which partial_hdr_err_proc are
+     *             not compatible with the ones returned in vector "last".  This
+     *             vector can include statements with conflicting partial_hdr_err_proc
+     *             values.
+     *
+     *      last: the statements from vector "in" with partial_hdr_err_proc that are
+     *            compatible with the last extract in the state.  All statements in
+     *            this vector are no-conflicting with each other.
+     *
+     *      last_statements_shift_bit: total shift in bits of the statements included
+     *                                 in vector "last".
+     *
+     *      last_statements_partial_proc: the setting of partial_hdr_err_proc of the statements
+     *                                    included in vector "last".  Set to boost::none if
+     *                                    no extract with partial_hdr_err_proc were found
+     *                                    in vector "in".
+     *
+     */
+    void split_statements(const IR::Vector<IR::BFN::ParserPrimitive> in,
+                          IR::Vector<IR::BFN::ParserPrimitive> &first,
+                          IR::Vector<IR::BFN::ParserPrimitive> &last,
+                          int &last_statements_shift_bit,
+                          boost::optional<bool> &last_statements_partial_proc) {
+        boost::optional<bool> curr_partial_proc = boost::none;
+        int curr_statements_shift_bit = 0;
+
+        first.clear();
+        last.clear();
+        last_statements_shift_bit = 0;
+        last_statements_partial_proc = boost::none;
+
+        for (auto statement : in) {
+            if (auto* extract = statement->to<IR::BFN::Extract>()) {
+                // Look for change in partial_hdr_err_proc compared to the previous value.
+                if (auto* pkt_rval = extract->source->to<IR::BFN::PacketRVal>()) {
+                    bool extract_partial_hdr_proc = pkt_rval->partial_hdr_err_proc;
+                    if (!curr_partial_proc || (extract_partial_hdr_proc != *curr_partial_proc)) {
+                        first.append(last);
+                        last.clear();
+                        curr_statements_shift_bit = pkt_rval->range.lo;
+                        curr_partial_proc = extract_partial_hdr_proc;
+                    }
+                    last_statements_shift_bit = pkt_rval->range.hi - curr_statements_shift_bit;
+                }
+            }
+            last.push_back(statement);
+        }
+        last_statements_partial_proc = curr_partial_proc;
+
+        if (last_statements_shift_bit) last_statements_shift_bit+=1;
+
+        if (LOGGING(4)) {
+            LOG4("  Greedy statements split");
+            LOG4("    First: ");
+            for (auto s : first) {
+                LOG4("      " << s);
+            }
+            LOG4("    Last: ");
+            for (auto s : last) {
+                LOG4("      " << s);
+            }
+            LOG4("    Last primitive partial_hdr_err_proc is "
+                    << (last_statements_partial_proc ?
+                            std::to_string(*last_statements_partial_proc):"(nil)")
+                    << " last statements shift in bits is " << last_statements_shift_bit);
+        }
+    }
+
+    /**
+     * @brief Checks that the partial_hdr_err_proc setting is the
+     *        same for all vector content provided in input.  Skip
+     *        check for vectors which pointer is set to nullptr.
+     *
+     * On return:
+     *      false:   partial_hdr_err_proc are conflicting.
+     *      true:    partial_hdr_err_proc are non-conflicting.
+     *
+     *      partial_proc_value:  when returned value is true (i.e. all partial_hdr_err_proc are
+     *                           non-conflicting), contains the value of those
+     *                           partial_hdr_err_proc.  Returns boost::none if none of the
+     *                           statements contained any partial_hdr_err_proc field.
+     *
+     */
+    bool partial_hdr_err_proc_verify(const IR::Vector<IR::BFN::ParserPrimitive> *statements,
+                                     const IR::Vector<IR::BFN::Select> *selects,
+                                     const IR::Vector<IR::BFN::Transition> *transitions,
+                                     boost::optional<bool> *partial_proc_value = nullptr){
+        boost::optional<bool> value = boost::none;
+        if (partial_proc_value)
+            *partial_proc_value = boost::none;
+
+        if (statements) {
+            for (auto statement : *statements) {
+                if (auto* extract = statement->to<IR::BFN::Extract>())
+                    if (auto* pkt_rval = extract->source->to<IR::BFN::PacketRVal>()) {
+                        auto v = pkt_rval->partial_hdr_err_proc;
+                        if (value && *value != v) return false;
+                        value = v;
+                    }
+            }
+        }
+
+        if (selects) {
+            for (auto select : *selects) {
+                if (auto* saved = select->source->to<IR::BFN::SavedRVal>())
+                    if (auto* pkt_rval = saved->source->to<IR::BFN::PacketRVal>()) {
+                        auto v = pkt_rval->partial_hdr_err_proc;
+                        if (value && *value != v ) return false;
+                        value = v;
+                    }
+            }
+        }
+
+        if (transitions) {
+            for (auto transition : *transitions){
+                if (auto next_state = transition->next) {
+                    boost::optional<bool> v = boost::none;
+                    if (partial_hdr_err_proc_verify(nullptr, &next_state->selects, nullptr, &v)) {
+                        if (v) {
+                            if (value && *value != *v) return false;
+                            value = *v;
+                        }
+                    } else
+                        return false;
+                }
+            }
+        }
+
+        if (partial_proc_value)
+            *partial_proc_value = value;
+
+        return true;
+    }
+
+    /**
+     * @brief Checks if the state's statement, selects and transitions
+     *        include only non-conflicting partial_hdr_err_proc values.
+     *
+     */
+    bool state_pkt_too_short_verify(const IR::BFN::ParserState* state,
+                                    bool &select_args_incompatible) {
+        select_args_incompatible = false;
+        if (state->selects.size()) {
+            // Look for incompatibility in select arguments.
+            // This needs specific processing.
+            //
+            if (!partial_hdr_err_proc_verify(nullptr,
+                                             &state->selects,
+                                             nullptr)) {
+                select_args_incompatible = true;
+                LOG4("state_pkt_too_short_verify(" << state->name <<
+                        "): incompatible select arguments");
+                return false;
+            }
+        }
+
+        if (!partial_hdr_err_proc_verify(&state->statements,
+                                         nullptr,
+                                         &state->transitions)) {
+            LOG4("state_pkt_too_short_verify(" << state->name <<
+                    "): incompatible statements and transitions");
+            return false;
+        }
+
+        LOG4("state_pkt_too_short_verify(" << state->name <<"): ok");
+        return true;
+    }
+
+    IR::BFN::ParserState* postorder(IR::BFN::ParserState* state) override {
+        LOG4("SplitGreedyParserStates(" << state->name << ")");
+
+        int cnt = 0;
+        bool select_args_incompatible = false;
+
+        while (!state_pkt_too_short_verify(state, select_args_incompatible)) {
+            if (select_args_incompatible) {
+                ::error(ErrorType::ERR_UNSUPPORTED,
+                        "Mixing non-greedy and greedy extracted fields in select "
+                        "statement is unsupported.");
+            } else {
+                cstring new_name = state->name + ".$greedy_" + cstring::to_cstring(cnt++);
+                state = split_state(state, new_name);
+            }
+        }
+
+        return state;
+    }
+};
+
 /// Generate a lowered version of the parser IR in this program and swap it in
 /// for the existing representation.
 struct LowerParserIR : public PassManager {
@@ -2482,7 +2904,9 @@ struct LowerParserIR : public PassManager {
 #endif  // HAVE_FLATROCK
 
         addPasses({
-            LOGGING(4) ? new DumpParser("before_parser_lowering") : nullptr,
+            LOGGING(4) ? new DumpParser("before_parser_lowering", false, true) : nullptr,
+            new SplitGreedyParserStates(),
+            LOGGING(4) ? new DumpParser("after_greedy_split", false, true) : nullptr,
             new ResolveParserConstants(phv, clotInfo),
             new ParserCopyProp(phv),
             new SplitParserState(phv, clotInfo),

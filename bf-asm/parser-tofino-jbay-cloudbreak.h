@@ -113,6 +113,7 @@ class Parser : public BaseParser, public Contextable {
             int         value_set_size = 0;
             int         value_set_handle = -1;
             int         offset_inc = 0, shift = 0, buf_req = -1;
+            int         disable_partial_hdr_err = -1, partial_hdr_err_proc = -1;
             bool        offset_rst = false;
             int         intr_md_bits = 0;
 

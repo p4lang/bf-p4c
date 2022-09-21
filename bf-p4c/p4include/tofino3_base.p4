@@ -613,6 +613,17 @@ extern IdleTimeout {
     IdleTimeout();
 }
 
+// -----------------------------------------------------------------------------
+// Extract and Lookahead greedy functions.
+//
+// Functions extract_greedy() and lookahead_greedy() extend packet_in.extract<T>()
+// and packet_in.lookahead<T>() respectively.  Both functions allow retrieving
+// as many bytes as available when packets with incomplete headers are received.
+// -----------------------------------------------------------------------------
+
+extern void extract_greedy<T>(packet_in pkt, out T hdr);
+
+extern T lookahead_greedy<T>(packet_in pkt);
 
 // -----------------------------------------------------------------------------
 // EXTERN FUNCTIONS

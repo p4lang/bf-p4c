@@ -456,7 +456,7 @@ class RewriteParde : public PardeTransform {
         // state has no write-able fields, insert stopper at the beginning
         if (!inserted) {
             auto stopper = new IR::BFN::HdrLenIncStop(
-                    new IR::BFN::PacketRVal(nw_bitrange(0, 0)));
+                    new IR::BFN::PacketRVal(nw_bitrange(0, 0), false));
             rv.insert(rv.begin(), stopper);
 
             LOG4("insert hdr_len_inc_stop (null-extract) in " << state->name);

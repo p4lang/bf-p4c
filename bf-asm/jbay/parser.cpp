@@ -154,6 +154,15 @@ static void write_output_slot(int lineno, Target::JBay::parser_regs::_memory::_p
     error(lineno, "Ran out of phv output slots");
 }
 
+template<> void Parser::State::Match::write_row_config(Target::JBay::parser_regs  &regs,
+        Parser *pa, State *state, int row, Match *def, json::map &ctxt_json) {
+    write_common_row_config(regs, pa, state, row, def, ctxt_json);
+    auto &action_row = regs.memory[state->gress].po_action_row[row];
+
+    if (disable_partial_hdr_err > 0)
+        action_row.disable_partial_hdr_err = 1;
+}
+
 template <> int Parser::State::Match::Save::write_output_config(Target::JBay::parser_regs &regs,
             void *_row, unsigned &used, int, int) const {
     Target::JBay::parser_regs::_memory::_po_action_row *row =
