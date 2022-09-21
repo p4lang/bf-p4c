@@ -301,6 +301,13 @@ parser ingress:
 
         /* -- no header should be pushed (zero register) */
         EXPECT_REGISTER(regs.prsr_mem.parser_ana_ext.ana_ext[0][0].push_hdr_id, "");
+
+        /* -- modify_* instructions are all zeroes too */
+        EXPECT_REGISTER(regs.prsr_mem.parser_ana_ext.ana_ext[0][0].mod_flags16, "");
+        EXPECT_REGISTER(regs.prsr_mem.parser_ana_ext.ana_ext[0][0].mod_flags4, "");
+        EXPECT_REGISTER(regs.prsr_mem.parser_ana_ext.ana_ext[0][0].mod_flag0, "");
+        EXPECT_REGISTER(regs.prsr_mem.parser_ana_ext.ana_ext[0][0].mod_flag1, "");
+        EXPECT_REGISTER(regs.prsr_mem.parser_ana_ext.ana_ext[0][0].mod_csum, "");
     }
 
     {
@@ -323,6 +330,11 @@ parser ingress:
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 78}
       next_alu1_instruction: {opcode: 1, lsb: 16, msb: 23, shift: 4}
       push_hdr_id: {hdr: 0xaa, offset: 0x7c}
+      modify_flags16: {src: w1,  imm: 0xdead, mask: 0xbe, shift: 0x3f}
+      modify_flags4:  {src: imm, imm: 0xb,    mask: 0xe,  shift: 0x1}
+      modify_flag0: {set: 0x39}
+      modify_flag1: {clear: 0xc}
+      modify_checksum: {idx: 0, enabled: true}
 )PARSER_CFG"));
 
         const auto &regs(asm_parser.generateConfig());
@@ -356,6 +368,16 @@ parser ingress:
 
         EXPECT_REGISTER(regs.prsr_mem.parser_ana_ext.ana_ext[0][0].push_hdr_id,
                         "vld: 1x1 | hdr_id: 8xaa | off: 8x7c");
+        EXPECT_REGISTER(regs.prsr_mem.parser_ana_ext.ana_ext[0][0].mod_flags16,
+                        "src: 2x1 | imm: 16xdead | mask: 16xbe | shift: 6x3f");
+        EXPECT_REGISTER(regs.prsr_mem.parser_ana_ext.ana_ext[0][0].mod_flags4,
+                        "src: 2x3 | imm: 4xb | mask: 4xe | shift: 6x1");
+        EXPECT_REGISTER(regs.prsr_mem.parser_ana_ext.ana_ext[0][0].mod_flag0,
+                        "imm: 1x1 | shift: 6x39");
+        EXPECT_REGISTER(regs.prsr_mem.parser_ana_ext.ana_ext[0][0].mod_flag1,
+                        "imm: 1x0 | shift: 6xc");
+        EXPECT_REGISTER(regs.prsr_mem.parser_ana_ext.ana_ext[0][0].mod_csum,
+                        "vld: 1x1 | cksum_idx: 1x0 | imm: 1x1");
     }
 
     {
@@ -1552,6 +1574,150 @@ parser ingress:
       match_w1: 0x****
       next_alu0_instruction: {opcode: 3, lsb: 63, msb: 70}
       next_alu1_instruction: {opcode: 1, lsb: 0, msb: 3, shift: 3}
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- modify_flags16 shift out of range */
+        AsmParserGuard asm_parser;
+        ASSERT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  analyzer_stage 0:
+    rule 0:
+      match_w0: 0x****
+      match_w1: 0x****
+      match_state: 0x****************
+      next_alu0_instruction: {opcode: 3, lsb: 63, msb: 78}
+      next_alu1_instruction: {opcode: 1, lsb: 16, msb: 23, shift: 4}
+      modify_flags16: {src: w1, imm: 0xdead, mask: 0xbe, shift: 64}
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- modify_flags16 immediate out of range */
+        AsmParserGuard asm_parser;
+        ASSERT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  analyzer_stage 0:
+    rule 0:
+      match_w0: 0x****
+      match_w1: 0x****
+      match_state: 0x****************
+      next_alu0_instruction: {opcode: 3, lsb: 63, msb: 78}
+      next_alu1_instruction: {opcode: 1, lsb: 16, msb: 23, shift: 4}
+      modify_flags16: {src: w0, imm: 65536, mask: 0, shift: 0}
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- modify_flag0 index out of range */
+        AsmParserGuard asm_parser;
+        ASSERT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  analyzer_stage 0:
+    rule 0:
+      match_w0: 0x****
+      match_w1: 0x****
+      match_state: 0x****************
+      next_alu0_instruction: {opcode: 3, lsb: 63, msb: 78}
+      next_alu1_instruction: {opcode: 1, lsb: 16, msb: 23, shift: 4}
+      modify_flag0: {set: 64}
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- modify_flag0 without set/clear */
+        AsmParserGuard asm_parser;
+        ASSERT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  analyzer_stage 0:
+    rule 0:
+      match_w0: 0x****
+      match_w1: 0x****
+      match_state: 0x****************
+      next_alu0_instruction: {opcode: 3, lsb: 63, msb: 78}
+      next_alu1_instruction: {opcode: 1, lsb: 16, msb: 23, shift: 4}
+      modify_flag0: {}
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- modify_flag0 multiple sets */
+        AsmParserGuard asm_parser;
+        ASSERT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  analyzer_stage 0:
+    rule 0:
+      match_w0: 0x****
+      match_w1: 0x****
+      match_state: 0x****************
+      next_alu0_instruction: {opcode: 3, lsb: 63, msb: 78}
+      next_alu1_instruction: {opcode: 1, lsb: 16, msb: 23, shift: 4}
+      modify_flag0: {set: 0, set: 0}
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- modify_flag0 mixed set/clear */
+        AsmParserGuard asm_parser;
+        ASSERT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  analyzer_stage 0:
+    rule 0:
+      match_w0: 0x****
+      match_w1: 0x****
+      match_state: 0x****************
+      next_alu0_instruction: {opcode: 3, lsb: 63, msb: 78}
+      next_alu1_instruction: {opcode: 1, lsb: 16, msb: 23, shift: 4}
+      modify_flag0: {set: 0, clear: 3}
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- modify_checksum index out of range */
+        AsmParserGuard asm_parser;
+        ASSERT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  analyzer_stage 0:
+    rule 0:
+      match_w0: 0x****
+      match_w1: 0x****
+      match_state: 0x****************
+      next_alu0_instruction: {opcode: 3, lsb: 63, msb: 78}
+      next_alu1_instruction: {opcode: 1, lsb: 16, msb: 23, shift: 4}
+      modify_checksum: {idx: 2, enabled: false}
+)PARSER_CFG"));
+    }
+
+    {
+        /* -- modify_flags4 mask out of range */
+        AsmParserGuard asm_parser;
+        ASSERT_FALSE(asm_parser.parseString(R"PARSER_CFG(
+version:
+  target: Tofino5
+parser ingress:
+  analyzer_stage 0:
+    rule 0:
+      match_w0: 0x****
+      match_w1: 0x****
+      match_state: 0x****************
+      next_alu0_instruction: {opcode: 3, lsb: 63, msb: 78}
+      next_alu1_instruction: {opcode: 1, lsb: 16, msb: 23, shift: 4}
+      modify_flags4: {src: imm, imm: 0xb, mask: 16, shift: 0x1}
 )PARSER_CFG"));
     }
 }

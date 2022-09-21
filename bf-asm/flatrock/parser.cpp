@@ -1697,6 +1697,141 @@ bool FlatrockParser::AnalyzerStage::input_push_hdr(
     return true;
 }
 
+template <uint8_t width>
+boost::optional<FlatrockParser::AnalyzerStage::Rule::ModifyFlags<width>>
+FlatrockParser::AnalyzerStage::load_modify_flags(
+    FlatrockParser::AnalyzerStage::Rule& rule,
+    value_t value) {
+    if (!CHECKTYPE(value, tMAP) || !require_keys(value, {"src", "imm", "mask", "shift"}))
+        return boost::none;
+
+    Rule::ModifyFlags<width> modify_flags;
+    constexpr unsigned max_value = (1 << width) - 1;
+    for (const auto &kv : MapIterChecked(value.map, false)) {
+        if (kv.key == "src") {
+            if (kv.value == "w0")
+                modify_flags.src = 0;
+            else if (kv.value == "w1")
+                modify_flags.src = 1;
+            else if (kv.value == "w2")
+                modify_flags.src = 2;
+            else if (kv.value == "imm")
+                modify_flags.src = 3;
+            else {
+                std::stringstream ss;
+                ss << "the src attribute of modify_flags" << width
+                   << " must be one of W0, W1, W2, imm.";
+                report_invalid_directive(ss.str().c_str(), kv.value);
+                return boost::none;
+            }
+        } else if (kv.key == "imm") {
+            if (!check_range(kv.value, 0, max_value)) {
+                error(kv.value.lineno,
+                      "the imm attribute of modify_flags%u must be a number in "
+                      "the interval [0, %u].",
+                      width, max_value);
+                return boost::none;
+            }
+            modify_flags.imm = kv.value.i;
+        } else if (kv.key == "mask") {
+            if (!check_range(kv.value, 0, max_value)) {
+                error(kv.value.lineno,
+                    "the mask attribute of modify_flags%u must be a number in "
+                    "the interval [0, %u].", width, max_value);
+                return boost::none;
+            }
+            modify_flags.mask = kv.value.i;
+        } else if (kv.key == "shift") {
+            if (!check_range(kv.value, 0, 63)) {
+                error(kv.value.lineno,
+                      "the shift attribute of modify_flags%u must be a number in "
+                      "the interval [0, 63].", width);
+                return boost::none;
+            }
+            modify_flags.shift = kv.value.i;
+        } else {
+            std::stringstream ss;
+            ss << "invalid attribute of modify_flags" << width << " directive";
+            report_invalid_directive(ss.str().c_str(), kv.key);
+            return boost::none;
+        }
+    }
+
+    return modify_flags;
+}
+
+boost::optional<FlatrockParser::AnalyzerStage::Rule::ModifyFlag>
+FlatrockParser::AnalyzerStage::load_modify_flag(
+    FlatrockParser::AnalyzerStage::Rule &rule,
+    value_t value) {
+    if (!CHECKTYPE(value, tMAP))
+        return boost::none;
+
+    bool command_met = false;
+    Rule::ModifyFlag modify_flag;
+    for (const auto &kv : MapIterChecked(value.map, false)) {
+        if (command_met) {
+            report_invalid_directive("multiple operations for a single modify_flag instruction",
+                                     kv.key);
+            return boost::none;
+        } else if (kv.key == "set" || kv.key == "clear") {
+            if (!check_range(kv.value, 0, 63)) {
+                error(kv.value.lineno,
+                      "the idx attribute of modify_flag must be a number in "
+                      "the interval [0, 63].");
+                return boost::none;
+            }
+            modify_flag.imm = kv.key == "set" ? true : false;
+            modify_flag.shift = kv.value.i;
+            command_met = true;
+        } else {
+            report_invalid_directive("invalid attribute of modify_flag directive", kv.key);
+            return boost::none;
+        }
+    }
+
+    if (!command_met) {
+        report_invalid_directive("modify_flag has to either set or clear a flag", value);
+        return boost::none;
+    }
+
+    return modify_flag;
+}
+
+bool FlatrockParser::AnalyzerStage::input_modify_checksum(
+    FlatrockParser::AnalyzerStage::Rule &rule,
+    value_t value) {
+    if (!CHECKTYPE(value, tMAP) || !require_keys(value, {"idx", "enabled"}))
+        return false;
+
+    Rule::ModifyChecksum modify_checksum;
+    for (const auto &kv : MapIterChecked(value.map, false)) {
+        if (kv.key == "idx") {
+            if (!check_range(kv.value, 0, 1)) {
+                error(kv.value.lineno,
+                      "the idx attribute of modify_checksum must be a number in "
+                      "the interval [0, 1].");
+                return false;
+            }
+            modify_checksum.cksum_idx = kv.value.i;
+        } else if (kv.key == "enabled") {
+            if (!CHECKTYPE(kv.value, tSTR) || (kv.value != "true" && kv.value != "false")) {
+                error(kv.value.lineno,
+                      "the enabled attribute of modify_checksum must be a boolean");
+                return false;
+            }
+            modify_checksum.enabled = kv.value == "true" ? true : false;
+        } else {
+            report_invalid_directive("invalid attribute of modify_checksum directive",
+            kv.key);
+            return false;
+        }
+    }
+
+    rule.modify_checksum = modify_checksum;
+    return true;
+}
+
 void FlatrockParser::AnalyzerStage::input_rule(VECTOR(value_t) args, value_t key, value_t data) {
     if (key.type == tSTR) {
         /* -- This is handled by the CHECKTYPE macro but I want nicer
@@ -1788,6 +1923,16 @@ void FlatrockParser::AnalyzerStage::input_rule(VECTOR(value_t) args, value_t key
             rule.next_alu1_instruction.input(args, kv.value);
         } else if (kv.key == "push_hdr_id") {
             input_push_hdr(rule, kv.value);
+        } else if (kv.key == "modify_flags4") {
+            rule.modify_flags4 = load_modify_flags<4>(rule, kv.value);
+        } else if (kv.key == "modify_flags16") {
+            rule.modify_flags16 = load_modify_flags<16>(rule, kv.value);
+        } else if (kv.key == "modify_flag0") {
+            rule.modify_flag0 = load_modify_flag(rule, kv.value);
+        } else if (kv.key == "modify_flag1") {
+            rule.modify_flag1 = load_modify_flag(rule, kv.value);
+        } else if (kv.key == "modify_checksum") {
+            input_modify_checksum(rule, kv.value);
         } else {
             report_invalid_directive("invalid rule attribute", kv.key);
         }
@@ -1903,6 +2048,36 @@ void FlatrockParser::AnalyzerStage::write_config(RegisterSetBase &regs, json::ma
                 (static_cast<uint32_t>(1) << 16) /* vld == '1' => push hdr_id into next slot */ |
                 (static_cast<uint32_t>(rule.push_hdr_id->hdr_id) << 8) |
                 (static_cast<uint32_t>(rule.push_hdr_id->offset));
+        }
+        if (rule.modify_flags16) {
+            fr_regs.prsr_mem.parser_ana_ext.ana_ext[*stage][rule_idx].mod_flags16 =
+                (static_cast<uint64_t>(rule.modify_flags16->src) << 38) |
+                (static_cast<uint64_t>(rule.modify_flags16->imm) << 22) |
+                (static_cast<uint64_t>(rule.modify_flags16->mask) << 6) |
+                (static_cast<uint64_t>(rule.modify_flags16->shift));
+        }
+        if (rule.modify_flags4) {
+            fr_regs.prsr_mem.parser_ana_ext.ana_ext[*stage][rule_idx].mod_flags4 =
+                (static_cast<uint32_t>(rule.modify_flags4->src) << 14) |
+                (static_cast<uint32_t>(rule.modify_flags4->imm) << 10) |
+                (static_cast<uint32_t>(rule.modify_flags4->mask) << 6) |
+                (static_cast<uint32_t>(rule.modify_flags4->shift));
+        }
+        if (rule.modify_flag0) {
+            fr_regs.prsr_mem.parser_ana_ext.ana_ext[*stage][rule_idx].mod_flag0 =
+                (static_cast<uint32_t>(rule.modify_flag0->imm) << 6) |
+                (static_cast<uint32_t>(rule.modify_flag0->shift));
+        }
+        if (rule.modify_flag1) {
+            fr_regs.prsr_mem.parser_ana_ext.ana_ext[*stage][rule_idx].mod_flag1 =
+                (static_cast<uint32_t>(rule.modify_flag1->imm) << 6) |
+                (static_cast<uint32_t>(rule.modify_flag1->shift));
+        }
+        if (rule.modify_checksum) {
+            fr_regs.prsr_mem.parser_ana_ext.ana_ext[*stage][rule_idx].mod_csum =
+                (static_cast<uint32_t>(1) << 2) |  // valid
+                (static_cast<uint32_t>(rule.modify_checksum->cksum_idx) << 1) |
+                (static_cast<uint32_t>(rule.modify_checksum->enabled));
         }
     }
 }

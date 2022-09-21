@@ -193,6 +193,7 @@
 #                              if ((w2[7:0] & mask_mode(imm4u)) >> imm2u) != 0, then + 4 - ((w2[7:0] & mask_mode(imm4u)) >> imm2u)
 #                              if mask_mode == 0, then each bit is a half-nibble mask
 #                              if mask_mode == 1, then the mask is a full bit mask on the lower bits; upper bits are 0xF
+# <modify-flags-src> ::= 'w0' | 'w1' | 'w2' | 'imm'
 phv [<thread>]:
     # Defines PHV alias names for registers.  <thread> is 'ingress', 'ghost' or
     # 'egress' and is optional.  If present, aliases are defined only for
@@ -414,6 +415,12 @@ parser [<thread>] [<port_use>, ...]:
         rule <constant>:
             # constant is explicit rule index; it also specifies the rule priority
             # when more rules match (lower value is higher priority)
+            # each rule supports up to 4 instructions for modifying flags, one for up to 16 bits
+            # (modify_flags16), one for up to 4 bits (modify_flags4), and two for 1 bit
+            # (modify_flag0 and modify_flag1). All of these can be set simultaneously. If the
+            # affected flags overlap, the instructions take effect in the following order of
+            # precedence:
+            # modify_flags16, modify_flag4, modify_flag0, modify_flag1.
             match_state: <match-constant> | <name>
             # if state match constant is ommited, it is derived from the state name at stage
             # if it is missing, it is treated as *
@@ -445,7 +452,28 @@ parser [<thread>] [<port_use>, ...]:
                 # 0xff for header ID is reserved for invalid
                 # offset is relative to pointer
                 # e.g. push_hdr_id: ipv4 0
-            # TODO update flags, update csum enable
+            modify_flags16:
+                # specifies src (2b), imm (16b), mask (16b), and shift (6b) to set/clear
+                # multiple flags at once.
+                src: <modify-flags-src>
+                imm: <constant>
+                    # whether to set or clear the corresponding flags, only used if src == 3
+                mask: <constant>
+                    # modify a flag if the corresponding mask bit is set
+                shift: <constant>
+                    # index into flags at which to start the operation
+            modify_flags4:
+                # same as modify_flag16, but with 4b imm and mask
+                src: <modify-flags-src>
+                imm: <constant>
+                mask: <constant>
+                shift: <constant>
+            modify_flag0: { set: <constant> | clear: <constant> },
+                # set or clear the flag at the index given by the 6-bit <constant>
+            modify_flag1: { set: <constant> | clear: <constant> },
+                # same as modify_flag0
+            modify_checksum: { idx: <constant>, enabled: <bool> },
+                # changes the enabled state of the checksum unit at the 1-bit index idx
     phv_builder_group <constant>:
         # specifies extract groups
         pov_select: <pov-select>
