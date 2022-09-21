@@ -212,11 +212,12 @@ template<> void Deparser::write_config(Target::Flatrock::deparser_regs &regs) {
     // Ensure that bridged metadata never overwrites header pointers:
     //   - Byte 0: 0 (start hdr offset)
     //   - Byte 1: 0xFF (not compressed)
-    //   - Byte 2-11: header ids
-    //   - Byte 12-21: compressed header lengths (if using -- not in use yet)
+    //   - Byte 2-17: header ids
+    //   - Byte 18-33: compressed header lengths (if using -- not in use yet)
     regs.mdp.br_meta_cfg_tcam.tcam[0].key_wh = 0xFFFFFFFFUL;
     regs.mdp.br_meta_cfg_tcam.tcam[0].key_wl = 0xFFFFFFFFUL;
-    regs.mdp_mem.rem_brm_ext_ram.rem_brm_ext[0].rem_brm_start = 1 + 1 + 10;
+    regs.mdp_mem.rem_brm_ext_ram.rem_brm_ext[0].rem_brm_start =
+        1 + 1 + Target::Flatrock::PAC_HEADER_POINTERS_MAX;
 
     // TM metadata
     // TODO: regs.mdp.tmm_ext

@@ -897,6 +897,8 @@ class Target::Flatrock : public Target {
         NUM_PARSERS = 1,
         NUM_PIPES = 8,  // TODO what is the correct number here?
         TABLES_REQUIRE_ROW = 0,
+        PAC_HEADER_POINTERS_MAX = 16,  // Maximum number of header pointers output by parser
+                                       // (parser has additional pointers available internally)
         PARSER_CSUM_MASKS = 4,
         PARSER_CSUM_MASK_WIDTH = 7,
         PARSER_CSUM_MASK_REG_WIDTH = 32,  // Each checksum mask is written into 7 32b wide registers

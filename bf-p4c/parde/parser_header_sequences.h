@@ -12,7 +12,7 @@ namespace {
 
 static constexpr unsigned int numHeaderIDs = 255;
 static constexpr unsigned int numHeaderSeqs = 2;
-static constexpr unsigned int numHeadersPerSeq = 10;
+static constexpr unsigned int numHeadersPerSeq = 16;
 static constexpr unsigned int payloadHeaderID = 254;
 static cstring payloadHeaderStateName = "$final";
 static cstring payloadHeaderName = "payload";
