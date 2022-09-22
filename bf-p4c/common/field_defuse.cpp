@@ -4,18 +4,10 @@
 #include "lib/map.h"
 #include "lib/range.h"
 
-namespace {
-
-/// TODO(yumin): move them to IR and remove this hack.
-/// These constant variables are fields with the bug that hardware behaviors are not
-/// correctly captured by our IR. For example, parser_err might be written in parser, but
-/// our IR does not have any node to represent it.
-const std::unordered_set<cstring> write_by_parser = {
+const std::unordered_set<cstring> FieldDefUse::write_by_parser = {
     "ingress::ig_intr_md_from_prsr.parser_err",
     "egress::eg_intr_md_from_prsr.parser_err"
 };
-
-}  // namespace
 
 static std::ostream &operator<<(std::ostream &out, const FieldDefUse::locpair &loc) {
     return out << *loc.second << " in " << *loc.first;

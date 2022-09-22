@@ -1,5 +1,6 @@
 #include "bf-p4c/phv/finalize_physical_liverange.h"
 #include <sstream>
+#include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/mau/table_summary.h"
@@ -151,6 +152,17 @@ void FinalizePhysicalLiverange::end_apply() {
             }
         }
         BUG_CHECK(found_implicit_parser_init, "ImplicitParserInit not found");
+    }
+
+    // mark parser_err as written in parser stage
+    for (const auto &fieldName : FieldDefUse::write_by_parser) {
+        const PHV::Field *field = phv_i.field(fieldName);
+        if (!field) continue;
+        for (const auto &locpair : defuse_i.getAllDefs(field->id)) {
+            if (locpair.first->is<IR::BFN::ParserState>() || locpair.first->is<IR::BFN::Parser>()) {
+                mark_access(field, le_bitrange(0, field->size - 1), locpair.first, true, true);
+            }
+        }
     }
 
     // update AllocSlices' live range.

@@ -60,6 +60,12 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
 
     VisitMode mode = VisitAll;
 
+    /// TODO(yumin): move them to IR and remove this hack.
+    /// These constant variables are fields with the bug that hardware behaviors are not
+    /// correctly captured by our IR. For example, parser_err might be written in parser, but
+    /// our IR does not have any node to represent it.
+    static const std::unordered_set<cstring> write_by_parser;
+
  private:
     const PhvInfo               &phv;
     SymBitMatrix                &conflict;

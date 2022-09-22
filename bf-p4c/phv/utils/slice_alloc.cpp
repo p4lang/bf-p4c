@@ -545,7 +545,7 @@ std::ostream& operator<<(std::ostream& out, const AllocSlice& slice) {
     out << " }";
 
     auto units = slice.getRefs();
-    out << units.size() << " units {";
+    out << ' ' << units.size() << " units {";
     for (auto u_entry : units)
         out << u_entry.first << " (" << u_entry.second << "); ";
     out << "}";

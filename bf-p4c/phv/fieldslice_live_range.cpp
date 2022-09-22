@@ -31,7 +31,7 @@ void pretty_print_live_range_info(std::ostream& out, const LiveRangeInfo& info,
         format->at(0) = "P";
         format->at(Device::numStages() + 1) = "D";
         for (int i = 1; i <= Device::numStages(); i++) {
-            format->at(i) = std::to_string(i);
+            format->at(i) = std::to_string(i - 1);
         }
         tp_format = format;
     }
