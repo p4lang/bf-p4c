@@ -24,14 +24,14 @@ class DynamicNextTable : public DynamicVisitor, public NextTable {
     NextTable   *pass;
 
  public:
-    ordered_set<UniqueId> next_for(const IR::MAU::Table *tbl, cstring what) const {
+    ordered_set<UniqueId> next_for(const IR::MAU::Table *tbl, cstring what) const override {
         return pass->next_for(tbl, what); }
-    virtual bool uses_next_table(const IR::MAU::Table *tbl) const {
+    bool uses_next_table(const IR::MAU::Table *tbl) const override {
         return pass->uses_next_table(tbl); }
-    void dbprint(std::ostream &out) const { pass->dbprint(out); }
-    const std::unordered_map<int, std::set<UniqueId>> &long_branches(UniqueId id) const {
+    void dbprint(std::ostream &out) const override { pass->dbprint(out); }
+    const std::unordered_map<int, std::set<UniqueId>> &long_branches(UniqueId id) const override {
         return pass->long_branches(id); }
-    std::pair<ssize_t, ssize_t> get_live_range_for_lb_with_dest(UniqueId id) const {
+    std::pair<ssize_t, ssize_t> get_live_range_for_lb_with_dest(UniqueId id) const override {
         return pass->get_live_range_for_lb_with_dest(id); }
     void setVisitor(NextTable *v) { DynamicVisitor::setVisitor((pass = v)); }
     DynamicNextTable *clone() const override { BUG("DynamicNextTable not cloneable"); }

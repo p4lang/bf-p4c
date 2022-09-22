@@ -392,7 +392,7 @@ class FlatrockDevice : public Device {
     bool getHasIngressDeparser() const override { return false; }
     bool getHasEgressParser() const override { return false; }
     bool getHasGhostThread() const override { return false; /* TBD */ };
-    bool getThreadsSharePipe(gress_t a, gress_t b) const {
+    bool getThreadsSharePipe(gress_t a, gress_t b) const override {
         // just check bottom bit, as ingress/ghost share a pipe
         return (a&1) == (b&1); }
     bool getHasMirrorIOSelect() const override { return false; }

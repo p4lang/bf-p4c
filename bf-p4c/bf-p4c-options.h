@@ -115,7 +115,7 @@ class BFNContext : public virtual P4CContext {
     static BFNContext& get();
 
     /// @return the compiler options for this compilation context.
-    BFN_Options& options();
+    BFN_Options& options() override;
 
     /// Record options created in the Backend
     void setBackendOptions(BFN_Options* options);

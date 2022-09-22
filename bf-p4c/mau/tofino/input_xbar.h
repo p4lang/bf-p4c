@@ -169,10 +169,10 @@ struct IXBar : public ::IXBar {
         parity_status_t parity = PARITY_NONE;
 
         bool search_data() const { return gw_search_bus || gw_hash_group; }
-        bool is_parity_enabled() const { return parity == PARITY_ENABLED; }
+        bool is_parity_enabled() const override { return parity == PARITY_ENABLED; }
 
         HashDistDest_t hash_dist_type = HD_DESTS;
-        std::string hash_dist_used_for() const {
+        std::string hash_dist_used_for() const override {
             return IXBar::hash_dist_name(hash_dist_type); }
 
         /* which of the 16 hash tables we are using (bitvec) */
@@ -210,7 +210,7 @@ struct IXBar : public ::IXBar {
                 computed_expressions.clear();
             }
         } meter_alu_hash;
-        const std::map<int, const IR::Expression *> &hash_computed_expressions() const {
+        const std::map<int, const IR::Expression *> &hash_computed_expressions() const override {
             return meter_alu_hash.computed_expressions; }
 
         /* tracks hash dist use (and hashes */
@@ -230,7 +230,7 @@ struct IXBar : public ::IXBar {
                 galois_start_bit_to_p4_hash.clear();
             }
         } hash_dist_hash;
-        int hash_dist_hash_group() const { return hash_dist_hash.group; }
+        int hash_dist_hash_group() const override { return hash_dist_hash.group; }
 
         struct ProxyHashKey {
             bool allocated = false;
@@ -281,23 +281,23 @@ struct IXBar : public ::IXBar {
         void dbprint(std::ostream &) const override;
 
         void add(const Use &alloc);
-        safe_vector<Byte> atcam_partition(int *hash_group = nullptr) const;
+        safe_vector<Byte> atcam_partition(int *hash_group = nullptr) const override;
         bool emit_gateway_asm(const MauAsmOutput &, std::ostream &, indent_t,
                               const IR::MAU::Table *) const override { return false; }
         void emit_ixbar_asm(const PhvInfo &phv, std::ostream& out, indent_t indent,
-                            const TableMatch *fmt, const IR::MAU::Table *) const;
-        void emit_salu_bytemasks(std::ostream &out, indent_t indent) const;
-        bitvec galois_matrix_bits() const { return hash_dist_hash.galois_matrix_bits; }
-        int hash_groups() const;
-        virtual TotalBytes match_hash(safe_vector<int> *hash_groups = nullptr) const;
-        bitvec meter_bit_mask() const { return meter_alu_hash.bit_mask; }
-        int total_input_bits() const {
+                            const TableMatch *fmt, const IR::MAU::Table *) const override;
+        void emit_salu_bytemasks(std::ostream &out, indent_t indent) const override;
+        bitvec galois_matrix_bits() const override { return hash_dist_hash.galois_matrix_bits; }
+        int hash_groups() const override;
+        TotalBytes match_hash(safe_vector<int> *hash_groups = nullptr) const override;
+        bitvec meter_bit_mask() const override { return meter_alu_hash.bit_mask; }
+        int total_input_bits() const override {
             int rv = 0;
             for (auto fl : field_list_order) {
                 rv += fl->type->width_bits(); }
             return rv; }
-        void update_resources(int, BFN::Resources::StageResources &) const;
-        const char *way_source_kind() const { return "group"; }
+        void update_resources(int, BFN::Resources::StageResources &) const override;
+        const char *way_source_kind() const override { return "group"; }
     };
     static Use &getUse(autoclone_ptr<::IXBar::Use> &ac);
     static const Use &getUse(const autoclone_ptr<::IXBar::Use> &ac);
@@ -573,13 +573,13 @@ struct IXBar : public ::IXBar {
                     TableResourceAlloc &alloc, const LayoutOption *lo,
                     const ActionData::Format::Use *af, const attached_entries_t &ae) override;
 
-    void update(cstring name, const ::IXBar::Use &alloc);
+    void update(cstring name, const ::IXBar::Use &alloc) override;
     void update(cstring name, const HashDistUse &hash_dist_alloc);
-    virtual void update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc);
-    virtual void update(const IR::MAU::Table *tbl);
-    void add_collisions();
-    void verify_hash_matrix() const;
-    void dbprint(std::ostream &) const;
+    void update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc) override;
+    void update(const IR::MAU::Table *tbl) override;
+    void add_collisions() override;
+    void verify_hash_matrix() const override;
+    void dbprint(std::ostream &) const override;
 
     const Loc *findExactByte(PHV::Container c, int byte) const {
         for (auto &p : Values(exact_fields.equal_range(c)))

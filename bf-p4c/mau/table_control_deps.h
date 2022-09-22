@@ -17,7 +17,7 @@ class TableControlDeps : public MauTableInspector {
     };
     ordered_map<const IR::MAU::Table *, info_t> info;
 
-    profile_t init_apply(const IR::Node *root) {
+    profile_t init_apply(const IR::Node *root) override {
         info.clear();
         return MauTableInspector::init_apply(root); }
     ordered_set<const IR::MAU::Table *> parents();

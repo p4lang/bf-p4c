@@ -255,8 +255,8 @@ class Table : BFN::Unit, IAnnotated  {
     bool has_match_data() const;
     bool for_dleft() const;
     bool is_always_run_action() const { return always_run == IR::MAU::AlwaysRun::ACTION; }
-    Annotations getAnnotations() const;
-    Annotation getAnnotation(cstring name) const;
+    Annotations getAnnotations() const override;
+    Annotation getAnnotation(cstring name) const override;
     Expression getExprAnnotation(cstring name) const;
     bool getAnnotation(cstring name, int &val) const;
     bool getAnnotation(cstring name, bool &val) const;
