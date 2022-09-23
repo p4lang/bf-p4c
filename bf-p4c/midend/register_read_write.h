@@ -33,6 +33,8 @@ typedef std::unordered_map<const IR::Declaration *,
                 IR::MethodCallExpression*>> RegisterExecuteCallByAction;
 typedef std::unordered_map<const IR::P4Control*,
         ordered_set<IR::Declaration_Instance *>> RegisterActionsByControl;
+typedef std::unordered_map<const IR::Declaration *,  // Register declaration
+        std::unordered_set<const IR::Declaration *>> ActionsByRegister;
 
 /**
  * \ingroup stateful_alu
@@ -52,6 +54,7 @@ class RegisterReadWrite : public PassManager {
     RegisterCallsByAction action_register_calls;
     RegisterExecuteCallByAction action_register_exec_calls;
     RegisterActionsByControl control_register_actions;
+    ActionsByRegister generated_register_actions;
 
     /**
      * \ingroup stateful_alu
@@ -63,13 +66,14 @@ class RegisterReadWrite : public PassManager {
      */
     class CheckRegisterActions : public Inspector {
         RegisterReadWrite &self;
-        std::unordered_map<const IR::Declaration_Instance *, int> reg_act_cnt;
+        std::unordered_map<const IR::Declaration *,  // Register -> RegisterAction
+            std::vector<const IR::Declaration *>> all_register_actions;
 
      public:
         explicit CheckRegisterActions(RegisterReadWrite &self) :
              self(self) {}
 
-        bool preorder(const IR::Declaration_Instance* di) override;
+        bool preorder(const IR::Declaration_Instance *) override;
         void end_apply() override;
     };
 

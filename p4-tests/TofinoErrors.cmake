@@ -55,8 +55,12 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-   "error: .*: too many actions try to access the register"
+   "error: .*: too many actions access the Register"
    extensions/p4_tests/p4_16/errors/stateful_read_write_5actions.p4
+)
+
+p4c_add_xfail_reason("tofino"
+   "error: .*: too many RegisterActions attached to the Register"
    extensions/p4_tests/p4_16/errors/stateful_read_write_5registeractions.p4
 )
 

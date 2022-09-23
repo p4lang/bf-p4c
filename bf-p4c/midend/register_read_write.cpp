@@ -7,16 +7,17 @@
 
 namespace BFN {
 
-bool RegisterReadWrite::CheckRegisterActions::preorder(const IR::Declaration_Instance* di) {
-    auto inst = dynamic_cast<P4::ExternInstantiation*>(
-        P4::ExternInstantiation::resolve(di, self.refMap, self.typeMap));
-    if (!inst || inst->type->name != "RegisterAction") return true;
-    auto *path_expr = inst->constructorArguments->at(0)->expression->to<IR::PathExpression>();
-    BUG_CHECK(path_expr != nullptr, "Expected PathExpression");
-    auto *decl_inst = getDeclInst(self.refMap, path_expr);
-    BUG_CHECK(decl_inst != nullptr, "Expected Declaration_Instance");
-    // If there is no item, add it and init the counter to 1
-    reg_act_cnt[decl_inst]++;
+bool RegisterReadWrite::CheckRegisterActions::preorder(
+        const IR::Declaration_Instance* reg_act_decl_inst) {
+    auto *reg_act_ext_inst = dynamic_cast<P4::ExternInstantiation*>(
+        P4::ExternInstantiation::resolve(reg_act_decl_inst, self.refMap, self.typeMap));
+    if (!reg_act_ext_inst || reg_act_ext_inst->type->name != "RegisterAction") return true;
+    auto *reg_path_expr =
+        reg_act_ext_inst->constructorArguments->at(0)->expression->to<IR::PathExpression>();
+    BUG_CHECK(reg_path_expr != nullptr, "Expected PathExpression");
+    auto *reg_decl_inst = getDeclInst(self.refMap, reg_path_expr);
+    BUG_CHECK(reg_decl_inst != nullptr, "Expected Declaration_Instance");
+    all_register_actions[reg_decl_inst].push_back(reg_act_decl_inst);
     return false;
 }
 
@@ -25,12 +26,39 @@ bool RegisterReadWrite::CheckRegisterActions::preorder(const IR::Declaration_Ins
  * This is a Tofino 1/2/3 HW restriction.
  */
 void RegisterReadWrite::CheckRegisterActions::end_apply() {
-    for (auto &item : reg_act_cnt) {
-        if (item.second > Device::statefulAluSpec().MaxInstructions)
-            ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
-                "%1%: too many actions try to access the register. The target limits the number "
-                "of actions accessing a single register to %2%. Reorganize your code to meet "
-                "this restriction.", item.first, Device::statefulAluSpec().MaxInstructions);
+    for (auto &item : all_register_actions) {
+        std::string actions_str;
+        if (static_cast<int>(item.second.size()) > Device::statefulAluSpec().MaxInstructions) {
+            if (self.generated_register_actions.count(item.first) > 0) {
+                // RegisterAction has been created in RegisterReadWrite
+                std::string sep;
+                for (auto &action : self.generated_register_actions.at(item.first)) {
+                    actions_str += sep + action->externalName();
+                    sep = ", ";
+                }
+                ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                    "%1%: too many actions access the Register\n"
+                    "The target architecture limits the number of actions accessing "
+                    "a single register to %2%.\n"
+                    "Reorganize your code to meet this restriction.\n"
+                    "The Register is accessed in the following actions: %3%",
+                    item.first, Device::statefulAluSpec().MaxInstructions, actions_str);
+            } else {
+                // RegisterAction has been instantiated in the P4 code
+                std::string sep;
+                for (auto &action : item.second) {
+                    actions_str += sep + action->externalName();
+                    sep = ", ";
+                }
+                ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                    "%1%: too many RegisterActions attached to the Register\n"
+                    "The target architecture limits the number of RegisterActions attached "
+                    "to a single Register to %2%.\n"
+                    "Reorganize your code to meet this restriction.\n"
+                    "The following RegisterActions are attached to the Register: %3%",
+                    item.first, Device::statefulAluSpec().MaxInstructions, actions_str);
+            }
+        }
     }
 }
 
@@ -475,6 +503,7 @@ bool RegisterReadWrite::AnalyzeActionWithRegisterCalls::preorder(const IR::Decla
             << reg_execute);
 
         self.action_register_exec_calls[act][reg.first] = reg_execute;
+        self.generated_register_actions[reg.first].insert(act);
     }
 
     return false;
