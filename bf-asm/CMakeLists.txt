@@ -69,9 +69,6 @@ if (ASAN_ENABLED)
   set (CMAKE_CXX_FLAGS "-fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer -fno-optimize-sibling-calls -g -O1")
 endif()
 
-set (CMAKE_CXX_STANDARD 11)
-set (CMAKE_CXX_STANDARD_REQUIRED ON)
-
 # json_diff
 set (JSONDIFF_SOURCES json_diff.cpp json.cpp fdstream.cpp)
 build_unified(JSONDIFF_SOURCES ALL)

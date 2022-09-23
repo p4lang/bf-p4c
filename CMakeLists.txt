@@ -53,6 +53,24 @@ if (ENABLE_STATIC_LIBS)
   set(Boost_USE_STATIC_RUNTIME OFF)
 endif()
 
+# We will be enabling C++17, but we need to support CMake 3.5. Luckily, even old
+# CMake can learn how to enable new standard. We asume here that the compiler
+# understands the -std=c++17 option as compilers that do not will not work
+# anyway.
+if (CMAKE_VERSION VERSION_LESS "3.8")
+    message(WARNING "Making old CMake support C++17")
+    set(CMAKE_CXX17_STANDARD_COMPILE_OPTION "-std=c++17")
+    set(CMAKE_CXX17_EXTENSION_COMPILE_OPTION "-std=gnu++17")
+endif()
+
+# enable C++17. Note that, as of now, there is also a hack in
+# bf-p4c/CMakeLists.txt to undo the setting of C++11 in p4c
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# set this explicitly for clarity, at this point, bfas uses ##__VA_ARGS__ which
+# is an extension
+set(CMAKE_CXX_EXTENSIONS ON)
+
 if (ENABLE_TESTING)
   enable_testing()
 endif()

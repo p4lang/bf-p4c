@@ -527,20 +527,6 @@ node ('compiler-travis') {
                         """
                     },
 
-                    'GCC-6 build' : {
-                        sh """
-                            docker run \
-                                --rm \
-                                -v ~/.ccache_bf-p4c-compilers:/root/.ccache \
-                                -e MAKEFLAGS=j2 \
-                                -e UNIFIED_BUILD=true \
-                                -e CC=gcc-6 \
-                                -e CXX=g++-6 \
-                                bf-p4c-compilers_intermediate_${image_tag} \
-                                /bfn/bf-p4c-compilers/docker/docker_build.sh
-                        """
-                    },
-
                     // Benchmarks
                     /*'Compile time benchmark' : {
                         build job: 'bf-p4c-compilers-performance-bench',

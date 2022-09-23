@@ -2,6 +2,19 @@
 
 MESSAGE("-- Adding p4c-barefoot")
 
+# enable C++17
+# this is a bit hacky -- for now, p4c sets C++ standard to 11 using the CMake
+# global variable designed for this purpose. This means that C++ standard
+# possibly set in bf-p4c top-level cmake (the one that includes p4c) would be
+# overwritten by p4c's setting. Therefore, we change the value here. But we also
+# need to make sure that p4c (or at least the parts that include bf-p4c
+# components such as frontend and IR) get build with C++17. For this reason, we
+# have to set the standard also in the PARENT_SCOPE, meaning the p4c cmake that
+# included this cmake. Setting in PARENT_SCOPE does not change value here, so we
+# need to do the setting twice.
+set(CMAKE_CXX_STANDARD 17 PARENT_SCOPE)
+set(CMAKE_CXX_STANDARD 17)
+
 # An option to configure the chunk size we use for unified builds in bf-p4c. By
 # default, this is tuned to use smaller chunks than the p4c repo uses. The goal
 # is to gain most of the benefit of unified builds when many files change, while
