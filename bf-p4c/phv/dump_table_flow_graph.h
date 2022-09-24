@@ -14,6 +14,11 @@ struct DumpTableFlowGraph : public Visitor {
 
         ordered_set<const PHV::Field*> reads, writes;
 
+        // An MAU::Table object may have TableSeq on the $default path,
+        // make sure these tables are not visited.
+        bool preorder(const IR::MAU::TableSeq*) override {
+            return false;
+        }
         bool preorder(const IR::MAU::Table* tbl) override {
             return !tbl->is_a_gateway_table_only();
         }
