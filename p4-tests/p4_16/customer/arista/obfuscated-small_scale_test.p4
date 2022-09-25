@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_SMALL_SCALE_TEST=1 -Ibf_arista_switch_small_scale_test/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'   --target tofino-tna --o bf_arista_switch_small_scale_test --bf-rt-schema bf_arista_switch_small_scale_test/context/bf-rt.json
-// p4c 9.7.3 (SHA: dc177f3)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_SMALL_SCALE_TEST=1 -Ibf_arista_switch_small_scale_test/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_small_scale_test --bf-rt-schema bf_arista_switch_small_scale_test/context/bf-rt.json
+// p4c 9.7.4 (SHA: 97e15e7)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -255,6 +255,11 @@ header Palatine {
 header Albemarle {
 }
 
+header Geismar {
+    bit<224> Quogue;
+    bit<32>  Lasara;
+}
+
 header Algodones {
     bit<6>  Buckeye;
     bit<10> Topanga;
@@ -423,11 +428,13 @@ header Beaverdam {
     bit<8> ElVerano;
 }
 
-header Brinkman {
+struct Brinkman {
+    @padding 
     bit<64> Boerne;
-    bit<3>  Alamosa;
-    bit<2>  Elderon;
-    bit<3>  Knierim;
+    @padding 
+    bit<3>  Perma;
+    bit<2>  Campbell;
+    bit<3>  Navarro;
 }
 
 header Montross {
@@ -479,6 +486,20 @@ header Bucktown {
     bit<8>  Wakita;
     bit<32> Latham;
     bit<32> Dandridge;
+}
+
+header Edgemont {
+    bit<3>  Hulbert;
+    bit<5>  Philbrook;
+    bit<2>  Skyway;
+    bit<6>  Whitten;
+    bit<8>  Rocklin;
+    bit<8>  Wakita;
+    bit<32> Latham;
+    bit<32> Dandridge;
+    bit<32> Woodston;
+    bit<32> Neshoba;
+    bit<32> Ironside;
 }
 
 header Colona {
@@ -737,14 +758,39 @@ struct Mausdale {
     NextHop_t      Wisdom;
 }
 
+typedef bit<11> AppFilterResId_t;
 struct Bessie {
-    bit<1>  Savery;
-    bit<1>  Morstein;
-    bit<1>  Quinault;
-    bit<32> Komatke;
-    bit<32> Salix;
-    bit<12> Moose;
-    bit<12> Minturn;
+    bit<1>           Savery;
+    bit<1>           Morstein;
+    bit<1>           Quinault;
+    bit<32>          Komatke;
+    bit<32>          Salix;
+    bit<32>          Ellicott;
+    bit<32>          Parmalee;
+    bit<32>          Donnelly;
+    bit<32>          Welch;
+    bit<32>          Kalvesta;
+    bit<32>          GlenRock;
+    bit<32>          Keenes;
+    bit<32>          Colson;
+    bit<32>          FordCity;
+    bit<32>          Husum;
+    bit<1>           Almond;
+    bit<1>           Schroeder;
+    bit<1>           Chubbuck;
+    bit<1>           Hagerman;
+    bit<1>           Jermyn;
+    bit<1>           Cleator;
+    bit<1>           Buenos;
+    bit<1>           Harvey;
+    bit<1>           LongPine;
+    bit<1>           Masardis;
+    bit<1>           WolfTrap;
+    bit<1>           Isabel;
+    bit<12>          Moose;
+    bit<12>          Minturn;
+    AppFilterResId_t Padonia;
+    AppFilterResId_t Gosnell;
 }
 
 struct McCaskill {
@@ -889,9 +935,12 @@ struct Martelle {
 }
 
 struct Westville {
-    bit<1> Baudette;
-    bit<1> Ekron;
-    bit<1> Swisshome;
+    bit<13> LaPointe;
+    bit<1>  Baudette;
+    bit<1>  Ekron;
+    bit<1>  Swisshome;
+    bit<13> Wharton;
+    bit<10> Cortland;
 }
 
 struct Sequim {
@@ -962,6 +1011,7 @@ struct Sequim {
     Kapalua      Bronwood;
     SoapLake     Cotter;
     Glendevey[2] Kinde;
+    Glendevey    Rendville;
     Ledoux       Hillside;
     Dennison     Wanamassa;
     Antlers      Peoria;
@@ -980,6 +1030,7 @@ struct Sequim {
     Fairmount    Recluse;
     Fairmount    Arapahoe;
     Fairmount    Parkway;
+    Geismar      Saltair;
 }
 
 struct Palouse {
@@ -1033,12 +1084,12 @@ parser Harding(packet_in Nephi, out Milano Olmitz, out Sequim Baker, out ingress
     }
     state Ossining {
         Nephi.extract<Ledoux>(Olmitz.Hillside);
-        Baker.Hallwood.Mayday = (bit<4>)4w0x5;
+        Baker.Hallwood.Mayday = (bit<4>)4w0x3;
         transition accept;
     }
     state Kempton {
         Nephi.extract<Ledoux>(Olmitz.Hillside);
-        Baker.Hallwood.Mayday = (bit<4>)4w0x6;
+        Baker.Hallwood.Mayday = (bit<4>)4w0x3;
         transition accept;
     }
     state GunnCity {
@@ -1050,6 +1101,9 @@ parser Harding(packet_in Nephi, out Milano Olmitz, out Sequim Baker, out ingress
         Nephi.extract<Ledoux>(Olmitz.Hillside);
         transition accept;
     }
+    state Eureka {
+        transition Sneads;
+    }
     state Emden {
         Nephi.extract<SoapLake>(Olmitz.Cotter);
         transition select((Nephi.lookahead<bit<24>>())[7:0], (Nephi.lookahead<bit<16>>())[15:0]) {
@@ -1059,6 +1113,8 @@ parser Harding(packet_in Nephi, out Milano Olmitz, out Sequim Baker, out ingress
             (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Starkey;
             (8w0x45 &&& 8w0xff, 16w0x800): Volens;
             (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Ossining;
+            (8w0x40 &&& 8w0xfc, 16w0x800 &&& 16w0xffff): Eureka;
+            (8w0x44 &&& 8w0xff, 16w0x800 &&& 16w0xffff): Eureka;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Nason;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Marquand;
             (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Kempton;
@@ -1083,6 +1139,8 @@ parser Harding(packet_in Nephi, out Milano Olmitz, out Sequim Baker, out ingress
             24w0x806 &&& 24w0xffff: Starkey;
             24w0x450800 &&& 24w0xffffff: Volens;
             24w0x50800 &&& 24w0xfffff: Ossining;
+            24w0x400800 &&& 24w0xfcffff: Eureka;
+            24w0x440800 &&& 24w0xffffff: Eureka;
             24w0x800 &&& 24w0xffff: Nason;
             24w0x6086dd &&& 24w0xf0ffff: Marquand;
             24w0x86dd &&& 24w0xffff: Kempton;
@@ -1100,6 +1158,8 @@ parser Harding(packet_in Nephi, out Milano Olmitz, out Sequim Baker, out ingress
             24w0x806 &&& 24w0xffff: Starkey;
             24w0x450800 &&& 24w0xffffff: Volens;
             24w0x50800 &&& 24w0xfffff: Ossining;
+            24w0x400800 &&& 24w0xfcffff: Eureka;
+            24w0x440800 &&& 24w0xffffff: Eureka;
             24w0x800 &&& 24w0xffff: Nason;
             24w0x6086dd &&& 24w0xf0ffff: Marquand;
             24w0x86dd &&& 24w0xffff: Kempton;
@@ -1117,6 +1177,8 @@ parser Harding(packet_in Nephi, out Milano Olmitz, out Sequim Baker, out ingress
             24w0x806 &&& 24w0xffff: Starkey;
             24w0x450800 &&& 24w0xffffff: Volens;
             24w0x50800 &&& 24w0xfffff: Ossining;
+            24w0x400800 &&& 24w0xfcffff: Eureka;
+            24w0x440800 &&& 24w0xffffff: Eureka;
             24w0x800 &&& 24w0xffff: Nason;
             24w0x6086dd &&& 24w0xf0ffff: Marquand;
             24w0x86dd &&& 24w0xffff: Kempton;
@@ -1144,12 +1206,26 @@ parser Harding(packet_in Nephi, out Milano Olmitz, out Sequim Baker, out ingress
     }
     state Nason {
         Nephi.extract<Ledoux>(Olmitz.Hillside);
+        Baker.Hallwood.Mayday = (bit<4>)4w0x5;
+        Dennison Aguila;
+        Aguila = Nephi.lookahead<Dennison>();
         Olmitz.Wanamassa.Irvine = (Nephi.lookahead<bit<160>>())[31:0];
-        Baker.Hallwood.Mayday = (bit<4>)4w0x3;
+        Olmitz.Wanamassa.Tallassee = (Nephi.lookahead<bit<128>>())[31:0];
         Olmitz.Wanamassa.LasVegas = (Nephi.lookahead<bit<14>>())[5:0];
         Olmitz.Wanamassa.Madawaska = (Nephi.lookahead<bit<80>>())[7:0];
         Baker.Empire.Wallula = (Nephi.lookahead<bit<72>>())[7:0];
-        transition accept;
+        transition select(Aguila.Woodfield, Aguila.Madawaska, Aguila.Dunstable) {
+            (4w0x6, 8w6, 13w0): Tahuya;
+            (4w0x6, 8w0x1 &&& 8w0xef, 13w0): Tahuya;
+            (4w0x7, 8w6, 13w0): Reidville;
+            (4w0x7, 8w0x1 &&& 8w0xef, 13w0): Reidville;
+            (4w0x8, 8w6, 13w0): Higgston;
+            (4w0x8, 8w0x1 &&& 8w0xef, 13w0): Higgston;
+            (default, 8w6, 13w0): Arredondo;
+            (default, 8w0x1 &&& 8w0xef, 13w0): Arredondo;
+            (default, default, 13w0): accept;
+            default: Moosic;
+        }
     }
     state Uniopolis {
         Baker.Hallwood.Soledad = (bit<3>)3w5;
@@ -1257,8 +1333,12 @@ parser Harding(packet_in Nephi, out Milano Olmitz, out Sequim Baker, out ingress
         }
     }
     state Chatanika {
-        Baker.Hallwood.Randall = (bit<3>)3w0x3;
-        Baker.Daisytown.LasVegas = (Nephi.lookahead<bit<14>>())[5:0];
+        Baker.Hallwood.Randall = (bit<3>)3w0x5;
+        Baker.Daisytown.Irvine = (Nephi.lookahead<Dennison>()).Irvine;
+        Baker.Daisytown.Tallassee = (Nephi.lookahead<Dennison>()).Tallassee;
+        Baker.Daisytown.LasVegas = (Nephi.lookahead<Dennison>()).LasVegas;
+        Baker.Hallwood.Moquah = (Nephi.lookahead<Dennison>()).Madawaska;
+        Baker.Hallwood.Forkville = (Nephi.lookahead<Dennison>()).Wallula;
         transition accept;
     }
     state Indios {
@@ -1305,11 +1385,11 @@ parser Harding(packet_in Nephi, out Milano Olmitz, out Sequim Baker, out ingress
         transition accept;
     }
     state Rhinebeck {
-        Baker.Hallwood.Randall = (bit<3>)3w0x5;
+        Baker.Hallwood.Randall = (bit<3>)3w0x3;
         transition accept;
     }
     state Ackerly {
-        Baker.Hallwood.Randall = (bit<3>)3w0x6;
+        Baker.Hallwood.Randall = (bit<3>)3w0x3;
         transition accept;
     }
     state Robstown {
@@ -1350,6 +1430,95 @@ parser Harding(packet_in Nephi, out Milano Olmitz, out Sequim Baker, out ingress
         }
         transition Geistown;
     }
+    state Tahuya {
+        Baker.Hallwood.Soledad = (bit<3>)3w2;
+        bit<32> Aguila;
+        Aguila = (Nephi.lookahead<bit<224>>())[31:0];
+        Olmitz.Saugatuck.Bicknell = Aguila[31:16];
+        Olmitz.Saugatuck.Naruna = Aguila[15:0];
+        transition accept;
+    }
+    state Reidville {
+        Baker.Hallwood.Soledad = (bit<3>)3w2;
+        bit<32> Aguila;
+        Aguila = (Nephi.lookahead<bit<256>>())[31:0];
+        Olmitz.Saugatuck.Bicknell = Aguila[31:16];
+        Olmitz.Saugatuck.Naruna = Aguila[15:0];
+        transition accept;
+    }
+    state Higgston {
+        Baker.Hallwood.Soledad = (bit<3>)3w2;
+        Nephi.extract<Geismar>(Olmitz.Saltair);
+        bit<32> Aguila;
+        Aguila = (Nephi.lookahead<bit<32>>())[31:0];
+        Olmitz.Saugatuck.Bicknell = Aguila[31:16];
+        Olmitz.Saugatuck.Naruna = Aguila[15:0];
+        transition accept;
+    }
+    state Trotwood {
+        bit<32> Aguila;
+        Aguila = (Nephi.lookahead<bit<64>>())[31:0];
+        Olmitz.Saugatuck.Bicknell = Aguila[31:16];
+        Olmitz.Saugatuck.Naruna = Aguila[15:0];
+        transition accept;
+    }
+    state Columbus {
+        bit<32> Aguila;
+        Aguila = (Nephi.lookahead<bit<96>>())[31:0];
+        Olmitz.Saugatuck.Bicknell = Aguila[31:16];
+        Olmitz.Saugatuck.Naruna = Aguila[15:0];
+        transition accept;
+    }
+    state Elmsford {
+        bit<32> Aguila;
+        Aguila = (Nephi.lookahead<bit<128>>())[31:0];
+        Olmitz.Saugatuck.Bicknell = Aguila[31:16];
+        Olmitz.Saugatuck.Naruna = Aguila[15:0];
+        transition accept;
+    }
+    state Baidland {
+        bit<32> Aguila;
+        Aguila = (Nephi.lookahead<bit<160>>())[31:0];
+        Olmitz.Saugatuck.Bicknell = Aguila[31:16];
+        Olmitz.Saugatuck.Naruna = Aguila[15:0];
+        transition accept;
+    }
+    state LoneJack {
+        bit<32> Aguila;
+        Aguila = (Nephi.lookahead<bit<192>>())[31:0];
+        Olmitz.Saugatuck.Bicknell = Aguila[31:16];
+        Olmitz.Saugatuck.Naruna = Aguila[15:0];
+        transition accept;
+    }
+    state LaMonte {
+        bit<32> Aguila;
+        Aguila = (Nephi.lookahead<bit<224>>())[31:0];
+        Olmitz.Saugatuck.Bicknell = Aguila[31:16];
+        Olmitz.Saugatuck.Naruna = Aguila[15:0];
+        transition accept;
+    }
+    state Roxobel {
+        bit<32> Aguila;
+        Aguila = (Nephi.lookahead<bit<256>>())[31:0];
+        Olmitz.Saugatuck.Bicknell = Aguila[31:16];
+        Olmitz.Saugatuck.Naruna = Aguila[15:0];
+        transition accept;
+    }
+    state Arredondo {
+        Baker.Hallwood.Soledad = (bit<3>)3w2;
+        Dennison Aguila;
+        Aguila = Nephi.lookahead<Dennison>();
+        Nephi.extract<Geismar>(Olmitz.Saltair);
+        transition select(Aguila.Woodfield) {
+            4w0x9: Trotwood;
+            4w0xa: Columbus;
+            4w0xb: Elmsford;
+            4w0xc: Baidland;
+            4w0xd: LoneJack;
+            4w0xe: LaMonte;
+            default: Roxobel;
+        }
+    }
 }
 
 control Goodlett(packet_out Nephi, inout Milano Olmitz, in Sequim Baker, in ingress_intrinsic_metadata_for_deparser_t Thurmond) {
@@ -1389,6 +1558,7 @@ control Goodlett(packet_out Nephi, inout Milano Olmitz, in Sequim Baker, in ingr
             Nephi.emit<Fairland>(Olmitz.Sedan);
             Nephi.emit<SoapLake>(Olmitz.Almota);
             Nephi.emit<Ledoux>(Olmitz.Lemont);
+            Nephi.emit<Geismar>(Olmitz.Saltair);
             Nephi.emit<Dennison>(Olmitz.Hookdale);
             Nephi.emit<Antlers>(Olmitz.Funston);
             Nephi.emit<Ramapo>(Olmitz.Mayflower);
@@ -1985,7 +2155,7 @@ control Salitpa(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_me
                         Beatrice.apply();
                     }
                 }
-            } else if (Baker.Earling.Norland == 1w0 && (Baker.Empire.DeGraff == 1w1 || Baker.Lindsborg.Broussard & 4w0x1 == 4w0x1 && Baker.Empire.Ambrose == 3w0x3)) {
+            } else if (Baker.Earling.Norland == 1w0 && (Baker.Empire.DeGraff == 1w1 || Baker.Lindsborg.Broussard & 4w0x1 == 4w0x1 && Baker.Empire.Ambrose == 3w0x5)) {
                 Morrow.apply();
             }
         }
@@ -2090,7 +2260,7 @@ control Kotzebue(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_m
         Baker.Empire.Billings = Baker.Hallwood.Sheldahl;
         Baker.Empire.Madawaska = Baker.Hallwood.Moquah;
         Baker.Empire.Wallula = Baker.Hallwood.Forkville;
-        Baker.Empire.Ambrose[2:0] = Baker.Hallwood.Randall[2:0];
+        Baker.Empire.Ambrose = Baker.Hallwood.Randall[2:0];
         Baker.Hallwood.Gasport = Baker.Hallwood.Gasport | Baker.Hallwood.Chatmoss;
     }
     @name(".Amalga") action Amalga() {
@@ -2116,7 +2286,7 @@ control Kotzebue(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_m
         Baker.Empire.Conner = Olmitz.Cotter.Conner;
         Baker.Empire.Lathrop = Olmitz.Cotter.Lathrop;
         Baker.Empire.Clyde = Olmitz.Cotter.Clyde;
-        Baker.Empire.Ambrose[2:0] = Baker.Hallwood.Mayday[2:0];
+        Baker.Empire.Ambrose = Baker.Hallwood.Mayday[2:0];
         Baker.Empire.Connell = Olmitz.Hillside.Connell;
     }
     @name(".WestEnd") action WestEnd() {
@@ -3015,7 +3185,8 @@ control Estero(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_met
     }
     @name(".Durant") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Durant;
     @name(".Kingsdale.Everton") Hash<bit<51>>(HashAlgorithm_t.CRC16, Durant) Kingsdale;
-    @name(".Tekonsha") ActionSelector(32w32768, Kingsdale, SelectorMode_t.RESILIENT) Tekonsha;
+    @name(".Tekonsha") ActionProfile(32w32768) Tekonsha;
+    @name(".Millett") ActionSelector(Tekonsha, Kingsdale, SelectorMode_t.RESILIENT, 32w120, 32w4) Millett;
     @disable_atomic_modify(1) @name(".Clermont") table Clermont {
         actions = {
             Gowanda();
@@ -3030,7 +3201,7 @@ control Estero(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_met
         }
         const default_action = Onamia();
         size = 512;
-        implementation = Tekonsha;
+        implementation = Millett;
         requires_versioning = false;
     }
     apply {
@@ -3172,7 +3343,8 @@ control Herring(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_me
     }
     @name(".Truro") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Truro;
     @name(".Plush.Waialua") Hash<bit<51>>(HashAlgorithm_t.CRC16, Truro) Plush;
-    @name(".Bethune") ActionSelector(32w512, Plush, SelectorMode_t.RESILIENT) Bethune;
+    @name(".Bethune") ActionProfile(32w512) Bethune;
+    @name(".Thistle") ActionSelector(Bethune, Plush, SelectorMode_t.RESILIENT, 32w120, 32w4) Thistle;
     @disable_atomic_modify(1) @name(".PawCreek") table PawCreek {
         actions = {
             Wattsburg();
@@ -3183,7 +3355,7 @@ control Herring(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_me
             Baker.Crannell.Freeny       : selector @name("Crannell.Freeny") ;
         }
         size = 128;
-        implementation = Bethune;
+        implementation = Thistle;
         const default_action = NoAction();
     }
     apply {
@@ -3192,6 +3364,9 @@ control Herring(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_me
 }
 
 control Cornwall(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_metadata_t Humeston, in egress_intrinsic_metadata_from_parser_t Basye, inout egress_intrinsic_metadata_for_deparser_t Woolwine, inout egress_intrinsic_metadata_for_output_port_t Agawam) {
+    @name(".Overton") action Overton() {
+        Woolwine.drop_ctl = (bit<3>)3w7;
+    }
     @name(".Langhorne") action Langhorne() {
     }
     @name(".Comobabi") action Comobabi(bit<8> Bovina) {
@@ -3240,14 +3415,14 @@ control Cornwall(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_me
             Langhorne();
             Comobabi();
             Natalbany();
-            @defaultonly NoAction();
+            @defaultonly Overton();
         }
         key = {
             Humeston.egress_rid : exact @name("Humeston.egress_rid") ;
             Humeston.egress_port: exact @name("Humeston.Toklat") ;
         }
         size = 8;
-        const default_action = NoAction();
+        const default_action = Overton();
     }
     apply {
         Brunson.apply();
@@ -3279,7 +3454,8 @@ control Caspian(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_met
     }
     @name(".Lowemont") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Lowemont;
     @name(".Wauregan.Wheaton") Hash<bit<51>>(HashAlgorithm_t.CRC16, Lowemont) Wauregan;
-    @name(".CassCity") ActionSelector(32w512, Wauregan, SelectorMode_t.RESILIENT) CassCity;
+    @name(".CassCity") ActionProfile(32w512) CassCity;
+    @name(".Karluk") ActionSelector(CassCity, Wauregan, SelectorMode_t.RESILIENT, 32w120, 32w4) Karluk;
     @disable_atomic_modify(1) @name(".Sanborn") table Sanborn {
         actions = {
             Norridge();
@@ -3290,7 +3466,7 @@ control Caspian(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_met
             Baker.Crannell.Freeny          : selector @name("Crannell.Freeny") ;
         }
         size = 128;
-        implementation = CassCity;
+        implementation = Karluk;
         const default_action = NoAction();
     }
     apply {
@@ -3574,7 +3750,7 @@ control Bluff(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_metad
     @name(".Virginia") action Virginia() {
         Baker.Earling.Pinole = (bit<1>)1w0x1;
     }
-    @disable_atomic_modify(1) @name(".Cornish") table Cornish {
+    @disable_atomic_modify(1) @use_hash_action(1) @name(".Cornish") table Cornish {
         actions = {
             Bedrock();
         }
@@ -3582,7 +3758,7 @@ control Bluff(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_metad
             Baker.Earling.Tornillo & 32w0x1: exact @name("Earling.Tornillo") ;
         }
         const default_action = Bedrock(32w0, 32w0);
-        size = 1;
+        size = 2;
     }
     @disable_atomic_modify(1) @name(".Hatchel") table Hatchel {
         actions = {
@@ -3612,14 +3788,18 @@ control Dougherty(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_m
         Baker.Earling.Pathfork = Baker.Earling.Tombstone;
         Baker.Earling.Tombstone = Advance;
     }
+    @name(".Ardara") action Ardara() {
+        Pelican(24w0, 24w0, 12w0);
+    }
     @use_hash_action(0) @disable_atomic_modify(1) @name(".Rockfield") table Rockfield {
         actions = {
             Pelican();
+            @defaultonly Ardara();
         }
         key = {
             Baker.Earling.Tornillo & 32w0xff000000: exact @name("Earling.Tornillo") ;
         }
-        const default_action = Pelican(24w0, 24w0, 12w0);
+        const default_action = Ardara();
         size = 256;
     }
     @name(".Redfield") action Redfield() {
@@ -3696,6 +3876,9 @@ control Devola(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_meta
 }
 
 control Mantee(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_metadata_t Humeston, in egress_intrinsic_metadata_from_parser_t Basye, inout egress_intrinsic_metadata_for_deparser_t Woolwine, inout egress_intrinsic_metadata_for_output_port_t Agawam) {
+    @name(".Herod") action Herod() {
+        Olmitz.Rendville.setInvalid();
+    }
     @name(".Walland") action Walland(bit<16> Melrose) {
         Baker.Humeston.Bledsoe = Baker.Humeston.Bledsoe + Melrose;
     }
@@ -3734,10 +3917,12 @@ control Mantee(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_meta
     @name(".Nerstrand") action Nerstrand(bit<24> Twichell, bit<24> Ferndale) {
         Chalco(Twichell, Ferndale);
         Olmitz.Wanamassa.Wallula = Olmitz.Wanamassa.Wallula - 8w1;
+        Herod();
     }
     @name(".Konnarock") action Konnarock(bit<24> Twichell, bit<24> Ferndale) {
         Chalco(Twichell, Ferndale);
         Olmitz.Peoria.Coalwood = Olmitz.Peoria.Coalwood - 8w1;
+        Herod();
     }
     @name(".Tillicum") action Tillicum() {
         Chalco(Olmitz.Cotter.Lathrop, Olmitz.Cotter.Clyde);
@@ -3792,11 +3977,13 @@ control Mantee(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_meta
         RedBay(Olmitz.Wanamassa.Newfane, 16w30, Twichell, Ferndale, Twichell, Ferndale, Pound);
         McDougal(Olmitz.Wanamassa.Newfane, 16w50, Lignite, 8w17);
         Olmitz.Wanamassa.Wallula = Olmitz.Wanamassa.Wallula - 8w1;
+        Herod();
     }
     @name(".Ontonagon") action Ontonagon(bit<24> Twichell, bit<24> Ferndale, bit<16> Pound, bit<32> Lignite) {
         RedBay(Olmitz.Peoria.Solomon, 16w70, Twichell, Ferndale, Twichell, Ferndale, Pound);
         McDougal(Olmitz.Peoria.Solomon, 16w90, Lignite, 8w17);
         Olmitz.Peoria.Coalwood = Olmitz.Peoria.Coalwood - 8w1;
+        Herod();
     }
     @name(".Ickesburg") action Ickesburg(bit<16> Powderly, bit<16> Tulalip, bit<24> Lathrop, bit<24> Clyde, bit<24> Twichell, bit<24> Ferndale, bit<16> Pound) {
         Olmitz.Pineville.setValid();
@@ -3940,7 +4127,7 @@ control Corum(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_meta
             Baker.Twain.Gotham                   : ternary @name("Twain.Gotham") ;
             Baker.Empire.Edgemoor                : ternary @name("Empire.Edgemoor") ;
             Baker.Empire.Jenners                 : ternary @name("Empire.Jenners") ;
-            Baker.Empire.Ambrose & 3w0x4         : ternary @name("Empire.Ambrose") ;
+            Baker.Empire.Ambrose                 : ternary @name("Empire.Ambrose") ;
             Baker.Earling.Subiaco                : ternary @name("Earling.Subiaco") ;
             Knights.mcast_grp_a                  : ternary @name("Knights.mcast_grp_a") ;
             Baker.Earling.Richvale               : ternary @name("Earling.Richvale") ;
@@ -4299,7 +4486,7 @@ control Sodaville(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_
         const default_action = NoAction();
     }
     apply {
-        if (Baker.Empire.Ambrose == 3w0x1) {
+        if (Baker.Empire.Ambrose & 3w0x3 == 3w0x1) {
             Kinston.apply();
             Bosco.apply();
         } else if (Baker.Empire.Ambrose == 3w0x2) {
@@ -5046,6 +5233,11 @@ control Varna(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_meta
     }
 }
 
+control Rixford(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_metadata_t Humeston, in egress_intrinsic_metadata_from_parser_t Basye, inout egress_intrinsic_metadata_for_deparser_t Woolwine, inout egress_intrinsic_metadata_for_output_port_t Agawam) {
+    apply {
+    }
+}
+
 @pa_no_init("ingress" , "Baker.Earling.Goulds") control Albin(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_metadata_t Yorkshire, in ingress_intrinsic_metadata_from_parser_t Glenoma, inout ingress_intrinsic_metadata_for_deparser_t Thurmond, inout ingress_intrinsic_metadata_for_tm_t Knights) {
     @name(".Midas") action Midas() {
         ;
@@ -5095,21 +5287,15 @@ control Varna(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_meta
         Olmitz.Kinde[0].setInvalid();
         Olmitz.Kinde[1].setInvalid();
     }
-    @name(".Rodessa") action Rodessa() {
-    }
     @name(".Hookstown") action Hookstown() {
-        Rodessa();
     }
     @name(".Unity") action Unity() {
-        Rodessa();
     }
     @name(".LaFayette") action LaFayette() {
         Olmitz.Wanamassa.setInvalid();
-        Rodessa();
     }
     @name(".Carrizozo") action Carrizozo() {
         Olmitz.Peoria.setInvalid();
-        Rodessa();
     }
     @name(".Munday") action Munday() {
         Hookstown();
@@ -5232,7 +5418,8 @@ control Varna(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_meta
     }
     @name(".Eustis") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Eustis;
     @name(".Almont.BigRiver") Hash<bit<51>>(HashAlgorithm_t.CRC16, Eustis) Almont;
-    @name(".SandCity") ActionSelector(32w8, Almont, SelectorMode_t.RESILIENT) SandCity;
+    @name(".Bothwell") ActionProfile(32w8) Bothwell;
+    @name(".Kealia") ActionSelector(Bothwell, Almont, SelectorMode_t.RESILIENT, 32w120, 32w4) Kealia;
     @disable_atomic_modify(1) @name(".Newburgh") table Newburgh {
         actions = {
             Dante();
@@ -5243,7 +5430,7 @@ control Varna(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_meta
             Baker.Crannell.Freeny: selector @name("Crannell.Freeny") ;
         }
         size = 2;
-        implementation = SandCity;
+        implementation = Kealia;
         const default_action = NoAction();
     }
     @use_hash_action(0) @disable_atomic_modify(1) @use_hash_action(0) @name(".Baroda") table Baroda {
@@ -5458,6 +5645,7 @@ control Powhatan(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_me
     @name(".Roseville") Wrens() Roseville;
     @name(".Lenapah") Burnett() Lenapah;
     @name(".Colburn") Naguabo() Colburn;
+    @name(".Crumstown") Rixford() Crumstown;
     @name(".Kirkwood") Wibaux() Kirkwood;
     @name(".Munich") Ancho() Munich;
     @name(".Nuevo") Downs() Nuevo;
@@ -5513,6 +5701,7 @@ control Powhatan(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_me
             Waukesha.apply(Olmitz, Baker, Humeston, Basye, Woolwine, Agawam);
             Beaman.apply(Olmitz, Baker, Humeston, Basye, Woolwine, Agawam);
             Belcher.apply(Olmitz, Baker, Humeston, Basye, Woolwine, Agawam);
+            Crumstown.apply(Olmitz, Baker, Humeston, Basye, Woolwine, Agawam);
             if (Baker.Earling.Goulds != 3w2) {
                 Panola.apply(Olmitz, Baker, Humeston, Basye, Woolwine, Agawam);
             }
@@ -5566,21 +5755,10 @@ parser Compton(packet_in Nephi, out Milano Olmitz, out Sequim Baker, out egress_
             default: Sneads;
         }
     }
-    state Olcott {
-        Nephi.extract<Glendevey>(Olmitz.Kinde[1]);
-        transition select((Nephi.lookahead<bit<24>>())[7:0], (Nephi.lookahead<bit<16>>())[15:0]) {
-            (8w0x45 &&& 8w0xff, 16w0x800): Volens;
-            (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Nason;
-            (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Marquand;
-            (8w0x0 &&& 8w0x0, 16w0x88f7): Oneonta;
-            default: Sneads;
-        }
-    }
     state Skillman {
         Olmitz.Parkway.setValid();
-        Nephi.extract<Glendevey>(Olmitz.Kinde[0]);
+        Nephi.extract<Glendevey>(Olmitz.Rendville);
         transition select((Nephi.lookahead<bit<24>>())[7:0], (Nephi.lookahead<bit<16>>())[15:0]) {
-            (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Olcott;
             (8w0x45 &&& 8w0xff, 16w0x800): Volens;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Nason;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Marquand;
@@ -5717,6 +5895,7 @@ control Lilydale(packet_out Nephi, inout Milano Olmitz, in Sequim Baker, in egre
             Nephi.emit<Welcome>(Olmitz.PeaRidge);
             Nephi.emit<Fairland>(Olmitz.Neponset);
             Nephi.emit<SoapLake>(Olmitz.Cotter);
+            Nephi.emit<Glendevey>(Olmitz.Rendville);
             Nephi.emit<Ledoux>(Olmitz.Hillside);
             Nephi.emit<Dennison>(Olmitz.Wanamassa);
             Nephi.emit<Antlers>(Olmitz.Peoria);

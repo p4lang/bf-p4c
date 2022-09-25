@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_VXLAN=1 -Ibf_arista_switch_nat_vxlan/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'   --target tofino-tna --o bf_arista_switch_nat_vxlan --bf-rt-schema bf_arista_switch_nat_vxlan/context/bf-rt.json
-// p4c 9.7.3 (SHA: dc177f3)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_VXLAN=1 -Ibf_arista_switch_nat_vxlan/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_nat_vxlan --bf-rt-schema bf_arista_switch_nat_vxlan/context/bf-rt.json
+// p4c 9.7.4 (SHA: 97e15e7)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -121,7 +121,7 @@
 @pa_alias("ingress" , "ig_intr_md_for_dprsr.mirror_type" , "Aguila.Baker.Bayshore")
 @pa_alias("ingress" , "ig_intr_md_for_tm.ingress_cos" , "Aguila.Harding.Grabill")
 @pa_alias("ingress" , "ig_intr_md_for_tm.level1_mcast_hash" , "ig_intr_md_for_tm.level2_mcast_hash")
-@pa_alias("ingress" , "ig_intr_md_for_tm.ucast_egress_port" , "Aguila.Frederika.Kenney")
+@pa_alias("ingress" , "ig_intr_md_for_tm.ucast_egress_port" , "Aguila.Sunbury.Kenney")
 @pa_alias("ingress" , "Aguila.Frederika.Pierceton" , "Aguila.Frederika.Vergennes")
 @pa_alias("ingress" , "Aguila.Wagener.GlenAvon" , "Aguila.Wagener.Wondervu")
 @pa_alias("egress" , "eg_intr_md.egress_port" , "Aguila.Nephi.Toklat")
@@ -403,6 +403,11 @@ header Findlay {
     bit<8> Killen;
 }
 
+header Kingsgate {
+    bit<224> Kendrick;
+    bit<32>  Hillister;
+}
+
 header Turkey {
     bit<6>  Riner;
     bit<10> Palmhurst;
@@ -571,11 +576,13 @@ header Ravena {
     bit<8> Redden;
 }
 
-header Yaurel {
+struct Yaurel {
+    @padding 
     bit<64> Bucktown;
-    bit<3>  Hulbert;
-    bit<2>  Philbrook;
-    bit<3>  Skyway;
+    @padding 
+    bit<3>  Camden;
+    bit<2>  Careywood;
+    bit<3>  Earlsboro;
 }
 
 header Rocklin {
@@ -627,6 +634,20 @@ header Billings {
     bit<8>  Morstein;
     bit<32> Waubun;
     bit<32> Minto;
+}
+
+header Seabrook {
+    bit<3>  Dyess;
+    bit<5>  Westhoff;
+    bit<2>  Havana;
+    bit<6>  Alamosa;
+    bit<8>  Nenana;
+    bit<8>  Morstein;
+    bit<32> Waubun;
+    bit<32> Minto;
+    bit<32> Devore;
+    bit<32> Melvina;
+    bit<32> Seibert;
 }
 
 header Eastwood {
@@ -784,55 +805,56 @@ struct Fredonia {
 }
 
 struct Darien {
-    bit<24> Hampton;
-    bit<24> Tallassee;
-    bit<1>  Norma;
-    bit<3>  SourLake;
-    bit<1>  Juneau;
-    bit<12> Sunflower;
-    bit<12> Aldan;
-    bit<20> RossFork;
-    bit<16> Maddock;
-    bit<16> Sublett;
-    bit<3>  Wisdom;
-    bit<12> Bonney;
-    bit<10> Cutten;
-    bit<3>  Lewiston;
-    bit<3>  Lamona;
-    bit<8>  Woodfield;
-    bit<1>  Naubinway;
-    bit<1>  Ovett;
-    bit<1>  Murphy;
-    bit<1>  Edwards;
-    bit<4>  Mausdale;
-    bit<16> Bessie;
-    bit<32> Savery;
-    bit<32> Quinault;
-    bit<2>  Komatke;
-    bit<32> Salix;
-    bit<9>  Florien;
-    bit<2>  Wallula;
-    bit<1>  Moose;
-    bit<12> Clarion;
-    bit<1>  Minturn;
-    bit<1>  Barrow;
-    bit<1>  Newfane;
-    bit<3>  McCaskill;
-    bit<32> Stennett;
-    bit<32> McGonigle;
-    bit<8>  Sherack;
-    bit<24> Plains;
-    bit<24> Amenia;
-    bit<2>  Tiburon;
-    bit<1>  Freeny;
-    bit<8>  SomesBar;
-    bit<12> Vergennes;
-    bit<1>  Sonoma;
-    bit<1>  Burwell;
-    bit<6>  Belgrade;
-    bit<1>  Peebles;
-    bit<8>  Hueytown;
-    bit<1>  Hayfield;
+    bit<24>  Hampton;
+    bit<24>  Tallassee;
+    bit<1>   Norma;
+    bit<3>   SourLake;
+    bit<1>   Juneau;
+    bit<12>  Sunflower;
+    bit<12>  Aldan;
+    bit<20>  RossFork;
+    bit<16>  Maddock;
+    bit<16>  Sublett;
+    bit<3>   Wisdom;
+    bit<12>  Bonney;
+    bit<10>  Cutten;
+    bit<3>   Lewiston;
+    bit<3>   Lamona;
+    bit<8>   Woodfield;
+    bit<1>   Naubinway;
+    bit<1>   Ovett;
+    bit<1>   Murphy;
+    bit<1>   Edwards;
+    bit<4>   Mausdale;
+    bit<16>  Bessie;
+    bit<32>  Savery;
+    bit<32>  Quinault;
+    bit<2>   Komatke;
+    bit<32>  Salix;
+    bit<9>   Florien;
+    bit<2>   Wallula;
+    bit<1>   Moose;
+    bit<12>  Clarion;
+    bit<1>   Minturn;
+    bit<1>   Barrow;
+    bit<1>   Newfane;
+    bit<3>   McCaskill;
+    bit<32>  Stennett;
+    bit<32>  McGonigle;
+    bit<8>   Sherack;
+    bit<24>  Plains;
+    bit<24>  Amenia;
+    bit<2>   Tiburon;
+    bit<1>   Freeny;
+    bit<8>   SomesBar;
+    bit<12>  Vergennes;
+    bit<1>   Sonoma;
+    bit<1>   Burwell;
+    bit<6>   Belgrade;
+    bit<1>   Peebles;
+    bit<8>   Hueytown;
+    bit<1>   Hayfield;
+    PortId_t Kenney;
 }
 
 struct Calabash {
@@ -919,14 +941,39 @@ struct McBrides {
     NextHop_t      Mickleton;
 }
 
+typedef bit<11> AppFilterResId_t;
 struct Hapeville {
-    bit<1>  Barnhill;
-    bit<1>  Wetonka;
-    bit<1>  NantyGlo;
-    bit<32> Wildorado;
-    bit<32> Dozier;
-    bit<12> Ocracoke;
-    bit<12> Lynch;
+    bit<1>           Barnhill;
+    bit<1>           Wetonka;
+    bit<1>           NantyGlo;
+    bit<32>          Wildorado;
+    bit<32>          Dozier;
+    bit<32>          Maybee;
+    bit<32>          Tryon;
+    bit<32>          Fairborn;
+    bit<32>          China;
+    bit<32>          Shorter;
+    bit<32>          Point;
+    bit<32>          McFaddin;
+    bit<32>          Jigger;
+    bit<32>          Villanova;
+    bit<32>          Mishawaka;
+    bit<1>           Hillcrest;
+    bit<1>           Oskawalik;
+    bit<1>           Pelland;
+    bit<1>           Gomez;
+    bit<1>           Placida;
+    bit<1>           Oketo;
+    bit<1>           Lovilia;
+    bit<1>           Simla;
+    bit<1>           LaCenter;
+    bit<1>           Maryville;
+    bit<1>           Sidnaw;
+    bit<1>           Toano;
+    bit<12>          Ocracoke;
+    bit<12>          Lynch;
+    AppFilterResId_t Kekoskee;
+    AppFilterResId_t Grovetown;
 }
 
 struct Sanford {
@@ -1071,9 +1118,12 @@ struct Biggers {
 }
 
 struct Bronwood {
-    bit<1> Cotter;
-    bit<1> Kinde;
-    bit<1> Hillside;
+    bit<13> Vinita;
+    bit<1>  Cotter;
+    bit<1>  Kinde;
+    bit<1>  Hillside;
+    bit<13> Suwanee;
+    bit<10> BigRun;
 }
 
 struct Wanamassa {
@@ -1137,6 +1187,7 @@ struct Wanamassa {
     Crozet      Fishers;
     Madawaska   Philip;
     Coalwood[2] Levasy;
+    Coalwood    Robins;
     Irvine      Indios;
     Kenbridge   Larwill;
     Whitten     Rhinebeck;
@@ -1157,6 +1208,7 @@ struct Wanamassa {
     Eastwood    Ledoux;
     Delavan     GunnCity;
     Delavan     Oneonta;
+    Kingsgate   Medulla;
 }
 
 struct Sneads {
@@ -1565,6 +1617,7 @@ control Lewellen(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrin
     @name(".Absecon") action Absecon(bit<8> Woodfield) {
         Aguila.Sunbury.Juneau = (bit<1>)1w1;
         Aguila.Sunbury.Woodfield = Woodfield;
+        Aguila.Sunbury.Aldan = (bit<12>)12w0;
     }
     @name(".Brodnax") action Brodnax(bit<24> Hampton, bit<24> Tallassee, bit<12> Bowers) {
         Aguila.Sunbury.Hampton = Hampton;
@@ -1796,7 +1849,7 @@ control Felton(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrinsi
         Aguila.Frederika.Cardenas = Aguila.Peoria.RioPecos;
         Aguila.Frederika.Galloway = Aguila.Peoria.Jenners;
         Aguila.Frederika.Vinemont = Aguila.Peoria.RockPort;
-        Aguila.Frederika.Atoka[2:0] = Aguila.Peoria.Stratford[2:0];
+        Aguila.Frederika.Atoka = Aguila.Peoria.Stratford[2:0];
         Aguila.Peoria.DeGraff = Aguila.Peoria.DeGraff | Aguila.Peoria.Quinhagak;
     }
     @name(".Burmah") action Burmah() {
@@ -1823,7 +1876,7 @@ control Felton(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrinsi
         Aguila.Frederika.Tallassee = Castle.Philip.Tallassee;
         Aguila.Frederika.Lathrop = Castle.Philip.Lathrop;
         Aguila.Frederika.Clyde = Castle.Philip.Clyde;
-        Aguila.Frederika.Atoka[2:0] = Aguila.Peoria.Piqua[2:0];
+        Aguila.Frederika.Atoka = Aguila.Peoria.Piqua[2:0];
         Aguila.Frederika.Connell = Castle.Indios.Connell;
     }
     @name(".WestEnd") action WestEnd() {
@@ -2614,7 +2667,8 @@ control Portales(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrin
     }
     @name(".Brinson") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Brinson;
     @name(".Westend.Everton") Hash<bit<51>>(HashAlgorithm_t.CRC16, Brinson) Westend;
-    @name(".Scotland") ActionSelector(32w32768, Westend, SelectorMode_t.RESILIENT) Scotland;
+    @name(".Scotland") ActionProfile(32w32768) Scotland;
+    @name(".Faith") ActionSelector(Scotland, Westend, SelectorMode_t.RESILIENT, 32w120, 32w4) Faith;
     @disable_atomic_modify(1) @name(".Addicks") table Addicks {
         actions = {
             Basye();
@@ -2629,7 +2683,7 @@ control Portales(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrin
         }
         const default_action = Ardsley();
         size = 512;
-        implementation = Scotland;
+        implementation = Faith;
         requires_versioning = false;
     }
     apply {
@@ -2716,7 +2770,7 @@ control Inkom(inout Westoak Castle, inout Wanamassa Aguila, in egress_intrinsic_
         size = 8192;
     }
     apply {
-        if (Aguila.Sunbury.Woodfield == 8w25 || Aguila.Sunbury.Woodfield == 8w10) {
+        if (Aguila.Sunbury.Woodfield == 8w25 || Aguila.Sunbury.Woodfield == 8w10 || Aguila.Sunbury.Woodfield == 8w81 || Aguila.Sunbury.Woodfield == 8w66) {
             Brule.apply();
         }
     }
@@ -2811,7 +2865,8 @@ control Havertown(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intri
     }
     @name(".Ghent") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Ghent;
     @name(".Protivin.Waialua") Hash<bit<51>>(HashAlgorithm_t.CRC16, Ghent) Protivin;
-    @name(".Medart") ActionSelector(32w1024, Protivin, SelectorMode_t.RESILIENT) Medart;
+    @name(".Medart") ActionProfile(32w1024) Medart;
+    @name(".Dilia") ActionSelector(Medart, Protivin, SelectorMode_t.RESILIENT, 32w120, 32w4) Dilia;
     @disable_atomic_modify(1) @stage(4) @placement_priority(1) @name(".Waseca") table Waseca {
         actions = {
             Napanoch();
@@ -2822,7 +2877,7 @@ control Havertown(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intri
             Aguila.Sedan.Readsboro           : selector @name("Sedan.Readsboro") ;
         }
         size = 128;
-        implementation = Medart;
+        implementation = Dilia;
         const default_action = NoAction();
     }
     apply {
@@ -2831,6 +2886,9 @@ control Havertown(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intri
 }
 
 control Haugen(inout Westoak Castle, inout Wanamassa Aguila, in egress_intrinsic_metadata_t Nephi, in egress_intrinsic_metadata_from_parser_t Oconee, inout egress_intrinsic_metadata_for_deparser_t Salitpa, inout egress_intrinsic_metadata_for_output_port_t Spanaway) {
+    @name(".NewCity") action NewCity() {
+        Salitpa.drop_ctl = (bit<3>)3w7;
+    }
     @name(".Goldsmith") action Goldsmith() {
     }
     @name(".Encinitas") action Encinitas(bit<8> Issaquah) {
@@ -2879,14 +2937,14 @@ control Haugen(inout Westoak Castle, inout Wanamassa Aguila, in egress_intrinsic
             Goldsmith();
             Encinitas();
             Herring();
-            @defaultonly NoAction();
+            @defaultonly NewCity();
         }
         key = {
             Nephi.egress_rid : exact @name("Nephi.egress_rid") ;
             Nephi.egress_port: exact @name("Nephi.Toklat") ;
         }
         size = 512;
-        const default_action = NoAction();
+        const default_action = NewCity();
     }
     apply {
         Plush.apply();
@@ -2931,7 +2989,8 @@ control Langhorne(inout Westoak Castle, inout Wanamassa Aguila, in egress_intrin
     }
     @name(".Bovina") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Bovina;
     @name(".Natalbany.Wheaton") Hash<bit<51>>(HashAlgorithm_t.CRC16, Bovina) Natalbany;
-    @name(".Lignite") ActionSelector(32w1024, Natalbany, SelectorMode_t.RESILIENT) Lignite;
+    @name(".Lignite") ActionProfile(32w1024) Lignite;
+    @name(".Richlawn") ActionSelector(Lignite, Natalbany, SelectorMode_t.RESILIENT, 32w120, 32w4) Richlawn;
     @disable_atomic_modify(1) @stage(4) @name(".Clarkdale") table Clarkdale {
         actions = {
             Comobabi();
@@ -2942,7 +3001,7 @@ control Langhorne(inout Westoak Castle, inout Wanamassa Aguila, in egress_intrin
             Aguila.Sedan.Readsboro            : selector @name("Sedan.Readsboro") ;
         }
         size = 128;
-        implementation = Lignite;
+        implementation = Richlawn;
         const default_action = NoAction();
     }
     apply {
@@ -3064,7 +3123,7 @@ control Cowley(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrinsi
     @name(".Lackey") action Lackey(bit<5> Westbury) {
         Aguila.Mayflower.Westbury = Westbury;
     }
-    @name(".Trion") Meter<bit<32>>(32w32, MeterType_t.BYTES) Trion;
+    @name(".Trion") Meter<bit<32>>(32w32, MeterType_t.PACKETS) Trion;
     @name(".Baldridge") action Baldridge(bit<32> Westbury) {
         Lackey((bit<5>)Westbury);
         Aguila.Mayflower.Makawao = (bit<1>)Trion.execute(Westbury);
@@ -3242,6 +3301,9 @@ control Moorman(inout Westoak Castle, inout Wanamassa Aguila, in egress_intrinsi
 }
 
 control Stone(inout Westoak Castle, inout Wanamassa Aguila, in egress_intrinsic_metadata_t Nephi, in egress_intrinsic_metadata_from_parser_t Oconee, inout egress_intrinsic_metadata_for_deparser_t Salitpa, inout egress_intrinsic_metadata_for_output_port_t Spanaway) {
+    @name(".Corry") action Corry() {
+        Castle.Robins.setInvalid();
+    }
     @name(".Milltown") action Milltown(bit<16> TinCity) {
         Aguila.Nephi.Bledsoe = Aguila.Nephi.Bledsoe + TinCity;
     }
@@ -3278,10 +3340,12 @@ control Stone(inout Westoak Castle, inout Wanamassa Aguila, in egress_intrinsic_
     @name(".Virginia") action Virginia(bit<24> Silvertip, bit<24> Thatcher) {
         Bedrock(Silvertip, Thatcher);
         Castle.Larwill.Vinemont = Castle.Larwill.Vinemont - 8w1;
+        Corry();
     }
     @name(".Cornish") action Cornish(bit<24> Silvertip, bit<24> Thatcher) {
         Bedrock(Silvertip, Thatcher);
         Castle.Rhinebeck.Welcome = Castle.Rhinebeck.Welcome - 8w1;
+        Corry();
     }
     @name(".Hatchel") action Hatchel() {
         Bedrock(Castle.Philip.Lathrop, Castle.Philip.Clyde);
@@ -3410,7 +3474,7 @@ control Rockfield(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intri
             Aguila.Mayflower.Makawao          : ternary @name("Mayflower.Makawao") ;
             Aguila.Frederika.Traverse         : ternary @name("Frederika.Traverse") ;
             Aguila.Frederika.Hematite         : ternary @name("Frederika.Hematite") ;
-            Aguila.Frederika.Atoka & 3w0x4    : ternary @name("Frederika.Atoka") ;
+            Aguila.Frederika.Atoka            : ternary @name("Frederika.Atoka") ;
             Aguila.Sunbury.Juneau             : ternary @name("Sunbury.Juneau") ;
             Aguila.Frederika.Orrick           : ternary @name("Frederika.Orrick") ;
             Aguila.Frederika.Chavies          : ternary @name("Frederika.Chavies") ;
@@ -3772,7 +3836,7 @@ control Fosston(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrins
         const default_action = NoAction();
     }
     apply {
-        if (Aguila.Frederika.Atoka == 3w0x1) {
+        if (Aguila.Frederika.Atoka & 3w0x3 == 3w0x1) {
             Elysburg.apply();
             LaMarque.apply();
         } else if (Aguila.Frederika.Atoka == 3w0x2) {
@@ -4584,7 +4648,7 @@ control Naguabo(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrins
     @name(".Burnett") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Burnett;
     @name(".Asher.Waipahu") Hash<bit<51>>(HashAlgorithm_t.CRC16, Burnett) Asher;
     @name(".Casselman") ActionProfile(32w98) Casselman;
-    @name(".Lovett") ActionSelector(Casselman, Asher, SelectorMode_t.FAIR, 32w40, 32w130) Lovett;
+    @name(".Carlsbad") ActionSelector(Casselman, Asher, SelectorMode_t.FAIR, 32w40, 32w130) Carlsbad;
 @pa_atomic("pipe_a" , "ingress" , "ig_intr_md_for_tm.ucast_egress_port")
 @pa_no_init("ingress" , "ig_intr_md_for_tm.ucast_egress_port")
 @disable_atomic_modify(1)
@@ -4599,7 +4663,7 @@ control Naguabo(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrins
             @defaultonly NoAction();
         }
         size = 1024;
-        implementation = Lovett;
+        implementation = Carlsbad;
         default_action = NoAction();
     }
     @name(".Cruso") DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) Cruso;
@@ -4611,7 +4675,7 @@ control Naguabo(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrins
             Rembrandt();
         }
         key = {
-            Harding.ucast_egress_port     : exact @name("Harding.ucast_egress_port") ;
+            Aguila.Sunbury.Kenney         : exact @name("Harding.ucast_egress_port") ;
             Aguila.Frederika.Wellton & 5w1: exact @name("Frederika.Wellton") ;
         }
         size = 1024;
@@ -4628,6 +4692,11 @@ control Naguabo(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrins
                 Leetsdale.apply();
             }
         }
+    }
+}
+
+control Eckman(inout Westoak Castle, inout Wanamassa Aguila, in egress_intrinsic_metadata_t Nephi, in egress_intrinsic_metadata_from_parser_t Oconee, inout egress_intrinsic_metadata_for_deparser_t Salitpa, inout egress_intrinsic_metadata_for_output_port_t Spanaway) {
+    apply {
     }
 }
 
@@ -4771,12 +4840,12 @@ parser Calverton(packet_in Longport, out Westoak Castle, out Wanamassa Aguila, o
     }
     state Unity {
         Longport.extract<Irvine>(Castle.Indios);
-        Aguila.Peoria.Piqua = (bit<4>)4w0x5;
+        Aguila.Peoria.Piqua = (bit<4>)4w0x3;
         transition accept;
     }
     state Hecker {
         Longport.extract<Irvine>(Castle.Indios);
-        Aguila.Peoria.Piqua = (bit<4>)4w0x6;
+        Aguila.Peoria.Piqua = (bit<4>)4w0x3;
         transition accept;
     }
     state Holcut {
@@ -4788,6 +4857,9 @@ parser Calverton(packet_in Longport, out Westoak Castle, out Wanamassa Aguila, o
         Longport.extract<Irvine>(Castle.Indios);
         transition accept;
     }
+    state Contact {
+        transition Dante;
+    }
     state Emigrant {
         Longport.extract<Madawaska>(Castle.Philip);
         transition select((Longport.lookahead<bit<24>>())[7:0], (Longport.lookahead<bit<16>>())[15:0]) {
@@ -4797,6 +4869,8 @@ parser Calverton(packet_in Longport, out Westoak Castle, out Wanamassa Aguila, o
             (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Slayden;
             (8w0x45 &&& 8w0xff, 16w0x800): Edmeston;
             (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Unity;
+            (8w0x40 &&& 8w0xfc, 16w0x800 &&& 16w0xffff): Contact;
+            (8w0x44 &&& 8w0xff, 16w0x800 &&& 16w0xffff): Contact;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): LaFayette;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Carrizozo;
             (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Hecker;
@@ -4821,6 +4895,8 @@ parser Calverton(packet_in Longport, out Westoak Castle, out Wanamassa Aguila, o
             24w0x806 &&& 24w0xffff: Slayden;
             24w0x450800 &&& 24w0xffffff: Edmeston;
             24w0x50800 &&& 24w0xfffff: Unity;
+            24w0x400800 &&& 24w0xfcffff: Contact;
+            24w0x440800 &&& 24w0xffffff: Contact;
             24w0x800 &&& 24w0xffff: LaFayette;
             24w0x6086dd &&& 24w0xf0ffff: Carrizozo;
             24w0x86dd &&& 24w0xffff: Hecker;
@@ -4838,6 +4914,8 @@ parser Calverton(packet_in Longport, out Westoak Castle, out Wanamassa Aguila, o
             24w0x806 &&& 24w0xffff: Slayden;
             24w0x450800 &&& 24w0xffffff: Edmeston;
             24w0x50800 &&& 24w0xfffff: Unity;
+            24w0x400800 &&& 24w0xfcffff: Contact;
+            24w0x440800 &&& 24w0xffffff: Contact;
             24w0x800 &&& 24w0xffff: LaFayette;
             24w0x6086dd &&& 24w0xf0ffff: Carrizozo;
             24w0x86dd &&& 24w0xffff: Hecker;
@@ -4855,6 +4933,8 @@ parser Calverton(packet_in Longport, out Westoak Castle, out Wanamassa Aguila, o
             24w0x806 &&& 24w0xffff: Slayden;
             24w0x450800 &&& 24w0xffffff: Edmeston;
             24w0x50800 &&& 24w0xfffff: Unity;
+            24w0x400800 &&& 24w0xfcffff: Contact;
+            24w0x440800 &&& 24w0xffffff: Contact;
             24w0x800 &&& 24w0xffff: LaFayette;
             24w0x6086dd &&& 24w0xf0ffff: Carrizozo;
             24w0x86dd &&& 24w0xffff: Hecker;
@@ -4902,12 +4982,26 @@ parser Calverton(packet_in Longport, out Westoak Castle, out Wanamassa Aguila, o
     }
     state LaFayette {
         Longport.extract<Irvine>(Castle.Indios);
+        Aguila.Peoria.Piqua = (bit<4>)4w0x5;
+        Kenbridge Beaman;
+        Beaman = Longport.lookahead<Kenbridge>();
         Castle.Larwill.Provo = (Longport.lookahead<bit<160>>())[31:0];
-        Aguila.Peoria.Piqua = (bit<4>)4w0x3;
+        Castle.Larwill.Denhoff = (Longport.lookahead<bit<128>>())[31:0];
         Castle.Larwill.Kearns = (Longport.lookahead<bit<14>>())[5:0];
         Castle.Larwill.Galloway = (Longport.lookahead<bit<80>>())[7:0];
         Aguila.Frederika.Vinemont = (Longport.lookahead<bit<72>>())[7:0];
-        transition accept;
+        transition select(Beaman.Mystic, Beaman.Galloway, Beaman.Suttle) {
+            (4w0x6, 8w6, 13w0): Hiwassee;
+            (4w0x6, 8w0x1 &&& 8w0xef, 13w0): Hiwassee;
+            (4w0x7, 8w6, 13w0): WestBend;
+            (4w0x7, 8w0x1 &&& 8w0xef, 13w0): WestBend;
+            (4w0x8, 8w6, 13w0): Kulpmont;
+            (4w0x8, 8w0x1 &&& 8w0xef, 13w0): Kulpmont;
+            (default, 8w6, 13w0): Shanghai;
+            (default, 8w0x1 &&& 8w0xef, 13w0): Shanghai;
+            (default, default, 13w0): accept;
+            default: Hookstown;
+        }
     }
     state Rodessa {
         Aguila.Peoria.Weatherby = (bit<3>)3w5;
@@ -5017,8 +5111,12 @@ parser Calverton(packet_in Longport, out Westoak Castle, out Wanamassa Aguila, o
         }
     }
     state Folcroft {
-        Aguila.Peoria.Stratford = (bit<3>)3w0x3;
-        Aguila.Saugatuck.Kearns = (Longport.lookahead<bit<14>>())[5:0];
+        Aguila.Peoria.Stratford = (bit<3>)3w0x5;
+        Aguila.Saugatuck.Provo = (Longport.lookahead<Kenbridge>()).Provo;
+        Aguila.Saugatuck.Denhoff = (Longport.lookahead<Kenbridge>()).Denhoff;
+        Aguila.Saugatuck.Kearns = (Longport.lookahead<Kenbridge>()).Kearns;
+        Aguila.Peoria.Jenners = (Longport.lookahead<Kenbridge>()).Galloway;
+        Aguila.Peoria.RockPort = (Longport.lookahead<Kenbridge>()).Vinemont;
         transition accept;
     }
     state Varna {
@@ -5065,11 +5163,11 @@ parser Calverton(packet_in Longport, out Westoak Castle, out Wanamassa Aguila, o
         transition accept;
     }
     state Supai {
-        Aguila.Peoria.Stratford = (bit<3>)3w0x5;
+        Aguila.Peoria.Stratford = (bit<3>)3w0x3;
         transition accept;
     }
     state Sharon {
-        Aguila.Peoria.Stratford = (bit<3>)3w0x6;
+        Aguila.Peoria.Stratford = (bit<3>)3w0x3;
         transition accept;
     }
     state Lushton {
@@ -5097,7 +5195,7 @@ parser Calverton(packet_in Longport, out Westoak Castle, out Wanamassa Aguila, o
     }
     state start {
         Longport.extract<ingress_intrinsic_metadata_t>(RichBar);
-        transition select(RichBar.ingress_port, (Longport.lookahead<Yaurel>()).Skyway) {
+        transition select(RichBar.ingress_port, (Longport.lookahead<Yaurel>()).Earlsboro) {
             (9w68 &&& 9w0x7f, 3w4 &&& 3w0x7): Chunchula;
             default: McCartys;
         }
@@ -5128,6 +5226,95 @@ parser Calverton(packet_in Longport, out Westoak Castle, out Wanamassa Aguila, o
             Aguila.Almota.Emida = ElJebel.Kapowsin;
         }
         transition Brockton;
+    }
+    state Hiwassee {
+        Aguila.Peoria.Weatherby = (bit<3>)3w2;
+        bit<32> Beaman;
+        Beaman = (Longport.lookahead<bit<224>>())[31:0];
+        Castle.Boyle.Pridgen = Beaman[31:16];
+        Castle.Boyle.Fairland = Beaman[15:0];
+        transition accept;
+    }
+    state WestBend {
+        Aguila.Peoria.Weatherby = (bit<3>)3w2;
+        bit<32> Beaman;
+        Beaman = (Longport.lookahead<bit<256>>())[31:0];
+        Castle.Boyle.Pridgen = Beaman[31:16];
+        Castle.Boyle.Fairland = Beaman[15:0];
+        transition accept;
+    }
+    state Kulpmont {
+        Aguila.Peoria.Weatherby = (bit<3>)3w2;
+        Longport.extract<Kingsgate>(Castle.Medulla);
+        bit<32> Beaman;
+        Beaman = (Longport.lookahead<bit<32>>())[31:0];
+        Castle.Boyle.Pridgen = Beaman[31:16];
+        Castle.Boyle.Fairland = Beaman[15:0];
+        transition accept;
+    }
+    state Iroquois {
+        bit<32> Beaman;
+        Beaman = (Longport.lookahead<bit<64>>())[31:0];
+        Castle.Boyle.Pridgen = Beaman[31:16];
+        Castle.Boyle.Fairland = Beaman[15:0];
+        transition accept;
+    }
+    state Milnor {
+        bit<32> Beaman;
+        Beaman = (Longport.lookahead<bit<96>>())[31:0];
+        Castle.Boyle.Pridgen = Beaman[31:16];
+        Castle.Boyle.Fairland = Beaman[15:0];
+        transition accept;
+    }
+    state Ogunquit {
+        bit<32> Beaman;
+        Beaman = (Longport.lookahead<bit<128>>())[31:0];
+        Castle.Boyle.Pridgen = Beaman[31:16];
+        Castle.Boyle.Fairland = Beaman[15:0];
+        transition accept;
+    }
+    state Wahoo {
+        bit<32> Beaman;
+        Beaman = (Longport.lookahead<bit<160>>())[31:0];
+        Castle.Boyle.Pridgen = Beaman[31:16];
+        Castle.Boyle.Fairland = Beaman[15:0];
+        transition accept;
+    }
+    state Tennessee {
+        bit<32> Beaman;
+        Beaman = (Longport.lookahead<bit<192>>())[31:0];
+        Castle.Boyle.Pridgen = Beaman[31:16];
+        Castle.Boyle.Fairland = Beaman[15:0];
+        transition accept;
+    }
+    state Brazil {
+        bit<32> Beaman;
+        Beaman = (Longport.lookahead<bit<224>>())[31:0];
+        Castle.Boyle.Pridgen = Beaman[31:16];
+        Castle.Boyle.Fairland = Beaman[15:0];
+        transition accept;
+    }
+    state Cistern {
+        bit<32> Beaman;
+        Beaman = (Longport.lookahead<bit<256>>())[31:0];
+        Castle.Boyle.Pridgen = Beaman[31:16];
+        Castle.Boyle.Fairland = Beaman[15:0];
+        transition accept;
+    }
+    state Shanghai {
+        Aguila.Peoria.Weatherby = (bit<3>)3w2;
+        Kenbridge Beaman;
+        Beaman = Longport.lookahead<Kenbridge>();
+        Longport.extract<Kingsgate>(Castle.Medulla);
+        transition select(Beaman.Mystic) {
+            4w0x9: Iroquois;
+            4w0xa: Milnor;
+            4w0xb: Ogunquit;
+            4w0xc: Wahoo;
+            4w0xd: Tennessee;
+            4w0xe: Brazil;
+            default: Cistern;
+        }
     }
 }
 
@@ -5169,25 +5356,19 @@ control Glouster(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrin
     @name(".Forman") action Forman() {
         Aguila.Sedan.Astor = Aguila.Casnovia.Goodwin;
     }
-    @name(".WestLine") action WestLine() {
-    }
     @name(".Lenox") action Lenox() {
-        WestLine();
     }
     @name(".Laney") action Laney() {
-        WestLine();
     }
     @name(".McClusky") action McClusky() {
         Castle.Larwill.setInvalid();
         Castle.Levasy[0].setInvalid();
         Castle.Indios.Connell = Aguila.Frederika.Connell;
-        WestLine();
     }
     @name(".Anniston") action Anniston() {
         Castle.Rhinebeck.setInvalid();
         Castle.Levasy[0].setInvalid();
         Castle.Indios.Connell = Aguila.Frederika.Connell;
-        WestLine();
     }
     @name(".Conklin") action Conklin() {
     }
@@ -5618,6 +5799,7 @@ control Snowflake(packet_out Longport, inout Westoak Castle, in Wanamassa Aguila
             Longport.emit<TroutRun>(Castle.Tularosa);
             Longport.emit<Madawaska>(Castle.Uniopolis);
             Longport.emit<Irvine>(Castle.Moosic);
+            Longport.emit<Kingsgate>(Castle.Medulla);
             Longport.emit<Kenbridge>(Castle.Ossining);
             Longport.emit<Whitten>(Castle.Nason);
             Longport.emit<Tenino>(Castle.Marquand);
@@ -5658,20 +5840,9 @@ parser Challenge(packet_in Longport, out Westoak Castle, out Wanamassa Aguila, o
             default: Dante;
         }
     }
-    state Pearce {
-        Longport.extract<Coalwood>(Castle.Levasy[1]);
-        transition select((Longport.lookahead<bit<24>>())[7:0], (Longport.lookahead<bit<16>>())[15:0]) {
-            (8w0x45 &&& 8w0xff, 16w0x800): Edmeston;
-            (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): LaFayette;
-            (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Carrizozo;
-            (8w0x0 &&& 8w0x0, 16w0x88f7): FarrWest;
-            default: Dante;
-        }
-    }
     state Ancho {
-        Longport.extract<Coalwood>(Castle.Levasy[0]);
+        Longport.extract<Coalwood>(Castle.Robins);
         transition select((Longport.lookahead<bit<24>>())[7:0], (Longport.lookahead<bit<16>>())[15:0]) {
-            (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Pearce;
             (8w0x45 &&& 8w0xff, 16w0x800): Edmeston;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): LaFayette;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Carrizozo;
@@ -5860,6 +6031,7 @@ control Chispa(inout Westoak Castle, inout Wanamassa Aguila, in egress_intrinsic
     @name(".Donnelly") Stamford() Donnelly;
     @name(".Welch") Tocito() Welch;
     @name(".Kalvesta") Picacho() Kalvesta;
+    @name(".Newkirk") Eckman() Newkirk;
     @name(".GlenRock") Flomaton() GlenRock;
     @name(".Keenes") Daguao() Keenes;
     @name(".Colson") LaHabra() Colson;
@@ -5916,6 +6088,7 @@ control Chispa(inout Westoak Castle, inout Wanamassa Aguila, in egress_intrinsic
             Ellicott.apply(Castle, Aguila, Nephi, Oconee, Salitpa, Spanaway);
             Isabel.apply(Castle, Aguila, Nephi, Oconee, Salitpa, Spanaway);
             Husum.apply(Castle, Aguila, Nephi, Oconee, Salitpa, Spanaway);
+            Newkirk.apply(Castle, Aguila, Nephi, Oconee, Salitpa, Spanaway);
             if (Aguila.Sunbury.Lewiston != 3w2) {
                 Cortland.apply(Castle, Aguila, Nephi, Oconee, Salitpa, Spanaway);
             }
@@ -5962,6 +6135,7 @@ control Rendville(packet_out Longport, inout Westoak Castle, in Wanamassa Aguila
             Longport.emit<Kenbridge>(Castle.Ponder);
             Longport.emit<Crozet>(Castle.Fishers);
             Longport.emit<Madawaska>(Castle.Philip);
+            Longport.emit<Coalwood>(Castle.Robins);
             Longport.emit<Irvine>(Castle.Indios);
             Longport.emit<Kenbridge>(Castle.Larwill);
             Longport.emit<Whitten>(Castle.Rhinebeck);
@@ -5984,6 +6158,7 @@ parser Reidville(packet_in Longport, out Westoak Castle, out Wanamassa Aguila, o
     @name(".Arredondo") Checksum() Arredondo;
     state start {
         Longport.extract<ingress_intrinsic_metadata_t>(RichBar);
+        Aguila.Frederika.Kenney = RichBar.ingress_port;
         transition Trotwood;
     }
     @hidden @override_phase0_table_name("Allgood") @override_phase0_action_name(".Chaska") state Trotwood {
@@ -6057,6 +6232,7 @@ parser Reidville(packet_in Longport, out Westoak Castle, out Wanamassa Aguila, o
         transition select(Castle.Larwill.Suttle, Castle.Larwill.Galloway) {
             (13w0x0 &&& 13w0x1fff, 8w17): LaMonte;
             (13w0x0 &&& 13w0x1fff, 8w6): Roxobel;
+            (13w0x0 &&& 13w0x1fff, 8w1): Manakin;
             default: accept;
         }
     }
@@ -6085,6 +6261,10 @@ parser Reidville(packet_in Longport, out Westoak Castle, out Wanamassa Aguila, o
         transition select(Castle.Boyle.Fairland) {
             default: accept;
         }
+    }
+    state Manakin {
+        Longport.extract<Tenino>(Castle.Boyle);
+        transition reject;
     }
     state Ardara {
         Longport.extract<Tenino>(Castle.Boyle);
@@ -6139,23 +6319,31 @@ control Rixford(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrins
     }
 @pa_no_init("ingress" , "Aguila.Sunbury.Mausdale")
 @pa_no_init("ingress" , "Aguila.Sunbury.Bessie")
-@name(".Millett") action Millett(bit<1> Raiford, bit<1> Ayden) {
+@name(".Needham") action Needham(bit<1> Raiford, bit<1> Ayden) {
         Aguila.Sunbury.Juneau = (bit<1>)1w1;
-        Aguila.Sunbury.Woodfield = Aguila.Frederika.Madera;
         Aguila.Sunbury.Mausdale = Aguila.Sunbury.RossFork[19:16];
         Aguila.Sunbury.Bessie = Aguila.Sunbury.RossFork[15:0];
         Aguila.Sunbury.RossFork = (bit<20>)20w511;
         Aguila.Sunbury.Edwards[0:0] = Raiford;
         Aguila.Sunbury.Murphy[0:0] = Ayden;
     }
+    @name(".Millett") action Millett(bit<1> Raiford, bit<1> Ayden) {
+        Needham(Raiford, Ayden);
+        Aguila.Sunbury.Woodfield = Aguila.Frederika.Madera;
+    }
+    @name(".Kamas") action Kamas(bit<1> Raiford, bit<1> Ayden) {
+        Needham(Raiford, Ayden);
+        Aguila.Sunbury.Woodfield = Aguila.Frederika.Madera + 8w56;
+    }
     @name(".CruzBay") action CruzBay(bit<20> Tanana, bit<24> Hampton, bit<24> Tallassee, bit<12> Aldan) {
+        Aguila.Sunbury.Woodfield = (bit<8>)8w0;
         Aguila.Sunbury.RossFork = Tanana;
-        Aguila.Sunbury.Moose = (bit<1>)1w0;
         Aguila.Hookdale.Bergton = (bit<1>)1w0;
         Aguila.Sunbury.Juneau = (bit<1>)1w0;
         Aguila.Sunbury.Hampton = Hampton;
         Aguila.Sunbury.Tallassee = Tallassee;
         Aguila.Sunbury.Aldan = Aldan;
+        Aguila.Sunbury.Moose = (bit<1>)1w1;
     }
     @disable_atomic_modify(1) @name(".Thistle") table Thistle {
         actions = {
@@ -6174,6 +6362,7 @@ control Rixford(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrins
     @disable_atomic_modify(1) @name(".Overton") table Overton {
         actions = {
             Millett();
+            Kamas();
             CruzBay();
             Potosi();
         }
@@ -6407,7 +6596,7 @@ control Rixford(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrins
                 }
             }
 
-        } else if (Aguila.Hookdale.Bergton == 1w1 && Aguila.Sunbury.Juneau == 1w0 && Aguila.Lemont.Mickleton == 15w0 && (Aguila.Frederika.Lapoint == 1w1 || Aguila.Hookdale.Provencal & 4w0x1 == 4w0x1 && Aguila.Frederika.Atoka == 3w0x3)) {
+        } else if (Aguila.Hookdale.Bergton == 1w1 && Aguila.Sunbury.Juneau == 1w0 && Aguila.Lemont.Mickleton == 15w0 && (Aguila.Frederika.Lapoint == 1w1 || Aguila.Hookdale.Provencal & 4w0x1 == 4w0x1 && Aguila.Frederika.Atoka == 3w0x5)) {
             Elsinore.apply();
         }
         if (Aguila.Hookdale.Bergton == 1w1 && Aguila.Hookdale.Provencal & 4w0x1 == 4w0x1 && Aguila.Frederika.Atoka == 3w0x1) {

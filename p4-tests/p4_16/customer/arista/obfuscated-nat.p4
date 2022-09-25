@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT=1 -Ibf_arista_switch_nat/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid' -Xp4c=--traffic-limit 95 --excludeBackendPasses=ResetInvalidatedChecksumHeaders  --target tofino-tna --o bf_arista_switch_nat --bf-rt-schema bf_arista_switch_nat/context/bf-rt.json
-// p4c 9.7.3 (SHA: dc177f3)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT=1 -Ibf_arista_switch_nat/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'   -Xp4c='--traffic-limit 95 --excludeBackendPasses=ResetInvalidatedChecksumHeaders' --target tofino-tna --o bf_arista_switch_nat --bf-rt-schema bf_arista_switch_nat/context/bf-rt.json
+// p4c 9.7.4 (SHA: 97e15e7)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -286,6 +286,11 @@ header Topanga {
     bit<8> Mendocino;
 }
 
+header Armstrong {
+    bit<224> Riner;
+    bit<32>  Anaconda;
+}
+
 header Eldred {
     bit<6>  Chloride;
     bit<10> Garibaldi;
@@ -454,11 +459,13 @@ header Montross {
     bit<8> Glenmora;
 }
 
-header DonaAna {
+struct DonaAna {
+    @padding 
     bit<64> Altus;
-    bit<3>  Merrill;
-    bit<2>  Hickox;
-    bit<3>  Tehachapi;
+    @padding 
+    bit<3>  Zeeland;
+    bit<2>  Herald;
+    bit<3>  Hilltop;
 }
 
 header Sewaren {
@@ -510,6 +517,20 @@ header Dandridge {
     bit<8>  Guadalupe;
     bit<32> Buckfield;
     bit<32> Moquah;
+}
+
+header Shivwits {
+    bit<3>  Colona;
+    bit<5>  Wilmore;
+    bit<2>  Piperton;
+    bit<6>  Almedia;
+    bit<8>  Fairmount;
+    bit<8>  Guadalupe;
+    bit<32> Buckfield;
+    bit<32> Moquah;
+    bit<32> Elsinore;
+    bit<32> Caguas;
+    bit<32> Duncombe;
 }
 
 header Forkville {
@@ -798,14 +819,39 @@ struct Pawtucket {
     NextHop_t      Osyka;
 }
 
+typedef bit<11> AppFilterResId_t;
 struct Buckhorn {
-    bit<1>  Rainelle;
-    bit<1>  Jenners;
-    bit<1>  Paulding;
-    bit<32> Millston;
-    bit<32> HillTop;
-    bit<12> Dateland;
-    bit<12> Doddridge;
+    bit<1>           Rainelle;
+    bit<1>           Jenners;
+    bit<1>           Paulding;
+    bit<32>          Millston;
+    bit<32>          HillTop;
+    bit<32>          Noonan;
+    bit<32>          Tanner;
+    bit<32>          Spindale;
+    bit<32>          Valier;
+    bit<32>          Waimalu;
+    bit<32>          Quamba;
+    bit<32>          Pettigrew;
+    bit<32>          Hartford;
+    bit<32>          Halstead;
+    bit<32>          Draketown;
+    bit<1>           FlatLick;
+    bit<1>           Alderson;
+    bit<1>           Mellott;
+    bit<1>           CruzBay;
+    bit<1>           Tanana;
+    bit<1>           Kingsgate;
+    bit<1>           Hillister;
+    bit<1>           Camden;
+    bit<1>           Careywood;
+    bit<1>           Earlsboro;
+    bit<1>           Seabrook;
+    bit<1>           Devore;
+    bit<12>          Dateland;
+    bit<12>          Doddridge;
+    AppFilterResId_t Melvina;
+    AppFilterResId_t Seibert;
 }
 
 struct Emida {
@@ -950,9 +996,12 @@ struct Circle {
 }
 
 struct Humeston {
-    bit<1> Armagh;
-    bit<1> Basco;
-    bit<1> Gamaliel;
+    bit<13> LaCenter;
+    bit<1>  Armagh;
+    bit<1>  Basco;
+    bit<1>  Gamaliel;
+    bit<13> Maybee;
+    bit<10> Tryon;
 }
 
 struct Orting {
@@ -1012,6 +1061,7 @@ struct Orting {
     Beaverdam Thurmond;
     Dowell    Lauada;
     Kalida[2] RichBar;
+    Kalida    Fairborn;
     Killen    Harding;
     Burrel    Nephi;
     Bonney    Tofte;
@@ -1031,6 +1081,7 @@ struct Orting {
     Algoa     Lefor;
     Sheldahl  Starkey;
     Sheldahl  Volens;
+    Armstrong China;
 }
 
 struct Ravinia {
@@ -1085,12 +1136,12 @@ parser Boyle(packet_in Ackerly, out Monrovia Philip, out Orting Levasy, out ingr
     }
     state Westview {
         Ackerly.extract<Killen>(Philip.Harding);
-        Levasy.SanRemo.Heppner = (bit<4>)4w0x5;
+        Levasy.SanRemo.Heppner = (bit<4>)4w0x3;
         transition accept;
     }
     state Forepaugh {
         Ackerly.extract<Killen>(Philip.Harding);
-        Levasy.SanRemo.Heppner = (bit<4>)4w0x6;
+        Levasy.SanRemo.Heppner = (bit<4>)4w0x3;
         transition accept;
     }
     state Chewalla {
@@ -1102,6 +1153,9 @@ parser Boyle(packet_in Ackerly, out Monrovia Philip, out Orting Levasy, out ingr
         Ackerly.extract<Killen>(Philip.Harding);
         transition accept;
     }
+    state Maryville {
+        transition Kellner;
+    }
     state GunnCity {
         Ackerly.extract<Dowell>(Philip.Lauada);
         transition select((Ackerly.lookahead<bit<24>>())[7:0], (Ackerly.lookahead<bit<16>>())[15:0]) {
@@ -1111,6 +1165,8 @@ parser Boyle(packet_in Ackerly, out Monrovia Philip, out Orting Levasy, out ingr
             (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Hester;
             (8w0x45 &&& 8w0xff, 16w0x800): Goodlett;
             (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Westview;
+            (8w0x40 &&& 8w0xfc, 16w0x800 &&& 16w0xffff): Maryville;
+            (8w0x44 &&& 8w0xff, 16w0x800 &&& 16w0xffff): Maryville;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Pimento;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Campo;
             (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Forepaugh;
@@ -1135,6 +1191,8 @@ parser Boyle(packet_in Ackerly, out Monrovia Philip, out Orting Levasy, out ingr
             24w0x806 &&& 24w0xffff: Hester;
             24w0x450800 &&& 24w0xffffff: Goodlett;
             24w0x50800 &&& 24w0xfffff: Westview;
+            24w0x400800 &&& 24w0xfcffff: Maryville;
+            24w0x440800 &&& 24w0xffffff: Maryville;
             24w0x800 &&& 24w0xffff: Pimento;
             24w0x6086dd &&& 24w0xf0ffff: Campo;
             24w0x86dd &&& 24w0xffff: Forepaugh;
@@ -1152,6 +1210,8 @@ parser Boyle(packet_in Ackerly, out Monrovia Philip, out Orting Levasy, out ingr
             24w0x806 &&& 24w0xffff: Hester;
             24w0x450800 &&& 24w0xffffff: Goodlett;
             24w0x50800 &&& 24w0xfffff: Westview;
+            24w0x400800 &&& 24w0xfcffff: Maryville;
+            24w0x440800 &&& 24w0xffffff: Maryville;
             24w0x800 &&& 24w0xffff: Pimento;
             24w0x6086dd &&& 24w0xf0ffff: Campo;
             24w0x86dd &&& 24w0xffff: Forepaugh;
@@ -1169,6 +1229,8 @@ parser Boyle(packet_in Ackerly, out Monrovia Philip, out Orting Levasy, out ingr
             24w0x806 &&& 24w0xffff: Hester;
             24w0x450800 &&& 24w0xffffff: Goodlett;
             24w0x50800 &&& 24w0xfffff: Westview;
+            24w0x400800 &&& 24w0xfcffff: Maryville;
+            24w0x440800 &&& 24w0xffffff: Maryville;
             24w0x800 &&& 24w0xffff: Pimento;
             24w0x6086dd &&& 24w0xf0ffff: Campo;
             24w0x86dd &&& 24w0xffff: Forepaugh;
@@ -1219,12 +1281,26 @@ parser Boyle(packet_in Ackerly, out Monrovia Philip, out Orting Levasy, out ingr
     }
     state Pimento {
         Ackerly.extract<Killen>(Philip.Harding);
+        Levasy.SanRemo.Heppner = (bit<4>)4w0x5;
+        Burrel Baranof;
+        Baranof = Ackerly.lookahead<Burrel>();
         Philip.Nephi.Commack = (Ackerly.lookahead<bit<160>>())[31:0];
-        Levasy.SanRemo.Heppner = (bit<4>)4w0x3;
+        Philip.Nephi.Beasley = (Ackerly.lookahead<bit<128>>())[31:0];
         Philip.Nephi.Dunstable = (Ackerly.lookahead<bit<14>>())[5:0];
         Philip.Nephi.Garcia = (Ackerly.lookahead<bit<80>>())[7:0];
         Levasy.Thawville.Norcatur = (Ackerly.lookahead<bit<72>>())[7:0];
-        transition accept;
+        transition select(Baranof.Armona, Baranof.Garcia, Baranof.Solomon) {
+            (4w0x6, 8w6, 13w0): Shorter;
+            (4w0x6, 8w0x1 &&& 8w0xef, 13w0): Shorter;
+            (4w0x7, 8w6, 13w0): Point;
+            (4w0x7, 8w0x1 &&& 8w0xef, 13w0): Point;
+            (4w0x8, 8w6, 13w0): McFaddin;
+            (4w0x8, 8w0x1 &&& 8w0xef, 13w0): McFaddin;
+            (default, 8w6, 13w0): Jigger;
+            (default, 8w0x1 &&& 8w0xef, 13w0): Jigger;
+            (default, default, 13w0): accept;
+            default: Mogadore;
+        }
     }
     state Judson {
         Levasy.SanRemo.Sledge = (bit<3>)3w5;
@@ -1345,8 +1421,12 @@ parser Boyle(packet_in Ackerly, out Monrovia Philip, out Orting Levasy, out ingr
         }
     }
     state Kapowsin {
-        Levasy.SanRemo.Wartburg = (bit<3>)3w0x3;
-        Levasy.Harriet.Dunstable = (Ackerly.lookahead<bit<14>>())[5:0];
+        Levasy.SanRemo.Wartburg = (bit<3>)3w0x5;
+        Levasy.Harriet.Commack = (Ackerly.lookahead<Burrel>()).Commack;
+        Levasy.Harriet.Beasley = (Ackerly.lookahead<Burrel>()).Beasley;
+        Levasy.Harriet.Dunstable = (Ackerly.lookahead<Burrel>()).Dunstable;
+        Levasy.SanRemo.Chatmoss = (Ackerly.lookahead<Burrel>()).Garcia;
+        Levasy.SanRemo.NewMelle = (Ackerly.lookahead<Burrel>()).Norcatur;
         transition accept;
     }
     state Mattapex {
@@ -1393,11 +1473,11 @@ parser Boyle(packet_in Ackerly, out Monrovia Philip, out Orting Levasy, out ingr
         transition accept;
     }
     state Boring {
-        Levasy.SanRemo.Wartburg = (bit<3>)3w0x5;
+        Levasy.SanRemo.Wartburg = (bit<3>)3w0x3;
         transition accept;
     }
     state Nucla {
-        Levasy.SanRemo.Wartburg = (bit<3>)3w0x6;
+        Levasy.SanRemo.Wartburg = (bit<3>)3w0x3;
         transition accept;
     }
     state Cadwell {
@@ -1437,6 +1517,95 @@ parser Boyle(packet_in Ackerly, out Monrovia Philip, out Orting Levasy, out ingr
             Levasy.Flaherty.Blitchton = Flaherty.ingress_port;
         }
         transition Nason;
+    }
+    state Shorter {
+        Levasy.SanRemo.Sledge = (bit<3>)3w2;
+        bit<32> Baranof;
+        Baranof = (Ackerly.lookahead<bit<224>>())[31:0];
+        Philip.Wabbaseka.Whitten = Baranof[31:16];
+        Philip.Wabbaseka.Joslin = Baranof[15:0];
+        transition accept;
+    }
+    state Point {
+        Levasy.SanRemo.Sledge = (bit<3>)3w2;
+        bit<32> Baranof;
+        Baranof = (Ackerly.lookahead<bit<256>>())[31:0];
+        Philip.Wabbaseka.Whitten = Baranof[31:16];
+        Philip.Wabbaseka.Joslin = Baranof[15:0];
+        transition accept;
+    }
+    state McFaddin {
+        Levasy.SanRemo.Sledge = (bit<3>)3w2;
+        Ackerly.extract<Armstrong>(Philip.China);
+        bit<32> Baranof;
+        Baranof = (Ackerly.lookahead<bit<32>>())[31:0];
+        Philip.Wabbaseka.Whitten = Baranof[31:16];
+        Philip.Wabbaseka.Joslin = Baranof[15:0];
+        transition accept;
+    }
+    state Villanova {
+        bit<32> Baranof;
+        Baranof = (Ackerly.lookahead<bit<64>>())[31:0];
+        Philip.Wabbaseka.Whitten = Baranof[31:16];
+        Philip.Wabbaseka.Joslin = Baranof[15:0];
+        transition accept;
+    }
+    state Mishawaka {
+        bit<32> Baranof;
+        Baranof = (Ackerly.lookahead<bit<96>>())[31:0];
+        Philip.Wabbaseka.Whitten = Baranof[31:16];
+        Philip.Wabbaseka.Joslin = Baranof[15:0];
+        transition accept;
+    }
+    state Hillcrest {
+        bit<32> Baranof;
+        Baranof = (Ackerly.lookahead<bit<128>>())[31:0];
+        Philip.Wabbaseka.Whitten = Baranof[31:16];
+        Philip.Wabbaseka.Joslin = Baranof[15:0];
+        transition accept;
+    }
+    state Oskawalik {
+        bit<32> Baranof;
+        Baranof = (Ackerly.lookahead<bit<160>>())[31:0];
+        Philip.Wabbaseka.Whitten = Baranof[31:16];
+        Philip.Wabbaseka.Joslin = Baranof[15:0];
+        transition accept;
+    }
+    state Pelland {
+        bit<32> Baranof;
+        Baranof = (Ackerly.lookahead<bit<192>>())[31:0];
+        Philip.Wabbaseka.Whitten = Baranof[31:16];
+        Philip.Wabbaseka.Joslin = Baranof[15:0];
+        transition accept;
+    }
+    state Gomez {
+        bit<32> Baranof;
+        Baranof = (Ackerly.lookahead<bit<224>>())[31:0];
+        Philip.Wabbaseka.Whitten = Baranof[31:16];
+        Philip.Wabbaseka.Joslin = Baranof[15:0];
+        transition accept;
+    }
+    state Placida {
+        bit<32> Baranof;
+        Baranof = (Ackerly.lookahead<bit<256>>())[31:0];
+        Philip.Wabbaseka.Whitten = Baranof[31:16];
+        Philip.Wabbaseka.Joslin = Baranof[15:0];
+        transition accept;
+    }
+    state Jigger {
+        Levasy.SanRemo.Sledge = (bit<3>)3w2;
+        Burrel Baranof;
+        Baranof = Ackerly.lookahead<Burrel>();
+        Ackerly.extract<Armstrong>(Philip.China);
+        transition select(Baranof.Armona) {
+            4w0x9: Villanova;
+            4w0xa: Mishawaka;
+            4w0xb: Hillcrest;
+            4w0xc: Oskawalik;
+            4w0xd: Pelland;
+            4w0xe: Gomez;
+            default: Placida;
+        }
     }
 }
 
@@ -1490,6 +1659,7 @@ parser Boyle(packet_in Ackerly, out Monrovia Philip, out Orting Levasy, out ingr
             Ackerly.emit<Elderon>(Philip.Lindy);
             Ackerly.emit<Dowell>(Philip.Brady);
             Ackerly.emit<Killen>(Philip.Emden);
+            Ackerly.emit<Armstrong>(Philip.China);
             Ackerly.emit<Burrel>(Philip.Skillman);
             Ackerly.emit<Bonney>(Philip.Olcott);
             Ackerly.emit<Provo>(Philip.Westoak);
@@ -1576,7 +1746,7 @@ control Anita(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsic_m
         size = 16384;
         idle_timeout = true;
     }
-    @disable_atomic_modify(1) @ways(3) @name(".McIntyre") table McIntyre {
+    @disable_atomic_modify(1) @name(".McIntyre") table McIntyre {
         actions = {
             Andrade();
             @defaultonly NoAction();
@@ -1982,23 +2152,31 @@ control Luttrell(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsi
         Levasy.Bratt.Kalkaska[0:0] = Levasy.Thawville.Rockham;
         Levasy.Bratt.Arvada[0:0] = Levasy.Thawville.Hiland;
     }
-    @name(".Wardville") action Wardville(bit<1> Rockham, bit<1> Hiland) {
+    @name(".Sidnaw") action Sidnaw(bit<1> Rockham, bit<1> Hiland) {
         Levasy.Bratt.Kenney = (bit<1>)1w1;
-        Levasy.Bratt.StarLake = Levasy.Thawville.Eastwood;
         Levasy.Bratt.Newfolden = Levasy.Bratt.Pettry[19:16];
         Levasy.Bratt.Candle = Levasy.Bratt.Pettry[15:0];
         Levasy.Bratt.Pettry = (bit<20>)20w511;
         Levasy.Bratt.Kalkaska[0:0] = Rockham;
         Levasy.Bratt.Arvada[0:0] = Hiland;
     }
+    @name(".Wardville") action Wardville(bit<1> Rockham, bit<1> Hiland) {
+        Sidnaw(Rockham, Hiland);
+        Levasy.Bratt.StarLake = Levasy.Thawville.Eastwood;
+    }
+    @name(".Toano") action Toano(bit<1> Rockham, bit<1> Hiland) {
+        Sidnaw(Rockham, Hiland);
+        Levasy.Bratt.StarLake = Levasy.Thawville.Eastwood + 8w56;
+    }
     @name(".Ludell") action Ludell(bit<20> Petroleum, bit<24> Glendevey, bit<24> Littleton, bit<12> Buncombe) {
+        Levasy.Bratt.StarLake = (bit<8>)8w0;
         Levasy.Bratt.Pettry = Petroleum;
-        Levasy.Bratt.Daleville = (bit<1>)1w0;
         Levasy.Garrison.McCaskill = (bit<1>)1w0;
         Levasy.Bratt.Kenney = (bit<1>)1w0;
         Levasy.Bratt.Glendevey = Glendevey;
         Levasy.Bratt.Littleton = Littleton;
         Levasy.Bratt.Buncombe = Buncombe;
+        Levasy.Bratt.Daleville = (bit<1>)1w1;
     }
     @name(".Oregon") action Oregon(bit<8> StarLake) {
         Levasy.Bratt.Kenney = (bit<1>)1w1;
@@ -2066,6 +2244,7 @@ control Luttrell(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsi
     @disable_atomic_modify(1) @name(".ElkMills") table ElkMills {
         actions = {
             Wardville();
+            Toano();
             NorthRim();
             Ludell();
             Exeter();
@@ -2087,6 +2266,7 @@ control Luttrell(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsi
     @disable_atomic_modify(1) @name(".Bostic") table Bostic {
         actions = {
             Wardville();
+            Toano();
             NorthRim();
             Exeter();
         }
@@ -2682,7 +2862,7 @@ control Miltona(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsic
                 Kosmos.apply();
             } else if (Levasy.Garrison.Minturn & 4w0x1 == 4w0x1 && Levasy.Thawville.Waubun == 3w0x1) {
                 BigFork.apply(Philip, Levasy, Flaherty, Indios, Larwill, Sunbury);
-            } else if (Levasy.Bratt.Kenney == 1w0 && (Levasy.Thawville.Atoka == 1w1 || Levasy.Garrison.Minturn & 4w0x1 == 4w0x1 && Levasy.Thawville.Waubun == 3w0x3)) {
+            } else if (Levasy.Bratt.Kenney == 1w0 && (Levasy.Thawville.Atoka == 1w1 || Levasy.Garrison.Minturn & 4w0x1 == 4w0x1 && Levasy.Thawville.Waubun == 3w0x5)) {
                 Ironia.apply();
             }
         }
@@ -2736,6 +2916,7 @@ control Duchesne(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsi
     @name(".Pocopson") action Pocopson(bit<8> StarLake) {
         Levasy.Bratt.Kenney = (bit<1>)1w1;
         Levasy.Bratt.StarLake = StarLake;
+        Levasy.Bratt.Buncombe = (bit<12>)12w0;
     }
     @name(".Barnwell") action Barnwell(bit<24> Glendevey, bit<24> Littleton, bit<12> Tulsa) {
         Levasy.Bratt.Glendevey = Glendevey;
@@ -2849,7 +3030,7 @@ control Palco(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsic_m
         Levasy.Thawville.Placedo = Levasy.SanRemo.Lakehills;
         Levasy.Thawville.Garcia = Levasy.SanRemo.Chatmoss;
         Levasy.Thawville.Norcatur = Levasy.SanRemo.NewMelle;
-        Levasy.Thawville.Waubun[2:0] = Levasy.SanRemo.Wartburg[2:0];
+        Levasy.Thawville.Waubun = Levasy.SanRemo.Wartburg[2:0];
         Levasy.SanRemo.Ambrose = Levasy.SanRemo.Ambrose | Levasy.SanRemo.Billings;
     }
     @name(".Hyrum") action Hyrum() {
@@ -2876,7 +3057,7 @@ control Palco(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsic_m
         Levasy.Thawville.Littleton = Philip.Lauada.Littleton;
         Levasy.Thawville.Lathrop = Philip.Lauada.Lathrop;
         Levasy.Thawville.Clyde = Philip.Lauada.Clyde;
-        Levasy.Thawville.Waubun[2:0] = Levasy.SanRemo.Heppner[2:0];
+        Levasy.Thawville.Waubun = Levasy.SanRemo.Heppner[2:0];
         Levasy.Thawville.Connell = Philip.Harding.Connell;
     }
     @name(".Lynne") action Lynne() {
@@ -3666,7 +3847,8 @@ control Stone(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsic_m
     }
     @name(".Silvertip") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Silvertip;
     @name(".Thatcher.Everton") Hash<bit<51>>(HashAlgorithm_t.CRC16, Silvertip) Thatcher;
-    @name(".Archer") ActionSelector(32w32768, Thatcher, SelectorMode_t.RESILIENT) Archer;
+    @name(".Archer") ActionProfile(32w32768) Archer;
+    @name(".Kekoskee") ActionSelector(Archer, Thatcher, SelectorMode_t.RESILIENT, 32w120, 32w4) Kekoskee;
     @disable_atomic_modify(1) @name(".Virginia") table Virginia {
         actions = {
             TinCity();
@@ -3681,7 +3863,7 @@ control Stone(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsic_m
         }
         const default_action = Bluff();
         size = 512;
-        implementation = Archer;
+        implementation = Kekoskee;
         requires_versioning = false;
     }
     apply {
@@ -3768,7 +3950,7 @@ control Advance(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_
         size = 8192;
     }
     apply {
-        if (Levasy.Bratt.StarLake == 8w25 || Levasy.Bratt.StarLake == 8w10) {
+        if (Levasy.Bratt.StarLake == 8w25 || Levasy.Bratt.StarLake == 8w10 || Levasy.Bratt.StarLake == 8w81 || Levasy.Bratt.StarLake == 8w66) {
             Crystola.apply();
         }
     }
@@ -3863,7 +4045,8 @@ control Edinburgh(inout Monrovia Philip, inout Orting Levasy, in ingress_intrins
     }
     @name(".Ferndale") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Ferndale;
     @name(".Broadford.Waialua") Hash<bit<51>>(HashAlgorithm_t.CRC16, Ferndale) Broadford;
-    @name(".Nerstrand") ActionSelector(32w1024, Broadford, SelectorMode_t.RESILIENT) Nerstrand;
+    @name(".Nerstrand") ActionProfile(32w1024) Nerstrand;
+    @name(".Grovetown") ActionSelector(Nerstrand, Broadford, SelectorMode_t.RESILIENT, 32w120, 32w4) Grovetown;
     @disable_atomic_modify(1) @name(".Konnarock") table Konnarock {
         actions = {
             Chalco();
@@ -3874,7 +4057,7 @@ control Edinburgh(inout Monrovia Philip, inout Orting Levasy, in ingress_intrins
             Levasy.Hearne.ElkNeck              : selector @name("Hearne.ElkNeck") ;
         }
         size = 128;
-        implementation = Nerstrand;
+        implementation = Grovetown;
         const default_action = NoAction();
     }
     apply {
@@ -3883,6 +4066,9 @@ control Edinburgh(inout Monrovia Philip, inout Orting Levasy, in ingress_intrins
 }
 
 control Tillicum(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_metadata_t Casnovia, in egress_intrinsic_metadata_from_parser_t Fordyce, inout egress_intrinsic_metadata_for_deparser_t Ugashik, inout egress_intrinsic_metadata_for_output_port_t Rhodell) {
+    @name(".Suwanee") action Suwanee() {
+        Ugashik.drop_ctl = (bit<3>)3w7;
+    }
     @name(".Trail") action Trail() {
     }
     @name(".Magazine") action Magazine(bit<8> McDougal) {
@@ -3931,14 +4117,14 @@ control Tillicum(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic
             Trail();
             Magazine();
             Batchelor();
-            @defaultonly NoAction();
+            @defaultonly Suwanee();
         }
         key = {
             Casnovia.egress_rid : exact @name("Casnovia.egress_rid") ;
             Casnovia.egress_port: exact @name("Casnovia.Toklat") ;
         }
         size = 512;
-        const default_action = NoAction();
+        const default_action = Suwanee();
     }
     apply {
         Pound.apply();
@@ -3970,7 +4156,8 @@ control Tulalip(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_
     }
     @name(".Nordland") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Nordland;
     @name(".Upalco.Wheaton") Hash<bit<51>>(HashAlgorithm_t.CRC16, Nordland) Upalco;
-    @name(".Alnwick") ActionSelector(32w1024, Upalco, SelectorMode_t.RESILIENT) Alnwick;
+    @name(".Alnwick") ActionProfile(32w1024) Alnwick;
+    @name(".BigRun") ActionSelector(Alnwick, Upalco, SelectorMode_t.RESILIENT, 32w120, 32w4) BigRun;
     @disable_atomic_modify(1) @name(".Osakis") table Osakis {
         actions = {
             Olivet();
@@ -3981,7 +4168,7 @@ control Tulalip(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_
             Levasy.Hearne.ElkNeck              : selector @name("Hearne.ElkNeck") ;
         }
         size = 128;
-        implementation = Alnwick;
+        implementation = BigRun;
         const default_action = NoAction();
     }
     apply {
@@ -4281,6 +4468,9 @@ control Terry(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_me
 }
 
 control Pendleton(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_metadata_t Casnovia, in egress_intrinsic_metadata_from_parser_t Fordyce, inout egress_intrinsic_metadata_for_deparser_t Ugashik, inout egress_intrinsic_metadata_for_output_port_t Rhodell) {
+    @name(".Oketo") action Oketo() {
+        Philip.Fairborn.setInvalid();
+    }
     @name(".Turney") action Turney(bit<16> Sodaville) {
         Levasy.Casnovia.Bledsoe = Levasy.Casnovia.Bledsoe + Sodaville;
     }
@@ -4317,10 +4507,12 @@ control Pendleton(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsi
     @name(".August") action August(bit<24> Kiron, bit<24> DewyRose) {
         Macungie(Kiron, DewyRose);
         Philip.Nephi.Norcatur = Philip.Nephi.Norcatur - 8w1;
+        Oketo();
     }
     @name(".Kinston") action Kinston(bit<24> Kiron, bit<24> DewyRose) {
         Macungie(Kiron, DewyRose);
         Philip.Tofte.McBride = Philip.Tofte.McBride - 8w1;
+        Oketo();
     }
     @name(".Chandalar") action Chandalar() {
         Macungie(Philip.Lauada.Lathrop, Philip.Lauada.Clyde);
@@ -4449,7 +4641,7 @@ control Haworth(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsic
             Levasy.Dacono.Hapeville             : ternary @name("Dacono.Hapeville") ;
             Levasy.Thawville.LakeLure           : ternary @name("Thawville.LakeLure") ;
             Levasy.Thawville.Ivyland            : ternary @name("Thawville.Ivyland") ;
-            Levasy.Thawville.Waubun & 3w0x4     : ternary @name("Thawville.Waubun") ;
+            Levasy.Thawville.Waubun             : ternary @name("Thawville.Waubun") ;
             Levasy.Bratt.Pettry                 : ternary @name("Bratt.Pettry") ;
             Sunbury.mcast_grp_a                 : ternary @name("Sunbury.mcast_grp_a") ;
             Levasy.Bratt.Daleville              : ternary @name("Bratt.Daleville") ;
@@ -4520,7 +4712,7 @@ control Morgana(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsic
         Levasy.Swifton.Bernice = (bit<1>)1w1;
         Levasy.Swifton.Greenwood = Greenwood;
     }
-    @idletime_precision(1) @disable_atomic_modify(1) @ways(2) @name(".Sanatoga") table Sanatoga {
+    @idletime_precision(1) @disable_atomic_modify(1) @name(".Sanatoga") table Sanatoga {
         actions = {
             Aquilla();
             @defaultonly NoAction();
@@ -4808,7 +5000,7 @@ control Daguao(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsic_
         const default_action = NoAction();
     }
     apply {
-        if (Levasy.Thawville.Waubun == 3w0x1) {
+        if (Levasy.Thawville.Waubun == 3w0x1 || Levasy.Thawville.Waubun == 3w0x5) {
             Naguabo.apply();
             Clarinda.apply();
         } else if (Levasy.Thawville.Waubun == 3w0x2) {
@@ -5609,6 +5801,11 @@ control Lakefield(inout Monrovia Philip, inout Orting Levasy, in ingress_intrins
     }
 }
 
+control Lovilia(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_metadata_t Casnovia, in egress_intrinsic_metadata_from_parser_t Fordyce, inout egress_intrinsic_metadata_for_deparser_t Ugashik, inout egress_intrinsic_metadata_for_output_port_t Rhodell) {
+    apply {
+    }
+}
+
 @pa_no_init("ingress" , "Levasy.Bratt.LaUnion") control Patchogue(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsic_metadata_t Flaherty, in ingress_intrinsic_metadata_from_parser_t Indios, inout ingress_intrinsic_metadata_for_deparser_t Larwill, inout ingress_intrinsic_metadata_for_tm_t Sunbury) {
     @name(".Exeter") action Exeter() {
         ;
@@ -5664,25 +5861,19 @@ control Lakefield(inout Monrovia Philip, inout Orting Levasy, in ingress_intrins
     @name(".McKenna") action McKenna() {
         Levasy.Hearne.Nuyaka = Levasy.Tabler.Lawai;
     }
-    @name(".Powhatan") action Powhatan() {
-    }
     @name(".McDaniels") action McDaniels() {
-        Powhatan();
     }
     @name(".Netarts") action Netarts() {
-        Powhatan();
     }
     @name(".Hartwick") action Hartwick() {
         Philip.Nephi.setInvalid();
         Philip.RichBar[0].setInvalid();
         Philip.Harding.Connell = Levasy.Thawville.Connell;
-        Powhatan();
     }
     @name(".Crossnore") action Crossnore() {
         Philip.Tofte.setInvalid();
         Philip.RichBar[0].setInvalid();
         Philip.Harding.Connell = Levasy.Thawville.Connell;
-        Powhatan();
     }
     @name(".Cataract") action Cataract() {
     }
@@ -6046,6 +6237,7 @@ control Keenes(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_m
     @name(".Saltair") Benitez() Saltair;
     @name(".Tahuya") Hecker() Tahuya;
     @name(".Reidville") Hookstown() Reidville;
+    @name(".Simla") Lovilia() Simla;
     @name(".Higgston") Humble() Higgston;
     @name(".Arredondo") Freetown() Arredondo;
     @name(".Trotwood") Nashua() Trotwood;
@@ -6111,6 +6303,7 @@ control Keenes(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_m
             Wharton.apply(Philip, Levasy, Casnovia, Fordyce, Ugashik, Rhodell);
             Thistle.apply(Philip, Levasy, Casnovia, Fordyce, Ugashik, Rhodell);
             Elmsford.apply(Philip, Levasy, Casnovia, Fordyce, Ugashik, Rhodell);
+            Simla.apply(Philip, Levasy, Casnovia, Fordyce, Ugashik, Rhodell);
             if (Levasy.Bratt.LaUnion != 3w2) {
                 Kealia.apply(Philip, Levasy, Casnovia, Fordyce, Ugashik, Rhodell);
             }
@@ -6166,20 +6359,9 @@ parser ElMirage(packet_in Ackerly, out Monrovia Philip, out Orting Levasy, out e
             default: Kellner;
         }
     }
-    state Sneads {
-        Ackerly.extract<Kalida>(Philip.RichBar[1]);
-        transition select((Ackerly.lookahead<bit<24>>())[7:0], (Ackerly.lookahead<bit<16>>())[15:0]) {
-            (8w0x45 &&& 8w0xff, 16w0x800): Goodlett;
-            (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Pimento;
-            (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Campo;
-            (8w0x0 &&& 8w0x0, 16w0x88f7): WildRose;
-            default: Kellner;
-        }
-    }
     state Oneonta {
-        Ackerly.extract<Kalida>(Philip.RichBar[0]);
+        Ackerly.extract<Kalida>(Philip.Fairborn);
         transition select((Ackerly.lookahead<bit<24>>())[7:0], (Ackerly.lookahead<bit<16>>())[15:0]) {
-            (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Sneads;
             (8w0x45 &&& 8w0xff, 16w0x800): Goodlett;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Pimento;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Campo;
@@ -6312,6 +6494,7 @@ control Coalton(packet_out Ackerly, inout Monrovia Philip, in Orting Levasy, in 
             Ackerly.emit<Burrel>(Philip.Glenoma);
             Ackerly.emit<Beaverdam>(Philip.Thurmond);
             Ackerly.emit<Dowell>(Philip.Lauada);
+            Ackerly.emit<Kalida>(Philip.Fairborn);
             Ackerly.emit<Killen>(Philip.Harding);
             Ackerly.emit<Burrel>(Philip.Nephi);
             Ackerly.emit<Bonney>(Philip.Tofte);

@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MEDIA=1 -Ibf_arista_switch_media/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'   --target tofino-tna --o bf_arista_switch_media --bf-rt-schema bf_arista_switch_media/context/bf-rt.json
-// p4c 9.7.3 (SHA: dc177f3)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MEDIA=1 -Ibf_arista_switch_media/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_media --bf-rt-schema bf_arista_switch_media/context/bf-rt.json
+// p4c 9.7.4 (SHA: 97e15e7)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -303,6 +303,11 @@ header Eldred {
     bit<8> Cornell;
 }
 
+header McFaddin {
+    bit<224> Dennison;
+    bit<32>  Jigger;
+}
+
 header Noyes {
     bit<6>  Helton;
     bit<10> Grannis;
@@ -471,11 +476,13 @@ header Hickox {
     bit<8> Tehachapi;
 }
 
-header Sewaren {
+struct Sewaren {
+    @padding 
     bit<64> WindGap;
-    bit<3>  Caroleen;
-    bit<2>  Lordstown;
-    bit<3>  Belfair;
+    @padding 
+    bit<3>  Villanova;
+    bit<2>  Mishawaka;
+    bit<3>  Hillcrest;
 }
 
 header Luzerne {
@@ -572,6 +579,20 @@ header Nenana {
     bit<8>  Placedo;
     bit<32> Onycha;
     bit<32> Delavan;
+}
+
+header Oskawalik {
+    bit<3>  Morstein;
+    bit<5>  Waubun;
+    bit<2>  Minto;
+    bit<6>  Level;
+    bit<8>  Eastwood;
+    bit<8>  Placedo;
+    bit<32> Onycha;
+    bit<32> Delavan;
+    bit<32> Pelland;
+    bit<32> Gomez;
+    bit<32> Placida;
 }
 
 header Bennet {
@@ -848,14 +869,39 @@ struct Dateland {
     NextHop_t      Bergton;
 }
 
+typedef bit<11> AppFilterResId_t;
 struct Doddridge {
-    bit<1>  Emida;
-    bit<1>  Lecompte;
-    bit<1>  Sopris;
-    bit<32> Thaxton;
-    bit<32> Lawai;
-    bit<12> McCracken;
-    bit<12> LaMoille;
+    bit<1>           Emida;
+    bit<1>           Lecompte;
+    bit<1>           Sopris;
+    bit<32>          Thaxton;
+    bit<32>          Lawai;
+    bit<32>          Oketo;
+    bit<32>          Lovilia;
+    bit<32>          Simla;
+    bit<32>          LaCenter;
+    bit<32>          Maryville;
+    bit<32>          Sidnaw;
+    bit<32>          Toano;
+    bit<32>          Kekoskee;
+    bit<32>          Grovetown;
+    bit<32>          Suwanee;
+    bit<1>           BigRun;
+    bit<1>           Robins;
+    bit<1>           Medulla;
+    bit<1>           Corry;
+    bit<1>           Eckman;
+    bit<1>           Hiwassee;
+    bit<1>           WestBend;
+    bit<1>           Kulpmont;
+    bit<1>           Shanghai;
+    bit<1>           Iroquois;
+    bit<1>           Milnor;
+    bit<1>           Ogunquit;
+    bit<12>          McCracken;
+    bit<12>          LaMoille;
+    AppFilterResId_t Wahoo;
+    AppFilterResId_t Tennessee;
 }
 
 struct Guion {
@@ -1030,9 +1076,12 @@ struct PeaRidge {
 }
 
 struct Peoria {
-    bit<1> Frederika;
-    bit<1> Saugatuck;
-    bit<1> Flaherty;
+    bit<13> Caborn;
+    bit<1>  Frederika;
+    bit<1>  Saugatuck;
+    bit<1>  Flaherty;
+    bit<13> Brazil;
+    bit<10> Cistern;
 }
 
 struct Sunbury {
@@ -1102,6 +1151,7 @@ struct Sunbury {
     Westhoff    Noyack;
     Riner       Hettinger;
     LasVegas[2] Coryville;
+    LasVegas    Newkirk;
     Kalida      Bellamy;
     Hampton     Tularosa;
     Vinemont    Uniopolis;
@@ -1120,6 +1170,7 @@ struct Sunbury {
     Bennet      Spearman;
     Jenners     BigPoint;
     Jenners     Tenstrike;
+    McFaddin    Vinita;
 }
 
 struct Castle {
@@ -1188,12 +1239,12 @@ parser Boring(packet_in Nucla, out Fishers Vanoss, out Sunbury Potosi, out ingre
     }
     state McDonough {
         Nucla.extract<Kalida>(Vanoss.Bellamy);
-        Potosi.Casnovia.Weatherby = (bit<4>)4w0x5;
+        Potosi.Casnovia.Weatherby = (bit<4>)4w0x3;
         transition accept;
     }
     state Aynor {
         Nucla.extract<Kalida>(Vanoss.Bellamy);
-        Potosi.Casnovia.Weatherby = (bit<4>)4w0x6;
+        Potosi.Casnovia.Weatherby = (bit<4>)4w0x3;
         transition accept;
     }
     state McIntyre {
@@ -1205,6 +1256,9 @@ parser Boring(packet_in Nucla, out Fishers Vanoss, out Sunbury Potosi, out ingre
         Nucla.extract<Kalida>(Vanoss.Bellamy);
         transition accept;
     }
+    state Goodrich {
+        transition Meyers;
+    }
     state SanPablo {
         Nucla.extract<Riner>(Vanoss.Hettinger);
         transition select((Nucla.lookahead<bit<24>>())[7:0], (Nucla.lookahead<bit<16>>())[15:0]) {
@@ -1214,6 +1268,8 @@ parser Boring(packet_in Nucla, out Fishers Vanoss, out Sunbury Potosi, out ingre
             (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Hagaman;
             (8w0x45 &&& 8w0xff, 16w0x800): McKenney;
             (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): McDonough;
+            (8w0x40 &&& 8w0xfc, 16w0x800 &&& 16w0xffff): Goodrich;
+            (8w0x44 &&& 8w0xff, 16w0x800 &&& 16w0xffff): Goodrich;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Ozona;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Leland;
             (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Aynor;
@@ -1240,6 +1296,8 @@ parser Boring(packet_in Nucla, out Fishers Vanoss, out Sunbury Potosi, out ingre
             24w0x806 &&& 24w0xffff: Hagaman;
             24w0x450800 &&& 24w0xffffff: McKenney;
             24w0x50800 &&& 24w0xfffff: McDonough;
+            24w0x400800 &&& 24w0xfcffff: Goodrich;
+            24w0x440800 &&& 24w0xffffff: Goodrich;
             24w0x800 &&& 24w0xffff: Ozona;
             24w0x6086dd &&& 24w0xf0ffff: Leland;
             24w0x86dd &&& 24w0xffff: Aynor;
@@ -1257,6 +1315,8 @@ parser Boring(packet_in Nucla, out Fishers Vanoss, out Sunbury Potosi, out ingre
             24w0x806 &&& 24w0xffff: Hagaman;
             24w0x450800 &&& 24w0xffffff: McKenney;
             24w0x50800 &&& 24w0xfffff: McDonough;
+            24w0x400800 &&& 24w0xfcffff: Goodrich;
+            24w0x440800 &&& 24w0xffffff: Goodrich;
             24w0x800 &&& 24w0xffff: Ozona;
             24w0x6086dd &&& 24w0xf0ffff: Leland;
             24w0x86dd &&& 24w0xffff: Aynor;
@@ -1274,6 +1334,8 @@ parser Boring(packet_in Nucla, out Fishers Vanoss, out Sunbury Potosi, out ingre
             24w0x806 &&& 24w0xffff: Hagaman;
             24w0x450800 &&& 24w0xffffff: McKenney;
             24w0x50800 &&& 24w0xfffff: McDonough;
+            24w0x400800 &&& 24w0xfcffff: Goodrich;
+            24w0x440800 &&& 24w0xffffff: Goodrich;
             24w0x800 &&& 24w0xffff: Ozona;
             24w0x6086dd &&& 24w0xf0ffff: Leland;
             24w0x86dd &&& 24w0xffff: Aynor;
@@ -1301,12 +1363,26 @@ parser Boring(packet_in Nucla, out Fishers Vanoss, out Sunbury Potosi, out ingre
     }
     state Ozona {
         Nucla.extract<Kalida>(Vanoss.Bellamy);
+        Potosi.Casnovia.Weatherby = (bit<4>)4w0x5;
+        Hampton Beatrice;
+        Beatrice = Nucla.lookahead<Hampton>();
         Vanoss.Tularosa.McBride = (Nucla.lookahead<bit<160>>())[31:0];
-        Potosi.Casnovia.Weatherby = (bit<4>)4w0x3;
+        Vanoss.Tularosa.Mackville = (Nucla.lookahead<bit<128>>())[31:0];
         Vanoss.Tularosa.Antlers = (Nucla.lookahead<bit<14>>())[5:0];
         Vanoss.Tularosa.Pilar = (Nucla.lookahead<bit<80>>())[7:0];
         Potosi.Sedan.Madawaska = (Nucla.lookahead<bit<72>>())[7:0];
-        transition accept;
+        transition select(Beatrice.Irvine, Beatrice.Pilar, Beatrice.Bonney) {
+            (4w0x6, 8w6, 13w0): Faith;
+            (4w0x6, 8w0x1 &&& 8w0xef, 13w0): Faith;
+            (4w0x7, 8w6, 13w0): Dilia;
+            (4w0x7, 8w0x1 &&& 8w0xef, 13w0): Dilia;
+            (4w0x8, 8w6, 13w0): NewCity;
+            (4w0x8, 8w0x1 &&& 8w0xef, 13w0): NewCity;
+            (default, 8w6, 13w0): Richlawn;
+            (default, 8w0x1 &&& 8w0xef, 13w0): Richlawn;
+            (default, default, 13w0): accept;
+            default: Andrade;
+        }
     }
     state Dahlgren {
         Potosi.Casnovia.Scarville = (bit<3>)3w5;
@@ -1405,8 +1481,12 @@ parser Boring(packet_in Nucla, out Fishers Vanoss, out Sunbury Potosi, out ingre
         }
     }
     state Salitpa {
-        Potosi.Casnovia.DeGraff = (bit<3>)3w0x3;
-        Potosi.Almota.Antlers = (Nucla.lookahead<bit<14>>())[5:0];
+        Potosi.Casnovia.DeGraff = (bit<3>)3w0x5;
+        Potosi.Almota.McBride = (Nucla.lookahead<Hampton>()).McBride;
+        Potosi.Almota.Mackville = (Nucla.lookahead<Hampton>()).Mackville;
+        Potosi.Almota.Antlers = (Nucla.lookahead<Hampton>()).Antlers;
+        Potosi.Casnovia.Stratford = (Nucla.lookahead<Hampton>()).Pilar;
+        Potosi.Casnovia.RioPecos = (Nucla.lookahead<Hampton>()).Madawaska;
         transition accept;
     }
     state Yulee {
@@ -1467,7 +1547,7 @@ parser Boring(packet_in Nucla, out Fishers Vanoss, out Sunbury Potosi, out ingre
     state start {
         Nucla.extract<ingress_intrinsic_metadata_t>(Swanlake);
         Potosi.Swanlake.Avondale = Swanlake.ingress_mac_tstamp;
-        transition select(Swanlake.ingress_port, (Nucla.lookahead<Sewaren>()).Belfair) {
+        transition select(Swanlake.ingress_port, (Nucla.lookahead<Sewaren>()).Hillcrest) {
             (9w68 &&& 9w0x7f, 3w4 &&& 3w0x7): Bowers;
             default: Camargo;
         }
@@ -1498,6 +1578,95 @@ parser Boring(packet_in Nucla, out Fishers Vanoss, out Sunbury Potosi, out ingre
             Potosi.Halltown.Broadwell = Scottdale.Cadwell;
         }
         transition Westview;
+    }
+    state Faith {
+        Potosi.Casnovia.Scarville = (bit<3>)3w2;
+        bit<32> Beatrice;
+        Beatrice = (Nucla.lookahead<bit<224>>())[31:0];
+        Vanoss.Ossining.Teigen = Beatrice[31:16];
+        Vanoss.Ossining.Lowes = Beatrice[15:0];
+        transition accept;
+    }
+    state Dilia {
+        Potosi.Casnovia.Scarville = (bit<3>)3w2;
+        bit<32> Beatrice;
+        Beatrice = (Nucla.lookahead<bit<256>>())[31:0];
+        Vanoss.Ossining.Teigen = Beatrice[31:16];
+        Vanoss.Ossining.Lowes = Beatrice[15:0];
+        transition accept;
+    }
+    state NewCity {
+        Potosi.Casnovia.Scarville = (bit<3>)3w2;
+        Nucla.extract<McFaddin>(Vanoss.Vinita);
+        bit<32> Beatrice;
+        Beatrice = (Nucla.lookahead<bit<32>>())[31:0];
+        Vanoss.Ossining.Teigen = Beatrice[31:16];
+        Vanoss.Ossining.Lowes = Beatrice[15:0];
+        transition accept;
+    }
+    state Carlsbad {
+        bit<32> Beatrice;
+        Beatrice = (Nucla.lookahead<bit<64>>())[31:0];
+        Vanoss.Ossining.Teigen = Beatrice[31:16];
+        Vanoss.Ossining.Lowes = Beatrice[15:0];
+        transition accept;
+    }
+    state Contact {
+        bit<32> Beatrice;
+        Beatrice = (Nucla.lookahead<bit<96>>())[31:0];
+        Vanoss.Ossining.Teigen = Beatrice[31:16];
+        Vanoss.Ossining.Lowes = Beatrice[15:0];
+        transition accept;
+    }
+    state Needham {
+        bit<32> Beatrice;
+        Beatrice = (Nucla.lookahead<bit<128>>())[31:0];
+        Vanoss.Ossining.Teigen = Beatrice[31:16];
+        Vanoss.Ossining.Lowes = Beatrice[15:0];
+        transition accept;
+    }
+    state Kamas {
+        bit<32> Beatrice;
+        Beatrice = (Nucla.lookahead<bit<160>>())[31:0];
+        Vanoss.Ossining.Teigen = Beatrice[31:16];
+        Vanoss.Ossining.Lowes = Beatrice[15:0];
+        transition accept;
+    }
+    state Norco {
+        bit<32> Beatrice;
+        Beatrice = (Nucla.lookahead<bit<192>>())[31:0];
+        Vanoss.Ossining.Teigen = Beatrice[31:16];
+        Vanoss.Ossining.Lowes = Beatrice[15:0];
+        transition accept;
+    }
+    state Sandpoint {
+        bit<32> Beatrice;
+        Beatrice = (Nucla.lookahead<bit<224>>())[31:0];
+        Vanoss.Ossining.Teigen = Beatrice[31:16];
+        Vanoss.Ossining.Lowes = Beatrice[15:0];
+        transition accept;
+    }
+    state Bassett {
+        bit<32> Beatrice;
+        Beatrice = (Nucla.lookahead<bit<256>>())[31:0];
+        Vanoss.Ossining.Teigen = Beatrice[31:16];
+        Vanoss.Ossining.Lowes = Beatrice[15:0];
+        transition accept;
+    }
+    state Richlawn {
+        Potosi.Casnovia.Scarville = (bit<3>)3w2;
+        Hampton Beatrice;
+        Beatrice = Nucla.lookahead<Hampton>();
+        Nucla.extract<McFaddin>(Vanoss.Vinita);
+        transition select(Beatrice.Irvine) {
+            4w0x9: Carlsbad;
+            4w0xa: Contact;
+            4w0xb: Needham;
+            4w0xc: Kamas;
+            4w0xd: Norco;
+            4w0xe: Sandpoint;
+            default: Bassett;
+        }
     }
 }
 
@@ -1546,6 +1715,7 @@ control Pioche(packet_out Nucla, inout Fishers Vanoss, in Sunbury Potosi, in ing
         Nucla.emit<Ambrose>(Vanoss.Oneonta);
         Nucla.emit<Laxon>(Vanoss.Sneads);
         {
+            Nucla.emit<McFaddin>(Vanoss.Vinita);
             Nucla.emit<Hampton>(Vanoss.Hemlock);
             Nucla.emit<Vinemont>(Vanoss.Mabana);
             Nucla.emit<Welcome>(Vanoss.Hester);
@@ -2300,7 +2470,7 @@ control Kosmos(inout Fishers Vanoss, inout Sunbury Potosi, in ingress_intrinsic_
             Potosi.Arapahoe.Plains: exact @name("Arapahoe.Plains") ;
             Potosi.Lemont.McBride : lpm @name("Lemont.McBride") ;
         }
-        size = 512;
+        size = 1024;
         idle_timeout = true;
         const default_action = Penzance();
     }
@@ -2427,7 +2597,7 @@ control Rhine(inout Fishers Vanoss, inout Sunbury Potosi, in ingress_intrinsic_m
         size = 2048;
         idle_timeout = true;
     }
-    @idletime_precision(1) @atcam_partition_index("Ravinia.HillTop") @atcam_number_partitions(512) @force_immediate(1) @disable_atomic_modify(1) @stage(5) @pack(2) @name(".Melder") table Melder {
+    @idletime_precision(1) @atcam_partition_index("Ravinia.HillTop") @atcam_number_partitions(1024) @force_immediate(1) @disable_atomic_modify(1) @stage(5) @pack(2) @name(".Melder") table Melder {
         actions = {
             @tableonly DeRidder();
             @tableonly Duchesne();
@@ -2439,7 +2609,7 @@ control Rhine(inout Fishers Vanoss, inout Sunbury Potosi, in ingress_intrinsic_m
             Potosi.Ravinia.HillTop                        : exact @name("Ravinia.HillTop") ;
             Potosi.Lemont.McBride & 128w0xffffffffffffffff: lpm @name("Lemont.McBride") ;
         }
-        size = 4096;
+        size = 8192;
         idle_timeout = true;
         const default_action = Blakeman();
     }
@@ -2537,7 +2707,7 @@ control Rhine(inout Fishers Vanoss, inout Sunbury Potosi, in ingress_intrinsic_m
                         Farner.apply();
                     }
                 }
-            } else if (Potosi.Hookdale.Rocklake == 1w0 && (Potosi.Sedan.Brainard == 1w1 || Potosi.Arapahoe.Amenia & 4w0x1 == 4w0x1 && Potosi.Sedan.Cardenas == 3w0x3)) {
+            } else if (Potosi.Hookdale.Rocklake == 1w0 && (Potosi.Sedan.Brainard == 1w1 || Potosi.Arapahoe.Amenia & 4w0x1 == 4w0x1 && Potosi.Sedan.Cardenas == 3w0x5)) {
                 Mondovi.apply();
             }
         }
@@ -2646,7 +2816,7 @@ control Bernstein(inout Fishers Vanoss, inout Sunbury Potosi, in ingress_intrins
         Potosi.Sedan.Comfrey = Vanoss.Hettinger.Comfrey;
         Potosi.Sedan.Lathrop = Vanoss.Hettinger.Lathrop;
         Potosi.Sedan.Clyde = Vanoss.Hettinger.Clyde;
-        Potosi.Sedan.Cardenas[2:0] = Potosi.Casnovia.Weatherby[2:0];
+        Potosi.Sedan.Cardenas = Potosi.Casnovia.Weatherby[2:0];
         Potosi.Sedan.Connell = Vanoss.Bellamy.Connell;
     }
     @name(".BirchRun") action BirchRun() {
@@ -3422,7 +3592,8 @@ control Cornish(inout Fishers Vanoss, inout Sunbury Potosi, in ingress_intrinsic
     }
     @name(".Redfield") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Redfield;
     @name(".Baskin.Everton") Hash<bit<51>>(HashAlgorithm_t.CRC16, Redfield) Baskin;
-    @name(".Wakenda") ActionSelector(32w32768, Baskin, SelectorMode_t.RESILIENT) Wakenda;
+    @name(".Wakenda") ActionProfile(32w32768) Wakenda;
+    @name(".Laramie") ActionSelector(Wakenda, Baskin, SelectorMode_t.RESILIENT, 32w120, 32w4) Laramie;
     @disable_atomic_modify(1) @name(".Mynard") table Mynard {
         actions = {
             Dougherty();
@@ -3438,7 +3609,7 @@ control Cornish(inout Fishers Vanoss, inout Sunbury Potosi, in ingress_intrinsic
         }
         const default_action = Advance();
         size = 512;
-        implementation = Wakenda;
+        implementation = Laramie;
         requires_versioning = false;
     }
     apply {
@@ -3580,7 +3751,8 @@ control Konnarock(inout Fishers Vanoss, inout Sunbury Potosi, in ingress_intrins
     }
     @name(".Magazine") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Magazine;
     @name(".McDougal.Waialua") Hash<bit<51>>(HashAlgorithm_t.CRC16, Magazine) McDougal;
-    @name(".Batchelor") ActionSelector(32w1024, McDougal, SelectorMode_t.RESILIENT) Batchelor;
+    @name(".Batchelor") ActionProfile(32w1024) Batchelor;
+    @name(".Pinebluff") ActionSelector(Batchelor, McDougal, SelectorMode_t.RESILIENT, 32w120, 32w4) Pinebluff;
     @disable_atomic_modify(1) @name(".Dundee") table Dundee {
         actions = {
             Tillicum();
@@ -3591,7 +3763,7 @@ control Konnarock(inout Fishers Vanoss, inout Sunbury Potosi, in ingress_intrins
             Potosi.Mayflower.Corvallis      : selector @name("Mayflower.Corvallis") ;
         }
         size = 128;
-        implementation = Batchelor;
+        implementation = Pinebluff;
         const default_action = NoAction();
     }
     apply {
@@ -3600,6 +3772,9 @@ control Konnarock(inout Fishers Vanoss, inout Sunbury Potosi, in ingress_intrins
 }
 
 control RedBay(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_metadata_t Lindy, in egress_intrinsic_metadata_from_parser_t Asharoken, inout egress_intrinsic_metadata_for_deparser_t Weissert, inout egress_intrinsic_metadata_for_output_port_t Bellmead) {
+    @name(".Fentress") action Fentress() {
+        Weissert.drop_ctl = (bit<3>)3w7;
+    }
     @name(".Tunis") action Tunis() {
     }
     @name(".Pound") action Pound(bit<8> Oakley) {
@@ -3648,14 +3823,14 @@ control RedBay(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_m
             Tunis();
             Pound();
             Ontonagon();
-            @defaultonly NoAction();
+            @defaultonly Fentress();
         }
         key = {
             Lindy.egress_rid : exact @name("Lindy.egress_rid") ;
             Lindy.egress_port: exact @name("Lindy.Toklat") ;
         }
         size = 1024;
-        const default_action = NoAction();
+        const default_action = Fentress();
     }
     apply {
         Nordland.apply();
@@ -3687,7 +3862,8 @@ control Ranier(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_m
     }
     @name(".Corum") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Corum;
     @name(".Nicollet.Wheaton") Hash<bit<51>>(HashAlgorithm_t.CRC16, Corum) Nicollet;
-    @name(".Fosston") ActionSelector(32w1024, Nicollet, SelectorMode_t.RESILIENT) Fosston;
+    @name(".Fosston") ActionProfile(32w1024) Fosston;
+    @name(".Molino") ActionSelector(Fosston, Nicollet, SelectorMode_t.RESILIENT, 32w120, 32w4) Molino;
     @disable_atomic_modify(1) @name(".Newsoms") table Newsoms {
         actions = {
             Hartwell();
@@ -3698,7 +3874,7 @@ control Ranier(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_m
             Potosi.Mayflower.Corvallis    : selector @name("Mayflower.Corvallis") ;
         }
         size = 128;
-        implementation = Fosston;
+        implementation = Molino;
         const default_action = NoAction();
     }
     apply {
@@ -4026,6 +4202,9 @@ control Newcomb(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_
 }
 
 control Minetto(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_metadata_t Lindy, in egress_intrinsic_metadata_from_parser_t Asharoken, inout egress_intrinsic_metadata_for_deparser_t Weissert, inout egress_intrinsic_metadata_for_output_port_t Bellmead) {
+    @name(".Perkasie") action Perkasie() {
+        Vanoss.Newkirk.setInvalid();
+    }
     @name(".August") action August(bit<16> Kinston) {
         Potosi.Lindy.Bledsoe = Potosi.Lindy.Bledsoe + Kinston;
     }
@@ -4062,10 +4241,12 @@ control Minetto(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_
     @name(".Talkeetna") action Talkeetna(bit<24> Stovall, bit<24> Haworth) {
         Idylside(Stovall, Haworth);
         Vanoss.Tularosa.Madawaska = Vanoss.Tularosa.Madawaska - 8w1;
+        Perkasie();
     }
     @name(".Gorum") action Gorum(bit<24> Stovall, bit<24> Haworth) {
         Idylside(Stovall, Haworth);
         Vanoss.Uniopolis.Kearns = Vanoss.Uniopolis.Kearns - 8w1;
+        Perkasie();
     }
     @name(".Quivero") action Quivero() {
         Idylside(Vanoss.Hettinger.Lathrop, Vanoss.Hettinger.Clyde);
@@ -4177,7 +4358,7 @@ control Telegraph(inout Fishers Vanoss, inout Sunbury Potosi, in ingress_intrins
             Potosi.Palouse.Lynch              : ternary @name("Palouse.Lynch") ;
             Potosi.Sedan.Whitefish            : ternary @name("Sedan.Whitefish") ;
             Potosi.Sedan.Orrick               : ternary @name("Sedan.Orrick") ;
-            Potosi.Sedan.Cardenas & 3w0x4     : ternary @name("Sedan.Cardenas") ;
+            Potosi.Sedan.Cardenas             : ternary @name("Sedan.Cardenas") ;
             Potosi.Hookdale.Stilwell          : ternary @name("Hookdale.Stilwell") ;
             Geistown.mcast_grp_a              : ternary @name("Geistown.Swifton") ;
             Potosi.Hookdale.Exton             : ternary @name("Hookdale.Exton") ;
@@ -4548,7 +4729,7 @@ control Waterford(inout Fishers Vanoss, inout Sunbury Potosi, in ingress_intrins
         const default_action = NoAction();
     }
     apply {
-        if (Potosi.Sedan.Cardenas == 3w0x1) {
+        if (Potosi.Sedan.Cardenas & 3w0x3 == 3w0x1) {
             Lovett.apply();
             Cruso.apply();
         } else if (Potosi.Sedan.Cardenas == 3w0x2) {
@@ -4756,7 +4937,7 @@ control LaHoma(inout Fishers Vanoss, inout Sunbury Potosi, in ingress_intrinsic_
         const default_action = Albin(8w0);
     }
     apply {
-        if (Potosi.Sedan.Cardenas == 3w0x1 && Potosi.Arapahoe.Tiburon != 1w0) {
+        if (Potosi.Sedan.Cardenas & 3w0x3 == 3w0x1 && Potosi.Arapahoe.Tiburon != 1w0) {
             Folcroft.apply();
         }
     }
@@ -5339,6 +5520,11 @@ control Sturgeon(inout Fishers Vanoss, inout Sunbury Potosi, in ingress_intrinsi
     }
 }
 
+control Tusayan(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_metadata_t Lindy, in egress_intrinsic_metadata_from_parser_t Asharoken, inout egress_intrinsic_metadata_for_deparser_t Weissert, inout egress_intrinsic_metadata_for_output_port_t Bellmead) {
+    apply {
+    }
+}
+
 @pa_no_init("ingress" , "Potosi.Hookdale.Kalkaska") control Gurdon(inout Fishers Vanoss, inout Sunbury Potosi, in ingress_intrinsic_metadata_t Swanlake, in ingress_intrinsic_metadata_from_parser_t Mulvane, inout ingress_intrinsic_metadata_for_deparser_t Luning, inout ingress_intrinsic_metadata_for_tm_t Geistown) {
     @name("doPtpI") Lakefield() Poteet;
     @name(".Penzance") action Penzance() {
@@ -5393,21 +5579,15 @@ control Sturgeon(inout Fishers Vanoss, inout Sunbury Potosi, in ingress_intrinsi
     @name(".Burtrum") action Burtrum() {
         Potosi.Mayflower.Bridger = Potosi.Funston.Mickleton;
     }
-    @name(".Blanchard") action Blanchard() {
-    }
     @name(".Gonzalez") action Gonzalez() {
-        Blanchard();
     }
     @name(".Motley") action Motley() {
-        Blanchard();
     }
     @name(".Monteview") action Monteview() {
         Vanoss.Tularosa.setInvalid();
-        Blanchard();
     }
     @name(".Wildell") action Wildell() {
         Vanoss.Uniopolis.setInvalid();
-        Blanchard();
     }
     @name(".Conda") action Conda() {
     }
@@ -5954,6 +6134,7 @@ control Saltair(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_
     @name(".Whitetail") Doral() Whitetail;
     @name(".Paoli") Wrens() Paoli;
     @name(".Tatum") Ludowici() Tatum;
+    @name(".Nicolaus") Tusayan() Nicolaus;
     @name(".Croft") Ahmeek() Croft;
     @name(".Oxnard") Holcut() Oxnard;
     @name(".McKibben") Gerster() McKibben;
@@ -6025,6 +6206,7 @@ control Saltair(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_
             Shivwits.apply(Vanoss, Potosi, Lindy, Asharoken, Weissert, Bellmead);
             Millett.apply(Vanoss, Potosi, Lindy, Asharoken, Weissert, Bellmead);
             Coalton.apply(Vanoss, Potosi, Lindy, Asharoken, Weissert, Bellmead);
+            Nicolaus.apply(Vanoss, Potosi, Lindy, Asharoken, Weissert, Bellmead);
             if (Potosi.Hookdale.Kalkaska != 3w2) {
                 Noonan.apply(Vanoss, Potosi, Lindy, Asharoken, Weissert, Bellmead);
             }
@@ -6081,20 +6263,9 @@ parser Tanner(packet_in Nucla, out Fishers Vanoss, out Sunbury Potosi, out egres
             default: Meyers;
         }
     }
-    state Chewalla {
-        Nucla.extract<LasVegas>(Vanoss.Coryville[1]);
-        transition select((Nucla.lookahead<bit<24>>())[7:0], (Nucla.lookahead<bit<16>>())[15:0]) {
-            (8w0x45 &&& 8w0xff, 16w0x800): McKenney;
-            (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Ozona;
-            (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Leland;
-            (8w0x0 &&& 8w0x0, 16w0x88f7): Millikin;
-            default: Meyers;
-        }
-    }
     state Forepaugh {
-        Nucla.extract<LasVegas>(Vanoss.Coryville[0]);
+        Nucla.extract<LasVegas>(Vanoss.Newkirk);
         transition select((Nucla.lookahead<bit<24>>())[7:0], (Nucla.lookahead<bit<16>>())[15:0]) {
-            (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Chewalla;
             (8w0x45 &&& 8w0xff, 16w0x800): McKenney;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Ozona;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Leland;
@@ -6316,6 +6487,7 @@ control Tryon(packet_out Nucla, inout Fishers Vanoss, in Sunbury Potosi, in egre
             Nucla.emit<Hampton>(Vanoss.Boyle);
             Nucla.emit<Elderon>(Vanoss.Ackerly);
             Nucla.emit<Riner>(Vanoss.Hettinger);
+            Nucla.emit<LasVegas>(Vanoss.Newkirk);
             Nucla.emit<Kalida>(Vanoss.Bellamy);
             Nucla.emit<Hampton>(Vanoss.Tularosa);
             Nucla.emit<Vinemont>(Vanoss.Uniopolis);
