@@ -8,6 +8,7 @@
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/lib/cmp.h"
 #include "lib/exceptions.h"
+#include "lib/ordered_map.h"
 
 namespace IR {
 namespace BFN {
@@ -125,7 +126,7 @@ class Clot final : public LiftCompare<Clot> {
     std::map<const PHV::FieldSlice*, cstring> slice_to_parser_state_;
 
     /// All fields that have slices in this CLOT, mapped to their corresponding slice.
-    std::map<const PHV::Field*, const PHV::FieldSlice*> fields_to_slices_;
+    ordered_map<const PHV::Field*, const PHV::FieldSlice*> fields_to_slices_;
 
     /// All fields that have slices in this CLOT and also have a PHV allocation. This consists of
     /// all modified and read-only fields that have slices in this CLOT.
@@ -135,14 +136,6 @@ class Clot final : public LiftCompare<Clot> {
     std::set<const PHV::Field*> checksum_fields_;
 
  public:
-    /// Returns all field slices covered by this CLOT in order of appearance. If the CLOT was
-    /// generated from a pseudoheader "hdr" with fields "A, B, C", then the function will return
-    /// [ {hdr.A}, {hdr.B}, {hdr.C} ]. However, if the CLOT is a multiheader or variable length
-    /// CLOT, an element in the vector might have more than 1 slice, such as
-    /// [ {hdr1.A}, {hdr2.A, hdr3.B} ], indicating that the CLOT will either contain
-    /// hdr1.A and hdr_2_.A OR hdr1.A and hdr_3_.A.
-    std::vector<std::set<const PHV::FieldSlice*>> all_slices() const;
-
     /// Return map which contains the field slices in the CLOT depending on which parser state
     /// the CLOT began in.
     const std::map<cstring, std::vector<const PHV::FieldSlice*>>& parser_state_to_slices() const {
@@ -150,7 +143,7 @@ class Clot final : public LiftCompare<Clot> {
     }
 
     /// Returns all fields that have slices in this CLOT, mapped to their corresponding slice.
-    const std::map<const PHV::Field*, const PHV::FieldSlice*>& fields_to_slices() const {
+    const ordered_map<const PHV::Field*, const PHV::FieldSlice*>& fields_to_slices() const {
         return fields_to_slices_;
     }
 

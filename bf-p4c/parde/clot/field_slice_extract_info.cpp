@@ -98,7 +98,6 @@ FieldSliceExtractInfo::remove_conflicts(const CollectParserInfo& parserInfo,
                                         int preGapBits,
                                         const ClotCandidate* candidate,
                                         int postGapBits) const {
-    int candidate_size = candidate->size_bits;
     int extract_size = slice()->size();
 
     // For each parser state in which this field slice is extracted, and each parser state
@@ -133,10 +132,9 @@ FieldSliceExtractInfo::remove_conflicts(const CollectParserInfo& parserInfo,
 
             auto shift_amounts = parserInfo.get_all_shift_amounts(extract_state, candidate_state);
 
-            int lower_bound =
-                extract_offset - candidate_offset - candidate_size - postGapBits + 1;
-            int upper_bound =
-                extract_offset + extract_size - candidate_offset + preGapBits - 1;
+            int candidate_size = candidate->size_in_bits(candidate_state);
+            int lower_bound = extract_offset - candidate_offset - candidate_size - postGapBits + 1;
+            int upper_bound = extract_offset + extract_size - candidate_offset + preGapBits - 1;
 
             for (auto it = shift_amounts->lower_bound(lower_bound);
                  it != shift_amounts->end() && *it <= upper_bound;

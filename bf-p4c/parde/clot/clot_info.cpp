@@ -886,7 +886,7 @@ std::string ClotInfo::print(const PhvInfo* phvInfo) const {
             std::set<const PHV::FieldSlice*> counted_slices;
             const auto state_to_slices = clot->parser_state_to_slices();
             for (auto it = state_to_slices.begin(); it != state_to_slices.end(); ++it) {
-                bool first_row = (it == clot->parser_state_to_slices().begin());
+                bool first_row = (it == state_to_slices.begin());
                 cstring parser_state = it->first;
 
                 tp.addRow({first_row ? std::to_string(clot->tag) : "",
@@ -926,7 +926,7 @@ std::string ClotInfo::print(const PhvInfo* phvInfo) const {
                     bits_in_clot = std::max(bits_in_clot,
                         clot->bit_offset(parser_state, slice) + slice->size());
                 }
-                bool last_row = (std::next(it) == clot->parser_state_to_slices().end());
+                bool last_row = (std::next(it) == state_to_slices.end());
                 if (!last_row)
                     tp.addBlank();
             }

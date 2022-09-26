@@ -3,6 +3,25 @@
 #include "bf-p4c/common/table_printer.h"
 #include "field_slice_extract_info.h"
 
+unsigned ClotCandidate::max_size_in_bits() const {
+    auto it =
+        std::max_element(parser_state_to_size_in_bits.begin(), parser_state_to_size_in_bits.end(),
+                         [](const std::pair<const IR::BFN::ParserState*, unsigned>& a,
+                            const std::pair<const IR::BFN::ParserState*, unsigned>& b) {
+                             return a.second < b.second;
+                         });
+    BUG_CHECK(it != parser_state_to_size_in_bits.end(),
+              "Cannot get CLOT candidate %1%'s max size, as it is not in any parser states", id);
+    return it->second;
+}
+
+unsigned ClotCandidate::size_in_bits(const IR::BFN::ParserState* parser_state) const {
+    BUG_CHECK(parser_state_to_size_in_bits.count(parser_state),
+              "Cannot get CLOT candidate %1%'s size, as it is not in parser state %2%", id,
+              parser_state->name);
+    return parser_state_to_size_in_bits.at(parser_state);
+}
+
 ClotCandidate::ClotCandidate(const ClotInfo& clotInfo,
                              const Pseudoheader* pseudoheader,
                              const std::vector<const FieldSliceExtractInfo*>& extract_infos,
@@ -21,20 +40,38 @@ ClotCandidate::ClotCandidate(const ClotInfo& clotInfo,
         pov_bits = clotInfo.fields_to_pov_bits_.at(first_field);
     }
 
-    for (auto extract_info : extract_infos) {
-        auto slice = extract_info->slice();
+    for (const auto* parser_state : extract_infos.front()->states()) {
+        parser_state_to_checksum_bits[parser_state];
+        parser_state_to_modified_bits[parser_state];
+        parser_state_to_readonly_bits[parser_state];
+        parser_state_to_unused_bits[parser_state];
+        parser_state_to_size_in_bits[parser_state] = 0;
+    }
 
-        if (clotInfo.is_modified(slice))
-            modified_bits.setrange(offset, slice->size());
+    for (const auto* extract_info : extract_infos) {
+        const PHV::FieldSlice* slice = extract_info->slice();
+        for (const auto* parser_state : extract_info->states()) {
+            if (clotInfo.is_checksum(slice)) {
+                parser_state_to_checksum_bits[parser_state].setrange(offset, slice->size());
+                checksum_slices.insert(slice);
+            }
 
-        if (clotInfo.is_checksum(slice))
-            checksum_bits.setrange(offset, slice->size());
+            if (clotInfo.is_modified(slice)) {
+                parser_state_to_modified_bits[parser_state].setrange(offset, slice->size());
+                modified_slices.insert(slice);
+            }
 
-        if (clotInfo.is_readonly(slice))
-            readonly_bits.setrange(offset, slice->size());
+            if (clotInfo.is_readonly(slice)) {
+                parser_state_to_readonly_bits[parser_state].setrange(offset, slice->size());
+                readonly_slices.insert(slice);
+            }
 
-        if (clotInfo.is_unused(slice))
-            unused_bits.setrange(offset, slice->size());
+            if (clotInfo.is_unused(slice)) {
+                parser_state_to_unused_bits[parser_state].setrange(offset, slice->size());
+                unused_slices.insert(slice);
+            }
+            parser_state_to_size_in_bits[parser_state] += slice->size();
+        }
 
         if (clotInfo.can_start_clot(extract_info))
             can_start_indices_.push_back(idx);
@@ -46,7 +83,15 @@ ClotCandidate::ClotCandidate(const ClotInfo& clotInfo,
         idx++;
     }
 
-    size_bits = offset;
+    auto get_sum_of_bits = [](const std::set<const PHV::FieldSlice*>& slices) -> unsigned {
+        return std::accumulate(
+            slices.begin(), slices.end(), 0u,
+            [](unsigned sum, const PHV::FieldSlice* slice) { return sum + slice->size(); });
+    };
+    checksum_bits = get_sum_of_bits(checksum_slices);
+    modified_bits = get_sum_of_bits(modified_slices);
+    readonly_bits = get_sum_of_bits(readonly_slices);
+    unused_bits = get_sum_of_bits(unused_slices);
     std::reverse(can_end_indices_.begin(), can_end_indices_.end());
 }
 
@@ -79,9 +124,38 @@ const std::vector<unsigned>& ClotCandidate::can_end_indices() const {
     return can_end_indices_;
 }
 
-const std::map<unsigned, StatePairSet>
-ClotCandidate::byte_gaps(const CollectParserInfo& parserInfo, const ClotCandidate* other) const {
-    return extract_infos.back()->byte_gaps(parserInfo, other->extract_infos.front());
+const std::map<unsigned, StatePairSet> ClotCandidate::byte_gaps(
+        const CollectParserInfo& parserInfo, const ClotCandidate* other) const {
+    std::map<unsigned, StatePairSet> byte_gaps;
+    for (const auto* state : states()) {
+        auto it = std::find_if(extract_infos.rbegin(), extract_infos.rend(),
+                               [&state](const FieldSliceExtractInfo* extract_info) {
+                                   return extract_info->states().count(state);
+                               });
+        std::map<unsigned, StatePairSet> byte_gaps_for_state =
+            (*it)->byte_gaps(parserInfo, other->extract_infos.front());
+
+        if (byte_gaps_for_state.empty()) continue;
+
+        std::map<unsigned, StatePairSet> matches;
+        std::copy_if(byte_gaps_for_state.begin(), byte_gaps_for_state.end(),
+                     std::inserter(matches, matches.begin()),
+                     [&state](const std::pair<unsigned, StatePairSet>& kv) {
+                         auto it = std::find_if(kv.second.begin(), kv.second.end(),
+                                                [&state](const StatePair& state_pair) {
+                                                    return state_pair.first == state ||
+                                                           state_pair.second == state;
+                                                });
+                         return it != kv.second.end();
+                     });
+
+        for (const auto& match : matches) {
+            for (const auto& state_pair : match.second) {
+                byte_gaps[match.first].insert(state_pair);
+            }
+        }
+    }
+    return byte_gaps;
 }
 
 const ClotCandidate* ClotCandidate::mark_adjacencies(bool afterAllocatedClot,
@@ -89,8 +163,8 @@ const ClotCandidate* ClotCandidate::mark_adjacencies(bool afterAllocatedClot,
     afterAllocatedClot |= this->afterAllocatedClot;
     beforeAllocatedClot |= this->beforeAllocatedClot;
 
-    if (afterAllocatedClot == this->afterAllocatedClot
-            && beforeAllocatedClot == this->beforeAllocatedClot)
+    if (afterAllocatedClot == this->afterAllocatedClot &&
+        beforeAllocatedClot == this->beforeAllocatedClot)
         return this;
 
     auto* result = new ClotCandidate(*this);
@@ -100,63 +174,76 @@ const ClotCandidate* ClotCandidate::mark_adjacencies(bool afterAllocatedClot,
 }
 
 bool ClotCandidate::operator<(const ClotCandidate& other) const {
-    if (unused_bits.popcount() != other.unused_bits.popcount())
-        return unused_bits.popcount() < other.unused_bits.popcount();
+    if (unused_bits != other.unused_bits) return unused_bits < other.unused_bits;
 
-    if (readonly_bits.popcount() != other.readonly_bits.popcount())
-        return readonly_bits.popcount() < other.readonly_bits.popcount();
+    if (readonly_bits != other.readonly_bits) return readonly_bits < other.readonly_bits;
 
     return id < other.id;
 }
 
 std::string ClotCandidate::print() const {
     std::stringstream out;
-
     out << "CLOT candidate " << id << ":" << std::endl;
 
-    bool first_state = true;
-    for (auto* state : states()) {
-        if (first_state)
-            out << "  states: ";
-        else
-            out << "          ";
-
-        first_state = false;
-        out << state->name << std::endl;
-    }
-
     if (afterAllocatedClot)
-        out << "  appears after  an allocated CLOT with 0-byte gap" << std::endl;
+        out << "  Appears after an allocated CLOT with 0-byte gap" << std::endl;
     if (beforeAllocatedClot)
-        out << "  appears before an allocated CLOT with 0-byte gap" << std::endl;
+        out << "  Appears before an allocated CLOT with 0-byte gap" << std::endl;
 
-    TablePrinter tp(out, {"Fields", "Bits", "Property"}, TablePrinter::Align::CENTER);
+    TablePrinter tp(out, {"Parser State", "Fields", "Bits", "Property"},
+                    TablePrinter::Align::CENTER);
 
-    int offset = 0;
-    for (auto extract_info : extract_infos) {
-        auto slice = extract_info->slice();
+    ordered_set<const IR::BFN::ParserState*> parser_states = extract_infos.front()->states();
+    bool first_parser_state = true;
+    for (const auto* parser_state : parser_states) {
+        if (!first_parser_state) tp.addSep();
+        first_parser_state = false;
 
-        std::stringstream bits;
-        bits << slice->size() << " [" << offset << ".." << (offset + slice->size() - 1) << "]";
+        int offset = 0;
+        bool first_extract_info = true;
+        for (const auto* extract_info : extract_infos) {
+            const PHV::FieldSlice* slice = extract_info->slice();
+            ordered_set<const IR::BFN::ParserState*> subset_of_parser_states =
+                extract_info->states();
 
-        std::string attr;
-        if (checksum_bits.getbit(offset)) attr = "checksum";
-        if (modified_bits.getbit(offset)) attr = "modified";
-        else if (readonly_bits.getbit(offset)) attr = "read-only";
-        else
-            attr = "unused";
+            if (!subset_of_parser_states.count(parser_state)) continue;
 
-        tp.addRow({std::string(slice->shortString()), bits.str(), attr});
+            std::stringstream bits;
+            bits << slice->size() << " [" << offset << ".." << (offset + slice->size() - 1) << "]";
 
-        offset += slice->size();
+            std::string attr;
+            if (parser_state_to_checksum_bits.at(parser_state).getbit(offset)) attr = "checksum";
+            if (parser_state_to_modified_bits.at(parser_state).getbit(offset))
+                attr = "modified";
+            else if (parser_state_to_readonly_bits.at(parser_state).getbit(offset))
+                attr = "read-only";
+            else
+                attr = "unused";
+
+            tp.addRow({std::string(first_extract_info ? parser_state->name : ""),
+                       std::string(slice->shortString()), bits.str(), attr});
+            first_extract_info = false;
+
+            offset += slice->size();
+        }
+        tp.addBlank();
+        tp.addRow({"", "Unused bits",
+                   std::to_string(parser_state_to_unused_bits.at(parser_state).popcount()), ""});
+        tp.addRow({"", "Read-only bits",
+                   std::to_string(parser_state_to_readonly_bits.at(parser_state).popcount()), ""});
+        tp.addRow({"", "Modified bits",
+                   std::to_string(parser_state_to_modified_bits.at(parser_state).popcount()), ""});
+        tp.addRow({"", "Checksum bits",
+                   std::to_string(parser_state_to_checksum_bits.at(parser_state).popcount()), ""});
+        tp.addRow({"", "Total bits", std::to_string(offset), ""});
     }
 
     tp.addSep();
-    tp.addRow({"Unused bits", std::to_string(unused_bits.popcount()), ""});
-    tp.addRow({"Read-only bits", std::to_string(readonly_bits.popcount()), ""});
-    tp.addRow({"Modified bits", std::to_string(modified_bits.popcount()), ""});
-    tp.addRow({"Checksum bits", std::to_string(checksum_bits.popcount()), ""});
-    tp.addRow({"Total bits", std::to_string(offset), ""});
+    tp.addRow({"", "Unique unused bits", std::to_string(unused_bits), ""});
+    tp.addRow({"", "Unique read-only bits", std::to_string(readonly_bits), ""});
+    tp.addRow({"", "Unique modified bits", std::to_string(modified_bits), ""});
+    tp.addRow({"", "Unique checksum bits", std::to_string(checksum_bits), ""});
+    tp.addRow({"", "Max total bits", std::to_string(max_size_in_bits()), ""});
 
     tp.print();
 

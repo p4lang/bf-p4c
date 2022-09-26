@@ -76,22 +76,6 @@ void Clot::add_slice(cstring parser_state, FieldKind kind, const PHV::FieldSlice
     fields_to_slices_[field] = slice;
 }
 
-std::vector<std::set<const PHV::FieldSlice*>> Clot::all_slices() const {
-    std::vector<std::set<const PHV::FieldSlice*>> all_slices;
-    for (const auto& kv : parser_state_to_slices_) {
-        auto slices = kv.second;
-        auto it = all_slices.begin();
-        for (const auto& slice : slices) {
-            if (it == all_slices.end()) {
-                it = all_slices.insert(it, std::set<const PHV::FieldSlice*>());
-            }
-            it->insert(slice);
-            ++it;
-        }
-    }
-    return all_slices;
-}
-
 unsigned Clot::length_in_bytes(cstring parser_state) const {
     unsigned length_in_bits = 0;
     BUG_CHECK(parser_state_to_slices_.count(parser_state),

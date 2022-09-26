@@ -519,7 +519,7 @@ class GreedyClotAllocator : public Visitor {
         // Given this constraint, this le_bitinterval tracks which bits in the candidate can be
         // included in the adjusted CLOT candidate. This is kept in low-endian format to make
         // manipulations with field slices easier later on.
-        le_bitinterval candidate_interval = StartLen(0, to_adjust->size_bits);
+        le_bitinterval candidate_interval = StartLen(0, to_adjust->max_size_in_bits());
         if (to_adjust->afterAllocatedClot) {
             // Get the first extract and figure out what parts of it don't conflict.
             const auto* first_extract = to_adjust->extracts().front();
@@ -578,31 +578,25 @@ class GreedyClotAllocator : public Visitor {
         // non-conflicting extracts. This map will be used for the slow path below.
         bool have_conflict = false;
         std::map<const PHV::Field*, std::vector<const FieldSliceExtractInfo*>> extract_map;
-        unsigned extract_bit_pos = to_adjust->size_bits;
+        unsigned extract_bit_pos = to_adjust->max_size_in_bits();
         for (auto extract : to_adjust->extracts()) {
-            const auto* slice = extract->slice();
+            const PHV::FieldSlice* slice = extract->slice();
             extract_bit_pos -= slice->size();
 
             // Adjust the extract so it lands within candidate_bitinterval. If the extract is
             // disjoint from the interval, then use nullptr to represent the empty extract.
-            const FieldSliceExtractInfo* adjusted_extract = nullptr;
-            auto trim_range =
-                toHalfOpenRange(slice->range())
-                    .shiftedByBits(extract_bit_pos)
-                    .intersectWith(candidate_interval)
-                    .shiftedByBits(-extract_bit_pos)
-                    .shiftedByBits(-slice->range().lo);
-            if (!trim_range.empty()) {
-                adjusted_extract = extract->trim(trim_range.lo, trim_range.size());
-            }
+            auto trim_range = toHalfOpenRange(slice->range())
+                                  .shiftedByBits(extract_bit_pos)
+                                  .intersectWith(candidate_interval)
+                                  .shiftedByBits(-extract_bit_pos)
+                                  .shiftedByBits(-slice->range().lo);
+            const FieldSliceExtractInfo* adjusted_extract =
+                trim_range.empty() ? nullptr : extract->trim(trim_range.lo, trim_range.size());
 
-            const auto* non_conflicts =
-                adjusted_extract
-                    ? adjusted_extract->remove_conflicts(parserInfo,
-                                                         preGapBits,
-                                                         allocated,
-                                                         postGapBits)
-                    : new std::vector<const FieldSliceExtractInfo*>();
+            const std::vector<const FieldSliceExtractInfo*>* non_conflicts =
+                adjusted_extract ? adjusted_extract->remove_conflicts(parserInfo, preGapBits,
+                                                                      allocated, postGapBits)
+                                 : new std::vector<const FieldSliceExtractInfo*>();
 
             // Figure out whether this extract conflicts with the allocated candidate, and add the
             // non-conflicting extracts to extract_map.

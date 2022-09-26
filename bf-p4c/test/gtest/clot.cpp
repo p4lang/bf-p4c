@@ -117,7 +117,17 @@ struct SliceSpec {
     bool operator>=(const SliceSpec other) const {
         return !(*this < other);
     }
+
+ private:
+    friend std::ostream& operator<<(std::ostream&, const SliceSpec&);
 };
+
+std::ostream& operator<<(std::ostream& out, const SliceSpec& sliceSpec) {
+    out << sliceSpec.fieldName;
+    if (sliceSpec.slice)
+        out << "[" << sliceSpec.slice->hi << ".." << sliceSpec.slice->lo << "]";
+    return out;
+}
 
 using ExpectedClot = std::vector<SliceSpec>;
 using ExpectedAllocation = std::set<ExpectedClot>;
@@ -169,10 +179,8 @@ void runTest(boost::optional<TofinoPipeTestCase> test,
     for (const auto* clot : clotInfo.clots()) {
         // Convert the actual CLOT into an ExpectedClot.
         ExpectedClot expectedClot;
-        for (const auto& slices : clot->all_slices()) {
-            for (const auto& slice : slices) {
-                expectedClot.emplace_back(slice->field()->name, slice->range());
-            }
+        for (const auto& kv : clot->fields_to_slices()) {
+            expectedClot.emplace_back(kv.first->name, kv.second->range());
         }
 
         EXPECT_NE(expectedClot.size(), 0UL);
@@ -973,6 +981,223 @@ TEST_F(ClotTest, HeaderPragma) {
     // h.f3  written, @pragma do_not_use_clot
     // -----
     runTest(test, {});
+}
+
+TEST_F(ClotTest, AdjacentMultiheaderVariableSize) {
+    auto test = createClotTest(P4_SOURCE(R"(
+        )"), P4_SOURCE(R"(
+            header H1 {
+                bit<96> f1;
+                bit<8> f2;
+            }
+
+            header H2 {
+                bit<64> f;
+            }
+
+            header H3 {
+                bit<16> f;
+            }
+
+            header H4 {
+                bit<32> f1;
+                bit<8> f2;
+            }
+
+            header H5 {
+                bit<40> f1;
+                bit<8> f2;
+            }
+        )"), P4_SOURCE(R"(
+            H1 a;
+            H2 b;
+            H3 c;
+            H4 d;
+            H5 e;
+        )"), P4_SOURCE(R"(
+            state start {
+                pkt.extract(hdr.a);
+                transition select(hdr.a.f2) {
+                    0: parseB;
+                    1: parseBC;
+                    2: parseBD;
+                }
+            }
+
+            state parseB {
+                pkt.extract(hdr.b);
+                transition parseE;
+            }
+
+            state parseBC {
+                pkt.extract(hdr.b);
+                pkt.extract(hdr.c);
+                transition parseE;
+            }
+
+            state parseBD {
+                pkt.extract(hdr.b);
+                pkt.extract(hdr.d);
+                transition parseE;
+            }
+
+            state parseE {
+                pkt.extract(hdr.e);
+                transition accept;
+            }
+        )"), P4_SOURCE(R"(
+            action act1() {
+                hdr.e.f2 = 0;
+            }
+
+            table t1 {
+                key = { hdr.e.f2 : exact; }
+                actions = { act1; }
+                size = 256;
+            }
+
+            apply {
+                t1.apply();
+            }
+        )"), P4_SOURCE(R"(
+            pkt.emit(hdr.a);
+            pkt.emit(hdr.b);
+            pkt.emit(hdr.c);
+            pkt.emit(hdr.d);
+            pkt.emit(hdr.e);
+        )"));
+
+    // -----
+    // a.f1        CLOT 1
+    // a.f2        CLOT 1
+    // -----
+    // b.f         CLOT 0 (This is CLOT 0 because it has the most unused bits)
+    // c.f         CLOT 0
+    // d.f1        CLOT 0
+    // d.f2        CLOT 0
+    //   Content and length varies based on parser state:
+    //     - parseB: { b.f } (length = 8B)
+    //     - parseBC: { b.f, c.f } (length = 10B)
+    //     - parseBD: { b.f, d.f1, d.f2 } (length = 13B)
+    // -----
+    //   "e" is adjacent to all possible variations of CLOT 0, no gap required.
+    // e.f1        CLOT 2
+    // e.f2        written
+
+    runTest(test, {
+        {"b.f", "c.f", "d.f1", "d.f2"},
+        {"a.f1", "a.f2"},
+        {"e.f1"}
+    });
+}
+
+TEST_F(ClotTest, NotAdjacentMultiheaderVariableSize) {
+    auto test = createClotTest(P4_SOURCE(R"(
+        )"), P4_SOURCE(R"(
+            header H1 {
+                bit<96> f1;
+                bit<8> f2;
+            }
+
+            header H2 {
+                bit<64> f;
+            }
+
+            header H3 {
+                bit<16> f;
+            }
+
+            header H4 {
+                bit<32> f1;
+                bit<8> f2;
+            }
+
+            header H5 {
+                bit<40> f1;
+                bit<8> f2;
+            }
+        )"), P4_SOURCE(R"(
+            H1 a;
+            H2 b;
+            H3 c;
+            H4 d;
+            H5 e;
+        )"), P4_SOURCE(R"(
+            state start {
+                pkt.extract(hdr.a);
+                transition select(hdr.a.f2) {
+                    0: parseB;
+                    1: parseBC;
+                    2: parseBD;
+                }
+            }
+
+            state parseB {
+                pkt.extract(hdr.b);
+                transition parseE;
+            }
+
+            state parseBC {
+                pkt.extract(hdr.b);
+                pkt.extract(hdr.c);
+                transition parseE;
+            }
+
+            state parseBD {
+                pkt.extract(hdr.b);
+                pkt.extract(hdr.d);
+                transition parseE;
+            }
+
+            state parseE {
+                pkt.extract(hdr.e);
+                transition accept;
+            }
+        )"), P4_SOURCE(R"(
+            action act1() {
+                hdr.d.f2 = 0;
+            }
+
+            table t1 {
+                key = { hdr.d.f2 : exact; }
+                actions = { act1; }
+                size = 256;
+            }
+
+            apply {
+                t1.apply();
+            }
+        )"), P4_SOURCE(R"(
+            pkt.emit(hdr.a);
+            pkt.emit(hdr.b);
+            pkt.emit(hdr.c);
+            pkt.emit(hdr.d);
+            pkt.emit(hdr.e);
+        )"));
+
+    // -----
+    // a.f1        CLOT 1
+    // a.f2        CLOT 1
+    // -----
+    // b.f         CLOT 0 (This is CLOT 0 because it has the most unused bits)
+    // c.f         CLOT 0
+    // d.f1        CLOT 0
+    // d.f2        written
+    //   Content and length varies based on parser state:
+    //     - parseB: { b.f } (length = 8B)
+    //     - parseBC: { b.f, c.f } (length = 10B)
+    //     - parseBD: { b.f, d.f1 } (length = 12B)
+    // -----
+    //   "e" is not adjacent in "parseBD" variation of CLOT 0: a gap is required.
+    // e.f1[39:16]  3-byte gap
+    // e.f1[15:0]   CLOT 2
+    // e.f2         CLOT 2
+
+    runTest(test, {
+        {"b.f", "c.f", "d.f1"},
+        {"a.f1", "a.f2"},
+        {{"e.f1", FromTo(0, 15)}, "e.f2"}
+    });
 }
 
 }  // namespace Test

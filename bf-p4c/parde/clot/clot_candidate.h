@@ -29,33 +29,50 @@ class ClotCandidate : public LiftLess<ClotCandidate> {
     /// CLOT, in descending order.
     std::vector<unsigned> can_end_indices_;
 
-    /// Indicates which bits in the candidate are checksums, as defined in
+    /// Indicates which bits per parser state in the candidate are checksums, as defined in
     /// \ref clot_alloc_and_metric "CLOT allocator and metric" (README.md). The first
-    /// element corresponds to the first bit of the first field slice in the candidate.
-    bitvec checksum_bits;
+    /// element in the bitvec corresponds to the first bit of the first field slice in the
+    /// candidate.
+    std::map<const IR::BFN::ParserState*, bitvec> parser_state_to_checksum_bits;
+    std::set<const PHV::FieldSlice*> checksum_slices;
+    unsigned checksum_bits;
 
-    /// Indicates which bits in the candidate are modified, as defined in
+    /// Indicates which bits per parser state in the candidate are modified, as defined in
     /// \ref clot_alloc_and_metric "CLOT allocator and metric" (README.md). The first
-    /// element corresponds to the first bit of the first field slice in the candidate.
-    bitvec modified_bits;
+    /// element in the bitvec corresponds to the first bit of the first field slice in the ¸
+    /// candidate.
+    std::map<const IR::BFN::ParserState*, bitvec> parser_state_to_modified_bits;
+    std::set<const PHV::FieldSlice*> modified_slices;
+    unsigned modified_bits;
 
-    /// Indicates which bits in the candidate are unused, as defined in
+    /// Indicates which bits per parser state in the candidate are read-only, as defined in
     /// \ref clot_alloc_and_metric "CLOT allocator and metric" (README.md). The first
-    /// element corresponds to the first bit of the first field slice in the candidate.
-    bitvec unused_bits;
+    /// element in the bitvec corresponds to the first bit of the first field slice in the
+    /// candidate.
+    std::map<const IR::BFN::ParserState*, bitvec> parser_state_to_readonly_bits;
+    std::set<const PHV::FieldSlice*> readonly_slices;
+    unsigned readonly_bits;
 
-    /// Indicates which bits in the candidate are read-only, as defined in
+    /// Indicates which bits per parser state in the candidate are unused, as defined in
     /// \ref clot_alloc_and_metric "CLOT allocator and metric" (README.md). The first
-    /// element corresponds to the first bit of the first field slice in the candidate.
-    bitvec readonly_bits;
+    /// element in the bitvec corresponds to the first bit of the first field slice in the
+    /// candidate.
+    std::map<const IR::BFN::ParserState*, bitvec> parser_state_to_unused_bits;
+    std::set<const PHV::FieldSlice*> unused_slices;
+    unsigned unused_bits;
+
+    std::map<const IR::BFN::ParserState*, unsigned> parser_state_to_size_in_bits;
 
     static unsigned nextId;
 
  public:
     const unsigned id;
 
-    /// The length of the candidate, in bits.
-    unsigned size_bits;
+    /// The maximum length of the candidate, in bits.
+    unsigned max_size_in_bits() const;
+
+    /// The length of the candidate for a given parser state, in bits.
+    unsigned size_in_bits(const IR::BFN::ParserState* parser_state) const;
 
     /// Indicates whether the candidate might immediately succeed an allocated CLOT with a 0-byte
     /// gap. When adjusting this candidate, if fields are removed from the beginning of the
