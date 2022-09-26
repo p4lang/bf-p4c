@@ -653,7 +653,7 @@ void CreateSaluInstruction::checkWriteAfterWrite() {
     auto elem = written_dest.find(lvalue_name);
     if (elem == written_dest.end()) {
         bool zero_assigned = assig_st->right->is<IR::Constant>() &&
-                             assig_st->right->to<IR::Constant>()->asUint64() == 0;
+                             assig_st->right->to<IR::Constant>()->value == 0;
         bool false_assigned = assig_st->right->is<IR::BoolLiteral>() &&
                              assig_st->right->to<IR::BoolLiteral>()->value == false;
         bool uncond_zero_or_false = !assig_pred && (zero_assigned || false_assigned);

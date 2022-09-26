@@ -2089,3 +2089,8 @@ p4c_add_xfail_reason("tofino"
   "Currently in p4c, the table .* cannot perform a range match on key .* as the key does not fit in under 5 PHV nibbles"
   testdata/p4_16_samples/psa-example-range-match.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "error: Out of the number of register file rows .* Reduce the number of large constants or RegisterParams"
+  extensions/p4_tests/p4_16/errors/p4c-4829.p4
+)
