@@ -31,10 +31,10 @@ const cstring ProgramStructure::EGRESS = "egress";
 const cstring ProgramStructure::EGRESS_DEPARSER = "egress_deparser";
 
 // append target architecture to declaration
-void ProgramStructure::include(cstring filename, IR::IndexedVector<IR::Node> *vector) {
+void ProgramStructure::include(cstring filename, IR::Vector<IR::Node> *vector) {
     // the p4c driver sets environment variables for include
     // paths.  check the environment and add these to the command
-    // line for the preporicessor
+    // line for the preprocessor
     char *drvP4IncludePath = getenv("P4C_16_INCLUDE_PATH");
     Util::PathName path(drvP4IncludePath ? drvP4IncludePath : p4includePath);
 
@@ -88,6 +88,23 @@ void ProgramStructure::createTofinoArch() {
                                 << def->getName() << ", ignored.");
                 continue;
             }
+        }
+        // There are 2 overloaded declarations of static_assert() extern functions
+        // in latest core.p4 version.
+        // As 'declarations' is IR::IndexedVector, it can not store 2 objects
+        // with the same name.
+        // We have 2 options:
+        // - either omit static_assert() declarations here
+        // - or change 'declarations' to IR::Vector and add additional structure to
+        //   track the types everywhere where declarations.getDeclaration() is used
+        //
+        // As static_assert() invocations are constant-folded in Frontend, there
+        // should not be any of those invocations in the IR at this point so
+        // the declaration is not needed.
+        // The first option of options listed above is chosen here.
+        if (decl->is<IR::Method>() && decl->to<IR::Method>()->name == "static_assert") {
+            LOG3("Skipping: " << decl);
+            continue;
         }
         declarations.push_back(decl);
     }

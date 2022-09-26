@@ -1977,7 +1977,7 @@ p4c_add_xfail_reason("tofino"
 )
 p4c_add_xfail_reason("tofino"
   "Can only switch on table"
-  testdata/p4_16_samples/invalid-hdr-warnings3.p4
+  testdata/p4_16_samples/invalid-hdr-warnings3-bmv2.p4
   testdata/p4_16_samples/issue3374.p4
 )
 
@@ -2093,4 +2093,14 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Out of the number of register file rows .* Reduce the number of large constants or RegisterParams"
   extensions/p4_tests/p4_16/errors/p4c-4829.p4
+)
+
+# p4c update 2022-09-22 (new test)
+p4c_add_xfail_reason("tofino"
+  "Conditions in an action must be simple comparisons of an action data parameter"
+  testdata/p4_16_samples/psa-dpdk-large-struct-fields.p4
+)
+p4c_add_xfail_reason("tofino"
+  "Cannot unify type 'PortId_t' with type 'bit<32>'"
+  testdata/p4_16_samples/psa-dpdk-hdr-field-non-align.p4
 )

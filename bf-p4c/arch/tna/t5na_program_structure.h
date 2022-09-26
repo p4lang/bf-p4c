@@ -22,7 +22,7 @@ struct T5naProgramStructure : ProgramStructure {
     void createPipeline();
 
     // We want to also keep TNA architecture definitions to remove them
-    IR::IndexedVector<IR::Node> targetTypesToRemove;
+    IR::Vector<IR::Node> targetTypesToRemove;
 
     // Keep instances of pipes
     std::vector<const IR::Declaration_Instance *> pipeInstances;

@@ -74,10 +74,10 @@ struct ProgramStructure {
 
     /// read architecture definition in 'filename', output a list of
     /// IR::Node in 'decl'
-    void include(cstring filename, IR::IndexedVector<IR::Node> *decls);
+    void include(cstring filename, IR::Vector<IR::Node> *decls);
 
     IR::IndexedVector<IR::Node> declarations;
-    IR::IndexedVector<IR::Node> targetTypes;
+    IR::Vector<IR::Node> targetTypes;
     /// target architecture types
     ordered_set<cstring> errors;
     ordered_map<cstring, const IR::Type_Enum *> enums;
