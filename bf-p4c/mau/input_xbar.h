@@ -195,7 +195,7 @@ struct IXBar {
                            HD_ACTIONDATA_ADR, HD_PRECOLOR, HD_HASHMOD, HD_DESTS };
     enum parity_status_t { PARITY_NONE, PARITY_ENABLED, PARITY_DISABLED };
 
-    /** IXbar::Use tracks the input xbar use of a single table */
+    /** IXBar::Use tracks the input xbar use of a single table */
     struct Use {
         /* everything is public so anyone can read it, but only IXBar should write to this */
         enum flags_t { NeedRange = 1, NeedXor = 2,
@@ -402,7 +402,7 @@ struct IXBar {
     static std::string hash_dist_name(HashDistDest_t dest);
 
 
-    /* A problem occurred with the way the IXbar was allocated that requires backtracking
+    /* A problem occurred with the way the IXBar was allocated that requires backtracking
      * and trying something else */
     struct failure : public Backtrack::trigger {
         int     stage = -1, group = -1;
@@ -521,7 +521,7 @@ inline std::ostream &operator<<(std::ostream &out, const IXBar::FieldInfo &fi) {
     return out;
 }
 
-std::ostream &operator<<(std::ostream &, const IXBar::Use &);
+std::ostream &operator<<(std::ostream &, IXBar::Use::type_t);
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Use::Byte &b) {
     out << b.container << '[' << b.lo << ".." << (b.lo + 7) << ']';
     if (b.loc) out << b.loc;

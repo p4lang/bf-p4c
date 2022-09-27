@@ -317,12 +317,23 @@ void IXBar::Use::update_resources(int stage, BFN::Resources::StageResources &sta
 
 /** Visualization Information on Hash Distribution Units
  */
+std::ostream &operator<<(std::ostream &out, IXBar::Use::type_t type) {
+    static const char *types[] = { "Exact", "ATCam", "Ternary", "Trie", "Gateway", "Action",
+        "ProxyHash", "Selector", "Meter", "StatefulAlu", "HashDist" };
+    if (size_t(type) < sizeof(types)/sizeof(types[0]))
+        out << types[type];
+    else
+        out << "<type " << int(type) << ">";
+    return out;
+}
+
 void IXBar::Use::dbprint(std::ostream &out) const {
+    out << type;
     for (auto &b : use)
-        out << b << Log::endl;
+        out << Log::endl << b;
     for (auto &w : way_use)
-        out << "[ " << w.source << ", " << w.index << ", " << w.select << ", 0x"
-            << hex(w.select_mask) << " ]" << Log::endl;
+        out << Log::endl << "[ " << w.source << ", " << w.index << ", " << w.select << ", 0x"
+            << hex(w.select_mask) << " ]";
 }
 
 void dump(const IXBar::Use *use) {

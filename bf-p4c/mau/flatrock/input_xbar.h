@@ -43,6 +43,13 @@ class IXBar : public ::IXBar {
         xor_enable_state        gateway_xor[GATEWAY_XOR_BYTES] = { UNUSED };
         std::map<int, match_t>  gateway_match_bytes;
 
+        // additional flags for flatrock (bits disjoint from ::IXbar::Use::flags_t)
+        enum flags_t {
+            // flags to limit word ixbar allocation to specific byte(s) of the word based
+            // use in the wadb/phvwr.  Pretty much only applies to xcmp ixbar alloc.
+            WadbByteUse = 0xf00, WadbByteUse_shift = 8
+        };
+
         void clear() override {
             ::IXBar::Use::clear();
             xme_units = 0; }

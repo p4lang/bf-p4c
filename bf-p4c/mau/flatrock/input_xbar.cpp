@@ -56,6 +56,9 @@ IXBar::Use::TotalBytes IXBar::Use::match_hash(safe_vector<int> *hash_groups) con
     return rv;
 }
 
+/* when accessing a container on a word ixbar, it always accesses 4 bytes of containers
+ * at a time.  This calculates the first container in a word of 4 bytes that includes
+ * the specific container */
 static PHV::Container word_base(PHV::Container c) {
     switch (c.size()) {
     case 8:
@@ -66,6 +69,21 @@ static PHV::Container word_base(PHV::Container c) {
         return c;
     default:
         BUG("%s invalid container size %d", c, c.size());
+    }
+}
+
+/* When accessing a container byte on a word xbar, this returns which byte within the
+ * word needs to be accessed (which needs to be aligned properly within the word) */
+static int word_offset(IXBar::Use::Byte &byte) {
+    switch (byte.container.size()) {
+    case 8:
+        return byte.container.index() & 3;
+    case 16:
+        return (byte.container.index() & 1) * 2 + (byte.lo / 8);
+    case 32:
+        return byte.lo / 8;
+    default:
+        BUG("%s invalid container size %d", byte.container, byte.container.size());
     }
 }
 
@@ -98,6 +116,7 @@ void IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
     // for gateways, 'allow_word' allows use of the fixed bytes as they are set up
     // as group 1 (no actual word inputs to gateway)
     for (auto &byte : alloc_use) {
+        unsigned wadb_usable_bytes = (byte.flags & Use::WadbByteUse) >> Use::WadbByteUse_shift;
         for (auto &l : ValuesForKey(fields, byte.container)) {
             if (l.group == 0 && byte_use[l.byte].second == byte.lo) {
                 if (xor_map && xor_map->count(byte)) {
@@ -113,10 +132,13 @@ void IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                     continue;
                 byte.loc = Loc(0, l.byte);
                 break; }
-            if (allow_word && (byte.flags & IXBar::Use::NeedXor) == 0 && l.group == 1) {
-                if (xor_map && xor_map->count(byte)) continue;
-                byte.loc = l;
-                break; } }
+            if (l.group == 1) {
+                if (wadb_usable_bytes && !(wadb_usable_bytes & (1U << word_offset(byte))))
+                    continue;
+                if (allow_word && (byte.flags & IXBar::Use::NeedXor) == 0) {
+                    if (xor_map && xor_map->count(byte)) continue;
+                    byte.loc = l;
+                    break; } } }
         if (!byte.loc)
             alloced.push_back(&byte); }
 }
@@ -158,10 +180,16 @@ bool IXBar::do_alloc(safe_vector<IXBar::Use::Byte *> &to_alloc,
                      BFN::Alloc1Dbase<PHV::Container> &word_use) {
     if (to_alloc.empty()) return true;
     std::map<PHV::Container, std::set<IXBar::Use::Byte *>> by_word;
+    std::vector<IXBar::Use::Byte *> requires_badb;
     for (auto *byte : to_alloc) {
         BUG_CHECK(byte->lo % 8U == 0, "misaligned byte for ixbar %s", *byte);
-        by_word[word_base(byte->container)].insert(byte);
         byte->search_bus = 0;  // not relevant for flatrock
+        unsigned usable_bytes = (byte->flags & Use::WadbByteUse) >> Use::WadbByteUse_shift;
+        if (usable_bytes && !(usable_bytes & (1U << word_offset(*byte)))) {
+            requires_badb.push_back(byte);
+        } else {
+            by_word[word_base(byte->container)].insert(byte);
+        }
     }
     // Find the free byte slots, and the first free word slot
     bitvec byte_free;
@@ -171,6 +199,11 @@ bool IXBar::do_alloc(safe_vector<IXBar::Use::Byte *> &to_alloc,
         ++i; }
     auto word = std::find_if(word_use.begin(), word_use.end(),
             [](PHV::Container &a) { return !a; } );
+    for (auto *b : requires_badb) {
+        int i = find_free_byte(byte_free, b);
+        if (i < 0) return false;
+        b->loc = Loc(0, i);
+        byte_free[i] = 0; }
     for (auto &grp : Values(by_word)) {
         if (grp.size() == 1 || word == word_use.end()) {
             // try to allocate byte slot(s)
@@ -464,8 +497,35 @@ class IXBar::GetActionUse : public Inspector {
     const PhvInfo &phv;
     ContByteConversion &map_alloc;
     std::map<cstring, bitvec> &fields_needed;
+    std::map<le_bitrange, unsigned> slice_flags;
     bool preorder(const IR::MAU::Instruction *inst) {
         bool inPhvWrite = (inst->name == "or" || inst->name == "andc");
+        slice_flags.clear();
+        if (inPhvWrite || inst->name == "set") {
+            le_bitrange bits = { };
+            auto *dest = phv.field(inst->operands[0], &bits);
+            BUG_CHECK(dest, "destination not a phv ref: %s", inst);
+            PHV::FieldUse WRITE(PHV::FieldUse::WRITE);
+            dest->foreach_alloc(bits, tbl, &WRITE, [&](const PHV::AllocSlice &sl) {
+                auto cont = sl.container();
+                auto &flags = slice_flags[sl.field_slice().shiftedByBits(-bits.lo)];
+                switch (cont.size()) {
+                case 8:
+                    flags = 1 << (cont.index() & 3) << Use::WadbByteUse_shift;
+                    break;
+                case 16:
+                    flags = 3 << ((cont.index() & 1)*2) << Use::WadbByteUse_shift;
+                    break;
+                case 32:
+                    flags = Use::WadbByteUse;
+                break;
+                default:
+                    BUG("invalid container size: %s", cont);
+                    break; } });
+        } else {
+            // FIXME need to be in EALU -- what alignment applies?  Need to be in badb
+            // for EALU8/16 and wadb for EALU32, but that may change with Pat's new proposal?
+        }
         for (unsigned i = 1; i < inst->operands.size(); ++i) {
             if (inPhvWrite && i == 1 && equiv(inst->operands[0], inst->operands[i]))
                 continue;
@@ -478,7 +538,12 @@ class IXBar::GetActionUse : public Inspector {
         bitvec field_bits(bits.lo, bits.hi - bits.lo + 1);
         if (fields_needed[finfo->name].contains(field_bits)) return false;  // already present
         fields_needed[finfo->name] |= field_bits;
-        add_use(map_alloc, finfo, phv, tbl, phv.get_alias_name(e), &bits);
+        if (slice_flags.empty()) {
+            add_use(map_alloc, finfo, phv, tbl, phv.get_alias_name(e), &bits);
+        } else {
+            for (auto &[slice, flags] : slice_flags) {
+                auto sl = slice.shiftedByBits(bits.lo);
+                add_use(map_alloc, finfo, phv, tbl, phv.get_alias_name(e), &sl, flags); } }
         return false; }
     bool preorder(const IR::Constant *) { return false; }
     bool preorder(const IR::MAU::ActionArg *) { return false; }
@@ -619,6 +684,7 @@ bool IXBar::allocActions(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
             return false; }
         alloc.type = Use::ACTION;
         alloc.used_by = tbl->name;
+        LOG3("allocated: " << alloc);
         update(tbl->name + "$act", alloc); }
     return true;
 }

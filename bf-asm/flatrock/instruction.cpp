@@ -79,8 +79,14 @@ struct operand {
             BUG_CHECK(abs.type == ActionBusSource::XcmpData, "%s not on xcmp abus", reg.name());
             unsigned size = ::Phv::reg(slot)->size/8U;  // size in bytes
             // FIXME -- need to be checking to make sure the whole value is within the slot
-            // somehow.  But we only have a single bye recorded in the ActionBusSource?
-            return (abs.xcmp_group*16 + abs.xcmp_byte)/size; }
+            // somehow.  But we only have a single byte recorded in the ActionBusSource?
+            if (abs.xcmp_group) {
+                unsigned align_mask = 3/size;
+                BUG_CHECK((slot & align_mask) == (abs.xcmp_byte & align_mask),
+                          "wadb byte %d misaligned for slot %d", abs.xcmp_byte, slot);
+                return 16/size + abs.xcmp_byte/4;
+            } else {
+                return abs.xcmp_byte/size; } }
         int bit_offset(int slot) override { return reg->lo % ::Phv::reg(slot)->size; }
         bool check() override {
             if (!reg.check()) return false;
@@ -96,8 +102,14 @@ struct operand {
             if (byte < 0) {
                 error(reg.lineno, "%s not available on the xcmp ixbar", reg.name());
                 return; }
-            if (reg->hi/8U - reg->lo/8U >= ::Phv::reg(slot)->size/8U)
+            unsigned size = ::Phv::reg(slot)->size/8U;  // size in bytes
+            if (reg->hi/8U - reg->lo/8U >= size)
                 error(reg.lineno, "%s is not entirely in one ADB slot", reg.name());
+            if (grp.index > 0 && size < 4) {
+                unsigned align_mask = 3/size;
+                if ((slot & align_mask) != (byte & align_mask))
+                    error(reg.lineno, "%s not aligned in wadb for destination PHE%d",
+                          reg.name(), size*8); }
             abs = ActionBusSource(grp, byte);
             if (tbl->find_on_actionbus(abs, reg->lo, reg->hi, ::Phv::reg(slot)->size/8U) < 0)
                 tbl->need_on_actionbus(abs, reg->lo, reg->hi, ::Phv::reg(slot)->size/8U); }

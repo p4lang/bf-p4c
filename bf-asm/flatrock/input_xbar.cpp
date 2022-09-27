@@ -24,7 +24,7 @@ int Flatrock::InputXbar::group_max_index(Group::type_t t) const {
     case Group::EXACT:   return 2;
     case Group::TERNARY: return 20;
     case Group::GATEWAY: return 1;
-    case Group::XCMP:    return 4;
+    case Group::XCMP:    return 2;
     default:
        BUG("invalid group type for %s: %s", Target::name(), group_type(t)); }
     return 0;

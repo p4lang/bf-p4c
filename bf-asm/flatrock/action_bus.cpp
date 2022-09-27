@@ -59,14 +59,16 @@ void Flatrock::ActionBus::write_regs(Target::Flatrock::mau_regs &regs, Table *tb
                     // can select word from n or n-1 or n-2
                     ealu.ealu_ew_xbar_top[word-2].shift = 0; }
             } else {
-                opfifo.opfifo_adb_direct.badb_en |= 1U << src.xcmp_byte;
-                // EALU has a full XBAR here so can rearrange badb in any way
-                // FIXME -- express/make use of this flexibility
-                ealu.ealu_eb_xbar[src.xcmp_byte].en |= 1U << src.xcmp_byte;
-                if (src.xcmp_byte < 4)
-                    ealu.ealu_cfg.bypass_ealu |= 1U << src.xcmp_byte;
-                else if (src.xcmp_byte < 8)
-                    ealu.ealu_cfg.bypass_ealu |= 1U << (2 + src.xcmp_byte/2U);
+                for (int byte = src.xcmp_byte; byte < src.xcmp_byte + el.second.size/8; ++byte) {
+                    opfifo.opfifo_adb_direct.badb_en |= 1U << byte;
+                    // EALU has a full XBAR here so can rearrange badb in any way
+                    // FIXME -- express/make use of this flexibility
+                    ealu.ealu_eb_xbar[byte].en |= 1U << byte;
+                    if (byte < 4)
+                        ealu.ealu_cfg.bypass_ealu |= 1U << byte;
+                    else if (byte < 8)
+                        ealu.ealu_cfg.bypass_ealu |= 1U << (2 + byte/2U);
+                }
             }
             break;
         default:
