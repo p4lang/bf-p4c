@@ -345,8 +345,8 @@ parser ingress:
         EXPECT_REGISTER(regs.prsr_mem.parser_key_s.key_s[0][0].key_wl_1, "32xffffffff");
         EXPECT_REGISTER(
             regs.prsr_mem.parser_key_w.key_w[0][0].key_wh,
-            "w1: ~16xabcd | w0: ~16x1234");
-        EXPECT_REGISTER(regs.prsr_mem.parser_key_w.key_w[0][0].key_wl, "w1: 16xabcd | w0: 16x1234");
+            "w1: ~16xcdab | w0: ~16x3412");
+        EXPECT_REGISTER(regs.prsr_mem.parser_key_w.key_w[0][0].key_wl, "w1: 16xcdab | w0: 16x3412");
 
         EXPECT_REGISTER(regs.prsr_mem.parser_ana_w.ana_w[0][0].exw_skip, "1b1");
         EXPECT_REGISTER(regs.prsr_mem.parser_ana_w.ana_w[0][0].next_w0_offset, "8xab");
@@ -408,9 +408,9 @@ parser ingress:
         EXPECT_REGISTER(regs.prsr_mem.parser_key_s.key_s[0][0].key_wh_1, "32xffffffff");
         EXPECT_REGISTER(regs.prsr_mem.parser_key_s.key_s[0][0].key_wl_1, "32x00000000");
         EXPECT_REGISTER(regs.prsr_mem.parser_key_w.key_w[0][0].key_wh,
-                        "w1: 4xff | ~4x4 | 4xff | ~4x6 | w0: ~4x8 | 8xff | ~4x8");
+                        "w1: 4xff | ~4x6 | 4xff | ~4x4 | w0: 4xff | ~4x8 | ~4x8 | 4xff");
         EXPECT_REGISTER(regs.prsr_mem.parser_key_w.key_w[0][0].key_wl,
-                        "w1: 4xff | 4x4 | 4xff | 4x6 | w0: 4x8 | 8xff | 4x8");
+                        "w1: 4xff | 4x6 | 4xff | 4x4 | w0: 4xff | 4x8 | 4x8 | 4xff");
 
         EXPECT_REGISTER(regs.prsr_mem.parser_ana_w.ana_w[0][0].exw_skip, "1b0");
         EXPECT_REGISTER(regs.prsr_mem.parser_ana_w.ana_w[0][0].next_w0_offset, "8x55");
@@ -463,9 +463,8 @@ parser ingress:
         EXPECT_REGISTER(regs.prsr_mem.parser_key_s.key_s[0][0].key_wh_1, "~32xffeeddcc");
         EXPECT_REGISTER(regs.prsr_mem.parser_key_s.key_s[0][0].key_wl_1, "32xffeeddcc");
         EXPECT_REGISTER(
-            regs.prsr_mem.parser_key_w.key_w[0][0].key_wh, "w1: ~16x8765 | w0: ~16xfedc");
-        EXPECT_REGISTER(
-            regs.prsr_mem.parser_key_w.key_w[0][0].key_wl, "w1: 16x8765 | w0: 16xfedc");
+            regs.prsr_mem.parser_key_w.key_w[0][0].key_wh, "w1: ~16x6587 | w0: ~16xdcfe");
+        EXPECT_REGISTER(regs.prsr_mem.parser_key_w.key_w[0][0].key_wl, "w1: 16x6587 | w0: 16xdcfe");
 
         EXPECT_REGISTER(regs.prsr_mem.parser_ana_w.ana_w[0][0].exw_skip, "1b1");
         EXPECT_REGISTER(regs.prsr_mem.parser_ana_w.ana_w[0][0].next_w0_offset, "8x00");
@@ -518,8 +517,8 @@ parser ingress:
         EXPECT_REGISTER(regs.prsr_mem.parser_key_s.key_s[0][0].key_wh_1, "~32xffeeddcc");
         EXPECT_REGISTER(regs.prsr_mem.parser_key_s.key_s[0][0].key_wl_1, "32xffeeddcc");
         EXPECT_REGISTER(
-            regs.prsr_mem.parser_key_w.key_w[0][0].key_wh, "w1: ~16x8765 | w0: ~16xfedc");
-        EXPECT_REGISTER(regs.prsr_mem.parser_key_w.key_w[0][0].key_wl, "w1: 16x8765 | w0: 16xfedc");
+            regs.prsr_mem.parser_key_w.key_w[0][0].key_wh, "w1: ~16x6587 | w0: ~16xdcfe");
+        EXPECT_REGISTER(regs.prsr_mem.parser_key_w.key_w[0][0].key_wl, "w1: 16x6587 | w0: 16xdcfe");
 
         EXPECT_REGISTER(regs.prsr_mem.parser_ana_w.ana_w[0][0].exw_skip, "1b1");
         EXPECT_REGISTER(regs.prsr_mem.parser_ana_w.ana_w[0][0].next_w0_offset, "8x00");
@@ -578,8 +577,8 @@ parser ingress:
         EXPECT_REGISTER(regs.prsr_mem.parser_key_s.key_s[0][0].key_wh_1, "~8xff | 24xffffff");
         EXPECT_REGISTER(regs.prsr_mem.parser_key_s.key_s[0][0].key_wl_1, "8xff | 24xffffff");
         EXPECT_REGISTER(
-            regs.prsr_mem.parser_key_w.key_w[0][0].key_wh, "w1: ~16x8765 | w0: ~16xfedc");
-        EXPECT_REGISTER(regs.prsr_mem.parser_key_w.key_w[0][0].key_wl, "w1: 16x8765 | w0: 16xfedc");
+            regs.prsr_mem.parser_key_w.key_w[0][0].key_wh, "w1: ~16x6587 | w0: ~16xdcfe");
+        EXPECT_REGISTER(regs.prsr_mem.parser_key_w.key_w[0][0].key_wl, "w1: 16x6587 | w0: 16xdcfe");
 
         EXPECT_REGISTER(regs.prsr_mem.parser_ana_w.ana_w[0][0].exw_skip, "1b1");
         EXPECT_REGISTER(regs.prsr_mem.parser_ana_w.ana_w[0][0].next_w0_offset, "8x00");
@@ -750,8 +749,8 @@ parser ingress:
         EXPECT_REGISTER(regs.prsr_mem.parser_key_s.key_s[1][1].key_wl_0, "24xffffff | 8x01");
         EXPECT_REGISTER(regs.prsr_mem.parser_key_s.key_s[1][1].key_wh_1, "~8xff | 24xffffff");
         EXPECT_REGISTER(regs.prsr_mem.parser_key_s.key_s[1][1].key_wl_1, "8xff | 24xffffff");
-        EXPECT_REGISTER(regs.prsr_mem.parser_key_w.key_w[1][1].key_wh, "16xffff | ~16xfedc");
-        EXPECT_REGISTER(regs.prsr_mem.parser_key_w.key_w[1][1].key_wl, "16xffff | 16xfedc");
+        EXPECT_REGISTER(regs.prsr_mem.parser_key_w.key_w[1][1].key_wh, "16xffff | ~16xdcfe");
+        EXPECT_REGISTER(regs.prsr_mem.parser_key_w.key_w[1][1].key_wl, "16xffff | 16xdcfe");
 
         EXPECT_REGISTER(regs.prsr_mem.parser_ana_w.ana_w[1][1].exw_skip, "");
         EXPECT_REGISTER(regs.prsr_mem.parser_ana_w.ana_w[1][1].next_w0_offset, "");
@@ -778,8 +777,8 @@ parser ingress:
         EXPECT_REGISTER(regs.prsr_mem.parser_key_s.key_s[1][2].key_wl_0, "24xffffff | 8x01");
         EXPECT_REGISTER(regs.prsr_mem.parser_key_s.key_s[1][2].key_wh_1, "~8xff | 24xffffff");
         EXPECT_REGISTER(regs.prsr_mem.parser_key_s.key_s[1][2].key_wl_1, "8xff | 24xffffff");
-        EXPECT_REGISTER(regs.prsr_mem.parser_key_w.key_w[1][2].key_wh, "12xfff | ~4x4 | 16xffff");
-        EXPECT_REGISTER(regs.prsr_mem.parser_key_w.key_w[1][2].key_wl, "12xfff | 4x4 | 16xffff");
+        EXPECT_REGISTER(regs.prsr_mem.parser_key_w.key_w[1][2].key_wh, "4xf | ~4x4 | 24xffffff");
+        EXPECT_REGISTER(regs.prsr_mem.parser_key_w.key_w[1][2].key_wl, "4xf | 4x4 | 24xffffff");
 
         EXPECT_REGISTER(regs.prsr_mem.parser_ana_w.ana_w[1][2].exw_skip, "");
         EXPECT_REGISTER(regs.prsr_mem.parser_ana_w.ana_w[1][2].next_w0_offset, "");
@@ -806,8 +805,8 @@ parser ingress:
         EXPECT_REGISTER(regs.prsr_mem.parser_key_s.key_s[2][0].key_wl_0, "24xffffff | 8x02");
         EXPECT_REGISTER(regs.prsr_mem.parser_key_s.key_s[2][0].key_wh_1, "~8x7f | 24xffffff");
         EXPECT_REGISTER(regs.prsr_mem.parser_key_s.key_s[2][0].key_wl_1, "8x7f | 24xffffff");
-        EXPECT_REGISTER(regs.prsr_mem.parser_key_w.key_w[2][0].key_wh, "16xffff | ~16x1234");
-        EXPECT_REGISTER(regs.prsr_mem.parser_key_w.key_w[2][0].key_wl, "16xffff | 16x1234");
+        EXPECT_REGISTER(regs.prsr_mem.parser_key_w.key_w[2][0].key_wh, "16xffff | ~16x3412");
+        EXPECT_REGISTER(regs.prsr_mem.parser_key_w.key_w[2][0].key_wl, "16xffff | 16x3412");
 
         EXPECT_REGISTER(regs.prsr_mem.parser_ana_w.ana_w[2][0].exw_skip, "");
         EXPECT_REGISTER(regs.prsr_mem.parser_ana_w.ana_w[2][0].next_w0_offset, "");
@@ -860,8 +859,8 @@ parser ingress:
         EXPECT_REGISTER(regs.prsr_mem.parser_key_s.key_s[2][2].key_wl_0, "32xffffffff");
         EXPECT_REGISTER(regs.prsr_mem.parser_key_s.key_s[2][2].key_wh_1, "32xffffffff");
         EXPECT_REGISTER(regs.prsr_mem.parser_key_s.key_s[2][2].key_wl_1, "32xffffffff");
-        EXPECT_REGISTER(regs.prsr_mem.parser_key_w.key_w[2][2].key_wh, "~16x5678 | 16xffff");
-        EXPECT_REGISTER(regs.prsr_mem.parser_key_w.key_w[2][2].key_wl, "16x5678 | 16xffff");
+        EXPECT_REGISTER(regs.prsr_mem.parser_key_w.key_w[2][2].key_wh, "~16x7856 | 16xffff");
+        EXPECT_REGISTER(regs.prsr_mem.parser_key_w.key_w[2][2].key_wl, "16x7856 | 16xffff");
 
         EXPECT_REGISTER(regs.prsr_mem.parser_ana_w.ana_w[2][2].exw_skip, "");
         EXPECT_REGISTER(regs.prsr_mem.parser_ana_w.ana_w[2][2].next_w0_offset, "");
