@@ -373,7 +373,6 @@ void GatewayTable::pass1() {
     for (auto &r : match) {
         if (range_match && r.offset >= 32) {
             continue; }
-        if (r.offset >= 64) continue;
         ignore.clrrange(r.offset, r.val->size());
         if (shift < 0 || shift > r.offset) shift = r.offset;
         if (maxbit < r.offset + r.val->size()) maxbit = r.offset + r.val->size(); }

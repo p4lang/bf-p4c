@@ -82,7 +82,7 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
-  "Assertion .*unicast .*replicate"
+  "Assertion|expected packets? on port . not seen"
   extensions/p4_tests/p4_16/stf/varbit_constant.p4
   )
 
@@ -183,7 +183,7 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
-  "error: .* in match does not line up with ixbar"
+  "expected packets? on port . not seen"
   extensions/p4_tests/p4_16/stf/parser_counter_6.p4
   extensions/p4_tests/p4_16/stf/parser_counter_8.p4
   extensions/p4_tests/p4_16/stf/parser_local_register.p4

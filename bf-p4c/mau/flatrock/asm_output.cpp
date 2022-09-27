@@ -89,8 +89,11 @@ void IXBar::Use::emit_ixbar_asm(const PhvInfo &phv, std::ostream &out, indent_t 
         break;
     }
     gather_bytes(phv, sort, tbl);
-    for (auto &group : sort)
-        out << indent << group_type << index(group.first) << ": " << group.second << std::endl;
+    for (auto &group : sort) {
+        if (type == GATEWAY && group.first == 1) {
+            // don't output the config of the fixed part of the gateway ixbar
+            continue; }
+        out << indent << group_type << index(group.first) << ": " << group.second << std::endl; }
     if (xme_units) {
         out << indent << "exact unit: [ " << emit_vector(bitvec(xme_units)) << " ]" << std::endl;
         int ident_bits_prev_alloc = 0;

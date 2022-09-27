@@ -6,6 +6,9 @@
 #if HAVE_FLATROCK
 class Target::Flatrock::GatewayTable : public ::GatewayTable {
     friend class ::GatewayTable;
+    static constexpr int GATEWAY_VECTOR_BYTES = 8;
+    static constexpr int GATEWAY_FIXED_BYTES = 5;
+
     GatewayTable(int line, const char *n, gress_t gr, Stage *s, int lid) :
         ::GatewayTable(line, n, gr, s, lid) { }
     void pass1() override;

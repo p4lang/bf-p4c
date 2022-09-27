@@ -72,11 +72,20 @@ void Target::Flatrock::GatewayTable::pass2() {
     int lineno = this->lineno;
     for (auto &key : match) {
         match_bits.setrange(key.offset, key.val.size());
-        for (auto &ixb : input_xbar) {
-            int offset = ixb->find_gateway_offset(&key.val);
-            if (offset != key.offset)
-                error(key.val.lineno, "%s in match does not line up with ixbar",
-                      key.val.desc().c_str()); } }
+        if (key.offset >= 64) {
+            int byte = (key.offset - 64)/8U;
+            if (key.val->reg.ixbar_id() != byte)
+                error(key.val.lineno, "Gateway match bits %d..%d can only match B%d",
+                      byte*8 + 64, byte*8 + 64 + 7, byte);
+            else if (key.offset % 8U != key.val->lo)
+                error(key.val.lineno, "%s in match not aligned",
+                      key.val.desc().c_str());
+        } else {
+            for (auto &ixb : input_xbar) {
+                int offset = ixb->find_gateway_offset(&key.val);
+                if (offset != key.offset)
+                    error(key.val.lineno, "%s in match does not line up with ixbar",
+                          key.val.desc().c_str()); } } }
     for (auto &xkey : xor_match) {
         lineno = xkey.val.lineno;
         xor_bits.setrange(xkey.offset, xkey.val.size());
@@ -86,7 +95,7 @@ void Target::Flatrock::GatewayTable::pass2() {
                 error(xkey.val.lineno, "%s in xor does not line up with ixbar",
                       xkey.val.desc().c_str()); } }
     unsigned byte = 1;
-    while (xor_bits || match_bits) {
+    while ((xor_bits || match_bits) && byte < (1U << GATEWAY_VECTOR_BYTES)) {
         if (xor_bits.getrange(0, 8)) {
             byte_use |= byte;
             byte_xor_value |= byte; }
@@ -98,6 +107,8 @@ void Target::Flatrock::GatewayTable::pass2() {
         xor_bits >>= 8;
         match_bits >>= 8;
         byte <<= 1; }
+    if (xor_bits)
+        error(lineno, "Can't xor in fixed part of gateway match");
 
     for (auto &line : table) {
         for (int i = 0; i < 8; ++i) {
