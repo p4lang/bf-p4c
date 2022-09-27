@@ -22,8 +22,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE "5" CACHE STRING
     "Target unified compilation chunk size for bf-p4c (an integer or ALL)")
 
-# add_cxx_compiler_option ("-Werror")
-
 find_package (Boost REQUIRED COMPONENTS graph)
 add_definitions("-DBOOST_NO_ARGUMENT_DEPENDENT_LOOKUP")
 if (ENABLE_JBAY)
@@ -1059,8 +1057,6 @@ set (P4C_BAREFOOT_SRCS
   ${BF_P4C_GRAPHS_SRCS}
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${P4C_BAREFOOT_SRCS}")
-set_source_files_properties(${BF_P4C_SOURCES} PROPERTIES COMPILE_OPTIONS "-Werror")
-set_source_files_properties(${P4C_BAREFOOT_SRCS} PROPERTIES COMPILE_OPTIONS "-Werror")
 build_unified(P4C_BAREFOOT_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 if(BUILD_STATIC_BFP4C_LIBS_INTERNAL)

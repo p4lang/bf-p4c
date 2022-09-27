@@ -36,12 +36,11 @@ include (CheckIncludeFile)
 check_include_file (execinfo.h HAVE_EXECINFO_H)
 check_include_file (ucontext.h HAVE_UCONTEXT_H)
 
-set(BFASM_CXX_FLAGS "")
+set(BFASM_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 include(P4CUtils)
+# TODO: Fix build warnings with -Wall and enable it.
 # add_cxx_compiler_option ("-Wall")
 # add_cxx_compiler_option ("-Wextra")
-# Disabling -Werror checks until all issues are fixed on all platforms
-add_cxx_compiler_option ("-Werror")
 # add_cxx_compiler_option ("-Wno-unused")
 # add_cxx_compiler_option ("-Wno-unused-parameter")
 # add_cxx_compiler_option ("-Wno-pragmas")

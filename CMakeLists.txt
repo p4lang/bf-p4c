@@ -17,6 +17,7 @@ OPTION(ENABLE_BAREFOOT_INTERNAL "Enable Barefoot Internal" ON)
 OPTION(ENABLE_TESTING "Enable generation of ctests" ON)
 OPTION(ENABLE_GTESTS "Enable building and running GTest unit tests" ON)
 OPTION(ENABLE_DOXYGEN "Build Doxygen-based developer documentation" ON)
+OPTION(ENABLE_WERROR "Treat build warnings as errors" ON)
 OPTION(FIXED_LIBDYNHASH "Use future version of the Dynamic hash library" OFF)
 OPTION(INSTALL_LIBDYNHASH "Install the Dynamic hash library" OFF)
 OPTION(ENABLE_ALT_PHV_ALLOC "Enable the alternative PHV allocator" OFF)
@@ -158,6 +159,10 @@ foreach (f ${SCHEMA_FILES})
   configure_file(${f} ${CMAKE_BINARY_DIR}/${f}.dep)
 endforeach()
 
+if (ENABLE_WERROR)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
+endif()
+
 add_subdirectory(bf-asm)
 
 # Override default settings in p4c.
@@ -176,6 +181,9 @@ if (ENABLE_GTESTS)
     PRIVATE "bf-p4c/logging"
     PRIVATE "${P4C_BINARY_DIR}/control-plane/"
   )
+  # -Wdeprecated-copy warns in gtest, so out of our control
+  # TODO: -Wno-unused-function warns in p4c, should be possible to fix it
+  target_compile_options(gtestp4c PUBLIC -Wno-unused-function -Wno-deprecated-copy)
 endif()
 
 add_custom_target(ctags-all
