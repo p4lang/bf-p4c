@@ -13,6 +13,22 @@
 // template specialization declarations
 #include "flatrock/action_table.h"
 
+const char *MemUnit::desc() const {
+    static char buffer[256], *p = buffer;
+    char *end = buffer+sizeof(buffer), *rv;
+    do {
+        if (end - p < 7) p = buffer;
+        rv = p;
+        if (stage >= 0)
+            p += snprintf(p, end-p, "Mem %d,%d,%d", stage, row, col);
+        else if (row >= 0)
+            p += snprintf(p, end-p, "Mem %d,%d", row, col);
+        else
+            p += snprintf(p, end-p, "Mem %d", col);
+    } while (p++ >= end);
+    return rv;
+}
+
 unsigned StatefulTable::const_info_t::unique_register_param_handle = REGISTER_PARAM_HANDLE_START;
 
 std::map<std::string, Table *> *Table::all;
@@ -193,33 +209,49 @@ static int add_rows(std::vector<Table::Layout> &layout, const value_t &rows) {
     return 0;
 }
 
-static int add_col(int lineno, Table::Layout &row, int col) {
-    if (contains_if(row.cols, [col](int &p)->bool { return p == col; })) {
-        error(lineno, "column %d duplicated", col);
-        return 1; }
-    row.cols.push_back(col);
+static int add_col(int lineno, int stage, Table::Layout &row, int col) {
+    for (auto &mu : row.memunits) {
+        if (mu.stage == stage && mu.col == col) {
+            error(lineno, "column %d duplicated", col);
+            return 1; } }
+    row.memunits.emplace_back(stage, row.row, col);
     return 0;
 }
 
-static int add_cols(Table::Layout &row, const value_t &cols) {
+static int add_cols(int stage, Table::Layout &row, const value_t &cols) {
     int rv = 0;
     if (cols.type == tVEC) {
         if (cols.vec.size == 1)
-            return add_cols(row, cols.vec[0]);
+            return add_cols(stage, row, cols.vec[0]);
         for (auto &col : cols.vec) {
             if (col.type == tVEC) {
                 error(col.lineno, "Column shape doesn't match rows");
                 rv |= 1;
             } else {
-                rv |= add_cols(row, col); }
+                rv |= add_cols(stage, row, col); }
             }
         return rv; }
+    if (cols.type == tMAP && Target::SRAM_GLOBAL_ACCESS()) {
+        bitvec      stages_seen;
+        for (auto &kv : cols.map) {
+            if (kv.key == "stage" && kv.key.type == tCMD && kv.key[1].type == tINT)
+                stage = kv.key[1].i;
+            else {
+                error(kv.key.lineno, "syntax error, expecting a stage number");
+                continue; }
+            if (stage < 0 || stage > Target::NUM_MAU_STAGES()) {
+                error(kv.key.lineno, "stage %d out of range", stage);
+            } else if (stages_seen[stage]) {
+                error(kv.key.lineno, "duplicate stage %d", stage);
+            } else {
+                rv |= add_cols(stage, row, kv.value); } }
+        return rv; }
     if (!CHECKTYPE2(cols, tINT, tRANGE)) return 1;
-    if (cols.type == tINT) return add_col(cols.lineno, row, cols.i);
+    if (cols.type == tINT) return add_col(cols.lineno, stage, row, cols.i);
     int step = cols.lo > cols.hi ? -1 : 1;
     for (int i = cols.lo; i != cols.hi; i += step)
-        rv |= add_col(cols.lineno, row, i);
-    rv |= add_col(cols.lineno, row, cols.hi);
+        rv |= add_col(cols.lineno, stage, row, i);
+    rv |= add_col(cols.lineno, stage, row, cols.hi);
     return rv;
 }
 
@@ -228,10 +260,10 @@ std::ostream &operator<<(std::ostream &out, const Table::Layout &l) {
     out << "row=" << l.row;
     if (l.bus >= 0) out << " bus=" << l.bus;
     if (l.word >= 0) out << " word=" << l.word;
-    if (!l.cols.empty()) {
+    if (!l.memunits.empty()) {
         const char *sep = "";
         out << " [";
-        for (auto col : l.cols) { out << sep << col; sep = ", "; }
+        for (auto &unit : l.memunits) { out << sep << unit; sep = ", "; }
         out << ']'; }
     if (!l.vpns.empty()) {
         const char *sep = "";
@@ -285,12 +317,36 @@ void Table::setup_layout(std::vector<Layout> &layout, const VECTOR(pair_t) &data
         err |= add_rows(layout, *row);
     if (err) return;
     if (auto *col = get(data, "column")) {
-        if (col->type == tVEC && col->vec.size == static_cast<int>(layout.size())) {
+        int stage = Target::SRAM_GLOBAL_ACCESS() ? this->stage->stageno : -1;
+        if (col->type == tMAP && Target::SRAM_GLOBAL_ACCESS()) {
+            bitvec      stages_seen;
+            for (auto &kv : col->map) {
+                if (kv.key.type == tINT)
+                    stage = kv.key.i;
+                else if (kv.key == "stage" && kv.key.type == tCMD && kv.key[1].type == tINT)
+                    stage = kv.key[1].i;
+                else {
+                    error(kv.key.lineno, "syntax error, expecting a stage number");
+                    continue; }
+                if (stage < 0 || stage > Target::NUM_STAGES(gress)) {
+                    error(kv.key.lineno, "stage %d out of range", stage);
+                } else if (stages_seen[stage]) {
+                    error(kv.key.lineno, "duplicate stage %d", stage);
+                } else {
+                    if (kv.value.type == tVEC && kv.value.vec.size + 0U == layout.size()) {
+                        for (int i = 0; i < kv.value.vec.size; i++)
+                            err |= add_cols(stage, layout[i], kv.value.vec[i]);
+                    } else {
+                        for (auto &lrow : layout)
+                            if ((err |= add_cols(stage, lrow, kv.value))) break; }
+                }
+            }
+        } else if (col->type == tVEC && col->vec.size == static_cast<int>(layout.size())) {
             for (int i = 0; i < col->vec.size; i++)
-                err |= add_cols(layout[i], col->vec[i]);
+                err |= add_cols(stage, layout[i], col->vec[i]);
         } else {
             for (auto &lrow : layout)
-                if ((err |= add_cols(lrow, *col))) break; }
+                if ((err |= add_cols(stage, lrow, *col))) break; }
     } else if (layout.size() > 1) {
         error(lineno, "No 'column' attribute in table %s%s", name(), subname);
         return; }
@@ -353,7 +409,7 @@ void Table::setup_maprams(value_t &v) {
         } else {
             continue;
         }
-        if (maprow_rams->size != static_cast<int>(row.cols.size())) {
+        if (maprow_rams->size != static_cast<int>(row.memunits.size())) {
             error(r->lineno, "Mapram layout doesn't match table layout");
             continue; }
         for (auto mapcol : *maprow_rams)
@@ -416,6 +472,15 @@ bool Table::validate_instruction(Table::Call &call) const {
     return true;
 }
 
+static bool column_match(const std::vector<MemUnit> &a, const std::vector<MemUnit> &b) {
+    auto it = b.begin();
+    for (auto &u : a) {
+        if (it == b.end()) return false;
+        if (u.col != it->col) return false;
+        ++it; }
+    return it == b.end();
+}
+
 void Table::setup_vpns(std::vector<Layout> &layout, VECTOR(value_t) *vpn, bool allow_holes) {
     int period, width, depth;
     const char *period_name;
@@ -430,13 +495,13 @@ void Table::setup_vpns(std::vector<Layout> &layout, VECTOR(value_t) *vpn, bool a
     for (auto &row : layout) {
         if (++word < width) {
             BUG_CHECK(firstrow);
-            if (row.cols != firstrow->cols)
+            if (!column_match(row.memunits, firstrow->memunits))
                 error(row.lineno, "Columns across wide rows don't match in table %s", name());
             row.vpns = firstrow->vpns;
             continue; }
         word = 0;
         firstrow = &row;
-        row.vpns.resize(row.cols.size());
+        row.vpns.resize(row.memunits.size());
         value_t *vpncoliter = 0;
         for (int &el : row.vpns) {
             // If VPN's are provided by the compiler, they need to match each
@@ -475,6 +540,8 @@ void Table::setup_vpns(std::vector<Layout> &layout, VECTOR(value_t) *vpn, bool a
                 // If there is no word information provided in assembly (Ternary
                 // Indirect/Stats) tables, the allocation is always a single
                 // word.
+                // FIXME -- this is wrong for cuckoo match tables, but the compiler provides
+                // vpns on tofino1/2/3 and on tofino5 we ignore this and set vpns in write_regs_vt
                 if (row.word < 0) row.word = word;
                 el = vpn_ctr[row.word];
                 if ((vpn_ctr[row.word] += period) == depth) vpn_ctr[row.word] = 0; } } }
@@ -666,8 +733,9 @@ bool Table::allow_bus_sharing(Table *t1, Table *t2) {
 void Table::alloc_rams(bool logical, BFN::Alloc2Dbase<Table *> &use,
                        BFN::Alloc2Dbase<Table *> *bus_use) {
     for (auto &row : layout) {
-        for (int col : row.cols) {
-            int r = row.row, c = col;
+        for (auto &memunit : row.memunits) {
+            BUG_CHECK(memunit.stage == -1 && memunit.row == row.row, "memunit fail");
+            int r = row.row, c = memunit.col;
             if (logical) {
                 c += 6 * (r&1);
                 r >>= 1; }
@@ -675,14 +743,13 @@ void Table::alloc_rams(bool logical, BFN::Alloc2Dbase<Table *> &use,
                 if (Table *old = use[r][c]) {
                     if (!allow_ram_sharing(this, old)) {
                         error(lineno, "Table %s trying to use (%d,%d) which is already in use "
-                              "by table %s", name(), row.row, col, old->name());
+                              "by table %s", name(), r, c, old->name());
                     }
                 } else {
                     use[r][c] = this;
                 }
-            } catch(const char *oob) {
-                error(lineno, "Table %s using out-of-bounds (%d,%d)", name(),
-                      row.row, col);
+            } catch(std::out_of_range) {
+                error(lineno, "Table %s using out-of-bounds (%d,%d)", name(), r, c);
             }
         }
         if (row.bus >= 0 && bus_use) {
@@ -697,16 +764,21 @@ void Table::alloc_rams(bool logical, BFN::Alloc2Dbase<Table *> &use,
     }
 }
 
+#if !HAVE_FLATROCK
+void Table::alloc_global_srams() { BUG(); }
+void Table::alloc_global_tcams() { BUG(); }
+#endif /* !HAVE_FLATROCK */
+
 void Table::alloc_busses(BFN::Alloc2Dbase<Table *> &bus_use) {
     for (auto &row : layout) {
-        // If row.cols is empty, we don't really need a bus here (won't use it
+        // If row.memunits is empty, we don't really need a bus here (won't use it
         // for anything).
         // E.g. An exact match table with 4 or less static entries (JBay) or 1
         // static entry (Tofino)
         // In these examples compiler does gateway optimization where static
         // entries are encoded in the gateway and no RAM's are used. We skip bus
         // allocation in these cases.
-        if (row.bus < 0 && !row.cols.empty()) {
+        if (row.bus < 0 && !row.memunits.empty()) {
             if (bus_use[row.row][0] == this)
                 row.bus = 0;
             else if (bus_use[row.row][1] == this)
@@ -743,7 +815,7 @@ void Table::alloc_maprams() {
             continue; }
         if (row.maprams.empty()) {
             int use = 0;
-            for (unsigned i = 0; i < row.cols.size(); i++) {
+            for (unsigned i = 0; i < row.memunits.size(); i++) {
                 while (use < MAPRAM_UNITS_PER_ROW && stage->mapram_use[sram_row][use]) use++;
                 if (use >= MAPRAM_UNITS_PER_ROW) {
                     error(row.lineno, "Ran out of maprams on row %d in stage %d", sram_row,
@@ -2356,11 +2428,13 @@ Table::determine_spare_bank_memory_units(const std::vector<Layout> &layout) cons
     layout_vpn_bounds(minvpn, spare_vpn, false);
     for (auto &row : layout) {
         auto vpn_itr = row.vpns.begin();
-        for (auto col : row.cols) {
+        for (auto &ram : row.memunits) {
+            BUG_CHECK(ram.stage == -1 && ram.row == row.row,
+                      "bogus %s in row %d", ram.desc(), row.row);
             if (vpn_itr != row.vpns.end())
                 vpn_ctr = *vpn_itr++;
             if (spare_vpn == vpn_ctr) {
-                spare_mem.push_back(memunit(row.row, col));
+                spare_mem.push_back(memunit(row.row, ram.col));
                 if (table_type() == SELECTION || table_type() == COUNTER ||
                     table_type() == METER || table_type() == STATEFUL)
                     continue;
@@ -2394,7 +2468,9 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(
     for (auto &row : layout) {
         int word = row.word >= 0 ? row.word : 0;
         auto vpn_itr = row.vpns.begin();
-        for (auto col : row.cols) {
+        for (auto &ram : row.memunits) {
+            BUG_CHECK(ram.stage == -1 && ram.row == row.row,
+                      "bogus %s in row %d", ram.desc(), row.row);
             if (vpn_itr == row.vpns.end())
                 no_vpns = true;
             else
@@ -2410,12 +2486,12 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(
             //       1   93
             //  E.g. VPN 0 has Ram 90 with word 0 and Ram 91 with word 1
             if (skip_spare_bank && spare_vpn == vpn_ctr) {
-                spare_mem.push_back(memunit(row.row, col));
+                spare_mem.push_back(memunit(row.row, ram.col));
                 if (table_type() == SELECTION || table_type() == COUNTER ||
                     table_type() == METER || table_type() == STATEFUL)
                     continue;
             }
-            mem_units[vpn_ctr][word] = memunit(row.row, col);
+            mem_units[vpn_ctr][word] = memunit(row.row, ram.col);
         }
     }
     if (mem_units.size() == 0) return nullptr;

@@ -332,6 +332,19 @@ class PhvRef_Printer:
             rv += ')'
         return rv
 
+class Mem_Printer:
+    "Print a MemUnit or subclass"
+    def __init__(self, val, big, small):
+        self.val = val
+        self.big = big
+        self.small = small
+    def to_string(self):
+        if self.val['stage'] >= 0:
+            return "%s(%d,%d,%d)" % (self.big, self.val['stage'], self.val['row'], self.val['col'])
+        if self.val['row'] >= 0:
+            return "%s(%d,%d)" % (self.big, self.val['row'], self.val['col'])
+        return "%s(%d)" % (self.small, self.val['col'])
+
 def bfas_pp(val):
     if val.type.tag == 'bitvec':
         return bitvecPrinter(val)
@@ -349,6 +362,10 @@ def bfas_pp(val):
         return ActionBusSource_Printer(val)
     if val.type.tag == 'Phv::Ref':
         return PhvRef_Printer(val)
+    if val.type.tag == 'SRamMatchTable::Ram':
+        return Mem_Printer(val, 'Ram', 'Lamb')
+    if val.type.tag == 'MemUnit':
+        return Mem_Printer(val, 'Mem', 'Mem')
     return None
 
 try:

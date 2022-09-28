@@ -70,7 +70,10 @@ void CounterTable::setup(VECTOR(pair_t) &data) {
     }
     if (teop >= 0 && type != BYTES && type != BOTH)
         error(lineno, "tEOP bus can only used when counting bytes");
-    alloc_rams(true, stage->sram_use);
+    if (Target::SRAM_GLOBAL_ACCESS())
+        alloc_global_srams();
+    else
+        alloc_rams(true, stage->sram_use);
 }
 
 CounterTable::lrt_params::lrt_params(const value_t &m)
@@ -251,7 +254,8 @@ template<class REGS> void CounterTable::write_regs_vt(REGS &regs) {
         BUG_CHECK(home != nullptr);
         LOG2("# DataSwitchbox.setup(" << row << ") home=" << home->row/2U);
         swbox->setup_row(row);
-        for (int logical_col : logical_row.cols) {
+        for (auto &memunit : logical_row.memunits) {
+            int logical_col = memunit.col;
             unsigned col = logical_col + 6*side;
             swbox->setup_row_col(row, col, *vpn);
             write_mapram_regs(regs, row, *mapram, *vpn, MapRam::STATISTICS);

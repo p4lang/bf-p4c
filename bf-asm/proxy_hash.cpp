@@ -48,8 +48,8 @@ void ProxyHashMatchTable::setup_ways() {
     SRamMatchTable::setup_ways();
     for (auto &row : layout) {
         int first_way = -1;
-        for (auto col : row.cols) {
-            int way = way_map.at(Ram(row.row, col)).way;
+        for (auto &unit : row.memunits) {
+            int way = way_map.at(unit).way;
             if (first_way < 0) {
                 first_way = way;
             } else if (ways[way].group_xme != ways[first_way].group_xme) {
@@ -97,9 +97,9 @@ template<class REGS> void ProxyHashMatchTable::write_regs_vt(REGS &regs) {
 
     for (auto &row : layout) {
         auto &rams_row = regs.rams.array.row[row.row];
-        for (auto col : row.cols) {
-            auto &way = way_map[Ram(row.row, col)];
-            auto &ram = rams_row.ram[col];
+        for (auto &unit : row.memunits) {
+            auto &way = way_map[unit];
+            auto &ram = rams_row.ram[unit.col];
             ram.match_nibble_s0q1_enable = version_nibble_mask.getrange(way.word*32U, 32);
             ram.match_nibble_s1q0_enable = UINT64_C(0xffffffff); } }
 }

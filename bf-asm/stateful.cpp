@@ -133,7 +133,7 @@ bool match_table_layouts(Table *t1, Table *t2) {
     auto it = t2->layout.begin();
     for (auto &row : t1->layout) {
         if (row.row != it->row) return false;
-        if (row.cols != it->cols) return false;
+        if (row.memunits != it->memunits) return false;
         if (row.maprams.empty())
             row.maprams = it->maprams;
         if (row.maprams != it->maprams) return false;
@@ -173,7 +173,10 @@ void StatefulTable::pass1() {
         if (logical_id < 0) logical_id = bound_selector->logical_id;
     } else {
         alloc_maprams();
-        alloc_rams(true, stage->sram_use); }
+        if (Target::SRAM_GLOBAL_ACCESS())
+            alloc_global_srams();
+        else
+            alloc_rams(true, stage->sram_use); }
     std::sort(layout.begin(), layout.end(),
               [](const Layout &a, const Layout &b)->bool { return a.row > b.row; });
     stage->table_use[timing_thread(gress)] |= Stage::USE_STATEFUL;
@@ -470,8 +473,10 @@ template<class REGS> void StatefulTable::write_regs_vt(REGS &regs) {
             auto &map_alu_row =  map_alu.row[row];
             LOG2("# DataSwitchbox.setup(" << row << ") home=" << home->row/2U);
             swbox.setup_row(row);
-            for (int logical_col : logical_row.cols) {
-                unsigned col = logical_col + 6*side;
+            for (auto &memunit : logical_row.memunits) {
+                BUG_CHECK(memunit.stage == -1 && memunit.row == logical_row.row,
+                          "bogus %s in logical row %d", memunit.desc(), logical_row.row);
+                unsigned col = memunit.col + 6*side;
                 swbox.setup_row_col(row, col, *vpn);
                 write_mapram_regs(regs, row, *mapram, *vpn, MapRam::STATEFUL);
                 if (gress)

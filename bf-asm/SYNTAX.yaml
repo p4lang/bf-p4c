@@ -545,6 +545,10 @@ stage <constant> <thread>:
             # must match the number of rows specified
             # Denotes the rams used on each row.  RAM type (sram, tcam or mapram)
             # depends on the table type
+            stage <int>: <vector> | '[' <vector>, ... ']'
+            - stage <int>: <vector>
+              # (Flatrock only) -- specify columns in specific stages that should be
+              # included in each row.
         bus: 0 | 1 | '[' 0 | 1, ... ']'
             # bus(es) to use.  If a list, must match the number of rows
         word: <vector>

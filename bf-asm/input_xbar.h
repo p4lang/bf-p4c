@@ -171,7 +171,12 @@ class InputXbar {
     const std::map<int, HashCol>& get_hash_table(HashTable id);
     const std::map<int, HashCol>& get_hash_table(unsigned id = 0) {
         return get_hash_table(HashTable(HashTable::EXACT, id)); }
-    Phv::Ref get_hashtable_bit(HashTable id, unsigned bit) const {
+
+    // which Group provides the input for a given HashTable
+    virtual Group hashtable_input_group(HashTable ht) const {
+        BUG_CHECK(ht.type == HashTable::EXACT, "not an exact hash table");
+        return Group(Group::EXACT, ht.index/2); }
+    virtual Phv::Ref get_hashtable_bit(HashTable id, unsigned bit) const {
         BUG_CHECK(id.type == HashTable::EXACT, "not an exact hash table");
         return get_group_bit(Group(Group::EXACT, id.index/2), bit + 64*(id.index & 0x1)); }
     Phv::Ref get_hashtable_bit(unsigned id, unsigned bit) const {
@@ -273,6 +278,7 @@ class InputXbar {
         const hash_column_t matrix[PARITY_GROUPS_DYN][HASH_MATRIX_WIDTH_DYN]) const {
             BUG_CHECK(ht.type == HashTable::EXACT, "not an exact hash table");
             return bitvec(matrix[ht.index][0].column_value); }
+    virtual void setup_match_key_cfg(const MatchSource *) {}  // noop for tofino1/2/3
 };
 
 inline std::ostream &operator<<(std::ostream &out, InputXbar::Group gr) {

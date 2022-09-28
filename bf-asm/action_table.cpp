@@ -346,7 +346,10 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
                     value_desc(kv.key), name());
         }
     }
-    alloc_rams(true, stage->sram_use, 0);
+    if (Target::SRAM_GLOBAL_ACCESS())
+        alloc_global_srams();
+    else
+        alloc_rams(true, stage->sram_use, 0);
     if (!action_bus) action_bus = ActionBus::create();
 }
 
@@ -404,18 +407,18 @@ void ActionTable::pass1() {
             if (row->word > width) {
                 error(row->lineno, "Invalid word %u for row %d", row->word, row->row);
                 continue; }
-            slice_size[row->word] += row->cols.size();
+            slice_size[row->word] += row->memunits.size();
         } else {
-            if (slice_size[word] + row->cols.size() > depth) {
+            if (slice_size[word] + row->memunits.size() > depth) {
                 int split = depth - slice_size[word];
                 row = layout.insert(row, Layout(*row));
-                row->cols.erase(row->cols.begin() + split, row->cols.end());
+                row->memunits.erase(row->memunits.begin() + split, row->memunits.end());
                 row->vpns.erase(row->vpns.begin() + split, row->vpns.end());
                 auto next = row + 1;
-                next->cols.erase(next->cols.begin(), next->cols.begin() + split);
+                next->memunits.erase(next->memunits.begin(), next->memunits.begin() + split);
                 next->vpns.erase(next->vpns.begin(), next->vpns.begin() + split); }
             row->word = word;
-            if ((slice_size[word] += row->cols.size()) == int(depth))
+            if ((slice_size[word] += row->memunits.size()) == int(depth))
                 ++word; }
         prev = &*row; }
     if (!home_rows_per_word.empty()) {
@@ -634,7 +637,8 @@ void ActionTable::write_regs_vt(REGS &regs) {
                           selector->name(), selector->home_row(), name(), logical_row.row);
                 else
                     flow_selector_addr(regs, selector->home_row(), logical_row.row); } }
-        for (int logical_col : logical_row.cols) {
+        for (auto &memunit : logical_row.memunits) {
+            int logical_col = memunit.col;
             unsigned col = logical_col + 6*side;
             auto &ram = regs.rams.array.row[row].ram[col];
             auto &unitram_config = map_alu_row.adrmux.unitram_config[side][logical_col];

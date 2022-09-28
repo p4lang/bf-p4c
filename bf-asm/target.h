@@ -178,9 +178,13 @@
     M(int, PHASE0_FORMAT_WIDTH) \
     M(bool, REQUIRE_TCAM_ID) \
     M(int, SRAM_EGRESS_ROWS) \
-    M(int, SRAM_GLOBAL_ACCESS) \
+    M(bool, SRAM_GLOBAL_ACCESS) \
     M(int, SRAM_INGRESS_ROWS) \
     M(int, SRAM_LAMBS_PER_STAGE) \
+    M(int, SRAM_REMOVED_COLUMNS) \
+    M(int, SRAM_STRIDE_COLUMN) \
+    M(int, SRAM_STRIDE_ROW) \
+    M(int, SRAM_STRIDE_STAGE) \
     M(int, SRAM_UNITS_PER_ROW) \
     M(int, STATEFUL_ALU_ADDR_WIDTH) \
     M(int, STATEFUL_ALU_CONST_MASK) \
@@ -203,12 +207,16 @@
     M(bool, SUPPORT_OVERFLOW_BUS) \
     M(bool, SUPPORT_SALU_FAST_CLEAR) \
     M(bool, SUPPORT_TRUE_EOP) \
+    M(bool, TCAM_GLOBAL_ACCESS) \
+    M(int, TCAM_ROWS) \
+    M(int, TCAM_UNITS_PER_ROW) \
     M(bool, TABLES_REQUIRE_ROW) \
 
 #define DECLARE_PER_TARGET_CONSTANT(TYPE, NAME) static TYPE NAME();
 
 #define TARGET_CLASS_SPECIFIC_CLASSES   \
     class ActionTable;                  \
+    class ExactMatchTable;              \
     class GatewayTable;
 #define REGISTER_SET_SPECIFIC_CLASSES   /* none */
 #define TARGET_SPECIFIC_CLASSES         /* none */
@@ -352,6 +360,10 @@ class Target::Tofino : public Target {
         SRAM_GLOBAL_ACCESS = false,
         SRAM_INGRESS_ROWS = 8,
         SRAM_LAMBS_PER_STAGE = 0,
+        SRAM_REMOVED_COLUMNS = 2,
+        SRAM_STRIDE_COLUMN = 1,
+        SRAM_STRIDE_ROW = 12,
+        SRAM_STRIDE_STAGE = 0,
         SRAM_UNITS_PER_ROW = 12,
         STATEFUL_CMP_UNITS = 2,
         STATEFUL_CMP_ADDR_WIDTH = 2,
@@ -378,6 +390,9 @@ class Target::Tofino : public Target {
         NUM_PARSERS = 18,
         NUM_PIPES = 4,
         OUTPUT_STAGE_EXTENSION_PRIVATE = 0,
+        TCAM_GLOBAL_ACCESS = false,
+        TCAM_ROWS = 12,
+        TCAM_UNITS_PER_ROW = 2,
         TABLES_REQUIRE_ROW = 1,
     };
     static int encodeConst(int src) {
@@ -509,6 +524,10 @@ class Target::JBay : public Target {
         SRAM_GLOBAL_ACCESS = false,
         SRAM_INGRESS_ROWS = 8,
         SRAM_LAMBS_PER_STAGE = 0,
+        SRAM_REMOVED_COLUMNS = 2,
+        SRAM_STRIDE_COLUMN = 1,
+        SRAM_STRIDE_ROW = 12,
+        SRAM_STRIDE_STAGE = 0,
         SRAM_UNITS_PER_ROW = 12,
         STATEFUL_CMP_UNITS = 4,
         STATEFUL_CMP_ADDR_WIDTH = 2,
@@ -535,6 +554,9 @@ class Target::JBay : public Target {
         NUM_PARSERS = 36,
         NUM_PIPES = 4,
         TABLES_REQUIRE_ROW = 1,
+        TCAM_GLOBAL_ACCESS = false,
+        TCAM_ROWS = 12,
+        TCAM_UNITS_PER_ROW = 2,
     };
     static int encodeConst(int src) {
         return (src >> 11 << 16) | (0x8 << 11) | (src & 0x7ff);
@@ -718,6 +740,10 @@ class Target::Cloudbreak : public Target {
         SRAM_GLOBAL_ACCESS = false,
         SRAM_INGRESS_ROWS = 8,
         SRAM_LAMBS_PER_STAGE = 0,
+        SRAM_REMOVED_COLUMNS = 2,
+        SRAM_STRIDE_COLUMN = 1,
+        SRAM_STRIDE_ROW = 12,
+        SRAM_STRIDE_STAGE = 0,
         SRAM_UNITS_PER_ROW = 12,
         STATEFUL_CMP_UNITS = 4,
         STATEFUL_CMP_ADDR_WIDTH = 2,
@@ -753,6 +779,9 @@ class Target::Cloudbreak : public Target {
          */
         NUM_PIPES = 4,
         TABLES_REQUIRE_ROW = 1,
+        TCAM_GLOBAL_ACCESS = false,
+        TCAM_ROWS = 12,
+        TCAM_UNITS_PER_ROW = 2,
     };
     static int encodeConst(int src) {
         return (src >> 11 << 16) | (0x8 << 11) | (src & 0x7ff);
@@ -871,7 +900,11 @@ class Target::Flatrock : public Target {
         SRAM_GLOBAL_ACCESS = true,
         SRAM_INGRESS_ROWS = 6,
         SRAM_LAMBS_PER_STAGE = 8,
-        SRAM_UNITS_PER_ROW = 8,
+        SRAM_REMOVED_COLUMNS = 0,
+        SRAM_STRIDE_COLUMN = 1,
+        SRAM_STRIDE_ROW = 256,
+        SRAM_STRIDE_STAGE = 16,
+        SRAM_UNITS_PER_ROW = 10,
         STATEFUL_CMP_UNITS = 4,
         STATEFUL_CMP_ADDR_WIDTH = 2,
         STATEFUL_CMP_CONST_WIDTH = 6,
@@ -897,6 +930,9 @@ class Target::Flatrock : public Target {
         NUM_PARSERS = 1,
         NUM_PIPES = 8,  // TODO what is the correct number here?
         TABLES_REQUIRE_ROW = 0,
+        TCAM_GLOBAL_ACCESS = true,
+        TCAM_ROWS = 10,
+        TCAM_UNITS_PER_ROW = 2,
         PAC_HEADER_POINTERS_MAX = 16,  // Maximum number of header pointers output by parser
                                        // (parser has additional pointers available internally)
         PARSER_CSUM_MASKS = 4,

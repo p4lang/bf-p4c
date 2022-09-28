@@ -8,6 +8,9 @@
 #include "stage.h"
 #include "tables.h"
 
+#include "tofino/exact_match.h"
+#include "flatrock/exact_match.h"
+
 void ExactMatchTable::setup(VECTOR(pair_t) &data) {
     common_init_setup(data, false, P4Table::MatchEntry);
     for (auto &kv : MapIterChecked(data, { "meter", "stats", "stateful" })) {
@@ -82,20 +85,6 @@ void ExactMatchTable::pass1() {
     if (stash_rows.size() == 0 && options.target == TOFINO && layout_size() > 0)
         error(lineno, "No stashes allocated for exact match table %s in stage %d",
             name(), stage->stageno);
-}
-
-void ExactMatchTable::setup_ways() {
-    SRamMatchTable::setup_ways();
-    for (auto &row : layout) {
-        int first_way = -1;
-        for (auto col : row.cols) {
-            int way = way_map.at(Ram(row.row, col)).way;
-            if (first_way < 0) {
-                first_way = way;
-            } else if (ways[way].group_xme != ways[first_way].group_xme) {
-                error(row.lineno, "Ways %d and %d of table %s share address bus on row %d, "
-                      "but use different hash groups", first_way, way, name(), row.row);
-                break; } } }
 }
 
 /**
@@ -288,11 +277,6 @@ void ExactMatchTable::generate_stash_overhead_rows() {
     }
 }
 
-#if HAVE_FLATROCK
-// flatrock-specific template specializations
-#include "flatrock/exact_match.cpp"                             // NOLINT(build/include)
-#endif  /* HAVE_FLATROCK */
-
 /* FIXME -- should have ExactMatchTable::write_merge_regs write some of the merge stuff
  * from write_regs? */
 template<class REGS> void ExactMatchTable::write_regs_vt(REGS &regs) {
@@ -301,11 +285,13 @@ template<class REGS> void ExactMatchTable::write_regs_vt(REGS &regs) {
 
     for (auto &row : layout) {
         auto &rams_row = regs.rams.array.row[row.row];
-        for (auto col : row.cols) {
-            auto &way = way_map[Ram(row.row, col)];
-            auto &ram = rams_row.ram[col];
-            ram.match_nibble_s0q1_enable = version_nibble_mask.getrange(way.word*32U, 32);
-            ram.match_nibble_s1q0_enable = UINT64_C(0xffffffff); } }
+        for (auto &ram : row.memunits) {
+            auto &way = way_map[ram];
+            BUG_CHECK(ram.stage == -1 && ram.row == row.row,
+                      "bogus %s in row %d", ram.desc(), row.row);
+            auto &ram_cfg = rams_row.ram[ram.col];
+            ram_cfg.match_nibble_s0q1_enable = version_nibble_mask.getrange(way.word*32U, 32);
+            ram_cfg.match_nibble_s1q0_enable = UINT64_C(0xffffffff); } }
 
     // Write stash regs if stashes are allocated
     if (stash_rows.size() == 0) return;
@@ -317,6 +303,7 @@ template<class REGS> void ExactMatchTable::write_regs_vt(REGS &regs) {
         auto stash_row = stash_rows[i];
         auto stash_col = stash_cols[i];
         auto stash_unit_id = stash_units[i];
+        MemUnit stash_memunit(stash_row, stash_col);
         auto idx = i / mem_units_per_word;
         auto physical_row_with_overhead = stash_overhead_rows.size() > idx ?
                                             stash_overhead_rows[idx] : ways[0].rams[0].row;
@@ -335,9 +322,8 @@ template<class REGS> void ExactMatchTable::write_regs_vt(REGS &regs) {
         auto &stash_row_nxtable_bus_drive =
             merge.stash_row_nxtable_bus_drive[stash_unit_id][stash_row];
         for (auto &row : layout) {
-            auto cols = row.cols;
-            if ((row.row == stash_row)
-                    && std::find(cols.begin(), cols.end(), stash_col) != cols.end()) {
+            if (row.row != stash_row) continue;
+            if (contains(row.memunits, stash_memunit)) {
                 // Assumption is that the search or match and result buses are
                 // always generated on the same index
                 auto &stash_match_mask = stash_reg.stash_match_mask[stash_unit_id];
@@ -423,12 +409,13 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) const {
                     auto stash_row = stash_rows[k * mem_units_per_word + j];
                     auto stash_col = stash_cols[k * mem_units_per_word + j];
                     auto stash_unit = stash_units[k * mem_units_per_word + j];
+                    // FIXME -- probably doesn't make sense for Tofino5
+                    MemUnit stash_memunit(stash_row, stash_col);
                     json::map stash_entry_per_unit;
                     stash_entry_per_unit["stash_entry_id"] = (4 * stash_row) + (2 * stash_unit) + i;
                     for (auto &row : layout) {
-                        auto cols = row.cols;
-                        if ((row.row == stash_row)
-                            && std::find(cols.begin(), cols.end(), stash_col) != cols.end()) {
+                        if (row.row != stash_row) continue;
+                        if (contains(row.memunits, stash_memunit)) {
                             stash_entry_per_unit["stash_match_data_select"] = row.bus;
                             stash_entry_per_unit["stash_hashbank_select"] = row.bus;
                             stash_entry_per_unit["hash_function_id"] = k;
@@ -512,4 +499,4 @@ void ExactMatchTable::gen_ghost_bits(int hash_function_number,
     }
 }
 
-DEFINE_TABLE_TYPE(ExactMatchTable)
+DEFINE_TABLE_TYPE_WITH_SPECIALIZATION(ExactMatchTable, TARGET_CLASS)

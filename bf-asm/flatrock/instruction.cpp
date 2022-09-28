@@ -775,19 +775,24 @@ void VLIWInstruction::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl,
     BUG_CHECK(slot >= 0);
     switch (Phv::reg(slot)->size) {
     case 8:
+        delta = imem.imem8[slot].phvwr_imem8[iaddr];
         imem.imem8[slot].phvwr_imem8[iaddr].color = color;
-        delta ^= imem.imem8[slot].phvwr_imem8[iaddr].instr;
         imem.imem8[slot].phvwr_imem8[iaddr].instr = bits;
+        delta ^= imem.imem8[slot].phvwr_imem8[iaddr];
         break;
     case 16:
-        imem.imem16[slot-160].phvwr_imem16[iaddr].color = color;
-        delta ^= imem.imem16[slot-160].phvwr_imem16[iaddr].instr;
-        imem.imem16[slot-160].phvwr_imem16[iaddr].instr = bits;
+        slot -= imem.imem8.size();
+        delta = imem.imem16[slot].phvwr_imem16[iaddr];
+        imem.imem16[slot].phvwr_imem16[iaddr].color = color;
+        imem.imem16[slot].phvwr_imem16[iaddr].instr = bits;
+        delta ^= imem.imem16[slot].phvwr_imem16[iaddr];
         break;
     case 32:
-        imem.imem32[slot-200].phvwr_imem32[iaddr].color = color;
-        delta ^= imem.imem32[slot-200].phvwr_imem32[iaddr].instr;
-        imem.imem32[slot-200].phvwr_imem32[iaddr].instr = bits;
+        slot -= imem.imem8.size() + imem.imem16.size();
+        delta = imem.imem32[slot].phvwr_imem32[iaddr];
+        imem.imem32[slot].phvwr_imem32[iaddr].color = color;
+        imem.imem32[slot].phvwr_imem32[iaddr].instr = bits;
+        delta ^= imem.imem32[slot].phvwr_imem32[iaddr];
         break;
     default:
         BUG(); }

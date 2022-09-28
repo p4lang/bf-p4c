@@ -51,6 +51,31 @@ struct RandomNumberGen {
 enum class TableOutputModifier { NONE, Color, Address };
 std::ostream &operator<<(std::ostream &, TableOutputModifier);
 
+/* a memory storage 'unit' somewhere on the chip */
+struct MemUnit {
+    int                             stage = -1;  // current stage (only) for tofino1/2/3
+    int                             row = -1;
+    int                             col;    // (lamb) unit when row == -1
+    MemUnit() = delete;
+    MemUnit(const MemUnit &) = default;
+    MemUnit(MemUnit &&) = default;
+    MemUnit &operator=(const MemUnit &) = default;
+    MemUnit &operator=(MemUnit &&) = default;
+    virtual ~MemUnit() {}
+    explicit MemUnit(int unit) : col(unit) {}
+    MemUnit(int r, int c) : row(r), col(c) {}
+    MemUnit(int s, int r, int c) : stage(s), row(r), col(c) {}
+    bool operator==(const MemUnit &a) const {
+        return std::tie(stage, row, col) == std::tie(a.stage, a.row, a.col); }
+    bool operator!=(const MemUnit &a) const {
+        return std::tie(stage, row, col) != std::tie(a.stage, a.row, a.col); }
+    bool operator<(const MemUnit &a) const {
+        return std::tie(stage, row, col) < std::tie(a.stage, a.row, a.col); }
+    virtual const char *desc() const;  // Short lived temp for messages
+    friend std::ostream &operator<<(std::ostream &out, const MemUnit &m) {
+        return out << m.desc(); }
+};
+
 class Table {
  public:
     struct Layout {
@@ -59,16 +84,19 @@ class Table {
          * ternary match refers to tcams (12x2)
          * exact match and ternary indirect refer to physical srams (8x12)
          * action (and others?) refer to logical srams (16x6)
-         * vpns contains the (base)vpn index of each ram in the row (matching cols)
-         * maprams contain the map ram indexes for synthetic 2-port memories (matching cols) */
+         * vpns contains the (base)vpn index of each ram in the row
+         * maprams contain the map ram indexes for synthetic 2-port memories
+         * vpns/maprams (if not empty) must match up to memunits (same size) */
         int                     lineno = -1;
         int                     row = -1;
-        int                     bus = -1;        // search bus for SRamMatch
+        int                     bus = -1;       // search bus for SRamMatch
         // result bus for SRamMatch, if the result bus is not used, a -1 is a possible value
         int                     result_bus = -2;
         int                     word = -1;      // which word for wide tables
         bool                    home_row = false;       // is this a home row
-        std::vector<int>        cols, vpns, maprams;
+        std::vector<MemUnit>    memunits;
+        std::vector<int>        vpns, maprams;
+        // On Tofino5, memories are accessable across stages
         Layout() = default;
         Layout(int l, int r) : lineno(l), row(r) {}
         friend std::ostream &operator<<(std::ostream &, const Layout &);
@@ -100,6 +128,8 @@ class Table {
     virtual int get_start_vpn() { return 0; }
     void alloc_rams(bool logical, BFN::Alloc2Dbase<Table *> &use,
                     BFN::Alloc2Dbase<Table *> *bus_use = 0);
+    void alloc_global_srams();
+    void alloc_global_tcams();
     void alloc_busses(BFN::Alloc2Dbase<Table *> &bus_use);
     void alloc_id(const char *idname, int &id, int &next_id, int max_id,
                   bool order, BFN::Alloc1Dbase<Table *> &use);
@@ -694,14 +724,14 @@ class Table {
 
     unsigned layout_size() const {
         unsigned rv = 0;
-        for (auto &row : layout) rv += row.cols.size();
+        for (auto &row : layout) rv += row.memunits.size();
         return rv; }
-    unsigned layout_get_vpn(const int r, const int c) const {
+    unsigned layout_get_vpn(const MemUnit &m) const {
         for (auto &row : layout) {
-            if (row.row != r) continue;
-            auto col = find(row.cols.begin(), row.cols.end(), c);
-            if (col == row.cols.end()) continue;
-            return row.vpns.at(col - row.cols.begin()); }
+            if (row.row != m.row) continue;
+            auto u = find(row.memunits.begin(), row.memunits.end(), m);
+            if (u == row.memunits.end()) continue;
+            return row.vpns.at(u - row.memunits.begin()); }
         BUG();
         return 0; }
     void layout_vpn_bounds(int &min, int &max, bool spare = false) const {
@@ -1013,24 +1043,13 @@ FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,                                  \
 
 DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam, or proxy_hash
  public:
-    struct Ram {
-        int                             stage = -1;  // current stage (only) for tofino1/2/3
-        int                             row = -1;
-        int                             col;    // (lamb) unit when row == -1
-        Ram() = delete;
-        explicit Ram(int unit) : col(unit) {}
-        Ram(int r, int c) : row(r), col(c) {}
-        Ram(int s, int r, int c) : stage(s), row(r), col(c) {}
-        bool operator==(const Ram &a) const {
-            return std::tie(stage, row, col) == std::tie(a.stage, a.row, a.col); }
-        bool operator!=(const Ram &a) const {
-            return std::tie(stage, row, col) != std::tie(a.stage, a.row, a.col); }
-        bool operator<(const Ram &a) const {
-            return std::tie(stage, row, col) < std::tie(a.stage, a.row, a.col); }
+    struct Ram : public MemUnit {
+        using MemUnit::MemUnit;
+        Ram(const MemUnit &m) : MemUnit(m) {}
+        Ram(MemUnit &&m) : MemUnit(std::move(m)) {}
         bool isLamb() const { return stage == -1 && row == -1; }
         const char *desc() const;  // Short lived temp for messages
     };
- protected:
     struct Way {
         int                             lineno;
         int                             group_xme;      // hash group or xme
@@ -1047,6 +1066,8 @@ DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam,
             return rv;
         }
     };
+
+ protected:
     std::vector<Way>                      ways;
     struct WayRam { int way, index, word, bank; };
     std::map<Ram, WayRam>                   way_map;
@@ -1077,8 +1098,11 @@ DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam,
     // Which hash groups are assigned to the hash_function_number in the hash_function json node
     // This is to coordinate with the hash_function_id in the ways
     std::map<unsigned, unsigned> hash_fn_ids;
+
+    // helper function only used/instantiated on tofino1/2/3
     template<class REGS>
     void write_attached_merge_regs(REGS &regs, int bus, int word, int word_group);
+
     bool parse_ram(const value_t &, std::vector<Ram> &);
     bool parse_way(const value_t &);
     void common_sram_setup(pair_t &, const VECTOR(pair_t) &);
@@ -1112,7 +1136,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam,
     int memunit(const Ram &r) const;
  public:
     Format::Field *lookup_field(const std::string &n, const std::string &act = "") const override;
-    virtual void setup_word_ixbar_group();
+    OVERLOAD_FUNC_FOREACH(TARGET_CLASS, virtual void, setup_word_ixbar_group, (), ())
     OVERLOAD_FUNC_FOREACH(TARGET_CLASS, virtual void, verify_format, (), ())
     OVERLOAD_FUNC_FOREACH(TARGET_CLASS, virtual void, verify_format_pass2, (), ())
     virtual bool verify_match_key();
@@ -1145,11 +1169,13 @@ DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam,
     StatefulTable *get_stateful() const override { return attached.get_stateful(); }
     MeterTable* get_meter() const override { return attached.get_meter(); }
     const Way *way_for_ram(Ram r) const { return &ways[way_map.at(r).way]; }
+    const Way *way_for_xme(int xme) const {
+        for (auto &way : ways) if (way.group_xme == xme) return &way;
+        return nullptr; }
 )
 
 DECLARE_TABLE_TYPE(ExactMatchTable, SRamMatchTable, "exact_match",
     bool dynamic_key_masks = false;
-    void setup_ways() override;
 
     // The position of the ghost bits in a single hash function
     // The key is name of the field and the field bit, the value is one-hot for all

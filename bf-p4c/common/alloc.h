@@ -13,14 +13,13 @@ template<class T> class Alloc1Dbase {
     Alloc1Dbase() = delete;
     Alloc1Dbase(const Alloc1Dbase &) = delete;
 
- protected:
+ public:
     explicit Alloc1Dbase(int sz) : size(sz) {
         data = new T[sz];
         for (int i = 0; i < sz; i++) data[i] = T(); }
     Alloc1Dbase(Alloc1Dbase &&a) : size(a.size), data(a.data) { a.data = 0; }
     virtual ~Alloc1Dbase() { delete [] data; }
 
- public:
     typedef T *iterator;
     typedef T *const_iterator;
     T &operator[](int i) {
@@ -69,7 +68,7 @@ template<class T> class Alloc2Dbase {
     Alloc2Dbase() = delete;
     Alloc2Dbase(const Alloc2Dbase &) = delete;
 
- protected:
+ public:
     Alloc2Dbase(int r, int c) : nrows(r), ncols(c) {
         size_t sz = r*c;
         data = new T[sz];
@@ -77,7 +76,6 @@ template<class T> class Alloc2Dbase {
     Alloc2Dbase(Alloc2Dbase &&a) : nrows(a.nrows), ncols(a.ncols), data(a.data) { a.data = 0; }
     virtual ~Alloc2Dbase() { delete [] data; }
 
- public:
     rowref<T> operator[](int i) {
         if (i < 0 || i >= nrows) throw std::out_of_range("Alloc2D");
         return rowref<T>(data+i*ncols, ncols); }

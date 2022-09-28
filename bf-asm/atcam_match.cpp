@@ -328,13 +328,15 @@ template<class REGS> void AlgTcamMatchTable::write_regs_vt(REGS &regs) {
 
     for (auto &row : layout) {
         auto &rams_row = regs.rams.array.row[row.row];
-        for (auto col : row.cols) {
-            auto &way = way_map[Ram(row.row, col)];
-            auto &ram = rams_row.ram[col];
-            ram.match_nibble_s0q1_enable =
+        for (auto &ram : row.memunits) {
+            auto &way = way_map[ram];
+            BUG_CHECK(ram.stage == -1 && ram.row == row.row,
+                      "bogus %s in row %d", ram.desc(), row.row);
+            auto &ram_cfg = rams_row.ram[ram.col];
+            ram_cfg.match_nibble_s0q1_enable =
                 version_nibble_mask.getrange(way.word*32U, 32)
                 & ~s1q0_nibbles.getrange(way.word*32U, 32);
-            ram.match_nibble_s1q0_enable
+            ram_cfg.match_nibble_s1q0_enable
                 = 0xffffffffUL & ~s0q1_nibbles.getrange(way.word*32U, 32); } }
 }
 #if HAVE_FLATROCK
@@ -357,9 +359,9 @@ std::unique_ptr<json::vector> AlgTcamMatchTable::gen_memory_resource_allocation_
         unsigned vpn_ctr = 0;
         for (auto &ram : way.rams) {
             if (mem_units.empty())
-                vpn_ctr = layout_get_vpn(ram.row, ram.col);
+                vpn_ctr = layout_get_vpn(ram);
             else
-                BUG_CHECK(vpn_ctr == layout_get_vpn(ram.row, ram.col));
+                BUG_CHECK(vpn_ctr == layout_get_vpn(ram));
             mem_units.push_back(memunit(ram));
             if (mem_units.size() == fmt_width) {
                 json::map tmp;

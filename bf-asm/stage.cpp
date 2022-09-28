@@ -49,13 +49,12 @@ AsmStage::AsmStage() : Section("stage") {
 }
 
 void AsmStage::start(int lineno, VECTOR(value_t) args) {
-    size_t oldsize = pipe.size();
-    if (int(pipe.size()) < Target::NUM_MAU_STAGES())
-        pipe.resize(Target::NUM_MAU_STAGES());
+    while (int(pipe.size()) < Target::NUM_MAU_STAGES())
+        pipe.emplace_back(pipe.size(), false);
 #if HAVE_FLATROCK
-    size_t oldesize = epipe.size();
-    if (Target::EGRESS_SEPARATE() && int(epipe.size()) < Target::NUM_EGRESS_STAGES())
-        epipe.resize(Target::NUM_EGRESS_STAGES());
+    if (Target::EGRESS_SEPARATE())
+        while (int(epipe.size()) < Target::NUM_EGRESS_STAGES())
+            epipe.emplace_back(epipe.size(), true);
 #endif
     if (args.size != 2 || args[0].type != tINT ||
         (args[1] != "ingress" && args[1] != "egress" &&
@@ -66,16 +65,23 @@ void AsmStage::start(int lineno, VECTOR(value_t) args) {
         error(lineno, "invalid stage number");
 #if HAVE_FLATROCK
     } else if (args[1] == "egress" && Target::EGRESS_SEPARATE()) {
-        if ((unsigned)args[0].i >= epipe.size())
-            epipe.resize(args[0].i + 1);
+        while ((unsigned)args[0].i >= epipe.size())
+            epipe.emplace_back(epipe.size(), true);
 #endif
     } else if ((unsigned)args[0].i >= pipe.size()) {
-        pipe.resize(args[0].i + 1); }
-    for (size_t i = oldsize; i < pipe.size(); i++)
-        pipe[i].stageno = i;
+        while ((unsigned)args[0].i >= pipe.size())
+            pipe.emplace_back(pipe.size(), false);
+    }
 #if HAVE_FLATROCK
-    for (size_t i = oldesize; i < epipe.size(); i++)
-        epipe[i].stageno = i;
+    if (Target::EGRESS_SEPARATE() && Target::TCAM_GLOBAL_ACCESS()) {
+        // ingress and egress pipes are laid out in reverse order, with the first
+        // egress stage next to (sharing with) the last ingress stage.
+        int i = pipe.size() - 1;
+        for (auto &estage : epipe) {
+            estage.shared_tcam_stage = &pipe[i];
+            pipe[i].all_refs.insert(&estage.shared_tcam_stage);
+            if (--i < 0) break; }
+    }
 #endif
 }
 
@@ -459,17 +465,23 @@ std::map<int, std::pair<bool, int>> Stage_data::teop = {
     { 3, { false, INT_MAX } }
 };
 
-Stage::Stage() {
+Stage::Stage(int stage, bool egress_only) : Stage_data(stage, egress_only) {
     static_assert(sizeof(Stage_data) == sizeof(Stage),
                   "All non-static Stage fields must be in Stage_data");
     table_use[0] = table_use[1] = NONE;
     stage_dep[0] = stage_dep[1] = NONE;
     error_mode[0] = error_mode[1] = PROPAGATE;
-    for (int i = 0; i < SRAM_ROWS; i++)
-        sram_use[i][0] = sram_use[i][1] = &invalid_rams;
+    for (int i = 0; i < Target::SRAM_ROWS(egress_only ? EGRESS : INGRESS); i++)
+        for (int j = 0; j < Target::SRAM_REMOVED_COLUMNS(); j++)
+            sram_use[i][j] = &invalid_rams;
 }
 
 Stage::~Stage() {
+    for (auto ref : all_refs)
+        *ref = nullptr;
+    if (shared_tcam_stage) {
+        shared_tcam_stage->all_refs.erase(&shared_tcam_stage);
+        shared_tcam_stage = nullptr; }
 }
 
 int Stage::first_table(gress_t gress) {
@@ -495,6 +507,10 @@ Stage *Stage::stage(gress_t gress, int stageno) {
 Stage::Stage(Stage &&a) : Stage_data(std::move(a)) {
     for (auto ref : all_refs)
         *ref = this;
+    if (shared_tcam_stage) {
+        shared_tcam_stage->all_refs.insert(&shared_tcam_stage);
+        shared_tcam_stage->all_refs.erase(&a.shared_tcam_stage);
+        a.shared_tcam_stage = nullptr; }
 }
 
 bitvec Stage::imem_use_all() const {

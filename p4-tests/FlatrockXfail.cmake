@@ -166,7 +166,7 @@ p4c_add_xfail_reason("tofino5"
 #  )
 
 p4c_add_xfail_reason("tofino5"
-  "Assembler BUG"  # Looping trying to get a valid RANDOM_DYN matrix
+  "Table .* using out-of-bounds Mem"
   extensions/p4_tests/p4_16/flatrock/dconfig1.p4
   )
 

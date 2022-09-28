@@ -107,7 +107,10 @@ void IdletimeTable::write_regs_vt(REGS &regs) {
         auto &map_alu_row = map_alu.row[row.row];
         auto &adrmux = map_alu_row.adrmux;
         auto vpn = row.vpns.begin();
-        for (int col : row.cols) {
+        for (auto &memunit : row.memunits) {
+            int col = memunit.col;
+            BUG_CHECK(memunit.stage == -1 && memunit.row == row.row,
+                      "bogus %s in row %d", memunit.desc(), row.row);
             setup_muxctl(map_alu_row.vh_xbars.adr_dist_idletime_adr_xbar_ctl[col], row.bus % 10);
             auto &mapram_cfg = adrmux.mapram_config[col];
             // auto &mapram_ctl = adrmux.mapram_ctl[col];

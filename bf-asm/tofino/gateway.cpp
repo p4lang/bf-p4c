@@ -202,11 +202,11 @@ void Target::Tofino::GatewayTable::pass3() {
             SRamMatchTable::WayRam *way = nullptr;
             for (auto &row : sram_tbl->layout) {
                 if (row.row == layout[0].row && row.bus == layout[0].bus) {
-                    if (row.cols.empty()) {
+                    if (row.memunits.empty()) {
                         // FIXME -- not really used, so we don't need to check the
                         // match/hash group.  Should this be an asm error?
                         return; }
-                    way = &sram_tbl->way_map.at(SRamMatchTable::Ram(row.row, row.cols[0]));
+                    way = &sram_tbl->way_map.at(row.memunits[0]);
                     break; } }
             BUG_CHECK(way, "%s claims to use search bus %d.%d, but we can't find it in the layout",
                       sram_tbl->name(), layout[0].row, layout[0].bus);

@@ -577,14 +577,18 @@ void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
                 } else if (p && !p->key_name.empty()) {
                     field_name = p->key_name;
                 }
-                // FIXME: input_xbar[0]->get_group_bit(input_xbar[0]->get_group() col.first);
-
+                auto group = input_xbar[0]->hashtable_input_group(hash_table_id);
+                int group_bit = bit;
+                // FIXME -- this adjustment is a hack for tofino1/2/3.  Should have a virtual
+                // method on InputXbar?  or something in Target?
+                if (group.index != hash_table_id.index && (hash_table_id.index & 1))
+                    group_bit += 64;
                 bits_to_xor->push_back(json::map{
                     {"field_bit", json::number(field_bit)},
                     {"field_name", json::string(field_name)},
                     {"global_name", json::string(global_name)},
-                    {"hash_match_group", json::number(hash_table_id.index / 2)},
-                    {"hash_match_group_bit", json::number((hash_table_id.index % 2) * 64 + bit)}
+                    {"hash_match_group", json::number(group.index)},
+                    {"hash_match_group_bit", json::number(group_bit)}
                     });
             }
         }

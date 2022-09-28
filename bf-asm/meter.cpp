@@ -144,7 +144,10 @@ void MeterTable::setup(VECTOR(pair_t) &data) {
     }
     if (teop >= 0 && count != BYTES)
         error(lineno, "tEOP bus can only used when counting bytes");
-    alloc_rams(true, stage->sram_use);
+    if (Target::SRAM_GLOBAL_ACCESS())
+        alloc_global_srams();
+    else
+        alloc_rams(true, stage->sram_use);
 }
 
 void MeterTable::pass1() {
@@ -160,11 +163,12 @@ void MeterTable::pass1() {
     if (uses_colormaprams() && color_mapram_addr == NO_COLOR_MAP)
         error(lineno, "Missing color mapram address type in table %s", name());
     for (auto &r : color_maprams) {
-        for (auto col : r.cols) {
-            if (Table *old = stage->mapram_use[r.row][col])
+        for (auto &memunit : r.memunits) {
+            BUG_CHECK(memunit.row == r.row, "memunit on wrong row");
+            if (Table *old = stage->mapram_use[r.row][memunit.col])
                 error(r.lineno, "Table %s trying to use mapram %d,%d for color, which is "
-                      "in use by table %s", name(), r.row, col, old->name());
-            stage->mapram_use[r.row][col] = this; } }
+                      "in use by table %s", name(), r.row, memunit.col, old->name());
+            stage->mapram_use[r.row][memunit.col] = this; } }
     if (!no_vpns && !color_maprams.empty() && color_maprams[0].vpns.empty())
         setup_vpns(color_maprams, 0);
     std::sort(layout.begin(), layout.end(),
@@ -655,7 +659,7 @@ void MeterTable::write_mapram_color_regs(REGS &regs, bool &push_on_overflow) {
             BUG_CHECK(curr_home_row/4U >= row.row/2U);
             /* b_oflo_color_write_o_sel_t_oflo_color_write_i must be set for all
              * switchboxes below the homerow and above current row
-	     * It should never be set for a switchbox above the home row
+             * It should never be set for a switchbox above the home row
              * It should never be set on the switchbox on the current row
              * as that would drive the top overflow down to any color maprams below.
              * This is invalid and can cause corruption if there is another meter occupying
@@ -700,7 +704,10 @@ void MeterTable::write_mapram_color_regs(REGS &regs, bool &push_on_overflow) {
             adr_ctl.adr_dist_oflo_adr_xbar_enable = 1;
         }
 
-        for (int col : row.cols) {
+        for (auto &memunit : row.memunits) {
+            int col = memunit.col;
+            BUG_CHECK(memunit.stage == -1 && memunit.row == row.row,
+                      "bogus %s in row %d", memunit.desc(), row.row);
             auto &mapram_config = map_alu_row.adrmux.mapram_config[col];
             if (row.row == curr_home_row/2)
                 mapram_config.mapram_color_bus_select = MapRam::ColorBus::COLOR;
@@ -750,7 +757,7 @@ void MeterTable::write_mapram_color_regs(REGS &regs, bool &push_on_overflow) {
             if (gress)
                 regs.cfg_regs.mau_cfg_mram_thread[col/3U] |= 1U << (col%3U*8U + row.row);
             ++vpn;
-	}
+        }
     }
 
     // Additional BUG_CHECK to verify that both these regs are not set on a switchbox
@@ -775,8 +782,8 @@ void MeterTable::write_mapram_color_regs(REGS &regs, bool &push_on_overflow) {
             map_alu.mapram_color_write_switchbox[i]
              .ctl.b_oflo_color_write_o_mux_select
              .b_oflo_color_write_o_sel_r_color_write_i == 1;
-        LOG5("i: " << i << "t_oflo: " << t_oflo_write_i 
-		        << ", r_oflo: " << r_oflo_write_i);
+        LOG5("i: " << i << "t_oflo: " << t_oflo_write_i
+                        << ", r_oflo: " << r_oflo_write_i);
         BUG_CHECK(!(t_oflo_write_i & r_oflo_write_i),
                  "Color maprams have invalid configuration"
                  " may cause corruption of color data from meter");
@@ -809,7 +816,10 @@ void MeterTable::write_regs_vt(REGS &regs) {
         BUG_CHECK(home != nullptr);
         LOG2("# DataSwitchbox.setup_row(" << row << ") home=" << home->row/2U);
         swbox->setup_row(row);
-        for (int logical_col : logical_row.cols) {
+        for (auto &memunit : logical_row.memunits) {
+            int logical_col = memunit.col;
+            BUG_CHECK(memunit.stage == -1 && memunit.row == logical_row.row,
+                      "bogus %s in logical row %d", memunit.desc(), logical_row.row);
             unsigned col = logical_col + 6*side;
             LOG2("# DataSwitchbox.setup_row_col(" << row << ", " << col << ", vpn=" << *vpn <<
                  ") home=" << home->row/2U);

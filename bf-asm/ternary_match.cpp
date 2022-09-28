@@ -49,13 +49,13 @@ void TernaryMatchTable::alloc_vpns() {
     std::vector<Layout *> rows;
     for (auto &r : layout) {
         rows.push_back(&r);
-        r.vpns.resize(r.cols.size()); }
+        r.vpns.resize(r.memunits.size()); }
     std::sort(rows.begin(), rows.end(), [](Layout *const&a, Layout *const&b)->bool {
                 return a->row < b->row; });
     int vpn = 0;
     for (int col = 0; col <= 1; ++col) {
         for (auto *r : rows) {
-            unsigned idx = find(r->cols, col) - r->cols.begin();
+            unsigned idx = find(r->memunits, MemUnit(r->row, col)) - r->memunits.begin();
             if (idx < r->vpns.size())
                 r->vpns[idx] = vpn++/width; }
         if (vpn%width != 0)
@@ -109,8 +109,8 @@ TernaryMatchTable::Match::Match(const value_t &v) : lineno(v.lineno) {
 static void check_tcam_match_bus(const std::vector<Table::Layout> &layout) {
     for (auto &row : layout) {
         if (row.bus < 0) continue;
-        for (auto col : row.cols)
-            if (row.bus != col)
+        for (auto &tcam : row.memunits)
+            if (row.bus != tcam.col)
                 error(row.lineno, "Tcam match bus hardwired to tcam column");
     }
 }
@@ -161,7 +161,10 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
                     value_desc(kv.key), name());
         }
     }
-    alloc_rams(false, stage->tcam_use, &stage->tcam_match_bus_use);
+    if (Target::TCAM_GLOBAL_ACCESS())
+        alloc_global_tcams();
+    else
+        alloc_rams(false, stage->tcam_use, &stage->tcam_match_bus_use);
     check_tcam_match_bus(layout);
     if (indirect_bus >= 0) {
         stage->tcam_indirect_bus_use[indirect_bus/2][indirect_bus&1] = this; }
@@ -229,7 +232,7 @@ void TernaryMatchTable::pass1() {
     } else {
         auto mg = match.begin();
         for (auto &row : layout) {
-            if (row.bus < 0) row.bus = row.cols.at(0);
+            if (row.bus < 0) row.bus = row.memunits.at(0).col;
             if (mg->byte_group >= 0) {
                 auto &bg_use = stage->tcam_byte_group_use[row.row/2][row.bus];
                 if (bg_use.first) {
@@ -250,16 +253,20 @@ void TernaryMatchTable::pass1() {
     for (auto &row : layout) row_use |= 1U << row.row;
     unsigned word = 0, wide_row_use = 0;
     int prev_row = -1;
-    std::vector<int> *cols = nullptr;
+    std::vector<MemUnit> *memunits = nullptr;
     for (auto &row : layout) {
-        if (row.cols.empty()) {
+        if (row.memunits.empty()) {
             error(row.lineno, "Empty row in ternary table %s", name());
             continue; }
-        if (cols) {
-            if (row.cols != *cols)
+        if (memunits) {
+            if (row.memunits.size() != memunits->size())
                 error(row.lineno, "Column mismatch across rows in wide tcam match");
+            for (size_t i = 0; i < row.memunits.size(); ++i)
+                if (row.memunits[i].stage != memunits->at(i).stage ||
+                    row.memunits[i].col != memunits->at(i).col)
+                    error(row.lineno, "Column mismatch across rows in wide tcam match");
         } else {
-            cols = &row.cols; }
+            memunits = &row.memunits; }
         wide_row_use |= 1U << row.row;
         if (++word == match.size()) {
             int top_row = floor_log2(wide_row_use);
@@ -275,13 +282,14 @@ void TernaryMatchTable::pass1() {
                     wide_row_use -= 1U << bottom_row;
                 else
                     wide_row_use -= 1U << 6;
-                for (int col : *cols) {
+                for (auto &memunit : *memunits) {
+                    int col = memunit.col;
                     if (col < 0 || col >= TCAM_UNITS_PER_ROW)
                         error(row.lineno, "Invalid column %d in table %s", col, name());
                     else
                         chain_rows[col] |= wide_row_use; } }
             word = 0;
-            cols = nullptr;
+            memunits = nullptr;
             wide_row_use = 0; } }
     if (indirect) {
         if (hit_next.size() > 0 && indirect->hit_next.size() > 0)
@@ -413,20 +421,22 @@ template<class REGS> void TernaryMatchTable::write_regs_vt(REGS &regs) {
     auto &merge = regs.rams.match.merge;
     for (Layout &row : layout) {
         auto vpn = row.vpns.begin();
-        for (auto col : row.cols) {
-            auto &tcam_mode = regs.tcams.col[col].tcam_mode[row.row];
+        for (auto tcam : row.memunits) {
+            BUG_CHECK(tcam.stage == -1 && tcam.row == row.row,
+                      "bogus tcam %s in row %d", tcam.desc(), row.row);
+            auto &tcam_mode = regs.tcams.col[tcam.col].tcam_mode[row.row];
             // tcam_mode.tcam_data1_select = row.bus; -- no longer used
             if (options.match_compiler)
-                tcam_mode.tcam_data1_select = col;
-            tcam_mode.tcam_chain_out_enable = (chain_rows[col] >> row.row) & 1;
+                tcam_mode.tcam_data1_select = tcam.col;
+            tcam_mode.tcam_chain_out_enable = (chain_rows[tcam.col] >> row.row) & 1;
             if (gress == INGRESS)
                 tcam_mode.tcam_ingress = 1;
             else if (gress == EGRESS)
                 tcam_mode.tcam_egress = 1;
             else if (gress == GHOST)
-                tcam_ghost_enable(regs, row.row, col);
+                tcam_ghost_enable(regs, row.row, tcam.col);
             tcam_mode.tcam_match_output_enable =
-                ((~chain_rows[col] | ALWAYS_ENABLE_ROW) >> row.row) & 1;
+                ((~chain_rows[tcam.col] | ALWAYS_ENABLE_ROW) >> row.row) & 1;
             tcam_mode.tcam_vpn = *vpn++;
             set_tcam_mode_logical_table(tcam_mode.tcam_logical_table, tcam_id, logical_id);
             tcam_mode.tcam_data_dirtcam_mode = match[word].dirtcam & 0x3ff;
@@ -435,18 +445,18 @@ template<class REGS> void TernaryMatchTable::write_regs_vt(REGS &regs) {
             auto &tcam_vh_xbar = regs.tcams.vh_data_xbar;
             if (options.match_compiler) {
                 for (int i = 0; i < 8; i++)
-                    tcam_vh_xbar.tcam_validbit_xbar_ctl[col][row.row/2][i] |= 15; }
-            auto &halfbyte_mux_ctl = tcam_vh_xbar.tcam_row_halfbyte_mux_ctl[col][row.row];
+                    tcam_vh_xbar.tcam_validbit_xbar_ctl[tcam.col][row.row/2][i] |= 15; }
+            auto &halfbyte_mux_ctl = tcam_vh_xbar.tcam_row_halfbyte_mux_ctl[tcam.col][row.row];
             halfbyte_mux_ctl.tcam_row_halfbyte_mux_ctl_select = match[word].byte_config;
             halfbyte_mux_ctl.tcam_row_halfbyte_mux_ctl_enable = 1;
             halfbyte_mux_ctl.tcam_row_search_thread = timing_thread(gress);
             if (match[word].word_group >= 0)
-                setup_muxctl(tcam_vh_xbar.tcam_row_output_ctl[col][row.row],
+                setup_muxctl(tcam_vh_xbar.tcam_row_output_ctl[tcam.col][row.row],
                              match[word].word_group);
             if (match[word].byte_group >= 0)
-                setup_muxctl(tcam_vh_xbar.tcam_extra_byte_ctl[col][row.row/2],
+                setup_muxctl(tcam_vh_xbar.tcam_extra_byte_ctl[tcam.col][row.row/2],
                              match[word].byte_group);
-            tcam_table_map(regs, row.row, col); }
+            tcam_table_map(regs, row.row, tcam.col); }
         if (++word == match.size()) word = 0; }
     if (tcam_id >= 0)
         setup_muxctl(merge.tcam_hit_to_logical_table_ixbar_outputmap[tcam_id], logical_id);
@@ -510,9 +520,9 @@ std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl
     for (auto colnum = 0U; !done; colnum++) {
         done = true;
         for (auto &row : layout) {
-            if (colnum >= row.cols.size())
+            if (colnum >= row.memunits.size())
                 continue;
-            auto col = row.cols[colnum];
+            auto col = row.memunits[colnum].col;
             auto vpn = row.vpns[colnum];
             mem_units.push_back(memunit(row.row, col));
             lrow = memunit(row.row, col);
@@ -1023,7 +1033,10 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
         }
-    alloc_rams(false, stage->sram_use, &stage->tcam_indirect_bus_use);
+    if (Target::SRAM_GLOBAL_ACCESS())
+        alloc_global_srams();
+    else
+        alloc_rams(false, stage->sram_use, &stage->tcam_indirect_bus_use);
     if (!action.set() && !actions)
         error(lineno, "Table %s has neither action table nor immediate actions", name());
     if (actions && !action_bus) action_bus = ActionBus::create();
@@ -1102,7 +1115,10 @@ template<class REGS> void TernaryIndirectTable::write_regs_vt(REGS &regs) {
         BUG_CHECK(row.result_bus >= 0);
         auto vpn = row.vpns.begin();
         auto &ram_row = regs.rams.array.row[row.row];
-        for (int col : row.cols) {
+        for (auto &memunit : row.memunits) {
+            int col = memunit.col;
+            BUG_CHECK(memunit.stage == -1 && memunit.row == row.row,
+                      "bogus %s in row %d", memunit.desc(), row.row);
             auto &unit_ram_ctl = ram_row.ram[col].unit_ram_ctl;
             unit_ram_ctl.match_ram_write_data_mux_select = 7; /* disable */
             unit_ram_ctl.match_ram_read_data_mux_select = 7; /* disable */

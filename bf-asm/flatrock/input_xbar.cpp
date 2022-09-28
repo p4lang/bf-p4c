@@ -111,47 +111,76 @@ unsigned Flatrock::InputXbar::exact_physical_ids() const {
 
 void Flatrock::InputXbar::pass2() {
     ::InputXbar::pass2();
-    // Find the range (min/max) of units used in the exact byte and word xbars.  This
-    // will only be needed if this ixbar is for an exact match table, but that is ok.
-    int lo[2] = { INT_MAX, INT_MAX }, hi[2] = { -1, -1 };
-    for (auto &group : groups) {
-        if (group.first.type != Group::EXACT) continue;
-        BUG_CHECK(group.first.index < 2, "invalid exact group %d", group.first.index);
-        for (auto &input : group.second) {
-            if (input.lo < lo[group.first.index]) lo[group.first.index] = input.lo;
-            if (input.hi > hi[group.first.index]) hi[group.first.index] = input.hi; } }
-    if (hi[0] >= lo[0]) {
-        first8 = lo[0]/8U;
-        num8 = hi[0]/8U - first8 + 1;
-    } else {
-        first8 = num8 = 0; }
-    if (hi[1] >= lo[1]) {
-        first32 = lo[1]/32U;
-        num32 = hi[1]/32U - first32 + 1;
-    } else {
-        first32 = num32 = 0; }
 }
 
-std::vector<const InputXbar::Input *> Flatrock::InputXbar::find_hash_inputs(
-            Phv::Slice sl, HashTable ht) const {
+void Flatrock::InputXbar::setup_match_key_cfg(const MatchSource *match) {
+    // extend the ranges of the keys in the key_cfg to cover the specified MatchSource
+    if (auto *phv = dynamic_cast<const Phv::Ref *>(match)) {
+        auto sl = **phv;
+        Group group(Group::EXACT, -1);
+        if (auto *in = find(sl, group, &group)) {
+            BUG_CHECK(group.type == Group::EXACT, "find corrupted group.type?");
+            size_t lo = in->lo + sl.lo - in->what->lo;
+            size_t hi = lo + sl.size() - 1;
+            switch (group.index) {
+            case 0:  // byte ixbar
+                if (num8 == 0) {
+                    first8 = lo/8;
+                    num8 = hi/8 + 1 - first8;
+                } else {
+                    if (first8 > lo/8) {
+                        num8 += first8 - lo/8;
+                        first8 = lo/8; }
+                    if (num8 < hi/8 + 1 - first8)
+                        num8 = hi/8 + 1 - first8; }
+                break;
+            case 1:  // word ixbar
+                if (num32 == 0) {
+                    first32 = lo/32;
+                    num32 = hi/32 + 1 - first32;
+                } else {
+                    if (first32 > lo/32) {
+                        num32 += first32 - lo/32;
+                        first32 = lo/32; }
+                    if (num32 < hi/32 + 1 - first32)
+                        num32 = hi/32 + 1 - first32; }
+                break;
+            default:
+                BUG("invalid exact group %d", group.index); }
+        } else {
+            error(match->get_lineno(), "%s not available on exact ixbar in table %s",
+                  match->toString().c_str(), table->name()); }
+    } else if (auto *hash = dynamic_cast<const HashMatchSource *>(match)) {
+        error(match->get_lineno(), "HashMatchSource not supported on flatrock");
+        // up to 24 hash bits are included, so we can support it
+    } else {
+        BUG();
+    }
+}
+
+InputXbar::Group Flatrock::InputXbar::hashtable_input_group(HashTable ht) const {
     BUG_CHECK(ht.type == HashTable::EXACT || ht.type == HashTable::XCMP,
               "invalid ht.type: %s", ht.toString().c_str());
-    Group group(ht.type == HashTable::EXACT ? Group::EXACT : Group::XCMP, ht.index);
-    return find_all(sl, group);
+    return Group(ht.type == HashTable::EXACT ? Group::EXACT : Group::XCMP, ht.index);
 }
 
 int Flatrock::InputXbar::find_offset(const MatchSource *ms, Group group) const {
     if (auto *phv = dynamic_cast<const Phv::Ref *>(ms)) {
         auto sl = **phv;
         if (auto *in = find(sl, group, &group)) {
-            int offset = in->lo + sl.lo - in->what->lo;
+            unsigned offset = in->lo + sl.lo - in->what->lo;
             if (group.type == Group::EXACT) {
                 switch (group.index) {
                 case 0:  // byte ixbar
+                    BUG_CHECK(offset >= first8 * 8 && offset + sl.size() - 1 < (first8 + num8) * 8,
+                              "%s not in the key_cfg", ms->toString().c_str());
                     offset += num32 * 32;
                     offset -= first8 * 8;
                     break;
                 case 1:  // word ixbar
+                    BUG_CHECK(offset >= first32 * 32 &&
+                              offset + sl.size() - 1 < (first32 + num32) * 32,
+                              "%s not in the key_cfg", ms->toString().c_str());
                     offset -= first32 * 32;
                     break;
                 default:
@@ -159,7 +188,7 @@ int Flatrock::InputXbar::find_offset(const MatchSource *ms, Group group) const {
             BUG_CHECK(offset >= 0, "computed invalid offset in InputXbar::find_offset");
             return offset; }
     } else if (auto *hash = dynamic_cast<const HashMatchSource *>(ms)) {
-        error(lineno, "HashMatchSource not supported on flatrock");
+        error(ms->get_lineno(), "HashMatchSource not supported on flatrock");
         // up to 24 hash bits are included starting at num32*32 + num8*8, so we can support it
     } else {
         BUG();
@@ -408,68 +437,83 @@ void Flatrock::InputXbar::write_xmu_key_mux(Target::Flatrock::mau_regs::_ppu_ems
         xmu.rf.ems_key_cfg[d].num32 = num32; }
 }
 
-void Flatrock::InputXbar::write_xme_regs(Target::Flatrock::mau_regs::_ppu_eml &xmu, int xme) {
-    auto *mt = table->to<SRamMatchTable>();
-    BUG_CHECK(mt, "%s is not an sram table", table->name());
-    SRamMatchTable::Ram unit(xme);
-    auto *way = mt->way_for_ram(unit);
-    int idx = std::find(way->rams.begin(), way->rams.end(), unit) - way->rams.begin();
-    int subword_bits = std::max(0, 7 - static_cast<int>(table->format->log2size));
-    int bank_bits = ceil_log2(way->rams.size());
-    int set_size = 1;
+// Info we need for both LAMB and STM xme config
+struct Flatrock::InputXbar::xme_cfg_info_t {
+    int log2_way_depth = 0;
+    int subword_bits = 0;
+    int set_size = 0;
     bitvec key_mask;
     int key_size = 0;
     int valid_en = 0;
+    int hash_base = 0;
+};
+
+/* common code needed to gather info about a cuckoo table for both LAMB and STM */
+void Flatrock::InputXbar::find_xme_info(xme_cfg_info_t &info, const SRamMatchTable::Way *way) {
+    info.subword_bits = std::max(0, 7 - static_cast<int>(table->format->log2size));
+    info.log2_way_depth = ceil_log2(way->rams.size());
+    info.set_size = 1;
     if (auto *match = table->format->field("match")) {
         // cuckoo hash (or BPH?)
-        set_size = table->format->groups();
-        while (set_size > 4) {
-            BUG_CHECK((set_size & 1) == 0, "cuckoo table %s match groups not valid", table->name());
-            set_size >>= 1;
-            ++subword_bits; }
-        for (int i = 0; i < set_size; ++i) {
+        info.set_size = table->format->groups();
+        while (info.set_size > 4) {
+            BUG_CHECK((info.set_size & 1) == 0,
+                      "cuckoo table %s match groups not valid", table->name());
+            info.set_size >>= 1;
+            ++info.subword_bits; }
+        for (int i = 0; i < info.set_size; ++i) {
             for (auto &br : match->by_group[i]->bits) {
-                key_mask.setrange(br.lo, br.size());
-                if (i == 0 && br.hi >= key_size)
-                    key_size = br.hi+1; } }
+                info.key_mask.setrange(br.lo, br.size());
+                if (i == 0 && br.hi >= info.key_size)
+                    info.key_size = br.hi+1; } }
         int shift = 64;
-        for (int i = 0; i < subword_bits; ++i, shift >>= 1)
-            key_mask |= key_mask << shift;
+        for (int i = 0; i < info.subword_bits; ++i, shift >>= 1)
+            info.key_mask |= info.key_mask << shift;
     } else {
         // direct match
         BUG_CHECK((table->format->groups() & (table->format->groups() - 1)) == 0,
                   "direct table %s match groups not a power of 2", table->name());
-        subword_bits += ceil_log2(table->format->groups());
+        info.subword_bits += ceil_log2(table->format->groups());
     }
     if (auto *valid = table->format->field("valid")) {
         BUG_CHECK(valid->bits.size() == 1 && valid->bits.front().size() == 1,
                   "valid is not one bit");
-        BUG_CHECK(valid->bits.front().lo >= key_size, "valid is not after match");
-        key_size = valid->bits.front().lo + 1;
-        valid_en = 1; }
-    BUG_CHECK(subword_bits == way->subword_bits, "subword bit size mismatch");
-    int addr_size = bank_bits + 6 + subword_bits;  // 6 is the whole lamb, but we could use less?
-    int hash_base = way->index;
+        BUG_CHECK(valid->bits.front().lo >= info.key_size, "valid is not after match");
+        info.key_size = valid->bits.front().lo + 1;
+        info.valid_en = 1; }
+    BUG_CHECK(info.subword_bits == way->subword_bits, "subword bit size mismatch");
+    info.hash_base = way->index;
+}
+
+void Flatrock::InputXbar::write_xme_regs(Target::Flatrock::mau_regs::_ppu_eml &xmu, int xme) {
+    xme_cfg_info_t info;
+    auto *mt = table->to<SRamMatchTable>();
+    BUG_CHECK(mt, "%s is not an sram table", table->name());
+    SRamMatchTable::Ram unit(xme);
+    auto *way = mt->way_for_ram(unit);
+    find_xme_info(info, way);
+    int banknum = std::find(way->rams.begin(), way->rams.end(), unit) - way->rams.begin();
     for (int d : dconfig) {
         auto &addr = xmu.rf.eml_addr_cfg[xme%2U][d];
-        addr.banknum = idx;
-        addr.banknum_size = bank_bits;
-        addr.banknum_start = hash_base + addr_size - bank_bits;
+        addr.banknum = banknum;
+        addr.banknum_size = info.log2_way_depth;
+        addr.banknum_start = info.hash_base + LAMB_DEPTH_BITS + info.subword_bits;
         addr.base_addr = 0;   // does not seem useful?
-        addr.idx_size = 6;
-        addr.idx_start = hash_base + subword_bits;
+        addr.idx_size = LAMB_DEPTH_BITS;
+        addr.idx_start = info.hash_base + info.subword_bits;
         xmu.rf.eml_en_sel[xme%2U][d].en = 1;
+        xmu.rf.eml_en_sel[xme%2U][d].sel = xme/2U;
         xmu.rf.eml_lamb_map[xme%2U][d].sel = output_unit;
         auto &match = xmu.rf.eml_match_cfg[xme%2U][d];
         match.bph_l1_en = 0;  // FIXME -- support BPH
-        match.entries_per_set = set_size;
+        match.entries_per_set = info.set_size;
         for (int i = 0; i < 16; ++i)
-            match.key_mask[i] = key_mask.getrange(i*8, 8);
-        match.key_and_v_size = key_size;
-        match.sets_per_word = subword_bits;
-        match.valid_en = valid_en;
+            match.key_mask[i] = info.key_mask.getrange(i*8, 8);
+        match.key_and_v_size = info.key_size;
+        match.sets_per_word = info.subword_bits;
+        match.valid_en = info.valid_en;
         auto &payload = xmu.rf.eml_payload_cfg[xme%2U][d];
-        payload.action_size = (MEM_WORD_WIDTH >> subword_bits)/set_size - key_size;
+        payload.action_size = (MEM_WORD_WIDTH >> info.subword_bits)/info.set_size - info.key_size;
         payload.addon = 0;      // not clear what it is used for?
         payload.base_mask = 0;  // pass ram data (can pass key bytes, useful for?)
         payload.cuckoo_start = 0;
@@ -481,7 +525,59 @@ void Flatrock::InputXbar::write_xme_regs(Target::Flatrock::mau_regs::_ppu_eml &x
 }
 
 void Flatrock::InputXbar::write_xme_regs(Target::Flatrock::mau_regs::_ppu_ems &xmu, int xme) {
-    BUG("STM XME setup not done yet");
+    xme_cfg_info_t info;
+    auto *mt = table->to<SRamMatchTable>();
+    BUG_CHECK(mt, "%s is not an sram table", table->name());
+    find_xme_info(info, mt->way_for_xme(xme | FIRST_STM_XME));
+    for (int d : dconfig) {
+        auto &addr = xmu.rf.ems_addr_cfg[xme%2U][d];
+        // FIXME -- are banks useful for STM tables?  One xme can access all the rams
+        addr.banknum = 0;
+        addr.banknum_size = 0;
+        addr.banknum_start = 0;
+        addr.base_addr = 0;   // does not seem useful?
+        addr.idx_sel = 0;   // not BPH -- revisit when BFH support
+        addr.idx_size = SRAM_DEPTH_BITS + info.log2_way_depth;
+        addr.idx_start = info.hash_base + info.subword_bits;
+        addr.alt_match_type = 0;   // FIXME -- what is this for? CSR comment not clear
+        addr.limit = 0xfffff;   // for non-power-2 size, ignore for now
+        xmu.rf.ems_en_sel[xme%2U][d].en = 1;
+        xmu.rf.ems_en_sel[xme%2U][d].sel = xme/2U;
+        auto &match = xmu.rf.ems_match_cfg[xme%2U][d];
+        match.bph_l1_en = 0;  // FIXME -- support BPH
+        if (xme%2) {
+            match.cascade_start = 1;  // per Carsten, this should be 1 for cuckoo matches?
+            // FIXME -- support BPH (wide vs narrow>?)
+        }
+        match.entries_per_set = info.set_size;
+        for (int i = 0; i < 16; ++i)
+            match.key_mask[i] = info.key_mask.getrange(i*8, 8);
+        match.key_and_v_size = info.key_size;
+        match.l1_passthru = 0;  // FIXME -- support BPH
+        match.sets_per_word = info.subword_bits;
+        match.valid_en = info.valid_en;
+        // FIXME -- one payload config for both XMEs in XMU -- only config once?
+        auto &payload = xmu.rf.ems_payload_cfg[d];
+        payload.action_size = (MEM_WORD_WIDTH >> info.subword_bits)/info.set_size - info.key_size;
+        payload.addon = 0;      // not clear what it is used for?
+        payload.base_mask = 0;  // pass ram data (can pass key bytes, useful for?)
+        payload.cuckoo_start = 0;
+        payload.idx_hi = 0;     // insert the 'index' into the payload.
+        payload.idx_lo = 1;
+        payload.idx_rot[0] = 0;
+        payload.idx_rot[1] = 0;
+        payload.idx_rot[2] = 0;
+        payload.idx_sel = 0;  // FIXME -- support BPH
+        payload.mres_en = 1;
+        payload.way_en = 1;
+    }
+    // FIXME -- one ems_cfg for both XMEs in XMU -- only config once?
+    auto &cfg = xmu.rf.ems_cfg;
+    cfg.l1_addr_delay = 3;  // FIXME -- delay config
+    cfg.l1_key_delay = 3;   // FIXME -- delay config
+    cfg.l2_delay = 3;       // FIXME -- delay config
+    cfg.stm_miss_allow = 0;
+    cfg.xmu_delay = 0;      // FIXME -- delay config
 }
 
 void Flatrock::InputXbar::write_xmu_regs_v(Target::Flatrock::mau_regs &regs) {

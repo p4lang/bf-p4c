@@ -68,7 +68,10 @@ void SelectionTable::setup(VECTOR(pair_t) &data) {
         else
             p4_table = P4Table::get(P4Table::Selection, p4_info); }
     fini(p4_info);
-    alloc_rams(true, stage->sram_use);
+    if (Target::SRAM_GLOBAL_ACCESS())
+        alloc_global_srams();
+    else
+        alloc_rams(true, stage->sram_use);
 }
 
 void SelectionTable::pass1() {
@@ -300,8 +303,10 @@ void SelectionTable::write_regs_vt(REGS &regs) {
         auto &map_alu_row =  map_alu.row[row];
         LOG2("# DataSwitchbox.setup(" << row << ") home=" << home->row/2U);
         swbox.setup_row(row);
-        for (int logical_col : logical_row.cols) {
-            unsigned col = logical_col + 6*side;
+        for (auto &memunit : logical_row.memunits) {
+            BUG_CHECK(memunit.stage == -1 && memunit.row == logical_row.row,
+                      "bogus %s in logical row %d", memunit.desc(), logical_row.row);
+            unsigned col = memunit.col + 6*side;
             swbox.setup_row_col(row, col, *vpn);
             write_mapram_regs(regs, row, *mapram, *vpn, MapRam::SELECTOR_SIZE);
             if (gress)
