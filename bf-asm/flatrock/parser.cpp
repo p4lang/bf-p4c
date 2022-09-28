@@ -2012,9 +2012,9 @@ void FlatrockParser::AnalyzerStage::write_config(RegisterSetBase &regs, json::ma
          *    so the match values need to be converted to network byte order.
          */
         fr_regs.prsr_mem.parser_key_w.key_w[*stage][rule_idx].key_wh =
-            ::htons(rule.match.w0.word0 & 0xffff) | (::htons(rule.match.w1.word0 & 0xffff) << 16);
+            htons(rule.match.w0.word0 & 0xffff) | (htons(rule.match.w1.word0 & 0xffff) << 16);
         fr_regs.prsr_mem.parser_key_w.key_w[*stage][rule_idx].key_wl =
-            ::htons(rule.match.w0.word1 & 0xffff) | (::htons(rule.match.w1.word1 & 0xffff) << 16);
+            htons(rule.match.w0.word1 & 0xffff) | (htons(rule.match.w1.word1 & 0xffff) << 16);
 
         /* -- w0, w1, w2 offsets */
         fr_regs.prsr_mem.parser_ana_w.ana_w[*stage][rule_idx].exw_skip =
