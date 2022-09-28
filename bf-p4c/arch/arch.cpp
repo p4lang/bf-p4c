@@ -259,20 +259,37 @@ IR::BFN::TnaControl* RestoreParams::preorder(IR::BFN::TnaControl* control) {
         add_param(tnaParams, params, "hdr", 0);
         add_param(tnaParams, params, "ig_md", 1);
         add_param(tnaParams, params, "ig_intr_md", 2);
-        add_param(tnaParams, params, "ig_intr_md_from_prsr", 3);
-        add_param(tnaParams, params, "ig_intr_md_for_dprsr", 4);
-        add_param(tnaParams, params, "ig_intr_md_for_tm", 5);
-        // Check for optional ghost_intrinsic_metadata_t for t2na arch
-        if (options.arch == "t2na" || options.arch == "t3na") {
-            add_param(tnaParams, params, "gh_intr_md", 6);
+#if HAVE_FLATROCK
+        if (options.arch == "t5na") {
+            add_param(tnaParams, params, "ig_intr_md_for_tm", 3);
+        } else {
+#endif  /* HAVE_FLATROCK */
+            add_param(tnaParams, params, "ig_intr_md_from_prsr", 3);
+            add_param(tnaParams, params, "ig_intr_md_for_dprsr", 4);
+            add_param(tnaParams, params, "ig_intr_md_for_tm", 5);
+            // Check for optional ghost_intrinsic_metadata_t for t2na arch
+            if (options.arch == "t2na" || options.arch == "t3na") {
+                add_param(tnaParams, params, "gh_intr_md", 6);
+            }
+#if HAVE_FLATROCK
         }
+#endif  /* HAVE_FLATROCK */
     } else if (control->thread == EGRESS) {
         add_param(tnaParams, params, "hdr", 0);
         add_param(tnaParams, params, "eg_md", 1);
         add_param(tnaParams, params, "eg_intr_md", 2);
-        add_param(tnaParams, params, "eg_intr_md_from_prsr", 3);
-        add_param(tnaParams, params, "eg_intr_md_for_dprsr", 4);
-        add_param(tnaParams, params, "eg_intr_md_for_oport", 5);
+#if HAVE_FLATROCK
+        if (options.arch == "t5na") {
+            add_param(tnaParams, params, "eg_intr_md_for_dprsr", 3);
+            add_param(tnaParams, params, "eg_intr_md_for_oport", 4);
+        } else {
+#endif  /* HAVE_FLATROCK */
+            add_param(tnaParams, params, "eg_intr_md_from_prsr", 3);
+            add_param(tnaParams, params, "eg_intr_md_for_dprsr", 4);
+            add_param(tnaParams, params, "eg_intr_md_for_oport", 5);
+#if HAVE_FLATROCK
+        }
+#endif  /* HAVE_FLATROCK */
     }
 
     return new IR::BFN::TnaControl(control->srcInfo, control->name,
@@ -293,7 +310,13 @@ IR::BFN::TnaParser* RestoreParams::preorder(IR::BFN::TnaParser* parser) {
         add_param(tnaParams, params, "ig_md", 2);
         add_param(tnaParams, params, "ig_intr_md", 3);
         add_param(tnaParams, params, "ig_intr_md_for_tm", 4);
-        add_param(tnaParams, params, "ig_intr_md_from_prsr", 5);
+#if HAVE_FLATROCK
+        if (options.arch != "t5na") {
+#endif  /* HAVE_FLATROCK */
+            add_param(tnaParams, params, "ig_intr_md_from_prsr", 5);
+#if HAVE_FLATROCK
+        }
+#endif  /* HAVE_FLATROCK */
     } else if (parser->thread == EGRESS) {
         add_param(tnaParams, params, "pkt", 0);
         add_param(tnaParams, params, "hdr", 1);
@@ -325,9 +348,18 @@ IR::BFN::TnaDeparser* RestoreParams::preorder(IR::BFN::TnaDeparser* control) {
         add_param(tnaParams, params, "pkt", 0);
         add_param(tnaParams, params, "hdr", 1);
         add_param(tnaParams, params, "metadata", 2);
-        add_param(tnaParams, params, "eg_intr_md_for_dprsr", 3);
-        add_param(tnaParams, params, "eg_intr_md", 4);
-        add_param(tnaParams, params, "eg_intr_md_from_prsr", 5);
+#if HAVE_FLATROCK
+        if (options.arch == "t5na") {
+            add_param(tnaParams, params, "eg_intr_md", 3);
+            add_param(tnaParams, params, "eg_intr_md_for_dprsr", 4);
+        } else {
+#endif  /* HAVE_FLATROCK */
+            add_param(tnaParams, params, "eg_intr_md_for_dprsr", 3);
+            add_param(tnaParams, params, "eg_intr_md", 4);
+            add_param(tnaParams, params, "eg_intr_md_from_prsr", 5);
+#if HAVE_FLATROCK
+        }
+#endif  /* HAVE_FLATROCK */
     }
 
     return new IR::BFN::TnaDeparser(control->srcInfo, control->name,
