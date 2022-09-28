@@ -6,7 +6,7 @@
 #                   end with '-' or '.' or have two consecutive '-' or '.'
 #   <thread>    ::= "ingress" | "egress" | "ghost"
 #                   ghost is only availble in jbay mau and phv sections
-#                   ghost only has 'ghost_md' and 'pipe_mask' sections used to 
+#                   ghost only has 'ghost_md' and 'pipe_mask' sections used to
 #                   configure 'tm_status_phv' register
 #   <register>  ::= <name> that matches a predefined register name
 #   <slice>     ::= <name>(<lo>..<hi>) | <name>(<bit>)
@@ -363,7 +363,7 @@ parser [<thread>] [<port_use>, ...]:
         # container(s) allocated to store ghost intrinsic metadata
         # tofino2+ only (set tm_status_phv reg)
     pipe_mask:
-        # pipe_mask to be set for ghost packets 
+        # pipe_mask to be set for ghost packets
         # (tm_status_phv.pipe_mask in tofino2)
     parse_depth_checks_disabled: true | false
         # Parse depth checks disabled
@@ -506,7 +506,7 @@ parser [<thread>] [<port_use>, ...]:
             # Each mask is specified as an up to 224b wide constant.
             # A mask specifies which bytes of the header are used for the checksum computation.
             # 1 -> used, 0 -> not used
-        unit <constant>: 
+        unit <constant>:
             # Each unit is able to verify 1 checksum.
             # The checksum is computed according to the selected 'config'
             # which specifies a header ('hdr') and a mask ('mask_sel').
@@ -1145,7 +1145,7 @@ stage <constant> <thread>:
         global_binding: true | false
         per_flow_enable: true | false
         bytecount_adjust: <int>
-          # add value to counted bytes 
+          # add value to counted bytes
     meter <name> [<logical_id>]:
         row: <vector>
         logical_bus: <vector>
@@ -1173,7 +1173,7 @@ stage <constant> <thread>:
         type: standard | lpf | red
         count: bytes | packets
         bytecount_adjust: <int>
-          # add value to counted bytes 
+          # add value to counted bytes
         sweep_interval: <int>
         global_binding: true | false
         per_flow_enable: true | false
