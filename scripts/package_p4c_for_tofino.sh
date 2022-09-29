@@ -82,7 +82,8 @@ $topdir/bootstrap_bfn_compilers.sh --build-dir $builddir \
                                    $enable_cb $enable_fr \
                                    $enable_static \
                                    $barefoot_internal \
-                                   -DENABLE_GTESTS=OFF
+                                   -DENABLE_GTESTS=OFF \
+                                   -DENABLE_WERROR=OFF
 cd $builddir
 make -j $parallel_make package
 
