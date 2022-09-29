@@ -414,7 +414,7 @@ parser [<thread>] [<port_use>, ...]:
         # e.g. stage 0 parse_ipv4
         rule <constant>:
             # constant is explicit rule index; it also specifies the rule priority
-            # when more rules match (lower value is higher priority)
+            # when more rules match (higher value is higher priority)
             # each rule supports up to 4 instructions for modifying flags, one for up to 16 bits
             # (modify_flags16), one for up to 4 bits (modify_flags4), and two for 1 bit
             # (modify_flag0 and modify_flag1). All of these can be set simultaneously. If the

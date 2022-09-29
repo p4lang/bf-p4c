@@ -1481,6 +1481,12 @@ class ComputeFlatrockParserIR : public ParserInspector {
     }
 
     void end_apply() override {
+        // We need to reverse the order because rules with lower index in Analyzer stage
+        // have lower priority but the priority of transitions is the opposite.
+        for (auto& kv : rules_info) {
+            std::reverse(kv.second.transitions.begin(), kv.second.transitions.end());
+        }
+
         auto log = [this](gress_t gress){
             if (extracts.count(gress) == 0) return;
             for (const auto& extract : extracts.at(gress)) {
