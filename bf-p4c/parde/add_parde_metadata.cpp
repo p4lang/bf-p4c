@@ -26,8 +26,6 @@ void AddParserMetadata::addTofinoIngressParserEntryPoint(IR::BFN::Parser* parser
             new IR::TempVar(IR::Type::Bits::get(1), true, "ingress$always_deparse");
     auto *bridgedMetadataIndicator =
             new IR::TempVar(IR::Type::Bits::get(8), false, BFN::BRIDGED_MD_INDICATOR);
-    auto *globalTimestamp = gen_fieldref(igParserMeta, "global_tstamp");
-    auto *globalVersion = gen_fieldref(igParserMeta, "global_ver");
 
     auto prim = new IR::Vector<IR::BFN::ParserPrimitive>();
     if (isV1) {
@@ -36,16 +34,23 @@ void AddParserMetadata::addTofinoIngressParserEntryPoint(IR::BFN::Parser* parser
         prim->push_back(new IR::BFN::Extract(bridgedMetadataIndicator,
                 new IR::BFN::ConstantRVal(0)));
     }
-    if (Device::currentDevice() == Device::TOFINO) {
-        prim->push_back(new IR::BFN::Extract(globalTimestamp,
-                new IR::BFN::MetadataRVal(StartLen(432, 48))));
-        prim->push_back(new IR::BFN::Extract(globalVersion,
-                new IR::BFN::MetadataRVal(StartLen(480, 32))));
+
+    if (igParserMeta) {
+        auto *globalTimestamp = gen_fieldref(igParserMeta, "global_tstamp");
+        auto *globalVersion = gen_fieldref(igParserMeta, "global_ver");
+        prim->push_back(
+            new IR::BFN::Extract(globalTimestamp,
+                new IR::BFN::MetadataRVal(
+                    StartLen(Device::metaGlobalTimestampStart(),
+                             Device::metaGlobalTimestampLen()))));
+        prim->push_back(
+            new IR::BFN::Extract(globalVersion,
+                new IR::BFN::MetadataRVal(
+                    StartLen(Device::metaGlobalVersionStart(),
+                             Device::metaGlobalVersionLen()))));
     } else {
-        prim->push_back(new IR::BFN::Extract(globalTimestamp,
-                new IR::BFN::MetadataRVal(StartLen(400, 48))));
-        prim->push_back(new IR::BFN::Extract(globalVersion,
-                new IR::BFN::MetadataRVal(StartLen(448, 32))));
+        ::warning("ingress_intrinsic_metadata_from_parser not defined in parser %1%",
+                  parser->name);
     }
 
     // Initialize mirror_type.$valid to 1 to workaround ingress drop issue in
@@ -59,13 +64,18 @@ void AddParserMetadata::addTofinoIngressParserEntryPoint(IR::BFN::Parser* parser
         if (!pipe->has_pragma(PragmaDisableI2EReservedDropImplementation::name)) {
             auto *igDeparserMeta =
                     getMetadataType(pipe, "ingress_intrinsic_metadata_for_deparser");
-            auto *mirrorType =
-                    gen_fieldref(igDeparserMeta, "mirror_type");
-            auto povBit =
-                    new IR::BFN::FieldLVal(new IR::TempVar(
-                        IR::Type::Bits::get(1), true, mirrorType->toString() + ".$valid"));
-            prim->push_back(new IR::BFN::Extract(povBit,
-                    new IR::BFN::ConstantRVal(1)));
+            if (igDeparserMeta) {
+                auto *mirrorType =
+                        gen_fieldref(igDeparserMeta, "mirror_type");
+                auto povBit =
+                        new IR::BFN::FieldLVal(new IR::TempVar(
+                            IR::Type::Bits::get(1), true, mirrorType->toString() + ".$valid"));
+                prim->push_back(new IR::BFN::Extract(povBit,
+                        new IR::BFN::ConstantRVal(1)));
+            } else {
+                ::warning("ingress_intrinsic_metadata_for_deparser not defined in parser %1%",
+                          parser->name);
+            }
         }
     }
 
@@ -96,23 +106,27 @@ void AddParserMetadata::addTofinoEgressParserEntryPoint(IR::BFN::Parser* parser)
 
     auto* alwaysDeparseBit =
         new IR::TempVar(IR::Type::Bits::get(1), true, "egress$always_deparse");
-    auto* globalTimestamp = gen_fieldref(egParserMeta, "global_tstamp");
-    auto* globalVersion = gen_fieldref(egParserMeta, "global_ver");
 
     auto prim = new IR::Vector<IR::BFN::ParserPrimitive>();
     if (isV1)
         prim->push_back(new IR::BFN::Extract(alwaysDeparseBit, new IR::BFN::ConstantRVal(1)));
 
-    if (Device::currentDevice() == Device::TOFINO) {
-        prim->push_back(new IR::BFN::Extract(globalTimestamp,
-                new IR::BFN::MetadataRVal(StartLen(432, 48))));
-        prim->push_back(new IR::BFN::Extract(globalVersion,
-                new IR::BFN::MetadataRVal(StartLen(480, 32))));
+    if (egParserMeta) {
+        auto* globalTimestamp = gen_fieldref(egParserMeta, "global_tstamp");
+        auto* globalVersion = gen_fieldref(egParserMeta, "global_ver");
+        prim->push_back(
+            new IR::BFN::Extract(globalTimestamp,
+                new IR::BFN::MetadataRVal(
+                    StartLen(Device::metaGlobalTimestampStart(),
+                             Device::metaGlobalTimestampLen()))));
+        prim->push_back(
+            new IR::BFN::Extract(globalVersion,
+                new IR::BFN::MetadataRVal(
+                    StartLen(Device::metaGlobalVersionStart(),
+                             Device::metaGlobalVersionLen()))));
     } else {
-        prim->push_back(new IR::BFN::Extract(globalTimestamp,
-                new IR::BFN::MetadataRVal(StartLen(400, 48))));
-        prim->push_back(new IR::BFN::Extract(globalVersion,
-                new IR::BFN::MetadataRVal(StartLen(448, 32))));
+        ::warning("egress_intrinsic_metadata_from_parser not defined in parser %1%",
+                  parser->name);
     }
 
     parser->start =

@@ -86,6 +86,10 @@ class Device {
     static int sramMinPackEntries() { return Device::get().getSramMinPackEntries(); }
     static int sramMaxPackEntries() { return Device::get().getSramMaxPackEntries(); }
     static int sramMaxPackEntriesPerRow() { return Device::get().getSramMaxPackEntriesPerRow(); }
+    static int metaGlobalTimestampStart() { return Device::get().getMetaGlobalTimestampStart(); }
+    static int metaGlobalTimestampLen() { return Device::get().getMetaGlobalTimestampLen(); }
+    static int metaGlobalVersionStart() { return Device::get().getMetaGlobalVersionStart(); }
+    static int metaGlobalVersionLen() { return Device::get().getMetaGlobalVersionLen(); }
 
  protected:
     explicit Device(cstring name) : name_(name) {}
@@ -129,6 +133,10 @@ class Device {
     virtual int getSramMinPackEntries() const = 0;
     virtual int getSramMaxPackEntries() const = 0;
     virtual int getSramMaxPackEntriesPerRow() const = 0;
+    virtual int getMetaGlobalTimestampStart() const = 0;
+    virtual int getMetaGlobalTimestampLen() const = 0;
+    virtual int getMetaGlobalVersionStart() const = 0;
+    virtual int getMetaGlobalVersionLen() const = 0;
 
  private:
     static Device* instance_;
@@ -192,6 +200,10 @@ class TofinoDevice : public Device {
     int getSramMinPackEntries() const override { return 1; }
     int getSramMaxPackEntries() const override { return 9; }
     int getSramMaxPackEntriesPerRow() const override { return 5; }
+    int getMetaGlobalTimestampStart() const override { return 432; }
+    int getMetaGlobalTimestampLen() const override { return 48; }
+    int getMetaGlobalVersionStart() const override { return 480; }
+    int getMetaGlobalVersionLen() const override { return 32; }
 };
 
 class JBayDevice : public Device {
@@ -250,6 +262,10 @@ class JBayDevice : public Device {
     int getSramMinPackEntries() const override { return 1; }
     int getSramMaxPackEntries() const override { return 9; }
     int getSramMaxPackEntriesPerRow() const override { return 5; }
+    int getMetaGlobalTimestampStart() const override { return 400; }
+    int getMetaGlobalTimestampLen() const override { return 48; }
+    int getMetaGlobalVersionStart() const override { return 448; }
+    int getMetaGlobalVersionLen() const override { return 32; }
 };
 
 /// Tofino2 variants. The only difference between them is the number of
@@ -338,6 +354,10 @@ class CloudbreakDevice : public Device {
     int getSramMinPackEntries() const override { return 1; }
     int getSramMaxPackEntries() const override { return 9; }
     int getSramMaxPackEntriesPerRow() const override { return 5; }
+    int getMetaGlobalTimestampStart() const override { return 400; }
+    int getMetaGlobalTimestampLen() const override { return 48; }
+    int getMetaGlobalVersionStart() const override { return 448; }
+    int getMetaGlobalVersionLen() const override { return 32; }
 };
 #endif /* HAVE_CLOUDBREAK */
 
@@ -401,6 +421,10 @@ class FlatrockDevice : public Device {
     int getSramMinPackEntries() const override { return 1; }
     int getSramMaxPackEntries() const override { return 4; }
     int getSramMaxPackEntriesPerRow() const override { return 4; }
+    int getMetaGlobalTimestampStart() const override { return 400; }
+    int getMetaGlobalTimestampLen() const override { return 48; }
+    int getMetaGlobalVersionStart() const override { return 448; }
+    int getMetaGlobalVersionLen() const override { return 32; }
 };
 #endif /* HAVE_FLATROCK */
 
