@@ -160,7 +160,9 @@ foreach (f ${SCHEMA_FILES})
 endforeach()
 
 if (ENABLE_WERROR)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
+  # fixme: we do want implicit-fallthrough to be an error, but we have to
+  # supress in in p4c and in generated code somehow
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wno-error=implicit-fallthrough")
 endif()
 
 add_subdirectory(bf-asm)
