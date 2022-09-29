@@ -7,7 +7,9 @@
 bool ValidateActions::preorder(const IR::MAU::Action *act) {
     auto tbl = findContext<IR::MAU::Table>();
     CHECK_NULL(tbl);
-    LOG4("ValidateActions for table: " << tbl->externalName());
+    Log::TempIndent indent;
+    LOG3("ValidateActions for table: " << tbl->externalName()
+            << ", action: " << act->name << indent);
     ActionAnalysis::FieldActionsMap field_actions_map;
     ActionAnalysis::ContainerActionsMap container_actions_map;
     ActionAnalysis aa(phv, phv_alloc, ad_alloc, tbl, false, false);  // action block is parallel.
@@ -19,7 +21,9 @@ bool ValidateActions::preorder(const IR::MAU::Action *act) {
     aa.set_verbose();
     act->apply(aa);
     warning_found |= aa.warning_found();
+    if (warning_found) LOG3("Warning found");
     error_found |= aa.error_found();
+    if (error_found) LOG3("Error found");
     return false;
 }
 

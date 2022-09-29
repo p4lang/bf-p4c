@@ -655,6 +655,7 @@ void ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
         auto &field_action = field_action_info.second;
         for (auto refCode : FieldAction::codesForErrorCases) {
             if ((field_action.error_code & refCode) != 0) {
+                LOG5("Error set due to matching on error cases");
                 error = true;
                 break;
             }
@@ -769,16 +770,16 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, const op_type_t
         cstring &error_message) {
     le_bitrange range;
     auto *field = phv.field(read.expr, &range);
+    auto *tbl = cont_action.table_context;
     Log::TempIndent indent;
-    LOG3("Init PHV Alignment for read field :" << field << indent);
+    LOG3("Init PHV Alignment for read expr:" << read.expr << ", field: " << field << indent);
 
     BUG_CHECK(field, "%1%: Operand %2% of instruction %3% operating on container %4% must be "
               "a PHV.", read.expr->srcInfo, read.expr, cont_action, container);
 
     PHV::FieldUse use(PHV::FieldUse::READ);
     std::set<PHV::Container> container_reads;
-    field->foreach_alloc(range, cont_action.table_context, &use,
-                         [&](const PHV::AllocSlice &alloc) {
+    field->foreach_alloc(range, tbl, &use, [&](const PHV::AllocSlice &alloc) {
         container_reads.insert(alloc.container());
         BUG_CHECK(alloc.container_slice().lo >= 0, "Invalid negative container bit");
     });
@@ -789,8 +790,7 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, const op_type_t
         return false;
     }
 
-    field->foreach_alloc(range, cont_action.table_context, &use,
-                         [&](const PHV::AllocSlice &alloc) {
+    field->foreach_alloc(range, tbl, &use, [&](const PHV::AllocSlice &alloc) {
          le_bitrange read_bits = alloc.container_slice();
          int lo;
          int hi;
@@ -802,11 +802,11 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, const op_type_t
              hi = write_bits.hi;
          }
          le_bitrange mini_write_bits(lo, hi);
-         LOG3("Read Bits: " << read_bits << " Write Bits: " << write_bits);
+         LOG4("Read Bits: " << read_bits << " Write Bits: " << write_bits);
          auto &init_phv_alignment = cont_action.initialization_phv_alignment;
          auto c = alloc.container();
          init_phv_alignment[c].emplace_back(mini_write_bits, read_bits, read_src);
-         LOG3("Init PHV alignment for container " << c
+         LOG4("Init PHV alignment for container " << c
                  << " - " << init_phv_alignment[alloc.container()]);
     });
 
@@ -816,32 +816,34 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, const op_type_t
         if (constant != nullptr && (constant->value == 0)) {
             if (auto type = constant->type->to<IR::Type_Bits>()) {
                 int resize_size = type->size;
-                // Check if the resize bits are unnalocated on top of
-                // the field
+                LOG4("Read expr is a Concat constant '" << type << "0 ++ PHV'");
+                // Check if the resize bits are unallocated on top of the field
                 // Note: there might be more alloc slices, just use and find the
                 //       one corresponding to the MSBs of the field
                 bool are_allocated = false;
-                field->foreach_alloc(range, cont_action.table_context, &use,
-                         [&](const PHV::AllocSlice &alloc) {
-                     // We care about the alloc slice that represents the MSBs
-                     if (alloc.field_slice().hi != field->size-1)
-                         return;
-                     int container_size = alloc.container().size();
-                     int start_container_bit = alloc.container_slice().hi+1;
-                     // Check if there are enough bits left in the container
-                     if (start_container_bit + resize_size > container_size) {
-                         are_allocated = true;
-                         return;
-                     }
-                     // Get all of the allocated bits
-                     auto alloc_bits = phv.bits_allocated(alloc.container());
-                     // Get the bits that should be unallocated
-                     auto resize_bits = alloc_bits.getslice(start_container_bit, resize_size);
-                     // Check if any of them is allocated
-                     if (!resize_bits.empty()) {
-                         are_allocated = true;
-                         return;
-                     }
+                field->foreach_alloc(range, tbl, &use, [&](const PHV::AllocSlice &alloc) {
+                    LOG5("Checking allocation on field alloc slice: " << alloc);
+                    // We care about the alloc slice that represents the MSBs
+                    if (alloc.field_slice().hi != field->size-1)
+                        return;
+                    int container_size = alloc.container().size();
+                    int start_container_bit = alloc.container_slice().hi + 1;
+                    // Check if there are enough bits left in the container
+                    if (start_container_bit + resize_size > container_size) {
+                        LOG5("Not enough bits left in container");
+                        are_allocated = true;
+                        return;
+                    }
+                    // Get all of the allocated bits for a slice (P4C-4811)
+                    auto alloc_bits = phv.bits_allocated(alloc.container(), field, tbl, &use);
+                    // Get the bits that should be unallocated
+                    auto resize_bits = alloc_bits.getslice(start_container_bit, resize_size);
+                    // Check if any of them is allocated
+                    if (!resize_bits.empty()) {
+                        LOG5("Not all bits are unallocated in container");
+                        are_allocated = true;
+                        return;
+                    }
                 });
                 // If we found that there are not enough unallocated bits raise an error
                 if (are_allocated) {
@@ -849,13 +851,15 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, const op_type_t
                                      " requires at least " + resize_size +
                                      " pad bits above the field"
                                      " (consider adding pa_solitary to the field)";
+                    LOG3("PHV not completely initialized");
                     return false;
                 }
-                le_bitrange mini_write_bits((write_bits.hi-resize_size)+1, write_bits.hi);
+                le_bitrange mini_write_bits((write_bits.hi - resize_size) + 1, write_bits.hi);
                 cont_action.extra_resize_reads.add_alignment(mini_write_bits, mini_write_bits);
             }
         }
     }
+    LOG3("PHV completely initialized");
     return true;
 }
 
@@ -1308,6 +1312,7 @@ void ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
         auto& cont_action = container_action.second;
         for (auto refCode : ContainerAction::codesForErrorCases) {
             if ((cont_action.error_code & refCode) != 0) {
+                LOG5("Error set due to matching on error cases");
                 error = true;
                 break;
             }
@@ -2761,6 +2766,18 @@ const std::vector<cstring> ActionAnalysis::ContainerAction::error_code_string_t 
     "BIT_COLLISION_SET",
 };
 
+void ActionAnalysis::ContainerAction::set_mismatch(ActionParam::type_t type) {
+    if (type == ActionParam::PHV) {
+        error_code |= READ_PHV_MISMATCH;
+        LOG4("Error Code Update: READ_PHV_MISMATCH");
+    } else if (type == ActionParam::ACTIONDATA) {
+        error_code |= ACTION_DATA_MISMATCH;
+        LOG4("Error Code Update: ACTION_DATA_MISMATCH");
+    } else {
+        error_code |= CONSTANT_MISMATCH;
+        LOG4("Error Code Update: CONSTANT_MISMATCH");
+    }
+};
 
 std::ostream &operator<<(std::ostream &out, const ActionAnalysis::ContainerAction &ca) {
     Log::TempIndent indent;

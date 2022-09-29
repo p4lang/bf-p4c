@@ -456,14 +456,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
             return name == "invalidate";
         }
 
-        void set_mismatch(ActionParam::type_t type) {
-            if (type == ActionParam::PHV)
-                error_code |= READ_PHV_MISMATCH;
-            else if (type == ActionParam::ACTIONDATA)
-                error_code |= ACTION_DATA_MISMATCH;
-            else
-                error_code |= CONSTANT_MISMATCH;
-        }
+        void set_mismatch(ActionParam::type_t type);
 
         bool action_data_isolated() const {
             return !is_from_set();
