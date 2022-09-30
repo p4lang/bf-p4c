@@ -226,14 +226,15 @@ class Deparser : public Section {
 
     // Digest Handle Setup
     // ------------------------------------------------------
-    // | FIELD TYPE | Pipe ID |  Field List Handle          |
-    // 31 ...     24         20                             0
-    // Field List Handle = 20 bits
+    // | Pipe ID | Field Type |  Field List Handle          |
+    // 31 ...   28           24                             0
+    // Field List Handle = 24 bits
+    // Field List Type = 4 bits (Field list is 0x9)
     // Pipe ID = 4 bits
-    // Field List Type = 8 bits (Field list is 0x21)
     static unsigned unique_field_list_handle;
     static unsigned next_handle() {
-        return unique_field_list_handle++ | unique_table_offset << 20 | FIELD_HANDLE_START;
+        return unique_table_offset << PIPE_ID_SHIFT | FIELD_HANDLE_START |
+               unique_field_list_handle++;
     }
 
     // gtest methods

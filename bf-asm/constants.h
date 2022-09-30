@@ -78,9 +78,10 @@ enum {
     STATEFUL_PREDICATION_OUTPUT = 6,
     // See bf-drivers/include/pipe_mgr/pipe_mgr_intf.h for the definitions
     TYPE_ENUM_SHIFT = 24,
+    PIPE_ID_SHIFT = 28,
     REGISTER_PARAM_HANDLE_START = (0x08 << TYPE_ENUM_SHIFT),
     ACTION_HANDLE_START = (0x20 << TYPE_ENUM_SHIFT),
-    FIELD_HANDLE_START = (0x21 << TYPE_ENUM_SHIFT),
+    FIELD_HANDLE_START = (0x9 << TYPE_ENUM_SHIFT),
     PER_FLOW_ENABLE_BITS = 1,
     METER_TYPE_BITS = 3,
     // Order is METER_TYPE, METER_PFE, METER_ADDRESS
