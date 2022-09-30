@@ -516,7 +516,7 @@ p4c_add_test_label("tofino" "p414_nightly" "smoketest_programs_alpm_test_TestRea
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_alpm_test_TestRealData"
    "test.TestRealData")
 
-set(_smoketestProgramsArgs "${testExtraArgs} -pd -arch ${TOFINO_P414_TEST_ARCH} -Xptf=--test-params=pkt_size=100")
+set(_smoketestProgramsArgs "${testExtraArgs} -pd -arch ${TOFINO_P414_TEST_ARCH}")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_basic_ipv4" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4/basic_ipv4.p4"
     "${_smoketestProgramsArgs}" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4")
 p4c_add_test_label("tofino" "p414_nightly" "smoketest_programs_basic_ipv4")
@@ -1072,7 +1072,7 @@ set(P4FACTORY_P4_16_PROGRAMS_INTERNAL_FLAGS "-I${CMAKE_CURRENT_SOURCE_DIR}/p4-pr
 foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS_INTERNAL)
   p4c_add_ptf_test_with_ptfdir ("tofino" "p4_16_programs_internal_${t}"
       "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/${t}/${t}.p4"
-    "${testExtraArgs} -target tofino -arch tna -bfrt -Xptf=--test-params=pkt_size=100"
+    "${testExtraArgs} -target tofino -arch tna -bfrt"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/${t}")
   bfn_set_p4_build_flag("tofino" "p4_16_programs_internal_${t}" "${P4FACTORY_P4_16_PROGRAMS_INTERNAL_FLAGS}")
   set (ports_json ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/${t}/ports.json)

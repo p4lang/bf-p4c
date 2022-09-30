@@ -2104,3 +2104,9 @@ p4c_add_xfail_reason("tofino"
   "Cannot unify type 'PortId_t' with type 'bit<32>'"
   testdata/p4_16_samples/psa-dpdk-hdr-field-non-align.p4
 )
+
+# p4-tests/dev-env update 2022-09-30 (broken test)
+p4c_add_xfail_reason("tofino"
+  "NameError: name 'start_hitless' is not defined"
+  p4_16_programs_internal_misc1
+)

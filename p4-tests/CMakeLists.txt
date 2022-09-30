@@ -38,6 +38,13 @@ if(NOT CLOUDBREAK_P414_TEST_ARCH)
     set(CLOUDBREAK_P414_TEST_ARCH ${P414_TEST_ARCH})
 endif()
 
+# Set PTF arg that specifies pkt_size in all tests. The wrapper makes sure it
+# gets forwarded to ptf it applicable.
+# This option is added to more and more tests coming from bf-switch & p4-tests
+# repositories so it makes sense to preset in for all tests.
+set(ptfPktSize 100)
+set(testExtraArgs "-Xptf=--test-params=pkt_size=${ptfPktSize}")
+
 # common test utils
 include(TestUtils.cmake)
 
