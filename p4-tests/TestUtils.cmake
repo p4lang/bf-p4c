@@ -180,7 +180,7 @@ macro(simple_test_setup_check device)
   if (NOT ENABLE_STF2PTF)
     # We run STF tests on the STF framework
     set(STF_SEARCH_PATHS
-      ${BFN_P4C_SOURCE_DIR}/../install/bin
+      ${P4FACTORY_INSTALL_DIR}/bin
       ${CMAKE_INSTALL_PREFIX}/bin)
 
     find_program(HARLYN_STF_${device} ${device}_test_harness PATHS ${STF_SEARCH_PATHS})
@@ -196,10 +196,10 @@ endmacro(simple_test_setup_check)
 
 macro(packet_test_setup_check device)
   # check for ptf
-  find_program(PTF ptf PATHS ${CMAKE_INSTALL_PREFIX}/bin)
+  find_program(PTF ptf PATHS ${P4FACTORY_INSTALL_DIR}/bin ${CMAKE_INSTALL_PREFIX}/bin)
 
   set(BF_SWITCHD_SEARCH_PATHS
-    ${BFN_P4C_SOURCE_DIR}/../install/bin
+    ${P4FACTORY_INSTALL_DIR}/bin
     ${CMAKE_INSTALL_PREFIX}/bin)
 
   # check for bf_switchd
@@ -213,7 +213,7 @@ macro(packet_test_setup_check device)
 
   # check for tofino-model
   set(HARLYN_MODEL_SEARCH_PATHS
-    ${BFN_P4C_SOURCE_DIR}/../install/bin
+    ${P4FACTORY_INSTALL_DIR}/bin
     ${CMAKE_INSTALL_PREFIX}/bin)
 
   find_program(HARLYN_MODEL tofino-model PATHS ${HARLYN_MODEL_SEARCH_PATHS} NO_DEFAULT_PATH)
