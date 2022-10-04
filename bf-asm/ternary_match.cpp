@@ -637,7 +637,10 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
                     int lsb_lo_bit_in_byte = std::max(lsb_lo, bit) % 8;
                     int lsb_hi_bit_in_byte = std::min(lsb_hi, bit + 7) % 8;
                     auto dirtcam_mode = get_dirtcam_mode(index, (bit / 8));
-                    BUG_CHECK(dirtcam_mode == DIRTCAM_4B_LO || dirtcam_mode == DIRTCAM_4B_HI);
+
+                    if (!(DIRTCAM_4B_LO == dirtcam_mode ||
+                          DIRTCAM_4B_HI == dirtcam_mode))  continue;
+
                     bitvec nibbles_of_range;
                     nibbles_of_range.setbit(lsb_lo_bit_in_byte / 4);
                     nibbles_of_range.setbit(lsb_hi_bit_in_byte / 4);
