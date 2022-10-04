@@ -8,7 +8,7 @@ MESSAGE("-- Adding p4c-barefoot")
 # possibly set in bf-p4c top-level cmake (the one that includes p4c) would be
 # overwritten by p4c's setting. Therefore, we change the value here. But we also
 # need to make sure that p4c (or at least the parts that include bf-p4c
-# components such as frontend and IR) get build with C++17. For this reason, we
+# components such as frontend and IR) get built with C++17. For this reason, we
 # have to set the standard also in the PARENT_SCOPE, meaning the p4c cmake that
 # included this cmake. Setting in PARENT_SCOPE does not change value here, so we
 # need to do the setting twice.

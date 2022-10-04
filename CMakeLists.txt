@@ -55,7 +55,7 @@ if (ENABLE_STATIC_LIBS)
 endif()
 
 # We will be enabling C++17, but we need to support CMake 3.5. Luckily, even old
-# CMake can learn how to enable new standard. We asume here that the compiler
+# CMake can learn how to enable new standard. We assume here that the compiler
 # understands the -std=c++17 option as compilers that do not will not work
 # anyway.
 if (CMAKE_VERSION VERSION_LESS "3.8")
