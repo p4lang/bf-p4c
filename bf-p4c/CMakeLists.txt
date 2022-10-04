@@ -1636,6 +1636,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pragma_eg_intr_md_opt.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pragma_sep_gat.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pragma_stage.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/register_actions.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/register_read_write.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/scc_toposort.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/simplify_key_elim_casts.cpp

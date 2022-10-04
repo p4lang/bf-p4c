@@ -1175,7 +1175,16 @@ void AttachTables::InitializeStatefulAlus
                 // any malformed initial value should have been diagnosed already, so no need
                 // for error messages here
                 if (auto *k = init->to<IR::Constant>()) {
-                    salu->init_reg_lo = k->asInt();
+                    auto tb = k->type->to<IR::Type_Bits>();
+                    if (tb == nullptr || !tb->isSigned) {
+                        // The value was checked for size and type in the frontend.
+                        // It should fit into 32 bits.
+                        BUG_CHECK(k->value <= 0xFFFF'FFFF,
+                            "Value does not fit into 32 bit register init_reg_lo.");
+                        salu->init_reg_lo = k->asUnsigned();
+                    } else {
+                        salu->init_reg_lo = k->asInt();
+                    }
                 } else if (init->is<IR::ListExpression>() || init->is<IR::StructExpression>()) {
                     auto components = *getListExprComponents(*init);
                     if (components.size() >= 1) {
