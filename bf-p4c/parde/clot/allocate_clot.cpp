@@ -1109,7 +1109,10 @@ class GreedyClotAllocator : public Visitor {
             const PHV::Field* pov_bit = nullptr;
             if (auto emit_field = emit->to<IR::BFN::EmitField>()) {
                 field = phvInfo.field(emit_field->source->field);
-                pov_bit = phvInfo.field(emit_field->povBit->field);
+                if (auto alias_slice = emit_field->povBit->field->to<IR::BFN::AliasSlice>())
+                    pov_bit = phvInfo.field(alias_slice->source);
+                else
+                    pov_bit = phvInfo.field(emit_field->povBit->field);
             }
 
             // Do not consider fields that are ineligible for multiheader CLOTs.
@@ -1117,13 +1120,28 @@ class GreedyClotAllocator : public Visitor {
                 is_emitted_more_than_once(field) ||
                 clotInfo.is_extracted_in_multiple_non_mutex_states(pov_bit) ||
                 pov_bits_set_invalid_in_mau.count(pov_bit)) {
+                std::string prefix = sequence.empty() ? "" : "Ended sequence: ";
+                if (field == nullptr && LOGGING(4)) {
+                    LOG4("  " << prefix << "Emit is not an EmitField");
+                } else if (LOGGING(4)) {
+                    std::string bullet = "\n    - ";
+                    std::stringstream reasons;
+                    if (!is_clot_eligible(field))
+                        reasons << bullet << field->name << " is not CLOT eligible";
+                    if (is_emitted_more_than_once(field))
+                        reasons << bullet << field->name << " is emitted more than once";
+                    if (clotInfo.is_extracted_in_multiple_non_mutex_states(pov_bit))
+                        reasons << bullet << pov_bit->name << " is extracted in multiple "
+                                << "mutually exclusive parser states";
+                    if (pov_bits_set_invalid_in_mau.count(pov_bit))
+                        reasons << bullet << pov_bit->name << " is set in MAU";
+
+                    LOG4("  " << prefix << field->name << " is not eligible for "
+                              << "multiheader extract sequences" << reasons.str());
+                }
+
                 if (sequence.empty()) continue;
 
-                if (field == nullptr)
-                    LOG4("  Ended sequence: emit is not an EmitField");
-                else
-                    LOG4("  Ended sequence: " << field->name << " is ineligible for multiheader "
-                         "extract sequences");
                 sequences.push_back(sequence);
                 sequence.clear();
                 state_to_size_in_bits.clear();
@@ -1137,7 +1155,7 @@ class GreedyClotAllocator : public Visitor {
                 !get_checksum_updates(field).empty() &&
                 checksum_updates != get_checksum_updates(field)) {
                 LOG4("  Ended sequence: " << field->name << " is involved in different checksum "
-                     "updates than last field in sequence");
+                     "updates than previous field in sequence");
                 sequences.push_back(sequence);
                 sequence.clear();
                 state_to_size_in_bits.clear();
@@ -1156,7 +1174,11 @@ class GreedyClotAllocator : public Visitor {
                     state_to_size_in_bits.clear();
                     for (const auto& state : extract_info->states())
                         state_to_size_in_bits[state] = extract_info->slice()->size();
-                };
+                } else {
+                    LOG4("  Cannot start a new sequence: "
+                         << field->name << " cannot start a CLOT or is extracted in parser states "
+                         << "that are not mutually exclusive.");
+                }
             };
 
             auto extract_info = field_map[field];
@@ -1254,7 +1276,8 @@ clotInfo(clotInfo) {
         /// clotInfo.pov_extracted_without_fields
         new FieldPovAnalysis(clotInfo, phv),
         new CollectClotInfo(phv, clotInfo, pragmaDoNotUseClot),
-        new GreedyClotAllocator(phv, clotInfo, log)
+        new GreedyClotAllocator(phv, clotInfo, log),
+        LOGGING(3) ? new DumpParser("after_clot_allocation") : nullptr
     });
 }
 

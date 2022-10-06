@@ -165,6 +165,9 @@ void runTest(boost::optional<TofinoPipeTestCase> test,
             ExpectedClot specializedClot;
             for (auto& slice : clot) {
                 auto fieldName = toString(gress) + "::hdr." + slice.fieldName;
+                BUG_CHECK(phvInfo.field(fieldName),
+                          "Field %1% in expected test result is not present in the P4 program",
+                          fieldName);
                 auto bitrange = slice.slice ? *slice.slice
                                             : StartLen(0, phvInfo.field(fieldName)->size);
                 specializedClot.emplace_back(fieldName, bitrange);
@@ -1198,6 +1201,172 @@ TEST_F(ClotTest, NotAdjacentMultiheaderVariableSize) {
         {"a.f1", "a.f2"},
         {{"e.f1", FromTo(0, 15)}, "e.f2"}
     });
+}
+
+TEST_F(ClotTest, AdjacentMultiheaderVariableSizeHeaderStack) {
+    auto test = createClotTest(P4_SOURCE(R"(
+        )"), P4_SOURCE(R"(
+            header hdr_t {
+                bit<32> f1;
+                bit<16> f2;
+            }
+        )"), P4_SOURCE(R"(
+            hdr_t[5] stack;
+        )"), P4_SOURCE(R"(
+            state start {
+                pkt.extract(hdr.stack[0]);
+                transition select(hdr.stack[0].f1) {
+                    0: parse_index_1;
+                    1: parse_index_1_2;
+                    2: parse_index_1_3;
+                }
+            }
+
+            state parse_index_1 {
+                pkt.extract(hdr.stack[1]);
+                transition parse_index_4;
+            }
+
+            state parse_index_1_2 {
+                pkt.extract(hdr.stack[1]);
+                pkt.extract(hdr.stack[2]);
+                transition parse_index_4;
+            }
+
+            state parse_index_1_3 {
+                pkt.extract(hdr.stack[1]);
+                pkt.extract(hdr.stack[3]);
+                transition parse_index_4;
+            }
+
+            state parse_index_4 {
+                pkt.extract(hdr.stack[4]);
+                transition accept;
+            }
+        )"), P4_SOURCE(R"(
+            action act1() {
+                hdr.stack[4].f2 = 0;
+            }
+
+            table t1 {
+                key = { hdr.stack[4].f2 : exact; }
+                actions = { act1; }
+                size = 256;
+            }
+
+            apply {
+                t1.apply();
+            }
+        )"), P4_SOURCE(R"(
+            pkt.emit(hdr);
+        )"));
+
+    // -----
+    // stack[0].f1        CLOT 1
+    // stack[0].f2        CLOT 1
+    // -----
+    // stack[1].f1        CLOT 0 (This is CLOT 0 because it has the most unused bits)
+    // stack[1].f2        CLOT 0
+    // stack[2].f1        CLOT 0
+    // stack[2].f2        CLOT 0
+    // stack[3].f1        CLOT 0
+    // stack[3].f2        CLOT 0
+    //   Content and length varies based on parser state:
+    //     - parse_index_1: { stack[0].f1, stack[0].f1 } (length = 6B)
+    //     - parse_index_1_2: { stack[1].f1, stack[1].f2, stack[2].f1, stack[2].f2 } (length = 12B)
+    //     - parse_index_1_3: { stack[1].f1, stack[1].f2, stack[3].f1, stack[3].f2 } (length = 12B)
+    // -----
+    //   "stack[4]" is adjacent to all possible variations of CLOT 0, no gap required.
+    // stack[4].f1        CLOT 2
+    // stack[4].f2        written
+
+    runTest(test, {{"stack[1].f1", "stack[1].f2", "stack[2].f1", "stack[2].f2", "stack[3].f1",
+                    "stack[3].f2"},
+                   {"stack[0].f1", "stack[0].f2"},
+                   {"stack[4].f1"}});
+}
+
+TEST_F(ClotTest, NotAdjacentMultiheaderVariableSizeHeaderStack) {
+    auto test = createClotTest(P4_SOURCE(R"(
+        )"), P4_SOURCE(R"(
+            header hdr_t {
+                bit<32> f1;
+                bit<16> f2;
+            }
+        )"), P4_SOURCE(R"(
+            hdr_t[5] stack;
+        )"), P4_SOURCE(R"(
+            state start {
+                pkt.extract(hdr.stack[0]);
+                transition select(hdr.stack[0].f1) {
+                    0: parse_index_1;
+                    1: parse_index_1_2;
+                    2: parse_index_1_3;
+                }
+            }
+
+            state parse_index_1 {
+                pkt.extract(hdr.stack[1]);
+                transition parse_index_4;
+            }
+
+            state parse_index_1_2 {
+                pkt.extract(hdr.stack[1]);
+                pkt.extract(hdr.stack[2]);
+                transition parse_index_4;
+            }
+
+            state parse_index_1_3 {
+                pkt.extract(hdr.stack[1]);
+                pkt.extract(hdr.stack[3]);
+                transition parse_index_4;
+            }
+
+            state parse_index_4 {
+                pkt.extract(hdr.stack[4]);
+                transition accept;
+            }
+        )"), P4_SOURCE(R"(
+            action act1() {
+                hdr.stack[3].f2 = 0;
+            }
+
+            table t1 {
+                key = { hdr.stack[3].f2 : exact; }
+                actions = { act1; }
+                size = 256;
+            }
+
+            apply {
+                t1.apply();
+            }
+        )"), P4_SOURCE(R"(
+            pkt.emit(hdr);
+        )"));
+
+    // -----
+    // stack[0].f1        CLOT 1
+    // stack[0].f2        CLOT 1
+    // -----
+    // stack[1].f1        CLOT 0 (This is CLOT 0 because it has the most unused bits)
+    // stack[1].f2        CLOT 0
+    // stack[2].f1        CLOT 0
+    // stack[2].f2        CLOT 0
+    // stack[3].f1        CLOT 0
+    // stack[3].f2        CLOT 0
+    //   Content and length varies based on parser state:
+    //     - parse_index_1: { stack[0].f1, stack[0].f1 } (length = 6B)
+    //     - parse_index_1_2: { stack[1].f1, stack[1].f2, stack[2].f1, stack[2].f2 } (length = 12B)
+    //     - parse_index_1_3: { stack[1].f1, stack[1].f2, stack[3].f1 } (length = 10B)
+    // -----
+    //   "stack[4]" is not adjacent in "parse_index_1_3" variation of CLOT 0: a gap is required.
+    // stack[4].f1[31..8] 3-byte gap
+    // stack[4].f1[7..0]  CLOT 2
+    // stack[4].f2        CLOT 2
+
+    runTest(test, {{"stack[1].f1", "stack[1].f2", "stack[2].f1", "stack[2].f2", "stack[3].f1"},
+                   {"stack[0].f1", "stack[0].f2"},
+                   {{"stack[4].f1", FromTo(0, 7)}, "stack[4].f2"}});
 }
 
 }  // namespace Test
