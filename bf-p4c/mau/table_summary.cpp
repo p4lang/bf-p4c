@@ -660,9 +660,9 @@ void TableSummary::PlacedTable::add(const IR::MAU::Table *t) {
     if (t->resources->memuse.count(t->unique_id()) == 0) return;  // BUG_CHECK?
     auto mem = t->resources->memuse.at(t->unique_id());
     if (t->ways.size() > 0) {
-    auto match_groups = t->ways[0].match_groups;
+        auto match_groups = t->ways[0].match_groups;
         for (auto mem_way : mem.ways) {
-            entries += match_groups * mem.ways.size() * Memories::SRAM_DEPTH;
+            entries += match_groups * mem_way.size * Memories::SRAM_DEPTH;
             LOG3("Adding entries to table : " << t->name << ", match_groups: " << match_groups
                     << ", mem.ways: " << mem.ways);
         }
@@ -696,10 +696,13 @@ TableSummary::PlacedTable::PlacedTable(const IR::MAU::Table *t) {
     // Do we need to do anything different for DLEFT for entries calculation
     // here?
     if (t->layout.atcam) {
+        entries = 0;
         auto mem = t->resources->memuse.at(t->unique_id());
         auto match_groups = t->ways[0].match_groups;
         for (auto mem_way : mem.ways) {
-            entries += match_groups * mem.ways.size() * Memories::SRAM_DEPTH;
+            entries += match_groups * mem_way.size * Memories::SRAM_DEPTH;
+            LOG3("Adding entries to table : " << t->name << ", match_groups: " << match_groups
+                    << ", mem.ways: " << mem.ways);
         }
     }
 

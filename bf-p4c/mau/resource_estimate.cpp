@@ -865,8 +865,11 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
                 BUG("%s: no size in indirect %s %s", at->srcInfo, at->kind(), at->name);
             int entries_per_sram = 1024 * per_word;
             int units = (attached_entries + entries_per_sram - 1) / entries_per_sram;
+            if (need_maprams) {
+                if (need_srams) units++;  // spare bank
+                lo->maprams += units;
+            }
             if (need_srams) lo->srams += units * width;
-            if (need_maprams) lo->maprams += units;
         }
     }
     // Before table placment, tables do not have attached Ternary Indirect or
@@ -1006,7 +1009,7 @@ void StageUseEstimate::determine_initial_layout_option(const IR::MAU::Table *tbl
         BUG_CHECK(layout_options.size() == 1, "Should only be one layout option for dleft "
                   "hash tables");
         options_to_dleft_entries(tbl, attached_entries); }
-    if (layout_options.size() == 1 && layout_options[0].layout.no_match_data()) {
+    if (layout_options.size() == 1 && layout_options[0].layout.no_match_data() && !entries) {
         preferred_index = 0;
     } else if (tbl->layout.atcam) {
         options_to_atcam_entries(tbl, entries);

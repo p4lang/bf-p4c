@@ -2618,7 +2618,7 @@ control Franktown(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrin
         const default_action = Millikin();
         size = 12288;
     }
-    @idletime_precision(1) @disable_atomic_modify(1) @pack(1) @name(".Trevorton") table Trevorton {
+    @idletime_precision(1) @disable_atomic_modify(1) @pack(1) @stage(2) @name(".Trevorton") table Trevorton {
         actions = {
             Neosho();
             BarNunn();
@@ -4488,7 +4488,7 @@ control Watters(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsi
     @name(".Brush") action Brush() {
         Hettinger.Bratt.Quinhagak = (bit<1>)1w1;
     }
-    @ternary(1) @disable_atomic_modify(1) @name(".Ceiba") table Ceiba {
+    @ternary(1) @disable_atomic_modify(1) @stage(5) @name(".Ceiba") table Ceiba {
         actions = {
             Petrolia();
             Aguada();

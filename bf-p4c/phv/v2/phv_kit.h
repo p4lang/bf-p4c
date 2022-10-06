@@ -131,6 +131,12 @@ struct PhvKit {
     PHV::Slicing::IteratorInterface* make_slicing_ctx(const PHV::SuperCluster* sc) const;
 
     // @returns true if @p a and @p b can be overlaid,
+    // because of their logical live ranges are disjoint and both fieldslices are
+    // qualified to be overlaid. This is important that we don't have cross dependencies between
+    // @p a and @p b if we need to redo table placement.
+    bool can_logical_liverange_be_overlaid(const PHV::AllocSlice& a,
+                                           const PHV::AllocSlice& b) const;
+    // @returns true if @p a and @p b can be overlaid,
     // because of their physical live ranges are disjoint and both fieldslices are
     // qualified to be overlaid:
     // (1) not pov, deparsed_to_tm, nor is_invalidate_from_arch.

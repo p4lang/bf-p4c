@@ -593,6 +593,9 @@ void InjectDepForAltPhvAlloc::end_apply() {
                 }
                 for (const auto& from_table : id_from_tables) {
                     for (const auto& to_table : id_to_tables) {
+                        if (from_table.second == to_table.second)
+                            continue;
+
                         auto mutex_tables = mutex(from_table.second, to_table.second);
                         if (mutex_tables) {
                             LOG5("Tables " << from_table.second->name << " and "

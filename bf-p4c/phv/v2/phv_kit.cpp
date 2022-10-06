@@ -59,6 +59,50 @@ PHV::Slicing::IteratorInterface* PhvKit::make_slicing_ctx(const PHV::SuperCluste
                                         boost::bind(&PhvKit::is_referenced, this, _1));
 }
 
+bool PhvKit::can_logical_liverange_be_overlaid(const PHV::AllocSlice& a,
+                                               const PHV::AllocSlice& b) const {
+    // Determine dependency direction (from / to) based on live range
+    bool ABeforeB = a.getEarliestLiveness() < b.getEarliestLiveness();
+    const PHV::AllocSlice& fromSlice = ABeforeB ? a : b;
+    const PHV::AllocSlice& toSlice   = ABeforeB ? b : a;
+
+    LOG6("From Slice : " << fromSlice << " --> To Slice : " << toSlice);
+    std::map<int, const IR::MAU::Table*> id_from_tables;
+    std::map<int, const IR::MAU::Table*> id_to_tables;
+    for (const auto& from_locpair : defuse.getAllDefsAndUses(fromSlice.field())) {
+        const auto from_table = from_locpair.first->to<IR::MAU::Table>();
+        if (!from_table) continue;
+        id_from_tables[from_table->id] = from_table;
+        LOG6("Table Read / Write (From Slice): " << from_table->name);
+    }
+    for (const auto& to_locpair : defuse.getAllDefsAndUses(toSlice.field())) {
+        const auto to_table = to_locpair.first->to<IR::MAU::Table>();
+        if (!to_table) continue;
+        id_to_tables[to_table->id] = to_table;
+        LOG6("Table Read / Write (To Slice): " << to_table->name);
+    }
+    for (const auto& from_table : id_from_tables) {
+        for (const auto& to_table : id_to_tables) {
+            if (from_table.second == to_table.second)
+                continue;
+
+            auto mutex_tables = table_mutex(from_table.second, to_table.second);
+            if (mutex_tables) {
+                LOG5("Tables " << from_table.second->name << " and "
+                        << to_table.second->name << " are mutually exclusive");
+                continue;
+            }
+
+            if (deps.happens_logi_after(from_table.second, to_table.second)) {
+                LOG5("Table " << from_table.second->name << " have dependencies on " <<
+                     to_table.second->name);
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 bool PhvKit::can_physical_liverange_be_overlaid(const PHV::AllocSlice& a,
                                                 const PHV::AllocSlice& b) const {
     BUG_CHECK(a.isPhysicalStageBased() && b.isPhysicalStageBased(),
@@ -94,7 +138,18 @@ bool PhvKit::can_physical_liverange_be_overlaid(const PHV::AllocSlice& a,
             return false;
         }
     }
-    return pragmas.pa_no_overlay().can_overlay(a.field(), b.field()) && a.isLiveRangeDisjoint(b);
+    if (!pragmas.pa_no_overlay().can_overlay(a.field(), b.field()))
+        return false;
+
+    if (a.isLiveRangeDisjoint(b, 1))
+        return true;
+
+    if (a.isLiveRangeDisjoint(b, 0)) {
+        // We have to make sure that the last use does not have a dependency on the new def.
+        LOG5("Slice " << a << " and Slice " << b << " must have its dependencies analyzed");
+        return can_logical_liverange_be_overlaid(a, b);
+    }
+    return false;
 }
 
 bool PhvKit::is_clot_allocated(const ClotInfo& clots, const PHV::SuperCluster& sc) {

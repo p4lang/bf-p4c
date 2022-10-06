@@ -260,7 +260,15 @@ bool AllocSlice::isLiveAt(int stage, const FieldUse& use) const {
     }
 }
 
-bool AllocSlice::isLiveRangeDisjoint(const AllocSlice& other) const {
+bool AllocSlice::isLiveRangeDisjoint(const AllocSlice& other, int gap) const {
+    if (gap) {
+        PHV::StageAndAccess max_stage_gap = std::make_pair(max_stage_i.first + gap,
+                                                           max_stage_i.second);
+        PHV::StageAndAccess max_other_stage_gap = std::make_pair(other.max_stage_i.first + gap,
+                                                                 other.max_stage_i.second);
+        return LiveRange(min_stage_i, max_stage_gap)
+            .is_disjoint(LiveRange(other.min_stage_i, max_other_stage_gap));
+    }
     return LiveRange(min_stage_i, max_stage_i)
         .is_disjoint(LiveRange(other.min_stage_i, other.max_stage_i));
 }

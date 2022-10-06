@@ -5218,7 +5218,7 @@ control Elliston(inout Frederika Lefor, inout HighRock Starkey, in egress_intrin
         Manakin();
         Tontogany.count();
     }
-    @disable_atomic_modify(1) @name(".Fairchild") table Fairchild {
+    @disable_atomic_modify(1) @name(".Fairchild") @stage(10) table Fairchild {
         actions = {
             Neuse();
             @defaultonly NoAction();

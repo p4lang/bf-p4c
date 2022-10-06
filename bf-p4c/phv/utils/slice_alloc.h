@@ -188,7 +188,7 @@ class AllocSlice {
     bool isLiveAt(int stage, const FieldUse& use) const;
 
     // @returns true if @p other and this AllocSlice have disjoint live ranges.
-    bool isLiveRangeDisjoint(const AllocSlice& other) const;
+    bool isLiveRangeDisjoint(const AllocSlice& other, int gap = 0) const;
 
     bool representsSameFieldSlice(const AllocSlice& other) const {
         if (field_i != other.field()) return false;

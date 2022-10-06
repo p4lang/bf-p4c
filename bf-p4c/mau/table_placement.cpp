@@ -2000,6 +2000,15 @@ bool TablePlacement::try_alloc_all(Placed *next, std::vector<Placed *> whole_sta
         return false; }
 
     if (no_memory) return true;
+#if 0
+    // SRAMs/MAPRAMs table consumption can be wrong if table share resources. It is probably
+    // better to not stop here but let try_alloc_mem find a solution if one exist. The actual code
+    // don't properly support mmultiple match table that share the same attach table. In this case
+    // the SRAMs consumed by the shared table will be multiplied by the number of match table
+    // that are connected to this latter. Because of this issue, we might think the SRAM array is
+    // full while it is not and not attempt to insert this eligible table. Fixing this issue
+    // would help our compilation time by not trying impossible memory allocation and simply
+    // stop here.
     if (auto ran_out = get_current_stage_use(next).ran_out()) {
         if (error_message == "") {
             error_message = next->table->toString() + " could not fit in stage " +
@@ -2015,7 +2024,9 @@ bool TablePlacement::try_alloc_all(Placed *next, std::vector<Placed *> whole_sta
         LOG3("    " << what << " of memory allocation ran out of " << ran_out);
         next->stage_advance_log = "ran out of " + ran_out;
         return false;
-    } else if (!try_alloc_mem(next, whole_stage)) {
+    }
+#endif
+    if (!try_alloc_mem(next, whole_stage)) {
         LOG3("    " << what << " of memory allocation did not fit");
         return false; }
     return true;
