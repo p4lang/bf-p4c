@@ -101,7 +101,17 @@ void FinalizePhysicalLiverange::mark_access(const PHV::Field* f, le_bitrange bit
         }
         return;
     }
+
     update_liverange(alloc_slices, access);
+
+    // Handle aliased fields
+    if (const PHV::Field* alias_dest = phv_i.getAliasDestination(f)) {
+        LOG2("   field " << f->name << " has alias dest :" << alias_dest->name);
+        const auto dest_slices =
+            find_all_overlapping_alloc_slices(alias_dest, bits, AllocContext::of_unit(unit),
+                                              is_write);
+        update_liverange(dest_slices, access);
+    }
 }
 
 bool FinalizePhysicalLiverange::preorder(const IR::Expression* e) {

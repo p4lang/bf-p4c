@@ -90,6 +90,7 @@ std::vector<AllocSlice> update_alloc_slices_with_physical_liverange(
 
     std::vector<AllocSlice> rst;
     for (auto& slice : slices) {
+        LOG5("\tupdate_alloc_slices_with_physical_liverange for " << slice);
         const auto* info = liverange_db.get_liverange(FieldSlice(slice.field()));
         if (!info) {
             if (slice.field()->is_ignore_alloc()) {
@@ -112,6 +113,7 @@ std::vector<AllocSlice> update_alloc_slices_with_physical_liverange(
             PHV::AllocSlice clone = slice;
             clone.setIsPhysicalStageBased(true);
             clone.setLiveness(r.start, r.end);
+            LOG4("\t  creating liverange slice: " << clone);
             rst.emplace_back(clone);
         }
     }
