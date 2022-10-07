@@ -14,6 +14,7 @@
 #include "bf-p4c/mau/table_mutex.h"
 #include "bf-p4c/mau/table_flow_graph.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/device.h"
 
 /* The DependencyGraph data structure is a directed graph in which tables are
  * vertices and edges are dependencies.  An edge from t1 to t2 means that t2
@@ -266,6 +267,7 @@ struct DependencyGraph {
 
     struct StageInfo {
         int min_stage,      // Minimum stage at which a table can be placed.
+        max_stage,          // Maximum stage at which a table must be placed (inclusive).
         dep_stages,         // Number of tables that depend on this table and
                             // must be placed in a stage after it.
         dep_stages_control,
@@ -389,7 +391,7 @@ struct DependencyGraph {
         } else {
             auto v = boost::add_vertex(label, g);
             labelToVertex[label] = v;
-            stage_info[label] = {0, 0, 0, 0, 0, 0};
+            stage_info[label] = {0, 0, 0, 0, 0, 0, 0};
             return v; }
     }
 
@@ -577,6 +579,12 @@ struct DependencyGraph {
         check_finalized();
         check_stage_info_exist(t);
         return stage_info.at(t).min_stage;
+    }
+
+    int max_stage(const IR::MAU::Table* t) const {
+        check_finalized();
+        check_stage_info_exist(t);
+        return stage_info.at(t).max_stage;
     }
 
     const std::vector<const IR::MAU::Table*>&
@@ -1042,6 +1050,35 @@ class FindDependencyGraph : public Logging::PassManager {
     calc_topological_stage(unsigned deps_flag = 0, DependencyGraph *dg_p = nullptr);
     FindDependencyGraph(const PhvInfo &, DependencyGraph &out, const BFN_Options *o = nullptr,
         cstring dotFileName = "", cstring passContext = "", const TableSummary *s = nullptr);
+};
+
+class PrintDependencyGraph : public Inspector {
+    cstring pipe_name;
+    const DependencyGraph &dg;
+    std::map<DependencyGraph::Graph::vertex_descriptor, cstring> vertex_names;
+    std::map<DependencyGraph::Graph::edge_descriptor, cstring> edge_names;
+    std::map<bitvec, char> bitvec_to_char;
+    std::map<char, bitvec> char_to_bitvec;
+    bool preorder(const IR::BFN::Pipe *t) override;
+    void end_apply(const IR::Node* root) override;
+    char encode_dependencies(const DependencyGraph::Graph::vertex_descriptor &src_v,
+                             const DependencyGraph::Graph::vertex_descriptor &dst_v);
+    std::string print_dependencies(bitvec deps);
+
+ public:
+    explicit PrintDependencyGraph(const DependencyGraph &out) : dg(out) {}
+};
+
+// Print a summary of the dependency graph in ascii
+class TableDependencyGraphSummary : public Logging::PassManager {
+    const DependencyGraph &dg;
+
+ public:
+    explicit TableDependencyGraphSummary(const DependencyGraph &d)
+    : Logging::PassManager("table_dependency_summary", Logging::Mode::AUTO),
+    dg(d) {
+        passes.push_back(new PrintDependencyGraph(dg));
+    }
 };
 
 std::ostream &operator<<(std::ostream &, DependencyGraph::dependencies_t);

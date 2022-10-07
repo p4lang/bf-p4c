@@ -42,6 +42,8 @@ TableAllocPass::TableAllocPass(const BFN_Options& options, PhvInfo& phv, Depende
         new TablePlacement(options, deps, mutex, phv, *lc,
                             *siaa, att_info, summary, mau_backtracker),
         new DumpPipe("After TablePlacement"),
+        new FindDependencyGraph(phv, deps),
+        new TableDependencyGraphSummary(deps),
         new CheckTableNameDuplicate,
         new TableFindSeqDependencies(phv),  // not needed?
         new AssignCounterLRTValues(),

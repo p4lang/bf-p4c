@@ -1270,6 +1270,8 @@ void DependencyGraph::fill_dep_stages_from_topo(
                 stage_info[table].dep_stages_control_anti_split = tbl_dep_stages;
             else
                 stage_info[table].dep_stages_control_anti = tbl_dep_stages;
+            stage_info[table].max_stage =
+                Device::numStages() - 1 - stage_info[table].dep_stages_control_anti_split;
         }
     }
 }
@@ -2423,4 +2425,129 @@ std::ostream &operator<<(std::ostream &out, DependencyGraph::dependencies_t deps
     if (first || bits >= (1U << sizeof(bit_names)/sizeof(bit_names[0])))
         out << "<0x" << hex(bits) << ">";
     return out;
+}
+
+
+bool PrintDependencyGraph::preorder(const IR::BFN::Pipe *p) {
+    pipe_name = p->name;
+    DependencyGraph::Graph::vertex_iterator vertices, vertices_end;
+    for (boost::tie(vertices, vertices_end) = boost::vertices(dg.g);
+         vertices != vertices_end; ++vertices) {
+        vertex_names.emplace(*vertices, dg.get_vertex(*vertices)->name);
+    }
+
+    DependencyGraph::Graph::edge_iterator edges, edges_end;
+    for (boost::tie(edges, edges_end) = boost::edges(dg.g); edges != edges_end; ++edges) {
+        auto src = boost::source(*edges, dg.g);
+        auto dst = boost::target(*edges, dg.g);
+
+        edge_names.emplace(*edges, vertex_names.at(src) + "->" + vertex_names.at(dst));
+    }
+    return false;
+}
+
+// encode dependencies between source and destination as characters
+char PrintDependencyGraph::encode_dependencies(
+        const DependencyGraph::Graph::vertex_descriptor &src_v,
+        const DependencyGraph::Graph::vertex_descriptor &dst_v) {
+    bitvec deps;
+    typename DependencyGraph::Graph::out_edge_iterator out, end;
+    for (boost::tie(out, end) = boost::out_edges(src_v, dg.g); out != end; ++out) {
+        if (boost::target(*out, dg.g) == dst_v) {
+            deps |= dg.g[*out];
+        }
+    }
+    if (bitvec_to_char.count(deps) == 0) {
+        char c = 'A' + bitvec_to_char.size();
+        if (bitvec_to_char.size() > 26) {
+            c = 'a' + bitvec_to_char.size() - 26;
+        }
+        bitvec_to_char.emplace(deps, c);
+        char_to_bitvec.emplace(c, deps);
+    }
+    return bitvec_to_char.at(deps);
+}
+
+// loop through each bit in bitvec, if it is set, print the corresponding
+// DependencyGraph::dependencies_t value
+std::string PrintDependencyGraph::print_dependencies(bitvec deps) {
+    std::stringstream str;
+    // Must be consistent with dependencies_t
+    for (unsigned i = 1; i < 19; ++i) {
+        if (deps & bitvec(1U << i)) {
+            str << " " << dep_types(DependencyGraph::dependencies_t(1U << i));
+        }
+    }
+    return str.str();
+}
+
+void PrintDependencyGraph::end_apply(const IR::Node *) {
+    // sort vertices by stage and logical_id
+    std::vector<DependencyGraph::Graph::vertex_descriptor> vertices;
+    DependencyGraph::Graph::vertex_iterator vertices_it, vertices_end;
+    for (boost::tie(vertices_it, vertices_end) = boost::vertices(dg.g);
+         vertices_it != vertices_end; ++vertices_it) {
+        vertices.push_back(*vertices_it);
+    }
+    std::sort(vertices.begin(), vertices.end(), [&](auto a, auto b) {
+        auto a_vertex = dg.get_vertex(a);
+        auto b_vertex = dg.get_vertex(b);
+        if (a_vertex->stage() != b_vertex->stage())
+            return a_vertex->stage() < b_vertex->stage();
+        return a_vertex->logical_id < b_vertex->logical_id;
+    });
+
+    // print vertices matrix and encode dependencies with ASCII chars.
+    int row_stage_separator = 0;
+    LOG_FEATURE("table_dependency_summary", 3, "#pipeline " << pipe_name);
+    LOG_FEATURE("table_dependency_summary", 3, "#stage " << row_stage_separator);
+    for (auto& src_v : vertices) {
+        if (row_stage_separator != dg.get_vertex(src_v)->stage()) {
+            row_stage_separator = dg.get_vertex(src_v)->stage();
+            LOG_FEATURE("table_dependency_summary", 3, "#stage " << row_stage_separator);
+        }
+        std::stringstream str;
+        int column_stage_separator = 0;
+        for (auto& dst_v : vertices) {
+            // print a space to indicate a new stage
+            if (column_stage_separator != dg.get_vertex(dst_v)->stage()) {
+                str << " ";
+                column_stage_separator = dg.get_vertex(dst_v)->stage();
+            }
+            // if there is not edge between src_v and dst_v, print '-'
+            if (src_v == dst_v) {  // print '^' on diagonal
+                str << "^";
+            } else if (!boost::edge(dst_v, src_v, dg.g).second) {
+                str << "-";
+            } else {
+                // encode dependencies between src_v and dst_v
+                // note that we would like to print the dependencies in the
+                // lower-left of the matrix, hence the inverted order of src_v
+                // and dst_v
+                auto deps = encode_dependencies(dst_v, src_v);
+                str << deps;
+            }
+        }
+        auto t= dg.get_vertex(src_v);
+        str << " " << std::setw(10) << vertex_names.at(src_v) << "("
+            << dg.min_stage(t) << ","
+            << dg.max_stage(t) << ")";
+
+        LOG_FEATURE("table_dependency_summary", 3, str);
+
+        for (auto e : boost::make_iterator_range(boost::out_edges(src_v, dg.g))) {
+            auto src = boost::source(e, dg.g);
+            auto dst = boost::target(e, dg.g);
+            LOG_FEATURE("table_dependency_summary", 6,
+                "  edge[" << vertex_names.at(src) << " -> " << vertex_names.at(dst) << "] = "
+                << edge_names.at(e) << " : " << dep_types(dg.g[e]));
+        }
+    }
+
+    // print dependencies encoded with ASCII chars
+    LOG_FEATURE("table_dependency_summary", 3, "#dependencies");
+    for (auto& kv : char_to_bitvec) {
+        LOG_FEATURE("table_dependency_summary", 3, kv.first << " : " <<
+                    print_dependencies(kv.second));
+    }
 }

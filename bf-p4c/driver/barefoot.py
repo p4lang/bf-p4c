@@ -106,7 +106,7 @@ class BarefootBackend(BackendDriver):
                 self.runVerifiers = True
 
         # order of commands
-        self.enable_commands(['preclean-dirs', 'preclean-files', 'preclean-runtime', 'preprocessor', 
+        self.enable_commands(['preclean-dirs', 'preclean-files', 'preclean-runtime', 'preprocessor',
                               'compiler', 'assembler', 'summary_logging', 'p4c-gen-conf', 'cleaner'])
 
         # additional options
@@ -220,7 +220,7 @@ class BarefootBackend(BackendDriver):
                                     dest="program_name", required=False)
 
     def configPrecleaner(self, opts, output_dir):
-        """! Configures precleaners command to remove possible previous 
+        """! Configures precleaners command to remove possible previous
         build artifacts.
         Use directory and file delete lists since PTF usually uses the output
         directory for its files and this helps the user not delete their
@@ -516,7 +516,7 @@ class BarefootBackend(BackendDriver):
             sys.exit(0)
 
         if opts.verbose > 0:
-            ta_logging = "table_placement:3,table_summary:1,table_dependency_graph:3"
+            ta_logging = "table_placement:3,table_summary:1,table_dependency_graph:3,table_dependency_summary:3"
             phv_verbosity = str(2 * opts.verbose - 1)
             pa_logging = "allocate_phv:" + phv_verbosity + \
                          ",allocator_base:3" + \
