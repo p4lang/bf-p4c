@@ -641,7 +641,7 @@ void SRamMatchTable::common_sram_checks() {
 
 void SRamMatchTable::pass1() {
     LOG1("### SRam match table " << name() << " pass1 " << loc());
-    alloc_busses(stage->sram_search_bus_use);
+    alloc_busses(stage->sram_search_bus_use, Layout::SEARCH_BUS);
     if (format) {
         verify_format();
         setup_ways();
@@ -791,7 +791,7 @@ void SRamMatchTable::determine_word_and_result_bus() {
         if (row.word_initialized()) {
             if (word != row.word)
                 error(lineno, "Word on row %d bus %d does not align with word in RAM",
-                      row.row, row.bus);
+                      row.row, row.bus.at(Layout::SEARCH_BUS));
         } else {
             row.word = word;
         }
@@ -808,21 +808,15 @@ void SRamMatchTable::determine_word_and_result_bus() {
                     result_bus_needed = true;
             }
         }
-        if (!row.result_bus_initialized()) {
-            if (result_bus_needed)
-                row.result_bus = row.bus;
-            else
-                row.result_bus = -1;
-        } else if (!row.result_bus_used() && result_bus_needed) {
-            error(row.lineno, "Row %d: Bus %d requires a result bus, but has not been allocated "
-                              "one", row.row, row.bus);
-        }
-        if (row.result_bus >= 0) {
-            auto *old = stage->match_result_bus_use[row.row][row.result_bus];
+        if (!row.bus.count(Layout::RESULT_BUS) && result_bus_needed)
+            row.bus[Layout::RESULT_BUS] = row.bus.at(Layout::SEARCH_BUS);
+        if (row.bus.count(Layout::RESULT_BUS)) {
+            auto *old = stage->match_result_bus_use[row.row][row.bus.at(Layout::RESULT_BUS)];
             if (old && old != this)
                 error(row.lineno, "inconsistent use of match result bus %d on row %d between "
-                      "table %s and %s", row.row, row.result_bus, name(), old->name());
-            stage->match_result_bus_use[row.row][row.result_bus] = this;
+                      "table %s and %s", row.row, row.bus.at(Layout::RESULT_BUS),
+                      name(), old->name());
+            stage->match_result_bus_use[row.row][row.bus.at(Layout::RESULT_BUS)] = this;
         }
     }
 }
@@ -895,6 +889,7 @@ template<class REGS> void SRamMatchTable::write_regs_vt(REGS &regs) {
     int index = -1;
     for (auto &row : layout) {
         index++;  /* index of the row in the layout */
+        int search_bus = ::get(row.bus, Layout::SEARCH_BUS, -1);
         /* setup match logic in rams */
         auto &rams_row = regs.rams.array.row[row.row];
         auto &vh_adr_xbar = rams_row.vh_adr_xbar;
@@ -910,17 +905,17 @@ template<class REGS> void SRamMatchTable::write_regs_vt(REGS &regs) {
             if (first) {
                 hash_group = ways[way.way].group_xme;
                 word = way.word;
-                setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[row.bus], hash_group);
+                setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[search_bus], hash_group);
                 first = false;
             } else if (hash_group != ways[way.way].group_xme || int(word) != way.word) {
                 auto first_way = way_map[row.memunits[0]];
                 error(ways[way.way].lineno, "table %s ways #%d and #%d use the same row bus "
                       "(%d.%d) but different %s", name(), first_way.way, way.way, row.row,
-                      row.bus, static_cast<int>(word) == way.word ? "hash groups" : "word order");
+                      search_bus, int(word) == way.word ? "hash groups" : "word order");
                 hash_group = ways[way.way].group_xme;
                 word = way.word; }
             setup_muxctl(vh_adr_xbar.exactmatch_mem_hashadr_xbar_ctl[col],
-                         ways[way.way].index / EXACT_HASH_ADR_BITS + row.bus*5);
+                         ways[way.way].index / EXACT_HASH_ADR_BITS + search_bus*5);
             if (options.match_compiler || ways[way.way].select) {
                 // Glass always sets this.  When mask == 0, bank will also be 0, and the
                 // comparison will always match, so the bus need not be read (inp_sel).
@@ -929,7 +924,7 @@ template<class REGS> void SRamMatchTable::write_regs_vt(REGS &regs) {
                 bank_enable.exactmatch_bank_enable_bank_mask =
                     ways[way.way].select.getrange(EXACT_HASH_FIRST_SELECT_BIT, 32);
                 bank_enable.exactmatch_bank_enable_bank_id = way.bank;
-                bank_enable.exactmatch_bank_enable_inp_sel |= 1 << row.bus; }
+                bank_enable.exactmatch_bank_enable_inp_sel |= 1 << search_bus; }
             auto &ram = rams_row.ram[col];
             for (unsigned i = 0; i < 4; i++)
                 ram.match_mask[i] = match_mask.getrange(way.word*128U+i*32, 32);
@@ -950,9 +945,9 @@ template<class REGS> void SRamMatchTable::write_regs_vt(REGS &regs) {
             ram.unit_ram_ctl.match_ram_logical_table = logical_id;
             ram.unit_ram_ctl.match_ram_write_data_mux_select = 7; /* unused */
             ram.unit_ram_ctl.match_ram_read_data_mux_select = 7; /* unused */
-            ram.unit_ram_ctl.match_ram_matchdata_bus1_sel = row.bus;
-            if (row.result_bus >= 0)
-                ram.unit_ram_ctl.match_result_bus_select = 1 << row.result_bus;
+            ram.unit_ram_ctl.match_ram_matchdata_bus1_sel = search_bus;
+            if (row.bus.count(Layout::RESULT_BUS))
+                ram.unit_ram_ctl.match_result_bus_select = 1 << row.bus.at(Layout::RESULT_BUS);
             if (auto cnt = word_info[way.word].size())
                 ram.unit_ram_ctl.match_entry_enable = ~(~0U << cnt);
             auto &unitram_config = regs.rams.map_alu.row[row.row].adrmux
@@ -1008,7 +1003,7 @@ template<class REGS> void SRamMatchTable::write_regs_vt(REGS &regs) {
         // Loop for determining the config to indicate which bytes from the search bus
         // are compared to the bytes on the RAM line
         if (!row.memunits.empty()) {
-            auto &byteswizzle_ctl = rams_row.exactmatch_row_vh_xbar_byteswizzle_ctl[row.bus];
+            auto &byteswizzle_ctl = rams_row.exactmatch_row_vh_xbar_byteswizzle_ctl[search_bus];
             for (unsigned i = 0; format && i < format->groups(); i++) {
                 if (Format::Field *match = format->field("match", i)) {
                     unsigned bit = 0;
@@ -1041,7 +1036,7 @@ template<class REGS> void SRamMatchTable::write_regs_vt(REGS &regs) {
                         unsigned byte = (bit%128)/8;
                         byteswizzle_ctl[byte][bit%8U] = 8; } } }
             if (using_match) {
-                auto &vh_xbar_ctl = rams_row.vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl;
+                auto &vh_xbar_ctl = rams_row.vh_xbar[search_bus].exactmatch_row_vh_xbar_ctl;
                 if (word_ixbar_group[word] >= 0) {
                     setup_muxctl(vh_xbar_ctl,  word_ixbar_group[word]);
                 } else {
@@ -1052,8 +1047,9 @@ template<class REGS> void SRamMatchTable::write_regs_vt(REGS &regs) {
                 vh_xbar_ctl.exactmatch_row_vh_xbar_thread = timing_thread(gress); }
         }
         /* setup match central config to extract results of the match */
-        BUG_CHECK(row.result_bus_initialized());
-        ssize_t r_bus = row.result_bus_used() ? row.row*2 + row.result_bus : -1;
+        ssize_t r_bus = -1;
+        if (row.bus.count(Layout::RESULT_BUS))
+            r_bus = row.row*2 + row.bus.at(Layout::RESULT_BUS);
         // If the result bus is not to be used, then the registers are not necessary to set up
         // for shift/mask/default etc.
         /* FIXME -- factor this where possible with ternary match code */

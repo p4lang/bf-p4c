@@ -287,11 +287,14 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
         actions = result->action && result->action->actions ? result->action->actions.get()
                                                             : result->actions.get();
         for (auto &row : result->layout) {
-            if (row.result_bus < 0)
+            int r_bus = row.row*2;
+            if (row.bus.count(Layout::RESULT_BUS))
+                r_bus += row.bus.at(Layout::RESULT_BUS) & 1;
+            else if (row.bus.count(Layout::TIND_BUS))
+                r_bus += row.bus.at(Layout::TIND_BUS);
+            else
                 continue;
-            int r_bus = row.row*2 | (row.result_bus & 1);
-            result_buses.insert(r_bus);
-        }
+            result_buses.insert(r_bus); }
     } else {
         /* ternary match with no indirection table */
         auto tern_table = this->to<TernaryMatchTable>();
@@ -443,9 +446,13 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
      *-----------------------*/
     if (result->format) {
         for (auto &row : result->layout) {
-            if (row.result_bus < 0)
+            int r_bus = row.row * 2;
+            if (row.bus.count(Layout::RESULT_BUS))
+                r_bus += row.bus.at(Layout::RESULT_BUS) & 1;
+            else if (row.bus.count(Layout::TIND_BUS))
+                r_bus += row.bus.at(Layout::TIND_BUS);
+            else
                 continue;
-            int r_bus = row.row*2 | (row.result_bus & 1);
             merge.mau_immediate_data_mask[type][r_bus] = bitMask(result->format->immed_size);
             if (result->format->immed_size > 0)
                 merge.mau_payload_shifter_enable[type][r_bus]

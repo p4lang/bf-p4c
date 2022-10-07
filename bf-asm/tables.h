@@ -89,9 +89,9 @@ class Table {
          * vpns/maprams (if not empty) must match up to memunits (same size) */
         int                     lineno = -1;
         int                     row = -1;
-        int                     bus = -1;       // search bus for SRamMatch
-        // result bus for SRamMatch, if the result bus is not used, a -1 is a possible value
-        int                     result_bus = -2;
+        enum bus_type_t { SEARCH_BUS, RESULT_BUS, TIND_BUS, IDLE_BUS };
+        std::map<bus_type_t, int> bus;
+
         int                     word = -1;      // which word for wide tables
         bool                    home_row = false;       // is this a home row
         std::vector<MemUnit>    memunits;
@@ -102,8 +102,6 @@ class Table {
         friend std::ostream &operator<<(std::ostream &, const Layout &);
 
         bool word_initialized() const { return word >= 0; }
-        bool result_bus_initialized() const { return result_bus >= -1 && result_bus <= 1; }
-        bool result_bus_used() const { return result_bus >= 0; }
     };
 
  protected:
@@ -117,6 +115,8 @@ class Table {
     virtual bool common_setup(pair_t &, const VECTOR(pair_t) &, P4Table::type);
     void setup_context_json(value_t &);
     void setup_layout(std::vector<Layout> &, const VECTOR(pair_t) &data, const char *subname = "");
+    int setup_layout_bus_attrib(std::vector<Layout> &, const value_t &data,
+                                const char *what, Layout::bus_type_t type);
     int setup_layout_attrib(std::vector<Layout> &, const value_t &data,
                             const char *what, int Layout::*attr);
     void setup_logical_id();
@@ -127,14 +127,16 @@ class Table {
     { BUG(); }
     virtual int get_start_vpn() { return 0; }
     void alloc_rams(bool logical, BFN::Alloc2Dbase<Table *> &use,
-                    BFN::Alloc2Dbase<Table *> *bus_use = 0);
+                    BFN::Alloc2Dbase<Table *> *bus_use = 0,
+                    Layout::bus_type_t bus_type = Layout::SEARCH_BUS);
     void alloc_global_srams();
     void alloc_global_tcams();
-    void alloc_busses(BFN::Alloc2Dbase<Table *> &bus_use);
+    void alloc_busses(BFN::Alloc2Dbase<Table *> &bus_use, Layout::bus_type_t bus_type);
     void alloc_id(const char *idname, int &id, int &next_id, int max_id,
                   bool order, BFN::Alloc1Dbase<Table *> &use);
     void alloc_maprams();
     virtual void alloc_vpns();
+    virtual Layout::bus_type_t default_bus_type() const { return Layout::SEARCH_BUS; }
     void need_bus(int lineno, BFN::Alloc1Dbase<Table *> &use, int idx, const char *name);
     static bool allow_ram_sharing(const Table *t1, const Table *t2);
 
@@ -398,7 +400,7 @@ class Table {
                 if (a == *this) return *this;
                 if (type == Name) free(str);
                 set(a);
-                if (type == Name) str = strdup(str);
+                if (type == Name) str = strdup(a.str);
                 return *this; }
             Arg &operator=(Arg &&a) {
                 std::swap(type, a.type);
@@ -878,6 +880,9 @@ class Table {
         return reachable_tables_; }
     std::string loc() const;
 };
+
+std::ostream &operator<<(std::ostream &, const Table::Layout &);
+std::ostream &operator<<(std::ostream &, const Table::Layout::bus_type_t);
 
 class FakeTable : public Table {
  public:
@@ -1436,6 +1441,7 @@ DECLARE_TABLE_TYPE(HashActionTable, MatchTable, "hash_action",
                                         const std::string &act = "") const override;
     void add_hash_functions(json::map &stage_tbl) const override;
     void determine_word_and_result_bus() override;
+    Layout::bus_type_t default_bus_type() const override { return Layout::RESULT_BUS; }
 )
 
 DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
@@ -1492,6 +1498,7 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
     void determine_word_and_result_bus() override;
     bitvec compute_reachable_tables() override;
     int get_tcam_id() const override { return match_table->tcam_id; }
+    Layout::bus_type_t default_bus_type() const override { return Layout::TIND_BUS; }
 )
 
 DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
@@ -1790,6 +1797,7 @@ class IdletimeTable : public Table {
         return rv; }
     bool needs_handle() const override { return true; }
     bool needs_next() const override { return true; }
+    Layout::bus_type_t default_bus_type() const override { return Layout::IDLE_BUS; }
 };
 
 DECLARE_ABSTRACT_TABLE_TYPE(Synth2Port, AttachedTable,
@@ -1908,6 +1916,7 @@ DECLARE_TABLE_TYPE(MeterTable, Synth2Port, "meter",
             int tcam_shift) const override;
     void add_cfg_reg(json::vector &cfg_cache, std::string full_name, std::string name,
             unsigned val, unsigned width);
+    Layout::bus_type_t default_bus_type() const override;
     int default_pfe_adjust() const override { return color_aware ? -METER_TYPE_BITS : 0; }
     void set_color_used() override { color_used = true; }
     void set_output_used() override { output_used = true; }

@@ -16,6 +16,15 @@
 #include "flatrock/meter.cpp"          // NOLINT(build/include)
 #endif  /* HAVE_FLATROCK */
 
+Table::Layout::bus_type_t MeterTable::default_bus_type() const {
+    // FIXME -- this is a bit of a hack -- if color_mapram_addr has been set, we want the
+    // bus_type for color maprams, not for the meter proper (which should not actually
+    // have a bus specified?)
+    if (color_mapram_addr == IDLE_MAP_ADDR) return Layout::IDLE_BUS;
+    warning(lineno, "meter table should not have bus:, will be ignored");
+    return Layout::SEARCH_BUS;
+}
+
 void MeterTable::setup(VECTOR(pair_t) &data) {
     common_init_setup(data, false, P4Table::Stateful);
     for (auto &kv : MapIterChecked(data, true)) {
@@ -30,21 +39,21 @@ void MeterTable::setup(VECTOR(pair_t) &data) {
                 color_aware = get_bool(kv.value);
         } else if (kv.key == "color_maprams") {
             if (CHECKTYPE(kv.value, tMAP)) {
+                if (auto addr_type = get(kv.value.map, "address")) {
+                    if (CHECKTYPE(*addr_type, tSTR)) {
+                        if (*addr_type == "idletime")
+                            color_mapram_addr = IDLE_MAP_ADDR;
+                        else if (*addr_type == "stats")
+                            color_mapram_addr = STATS_MAP_ADDR;
+                        else
+                            error(addr_type->lineno, "Unrecognized color mapram address type %s",
+                                  addr_type->s);
+                    }
+                }
                 setup_layout(color_maprams, kv.value.map, " color_maprams");
                 if (auto *vpn = get(kv.value.map, "vpns"))
                     if (CHECKTYPE(*vpn, tVEC))
                         setup_vpns(color_maprams, &vpn->vec, true);
-            }
-            if (auto addr_type = get(kv.value.map, "address")) {
-                if (CHECKTYPE(*addr_type, tSTR)) {
-                    if (*addr_type == "idletime")
-                        color_mapram_addr = IDLE_MAP_ADDR;
-                    else if (*addr_type == "stats")
-                        color_mapram_addr = STATS_MAP_ADDR;
-                    else
-                        error(addr_type->lineno, "Unrecognized color mapram address type %s",
-                              addr_type->s);
-                }
             }
         } else if (kv.key == "pre_color") {
             if (CHECKTYPE(kv.value, tCMD)) {
@@ -750,7 +759,7 @@ void MeterTable::write_mapram_color_regs(REGS &regs, bool &push_on_overflow) {
             if (color_mapram_addr == IDLE_MAP_ADDR) {
                 ram_address_mux_ctl.ram_stats_meter_adr_mux_select_idlet = 1;
                 setup_muxctl(map_alu_row.vh_xbars.adr_dist_idletime_adr_xbar_ctl[col],
-                        row.bus % 10);
+                        row.bus.at(Layout::IDLE_BUS) % 10);
             } else if (color_mapram_addr == STATS_MAP_ADDR) {
                 ram_address_mux_ctl.ram_stats_meter_adr_mux_select_stats = 1;
             }
@@ -914,7 +923,7 @@ template<> void MeterTable::meter_color_logical_to_phys(Target::Tofino::mau_regs
         if (color_mapram_addr == IDLE_MAP_ADDR) {
             adrdist.movereg_idle_ctl[logical_id].movereg_idle_ctl_mc = 1;
             for (auto lo : color_maprams) {
-                 int bus_index = lo.bus;
+                 int bus_index = lo.bus.at(Layout::IDLE_BUS);
                  // If color mapram start on upper half, it will be overflow in the lower half
                  if (color_maprams[0].row >= UPPER_MATCH_CENTRAL_FIRST_ROW)
                      bus_index += IDLETIME_BUSSES_PER_HALF;
@@ -945,7 +954,7 @@ template<> void MeterTable::meter_color_logical_to_phys(Target::JBay::mau_regs &
         if (color_mapram_addr == IDLE_MAP_ADDR) {
             adrdist.movereg_idle_ctl[logical_id].movereg_idle_ctl_mc = 1;
             for (auto lo : color_maprams) {
-                 int bus_index = lo.bus;
+                 int bus_index = lo.bus.at(Layout::IDLE_BUS);
                  // No overflow bus exist between upper and lower half so every color mapram have
                  // to use their respective bus
                  if (lo.row >= UPPER_MATCH_CENTRAL_FIRST_ROW)
@@ -978,7 +987,7 @@ template<> void MeterTable::meter_color_logical_to_phys(Target::Cloudbreak::mau_
         if (color_mapram_addr == IDLE_MAP_ADDR) {
             adrdist.movereg_idle_ctl[logical_id].movereg_idle_ctl_mc = 1;
             for (auto lo : color_maprams) {
-                 int bus_index = lo.bus;
+                 int bus_index = lo.bus.at(Layout::IDLE_BUS);
                  // No overflow bus exist between upper and lower half so every color mapram have
                  // to use their respective bus
                  if (lo.row >= UPPER_MATCH_CENTRAL_FIRST_ROW)

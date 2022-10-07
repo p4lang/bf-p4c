@@ -50,15 +50,13 @@ void HashActionTable::pass1() {
 void HashActionTable::pass2() {
     LOG1("### Hash Action " << name() << " pass2 " << loc());
     if (logical_id < 0) choose_logical_id();
-    if (Target::GATEWAY_NEEDS_SEARCH_BUS()) {
-        if (layout.size() != 1 || (layout[0].bus < 0 && layout[0].result_bus < 0))
+    if (Target::GATEWAY_NEEDS_SEARCH_BUS()) {  // FIXME -- misnamed param?
+        if (layout.size() != 1 || layout[0].bus.empty()) {
             error(lineno, "Need explicit row/bus in hash_action table");
-        else if (layout[0].bus >= 0 && layout[0].result_bus >= 0)
+        } else if (layout[0].bus.size() > 1) {
             error(lineno, "Can't have both bus and result_bus in hash_action table");
-        else if (layout[0].bus < 0)
-            layout[0].bus = layout[0].result_bus;
-        else if (layout[0].result_bus < 0)
-            layout[0].result_bus = layout[0].bus; }
+        } else {
+            BUG_CHECK(layout[0].bus.count(Layout::RESULT_BUS), "should have result bus (only)"); } }
     allocate_physical_id();
     determine_word_and_result_bus();
     for (auto &ixb : input_xbar)
@@ -77,7 +75,6 @@ void HashActionTable::pass2() {
 void HashActionTable::determine_word_and_result_bus() {
     for (auto &row : layout) {
         row.word = 0;
-        row.result_bus = row.bus;
     }
 }
 
@@ -96,7 +93,7 @@ template<class REGS>
 void HashActionTable::write_regs_vt(REGS &regs) {
     LOG1("### Hash Action " << name() << " write_regs " << loc());
     /* FIXME -- setup layout with no rams so other functions can write registers properly */
-    int bus_type = layout[0].bus >> 1;
+    int bus_type = layout[0].bus[Layout::RESULT_BUS] >> 1;
     MatchTable::write_regs(regs, bus_type, this);
     auto &merge = regs.rams.match.merge;
     merge.exact_match_logical_result_en |= 1 << logical_id;

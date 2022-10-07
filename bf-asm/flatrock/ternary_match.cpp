@@ -135,23 +135,25 @@ void Target::Flatrock::TernaryMatchTable::write_regs(Target::Flatrock::mau_regs 
             int unit = phys_row + TCAM_ROWS * col;
             auto &iss_sel = scm.int_stage_sbus_sel[unit];
             if (minstage < this_stage) {
-                iss_sel.ig_sel_r2l[row.bus] = match.at(word).word_group;
-                iss_sel.issb_sel_r2l[row.bus] = 2;
+                int hbus = row.bus.at(Layout::SEARCH_BUS);
+                iss_sel.ig_sel_r2l[hbus] = match.at(word).word_group;
+                iss_sel.issb_sel_r2l[hbus] = 2;
                 if (minstage > 0)
-                    ppu.scm[minstage-1].stage_addrmap.result_bus[unit].isrb_l2r_dis[row.bus] |= 2;
-                scm.result_bus[unit].isrb_l2r_dis[row.bus] = 3;
+                    ppu.scm[minstage-1].stage_addrmap.result_bus[unit].isrb_l2r_dis[hbus] |= 2;
+                scm.result_bus[unit].isrb_l2r_dis[hbus] = 3;
                 for (int st = minstage; st < this_stage; ++st) {
                     if (!ramuse[col][st])
-                        ppu.scm[st].stage_addrmap.result_bus[unit].isrb_l2r_dis[row.bus] |= 1; } }
+                        ppu.scm[st].stage_addrmap.result_bus[unit].isrb_l2r_dis[hbus] |= 1; } }
             if (maxstage > this_stage) {
-                iss_sel.ig_sel_l2r[row.bus] = match.at(word).word_group;
-                iss_sel.issb_sel_l2r[row.bus] = 2;
+                int hbus = row.bus.at(Layout::SEARCH_BUS);
+                iss_sel.ig_sel_l2r[hbus] = match.at(word).word_group;
+                iss_sel.issb_sel_l2r[hbus] = 2;
                 if (maxstage < LAST_INGRESS_STAGE)
-                    ppu.scm[maxstage+1].stage_addrmap.result_bus[unit].isrb_r2l_dis[row.bus] |= 2;
-                scm.result_bus[unit].isrb_r2l_dis[row.bus] = 3;
+                    ppu.scm[maxstage+1].stage_addrmap.result_bus[unit].isrb_r2l_dis[hbus] |= 2;
+                scm.result_bus[unit].isrb_r2l_dis[hbus] = 3;
                 for (int st = maxstage; st > this_stage; --st) {
                     if (!ramuse[col][st])
-                        ppu.scm[st].stage_addrmap.result_bus[unit].isrb_r2l_dis[row.bus] |= 1; } }
+                        ppu.scm[st].stage_addrmap.result_bus[unit].isrb_r2l_dis[hbus] |= 1; } }
             // need to merge to the middle (row 4 or 5) of 10x2 layout
             int direction = (phys_row % 10) < 5 ? +1 : -1;
             for (int row = phys_row; true; row += direction) {
@@ -178,9 +180,9 @@ void Target::Flatrock::TernaryMatchTable::write_regs(Target::Flatrock::mau_regs 
             if (ram.stage == stage->stageno) {
                 scm.tcam_mode[unit].key_sel = gress == EGRESS ? 5 : 0;
             } else if ((ram.stage < stage->stageno) ^ (gress == EGRESS)) {
-                scm.tcam_mode[unit].key_sel = row.bus + 3;  // R2L bus
+                scm.tcam_mode[unit].key_sel = row.bus.at(Layout::SEARCH_BUS) + 3;  // R2L bus
             } else {
-                scm.tcam_mode[unit].key_sel = row.bus + 1;  // L2R bus
+                scm.tcam_mode[unit].key_sel = row.bus.at(Layout::SEARCH_BUS) + 1;  // L2R bus
             }
             // scm.tcam_result_ctl[unit] = 0;  leaving this as 0 in all fields is
             // entire tcam as priority (no splitting or bitmap)

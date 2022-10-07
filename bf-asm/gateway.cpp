@@ -103,7 +103,7 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
             if (kv.value.i < 0 || kv.value.i > 1)
                 error(kv.value.lineno, "bus %" PRId64 " out of range", kv.value.i);
             if (layout.empty()) layout.resize(1);
-            layout[0].bus = kv.value.i;
+            layout[0].bus[Layout::SEARCH_BUS] = kv.value.i;
             if (layout[0].lineno < 0)
                 layout[0].lineno = kv.value.lineno;
         } else if (kv.key == "payload_row") {
@@ -118,7 +118,7 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
             if (kv.value.i < 0 || kv.value.i > 3)
                 error(kv.value.lineno, "bus %" PRId64 " out of range", kv.value.i);
             if (layout.size() < 2) layout.resize(2);
-            layout[1].result_bus = kv.value.i;
+            layout[1].bus[Layout::RESULT_BUS] = kv.value.i;
             if (layout[1].lineno < 0)
                 layout[1].lineno = kv.value.lineno;
         } else if (kv.key == "payload_unit") {
@@ -309,11 +309,15 @@ void GatewayTable::verify_format() {
                           field.first.c_str());
                     err = true; } } }
     } else if (layout.size() > 1) {
-        if (layout[1].result_bus < 0 || layout[1].result_bus > 3)
-            error(layout[1].lineno, "Invalid bus %d for gateway payload",  layout[1].result_bus);
-        if ((layout[1].result_bus & 2) && format->groups() > 1)
-            error(format->lineno, "Can't have mulitple payload format groups when using "
-                  "ternary indirect bus"); }
+        if (!layout[1].bus.count(Layout::RESULT_BUS)) {
+            error(layout[1].lineno, "No result bus for gateway payload");
+        } else {
+            int result_bus = layout[1].bus.at(Layout::RESULT_BUS);
+            if (result_bus > 3)
+                error(layout[1].lineno, "Invalid bus %d for gateway payload", result_bus);
+            if ((result_bus & 2) && format->groups() > 1)
+                error(format->lineno, "Can't have mulitple payload format groups when using "
+                      "ternary indirect bus"); } }
 }
 
 void GatewayTable::pass1() {
@@ -471,7 +475,8 @@ template<class REGS>
 static bool setup_vh_xbar(REGS &regs, Table *table, Table::Layout &row, int base,
                           std::vector<GatewayTable::MatchKey> &match, int group) {
     auto &rams_row = regs.rams.array.row[row.row];
-    auto &byteswizzle_ctl = rams_row.exactmatch_row_vh_xbar_byteswizzle_ctl[row.bus];
+    auto &byteswizzle_ctl =
+        rams_row.exactmatch_row_vh_xbar_byteswizzle_ctl[row.bus.at(Table::Layout::SEARCH_BUS)];
     for (auto &r : match) {
         if (r.offset >= 32) break; /* skip hash matches */
         for (int bit = 0; bit < r.val->size(); ++bit) {
@@ -651,19 +656,20 @@ void GatewayTable::write_regs_vt(REGS &regs) {
     auto &row_reg = regs.rams.array.row[row.row];
     auto &gw_reg = row_reg.gateway_table[gw_unit];
     auto &merge = regs.rams.match.merge;
-    if (row.bus == 0) {
+    int search_bus = row.bus.at(Layout::SEARCH_BUS);
+    if (search_bus == 0) {
         gw_reg.gateway_table_ctl.gateway_table_input_data0_select = 1;
         gw_reg.gateway_table_ctl.gateway_table_input_hash0_select = 1;
     } else {
-        BUG_CHECK(row.bus == 1);
+        BUG_CHECK(search_bus == 1);
         gw_reg.gateway_table_ctl.gateway_table_input_data1_select = 1;
         gw_reg.gateway_table_ctl.gateway_table_input_hash1_select = 1; }
     for (auto &ixb : input_xbar) {
         if (ixb->hash_group() >= 0)
-            setup_muxctl(row_reg.vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[row.bus],
+            setup_muxctl(row_reg.vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[search_bus],
                          ixb->hash_group());
         if (ixb->match_group() >= 0 && gateway_needs_ixbar_group()) {
-            auto &vh_xbar_ctl = row_reg.vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl;
+            auto &vh_xbar_ctl = row_reg.vh_xbar[search_bus].exactmatch_row_vh_xbar_ctl;
             setup_muxctl(vh_xbar_ctl, ixb->match_group());
             /* vh_xbar_ctl.exactmatch_row_vh_xbar_thread = gress; */ } }
     gw_reg.gateway_table_ctl.gateway_table_logical_table = logical_id;
@@ -698,24 +704,24 @@ void GatewayTable::write_regs_vt(REGS &regs) {
     merge.gateway_en |= 1 << logical_id;
     setup_muxctl(merge.gateway_to_logicaltable_xbar_ctl[logical_id], row.row*2 + gw_unit);
     if (layout.size() > 1) {
-        BUG_CHECK(layout[1].result_bus >= 0);
-        payload_write_regs(regs, layout[1].row, layout[1].result_bus >> 1,
-                           layout[1].result_bus & 1);
-    }
+        int result_bus = layout[1].bus.at(Layout::RESULT_BUS);
+        payload_write_regs(regs, layout[1].row, result_bus >> 1, result_bus & 1); }
     if (Table *tbl = match_table) {
         bool tind_bus = false;
+        auto bus_type = Layout::RESULT_BUS;
         auto *tmatch = dynamic_cast<TernaryMatchTable *>(tbl);
         if (tmatch) {
             tind_bus = true;
+            bus_type = Layout::TIND_BUS;
             tbl = tmatch->indirect;
         } else if (auto *hashaction = dynamic_cast<HashActionTable *>(tbl)) {
-            tind_bus = hashaction->layout[0].bus >= 2;
+            tind_bus = hashaction->layout[0].bus.at(bus_type) >= 2;
         }
         if (tbl) {
             for (auto &row : tbl->layout) {
-                BUG_CHECK(row.result_bus_initialized());
-                if (row.result_bus >= 0) {
-                    auto &xbar_ctl = merge.gateway_to_pbus_xbar_ctl[row.row * 2 + row.result_bus];
+                if (row.bus.count(bus_type)) {
+                    int bus = row.bus.at(bus_type);
+                    auto &xbar_ctl = merge.gateway_to_pbus_xbar_ctl[row.row * 2 + (bus & 1)];
                     if (tind_bus) {
                         xbar_ctl.tind_logical_select = logical_id;
                         xbar_ctl.tind_inhibit_enable = 1;

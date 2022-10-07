@@ -112,9 +112,9 @@ TernaryMatchTable::Match::Match(const value_t &v) : lineno(v.lineno) {
 
 static void check_tcam_match_bus(const std::vector<Table::Layout> &layout) {
     for (auto &row : layout) {
-        if (row.bus < 0) continue;
+        if (row.bus.empty()) continue;
         for (auto &tcam : row.memunits)
-            if (row.bus != tcam.col)
+            if (row.bus.at(Table::Layout::SEARCH_BUS) != tcam.col)
                 error(row.lineno, "Tcam match bus hardwired to tcam column");
     }
 }
@@ -220,13 +220,15 @@ void TernaryMatchTable::pass1() {
     } else {
         auto mg = match.begin();
         for (auto &row : layout) {
-            if (row.bus < 0) row.bus = row.memunits.at(0).col;
+            if (!row.bus.count(Layout::SEARCH_BUS))
+                row.bus[Layout::SEARCH_BUS] = row.memunits.at(0).col;
+            auto bus = row.bus.at(Layout::SEARCH_BUS);
             if (mg->byte_group >= 0) {
-                auto &bg_use = stage->tcam_byte_group_use[row.row/2][row.bus];
+                auto &bg_use = stage->tcam_byte_group_use[row.row/2][bus];
                 if (bg_use.first) {
                     if (bg_use.second != mg->byte_group) {
                         error(mg->lineno, "Conflicting tcam byte group between rows %d and %d "
-                              "in col %d for table %s", row.row, row.row^1, row.bus, name());
+                              "in col %d for table %s", row.row, row.row^1, bus, name());
                         if (bg_use.first != this)
                             error(bg_use.first->lineno, "...also used in table %s",
                                   bg_use.first->name()); }
@@ -1034,7 +1036,7 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
     if (Target::SRAM_GLOBAL_ACCESS())
         alloc_global_srams();
     else
-        alloc_rams(false, stage->sram_use, &stage->tcam_indirect_bus_use);
+        alloc_rams(false, stage->sram_use, &stage->tcam_indirect_bus_use, Layout::TIND_BUS);
     if (!action.set() && !actions)
         error(lineno, "Table %s has neither action table nor immediate actions", name());
     if (actions && !action_bus) action_bus = ActionBus::create();
@@ -1064,7 +1066,7 @@ bitvec TernaryIndirectTable::compute_reachable_tables() {
 
 void TernaryIndirectTable::pass1() {
     LOG1("### Ternary indirect table " << name() << " pass1");
-    alloc_busses(stage->tcam_indirect_bus_use);
+    alloc_busses(stage->tcam_indirect_bus_use, Layout::TIND_BUS);
     determine_word_and_result_bus();
     Table::pass1();
     if (action_enable >= 0)
@@ -1083,7 +1085,6 @@ void TernaryIndirectTable::pass1() {
 void TernaryIndirectTable::determine_word_and_result_bus() {
     for (auto &row : layout) {
         row.word = 0;
-        row.result_bus = row.bus;
     }
 }
 
@@ -1110,7 +1111,7 @@ template<class REGS> void TernaryIndirectTable::write_regs_vt(REGS &regs) {
         regs.tcams.tcam_match_adr_shift[tcam_id] = tcam_shift;
     auto &merge = regs.rams.match.merge;
     for (Layout &row : layout) {
-        BUG_CHECK(row.result_bus >= 0);
+        int bus = row.bus.at(Layout::TIND_BUS);
         auto vpn = row.vpns.begin();
         auto &ram_row = regs.rams.array.row[row.row];
         for (auto &memunit : row.memunits) {
@@ -1120,10 +1121,10 @@ template<class REGS> void TernaryIndirectTable::write_regs_vt(REGS &regs) {
             auto &unit_ram_ctl = ram_row.ram[col].unit_ram_ctl;
             unit_ram_ctl.match_ram_write_data_mux_select = 7; /* disable */
             unit_ram_ctl.match_ram_read_data_mux_select = 7; /* disable */
-            unit_ram_ctl.tind_result_bus_select = 1U << row.result_bus;
+            unit_ram_ctl.tind_result_bus_select = 1U << bus;
             auto &mux_ctl = regs.rams.map_alu.row[row.row].adrmux
                     .ram_address_mux_ctl[col/6][col%6];
-                mux_ctl.ram_unitram_adr_mux_select = row.result_bus + 2;
+                mux_ctl.ram_unitram_adr_mux_select = bus + 2;
             auto &unitram_config = regs.rams.map_alu.row[row.row].adrmux
                     .unitram_config[col/6][col%6];
             unitram_config.unitram_type = 6;
@@ -1135,13 +1136,13 @@ template<class REGS> void TernaryIndirectTable::write_regs_vt(REGS &regs) {
                 unitram_config.unitram_egress = 1;
             unitram_config.unitram_enable = 1;
             auto &xbar_ctl = regs.rams.map_alu.row[row.row].vh_xbars
-                    .adr_dist_tind_adr_xbar_ctl[row.result_bus];
+                    .adr_dist_tind_adr_xbar_ctl[bus];
             if (tcam_id >= 0)
                 setup_muxctl(xbar_ctl, tcam_id);
             if (gress == EGRESS)
                 regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row.row);
             ram_row.tind_ecc_error_uram_ctl[timing_thread(gress)] |= 1 << (col - 2); }
-        int r_bus = row.row*2 + row.result_bus;
+        int r_bus = row.row*2 + bus;
         merge.tind_ram_data_size[r_bus] = format->log2size - 1;
         if (tcam_id >= 0)
             setup_muxctl(merge.tcam_match_adr_to_physical_oxbar_outputmap[r_bus], tcam_id);
@@ -1196,7 +1197,7 @@ void TernaryMatchTable::add_result_physical_buses(json::map &stage_tbl) const {
     json::vector &result_physical_buses = stage_tbl["result_physical_buses"] = json::vector();
     if (indirect) {
         for (auto l : indirect->layout) {
-            result_physical_buses.push_back(l.row * 2 + l.result_bus); } }
+            result_physical_buses.push_back(l.row * 2 + l.bus.at(Layout::TIND_BUS)); } }
     else
         result_physical_buses.push_back(indirect_bus);
 }

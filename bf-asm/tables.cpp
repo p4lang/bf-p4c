@@ -277,10 +277,26 @@ static int add_stages(Table::Layout &row, const value_t &stages) {
     return rv;
 }
 
+std::ostream &operator<<(std::ostream &out, const Table::Layout::bus_type_t type) {
+    switch (type) {
+    case Table::Layout::SEARCH_BUS:
+        return out << "search_bus";
+    case Table::Layout::RESULT_BUS:
+        return out << "result_bus";
+    case Table::Layout::TIND_BUS:
+        return out << "tind_bus";
+    case Table::Layout::IDLE_BUS:
+        return out << "idle_bus";
+    default:
+        return out << "[bus_t " << static_cast<int>(type) << "]";
+    }
+}
+
 std::ostream &operator<<(std::ostream &out, const Table::Layout &l) {
     if (l.home_row) out << "home_";
     out << "row=" << l.row;
-    if (l.bus >= 0) out << " bus=" << l.bus;
+    for (auto [type, idx] : l.bus)
+        out << " " << type << "=" << idx;
     if (l.word >= 0) out << " word=" << l.word;
     if (!l.memunits.empty()) {
         const char *sep = "";
@@ -319,6 +335,30 @@ int Table::setup_layout_attrib(std::vector<Layout> &layout, const value_t &data,
     } else {
         for (auto &lrow : layout)
             lrow.*attr = data.i;
+    }
+    return 0;
+}
+
+int Table::setup_layout_bus_attrib(std::vector<Layout> &layout, const value_t &data,
+                                   const char *what, Layout::bus_type_t type) {
+    if (!CHECKTYPE2(data, tINT, tVEC)) {
+        return 1;
+    } else if (data.type == tVEC) {
+        if (data.vec.size != static_cast<int>(layout.size())) {
+            error(data.lineno, "%s shape doesn't match rows", what);
+            return 1;
+        } else {
+            for (int i = 0; i < data.vec.size; i++) {
+                if (!CHECKTYPE(data.vec[i], tINT)) return 1;
+                if (data.vec[i].i >= 0)
+                    layout[i].bus[type] = data.vec[i].i;
+            }
+        }
+    } else if (data.i < 0) {
+        error(data.lineno, "%s value %" PRId64 " invalid", what, data.i);
+    } else {
+        for (auto &lrow : layout)
+            lrow.bus[type] = data.i;
     }
     return 0;
 }
@@ -384,26 +424,23 @@ void Table::setup_layout(std::vector<Layout> &layout, const VECTOR(pair_t) &data
     } else if (layout.size() > 1) {
         error(lineno, "No 'column' attribute in table %s%s", name(), subname);
         return; }
-    auto *bus = get(data, "bus");
-    if (!bus)
-        bus = get(data, "search_bus");
-    if (bus)
-        err |= Table::setup_layout_attrib(layout, *bus, "Bus", &Layout::bus);
-    if (auto *result_bus = get(data, "result_bus"))
-        err |= Table::setup_layout_attrib(layout, *result_bus, "Bus", &Layout::result_bus);
+    if (auto *bus = get(data, "bus"))
+        err |= Table::setup_layout_bus_attrib(layout, *bus, "Bus", default_bus_type());
+    else if (auto *bus = get(data, "search_bus"))
+        err |= Table::setup_layout_bus_attrib(layout, *bus, "Bus", Layout::SEARCH_BUS);
+    if (auto *bus = get(data, "result_bus"))
+        err |= Table::setup_layout_bus_attrib(layout, *bus, "Bus", Layout::RESULT_BUS);
     if (auto *word = get(data, "word"))
         err |= Table::setup_layout_attrib(layout, *word, "Word", &Layout::word);
     if (err) return;
     for (auto i = layout.begin(); i != layout.end(); i++)
         for (auto j = i+1; j != layout.end(); j++)
-            if (i->row == j->row && i->bus == j->bus && i->result_bus == j->result_bus &&
-                i->word == j->word) {
-#define __BUS_SIZ 16
-                char bus[__BUS_SIZ] = { 0 };
-                if (i->bus >= 0) snprintf(bus, __BUS_SIZ, " bus %d", i->bus);
-                error(i->lineno, "row %d%s duplicated in table %s%s", i->row, bus,
+            if (i->row == j->row && i->bus == j->bus && i->word == j->word) {
+                std::stringstream bus;
+                if (!i->bus.empty())
+                    bus << " " << i->bus.begin()->first << " " << i->bus.begin()->second;
+                error(i->lineno, "row %d%s duplicated in table %s%s", i->row, bus.str().c_str(),
                       name(), subname); }
-#undef __BUS_SIZ
 }
 
 void Table::setup_logical_id() {
@@ -765,7 +802,7 @@ bool Table::allow_bus_sharing(Table *t1, Table *t2) {
 }
 
 void Table::alloc_rams(bool logical, BFN::Alloc2Dbase<Table *> &use,
-                       BFN::Alloc2Dbase<Table *> *bus_use) {
+                       BFN::Alloc2Dbase<Table *> *bus_use, Layout::bus_type_t bus_type) {
     for (auto &row : layout) {
         for (auto &memunit : row.memunits) {
             BUG_CHECK(memunit.stage == -1 && memunit.row == row.row, "memunit fail");
@@ -786,13 +823,14 @@ void Table::alloc_rams(bool logical, BFN::Alloc2Dbase<Table *> &use,
                 error(lineno, "Table %s using out-of-bounds (%d,%d)", name(), r, c);
             }
         }
-        if (row.bus >= 0 && bus_use) {
-            if (Table *old = (*bus_use)[row.row][row.bus]) {
+        if (bus_use && row.bus.count(bus_type)) {
+            int bus = row.bus.at(bus_type);
+            if (Table *old = (*bus_use)[row.row][bus]) {
                 if (old != this && old->p4_name() != p4_name())
                     error(lineno, "Table %s trying to use bus %d on row %d which is already in "
-                          "use by table %s", name(), row.bus, row.row, old->name());
+                          "use by table %s", name(), bus, row.row, old->name());
             } else {
-                (*bus_use)[row.row][row.bus] = this;
+                (*bus_use)[row.row][bus] = this;
             }
         }
     }
@@ -803,7 +841,7 @@ void Table::alloc_global_srams() { BUG(); }
 void Table::alloc_global_tcams() { BUG(); }
 #endif /* !HAVE_FLATROCK */
 
-void Table::alloc_busses(BFN::Alloc2Dbase<Table *> &bus_use) {
+void Table::alloc_busses(BFN::Alloc2Dbase<Table *> &bus_use, Layout::bus_type_t bus_type) {
     for (auto &row : layout) {
         // If row.memunits is empty, we don't really need a bus here (won't use it
         // for anything).
@@ -812,15 +850,16 @@ void Table::alloc_busses(BFN::Alloc2Dbase<Table *> &bus_use) {
         // In these examples compiler does gateway optimization where static
         // entries are encoded in the gateway and no RAM's are used. We skip bus
         // allocation in these cases.
-        if (row.bus < 0 && !row.memunits.empty()) {
+        if (!row.bus.count(bus_type) && !row.memunits.empty()) {
+            // FIXME -- iterate over bus_use[row.row] rather than assuming 2 rows
             if (bus_use[row.row][0] == this)
-                row.bus = 0;
+                row.bus[bus_type] = 0;
             else if (bus_use[row.row][1] == this)
-                row.bus = 1;
+                row.bus[bus_type] = 1;
             else if (!bus_use[row.row][0])
-                bus_use[row.row][row.bus = 0] = this;
+                bus_use[row.row][row.bus[bus_type] = 0] = this;
             else if (!bus_use[row.row][1])
-                bus_use[row.row][row.bus = 1] = this;
+                bus_use[row.row][row.bus[bus_type] = 1] = this;
             else
                 error(lineno, "No bus available on row %d for table %s",
                       row.row, name()); } }
@@ -3087,9 +3126,8 @@ void Table::common_tbl_cfg(json::map &tbl) const {
 void Table::add_result_physical_buses(json::map &stage_tbl) const {
     json::vector &result_physical_buses = stage_tbl["result_physical_buses"] = json::vector();
     for (auto l : layout) {
-        if (!l.result_bus_used())
-            continue;
-        result_physical_buses.push_back(l.row * 2 + l.result_bus);
+        if (l.bus.count(Layout::RESULT_BUS))
+            result_physical_buses.push_back(l.row * 2 + l.bus.at(Layout::RESULT_BUS));
     }
 }
 

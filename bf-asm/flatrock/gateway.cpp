@@ -61,7 +61,7 @@ void Target::Flatrock::GatewayTable::pass1() {
     ::GatewayTable::pass1();
     if (layout.size() != 1 || layout[0].row < 0) {
         error(lineno, "No row specified in gateway");
-    } else if (layout[0].bus >= 0) {
+    } else if (!layout[0].bus.empty()) {
         // should be error?
         warning(lineno, "No search bus needed for gateway on %s", Target::name()); }
 }

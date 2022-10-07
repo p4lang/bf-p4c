@@ -328,7 +328,12 @@ template<class REGS> void ExactMatchTable::write_regs_vt(REGS &regs) {
                 // always generated on the same index
                 auto &stash_match_mask = stash_reg.stash_match_mask[stash_unit_id];
                 if (stash_row == physical_row_with_overhead) {
-                    int result_bus = row.result_bus >= 0 ? row.result_bus : row.bus;
+                    // FIXME -- the overhead row should always have a result bus allocated, but
+                    // sometimes it does not.  This hack has been here for awhile and is needed
+                    // for p4_16/compile_only/meters_0.p4 at least, but seems wrong and unsafe
+                    int result_bus = row.bus.count(Layout::RESULT_BUS)
+                                   ? row.bus.at(Layout::RESULT_BUS)
+                                   : row.bus.at(Layout::SEARCH_BUS);
                     stash_row_nxtable_bus_drive = 1 << result_bus;
                     stash_reg.stash_match_result_bus_select[stash_unit_id] = 1 << result_bus;
 
@@ -367,8 +372,8 @@ template<class REGS> void ExactMatchTable::write_regs_vt(REGS &regs) {
                         stash_match_mask[word] = 0;
                     }
                 }
-                input_data_ctl.stash_match_data_select = row.bus;
-                input_data_ctl.stash_hashbank_select = row.bus;
+                input_data_ctl.stash_match_data_select = row.bus.at(Layout::SEARCH_BUS);
+                input_data_ctl.stash_hashbank_select = row.bus.at(Layout::SEARCH_BUS);
                 break;
             }
         }
@@ -416,8 +421,9 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) const {
                     for (auto &row : layout) {
                         if (row.row != stash_row) continue;
                         if (contains(row.memunits, stash_memunit)) {
-                            stash_entry_per_unit["stash_match_data_select"] = row.bus;
-                            stash_entry_per_unit["stash_hashbank_select"] = row.bus;
+                            int bus = row.bus.at(Layout::SEARCH_BUS);
+                            stash_entry_per_unit["stash_match_data_select"] = bus;
+                            stash_entry_per_unit["stash_hashbank_select"] = bus;
                             stash_entry_per_unit["hash_function_id"] = k;
                             break;
                         }

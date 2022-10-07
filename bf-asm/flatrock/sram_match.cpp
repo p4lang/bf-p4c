@@ -111,8 +111,9 @@ void SRamMatchTable::setup_word_ixbar_group(Target::Flatrock) {
 
 // Configure STM for read of the given ram from the given read port/bus
 // REGS here will be an STM 3-dim array, indexed by [row][stage][col]
-template <class REGS> void stm_read_config(REGS &stm, int stage, int col, int vbus, int hbus,
-                                           const MemUnit &ram, int vpn, int delay) {
+template <class REGS> void stm_read_config(REGS &stm, int stage, int col, int vbus,
+            const std::map<Table::Layout::bus_type_t, int> &busses,
+            const MemUnit &ram, int vpn, int delay) {
     // enable the vertical bus down to the row
     for (auto r = 0; r < ram.row; ++r) {
         auto &cfg = stm[r][stage][col];
@@ -140,6 +141,7 @@ template <class REGS> void stm_read_config(REGS &stm, int stage, int col, int vb
             left = true; }
     // ram needs a horiz bus -- left or right depending on `left`
     if (left) {
+        int hbus = busses.at(Table::Layout::SEARCH_BUS);
         if (hbus == 0)
             stm[ram.row][stage][col].ver_top_cfg.r2l0_en[vbus] = 1;
         else
@@ -165,6 +167,7 @@ template <class REGS> void stm_read_config(REGS &stm, int stage, int col, int vb
         cfg.ram_cfg.vpn[ram.col&1] = vpn;
         cfg.ram_cfg.wr_sel[ram.col&1] = 0;  // no writes
     } else {
+        int hbus = busses.at(Table::Layout::SEARCH_BUS);
         if (hbus == 0)
             stm[ram.row][stage][col].ver_top_cfg.l2r0_en[vbus] = 1;
         else

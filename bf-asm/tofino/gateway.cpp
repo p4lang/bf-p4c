@@ -5,6 +5,18 @@
 
 #include "ternary_match.h"
 
+/* Tofino1/2/3 Gateway table support
+ * GatewayTable uses the Table::Layout in a somewhat hacky way to track the gateway match
+ * and payload blocks.  Layout may have either one or two entries.
+ * layout[0] is the layout for the gateway match -- which row and search bus is being used
+ * layout[1] is the layout for the payload -- which row and result bus is being used.
+ * if layout.size() == 1, there is no payload.
+ * The payload result bus is stored as bus[RESULT_BUS] even though it may be either a
+ * match result bus or a tind bus -- the second bit (so busses 2 and 3) are the tind
+ * busses as that is the way they they are encode in some registers.  It should perhaps be
+ * changed to use the bus_type_t to track whether it is a match RESULT_BUS or a TIND_BUS
+ */
+
 bool Target::Tofino::GatewayTable::check_match_key(MatchKey &key,
         const std::vector<MatchKey> &vec, bool is_xor) {
     if (!::GatewayTable::check_match_key(key, vec, is_xor)) return false;
@@ -38,17 +50,18 @@ void Target::Tofino::GatewayTable::pass1() {
      * payloads are tied to physical tables, so there can be no layout[1] */
     if (layout.empty() || layout[0].row < 0)
         error(lineno, "No row specified in gateway");
-    else if (layout[0].bus < 0 && (!match.empty() || !xor_match.empty()))
+    else if (!layout[0].bus.count(Layout::SEARCH_BUS) && (!match.empty() || !xor_match.empty()))
         error(lineno, "No bus specified in gateway to read from");
     if (payload_unit >= 0 && have_payload < 0 && match_address < 0)
         error(lineno, "payload_unit with no payload or match address in gateway");
     if (layout.size() > 1) {
-        if (layout[1].result_bus >= 0 && (have_payload >= 0 || match_address >= 0)) {
+        if (layout[1].bus.count(Layout::RESULT_BUS) && (have_payload >= 0 || match_address >= 0)) {
+            int result_bus = layout[1].bus.at(Layout::RESULT_BUS);
             if (payload_unit < 0) {
-                payload_unit = layout[1].result_bus & 1;
-            } else if (payload_unit != (layout[1].result_bus & 1)) {
+                payload_unit = result_bus & 1;
+            } else if (payload_unit != (result_bus & 1)) {
                 error(layout[1].lineno, "payload unit %d cannot write to result bus %d",
-                      payload_unit, layout[1].result_bus); } }
+                      payload_unit, result_bus); } }
         if (layout[1].row < 0) {
             error(layout[1].lineno, "payload_bus with no payload_row in gateway");
         } else if (Table *tbl = match_table) {
@@ -57,15 +70,15 @@ void Target::Tofino::GatewayTable::pass1() {
             if (tbl && !tbl->layout.empty()) {
                 for (auto &r : tbl->layout) {
                     if (r.row != layout[1].row) continue;
-                    auto match_rbus = r.result_bus >= 0 ? r.result_bus : r.bus;
-                    if (match_rbus >= 0 && payload_unit >= 0 && payload_unit != (match_rbus & 1))
+                    if (!r.bus.count(Layout::RESULT_BUS)) continue;
+                    int match_rbus = r.bus.at(Layout::RESULT_BUS);
+                    if (payload_unit >= 0 && payload_unit != (match_rbus & 1))
                         continue;
-                    auto &gw_rbus = layout[1].result_bus;
-                    if (match_rbus == gw_rbus || gw_rbus < 0) {
-                        if (gw_rbus < 0 && match_rbus >= 0)
-                            gw_rbus = match_rbus;
+                    if (!layout[1].bus.count(Layout::RESULT_BUS))
+                        layout[1].bus[Layout::RESULT_BUS] = match_rbus;
+                    if (match_rbus == layout[1].bus.at(Layout::RESULT_BUS)) {
                         if (tbl->to<TernaryIndirectTable>())
-                            layout[1].result_bus |= 2;
+                            layout[1].bus[Layout::RESULT_BUS] |= 2;
                         break; } } }
         } else if (have_payload >= 0 || match_address >= 0) {
             if (payload_unit) {
@@ -88,40 +101,44 @@ void Target::Tofino::GatewayTable::pass1() {
             error(lineno, "No result busses in table %s for gateway payload", match_table->name());
         } else {
             for (auto &r : tbl->layout) {
-                auto match_rbus = r.result_bus >= 0 ? r.result_bus : r.bus;
+                auto match_rbus = r.bus.count(Layout::RESULT_BUS) >= 0
+                        ? r.bus.at(Layout::RESULT_BUS) : r.bus.at(Layout::SEARCH_BUS);
                 if (match_rbus >= 0 && payload_unit != (match_rbus & 1)) continue;
                 if (!stage->gw_payload_use[r.row][payload_unit]) {
                     layout.resize(2);
                     layout[1].row = r.row;
-                    if (r.result_bus >= 0)
-                        layout[1].result_bus = r.result_bus;
+                    if (r.bus.count(Layout::RESULT_BUS))
+                        layout[1].bus[Layout::RESULT_BUS] = r.bus.at(Layout::RESULT_BUS);
                     else
-                        layout[1].result_bus = r.bus | (ternary ? 2 : 0);
+                        layout[1].bus[Layout::RESULT_BUS] = r.bus.at(Layout::SEARCH_BUS)
+                                                          | (ternary ? 2 : 0);
                     stage->gw_payload_use[r.row][payload_unit] = this;
                     break; } }
             if (layout.size() < 2)
                 error(lineno, "No row in table %s has payload unit %d free", tbl->name(),
                       payload_unit); } }
-    if (layout.size() > 1 && layout[1].result_bus >= 0) {
+    if (layout.size() > 1 && layout[1].bus.count(Layout::RESULT_BUS)) {
+        int result_bus = layout[1].bus.at(Layout::RESULT_BUS);
         Table *tbl = match_table;
         if (auto *tmatch = dynamic_cast<TernaryMatchTable *>(tbl))
             tbl = tmatch->indirect;
         if (!tbl) tbl = this;
-        auto &result_bus = (layout[1].result_bus & 2) ? stage->tcam_indirect_bus_use
-                                                      : stage->match_result_bus_use;
-        auto *old = result_bus[layout[1].row][layout[1].result_bus & 1];
+        auto &bus_use = (result_bus & 2) ? stage->tcam_indirect_bus_use
+                                         : stage->match_result_bus_use;
+        auto *old = bus_use[layout[1].row][result_bus & 1];
         if (old && old != tbl)
             error(layout[1].lineno, "Gateway payload result bus %d conflict on row %d between "
-                  "%s and %s", layout[1].result_bus, layout[1].row, name(), old->name());
-        result_bus[layout[1].row][layout[1].result_bus & 1] = tbl;
+                  "%s and %s", result_bus, layout[1].row, name(), old->name());
+        bus_use[layout[1].row][result_bus & 1] = tbl;
     }
 }
 
 void Target::Tofino::GatewayTable::pass2() {
     ::GatewayTable::pass2();
     if (gw_unit < 0) {
-        if (layout[0].bus >= 0 && !stage->gw_unit_use[layout[0].row][layout[0].bus]) {
-            gw_unit = layout[0].bus;
+        if (layout[0].bus.count(Layout::SEARCH_BUS) &&
+            !stage->gw_unit_use[layout[0].row][layout[0].bus.at(Layout::SEARCH_BUS)]) {
+            gw_unit = layout[0].bus.at(Layout::SEARCH_BUS);
         } else {
             for (int i = 0; i < 2; ++i) {
                 if (!stage->gw_unit_use[layout[0].row][i] &&
@@ -132,17 +149,19 @@ void Target::Tofino::GatewayTable::pass2() {
             error(layout[0].lineno, "No gateway units available on row %d", layout[0].row);
         else
             stage->gw_unit_use[layout[0].row][gw_unit] = this; }
-    if (layout[0].bus < 0 && gw_unit >= 0)
-        layout[0].bus = gw_unit;
+    if (!layout[0].bus.count(Layout::SEARCH_BUS) && gw_unit >= 0)
+        layout[0].bus[Layout::SEARCH_BUS] = gw_unit;
     if (payload_unit < 0 && (have_payload >= 0 || match_address >= 0)) {
         if (layout.size() > 1) {
-            if (layout[1].result_bus < 0) {
+            if (!layout[1].bus.count(Layout::RESULT_BUS)) {
                 if (!stage->gw_payload_use[layout[1].row][0])
                     payload_unit = 0;
                 else if (!stage->gw_payload_use[layout[1].row][1])
                     payload_unit = 1;
-            } else if (!stage->gw_payload_use[layout[1].row][layout[1].result_bus & 1]) {
-                payload_unit = layout[1].bus & 1; }
+            } else {
+                int u = layout[1].bus.at(Layout::RESULT_BUS) & 1;
+                if (!stage->gw_payload_use[layout[1].row][u])
+                    payload_unit = u; }
             if (payload_unit >= 0)
                 stage->gw_payload_use[layout[1].row][payload_unit] = this;
             else
@@ -154,23 +173,23 @@ void Target::Tofino::GatewayTable::pass2() {
                 ternary = true; }
             if (tbl && !tbl->layout.empty()) {
                 for (auto &row : tbl->layout) {
-                    auto match_rbus = row.result_bus >= 0 ? row.result_bus : row.bus;
+                    auto match_rbus = row.bus.at(ternary ? Layout::TIND_BUS : Layout::RESULT_BUS);
                     BUG_CHECK(match_rbus >= 0);  // alloc_busses on the match table must run first
-                    if (stage->gw_payload_use[row.row][match_rbus & 1]) {
+                    if (stage->gw_payload_use[row.row][match_rbus]) {
                         continue;
                     } else {
-                        payload_unit = match_rbus & 1; }
+                        payload_unit = match_rbus; }
                     stage->gw_payload_use[row.row][payload_unit] = this;
                     layout.resize(2);
                     layout[1].row = row.row;
-                    layout[1].result_bus = match_rbus | (ternary ? 2 : 0);
+                    layout[1].bus[Layout::RESULT_BUS] = match_rbus | (ternary ? 2 : 0);
                     break; }
                 if (payload_unit < 0)
                     error(lineno, "No row in table %s has a free payload unit", tbl->name());
             } else {
                 error(lineno, "No result busses in table %s for gateway payload",
                       match_table->name()); } } }
-    if (payload_unit >= 0 && layout[1].result_bus < 0) {
+    if (payload_unit >= 0 && !layout[1].bus.count(Layout::RESULT_BUS)) {
         BUG_CHECK(layout.size() > 1);
         int row = layout[1].row;
         Table *tbl = match_table;
@@ -183,18 +202,19 @@ void Target::Tofino::GatewayTable::pass2() {
             if (ternary >= 0 && (i >> 1) != ternary) continue;
             auto &result_bus = (i & 2) ? stage->tcam_indirect_bus_use : stage->match_result_bus_use;
             if (!result_bus[row][i & 1] || result_bus[row][i & 1] == tbl) {
-                layout[1].result_bus = i;
+                layout[1].bus[Layout::RESULT_BUS] = i;
                 result_bus[row][i & 1] = tbl;
                 break; } }
-        if (layout[1].result_bus < 0) {
+        if (!layout[1].bus.count(Layout::RESULT_BUS)) {
             error(lineno, "No result bus available for gateway payload of table %s on row %d",
                   name(), layout[1].row); } }
 }
 
 void Target::Tofino::GatewayTable::pass3() {
     ::GatewayTable::pass3();
-    if (layout[0].bus >= 0) {
-        auto *tbl = stage->sram_search_bus_use[layout[0].row][layout[0].bus];
+    if (layout[0].bus.count(Layout::SEARCH_BUS)) {
+        int search_bus = layout[0].bus.at(Layout::SEARCH_BUS);
+        auto *tbl = stage->sram_search_bus_use[layout[0].row][search_bus];
         // Sharing with an exact match -- make sure it is ok
         if (!tbl) return;
         for (auto &ixb : input_xbar) {
@@ -203,7 +223,7 @@ void Target::Tofino::GatewayTable::pass3() {
                       "search bus?", tbl->name());
             SRamMatchTable::WayRam *way = nullptr;
             for (auto &row : sram_tbl->layout) {
-                if (row.row == layout[0].row && row.bus == layout[0].bus) {
+                if (row.row == layout[0].row && row.bus.at(Layout::SEARCH_BUS) == search_bus) {
                     if (row.memunits.empty()) {
                         // FIXME -- not really used, so we don't need to check the
                         // match/hash group.  Should this be an asm error?
@@ -211,17 +231,17 @@ void Target::Tofino::GatewayTable::pass3() {
                     way = &sram_tbl->way_map.at(row.memunits[0]);
                     break; } }
             BUG_CHECK(way, "%s claims to use search bus %d.%d, but we can't find it in the layout",
-                      sram_tbl->name(), layout[0].row, layout[0].bus);
+                      sram_tbl->name(), layout[0].row, search_bus);
             if (ixb->hash_group() >= 0 && sram_tbl->ways[way->way].group_xme >= 0 &&
                 ixb->hash_group() != sram_tbl->ways[way->way].group_xme) {
                 error(layout[0].lineno, "%s sharing search bus %d.%d with %s, but wants a "
-                      "different hash group", name(), layout[0].row, layout[0].bus, tbl->name());
+                      "different hash group", name(), layout[0].row, search_bus, tbl->name());
             }
             if (ixb->match_group() >= 0 && sram_tbl->word_ixbar_group[way->word] >= 0 &&
                 gateway_needs_ixbar_group() &&
                 ixb->match_group() != sram_tbl->word_ixbar_group[way->word]) {
                 error(layout[0].lineno, "%s sharing search bus %d.%d with %s, but wants a "
-                      "different match group", name(), layout[0].row, layout[0].bus, tbl->name());
+                      "different match group", name(), layout[0].row, search_bus, tbl->name());
             }
         }
     }
