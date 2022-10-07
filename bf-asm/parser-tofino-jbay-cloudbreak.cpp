@@ -434,82 +434,120 @@ int Parser::get_header_stack_size_from_valid_bits(std::vector<State::Match::Set*
     return 0;
 }
 
-int Parser::get_prsr_max_dph() {
-    int prsr_dph_max = 0;
-    int parser_depth_max_bits = parser_depth_max_bytes*8;
-    std::function<void(const State*, int)> traverse_state;
-    std::map<const State*, std::pair<int, int>> visited;  // pair: first=bits_shifted
+/**
+ * @brief  Returns the deepest parser depth, starting from state s.
+ *         Returned value in bits.
+ */
+int Parser::state_prsr_dph_max(const State *s) {
+    std::map<const State*, std::pair<int, int>> visited;  // pair: first=curr_dph_bits
                                                           //       second=recurse count
-    traverse_state = [&, this](const State *s, int bits_shifted) {
-        if (!s) return;
-        // Keep track of states visited along with the parser depth at time of visit
-        // and the number of times the state was called recursively.  Return if current
-        // bits_shifted value is smaller or equal to the largest value seen so far,
-        // or if the state was called enough times to fill the header stack if one
-        // is used.
-        if (visited.count(s) && (visited.at(s).first >= bits_shifted)) {
-            LOG5(" State : " << s->name << " --> largest depth : " << visited[s].first
-                      << " >= current depth : " << bits_shifted << " --> Ignore.");
-            return;
+    return state_prsr_dph_max(s, visited, 0);
+}
+
+/**
+ * @brief Returns the deepest parser depth for state s, considering the depth
+ *        is already at curr_dph_bits at the time it's being called.
+ *        Returned value in bits.
+ */
+int Parser::state_prsr_dph_max(const State *s,
+                               std::map<const State*, std::pair<int, int>> &visited,
+                               int curr_dph_bits) {
+    int parser_depth_max_bits = parser_depth_max_bytes*8;
+    if (!s) return 0;
+    // Keep track of states visited along with the parser depth at time of visit
+    // and the number of times the state was called recursively.  Return 0 if current
+    // curr_dph_bits value is smaller or equal to the largest value seen so far,
+    // or if the state was called enough times to fill the header stack if one
+    // is used.
+    if (visited.count(s) && (visited.at(s).first >= curr_dph_bits)) {
+        LOG5(" State : " << s->name << " --> largest depth : " << visited[s].first
+                  << " >= current depth : " << curr_dph_bits << " --> Ignore.");
+        return 0;
+    }
+    visited[s].first = curr_dph_bits;
+    visited[s].second++;
+    int curr_state_prsr_dph_max = 0;
+    for (const auto *m : s->match) {
+        auto local_bits_shifted = curr_dph_bits + (m->shift * 8) - m->intr_md_bits;
+        std::string next_name = m->next ? m->next->name : std::string("END");
+        LOG5(" State : " << s->name << " --> " << m->match << " --> "
+                << next_name << " | Bits: " << curr_dph_bits
+                << ", shift : " << m->shift * 8 << ", intr_md_bits : " << m->intr_md_bits
+                << ", Total Bits : " << local_bits_shifted);
+        // Look for non-unrolled loops that save in header stacks.  In that case, use
+        // header stack size to limit parser depth calculation.
+        if (m->offset_inc) {
+            // One of the Set operations will set the header stack entries $valid bits.
+            // Get stack size information from these valid bits.
+            int stack_size = get_header_stack_size_from_valid_bits(m->set);
+            LOG5(" State : stack_size = " << stack_size << ", visited count = "
+                 << visited[s].second);
+            // Do not go beyond header stack size to find parser depth.
+            if (visited[s].second > stack_size) {
+                LOG5(" State : reached end of header stack, size = " << stack_size);
+                continue;
+            }
         }
-        visited[s].first = bits_shifted;
-        visited[s].second++;
-        for (const auto *m : s->match) {
-            auto local_bits_shifted = bits_shifted + (m->shift * 8) - m->intr_md_bits;
-            std::string next_name = m->next ? m->next->name : std::string("END");
-            LOG5(" State : " << s->name << " --> " << m->match << " --> "
-                    << next_name << " | Bits: " << bits_shifted
-                    << ", shift : " << m->shift * 8 << ", intr_md_bits : " << m->intr_md_bits
-                    << ", Total Bits : " << local_bits_shifted);
-            // Look for non-unrolled loops that save in header stacks.  In that case, use
-            // header stack size to limit parser depth calculation.
-            if (m->offset_inc) {
-                // One of the Set operations will set the header stack entries $valid bits.
-                // Get stack size information from these valid bits.
-                int stack_size = get_header_stack_size_from_valid_bits(m->set);
-                LOG5(" State : stack_size = " << stack_size << ", visited count = "
-                     << visited[s].second);
-                // Do not go beyond header stack size to find parser depth.
-                if (visited[s].second > stack_size) {
-                    LOG5(" State : reached end of header stack, size = " << stack_size);
-                    continue;
+
+        if  (local_bits_shifted < parser_depth_max_bits) {
+            if (m->next) {
+                for (auto n : m->next.ptr) {
+                    int prsr_dph = state_prsr_dph_max(n, visited, local_bits_shifted);
+                    curr_state_prsr_dph_max = std::max(curr_state_prsr_dph_max,
+                                                       prsr_dph);
                 }
+            } else {
+                curr_state_prsr_dph_max = std::max(curr_state_prsr_dph_max,
+                                                   local_bits_shifted);
             }
-
-            if  (local_bits_shifted < parser_depth_max_bits)
-                if (m->next) {
-                    for (auto n : m->next.ptr)
-                        traverse_state(n, local_bits_shifted);
-                } else {
-                    prsr_dph_max = std::max(prsr_dph_max, local_bits_shifted);
-                } else {
-                    LOG5(" State : " << s->name << " --> " << m->match << " --> "
-                         << next_name << " | Reached " << parser_depth_max_bits
-                         << " bits, maximum supported by target.");
-                prsr_dph_max = parser_depth_max_bits;
-            }
-
-            // If the current match is a default or catch-all transition, then
-            // break out of the loop as any following transitions will never
-            // be taken.
-            uint64_t mask = bitMask(s->key.width);
-            if ((m->match.word0 & m->match.word1 & mask) == mask) {
-                LOG5(" State : catch-all transition, break out of loop.");
-                break;
-            }
+        } else {
+            LOG5(" State : " << s->name << " --> " << m->match << " --> "
+                 << next_name << " | Reached " << parser_depth_max_bits
+                 << " bits, maximum supported by target.");
+            curr_state_prsr_dph_max = parser_depth_max_bits;
         }
-        visited[s].second--;
-    };
-    traverse_state(get_start_state(), 0);
+
+        // No point in going any further with the other matches
+        // if we reached the maximum allowed by the target.
+        if (curr_state_prsr_dph_max >= parser_depth_max_bits)
+            break;
+
+        // If the current match is a default or catch-all transition, then
+        // break out of the loop as any following transitions will never
+        // be taken.
+        uint64_t mask = bitMask(s->key.width);
+        if ((m->match.word0 & m->match.word1 & mask) == mask) {
+            LOG5(" State : catch-all transition, break out of loop.");
+            break;
+        }
+    }
+    visited[s].second--;
+    return curr_state_prsr_dph_max;
+}
+
+int Parser::get_prsr_max_dph() {
+    // Look for the longest parser depth from all configured start states.
+    // Return the longest one found.
+    //
+    // Note: at this point start_state[] contains the start states either
+    //       read from the bfa file, or deduced from the standard/typical
+    //       start state names returned from get_start_state() during
+    //       Parser::process.
+    //
+    int prsr_dph_max = 0;
+    for (auto &state : start_state) {
+        if (state) {
+            BUG_CHECK(states[state.name],
+                      "Start state %s not found in states table.", state.name.c_str());
+            int prsr_dph = state_prsr_dph_max(states[state.name]);
+            prsr_dph_max = std::max(prsr_dph_max, prsr_dph);
+        }
+    }
     prsr_dph_max = (prsr_dph_max + 0x7) & ~0x7;
     prsr_dph_max /= 8;
     prsr_dph_max = (prsr_dph_max + 0xf) & ~0xf;
     prsr_dph_max /= 16;
-
-    if (prsr_dph_max < 4)
-        prsr_dph_max = 4;
-
-    return prsr_dph_max;
+    return std::max(prsr_dph_max, 4);
 }
 
 void Parser::output_default_ports(json::vector& vec, bitvec port_use) {

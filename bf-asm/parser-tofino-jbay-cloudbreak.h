@@ -379,6 +379,9 @@ class Parser : public BaseParser, public Contextable {
     template<class REGS> void mark_unused_output_map(REGS &, void *, unsigned);
     void define_state(gress_t gress, pair_t &kv);
     void output_default_ports(json::vector& vec, bitvec port_use);
+    int state_prsr_dph_max(const State *s);
+    int state_prsr_dph_max(const State *s, std::map<const State*, std::pair<int, int>> &visited,
+                           int curr_dph_bits);
     int parser_depth_max_bytes;
 };
 
