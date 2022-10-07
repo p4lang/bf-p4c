@@ -351,14 +351,14 @@ class Table {
             // A phase0 table can only have 1 entry
             if (tbl->table_type() == PHASE0) return 1;
             if (is_wide_format()) return groups();
-            return log2size ? (1U << (ceil_log2(MEM_WORD_WIDTH) - log2size)) : 0; }
+            return log2size ? (1U << (ceil_log2(tbl->ram_word_width()) - log2size)) : 0; }
         int get_mem_units_per_table_word() const {
-            return is_wide_format() ? ((size - 1)/MEM_WORD_WIDTH) + 1 : 1; }
+            return is_wide_format() ? ((size - 1)/tbl->ram_word_width()) + 1 : 1; }
         int get_table_word_width() const {
             return is_wide_format() ?
-                MEM_WORD_WIDTH * get_mem_units_per_table_word() : MEM_WORD_WIDTH; }
+                tbl->ram_word_width() * get_mem_units_per_table_word() : tbl->ram_word_width(); }
         int get_padding_format_width() const {
-            return is_wide_format() ? get_mem_units_per_table_word() * MEM_WORD_WIDTH
+            return is_wide_format() ? get_mem_units_per_table_word() * tbl->ram_word_width()
                                         : (1U << log2size); }
     };
 
@@ -659,6 +659,7 @@ class Table {
         BUG_CHECK(options.target != TOFINO5, "need memunit update for tofino5");
 #endif /* HAVE_FLATROCK */
         return r*12 + c; }
+    virtual int ram_word_width() const { return MEM_WORD_WIDTH; }
     virtual int unitram_type() { BUG(); return -1; }
     virtual bool uses_colormaprams() const { return false; }
     virtual int color_shiftcount(Table::Call &call, int group, int tcam_shift) const {
@@ -1273,6 +1274,7 @@ DECLARE_TABLE_TYPE(ProxyHashMatchTable, SRamMatchTable, "proxy_hash",
 )
 
 DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
+ protected:
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) const override;
     struct Match {
         int lineno = -1, word_group = -1, byte_group = -1, byte_config = 0, dirtcam = 0;
@@ -1343,6 +1345,7 @@ DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(
             const char *type, const std::vector<Layout> &layout,
             bool skip_spare_bank = false) const override;
+    json::map &get_tbl_top(json::vector &out) const;
     Call &action_call() override { return indirect ? indirect->action : action; }
     Call &instruction_call() override { return indirect ? indirect->instruction: instruction; }
     int memunit(const int r, const int c) const override {
@@ -1374,8 +1377,10 @@ DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
         if (p4_table)
             p4_table->base_alpm_tbl_cfg(pre_classifier_tbl, size, this, P4Table::PreClassifier);
     }
-    void gen_match_fields_pvp(json::vector &match_field_list, unsigned word,
+    virtual void gen_match_fields_pvp(json::vector &match_field_list, unsigned word,
         bool uses_versioning, unsigned version_word_group, bitvec &tcam_bits) const;
+    virtual void gen_match_fields(json::vector &match_field_list,
+                                  std::vector<bitvec> &tcam_bits) const;
     unsigned get_default_action_handle() const override {
         unsigned def_act_handle = Table::get_default_action_handle();
         return def_act_handle > 0 ? def_act_handle :
@@ -1399,6 +1404,9 @@ DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
         return def_action_params; }
     bitvec compute_reachable_tables() override;
     int get_tcam_id() const override { return tcam_id; }
+    virtual void setup_indirect(const value_t &v) {
+        if (CHECKTYPE(v, tSTR))
+            indirect = v; }
 
  private:
     template<class REGS> void tcam_table_map(REGS &regs, int row, int col);
@@ -1415,6 +1423,7 @@ DECLARE_TABLE_TYPE(Phase0MatchTable, MatchTable, "phase0_match",
     void pass0() override {}
     void set_pred() override { return; }
     bool needs_next() const override { return false; }
+    int ram_word_width() const override { return Target::PHASE0_FORMAT_WIDTH(); }
 )
 DECLARE_TABLE_TYPE(HashActionTable, MatchTable, "hash_action",
  public:

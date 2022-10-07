@@ -255,6 +255,28 @@ static int add_cols(int stage, Table::Layout &row, const value_t &cols) {
     return rv;
 }
 
+static int add_stages(Table::Layout &row, const value_t &stages) {
+    int rv = 0;
+    if (stages.type == tVEC) {
+        if (stages.vec.size == 1)
+            return add_stages(row, stages.vec[0]);
+        for (auto &stg : stages.vec) {
+            if (stg.type == tVEC) {
+                error(stg.lineno, "Stages shape doesn't match rows");
+                rv |= 1;
+            } else {
+                rv |= add_stages(row, stg); }
+            }
+        return rv; }
+    if (!CHECKTYPE2(stages, tINT, tRANGE)) return 1;
+    if (stages.type == tINT) return add_col(stages.lineno, stages.i, row, 0);
+    int step = stages.lo > stages.hi ? -1 : 1;
+    for (int i = stages.lo; i != stages.hi; i += step)
+        rv |= add_col(stages.lineno, i, row, 0);
+    rv |= add_col(stages.lineno, stages.hi, row, 0);
+    return rv;
+}
+
 std::ostream &operator<<(std::ostream &out, const Table::Layout &l) {
     if (l.home_row) out << "home_";
     out << "row=" << l.row;
@@ -316,9 +338,21 @@ void Table::setup_layout(std::vector<Layout> &layout, const VECTOR(pair_t) &data
     else
         err |= add_rows(layout, *row);
     if (err) return;
-    if (auto *col = get(data, "column")) {
-        int stage = Target::SRAM_GLOBAL_ACCESS() ? this->stage->stageno : -1;
-        if (col->type == tMAP && Target::SRAM_GLOBAL_ACCESS()) {
+    bool global_access = (table_type() == TERNARY) ? Target::TCAM_GLOBAL_ACCESS()
+                                                   : Target::SRAM_GLOBAL_ACCESS();
+    if (global_access && table_type() == TERNARY && Target::TCAM_UNITS_PER_ROW() == 1) {
+        if (auto *stg = get(data, "stages")) {
+            if (stg->type == tVEC && stg->vec.size == static_cast<int>(layout.size())) {
+                for (int i = 0; i < stg->vec.size; i++)
+                    err |= add_stages(layout[i], stg->vec[i]);
+            } else if (layout.size() == 1)
+                err |= add_stages(layout[0], *stg);
+        } else {
+            for (auto &lrow : layout)
+                err |= add_col(lineno, this->stage->stageno, lrow, 0); }
+    } else if (auto *col = get(data, "column")) {
+        int stage = global_access ? this->stage->stageno : -1;
+        if (col->type == tMAP && global_access) {
             bitvec      stages_seen;
             for (auto &kv : col->map) {
                 if (kv.key.type == tINT)
@@ -2906,10 +2940,9 @@ json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
         add_zero_padding_fields(format, act,
                 format ? format->get_padding_format_width() : -1);
     json::map pack_fmt;
-    auto mem_word_width = table_type() == PHASE0 ? Target::PHASE0_FORMAT_WIDTH() : MEM_WORD_WIDTH;
+    auto mem_word_width = ram_word_width();
     pack_fmt["memory_word_width"] = mem_word_width;
-    auto table_word_width = table_type() == PHASE0 ?
-        Target::PHASE0_FORMAT_WIDTH() : format ? format->get_table_word_width() : MEM_WORD_WIDTH;
+    auto table_word_width = format ? format->get_table_word_width() : ram_word_width();
     pack_fmt["table_word_width"] = table_word_width;
     pack_fmt["entries_per_table_word"] = format ? format->get_entries_per_table_word() : 1;
     pack_fmt["number_memory_units_per_table_word"]

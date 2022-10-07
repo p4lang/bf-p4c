@@ -207,9 +207,12 @@
     M(bool, SUPPORT_OVERFLOW_BUS) \
     M(bool, SUPPORT_SALU_FAST_CLEAR) \
     M(bool, SUPPORT_TRUE_EOP) \
+    M(bool, TCAM_EXTRA_NIBBLE) \
     M(bool, TCAM_GLOBAL_ACCESS) \
+    M(int, TCAM_MEMORY_FULL_WIDTH) \
     M(int, TCAM_ROWS) \
     M(int, TCAM_UNITS_PER_ROW) \
+    M(int, TCAM_XBAR_GROUPS) \
     M(bool, TABLES_REQUIRE_ROW) \
 
 #define DECLARE_PER_TARGET_CONSTANT(TYPE, NAME) static TYPE NAME();
@@ -217,7 +220,8 @@
 #define TARGET_CLASS_SPECIFIC_CLASSES   \
     class ActionTable;                  \
     class ExactMatchTable;              \
-    class GatewayTable;
+    class GatewayTable;                 \
+    class TernaryMatchTable;
 #define REGISTER_SET_SPECIFIC_CLASSES   /* none */
 #define TARGET_SPECIFIC_CLASSES         /* none */
 
@@ -390,9 +394,12 @@ class Target::Tofino : public Target {
         NUM_PARSERS = 18,
         NUM_PIPES = 4,
         OUTPUT_STAGE_EXTENSION_PRIVATE = 0,
+        TCAM_EXTRA_NIBBLE = true,
         TCAM_GLOBAL_ACCESS = false,
+        TCAM_MEMORY_FULL_WIDTH = 47,
         TCAM_ROWS = 12,
         TCAM_UNITS_PER_ROW = 2,
+        TCAM_XBAR_GROUPS = 12,
         TABLES_REQUIRE_ROW = 1,
     };
     static int encodeConst(int src) {
@@ -554,9 +561,12 @@ class Target::JBay : public Target {
         NUM_PARSERS = 36,
         NUM_PIPES = 4,
         TABLES_REQUIRE_ROW = 1,
+        TCAM_EXTRA_NIBBLE = true,
         TCAM_GLOBAL_ACCESS = false,
+        TCAM_MEMORY_FULL_WIDTH = 47,
         TCAM_ROWS = 12,
         TCAM_UNITS_PER_ROW = 2,
+        TCAM_XBAR_GROUPS = 12,
     };
     static int encodeConst(int src) {
         return (src >> 11 << 16) | (0x8 << 11) | (src & 0x7ff);
@@ -779,9 +789,12 @@ class Target::Cloudbreak : public Target {
          */
         NUM_PIPES = 4,
         TABLES_REQUIRE_ROW = 1,
+        TCAM_EXTRA_NIBBLE = true,
         TCAM_GLOBAL_ACCESS = false,
+        TCAM_MEMORY_FULL_WIDTH = 47,
         TCAM_ROWS = 12,
         TCAM_UNITS_PER_ROW = 2,
+        TCAM_XBAR_GROUPS = 12,
     };
     static int encodeConst(int src) {
         return (src >> 11 << 16) | (0x8 << 11) | (src & 0x7ff);
@@ -863,6 +876,11 @@ class Target::Flatrock : public Target {
         NUM_EGRESS_STAGES_PRIVATE = 12,
         OUTPUT_STAGE_EXTENSION_PRIVATE = 0,
 #endif
+        // details on the number and relative positioning of stage numbers
+        EGRESS_STAGE0_INGRESS_STAGE = 13,
+        LAST_INGRESS_STAGE = 15,
+        LAST_EGRESS_STAGE = 11,
+
         ACTION_INSTRUCTION_MAP_WIDTH = 8,
         DEPARSER_CHECKSUM_UNITS = 4,
         DEPARSER_CONSTANTS = 0,
@@ -930,9 +948,12 @@ class Target::Flatrock : public Target {
         NUM_PARSERS = 1,
         NUM_PIPES = 8,  // TODO what is the correct number here?
         TABLES_REQUIRE_ROW = 0,
+        TCAM_EXTRA_NIBBLE = false,
         TCAM_GLOBAL_ACCESS = true,
-        TCAM_ROWS = 10,
-        TCAM_UNITS_PER_ROW = 2,
+        TCAM_MEMORY_FULL_WIDTH = 41,
+        TCAM_ROWS = 20,
+        TCAM_UNITS_PER_ROW = 1,
+        TCAM_XBAR_GROUPS = 20,
         PAC_HEADER_POINTERS_MAX = 16,  // Maximum number of header pointers output by parser
                                        // (parser has additional pointers available internally)
         PARSER_CSUM_MASKS = 4,

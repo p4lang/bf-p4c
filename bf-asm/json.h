@@ -470,6 +470,9 @@ class map : public obj, public map_base {
             map *m = dynamic_cast<map *>(iter->second.get());
             if (!m) throw std::runtime_error("lookup in non-map json object");
             return element_ref(*m, std::move(i)); }
+        template <class T> void push_back(T &&v) {
+            vector &vec = *this;
+            vec.push_back(std::forward<T>(v)); }
         template <class T> bool is() const {
             return !key && dynamic_cast<T *>(iter->second.get()) != nullptr; }
         template <class T> T &to() {

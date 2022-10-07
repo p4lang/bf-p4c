@@ -75,8 +75,8 @@ void AsmStage::start(int lineno, VECTOR(value_t) args) {
 #if HAVE_FLATROCK
     if (Target::EGRESS_SEPARATE() && Target::TCAM_GLOBAL_ACCESS()) {
         // ingress and egress pipes are laid out in reverse order, with the first
-        // egress stage next to (sharing with) the last ingress stage.
-        int i = pipe.size() - 1;
+        // egress stage next to (sharing with) the last but 2 ingress stage.
+        int i = pipe.size() - 3;
         for (auto &estage : epipe) {
             estage.shared_tcam_stage = &pipe[i];
             pipe[i].all_refs.insert(&estage.shared_tcam_stage);

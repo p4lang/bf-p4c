@@ -549,6 +549,9 @@ stage <constant> <thread>:
             - stage <int>: <vector>
               # (Flatrock only) -- specify columns in specific stages that should be
               # included in each row.
+        stages: <vector> | '[' <vector>, ... ']'
+            # (Flatrock tcam only) -- flatrock tcams have only 1 column per stage (20 rows)
+            # so this takes the place of `column:` specifying which stages the row(s) should use
         bus: 0 | 1 | '[' 0 | 1, ... ']'
             # bus(es) to use.  If a list, must match the number of rows
         word: <vector>
@@ -888,6 +891,8 @@ stage <constant> <thread>:
         indirect: <table-name>
             # ternary indirection table to use with this table
             # if there's an indirection table, it should contain all the table refs
+        indirect: <int> | <vector>
+            # (flatrock only) use local tind LAMB rams in the SCM block for ternary indirect
         indirect_bus: <int>
             # which indirect bus to use for ternary tables with no indirection table
         # common keys described above

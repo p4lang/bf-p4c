@@ -1,11 +1,209 @@
 #include "ternary_match.h"
+#include "stage.h"
+#include "top_level.h"
 
-template<> void TernaryMatchTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
-    LOG1("### Ternary match table " << name() << " write_regs " << loc());
-    MatchTable::write_regs(regs, 1, indirect);
-    error(lineno, "%s:%d: Flatrock ternary match not implemented yet!", SRCFILE, __LINE__);
+void Target::Flatrock::TernaryMatchTable::setup_indirect(const value_t &v) {
+    if (v.type == tINT) {
+        if (v.i < 0 || v.i >= LOCAL_TIND_UNITS)
+            error(v.lineno, "invalid tind unit %" PRIi64, v.i);
+        local_tind_units.push_back(v.i);
+    } else if (v.type == tVEC) {
+        for (auto &el : v.vec) {
+            if (CHECKTYPE(el, tINT)) {
+                if (el.i < 0 || el.i >= LOCAL_TIND_UNITS)
+                    error(el.lineno, "invalid tind unit %" PRIi64, el.i);
+                local_tind_units.push_back(el.i); } }
+    } else if (v.type == tSTR) {
+        indirect = v;
+    } else {
+        error(v.lineno, "Syntax Error, invalid indirect");
+    }
 }
 
+void Target::Flatrock::TernaryMatchTable::pass1() {
+    ::TernaryMatchTable::pass1();
+    if (tcam_id < 0 && indirect) {
+        // allocate for tables with indirect STM first
+        alloc_id("tcam", tcam_id, stage->pass1_tcam_id,
+             TCAM_TABLES_WITH_INDIRECT_STM, false, stage->tcam_id_use);
+        physical_id = tcam_id; }
+}
+
+void Target::Flatrock::TernaryMatchTable::pass2() {
+    ::TernaryMatchTable::pass2();
+    if (tcam_id < 0) {
+        alloc_id("tcam", tcam_id, stage->pass1_tcam_id,
+             TCAM_TABLES_PER_STAGE, false, stage->tcam_id_use);
+        physical_id = tcam_id; }
+}
+
+static auto &scm_regs(gress_t gress, int stageno) {
+    auto &ppu = TopLevel::regs<Target::Flatrock>()->reg_pipe.ppu_pack;
+    Stage *stage = Stage::stage(gress, stageno);
+    BUG_CHECK(stage, "invalid stage %s:%d", to_string(gress).c_str(), stageno);
+    if (stage->shared_tcam_stage) stage = stage->shared_tcam_stage;
+    return ppu.scm[stage->stageno].stage_addrmap;
+}
+
+void Target::Flatrock::TernaryMatchTable::gen_match_fields_pvp(json::vector &match_field_list,
+        unsigned word, bool uses_versioning, unsigned version_word_group, bitvec &tcam_bits) const {
+    // Flatrock does not use payload, version, or parity bits it the tcam, so do nothing
+}
+
+void Target::Flatrock::TernaryMatchTable::gen_match_fields(json::vector &match_field_list,
+                                                           std::vector<bitvec> &tcam_bits) const {
+    unsigned match_index = match.size() - 1;
+    for (auto &ixb : input_xbar) {
+        for (auto field : *ixb) {
+            switch (field.first.type) {
+            case InputXbar::Group::TERNARY: {
+                int word = match_index - match_word(field.first.index);
+                if (word < 0) continue;
+                std::string source = "spec";
+                std::string field_name = field.second.what.name();
+                unsigned lsb_mem_word_offset = 0;
+                lsb_mem_word_offset = field.second.lo;
+                gen_entry_cfg(match_field_list, field_name,
+                              lsb_mem_word_offset, word, word, source,
+                              field.second.what.lobit(), field.second.hi -
+                              field.second.lo + 1, field.first.index,
+                              tcam_bits[word], field.second.what->lo % 4); }
+                break;
+            default:
+                break; } } }
+}
+
+void Target::Flatrock::TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
+    ::TernaryMatchTable::gen_tbl_cfg(out);
+    if (!local_tind_units.empty()) {
+        json::map &tbl = get_tbl_top(out);
+        json::vector &stage_tables = tbl["match_attributes"]["stage_tables"];
+        BUG_CHECK(stage_tables.size() == 1, "Not exact 1 stage table");
+        json::map &stage_tbl = stage_tables[0]->to<json::map>();
+        /* build/modify ternary_indirection_stage_table json for these local tinds */
+        json::map &tind = stage_tbl["ternary_indirection_stage_table"];
+        json::map &mra = tind["memory_resource_allocation"] = json::map();
+        mra["memory_type"] = "scm-tind";
+        json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"];
+        json::vector units, vpns;
+        int vpn = 0;
+        for (auto tunit : local_tind_units) {
+            units.push_back(tunit);
+            vpns.push_back(vpn++); }
+        mra["memory_units_and_vpns"].push_back(json::map { { "memory_units", std::move(units) },
+                                                           { "vpns", std::move(vpns) } });
+        tind["pack_format"] = json::vector();  // erase the dummy pack format
+        add_pack_format(tind, format.get());
+        tind["size"] = local_tind_units.size() * LOCAL_TIND_DEPTH *
+                       (LOCAL_TIND_WIDTH >> format->log2size);
+    }
+}
+
+void Target::Flatrock::TernaryMatchTable::write_regs(Target::Flatrock::mau_regs &regs) {
+    LOG1("### Ternary match table " << name() << " write_regs " << loc());
+    MatchTable::write_regs(regs, 1, indirect ? indirect : this);
+
+    auto &ppu = TopLevel::regs<Target::Flatrock>()->reg_pipe.ppu_pack;
+    bitvec dconfig(0xf);    // FIXME -- could select different bits based on dconfig, but
+                            // for now set all 4 variants
+    unsigned word = 0;
+    int logical_tcam = tcam_id + (gress == EGRESS ? 8 : 0);
+    for (auto &row : layout) {
+        int minstage = stage->stageno, maxstage = stage->stageno;
+        // track which stages' rams are in use for each column in the row, using
+        // ingress stage numbers (so reversed when this is an egress table
+        bitvec ramuse[TCAM_UNITS_PER_ROW];
+        for (auto &ram : row.memunits) {
+            int stage = ram.stage;
+            if (gress = EGRESS)
+                stage = EGRESS_STAGE0_INGRESS_STAGE - stage;
+            ramuse[ram.col][stage] = 1;
+            if (stage < minstage) minstage = stage;
+            if (stage > maxstage) maxstage = stage; }
+        auto vpn = row.vpns.begin();
+        int phys_row = row.row;
+        if (TCAM_UNITS_PER_ROW == 1 && phys_row < 10) {
+            // when in 20x1 config, reverse the first column so 9 ends up next to 10
+            // for wide match combining
+            phys_row = 9 - phys_row; }
+        int this_stage = stage->stageno;
+        if (gress == EGRESS)
+            this_stage = EGRESS_STAGE0_INGRESS_STAGE - this_stage;
+        auto &scm = ppu.scm[this_stage].stage_addrmap;
+
+        for (auto col = 0; col < TCAM_UNITS_PER_ROW; ++col) {
+            int unit = phys_row + TCAM_ROWS * col;
+            auto &iss_sel = scm.int_stage_sbus_sel[unit];
+            if (minstage < this_stage) {
+                iss_sel.ig_sel_r2l[row.bus] = match.at(word).word_group;
+                iss_sel.issb_sel_r2l[row.bus] = 2;
+                if (minstage > 0)
+                    ppu.scm[minstage-1].stage_addrmap.result_bus[unit].isrb_l2r_dis[row.bus] |= 2;
+                scm.result_bus[unit].isrb_l2r_dis[row.bus] = 3;
+                for (int st = minstage; st < this_stage; ++st) {
+                    if (!ramuse[col][st])
+                        ppu.scm[st].stage_addrmap.result_bus[unit].isrb_l2r_dis[row.bus] |= 1; } }
+            if (maxstage > this_stage) {
+                iss_sel.ig_sel_l2r[row.bus] = match.at(word).word_group;
+                iss_sel.issb_sel_l2r[row.bus] = 2;
+                if (maxstage < LAST_INGRESS_STAGE)
+                    ppu.scm[maxstage+1].stage_addrmap.result_bus[unit].isrb_r2l_dis[row.bus] |= 2;
+                scm.result_bus[unit].isrb_r2l_dis[row.bus] = 3;
+                for (int st = maxstage; st > this_stage; --st) {
+                    if (!ramuse[col][st])
+                        ppu.scm[st].stage_addrmap.result_bus[unit].isrb_r2l_dis[row.bus] |= 1; } }
+            // need to merge to the middle (row 4 or 5) of 10x2 layout
+            int direction = (phys_row % 10) < 5 ? +1 : -1;
+            for (int row = phys_row; true; row += direction) {
+                // The '4' here hardcodes the unsplit priority result.  When we support
+                // split or bitmap tcams, this will need to change
+                scm.match_merge[row + TCAM_ROWS * col][logical_tcam].enable_ |= 4;
+                if (row == 4 || row == 5 || row == 14 || row == 15) break; } }
+
+        for (auto &ram : row.memunits) {
+            BUG_CHECK(row.row == ram.row, "ram row mismatch");
+            auto &scm = scm_regs(gress, ram.stage);
+            int unit = phys_row + TCAM_ROWS * ram.col;
+            for (auto d : dconfig)
+                scm.chunk_mask[unit].chunk_mask[d] = 0xff;  // FIXME -- for now use whole tcam
+            // scm.dconfig_idx[unit] = ??   -- use dconfig
+            if (gress == EGRESS)
+                scm.search_bus[unit].eg_sel = match.at(word).word_group;
+            else
+                scm.search_bus[unit].ig_sel = match.at(word).word_group;
+            for (auto d : dconfig)
+                scm.tcam_mode[unit].chain_out_en[d] = word != match.size() - 1;
+            for (unsigned i = 0; i < 5; ++i)
+                scm.tcam_mode[unit].dirtcam_mode[i] = (match.at(word).dirtcam >> i*2) & 0b11;
+            if (ram.stage == stage->stageno) {
+                scm.tcam_mode[unit].key_sel = gress == EGRESS ? 5 : 0;
+            } else if ((ram.stage < stage->stageno) ^ (gress == EGRESS)) {
+                scm.tcam_mode[unit].key_sel = row.bus + 3;  // R2L bus
+            } else {
+                scm.tcam_mode[unit].key_sel = row.bus + 1;  // L2R bus
+            }
+            // scm.tcam_result_ctl[unit] = 0;  leaving this as 0 in all fields is
+            // entire tcam as priority (no splitting or bitmap)
+            for (auto d : dconfig)
+                scm.vpn[unit].vpn[d] = *vpn;
+            ++vpn; }
+
+        int idx = 0;
+        for (auto tind : local_tind_units) {
+            scm.tind_table_cfg[tind].subw_addr_bits = 6 - format->log2size;
+            scm.tind_table_cfg[tind].tind_id = idx;
+            scm.tind_table_use[logical_tcam].tind_bmp |= 1U << tind;
+            ++idx; }
+        if (++word == match.size()) word = 0; }
+
+    if (actions) actions->write_regs(regs, this);
+    if (gateway) gateway->write_regs(regs);
+    if (idletime) idletime->write_regs(regs);
+    for (auto &hd : hash_dist)
+        hd.write_regs(regs, this);
+}
+
+template<> void TernaryMatchTable::write_regs_vt(Target::Flatrock::mau_regs &regs) { BUG(); }
 template<> void TernaryIndirectTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
     LOG1("### Ternary indirect table " << name() << " write_regs");
     error(lineno, "%s:%d: Flatrock ternary indirect not implemented yet!", SRCFILE, __LINE__);

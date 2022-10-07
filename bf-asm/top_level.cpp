@@ -15,28 +15,6 @@ TopLevel::~TopLevel() {
     all = nullptr;
 }
 
-#if HAVE_FLATROCK
-// this specialization should go away once we have memory CSRs
-template<>
-TopLevelRegs<Target::Flatrock>::TopLevelRegs() {
-    declare_registers(&this->mem_top, sizeof(this->mem_top),
-        [this](std::ostream &out, const char *addr, const void *end) {
-            out << "memories.top";
-            /* this->mem_top.emit_fieldname(out, addr, end); */ });
-    declare_registers(&this->mem_pipe, sizeof(this->mem_pipe),
-        [this](std::ostream &out, const char *addr, const void *end) {
-            out << "memories.pipe";
-            /* this->mem_pipe.emit_fieldname(out, addr, end); */ });
-    declare_registers(&this->reg_top, sizeof(this->reg_top),
-        [this](std::ostream &out, const char *addr, const void *end) {
-            out << "registers.top";
-            this->reg_top.emit_fieldname(out, addr, end); });
-    declare_registers(&this->reg_pipe, sizeof(this->reg_pipe),
-        [this](std::ostream &out, const char *addr, const void *end) {
-            out << "registers.pipe";
-            this->reg_pipe.emit_fieldname(out, addr, end); });
-}
-#endif  /* HAVE_FLATROCK */
 template<class TARGET>
 TopLevelRegs<TARGET>::TopLevelRegs() {
     declare_registers(&this->mem_top, sizeof(this->mem_top),

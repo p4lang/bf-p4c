@@ -3,6 +3,8 @@
 #include "hex.h"
 #include "hashexpr.h"
 
+#include "ternary_match.h"
+
 bool Target::Tofino::GatewayTable::check_match_key(MatchKey &key,
         const std::vector<MatchKey> &vec, bool is_xor) {
     if (!::GatewayTable::check_match_key(key, vec, is_xor)) return false;

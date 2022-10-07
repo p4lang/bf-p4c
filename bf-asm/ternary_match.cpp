@@ -6,12 +6,14 @@
 #include "range.h"
 #include "stage.h"
 #include "tables.h"
+
+#include "tofino/ternary_match.h"
 #include "flatrock/ternary_match.h"
 
 Table::Format::Field *TernaryMatchTable::lookup_field(const std::string &n,
          const std::string &act) const {
-    assert(!format);
-    auto *rv = gateway ? gateway->lookup_field(n, act) : nullptr;
+    auto *rv = format ? format->field(n) : nullptr;
+    if (!rv && gateway) rv = gateway->lookup_field(n, act);
     if (!rv && indirect) rv = indirect->lookup_field(n, act);
     if (!rv && !act.empty()) {
         if (auto call = get_action()) {
@@ -69,10 +71,10 @@ TernaryMatchTable::Match::Match(const value_t &v) : lineno(v.lineno) {
             error(v.lineno, "Syntax error");
             return; }
         if (!CHECKTYPE(v[0], tINT) || !CHECKTYPE(v[v.vec.size-1], tINT)) return;
-        if ((word_group = v[0].i) < 0 || v[0].i >= TCAM_XBAR_GROUPS)
+        if ((word_group = v[0].i) < 0 || v[0].i >= Target::TCAM_XBAR_GROUPS())
             error(v[0].lineno, "Invalid input xbar group %" PRId64, v[0].i);
-        if (v.vec.size == 3 && CHECKTYPE(v[1], tINT)) {
-            if ((byte_group = v[1].i) < 0 || v[1].i >= TCAM_XBAR_GROUPS/2)
+        if (Target::TCAM_EXTRA_NIBBLE() && v.vec.size == 3 && CHECKTYPE(v[1], tINT)) {
+            if ((byte_group = v[1].i) < 0 || v[1].i >= Target::TCAM_XBAR_GROUPS()/2)
                 error(v[1].lineno, "Invalid input xbar group %" PRId64, v[1].i);
         } else {
             byte_group = -1;
@@ -82,16 +84,18 @@ TernaryMatchTable::Match::Match(const value_t &v) : lineno(v.lineno) {
     } else if (CHECKTYPE(v, tMAP)) {
         for (auto &kv : MapIterChecked(v.map)) {
             if (kv.key == "group") {
-                if (kv.value.type != tINT || kv.value.i < 0 || kv.value.i >= TCAM_XBAR_GROUPS)
+                if (kv.value.type != tINT || kv.value.i < 0 ||
+                    kv.value.i >= Target::TCAM_XBAR_GROUPS())
                     error(kv.value.lineno, "Invalid input xbar group %s", value_desc(kv.value));
                 else
                     word_group = kv.value.i;
-            } else if (kv.key == "byte_group") {
-                if (kv.value.type != tINT || kv.value.i < 0 || kv.value.i >= TCAM_XBAR_GROUPS/2)
+            } else if (Target::TCAM_EXTRA_NIBBLE() && kv.key == "byte_group") {
+                if (kv.value.type != tINT || kv.value.i < 0 ||
+                    kv.value.i >= Target::TCAM_XBAR_GROUPS()/2)
                     error(kv.value.lineno, "Invalid input xbar group %s", value_desc(kv.value));
                 else
                     byte_group = kv.value.i;
-            } else if (kv.key == "byte_config") {
+            } else if (Target::TCAM_EXTRA_NIBBLE() && kv.key == "byte_config") {
                 if (kv.value.type != tINT || kv.value.i < 0 || kv.value.i >= 4)
                     error(kv.value.lineno, "Invalid byte group config %s", value_desc(kv.value));
                 else
@@ -135,8 +139,7 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "match") {
             /* done above to be done before vpns */
         } else if (kv.key == "indirect") {
-            if (CHECKTYPE(kv.value, tSTR))
-                indirect = kv.value;
+            setup_indirect(kv.value);
         } else if (kv.key == "indirect_bus") {
             if (CHECKTYPE(kv.value, tINT)) {
                 if (kv.value.i < 0 || kv.value.i >= 16) {
@@ -198,21 +201,6 @@ void TernaryMatchTable::pass1() {
     if (action_bus) action_bus->pass1(this);
     MatchTable::pass1();
     stage->table_use[timing_thread(gress)] |= Stage::USE_TCAM;
-    // Dont allocate id (mark them as used) for empty ternary tables (keyless
-    // tables). Keyless tables are marked ternary with a tind. They are setup by
-    // the driver to always miss (since there is no match) and run the miss
-    // action. The miss action is associated with the logical table space and
-    // does not need a tcam id association. This saves tcams ids to be assigned
-    // to actual ternary tables. This way we can have 8 real ternary match
-    // tables within a stage and not count the keyless among them.
-    // NOTE: The tcam_id is never assigned for these tables and will be set to
-    // default (-1). We also disable registers associated with tcam_id for this
-    // table.
-    if (layout_size() != 0) {
-        alloc_id("tcam", tcam_id, stage->pass1_tcam_id,
-             TCAM_TABLES_PER_STAGE, false, stage->tcam_id_use);
-        physical_id = tcam_id; }
-    // alloc_busses(stage->tcam_match_bus_use); -- now hardwired
     if (layout_size() == 0) layout.clear();
     BUG_CHECK(input_xbar.size() == 1, "%s does not have one input xbar", name());
     if (match.empty() && input_xbar[0]->tcam_width() && layout.size() != 0) {
@@ -316,10 +304,6 @@ void TernaryMatchTable::pass1() {
 void TernaryMatchTable::pass2() {
     LOG1("### Ternary match table " << name() << " pass2 " << loc());
     if (logical_id < 0) choose_logical_id();
-    if (tcam_id < 0 && Target::REQUIRE_TCAM_ID()) {
-        alloc_id("tcam", tcam_id, stage->pass1_tcam_id,
-             TCAM_TABLES_PER_STAGE, false, stage->tcam_id_use);
-        physical_id = tcam_id; }
     for (auto &ixb : input_xbar)
         ixb->pass2();
     if (!indirect && indirect_bus < 0) {
@@ -708,63 +692,9 @@ void TernaryMatchTable::gen_match_fields_pvp(json::vector &match_field_list, uns
         word, word, "parity", start_bit, TCAM_PARITY_BITS, dirtcam_index, tcam_bits);
 }
 
-void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
-    unsigned number_entries = match.size() ? layout_size()/match.size() * 512 : 0;
-    json::map *tbl_ptr;
-    // For ALPM tables, this sets up the top level ALPM table and this ternary
-    // table as its preclassifier. As the pre_classifier is always in the
-    // previous stage as the atcams, this function will be called before the
-    // atcam cfg generation. The atcam will check for presence of this table and
-    // add the atcam cfg gen
-    if (is_alpm()) {
-        json::map *alpm_ptr = base_tbl_cfg(out, "match_entry", number_entries);
-        json::map &alpm = *alpm_ptr;
-        json::map &match_attributes = alpm["match_attributes"];
-        match_attributes["match_type"] = "algorithmic_lpm";
-        json::map &alpm_pre_classifier = match_attributes["pre_classifier"];
-        base_alpm_pre_classifier_tbl_cfg(alpm_pre_classifier, "match_entry", number_entries);
-        tbl_ptr = &alpm_pre_classifier;
-        // top level alpm table has the same key as alpm preclassifier
-        add_match_key_cfg(alpm);
-    } else {
-        tbl_ptr = base_tbl_cfg(out, "match_entry", number_entries); }
-    json::map &tbl = *tbl_ptr;
-    bool uses_versioning = false;
-    unsigned version_word_group = -1;
+void TernaryMatchTable::gen_match_fields(json::vector &match_field_list,
+                                         std::vector<bitvec> &tcam_bits) const {
     unsigned match_index = match.size() - 1;
-    unsigned index = 0;
-    json::vector match_field_list, match_entry_list;
-    for (auto &m : match) {
-        if (m.byte_config == 3) {
-            uses_versioning = true;
-            version_word_group = match_index - index;
-            break; }
-        index++; }
-    // Determine the zero padding necessary by creating a bitvector (for each
-    // word). While creating entries for pack format set bits used. The unused
-    // bits must be padded with zero field entries.
-    std::vector<bitvec> tcam_bits(match.size());
-    // Set pvp bits for each tcam word
-    for (unsigned i = 0; i < match.size(); i++) {
-        gen_match_fields_pvp(match_field_list, i, uses_versioning,
-                version_word_group, tcam_bits[i]);
-    }
-    json::map &match_attributes = tbl["match_attributes"];
-    json::vector &stage_tables = match_attributes["stage_tables"];
-    json::map &stage_tbl = *add_stage_tbl_cfg(match_attributes, "ternary_match", number_entries);
-    // This is a only a glass required field, as it is only required when no default action
-    // is specified, which is impossible for Brig through p4-16
-    stage_tbl["default_next_table"] = Stage::end_of_pipe();
-    json::map &pack_fmt = add_pack_format(stage_tbl, 47, match.size(), 1);
-    stage_tbl["memory_resource_allocation"]
-        = gen_memory_resource_allocation_tbl_cfg("tcam", layout);
-    // FIXME-JSON: If the next table is modifiable then we set it to what it's mapped
-    // to. Otherwise, set it to the default next table for this stage.
-    // stage_tbl["default_next_table"] = Target::END_OF_PIPE();
-    // FIXME: How to deal with multiple next hit tables?
-    stage_tbl["default_next_table"] = hit_next.size() > 0
-                                    ? hit_next[0].next_table_id() : Target::END_OF_PIPE();
-    add_result_physical_buses(stage_tbl);
     for (auto &ixb : input_xbar) {
         for (auto field : *ixb) {
             switch (field.first.type) {
@@ -897,6 +827,71 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
                         tcam_bits[match_index - word]);
                 }
                 break; } } }
+}
+
+json::map &TernaryMatchTable::get_tbl_top(json::vector &out) const {
+    unsigned number_entries = match.size() ? layout_size()/match.size() * 512 : 0;
+    // For ALPM tables, this sets up the top level ALPM table and this ternary
+    // table as its preclassifier. As the pre_classifier is always in the
+    // previous stage as the atcams, this function will be called before the
+    // atcam cfg generation. The atcam will check for presence of this table and
+    // add the atcam cfg gen
+    if (is_alpm()) {
+        json::map *alpm_ptr = base_tbl_cfg(out, "match_entry", number_entries);
+        json::map &alpm = *alpm_ptr;
+        json::map &match_attributes = alpm["match_attributes"];
+        match_attributes["match_type"] = "algorithmic_lpm";
+        json::map &alpm_pre_classifier = match_attributes["pre_classifier"];
+        base_alpm_pre_classifier_tbl_cfg(alpm_pre_classifier, "match_entry", number_entries);
+        // top level alpm table has the same key as alpm preclassifier
+        add_match_key_cfg(alpm);
+        return alpm_pre_classifier;
+    } else {
+        return *base_tbl_cfg(out, "match_entry", number_entries);
+    }
+}
+
+void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
+    unsigned number_entries = match.size() ? layout_size()/match.size() * 512 : 0;
+    json::map &tbl = get_tbl_top(out);
+    bool uses_versioning = false;
+    unsigned version_word_group = -1;
+    unsigned match_index = match.size() - 1;
+    unsigned index = 0;
+    json::vector match_field_list;
+    for (auto &m : match) {
+        if (m.byte_config == 3) {
+            uses_versioning = true;
+            version_word_group = match_index - index;
+            break; }
+        index++; }
+    // Determine the zero padding necessary by creating a bitvector (for each
+    // word). While creating entries for pack format set bits used. The unused
+    // bits must be padded with zero field entries.
+    std::vector<bitvec> tcam_bits(match.size());
+    // Set pvp bits for each tcam word
+    for (unsigned i = 0; i < match.size(); i++) {
+        gen_match_fields_pvp(match_field_list, i, uses_versioning,
+                version_word_group, tcam_bits[i]);
+    }
+    json::map &match_attributes = tbl["match_attributes"];
+    json::vector &stage_tables = match_attributes["stage_tables"];
+    json::map &stage_tbl = *add_stage_tbl_cfg(match_attributes, "ternary_match", number_entries);
+    // This is a only a glass required field, as it is only required when no default action
+    // is specified, which is impossible for Brig through p4-16
+    stage_tbl["default_next_table"] = Stage::end_of_pipe();
+    json::map &pack_fmt = add_pack_format(stage_tbl, Target::TCAM_MEMORY_FULL_WIDTH(),
+                                          match.size(), 1);
+    stage_tbl["memory_resource_allocation"]
+        = gen_memory_resource_allocation_tbl_cfg("tcam", layout);
+    // FIXME-JSON: If the next table is modifiable then we set it to what it's mapped
+    // to. Otherwise, set it to the default next table for this stage.
+    // stage_tbl["default_next_table"] = Target::END_OF_PIPE();
+    // FIXME: How to deal with multiple next hit tables?
+    stage_tbl["default_next_table"] = hit_next.size() > 0
+                                    ? hit_next[0].next_table_id() : Target::END_OF_PIPE();
+    add_result_physical_buses(stage_tbl);
+    gen_match_fields(match_field_list, tcam_bits);
 
     // For keyless table, just add parity & payload bits
     if (p4_params_list.empty()) {
@@ -1206,5 +1201,5 @@ void TernaryMatchTable::add_result_physical_buses(json::map &stage_tbl) const {
         result_physical_buses.push_back(indirect_bus);
 }
 
-DEFINE_TABLE_TYPE(TernaryMatchTable)
+DEFINE_TABLE_TYPE_WITH_SPECIALIZATION(TernaryMatchTable, TARGET_CLASS)
 DEFINE_TABLE_TYPE(TernaryIndirectTable)
