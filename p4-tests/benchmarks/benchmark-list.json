@@ -11,14 +11,40 @@
             "-Xp4c=--disable-power-check",
             "--target", "tofino2"]
     },
-    "extreme-npb": {
-        "path": "../p4_16/customer/extreme/npb-master-20210301.p4",
-        "description": "Extreme npb profile",
+    "arista-baremetal": {
+        "path": "../p4_16/customer/arista/obfuscated-p416_baremetal_tofino2-2022-09-15.p4",
+        "description": "Arista baremetal profile",
+        "args": [
+            "-Xp4c=--disable-power-check",
+            "--target", "tofino2"]
+    },
+    "extreme-npb-master": {
+        "path": "../p4_16/customer/extreme/npb-master-ptf/src/pgm_sp_npb_vcpFw_top.p4",
+        "description": "Extreme npb master profile",
         "args": ["--target", "tofino2", "-Xp4c=--disable-power-check"]
     },
-    "switch16": {
+    "extreme-npb-multi-prog": {
+        "path": "../p4_16/customer/extreme/npb-multi-prog/src/pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top.p4",
+        "description": "Extreme npb multi-prog profile",
+        "args": ["--target", "tofino2", "-Xp4c=--disable-power-check"]
+    },
+    "extreme-npb-folded-pipe": {
+        "path": "../p4_16/customer/extreme/npb-folded-pipe/src/pgm_fp_npb_dedup_dtel_vcpFw_top.p4",
+        "description": "Extreme npb folder-pipe profile",
+        "args": ["--target", "tofino2", "-Xp4c=--disable-power-check"]
+    },
+    "switch16_y7": {
         "path": "../p4_16/switch_16/p4src/switch-tofino2/switch_tofino2_y7.p4",
-        "description": "Switch16",
+        "description": "Switch_y7",
+        "args": [
+            "--target", "tofino2", 
+            "-Xp4c=--disable-power-check", 
+            "-I", "./../p4_16/switch_16/p4src/shared/"
+        ]
+    },
+    "switch16_y8": {
+        "path": "../p4_16/switch_16/p4src/switch-tofino2/switch_tofino2_y8.p4",
+        "description": "Switch16_y8",
         "args": [
             "--target", "tofino2", 
             "-Xp4c=--disable-power-check", 

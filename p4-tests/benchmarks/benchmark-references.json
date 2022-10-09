@@ -1,18 +1,34 @@
 {
     "arista-default": {
         "threshold_pct": 5,
-        "compile_time": 493.45
+        "compile_time": 447
     },
     "arista-msee": {
         "threshold_pct": 5,
-        "compile_time": 792.09
+        "compile_time": 2443
     },
-    "extreme-npb": {
+    "arista-baremetal": {
         "threshold_pct": 5,
-        "compile_time": 872.45
+        "compile_time": 1639
     },
-    "switch16": {
+    "extreme-npb-master": {
         "threshold_pct": 5,
-        "compile_time": 230.69
+        "compile_time": 488
+    },
+    "extreme-npb-multi-prog": {
+        "threshold_pct": 5,
+        "compile_time": 977
+    },
+    "extreme-npb-folded-pipe": {
+        "threshold_pct": 5,
+        "compile_time": 555
+    },
+    "switch16_y7": {
+        "threshold_pct": 5,
+        "compile_time": 223
+    },
+    "switch16_y8": {
+        "threshold_pct": 5,
+        "compile_time": 2445
     }
 }
