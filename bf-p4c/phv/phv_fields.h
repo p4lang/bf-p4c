@@ -289,6 +289,10 @@ class Field : public LiftLess<Field> {
     Constraints::AlignmentConstraint alignment_i;
 
     bool            deparsed_bottom_bits_i = false;    /// true when learning digest, no shifter
+    bool            deparsed_top_bits_i = false;       /// true when the field must be in the top
+                                                       /// 16b of a container. flatrock constraint
+                                                       /// for intrinsic metadata that must be in
+                                                       /// bytes 3:2 of 32b containers
     bool            exact_containers_i = false;        /// place in container exactly (no holes)
 
     bool            deparsed_to_tm_i = false;          /// true if field is read by TM
@@ -441,6 +445,8 @@ class Field : public LiftLess<Field> {
 
     bool deparsed_bottom_bits() const                      { return deparsed_bottom_bits_i; }
     void set_deparsed_bottom_bits(bool b)                  { deparsed_bottom_bits_i = b; }
+    bool deparsed_top_bits() const                         { return deparsed_top_bits_i; }
+    void set_deparsed_top_bits(bool b)                     { deparsed_top_bits_i = b; }
     bool exact_containers() const                          { return exact_containers_i; }
     void set_exact_containers(bool b)                      { exact_containers_i = b; }
     void set_written_in_force_immediate(bool b)            { write_force_immediate_i = b; }

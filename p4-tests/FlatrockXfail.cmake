@@ -87,7 +87,8 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
-  "Compiler Bug: Field not created in PhvInfo"
+  #"expected packet on port .* not seen"
+  "Requested byte is out of bounds"
   extensions/p4_tests/p4_16/flatrock/mirror_simple.p4
   )
 

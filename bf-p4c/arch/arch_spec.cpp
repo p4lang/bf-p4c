@@ -67,6 +67,9 @@ void ArchSpec::setTofinoIntrinsicTypes() {
 }
 
 TofinoArchSpec::TofinoArchSpec() : ArchSpec() {
+    // Index of the intrinsic metadata for deparser param
+    deparser_intrinsic_metadata_for_deparser_param_index = 3;
+
     // ingress_intrinsic_metadata_from_parser
     add_prsr_md(INGRESS, IntrinsicField("global_tstamp"));
     add_prsr_md(INGRESS, IntrinsicField("global_ver"));
@@ -86,6 +89,9 @@ TofinoArchSpec::TofinoArchSpec() : ArchSpec() {
 }
 
 JBayArchSpec::JBayArchSpec() : ArchSpec() {
+    // Index of the intrinsic metadata for deparser param
+    deparser_intrinsic_metadata_for_deparser_param_index = 3;
+
     // ingress_intrinsic_metadata_from_parser
     add_prsr_md(INGRESS, IntrinsicField("global_tstamp"));
     add_prsr_md(INGRESS, IntrinsicField("global_ver"));
@@ -138,6 +144,9 @@ JBayArchSpec::JBayArchSpec() : ArchSpec() {
 
 #if HAVE_CLOUDBREAK
 CloudbreakArchSpec::CloudbreakArchSpec() : ArchSpec() {
+    // Index of the intrinsic metadata for deparser param
+    deparser_intrinsic_metadata_for_deparser_param_index = 3;
+
     // ingress_intrinsic_metadata_from_parser
     add_prsr_md(INGRESS, IntrinsicField("global_tstamp"));
     add_prsr_md(INGRESS, IntrinsicField("global_ver"));
@@ -191,18 +200,30 @@ CloudbreakArchSpec::CloudbreakArchSpec() : ArchSpec() {
 
 #if HAVE_FLATROCK
 void FlatrockArchSpec::setFlatrockIntrinsicTypes() {
+    // Index of the intrinsic metadata for deparser param
+    deparser_intrinsic_metadata_for_deparser_param_index = 4;
+
     // ingress_intrinsic_metadata_for_tm
     // FIXME: vld_vec signals -- should these be expressed in another way?
     add_tm_md(INGRESS, IntrinsicField("ucast_egress_pipe", "egress_unicast_pipe"));
     add_tm_md(INGRESS, IntrinsicField("perfect_hash_table_id"));  // vld_vec
     add_tm_md(INGRESS, IntrinsicField("mirror_bitmap"));
-    add_tm_md(INGRESS, IntrinsicField("mirror_cos"));
+    add_tm_md(INGRESS, IntrinsicField("mirror_cos", "mirr_icos"));
     add_tm_md(INGRESS, IntrinsicField("pkt_expan_idx_vld"));  // vld_vec
     add_tm_md(INGRESS, IntrinsicField("lq_vld"));   // vld_vec
     add_tm_md(INGRESS, IntrinsicField("iafc_vld"));   // vld_vec
     add_tm_md(INGRESS, IntrinsicField("pgen_trig_vld"));   // vld_vec
     add_tm_md(INGRESS, IntrinsicField("drop"));   // vld_vec
     add_tm_md(INGRESS, IntrinsicField("icrc_enable"));   // vld_vec
+
+    // egress_intrinsic_metadata_for_deparser
+    add_dprsr_md(EGRESS, IntrinsicField("mirror_hash", "mirr_hash"));
+    add_dprsr_md(EGRESS, IntrinsicField("mirror_io_select", "mirr_io_sel"));
+    add_dprsr_md(EGRESS, IntrinsicField("mirror_egress_port", "mirr_epipe_port"));
+    add_dprsr_md(EGRESS, IntrinsicField("mirror_qid", "mirr_qid"));
+    add_dprsr_md(EGRESS, IntrinsicField("mirror_deflect_on_drop", "mirr_dond_ctrl"));
+    add_dprsr_md(EGRESS, IntrinsicField("mirror_ingress_cos", "mirr_icos"));
+    add_dprsr_md(EGRESS, IntrinsicField("mirror_multicast_ctrl", "mirr_mc_ctrl"));
 
     parser_intrinsic_types[INGRESS] = {
         { "ingress_intrinsic_metadata_t", "ingress_intrinsic_metadata" },

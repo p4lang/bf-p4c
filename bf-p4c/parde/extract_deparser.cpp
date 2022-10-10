@@ -135,6 +135,15 @@ int ExtractDeparser::getDigestIndex(const IR::Declaration_Instance* decl) {
     return cst->asInt();
 }
 
+IR::ID ExtractDeparser::getTnaParamName(const IR::BFN::TnaDeparser *deparser, IR::ID orig_name) {
+    for (auto& kv : deparser->tnaParams) {
+        if (kv.second == orig_name.name) {
+            return IR::ID(orig_name.srcInfo, kv.first, orig_name.name);
+        }
+    }
+    return orig_name;
+}
+
 /// handle deprecated syntax
 void ExtractDeparser::processMirrorEmit(const IR::MethodCallExpression* mc,
         const IR::Expression* select, int idx) {
@@ -171,11 +180,13 @@ void ExtractDeparser::processMirrorEmit(const IR::MethodCallExpression* mc, int 
     auto deparser = findContext<IR::BFN::TnaDeparser>();
     BUG_CHECK(deparser != nullptr,
             "ExtractDeparser must be applied to deparser block");
-    auto param = deparser->type->applyParams->parameters.at(3);
+    int param_idx = Device::archSpec().getDeparserIntrinsicMetadataForDeparserParamIndex();
+    auto param = deparser->type->applyParams->parameters.at(param_idx);
     auto st = param->type->to<IR::Type_StructLike>();
     BUG_CHECK(st != nullptr,
             "Parameter type %1% must be a struct", param->type);
-    auto meta = new IR::Metadata(param->name, st);
+    auto name = getTnaParamName(deparser, param->name);
+    auto meta = new IR::Metadata(name, st);
     auto member = new IR::Member(IR::Type_Bits::get(Device::mirrorTypeWidth()),
             new IR::ConcreteHeaderRef(meta), "mirror_type");
     processMirrorEmit(mc, member, idx);
@@ -185,11 +196,13 @@ void ExtractDeparser::processResubmitEmit(const IR::MethodCallExpression* mc, in
     auto deparser = findContext<IR::BFN::TnaDeparser>();
     BUG_CHECK(deparser != nullptr,
             "ExtractDeparser must be applied to deparser block");
-    auto param = deparser->type->applyParams->parameters.at(3);
+    int param_idx = Device::archSpec().getDeparserIntrinsicMetadataForDeparserParamIndex();
+    auto param = deparser->type->applyParams->parameters.at(param_idx);
     auto st = param->type->to<IR::Type_StructLike>();
     BUG_CHECK(st != nullptr,
             "Parameter type %1% must be a struct", param->type);
-    auto meta = new IR::Metadata(param->name, st);
+    auto name = getTnaParamName(deparser, param->name);
+    auto meta = new IR::Metadata(name, st);
     auto member = new IR::Member(new IR::ConcreteHeaderRef(meta),
             "resubmit_type");
     processResubmitEmit(mc, member, idx);
@@ -200,11 +213,13 @@ void ExtractDeparser::processDigestPack(const IR::MethodCallExpression* mc, int 
     auto deparser = findContext<IR::BFN::TnaDeparser>();
     BUG_CHECK(deparser != nullptr,
             "ExtractDeparser must be applied to deparser block");
-    auto param = deparser->type->applyParams->parameters.at(3);
+    int param_idx = Device::archSpec().getDeparserIntrinsicMetadataForDeparserParamIndex();
+    auto param = deparser->type->applyParams->parameters.at(param_idx);
     auto st = param->type->to<IR::Type_StructLike>();
     BUG_CHECK(st != nullptr,
             "Parameter type %1% must be a struct", param->type);
-    auto meta = new IR::Metadata(param->name, st);
+    auto name = getTnaParamName(deparser, param->name);
+    auto meta = new IR::Metadata(name, st);
     auto member = new IR::Member(new IR::ConcreteHeaderRef(meta),
             "digest_type");
     generateDigest(digests["learning"], "learning",

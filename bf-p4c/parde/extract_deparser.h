@@ -62,6 +62,9 @@ class ExtractDeparser : public DeparserInspector {
     void processDigestPack(const IR::MethodCallExpression*, int, cstring);
     void enforceHeaderOrdering();
 
+    /// Get the standard TNA parameter name corresponding to the paramater name used in the P4
+    IR::ID getTnaParamName(const IR::BFN::TnaDeparser *deparser, IR::ID orig_name);
+
     bool preorder(const IR::Annotation* annot) override;
     bool preorder(const IR::AssignmentStatement* stmt) override;
     void postorder(const IR::MethodCallExpression* mc) override;

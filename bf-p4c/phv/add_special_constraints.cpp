@@ -110,6 +110,15 @@ bool AddSpecialConstraints::preorder(BFN_MAYBE_UNUSED const IR::ConcreteHeaderRe
 
             auto res = pragmas_i.pa_byte_pack().add_compiler_added_packing(packing);
             if (!res.ok()) error(*res.error);
+
+            // Require 9-16b fields to be in the upper half
+            // FIXME: should the packet_length field be excluded?
+            for (auto& struct_field : ts->fields) {
+                cstring field_name = md->name + "." + struct_field->name;
+                auto* field = phv_i.field(field_name);
+                BUG_CHECK(field, "Couldn't find field: %1%", field_name);
+                if (field->size >= 9 && field->size <= 16) field->set_deparsed_top_bits(true);
+            }
         }
     }
 #endif  /* HAVE_FLATROCK */

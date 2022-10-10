@@ -1186,6 +1186,7 @@ void PHV::AlignedCluster::initialize_constraints() {
         if (slice.field()->deparsed())              num_constraints_i++;
         if (slice.field()->is_solitary())           num_constraints_i++;
         if (slice.field()->deparsed_bottom_bits())  num_constraints_i++;
+        if (slice.field()->deparsed_top_bits())     num_constraints_i++;
         if (slice.field()->exact_containers())      num_constraints_i++; }
 }
 
@@ -1227,6 +1228,7 @@ boost::optional<le_bitrange> PHV::AlignedCluster::validContainerStartRange(
     // Endian) of all cluster fields, which is the intersection of the valid
     // starting bit positions of each field in the cluster.
     bool has_deparsed_bottom_bits = false;
+    bool has_deparsed_top_bits = false;
     le_bitinterval valid_start_interval = ZeroToMax();
 
     // If the field has deparsed bottom bits, and it includes the LSB for
@@ -1235,6 +1237,11 @@ boost::optional<le_bitrange> PHV::AlignedCluster::validContainerStartRange(
     if (slice.field()->deparsed_bottom_bits() && slice.range().lo == 0) {
         has_deparsed_bottom_bits = true;
         LOG5("\tSlice " << slice << " has deparsed bottom bits"); }
+
+    // If the field has deparsed top bits then it needs to be placed in the top 16b.
+    if (slice.field()->deparsed_top_bits() && container_size == PHV::Size::b32) {
+        has_deparsed_top_bits = true;
+        LOG5("\tSlice " << slice << " has deparsed top bits"); }
 
     BUG_CHECK(slice.size() <= int(container_size), "Slice size greater than container size");
     LOG5("\tField slice " << slice << " to be placed in container size " << container_size <<
@@ -1248,6 +1255,17 @@ boost::optional<le_bitrange> PHV::AlignedCluster::validContainerStartRange(
               "field slice %1% has valid container range %2%, which has no "
               "overlap with container range %3%",
               slice.field()->name, slice.validContainerRange(), container_range);
+
+    // Mask to top bits
+    if (has_deparsed_top_bits) {
+        // network order, so top half is 0 .. container_size / 2
+        valid_interval = valid_interval.intersectWith(0, int(container_size) / 2);
+        nw_bitrange top_range = StartLen(0, int(container_size) / 2);
+        BUG_CHECK(!valid_interval.empty(), "Bad absolute container range; "
+                "field slice %1% has valid container range %2%, which has no "
+                "overlap with top range %3%",
+                slice.field()->name, slice.validContainerRange(), top_range);
+    }
 
     // ...and converted to little Endian with respect to the coordinate
     // space formed by the container.

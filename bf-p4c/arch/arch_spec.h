@@ -38,6 +38,8 @@ class ArchSpec {
     std::vector<IntrinsicParam> mauppu_intrinsic_types[GRESS_T_COUNT];
     std::vector<IntrinsicParam> deparser_intrinsic_types[GRESS_T_COUNT];
 
+    int deparser_intrinsic_metadata_for_deparser_param_index = -1;
+
  public:
     enum ArchType_t { TNA, T2NA
 #if HAVE_CLOUDBREAK
@@ -120,6 +122,17 @@ class ArchSpec {
 
     std::vector<IntrinsicParam> getDeparserIntrinsicTypes(gress_t g) const {
         return deparser_intrinsic_types[g];
+    }
+
+    /** @brief Get the index of the intrinsic metadata for deparser parameter in the deparser.
+     *
+     * The parameter is the \p ingress_intrinsic_metadata_for_deparser_t or
+     * \p egress_intrinsic_metadata_for_deparser_t for the corresponding gress.
+     *
+     * @return index of the intrinsic metadata for deparser parameter
+     */
+    int getDeparserIntrinsicMetadataForDeparserParamIndex() const {
+        return deparser_intrinsic_metadata_for_deparser_param_index;
     }
 
     void setTofinoIntrinsicTypes();

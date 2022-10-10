@@ -7,20 +7,20 @@
 
 #define FLATROCK_SIMPLE_INTRINSIC(GRESS, VAL, REG, REGNAME, IFSHIFT) \
     REG.phv_n_##REGNAME = VAL.val->reg.deparser_id();                \
-    IFSHIFT(REG.REGNAME##_shft = intrin.vals[0].val->lo;)
+    IFSHIFT(REG.REGNAME##_shft = VAL.val->lo;)
 
 #define FLATROCK_BYTE_PAIR_INTRINSIC(GRESS, VAL, REG, REGNAME, IFSHIFT) \
     /* FIXME: what are the two deparser IDs? */                         \
     REG.phv_n_b0_##REGNAME = VAL.val->reg.deparser_id();                \
-    REG.phv_n_b1_##REGNAME = VAL.val->reg.deparser_id();                \
+    REG.phv_n_b1_##REGNAME = VAL.val->reg.deparser_id() + 1;            \
     IFSHIFT(REG.REGNAME##_shft = intrin.vals[0].val->lo;)
 
-#define MDP_INTRINSIC(NAME, R1, IFSHIFT)                                      \
-    DEPARSER_INTRINSIC(Flatrock, INGRESS, NAME, 1) {                                          \
+#define MDP_INTRINSIC(NAME, R1, IFSHIFT)                                                   \
+    DEPARSER_INTRINSIC(Flatrock, INGRESS, NAME, 1) {                                       \
         FLATROCK_SIMPLE_INTRINSIC(INGRESS, intrin.vals[0], regs.mdp_mem.R1, NAME, IFSHIFT) \
     }
 
-#define MDP_INTRINSIC_BP(NAME, R1, IFSHIFT)                                      \
+#define MDP_INTRINSIC_BP(NAME, R1, IFSHIFT)                                                   \
     DEPARSER_INTRINSIC(Flatrock, INGRESS, NAME, 1) {                                          \
         FLATROCK_BYTE_PAIR_INTRINSIC(INGRESS, intrin.vals[0], regs.mdp_mem.R1, NAME, IFSHIFT) \
     }
@@ -31,13 +31,23 @@
     }
 
 #define MDP_INTRINSIC_BP_RENAME(NAME, R1, REGNAME, IFSHIFT)                                      \
-    DEPARSER_INTRINSIC(Flatrock, INGRESS, NAME, 1) {                                          \
+    DEPARSER_INTRINSIC(Flatrock, INGRESS, NAME, 1) {                                             \
         FLATROCK_BYTE_PAIR_INTRINSIC(INGRESS, intrin.vals[0], regs.mdp_mem.R1, REGNAME, IFSHIFT) \
     }
 
-#define DPR_INTRINSIC_RENAME(NAME, R1, REGNAME, IFSHIFT)                                       \
-    DEPARSER_INTRINSIC(Flatrock, EGRESS, NAME, 1) {                                            \
+#define DPR_INTRINSIC_RENAME(NAME, R1, REGNAME, IFSHIFT)                                   \
+    DEPARSER_INTRINSIC(Flatrock, EGRESS, NAME, 1) {                                        \
         FLATROCK_SIMPLE_INTRINSIC(EGRESS, intrin.vals[0], regs.dprsr.R1, REGNAME, IFSHIFT) \
+    }
+
+#define DPR_INTRINSIC_TBL_RENAME(NAME, R1, REGNAME, CNT, IFSHIFT)                    \
+    DEPARSER_INTRINSIC(Flatrock, EGRESS, NAME, 1) {                                  \
+        for (int i = 0; i < CNT; i++) {                                              \
+            regs.dprsr.R1[i].REGNAME##_phes = intrin.vals[0].val->reg.deparser_id(); \
+            regs.dprsr.R1[i].REGNAME##_sel = 1;                                      \
+            regs.dprsr.R1[i].REGNAME##_dflt = 0;                                     \
+            IFSHIFT(regs.dprsr.R1[i].REGNAME##_shft = intrin.vals[0].val->lo;)       \
+        }                                                                            \
     }
 
 // minimal intrinsics for now
@@ -51,8 +61,7 @@ MDP_INTRINSIC_RENAME(egress_unicast_pipe, tmm_ext_ram.tmm_ext[0], epipe_id, YES)
 MDP_INTRINSIC_RENAME(egress_unicast_port, tmm_ext_ram.tmm_ext[0], epipe_port, YES)
 MDP_INTRINSIC_RENAME(qid, tmm_ext_ram.tmm_ext[0], eport_qid, YES)
 // TODO: epipe_id -- split from egress_unicast_port?
-// TODO: b0_mrr_bmp
-// TODO: b1_mrr_bmp
+MDP_INTRINSIC_BP_RENAME(mirror_bitmap, tmm_ext_ram.tmm_ext[0], mrr_bmp, YES)
 MDP_INTRINSIC_BP_RENAME(egress_multicast_group_0, tmm_ext_ram.tmm_ext[0], mcid1, YES)
 MDP_INTRINSIC_BP_RENAME(egress_multicast_group_1, tmm_ext_ram.tmm_ext[0], mcid2, YES)
 MDP_INTRINSIC_BP(rid, tmm_ext_ram.tmm_ext[0], YES)
@@ -82,6 +91,8 @@ DEPARSER_INTRINSIC(Flatrock, INGRESS, valid_vec, 2) {
     regs.mdp.vld_vec_ext.shift_amt = intrin.vals.back().val->lo % 8;
 }
 
+DPR_INTRINSIC_TBL_RENAME(mirr_io_sel, dprsr_phvxb_rspec.ehm_xb.mirr_cfg, mirr_src, 8, YES)
+
 // FIXME: egress_unicast_port should be removed from EGRESS
 DEPARSER_INTRINSIC(Flatrock, EGRESS, egress_unicast_port, 1) { }
 
@@ -93,6 +104,73 @@ DEPARSER_INTRINSIC(Flatrock, EGRESS, egress_unicast_port, 1) { }
 #undef MDP_INTRINSIC_RENAME
 #undef MDP_INTRINSIC_BP_RENAME
 #undef DPR_INTRINSIC_RENAME
+#undef DPR_INTRINSIC_TBL_RENAME
+
+// Configure the mirror digest
+DEPARSER_DIGEST(Flatrock, EGRESS, mirror, 8, can_shift = true;) {
+    auto &ehm_xb = regs.dprsr.dprsr_phvxb_rspec.ehm_xb;
+
+    const auto* reg_sel = &data.select.val->reg;
+    int reg_sel_shift = data.select.val->lo;
+
+    const auto* reg_en = &data.select.pov.front()->reg;
+    int reg_en_shift = data.select.pov.front()->lo;
+
+    BUG_CHECK(deparser.pov[EGRESS].count(reg_sel), "Cannot find register %s in POV map",
+              reg_sel->name);
+    BUG_CHECK(deparser.pov[EGRESS].count(reg_en), "Cannot find register %s in POV map",
+              reg_en->name);
+
+    int en_pov_bit = deparser.pov[EGRESS].at(reg_en) + reg_en_shift;
+
+    // Configure the select expression extraction
+    ehm_xb.pov_key_sel.pov_byte[0] = deparser.pov[EGRESS].at(reg_sel) / 8;
+
+    int idx = 0;
+    for (auto &set : data.layout) {
+        int id = set.first >> data.shift;
+        unsigned key_wl = ~(0xfu << reg_sel_shift) | (unsigned)(id << reg_sel_shift);
+        unsigned key_wh = (0xfu << reg_sel_shift) ^ key_wl;
+        ehm_xb.key[idx].key_wh = key_wh;
+        ehm_xb.key[idx].key_wl = key_wl;
+
+        ehm_xb.mirr_cfg[idx].mirr_en_phes = data.select.pov.front()->reg.deparser_id();
+        ehm_xb.mirr_cfg[idx].mirr_en_sel = 1;
+        ehm_xb.mirr_cfg[idx].mirr_en_dflt = 0;
+        ehm_xb.mirr_cfg[idx].mirr_en_shft = data.select.pov.front()->lo;
+
+        // FIXME: set the payload length appropriately
+        // ehm_xb.pld_len_cfg[idx].ehm_pld_len_phes = 0;
+        ehm_xb.pld_len_cfg[idx].ehm_pld_len_pov0 = en_pov_bit;
+        ehm_xb.pld_len_cfg[idx].ehm_pld_len_pov1 = en_pov_bit;
+        ehm_xb.pld_len_cfg[idx].ehm_pld_len_sel = 0;
+        ehm_xb.pld_len_cfg[idx].ehm_pld_len_dflt = 256;
+
+        const auto &phes = set.second;
+        if (phes.size()) {
+            // ehm_xb.mirr_cfg[idx].mirr_ehm_phes = 0;
+            ehm_xb.mirr_cfg[idx].mirr_ehm_sel = 0;
+            ehm_xb.mirr_cfg[idx].mirr_ehm_dflt = 1;
+            // ehm_xb.mirr_cfg[idx].mirr_ehm_shft = 0;
+
+            // ehm_xb.hdr_len_cfg[idx].ehm_hdr_len_phes = 0;
+            ehm_xb.hdr_len_cfg[idx].ehm_hdr_len_pov0 = en_pov_bit;
+            ehm_xb.hdr_len_cfg[idx].ehm_hdr_len_pov1 = en_pov_bit;
+            ehm_xb.hdr_len_cfg[idx].ehm_hdr_len_sel = 0;
+            ehm_xb.hdr_len_cfg[idx].ehm_hdr_len_dflt = phes.size();
+
+            for (int i = 0; i < phes.size(); ++i)
+                ehm_xb.data[idx][i / 4].phe[i % 4] = phes[i]->reg.deparser_id();
+        } else {
+            // ehm_xb.mirr_cfg[idx].mirr_ehm_phes = 0;
+            ehm_xb.mirr_cfg[idx].mirr_ehm_sel = 0;
+            ehm_xb.mirr_cfg[idx].mirr_ehm_dflt = 0;
+            // ehm_xb.mirr_cfg[idx].mirr_ehm_shft = 0;
+        }
+
+        idx++;
+    }
+}
 
 template<> unsigned Deparser::FDEntry::Checksum::encode<Target::Flatrock>() {
     error(-1, "%s:%d: Flatrock deparser not implemented yet!", SRCFILE, __LINE__);
@@ -139,14 +217,25 @@ void fill_string(int idx, int seq, ITER begin, ITER end, const pov_map_t &pov_ma
 ///
 /// Populates the @p pov_order vector with Phv::Ref objects that represent the 128b POV
 template<> void Deparser::process(Target::Flatrock*) {
-    // Intrinsics that must be extracted from the POV vector
+    // Intrinsics/digests that must be extracted from the POV vector
     static std::set<Deparser::Intrinsic::Type *> povIntrinsics = {
         Deparser::Intrinsic::Type::all[Target::Flatrock::tag][INGRESS]["valid_vec"],
     };
 
+    static std::set<Deparser::Digest::Type *> povDigests = {
+        Deparser::Digest::Type::all[Target::Flatrock::tag][EGRESS]["mirror"],
+    };
+
+    // Perform the actual intrinsic/digest extraction
     for (auto &intrin : intrinsics) {
         if (povIntrinsics.count(intrin.type)) {
             for (auto &val : intrin.vals) pov_order[intrin.type->gress].push_back(val.val);
+        }
+    }
+
+    for (auto &digest : digests) {
+        if (povDigests.count(digest.type)) {
+            pov_order[digest.type->gress].push_back(digest.select.val);
         }
     }
 }
@@ -358,11 +447,13 @@ template<> void Deparser::write_config(Target::Flatrock::deparser_regs &regs) {
 
     for (auto &intrin : intrinsics)
         intrin.type->setregs(regs, *this, intrin);
+    for (auto &digest : digests)
+        digest.type->setregs(regs, *this, digest);
 
     if (!intrinsics.empty())
         warning(intrinsics.front().lineno, "Flatrock intrinsics not fully implemented yet!");
     if (!digests.empty())
-        error(digests.front().lineno, "Flatrock digests not implemented yet!");
+        warning(digests.front().lineno, "Flatrock digests not fully implemented yet!");
 
     // Verify that TopLevel::regs<>() is non-null before attempting to set.
     // Will sometimes be nullptr when running in a gtest context
