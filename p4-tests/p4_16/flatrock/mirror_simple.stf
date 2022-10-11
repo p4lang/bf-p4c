@@ -24,17 +24,17 @@ expect 3     12345678 10111213 5555 5555 40 50
 
 # Egress mirror
 
-# Case 4
+# Case 4 - mirror type mismatch
 packet 4     00010203 12345678 2021 3031 40 50
 expect 4     00010203 12345678 2021 2021 40 50
 
 
-# Case 5
+# Case 5 - mirror with source = ingress
 #  -- currently causes the model to exit due to requested byte being out of bounds
 packet 5     00010203 12345678 2021 3031 10 50
 expect 5     00010203 12345678 2021 2021 10 50
 
-# Case 6
+# Case 6 - mirror with source = egress
 #  -- currently causes the model to exit due to lack of PGR support
 packet 6     00010203 12345678 2021 3031 11 50
 expect 6     00010203 12345678 2021 2021 11 50
