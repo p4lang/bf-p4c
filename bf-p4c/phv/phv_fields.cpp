@@ -575,8 +575,9 @@ bitvec PhvInfo::bits_allocated(
         const PHV::AllocContext *ctxt,
         const PHV::FieldUse* use) const {
     Log::TempIndent indent;
-    LOG3("Allocating bits for continer : " << c << ", writes: " << writes
-            << ", ctxt: " << *ctxt << ", use: " << *use << indent);
+    LOG3("Allocating bits for container : " << c << indent);
+    LOG3("AllocContext: " << *ctxt << ", use: " << *use);
+    LOG3("Writes: " << writes);
     bitvec ret_bitvec;
     auto& fields = fields_in_container(c);
 

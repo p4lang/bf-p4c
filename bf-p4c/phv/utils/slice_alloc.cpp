@@ -318,8 +318,12 @@ bool AllocSlice::isReferenced(const AllocContext* ctxt, const FieldUse* use,
         case AllocContext::Type::TABLE: {
             LOG5("\t\t Table " << ctxt->table->name);
             std::set<int> stages;
+            LOG5("\t\t is_physical_stage_based_i: " << is_physical_stage_based_i);
+            LOG5("\t\t useTblRefs: " << (int)useTblRefs);
             if (is_physical_stage_based_i) {
                 stages = PhvInfo::physicalStages(ctxt->table);
+                for (auto s : stages)
+                    LOG5("\t\t\t stages: " << s);
             } else if ((int)useTblRefs) {
                 cstring tblName(ctxt->table->name);
                 const char *tblSplit = tblName.find("$split");
@@ -367,6 +371,8 @@ bool AllocSlice::isReferenced(const AllocContext* ctxt, const FieldUse* use,
                 return ref_match;
             } else {
                 stages = PhvInfo::minStages(ctxt->table);
+                for (auto s : stages)
+                    LOG5("\t\t\t min stages: " << s);
             }
 
             for (auto stage : stages) {

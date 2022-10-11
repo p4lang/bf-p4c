@@ -808,6 +808,10 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, const op_type_t
          init_phv_alignment[c].emplace_back(mini_write_bits, read_bits, read_src);
          LOG4("Init PHV alignment for container " << c
                  << " - " << init_phv_alignment[alloc.container()]);
+         if (container == c) {
+            LOG5("Container is background source as it matches destination");
+            cont_action.is_background_source = true;
+         }
     });
 
     // Check if this is read in a form of "0 ++ <PHV_field>"
@@ -1207,7 +1211,8 @@ void ActionAnalysis::determine_unused_bits(PHV::Container container,
 void ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
     Log::TempIndent indent;
     if (verbose)
-        LOG2("Action " << action_name << " in table " << tbl->name << indent);
+        LOG2("Verifying P4 action with phv for action " << action_name
+                << " in table " << tbl->name << indent);
     for (auto &container_action : *container_actions_map) {
         auto &container = container_action.first;
         auto &cont_action = container_action.second;
@@ -1753,7 +1758,8 @@ bool ActionAnalysis::ContainerAction::verify_deposit_field_variant(PHV::Containe
 bool ActionAnalysis::ContainerAction::verify_set_alignment(PHV::Container container,
         TotalAlignment &ad_alignment) {
     Log::TempIndent indent;
-    LOG4("Verify set alignment for container " << container << " AD Alignment: " << ad_alignment);
+    LOG4("Verify set alignment for container " << container
+            << " AD Alignment: " << ad_alignment << indent);
     int non_aligned_phv_sources = 0;
     int non_contiguous_phv_sources = 0;
     int non_aligned_and_non_contiguous_sources = 0;
@@ -1774,6 +1780,12 @@ bool ActionAnalysis::ContainerAction::verify_set_alignment(PHV::Container contai
             ad_alignment.aligned() || ad_alignment.contiguous() ? 0 : 1;
     }
 
+    LOG5("Non aligned non contiguous sources: " << non_aligned_and_non_contiguous_sources
+            << ", non aligned sources: " << non_aligned_sources
+            << ", non aligned phv sources : " << non_aligned_phv_sources
+            << ", ad sources: " << ad_sources()
+            << ", ad alignment is contiguous: " << ad_alignment.contiguous()
+            << ", non contiguous sources: " << non_contiguous_sources);
     // If a source is both not aligned and not contiguous, the only supportable is a
     // byte rotate merge
     if (non_aligned_and_non_contiguous_sources > 0)
@@ -2078,8 +2090,8 @@ bool ActionAnalysis::ContainerAction::verify_overwritten(const PHV::Container co
         if (write_field == nullptr)
             BUG("Verify Overwritten: Action does not have a write?");
         fieldsWritten.insert(write_field);
-        LOG4("Overwrite: Adding written field " << write_field->name << " for expr " <<
-             field_action.write.expr);
+        LOG4("Adding written field " << write_field->name
+                << " for expr " << field_action.write.expr);
     }
 
     PHV::FieldUse use(PHV::FieldUse::WRITE);
@@ -2092,10 +2104,11 @@ bool ActionAnalysis::ContainerAction::verify_overwritten(const PHV::Container co
         total_write_bits |= tot_align_info.second.direct_write_bits;
     }
 
-    LOG4("Overwrite masks - container:" << container_occupancy << " total_write: " <<
-         total_write_bits);
-    LOG4("Overwrite masks - adi:" << adi.alignment.direct_write_bits <<
-         " ci: " << ci.alignment.direct_write_bits << " invalid: " << invalidate_write_bits);
+    LOG4("Overwrite masks - container:" << container_occupancy
+            << " total_write: " << total_write_bits);
+    LOG4("Overwrite masks - adi:" << adi.alignment.direct_write_bits
+            << " ci: " << ci.alignment.direct_write_bits
+            << " invalid: " << invalidate_write_bits);
 
     if (container_occupancy.empty()) {
         LOG3("container_occupancy is empty");
@@ -2145,7 +2158,7 @@ bool ActionAnalysis::ContainerAction::verify_overwritten(const PHV::Container co
             }
         }
     }
-    LOG4("\t Overwrite masks - preserved:" << preserved_bits);
+    LOG4("Overwrite masks - preserved:" << preserved_bits);
 
     LOG5("Total write bits: " << total_write_bits << ", preserved_bits: " << preserved_bits);
     if ((total_write_bits | preserved_bits) != container_occupancy) {
@@ -2164,6 +2177,8 @@ bool ActionAnalysis::ContainerAction::verify_overwritten(const PHV::Container co
 /** Ensure that a read field is the only field within that container
  */
 bool ActionAnalysis::ContainerAction::verify_only_read(const PhvInfo &phv, int num_source) {
+    Log::TempIndent indent;
+    LOG3("Verifying only read for souces: " << num_source << indent);
     ordered_set<const PHV::Field*> fieldsRead;
     int src_cnt = 0;
     for (auto& field_action : field_actions) {
@@ -2173,7 +2188,7 @@ bool ActionAnalysis::ContainerAction::verify_only_read(const PhvInfo &phv, int n
                 src_cnt++;
                 read_field = phv.field(read.expr);
                 fieldsRead.insert(read_field); } } }
-
+    LOG4("Fields Read: " << fieldsRead);
     BUG_CHECK(src_cnt == num_source, "Shift operation with improper number of sources, expected "
               "%d but got %d", num_source, src_cnt);
 
@@ -2182,8 +2197,12 @@ bool ActionAnalysis::ContainerAction::verify_only_read(const PhvInfo &phv, int n
         auto container = tot_align_info.first;
         auto &total_alignment = tot_align_info.second;
         bitvec container_occupancy = phv.bits_allocated(container, fieldsRead, table_context, &use);
-        if (total_alignment.direct_read_bits != container_occupancy)
+        LOG4("Phv alignment on container " << container << ": " << total_alignment
+                << " container_occupancy: " << container_occupancy);
+        if (total_alignment.direct_read_bits != container_occupancy) {
+            LOG3("Alignment read bits not equal to container_occupancy");
             return false;
+        }
     }
     return true;
 }
@@ -2685,7 +2704,8 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
     }
 
     bool check_overwrite = !(is_from_set() && container.is(PHV::Kind::normal));
-    check_overwrite |= (is_from_set() && read_sources() == 2);
+    check_overwrite |= (is_from_set() && read_sources() == 2
+                        && (!(convert_instr_to_deposit_field && is_background_source)));
 
     if (check_overwrite) {
         LOG4("Checking overwrite");
@@ -2714,6 +2734,8 @@ void ActionAnalysis::postorder(const IR::MAU::Action *act) {
         verify_P4_action_with_phv(act->name);
     else
         verify_P4_action_without_phv(act->name);
+
+    LOG5(*this);
 }
 
 std::ostream &operator<<(std::ostream &out, const ActionAnalysis::Alignment& a) {
@@ -2844,6 +2866,22 @@ std::ostream &operator<<(std::ostream &out, const ActionAnalysis::TotalAlignment
         if (i < ((int)ta.indiv_alignments.size() - 1))
             out << Log::endl;
     }
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const ActionAnalysis &aa) {
+    out << "Action Analysis: "
+        << " table: " << aa.get_table()->name
+        << " field_action: " << aa.get_field_action() << Log::endl;
+    out << " phv_alloc: " << (aa.get_phv_alloc() ? "Y" : "N")
+        << " ad_alloc: " << (aa.get_ad_alloc() ? "Y" : "N")
+        << " allow_unalloc: " << (aa.get_allow_unalloc() ? "Y" : "N")
+        << " sequential: " << (aa.get_sequential() ? "Y" : "N")
+        << " action_data_misaligned: " << (aa.get_action_data_misaligned() ? "Y" : "N")
+        << " verbose: " << (aa.get_verbose() ? "Y" : "N")
+        << " error_verbose: " << (aa.get_error_verbose() ? "Y" : "N")
+        << " warning: " << (aa.warning_found() ? "Y" : "N")
+        << " error: " << (aa.error_found() ? "Y" : "N");
     return out;
 }
 

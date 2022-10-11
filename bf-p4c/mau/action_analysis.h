@@ -372,6 +372,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         ordered_map<PHV::Container, safe_vector<Alignment>> initialization_phv_alignment;
         // A container can be sourced multiple times, and thus this has become a multimap
         std::multimap<PHV::Container, TotalAlignment> phv_alignment;
+        bool is_background_source = false;
 
         // Set of error codes for which we report an error in compilation.
         static std::set<unsigned> codesForErrorCases;
@@ -646,13 +647,24 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
 
     void set_verbose() { verbose = true; }
     void set_error_verbose() { error_verbose = true; }
-    bool warning_found() { return warning; }
-    bool error_found() { return error; }
+    bool warning_found() const { return warning; }
+    bool error_found() const { return error; }
+    bool get_phv_alloc() const { return phv_alloc; }
+    bool get_ad_alloc() const { return ad_alloc; }
+    bool get_allow_unalloc() const { return allow_unalloc; }
+    bool get_sequential() const { return sequential; }
+    bool get_action_data_misaligned() const { return action_data_misaligned; }
+    bool get_verbose() const { return verbose; }
+    bool get_error_verbose() const { return error_verbose; }
+    const IR::MAU::Table* get_table() const { return tbl; }
+    const FieldAction& get_field_action() const { return field_action; }
 
     ActionAnalysis(const PhvInfo &p, bool pa, bool aa, const IR::MAU::Table *t,
             bool au = false, bool seq = true)
         : phv(p), phv_alloc(pa), ad_alloc(aa), allow_unalloc(au), sequential(seq), tbl(t)
         {visitDagOnce = false;}
 };
+
+std::ostream &operator<<(std::ostream &out, const ActionAnalysis&);
 
 #endif /* EXTENSIONS_BF_P4C_MAU_ACTION_ANALYSIS_H_ */
