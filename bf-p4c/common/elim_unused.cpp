@@ -235,6 +235,12 @@ class ElimUnused::Headers : public PardeTransform {
         // value from is never set.
         if (param->source && hasDefs(param->source->field)) return param;
 #if HAVE_FLATROCK
+        // Keep Flatrock $zero fields -- these are fields that should be zero
+        if (Device::currentDevice() == Device::FLATROCK && param->source) {
+            if (const auto* f = self.phv.field(param->source->field)) {
+                if (f->name.endsWith("$zero")) return param;
+            }
+        }
         // Keep Flatrock metadata packer valid vector fields
         // Handle fields without POV bits
         if (Device::currentDevice() == Device::FLATROCK && param->source && !param->povBit) {

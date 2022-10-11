@@ -142,10 +142,12 @@ IR::Node *AddMetadataPOV::postorder(IR::MAU::Primitive *p) {
 
 IR::Node *AddMetadataPOV::postorder(IR::BFN::Extract *e) {
     for (auto *param : dp->params) {
-        if (auto lval = e->dest->to<IR::BFN::FieldLVal>()) {
-            if (equiv(lval->field, param->source->field))
-                return new IR::Vector<IR::BFN::ParserPrimitive>(
-                    {e, new IR::BFN::Extract(param->povBit, new IR::BFN::ConstantRVal(1))});
+        if (param->povBit) {
+            if (auto lval = e->dest->to<IR::BFN::FieldLVal>()) {
+                if (equiv(lval->field, param->source->field))
+                    return new IR::Vector<IR::BFN::ParserPrimitive>(
+                        {e, new IR::BFN::Extract(param->povBit, new IR::BFN::ConstantRVal(1))});
+            }
         }
     }
     return e;

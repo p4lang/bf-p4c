@@ -1,0 +1,43 @@
+# Table setup
+
+
+# cmd  port  f1       f2       h1   h2   h3   b1 b2
+# ---  ----  -------- -------- ---- ---- ---- -- --
+
+# Passthrough
+
+# Case 1
+packet 1     00010203 10111213 2021 3031 4041 50 60
+expect 1     00010203 10111213 2021 3031 4041 50 60
+
+
+# Multicast - group a only
+
+# Case 2
+packet 2     12345678 10111213 2021 3031 4041 51 60
+expect 2     12345678 10111213 2021 3031 4041 51 60
+
+
+# Multicast - group b only
+
+# Case 3
+packet 3     12345678 10111213 2021 3031 4041 52 60
+expect 3     12345678 10111213 2021 3031 4041 52 60
+
+
+# Multicast - group a & b
+
+# Case 4
+packet 4     12345678 10111213 2021 3031 4041 53 60
+expect 4     12345678 10111213 2021 3031 4041 53 60
+
+
+# Multicast - group a then b with additional fields set
+
+# Case 5
+packet 5     10011002 10030201 2021 3031 4041 55 60
+expect 5     10011002 10030201 2021 3031 4041 55 60
+
+# Case 6
+packet 6     10011002 10030201 2021 3031 4041 56 60
+expect 6     10011002 10030201 2021 3031 4041 56 60

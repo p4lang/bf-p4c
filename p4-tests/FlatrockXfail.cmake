@@ -92,6 +92,11 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/flatrock/mirror_simple.p4
   )
 
+p4c_add_xfail_reason("tofino5"
+  "expected packet on port .* not seen"
+  extensions/p4_tests/p4_16/flatrock/mcast_simple.p4
+  )
+
 # *********************************************************************************************** #
 # ** TNA tests that "should" work *************************************************************** #
 # *********************************************************************************************** #
@@ -173,8 +178,6 @@ p4c_add_xfail_reason("tofino5"
 
 p4c_add_xfail_reason("tofino5"
   "Compiler Bug: Could not find hdr_id"
-  extensions/p4_tests/p4_16/stf/extract_slice_2.p4
-  extensions/p4_tests/p4_16/stf/parser_multi_write_5.p4
   extensions/p4_tests/p4_16/stf/parser_multi_write_8.p4
   )
 
@@ -187,15 +190,6 @@ p4c_add_xfail_reason("tofino5"
   "expected packets? on port . not seen"
   extensions/p4_tests/p4_16/stf/parser_counter_6.p4
   extensions/p4_tests/p4_16/stf/parser_counter_8.p4
-  extensions/p4_tests/p4_16/stf/parser_local_register.p4
-  extensions/p4_tests/p4_16/stf/parser_local_register_2.p4
-  )
-
-p4c_add_xfail_reason("tofino5"
-  "error: Duplicate element"
-  # Multiple writes to the same field generate currently multiple extracts
-  # which is wrong and assembler reports the error
-  extensions/p4_tests/p4_16/stf/parser_multi_write_1.p4
   )
 
 p4c_add_xfail_reason("tofino5"
@@ -284,6 +278,15 @@ p4c_add_xfail_reason("tofino5"
 
 p4c_add_xfail_reason("tofino5"
   "Could not place table .*: The table .* could not fit within the input crossbar"
+  extensions/p4_tests/p4_16/stf/extract_slice_2.p4
+  extensions/p4_tests/p4_16/stf/parser_local_register.p4
+  extensions/p4_tests/p4_16/stf/parser_local_register_2.p4
+  extensions/p4_tests/p4_16/stf/parser_multi_write_1.p4
+  extensions/p4_tests/p4_16/stf/parser_multi_write_5.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  "Search bus must be found within possible ghost bit candidates"
   extensions/p4_tests/p4_16/stf/metadata_extract.p4
   )
 

@@ -358,6 +358,9 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
             } else if (kv.key == "packet_body_offset") {
                 pbo[gress].lineno = kv.key.lineno;
                 pbo[gress].input(kv.value);
+            } else if (kv.key == "zero") {
+                zero_container[gress] = {gress, DEPARSER_STAGE, kv.value};
+                zero_container[gress].lineno = kv.key.lineno;
             } else if (auto *itype = ::get(Intrinsic::Type::all[Target::register_set()][gress],
                                            value_desc(&kv.key))) {
                 intrinsics.emplace_back(itype, kv.key.lineno);

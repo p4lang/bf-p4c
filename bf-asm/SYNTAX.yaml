@@ -1399,6 +1399,8 @@ deparser <thread>:
         var_off_len: <constant>
             # Variable offset: length in POV
             # Default: 0
+    zero: <phv_location>,
+        # list of phv slots that should be initialized to (valid) zero
 flexible_headers:
     # Lists the headers that were re-packed by the compiler because
     # they were marked flexible. See context.json schema 'flexible_headers' node

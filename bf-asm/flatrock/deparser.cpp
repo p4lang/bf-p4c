@@ -279,11 +279,12 @@ template<> void Deparser::write_config(Target::Flatrock::deparser_regs &regs) {
         }
     }
     // Verify that we haven't written the _last_ entry (keep for zero byte)
-    BUG_CHECK(idx <= Target::Flatrock::POV_WIDTH - 1, "Too many POV bytes being extracted");
+    BUG_CHECK(idx <= Target::Flatrock::POV_WIDTH / 8 - 1, "Too many POV bytes being extracted");
 
-    // TODO: write the final (b15) extraction
+    // populate unused bytes with the zero byte
     // TODO: consider pushing the zero-byte into the pov_order list in the Flatrock process method
-    // *mdp_pov_ext_bytes[Target::Flatrock::POV_WIDTH - 1] = ??;
+    for ( ; idx < Target::Flatrock::POV_WIDTH / 8; ++idx)
+        *mdp_pov_ext_bytes[idx] = zero_container[INGRESS]->reg.deparser_id();
 
     // Valid vector -- handled in valid_vec intrinsic above
 

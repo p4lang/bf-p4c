@@ -130,6 +130,10 @@ class Deparser : public Section {
                                                  // (elemnent 1). Element 0 is always unused.
                                                  // The 2-element array is present for
                                                  // consistency with other fields.
+    /// Container guaranteed to be zero
+    /// Used in Flatrock for POV bytes that must be zero
+    Phv::Ref                            zero_container[2];
+
     struct Intrinsic {
         struct Type;
         Type                    *type;

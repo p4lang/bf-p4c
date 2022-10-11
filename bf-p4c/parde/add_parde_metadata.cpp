@@ -85,6 +85,24 @@ void AddParserMetadata::addTofinoIngressParserEntryPoint(IR::BFN::Parser* parser
         { new IR::BFN::Transition(match_t(), 0, parser->start) });
 }
 
+void AddParserMetadata::addFlatrockIngressParserEntryPoint(IR::BFN::Parser* /*parser*/) {
+    ::warning("Parser metadata partially implemented for %1%", Device::name());
+
+    // auto prim = new IR::Vector<IR::BFN::ParserPrimitive>();
+
+    // FIXME: enable the code below when Flatrock lower-parser supports constants.
+    // Initialize ingress_intrinsic_metadata_for_tm.$zero to 0
+    // auto* igTmMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_tm");
+    // auto zeroVar = new IR::BFN::FieldLVal(
+    //     new IR::TempVar(IR::Type::Bits::get(8), true, igTmMeta->name + ".$zero"));
+    // prim->push_back(new IR::BFN::Extract(zeroVar, new IR::BFN::ConstantRVal(0)));
+
+    // parser->start =
+    //   new IR::BFN::ParserState(createThreadName(parser->gress, "$entry_point"), parser->gress,
+    //     *prim, { },
+    //     { new IR::BFN::Transition(match_t(), 0, parser->start) });
+}
+
 void AddParserMetadata::addIngressMetadata(IR::BFN::Parser *parser) {
     if (Device::currentDevice() == Device::TOFINO ||
         Device::currentDevice() == Device::JBAY
@@ -95,7 +113,7 @@ void AddParserMetadata::addIngressMetadata(IR::BFN::Parser *parser) {
         addTofinoIngressParserEntryPoint(parser);
 #if HAVE_FLATROCK
     } else if (Device::currentDevice() == Device::FLATROCK) {
-        ::warning("Parser metadata not implemented for %1%", Device::name());
+        addFlatrockIngressParserEntryPoint(parser);
 #endif
     }
 }
@@ -184,6 +202,20 @@ void AddDeparserMetadata::addIngressMetadata(IR::BFN::Deparser *d) {
             continue; }
         addDeparserParamRename(d, dpMeta, f.name, f.asm_name);
     }
+
+#if HAVE_FLATROCK
+    // Create a zero-field to ensure that there's a zero container available to the metadata packer
+    if (Device::currentDevice() == Device::FLATROCK) {
+        auto* tmMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_tm");
+        if (!tmMeta) {
+            ::warning("ig_intr_md_for_tm not defined in ingress control block");
+        } else {
+            auto* zeroVar = new IR::TempVar(IR::Type::Bits::get(8), true, tmMeta->name + ".$zero");
+            auto* param = new IR::BFN::DeparserParameter("zero", zeroVar);
+            d->params.push_back(param);
+        }
+    }
+#endif  /* HAVE_FLATROCK */
 }
 
 void AddDeparserMetadata::addEgressMetadata(IR::BFN::Deparser *d) {
