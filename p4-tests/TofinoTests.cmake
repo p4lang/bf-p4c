@@ -1010,16 +1010,62 @@ set (P4FACTORY_P4_16_PROGRAMS_COMPILE_ONLY
   )
 
 ## Internal P4-16 Programs
-set (P4FACTORY_P4_16_PROGRAMS_INTERNAL
-  misc1
-  tna_pvs_multi_states
-  tna_multi_prsr_programs_multi_pipes
+set (P4FACTORY_P4_16_PROGRAMS_INTERNAL  
+  bfrt_dev
+  bfrt_perf
+  bfrt_tm_queue
+  cuckoo_rollback
+  digest_test
+  exm_large
+  exm_no_hash
+  fr_counter
+  ha_multistage
+  ipv4_checksum
   mirror
+  misc1
+  multithread_test
+  selector
+  snapshot_all_pipes
+  snapshot_all_stages
+  snapshot_all_stages_egress
+  snapshot_phv
+  tna_alpmV2
+  tna_digest_custom
+  tna_hash
+  tna_ipv6_alpm
+  tna_multi_prsr_programs_multi_pipes
+  tna_pvs_multi_states
+  metersv2
+  tna_dkm_large_table
+  tna_stful
   )
 
 ## Internal P4-16 Programs - compile-only
 set (P4FACTORY_P4_16_PROGRAMS_INTERNAL_COMPILE_ONLY
   fr_test
+  # basic_lamb
+  # basic_t5na
+  bfrt_alpm_perf
+  bfrt_tm
+  bri_drivers_test
+  color_aware_meter
+  # common
+  counter_meter_test
+  custom_meter_colors
+  digest_test_custom
+  # forwarding_pipeline
+  ha_1
+  # hwlrn
+  large_counter_meter
+  lrn
+  multithread_perf
+  # p4program.am
+  selector_dist
+  selector_resize
+  tna_ambiguities
+  tna_counter_extended
+  tna_ipv4_alpm
+  # uni_dim_scale_shared
   )
 
 # TODO: How to enable these tests?
