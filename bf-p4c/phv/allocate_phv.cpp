@@ -2877,6 +2877,40 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
             for (auto& slice : perContainerAlloc.slices(c)) LOG_DEBUG6(TAB2 << slice);
         }
 
+        // Check that we don't get parser extract group source conflict between slices (existing
+        // and to-be-allocated)
+        using ExtractSource = PHV::Allocation::ExtractSource;
+        if (Device::phvSpec().hasParserExtractGroups()) {
+            ExtractSource source = ExtractSource::NONE;  // shared over all lambda invocations
+            auto check = [&source, this](const auto &slices) {
+                for (auto &slice : slices) {
+                    if (utils_i.uses.is_extracted(slice.field())) {
+                        auto sliceSource = utils_i.uses.is_extracted_from_pkt(slice.field())
+                            ? ExtractSource::PACKET : ExtractSource::NON_PACKET;
+                        if (source == ExtractSource::NONE)
+                            source = sliceSource;
+                        if (source != sliceSource) {
+                            LOG_DEBUG5(TAB1 "Not possible because slice " << slice
+                                       << " has extract source " << sliceSource
+                                       << " while previous slice(s) has " << source);
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            };
+            // set the source from the slices already in the container
+            bool consistent = check(perContainerAlloc.slices(c));
+            BUG_CHECK(consistent,
+                      "There is inconsistent parser extract group source in already allocated "
+                      "slices in %1%", c);
+            // and check it is consistent with the new slices
+            // TODO: check the new slices are consistent among themselves before trying to
+            // allocate them
+            if (!check(candidate_slices))
+                continue;
+        }
+
         // check pa_container_type constraints for candidates after dark overlay.
         bool pa_container_type_ok = true;
         for (const auto& sl : candidate_slices) {

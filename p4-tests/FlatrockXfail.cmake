@@ -151,7 +151,7 @@ p4c_add_xfail_reason("tofino5"
 
 # These may be genuine expected failures due to field packing and extractions
 p4c_add_xfail_reason("tofino5"
-  "Compiler Bug: Trying to allocate field .* with .* source to container .* with .* source"
+  "Compiler Bug: Trying to allocate field .* with .* source to container .* with .* source|Invalid container allocation"
   extensions/p4_tests/p4_16/stf/bit_or_in_same_state.p4
   )
 
