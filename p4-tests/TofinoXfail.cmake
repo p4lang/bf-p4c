@@ -464,8 +464,12 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Cannot unify type"
+  "Cannot cast implicitly type"
   extensions/p4_tests/p4_16/stf/onlab_packet_io.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Cannot unify type"
   extensions/p4_tests/p4_16/fabric-psa/fabric.p4
 )
 
@@ -1153,6 +1157,10 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/soured_0.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/tofino-bug-1.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/tofino-bug-5.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Cannot cast implicitly type"
   P4C-1021-1
 )
 
@@ -1368,7 +1376,7 @@ if (NOT ENABLE_ALT_PHV_ALLOC)
 endif()
 
 p4c_add_xfail_reason("tofino"
-  "Cannot unify type"
+  "Cannot cast implicitly type"
   extensions/p4_tests/p4_16/compile_only/brig-305.p4
 )
 
@@ -2103,4 +2111,25 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "NameError: name 'start_hitless' is not defined"
   p4_16_programs_internal_misc1
+)
+
+# p4c update 2022-10-10 (new tests)
+p4c_add_xfail_reason("tofino"
+  "The hash offset must be a power of 2 in a hash calculation"
+  testdata/p4_16_samples/hashing-non-tuple-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Unimplemented compiler support: Unsupported type"
+  testdata/p4_16_samples/parser-unroll-test8.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Currently in p4c, the table .* cannot perform a range match on key .* as the key does not fit in under 5 PHV nibbles"
+  testdata/p4_16_samples/issue3550.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "declaration not found"
+  testdata/p4_16_samples/psa-dpdk-header-union-typedef.p4
 )

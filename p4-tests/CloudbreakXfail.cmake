@@ -300,7 +300,7 @@ p4c_add_xfail_reason("tofino3"
 
 # ports are 11 bits on cloudbreak, so programs that assume 9 bits won't work
 p4c_add_xfail_reason("tofino3"
-  "Cannot unify type"
+  "Cannot cast implicitly type"
   extensions/p4_tests/p4_14/stf/egress_port_init.p4
   extensions/p4_tests/p4_14/stf/p4c-3551.p4
   extensions/p4_tests/p4_16/compile_only/empty_header_stack.p4

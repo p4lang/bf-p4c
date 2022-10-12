@@ -119,7 +119,7 @@ TEST_F(ErrorReporterTest, WarnigWithSuffixConformToExpectedFormat) {
                 return (ix + 1);
                 ^^^^^^
   ---- Actual error:
-  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(198): Cannot unify type 'bit<16>' with type 'bool'
+  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(198): Cannot cast implicitly type 'bit<16>' to type 'bool'
               bool f(in bit<16> ix) {
               ^^^^
   ---- Originating from:
