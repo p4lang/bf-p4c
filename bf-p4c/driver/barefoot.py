@@ -539,6 +539,11 @@ class BarefootBackend(BackendDriver):
                                                                                  parde_logging,
                                                                                  bridge_logging,
                                                                                  ixbar_logging))
+        # re-apply user provided options to override default values
+        if (os.environ['P4C_BUILD_TYPE'] == "DEVELOPER"):
+            for option in opts.log_levels:
+                self.add_command_option('compiler', "-T{}".format(option))
+
         # Print all used schema versions
         if opts.schema_versions:
             schema_versions_file = open(os.path.join(os.environ['P4C_CFG_PATH'], 'schema_versions'), 'r')
@@ -634,11 +639,10 @@ class BarefootBackend(BackendDriver):
 
         if self._dry_run:
             print('parse manifest:', manifest_filename)
-            self._pipes = [ { 'context': '{}/pipe/context.json'.format(self._output_directory),
+            self._pipes = { 0: { 'context': '{}/pipe/context.json'.format(self._output_directory),
                               'resources': '{}/pipe/resources.json'.format(self._output_directory),
                               'pipe_dir': '{}/pipe'.format(self._output_directory),
-                              'pipe_id': 0
-            } ]
+                              'pipe_id': 0 } }
             return 0
 
         # compilation failed and there is no manifest. An error should have been printed,
@@ -662,7 +666,7 @@ class BarefootBackend(BackendDriver):
                                 "' does not appear to be valid manifest JSON.\n"
                 self.exitWithError(error_msg)
 
-        self._pipes = []
+        self._pipes = {}
         schema_version = parse_version(self._manifest['schema_version'])
         pipe_name_label = 'pipe_name'
         if schema_version == parse_version("1.0.0"): pipe_name_label = 'pipe'
@@ -678,8 +682,8 @@ class BarefootBackend(BackendDriver):
                                  "' does not contain valid program contexts.\n"
                 self.exitWithError(error_msg)
             for ctxt in prog["contexts"]:
-                self._pipes.append({})
                 pipe_id = ctxt['pipe']
+                self._pipes[pipe_id] = {}
                 self._pipes[pipe_id]['pipe_name'] = ctxt['pipe_name']
                 self._pipes[pipe_id]['context'] = os.path.join(self._output_directory,
                                                                ctxt['path'])
@@ -698,8 +702,10 @@ class BarefootBackend(BackendDriver):
                 error_msg = "ERROR: Input file '" + manifest_filename + \
                                  "' does not contain a valid program.\n"
             for pipe in prog["pipes"]:
-                self._pipes.append({})
+                if pipe['pipe_name'] in self.skip_compilation:
+                    continue
                 pipe_id = int(pipe['pipe_id'])
+                self._pipes[pipe_id] = {}
                 self._pipes[pipe_id]['pipe_id'] = pipe_id
                 self._pipes[pipe_id]['pipe_name'] = pipe['pipe_name']
                 self._pipes[pipe_id]['context'] = os.path.join(self._output_directory,
@@ -987,7 +993,7 @@ class BarefootBackend(BackendDriver):
             # Invocation or program error. Should try to recover as much as we can
             try:
                 self.parseManifest()
-                for pipe in self._pipes:
+                for pipe in self._pipes.values():
                     if run_summary_logs and pipe.get('context', False):  # context.json is required
                         # ignore the return code -- we may have failed generating some logs.
                         # update manifest to export compilation time before runSummaryLogging is executed
@@ -1013,7 +1019,7 @@ class BarefootBackend(BackendDriver):
             # that were added on the command line (-Xassembler)
             self._saved_assembler_params = list(self._commands['assembler'])
             unique_table_offset = 0
-            for pipe in self._pipes:
+            for pipe in self._pipes.values():
 
                 if 'pipe_name' in pipe and pipe['pipe_name'] in self.skip_compilation:
                     continue
@@ -1075,7 +1081,7 @@ class BarefootBackend(BackendDriver):
             if self._dry_run:
                 pipeNames = ['pipe']
             else:
-                pipeNames = [ p['pipe_name'] for p in self._pipes ]
+                pipeNames = [ p['pipe_name'] for p in self._pipes.values() ]
             self.add_command_option('p4c-gen-conf', '--pipe {}'.format(' '.join(pipeNames)))
             rc += self.checkAndRunCmd('p4c-gen-conf')
 
