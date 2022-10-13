@@ -12,7 +12,10 @@ properties([
      [
          actions: [DeleteBuild()]
      ]
-     ]))
+     ])),
+     parameters([
+        booleanParam(name: 'ALT_PHV', defaultValue: (boolean)(env.JOB_NAME =~ /alt-phv/), description: "Internal: use ALT PHV pass")
+     ])
 ])
 
 node {
@@ -50,6 +53,12 @@ def runInDocker(Map namedArgs, String cmd) {
     """
 }
 
+def getBoostrapOpts() {
+    if (params.ALT_PHV)
+        return "-e BOOSTRAP_EXTRA_OPTS=-DENABLE_ALT_PHV_ALLOC=ON"
+    return ""
+}
+
 def runInDocker(String cmd) {
     runInDocker([:], cmd)
 }
@@ -62,6 +71,7 @@ node ('compiler-travis') {
         timestamps {
 
             stage ('Checkout') {
+                echo "This is ${env.BUILD_TAG}, ${params.ALT_PHV}"
                 echo 'Checking out bf-p4c-compilers'
                 checkout scm
                 bf_p4c_compilers_rev = sh (
@@ -92,8 +102,9 @@ node ('compiler-travis') {
                             ${DOCKER_REGISTRY}
                     """
                 }
-                image_tag_branch = "${env.BRANCH_NAME.toLowerCase()}"
-                image_tag = "${image_tag_branch}_${bf_p4c_compilers_rev}"
+                kind = params.ALT_PHV ? "altphv_" : ""
+                image_tag_branch = "${kind}${env.BRANCH_NAME.toLowerCase()}"
+                image_tag = "${image_tag_branch}_${bf_p4c_compilers_rev}".replace('/', '--')
                 try {
                     // Try to pull any image of this branch first. The intermediate image build
                     // attempts to reuse docker layers from it, even if the revisions are not
@@ -145,6 +156,7 @@ node ('compiler-travis') {
                     parallel (
                         'Unified': {
                             echo 'Building final Docker image to run tests with (unified build)'
+                            extra_opts = getBoostrapOpts()
                             sh """
                                 docker rm -f bf-p4c-compilers_build_${image_tag} \
                                     || true
@@ -153,6 +165,7 @@ node ('compiler-travis') {
                                     -v ~/.ccache_bf-p4c-compilers:/root/.ccache \
                                     -e UNIFIED_BUILD=true \
                                     -e MAKEFLAGS=j16 \
+                                    ${extra_opts} \
                                     bf-p4c-compilers_intermediate_${image_tag} \
                                     /bfn/bf-p4c-compilers/docker/docker_build.sh
                                 docker commit \
@@ -165,11 +178,13 @@ node ('compiler-travis') {
 
                         'Non-unified': {
                             echo 'Testing non-unified build'
+                            extra_opts = getBoostrapOpts()
                             sh """
                                 docker run --rm \
                                     -v ~/.ccache_bf-p4c-compilers:/root/.ccache \
                                     -e UNIFIED_BUILD=false \
                                     -e MAKEFLAGS=j16 \
+                                    ${extra_opts} \
                                     bf-p4c-compilers_intermediate_${image_tag} \
                                     /bfn/bf-p4c-compilers/docker/docker_build.sh
                             """
