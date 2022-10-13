@@ -292,45 +292,46 @@ void Memories::add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
  *  such as tind, synth2port, and action tables later.
  */
 bool Memories::single_allocation_balance(mem_info &mi, unsigned row) {
-    LOG3(" Allocating all ATCAM partitions");
+    Log::TempIndent indent;
+    LOG3(" Allocating all ATCAM partitions" << indent);
     if (!allocate_all_atcam(mi))
         return false;
 
-    LOG3(" Allocating all exact tables");
+    LOG3(" Allocating all exact tables" << indent);
     if (!allocate_all_exact(row))
         return false;
 
-    LOG3(" Allocating all ternary tables");
+    LOG3(" Allocating all ternary tables" << indent);
     if (!allocate_all_ternary()) {
         return false;
     }
 
-    LOG3(" Allocating all ternary indirect tables");
+    LOG3(" Allocating all ternary indirect tables" << indent);
     if (!allocate_all_tind()) {
         return false;
     }
 
-    LOG3(" Allocating all action tables");
+    LOG3(" Allocating all action tables" << indent);
     if (!allocate_all_swbox_users()) {
         return false;
     }
 
-    LOG3(" Allocating all idletime tables");
+    LOG3(" Allocating all idletime tables" << indent);
     if (!allocate_all_idletime()) {
         return false;
     }
 
-    LOG3(" Allocating all gateway tables");
+    LOG3(" Allocating all gateway tables" << indent);
     if (!allocate_all_gw()) {
         return false;
     }
 
-    LOG3(" Allocate all tind result bus tables");
+    LOG3(" Allocate all tind result bus tables" << indent);
     if (!allocate_all_tind_result_bus_tables()) {
         return false;
     }
 
-    LOG3(" Allocate all no match miss");
+    LOG3(" Allocate all no match miss" << indent);
     if (!allocate_all_no_match_miss()) {
         return false;
     }
@@ -1236,6 +1237,10 @@ bool Memories::allocate_all_exact(unsigned column_mask) {
         for (auto &tr : table_alloc_ram_widths) {
             ram_width_table_allocs.insert(std::pair<int, table_alloc*>(tr.second, tr.first));
         }
+        LOG7("Sorted table alloc for stash allocation");
+        for (auto &ta : ram_width_table_allocs) {
+            LOG7("\tRam width: " << ta.first << ", exact table: " << ta.second->table->name);
+        }
         // Iterate over the sorted multimap, table allocs with wider matches are
         // allocated stashes first since they have to be aligned to same stash
         // column. However for single RAM matches there is no such restriction
@@ -1253,49 +1258,49 @@ bool Memories::allocate_all_exact(unsigned column_mask) {
                 std::map<int, std::vector<int>> stash_map;
                 for (auto mem_way : alloc.ways) {
                     BUG_CHECK(ixbar_way != match_ixbar->way_use.end(), "No ixbar_way found!");
-                    LOG5("way group : " << ixbar_way->source
+                    LOG5("\tway group : " << ixbar_way->source
                             << " - way: " << wayno << " - size : " << mem_way.size
                             << " - mem way: " << mem_way);
                     if (stash_map.count(ixbar_way->source) == 0) {
                         auto ram_width = mem_way.rams.size()/mem_way.size;
-                        LOG6("Ram Width: " << ram_width << ", mem way rams size : "
+                        LOG6("\tRam Width: " << ram_width << ", mem way rams size : "
                                 << mem_way.rams.size() << " mem way size : " << mem_way.size);
                         // Determine stash unit, all units should be aligned in
                         // the same stash column for wide matches
                         auto stash_unit = -1;
                         for (int i = 0; i < STASH_UNITS; i++) {
                             if (stash_unit == -1) {
-                                LOG7("Assigning for stash unit " << i);
+                                LOG7("\t\tAssigning for stash unit " << i);
                                 unsigned width = 0;
                                 // For wide RAMS, the stash units must be
                                 // aligned in the same column on all rows of the
                                 // wide match.
                                 if (ram_width > 1) {
                                     for (auto ram : mem_way.rams) {
-                                        LOG7("\tRam : " << ram.first << " stash unit: "
+                                        LOG7("\t\t\tRam : " << ram.first << " stash unit: "
                                                 << stash_use[ram.first][i] << " width: "
                                                 << width << ", ram_width: " << ram_width);
+                                        if (width >= ram_width) break;
                                         if (!stash_use[ram.first][i].isNullOrEmpty()) {
                                             stash_unit = -1;
                                             break;
                                         }
-                                        if (width >= ram_width) break;
                                         stash_unit = i;
-                                        LOG7("\tAssigned stash unit " << stash_unit);
+                                        LOG7("\t\t\tAssigned stash unit " << stash_unit);
                                         width++;
                                     }
                                 // For single RAM width allocate any slot
                                 // available on any row the RAMs are present
                                 } else {
                                     for (auto ram : mem_way.rams) {
-                                        LOG7("\tRam : " << ram.first << " stash unit: "
+                                        LOG7("\t\t\tRam : " << ram.first << " stash unit: "
                                                 << stash_use[ram.first][i]
                                                 << ", ram_width: " << ram_width);
                                         if (!stash_use[ram.first][i].isNullOrEmpty()) {
                                             continue;
                                         }
                                         stash_unit = i;
-                                        LOG7("\tAssigned stash unit " << stash_unit);
+                                        LOG7("\t\t\tAssigned stash unit " << stash_unit);
                                         break;
                                     }
                                 }
@@ -1307,7 +1312,7 @@ bool Memories::allocate_all_exact(unsigned column_mask) {
                                     if (width >= ram_width) break;
                                     stash_map[ixbar_way->source].push_back(ram.first);
                                     stash_use[ram.first][stash_unit] = u_id.build_name();
-                                    LOG4("Rams : " << "[" << ram.first << ", "
+                                    LOG4("\t\tRams : " << "[" << ram.first << ", "
                                         << (ram.second + 2) << "]"
                                         << " - stash unit : " << stash_unit);
                                     for (auto &r : alloc.row) {
@@ -1322,7 +1327,7 @@ bool Memories::allocate_all_exact(unsigned column_mask) {
                                 break;
                             }
                         }
-                        LOG7("Stash Usage: \n" << stash_use);
+                        LOG7("\tStash Usage: \n" << stash_use);
                         BUG_CHECK(stash_unit >= 0,
                             "No stash unit found for table %1%", u_id.build_name());
                     }
