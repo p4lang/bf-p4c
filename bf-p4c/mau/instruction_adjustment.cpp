@@ -440,7 +440,7 @@ const IR::Node *SplitInstructions::preorder(IR::MAU::Instruction *inst) {
     });
     BUG_CHECK(slices.size() >= 1, "No PHV slices allocated for %1%, instruction: %2%.",
               PHV::FieldSlice(field, bits), inst);
-    if (slices.size() <= 1) return inst;  // nothing to split
+    if (slices.size() == 1) return inst;  // nothing to split
 
     LOG5("Splitting instruction:" << inst);
 
@@ -849,21 +849,20 @@ void MergeInstructions::analyze_phv_field(IR::Expression *expr) {
         if (merged_location != merged_fields.end())
             BUG("More than one write within an instruction");
 
-        int split_count = 0;
         PHV::FieldUse use(PHV::FieldUse::WRITE);
-        field->foreach_alloc(bits, findContext<IR::MAU::Table>(), &use,
-                             [&](const PHV::AllocSlice &) {
-            split_count++;
-        });
-        if (split_count != 1)
-            BUG("Instruction on field %s not a single container instruction", field->name);
+        PHV::Container cntr = PHV::Container();
         field->foreach_alloc(bits, findContext<IR::MAU::Table>(), &use,
                              [&](const PHV::AllocSlice &alloc) {
-            auto container = alloc.container();
-            merged_location = merged_fields.find(container);
+            if (cntr == PHV::Container())
+                cntr = alloc.container();
+            else
+                BUG_CHECK((cntr == alloc.container()),
+                          "Instruction on field %s not a single container instruction",
+                          field->name);
+            merged_location = merged_fields.find(cntr);
             write_found = true;
 
-            if (saturationArith && container.size() != static_cast<size_t>(field->size)) {
+            if (saturationArith && cntr.size() != static_cast<size_t>(field->size)) {
                 BUG("Destination of saturation add was allocated to bigger container than the "
                     "field itself, which would cause saturation to produce wrong results. You can "
                     "try constraining source operand with @pa_container_size to achieve correct "
@@ -883,6 +882,7 @@ const IR::Slice *MergeInstructions::preorder(IR::Slice *sl) {
 /** Mark instructions that have a write corresponding to the expression being removed
  */
 const IR::Expression *MergeInstructions::preorder(IR::Expression *expr) {
+    LOG5("MergeInstructions preorder on expression: " << *expr);
     if (!findContext<IR::MAU::Instruction>()) {
         prune();
         return expr;
@@ -1177,21 +1177,49 @@ void MergeInstructions::build_actiondata_source(ActionAnalysis::ContainerAction 
         src1_writebits = adi.alignment.write_bits();
         LOG5("multiOp " << adi.action_data_name << "  writebits:" << src1_writebits);
     } else {
-        bool single_action_data = true;
+        const IR::Expression *prv_expr = nullptr;
+        bitvec read_bits;
         for (auto &field_action : cont_action.field_actions) {
             for (auto &read : field_action.reads) {
                 if (read.type != ActionAnalysis::ActionParam::ACTIONDATA)
                     continue;
                 if (read.is_conditional)
                     continue;
-                BUG_CHECK(single_action_data, "Action data that shouldn't require an alias "
-                          "does require an alias");
-                *src1_p = read.expr;
-                src1_writebits = adi.alignment.write_bits();
-                LOG5("field " << field_action.name << "  writebits:" << src1_writebits);
 
-                single_action_data = false;
-            }
+                src1_writebits = adi.alignment.write_bits();
+                BUG_CHECK(!read_bits.getrange(read.range().lo, read.range().size()),
+                    "Overlapping AD read params ...?");
+                read_bits.setrange(read.range().lo, read.range().size());
+                *src1_p = read.expr;
+                LOG5("field " << field_action.name << " src1_p:" << **src1_p << "  writebits:" <<
+                     src1_writebits << "  readbits: " << read_bits);
+
+                if (auto *slc = (*src1_p)->to<IR::Slice>()) {
+                    // Store first source AD expression
+                    if (prv_expr == nullptr) {
+                        // Store first source AD expression
+                        prv_expr = slc->e0;
+                    } else {
+                        // Compare first AD expression with current AD expression
+                        BUG_CHECK((prv_expr == slc->e0), "Slices of multiple AD sources?");
+                        BUG_CHECK((read_bits.is_contiguous()),
+                                  "Non contiguous slices of AD sources?");
+                    }
+                    // Update returned source expression as merged slice of multiple source slices
+                    *src1_p = new IR::Slice(prv_expr, (read_bits.ffs() + read_bits.popcount() - 1),
+                                            read_bits.ffs());
+                } else {
+                    if (prv_expr == nullptr) {
+                        // Store first AD expression
+                        prv_expr = *src1_p;
+                    } else {
+                        // Compare first AD expression with current AD expression
+                        BUG_CHECK(prv_expr == *src1_p, "Multiple AD sources?");
+                        BUG_CHECK((read_bits.is_contiguous()),
+                                  "Non contiguous AD sources?");
+                    }
+                }
+           }
         }
     }
 

@@ -2061,6 +2061,55 @@ bool ActionAnalysis::ContainerAction::verify_alignment(PHV::Container &container
     return true;
 }
 
+// For container actions with counts[ActionParam::ACTIONDATA]>1 verify
+// whether there are really multiple ACTIONDATA params
+// E.g. in the case of an ACTIONDATA param being split into multiple slices
+//        due to the destination metadata being sliced because of different overlays
+//        and different initializations of these slices. In this case return false and
+//        the source/dest slices will be merged into single slices or multioperand objects.
+bool ActionAnalysis::ContainerAction::verify_multiple_action_data() const {
+    bitvec read_bits, write_bits;
+    bool first_act = true;
+    const IR::Expression *prv_rexpr = nullptr, *prv_wexpr = nullptr;
+    for (auto& fa : field_actions) {
+        LOG4("   FieldAction " << fa.name << "  write_bits: " << fa.write.range() <<
+             "   # of read_params: " << fa.reads.size());
+
+        auto *fa_wexpr = fa.write.expr;
+        if (auto *slice = fa_wexpr->to<IR::Slice>()) {
+            fa_wexpr = slice->e0;
+        }
+        if (first_act) prv_wexpr = fa_wexpr;
+        if (prv_wexpr != fa_wexpr) return true;
+
+        // Limit multiple AD exception to single source instructions
+        if (fa.reads.size() > 1) return true;
+        for (auto r_param : fa.reads) {
+            auto *r_expr = r_param.expr;
+            if (auto *slice = r_expr->to<IR::Slice>()) {
+                r_expr = slice->e0;
+            }
+            LOG4("\t " << *r_expr <<"   read_bits: "<< r_param.range());
+
+            write_bits.setrange(fa.write.range().lo, fa.write.range().size());
+            read_bits.setrange(r_param.range().lo, r_param.range().size());
+            LOG4("  unified  write_bits: " <<  write_bits << "   read_bits: " << read_bits);
+
+            if (first_act) {
+                prv_rexpr = r_expr;
+                first_act = false;
+            }
+
+            if (prv_rexpr != r_expr) return true;
+        }
+    }
+
+    if (!write_bits.is_contiguous() || !read_bits.is_contiguous()) return true;
+
+    return false;
+}
+
+
 bitvec ActionAnalysis::ContainerAction::specialities() const {
     bitvec rv;
     for (auto &fa : field_actions) {
@@ -2277,8 +2326,14 @@ void ActionAnalysis::check_constant_to_actiondata(ContainerAction &cont_action,
     LOG4("Checking constant to action data : " << container << indent);
     auto &counts = cont_action.counts;
     if (counts[ActionParam::ACTIONDATA] > 1 && ad_alloc) {
-        cont_action.error_code |= ContainerAction::MULTIPLE_ACTION_DATA;
-        LOG4("Error Code Update: MULTIPLE_ACTION_DATA");
+        bool mult_ad = cont_action.verify_multiple_action_data();
+
+        if (mult_ad) {
+            cont_action.error_code |= ContainerAction::MULTIPLE_ACTION_DATA;
+            LOG4("Error Code Update: MULTIPLE_ACTION_DATA");
+        } else {
+            counts[ActionParam::ACTIONDATA] = 1;
+        }
     }
 
     if (counts[ActionParam::CONSTANT] == 0)

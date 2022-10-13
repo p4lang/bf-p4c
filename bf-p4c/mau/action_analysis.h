@@ -528,6 +528,8 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
                ||  (name == "sethi");
         }
 
+        bool verify_multiple_action_data() const;
+
         friend std::ostream &operator<<(std::ostream &out, const ContainerAction&);
         std::string to_string() const;
     };
