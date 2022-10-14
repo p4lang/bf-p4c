@@ -337,11 +337,21 @@ class CheckStatefulAlu : public MauModifier {
 
     bool preorder(IR::MAU::StatefulAlu *) override;
     bool preorder(IR::MAU::SaluFunction *) override;
+    bool preorder(IR::MAU::Primitive *) override;
+
+    /**
+     * @brief Check that register params and large constants used in register actions associated
+     * with a given register fit in the device's register file rows.
+     *
+     */
+    void postorder(IR::MAU::StatefulAlu *) override;
     // FIXME -- Type_Typedef should have been resolved and removed by Typechecking in the
     // midend?  But we're running into it here, so a helper to skip over typedefs.
     static const IR::Type *getType(const IR::Type *t) {
         while (auto td = t->to<IR::Type_Typedef>()) t = td->type;
         return t; }
+
+    std::set<big_int> large_constants;
 };
 
 class FixupStatefulAlu : public PassManager {

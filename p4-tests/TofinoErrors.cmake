@@ -208,3 +208,25 @@ p4c_add_xfail_reason("tofino"
   "error: .*: Invalid local variable entry in checksum calculation .*"
   extensions/p4_tests/p4_16/errors/p4c-3477.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "error: Register actions associated with .* do not fit on the device. \
+Actions use 9 large constants but the device has only 4 register action parameter slots. \
+To make the actions fit, reduce the number of large constants."
+  extensions/p4_tests/p4_16/errors/p4c-4829-constants.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: Register actions associated with .* do not fit on the device. \
+Actions use 6 large constants and 3 register parameters for a total of 9 register \
+action parameter slots but the device has only 4 register action parameter slots. \
+To make the actions fit, reduce the number of large constants or register parameters."
+  extensions/p4_tests/p4_16/errors/p4c-4829-mixed.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: Register actions associated with .* do not fit on the device. \
+Actions use 5 register parameters but the device has only 4 register action parameter slots. \
+To make the actions fit, reduce the number of register parameters."
+  extensions/p4_tests/p4_16/errors/p4c-4829-params.p4
+)

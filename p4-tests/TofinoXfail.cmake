@@ -2092,11 +2092,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-example-range-match.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "error: Out of the number of register file rows .* Reduce the number of large constants or RegisterParams"
-  extensions/p4_tests/p4_16/errors/p4c-4829.p4
-)
-
 # p4c update 2022-09-22 (new test)
 p4c_add_xfail_reason("tofino"
   "Conditions in an action must be simple comparisons of an action data parameter"

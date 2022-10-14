@@ -1815,6 +1815,8 @@ bool CreateSaluInstruction::preorder(const IR::Declaration_Instance *di) {
 }
 
 bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
+    large_constants.clear();
+
     auto &device = Device::statefulAluSpec();
     const IR::Type *regtype = nullptr;
     if (salu->selector) {
@@ -1936,6 +1938,64 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
     lmatch_usage.salu = salu;
     salu->apply(lmatch_usage);
     return true;
+}
+
+bool CheckStatefulAlu::preorder(IR::MAU::Primitive *prim) {
+    if (!findContext<IR::MAU::SaluAction>()) {
+        return true;
+    }
+
+    const auto &device = Device::statefulAluSpec();
+    for (const auto *op : prim->operands) {
+        if (const auto *constant = op->to<IR::Constant>();
+            constant && (constant->value < device.MinInstructionConstValue ||
+                         constant->value > device.MaxInstructionConstValue)) {
+            large_constants.insert(constant->value);
+        }
+    }
+    return true;
+}
+
+void CheckStatefulAlu::postorder(IR::MAU::StatefulAlu *salu) {
+    const auto &device = Device::statefulAluSpec();
+    const std::size_t constants = large_constants.size();
+    const std::size_t params = salu->regfile.size();
+
+    const std::size_t needed_file_rows = constants + params;
+    if (needed_file_rows > static_cast<std::size_t>(device.MaxRegfileRows)) {
+        std::stringstream msg;
+        msg << "Register actions associated with %1%: [ ";
+        for (const auto *salu_action : Values(salu->instruction)) {
+            msg << salu_action->name.name << " ";
+        }
+        msg << "] do not fit on the device. Actions use ";
+        if (constants > 0) {
+            msg << constants << " large constants ";
+            if (params > 0) {
+                msg << "and ";
+            }
+        }
+        if (params > 0) {
+            msg << params << " register parameters ";
+            if (constants > 0) {
+                msg << "for a total of " << needed_file_rows << " register action parameter slots ";
+            }
+        }
+        msg << "but the device has only " << device.MaxRegfileRows
+            << " register action parameter slots. To make the actions fit, reduce the number of ";
+        if (constants > 0) {
+            msg << "large constants";
+            if (params > 0) {
+                msg << " or ";
+            } else {
+                msg << ".";
+            }
+        }
+        if (params > 0) {
+            msg << "register parameters.";
+        }
+        ::error(ErrorType::ERR_OVERLIMIT, msg.str().c_str(), salu);
+    }
 }
 
 void CheckStatefulAlu::AddressLmatchUsage::clear() {

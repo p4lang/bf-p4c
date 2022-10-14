@@ -1318,11 +1318,6 @@ void AttachTables::InitializeRegisterParams::end_apply() {
         auto *decl = p.first;
         auto *salu = p.second;
         int index = static_cast<int>(salu->regfile.size());
-        if (index >= Device::statefulAluSpec().MaxRegfileRows)
-            ::error(ErrorType::ERR_OVERLIMIT,
-                "%1%: the number of available slots for register "
-                "action parameters exceeded; maximum number is %2%",
-                salu, Device::statefulAluSpec().MaxRegfileRows);
         BUG_CHECK(!decl->arguments->empty(), "RegisterParam misses an argument");
         auto *initial_expr = decl->arguments->at(0)->expression;
         auto *initial_expr_type = self.typeMap->getType(initial_expr);
