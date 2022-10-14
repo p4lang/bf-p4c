@@ -172,14 +172,19 @@ if [ "$RUN_BOOTSTRAP_PTF" == "yes" ]; then
     ${mydir}/bootstrap_ptf.sh ${builddir}
 fi
 
-mkdir -p ${builddir}/p4c/extensions/bf-p4c
-ln -sf $(realpath --relative-to ${builddir}/p4c/extensions/bf-p4c ${mydir}/bf-p4c/.gdbinit) ${builddir}/p4c/extensions/bf-p4c/p4c-barefoot-gdb.gdb
-mkdir -p ${builddir}/p4c/backends/bmv2/
-ln -sf $(realpath --relative-to ${builddir}/p4c/backends/bmv2 ${mydir}/bf-p4c/.gdbinit) ${builddir}/p4c/backends/bmv2/p4c-bm2-ss-gdb.gdb
-mkdir -p ${builddir}/p4c/backends/p4test
-ln -sf $(realpath --relative-to ${builddir}/p4c/backends/p4test ${mydir}/bf-p4c/.gdbinit) ${builddir}/p4c/backends/p4test/p4test-gdb.gdb
-mkdir -p ${builddir}/bf-asm
-ln -sf $(realpath --relative-to ${builddir}/bf-asm ${mydir}/bf-asm/.gdbinit) ${builddir}/bf-asm/bf-asm-gdb.gdb
+make_relative_link ()
+{
+    local target="${1:?make_relative_link: Argument 1 should be the target.}"
+    local link_name="${2:?make_relative_link: Argument 2 should be the link name.}"
+    local link_name_dir="$(dirname "${link_name}")"
+    mkdir -p "${link_name_dir}/"
+    ln -sf "$(realpath --relative-to "${link_name_dir}/" "${target}")" "${link_name}"
+}
+
+make_relative_link "${mydir}/bf-p4c/.gdbinit" "${builddir}/p4c/extensions/bf-p4c/p4c-barefoot-gdb.gdb"
+make_relative_link "${mydir}/bf-p4c/.gdbinit" "${builddir}/p4c/backends/bmv2/p4c-bm2-ss-gdb.gdb"
+make_relative_link "${mydir}/bf-p4c/.gdbinit" "${builddir}/p4c/backends/p4tests/p4test-gdb.gdb"
+make_relative_link "${mydir}/bf-asm/.gdbinit" "${builddir}/bf-asm/bf-asm-gdb.gdb"
 
 echo "Configured for build in ${builddir}"
 popd > /dev/null # $mydir
