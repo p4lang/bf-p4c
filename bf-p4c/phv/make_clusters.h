@@ -70,7 +70,8 @@ class Clustering : public PassManager {
 
     /// field pairs that cannot be packed in a container because of inconsistent
     /// extractions from flexible header fields.
-    ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>> inconsistent_extract_no_packs_i;
+    assoc::hash_map<const PHV::Field*,
+        assoc::hash_set<const PHV::Field*>> inconsistent_extract_no_packs_i;
 
     /// Maps fields to their slices.  Slice lists are ordered from LSB to MSB.
     ordered_map<const PHV::Field*, std::list<PHV::FieldSlice>> fields_to_slices_i;

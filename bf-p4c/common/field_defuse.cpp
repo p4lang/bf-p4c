@@ -19,7 +19,7 @@ class FieldDefUse::ClearBeforeEgress : public Inspector, TofinoWriteContext {
         auto *f = self.phv.field(e);
         if (f && isWrite()) {
             LOG4("CLEARING FIELD: " << e);
-            self.defuse.erase(f->id);
+            self.defuse[f->id] = info();
             return false; }
         if (e->is<IR::Member>())
             return false;
@@ -27,7 +27,7 @@ class FieldDefUse::ClearBeforeEgress : public Inspector, TofinoWriteContext {
     bool preorder(const IR::HeaderRef *hr) override {
         for (int id : self.phv.struct_info(hr).field_ids()) {
             if (isWrite()) {
-                self.defuse.erase(id);
+                self.defuse[id] = info();
                 LOG4("CLEARING HEADER REF: " << hr); } }
         return false; }
  public:
@@ -59,6 +59,7 @@ Visitor::profile_t FieldDefUse::init_apply(const IR::Node *root) {
     defs.clear();
     uses.clear();
     defuse.clear();
+    defuse.resize(phv.num_fields());
     located_uses.clear();
     located_defs.clear();
     output_deps.clear();
@@ -73,7 +74,8 @@ void FieldDefUse::check_conflicts(const info &read, int when) {
     int firstdef = INT_MAX;
     for (auto def : read.def)
         firstdef = std::min(firstdef, def.first->stage());
-    for (auto &other : Values(defuse)) {
+    for (auto& other : defuse) {
+        if (other.field == nullptr) continue;
         if (other.field == read.field) continue;
         for (auto use : other.use) {
             int use_when = use.first->stage();
@@ -446,7 +448,8 @@ bool FieldDefUse::preorder(const IR::Expression *e) {
 
 void FieldDefUse::flow_merge(Visitor &a_) {
     FieldDefUse &a = dynamic_cast<FieldDefUse &>(a_);
-    for (auto &i : Values(a.defuse)) {
+    for (auto &i : a.defuse) {
+        if (i.field == nullptr) continue;
         auto &info = field(i.field);
         BUG_CHECK(&info != &i, "same object in FieldDefUse::flow_merge");
         info.def.insert(i.def.begin(), i.def.end());
@@ -496,22 +499,24 @@ std::ostream &operator<<(std::ostream &out, const FieldDefUse::info &i) {
 void dump(const FieldDefUse::info &a) { std::cout << a; }
 
 std::ostream &operator<<(std::ostream &out, const FieldDefUse &a) {
-    for (auto &i : Values(a.defuse))
+    for (auto &i : a.defuse) {
+        if (i.field == nullptr) continue;
         out << i;
+    }
     out << DBPrint::Brief;
     unsigned maxw = 0;
     for (unsigned i = 0; i < a.phv.num_fields(); i++) {
         auto field = a.phv.field(i);
         CHECK_NULL(field);
         unsigned sz = field->name.size();
-        if (!a.defuse.count(i))
+        if (a.defuse[i].field != nullptr)
             sz += 2;
         if (maxw < sz) maxw = sz; }
     for (unsigned i = 0; i < a.phv.num_fields(); i++) {
         auto field = a.phv.field(i);
         CHECK_NULL(field);
         auto name = field->name;
-        if (!a.defuse.count(i))
+        if (a.defuse[i].field != nullptr)
             out << '[' << std::setw(maxw-2) << std::left << name << ']';
         else
             out << std::setw(maxw) << std::left << name;

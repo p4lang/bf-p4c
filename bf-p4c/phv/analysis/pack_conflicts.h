@@ -2,6 +2,7 @@
 #define EXTENSIONS_BF_P4C_PHV_ANALYSIS_PACK_CONFLICTS_H_
 
 #include "ir/ir.h"
+#include "bf-p4c/lib/assoc.h"
 #include "bf-p4c/mau/action_analysis.h"
 #include "bf-p4c/mau/action_mutex.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
@@ -33,8 +34,8 @@ class PackConflicts : public PassManager {
     /// xxx(Deep): Change the field here to PHV::FieldSlice for more precise analysis
     ordered_map<const IR::MAU::Action*, ordered_set<PHV::FieldSlice>> actionWrites;
 
-    ordered_map<PHV::FieldSlice, int> fieldslice_to_id;
-    ordered_map<const PHV::Field*, ordered_set<le_bitrange>> field_fine_slices;
+    assoc::hash_map<PHV::FieldSlice, int> fieldslice_to_id;
+    assoc::hash_map<const PHV::Field*, ordered_set<le_bitrange>> field_fine_slices;
     int fieldslice_id_counter = 0;
     SymBitMatrix fieldslice_no_pack_i;
 

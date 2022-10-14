@@ -162,7 +162,7 @@ class Allocation {
     // from child to parent on committing.
     const PhvInfo* phv_i;
     const PhvUse* uses_i;
-    ordered_map<PHV::Size, ordered_map<ContainerAllocStatus, int>> count_by_status_i;
+    assoc::hash_map<PHV::Size, ordered_map<ContainerAllocStatus, int>> count_by_status_i;
 
     // For efficiency, these are NOT copied from parent to child.  Changes in
     // the child are copied back to the parent on commit.  However, parent info
@@ -1040,7 +1040,7 @@ class SuperCluster : public ClusterStats {
 
     /// Map a slice to the slice lists that contain it.  Each slice is in at
     /// least one slice list.
-    ordered_map<const PHV::FieldSlice, ordered_set<const SliceList*>> slices_to_slice_lists_i;
+    assoc::hash_map<const PHV::FieldSlice, ordered_set<const SliceList*>> slices_to_slice_lists_i;
 
     // Statstics gathered from clusters.
     PHV::Kind kind_i = PHV::Kind::tagalong;

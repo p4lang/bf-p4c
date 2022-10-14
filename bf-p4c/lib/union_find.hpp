@@ -1,6 +1,7 @@
 #ifndef EXTENSIONS_BF_P4C_LIB_UNION_FIND_HPP_
 #define EXTENSIONS_BF_P4C_LIB_UNION_FIND_HPP_
 
+#include "bf-p4c/lib/assoc.h"
 #include "lib/cstring.h"
 #include "lib/exceptions.h"
 #include "lib/ordered_map.h"
@@ -25,7 +26,7 @@ template <typename T, typename Set = ordered_set<T>>
 class UnionFind {
     // Map elements to the set that contains them.  Each element is in exactly
     // one set, and set pointers are never null.
-    std::map<T, Set*> element_map_i;
+    assoc::hash_map<T, Set*> element_map_i;
 
     // All the sets.
     ordered_set<Set*> sets_i;

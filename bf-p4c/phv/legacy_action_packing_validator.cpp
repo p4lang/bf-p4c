@@ -76,19 +76,19 @@ struct SliceListGroupProp {
     ordered_set<const SuperCluster::SliceList*> unsettled_byte_sl;
 
     /// map field to all its fieldslice involved for this group of slice lists.
-    ordered_map<const Field*, ordered_set<FieldSlice>> field_settled_slices;
+    assoc::hash_map<const Field*, ordered_set<FieldSlice>> field_settled_slices;
 
     /// map fieldslice to its slice list.
-    ordered_map<FieldSlice, const SuperCluster::SliceList*> fs_sl;
+    assoc::hash_map<FieldSlice, const SuperCluster::SliceList*> fs_sl;
 
     /// map fieldslice to its offset (including prepending alignment) in the slice list.
-    ordered_map<FieldSlice, int> fs_offset;
+    assoc::hash_map<FieldSlice, int> fs_offset;
 
     /// slice lists grouped by their container sizes.
     UnionFind<const SuperCluster::SliceList*> same_container_size_group;
 
     /// map slice list to the number of bits required.
-    ordered_map<const SuperCluster::SliceList*, int> sl_bits;
+    assoc::hash_map<const SuperCluster::SliceList*, int> sl_bits;
 
     /// map slice list to its container size. If its container size can not be decided
     /// within this group, sl_cont_size.count(sl) == 0.
@@ -98,13 +98,13 @@ struct SliceListGroupProp {
     /// within this group, sl_containers.count(sl) == 0. This ID is just for convenience. You
     /// can use other IDs in solver later, as long as relevant slice lists have unique IDs.
     /// All these container IDs will start with a character "C".
-    ordered_map<const SuperCluster::SliceList*, solver::ContainerID> sl_container;
+    assoc::hash_map<const SuperCluster::SliceList*, solver::ContainerID> sl_container;
 
     /// map fieldslice to its sources.
     ordered_map<FieldSlice, ActionClassifiedSources> fs_sources;
 
     /// map slice list to all actions that will modify its fieldslices.
-    ordered_map<const SuperCluster::SliceList*, ordered_set<const IR::MAU::Action*>> sl_actions;
+    assoc::hash_map<const SuperCluster::SliceList*, ordered_set<const IR::MAU::Action*>> sl_actions;
 
     /// return decided container of @p sl.
     boost::optional<solver::ContainerID> container(const SuperCluster::SliceList* sl) const {

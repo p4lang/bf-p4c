@@ -13,6 +13,8 @@
 #include <utility>
 #include <string>
 
+#include <boost/functional/hash.hpp>
+
 /// The assoc namespace contains wrappers over various associative containers that can be used more
 /// safely in the compiler. In particular, it tries to keep track of possible sources of
 /// nondeterminism -- cases when repeated compilation of the same P4 code produces different
@@ -354,6 +356,104 @@ class set : public detail::CondIterableAssoc<std::set<Key, Compare, Allocator>, 
     /// in the map.
     const std::set<Key, Compare, Allocator> &unstable_iterable() const {
         return static_cast<const Base &>(*this);
+    }
+};
+
+/// Map container implemented as hashtable. Provides average constant time lookup. Member
+/// functions used for iteration (begin) are intentionaly not exposed to avoid accidental
+/// nondeterministic behavior of the compiler.
+/// \see namespace assoc
+template<typename Key, typename T, typename Hash = boost::hash<Key>,
+         typename Equal = std::equal_to<Key>,
+         typename Allocator = std::allocator<std::pair<const Key, T>>>
+class hash_map : private std::unordered_map<Key, T, Hash, Equal, Allocator> {
+    using ABase = std::unordered_map<Key, T, Hash, Equal, Allocator>;
+
+ public:
+    using mapped_type = typename ABase::mapped_type;
+
+    using ABase::ABase;
+    using ABase::operator=;
+
+    using ABase::at;
+    using ABase::operator[];
+
+    using ABase::end;
+    using ABase::cend;
+
+    using ABase::empty;
+    using ABase::size;
+    using ABase::max_size;
+
+    using ABase::clear;
+    using ABase::insert;
+    using ABase::emplace;
+    using ABase::emplace_hint;
+    using ABase::erase;
+    using ABase::swap;
+
+    using ABase::count;
+    using ABase::find;
+
+    BFN_ASSOC_OP_DEF(hash_map, ==)
+    BFN_ASSOC_OP_DEF(hash_map, !=)
+
+    void swap(hash_map &other) noexcept { ABase::swap(other); }
+
+    /// Extract an iterable that can be iterated over even if this container is not iterable.
+    /// This is intended for targeted use at places where it is actually safe to iterate over
+    /// a container with unspecified order -- i.e. in cases where the result does in no way
+    /// depend on the iteration order. An example can be checking if a given value is present
+    /// in the map.
+    const ABase& unstable_iterable() const {
+        return static_cast<const ABase &>(*this);
+    }
+};
+
+/// Set container implemented as hashtable. Provides average constant time lookup. Member
+/// functions used for iteration (begin) are intentionaly not exposed to avoid accidental
+/// nondeterministic behavior of the compiler.
+/// \see namespace assoc
+template<typename T, typename Hash = boost::hash<T>,
+         typename Equal = std::equal_to<T>,
+         typename Allocator = std::allocator<T>>
+class hash_set : private std::unordered_set<T, Hash, Equal, Allocator> {
+    using ABase = std::unordered_set<T, Hash, Equal, Allocator>;
+
+ public:
+    using ABase::ABase;
+
+    using ABase::operator=;
+
+    using ABase::end;
+    using ABase::cend;
+
+    using ABase::empty;
+    using ABase::size;
+    using ABase::max_size;
+
+    using ABase::clear;
+    using ABase::insert;
+    using ABase::emplace;
+    using ABase::emplace_hint;
+    using ABase::erase;
+    using ABase::swap;
+
+    using ABase::count;
+    using ABase::find;
+
+    BFN_ASSOC_OP_DEF(hash_set, ==)
+    BFN_ASSOC_OP_DEF(hash_set, !=)
+
+    void swap(hash_set &other) noexcept { ABase::swap(other); }
+
+    /// Extract an iterable that can be iterated over even if this container is not iterable.
+    /// This is intended for targeted use at places where it is actually safe to iterate over
+    /// a container with unspecified order -- i.e. in cases where the result does in no way
+    /// depend on the iteration order. An example can be checking if a given value is present
+    /// in the map.
+    const ABase& unstable_iterable() const {
+        return static_cast<const ABase &>(*this);
     }
 };
 

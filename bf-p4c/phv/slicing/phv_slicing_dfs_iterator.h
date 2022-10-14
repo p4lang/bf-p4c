@@ -5,6 +5,7 @@
 
 #include "lib/ordered_set.h"
 
+#include "bf-p4c/lib/assoc.h"
 #include "bf-p4c/phv/slicing/phv_slicing_iterator.h"
 #include "bf-p4c/phv/slicing/phv_slicing_split.h"
 #include "bf-p4c/phv/slicing/types.h"
@@ -223,7 +224,7 @@ class DfsItrContext : public IteratorInterface {
 
     /// return true if exists constraint unsat due to the limit of slice list size.
     bool dfs_prune_unsat_slicelist_max_size(
-        const ordered_map<FieldSlice, AfterSplitConstraint>& constraints,
+        const SplitDecision& constraints,
         const SuperCluster* sc) const;
 
     /// return true if constraints for a slice list cannot be *all* satisfied.
@@ -235,7 +236,7 @@ class DfsItrContext : public IteratorInterface {
     /// it's impossible. We run a greedy algorithm looking for cases but may have
     /// false negatives.
     bool dfs_prune_unsat_slicelist_constraints(
-        const ordered_map<FieldSlice, AfterSplitConstraint>& constraints,
+        const SplitDecision& constraints,
         const SuperCluster* sc) const;
 
     /// return true if exists a metadata list that will join two
@@ -248,7 +249,7 @@ class DfsItrContext : public IteratorInterface {
     /// sl_3 will join sl_1 and sl_2 into one super cluster, and we can infer that
     /// this cluster is invalid because exact slice list sizes are not the same.
     bool dfs_prune_unsat_exact_list_size_mismatch(
-        const ordered_map<FieldSlice, AfterSplitConstraint>& decided_sz,
+        const SplitDecision& decided_sz,
         const SuperCluster* sc) const;
 
     /// return true if there exists packing that make it impossible to
@@ -258,7 +259,8 @@ class DfsItrContext : public IteratorInterface {
 
     /// collect_aftersplit_constraints returns AfterSplitConstraints on the fieldslice
     /// of @p sc based on split_decisions_i and pa_container_size_upcastings_i.
-    boost::optional<ordered_map<FieldSlice, AfterSplitConstraint>> collect_aftersplit_constraints(
+    boost::optional<SplitDecision>
+    collect_aftersplit_constraints(
         const SuperCluster* sc) const;
 
     /// collect additional implicit container size constraint and save them to @p decided_sz,
@@ -270,7 +272,7 @@ class DfsItrContext : public IteratorInterface {
     /// because of these three constraints, this field can only be allocated to 16-bit container.
     /// There can be more special cases for these implicit (hard to be generalized).
     bool collect_implicit_container_sz_constraint(
-        ordered_map<FieldSlice, AfterSplitConstraint>* decided_sz,
+        SplitDecision* decided_sz,
         const SuperCluster* sc) const;
 
     /// dfs_pick_next return the next slice list to be split.
@@ -290,7 +292,7 @@ class DfsItrContext : public IteratorInterface {
     /// If we found that any field slice in the last byte of a slice list has a decided size,
     /// then we can split the *tail* out so that the packing is materialized as early as possible.
     bool propagate_tail_split(SuperCluster* sc,
-                              const ordered_map<FieldSlice, AfterSplitConstraint>& constraints,
+                              const SplitDecision& constraints,
                               const SplitDecision* decisions,
                               const SuperCluster::SliceList* just_split_target,
                               const int n_just_split_bits,

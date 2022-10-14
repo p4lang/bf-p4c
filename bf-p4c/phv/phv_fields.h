@@ -8,6 +8,7 @@
 
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/device.h"
+#include "bf-p4c/lib/assoc.h"
 #include "bf-p4c/lib/cmp.h"
 #include "bf-p4c/lib/union_find.hpp"
 #include "bf-p4c/ir/thread_visitor.h"
@@ -994,6 +995,14 @@ class FieldSlice : public AbstractField, public LiftCompare<FieldSlice> {
         field_i->foreach_byte(range_i, PHV::AllocContext::of_unit(ctxt), use, fn); }
 
     bool is_unallocated() const { return field_i->is_unallocated(); }
+
+    friend size_t hash_value(const FieldSlice& fs) {
+        size_t h = 0;
+        boost::hash_combine(h, fs.field()->id);
+        boost::hash_combine(h, fs.range().lo);
+        boost::hash_combine(h, fs.range().hi);
+        return h;
+    }
 };
 
 /// PackingLayout represents a packing constraint that specifies slices of fields must be

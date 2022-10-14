@@ -280,7 +280,7 @@ struct DependencyGraph {
 
     using MinEdgeInfo = std::pair<const IR::MAU::Table *, dependencies_t>;
     bool display_min_edges = false;
-    ordered_map<const IR::MAU::Table *, safe_vector<MinEdgeInfo>> min_stage_edges;
+    assoc::hash_map<const IR::MAU::Table *, safe_vector<MinEdgeInfo>> min_stage_edges;
 
     /// The largest value of min_stage encountered when determining min_stage values for table,
     /// across all tables in the program. The minimum number of stages required by the program is

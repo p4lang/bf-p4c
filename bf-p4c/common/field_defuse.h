@@ -91,7 +91,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
 
     /// Intermediate data structure for computing def/use sets.
     struct info {
-        const PHV::Field    *field = 0;
+        const PHV::Field    *field = nullptr;
         LocPairSet           def, use;
         ordered_map<locpair, ordered_set<le_bitrange>> def_covered_ranges_map;
         // The reason to have a set of bit range is that there is a case that new def's range only
@@ -102,7 +102,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
         // different covered def bit range.
     };
     /// Intermediate data structure for computing def/use sets.
-    std::unordered_map<int, info> defuse;
+    std::vector<info> defuse;
     class ClearBeforeEgress;
     class CollectAliasDestinations;
 

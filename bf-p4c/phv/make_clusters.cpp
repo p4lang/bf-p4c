@@ -879,7 +879,7 @@ void Clustering::CollectPlaceTogetherConstraints::visit_digest_fieldlist(
     if (fl->sources.size() == 0) return;
     LOG5("  creating slice list from field list: " << fl);
 
-    ordered_set<PHV::FieldSlice> fs_seen;
+    assoc::hash_set<PHV::FieldSlice> fs_seen;
     auto* fieldslice_list = new std::list<PHV::FieldSlice>();
     for (auto f = fl->sources.rbegin(); f != fl->sources.rend() - skip; f++) {
         le_bitrange fs_range;
@@ -1227,7 +1227,7 @@ void Clustering::MakeSuperClusters::end_apply() {
         LOG1(sl);
     }
     UnionFind<const PHV::RotationalCluster*> cluster_union_find;
-    ordered_map<PHV::FieldSlice, PHV::RotationalCluster*> slices_to_clusters;
+    assoc::hash_map<PHV::FieldSlice, PHV::RotationalCluster*> slices_to_clusters;
 
     for (auto* rotational_cluster : self.rotational_clusters_i) {
         // Insert cluster into UnionFind.
@@ -1383,7 +1383,7 @@ void Clustering::MakeSuperClusters::addPaddingForMarshaledFields(
 }
 
 void Clustering::ValidateClusters::validate_basics(const std::list<PHV::SuperCluster*>& clusters) {
-    ordered_set<PHV::FieldSlice> showed;
+    assoc::hash_set<PHV::FieldSlice> showed;
     for (auto* sc : clusters) {
         for (const auto* sl : sc->slice_lists()) {
             if (sl->empty()) {
