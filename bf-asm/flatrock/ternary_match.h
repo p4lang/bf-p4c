@@ -17,7 +17,7 @@ class Target::Flatrock::TernaryMatchTable : public ::TernaryMatchTable {
 
     std::vector<int>    local_tind_units;
 
-    int memunit(const int r, const int c) const override { return r + c*10; }
+    int json_memunit(const MemUnit &) const override;
     void pass1() override;
     void pass2() override;
     int ram_word_width() const override { return LOCAL_TIND_WIDTH; }

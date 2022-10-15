@@ -89,7 +89,7 @@ class Table {
          * vpns/maprams (if not empty) must match up to memunits (same size) */
         int                     lineno = -1;
         int                     row = -1;
-        enum bus_type_t { SEARCH_BUS, RESULT_BUS, TIND_BUS, IDLE_BUS };
+        enum bus_type_t { SEARCH_BUS, RESULT_BUS, TIND_BUS, IDLE_BUS, L2R_BUS, R2L_BUS };
         std::map<bus_type_t, int> bus;
 
         int                     word = -1;      // which word for wide tables
@@ -655,12 +655,12 @@ class Table {
     virtual int indirect_shiftcount() const { BUG(); return -1; }
     virtual int address_shift() const { BUG(); return -1; }
     virtual int home_row() const { BUG(); return -1; }
-    /* row,col -> mem unitno mapping -- unitnumbers used in context json */
-    virtual int memunit(const int r, const int c) const {
+    /* mem unitno mapping -- unit numbers used in context json */
+    virtual int json_memunit(const MemUnit &u) const {
 #if HAVE_FLATROCK
-        BUG_CHECK(options.target != TOFINO5, "need memunit update for tofino5");
+        BUG_CHECK(options.target != TOFINO5, "need json_memunit update for tofino5");
 #endif /* HAVE_FLATROCK */
-        return r*12 + c; }
+        return u.row*12 + u.col; }
     virtual int ram_word_width() const { return MEM_WORD_WIDTH; }
     virtual int unitram_type() { BUG(); return -1; }
     virtual bool uses_colormaprams() const { return false; }
@@ -1139,7 +1139,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam,
     virtual void gen_ghost_bits(int hash_function_number, json::vector &ghost_bits_to_hash_bits,
         json::vector &ghost_bits_info) const { }
     virtual void no_overhead_determine_result_bus_usage();
-    int memunit(const Ram &r) const;
+    int json_memunit(const MemUnit &r) const override;
  public:
     Format::Field *lookup_field(const std::string &n, const std::string &act = "") const override;
     OVERLOAD_FUNC_FOREACH(TARGET_CLASS, virtual void, setup_word_ixbar_group, (), ())
@@ -1353,11 +1353,11 @@ DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
     json::map &get_tbl_top(json::vector &out) const;
     Call &action_call() override { return indirect ? indirect->action : action; }
     Call &instruction_call() override { return indirect ? indirect->instruction: instruction; }
-    int memunit(const int r, const int c) const override {
+    int json_memunit(const MemUnit &u) const override {
 #if HAVE_FLATROCK
-        BUG_CHECK(options.target != TOFINO5, "need memunit update for tofino5");
+        BUG_CHECK(options.target != TOFINO5, "need json_memunit update for tofino5");
 #endif /* HAVE_FLATROCK */
-        return r + c*12; }
+        return u.row + u.col*12; }
     bool is_ternary() override { return true; }
     bool has_indirect() { return indirect; }
     int hit_next_size() const override {
@@ -1523,11 +1523,11 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
     MeterTable* get_meter() const override;
     Call &action_call() override {
         return match_tables.size() == 1 ? (*match_tables.begin())->action_call() : action; }
-    int memunit(const int r, const int c) const override {
+    int json_memunit(const MemUnit &u) const override {
 #if HAVE_FLATROCK
-        BUG_CHECK(options.target != TOFINO5, "need memunit update for tofino5");
+        BUG_CHECK(options.target != TOFINO5, "need json_memunit update for tofino5");
 #endif /* HAVE_FLATROCK */
-        return r*6 + c; }
+        return u.row*6 + u.col; }
     void pass1() override;
     unsigned get_alu_index() const {
         if (layout.size() > 0) return layout[0].row/4U;
@@ -1772,11 +1772,11 @@ class IdletimeTable : public Table {
         return IDLETIME; }
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) const override {
         width = period = 1; depth = layout_size(); period_name = 0; }
-    int memunit(const int r, const int c) const override {
+    int json_memunit(const MemUnit &u) const override {
 #if HAVE_FLATROCK
-        BUG_CHECK(options.target != TOFINO5, "need memunit update for tofino5");
+        BUG_CHECK(options.target != TOFINO5, "need json_memunit update for tofino5");
 #endif /* HAVE_FLATROCK */
-        return r*6 + c; }
+        return u.row*6 + u.col; }
     int precision_shift() const;
     int direct_shiftcount() const override;
     void pass1() override;

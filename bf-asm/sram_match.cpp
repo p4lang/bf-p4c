@@ -297,7 +297,7 @@ bool SRamMatchTable::verify_match_key() {
     return error_count == 0;
 }
 
-int SRamMatchTable::memunit(const SRamMatchTable::Ram &r) const {
+int SRamMatchTable::json_memunit(const MemUnit &r) const {
     if (r.stage >= 0) {
         return r.stage * Target::SRAM_STRIDE_STAGE() +
                r.row * Target::SRAM_STRIDE_ROW() +
@@ -349,7 +349,7 @@ std::unique_ptr<json::map>
                 vpn_ctr = layout_get_vpn(ram);
             else
                 BUG_CHECK(vpn_ctr == layout_get_vpn(ram)); }
-        mem_units.push_back(memunit(ram));
+        mem_units.push_back(json_memunit(ram));
         if (mem_units.size() == fmt_width) {
             json::map tmp;
             tmp["memory_units"] = std::move(mem_units);

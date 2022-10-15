@@ -554,6 +554,9 @@ stage <constant> <thread>:
             # so this takes the place of `column:` specifying which stages the row(s) should use
         bus: 0 | 1 | '[' 0 | 1, ... ']'
             # bus(es) to use.  If a list, must match the number of rows
+        lhbus: 0 | 1 | <vector>
+        rhbus: 0 | 1 | <vector>
+            # (Flatrock only) horizontal busses to use to the left and right of the table
         word: <vector>
             # for wide tables, specify which word of the wide word is in each row of the table
         vpns: <vector>

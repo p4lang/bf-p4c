@@ -50,8 +50,9 @@ class Stage_data {
     BFN::Alloc2D<Table *, SRAM_ROWS, 2>                      match_result_bus_use;
     BFN::Alloc2D<Table *, SRAM_ROWS, MAPRAM_UNITS_PER_ROW>   mapram_use;
     BFN::Alloc2Dbase<Table *>                                tcam_use;
-    BFN::Alloc2D<Table *, TCAM_ROWS, 2>                      tcam_match_bus_use;
+    BFN::Alloc2Dbase<Table *>                                tcam_match_bus_use;
     BFN::Alloc2D<std::pair<Table *, int>, TCAM_ROWS, 2>      tcam_byte_group_use;
+    BFN::Alloc1Dbase<Table *>                                local_tind_use;
     BFN::Alloc2D<Table *, SRAM_ROWS, 2>                      tcam_indirect_bus_use;
     BFN::Alloc2D<GatewayTable *, SRAM_ROWS, 2>               gw_unit_use;
     BFN::Alloc2D<GatewayTable *, SRAM_ROWS, 2>               gw_payload_use;
@@ -113,7 +114,9 @@ class Stage_data {
  protected:
     Stage_data(int stage, bool egress_only) : stageno(stage),
         sram_use(Target::SRAM_ROWS(egress_only ? EGRESS : INGRESS), Target::SRAM_UNITS_PER_ROW()),
-        tcam_use(Target::TCAM_ROWS(), Target::TCAM_UNITS_PER_ROW())
+        tcam_use(Target::TCAM_ROWS(), Target::TCAM_UNITS_PER_ROW()),
+        tcam_match_bus_use(Target::TCAM_ROWS(), Target::TCAM_MATCH_BUSSES()),
+        local_tind_use(Target::LOCAL_TIND_UNITS())
         {}
     Stage_data(const Stage_data &) = delete;
     Stage_data(Stage_data &&) = default;

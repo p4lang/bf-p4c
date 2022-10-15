@@ -41,6 +41,7 @@ set (BFAS_FLATROCK_SRCS
   flatrock/parser.cpp
   flatrock/sram_match.cpp
   flatrock/tables.cpp
+  flatrock/target.cpp
   flatrock/ternary_match.cpp
   PARENT_SCOPE
   )

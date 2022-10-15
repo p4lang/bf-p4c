@@ -2,17 +2,46 @@
 #include "stage.h"
 #include "top_level.h"
 
+int Target::Flatrock::TernaryMatchTable::json_memunit(const MemUnit &u) const {
+    int stage = gress == EGRESS ? EGRESS_STAGE0_INGRESS_STAGE - u.stage : u.stage;
+    int row = u.row;
+    if (TCAM_UNITS_PER_ROW == 1 && row < 10) {
+        // when in 20x1 config, reverse the first column so 9 ends up next to 10
+        // for wide match combining
+        row = 9 - row; }
+    return stage * TCAM_STRIDE_STAGE + row * TCAM_STRIDE_ROW + u.col * TCAM_STRIDE_COLUMN;
+}
+
 void Target::Flatrock::TernaryMatchTable::setup_indirect(const value_t &v) {
     if (v.type == tINT) {
         if (v.i < 0 || v.i >= LOCAL_TIND_UNITS)
             error(v.lineno, "invalid tind unit %" PRIi64, v.i);
         local_tind_units.push_back(v.i);
+    } else if (v.type == tRANGE) {
+        if (v.lo < 0 || v.lo >= LOCAL_TIND_UNITS)
+            error(v.lineno, "invalid tind unit %d", v.lo);
+        else if (v.hi < 0 || v.hi >= LOCAL_TIND_UNITS)
+            error(v.lineno, "invalid tind unit %d", v.hi);
+        int step = v.lo <= v.hi ? 1 : -1;
+        for (int i = v.lo; i != v.hi; i += step)
+            local_tind_units.push_back(i);
+        local_tind_units.push_back(v.hi);
     } else if (v.type == tVEC) {
         for (auto &el : v.vec) {
-            if (CHECKTYPE(el, tINT)) {
+            if (!CHECKTYPE2(el, tINT, tRANGE)) continue;
+            if (el.type == tINT) {
                 if (el.i < 0 || el.i >= LOCAL_TIND_UNITS)
                     error(el.lineno, "invalid tind unit %" PRIi64, el.i);
-                local_tind_units.push_back(el.i); } }
+                local_tind_units.push_back(el.i);
+            } else {
+                if (el.lo < 0 || el.lo >= LOCAL_TIND_UNITS)
+                    error(el.lineno, "invalid tind unit %d", el.lo);
+                else if (el.hi < 0 || el.hi >= LOCAL_TIND_UNITS)
+                    error(el.lineno, "invalid tind unit %d", el.hi);
+                int step = el.lo <= el.hi ? 1 : -1;
+                for (int i = el.lo; i != el.hi; i += step)
+                    local_tind_units.push_back(i);
+                local_tind_units.push_back(el.hi); } }
     } else if (v.type == tSTR) {
         indirect = v;
     } else {
@@ -27,6 +56,48 @@ void Target::Flatrock::TernaryMatchTable::pass1() {
         alloc_id("tcam", tcam_id, stage->pass1_tcam_id,
              TCAM_TABLES_WITH_INDIRECT_STM, false, stage->tcam_id_use);
         physical_id = tcam_id; }
+    for (auto tind : local_tind_units) {
+        if (stage->local_tind_use[tind]) {
+            if (stage->local_tind_use[tind] == this)
+                error(lineno, "local tind %d used multiple times by %s", tind, name());
+            else
+                error(lineno, "table %s using local tind %d already in use by %s", name(),
+                      tind, stage->local_tind_use[tind]->name());
+        } else {
+            stage->local_tind_use[tind] = this; } }
+    int tbl_stage = stage->stageno;
+    if (gress == EGRESS) tbl_stage = EGRESS_STAGE0_INGRESS_STAGE - tbl_stage;
+    for (auto &row : layout) {
+        auto [minstage, maxstage] = stage_range(row.memunits, gress == EGRESS);
+        if (minstage < tbl_stage) {
+            if (!row.bus.count(Layout::R2L_BUS)) {
+                if (!row.bus.count(Layout::SEARCH_BUS)) continue;
+                row.bus[Layout::R2L_BUS] = row.bus.at(Layout::SEARCH_BUS); }
+            int hbus = row.bus.at(Layout::R2L_BUS) + TCAM_MATCH_BUSSES/2;
+            for (int st = minstage; st <= tbl_stage; ++st) {
+                auto &old = Stage::stage(INGRESS, st)->tcam_match_bus_use[row.row][hbus];
+                if (old)
+                    error(row.lineno, "%s wants to use r2l bus %d:%d:%d, already in use by %s",
+                          name(), row.row, st, hbus - TCAM_MATCH_BUSSES/2, old->name());
+                else
+                    old = this; } }
+        if (maxstage > tbl_stage) {
+            if (!row.bus.count(Layout::L2R_BUS)) {
+                if (!row.bus.count(Layout::SEARCH_BUS)) continue;
+                row.bus[Layout::L2R_BUS] = row.bus.at(Layout::SEARCH_BUS); }
+            int hbus = row.bus.at(Layout::L2R_BUS);
+            for (int st = tbl_stage; st <= maxstage; ++st) {
+                auto &old = Stage::stage(INGRESS, st)->tcam_match_bus_use[row.row][hbus];
+                if (old)
+                    error(row.lineno, "%s wants to use l2r bus %d:%d:%d, already in use by %s",
+                          name(), row.row, st, hbus, old->name());
+                else
+                    old = this; } }
+    }
+    if (auto *fmt = indirect ? indirect->format.get() : format.get()) {
+        if (fmt->immed && fmt->immed->bit(0) != 0) {
+            error(fmt->lineno, "immediate operands in format for ternary%s must start at bit 0",
+                  indirect ? " indirect" : ""); } }
 }
 
 void Target::Flatrock::TernaryMatchTable::pass2() {
@@ -35,6 +106,34 @@ void Target::Flatrock::TernaryMatchTable::pass2() {
         alloc_id("tcam", tcam_id, stage->pass1_tcam_id,
              TCAM_TABLES_PER_STAGE, false, stage->tcam_id_use);
         physical_id = tcam_id; }
+    int tbl_stage = stage->stageno;
+    if (gress == EGRESS) tbl_stage = EGRESS_STAGE0_INGRESS_STAGE - tbl_stage;
+    for (auto &row : layout) {
+        auto [minstage, maxstage] = stage_range(row.memunits, gress == EGRESS);
+        if (minstage < tbl_stage && !row.bus.count(Layout::R2L_BUS)) {
+            for (int hbus = TCAM_MATCH_BUSSES/2; hbus < TCAM_MATCH_BUSSES; ++hbus) {
+                bool ok = true;
+                for (int st = minstage; st <= tbl_stage; ++st) {
+                    if (Stage::stage(INGRESS, st)->tcam_match_bus_use[row.row][hbus]) {
+                        ok = false;
+                        break; } }
+                if (ok) {
+                    row.bus[Layout::R2L_BUS] = hbus - TCAM_MATCH_BUSSES/2;
+                    for (int st = minstage; st <= tbl_stage; ++st)
+                        Stage::stage(INGRESS, st)->tcam_match_bus_use[row.row][hbus] = this;
+                    break; } } }
+        if (maxstage > tbl_stage && !row.bus.count(Layout::L2R_BUS)) {
+            for (int hbus = 0; hbus < TCAM_MATCH_BUSSES/2; ++hbus) {
+                bool ok = true;
+                for (int st = tbl_stage; st <= maxstage; ++st) {
+                    if (Stage::stage(INGRESS, st)->tcam_match_bus_use[row.row][hbus]) {
+                        ok = false;
+                        break; } }
+                if (ok) {
+                    row.bus[Layout::R2L_BUS] = hbus;
+                    for (int st = tbl_stage; st <= maxstage; ++st)
+                        Stage::stage(INGRESS, st)->tcam_match_bus_use[row.row][hbus] = this;
+                    break; } } } }
 }
 
 static auto &scm_regs(gress_t gress, int stageno) {
@@ -85,13 +184,13 @@ void Target::Flatrock::TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
         json::map &mra = tind["memory_resource_allocation"] = json::map();
         mra["memory_type"] = "scm-tind";
         json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"];
-        json::vector units, vpns;
         int vpn = 0;
         for (auto tunit : local_tind_units) {
+            json::vector units, vpns;
             units.push_back(tunit);
-            vpns.push_back(vpn++); }
-        mra["memory_units_and_vpns"].push_back(json::map { { "memory_units", std::move(units) },
-                                                           { "vpns", std::move(vpns) } });
+            vpns.push_back(vpn++);
+            mem_units_and_vpns.push_back(json::map { { "memory_units", std::move(units) },
+                                                     { "vpns", std::move(vpns) } }); }
         tind["pack_format"] = json::vector();  // erase the dummy pack format
         add_pack_format(tind, format.get());
         tind["size"] = local_tind_units.size() * LOCAL_TIND_DEPTH *
@@ -112,10 +211,13 @@ void Target::Flatrock::TernaryMatchTable::write_regs(Target::Flatrock::mau_regs 
         int minstage = stage->stageno, maxstage = stage->stageno;
         // track which stages' rams are in use for each column in the row, using
         // ingress stage numbers (so reversed when this is an egress table
+        if (gress == EGRESS) {
+            minstage = EGRESS_STAGE0_INGRESS_STAGE - minstage;
+            maxstage = EGRESS_STAGE0_INGRESS_STAGE - maxstage; }
         bitvec ramuse[TCAM_UNITS_PER_ROW];
         for (auto &ram : row.memunits) {
             int stage = ram.stage;
-            if (gress = EGRESS)
+            if (gress == EGRESS)
                 stage = EGRESS_STAGE0_INGRESS_STAGE - stage;
             ramuse[ram.col][stage] = 1;
             if (stage < minstage) minstage = stage;
@@ -135,7 +237,7 @@ void Target::Flatrock::TernaryMatchTable::write_regs(Target::Flatrock::mau_regs 
             int unit = phys_row + TCAM_ROWS * col;
             auto &iss_sel = scm.int_stage_sbus_sel[unit];
             if (minstage < this_stage) {
-                int hbus = row.bus.at(Layout::SEARCH_BUS);
+                int hbus = row.bus.at(Layout::R2L_BUS);
                 iss_sel.ig_sel_r2l[hbus] = match.at(word).word_group;
                 iss_sel.issb_sel_r2l[hbus] = 2;
                 if (minstage > 0)
@@ -145,7 +247,7 @@ void Target::Flatrock::TernaryMatchTable::write_regs(Target::Flatrock::mau_regs 
                     if (!ramuse[col][st])
                         ppu.scm[st].stage_addrmap.result_bus[unit].isrb_l2r_dis[hbus] |= 1; } }
             if (maxstage > this_stage) {
-                int hbus = row.bus.at(Layout::SEARCH_BUS);
+                int hbus = row.bus.at(Layout::L2R_BUS);
                 iss_sel.ig_sel_l2r[hbus] = match.at(word).word_group;
                 iss_sel.issb_sel_l2r[hbus] = 2;
                 if (maxstage < LAST_INGRESS_STAGE)
@@ -180,9 +282,9 @@ void Target::Flatrock::TernaryMatchTable::write_regs(Target::Flatrock::mau_regs 
             if (ram.stage == stage->stageno) {
                 scm.tcam_mode[unit].key_sel = gress == EGRESS ? 5 : 0;
             } else if ((ram.stage < stage->stageno) ^ (gress == EGRESS)) {
-                scm.tcam_mode[unit].key_sel = row.bus.at(Layout::SEARCH_BUS) + 3;  // R2L bus
+                scm.tcam_mode[unit].key_sel = row.bus.at(Layout::R2L_BUS) + 3;  // R2L bus
             } else {
-                scm.tcam_mode[unit].key_sel = row.bus.at(Layout::SEARCH_BUS) + 1;  // L2R bus
+                scm.tcam_mode[unit].key_sel = row.bus.at(Layout::L2R_BUS) + 1;  // L2R bus
             }
             // scm.tcam_result_ctl[unit] = 0;  leaving this as 0 in all fields is
             // entire tcam as priority (no splitting or bitmap)

@@ -5,6 +5,7 @@
 #include "target.h"
 #include "ubits.h"
 #include "parser.h"
+#include "tables.h"
 
 void declare_registers(const Target::Tofino::top_level_regs *regs) {
     declare_registers(&regs->mem_top, sizeof(regs->mem_top),
@@ -423,6 +424,24 @@ void Target::OVERRIDE_NUM_MAU_STAGES(int num) {
 
     numMauStagesOverride = num;
     return;
+}
+
+int Target::NUM_BUS_OF_TYPE_v(int bus_type) const {
+    // default values for Tofino1/2/3
+    switch (static_cast<Table::Layout::bus_type_t>(bus_type)) {
+    case Table::Layout::SEARCH_BUS:
+    case Table::Layout::RESULT_BUS:
+    case Table::Layout::TIND_BUS:
+        return 2;
+    case Table::Layout::IDLE_BUS:
+        return 20;
+    default:
+        return 0;
+    }
+}
+
+int Target::NUM_BUS_OF_TYPE(int bus_type) {
+    SWITCH_FOREACH_TARGET(options.target, return TARGET().NUM_BUS_OF_TYPE_v(bus_type); )
 }
 
 // should these be inline in the header file?

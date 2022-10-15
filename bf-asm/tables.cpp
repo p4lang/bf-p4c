@@ -341,7 +341,12 @@ int Table::setup_layout_attrib(std::vector<Layout> &layout, const value_t &data,
 
 int Table::setup_layout_bus_attrib(std::vector<Layout> &layout, const value_t &data,
                                    const char *what, Layout::bus_type_t type) {
-    if (!CHECKTYPE2(data, tINT, tVEC)) {
+    int limit = Target::NUM_BUS_OF_TYPE(type);
+    int err = 0;
+    if (limit <= 0) {
+        error(data.lineno, "No %s on target %s", to_string(type).c_str(), Target::name());
+        return 1;
+    } else if (!CHECKTYPE2(data, tINT, tVEC)) {
         return 1;
     } else if (data.type == tVEC) {
         if (data.vec.size != static_cast<int>(layout.size())) {
@@ -350,17 +355,25 @@ int Table::setup_layout_bus_attrib(std::vector<Layout> &layout, const value_t &d
         } else {
             for (int i = 0; i < data.vec.size; i++) {
                 if (!CHECKTYPE(data.vec[i], tINT)) return 1;
+                if (data.vec[i].i >= limit) {
+                    error(data.vec[i].lineno, "%" PRId64 " to large for %s", data.vec[i].i,
+                          to_string(type).c_str());
+                    err = 1; }
                 if (data.vec[i].i >= 0)
                     layout[i].bus[type] = data.vec[i].i;
             }
         }
     } else if (data.i < 0) {
         error(data.lineno, "%s value %" PRId64 " invalid", what, data.i);
+        err = 1;
+    } else if (data.i >= limit) {
+        error(data.lineno, "%" PRId64 " to large for %s", data.i, to_string(type).c_str());
+        err = 1;
     } else {
         for (auto &lrow : layout)
             lrow.bus[type] = data.i;
     }
-    return 0;
+    return err;
 }
 
 void Table::setup_layout(std::vector<Layout> &layout, const VECTOR(pair_t) &data,
@@ -428,6 +441,10 @@ void Table::setup_layout(std::vector<Layout> &layout, const VECTOR(pair_t) &data
         err |= Table::setup_layout_bus_attrib(layout, *bus, "Bus", default_bus_type());
     else if (auto *bus = get(data, "search_bus"))
         err |= Table::setup_layout_bus_attrib(layout, *bus, "Bus", Layout::SEARCH_BUS);
+    if (auto *bus = get(data, "lhbus"))
+        err |= Table::setup_layout_bus_attrib(layout, *bus, "R2L hbus", Layout::R2L_BUS);
+    if (auto *bus = get(data, "rhbus"))
+        err |= Table::setup_layout_bus_attrib(layout, *bus, "L2R hbus", Layout::L2R_BUS);
     if (auto *bus = get(data, "result_bus"))
         err |= Table::setup_layout_bus_attrib(layout, *bus, "Bus", Layout::RESULT_BUS);
     if (auto *word = get(data, "word"))
@@ -2507,7 +2524,7 @@ Table::determine_spare_bank_memory_units(const std::vector<Layout> &layout) cons
             if (vpn_itr != row.vpns.end())
                 vpn_ctr = *vpn_itr++;
             if (spare_vpn == vpn_ctr) {
-                spare_mem.push_back(memunit(row.row, ram.col));
+                spare_mem.push_back(json_memunit(ram));
                 if (table_type() == SELECTION || table_type() == COUNTER ||
                     table_type() == METER || table_type() == STATEFUL)
                     continue;
@@ -2559,12 +2576,12 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(
             //       1   93
             //  E.g. VPN 0 has Ram 90 with word 0 and Ram 91 with word 1
             if (skip_spare_bank && spare_vpn == vpn_ctr) {
-                spare_mem.push_back(memunit(row.row, ram.col));
+                spare_mem.push_back(json_memunit(ram));
                 if (table_type() == SELECTION || table_type() == COUNTER ||
                     table_type() == METER || table_type() == STATEFUL)
                     continue;
             }
-            mem_units[vpn_ctr][word] = memunit(row.row, ram.col);
+            mem_units[vpn_ctr][word] = json_memunit(ram);
         }
     }
     if (mem_units.size() == 0) return nullptr;

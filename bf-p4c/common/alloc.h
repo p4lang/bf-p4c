@@ -71,7 +71,7 @@ template<class T> class Alloc2Dbase {
  public:
     Alloc2Dbase(int r, int c) : nrows(r), ncols(c) {
         size_t sz = r*c;
-        data = new T[sz];
+        data = sz ? new T[sz] : nullptr;
         for (size_t i = 0; i < sz; i++) data[i] = T(); }
     Alloc2Dbase(Alloc2Dbase &&a) : nrows(a.nrows), ncols(a.ncols), data(a.data) { a.data = 0; }
     virtual ~Alloc2Dbase() { delete [] data; }

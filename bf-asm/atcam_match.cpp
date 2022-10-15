@@ -362,7 +362,7 @@ std::unique_ptr<json::vector> AlgTcamMatchTable::gen_memory_resource_allocation_
                 vpn_ctr = layout_get_vpn(ram);
             else
                 BUG_CHECK(vpn_ctr == layout_get_vpn(ram));
-            mem_units.push_back(memunit(ram));
+            mem_units.push_back(json_memunit(ram));
             if (mem_units.size() == fmt_width) {
                 json::map tmp;
                 tmp["memory_units"] = std::move(mem_units);

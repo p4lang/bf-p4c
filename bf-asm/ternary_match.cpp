@@ -296,7 +296,12 @@ void TernaryMatchTable::pass1() {
                           " at bit 0 to be used as next table selector");
             } else {
                 error(indirect->format->lineno, "No 'next' or 'action' field in format"); } }
-            }
+        if (format)
+            error(format->lineno, "Format unexpected in Ternary Match table %s with separate "
+                  "Indirect table %s", name(), indirect->name());
+    } else if (format) {
+        format->pass1(this);
+    }
     attached.pass1(this);
     if (hit_next.size() > 2 && !indirect)
         error(lineno, "Ternary Match tables cannot directly specify more than 2 hit next tables");
@@ -508,10 +513,10 @@ std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl
         for (auto &row : layout) {
             if (colnum >= row.memunits.size())
                 continue;
-            auto col = row.memunits[colnum].col;
+            auto mu = row.memunits[colnum];
             auto vpn = row.vpns[colnum];
-            mem_units.push_back(memunit(row.row, col));
-            lrow = memunit(row.row, col);
+            mem_units.push_back(json_memunit(mu));
+            lrow = json_memunit(mu);
             if (++word == match.size()) {
                 mem_units_and_vpns.push_back(json::map {
                         { "memory_units",  std::move(mem_units) },

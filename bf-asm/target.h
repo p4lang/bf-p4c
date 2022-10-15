@@ -7,6 +7,8 @@
 #include "asm-types.h"
 #include "bf-p4c/common/flatrock_parser.h"
 
+struct MemUnit;
+
 /** FOR_ALL_TARGETS -- metamacro that expands a macro for each defined target
  *  FOR_ALL_REGISTER_SETS -- metamacro that expands for each distinct register set;
  *              basically a subset of targets with one per distinct register set
@@ -155,6 +157,7 @@
     M(int, IXBAR_HASH_GROUPS) \
     M(int, IXBAR_HASH_INDEX_MAX) \
     M(int, IXBAR_HASH_INDEX_STRIDE) \
+    M(int, LOCAL_TIND_UNITS)\
     M(int, LONG_BRANCH_TAGS) \
     M(int, MAX_OVERHEAD_OFFSET) \
     M(int, MAX_OVERHEAD_OFFSET_NEXT) \
@@ -209,6 +212,7 @@
     M(bool, SUPPORT_TRUE_EOP) \
     M(bool, TCAM_EXTRA_NIBBLE) \
     M(bool, TCAM_GLOBAL_ACCESS) \
+    M(int, TCAM_MATCH_BUSSES) \
     M(int, TCAM_MEMORY_FULL_WIDTH) \
     M(int, TCAM_ROWS) \
     M(int, TCAM_UNITS_PER_ROW) \
@@ -254,6 +258,11 @@ class Target {
     static int SRAM_ROWS(gress_t gr) {
         return gr == EGRESS ? SRAM_EGRESS_ROWS() : SRAM_INGRESS_ROWS();
     }
+
+    // FIXME -- bus_type here is a Table::Layout::bus_type_t, but can't forward
+    // declare a nested type.
+    virtual int NUM_BUS_OF_TYPE_v(int bus_type) const;
+    static int NUM_BUS_OF_TYPE(int bus_type);
 
  private:
     static int numMauStagesOverride;
@@ -350,6 +359,7 @@ class Target::Tofino : public Target {
         IXBAR_HASH_GROUPS = 8,
         IXBAR_HASH_INDEX_MAX = 40,
         IXBAR_HASH_INDEX_STRIDE = 10,
+        LOCAL_TIND_UNITS = 0,
         LONG_BRANCH_TAGS = 0,
         MAU_BASE_DELAY = 20,
         MAU_BASE_PREDICATION_DELAY = 11,
@@ -396,6 +406,7 @@ class Target::Tofino : public Target {
         OUTPUT_STAGE_EXTENSION_PRIVATE = 0,
         TCAM_EXTRA_NIBBLE = true,
         TCAM_GLOBAL_ACCESS = false,
+        TCAM_MATCH_BUSSES = 2,
         TCAM_MEMORY_FULL_WIDTH = 47,
         TCAM_ROWS = 12,
         TCAM_UNITS_PER_ROW = 2,
@@ -519,6 +530,7 @@ class Target::JBay : public Target {
         IXBAR_HASH_GROUPS = 8,
         IXBAR_HASH_INDEX_MAX = 40,
         IXBAR_HASH_INDEX_STRIDE = 10,
+        LOCAL_TIND_UNITS = 0,
         LONG_BRANCH_TAGS = 8,
         MAU_BASE_DELAY = 23,
         MAU_BASE_PREDICATION_DELAY = 13,
@@ -563,6 +575,7 @@ class Target::JBay : public Target {
         TABLES_REQUIRE_ROW = 1,
         TCAM_EXTRA_NIBBLE = true,
         TCAM_GLOBAL_ACCESS = false,
+        TCAM_MATCH_BUSSES = 2,
         TCAM_MEMORY_FULL_WIDTH = 47,
         TCAM_ROWS = 12,
         TCAM_UNITS_PER_ROW = 2,
@@ -738,6 +751,7 @@ class Target::Cloudbreak : public Target {
         IXBAR_HASH_GROUPS = 8,
         IXBAR_HASH_INDEX_MAX = 40,
         IXBAR_HASH_INDEX_STRIDE = 10,
+        LOCAL_TIND_UNITS = 0,
         LONG_BRANCH_TAGS = 8,
         MAU_BASE_DELAY = 23,
         MAU_BASE_PREDICATION_DELAY = 13,
@@ -791,6 +805,7 @@ class Target::Cloudbreak : public Target {
         TABLES_REQUIRE_ROW = 1,
         TCAM_EXTRA_NIBBLE = true,
         TCAM_GLOBAL_ACCESS = false,
+        TCAM_MATCH_BUSSES = 2,
         TCAM_MEMORY_FULL_WIDTH = 47,
         TCAM_ROWS = 12,
         TCAM_UNITS_PER_ROW = 2,
@@ -904,6 +919,7 @@ class Target::Flatrock : public Target {
         IXBAR_HASH_GROUPS = 16,  // actually XME indexes
         IXBAR_HASH_INDEX_MAX = 45,
         IXBAR_HASH_INDEX_STRIDE = 1,
+        LOCAL_TIND_UNITS = 16,
         LONG_BRANCH_TAGS = 32,
         MAU_BASE_DELAY = 23,
         MAU_BASE_PREDICATION_DELAY = 13,
@@ -950,8 +966,12 @@ class Target::Flatrock : public Target {
         TABLES_REQUIRE_ROW = 0,
         TCAM_EXTRA_NIBBLE = false,
         TCAM_GLOBAL_ACCESS = true,
+        TCAM_MATCH_BUSSES = 4,  // 2x L2R and 2x R2L
         TCAM_MEMORY_FULL_WIDTH = 41,
         TCAM_ROWS = 20,
+        TCAM_STRIDE_COLUMN = 10,
+        TCAM_STRIDE_ROW = 1,
+        TCAM_STRIDE_STAGE = 21,
         TCAM_UNITS_PER_ROW = 1,
         TCAM_XBAR_GROUPS = 20,
         PAC_HEADER_POINTERS_MAX = 16,  // Maximum number of header pointers output by parser
@@ -1045,9 +1065,15 @@ class Target::Flatrock : public Target {
     static int encodeConst(int src) {
         return src;
     }
+    int NUM_BUS_OF_TYPE_v(int bus_type) const override;
     TARGET_SPECIFIC_CLASSES
     REGISTER_SET_SPECIFIC_CLASSES
     TARGET_CLASS_SPECIFIC_CLASSES
+
+    static std::pair<int, int> stage_range(const std::vector<MemUnit> &mem,
+                                           bool egress2ingress = false);
+    static void stage_col_range(const std::vector<MemUnit> &mem, int &minstage, int &mincol,
+                                int &maxstage, int &maxcol);
 };
 void declare_registers(const Target::Flatrock::top_level_regs *regs);
 void undeclare_registers(const Target::Flatrock::top_level_regs *regs);
