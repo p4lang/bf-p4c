@@ -296,12 +296,12 @@ TEST(FlatrockParser, FourByteConstant) {
         blk.match(TestCode::CodeBlock::ParserEAsm,
                   CheckList{"parser egress:", "`.*`", "phv_builder_group `\\d{1,2}`:", "`.*`",
                             "extract `\\d{1,2}`:", "`.*`",
-                            "- {`.*`W`(\\d{1,2})`(0..7): constant 4`.*`"
-                            "W`\\1`(8..15): constant 3`.*`"
+                            "- {`.*`W`(\\d{1,2})`(24..31): constant 1`.*`"
                             "W`\\1`(16..23): constant 2`.*`"
-                            "W`\\1`(24..31): constant 1`.*`}"});
+                            "W`\\1`(8..15): constant 3`.*`"
+                            "W`\\1`(0..7): constant 4`.*`}"});
     EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count << "\n'"
-                             << blk.extract_code(TestCode::CodeBlock::ParserIAsm) << "'\n";
+                             << blk.extract_code(TestCode::CodeBlock::ParserEAsm) << "'\n";
 }
 
 TEST(FlatrockParser, EightByteConstant) {
@@ -316,17 +316,17 @@ TEST(FlatrockParser, EightByteConstant) {
         blk.match(TestCode::CodeBlock::ParserEAsm,
                   CheckList{"parser egress:", "`.*`", "phv_builder_group `\\d{1,2}`:", "`.*`",
                             "extract `\\d{1,2}`:", "`.*`",
-                            "- {`.*`W`(\\d{1,2})`(0..7): constant 4`.*`"
-                            "W`\\1`(8..15): constant 0`.*`"
+                            "- {`.*`W`(\\d{1,2})`(24..31): constant 0`.*`"
                             "W`\\1`(16..23): constant 3`.*`"
-                            "W`\\1`(24..31): constant 0`.*`}",
+                            "W`\\1`(8..15): constant 0`.*`"
+                            "W`\\1`(0..7): constant 4`.*`}",
                             "`.*`",
-                            "- {`.*`W`(\\d{1,2})`(0..7): constant 2`.*`"
-                            "W`\\2`(8..15): constant 0`.*`"
+                            "- {`.*`W`(\\d{1,2})`(24..31): constant 0`.*`"
                             "W`\\2`(16..23): constant 1`.*`"
-                            "W`\\2`(24..31): constant 0`.*`}"});
+                            "W`\\2`(8..15): constant 0`.*`"
+                            "W`\\2`(0..7): constant 2`.*`}"});
     EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count << "\n'"
-                             << blk.extract_code(TestCode::CodeBlock::ParserIAsm) << "'\n";
+                             << blk.extract_code(TestCode::CodeBlock::ParserEAsm) << "'\n";
 }
 
 /**

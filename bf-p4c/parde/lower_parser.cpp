@@ -1128,6 +1128,11 @@ struct ComputeLoweredParserIR : public ParserInspector {
 
 #ifdef HAVE_FLATROCK
 
+/***
+ * Intermediate representation of parser extractions.
+ * Fed by ComputeFlatrockParserIR, consumed by ReplaceFlatrockParserIR.
+ * @pre The slices stored in @a slices should not overlap.
+ */
 struct ParserExtract {
     // size of the PHV container of this extraction
     PHV::Size size;
@@ -1150,12 +1155,20 @@ struct ParserExtract {
     Flatrock::ExtractType type;
     Flatrock::ExtractSubtype subtype;
     cstring hdr;
-    int offset;
+    /// In case of a constant, @a offset stores the value of the constant at proper bit position.
+    /// If more constants are mapped to a single container, their values are merged in @a offset.
+    /// Marked mutable since the value is updated for constants when more are mapped to a single
+    /// container.
+    mutable int offset;
 
     bool operator<(const ParserExtract& e) const {
         // header name does not affect ordering
-        return std::tie(size, index, offset, type, subtype) <
+        if (type == Flatrock::ExtractType::Packet)
+            return std::tie(size, index, offset, type, subtype) <
                 std::tie(e.size, e.index, e.offset, e.type, e.subtype);
+        // don't match on offset because it stores the value of the constant
+        return std::tie(size, index, type, subtype) <
+            std::tie(e.size, e.index, e.type, e.subtype);
     }
 };
 
@@ -1261,6 +1274,8 @@ class ComputeFlatrockParserIR : public ParserInspector {
                     " are not supported in the same container: %3%",
                     new_pe.hdr, pe->hdr, alloc);
             pe->slices.push_back(new_pe.slices.front());
+            // merge constants
+            pe->offset |= new_pe.offset;
         }
         comments[{gress, new_pe.size, new_pe.index, new_pe.slices.front()}].push_back(
             debugInfoFor(extract, alloc, extract->source->is<IR::BFN::InputBufferRVal>() ?
@@ -1347,7 +1362,12 @@ class ComputeFlatrockParserIR : public ParserInspector {
             } else if (auto* constantSource = extract->source->to<IR::BFN::ConstantRVal>()) {
                 type = Flatrock::ExtractType::Other;
                 subtype = Flatrock::ExtractSubtype::Constant;
-                container_offset_in_bytes = constantSource->constant->asUnsigned();
+                auto value = constantSource->constant->asUnsigned();
+                // check that the value doesn't overflow
+                const auto max_slice_value = (1ULL << alloc.container_slice().size()) - 1;
+                BUG_CHECK(value <= max_slice_value, "Value too big for given container");
+                // store the value at proper bit position
+                container_offset_in_bytes = value << alloc.container_slice().lo;
             }
 
             BUG_CHECK(container_offset_in_bytes, "Uninitialized header offset");
@@ -1823,25 +1843,25 @@ class ReplaceFlatrockParserIR : public ParserTransform {
 
     void add_offsets(std::vector<Flatrock::ExtractInfo>& offsets, const std::string container_name,
                      const ParserExtract& extract) const {
-        constexpr auto BYTE = 8;
+        constexpr auto BITS_IN_BYTE = 8;
         const auto size = static_cast<int>(extract.size);
 
         // Large constants need to be split into 1-byte slices. Slice suffix is also added to 1-byte
         // constants placed in larger containers.
-        if (extract.subtype == Flatrock::ExtractSubtype::Constant && size > BYTE) {
+        if (extract.subtype == Flatrock::ExtractSubtype::Constant && size > BITS_IN_BYTE) {
             const auto constant = static_cast<unsigned int>(extract.offset);
-            auto mask = 0xff;
-            // FIXME we are processing only first slice, but there might be multiple slices
-            // with constants per container, we need process them all
-            for (auto i = extract.slices[0].lo; i < extract.slices[0].hi; i += BYTE) {
-                const auto offset = (constant & mask) >> (i - extract.slices[0].lo);
-                mask <<= BYTE;
+            for (const auto &slice : extract.slices) {
+                for (auto i_lo = slice.hi + 1 - BITS_IN_BYTE; i_lo >= slice.lo;
+                        i_lo -= BITS_IN_BYTE) {
+                    const auto offset = (constant >> i_lo) & 0xff;
 
-                const auto hi = i + BYTE - 1;
-                const auto slice = '(' + std::to_string(i) + ".." + std::to_string(hi) + ')';
+                    const auto i_hi = i_lo + BITS_IN_BYTE - 1;
+                    const auto suffix =
+                        '(' + std::to_string(i_lo) + ".." + std::to_string(i_hi) + ')';
 
-                offsets.push_back(
-                    {container_name + slice, static_cast<int>(offset), extract.subtype});
+                    offsets.push_back(
+                        {container_name + suffix, static_cast<int>(offset), extract.subtype});
+                }
             }
         } else {
             offsets.push_back({container_name, extract.offset, extract.subtype});
