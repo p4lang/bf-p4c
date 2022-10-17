@@ -1,10 +1,10 @@
-// mirror simple
+// mcast simple
 // -------------
 //
-// Tests basic mirror functionality:
-//  - ingress mirror
-//  - egresss mirror - input pkt
-//  - egresss mirror - output pkt
+// Tests basic multicast functionality:
+//  - group a
+//  - group b
+//  - group a and b
 
 #include <t5na.p4>
 
@@ -23,7 +23,6 @@ struct headers {
 }
 
 struct metadata {
-    MirrorId_t   mirr_sess_id;
 }
 
 #define HAVE_INGRESS
