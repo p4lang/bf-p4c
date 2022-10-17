@@ -2285,13 +2285,27 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
         CHECK_NULL(parserBlock);
         auto parser = parserBlock->container;
         CHECK_NULL(parser);
-        BUG_CHECK(ingressIntrinsicMdParamName.count(parserBlock),
-                  "%1%: Name of the intrinsic metadata not found for this parser block",
-                  parser->getName());
-        portMetadata.set_key_name(ingressIntrinsicMdParamName[parserBlock]);
-        addP4InfoExternInstance(
-            symbols, SymbolType::PORT_METADATA(), "PortMetadata",
-            name, nullptr, portMetadata, p4Info);
+
+        if (ingressIntrinsicMdParamName.count(parserBlock)) {
+            portMetadata.set_key_name(ingressIntrinsicMdParamName[parserBlock]);
+
+            addP4InfoExternInstance(
+                symbols, SymbolType::PORT_METADATA(), "PortMetadata",
+                name, nullptr, portMetadata, p4Info);
+        } else {
+            ::error("Name [identifier] of the intrinsic metadata not found for the parser block "
+                    "now named ''%1%'', internal metadata name ''%2%''.  Please note: the first "
+                    "name given here may not match the packet parser`s name in the source code, "
+                    "e.g. due to the name mangling used to support pipelines with multiple uses "
+                    "of the same parser on different gresses.  This parameter is required by the "
+                    "compiler so it can generate a key name for the port-metadata (''phase0'') "
+                    "table in the runtime JSON [''bfrt.json''].  Easiest-known solution: "
+                    "add a parameter (with an identifier [name]) of the ingress "
+                    "intrinsic-metadata type [''ingress_intrinsic_metadata_t''] to the "
+                    "relevant parser, as demonstrated in the Tofino[1] Native Architecture, "
+                    "even if it is officially optional.",
+                    parser->getName(), name);
+        }
     }
 
     void addSnapshot(const P4RuntimeSymbolTableIface& symbols,
