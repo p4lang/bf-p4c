@@ -11,6 +11,9 @@ class BfErrorReporter : public ErrorReporter {
     void emit_message(const ErrorMessage &msg) override;
 
     void emit_message(const ParserErrorMessage &msg) override;
+
+ public:
+    void silently_increment_the_error_count() { ++this->errorCount; }
 };
 
 #endif  /* _EXTENSIONS_BF_P4C_LOGGING_BF_ERROR_REPORTER_H_ */
