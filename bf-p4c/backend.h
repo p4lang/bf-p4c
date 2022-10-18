@@ -27,18 +27,18 @@ namespace BFN {
 
 class Backend : public PassManager {
     BFN_Options options;
-    ClotInfo clot;
     PhvInfo phv;
     PhvUse uses;
+    ClotInfo clot;
     DependencyGraph deps;
     FieldDefUse defuse;
     TablesMutuallyExclusive mutex;
     DeparserCopyOpt decaf;
     /// Class that represents the resource allocation post table placement round
     TableSummary table_summary;
-    TableAllocPass table_alloc;
     /// Class that represents the backtracking point from table placement to PHV allocation.
     MauBacktracker mau_backtracker;
+    TableAllocPass table_alloc;
     // Primitives Json Node, is populated before instruction adjustment and
     // passed to AsmOutput to output primitive json file
     Util::JsonObject primNode;

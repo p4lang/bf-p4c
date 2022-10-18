@@ -146,13 +146,15 @@ static void debug_hook(const char *parent, unsigned idx, const char *pass, const
 
 Backend::Backend(const BFN_Options& o, int pipe_id) :
     options(o),
-    clot(uses),
     uses(phv),
+    clot(uses),
     defuse(phv),
     decaf(phv, uses, defuse, deps),
     table_summary(pipe_id, deps, phv),
+    mau_backtracker(&table_summary),
     table_alloc(options, phv, deps, table_summary, &jsonGraph, mau_backtracker),
-    mau_backtracker(&table_summary), parserHeaderSeqs(phv), longBranchDisabled() {
+    parserHeaderSeqs(phv),
+    longBranchDisabled() {
     BUG_CHECK(pipe_id >= 0, "Invalid pipe id in backend : %d", pipe_id);
     flexibleLogging = new LogFlexiblePacking(phv);
     phvLoggingInfo = new CollectPhvLoggingInfo(phv, uses);
