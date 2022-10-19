@@ -15,7 +15,7 @@ if [[ "${CC}" == "gcc-6" || "${CXX}" == "g++-6" ]] ; then
 fi
 
 if [[ "${UNIFIED_BUILD}" != true ]] ; then
-    BOOSTRAP_EXTRA_OPTS+=("--disable-unified")
+    BOOTSTRAP_EXTRA_OPTS+=("--disable-unified")
 fi
 if [[ "${TOFINO_P414_TEST_ARCH_TNA}" == "true" ]] ; then
     BOOTSTRAP_EXTRA_OPTS+=("-DTOFINO_P414_TEST_ARCH=tna")
@@ -28,7 +28,7 @@ export LDFLAGS="-Wl,-s"
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DENABLE_STF2PTF=OFF \
     -DINSTALL_LIBDYNHASH=OFF \
-    ${BOOSTRAP_EXTRA_OPTS[@]}
+    ${BOOTSTRAP_EXTRA_OPTS[@]}
 
 cd build
 make

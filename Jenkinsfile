@@ -55,7 +55,7 @@ def runInDocker(Map namedArgs, String cmd) {
 
 def getBoostrapOpts() {
     if (params.ALT_PHV)
-        return "-e BOOSTRAP_EXTRA_OPTS=-DENABLE_ALT_PHV_ALLOC=ON"
+        return "-e BOOTSTRAP_EXTRA_OPTS=-DENABLE_ALT_PHV_ALLOC=ON"
     return ""
 }
 
