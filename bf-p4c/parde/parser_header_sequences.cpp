@@ -1,7 +1,6 @@
 #include "parser_header_sequences.h"
 
 Visitor::profile_t ParserHeaderSequences::init_apply(const IR::Node *node) {
-    header_id_cnt = 0;
     headers.clear();
     header_ids.clear();
     sequences.clear();
@@ -17,7 +16,6 @@ void ParserHeaderSequences::flow_merge(Visitor& other_) {
     for (const auto& kv : other.sequences) {
         sequences[kv.first].insert(kv.second.begin(), kv.second.end());
     }
-    header_ids.insert(other.header_ids.begin(), other.header_ids.end());
     header_sizes.insert(other.header_sizes.begin(), other.header_sizes.end());
 }
 
@@ -29,8 +27,6 @@ bool ParserHeaderSequences::preorder(const IR::BFN::Parser* parser) {
 
 void ParserHeaderSequences::record_header(gress_t gress, cstring header, size_t size) {
     if (!headers[gress].count(header)) LOG1("Found header: " << header);
-    // Assign a unique header ID
-    if (!headers[gress].count(header)) header_ids[{gress, header}] = header_id_cnt++;
     const auto prev_size = header_sizes.find(header);
     BUG_CHECK(prev_size == header_sizes.end() || prev_size->second == size,
               "Header %1% added with conflicting sizes %2% and %3%", header, prev_size->second,
@@ -101,6 +97,11 @@ bool ParserHeaderSequences::preorder(const IR::BFN::Extract* extract) {
 void ParserHeaderSequences::end_apply() {
     for (auto& seq : sequences[INGRESS]) seq.emplace(payloadHeaderName);
     headers[INGRESS].insert(payloadHeaderName);
+    // Assign a unique header ID
+    int header_id_cnt = 0;
+    for (const auto &gress : headers)
+        for (const auto &header : gress.second)
+            header_ids[{gress.first, header}] = header_id_cnt++;
     header_ids[{INGRESS, payloadHeaderName}] = payloadHeaderID;
     header_sizes[payloadHeaderName] = 0;
     if (LOGGING(1)) {

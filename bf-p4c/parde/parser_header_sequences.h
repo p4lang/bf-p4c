@@ -35,7 +35,6 @@ class ParserHeaderSequences : public BFN::ControlFlowVisitor, public PardeInspec
     /** Headers extracted in the parser */
     std::map<gress_t, ordered_set<cstring>> headers;
     std::map<std::pair<gress_t, cstring>, int> header_ids;
-    int header_id_cnt;  // Current header ID
 
     /** Header sequences extracted in the parser */
     std::map<gress_t, ordered_set<ordered_set<cstring>>> sequences;
