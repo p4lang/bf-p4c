@@ -31,8 +31,8 @@ struct Memories {
     static constexpr int LAMB_DEPTH = 64;
     static constexpr int TOTAL_LAMBS = 8;
     static constexpr int SRAM_DEPTH = 1024;
-    static constexpr int TCAM_ROWS = 12;
-    static constexpr int TCAM_COLUMNS = 2;
+    // static constexpr int TCAM_ROWS = 12;
+    // static constexpr int TCAM_COLUMNS = 2;
     static constexpr int TCAM_DEPTH = 512;
     static constexpr int LOCAL_TIND_DEPTH = 64;
     static constexpr int TOTAL_LOCAL_TIND = 16;
@@ -112,6 +112,34 @@ struct Memories {
         int                                      tind_result_bus = -1;
         IR::MAU::ColorMapramAddress cma = IR::MAU::ColorMapramAddress::NOT_SET;
 
+        // SCM related data
+        enum h_bus_t { NONE, LEFT_HBUS1, LEFT_HBUS2, RIGHT_HBUS1, RIGHT_HBUS2};
+        struct ScmLoc {
+            int stage;
+            // SCM TCAMs are located in row/column tuple but can be abstracted as a single
+            // column with more rows since the hardware really act like that.
+            int row;
+
+            bool operator==(const ScmLoc &scm_loc) const {
+                return stage == scm_loc.stage && row == scm_loc.row;
+            }
+            bool operator!=(const ScmLoc &scm_loc) const { return !(*this == scm_loc); }
+            bool operator<(const ScmLoc &scm_loc) const {
+                if (stage != scm_loc.stage)
+                    return stage < scm_loc.stage;
+                if (row != scm_loc.row)
+                    return row < scm_loc.row;
+                return false;
+            }
+            ScmLoc() : stage(-1), row(-1) {}
+            explicit ScmLoc(int s, int r) : stage(s), row(r) {}
+        };
+
+        // table_id (0..3) have STM tind capability, (0..7) have local tind capability
+        int                                       table_id = -1;
+        safe_vector<int>                          local_tind;
+        std::map<ScmLoc, std::pair<int, h_bus_t>> loc_to_gb;  // Location -> Group/Bus
+
         /** This is a map of AttachedMemory UniqueIds that are shared with other tables, i.e.
          *  Action Profiles.  The AttachedMemory though shared, is only allocated on one table
          *  The key is the id of the table underneath the current table, and the value is the
@@ -146,8 +174,15 @@ struct Memories {
             cma = IR::MAU::ColorMapramAddress::NOT_SET;
         }
 
+        void clear_scm() {
+            table_id = -1;
+            local_tind.clear();
+            loc_to_gb.clear();
+        }
+
         void clear() {
             clear_allocation();
+            clear_scm();
             unattached_tables.clear();
             dleft_learn.clear();
             dleft_match.clear();
@@ -157,6 +192,8 @@ struct Memories {
         bool separate_search_and_result_bus() const;
         // depth in memory units + mask to use for memory selection per way
     };
+
+    int local_stage = -1;
 
  public:
     virtual ~Memories() {}
@@ -172,8 +209,10 @@ struct Memories {
                    const ActionData::Format::Use *af, ActionData::FormatType_t ft,
                    int entries, int stage_table, attached_entries_t attached_entries) = 0;
     virtual void shrink_allowed_lts() = 0;
+    virtual void fill_placed_scm_table(const IR::MAU::Table *, const TableResourceAlloc *) = 0;
     virtual void printOn(std::ostream &) const = 0;
     cstring last_failure() const { return failure_reason ? failure_reason : ""; }
+    void set_local_stage(int stage) { local_stage = stage; }
 
  protected:
     enum update_type_t { UPDATE_RAM, UPDATE_MAPRAM, UPDATE_GATEWAY,

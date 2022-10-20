@@ -4448,7 +4448,7 @@ void Memories::printOn(std::ostream &out) const {
         if (ch == 'Z') ch = 'a'-1;
         else if (ch == 'z') ch = '0'-1; }
     out << "tc  sb  rb  tib ab  st  srams       mapram  ov  gw pay 2p" << Log::endl;
-    for (int r = 0; r < Memories::TCAM_ROWS; r++) {
+    for (int r = 0; r < TCAM_ROWS; r++) {
         for (auto arr : arrays) {
             for (int c = 0; c < arr->cols(); c++) {
                 if (r >= arr->rows()) {

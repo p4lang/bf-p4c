@@ -662,6 +662,9 @@ struct Memories : public ::Memories {
                    const ActionData::Format::Use *af, ActionData::FormatType_t ft,
                    int entries, int stage_table, attached_entries_t attached_entries);
     void shrink_allowed_lts() { logical_tables_allowed--; }
+    void fill_placed_scm_table(const IR::MAU::Table *, const TableResourceAlloc *) {
+        BUG("SCM Not supported on this device");
+    }
     void printOn(std::ostream &) const;
     void visitUse(const Use &, std::function<void(cstring &, update_type_t)> fn);
 };

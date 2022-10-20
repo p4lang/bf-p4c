@@ -7,9 +7,12 @@
 
 // device-specific parameters for MAU/PPU.
 class IXBarSpec {
+ public:
     /* common */
     virtual int ternaryBytesPerGroup() const { UNSUPPORTED };
     virtual int ternaryGroups() const { UNSUPPORTED };
+    virtual int tcam_rows() const { UNSUPPORTED };
+    virtual int tcam_columns() const { UNSUPPORTED };
 
     /* tofino */
     virtual int byteGroups() const { UNSUPPORTED };
@@ -93,6 +96,8 @@ class TofinoIXBarSpec : public IXBarSpec {
     int ternaryBytesPerGroup() const override { return 5; }
     int ternaryGroups() const override { return StageUse::MAX_TERNARY_GROUPS; }
     int tofinoMeterAluByteOffset() const override { return 8; }
+    int tcam_rows() const override { return 12; }
+    int tcam_columns() const override { return 2; }
 };
 
 class TofinoIMemSpec : public IMemSpec {
@@ -117,6 +122,8 @@ class FlatrockIXBarSpec : public IXBarSpec {
     int ternaryGroups() const override { return 16; }
     int xcmpBytes() const override { return 16; }
     int xcmpWords() const override { return 12; }
+    int tcam_rows() const override { return 20; }
+    int tcam_columns() const override { return 1; }
 };
 
 class FlatrockIMemSpec : public IMemSpec {

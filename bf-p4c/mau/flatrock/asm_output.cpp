@@ -1,3 +1,4 @@
+#include <boost/iostreams/detail/select.hpp>
 #include "action_data_bus.h"
 #include "bf-p4c/mau/asm_output.h"
 #include "bf-p4c/mau/asm_hash_output.h"
@@ -256,6 +257,254 @@ bool PpuAsmOutput::gateway_uses_inhibit_index(const IR::MAU::Table *tbl) const {
         if (gw.second)
             gw_tags.insert(gw.second); }
     return gw_tags.size() > 1;
+}
+
+// FIXME -- Remove stuff no longer required for Flatrock
+void PpuAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memories::Use &mem,
+         const IR::MAU::Table::Layout *layout, const TableFormat::Use *format) const {
+    safe_vector<int> row, bus, result_bus, word;
+    std::map<int, safe_vector<int>> home_rows;
+    safe_vector<int> stash_rows;
+    safe_vector<int> stash_cols;
+    safe_vector<int> stash_units;
+    safe_vector<int> alu_rows;
+    safe_vector<char> logical_bus;
+    bool logical = mem.type >= Memories::Use::COUNTER;
+    bool have_bus = false;
+    bool have_mapcol = mem.is_twoport();
+    bool have_col = false;
+    bool have_word = mem.type == Memories::Use::ACTIONDATA;
+    bool have_vpn = have_word;
+
+    bool separate_bus = mem.separate_search_and_result_bus();
+    // Also explicitly print out search bus and hash bus if the layout has no overhead
+    if (layout != nullptr && format != nullptr) {
+        if (!layout->no_match_rams()) {
+            if (!format->has_overhead())
+                separate_bus = true;
+        }
+    }
+
+    for (auto &r : mem.row) {
+        if (logical) {
+            int logical_row = 2*r.row + (r.col[0] >= Memories::LEFT_SIDE_COLUMNS);
+            row.push_back(logical_row);
+            have_col = true;
+            if (r.bus >= 0) {
+                switch (r.bus) {
+                    case 0 /*ACTION*/:
+                        logical_bus.push_back('A');
+                        break;
+                    case 1 /*SYNTH*/:
+                        logical_bus.push_back('S');
+                        alu_rows.push_back(logical_row);
+                        break;
+                    case 2 /*OFLOW*/:
+                        logical_bus.push_back('O');
+                        break;
+                    default:
+                        logical_bus.push_back('X');
+                        break;
+                }
+                have_bus = true;
+                // Only provide VPN for the Counter/Meter and ActionData case until validated on
+                // the other type of logical memory type.
+                if (mem.type == Memories::Use::COUNTER || mem.type == Memories::Use::METER)
+                    have_vpn = true;
+            }
+        } else {
+            row.push_back(r.row);
+            bus.push_back(r.bus);
+            if (r.bus >= 0) have_bus = true;
+            if (separate_bus)
+                result_bus.push_back(r.result_bus);
+            if (r.col.size() > 0) have_col = true;
+        }
+        if (have_word)
+            word.push_back(r.word);
+        if ((r.stash_unit >= 0) && (r.stash_col >= 0)) {
+            stash_rows.push_back(r.row);
+            stash_cols.push_back(r.stash_col);
+            stash_units.push_back(r.stash_unit);
+            LOG4("Adding stash on row: " << r.row << ", col: "
+                    << r.stash_col << ", unit: " << r.stash_unit);
+        }
+    }
+    if (row.size() > 1) {
+        out << indent << "row: " << row << std::endl;
+        if (have_bus) {
+            if (separate_bus) {
+                out << indent << "search_bus: " << bus << std::endl;
+                out << indent << "result_bus: " << result_bus << std::endl;
+            } else {
+                if (logical)
+                    out << indent << "logical_bus: " << logical_bus << std::endl;
+                else
+                    out << indent << "bus: " << bus << std::endl;
+            }
+        } else if (separate_bus) {
+            out << indent << "result_bus: " << result_bus << std::endl;
+        }
+        if (have_word)
+            out << indent << "word: " << word << std::endl;
+        if (have_col) {
+            out << indent << "column:" << std::endl;
+            for (auto &r : mem.row)
+                out << indent << "- " << memory_vector(r.col, mem.type, false) << std::endl;
+        }
+        if (have_mapcol) {
+            out << indent << "maprams: " << std::endl;
+            for (auto &r : mem.row)
+                out << indent << "- " << memory_vector(r.mapcol, mem.type, true) << std::endl;
+        }
+        if (have_vpn) {
+            out << indent << "vpns: " << std::endl;
+            for (auto &r : mem.row) {
+                out << indent << "- " << r.vpn << std::endl;
+            }
+        }
+    } else if (row.size() == 1) {
+        out << indent << "row: " << row[0] << std::endl;
+        if (have_bus) {
+            if (separate_bus) {
+                out << indent << "search_bus: " << bus[0] << std::endl;
+                out << indent << "result_bus: " << result_bus[0] << std::endl;
+            } else {
+                if (logical)
+                    out << indent << "logical_bus: " << logical_bus[0] << std::endl;
+                else
+                    out << indent << "bus: " << bus[0] << std::endl;
+            }
+        } else if (separate_bus) {
+            out << indent << "result_bus: " << result_bus[0] << std::endl;
+        }
+        if (have_col) {
+            out << indent << "column: " << memory_vector(mem.row[0].col, mem.type, false)
+            << std::endl;
+        }
+        if (have_mapcol) {
+            out << indent << "maprams: " << memory_vector(mem.row[0].mapcol, mem.type, true)
+                << std::endl;
+        }
+        if (have_vpn)
+           out << indent << "vpns: " << mem.row[0].vpn << std::endl;
+    }
+    for (auto r : mem.home_row) {
+        home_rows[r.second].push_back(r.first);
+    }
+
+    if (!mem.loc_to_gb.empty()) {
+        out << indent << "tcam_id: " << mem.table_id << std::endl;
+        std::map<int, std::set<int>> row_to_stages;
+        for (auto loc : mem.loc_to_gb) {
+            const Memories::Use::ScmLoc &scm_loc = loc.first;
+            row_to_stages[scm_loc.row].insert(scm_loc.stage);
+        }
+        out << indent << "row: [ ";
+        bool first_val = true;
+        for (const auto &[key, value] : row_to_stages) {
+            if (first_val)
+                out << key;
+            else
+                out << ", " << key;
+
+            first_val = false;
+        }
+        out << " ]" << std::endl;
+
+        auto print_set = [&](const std::set<int> &s) {
+            out << " [ ";
+            bool first = true;
+            for (int stage : s) {
+                if (first)
+                    out << stage;
+                else
+                    out << ", " << stage;
+
+                first = false;
+            }
+            out << " ]";
+        };
+
+        out << indent << "stage: [ ";
+        first_val = true;
+        for (const auto &[key, value] : row_to_stages) {
+            if (first_val) {
+                print_set(value);
+            } else {
+                out << ", ";
+                print_set(value);
+            }
+
+            first_val = false;
+        }
+        out << " ]" << std::endl;
+    }
+
+    // Home rows are now printed out as a vector of vectors, of each home row per word
+    if (mem.type == Memories::Use::ACTIONDATA && !home_rows.empty()) {
+        out << indent << "home_row:" << std::endl;
+        int word_check = 0;
+        for (auto home_row_kv : home_rows) {
+            BUG_CHECK(word_check++ == home_row_kv.first, "Home row is not found with a row");
+            auto home_row = home_row_kv.second;
+            if (home_row.size() > 1)
+                out << indent << "- " << home_row << std::endl;
+            else
+                out << indent << "- " << home_row[0] << std::endl;
+        }
+    } else if (!alu_rows.empty()) {
+        if (alu_rows.size() > 1)
+            out << indent << "home_row: " << alu_rows << std::endl;
+        else
+            out << indent << "home_row: " << alu_rows[0] << std::endl;
+    }
+    if (!mem.color_mapram.empty()) {
+        out << indent++ << "color_maprams:" << std::endl;
+        safe_vector<int> color_mapram_row, color_mapram_bus;
+        for (auto &r : mem.color_mapram) {
+            color_mapram_row.push_back(r.row);
+            color_mapram_bus.push_back(r.bus);
+        }
+        if (color_mapram_row.size() > 1) {
+            out << indent << "row: " << color_mapram_row << std::endl;
+            out << indent << "bus: " << color_mapram_bus << std::endl;
+            out << indent << "column:" << std::endl;
+            for (auto &r : mem.color_mapram)
+                out << indent << "- " << memory_vector(r.col, mem.type, true) << std::endl;
+            out << indent << "vpns:" << std::endl;
+            for (auto &r : mem.color_mapram)
+                out << indent << "- " << r.vpn << std::endl;
+        } else {
+            out << indent << "row: " << color_mapram_row[0] << std::endl;
+            out << indent << "bus: " << color_mapram_bus[0] << std::endl;
+            out << indent << "column: " << memory_vector(mem.color_mapram[0].col, mem.type, true)
+                << std::endl;
+            out << indent << "vpns:" << mem.color_mapram[0].vpn << std::endl;
+        }
+        out << indent << "address: ";
+        if (mem.cma == IR::MAU::ColorMapramAddress::IDLETIME)
+            out << "idletime";
+        else if (mem.cma == IR::MAU::ColorMapramAddress::STATS)
+            out << "stats";
+        else
+            BUG("Color mapram has not been allocated an address");
+        out << std::endl;
+        indent--;
+    }
+
+    if (mem.type == Memories::Use::TERNARY && mem.tind_result_bus >= 0)
+        out << indent << "indirect_bus: " << mem.tind_result_bus << std::endl;
+
+
+    if ((mem.type == Memories::Use::EXACT) &&
+            (stash_rows.size() > 0) && (stash_units.size() > 0)) {
+        out << indent++ << "stash: " << std::endl;
+        out << indent << "row: " << stash_rows << std::endl;
+        out << indent << "col: " << stash_cols << std::endl;
+        out << indent << "unit: " << stash_units << std::endl;
+        indent--;
+    }
 }
 
 }  // end namespace Flatrock

@@ -11,6 +11,8 @@
 #include "mau/input_xbar.h"
 #include "mau/instruction_memory.h"
 #include "mau/memories.h"
+#include "mau/flatrock/memories.h"
+#include "mau/tofino/memories.h"
 #include "version.h"
 
 #include "resources.h"
@@ -855,6 +857,9 @@ ResourcesLogging::MauStageResourceUsage *ResourcesLogging::logStage(int stageNo)
     auto hashBits = logHashBits(stageNo);
     auto hashDist = logHashDist(stageNo);
 
+    int tcam_rows = Device::ixbarSpec().tcam_rows();
+    int tcam_cols = Device::ixbarSpec().tcam_columns();
+
     auto ramsRes = new RamResourceUsage(
         Memories::SRAM_COLUMNS,  // nColums
         Memories::SRAM_ROWS);  // nRows
@@ -874,9 +879,7 @@ ResourcesLogging::MauStageResourceUsage *ResourcesLogging::logStage(int stageNo)
     auto meterRes = new MeterAluResourceUsage(4);  // nAlus
     auto statisticsRes = new StatisticAluResourceUsage(4);  // nAlus
 
-    auto tcamsRes = new TcamResourceUsage(
-        Memories::TCAM_COLUMNS,  // nColums
-        Memories::TCAM_ROWS);  // nRows
+    auto tcamsRes = new TcamResourceUsage(tcam_cols, tcam_rows);
 
     logMemories(stageNo, ramsRes, mapRamsRes, gatewaysRes,
                 stashesRes, meterRes, statisticsRes, tcamsRes);

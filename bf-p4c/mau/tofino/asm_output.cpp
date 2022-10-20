@@ -419,4 +419,9 @@ void MauAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
     }
 }
 
+void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memories::Use &mem,
+         const IR::MAU::Table::Layout *layout, const TableFormat::Use *format) const {
+    ::MauAsmOutput::emit_memory(out, indent, mem, layout, format);
+}
+
 }  // end Tofino namespace

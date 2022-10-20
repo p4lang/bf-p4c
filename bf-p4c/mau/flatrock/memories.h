@@ -126,11 +126,14 @@ struct Memories : public ::Memories {
     static constexpr int MAPRAM_COLUMNS = 6;
     static constexpr int MAPRAM_MASK = (1U << MAPRAM_COLUMNS) - 1;
     static constexpr int SRAM_DEPTH = 1024;
-    static constexpr int TCAM_ROWS = 12;
-    static constexpr int TCAM_COLUMNS = 2;
+    static constexpr int TCAM_ROWS = 20;      // This is to abstract the 10 x 2 -> 20 x 1
+    static constexpr int TCAM_COLUMNS = 1;    // This is to abstract the 10 x 2 -> 20 x 1
     static constexpr int TCAM_DEPTH = 512;
+    static constexpr int LOCAL_TIND_DEPTH = 64;
+    static constexpr int TOTAL_LOCAL_TIND = 16;
     static constexpr int TABLES_MAX = 16;
     static constexpr int TERNARY_TABLES_MAX = 8;
+    static constexpr int TERNARY_TABLES_WITH_STM_TIND_MAX = 4;
     static constexpr int ACTION_TABLES_MAX = 16;
     static constexpr int GATEWAYS_PER_ROW = 2;
     static constexpr int BUS_COUNT = 2;         // search/result busses per row
@@ -235,6 +238,7 @@ struct Memories : public ::Memories {
     unsigned                                           sram_inuse[SRAM_ROWS] = { 0 };
     BFN::Alloc2D<cstring, SRAM_ROWS, STASH_UNITS>           stash_use;
     BFN::Alloc2D<cstring, TCAM_ROWS, TCAM_COLUMNS>          tcam_use;
+    BFN::Alloc1D<cstring, TOTAL_LOCAL_TIND>                 local_tind_use;
     BFN::Alloc2D<cstring, SRAM_ROWS, GATEWAYS_PER_ROW>      gateway_use;
     // FIXME (Refactoring): Remove sram_print_result_bus / sram_print_search_bus
     // and move the info inside and move into main result_bus_info /
@@ -243,8 +247,6 @@ struct Memories : public ::Memories {
     BFN::Alloc2D<cstring, SRAM_ROWS, BUS_COUNT>             sram_print_search_bus;
     BFN::Alloc2D<result_bus_info, SRAM_ROWS, BUS_COUNT>     sram_result_bus;
     BFN::Alloc2D<cstring, SRAM_ROWS, BUS_COUNT>             sram_print_result_bus;
-    // int tcam_group_use[TCAM_ROWS][TCAM_COLUMNS] = {{-1}};
-    int tcam_midbyte_use[TCAM_ROWS/2][TCAM_COLUMNS] = {{-1}};
     BFN::Alloc2D<cstring, SRAM_ROWS, 2>                     tind_bus;
     BFN::Alloc2D<cstring, SRAM_ROWS, PAYLOAD_COUNT>         payload_use;
     BFN::Alloc2D<cstring, SRAM_ROWS, 2>                     action_data_bus;
@@ -257,6 +259,26 @@ struct Memories : public ::Memories {
     bool gw_bytes_reserved[SRAM_ROWS][BUS_COUNT] = {{false}};
     BFN::Alloc1D<cstring, STATS_ALUS>                       stats_alus;
     BFN::Alloc1D<cstring, METER_ALUS>                       meter_alus;
+    // 16 bit mask (0..7 ingress and 8..15 egress)
+    unsigned                                                scm_tbl_id = 0;
+
+    struct scm_alloc_stage {
+        // Abstract the TCAM layout as a single column with 20 rows
+        BFN::Alloc1D<cstring, TCAM_ROWS> tcam_use;
+        BFN::Alloc1D<cstring, TCAM_ROWS> left_hbus1;
+        BFN::Alloc1D<cstring, TCAM_ROWS> left_hbus2;
+        BFN::Alloc1D<cstring, TCAM_ROWS> right_hbus1;
+        BFN::Alloc1D<cstring, TCAM_ROWS> right_hbus2;
+        unsigned tcam_in_use;         // 20 bit mask
+        unsigned left_hbus1_in_use;   // 20 bit mask
+        unsigned left_hbus2_in_use;   // 20 bit mask
+        unsigned right_hbus1_in_use;  // 20 bit mask
+        unsigned right_hbus2_in_use;  // 20 bit mask
+
+        scm_alloc_stage() : tcam_in_use(0), left_hbus1_in_use(0), left_hbus2_in_use(0),
+                            right_hbus1_in_use(0), right_hbus2_in_use(0) {}
+    };
+    std::map<int, scm_alloc_stage> scm_curr_alloc;  // Stage is the key
 
     struct mem_info {
         int logical_tables = 0;
@@ -367,6 +389,7 @@ struct Memories : public ::Memories {
         int number = 0;   // Used to keep track of wide action tables and way numbers in exact match
         int hash_group = -1;  // Which hash group the exact match way is using
         int logical_table = -1;  // For ATCAM tables, which logical table this partition is based
+        int scm_table_id = -1;
         int vpn_increment = 1;
         int vpn_offset = 0;
         int vpn_spare = 0;
@@ -707,9 +730,8 @@ struct Memories : public ::Memories {
     SRAM_group *best_partition_candidate(int row, unsigned column_mask, int &loc);
 
     bool allocate_all_ternary();
-    int ternary_TCAMs_necessary(table_alloc *ta, int &midbyte);
-    bool find_ternary_stretch(int TCAMs_necessary, int &row, int &col, int midbyte,
-        bool &split_midbyte);
+    int ternary_TCAMs_necessary(table_alloc *ta);
+    bool find_ternary_stretch(int TCAMs_necessary, int &row);
 
     bool allocate_all_tind();
     void find_tind_groups();
@@ -750,6 +772,7 @@ struct Memories : public ::Memories {
                    const ActionData::Format::Use *af, ActionData::FormatType_t ft,
                    int entries, int stage_table, attached_entries_t attached_entries);
     void shrink_allowed_lts() { logical_tables_allowed--; }
+    void fill_placed_scm_table(const IR::MAU::Table *, const TableResourceAlloc *);
     void printOn(std::ostream &) const;
     void visitUse(const Use &, std::function<void(cstring &, update_type_t)> fn);
 };

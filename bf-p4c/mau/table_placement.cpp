@@ -1745,6 +1745,17 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
     if (shrink_lt)
         current_mem->shrink_allowed_lts();
 
+#ifdef HAVE_FLATROCK
+    if (Device::currentDevice() == Device::FLATROCK) {
+        for (const Placed *p = next->prev; p; p = p->prev) {
+            if (p->stage == next->stage)
+                continue;
+            current_mem->fill_placed_scm_table(p->table, &p->resources);
+        }
+        current_mem->set_local_stage(next->stage);
+    }
+#endif
+
     const IR::MAU::Table *table_to_add = nullptr;
     for (auto *p : whole_stage) {
         table_to_add = p->table;

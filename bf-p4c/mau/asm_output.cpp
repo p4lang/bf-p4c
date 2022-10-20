@@ -754,16 +754,6 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const ::IXBar:
     }
 }
 
-class memory_vector {
-    const safe_vector<int>     &vec;
-    Memories::Use::type_t       type;
-    bool                        is_mapcol;
-    friend std::ostream &operator<<(std::ostream &, const memory_vector &);
- public:
-    memory_vector(const safe_vector<int> &v, Memories::Use::type_t t, bool ism)
-      : vec(v), type(t), is_mapcol(ism) {}
-};
-
 std::ostream &operator<<(std::ostream &out, const memory_vector &v) {
     if (v.vec.size() != 1) out << "[ ";
     const char *sep = "";
@@ -2795,7 +2785,12 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
         if (auto *ti = at->to<IR::MAU::TernaryIndirect>()) {
             have_indirect = true;
             auto unique_id = tbl->unique_id(ti);
-            out << indent << at->kind() << ": " << unique_id << std::endl;
+            if (tbl->layout.is_local_tind) {
+                const auto &use = tbl->resources->memuse.at(unique_id);
+                out << indent << at->kind() << ": " << use.local_tind << std::endl;
+            } else {
+                out << indent << at->kind() << ": " << unique_id << std::endl;
+            }
         } else if (auto ad = at->to<IR::MAU::ActionData>()) {
             bool ad_check = tbl->layout.action_data_bytes_in_table > 0;
             ad_check |= tbl->layout.action_addr.address_bits > 0;
@@ -3068,7 +3063,11 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
 
 
     if (!tbl->actions.empty()) {
-        out << indent << "instruction: " << tbl->unique_id(ti).build_name() << "(";
+        // Local tinds are attached to the parent table
+        if (tbl->layout.is_local_tind)
+            out << indent << "instruction: " << tbl->unique_id() << "(";
+        else
+            out << indent << "instruction: " << tbl->unique_id(ti).build_name() << "(";
         if (tbl->resources->table_format.instr_in_overhead()) {
             if (gateway_uses_inhibit_index(tbl))
                 out << "$GATEWAY_IDX";
@@ -3383,10 +3382,14 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Selector *as) {
 bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
     indent_t    indent(1);
     auto unique_id = tbl->unique_id(ti);
-    out << indent++ << "ternary_indirect " << unique_id << ':' << std::endl;
-    self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
-    self.emit_ixbar(out, indent, tbl->resources->match_ixbar.get(), nullptr,
-                      &tbl->resources->hash_dists, nullptr, nullptr, tbl, false);
+    if (tbl->layout.is_local_tind) {
+        indent++;
+    } else {
+        out << indent++ << "ternary_indirect " << unique_id << ':' << std::endl;
+        self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
+        self.emit_ixbar(out, indent, tbl->resources->match_ixbar.get(), nullptr,
+                        &tbl->resources->hash_dists, nullptr, nullptr, tbl, false);
+    }
     self.emit_table_format(out, indent, tbl->resources->table_format, nullptr, true, false);
     bitvec source;
     source.setbit(ActionData::IMMEDIATE);
