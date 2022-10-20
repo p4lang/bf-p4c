@@ -182,6 +182,8 @@ struct MemUnit;
     M(bool, REQUIRE_TCAM_ID) \
     M(int, SRAM_EGRESS_ROWS) \
     M(bool, SRAM_GLOBAL_ACCESS) \
+    M(int, SRAM_HBUS_SECTIONS_PER_STAGE) \
+    M(int, SRAM_HBUSSES_PER_ROW) \
     M(int, SRAM_INGRESS_ROWS) \
     M(int, SRAM_LAMBS_PER_STAGE) \
     M(int, SRAM_REMOVED_COLUMNS) \
@@ -372,6 +374,8 @@ class Target::Tofino : public Target {
         REQUIRE_TCAM_ID = false,   // miss-only tables do not need a tcam id
         SRAM_EGRESS_ROWS = 8,
         SRAM_GLOBAL_ACCESS = false,
+        SRAM_HBUS_SECTIONS_PER_STAGE = 0,
+        SRAM_HBUSSES_PER_ROW = 0,
         SRAM_INGRESS_ROWS = 8,
         SRAM_LAMBS_PER_STAGE = 0,
         SRAM_REMOVED_COLUMNS = 2,
@@ -541,6 +545,8 @@ class Target::JBay : public Target {
         REQUIRE_TCAM_ID = false,   // miss-only tables do not need a tcam id
         SRAM_EGRESS_ROWS = 8,
         SRAM_GLOBAL_ACCESS = false,
+        SRAM_HBUS_SECTIONS_PER_STAGE = 0,
+        SRAM_HBUSSES_PER_ROW = 0,
         SRAM_INGRESS_ROWS = 8,
         SRAM_LAMBS_PER_STAGE = 0,
         SRAM_REMOVED_COLUMNS = 2,
@@ -762,6 +768,8 @@ class Target::Cloudbreak : public Target {
         REQUIRE_TCAM_ID = false,   // miss-only tables do not need a tcam id
         SRAM_EGRESS_ROWS = 8,
         SRAM_GLOBAL_ACCESS = false,
+        SRAM_HBUS_SECTIONS_PER_STAGE = 0,
+        SRAM_HBUSSES_PER_ROW = 0,
         SRAM_INGRESS_ROWS = 8,
         SRAM_LAMBS_PER_STAGE = 0,
         SRAM_REMOVED_COLUMNS = 2,
@@ -932,6 +940,8 @@ class Target::Flatrock : public Target {
         REQUIRE_TCAM_ID = true,
         SRAM_EGRESS_ROWS = 4,
         SRAM_GLOBAL_ACCESS = true,
+        SRAM_HBUS_SECTIONS_PER_STAGE = 5,
+        SRAM_HBUSSES_PER_ROW = 4,  // 2x L2R and 2x R2L
         SRAM_INGRESS_ROWS = 6,
         SRAM_LAMBS_PER_STAGE = 8,
         SRAM_REMOVED_COLUMNS = 0,

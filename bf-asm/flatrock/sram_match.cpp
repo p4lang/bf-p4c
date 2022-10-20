@@ -109,6 +109,60 @@ void SRamMatchTable::setup_word_ixbar_group(Target::Flatrock) {
     // flatrock does not need this as words are assigned to specific XMEs
 }
 
+void SRamMatchTable::alloc_global_busses() {
+    int tbl_stage = stage->stageno;
+    for (auto &row : layout) {
+        int minstage, mincol, maxstage, maxcol;
+        Target::Flatrock::stage_col_range(row.memunits, minstage, mincol, maxstage, maxcol);
+        auto *way = way_for_ram(row.memunits.front());
+        if (!way) {
+                error(row.lineno, "Can't find way for %s", row.memunits.front().desc());
+                continue; }
+        int tbl_col = (way->group_xme % 4) / 2;
+        for (auto &ram : row.memunits) {
+            if (way != way_for_ram(ram)) {
+                error(row.lineno, "All rams on row in table %s not in the same way", name());
+                break; } }
+        if (minstage < tbl_stage || (minstage == tbl_stage && mincol/2 < tbl_col)) {
+            if (!row.bus.count(Layout::R2L_BUS)) {
+                if (!row.bus.count(Layout::SEARCH_BUS))
+                    error(row.lineno, "No r2l bus allocated on row %d of %s", row.row, name());
+                else
+                    row.bus[Layout::R2L_BUS] = row.bus.at(Layout::SEARCH_BUS); }
+            if (row.bus.count(Layout::R2L_BUS)) {
+                int hbus = row.bus.at(Layout::R2L_BUS) + Target::SRAM_HBUSSES_PER_ROW()/2;
+                for (int st = minstage; st <= tbl_stage; st++) {
+                    int lim = st == tbl_stage ? tbl_col
+                            : Target::SRAM_HBUS_SECTIONS_PER_STAGE();
+                    for (int c = st == minstage ? mincol/2 : 0; c < lim; ++c) {
+                        auto &old = Stage::stage(gress, st)->stm_hbus_use.at(row.row, c, hbus);
+                        if (old)
+                            error(row.lineno, "%s wants to use r2l bus %d:%d:%d:%d, already in "
+                                  "use by %s", name(), row.row, st, c,
+                                  hbus - Target::SRAM_HBUSSES_PER_ROW()/2, old->name());
+                        else
+                            old = this; } } } }
+        if (maxstage > tbl_stage || (maxstage == tbl_stage && maxcol/2 > tbl_col)) {
+            if (!row.bus.count(Layout::L2R_BUS)) {
+                if (!row.bus.count(Layout::SEARCH_BUS))
+                    error(row.lineno, "No l2r bus allocated on row %d of %s", row.row, name());
+                else
+                    row.bus[Layout::L2R_BUS] = row.bus.at(Layout::SEARCH_BUS); }
+            if (row.bus.count(Layout::L2R_BUS)) {
+                int hbus = row.bus.at(Layout::L2R_BUS);
+                for (int st = tbl_stage; st <= maxstage; st++) {
+                    int lim = st == maxstage ? maxcol/2 + 1
+                            : Target::SRAM_HBUS_SECTIONS_PER_STAGE();
+                    for (int c = st == tbl_stage ? tbl_col : 0; c < lim; ++c) {
+                        auto &old = Stage::stage(gress, st)->stm_hbus_use.at(row.row, c, hbus);
+                        if (old)
+                            error(row.lineno, "%s wants to use l2r bus %d:%d:%d:%d, already in "
+                                  "use by %s", name(), row.row, st, c, hbus, old->name());
+                        else
+                            old = this; } } } }
+    }
+}
+
 // Configure STM for read of the given ram from the given read port/bus
 // REGS here will be an STM 3-dim array, indexed by [row][stage][col]
 template <class REGS> void stm_read_config(REGS &stm, int stage, int col, int vbus,
@@ -141,53 +195,65 @@ template <class REGS> void stm_read_config(REGS &stm, int stage, int col, int vb
             left = true; }
     // ram needs a horiz bus -- left or right depending on `left`
     if (left) {
-        int hbus = busses.at(Table::Layout::SEARCH_BUS);
-        if (hbus == 0)
-            stm[ram.row][stage][col].ver_top_cfg.r2l0_en[vbus] = 1;
-        else
-            stm[ram.row][stage][col].ver_top_cfg.r2l1_en[vbus] = 1;
+        int hbus = busses.at(Table::Layout::R2L_BUS);
+        // request goes down vbus and on to r2l req bus
         stm[ram.row][stage][col].hor_r2l_cfg.rd_req_sel[hbus] = 2 + vbus;
+        // response comes back on corresponding l2r resp bus and up vbus
+        if (hbus == 0)
+            stm[ram.row][stage][col].ver_top_cfg.l2r0_en[vbus] = 1;
+        else
+            stm[ram.row][stage][col].ver_top_cfg.l2r1_en[vbus] = 1;
         if (!col--) {
             col = 4;
             if (--stage & 1) --delay; }
         while (stage > ram.stage || col > ram.col/2) {
+            // request along r2l bus to the ram
             stm[ram.row][stage][col].hor_r2l_cfg.rd_req_sel[hbus] = 1;
+            // response comes back on the corresponding l2r resp bus
+            stm[ram.row][stage][col].hor_l2r_cfg.rd_rsp_hor[hbus] = 1;
             if (!col--) {
                 col = 4;
                 if (--stage & 1) --delay; } }
         BUG_CHECK(stage == ram.stage && col == ram.col/2, "failed to reach correct column");
-        BUG_CHECK(delay >= 0, "negative delay -- initial delay not large enough");
         cfg.hor_r2l_cfg.rd_req_sel[hbus] = 1;
+        BUG_CHECK(delay >= 0, "negative delay -- initial delay not large enough");
+        // response goes onto the corresponding l2r response bus
         if (ram.col&1)
-            cfg.hor_r2l_cfg.rd_rsp_ram1[hbus] = 1;
+            cfg.hor_l2r_cfg.rd_rsp_ram1[hbus] = 1;
         else
-            cfg.hor_r2l_cfg.rd_rsp_ram0[hbus] = 1;
+            cfg.hor_l2r_cfg.rd_rsp_ram0[hbus] = 1;
         cfg.ram_cfg.delay[ram.col&1] = delay;  // FIXME -- delay config
         cfg.ram_cfg.rd_sel[ram.col&1] = 7 + hbus;
         cfg.ram_cfg.vpn[ram.col&1] = vpn;
         cfg.ram_cfg.wr_sel[ram.col&1] = 0;  // no writes
     } else {
-        int hbus = busses.at(Table::Layout::SEARCH_BUS);
-        if (hbus == 0)
-            stm[ram.row][stage][col].ver_top_cfg.l2r0_en[vbus] = 1;
-        else
-            stm[ram.row][stage][col].ver_top_cfg.l2r1_en[vbus] = 1;
+        int hbus = busses.at(Table::Layout::L2R_BUS);
+        // request goes down vbus and on to l2r req bus
         stm[ram.row][stage][col].hor_l2r_cfg.rd_req_sel[hbus] = 2 + vbus;
+        // response comes back on corresponding r2l resp bus and up vbus
+        if (hbus == 0)
+            stm[ram.row][stage][col].ver_top_cfg.r2l0_en[vbus] = 1;
+        else
+            stm[ram.row][stage][col].ver_top_cfg.r2l1_en[vbus] = 1;
         if (++col > 4) {
             col = 0;
             if (stage++ & 1) --delay; }
         while (stage < ram.stage || col < ram.col/2) {
+            // request along l2r bus to the ram
             stm[ram.row][stage][col].hor_l2r_cfg.rd_req_sel[hbus] = 1;
+            // response comes back on the corresponding r2l resp bus
+            stm[ram.row][stage][col].hor_r2l_cfg.rd_rsp_hor[hbus] = 1;
             if (++col > 4) {
                 col = 0;
                 if (stage++ & 1) --delay; } }
         BUG_CHECK(stage == ram.stage && col == ram.col/2, "failed to reach correct column");
-        BUG_CHECK(delay >= 0, "negative delay -- initial delay not large enough");
         cfg.hor_l2r_cfg.rd_req_sel[hbus] = 1;
+        BUG_CHECK(delay >= 0, "negative delay -- initial delay not large enough");
+        // response goes onto the corresponding r2l response bus
         if (ram.col&1)
-            cfg.hor_l2r_cfg.rd_rsp_ram1[hbus] = 1;
+            cfg.hor_r2l_cfg.rd_rsp_ram1[hbus] = 1;
         else
-            cfg.hor_l2r_cfg.rd_rsp_ram0[hbus] = 1;
+            cfg.hor_r2l_cfg.rd_rsp_ram0[hbus] = 1;
         cfg.ram_cfg.delay[ram.col&1] = delay;  // FIXME -- delay config
         cfg.ram_cfg.rd_sel[ram.col&1] = 9 + hbus;
         cfg.ram_cfg.vpn[ram.col&1] = vpn;

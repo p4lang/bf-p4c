@@ -1113,6 +1113,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam,
     bool parse_way(const value_t &);
     void common_sram_setup(pair_t &, const VECTOR(pair_t) &);
     void common_sram_checks();
+    void alloc_global_busses();
     void alloc_vpns() override;
     virtual void setup_ways();
     void setup_hash_function_ids();
@@ -1174,7 +1175,8 @@ DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam,
     SelectionTable *get_selector() const override { return attached.get_selector(); }
     StatefulTable *get_stateful() const override { return attached.get_stateful(); }
     MeterTable* get_meter() const override { return attached.get_meter(); }
-    const Way *way_for_ram(Ram r) const { return &ways[way_map.at(r).way]; }
+    const Way *way_for_ram(Ram r) const {
+        return way_map.count(r) ? &ways[way_map.at(r).way] : nullptr; }
     const Way *way_for_xme(int xme) const {
         for (auto &way : ways) if (way.group_xme == xme) return &way;
         return nullptr; }

@@ -639,14 +639,21 @@ void SRamMatchTable::common_sram_checks() {
         input_xbar.emplace_back(InputXbar::create(this));
 }
 
+#if !HAVE_FLATROCK
+void SRamMatchTable::alloc_global_busses() { BUG(); }
+#endif
+
 void SRamMatchTable::pass1() {
     LOG1("### SRam match table " << name() << " pass1 " << loc());
-    alloc_busses(stage->sram_search_bus_use, Layout::SEARCH_BUS);
     if (format) {
         verify_format();
         setup_ways();
         determine_word_and_result_bus();
     }
+    if (Target::SRAM_GLOBAL_ACCESS())
+        alloc_global_busses();
+    else
+        alloc_busses(stage->sram_search_bus_use, Layout::SEARCH_BUS);
     MatchTable::pass1();
     if (action_enable >= 0)
         if (action.args.size() < 1 || action.args[0].size() <= (unsigned)action_enable)
@@ -657,7 +664,7 @@ void SRamMatchTable::pass1() {
                 if (row.row == gateway->layout[0].row && row.bus == gateway->layout[0].bus &&
                     !row.memunits.empty()) {
                     unsigned gw_use = gateway->input_use() & 0xff;
-                    auto &way = way_map[row.memunits[0]];
+                    auto &way = way_map.at(row.memunits[0]);
                     for (auto &grp : group_info) {
                         if (gw_use & grp.tofino_mask[way.word]) {
                             error(gateway->lineno, "match bus conflict between match and gateway"
@@ -734,12 +741,12 @@ void SRamMatchTable::setup_ways() {
             for (auto &ram : w.rams) {
                 ++index;
                 if (way_map.count(ram)) {
-                    if (way == way_map[ram].way)
+                    if (way == way_map.at(ram).way)
                         error(w.lineno, "%s used twice in way %d of table %s",
                               ram.desc(), way, name());
                     else
                         error(w.lineno, "%s used ways %d and %d of table %s",
-                              ram.desc(), way, way_map[ram].way, name());
+                              ram.desc(), way, way_map.at(ram).way, name());
                     continue; }
                 way_map[ram].way = way;
                 if (!ram.isLamb() && !rams.count(ram))
@@ -901,14 +908,14 @@ template<class REGS> void SRamMatchTable::write_regs_vt(REGS &regs) {
             int col = memunit.col;
             BUG_CHECK(memunit.stage == -1 && memunit.row == row.row,
                       "bogus %s in row %d", memunit.desc(), row.row);
-            auto &way = way_map[memunit];
+            auto &way = way_map.at(memunit);
             if (first) {
                 hash_group = ways[way.way].group_xme;
                 word = way.word;
                 setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[search_bus], hash_group);
                 first = false;
             } else if (hash_group != ways[way.way].group_xme || int(word) != way.word) {
-                auto first_way = way_map[row.memunits[0]];
+                auto first_way = way_map.at(row.memunits[0]);
                 error(ways[way.way].lineno, "table %s ways #%d and #%d use the same row bus "
                       "(%d.%d) but different %s", name(), first_way.way, way.way, row.row,
                       search_bus, int(word) == way.word ? "hash groups" : "word order");
@@ -1135,7 +1142,7 @@ template<class REGS> void SRamMatchTable::write_regs_vt(REGS &regs) {
                     BUG_CHECK(r_bus >= 0);
                     merge_col.row_action_nxtable_bus_drive[row.row] |= 1 << (r_bus % 2); }
                 if (word_group < 2) {
-                    auto &way = way_map[ram];
+                    auto &way = way_map.at(ram);
                     int idx = way.index + word - result_bus_word;
                     int overhead_row = ways[way.way].rams[idx].row;
                     auto &hitmap_ixbar = merge_col.hitmap_output_map[2*row.row + word_group];

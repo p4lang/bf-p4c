@@ -47,6 +47,7 @@ class Stage_data {
     std::set<Stage **>          all_refs;
     BFN::Alloc2Dbase<Table *>                                sram_use;
     BFN::Alloc2D<Table *, SRAM_ROWS, 2>                      sram_search_bus_use;
+    BFN::Alloc3Dbase<Table *>                                stm_hbus_use;
     BFN::Alloc2D<Table *, SRAM_ROWS, 2>                      match_result_bus_use;
     BFN::Alloc2D<Table *, SRAM_ROWS, MAPRAM_UNITS_PER_ROW>   mapram_use;
     BFN::Alloc2Dbase<Table *>                                tcam_use;
@@ -114,6 +115,8 @@ class Stage_data {
  protected:
     Stage_data(int stage, bool egress_only) : stageno(stage),
         sram_use(Target::SRAM_ROWS(egress_only ? EGRESS : INGRESS), Target::SRAM_UNITS_PER_ROW()),
+        stm_hbus_use(Target::SRAM_ROWS(egress_only ? EGRESS : INGRESS),
+                     Target::SRAM_HBUS_SECTIONS_PER_STAGE(), Target::SRAM_HBUSSES_PER_ROW()),
         tcam_use(Target::TCAM_ROWS(), Target::TCAM_UNITS_PER_ROW()),
         tcam_match_bus_use(Target::TCAM_ROWS(), Target::TCAM_MATCH_BUSSES()),
         local_tind_use(Target::LOCAL_TIND_UNITS())
