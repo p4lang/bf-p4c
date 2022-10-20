@@ -72,7 +72,7 @@ bool PHV::Allocation::addStatus(PHV::Container c, const ContainerStatus& status)
 
 void PHV::Allocation::addMetaInitPoints(
         PHV::AllocSlice slice,
-        ordered_set<const IR::MAU::Action*> actions) {
+        const ActionSet& actions) {
     meta_init_points_i[slice] = actions;
     LOG5("Adding init points for " << slice);
     LOG5("Number of entries in meta_init_points_i: " << meta_init_points_i.size());
@@ -637,9 +637,8 @@ PHV::Allocation::getMetadataInits(const IR::MAU::Action* act) const {
     return init_writes_i.at(act);
 }
 
-const ordered_set<const IR::MAU::Action*>
-PHV::Allocation::getInitPointsForField(const PHV::Field* f) const {
-    ordered_set<const IR::MAU::Action*> rs;
+PHV::ActionSet PHV::Allocation::getInitPointsForField(const PHV::Field* f) const {
+    PHV::ActionSet rs;
     for (const auto& kv : meta_init_points_i) {
         if (kv.first.field() != f) continue;
         rs.insert(kv.second.begin(), kv.second.end());
@@ -772,13 +771,12 @@ bool PHV::ConcreteAllocation::contains(PHV::Container c) const {
     return container_status_i.find(c) != container_status_i.end();
 }
 
-boost::optional<ordered_set<const IR::MAU::Action*>>
-PHV::Allocation::getInitPoints(const PHV::AllocSlice& slice) const {
+boost::optional<PHV::ActionSet> PHV::Allocation::getInitPoints(const PHV::AllocSlice& slice) const {
     if (!meta_init_points_i.count(slice)) return boost::none;
     return meta_init_points_i.at(slice);
 }
 
-boost::optional<ordered_set<const IR::MAU::Action*>>
+boost::optional<PHV::ActionSet>
 PHV::Transaction::getInitPoints(const PHV::AllocSlice& slice) const {
     if (meta_init_points_i.count(slice))
         return meta_init_points_i.at(slice);

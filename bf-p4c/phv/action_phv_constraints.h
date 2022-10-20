@@ -726,7 +726,7 @@ class ActionPhvConstraints : public Inspector {
     /// In this case, if container_state is {priority, cfi} and the candidate slice (slice) is tag,
     /// then the UnionFind structure will return {{m2.a}, {m.c, m.d}}.
     CanPackErrorCode check_and_generate_constraints_for_bitwise_or_move(
-        const PHV::Allocation& alloc, const ordered_set<const IR::MAU::Action*>& actions,
+        const PHV::Allocation& alloc, const PHV::ActionSet& actions,
         const PHV::Allocation::MutuallyLiveSlices& container_state, const PHV::Container& c,
         const PHV::Allocation::LiveRangeShrinkingMap& initActions, ActionPropertyMap* action_props,
         PackingConstraints* copack_constraints) const;
@@ -734,7 +734,7 @@ class ActionPhvConstraints : public Inspector {
     /// Perform analysis on rotational aligment constraints.
     CanPackErrorCode check_and_generate_rotational_alignment_constraints(
         const PHV::Allocation& alloc, const std::vector<PHV::AllocSlice>& slices,
-        const ordered_set<const IR::MAU::Action*>& actions,
+        const PHV::ActionSet& actions,
         const PHV::Allocation::MutuallyLiveSlices& container_state, const PHV::Container& c,
         ActionPropertyMap* action_props) const;
 
@@ -764,19 +764,19 @@ class ActionPhvConstraints : public Inspector {
 
     /// Merge actions for all the candidate fields into a set, including initialization actions for
     /// any metadata fields overlaid due to live range shrinking.
-    ordered_set<const IR::MAU::Action*> make_writing_action_set(
+    PHV::ActionSet make_writing_action_set(
         const PHV::Allocation& alloc, const PHV::Allocation::MutuallyLiveSlices& container_state,
         const PHV::Allocation::LiveRangeShrinkingMap& initActions) const;
 
     /// generate action container properties for @p actions.
     ActionPropertyMap make_action_container_properties(
-        const PHV::Allocation& alloc, const ordered_set<const IR::MAU::Action*>& actions,
+        const PHV::Allocation& alloc, const PHV::ActionSet& actions,
         const PHV::Allocation::MutuallyLiveSlices& container_state,
         const PHV::Allocation::LiveRangeShrinkingMap& initActions, bool is_mocha_or_dark) const;
 
     /// generate pack constraints for all @p actions.
     PackingConstraints make_initial_copack_constraints(
-        const ordered_set<const IR::MAU::Action*>& actions,
+        const PHV::ActionSet& actions,
         const PHV::Allocation::MutuallyLiveSlices& container_state) const;
 
     /// @returns the stages for the table associated with action @p action.
@@ -899,7 +899,7 @@ class ActionPhvConstraints : public Inspector {
     /// slice s, then all other slices in @p container_state are also not written by action b.
     bool all_field_slices_written_together(
             const PHV::Allocation::MutuallyLiveSlices& container_state,
-            const ordered_set<const IR::MAU::Action*>& set_of_actions,
+            const PHV::ActionSet& set_of_actions,
             const PHV::Allocation::LiveRangeShrinkingMap& initActions) const;
 
     /// @returns true if there is a no-pack conflict between the fields in @p container_state.
@@ -943,7 +943,7 @@ class ActionPhvConstraints : public Inspector {
     /// returns an eroor when any action constraint of @p actions are violated if
     /// the destination container has slices in @p container_state.
     CanPackErrorV2 check_bitwise_and_basic_move_constraints(
-            const ordered_set<const IR::MAU::Action*>& actions,
+            const PHV::ActionSet& actions,
             const PHV::Allocation::MutuallyLiveSlices& container_state,
             const ActionPropertyMap* action_props) const;
 

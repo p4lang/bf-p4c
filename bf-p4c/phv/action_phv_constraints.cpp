@@ -1459,13 +1459,14 @@ int ActionPhvConstraints::count_bitmasked_set_instructions(
         setOfSlices.insert(slice);
 
     // Merge actions for all candidate fields into a set.
-    ordered_set<const IR::MAU::Action*> allActionsForSlices;
+    PHV::ActionSet allActionsForSlices;
     for (auto& slice : slices) {
         const auto& writingActions = constraint_tracker.written_in(slice);
         allActionsForSlices.insert(writingActions.begin(), writingActions.end());
-        if (initActions.count(slice.field()))
-            allActionsForSlices.insert(initActions.at(slice.field()).begin(),
-                    initActions.at(slice.field()).end());
+        const auto it = initActions.find(slice.field());
+        if (it != initActions.end()) {
+            allActionsForSlices.insert(it->second.begin(), it->second.end());
+        }
     }
     // For every action, check if bitmasked-set would be synthesized for the writes to slices.
     for (auto& action : allActionsForSlices) {
@@ -1957,10 +1958,10 @@ bool ActionPhvConstraints::check_speciality_read_and_bitmask(
     return false;
 }
 
-ordered_set<const IR::MAU::Action*> ActionPhvConstraints::make_writing_action_set(
+PHV::ActionSet ActionPhvConstraints::make_writing_action_set(
     const PHV::Allocation& alloc, const PHV::Allocation::MutuallyLiveSlices& container_state,
     const PHV::Allocation::LiveRangeShrinkingMap& initActions) const {
-    ordered_set<const IR::MAU::Action*> set_of_actions;
+    PHV::ActionSet set_of_actions;
     for (const auto& slice : container_state) {
         const auto& writing_actions = constraint_tracker.written_in(slice);
         set_of_actions.insert(writing_actions.begin(), writing_actions.end());
@@ -1993,7 +1994,7 @@ ordered_set<const IR::MAU::Action*> ActionPhvConstraints::make_writing_action_se
 
 /// generate action container properties for @p actions.
 ActionPhvConstraints::ActionPropertyMap ActionPhvConstraints::make_action_container_properties(
-    const PHV::Allocation& alloc, const ordered_set<const IR::MAU::Action*>& actions,
+    const PHV::Allocation& alloc, const PHV::ActionSet& actions,
     const PHV::Allocation::MutuallyLiveSlices& container_state,
     const PHV::Allocation::LiveRangeShrinkingMap& initActions,
     bool is_mocha_or_dark) const {
@@ -2016,7 +2017,7 @@ ActionPhvConstraints::ActionPropertyMap ActionPhvConstraints::make_action_contai
 }
 
 ActionPhvConstraints::PackingConstraints ActionPhvConstraints::make_initial_copack_constraints(
-    const ordered_set<const IR::MAU::Action*>& actions,
+    const PHV::ActionSet& actions,
     const PHV::Allocation::MutuallyLiveSlices& container_state) const {
     ActionPhvConstraints::PackingConstraints packing_constraints;
     for (const auto* action : actions) {
@@ -2042,7 +2043,7 @@ ActionPhvConstraints::PackingConstraints ActionPhvConstraints::make_initial_copa
 }
 
 CanPackErrorV2 ActionPhvConstraints::check_bitwise_and_basic_move_constraints(
-    const ordered_set<const IR::MAU::Action*>& actions,
+    const PHV::ActionSet& actions,
     const PHV::Allocation::MutuallyLiveSlices& container_state,
     const ActionPropertyMap* action_props) const {
     for (const auto* action : actions) {
@@ -2130,7 +2131,7 @@ CanPackErrorV2 ActionPhvConstraints::check_bitwise_and_basic_move_constraints(
 }
 
 CanPackErrorCode ActionPhvConstraints::check_and_generate_constraints_for_bitwise_or_move(
-    const PHV::Allocation& alloc, const ordered_set<const IR::MAU::Action*>& actions,
+    const PHV::Allocation& alloc, const PHV::ActionSet& actions,
     const PHV::Allocation::MutuallyLiveSlices& container_state, const PHV::Container& c,
     const PHV::Allocation::LiveRangeShrinkingMap& initActions, ActionPropertyMap* action_props,
     PackingConstraints* copack_constraints) const {
@@ -2241,7 +2242,7 @@ CanPackErrorCode ActionPhvConstraints::check_and_generate_constraints_for_bitwis
 CanPackErrorCode ActionPhvConstraints::check_and_generate_rotational_alignment_constraints(
     const PHV::Allocation& alloc,
     const std::vector<PHV::AllocSlice>& slices,
-    const ordered_set<const IR::MAU::Action*>& actions,
+    const PHV::ActionSet& actions,
     const PHV::Allocation::MutuallyLiveSlices& container_state,
     const PHV::Container& c,
     ActionPropertyMap* action_props) const {
@@ -3215,7 +3216,7 @@ bool ActionPhvConstraints::assign_containers_to_unallocated_sources(
 
 bool ActionPhvConstraints::all_field_slices_written_together(
         const PHV::Allocation::MutuallyLiveSlices& container_state,
-        const ordered_set<const IR::MAU::Action*>& set_of_actions,
+        const PHV::ActionSet& set_of_actions,
         const PHV::Allocation::LiveRangeShrinkingMap& initActions) const {
     for (auto action : set_of_actions) {
         enum WriteType { NO_INIT, NOT_WRITTEN, WRITTEN } thisActionWrites = NO_INIT;

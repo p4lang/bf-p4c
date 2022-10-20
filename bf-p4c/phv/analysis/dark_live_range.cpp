@@ -485,7 +485,7 @@ bool DarkLiveRange::ignoreReachCondition(
 
 bool DarkLiveRange::isGroupDominatorEarlierThanFirstUseOfCurrentField(
         const OrderedFieldInfo& currentField,
-        const ordered_set<const IR::BFN::Unit*>& doms,
+        const PHV::UnitSet& doms,
         const IR::MAU::Table* groupDominator) const {
     bool singleDom = (doms.size() == 1);
     if (currentField.minStage.first < dg.min_stage(groupDominator))
@@ -679,7 +679,7 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
 
         // Populate the list of dominators for the current live range slice of
         // the field.
-        ordered_set<const IR::BFN::Unit*> f_nodes;
+        PHV::UnitSet f_nodes;
         for (auto iunit : info.units) {
             // Since dominator analysis is gress specific we ideally should not
             // be seeing fields from different gresses (e.g. ingress and ghost)
@@ -1175,12 +1175,12 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::getInitPointsForTable(
     return rv;
 }
 
-boost::optional<PHV::Allocation::ActionSet> DarkLiveRange::getInitActions(
+boost::optional<PHV::ActionSet> DarkLiveRange::getInitActions(
         const PHV::Container& c,
         const OrderedFieldInfo& field,
         const IR::MAU::Table* t,
         const PHV::Transaction& alloc) const {
-    PHV::Allocation::ActionSet moveActions;
+    PHV::ActionSet moveActions;
     const PHV::Field* f = field.field.field();
     for (const auto* act : tablesToActions.getActionsForTable(t)) {
         // If field is already written in this action, do not initialize here.
@@ -1249,7 +1249,7 @@ boost::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForLastFieldToDark(
     // Find out all the actions in table t, where we need to insert moves into the dark container.
     // DXm[a...b] = Xn[a...b]
     // ALEX: Only need to do this for non ARA move-to-dark inits
-    boost::optional<PHV::Allocation::ActionSet> moveActions;
+    boost::optional<PHV::ActionSet> moveActions;
     if (!useARA) {
         moveActions = getInitActions(c, prvField, t, alloc);
         if (!moveActions) return boost::none;
@@ -1327,7 +1327,7 @@ boost::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForCurrentFieldWithZe
     // Find out all actions in table t, where we need to initialize @field to 0 in container @c.
     // c[a...b] = 0
     // ALEX: Use initAction for non-ARA primitives
-    boost::optional<PHV::Allocation::ActionSet>  initActions;
+    boost::optional<PHV::ActionSet> initActions;
     if (!useARA) {
         initActions = getInitActions(c, field, t, alloc);
         if (!initActions) return boost::none;
@@ -1348,7 +1348,7 @@ boost::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForCurrentFieldWithZe
                 LOG_DEBUG5("\t\t " << entry.first << " (" << entry.second << ")");
         }
         dstSlice.addRefs(field.field.getRefs());
-        return new PHV::DarkInitEntry(dstSlice, PHV::Allocation::ActionSet());
+        return new PHV::DarkInitEntry(dstSlice, PHV::ActionSet());
     } else {
         BUG_CHECK((initActions->size() > 0), "No actions found to zero init dark overlay!");
         LOG_DEBUG5("\t  B. Add unit " << t->name << " to slice " << dstSlice);
@@ -1426,7 +1426,7 @@ DarkLiveRange::generateARAzeroInit(
                          field.maxStage);
     dstSlice.addRefs(field.field.getRefs());
 
-    PHV::DarkInitEntry rv(dstSlice, PHV::Allocation::ActionSet());
+    PHV::DarkInitEntry rv(dstSlice, PHV::ActionSet());
     // Handle padding fields
     if (field.field.field()->padding || onlyReadCandidates) {
         rv.setNop();
@@ -1535,7 +1535,7 @@ const PHV::Container DarkLiveRange::getBestDarkContainer(
 
 const IR::MAU::Table* DarkLiveRange::getGroupDominator(
         const PHV::Field* f,
-        const ordered_set<const IR::BFN::Unit*>& f_units,
+        const PHV::UnitSet& f_units,
         gress_t gress) const {
     LOG_DEBUG1(TAB2 "getGroupDominator : " << f << " for gress: " << gress);
     ordered_map<const IR::MAU::Table*, const IR::BFN::Unit*> tablesToUnits;
@@ -1587,7 +1587,7 @@ bool DarkLiveRange::mustMoveToDark(
 
 bool DarkLiveRange::mustInitializeCurrentField(
         const OrderedFieldInfo& field,
-        const ordered_set<const IR::BFN::Unit*>& fieldUses) const {
+        const PHV::UnitSet& fieldUses) const {
     ordered_set<const IR::MAU::Table*> tableUses;
     for (const auto* u : fieldUses) {
         if (u->is<IR::BFN::Deparser>()) continue;

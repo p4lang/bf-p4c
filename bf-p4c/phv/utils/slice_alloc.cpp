@@ -35,7 +35,7 @@ AllocSlice::AllocSlice(
         int field_bit_lo,
         int container_bit_lo,
         int width,
-        ActionSet action)
+        const ActionSet& action)
 : AllocSlice(f, c, field_bit_lo, container_bit_lo, width) {
     init_points_i = action;
 }
@@ -339,15 +339,17 @@ bool AllocSlice::isReferenced(const AllocContext* ctxt, const FieldUse* use,
                 for (auto refEntry : refs) LOG5("\t  " << refEntry.first << " (" <<
                                                 refEntry.second << ")");
                 bool ref_match = false;
-                if (refs.count(tblName)) {
+                const auto tblNameRef = refs.find(tblName);
+                if (tblNameRef != refs.end()) {
                     if (use)
-                        ref_match = !bool(refs.at(tblName) & *use);
+                        ref_match = !bool(tblNameRef->second & *use);
                     else
                         ref_match = true;
                 }
-                if (!ref_match && gwName.size() && refs.count(gwName)) {
+                const auto gwNameRef = refs.find(gwName);
+                if (!ref_match && gwName.size() && gwNameRef != refs.end()) {
                     if (use && use->isRead())
-                        ref_match = !bool(refs.at(gwName) & *use);
+                        ref_match = !bool(gwNameRef->second & *use);
                     else
                         ref_match = true;
                 }
@@ -406,17 +408,16 @@ int AllocSlice::deparser_stage_idx() const {
 
 // Add table access if it hasn't been already added
 bool AllocSlice::addRef(cstring u_name, FieldUse f_use) const {
-    if (refs.count(u_name)) {
-        if (refs[u_name] != f_use) {
-            refs[u_name] |= f_use;
+    auto [it, inserted] = refs.insert(std::make_pair(u_name, f_use));
+    if (!inserted) {
+        if (it->second != f_use) {
+            it->second |= f_use;
             return true;
         } else {
             return false;
         }
-    } else {
-        refs[u_name] = f_use;
-        return true;
     }
+    return true;
 }
 
 le_bitrange AllocSlice::container_bytes() const {
@@ -453,7 +454,7 @@ bool DarkInitPrimitive::setSourceLatestLiveness(StageAndAccess max) {
     }
 }
 
-DarkInitPrimitive::DarkInitPrimitive(ActionSet initPoints)
+DarkInitPrimitive::DarkInitPrimitive(const ActionSet& initPoints)
     : assignZeroToDestination(true), nop(false),
     alwaysInitInLastMAUStage(false), alwaysRunActionPrim(false), actions(initPoints) {}
 
@@ -461,7 +462,7 @@ DarkInitPrimitive::DarkInitPrimitive(AllocSlice& src)
      : assignZeroToDestination(false), nop(false), sourceSlice(new AllocSlice(src)),
      alwaysInitInLastMAUStage(false), alwaysRunActionPrim(false) { }
 
-DarkInitPrimitive::DarkInitPrimitive(AllocSlice& src, ActionSet initPoints)
+DarkInitPrimitive::DarkInitPrimitive(AllocSlice& src, const ActionSet& initPoints)
      : assignZeroToDestination(false), nop(false), sourceSlice(new AllocSlice(src)),
      alwaysInitInLastMAUStage(false), alwaysRunActionPrim(false), actions(initPoints) { }
 
@@ -630,7 +631,7 @@ std::ostream& operator<<(std::ostream& out, const DarkInitPrimitive& prim) {
     auto priorPrms = prim.getARApriorPrims();
     auto postPrms  = prim.getARApostPrims();
 
-    if (!priorPrms.size()) {
+    if (priorPrms.empty()) {
         out << "  : No prior prims";
     } else {
         out << "  : Prior prims:";
@@ -640,7 +641,7 @@ std::ostream& operator<<(std::ostream& out, const DarkInitPrimitive& prim) {
         }
     }
 
-    if (!postPrms.size()) {
+    if (postPrms.empty()) {
         out << "  : No post prims";
     } else {
         out << "  : Post prims:";

@@ -7,18 +7,16 @@ Visitor::profile_t MapTablesToActions::init_apply(const IR::Node* root) {
     return Inspector::init_apply(root);
 }
 
-const PHV::Allocation::ActionSet
-MapTablesToActions::getActionsForTable(const IR::MAU::Table* t) const {
+const PHV::ActionSet& MapTablesToActions::getActionsForTable(const IR::MAU::Table* t) const {
     BUG_CHECK(t, "Null table encountered");
-    PHV::Allocation::ActionSet emptySet;
+    static const PHV::ActionSet emptySet;
     if (!tableToActionsMap.count(t)) return emptySet;
     return tableToActionsMap.at(t);
 }
 
-const PHV::Allocation::ActionSet
-MapTablesToActions::getDefaultActionsForTable(const IR::MAU::Table* t) const {
+const PHV::ActionSet& MapTablesToActions::getDefaultActionsForTable(const IR::MAU::Table* t) const {
     BUG_CHECK(t, "Null table encountered");
-    PHV::Allocation::ActionSet emptySet;
+    static const PHV::ActionSet emptySet;
     if (!defaultActions.count(t)) return emptySet;
     return defaultActions.at(t);
 }

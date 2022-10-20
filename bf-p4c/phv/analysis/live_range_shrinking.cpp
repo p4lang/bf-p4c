@@ -40,11 +40,11 @@ bool FindInitializationNode::preorder(const IR::MAU::Action* act) {
 
 bool FindInitializationNode::ignoreDeparserUseForPacketField(
         const PHV::Field* f,
-        const ordered_set<const IR::BFN::Unit*>& f_dominators) const {
+        const PHV::UnitSet& f_dominators) const {
     if (!noInitPacketFields.isCandidateHeader(f->header())) return false;
     auto& actions = noInitPacketFields.getActionsForCandidateHeader(f->header());
     if (actions.size() > 1) return false;
-    ordered_set<const IR::BFN::Unit*> tables;
+    PHV::UnitSet tables;
     for (const auto* action : actions) {
         auto t = tablesToActions.getTableForAction(action);
         if (t)
@@ -60,7 +60,7 @@ bool FindInitializationNode::summarizeUseDefs(
         const PHV::Field* f,
         const ordered_set<const IR::BFN::Unit*>& initPoints,
         ordered_map<const PHV::Field*, ordered_map<const IR::BFN::Unit*, unsigned>>& units,
-        ordered_set<const IR::BFN::Unit*>& f_dominators) const {
+        PHV::UnitSet& f_dominators) const {
     // Note all units where field f is defined.
     for (auto& def : defuse.getAllDefs(f->id)) {
         if (def.second->is<ImplicitParserInit>()) {
@@ -139,7 +139,7 @@ bool FindInitializationNode::summarizeUseDefs(
 
 bool FindInitializationNode::canInitTableReachGUnits(
         const IR::MAU::Table* table,
-        const ordered_set<const IR::BFN::Unit*>& g_units) const {
+        const PHV::UnitSet& g_units) const {
     const IR::BFN::Unit* unit = table->to<IR::BFN::Unit>();
     if (!unit) BUG("How is table %1% not a unit?", table->name);
     auto rv = canFUnitsReachGUnits({ unit }, g_units, flowGraph);
@@ -152,7 +152,7 @@ bool FindInitializationNode::canInitTableReachGUnits(
 
 bool FindInitializationNode::canFUsesReachInitTable(
         const IR::MAU::Table* initTable,
-        const ordered_set<const IR::BFN::Unit*>& f_units) const {
+        const PHV::UnitSet& f_units) const {
     const IR::BFN::Unit* unit = initTable->to<IR::BFN::Unit>();
     if (!unit) BUG("How is table %1% not a unit?", initTable->name);
     auto rv = canFUnitsReachGUnits(f_units, { unit }, flowGraph);
@@ -319,7 +319,7 @@ bool FindInitializationNode::mayViolatePackConflict(
     return false;
 }
 
-boost::optional<const PHV::Allocation::ActionSet> FindInitializationNode::getInitPointsForTable(
+boost::optional<const PHV::ActionSet> FindInitializationNode::getInitPointsForTable(
         const PHV::Container& c,
         const IR::MAU::Table* t,
         const PHV::Field* f,
@@ -329,7 +329,7 @@ boost::optional<const PHV::Allocation::ActionSet> FindInitializationNode::getIni
         bool ignoreMutex) const {
     // If the uses of the previous field do not reach this initialization point, then the live
     // ranges might overlap.
-    ordered_set<const IR::BFN::Unit*> prevUseUnits;
+    PHV::UnitSet prevUseUnits;
     for (const auto* tbl : prevUses) {
         const IR::BFN::Unit* u = tbl->to<IR::BFN::Unit>();
         if (!u) BUG("How is table %1% not a unit?", tbl->name);
@@ -352,7 +352,7 @@ boost::optional<const PHV::Allocation::ActionSet> FindInitializationNode::getIni
         if (increasesDependenceCriticalPath(prevUse, t))
             return boost::none;
     }
-    PHV::Allocation::ActionSet actions;
+    PHV::ActionSet actions;
     // If the table t is mutually exclusive with any of the tables that are the uses of field f,
     // then do not initialize in this table.
     if (!ignoreMutex) {
@@ -407,7 +407,7 @@ boost::optional<const PHV::Allocation::ActionSet> FindInitializationNode::getIni
     return actions;
 }
 
-boost::optional<const PHV::Allocation::ActionSet>
+boost::optional<const PHV::ActionSet>
 FindInitializationNode::getInitializationCandidates(
         const PHV::Container& c,
         const PHV::Field* f,
@@ -416,10 +416,10 @@ FindInitializationNode::getInitializationCandidates(
         const int lastAllowedStage,
         const ordered_set<const IR::MAU::Table*>& fStrictDominators,
         const PHV::Field* prevField,
-        const ordered_map<const PHV::Field*, ordered_set<const IR::BFN::Unit*>>& g_units,
+        const ordered_map<const PHV::Field*, PHV::UnitSet>& g_units,
         const PHV::Allocation::MutuallyLiveSlices& container_state,
         const PHV::Transaction& alloc) const {
-    PHV::Allocation::ActionSet rv;
+    PHV::ActionSet rv;
     // At this point, the group dominator could be a unit that writes to the field, or a unit that
     // strictly dominates a read to the field. It can never be a unit that reads the field.
     const IR::BFN::Unit* unit = groupDominator->to<IR::BFN::Unit>();
@@ -651,7 +651,7 @@ FindInitializationNode::findInitializationNodes(
     ordered_map<const PHV::Field*, ordered_map<const IR::BFN::Unit*, unsigned>> units;
     idx = 0;
     const PHV::Field* lastField = nullptr;
-    static PHV::Allocation::ActionSet emptySet;
+    static const PHV::ActionSet emptySet;
     std::map<int, bool> fieldIsDarkInit;
 
     // For each metadata field that shares containers based on live ranges with other metadata:
@@ -671,7 +671,7 @@ FindInitializationNode::findInitializationNodes(
 
         // Set of dominator nodes for field f. These will also be the prime candidates for metadata
         // initialization, so these should not contain any gateways.
-        ordered_set<const IR::BFN::Unit*> f_dominators;
+        PHV::UnitSet f_dominators;
         // Collect all initialization points for slices of this field. They are part of the def set
         // of this field too.
         BUG_CHECK(field_to_slices.count(f), "Cannot find candidate slice corresponding to %1%",
@@ -683,7 +683,7 @@ FindInitializationNode::findInitializationNodes(
             // ALEX: This is only accounting for the metadata init
             // points. Lets account for dark initialization points also.
             // *ALEX*: We are still missing the AlwaysRunAction inits.
-            PHV::Allocation::ActionSet darkInitPoints;
+            PHV::ActionSet darkInitPoints;
             if (slice.hasInitPrimitive()) {
                 LOG_DEBUG5(TAB2 "... is marked darkInit:" << fieldIsDarkInit.count(f->id));
                 if (!fieldIsDarkInit[f->id] ||
@@ -756,7 +756,7 @@ FindInitializationNode::findInitializationNodes(
         }
 
         LOG_DEBUG3(TAB1 "Checking if " << f->name << " needs initialization.");
-        ordered_map<const PHV::Field*, ordered_set<const IR::BFN::Unit*>> g_units;
+        ordered_map<const PHV::Field*, PHV::UnitSet> g_units;
         // Check against each field initialized so far in this container.
         for (const auto* g : seenFields) {
             if (phv.isFieldMutex(f, g)) {
@@ -766,7 +766,7 @@ FindInitializationNode::findInitializationNodes(
             LOG_DEBUG4(TAB2 "Non exclusive with field " << g->name);
             // We need to make sure that all defuses of field f cannot reach the defuses of field g.
             // The defuses of field g are first collected in the g_field_units set.
-            ordered_set<const IR::BFN::Unit*> g_field_units;
+            PHV::UnitSet g_field_units;
             if (!units.count(g)) {
                 LOG_DEBUG3(TAB2 "Could not find any defuse units corresponding to " << g->name);
                 continue;

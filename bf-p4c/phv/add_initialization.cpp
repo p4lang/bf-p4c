@@ -77,7 +77,7 @@ class AddMetadataInitialization : public Transform {
     const ComputeFieldsRequiringInit&       fieldsForInit;
     const MapTablesToActions&               actionsMap;
 
-    ordered_map<PHV::FieldSlice, PHV::Allocation::ActionSet> initializedSlices;
+    ordered_map<PHV::FieldSlice, PHV::ActionSet> initializedSlices;
 
     profile_t init_apply(const IR::Node* root) override {
         initializedSlices.clear();

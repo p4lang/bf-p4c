@@ -691,7 +691,7 @@ class Field : public LiftLess<Field> {
     }
 
     PHV::AllocSlice* add_and_return_alloc(const Field* f, PHV::Container c, int fb, int cb, int w,
-            ordered_set<const IR::MAU::Action*> a) {
+            const ActionSet& a) {
         alloc_slice_i.emplace_back(f, c, fb, cb, w, a);
         unsigned size = alloc_slice_i.size();
         return &(alloc_slice_i[size - 1]);

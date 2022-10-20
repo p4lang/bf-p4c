@@ -3,7 +3,7 @@
 #include "bf-p4c/phv/utils/utils.h"
 
 /// @returns true if any of the dominator units in @doms is a parser node.
-bool hasParserUse(ordered_set<const IR::BFN::Unit*> doms) {
+bool hasParserUse(const PHV::UnitSet& doms) {
     for (const auto* u : doms)
         if (u->is<IR::BFN::Parser>() || u->is<IR::BFN::ParserState>() ||
             u->is<IR::BFN::GhostParser>())
@@ -13,8 +13,8 @@ bool hasParserUse(ordered_set<const IR::BFN::Unit*> doms) {
 
 /// @returns all pairs (x, y) where x is an unit in @f_units that can reach the unit y in @g_units.
 ordered_set<std::pair<const IR::BFN::Unit*, const IR::BFN::Unit*>> canFUnitsReachGUnits(
-    const ordered_set<const IR::BFN::Unit*>& f_units,
-    const ordered_set<const IR::BFN::Unit*>& g_units,
+    const PHV::UnitSet& f_units,
+    const PHV::UnitSet& g_units,
     const ordered_map<gress_t, FlowGraph>& flowGraph) {
     ordered_set<std::pair<const IR::BFN::Unit*, const IR::BFN::Unit*>> rv;
     auto gress = boost::make_optional(false, gress_t());
@@ -83,11 +83,10 @@ ordered_set<std::pair<const IR::BFN::Unit*, const IR::BFN::Unit*>> canFUnitsReac
 
 /// Trim the set of dominators by removing nodes that are dominated by other dominator nodes
 /// already in the set.
-void getTrimmedDominators(ordered_set<const IR::BFN::Unit*>& candidates,
+void getTrimmedDominators(PHV::UnitSet& candidates,
                           const BuildDominatorTree& domTree) {
     // By definition of dominators, all candidates are tables.
-    ordered_set<const IR::BFN::Unit*> emptySet;
-    ordered_set<const IR::BFN::Unit*> dominatedNodes;
+    std::unordered_set<const IR::BFN::Unit*> dominatedNodes;
     for (const auto* u1 : candidates) {
         if (hasParserUse({u1})) continue;
         bool table1 = u1->is<IR::MAU::Table>();
@@ -108,14 +107,13 @@ void getTrimmedDominators(ordered_set<const IR::BFN::Unit*>& candidates,
             }
         }
     }
-    for (const auto* u : dominatedNodes)
-        candidates.erase(u);
+    candidates.erase_set(dominatedNodes);
 }
 
 /// Update flowgraph with ARA edges
 ordered_map<gress_t, FlowGraph>
-update_flowgraph(const ordered_set<const IR::BFN::Unit*>& g_units,
-                 const ordered_set<const IR::BFN::Unit*>& f_units,
+update_flowgraph(const PHV::UnitSet& g_units,
+                 const PHV::UnitSet& f_units,
                  const ordered_map<gress_t, FlowGraph>& flgraphs,
                  const PHV::Transaction& transact,
                  bool& canUseAra) {

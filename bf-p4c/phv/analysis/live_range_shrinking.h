@@ -50,7 +50,7 @@ class FindInitializationNode : public Inspector {
     /// therefore its deparser use can be ignored.
     bool ignoreDeparserUseForPacketField(
             const PHV::Field* f,
-            const ordered_set<const IR::BFN::Unit*>& f_dominators) const;
+            const PHV::UnitSet& f_dominators) const;
 
     /// Summarizes the uses and defs of field @p f and stores the result in the associated
     /// map @p units, contains both the list of units for usedef and the kind of access
@@ -60,23 +60,23 @@ class FindInitializationNode : public Inspector {
             const PHV::Field* f,
             const ordered_set<const IR::BFN::Unit*>& initPoints,
             ordered_map<const PHV::Field*, ordered_map<const IR::BFN::Unit*, unsigned>>& units,
-            ordered_set<const IR::BFN::Unit*>& f_dominators) const;
+            PHV::UnitSet& f_dominators) const;
 
     /// @returns true if @p table reachs any defuse units in @p g_units.
     bool canInitTableReachGUnits(
             const IR::MAU::Table* table,
-            const ordered_set<const IR::BFN::Unit*>& g_units) const;
+            const PHV::UnitSet& g_units) const;
 
     /// @returns true if any defuse units in @p f_units reach @p initTable.
     bool canFUsesReachInitTable(
             const IR::MAU::Table* initTable,
-            const ordered_set<const IR::BFN::Unit*>& f_units) const;
+            const PHV::UnitSet& f_units) const;
 
     /// @returns a set of actions where field @p f with uses @p u can be initialized, given group
     /// dominator @p t for the defuse units of @p f and a stage @p lastAllowedStage, after which the
     /// initialization should be performed. @p prevField is the overlapping field that has the
     /// adjacent earlier live range to @p f.
-    boost::optional<const PHV::Allocation::ActionSet> getInitializationCandidates(
+    boost::optional<const PHV::ActionSet> getInitializationCandidates(
             const PHV::Container& c,
             const PHV::Field* f,
             const IR::MAU::Table* t,
@@ -84,7 +84,7 @@ class FindInitializationNode : public Inspector {
             const int lastAllowedStage,
             const ordered_set<const IR::MAU::Table*>& fStrictDominators,
             const PHV::Field* prevField,
-            const ordered_map<const PHV::Field*, ordered_set<const IR::BFN::Unit*>>& g_units,
+            const ordered_map<const PHV::Field*, PHV::UnitSet>& g_units,
             const PHV::Allocation::MutuallyLiveSlices& container_state,
             const PHV::Transaction& alloc) const;
 
@@ -103,7 +103,7 @@ class FindInitializationNode : public Inspector {
             const PHV::Transaction& alloc) const;
 
     /// @returns a set of actions where field @p f must be initialized in @p tbl.
-    boost::optional<const PHV::Allocation::ActionSet> getInitPointsForTable(
+    boost::optional<const PHV::ActionSet> getInitPointsForTable(
             const PHV::Container& c,
             const IR::MAU::Table* t,
             const PHV::Field* f,

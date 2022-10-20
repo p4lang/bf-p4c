@@ -8,7 +8,7 @@
   */
 class MapTablesToActions : public Inspector {
  public:
-    using TableActionsMap = ordered_map<const IR::MAU::Table*, ordered_set<const IR::MAU::Action*>>;
+    using TableActionsMap = ordered_map<const IR::MAU::Table*, PHV::ActionSet>;
     using ActionTableMap = ordered_map<const IR::MAU::Action*, const IR::MAU::Table*>;
 
  private:
@@ -30,10 +30,10 @@ class MapTablesToActions : public Inspector {
 
  public:
     /// @returns the set of actions that can be invoked for a table @p t.
-    const PHV::Allocation::ActionSet getActionsForTable(const IR::MAU::Table* t) const;
+    const PHV::ActionSet& getActionsForTable(const IR::MAU::Table* t) const;
 
     /// @returns the set of possible default actions for table @p t.
-    const PHV::Allocation::ActionSet getDefaultActionsForTable(const IR::MAU::Table* t) const;
+    const PHV::ActionSet& getDefaultActionsForTable(const IR::MAU::Table* t) const;
 
     /// @return the table from which @p act is invoked.
     boost::optional<const IR::MAU::Table*> getTableForAction(const IR::MAU::Action* act) const;

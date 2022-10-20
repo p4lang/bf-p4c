@@ -3,6 +3,7 @@
 
 #include <boost/optional.hpp>
 #include "bf-p4c/ir/bitrange.h"
+#include "bf-p4c/lib/small_set.h"
 #include "bf-p4c/phv/phv.h"
 #include "lib/bitvec.h"
 #include "lib/symbitmatrix.h"
@@ -10,7 +11,9 @@
 
 namespace PHV {
 
-using ActionSet = ordered_set<const IR::MAU::Action*>;
+using ActionSet = SmallSet<const IR::MAU::Action*>;
+using UnitSet = SmallSet<const IR::BFN::Unit*>;
+using RefsMap = ordered_map<cstring, FieldUse>;
 
 class DarkInitPrimitive;
 class DarkInitEntry;
@@ -31,8 +34,8 @@ class DarkInitPrimitive {
      bool alwaysInitInLastMAUStage;
      bool alwaysRunActionPrim;
      ActionSet actions;
-     ordered_set<const IR::BFN::Unit*> priorUnits;   // Hold units of prior overlay slice
-     ordered_set<const IR::BFN::Unit*> postUnits;   // Hold units of post overlay slice
+     UnitSet priorUnits;   // Hold units of prior overlay slice
+     UnitSet postUnits;   // Hold units of post overlay slice
      std::vector<DarkInitEntry*> priorPrims;  // Hold prior ARA prims
      std::vector<DarkInitEntry*> postPrims;  // Hold post ARA prims
 
@@ -41,9 +44,9 @@ class DarkInitPrimitive {
          : assignZeroToDestination(false), nop(false), sourceSlice(),
          alwaysInitInLastMAUStage(false), alwaysRunActionPrim(false) { }
 
-    explicit DarkInitPrimitive(ActionSet initPoints);
+    explicit DarkInitPrimitive(const ActionSet& initPoints);
     explicit DarkInitPrimitive(AllocSlice& src);
-    explicit DarkInitPrimitive(AllocSlice& src, ActionSet initPoints);
+    explicit DarkInitPrimitive(AllocSlice& src, const ActionSet& initPoints);
     explicit DarkInitPrimitive(const DarkInitPrimitive& other);
     DarkInitPrimitive& operator=(const DarkInitPrimitive& other);
 
@@ -63,13 +66,14 @@ class DarkInitPrimitive {
          assignZeroToDestination = false;
      }
 
-     void addPriorUnits(const ordered_set<const IR::BFN::Unit*>& units, bool append = true)  {
+     void addPriorUnits(const UnitSet& units, bool append = true) {
          if (!append) {
              priorUnits.clear();
          }
          priorUnits.insert(units.begin(), units.end());
      }
-     void addPostUnits(const ordered_set<const IR::BFN::Unit*>& units, bool append = true) {
+
+     void addPostUnits(const UnitSet& units, bool append = true) {
          if (!append) {
              postUnits.clear();
          }
@@ -101,8 +105,8 @@ class DarkInitPrimitive {
      }
      bool setSourceLatestLiveness(StageAndAccess max);
      const ActionSet& getInitPoints() const { return actions; }
-     const ordered_set<const IR::BFN::Unit*>& getARApriorUnits() const { return priorUnits; }
-     const ordered_set<const IR::BFN::Unit*>& getARApostUnits() const { return postUnits; }
+     const UnitSet& getARApriorUnits() const { return priorUnits; }
+     const UnitSet& getARApostUnits() const { return postUnits; }
      const std::vector<DarkInitEntry*> getARApriorPrims() const { return priorPrims; }
      const std::vector<DarkInitEntry*> getARApostPrims() const { return postPrims; }
 };
@@ -116,7 +120,7 @@ class AllocSlice {
     ActionSet init_points_i;
     StageAndAccess min_stage_i;
     StageAndAccess max_stage_i;
-    mutable ordered_map<cstring, FieldUse> refs;
+    mutable RefsMap refs;
     DarkInitPrimitive init_i;
 
     // Is true if the alloc is copied from an alias destination alloc that requires an always run
@@ -139,7 +143,7 @@ class AllocSlice {
     AllocSlice(const Field* f, Container c, int f_bit_lo, int container_bit_lo,
                int width);
     AllocSlice(const Field* f, Container c, int f_bit_lo, int container_bit_lo, int width,
-               ActionSet action);
+               const ActionSet& action);
     AllocSlice(const Field* f, Container c, le_bitrange f_slice,
                le_bitrange container_slice);
 
@@ -226,14 +230,14 @@ class AllocSlice {
     bool hasMetaInit() const { return has_meta_init_i; }
     void setMetaInit() { has_meta_init_i = true; }
     const ActionSet& getInitPoints() const { return init_points_i; }
-    void setInitPoints(const ActionSet init_points) { init_points_i = init_points; }
+    void setInitPoints(const ActionSet& init_points) { init_points_i = init_points; }
     void setShadowAlwaysRun(bool val) { shadow_always_run_i = val; }
     bool getShadowAlwaysRun() const { return shadow_always_run_i; }
     void setShadowInit(bool val) { shadow_init_i = val; }
     bool getShadowInit() const { return shadow_init_i; }
-    const ordered_map<cstring, FieldUse>& getRefs() const { return refs; }
+    const RefsMap& getRefs() const { return refs; }
     void clearRefs() { refs.clear(); }
-    void addRefs(const ordered_map<cstring, FieldUse>& sl_refs, bool clear_refs = false) {
+    void addRefs(const RefsMap& sl_refs, bool clear_refs = false) {
         if (clear_refs)
             refs.clear();
         for (auto ref_entry : sl_refs)
@@ -276,11 +280,11 @@ class DarkInitEntry {
 
  public:
      explicit DarkInitEntry(AllocSlice& dest) : destinationSlice(dest) { }
-     explicit DarkInitEntry(AllocSlice& dest, ActionSet initPoints)
+     explicit DarkInitEntry(AllocSlice& dest, const ActionSet& initPoints)
          : destinationSlice(dest), initInfo(initPoints) { }
      explicit DarkInitEntry(AllocSlice& dest, AllocSlice& src)
          : destinationSlice(dest), initInfo(src) { }
-     explicit DarkInitEntry(AllocSlice& dest, AllocSlice& src, ActionSet init)
+     explicit DarkInitEntry(AllocSlice& dest, AllocSlice& src, const ActionSet& init)
          : destinationSlice(dest), initInfo(src, init) { }
      explicit DarkInitEntry(const AllocSlice& dest, const DarkInitPrimitive &src)
          : destinationSlice(dest), initInfo(src) { }
@@ -294,10 +298,10 @@ class DarkInitEntry {
      bool mustInitInLastMAUStage() const { return initInfo.mustInitInLastMAUStage(); }
      AllocSlice* getSourceSlice() const { return initInfo.getSourceSlice(); }
 
-     void addPriorUnits(const ordered_set<const IR::BFN::Unit*>& units, bool append = true) {
+     void addPriorUnits(const UnitSet& units, bool append = true) {
          initInfo.addPriorUnits(units, append);
      }
-     void addPostUnits(const ordered_set<const IR::BFN::Unit*>& units, bool append = true) {
+     void addPostUnits(const UnitSet& units, bool append = true) {
          initInfo.addPostUnits(units, append);
      }
 
@@ -320,7 +324,7 @@ class DarkInitEntry {
         destinationSlice.setEarliestLiveness(min);
     }
 
-    void addRefs(const ordered_map<cstring, FieldUse>& sl_refs, bool clear_refs = false) {
+    void addRefs(const RefsMap& sl_refs, bool clear_refs = false) {
         destinationSlice.addRefs(sl_refs, clear_refs);
     }
 

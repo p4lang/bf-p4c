@@ -1969,7 +1969,7 @@ bool CoreAllocation::try_pack_slice_list(
         auto initPointsForTransaction = perContainerAlloc.getInitPoints(field_slice);
         if (initPointsForTransaction && initPointsForTransaction->size() > 0)
             initActions[field_slice.field()].insert(initPointsForTransaction->begin(),
-                    initPointsForTransaction->end());
+                                                    initPointsForTransaction->end());
     }
 
     // -  Populate actual_container_state with allocated slices that
@@ -2007,7 +2007,7 @@ bool CoreAllocation::try_pack_slice_list(
         auto initPointsForTransaction = perContainerAlloc.getInitPoints(field_slice);
         if (initPointsForTransaction && initPointsForTransaction->size() > 0)
             initActions[field_slice.field()].insert(initPointsForTransaction->begin(),
-                    initPointsForTransaction->end());
+                                                    initPointsForTransaction->end());
     }
 
     if (initActions.size() > 0)
@@ -3231,8 +3231,7 @@ bool CoreAllocation::generateNewAllocSlices(
         }
 
         // Verify the number of sources in initialization actions
-        ordered_set<const IR::MAU::Action*> initActions;
-        initActions.insert(newSlice.getInitPoints().begin(), newSlice.getInitPoints().end());
+        PHV::ActionSet initActions = newSlice.getInitPoints();
         initActions.insert(newSlice.getInitPrimitive().getInitPoints().begin(),
                            newSlice.getInitPrimitive().getInitPoints().end());
 
@@ -3710,7 +3709,7 @@ void PHV::AllocUtils::bind_slices(const PHV::ConcreteAllocation& alloc, PhvInfo&
         for (PHV::AllocSlice slice : container_and_slices.second.slices) {
             PHV::Field* f = const_cast<PHV::Field*>(slice.field());
             auto init_points = alloc.getInitPoints(slice);
-            static ordered_set<const IR::MAU::Action*> emptySet;
+            static const PHV::ActionSet emptySet;
             slice.setInitPoints(init_points ? *init_points : emptySet);
             if (init_points) {
                 slice.setMetaInit();
@@ -3853,7 +3852,7 @@ void merge_slices(
             last->getLatestLiveness() == slice.getLatestLiveness() &&
             last->getInitPrimitive() == slice.getInitPrimitive()) {
             int new_width = last->width() + slice.width();
-            ordered_set<const IR::MAU::Action*> new_init_points;
+            PHV::ActionSet new_init_points;
             if (last->hasMetaInit())
                 new_init_points.insert(last->getInitPoints().begin(),
                                         last->getInitPoints().end());

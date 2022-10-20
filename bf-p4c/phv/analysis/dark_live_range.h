@@ -119,7 +119,7 @@ class DarkLiveRange : public Inspector {
         PHV::AllocSlice field;
         StageAndAccess minStage;
         StageAndAccess maxStage;
-        ordered_set<const IR::BFN::Unit*> units;
+        PHV::UnitSet units;
 
         explicit OrderedFieldInfo(
                 const PHV::AllocSlice& f,
@@ -270,14 +270,14 @@ class DarkLiveRange : public Inspector {
 
     const IR::MAU::Table* getGroupDominator(
             const PHV::Field* f,
-            const ordered_set<const IR::BFN::Unit*>& f_units,
+            const PHV::UnitSet& f_units,
             gress_t gress) const;
 
     bool increasesDependenceCriticalPath(
             const IR::MAU::Table* use,
             const IR::MAU::Table* init) const;
 
-    boost::optional<PHV::Allocation::ActionSet> getInitActions(
+    boost::optional<PHV::ActionSet> getInitActions(
             const PHV::Container& c,
             const OrderedFieldInfo& field,
             const IR::MAU::Table* t,
@@ -307,7 +307,7 @@ class DarkLiveRange : public Inspector {
 
     bool mustInitializeCurrentField(
             const OrderedFieldInfo& field,
-            const ordered_set<const IR::BFN::Unit*>& fieldUses) const;
+            const PHV::UnitSet& fieldUses) const;
 
     bool mustInitializeFromDarkContainer(
             const OrderedFieldInfo& field,
@@ -352,7 +352,7 @@ class DarkLiveRange : public Inspector {
 
     bool isGroupDominatorEarlierThanFirstUseOfCurrentField(
             const OrderedFieldInfo& currentField,
-            const ordered_set<const IR::BFN::Unit*>& doms,
+            const PHV::UnitSet& doms,
             const IR::MAU::Table* groupDominator) const;
 
     bool nonOverlaidWrites(

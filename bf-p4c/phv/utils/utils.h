@@ -14,8 +14,6 @@
 
 namespace PHV {
 
-using ActionSet = ordered_set<const IR::MAU::Action*>;
-
 /** A set of PHV containers of the same size. */
 class ContainerGroup {
     /// Size (bit width) of each container in this group.
@@ -104,7 +102,6 @@ class Allocation {
 
     using GressAssignment = boost::optional<gress_t>;
     using MutuallyLiveSlices = ordered_set<AllocSlice>;
-    using ActionSet = ordered_set<const IR::MAU::Action*>;
     using LiveRangeShrinkingMap = ordered_map<const PHV::Field*, ActionSet>;
     enum class ContainerAllocStatus { EMPTY, PARTIAL, FULL };
     enum class ExtractSource { NONE, PACKET, NON_PACKET };
@@ -171,7 +168,7 @@ class Allocation {
     mutable ordered_map<const PHV::Field*, FieldStatus>  field_status_i;
     /// Structure that remembers the actions at which metadata fields need to be initialized for a
     /// particular allocation object.
-    mutable ordered_map<AllocSlice, ordered_set<const IR::MAU::Action*>> meta_init_points_i;
+    mutable ordered_map<AllocSlice, ActionSet> meta_init_points_i;
     /// Structure that remembers actions at which metadata initialization for various fields has
     /// been added.
     mutable ordered_map<const IR::MAU::Action*, ordered_set<const PHV::Field*>> init_writes_i;
@@ -196,9 +193,7 @@ class Allocation {
     Allocation(const PhvInfo& phv, const PhvUse& uses) : phv_i(&phv), uses_i(&uses) { }
 
     /// @returns the meta_init_points_i map for the current allocation object.
-    ordered_map<AllocSlice, ordered_set<const IR::MAU::Action*>>& get_meta_init_points() const {
-        return meta_init_points_i;
-    }
+    ordered_map<AllocSlice, ActionSet>& get_meta_init_points() const { return meta_init_points_i; }
 
  private:
     /// Uniform abstraction for setting container state.  For internal use
@@ -206,9 +201,7 @@ class Allocation {
     virtual bool addStatus(PHV::Container c, const ContainerStatus& status);
 
     /// Add the actions in @p actions to the metadata initialization points for @p slice.
-    virtual void addMetaInitPoints(
-            AllocSlice slice,
-            ordered_set<const IR::MAU::Action*> actions);
+    virtual void addMetaInitPoints(AllocSlice slice, const ActionSet& actions);
 
     /// Uniform convenience abstraction for adding one slice.  For internal use
     /// only.  @c must exist in this Allocation.
@@ -249,8 +242,7 @@ class Allocation {
 
     /// @returns the set of actions where @p slice must be initialized for overlay enabled by live
     /// range shrinking.
-    virtual boost::optional<ordered_set<const IR::MAU::Action*>>
-        getInitPoints(const AllocSlice& slice) const;
+    virtual boost::optional<ActionSet> getInitPoints(const AllocSlice& slice) const;
 
     /// @returns number of containers owned by this allocation.
     virtual size_t size() const = 0;
@@ -262,8 +254,7 @@ class Allocation {
     virtual const ordered_set<const PHV::Field*> getMetadataInits(const IR::MAU::Action* act) const;
 
     /// @returns the set of initialization actions for the field @p f.
-    virtual const ordered_set<const IR::MAU::Action*> getInitPointsForField(const PHV::Field* f)
-        const;
+    virtual ActionSet getInitPointsForField(const PHV::Field* f) const;
 
     /// @returns all tagalong collection IDs used
     const ordered_set<unsigned> getTagalongCollectionsUsed() const;
@@ -595,8 +586,7 @@ class Transaction : public Allocation {
     cstring getTransactionSummary() const;
 
     /// @returns the set of actions in which @p slice must be initialized for live range shrinking.
-    boost::optional<ordered_set<const IR::MAU::Action*>>
-        getInitPoints(const AllocSlice& slice) const override;
+    boost::optional<ActionSet> getInitPoints(const AllocSlice& slice) const override;
 
     /// Returns the outstanding writes in this view.
     const ordered_map<PHV::Container, ContainerStatus>& getTransactionStatus() const {
@@ -612,7 +602,7 @@ class Transaction : public Allocation {
 
     /// @returns a map of all the AllocSlices and the various actions where these slices must be
     /// initialized, for the PHV allocation represented by the current transaction.
-    const ordered_map<AllocSlice, ordered_set<const IR::MAU::Action*>>& getMetaInitPoints() const {
+    const ordered_map<AllocSlice, ActionSet>& getMetaInitPoints() const {
         return meta_init_points_i;
     }
 
@@ -637,11 +627,8 @@ class Transaction : public Allocation {
 
     /// @returns the set of actions in which field @p f is initialized
     /// to enable live range shrinking.
-    const ordered_set<const IR::MAU::Action*> getInitPointsForField(const PHV::Field* f) const
-        override {
-        const auto parentInitPoints = parent_i->getInitPointsForField(f);
-        ordered_set<const IR::MAU::Action*> rs;
-        rs.insert(parentInitPoints.begin(), parentInitPoints.end());
+    ActionSet getInitPointsForField(const PHV::Field* f) const override {
+        ActionSet rs = parent_i->getInitPointsForField(f);
         for (auto kv : meta_init_points_i) {
             if (kv.first.field() != f) continue;
             rs.insert(kv.second.begin(), kv.second.end());
