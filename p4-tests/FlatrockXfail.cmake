@@ -69,6 +69,13 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/stf/lookahead1.p4
   extensions/p4_tests/p4_16/stf/p4c-3551.p4
   extensions/p4_tests/p4_16/stf/simple_l3_acl_disappearing_options.p4
+  extensions/p4_tests/p4_16/flatrock/pac_shallow_branch_select_multiple.p4
+  )
+
+# Tracked under P4C-4891
+p4c_add_xfail_reason("tofino5"
+  "Compiler Bug: Fields from different headers .* are not supported in the same container"
+  extensions/p4_tests/p4_16/flatrock/pac_extraction_different_fields_same_container.p4
   )
 
 p4c_add_xfail_reason("tofino5"
