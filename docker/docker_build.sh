@@ -17,6 +17,20 @@ fi
 if [[ "${UNIFIED_BUILD}" != true ]] ; then
     BOOTSTRAP_EXTRA_OPTS+=("--disable-unified")
 fi
+
+if [[ "${UBSAN}" == "true" ]] ; then
+    BOOTSTRAP_EXTRA_OPTS+=("--enable-ubsan")
+fi
+if [[ "${ASAN}" == "true" ]] ; then
+    BOOTSTRAP_EXTRA_OPTS+=("--enable-asan")
+fi
+if [[ "${UBSAN}" == "true" || "${ASAN}" == "true" ]] ; then
+    # These configurations might emit additional warnings,
+    # that we do not see in standard builds.
+    # Do not block builds by treating them as errors.
+    BOOTSTRAP_EXTRA_OPTS+=("--disable-werror")
+fi
+
 if [[ "${TOFINO_P414_TEST_ARCH_TNA}" == "true" ]] ; then
     BOOTSTRAP_EXTRA_OPTS+=("-DTOFINO_P414_TEST_ARCH=tna")
 fi

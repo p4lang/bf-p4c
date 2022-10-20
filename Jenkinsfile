@@ -14,7 +14,13 @@ properties([
      ]
      ])),
      parameters([
-        booleanParam(name: 'ALT_PHV', defaultValue: (boolean)(env.JOB_NAME =~ /alt-phv/), description: "Internal: use ALT PHV pass")
+        booleanParam( name: 'ALT_PHV',                    defaultValue: (boolean)(env.JOB_NAME =~ /alt-phv/),                                                                       description: "Internal: use ALT PHV pass"),
+        booleanParam( name: 'UBSAN',                      defaultValue: (boolean)(env.JOB_NAME =~ /sanitizers/),                                                                    description: 'Choose whether to use Undefined Behavior Sanitizer.', ),
+        booleanParam( name: 'ASAN',                       defaultValue: (boolean)(env.JOB_NAME =~ /sanitizers/),                                                                    description: 'Choose whether to use Address Sanitizer.', ),
+
+        string(       name: 'UBSAN_OPTIONS',              defaultValue: env.JOB_NAME =~ /sanitizers/ ? 'print_stacktrace=1' : '',                                                   description: 'Options to configure Undefined Behavior Sanitizer.', ),
+        string(       name: 'ASAN_OPTIONS',               defaultValue: env.JOB_NAME =~ /sanitizers/ ? 'print_stacktrace=1:halt_on_error=0:detect_leaks=0' : '',                    description: 'Options to configure Address Sanitizer.', ),
+
      ])
 ])
 
@@ -47,6 +53,8 @@ def runInDocker(Map namedArgs, String cmd) {
             -e CTEST_PARALLEL_LEVEL=${args.ctestParallelLevel} \
             -e CTEST_OUTPUT_ON_FAILURE='true' \
             -e P4C_DO_RUN_LOAD_MEASUREMENT='yes' \
+            -e UBSAN_OPTIONS=${params.UBSAN_OPTIONS} \
+            -e ASAN_OPTIONS=${params.ASAN_OPTIONS} \
             ${args.extraArgs} \
             ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag} \
             ${cmd}
@@ -57,6 +65,10 @@ def getBoostrapOpts() {
     if (params.ALT_PHV)
         return "-e BOOTSTRAP_EXTRA_OPTS=-DENABLE_ALT_PHV_ALLOC=ON"
     return ""
+}
+
+def sanitizersEnabled() {
+    return params.UBSAN || params.ASAN
 }
 
 def runInDocker(String cmd) {
@@ -102,8 +114,9 @@ node ('compiler-travis') {
                             ${DOCKER_REGISTRY}
                     """
                 }
-                kind = params.ALT_PHV ? "altphv_" : ""
-                image_tag_branch = "${kind}${env.BRANCH_NAME.toLowerCase()}"
+                kind = sanitizersEnabled() ? "sanitizers_" : params.ALT_PHV ? "altphv_" : ""
+                branch = env.BRANCH_NAME ? env.BRANCH_NAME : scm.branches[0].name
+                image_tag_branch = "${kind}${branch.toLowerCase()}"
                 image_tag = "${image_tag_branch}_${bf_p4c_compilers_rev}".replace('/', '--')
                 try {
                     // Try to pull any image of this branch first. The intermediate image build
@@ -165,6 +178,10 @@ node ('compiler-travis') {
                                     -v ~/.ccache_bf-p4c-compilers:/root/.ccache \
                                     -e UNIFIED_BUILD=true \
                                     -e MAKEFLAGS=j16 \
+                                    -e UBSAN=${params.UBSAN} \
+                                    -e ASAN=${params.ASAN} \
+                                    -e UBSAN_OPTIONS=${params.UBSAN_OPTIONS} \
+                                    -e ASAN_OPTIONS=${params.ASAN_OPTIONS} \
                                     ${extra_opts} \
                                     bf-p4c-compilers_intermediate_${image_tag} \
                                     /bfn/bf-p4c-compilers/docker/docker_build.sh
@@ -238,6 +255,9 @@ node ('compiler-travis') {
                             ctestParallelLevel: 8,
                             "ctest -R '^tofino/.*arista*' -L 'CUST_MUST_PASS'"
                         )
+
+                        if (sanitizersEnabled())
+                            return
 
                         echo 'Running switch-14 and switch-16 tests for METRICS'
                         sh "docker pull ${DOCKER_PROJECT}/compiler_metrics:stage"
@@ -531,6 +551,9 @@ node ('compiler-travis') {
                     // Ideally, keep this in sync with
                     // https://github.com/intel-restricted/networking.switching.barefoot.sandals/blob/master/jenkins/bf_sde_compilers_package.sh
                     'Packaging' : {
+                        if (sanitizersEnabled())
+                            return
+
                         sh """
                             mkdir -p ~/.ccache_bf-p4c-compilers
                             docker run \

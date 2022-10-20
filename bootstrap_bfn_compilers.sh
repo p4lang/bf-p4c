@@ -18,9 +18,11 @@ show_help () {
     echo >&2 "   --build-type <type>    DEBUG RELEASE or RelWithDebInfo"
     echo >&2 "   --p4c-cpp-flags <x>    add <x> to CPPFLAGS for p4c build"
     echo >&2 "   --enable-ubsan         build with undefined sanitizer"
+    echo >&2 "   --enable-asan          build with address sanitizer"
     echo >&2 "   --small-config         only builds: (1) the compiler, (2) testing EXCEPT for the gtest-based tests"
     echo >&2 "   --minimal-config       disable most build targets other than the compiler"
     echo >&2 "   --disable-unified      disable unified build"
+    echo >&2 "   --disable-werror       do not treat build warnings as errors"
     echo >&2 "   --cmake-gen <gen>      see 'cmake -h' for list of generators"
     echo >&2 "   --disable-preconfig    disable local pre-configured defaults even if they are present"
 }
@@ -31,9 +33,11 @@ builddir=${mydir}/build
 buildtype=DEBUG
 P4C_CPP_FLAGS=''
 enableUBSan=false
+enableASan=false
 smallConfig=false
 minimalConfig=false
 disableUnified=false
+disableWerror=false
 disablePreconfig=false
 preconfigPath=/bfn/bf-p4c-preconfig.cmake
 otherArgs=""
@@ -59,6 +63,9 @@ while [ $# -gt 0 ]; do
     --enable-ubsan)
         enableUBSan=true
         ;;
+    --enable-asan)
+        enableASan=true
+        ;;
     --small-config)
         smallConfig=true
         ;;
@@ -67,6 +74,9 @@ while [ $# -gt 0 ]; do
         ;;
     --disable-unified)
         disableUnified=true
+        ;;
+    --disable-werror)
+        disableWerror=true
         ;;
     --cmake-gen)
         cmakeGen="$2"
@@ -132,12 +142,21 @@ if $disableUnified ; then
     ENABLED_COMPONENTS+=" -DENABLE_UNIFIED_COMPILATION=OFF"
 fi
 
+if $disableWerror ; then
+    ENABLED_COMPONENTS+=" -DENABLE_WERROR=OFF"
+fi
+
 if [ "$disablePreconfig" = "false"  -a -r $preconfigPath ]; then
     otherArgs+=" -C$preconfigPath"
 fi
 
 if $enableUBSan ; then
     P4C_CPP_FLAGS+=" -fno-var-tracking-assignments -fsanitize=undefined"
+fi
+
+if $enableASan ; then
+    P4C_CPP_FLAGS+=" -fno-var-tracking-assignments -fsanitize=address -fsanitize-recover=address"
+    otherArgs+=" -DENABLE_GC=OFF"
 fi
 
 mkdir -p ${builddir}
