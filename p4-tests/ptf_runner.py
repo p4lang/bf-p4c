@@ -650,6 +650,23 @@ def main():
                         debug("Timing out!")
                         return
 
+    # Waits for a port to be free.
+    # Useful for processes like switchd which are shut down by a test driver and started again
+    # in quick succession by subsequent tests. The OS may take some time before freeing a TCP port,
+    # calling this function may prevent "address in use" errors in such scenarios.
+    def wait_for_port_free(port, timeout=60):
+        begin_wait = time.time()
+        while time.time() < begin_wait + timeout:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                s.bind(('', port))
+                s.close()
+                return
+            except OSError:
+                time.sleep(1)
+                continue
+        warn(f"Port {port} still in use!")
+
     def model_log_to_err():
         with open(model_log_path) as f:
             error("model log:\n----------\n{}\n----------\n".format(f.read()))
@@ -693,9 +710,15 @@ def main():
     # tests to speed-up testing
     processes = {}
     def run():
+        switchd_status_port = 7777
+        switchd_bfrt_grpc_port = 50052 # default
 
         # Ensure that there are no instances of tofino-model or bf_switchd running
         run_setup()
+
+        # Make sure switchd's ports are free
+        wait_for_port_free(switchd_status_port)
+        wait_for_port_free(switchd_bfrt_grpc_port)
 
         disable_model_logging = True
         if args.enable_model_logging:
@@ -717,7 +740,6 @@ def main():
                                   disable_logging=disable_model_logging)
             processes["model"] = model_p
 
-            switchd_status_port = 7777
             pi_choice = args.pdtest
             if args.bfrt_test:
                 pi_choice = args.bfrt_test
