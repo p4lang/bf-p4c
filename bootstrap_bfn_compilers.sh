@@ -37,6 +37,7 @@ disableUnified=false
 disablePreconfig=false
 preconfigPath=/bfn/bf-p4c-preconfig.cmake
 otherArgs=""
+cmakeGen="Unix Makefiles"
 
 while [ $# -gt 0 ]; do
     case $1 in
@@ -147,7 +148,7 @@ pushd ${builddir}
 # CMakeLists has changed but there is no intention to change configuration.
 
 cmake ${mydir} -DCMAKE_BUILD_TYPE=${buildtype}\
-      ${cmakeGen:+"-G${cmakeGen}"} \
+      -G "${cmakeGen}" \
       ${ENABLED_COMPONENTS} \
       -DP4C_DRIVER_NAME='bf-p4c' \
       -DENABLE_GMP=OFF \
