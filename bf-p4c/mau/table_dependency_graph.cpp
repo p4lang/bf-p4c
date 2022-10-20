@@ -2459,7 +2459,7 @@ char PrintDependencyGraph::encode_dependencies(
     }
     if (bitvec_to_char.count(deps) == 0) {
         char c = 'A' + bitvec_to_char.size();
-        if (bitvec_to_char.size() > 26) {
+        if (bitvec_to_char.size() >= 26) {
             c = 'a' + bitvec_to_char.size() - 26;
         }
         bitvec_to_char.emplace(deps, c);
@@ -2481,8 +2481,9 @@ std::string PrintDependencyGraph::print_dependencies(bitvec deps) {
     return str.str();
 }
 
-void PrintDependencyGraph::end_apply(const IR::Node *) {
-    // sort vertices by stage and logical_id
+std::stringstream PrintDependencyGraph::print_graph(const DependencyGraph& dg) {
+    std::stringstream ss;
+    // sort vertices by gress, stage, logical_id
     std::vector<DependencyGraph::Graph::vertex_descriptor> vertices;
     DependencyGraph::Graph::vertex_iterator vertices_it, vertices_end;
     for (boost::tie(vertices_it, vertices_end) = boost::vertices(dg.g);
@@ -2492,6 +2493,8 @@ void PrintDependencyGraph::end_apply(const IR::Node *) {
     std::sort(vertices.begin(), vertices.end(), [&](auto a, auto b) {
         auto a_vertex = dg.get_vertex(a);
         auto b_vertex = dg.get_vertex(b);
+        if (a_vertex->thread() != b_vertex->thread())
+            return a_vertex->thread() < b_vertex->thread();
         if (a_vertex->stage() != b_vertex->stage())
             return a_vertex->stage() < b_vertex->stage();
         return a_vertex->logical_id < b_vertex->logical_id;
@@ -2499,50 +2502,48 @@ void PrintDependencyGraph::end_apply(const IR::Node *) {
 
     // print vertices matrix and encode dependencies with ASCII chars.
     int row_stage_separator = 0;
-    LOG_FEATURE("table_dependency_summary", 3, "#pipeline " << pipe_name);
-    LOG_FEATURE("table_dependency_summary", 3, "#stage " << row_stage_separator);
+    ss << "#pipeline " << pipe_name << std::endl;
+    ss << "#stage " << row_stage_separator << std::endl;
     for (auto& src_v : vertices) {
         if (row_stage_separator != dg.get_vertex(src_v)->stage()) {
             row_stage_separator = dg.get_vertex(src_v)->stage();
-            LOG_FEATURE("table_dependency_summary", 3, "#stage " << row_stage_separator);
+            ss << "#stage " << row_stage_separator << std::endl;
         }
-        std::stringstream str;
         int column_stage_separator = 0;
         for (auto& dst_v : vertices) {
             // print a space to indicate a new stage
             if (column_stage_separator != dg.get_vertex(dst_v)->stage()) {
-                str << " ";
+                ss << " ";
                 column_stage_separator = dg.get_vertex(dst_v)->stage();
             }
             // if there is not edge between src_v and dst_v, print '-'
             if (src_v == dst_v) {  // print '^' on diagonal
-                str << "^";
+                ss << "^";
             } else if (!boost::edge(dst_v, src_v, dg.g).second) {
-                str << "-";
+                ss << "-";
             } else {
                 // encode dependencies between src_v and dst_v
                 // note that we would like to print the dependencies in the
                 // lower-left of the matrix, hence the inverted order of src_v
                 // and dst_v
                 auto deps = encode_dependencies(dst_v, src_v);
-                str << deps;
+                ss << deps;
             }
         }
         auto t= dg.get_vertex(src_v);
-        str << " " << std::setw(10) << vertex_names.at(src_v) << "("
+        ss << " " << vertex_names.at(src_v) << "("
             << dg.min_stage(t) << ","
             << dg.max_stage(t) << ")";
-
-        LOG_FEATURE("table_dependency_summary", 3, str);
-
-        for (auto e : boost::make_iterator_range(boost::out_edges(src_v, dg.g))) {
-            auto src = boost::source(e, dg.g);
-            auto dst = boost::target(e, dg.g);
-            LOG_FEATURE("table_dependency_summary", 6,
-                "  edge[" << vertex_names.at(src) << " -> " << vertex_names.at(dst) << "] = "
-                << edge_names.at(e) << " : " << dep_types(dg.g[e]));
-        }
+        ss << std::endl;
     }
+
+    return ss;
+}
+
+void PrintDependencyGraph::end_apply(const IR::Node *) {
+    std::stringstream ss;
+    ss = print_graph(dg);
+    LOG_FEATURE("table_dependency_summary", 3, ss);
 
     // print dependencies encoded with ASCII chars
     LOG_FEATURE("table_dependency_summary", 3, "#dependencies");

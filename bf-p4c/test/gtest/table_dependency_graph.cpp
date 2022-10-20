@@ -4,6 +4,7 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/optional.hpp>
 
+#include "bf-p4c/test/gtest/bf_gtest_helpers.h"
 #include "gtest/gtest.h"
 
 #include "bf-p4c/common/field_defuse.h"
@@ -113,6 +114,18 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe, PhvInfo& phv, Fiel
         &defuse,
     };
     return pipe->apply(quick_backend);
+}
+
+void check_dependency_graph_summary(boost::optional<TofinoPipeTestCase>& test,
+                                    const DependencyGraph& dg, Match::CheckList& expected) {
+    auto *print_dg = new PrintDependencyGraph(dg);
+    test->pipe->apply(*print_dg);
+    std::stringstream ss;
+    ss = print_dg->print_graph(dg);
+    auto res = Match::match(expected, ss.str());
+    EXPECT_TRUE(res.success) << "    @ expected[" << res.count<< "], char pos=" << res.pos << "\n" \
+                             << "       " << expected[res.count] << "\n"
+                             << "found: " << ss.str().substr(res.pos) << "\n";
 }
 
 }  // namespace
@@ -230,6 +243,18 @@ TEST_F(TableDependencyGraphTest, GraphInjectedControl) {
         }
     }
     EXPECT_EQ(num_checks, NUM_CHECKS_EXPECTED);
+
+    Match::CheckList expected = {
+    "#pipeline pipe\n",
+    "#stage 0\n",
+    "#stage -1\n",
+    " ^---- t1_0(0,11)\n",
+    " A^--A t4_0(0,11)\n",
+    " B-^-- cond-`(\\d+)`(0,11)\n",
+    " --C^- t2_0(0,11)\n",
+    " --CD^ t3_0(0,11)\n",
+    };
+    check_dependency_graph_summary(test, dg, expected);
 }
 
 TEST_F(TableDependencyGraphTest, GraphEdgeAnnotations) {
@@ -429,6 +454,17 @@ TEST_F(TableDependencyGraphTest, GraphEdgeAnnotations) {
             EXPECT_EQ(true, false);
         }
     }
+
+    Match::CheckList expected = {
+    "#pipeline pipe\n",
+    "#stage 0\n",
+    "#stage -1\n",
+    " ^--- t11_0(0,10)\n",
+    " A^-- t12_0(1,11)\n",
+    " B-^- t1_0(0,11)\n",
+    " --B^ t2_0(0,11)\n",
+    };
+    check_dependency_graph_summary(test, dg, expected);
 }
 
 
@@ -659,6 +695,25 @@ TEST_F(TableDependencyGraphTest, GraphLayeredControl) {
     EXPECT_EQ(dg.dependence_tail_size(t10), 0);
     EXPECT_EQ(dg.dependence_tail_size(t11), 1);
     EXPECT_EQ(dg.dependence_tail_size(t12), 0);
+
+    Match::CheckList expected = {
+    "#pipeline pipe\n",
+    "#stage 0\n",
+    "#stage -1\n",
+    " ^----------- t11_0(0,7)\n",
+    " A^---------- t12_0(1,11)\n",
+    " B-^--------- t1_0(0,7)\n",
+    " --B^-------- t2_0(0,7)\n",
+    " ----^------- t3_0(0,11)\n",
+    " -----^------ t4_0(0,11)\n",
+    " ------^----- t5_0(0,11)\n",
+    " -------^---- t6_0(0,11)\n",
+    " ---C----^--- t7_0(1,8)\n",
+    " ---D----D^-- t8_0(2,9)\n",
+    " ---D----DE^- t9_0(3,10)\n",
+    " ---D----DEE^ t10_0(4,11)\n",
+    };
+    check_dependency_graph_summary(test, dg, expected);
 }
 
 /*
@@ -837,6 +892,27 @@ TEST_F(TableDependencyGraphTest, GraphMinStage) {
     EXPECT_EQ(dg.stage_info[beta].min_stage, 1);
     EXPECT_EQ(dg.stage_info[gamma].min_stage, 2);
     EXPECT_EQ(dg.stage_info[t2].min_stage, 1);
+
+    Match::CheckList expected = {
+    "#pipeline pipe\n",
+    "#stage 0\n",
+    "#stage -1\n",
+    " ^------------- A_0(0,8)\n",
+    " A^------------ B_0(0,8)\n",
+    " -A^----------- X_0(0,9)\n",
+    " -B-^---------- Y_0(0,9)\n",
+    " B---^--------- C_0(0,11)\n",
+    " ----A^-------- X2_0(0,11)\n",
+    " ----B-^------- Y2_0(0,11)\n",
+    " -------^----C- beta_0(1,10)\n",
+    " -------A^----- t2_0(1,11)\n",
+    " -DEE-----^---- Z1_0(1,9)\n",
+    " -DEE-----C^--- Z2_0(2,10)\n",
+    " -DEE-----CC^-- Z3_0(3,11)\n",
+    " ------------^- alpha_0(0,9)\n",
+    " -------FE---C^ gamma_0(2,11)\n",
+    };
+    check_dependency_graph_summary(test, dg, expected);
 }
 
 
@@ -928,6 +1004,17 @@ TEST_F(TableDependencyGraphTest, AntiGraph1) {
     EXPECT_EQ(dg.min_stage(b), 1);
     EXPECT_EQ(dg.min_stage(c), 1);
     EXPECT_EQ(dg.min_stage(d), 1);
+
+    Match::CheckList expected = {
+        "#pipeline pipe\n",
+        "#stage 0\n",
+        "#stage -1\n",
+        " ^--A node_c_0(1,11)\n",
+        " B^-C node_d_0(1,11)\n",
+        " --^- node_a_0(0,10)\n",
+        " --D^ node_b_0(1,11)\n",
+    };
+    check_dependency_graph_summary(test, dg, expected);
 }
 
 /**
@@ -1020,6 +1107,17 @@ TEST_F(TableDependencyGraphTest, DomFrontier1) {
     EXPECT_EQ(dg.min_stage(c), 1);
     EXPECT_EQ(dg.min_stage(d), 2);
     EXPECT_EQ(dg.stage_info.at(c).dep_stages_dom_frontier, 1);
+
+    Match::CheckList expected = {
+        "#pipeline pipe\n",
+        "#stage 0\n",
+        "#stage -1\n",
+        " ^--A node_c_0(1,10)\n",
+        " B^-C node_d_0(2,11)\n",
+        " --^- node_a_0(0,9)\n",
+        " --D^ node_b_0(1,10)\n",
+    };
+    check_dependency_graph_summary(test, dg, expected);
 }
 
 /**
@@ -1028,7 +1126,7 @@ TEST_F(TableDependencyGraphTest, DomFrontier1) {
  *     A ---------------------
  *     | Data      |          |
  *     | Control   | Control  | Control
- *     |           |          | 
+ *     |           |          |
  *     V   Anti    V   Data   V
  *     B --------> C -------> D
  *
@@ -1112,6 +1210,17 @@ TEST_F(TableDependencyGraphTest, DomFrontier2) {
     EXPECT_EQ(dg.min_stage(c), 1);
     EXPECT_EQ(dg.min_stage(d), 2);
     EXPECT_EQ(dg.stage_info.at(a).dep_stages_dom_frontier, 2);
+
+    Match::CheckList expected = {
+    "#pipeline pipe\n",
+    "#stage 0\n",
+    "#stage -1\n",
+    " ^--- node_a_0(0,9)\n",
+    " A^-- node_b_0(1,10)\n",
+    " BC^- node_c_0(1,10)\n",
+    " B-D^ node_d_0(2,11)\n",
+    };
+    check_dependency_graph_summary(test, dg, expected);
 }
 
 /**
@@ -1201,6 +1310,17 @@ TEST_F(TableDependencyGraphTest, AntiGraph2) {
     EXPECT_EQ(dg.dependence_tail_size_control_anti(b), 1);
     EXPECT_EQ(dg.dependence_tail_size_control_anti(c), 0);
     EXPECT_EQ(dg.dependence_tail_size_control_anti(d), 0);
+
+    Match::CheckList expected = {
+    "#pipeline pipe\n",
+    "#stage 0\n",
+    "#stage -1\n",
+    " ^--- node_a_0(0,10)\n",
+    " A^-- node_b_0(0,10)\n",
+    " --^- node_c_0(0,11)\n",
+    " -BA^ node_d_0(1,11)\n",
+    };
+    check_dependency_graph_summary(test, dg, expected);
 }
 
 /**
@@ -1299,6 +1419,17 @@ TEST_F(TableDependencyGraphTest, LogicalThruControl) {
     EXPECT_EQ(dg.dependence_tail_size_control_anti(b), 1);
     EXPECT_EQ(dg.dependence_tail_size_control_anti(c), 1);
     EXPECT_EQ(dg.dependence_tail_size_control_anti(d), 0);
+
+    Match::CheckList expected = {
+    "#pipeline pipe\n",
+    "#stage 0\n",
+    "#stage -1\n",
+    " ^--- node_a_0(0,9)\n",
+    " A^-- node_b_0(1,10)\n",
+    " BC^- node_c_0(1,10)\n",
+    " --D^ node_d_0(2,11)\n",
+    };
+    check_dependency_graph_summary(test, dg, expected);
 }
 
 /**
@@ -1395,6 +1526,17 @@ TEST_F(TableDependencyGraphTest, LogicalThruControl2) {
     EXPECT_EQ(dg.dependence_tail_size_control_anti(b), 1);
     EXPECT_EQ(dg.dependence_tail_size_control_anti(c), 0);
     EXPECT_EQ(dg.dependence_tail_size_control_anti(d), 0);
+
+    Match::CheckList expected = {
+    "#pipeline pipe\n",
+    "#stage 0\n",
+    "#stage -1\n",
+    " ^--- node_a_0(0,9)\n",
+    " A^-- node_b_0(1,10)\n",
+    " -B^- node_c_0(1,11)\n",
+    " -CD^ node_d_0(2,11)\n",
+    };
+    check_dependency_graph_summary(test, dg, expected);
 }
 
 /**
@@ -1523,6 +1665,18 @@ TEST_F(TableDependencyGraphTest, GraphA) {
     EXPECT_EQ(dg.happens_phys_before(e, b), false);
     EXPECT_EQ(dg.happens_phys_before(e, c), false);
     EXPECT_EQ(dg.happens_phys_before(e, e), false);
+
+    Match::CheckList expected = {
+        "#pipeline pipe\n",
+        "#stage 0\n",
+        "#stage -1\n",
+        " ^---- node_a_0(0,8)\n",
+        " A^--- node_b_0(1,9)\n",
+        " BC^-- node_c_0(2,10)\n",
+        " BCD^- node_d_0(3,11)\n",
+        " BC--^ node_e_0(2,11)\n",
+    };
+    check_dependency_graph_summary(test, dg, expected);
 }
 
 TEST_F(TableDependencyGraphTest, HitMissValidation) {
@@ -1590,6 +1744,16 @@ TEST_F(TableDependencyGraphTest, HitMissValidation) {
     EXPECT_EQ(dg.min_stage(a), 0);
     EXPECT_EQ(dg.min_stage(b), 1);
     EXPECT_EQ(dg.min_stage(c), 0);
+
+    Match::CheckList expected = {
+    "#pipeline pipe\n",
+    "#stage 0\n",
+    "#stage -1\n",
+    " ^-- node_a_0(0,10)\n",
+    " A^- node_b_0(1,11)\n",
+    " B-^ node_c_0(0,11)\n",
+    };
+    check_dependency_graph_summary(test, dg, expected);
 }
 
 
@@ -1665,6 +1829,17 @@ TEST_F(TableDependencyGraphTest, ExitTest) {
     EXPECT_EQ(dg.min_stage(b), 0);
     EXPECT_EQ(dg.min_stage(c), 1);
     EXPECT_EQ(dg.min_stage(d), 0);
+
+    Match::CheckList expected = {
+    "#pipeline pipe\n",
+    "#stage 0\n",
+    "#stage -1\n",
+    " ^--- node_a_0(0,10)\n",
+    " A^-- node_b_0(0,11)\n",
+    " BA^- node_c_0(1,11)\n",
+    " AA-^ node_d_0(0,11)\n",
+    };
+    check_dependency_graph_summary(test, dg, expected);
 }
 
 TEST_F(TableDependencyGraphTest, LogicalVsPhysicalTest) {
@@ -1805,6 +1980,21 @@ TEST_F(TableDependencyGraphTest, LogicalVsPhysicalTest) {
             EXPECT_TRUE(hlam[(*it).first].count(d));
         }
     }
+
+    Match::CheckList expected = {
+    "#pipeline pipe\n",
+    "#stage 0\n",
+    "#stage -1\n",
+    " ^------- node_a_0(0,7)\n",
+    " A^------ node_b_0(1,8)\n",
+    " BC^----- node_c_0(1,8)\n",
+    " D--^---- node_d_0(0,8)\n",
+    " EFGF^--- node_e_0(2,9)\n",
+    " ----B^-- node_f_0(3,10)\n",
+    " HIH-ID^- node_g_0(3,10)\n",
+    " JCFKI-F^ node_h_0(4,11)\n",
+    };
+    check_dependency_graph_summary(test, dg, expected);
 }
 
 /**
@@ -2079,6 +2269,17 @@ TEST_F(TableDependencyGraphTest, ExitGraph1) {
     EXPECT_EQ(dg.dependence_tail_size_control_anti(b), 1);
     EXPECT_EQ(dg.dependence_tail_size_control_anti(c), 1);
     EXPECT_EQ(dg.dependence_tail_size_control_anti(d), 0);
+
+    Match::CheckList expected = {
+        "#pipeline pipe\n",
+        "#stage 0\n",
+        "#stage -1\n",
+        " ^--- node_a_0(0,10)\n",
+        " A^-- node_b_0(0,10)\n",
+        " -A^- node_c_0(0,10)\n",
+        " -AB^ node_d_0(1,11)\n",
+    };
+    check_dependency_graph_summary(test, dg, expected);
 }
 
 /**
@@ -2162,6 +2363,17 @@ TEST_F(TableDependencyGraphTest, ExitGraph2) {
     EXPECT_EQ(dg.dependence_tail_size_control_anti(b), 1);
     EXPECT_EQ(dg.dependence_tail_size_control_anti(c), 1);
     EXPECT_EQ(dg.dependence_tail_size_control_anti(d), 0);
+
+    Match::CheckList expected = {
+        "#pipeline pipe\n",
+        "#stage 0\n",
+        "#stage -1\n",
+        " ^--- node_a_0(0,10)\n",
+        " A^-- node_b_0(0,10)\n",
+        " -B^- node_c_0(0,10)\n",
+        " --C^ node_d_0(1,11)\n",
+    };
+    check_dependency_graph_summary(test, dg, expected);
 }
 
 /**
@@ -2257,6 +2469,18 @@ TEST_F(TableDependencyGraphTest, ExitGraph3) {
     EXPECT_EQ(dg.dependence_tail_size_control_anti(c), 1);
     EXPECT_EQ(dg.dependence_tail_size_control_anti(d), 0);
     EXPECT_EQ(dg.dependence_tail_size_control_anti(e), 0);
+
+    Match::CheckList expected = {
+        "#pipeline pipe\n",
+        "#stage 0\n",
+        "#stage -1\n",
+        " ^---- node_a_0(0,10)\n",
+        " A^--- node_b_0(0,10)\n",
+        " -B^-- node_c_0(0,10)\n",
+        " --A^- node_d_0(0,11)\n",
+        " --CB^ node_e_0(1,11)\n",
+    };
+    check_dependency_graph_summary(test, dg, expected);
 }
 
 /**
@@ -2341,6 +2565,17 @@ TEST_F(TableDependencyGraphTest, ExitGraph4) {
     EXPECT_EQ(dg.dependence_tail_size_control_anti(b), 1);
     EXPECT_EQ(dg.dependence_tail_size_control_anti(c), 1);
     EXPECT_EQ(dg.dependence_tail_size_control_anti(d), 0);
+
+    Match::CheckList expected = {
+    "#pipeline pipe\n",
+    "#stage 0\n",
+    "#stage -1\n",
+    " ^--- node_a_0(0,10)\n",
+    " A^-- node_b_0(0,10)\n",
+    " -B^- node_c_0(0,10)\n",
+    " -BC^ node_d_0(1,11)\n",
+    };
+    check_dependency_graph_summary(test, dg, expected);
 }
 
 /**
@@ -2461,6 +2696,20 @@ TEST_F(TableDependencyGraphTest, ExitGraph5) {
     EXPECT_EQ(dg.dependence_tail_size_control_anti(e), 1);
     EXPECT_EQ(dg.dependence_tail_size_control_anti(f), 1);
     EXPECT_EQ(dg.dependence_tail_size_control_anti(g), 0);
+
+    Match::CheckList expected = {
+    "#pipeline pipe\n",
+    "#stage 0\n",
+    "#stage -1\n",
+    " ^---A-- node_b_0(0,10)\n",
+    " B^----- node_c_0(0,10)\n",
+    " B-^---- node_d_0(0,10)\n",
+    " B--^--- node_e_0(0,10)\n",
+    " ----^-- node_a_0(0,10)\n",
+    " -AAA-^- node_f_0(0,10)\n",
+    " -AAA-C^ node_g_0(1,11)\n",
+    };
+    check_dependency_graph_summary(test, dg, expected);
 }
 
 
@@ -2485,7 +2734,7 @@ TEST_F(TableDependencyGraphTestForTofino2, Tofino2GraphTest) {
                     size = 512;
                 }
 
-                action noop() {} 
+                action noop() {}
                 action setf2(bit<8> v) { headers.h1.f2 = v; }
                 action setf3(bit<8> v) { headers.h1.f3 = v; }
                 action setf4(bit<8> v) { headers.h1.f4 = v; }
@@ -2584,10 +2833,25 @@ TEST_F(TableDependencyGraphTestForTofino2, Tofino2GraphTest) {
     EXPECT_TRUE(dg.happens_logi_before(multi, e));
     EXPECT_TRUE(dg.happens_phys_before(b, e));
     EXPECT_FALSE(dg.happens_phys_before(b, g));
+
+    Match::CheckList expected = {
+    "#pipeline pipe\n",
+    "#stage 0\n",
+    "#stage -1\n",
+    " ^------- node_a_0(0,17)\n",
+    " A^------ node_b_0(0,17)\n",
+    " AB^-C--- multi_0(1,18)\n",
+    " A-B^---- node_c_0(2,19)\n",
+    " A---^--- node_d_0(0,18)\n",
+    " A-C--^-- node_e_0(1,19)\n",
+    " A-----^- node_f_0(0,19)\n",
+    " A------^ node_g_0(0,19)\n",
+    };
+    check_dependency_graph_summary(test, dg, expected);
 }
 
 /**
- * The goal of any PredicationBasedEdges tests was to test the PredicationBasedControlEdges 
+ * The goal of any PredicationBasedEdges tests was to test the PredicationBasedControlEdges
  * pass in order to guarantee that the dependencies necessary for Tofino1 are captured.
  * These dependencies are explained in the comments in that pass.
  */
@@ -3101,6 +3365,19 @@ TEST_F(TableDependencyGraphTest, P4C_2716_Test1) {
     EXPECT_TRUE(dg.happens_logi_after(f, c));
     EXPECT_TRUE(dg.happens_logi_after(f, d));
     EXPECT_TRUE(dg.happens_logi_after(f, e));
+
+    Match::CheckList expected = {
+        "#pipeline pipe\n",
+        "#stage 0\n",
+        "#stage -1\n",
+        " ^----- node_a_0(0,11)\n",
+        " A^---- node_b_0(0,11)\n",
+        " AB^CCD node_f_0(0,11)\n",
+        " -E-^-- node_c_0(0,11)\n",
+        " -E--^- node_d_0(0,11)\n",
+        " A----^ node_e_0(0,11)\n",
+    };
+    check_dependency_graph_summary(test, dg, expected);
 }
 
 }  // namespace Test

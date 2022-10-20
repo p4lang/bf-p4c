@@ -1067,6 +1067,7 @@ class PrintDependencyGraph : public Inspector {
 
  public:
     explicit PrintDependencyGraph(const DependencyGraph &out) : dg(out) {}
+    std::stringstream print_graph(const DependencyGraph& g);
 };
 
 // Print a summary of the dependency graph in ascii
