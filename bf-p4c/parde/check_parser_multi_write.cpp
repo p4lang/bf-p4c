@@ -363,18 +363,21 @@ struct InferWriteMode : public ParserTransform {
             state_to_extracts[s].insert(e);
         }
 
-        for (auto& kv : state_to_extracts) {
+        for (auto& [state, extracts] : state_to_extracts) {
             // If more than one writes exist, the last write wins.
-            // Mark all other writes as dead to be elim'd later.
-
-            if (kv.second.size() > 1) {
-                ordered_set<const IR::BFN::Extract*>::size_type i = 0;
-                for (auto e : kv.second) {
-                    if (i == kv.second.size() - 1)
-                        break;
-                    dead_extracts.insert(e);
-                    i++;
-                }
+            // Mark all other overlapping writes as dead to be elim'd later.
+            auto it = extracts.rbegin();
+            auto last = it++;
+            le_bitrange last_bitrange;
+            BUG_CHECK(phv.field((*last)->dest->field, &last_bitrange) != nullptr,
+                "No PHV field for the extract");
+            while (it != extracts.rend()) {
+                le_bitrange it_bitrange;
+                BUG_CHECK(phv.field((*it)->dest->field, &it_bitrange) != nullptr,
+                    "No PHV field for extract");
+                if (last_bitrange.contains(it_bitrange))
+                    dead_extracts.insert(*it);
+                it++;
             }
         }
     }

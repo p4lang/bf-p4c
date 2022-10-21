@@ -1,0 +1,4 @@
+#         f1           f2           h1     b1  b2
+packet 0  11 22 33 44  aa bb cc dd  a1 a2  b1  b2  12 34 56 78
+#         f1           f2           h1     b1  b2
+expect 0  11 22 33 44  11 22 33 44  a1 a2  b1  b2  12 34 56 78
