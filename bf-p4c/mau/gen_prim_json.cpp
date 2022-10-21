@@ -338,7 +338,7 @@ void GeneratePrimitiveInfo::gen_action_json(const IR::MAU::Table *tbl,
                 if (auto phv_field = phv.field(dst, &bits)) {
                     add_op_json(_primitive, "dst", "phv", canon_name(phv_field->externalName()));
                     add_op_json(_primitive, "dst_mask", "immediate",
-                            std::to_string((1U << bits.size()) - 1));
+                            std::to_string((1ULL << bits.size()) - 1));
                 }
 
                 if (inst->name == "conditionally-set") {

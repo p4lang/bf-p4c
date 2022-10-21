@@ -1,3 +1,5 @@
+#include <string_view>
+
 #include "action_bus.h"
 #include "input_xbar.h"
 #include "stage.h"
@@ -171,7 +173,7 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) const {
     // FIXME: Support multiple hash_dist's
     int size = hash_dist.empty() ? 1 : 1 + hash_dist[0].mask;
     json::map &tbl = *base_tbl_cfg(out, "match_entry", size);
-    const char *stage_tbl_type = "match_with_no_key";
+    std::string_view stage_tbl_type = "match_with_no_key";
     size = 1;
     if (p4_table && p4_table->p4_stage_table_type() == "gateway_with_entries") {
         stage_tbl_type = "gateway_with_entries";
@@ -182,10 +184,10 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) const {
     }
     json::map &match_attributes = tbl["match_attributes"];
     json::vector &stage_tables = match_attributes["stage_tables"];
-    json::map &stage_tbl = *add_stage_tbl_cfg(match_attributes, stage_tbl_type, size);
+    json::map &stage_tbl = *add_stage_tbl_cfg(match_attributes, stage_tbl_type.data(), size);
     stage_tbl["memory_resource_allocation"] = nullptr;
     if (!match_attributes.count("match_type"))
-        match_attributes["match_type"] = stage_tbl_type;
+        match_attributes["match_type"] = stage_tbl_type.data();
     // This is a only a glass required field, as it is only required when no default action
     // is specified, which is impossible for Brig through p4-16
     stage_tbl["default_next_table"] = Stage::end_of_pipe();

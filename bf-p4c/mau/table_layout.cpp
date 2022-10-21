@@ -576,7 +576,8 @@ class GatewayLayout : public MauInspector {
 void DoTableLayout::setup_gateway_layout(IR::MAU::Table::Layout &layout,
                                          const IR::MAU::Table *tbl) {
     for (auto &gw : tbl->gateway_rows)
-        gw.first->apply(GatewayLayout(layout));
+        if (gw.first)
+            gw.first->apply(GatewayLayout(layout));
     // should count gw tcam width and depth to support gw splitting when needed
 }
 

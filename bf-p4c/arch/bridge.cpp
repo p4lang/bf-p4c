@@ -247,7 +247,7 @@ BridgedPacking::BridgedPacking(BFN_Options& options, RepackedHeaderTypes& map,
         new P4::ClearTypeMap(&typeMap),
         typeChecking,
         new BFN::ConvertSizeOfToConstant(),
-        PassRepeated({
+        new PassRepeated({
             new P4::ConstantFolding(&refMap, &typeMap, true, typeChecking),
             new P4::StrengthReduction(&refMap, &typeMap, typeChecking),
             new P4::Reassociation(),
@@ -280,7 +280,7 @@ SubstitutePackedHeaders::SubstitutePackedHeaders(BFN_Options& options,
         new P4::ClearTypeMap(&typeMap),
         typeChecking,
         new BFN::ConvertSizeOfToConstant(),
-        PassRepeated({
+        new PassRepeated({
             new P4::ConstantFolding(&refMap, &typeMap, true, typeChecking),
             new P4::StrengthReduction(&refMap, &typeMap, typeChecking),
             new P4::Reassociation(),
