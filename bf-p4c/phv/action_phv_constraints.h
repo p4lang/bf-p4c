@@ -237,7 +237,8 @@ class ActionPhvConstraints : public Inspector {
         /// ([write_lo, write_hi], [read_lo, read_hi]) slices used while setting those destinations.
         ordered_map<const PHV::Field*,
             ordered_map<le_bitrange,
-                ordered_set<std::pair<std::pair<int, int>, std::pair<int, int>>>>> statefulWrites;
+                ordered_map<const IR::MAU::Action*,
+                            ordered_set<std::pair<int, int>>>>> statefulWrites;
 
         /// Used to generate unique action IDs when creating `struct OperandInfo` objects
         static int current_action;
@@ -252,7 +253,8 @@ class ActionPhvConstraints : public Inspector {
         /// Add constraints induced by @p act.
         void add_action(
             const IR::MAU::Action *act,
-            const ActionAnalysis::FieldActionsMap field_actions_map);
+            const ActionAnalysis::FieldActionsMap field_actions_map,
+            const IR::MAU::Table *tbl);
 
         /// @returns true if @p field is written in @p act only using a PHV source.
         /// If an action data or constant source is used, then @returns false.
@@ -372,7 +374,7 @@ class ActionPhvConstraints : public Inspector {
         /** @returns the stateful destinations map.
           */
         const ordered_map<const PHV::Field*, ordered_map<le_bitrange,
-              ordered_set<std::pair<std::pair<int, int>, std::pair<int, int>>>>>&
+              ordered_map<const IR::MAU::Action*, ordered_set<std::pair<int, int>>>>>&
                   getStatefulWrites() const {
             return statefulWrites;
         }

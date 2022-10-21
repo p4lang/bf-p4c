@@ -108,7 +108,7 @@ bool ActionPhvConstraints::preorder(const IR::MAU::Action *act) {
     ActionAnalysis::FieldActionsMap field_actions_map;
     aa.set_field_actions_map(&field_actions_map);
     act->apply(aa);
-    constraint_tracker.add_action(act, field_actions_map);
+    constraint_tracker.add_action(act, field_actions_map, tbl);
     prelim_constraints_ok &= early_check_ok(act);
     return true;
 }
@@ -132,8 +132,9 @@ void ActionPhvConstraints::ConstraintTracker::clear() {
 
 void ActionPhvConstraints::ConstraintTracker::add_action(
         const IR::MAU::Action *act,
-        const ActionAnalysis::FieldActionsMap field_actions_map) {
-    LOG5("Action PHV Constraints: Analyzing " << act);
+        const ActionAnalysis::FieldActionsMap field_actions_map,
+        const IR::MAU::Table *tbl) {
+    LOG5("Action PHV Constraints: Analyzing " << act << " in table " << tbl->name);
     for (auto &field_action : Values(field_actions_map)) {
         le_bitrange write_range;
         auto *write_field = phv.field(field_action.write.expr, &write_range);
@@ -223,14 +224,11 @@ void ActionPhvConstraints::ConstraintTracker::add_action(
                         lo = 0;
                         hi = read.size() - 1;
                     }
-                    std::pair<int, int> write_range_pair = std::make_pair(write_range.lo,
-                            write_range.hi);
                     std::pair<int, int> read_range_pair = std::make_pair(lo, hi);
-                    statefulWrites[write_field][write_range].insert(
-                            std::make_pair(write_range_pair, read_range_pair));
+                    statefulWrites[write_field][write_range][act].insert(read_range_pair);
                     LOG5("\t  ...adding stateful read range [" << lo << ", " << hi << "] and "
-                         "write range [" << write_range_pair.first << ", " <<
-                         write_range_pair.second << "]");
+                         "write range [" << write_range.lo << ", " <<
+                         write_range.hi << "] for action " << act << " in table " << tbl->name);
                 }
             }
 
@@ -1572,57 +1570,63 @@ bool ActionPhvConstraints::stateful_destinations_constraints_violated(
     size_t size = static_cast<size_t>(container_state.begin()->container().size());
     LOG6("\t\t\tContainer size: " << size);
     const auto& statefulWrites = constraint_tracker.getStatefulWrites();
-    ordered_map<const PHV::Field*, ordered_map<le_bitrange, int>> field_to_rot;
+    ordered_map<const PHV::Field*,
+                ordered_map<le_bitrange, ordered_map<const IR::MAU::Action*, int>>> fslice_to_rot;
     for (const auto& slice : container_state) {
         if (!statefulWrites.count(slice.field())) continue;
         for (auto kv : statefulWrites.at(slice.field())) {
-            LOG6("\t\t\tChecking range " << kv.first);
+            auto write_range = kv.first;
+            LOG6("\t\t\tChecking range " << write_range);
             auto written_field_slice = slice.field_slice();
             if (!kv.first.contains(written_field_slice)) continue;
             for (auto limit : kv.second) {
-                auto read_range = limit.second;
-                auto write_range = limit.first;
-                if (write_range.first != written_field_slice.lo || write_range.second !=
+                auto *act = limit.first;
+                for (auto read_range : limit.second) {
+                    if (write_range.lo != written_field_slice.lo || write_range.hi !=
                         written_field_slice.hi)
-                    LOG6("\t\t\t  Range " << written_field_slice << " contained in [" <<
-                         write_range.first << ", " << write_range.second << "] but not the same as "
-                         "it.");
-                // Because of the way slicing is done, write_range will always be a superset of
-                // written_field_slice. Therefore, written_field_slice's lo will always be greater
-                // than or equal to write_range's left coordinate (lo) and written_field_slice's hi
-                // will always be lesser than or equal to write_range's right coordinate (hi).
-                LOG7("\t\t\t\tlo: " << read_range.first << ", hi: " << read_range.second);
-                if (write_range.first != written_field_slice.lo) {
-                    read_range.first -= (write_range.first - written_field_slice.lo);
-                    LOG7("\t\t\t\tlo factor: " << (written_field_slice.lo - write_range.first));
-                }
-                if (write_range.second != written_field_slice.hi) {
-                    read_range.second -= (write_range.second - written_field_slice.hi);
-                    LOG7("\t\t\t\thi factor: " << (written_field_slice.hi - write_range.second));
-                }
-                LOG7("\t\t\t\tlo: " << read_range.first << ", hi: " << read_range.second);
-                if (read_range.first / size == read_range.second / size) {
-                    // Validate that all of the slice of the same field of the same container
-                    // written by a stateful action can share the same rotation.
-                    int cur_rot = read_range.first - slice.container_slice().lo;
-                    if (field_to_rot.count(slice.field()) &&
-                        field_to_rot[slice.field()].count(kv.first)) {
-                        int prev_rot = field_to_rot[slice.field()][kv.first];
-                        if (prev_rot != cur_rot) {
-                            LOG5("\t\t\tThe rotation of " << slice << " is not equal to other "
-                                 "slice of the same field carried in the same container. "
-                                 "Thereforce, this packing is not possible.");
-                            return true;
-                        }
-                    } else {
-                        field_to_rot[slice.field()][kv.first] = cur_rot;
+                        LOG6("\t\t\t  Range " << written_field_slice << " contained in [" <<
+                             write_range.lo << ", " << write_range.hi << "] but not the same as "
+                             "it.");
+                    // Because of the way slicing is done, write_range will always be a superset of
+                    // written_field_slice. Therefore, written_field_slice's lo will always be
+                    // greater than or equal to write_range's left coordinate (lo) and
+                    // written_field_slice's hi will always be lesser than or equal to
+                    // write_range's right coordinate (hi).
+                    LOG7("\t\t\t\tlo: " << read_range.first << ", hi: " << read_range.second);
+                    if (write_range.lo != written_field_slice.lo) {
+                        read_range.first -= (write_range.lo - written_field_slice.lo);
+                        LOG7("\t\t\t\tlo factor: " << (written_field_slice.lo - write_range.lo));
                     }
-                    continue;
+                    if (write_range.hi != written_field_slice.hi) {
+                        read_range.second -= (write_range.hi - written_field_slice.hi);
+                        LOG7("\t\t\t\thi factor: " << (written_field_slice.hi - write_range.hi));
+                    }
+                    LOG7("\t\t\t\tlo: " << read_range.first << ", hi: " << read_range.second);
+                    if (read_range.first / size == read_range.second / size) {
+                        // Validate that all of the slice of the same field of the same container
+                        // written by a stateful action can share the same rotation.
+                        int cur_rot = read_range.first - slice.container_slice().lo;
+                        if (fslice_to_rot.count(slice.field()) &&
+                            fslice_to_rot[slice.field()].count(write_range) &&
+                            fslice_to_rot[slice.field()][write_range].count(act)) {
+                            int prev_rot = fslice_to_rot[slice.field()][write_range][act];
+                            if (prev_rot != cur_rot) {
+                                LOG5("\t\t\tThe rotation (" << cur_rot << ") of " << slice <<
+                                     " is not equal to other rotation (" << prev_rot << ") carried"
+                                     " in the same container. Thereforce, this packing is not"
+                                     " possible.");
+                                return true;
+                            }
+                        } else {
+                            fslice_to_rot[slice.field()][write_range][act] = cur_rot;
+                        }
+                        continue;
+                    }
+                    LOG5("\t\t\tThe alignment of " << slice << " would force the data for ALU "
+                         "operation to go to multiple action data bus slots. Therefore, this "
+                         "packing is not possible.");
+                    return true;
                 }
-                LOG5("\t\t\tThe alignment of " << slice << " would force the data for ALU operation"
-                     "to go to multiple action data bus slots. Therefore, this packing "
-                     "is not possible.");
-                return true;
             }
         }
     }
