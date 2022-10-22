@@ -646,7 +646,11 @@ void Table::common_init_setup(const VECTOR(pair_t) &data, bool, P4Table::type) {
 }
 
 bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p4type) {
+    bool global_access = (table_type() == TERNARY) ? Target::TCAM_GLOBAL_ACCESS()
+                                                   : Target::SRAM_GLOBAL_ACCESS();
     if (kv.key == "format" || kv.key == "row" || kv.key == "column" || kv.key == "bus") {
+        /* done in Table::common_init_setup */
+    } else if (global_access && (kv.key == "stage" || kv.key == "lhbus" || kv.key == "rhbus")) {
         /* done in Table::common_init_setup */
     } else if (kv.key == "action") {
         action.setup(kv.value, this);
