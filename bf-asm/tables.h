@@ -102,6 +102,8 @@ class Table {
         friend std::ostream &operator<<(std::ostream &, const Layout &);
 
         bool word_initialized() const { return word >= 0; }
+        bool operator==(const Layout &) const;
+        bool operator!=(const Layout &a) const { return !(*this == a); }
     };
 
  protected:

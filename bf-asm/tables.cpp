@@ -29,6 +29,11 @@ const char *MemUnit::desc() const {
     return rv;
 }
 
+bool Table::Layout::operator==(const Table::Layout &a) const {
+    return row == a.row && bus == a.bus && word == a.word && memunits == a.memunits;
+    // ignoring other fields as if the above are all the same, will use the same resources
+}
+
 unsigned StatefulTable::const_info_t::unique_register_param_handle = REGISTER_PARAM_HANDLE_START;
 
 std::map<std::string, Table *> *Table::all;
@@ -452,7 +457,7 @@ void Table::setup_layout(std::vector<Layout> &layout, const VECTOR(pair_t) &data
     if (err) return;
     for (auto i = layout.begin(); i != layout.end(); i++)
         for (auto j = i+1; j != layout.end(); j++)
-            if (i->row == j->row && i->bus == j->bus && i->word == j->word) {
+            if (*i == *j) {
                 std::stringstream bus;
                 if (!i->bus.empty())
                     bus << " " << i->bus.begin()->first << " " << i->bus.begin()->second;
