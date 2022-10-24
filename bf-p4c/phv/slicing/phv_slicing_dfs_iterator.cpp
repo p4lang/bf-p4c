@@ -296,12 +296,12 @@ boost::optional<ordered_set<SuperCluster*>> presplit_by(const ordered_set<SuperC
     return rst;
 }
 
-const std::set<int> AfterSplitConstraint::all_container_sizes = {8, 16, 32};
+const bitvec AfterSplitConstraint::all_container_sizes = bitvec((1<<8) | (1<<16) | (1llu<<32));
 
-AfterSplitConstraint::AfterSplitConstraint(const std::set<int>& sizes) : sizes(sizes) {
+AfterSplitConstraint::AfterSplitConstraint(const bitvec& sizes) : sizes(sizes) {
     BUG_CHECK(!sizes.empty(), "empty afterSplitConstraint is not allowed");
     for (const auto& v : sizes) {
-        BUG_CHECK(all_container_sizes.count(v), "invalid container size: %1%", v);
+        BUG_CHECK(all_container_sizes.getbit(v), "invalid container size: %1%", v);
     }
 }
 
@@ -310,13 +310,13 @@ AfterSplitConstraint::AfterSplitConstraint(ConstraintType t, int v) {
     if (t == ctype::NONE) {
         sizes = all_container_sizes;
     } else if (t == ctype::EXACT) {
-        BUG_CHECK(all_container_sizes.count(v), "invalid container size: %1%", v);
-        sizes = {v};
+        BUG_CHECK(all_container_sizes.getbit(v), "invalid container size: %1%", v);
+        sizes = bitvec(1llu<<v);
     } else if (t == ctype::MIN) {
-        BUG_CHECK(all_container_sizes.count(v), "invalid container size: %1%", v);
-        for (const auto& s : boost::adaptors::reverse(all_container_sizes)) {
-            if (s < v) break;
-            sizes.insert(s);
+        BUG_CHECK(all_container_sizes.getbit(v), "invalid container size: %1%", v);
+        for (const auto& s : all_container_sizes) {
+            if (s < v) continue;
+            sizes.setbit(s);
         }
     } else {
         BUG("unknown type: %1%", (int)t);
@@ -325,9 +325,9 @@ AfterSplitConstraint::AfterSplitConstraint(ConstraintType t, int v) {
 
 AfterSplitConstraint::ConstraintType AfterSplitConstraint::type() const {
     using ctype = AfterSplitConstraint::ConstraintType;
-    if (sizes.size() == all_container_sizes.size()) {
+    if (sizes.popcount() == all_container_sizes.popcount()) {
         return ctype::NONE;
-    } else if (sizes.size() == 1) {
+    } else if (sizes.popcount() == 1) {
         return ctype::EXACT;
     } else {
         return ctype::MIN;
@@ -336,9 +336,7 @@ AfterSplitConstraint::ConstraintType AfterSplitConstraint::type() const {
 
 boost::optional<AfterSplitConstraint> AfterSplitConstraint::intersect(
     const AfterSplitConstraint& other) const {
-    std::set<int> rv;
-    std::set_intersection(sizes.begin(), sizes.end(), other.sizes.begin(), other.sizes.end(),
-                          std::inserter(rv, rv.begin()));
+    bitvec rv = sizes & other.sizes;
     if (rv.empty()) {
         return boost::none;
     }
@@ -346,7 +344,7 @@ boost::optional<AfterSplitConstraint> AfterSplitConstraint::intersect(
 }
 
 bool AfterSplitConstraint::ok(const int n) const {
-    return sizes.count(n);
+    return sizes.getbit(n);
 }
 
 // NextSplitChoiceMetrics is used during DFS to sort best slicing choice
@@ -1612,8 +1610,11 @@ bool DfsItrContext::collect_implicit_container_sz_constraint(
                     return;
                 }
             }
-            AfterSplitConstraint constraint = AfterSplitConstraint(
-                    std::set<int>(possible_sizes.begin(), possible_sizes.end()));
+            bitvec possible_sizes_bv;
+            for (int i : possible_sizes) {
+                possible_sizes_bv[i] = true;
+            }
+            AfterSplitConstraint constraint = AfterSplitConstraint(possible_sizes_bv);
             if (!intersect_and_save(constraint, fs)) {
                 sat = false;
             }

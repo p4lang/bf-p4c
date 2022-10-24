@@ -20,7 +20,7 @@ using SliceListLoc = std::pair<SuperCluster*, SuperCluster::SliceList*>;
 /// constraints introduced on fieldslices of container sizes after splitting a slice list.
 struct AfterSplitConstraint {
     // all possible container sizes, used for initialization.
-    static const std::set<int> all_container_sizes;
+    static const bitvec all_container_sizes;
 
     // ConstraintType abstracts this constraint.
     enum class ConstraintType {
@@ -32,12 +32,12 @@ struct AfterSplitConstraint {
     // default constructor
     AfterSplitConstraint(): sizes(all_container_sizes) {}
     // construct from set.
-    explicit AfterSplitConstraint(const std::set<int>& sizes);
+    explicit AfterSplitConstraint(const bitvec& sizes);
     // construct based on type.
     explicit AfterSplitConstraint(ConstraintType t, int v = 0);
 
     // available container sizes for this constraint.
-    std::set<int> sizes;
+    bitvec sizes;
 
     // return the type of this constraint.
     ConstraintType type() const;

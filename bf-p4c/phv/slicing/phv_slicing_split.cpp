@@ -20,7 +20,7 @@ static void update_slices(
     ordered_set<const RotationalCluster*>& new_clusters,
     ordered_set<SuperCluster::SliceList*>& slice_lists,
     ordered_map<FieldSlice, ordered_set<SuperCluster::SliceList*>>& slices_to_slice_lists,
-    ordered_map<const FieldSlice, const RotationalCluster*>& slices_to_clusters) {
+    assoc::hash_map<const FieldSlice, const RotationalCluster*>& slices_to_clusters) {
     // Update the set of live clusters.
     auto old_it = new_clusters.find(old);
     if (old_it != new_clusters.end()) {
@@ -176,7 +176,7 @@ boost::optional<std::list<SuperCluster*>> split(const SuperCluster* sc,
     //// 1. deep copy states.
     ordered_set<const PHV::RotationalCluster*> new_clusters(sc->clusters());
     // Keep a map of slices to clusters (both old and new for this schema).
-    ordered_map<const PHV::FieldSlice, const PHV::RotationalCluster*> slices_to_clusters;
+    assoc::hash_map<const PHV::FieldSlice, const PHV::RotationalCluster*> slices_to_clusters;
     for (auto* rotational : new_clusters)
         for (auto* aligned : rotational->clusters())
             for (auto& slice : *aligned) slices_to_clusters[slice] = rotational;
