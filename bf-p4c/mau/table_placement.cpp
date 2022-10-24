@@ -3236,6 +3236,7 @@ void DecidePlacement::initForPipe(const IR::BFN::Pipe *pipe,
         new GroupPlace(*this, work, {}, pipe->ghost_thread.ghost_mau); }
     self.rejected_placements.clear();
     saved_placements.clear();
+    bt_attempts.clear();
 }
 
 void DecidePlacement::recomputePartlyPlaced(const Placed *done,
@@ -3262,6 +3263,7 @@ DecidePlacement::find_previous_placement(const Placed *best, int offset, bool lo
                                          int process_stage) {
     auto &info = saved_placements.at(best->name);
     auto &bt = local_bt ? info.last_pass : info.early;
+    boost::optional<DecidePlacement::BacktrackPlacement&> rv = boost::none;
     int best_init_stage = best->init_stage();
     for (auto it = bt.rbegin(); it != bt.rend(); ++it) {
         int stage = it->first;
@@ -3271,20 +3273,39 @@ DecidePlacement::find_previous_placement(const Placed *best, int offset, bool lo
         if (placement.is_best_placement() || placement.tried) {
             continue;
         } else if (((stage + offset) <= process_stage) && !placement->need_more) {
+            if (bt_attempts.count(best->name)) {
+                if (bt_attempts.at(best->name).count(stage)) {
+                    LOG3("Found other placement for table:" << best->name << " at stage:" <<
+                         stage << " but a variant of it was already tried");
+                    rv = placement;
+                    continue;
+                }
+            }
             LOG3("Found other placement for table:" << best->name << " at stage:" << stage);
+            bt_attempts[best->name].insert(stage);
             return placement;
         } else if ((plac_init_stage + offset) <= best_init_stage &&
                    (stage + offset) < process_stage) {
+            if (bt_attempts.count(best->name)) {
+                if (bt_attempts.at(best->name).count(stage)) {
+                    LOG3("Found other placement for split table:" << best->name << " at stage:" <<
+                         stage << " but a variant of it was already tried");
+                    rv = placement;
+                    continue;
+                }
+            }
             LOG3("Found other initial placement for split table:" << best->name <<
                  " at stage:" << stage);
+            bt_attempts[best->name].insert(stage);
             return placement;
         }
     }
-    return boost::none;
+    return rv;
 }
 
 boost::optional<DecidePlacement::BacktrackPlacement&>
 DecidePlacement::find_backtrack_point(const Placed *best, int offset, bool local_bt) {
+    boost::optional<DecidePlacement::BacktrackPlacement&> cc = boost::none;
     ordered_set<const IR::MAU::Table*> to_be_analyzed;
     std::map<const IR::MAU::Table*, const Placed*> same_stage;
     int process_stage = best->stage;
@@ -3324,6 +3345,7 @@ DecidePlacement::find_backtrack_point(const Placed *best, int offset, bool local
      */
     while (!to_be_analyzed.empty()) {
         ordered_set<const IR::MAU::Table*> to_be_analyzed_next_post;
+        ordered_set<const IR::MAU::Table*> potential_container_conflict;
         for (const IR::MAU::Table* t1 : to_be_analyzed) {
             // Data dependency
             ordered_set<const IR::MAU::Table*> prev = self.deps.happens_phys_after_map.at(t1);
@@ -3356,6 +3378,15 @@ DecidePlacement::find_backtrack_point(const Placed *best, int offset, bool local
         if (!process_stage)
             return boost::none;
 
+        // It is possible that a table can't be placed into a given stage because of container
+        // conflict with another table in the same stage.
+        for (const IR::MAU::Table* t1 : to_be_analyzed) {
+            if (self.deps.container_conflicts.count(t1)) {
+                potential_container_conflict.insert(self.deps.container_conflicts.at(t1).begin(),
+                                                    self.deps.container_conflicts.at(t1).end());
+            }
+        }
+
         same_stage.clear();
         while (last_stage) {
             if (last_stage->stage < process_stage) {
@@ -3373,12 +3404,28 @@ DecidePlacement::find_backtrack_point(const Placed *best, int offset, bool local
                     if (bt)
                         return bt;
                 }
+            } else if (!cc && !self.ignoreContainerConflicts &&
+                       (potential_container_conflict.count(last_stage->table) ||
+                       (last_stage->gw && potential_container_conflict.count(last_stage->gw)))) {
+                LOG3("Found table with potential container conflict:" << last_stage->name <<
+                     " in previous stage:" << process_stage);
+                if (saved_placements.count(last_stage->name)) {
+                    cc = find_previous_placement(last_stage, offset, local_bt, process_stage);
+                    if (cc)
+                        LOG3("Caching potential container conflict table in the search for a " <<
+                             "direct dependent table");
+                }
             }
+
             same_stage.insert({ last_stage->table, last_stage });
             if (last_stage->gw)
                 same_stage.insert({ last_stage->gw, last_stage });
             last_stage = last_stage->prev;
         }
+        // No direct dependent table found, go for the one with container conflict
+        if (cc)
+            return cc;
+
         if (to_be_analyzed_next_post.empty() && process_stage && last_stage)
             LOG3("Analyzing previous stage with the same dependent table");
         else
@@ -3796,6 +3843,7 @@ class DecidePlacement::BacktrackManagement {
             LOG3("Try with resource mode enabled");
             backtrack_to(start_flow);
             self.saved_placements.clear();
+            self.bt_attempts.clear();
             self.backtrack_count = 0;
             self.resource_mode = true;
             return true;
