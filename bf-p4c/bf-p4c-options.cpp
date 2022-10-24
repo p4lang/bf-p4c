@@ -686,7 +686,7 @@ void BFNContext::discoverPipes(const IR::P4Program *program, const IR::ToplevelB
     for (auto p : _pipes) LOG4("[" << p.first << ", " << p.second << "]");
 }
 
-ErrorReporter& BFNContext::errorReporter() {
+BfErrorReporter& BFNContext::errorReporter() {
     return bfErrorReporter;
 }
 

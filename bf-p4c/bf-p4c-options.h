@@ -164,7 +164,7 @@ class BFNContext : public virtual P4CContext {
         return false;
     }
 
-    ErrorReporter& errorReporter() override;
+    BfErrorReporter& errorReporter() override;
 
  private:
     bool isRecognizedDiagnostic(cstring diagnostic) final;
