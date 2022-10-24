@@ -2122,3 +2122,9 @@ p4c_add_xfail_reason("tofino"
   "declaration not found"
   testdata/p4_16_samples/psa-dpdk-header-union-typedef.p4
 )
+
+# p4c update 2022-10-24 (new test)
+p4c_add_xfail_reason("tofino"
+  "Conditions in an action must be simple comparisons of an action data parameter"
+  testdata/p4_16_samples/psa-dpdk-large-header-fields.p4
+)
