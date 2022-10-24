@@ -516,23 +516,62 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/compile_only/p4c-4498.p4
 )
 
-p4c_add_xfail_reason("tofino3"
-  "AssertionError: Expected packet was not received"
-  # Packet is received, but 2 bytes are different than expected for unknown reason.
-  extensions/p4_tests/p4_16/ptf/inner_checksum_payload_offset.p4
-  extensions/p4_tests/p4_14/ptf/inner_checksum_l4.p4
-  # Packet is received, but 1 byte is different than expected for unknown reason.
-  # This is already in JBay and Tofino Xfails, too.
-  extensions/p4_tests/p4_16/ptf/ingress_checksum.p4
-)
+# p4c_add_xfail_reason("tofino3"
+#   "AssertionError: Expected packet was not received"
+#   # Packet is received, but 2 bytes are different than expected for unknown reason.
+#   extensions/p4_tests/p4_16/ptf/inner_checksum_payload_offset.p4
+#   extensions/p4_tests/p4_14/ptf/inner_checksum_l4.p4
+#   # Packet is received, but 1 byte is different than expected for unknown reason.
+#   # This is already in JBay and Tofino Xfails, too.
+#   extensions/p4_tests/p4_16/ptf/ingress_checksum.p4
+# )
 
-p4c_add_xfail_reason("tofino3"
-  "Error when creating clone session in target"
-  # Error during runtime, unknown reason.
-  extensions/p4_tests/p4_16/ptf/clone_v1model.p4
-)
+# p4c_add_xfail_reason("tofino3"
+#   "Error when creating clone session in target"
+#   # Error during runtime, unknown reason.
+#   extensions/p4_tests/p4_16/ptf/clone_v1model.p4
+# )
 
 p4c_add_xfail_reason("tofino3"
   "error: Mixing non-greedy and greedy extracted fields in select statement is unsupported"
   extensions/p4_tests/p4_16/cloudbreak/p4c-4841.p4
+)
+
+# (2022-10-20) Tofino 3 driver does not yet support fast reconfig used by
+# ptf_runner.py and there also no way to run P4 runtime tests without fast
+# reconfig. So for now at least we can check that the tests compile and then
+# fail in loading.
+# TODO: after fixing this, uncoment the following sets of xfails above
+#  - "AssertionError: Expected packet was not received"
+#  - "Error when creating clone session in target"
+p4c_add_xfail_reason("tofino3"
+  "\"grpc_message\":\"Error in second phase of device update\""
+  extensions/p4_tests/p4_14/ptf/easy.p4
+  extensions/p4_tests/p4_14/ptf/easy_exact.p4
+  extensions/p4_tests/p4_14/ptf/easy_no_match.p4
+  extensions/p4_tests/p4_14/ptf/easy_no_match_with_gateway.p4
+  extensions/p4_tests/p4_14/ptf/easy_ternary.p4
+  extensions/p4_tests/p4_14/ptf/ecmp_pi.p4
+  extensions/p4_tests/p4_14/ptf/inner_checksum_l4.p4
+  extensions/p4_tests/p4_14/ptf/ternary_match_constant_action_data.p4
+  extensions/p4_tests/p4_16/ptf/adata_constant_out_of_range_for_immediate.p4
+  extensions/p4_tests/p4_16/ptf/checksum_if_else_cond.p4
+  extensions/p4_tests/p4_16/ptf/clone_v1model.p4
+  extensions/p4_tests/p4_16/ptf/ingress_checksum.p4
+  extensions/p4_tests/p4_16/ptf/inner_checksum.p4
+  extensions/p4_tests/p4_16/ptf/inner_checksum_payload_offset.p4
+  extensions/p4_tests/p4_16/ptf/ipv4_checksum.p4
+  extensions/p4_tests/p4_16/ptf/ipv6_checksum.p4
+  extensions/p4_tests/p4_16/ptf/large_action_data_constant.p4
+  extensions/p4_tests/p4_16/ptf/large_indirect_count.p4
+  extensions/p4_tests/p4_16/ptf/multicast_basic.p4
+  extensions/p4_tests/p4_16/ptf/options_invalid.p4
+  extensions/p4_tests/p4_16/ptf/p4c-4137.p4
+  extensions/p4_tests/p4_16/ptf/p4c_4490.p4
+  extensions/p4_tests/p4_16/ptf/register_action_predicate.p4
+  extensions/p4_tests/p4_16/ptf/saturation.p4
+  extensions/p4_tests/p4_16/ptf/tofino2_a0_header_checksum_workaround.p4
+  extensions/p4_tests/p4_16/ptf/udpv4_and_v6_checksum.p4
+  extensions/p4_tests/p4_16/ptf/various_indirect_meters.p4
+  extensions/p4_tests/p4_16/ptf/verify_checksum.p4
 )

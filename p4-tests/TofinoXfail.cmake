@@ -2102,12 +2102,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-dpdk-hdr-field-non-align.p4
 )
 
-# p4-tests/dev-env update 2022-10-13 (broken test)
-p4c_add_xfail_reason("tofino"
-  "NameError: name 'start_warm_init' is not defined"
-  p4_16_programs_internal_misc1
-)
-
 # p4c update 2022-10-10 (new tests)
 p4c_add_xfail_reason("tofino"
   "The hash offset must be a power of 2 in a hash calculation"

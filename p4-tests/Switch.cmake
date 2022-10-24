@@ -118,9 +118,7 @@ p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_x3_profile")
 	 ^acl2
          ^hash
          ^switch_l3.L3SVITest
-         ^switch_l2.L2LagTest
-         ^switch_l3.L3ECMPTest
-         ^switch_l3.L3ECMPLBTest")
+         ^switch_l2.L2LagTest")
 # All switch_16 tests should depend on the test being compiled, rather than
 # relying on the first one to compile the test.
 set_tests_properties(

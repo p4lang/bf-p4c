@@ -100,13 +100,9 @@ p4c_add_xfail_reason("tofino5"
 
 p4c_add_xfail_reason("tofino5"
   #"expected packet on port .* not seen"
-  "Requested byte is out of bounds"
+  #"Requested byte is out of bounds"
+  "BUG:.*eMac don't correctly handle PGR pkts yet!" # in model
   extensions/p4_tests/p4_16/flatrock/mirror_simple.p4
-  )
-
-p4c_add_xfail_reason("tofino5"
-  "expected packet on port .* not seen"
-  extensions/p4_tests/p4_16/flatrock/mcast_simple.p4
   )
 
 # *********************************************************************************************** #

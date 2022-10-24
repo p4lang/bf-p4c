@@ -394,7 +394,7 @@ node ('compiler-travis') {
                                 ctest \
                                     -R '^tofino/(.*programs|.*internal_p4_14)' \
                                     -E 'TestRealData|_basic_ipv4|_stful|_meters|_hash_driven|_dkm|_exm_smoke_test|_exm_direct_|_exm_direct_1_|p4_16_programs_tna_exact_match|p4_16_programs_tna_meter_lpf_wred|perf_test_alpm|entry_read_from_hw' \
-                                    -LE 'UNSTABLE|p414_nightly|determinism'
+                                    -LE 'UNSTABLE|NON_PR_TOFINO|p414_nightly|determinism'
                             '''
                         )
                     },

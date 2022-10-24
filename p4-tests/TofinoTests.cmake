@@ -1272,6 +1272,8 @@ p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/forensics.p4")
 set_tests_properties("tofino/extensions/p4_tests/p4_16/compile_only/forensics.p4" PROPERTIES TIMEOUT ${extended_timeout_150percent})
 
+set_tests_properties("tofino/p4_16_programs_internal_tna_alpmV2" PROPERTIES TIMEOUT ${extended_timeout_12times})
+
 include(Switch.cmake)
 
 # TODO: Move all glass tests to this file
@@ -1395,3 +1397,7 @@ foreach(t IN LISTS NON_PR)
   file(RELATIVE_PATH test_path ${P4C_SOURCE_DIR} ${t})
   p4c_add_test_label("tofino" "NON_PR_TOFINO" ${test_path})
 endforeach()
+
+
+# Dev-env update 2022-10-21: runs for almost 3 hours, then fails
+p4c_add_test_label("tofino" "NON_PR_TOFINO" p4_16_programs_internal_tna_alpmV2)
