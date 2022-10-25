@@ -131,6 +131,31 @@ class PhvLogging : public MauInspector {
             : unit(u), parserState(name) { }
     };
 
+    /** This class gathers defuse information about the fields which can then be used
+      * during PHV logging.
+      * This pass has to be run prior LowerParser pass which needs to update the names
+      * of merged states during MergeLoweredParserStates pass.
+      */
+    class CollectDefUseInfo : public Visitor {
+        /// Defuse information for PHV fields.
+        const FieldDefUse &defuse;
+
+        const IR::Node *apply_visitor(const IR::Node *n, const char *name = 0) override;
+
+     public:
+        void replace_parser_state_name(cstring old_name, cstring new_name);
+        /** Maps field id to set of parser states names which define the field.
+         *  Populated by values from located_defs in FieldDefUse.
+         */
+        ordered_map<int, ordered_set<cstring>> parser_defs;
+        /** Maps field id to set of deparser names which the field is used in.
+         *  Populated by values from located_uses in FieldDefUse.
+         */
+        ordered_map<int, ordered_set<cstring>> deparser_uses;
+
+        explicit CollectDefUseInfo(const FieldDefUse &du) : defuse(du) {}
+    };
+
     enum class ConstraintReason : std::size_t {
         SolitaryAlu = 0,
         SolitaryIntrinsic,
@@ -159,8 +184,8 @@ class PhvLogging : public MauInspector {
     const ClotInfo      &clot;
     /// Information collected about PHV fields usage.
     const CollectPhvLoggingInfo& info;
-    /// Defuse information for PHV fields.
-    const FieldDefUse   &defuse;
+    /// Collected defuse information for PHV fields.
+    const CollectDefUseInfo &defuseInfo;
     /// Table allocation.
     const ordered_map<cstring, ordered_set<int>>& tableAlloc;
     /// Table summary.
@@ -306,10 +331,10 @@ class PhvLogging : public MauInspector {
                         const PhvInfo &p,
                         const ClotInfo &ci,
                         const CollectPhvLoggingInfo& c,
-                        const FieldDefUse &du,
+                        const CollectDefUseInfo &cdu,
                         const ordered_map<cstring, ordered_set<int>>& t,
                         const TableSummary &ts)
-        : phv(p), clot(ci), info(c), defuse(du), tableAlloc(t), tableSummary(ts),
+        : phv(p), clot(ci), info(c), defuseInfo(cdu), tableAlloc(t), tableSummary(ts),
       logger(filename,
              Logging::Logger::buildDate(),
              BF_P4C_VERSION,

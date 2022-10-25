@@ -6,6 +6,7 @@
 
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/bridged_packing.h"
+#include "bf-p4c/logging/phv_logging.h"
 #include "bf-p4c/mau/finalize_mau_pred_deps_power.h"
 #include "bf-p4c/mau/jbay_next_table.h"
 #include "bf-p4c/mau/mau_alloc.h"
@@ -49,6 +50,7 @@ class Backend : public PassManager {
 
     LogFlexiblePacking *flexibleLogging;
     CollectPhvLoggingInfo *phvLoggingInfo;
+    PhvLogging::CollectDefUseInfo *phvLoggingDefUseInfo;
     DynamicNextTable nextTblProp;
     MauPower::FinalizeMauPredDepsPower* power_and_mpr;
     LiveRangeReport *liveRangeReport;
@@ -83,6 +85,10 @@ class Backend : public PassManager {
     const LogRepackedHeaders *get_flexible_logging() const {
         return flexibleLogging->get_flexible_logging(); }
     const CollectPhvLoggingInfo *get_phv_logging() const { return phvLoggingInfo; }
+    const PhvLogging::CollectDefUseInfo *get_phv_logging_defuse_info() const {
+        BUG_CHECK(phvLoggingDefUseInfo, "DefUse info for PHV logging was not initialized");
+        return phvLoggingDefUseInfo;
+    }
     const ordered_map<cstring, ordered_set<int>>& get_table_alloc() const {
         return table_summary.getTableAlloc();
     }

@@ -138,6 +138,8 @@ class TestCode {
     std::regex marker;      // Optional search string for the block we are interested in.
     std::string ends;       // How our optional block starts and ends.
 
+    std::string phv_log_file = {};  // path to phv log file
+
  public:
     const IR::P4Program* get_program() { return program; }
     /// Useful strings.
@@ -228,6 +230,10 @@ class TestCode {
     /// Sets the flags to be used by other member functions.
     void flags(Match::Flag f) { flag = f; }
 
+    void set_phv_log_file(std::string path) {
+        phv_log_file = path;
+    }
+
     /// Runs the pass over either the pipe (if created) else the program.
     bool apply_pass(Visitor& pass, const Visitor_Context* context = nullptr);
     bool apply_pass(Visitor* pass, const Visitor_Context* context = nullptr) {
@@ -238,7 +244,8 @@ class TestCode {
                      FullMidend,                    ///< Remove the pipe and run over the program.
                      ConverterToBackend,            ///< Run over the program and create the pipe.
                      ThreadLocalInstances,          ///< Run over the pipe.
-                     FullBackend};                  ///< Run over the pipe, creates asm CodeBlocks.
+                     FullBackend,                   ///< Run over the pipe, creates asm CodeBlocks.
+                     PhvLogging};                   ///< Run over the pipe, creates phv.json.
     bool apply_pass(Pass pass);
 
     /// Runs all the necessary passes to create a backend ready for testing.

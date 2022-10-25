@@ -16,6 +16,7 @@
 #include "bf-p4c/common/bridged_packing.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/parse_annotations.h"
+#include "bf-p4c/logging/phv_logging.h"
 #include "bf-p4c/logging/source_info_logging.h"
 #include "bf-p4c/phv/create_thread_local_instances.h"
 #include "frontends/parsers/parserDriver.h"
@@ -578,6 +579,18 @@ bool TestCode::apply_pass(Pass pass) {
             static int pipe_id = INT_MAX;  // TableSummary requires a unique pipe ID.
             backend = new BFN::Backend{options, pipe_id--};
             return apply_pass(backend);
+        }
+
+        case Pass::PhvLogging: {
+            if (!backend)
+                throw std::invalid_argument("FullBackend must be run first");
+            if (phv_log_file.empty())
+                throw std::invalid_argument("Path to phv log file must be set first");
+            return apply_pass(new PhvLogging(phv_log_file.c_str(),
+                backend->get_phv(), backend->get_clot(),
+                *(backend->get_phv_logging()),
+                *(backend->get_phv_logging_defuse_info()),
+                backend->get_table_alloc(), backend->get_tbl_summary()));
         }
     }
     return false;

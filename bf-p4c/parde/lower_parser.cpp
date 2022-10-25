@@ -2250,11 +2250,13 @@ struct MergeLoweredParserStates : public ParserTransform {
     const CollectLoweredParserInfo& parser_info;
     const ComputeLoweredParserIR& computed;
     ClotInfo &clot;
+    PhvLogging::CollectDefUseInfo *defuseInfo;
 
     explicit MergeLoweredParserStates(const CollectLoweredParserInfo& pi,
                                       const ComputeLoweredParserIR& computed,
-                                      ClotInfo &c)
-        : parser_info(pi), computed(computed), clot(c) { }
+                                      ClotInfo &c,
+                                      PhvLogging::CollectDefUseInfo *defuseInfo)
+        : parser_info(pi), computed(computed), clot(c), defuseInfo(defuseInfo) { }
 
     // Compares all fields in two LoweredParserMatch objects
     // except for the match values.  Essentially returns if both
@@ -2497,6 +2499,10 @@ struct MergeLoweredParserStates : public ParserTransform {
                         if (Device::numClots() > 0 && BackendOptions().use_clot)
                             clot.merge_parser_states(state->thread(), state->name,
                                                      match->next->name);
+                        if (defuseInfo)
+                            defuseInfo->replace_parser_state_name(
+                                createThreadName(match->next->thread(), match->next->name),
+                                createThreadName(state->thread(), state->name));
                         do_merge(match, next);
                         continue;
                     }
@@ -2912,7 +2918,8 @@ struct LowerParserIR : public PassManager {
                   BFN_MAYBE_UNUSED const FieldDefUse& defuse,
                   ClotInfo& clotInfo,
                   BFN_MAYBE_UNUSED const ParserHeaderSequences& parserHeaderSeqs,
-                  std::map<gress_t, std::set<PHV::Container>>& origParserZeroInitContainers)
+                  std::map<gress_t, std::set<PHV::Container>>& origParserZeroInitContainers,
+                  PhvLogging::CollectDefUseInfo *defuseInfo)
         : origParserZeroInitContainers(origParserZeroInitContainers) {
         auto* allocateParserChecksums = new AllocateParserChecksums(phv, clotInfo);
         auto* parser_info = new CollectParserInfo;
@@ -2962,7 +2969,8 @@ struct LowerParserIR : public PassManager {
                 static_cast<Visitor *>(replaceLoweredParserIR),
             LOGGING(4) ? new DumpParser("after_parser_lowering") : nullptr,
             lower_parser_info,
-            new MergeLoweredParserStates(*lower_parser_info, *computeLoweredParserIR, clotInfo),
+            new MergeLoweredParserStates(*lower_parser_info, *computeLoweredParserIR, clotInfo,
+                defuseInfo),
             LOGGING(4) ? new DumpParser("final_llir_parser") : nullptr
         });
     }
@@ -4258,7 +4266,8 @@ class ComputeBufferRequirements : public ParserModifier {
  *  - WarnTernaryMatchFields
  */
 LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &defuse,
-        const ParserHeaderSequences &parserHeaderSeqs) :
+        const ParserHeaderSequences &parserHeaderSeqs,
+        PhvLogging::CollectDefUseInfo *defuseInfo) :
     Logging::PassManager("parser", Logging::Mode::AUTO) {
     auto pragma_no_init = new PragmaNoInit(phv);
     auto compute_init_valid = new ComputeInitZeroContainers(
@@ -4267,7 +4276,8 @@ LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &
 
     addPasses({
         pragma_no_init,
-        new LowerParserIR(phv, defuse, clot, parserHeaderSeqs, origParserZeroInitContainers),
+        new LowerParserIR(phv, defuse, clot, parserHeaderSeqs, origParserZeroInitContainers,
+            defuseInfo),
         new LowerDeparserIR(phv, clot),
         new WarnTernaryMatchFields(phv),
         Device::currentDevice() == Device::TOFINO ? compute_init_valid : nullptr,

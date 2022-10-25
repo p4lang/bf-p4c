@@ -3,6 +3,7 @@
 
 #include "ir/ir.h"
 #include "logging/pass_manager.h"
+#include "logging/phv_logging.h"
 #include "common/utils.h"
 #include "bf-p4c/parde/parser_header_sequences.h"
 
@@ -38,7 +39,8 @@ class LowerParser : public Logging::PassManager {
     std::map<gress_t, std::set<PHV::Container>> origParserZeroInitContainers;
  public:
     explicit LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &defuse,
-        const ParserHeaderSequences &parserHeaderSeqs);
+        const ParserHeaderSequences &parserHeaderSeqs,
+        PhvLogging::CollectDefUseInfo *defuseInfo);
 };
 
 #endif /* EXTENSIONS_BF_P4C_PARDE_LOWER_PARSER_H_ */

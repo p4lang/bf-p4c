@@ -178,6 +178,8 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
         static const LocPairSet emptyset;
         return located_defs.count(fid) ? located_defs.at(fid) : emptyset; }
 
+    const ordered_map<int, LocPairSet> &getAllDefs() const { return located_defs; }
+
     const LocPairSet &getUses(locpair def) const {
         static const LocPairSet emptyset;
         return uses.count(def) ? uses.at(def) : emptyset; }
@@ -189,6 +191,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     const LocPairSet &getAllUses(int fid) const {
         static const LocPairSet emptyset;
         return located_uses.count(fid) ? located_uses.at(fid) : emptyset; }
+    const ordered_map<int, LocPairSet> &getAllUses() const { return located_uses; }
 
     /// @return all defs that the given def may overwrite.
     const LocPairSet &getOutputDeps(locpair def) const {

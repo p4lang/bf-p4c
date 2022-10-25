@@ -109,6 +109,49 @@ bool CollectPhvLoggingInfo::preorder(const IR::MAU::TableKey* read) {
     return true;
 }
 
+const IR::Node *PhvLogging::CollectDefUseInfo::apply_visitor(const IR::Node *n, const char *) {
+    parser_defs.clear();
+    deparser_uses.clear();
+    for (auto &[field_id, defs] : defuse.getAllDefs()) {
+        LOG4("Located def[" << field_id << "]:");
+        ordered_set<cstring> state_names;
+        for (auto &[unit, expr] : defs) {
+            // If this is an implicit parser initialization added because
+            // of uninitialized reads, ignore it.
+            if (expr->is<ImplicitParserInit>())
+                continue;
+            if (auto ps = unit->to<IR::BFN::ParserState>()) {
+                state_names.emplace(ps->name);
+                LOG4("    state: " << ps->name);
+            }
+        }
+        if (!state_names.empty())
+            parser_defs.emplace(field_id, state_names);
+    }
+    for (auto &[field_id, uses] : defuse.getAllUses()) {
+        LOG4("Located use[" << field_id << "]:");
+        ordered_set<cstring> deparser_names;
+        for (auto &[unit, expr] : uses) {
+            if (auto d = unit->to<IR::BFN::Deparser>()) {
+                deparser_names.emplace(d->toString());
+                LOG4("    deparser: " << d->toString());
+            }
+        }
+        if (!deparser_names.empty())
+            deparser_uses.emplace(field_id, deparser_names);
+    }
+    return n;
+}
+
+void PhvLogging::CollectDefUseInfo::replace_parser_state_name(cstring old_name, cstring new_name) {
+    for (auto &[field_id, names] : parser_defs) {
+        if (names.erase(old_name) > 0) {
+            LOG4("Replacing " << old_name << " by " << new_name);
+            names.emplace(new_name);
+        }
+    }
+}
+
 void PhvLogging::end_apply(const IR::Node *root) {
     // Populate resources structures.
     populateContainerGroups("mau");
@@ -799,10 +842,9 @@ void
 PhvLogging::getAllDeparserUses(const PHV::Field* f, ordered_set<PhvLogging::PardeInfo>& rv) const {
     if (f->padding) return;
     LOG4("Deparser uses of Field: " << f);
-    for (const FieldDefUse::locpair use : defuse.getAllUses(f->id)) {
-        const IR::BFN::Unit *use_unit = use.first;
-        if (auto d = use_unit->to<IR::BFN::Deparser>()) {
-            LOG4("    Used in " << d->toString());
+    if (auto uses = defuseInfo.deparser_uses.find(f->id); uses != defuseInfo.deparser_uses.end()) {
+        for (const auto &name : uses->second) {
+            LOG4("    Used in " << name);
             PardeInfo entry("deparser");
             rv.insert(entry);
         }
@@ -817,14 +859,10 @@ PhvLogging::getAllParserDefs(const PHV::Field* f, ordered_set<PhvLogging::PardeI
     // are done to field X, which is then just assigned to field Y)
     if (f->aliasSource) getAllParserDefs(f->aliasSource, rv);
     LOG4("Parser defs of Field: " << f);
-    for (const FieldDefUse::locpair def : defuse.getAllDefs(f->id)) {
-        const IR::BFN::Unit *def_unit = def.first;
-        // If this is an implicit parser initialization added because of uninitialized reads, ignore
-        // it.
-        if (def.second->is<ImplicitParserInit>()) continue;
-        if (auto ps = def_unit->to<IR::BFN::ParserState>()) {
-            LOG4("    Defined in parser state " << ps->name);
-            PardeInfo entry("parser", std::string(ps->name));
+    if (auto defs = defuseInfo.parser_defs.find(f->id); defs != defuseInfo.parser_defs.end()) {
+        for (const auto &name : defs->second) {
+            LOG4("    Defined in parser state " << name);
+            PardeInfo entry("parser", std::string(name));
             rv.insert(entry);
         }
     }

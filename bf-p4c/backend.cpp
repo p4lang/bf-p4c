@@ -158,6 +158,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
     BUG_CHECK(pipe_id >= 0, "Invalid pipe id in backend : %d", pipe_id);
     flexibleLogging = new LogFlexiblePacking(phv);
     phvLoggingInfo = new CollectPhvLoggingInfo(phv, uses);
+    phvLoggingDefUseInfo = options.debugInfo ? new PhvLogging::CollectDefUseInfo(defuse) : nullptr;
     auto *PHV_Analysis = new PHV_AnalysisPass(options, phv, uses, clot,
                                               defuse, deps, decaf, mau_backtracker,
                                               phvLoggingInfo /*, &jsonGraph */);
@@ -380,9 +381,10 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         new DumpPipe("Final table graph"),
         new CheckFieldCorruption(defuse, phv, PHV_Analysis->get_pragmas()),
         new AdjustExtract(phv),
+        phvLoggingDefUseInfo,
         // Rewrite parser and deparser IR to reflect the PHV allocation such that field operations
         // are converted into container operations.
-        new LowerParser(phv, clot, defuse, parserHeaderSeqs),
+        new LowerParser(phv, clot, defuse, parserHeaderSeqs, phvLoggingDefUseInfo),
         new CheckTableNameDuplicate,
         new CheckUnimplementedFeatures(options.allowUnimplemented),
         // must be called right before characterize power
