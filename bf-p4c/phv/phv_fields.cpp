@@ -3,7 +3,7 @@
 #include <string>
 #include <boost/range/adaptor/reversed.hpp>
 #include "bf-p4c/arch/bridge_metadata.h"
-#include "bf-p4c/common/flexible_packing.h"
+#include "bf-p4c/common/bridged_packing.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/common/pragma/all_pragmas.h"
 #include "bf-p4c/common/utils.h"

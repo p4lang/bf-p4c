@@ -7,11 +7,11 @@
 #include "lib/error.h"
 #include "ir/ir.h"
 #include "test/gtest/helpers.h"
+#include "bf-p4c/common/bridged_packing.h"
 #include "bf-p4c/common/extract_maupipe.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/common/parse_annotations.h"
 #include "bf-p4c/midend.h"
-#include "bf-p4c/arch/bridge.h"
 #include "bf-p4c/phv/create_thread_local_instances.h"
 
 namespace Test {
@@ -73,7 +73,7 @@ TofinoPipeTestCase::create(const std::string& source) {
     }
     // no-op
     ordered_map<cstring, const IR::Type_StructLike*> empty;
-    BFN::SubstitutePackedHeaders postmid(options, empty, *midend.sourceInfoLogging);
+    SubstitutePackedHeaders postmid(options, empty, *midend.sourceInfoLogging);
     midendProgram->apply(postmid);
     if (postmid.pipe.size() == 0) {
         std::cerr << "backend converter failed" << std::endl;

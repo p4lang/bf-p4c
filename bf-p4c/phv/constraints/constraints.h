@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <ostream>
 #include "lib/ordered_set.h"
+#include "lib/cstring.h"
 
 /// This is the file in which we will document all PHV constraints.
 /// XXX(Deep): Integrate all constraints into this class format.
@@ -36,7 +37,7 @@ class SolitaryConstraint : BooleanConstraint {
      // Define reasons for constraints here as enum classes.
     enum SolitaryReason {
         NONE = 0,                           // represents absence of solitary constraint
-        ALU = 1,                            // solitary constraint due to ALU operation
+        ALU = (1 << 0),                     // solitary constraint due to ALU operation
         CHECKSUM = (1 << 1),                // solitary constraint due to use in checksum
         ARCH = (1 << 2),                    // solitary constraint required by the hardware
         DIGEST = (1 << 3),                  // solitary constraint due to use in digest
@@ -70,7 +71,7 @@ class DigestConstraint : BooleanConstraint {
     // Define type of digest in which the field is used.
     enum DigestType {
         NONE = 0,               // Field is not used in a digest
-        MIRROR = 1,             // used in mirror digest
+        MIRROR = (1 << 0),      // used in mirror digest
         LEARNING = (1 << 1),    // used in learning digest
         RESUBMIT = (1 << 2),    // used in resubmit
         PKTGEN = (1 << 3)       // used in pktgen
@@ -83,6 +84,32 @@ class DigestConstraint : BooleanConstraint {
     bool isLearning() const { return reason & LEARNING; }
     bool isResubmit() const { return reason & RESUBMIT; }
     bool isPktGen() const { return reason & PKTGEN; }
+};
+
+class DeparsedToTMConstraint : BooleanConstraint {
+ public:
+    enum DeparsedToTMReason {
+        NONE = 0,               // Field is not deparsed to TM
+        DEPARSE = 1 << 0,       // Field is deparsed to TM
+    };
+
+    bool hasConstraint() const { return (reason != 0); }
+    void addConstraint(uint32_t r) { reason |= r; }
+
+    bool isDeparse() const { return reason & DEPARSE; }
+};
+
+class NoSplitConstraint : BooleanConstraint {
+ public:
+    enum NoSplitReason {
+        NONE = 0,               // Field is not deparsed to TM
+        NO_SPLIT = 1 << 0,      // Field is deparsed to TM
+    };
+
+    bool hasConstraint() const { return (reason != 0); }
+    void addConstraint(uint32_t r) { reason |= r; }
+
+    bool isNoSplit() const { return reason & NO_SPLIT; }
 };
 
 class IntegerConstraint {
@@ -109,7 +136,7 @@ class AlignmentConstraint : IntegerConstraint {
     // Define the cause of alignment constraint
     enum AlignmentReason {
         NONE = 0,
-        BRIDGE = 1,
+        BRIDGE = (1 << 0),
         PARSER = (1 << 1),
         DEPARSER = (1 << 2),
         TERNARY_MATCH = (1 << 3),
@@ -171,12 +198,68 @@ class GroupConstraint {
     virtual void addConstraint(uint32_t reason) = 0;
 };
 
-class CopackConstraint : GroupConstraint {
+class PairConstraint {
+ protected:
+    unsigned reason = 0;
+    // represents the pair of fields have the mutual constraint
+    // e.g. A pair of field that must be packed to the same byte.
+    //      A pair of field that must be be aligned to the same bit offset.
+    std::pair<cstring, cstring> fields;
+
  public:
-    ~CopackConstraint() {}
+    PairConstraint(cstring f1, cstring f2) {
+        if (f1 < f2) {
+            fields.first = f1;
+            fields.second = f2;
+        } else {
+            fields.first = f2;
+            fields.second = f1;
+        }
+    }
+    PairConstraint(PairConstraint& p) {
+        fields.first = p.fields.first;
+        fields.second = p.fields.second;
+    }
+    ~PairConstraint() {}
+    virtual bool hasConstraint() const = 0;
+    virtual void addConstraint(uint32_t reason) = 0;
+    bool operator==(const PairConstraint & a) const {
+        return reason == a.reason && fields == a.fields; }
+    bool operator<(PairConstraint const & a) const {
+        if (reason < a.reason) return true;
+        else if (fields < a.fields) return true;
+        return false;
+    }
+};
+
+class CopackConstraint : PairConstraint {
+ public:
+    CopackConstraint(cstring f1, cstring f2) : PairConstraint(f1, f2) {}
     bool hasConstraint() const { return (reason != 0); }
     void addConstraint(unsigned r) { reason |= r; }
 };
+
+class NoOverlapConstraint : PairConstraint {
+ public:
+    NoOverlapConstraint(cstring f1, cstring f2) : PairConstraint(f1, f2) {}
+    bool hasConstraint() const { return (reason != 0); }
+    void addConstraint(unsigned r) { reason |= r; }
+};
+
+class NoPackConstraint : PairConstraint {
+ public:
+    NoPackConstraint(cstring f1, cstring f2) : PairConstraint(f1, f2) {}
+    bool hasConstraint() const { return (reason != 0); }
+    void addConstraint(unsigned r) { reason |= r; }
+};
+
+class MutuallyAlignedConstraint : PairConstraint {
+ public:
+    MutuallyAlignedConstraint(cstring f1, cstring f2) : PairConstraint(f1, f2) {}
+    bool hasConstraint() const { return (reason != 0); }
+    void addConstraint(unsigned r) { reason |= r; }
+};
+
 
 }  // namespace Constraints
 

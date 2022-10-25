@@ -5,7 +5,7 @@
 #include "bf-p4c-options.h"
 
 #include "bf-p4c/bf-p4c-options.h"
-#include "bf-p4c/common/flexible_packing.h"
+#include "bf-p4c/common/bridged_packing.h"
 #include "bf-p4c/mau/finalize_mau_pred_deps_power.h"
 #include "bf-p4c/mau/jbay_next_table.h"
 #include "bf-p4c/mau/mau_alloc.h"

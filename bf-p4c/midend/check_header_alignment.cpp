@@ -1,5 +1,5 @@
 #include "bf-p4c/midend/check_header_alignment.h"
-#include "bf-p4c/common/flexible_packing.h"
+#include "bf-p4c/common/bridged_packing.h"
 #include "bf-p4c/device.h"
 #include "frontends/p4/typeMap.h"
 #include "lib/pad_alignment.h"

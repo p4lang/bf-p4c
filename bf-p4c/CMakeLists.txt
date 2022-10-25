@@ -277,7 +277,6 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/extract_maupipe.cpp
   common/field_defuse.cpp
   common/flatrock_parser.cpp
-  common/flexible_packing.cpp
   common/bridged_packing.cpp
   common/header_stack.cpp
   common/ir_utils.cpp
@@ -307,7 +306,6 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/extract_maupipe.h
   common/field_defuse.h
   common/flatrock_parser.h
-  common/flexible_packing.h
   common/bridged_packing.h
   common/header_stack.h
   common/ir_utils.h
@@ -818,7 +816,6 @@ set (BF_P4C_BACKEND_ARCH_SRCS
   arch/psa/rewrite_bridge_metadata.cpp
   arch/remove_set_metadata.cpp
   arch/rewrite_action_selector.cpp
-  arch/bridge.cpp
   arch/tna.cpp
   arch/v1model.cpp
   arch/fromv1.0/add_metadata_parser_states.cpp
@@ -864,7 +861,6 @@ set (BF_P4C_BACKEND_ARCH_HDRS
   arch/psa/rewrite_bridge_metadata.h
   arch/remove_set_metadata.h
   arch/rewrite_action_selector.h
-  arch/bridge.h
   arch/tna.h
   arch/t2na.h
   arch/t5na.h

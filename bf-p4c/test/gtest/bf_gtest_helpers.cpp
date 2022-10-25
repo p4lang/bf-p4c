@@ -13,7 +13,7 @@
 #include "p4headers.h"
 #include "lib/exceptions.h"
 #include "lib/sourceCodeBuilder.h"
-#include "bf-p4c/arch/bridge.h"
+#include "bf-p4c/common/bridged_packing.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/parse_annotations.h"
 #include "bf-p4c/logging/source_info_logging.h"
@@ -557,7 +557,7 @@ bool TestCode::apply_pass(Pass pass) {
             ordered_map<cstring, const IR::Type_StructLike*> emptyRepackedMap;
             P4::ReferenceMap emptyRefMap;
             CollectSourceInfoLogging emptySrcInfoLog(emptyRefMap);
-            BFN::SubstitutePackedHeaders extractPipes(options, emptyRepackedMap, emptySrcInfoLog);
+            SubstitutePackedHeaders extractPipes(options, emptyRepackedMap, emptySrcInfoLog);
             if (!apply_pass(extractPipes) || !extractPipes.pipe.size())
                 return false;
             pipe = extractPipes.pipe[0];

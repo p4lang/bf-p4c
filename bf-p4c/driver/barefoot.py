@@ -532,7 +532,7 @@ class BarefootBackend(BackendDriver):
                             ",lower_parser:" + parde_verbosity + \
                             ",decaf*:" + parde_verbosity + \
                             ",characterize_parser.h:" + parde_verbosity
-            bridge_logging = "flexible_packing:1"
+            bridge_logging = "bridged_packing:1"
             ixbar_logging = "ixbar_info:3"
             self.add_command_option('compiler', '--verbose -T{},{},{},{},{}'.format(ta_logging,
                                                                                  pa_logging,

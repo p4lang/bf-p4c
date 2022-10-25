@@ -11,7 +11,7 @@
 
 #include "bf-asm/version.h"
 #include "bf-p4c/bf-p4c-options.h"
-#include "bf-p4c/common/flexible_packing.h"
+#include "bf-p4c/common/bridged_packing.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/mau/asm_output.h"

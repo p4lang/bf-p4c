@@ -1,12 +1,53 @@
+#include <z3++.h>
+#include <algorithm>
+#include <cstring>
 #include <functional>
+#include <iostream>
 #include <numeric>
 #include <queue>
+#include <sstream>
 #include <stack>
-#include "bridged_packing.h"
+
+#include "frontends/common/constantFolding.h"
+#include "frontends/p4/reassociation.h"
+#include "frontends/p4/strengthReduction.h"
+#include "frontends/p4/typeMap.h"
+#include "frontends/p4/uselessCasts.h"
+#include "midend/local_copyprop.h"
+#include "bf-p4c/arch/bridge_metadata.h"
+#include "bf-p4c/arch/collect_hardware_constrained_fields.h"
+#include "bf-p4c/backend.h"
+#include "bf-p4c/common/bridged_packing.h"
+#include "bf-p4c/common/ir_utils.h"
+#include "bf-p4c/common/size_of.h"
+#include "bf-p4c/common/table_printer.h"
 #include "bf-p4c/common/utils.h"
+#include "bf-p4c/lib/pad_alignment.h"
+#include "bf-p4c/midend/check_header_alignment.h"
+#include "bf-p4c/midend/simplify_args.h"
+#include "bf-p4c/phv/cluster_phv_operations.h"
 #include "bf-p4c/phv/constraints/constraints.h"
 #include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/arch/bridge_metadata.h"
+#include "bf-p4c/phv/pragma/pa_atomic.h"
+#include "bf-p4c/phv/pragma/pa_container_size.h"
+#include "bf-p4c/phv/pragma/pa_no_pack.h"
+#include "bf-p4c/phv/pragma/pa_solitary.h"
+#include "bf-p4c/logging/event_logger.h"
+
+// included by PackFlexibleHeaders
+#include "bf-p4c/common/alias.h"
+#include "bf-p4c/common/check_for_unimplemented_features.h"
+#include "bf-p4c/common/header_stack.h"
+#include "bf-p4c/common/multiple_apply.h"
+#include "bf-p4c/mau/empty_controls.h"
+#include "bf-p4c/mau/instruction_selection.h"
+#include "bf-p4c/mau/push_pop.h"
+#include "bf-p4c/mau/selector_update.h"
+#include "bf-p4c/mau/stateful_alu.h"
+#include "bf-p4c/parde/add_metadata_pov.h"
+#include "bf-p4c/parde/stack_push_shims.h"
+#include "bf-p4c/phv/create_thread_local_instances.h"
+#include "bf-p4c/phv/pragma/pa_no_overlay.h"
 
 Visitor::profile_t CollectIngressBridgedFields::init_apply(const IR::Node* root) {
     profile_t rv = Inspector::init_apply(root);
@@ -190,15 +231,15 @@ void GatherDigestFields::end_apply() {
     };
 
     for (auto d : digests) {
-        LOG1("d " << d.first);
+        LOG4("d " << d.first);
     }
 
     for (auto h : headers) {
-        LOG1("h " << h.first);
+        LOG4("h " << h.first);
     }
 
     for (auto t : digest_types) {
-        LOG1("t " << t);
+        LOG4("t " << t);
         auto src_lists = digests.at(t);
         if (!headers.count(t))
             continue;
@@ -233,7 +274,7 @@ bool CollectConstraints::preorder(const IR::HeaderOrMetadata* hdr) {
         return false;
 
     for (auto f : flexible_fields) {
-        LOG1("compute constraints for " << f);
+        LOG4("compute constraints for " << f);
     }
 
     computeAlignmentConstraint(flexible_fields, true);
@@ -258,7 +299,7 @@ bool CollectConstraints::preorder(const IR::BFN::DigestFieldList* fl) {
             iter++; });
 
     for (auto f : flexible_fields) {
-        LOG1("compute constraints for " << f);
+        LOG4("compute constraints for " << f);
     }
 
     computeAlignmentConstraint(flexible_fields, true);
@@ -790,7 +831,7 @@ void CollectConstraints::computeNoPackIfIntrinsicMeta(
                 no_pack = true;
         }
         if (no_pack) {
-            LOG1("\t\tNoPack due to intrinsic " << field);
+            LOG4("\t\tNoPack due to intrinsic " << field);
             noPackWithAll(field);
         }
     };
@@ -815,7 +856,7 @@ void CollectConstraints::computeNoPackIfActionDataWrite(
                 if (actionConstraints.written_by_ad_constant(field, a) &&
                     !actionConstraints.written_by_ad_constant(f, a)) {
                     // do not pack field if one is written by constant, other is not.
-                    LOG1("\t\tNoPack in action " << a->name << " "
+                    LOG4("\t\tNoPack in action " << a->name << " "
                             << field->name << " " << f->name);
                     phv.addFieldNoPack(field, f); } } } };
 
@@ -1043,7 +1084,10 @@ void ConstraintSolver::add_extract_together_constraints(
                 z3::expr v1 = context.bv_const((*it)->name, 16);
                 z3::expr v2 = context.bv_const((*it2)->name, 16);
                 LOG1("Copack constraint: " << v1 << " and " << v2);
-                solver.add(v1 / 8 == v2 / 8);
+                z3::expr pack_same_byte = (v1 / 8 == v2 / 8);
+                solver.add(pack_same_byte);
+
+                packingConstraints[(*it)->name].push_back(pack_same_byte);
 
                 std::stringstream str;
                 str << "(";
@@ -1227,7 +1271,8 @@ void ConstraintSolver::add_no_pack_constraints(
                 z3::expr noPack =
                     (((v1 + (*it)->size) / 8) * 8) < ((v2 / 8) * 8) ||
                     (((v2 + (*it2)->size) / 8) * 8) < ((v1 / 8) * 8);
-                solver.add(noPack);
+
+                packingConstraints[(*it)->name].push_back(noPack);
 
                 std::stringstream str;
                 str << "(";
@@ -1463,6 +1508,7 @@ bool PackWithConstraintSolver::preorder(const IR::HeaderOrMetadata* hdr) {
         const auto* field = phv.field(fieldName);
         nonByteAlignedFields.insert(field);
         phvFieldToStructField.emplace(field, f);
+        packingCandidateFields[hdr->type->name].insert(fieldName);
     }
 
     ordered_set<const PHV::Field*> byteAlignedFields;
@@ -1585,7 +1631,7 @@ bool PackWithConstraintSolver::preorder(const IR::BFN::DigestFieldList* d) {
 void PackWithConstraintSolver::optimize() {
     for (auto f : nonByteAlignedFieldsMap) {
         for (auto g : f.second) {
-            LOG1("k: " << f.first << " " << g);
+            LOG4(TAB1 << f.first << " " << g->name);
         }
     }
     // add constraints related to a single field list
@@ -1806,3 +1852,727 @@ ReplaceFlexibleType::postorder(IR::StructExpression* expr) {
     return new IR::StructExpression(expr->structType, *comp);
 }
 
+
+// helper function
+bool findFlexibleAnnotation(const IR::Type_StructLike* header) {
+    for (auto f : header->fields) {
+        auto anno = f->getAnnotation("flexible");
+        if (anno != nullptr)
+            return true; }
+    return false;
+}
+
+// XXX(Deep): BRIG-333
+// We can do better with these IR::BFN::DeparserParameters in terms of packing. This IR type is only
+// used to represent intrinsic metadata in ingress and egress at the moment. As noted in the
+// comments in line 698 in phv_fields.cpp, the constraints on bottom_bit for some of these TM
+// metadata is not necessary. We can theoretically place certain TM metadata field, such as
+// bypass_egress to any bit in a byte. The implication for bridge metadata packing is that
+// bypass_egress could be packed with any field anywhere. There are a few other TM metadata with the
+// same property: ct_disable, ct_mcast, qid, icos, meter_color, deflect_on_drop, copy_to_cpu_cos.
+// BRIG-333 is tracking this issue.
+bool GatherDeparserParameters::preorder(const IR::BFN::DeparserParameter* p) {
+    BUG_CHECK(p->source, "Parameter %1% missing source", p->name);
+    const PHV::Field* f = phv.field(p->source->field);
+    BUG_CHECK(f, "Field %1% not found while gathering deparser parameters", p->source->field);
+    LOG5("    Deparser parameter identified: " << f);
+    params.insert(f);
+    return true;
+}
+
+// TODO: Remove reliance on phase0 parser state name by visiting Phase0 node in
+// IR::BFN::Parser and use phase0->fields to gather Phase0 fields. The fields
+// must be converted from an IR::StructField to a PHV::Field.
+// TODO: Another chance for optimization is by allowing flexible packing of
+// fields. Right now, the fields are packed to Phase0 bit width (Tofino = 64 and
+// JBAY = 128) with padding inserted. This does not allow flexibility while
+// packing fields into containers. The packing is specified in tna.cpp &
+// arch/phase0.cpp - canPackDataIntoPhase0() method. The packing code can be
+// removed and we can work with only the fields in Phase0. Packing width can be
+// determined by Device::pardeSpec().bitPhase0Width()
+bool GatherPhase0Fields::preorder(const IR::BFN::ParserState* p) {
+    // Not a phase 0 parser state
+    if (p->name != PHASE0_PARSER_STATE_NAME)
+        return true;
+    // For phase 0 parser state, detect the fields written to.
+    for (auto s : p->statements) {
+        auto* e = s->to<IR::BFN::Extract>();
+        if (!e) continue;
+        auto* dest = e->dest->to<IR::BFN::FieldLVal>();
+        if (!dest) continue;
+        const auto* f = phv.field(dest->field);
+        if (!f) continue;
+        LOG3("CONSTRAINT must be packed alone A " << f);
+        noPackFields.insert(f); }
+    return true;
+}
+
+// TODO: if a field is used in both bridging and mirror/resubmit/digest, we do
+// not pack these fields with other fields. The compiler should be able to do
+// better.
+bool GatherPhase0Fields::preorder(const IR::BFN::DigestFieldList* d) {
+    for (auto source : d->sources) {
+        const auto* field = phv.field(source->field);
+        if (!field) continue;
+        LOG3("CONSTRAINT must be packed alone B " << field);
+        noPackFields.insert(field);
+    }
+    return false;
+}
+
+std::string LogRepackedHeaders::strip_prefix(cstring str, std::string pre) {
+    std::string s = str + "";
+    // Find the first occurence of the prefix
+    size_t first = s.find(pre, 0);
+
+    // If it's not at 0, then we haven't found a prefix
+    if (first != 0)
+        return s;
+
+    // Otherwise, we have a match and can trim it
+    return s.substr(pre.length(), std::string::npos);
+}
+
+// Collect repacked headers
+bool LogRepackedHeaders::preorder(const IR::HeaderOrMetadata* h) {
+    // Check if we have visited this header's ingress/egress version before
+    cstring hname = h->name;
+    std::string h_in = strip_prefix(hname, "ingress::");
+    std::string h_out = strip_prefix(hname, "egress::");
+    if (hdrs.find(h_in) != hdrs.end() || hdrs.find(h_out) != hdrs.end())
+        return false;
+    // Otherwise, add the shorter one (the one with the prefix stripped) to our set
+    std::string h_strip;
+    if (h_in.length() > h_out.length())
+        h_strip = h_out;
+    else
+        h_strip = h_in;
+    hdrs.emplace(h_strip);
+
+    // Check if this header may have been repacked by looking for flexible fields
+    bool isRepacked = false;
+    for (auto f : *h->type->fields.getEnumerator()) {
+        if (f->getAnnotation("flexible")) {
+            isRepacked = true;
+            break;
+        }
+    }
+
+    // Add it to our vector if it is repacked
+    if (isRepacked) {
+        std::pair<const IR::HeaderOrMetadata*, std::string> pr(h, h_strip);
+        repacked.push_back(pr);
+    }
+
+    // Prune this branch because headers won't have headers as children
+    return false;
+}
+
+// Pretty print all of the headers
+void LogRepackedHeaders::end_apply() {
+    // Check if we should be logging anything
+    if (LOGGING(1))
+        // Iterate through the headers and print all of their fields
+        for (auto h : repacked)
+            LOG1(pretty_print(h.first, h.second));
+}
+
+// TODO: Currently outputting backend name for each field. Should be changed to user facing name.
+std::string LogRepackedHeaders::getFieldName(std::string hdr, const IR::StructField* f) const {
+    auto nm = hdr + "." + f->name;
+    auto* fi = phv.field(nm);
+    auto name = fi ? fi->name : nm;
+    std::string s = name + "";
+    return s;
+}
+
+std::string LogRepackedHeaders::pretty_print(const IR::HeaderOrMetadata* h, std::string hdr) const {
+    // Number of bytes we have used
+    unsigned byte_ctr = 0;
+    // Number of bits in the current byte we have used
+    unsigned bits_ctr = 0;
+
+    std::stringstream out;
+    out << "Repacked header " << hdr << ":" << std::endl;
+
+    // Create our table printer
+    TablePrinter* tp = new TablePrinter(out, {"Byte #", "Bits", "Field name"},
+                                       TablePrinter::Align::CENTER);
+    tp->addSep();
+
+    // Run through the fields. We divide each field into 3 sections: (1) the portion that goes into
+    // the current byte; (2) the portion that goes into byte(s) in the middle; and (3) the portion
+    // that goes into the last byte. As we process each field, we may want to change how previous
+    // portions were allocated. For example, if we realize (2) will be a range and (1) was a full
+    // byte, then (1) should get merged into (2). Thus, we will capture the printing (to
+    // TablePrinter) of each portion as a copy-capture lambda. This allows us to do "lazy
+    // evaluation" and effectively modify what is printed after in earlier portions.
+    for (auto f : h->type->fields) {
+        // PORTION(1): This section will always exist, but it may end up getting included into
+        // portion 2
+        std::function<void(void)> write_beg = [=]() { return; };
+        // PORTION(2): This section may be a range (of full bytes), a single full byte or be empty.
+        std::function<void(void)> write_mid = [=]() { return; };
+        // PORTION(3): This section is necessary when the field doesn't end up completely filling
+        // the last byte of the mid.
+        std::function<void(void)> write_end = [=]() { return; };
+
+        // Get the field name. If it's a pad, change to *PAD*
+        std::string name = getFieldName(hdr, f);
+        if (name.find("__pad_", 0) != std::string::npos)
+            name = "*PAD*";
+
+        // Need to calculate how many bytes and what bits this field takes up
+        unsigned width = f->type->width_bits();
+        // Remaining bits in the current byte
+        unsigned rem_bits = 8 - bits_ctr;
+        // True if this field overflows the current byte
+        bool ofByte = width > rem_bits;
+
+        // PORTION (1): First, we add to the current byte.
+        // Last bit is the next open bit
+        unsigned last_bit = ofByte ? 8 : bits_ctr + width;
+        // If this first byte is full, we'll need to print a separator.
+        bool first_full = last_bit == 8;
+        // If this byte is completely occupied by this field, it may need to be a range
+        bool first_occu = first_full && bits_ctr == 0;
+        write_beg = [=]() {
+                        tp->addRow({std::to_string(byte_ctr),
+                                   "[" + std::to_string(bits_ctr) + " : "
+                                   + std::to_string(last_bit - 1) + "]",
+                                   name});
+                        if (first_full) tp->addSep();
+                    };
+
+        // Update bits/byte counter and width after finishing 1st byte
+        bits_ctr = last_bit % 8;
+        byte_ctr = first_full ? byte_ctr + 1 : byte_ctr;
+        width = width - rem_bits;
+
+        // PORTION (2)/(3): Only need to handle this portion if we did overflow
+        if (ofByte) {
+            // See what byte/bit we'll fill up to. The last bit is the next open bit
+            unsigned end_byte = byte_ctr + width/8;
+            last_bit = width % 8;
+
+            // PORTION(2): Now, we want to handle any bytes that are completely filled by this
+            // field. We want to put multiple bytes that are occupied by the same field into a range
+            // instead of explicitly printing out each one
+            if (end_byte - byte_ctr >= 1) {
+                // If we're in this conditional, we know that we have at least 1 full byte, but
+                // that's not enough to print a range, so:
+                if (end_byte - byte_ctr >= 2 || first_occu) {
+                    // Now, we have at least 2 bytes that are full, so we can print a range.
+                    unsigned beg_byte = byte_ctr;
+                    // If the first was completely occupied by this field, include it in the range
+                    // and don't do anything in write_beg
+                    if (first_occu) {
+                        beg_byte--;
+                        write_beg = [=]() { return; };
+                    }
+                    // Add the range row
+                    write_mid = [=]() {
+                                    tp->addRow({std::to_string(beg_byte) + " -- "
+                                               + std::to_string(end_byte-1),
+                                               "[" + std::to_string(0) + " : "
+                                               + std::to_string(7) + "]",
+                                               name});
+                                    tp->addSep();
+                                    return;
+                                };
+                } else {
+                    // Here we know our mid portion is going to be just the single full byte we have
+                    write_mid = [=]() {
+                                    tp->addRow({std::to_string(byte_ctr),
+                                               "[" + std::to_string(0) + " : "
+                                               + std::to_string(7) + "]",
+                                               name});
+                                    tp->addSep();
+                                    return;
+                                };
+                }
+            }
+
+            // PORTION(3): We now need to handle the partial byte that might be leftover
+            if (last_bit != 0) {
+                write_end = [=]() {
+                                tp->addRow({std::to_string(end_byte),
+                                           "[" + std::to_string(0) + " : "
+                                           + std::to_string((last_bit-1)) + "]",
+                                           name});
+                                return;
+                            };
+            }
+
+            // Now, we update our counters
+            byte_ctr = end_byte;
+            bits_ctr = last_bit;
+        }
+        // Finally, write everything to the table printer
+        write_beg();
+        write_mid();
+        write_end();
+    }
+
+    // Print the table to the stream out and return it
+    tp->print();
+    out << std::endl;
+    return out.str();
+}
+
+GatherPackingConstraintFromSinglePipeline::GatherPackingConstraintFromSinglePipeline(
+        PhvInfo& p,
+        const PhvUse& u,
+        DependencyGraph& dg,
+        const BFN_Options &o,
+        PackWithConstraintSolver& sol) :
+          options(o),
+          pa_no_pack(p),
+          packConflicts(p, dg, tMutex, table_alloc, aMutex, pa_no_pack),
+          actionConstraints(p, u, packConflicts, tableActionsMap, dg),
+          packWithConstraintSolver(sol) {
+              addPasses({
+                      new FindDependencyGraph(p, dg, &options),
+                      new PHV_Field_Operations(p),
+                      new PragmaContainerSize(p),
+                      new PragmaAtomic(p),
+                      new PragmaSolitary(p),
+                      &pa_no_pack,
+                      &tMutex,
+                      &aMutex,
+                      &packConflicts,
+                      &tableActionsMap,
+                      &actionConstraints,
+                      new GatherDeparserParameters(p, deparserParams),
+                      new GatherPhase0Fields(p, noPackFields),
+                      new GatherAlignmentConstraints(p, actionConstraints),
+                      &packWithConstraintSolver,
+              });
+}
+
+// Return a Json representation of flexible headers to be saved in .bfa/context.json
+std::string LogRepackedHeaders::asm_output() const {
+    if (repacked.empty())
+        return std::string("");
+
+    std::ostringstream out;
+    bool first_header = true;
+    out << "flexible_headers: [\n";  // list of headers
+    for (auto h : repacked) {
+        if (!first_header) {
+            out << ",\n";
+        } else {
+            out << "\n"; first_header = false;
+        }
+
+        out << "  { name: \"" << h.second << "\",\n"
+            << "    fields: [\n";  // list of fields
+
+        bool first_field = true;
+        for (auto f : h.first->type->fields) {
+            auto name = f->name.name;   // getFieldName(h.second, f);
+            // for now all the fields are full fields not slices
+            unsigned width = f->type->width_bits();
+            unsigned start_bit = 0;  // so all fields start at 0.
+
+            if (!first_field) {
+                out << ",\n";
+            } else {
+                out << "\n"; first_field = false;
+            }
+
+            out << "      { name: \"" << name << "\", slice: { "
+                << "start_bit: " << start_bit << ", bit_width: " << width
+                // << ", slice_name:" << "the name of the slice"
+                << " } }";
+        }
+        out << "    ]\n";    // list of fields
+        out << "  }";     // header
+    }
+    out << "]\n";  // list of headers
+    return out.str();
+}
+
+/**
+ * candidates: if non-empty, indicate the set of header types to pack.
+ *             if empty, all eligible header types are packed.
+ */
+PackFlexibleHeaders::PackFlexibleHeaders(const BFN_Options& options,
+        ordered_set<cstring>& candidates, RepackedHeaderTypes& map) :
+    uses(phv),
+    defuse(phv),
+    solver(context),
+    constraint_solver(phv, context, solver,
+                      packingConstraints, constraints, debug_info),
+    packWithConstraintSolver(phv, constraint_solver, candidates,
+                             map, packingCandidateFields, packingConstraints) {
+    flexiblePacking = new GatherPackingConstraintFromSinglePipeline(phv, uses, deps, options,
+            packWithConstraintSolver);
+    flexiblePacking->addDebugHook(options.getDebugHook(), true);
+    PragmaNoOverlay *noOverlay = new PragmaNoOverlay(phv);
+    PragmaAlias *pragmaAlias = new PragmaAlias(phv, *noOverlay);
+    addPasses({
+        new CreateThreadLocalInstances,
+        new BFN::CollectHardwareConstrainedFields,
+        new CheckForUnimplementedFeatures(),
+        new RemoveEmptyControls,
+        // new MultipleApply(options, boost::none, false, false),
+        new AddSelectorSalu,
+        new FixupStatefulAlu,
+        new CollectHeaderStackInfo,  // Needed by CollectPhvInfo.
+        new CollectPhvInfo(phv),
+        &defuse,
+        Device::hasMetadataPOV() ? new AddMetadataPOV(phv) : nullptr,
+        new CollectPhvInfo(phv),
+        &defuse,
+        new CollectHeaderStackInfo,  // Needs to be rerun after CreateThreadLocalInstances, but
+                                     // cannot be run after InstructionSelection.
+        new RemovePushInitialization,
+        new StackPushShims,
+        new CollectPhvInfo(phv),    // Needs to be rerun after CreateThreadLocalInstances.
+        new HeaderPushPop,
+        new InstructionSelection(options, phv),
+        new FindDependencyGraph(phv, deps, &options, "program_graph", "Pack Flexible Headers"),
+        new CollectPhvInfo(phv),
+        pragmaAlias,
+        new AutoAlias(phv, *pragmaAlias, *noOverlay),
+        new Alias(phv, *pragmaAlias),
+        new CollectPhvInfo(phv),
+        // Run after InstructionSelection, before deadcode elimination.
+        flexiblePacking
+    });
+
+    if (options.excludeBackendPasses) {
+        try {
+            removePasses(options.passesToExcludeBackend);
+        } catch (const std::runtime_error& e) {
+            // Ignore this error since this is only a subset of the backend passes
+            LOG3(e.what());
+        }
+    }
+}
+
+void PackFlexibleHeaders::check_conflicting_constraints() {
+    for (auto& [hdr, fields] : packingCandidateFields) {
+        for (auto& f : fields) {
+            if (packingConstraints.count(f) == 0)
+                continue;
+            z3::context context;
+            z3::expr_vector constraints(context);
+            for (auto c : packingConstraints.at(f)) {
+                constraints.push_back(c);
+            }
+            if (solver.check(constraints) == z3::unsat) {
+                LOG3("ignore conflicting constraints: " << constraints);
+            } else {
+                solver.add(constraints);
+            }
+        }
+    }
+}
+
+void PackFlexibleHeaders::end_apply() {
+    if (LOGGING(2)) {
+        for (auto hdr : debug_info) {
+            LOG1("(header " << hdr.first);
+            for (auto constr = hdr.second.begin();
+                    constr != hdr.second.end(); ++constr) {
+                LOG1("  (constraint " << (*constr).first);
+                for (auto iter = (*constr).second.begin();
+                        iter != (*constr).second.end(); ++iter) {
+                    LOG1("    " << *iter
+                            << ((std::next(iter) != (*constr).second.end()) ? "" : ")")
+                            << ((std::next(constr) != hdr.second.end()) ? "" : ")"));
+                } }
+        } }
+}
+
+// Collect the 'emit' and 'extract' call on @flexible headers. We need to
+// consider constraints both briding and mirror/resubmit, as a field may
+// be used in both places.
+void CollectBridgedFieldsUse::postorder(const IR::MethodCallExpression* expr) {
+    auto mi = P4::MethodInstance::resolve(expr, refMap, typeMap);
+    if (!mi)
+        return;
+    auto em = mi->to<P4::ExternMethod>();
+    if (!em)
+        return;
+    if (em->method->name != "emit" &&
+        em->method->name != "extract")
+        return;
+
+    auto type_name = em->originalExternType->name;
+    if (type_name != "packet_in" &&
+        type_name != "packet_out" &&
+        type_name != "Resubmit" &&
+        type_name != "Mirror")
+        return;
+
+    boost::optional<gress_t> thread = boost::make_optional(false, gress_t());
+    auto parser = findContext<IR::BFN::TnaParser>();
+    if (parser)
+        thread = parser->thread;
+
+    auto deparser = findContext<IR::BFN::TnaDeparser>();
+    if (deparser)
+        thread = deparser->thread;
+
+    // neither parser or deparser
+    if (thread == boost::none)
+        return;
+
+    // expected number of argument
+    size_t arg_count = 1;
+    if (type_name == "Mirror")
+        arg_count = 2;
+
+    if (expr->arguments->size() < arg_count)
+        return;
+
+    auto dest = (*expr->arguments)[arg_count - 1]->expression;
+    const IR::Type* type = nullptr;
+    if (auto *hdr = dest->to<IR::HeaderRef>()) {
+        type = hdr->type;
+    } else if (auto *hdr = dest->to<IR::StructExpression>()) {
+        type = hdr->type;
+    }
+
+    if (type == nullptr)
+        return;
+
+    bool need_packing = false;
+    if (auto ty = type->to<IR::Type_StructLike>()) {
+        if (findFlexibleAnnotation(ty)) {
+            need_packing = true;
+        }
+    } else if (type->is<IR::BFN::Type_FixedSizeHeader>()) {
+        need_packing = true;
+    }
+    if (!need_packing)
+        return;
+
+    Use u;
+    u.type = type;
+    u.method = em->method->name;
+    u.thread = *thread;
+
+    if (auto ty = type->to<IR::Type_StructLike>())
+        u.name = ty->name;
+
+    bridge_uses.insert(u);
+}
+
+class PostMidEndLast : public PassManager {
+ public:
+    PostMidEndLast() { setName("PostMidEndLast"); }
+};
+
+/**
+ * XXX(hanw): some code duplication with extract_mau_pipe, needs to refactor ParseTna to
+ * provide a mechanism to iterate directly on TNA pipelines.
+ */
+bool ExtractBridgeInfo::preorder(const IR::P4Program* program) {
+    BFN::ApplyEvaluator eval(refMap, typeMap);
+    auto new_program = program->apply(eval);
+
+    auto toplevel = eval.getToplevelBlock();
+    BUG_CHECK(toplevel, "toplevel cannot be nullptr");
+
+    auto main = toplevel->getMain();
+    auto arch = new BFN::ParseTna();
+    main->apply(*arch);
+
+    /// SimplifyReferences passes are fixup passes that modifies the visited IR tree.
+    /// Unfortunately, the modifications by simplifyReferences will transform IR tree towards
+    /// the backend IR, which means we can no longer run typeCheck pass after applying
+    /// simplifyReferences to the frontend IR.
+    auto simplifyReferences = new SimplifyReferences(bindings, refMap, typeMap);
+
+    // collect and set global_pragmas
+    new_program->apply(collect_pragma);
+
+    auto npipe = 0;
+    for (auto pkg : main->constantValue) {
+        // collect per pipe bridge uses
+        CollectBridgedFieldsUse collectBridgedFields(refMap, typeMap);
+        if (!pkg.second) continue;
+        if (!pkg.second->is<IR::PackageBlock>()) continue;
+        std::vector<gress_t> gresses = {INGRESS, EGRESS};
+        for (auto gress : gresses) {
+            if (!arch->threads.count(std::make_pair(npipe, gress))) {
+                ::error("Unable to find thread %1%", npipe);
+                return false; }
+            auto thread = arch->threads.at(std::make_pair(npipe, gress));
+            thread = thread->apply(*simplifyReferences);
+            for (auto p : thread->parsers) {
+                if (auto parser = p->to<IR::BFN::TnaParser>()) {
+                    parser->apply(collectBridgedFields);
+                }
+            }
+            if (auto dprsr = dynamic_cast<const IR::BFN::TnaDeparser *>(thread->deparser)) {
+                dprsr->apply(collectBridgedFields);
+            }
+        }
+        all_uses.emplace(npipe, collectBridgedFields.bridge_uses);
+        npipe++;
+    }
+
+    return false;
+}
+
+std::vector<const IR::BFN::Pipe*>*
+ExtractBridgeInfo::generate_bridge_pairs(std::vector<BridgeContext>& all_context) {
+    std::vector<BridgeContext> all_emits;
+    std::vector<BridgeContext> all_extracts;
+
+    for (auto context : all_context) {
+        if (context.use.method == "emit") {
+            all_emits.push_back(context);
+        } else if (context.use.method == "extract") {
+            all_extracts.push_back(context);
+        }
+    }
+
+    auto pipes = new std::vector<const IR::BFN::Pipe*>();
+    for (auto emit : all_emits) {
+        for (auto extract : all_extracts) {
+            // cannot bridge from ingress to ingress or egress to egress
+            if (emit.use.thread == extract.use.thread)
+                continue;
+            // can only bridge from egress to ingress in the same pipe
+            if (emit.use.thread == EGRESS && extract.use.thread == INGRESS &&
+                emit.pipe_id != extract.pipe_id)
+                continue;
+            LOG3("pipe " << emit.pipe_id << " " << emit.use <<
+                 " pipe " << extract.pipe_id << " " << extract.use);
+            auto pipe = new IR::BFN::Pipe;
+            // emit and extract has the same pointer to pragma
+            pipe->global_pragmas = collect_pragma.global_pragmas();
+            pipe->thread[INGRESS] = emit.thread;
+            pipe->thread[EGRESS] = extract.thread;
+            pipes->push_back(pipe);
+        }
+    }
+
+    return pipes;
+}
+
+void ExtractBridgeInfo::end_apply(const IR::Node*) {
+    ordered_map<cstring, ordered_set<std::pair<int, CollectBridgedFieldsUse::Use>>> uses_by_name;
+    for (auto kv : all_uses) {
+        LOG1("pipe " << kv.first);
+        for (auto u : kv.second) {
+            LOG1("\t " << u);
+            uses_by_name[u.name].insert(std::make_pair(kv.first, u));
+        }
+    }
+    ordered_set<cstring> candidates;
+    for (auto kv : uses_by_name)
+        candidates.insert(kv.first);
+
+    auto pack = new PackFlexibleHeaders(options, candidates, map);
+
+    for (auto kv : uses_by_name) {
+        std::vector<BridgeContext> bridge_infos;
+        for (auto u : kv.second) {
+            auto pipe_id = u.first;
+            auto pipe = conv->getPipes().at(pipe_id);
+            auto thread = pipe->thread[u.second.thread];
+            BridgeContext ctxt = {pipe_id, u.second, thread};
+            bridge_infos.push_back(ctxt);
+        }
+
+        auto bridgePath = generate_bridge_pairs(bridge_infos);
+
+        for (auto p : *bridgePath) {
+            LOG1("Collect flexible fields for " << kv.first);
+            pack->set_pipeline_name(p->name);
+            p->apply(*pack);
+        }
+    }
+
+    pack->check_conflicting_constraints();
+    pack->solve();
+}
+
+// Invariants:
+//  - must be applied to IR::P4Program node that can be type-checked
+//  - must generated IR::P4Program node that can still be type-checked.
+// Post condition:
+//  - vector of backend pipes for the corresponding p4 program.
+//  - if bridge_packing is enabled, a transformed IR::P4Program
+//        with @flexible header repacked.
+// SimplifyReference transforms IR::P4Program towards the
+// backend IR representation, as a result, the transformed
+// P4Program no longer type-check.
+BridgedPacking::BridgedPacking(BFN_Options& options, RepackedHeaderTypes& map,
+                               CollectSourceInfoLogging& sourceInfoLogging)
+    : map(map) {
+    refMap.setIsV1(true);
+    bindings = new ParamBinding(&typeMap,
+        options.langVersion == CompilerOptions::FrontendVersion::P4_14);
+    conv = new BFN::BackendConverter(&refMap, &typeMap, bindings, pipe, pipes, sourceInfoLogging);
+    evaluator = new BFN::ApplyEvaluator(&refMap, &typeMap);
+    extractBridgeInfo = new ExtractBridgeInfo(options, &refMap, &typeMap, conv, bindings, map);
+    auto typeChecking = new BFN::TypeChecking(&refMap, &typeMap, true);
+
+    addPasses({
+        new P4::ClearTypeMap(&typeMap),
+        typeChecking,
+        new BFN::ConvertSizeOfToConstant(),
+        new PassRepeated({
+            new P4::ConstantFolding(&refMap, &typeMap, true, typeChecking),
+            new P4::StrengthReduction(&refMap, &typeMap, typeChecking),
+            new P4::Reassociation(),
+            new P4::UselessCasts(&refMap, &typeMap)
+        }),
+        typeChecking,
+        new RenameArchParams(&refMap, &typeMap),
+        new FillFromBlockMap(&refMap, &typeMap),
+        evaluator,
+        bindings,
+        conv,  // map name to IR::BFN::Pipe
+        extractBridgeInfo,
+        new PadFixedSizeHeaders(map),
+    });
+}
+
+SubstitutePackedHeaders::SubstitutePackedHeaders(BFN_Options& options,
+                                                 const RepackedHeaderTypes &map,
+                                                 CollectSourceInfoLogging& sourceInfoLogging) {
+    refMap.setIsV1(true);
+    bindings = new ParamBinding(&typeMap,
+        options.langVersion == CompilerOptions::FrontendVersion::P4_14);
+    conv = new BFN::BackendConverter(&refMap, &typeMap, bindings, pipe, pipes, sourceInfoLogging);
+    evaluator = new BFN::ApplyEvaluator(&refMap, &typeMap);
+    auto typeChecking = new BFN::TypeChecking(&refMap, &typeMap, true);
+
+    addPasses({
+        new ReplaceFlexibleType(map),
+        new P4::ClearTypeMap(&typeMap),
+        typeChecking,
+        new BFN::ConvertSizeOfToConstant(),
+        new PassRepeated({
+            new P4::ConstantFolding(&refMap, &typeMap, true, typeChecking),
+            new P4::StrengthReduction(&refMap, &typeMap, typeChecking),
+            new P4::Reassociation(),
+            new P4::UselessCasts(&refMap, &typeMap)
+        }),
+        typeChecking,
+        new RenameArchParams(&refMap, &typeMap),
+        new FillFromBlockMap(&refMap, &typeMap),
+        evaluator,
+        bindings,
+        conv,
+        new PostMidEndLast,
+    });
+}
+
+std::ostream& operator<<(std::ostream &out, const CollectBridgedFieldsUse::Use& u) {
+    out << u.method;
+    if (auto type = u.type->to<IR::Type_StructLike>()) {
+        out << " " << type->name.name;
+    }
+    out << " in " << u.thread << ";";
+    return out;
+}

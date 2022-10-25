@@ -76,6 +76,7 @@
 #include "backends/graphs/graph_visitor.h"
 #include "bf-p4c/backend.h"
 #include "bf-p4c/common/pragma/collect_global_pragma.h"
+#include "bf-p4c/common/bridged_packing.h"
 #include "bf-p4c/control-plane/runtime.h"
 #include "bf-p4c/frontend.h"
 #include "bf-p4c/lib/error_type.h"
@@ -96,7 +97,6 @@
 #include "frontends/common/constantFolding.h"
 #include "frontends/p4-14/header_type.h"
 #include "frontends/p4-14/typecheck.h"
-#include "arch/bridge.h"
 #include "ir/dbprint.h"
 #include "lib/compile_context.h"
 #include "lib/crash.h"
@@ -457,7 +457,7 @@ int main(int ac, char **av) {
     /* save the pre-packing p4 program */
     // return IR::P4Program with @flexible header packed
     auto map = new RepackedHeaderTypes;
-    BFN::BridgedPacking bridgePacking(options, *map, *midend.sourceInfoLogging);
+    BridgedPacking bridgePacking(options, *map, *midend.sourceInfoLogging);
     bridgePacking.addDebugHook(hook, true);
     bridgePacking.addDebugHook(EventLogger::getDebugHook(), true);
 
@@ -466,7 +466,7 @@ int main(int ac, char **av) {
         return return_from_main_politely(PROGRAM_ERROR);
         // still did not reach the backend for fitting issues
 
-    BFN::SubstitutePackedHeaders substitute(options, *map, *midend.sourceInfoLogging);
+    SubstitutePackedHeaders substitute(options, *map, *midend.sourceInfoLogging);
     substitute.addDebugHook(hook, true);
     substitute.addDebugHook(EventLogger::getDebugHook(), true);
 

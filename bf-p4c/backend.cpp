@@ -55,7 +55,7 @@
 #include "bf-p4c/common/check_uninitialized_read.h"
 #include "bf-p4c/common/elim_unused.h"
 #include "bf-p4c/common/extract_maupipe.h"
-#include "bf-p4c/common/flexible_packing.h"
+#include "bf-p4c/common/bridged_packing.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/common/ir_utils.h"
 #include "bf-p4c/common/multiple_apply.h"

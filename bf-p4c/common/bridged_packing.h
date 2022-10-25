@@ -6,6 +6,49 @@
 #include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/phv/constraints/constraints.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "frontends/common/resolveReferences/referenceMap.h"
+#include "frontends/p4/typeMap.h"
+#include "bf-p4c/phv/phv.h"
+#include "bf-p4c/common/pragma/collect_global_pragma.h"
+
+#include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/common/extract_maupipe.h"
+#include "bf-p4c/midend/blockmap.h"
+#include "bf-p4c/midend/normalize_params.h"
+#include "bf-p4c/midend/param_binding.h"
+#include "bf-p4c/midend/simplify_references.h"
+#include "bf-p4c/midend/type_checker.h"
+#include "frontends/common/resolveReferences/resolveReferences.h"
+#include "frontends/p4/methodInstance.h"
+#include "bf-p4c/logging/source_info_logging.h"
+
+// Collection of bridge metadata constraints across all pipelines
+// in the program.
+struct AllConstraints {
+    ordered_set<const Constraints::AlignmentConstraint*> alignedConstraints;
+    ordered_set<const Constraints::CopackConstraint*> copackConstraints;
+    ordered_set<const Constraints::SolitaryConstraint*> solitaryConstraints;
+    ordered_set<const Constraints::NoPackConstraint*> nopackConstraints;
+    ordered_set<const Constraints::NoOverlapConstraint*> nooverlapConstraints;
+    ordered_set<const Constraints::MutuallyAlignedConstraint*> mutuallyAlignedConstraints;
+    ordered_set<const Constraints::DeparsedToTMConstraint*> deparseToTMConstraints;
+    ordered_set<const Constraints::NoSplitConstraint*> noSplitConstraints;
+};
+
+using FieldListEntry = std::pair<int, const IR::Type*>;
+using AlignmentConstraint = Constraints::AlignmentConstraint;
+using SolitaryConstraint = Constraints::SolitaryConstraint;
+using RepackedHeaders = std::vector<std::pair<const IR::HeaderOrMetadata*, std::string>>;
+using ExtractedTogether = ordered_map<cstring, ordered_set<cstring>>;
+using PackingCandidateFields = ordered_map<cstring, ordered_set<cstring>>;
+using PackedFields = ordered_map<cstring, std::vector<cstring>>;
+using PackingConstraints = ordered_map<cstring, std::vector<z3::expr>>;
+
+/**
+ * Represents constraints induced in the ConstraintSolver class in the form
+ * header -> constraint type -> description of constraint.
+ */
+using DebugInfo = ordered_map<cstring, ordered_map<cstring, ordered_set<cstring>>>;
 
 /**
  * \ingroup bridged_packing
@@ -223,8 +266,6 @@ class GatherDigestFields : public Inspector {
     void end_apply() override;
 };
 
-using AlignmentConstraint = Constraints::AlignmentConstraint;
-using SolitaryConstraint = Constraints::SolitaryConstraint;
 
 /**
  * The inspector induces alignment constraints for bridged fields based on the information
@@ -346,11 +387,6 @@ class GatherAlignmentConstraints : public PassManager {
     }
 };
 
-/**
- * Represents constraints induced in the ConstraintSolver class in the form
- * header -> constraint type -> description of constraint.
- */
-using DebugInfo = ordered_map<cstring, ordered_map<cstring, ordered_set<cstring>>>;
 
 /**
  * \brief The class uses the Z3 solver to generate packing for a set of %PHV fields
@@ -388,6 +424,8 @@ class ConstraintSolver {
     const PhvInfo& phv;
     z3::context& context;
     z3::optimize& solver;
+    PackingConstraints& packingConstraints;
+    AllConstraints& constraints;
     /// Stores induced per-header-per-type constraints in a human-readable form.
     /// For use outside of this class.
     DebugInfo& debug_info;
@@ -408,8 +446,10 @@ class ConstraintSolver {
 
  public:
     explicit ConstraintSolver(const PhvInfo& p, z3::context& context,
-            z3::optimize& solver, DebugInfo& dbg) :
-        phv(p), context(context), solver(solver), debug_info(dbg) {}
+            z3::optimize& solver, PackingConstraints& pc,
+            AllConstraints& constraints, DebugInfo& dbg) :
+        phv(p), context(context), solver(solver), packingConstraints(pc),
+        constraints(constraints), debug_info(dbg) {}
 
     void add_constraints(cstring, ordered_set<const PHV::Field*>&);
     void add_mutually_aligned_constraints(ordered_set<const PHV::Field*>&);
@@ -482,24 +522,44 @@ class PackWithConstraintSolver : public Inspector {
     ordered_map<cstring, ordered_set<const PHV::Field*>> byteAlignedFieldsMap;
     /// A mapping from \@flexible PHV::Field to the corresponding IR::StructField
     /// for each header/metadata/digest field list
+    // XXX: make this a ordered_map<cstring, IR::StructField>
     ordered_map<cstring, ordered_map<const PHV::Field*, const IR::StructField*>>
                                                          phvFieldToStructFieldMap;
+
+    /// FIXME: remove
+    /// A mapping from a path such as ingress::hdr.foo to the corresponding
+    /// struct field of hdr_t
+    ordered_map<cstring, ordered_map<cstring, const IR::StructField*>>
+                                                         pathToStructFieldMap;
+
+    PackingCandidateFields&                              packingCandidateFields;
+    PackingConstraints&                                  packingConstraints;
+
     /// A mapping from header/metadata/digest field list name to the corresponding
     /// IR::Type_StructLike for each header/metadata/digest field list
     ordered_map<cstring, const IR::Type_StructLike*>     headerMap;
+
+    // Pipeline name for printing debug messages
+    cstring pipelineName;
 
  public:
     explicit PackWithConstraintSolver(const PhvInfo& p,
             ConstraintSolver& solver,
             const ordered_set<cstring>& c,
-            ordered_map<cstring, const IR::Type_StructLike*>& r):
-        phv(p), solver(solver), candidates(c), repackedTypes(r) {}
+            ordered_map<cstring, const IR::Type_StructLike*>& r,
+            PackingCandidateFields& pcf,
+            PackingConstraints& pc):
+        phv(p), solver(solver),
+        candidates(c), repackedTypes(r),
+        packingCandidateFields(pcf),
+        packingConstraints(pc) {}
 
     Visitor::profile_t init_apply(const IR::Node* root) override;
     bool preorder(const IR::HeaderOrMetadata* hdr) override;
     bool preorder(const IR::BFN::DigestFieldList* dfl) override;
     void end_apply() override;
 
+    void set_pipeline_name(cstring name) { pipelineName = name; }
     void optimize();
     void solve();
 };
@@ -564,9 +624,6 @@ class PadFixedSizeHeaders : public Inspector {
     }
 };
 
-using RepackedHeaderTypes = ordered_map<cstring, const IR::Type_StructLike*>;
-using FieldListEntry = std::pair<int, const IR::Type*>;
-
 /**
  * The transformer replaces specified headers/metadata/digest field lists
  * with adjusted versions. The adjusted versions are to be delivered through
@@ -592,5 +649,387 @@ class ReplaceFlexibleType : public Transform {
     const IR::Node* postorder(IR::Type_StructLike* h) override;
     const IR::Node* postorder(IR::StructExpression* h) override;
 };
+
+
+bool findFlexibleAnnotation(const IR::Type_StructLike*);
+
+/// This class gathers all the bridged metadata fields also used as deparser parameters. The
+/// CollectPhvInfo pass sets the deparsed_bottom_bits() property for all deparser parameters to
+/// true. Therefore, this alignment constraint needs to be recognized and respected during bridged
+/// metadata packing.
+class GatherDeparserParameters : public Inspector {
+ private:
+    const PhvInfo& phv;
+    /// Set of detected deparser parameters.
+    ordered_set<const PHV::Field*>& params;
+
+    profile_t init_apply(const IR::Node* root) override {
+        params.clear();
+        return Inspector::init_apply(root);
+    }
+
+    bool preorder(const IR::BFN::DeparserParameter* p) override;
+
+ public:
+    explicit GatherDeparserParameters(const PhvInfo& p, ordered_set<const PHV::Field*>& f)
+            : phv(p), params(f) { }
+};
+
+/// This class identifies all fields initialized in the parser during Phase 0. The output of this
+/// pass is used later by RepackFlexHeaders as follows: If a bridged field is also initialized in
+/// Phase 0, then that field is not packed with any other field.
+class GatherPhase0Fields : public Inspector {
+ private:
+    const PhvInfo& phv;
+    /// Set of all fields initialized in phase 0.
+    ordered_set<const PHV::Field*>& noPackFields;
+    static constexpr char const *PHASE0_PARSER_STATE_NAME = "ingress::$phase0";
+
+    profile_t init_apply(const IR::Node* root) override {
+        noPackFields.clear();
+        return Inspector::init_apply(root);
+    }
+
+    bool preorder(const IR::BFN::ParserState* p) override;
+
+    bool preorder(const IR::BFN::DigestFieldList* d) override;
+
+ public:
+    explicit GatherPhase0Fields(
+            const PhvInfo& p,
+            ordered_set<const PHV::Field*>& f)
+            : phv(p), noPackFields(f) { }
+};
+
+
+// set of variables for bridged fields (pretty print)
+// set of constraints for bridged fields
+// helper function to convert between PHV::Field to z3::expr
+// constraints are objects on PHV fields
+// constraints can be pretty_printed, encoded to z3
+class LogRepackedHeaders : public Inspector {
+ private:
+    // Need this for field names
+    const PhvInfo& phv;
+    // Contains all of the (potentially) repacked headers
+    RepackedHeaders repacked;
+    // All headers we have seen before, but with "egress" or "ingress" removed (avoid duplication)
+    std::unordered_set<std::string> hdrs;
+
+    // Collects all headers/metadatas that may have been repacked (i.e. have a field that is
+    // flexible)
+    bool preorder(const IR::HeaderOrMetadata* h) override;
+
+    // Pretty print all of the flexible headers
+    void end_apply() override;
+
+    // Returns the full field name
+    std::string getFieldName(std::string hdr, const IR::StructField* field) const;
+
+    // Pretty prints a single header/metadata
+    std::string pretty_print(const IR::HeaderOrMetadata* h, std::string hdr) const;
+
+    // Strips the given prefix from the front of the cstring, returns as string
+    std::string strip_prefix(cstring str, std::string pre);
+
+ public:
+    explicit LogRepackedHeaders(const PhvInfo& p) : phv(p) { }
+
+    std::string asm_output() const;
+};
+
+class LogFlexiblePacking : public Logging::PassManager {
+    LogRepackedHeaders* flexibleLogging;
+
+ public:
+    explicit LogFlexiblePacking(const PhvInfo& phv) :
+    Logging::PassManager("flexible_packing", Logging::Mode::AUTO) {
+        flexibleLogging = new LogRepackedHeaders(phv);
+        addPasses({
+            flexibleLogging,
+        });
+    }
+
+    const LogRepackedHeaders *get_flexible_logging() const { return flexibleLogging; }
+};
+
+class GatherPackingConstraintFromSinglePipeline : public PassManager {
+ private:
+    const BFN_Options&                                  options;
+    MauBacktracker                                      table_alloc;
+    PragmaNoPack                                        pa_no_pack;
+    PackConflicts                                       packConflicts;
+    MapTablesToActions                                  tableActionsMap;
+    ActionPhvConstraints                                actionConstraints;
+    SymBitMatrix                                        doNotPack;
+    TablesMutuallyExclusive                             tMutex;
+    ActionMutuallyExclusive                             aMutex;
+    ordered_set<const PHV::Field*>                      noPackFields;
+    ordered_set<const PHV::Field*>                      deparserParams;
+
+    // used by solver-based packing
+    ordered_set<const PHV::Field*>                      fieldsToPack;
+    PackWithConstraintSolver&                           packWithConstraintSolver;
+
+ public:
+    explicit GatherPackingConstraintFromSinglePipeline(
+            PhvInfo& p,
+            const PhvUse& u,
+            DependencyGraph& dg,
+            const BFN_Options &o,
+            PackWithConstraintSolver& sol);
+
+    // Return a Json representation of flexible headers to be saved in .bfa/context.json
+    // must be called after the pass is applied
+    std::string asm_output() const;
+};
+
+// PackFlexibleHeader manages the global context for packing bridge metadata
+// The global context includes:
+// - instance of z3 solver and its context
+//
+// We need to manage the global context at this level is because bridge
+// metadata can be used across multiple pipelines in folded pipeline. To
+// support folded pipeline, we first collect bridge metadata constraints across
+// each pair of ingress/egress, and run z3 solver over the global set of
+// constraints over all pairs of ingress&egress pipelines. Therefore, it
+// is necessary to maintain z3 context as this level.
+class PackFlexibleHeaders : public PassManager {
+    std::vector<const IR::BFN::Pipe*> pipe;
+    PhvInfo phv;
+    PhvUse uses;
+    FieldDefUse defuse;
+    DependencyGraph deps;
+
+    z3::context context;
+    z3::optimize solver;
+    ConstraintSolver constraint_solver;
+    PackWithConstraintSolver packWithConstraintSolver;
+    PackingCandidateFields packingCandidateFields;
+    PackingConstraints packingConstraints;
+    PackedFields packedFields;
+    AllConstraints constraints;
+
+    cstring pipelineName;
+    /* storage for debug log */
+    DebugInfo debug_info;
+
+    GatherPackingConstraintFromSinglePipeline *flexiblePacking;
+
+ public:
+    explicit PackFlexibleHeaders(const BFN_Options& options, ordered_set<cstring>&,
+                                 RepackedHeaderTypes& repackedTypes);
+
+    void set_pipeline_name(cstring name) { pipelineName = name; }
+    // encode constraints to z3 expressions
+    void optimize() {
+         packWithConstraintSolver.set_pipeline_name(pipelineName);
+         packWithConstraintSolver.optimize(); }
+    // execute z3 solver to find a solution
+    void solve() { packWithConstraintSolver.solve(); }
+    // convert the solution to P4 header format
+    void end_apply() override;
+
+    void print_packing_candidate_fields() const {
+        for (auto& [hdr_type, fields] : packingCandidateFields) {
+            LOG3("Packing candidate fields for " << hdr_type << ":");
+            for (auto f : fields) {
+                LOG3("  " << f);
+            }
+        }
+    }
+    void check_conflicting_constraints();
+};
+
+/**
+ * \defgroup bridged_packing Packing of bridged and fixed-size headers
+ * \ingroup post_midend
+ * \brief Overview of passes that adjust packing of bridged headers
+ *
+ * Packing of bridged headers is performed in order to satisfy constraints induced
+ * by the processing threads where the bridged headers are used.
+ * Bridging can be used from an ingress to an egress processing thread of a possibly
+ * different pipe, from an egress to an ingress processing thread of the same pipe
+ * in the case of a folded program, or the combination of both.
+ *
+ * The egress to ingress bridging is available on Tofino 32Q with loopbacks present
+ * at pipes 1 and 3. It is not available on Tofino 64Q with no loopbacks.
+ *
+ * The case of the combination of both bridging in a folded program is shown below:
+ *
+ * \dot
+ * digraph folded_pipeline {
+ *   layout=neato
+ *   node [shape=box,style="rounded,filled",fontname="sans-serif,bold",
+ *     margin="0.05,0.05",color=dodgerblue3,fillcolor=dodgerblue3,fontcolor=white,fontsize=10]
+ *   edge [fontname="sans-serif",color=gray40,fontcolor=gray40,fontsize=10]
+ *   IG0 [label="pipe0:ingress", pos="-1,1!"]
+ *   EG0 [label="pipe0:egress", pos="1,1!"]
+ *   IG1 [label="pipe1:ingress", pos="-1,0!"]
+ *   EG1 [label="pipe1:egress", pos="1,0!"]
+ *   IG0 -> EG1
+ *   EG1 -> IG1 [label="32Q loopback"]
+ *   IG1 -> EG0
+ * }
+ * \enddot
+ *
+ * Packets are processed in a "logical" pipe(line) that spans multiple "physical" pipe(line)s.
+ * Using the backend's terminology, the packet is processed by four threads
+ * of the IR::BFN::Pipe::thread_t type in a run-to-completion manner.
+ *
+ * All bridged headers needs to be analyzed in all threads they are used in.
+ * They are emitted by the source thread and extracted by the destination thread.
+ * In the case above, if a bridged header is used in all threads, the analysis is
+ * performed on pairs (pipe0:ingress, pipe1:egress), (pipe1:egress, pipe1:ingress),
+ * and (pipe1:ingress, pipe0:egress) (following the arrows).
+ *
+ * Packing of bridged headers is performed only for the headers/structs
+ * with the \@flexible annotation and for resubmit headers,
+ * which are fixed-sized (transformed into the IR::BFN::Type_FixedSizeHeader type in midend).
+ *
+ * The steps are as follows:
+ *
+ * 1. BFN::BridgedPacking:
+ *    Perform some auxiliary passes and convert the midend IR towards the backend IR
+ *    (BackendConverter).
+ * 2. BFN::BridgedPacking -> ExtractBridgeInfo::preorder(IR::P4Program):
+ *    Find usages of bridged headers (CollectBridgedFieldsUse).
+ * 3. BFN::BridgedPacking -> ExtractBridgeInfo::end_apply():
+ *    For all pairs of gresses where the bridged headers are used, perform some auxiliary
+ *      backend passes (under PackFlexibleHeaders) and collect the constraints of
+ *      bridged headers (FlexiblePacking).
+ * 4. BFN::BridgedPacking -> ExtractBridgeInfo::end_apply()
+ *    -> PackFlexibleHeaders::solve() -> FlexiblePacking::solve()
+ *    -> PackWithConstraintSolver::solve() -> ConstraintSolver::solve():
+ *    Use Z3 solver to find a satisfying packing of the bridged headers,
+ *      which is stored in the RepackedHeaderTypes map.
+ * 5. BFN::BridgedPacking -> PadFixedSizeHeaders:
+ *    Look for fixed-size headers and add their adjusted packing to the RepackedHeaderTypes map.
+ * 6. The modifications of the auxiliary passes performed in 1., the converted backend IR,
+ *      and the modifications of auxiliary backend passes performed in 3. are thrown away.
+ * 7. BFN::SubstitutePackedHeaders -> ReplaceFlexibleType::postorder:
+ *    The solution found by the Z3 solver is used to substitute the original bridged headers
+ *      with adjusted ones. Fixed-size headers are also substituted with adjusted ones.
+ * 8. BFN::SubstitutePackedHeaders:
+ *    Perform the same auxiliary passes and convert the IR towards the backend IR as in 1.
+ *      and perform the PostMidEndLast pass.
+ */
+
+using PipeAndGress = std::pair<std::pair<cstring, gress_t>, std::pair<cstring, gress_t>>;
+
+using BridgeLocs = ordered_map<std::pair<cstring, gress_t>, IR::HeaderRef*>;
+
+class CollectBridgedFieldsUse : public Inspector {
+ public:
+    P4::ReferenceMap *refMap;
+    P4::TypeMap *typeMap;
+
+    struct Use {
+        const IR::Type* type;
+        cstring name;
+        cstring method;
+        gress_t thread;
+
+        bool operator<(const Use& other) const {
+            return std::tie(type, name, method, thread) <
+                   std::tie(other.type, other.name, other.method, other.thread); }
+
+        bool operator==(const Use& other) const {
+            return std::tie(type, name, method, thread) ==
+                   std::tie(other.type, other.name, other.method, other.thread); }
+    };
+
+    ordered_set<Use> bridge_uses;
+
+    friend std::ostream& operator<<(std::ostream&, const Use& u);
+
+ public:
+    CollectBridgedFieldsUse(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) :
+    refMap(refMap), typeMap(typeMap) {}
+
+    void postorder(const IR::MethodCallExpression* mc) override;
+};
+
+struct BridgeContext {
+    int pipe_id;
+    CollectBridgedFieldsUse::Use use;
+    IR::BFN::Pipe::thread_t thread;
+};
+
+class ExtractBridgeInfo : public Inspector {
+    const BFN_Options& options;
+    P4::ReferenceMap *refMap;
+    P4::TypeMap *typeMap;
+    BFN::BackendConverter *conv;
+    ParamBinding* bindings;
+    RepackedHeaderTypes &map;
+    CollectGlobalPragma collect_pragma;
+
+ public:
+    ordered_map<int, ordered_set<CollectBridgedFieldsUse::Use>> all_uses;
+
+    ExtractBridgeInfo(BFN_Options& options,
+            P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
+            BFN::BackendConverter* conv, ParamBinding* bindings,
+            RepackedHeaderTypes& ht) :
+        options(options), refMap(refMap), typeMap(typeMap), conv(conv),
+        bindings(bindings), map(ht) {}
+
+    std::vector<const IR::BFN::Pipe*>*
+        generate_bridge_pairs(std::vector<BridgeContext>&);
+
+    bool preorder(const IR::P4Program* program) override;
+    void end_apply(const IR::Node*) override;
+};
+
+/**
+ * \ingroup bridged_packing
+ * \brief The pass analyzes the usage of bridged headers and adjusts their packing.
+ *
+ * @pre Apply this pass manager to IR::P4Program after midend processing.
+ * @post The RepackedHeaderTypes map filled in with adjusted packing of bridged headers.
+ */
+class BridgedPacking : public PassManager {
+    ParamBinding* bindings;
+    BFN::ApplyEvaluator *evaluator;
+    BFN::BackendConverter *conv;
+    RepackedHeaderTypes &map;
+    ExtractBridgeInfo* extractBridgeInfo;
+
+ public:
+    P4::ReferenceMap refMap;
+    P4::TypeMap typeMap;
+
+ public:
+    BridgedPacking(BFN_Options& options, RepackedHeaderTypes& repackMap,
+                   CollectSourceInfoLogging& sourceInfoLogging);
+
+    IR::Vector<IR::BFN::Pipe> pipe;
+    ordered_map<int, const IR::BFN::Pipe*> pipes;
+};
+
+/**
+ * \ingroup bridged_packing
+ * \brief The pass substitutes bridged headers with adjusted ones
+ *        and converts the IR into the backend form.
+ */
+class SubstitutePackedHeaders : public PassManager {
+    ParamBinding* bindings;
+    BFN::ApplyEvaluator *evaluator;
+    BFN::BackendConverter *conv;
+
+ public:
+    P4::ReferenceMap refMap;
+    P4::TypeMap typeMap;
+    IR::Vector<IR::BFN::Pipe> pipe;
+    ordered_map<int, const IR::BFN::Pipe*> pipes;
+
+ public:
+    SubstitutePackedHeaders(BFN_Options& options, const RepackedHeaderTypes& repackedMap,
+                            CollectSourceInfoLogging& sourceInfoLogging);
+    const BFN::ProgramThreads &getThreads() const { return conv->getThreads(); }
+    const IR::ToplevelBlock *getToplevelBlock() const { return evaluator->toplevel; }
+};
+
 
 #endif /* EXTENSIONS_BF_P4C_COMMON_BRIDGED_PACKING_H_ */
