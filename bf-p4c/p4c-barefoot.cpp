@@ -561,7 +561,7 @@ int main(int ac, char **av) {
 #if BFP4C_CATCH_EXCEPTIONS
     // catch all exceptions here
     } catch (const Util::CompilerBug &e) {
-        BFNContext::get().errorReporter().silently_increment_the_error_count();
+        BFNContext::get().errorReporter().increment_the_error_count();
         reportStats_alwaysCallThisONCEshortlyBeforeExiting();
 
 #ifdef BAREFOOT_INTERNAL
@@ -576,27 +576,27 @@ int main(int ac, char **av) {
               << std::endl;
         return INTERNAL_COMPILER_ERROR;
     } catch (const Util::CompilerUnimplemented &e) {
-        BFNContext::get().errorReporter().silently_increment_the_error_count();
+        BFNContext::get().errorReporter().increment_the_error_count();
         reportStats_alwaysCallThisONCEshortlyBeforeExiting();
 
         std::cerr << e.what() << std::endl;
         return COMPILER_ERROR;
     } catch (const Util::CompilationError &e) {
-        BFNContext::get().errorReporter().silently_increment_the_error_count();
+        BFNContext::get().errorReporter().increment_the_error_count();
         reportStats_alwaysCallThisONCEshortlyBeforeExiting();
 
         std::cerr << e.what() << std::endl;
         return PROGRAM_ERROR;
 #if BAREFOOT_INTERNAL
     } catch (const std::exception &e) {
-        BFNContext::get().errorReporter().silently_increment_the_error_count();
+        BFNContext::get().errorReporter().increment_the_error_count();
         reportStats_alwaysCallThisONCEshortlyBeforeExiting();
 
         std::cerr << "Internal compiler error: " << e.what() << std::endl;
         return INTERNAL_COMPILER_ERROR;
 #endif
     } catch (...) {
-        BFNContext::get().errorReporter().silently_increment_the_error_count();
+        BFNContext::get().errorReporter().increment_the_error_count();
         reportStats_alwaysCallThisONCEshortlyBeforeExiting();
 
         std::cerr << "Internal compiler error. Please submit a bug report with your code."
