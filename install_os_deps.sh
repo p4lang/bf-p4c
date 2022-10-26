@@ -502,21 +502,13 @@ function install_protobuf() {
 }
 
 function install_z3() {
-    Z3='z3-4.8.7-x64-ubuntu-16.04'
-    Z3_ZIP="${Z3}.zip"
-    cd /tmp
+    Z3='z3_4.8.8_amd64-ubuntu.deb'
+    pushd /tmp
     curl -L --noproxy "*" \
-      https://artifacts-bxdsw.sc.intel.com/repository/generic/third-party/"${Z3_ZIP}" -o "${Z3_ZIP}"
-    unzip "${Z3_ZIP}"
-
-    cd "${Z3}"
-    $SUDO cp bin/libz3.a /usr/local/lib/
-    $SUDO cp bin/libz3.so /usr/local/lib/
-    $SUDO cp bin/z3 /usr/local/bin/
-    $SUDO cp include/*.h /usr/local/include/
-
+      https://artifacts-bxdsw.sc.intel.com/repository/generic/third-party/"${Z3}" -o "${Z3}"
+    $SUDO dpkg -i ${Z3}
     cd /tmp
-    rm -rf "${Z3}" "${Z3_ZIP}"
+    rm -rf "${Z3}"
 }
 
 # the main routine

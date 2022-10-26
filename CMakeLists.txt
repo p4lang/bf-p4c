@@ -92,7 +92,7 @@ else()
 endif()
 include_directories(${LIBDYNHASH_INCLUDE_DIR})
 
-set(Z3_MIN_VERSION "4.8.7")
+set(Z3_MIN_VERSION "4.8.8")
 find_package(Z3 ${Z3_MIN_VERSION} REQUIRED)
 
 # Additional P4C_CPP_FLAGS may be passed (via bootstrap_bfn_compilers.sh script)
