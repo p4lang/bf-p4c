@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_L2_DCI=1 -Ibf_arista_switch_l2_dci/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino2-t2na --o bf_arista_switch_l2_dci --bf-rt-schema bf_arista_switch_l2_dci/context/bf-rt.json
-// p4c 9.7.4 (SHA: 97e15e7)
+// p4c 9.7.4 (SHA: 8e6e85a)
 
 #include <core.p4>
 #include <tofino2_specs.p4>
@@ -792,7 +792,6 @@ struct Tornillo {
     bit<12>  Norcatur;
     bit<10>  Hueytown;
     bit<3>   LaLuz;
-    bit<3>   Townville;
     bit<8>   Steger;
     bit<1>   Monahans;
     bit<1>   Pinole;
@@ -2216,7 +2215,7 @@ control Wardville(inout Frederika Olcott, inout HighRock Westoak, in ingress_int
         key = {
             Westoak.Garrison.Avondale: exact @name("Garrison.Avondale") ;
         }
-        default_action = Oregon(3w0, 6w0, 2w0);
+        default_action = Oregon(3w0, 6w0, 2w3);
         size = 512;
     }
     apply {
@@ -2523,17 +2522,16 @@ control Miltona(inout Frederika Olcott, inout HighRock Westoak, in ingress_intri
         actions = {
             Chilson();
             Reynolds();
-            Kosmos();
+            @defaultonly Kosmos();
             Wakeman();
         }
         key = {
-            Olcott.Casnovia.Grannis : exact @name("Casnovia.Grannis") ;
             Olcott.Casnovia.StarLake: exact @name("Casnovia.StarLake") ;
             Olcott.Casnovia.Rains   : exact @name("Casnovia.Rains") ;
             Olcott.Casnovia.SoapLake: exact @name("Casnovia.SoapLake") ;
             Westoak.Wyndmoor.LaLuz  : ternary @name("Wyndmoor.LaLuz") ;
         }
-        default_action = Kosmos();
+        const default_action = Kosmos();
         size = 1024;
         requires_versioning = false;
     }
@@ -13932,14 +13930,14 @@ control Cleator(inout Frederika Olcott, inout HighRock Westoak, in ingress_intri
         Wiota.apply(Olcott, Westoak, Garrison, Lefor, Starkey, Milano);
         Duncombe.apply(Olcott, Westoak, Garrison, Lefor, Starkey, Milano);
         Oxnard.apply(Olcott, Westoak, Garrison, Lefor, Starkey, Milano);
+        if (Olcott.Casnovia.isValid()) {
+            Shivwits.apply(Olcott, Westoak, Garrison, Lefor, Starkey, Milano);
+        }
         if (Westoak.Covert.RioPecos == 1w0 && Westoak.Alstown.Bessie == 1w0 && Westoak.Alstown.Savery == 1w0) {
             if (Westoak.Lookeba.Aldan & 4w0x2 == 4w0x2 && Westoak.Covert.Bennet == 3w0x2 && Westoak.Lookeba.RossFork == 1w1) {
             } else {
                 if (Westoak.Lookeba.Aldan & 4w0x1 == 4w0x1 && Westoak.Covert.Bennet == 3w0x1 && Westoak.Lookeba.RossFork == 1w1) {
                 } else {
-                    if (Olcott.Casnovia.isValid()) {
-                        Shivwits.apply(Olcott, Westoak, Garrison, Lefor, Starkey, Milano);
-                    }
                     if (Westoak.Wyndmoor.Pajaros == 1w0 && Westoak.Wyndmoor.LaLuz != 3w2) {
                         McKibben.apply(Olcott, Westoak, Garrison, Lefor, Starkey, Milano);
                     }

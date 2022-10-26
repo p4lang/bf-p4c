@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MEDIA=1 -Ibf_arista_switch_media/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_media --bf-rt-schema bf_arista_switch_media/context/bf-rt.json
-// p4c 9.7.4 (SHA: 97e15e7)
+// p4c 9.7.4 (SHA: 8e6e85a)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -743,7 +743,6 @@ struct Buncombe {
     bit<12> Norcatur;
     bit<10> Arvada;
     bit<3>  Kalkaska;
-    bit<3>  Newfolden;
     bit<8>  Ledoux;
     bit<1>  Candle;
     bit<1>  Ackley;
@@ -3347,7 +3346,7 @@ control Newland(inout Fishers Vanoss, inout Sunbury Potosi, in ingress_intrinsic
         key = {
             Potosi.Swanlake.Blitchton: exact @name("Swanlake.Blitchton") ;
         }
-        default_action = Waumandee(3w0, 6w0, 2w0);
+        default_action = Waumandee(3w0, 6w0, 2w3);
         size = 512;
     }
     apply {
@@ -3614,48 +3613,6 @@ control Cornish(inout Fishers Vanoss, inout Sunbury Potosi, in ingress_intrinsic
     }
     apply {
         Mynard.apply();
-    }
-}
-
-control Crystola(inout Fishers Vanoss, inout Sunbury Potosi, in ingress_intrinsic_metadata_t Swanlake, in ingress_intrinsic_metadata_from_parser_t Mulvane, inout ingress_intrinsic_metadata_for_deparser_t Luning, inout ingress_intrinsic_metadata_for_tm_t Geistown) {
-    @name(".LasLomas") action LasLomas() {
-    }
-    @name(".Deeth") action Deeth(bit<20> Westville) {
-        LasLomas();
-        Potosi.Hookdale.Kalkaska = (bit<3>)3w2;
-        Potosi.Hookdale.Stilwell = Westville;
-        Potosi.Hookdale.Basic = Potosi.Sedan.Clarion;
-        Potosi.Hookdale.Arvada = (bit<10>)10w0;
-    }
-    @name(".Devola") action Devola() {
-        LasLomas();
-        Potosi.Hookdale.Kalkaska = (bit<3>)3w3;
-        Potosi.Sedan.Ayden = (bit<1>)1w0;
-        Potosi.Sedan.Brainard = (bit<1>)1w0;
-    }
-    @name(".Shevlin") action Shevlin() {
-        Potosi.Sedan.Manilla = (bit<1>)1w1;
-    }
-    @ternary(1) @disable_atomic_modify(1) @name(".Eudora") table Eudora {
-        actions = {
-            Deeth();
-            Devola();
-            Shevlin();
-            LasLomas();
-        }
-        key = {
-            Vanoss.Levasy.Helton    : exact @name("Levasy.Helton") ;
-            Vanoss.Levasy.Grannis   : exact @name("Levasy.Grannis") ;
-            Vanoss.Levasy.StarLake  : exact @name("Levasy.StarLake") ;
-            Vanoss.Levasy.Rains     : exact @name("Levasy.Rains") ;
-            Potosi.Hookdale.Kalkaska: ternary @name("Hookdale.Kalkaska") ;
-        }
-        default_action = Shevlin();
-        size = 1024;
-        requires_versioning = false;
-    }
-    apply {
-        Eudora.apply();
     }
 }
 
@@ -5858,6 +5815,39 @@ control Tusayan(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_
         default_action = Palomas(24w0, 24w0, 12w0);
         size = 65536;
     }
+    @name(".LasLomas") action LasLomas() {
+    }
+    @name(".Deeth") action Deeth(bit<20> Westville) {
+        LasLomas();
+        Potosi.Hookdale.Kalkaska = (bit<3>)3w2;
+        Potosi.Hookdale.Stilwell = Westville;
+        Potosi.Hookdale.Basic = Potosi.Sedan.Clarion;
+        Potosi.Hookdale.Arvada = (bit<10>)10w0;
+    }
+    @name(".Devola") action Devola() {
+        LasLomas();
+        Potosi.Hookdale.Kalkaska = (bit<3>)3w3;
+        Potosi.Sedan.Ayden = (bit<1>)1w0;
+        Potosi.Sedan.Brainard = (bit<1>)1w0;
+    }
+    @name(".Shevlin") action Shevlin() {
+        Potosi.Sedan.Manilla = (bit<1>)1w1;
+    }
+    @ternary(1) @disable_atomic_modify(1) @name(".Eudora") table Eudora {
+        actions = {
+            Deeth();
+            Devola();
+            @defaultonly Shevlin();
+            LasLomas();
+        }
+        key = {
+            Vanoss.Levasy.Grannis : exact @name("Levasy.Grannis") ;
+            Vanoss.Levasy.StarLake: exact @name("Levasy.StarLake") ;
+            Vanoss.Levasy.Rains   : exact @name("Levasy.Rains") ;
+        }
+        const default_action = Shevlin();
+        size = 1024;
+    }
     @name(".Penalosa") Sturgeon() Penalosa;
     @name(".Schofield") Brookwood() Schofield;
     @name(".Woodville") Lushton() Woodville;
@@ -5898,7 +5888,6 @@ control Tusayan(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_
     @name(".Hagerman") Newland() Hagerman;
     @name(".Jermyn") Capitola() Jermyn;
     @name(".Cleator") Lorane() Cleator;
-    @name(".Buenos") Crystola() Buenos;
     @name(".Harvey") Mocane() Harvey;
     @name(".LongPine") Berrydale() LongPine;
     @name(".Masardis") Lenox() Masardis;
@@ -5934,7 +5923,18 @@ control Tusayan(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_
                 Snowflake: {
                 }
                 default: {
-                    Geismar.apply(Vanoss, Potosi, Swanlake, Mulvane, Luning, Geistown);
+                    if (Vanoss.Levasy.isValid()) {
+                        switch (Eudora.apply().action_run) {
+                            Deeth: {
+                            }
+                            default: {
+                                Geismar.apply(Vanoss, Potosi, Swanlake, Mulvane, Luning, Geistown);
+                            }
+                        }
+
+                    } else {
+                        Geismar.apply(Vanoss, Potosi, Swanlake, Mulvane, Luning, Geistown);
+                    }
                 }
             }
 
@@ -5945,9 +5945,6 @@ control Tusayan(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_
                     if (Potosi.Arapahoe.Amenia & 4w0x1 == 4w0x1 && Potosi.Sedan.Cardenas == 3w0x1 && Potosi.Arapahoe.Tiburon == 1w1) {
                         Edgemont.apply(Vanoss, Potosi, Swanlake, Mulvane, Luning, Geistown);
                     } else {
-                        if (Vanoss.Levasy.isValid()) {
-                            Buenos.apply(Vanoss, Potosi, Swanlake, Mulvane, Luning, Geistown);
-                        }
                         if (Potosi.Hookdale.Rocklake == 1w0 && Potosi.Hookdale.Kalkaska != 3w2 && Potosi.Clearmont.Millhaven == 1w0) {
                             Lasara.apply(Vanoss, Potosi, Swanlake, Mulvane, Luning, Geistown);
                         }

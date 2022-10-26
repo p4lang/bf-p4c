@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MSEE_TOFINO2=1 -Ibf_arista_switch_msee_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino2-t2na --o bf_arista_switch_msee_tofino2 --bf-rt-schema bf_arista_switch_msee_tofino2/context/bf-rt.json
-// p4c 9.7.4 (SHA: 97e15e7)
+// p4c 9.7.4 (SHA: 8e6e85a)
 
 #include <core.p4>
 #include <tofino2_specs.p4>
@@ -795,7 +795,6 @@ struct McGrady {
     bit<12>  Westboro;
     bit<9>   Pierceton;
     bit<3>   FortHunt;
-    bit<3>   Hueytown;
     bit<8>   Conner;
     bit<1>   LaLuz;
     bit<1>   Townville;
@@ -2274,7 +2273,7 @@ control Standard(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsi
         key = {
             Lefor.Moultrie.Avondale: exact @name("Moultrie.Avondale") ;
         }
-        default_action = Wolverine(3w0, 6w0, 2w0);
+        default_action = Wolverine(3w0, 6w0, 2w3);
         size = 512;
     }
     apply {
@@ -2581,17 +2580,16 @@ control Kosmos(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_
         actions = {
             BigFork();
             Kenvil();
-            Rhine();
+            @defaultonly Rhine();
             Ironia();
         }
         key = {
-            Westoak.Flaherty.Noyes   : exact @name("Flaherty.Noyes") ;
             Westoak.Flaherty.Helton  : exact @name("Flaherty.Helton") ;
             Westoak.Flaherty.Grannis : exact @name("Flaherty.Grannis") ;
             Westoak.Flaherty.StarLake: exact @name("Flaherty.StarLake") ;
             Lefor.Ekwok.FortHunt     : ternary @name("Ekwok.FortHunt") ;
         }
-        default_action = Rhine();
+        const default_action = Rhine();
         size = 1024;
         requires_versioning = false;
     }
@@ -5300,7 +5298,7 @@ control Ancho(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_m
         Edmeston(Wynnewood, Venice, JimFalls, Tahlequah, Swansboro, Wanilla, Gilmanton, Allegan, Ouachita, Gorman, Hayfield, Belgrade);
         Lefor.Neponset.Sonoma = (bit<1>)1w1;
     }
-    @disable_atomic_modify(1) @ways(1) @name(".Viroqua") table Viroqua {
+    @disable_atomic_modify(1) @ways(1) @ternary(1) @name(".Viroqua") table Viroqua {
         actions = {
             Edmeston();
             Lamar();
@@ -5313,7 +5311,7 @@ control Ancho(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_m
         size = 2048;
         const default_action = Biloxi();
     }
-    @disable_atomic_modify(1) @ways(1) @name(".Monico") table Monico {
+    @disable_atomic_modify(1) @ways(1) @ternary(1) @name(".Monico") table Monico {
         actions = {
             Edmeston();
             Lamar();
@@ -15390,14 +15388,14 @@ control Simla(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_m
             Goodrich.apply(Westoak, Lefor, Moultrie, Starkey, Volens, Pinetop);
             Qulin.apply(Westoak, Lefor, Moultrie, Starkey, Volens, Pinetop);
             Tinaja.apply(Westoak, Lefor, Moultrie, Starkey, Volens, Pinetop);
+            if (Westoak.Flaherty.isValid()) {
+                Danforth.apply(Westoak, Lefor, Moultrie, Starkey, Volens, Pinetop);
+            }
             if (Lefor.HighRock.RockPort == 1w0 && Lefor.Millstone.Edwards == 1w0 && Lefor.Millstone.Mausdale == 1w0) {
                 if (Lefor.Jayton.Juneau & 4w0x2 == 4w0x2 && Lefor.HighRock.Placedo == 3w0x2 && Lefor.Jayton.Sunflower == 1w1) {
                 } else {
                     if (Lefor.Jayton.Juneau & 4w0x1 == 4w0x1 && Lefor.HighRock.Placedo == 3w0x1 && Lefor.Jayton.Sunflower == 1w1) {
                     } else {
-                        if (Westoak.Flaherty.isValid()) {
-                            Danforth.apply(Westoak, Lefor, Moultrie, Starkey, Volens, Pinetop);
-                        }
                         if (Lefor.Ekwok.RedElm == 1w0 && Lefor.Ekwok.FortHunt != 3w2) {
                             Dovray.apply(Westoak, Lefor, Moultrie, Starkey, Volens, Pinetop);
                         }

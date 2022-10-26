@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_DDOS_TOFINO2=1 -Ibf_arista_switch_ddos_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino2-t2na --o bf_arista_switch_ddos_tofino2 --bf-rt-schema bf_arista_switch_ddos_tofino2/context/bf-rt.json
-// p4c 9.7.4 (SHA: 97e15e7)
+// p4c 9.7.4 (SHA: 8e6e85a)
 
 #include <core.p4>
 #include <tofino2_specs.p4>
@@ -787,7 +787,6 @@ struct Goulds {
     bit<12>  Newfane;
     bit<9>   SomesBar;
     bit<3>   Vergennes;
-    bit<3>   Pierceton;
     bit<8>   Ledoux;
     bit<1>   FortHunt;
     bit<1>   Hueytown;
@@ -2238,7 +2237,7 @@ control Bostic(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrins
         key = {
             Dwight.Nooksack.Avondale: exact @name("Nooksack.Avondale") ;
         }
-        default_action = Danbury(3w0, 6w0, 2w0);
+        default_action = Danbury(3w0, 6w0, 2w3);
         size = 512;
     }
     apply {
@@ -2545,17 +2544,16 @@ control Rhine(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrinsi
         actions = {
             Bammel();
             Mendoza();
-            Paragonah();
+            @defaultonly Paragonah();
             LaJara();
         }
         key = {
-            Virgilina.Mayflower.Helton  : exact @name("Mayflower.Helton") ;
             Virgilina.Mayflower.Grannis : exact @name("Mayflower.Grannis") ;
             Virgilina.Mayflower.StarLake: exact @name("Mayflower.StarLake") ;
             Virgilina.Mayflower.Rains   : exact @name("Mayflower.Rains") ;
             Dwight.Lookeba.Vergennes    : ternary @name("Lookeba.Vergennes") ;
         }
-        default_action = Paragonah();
+        const default_action = Paragonah();
         size = 1024;
         requires_versioning = false;
     }
@@ -6416,14 +6414,14 @@ control Weslaco(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrin
         Masardis.apply(Virgilina, Dwight, Nooksack, RockHill, Robstown, Courtdale);
         LaPointe.apply(Virgilina, Dwight, Nooksack, RockHill, Robstown, Courtdale);
         Cortland.apply(Virgilina, Dwight, Nooksack, RockHill, Robstown, Courtdale);
+        if (Virgilina.Mayflower.isValid()) {
+            Herod.apply(Virgilina, Dwight, Nooksack, RockHill, Robstown, Courtdale);
+        }
         if (Dwight.Circle.Etter == 1w0 && Dwight.Armagh.Ovett == 1w0 && Dwight.Armagh.Murphy == 1w0) {
             if (Dwight.Humeston.Norma & 4w0x2 == 4w0x2 && Dwight.Circle.Minto == 3w0x2 && Dwight.Humeston.SourLake == 1w1) {
             } else {
                 if (Dwight.Humeston.Norma & 4w0x1 == 4w0x1 && Dwight.Circle.Minto == 3w0x1 && Dwight.Humeston.SourLake == 1w1) {
                 } else {
-                    if (Virgilina.Mayflower.isValid()) {
-                        Herod.apply(Virgilina, Dwight, Nooksack, RockHill, Robstown, Courtdale);
-                    }
                     if (Dwight.Lookeba.Tornillo == 1w0 && Dwight.Lookeba.Vergennes != 3w2) {
                         Rendville.apply(Virgilina, Dwight, Nooksack, RockHill, Robstown, Courtdale);
                     }

@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_STATELESS_LOAD_BALANCE_V4V6=1 -Ibf_arista_switch_stateless_load_balance_v4v6/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_stateless_load_balance_v4v6 --bf-rt-schema bf_arista_switch_stateless_load_balance_v4v6/context/bf-rt.json
-// p4c 9.7.4 (SHA: 97e15e7)
+// p4c 9.7.4 (SHA: 8e6e85a)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -721,7 +721,6 @@ struct Hueytown {
     bit<12> Comfrey;
     bit<10> Peebles;
     bit<3>  Wellton;
-    bit<3>  Kenney;
     bit<8>  Cornell;
     bit<1>  Crestone;
     bit<1>  Buncombe;
@@ -3125,7 +3124,7 @@ control Kingsdale(inout Hookdale Levasy, inout Jayton Indios, in ingress_intrins
         Tekonsha(Indios.Lookeba.Steger, Indios.Lookeba.Quogue, Indios.Lookeba.Clarion, Chevak);
     }
     @name(".Blanding") DirectMeter(MeterType_t.BYTES) Blanding;
-    @disable_atomic_modify(1) @use_hash_action(0) @name(".Ocilla") table Ocilla {
+    @disable_atomic_modify(1) @name(".Ocilla") table Ocilla {
         actions = {
             Clermont();
         }
@@ -3272,7 +3271,7 @@ control Encinitas(inout Hookdale Levasy, inout Jayton Indios, in ingress_intrins
         key = {
             Indios.PeaRidge.Blitchton: exact @name("PeaRidge.Blitchton") ;
         }
-        default_action = Issaquah(3w0, 6w0, 2w0);
+        default_action = Issaquah(3w0, 6w0, 2w3);
         size = 512;
     }
     apply {
@@ -3554,48 +3553,6 @@ control Ragley(inout Hookdale Levasy, inout Jayton Indios, in ingress_intrinsic_
     }
     apply {
         Granville.apply();
-    }
-}
-
-control Council(inout Hookdale Levasy, inout Jayton Indios, in ingress_intrinsic_metadata_t PeaRidge, in ingress_intrinsic_metadata_from_parser_t Larwill, inout ingress_intrinsic_metadata_for_deparser_t Rhinebeck, inout ingress_intrinsic_metadata_for_tm_t Cranbury) {
-    @name(".Capitola") action Capitola() {
-    }
-    @name(".Liberal") action Liberal(bit<20> Eolia) {
-        Capitola();
-        Indios.Yorkshire.Wellton = (bit<3>)3w2;
-        Indios.Yorkshire.Corydon = Eolia;
-        Indios.Yorkshire.Bells = Indios.Lookeba.Clarion;
-        Indios.Yorkshire.Peebles = (bit<10>)10w0;
-    }
-    @name(".Doyline") action Doyline() {
-        Capitola();
-        Indios.Yorkshire.Wellton = (bit<3>)3w3;
-        Indios.Lookeba.Bonduel = (bit<1>)1w0;
-        Indios.Lookeba.Fristoe = (bit<1>)1w0;
-    }
-    @name(".Belcourt") action Belcourt() {
-        Indios.Lookeba.Hammond = (bit<1>)1w1;
-    }
-    @ternary(1) @disable_atomic_modify(1) @name(".Moorman") table Moorman {
-        actions = {
-            Liberal();
-            Doyline();
-            Belcourt();
-            Capitola();
-        }
-        key = {
-            Levasy.Mayflower.Spearman : exact @name("Mayflower.Spearman") ;
-            Levasy.Mayflower.Chevak   : exact @name("Mayflower.Chevak") ;
-            Levasy.Mayflower.Mendocino: exact @name("Mayflower.Mendocino") ;
-            Levasy.Mayflower.Eldred   : exact @name("Mayflower.Eldred") ;
-            Indios.Yorkshire.Wellton  : ternary @name("Yorkshire.Wellton") ;
-        }
-        default_action = Belcourt();
-        size = 1024;
-        requires_versioning = false;
-    }
-    apply {
-        Moorman.apply();
     }
 }
 
@@ -5849,6 +5806,39 @@ control Wyanet(inout Hookdale Levasy, inout Jayton Indios, in ingress_intrinsic_
         requires_versioning = false;
         const default_action = Amherst();
     }
+    @name(".Capitola") action Capitola() {
+    }
+    @name(".Liberal") action Liberal(bit<20> Eolia) {
+        Capitola();
+        Indios.Yorkshire.Wellton = (bit<3>)3w2;
+        Indios.Yorkshire.Corydon = Eolia;
+        Indios.Yorkshire.Bells = Indios.Lookeba.Clarion;
+        Indios.Yorkshire.Peebles = (bit<10>)10w0;
+    }
+    @name(".Doyline") action Doyline() {
+        Capitola();
+        Indios.Yorkshire.Wellton = (bit<3>)3w3;
+        Indios.Lookeba.Bonduel = (bit<1>)1w0;
+        Indios.Lookeba.Fristoe = (bit<1>)1w0;
+    }
+    @name(".Belcourt") action Belcourt() {
+        Indios.Lookeba.Hammond = (bit<1>)1w1;
+    }
+    @ternary(1) @disable_atomic_modify(1) @name(".Moorman") table Moorman {
+        actions = {
+            Liberal();
+            Doyline();
+            @defaultonly Belcourt();
+            Capitola();
+        }
+        key = {
+            Levasy.Mayflower.Chevak   : exact @name("Mayflower.Chevak") ;
+            Levasy.Mayflower.Mendocino: exact @name("Mayflower.Mendocino") ;
+            Levasy.Mayflower.Eldred   : exact @name("Mayflower.Eldred") ;
+        }
+        const default_action = Belcourt();
+        size = 1024;
+    }
     @name(".Cross") Ravenwood() Cross;
     @name(".Snowflake") FarrWest() Snowflake;
     @name(".Pueblo") Skene() Pueblo;
@@ -5889,7 +5879,6 @@ control Wyanet(inout Hookdale Levasy, inout Jayton Indios, in ingress_intrinsic_
     @name(".Donnelly") Catlin() Donnelly;
     @name(".Welch") Woodsboro() Welch;
     @name(".Kalvesta") Ranier() Kalvesta;
-    @name(".GlenRock") Council() GlenRock;
     @name(".Keenes") Manakin() Keenes;
     @name(".Colson") McDougal() Colson;
     @name(".FordCity") Aguada() FordCity;
@@ -5906,7 +5895,18 @@ control Wyanet(inout Hookdale Levasy, inout Jayton Indios, in ingress_intrinsic_
         Challenge.apply(Levasy, Indios, PeaRidge, Larwill, Rhinebeck, Cranbury);
         Ironside.apply(Levasy, Indios, PeaRidge, Larwill, Rhinebeck, Cranbury);
         Husum.apply(Levasy, Indios, PeaRidge, Larwill, Rhinebeck, Cranbury);
-        Schofield.apply(Levasy, Indios, PeaRidge, Larwill, Rhinebeck, Cranbury);
+        if (Levasy.Mayflower.isValid()) {
+            switch (Moorman.apply().action_run) {
+                Liberal: {
+                }
+                default: {
+                    Schofield.apply(Levasy, Indios, PeaRidge, Larwill, Rhinebeck, Cranbury);
+                }
+            }
+
+        } else {
+            Schofield.apply(Levasy, Indios, PeaRidge, Larwill, Rhinebeck, Cranbury);
+        }
         if (Indios.Lookeba.Lenexa == 1w0 && Indios.Orting.Sherack == 1w0 && Indios.Orting.Plains == 1w0 && Indios.Yorkshire.Monahans == 1w0) {
             Geismar.apply(Levasy, Indios, PeaRidge, Larwill, Rhinebeck, Cranbury);
             if (Indios.Gamaliel.Edwards == 1w1 && Levasy.Mayflower.isValid() == false && (Indios.Gamaliel.Murphy & 4w0x2 == 4w0x2 && Indios.Lookeba.LakeLure == 3w0x2 || Indios.Gamaliel.Murphy & 4w0x1 == 4w0x1 && Indios.Lookeba.LakeLure == 3w0x1)) {
@@ -5951,9 +5951,6 @@ control Wyanet(inout Hookdale Levasy, inout Jayton Indios, in ingress_intrinsic_
                 }
 
             } else {
-                if (Levasy.Mayflower.isValid()) {
-                    GlenRock.apply(Levasy, Indios, PeaRidge, Larwill, Rhinebeck, Cranbury);
-                }
                 if (Indios.Yorkshire.Monahans == 1w0 && Indios.Yorkshire.Wellton != 3w2) {
                     Woodville.apply(Levasy, Indios, PeaRidge, Larwill, Rhinebeck, Cranbury);
                 }

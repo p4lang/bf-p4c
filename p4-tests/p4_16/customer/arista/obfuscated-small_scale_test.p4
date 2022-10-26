@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_SMALL_SCALE_TEST=1 -Ibf_arista_switch_small_scale_test/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_small_scale_test --bf-rt-schema bf_arista_switch_small_scale_test/context/bf-rt.json
-// p4c 9.7.4 (SHA: 97e15e7)
+// p4c 9.7.4 (SHA: 8e6e85a)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -639,7 +639,6 @@ struct Sardinia {
     bit<12> Turkey;
     bit<10> Lugert;
     bit<3>  Goulds;
-    bit<3>  LaConner;
     bit<8>  Chloride;
     bit<1>  McGrady;
     bit<1>  Oilmont;
@@ -2939,7 +2938,7 @@ control Blakeman(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_m
         key = {
             Baker.Yorkshire.Blitchton: exact @name("Yorkshire.Blitchton") ;
         }
-        default_action = Palco(3w0, 6w0, 2w0);
+        default_action = Palco(3w0, 6w0, 2w3);
         size = 512;
     }
     apply {
@@ -3206,48 +3205,6 @@ control Estero(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_met
     }
     apply {
         Clermont.apply();
-    }
-}
-
-control Blanding(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_metadata_t Yorkshire, in ingress_intrinsic_metadata_from_parser_t Glenoma, inout ingress_intrinsic_metadata_for_deparser_t Thurmond, inout ingress_intrinsic_metadata_for_tm_t Knights) {
-    @name(".Ocilla") action Ocilla() {
-    }
-    @name(".Shelby") action Shelby(bit<20> Elkville) {
-        Ocilla();
-        Baker.Earling.Goulds = (bit<3>)3w2;
-        Baker.Earling.Subiaco = Elkville;
-        Baker.Earling.Tombstone = Baker.Empire.Clarion;
-        Baker.Earling.Lugert = (bit<10>)10w0;
-    }
-    @name(".Chambers") action Chambers() {
-        Ocilla();
-        Baker.Earling.Goulds = (bit<3>)3w3;
-        Baker.Empire.Grassflat = (bit<1>)1w0;
-        Baker.Empire.DeGraff = (bit<1>)1w0;
-    }
-    @name(".Ardenvoir") action Ardenvoir() {
-        Baker.Empire.Delavan = (bit<1>)1w1;
-    }
-    @ternary(1) @disable_atomic_modify(1) @name(".Clinchco") table Clinchco {
-        actions = {
-            Shelby();
-            Chambers();
-            Ardenvoir();
-            Ocilla();
-        }
-        key = {
-            Olmitz.Biggers.Buckeye : exact @name("Biggers.Buckeye") ;
-            Olmitz.Biggers.Topanga : exact @name("Biggers.Topanga") ;
-            Olmitz.Biggers.Allison : exact @name("Biggers.Allison") ;
-            Olmitz.Biggers.Spearman: exact @name("Biggers.Spearman") ;
-            Baker.Earling.Goulds   : ternary @name("Earling.Goulds") ;
-        }
-        default_action = Ardenvoir();
-        size = 512;
-        requires_versioning = false;
-    }
-    apply {
-        Clinchco.apply();
     }
 }
 
@@ -5443,6 +5400,41 @@ control Rixford(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_met
         default_action = Folcroft(24w0, 24w0, 12w0);
         size = 32768;
     }
+    @name(".Ocilla") action Ocilla() {
+    }
+    @name(".Shelby") action Shelby(bit<20> Elkville) {
+        Ocilla();
+        Baker.Earling.Goulds = (bit<3>)3w2;
+        Baker.Earling.Subiaco = Elkville;
+        Baker.Earling.Tombstone = Baker.Empire.Clarion;
+        Baker.Earling.Lugert = (bit<10>)10w0;
+    }
+    @name(".Chambers") action Chambers() {
+        Ocilla();
+        Baker.Earling.Goulds = (bit<3>)3w3;
+        Baker.Empire.Grassflat = (bit<1>)1w0;
+        Baker.Empire.DeGraff = (bit<1>)1w0;
+    }
+    @name(".Ardenvoir") action Ardenvoir() {
+        Baker.Empire.Delavan = (bit<1>)1w1;
+    }
+    @ternary(1) @disable_atomic_modify(1) @name(".Clinchco") table Clinchco {
+        actions = {
+            Shelby();
+            Chambers();
+            @defaultonly Ardenvoir();
+            Ocilla();
+        }
+        key = {
+            Olmitz.Biggers.Topanga : exact @name("Biggers.Topanga") ;
+            Olmitz.Biggers.Allison : exact @name("Biggers.Allison") ;
+            Olmitz.Biggers.Spearman: exact @name("Biggers.Spearman") ;
+            Baker.Earling.Goulds   : ternary @name("Earling.Goulds") ;
+        }
+        const default_action = Ardenvoir();
+        size = 512;
+        requires_versioning = false;
+    }
     @name(".Bairoil") Varna() Bairoil;
     @name(".NewRoads") Jauca() NewRoads;
     @name(".Berrydale") Brockton() Berrydale;
@@ -5482,7 +5474,6 @@ control Rixford(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_met
     @name(".Sturgeon") Blakeman() Sturgeon;
     @name(".Putnam") Kelliher() Putnam;
     @name(".Hartville") Capitola() Hartville;
-    @name(".Gurdon") Blanding() Gurdon;
     @name(".Poteet") Lamar() Poteet;
     @name(".Blakeslee") Slayden() Blakeslee;
     @name(".Margie") Edmeston() Margie;
@@ -5505,7 +5496,18 @@ control Rixford(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_met
             WestLine.apply(Olmitz, Baker, Yorkshire, Glenoma, Thurmond, Knights);
             McClusky.apply(Olmitz, Baker, Yorkshire, Glenoma, Thurmond, Knights);
             Sheyenne.apply(Olmitz, Baker, Yorkshire, Glenoma, Thurmond, Knights);
-            Skokomish.apply(Olmitz, Baker, Yorkshire, Glenoma, Thurmond, Knights);
+            if (Olmitz.Biggers.isValid()) {
+                switch (Clinchco.apply().action_run) {
+                    Shelby: {
+                    }
+                    default: {
+                        Skokomish.apply(Olmitz, Baker, Yorkshire, Glenoma, Thurmond, Knights);
+                    }
+                }
+
+            } else {
+                Skokomish.apply(Olmitz, Baker, Yorkshire, Glenoma, Thurmond, Knights);
+            }
             if (Baker.Empire.Morstein == 1w0 && Baker.Magasco.SourLake == 1w0 && Baker.Magasco.Juneau == 1w0) {
                 if (Baker.Lindsborg.Broussard & 4w0x2 == 4w0x2 && Baker.Empire.Ambrose == 3w0x2 && Baker.Lindsborg.Arvada == 1w1) {
                     Parmele.apply(Olmitz, Baker, Yorkshire, Glenoma, Thurmond, Knights);
@@ -5513,9 +5515,6 @@ control Rixford(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_met
                     if (Baker.Lindsborg.Broussard & 4w0x1 == 4w0x1 && Baker.Empire.Ambrose == 3w0x1 && Baker.Lindsborg.Arvada == 1w1) {
                         Blackwood.apply(Olmitz, Baker, Yorkshire, Glenoma, Thurmond, Knights);
                     } else {
-                        if (Olmitz.Biggers.isValid()) {
-                            Gurdon.apply(Olmitz, Baker, Yorkshire, Glenoma, Thurmond, Knights);
-                        }
                         if (Baker.Earling.Norland == 1w0 && Baker.Earling.Goulds != 3w2) {
                             Freetown.apply(Olmitz, Baker, Yorkshire, Glenoma, Thurmond, Knights);
                         }

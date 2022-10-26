@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_SCALE=1 -Ibf_arista_switch_nat_scale/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_nat_scale --bf-rt-schema bf_arista_switch_nat_scale/context/bf-rt.json
-// p4c 9.7.4 (SHA: 97e15e7)
+// p4c 9.7.4 (SHA: 8e6e85a)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -818,7 +818,6 @@ struct Daleville {
     bit<12>  Bonney;
     bit<10>  Sublett;
     bit<3>   Wisdom;
-    bit<3>   Cutten;
     bit<8>   Woodfield;
     bit<1>   Lewiston;
     bit<1>   Lamona;
@@ -2364,7 +2363,7 @@ control DeRidder(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intr
         key = {
             Tenstrike.Thurmond.Blitchton: exact @name("Thurmond.Blitchton") ;
         }
-        default_action = Bechyn(3w0, 6w0, 2w0);
+        default_action = Bechyn(3w0, 6w0, 2w3);
         size = 512;
     }
     apply {
@@ -2655,19 +2654,16 @@ control Scotland(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intr
         actions = {
             Wyandanch();
             Vananda();
-            Yorklyn();
+            @defaultonly Yorklyn();
             Addicks();
         }
         key = {
-            BigPoint.Volens.Riner     : exact @name("Volens.Riner") ;
-            BigPoint.Volens.Palmhurst : exact @name("Volens.Palmhurst") ;
-            BigPoint.Volens.Comfrey   : exact @name("Volens.Comfrey") ;
-            BigPoint.Volens.Kalida    : exact @name("Volens.Kalida") ;
-            Tenstrike.Saugatuck.Wisdom: ternary @name("Saugatuck.Wisdom") ;
+            BigPoint.Volens.Palmhurst: exact @name("Volens.Palmhurst") ;
+            BigPoint.Volens.Comfrey  : exact @name("Volens.Comfrey") ;
+            BigPoint.Volens.Kalida   : exact @name("Volens.Kalida") ;
         }
-        default_action = Yorklyn();
+        const default_action = Yorklyn();
         size = 1024;
-        requires_versioning = false;
     }
     apply {
         Botna.apply();
@@ -2707,7 +2703,7 @@ control Chappell(inout Skillman BigPoint, inout Kinde Tenstrike, in egress_intri
             Tenstrike.Saugatuck.Murphy : exact @name("Saugatuck.Murphy") ;
             Tenstrike.Saugatuck.Edwards: exact @name("Saugatuck.Edwards") ;
         }
-        default_action = Gardena();
+        const default_action = Gardena();
         size = 8192;
     }
     apply {
@@ -6017,15 +6013,15 @@ control Lenox(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intrins
         }
         Cowan.apply(BigPoint, Tenstrike, Thurmond, Castle, Aguila, Lauada);
         Stanwood.apply(BigPoint, Tenstrike, Thurmond, Castle, Aguila, Lauada);
+        if (BigPoint.Volens.isValid()) {
+            Woodville.apply(BigPoint, Tenstrike, Thurmond, Castle, Aguila, Lauada);
+        }
         if (Tenstrike.Wanamassa.Wetonka == 1w0 && Tenstrike.Lemont.Emida == 1w0 && Tenstrike.Lemont.Sopris == 1w0) {
             if (Tenstrike.Almota.Shirley & 4w0x2 == 4w0x2 && Tenstrike.Wanamassa.Atoka == 3w0x2 && Tenstrike.Almota.Ramos == 1w1) {
             } else {
                 if (Tenstrike.Almota.Shirley & 4w0x1 == 4w0x1 && Tenstrike.Wanamassa.Atoka == 3w0x1 && Tenstrike.Almota.Ramos == 1w1 && Tenstrike.Wanamassa.Subiaco == 16w0) {
                     Bridgton.apply();
                 } else {
-                    if (BigPoint.Volens.isValid()) {
-                        Woodville.apply(BigPoint, Tenstrike, Thurmond, Castle, Aguila, Lauada);
-                    }
                     if (Tenstrike.Saugatuck.Norma == 1w0 && Tenstrike.Saugatuck.Wisdom != 3w2) {
                         Denning.apply(BigPoint, Tenstrike, Thurmond, Castle, Aguila, Lauada);
                     }

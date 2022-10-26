@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT=1 -Ibf_arista_switch_nat/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'   -Xp4c='--traffic-limit 95 --excludeBackendPasses=ResetInvalidatedChecksumHeaders' --target tofino-tna --o bf_arista_switch_nat --bf-rt-schema bf_arista_switch_nat/context/bf-rt.json
-// p4c 9.7.4 (SHA: 97e15e7)
+// p4c 9.7.4 (SHA: 8e6e85a)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -698,7 +698,6 @@ struct Miranda {
     bit<12> Fairhaven;
     bit<10> Stilwell;
     bit<3>  LaUnion;
-    bit<3>  Cuprum;
     bit<8>  StarLake;
     bit<1>  Belview;
     bit<1>  Broussard;
@@ -3603,7 +3602,7 @@ control Wauregan(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsi
         key = {
             Levasy.Flaherty.Blitchton: exact @name("Flaherty.Blitchton") ;
         }
-        default_action = CassCity(3w0, 6w0, 2w0);
+        default_action = CassCity(3w0, 6w0, 2w3);
         size = 512;
     }
     apply {
@@ -3871,48 +3870,6 @@ control Stone(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsic_m
     }
 }
 
-control Cornish(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsic_metadata_t Flaherty, in ingress_intrinsic_metadata_from_parser_t Indios, inout ingress_intrinsic_metadata_for_deparser_t Larwill, inout ingress_intrinsic_metadata_for_tm_t Sunbury) {
-    @name(".Hatchel") action Hatchel() {
-    }
-    @name(".Dougherty") action Dougherty(bit<20> Masontown) {
-        Hatchel();
-        Levasy.Bratt.LaUnion = (bit<3>)3w2;
-        Levasy.Bratt.Pettry = Masontown;
-        Levasy.Bratt.Buncombe = Levasy.Thawville.Clarion;
-        Levasy.Bratt.Stilwell = (bit<10>)10w0;
-    }
-    @name(".Pelican") action Pelican() {
-        Hatchel();
-        Levasy.Bratt.LaUnion = (bit<3>)3w3;
-        Levasy.Thawville.Bufalo = (bit<1>)1w0;
-        Levasy.Thawville.Atoka = (bit<1>)1w0;
-    }
-    @name(".Unionvale") action Unionvale() {
-        Levasy.Thawville.DeGraff = (bit<1>)1w1;
-    }
-    @ternary(1) @disable_atomic_modify(1) @name(".Bigspring") table Bigspring {
-        actions = {
-            Dougherty();
-            Pelican();
-            Unionvale();
-            Hatchel();
-        }
-        key = {
-            Philip.Ambler.Chloride : exact @name("Ambler.Chloride") ;
-            Philip.Ambler.Garibaldi: exact @name("Ambler.Garibaldi") ;
-            Philip.Ambler.Weinert  : exact @name("Ambler.Weinert") ;
-            Philip.Ambler.Cornell  : exact @name("Ambler.Cornell") ;
-            Levasy.Bratt.LaUnion   : ternary @name("Bratt.LaUnion") ;
-        }
-        default_action = Unionvale();
-        size = 1024;
-        requires_versioning = false;
-    }
-    apply {
-        Bigspring.apply();
-    }
-}
-
 control Advance(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_metadata_t Casnovia, in egress_intrinsic_metadata_from_parser_t Fordyce, inout egress_intrinsic_metadata_for_deparser_t Ugashik, inout egress_intrinsic_metadata_for_output_port_t Rhodell) {
     @name(".Rockfield") action Rockfield(bit<2> Noyes, bit<16> Garibaldi, bit<4> Weinert, bit<12> Redfield) {
         Philip.Ambler.Helton = Noyes;
@@ -3946,7 +3903,7 @@ control Advance(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_
             Levasy.Bratt.Newfolden: exact @name("Bratt.Newfolden") ;
             Levasy.Bratt.Candle   : exact @name("Bratt.Candle") ;
         }
-        default_action = Mynard();
+        const default_action = Mynard();
         size = 8192;
     }
     apply {
@@ -6026,6 +5983,39 @@ control Lovilia(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_
         size = 2;
         const default_action = NoAction();
     }
+    @name(".Hatchel") action Hatchel() {
+    }
+    @name(".Dougherty") action Dougherty(bit<20> Masontown) {
+        Hatchel();
+        Levasy.Bratt.LaUnion = (bit<3>)3w2;
+        Levasy.Bratt.Pettry = Masontown;
+        Levasy.Bratt.Buncombe = Levasy.Thawville.Clarion;
+        Levasy.Bratt.Stilwell = (bit<10>)10w0;
+    }
+    @name(".Pelican") action Pelican() {
+        Hatchel();
+        Levasy.Bratt.LaUnion = (bit<3>)3w3;
+        Levasy.Thawville.Bufalo = (bit<1>)1w0;
+        Levasy.Thawville.Atoka = (bit<1>)1w0;
+    }
+    @name(".Unionvale") action Unionvale() {
+        Levasy.Thawville.DeGraff = (bit<1>)1w1;
+    }
+    @ternary(1) @disable_atomic_modify(1) @name(".Bigspring") table Bigspring {
+        actions = {
+            Dougherty();
+            Pelican();
+            @defaultonly Unionvale();
+            Hatchel();
+        }
+        key = {
+            Philip.Ambler.Garibaldi: exact @name("Ambler.Garibaldi") ;
+            Philip.Ambler.Weinert  : exact @name("Ambler.Weinert") ;
+            Philip.Ambler.Cornell  : exact @name("Ambler.Cornell") ;
+        }
+        const default_action = Unionvale();
+        size = 1024;
+    }
     @name(".Lenapah") Lakefield() Lenapah;
     @name(".Colburn") Waumandee() Colburn;
     @name(".Kirkwood") LaJara() Kirkwood;
@@ -6067,7 +6057,6 @@ control Lovilia(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_
     @name(".Geismar") Monse() Geismar;
     @name(".Lasara") Woodsboro() Lasara;
     @name(".Perma") Bodcaw() Perma;
-    @name(".Campbell") Cornish() Campbell;
     @name(".Navarro") Easley() Navarro;
     @name(".Edgemont") Blackwood() Edgemont;
     @name(".Woodston") Parmele() Woodston;
@@ -6096,6 +6085,12 @@ control Lovilia(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_
             Warsaw.apply(Philip, Levasy, Flaherty, Indios, Larwill, Sunbury);
             Vincent.apply(Philip, Levasy, Flaherty, Indios, Larwill, Sunbury);
             GlenRock.apply(Philip, Levasy, Flaherty, Indios, Larwill, Sunbury);
+            if (Philip.Ambler.isValid()) {
+                Bigspring.apply();
+            }
+            if (Levasy.Bratt.LaUnion != 3w2) {
+                Snowflake.apply(Philip, Levasy, Flaherty, Indios, Larwill, Sunbury);
+            }
             Challenge.apply(Philip, Levasy, Flaherty, Indios, Larwill, Sunbury);
             Belcher.apply(Philip, Levasy, Flaherty, Indios, Larwill, Sunbury);
             Hooven.apply(Philip, Levasy, Flaherty, Indios, Larwill, Sunbury);
@@ -6106,18 +6101,9 @@ control Lovilia(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_
             Neshoba.apply(Philip, Levasy, Flaherty, Indios, Larwill, Sunbury);
             Chispa.apply(Philip, Levasy, Flaherty, Indios, Larwill, Sunbury);
             Harney.apply();
-            if (Philip.Ambler.isValid() == false) {
-                Kirkwood.apply(Philip, Levasy, Flaherty, Indios, Larwill, Sunbury);
-            } else {
-                if (Philip.Ambler.isValid()) {
-                    Campbell.apply(Philip, Levasy, Flaherty, Indios, Larwill, Sunbury);
-                }
-            }
+            Kirkwood.apply(Philip, Levasy, Flaherty, Indios, Larwill, Sunbury);
             Waukesha.apply();
             Gracewood.apply(Philip, Levasy, Flaherty, Indios, Larwill, Sunbury);
-            if (Levasy.Bratt.LaUnion != 3w2) {
-                Snowflake.apply(Philip, Levasy, Flaherty, Indios, Larwill, Sunbury);
-            }
             Colburn.apply(Philip, Levasy, Flaherty, Indios, Larwill, Sunbury);
             Cross.apply(Philip, Levasy, Flaherty, Indios, Larwill, Sunbury);
             Ironside.apply(Philip, Levasy, Flaherty, Indios, Larwill, Sunbury);

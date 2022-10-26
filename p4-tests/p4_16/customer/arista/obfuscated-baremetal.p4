@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_BAREMETAL=1 -Ibf_arista_switch_baremetal/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_baremetal --bf-rt-schema bf_arista_switch_baremetal/context/bf-rt.json
-// p4c 9.7.4 (SHA: 97e15e7)
+// p4c 9.7.4 (SHA: 8e6e85a)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -707,7 +707,6 @@ struct RedElm {
     bit<12> Fairhaven;
     bit<10> LaLuz;
     bit<3>  Townville;
-    bit<3>  Monahans;
     bit<8>  StarLake;
     bit<1>  Pinole;
     bit<1>  Bells;
@@ -3569,7 +3568,7 @@ control Bovina(inout Frederika Westoak, inout WebbCity Lefor, in ingress_intrins
         key = {
             Lefor.Milano.Blitchton: exact @name("Milano.Blitchton") ;
         }
-        default_action = Natalbany(3w0, 6w0, 2w0);
+        default_action = Natalbany(3w0, 6w0, 2w3);
         size = 512;
     }
     apply {
@@ -3850,48 +3849,6 @@ control Doyline(inout Frederika Westoak, inout WebbCity Lefor, in ingress_intrin
     }
     apply {
         Kilbourne.apply();
-    }
-}
-
-control Bluff(inout Frederika Westoak, inout WebbCity Lefor, in ingress_intrinsic_metadata_t Milano, in ingress_intrinsic_metadata_from_parser_t Starkey, inout ingress_intrinsic_metadata_for_deparser_t Volens, inout ingress_intrinsic_metadata_for_tm_t Dacono) {
-    @name(".Bedrock") action Bedrock() {
-    }
-    @name(".Silvertip") action Silvertip(bit<20> Livonia) {
-        Bedrock();
-        Lefor.Picabo.Townville = (bit<3>)3w2;
-        Lefor.Picabo.Vergennes = Livonia;
-        Lefor.Picabo.SomesBar = Lefor.Ekwok.Clarion;
-        Lefor.Picabo.LaLuz = (bit<10>)10w0;
-    }
-    @name(".Thatcher") action Thatcher() {
-        Bedrock();
-        Lefor.Picabo.Townville = (bit<3>)3w3;
-        Lefor.Ekwok.Hiland = (bit<1>)1w0;
-        Lefor.Ekwok.Madera = (bit<1>)1w0;
-    }
-    @name(".Archer") action Archer() {
-        Lefor.Ekwok.Weatherby = (bit<1>)1w1;
-    }
-    @ternary(1) @disable_atomic_modify(1) @name(".Virginia") table Virginia {
-        actions = {
-            Silvertip();
-            Thatcher();
-            Archer();
-            Bedrock();
-        }
-        key = {
-            Westoak.Flaherty.Chloride : exact @name("Flaherty.Chloride") ;
-            Westoak.Flaherty.Garibaldi: exact @name("Flaherty.Garibaldi") ;
-            Westoak.Flaherty.Weinert  : exact @name("Flaherty.Weinert") ;
-            Westoak.Flaherty.Cornell  : exact @name("Flaherty.Cornell") ;
-            Lefor.Picabo.Townville    : ternary @name("Picabo.Townville") ;
-        }
-        default_action = Archer();
-        size = 1024;
-        requires_versioning = false;
-    }
-    apply {
-        Virginia.apply();
     }
 }
 
@@ -6330,6 +6287,41 @@ control Fentress(inout Frederika Westoak, inout WebbCity Lefor, in egress_intrin
         implementation = Clintwood;
         const default_action = NoAction();
     }
+    @name(".Bedrock") action Bedrock() {
+    }
+    @name(".Silvertip") action Silvertip(bit<20> Livonia) {
+        Bedrock();
+        Lefor.Picabo.Townville = (bit<3>)3w2;
+        Lefor.Picabo.Vergennes = Livonia;
+        Lefor.Picabo.SomesBar = Lefor.Ekwok.Clarion;
+        Lefor.Picabo.LaLuz = (bit<10>)10w0;
+    }
+    @name(".Thatcher") action Thatcher() {
+        Bedrock();
+        Lefor.Picabo.Townville = (bit<3>)3w3;
+        Lefor.Ekwok.Hiland = (bit<1>)1w0;
+        Lefor.Ekwok.Madera = (bit<1>)1w0;
+    }
+    @name(".Archer") action Archer() {
+        Lefor.Ekwok.Weatherby = (bit<1>)1w1;
+    }
+    @ternary(1) @disable_atomic_modify(1) @name(".Virginia") table Virginia {
+        actions = {
+            Silvertip();
+            Thatcher();
+            @defaultonly Archer();
+            Bedrock();
+        }
+        key = {
+            Westoak.Flaherty.Garibaldi: exact @name("Flaherty.Garibaldi") ;
+            Westoak.Flaherty.Weinert  : exact @name("Flaherty.Weinert") ;
+            Westoak.Flaherty.Cornell  : exact @name("Flaherty.Cornell") ;
+            Lefor.Picabo.Townville    : ternary @name("Picabo.Townville") ;
+        }
+        const default_action = Archer();
+        size = 1024;
+        requires_versioning = false;
+    }
     @name(".Neshoba") Nuevo() Neshoba;
     @name(".Ironside") Sanborn() Ironside;
     @name(".Ellicott") Glenpool() Ellicott;
@@ -6375,7 +6367,6 @@ control Fentress(inout Frederika Westoak, inout WebbCity Lefor, in egress_intrin
     @name(".Herod") Bovina() Herod;
     @name(".Rixford") Cowley() Rixford;
     @name(".Crumstown") Charters() Crumstown;
-    @name(".LaPointe") Bluff() LaPointe;
     @name(".Eureka") Roseville() Eureka;
     @name(".Millett") Waukesha() Millett;
     @name(".Thistle") Harney() Thistle;
@@ -6402,7 +6393,18 @@ control Fentress(inout Frederika Westoak, inout WebbCity Lefor, in egress_intrin
             Kalvesta.apply(Westoak, Lefor, Milano, Starkey, Volens, Dacono);
             Colson.apply(Westoak, Lefor, Milano, Starkey, Volens, Dacono);
             Newberg.apply(Westoak, Lefor, Milano, Starkey, Volens, Dacono);
-            Hagerman.apply(Westoak, Lefor, Milano, Starkey, Volens, Dacono);
+            if (Westoak.Flaherty.isValid()) {
+                switch (Virginia.apply().action_run) {
+                    Silvertip: {
+                    }
+                    default: {
+                        Hagerman.apply(Westoak, Lefor, Milano, Starkey, Volens, Dacono);
+                    }
+                }
+
+            } else {
+                Hagerman.apply(Westoak, Lefor, Milano, Starkey, Volens, Dacono);
+            }
             if (Lefor.Ekwok.Etter == 1w0 && Lefor.Longwood.Savery == 1w0 && Lefor.Longwood.Quinault == 1w0) {
                 Saltair.apply(Westoak, Lefor, Milano, Starkey, Volens, Dacono);
                 if (Lefor.Alstown.RossFork & 4w0x2 == 4w0x2 && Lefor.Ekwok.Minto == 3w0x2 && Lefor.Alstown.Maddock == 1w1) {
@@ -6412,9 +6414,6 @@ control Fentress(inout Frederika Westoak, inout WebbCity Lefor, in egress_intrin
                         Isabel.apply(Westoak, Lefor, Milano, Starkey, Volens, Dacono);
                         LongPine.apply(Westoak, Lefor, Milano, Starkey, Volens, Dacono);
                     } else {
-                        if (Westoak.Flaherty.isValid()) {
-                            LaPointe.apply(Westoak, Lefor, Milano, Starkey, Volens, Dacono);
-                        }
                         if (Lefor.Picabo.Wauconda == 1w0 && Lefor.Picabo.Townville != 3w2) {
                             Jermyn.apply(Westoak, Lefor, Milano, Starkey, Volens, Dacono);
                         }

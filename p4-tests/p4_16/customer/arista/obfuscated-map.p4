@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MAP=1 -Ibf_arista_switch_map/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_map --bf-rt-schema bf_arista_switch_map/context/bf-rt.json
-// p4c 9.7.4 (SHA: 97e15e7)
+// p4c 9.7.4 (SHA: 8e6e85a)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -8,7 +8,6 @@
 
 @pa_auto_init_metadata
 @pa_container_size("ingress" , "Lindy.Monrovia.Tallassee" , 16)
-@pa_container_size("ingress" , "Lindy.Monrovia.$parsed" , 8)
 @pa_atomic("ingress" , "Brady.Circle.Onycha")
 @gfm_parity_enable
 @pa_alias("ingress" , "Lindy.Hookdale.Dassel" , "Brady.Lookeba.Linden")
@@ -640,7 +639,6 @@ struct Pathfork {
     bit<12> Westboro;
     bit<10> LaConner;
     bit<3>  McGrady;
-    bit<3>  Oilmont;
     bit<8>  Linden;
     bit<1>  Tornillo;
     bit<1>  Satolah;
@@ -2522,7 +2520,7 @@ control Eaton(inout Lemont Lindy, inout Wyndmoor Brady, in ingress_intrinsic_met
         key = {
             Brady.Courtdale.Blitchton: exact @name("Courtdale.Blitchton") ;
         }
-        default_action = Trevorton(3w0, 6w0, 2w0);
+        default_action = Trevorton(3w0, 6w0, 2w3);
         size = 512;
     }
     apply {
@@ -2788,48 +2786,6 @@ control Melder(inout Lemont Lindy, inout Wyndmoor Brady, in ingress_intrinsic_me
     }
     apply {
         Bigfork.apply();
-    }
-}
-
-control Jauca(inout Lemont Lindy, inout Wyndmoor Brady, in ingress_intrinsic_metadata_t Courtdale, in ingress_intrinsic_metadata_from_parser_t Emden, inout ingress_intrinsic_metadata_for_deparser_t Skillman, inout ingress_intrinsic_metadata_for_tm_t Swifton) {
-    @name(".Brownson") action Brownson() {
-    }
-    @name(".Punaluu") action Punaluu(bit<20> Belmont) {
-        Brownson();
-        Brady.Lookeba.McGrady = (bit<3>)3w2;
-        Brady.Lookeba.Ericsburg = Belmont;
-        Brady.Lookeba.Basic = Brady.Circle.Clarion;
-        Brady.Lookeba.LaConner = (bit<10>)10w0;
-    }
-    @name(".Linville") action Linville() {
-        Brownson();
-        Brady.Lookeba.McGrady = (bit<3>)3w3;
-        Brady.Circle.Bufalo = (bit<1>)1w0;
-        Brady.Circle.Atoka = (bit<1>)1w0;
-    }
-    @name(".Kelliher") action Kelliher() {
-        Brady.Circle.DeGraff = (bit<1>)1w1;
-    }
-    @ternary(1) @disable_atomic_modify(1) @name(".Hopeton") table Hopeton {
-        actions = {
-            Punaluu();
-            Linville();
-            Kelliher();
-            Brownson();
-        }
-        key = {
-            Lindy.Funston.Cornell: exact @name("Funston.Cornell") ;
-            Lindy.Funston.Noyes  : exact @name("Funston.Noyes") ;
-            Lindy.Funston.Helton : exact @name("Funston.Helton") ;
-            Lindy.Funston.Grannis: exact @name("Funston.Grannis") ;
-            Brady.Lookeba.McGrady: ternary @name("Lookeba.McGrady") ;
-        }
-        default_action = Kelliher();
-        size = 1024;
-        requires_versioning = false;
-    }
-    apply {
-        Hopeton.apply();
     }
 }
 
@@ -5006,6 +4962,39 @@ control Cleator(inout Lemont Lindy, inout Wyndmoor Brady, in egress_intrinsic_me
         default_action = Cruso(24w0, 24w0, 12w0);
         size = 16384;
     }
+    @name(".Brownson") action Brownson() {
+    }
+    @name(".Punaluu") action Punaluu(bit<20> Belmont) {
+        Brownson();
+        Brady.Lookeba.McGrady = (bit<3>)3w2;
+        Brady.Lookeba.Ericsburg = Belmont;
+        Brady.Lookeba.Basic = Brady.Circle.Clarion;
+        Brady.Lookeba.LaConner = (bit<10>)10w0;
+    }
+    @name(".Linville") action Linville() {
+        Brownson();
+        Brady.Lookeba.McGrady = (bit<3>)3w3;
+        Brady.Circle.Bufalo = (bit<1>)1w0;
+        Brady.Circle.Atoka = (bit<1>)1w0;
+    }
+    @name(".Kelliher") action Kelliher() {
+        Brady.Circle.DeGraff = (bit<1>)1w1;
+    }
+    @ternary(1) @disable_atomic_modify(1) @ternary(1) @name(".Hopeton") table Hopeton {
+        actions = {
+            Punaluu();
+            Linville();
+            @defaultonly Kelliher();
+            Brownson();
+        }
+        key = {
+            Lindy.Funston.Noyes  : exact @name("Funston.Noyes") ;
+            Lindy.Funston.Helton : exact @name("Funston.Helton") ;
+            Lindy.Funston.Grannis: exact @name("Funston.Grannis") ;
+        }
+        const default_action = Kelliher();
+        size = 1024;
+    }
     @name(".Statham") Asher() Statham;
     @name(".Corder") Ironia() Corder;
     @name(".LaHoma") Earlham() LaHoma;
@@ -5051,7 +5040,6 @@ control Cleator(inout Lemont Lindy, inout Wyndmoor Brady, in egress_intrinsic_me
     @name(".Baroda") Eaton() Baroda;
     @name(".Bairoil") Rhine() Bairoil;
     @name(".NewRoads") Clarkdale() NewRoads;
-    @name(".Berrydale") Jauca() Berrydale;
     @name(".Benitez") DeerPark() Benitez;
     @name(".Tusculum") Dundalk() Tusculum;
     @name(".Forman") Bellville() Forman;
@@ -5077,6 +5065,12 @@ control Cleator(inout Lemont Lindy, inout Wyndmoor Brady, in egress_intrinsic_me
             Hookstown.apply(Lindy, Brady, Courtdale, Emden, Skillman, Swifton);
             Carrizozo.apply(Lindy, Brady, Courtdale, Emden, Skillman, Swifton);
             Hecker.apply(Lindy, Brady, Courtdale, Emden, Skillman, Swifton);
+            if (Lindy.Funston.isValid()) {
+                Hopeton.apply();
+            }
+            if (Brady.Lookeba.McGrady != 3w2) {
+                Sharon.apply(Lindy, Brady, Courtdale, Emden, Skillman, Swifton);
+            }
             Elliston.apply(Lindy, Brady, Courtdale, Emden, Skillman, Swifton);
             Baroda.apply(Lindy, Brady, Courtdale, Emden, Skillman, Swifton);
             Tusculum.apply(Lindy, Brady, Courtdale, Emden, Skillman, Swifton);
@@ -5085,18 +5079,9 @@ control Cleator(inout Lemont Lindy, inout Wyndmoor Brady, in egress_intrinsic_me
             WestLine.apply(Lindy, Brady, Courtdale, Emden, Skillman, Swifton);
             ElJebel.apply(Lindy, Brady, Courtdale, Emden, Skillman, Swifton);
             Edmeston.apply();
-            if (Lindy.Funston.isValid() == false) {
-                LaHoma.apply(Lindy, Brady, Courtdale, Emden, Skillman, Swifton);
-            } else {
-                if (Lindy.Funston.isValid()) {
-                    Berrydale.apply(Lindy, Brady, Courtdale, Emden, Skillman, Swifton);
-                }
-            }
+            LaHoma.apply(Lindy, Brady, Courtdale, Emden, Skillman, Swifton);
             Slayden.apply();
             Unity.apply(Lindy, Brady, Courtdale, Emden, Skillman, Swifton);
-            if (Brady.Lookeba.McGrady != 3w2) {
-                Sharon.apply(Lindy, Brady, Courtdale, Emden, Skillman, Swifton);
-            }
             Corder.apply(Lindy, Brady, Courtdale, Emden, Skillman, Swifton);
             Lushton.apply(Lindy, Brady, Courtdale, Emden, Skillman, Swifton);
             Lenox.apply(Lindy, Brady, Courtdale, Emden, Skillman, Swifton);

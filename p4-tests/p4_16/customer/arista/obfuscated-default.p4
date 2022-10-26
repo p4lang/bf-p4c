@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_DEFAULT=1 -Ibf_arista_switch_default/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_default --bf-rt-schema bf_arista_switch_default/context/bf-rt.json
-// p4c 9.7.4 (SHA: 97e15e7)
+// p4c 9.7.4 (SHA: 8e6e85a)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -796,7 +796,6 @@ struct Belview {
     bit<12> Loris;
     bit<10> Daleville;
     bit<3>  Basalt;
-    bit<3>  Darien;
     bit<8>  Newfane;
     bit<1>  Norma;
     bit<1>  SourLake;
@@ -3190,7 +3189,7 @@ control Medart(inout Emden Aguila, inout Cranbury Nixon, in ingress_intrinsic_me
         key = {
             Nixon.Baker.Clyde: exact @name("Baker.Clyde") ;
         }
-        default_action = Waseca(3w0, 6w0, 2w0);
+        default_action = Waseca(3w0, 6w0, 2w3);
         size = 512;
     }
     apply {
@@ -3460,48 +3459,6 @@ control Kevil(inout Emden Aguila, inout Cranbury Nixon, in ingress_intrinsic_met
     }
     apply {
         Luverne.apply();
-    }
-}
-
-control Amsterdam(inout Emden Aguila, inout Cranbury Nixon, in ingress_intrinsic_metadata_t Baker, in ingress_intrinsic_metadata_from_parser_t Mattapex, inout ingress_intrinsic_metadata_for_deparser_t Midas, inout ingress_intrinsic_metadata_for_tm_t Glenoma) {
-    @name(".Gwynn") action Gwynn() {
-    }
-    @name(".Rolla") action Rolla(bit<20> Crannell) {
-        Gwynn();
-        Nixon.Hillside.Basalt = (bit<3>)3w2;
-        Nixon.Hillside.Candle = Crannell;
-        Nixon.Hillside.Hoagland = Nixon.Bronwood.Freeman;
-        Nixon.Hillside.Daleville = (bit<10>)10w0;
-    }
-    @name(".Brookwood") action Brookwood() {
-        Gwynn();
-        Nixon.Hillside.Basalt = (bit<3>)3w3;
-        Nixon.Bronwood.Oilmont = (bit<1>)1w0;
-        Nixon.Bronwood.Norland = (bit<1>)1w0;
-    }
-    @name(".Granville") action Granville() {
-        Nixon.Bronwood.Clover = (bit<1>)1w1;
-    }
-    @ternary(1) @disable_atomic_modify(1) @name(".Council") table Council {
-        actions = {
-            Rolla();
-            Brookwood();
-            Granville();
-            Gwynn();
-        }
-        key = {
-            Aguila.Olcott.Kalida   : exact @name("Olcott.Kalida") ;
-            Aguila.Olcott.Wallula  : exact @name("Olcott.Wallula") ;
-            Aguila.Olcott.Dennison : exact @name("Olcott.Dennison") ;
-            Aguila.Olcott.Fairhaven: exact @name("Olcott.Fairhaven") ;
-            Nixon.Hillside.Basalt  : ternary @name("Hillside.Basalt") ;
-        }
-        default_action = Granville();
-        size = 1024;
-        requires_versioning = false;
-    }
-    apply {
-        Council.apply();
     }
 }
 
@@ -6035,6 +5992,41 @@ control Sahuarita(inout Emden Aguila, inout Cranbury Nixon, in egress_intrinsic_
         default_action = Munich(24w0, 24w0, 12w0);
         size = 65536;
     }
+    @name(".Gwynn") action Gwynn() {
+    }
+    @name(".Rolla") action Rolla(bit<20> Crannell) {
+        Gwynn();
+        Nixon.Hillside.Basalt = (bit<3>)3w2;
+        Nixon.Hillside.Candle = Crannell;
+        Nixon.Hillside.Hoagland = Nixon.Bronwood.Freeman;
+        Nixon.Hillside.Daleville = (bit<10>)10w0;
+    }
+    @name(".Brookwood") action Brookwood() {
+        Gwynn();
+        Nixon.Hillside.Basalt = (bit<3>)3w3;
+        Nixon.Bronwood.Oilmont = (bit<1>)1w0;
+        Nixon.Bronwood.Norland = (bit<1>)1w0;
+    }
+    @name(".Granville") action Granville() {
+        Nixon.Bronwood.Clover = (bit<1>)1w1;
+    }
+    @ternary(1) @disable_atomic_modify(1) @name(".Council") table Council {
+        actions = {
+            Rolla();
+            Brookwood();
+            @defaultonly Granville();
+            Gwynn();
+        }
+        key = {
+            Aguila.Olcott.Wallula  : exact @name("Olcott.Wallula") ;
+            Aguila.Olcott.Dennison : exact @name("Olcott.Dennison") ;
+            Aguila.Olcott.Fairhaven: exact @name("Olcott.Fairhaven") ;
+            Nixon.Hillside.Basalt  : ternary @name("Hillside.Basalt") ;
+        }
+        const default_action = Granville();
+        size = 1024;
+        requires_versioning = false;
+    }
     @name(".Donnelly") Roseville() Donnelly;
     @name(".Welch") Langhorne() Welch;
     @name(".Kalvesta") Skokomish() Kalvesta;
@@ -6076,7 +6068,6 @@ control Sahuarita(inout Emden Aguila, inout Cranbury Nixon, in egress_intrinsic_
     @name(".Herod") Medart() Herod;
     @name(".Rixford") Natalbany() Rixford;
     @name(".Crumstown") Corum() Crumstown;
-    @name(".LaPointe") Amsterdam() LaPointe;
     @name(".Eureka") Tolley() Eureka;
     @name(".Millett") Horsehead() Millett;
     @name(".Thistle") Lakefield() Thistle;
@@ -6109,7 +6100,18 @@ control Sahuarita(inout Emden Aguila, inout Cranbury Nixon, in egress_intrinsic_
                 Geismar: {
                 }
                 default: {
-                    Masardis.apply(Aguila, Nixon, Baker, Mattapex, Midas, Glenoma);
+                    if (Aguila.Olcott.isValid()) {
+                        switch (Council.apply().action_run) {
+                            Rolla: {
+                            }
+                            default: {
+                                Masardis.apply(Aguila, Nixon, Baker, Mattapex, Midas, Glenoma);
+                            }
+                        }
+
+                    } else {
+                        Masardis.apply(Aguila, Nixon, Baker, Mattapex, Midas, Glenoma);
+                    }
                 }
             }
 
@@ -6120,9 +6122,6 @@ control Sahuarita(inout Emden Aguila, inout Cranbury Nixon, in egress_intrinsic_
                     if (Nixon.Flaherty.Broadwell & 4w0x1 == 4w0x1 && Nixon.Bronwood.Ipava == 3w0x1 && Nixon.Flaherty.Grays == 1w1) {
                         Wharton.apply(Aguila, Nixon, Baker, Mattapex, Midas, Glenoma);
                     } else {
-                        if (Aguila.Olcott.isValid()) {
-                            LaPointe.apply(Aguila, Nixon, Baker, Mattapex, Midas, Glenoma);
-                        }
                         if (Nixon.Hillside.Kalkaska == 1w0 && Nixon.Hillside.Basalt != 3w2 && Nixon.Rienzi.Earling == 1w0) {
                             WolfTrap.apply(Aguila, Nixon, Baker, Mattapex, Midas, Glenoma);
                         }

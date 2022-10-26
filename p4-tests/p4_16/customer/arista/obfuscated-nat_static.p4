@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_STATIC=1 -Ibf_arista_switch_nat_static/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'   -Xp4c='--traffic-limit 95 --excludeBackendPasses=ResetInvalidatedChecksumHeaders' --target tofino-tna --o bf_arista_switch_nat_static --bf-rt-schema bf_arista_switch_nat_static/context/bf-rt.json
-// p4c 9.7.4 (SHA: 97e15e7)
+// p4c 9.7.4 (SHA: 8e6e85a)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -707,7 +707,6 @@ struct Peebles {
     bit<12> Woodfield;
     bit<10> LaUnion;
     bit<3>  Cuprum;
-    bit<3>  Belview;
     bit<8>  Rains;
     bit<1>  Broussard;
     bit<1>  Arvada;
@@ -2618,7 +2617,7 @@ control Franktown(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrin
         const default_action = Millikin();
         size = 12288;
     }
-    @idletime_precision(1) @disable_atomic_modify(1) @pack(1) @stage(2) @name(".Trevorton") table Trevorton {
+    @idletime_precision(1) @disable_atomic_modify(1) @pack(1) @name(".Trevorton") table Trevorton {
         actions = {
             Neosho();
             BarNunn();
@@ -4202,7 +4201,7 @@ control Chalco(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsic
         key = {
             Hettinger.Almota.Blitchton: exact @name("Almota.Blitchton") ;
         }
-        default_action = Twichell(3w0, 6w0, 2w0);
+        default_action = Twichell(3w0, 6w0, 2w3);
         size = 512;
     }
     apply {
@@ -4469,48 +4468,6 @@ control Elysburg(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrins
     }
 }
 
-control Watters(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsic_metadata_t Almota, in ingress_intrinsic_metadata_from_parser_t Coryville, inout ingress_intrinsic_metadata_for_deparser_t Bellamy, inout ingress_intrinsic_metadata_for_tm_t Lemont) {
-    @name(".Burmester") action Burmester() {
-    }
-    @name(".Petrolia") action Petrolia(bit<20> Belmore) {
-        Burmester();
-        Hettinger.Moultrie.Cuprum = (bit<3>)3w2;
-        Hettinger.Moultrie.Montague = Belmore;
-        Hettinger.Moultrie.Pettry = Hettinger.Bratt.Clarion;
-        Hettinger.Moultrie.LaUnion = (bit<10>)10w0;
-    }
-    @name(".Aguada") action Aguada() {
-        Burmester();
-        Hettinger.Moultrie.Cuprum = (bit<3>)3w3;
-        Hettinger.Bratt.Rockham = (bit<1>)1w0;
-        Hettinger.Bratt.Panaca = (bit<1>)1w0;
-    }
-    @name(".Brush") action Brush() {
-        Hettinger.Bratt.Quinhagak = (bit<1>)1w1;
-    }
-    @ternary(1) @disable_atomic_modify(1) @stage(5) @name(".Ceiba") table Ceiba {
-        actions = {
-            Petrolia();
-            Aguada();
-            Brush();
-            Burmester();
-        }
-        key = {
-            Noyack.Thurmond.Garibaldi: exact @name("Thurmond.Garibaldi") ;
-            Noyack.Thurmond.Weinert  : exact @name("Thurmond.Weinert") ;
-            Noyack.Thurmond.Cornell  : exact @name("Thurmond.Cornell") ;
-            Noyack.Thurmond.Noyes    : exact @name("Thurmond.Noyes") ;
-            Hettinger.Moultrie.Cuprum: ternary @name("Moultrie.Cuprum") ;
-        }
-        default_action = Brush();
-        size = 1024;
-        requires_versioning = false;
-    }
-    apply {
-        Ceiba.apply();
-    }
-}
-
 control Dresden(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic_metadata_t Hookdale, in egress_intrinsic_metadata_from_parser_t Duchesne, inout egress_intrinsic_metadata_for_deparser_t Centre, inout egress_intrinsic_metadata_for_output_port_t Pocopson) {
     @name(".Lorane") action Lorane(bit<2> Helton, bit<16> Weinert, bit<4> Cornell, bit<12> Dundalk) {
         Noyack.Thurmond.Grannis = Helton;
@@ -4544,7 +4501,7 @@ control Dresden(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic
             Hettinger.Moultrie.Candle: exact @name("Moultrie.Candle") ;
             Hettinger.Moultrie.Ackley: exact @name("Moultrie.Ackley") ;
         }
-        default_action = Boyes();
+        const default_action = Boyes();
         size = 8192;
     }
     apply {
@@ -6749,6 +6706,39 @@ control Needles(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic
         size = 2;
         const default_action = NoAction();
     }
+    @name(".Burmester") action Burmester() {
+    }
+    @name(".Petrolia") action Petrolia(bit<20> Belmore) {
+        Burmester();
+        Hettinger.Moultrie.Cuprum = (bit<3>)3w2;
+        Hettinger.Moultrie.Montague = Belmore;
+        Hettinger.Moultrie.Pettry = Hettinger.Bratt.Clarion;
+        Hettinger.Moultrie.LaUnion = (bit<10>)10w0;
+    }
+    @name(".Aguada") action Aguada() {
+        Burmester();
+        Hettinger.Moultrie.Cuprum = (bit<3>)3w3;
+        Hettinger.Bratt.Rockham = (bit<1>)1w0;
+        Hettinger.Bratt.Panaca = (bit<1>)1w0;
+    }
+    @name(".Brush") action Brush() {
+        Hettinger.Bratt.Quinhagak = (bit<1>)1w1;
+    }
+    @ternary(1) @disable_atomic_modify(1) @ternary(1) @name(".Ceiba") table Ceiba {
+        actions = {
+            Petrolia();
+            Aguada();
+            @defaultonly Brush();
+            Burmester();
+        }
+        key = {
+            Noyack.Thurmond.Weinert: exact @name("Thurmond.Weinert") ;
+            Noyack.Thurmond.Cornell: exact @name("Thurmond.Cornell") ;
+            Noyack.Thurmond.Noyes  : exact @name("Thurmond.Noyes") ;
+        }
+        const default_action = Brush();
+        size = 1024;
+    }
     @name(".Overton") Kalvesta() Overton;
     @name(".Karluk") Pound() Karluk;
     @name(".Bothwell") Chambers() Bothwell;
@@ -6792,7 +6782,6 @@ control Needles(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic
     @name(".Hartford") Redvale() Hartford;
     @name(".Halstead") ElkMills() Halstead;
     @name(".Draketown") Tampa() Draketown;
-    @name(".FlatLick") Watters() FlatLick;
     @name(".Alderson") Loyalton() Alderson;
     @name(".Mellott") Janney() Mellott;
     @name(".CruzBay") Hooven() CruzBay;
@@ -6820,6 +6809,12 @@ control Needles(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic
             Newberg.apply(Noyack, Hettinger, Almota, Coryville, Bellamy, Lemont);
             Wiota.apply(Noyack, Hettinger, Almota, Coryville, Bellamy, Lemont);
             Seabrook.apply(Noyack, Hettinger, Almota, Coryville, Bellamy, Lemont);
+            if (Noyack.Thurmond.isValid()) {
+                Ceiba.apply();
+            }
+            if (Hettinger.Moultrie.Cuprum != 3w2) {
+                Oxnard.apply(Noyack, Hettinger, Almota, Coryville, Bellamy, Lemont);
+            }
             Shawville.apply(Noyack, Hettinger, Almota, Coryville, Bellamy, Lemont);
             ElMirage.apply(Noyack, Hettinger, Almota, Coryville, Bellamy, Lemont);
             Quamba.apply(Noyack, Hettinger, Almota, Coryville, Bellamy, Lemont);
@@ -6831,18 +6826,9 @@ control Needles(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic
             Caguas.apply(Noyack, Hettinger, Almota, Coryville, Bellamy, Lemont);
             Camden.apply(Noyack, Hettinger, Almota, Coryville, Bellamy, Lemont);
             Millett.apply();
-            if (Noyack.Thurmond.isValid() == false) {
-                Bothwell.apply(Noyack, Hettinger, Almota, Coryville, Bellamy, Lemont);
-            } else {
-                if (Noyack.Thurmond.isValid()) {
-                    FlatLick.apply(Noyack, Hettinger, Almota, Coryville, Bellamy, Lemont);
-                }
-            }
+            Bothwell.apply(Noyack, Hettinger, Almota, Coryville, Bellamy, Lemont);
             Eureka.apply();
             Coalton.apply(Noyack, Hettinger, Almota, Coryville, Bellamy, Lemont);
-            if (Hettinger.Moultrie.Cuprum != 3w2) {
-                Oxnard.apply(Noyack, Hettinger, Almota, Coryville, Bellamy, Lemont);
-            }
             Karluk.apply(Noyack, Hettinger, Almota, Coryville, Bellamy, Lemont);
             Tatum.apply(Noyack, Hettinger, Almota, Coryville, Bellamy, Lemont);
             Kingsgate.apply(Noyack, Hettinger, Almota, Coryville, Bellamy, Lemont);

@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_VXLAN=1 -Ibf_arista_switch_nat_vxlan/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_nat_vxlan --bf-rt-schema bf_arista_switch_nat_vxlan/context/bf-rt.json
-// p4c 9.7.4 (SHA: 97e15e7)
+// p4c 9.7.4 (SHA: 8e6e85a)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -752,6 +752,7 @@ struct Lovewell {
     bit<32>   Pajaros;
     bit<16>   Wauconda;
     bit<32>   Richvale;
+    bit<1>    Norco;
     bit<8>    SomesBar;
     bit<8>    Vergennes;
     bit<8>    Pierceton;
@@ -819,7 +820,6 @@ struct Darien {
     bit<12>  Bonney;
     bit<10>  Cutten;
     bit<3>   Lewiston;
-    bit<3>   Lamona;
     bit<8>   Woodfield;
     bit<1>   Naubinway;
     bit<1>   Ovett;
@@ -2423,7 +2423,7 @@ control Duchesne(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrin
         key = {
             Aguila.RichBar.Blitchton: exact @name("RichBar.Blitchton") ;
         }
-        default_action = Centre(3w0, 6w0, 2w0);
+        default_action = Centre(3w0, 6w0, 2w3);
         size = 512;
     }
     apply {
@@ -2714,19 +2714,16 @@ control Wyandanch(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intri
         actions = {
             Yorklyn();
             Botna();
-            Chappell();
+            @defaultonly Chappell();
             Vananda();
         }
         key = {
-            Castle.Virgilina.Riner    : exact @name("Virgilina.Riner") ;
             Castle.Virgilina.Palmhurst: exact @name("Virgilina.Palmhurst") ;
             Castle.Virgilina.Comfrey  : exact @name("Virgilina.Comfrey") ;
             Castle.Virgilina.Kalida   : exact @name("Virgilina.Kalida") ;
-            Aguila.Sunbury.Lewiston   : ternary @name("Sunbury.Lewiston") ;
         }
-        default_action = Chappell();
+        const default_action = Chappell();
         size = 1024;
-        requires_versioning = false;
     }
     apply {
         Estero.apply();
@@ -2766,7 +2763,7 @@ control Inkom(inout Westoak Castle, inout Wanamassa Aguila, in egress_intrinsic_
             Aguila.Sunbury.Mausdale: exact @name("Sunbury.Mausdale") ;
             Aguila.Sunbury.Bessie  : exact @name("Sunbury.Bessie") ;
         }
-        default_action = Onamia();
+        const default_action = Onamia();
         size = 8192;
     }
     apply {
@@ -4722,6 +4719,7 @@ control Valmont(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrins
     @name(".Moxley") action Moxley() {
         Aguila.Frederika.Richvale = (bit<32>)32w0;
         Aguila.Frederika.Wauconda = (bit<16>)Aguila.Frederika.Vergennes;
+        Aguila.Frederika.Norco = (bit<1>)1w1;
     }
     @disable_atomic_modify(1) @name(".Stout") table Stout {
         actions = {
@@ -5717,6 +5715,9 @@ control Glouster(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrin
         }
         Hawthorne.apply(Castle, Aguila, RichBar, Nixon, Mattapex, Harding);
         Hartwick.apply(Castle, Aguila, RichBar, Nixon, Mattapex, Harding);
+        if (Castle.Virgilina.isValid()) {
+            Netarts.apply(Castle, Aguila, RichBar, Nixon, Mattapex, Harding);
+        }
         if (Aguila.Frederika.Wetonka == 1w0 && Aguila.Funston.Thaxton == 1w0 && Aguila.Funston.Lawai == 1w0) {
             if (Aguila.Hookdale.Provencal & 4w0x2 == 4w0x2 && Aguila.Frederika.Atoka == 3w0x2 && Aguila.Hookdale.Bergton == 1w1) {
                 if (Aguila.Geistown.Baytown != 16w0) {
@@ -5731,9 +5732,6 @@ control Glouster(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrin
             } else {
                 if (Aguila.Hookdale.Provencal & 4w0x1 == 4w0x1 && Aguila.Frederika.Atoka == 3w0x1 && Aguila.Hookdale.Bergton == 1w1 && Aguila.Frederika.Subiaco == 16w0) {
                 } else {
-                    if (Castle.Virgilina.isValid()) {
-                        Netarts.apply(Castle, Aguila, RichBar, Nixon, Mattapex, Harding);
-                    }
                     if (Aguila.Sunbury.Juneau == 1w0 && Aguila.Sunbury.Lewiston != 3w2) {
                         Putnam.apply(Castle, Aguila, RichBar, Nixon, Mattapex, Harding);
                     }
@@ -6616,7 +6614,7 @@ control Rixford(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrins
         Oxnard.apply(Castle, Aguila, RichBar, Nixon, Mattapex, Harding);
         if (Aguila.Hookdale.Bergton == 1w1 && Aguila.Hookdale.Provencal & 4w0x1 == 4w0x1 && Aguila.Frederika.Atoka == 3w0x1 && Harding.copy_to_cpu == 1w0) {
             if (Aguila.Frederika.Raiford == 1w0 || Aguila.Frederika.Ayden == 1w0) {
-                if ((Aguila.Frederika.Raiford == 1w1 || Aguila.Frederika.Ayden == 1w1) && Castle.Noyack.isValid() == true && Aguila.Frederika.Sardinia == 1w1 || Aguila.Frederika.Raiford == 1w0 && Aguila.Frederika.Ayden == 1w0) {
+                if ((Aguila.Frederika.Raiford == 1w1 || Aguila.Frederika.Ayden == 1w1) && (Castle.Noyack.isValid() == true && Aguila.Frederika.Sardinia == 1w1) || Aguila.Frederika.Norco == 1w1 && Aguila.Frederika.Raiford == 1w0 && Aguila.Frederika.Ayden == 1w1 || Aguila.Frederika.Raiford == 1w0 && Aguila.Frederika.Ayden == 1w0) {
                     switch (Overton.apply().action_run) {
                         Potosi: {
                             Caguas.apply();

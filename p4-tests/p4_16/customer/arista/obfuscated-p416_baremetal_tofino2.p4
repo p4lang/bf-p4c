@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_BAREMETAL_TOFINO2=1 -Ibf_arista_switch_baremetal_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino2-t2na --o bf_arista_switch_baremetal_tofino2 --bf-rt-schema bf_arista_switch_baremetal_tofino2/context/bf-rt.json
-// p4c 9.7.4 (SHA: 97e15e7)
+// p4c 9.7.4 (SHA: 8e6e85a)
 
 #include <core.p4>
 #include <tofino2_specs.p4>
@@ -780,7 +780,6 @@ struct Oilmont {
     bit<12>  Newfane;
     bit<9>   Hueytown;
     bit<3>   LaLuz;
-    bit<3>   Townville;
     bit<8>   Ledoux;
     bit<1>   Monahans;
     bit<1>   Pinole;
@@ -2213,7 +2212,7 @@ control Standard(inout Frederika Lefor, inout HighRock Starkey, in ingress_intri
         key = {
             Starkey.Garrison.Avondale: exact @name("Garrison.Avondale") ;
         }
-        default_action = Wolverine(3w0, 6w0, 2w0);
+        default_action = Wolverine(3w0, 6w0, 2w3);
         size = 512;
     }
     apply {
@@ -2521,17 +2520,16 @@ control Kosmos(inout Frederika Lefor, inout HighRock Starkey, in ingress_intrins
         actions = {
             BigFork();
             Kenvil();
-            Rhine();
+            @defaultonly Rhine();
             Ironia();
         }
         key = {
-            Lefor.Casnovia.Helton  : exact @name("Casnovia.Helton") ;
             Lefor.Casnovia.Grannis : exact @name("Casnovia.Grannis") ;
             Lefor.Casnovia.StarLake: exact @name("Casnovia.StarLake") ;
             Lefor.Casnovia.Rains   : exact @name("Casnovia.Rains") ;
             Starkey.Wyndmoor.LaLuz : ternary @name("Wyndmoor.LaLuz") ;
         }
-        default_action = Rhine();
+        const default_action = Rhine();
         size = 1024;
         requires_versioning = false;
     }
@@ -5218,7 +5216,7 @@ control Elliston(inout Frederika Lefor, inout HighRock Starkey, in egress_intrin
         Manakin();
         Tontogany.count();
     }
-    @disable_atomic_modify(1) @name(".Fairchild") @stage(10) table Fairchild {
+    @disable_atomic_modify(1) @name(".Fairchild") table Fairchild {
         actions = {
             Neuse();
             @defaultonly NoAction();
@@ -9690,14 +9688,14 @@ control Devore(inout Frederika Lefor, inout HighRock Starkey, in ingress_intrins
         Wahoo.apply(Lefor, Starkey, Garrison, Volens, Ravinia, Milano);
         Molino.apply(Lefor, Starkey, Garrison, Volens, Ravinia, Milano);
         Dilia.apply(Lefor, Starkey, Garrison, Volens, Ravinia, Milano);
+        if (Lefor.Casnovia.isValid()) {
+            Laramie.apply(Lefor, Starkey, Garrison, Volens, Ravinia, Milano);
+        }
         if (Starkey.Covert.Piqua == 1w0 && Starkey.Alstown.Bessie == 1w0 && Starkey.Alstown.Savery == 1w0) {
             if (Starkey.Lookeba.Aldan & 4w0x2 == 4w0x2 && Starkey.Covert.Onycha == 3w0x2 && Starkey.Lookeba.RossFork == 1w1) {
             } else {
                 if (Starkey.Lookeba.Aldan & 4w0x1 == 4w0x1 && Starkey.Covert.Onycha == 3w0x1 && Starkey.Lookeba.RossFork == 1w1) {
                 } else {
-                    if (Lefor.Casnovia.isValid()) {
-                        Laramie.apply(Lefor, Starkey, Garrison, Volens, Ravinia, Milano);
-                    }
                     if (Starkey.Wyndmoor.Renick == 1w0 && Starkey.Wyndmoor.LaLuz != 3w2) {
                         NewCity.apply(Lefor, Starkey, Garrison, Volens, Ravinia, Milano);
                     }

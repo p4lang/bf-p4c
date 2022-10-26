@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_VXLAN_EVPN_SCALE=1 -Ibf_arista_switch_vxlan_evpn_scale/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_vxlan_evpn_scale --bf-rt-schema bf_arista_switch_vxlan_evpn_scale/context/bf-rt.json
-// p4c 9.7.4 (SHA: 97e15e7)
+// p4c 9.7.4 (SHA: 8e6e85a)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -694,7 +694,6 @@ struct Oilmont {
     bit<12> Wallula;
     bit<10> Pierceton;
     bit<3>  FortHunt;
-    bit<3>  Hueytown;
     bit<8>  Helton;
     bit<1>  LaLuz;
     bit<1>  Townville;
@@ -3476,7 +3475,7 @@ control Goldsmith(inout Wanamassa Lindy, inout Talco Brady, in ingress_intrinsic
         key = {
             Brady.Moultrie.Blitchton: exact @name("Moultrie.Blitchton") ;
         }
-        default_action = Encinitas(3w0, 6w0, 2w0);
+        default_action = Encinitas(3w0, 6w0, 2w3);
         size = 512;
     }
     apply {
@@ -3757,48 +3756,6 @@ control Gunder(inout Wanamassa Lindy, inout Talco Brady, in ingress_intrinsic_me
     }
     apply {
         Capitola.apply();
-    }
-}
-
-control Liberal(inout Wanamassa Lindy, inout Talco Brady, in ingress_intrinsic_metadata_t Moultrie, in ingress_intrinsic_metadata_from_parser_t Emden, inout ingress_intrinsic_metadata_for_deparser_t Skillman, inout ingress_intrinsic_metadata_for_tm_t Pinetop) {
-    @name(".Doyline") action Doyline() {
-    }
-    @name(".Belcourt") action Belcourt(bit<20> BealCity) {
-        Doyline();
-        Brady.Ekwok.FortHunt = (bit<3>)3w2;
-        Brady.Ekwok.Wauconda = BealCity;
-        Brady.Ekwok.Pajaros = Brady.HighRock.Clarion;
-        Brady.Ekwok.Pierceton = (bit<10>)10w0;
-    }
-    @name(".Moorman") action Moorman() {
-        Doyline();
-        Brady.Ekwok.FortHunt = (bit<3>)3w3;
-        Brady.HighRock.Rudolph = (bit<1>)1w0;
-        Brady.HighRock.Dolores = (bit<1>)1w0;
-    }
-    @name(".Parmelee") action Parmelee() {
-        Brady.HighRock.Piqua = (bit<1>)1w1;
-    }
-    @ternary(1) @disable_atomic_modify(1) @name(".Bagwell") table Bagwell {
-        actions = {
-            Belcourt();
-            Moorman();
-            Parmelee();
-            Doyline();
-        }
-        key = {
-            Lindy.Frederika.Mendocino: exact @name("Frederika.Mendocino") ;
-            Lindy.Frederika.Eldred   : exact @name("Frederika.Eldred") ;
-            Lindy.Frederika.Chloride : exact @name("Frederika.Chloride") ;
-            Lindy.Frederika.Garibaldi: exact @name("Frederika.Garibaldi") ;
-            Brady.Ekwok.FortHunt     : ternary @name("Ekwok.FortHunt") ;
-        }
-        default_action = Parmelee();
-        size = 1024;
-        requires_versioning = false;
-    }
-    apply {
-        Bagwell.apply();
     }
 }
 
@@ -6236,6 +6193,41 @@ control Richlawn(inout Wanamassa Lindy, inout Talco Brady, in egress_intrinsic_m
         implementation = Tusayan;
         const default_action = NoAction();
     }
+    @name(".Doyline") action Doyline() {
+    }
+    @name(".Belcourt") action Belcourt(bit<20> BealCity) {
+        Doyline();
+        Brady.Ekwok.FortHunt = (bit<3>)3w2;
+        Brady.Ekwok.Wauconda = BealCity;
+        Brady.Ekwok.Pajaros = Brady.HighRock.Clarion;
+        Brady.Ekwok.Pierceton = (bit<10>)10w0;
+    }
+    @name(".Moorman") action Moorman() {
+        Doyline();
+        Brady.Ekwok.FortHunt = (bit<3>)3w3;
+        Brady.HighRock.Rudolph = (bit<1>)1w0;
+        Brady.HighRock.Dolores = (bit<1>)1w0;
+    }
+    @name(".Parmelee") action Parmelee() {
+        Brady.HighRock.Piqua = (bit<1>)1w1;
+    }
+    @ternary(1) @disable_atomic_modify(1) @name(".Bagwell") table Bagwell {
+        actions = {
+            Belcourt();
+            Moorman();
+            @defaultonly Parmelee();
+            Doyline();
+        }
+        key = {
+            Lindy.Frederika.Eldred   : exact @name("Frederika.Eldred") ;
+            Lindy.Frederika.Chloride : exact @name("Frederika.Chloride") ;
+            Lindy.Frederika.Garibaldi: exact @name("Frederika.Garibaldi") ;
+            Brady.Ekwok.FortHunt     : ternary @name("Ekwok.FortHunt") ;
+        }
+        const default_action = Parmelee();
+        size = 1024;
+        requires_versioning = false;
+    }
     @name(".Torrance") Blanchard() Torrance;
     @name(".Lilydale") Natalbany() Lilydale;
     @name(".Haena") Paradise() Haena;
@@ -6281,7 +6273,6 @@ control Richlawn(inout Wanamassa Lindy, inout Talco Brady, in egress_intrinsic_m
     @name(".Saltair") Goldsmith() Saltair;
     @name(".Tahuya") Brunson() Tahuya;
     @name(".Reidville") Corum() Reidville;
-    @name(".Higgston") Liberal() Higgston;
     @name(".Arredondo") Crossnore() Arredondo;
     @name(".Trotwood") Netarts() Trotwood;
     @name(".Columbus") Hartwick() Columbus;
@@ -6308,7 +6299,18 @@ control Richlawn(inout Wanamassa Lindy, inout Talco Brady, in egress_intrinsic_m
             Geismar.apply(Lindy, Brady, Moultrie, Emden, Skillman, Pinetop);
             Campbell.apply(Lindy, Brady, Moultrie, Emden, Skillman, Pinetop);
             Ardara.apply(Lindy, Brady, Moultrie, Emden, Skillman, Pinetop);
-            Ellicott.apply(Lindy, Brady, Moultrie, Emden, Skillman, Pinetop);
+            if (Lindy.Frederika.isValid()) {
+                switch (Bagwell.apply().action_run) {
+                    Belcourt: {
+                    }
+                    default: {
+                        Ellicott.apply(Lindy, Brady, Moultrie, Emden, Skillman, Pinetop);
+                    }
+                }
+
+            } else {
+                Ellicott.apply(Lindy, Brady, Moultrie, Emden, Skillman, Pinetop);
+            }
             if (Brady.HighRock.Onycha == 1w0 && Brady.Millstone.Edwards == 1w0 && Brady.Millstone.Mausdale == 1w0) {
                 Jermyn.apply(Lindy, Brady, Moultrie, Emden, Skillman, Pinetop);
                 if (Brady.Jayton.Juneau & 4w0x2 == 4w0x2 && Brady.HighRock.Nenana == 3w0x2 && Brady.Jayton.Sunflower == 1w1) {
@@ -6318,9 +6320,6 @@ control Richlawn(inout Wanamassa Lindy, inout Talco Brady, in egress_intrinsic_m
                         FordCity.apply(Lindy, Brady, Moultrie, Emden, Skillman, Pinetop);
                         GlenRock.apply(Lindy, Brady, Moultrie, Emden, Skillman, Pinetop);
                     } else {
-                        if (Lindy.Frederika.isValid()) {
-                            Higgston.apply(Lindy, Brady, Moultrie, Emden, Skillman, Pinetop);
-                        }
                         if (Brady.Ekwok.RedElm == 1w0 && Brady.Ekwok.FortHunt != 3w2) {
                             Parmalee.apply(Lindy, Brady, Moultrie, Emden, Skillman, Pinetop);
                         }
