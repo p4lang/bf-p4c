@@ -2265,7 +2265,9 @@ void PackFlexibleHeaders::check_conflicting_constraints() {
             if (solver.check(constraints) == z3::unsat) {
                 LOG3("ignore conflicting constraints: " << constraints);
             } else {
-                solver.add(constraints);
+                for (const auto& c : constraints) {
+                    solver.add(c);
+                }
             }
         }
     }
