@@ -550,6 +550,7 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/clot/header_removal_analysis.cpp
   parde/clot/pseudoheader.cpp
   parde/clot/pragma/do_not_use_clot.cpp
+  parde/mirror/const_mirror_session_opt.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PARDE_SRCS}")
 build_unified(BF_P4C_BACKEND_PARDE_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
@@ -599,6 +600,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/clot/header_removal_analysis.h
   parde/clot/pseudoheader.h
   parde/clot/pragma/do_not_use_clot.h
+  parde/mirror/const_mirror_session_opt.h
   parde/reset_invalidated_checksum_headers.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PARDE_HDRS}")

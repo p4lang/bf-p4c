@@ -90,6 +90,7 @@
 #include "bf-p4c/parde/infer_payload_offset.h"
 #include "bf-p4c/parde/lower_parser.h"
 #include "bf-p4c/parde/merge_parser_state.h"
+#include "bf-p4c/parde/mirror/const_mirror_session_opt.h"
 #include "bf-p4c/parde/reset_invalidated_checksum_headers.h"
 #include "bf-p4c/parde/resolve_negative_extract.h"
 #include "bf-p4c/parde/rewrite_parser_locals.h"
@@ -272,6 +273,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         new CollectPhvInfo(phv),
         new ValidToStkvalid(phv),   // Alias header stack $valid fields with $stkvalid slices.
                                     // Must happen before ElimUnused.
+        new ConstMirrorSessionOpt(phv),
         new CollectPhvInfo(phv),
         &defuse,
         (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
