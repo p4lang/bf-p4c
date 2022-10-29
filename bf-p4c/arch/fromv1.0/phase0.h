@@ -174,6 +174,7 @@ class ConvertPhase0 : public PassManager {
     }
 };
 
+cstring getDefaultPhase0TableKeyName();
 
 }  // namespace BFN
 

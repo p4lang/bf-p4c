@@ -25,8 +25,10 @@ namespace BFN {
 
 namespace {
 
-cstring getPhase0TableKeyName(const IR::ParameterList *params) {
-    cstring keyName = "phase0_data";
+const cstring defaultPhase0TableKeyName = "phase0_data";  //  DRY, SPOT/SSOT
+
+cstring getPhase0TableKeyName(const IR::ParameterList* params) {
+    cstring keyName = defaultPhase0TableKeyName;
     for (auto p : *params) {
         if (p->type->toString() == "ingress_intrinsic_metadata_t") {
             keyName = p->name;
@@ -946,5 +948,8 @@ IR::Node* ConvertPhase0AssignToExtract::preorder(IR::AssignmentStatement* stmt) 
         return new IR::MethodCallStatement(extract);
     }
     return stmt; }
+
+cstring getDefaultPhase0TableKeyName() { return defaultPhase0TableKeyName; }
+
 
 }  // namespace BFN
