@@ -9,10 +9,13 @@ struct TableFormat : ::TableFormat {
 
     void classify_match_bits() override;
     bool allocate_sram_match() override;
+    bool allocate_overhead(bool alloc_match = false) override;
     bool allocate_match_byte(const ByteInfo &info, safe_vector<ByteInfo> &alloced, int width_sect,
         bitvec &byte_attempt, bitvec &bit_attempt) override;
     bool allocate_match_with_algorithm(int group);
     void find_bytes_to_allocate(int width_sect, safe_vector<ByteInfo> &unalloced) override;
+    bool requires_versioning() const override { return false; }
+    bool requires_valid_oh() const override { return !layout_option.layout.ternary; }
  public:
     TableFormat(const LayoutOption &l, const IXBar::Use *mi, const IXBar::Use *phi,
                 const IR::MAU::Table *t, const bitvec im, bool gl, FindPayloadCandidates &fpc)

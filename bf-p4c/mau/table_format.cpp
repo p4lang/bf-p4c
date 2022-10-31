@@ -582,7 +582,8 @@ bool TableFormat::find_format(Use *u) {
  *  The current algorithm just packs as close to the bottom as it can, and does not leave
  *  any holes to put match data in.  This could be optimized to pack match data.
  */
-bool TableFormat::allocate_overhead() {
+bool TableFormat::allocate_overhead(bool alloc_match) {
+    BUG_CHECK(!alloc_match, "Allocating Match must be done independently");
     if (!allocate_next_table())
         return false;
     LOG3("Next Table");
@@ -751,12 +752,10 @@ bitvec TableFormat::bitvec_necessary(type_t type) const {
             rv.setrange(0, SelectorLengthShiftBits(sel));
         else
             BUG("Unreachable");
-#if HAVE_FLATROCK
-    // Flatrock check required as the overhead_bits_necessary() call will otherwise allocate bits
-    // for valid in non flatrock backends
-    } else if ((Device::currentDevice() == Device::FLATROCK) && (type == VALID)) {
+    } else if ((type == VALID) && requires_valid_oh()) {
+        // Flatrock check required as the overhead_bits_necessary() call will otherwise allocate
+        // bits for valid in non flatrock backends
         rv.setrange(0, 1);  // Single valid bit
-#endif
     }
     return rv;
 }

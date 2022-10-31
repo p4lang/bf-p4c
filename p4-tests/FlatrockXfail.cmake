@@ -14,11 +14,6 @@ set (FLATROCK_XFAIL_TESTS
   )
 
 p4c_add_xfail_reason("tofino5"
-  "error: immediate operands in format for ternary must start at bit 0"
-  extensions/p4_tests/p4_16/flatrock/ternary1.p4
-  )
-
-p4c_add_xfail_reason("tofino5"
   "error: No phv record meta.__IngressP_extra_bridged_metadata.hdr_data_b1"
   extensions/p4_tests/p4_16/stf/p4c-2772-c.p4
   )

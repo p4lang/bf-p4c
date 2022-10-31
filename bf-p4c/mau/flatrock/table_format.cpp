@@ -100,12 +100,8 @@ bool TableFormat::allocate_sram_match() {
         overhead_groups_per_RAM.size());
 
     auto &layout = layout_option.layout;
-    auto total_groups = layout_option.way.match_groups;
-    for (auto group = 0; group < layout_option.way.match_groups; group++) {
+    for (int group = 0; group < layout_option.way.match_groups; group++)
         use->match_groups[group].clear_match();
-    }
-    if (layout.is_lamb_direct())
-        total_groups = layout.sets_per_word;
 
     match_bytes.clear();
     ghost_bytes.clear();
@@ -118,14 +114,26 @@ bool TableFormat::allocate_sram_match() {
     ghost_bits_count += layout.get_subword_bits();
     classify_match_bits();
 
+    return allocate_overhead(!layout.is_lamb_direct());
+}
+
+bool TableFormat::allocate_overhead(bool alloc_match) {
+    auto &layout = layout_option.layout;
+    int total_groups = layout_option.way.match_groups;
+    // Ternary Indirection table only need a valid overhead format for a single entry
+    if (layout_option.layout.ternary)
+        total_groups = 1;
+    else if (layout.is_lamb_direct())
+        total_groups = layout.sets_per_word;
+
     int per_group_width = 0;
     int group = 0;
     auto allocate_overhead_bits = [&](const type_t t, const int align = 0) {
         int alloc_bits = bits_necessary(t);
         if (alloc_bits > 0) {
-            auto start = total_use.max().index() + 1;
+            int start = total_use.max().index() + 1;
             if ((align > 1) && (start % align))
-                    start = ((start / align) + 1) * align;
+                start = ((start / align) + 1) * align;
             bitvec alloc_mask(start, alloc_bits);
             use->match_groups[group].mask[t] |= alloc_mask;
             total_use |= alloc_mask;
@@ -140,7 +148,7 @@ bool TableFormat::allocate_sram_match() {
             total_use.setrange(total_use.max().index() + 1, pad_range);
         }
         // Dont allocate match bits overhead for direct lookup
-        if (!layout.is_lamb_direct())
+        if (alloc_match)
             if (!allocate_match_with_algorithm(group)) return false;
         allocate_overhead_bits(VALID);
         allocate_overhead_bits(IMMEDIATE);
@@ -152,9 +160,8 @@ bool TableFormat::allocate_sram_match() {
 
         group++;
     }
-
-    LOG3("Allocating for total groups: " << total_groups << ", allocated: " << group
-            << ", per_group_width: " << per_group_width);
+    LOG3("Allocating for total groups: " << total_groups << ", allocated: " << group <<
+         ", per_group_width: " << per_group_width);
     if (group == total_groups) return true;
     return false;
 }

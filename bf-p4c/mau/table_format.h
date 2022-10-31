@@ -274,13 +274,6 @@ struct TableFormat {
     FindPayloadCandidates &fpc;
 
     bool skinny = false;
-    bool requires_versioning() const {
-#ifdef HAVE_FLATROCK
-        // no version bits set for Flatrock
-        if (Device::currentDevice() == Device::FLATROCK) return false;
-#endif
-        return layout_option.layout.requires_versioning; }
-
     void clear_match_state();
     void clear_pre_allocation_state();
 
@@ -289,7 +282,6 @@ struct TableFormat {
     bool allocate_overhead_field(type_t type, int lsb_mem_word_offset, int bit_width, int entry,
         int RAM_word);
     bool allocate_overhead_entry(int entry, int RAM_word, int lsb_mem_word_offset);
-    bool allocate_overhead();
     void setup_pfes_and_types();
     bool allocate_all_indirect_ptrs();
     bool allocate_all_immediate();
@@ -336,8 +328,11 @@ struct TableFormat {
     virtual bool allocate_sram_match();
     virtual bool allocate_match_byte(const ByteInfo &info, safe_vector<ByteInfo> &alloced,
             int width_sect, bitvec &byte_attempt, bitvec &bit_attempt);
+    virtual bool requires_versioning() const { return layout_option.layout.requires_versioning; }
+    virtual bool requires_valid_oh() const { return false; }
 
  protected:
+    virtual bool allocate_overhead(bool alloc_match = false);
     void choose_ghost_bits(safe_vector<IXBar::Use::Byte> &potential_ghost);
     int bits_necessary(type_t type) const;
     bool initialize_byte(int byte_offset, int width_sect, const ByteInfo &info,
