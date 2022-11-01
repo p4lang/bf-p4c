@@ -3685,7 +3685,7 @@ class DecidePlacement::BacktrackManagement {
                     // retry table placement with resource-based allocation and backtracking ON.
                     ena_resource_mode = true;
                     self.resource_mode = true;
-                    self.MaxBacktracksPerPipe = 32;
+                    self.MaxBacktracksPerPipe = 64;
                     break;
                 case TableSummary::ALT_FINALIZE_TABLE_SAME_ORDER:
                     self.MaxBacktracksPerPipe = -1;
@@ -3693,7 +3693,7 @@ class DecidePlacement::BacktrackManagement {
                 case TableSummary::ALT_FINALIZE_TABLE:
                     // final round, enable both resource-based allocation and backtracking.
                     ena_resource_mode = true;
-                    self.MaxBacktracksPerPipe = 32;
+                    self.MaxBacktracksPerPipe = 64;
                     break;
                 default:
                     self.MaxBacktracksPerPipe = -1;
