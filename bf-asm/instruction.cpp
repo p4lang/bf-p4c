@@ -719,7 +719,25 @@ Instruction *AluOP3Src::Decode::decode(Table *tbl, const Table::Actions::Action 
     return 0;
 }
 
-Instruction *AluOP::pass1(Table *tbl, Table::Actions::Action *) {
+static bool will_pad_with_zeros(const Phv::Slice &dest, Table::Actions::Action *,
+                                operand::Action *ad) {
+    if (ad->lo != dest.lo || ad->hi != dest.hi) {
+        // need to line up with the destination, if it doesn't reject
+        // FIXME could we rotate the data in the field if everything else was ok?  The
+        // compiler should have done that already
+        return false; }
+    if (ad->field->bits.size() != 1) {
+        // punt for split fields.  Not sure this can ever happen
+        return false; }
+    if (ad->field->size < dest.reg.size) {
+        // field not big enough
+        return false; }
+    // FIXME -- should check that the action has no other uses of this AD operand that uses
+    // other bits?  Not trivial to do
+    return true;
+}
+
+Instruction *AluOP::pass1(Table *tbl, Table::Actions::Action *act) {
     if (!dest.check()) return this;
     if (!ignoreSrc1 && !src1.check()) return this;
     if (!ignoreSrc2 && !src2.check()) return this;
@@ -740,15 +758,19 @@ Instruction *AluOP::pass1(Table *tbl, Table::Actions::Action *) {
     if (!ignoreSrc2 && src2.phvGroup() < 0)
         error(lineno, "src2 must be phv register");
     if (dest->lo || dest->hi != dest->reg.size-1) {
-        auto *k = src1.to<operand::Const>();
-        if (k && (opc->flags & CanSliceWithConst) && operand(dest) == src2 && k->value >= 0 &&
-            (k->value << dest->lo) < 8) {
-            // special case -- bitwise op wih dest==src2 and src1 is a constant can just operate
-            // on the whole container to get the right result
-            k->value <<= dest->lo;
-            // FIXME -- should rewrite dest and src2 to refer to the whole container for
-            // strict correctness?  We don't actually look at the slice after this so maybe ok
-            return this; }
+        if ((opc->flags & CanSliceWithConst) && operand(dest) == src2) {
+            // special case -- bitwise op wih dest==src2 and src1 is a constant or action
+            // data that is padded with 0s can just operate on the whole container to get
+            // the right result
+            auto *k = src1.to<operand::Const>();
+            if (k && k->value >= 0 && (k->value << dest->lo) < 8) {
+                k->value <<= dest->lo;
+                // FIXME -- should rewrite dest and src2 to refer to the whole container for
+                // strict correctness?  We don't actually look at the slice after this so maybe ok
+                return this; }
+            auto *ad = src1.to<operand::Action>();
+            if (ad && will_pad_with_zeros(*dest, act, ad))
+                return this; }
         error(lineno, "ALU ops cannot operate on slices");
     }
     return this;
