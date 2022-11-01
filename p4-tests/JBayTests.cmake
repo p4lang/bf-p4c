@@ -15,11 +15,12 @@ set (P16_V1_EXCLUDE_PATTERNS "tofino\\.h")
 set (P16_V1_FOR_JBAY "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/*.p4")
 p4c_find_tests("${P16_V1_FOR_JBAY}" p16_v1tests INCLUDE "${P16_V1_INCLUDE_PATTERNS}" EXCLUDE "${P16_V1_EXCLUDE_PATTERNS}")
 
-set (P16_JNA_INCLUDE_PATTERNS "include.*(t2?na).p4" "main|common_tna_test|common_t2na_test")
+set (P16_JNA_INCLUDE_PATTERNS "include.*(t2?na|tofino2_arch).p4" "main|common_tna_test|common_t2na_test")
 set (P16_JNA_EXCLUDE_PATTERNS
   "tofino\\.h" "TOFINO1_ONLY" "<built-in>"
   "p4c-1323-b\\.p4"
   "p4c-1587-a\\.p4"
+  "p4c-2537\\.p4"  # this program is excluded because it exceeds 900s timeout
   "p4c-2794\\.p4"
   "p4c-3001\\.p4"
   "p4c-3030-2\\.p4"

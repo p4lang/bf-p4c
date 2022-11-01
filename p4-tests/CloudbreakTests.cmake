@@ -15,7 +15,7 @@ set (P16_V1_EXCLUDE_PATTERNS "tofino\\.h")
 set (P16_V1_FOR_CLOUDBREAK "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/*.p4")
 p4c_find_tests("${P16_V1_FOR_CLOUDBREAK}" p16_v1tests INCLUDE "${P16_V1_INCLUDE_PATTERNS}" EXCLUDE "${P16_V1_EXCLUDE_PATTERNS}")
 
-set (P16_JNA_INCLUDE_PATTERNS "include.*(t[23]?na).p4" "main|common_tna_test")
+set (P16_JNA_INCLUDE_PATTERNS "include.*(t[23]?na|tofino3_arch).p4" "main|common_tna_test")
 set (P16_JNA_EXCLUDE_PATTERNS "tofino\\.h" "TOFINO1_ONLY" "TOFINO2_ONLY" "<built-in>"
                               "mirror_constants\\.p4"
                               "p4c-2740\\.p4"
