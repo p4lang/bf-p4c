@@ -21,7 +21,7 @@ add SwitchIngress.ingress_port_mapping.port_mapping ingress_port:8 set_port_prop
         tc:0 meter_index:0 sflow_session_id:0xff mac_pkt_class:0)
 
 add SwitchIngress.ingress_port_mapping.bd_action_profile 1 \
-    set_bd_properties(bd:0x100c vrf:4 bd_label:0 stp_group: learning_mode:0     \
+    set_bd_properties(bd:0x100c vrf:4 bd_label:0 stp_group:0 learning_mode:0    \
         ipv4_unicast_enable:1 ipv4_multicast_enable:0 igmp_snooping_enable:0    \
         ipv6_unicast_enable:1 ipv6_multicast_enable:0 mld_snooping_enable:0     \
         mpls_enable:0 mrpf_group:0 zone:0)
