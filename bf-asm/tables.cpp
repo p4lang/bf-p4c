@@ -292,6 +292,10 @@ std::ostream &operator<<(std::ostream &out, const Table::Layout::bus_type_t type
         return out << "tind_bus";
     case Table::Layout::IDLE_BUS:
         return out << "idle_bus";
+    case Table::Layout::L2R_BUS:
+        return out << "l2r bus";
+    case Table::Layout::R2L_BUS:
+        return out << "r2l bus";
     default:
         return out << "[bus_t " << static_cast<int>(type) << "]";
     }

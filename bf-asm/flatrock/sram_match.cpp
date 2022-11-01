@@ -109,57 +109,58 @@ void SRamMatchTable::setup_word_ixbar_group(Target::Flatrock) {
     // flatrock does not need this as words are assigned to specific XMEs
 }
 
+void SRamMatchTable::alloc_global_bus(Layout &row, Layout::bus_type_t bus_kind, int lo_stage,
+                                      int lo_col, int hi_stage, int hi_col) {
+    if (!row.bus.count(bus_kind)) {
+        if (!row.bus.count(Layout::SEARCH_BUS))
+            error(row.lineno, "No %s allocated on row %d of %s", to_string(bus_kind).c_str(),
+                  row.row, name());
+        else
+            row.bus[bus_kind] = row.bus.at(Layout::SEARCH_BUS); }
+    if (row.bus.count(bus_kind)) {
+        int hbus = row.bus.at(bus_kind) + Target::SRAM_HBUSSES_PER_ROW()/2;
+        for (int st = lo_stage; st <= hi_stage; st++) {
+            int lim = st == hi_stage ? hi_col
+                    : Target::SRAM_HBUS_SECTIONS_PER_STAGE();
+            for (int c = st == lo_stage ? lo_col/2 : 0; c < lim; ++c) {
+                auto &old = Stage::stage(gress, st)->stm_hbus_use.at(row.row, c, hbus);
+                if (old)
+                    error(row.lineno, "%s wants to use %s %d:%d:%d:%d, already in "
+                          "use by %s", name(), to_string(bus_kind).c_str(), row.row, st, c,
+                          hbus - Target::SRAM_HBUSSES_PER_ROW()/2, old->name());
+                else
+                    old = this; } } }
+}
+
 void SRamMatchTable::alloc_global_busses() {
     int tbl_stage = stage->stageno;
     for (auto &row : layout) {
         int minstage, mincol, maxstage, maxcol;
         Target::Flatrock::stage_col_range(row.memunits, minstage, mincol, maxstage, maxcol);
-        auto *way = way_for_ram(row.memunits.front());
-        if (!way) {
-                error(row.lineno, "Can't find way for %s", row.memunits.front().desc());
-                continue; }
-        int tbl_col = (way->group_xme % 4) / 2;
+        const Way *left_way = nullptr, *right_way = nullptr;  // ways using left & right busses
+        int left_col = -1, right_col = -1;  // xme cols of those ways
         for (auto &ram : row.memunits) {
-            if (way != way_for_ram(ram)) {
-                error(row.lineno, "All rams on row in table %s not in the same way", name());
-                break; } }
-        if (minstage < tbl_stage || (minstage == tbl_stage && mincol/2 < tbl_col)) {
-            if (!row.bus.count(Layout::R2L_BUS)) {
-                if (!row.bus.count(Layout::SEARCH_BUS))
-                    error(row.lineno, "No r2l bus allocated on row %d of %s", row.row, name());
-                else
-                    row.bus[Layout::R2L_BUS] = row.bus.at(Layout::SEARCH_BUS); }
-            if (row.bus.count(Layout::R2L_BUS)) {
-                int hbus = row.bus.at(Layout::R2L_BUS) + Target::SRAM_HBUSSES_PER_ROW()/2;
-                for (int st = minstage; st <= tbl_stage; st++) {
-                    int lim = st == tbl_stage ? tbl_col
-                            : Target::SRAM_HBUS_SECTIONS_PER_STAGE();
-                    for (int c = st == minstage ? mincol/2 : 0; c < lim; ++c) {
-                        auto &old = Stage::stage(gress, st)->stm_hbus_use.at(row.row, c, hbus);
-                        if (old)
-                            error(row.lineno, "%s wants to use r2l bus %d:%d:%d:%d, already in "
-                                  "use by %s", name(), row.row, st, c,
-                                  hbus - Target::SRAM_HBUSSES_PER_ROW()/2, old->name());
-                        else
-                            old = this; } } } }
-        if (maxstage > tbl_stage || (maxstage == tbl_stage && maxcol/2 > tbl_col)) {
-            if (!row.bus.count(Layout::L2R_BUS)) {
-                if (!row.bus.count(Layout::SEARCH_BUS))
-                    error(row.lineno, "No l2r bus allocated on row %d of %s", row.row, name());
-                else
-                    row.bus[Layout::L2R_BUS] = row.bus.at(Layout::SEARCH_BUS); }
-            if (row.bus.count(Layout::L2R_BUS)) {
-                int hbus = row.bus.at(Layout::L2R_BUS);
-                for (int st = tbl_stage; st <= maxstage; st++) {
-                    int lim = st == maxstage ? maxcol/2 + 1
-                            : Target::SRAM_HBUS_SECTIONS_PER_STAGE();
-                    for (int c = st == tbl_stage ? tbl_col : 0; c < lim; ++c) {
-                        auto &old = Stage::stage(gress, st)->stm_hbus_use.at(row.row, c, hbus);
-                        if (old)
-                            error(row.lineno, "%s wants to use l2r bus %d:%d:%d:%d, already in "
-                                  "use by %s", name(), row.row, st, c, hbus, old->name());
-                        else
-                            old = this; } } } }
+            if (auto *way = way_for_ram(ram)) {
+                int col = (way->group_xme % 4) / 2;
+                if (ram.stage == tbl_stage ? ram.col/2 < col : ram.stage < tbl_stage) {
+                    if (left_way && left_way != way)
+                        error(row.lineno, "rams on row %d in different ways can't share lhbus",
+                              row.row);
+                    left_way = way;
+                    left_col = col;
+                } else if (ram.stage == tbl_stage ? ram.col/2 > col : ram.stage > tbl_stage) {
+                    if (right_way && right_way != way)
+                        error(row.lineno, "rams on row %d in different ways can't share rhbus",
+                              row.row);
+                    right_way = way;
+                    right_col = col;
+                }
+            } else {
+                error(row.lineno, "Can't find way for %s", ram.desc()); } }
+        if (left_way) {
+            alloc_global_bus(row, Layout::R2L_BUS, minstage, mincol, tbl_stage, left_col); }
+        if (right_way) {
+            alloc_global_bus(row, Layout::L2R_BUS, tbl_stage, right_col, maxstage, maxcol); }
     }
 }
 

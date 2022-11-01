@@ -1115,6 +1115,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam,
     bool parse_way(const value_t &);
     void common_sram_setup(pair_t &, const VECTOR(pair_t) &);
     void common_sram_checks();
+    void alloc_global_bus(Layout &, Layout::bus_type_t, int, int, int, int);
     void alloc_global_busses();
     void alloc_vpns() override;
     virtual void setup_ways();
