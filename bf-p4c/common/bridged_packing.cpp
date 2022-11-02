@@ -2257,7 +2257,6 @@ void PackFlexibleHeaders::check_conflicting_constraints() {
         for (auto& f : fields) {
             if (packingConstraints.count(f) == 0)
                 continue;
-            z3::context context;
             z3::expr_vector constraints(context);
             for (auto c : packingConstraints.at(f)) {
                 constraints.push_back(c);
