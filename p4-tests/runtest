@@ -123,6 +123,28 @@ run() {
     return $status
 }
 
+# Run PTF test with given command, possibly repeat on failure if that was
+# requested. This also handles env cleanup before/after (each) PTF. Returns the
+# exit status of last PRT test.
+# The RERUN_PTF_ON_FAILURE variable should be only used as last resort for
+# tests we cannot fix (e.g. coming from customers).
+run-ptf() {
+    local ptf_test_status
+    clean_env
+    for i in $(seq 0 ${RERUN_PTF_ON_FAILURE:-0}); do
+        if [[ $i -gt 0 ]]; then
+            echo "WARNING: PTF test failed and rerun is allowed, reruning PTF (rerun $i/${RERUN_PTF_ON_FAILURE})"
+        fi
+        run "$@"
+        ptf_test_status=$?
+        clean_env
+        if [[ $ptf_test_status -eq 0 ]]; then
+            return 0
+        fi
+    done
+    return $ptf_test_status
+}
+
 srcdir=${1%/}
 if [ ! -d "$srcdir" ]; then
     die "Usage: $0 <srcdir> <test-source>"
@@ -814,11 +836,9 @@ if $run_pd ; then
                              $port_map_file \
                              $test_port \
                              $PTF_EXTRA_ARGS"
-        clean_env
         echo $PTF_CMD
-        run $PTF_CMD
+        run-ptf $PTF_CMD
         ptf_test_status=$?
-        clean_env
         if ${P4TEST_CLEAN_PASSING:-false} && [ $ptf_test_status -eq 0 ]; then
             rm -rf $testdir/${name}${out_ext}.out
         fi
@@ -861,11 +881,9 @@ if $run_ptf && ! $run_bfrt ; then
     fi
 
     if [ -n "$PTF_CMD" ]; then
-        clean_env
         echo $PTF_CMD
-        run $PTF_CMD
+        run-ptf $PTF_CMD
         ptf_test_status=$?
-        clean_env
         if ${P4TEST_CLEAN_PASSING:-false} && [ $ptf_test_status -eq 0 ]; then
             rm -rf $testdir/${name}${out_ext}.out
         fi
@@ -920,11 +938,9 @@ if $run_bfrt; then
         fi
 
         if [ -n "$PTF_CMD" ]; then
-            clean_env
             echo $PTF_CMD
-            run $PTF_CMD
+            run-ptf $PTF_CMD
             ptf_test_status=$?
-            clean_env
             if ${P4TEST_CLEAN_PASSING:-false} && [ $ptf_test_status -eq 0 ]; then
                 rm -rf $testdir/${name}${out_ext}.out
             fi
@@ -983,10 +999,8 @@ if $run_bfrt; then
         fi
 
         if [ -n "$PTF_CMD" ]; then
-            clean_env
-            run $PTF_CMD
+            run-ptf $PTF_CMD
             ptf_test_status=$?
-            clean_env
             if ${P4TEST_CLEAN_PASSING:-false} && [ $ptf_test_status -eq 0 ]; then
                 rm -rf $switchBuild
             fi

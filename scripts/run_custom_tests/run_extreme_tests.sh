@@ -32,9 +32,14 @@ sed -i 's/sequence_number/seqence_number/g' /usr/local/lib/python3.8/site-packag
 # Run test
 export CTEST_OUTPUT_ON_FAILURE='true'
 echo "Running ptf test"
-cd $bfnhome/build/p4c && ctest -V -R "^tofino2/.*npb-master-ptf"  || ctest --rerun-failed
-cd $bfnhome/build/p4c && ctest -V -R "^tofino2/.*npb-multi-prog"  || ctest --rerun-failed
-cd $bfnhome/build/p4c && ctest -V -R "^tofino2/.*npb-folded-pipe" || ctest --rerun-failed
+# The PTF tests are flaky. The PTF test fails intermittently even with the
+# same tofino binary. According to model logs, it seems the first deviation
+# happens after a different value is read from a register, so maybe it really is
+# some race-condition during test setup.
+export RERUN_PTF_ON_FAILURE=1
+cd $bfnhome/build/p4c && ctest -V -R "^tofino2/.*npb-master-ptf"
+cd $bfnhome/build/p4c && ctest -V -R "^tofino2/.*npb-multi-prog"
+cd $bfnhome/build/p4c && ctest -V -R "^tofino2/.*npb-folded-pipe"
 
 # If running in jarvis container, reset test.json patch
 if [[ $PWD == *"mnt"* ]]; then
