@@ -415,6 +415,7 @@ class CollectClotInfo : public Inspector {
 
     /// Collects the set of fields extracted.
     bool preorder(const IR::BFN::Extract* extract) override;
+    bool preorder(const IR::BFN::ParserZeroInit* zero_init) override;
 
     /// Collects the set of POV bits on which each field's emit is predicated.
     bool preorder(const IR::BFN::EmitField* emit) override;

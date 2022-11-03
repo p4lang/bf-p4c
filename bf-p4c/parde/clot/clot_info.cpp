@@ -1150,6 +1150,18 @@ bool CollectClotInfo::preorder(const IR::BFN::Extract* extract) {
     return true;
 }
 
+bool CollectClotInfo::preorder(const IR::BFN::ParserZeroInit* zero_init) {
+    auto state = findContext<IR::BFN::ParserState>();
+
+    if (auto field_lval = zero_init->field->to<IR::BFN::FieldLVal>()) {
+        if (auto f = phv.field(field_lval->field)) {
+            clotInfo.add_field(f, new IR::BFN::ConstantRVal(0), state);
+        }
+    }
+
+    return true;
+}
+
 bool CollectClotInfo::preorder(const IR::BFN::EmitField* emit) {
     auto field = phv.field(emit->source->field);
     auto irPov = emit->povBit->field;

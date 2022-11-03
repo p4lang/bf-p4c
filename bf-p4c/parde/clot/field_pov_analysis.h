@@ -1,20 +1,23 @@
 #ifndef EXTENSIONS_BF_P4C_PARDE_CLOT_FIELD_POV_ANALYSIS_H_
 #define EXTENSIONS_BF_P4C_PARDE_CLOT_FIELD_POV_ANALYSIS_H_
+
 #include "bf-p4c/parde/parser_info.h"
 #include "bf-p4c/parde/clot/clot_info.h"
-/* This pass is a parser data flow analysis to find if a field is extracted
- * in every path that sets the field's valid bit. If there exists a path
+
+/* This pass is a parser data flow analysis to find if a field is extracted from
+ * the packet in every path that sets the field's valid bit. If there exists a path
  * where valid bit is set but no fields of the corresponding header is extracted
- * then such fields should not be placed in clots.
+ * from the packet then such fields should not be placed in clots.
  *
  * The analysis proceeds in topological sorted order.
  * Every state has two bitvectors :
- *    1. field_vec : Contains fields that are definitely extracted before the current state
+ *    1. field_vec : Contains fields that are definitely extracted from the packet before
+ *                   the current state
  *    2. pov_vec : Valid bits that are set before the current state and are waiting for
                    corresponding fields to be extracted.
  *
  * The current state will add a field in its field_vec if any of these conditions are met:
- *    1. Field is extracted in the current state
+ *    1. Field is extracted from the packet in the current state
  *    2. The field is present in all the immediate predecessors' field_vec
  *
  * Subsequently, the current state will add a valid bit in its pov_vec if
@@ -51,4 +54,5 @@ class FieldPovAnalysis : public Inspector {
         return rv;
     }
 };
+
 #endif /* EXTENSIONS_BF_P4C_PARDE_CLOT_FIELD_POV_ANALYSIS_H_ */

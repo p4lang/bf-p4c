@@ -33,13 +33,13 @@ void FieldPovAnalysis::end_apply() {
                             if (const_src->asInt()) {
                                 temp_pov_vec.setbit(field->id);
                             }
-                        } else if (field->deparsed()) {
+                        } else if (field->deparsed() &&
+                                   extract->source->is<IR::BFN::PacketRVal>()) {
                             curr_field_vec.setbit(field->id);
                         }
                     }
                 }
             }
-
             // Loop below will perform bitwise-and operation on all predecessors' field_vec
             // and save the result in temp_field_vec. This is to capture only those fields that
             // are set in all predecessors' field_vec. It will also perform bitwise-or operation

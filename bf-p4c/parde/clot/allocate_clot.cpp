@@ -403,6 +403,36 @@ class GreedyClotAllocator : public Visitor {
 
                     const auto* f = nodeInfo.field;
 
+                    // If a state exists in the parser where the field f has its POV bit set
+                    // but f is not extracted from the packet (zero init or extracted from
+                    // constant), then the states where that happens must not be in the same paths
+                    // through the parser as the states containing the two ClotCandidates. If they
+                    // are, then the candidates could be adjacent in the parser but not adjacent in
+                    // the deparser, which is not allowed. Thus, a gap would be required.
+                    if (!clotInfo.extracted_with_pov(f)) {
+                        std::set<const IR::BFN::ParserState*>
+                            states_where_f_is_not_extracted_from_packet;
+                        for (const auto& [state, source] : clotInfo.field_to_parser_states_.at(f)) {
+                            if (!source->is<IR::BFN::PacketRVal>()) {
+                                states_where_f_is_not_extracted_from_packet.insert(state);
+                            }
+                        }
+                        for (const auto& f_state : states_where_f_is_not_extracted_from_packet) {
+                            for (const auto& [c1_state, c2_state] : gaps.at(0)) {
+                                const auto& parser_graph = parserInfo.graph(f_state);
+                                if (!parser_graph.is_ancestor(f_state, c1_state) &&
+                                    (!parser_graph.is_ancestor(c1_state, f_state) ||
+                                     !parser_graph.is_ancestor(f_state, c2_state)) &&
+                                    !parser_graph.is_ancestor(c2_state, f_state))
+                                    continue;
+                                LOG5("      Field " << f->name
+                                                    << " might be deparsed between candidates, "
+                                                       "and not be sourced from the packet");
+                                return true;
+                            }
+                        }
+                    }
+
                     // The field f might be deparsed between c1 and c2, so the two CLOT candidates
                     // might be separated if f's header might be added by the MAU pipeline.
                     if (clotInfo.is_added_by_mau(f->header())) {
@@ -452,13 +482,10 @@ class GreedyClotAllocator : public Visitor {
                         // Look at the states in which c1 is extracted immediately before c2. If
                         // any of those states are contained in c1States or c2States, then c1 might
                         // be separated from c2.
-                        for (auto statePair : gaps.at(0)) {
-                            const auto* c1State = statePair.first;
-                            const auto* c2State = statePair.second;
-
+                        for (const auto& [c1State, c2State] : gaps.at(0)) {
                             if (c1States.count(c1State) || c2States.count(c2State)) {
-                                LOG5("      Field " << f->name << " might be inserted between "
-                                     "candidates");
+                                LOG5("      Field " << f->name
+                                                    << " might be inserted between candidates");
                                 return true;
                             }
                         }

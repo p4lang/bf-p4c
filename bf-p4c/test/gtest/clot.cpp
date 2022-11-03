@@ -5,6 +5,7 @@
 #include "bf-p4c/mau/instruction_selection.h"
 #include "bf-p4c/parde/clot/allocate_clot.h"
 #include "bf-p4c/parde/clot/clot_info.h"
+#include "bf-p4c/parde/clot/field_pov_analysis.h"
 #include "bf-p4c/parde/clot/pragma/do_not_use_clot.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
@@ -141,6 +142,7 @@ void runTest(boost::optional<TofinoPipeTestCase> test,
     CollectHeaderStackInfo collectHeaderStackInfo;
     CollectPhvInfo collectPhvInfo(phvInfo);
     PragmaDoNotUseClot pragmaDoNotUseClot(phvInfo);
+    FieldPovAnalysis fieldPovAnalysis(clotInfo, phvInfo);
     CollectClotInfo collectClotInfo(phvInfo, clotInfo, pragmaDoNotUseClot);
     InstructionSelection instructionSelection(BackendOptions(), phvInfo);
     AllocateClot allocateClot(clotInfo, phvInfo, phvUse, pragmaDoNotUseClot, false);
@@ -148,8 +150,10 @@ void runTest(boost::optional<TofinoPipeTestCase> test,
     PassManager passes = {
       &collectHeaderStackInfo,
       &collectPhvInfo,
+      &clotInfo.parserInfo,
       &instructionSelection,
       &pragmaDoNotUseClot,
+      &fieldPovAnalysis,
       &collectClotInfo,
       &allocateClot,
     };
@@ -1367,6 +1371,214 @@ TEST_F(ClotTest, NotAdjacentMultiheaderVariableSizeHeaderStack) {
     runTest(test, {{"stack[1].f1", "stack[1].f2", "stack[2].f1", "stack[2].f2", "stack[3].f1"},
                    {"stack[0].f1", "stack[0].f2"},
                    {{"stack[4].f1", FromTo(0, 7)}, "stack[4].f2"}});
+}
+
+// If fields are zero intialized or extracted by a constant between two CLOTs, those two CLOT are
+// adjacent in the parser. However, if those fields are deparsed between the two CLOTs, then they
+// are also not adjacent in the deparser. Therefore, a gap needs to be inserted between those two
+// CLOTs.
+TEST_F(ClotTest, ZeroInitsBetweenTwoClots) {
+    auto test = createClotTest(P4_SOURCE(R"(
+        )"), P4_SOURCE(R"(
+            header hdr_t {
+                bit<32> f1;
+                bit<32> f2;
+            }
+        )"), P4_SOURCE(R"(
+            hdr_t a;
+            hdr_t b;
+            hdr_t c;
+            hdr_t d;
+            hdr_t e;
+            hdr_t f;
+        )"), P4_SOURCE(R"(
+            state start {
+                pkt.extract(hdr.a);
+                transition parse_b;
+            }
+
+            state parse_b {
+                pkt.extract(hdr.b);
+                transition select(hdr.b.f1) {
+                    0: zero_init_c;
+                    1: parse_c;
+                }
+            }
+
+            state zero_init_c {
+                hdr.c.setValid();
+                hdr.c.f1 = 0;
+                hdr.c.f2 = 0;
+                transition parse_e;
+            }
+
+            state parse_c {
+                pkt.extract(hdr.c);
+                transition parse_d;
+            }
+
+            state parse_d {
+                pkt.extract(hdr.d);
+                transition parse_e;
+            }
+
+            state parse_e {
+                pkt.extract(hdr.e);
+                transition accept;
+            }
+        )"), P4_SOURCE(R"(
+            action act1() { hdr.e.f2 = 0; }
+
+            table t1 {
+                key = { hdr.e.f2 : exact; }
+                actions = { act1; }
+                size = 256;
+            }
+
+            apply {
+                t1.apply();
+            }
+        )"), P4_SOURCE(R"(
+            pkt.emit(hdr);
+        )"));
+
+    runTest(test, {{"a.f1", "a.f2", "b.f1", "b.f2"}, {"d.f1", "d.f2"}, {{"e.f1", FromTo(0, 7)}}});
+}
+
+TEST_F(ClotTest, ExtractConstantsBetweenTwoClots) {
+    auto test = createClotTest(P4_SOURCE(R"(
+        )"), P4_SOURCE(R"(
+            header hdr_t {
+                bit<32> f1;
+                bit<32> f2;
+            }
+        )"), P4_SOURCE(R"(
+            hdr_t a;
+            hdr_t b;
+            hdr_t c;
+            hdr_t d;
+            hdr_t e;
+            hdr_t f;
+        )"), P4_SOURCE(R"(
+            state start {
+                pkt.extract(hdr.a);
+                transition parse_b;
+            }
+
+            state parse_b {
+                pkt.extract(hdr.b);
+                transition select(hdr.b.f1) {
+                    0: zero_init_c;
+                    1: parse_c;
+                }
+            }
+
+            state zero_init_c {
+                hdr.c.setValid();
+                hdr.c.f1 = 192;
+                hdr.c.f2 = 168;
+                transition parse_e;
+            }
+
+            state parse_c {
+                pkt.extract(hdr.c);
+                transition parse_d;
+            }
+
+            state parse_d {
+                pkt.extract(hdr.d);
+                transition parse_e;
+            }
+
+            state parse_e {
+                pkt.extract(hdr.e);
+                transition accept;
+            }
+        )"), P4_SOURCE(R"(
+            action act1() { hdr.e.f2 = 0; }
+
+            table t1 {
+                key = { hdr.e.f2 : exact; }
+                actions = { act1; }
+                size = 256;
+            }
+
+            apply {
+                t1.apply();
+            }
+        )"), P4_SOURCE(R"(
+            pkt.emit(hdr);
+        )"));
+
+    runTest(test, {{"a.f1", "a.f2", "b.f1", "b.f2"}, {"d.f1", "d.f2"}, {{"e.f1", FromTo(0, 7)}}});
+}
+
+TEST_F(ClotTest, ZeroInitAndExtractConstantBetweenTwoClots) {
+    auto test = createClotTest(P4_SOURCE(R"(
+        )"), P4_SOURCE(R"(
+            header hdr_t {
+                bit<32> f1;
+                bit<32> f2;
+            }
+        )"), P4_SOURCE(R"(
+            hdr_t a;
+            hdr_t b;
+            hdr_t c;
+            hdr_t d;
+            hdr_t e;
+            hdr_t f;
+        )"), P4_SOURCE(R"(
+            state start {
+                pkt.extract(hdr.a);
+                transition parse_b;
+            }
+
+            state parse_b {
+                pkt.extract(hdr.b);
+                transition select(hdr.b.f1) {
+                    0: zero_init_c;
+                    1: parse_c;
+                }
+            }
+
+            state zero_init_c {
+                hdr.c.setValid();
+                hdr.c.f1 = 0;
+                hdr.c.f2 = 42;
+                transition parse_e;
+            }
+
+            state parse_c {
+                pkt.extract(hdr.c);
+                transition parse_d;
+            }
+
+            state parse_d {
+                pkt.extract(hdr.d);
+                transition parse_e;
+            }
+
+            state parse_e {
+                pkt.extract(hdr.e);
+                transition accept;
+            }
+        )"), P4_SOURCE(R"(
+            action act1() { hdr.e.f2 = 0; }
+
+            table t1 {
+                key = { hdr.e.f2 : exact; }
+                actions = { act1; }
+                size = 256;
+            }
+
+            apply {
+                t1.apply();
+            }
+        )"), P4_SOURCE(R"(
+            pkt.emit(hdr);
+        )"));
+
+    runTest(test, {{"a.f1", "a.f2", "b.f1", "b.f2"}, {"d.f1", "d.f2"}, {{"e.f1", FromTo(0, 7)}}});
 }
 
 }  // namespace Test
