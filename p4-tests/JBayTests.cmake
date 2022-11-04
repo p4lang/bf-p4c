@@ -57,6 +57,7 @@ set (P16_JNA_EXCLUDE_PATTERNS
   "p4c-4055\\.p4"
   "MODEL-1095\\.p4"
   "p4c-4072\\.p4"
+  "p4c-4943\\.p4"
 )
 set (P16_JNA_FOR_JBAY "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*/*.p4"
                       "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4"

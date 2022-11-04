@@ -1,5 +1,5 @@
-#ifndef BF_ASM_PARSER_TOFINO_JBAY_CLOUDBREAK_H_
-#define BF_ASM_PARSER_TOFINO_JBAY_CLOUDBREAK_H_
+#ifndef PARSER_TOFINO_JBAY_CLOUDBREAK_H_
+#define PARSER_TOFINO_JBAY_CLOUDBREAK_H_
 
 #include <map>
 #include <vector>
@@ -147,7 +147,6 @@ class Parser : public BaseParser, public Contextable {
                 Save(gress_t, Match* m, int l, int h, value_t &data, int flgs = 0);
                 template<class REGS>
                 int write_output_config(REGS &, void *, unsigned &, int, int) const;
-                OutputUse output_use() const;
             };
             std::vector<Save*>  save;
 
@@ -159,7 +158,6 @@ class Parser : public BaseParser, public Contextable {
                 Set(gress_t gress, Match* m, value_t &data, int v, int flgs = 0);
                 template<class REGS>
                 void write_output_config(REGS &, void *, unsigned &, int, int) const;
-                OutputUse output_use() const;
                 bool merge(gress_t, const Set &a);
                 bool operator==(const Set &a) const { return where == a.where && what == a.what
                     && flags == a.flags; }
@@ -206,8 +204,6 @@ class Parser : public BaseParser, public Contextable {
             void unmark_reachable(Parser *, State *state, bitvec &unreach);
             void pass1(Parser *pa, State *state);
             void pass2(Parser *pa, State *state);
-            OutputUse output_use() const;
-            void merge_outputs(OutputUse);
             template<class REGS> int write_load_config(REGS &, Parser *, State *, int) const;
             template<class REGS> void write_lookup_config(REGS &, State *, int) const;
             template<class EA_REGS> void write_counter_config(EA_REGS &) const;
@@ -661,4 +657,4 @@ void setup_jbay_clear_on_write(bitvec phv_allow_clear_on_write,
                                checked_array<256, ubits<1>> &main_i,
                                checked_array<256, ubits<1>> &main_e);
 
-#endif  /* BF_ASM_PARSER_TOFINO_JBAY_CLOUDBREAK_H_ */
+#endif  /* PARSER_TOFINO_JBAY_CLOUDBREAK_H_ */

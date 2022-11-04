@@ -1666,103 +1666,6 @@ void Parser::State::MatchKey::preserve_saved(unsigned saved) {
             break; } }
 }
 
-Parser::State::OutputUse Parser::State::Match::Save::output_use() const {
-    OutputUse rv;
-    if (lo == hi)
-        rv.b8++;
-    else if (lo+1 == hi)
-        rv.b16++;
-    else if (lo+3 == hi)
-        rv.b32++;
-    else
-        BUG();
-    return rv;
-}
-Parser::State::OutputUse Parser::State::Match::Set::output_use() const {
-    OutputUse rv;
-    if (where->reg.size == 8)
-        rv.b8++;
-    else if (where->reg.size == 16)
-        rv.b16++;
-    else if (where->reg.size == 32)
-        rv.b32++;
-    else
-        BUG();
-    return rv;
-}
-Parser::State::OutputUse Parser::State::Match::output_use() const {
-    OutputUse rv;
-    for (auto s : save) rv += s->output_use();
-    for (auto s : set) rv += s->output_use();
-    return rv;
-}
-void Parser::State::Match::merge_outputs(OutputUse use) {
-    if (options.target != TOFINO) return;  // this is tofino specific
-    // In a loop, do not merge the extracts since the offset inc count is tied to the container.
-    if (offset_inc) return;
-    use += output_use();
-
-    // Compiler may over allocate each extractor size to take advantage of the narrow-to-wide
-    // feature. Need to account for these before combining adjacent extracts.
-    while (use.b32 > 4) {
-        if (use.b16 + 2 <= 4) {
-            use.b32--;
-            use.b16 += 2;
-        } else if (use.b8 + 4 <= 4) {
-            use.b32--;
-            use.b8 += 4;
-        } else {
-            break;
-        }
-    }
-
-    while (use.b16 > 4) {
-        if (use.b8 + 2 <= 4) {
-            use.b16--;
-            use.b8 += 2;
-        } else {
-            break;
-        }
-    }
-
-    if (use.b32 >= 4 && use.b16 >= 4) return;
-    std::sort(save.begin(), save.end(), [](const Save* a, const Save* b)->bool {
-        return a->lo < b->lo; });
-    /* combine adjacent aligned 16-bit extracts into 32 bit */
-    for (unsigned i = 0; i+1 < save.size() && use.b32 < 4; ++i) {
-        if (save[i]->hi == save[i]->lo + 1 && save[i+1]->lo == save[i]->hi + 1 &&
-            save[i+1]->hi == save[i+1]->lo + 1 && !save[i]->flags && !save[i+1]->flags &&
-            (save[i]->where->reg.parser_id() & 1) == 0 &&
-            save[i]->where->reg.parser_id() + 1 == save[i+1]->where->reg.parser_id()) {
-            LOG3("merge 2x16->32 (" << save[i]->where << ", " << save[i+1]->where << ")");
-            save[i]->hi += 2;
-            save.erase(save.begin()+i+1);
-            use.b32++;
-            use.b16 -= 2; } }
-    /* combine adjacent aligned 8-bit extracts into 16 bit */
-    for (unsigned i = 0; i+1 < save.size() && use.b16 < 4; ++i) {
-        if (save[i]->hi == save[i]->lo && save[i+1]->lo == save[i]->hi + 1 &&
-            save[i+1]->hi == save[i+1]->lo && !save[i]->flags && !save[i+1]->flags &&
-            (save[i]->where->reg.parser_id() & 1) == 0 &&
-            save[i]->where->reg.parser_id() + 1 == save[i+1]->where->reg.parser_id()) {
-            LOG3("merge 2x8->16 (" << save[i]->where << ", " << save[i+1]->where << ")");
-            save[i]->hi += 1;
-            save.erase(save.begin()+i+1);
-            use.b16++;
-            use.b8 -= 2; } }
-    /* combine 4 adjacent aligned 8-bit extracts into 32 bit */
-    for (unsigned i = 0; i+1 < save.size() && use.b32 < 4; ++i) {
-        if (save[i]->hi == save[i]->lo + 1 && save[i+1]->lo == save[i]->hi + 1 &&
-            save[i+1]->hi == save[i+1]->lo + 1 && !save[i]->flags && !save[i+1]->flags &&
-            (save[i]->where->reg.parser_id() & 1) == 0 &&
-            save[i]->where->reg.parser_id() + 1 == save[i+1]->where->reg.parser_id()) {
-            LOG3("merge 4x8->32 (" << save[i]->where << ", " << save[i+1]->where << ")");
-            save[i]->hi += 2;
-            save.erase(save.begin()+i+1);
-            use.b32++;
-            use.b16 -= 2; } }
-}
-
 void Parser::State::Match::pass2(Parser *pa, State *state) {
     for (auto &c : csum)
         c.pass2(pa);
@@ -1795,8 +1698,6 @@ void Parser::State::pass2(Parser *pa) {
                 def_saved |= 1 << i;
         if (def_saved && def->next)
             def->next->key.preserve_saved(def_saved); }
-    OutputUse defuse;
-    if (def) defuse = def->output_use();
     for (auto m : match) {
         m->pass2(pa, this);
         unsigned saved = def_saved;
@@ -1810,9 +1711,7 @@ void Parser::State::pass2(Parser *pa) {
             if (m->next)
                 m->next->key.preserve_saved(saved);
             else if (def && def->next)
-                def->next->key.preserve_saved(saved); }
-        if (!options.match_compiler)
-            m->merge_outputs(defuse); }
+                def->next->key.preserve_saved(saved); } }
 }
 
 /********* output *********/
