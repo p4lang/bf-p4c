@@ -908,6 +908,9 @@ class SaluAction : VLIWInstruction {
     // downshift it properly
     // FIXME -- should be std::bitset<4>, but irgen chokes on that currently.
 
+    // Mapping of output parameters to output ALUs.
+    std::map<int, int> output_param_to_alu = {};
+
     visit_children {
         VLIWInstruction::visit_children(v);
         action.visit_children(v);

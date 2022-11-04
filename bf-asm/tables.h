@@ -1,4 +1,4 @@
-#ifndef BF_ASM_TABLES_H_
+#ifndef BF_ASM_TABLES_H_  // NOLINT(build/header_guard)
 #define BF_ASM_TABLES_H_
 
 #include <config.h>
@@ -511,6 +511,11 @@ class Table {
             // assembly order.
             int                                 position_in_assembly = -1;
             bool                                minmax_use = false;  // jbay sful min/max
+            // Predication operand coming into the output ALUs in stateful actions. This attribute
+            // is used to make sure that all combined predicate outputs from a given stateful action
+            // have the same form, because the predication operand is always the same in every
+            // output ALU.
+            int                                 pred_comb_sel = -1;
             std::unique_ptr<json::map>          context_json;
             Action(Table *, Actions *, pair_t &, int);
             enum mod_cond_loc_t { MC_ADT, MC_IMMED };
@@ -2010,7 +2015,6 @@ DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
     unsigned            phv_byte_mask = 0;
     std::vector<Ref>    sbus_learn, sbus_match;
     enum { SBUS_OR = 0, SBUS_AND = 1 } sbus_comb = SBUS_OR;
-    int                 pred_comb_sel = -1;
     int                 phv_hash_shift = 0;
     bitvec              phv_hash_mask = bitvec(0, 128);
     Instruction         *output_lmatch = nullptr;  // output instruction using lmatch
@@ -2043,4 +2047,4 @@ DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
 #endif  /* HAVE_JBAY */
 )
 
-#endif /* BF_ASM_TABLES_H_ */
+#endif /* BF_ASM_TABLES_H_ */  // NOLINT(build/header_guard)

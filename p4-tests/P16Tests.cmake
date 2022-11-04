@@ -311,4 +311,5 @@ p4c_add_xfail_reason("p4"
   extensions/p4_tests/p4_16/ptf/hash_field_expression_sym.p4
   extensions/p4_tests/p4_16/compile_only/p4c-4837_tna_checksum.p4
   extensions/p4_tests/p4_16/ptf/p4c-4742.p4
+  extensions/p4_tests/p4_16/stf/p4c-4535.p4
 )

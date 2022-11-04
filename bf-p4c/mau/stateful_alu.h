@@ -194,6 +194,7 @@ class CreateSaluInstruction : public Inspector {
     IR::MAU::SaluAction::ReturnEnumEncoding     *return_encoding = nullptr;
     int                                         return_enum_word = -1;
     bool                                        split_ifs = false;
+    std::map<int, const IR::Expression*>        output_param_operands;
 
     // Map for detection of WAW data hazards
     // * Key is the lvalue
@@ -229,6 +230,7 @@ class CreateSaluInstruction : public Inspector {
     bool applyArg(const IR::PathExpression *, cstring);
     const IR::Expression *reuseCmp(const IR::MAU::SaluInstruction *cmp, int idx);
     void setupCmp(cstring op);
+    void assignOutputAlus();
     const IR::MAU::SaluInstruction *setup_output();
     bool outputEnumAsPredicate(const IR::Member *);
     bool canBeIXBarExpr(const IR::Expression *);

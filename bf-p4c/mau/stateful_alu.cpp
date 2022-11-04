@@ -471,6 +471,7 @@ void CreateSaluInstruction::clearFuncState() {
     assig_st = nullptr;
     assig_pred = nullptr;
     written_dest.clear();
+    output_param_operands.clear();
 }
 
 bool CreateSaluInstruction::preorder(const IR::Function *func) {
@@ -532,8 +533,19 @@ void CreateSaluInstruction::postorder(const IR::Function *func) {
         auto &output = outputs[kv.first];
         BUG_CHECK(is_address_output(output->operands.back()), "not address output?");
         output->operands.push_back(new IR::MAU::SaluFunction(kv.second, "lmatch")); }
-    for (auto *instr : outputs) {
+    assignOutputAlus();
+    for (std::size_t i = 0; i < outputs.size(); ++i) {
+        auto *instr = outputs[i];
         if (instr) {
+            if (Device::statefulAluSpec().OutputWords > 1) {
+                const auto it = action->output_param_to_alu.find(static_cast<int>(i));
+                BUG_CHECK(it != action->output_param_to_alu.end(),
+                          "No output ALU assigned to parameter %1%", i);
+                instr->operands.insert(
+                    instr->operands.begin() + instr->output_operand,
+                    new IR::MAU::SaluReg(instr->operands.front()->type,
+                                         "word" + std::to_string(it->second), false));
+            }
             insert_instruction(instr);
             LOG3("  add " << *action->action.back()); } }
     if (math.valid) {
@@ -1553,13 +1565,105 @@ bool CreateSaluInstruction::outputEnumAsPredicate(const IR::Member *mem) {
     return true;
 }
 
+void CreateSaluInstruction::assignOutputAlus() {
+    if (Device::statefulAluSpec().OutputWords == 1) {
+        action->output_param_to_alu[0] = 0;
+        return;
+    }
+
+    for (int param = 0; param < Device::statefulAluSpec().OutputWords; ++param) {
+        // In case any output parameter ends up uninitialized, we assign it to an output ALU that
+        // outputs 0.
+        output_param_operands.insert({param, nullptr});
+    }
+
+    std::set<int> used_alus;
+    // First handle memory/phv slices because they might be constrained to specific ALUs.
+    for (const auto &[param, operand] : output_param_operands) {
+        if (operand) {
+            if (const auto *slice = operand->to<IR::Slice>(); slice) {
+                bool duplicate = false;
+                for (const auto &[assigned_param, assigned_alu] : action->output_param_to_alu) {
+                    const auto *assigned_op = output_param_operands.at(assigned_param);
+                    if (assigned_op && slice->equiv(*assigned_op)) {
+                        // Use the same output ALU for multiple output parameters if they return the
+                        // same value.
+                        action->output_param_to_alu[param] = assigned_alu;
+                        duplicate = true;
+                        break;
+                    }
+                }
+                if (duplicate) {
+                    continue;
+                }
+
+                // alu0/1 always use bits 31:0, alu2/3 - bits 63:32.
+                // See JBay/CloudBreak MAU Micro-Architecture 6.2.12.8 Alu-Output for details.
+                const unsigned BOUNDARY = 32;
+                std::vector<int> available_alus;
+                bool ls_bits = true;
+                if (slice->getH() < BOUNDARY) {
+                    available_alus = {0, 1};
+                } else if (slice->getL() >= BOUNDARY) {
+                    available_alus = {2, 3};
+                    ls_bits = false;
+                } else {
+                    ::fatal_error(
+                        ErrorType::ERR_INVALID,
+                        "Slices assigned to outputs of register actions cannot cross the "
+                        "%2%-bit boundary %1%",
+                        slice->srcInfo, BOUNDARY);
+                }
+
+                const auto alu = std::find_if(available_alus.begin(), available_alus.end(),
+                                              [&](const int alu) { return !used_alus.count(alu); });
+                if (alu != available_alus.end()) {
+                    action->output_param_to_alu[param] = *alu;
+                    used_alus.insert(*alu);
+                } else {
+                    // This is possible if too many output parameters are all assigned to either low
+                    // or high bits of phv and stateful memory. However, returning values from PHV
+                    // is not supported currently so it shouldn't happen.
+                    std::stringstream msg;
+                    msg << "Too many output parameters return the " << BOUNDARY
+                        << (ls_bits ? " least" : " most")
+                        << " significant bits of stateful memory or PHV from action "
+                        << action->name << ". Reduce the number of such outputs to "
+                        << available_alus.size() << ".%1%";
+                    ::fatal_error(ErrorType::ERR_OVERLIMIT, msg.str().c_str(), action->srcInfo);
+                }
+            }
+        }
+    }
+    // Handle other outputs
+    for (const auto &[param, operand] : output_param_operands) {
+        if (action->output_param_to_alu.count(param)) {
+            continue;
+        }
+
+        for (int alu = 0; alu < Device::statefulAluSpec().OutputWords; ++alu) {
+            if (!used_alus.count(alu)) {
+                action->output_param_to_alu[param] = alu;
+                used_alus.insert(alu);
+                break;
+            }
+        }
+
+        BUG_CHECK(
+            action->output_param_to_alu.count(param),
+            "Couldn't assign an output ALU even though the operand (%1%) imposes no constraints",
+            operand);
+    }
+}
+
 const IR::MAU::SaluInstruction *CreateSaluInstruction::setup_output() {
     if (outputs.size() <= size_t(output_index)) outputs.resize(output_index+1);
     auto &output = outputs[output_index];
     int out_idx = -1;
     if (Device::statefulAluSpec().OutputWords > 1) {
-        operands.insert(operands.begin(), new IR::MAU::SaluReg(operands.at(0)->type,
-                                "word" + std::to_string(output_index), false));
+        BUG_CHECK(operands.size() == 1ul, "Unexpected number of operands (%1%) for output",
+                  operands.size());
+        output_param_operands[output_index] = operands.front();
         out_idx = 0; }
     if (predicate) {
         operands.insert(operands.begin(), predicate);
@@ -1641,6 +1745,7 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
             operands.push_back(new IR::MAU::SaluReg(IR::Type::Bits::get(1), "alu_lo", false));
         } else if (k && k->value == 0) {
             // 0 will be output if we don't drive it at all
+            output_param_operands.insert({output_index, nullptr});
             break;
         } else if (canOutputDirectly(operands.at(0))) {
             if (auto *reg = operands.at(0)->to<IR::MAU::SaluReg>()) {

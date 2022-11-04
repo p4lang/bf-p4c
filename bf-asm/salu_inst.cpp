@@ -887,14 +887,14 @@ Instruction *OutOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
     return rv;
 }
 
-Instruction *OutOP::pass1(Table *tbl_, Table::Actions::Action *) {
+Instruction *OutOP::pass1(Table *tbl_, Table::Actions::Action *act) {
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
     if (src)
         src->pass1(tbl);
     if (output_mux == STATEFUL_PREDICATION_OUTPUT) {
-        if (tbl->pred_comb_sel >= 0 && tbl->pred_comb_sel != slot - ALUOUT0)
+        if (act->pred_comb_sel >= 0 && act->pred_comb_sel != predication_encode)
             error(lineno, "Only one output of predication allowed");
-        tbl->pred_comb_sel = slot - ALUOUT0; }
+        act->pred_comb_sel = predication_encode; }
 #if HAVE_JBAY
     if (lmatch) {
         if (tbl->output_lmatch) {

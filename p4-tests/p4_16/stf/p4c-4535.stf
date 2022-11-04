@@ -1,0 +1,16 @@
+#        dst_addr     src_addr     ether_type   payload
+
+# write to register and drop the packet
+packet 0 010203040506 0708090a0b0c aaaa         0123456789abcdef
+
+# read the same values from register
+packet 0 000000000000 000000000000 bbbb         0123456789abcdef
+expect 0 010203040506 0708090a0b0c aaaa         0123456789abcdef
+
+# read with the first 4 bytes copied 2 more times
+packet 0 000000000000 000000000000 cccc         0123456789abcdef
+expect 0 010203040102 030401020304 aaaa         0123456789abcdef
+
+# read the predicate copied 1 more time
+packet 0 000000000000 000000000000 dddd         0123456789abcdef
+expect 0 000000040000 0004090a0b0c aaaa         0123456789abcdef

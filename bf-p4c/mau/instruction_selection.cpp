@@ -442,12 +442,13 @@ const IR::Node *Synth2PortSetup::postorder(IR::MAU::Primitive *prim) {
                   direct_access ? "" : "in", salu->direct ? "" : "in");
 
         int output_offsets[] = { 0, 64, 32, 96 };
-        auto makeInstr = [&](const IR::Expression *dest, int output) -> IR::MAU::Instruction * {
-            BUG_CHECK(size_t(output) < sizeof(output_offsets)/sizeof(output_offsets[0]),
+        auto makeInstr = [&](const IR::Expression *dest, int param,
+                             int output_alu) -> IR::MAU::Instruction * {
+            BUG_CHECK(size_t(output_alu) < sizeof(output_offsets)/sizeof(output_offsets[0]),
                       "too many outputs");
-            int bit = output_offsets[output];
+            int bit = output_offsets[output_alu];
             int output_size = prim->type->width_bits();
-            if ((salu_inst->return_predicate_words >> output) & 1) {
+            if ((salu_inst->return_predicate_words >> param) & 1) {
                 // an output enum encoded in the 16-bit predicate
                 BUG_CHECK(salu->pred_shift >= 0, "Not outputting predicate even though "
                           "its being used");
@@ -469,12 +470,19 @@ const IR::Node *Synth2PortSetup::postorder(IR::MAU::Primitive *prim) {
         unsigned idx = (method == "execute" && !direct_access) ? 2 : 1;
         for (int output = 1; idx < prim->operands.size(); ++idx, ++output) {
             // Have to put these instructions at the highest level of the instruction
-            created_instrs.push_back(makeInstr(prim->operands[idx], output)); }
+            const auto alu = salu_inst->output_param_to_alu.find(output);
+            BUG_CHECK(alu != salu_inst->output_param_to_alu.end(),
+                      "No output ALU assigned to parameter %1% in %2%", output, salu_inst->name);
+            created_instrs.push_back(makeInstr(prim->operands[idx], output, alu->second));
+        }
         rv = nullptr;
         if (prim->type->is<IR::Type::Void>()) {
         } else if (prim->type->is<IR::Type::Bits>() || prim->type->is<IR::Type_Enum>() ||
                    prim->type->is<IR::Type::Boolean>()) {
-            rv = makeInstr(new IR::TempVar(prim->type), 0);
+            const auto alu = salu_inst->output_param_to_alu.find(0);
+            BUG_CHECK(alu != salu_inst->output_param_to_alu.end(),
+                      "No output ALU assigned to paramater 0 in %1%", salu_inst->name);
+            rv = makeInstr(new IR::TempVar(prim->type), 0, alu->second);
         } else {
             error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1%: %2% return type must be simple "
                   "(void, bit, bool or enum), not complex", prim, objType); }
