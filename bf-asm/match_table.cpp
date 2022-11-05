@@ -150,6 +150,23 @@ METER_ACCESS_TYPE MatchTable::default_meter_access_type(bool for_stateful) {
     return rv;
 }
 
+std::vector<Table::Call> MatchTable::get_calls() const {
+    std::vector<Call> rv = Table::get_calls();
+    if (attached.selector) rv.emplace_back(attached.selector);
+    if (attached.selector_length) rv.emplace_back(attached.selector_length);
+    for (auto &c : attached.stats)
+        if (c)
+            rv.emplace_back(c);
+    for (auto &c : attached.meters)
+        if (c)
+            rv.emplace_back(c);
+    for (auto &c : attached.statefuls)
+        if (c)
+            rv.emplace_back(c);
+    if (attached.meter_color) rv.emplace_back(attached.meter_color);
+    return rv;
+}
+
 void MatchTable::pass0() {
     LOG1("### match table " << name() << " pass0 " << loc());
 #if 0

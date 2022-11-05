@@ -63,6 +63,22 @@ void IdletimeTable::pass3() {
     LOG1("### Idletime table " << name() << " pass3 " << loc());
 }
 
+// This is the same as AttachedTable::json_memunit, but IdletimeTable is not a derived class
+// of AttachedTable, so we duplicate it
+int IdletimeTable::json_memunit(const MemUnit &r) const {
+    if (r.stage >= 0) {
+        return r.stage * Target::SRAM_STRIDE_STAGE() +
+               r.row * Target::SRAM_STRIDE_ROW() +
+               r.col * Target::SRAM_STRIDE_COLUMN();
+    } else if (r.row >= 0) {
+        // per-stage logical sram
+        return r.row * Target::SRAM_LOGICAL_UNITS_PER_ROW() + r.col;
+    } else {
+        // lamb
+        return r.col;
+    }
+}
+
 static int precision_bits[] = { 0, 0, 1, 2, 0, 0, 3 };
 
 #if HAVE_FLATROCK

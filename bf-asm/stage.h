@@ -65,6 +65,7 @@ class Stage_data {
     BFN::Alloc1Dbase <std::vector<InputXbar *>>              hash_table_use;
     BFN::Alloc1Dbase<std::vector<InputXbar *>>               hash_group_use;
     BFN::Alloc1D<std::vector<HashDistribution *>, 6>         hash_dist_use;
+    BFN::Alloc1Dbase<ActionTable *>                          action_unit_use;
     BFN::Alloc1D<Table *, ACTION_DATA_BUS_SLOTS>             action_bus_use;
     BFN::Alloc1D<Table *, LOGICAL_SRAM_ROWS>                 action_data_use,
                                                              meter_bus_use,
@@ -121,7 +122,8 @@ class Stage_data {
         tcam_match_bus_use(Target::TCAM_ROWS(), Target::TCAM_MATCH_BUSSES()),
         local_tind_use(Target::LOCAL_TIND_UNITS()),
         hash_table_use(Target::EXACT_HASH_TABLES()),
-        hash_group_use(Target::EXACT_HASH_GROUPS())
+        hash_group_use(Target::EXACT_HASH_GROUPS()),
+        action_unit_use(Target::ARAM_UNITS_PER_STAGE())
         {}
     Stage_data(const Stage_data &) = delete;
     Stage_data(Stage_data &&) = default;

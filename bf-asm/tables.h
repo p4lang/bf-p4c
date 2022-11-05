@@ -131,6 +131,8 @@ class Table {
     void alloc_rams(bool logical, BFN::Alloc2Dbase<Table *> &use,
                     BFN::Alloc2Dbase<Table *> *bus_use = 0,
                     Layout::bus_type_t bus_type = Layout::SEARCH_BUS);
+    void alloc_global_bus(Layout &, Layout::bus_type_t, int, int, int, int);
+    virtual void alloc_global_busses();
     void alloc_global_srams();
     void alloc_global_tcams();
     void alloc_busses(BFN::Alloc2Dbase<Table *> &bus_use, Layout::bus_type_t bus_type);
@@ -318,6 +320,7 @@ class Table {
         unsigned                size = 0, immed_size = 0;
         Field                   *immed = 0;
         unsigned                log2size = 0; /* ceil(log2(size)) */
+        unsigned                overhead_start = 0, overhead_size = 0;  // extent of non-match
         int                     overhead_word = -1;
 
         unsigned groups() const { return fmt.size(); }
@@ -653,6 +656,7 @@ class Table {
     virtual void set_output_used() {
         error(lineno, "Cannot extract output on a non-stateful table %s", name()); }
     virtual const Call &get_action() const { return action; }
+    virtual std::vector<Call> get_calls() const;
     virtual bool is_attached(const Table *) const { BUG(); return false; }
     virtual Format::Field *find_address_field(const AttachedTable *) const { BUG(); return 0; }
     virtual Format::Field *get_per_flow_enable_param(MatchTable *) const { BUG(); return 0; }
@@ -663,11 +667,7 @@ class Table {
     virtual int address_shift() const { BUG(); return -1; }
     virtual int home_row() const { BUG(); return -1; }
     /* mem unitno mapping -- unit numbers used in context json */
-    virtual int json_memunit(const MemUnit &u) const {
-#if HAVE_FLATROCK
-        BUG_CHECK(options.target != TOFINO5, "need json_memunit update for tofino5");
-#endif /* HAVE_FLATROCK */
-        return u.row*12 + u.col; }
+    virtual int json_memunit(const MemUnit &u) const;
     virtual int ram_word_width() const { return MEM_WORD_WIDTH; }
     virtual int unitram_type() { BUG(); return -1; }
     virtual bool uses_colormaprams() const { return false; }
@@ -682,6 +682,7 @@ class Table {
     template<class T> T *to() { return dynamic_cast<T *>(this); }
     template<class T> const T *to() const { return dynamic_cast<const T *>(this); }
     virtual void determine_word_and_result_bus() { BUG(); }
+    virtual int stm_vbus_column() const { BUG(); }
 
     std::string                 name_;
     int                         uid;
@@ -975,6 +976,7 @@ public:
     bool is_attached(const Table *tbl) const override;
     const Table::Call *get_call(const Table *tbl) const { return get_attached()->get_call(tbl); }
     const AttachedTables *get_attached() const override { return &attached; }
+    std::vector<Call> get_calls() const override;
     AttachedTables *get_attached() override { return &attached; }
     const GatewayTable *get_gateway() const override { return gateway; }
     const MatchTable *get_match_table() const override { return this; }
@@ -1120,8 +1122,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam,
     bool parse_way(const value_t &);
     void common_sram_setup(pair_t &, const VECTOR(pair_t) &);
     void common_sram_checks();
-    void alloc_global_bus(Layout &, Layout::bus_type_t, int, int, int, int);
-    void alloc_global_busses();
+    void alloc_global_busses() override;
     void alloc_vpns() override;
     virtual void setup_ways();
     void setup_hash_function_ids();
@@ -1148,7 +1149,6 @@ DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam,
     virtual void gen_ghost_bits(int hash_function_number, json::vector &ghost_bits_to_hash_bits,
         json::vector &ghost_bits_info) const { }
     virtual void no_overhead_determine_result_bus_usage();
-    int json_memunit(const MemUnit &r) const override;
  public:
     Format::Field *lookup_field(const std::string &n, const std::string &act = "") const override;
     OVERLOAD_FUNC_FOREACH(TARGET_CLASS, virtual void, setup_word_ixbar_group, (), ())
@@ -1533,11 +1533,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
     MeterTable* get_meter() const override;
     Call &action_call() override {
         return match_tables.size() == 1 ? (*match_tables.begin())->action_call() : action; }
-    int json_memunit(const MemUnit &u) const override {
-#if HAVE_FLATROCK
-        BUG_CHECK(options.target != TOFINO5, "need json_memunit update for tofino5");
-#endif /* HAVE_FLATROCK */
-        return u.row*6 + u.col; }
+    int json_memunit(const MemUnit &u) const override;
     void pass1() override;
     unsigned get_alu_index() const {
         if (layout.size() > 0) return layout[0].row/4U;
@@ -1592,6 +1588,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
 )
 
 DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
+ protected:
     int                                 action_id = -1;
     std::map<int, bitvec>               home_rows_per_word;
     int                                 home_lineno = -1;
@@ -1782,11 +1779,7 @@ class IdletimeTable : public Table {
         return IDLETIME; }
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) const override {
         width = period = 1; depth = layout_size(); period_name = 0; }
-    int json_memunit(const MemUnit &u) const override {
-#if HAVE_FLATROCK
-        BUG_CHECK(options.target != TOFINO5, "need json_memunit update for tofino5");
-#endif /* HAVE_FLATROCK */
-        return u.row*6 + u.col; }
+    int json_memunit(const MemUnit &u) const override;
     int precision_shift() const;
     int direct_shiftcount() const override;
     void pass1() override;
@@ -2046,5 +2039,12 @@ DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
     BFN::Alloc1D<StatefulAlu::TMatchInfo, Target::JBay::STATEFUL_TMATCH_UNITS>       tmatch_use;
 #endif  /* HAVE_JBAY */
 )
+
+#if HAVE_FLATROCK
+// defined and instantiated in flatrock/sram_match.cpp
+template <class REGS> void stm_read_config(REGS &stm, int stage, int col, int vbus,
+            const std::map<Table::Layout::bus_type_t, int> &busses,
+            const MemUnit &ram, int vpn, int delay);
+#endif /* HAVE_FLATROCK */
 
 #endif /* BF_ASM_TABLES_H_ */  // NOLINT(build/header_guard)

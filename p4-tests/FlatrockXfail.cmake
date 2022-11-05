@@ -40,6 +40,11 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/flatrock/exact2.p4
   )
 
+p4c_add_xfail_reason("tofino5"
+  "Table.*action_data using out-of-bounds Mem"
+  extensions/p4_tests/p4_16/flatrock/direct_actiondata1.p4
+  )
+
 #p4c_add_xfail_reason("tofino5"
 #  ""  -- need a real test case here.
 #  extensions/p4_tests/p4_16/flatrock/pac_trivial.p4

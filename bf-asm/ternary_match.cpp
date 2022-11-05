@@ -1071,9 +1071,12 @@ bitvec TernaryIndirectTable::compute_reachable_tables() {
 
 void TernaryIndirectTable::pass1() {
     LOG1("### Ternary indirect table " << name() << " pass1");
-    alloc_busses(stage->tcam_indirect_bus_use, Layout::TIND_BUS);
     determine_word_and_result_bus();
     Table::pass1();
+    if (Target::SRAM_GLOBAL_ACCESS())
+        alloc_global_busses();
+    else
+        alloc_busses(stage->tcam_indirect_bus_use, Layout::TIND_BUS);
     if (action_enable >= 0)
         if (action.args.size() < 1 || action.args[0].size() <= (unsigned)action_enable)
             error(lineno, "Action enable bit %d out of range for action selector", action_enable);

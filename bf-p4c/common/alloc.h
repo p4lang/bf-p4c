@@ -8,7 +8,7 @@
 namespace BFN {
 
 template<class T> class Alloc1Dbase {
-    int         size;
+    int         size_;
     T           *data;
     Alloc1Dbase() = delete;
     Alloc1Dbase(const Alloc1Dbase &) = delete;
@@ -16,26 +16,27 @@ template<class T> class Alloc1Dbase {
     Alloc1Dbase &operator=(Alloc1Dbase &&) = delete;
 
  public:
-    explicit Alloc1Dbase(int sz) : size(sz) {
+    explicit Alloc1Dbase(int sz) : size_(sz) {
         data = sz ? new T[sz] {} : nullptr; }
-    Alloc1Dbase(Alloc1Dbase &&a) noexcept : size(a.size), data(a.data) { a.data = 0; }
+    Alloc1Dbase(Alloc1Dbase &&a) noexcept : size_(a.size_), data(a.data) { a.data = 0; }
     virtual ~Alloc1Dbase() { delete [] data; }
 
     typedef T *iterator;
     typedef T *const_iterator;
     T &operator[](int i) {
-        if (i < 0 || i >= size) throw std::out_of_range("Alloc1D");
+        if (i < 0 || i >= size_) throw std::out_of_range("Alloc1D");
         return data[i]; }
     const T &operator[](int i) const {
-        if (i < 0 || i >= size) throw std::out_of_range("Alloc1D");
+        if (i < 0 || i >= size_) throw std::out_of_range("Alloc1D");
         return data[i]; }
     bool operator==(const Alloc1Dbase<T> &t) const {
-        return std::equal(data, data + size, t.data, t.data + t.size); }
+        return std::equal(data, data + size_, t.data, t.data + t.size_); }
     bool operator!=(const Alloc1Dbase<T> &t) const { return !(*this==t); }
 
-    void clear() { std::fill(data, data + size, T()); }
+    int size() const { return size_; }
+    void clear() { std::fill(data, data + size_, T()); }
     T *begin() { return data; }
-    T *end() { return data + size; }
+    T *end() { return data + size_; }
 };
 
 template<class T, int S> class Alloc1D : public Alloc1Dbase<T> {

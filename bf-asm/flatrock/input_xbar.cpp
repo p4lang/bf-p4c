@@ -487,6 +487,8 @@ struct Flatrock::InputXbar::xme_cfg_info_t {
     int key_size = 0;
     int valid_en = 0;
     int hash_base = 0;
+    bool has_direct = false;
+    unsigned index_size = 0;
 };
 
 /* common code needed to gather info about a cuckoo table for both LAMB and STM */
@@ -524,6 +526,11 @@ void Flatrock::InputXbar::find_xme_info(xme_cfg_info_t &info, const SRamMatchTab
         info.valid_en = 1; }
     BUG_CHECK(info.subword_bits == way->subword_bits, "subword bit size mismatch");
     info.hash_base = way->index;
+    info.index_size = info.log2_way_depth + info.subword_bits;
+    for (auto &c : table->get_calls()) {
+        if (c.is_direct_call()) {
+            info.has_direct = true;
+            break; } }
 }
 
 void Flatrock::InputXbar::write_xme_regs(Target::Flatrock::mau_regs::_ppu_eml &xmu, int xme) {
@@ -554,13 +561,19 @@ void Flatrock::InputXbar::write_xme_regs(Target::Flatrock::mau_regs::_ppu_eml &x
         match.sets_per_word = info.subword_bits;
         match.valid_en = info.valid_en;
         auto &payload = xmu.rf.eml_payload_cfg[xme%2U][d];
-        payload.action_size = (MEM_WORD_WIDTH >> info.subword_bits)/info.set_size - info.key_size;
+        payload.action_size = table->format->overhead_size;
         payload.addon = 0;      // not clear what it is used for?
         payload.base_mask = 0;  // pass ram data (can pass key bytes, useful for?)
         payload.cuckoo_start = 0;
-        payload.idx_hi = 0;     // insert the 'index' into the payload.  For LAMB, there's
-        payload.idx_lo = 1;    // no idx_sel field, so it always comes from hash?
-        payload.idx_rot = 0;
+        if (info.has_direct) {
+            payload.idx_hi = table->format->overhead_size + info.index_size - 1;
+            payload.idx_lo = table->format->overhead_size;
+            payload.idx_rot = table->format->overhead_size;
+        } else {
+            payload.idx_hi = 0;
+            payload.idx_lo = 1;
+            payload.idx_rot = 0;
+        }
         payload.mres_en = 1;
     }
 }
@@ -601,13 +614,19 @@ void Flatrock::InputXbar::write_xme_regs(Target::Flatrock::mau_regs::_ppu_ems &x
         match.valid_en = info.valid_en;
         // FIXME -- one payload config for both XMEs in XMU -- only config once?
         auto &payload = xmu.rf.ems_payload_cfg[d];
-        payload.action_size = (MEM_WORD_WIDTH >> info.subword_bits)/info.set_size - info.key_size;
+        payload.action_size = table->format->overhead_size;
         payload.addon = 0;      // not clear what it is used for?
         payload.base_mask = 0;  // pass ram data (can pass key bytes, useful for?)
         payload.cuckoo_start = 0;
-        payload.idx_hi = 0;     // insert the 'index' into the payload.
-        payload.idx_lo = 1;
-        payload.idx_rot[0] = 0;
+        if (info.has_direct) {
+            payload.idx_hi = table->format->overhead_size + info.index_size - 1;
+            payload.idx_lo = table->format->overhead_size;
+            payload.idx_rot[0] = table->format->overhead_size;
+        } else {
+            payload.idx_hi = 0;     // insert the 'index' into the payload.
+            payload.idx_lo = 1;
+            payload.idx_rot[0] = 0;
+        }
         payload.idx_rot[1] = 0;
         payload.idx_rot[2] = 0;
         payload.idx_sel = 0;  // FIXME -- support BPH

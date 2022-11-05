@@ -174,6 +174,7 @@ class ActionBus {
         unsigned rv = 0;
         for (auto &slot : by_byte) rv += slot.second.size;
         return rv; }
+    auto slots() const { return Values(by_byte); }
 };
 
 #endif /* BF_ASM_ACTION_BUS_H_ */

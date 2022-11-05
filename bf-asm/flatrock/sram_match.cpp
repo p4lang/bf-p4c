@@ -115,29 +115,6 @@ void SRamMatchTable::setup_word_ixbar_group(Target::Flatrock) {
     // flatrock does not need this as words are assigned to specific XMEs
 }
 
-void SRamMatchTable::alloc_global_bus(Layout &row, Layout::bus_type_t bus_kind, int lo_stage,
-                                      int lo_col, int hi_stage, int hi_col) {
-    if (!row.bus.count(bus_kind)) {
-        if (!row.bus.count(Layout::SEARCH_BUS))
-            error(row.lineno, "No %s allocated on row %d of %s", to_string(bus_kind).c_str(),
-                  row.row, name());
-        else
-            row.bus[bus_kind] = row.bus.at(Layout::SEARCH_BUS); }
-    if (row.bus.count(bus_kind)) {
-        int hbus = row.bus.at(bus_kind) + Target::SRAM_HBUSSES_PER_ROW()/2;
-        for (int st = lo_stage; st <= hi_stage; st++) {
-            int lim = st == hi_stage ? hi_col
-                    : Target::SRAM_HBUS_SECTIONS_PER_STAGE();
-            for (int c = st == lo_stage ? lo_col/2 : 0; c < lim; ++c) {
-                auto &old = Stage::stage(gress, st)->stm_hbus_use.at(row.row, c, hbus);
-                if (old)
-                    error(row.lineno, "%s wants to use %s %d:%d:%d:%d, already in "
-                          "use by %s", name(), to_string(bus_kind).c_str(), row.row, st, c,
-                          hbus - Target::SRAM_HBUSSES_PER_ROW()/2, old->name());
-                else
-                    old = this; } } }
-}
-
 void SRamMatchTable::alloc_global_busses() {
     int tbl_stage = stage->stageno;
     for (auto &row : layout) {
@@ -164,9 +141,9 @@ void SRamMatchTable::alloc_global_busses() {
             } else {
                 error(row.lineno, "Can't find way for %s", ram.desc()); } }
         if (left_way) {
-            alloc_global_bus(row, Layout::R2L_BUS, minstage, mincol, tbl_stage, left_col); }
+            alloc_global_bus(row, Layout::R2L_BUS, minstage, mincol/2, tbl_stage, left_col); }
         if (right_way) {
-            alloc_global_bus(row, Layout::L2R_BUS, tbl_stage, right_col, maxstage, maxcol); }
+            alloc_global_bus(row, Layout::L2R_BUS, tbl_stage, right_col, maxstage, maxcol/2); }
     }
 }
 

@@ -1,4 +1,5 @@
 #include "action_bus.h"
+#include "action_table.h"
 
 void Flatrock::ActionBus::alloc_field(Table *tbl, ActionBusSource src,
                                       unsigned offset, unsigned sizes_needed) {
@@ -27,23 +28,38 @@ void Flatrock::ActionBus::write_regs(Target::Flatrock::mau_regs &regs, Table *tb
         auto &src = el.second.data.begin()->first;
         switch (src.type) {
         case ActionBusSource::Field: {
-            unsigned bit = src.field->immed_bit(0);
-            if (immed_offset < 0) {
-                immed_offset = el.first + bit/8U;
-                mrd.rf.mrd_iad_cfg[tbl->physical_id].badb_start = immed_offset;
-                // FIXME -- need dconfig here
-                mrd.rf.mrd_iad_ext[tbl->physical_id].ext_size[0] = tbl->format->immed_size;
-            } else if (immed_offset != el.first + bit/8U) {
-                error(lineno, "immediate field misalignment on action bus"); }
-            for (auto i = el.first + bit/8U; i <= el.first + (bit + el.second.size - 1)/8U; ++i) {
+            auto *atab = tbl->to<Target::Flatrock::ActionTable>();
+            if (atab) {
+                // mrd_aram_cfg already set up in Target::Flatrock::ActionTable::write_regs,
+                // but perhaps should be here?
+            } else {
+                unsigned bit = src.field->immed_bit(0);
+                if (immed_offset < 0) {
+                    immed_offset = el.first - bit/8U;
+                    mrd.rf.mrd_iad_cfg[tbl->physical_id].badb_start = immed_offset;
+                    // FIXME -- need dconfig here
+                    mrd.rf.mrd_iad_ext[tbl->physical_id].ext_size[0] = tbl->format->immed_size;
+                } else if (immed_offset != el.first - bit/8U) {
+                    error(lineno, "immediate field misalignment on action bus"); } }
+            for (auto i = el.first; i < el.first + (el.second.size + 7)/8U; ++i) {
                 if (i < 4) {
                     ealu.ealu_cfg.bypass_ealu |= 1U << i;
                 } else if (i < 8) {
                     ealu.ealu_cfg.bypass_ealu |= 1U << (2 + i/2);
                 } else if (i >= 16) {
-                    error(lineno, "immediate must be in the bottom 16 bytes of action data bus");
-                    continue; }
-                ealu.ealu_eb_xbar[i].en |= 1U << i; }
+                    if (i & 3) continue;
+                    if (!atab) {
+                        error(lineno, "immediate must be in the bottom 16 bytes of action "
+                              "data bus");
+                        continue; }
+                    if (i < 23)
+                        ealu.ealu_cfg.bypass_ealu |= 1U << (2 + i/4); }
+                if (i < 16)
+                    ealu.ealu_eb_xbar[i].en |= 1U << i;
+                else if (i < 23)
+                    ealu.ealu_ew_xbar_bot[i/4 - 4].inputword = i/4;
+                else
+                    ealu.ealu_ew_xbar_top[i/4 - 6].shift = 0; }
             break; }
         case ActionBusSource::XcmpData:
             if (src.xcmp_group) {

@@ -867,6 +867,7 @@ void Table::alloc_rams(bool logical, BFN::Alloc2Dbase<Table *> &use,
 }
 
 #if !HAVE_FLATROCK
+void Table::alloc_global_busses() { BUG(); }
 void Table::alloc_global_srams() { BUG(); }
 void Table::alloc_global_tcams() { BUG(); }
 #endif /* !HAVE_FLATROCK */
@@ -1243,9 +1244,9 @@ void Table::Format::pass1(Table *tbl) {
         return; }
     LOG2("table " << tbl->name() << " has " << immed_fields.size() << " immediate data fields "
          "over " << (hi + 1 - lo) << " bits");
-    if (hi - lo >= MAX_IMMED_ACTION_DATA) {
+    if (hi - lo >= Target::MAX_IMMED_ACTION_DATA()) {
         error(lineno, "Immediate data for table %s spread over more than %d bits",
-              tbl->name(), MAX_IMMED_ACTION_DATA);
+              tbl->name(), Target::MAX_IMMED_ACTION_DATA());
         return; }
     immed_size = hi + 1 - lo;
     for (unsigned i = 1; i < fmt.size(); i++) {
@@ -1259,6 +1260,14 @@ void Table::Format::pass1(Table *tbl) {
                 error(lineno, "Immediate data field %s for table %s does not match across "
                       "ways in a ram", f.first.c_str(), tbl->name());
                 break; } } }
+    lo = INT_MAX, hi = 0;
+    for (auto &[name, field] : fmt[0]) {
+        // FIXME -- should use a flag rather than names here?  Someone would need to set the flag
+        if (name == "match" || name == "version" || name == "valid") continue;
+        lo = std::min(lo, field.bit(0));
+        hi = std::max(hi, field.bit(field.size-1)); }
+    overhead_size = hi > lo ? hi - lo + 1 : 0;
+    overhead_start = hi > lo ? lo : 0;
 }
 
 void Table::Format::pass2(Table *tbl) {
@@ -2547,6 +2556,20 @@ Table::determine_spare_bank_memory_units(const std::vector<Layout> &layout) cons
     return spare_mem;
 }
 
+int Table::json_memunit(const MemUnit &r) const {
+    if (r.stage >= 0) {
+        return r.stage * Target::SRAM_STRIDE_STAGE() +
+               r.row * Target::SRAM_STRIDE_ROW() +
+               r.col * Target::SRAM_STRIDE_COLUMN();
+    } else if (r.row >= 0) {
+        // per-stage physical sram
+        return r.row * Target::SRAM_UNITS_PER_ROW() + r.col;
+    } else {
+        // lamb
+        return r.col;
+    }
+}
+
 std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(
         const char *type, const std::vector<Layout> &layout, bool skip_spare_bank) const {
     int width, depth, period;
@@ -2572,8 +2595,7 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(
         int word = row.word >= 0 ? row.word : 0;
         auto vpn_itr = row.vpns.begin();
         for (auto &ram : row.memunits) {
-            BUG_CHECK(ram.stage == -1 && ram.row == row.row,
-                      "bogus %s in row %d", ram.desc(), row.row);
+            BUG_CHECK(ram.row == row.row, "bogus %s in row %d", ram.desc(), row.row);
             if (vpn_itr == row.vpns.end())
                 no_vpns = true;
             else
@@ -2748,6 +2770,13 @@ void Table::canon_field_list(json::vector &field_list) const {
         auto &name = field["field_name"]->to<json::string>();
         if (int lo = remove_name_tail_range(name))
             field["start_bit"]->to<json::number>().val += lo; }
+}
+
+std::vector<Table::Call> Table::get_calls() const {
+    std::vector<Call> rv;
+    if (action) rv.emplace_back(action);
+    if (instruction) rv.emplace_back(instruction);
+    return rv;
 }
 
 /**

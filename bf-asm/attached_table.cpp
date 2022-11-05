@@ -442,6 +442,21 @@ void AttachedTables::pass1(MatchTable *self) {
     }
 }
 
+int AttachedTable::json_memunit(const MemUnit &r) const {
+    if (r.stage >= 0) {
+        return r.stage * Target::SRAM_STRIDE_STAGE() +
+               r.row * Target::SRAM_STRIDE_ROW() +
+               r.col * Target::SRAM_STRIDE_COLUMN();
+    } else if (r.row >= 0) {
+        // per-stage logical sram
+        return r.row * Target::SRAM_LOGICAL_UNITS_PER_ROW() + r.col;
+    } else {
+        // lamb
+        return r.col;
+    }
+}
+
+
 template<class REGS>
 void AttachedTables::write_merge_regs(REGS &regs, MatchTable *self, int type, int bus) {
     for (auto &s : stats) s->write_merge_regs(regs, self, type, bus, s.args);

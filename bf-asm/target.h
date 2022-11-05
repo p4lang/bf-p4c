@@ -135,6 +135,7 @@ struct MemUnit;
 #define PER_TARGET_CONSTANTS(M) \
     M(const char *, name) \
     M(target_t, register_set)  \
+    M(int, ARAM_UNITS_PER_STAGE) \
     M(int, DEPARSER_CHECKSUM_UNITS) \
     M(int, DEPARSER_CONSTANTS) \
     M(int, DEPARSER_MAX_FD_ENTRIES) \
@@ -160,6 +161,7 @@ struct MemUnit;
     M(int, IXBAR_HASH_INDEX_STRIDE) \
     M(int, LOCAL_TIND_UNITS)\
     M(int, LONG_BRANCH_TAGS) \
+    M(int, MAX_IMMED_ACTION_DATA) \
     M(int, MAX_OVERHEAD_OFFSET) \
     M(int, MAX_OVERHEAD_OFFSET_NEXT) \
     M(int, MATCH_BYTE_16BIT_PAIRS) \
@@ -186,6 +188,7 @@ struct MemUnit;
     M(int, SRAM_HBUS_SECTIONS_PER_STAGE) \
     M(int, SRAM_HBUSSES_PER_ROW) \
     M(int, SRAM_INGRESS_ROWS) \
+    M(int, SRAM_LOGICAL_UNITS_PER_ROW) \
     M(int, SRAM_LAMBS_PER_STAGE) \
     M(int, SRAM_REMOVED_COLUMNS) \
     M(int, SRAM_STRIDE_COLUMN) \
@@ -329,12 +332,14 @@ class Target::Tofino : public Target {
         ::Tofino::regs_all_deparser_header_phase        header;
     };
     enum {
+        ARAM_UNITS_PER_STAGE = 0,
         PARSER_CHECKSUM_UNITS = 2,
         PARSER_EXTRACT_BYTES = false,
         PARSER_DEPTH_MAX_BYTES_INGRESS = (((1<<10)-1)*16),
         PARSER_DEPTH_MAX_BYTES_EGRESS = (((1<<10)-1)*16),
         MATCH_BYTE_16BIT_PAIRS = true,
         MATCH_REQUIRES_PHYSID = false,
+        MAX_IMMED_ACTION_DATA = 32,
         MAX_OVERHEAD_OFFSET = 64,
         MAX_OVERHEAD_OFFSET_NEXT = 40,
         NUM_MAU_STAGES_PRIVATE = 12,
@@ -380,6 +385,7 @@ class Target::Tofino : public Target {
         SRAM_HBUSSES_PER_ROW = 0,
         SRAM_INGRESS_ROWS = 8,
         SRAM_LAMBS_PER_STAGE = 0,
+        SRAM_LOGICAL_UNITS_PER_ROW = 6,
         SRAM_REMOVED_COLUMNS = 2,
         SRAM_STRIDE_COLUMN = 1,
         SRAM_STRIDE_ROW = 12,
@@ -492,12 +498,14 @@ class Target::JBay : public Target {
     typedef ::JBay::regs_match_action_stage_        mau_regs;
     typedef ::JBay::regs_deparser                   deparser_regs;
     enum {
+        ARAM_UNITS_PER_STAGE = 0,
         PARSER_CHECKSUM_UNITS = 5,
         PARSER_EXTRACT_BYTES = true,
         PARSER_DEPTH_MAX_BYTES_INGRESS = (((1<<10)-1)*16),
         PARSER_DEPTH_MAX_BYTES_EGRESS = (32*16),
         MATCH_BYTE_16BIT_PAIRS = false,
         MATCH_REQUIRES_PHYSID = false,
+        MAX_IMMED_ACTION_DATA = 32,
         MAX_OVERHEAD_OFFSET = 64,
         MAX_OVERHEAD_OFFSET_NEXT = 40,
 #ifdef EMU_OVERRIDE_STAGE_COUNT
@@ -552,6 +560,7 @@ class Target::JBay : public Target {
         SRAM_HBUSSES_PER_ROW = 0,
         SRAM_INGRESS_ROWS = 8,
         SRAM_LAMBS_PER_STAGE = 0,
+        SRAM_LOGICAL_UNITS_PER_ROW = 6,
         SRAM_REMOVED_COLUMNS = 2,
         SRAM_STRIDE_COLUMN = 1,
         SRAM_STRIDE_ROW = 12,
@@ -717,12 +726,14 @@ class Target::Cloudbreak : public Target {
     typedef ::Cloudbreak::regs_match_action_stage_        mau_regs;
     typedef ::Cloudbreak::regs_deparser                   deparser_regs;
     enum {
+        ARAM_UNITS_PER_STAGE = 0,
         PARSER_CHECKSUM_UNITS = 5,
         PARSER_EXTRACT_BYTES = true,
         PARSER_DEPTH_MAX_BYTES_INGRESS = (((1<<10)-1)*16),
         PARSER_DEPTH_MAX_BYTES_EGRESS = (32*16),
         MATCH_BYTE_16BIT_PAIRS = false,
         MATCH_REQUIRES_PHYSID = false,
+        MAX_IMMED_ACTION_DATA = 32,
         MAX_OVERHEAD_OFFSET = 64,
         MAX_OVERHEAD_OFFSET_NEXT = 40,
 #ifdef EMU_OVERRIDE_STAGE_COUNT
@@ -776,6 +787,7 @@ class Target::Cloudbreak : public Target {
         SRAM_HBUSSES_PER_ROW = 0,
         SRAM_INGRESS_ROWS = 8,
         SRAM_LAMBS_PER_STAGE = 0,
+        SRAM_LOGICAL_UNITS_PER_ROW = 6,
         SRAM_REMOVED_COLUMNS = 2,
         SRAM_STRIDE_COLUMN = 1,
         SRAM_STRIDE_ROW = 12,
@@ -887,6 +899,7 @@ class Target::Flatrock : public Target {
     };
 
     enum {
+        ARAM_UNITS_PER_STAGE = 4,
         PARSER_CHECKSUM_UNITS = 2,
         PARSER_EXTRACT_BYTES = true,
         PARSER_DEPTH_MAX_BYTES_INGRESS = (((1 << 10) - 1) * 16),
@@ -936,6 +949,7 @@ class Target::Flatrock : public Target {
         LONG_BRANCH_TAGS = 32,
         MAU_BASE_DELAY = 23,
         MAU_BASE_PREDICATION_DELAY = 13,
+        MAX_IMMED_ACTION_DATA = 64,
         MAX_OVERHEAD_OFFSET = 128,
         MAX_OVERHEAD_OFFSET_NEXT = 128,
         METER_ALU_GROUP_DATA_DELAY = 15,
@@ -949,6 +963,7 @@ class Target::Flatrock : public Target {
         SRAM_HBUSSES_PER_ROW = 4,  // 2x L2R and 2x R2L
         SRAM_INGRESS_ROWS = 6,
         SRAM_LAMBS_PER_STAGE = 8,
+        SRAM_LOGICAL_UNITS_PER_ROW = 10,
         SRAM_REMOVED_COLUMNS = 0,
         SRAM_STRIDE_COLUMN = 1,
         SRAM_STRIDE_ROW = 256,

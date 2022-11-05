@@ -297,20 +297,6 @@ bool SRamMatchTable::verify_match_key() {
     return error_count == 0;
 }
 
-int SRamMatchTable::json_memunit(const MemUnit &r) const {
-    if (r.stage >= 0) {
-        return r.stage * Target::SRAM_STRIDE_STAGE() +
-               r.row * Target::SRAM_STRIDE_ROW() +
-               r.col * Target::SRAM_STRIDE_COLUMN();
-    } else if (r.row >= 0) {
-        // per-stage sram
-        return r.row * Target::SRAM_UNITS_PER_ROW() + r.col;
-    } else {
-        // lamb
-        return r.col;
-    }
-}
-
 std::unique_ptr<json::map>
         SRamMatchTable::gen_memory_resource_allocation_tbl_cfg(const Way &way) const {
     json::map mra;
