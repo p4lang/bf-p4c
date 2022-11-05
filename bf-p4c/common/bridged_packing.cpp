@@ -737,7 +737,7 @@ void CollectConstraints::computeMustPackConstraints(
                     LOG5("\t\t\t " << r->name);
 
             if (mustPack(it->second, it2->second, common_reads)) {
-                LOG3("\t\tMust pack fields " << it->first->name <<
+                LOG6("\t\tMust pack fields " << it->first->name <<
                         " and " << it2->first->name << " together.");
                 constraints.mustPack.insert(std::make_pair(it->first, it2->first)); } } }
 }
@@ -793,7 +793,7 @@ void CollectConstraints::computeNoSplitConstraints(
                 else if (max_split_size <= 32)
                     setNoSplitContainerSize(field, 32);
                 else
-                    LOG1("ERROR: Cannot apply no_split constraint on field " << field << " that is"
+                    LOG6("ERROR: Cannot apply no_split constraint on field " << field << " that is"
                          "more than 32 bit wide");
             }
         }
@@ -879,7 +879,7 @@ void CollectConstraints::computeNoPackIfSpecialityRead(
                     writeActions2.sorted_begin(), writeActions2.sorted_end(),
                     std::inserter(intersection, intersection.begin()));
             if (intersection.size() != 0) {
-                LOG1("\t\tNoPack due to speciality read " << field);
+                LOG6("\t\tNoPack due to speciality read " << field);
                 phv.addFieldNoPack(field, f);
             }
         }
@@ -924,7 +924,7 @@ void CollectConstraints::computeNoPackIfDigestUse(
             noPackWithAll(field);
         }
         if (debug)
-            LOG1(str.str());
+            LOG6(str.str());
     };
 
     for (auto f : fields) {
@@ -941,13 +941,13 @@ Visitor::profile_t CollectConstraints::init_apply(const IR::Node* root) {
 void CollectConstraints::end_apply() {
     if (LOGGING(4)) {
         if (constraints.alignment.size() > 0) {
-            LOG3("\tPrinting bridged fields with alignment constraints:");
+            LOG6("\tPrinting bridged fields with alignment constraints:");
             for (auto kv : constraints.alignment)
                 for (auto c : kv.second)
                     LOG4("\t  " << kv.first << " : " << c.getAlignment());
         }
         if (constraints.mutualAlignment.size() > 0) {
-            LOG3("\tPrinting mutually aligned fields:");
+            LOG6("\tPrinting mutually aligned fields:");
             for (auto kv : constraints.mutualAlignment)
                 for (auto f : kv.second)
                     LOG4("\t  " << kv.first << " and " << f);
@@ -1033,7 +1033,7 @@ void ConstraintSolver::add_field_alignment_constraints(
     // alignment constraint
     auto align = f->getAlignmentConstraint();
     if (align.hasConstraint()) {
-        LOG1("Alignment constraint: " << align.getAlignment() << " for " << f->name);
+        LOG6("Alignment constraint: " << align.getAlignment() << " for " << f->name);
         solver.add(v % 8 == static_cast<int>(align.getAlignment()));
 
         std::stringstream str;
@@ -1083,7 +1083,7 @@ void ConstraintSolver::add_extract_together_constraints(
             if (phv.are_bridged_extracted_together(*it, *it2)) {
                 z3::expr v1 = context.bv_const((*it)->name, 16);
                 z3::expr v2 = context.bv_const((*it2)->name, 16);
-                LOG1("Copack constraint: " << v1 << " and " << v2);
+                LOG6("Copack constraint: " << v1 << " and " << v2);
                 z3::expr pack_same_byte = (v1 / 8 == v2 / 8);
                 solver.add(pack_same_byte);
 
@@ -1114,7 +1114,7 @@ void ConstraintSolver::add_mutually_aligned_constraints(ordered_set<const PHV::F
             if (phv.are_mutually_aligned(*it, *it2)) {
                 z3::expr v1 = context.bv_const((*it)->name, 16);
                 z3::expr v2 = context.bv_const((*it2)->name, 16);
-                LOG1("Mutually aligned constraint: " << v1 << " and " << v2);
+                LOG6("Mutually aligned constraint: " << v1 << " and " << v2);
                 solver.add(v1 % 8 == v2 % 8);
 
                 std::stringstream str;
@@ -1151,7 +1151,7 @@ void ConstraintSolver::add_solitary_constraints(
                 (((v1 + f1->size) % 8 == 0) && (v2 >= (((v1 + f1->size) / 8) * 8))) ||
                 (((v1 + f1->size) % 8 == 1) && (v2 >= ((((v1 + f1->size) / 8) + 1) * 8)));
             z3::expr lowerBound = (v2 + f2->size) <= ((v1 / 8) * 8);
-            LOG1("Solitary constraint: " << v1 << " and " << v2);
+            LOG6("Solitary constraint: " << v1 << " and " << v2);
             solver.add(upperBound || lowerBound);
         }
 
@@ -1176,7 +1176,7 @@ void ConstraintSolver::add_deparsed_to_tm_constraints(
         z3::expr v = context.bv_const(f->name, 16);
         z3::expr mustFitSingleByte =
             ((v / 8) * 8) == (((v + f->size - 1) / 8) * 8);
-        LOG1("NoSplit constraint: " << f);
+        LOG6("NoSplit constraint: " << f);
         solver.add(mustFitSingleByte);
 
         std::stringstream str;
@@ -1197,7 +1197,7 @@ void ConstraintSolver::add_no_split_constraints(
             if (f->no_split_container_size() != -1) continue;
             z3::expr mustFitSingleByte =
                 ((v / 8) * 8) == (((v + f->size - 1) / 8) * 8);
-            LOG1("NoSplit constraint: " << f);
+            LOG6("NoSplit constraint: " << f);
             solver.add(mustFitSingleByte);
 
             std::stringstream str;
@@ -1208,7 +1208,7 @@ void ConstraintSolver::add_no_split_constraints(
         } else if (f->size <= 16) {
             z3::expr mustFitTwoBytes =
                 ((v / 8 + 1) * 8) == (((v + f->size - 1) / 8) * 8);
-            LOG1("NoSplit constraint: " << f);
+            LOG6("NoSplit constraint: " << f);
             solver.add(mustFitTwoBytes);
 
             std::stringstream str;
@@ -1243,7 +1243,7 @@ void ConstraintSolver::add_no_split_constraints(
 
             z3::expr upperBound = (v2 >= (((v1 + f1->no_split_container_size()) / 8) * 8));
             z3::expr lowerBound = (v2 + f2->size) <= ((v1 / 8) * 8);
-            LOG1("Solitary constraint for no_split field: " <<
+            LOG6("Solitary constraint for no_split field: " <<
                     f1->no_split_container_size() << " " << v1 << " and " << v2);
             solver.add(upperBound || lowerBound);
         }
@@ -1267,7 +1267,7 @@ void ConstraintSolver::add_no_pack_constraints(
             if (phv.isFieldNoPack(*it, *it2)) {
                 z3::expr v1 = context.bv_const((*it)->name, 16);
                 z3::expr v2 = context.bv_const((*it2)->name, 16);
-                LOG1("NoPack constraint: " << v1 << " and " << v2);
+                LOG6("NoPack constraint: " << v1 << " and " << v2);
                 z3::expr noPack =
                     (((v1 + (*it)->size) / 8) * 8) < ((v2 / 8) * 8) ||
                     (((v2 + (*it2)->size) / 8) * 8) < ((v1 / 8) * 8);
@@ -1299,7 +1299,7 @@ const PHV::Field* ConstraintSolver::create_padding(int size) {
  */
 void ConstraintSolver::add_constraints(cstring hdr, ordered_set<const PHV::Field*>& fields) {
     for (auto f : fields)
-        LOG1("add constraints for " << f);
+        LOG6("add constraints for " << f);
     /// Computes upper bound of the overall size of all fields, which is used as a constraint
     /// to Z3 solver in the ConstraintSolver::add_field_alignment_constraints method.
     /// It assumes that each field is padded to next byte boundary.
@@ -1327,7 +1327,7 @@ void ConstraintSolver::add_constraints(cstring hdr, ordered_set<const PHV::Field
 
 void ConstraintSolver::print_assertions() {
     if (LOGGING(5)) {
-        LOG3("constraints " << solver.assertions());
+        LOG6("constraints " << solver.assertions());
     }
 }
 
@@ -1360,7 +1360,7 @@ ConstraintSolver::insert_padding(std::vector<std::pair<unsigned, std::string>>& 
             auto padding_size = (iter+1)->first - iter->first - f->size;
             auto padding = create_padding(padding_size);
             offset_and_fields.push_back(std::make_pair(iter->first + f->size, padding));
-            LOG3("Placing padding at [" << iter->first + f->size << " .. "
+            LOG6("Placing padding at [" << iter->first + f->size << " .. "
                     << iter->first + f->size + padding->size << "]");
             iter++; }
     } while (iter != placement.end());
@@ -1376,7 +1376,7 @@ ConstraintSolver::insert_padding(std::vector<std::pair<unsigned, std::string>>& 
         if (LOGGING(3)) {
             auto pos = p.second.find("$");
             if (pos != std::string::npos) {
-                LOG3("Placing " << p.second << " at [" << p.first << ".."
+                LOG6("Placing " << p.second << " at [" << p.first << ".."
                         << p.first + f->size - 1 << "]"); } }
     }
 
@@ -1390,7 +1390,7 @@ ConstraintSolver::insert_padding(std::vector<std::pair<unsigned, std::string>>& 
         if (offset % 8 != 0) {
             auto padding = create_padding(8 - offset % 8);
             offset_and_fields.push_back(std::make_pair(offset, padding));
-            LOG3("Placing padding at [" << offset << " .. "
+            LOG6("Placing padding at [" << offset << " .. "
                     << offset + padding->size - 1 << "]"); }
     }
 
@@ -1439,7 +1439,7 @@ ConstraintSolver::solve(
     }
 
     if (LOGGING(3)) {
-        LOG3("model " << solver.get_model());
+        LOG6("model " << solver.get_model());
     }
 
     ordered_map<std::string, unsigned> offsets;
@@ -1560,7 +1560,7 @@ bool PackWithConstraintSolver::preorder(const IR::BFN::DigestFieldList* d) {
         return false;
     }
 
-    LOG3("Packing " << d->type << " fieldlist " << d);
+    LOG6("Packing " << d->type << " fieldlist " << d);
     std::vector<std::tuple<const IR::StructField*, const IR::BFN::FieldLVal*>> sources;
     // XXX(HanW): mirror digest has 'session_id' in the first element, which is not
     // part of the mirror field list.
@@ -1697,7 +1697,7 @@ void PackWithConstraintSolver::solve() {
             if (!f->getAnnotation("flexible") &&
                 !f->getAnnotation("padding")) {
                 fields.push_back(f);
-                LOG1("Pushing original field " << f);
+                LOG6("Pushing original field " << f);
                 continue; } }
 
         // Add repacked flexible fields and padding.
@@ -1707,7 +1707,7 @@ void PackWithConstraintSolver::solve() {
             if (phvFieldToStructField.count(f)) {
                 auto field = phvFieldToStructField.at(f);
                 fields.push_back(field);
-                LOG1("Pushing field " << field);
+                LOG6("Pushing field " << field);
             } else {
                 cstring padFieldName = "__pad_" + cstring::to_cstring(padFieldId++);
                 auto* fieldAnnotations = new IR::Annotations(
@@ -1718,12 +1718,12 @@ void PackWithConstraintSolver::solve() {
                             IR::Type::Bits::get(f->size));
 
                 fields.push_back(padField);
-                LOG1("Pushing field " << padField << ", overlayable: " << f->overlayable);
+                LOG6("Pushing field " << padField << ", overlayable: " << f->overlayable);
             }
         }
 
         auto* newtype = new IR::Type_Header(type->name, type->annotations, fields);
-        LOG1("Repacked header: " << newtype);
+        LOG6("Repacked header: " << newtype);
 
         repackedTypes.emplace(type->name, newtype);
     };
@@ -1786,14 +1786,14 @@ const IR::BFN::DigestFieldList* ReplaceFlexibleType::repackFieldList(cstring dig
         new IR::BFN::DigestFieldList(origFieldList->srcInfo,
                 origFieldList->idx, newSources, repackedHeaderType,
                 origFieldList->controlPlaneName);
-    LOG3("Repacked digest: " << digest << " "  << repackedFieldList);
+    LOG6("Repacked digest: " << digest << " "  << repackedFieldList);
     return repackedFieldList;
 }
 
 const IR::Node* ReplaceFlexibleType::postorder(IR::BFN::DigestFieldList* d) {
     if (!repackedTypes.count(d->type->name))
         return d;
-    LOG1("Replacing " << d);
+    LOG6("Replacing " << d);
     auto repackedHeaderType = repackedTypes.at(d->type->name);
     std::map<cstring, int> original_field_indices;
     int index = 0;
@@ -1808,19 +1808,19 @@ const IR::Node* ReplaceFlexibleType::postorder(IR::BFN::DigestFieldList* d) {
             continue; }
         repacked_field_indices.push_back(
                 std::make_pair(original_field_indices.at(f->name), f->type));
-        LOG3("\tRepacked field " << f->name); }
+        LOG6("\tRepacked field " << f->name); }
 
     if (LOGGING(3)) {
         for (auto i : repacked_field_indices) {
-            LOG3("\t\trepacking " << i.first << " to " << i.second);
+            LOG6("\t\trepacking " << i.first << " to " << i.second);
         } }
 
     auto digest = findContext<IR::BFN::Digest>();
     BUG_CHECK(digest != nullptr, "Unable to find digest for %1%", d);
     auto rd = repackFieldList(digest->name, repacked_field_indices,
                     repackedHeaderType, d);
-    LOG3("Repacked digest type: " << repackedHeaderType);
-    LOG3("Repacked digest " << rd);
+    LOG6("Repacked digest type: " << repackedHeaderType);
+    LOG6("Repacked digest " << rd);
     return rd;
 }
 
@@ -1902,7 +1902,7 @@ bool GatherPhase0Fields::preorder(const IR::BFN::ParserState* p) {
         if (!dest) continue;
         const auto* f = phv.field(dest->field);
         if (!f) continue;
-        LOG3("CONSTRAINT must be packed alone A " << f);
+        LOG6("CONSTRAINT must be packed alone A " << f);
         noPackFields.insert(f); }
     return true;
 }
@@ -1914,7 +1914,7 @@ bool GatherPhase0Fields::preorder(const IR::BFN::DigestFieldList* d) {
     for (auto source : d->sources) {
         const auto* field = phv.field(source->field);
         if (!field) continue;
-        LOG3("CONSTRAINT must be packed alone B " << field);
+        LOG6("CONSTRAINT must be packed alone B " << field);
         noPackFields.insert(field);
     }
     return false;
@@ -2247,7 +2247,7 @@ PackFlexibleHeaders::PackFlexibleHeaders(const BFN_Options& options,
             removePasses(options.passesToExcludeBackend);
         } catch (const std::runtime_error& e) {
             // Ignore this error since this is only a subset of the backend passes
-            LOG3(e.what());
+            LOG6(e.what());
         }
     }
 }
@@ -2262,7 +2262,7 @@ void PackFlexibleHeaders::check_conflicting_constraints() {
                 constraints.push_back(c);
             }
             if (solver.check(constraints) == z3::unsat) {
-                LOG3("ignore conflicting constraints: " << constraints);
+                LOG6("ignore conflicting constraints: " << constraints);
             } else {
                 for (const auto& c : constraints) {
                     solver.add(c);
@@ -2275,13 +2275,13 @@ void PackFlexibleHeaders::check_conflicting_constraints() {
 void PackFlexibleHeaders::end_apply() {
     if (LOGGING(2)) {
         for (auto hdr : debug_info) {
-            LOG1("(header " << hdr.first);
+            LOG6("(header " << hdr.first);
             for (auto constr = hdr.second.begin();
                     constr != hdr.second.end(); ++constr) {
-                LOG1("  (constraint " << (*constr).first);
+                LOG6("  (constraint " << (*constr).first);
                 for (auto iter = (*constr).second.begin();
                         iter != (*constr).second.end(); ++iter) {
-                    LOG1("    " << *iter
+                    LOG6("    " << *iter
                             << ((std::next(iter) != (*constr).second.end()) ? "" : ")")
                             << ((std::next(constr) != hdr.second.end()) ? "" : ")"));
                 } }
@@ -2444,7 +2444,7 @@ ExtractBridgeInfo::generate_bridge_pairs(std::vector<BridgeContext>& all_context
             if (emit.use.thread == EGRESS && extract.use.thread == INGRESS &&
                 emit.pipe_id != extract.pipe_id)
                 continue;
-            LOG3("pipe " << emit.pipe_id << " " << emit.use <<
+            LOG6("pipe " << emit.pipe_id << " " << emit.use <<
                  " pipe " << extract.pipe_id << " " << extract.use);
             auto pipe = new IR::BFN::Pipe;
             // emit and extract has the same pointer to pragma
@@ -2461,9 +2461,7 @@ ExtractBridgeInfo::generate_bridge_pairs(std::vector<BridgeContext>& all_context
 void ExtractBridgeInfo::end_apply(const IR::Node*) {
     ordered_map<cstring, ordered_set<std::pair<int, CollectBridgedFieldsUse::Use>>> uses_by_name;
     for (auto kv : all_uses) {
-        LOG1("pipe " << kv.first);
         for (auto u : kv.second) {
-            LOG1("\t " << u);
             uses_by_name[u.name].insert(std::make_pair(kv.first, u));
         }
     }
@@ -2486,7 +2484,7 @@ void ExtractBridgeInfo::end_apply(const IR::Node*) {
         auto bridgePath = generate_bridge_pairs(bridge_infos);
 
         for (auto p : *bridgePath) {
-            LOG1("Collect flexible fields for " << kv.first);
+            LOG6("Collect flexible fields for " << kv.first);
             pack->set_pipeline_name(p->name);
             p->apply(*pack);
         }
