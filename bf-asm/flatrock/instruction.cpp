@@ -84,7 +84,7 @@ struct operand {
                 unsigned align_mask = 3/size;
                 BUG_CHECK((slot & align_mask) == (abs.xcmp_byte & align_mask),
                           "wadb byte %d misaligned for slot %d", abs.xcmp_byte, slot);
-                return 16/size + abs.xcmp_byte/4;
+                return 16/size + (abs.xcmp_group-1)*4 + abs.xcmp_byte/4;
             } else {
                 return abs.xcmp_byte/size; } }
         int bit_offset(int slot) override { return reg->lo % ::Phv::reg(slot)->size; }

@@ -47,8 +47,9 @@ void Flatrock::ActionBus::write_regs(Target::Flatrock::mau_regs &regs, Table *tb
             break; }
         case ActionBusSource::XcmpData:
             if (src.xcmp_group) {
-                BUG_CHECK(src.xcmp_group == 1, "invalid XCMP group");
-                unsigned word = src.xcmp_byte/4U;
+                BUG_CHECK(src.xcmp_group >= 1 && src.xcmp_group <= 4, "invalid XCMP group");
+                unsigned wgroup = src.xcmp_group - 1;
+                unsigned word = wgroup*4 + src.xcmp_byte/4U;
                 opfifo.opfifo_adb_direct.wadb_en |= 1U << word;
                 if (word < 2) {
                     // EALU has an OXBAR for the bottom two words that can select

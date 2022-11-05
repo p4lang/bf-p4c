@@ -24,7 +24,7 @@ int Flatrock::InputXbar::group_max_index(Group::type_t t) const {
     case Group::EXACT:   return 2;
     case Group::TERNARY: return 20;
     case Group::GATEWAY: return 1;
-    case Group::XCMP:    return 2;
+    case Group::XCMP:    return 4;
     default:
        BUG("invalid group type for %s: %s", Target::name(), group_type(t)); }
     return 0;
@@ -41,7 +41,10 @@ InputXbar::Group Flatrock::InputXbar::group_name(bool tern, const value_t &key) 
             if (key[1] == "byte") return Group(Group::XCMP, 0);
             if (key[1] == "word") return Group(Group::XCMP, 1);
         } else if (key[0] == "ternary" && CHECKTYPE(key[1], tINT)) {
-            return Group(Group::TERNARY, key[1].i); } }
+            return Group(Group::TERNARY, key[1].i); }
+    } else if (key.type == tCMD && key.vec.size == 3 && key[0] == "xcmp" && key[1] == "word") {
+        if (CHECKTYPE(key[2], tINT) && key[2].i >= 0 && key[2].i < 4)
+            return Group(Group::XCMP, key[2].i + 1); }
     return Group(Group::INVALID, 0);
 }
 
@@ -78,10 +81,47 @@ void Flatrock::InputXbar::check_input(Group group, Input &input, TcamUseCache &t
     }
 }
 
+/**
+ * parse flatrock "combined" hashtable/groups
+ *
+ * flatrock has level1 and level2 hashes, rather than "tables" and "groups" so we kind
+ * of shoe-horn them into things.
+ * HashTable EXACT:0 is the em bytehash (level1) table
+ * HashTable EXACT:1 is the em wordhash (level1) table
+ * HashTable XCMP:0..3 are the 4 XCMP hash subsets.
+ *
+ * HashGrp 0-3 are the STM hashes, 4-7 are the lamb hashes, and 8-11 are the XCMP hashes
+ * in the HashGrp object, the `tables` corresponds to the bits in the level2 tables
+ * - for EXACT hashes there are 20 (lamb) or 25 (stm) bits for the 20 bytes + 5 words
+ * - for XCMP hashes there are 4 bits for the 4 subsets
+ */
+bool Flatrock::InputXbar::parse_hash(Table *t, const pair_t &kv) {
+    if (kv.key.vec.size == 2 && kv.key[0] == "byte") {
+        parse_hash_table(t, HashTable(HashTable::EXACT, 0), kv.value);
+    } else if (kv.key.vec.size == 2 && kv.key[0] == "word") {
+        parse_hash_table(t, HashTable(HashTable::EXACT, 1), kv.value);
+#if 0
+    } else if (kv.key.vec.size == 3 && (kv.key[0] == "lamb" || kv.key[0] == "stm")) {
+        // FIXME -- do we need to specify the HashGrp or can we always figure it out
+        // in the end? (we currently do this in Flatrock::InputXbar::write_regs_v)
+        if (!CHECKTYPE(kv.key[2], tINT) || kv.key[2].i < 0 || kv.key[2].i > 3) return false;
+        parse_hash_table(t, HashTable(HashTable::EXACT, 0), kv.value);
+        if (kv.key[0] == "stm")
+            // FIXME -- need to filter this to have the byte part and word part
+            parse_hash_table(t, HashTable(HashTable::EXACT, 1), kv.value);
+#endif
+    } else if (kv.key.vec.size == 3 && kv.key[0] == "xcmp") {
+        if (!CHECKTYPE(kv.key[2], tINT) || kv.key[2].i < 0 || kv.key[2].i > 3) return false;
+        parse_hash_table(t, HashTable(HashTable::XCMP, kv.key[2].i), kv.value);
+    } else {
+        return false; }
+    return true;
+}
+
 bool Flatrock::InputXbar::parse_unit(Table *t, const pair_t &kv) {
     if (kv.key[0] == "output") {
         if (CHECKTYPE(kv.value, tINT)) {
-            if (kv.value.i < 0 || kv.value.i >= XMU_UNITS)
+            if (kv.value.i < 0 || kv.value.i >= FIRST_STM_XMU)
                 error(kv.value.lineno, "Invalid output unit %" PRId64, kv.value.i);
             output_unit = kv.value.i; }
     } else if (kv.key[0] == "exact") {
@@ -333,14 +373,15 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
         case Group::XCMP: {
             auto &xcmp_key_cfg = minput.minput_xcmp_xb_key_erf;
             if (group.first.index) {
+                int wgroup = group.first.index - 1;
                 auto &key32 = xcmp_key_cfg.minput_xcmp_xb_key32;
                 for (auto &input : group.second) {
                     for (int d : dconfig)
-                        key32[input.lo/32U][d].key32 = input.what->reg.ixbar_id()/4U;
+                        key32[wgroup*4 + input.lo/32U][d].key32 = input.what->reg.ixbar_id()/4U;
                     unsigned bit = minput_word_pwr_transpose[input.what->reg.uid];
                     minput.minput_word_pwr_erf.minput_word_pwr[bit/4].data_chain0 |= 1U << (bit%4);
                     minput.rf.minput_xcmp_xb_tab[table->physical_id].key32_used |=
-                        bitRange(input.lo/32U, input.hi/32U); }
+                        bitRange(wgroup*4 + input.lo/32U, input.hi/32U); }
             } else {
                 auto &key8 = xcmp_key_cfg.minput_xcmp_xb_key8;
                 for (auto &input : group.second) {
@@ -529,6 +570,8 @@ void Flatrock::InputXbar::write_xme_regs(Target::Flatrock::mau_regs::_ppu_ems &x
     auto *mt = table->to<SRamMatchTable>();
     BUG_CHECK(mt, "%s is not an sram table", table->name());
     find_xme_info(info, mt->way_for_xme(xme | FIRST_STM_XME));
+    if (output_unit >= 0)
+        warning(lineno, "output_unit not relevant for STM XME, will be ignored");
     for (int d : dconfig) {
         auto &addr = xmu.rf.ems_addr_cfg[xme%2U][d];
         // FIXME -- are banks useful for STM tables?  One xme can access all the rams

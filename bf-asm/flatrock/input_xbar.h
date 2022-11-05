@@ -26,6 +26,9 @@ class InputXbar : public ::InputXbar {
     int group_max_index(Group::type_t t) const override;
     Group group_name(bool ternary, const value_t &value) const override;
     int group_size(Group::type_t t) const override;
+    int hash_num_columns(HashTable ht) const override {
+        return ht.type == HashTable::EXACT ? 45 : ht.type == HashTable::XCMP ? 32 : 0; }
+    bool parse_hash(Table *t, const pair_t &kv) override;
     bool parse_unit(Table *t, const pair_t &kv) override;
     unsigned exact_physical_ids() const override;
 

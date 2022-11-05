@@ -529,7 +529,7 @@ bool SRamMatchTable::parse_way(const value_t &v) {
     if (v.type == tVEC) {
         // DEPRECATED -- old style "raw" way for tofino1/2/3
         if (v.vec.size < 3 || v[0].type != tINT || v[1].type != tINT || v[2].type != tINT ||
-            v[0].i < 0 || v[1].i < 0 || v[2].i < 0 || v[0].i >= EXACT_HASH_GROUPS ||
+            v[0].i < 0 || v[1].i < 0 || v[2].i < 0 || v[0].i >= Target::EXACT_HASH_GROUPS() ||
             v[1].i >= EXACT_HASH_ADR_GROUPS || v[2].i >= (1 << EXACT_HASH_SELECT_BITS)) {
             return false; }
         way.group_xme = v[0].i;

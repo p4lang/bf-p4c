@@ -95,11 +95,13 @@ class InputXbar {
         return hash_columns_used(HashTable(HashTable::EXACT, id)); }
     bool can_merge(HashGrp &a, HashGrp &b);
     void add_use(unsigned &byte_use, std::vector<Input> &a);
+    virtual int hash_num_columns(HashTable ht) const { return 52; }
     virtual int group_max_index(Group::type_t t) const;
     virtual Group group_name(bool ternary, const value_t &value) const;
     virtual int group_size(Group::type_t t) const;
     const char *group_type(Group::type_t t) const;
     void parse_group(Table *t, Group gr, const value_t &value);
+    virtual bool parse_hash(Table *t, const pair_t &kv) { return false; }
     void parse_hash_group(HashGrp &hash_group, const value_t &value);
     void parse_hash_table(Table *t, HashTable ht, const value_t &value);
     virtual bool parse_unit(Table *t, const pair_t &kv) { return false; }
@@ -213,7 +215,7 @@ class InputXbar {
         return 0; }
     HashGrp* get_hash_group(unsigned group = -1) { return ::getref(hash_groups, group); }
     HashGrp* get_hash_group_from_hash_table(int hash_table) {
-        if (hash_table < 0 || hash_table >= HASH_TABLES) return nullptr;
+        if (hash_table < 0 || hash_table >= Target::EXACT_HASH_TABLES()) return nullptr;
         for (auto &hg : hash_groups) {
             if (hg.second.tables & (1U << hash_table))
                 return &hg.second;

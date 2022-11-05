@@ -84,6 +84,7 @@ void SRamMatchTable::verify_format_pass2(Target::Flatrock) {
             // there should be a better/cleaner interface for mapping between the match
             // key and things in the ixbar
             unsigned bit = 0;
+            int prev_offset = -1;
             for (auto &piece : match->by_group[i]->bits) {
                 auto mw = --match_by_bit.upper_bound(bit);
                 int lo = bit - mw->first;
@@ -92,10 +93,15 @@ void SRamMatchTable::verify_format_pass2(Target::Flatrock) {
                         int offset = ixb->find_match_offset(mw->second);
                         if (offset < 0) continue;  // error?  not found on ixbar
                         if (offset + i*stride != piece.lo + mw->first - bit) {
-                            error(match->fmt->lineno, "match entries don't match "
-                                  "input_xbar ordering");
+                            if (prev_offset < offset)
+                                error(match->fmt->lineno, "match entry %s not aligned between "
+                                      "format and input_xbar", mw->second->toString().c_str());
+                            else
+                                error(match->fmt->lineno, "match entries don't match "
+                                      "input_xbar ordering");
                             err = true;
-                            break; } }
+                            break; }
+                        prev_offset = offset; }
                     lo = 0;
                     ++mw;
                 }
@@ -277,9 +283,11 @@ template<> void SRamMatchTable::write_regs_vt(Target::Flatrock::mau_regs &regs) 
         for (auto &ram : row.memunits) {
             BUG_CHECK(row.row == ram.row, "ram row mismatch");
             auto *way = way_for_ram(ram);
+            LOG3("# bus setup for " << ram << " in way " << (way - &ways[0]) << " xme " <<
+                 way->group_xme);
             // FIXME -- should be getting vpn from row.vpn?
             int vpn = std::find(way->rams.begin(), way->rams.end(), ram) - way->rams.begin();
-            int memcol = (way->group_xme % 4) / 2;
+            int memcol = (way->group_xme % 8) / 2;
             int vbus = way->group_xme % 2;
             if (gress != EGRESS)
                 stm_read_config(ppu.istm, stage->stageno, memcol, vbus, row.bus,

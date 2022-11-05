@@ -120,7 +120,7 @@ void InputXbar::parse_group(Table *t, Group gr, const value_t &value) {
 }
 
 void InputXbar::parse_hash_group(HashGrp &hash_group, const value_t &value) {
-    if (value.type == tINT && (unsigned)value.i < HASH_TABLES) {
+    if (value.type == tINT && (unsigned)value.i < Target::EXACT_HASH_TABLES()) {
         hash_group.tables |= 1U << value.i;
         return; }
     if (!CHECKTYPE2(value, tVEC, tMAP)) return;
@@ -143,7 +143,7 @@ void InputXbar::parse_hash_group(HashGrp &hash_group, const value_t &value) {
                 }
             } else if (el.key == "table") {
                 if (el.value.type == tINT) {
-                    if (el.value.i < 0 || el.value.i >= HASH_TABLES)
+                    if (el.value.i < 0 || el.value.i >= Target::EXACT_HASH_TABLES())
                         error(el.value.lineno, "invalid hash group descriptor");
                     else
                         hash_group.tables |= 1U << el.value.i;
@@ -162,7 +162,7 @@ void InputXbar::parse_hash_group(HashGrp &hash_group, const value_t &value) {
     if (tbl) {
         for (auto &v : *tbl) {
             if (!CHECKTYPE(v, tINT)) continue;
-            if (v.i < 0 || v.i >= HASH_TABLES) {
+            if (v.i < 0 || v.i >= Target::EXACT_HASH_TABLES()) {
                 error(v.lineno, "invalid hash group descriptor");
             } else {
                 hash_group.tables |= 1U << v.i;
@@ -201,7 +201,7 @@ void InputXbar::parse_hash_table(Table *t, HashTable ht, const value_t &value) {
 
 void InputXbar::setup_hash(std::map<int, HashCol> &hash_table, HashTable ht,
                            gress_t gress, int stage, value_t &what, int lineno, int lo, int hi) {
-    if (lo < 0 || lo >= 52 || hi < 0 || hi >= 52) {
+    if (lo < 0 || lo >= hash_num_columns(ht) || hi < 0 || hi >= hash_num_columns(ht)) {
         error(lineno, "Hash column out of range");
         return; }
     if (lo == hi) {
@@ -268,7 +268,7 @@ void InputXbar::input(Table *t, bool tern, const VECTOR(pair_t) &data) {
             if (!CHECKTYPE(kv.key.vec.back(), tINT)) continue;
             int index = kv.key.vec.back().i;
             if (kv.key[1] == "group") {
-                if (index >= EXACT_HASH_GROUPS) {
+                if (index >= Target::EXACT_HASH_GROUPS()) {
                     error(kv.key.lineno, "invalid hash group descriptor");
                     continue; }
                 if (hash_groups[index].lineno >= 0) {
@@ -277,10 +277,12 @@ void InputXbar::input(Table *t, bool tern, const VECTOR(pair_t) &data) {
                     warning(hash_groups[index].lineno, "previous definition here"); }
                 hash_groups[index].lineno = kv.key.lineno;
                 parse_hash_group(hash_groups[index], kv.value);
-            } else if (index >= HASH_TABLES) {
+            } else if (index >= Target::EXACT_HASH_TABLES()) {
                 error(kv.key.lineno, "invalid hash descriptor");
             } else {
                 parse_hash_table(t, HashTable(HashTable::EXACT, index), kv.value); }
+        } else if (kv.key.type == tCMD && kv.key[1] == "hash" && parse_hash(t, kv)) {
+            continue;
         } else {
             error(kv.key.lineno, "expecting a group or hash descriptor"); }
     }

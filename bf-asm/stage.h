@@ -62,8 +62,8 @@ class Stage_data {
     BFN::Alloc1D<Table *, TCAM_TABLES_PER_STAGE>             tcam_id_use;
     ordered_map<InputXbar::Group, std::vector<InputXbar *>>  ixbar_use;
     BFN::Alloc1D<Table *, TCAM_XBAR_INPUT_BYTES>             tcam_ixbar_input;
-    BFN::Alloc1D<std::vector<InputXbar *>, HASH_TABLES>      hash_table_use;
-    BFN::Alloc1D<std::vector<InputXbar *>, EXACT_HASH_GROUPS>hash_group_use;
+    BFN::Alloc1Dbase <std::vector<InputXbar *>>              hash_table_use;
+    BFN::Alloc1Dbase<std::vector<InputXbar *>>               hash_group_use;
     BFN::Alloc1D<std::vector<HashDistribution *>, 6>         hash_dist_use;
     BFN::Alloc1D<Table *, ACTION_DATA_BUS_SLOTS>             action_bus_use;
     BFN::Alloc1D<Table *, LOGICAL_SRAM_ROWS>                 action_data_use,
@@ -119,7 +119,9 @@ class Stage_data {
                      Target::SRAM_HBUS_SECTIONS_PER_STAGE(), Target::SRAM_HBUSSES_PER_ROW()),
         tcam_use(Target::TCAM_ROWS(), Target::TCAM_UNITS_PER_ROW()),
         tcam_match_bus_use(Target::TCAM_ROWS(), Target::TCAM_MATCH_BUSSES()),
-        local_tind_use(Target::LOCAL_TIND_UNITS())
+        local_tind_use(Target::LOCAL_TIND_UNITS()),
+        hash_table_use(Target::EXACT_HASH_TABLES()),
+        hash_group_use(Target::EXACT_HASH_GROUPS())
         {}
     Stage_data(const Stage_data &) = delete;
     Stage_data(Stage_data &&) = default;
