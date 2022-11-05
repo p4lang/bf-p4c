@@ -45,8 +45,8 @@ bool ContainerSizeExtractor::isLoggableOnField(const std::vector<int> &layout) {
 unsigned ContainerSizeExtractor::getFieldSize(const ConstrainedField &field) {
     le_bitrange aggregated;
     auto &slices = field.getSlices();
-    for (auto itr = slices.sorted_begin(); itr != slices.sorted_end(); itr++) {
-        aggregated |= itr->getRange();
+    for (const auto & slice : slices) {
+        aggregated |= slice.getRange();
     }
     return aggregated.size();
 }

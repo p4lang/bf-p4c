@@ -874,7 +874,7 @@ PhvLogging::addPardeReadsAndWrites(const PHV::Field* f, ordered_set<PhvLogging::
     LOG4("Adding parde reads and writes for Field: " << f);
     auto dType = getDeparserAccessType(f);
     std::for_each(rv.begin(), rv.end(),
-                  [&](PardeInfo& entry) {
+                  [&](const PardeInfo& entry) {
                       if (entry.unit == "parser") {
                           std::string parserStateName(stripThreadPrefix(entry.parserState));
                           cs->append_writes(new Access(ParserLocation("ibuf",

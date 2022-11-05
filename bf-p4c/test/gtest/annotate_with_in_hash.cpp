@@ -70,7 +70,7 @@ TEST(AnnotateWithInHash, actionKeyNoParam) {
         "}",
         "@name(\"ingress_control.tableKeyNoParam\") table tableKeyNoParam_`(\\d+)` {",
             "key = {",
-                "hdr.vlan.pcp: exact @name(\"hdr.vlan.pcp\") ;",
+                "hdr.vlan.pcp: exact @name(\"hdr.vlan.pcp\");",
             "}",
             "actions = {",
                 "actionKeyNoParam(); @defaultonly NoAction_`\\1`();",

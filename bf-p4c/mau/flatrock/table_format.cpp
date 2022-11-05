@@ -1,5 +1,5 @@
 #include "bf-p4c/mau/flatrock/table_format.h"
-#include "lib/gmputil.h"
+#include "lib/big_int_util.h"
 
 namespace Flatrock {
 

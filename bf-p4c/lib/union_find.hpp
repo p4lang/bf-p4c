@@ -54,7 +54,7 @@ class UnionFind {
     /// Creates a UnionFind initialized with \p all_elements.
     template <typename ContainerOfT>
     explicit UnionFind(ContainerOfT all_elements) {
-        for (T& elt : all_elements)
+        for (auto& elt : all_elements)
             insert(elt);
     }
 

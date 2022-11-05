@@ -37,7 +37,7 @@ class ParserHeaderSequences : public BFN::ControlFlowVisitor, public PardeInspec
     std::map<std::pair<gress_t, cstring>, int> header_ids;
 
     /** Header sequences extracted in the parser */
-    std::map<gress_t, ordered_set<ordered_set<cstring>>> sequences;
+    std::map<gress_t, std::vector<ordered_set<cstring>>> sequences;
     // Name to size in bits of headers extracted in the ingress.
     // Needed for the Hdr section in the assembly for Flatrock.
     std::map<cstring, size_t> header_sizes;

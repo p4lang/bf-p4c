@@ -3,7 +3,7 @@
 /* ConstrainedSlice */
 
 ConstrainedSlice::ConstrainedSlice(const ConstrainedField &parent, le_bitrange range)
-    : parent(parent), range(range) {
+    : parent(&parent), range(range) {
     using Slice = Logging::Phv_Schema_Logger::Slice;
     using FieldSlice = Logging::Phv_Schema_Logger::FieldSlice;
 
@@ -21,13 +21,13 @@ void ConstrainedSlice::setContainerSize(const Constraints::ContainerSizeConstrai
 }
 
 bool ConstrainedSlice::operator<(const ConstrainedSlice &other) const {
-    if (parent.getName() != other.parent.getName())
-        return parent.getName() < other.parent.getName();
+    if (parent->getName() != other.parent->getName())
+        return parent->getName() < other.parent->getName();
     return range < other.range;
 }
 
 bool ConstrainedSlice::operator==(const ConstrainedSlice &other) const {
-    return parent.getName() == other.parent.getName() && range == other.range;
+    return parent->getName() == other.parent->getName() && range == other.range;
 }
 
 /* ConstrainedField */
@@ -37,7 +37,7 @@ ConstrainedField::ConstrainedField(const cstring &name) : name(name) {
 }
 
 void ConstrainedField::addSlice(const ConstrainedSlice &slice) {
-    slices.insert(slice);
+    slices.push_back(slice);
 }
 
 void ConstrainedField::setSolitary(const Constraints::SolitaryConstraint &solitary) {

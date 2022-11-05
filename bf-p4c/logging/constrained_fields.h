@@ -35,7 +35,7 @@ class ConstrainedField;
  */
 class ConstrainedSlice : public LoggableEntity, public LiftCompare<ConstrainedSlice> {
  private:
-    const ConstrainedField &parent;
+    const ConstrainedField *parent;
     le_bitrange range;
 
     Constraints::AlignmentConstraint alignment;
@@ -45,7 +45,7 @@ class ConstrainedSlice : public LoggableEntity, public LiftCompare<ConstrainedSl
     ConstrainedSlice(const ConstrainedField &parent, le_bitrange range);
 
     const le_bitrange &getRange() const                           { return range; }
-    const ConstrainedField &getParent() const                     { return parent; }
+    const ConstrainedField &getParent() const                     { return *parent; }
 
     /// Constraints
     void setAlignment(const Constraints::AlignmentConstraint &alignment);
@@ -66,7 +66,7 @@ class ConstrainedSlice : public LoggableEntity, public LiftCompare<ConstrainedSl
 class ConstrainedField : public LoggableEntity {
  private:
     cstring name;
-    ordered_set<ConstrainedSlice> slices;
+    std::vector<ConstrainedSlice> slices;
 
     Constraints::SolitaryConstraint solitary;
     Constraints::AlignmentConstraint alignment;
@@ -87,8 +87,8 @@ class ConstrainedField : public LoggableEntity {
     const cstring &getName() const                                        { return name; }
 
     void addSlice(const ConstrainedSlice &slice);
-    ordered_set<ConstrainedSlice> &getSlices()                            { return slices; }
-    const ordered_set<ConstrainedSlice> &getSlices() const                { return slices; }
+    std::vector<ConstrainedSlice> &getSlices()                            { return slices; }
+    const std::vector<ConstrainedSlice> &getSlices() const                { return slices; }
 
     /// Constraints
     void setSolitary(const Constraints::SolitaryConstraint &solitary);

@@ -449,6 +449,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "The hash offset must be a power of 2 in a hash calculation"
   testdata/p4_16_samples/issue1049-bmv2.p4
+  testdata/p4_16_samples/issue584-1-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1019,7 +1020,6 @@ p4c_add_xfail_reason("tofino"
 # P4C-539
 p4c_add_xfail_reason("tofino"
   "error: .*: declaration not found"
-  testdata/p4_16_samples/issue2201-1-bmv2.p4
   testdata/p4_16_samples/issue2201-bmv2.p4
   testdata/p4_16_samples/action_profile-bmv2.p4
   testdata/p4_16_samples/issue1768-bmv2.p4
@@ -1045,6 +1045,8 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/action_profile_max_group_size_annotation.p4
   testdata/p4_16_samples/issue1824-bmv2.p4
   testdata/p4_16_samples/p4rt_digest_complex.p4
+  # no support for log_msg
+  testdata/p4_16_samples/logging-bmv2.p4
   # new tests added to p4c
   testdata/p4_16_samples/test-parserinvalidargument-error-bmv2.p4
   # glass testsuite failures
@@ -1345,8 +1347,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/p4c-2056.p4
   testdata/p4_16_samples/issue2726-bmv2.p4
   testdata/p4_16_samples/issue1989-bmv2.p4
-  # p4c update 2021-11-08
-  testdata/p4_16_samples/invalid-hdr-warnings4.p4
   # p4c update 2021-12-06
   testdata/p4_16_samples/control-hs-index-test1.p4
   testdata/p4_16_samples/control-hs-index-test2.p4
@@ -1981,6 +1981,7 @@ p4c_add_xfail_reason("tofino"
   "Can only switch on table"
   testdata/p4_16_samples/invalid-hdr-warnings3-bmv2.p4
   testdata/p4_16_samples/issue3374.p4
+  testdata/p4_16_samples/issue3650.p4
 )
 
 # P4C-4158 - Expected program output not communicated to us by customer (Arista)
@@ -2127,4 +2128,9 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Conditions in an action must be simple comparisons of an action data parameter"
   testdata/p4_16_samples/psa-dpdk-large-header-fields.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  ".*: must be a compile-time constant"
+  testdata/p4_16_samples/psa-example-mask-range-err.p4
 )

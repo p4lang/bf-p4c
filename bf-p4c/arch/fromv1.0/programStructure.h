@@ -21,7 +21,7 @@
 #include "frontends/p4/createBuiltins.h"
 #include "frontends/p4/directCalls.h"
 #include "frontends/common/constantFolding.h"
-#include "lib/gmputil.h"
+#include "lib/big_int_util.h"
 
 namespace P4V1 {
 

@@ -332,7 +332,7 @@ PHV::Allocation::slicesByLiveness(PHV::Container c) const {
     auto slices = this->slices(c);
     ordered_map<unsigned, ordered_set<bitvec>> by_round;
     ordered_map<unsigned, ordered_set<bitvec>> remove_by_round;
-    ordered_map<int, PHV::AllocSlice*> fid_to_slice;
+    ordered_map<int, const PHV::AllocSlice*> fid_to_slice;
 
     // Populate round 1.
     for (auto& slice : slices) {

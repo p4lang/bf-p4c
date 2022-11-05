@@ -6,7 +6,7 @@
 
 #include "ir/ir.h"
 #include "lib/path.h"
-#include "lib/gmputil.h"
+#include "lib/big_int_util.h"
 
 #include "frontends/common/options.h"
 #include "frontends/common/parseInput.h"

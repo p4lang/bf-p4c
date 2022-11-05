@@ -8,20 +8,28 @@ Visitor::profile_t ParserHeaderSequences::init_apply(const IR::Node *node) {
     return Inspector::init_apply(node);
 }
 
+static void remove_duplicates(std::vector<ordered_set<cstring>>& seq) {
+    std::sort(seq.begin(), seq.end());
+    auto it = std::unique(seq.begin(), seq.end());
+    seq.erase(it, seq.end());
+}
+
 void ParserHeaderSequences::flow_merge(Visitor& other_) {
     auto& other = dynamic_cast<ParserHeaderSequences&>(other_);
     for (const auto& kv : other.headers) {
         headers[kv.first].insert(kv.second.begin(), kv.second.end());
     }
     for (const auto& kv : other.sequences) {
-        sequences[kv.first].insert(kv.second.begin(), kv.second.end());
+        auto& sequences_gress = sequences[kv.first];
+        sequences_gress.insert(sequences_gress.end(), kv.second.begin(), kv.second.end());
+        remove_duplicates(sequences_gress);
     }
     header_sizes.insert(other.header_sizes.begin(), other.header_sizes.end());
 }
 
 /** @brief Create an empty set of sequences for each parser */
 bool ParserHeaderSequences::preorder(const IR::BFN::Parser* parser) {
-    sequences.emplace(parser->gress, ordered_set<ordered_set<cstring>>({{}}));
+    sequences[parser->gress] = {{}};
     return true;
 }
 
@@ -95,7 +103,12 @@ bool ParserHeaderSequences::preorder(const IR::BFN::Extract* extract) {
 }
 
 void ParserHeaderSequences::end_apply() {
-    for (auto& seq : sequences[INGRESS]) seq.emplace(payloadHeaderName);
+    for (auto& seq : sequences[INGRESS]) {
+        seq.emplace(payloadHeaderName);
+    }
+    for (auto& [gress, seqs_gress] : sequences) {
+        remove_duplicates(seqs_gress);
+    }
     headers[INGRESS].insert(payloadHeaderName);
     // Assign a unique header ID
     int header_id_cnt = 0;

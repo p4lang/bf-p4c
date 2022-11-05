@@ -11,7 +11,7 @@ namespace Test {
 class ContainerSizeExtractorTest : public TofinoBackendTest, public ContainerSizeExtractor {
  protected:
     ConstrainedField field = ConstrainedField("dummy");
-    const ordered_set<ConstrainedSlice> &slices = field.getSlices();
+    const std::vector<ConstrainedSlice> &slices = field.getSlices();
 };
 
 TEST_F(ContainerSizeExtractorTest, IsLoggableOnFieldWorks) {

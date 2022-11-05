@@ -26,7 +26,7 @@ TEST_F(ErrorReporterTest, ErrorHelperPlainFormatsCorrectly) {
         "Str: hello, Dec: 10\n");
 }
 
-TEST_F(ErrorReporterTest, WarnigsConformToExpectedFormat) {
+TEST_F(ErrorReporterTest, WarningsConformToExpectedFormat) {
     // NOTE: Warnings are formatted exactly the same as errors
 
     const std::string EXPECTED_WARN_0 = ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(200): [--Wwarn=unused] warning: 'val_undefined' is unused
@@ -47,13 +47,20 @@ TEST_F(ErrorReporterTest, WarnigsConformToExpectedFormat) {
            ^^^^^^^^^^^^^^^^
 )";
 
-    const std::string EXPECTED_WARN_3 = R"(warning: No size defined for table 'TABLE_NAME', setting default size to 512
+    const std::string EXPECTED_WARN_3 = R"([--Wwarn=uninitialized_use] warning: val_undefined may be uninitialized
+)" +
+        ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(200): [--Wwarn=uninitialized_use] warning: val_undefined may be uninitialized
+    action do_global_action(in bool make_zero, out bool val_undefined) {
+                                                        ^^^^^^^^^^^^^
+)";
+
+    const std::string EXPECTED_WARN_4 = R"(warning: No size defined for table 'TABLE_NAME', setting default size to 512
 )";
 
     const std::string EXPECTED_WARNINGS = EXPECTED_WARN_0 + EXPECTED_WARN_1 + EXPECTED_WARN_2 +
-                                          EXPECTED_WARN_3;
+                                          EXPECTED_WARN_3 + EXPECTED_WARN_4;
 
-    // Running frontend on this code should emit EXPECTED_WARN_0, 1, 2 and 3
+    // Running frontend on this code should emit EXPECTED_WARN_0, 1, 2, 3 and 4
     auto CODE = R"(
     header ethernet_t {
         bit<48> src_addr;
@@ -114,7 +121,7 @@ TEST_F(ErrorReporterTest, WarnigsConformToExpectedFormat) {
     BaseCompileContext::get().errorReporter().setOutputStream(backupStream);
 }
 
-TEST_F(ErrorReporterTest, WarnigWithSuffixConformToExpectedFormat) {
+TEST_F(ErrorReporterTest, WarningWithSuffixConformToExpectedFormat) {
     const std::string EXPECTED_WARN_1 = ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(199): [--Werror=type-error] error: return +
                 return (ix + 1);
                 ^^^^^^

@@ -3030,7 +3030,7 @@ ActionPhvConstraints::verify_two_container_alignment(
             }
 
             // Combine multiple adjacent source slices.
-            PHV::AllocSlice* src_slice = nullptr;
+            const PHV::AllocSlice* src_slice = nullptr;
             for (auto& slice : source_slices) {
                 if (src_slice == nullptr) {
                     src_slice = &slice;

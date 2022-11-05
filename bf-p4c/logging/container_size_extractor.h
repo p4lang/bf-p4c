@@ -32,7 +32,7 @@ class ContainerSizeExtractor {
                                 const std::vector<le_bitrange> &slicing, ConstrainedField &field);
 
     static void applyConstraintToSlices(
-                            std::vector<ConstrainedSlice*> &slices, const std::vector<int> &layout);
+                    std::vector<ConstrainedSlice*> &slices, const std::vector<int> &layout);
 };
 
 #endif  // BF_P4C_LOGGING_CONTAINER_SIZE_EXTRACTOR_H_

@@ -3,7 +3,7 @@
 #include "ir/json_loader.h"
 #include "dynamic_hash/dynamic_hash.h"
 #include "lib/hex.h"
-#include "lib/gmputil.h"
+#include "lib/big_int_util.h"
 #include "bf-p4c/mau/hash_function.h"
 
 /**
