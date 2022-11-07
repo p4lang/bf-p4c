@@ -401,7 +401,17 @@ action_for_table_action(const MatchTable *tbl, const Actions::Action *act) const
 #if HAVE_FLATROCK
 template<> void StatefulTable::write_action_regs_vt(Target::Flatrock::mau_regs &regs,
             const Actions::Action *act) {
-    error(lineno, "%s:%d: Flatrock stateful not implemented yet!", SRCFILE, __LINE__);
+    auto &salu = regs.ppu_sful[physical_id].ppu_sful_alu;
+    auto &salu_instr_common = salu.sful_instr_common[act->code];
+    if (act->minmax_use) {
+        salu_instr_common.datasize = 7;
+        salu_instr_common.op_dual = is_dual_mode();
+    } else if (is_dual_mode()) {
+        salu_instr_common.datasize = format->log2size - 1;
+        salu_instr_common.op_dual = 1;
+    } else {
+        salu_instr_common.datasize = format->log2size;
+    }
 }
 #endif  /* HAVE_FLATROCK */
 template<class REGS>
@@ -444,7 +454,35 @@ template<class REGS> void StatefulTable::write_merge_regs_vt(REGS &regs, MatchTa
 
 #if HAVE_FLATROCK
 template<> void StatefulTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
-    error(lineno, "%s:%d: Flatrock stateful not implemented yet!", SRCFILE, __LINE__);
+    LOG1("### Stateful table " << name() << " write_regs " << loc());
+
+    auto &salu = regs.ppu_sful[physical_id].ppu_sful_alu;
+    salu.sful_ctl.enable_ = 1;
+    salu.sful_ctl.outp_pred_shift = pred_shift / 4;
+    salu.sful_ctl.out_prd_cmb_shft = pred_comb_shift;
+
+    this->write_logging_regs(regs);
+
+    for (auto &inst : salu.sful_instr_cmp_alu) {
+        for (auto &alu : inst) {
+            if (!alu.cmp_opcode.modified()) {
+                alu.cmp_opcode = 2;
+            }
+        }
+    }
+
+    if (math_table) {
+        for (size_t i = 0; i < math_table.data.size(); ++i) {
+            salu.sful_mathtable[i/4U].mathtable.set_subfield(math_table.data[i], 8*(i%4U), 8);
+        }
+        salu.sful_mathunit_ctl.output_scale = math_table.scale & 0x3fU;
+        salu.sful_mathunit_ctl.exponent_invert = math_table.invert;
+        switch (math_table.shift) {
+        case -1: salu.sful_mathunit_ctl.exponent_shift = 2; break;
+        case  0: salu.sful_mathunit_ctl.exponent_shift = 0; break;
+        case  1: salu.sful_mathunit_ctl.exponent_shift = 1; break;
+        }
+    }
 }
 #endif  /* HAVE_FLATROCK */
 template<class REGS> void StatefulTable::write_regs_vt(REGS &regs) {
