@@ -2134,3 +2134,14 @@ p4c_add_xfail_reason("tofino"
   ".*: must be a compile-time constant"
   testdata/p4_16_samples/psa-example-mask-range-err.p4
 )
+
+# p4c update 2022-11-07 (new tests)
+p4c_add_xfail_reason("tofino"
+  "Cannot extract field .* from PSA_MeterColor_t which has type .*"
+  testdata/p4_16_samples/psa-example-dpdk-directmeter-1.p4
+  testdata/p4_16_samples/psa-example-dpdk-directmeter.p4
+)
+p4c_add_xfail_reason("tofino"
+  "Direct Extern - .* of type .* is used in action .* but not specified as a .* property on the actions table .*"
+  testdata/p4_16_samples/psa-example-dpdk-directmeter-err.p4
+)
