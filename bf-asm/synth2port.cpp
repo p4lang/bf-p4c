@@ -79,10 +79,6 @@ void Synth2Port::pass3() {
     LOG1("### Synth2Port table " << name() << " pass3 " << loc());
 }
 
-template<class REGS>
-void Synth2Port::write_regs_vt(REGS &) {
-}
-
 json::map *Synth2Port::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) const {
     json::map &stage_tbl = *AttachedTable::add_stage_tbl_cfg(tbl, type, size);
     std::string hr = how_referenced();

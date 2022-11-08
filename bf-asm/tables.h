@@ -1814,7 +1814,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(Synth2Port, AttachedTable,
  public:
     int get_home_row_for_row(int row) const;
     void add_alu_indexes(json::map &stage_tbl, std::string alu_indexes) const;
-    template<class REGS> void write_regs_vt(REGS &regs);
+    template<class REGS> void write_regs_vt(REGS &regs) { }
     FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
         void write_regs, (mau_regs &regs), override {
             write_regs_vt<decltype(regs)>(regs); })
