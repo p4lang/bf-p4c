@@ -268,18 +268,112 @@ bool IXBar::exact_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
         return do_alloc(alloced, exact_byte_use); }
 }
 
+/** Find the best suitable ternary group for the remaining xbar bytes required. The idea is that
+ *  after one or more iteration, all of the alloc_use bytes are part of the alloced vector. This
+ *  function only process one ternary group at a time. It analyses the requirement and select
+ *  odd/even ternary group if it can reduce the global number of TCAM requirement. If selecting
+ *  either group type will not have an impact on the global number of TCAM requirement, the group
+ *  being the least used will be choosen. This behavior can be relaxed using the optimal flag set
+ *  to false which is tried as the last resort.
+ */
+bool IXBar::ternary_find_grp_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
+                                   safe_vector<IXBar::Use::Byte *> &alloced,
+                                   int &ternary_use_tbl, bool optimal) {
+    // Always try to pack ternary group at the start to automatically balance even and odd group
+    int first_grp = 0;
+    int grp_inc = 1;
+    if (optimal) {
+        // Pre-analyse alignment needs
+        int odd = 0;
+        int even = 0;
+        int total = 0;
+        for (const IXBar::Use::Byte &byte : alloc_use) {
+            // Byte was already allocated
+            if (byte.loc)
+                continue;
+
+            // Only PHE16 and PHE32 have even/odd alignment constraint that must be tracked
+            if (byte.container.is(PHV::Size::b16) || byte.container.is(PHV::Size::b32)) {
+                if (byte.lo % 16)
+                    odd++;
+                else
+                    even++;
+            }
+            total++;
+        }
+
+        int min_width = (total + (TERNARY_BYTES_PER_GROUP - 1)) / TERNARY_BYTES_PER_GROUP;
+        int worst_width = (odd > even ? (odd + (TERNARY_MIN_EVEN_ODD_BYTES_PER_GROUP - 1)) /
+                                         TERNARY_MIN_EVEN_ODD_BYTES_PER_GROUP :
+                                        (even + (TERNARY_MIN_EVEN_ODD_BYTES_PER_GROUP - 1)) /
+                                         TERNARY_MIN_EVEN_ODD_BYTES_PER_GROUP);
+        // Only force a ternary group if this will make a difference
+        if (worst_width > min_width) {
+            first_grp = (odd > even ? 1 : 0);
+            grp_inc = 2;
+        }
+    }
+
+    // Find the first ternary group that is available and fit the required alignment constraints
+    for (int grp = first_grp; grp < TERNARY_GROUPS; grp += grp_inc) {
+        // We always start filling either the first or the second byte of a group
+        if (ternary_use[grp][0].first || ternary_use[grp][1].first) continue;
+        if (ternary_use_tbl & (1 << grp)) continue;
+
+        ternary_use_tbl |= 1 << grp;
+
+        for (int b = 0; b < TERNARY_BYTES_PER_GROUP; b++) {
+            bool candidate = false;  // This is to track possible 8-bit container not alloced
+            for (IXBar::Use::Byte &byte : alloc_use) {
+                // Byte was already allocated
+                if (byte.loc)
+                    continue;
+
+                if (byte.container.is(PHV::Size::b16) || byte.container.is(PHV::Size::b32)) {
+                    bool odd_pos = ((grp & 0x1) + b) & 0x1;
+                    bool odd_byte = (byte.lo % 16 ? true : false);
+                    if (odd_byte == odd_pos) {
+                        byte.loc = Loc(grp, b);
+                        alloced.push_back(&byte);
+                        candidate = false;
+                        break;
+                    }
+                } else {
+                    candidate = true;
+                }
+            }
+            // This byte position was not filled by any PHE16 or PHE32 with alignment constraint
+            // but PHE8 was available
+            if (candidate) {
+                for (IXBar::Use::Byte &byte : alloc_use) {
+                    // Byte was already allocated
+                    if (byte.loc)
+                        continue;
+
+                    if (byte.container.is(PHV::Size::b8)) {
+                        byte.loc = Loc(grp, b);
+                        alloced.push_back(&byte);
+                        break;
+                    }
+                }
+            }
+            if (alloced.size() == alloc_use.size())
+                break;
+        }
+        return true;
+    }
+    return false;
+}
+
 bool IXBar::ternary_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                                safe_vector<IXBar::Use::Byte *> &alloced) {
-    // find_alloc(alloc_use, alloced, ternary_fields);  -- can't share groups
-    auto it = alloc_use.begin();
-    for (int grp = 0; grp < TERNARY_GROUPS; grp++) {
-        if (ternary_use[grp][0].first) continue;
-        for (int b = 0; b < TERNARY_BYTES_PER_GROUP && it != alloc_use.end(); ++b, ++it) {
-            // FIXME -- this ignores alignment limits for 16 and 32 bit PHVs in bytes 0..3
-            it->loc = Loc(grp, b);
-            alloced.push_back(&*it); }
-        if (it == alloc_use.end()) break; }
-    return it == alloc_use.end();;
+    int ternary_use_tbl = 0;  // Used to carry current tbl ternary use before update
+    while (alloced.size() != alloc_use.size()) {
+        if (!ternary_find_grp_alloc(alloc_use, alloced, ternary_use_tbl, true))
+            if (!ternary_find_grp_alloc(alloc_use, alloced, ternary_use_tbl, false))
+                return false;
+    }
+    return true;
 }
 
 bool IXBar::xcmp_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,

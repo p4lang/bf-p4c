@@ -31,6 +31,7 @@ class IXBar : public ::IXBar {
     static constexpr int STM_XMU_UNITS = 0xf0;    /* second 8 units */
     static constexpr int TERNARY_GROUPS = 20;
     static constexpr int TERNARY_BYTES_PER_GROUP = 5;
+    static constexpr int TERNARY_MIN_EVEN_ODD_BYTES_PER_GROUP = 2;
     static constexpr int EXACT_HASH_BITS = 45;
 
     using Loc = ::IXBar::Loc;
@@ -149,6 +150,9 @@ class IXBar : public ::IXBar {
                           safe_vector<IXBar::Use::Byte *> &alloced,
                           bool allow_word);
     bool exact_find_units(IXBar::Use &alloc, const LayoutOption *lo);
+    bool ternary_find_grp_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
+                                safe_vector<IXBar::Use::Byte *> &alloced,
+                                int &ternary_use_tbl, bool optimal);
     bool ternary_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                             safe_vector<IXBar::Use::Byte *> &alloced);
     bool xcmp_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
