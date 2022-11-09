@@ -1,3 +1,4 @@
+#include "bf-p4c/common/flatrock.h"
 #include "bf-p4c/parde/asm_output.h"
 #include "bf-p4c/parde/parser_header_sequences.h"
 
@@ -51,9 +52,12 @@ std::ostream& operator<<(std::ostream& out, const HeaderAsmOutput& headerOut) {
                           seq.size(), numHeadersPerSeq, ss.str());
                 out << indent << id++ << ": " << ss.str() << std::endl;
             }
-            if (id >= numHeaderSeqs) {
-                out << indent << "# " << (seqs.sequences.at(INGRESS).size() - numHeaderSeqs)
-                    << " additional sequence(s) are not compressed" << std::endl;
+            if (id == Flatrock::MDP_HDR_ID_COMP_ROWS) {
+                if (seqs.sequences.at(INGRESS).size() > Flatrock::MDP_HDR_ID_COMP_ROWS) {
+                    out << indent << "# " <<
+                        (seqs.sequences.at(INGRESS).size() - Flatrock::MDP_HDR_ID_COMP_ROWS) <<
+                        " additional sequence(s) are not compressed" << std::endl;
+                }
                 break;
             }
         }

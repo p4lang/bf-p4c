@@ -16,7 +16,7 @@
 #include "bf-p4c/common/debug_info.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/common/ir_utils.h"
-#include "bf-p4c/common/flatrock_parser.h"
+#include "bf-p4c/common/flatrock.h"
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/device.h"

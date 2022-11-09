@@ -2,7 +2,7 @@
 #define BF_P4C_PARDE_FLATROCK_H_
 
 #include <iostream>
-#include "bf-p4c/common/flatrock_parser.h"
+#include "bf-p4c/common/flatrock.h"
 #include "lib/cstring.h"
 #include "lib/exceptions.h"
 

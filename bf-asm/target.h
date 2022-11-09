@@ -5,7 +5,7 @@
 #include "bfas.h"
 #include "map.h"
 #include "asm-types.h"
-#include "bf-p4c/common/flatrock_parser.h"
+#include "bf-p4c/common/flatrock.h"
 
 struct MemUnit;
 
@@ -1012,7 +1012,9 @@ class Target::Flatrock : public Target {
         PARSER_CSUM_MASK_BITS = PARSER_CSUM_MASK_WIDTH * PARSER_CSUM_MASK_REG_WIDTH,
         PARSER_CSUM_MATCH_WIDTH = 32,
         PARSER_BRIDGE_MD_WIDTH = 64,
-        PARSER_SEQ_ID_MAX = 254,  // Max value of header sequence ID; 255 reserved for escape value
+        // Max value of header sequence ID
+        // ::Flatrock::MDP_HDR_ID_COMP_ROWS value reserved for escape value
+        PARSER_SEQ_ID_MAX = ::Flatrock::MDP_HDR_ID_COMP_ROWS - 1,
         PARSER_HDR_ID_MAX = 254,  // Max value of hdr_id; 255 is reserved for invalid header
         PARSER_BASE_LEN_MAX = 255,
         PARSER_NUM_COMP_BITS_MAX = 15,
@@ -1090,7 +1092,7 @@ class Target::Flatrock : public Target {
                                                     // variable offset component. The length
                                                     // in the config register must be in the range
                                                     // [0, DEPARSER_PBO_VAR_OFFSET_LEN_MAX].
-        MDP_HDR_ID_COMP_ROWS = 255,
+        MDP_HDR_ID_COMP_ROWS = ::Flatrock::MDP_HDR_ID_COMP_ROWS,
     };
     static int encodeConst(int src) {
         return src;

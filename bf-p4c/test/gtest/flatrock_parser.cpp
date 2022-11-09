@@ -420,7 +420,6 @@ TEST(FlatrockParser, AnalyzerMultipleTransitions) {
         "` *`seq:",
         "` *`0: [ig_intr_md, hdrs.h1, hdrs.h2, hdrs.h3, payload]",
         "` *`1: [ig_intr_md, hdrs.h1, payload]",
-        "` *`# 0 additional sequence(s) are not compressed",
         "` *`len:",
         "` *`ig_intr_md: { base_len: 8, num_comp_bits: 0, scale: 0 }",
         "` *`hdrs.h1: { base_len: 12, num_comp_bits: 0, scale: 0 }",

@@ -1,10 +1,10 @@
-#ifndef BF_P4C_COMMON_FLATROCK_PARSER_H_
-#define BF_P4C_COMMON_FLATROCK_PARSER_H_
+#ifndef BF_P4C_COMMON_FLATROCK_H_
+#define BF_P4C_COMMON_FLATROCK_H_
 
 #include <vector>
 
 /**
- * @file flatrock_parser.h
+ * @file flatrock.h
  *
  * @warning The corresponding .cpp file is linked only with the compiler, not the assembler.
  * Thus, the constructors defined in the .cpp can be used only in the compiler.
@@ -49,6 +49,7 @@ enum constants {
     PARSER_PHV_BUILDER_PACKET_PHE8_SOURCES = 4,
     PARSER_PHV_BUILDER_PACKET_PHE16_SOURCES = 2,
     PARSER_PHV_BUILDER_PACKET_PHE32_SOURCES = 1,
+    MDP_HDR_ID_COMP_ROWS = 255,
 };
 
 /**
@@ -186,4 +187,4 @@ struct metadata_select {
 
 }  /* namespace Flatrock */
 
-#endif  /* BF_P4C_COMMON_FLATROCK_PARSER_H_ */
+#endif  /* BF_P4C_COMMON_FLATROCK_H_ */

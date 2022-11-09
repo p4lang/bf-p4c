@@ -2,7 +2,7 @@
 #define BF_ASM_FLATROCK_PARSER_H_
 
 #include <boost/optional.hpp>
-#include "bf-p4c/common/flatrock_parser.h"
+#include "bf-p4c/common/flatrock.h"
 #include "../parser.h"
 #include "asm-types.h"
 #include "target.h"

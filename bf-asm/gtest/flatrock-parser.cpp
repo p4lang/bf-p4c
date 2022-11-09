@@ -1,7 +1,7 @@
 #include <boost/algorithm/string/replace.hpp>
 #include "flatrock/hdr.h"
 #include "flatrock/parser.h"
-#include "bf-p4c/common/flatrock_parser.h"
+#include "bf-p4c/common/flatrock.h"
 #include "phv.h"
 #include "gtest/gtest.h"
 

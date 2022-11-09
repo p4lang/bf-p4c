@@ -276,7 +276,7 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/empty_tableseq.cpp
   common/extract_maupipe.cpp
   common/field_defuse.cpp
-  common/flatrock_parser.cpp
+  common/flatrock.cpp
   common/bridged_packing.cpp
   common/header_stack.cpp
   common/ir_utils.cpp
@@ -305,7 +305,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/empty_tableseq.h
   common/extract_maupipe.h
   common/field_defuse.h
-  common/flatrock_parser.h
+  common/flatrock.h
   common/bridged_packing.h
   common/header_stack.h
   common/ir_utils.h
