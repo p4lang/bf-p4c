@@ -84,7 +84,7 @@ template<> void MatchTable::write_regs(Target::Flatrock::mau_regs &regs, int typ
                 break;
             }
         }
-        imem_map[12].data = adr_default;
+        imem_map[9].data = adr_default;
     } else if (instr_call.args[0] == "$GATEWAY_IDX") {
         mrd.mrd_imem_ext[physical_id].ext_start[dconfig] = 62;
         mrd.mrd_imem_ext[physical_id].ext_size[dconfig] = 2;

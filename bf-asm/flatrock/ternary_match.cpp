@@ -238,30 +238,37 @@ void Target::Flatrock::TernaryMatchTable::write_regs(Target::Flatrock::mau_regs 
             auto &iss_sel = scm.int_stage_sbus_sel[unit];
             if (minstage < this_stage) {
                 int hbus = row.bus.at(Layout::R2L_BUS);
-                iss_sel.ig_sel_r2l[hbus] = match.at(word).word_group;
+                if (gress == EGRESS)
+                    iss_sel.eg_sel_r2l[hbus] = match.at(word).word_group;
+                else
+                    iss_sel.ig_sel_r2l[hbus] = match.at(word).word_group;
                 iss_sel.issb_sel_r2l[hbus] = 2;
-                if (minstage > 0)
-                    ppu.scm[minstage-1].stage_addrmap.result_bus[unit].isrb_l2r_dis[hbus] |= 2;
-                scm.result_bus[unit].isrb_l2r_dis[hbus] = 3;
+                scm.match_merge[unit][logical_tcam].r2l_en |= 1 << hbus;
                 for (int st = minstage; st < this_stage; ++st) {
-                    if (!ramuse[col][st])
-                        ppu.scm[st].stage_addrmap.result_bus[unit].isrb_l2r_dis[hbus] |= 1; } }
+                    if (st != minstage)
+                        ppu.scm[st].stage_addrmap.result_bus[unit].isrb_l2r_en[hbus] |= 2;
+                    if (ramuse[col][st])
+                        ppu.scm[st].stage_addrmap.result_bus[unit].isrb_l2r_en[hbus] |= 1; } }
             if (maxstage > this_stage) {
                 int hbus = row.bus.at(Layout::L2R_BUS);
-                iss_sel.ig_sel_l2r[hbus] = match.at(word).word_group;
+                if (gress == EGRESS)
+                    iss_sel.eg_sel_l2r[hbus] = match.at(word).word_group;
+                else
+                    iss_sel.ig_sel_l2r[hbus] = match.at(word).word_group;
                 iss_sel.issb_sel_l2r[hbus] = 2;
-                if (maxstage < LAST_INGRESS_STAGE)
-                    ppu.scm[maxstage+1].stage_addrmap.result_bus[unit].isrb_r2l_dis[hbus] |= 2;
-                scm.result_bus[unit].isrb_r2l_dis[hbus] = 3;
+                scm.match_merge[unit][logical_tcam].l2r_en |= 1 << hbus;
                 for (int st = maxstage; st > this_stage; --st) {
-                    if (!ramuse[col][st])
-                        ppu.scm[st].stage_addrmap.result_bus[unit].isrb_r2l_dis[hbus] |= 1; } }
+                    if (st != maxstage)
+                        ppu.scm[st].stage_addrmap.result_bus[unit].isrb_r2l_en[hbus] |= 2;
+                    if (ramuse[col][st])
+                        ppu.scm[st].stage_addrmap.result_bus[unit].isrb_r2l_en[hbus] |= 1; } }
             // need to merge to the middle (row 4 or 5) of 10x2 layout
             int direction = (phys_row % 10) < 5 ? +1 : -1;
             for (int row = phys_row; true; row += direction) {
-                // The '4' here hardcodes the unsplit priority result.  When we support
+                // The '0' here hardcodes the unsplit priority result.  When we support
                 // split or bitmap tcams, this will need to change
-                scm.match_merge[row + TCAM_ROWS * col][logical_tcam].enable_ |= 4;
+                scm.match_merge[row + TCAM_ROWS * col][logical_tcam].result_en = 1;
+                scm.match_merge[row + TCAM_ROWS * col][logical_tcam].result_sel = 0;
                 if (row == 4 || row == 5 || row == 14 || row == 15) break; } }
 
         for (auto &ram : row.memunits) {

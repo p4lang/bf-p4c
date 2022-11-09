@@ -2,8 +2,8 @@
 ARG DOCKER_PROJECT=amr-registry.caas.intel.com/bxd-sw
 
 # p4factory docker image to use (p4factory:<tag> or p4factory@sha256:<hash>)
-# p4factory_git_commit=0732c3195b7f51f0e52af2eb5e9e4788373916d1
-ARG P4FACTORY_IMAGE=p4factory@sha256:dc9bc8b582eb1df2f0acef28c1a8820772745e87c9006c7ffda3666456136361
+# p4factory_git_commit=44a4d54f95d2779d145dc9276b6e41a505f1bf88
+ARG P4FACTORY_IMAGE=p4factory@sha256:72cb9e0e20ee099ddfba51bd09b25ce2e7754a2d8e4c0c853ac7e0cf0a515135
 
 FROM ${DOCKER_PROJECT}/${P4FACTORY_IMAGE} AS environment
 
