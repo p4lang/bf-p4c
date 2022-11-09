@@ -19,8 +19,11 @@ bool DetermineCandidateHeaders::preorder(const IR::BFN::Extract* extract) {
     BUG_CHECK(field, "Could not find destination field for extract %1%",
             cstring::to_cstring(extract));
     if (!field->pov) return true;
-    headersValidatedInParser.insert(field->header());
-    LOG3("\t  Header validated in parser: " << field->header());
+    const auto* const_source = extract->source->to<IR::BFN::ConstantRVal>();
+    if (!const_source || const_source->constant->value != 0) {
+        headersValidatedInParser.insert(field->header());
+        LOG3("\t  Header validated in parser: " << field->header());
+    }
     return true;
 }
 
