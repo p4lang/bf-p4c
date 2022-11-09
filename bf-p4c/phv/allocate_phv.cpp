@@ -876,8 +876,8 @@ AllocScore::AllocScore(
         // slices allocated in parent, robust in that @p alloc can commit things that
         // are already in the parent.
         auto slices = kv.second.slices;
-        for (const auto& slice : parent->slices(container)) {
-            slices.erase(slice); }
+        parent->foreach_slice(container, [&] (const PHV::AllocSlice& slice) {
+            slices.erase(slice); });
 
         // skip, if there is no allocated slices.
         if (slices.size() == 0)
@@ -981,7 +981,7 @@ AllocScore::AllocScore(
             if (packing_opportunities && by_kind[kind][n_packing_bits]) {
                 int n_packing_priorities = 100000;  // do not use max because it might overflow.
                 for (auto i = container.lsb(); i <= container.msb(); ++i) {
-                    for (const auto& p_slice : parent->slices(container)) {
+                    parent->foreach_slice(container, [&] (const PHV::AllocSlice& p_slice) {
                         for (const auto& slice : slices) {
                             if (p_slice.container_slice().contains(i)
                                 && slice.container_slice().contains(i)) {
@@ -992,7 +992,7 @@ AllocScore::AllocScore(
                                     packing_opportunities->nOpportunitiesAfter(f1, f2));
                             }
                         }
-                    }
+                    });
                 }
                 by_kind[kind][n_packing_priority] = n_packing_priorities;
             }

@@ -245,7 +245,7 @@ void PHV::Allocation::setParserExtractGroupSource(PHV::Container c, ExtractSourc
 PHV::Allocation::MutuallyLiveSlices PHV::Allocation::liverange_overlapped_slices(
         const PHV::Container c, const std::vector<AllocSlice>& slices) const {
     PHV::Allocation::MutuallyLiveSlices rs;
-    for (auto& allocated : this->slices(c)) {
+    foreach_slice(c, [&] (const AllocSlice& allocated) {
         if (std::any_of(slices.begin(), slices.end(), [&](const AllocSlice& sl) {
                 // not mutex and have overlapped live range.
                 return !phv_i->field_mutex()(allocated.field()->id, sl.field()->id) &&
@@ -253,7 +253,7 @@ PHV::Allocation::MutuallyLiveSlices PHV::Allocation::liverange_overlapped_slices
             })) {
             rs.insert(allocated);
         }
-    }
+    });
     return rs;
 }
 
@@ -261,14 +261,13 @@ PHV::Allocation::MutuallyLiveSlices PHV::Allocation::liverange_overlapped_slices
 PHV::Allocation::MutuallyLiveSlices
 PHV::Allocation::slicesByLiveness(const PHV::Container c, const AllocSlice& sl) const {
     PHV::Allocation::MutuallyLiveSlices rs;
-    auto slices = this->slices(c);
-    for (auto& slice : slices) {
+    this->foreach_slice(c, [&] (const PHV::AllocSlice& slice) {
         bool mutex = phv_i->field_mutex()(slice.field()->id, sl.field()->id);
         // *ALEX* Checking disjoint liveranges may be too conservative due to
         // default [parser, deparser] liveranges - See P4C-4467
         bool liverange_mutex = slice.isLiveRangeDisjoint(sl);
         if (!mutex && !liverange_mutex) rs.insert(slice);
-    }
+    });
     return rs;
 }
 
@@ -279,9 +278,8 @@ PHV::Allocation::MutuallyLiveSlices
 PHV::Allocation::byteSlicesByLiveness(const PHV::Container c, const AllocSlice& sl,
                                       const PragmaNoInit& noInit) const {
     PHV::Allocation::MutuallyLiveSlices rs;
-    auto slices = this->slices(c);
     bool sl_is_extracted = uses_i->is_extracted_from_pkt(sl.field());
-    for (auto& slice : slices) {
+    this->foreach_slice(c, [&] (const AllocSlice& slice) {
         bool mutex = phv_i->field_mutex()(slice.field()->id, sl.field()->id);
         // *ALEX* Checking disjoint liveranges may be too conservative due to
         // default [parser, deparser] liveranges - See P4C-4467
@@ -304,7 +302,7 @@ PHV::Allocation::byteSlicesByLiveness(const PHV::Container c, const AllocSlice& 
         }
 
         if (!mutex && (!liverange_mutex || extr_in_uninit_byte)) rs.insert(slice);
-    }
+    });
     return rs;
 }
 
@@ -312,16 +310,15 @@ PHV::Allocation::MutuallyLiveSlices
 PHV::Allocation::slicesByLiveness(const PHV::Container c,
                                   std::vector<AllocSlice>& slices) const {
     PHV::Allocation::MutuallyLiveSlices rs;
-    auto existingSlices = this->slices(c);
     // TODO(yumin): discrepancy with ^ slicesByLiveness function
     // liveRangeDisjoint not check in this function.
-    for (auto& slice : existingSlices) {
+    this->foreach_slice(c, [&] (const AllocSlice& slice) {
         if (std::any_of(slices.begin(), slices.end(), [&](const AllocSlice& sl) {
                 return !phv_i->field_mutex()(slice.field()->id, sl.field()->id);
             })) {
             rs.insert(slice);
         }
-    }
+    });
     return rs;
 }
 
@@ -810,6 +807,15 @@ PHV::Allocation::FieldStatus PHV::ConcreteAllocation::getStatus(const PHV::Field
     return { };
 }
 
+void PHV::ConcreteAllocation::foreach_slice(const PHV::Field* f,
+                                            std::function<void(const AllocSlice&)> cb) const {
+    if (auto it = field_status_i.find(f); it != field_status_i.end()) {
+        for (const auto& slice : it->second) {
+            cb(slice);
+        }
+    }
+}
+
 void PHV::ConcreteAllocation::deallocate(const ordered_set<PHV::AllocSlice>& slices) {
     ordered_set<PHV::Container> touched_conts;
     for (const auto& sl : slices) {
@@ -908,22 +914,38 @@ ordered_set<PHV::AllocSlice> PHV::Allocation::slices(PHV::Container c) const {
     return slices(c, StartLen(0, int(c.type().size())));
 }
 
+void PHV::Allocation::foreach_slice(PHV::Container c,
+                                    std::function<void(const PHV::AllocSlice&)> cb) const {
+    foreach_slice(c, StartLen(0, int(c.type().size())), cb);
+}
+
 ordered_set<PHV::AllocSlice>
 PHV::Allocation::slices(PHV::Container c, int stage, PHV::FieldUse access) const {
     return slices(c, StartLen(0, int(c.type().size())), stage, access);
 }
 
+void
+PHV::Allocation::foreach_slice(PHV::Container c, int stage, PHV::FieldUse access,
+                               std::function<void(const PHV::AllocSlice&)> cb) const {
+    foreach_slice(c, StartLen(0, int(c.type().size())), stage, access, cb);
+}
+
 // Returns the contents of this transaction *and* its parent.
 ordered_set<PHV::AllocSlice> PHV::Allocation::slices(PHV::Container c, le_bitrange range) const {
     ordered_set<PHV::AllocSlice> rv;
+    foreach_slice(c, range, [&] (const PHV::AllocSlice& slice) {
+        rv.insert(slice);
+    });
+    return rv;
+}
 
+void PHV::Allocation::foreach_slice(PHV::Container c, le_bitrange range,
+                                    std::function<void(const PHV::AllocSlice&)> cb) const {
     if (const auto* status = this->getStatus(c))
         for (auto& slice : status->slices)
             if (slice.container_slice().overlaps(range)) {
-                rv.insert(slice);
+                cb(slice);
             }
-
-    return rv;
 }
 
 ordered_set<PHV::AllocSlice>
@@ -932,14 +954,25 @@ PHV::Allocation::slices(
         le_bitrange range,
         int stage,
         PHV::FieldUse access) const {
-    auto all_slices = slices(c, range);
     ordered_set<PHV::AllocSlice> rv;
-    for (auto& slice : all_slices) {
-        if (slice.isLiveAt(stage, access)) {
-            rv.insert(slice);
-        }
-    }
+    foreach_slice(c, range, stage, access, [&] (const PHV::AllocSlice& slice) {
+        rv.insert(slice);
+    });
     return rv;
+}
+
+void
+PHV::Allocation::foreach_slice(
+        PHV::Container c,
+        le_bitrange range,
+        int stage,
+        PHV::FieldUse access,
+        std::function<void(const PHV::AllocSlice&)> cb) const {
+    foreach_slice(c, range, [&] (const PHV::AllocSlice& slice) {
+        if (slice.isLiveAt(stage, access)) {
+            cb(slice);
+        }
+    });
 }
 
 const PHV::Allocation::ContainerStatus*
@@ -966,18 +999,32 @@ PHV::Transaction::getStatus(const PHV::Field* f) const {
     // only see part of the actual alloc slices of @p field.
     // Also, the performance improvement of caching is open to doubt.
     PHV::Allocation::FieldStatus rst;
-    ordered_set<le_bitrange> range_seen;
+    this->foreach_slice(f, [&] (const AllocSlice& slice) {
+        rst.insert(slice);
+    });
+    return rst;
+}
+
+void
+PHV::Transaction::foreach_slice(const PHV::Field* f,
+                                std::function<void(const AllocSlice&)> cb) const {
+    // DO NOT cache field_status_i like container_status_i because
+    // container_status_i are always modified-by-copy, while this
+    // field_status_i are not. This leads to a bug that when field_status_i
+    // is modified in a parent transaction, children transactions can
+    // only see part of the actual alloc slices of @p field.
+    // Also, the performance improvement of caching is open to doubt.
+    assoc::hash_set<le_bitrange> range_seen;
     if (field_status_i.count(f)) {
         for (const auto& slice : field_status_i.at(f)) {
             range_seen.insert(slice.field_slice());
-            rst.insert(slice);
+            cb(slice);
         }
     }
-    for (const auto& slice : parent_i->getStatus(f)) {
-        if (range_seen.count(slice.field_slice())) continue;
-        rst.insert(slice);
-    }
-    return rst;
+    parent_i->foreach_slice(f, [&] (const AllocSlice& s) {
+        if (range_seen.count(s.field_slice())) return;
+        cb(s);
+    });
 }
 
 ordered_set<PHV::AllocSlice>
@@ -985,11 +1032,21 @@ PHV::Allocation::slices(const PHV::Field* f, le_bitrange range) const {
     ordered_set<PHV::AllocSlice> rv;
 
     // Get status, which includes parent and child info.
-    for (auto& slice : this->getStatus(f))
-        if (slice.field_slice().overlaps(range))
-            rv.insert(slice);
+    this->foreach_slice(f, range, [&] (const PHV::AllocSlice& slice) {
+        rv.insert(slice);
+    });
 
     return rv;
+}
+
+void
+PHV::Allocation::foreach_slice(const PHV::Field* f, le_bitrange range,
+        std::function<void(const AllocSlice&)> cb) const {
+    // Get status, which includes parent and child info.
+    this->foreach_slice(f, [&] (const AllocSlice& slice) {
+        if (slice.field_slice().overlaps(range))
+            cb(slice);
+    });
 }
 
 ordered_set<PHV::AllocSlice>
@@ -998,14 +1055,24 @@ PHV::Allocation::slices(
         le_bitrange range,
         int stage,
         PHV::FieldUse access) const {
-    auto all_slices = slices(f, range);
     ordered_set<PHV::AllocSlice> rv;
-    for (auto& slice : all_slices) {
-        if (slice.isLiveAt(stage, access)) {
-            rv.insert(slice);
-        }
-    }
+    foreach_slice(f, range, stage, access, [&] (const AllocSlice& slice) {
+        rv.insert(slice);
+    });
     return rv;
+}
+
+void PHV::Allocation::foreach_slice(
+        const PHV::Field* f,
+        le_bitrange range,
+        int stage,
+        PHV::FieldUse access,
+        std::function<void(const AllocSlice&)> cb) const {
+    foreach_slice(f, range, [&] (const AllocSlice& slice) {
+        if (slice.isLiveAt(stage, access)) {
+            cb(slice);
+        }
+    });
 }
 
 ordered_map<PHV::Container, PHV::Allocation::ContainerStatus> PHV::Transaction::get_actual_diff()

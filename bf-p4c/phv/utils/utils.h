@@ -233,6 +233,8 @@ class Allocation {
     /// @returns the FieldStatus of this allocation, if present.  Failing
     ///          that, check its ancestors.  If @p f has no status yet, return an empty FieldStatus.
     virtual FieldStatus getStatus(const PHV::Field* f) const = 0;
+    virtual void foreach_slice(const PHV::Field* f,
+                               std::function<void(const AllocSlice&)> cb) const = 0;
 
     friend class Transaction;
 
@@ -266,9 +268,12 @@ class Allocation {
 
     /// @returns all the slices allocated to @p c.
     ordered_set<AllocSlice> slices(PHV::Container c) const;
+    void foreach_slice(PHV::Container c, std::function<void(const AllocSlice&)> cb) const;
 
     /// @returns all the slices allocated to @p c and valid in the stage @p stage.
     ordered_set<AllocSlice> slices(PHV::Container c, int stage, PHV::FieldUse access) const;
+    void foreach_slice(PHV::Container c, int stage, PHV::FieldUse access,
+                std::function<void(const AllocSlice&)> cb) const;
 
     /// Add @p slice allocated to a dark container to the current Allocation object.
     /// @returns true if the addition was successful.
@@ -296,9 +301,14 @@ class Allocation {
     }
 
     /// @returns all the slices allocated to @p c that overlap with @p range.
-    virtual ordered_set<AllocSlice> slices(PHV::Container c, le_bitrange range) const;
-    virtual ordered_set<AllocSlice>
+    ordered_set<AllocSlice> slices(PHV::Container c, le_bitrange range) const;
+    ordered_set<AllocSlice>
         slices(PHV::Container c, le_bitrange range, int stage, PHV::FieldUse access) const;
+    void foreach_slice(PHV::Container c, le_bitrange range,
+                       std::function<void(const AllocSlice&)> cb) const;
+
+    void foreach_slice(PHV::Container c, le_bitrange range, int stage, PHV::FieldUse access,
+                       std::function<void(const AllocSlice&)> cb) const;
 
     /** The allocation manager keeps a list of combinations of slices that are
      * live in the container at the same time, as well as the thread assignment
@@ -364,9 +374,14 @@ class Allocation {
     /// the field portion of the allocated slice.  May be empty (if @p f is not
     /// allocated) or contain slices that do not fully cover all bits of @p f (if
     /// @p f is only partially allocated).
-    virtual ordered_set<PHV::AllocSlice> slices(const PHV::Field* f, le_bitrange range) const;
-    virtual ordered_set<PHV::AllocSlice>
+    ordered_set<PHV::AllocSlice> slices(const PHV::Field* f, le_bitrange range) const;
+    ordered_set<PHV::AllocSlice>
         slices(const PHV::Field* f, le_bitrange range, int stage, PHV::FieldUse access) const;
+
+    void foreach_slice(const PHV::Field* f, le_bitrange range,
+                std::function<void(const AllocSlice&)> cb) const;
+    void foreach_slice(const PHV::Field* f, le_bitrange range, int stage, PHV::FieldUse access,
+                std::function<void(const AllocSlice&)> cb) const;
 
     /// @returns the set of slices allocated for the field @p f in this
     /// Allocation.  May be empty (if @p f is not allocated) or contain slices that
@@ -489,6 +504,8 @@ class ConcreteAllocation : public Allocation {
     /// @returns the FieldStatus of this allocation, if present.  Failing
     ///          that, check its ancestors.  If @p f has no status yet, return an empty FieldStatus.
     FieldStatus getStatus(const PHV::Field* f) const override;
+    void foreach_slice(const PHV::Field* f,
+                       std::function<void(const AllocSlice&)> cb) const override;
 
     /** @returns an allocation initialized with the containers present in
      * Device::phvSpec, with the gress set for any hard-wired containers, but
@@ -537,6 +554,8 @@ class Transaction : public Allocation {
     /// @returns the FieldStatus of this allocation, if present.  Failing
     ///          that, check its ancestors.  If @p f has no status yet, return an empty FieldStatus.
     FieldStatus getStatus(const PHV::Field* f) const override;
+    void foreach_slice(const PHV::Field* f,
+                       std::function<void(const AllocSlice&)> cb) const override;
 
  public:
     /// Constructor.

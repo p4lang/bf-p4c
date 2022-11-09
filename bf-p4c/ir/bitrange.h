@@ -410,6 +410,13 @@ struct HalfOpenRange {
         return hi < other.hi;
     }
 
+    friend size_t hash_value(const HalfOpenRange& r) {
+        size_t h = 0;
+        boost::hash_combine(h, r.lo);
+        boost::hash_combine(h, r.hi);
+        return h;
+    }
+
     /// The lowest numbered index in the range. For Endian::Network, this is the
     /// most significant bit or byte; for Endian::Little, it's the least
     /// significant.
@@ -611,6 +618,13 @@ struct ClosedRange {
         if (lo != other.lo)
             return lo < other.lo;
         return hi < other.hi;
+    }
+
+    friend size_t hash_value(const ClosedRange& cr) {
+        size_t h = 0;
+        boost::hash_combine(h, cr.lo);
+        boost::hash_combine(h, cr.hi);
+        return h;
     }
 
     /// Formats this range as P4 syntax by converting to a little-endian range of bits, and

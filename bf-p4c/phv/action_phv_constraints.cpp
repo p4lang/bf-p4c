@@ -4007,10 +4007,10 @@ CanPackErrorV2 ActionPhvConstraints::check_read_action_move_constraints(
         for (const auto& slice : candidates) {
             for (const auto& write : constraint_tracker.destinations(slice, action)) {
                 // if destination has been allocated, save their containers.
-                for (const auto& write_sl :
-                     alloc.slices(write.field(), write.range(), stage, use)) {
-                    container_write_slices[write_sl.container()].insert(write_sl);
-                }
+                alloc.foreach_slice(write.field(), write.range(), stage, use,
+                    [&] (const auto& write_sl) {
+                        container_write_slices[write_sl.container()].insert(write_sl);
+                    });
             }
         }
         // Walk through the destination containers one-by-one and check their validity
