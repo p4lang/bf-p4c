@@ -119,7 +119,6 @@ JBayArchSpec::JBayArchSpec() : ArchSpec() {
     add_dprsr_md(INGRESS, IntrinsicField("pktgen", "pgen"));
     add_dprsr_md(INGRESS, IntrinsicField("pktgen_length", "pgen_len"));
     add_dprsr_md(INGRESS, IntrinsicField("pktgen_address", "pgen_addr"));
-    add_dprsr_md(INGRESS, IntrinsicField("learn_sel"));
 
     // egress_intrinsic_metadata_for_deparser
     add_dprsr_md(EGRESS, IntrinsicField("mirror_hash", "mirr_hash"));
@@ -174,7 +173,6 @@ CloudbreakArchSpec::CloudbreakArchSpec() : ArchSpec() {
     add_dprsr_md(INGRESS, IntrinsicField("pktgen", "pgen"));
     add_dprsr_md(INGRESS, IntrinsicField("pktgen_length", "pgen_len"));
     add_dprsr_md(INGRESS, IntrinsicField("pktgen_address", "pgen_addr"));
-    add_dprsr_md(INGRESS, IntrinsicField("learn_sel"));
 
     // egress_intrinsic_metadata_for_deparser
     add_dprsr_md(EGRESS, IntrinsicField("mirror_hash", "mirr_hash"));

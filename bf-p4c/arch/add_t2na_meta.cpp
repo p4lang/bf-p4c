@@ -37,8 +37,6 @@ void AddT2naMeta::postorder(IR::Type_StructLike* typeStructLike) {
             new IR::StructField("mtu_trunc_err_f", IR::Type::Bits::get(1)));
         if (typeStructLikeName == "ingress_intrinsic_metadata_for_deparser_t") {
             typeStructLike->fields.push_back(
-                new IR::StructField("learn_sel", IR::Type::Bits::get(3)));
-            typeStructLike->fields.push_back(
                 new IR::StructField("pktgen", IR::Type::Bits::get(1)));
             typeStructLike->fields.push_back(
                 new IR::StructField("pktgen_address", IR::Type::Bits::get(14)));
