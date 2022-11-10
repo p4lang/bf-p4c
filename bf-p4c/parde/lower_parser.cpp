@@ -1134,6 +1134,9 @@ struct ComputeLoweredParserIR : public ParserInspector {
  * @pre The slices stored in @a slices should not overlap.
  */
 struct ParserExtract {
+    Flatrock::ExtractType type;
+    Flatrock::ExtractSubtype subtype;
+
     // size of the PHV container of this extraction
     PHV::Size size;
     // slices of the PHV container of this extraction; might not be the whole container if multiple
@@ -1152,8 +1155,7 @@ struct ParserExtract {
      * W1 -> 1
      */
     unsigned int index;
-    Flatrock::ExtractType type;
-    Flatrock::ExtractSubtype subtype;
+
     cstring hdr;
     /// In case of a constant, @a offset stores the value of the constant at proper bit position.
     /// If more constants are mapped to a single container, their values are merged in @a offset.
@@ -1282,6 +1284,67 @@ class ComputeFlatrockParserIR : public ParserInspector {
                 extract->source->to<IR::BFN::InputBufferRVal>()->range : nw_bitrange{}, true));
     }
 
+    bool preorder(const IR::BFN::ParserZeroInit* zero) override {
+        return preorder(new IR::BFN::Extract(zero->field, new IR::BFN::ConstantRVal(0)));
+    }
+
+    ParserExtract extract_packet(const PHV::AllocSlice &alloc,
+            const cstring hdr_name, int container_offset_in_bytes) {
+        ParserExtract e = {
+            .type = Flatrock::ExtractType::Packet,
+            .subtype = Flatrock::ExtractSubtype::None,
+            .size = alloc.container().type().size(),
+            .slices = std::vector<le_bitrange>{alloc.container_slice()},
+            .index = alloc.container().index(),
+            .hdr = hdr_name,
+            .offset = container_offset_in_bytes
+        };
+
+        return e;
+    }
+
+    ParserExtract extract_constant(const PHV::AllocSlice &alloc,
+            const IR::BFN::ConstantRVal *constant, const cstring hdr_name) {
+        auto value = constant->constant->asUnsigned();
+        // Check that the value doesn't overflow
+        const auto max_slice_value = (1ULL << alloc.container_slice().size()) - 1;
+        BUG_CHECK(value <= max_slice_value,
+            "Value %1% too big for the constainer slice %2%%3% %4%", value,
+            alloc.container().type().size(), alloc.container().index(), alloc.container_slice());
+
+        ParserExtract e = {
+            .type = Flatrock::ExtractType::Other,
+            .subtype = Flatrock::ExtractSubtype::Constant,
+            .size = alloc.container().type().size(),
+            .slices = std::vector<le_bitrange>{alloc.container_slice()},
+            .index = alloc.container().index(),
+            .hdr = hdr_name,
+            // Store the value at proper bit position
+            .offset = static_cast<int>(value << alloc.container_slice().lo)
+        };
+
+        return e;
+    }
+
+    int get_hdr_bit_width(const IR::Expression *expr) {
+        auto *member = expr->to<IR::Member>();
+        if (member == nullptr)
+            if (const auto *slice = expr->to<IR::Slice>())
+                member = slice->e0->to<IR::Member>();
+        CHECK_NULL(member);
+        CHECK_NULL(member->expr);
+
+        const auto hdr_ref = member->expr->to<IR::HeaderRef>();
+        BUG_CHECK(hdr_ref, "Unsupported header expression: %1%", member->expr);
+        CHECK_NULL(hdr_ref->baseRef());
+
+        return hdr_ref->baseRef()->type->width_bits();
+    }
+
+    /**
+     * The @p extract parameter can be a dummy not being a part of the IR tree.
+     * @see preorder(const IR::BFN::ParserZeroInit* zero)
+     */
     bool preorder(const IR::BFN::Extract* extract) override {
         // FIXME: Other extract sources are currently not mapped to HW resources,
         // so we rather report it than ignore them.
@@ -1292,33 +1355,19 @@ class ComputeFlatrockParserIR : public ParserInspector {
         CHECK_NULL(lval);
 
         const auto allocs = phv.get_alloc(lval->field, PHV::AllocContext::PARSER);
-        BUG_CHECK(allocs.size() <= 1, "Only one allocation allowed after PHV allocation");
+        BUG_CHECK(allocs.size() <= 1, "Only one parser allocation allowed");
         const auto* phv_field = phv.field(lval->field);
         CHECK_NULL(phv_field);
         const cstring hdr_name = phv_field->header();
         BUG_CHECK(!hdr_name.isNullOrEmpty(), "Unspecified header name");
-        BUG_CHECK(phv_field->parsed(), "Processing non-parsed field");
+        if (hdr_name == igMetaName)
+            igMetaExtracted = true;
 
         LOG5("lval->field: " << lval->field);
         LOG5("phv_field: " << phv_field);
         for (const auto &a : allocs) {
             LOG5("alloc: " << a);
         }
-
-        auto *member = lval->field->to<IR::Member>();
-        if (member == nullptr) {
-            const auto *slice = lval->field->to<IR::Slice>();
-            if (slice != nullptr)
-                member = slice->e0->to<IR::Member>();
-        }
-        CHECK_NULL(member);
-        CHECK_NULL(member->expr);
-
-        const auto hdr_ref = member->expr->to<IR::HeaderRef>();
-        BUG_CHECK(hdr_ref, "Unsupported header expression: %1%", member->expr);
-        CHECK_NULL(hdr_ref->baseRef());
-
-        const size_t hdr_bit_width = hdr_ref->baseRef()->type->width_bits();
 
         bool used_in_ingress = false;
         bool used_in_egress = false;
@@ -1330,59 +1379,56 @@ class ComputeFlatrockParserIR : public ParserInspector {
                 used_in_egress = true;
         }
 
-        int hdr_offset_in_bits = 0;
         if (allocs.size() > 0) {
             const auto& alloc = allocs.front();
-            boost::optional<int> container_offset_in_bytes;
-            Flatrock::ExtractType type = Flatrock::ExtractType::None;
-            Flatrock::ExtractSubtype subtype = Flatrock::ExtractSubtype::None;
 
-            if (extract->source->is<IR::BFN::PacketRVal>()) {
-                const int after_field_bits = phv_field->offset;
+            ParserExtract e;
+
+            if (const auto *pkt_rval = extract->source->to<IR::BFN::PacketRVal>()) {
+                size_t hdr_bit_width = get_hdr_bit_width(lval->field);
+                BUG_CHECK(hdr_bit_width % 8 == 0,
+                        "Header %1% is not byte-aligned (%2% bits) during parser lowering",
+                        hdr_name, hdr_bit_width);
+                int after_field_bits = phv_field->offset;
                 int field_offset_in_bits = hdr_bit_width - after_field_bits -
                     (alloc.field_slice().hi + 1);
                 LOG5("field_offset_in_bits: " << field_offset_in_bits);
-
-                auto rval = extract->source->to<IR::BFN::PacketRVal>();
-                BUG_CHECK(rval->range.lo >= field_offset_in_bits,
+                BUG_CHECK(pkt_rval->range.lo >= field_offset_in_bits,
                         "Offset of extract (%1%) source in input buffer (%2%)"
                         " is lower than offset of destination field (%3%)",
-                        extract, rval->range.lo, field_offset_in_bits);
-                hdr_offset_in_bits = rval->range.lo - field_offset_in_bits;
-
+                        extract, pkt_rval->range.lo, field_offset_in_bits);
+                int hdr_offset_in_bits = pkt_rval->range.lo - field_offset_in_bits;
+                BUG_CHECK(hdr_offset_in_bits % 8 == 0,
+                        "Offset of header %1% is not byte-aligned (%2% bits)"
+                        " during parser lowering",
+                        hdr_name, hdr_offset_in_bits);
                 int container_offset_in_bits = field_offset_in_bits -
                         (alloc.container().size() - (alloc.container_slice().hi + 1));
                 LOG5("container_offset_in_bits: " << container_offset_in_bits);
                 BUG_CHECK(container_offset_in_bits >= 0, "Invalid container allocation");
-                type = Flatrock::ExtractType::Packet;
                 BUG_CHECK(container_offset_in_bits % 8 == 0,
                         "Invalid position of slice in container");
-                container_offset_in_bytes = container_offset_in_bits / 8;
+                int container_offset_in_bytes = container_offset_in_bits / 8;
                 LOG5("container_offset_in_bytes: " << container_offset_in_bytes);
-            } else if (auto* constantSource = extract->source->to<IR::BFN::ConstantRVal>()) {
-                type = Flatrock::ExtractType::Other;
-                subtype = Flatrock::ExtractSubtype::Constant;
-                auto value = constantSource->constant->asUnsigned();
-                // check that the value doesn't overflow
-                const auto max_slice_value = (1ULL << alloc.container_slice().size()) - 1;
-                BUG_CHECK(value <= max_slice_value, "Value too big for given container");
-                // store the value at proper bit position
-                container_offset_in_bytes = value << alloc.container_slice().lo;
+                e = extract_packet(alloc, hdr_name, container_offset_in_bytes);
+                const auto *state = findContext<IR::BFN::ParserState>();
+                CHECK_NULL(state);
+                if (headers[state].count(hdr_name) == 0) {
+                    int push_hdr_width = hdr_bit_width / 8;
+                    headers[state].insert(hdr_name);
+                    LOG3("Collecting state[" << state->name << "] push_hdr: " << hdr_name <<
+                            ", width (in bytes): " << push_hdr_width <<
+                            ", offset (in bytes): " << (hdr_offset_in_bits / 8));
+                    rules_info[state].push_hdr.push_back({
+                        hdr_name,
+                        push_hdr_width,
+                        hdr_offset_in_bits / 8
+                    });
+                }
+            } else if (const auto* const_rval = extract->source->to<IR::BFN::ConstantRVal>()) {
+                e = extract_constant(alloc, const_rval, hdr_name);
             }
 
-            BUG_CHECK(container_offset_in_bytes, "Uninitialized header offset");
-
-            const auto size = alloc.container().type().size();
-            const auto index = alloc.container().index();
-            const auto slice = alloc.container_slice();
-
-            ParserExtract e = {.size = size,
-                               .slices = std::vector<le_bitrange>{slice},
-                               .index = index,
-                               .type = type,
-                               .subtype = subtype,
-                               .hdr = hdr_name,
-                               .offset = *container_offset_in_bytes};
             // FIXME If a header field is modified in ingress and then used in egress,
             // extracting it again in egress would overwrite the changes from ingress.
             // The PHEs from ingress should be copied to egress instead.
@@ -1391,32 +1437,6 @@ class ComputeFlatrockParserIR : public ParserInspector {
             if (used_in_egress)
                 add_extract(EGRESS, extract, alloc, e);
         };
-
-        const auto *state = findContext<IR::BFN::ParserState>();
-        CHECK_NULL(state);
-        if (headers[state].count(hdr_name) == 0) {
-            if (extract->source->is<IR::BFN::PacketRVal>()) {
-                BUG_CHECK(hdr_bit_width % 8 == 0,
-                        "Header %1% is not byte-aligned (%2% bits) during parser lowering",
-                        hdr_name, hdr_bit_width);
-                BUG_CHECK(hdr_offset_in_bits % 8 == 0,
-                        "Offset of header %1% is not byte-aligned (%2% bits)"
-                        " during parser lowering",
-                        hdr_name, hdr_offset_in_bits);
-                int push_hdr_width = hdr_bit_width / 8;
-                headers[state].insert(hdr_name);
-                LOG3("Collecting state[" << state->name << "] push_hdr: " << hdr_name <<
-                        ", width (in bytes): " << push_hdr_width <<
-                        ", offset (in bytes): " << (hdr_offset_in_bits / 8));
-                rules_info[state].push_hdr.push_back({
-                    hdr_name,
-                    push_hdr_width,
-                    hdr_offset_in_bits / 8
-                });
-            }
-            if (hdr_name == igMetaName)
-                igMetaExtracted = true;
-        }
 
         return true;
     }
@@ -1479,8 +1499,9 @@ class ComputeFlatrockParserIR : public ParserInspector {
         // so we rather report it than ignore them.
         if (!findContext<IR::BFN::Transition>())
             BUG_CHECK(prim->is<IR::BFN::Extract>() ||
-                    prim->is<IR::Flatrock::ExtractPayloadHeader>(),
-                    "IR::BFN::ParserPrimitive: %1% is currently not supported!", prim);
+                prim->is<IR::BFN::ParserZeroInit>() ||
+                prim->is<IR::Flatrock::ExtractPayloadHeader>(),
+                "IR::BFN::ParserPrimitive: %1% is currently not supported!", prim);
         return true;
     }
 

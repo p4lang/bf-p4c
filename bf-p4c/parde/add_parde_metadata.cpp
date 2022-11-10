@@ -85,22 +85,17 @@ void AddParserMetadata::addTofinoIngressParserEntryPoint(IR::BFN::Parser* parser
         { new IR::BFN::Transition(match_t(), 0, parser->start) });
 }
 
-void AddParserMetadata::addFlatrockIngressParserEntryPoint(IR::BFN::Parser* /*parser*/) {
-    ::warning("Parser metadata partially implemented for %1%", Device::name());
-
-    // auto prim = new IR::Vector<IR::BFN::ParserPrimitive>();
-
-    // FIXME: enable the code below when Flatrock lower-parser supports constants.
+void AddParserMetadata::addFlatrockIngressParserEntryPoint(IR::BFN::Parser* parser) {
     // Initialize ingress_intrinsic_metadata_for_tm.$zero to 0
-    // auto* igTmMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_tm");
-    // auto zeroVar = new IR::BFN::FieldLVal(
-    //     new IR::TempVar(IR::Type::Bits::get(8), true, igTmMeta->name + ".$zero"));
-    // prim->push_back(new IR::BFN::Extract(zeroVar, new IR::BFN::ConstantRVal(0)));
+    auto* igTmMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_tm");
+    CHECK_NULL(igTmMeta);
+    auto zeroVar = new IR::BFN::FieldLVal(
+        new IR::TempVar(IR::Type::Bits::get(8), true, igTmMeta->name + ".$zero"));
+    auto prim = new IR::Vector<IR::BFN::ParserPrimitive>(
+        { new IR::BFN::Extract(zeroVar, new IR::BFN::ConstantRVal(0)) });
 
-    // parser->start =
-    //   new IR::BFN::ParserState(createThreadName(parser->gress, "$entry_point"), parser->gress,
-    //     *prim, { },
-    //     { new IR::BFN::Transition(match_t(), 0, parser->start) });
+    parser->start = new IR::BFN::ParserState(createThreadName(parser->gress, "$entry_point"),
+        parser->gress, *prim, { }, { new IR::BFN::Transition(match_t(), 0, parser->start) });
 }
 
 void AddParserMetadata::addIngressMetadata(IR::BFN::Parser *parser) {
