@@ -87,7 +87,12 @@ struct operand {
                 return 16/size + (abs.xcmp_group-1)*4 + abs.xcmp_byte/4;
             } else {
                 return abs.xcmp_byte/size; } }
-        int bit_offset(int slot) override { return reg->lo % ::Phv::reg(slot)->size; }
+        int bit_offset(int slot) override {
+            BUG_CHECK(abs.type == ActionBusSource::XcmpData, "%s not on xcmp abus", reg.name());
+            unsigned bit = reg->lo;
+            if (!abs.xcmp_group)
+                bit = bit % 8U + (abs.xcmp_byte%4U) * 8;
+            return bit % ::Phv::reg(slot)->size; }
         bool check() override {
             if (!reg.check()) return false;
             if (reg->reg.mau_id() < 0) {
