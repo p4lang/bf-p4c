@@ -3,6 +3,7 @@
 
 #include "bf-p4c/mau/input_xbar.h"
 #include "bf-p4c/common/alloc.h"
+#include "bf-p4c/mau/asm_output.h"
 #include "bf-p4c/mau/mau_spec.h"
 
 class Slice;
@@ -62,6 +63,9 @@ class IXBar : public ::IXBar {
 
         bool emit_gateway_asm(const MauAsmOutput &, std::ostream &, indent_t,
                               const IR::MAU::Table *) const override;
+        void emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &match_data,
+                safe_vector<Slice> &ghost, const TableMatch *fmt,
+                std::map<int, std::map<int, Slice>> &sort) const override;
         void emit_salu_bytemasks(std::ostream &, indent_t) const { BUG(""); }
         void emit_ixbar_asm(const PhvInfo &phv, std::ostream& out, indent_t indent,
                             const TableMatch *fmt, const IR::MAU::Table *) const;
@@ -76,6 +80,8 @@ class IXBar : public ::IXBar {
         int total_input_bits() const { BUG(""); }
         void update_resources(int, BFN::Resources::StageResources &) const;
         const char *way_source_kind() const { return "xme"; }
+        bool has_lamb() const { return xme_units & LAMB_XME_UNITS; }
+        bool has_stm() const { return xme_units & STM_XME_UNITS; }
 
      private:
         int slot_size(int group) const;

@@ -13,6 +13,8 @@ class PpuAsmOutput : public MauAsmOutput {
     void emit_memory(std::ostream &out, indent_t, const Memories::Use &,
             const IR::MAU::Table::Layout *l = nullptr,
             const TableFormat::Use *f = nullptr) const override;
+    void emit_ways(std::ostream &out, indent_t indent, const ::IXBar::Use *use,
+            const Memories::Use *mem) const override;
  public:
     PpuAsmOutput(const PhvInfo &phv, const IR::BFN::Pipe *pipe,
                  const NextTable *nxts, const MauPower::FinalizeMauPredDepsPower* pmpr,

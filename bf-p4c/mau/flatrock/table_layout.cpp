@@ -58,7 +58,14 @@ void LayoutChoices::setup_layout_option_no_match(const IR::MAU::Table *tbl,
 void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
         const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type,
         int action_data_bytes_in_table, int immediate_bits, int index) {
+    Log::TempIndent indent;
+    LOG3("Setting up layouts for exact match table " << tbl->name
+            << " with ADB " << action_data_bytes_in_table
+            << ", immediate_bits " << immediate_bits << ", index " << index << indent);
     BUG_CHECK(format_type.valid(), "invalid format type in LayoutChoices::setup_exact_match");
+
+    // TODO: Skip Adding layout with Action Data until support is added
+    if (action_data_bytes_in_table > 0) return;
 
     auto pack_val = get_pack_pragma_val(tbl, layout_proto);
     // Determine single entry bits first and then the no. of entries possible within a word
@@ -175,15 +182,13 @@ void LayoutChoices::add_layout_option(const IR::MAU::Table *tbl,
     auto lo_key = std::make_pair(tbl->name, format_type);
     int total_bits = entries * single_entry_bits;
 
-    LOG2(IndentCtl::indent);
     // Per entry cannot exceed 64 bits overhead
     if ((overhead_bits <= TableFormat::OVERHEAD_BITS)
         // Total bits cannot exceed single RAM width
             && (total_bits <= TableFormat::SINGLE_RAM_BITS)) {
         cache_layout_options[lo_key].emplace_back(layout, way, index);
-        LOG2("Adding " << cache_layout_options[lo_key].back());
+        LOG2("\tAdding " << cache_layout_options[lo_key].back());
     }
-    LOG2_UNINDENT;
 }
 
 }  // namespace Flatrock

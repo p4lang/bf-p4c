@@ -82,7 +82,7 @@ class MauAsmOutput : public MauInspector {
     void emit_ixbar(std::ostream &out, indent_t, const IXBar::Use *, const IXBar::Use *,
         const safe_vector<Tofino::IXBar::HashDistUse> *, const Memories::Use *, const TableMatch *,
         const IR::MAU::Table *, bool ternary) const;
-    void emit_ways(std::ostream &out, indent_t indent, const IXBar::Use *use,
+    virtual void emit_ways(std::ostream &out, indent_t indent, const IXBar::Use *use,
         const Memories::Use *mem) const;
     // FIXME: change API to be target-agnostic
     void emit_hash_dist(std::ostream &out, indent_t indent,

@@ -86,6 +86,11 @@ class Device {
     static int sramMinPackEntries() { return Device::get().getSramMinPackEntries(); }
     static int sramMaxPackEntries() { return Device::get().getSramMaxPackEntries(); }
     static int sramMaxPackEntriesPerRow() { return Device::get().getSramMaxPackEntriesPerRow(); }
+    /* sramColumnAdjust is applicable for Tofino targets where the left and right side columns in
+     * SRAMs are different. The columns are still present in address space but not actually usable.
+     * This results in an adjustment required for column numbering.
+     */
+    static int sramColumnAdjust() { return Device::get().getSramColumnAdjust(); }
     static int metaGlobalTimestampStart() { return Device::get().getMetaGlobalTimestampStart(); }
     static int metaGlobalTimestampLen() { return Device::get().getMetaGlobalTimestampLen(); }
     static int metaGlobalVersionStart() { return Device::get().getMetaGlobalVersionStart(); }
@@ -133,6 +138,7 @@ class Device {
     virtual int getSramMinPackEntries() const = 0;
     virtual int getSramMaxPackEntries() const = 0;
     virtual int getSramMaxPackEntriesPerRow() const = 0;
+    virtual int getSramColumnAdjust() const = 0;
     virtual int getMetaGlobalTimestampStart() const = 0;
     virtual int getMetaGlobalTimestampLen() const = 0;
     virtual int getMetaGlobalVersionStart() const = 0;
@@ -204,6 +210,7 @@ class TofinoDevice : public Device {
     int getMetaGlobalTimestampLen() const override { return 48; }
     int getMetaGlobalVersionStart() const override { return 480; }
     int getMetaGlobalVersionLen() const override { return 32; }
+    int getSramColumnAdjust() const override { return 2; }
 };
 
 class JBayDevice : public Device {
@@ -266,6 +273,7 @@ class JBayDevice : public Device {
     int getMetaGlobalTimestampLen() const override { return 48; }
     int getMetaGlobalVersionStart() const override { return 448; }
     int getMetaGlobalVersionLen() const override { return 32; }
+    int getSramColumnAdjust() const override { return 2; }
 };
 
 /// Tofino2 variants. The only difference between them is the number of
@@ -358,6 +366,7 @@ class CloudbreakDevice : public Device {
     int getMetaGlobalTimestampLen() const override { return 48; }
     int getMetaGlobalVersionStart() const override { return 448; }
     int getMetaGlobalVersionLen() const override { return 32; }
+    int getSramColumnAdjust() const override { return 2; }
 };
 #endif /* HAVE_CLOUDBREAK */
 
@@ -425,6 +434,7 @@ class FlatrockDevice : public Device {
     int getMetaGlobalTimestampLen() const override { return 48; }
     int getMetaGlobalVersionStart() const override { return 448; }
     int getMetaGlobalVersionLen() const override { return 32; }
+    int getSramColumnAdjust() const override { return 0; }
 };
 #endif /* HAVE_FLATROCK */
 

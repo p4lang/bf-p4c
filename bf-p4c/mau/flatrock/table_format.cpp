@@ -3,7 +3,56 @@
 
 namespace Flatrock {
 
+/** Given a number of overhead entries, this algorithm determines how many match groups
+ *  can fully fit into that particular RAM line.
+ *  TODO: Wide matches
+ */
+void TableFormat::allocate_full_fits(int width_sect, int group) {
+    Log::TempIndent indent;
+    LOG4("Allocating Full Fits on RAM word " << width_sect << " search bus "
+         << search_bus_per_width[width_sect] << " for group " << group << indent);
+    safe_vector<ByteInfo> allocation_needed;
+    safe_vector<ByteInfo> alloced;
+    find_bytes_to_allocate(width_sect, allocation_needed);
+    bitvec byte_attempt;
+    bitvec bit_attempt;
+
+    if (group == -1) return;
+    int groups_allocated = 0;
+    int allocate_single_group = (group >= 0);
+    while (true) {
+        alloced.clear();
+        byte_attempt.clear();
+        bit_attempt.clear();
+        // if (!allocate_single_group)
+        //     group = determine_group(width_sect, groups_allocated);
+        // if (group == -1) break;
+        LOG4("Attempting Entry " << group);
+        for (const auto& info : allocation_needed) {
+            if (!allocate_match_byte(info, alloced, width_sect, byte_attempt, bit_attempt))
+                break;
+        }
+
+        if (allocation_needed.size() != alloced.size()) break;
+
+        LOG6("Bytes used for match 0x"
+             << byte_attempt.getslice(width_sect * SINGLE_RAM_BYTES, SINGLE_RAM_BYTES));
+
+        LOG4("Entry " << group << " fully fits on RAM word");
+
+        groups_allocated++;
+        full_match_groups_per_RAM[width_sect]++;
+        bitvec empty;
+        fill_out_use(group, alloced, empty);
+        LOG4("Entry usage: " << total_use);
+
+        if (allocate_single_group) break;
+    }
+}
+
 bool TableFormat::allocate_match_with_algorithm(int group) {
+    Log::TempIndent indent;
+    LOG5("Allocate match with algorithm for group " << group << indent);
     for (int width_sect = 0; width_sect < layout_option.way.width; width_sect++) {
         allocate_full_fits(width_sect, group);
     }
@@ -21,19 +70,24 @@ bool TableFormat::allocate_match_with_algorithm(int group) {
 
 bool TableFormat::allocate_match_byte(const ByteInfo &info, safe_vector<ByteInfo> &alloced,
     int width_sect, bitvec &byte_attempt, bitvec &bit_attempt) {
+    Log::TempIndent indent;
+    LOG5("Allocate Match Byte" << indent);
     // Need to increment by entry size
     // Entry size = 1/2 1/4 of a set
     // Set size 1, 2, 4, 8, 16, 32, 64, 128 (sets per word)
     // Set enable 4 way lookup always
     // for (int i = 0; i < SINGLE_RAM_BYTES; i+=((SINGLE_RAM_BITS/MAX_GROUPS_PER_LAMB)/8))
     for (int i = 0; i < SINGLE_RAM_BYTES; i++) {
-       if (initialize_byte(i, width_sect, info, alloced, byte_attempt, bit_attempt))
-           return true;
+        if (initialize_byte(i, width_sect, info, alloced, byte_attempt, bit_attempt))
+            return true;
     }
+    LOG6("Alloced : " << alloced);
     return false;
 }
 
 void TableFormat::classify_match_bits() {
+    Log::TempIndent indent;
+    LOG5("Classifying match bits" << indent);
     safe_vector<IXBar::Use::Byte> potential_ghost;
 
     for (const auto& byte : single_match) {
@@ -50,13 +104,11 @@ void TableFormat::classify_match_bits() {
         match_bytes.emplace_back(byte, byte.bit_use);
     }
 
-
     for (auto sb : search_buses) {
         BUG_CHECK(std::count(search_bus_per_width.begin(), search_bus_per_width.end(), sb) > 0,
                   "Byte on search bus %d appears as a match byte when no search bus is "
                   "provided on match", sb);
     }
-
 
     for (const auto& info : ghost_bytes) {
         LOG6("\t\tGhost " << info.byte);
@@ -95,6 +147,8 @@ Flatrock Action Format For LAMB's
   - Need a valid bit per entry (Use disable_versioning to disable valid bit)
 *************************************************************************************************/
 bool TableFormat::allocate_sram_match() {
+    Log::TempIndent indent;
+    LOG5("Allocating SRAM Match" << indent);
     BUG_CHECK(overhead_groups_per_RAM.size() == 1,
         "Cannot allocate wide RAMS in Flatrock. Invalid size %1%",
         overhead_groups_per_RAM.size());
@@ -118,6 +172,8 @@ bool TableFormat::allocate_sram_match() {
 }
 
 bool TableFormat::allocate_overhead(bool alloc_match) {
+    Log::TempIndent indent;
+    LOG5("Allocate overhead with match(" << (alloc_match ? "Y" : "N") << ")" << indent);
     auto &layout = layout_option.layout;
     int total_groups = layout_option.way.match_groups;
     // Ternary Indirection table only need a valid overhead format for a single entry
@@ -168,18 +224,108 @@ bool TableFormat::allocate_overhead(bool alloc_match) {
 
 /** Pull out all bytes that coordinate to a particular search bus
  */
-void TableFormat::find_bytes_to_allocate(int width_sect, safe_vector<ByteInfo> &unalloced) {
-    int search_bus = search_bus_per_width[width_sect];
-    for (const auto& info : match_bytes) {
-        if (info.byte.search_bus != search_bus)
-            continue;
-        unalloced.push_back(info);
-    }
+void TableFormat::find_bytes_to_allocate(int /* width_sect */, safe_vector<ByteInfo> &unalloced) {
+    Log::TempIndent indent;
+    LOG5("Find bytes to allocate" << indent);
+
     // FIXME
-    // flatrock needs these ordered based on how they are in the input_xbar -- so sorting
+    // Flatrock needs these ordered based on how they are in the input_xbar -- so sorting
     // by size (as tofino does) is bad.  Do we need to reorder to get the word_xbar match
     // first, followed by byte_xbar?  Do we need to ensure they're densely packed on the
     // ixbar or insert gaps?  Not clear what exactly is required here.
+    //
+    // For now we attempt to order word_xbar match first followed by byte_xbar The word containers
+    // go on the word xbar while half word and byte containers go on the byte xbar. This may not
+    // work for all cases and this code may need to be revised to identify and reorder accordingly.
+    // Inefficient ordering will limit packing options while allocating match and overhead.
+    for (const auto& info : match_bytes) {
+        if (info.byte.container.size() == 32) {
+            LOG6("Add to Unalloced Match : " << info);
+            unalloced.push_back(info);
+        }
+    }
+    for (const auto& info : match_bytes) {
+        if (info.byte.container.size() < 32) {
+            LOG6("Add to Unalloced Match : " << info);
+            unalloced.push_back(info);
+        }
+    }
+}
+
+bool TableFormat::analyze_layout_option() {
+    // FIXME: In total needs some information variable passed about ghosting
+    LOG2("  Layout option { pack : " << layout_option.way.match_groups << ", width : "
+         << layout_option.way.width << ", entries: " << layout_option.entries << " }");
+
+    // If table has @dynamic_table_key_masks pragma, the driver expects all bits
+    // to be available in the table pack format, so we disable ghosting
+    if (!tbl->dynamic_key_masks &&
+        !layout_option.layout.proxy_hash && layout_option.entries > 0) {
+        int min_way_size = *std::min_element(layout_option.way_sizes.begin(),
+                                             layout_option.way_sizes.end());
+        ghost_bits_count = layout_option.layout.get_ram_ghost_bits()
+                            + floor_log2(min_way_size);
+    }
+
+    use->only_one_result_bus = layout_option.layout.atcam;
+
+    // Initialize all information
+    overhead_groups_per_RAM.resize(layout_option.way.width, 0);
+    full_match_groups_per_RAM.resize(layout_option.way.width, 0);
+    shared_groups_per_RAM.resize(layout_option.way.width, 0);
+    search_bus_per_width.resize(layout_option.way.width, 0);
+    use->match_group_map.resize(layout_option.way.width);
+
+    for (int i = 0; i < layout_option.way.match_groups; i++) {
+        use->match_groups.emplace_back();
+    }
+
+    single_match = *(match_ixbar->match_hash()[0]);
+
+    for (size_t i = 0; i < overhead_groups_per_RAM.size(); i++) {
+        bool result_bus_needed = overhead_groups_per_RAM[i] > 0;
+        use->result_bus_needed.push_back(result_bus_needed);
+    }
+    LOG3("  Search buses per word " << search_bus_per_width);
+    LOG3("  Overhead groups per word " << overhead_groups_per_RAM);
+
+    // Unsure if more code will be required here in the future
+    return true;
+}
+
+void TableFormat::choose_ghost_bits(safe_vector<IXBar::Use::Byte> &potential_ghost) {
+    int ghost_bits_allocated = 0;
+    while (ghost_bits_allocated < ghost_bits_count) {
+        int diff = ghost_bits_count - ghost_bits_allocated;
+        auto it = potential_ghost.begin();
+        if (it == potential_ghost.end())
+            break;
+        if (diff >= it->bit_use.popcount()) {
+            ghost_bytes.emplace_back(*it, it->bit_use);
+            ghost_bits_allocated += it->bit_use.popcount();
+        } else {
+            bitvec ghosted_bits;
+            int start = it->bit_use.ffs();
+            int split_bit = -1;
+            do {
+                int end = it->bit_use.ffz(start);
+                if (end - start + ghosted_bits.popcount() < diff) {
+                    ghosted_bits.setrange(start, end - start);
+                } else {
+                    split_bit = start + (diff - ghosted_bits.popcount()) - 1;
+                    ghosted_bits.setrange(start, split_bit - start + 1);
+                }
+                start = it->bit_use.ffs(end);
+            } while (start >= 0);
+            BUG_CHECK(split_bit >= 0, "Could not correctly split a byte into a ghosted and "
+                      "match section");
+            bitvec match_bits = it->bit_use - ghosted_bits;
+            ghost_bytes.emplace_back(*it, ghosted_bits);
+            ghost_bits_allocated += ghosted_bits.popcount();
+            match_bytes.emplace_back(*it, match_bits);
+        }
+        it = potential_ghost.erase(it);
+    }
 }
 
 }

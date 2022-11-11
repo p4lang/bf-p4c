@@ -2,6 +2,7 @@
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/logging/resources.h"
+#include "bf-p4c/mau/asm_hash_output.h"
 #include "bf-p4c/mau/gateway.h"
 #include "bf-p4c/mau/ixbar_expr.h"
 #include "bf-p4c/mau/resource.h"
@@ -127,6 +128,47 @@ void IXBar::Use::emit_salu_bytemasks(std::ostream &out, indent_t indent) const {
         out << indent << "data_bytemask: " << salu_input_source.data_bytemask << std::endl;
     if (salu_input_source.hash_bytemask)
         out << indent << "hash_bytemask: " << salu_input_source.hash_bytemask << std::endl;
+}
+
+/* Determine which bytes of a table's input xbar belong to an individual hash table,
+   so that we can output the hash of this individual table. */
+void IXBar::Use::emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &match_data,
+        safe_vector<Slice> &ghost, const TableMatch *fmt,
+        std::map<int, std::map<int, Slice>> &sort) const {
+    LOG5("Emitting ixbar hash table");
+    if (sort.empty()) return;
+
+    auto update_match_data = [&](Slice &reg){
+        if (fmt != nullptr) {
+            safe_vector<Slice> reg_ghost;
+            safe_vector<Slice> reg_hash = reg.split(fmt->ghost_bits, reg_ghost);
+            ghost.insert(ghost.end(), reg_ghost.begin(), reg_ghost.end());
+            // P4C-4496: if dynamic_table_key_masks pragma is applied to the
+            // table, ghost bits are disabled, as a result, match key must be
+            // emitted as match data to generated the correct hash section in
+            // bfa and context.json
+            if (!fmt->identity_hash || fmt->dynamic_key_masks)
+                match_data.insert(match_data.end(), reg_hash.begin(), reg_hash.end());
+        } else {
+            match_data.emplace_back(reg);
+        }
+    };
+
+    unsigned half = hash_table & 1;
+    if (sort.count(hash_table/2) == 0) return;
+    for (auto &match : sort.at(hash_table/2)) {
+        Slice reg = match.second;
+        if (match.first/64U != half) {
+            if ((match.first + reg.width() - 1)/64U != half)
+                continue;
+            assert(half);
+            reg = reg(64 - match.first, 64);
+        } else if ((match.first + reg.width() - 1)/64U != half) {
+            assert(!half);
+            reg = reg(0, 63 - match.first); }
+        if (!reg) continue;
+        update_match_data(reg);
+    }
 }
 
 int IXBar::Use::hash_groups() const {

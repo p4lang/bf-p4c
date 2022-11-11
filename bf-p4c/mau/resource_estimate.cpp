@@ -533,34 +533,50 @@ bool StageUseEstimate::can_be_identity_hash(const IR::MAU::Table *tbl, LayoutOpt
  */
 void StageUseEstimate::calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOption *lo,
                                            int &calculated_depth) {
+    Log::TempIndent indent;
+    LOG5("Calculating way sizes for table : " << tbl->name
+            << ", initial calculated_depth: " << calculated_depth << indent);
     if (ways_provided(tbl, lo, calculated_depth))
         return;
 
-    // TODO: Lambs are only used in Flatrock. Code needs to be updated for large lambs, currently
-    // only deals with small tables which fit in 64 / 128 words.
-    // For non-lamb layouts (STMs) the remaining code will also require a different approach.
-    // Eventually its best to separate out this function for Flatrock
-    if (lo->layout.is_lamb) {
-        if (lo->layout.is_direct) {
-            lo->way_sizes.push_back(calculated_depth);
-        } else {
-            switch (calculated_depth) {
-                case 1:
-                    lo->way_sizes = { 1 };
-                    break;
-                case 2:
-                    lo->way_sizes = {1, 1};
-                    break;
-                case 3:
-                    lo->way_sizes = {1, 1, 1};
-                    break;
-                case 4:
-                    lo->way_sizes = {1, 1, 1, 1};
-                    break;
+#if HAVE_FLATROCK
+    if (Device::currentDevice() == Device::FLATROCK) {
+        // TODO: Lambs are only used in Flatrock. Code needs to be updated for large lambs,
+        // currently only deals with small tables which fit in 64 / 128 words.
+        // For non-lamb layouts (STMs) the remaining code will also require a different approach.
+        // Eventually its best to separate out this function for Flatrock
+        if (lo->layout.is_lamb) {
+            if (lo->layout.is_direct) {
+                lo->way_sizes.push_back(calculated_depth);
+            } else {
+                switch (calculated_depth) {
+                    case 1:
+                        lo->way_sizes = { 1 };
+                        break;
+                    case 2:
+                        lo->way_sizes = {1, 1};
+                        break;
+                    case 3:
+                        lo->way_sizes = {1, 1, 1};
+                        break;
+                    case 4:
+                        lo->way_sizes = {1, 1, 1, 1};
+                        break;
+                }
             }
+        } else {  // STM
+            // By default only use 2 ways
+            if (calculated_depth == 1) {
+                calculated_depth++;
+            } else {
+                calculated_depth = calculated_depth % 2 ? calculated_depth : calculated_depth + 1;
+            }
+
+            lo->way_sizes = { calculated_depth/2, calculated_depth/2 };
         }
-        if (lo->way_sizes.size() > 0) return;
+        return;
     }
+#endif
 
     // This indicates that we are using identity function.
     if (lo->layout.ixbar_width_bits < ceil_log2(lo->layout.get_sram_depth())

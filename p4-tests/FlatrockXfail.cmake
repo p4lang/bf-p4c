@@ -18,15 +18,10 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/stf/p4c-2772-c.p4
   )
 
-p4c_add_xfail_reason("tofino5"
-  "error: invalid ram in way"
-  extensions/p4_tests/p4_16/flatrock/direct-stm0.p4
-  )
-
 # invalid assembly code
 p4c_add_xfail_reason("tofino5"
 #  "Invalid slice of 7 bit field immediate"
-  "error: Invalid field group"
+  "error: Ghost bit .* does not appear on the hash function for way"
   extensions/p4_tests/p4_16/flatrock/tf5_template.p4
   )
 
@@ -41,13 +36,13 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
-  "Table.*action_data using out-of-bounds Mem"
+  "error: The table table .* cannot find a valid packing, and cannot be placed. Possibly the match key is too wide given the hardware constraints"
   extensions/p4_tests/p4_16/flatrock/direct_actiondata1.p4
+  extensions/p4_tests/p4_16/stf/p4c-3089.p4
   )
 
 #p4c_add_xfail_reason("tofino5"
 #  ""  -- need a real test case here.
-#  extensions/p4_tests/p4_16/flatrock/pac_trivial.p4
 #  extensions/p4_tests/p4_16/flatrock/pac_single_hdr.p4
 #  )
 
@@ -129,15 +124,19 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/stf/p4c-3055-2.p4
   )
 
+p4c_add_xfail_reason("tofino5"
+  # "Compiler Bug: Cannot process pipelines with 6 arguments on Tofino 5"
+  "Compiler Bug: Exiting with SIGSEGV"
+  extensions/p4_tests/p4_16/stf/auto_init_meta2.p4
+  )
+
 # Unimplemented - support for wide matches
 p4c_add_xfail_reason("tofino5"
   "Compiler Bug: Cannot allocate wide RAMS in Flatrock. Invalid size 2"
   extensions/p4_tests/p4_16/stf/cond_checksum_update_4.p4
   extensions/p4_tests/p4_16/stf/p4c-1513.p4
-  extensions/p4_tests/p4_16/stf/p4c-3089.p4
   extensions/p4_tests/p4_16/stf/zeros_as_ones.p4
   extensions/p4_tests/p4_16/stf/p4c-2772.p4
-  extensions/p4_tests/p4_16/stf/auto_init_meta2.p4
   extensions/p4_tests/p4_16/stf/parser_extract_upcast.p4
   extensions/p4_tests/p4_16/stf/p4c-4855.p4
   )
@@ -169,8 +168,9 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
-  "error: No phv record ig_md"
+  "error: No phv record .*"
   extensions/p4_tests/p4_16/stf/backend_bug1c.p4
+  extensions/p4_tests/p4_16/stf/p4c-1179.p4
   )
 
 #p4c_add_xfail_reason("tofino5"
@@ -180,18 +180,13 @@ p4c_add_xfail_reason("tofino5"
 #  )
 
 p4c_add_xfail_reason("tofino5"
-  "Table .* using out-of-bounds Mem"
+  "Could not place table .*: The selected pack format for table .* could not fit given the input xbar allocation"
   extensions/p4_tests/p4_16/flatrock/dconfig1.p4
   )
 
 p4c_add_xfail_reason("tofino5"
   "Compiler Bug: Could not find hdr_id"
   extensions/p4_tests/p4_16/stf/parser_multi_write_8.p4
-  )
-
-p4c_add_xfail_reason("tofino5"
-  "error: Invalid offset for .* group"
-  extensions/p4_tests/p4_16/stf/p4c-1179.p4
   )
 
 p4c_add_xfail_reason("tofino5"
@@ -294,7 +289,7 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
-  "Search bus must be found within possible ghost bit candidates"
+  "Compiler Bug: Byte on search bus .* appears as a match byte when no search bus is provided on match"
   extensions/p4_tests/p4_16/stf/metadata_extract.p4
   )
 

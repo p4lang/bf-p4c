@@ -1180,46 +1180,54 @@ bool TableFormat::is_match_entry_wide() const {
  */
 bool TableFormat::initialize_byte(int byte_offset, int width_sect, const ByteInfo &info,
         safe_vector<ByteInfo> &alloced, bitvec &byte_attempt, bitvec &bit_attempt) {
-     int initial_offset = byte_offset + width_sect * SINGLE_RAM_BYTES;
+    Log::TempIndent indent;
+    LOG5("Initialize Byte with byte_offset " << byte_offset
+            << ", width_sect: " << width_sect << indent);
+    int initial_offset = byte_offset + width_sect * SINGLE_RAM_BYTES;
 
-     if (match_byte_use.getbit(initial_offset) || byte_attempt.getbit(initial_offset))
-         return false;
-     // Only interleaved bytes can go to the interleaved positions
-     if (!info.il_info.interleaved && interleaved_match_byte_use.getbit(initial_offset))
-         return false;
+    if (match_byte_use.getbit(initial_offset) || byte_attempt.getbit(initial_offset))
+        return false;
+    // Only interleaved bytes can go to the interleaved positions
+    if (!info.il_info.interleaved && interleaved_match_byte_use.getbit(initial_offset))
+        return false;
 
-     auto use_slice = total_use.getslice(initial_offset * 8, 8);
-     use_slice |= bit_attempt.getslice(initial_offset * 8, 8);
-     if (!info.il_info.interleaved)
-         use_slice |= interleaved_bit_use.getslice(initial_offset * 8, 8);
+    auto use_slice = total_use.getslice(initial_offset * 8, 8);
+    use_slice |= bit_attempt.getslice(initial_offset * 8, 8);
+    if (!info.il_info.interleaved)
+        use_slice |= interleaved_bit_use.getslice(initial_offset * 8, 8);
 
-     if (!(use_slice & info.bit_use).empty())
-         return false;
+    if (!(use_slice & info.bit_use).empty())
+        return false;
 
-     byte_attempt.setbit(initial_offset);
-     bit_attempt |= info.bit_use << (initial_offset * 8);
-     alloced.push_back(info);
-     alloced.back().byte_location = initial_offset;
-     return true;
+    byte_attempt.setbit(initial_offset);
+    bit_attempt |= info.bit_use << (initial_offset * 8);
+    alloced.push_back(info);
+    alloced.back().byte_location = initial_offset;
+    LOG6("Initialized byte " << alloced);
+    LOG6("Initial offset: " << initial_offset << ", Bit attempt " << bit_attempt
+        << "Byte attempt " << byte_attempt << " Use slice " << use_slice);
+    return true;
 }
 
 bool TableFormat::allocate_match_byte(const ByteInfo &info, safe_vector<ByteInfo> &alloced,
         int width_sect, bitvec &byte_attempt, bitvec &bit_attempt) {
     int lo = pa == SAVE_GW_SPACE ? GATEWAY_BYTES : 0;
     int hi = pa == SAVE_GW_SPACE ? VERSION_BYTES : SINGLE_RAM_BYTES;
+    Log::TempIndent indent;
+    LOG5("Allocate Match Byte [lo: " << lo << ", hi: " << hi << "]" << indent);
 
     for (int i = 0; i < SINGLE_RAM_BYTES; i++) {
-       if (i < lo || i >= hi)
-           continue;
-       if (initialize_byte(i, width_sect, info, alloced, byte_attempt, bit_attempt))
-           return true;
+        if (i < lo || i >= hi)
+            continue;
+        if (initialize_byte(i, width_sect, info, alloced, byte_attempt, bit_attempt))
+            return true;
     }
 
     for (int i = 0; i < SINGLE_RAM_BYTES; i++) {
-       if (i >= lo && i < hi)
-           continue;
-       if (initialize_byte(i, width_sect, info, alloced, byte_attempt, bit_attempt))
-           return true;
+        if (i >= lo && i < hi)
+            continue;
+        if (initialize_byte(i, width_sect, info, alloced, byte_attempt, bit_attempt))
+            return true;
     }
     return false;
 }
@@ -1230,6 +1238,8 @@ bool TableFormat::allocate_match_byte(const ByteInfo &info, safe_vector<ByteInfo
  */
 bool TableFormat::allocate_interleaved_byte(const ByteInfo &info, safe_vector<ByteInfo> &alloced,
         int width_sect, int entry, bitvec &byte_attempt, bitvec &bit_attempt) {
+    Log::TempIndent indent;
+    LOG5("Allocate Interleaved Byte" << indent);
     BUG_CHECK(info.il_info.interleaved, "Illegally calling allocate_interleaved_byte");
 
     int first_oh_bit = use->match_groups[entry].overhead_mask().min().index();
@@ -1247,8 +1257,11 @@ bool TableFormat::allocate_interleaved_byte(const ByteInfo &info, safe_vector<By
 /** Pull out all bytes that coordinate to a particular search bus
  */
 void TableFormat::find_bytes_to_allocate(int width_sect, safe_vector<ByteInfo> &unalloced) {
+    Log::TempIndent indent;
+    LOG5("Find bytes to allocate" << indent);
     int search_bus = search_bus_per_width[width_sect];
     for (const auto& info : match_bytes) {
+        LOG6("Match Byte: " << info);
         if (info.byte.search_bus != search_bus)
             continue;
         unalloced.push_back(info);
@@ -1526,6 +1539,8 @@ int TableFormat::determine_group(int width_sect, int groups_allocated) {
  */
 void TableFormat::fill_out_use(int group, const safe_vector<ByteInfo> &alloced,
                                bitvec &version_loc) {
+    Log::TempIndent indent;
+    LOG5("Filling out match byte and group use" << indent);
     auto &group_use = use->match_groups[group];
     for (const auto& info : alloced) {
         bitvec match_location = info.bit_use << (8 * info.byte_location);
@@ -1544,6 +1559,9 @@ void TableFormat::fill_out_use(int group, const safe_vector<ByteInfo> &alloced,
         if ((byte_offset % SINGLE_RAM_BYTES) < VERSION_BYTES)
             match_byte_use.setbit(byte_offset);
     }
+
+    LOG6("Total Use: " << total_use << ", group use: " << group_use
+            << ", match byte use: " << match_byte_use);
 }
 
 /** Given a number of overhead entries, this algorithm determines how many match groups
@@ -1554,8 +1572,9 @@ void TableFormat::fill_out_use(int group, const safe_vector<ByteInfo> &alloced,
  *  necessarily version, as version can be placed in any of the wide match sections.
  */
 void TableFormat::allocate_full_fits(int width_sect, int group) {
-    LOG4("\t  Allocating Full Fits on RAM word " << width_sect << " search bus "
-         << search_bus_per_width[width_sect] << " for group " << group);
+    Log::TempIndent indent;
+    LOG4("Allocating Full Fits on RAM word " << width_sect << " search bus "
+         << search_bus_per_width[width_sect] << " for group " << group << indent);
     safe_vector<ByteInfo> allocation_needed;
     safe_vector<ByteInfo> alloced;
     find_bytes_to_allocate(width_sect, allocation_needed);
@@ -1572,7 +1591,7 @@ void TableFormat::allocate_full_fits(int width_sect, int group) {
             group = determine_group(width_sect, groups_allocated);
         if (group == -1)
             break;
-        LOG4("\t    Attempting Entry " << group);
+        LOG4("Attempting Entry " << group);
         for (const auto& info : allocation_needed) {
             if (info.il_info.interleaved) {
                 if (!allocate_interleaved_byte(info, alloced, width_sect, group, byte_attempt,
@@ -1587,7 +1606,7 @@ void TableFormat::allocate_full_fits(int width_sect, int group) {
         if (allocation_needed.size() != alloced.size())
             break;
 
-        LOG6("\t\tBytes used for match 0x"
+        LOG6("Bytes used for match 0x"
              << byte_attempt.getslice(width_sect * SINGLE_RAM_BYTES, SINGLE_RAM_BYTES));
 
         bitvec version_loc;
@@ -1605,18 +1624,18 @@ void TableFormat::allocate_full_fits(int width_sect, int group) {
 
         if (!version_allocated[group] && !version_loc.empty()) {
             int version_byte = version_loc.min().index() / 8;
-            LOG6("\t\tVersion Loc : { Byte : " << (version_byte % SINGLE_RAM_BYTES)
+            LOG6("Version Loc : { Byte : " << (version_byte % SINGLE_RAM_BYTES)
                   << " Bits in Byte : " << version_loc.getslice(version_byte * 8, 8) << "}");
         } else {
-            LOG6("\t\tVersion not allocated on RAM word " << width_sect);
+            LOG6("Version not allocated on RAM word " << width_sect);
         }
 
-        LOG4("\t    Entry " << group << " fully fits on RAM word");
+        LOG4("Entry " << group << " fully fits on RAM word");
 
         groups_allocated++;
         full_match_groups_per_RAM[width_sect]++;
         fill_out_use(group, alloced, version_loc);
-        LOG4("\t    Entry usage: " << total_use);
+        LOG4("Entry usage: " << total_use);
 
         if (allocate_single_group) break;
     }

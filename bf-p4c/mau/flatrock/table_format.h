@@ -16,6 +16,9 @@ struct TableFormat : ::TableFormat {
     void find_bytes_to_allocate(int width_sect, safe_vector<ByteInfo> &unalloced) override;
     bool requires_versioning() const override { return false; }
     bool requires_valid_oh() const override { return !layout_option.layout.ternary; }
+    bool analyze_layout_option() override;
+    void choose_ghost_bits(safe_vector<IXBar::Use::Byte> &potential_ghost) override;
+    void allocate_full_fits(int width_sect, int group) override;
  public:
     TableFormat(const LayoutOption &l, const IXBar::Use *mi, const IXBar::Use *phi,
                 const IR::MAU::Table *t, const bitvec im, bool gl, FindPayloadCandidates &fpc)

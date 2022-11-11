@@ -1683,10 +1683,13 @@ struct TablePlacement::RewriteForSplitAttached : public Transform {
 };
 
 bool TablePlacement::try_alloc_ixbar(Placed *next, std::vector<Placed *> allocated_layout) {
+    Log::TempIndent indent;
+    LOG5("Trying to allocate ixbar for " << next->name << indent);
     next->resources.clear_ixbar();
     std::unique_ptr<IXBar> current_ixbar(IXBar::create());
     int tables_already_in_stage = 0;
     for (auto *p : boost::adaptors::reverse(allocated_layout)) {
+        // TODO: SCM or ternary is shared across both gress
         if (!Device::threadsSharePipe(p->table->gress, next->table->gress)) continue;
         current_ixbar->update(p->table, &p->resources);
         tables_already_in_stage++;
@@ -1719,11 +1722,13 @@ bool TablePlacement::try_alloc_ixbar(Placed *next, std::vector<Placed *> allocat
         return false;
     }
 
+    LOG5("Allocating ixbar successful");
     return true;
 }
 
 bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_stage) {
-    LOG5("Trying to allocate mem for " << next->name);
+    Log::TempIndent indent;
+    LOG5("Trying to allocate mem for " << next->name << indent);
     std::unique_ptr<Memories> current_mem(Memories::create());
     // This is to guarantee for Tofino to have at least a table per gress within a stage, as
     // a path is required from the parser

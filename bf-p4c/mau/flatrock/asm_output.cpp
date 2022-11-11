@@ -61,19 +61,20 @@ void IXBar::Use::gather_bytes(const PhvInfo &phv, std::map<int, std::map<int, Sl
 
 void IXBar::Use::emit_ixbar_asm(const PhvInfo &phv, std::ostream &out, indent_t indent,
                                 const TableMatch *fmt, const IR::MAU::Table *tbl) const {
-    std::map<int, std::map<int, Slice>> sort;
+    typedef std::map<int, std::map<int, Slice>> SortMap;
+    SortMap sort_all, sort_word, sort_byte;
     cstring group_type;
     cstring (*index)(int i) = [](int)->cstring { return ""; };
     switch (type) {
     case EXACT_MATCH:
         group_type = "exact";
-        index = [](int i)->cstring { return i ? " word" : " byte"; };
+        index = [](int i)->cstring { return i ? "word" : "byte"; };
         break;
     case ATCAM_MATCH:
         BUG("ATCAM not supported");
     case TERNARY_MATCH:
         group_type = "ternary";
-        index = [](int i)->cstring { return " " + std::to_string(i); };
+        index = [](int i)->cstring { return std::to_string(i); };
         break;
     case TRIE_MATCH:
         // is just XCMP?  so this case should go away and use default: below
@@ -86,27 +87,53 @@ void IXBar::Use::emit_ixbar_asm(const PhvInfo &phv, std::ostream &out, indent_t 
         BUG("PROXY_HASH not supported");
     default:
         group_type = "xcmp";
-        index = [](int i)->cstring { return i ? " word" : " byte"; };
+        index = [](int i)->cstring { return i ? "word" : "byte"; };
         break;
     }
-    gather_bytes(phv, sort, tbl);
-    for (auto &group : sort) {
+    gather_bytes(phv, sort_all, tbl);
+    for (auto &group : sort_all) {
         if (type == GATEWAY && group.first == 1) {
             // don't output the config of the fixed part of the gateway ixbar
             continue; }
-        out << indent << group_type << index(group.first) << ": " << group.second << std::endl; }
+        out << indent << group_type << " " << index(group.first)
+            << ": " << group.second << std::endl;
+        // TODO: Current sorting for word / byte is simple. With xcmp there is 1 byte group and 3
+        // word groups and this algorithm will need to be updated.
+        if (group.first == 1)
+            sort_word.insert(group);
+        else
+            sort_byte.insert(group);
+    }
+
     if (xme_units) {
         out << indent << "exact unit: [ " << emit_vector(bitvec(xme_units)) << " ]" << std::endl;
         int ident_bits_prev_alloc = 0;
-        for (int mask = xme_units, xmu = 0; mask; ++xmu, mask >>= 2) {
-            if ((mask & 3) == 0) continue;
-            out << indent << "hash " << xmu << ":" << std::endl;
+
+        auto emit_ixbar_hash_table_and_exact = [&](int &xmu, SortMap &s) {
             safe_vector<Slice> match_data;
             safe_vector<Slice> ghost;
-            emit_ixbar_hash_table(0, match_data, ghost, fmt, sort);
+            emit_ixbar_hash_table(-1, match_data, ghost, fmt, s);
             emit_ixbar_hash_exact(out, indent+1, match_data, ghost, this, xmu,
-                                  ident_bits_prev_alloc); } }
-    if (output_unit >= 0)
+                                  ident_bits_prev_alloc);
+        };
+
+        for (int mask = xme_units, xmu = 0; mask; ++xmu, mask >>= 2) {
+            if ((mask & 3) == 0) continue;
+            // Word hash
+            if (sort_word.size() > 0) {
+                out << indent << "word hash:" << std::endl;
+                emit_ixbar_hash_table_and_exact(xmu, sort_word);
+            }
+
+            // Byte hash
+            if (sort_byte.size() > 0) {
+                out << indent << "byte hash:" << std::endl;
+                emit_ixbar_hash_table_and_exact(xmu, sort_byte);
+            }
+        }
+    }
+
+    if (tbl->layout.is_lamb && output_unit >= 0)
         out << indent << "output unit: " << output_unit << std::endl;
 }
 
@@ -242,6 +269,54 @@ bool ActionDataBus::Use::emit_adb_asm(std::ostream &out, const IR::MAU::Table *t
     return !first;
 }
 
+/* Generate asm for the way information, such as the size, select mask, and specifically which
+   RAMs belong to a specific way */
+void PpuAsmOutput::emit_ways(std::ostream &out, indent_t indent, const ::IXBar::Use *use,
+        const Memories::Use *mem) const {
+    if (use == nullptr || use->way_use.empty()) return;
+    out << indent++ << "ways:" << std::endl;
+
+    auto ixbar_way = use->way_use.begin();
+
+    if (auto *u = dynamic_cast<const Flatrock::IXBar::Use *>(use)) {
+        unsigned xme_units = u->xme_units;
+        int i = 0;
+        for (; ixbar_way != use->way_use.end(); ++ixbar_way) {
+            // XME
+            int xme = ffs(xme_units) - 1;
+            out << indent << "- { " << use->way_source_kind() << ": " << xme << ", "
+                << "index: " << ixbar_way->index.lo << ".." << ixbar_way->index.hi;
+
+            // Select
+            if (ixbar_way->select_mask)
+                out << ", select: " << ixbar_way->select.lo << ".." << ixbar_way->select.hi
+                    << " & 0x" << hex(ixbar_way->select_mask);
+
+            // RAMS
+            if (u->has_lamb()) {
+                out << ", rams: [[" << xme << "]] }" << std::endl;
+            } else {
+                auto mem_way = mem->ways[i];
+                size_t index = 0;
+                out << ", rams: [";
+                for (auto stage_ram : mem_way.stage_rams) {
+                    auto stage = stage_ram.first;
+                    for (auto ram : stage_ram.second) {
+                        out << "[" << stage << ", " << ram.first << ", " << ram.second << "]";
+                        if (index < mem_way.rams.size() - 1)
+                            out << ", ";
+                        index++;
+                    }
+                }
+                out  << "] }" << std::endl;
+            }
+
+            xme_units &= ~(1U << xme);
+            i++;
+        }
+    }
+}
+
 void PpuAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
         const TableFormat::Use &use, const TableMatch *tm, bool ternary,
         bool no_match) const {
@@ -264,12 +339,8 @@ void PpuAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
          const IR::MAU::Table::Layout *layout, const TableFormat::Use *format) const {
     safe_vector<int> row, bus, result_bus, word;
     std::map<int, safe_vector<int>> home_rows;
-    safe_vector<int> stash_rows;
-    safe_vector<int> stash_cols;
-    safe_vector<int> stash_units;
     safe_vector<int> alu_rows;
     safe_vector<char> logical_bus;
-    bool logical = mem.type >= Memories::Use::COUNTER;
     bool have_bus = false;
     bool have_mapcol = mem.is_twoport();
     bool have_col = false;
@@ -286,49 +357,13 @@ void PpuAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
     }
 
     for (auto &r : mem.row) {
-        if (logical) {
-            int logical_row = 2*r.row + (r.col[0] >= Memories::LEFT_SIDE_COLUMNS);
-            row.push_back(logical_row);
-            have_col = true;
-            if (r.bus >= 0) {
-                switch (r.bus) {
-                    case 0 /*ACTION*/:
-                        logical_bus.push_back('A');
-                        break;
-                    case 1 /*SYNTH*/:
-                        logical_bus.push_back('S');
-                        alu_rows.push_back(logical_row);
-                        break;
-                    case 2 /*OFLOW*/:
-                        logical_bus.push_back('O');
-                        break;
-                    default:
-                        logical_bus.push_back('X');
-                        break;
-                }
-                have_bus = true;
-                // Only provide VPN for the Counter/Meter and ActionData case until validated on
-                // the other type of logical memory type.
-                if (mem.type == Memories::Use::COUNTER || mem.type == Memories::Use::METER)
-                    have_vpn = true;
-            }
-        } else {
-            row.push_back(r.row);
-            bus.push_back(r.bus);
-            if (r.bus >= 0) have_bus = true;
-            if (separate_bus)
-                result_bus.push_back(r.result_bus);
-            if (r.col.size() > 0) have_col = true;
-        }
-        if (have_word)
-            word.push_back(r.word);
-        if ((r.stash_unit >= 0) && (r.stash_col >= 0)) {
-            stash_rows.push_back(r.row);
-            stash_cols.push_back(r.stash_col);
-            stash_units.push_back(r.stash_unit);
-            LOG4("Adding stash on row: " << r.row << ", col: "
-                    << r.stash_col << ", unit: " << r.stash_unit);
-        }
+        row.push_back(r.row);
+        bus.push_back(r.bus);
+        if (r.bus >= 0) have_bus = true;
+        if (separate_bus)
+            result_bus.push_back(r.result_bus);
+        if (r.col.size() > 0) have_col = true;
+        if (have_word) word.push_back(r.word);
     }
     if (row.size() > 1) {
         out << indent << "row: " << row << std::endl;
@@ -337,10 +372,7 @@ void PpuAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
                 out << indent << "search_bus: " << bus << std::endl;
                 out << indent << "result_bus: " << result_bus << std::endl;
             } else {
-                if (logical)
-                    out << indent << "logical_bus: " << logical_bus << std::endl;
-                else
-                    out << indent << "bus: " << bus << std::endl;
+                out << indent << "bus: " << bus << std::endl;
             }
         } else if (separate_bus) {
             out << indent << "result_bus: " << result_bus << std::endl;
@@ -370,10 +402,7 @@ void PpuAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
                 out << indent << "search_bus: " << bus[0] << std::endl;
                 out << indent << "result_bus: " << result_bus[0] << std::endl;
             } else {
-                if (logical)
-                    out << indent << "logical_bus: " << logical_bus[0] << std::endl;
-                else
-                    out << indent << "bus: " << bus[0] << std::endl;
+                out << indent << "bus: " << bus[0] << std::endl;
             }
         } else if (separate_bus) {
             out << indent << "result_bus: " << result_bus[0] << std::endl;
@@ -495,16 +524,6 @@ void PpuAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
 
     if (mem.type == Memories::Use::TERNARY && mem.tind_result_bus >= 0)
         out << indent << "indirect_bus: " << mem.tind_result_bus << std::endl;
-
-
-    if ((mem.type == Memories::Use::EXACT) &&
-            (stash_rows.size() > 0) && (stash_units.size() > 0)) {
-        out << indent++ << "stash: " << std::endl;
-        out << indent << "row: " << stash_rows << std::endl;
-        out << indent << "col: " << stash_cols << std::endl;
-        out << indent << "unit: " << stash_units << std::endl;
-        indent--;
-    }
 }
 
 }  // end namespace Flatrock

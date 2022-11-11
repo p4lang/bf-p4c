@@ -506,39 +506,3 @@ void emit_ixbar_gather_bytes(const PhvInfo &phv,
         }
     }
 }
-
-/* Determine which bytes of a table's input xbar belong to an individual hash table,
-   so that we can output the hash of this individual table. */
-void emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &match_data,
-        safe_vector<Slice> &ghost, const TableMatch *fmt,
-        std::map<int, std::map<int, Slice>> &sort) {
-    if (sort.empty())
-        return;
-    unsigned half = hash_table & 1;
-    if (sort.count(hash_table/2) == 0) return;
-    for (auto &match : sort.at(hash_table/2)) {
-        Slice reg = match.second;
-        if (match.first/64U != half) {
-            if ((match.first + reg.width() - 1)/64U != half)
-                continue;
-            assert(half);
-            reg = reg(64 - match.first, 64);
-        } else if ((match.first + reg.width() - 1)/64U != half) {
-            assert(!half);
-            reg = reg(0, 63 - match.first); }
-        if (!reg) continue;
-        if (fmt != nullptr) {
-            safe_vector<Slice> reg_ghost;
-            safe_vector<Slice> reg_hash = reg.split(fmt->ghost_bits, reg_ghost);
-            ghost.insert(ghost.end(), reg_ghost.begin(), reg_ghost.end());
-            // P4C-4496: if dynamic_table_key_masks pragma is applied to the
-            // table, ghost bits are disabled, as a result, match key must be
-            // emitted as match data to generated the correct hash section in
-            // bfa and context.json
-            if (!fmt->identity_hash || fmt->dynamic_key_masks)
-                match_data.insert(match_data.end(), reg_hash.begin(), reg_hash.end());
-        } else {
-            match_data.emplace_back(reg);
-        }
-    }
-}

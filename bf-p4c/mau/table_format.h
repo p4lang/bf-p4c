@@ -244,9 +244,10 @@ struct TableFormat {
     safe_vector<IXBar::Use::Byte> single_match;
     int ghost_bits_count = 0;
 
+    const IR::MAU::Table *tbl;
+
  private:
     const IXBar::Use *proxy_hash_ixbar;
-    const IR::MAU::Table *tbl;
 
     std::set<int> fully_ghosted_search_buses;
     safe_vector<int> ghost_bit_buses;
@@ -295,7 +296,6 @@ struct TableFormat {
     void ternary_midbyte(int midbyte, size_t &index, bool lo_midbyte);
     void ternary_version(size_t &index);
 
-    bool analyze_layout_option();
     bool analyze_skinny_layout_option(int per_RAM, safe_vector<IXBar::Use::GroupInfo> &sizes);
     bool analyze_wide_layout_option(safe_vector<IXBar::Use::GroupInfo> &sizes);
     void analyze_proxy_hash_option(int per_RAM);
@@ -305,12 +305,10 @@ struct TableFormat {
     bool allocate_selector_length();
     bool allocate_indirect_ptr(int total, type_t type, int group, int RAM);
 
-    virtual void find_bytes_to_allocate(int width_sect, safe_vector<ByteInfo> &unalloced);
     bool allocate_interleaved_byte(const ByteInfo &info, safe_vector<ByteInfo> &alloced,
         int width_sect, int entry, bitvec &byte_attempt, bitvec &bit_attempt);
     bool allocate_version(int width_sect, const safe_vector<ByteInfo> &alloced,
         bitvec &version_loc, bitvec &byte_attempt, bitvec &bit_attempt);
-    void fill_out_use(int group, const safe_vector<ByteInfo> &alloced, bitvec &version_loc);
 
     int determine_group(int width_sect, int groups_allocated);
     void allocate_share(int width_sect, int group, safe_vector<ByteInfo> &unalloced_group,
@@ -330,19 +328,22 @@ struct TableFormat {
             int width_sect, bitvec &byte_attempt, bitvec &bit_attempt);
     virtual bool requires_versioning() const { return layout_option.layout.requires_versioning; }
     virtual bool requires_valid_oh() const { return false; }
+    virtual void find_bytes_to_allocate(int width_sect, safe_vector<ByteInfo> &unalloced);
 
  protected:
     virtual bool allocate_overhead(bool alloc_match = false);
-    void choose_ghost_bits(safe_vector<IXBar::Use::Byte> &potential_ghost);
+    virtual void choose_ghost_bits(safe_vector<IXBar::Use::Byte> &potential_ghost);
     int bits_necessary(type_t type) const;
     bool initialize_byte(int byte_offset, int width_sect, const ByteInfo &info,
         safe_vector<ByteInfo> &alloced, bitvec &byte_attempt, bitvec &bit_attempted);
-    void allocate_full_fits(int width_sect, int group = -1);
+    virtual void allocate_full_fits(int width_sect, int group = -1);
+    virtual bool analyze_layout_option();
+    void fill_out_use(int group, const safe_vector<ByteInfo> &alloced, bitvec &version_loc);
 
  public:
     TableFormat(const LayoutOption &l, const IXBar::Use *mi, const IXBar::Use *phi,
                 const IR::MAU::Table *t, const bitvec im, bool gl, FindPayloadCandidates &fpc)
-        : layout_option(l), match_ixbar(mi), proxy_hash_ixbar(phi), tbl(t), immediate_mask(im),
+        : layout_option(l), match_ixbar(mi), tbl(t), proxy_hash_ixbar(phi), immediate_mask(im),
           gw_linked(gl), fpc(fpc) {}
     bool find_format(Use *u);
     void verify();

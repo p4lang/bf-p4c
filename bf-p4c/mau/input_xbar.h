@@ -7,6 +7,8 @@
 #include <unordered_set>
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/alloc.h"
+#include "bf-p4c/common/asm_output.h"
+#include "bf-p4c/common/slice.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/lib/autoclone.h"
 #include "bf-p4c/lib/dyn_vector.h"
@@ -374,6 +376,9 @@ struct IXBar {
         virtual void emit_ixbar_asm(const PhvInfo &phv, std::ostream& out, indent_t indent,
                                     const TableMatch *fmt, const IR::MAU::Table *) const = 0;
         virtual void emit_salu_bytemasks(std::ostream &out, indent_t indent) const = 0;
+        virtual void emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &match_data,
+                safe_vector<Slice> &ghost, const TableMatch *fmt,
+                std::map<int, std::map<int, Slice>> &sort) const = 0;
         virtual bitvec galois_matrix_bits() const = 0;
         virtual int gateway_group() const;
         virtual int groups() const;  // how many different groups in this use

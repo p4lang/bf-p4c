@@ -83,6 +83,7 @@ struct Memories {
             int size;
             unsigned select_mask;
             safe_vector<std::pair<int, int>> rams;
+            ordered_map<int, safe_vector<std::pair<int, int>>> stage_rams;
             explicit Way(int s, unsigned sm) : size(s), select_mask(sm) {}
         };
         friend std::ostream &operator<<(std::ostream &out, const Way &w);
@@ -198,7 +199,7 @@ struct Memories {
  public:
     virtual ~Memories() {}
     virtual bool allocate_all() = 0;
-    virtual bool allocate_all_dummies() = 0;
+    virtual bool allocate_all_dummies() { return true; }
     virtual void update(cstring table_name, const Use &alloc) = 0;
     virtual void update(const std::map<UniqueId, Use> &alloc) = 0;
     virtual void remove(cstring table_name, const Use &alloc) = 0;

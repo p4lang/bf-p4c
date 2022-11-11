@@ -205,7 +205,9 @@ bool IXBar::do_alloc(safe_vector<IXBar::Use::Byte *> &to_alloc,
         b->loc = Loc(0, i);
         byte_free[i] = 0; }
     for (auto &grp : Values(by_word)) {
-        if (grp.size() == 1 || word == word_use.end()) {
+        // NOTE: Find free bytes on byte slots for any group size less than 4 bytes This may not
+        // necessarily be the most efficient way to pack in all scenarios.
+        if (grp.size() < 4 || word == word_use.end()) {
             // try to allocate byte slot(s)
             bool ok = true;
             for (auto *b : grp) {
@@ -864,6 +866,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
     if (!allocGateway(tbl, phv, getUse(alloc.gateway_ixbar), lo)) {
         alloc.clear_ixbar();
         return false; }
+    LOG2("Ixbar allocation on table successful");
     return true;
 }
 
@@ -1053,6 +1056,41 @@ void IXBar::dbprint(std::ostream &out) const {
 
 void IXBar::Use::dbprint(std::ostream &out) const {
     ::IXBar::Use::dbprint(out);
+}
+
+/* Determine which bytes of a table's input xbar belong to an individual hash table,
+   so that we can output the hash of this individual table. */
+void IXBar::Use::emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &match_data,
+        safe_vector<Slice> &ghost, const TableMatch *fmt,
+        std::map<int, std::map<int, Slice>> &sort) const {
+    LOG5("Emitting ixbar hash table");
+    if (sort.empty()) return;
+
+    auto update_match_data = [&](Slice &reg){
+        if (fmt != nullptr) {
+            safe_vector<Slice> reg_ghost;
+            safe_vector<Slice> reg_hash = reg.split(fmt->ghost_bits, reg_ghost);
+            ghost.insert(ghost.end(), reg_ghost.begin(), reg_ghost.end());
+            // P4C-4496: if dynamic_table_key_masks pragma is applied to the
+            // table, ghost bits are disabled, as a result, match key must be
+            // emitted as match data to generated the correct hash section in
+            // bfa and context.json
+            if (!fmt->identity_hash || fmt->dynamic_key_masks)
+                match_data.insert(match_data.end(), reg_hash.begin(), reg_hash.end());
+        } else {
+            match_data.emplace_back(reg);
+        }
+    };
+
+    for (auto [ht, m] : sort) {
+        if (hash_table >= 0 && hash_table/2 != ht) continue;
+        for (auto &match : m) {
+            Slice reg = match.second;
+            if (!reg) continue;
+            update_match_data(reg);
+        }
+    }
+    return;
 }
 
 }  // namespace Flatrock

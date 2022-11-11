@@ -287,6 +287,9 @@ struct IXBar : public ::IXBar {
         void emit_ixbar_asm(const PhvInfo &phv, std::ostream& out, indent_t indent,
                             const TableMatch *fmt, const IR::MAU::Table *) const override;
         void emit_salu_bytemasks(std::ostream &out, indent_t indent) const override;
+        void emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &match_data,
+                safe_vector<Slice> &ghost, const TableMatch *fmt,
+                std::map<int, std::map<int, Slice>> &sort) const override;
         bitvec galois_matrix_bits() const override { return hash_dist_hash.galois_matrix_bits; }
         int hash_groups() const override;
         TotalBytes match_hash(safe_vector<int> *hash_groups = nullptr) const override;
