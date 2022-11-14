@@ -2,7 +2,7 @@
 
 set -e
 
-topdir=$(dirname $0)/..
+topdir=$(readlink -f $(dirname $0)/..)
 builddir=build.release
 # set -x
 if [[ $(uname -s) == 'Linux' ]]; then
@@ -13,6 +13,31 @@ else
     enable_static=""
 fi
 
+install_prefix=/usr/local
+barefoot_internal="-DENABLE_BAREFOOT_INTERNAL=OFF"
+enable_cb="-DENABLE_CLOUDBREAK=OFF"
+enable_fr="-DENABLE_FLATROCK=OFF"
+pgo=false
+lto=false
+
+build_p4c() {
+    ${topdir}/bootstrap_bfn_compilers.sh --build-dir $builddir \
+                                --p4c-cpp-flags "$*" \
+                                -DCMAKE_BUILD_TYPE=RELEASE \
+                                -DCMAKE_INSTALL_PREFIX=$install_prefix \
+                                -DENABLE_BMV2=OFF -DENABLE_EBPF=OFF -DENABLE_UBPF=OFF \
+                                -DENABLE_P4TEST=OFF -DENABLE_P4C_GRAPHS=OFF \
+                                -DENABLE_DOXYGEN=OFF \
+                                $enable_cb $enable_fr \
+                                $enable_static \
+                                $barefoot_internal \
+                                -DENABLE_GTESTS=OFF \
+                                -DENABLE_WERROR=OFF \
+                                -DENABLE_LTO=$lto
+
+    (cd $builddir ; make -j $parallel_make)
+}
+
 usage() {
     echo $1
     echo "Usage: ./scripts/package_p4c_for_tofino.sh <optional arguments>"
@@ -20,14 +45,13 @@ usage() {
     echo "   --install-prefix <install_prefix>"
     echo "   --barefoot-internal"
     echo "   --enable-cb"
+    echo "   --enable-fr"
+    echo "   --enable-pgo"
+    echo "   --enable-lto"
     echo "   -j <numjobs>"
 }
 
 
-install_prefix=/usr/local
-barefoot_internal="-DENABLE_BAREFOOT_INTERNAL=OFF"
-enable_cb="-DENABLE_CLOUDBREAK=OFF"
-enable_fr="-DENABLE_FLATROCK=OFF"
 while [ $# -gt 0 ]; do
     case $1 in
         --build-dir)
@@ -55,7 +79,13 @@ while [ $# -gt 0 ]; do
         --enable-fr)
             enable_fr="-DENABLE_FLATROCK=ON"
             ;;
-	-j)
+        --enable-pgo)
+            pgo=true
+            ;;
+        --enable-lto)
+            lto=true
+            ;;
+        -j)
             parallel_make="$2"
             shift;
             ;;
@@ -73,19 +103,19 @@ done
 # Do this by adding headers to everything except p4c/ and p4-tests/.
 "${topdir}/scripts/packaging/copyright-stamp" "${topdir}"
 
-$topdir/bootstrap_bfn_compilers.sh --build-dir $builddir \
-                                   -DCMAKE_BUILD_TYPE=RELEASE \
-                                   -DCMAKE_INSTALL_PREFIX=$install_prefix \
-                                   -DENABLE_BMV2=OFF -DENABLE_EBPF=OFF -DENABLE_UBPF=OFF \
-                                   -DENABLE_P4TEST=OFF -DENABLE_P4C_GRAPHS=OFF \
-                                   -DENABLE_DOXYGEN=OFF \
-                                   $enable_cb $enable_fr \
-                                   $enable_static \
-                                   $barefoot_internal \
-                                   -DENABLE_GTESTS=OFF \
-                                   -DENABLE_WERROR=OFF
-cd $builddir
-make -j $parallel_make package
+if $pgo ; then
+    # Build an instrumented binary for PGO.
+    build_p4c "-fprofile-generate"
+
+    # Collect profiles by running a representative workload.
+    ./scripts/pgo_train.sh
+
+    # Use the collected profiles to apply PGO.
+    # TODO: With GCC 10 and newer, consider to also use -fprofile-partial-training
+    build_p4c "-fprofile-use"
+else
+    build_p4c
+fi
 
 echo "Success!"
 exit 0
