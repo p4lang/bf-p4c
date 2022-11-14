@@ -1294,7 +1294,9 @@ bool AttachTables::InitializeRegisterParams::preorder(const IR::MAU::Primitive *
                 "%1%: RegisterParam cannot be used outside RegisterAction", prim);
         }
     }
-    BUG_CHECK(reg_decl != nullptr, "RegisterParam not under Register");
+    if (reg_decl == nullptr)
+        ::error(ErrorType::ERR_UNSUPPORTED,
+            "%1%: RegisterParam can be used only in RegisterAction or within Register.write", prim);
     if (self.salu_inits.count(reg_decl) > 0) {
         auto *salu = self.salu_inits.at(reg_decl);
         if (param_salus.count(reg_param_decl) > 0) {
