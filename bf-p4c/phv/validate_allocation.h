@@ -1,6 +1,7 @@
 #ifndef BF_P4C_PHV_VALIDATE_ALLOCATION_H_
 #define BF_P4C_PHV_VALIDATE_ALLOCATION_H_
 
+#include "bf-p4c/phv/alloc_setting.h"
 #include "bf-p4c/phv/fieldslice_live_range.h"
 #include "ir/ir.h"
 #include "ir/visitor.h"
@@ -28,8 +29,10 @@ namespace PHV {
 class ValidateAllocation final : public Inspector {
  public:
     ValidateAllocation(PhvInfo& phv, const ClotInfo& clot,
-                       const PHV::FieldSliceLiveRangeDB& physical_liverange)
-        : phv(phv), clot(clot), physical_liverange(physical_liverange) {}
+                       const PHV::FieldSliceLiveRangeDB& physical_liverange,
+                       const PHV::AllocSetting& setting)
+        : phv(phv), clot(clot), physical_liverange(physical_liverange),
+        setting(setting) {}
 
     void set_physical_liverange_overlay(bool enable) { physical_liverange_overlay = enable; }
 
@@ -38,6 +41,7 @@ class ValidateAllocation final : public Inspector {
     const ClotInfo& clot;
     const PHV::FieldSliceLiveRangeDB& physical_liverange;
     bool physical_liverange_overlay = false;
+    const PHV::AllocSetting& setting;
 
     SymBitMatrix mutually_exclusive_field_ids;
     profile_t init_apply(const IR::Node* root) override;

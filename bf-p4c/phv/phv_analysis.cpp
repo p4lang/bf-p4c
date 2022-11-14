@@ -100,7 +100,8 @@ PHV_AnalysisPass::PHV_AnalysisPass(
           physical_liverange_db, source_tracker, tb_keys, table_mutex, deps,
           pragmas, settings, alloc),
       allocate_phv(utils, alloc, phv, unallocated) {
-        auto* validate_allocation = new PHV::ValidateAllocation(phv, clot, physical_liverange_db);
+        auto* validate_allocation = new PHV::ValidateAllocation(phv, clot, physical_liverange_db,
+            settings);
         addPasses({
             // Identify uses of fields in MAU, PARDE
             &uses,

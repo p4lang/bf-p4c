@@ -745,6 +745,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         }
     }
 
+    if (setting.trivial_alloc) return true;
     // POV bits limitation check.
     for (gress_t gress : { INGRESS, EGRESS }) {
         size_t povBits = getPOVContainerBytes(gress);
