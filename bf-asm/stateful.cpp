@@ -401,7 +401,8 @@ action_for_table_action(const MatchTable *tbl, const Actions::Action *act) const
 #if HAVE_FLATROCK
 template<> void StatefulTable::write_action_regs_vt(Target::Flatrock::mau_regs &regs,
             const Actions::Action *act) {
-    auto &salu = regs.ppu_sful[physical_id].ppu_sful_alu;
+    BUG_CHECK(physical_ids.popcount() == 1, "not exactly one physical id for %s", name());
+    auto &salu = regs.ppu_sful[*physical_ids.begin()].ppu_sful_alu;
     auto &salu_instr_common = salu.sful_instr_common[act->code];
     if (act->minmax_use) {
         salu_instr_common.datasize = 7;
@@ -456,7 +457,8 @@ template<class REGS> void StatefulTable::write_merge_regs_vt(REGS &regs, MatchTa
 template<> void StatefulTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
     LOG1("### Stateful table " << name() << " write_regs " << loc());
 
-    auto &salu = regs.ppu_sful[physical_id].ppu_sful_alu;
+    BUG_CHECK(physical_ids.popcount() == 1, "not exactly one physical id for %s", name());
+    auto &salu = regs.ppu_sful[*physical_ids.begin()].ppu_sful_alu;
     salu.sful_ctl.enable_ = 1;
     salu.sful_ctl.outp_pred_shift = pred_shift / 4;
     salu.sful_ctl.out_prd_cmb_shft = pred_comb_shift;

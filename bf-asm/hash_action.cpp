@@ -59,7 +59,7 @@ void HashActionTable::pass2() {
             error(lineno, "Can't have both bus and result_bus in hash_action table");
         } else {
             BUG_CHECK(layout[0].bus.count(Layout::RESULT_BUS), "should have result bus (only)"); } }
-    allocate_physical_id();
+    allocate_physical_ids();
     determine_word_and_result_bus();
     for (auto &ixb : input_xbar)
         ixb->pass2();

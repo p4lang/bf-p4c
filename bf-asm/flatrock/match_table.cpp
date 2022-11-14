@@ -40,6 +40,7 @@ template<> void MatchTable::write_regs(Target::Flatrock::mau_regs &regs, int typ
 
     int dconfig = 0;  // FIXME -- some parts of this support selecting config based on
     // dconfig bits -- for now we just use config 0
+    BUG_CHECK(!physical_ids.empty(), "No physical ids for %s", name());
 
     auto &mrd = regs.ppu_mrd.rf;
     auto &minput = regs.ppu_minput.rf;
@@ -51,10 +52,10 @@ template<> void MatchTable::write_regs(Target::Flatrock::mau_regs &regs, int typ
         minput.minput_mpr.main_tables |= 1 << logical_id; }
     if (always_run || pred.empty()) {
         minput.minput_mpr.always_run = 1 << logical_id;
-        minput.minput_mpr_act[logical_id].activate |= 1 << physical_id;
+        minput.minput_mpr_act[logical_id].activate |= physical_ids;
     } else {
         for (auto tbl : Keys(find_pred_in_stage(stage->stageno)))
-            minput.minput_mpr_act[tbl->logical_id].activate |= 1 << physical_id;
+            minput.minput_mpr_act[tbl->logical_id].activate |= physical_ids;
     }
     if (long_branch_input >= 0) {
         minput.minput_mpr_act[logical_id].long_branch_en = 1;
@@ -62,40 +63,44 @@ template<> void MatchTable::write_regs(Target::Flatrock::mau_regs &regs, int typ
 
     // these xbars are "backwards" (because they are oxbars?) -- l2p maps physical to logical
     // and p2l maps logical to physical
-    mrd.mrd_l2p_xbar[physical_id].en = 1;
-    mrd.mrd_l2p_xbar[physical_id].logical_table = logical_id;
+    for (auto physid : physical_ids) {
+        mrd.mrd_l2p_xbar[physid].en = 1;
+        mrd.mrd_l2p_xbar[physid].logical_table = logical_id; }
     mrd.mrd_p2l_xbar[logical_id].en = 1;
-    mrd.mrd_p2l_xbar[logical_id].phy_table = physical_id;
+    mrd.mrd_p2l_xbar[logical_id].phy_table = *physical_ids.begin();
     if (get_actions()) {
-        mrd.mrd_imem_cfg.active_en |= 1 << physical_id;
-        mrd.mrd_imem_delay[physical_id].delay = 1; }   // FIXME -- what is the delay?
-    minput.minput_mpr_act[logical_id].activate |= 1 << physical_id;
+        mrd.mrd_imem_cfg.active_en |= physical_ids;
+        for (auto physid : physical_ids)
+            mrd.mrd_imem_delay[physid].delay = 1; }   // FIXME -- what is the delay?
+    minput.minput_mpr_act[logical_id].activate |= physical_ids;
 
     /* action/imem setup */
     // FIXME -- factor with common code in MatchTable::write_common_regs
-    auto &imem_map = regs.ppu_mrd.mrd_imem_map_erf.mrd_imem_map[physical_id];
-    Actions *actions = action && action->actions ? action->actions.get() : result->actions.get();
-    unsigned adr_default = 0;
-    auto instr_call = instruction_call();
-    if (instr_call.args[0] == "$DEFAULT") {
-        for (auto it = actions->begin(); it != actions->end(); it++) {
-            if (it->code != -1) {
-                adr_default |= it->addr;
-                break;
+    for (auto physid : physical_ids) {
+        auto &imem_map = regs.ppu_mrd.mrd_imem_map_erf.mrd_imem_map[physid];
+        Actions *actions = action && action->actions ? action->actions.get()
+                                                     : result->actions.get();
+        unsigned adr_default = 0;
+        auto instr_call = instruction_call();
+        if (instr_call.args[0] == "$DEFAULT") {
+            for (auto it = actions->begin(); it != actions->end(); it++) {
+                if (it->code != -1) {
+                    adr_default |= it->addr;
+                    break;
+                }
             }
-        }
-        imem_map[9].data = adr_default;
-    } else if (instr_call.args[0] == "$GATEWAY_IDX") {
-        mrd.mrd_imem_ext[physical_id].ext_start[dconfig] = 62;
-        mrd.mrd_imem_ext[physical_id].ext_size[dconfig] = 2;
-    } else if (auto *action_field = instr_call.args[0].field()) {
-        if (actions->max_code < ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH) {
-            mrd.mrd_imem_pld[physical_id].map_en[dconfig] = 1;
-            for (auto &act : *actions)
-                if ((act.name != result->default_action) || !result->default_only_action)
-                    imem_map[act.code].data = act.addr; }
-        mrd.mrd_imem_ext[physical_id].ext_start[dconfig] = action_field->immed_bit(0);
-        mrd.mrd_imem_ext[physical_id].ext_size[dconfig] = action_field->size; }
+            imem_map[9].data = adr_default;
+        } else if (instr_call.args[0] == "$GATEWAY_IDX") {
+            mrd.mrd_imem_ext[physid].ext_start[dconfig] = 62;
+            mrd.mrd_imem_ext[physid].ext_size[dconfig] = 2;
+        } else if (auto *action_field = instr_call.args[0].field()) {
+            if (actions->max_code < ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH) {
+                mrd.mrd_imem_pld[physid].map_en[dconfig] = 1;
+                for (auto &act : *actions)
+                    if ((act.name != result->default_action) || !result->default_only_action)
+                        imem_map[act.code].data = act.addr; }
+            mrd.mrd_imem_ext[physid].ext_start[dconfig] = action_field->immed_bit(0);
+            mrd.mrd_imem_ext[physid].ext_size[dconfig] = action_field->size; } }
 
     if (action_bus) action_bus->write_regs(regs, this);
 

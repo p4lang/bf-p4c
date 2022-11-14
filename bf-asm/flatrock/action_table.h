@@ -22,8 +22,8 @@ class Target::Flatrock::ActionTable : public ::ActionTable {
         ::ActionTable(line, n, gr, s, lid) { }
 
     int stm_vbus_column() const override {
-        BUG_CHECK(physical_id >= 0, "physical id not yet set");
-        return physical_id + 1; }
+        BUG_CHECK(physical_ids.popcount() == 1, "not exactly one physical id in %s", name());
+        return *physical_ids.begin() + 1; }
 };
 
 #endif

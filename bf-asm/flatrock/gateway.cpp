@@ -188,8 +188,9 @@ void Target::Flatrock::GatewayTable::write_next_table_regs(Target::Flatrock::mau
         // In this case we definitely need to use the inhibit_index to select, but
         // otherwise will use the payload
         for (int d : dconfig) {
-            mrd.rf.mrd_nt_ext[physical_id].ext_start[d] = 62;
-            mrd.rf.mrd_nt_ext[physical_id].ext_size[d] = 2;
+            for (auto physid : physical_ids) {
+                mrd.rf.mrd_nt_ext[physid].ext_start[d] = 62;
+                mrd.rf.mrd_nt_ext[physid].ext_size[d] = 2; }
             mrd.rf.mrd_pred_pld[logical_id].map_en_gw_inh[d] = 1;
         }
     }
@@ -198,21 +199,24 @@ void Target::Flatrock::GatewayTable::write_next_table_regs(Target::Flatrock::mau
     if (actions && inhibit_idx_action.size() > (match_table ? 1 : 0)) {
         // FIXME -- maybe this belongs elsewhere?  In MatchTable::write_regs?  Or that should
         // call some gateway method?  Needs access to the Flatrock::GatewayTable object
-        auto &imem_map = mrd.mrd_imem_map_erf.mrd_imem_map[physical_id];
-        for (auto &act : inhibit_idx_action) {
-            auto *action = actions->action(act.second);
-            BUG_CHECK(action || act.second == "", "Can't find action %s in table %s",
-                      act.second.c_str(), match_table->name());
-            // FIXME -- this assumes addr 0 is always a noop.
-            imem_map[act.first].data = action ? action->addr : 0;
+        for (auto physid : physical_ids) {
+            auto &imem_map = mrd.mrd_imem_map_erf.mrd_imem_map[physid];
+            for (auto &act : inhibit_idx_action) {
+                auto *action = actions->action(act.second);
+                BUG_CHECK(action || act.second == "", "Can't find action %s in table %s",
+                          act.second.c_str(), match_table->name());
+                // FIXME -- this assumes addr 0 is always a noop.
+                imem_map[act.first].data = action ? action->addr : 0;
+            }
+            for (int d : dconfig)
+                mrd.rf.mrd_imem_pld[physid].map_en_gw_inh[d] = 1;
         }
-        for (int d : dconfig)
-            mrd.rf.mrd_imem_pld[physical_id].map_en_gw_inh[d] = 1;
     }
 }
 
 void Target::Flatrock::GatewayTable::write_regs(Target::Flatrock::mau_regs &regs) {
     LOG1("### Gateway table " << name() << " write_regs " << loc());
+    BUG_CHECK(!physical_ids.empty(), "No physical ids associated with %s", name());
     auto &minput = regs.ppu_minput.rf;
     auto &mrd = regs.ppu_mrd.rf;
     if (!match_table) {
@@ -226,10 +230,10 @@ void Target::Flatrock::GatewayTable::write_regs(Target::Flatrock::mau_regs &regs
             minput.minput_mpr.main_tables |= 1 << logical_id; }
         if (always_run || pred.empty()) {
             minput.minput_mpr.always_run = 1 << logical_id;
-            minput.minput_mpr_act[logical_id].activate |= 1 << physical_id;
+            minput.minput_mpr_act[logical_id].activate |= physical_ids;
         } else {
             for (auto tbl : Keys(find_pred_in_stage(stage->stageno)))
-                minput.minput_mpr_act[tbl->logical_id].activate |= 1 << physical_id;
+                minput.minput_mpr_act[tbl->logical_id].activate |= physical_ids;
         }
         if (long_branch_input >= 0) {
             minput.minput_mpr_act[logical_id].long_branch_en = 1;
@@ -238,14 +242,16 @@ void Target::Flatrock::GatewayTable::write_regs(Target::Flatrock::mau_regs &regs
 
         // these xbars are "backwards" (because they are oxbars?) -- l2p maps physical to logical
         // and p2l maps logical to physical
-        mrd.mrd_l2p_xbar[physical_id].en = 1;
-        mrd.mrd_l2p_xbar[physical_id].logical_table = logical_id;
+        for (auto physid : physical_ids) {
+            mrd.mrd_l2p_xbar[physid].en = 1;
+            mrd.mrd_l2p_xbar[physid].logical_table = logical_id; }
         mrd.mrd_p2l_xbar[logical_id].en = 1;
-        mrd.mrd_p2l_xbar[logical_id].phy_table = physical_id;
+        mrd.mrd_p2l_xbar[logical_id].phy_table = *physical_ids.begin();
         if (get_actions()) {
-            mrd.mrd_imem_cfg.active_en |= 1 << physical_id;
-            mrd.mrd_imem_delay[physical_id].delay = 1; }   // FIXME -- what is the delay?
-        minput.minput_mpr_act[logical_id].activate |= 1 << physical_id;
+            mrd.mrd_imem_cfg.active_en |= physical_ids;
+            for (auto physid : physical_ids)
+                mrd.mrd_imem_delay[physid].delay = 1; }   // FIXME -- what is the delay?
+        minput.minput_mpr_act[logical_id].activate |= physical_ids;
 
         // FIXME -- need action/imem setup from MatchTable::write_regs if the gateway has actions?
     }
@@ -295,19 +301,21 @@ void Target::Flatrock::GatewayTable::write_regs(Target::Flatrock::mau_regs &regs
         else
             BUG_CHECK(((byte_xor_value >> byte) & 1) == 0, "invalid byte xor value"); }
 
-    minput.minput_gw_comp_vect[physical_id].comp_idx = first_row.row;
-    mrd.mrd_inhibit_ix.en[physical_id] = 1;
+    for (auto physid : physical_ids) {
+        minput.minput_gw_comp_vect[physid].comp_idx = first_row.row;
+        mrd.mrd_inhibit_ix.en[physid] = 1;
 
-    // FIXME -- model needs these non-zero to avoid error message, but what should they be?
-    mrd.mrd_pld_delay[physical_id].delay = 1;
-    mrd.mrd_gwres_delay[physical_id].delay = 1;
+        // FIXME -- model needs these non-zero to avoid error message, but what should they be?
+        mrd.mrd_pld_delay[physid].delay = 1;
+        mrd.mrd_gwres_delay[physid].delay = 1;
 
-    if (have_payload) {
-        mrd.mrd_inhibit_pld[physical_id].pld0 = payload & 0xffffffff;
-        mrd.mrd_inhibit_pld[physical_id].pld1 = payload >> 32; }
-    // FIXME -- when to enable inserting the inhibit index?  For now do it unconditionally
-    // as it just uses the upper two bits of payload which are otherwise useless.
-    mrd.mrd_inhibit_ix.en[physical_id] = 1;
+        if (have_payload) {
+            mrd.mrd_inhibit_pld[physid].pld0 = payload & 0xffffffff;
+            mrd.mrd_inhibit_pld[physid].pld1 = payload >> 32; }
+        // FIXME -- when to enable inserting the inhibit index?  For now do it unconditionally
+        // as it just uses the upper two bits of payload which are otherwise useless.
+        mrd.mrd_inhibit_ix.en[physid] = 1;
+    }
     write_next_table_regs(regs);
 }
 

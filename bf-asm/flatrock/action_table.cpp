@@ -7,32 +7,34 @@ void Target::Flatrock::ActionTable::pass1() {
     ::ActionTable::pass1();
     if (match_tables.size() != 1)
         error(lineno, "Action table can only be used by a single match table on Flatrock");
-    if (physical_id >= 0) {
-        if (stage->action_unit_use[physical_id])
-            error(lineno, "aram unit %d used by both %s and %s", physical_id,
-                  stage->action_unit_use[physical_id]->name(), name());
-        stage->action_unit_use[physical_id] = this;
-        alloc_global_busses();
+    for (auto physid : physical_ids) {
+        if (stage->action_unit_use[physid])
+            error(lineno, "aram unit %d used by both %s and %s", physid,
+                  stage->action_unit_use[physid]->name(), name());
+        stage->action_unit_use[physid] = this;
     }
+    if (!physical_ids.empty())
+        alloc_global_busses();
 }
 
 void Target::Flatrock::ActionTable::pass2() {
     ::ActionTable::pass2();
-    if (physical_id < 0) {
+    if (physical_ids.empty()) {
         for (auto &row : layout) {
             for (auto &memunit : row.memunits) {
                 int unit = memunit.col/2 - 1;
                 if (unit >= 0 && !stage->action_unit_use[unit]) {
-                    physical_id = unit;
+                    physical_ids[unit] = 1;
                     break; } }
-            if (physical_id >= 0) break; }
-        if (physical_id < 0) {
+            if (!physical_ids.empty()) break; }
+        if (physical_ids.empty()) {
             for (int unit = 0; unit < ARAM_UNITS_PER_STAGE; ++unit) {
                 if (!stage->action_unit_use[unit]) {
-                    physical_id = unit;
+                    physical_ids[unit] = 1;
                     break; } } }
-        if (physical_id >= 0) {
-            stage->action_unit_use[physical_id] = this;
+        if (!physical_ids.empty()) {
+            for (auto physid : physical_ids)
+                stage->action_unit_use[physid] = this;
             alloc_global_busses();
         } else {
             error(lineno, "No action unit available for %s", name()); } }
@@ -101,33 +103,37 @@ void Target::Flatrock::ActionTable::write_regs(Target::Flatrock::mau_regs &regs)
     }
     if (width != 1)
         ::error(lineno, "wide action table not supported yet.");
-    auto& aram = regs.ppu_aram[physical_id];
-    auto &mrd = regs.ppu_mrd.rf;
-    int sub_addr_size = log2(128U) - fmt_log2size;
-    assert(sub_addr_size >= 0 && sub_addr_size <= 7);
-    aram.rf.aram_sub_addr.sub_addr_size[dconfig] = sub_addr_size;
-
-    // TODO
-    // aram.rf.aram_cfg.dconfig_sel_hi
-    // aram.rf.aram_cfg.dconfig_sel_lo
-    aram.rf.aram_cfg.stm_rd_delay = 4;   // min value
-    // aram.rf.aram_cfg.stm_miss_allow
-
-    if (badb_start >= 0) {
-        mrd.mrd_aram_cfg[physical_id].badb_start = badb_start;
-        mrd.mrd_aram_cfg[physical_id].badb_size = badb_size; }
-    if (wadb_start >= 0) {
-        mrd.mrd_aram_cfg[physical_id].wadb_start = wadb_start;
-        mrd.mrd_aram_cfg[physical_id].wadb_size = wadb_size; }
-
     auto *mt = get_match_table();
-    mrd.mrd_p2a_xbar[physical_id].en[dconfig] = 1;
-    mrd.mrd_p2a_xbar[physical_id].unit[dconfig] = mt->physical_id;
-    mrd.mrd_aram_ext[physical_id].ext_start[dconfig] = determine_shiftcount(mt->action, 0, 0, 0);
-    if (mt->action.args[0] == "$DIRECT") {
-        mrd.mrd_aram_ext[physical_id].ext_size[dconfig] = 20;  // FIXME -- how big is the index?
-    } else if (auto *field = mt->action.args[0].field()) {
-        mrd.mrd_aram_ext[physical_id].ext_size[dconfig] = field->size;
+    for (auto physid : physical_ids) {
+        auto& aram = regs.ppu_aram[physid];
+        auto &mrd = regs.ppu_mrd.rf;
+        int sub_addr_size = log2(128U) - fmt_log2size;
+        assert(sub_addr_size >= 0 && sub_addr_size <= 7);
+        aram.rf.aram_sub_addr.sub_addr_size[dconfig] = sub_addr_size;
+
+        // TODO
+        // aram.rf.aram_cfg.dconfig_sel_hi
+        // aram.rf.aram_cfg.dconfig_sel_lo
+        aram.rf.aram_cfg.stm_rd_delay = 4;   // min value
+        // aram.rf.aram_cfg.stm_miss_allow
+
+        if (badb_start >= 0) {
+            mrd.mrd_aram_cfg[physid].badb_start = badb_start;
+            mrd.mrd_aram_cfg[physid].badb_size = badb_size; }
+        if (wadb_start >= 0) {
+            mrd.mrd_aram_cfg[physid].wadb_start = wadb_start;
+            mrd.mrd_aram_cfg[physid].wadb_size = wadb_size; }
+
+        mrd.mrd_p2a_xbar[physid].en[dconfig] = 1;
+        BUG_CHECK(mt->physical_ids.popcount() == 1,
+                  "Not exactly one physical id in %s", mt->name());
+        mrd.mrd_p2a_xbar[physid].unit[dconfig] = *mt->physical_ids.begin();
+        mrd.mrd_aram_ext[physid].ext_start[dconfig] = determine_shiftcount(mt->action, 0, 0, 0);
+        if (mt->action.args[0] == "$DIRECT") {
+            mrd.mrd_aram_ext[physid].ext_size[dconfig] = 20;  // FIXME -- how big is the index?
+        } else if (auto *field = mt->action.args[0].field()) {
+            mrd.mrd_aram_ext[physid].ext_size[dconfig] = field->size;
+        }
     }
 
     auto &ppu = TopLevel::regs<Target::Flatrock>()->reg_pipe.ppu_pack;
@@ -135,17 +141,19 @@ void Target::Flatrock::ActionTable::write_regs(Target::Flatrock::mau_regs &regs)
     for (auto &row : layout)
         for (auto &ram : row.memunits)
             maxdelay = std::max(maxdelay, std::abs(ram.stage/2 - stage->stageno/2));
+    BUG_CHECK(physical_ids.popcount() == 1, "not exactly one physical id in %s", name());
+    // FIXME -- if there's more than one physical id (wide table), the rams need to
+    // be split between them
+    int vcol = *physical_ids.begin() + 1;
     for (auto &row : layout) {
         auto vpn = row.vpns.begin();
         for (auto &ram : row.memunits) {
             BUG_CHECK(row.row == ram.row, "ram row mismatch");
             BUG_CHECK(vpn != row.vpns.end(), "not enough vpns on row");
             if (gress != EGRESS)
-                stm_read_config(ppu.istm, stage->stageno, physical_id + 1, 4, row.bus,
-                                ram, *vpn, maxdelay);
+                stm_read_config(ppu.istm, stage->stageno, vcol, 4, row.bus, ram, *vpn, maxdelay);
             else
-                stm_read_config(ppu.estm, stage->stageno, physical_id + 1, 4, row.bus,
-                                ram, *vpn, maxdelay);
+                stm_read_config(ppu.estm, stage->stageno, vcol, 4, row.bus, ram, *vpn, maxdelay);
             ++vpn; }
         BUG_CHECK(vpn == row.vpns.end(), "too many vpns on row"); }
 

@@ -2668,8 +2668,10 @@ json::map *Table::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) 
     stage_tbl["size"] = size;
     stage_tbl["stage_table_type"] = type;
     stage_tbl["logical_table_id"] = logical_id;
-    if (physical_id >= 0)
-        stage_tbl["physical_table_id"] = physical_id;
+    if (physical_ids) {
+        // this is only used by the driver to set miss entry imem/iad/next, so it should
+        // not matter which physical table it is set on if there are multiple
+        stage_tbl["physical_table_id"] = *physical_ids.begin(); }
 
     if (this->to<MatchTable>()) {
         stage_tbl["has_attached_gateway"] = false;

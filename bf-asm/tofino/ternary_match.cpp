@@ -16,6 +16,6 @@ void Target::Tofino::TernaryMatchTable::pass1() {
     if (layout_size() != 0) {
         alloc_id("tcam", tcam_id, stage->pass1_tcam_id,
              TCAM_TABLES_PER_STAGE, false, stage->tcam_id_use);
-        physical_id = tcam_id; }
+        physical_ids[tcam_id] = 1; }
     // alloc_busses(stage->tcam_match_bus_use); -- now hardwired
 }

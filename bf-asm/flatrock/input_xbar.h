@@ -61,6 +61,7 @@ class InputXbar : public ::InputXbar {
         const hash_column_t matrix[PARITY_GROUPS_DYN][HASH_MATRIX_WIDTH_DYN]) const override;
     Group hashtable_input_group(HashTable ht) const override;
     void setup_match_key_cfg(const MatchSource *) override;
+    unsigned xmu_units() const;
 };
 
 }

@@ -36,9 +36,10 @@ void Flatrock::ActionBus::write_regs(Target::Flatrock::mau_regs &regs, Table *tb
                 unsigned bit = src.field->immed_bit(0);
                 if (immed_offset < 0) {
                     immed_offset = el.first - bit/8U;
-                    mrd.rf.mrd_iad_cfg[tbl->physical_id].badb_start = immed_offset;
-                    // FIXME -- need dconfig here
-                    mrd.rf.mrd_iad_ext[tbl->physical_id].ext_size[0] = tbl->format->immed_size;
+                    for (auto physid : tbl->physical_ids) {
+                        mrd.rf.mrd_iad_cfg[physid].badb_start = immed_offset;
+                        // FIXME -- need dconfig here
+                        mrd.rf.mrd_iad_ext[physid].ext_size[0] = tbl->format->immed_size; }
                 } else if (immed_offset != el.first - bit/8U) {
                     error(lineno, "immediate field misalignment on action bus"); } }
             for (auto i = el.first; i < el.first + (el.second.size + 7)/8U; ++i) {

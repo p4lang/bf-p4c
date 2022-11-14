@@ -55,7 +55,7 @@ void Target::Flatrock::TernaryMatchTable::pass1() {
         // allocate for tables with indirect STM first
         alloc_id("tcam", tcam_id, stage->pass1_tcam_id,
              TCAM_TABLES_WITH_INDIRECT_STM, false, stage->tcam_id_use);
-        physical_id = tcam_id; }
+        physical_ids[tcam_id] = 1; }
     for (auto tind : local_tind_units) {
         if (stage->local_tind_use[tind]) {
             if (stage->local_tind_use[tind] == this)
@@ -105,7 +105,7 @@ void Target::Flatrock::TernaryMatchTable::pass2() {
     if (tcam_id < 0) {
         alloc_id("tcam", tcam_id, stage->pass1_tcam_id,
              TCAM_TABLES_PER_STAGE, false, stage->tcam_id_use);
-        physical_id = tcam_id; }
+        physical_ids[tcam_id] = 1; }
     int tbl_stage = stage->stageno;
     if (gress == EGRESS) tbl_stage = EGRESS_STAGE0_INGRESS_STAGE - tbl_stage;
     for (auto &row : layout) {

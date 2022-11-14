@@ -1,5 +1,14 @@
 #include "exact_match.h"
+#include "input_xbar.h"
 #include "stage.h"
+
+void Target::Flatrock::ExactMatchTable::pass1() {
+    ::ExactMatchTable::pass1();
+    unsigned stm_xmus = 0;
+    for (auto &ixb : input_xbar)
+        stm_xmus |= dynamic_cast<::Flatrock::InputXbar &>(*ixb).xmu_units() & 0xf0;
+    physical_ids |= stm_xmus << 8;
+}
 
 void Target::Flatrock::ExactMatchTable::setup_ways() {
     ::ExactMatchTable::setup_ways();

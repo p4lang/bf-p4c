@@ -37,6 +37,7 @@ class DynHash : public Section {
     }
 
     void output(json::map &ctxtJson) {
+        ctxtJson["dynamic_hash_calculations"] = json::vector();  // this key required by schema
         if (_dynhash) {
            ctxtJson.merge(_dynhash->to<json::map>());
         }

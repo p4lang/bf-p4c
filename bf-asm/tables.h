@@ -629,7 +629,7 @@ class Table {
     virtual void common_tbl_cfg(json::map &tbl) const;
     void add_match_key_cfg(json::map& tbl) const;
     bool add_json_node_to_table(json::map &tbl, const char *name) const;
-    void allocate_physical_id(unsigned usable = ~0U);
+    void allocate_physical_ids(unsigned usable = ~0U);
     template<typename T> void init_json_node(json::map &tbl, const char *name) const;
     enum table_type_t { OTHER = 0, TERNARY_INDIRECT, GATEWAY, ACTION, SELECTION, COUNTER,
                         METER, IDLETIME, STATEFUL, HASH_ACTION, EXACT, TERNARY, PHASE0, ATCAM,
@@ -691,7 +691,7 @@ class Table {
     gress_t                     gress;
     int                         lineno = -1;
     int                         logical_id = -1;
-    int                         physical_id = -1;
+    bitvec                      physical_ids;
     std::vector<DynamicIXbar>   dynamic_config;
     std::vector<std::unique_ptr<InputXbar>>     input_xbar;
     std::vector<Layout>         layout;

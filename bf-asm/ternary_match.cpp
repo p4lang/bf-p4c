@@ -158,7 +158,7 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
                           tcam_id, stage->tcam_id_use[tcam_id]->name());
                 else
                     stage->tcam_id_use[tcam_id] = this;
-                physical_id = tcam_id; }
+                physical_ids[tcam_id] = 1; }
         } else {
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name());

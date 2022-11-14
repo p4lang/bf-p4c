@@ -149,6 +149,13 @@ unsigned Flatrock::InputXbar::exact_physical_ids() const {
     return 0xff00;
 }
 
+unsigned Flatrock::InputXbar::xmu_units() const {
+    unsigned rv = 0;
+    for (int i : xme_units)
+        rv |= 1U << (i/2);
+    return rv;
+}
+
 void Flatrock::InputXbar::pass2() {
     ::InputXbar::pass2();
 }
@@ -380,16 +387,18 @@ void Flatrock::InputXbar::write_regs_v(Target::Flatrock::mau_regs &regs) {
                         key32[wgroup*4 + input.lo/32U][d].key32 = input.what->reg.ixbar_id()/4U;
                     unsigned bit = minput_word_pwr_transpose[input.what->reg.uid];
                     minput.minput_word_pwr_erf.minput_word_pwr[bit/4].data_chain0 |= 1U << (bit%4);
-                    minput.rf.minput_xcmp_xb_tab[table->physical_id].key32_used |=
-                        bitRange(wgroup*4 + input.lo/32U, input.hi/32U); }
+                    for (auto physid : table->physical_ids) {
+                        minput.rf.minput_xcmp_xb_tab[physid].key32_used |=
+                            bitRange(wgroup*4 + input.lo/32U, input.hi/32U); } }
             } else {
                 auto &key8 = xcmp_key_cfg.minput_xcmp_xb_key8;
                 for (auto &input : group.second) {
                     setup_byte_ixbar(key8, input, 0);
                     unsigned bit = minput_byte_pwr_transpose[input.what->reg.uid];
                     minput.minput_byte_pwr_erf.minput_byte_pwr[bit/4].data_chain1 |= 1U << (bit%4);
-                    minput.rf.minput_xcmp_xb_tab[table->physical_id].key8_used |=
-                        bitRange(input.lo/8U, input.hi/8U); } }
+                    for (auto physid : table->physical_ids) {
+                        minput.rf.minput_xcmp_xb_tab[physid].key8_used |=
+                            bitRange(input.lo/8U, input.hi/8U); } } }
             break; }
         default:
             BUG("invalid InputXbar::Group::Type(%d)", group.first.type);

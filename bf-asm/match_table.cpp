@@ -180,11 +180,11 @@ void MatchTable::pass0() {
             error(lineno, "Duplicate logical id %d use", logical_id);
             error(stage->logical_id_use[logical_id]->lineno, "previous use here"); }
         stage->logical_id_use[logical_id] = this; }
-    if (physical_id >= 0) {
-        if (stage->physical_id_use[physical_id] && stage->physical_id_use[physical_id] != this) {
-            error(lineno, "Duplicate physical id %d use", physical_id);
-            error(stage->physical_id_use[physical_id]->lineno, "previous use here"); }
-        stage->physical_id_use[physical_id] = this; }
+    for (auto physid : physical_ids) {
+        if (stage->physical_id_use[physid] && stage->physical_id_use[physid] != this) {
+            error(lineno, "Duplicate physical id %d use", physid);
+            error(stage->physical_id_use[physid]->lineno, "previous use here"); }
+        stage->physical_id_use[physid] = this; }
     if (action.check() && action->set_match_table(this, !action.is_direct_call()) != ACTION)
         error(action.lineno, "%s is not an action table", action->name());
     attached.pass0(this);
@@ -230,16 +230,17 @@ void MatchTable::pass1() {
         gateway->pass1(); }
 }
 
-void Table::allocate_physical_id(unsigned usable) {
-    if (physical_id >= 0) {
-        BUG_CHECK((usable >> physical_id) & 1, "table %s has physical id %d which appears to be "
-                  "invalid", name(), physical_id);
+void Table::allocate_physical_ids(unsigned usable) {
+    if (physical_ids) {
+        auto unusable = physical_ids - bitvec(usable);
+        BUG_CHECK(unusable.empty(), "table %s using physical id %d which appears to be invalid",
+                  name(), *unusable.begin());
         return; }
     if (!Target::MATCH_REQUIRES_PHYSID()) return;
     for (int i = 0; i < PHYSICAL_TABLES_PER_STAGE; ++i) {
         if (!((usable >> i) & 1)) continue;
         if (stage->physical_id_use[i]) continue;
-        physical_id = i;
+        physical_ids[i] = 1;
         stage->physical_id_use[i] = this;
         return; }
     error(lineno, "No physical id available for table %s", name());

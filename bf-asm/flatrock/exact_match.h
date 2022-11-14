@@ -9,6 +9,7 @@ class Target::Flatrock::ExactMatchTable : public ::ExactMatchTable {
     ExactMatchTable(int line, const char *n, gress_t gr, Stage *s, int lid) :
         ::ExactMatchTable(line, n, gr, s, lid) { }
 
+    void pass1() override;
     void setup_ways() override;
 };
 

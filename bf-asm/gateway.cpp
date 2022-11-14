@@ -430,9 +430,9 @@ void GatewayTable::pass2() {
 void GatewayTable::pass3() {
     LOG1("### Gateway table " << name() << " pass3 " << loc());
     if (match_table)
-        physical_id = match_table->physical_id;
+        physical_ids = match_table->physical_ids;
     else
-        allocate_physical_id();
+        allocate_physical_ids();
 }
 
 static unsigned match_input_use(const std::vector<GatewayTable::MatchKey> &match) {

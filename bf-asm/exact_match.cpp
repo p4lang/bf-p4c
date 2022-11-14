@@ -224,7 +224,7 @@ void ExactMatchTable::pass2() {
     unsigned usable = -1;
     for (auto &ixb : input_xbar)
         usable &= ixb->exact_physical_ids();
-    allocate_physical_id(usable);
+    allocate_physical_ids(usable);
     determine_ghost_bits();
     // Derive a stash format from current table format with a single entry (we
     // use group 0 entry) and all fields except 'version' and 'action' (match

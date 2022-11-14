@@ -5,6 +5,7 @@
 #include <iostream>
 #include <functional>
 #include <sstream>
+#include "bitvec.h"
 #include "log.h"
 
 void declare_registers(const void *addr, size_t sz,
@@ -82,6 +83,18 @@ template<int N> struct ubits : ubits_base {
         value |= v;
         write = true;
         log("|=", v);
+        return check(); }
+    const ubits &operator|=(bitvec v) {
+        if (disabled_)
+            LOG1("ERROR: Writing disabled register value in " << this);
+        if (v.ffs(N) > 0)
+            LOG1("ERROR: bitvec 0x" << v << " out of range for " << N << " bits in " << this);
+        uint64_t val = v.getrange(0, N);
+        if (write && (val & value) != 0)
+            LOG1("WARNING: Overwriting " << value << " with " << (val|value) << " in " << this);
+        value |= val;
+        write = true;
+        log("|=", val);
         return check(); }
     const ubits &operator+=(uint64_t v) {
         if (disabled_)

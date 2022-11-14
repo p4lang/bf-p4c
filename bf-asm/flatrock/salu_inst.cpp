@@ -14,7 +14,8 @@ void DivMod::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl,
 void MinMax::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl_,
         Table::Actions::Action *act) {
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
-    auto &salu = regs.ppu_sful[tbl->physical_id].ppu_sful_alu;
+    BUG_CHECK(tbl->physical_ids.popcount() == 1, "not exactly one physical id for %s", tbl->name());
+    auto &salu = regs.ppu_sful[*tbl->physical_ids.begin()].ppu_sful_alu;
     auto &sful_instr_common = salu.sful_instr_common[act->code];
 
     if (auto k = mask.to<operand::Const>()) {
@@ -53,7 +54,8 @@ void AluOP::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl_,
         Table::Actions::Action *act) {
     LOG2(this);
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
-    auto &salu = regs.ppu_sful[tbl->physical_id].ppu_sful_alu;
+    BUG_CHECK(tbl->physical_ids.popcount() == 1, "not exactly one physical id for %s", tbl->name());
+    auto &salu = regs.ppu_sful[*tbl->physical_ids.begin()].ppu_sful_alu;
     auto &sful_inst_st = salu.sful_instr_state_alu[act->code][slot - ALU2LO];
     auto &sful_i2st = salu.sful_instr2_st_alu[act->code][slot - ALU2LO];
     auto &sful_instr_common = salu.sful_instr_common[act->code];
@@ -140,7 +142,8 @@ template<>
 void BitOP::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl,
         Table::Actions::Action *act) {
     LOG2(this);
-    auto &salu = regs.ppu_sful[tbl->physical_id].ppu_sful_alu;
+    BUG_CHECK(tbl->physical_ids.popcount() == 1, "not exactly one physical id for %s", tbl->name());
+    auto &salu = regs.ppu_sful[*tbl->physical_ids.begin()].ppu_sful_alu;
     auto &sful_inst_st = salu.sful_instr_state_alu[act->code][slot - ALU2LO];
 
     sful_inst_st.op = opc->opcode & 0xf;
@@ -157,7 +160,8 @@ void CmpOP::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl_,
         Table::Actions::Action *act) {
     LOG2(this);
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
-    auto &salu = regs.ppu_sful[tbl->physical_id].ppu_sful_alu;
+    BUG_CHECK(tbl->physical_ids.popcount() == 1, "not exactly one physical id for %s", tbl->name());
+    auto &salu = regs.ppu_sful[*tbl->physical_ids.begin()].ppu_sful_alu;
     auto &salu_cmp_alu = salu.sful_instr_cmp_alu[act->code][slot];
     auto &salu_inst_com = salu.sful_instr_common[act->code];
 
@@ -230,8 +234,9 @@ void CmpOP::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl_,
     }
 
     salu_cmp_alu.cmp_opcode = opc->opcode | (type << 2);
-    auto lmask = sbus_mask(tbl->physical_id, tbl->sbus_learn);
-    auto mmask = sbus_mask(tbl->physical_id, tbl->sbus_match);
+    BUG_CHECK(tbl->physical_ids.popcount() == 1, "not exactly one physical id for %s", tbl->name());
+    auto lmask = sbus_mask(*tbl->physical_ids.begin(), tbl->sbus_learn);
+    auto mmask = sbus_mask(*tbl->physical_ids.begin(), tbl->sbus_match);
 
     salu_inst_com.lmatch_sb_listen = lmask;
     salu_inst_com.match_sb_listen = mmask;
@@ -253,7 +258,8 @@ template<>
 void TMatchOP::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl_,
         Table::Actions::Action *act) {
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
-    auto &salu = regs.ppu_sful[tbl->physical_id].ppu_sful_alu;
+    BUG_CHECK(tbl->physical_ids.popcount() == 1, "not exactly one physical id for %s", tbl->name());
+    auto &salu = regs.ppu_sful[*tbl->physical_ids.begin()].ppu_sful_alu;
     auto &salu_cmp_alu = salu.sful_instr_cmp_alu[act->code][slot];
     auto &salu_tmatch = salu.sful_instr_tmtch_alu[act->code][slot];
     auto &salu_inst_com = salu.sful_instr_common[act->code];
@@ -265,9 +271,9 @@ void TMatchOP::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl_,
     salu_cmp_alu.cmp_opcode = 2;
     salu_cmp_alu.cmp_asrc_input = srca->field->bit(0) > 0;
     salu_cmp_alu.cmp_bsrc_input = srcb->phv_index(tbl);
-    if (auto lmask = sbus_mask(tbl->physical_id, tbl->sbus_learn))
+    if (auto lmask = sbus_mask(*tbl->physical_ids.begin(), tbl->sbus_learn))
         salu_inst_com.lmatch_sb_listen = lmask;
-    if (auto mmask = sbus_mask(tbl->physical_id, tbl->sbus_match))
+    if (auto mmask = sbus_mask(*tbl->physical_ids.begin(), tbl->sbus_match))
         salu_inst_com.match_sb_listen = mmask;
     salu_cmp_alu.cmp_sbus_or = 0;
     salu_cmp_alu.cmp_sbus_and = learn ? 1 : 0;
@@ -283,7 +289,8 @@ template<>
 void OutOP::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl_,
         Table::Actions::Action *act) {
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
-    auto &salu = regs.ppu_sful[tbl->physical_id].ppu_sful_alu;
+    BUG_CHECK(tbl->physical_ids.popcount() == 1, "not exactly one physical id for %s", tbl->name());
+    auto &salu = regs.ppu_sful[*tbl->physical_ids.begin()].ppu_sful_alu;
     auto &sful_ioa = salu.sful_instr_outp_alu[act->code][slot - ALUOUT0];
     if (predication_encode) {
         sful_ioa.output_cmpfn = predication_encode;

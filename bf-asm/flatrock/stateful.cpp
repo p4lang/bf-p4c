@@ -29,7 +29,8 @@ void set_ftr_raw_instr_bits(checked_array<4,
 }
 
 template<> void StatefulTable::write_logging_regs(Target::Flatrock::mau_regs &regs) {
-    auto &sful = regs.ppu_sful[physical_id];
+    BUG_CHECK(physical_ids.popcount() == 1, "not exactly one physical id for %s", name());
+    auto &sful = regs.ppu_sful[*physical_ids.begin()];
     auto &salu = sful.ppu_sful_alu;
 
     if (stateful_counter_mode && (stateful_counter_mode & FUNCTION_MASK) != FUNCTION_FAST_CLEAR) {
