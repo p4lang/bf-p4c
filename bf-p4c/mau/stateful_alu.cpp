@@ -2081,6 +2081,20 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
     return true;
 }
 
+void CheckStatefulAlu::postorder(IR::MAU::SaluInstruction *si) {
+    if (Device::currentDevice() == Device::TOFINO && si->name.endsWith(".u")) {
+        // For the unsigned compare, the inputs from memory and phv are treated as unsigned
+        // and are zero-extended to 34b, but the constant input is always treated as a signed
+        // number and is sign-extended. On Tofino 1, the constant regfile is only 32 bits wide.
+        for (const auto *op : si->operands) {
+            const auto *constant = op->to<IR::Constant>();
+            if (constant && (constant->value > INT_MAX || constant->value < INT_MIN))
+                error("%sconstant value %s is out of range [%d; %d] for stateful ALU", op->srcInfo,
+                      constant->value.str(), INT_MIN, INT_MAX);
+        }
+    }
+}
+
 bool CheckStatefulAlu::preorder(IR::MAU::Primitive *prim) {
     if (!findContext<IR::MAU::SaluAction>()) {
         return true;

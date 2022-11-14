@@ -349,6 +349,8 @@ class CheckStatefulAlu : public MauModifier {
      *
      */
     void postorder(IR::MAU::StatefulAlu *) override;
+    void postorder(IR::MAU::SaluInstruction *) override;
+
     // FIXME -- Type_Typedef should have been resolved and removed by Typechecking in the
     // midend?  But we're running into it here, so a helper to skip over typedefs.
     static const IR::Type *getType(const IR::Type *t) {

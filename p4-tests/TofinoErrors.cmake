@@ -236,3 +236,8 @@ p4c_add_xfail_reason("tofino"
 expression. Try simplifying your expression."
   extensions/p4_tests/p4_16/errors/p4c-4976-unary-negation.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "error: constant value .* is out of range .* for stateful ALU"
+  extensions/p4_tests/p4_16/errors/p4c-4110.p4
+)
