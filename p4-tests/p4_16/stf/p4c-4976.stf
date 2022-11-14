@@ -1,0 +1,105 @@
+#           dst_addr        src_addr        ether_type  id      type    fields
+
+# reg1
+# value = value | hdr.test.input_field_1; ret = 0;
+# value = 0x0 | 0x42 = 0x42
+packet 0    000000000001    000000000002    8822        0001    01      00 42 ff 00
+expect 0    000000000001    000000000001    8822        0001    01      00 42 00 00
+
+# ret = value | hdr.test.input_field_1;
+# ret = 0x42 | 0x01 = 0x43
+packet 0    000000000002    000000000003    8822        0002    02      00 01 ff 00
+expect 0    000000000001    000000000002    8822        0002    02      00 01 43 00
+
+# value = hdr.test.input_field_1 | value; ret = 0;
+# value = 0x80 | 0x42 = 0xc2
+packet 0    000000000003    000000000004    8822        0003    03      00 80 ff 00
+expect 0    000000000001    000000000003    8822        0003    03      00 80 00 00    
+
+# ret = hdr.test.input_field_1 | value;
+# ret = 0x21 | 0xc2 = 0xe3
+packet 0    000000000004    000000000005    8822        0004    04      00 21 ff 00
+expect 0    000000000001    000000000004    8822        0004    04      00 21 e3 00
+
+# reg2
+# value = value | ~hdr.test.input_field_1; ret = 0;
+# value = 0x0 | 0x42 = 0x42
+packet 0    000000000001    000000000002    8822        0001    05      00 bd ff 00
+expect 0    000000000001    000000000001    8822        0001    05      00 bd 00 00
+
+# ret = value | ~hdr.test.input_field_1;
+# ret = 0x42 | 0x01 = 0x43
+packet 0    000000000002    000000000003    8822        0002    06      00 fe ff 00
+expect 0    000000000001    000000000002    8822        0002    06      00 fe 43 00
+
+# value = hdr.test.input_field_1 | ~value; ret = 0;
+# value = 0x80 | 0xbd = 0xbd
+packet 0    000000000003    000000000004    8822        0003    07      00 80 ff 00
+expect 0    000000000001    000000000003    8822        0003    07      00 80 00 00    
+
+# ret = hdr.test.input_field_1 | ~value;
+# ret = 0x21 | 0x42 = 0x63
+packet 0    000000000004    000000000005    8822        0004    08      00 21 ff 00
+expect 0    000000000001    000000000004    8822        0004    08      00 21 63 00
+
+# reg3
+# value = ~hdr.test.input_field_1; ret = 0;
+packet 0    000000000001    000000000002    8822        0001    09      00 bd ff 00
+expect 0    000000000001    000000000001    8822        0001    09      00 bd 00 00
+
+# ret = ~hdr.test.input_field_1;
+# ret = 0x43
+packet 0    000000000002    000000000003    8822        0002    0a      00 bc ff 00
+expect 0    000000000001    000000000002    8822        0002    0a      00 bc 43 00
+
+# reg4
+# value = value ^ ~hdr.test.input_field_1; ret = 0;
+# value = 0x0 ^ 0x42 = 0x42
+packet 0    000000000001    000000000002    8822        0001    0b      00 bd ff 00
+expect 0    000000000001    000000000001    8822        0001    0b      00 bd 00 00
+
+# ret = value ^ ~hdr.test.input_field_1;
+# ret = 0x42 ^ 0x01 = 0x43
+packet 0    000000000002    000000000003    8822        0002    0c      00 fe ff 00
+expect 0    000000000001    000000000002    8822        0002    0c      00 fe 43 00
+
+# value = hdr.test.input_field_1 ^ ~value; ret = 0;
+# value = 0x80 ^ 0xbd = 0x3d
+packet 0    000000000003    000000000004    8822        0003    0d      00 80 ff 00
+expect 0    000000000001    000000000003    8822        0003    0d      00 80 00 00    
+
+# ret = hdr.test.input_field_1 ^ ~value;
+# ret = 0x21 ^ 0xc2 = 0xe3
+packet 0    000000000004    000000000005    8822        0004    0e      00 21 ff 00
+expect 0    000000000001    000000000004    8822        0004    0e      00 21 e3 00
+
+# reg5
+# value = -hdr.test.input_field_1; ret = 0;
+packet 0    000000000001    000000000002    8822        0001    0f      00 bd ff 00
+expect 0    000000000001    000000000001    8822        0001    0f      00 bd 00 00
+
+# ret = -hdr.test.input_field_1;
+# ret = 0x43
+packet 0    000000000002    000000000003    8822        0002    10      00 bd ff 00
+expect 0    000000000001    000000000002    8822        0002    10      00 bd 43 00
+
+# reg6
+# value = value & ~hdr.test.input_field_1; ret = 0;
+# value = 0xff & 0x42 = 0x42
+packet 0    000000000001    000000000002    8822        0001    11      00 bd ff 00
+expect 0    000000000001    000000000001    8822        0001    11      00 bd 00 00
+
+# ret = value & ~hdr.test.input_field_1;
+# ret = 0x42 & 0x01 = 0x00
+packet 0    000000000002    000000000003    8822        0002    12      00 fe ff 00
+expect 0    000000000001    000000000002    8822        0002    12      00 fe 00 00
+
+# value = hdr.test.input_field_1 & ~value; ret = 0;
+# value = 0x80 & 0xbd = 0x80
+packet 0    000000000003    000000000004    8822        0003    13      00 80 ff 00
+expect 0    000000000001    000000000003    8822        0003    13      00 80 00 00    
+
+# ret = hdr.test.input_field_1 ^ ~value;
+# ret = 0x21 ^ 0x7f = 0x21
+packet 0    000000000004    000000000005    8822        0004    14      00 21 ff 00
+expect 0    000000000001    000000000004    8822        0004    14      00 21 21 00

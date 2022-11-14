@@ -293,6 +293,7 @@ p4c_add_xfail_reason("p4"
   extensions/p4_tests/p4_16/stf/funnel_shift.p4
   extensions/p4_tests/p4_16/stf/overwriting_bitwise.p4
   extensions/p4_tests/p4_16/stf/p4c-4771.p4
+  extensions/p4_tests/p4_16/stf/p4c-4976.p4
   extensions/p4_tests/p4_16/ptf/static_entries.p4
   extensions/p4_tests/p4_16/ptf/checksum_if_else_cond.p4
   extensions/p4_tests/p4_16/ptf/checksum_splitting.p4

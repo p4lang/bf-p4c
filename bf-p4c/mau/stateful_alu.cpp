@@ -588,7 +588,7 @@ void CreateSaluInstruction::doAssignment(const Util::SourceInfo &srcInfo) {
             predicate = new IR::LAnd(old_predicate, predicate);
         etype = OUTPUT;
         operands.push_back(new IR::Constant(1)); }
-    BUG_CHECK(operands.size() > (etype < OUTPUT), "%1%: recursion failure", srcInfo);
+    BUG_CHECK(operands.size() > (etype < OUTPUT_ALUHI), "%1%: recursion failure", srcInfo);
     if (operands.front()->type->width_bits() > Device::statefulAluSpec().MaxSize)
         error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1%Wide operations not supported in "
                 "stateful alu, will only operate on bottom %2% bits", srcInfo,
@@ -1365,14 +1365,13 @@ bool CreateSaluInstruction::preorder(const IR::SubSat *e) {
 
 void CreateSaluInstruction::postorder(const IR::BAnd *e) {
     checkAndReportComplexInstruction(e);
-    if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
+    if (etype == VALUE || etype == OUTPUT_ALUHI) {
         if (e->left->is<IR::Cmpl>())
             opcode = "andca";
         else if (e->right->is<IR::Cmpl>())
             opcode = "andcb";
         else
             opcode = "and";
-        if (etype == OUTPUT) etype = OUTPUT_ALUHI;
     } else if (etype == IF) {
         if (operands.size() < 2) return;  // can only happen if there has been an error
         if (opcode == "tmatch") return;  // separate operands
@@ -1419,12 +1418,24 @@ bool CreateSaluInstruction::isComplexInstruction(const IR::Operation_Binary *op)
         ret |= oper->is<IR::Sub>()  | oper->is<IR::SubSat>();
         ret |= oper->is<IR::BAnd>() | oper->is<IR::BOr>() | oper->is<IR::BXor>();
         ret |= oper->is<IR::Div>()  | oper->is<IR::Mod>();
+        ret |= oper->is<IR::Neg>();
     }
 
     return ret;
 }
 
+bool CreateSaluInstruction::preorder(const IR::BAnd *) {
+    if (etype == OUTPUT && outputAluHi()) etype = OUTPUT_ALUHI;
+    return true;
+}
+
+bool CreateSaluInstruction::preorder(const IR::BXor *) {
+    if (etype == OUTPUT && outputAluHi()) etype = OUTPUT_ALUHI;
+    return true;
+}
+
 bool CreateSaluInstruction::preorder(const IR::BOr *e) {
+    if (etype == OUTPUT && outputAluHi()) etype = OUTPUT_ALUHI;
     if (isComplexInstruction(e)) {
         if (etype == VALUE && operands.size() == 1) {
             // Collect & dump data for the left subtree
@@ -1454,14 +1465,13 @@ void CreateSaluInstruction::postorder(const IR::BOr *e) {
         return;
     }
 
-    if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
+    if (etype == VALUE || etype == OUTPUT_ALUHI) {
         if (e->left->is<IR::Cmpl>())
             opcode = "orca";
         else if (e->right->is<IR::Cmpl>())
             opcode = "orcb";
         else
             opcode = "or";
-        if (etype == OUTPUT) etype = OUTPUT_ALUHI;
     } else {
         error("%sexpression too complex for stateful alu", e->srcInfo); }
 }
@@ -1480,14 +1490,32 @@ bool CreateSaluInstruction::preorder(const IR::Concat *e) {
 }
 void CreateSaluInstruction::postorder(const IR::BXor *e) {
     checkAndReportComplexInstruction(e);
-    if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
+    if (etype == VALUE || etype == OUTPUT_ALUHI) {
         if (e->left->is<IR::Cmpl>() || e->right->is<IR::Cmpl>())
             opcode = "xnor";
         else
             opcode = "xor";
-        if (etype == OUTPUT) etype = OUTPUT_ALUHI;
     } else {
         error("%sexpression too complex for stateful alu", e->srcInfo); }
+}
+void CreateSaluInstruction::postorder(const IR::Neg *e) {
+    if (etype == OUTPUT && outputAluHi()) {
+        etype = OUTPUT_ALUHI;
+    }
+
+    // There is no opcode for unary negation, so we use subtraction instead. SUBR performs B - A
+    // with A being the value to negate and B = 0.
+    opcode = "subr";
+    if (operands.size() <= 2) {
+        BUG_CHECK(!operands.empty(), "No operands for unary negation in SALU action %1%", salu);
+        const auto *negated = operands.back();
+        operands.push_back(new IR::Constant(negated->srcInfo, negated->type, 0));
+    } else {
+        error(ErrorType::ERR_UNSUPPORTED,
+              "Unary negation (%1%) in Stateful ALU is only possible if it is the only operation "
+              "in an expression. Try simplifying your expression.",
+              e);
+    }
 }
 void CreateSaluInstruction::postorder(const IR::Cmpl *e) {
     static const std::map<cstring, cstring> complement = {
@@ -1500,7 +1528,15 @@ void CreateSaluInstruction::postorder(const IR::Cmpl *e) {
         return; }
     if (complement.count(opcode))
         opcode = complement.at(opcode);
-    else if (etype != VALUE)
+    else if (etype == OUTPUT || etype == OUTPUT_ALUHI) {
+        if (outputAluHi()) {
+            etype = OUTPUT_ALUHI; }
+        // Switch opcode from "output" to "nota" so that the correct instruction is created for
+        // bit complements in ALUHI, eg. ret = ~hdr.field;. If this bit complement is part of a
+        // binary bitwise operation, eg. ORCA, the opcode will be changed again in the relevant
+        // postorder method for the binary operation.
+        opcode = "nota";
+    } else if (etype != VALUE)
         error("%sexpression too complex for stateful alu", e->srcInfo);
 }
 void CreateSaluInstruction::postorder(const IR::Concat *e) {

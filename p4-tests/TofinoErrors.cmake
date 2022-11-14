@@ -230,3 +230,9 @@ Actions use 5 register parameters but the device has only 4 register action para
 To make the actions fit, reduce the number of register parameters."
   extensions/p4_tests/p4_16/errors/p4c-4829-params.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "error: Unary negation .* in Stateful ALU is only possible if it is the only operation in an \
+expression. Try simplifying your expression."
+  extensions/p4_tests/p4_16/errors/p4c-4976-unary-negation.p4
+)
