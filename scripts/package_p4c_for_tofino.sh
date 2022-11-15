@@ -117,5 +117,8 @@ else
     build_p4c
 fi
 
+# Generate the final CPack archive.
+(cd $builddir; make package)
+
 echo "Success!"
 exit 0
