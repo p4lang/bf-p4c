@@ -1163,6 +1163,9 @@ struct ParserExtract {
     /// container.
     mutable int offset;
 
+    /// Textual information about extracts
+    mutable std::vector<cstring> comments;
+
     bool operator<(const ParserExtract& e) const {
         // header name does not affect ordering
         if (type == Flatrock::ExtractType::Packet)
@@ -1246,7 +1249,6 @@ class ComputeFlatrockParserIR : public ParserInspector {
     profile_t init_apply(const IR::Node *node) override {
         headers.clear();
         rules_info.clear();
-        comments.clear();
         extracts.clear();
         igMetaExtracted = false;
         return Inspector::init_apply(node);
@@ -1259,8 +1261,8 @@ class ComputeFlatrockParserIR : public ParserInspector {
         return true;
     }
 
-    void add_extract(const gress_t gress, const IR::BFN::Extract *extract,
-            const PHV::AllocSlice& alloc, const ParserExtract& new_pe) {
+    void add_extract(const gress_t gress, const PHV::AllocSlice& alloc,
+            const ParserExtract& new_pe) {
         // TODO check if the layout of slices in the container is the same as the layout
         // of fields in the header in case of extract from packet
         // TODO check the container with fields extracted from packet if it does not
@@ -1276,12 +1278,10 @@ class ComputeFlatrockParserIR : public ParserInspector {
                     " are not supported in the same container: %3%",
                     new_pe.hdr, pe->hdr, alloc);
             pe->slices.push_back(new_pe.slices.front());
+            pe->comments.push_back(new_pe.comments.front());
             // merge constants
             pe->offset |= new_pe.offset;
         }
-        comments[{gress, new_pe.size, new_pe.index, new_pe.slices.front()}].push_back(
-            debugInfoFor(extract, alloc, extract->source->is<IR::BFN::InputBufferRVal>() ?
-                extract->source->to<IR::BFN::InputBufferRVal>()->range : nw_bitrange{}, true));
     }
 
     bool preorder(const IR::BFN::ParserZeroInit* zero) override {
@@ -1289,7 +1289,8 @@ class ComputeFlatrockParserIR : public ParserInspector {
     }
 
     ParserExtract extract_packet(const PHV::AllocSlice &alloc,
-            const cstring hdr_name, int container_offset_in_bytes) {
+            const cstring hdr_name, int container_offset_in_bytes,
+            const cstring comment) {
         ParserExtract e = {
             .type = Flatrock::ExtractType::Packet,
             .subtype = Flatrock::ExtractSubtype::None,
@@ -1297,14 +1298,16 @@ class ComputeFlatrockParserIR : public ParserInspector {
             .slices = std::vector<le_bitrange>{alloc.container_slice()},
             .index = alloc.container().index(),
             .hdr = hdr_name,
-            .offset = container_offset_in_bytes
+            .offset = container_offset_in_bytes,
+            .comments = std::vector<cstring>{comment}
         };
 
         return e;
     }
 
     ParserExtract extract_constant(const PHV::AllocSlice &alloc,
-            const IR::BFN::ConstantRVal *constant, const cstring hdr_name) {
+            const IR::BFN::ConstantRVal *constant, const cstring hdr_name,
+            const cstring comment) {
         auto value = constant->constant->asUnsigned();
         // Check that the value doesn't overflow
         const auto max_slice_value = (1ULL << alloc.container_slice().size()) - 1;
@@ -1320,7 +1323,8 @@ class ComputeFlatrockParserIR : public ParserInspector {
             .index = alloc.container().index(),
             .hdr = hdr_name,
             // Store the value at proper bit position
-            .offset = static_cast<int>(value << alloc.container_slice().lo)
+            .offset = static_cast<int>(value << alloc.container_slice().lo),
+            .comments = std::vector<cstring>{comment}
         };
 
         return e;
@@ -1383,6 +1387,11 @@ class ComputeFlatrockParserIR : public ParserInspector {
             const auto& alloc = allocs.front();
 
             ParserExtract e;
+            cstring comment = debugInfoFor(extract, alloc,
+                    extract->source->is<IR::BFN::InputBufferRVal>() ?
+                        extract->source->to<IR::BFN::InputBufferRVal>()->range :
+                        nw_bitrange{},
+                    true);
 
             if (const auto *pkt_rval = extract->source->to<IR::BFN::PacketRVal>()) {
                 size_t hdr_bit_width = get_hdr_bit_width(lval->field);
@@ -1410,7 +1419,7 @@ class ComputeFlatrockParserIR : public ParserInspector {
                         "Invalid position of slice in container");
                 int container_offset_in_bytes = container_offset_in_bits / 8;
                 LOG5("container_offset_in_bytes: " << container_offset_in_bytes);
-                e = extract_packet(alloc, hdr_name, container_offset_in_bytes);
+                e = extract_packet(alloc, hdr_name, container_offset_in_bytes, comment);
                 const auto *state = findContext<IR::BFN::ParserState>();
                 CHECK_NULL(state);
                 if (headers[state].count(hdr_name) == 0) {
@@ -1426,16 +1435,16 @@ class ComputeFlatrockParserIR : public ParserInspector {
                     });
                 }
             } else if (const auto* const_rval = extract->source->to<IR::BFN::ConstantRVal>()) {
-                e = extract_constant(alloc, const_rval, hdr_name);
+                e = extract_constant(alloc, const_rval, hdr_name, comment);
             }
 
             // FIXME If a header field is modified in ingress and then used in egress,
             // extracting it again in egress would overwrite the changes from ingress.
             // The PHEs from ingress should be copied to egress instead.
             if (used_in_ingress)
-                add_extract(INGRESS, extract, alloc, e);
+                add_extract(INGRESS, alloc, e);
             if (used_in_egress)
-                add_extract(EGRESS, extract, alloc, e);
+                add_extract(EGRESS, alloc, e);
         };
 
         return true;
@@ -1537,13 +1546,12 @@ class ComputeFlatrockParserIR : public ParserInspector {
                   << ", subtype=" << extract.subtype
                   << ", header=" << extract.hdr
                   << ", offset=" << extract.offset);
+                unsigned int i = 0;
                 for (const auto& slice : extract.slices) {
                     LOG3("    slice=" << slice);
-                    if (comments.count({gress, extract.size, extract.index, slice}) == 0)
-                        continue;
-                    for (const auto& comment :
-                         comments.at({gress, extract.size, extract.index, slice}))
-                        LOG3("      " << comment);
+                    if (i < extract.comments.size())
+                        LOG3("      " << extract.comments[i]);
+                    ++i;
                 }
             }
         };
@@ -1569,10 +1577,6 @@ class ComputeFlatrockParserIR : public ParserInspector {
      *        needed to create analyzer rules for the given parser states.
      */
     std::map<const IR::BFN::ParserState*, AnalyzerRuleInfo> rules_info;
-    /**
-     * @brief Textual information about extracts performed in parser
-     */
-    std::map<ExtractCommentInfo, std::vector<cstring>> comments;
     /**
      * @brief Information about extracts performed in parser needed to create
      *        corresponding PHV builder extracts.
@@ -1902,38 +1906,27 @@ class ReplaceFlatrockParserIR : public ParserTransform {
             if (phv_builder_extract == nullptr)
                 phv_builder_extract = new IR::Flatrock::PhvBuilderExtract(extract.size);
 
-            for (const auto& slice : extract.slices) {
-                const auto comments = computed.comments.at(
-                    {gress, extract.size, extract.index, slice});
-                phv_builder_extract->debug.info.insert(phv_builder_extract->debug.info.begin(),
-                                                       comments.begin(), comments.end());
-            }
-
             /**
              * Each PHV builder group extract specifies a pair of PHE sources.
              * Each PHE source specifies:
              * - 4 PHE8 sources or
              * - 2 PHE16 sources or
              * - 1 PHE32 source
-             * Values for the first PHE source (4xPHE8 / 2xPHE16 / 1xPHE32) in the pair are
-             * stored in type1, hdr1_name, offsets1
-             * Values for the second PHE source (4xPHE8 / 2xPHE16 / 1xPHE32) in the pair are
-             * stored in type2, hdr2_name, offsets2
+             * Values for each PHE source (4xPHE8 / 2xPHE16 / 1xPHE32) in the pair are
+             * stored in one element of 'source' array
              */
             phv_builder_extract->index = 0;
             const auto index = extract.index;
             const auto phe_sources = phe_info.phe_sources;
-            if ((index / phe_sources) % Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES == 0) {
-                // FIXME: clean up
-                phv_builder_extract->type1 = extract.type;
-                phv_builder_extract->hdr1_name = extract.hdr;
-                add_offsets(phv_builder_extract->offsets1, phe_info.container_name, extract);
-            } else {
-                // FIXME: clean up
-                phv_builder_extract->type2 = extract.type;
-                phv_builder_extract->hdr2_name = extract.hdr;
-                add_offsets(phv_builder_extract->offsets2, phe_info.container_name, extract);
-            }
+            const auto phe_source_index =
+                    (index / phe_sources) % Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES;
+            phv_builder_extract->source[phe_source_index].type = extract.type;
+            phv_builder_extract->source[phe_source_index].hdr_name = extract.hdr;
+            add_offsets(phv_builder_extract->source[phe_source_index].offsets,
+                    phe_info.container_name, extract);
+            phv_builder_extract->source[phe_source_index].debug.info.insert(
+                    phv_builder_extract->source[phe_source_index].debug.info.end(),
+                    extract.comments.begin(), extract.comments.end());
         }
 
         return extracts;

@@ -1,6 +1,6 @@
 #emit
-#include "bf-p4c/common/flatrock.h"
 #include "bf-p4c/common/debug_info.h"
+#include "bf-p4c/common/flatrock.h"
 #include "bf-p4c/parde/flatrock.h"
 #include "lib/exceptions.h"
 #end
@@ -338,23 +338,13 @@ class PhvBuilderExtract {
     match_t match = {match_all, match_all};
 #emit
     PHV::Size size = PHV::Size::null;
-    ::Flatrock::ExtractType type1 = ::Flatrock::ExtractType::None;
-    ::Flatrock::ExtractType type2 = ::Flatrock::ExtractType::None;
-
-    std::vector<::Flatrock::ExtractInfo> offsets1 = {};
-    std::vector<::Flatrock::ExtractInfo> offsets2 = {};
-#end
-    boost::optional<int> hdr1_id = boost::none;
-    boost::optional<cstring> hdr1_name = boost::none;
-
-    boost::optional<int> hdr2_id = boost::none;
-    boost::optional<cstring> hdr2_name = boost::none;
-#emit
-    ::BFN::DebugInfo debug;
+    ::Flatrock::PheSource source[::Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES];
 #end
 #noconstructor
-    PhvBuilderExtract() : size(PHV::Size::null) {}
-    PhvBuilderExtract(PHV::Size size) : size(size) {}
+#emit
+    PhvBuilderExtract() : size{PHV::Size::null}, source{{}, {}} {}
+    PhvBuilderExtract(PHV::Size size) : size{size}, source{{}, {}} {}
+#end
     validate {
         size_t sources = 0;
         switch (size) {
@@ -364,10 +354,11 @@ class PhvBuilderExtract {
         default:
             BUG("Invalid container size in PHV builder extractor");
         }
-        BUG_CHECK(offsets1.size() <= sources,
-            "too many offsets provided on left: %d, allowed at most %d", offsets1.size(), sources);
-        BUG_CHECK(offsets2.size() <= sources,
-            "too many offsets provided on right: %d, allowed at most %d", offsets2.size(), sources);
+        for (int i = 0; i < ::Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES; ++i) {
+            BUG_CHECK(source[i].offsets.size() <= sources,
+                    "too many offsets provided in the source %d: %d, allowed at most %d",
+                    i, source[i].offsets.size(), sources);
+        }
     }
     toString { return "extract id=" + cstring::to_cstring(index); }
     dbprint {
@@ -381,28 +372,19 @@ class PhvBuilderExtract {
         default:
             BUG("Invalid container size in PHV builder extractor");
         }
-        out << IndentCtl::endl << "type1=" << type1;
-        out << IndentCtl::endl << "hdr1_id=" << (hdr1_id ? std::to_string(*hdr1_id) : "<unset>");
-        out << IndentCtl::endl << "hdr1_name=" << (hdr1_name ? *hdr1_name : "<unset>");
-        out << IndentCtl::endl << "offsets=[";
-        std::string sep = "";
-        for (auto &offset : offsets1) {
-            out << sep << '(' << offset.container << ", " << offset.subtype << ", " << offset.value
-                << ')';
-            sep = ", ";
+        for (int i = 0; i < ::Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES; ++i) {
+            out << IndentCtl::endl << "source[" << i << "].type=" << source[i].type;
+            out << IndentCtl::endl << "source[" << i << "].hdr_name=" <<
+                    (source[i].hdr_name ? *source[i].hdr_name : "<unset>");
+            out << IndentCtl::endl << "source[" << i << "].offsets=[";
+            std::string sep = "";
+            for (auto &offset : source[i].offsets) {
+                out << sep << '(' << offset.container << ", " << offset.subtype << ", " << offset.value
+                    << ')';
+                sep = ", ";
+            }
+            out << ']';
         }
-        out << ']';
-        out << IndentCtl::endl << "type2=" << type2;
-        out << IndentCtl::endl << "hdr2_id=" << (hdr2_id ? std::to_string(*hdr2_id) : "<unset>");
-        out << IndentCtl::endl << "hdr2_name=" << (hdr2_name ? *hdr2_name : "<unset>");
-        out << IndentCtl::endl << "offsets=[";
-        sep = "";
-        for (auto &offset : offsets2) {
-            out << sep << '(' << offset.container << ", " << offset.subtype << ", " << offset.value
-                << ')';
-            sep = ", ";
-        }
-        out << ']';
         out << IndentCtl::unindent;
     }
 }

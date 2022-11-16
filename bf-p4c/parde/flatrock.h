@@ -305,6 +305,13 @@ struct ExtractInfo {
     int value;
     ExtractSubtype subtype;
 };
+
+struct PheSource {
+    ExtractType type = ExtractType::None;
+    std::vector<ExtractInfo> offsets = {};
+    boost::optional<cstring> hdr_name = boost::none;
+    ::BFN::DebugInfo debug = {};
+};
 }  // namespace Flatrock
 
 inline std::ostream& operator<<(std::ostream& os, const Flatrock::ExtractType type) {

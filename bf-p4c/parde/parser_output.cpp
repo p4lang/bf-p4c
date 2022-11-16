@@ -8,6 +8,7 @@
 #include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/common/autoindent.h"
 #include "bf-p4c/common/debug_info.h"
+#include "bf-p4c/common/flatrock.h"
 #include "bf-p4c/parde/asm_output.h"
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/parde/clot/clot_info.h"
@@ -242,23 +243,15 @@ struct ParserAsmSerializer : public ParserInspector {
             break;
         }
 
-        auto output_extract = [this, &phv_builder_extract, &source](
-                const Flatrock::ExtractType type,
-                const boost::optional<int> &hdr_id, const boost::optional<cstring> &hdr_name,
-                const PHV::Size size, const std::vector<Flatrock::ExtractInfo> &offsets) {
-            if (type == Flatrock::ExtractType::Packet) {
-                if (hdr_id)
-                    out << indent << "- " << source << ' ' << *hdr_id;
-                else if (hdr_name)
-                    out << indent << "- " << source << ' ' << *hdr_name;
-                else
-                    out << indent << "- {}";
-                if (hdr_id || hdr_name) {
-                    out << ' ';
+        auto output_extract = [this, &source](
+                const PHV::Size size, const Flatrock::PheSource &phe_source) {
+            if (phe_source.type == Flatrock::ExtractType::Packet) {
+                if (phe_source.hdr_name) {
+                    out << indent << "- " << source << ' ' << *phe_source.hdr_name << ' ';
                     if (size != PHV::Size::b32)
                         out << "[ ";
                     std::string sep = "";
-                    for (auto &offset : offsets) {
+                    for (auto &offset : phe_source.offsets) {
                         out << sep << offset.container;
                         if (size != PHV::Size::b8)
                             out << " msb_offset ";
@@ -269,11 +262,13 @@ struct ParserAsmSerializer : public ParserInspector {
                     }
                     if (size != PHV::Size::b32)
                         out << " ]";
+                } else {
+                    out << indent << "- {}";
                 }
             } else {
                 out << indent << "- { ";
                 std::string sep = "";
-                for (auto &offset : offsets) {
+                for (auto &offset : phe_source.offsets) {
                     out << sep << offset.container;
                     out << ": " << get_subtype_label(offset.subtype) << " ";
                     out << offset.value;
@@ -281,34 +276,17 @@ struct ParserAsmSerializer : public ParserInspector {
                 }
                 out << " }";
             }
+            out << std::endl;
+            indent++;
+            for (auto& info : phe_source.debug.info)
+                out << indent << "# " << info << std::endl;
+            indent--;
         };
 
         out << indent << "source:" << std::endl;
         indent++;
-
-        output_extract(
-            phv_builder_extract->type1,
-            phv_builder_extract->hdr1_id,
-            phv_builder_extract->hdr1_name,
-            phv_builder_extract->size,
-            phv_builder_extract->offsets1);
-
-        out << std::endl;
-
-        output_extract(
-            phv_builder_extract->type2,
-            phv_builder_extract->hdr2_id,
-            phv_builder_extract->hdr2_name,
-            phv_builder_extract->size,
-            phv_builder_extract->offsets2);
-
-        out << std::endl;
-
-        indent++;
-        for (auto& info : phv_builder_extract->debug.info)
-            out << indent << "# " << info << std::endl;
-        indent--;
-
+        for (int i = 0; i < Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES; ++i)
+            output_extract(phv_builder_extract->size, phv_builder_extract->source[i]);
         indent--;
 
         indent--;
