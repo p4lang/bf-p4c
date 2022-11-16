@@ -454,7 +454,9 @@ class IXBar::SetupCmpMap : public Inspector {
     SetupCmpMap(const PhvInfo &phv, const IR::MAU::Table *tbl, cmp_map_t &cm)
     : phv(phv), tbl(tbl), cmp_map(cm) {
         for (auto &gw : tbl->gateway_rows)
-            gw.first->apply(*this); }
+            if (gw.first)
+                gw.first->apply(*this);
+    }
 };
 
 bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,

@@ -1666,6 +1666,8 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
         auto main = evaluatedProgram->getMain();
         if (!main)
             ::fatal_error("Program does not contain a `main` module");
+
+        isMultiParser = false;
         if (main->type->name == "MultiParserSwitch") {
             forAllPipeBlocks(evaluatedProgram, [&](cstring pipeName, const IR::PackageBlock* pkg) {
                 BUG_CHECK(

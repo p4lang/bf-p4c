@@ -128,6 +128,8 @@ struct ActionDataBus {
     ordered_map<cstring, const Use &> reduction_or_mapping;
 
  public:
+    virtual ~ActionDataBus() { }
+
     virtual bool alloc_action_data_bus(const IR::MAU::Table *tbl,
         const ActionData::Format::Use *use, TableResourceAlloc &alloc) = 0;
     virtual bool alloc_action_data_bus(const IR::MAU::Table *tbl,
