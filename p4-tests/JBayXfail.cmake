@@ -67,7 +67,7 @@ endif() # HARLYN_STF
 # BEGIN: XFAILS that match glass XFAILS
 
 p4c_add_xfail_reason("tofino2"
-  "table .* Cannot match on multiple fields using lpm match type"
+  "table .* Cannot match on multiple fields using the LPM match type"
   testdata/p4_14_samples/issue60.p4
   )
 

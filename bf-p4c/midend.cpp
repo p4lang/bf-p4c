@@ -349,13 +349,14 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::EliminateNewtype(&refMap, &typeMap, typeChecking),
         new P4::EliminateSerEnums(&refMap, &typeMap, typeChecking),
         new BFN::TypeChecking(&refMap, &typeMap, true),
+        new BFN::SetDefaultSize(true /* warn */),  // set default table size for tables w/o "size="
         new BFN::CheckUnsupported(&refMap, &typeMap),
         new P4::OrderArguments(&refMap, &typeMap, typeChecking),
         new BFN::OptionalToTernaryMatchTypeConverter(),
         new BFN::ArchTranslation(&refMap, &typeMap, options),
         new BFN::TypeChecking(&refMap, &typeMap, true),
         new BFN::CheckDesignPattern(&refMap, &typeMap),  // add checks for p4 design pattern here.
-        new BFN::SetDefaultSize(true /* warn */),  // set default table size to 512 if not set.
+        new BFN::SetDefaultSize(false /* warn */),  //  belt and suspenders, in case of IR mutation
         new BFN::InitializeMirrorIOSelect(&refMap, &typeMap),
         new BFN::DropPacketWithMirrorEngine(&refMap, &typeMap),
         new EnumOn32Bits::FindStatefulEnumOutputs(*enum_policy),

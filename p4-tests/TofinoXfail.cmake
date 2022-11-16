@@ -567,7 +567,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "table .* Cannot match on multiple fields using lpm match type"
+  "table .* Cannot match on multiple fields using the LPM match type"
   extensions/p4_tests/glass/mau/case1770.p4
   testdata/p4_14_samples/issue60.p4
   testdata/p4_16_samples/psa-dpdk-lpm-match-err1.p4
