@@ -22,7 +22,8 @@ struct Device::GatewaySpec {
     bool        SupportXor;
     bool        SupportRange;
     int         ExactShifts;
-    bool        ByteSwizzle;
+    bool        ByteSwizzle;    // is the a byte swizzle between ixbar and gateway
+    int         PerByteMatch;   // lower bytes are shared per row, with 1 bit match per row
     unsigned    XorByteSlots;
 };
 
@@ -152,6 +153,7 @@ class BuildGatewayMatch : public Inspector {
     CollectGatewayFields        &fields;
     match_t                     match;
     safe_vector<int>            range_match;
+    std::map<int, match_t>      byte_matches;
     profile_t init_apply(const IR::Node *root) override;
     bool preorder(const IR::Expression *) override;
     bool preorder(const IR::MAU::TypedPrimitive *) override;
@@ -174,6 +176,8 @@ class BuildGatewayMatch : public Inspector {
     PHV::FieldSlice             match_field;
     uint64_t                    andmask = 0, ormask = 0, cmplmask = 0;
     int                         shift = 0, maxbit = 0;
+    bool check_per_byte_match(const std::pair<int, le_bitrange> &byte,
+                              uint64_t mask, uint64_t val);
 
  public:
     BuildGatewayMatch(const PhvInfo &phv, CollectGatewayFields &f);

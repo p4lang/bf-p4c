@@ -19,6 +19,10 @@ std::ostream &operator<<(std::ostream &out, const CollectGatewayFields::info_t &
 std::ostream &operator<<(std::ostream &out, const CollectGatewayFields &gwf) {
     auto flags = dbgetflags(out);
     out << Brief << indent;
+    if (gwf.tbl) {
+        out << "table: " << gwf.tbl->name;
+        if (gwf.ixbar) out << "  "; }
+    if (gwf.ixbar) out << "ixbar: " << indent << *gwf.ixbar << unindent;
     for (auto &i : gwf.info) {
         out << Log::endl << i.first << i.second;
         for (auto x : i.second.xor_with)

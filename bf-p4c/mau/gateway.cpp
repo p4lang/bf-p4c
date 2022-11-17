@@ -17,6 +17,7 @@ const Device::GatewaySpec &TofinoDevice::getGatewaySpec() const {
         /* .SupportRange = */   true,
         /* .ExactShifts = */    1,
         /* .ByteSwizzle = */    true,
+        /* .PerByteMatch = */   0,
         /* .XorByteSlots = */   0xf0,
     };
     return spec; }
@@ -31,6 +32,7 @@ const Device::GatewaySpec &JBayDevice::getGatewaySpec() const {
         /* .SupportRange = */   true,
         /* .ExactShifts = */    5,
         /* .ByteSwizzle = */    true,
+        /* .PerByteMatch = */   0,
         /* .XorByteSlots = */   0xf0,
     };
     return spec; }
@@ -46,6 +48,7 @@ const Device::GatewaySpec &CloudbreakDevice::getGatewaySpec() const {
         /* .SupportRange = */   true,
         /* .ExactShifts = */    5,
         /* .ByteSwizzle = */    true,
+        /* .PerByteMatch = */   0,
         /* .XorByteSlots = */   0xf0,
     };
     return spec; }
@@ -61,6 +64,7 @@ const Device::GatewaySpec &FlatrockDevice::getGatewaySpec() const {
         /* .SupportRange = */   false,
         /* .ExactShifts = */    4,
         /* .ByteSwizzle = */    false,
+        /* .PerByteMatch = */   8,
         /* .XorByteSlots = */   0xf0,
     };
     return spec;
@@ -805,7 +809,8 @@ bool CollectGatewayFields::compute_offsets() {
     std::sort(sort_by_size.begin(), sort_by_size.end(),
               [](decltype(info)::value_type *a, decltype(info)::value_type *b) -> bool {
                   return a->first.size() > b->first.size(); });
-    std::map<std::pair<PHV::Container, int>, int>       alloc_bytes;
+    // track where each container byte is located on the gateway input
+    std::map<std::pair<PHV::Container, int>, std::set<int>>       alloc_bytes;
     PHV::FieldUse use_read(PHV::FieldUse::READ);
 
     if (!gws.ByteSwizzle && ixbar) {
@@ -816,7 +821,7 @@ bool CollectGatewayFields::compute_offsets() {
             // different byte addresses in the match.  This should be more flexible to support
             // other schemes too
             int b = byte.loc.group*8 + byte.loc.byte;
-            alloc_bytes[byte] = b;
+            alloc_bytes[byte].insert(b);
             if (b >= bytes) bytes = b+1; }
         // another odd problem -- xors can generally only go one way (can xor bytes 4-7 into
         // bytes 0-3, but not the reverse on flatrock), so we need to make sure that the
@@ -827,16 +832,16 @@ bool CollectGatewayFields::compute_offsets() {
             if (i.second.xor_with.empty()) continue;  // no xor so ok
             bool can_xor = true;
             i.first.foreach_byte(tbl, &use_read, [&](const PHV::AllocSlice &sl) {
-                int b = alloc_bytes.at(sl.container_byte());
-                if (!((gws.XorByteSlots >> b) & 1))
-                    can_xor = false; });
+                for (int b : alloc_bytes.at(sl.container_byte())) {
+                    if (!((gws.XorByteSlots >> b) & 1))
+                        can_xor = false; } });
             if (can_xor) continue;   // can xor, so ok
             can_xor = true;
             for (auto &xor_with : i.second.xor_with) {
                 xor_with.foreach_byte(tbl, &use_read, [&](const PHV::AllocSlice &sl) {
-                int b = alloc_bytes.at(sl.container_byte());
-                if (!((gws.XorByteSlots >> b) & 1))
-                    can_xor = false; }); }
+                    for (int b : alloc_bytes.at(sl.container_byte())) {
+                        if (!((gws.XorByteSlots >> b) & 1))
+                            can_xor = false; } }); }
             if (!can_xor) return false;  // reverse fails, so fail
             for (auto &xor_with : i.second.xor_with)
                 this->info.at(xor_with).xor_with.insert(i.first);
@@ -851,7 +856,7 @@ bool CollectGatewayFields::compute_offsets() {
             xor_with.foreach_byte(tbl, &use_read, [&](const PHV::AllocSlice &sl) {
                 auto alloc_byte = sl.container_byte();
                 bool duplicate = alloc_bytes.count(alloc_byte);
-                auto bit = (duplicate ? alloc_bytes.at(alloc_byte) : bytes) * 8U +
+                auto bit = (duplicate ? *alloc_bytes.at(alloc_byte).begin() : bytes) * 8U +
                            sl.container_slice().lo % 8U;
                 with.offsets.emplace_back(bit, sl.field_slice());
                 info.xor_offsets.emplace_back(bit, sl.field_slice().shiftedByBits(shift));
@@ -859,7 +864,7 @@ bool CollectGatewayFields::compute_offsets() {
                      field << "(" << info.xor_offsets.back().second << ") xor " << xor_with <<
                      ' ' << sl << " (" << with.offsets.back().second << ")");
                 if (!duplicate) {
-                    alloc_bytes[alloc_byte] = bytes;
+                    alloc_bytes[alloc_byte].insert(bytes);
                     ++bytes; }
             }); } }
     // we collect slices that could be allocated to either bytes or bits here, then
@@ -908,17 +913,19 @@ bool CollectGatewayFields::compute_offsets() {
                 auto alloc_byte = sl.container_byte();
                 bool add_to_need_alloc = false;
                 if (alloc_bytes.count(alloc_byte)) {
-                    auto bit = alloc_bytes.at(alloc_byte) * 8U + sl.container_slice().lo % 8U;
-                    if (std::find_if(info.offsets.begin(), info.offsets.end(),
-                                     [&](const std::pair<int, le_bitrange> &offset) {
-                                         return le_bitinterval(offset.first,
-                                                               offset.first + offset.second.size())
-                                             .overlaps(bit, bit + sl.container_slice().size());
-                                     }) != info.offsets.end()) {
-                        add_to_need_alloc = true;
-                    } else {
-                        info.offsets.emplace_back(bit, sl.field_slice());
-                        LOG5("  duplicate byte " << (bit/8) << " " << field << ' ' << sl);
+                    for (auto byte : alloc_bytes.at(alloc_byte)) {
+                        auto bit = byte * 8U + sl.container_slice().lo % 8U;
+                        if (std::find_if(info.offsets.begin(), info.offsets.end(),
+                                 [&](const std::pair<int, le_bitrange> &offset) {
+                                     return le_bitinterval(offset.first,
+                                                           offset.first + offset.second.size())
+                                         .overlaps(bit, bit + sl.container_slice().size());
+                                 }) != info.offsets.end()) {
+                            add_to_need_alloc = true;
+                        } else {
+                            info.offsets.emplace_back(bit, sl.field_slice());
+                            LOG5("  duplicate byte " << (bit/8) << " " << field << ' ' << sl);
+                        }
                     }
                 } else {
                     add_to_need_alloc = true; }
@@ -958,7 +965,7 @@ bool CollectGatewayFields::compute_offsets() {
             LOG5("  bit " << bits << ' ' << *n.field << ' ' << n.slice);
             bits += n.slice.width(); } }
 
-    LOG6("CollectGatewayFields::compute_offsets finished" << *this << DBPrint::Reset);
+    LOG6("CollectGatewayFields::compute_offsets finished " << *this << DBPrint::Reset);
     if (bytes > gws.PhvBytes) return false;
     if (bits > gws.HashBits) return false;
     return bits <= IXBar::get_hash_single_bits();
@@ -1170,6 +1177,9 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
             match_field = {}; }
     } else {
         LOG4("  xor_field = " << field->name << ' ' << bits);
+        auto &gws = Device::gatewaySpec();
+        // FIXME -- could/should call `constant(0)` here to do a compare with 0 for the xor?
+        // avoid duplicating all this code;
         size_t size = std::max(static_cast<int>(bits.size()), match_field.size());
         uint64_t mask = bitMask(size), donemask = 0;
         uint64_t val = cmplmask & mask;
@@ -1184,6 +1194,7 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
         LOG4("  xor_match_info = " << *field_info);
         auto it = field_info->xor_offsets.begin();
         auto end = field_info->xor_offsets.end();
+        auto orig_mask = mask;
         for (auto &off : match_info->offsets) {
             while (it != end && it->first < off.first) ++it;
             if (it == end) break;
@@ -1192,6 +1203,9 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
                 BUG("field equality comparison misaligned in gateway"); }
             uint64_t elmask = bitMask(off.second.size()) << off.second.lo;
             if ((elmask &= mask) == 0) continue;
+            if (off.first/8 < gws.PerByteMatch) {
+                if (!check_per_byte_match(off, mask, val)) continue;
+                mask &= ~elmask; }
             int shft = off.first - off.second.lo - shift;
             LOG6("    elmask=0x" << hex(elmask) << " shft=" << shft);
             if (shft >= 0) {
@@ -1201,11 +1215,13 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
                 match.word0 &= ~(val >> -shft) | ~(elmask >> -shft);
                 match.word1 &= (val >> -shft) | ~(elmask >> -shft); }
             LOG6("    match now " << match);
-            donemask |= mask;
+            donemask |= elmask;
             if (++it == end) break; }
         const IR::Expression *tmp;
-        BUG_CHECK(mask == donemask, "failed to match all bits of %s",
+        BUG_CHECK(orig_mask == donemask, "failed to match all bits of %s",
                   (tmp = findContext<IR::Operation::Relation>()) ? tmp : e);
+        BUG_CHECK(shift >= gws.PerByteMatch*8 || mask << (64 - gws.PerByteMatch*8 + shift) == 0,
+                  "Didn't cover all bytes");
         match_field = {}; }
     return false;
 }
@@ -1233,8 +1249,32 @@ bool BuildGatewayMatch::preorder(const IR::MAU::TypedPrimitive *prim) {
     return false;
 }
 
+/** Check that a byte match is compatible with other byte matches that are in the
+ *  same byte of the gateway for Flatrock.  If it is not, return false, causing the
+ *  caller to do a don't-care match on this byte.  If it is, add the new bits to the
+ *  byte match and *remove* them from the overall field match (so later matches against
+ *  the same field byte in different bytes of the gateway will be don't care)
+ */
+bool BuildGatewayMatch::check_per_byte_match(const std::pair<int, le_bitrange> &byte,
+                                             uint64_t mask, uint64_t val) {
+    BUG_CHECK((byte.first % 8) + byte.second.size() <= 8, "match crosses byte boundary");
+    int byte_idx = byte.first / 8;
+    int shft = (byte.second.lo & -8) + (byte.first % 8);
+    unsigned bmask = (mask >> shft) & 0xff;
+    unsigned bval = (val >> shft) & bmask;
+    BUG_CHECK(bmask != 0, "no bits in the identified byte?");
+    match_t &bmatch = byte_matches.emplace(byte_idx, match_t::dont_care(8)).first->second;
+    if ((~bval & bmask & ~bmatch.word0) || (bval & bmask & ~bmatch.word1)) {
+        LOG6("    skip byte " << (byte.first/8) << " " << match_t(8, bval, bmask) << " " << bmatch);
+        return false; }
+    bmatch.word0 &= ~bval;
+    bmatch.word1 &= ~bmask | bval;
+    return true;
+}
+
 void BuildGatewayMatch::constant(uint64_t c) {
     auto ctxt = getContext();
+    auto &gws = Device::gatewaySpec();
     if (ctxt->node->is<IR::BAnd>()) {
         andmask = c;
         LOG4("  andmask = 0x" << hex(andmask));
@@ -1256,6 +1296,9 @@ void BuildGatewayMatch::constant(uint64_t c) {
             uint64_t elmask = bitMask(off.second.size()) << off.second.lo;
             if ((elmask &= mask) == 0) continue;
             int shft = off.first - off.second.lo - shift;
+            if (off.first/8 < gws.PerByteMatch) {
+                if (!check_per_byte_match(off, mask, val)) continue;
+                mask &= ~elmask; }
             LOG6("    elmask=0x" << hex(elmask) << " shft=" << shft);
             if (shft >= 0) {
                 match.word0 &= ~(val << shft) | ~(elmask << shft);
@@ -1264,6 +1307,9 @@ void BuildGatewayMatch::constant(uint64_t c) {
                 match.word0 &= ~(val >> -shft) | ~(elmask >> -shft);
                 match.word1 &= (val >> -shft) | ~(elmask >> -shft); }
             LOG6("    match now " << match); }
+        // DANGER -- will require more than 64 bits if PerByteMatch > 8 (it is 8 on tofino5)
+        BUG_CHECK(shift >= gws.PerByteMatch*8 || mask << (64 - gws.PerByteMatch*8 + shift) == 0,
+                  "Didn't cover all bytes");
         match_field = {};
     } else {
         BUG("Invalid context for constant in BuildGatewayMatch"); }

@@ -211,10 +211,19 @@ InputXbar::Group Flatrock::InputXbar::hashtable_input_group(HashTable ht) const 
     return Group(ht.type == HashTable::EXACT ? Group::EXACT : Group::XCMP, ht.index);
 }
 
-int Flatrock::InputXbar::find_offset(const MatchSource *ms, Group group) const {
+int Flatrock::InputXbar::find_offset(const MatchSource *ms, Group group, int off) const {
     if (auto *phv = dynamic_cast<const Phv::Ref *>(ms)) {
         auto sl = **phv;
-        if (auto *in = find(sl, group, &group)) {
+        const Input *in = nullptr;
+        if (off >= 0) {
+            for (auto i : find_all(sl, group)) {
+                if (i->lo + sl.lo - i->what->lo == off) {
+                    in = i;
+                    break; } }
+        } else {
+            in = find(sl, group, &group);
+        }
+        if (in) {
             unsigned offset = in->lo + sl.lo - in->what->lo;
             if (group.type == Group::EXACT) {
                 switch (group.index) {

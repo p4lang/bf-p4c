@@ -336,10 +336,10 @@ void IXBar::Use::dbprint(std::ostream &out) const {
 }
 
 void dump(const IXBar::Use *use) {
-    std::cout << *use;
+    std::cout << *use << std::endl;
 }
 void dump(const IXBar::Use &use) {
-    std::cout << use;
+    std::cout << use << std::endl;
 }
 void dump(const IXBar::Use::Byte *ub) {
     std::cout << *ub << std::endl;

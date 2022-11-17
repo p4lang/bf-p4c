@@ -8,6 +8,10 @@
 
 class Slice;
 
+/* FIXME -- should be in p4c/lib/match.h */
+inline bool operator<(const match_t &a, const match_t &b) {
+    return std::tie(a.word0, a.word1) < std::tie(b.word0, b.word1); }
+
 namespace Flatrock {
 
 class IXBar : public ::IXBar {
@@ -130,7 +134,7 @@ class IXBar : public ::IXBar {
     typedef std::map<std::pair<PHV::Container, int>, std::pair<PHV::Container, int>> xor_map_t;
     friend std::ostream &operator<<(std::ostream &, const xor_map_t &);
     // container bytes that need to be matched against a byte the vector match
-    typedef std::map<std::pair<PHV::Container, int>, match_t>                        cmp_map_t;
+    typedef std::map<std::pair<PHV::Container, int>, std::set<match_t>>              cmp_map_t;
     friend std::ostream &operator<<(std::ostream &, const cmp_map_t &);
     class SetupCmpMap;
 
@@ -163,6 +167,7 @@ class IXBar : public ::IXBar {
                             safe_vector<IXBar::Use::Byte *> &alloced);
     bool xcmp_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                          safe_vector<IXBar::Use::Byte *> &alloced);
+    void replicate_alloc_bytes(const cmp_map_t &cmp_map, safe_vector<Use::Byte> &alloc_use);
 
     bool allocGateway(const IR::MAU::Table *, const PhvInfo &, Use &, const LayoutOption *);
     void setupMatchAlloc(const IR::MAU::Table *, const PhvInfo &, ContByteConversion &, Use &);

@@ -51,7 +51,7 @@ class InputXbar : public ::InputXbar {
     static void write_global_regs(Target::Flatrock::mau_regs &regs, gress_t gress);
     std::vector<const Input *> find_hash_inputs(Phv::Slice sl, HashTable ht) const override {
         return find_all(sl, hashtable_input_group(ht)); }
-    int find_offset(const MatchSource *, Group) const override;
+    int find_offset(const MatchSource *, Group, int) const override;
     Phv::Ref get_hashtable_bit(HashTable id, unsigned bit) const override {
         return get_group_bit(hashtable_input_group(id), bit); }
     int global_bit_position_adjust(HashTable ht) const override {

@@ -265,11 +265,11 @@ class InputXbar {
     const Input *find(Phv::Slice sl, Group grp, Group *found = nullptr) const;
     const Input *find_exact(Phv::Slice sl, int group) const {
         return find(sl, Group(Group::EXACT, group)); }
-    virtual int find_offset(const MatchSource *, Group grp) const;
-    int find_gateway_offset(const MatchSource *ms) const {
-        return find_offset(ms, Group(Group::GATEWAY, 0)); }
-    int find_match_offset(const MatchSource *ms) const {
-        return find_offset(ms, Group(Group::EXACT, -1)); }
+    virtual int find_offset(const MatchSource *, Group grp, int offset) const;
+    int find_gateway_offset(const MatchSource *ms, int offset) const {
+        return find_offset(ms, Group(Group::GATEWAY, 0), offset); }
+    int find_match_offset(const MatchSource *ms, int offset = -1) const {
+        return find_offset(ms, Group(Group::EXACT, -1), offset); }
 
     std::vector<const Input *> find_all(Phv::Slice sl, Group grp) const;
     virtual std::vector<const Input *> find_hash_inputs(Phv::Slice sl, HashTable ht) const;

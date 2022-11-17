@@ -82,7 +82,7 @@ void Target::Flatrock::GatewayTable::pass2() {
                       key.val.desc().c_str());
         } else {
             for (auto &ixb : input_xbar) {
-                int offset = ixb->find_gateway_offset(&key.val);
+                int offset = ixb->find_gateway_offset(&key.val, key.offset);
                 if (offset != key.offset)
                     error(key.val.lineno, "%s in match does not line up with ixbar",
                           key.val.desc().c_str()); } } }
@@ -90,7 +90,7 @@ void Target::Flatrock::GatewayTable::pass2() {
         lineno = xkey.val.lineno;
         xor_bits.setrange(xkey.offset, xkey.val.size());
         for (auto &ixb : input_xbar) {
-            int offset = ixb->find_gateway_offset(&xkey.val);
+            int offset = ixb->find_gateway_offset(&xkey.val, xkey.offset - 32);
             if (offset != xkey.offset + 32)
                 error(xkey.val.lineno, "%s in xor does not line up with ixbar",
                       xkey.val.desc().c_str()); } }
@@ -290,8 +290,8 @@ void Target::Flatrock::GatewayTable::write_regs(Target::Flatrock::mau_regs &regs
     --row;  // last row of the table (inclusive)
     minput.minput_gw_comp.grp_start |= 1 << row;
     if (!miss.run_table) {
-        minput.minput_gw_comp.grp_inhibit |= 1 << first_row.row;
-        minput.minput_gw_comp.grp_inh_idx[first_row.row] = miss.next_map_lut;
+        minput.minput_gw_comp.grp_inhibit |= 1 << row;
+        minput.minput_gw_comp.grp_inh_idx[row] = miss.next_map_lut;
     } else if (!match_table || match_table->table_type() == HASH_ACTION) {
         BUG("Flatrock can't run_table on hash_action"); }
 

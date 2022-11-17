@@ -19,7 +19,13 @@ std::ostream &operator<<(std::ostream &out, const IXBar::xor_map_t &xor_map) {
 std::ostream &operator<<(std::ostream &out, const IXBar::cmp_map_t &cmp_map) {
     const char *sep = "";
     for (auto &p : cmp_map) {
-        out << sep << p.first.first << '[' << p.first.second << "]~" << p.second;
+        out << sep << p.first.first << '[' << p.first.second << "]~";
+        if (p.second.size() != 1) out << '{';
+        const char *setsep = "";
+        for (auto &m : p.second) {
+            out << setsep << m;
+            setsep = ", "; }
+        if (p.second.size() != 1) out << '}';
         sep = ", "; }
     return out;
 }
@@ -128,7 +134,7 @@ void IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
                     if (l.byte < GATEWAY_XOR_BYTES && gateway_xor[l.byte] == ON)
                         continue; }
                 if (cmp_map && gateway_match_bytes.count(l.byte) && cmp_map->count(byte) &&
-                    cmp_map->at(byte) != gateway_match_bytes.at(l.byte))
+                    !cmp_map->at(byte).count(gateway_match_bytes.at(l.byte)))
                     continue;
                 byte.loc = Loc(0, l.byte);
                 break; }
@@ -235,13 +241,26 @@ bool IXBar::gateway_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
 
 bool IXBar::gateway_setup_cmp(Use &alloc, const cmp_map_t &cmp_map) {
     alloc.gateway_match_bytes.clear();
+    cmp_map_t                                           needed;
+    std::map<cmp_map_t::key_type, std::set<int>>        avail_slots;
     for (auto &use : alloc.use) {
         if (use.loc.group) continue;
         if (cmp_map.count(use)) {
-            if (gateway_match_bytes.count(use.loc.byte) &&
-                gateway_match_bytes.at(use.loc.byte) != cmp_map.at(use))
-                return false;
-            alloc.gateway_match_bytes.emplace(use.loc.byte, cmp_map.at(use)); } }
+            if (!needed.count(use)) needed[use] = cmp_map.at(use);
+            auto &need = needed.at(use);
+            if (gateway_match_bytes.count(use.loc.byte)) {
+                auto match = gateway_match_bytes.at(use.loc.byte);
+                need.erase(match);
+                alloc.gateway_match_bytes.emplace(use.loc.byte, match);
+            } else {
+                avail_slots[use].insert(use.loc.byte); } } }
+    for (auto &need : needed) {
+        for (auto &match : need.second) {
+            auto &avail = avail_slots[need.first];
+            if (avail.empty()) return false;
+            int slot = *avail.begin();
+            avail.erase(slot);
+            alloc.gateway_match_bytes.emplace(slot, match); } }
     return true;
 }
 
@@ -408,7 +427,7 @@ class IXBar::SetupCmpMap : public Inspector {
             unsigned m = (mask >> offset) & bitMask(sl.width());
             unsigned v = value >> offset;
             unsigned shift = sl.container_slice().lo % 8U;
-            cmp_map[byte] = match_t(8, v << shift, m << shift);
+            cmp_map[byte].insert(match_t(8, v << shift, m << shift));
         });
     }
 
@@ -458,6 +477,20 @@ class IXBar::SetupCmpMap : public Inspector {
                 gw.first->apply(*this);
     }
 };
+
+/* when a single gateway compares a byte against multiple different constants, it needs to
+ * be replicated in the ixbar so that each byte can match a different constant, as there's
+ * only a single vector match on flatrock and the gateway rows only match one bit per byte,
+ * testing whether that byte matched its byte constant or not */
+void IXBar::replicate_alloc_bytes(const cmp_map_t &cmp_map, safe_vector<Use::Byte> &alloc_use) {
+    for (size_t i = 0; i < alloc_use.size(); ++i) {
+        if (cmp_map.count(alloc_use[i])) {
+            size_t matches = cmp_map.at(alloc_use[i]).size();
+            if (matches > 1) {
+                Use::Byte tmp = alloc_use[i];  // need a copy as insert invalidates references
+                alloc_use.insert(alloc_use.begin()+i, matches-1, tmp);
+                i += matches - 1; } } }
+}
 
 bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
                          const LayoutOption *lo) {
@@ -529,6 +562,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
         SetupCmpMap(phv, tbl, cmp_map);
         LOG4("cmp_map: " << cmp_map);
         if (!xor_map.empty()) LOG4("xor_map: " << xor_map);
+        replicate_alloc_bytes(cmp_map, alloc.use);
         if (!gateway_find_alloc(alloc.use, xbar_alloced, cmp_map, xor_map) ||
             !gateway_setup_cmp(alloc, cmp_map) || !gateway_setup_xor(alloc, xor_map)) {
             alloc.clear();
