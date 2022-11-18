@@ -54,6 +54,7 @@ set (BFAS_FLATROCK_HEADERS
   flatrock/hash_action.h
   flatrock/hdr.h
   flatrock/input_xbar.h
+  flatrock/instruction.h
   flatrock/parser.h
   flatrock/sram_match.h
   flatrock/ternary_match.h

@@ -6,6 +6,8 @@
 #include "stage.h"
 #include "flatrock/action_bus.h"
 
+static MeterBus_t MeterBus;
+
 std::ostream &operator<<(std::ostream &out, const ActionBusSource &src) {
     const char *sep = "";
     switch (src.type) {

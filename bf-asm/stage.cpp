@@ -284,29 +284,29 @@ void AsmStage::process() {
         Phv::setuse(EGRESS, stage.action_use[EGRESS]);
         Phv::setuse(EGRESS, stage.action_set[EGRESS]); }
 #endif
+    for (auto &stage : pipe) {
+        for (auto table : stage.tables)
+            table->pass2();
+        std::sort(stage.tables.begin(), stage.tables.end(), [](Table *a, Table *b) {
+                    return a->logical_id < b->logical_id; }); }
+#if HAVE_FLATROCK
+    for (auto &stage : epipe) {
+        for (auto table : stage.tables)
+            table->pass2();
+        std::sort(stage.tables.begin(), stage.tables.end(), [](Table *a, Table *b) {
+                    return a->logical_id < b->logical_id; }); }
+#endif
+    for (auto &stage : pipe) {
+        for (auto table : stage.tables)
+            table->pass3(); }
+#if HAVE_FLATROCK
+    for (auto &stage : epipe) {
+        for (auto table : stage.tables)
+            table->pass3(); }
+#endif
 }
 
 void AsmStage::output(json::map &ctxt_json) {
-    for (auto &stage : pipe) {
-        for (auto table : stage.tables)
-            table->pass2();
-        std::sort(stage.tables.begin(), stage.tables.end(), [](Table *a, Table *b) {
-                    return a->logical_id < b->logical_id; }); }
-#if HAVE_FLATROCK
-    for (auto &stage : epipe) {
-        for (auto table : stage.tables)
-            table->pass2();
-        std::sort(stage.tables.begin(), stage.tables.end(), [](Table *a, Table *b) {
-                    return a->logical_id < b->logical_id; }); }
-#endif
-    for (auto &stage : pipe) {
-        for (auto table : stage.tables)
-            table->pass3(); }
-#if HAVE_FLATROCK
-    for (auto &stage : epipe) {
-        for (auto table : stage.tables)
-            table->pass3(); }
-#endif
     if (int(pipe.size()) > Target::NUM_MAU_STAGES()) {
         auto lineno = pipe.back().tables.empty() ? 0 : pipe.back().tables[0]->lineno;
         error(lineno, "%s supports up to %d stages, using %zd", Target::name(),
@@ -922,4 +922,3 @@ void Stage::write_teop_regs(REGS &regs) {
         }
     }
 }
-

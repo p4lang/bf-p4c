@@ -1,416 +1,12 @@
-#include "instruction.h"
-
 #include "action_bus.h"
+#include "asm-types.h"
+#include "bfas.h"
 #include "phv.h"
 #include "stage.h"
 #include "tables.h"
+#include "flatrock/instruction.h"
 
 namespace Flatrock {
-
-struct operand {
-    /** A source operand to a VLIW instruction -- this can be a variety of things, so we
-     * have a pointer to an abstract base class and a number of derived concrete classes for
-     * the different kinds of operands.  When we parse the operand, the type may be determined,
-     * or if it is just a name, we will have to wait to a later pass to resolve what the
-     * name refers to.  At that point, the `Named' object created in parsing will be replaced
-     * with the actual operand type */
-    struct Base {
-        int     lineno;
-        explicit Base(int line) : lineno(line) {}
-        Base(const Base &a) : lineno(a.lineno) {}
-        virtual ~Base() {}
-        virtual Base *clone() = 0;
-        virtual Base *lookup(Base *&ref) { return this; }
-        virtual bool check() { return true; }
-        virtual int bits(int slot) = 0;
-        virtual int bit_offset(int slot) = 0;
-        virtual void dbprint(std::ostream &) const = 0;
-        virtual bool equiv(const Base *) const = 0;
-        virtual bool phvRead(std::function<void(const ::Phv::Slice &sl)>) { return false; }
-        /** pass1 called as part of pass1 processing of stage
-         * @param tbl table containing the action with the instruction with this operand
-         * @param slot PHV container this operand is associated with */
-        virtual void pass1(Table *tbl, int slot) {}
-        /** pass2 called as part of pass2 processing of stage
-         * @param tbl table containing the action with the instruction with this operand
-         * @param slot PHV container this operand is associated with */
-        virtual void pass2(Table *tbl, int slot) {}
-    } *op;
-    struct Const : Base {
-        int64_t value;
-        Const(int line, int64_t v) : Base(line), value(v) {}
-        bool equiv(const Base *a_) const override {
-            if (auto *a = dynamic_cast<const Const *>(a_)) {
-                return value == a->value;
-            } else { return false; } }
-        Const *clone() override { return new Const(*this); }
-        int bits(int slot) override {
-            switch (::Phv::reg(slot)->size) {
-            case 8: return (value & 0xff) | 0x100;
-            case 16: return (value & 0x1f) | 0x20;
-            case 32: return (value & 0xf) | 0x10;
-            default: BUG("invalid register size %d", ::Phv::reg(slot)->size); } }
-        int bit_offset(int) override { return 0; }
-        void pass1(Table *tbl, int slot) override {
-            int min, max;
-            switch (::Phv::reg(slot)->size) {
-            case 8:  min = -128; max = 255; break;
-            case 16: min =  -16; max =  15; break;
-            case 32: min =   -8; max =   7; break;
-            default: BUG("invalid register size %d", ::Phv::reg(slot)->size); }
-            if (value > max || value < min)
-                error(lineno, "Constant value %" PRId64 " out of range for PHE%d",
-                      value, ::Phv::reg(slot)->size); }
-        void dbprint(std::ostream &out) const override { out << value; }
-    };
-    struct Phv : Base {
-        ::Phv::Ref      reg;
-        ActionBusSource abs;
-        Phv(int line, gress_t g, int stage, const value_t &n) : Base(line), reg(g, stage, n) {}
-        Phv(int line, gress_t g, int stage, const std::string &n, int l, int h) :
-            Base(line), reg(g, stage, line, n, l, h) {}
-        explicit Phv(const ::Phv::Ref &r) : Base(r.lineno), reg(r) {}
-        bool equiv(const Base *a_) const override {
-            if (auto *a = dynamic_cast<const Phv *>(a_)) {
-                return reg == a->reg;
-            } else { return false; } }
-        Phv *clone() override { return new Phv(*this); }
-        int bits(int slot) override {
-            BUG_CHECK(abs.type == ActionBusSource::XcmpData, "%s not on xcmp abus", reg.name());
-            unsigned size = ::Phv::reg(slot)->size/8U;  // size in bytes
-            // FIXME -- need to be checking to make sure the whole value is within the slot
-            // somehow.  But we only have a single byte recorded in the ActionBusSource?
-            if (abs.xcmp_group) {
-                unsigned align_mask = 3/size;
-                BUG_CHECK((slot & align_mask) == (abs.xcmp_byte & align_mask),
-                          "wadb byte %d misaligned for slot %d", abs.xcmp_byte, slot);
-                return 16/size + (abs.xcmp_group-1)*4 + abs.xcmp_byte/4;
-            } else {
-                return abs.xcmp_byte/size; } }
-        int bit_offset(int slot) override {
-            BUG_CHECK(abs.type == ActionBusSource::XcmpData, "%s not on xcmp abus", reg.name());
-            unsigned bit = reg->lo;
-            if (!abs.xcmp_group)
-                bit = bit % 8U + (abs.xcmp_byte%4U) * 8;
-            return bit % ::Phv::reg(slot)->size; }
-        bool check() override {
-            if (!reg.check()) return false;
-            if (reg->reg.mau_id() < 0) {
-                error(reg.lineno, "%s not accessable in mau", reg->reg.name);
-                return false; }
-            return true; }
-        void pass1(Table *tbl, int) override {
-            tbl->stage->action_use[tbl->gress][reg->reg.uid] = true; }
-        void pass2(Table *tbl, int slot) override {
-            ::InputXbar::Group grp(::InputXbar::Group::XCMP, -1);
-            int byte = tbl->find_on_ixbar(*reg, grp, &grp);
-            if (byte < 0) {
-                error(reg.lineno, "%s not available on the xcmp ixbar", reg.name());
-                return; }
-            unsigned size = ::Phv::reg(slot)->size/8U;  // size in bytes
-            if (reg->hi/8U - reg->lo/8U >= size)
-                error(reg.lineno, "%s is not entirely in one ADB slot", reg.name());
-            if (grp.index > 0 && size < 4) {
-                unsigned align_mask = 3/size;
-                if ((slot & align_mask) != (byte & align_mask))
-                    error(reg.lineno, "%s not aligned in wadb for destination PHE%d",
-                          reg.name(), size*8); }
-            abs = ActionBusSource(grp, byte);
-            if (tbl->find_on_actionbus(abs, reg->lo, reg->hi, ::Phv::reg(slot)->size/8U) < 0)
-                tbl->need_on_actionbus(abs, reg->lo, reg->hi, ::Phv::reg(slot)->size/8U); }
-        void dbprint(std::ostream &out) const override { out << reg; }
-        bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) override {
-            fn(*reg);
-            return true; }
-    };
-    struct Action : Base {
-        /* source referring to either an action data or immediate field OR an attached table
-         * output.  All of these are accessed via the action data bus */
-        std::string             name;
-        std::string             p4name;
-        TableOutputModifier     mod = TableOutputModifier::NONE;
-        Table                   *table;
-        Table::Format::Field    *field;
-        int                     lo, hi;
-
-        Action(int line, const std::string &n, Table *tbl, Table::Format::Field *f,
-               unsigned l, unsigned h) : Base(line), name(n), table(tbl), field(f), lo(l), hi(h) {}
-        Action(int line, const std::string &n, TableOutputModifier mod, Table *tbl,
-               unsigned l, unsigned h)
-        : Base(line), name(n), mod(mod), table(tbl), field(nullptr), lo(l), hi(h) {}
-        Action(int line, const std::string &n, Table *tbl, Table::Format::Field *f,
-               unsigned l, unsigned h, const std::string &m)
-        : Base(line), name(n), p4name(m), table(tbl), field(f), lo(l), hi(h) {}
-        Action(int line, const std::string &n, TableOutputModifier mod, Table *tbl,
-               unsigned l, unsigned h, const std::string &m)
-        : Base(line), name(n), p4name(m), mod(mod), table(tbl), field(nullptr), lo(l), hi(h) {}
-        bool equiv(const Base *a_) const override {
-            auto *a = dynamic_cast<const Action *>(a_);
-            if (!a || lo != a->lo || hi != a->hi) return false;
-            if (name == a->name && table == a->table && field == a->field && mod == a->mod)
-                return true;
-            if (field != a->field && (!field || !a->field)) return false;
-            int b1 = field ? table->find_on_actionbus(field, lo, hi, 0)
-                           : table->find_on_actionbus(name, mod, lo, hi, 0);
-            int b2 = a->field ? a->table->find_on_actionbus(a->field, lo, hi, 0)
-                              : a->table->find_on_actionbus(a->name, mod, lo, hi, 0);
-            return b1 == b2 && b1 >= 0; }
-        Action *clone() override { return new Action(*this); }
-        int bits(int slot) override {
-            int size = ::Phv::reg(slot)->size/8U;
-            int byte = field ? table->find_on_actionbus(field, lo, hi, 0)
-                             : table->find_on_actionbus(name, mod, lo, hi, 0);
-            if (byte < 0) {
-                if (lo > 0 || (field && hi + 1 < int(field->size)))
-                    error(lineno, "%s(%d..%d) is not on the action bus", name.c_str(), lo, hi);
-                else
-                    error(lineno, "%s is not on the action bus", name.c_str());
-                return -1; }
-            return byte/size; }
-        int bit_offset(int slot) override {
-            int size = ::Phv::reg(slot)->size;
-            int byte = field ? table->find_on_actionbus(field, lo, hi, 0)
-                             : table->find_on_actionbus(name, mod, lo, hi, 0);
-            return (byte * 8U + lo) % size; }
-        void pass1(Table *tbl, int slot) override {
-            if (field) field->flags |= Table::Format::Field::USED_IMMED;
-            auto slot_size = ::Phv::reg(slot)->size;
-            if (lo >= 0 && hi >= 0 && lo/slot_size != hi/slot_size) {
-                error(lineno, "action bus slice (%d..%d) can't fit in a single slot for %d bit "
-                      "access", lo, hi, slot_size);
-                // chop it down to be in range (avoid error cascade)
-                hi = lo | (slot_size-1); } }
-        void dbprint(std::ostream &out) const override {
-            out << name << mod << '(' << lo << ".." << hi << ')';
-            if (field)
-                out << '[' << field->bits[0].lo << ':' << field->size << ", "
-                    << field->group << ']'; }
-    };
-    struct RawAction : Base {
-        int             index;
-        unsigned        offset;
-
-        RawAction(int line, int idx, unsigned off) : Base(line), index(idx), offset(off) {}
-        bool equiv(const Base *a_) const override {
-            if (auto *a = dynamic_cast<const RawAction *>(a_)) {
-                return index == a->index && offset == a->offset;
-            } else { return false; } }
-        RawAction *clone() override { return new RawAction(*this); }
-        int bits(int) override { return index; }
-        int bit_offset(int) override { return 0; }
-        void dbprint(std::ostream &out) const override { out << 'A' << index; }
-    };
-#if 0
-    // FIXME -- read from XCMP hash?
-    struct HashDist : Base {
-        Table                   *table;
-        std::vector<int>        units;
-        int                     lo = -1, hi = -1;
-
-        HashDist(int line, Table *t) : Base(line), table(t) {}
-        HashDist(int line, Table *t, int unit) : Base(line), table(t) { units.push_back(unit); }
-        unsigned bitoffset(int group) const override { return lo >= 0 ? lo : 0; }
-        static HashDist *parse(Table *tbl, const VECTOR(value_t) &v) {
-            if (v.size < 2 || v[0] != "hash_dist") return nullptr;
-            auto *rv = new HashDist(v[0].lineno, tbl);
-            for (int i = 1; i < v.size; ++i) {
-                if (v[i].type == tRANGE && rv->lo == -1) {
-                    rv->lo = v[i].lo;
-                    rv->hi = v[i].hi;
-                } else if (CHECKTYPE(v[i], tINT)) {
-                    rv->units.push_back(v[i].i);
-                } else {
-                    delete rv;
-                    return nullptr; } }
-            return rv; }
-
-        HashDistribution *find_hash_dist(int unit) const {
-            if (auto rv = table->find_hash_dist(unit)) return rv;
-            for (auto mtab : table->get_match_tables())
-                if (auto rv = mtab->find_hash_dist(unit)) return rv;
-            return nullptr; }
-        bool equiv(const Base *a_) const override {
-            auto *a = dynamic_cast<const HashDist *>(a_);
-            if (!a || units != a->units || lo != a->lo || hi != a->hi) return false;
-            if (table == a->table) return true;
-            int elo = this->lo < 0 ? 0 : lo;
-            int ehi = this->hi < 0 ? 15 : hi;
-            for (auto unit : units) {
-                int b1 = table->find_on_actionbus(find_hash_dist(unit), elo, ehi, 0);
-                int b2 = a->table->find_on_actionbus(a->find_hash_dist(unit), elo, ehi, 0);
-                if (b1 != b2 || b1 < 0) return false; }
-            return true; }
-        HashDist *clone() override { return new HashDist(*this); }
-        void pass2(int group) override {
-            if (units.size() > 2) {
-                error(lineno, "Can't use more than 2 hash_dist units together in an action");
-                return; }
-            int size = group_size[group]/8U;
-            if (lo < 0) lo = 0;
-            if (hi < 0) hi = 8*size - 1;
-            if ((lo ^ hi) & ~(8*size-1))
-                error(lineno, "hash dist slice(%d..%d) can't be accessed by %d bit PHV",
-                      lo, hi, 8*size);
-            if (units.size() == 2) {
-                if (size != 4)
-                    error(lineno, "Can't combine hash_dist units in %d bit operation", size*8);
-                auto xbar_use = HashDistribution::IMMEDIATE_LOW;
-                for (auto u : units) {
-                    if (auto hd = find_hash_dist(u))
-                        hd->xbar_use |= xbar_use;
-                    else
-                        error(lineno, "No hash dist %d in table %s", u, table->name());
-                    xbar_use = HashDistribution::IMMEDIATE_HIGH; }
-            } else if (auto hd = find_hash_dist(units.at(0))) {
-                if (hd->xbar_use & HashDistribution::IMMEDIATE_HIGH) {
-                    if (size == 4) {
-                        lo += 16;
-                        hi += 16; }
-                } else {
-                    hd->xbar_use |= HashDistribution::IMMEDIATE_LOW; }
-            } else {
-                error(lineno, "No hash dist %d in table %s", units.at(0), table->name());
-            }
-            int lo = this->lo;
-            for (auto u : units) {
-                if (auto hd = find_hash_dist(u)) {
-                    if (table->find_on_actionbus(hd, lo, hi, size) < 0)
-                        table->need_on_actionbus(hd, lo, hi, size);
-                    lo += 16; } } }
-        int bits(int group, int dest_size = -1) override {
-            int size = group_size[group]/8U;
-            auto hd = find_hash_dist(units.at(0));
-            int byte = table->find_on_actionbus(hd, lo, hi, size);
-            if (byte < 0) {
-                error(lineno, "hash dist %d is not on the action bus", hd->id);
-                return -1; }
-            if (units.size() == 2) {
-                auto hd1 = find_hash_dist(units.at(1));
-                if (table->find_on_actionbus(ActionBusSource(hd, hd1), lo + 16, hi, size) < 0)
-                    error(lineno, "hash dists %d and %d not contiguous on the action bus",
-                          hd->id, hd1->id);
-            }
-            if (size == 2) byte -= 32;
-            if (byte >= 0 || byte < 32*size)
-                return ACTIONBUS_OPERAND + byte/size;
-            error(lineno, "action bus entry %d(hash_dist %d) out of range for %d-bit access",
-                  size == 2 ? byte+32 : byte, hd->id, size*8);
-            return -1; }
-        void dbprint(std::ostream &out) const override {
-            out << "hash_dist(";
-            const char *sep = "";
-            for (auto u : units) {
-                out << sep << u;
-                sep = ", "; }
-            out << ")"; }
-    };
-    struct RandomGen : Base {
-        Table           *table;
-        RandomNumberGen rng;
-        int             lo = 0, hi = -1;
-        RandomGen(Table *t, const VECTOR(value_t) &v) : Base(v[0].lineno), table(t), rng(0) {
-            if (v.size > 1 && CHECKTYPE(v[1], tINT)) rng.unit = v[1].i;
-            if (rng.unit < 0 || rng.unit > 1)
-                error(v[0].lineno, "invalid random number generator");
-            if (v.size > 2 && CHECKTYPE(v[2], tRANGE)) {
-                lo = v[2].lo;
-                hi = v[2].hi;
-                if (lo < 0 || hi > 31 || hi < lo)
-                    error(v[2].lineno, "invalid random number generator slice"); } }
-        bool equiv(const Base *a_) const override {
-            if (auto *a = dynamic_cast<const RandomGen *>(a_)) {
-                return rng == a->rng && lo == a->lo && hi == a->hi;
-            } else { return false; } }
-        RandomGen *clone() override { return new RandomGen(*this); }
-        void pass2(int group) override {
-            unsigned size = group_size[group];
-            if (hi < 0) hi = lo + 8*size - 1;
-            if ((lo ^ hi) & ~(8*size-1))
-                error(lineno, "invalid slice(%d..%d) of rng %d for use with %d bit PHV",
-                      lo, hi, rng.unit, size);
-            if (table->find_on_actionbus(rng, lo, hi, size/8U))
-                table->need_on_actionbus(rng, lo, hi, size/8U); }
-        int bits(int group, int dest_size = -1) override {
-            int size = group_size[group]/8U;
-            int byte = table->find_on_actionbus(rng, lo, hi, size);
-            if (byte < 0) {
-                error(lineno, "rng %d is not on the action bus", rng.unit);
-                return -1; }
-            if (size == 2) byte -= 32;
-            if (byte >= 0 || byte < 32*size)
-                return ACTIONBUS_OPERAND + byte/size;
-            error(lineno, "action bus entry %d(rng %d) out of range for %d-bit access",
-                  size == 2 ? byte+32 : byte, rng.unit, size*8);
-            return -1; }
-        unsigned bitoffset(int group) const override { return lo; }
-        void dbprint(std::ostream &out) const override {
-            out << "rng " << rng.unit << '(' << lo << ".." << hi << ')'; }
-    };
-#endif
-    struct Named : Base {
-        std::string             name;
-        std::string             p4name;
-        TableOutputModifier     mod = TableOutputModifier::NONE;
-        int                     lo, hi;
-        Table                   *tbl;
-        std::string             action;
-
-        Named(int line, const std::string &n, int l, int h, Table *t, const std::string &act)
-        : Base(line), name(n), lo(l), hi(h), tbl(t), action(act) {}
-        Named(int line, const std::string &n, TableOutputModifier m, int l, int h,
-              Table *t, const std::string &act)
-        : Base(line), name(n), mod(m), lo(l), hi(h), tbl(t), action(act) {}
-        Named(int line, const std::string &n, int l, int h,
-              Table *t, const std::string &act, std::string &m)
-        : Base(line), name(n), p4name(m), lo(l), hi(h), tbl(t), action(act) {}
-        Named(int line, const std::string &n, TableOutputModifier mod, int l, int h,
-              Table *t, const std::string &act, std::string &m)
-        : Base(line), name(n), p4name(m), mod(mod), lo(l), hi(h), tbl(t), action(act) {}
-        bool equiv(const Base *a_) const override {
-            if (auto *a = dynamic_cast<const Named *>(a_)) {
-                return name == a->name && lo == a->lo && hi == a->hi && tbl == a->tbl &&
-                       action == a->action;
-            } else { return false; } }
-        Base *lookup(Base *&ref) override;
-        Named *clone() override { return new Named(*this); }
-        bool check() override { BUG(); return true; }
-        int bits(int) override { BUG(); return 0; }
-        int bit_offset(int) override { BUG(); return 0; }
-        void pass1(Table *, int) override { BUG(); }
-        void dbprint(std::ostream &out) const override {
-            out << name;
-            if (lo >= 0) {
-                out << '(' << lo;
-                if (hi >= 0 && hi != lo) out << ".. " << hi;
-                out << ')'; }
-            out << '[' << tbl->name() << ':' << action << ']'; }
-    };
-    operand() : op(0) {}
-    operand(const operand &a) : op(a.op ? a.op->clone() : 0) {}
-    operand(operand &&a) : op(a.op) { a.op = 0; }
-    operand &operator=(const operand &a) {
-        if (&a != this) {
-            delete op;
-            op = a.op ? a.op->clone() : 0; }
-        return *this; }
-    operand &operator=(operand &&a) {
-        if (&a != this) {
-            delete op;
-            op = a.op;
-            a.op = 0; }
-        return *this; }
-    ~operand() { delete op; }
-    operand(Table *tbl, const Table::Actions::Action *act, const value_t &v);
-    operand(gress_t gress, int stage, const value_t &v) : op(new Phv(v.lineno, gress, stage, v)) {}
-    explicit operand(const ::Phv::Ref &r) : op(new Phv(r)) {}
-    bool valid() const { return op != 0; }
-    bool operator==(operand &a) {
-        return op == a.op || (op && a.op && op->lookup(op)->equiv(a.op->lookup(a.op))); }
-    bool check() { return op && op->lookup(op) ? op->check() : false; }
-    void dbprint(std::ostream &out) const { op->dbprint(out); }
-    Base *operator->() { return op->lookup(op); }
-    template <class T> T *to() { return dynamic_cast<T *>(op->lookup(op)); }
-};
 
 static void parse_slice(const VECTOR(value_t) &vec, int idx, int &lo, int &hi) {
     if (PCHECKTYPE2(vec.size == idx+1, vec[idx], tINT, tRANGE)) {
@@ -421,7 +17,7 @@ static void parse_slice(const VECTOR(value_t) &vec, int idx, int &lo, int &hi) {
             hi = vec[idx].hi; } }
 }
 
-operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v) : op(0) {
+Operand::Operand(Table *tbl, const Table::Actions::Action *act, const value_t &v) : op(0) {
     if (v.type == tINT) {
         op = new Const(v.lineno, v.i);
     } else if (CHECKTYPE2(v, tSTR, tCMD)) {
@@ -443,7 +39,7 @@ operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v
         op = new Named(v.lineno, name, mod, lo, hi, tbl, act->name, p4name); }
 }
 
-auto operand::Named::lookup(Base *&ref) -> Base * {
+auto Operand::Named::lookup(Base *&ref) -> Base * {
     int slot, len = -1;
     if (tbl->action) tbl = tbl->action;
     int lo = this->lo >= 0 ? this->lo : 0;
@@ -472,93 +68,6 @@ auto operand::Named::lookup(Base *&ref) -> Base * {
     return ref;
 }
 
-struct InstructionShim : Instruction {
-    // Just a shim to ensure these instructions are only used on Flatrock
-    explicit InstructionShim(int l) : Instruction(l) {}
-    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
-        void write_regs, (mau_regs &, Table *, Table::Actions::Action *), override {
-            BUG("Flatrock instruction on %s?", Target::name()); })
-};
-
-struct VLIWInstruction : InstructionShim {
-    explicit VLIWInstruction(int l) : InstructionShim(l) {}
-    virtual uint32_t encode() = 0;
-    void write_regs(Target::Flatrock::mau_regs &, Table *, Table::Actions::Action *) override;
-};
-
-struct PhvWrite : VLIWInstruction {
-    struct Decode : Instruction::Decode {
-        enum opcodes { NOOP=0, SET=1, ANDC=2, OR=3, SETBM=4, LDC=4, DPF=8 };
-        std::string name;
-        unsigned opcode;
-        Decode(const char *n, target_t targ, unsigned op)
-        : Instruction::Decode(n, targ), name(n), opcode(op) {}
-        virtual PhvWrite *alloc(Table *tbl, const Table::Actions::Action *act,
-                                const VECTOR(value_t) &op) const;
-        Instruction *decode(Table *tbl, const Table::Actions::Action *act,
-                            const VECTOR(value_t) &op) const override;
-    } const *opc;
-    Phv::Ref    alu_slot;
-    Phv::Ref    dest;
-    operand     src;
-    static constexpr int MAX_MERGE_DEST = 0;  // no merge dest any more?
-    PhvWrite(const Decode *op, Table *tbl, const Table::Actions::Action *act,
-             const value_t &d, const value_t &s) : VLIWInstruction(d.lineno),
-         opc(op), dest(tbl->gress, tbl->stage->stageno + 1, d), src(tbl, act, s) {}
-    std::string name() { return opc->name; }
-    Instruction *pass1(Table *tbl, Table::Actions::Action *);
-    void pass2(Table *tbl, Table::Actions::Action *) { src->pass2(tbl, slot); }
-    bool equiv(Instruction *a_);
-    uint32_t encode();
-    bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) { return src->phvRead(fn); }
-    void dbprint(std::ostream &out) const {
-        out << "INSTR: " << opc->name << " " << dest << ", " << src; }
-};
-
-struct Noop : PhvWrite::Decode {
-    Noop(const char *n, target_t targ) : Decode(n, targ, 0) {}
-    Instruction *decode(Table *tbl, const Table::Actions::Action *act,
-                        const VECTOR(value_t) &op) const override;
-};
-
-struct BitmaskSet : PhvWrite {
-    struct Decode : PhvWrite::Decode {
-        Decode(const char *n, target_t targ) : PhvWrite::Decode(n, targ, SETBM) {}
-        Instruction *decode(Table *tbl, const Table::Actions::Action *act,
-                            const VECTOR(value_t) &op) const override;
-    };
-    uint32_t    mask;
-    BitmaskSet(const Decode *op, Table *tbl, const Table::Actions::Action *act, const value_t &d,
-               const value_t &s, int m) : PhvWrite(op, tbl, act, d, s), mask(m) {}
-    BitmaskSet(PhvWrite &wr, int m);
-    uint32_t encode();
-};
-
-struct DepositField : PhvWrite {
-    struct Decode : PhvWrite::Decode {
-        Decode(const char *n, target_t targ) : PhvWrite::Decode(n, targ, DPF) {}
-        PhvWrite *alloc(Table *tbl, const Table::Actions::Action *act,
-                        const VECTOR(value_t) &op) const override;
-    };
-    DepositField(const Decode *op, Table *tbl, const Table::Actions::Action *act,
-                 const value_t &d, const value_t &s) : PhvWrite(op, tbl, act, d, s) {}
-    explicit DepositField(PhvWrite &wr);
-    uint32_t encode();
-};
-
-struct LoadConst : PhvWrite {
-    struct Decode : PhvWrite::Decode {
-        Decode(const char *n, target_t targ) : PhvWrite::Decode(n, targ, LDC) {}
-        PhvWrite *alloc(Table *tbl, const Table::Actions::Action *act,
-                        const VECTOR(value_t) &op) const override;
-    };
-    LoadConst(const Decode *op, Table *tbl, const Table::Actions::Action *act,
-              const value_t &d, const value_t &s) : PhvWrite(op, tbl, act, d, s) {}
-    explicit LoadConst(PhvWrite &wr);
-    Instruction *pass1(Table *tbl, Table::Actions::Action *);
-    uint32_t encode();
-};
-
 static Noop                 opNoop("noop",          FLATROCK);                            // NOLINT
 static PhvWrite::Decode     opSet ("set",           FLATROCK, PhvWrite::Decode::SET),     // NOLINT
                             opAndc("andc",          FLATROCK, PhvWrite::Decode::ANDC),    // NOLINT
@@ -585,7 +94,9 @@ Instruction *PhvWrite::Decode::decode(Table *tbl, const Table::Actions::Action *
                                       const VECTOR(value_t) &op) const {
     if (op.size != 3 && op.size != 4) {
         error(op[0].lineno, "%s requires 2 or 3 operands", op[0].s);
-        return 0; }
+        return nullptr; }
+    if (Operand::isActionData(op[1]))
+        return nullptr;
     PhvWrite *rv = alloc(tbl, act, op);
     if (op.size == 3)
         rv->alu_slot = rv->dest;
@@ -594,7 +105,7 @@ Instruction *PhvWrite::Decode::decode(Table *tbl, const Table::Actions::Action *
     if (!rv->src.valid()) {
         error(op[2].lineno, "invalid src");
         delete rv;
-        return 0; }
+        return nullptr; }
     return rv;
 }
 
@@ -602,7 +113,9 @@ Instruction *Noop::decode(Table *tbl, const Table::Actions::Action *act,
                                  const VECTOR(value_t) &op) const {
     if (op.size != 2) {
         error(op[0].lineno, "%s requires 1 operand", op[0].s);
-        return 0; }
+        return nullptr; }
+    if (Operand::isActionData(op[1]))
+        return nullptr;
     value_t A0{tSTR, op[1].lineno};
     A0.s = const_cast<char *>("A0");
     PhvWrite *rv = new PhvWrite(this, tbl, act, op[1], A0);
@@ -614,10 +127,12 @@ Instruction *BitmaskSet::Decode::decode(Table *tbl, const Table::Actions::Action
                                         const VECTOR(value_t) &op) const {
     if (op.size != 4 && op.size != 5) {
         error(op[0].lineno, "%s requires 3 or 4 operands", op[0].s);
-        return 0; }
+        return nullptr; }
+    if (Operand::isActionData(op[1]))
+        return nullptr;
     if (op[op.size-1].type != tINT) {
         error(op[op.size-1].lineno, "%s mask must be a constant", op[0].s);
-        return 0; }
+        return nullptr; }
     auto *rv = new BitmaskSet(this, tbl, act, op[op.size-3], op[op.size-2], op[op.size-1].i);
     if (op.size == 4)
         rv->alu_slot = rv->dest;
@@ -626,7 +141,7 @@ Instruction *BitmaskSet::Decode::decode(Table *tbl, const Table::Actions::Action
     if (!rv->src.valid()) {
         error(op[2].lineno, "invalid src");
         delete rv;
-        return 0; }
+        return nullptr; }
     return rv;
 }
 
@@ -644,7 +159,7 @@ Instruction *PhvWrite::pass1(Table *tbl, Table::Actions::Action *act) {
               dest->reg.name, alu_slot->reg.name); }
     int hi = Phv::reg(slot)->size - 1;
     int maxconst = hi == 7 ? 256 : hi == 15 ? 16 : 8;
-    auto *k = src.to<operand::Const>();
+    auto *k = src.to<Operand::Const>();
     // FIXME -- invalid 'set' instructions might be implementable by converting them
     // to load-const, deposit-field, or bitmasked-set
     if (opc->opcode == Decode::SET) {
@@ -670,7 +185,7 @@ Instruction *PhvWrite::pass1(Table *tbl, Table::Actions::Action *act) {
 }
 Instruction *LoadConst::pass1(Table *tbl, Table::Actions::Action *act) {
     PhvWrite::pass1(tbl, act);
-    if (auto *k = src.to<operand::Const>()) {
+    if (auto *k = src.to<Operand::Const>()) {
         switch (Phv::reg(slot)->size) {
         case 8:
             error(dest.lineno, "load-const not usable on 8-bit containers"
@@ -748,7 +263,7 @@ uint32_t DepositField::encode() {
     return rv;
 }
 uint32_t LoadConst::encode() {
-    uint32_t rv = src.to<operand::Const>()->value;
+    uint32_t rv = src.to<Operand::Const>()->value;
     int merge_dest = dest->reg.mau_id() - slot;
     BUG_CHECK(merge_dest == 0, "merge in PHV write not supported");
     switch (Phv::reg(slot)->size) {
@@ -803,5 +318,508 @@ void VLIWInstruction::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl,
         BUG(); }
     regs.ppu_phvwr.rf.phvwr_parity[iaddr].parity[color] ^= parity_2b(delta);
 }
+
+namespace EALU {
+
+// The following instruction table for the Flatrock PPU is identical to the
+// instruction table for tofino123.  Note: these instruction must be
+// instantiated after the PhvWrite instructions, as instruction is decoded as
+// PhvWrite instructions first. If that failed, it is then decoded as Ealu
+// instructions.
+//                                   OPNAME            OPCODE
+static AluOP::Decode     opADD      ("add",   FLATROCK, 0x23e,  AluOP::Commutative),               // NOLINT
+                         opADDC     ("addc",  FLATROCK, 0x2be,  AluOP::Commutative),               // NOLINT
+                         opSUB      ("sub",   FLATROCK, 0x33e),                                    // NOLINT
+                         opSUBC     ("subc",  FLATROCK, 0x3be),                                    // NOLINT
+                         opSADDU    ("saddu", FLATROCK, 0x03e,  AluOP::Commutative),               // NOLINT
+                         opSADDS    ("sadds", FLATROCK, 0x07e,  AluOP::Commutative),               // NOLINT
+                         opSSUBU    ("ssubu", FLATROCK, 0x0be),                                    // NOLINT
+                         opSSUBS    ("ssubs", FLATROCK, 0x0fe),                                    // NOLINT
+                         opMINU     ("minu",  FLATROCK, 0x13e,  AluOP::Commutative),               // NOLINT
+                         opMINS     ("mins",  FLATROCK, 0x17e,  AluOP::Commutative),               // NOLINT
+                         opMAXU     ("maxu",  FLATROCK, 0x1be,  AluOP::Commutative),               // NOLINT
+                         opMAXS     ("maxs",  FLATROCK, 0x1fe,  AluOP::Commutative),               // NOLINT
+                         opSETZ     ("setz",  FLATROCK, 0x01e,  AluOP::Commutative+AluOP::IgnoreSrcs), // NOLINT
+                         opNOR      ("nor",   FLATROCK, 0x05e,  AluOP::Commutative),               // NOLINT
+                         opANDCA    ("andca", FLATROCK, 0x09e,  AluOP::CanSliceWithConst),         // NOLINT
+                         opANDCB    ("andcb", FLATROCK, 0x11e,  &opANDCA),                         // NOLINT
+                         opNOTB     ("notb",  FLATROCK, 0x15e,  AluOP::IgnoreSrc1,  "not"),        // NOLINT
+                         opNOTA     ("nota",  FLATROCK, 0x0de,  AluOP::IgnoreSrc2,  &opNOTB),      // NOLINT
+                         opXOR      ("xor",   FLATROCK, 0x19e,  AluOP::Commutative+AluOP::CanSliceWithConst), // NOLINT
+                         opNAND     ("nand",  FLATROCK, 0x1de,  AluOP::Commutative),               // NOLINT
+                         opAND      ("and",   FLATROCK, 0x21e,  AluOP::Commutative),               // NOLINT
+                         opXNOR     ("xnor",  FLATROCK, 0x25e,  AluOP::Commutative),               // NOLINT
+                         opB        ("alu_b", FLATROCK, 0x29e,  AluOP::IgnoreSrc1),                // NOLINT
+                         opORCA     ("orca",  FLATROCK, 0x2de),                                    // NOLINT
+                         opA        ("alu_a", FLATROCK, 0x31e,  AluOP::IgnoreSrc2,  &opB),         // NOLINT
+                         opORCB     ("orcb",  FLATROCK, 0x35e,  &opORCA),                          // NOLINT
+                         opOR       ("or",    FLATROCK, 0x39e,  AluOP::Commutative+AluOP::CanSliceWithConst), // NOLINT
+                         opSETHI    ("sethi", FLATROCK, 0x3de,  AluOP::Commutative+AluOP::IgnoreSrcs),        // NOLINT
+                         opGTEQU    ("gtequ", FLATROCK, 0x02e),                                    // NOLINT
+                         opGTEQS    ("gteqs", FLATROCK, 0x06e),                                    // NOLINT
+                         opLTU      ("ltu",   FLATROCK, 0x0ae),                                    // NOLINT
+                         opLTS      ("lts",   FLATROCK, 0x0ee),                                    // NOLINT
+                         opLEQU     ("lequ",  FLATROCK, 0x12e, &opGTEQU),                          // NOLINT
+                         opLEQS     ("leqs",  FLATROCK, 0x16e, &opGTEQS),                          // NOLINT
+                         opGTU      ("gtu",   FLATROCK, 0x1ae, &opLTU),                            // NOLINT
+                         opGTS      ("gts",   FLATROCK, 0x1ee, &opLTS),                            // NOLINT
+                         opEQ       ("eq",    FLATROCK, 0x22e, AluOP::Commutative),                // NOLINT
+                         opNEQ      ("neq",   FLATROCK, 0x2ae, AluOP::Commutative),                // NOLINT
+                         opEQ64     ("eq64",  FLATROCK, 0x26e, AluOP::Commutative),                // NOLINT
+                         opNEQ64    ("neq64", FLATROCK, 0x2ee, AluOP::Commutative);                // NOLINT
+static ShiftOP::Decode   opSHL      ("shl",   FLATROCK, 0x0c,       false),                        // NOLINT
+                         opSHRS     ("shrs",  FLATROCK, 0x1c,       false),                        // NOLINT
+                         opSHRU     ("shru",  FLATROCK, 0x14,       false),                        // NOLINT
+                         opFUNSHIFT ("funnel-shift", FLATROCK, 0x4,   true);                       // NOLINT
+
+static LoadConst::Decode    ealuOpLdc     ("load-const",        FLATROCK, 0x8);                    // NOLINT
+static Set::Decode          ealuOpSet     ("set",               FLATROCK, 0x6);                    // NOLINT
+static BitmaskSet::Decode   ealuOpSetm    ("bitmasked-set",     FLATROCK, 1);                      // NOLINT
+static ByteRotateMerge::Decode  ealuOpBrm ("byte-rotate-merge", FLATROCK, 0xa);                    // NOLINT
+static DepositField::Decode ealuOpDeposit ("deposit-field",     FLATROCK, 0x1);                    // NOLINT
+
+
+// Decode destination field for EALU instructions to instr_word and instr_width
+bool EALUInstruction::decode_dest(const value_t &v) {
+    if (!CHECKTYPE(v, tSTR)) return false;
+    // match on "Ax", "EALU8[x]", "EALU16[x]", "EALU32[x]" to identify EALU outputs
+    int slot, len = -1;
+    if (sscanf(v.s, "A%d%n", &slot, &len) >= 1 && v.s[len] == '\0') {
+        if (slot >= 0 && slot < 4) {
+            instr_width = 8;
+            instr_word = slot;
+            return true;
+        } else if (slot == 4 || slot == 6) {
+            instr_width = 16;
+            instr_word = slot;
+            return true;
+        } else if (slot == 16 || slot == 20) {
+            instr_width = 32;
+            instr_word = slot;
+            return true;
+        } else {
+            return false;
+        }
+    } else if (sscanf(v.s, "EALU8[%d]%n", &slot, &len) >= 1 && len == strlen(v.s) && slot >= 0 &&
+               slot < Target::EXTEND_ALU_8_SLOTS()) {
+        instr_width = 8;
+        instr_word = slot;
+        return true;
+    } else if (sscanf(v.s, "EALU16[%d]%n", &slot, &len) >= 1 && len == strlen(v.s) && slot >= 0 &&
+               slot < Target::EXTEND_ALU_16_SLOTS()) {
+        instr_width = 16;
+        instr_word = slot;
+        return true;
+    } else if (sscanf(v.s, "EALU32[%d]%n", &slot, &len) >= 1 && len == strlen(v.s) && slot >= 0 &&
+               slot < Target::EXTEND_ALU_32_SLOTS()) {
+        instr_width = 32;
+        instr_word = slot;
+        return true; }
+    return false;
+}
+
+Instruction* AluOP::Decode::decode(Table *tbl, const Table::Actions::Action *act,
+                                   const VECTOR(value_t) &op) const {
+    AluOP *rv;
+    if (op.size == 4) {
+        rv = new AluOP(this, tbl, act, op.data[1], op.data[2], op.data[3]);
+    } else if (op.size == 3) {
+        if (!(flags & IgnoreSrc1) && (flags & IgnoreSrc2)) {
+            rv = new AluOP(this, tbl, act, op.data[1], op.data[2], op.data[2]);
+            rv->ignoreSrc2 = true;
+        } else {
+            rv = new AluOP(this, tbl, act, op.data[1], op.data[1], op.data[2]);
+            rv->ignoreSrc1 = (flags & IgnoreSrc1) != 0; }
+    } else if (op.size == 2 && (flags & IgnoreSrc1) && (flags & IgnoreSrc2)) {
+        rv = new AluOP(this, tbl, act, op.data[1], op.data[1], op.data[1]);
+        rv->ignoreSrc1 = rv->ignoreSrc2 = true;
+    } else {
+        error(op[0].lineno, "%s requires 2 or 3 operands", op[0].s);
+        return nullptr; }
+    if (!rv->src1.valid())
+        error(op[2].lineno, "invalid src1");
+    else if (!rv->src2.valid())
+        error(op[3].lineno, "invalid src2");
+    else
+        return rv;
+    delete rv;
+    return nullptr;
+}
+
+Instruction* AluOP::pass1(Table *tbl, Table::Actions::Action *act) {
+    if (dest->phv())
+        error(lineno, "dest must be action data");
+    if (!dest->check()) return this;
+    if (!ignoreSrc1 && !src1->check()) return this;
+    if (!ignoreSrc2 && !src2->check()) return this;
+
+    if (!ignoreSrc1) src1->pass1(tbl, instr_word);
+    if (!ignoreSrc2) src2->pass1(tbl, instr_word);
+
+    if (!ignoreSrc2 && !src2->phv() && opc->swap_args) {
+        std::swap(src1, src2);
+        std::swap(ignoreSrc1, ignoreSrc2);
+        opc = opc->swap_args; }
+
+    if (!ignoreSrc2 && !src2->phv())
+        error(lineno, "src2 must be phv register");
+    return this;
+}
+
+uint32_t AluOP::encode() {
+    uint32_t rv = (opc->opcode << 11);
+    if (!ignoreSrc1)
+        rv |= (src1->bits(instr_word) << 5);
+    // set srci
+    return rv;
+}
+
+bool AluOP::equiv(Instruction *a_) {
+    if (auto *a = dynamic_cast<AluOP *>(a_)) {
+        return opc == a->opc && ignoreSrc1 == a->ignoreSrc1 && ignoreSrc2 == a->ignoreSrc2 &&
+               src1 == a->src1 && src2 == a->src2 && dest == a->dest;
+    } else {
+        return false;
+    }
+}
+
+Instruction *LoadConst::Decode::decode(Table *tbl, const Table::Actions::Action *act,
+                                           const VECTOR(value_t) &op) const {
+    if (op.size != 3) {
+        error(op[0].lineno, "%s requires 2 operands", op[0].s);
+        return nullptr; }
+    if (!CHECKTYPE(op[2], tINT)) return nullptr;
+    auto *rv = new LoadConst(tbl, act, op.data[1], op.data[2].i);
+    if (!rv->dest.valid()) {
+        error(op[1].lineno, "invalid dest");
+        delete rv;
+        return nullptr; }
+    return rv;
+}
+
+Instruction *LoadConst::pass1(Table *tbl, Table::Actions::Action *act) {
+    if (dest->phv())
+        error(lineno, "dest must be action data");
+    if (!dest->check()) return this;
+    int size = instr_width;
+    int minval = -1 << (size - 1);
+    if (size > 21) {
+        size = 21;
+        minval = 0; }
+    // For an 8 or 16 bit PHV, the constant to load is 8 (or 16) bits, so
+    // there's no need for sign extension to deal with a negative value.  For
+    // 32 bit PHVs, the constant is 21 bits and zero-extended to 32 bits, so
+    // must be positive.
+    if (src >= (1 << size) || src < minval)
+        error(lineno, "Constant value %d out of range", src);
+    src &= (1 << size) - 1;
+    return this;
+}
+
+uint32_t LoadConst::encode() {
+    return Target::encodeConst(src);
+}
+
+bool LoadConst::equiv(Instruction *a_) {
+    if (auto *a = dynamic_cast<LoadConst *>(a_)) {
+        return dest == a->dest && src == a->src;
+    } else {
+        return false;
+    }
+}
+
+Instruction *ShiftOP::Decode::decode(Table *tbl, const Table::Actions::Action *act,
+                                     const value_t_VECTOR &op) const {
+    if (op.size != (use_src1 ? 5 : 4)) {
+        error(op[0].lineno, "%s requires %d operands", op[0].s, use_src1 ? 4 : 3);
+        return nullptr; }
+    ShiftOP *rv = new ShiftOP(this, tbl, act, op.data + 1);
+    if (!rv->src1.valid())
+        error(op[2].lineno, "invalid src1");
+    else if (!rv->src2.valid())
+        error(op[3].lineno, "invalid src2");
+    else if (rv->shift < 0 || rv->shift > 0x1f)
+        error(op[3].lineno, "invalid shift");
+    else
+        return rv;
+    delete rv;
+    return nullptr;
+}
+
+Instruction *ShiftOP::pass1(Table *tbl, Table::Actions::Action *) {
+    if (dest->phv())
+        error(lineno, "dest must be action data");
+    if (!dest.check()) return this;
+    if (!src1.check() || !src2.check()) return this;
+    src1->pass1(tbl, slot/Phv::mau_groupsize());
+    src2->pass1(tbl, slot/Phv::mau_groupsize());
+    if (!src2.phv())
+        error(lineno, "src%s must be phv register", opc->use_src1 ? "2" : "");
+    return this;
+}
+
+uint32_t ShiftOP::encode() {
+    int rv = (shift << 17) | (opc->opcode << 11);
+    if (opc->use_src1) rv |= src1->bits(instr_word);
+    rv <<= 5;
+    return rv | src2->bits(instr_word);
+}
+
+bool ShiftOP::equiv(Instruction *a_) {
+    if (auto *a = dynamic_cast<ShiftOP *>(a_)) {
+        return opc == a->opc && dest == a->dest && src1 == a->src1 && src2 == a->src2 &&
+               shift == a->shift;
+    } else {
+        return false;
+    }
+}
+
+Instruction *Set::Decode::decode(Table *tbl, const Table::Actions::Action *act,
+                                 const VECTOR(value_t) &op) const {
+    if (op.size != 3) {
+        error(op[0].lineno, "%s requires 2 operands", op[0].s);
+        return nullptr; }
+    Set *rv = new Set(this, tbl, act, op[1], op[2]);
+    if (!rv->src.valid()) {
+        error(op[2].lineno, "invalid src");
+        delete rv;
+        return nullptr; }
+    return rv;
+}
+
+Instruction *Set::pass1(Table *tbl, Table::Actions::Action *act) {
+    if (dest->phv())
+        error(lineno, "dest must be action data");
+    if (!dest.check() || !src.check()) return this;
+    if (auto *k = src.to<Operand::Const>()) {
+        int minsignconst = Target::MINIMUM_INSTR_CONSTANT();
+        // Translate large value with negative value, e.g. 0xFFFE -> -2 on 16-bit PHV
+        int64_t maxvalue = 1LL << instr_width;
+        int64_t delta = k->value - maxvalue;
+        if (delta >= minsignconst)
+            k->value = delta;
+        if (k->value < minsignconst || k->value >= 8)
+            return (new LoadConst(tbl, act, dest, k->value))->pass1(tbl, act); }
+    src->pass1(tbl, instr_word);
+    return this;
+}
+
+uint32_t Set::encode() {
+    uint32_t rv = opc->opcode << 11;
+    rv |= src->bits(instr_word) << 5;
+    if (chain)
+        rv |= 1 << 24;
+    if (priority >= 0)
+        rv |= priority & 0x7;
+    return rv;
+}
+
+bool Set::equiv(Instruction *a_) {
+    if (auto *a = dynamic_cast<Set *>(a_)) {
+        return dest == a->dest && src == a->src;
+    } else {
+        return false;
+    }
+}
+
+Instruction *BitmaskSet::Decode::decode(Table *tbl, const Table::Actions::Action *act,
+                                            const VECTOR(value_t) &op) const {
+    if (op.size != 4 && op.size != 5) {
+        error(op[0].lineno, "%s requires 3 or 4 operands", op[0].s);
+        return nullptr; }
+    if (!CHECKTYPE(op[op.size - 1], tINT)) {
+        error(op[op.size-1].lineno, "%s mask must be a constant", op[0].s);
+        return nullptr; }
+    auto *rv = new BitmaskSet(this, tbl, act, op.data[op.size - 3], op.data[op.size - 2],
+                              op.data[op.size - 1].i);
+    if (!rv->dest.valid())
+        error(op[1].lineno, "invalid dest");
+    else
+        return rv;
+    delete rv;
+    return nullptr;
+}
+
+Instruction *BitmaskSet::pass1(Table *tbl, Table::Actions::Action *act) {
+    if (dest->phv())
+        error(lineno, "dest must be action data");
+    if (!dest->check()) return this;
+    // only applicable to 8b action data
+    if (instr_width != 8) {
+        error(lineno, "bitmasked-set only applicable to 8b action data");
+        return this; }
+    return this;
+}
+
+uint32_t BitmaskSet::encode() {
+    uint32_t rv = 1 << 21;
+    rv |= mask << 11;
+    rv |= (src1->bits(instr_word) << 5);
+    if (chain)
+        rv |= 1 << 22;
+    if (priority >= 0)
+        rv |= priority & 0x7;
+    return rv;
+}
+
+bool BitmaskSet::equiv(Instruction *a_) {
+    if (auto *a = dynamic_cast<BitmaskSet *>(a_)) {
+        return dest == a->dest && src1 == a->src1 && mask == a->mask &&
+               chain == a->chain && priority == a->priority;
+    } else {
+        return false;
+    }
+}
+
+Instruction *ByteRotateMerge::Decode::decode(Table *tbl, const Table::Actions::Action *act,
+                                             const VECTOR(value_t) &op) const {
+    if (op.size != 6) {
+        error(op[0].lineno, "%s requires 6 operands", op[0].s);
+        return nullptr; }
+    auto *rv = new ByteRotateMerge(this, tbl, act, op.data[1], op.data[2], op.data[3].i,
+                                   op.data[4].i, op.data[5].i);
+    if (!rv->dest.valid())
+        error(op[1].lineno, "invalid dest");
+    else
+        return rv;
+    delete rv;
+    return nullptr;
+}
+
+Instruction *ByteRotateMerge::pass1(Table *tbl, Table::Actions::Action *act) {
+    if (dest->phv())
+        error(lineno, "dest must be action data");
+    if (!dest->check()) return this;
+    return this;
+}
+
+uint32_t ByteRotateMerge::encode() {
+    // only applicable to 16 and 32
+    if (instr_width != 16 && instr_width != 32) {
+        error(lineno, "byte-rotate-merge only applicable to 16b and 32b action data");
+        return 0; }
+    uint32_t rv = opc->opcode << 11;
+    rv |= src1->bits(instr_word) << 5;
+    switch (instr_width) {
+    case 16:
+        rv |= mask & 0x3 << 15;
+        rv |= rot1 & 0x1 << 22;
+        rv |= rot2 & 0x1 << 20;
+        break;
+    case 32:
+        rv |= mask & 0xf << 15;
+        rv |= rot1 & 0x3 << 22;
+        rv |= rot2 & 0x3 << 20;
+        break;
+    }
+    return rv;
+}
+
+bool ByteRotateMerge::equiv(Instruction *a_) {
+    if (auto *a = dynamic_cast<ByteRotateMerge *>(a_)) {
+        return dest == a->dest && src1 == a->src1;
+    } else {
+        return false;
+    }
+}
+
+Instruction *DepositField::Decode::decode(Table *tbl, const Table::Actions::Action *act,
+                                          const VECTOR(value_t) &op) const {
+    if (op.size != 4) {
+        error(op[0].lineno, "%s requires 3 operands", op[0].s);
+        return nullptr; }
+    auto *rv = new DepositField(this, tbl, act, op.data[1], op.data[2], op.data[3]);
+    if (!rv->dest.valid())
+        error(op[1].lineno, "invalid dest");
+    else
+        return rv;
+    delete rv;
+    return nullptr;
+}
+
+Instruction *DepositField::pass1(Table *tbl, Table::Actions::Action *act) {
+    if (dest->phv())
+        error(lineno, "dest must be action data");
+    if (!dest->check()) return this;
+    return this;
+}
+
+uint32_t DepositField::encode() {
+    uint32_t rv = 1 << 11;
+    rv |= (src1->bits(instr_word) << 5);
+    if (priority >= 0)
+        rv |= priority & 0x7;
+    if (chain)
+        rv |= 1 << 22;
+    switch (instr_width) {
+    case 8:
+        rv |= (hibit & 0x7) << 12;
+        rv |= (lobit & 3) << 15;
+        rv |= (lobit & ~3) << 20;
+        rv |= (rot & 0x7) << 17;
+        break;
+    case 16:
+        rv |= (hibit & 0xf) << 12;
+        rv |= (lobit & 0x1) << 16;
+        rv |= (lobit & ~1) << 21;
+        rv |= (rot & 0xf) << 17;
+        break;
+    case 32:
+        rv |= (hibit & 0x1f) << 12;
+        rv |= (lobit & 0x1f) << 22;
+        rv |= (rot & 0x1f) << 17;
+        break;
+    }
+    return rv;
+}
+
+bool DepositField::equiv(Instruction *a_) {
+    if (auto *a = dynamic_cast<DepositField *>(a_)) {
+        return dest == a->dest && src1 == a->src1;
+    } else {
+        return false;
+    }
+}
+
+void EALUInstruction::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl,
+                                 Table::Actions::Action *act) {
+    auto &imem = regs.ppu_phvwr.imem;
+    int iaddr = act->addr / Target::Flatrock::IMEM_COLORS;
+    int color = act->addr % Target::Flatrock::IMEM_COLORS;
+    uint32_t bits = encode();
+    BUG_CHECK(instr_word >= 0);
+
+    LOG2(*this);
+    // Use ealu class to convert slot to ealu size
+    switch (instr_width) {
+    case 8:
+        // 8b ealu is 4 slots: A0, A1, A2, A3
+        imem.eaimem8[instr_word].ealu_imem8[iaddr].color = color;
+        imem.eaimem8[instr_word].ealu_imem8[iaddr].instr = bits;
+        break;
+    case 16:
+        // 16b ealu is 2 slots: A4 and A6;
+        instr_word -= 4;
+        instr_word /= 2;
+        imem.eaimem16[instr_word].ealu_imem16[iaddr].color = color;
+        imem.eaimem16[instr_word].ealu_imem16[iaddr].instr = bits;
+        break;
+    case 32:
+        // 32b ealu is 2 slots: A16 and A20
+        instr_word -= 16;
+        instr_word /= 4;
+        imem.eaimem32[instr_word].ealu_imem32[iaddr].color = color;
+        imem.eaimem32[instr_word].ealu_imem32[iaddr].instr = bits;
+        break;
+    default:
+        BUG();
+    }
+
+    // ealu_parity
+    // ealu_eaimem_mask
+    // ealu_cfg
+}
+
+}  // namespace EALU
 
 }  // end namespace Flatrock

@@ -4,7 +4,9 @@
 #include <array>
 #include "tables.h"
 
-static struct MeterBus_t {} MeterBus;
+// static struct MeterBus_t {} MeterBus;
+struct MeterBus_t {};
+
 struct ActionBusSource {
     enum { None, Field, HashDist, HashDistPair, RandomGen, TableOutput, TableColor, TableAddress,
            Ealu, XcmpData, NameRef, ColorRef, AddressRef }

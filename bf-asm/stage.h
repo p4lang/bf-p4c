@@ -9,35 +9,6 @@
 #include "input_xbar.h"
 #include "bf-p4c/common/alloc.h"
 
-class AsmStage : public Section {
-    void start(int lineno, VECTOR(value_t) args);
-    void input(VECTOR(value_t) args, value_t data);
-    void process();
-    void output(json::map &);
-
-    /// Propagates group_table_use to adjacent stages that are not match-dependent.
-    void propagate_group_table_use();
-
-    unsigned compute_latency(gress_t gress);
-    AsmStage();
-    ~AsmStage() {}
-    std::vector<Stage>  pipe;
-#if HAVE_FLATROCK
-    std::vector<Stage>  epipe;   // for separate egress pipe
-#endif
-    static AsmStage     singleton_object;
-    bitvec              stages_seen[NUM_GRESS_T];
-
- public:
-    static int numstages() { return singleton_object.pipe.size(); }
-    static std::vector<Stage> &stages(gress_t gress) {
-#if HAVE_FLATROCK
-        if (gress == EGRESS && Target::EGRESS_SEPARATE())
-            return singleton_object.epipe;
-#endif
-        return singleton_object.pipe; }
-};
-
 class Stage_data {
     /* we encapsulate all the Stage non-static fields in a base class to automate the
      * generation of the move construtor properly */
@@ -167,4 +138,79 @@ class Stage : public Stage_data {
     bitvec imem_use_all() const;
 };
 
-#endif /* BF_ASM_STAGE_H_ */
+class AsmStage : public Section {
+    void start(int lineno, VECTOR(value_t) args);
+    void input(VECTOR(value_t) args, value_t data);
+    void output(json::map &);
+
+    /// Propagates group_table_use to adjacent stages that are not match-dependent.
+    void propagate_group_table_use();
+
+    unsigned compute_latency(gress_t gress);
+    AsmStage();
+    ~AsmStage() {}
+    std::vector<Stage>  pipe;
+#if HAVE_FLATROCK
+    std::vector<Stage>  epipe;   // for separate egress pipe
+#endif
+    static AsmStage     singleton_object;
+    bitvec              stages_seen[NUM_GRESS_T];
+
+ public:
+    void process();
+    static int numstages() { return singleton_object.pipe.size(); }
+    static std::vector<Stage> &stages(gress_t gress) {
+#if HAVE_FLATROCK
+        if (gress == EGRESS && Target::EGRESS_SEPARATE())
+            return singleton_object.epipe;
+#endif
+        return singleton_object.pipe; }
+
+    // for gtest
+    void reset_stage(Stage& stage) {
+        for (auto &tbl : stage.tables)
+            tbl->all->clear();
+        stage.tables.clear();
+        stage.all_refs.clear();
+        stage.sram_use.clear();
+        stage.sram_search_bus_use.clear();
+        stage.stm_hbus_use.clear();
+        stage.match_result_bus_use.clear();
+        stage.mapram_use.clear();
+        stage.tcam_use.clear();
+        stage.tcam_match_bus_use.clear();
+        stage.tcam_byte_group_use.clear();
+        stage.gw_unit_use.clear();
+        stage.gw_payload_use.clear();
+        stage.logical_id_use.clear();
+        stage.physical_id_use.clear();
+        stage.tcam_id_use.clear();
+        stage.ixbar_use.clear();
+        stage.tcam_ixbar_input.clear();
+        stage.hash_table_use.clear();
+        stage.hash_group_use.clear();
+        stage.hash_dist_use.clear();
+        stage.action_bus_use.clear();
+        stage.action_data_use.clear();
+        stage.meter_bus_use.clear();
+        stage.stats_bus_use.clear();
+        stage.selector_adr_bus_use.clear();
+        stage.overflow_bus_use.clear();
+        stage.idletime_bus_use.clear();
+        stage.imem_addr_use.clear();
+        stage.long_branch_use.clear();
+    }
+
+    void reset() {
+        stages_seen[INGRESS].clear();
+        stages_seen[EGRESS].clear();
+        for (auto& stage : pipe)
+            reset_stage(stage);
+#if HAVE_FLATROCK
+        for (auto& stage : epipe)
+            reset_stage(stage);
+#endif
+    }
+};
+
+#endif /* STAGE_H_ */

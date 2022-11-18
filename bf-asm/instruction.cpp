@@ -47,20 +47,24 @@ Instruction::Decode::Decode(const char *name, std::set<target_t> target, int set
 Instruction *Instruction::decode(Table *tbl, const Table::Actions::Action *act,
                                  const VECTOR(value_t) &op) {
     for (auto d : ValuesForKey(Instruction::Decode::opcode[tbl->instruction_set()], op[0].s)) {
-        if ((d->targets >> Target::register_set()) & 1)
-            return d->decode(tbl, act, op); }
+        if ((d->targets >> Target::register_set()) & 1) {
+            auto inst = d->decode(tbl, act, op);
+            if (!inst) continue;
+            return inst; } }
     if (auto p = strchr(op[0].s, '.')) {
         std::string opname(op[0].s, p - op[0].s);
         for (auto d : ValuesForKey(Instruction::Decode::opcode[tbl->instruction_set()], opname)) {
-            if (((d->targets >> options.target) & 1) && d->type_suffix)
-                return d->decode(tbl, act, op); } }
+            if (((d->targets >> options.target) & 1) && d->type_suffix) {
+                auto inst = d->decode(tbl, act, op);
+                if (!inst) continue;
+                return inst; } } }
     return 0;
 }
 
 namespace VLIW {
 static const int group_size[] = { 32, 32, 32, 32, 8, 8, 8, 8, 16, 16, 16, 16, 16, 16 };
 
-struct operand {
+struct Operand {
     /** A source operand to a VLIW instruction -- this can be a variety of things, so we
      * have a pointer to an abstract base class and a number of derived concrete classes for
      * the different kinds of operands.  When we parse the operand, the type may be determined,
@@ -455,29 +459,30 @@ struct operand {
                 out << ')'; }
             out << '[' << tbl->name() << ':' << action << ']'; }
     };
-    operand() : op(0) {}
-    operand(const operand &a) : op(a.op ? a.op->clone() : 0) {}
-    operand(operand &&a) : op(a.op) { a.op = 0; }
-    operand &operator=(const operand &a) {
+    Operand() : op(0) {}
+    Operand(const Operand &a) : op(a.op ? a.op->clone() : 0) {}
+    Operand(Operand &&a) : op(a.op) { a.op = 0; }
+    Operand &operator=(const Operand &a) {
         if (&a != this) {
             delete op;
             op = a.op ? a.op->clone() : 0; }
         return *this; }
-    operand &operator=(operand &&a) {
+    Operand &operator=(Operand &&a) {
         if (&a != this) {
             delete op;
             op = a.op;
             a.op = 0; }
         return *this; }
-    ~operand() { delete op; }
-    operand(Table *tbl, const Table::Actions::Action *act, const value_t &v);
-    operand(gress_t gress, int stage, const value_t &v) : op(new Phv(v.lineno, gress, stage, v)) {}
-    explicit operand(const ::Phv::Ref &r) : op(new Phv(r)) {}
+    ~Operand() { delete op; }
+    Operand(Table *tbl, const Table::Actions::Action *act, const value_t &v);
+    Operand(gress_t gress, int stage, const value_t &v) : op(new Phv(v.lineno, gress, stage, v)) {}
+    explicit Operand(const ::Phv::Ref &r) : op(new Phv(r)) {}
     bool valid() const { return op != 0; }
-    bool operator==(operand &a) {
+    bool operator==(Operand &a) {
         return op == a.op || (op && a.op && op->lookup(op)->equiv(a.op->lookup(a.op))); }
     unsigned bitoffset(int group) { return op->lookup(op)->bitoffset(group); }
-    bool check() { return op && op->lookup(op) ? op->check() : false; }
+    bool check() {
+        return op && op->lookup(op) ? op->check() : false; }
     int phvGroup() { return op->lookup(op)->phvGroup(); }
     bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) {
         return op->lookup(op)->phvRead(fn); }
@@ -496,7 +501,7 @@ static void parse_slice(const VECTOR(value_t) &vec, int idx, int &lo, int &hi) {
             hi = vec[idx].hi; } }
 }
 
-operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v) : op(0) {
+Operand::Operand(Table *tbl, const Table::Actions::Action *act, const value_t &v) : op(0) {
     if (v.type == tINT) {
         op = new Const(v.lineno, v.i);
     } else if (CHECKTYPE2(v, tSTR, tCMD)) {
@@ -529,7 +534,7 @@ operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v
         op = new Named(v.lineno, name, mod, lo, hi, tbl, act->name, p4name); }
 }
 
-auto operand::Named::lookup(Base *&ref) -> Base * {
+auto Operand::Named::lookup(Base *&ref) -> Base * {
     int slot, len = -1;
     if (tbl->action) tbl = tbl->action;
     int lo = this->lo >= 0 ? this->lo : 0;
@@ -633,25 +638,25 @@ struct AluOP : VLIWInstruction {
                             const VECTOR(value_t) &op) const override;
     } *opc;
     Phv::Ref    dest;
-    operand     src1, src2;
+    Operand     src1, src2;
     bool        ignoreSrc1 = false, ignoreSrc2 = false;
     AluOP(const Decode *op, Table *tbl, const Table::Actions::Action *act, const value_t &d,
           const value_t &s1, const value_t &s2)
     : VLIWInstruction(d.lineno), opc(op), dest(tbl->gress, tbl->stage->stageno + 1, d),
       src1(tbl, act, s1), src2(tbl, act, s2) {}
-    std::string name() { return opc->name; }
-    Instruction *pass1(Table *tbl, Table::Actions::Action *);
-    void pass2(Table *tbl, Table::Actions::Action *) {
+    std::string name() override { return opc->name; }
+    Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
+    void pass2(Table *tbl, Table::Actions::Action *) override {
         if (!ignoreSrc1) src1->pass2(slot/Phv::mau_groupsize());
         if (!ignoreSrc2) src2->pass2(slot/Phv::mau_groupsize()); }
-    int encode();
-    bool equiv(Instruction *a_);
+    int encode() override;
+    bool equiv(Instruction *a_) override;
     bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) override {
         bool rv = false;
         if (!ignoreSrc1) rv |= src1.phvRead(fn);
         if (!ignoreSrc2) rv |= src2.phvRead(fn);
         return rv; }
-    void dbprint(std::ostream &out) const {
+    void dbprint(std::ostream &out) const override {
         out << "INSTR: " << opc->name << ' ' << dest << ", " << src1 << ", " << src2; }
 };
 
@@ -663,7 +668,7 @@ struct AluOP3Src : AluOP {
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                             const VECTOR(value_t) &op) const override;
     };
-    operand     src3;
+    Operand     src3;
     AluOP3Src(const Decode *op, Table *tbl, const Table::Actions::Action *act, const value_t &d,
               const value_t &s1, const value_t &s2, const value_t &s3)
     : AluOP(op, tbl, act, d, s1, s2), src3(tbl, act, s3) {}
@@ -720,7 +725,7 @@ Instruction *AluOP3Src::Decode::decode(Table *tbl, const Table::Actions::Action 
 }
 
 static bool will_pad_with_zeros(const Phv::Slice &dest, Table::Actions::Action *,
-                                operand::Action *ad) {
+                                Operand::Action *ad) {
     if (ad->lo != dest.lo || ad->hi != dest.hi) {
         // need to line up with the destination, if it doesn't reject
         // FIXME could we rotate the data in the field if everything else was ok?  The
@@ -758,17 +763,17 @@ Instruction *AluOP::pass1(Table *tbl, Table::Actions::Action *act) {
     if (!ignoreSrc2 && src2.phvGroup() < 0)
         error(lineno, "src2 must be phv register");
     if (dest->lo || dest->hi != dest->reg.size-1) {
-        if ((opc->flags & CanSliceWithConst) && operand(dest) == src2) {
+        if ((opc->flags & CanSliceWithConst) && Operand(dest) == src2) {
             // special case -- bitwise op wih dest==src2 and src1 is a constant or action
             // data that is padded with 0s can just operate on the whole container to get
             // the right result
-            auto *k = src1.to<operand::Const>();
+            auto *k = src1.to<Operand::Const>();
             if (k && k->value >= 0 && (k->value << dest->lo) < 8) {
                 k->value <<= dest->lo;
                 // FIXME -- should rewrite dest and src2 to refer to the whole container for
                 // strict correctness?  We don't actually look at the slice after this so maybe ok
                 return this; }
-            auto *ad = src1.to<operand::Action>();
+            auto *ad = src1.to<Operand::Action>();
             if (ad && will_pad_with_zeros(*dest, act, ad))
                 return this; }
         error(lineno, "ALU ops cannot operate on slices");
@@ -778,15 +783,15 @@ Instruction *AluOP::pass1(Table *tbl, Table::Actions::Action *act) {
 Instruction *AluOP3Src::pass1(Table *tbl, Table::Actions::Action *act) {
     AluOP::pass1(tbl, act);
     src3->pass1(tbl, slot/Phv::mau_groupsize());
-    if (!src3.to<operand::Action>())
+    if (!src3.to<Operand::Action>())
         error(lineno, "src3 must be on the action bus");
     return this;
 }
 void AluOP3Src::pass2(Table *tbl, Table::Actions::Action *act) {
     AluOP::pass2(tbl, act);
     src3->pass2(slot/Phv::mau_groupsize());
-    if (auto s1 = src1.to<operand::Action>()) {
-        auto s3 = src3.to<operand::Action>();
+    if (auto s1 = src1.to<Operand::Action>()) {
+        auto s3 = src3.to<Operand::Action>();
         if (s1->bits(slot/Phv::mau_groupsize()) + 1 != s3->bits(slot/Phv::mau_groupsize()))
             error(lineno, "src1 and src3 must be adjacent on the action bus");
     } else {
@@ -822,13 +827,13 @@ struct LoadConst : VLIWInstruction {
     LoadConst(Table *tbl, const Table::Actions::Action *act, const value_t &d, int s)
         : VLIWInstruction(d.lineno), dest(tbl->gress, tbl->stage->stageno + 1, d), src(s) {}
     LoadConst(int line, Phv::Ref &d, int v) : VLIWInstruction(line), dest(d), src(v) {}
-    std::string name() { return ""; }
-    Instruction *pass1(Table *tbl, Table::Actions::Action *);
-    void pass2(Table *, Table::Actions::Action *) {}
-    int encode() { return Target::encodeConst(src); }
-    bool equiv(Instruction *a_);
+    std::string name() override { return ""; }
+    Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
+    void pass2(Table *, Table::Actions::Action *) override {}
+    int encode() override { return Target::encodeConst(src); }
+    bool equiv(Instruction *a_) override;
     bool phvRead(std::function<void(const ::Phv::Slice &sl)> fn) override { return false; }
-    void dbprint(std::ostream &out) const {
+    void dbprint(std::ostream &out) const override {
         out << "INSTR: set " << dest << ", " << src; }
 };
 
@@ -897,7 +902,7 @@ struct CondMoveMux : VLIWInstruction {
                             const VECTOR(value_t) &op) const override;
     } *opc;
     Phv::Ref    dest;
-    operand     src1, src2;
+    Operand     src1, src2;
     unsigned    cond = 0;
     CondMoveMux(Table *tbl, const Decode *op, const Table::Actions::Action *act,
                 const value_t &d, const value_t &s)
@@ -995,7 +1000,7 @@ struct ByteRotateMerge : VLIWInstruction {
                             const VECTOR(value_t) &op) const;
     };
     Phv::Ref dest;
-    operand src1, src2;
+    Operand src1, src2;
     bitvec byte_mask;
     int src1_shift, src2_shift;
     ByteRotateMerge(Table *tbl, const Table::Actions::Action *act, const value_t &d,
@@ -1112,7 +1117,7 @@ struct DepositField : VLIWInstruction {
                             const VECTOR(value_t) &op) const override;
     };
     Phv::Ref    dest;
-    operand     src1, src2;
+    Operand     src1, src2;
     DepositField(Table *tbl, const Table::Actions::Action *act, const value_t &d,
                  const value_t &s)
     : VLIWInstruction(d.lineno), dest(tbl->gress, tbl->stage->stageno + 1, d),
@@ -1170,7 +1175,7 @@ Instruction *DepositField::pass1(Table *tbl, Table::Actions::Action *act) {
     return this;
 }
 int DepositField::encode() {
-    // If src1 is an operand::Const (and we pass a valid dest_size),
+    // If src1 is an Operand::Const (and we pass a valid dest_size),
     // we will recieve the combined rotation + bits from DepositField::discoverRotation().
     // Otherwise the top 'RotationBits' will be zero.
     int rotConst = src1.bits(slot/Phv::mau_groupsize(), dest.size());
@@ -1214,7 +1219,7 @@ struct Set : VLIWInstruction {
                             const VECTOR(value_t) &op) const override;
     };
     Phv::Ref    dest;
-    operand     src;
+    Operand     src;
     static AluOP::Decode *opA;
     Set(Table *tbl, const Table::Actions::Action *act, const value_t &d, const value_t &s)
     : VLIWInstruction(d.lineno), dest(tbl->gress, tbl->stage->stageno + 1, d), src(tbl, act, s) {}
@@ -1253,7 +1258,7 @@ Instruction *Set::pass1(Table *tbl, Table::Actions::Action *act) {
         return this; }
     if (dest->lo || dest->hi != dest->reg.size-1)
         return (new DepositField(tbl, *this))->pass1(tbl, act);
-    if (auto *k = src.to<operand::Const>()) {
+    if (auto *k = src.to<Operand::Const>()) {
         if (dest->reg.type == Phv::Register::DARK) {
             error(dest.lineno, "can't set dark phv to a constant");
             return this; }
@@ -1363,7 +1368,7 @@ struct ShiftOP : VLIWInstruction {
                             const VECTOR(value_t) &op) const override;
     } *opc;
     Phv::Ref    dest;
-    operand     src1, src2;
+    Operand     src1, src2;
     int         shift = 0;
     ShiftOP(const Decode *d, Table *tbl, const Table::Actions::Action *act, const value_t *ops)
     : VLIWInstruction(ops->lineno), opc(d), dest(tbl->gress, tbl->stage->stageno + 1, ops[0]),

@@ -144,10 +144,10 @@ set (BFAS_COMMON_SOURCES
   ubits.cpp
   vector.c
   widereg.cpp
-  ${BFN_P4C_LIB_DIR}/hex.cpp
   ${BFN_P4C_LIB_DIR}/bitvec.cpp
-  ${BFN_P4C_LIB_DIR}/log.cpp
+  ${BFN_P4C_LIB_DIR}/hex.cpp
   ${BFN_P4C_LIB_DIR}/indent.cpp
+  ${BFN_P4C_LIB_DIR}/log.cpp
   )
 
 SET (BFAS_COMMON_HEADERS
@@ -341,14 +341,31 @@ if (ENABLE_GTESTS)
     gtest/flatrock-parser.cpp
     gtest/gateway.cpp
     gtest/hashexpr.cpp
+    gtest/instruction.cpp
     gtest/metadata_packer.cpp
     gtest/mirror.cpp
     gtest/parser-test.cpp
     gtest/register-matcher.h
-    gtest/register-matcher.cpp)
-  add_executable (gtestasm ${BFAS_GTEST_SOURCES})
+    gtest/register-matcher.cpp
+    )
+
+  set(BFP4C_SOURCES
+  ${BFN_P4C_LIB_DIR}/bitvec.cpp
+  ${BFN_P4C_LIB_DIR}/compile_context.cpp
+  ${BFN_P4C_LIB_DIR}/cstring.cpp
+  ${BFN_P4C_LIB_DIR}/error_catalog.cpp
+  ${BFN_P4C_LIB_DIR}/error_message.cpp
+  ${BFN_P4C_LIB_DIR}/error_reporter.h
+  ${BFN_P4C_LIB_DIR}/hash.cpp
+  ${BFN_P4C_LIB_DIR}/options.cpp
+  ${BFN_P4C_LIB_DIR}/source_file.cpp
+  ${BFN_P4C_LIB_DIR}/stringify.cpp
+  )
+
+  add_executable (gtestasm ${BFAS_GTEST_SOURCES} ${BFP4C_SOURCES})
   include_directories(
     ${BFN_P4C_SOURCE_DIR}/p4c/test/frameworks/gtest/googletest/include
+    ${BFN_P4C_SOURCE_DIR}/p4c
   )
   target_link_libraries (gtestasm PRIVATE bfas_lib gtest)
   target_compile_options (gtestasm PRIVATE -Wall -Wextra -ggdb -O3

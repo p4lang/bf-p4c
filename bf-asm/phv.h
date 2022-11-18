@@ -248,6 +248,9 @@ class Phv : public Section {
         phv.target = nullptr;
         phv.regs.clear();
         phv.phv_pov_names.clear();
+        phv.names[INGRESS].clear();
+        phv.names[EGRESS].clear();
+        phv.names[GHOST].clear();
     }
 };
 

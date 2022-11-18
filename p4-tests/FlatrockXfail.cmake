@@ -294,7 +294,7 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
-  "error: Unknown instruction or table add"
+  "dest must be action data"
   extensions/p4_tests/p4_16/stf/p4c-1504.p4
   )
   
