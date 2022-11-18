@@ -309,8 +309,8 @@ struct AllocateParserState : public ParserTransform {
         };
 
         struct ExtractAllocator : Allocator {
-            ordered_map<PHV::Container,
-                        ordered_set<const IR::BFN::ExtractPhv*>> container_to_extracts;
+            std::list<std::pair<PHV::Container,
+                                ordered_set<const IR::BFN::ExtractPhv*>>> container_to_extracts;
 
             virtual
             std::pair<size_t, unsigned>
@@ -587,7 +587,31 @@ struct AllocateParserState : public ParserTransform {
                     auto slice = alloc_slices[0];
                     auto container = slice.container();
 
-                    container_to_extracts[container].insert(e);
+                    if (e->source->is<IR::BFN::InputBufferRVal>()) {
+                        // Only allow the merge with the last extract
+                        if (container_to_extracts.empty() ||
+                            container_to_extracts.back().first != container) {
+                            container_to_extracts.push_back(std::make_pair(container,
+                                ordered_set<const IR::BFN::ExtractPhv*>()));
+                        }
+                        container_to_extracts.back().second.insert(e);
+                    } else {
+                        // Try to merge it with another extract related to the same container
+                        // because the source is a constant and input buffer is irrelevant
+                        bool merged = false;
+                        for (auto &kv : container_to_extracts) {
+                            if (kv.first == container) {
+                                kv.second.insert(e);
+                                merged = true;
+                                break;
+                            }
+                        }
+                        if (!merged) {
+                            container_to_extracts.push_back(std::make_pair(container,
+                                ordered_set<const IR::BFN::ExtractPhv*>()));
+                            container_to_extracts.back().second.insert(e);
+                        }
+                    }
                 }
             }
         };
