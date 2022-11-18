@@ -213,7 +213,7 @@ struct Memories {
     virtual void fill_placed_scm_table(const IR::MAU::Table *, const TableResourceAlloc *) = 0;
     virtual void printOn(std::ostream &) const = 0;
     cstring last_failure() const { return failure_reason ? failure_reason : ""; }
-    void set_local_stage(int stage) { local_stage = stage; }
+    virtual void init_shared(int stage) { local_stage = stage; }
 
  protected:
     enum update_type_t { UPDATE_RAM, UPDATE_MAPRAM, UPDATE_GATEWAY,

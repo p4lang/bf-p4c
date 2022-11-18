@@ -1,0 +1,16 @@
+# add ingress.test1 1 hdrs.data.h1:0x0301 setport(p:6)
+
+add egress.test1 1 hdrs.data.f1:0x01,hdrs.data.b1:0x04 setb1(v:1)
+add egress.test1 2 hdrs.data.f1:0x02,hdrs.data.b1:0x11 setb1(v:2)
+
+add egress.test2 1 hdrs.data.f1:0x01020103,hdrs.data.h1:0x0303 setf1(v:4)
+
+# add egress.test3 1 hdrs.data.f1:0x01020104 setf1(v:5)
+
+
+packet 2 01010101 02020202 0301 04 05 06070809
+packet 2 01010102 02020202 0302 11 05 06070809
+packet 2 01020103 02020202 0303 04 05 06070809
+expect 2 01010101 02020202 0301 01 05 06070809
+expect 2 01010102 02020202 0302 02 05 06070809
+expect 2 01020104 02020202 0303 04 05 06070809

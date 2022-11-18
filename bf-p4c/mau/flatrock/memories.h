@@ -123,6 +123,7 @@ struct Memories : public ::Memories {
     static constexpr int TABLES_MAX = 16;
     static constexpr int TERNARY_TABLES_MAX = 8;
     static constexpr int TERNARY_TABLES_WITH_STM_TIND_MAX = 4;
+    static constexpr int EGRESS_STAGE0_INGRESS_STAGE = 13;
 
     ////////////////////////////////////////////////////////
     // STM PARAMETERS
@@ -201,11 +202,13 @@ struct Memories : public ::Memories {
 
     struct scm_alloc_stage {
         // Abstract the TCAM layout as a single column with 20 rows
-        BFN::Alloc1D<cstring, TCAM_ROWS> tcam_use;
-        BFN::Alloc1D<cstring, TCAM_ROWS> left_hbus1;
-        BFN::Alloc1D<cstring, TCAM_ROWS> left_hbus2;
-        BFN::Alloc1D<cstring, TCAM_ROWS> right_hbus1;
-        BFN::Alloc1D<cstring, TCAM_ROWS> right_hbus2;
+        BFN::Alloc1D<const IR::MAU::Table *, TCAM_ROWS>        tcam_use;
+        BFN::Alloc1D<int, TCAM_ROWS>                           tcam_grp;
+        BFN::Alloc1D<const IR::MAU::Table *, TCAM_ROWS>        left_hbus1;
+        BFN::Alloc1D<const IR::MAU::Table *, TCAM_ROWS>        left_hbus2;
+        BFN::Alloc1D<const IR::MAU::Table *, TCAM_ROWS>        right_hbus1;
+        BFN::Alloc1D<const IR::MAU::Table *, TCAM_ROWS>        right_hbus2;
+        BFN::Alloc1D<const IR::MAU::Table *, TOTAL_LOCAL_TIND> local_tind_use;
         unsigned tcam_in_use;         // 20 bit mask
         unsigned left_hbus1_in_use;   // 20 bit mask
         unsigned left_hbus2_in_use;   // 20 bit mask
@@ -215,12 +218,20 @@ struct Memories : public ::Memories {
         scm_alloc_stage() : tcam_in_use(0), left_hbus1_in_use(0), left_hbus2_in_use(0),
                             right_hbus1_in_use(0), right_hbus2_in_use(0) {}
     };
-    std::map<int, scm_alloc_stage> scm_curr_alloc;  // Stage is the key
+    struct scm_alloc {
+        std::map<const IR::MAU::Table *, int> tbl_to_local_stage;
+        std::map<int, scm_alloc_stage> stage_to_alloc;  // Ingress Stage is the key
 
-    BFN::Alloc2D<cstring, TCAM_ROWS, TCAM_COLUMNS>              tcam_use;
+        void clear() {
+            tbl_to_local_stage.clear();
+            stage_to_alloc.clear();
+        }
+    };
+    scm_alloc scm_curr_alloc;
+    friend std::ostream &operator<<(std::ostream &, const scm_alloc &);
+
     BFN::Alloc2D<cstring, SRAM_ROWS, 2>                         tind_bus;
     BFN::Alloc2D<cstring, N_ISTM_ROWS, STM_COLS_PER_STAGE>      sram_use;
-    BFN::Alloc1D<cstring, TOTAL_LOCAL_TIND>               local_tind_use;
     BFN::Alloc2D<cstring, SRAM_ROWS, PAYLOAD_COUNT>          payload_use;
     BFN::Alloc2D<cstring, SRAM_ROWS, GATEWAYS_PER_ROW>       gateway_use;
 
@@ -456,7 +467,6 @@ struct Memories : public ::Memories {
 
         // cstring get_name() const;
         UniqueId build_unique_id() const;
-        bool same_wide_action(const SRAM_group &a);
         int calculate_next_vpn() const {
             return placed * vpn_increment + vpn_offset;
         }
@@ -488,7 +498,6 @@ struct Memories : public ::Memories {
 
     int allocation_count = 0;
     ordered_map<const IR::MAU::AttachedMemory *, table_alloc *> shared_attached;
-    unsigned side_mask(RAM_side_t side) const;
     int mems_needed(int entries, int depth, int per_mem_row);
     void clear_table_vectors();
     void clear_uses();
@@ -519,16 +528,12 @@ struct Memories : public ::Memories {
 
     bool allocate_all_ternary();
     int ternary_TCAMs_necessary(table_alloc *ta);
-    bool find_ternary_stretch(int TCAMs_necessary, int &row);
+    bool find_ternary_stretch(int TCAMs_necessary,
+                              BFN::Alloc1D<const IR::MAU::Table *, TCAM_ROWS> &tcam_use, int &row);
 
     bool allocate_all_tind();
-    bool allocate_all_tind_result_bus_tables();
     void find_tind_groups();
-    int find_best_tind_row(SRAM_group *tg, int &bus);
-    void compress_tind_groups();
 
-    void log_allocation(safe_vector<table_alloc *> *tas, UniqueAttachedId::type_t type);
-    void log_allocation(safe_vector<table_alloc *> *tas, UniqueAttachedId::pre_placed_type_t ppt);
     table_alloc *find_corresponding_exact_match(cstring name);
 
     bool find_mem_and_bus_for_idletime(std::vector<std::pair<int, std::vector<int>>>& mem_locs,
@@ -551,6 +556,7 @@ struct Memories : public ::Memories {
     void shrink_allowed_lts() { logical_tables_allowed--; }
     void fill_placed_scm_table(const IR::MAU::Table *, const TableResourceAlloc *);
     void printOn(std::ostream &) const;
+    void init_shared(int stage) { local_stage = stage; scm_curr_alloc.clear(); }
     void visitUse(const Use &, std::function<void(cstring &, update_type_t)> fn);
 };
 

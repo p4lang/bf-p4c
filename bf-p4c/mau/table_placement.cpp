@@ -1752,17 +1752,18 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
 
 #ifdef HAVE_FLATROCK
     if (Device::currentDevice() == Device::FLATROCK) {
+        current_mem->init_shared(next->stage);
         for (const Placed *p = next->prev; p; p = p->prev) {
-            if (p->stage == next->stage)
+            if (p->stage == next->stage && p->table->gress == next->table->gress)
                 continue;
             current_mem->fill_placed_scm_table(p->table, &p->resources);
         }
-        current_mem->set_local_stage(next->stage);
     }
 #endif
 
     const IR::MAU::Table *table_to_add = nullptr;
     for (auto *p : whole_stage) {
+        if (!Device::threadsSharePipe(p->table->gress, next->table->gress)) continue;
         table_to_add = p->table;
         if (!p->use.format_type.matchThisStage())
             table_to_add = table_to_add->apply(RewriteForSplitAttached(*this, p));

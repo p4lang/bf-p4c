@@ -152,25 +152,6 @@ void Memories::SRAM_group::dbprint(std::ostream &out) const {
         << ", left to place " << left_to_place() << " }";
 }
 
-bool Memories::SRAM_group::same_wide_action(const SRAM_group &a) {
-    return ta == a.ta && type == ACTION && a.type == ACTION && logical_table == a.logical_table;
-}
-
-
-unsigned Memories::side_mask(RAM_side_t side) const {
-    switch (side) {
-        case LEFT:
-            return (1 << LEFT_SIDE_COLUMNS) - 1;
-        case RIGHT:
-            return ((1 << SRAM_COLUMNS) - 1) & ~((1 << LEFT_SIDE_COLUMNS) - 1);
-        case RAM_SIDES:
-             return ((1 << SRAM_COLUMNS) - 1);
-        default:
-             BUG("Unrecognizable RAM side to allocate");
-    }
-    return 0;
-}
-
 int Memories::mems_needed(int entries, int depth, int per_mem_row) {
     int mems_needed = (entries + per_mem_row * depth - 1) / (depth * per_mem_row);
     return mems_needed;
@@ -178,9 +159,7 @@ int Memories::mems_needed(int entries, int depth, int per_mem_row) {
 
 void Memories::clear_uses() {
     gateway_use.clear();
-    tcam_use.clear();
     tind_bus.clear();
-    scm_curr_alloc.clear();
     scm_tbl_id = 0;
     sram_use.clear();
     memset(sram_inuse, 0, sizeof(sram_inuse));
@@ -188,6 +167,7 @@ void Memories::clear_uses() {
     sram_print_search_bus.clear();
     sram_result_bus.clear();
     sram_print_result_bus.clear();
+    scm_tbl_id = 0;
 }
 
 void Memories::clear() {
@@ -858,7 +838,6 @@ bool Memories::allocate_all_exact(unsigned column_mask) {
     return true;
 }
 
-
 void Memories::compress_row(Use &alloc) {
     std::stable_sort(alloc.row.begin(), alloc.row.end(),
         [=](const Memories::Use::Row a, const Memories::Use::Row b) {
@@ -1038,11 +1017,13 @@ int Memories::ternary_TCAMs_necessary(table_alloc *ta) {
 }
 
 /* Finds the stretch on the ternary array that can hold entries */
-bool Memories::find_ternary_stretch(int TCAMs_necessary, int &row) {
+bool Memories::find_ternary_stretch(int TCAMs_necessary,
+                                    BFN::Alloc1D<const IR::MAU::Table *, TCAM_ROWS> &tcam_use,
+                                    int &row) {
     int clear_cols = 0;
 
     for (int i = 0; i < TCAM_ROWS; i++) {
-        if (tcam_use[i][0]) {
+        if (tcam_use[i]) {
             clear_cols = 0;
             continue;
         }
@@ -1059,7 +1040,6 @@ bool Memories::find_ternary_stretch(int TCAMs_necessary, int &row) {
 
 /* Allocates all ternary entries within the stage */
 bool Memories::allocate_all_ternary() {
-    allocation_count = 0;
     std::sort(ternary_tables.begin(), ternary_tables.end(),
         [=](const table_alloc *a, table_alloc *b) {
         int t;
@@ -1103,16 +1083,23 @@ bool Memories::allocate_all_ternary() {
                 return false;
             }
 
+            int ingress_stage = (ta->table->gress != EGRESS) ?
+                                local_stage : EGRESS_STAGE0_INGRESS_STAGE - local_stage;
+            scm_alloc_stage &alloc_stage = scm_curr_alloc.stage_to_alloc[ingress_stage];
+            scm_curr_alloc.tbl_to_local_stage[ta->table] = ingress_stage;
+            int group = 0;
             for (int i = 0; i < ta->calc_entries_per_uid[lt_entry] / TCAM_DEPTH; i++) {
-                if (!find_ternary_stretch(TCAMs_necessary, row))
+                if (!find_ternary_stretch(TCAMs_necessary, alloc_stage.tcam_use, row))
                     return false;
                 for (int i = row; i < row + TCAMs_necessary; i++) {
-                    tcam_use[i][0] = u_id.build_name();
+                    alloc_stage.tcam_use[i] = ta->table;
+                    alloc_stage.tcam_grp[i] = group;
+                    alloc_stage.tcam_in_use |= 1 << i;
                     alloc.loc_to_gb.emplace(std::piecewise_construct,
                         std::forward_as_tuple(local_stage, i),
-                        std::forward_as_tuple(std::make_pair(allocation_count, Use::NONE)));
+                        std::forward_as_tuple(std::make_pair(group, Use::NONE)));
                 }
-                allocation_count++;
+                group++;
             }
             lt_entry++;
         }
@@ -1132,7 +1119,7 @@ bool Memories::allocate_all_ternary() {
             }
         }
     }
-
+    LOG7(scm_curr_alloc);
     return true;
 }
 
@@ -1174,77 +1161,6 @@ void Memories::find_tind_groups() {
     });
 }
 
-/* Finds the best row in which to put the tind table */
-int Memories::find_best_tind_row(SRAM_group *tg, int &bus) {
-    int open_space = 0;
-    unsigned left_mask = 0xf;
-    safe_vector<int> available_rows;
-    auto name = tg->build_unique_id().build_name();
-    for (int i = 0; i < SRAM_ROWS; i++) {
-        auto tbus = tind_bus[i];
-        if (!tbus[0] || tbus[0] == name || !tbus[1] || tbus[1] == name) {
-            available_rows.push_back(i);
-            open_space += bitcount(~sram_inuse[i] & left_mask);
-        }
-    }
-
-    if (open_space == 0)
-        return -1;
-
-    std::sort(available_rows.begin(), available_rows.end(),
-        [=] (const int a, const int b) {
-        int t;
-        if ((t = bitcount(~sram_inuse[a] & left_mask)
-               - bitcount(~sram_inuse[b] & left_mask)) != 0) return t > 0;
-
-        auto tbus0 = tind_bus[a];
-        auto tbus1 = tind_bus[b];
-        if ((tbus0[0] == name || tbus0[1] == name)
-            && !(tbus1[0] == name || tbus1[1] == name))
-            return true;
-        if ((tbus1[0] == name || tbus1[1] == name)
-            && !(tbus0[0] == name || tbus0[1] == name))
-            return false;
-        return a < b;
-    });
-
-
-    int best_row = available_rows[0];
-    if (!tind_bus[best_row][0] || tind_bus[best_row][0] == name)
-        bus = 0;
-    else
-        bus = 1;
-
-    return best_row;
-}
-
-/* Compresses the tind groups on the same row in the use, into one row */
-void Memories::compress_tind_groups() {
-    for (auto *ta : tind_tables) {
-        if (ta->layout_option->local_tinds)
-            continue;
-        for (auto u_id : ta->allocation_units(nullptr, false, UniqueAttachedId::TIND_PP)) {
-            auto &alloc = (*ta->memuse)[u_id];
-            std::sort(alloc.row.begin(), alloc.row.end(),
-                [=](const Memories::Use::Row a, const Memories::Use::Row b) {
-                    int t;
-                    if ((t = a.row - b.row) != 0) return t < 0;
-                    if ((t = a.bus - b.bus) != 0) return t < 0;
-                    return false;
-                });
-            for (size_t i = 0; i < alloc.row.size() - 1; i++) {
-                if (alloc.row[i].row == alloc.row[i+1].row &&
-                    alloc.row[i].bus == alloc.row[i+1].bus) {
-                    alloc.row[i].col.insert(alloc.row[i].col.end(), alloc.row[i+1].col.begin(),
-                                            alloc.row[i+1].col.end());
-                    alloc.row.erase(alloc.row.begin() + i + 1);
-                    i--;
-                }
-            }
-        }
-    }
-}
-
 /* Allocates all of the ternary indirect tables into the first column if they fit.
    FIXME: This is obviously a punt and needs to be adjusted. */
 bool Memories::allocate_all_tind() {
@@ -1253,18 +1169,22 @@ bool Memories::allocate_all_tind() {
         auto *tg = tind_groups[0];
         if (tg->ta->layout_option->local_tinds) {
             auto unique_id = tg->build_unique_id();
-            cstring name = unique_id.build_name();
             auto &alloc = (*tg->ta->memuse)[unique_id];
             int placed_tind = 0;
+            int ingress_stage = (tg->ta->table->gress != EGRESS) ?
+                                local_stage : EGRESS_STAGE0_INGRESS_STAGE - local_stage;
+            scm_alloc_stage &alloc_stage = scm_curr_alloc.stage_to_alloc[ingress_stage];
             // Populate Highest table id first with Local Tind 15..0 for ingress and 0..15 for
             // egress
             auto tids = tg->ta->table->gress == EGRESS ? Range(0, TOTAL_LOCAL_TIND - 1) :
                                                          Range(TOTAL_LOCAL_TIND - 1, 0);
+            LOG4("Allocation for " << unique_id.build_name());
             for (int i : tids) {
-                if (!local_tind_use[i]) {
-                    local_tind_use[i] = name;
+                if (!alloc_stage.local_tind_use[i]) {
+                    alloc_stage.local_tind_use[i] = tg->ta->table;
                     placed_tind++;
                     alloc.local_tind.push_back(i);
+                    LOG4("local_tind: " << i << " placed_tind: " << placed_tind);
                     if (placed_tind == tg->ta->layout_option->local_tinds)
                         break;
                 }
@@ -1276,156 +1196,68 @@ bool Memories::allocate_all_tind() {
             tind_groups.erase(tind_groups.begin());
             continue;
         }
-        int best_bus = 0;
-        int best_row = find_best_tind_row(tg, best_bus);
-        if (best_row == -1) {
-            failure_reason = "no tind row available";
-            return false; }
-        for (int i = 0; i < LEFT_SIDE_COLUMNS; i++) {
-            if (~sram_inuse[best_row] & (1 << i)) {
-                auto unique_id = tg->build_unique_id();
-                cstring name = unique_id.build_name();
-                sram_inuse[best_row] |= (1 << i);
-                sram_use[best_row][i] = name;
-                tg->placed++;
-                if (tg->all_placed()) {
-                    tind_groups.erase(tind_groups.begin());
-                }
-                tind_bus[best_row][best_bus] = name;
-
-                auto &alloc = (*tg->ta->memuse)[unique_id];
-                alloc.row.emplace_back(best_row, best_bus);
-                alloc.row.back().result_bus = best_bus;
-                alloc.row.back().col.push_back(i);
-                break;
-            }
-        }
     }
-    compress_tind_groups();
-    log_allocation(&tind_tables, UniqueAttachedId::TIND_PP);
+    LOG7(scm_curr_alloc);
     return true;
 }
-
-void Memories::log_allocation(safe_vector<table_alloc *> *tas,
-        UniqueAttachedId::pre_placed_type_t ppt) {
-    for (auto *ta : *tas) {
-        for (auto u_id : ta->allocation_units(nullptr, false, ppt)) {
-            auto alloc = (*ta->memuse)[u_id];
-            LOG4("Allocation for " << u_id.build_name());
-            for (int local_tind : alloc.local_tind) {
-                LOG4("local_tind : " << local_tind);
-            }
-            for (auto row : alloc.row) {
-                LOG4("(Row, Bus, [Columns]) : (" << row.row << ", " << row.bus << ", ["
-                     << row.col << "])");
-            }
-        }
-    }
-}
-
-void Memories::log_allocation(safe_vector<table_alloc *> *tas, UniqueAttachedId::type_t type) {
-    for (auto *ta : *tas) {
-        for (auto ba : ta->table->attached) {
-            if (ba->attached->unique_id().type != type)
-                continue;
-            for (auto u_id : ta->allocation_units(ba->attached)) {
-                auto alloc = (*ta->memuse)[u_id];
-                LOG4("Allocation for " << u_id.build_name());
-                for (auto row : alloc.row) {
-                    LOG4("(Row, Bus, [Columns]) : (" << row.row << ", " << row.bus << ", ["
-                         << row.col << "])");
-                }
-            }
-        }
-    }
-}
-
-
-/**
- * The purpose of this function is to allocate a ternary indirect bus only for a TCAM table
- * that requires a single ternary indirect bus, but no ternary indirect table.  This
- * appears as an "indirect_bus" node in the assembly.
- *
- * This is slightly different than no-match-miss tables, as no-match-miss tables output
- * a TernaryIndirect with no RAMs, but a format, (though this format is never actually used)
- * as for any Assembler Calls, the key in the format are necessary.  However at this point
- * a TernaryIndirect Table with no format does not assemble.  These in theory are the
- * same table result, but have to be output in different ways in order to pass the assembler
- */
-bool Memories::allocate_all_tind_result_bus_tables() {
-    for (auto *ta : tind_result_bus_tables) {
-        for (auto u_id : ta->allocation_units()) {
-            auto &alloc = (*ta->memuse).at(u_id);
-            BUG_CHECK(alloc.type == Use::TERNARY, "Tind result bus not on a ternary table?");
-            bool found = false;
-            for (int i = 0; i < SRAM_ROWS; i++) {
-                for (int j = 0; j < BUS_COUNT && j < PAYLOAD_COUNT; j++) {
-                    if (payload_use[i][j]) continue;
-                    if (tind_bus[i][j]) continue;
-                    // Add a tind result bus node
-                    alloc.tind_result_bus = i * BUS_COUNT + j;
-                    tind_bus[i][j] = u_id.build_name();
-                    payload_use[i][j] = u_id.build_name();
-                    found = true;
-                    break;
-                }
-                if (found) break;
-            }
-
-            if (!found) {
-                failure_reason = "failed to place tind result bus " + u_id.build_name();
-                return false; }
-        }
-    }
-    return true;
-}
-
 
 void Memories::fill_placed_scm_table(const IR::MAU::Table *t, const TableResourceAlloc *resources) {
     int group = -1;
     Use::h_bus_t bus = Use::NONE;
     for (auto &kv : resources->memuse) {
-        if (kv.second.type != Use::TERNARY)
-            continue;
-        for (auto &kv2 : kv.second.loc_to_gb) {
-            const Use::ScmLoc &scm_loc = kv2.first;
-            std::tie(group, bus) = kv2.second;
-            scm_alloc_stage &alloc_stage = scm_curr_alloc[scm_loc.stage];
-            alloc_stage.tcam_use[scm_loc.row] = t->name;
-            unsigned mask_loc = 1 << scm_loc.row;
-            alloc_stage.tcam_in_use |= mask_loc;
-            switch (bus) {
-            case Use::LEFT_HBUS1:
-                alloc_stage.left_hbus1[scm_loc.row] = t->name;
-                alloc_stage.left_hbus1_in_use |= mask_loc;
-                LOG7("Table " << t->name << " use LEFT_HBUS1 on stage:" << scm_loc.stage <<
-                     " row:" << scm_loc.row << " for group:" << group);
-                break;
-            case Use::LEFT_HBUS2:
-                alloc_stage.left_hbus2[scm_loc.row] = t->name;
-                alloc_stage.left_hbus2_in_use |= mask_loc;
-                LOG7("Table " << t->name << " use LEFT_HBUS2 on stage:" << scm_loc.stage <<
-                     " row:" << scm_loc.row << " for group:" << group);
-                break;
-            case Use::RIGHT_HBUS1:
-                alloc_stage.right_hbus1[scm_loc.row] = t->name;
-                alloc_stage.right_hbus1_in_use |= mask_loc;
-                LOG7("Table " << t->name << " use RIGHT_HBUS1 on stage:" << scm_loc.stage <<
-                     " row:" << scm_loc.row << " for group:" << group);
-                break;
-            case Use::RIGHT_HBUS2:
-                alloc_stage.right_hbus2[scm_loc.row] = t->name;
-                alloc_stage.right_hbus2_in_use |= mask_loc;
-                LOG7("Table " << t->name << " use RIGHT_HBUS2 on stage:" << scm_loc.stage <<
-                     " row:" << scm_loc.row << " for group:" << group);
-                break;
-            case Use::NONE:
-                LOG7("Table " << t->name << " use local bus on stage:" << scm_loc.stage <<
-                     " row:" << scm_loc.row << " for group:" << group);
-                break;
-            default:
-                BUG("Unhandled horizontal bus type %d", bus);
-                break;
+        if (kv.second.type == Use::TERNARY) {
+            for (auto &kv2 : kv.second.loc_to_gb) {
+                const Use::ScmLoc &scm_loc = kv2.first;
+                std::tie(group, bus) = kv2.second;
+                int ingress_stage = (t->gress != EGRESS) ? scm_loc.stage :
+                                                        EGRESS_STAGE0_INGRESS_STAGE - scm_loc.stage;
+                scm_alloc_stage &alloc_stage = scm_curr_alloc.stage_to_alloc[ingress_stage];
+                alloc_stage.tcam_use[scm_loc.row] = t;
+                alloc_stage.tcam_grp[scm_loc.row] = group;
+                unsigned mask_loc = 1 << scm_loc.row;
+                alloc_stage.tcam_in_use |= mask_loc;
+                switch (bus) {
+                case Use::LEFT_HBUS1:
+                    alloc_stage.left_hbus1[scm_loc.row] = t;
+                    alloc_stage.left_hbus1_in_use |= mask_loc;
+                    LOG7("Table " << t->name << " use LEFT_HBUS1 on stage:" << ingress_stage <<
+                        " row:" << scm_loc.row << " for group:" << group);
+                    break;
+                case Use::LEFT_HBUS2:
+                    alloc_stage.left_hbus2[scm_loc.row] = t;
+                    alloc_stage.left_hbus2_in_use |= mask_loc;
+                    LOG7("Table " << t->name << " use LEFT_HBUS2 on stage:" << ingress_stage <<
+                        " row:" << scm_loc.row << " for group:" << group);
+                    break;
+                case Use::RIGHT_HBUS1:
+                    alloc_stage.right_hbus1[scm_loc.row] = t;
+                    alloc_stage.right_hbus1_in_use |= mask_loc;
+                    LOG7("Table " << t->name << " use RIGHT_HBUS1 on stage:" << ingress_stage <<
+                        " row:" << scm_loc.row << " for group:" << group);
+                    break;
+                case Use::RIGHT_HBUS2:
+                    alloc_stage.right_hbus2[scm_loc.row] = t;
+                    alloc_stage.right_hbus2_in_use |= mask_loc;
+                    LOG7("Table " << t->name << " use RIGHT_HBUS2 on stage:" << ingress_stage <<
+                        " row:" << scm_loc.row << " for group:" << group);
+                    break;
+                case Use::NONE:
+                    scm_curr_alloc.tbl_to_local_stage[t] = ingress_stage;
+                    LOG7("Table " << t->name << " use local bus on stage:" << ingress_stage <<
+                        " row:" << scm_loc.row << " for group:" << group);
+                    break;
+                default:
+                    BUG("Unhandled horizontal bus type %d", bus);
+                    break;
+                }
+            }
+        } else if (kv.second.type == Use::TIND && !kv.second.local_tind.empty()) {
+            int local_stage = scm_curr_alloc.tbl_to_local_stage[t];
+            scm_alloc_stage &alloc_stage = scm_curr_alloc.stage_to_alloc[local_stage];
+            for (int local_tind : kv.second.local_tind) {
+                alloc_stage.local_tind_use[local_tind] = t;
+                LOG7("Table " << t->name << " use local tind on stage:" << local_stage <<
+                    " row:" << local_tind);
             }
         }
     }
@@ -1441,7 +1273,7 @@ void Memories::visitUse(const Use &alloc, std::function<void(cstring &, update_t
         bus = &sram_print_search_bus;
         break;
     case Use::TERNARY:
-        use = &tcam_use;
+        // Currently not handled
         break;
     case Use::GATEWAY:
         gw_use = &gateway_use;
@@ -1533,9 +1365,70 @@ std::ostream &operator<<(std::ostream &out, const Memories::result_bus_info &rbi
     return out;
 }
 
+std::ostream & operator<<(std::ostream &out, const Memories::scm_alloc &scma) {
+    // Build table -> abreviated name map using e.g. A00G0000 for the first TCAM table defined
+    // on stage 0 group 0.
+    std::map<const IR::MAU::Table *, cstring> tbl_to_ab;
+    std::map<cstring, const IR::MAU::Table *> ab_to_tbl;
+    std::vector<char> next_val(16, 'A');
+
+    if (scma.tbl_to_local_stage.empty())
+        return out;
+
+    for (const auto& [tbl, stage] : scma.tbl_to_local_stage) {
+        char str[8];
+        snprintf(str, sizeof(str), "%02d", stage);
+        tbl_to_ab[tbl] = next_val[stage]++ + cstring(str);
+        ab_to_tbl[tbl_to_ab[tbl]] = tbl;
+    }
+    std::vector<std::string> row_str(Memories::TCAM_ROWS);
+    std::vector<std::string> tind_str(Memories::TOTAL_LOCAL_TIND/2);  // Output 2 tinds per row
+    out << Log::endl;
+    for (const auto& [stage, scm_alloc] : scma.stage_to_alloc) {
+        char str[8];
+        snprintf(str, sizeof(str), "%02d", stage);
+        out << "Stage " << cstring(str) << " ";
+        for (int row = 0; row < Memories::TCAM_ROWS; row++) {
+            std::string &row_ref = row_str[row];
+            if (!scm_alloc.tcam_use[row]) {
+                row_ref += "-------- ";
+                continue;
+            }
+            row_ref += tbl_to_ab[scm_alloc.tcam_use[row]];
+            snprintf(str, sizeof(str), "%04d", scm_alloc.tcam_grp[row]);
+            row_ref += "G" + std::string(str) + " ";
+        }
+        for (int row = 0; row < Memories::TOTAL_LOCAL_TIND; row++) {
+            std::string &row_ref = tind_str[row/2];
+            if (!scm_alloc.local_tind_use[row]) {
+                row_ref += "--- ";
+                if (!(row & 1)) row_ref += " ";
+                continue;
+            }
+            row_ref += tbl_to_ab[scm_alloc.local_tind_use[row]];
+            row_ref += " ";
+            if (!(row & 1)) row_ref += " ";
+        }
+    }
+    // Output the Stage header line
+    out << Log::endl;
+    for (std::string &out_str : row_str) {
+        out << out_str << Log::endl;
+    }
+    out << "**Local Ternary Indirection Table shows on even and odd pair**" << Log::endl;
+    for (std::string &out_str : tind_str) {
+        out << out_str << Log::endl;
+    }
+    for (const auto& [ab, tbl] : ab_to_tbl) {
+        out << ab << " Table:" << tbl->name << " Gress:" << tbl->gress << " Num Entries:" <<
+        tbl->layout.entries << " Match Bytes:" << tbl->layout.match_bytes << Log::endl;
+    }
+    return out;
+}
+
 /* MemoriesPrinter in .gdbinit should match this */
 void Memories::printOn(std::ostream &out) const {
-    const BFN::Alloc2Dbase<cstring> *arrays[] = { &tcam_use, &sram_print_search_bus,
+    const BFN::Alloc2Dbase<cstring> *arrays[] = { &sram_print_search_bus,
                 &sram_print_result_bus, &tind_bus, &sram_use, &gateway_use };
     std::map<cstring, char>     tables;
     for (auto arr : arrays)
@@ -1548,8 +1441,8 @@ void Memories::printOn(std::ostream &out) const {
         t.second = ++ch;
         if (ch == 'Z') ch = 'a'-1;
         else if (ch == 'z') ch = '0'-1; }
-    out << "tc  sb  rb  tib srams      gw" << Log::endl;
-    for (int r = 0; r < TCAM_ROWS; r++) {
+    out << "sb  rb  tib srams  gw" << Log::endl;
+    for (int r = 0; r < Memories::SRAM_ROWS; r++) {
         for (auto arr : arrays) {
             for (int c = 0; c < arr->cols(); c++) {
                 if (r >= arr->rows()) {
