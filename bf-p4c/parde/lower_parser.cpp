@@ -28,6 +28,7 @@
 #include "bf-p4c/parde/coalesce_learning.h"
 #include "bf-p4c/parde/collect_parser_usedef.h"
 #include "bf-p4c/parde/field_packing.h"
+#include "bf-p4c/parde/flatrock.h"
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/parde/dump_parser.h"
 #include "bf-p4c/parde/split_parser_state.h"
@@ -1307,7 +1308,7 @@ class ComputeFlatrockParserIR : public ParserInspector {
 
     ParserExtract extract_constant(const PHV::AllocSlice &alloc,
             const IR::BFN::ConstantRVal *constant, const cstring hdr_name,
-            const cstring comment) {
+            const cstring comment, const Flatrock::ExtractSubtype subtype) {
         auto value = constant->constant->asUnsigned();
         // Check that the value doesn't overflow
         const auto max_slice_value = (1ULL << alloc.container_slice().size()) - 1;
@@ -1317,7 +1318,7 @@ class ComputeFlatrockParserIR : public ParserInspector {
 
         ParserExtract e = {
             .type = Flatrock::ExtractType::Other,
-            .subtype = Flatrock::ExtractSubtype::Constant,
+            .subtype = subtype,
             .size = alloc.container().type().size(),
             .slices = std::vector<le_bitrange>{alloc.container_slice()},
             .index = alloc.container().index(),
@@ -1435,7 +1436,13 @@ class ComputeFlatrockParserIR : public ParserInspector {
                     });
                 }
             } else if (const auto* const_rval = extract->source->to<IR::BFN::ConstantRVal>()) {
-                e = extract_constant(alloc, const_rval, hdr_name, comment);
+                auto subtype = Flatrock::ExtractSubtype::Constant;
+                if (auto member = extract->dest->to<IR::Member>()) {
+                    if (member->member.name == "$valid") {
+                        subtype = Flatrock::ExtractSubtype::PovFlags;
+                    }
+                }
+                e = extract_constant(alloc, const_rval, hdr_name, comment, subtype);
             }
 
             // FIXME If a header field is modified in ingress and then used in egress,
@@ -1701,9 +1708,12 @@ class ReplaceFlatrockParserIR : public ParserTransform {
                     /* next_state_name */ next_state_name,
                     /* next_w0_offset */ boost::none,
                     /* next_w1_offset */ boost::none,
-                    /* next_w2_offset */ boost::none,
-                    /* push_hdr_id_hdr_id */ hdr_id_map->second,
-                    /* push_hdr_id_offset */ state_info.push_hdr[hdr_id].offset);
+                    /* next_w2_offset */ boost::none);
+                analyzer_rule->push_hdr_id = ::Flatrock::PushHdrId {
+                    static_cast<uint8_t>(hdr_id_map->second),
+                    static_cast<uint8_t>(state_info.push_hdr[hdr_id].offset)
+                };
+
                 analyzer_rule->match_state = state_match;
                 analyzer_rule->next_alu0_instruction = Flatrock::alu0_instruction(
                     Flatrock::alu0_instruction::OPCODE_NOOP);
@@ -1738,16 +1748,41 @@ class ReplaceFlatrockParserIR : public ParserTransform {
                         "Maximum number of analyzer rules (%1%) in stage %2% exceeded",
                         ::Flatrock::PARSER_ANALYZER_STAGE_RULES, stage_id);
 
-                boost::optional<int> push_hdr_id{boost::none};
-                boost::optional<int> push_hdr_id_offset{boost::none};
+                boost::optional<::Flatrock::PushHdrId> push_hdr_id{boost::none};
+                boost::optional<::Flatrock::ModifyFlag> modify_flag{boost::none};
                 if (hdr_id < state_info.push_hdr.size()) {
                     const auto hdr_id_map = parserHeaderSeqs.header_ids.find(
                             {INGRESS, state_info.push_hdr[hdr_id].name});
                     BUG_CHECK(hdr_id_map != parserHeaderSeqs.header_ids.end(),
                             "Could not find hdr_id for ingress header: %1%",
                             state_info.push_hdr[hdr_id].name);
-                    push_hdr_id = hdr_id_map->second;
-                    push_hdr_id_offset = state_info.push_hdr[hdr_id].offset;
+                    push_hdr_id = ::Flatrock::PushHdrId {
+                        static_cast<uint8_t>(hdr_id_map->second),
+                        static_cast<uint8_t>(state_info.push_hdr[hdr_id].offset)
+                    };
+                    modify_flag = ::Flatrock::ModifyFlag();
+                    modify_flag->imm = true;
+
+                    auto hdr_name = state_info.push_hdr[hdr_id].name;
+                    const PHV::Field* valid_field = nullptr;
+                    for (const auto& kv : phv.get_all_fields()) {
+                        if (kv.second.pov && hdr_name == kv.second.header()) {
+                            valid_field = &kv.second;
+                        }
+                    }
+
+                    if (!valid_field) {
+                        LOG1("Could not find $valid for " << hdr_name);
+                    } else {
+                        auto allocs = phv.get_alloc(valid_field);
+                        BUG_CHECK(!allocs.empty(), "Could not find the alloc slice for $valid");
+                        PHV::AllocSlice alloc_info = allocs.front();
+                        // FIXME: needs to sync with preorder(const IR::BFN::Extract*),
+                        //        see the todo there.
+                        //        If the number of headers exceeds the width of a single container
+                        //        then the pov_flags assignment must match PHV allocation.
+                        modify_flag->shift = alloc_info.container_slice().lo;
+                    }
                 }
 
                 cstring next_state_name = sanitizeName(transition.next_state->name);
@@ -1767,11 +1802,13 @@ class ReplaceFlatrockParserIR : public ParserTransform {
                     /* next_state_name */ next_state_name,
                     /* next_w0_offset */ next_w0_offset,
                     /* next_w1_offset */ next_w1_offset,
-                    /* next_w2_offset */ next_w2_offset,
-                    /* push_hdr_id_hdr_id */ push_hdr_id,
-                    /* push_hdr_id_offset */ push_hdr_id_offset);
+                    /* next_w2_offset */ next_w2_offset);
+                analyzer_rule->push_hdr_id = push_hdr_id;
                 analyzer_rule->match_state = state_match;
                 analyzer_rule->match_w0 = transition.match;
+                // update the valid bit in POV flags
+                analyzer_rule->modify_flag0 = modify_flag;
+
                 // TODO
                 // Check if the width of transition.match is correct, if not
                 // report error/bug.
@@ -2005,14 +2042,15 @@ class ReplaceFlatrockParserIR : public ParserTransform {
         return pipe;
     }
 
+    const PhvInfo& phv;
     const ComputeFlatrockParserIR& computed;
     const ParserHeaderSequences& parserHeaderSeqs;
     const CollectParserInfo& parser_info;
 
  public:
-    explicit ReplaceFlatrockParserIR(const ComputeFlatrockParserIR& computed,
+    explicit ReplaceFlatrockParserIR(const PhvInfo& phv, const ComputeFlatrockParserIR& computed,
             const ParserHeaderSequences& phs, const CollectParserInfo& pi) :
-        computed(computed), parserHeaderSeqs(phs), parser_info(pi) {}
+        phv(phv), computed(computed), parserHeaderSeqs(phs), parser_info(pi) {}
 };
 
 #endif  // HAVE_FLATROCK
@@ -2946,7 +2984,7 @@ struct LowerParserIR : public PassManager {
 #endif  // HAVE_FLATROCK
         auto* replaceLoweredParserIR = new ReplaceParserIR(*computeLoweredParserIR);
 #ifdef HAVE_FLATROCK
-        auto *replaceFlatrockParserIR = new ReplaceFlatrockParserIR(*computeFlatrockParserIR,
+        auto *replaceFlatrockParserIR = new ReplaceFlatrockParserIR(phv, *computeFlatrockParserIR,
                 parserHeaderSeqs, *parser_info);
 #endif  // HAVE_FLATROCK
 

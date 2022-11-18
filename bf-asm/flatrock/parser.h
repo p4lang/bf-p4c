@@ -322,32 +322,13 @@ class FlatrockParser : public BaseParser, virtual public Parsable {
             int next_w2_offset = 0;
             struct alu0_instruction next_alu0_instruction;
             struct alu1_instruction next_alu1_instruction;
-            struct PushHdrId {
-                uint8_t hdr_id = 0xff;
-                uint8_t offset = 0;
-            };
-            template<uint8_t N>
-            struct ModifyFlags {
-                static const uint8_t _width = N;
-                uint8_t src   = 0;
-                uint32_t imm  = 0;
-                uint32_t mask = 0;
-                uint8_t shift = 0;
-            };
-            struct ModifyFlag {
-                bool    imm   = 0;
-                uint8_t shift = 0;
-            };
-            struct ModifyChecksum {
-                uint8_t cksum_idx = 0;
-                bool    enabled   = false;
-            };
-            boost::optional<ModifyFlags<16>> modify_flags16;
-            boost::optional<ModifyFlags<4>> modify_flags4;
-            boost::optional<ModifyFlag> modify_flag0;
-            boost::optional<ModifyFlag> modify_flag1;
-            boost::optional<ModifyChecksum> modify_checksum;
-            boost::optional<PushHdrId> push_hdr_id;
+
+            boost::optional<Flatrock::ModifyFlags<16>> modify_flags16;
+            boost::optional<Flatrock::ModifyFlags<4>> modify_flags4;
+            boost::optional<Flatrock::ModifyFlag> modify_flag0;
+            boost::optional<Flatrock::ModifyFlag> modify_flag1;
+            boost::optional<Flatrock::ModifyChecksum> modify_checksum;
+            boost::optional<Flatrock::PushHdrId> push_hdr_id;
         } rules[Target::Flatrock::PARSER_ANALYZER_STAGE_RULES];
         ///< Rules within a single analyzer stage
 
@@ -362,8 +343,8 @@ class FlatrockParser : public BaseParser, virtual public Parsable {
         void input_rule(VECTOR(value_t) args, value_t key, value_t data);
         bool input_push_hdr(Rule &rule, value_t value);
         template <uint8_t width>
-        boost::optional<Rule::ModifyFlags<width>> load_modify_flags(Rule &rule, value_t value);
-        boost::optional<Rule::ModifyFlag> load_modify_flag(Rule &rule, value_t value);
+        boost::optional<Flatrock::ModifyFlags<width>> load_modify_flags(Rule &rule, value_t value);
+        boost::optional<Flatrock::ModifyFlag> load_modify_flag(Rule &rule, value_t value);
         bool input_modify_checksum(Rule &rule, value_t value);
     } analyzer[Target::Flatrock::PARSER_ANALYZER_STAGES];  ///< Analyzer
 

@@ -1664,7 +1664,7 @@ bool FlatrockParser::AnalyzerStage::input_push_hdr(
         return false;
     }
 
-    Rule::PushHdrId push_hdr_id;
+    Flatrock::PushHdrId push_hdr_id;
     for (const auto &kv_hdr : MapIterChecked(value.map, false)) {
         if (kv_hdr.key == "hdr") {
             if (kv_hdr.value.type == tSTR) {
@@ -1699,14 +1699,12 @@ bool FlatrockParser::AnalyzerStage::input_push_hdr(
 }
 
 template <uint8_t width>
-boost::optional<FlatrockParser::AnalyzerStage::Rule::ModifyFlags<width>>
-FlatrockParser::AnalyzerStage::load_modify_flags(
-    FlatrockParser::AnalyzerStage::Rule& rule,
-    value_t value) {
+boost::optional<Flatrock::ModifyFlags<width>> FlatrockParser::AnalyzerStage::load_modify_flags(
+    FlatrockParser::AnalyzerStage::Rule &rule, value_t value) {
     if (!CHECKTYPE(value, tMAP) || !require_keys(value, {"src", "imm", "mask", "shift"}))
         return boost::none;
 
-    Rule::ModifyFlags<width> modify_flags;
+    Flatrock::ModifyFlags<width> modify_flags;
     constexpr unsigned max_value = (1 << width) - 1;
     for (const auto &kv : MapIterChecked(value.map, false)) {
         if (kv.key == "src") {
@@ -1761,15 +1759,13 @@ FlatrockParser::AnalyzerStage::load_modify_flags(
     return modify_flags;
 }
 
-boost::optional<FlatrockParser::AnalyzerStage::Rule::ModifyFlag>
-FlatrockParser::AnalyzerStage::load_modify_flag(
-    FlatrockParser::AnalyzerStage::Rule &rule,
-    value_t value) {
+boost::optional<Flatrock::ModifyFlag> FlatrockParser::AnalyzerStage::load_modify_flag(
+    FlatrockParser::AnalyzerStage::Rule &rule, value_t value) {
     if (!CHECKTYPE(value, tMAP))
         return boost::none;
 
     bool command_met = false;
-    Rule::ModifyFlag modify_flag;
+    Flatrock::ModifyFlag modify_flag;
     for (const auto &kv : MapIterChecked(value.map, false)) {
         if (command_met) {
             report_invalid_directive("multiple operations for a single modify_flag instruction",
@@ -1805,7 +1801,7 @@ bool FlatrockParser::AnalyzerStage::input_modify_checksum(
     if (!CHECKTYPE(value, tMAP) || !require_keys(value, {"idx", "enabled"}))
         return false;
 
-    Rule::ModifyChecksum modify_checksum;
+    Flatrock::ModifyChecksum modify_checksum;
     for (const auto &kv : MapIterChecked(value.map, false)) {
         if (kv.key == "idx") {
             if (!check_range(kv.value, 0, 1)) {

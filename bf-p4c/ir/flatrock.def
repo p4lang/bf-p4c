@@ -254,9 +254,13 @@ class AnalyzerRule {
 #emit
     boost::optional<::Flatrock::alu0_instruction> next_alu0_instruction;
     boost::optional<::Flatrock::alu1_instruction> next_alu1_instruction;
+    boost::optional<::Flatrock::ModifyChecksum> modify_checksum;
+    boost::optional<::Flatrock::ModifyFlags<16>> modify_flags16;
+    boost::optional<::Flatrock::ModifyFlags<4>> modify_flags4;
+    boost::optional<::Flatrock::ModifyFlag> modify_flag0;
+    boost::optional<::Flatrock::ModifyFlag> modify_flag1;
+    boost::optional<::Flatrock::PushHdrId> push_hdr_id;
 #end
-    boost::optional<int> push_hdr_id_hdr_id;
-    boost::optional<int> push_hdr_id_offset;
 
     toString { return "rule id=" + cstring::to_cstring(index); }
     dbprint {
@@ -300,10 +304,24 @@ class AnalyzerRule {
         } else {
             out << "<unset>";
         }
-        out << IndentCtl::endl << "push_hdr_id.hdr_id="
-            << (push_hdr_id_hdr_id ? std::to_string(*push_hdr_id_hdr_id) : "<unset>");
-        out << IndentCtl::endl << "push_hdr_id.offset="
-            << (push_hdr_id_offset ? std::to_string(*push_hdr_id_offset) : "<unset>");
+        out << IndentCtl::endl << "modify_checksum=";
+        if (modify_checksum) out << "\"" << *modify_checksum << "\"";
+        else out << "<unset>";
+        out << IndentCtl::endl << "modify_flags16=";
+        if (modify_flags16) out << "\"" << *modify_flags16 << "\"";
+        else out << "<unset>";
+        out << IndentCtl::endl << "modify_flags4=";
+        if (modify_flags4) out << "\"" << *modify_flags4 << "\"";
+        else out << "<unset>";
+        out << IndentCtl::endl << "modify_flag0=";
+        if (modify_flag0) out << "\"" << *modify_flag0 << "\"";
+        else out << "<unset>";
+        out << IndentCtl::endl << "modify_flag1=";
+        if (modify_flag1) out << "\"" << *modify_flag1 << "\"";
+        else out << "<unset>";
+        out << IndentCtl::endl << "push_hdr_id=";
+        if (push_hdr_id) out << "\"" << *push_hdr_id << "\"";
+        else out << "<unset>";
         out << IndentCtl::unindent;
     }
 }

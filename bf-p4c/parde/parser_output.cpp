@@ -205,9 +205,43 @@ struct ParserAsmSerializer : public ParserInspector {
             print_pretty(out, *analyzer_rule->next_alu1_instruction);
             out << std::endl;
         }
-        if (analyzer_rule->push_hdr_id_hdr_id && analyzer_rule->push_hdr_id_offset)
-            out << indent << "push_hdr_id: { hdr: " << *analyzer_rule->push_hdr_id_hdr_id
-                << ", offset: " << *analyzer_rule->push_hdr_id_offset << " }" << std::endl;
+        if (const auto& cksum = analyzer_rule->modify_checksum)
+            out << indent
+                << "modify_checksum: "
+                << "{ cksum_idx: " << cksum->cksum_idx
+                << ", enabled: " << (cksum->enabled ? "true" : "false")
+                << "}" << std::endl;
+        if (const auto& instr = analyzer_rule->modify_flags16)
+            out << indent
+                << "modify_flags16: "
+                << "{ imm: "   << instr->imm
+                << ", mask: "  << instr->mask
+                << ", shift: " << static_cast<unsigned>(instr->shift)
+                << ", src: "   << static_cast<unsigned>(instr->src)
+                << " }" << std::endl;
+        if (const auto& instr = analyzer_rule->modify_flags4)
+            out << indent
+                << "modify_flags4: "
+                << "{ imm: "   << instr->imm
+                << ", mask: "  << instr->mask
+                << ", shift: " << static_cast<unsigned>(instr->shift)
+                << ", src: "   << static_cast<unsigned>(instr->src)
+                << " }" << std::endl;
+        int i = 0;
+        for (const auto& instr : {analyzer_rule->modify_flag0, analyzer_rule->modify_flag1}) {
+            if (instr)
+                out << indent
+                    << "modify_flag" << i++ << ": "
+                    << "{ "   << (instr->imm ? "set" : "clear")
+                    << ": " << static_cast<unsigned>(instr->shift)
+                    << " }" << std::endl;
+        }
+        if (analyzer_rule->push_hdr_id)
+            out << indent
+                << "push_hdr_id: "
+                << "{ hdr: "    << static_cast<unsigned>(analyzer_rule->push_hdr_id->hdr_id)
+                << ", offset: " << static_cast<unsigned>(analyzer_rule->push_hdr_id->offset)
+                << " }" << std::endl;
         indent--;
         return true;
     }

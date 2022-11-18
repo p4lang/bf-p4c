@@ -1,6 +1,8 @@
 #ifndef BF_P4C_COMMON_FLATROCK_H_
 #define BF_P4C_COMMON_FLATROCK_H_
 
+#include <stdint.h>
+#include <iostream>
 #include <vector>
 
 /**
@@ -185,6 +187,53 @@ struct metadata_select {
     explicit metadata_select(type_enum type, std::vector<int> ops = {});
 };
 
+struct PushHdrId {
+    uint8_t hdr_id = 0xff;
+    uint8_t offset = 0;
+
+    PushHdrId() = default;
+    PushHdrId(uint8_t id, uint8_t off) : hdr_id(id), offset(off) {}
+};
+
+template <uint8_t N>
+struct ModifyFlags {
+    static const uint8_t _width = N;
+    uint8_t src = 0;
+    uint32_t imm = 0;
+    uint32_t mask = 0;
+    uint8_t shift = 0;
+};
+
+struct ModifyFlag {
+    bool imm = 0;
+    uint8_t shift = 0;
+};
+
+struct ModifyChecksum {
+    uint8_t cksum_idx = 0;
+    bool enabled = false;
+};
+
 }  /* namespace Flatrock */
+
+inline std::ostream& operator<<(std::ostream& os, const Flatrock::PushHdrId phi) {
+    return os << "hdr_id=" << std::to_string(phi.hdr_id) <<
+            ", offset=" << std::to_string(phi.offset);
+}
+
+inline std::ostream& operator<<(std::ostream& os, const Flatrock::ModifyChecksum mc) {
+    return os << "cksum_idx=" << std::to_string(mc.cksum_idx) << ", enabled=" << mc.enabled;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const Flatrock::ModifyFlag mf) {
+    return os << "imm=" << mf.imm << ", shift=" << std::to_string(mf.shift);
+}
+
+template<uint8_t N>
+inline std::ostream& operator<<(std::ostream& os, const Flatrock::ModifyFlags<N> mf) {
+    return os << "width=" << std::to_string(mf._width) << ", src=" << std::to_string(mf.src) <<
+            ", imm=" << std::to_string(mf.imm) << ", mask=" << std::to_string(mf.mask) <<
+            ", shift=" << std::to_string(mf.shift);
+}
 
 #endif  /* BF_P4C_COMMON_FLATROCK_H_ */
