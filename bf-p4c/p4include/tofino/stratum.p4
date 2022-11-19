@@ -85,6 +85,7 @@ package Pipeline<IH, IM, EH, EM, CG>(
     EgressT<EH, EM, CG> egress,
     EgressDeparserT<EH, EM, CG> egress_deparser);
 
+@pkginfo(arch="TNA", version="1.0.0")
 package Switch<IH0, IM0, EH0, EM0, CG0, IH1, IM1, EH1, EM1, CG1,
                IH2, IM2, EH2, EM2, CG2, IH3, IM3, EH3, EM3, CG3>(
     Pipeline<IH0, IM0, EH0, EM0, CG0> pipe0,

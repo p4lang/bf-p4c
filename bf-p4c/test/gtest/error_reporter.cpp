@@ -29,27 +29,27 @@ TEST_F(ErrorReporterTest, ErrorHelperPlainFormatsCorrectly) {
 TEST_F(ErrorReporterTest, WarningsConformToExpectedFormat) {
     // NOTE: Warnings are formatted exactly the same as errors
 
-    const std::string EXPECTED_WARN_0 = ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(200): [--Wwarn=unused] warning: 'val_undefined' is unused
+    const std::string EXPECTED_WARN_0 = ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(201): [--Wwarn=unused] warning: 'val_undefined' is unused
     action do_global_action(in bool make_zero, out bool val_undefined) {
                                                         ^^^^^^^^^^^^^
 )";
 
-    const std::string EXPECTED_WARN_1 = ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(202): [--Wwarn=uninitialized_use] warning: tmp may be uninitialized
+    const std::string EXPECTED_WARN_1 = ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(203): [--Wwarn=uninitialized_use] warning: tmp may be uninitialized
         tmp = tmp * (make_zero ? 16w0 : 16w1);
               ^^^
 )";
 
-    const std::string EXPECTED_WARN_2 = ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(200): [--Wwarn=uninitialized_out_param] warning: out parameter 'val_undefined' may be uninitialized when 'do_global_action' terminates
+    const std::string EXPECTED_WARN_2 = ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(201): [--Wwarn=uninitialized_out_param] warning: out parameter 'val_undefined' may be uninitialized when 'do_global_action' terminates
     action do_global_action(in bool make_zero, out bool val_undefined) {
                                                         ^^^^^^^^^^^^^
-)" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(200)
+)" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(201)
     action do_global_action(in bool make_zero, out bool val_undefined) {
            ^^^^^^^^^^^^^^^^
 )";
 
     const std::string EXPECTED_WARN_3 = R"([--Wwarn=uninitialized_use] warning: val_undefined may be uninitialized
 )" +
-        ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(200): [--Wwarn=uninitialized_use] warning: val_undefined may be uninitialized
+        ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(201): [--Wwarn=uninitialized_use] warning: val_undefined may be uninitialized
     action do_global_action(in bool make_zero, out bool val_undefined) {
                                                         ^^^^^^^^^^^^^
 )";
@@ -122,32 +122,32 @@ TEST_F(ErrorReporterTest, WarningsConformToExpectedFormat) {
 }
 
 TEST_F(ErrorReporterTest, WarningWithSuffixConformToExpectedFormat) {
-    const std::string EXPECTED_WARN_1 = ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(199): [--Werror=type-error] error: return +
+    const std::string EXPECTED_WARN_1 = ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(200): [--Werror=type-error] error: return +
                 return (ix + 1);
                 ^^^^^^
   ---- Actual error:
-  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(198): Cannot cast implicitly type 'bit<16>' to type 'bool'
+  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(199): Cannot cast implicitly type 'bit<16>' to type 'bool'
               bool f(in bit<16> ix) {
               ^^^^
   ---- Originating from:
-  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(199): Source expression '+' produces a result of type 'bit<16>' which cannot be assigned to a left-value with type 'bool'
+  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(200): Source expression '+' produces a result of type 'bit<16>' which cannot be assigned to a left-value with type 'bool'
                   return (ix + 1);
                           ^^^^^^
-  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(198)
+  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(199)
               bool f(in bit<16> ix) {
               ^^^^
-)" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(197): [--Werror=type-error] error: cntr
+)" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(198): [--Werror=type-error] error: cntr
         Virtual() cntr = {
                   ^^^^
   ---- Actual error:
-  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(198): Cannot unify type 'bool' with type 'bit<16>'
+  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(199): Cannot unify type 'bool' with type 'bit<16>'
               bool f(in bit<16> ix) {
               ^^^^
   ---- Originating from:
-  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(198): Method 'f' does not have the expected type 'f'
+  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(199): Method 'f' does not have the expected type 'f'
               bool f(in bit<16> ix) {
                    ^
-  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(193)
+  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(194)
       abstract bit<16> f(in bit<16> ix);
                        ^
 )";

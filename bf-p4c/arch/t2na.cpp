@@ -19,8 +19,11 @@ T2naArchTranslation::T2naArchTranslation(P4::ReferenceMap *refMap,
     addDebugHook(options.getDebugHook());
     addPasses({
         new AddT2naMeta(),
+        new BFN::CollectPkgInfo(refMap, typeMap),
         new RewriteControlAndParserBlocks(refMap, typeMap),
-        new RestoreParams(options),
+        new RestoreParams(options, refMap, typeMap),
+        new P4::ClearTypeMap(typeMap),
+        new P4::TypeChecking(refMap, typeMap, true),
         new CheckT2NAExternInvocation(refMap, typeMap),
         new LoweringType(),
         new P4::ClearTypeMap(typeMap),

@@ -473,7 +473,7 @@ class RemoveNodesWithNoMapping : public Transform {
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-/** 
+/**
  * \ingroup SimpleSwitchTranslation
  * @pre: assume no nested control block or parser block,
  *       as a result, all declarations within a control block have different names.
@@ -843,7 +843,7 @@ class ConstructSymbolTable : public Inspector {
      * map
      */
     std::map<unsigned long, unsigned> cloneIndexHashes[2];
-    /** 
+    /**
      * resubmitIndex assignment algorithm:
      * - we assign a unique index per resubmit field list
      * - there could be multiple actions calling resubmit within a table
@@ -2561,6 +2561,7 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         collect_pragma,
         new P4::ValidateTableProperties({"implementation", "size", "counters", "meters",
                                          "support_timeout"}),
+        new BFN::CollectPkgInfo(refMap, typeMap),
         new P4::LocalCopyPropagation(refMap, typeMap, typeChecking, V1::skipCond),
         new BFN::TypeChecking(refMap, typeMap, true),
         new RemoveExternMethodCallsExcludedByAnnotation,
@@ -2582,6 +2583,7 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         new AddMetadataParserStates(refMap, typeMap),
         new BFN::AddAdjustByteCount(structure, refMap, typeMap),
         new P4::EliminateSerEnums(refMap, typeMap),
+        new BFN::CollectPkgInfo(refMap, typeMap),
         new TranslationLast(),
     });
 }

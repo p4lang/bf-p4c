@@ -9,8 +9,12 @@
 #include <set>
 #include <boost/algorithm/string.hpp>
 #include <boost/optional.hpp>
+#include "frontends/common/resolveReferences/referenceMap.h"
+#include "ir/ir-generated.h"
 #include "ir/ir.h"
 #include "ir/namemap.h"
+#include "ir/pass_manager.h"
+#include "ir/visitor.h"
 #include "lib/path.h"
 #include "frontends/common/options.h"
 #include "frontends/p4/typeMap.h"
@@ -117,30 +121,89 @@ enum ArchBlock_t {
     BLOCK_TYPE
 };
 
+static const std::map<cstring, std::map<std::pair<ArchBlock_t, gress_t>, int> > archBlockIndex = {
+    { "TNA", {
+        { { PARSER, INGRESS }, 0 },
+        { { MAU, INGRESS }, 1 },
+        { { DEPARSER, INGRESS }, 2 },
+        { { PARSER, EGRESS }, 3 },
+        { { MAU, EGRESS }, 4 },
+        { { DEPARSER, EGRESS }, 5 }
+    } },
+    { "T2NA", {
+        { { PARSER, INGRESS }, 0 },
+        { { MAU, INGRESS }, 1 },
+        { { DEPARSER, INGRESS }, 2 },
+        { { PARSER, EGRESS }, 3 },
+        { { MAU, EGRESS }, 4 },
+        { { DEPARSER, EGRESS }, 5 },
+        { { MAU, GHOST }, 6 }
+    } },
+    { "T3NA", {
+        { { PARSER, INGRESS }, 0 },
+        { { MAU, INGRESS }, 1 },
+        { { DEPARSER, INGRESS }, 2 },
+        { { PARSER, EGRESS }, 3 },
+        { { MAU, EGRESS }, 4 },
+        { { DEPARSER, EGRESS }, 5 },
+        { { MAU, GHOST }, 6 }
+    } },
+    { "T5NA", {
+        { { PARSER, INGRESS }, 0 },
+        { { MAU, INGRESS }, 1 },
+        { { MAU, EGRESS }, 2 },
+        { { DEPARSER, EGRESS }, 3 },
+        { { MAU, GHOST }, 4 }
+    } } };
+
 /** \ingroup ArchTranslation */
 struct BlockInfo {
-    int index;
-    // XXX(amresh); In addition to the index, we need the pipe name to generate
-    // a fully qualified name in case of multipipe scenarios.
-    cstring pipe;
-    gress_t gress;
-
-    // which port to configure using this impl.
+    /// Index in the Pipeline invocation.
+    int              pipe_index;
+    /// The pipe name to generate a fully qualified name in case of multipipe scenarios.
+    cstring          pipe_name;
+    gress_t          gress;
+    /// which port to configure using this impl.
     std::vector<int> portmap;
+    /// A block could be a parser, deparser or a mau.
+    ArchBlock_t      type;
+    /// arch specified name for the block
+    cstring          arch;
+    /// used by multi-parser support
+    cstring          parser_instance_name;
+    int              block_index;
 
-    ArchBlock_t type;
-
-    // arch specified name for the block
-    cstring arch;
-
-    BlockInfo(int index, cstring pipe, gress_t gress, ArchBlock_t type, cstring arch = "")
-            : index(index), pipe(pipe), gress(gress), type(type), arch(arch) {}
+    BlockInfo(int pi, cstring pn, gress_t gress, ArchBlock_t type, cstring arch,
+              cstring parser_inst = "")
+        : pipe_index(pi),
+          pipe_name(pn),
+          gress(gress),
+          type(type),
+          arch(arch),
+          parser_instance_name(parser_inst) {
+        BUG_CHECK(archBlockIndex.count(arch) != 0,
+                    "Unknown architecture %1%", arch);
+        BUG_CHECK(archBlockIndex.at(arch).find({type, gress}) != archBlockIndex.at(arch).end(),
+                    "Unknown block type %1% for architecture %2%", type, arch);
+        block_index = archBlockIndex.at(arch).at({type, gress});
+    }
     void dbprint(std::ostream& out) {
-        out << "index " << index << " ";
-        out << "pipe" << pipe << " ";
+        out << "pipe_index " << pipe_index << " ";
+        out << "pipe_name" << pipe_name << " ";
         out << "gress " << gress << " ";
+        out << "block_index" << block_index << " ";
         out << "type " << type << " ";
         out << "arch" << arch << std::endl;
+    }
+    bool operator==(const BlockInfo& other) const {
+        return pipe_index == other.pipe_index && pipe_name == other.pipe_name &&
+               gress == other.gress && block_index == other.block_index &&
+               type == other.type && arch == other.arch;
+    }
+    bool operator<(const BlockInfo& other) const {
+        return std::tie(pipe_index, pipe_name, gress, block_index, type, arch) <
+               std::tie(other.pipe_index, other.pipe_name, other.gress,
+                        other.block_index, other.type, other.arch);
     }
 };
 
@@ -151,12 +214,46 @@ using BlockInfoMapping = std::multimap<const IR::Node*, BlockInfo>;
 /** \ingroup ArchTranslation */
 using DefaultPortMap = std::map<int, std::vector<int>>;
 
+// An Inspector pass to extract @pkginfo annotation from the P4 program
+class GetPkgInfo : public Inspector {
+    inline static cstring arch = "UNKNOWN";
+    inline static cstring version = "UNKNOWN";
+
+ public:
+    bool found = false;
+    GetPkgInfo() { setName("GetPkgInfo"); }
+    profile_t init_apply(const IR::Node* node) override {
+        found = false;
+        return Inspector::init_apply(node); }
+    void end_apply() override {
+        BUG_CHECK(found != false, "No @pkginfo annotation found in the program"); }
+    bool preorder(const IR::PackageBlock* pkg) override;
+
+    static cstring getArch() { return arch; }
+    static cstring getVersion() { return version; }
+};
+
+struct CollectPkgInfo : public PassManager {
+    CollectPkgInfo(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
+        auto* evaluator = new P4::EvaluatorPass(refMap, typeMap);
+        passes.emplace_back(evaluator);
+        passes.emplace_back(new VisitFunctor([evaluator]() {
+            auto toplevel = evaluator->getToplevelBlock();
+            auto main = toplevel->getMain();
+            ERROR_CHECK(main != nullptr, ErrorType::ERR_INVALID,
+                        "program: does not instantiate `main`");
+            main->apply(*new GetPkgInfo());
+        }));
+        setName("CollectPkgInfo");
+    }
+};
+
 /** \ingroup ArchTranslation */
 class ParseTna : public Inspector {
     const IR::PackageBlock*   mainBlock = nullptr;
 
  public:
-    ParseTna() { }
+    ParseTna() { setName("ParseTna"); }
 
     // parse tna pipeline with single parser.
     void parseSingleParserPipeline(const IR::PackageBlock* block, unsigned index);
@@ -175,19 +272,24 @@ class ParseTna : public Inspector {
     bool hasMultiplePipes = false;
     bool hasMultipleParsers = false;
 };
-
 /** \ingroup ArchTranslation */
 struct DoRewriteControlAndParserBlocks : Transform {
- public:
-    explicit DoRewriteControlAndParserBlocks(BlockInfoMapping* block_info) :
-            block_info(block_info) {}
+    P4::ReferenceMap *refMap;
+    P4::TypeMap *typeMap;
+    BlockInfoMapping* block_info;
+    // mapping from tuple(pipeline_name, block_index) to the block name.
+    ordered_map<std::tuple<cstring, int>, cstring> block_name_map;
+
+    explicit DoRewriteControlAndParserBlocks(P4::ReferenceMap *refMap, P4::TypeMap* typeMap,
+        BlockInfoMapping* block_info) :
+            refMap(refMap), typeMap(typeMap), block_info(block_info) {}
     const IR::Node* postorder(IR::P4Parser *node) override;
     const IR::Node* postorder(IR::P4Control *node) override;
-
- private:
-    BlockInfoMapping* block_info;
-    // bool *hasMultiplePipes = nullptr;
-    // bool *hasMultipleParsers = nullptr;
+    const IR::Node* postorder(IR::Declaration_Instance* node) override;
+    Visitor::profile_t init_apply(const IR::Node* node) override {
+        block_name_map.clear();
+        return Transform::init_apply(node);
+    }
 };
 
 /**
@@ -200,21 +302,23 @@ struct DoRewriteControlAndParserBlocks : Transform {
  * IR::BFN::Deparser.
  */
 struct RewriteControlAndParserBlocks : public PassManager {
- public:
     RewriteControlAndParserBlocks(P4::ReferenceMap* refMap,
                                   P4::TypeMap* typeMap) {
         auto* evaluator = new P4::EvaluatorPass(refMap, typeMap);
         auto* parseTna = new ParseTna();
-        passes.push_back(evaluator);
-        passes.push_back(new VisitFunctor([evaluator, parseTna]() {
+
+        passes.emplace_back(evaluator);
+        passes.emplace_back(new VisitFunctor([evaluator, parseTna]() {
             auto toplevel = evaluator->getToplevelBlock();
             auto main = toplevel->getMain();
             ERROR_CHECK(main != nullptr, ErrorType::ERR_INVALID,
                         "program: does not instantiate `main`");
             main->apply(*parseTna);
         }));
-        passes.push_back(
-            new DoRewriteControlAndParserBlocks(&parseTna->toBlockInfo));
+        passes.emplace_back(new P4::TypeChecking(refMap, typeMap));
+        passes.emplace_back(
+            new DoRewriteControlAndParserBlocks(refMap, typeMap,
+            &parseTna->toBlockInfo));
     }
 };
 
@@ -224,12 +328,16 @@ struct RewriteControlAndParserBlocks : public PassManager {
  * architecture.
  */
 struct RestoreParams: public Transform {
-    explicit RestoreParams(BFN_Options &options) : options(options) { }
-    IR::BFN::TnaControl* preorder(IR::BFN::TnaControl* control);
-    IR::BFN::TnaParser* preorder(IR::BFN::TnaParser* parser);
-    IR::BFN::TnaDeparser* preorder(IR::BFN::TnaDeparser* deparser);
-
+    explicit RestoreParams(BFN_Options& options, P4::ReferenceMap* refMap, P4::TypeMap* typeMap)
+        : options(options), refMap(refMap), typeMap(typeMap) {}
+    const IR::Node* postorder(IR::BFN::TnaControl* control) override;
+    const IR::Node* postorder(IR::BFN::TnaParser* parser) override;
+    const IR::Node* postorder(IR::BFN::TnaDeparser* deparser) override;
     BFN_Options &options;
+    P4::ReferenceMap* refMap;
+    P4::TypeMap* typeMap;
+    cstring arch;
+    cstring version;
 };
 
 /**

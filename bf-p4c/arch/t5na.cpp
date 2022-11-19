@@ -2,6 +2,8 @@
 #include "frontends/p4/typeChecking/typeChecker.h"
 #include "frontends/p4/evaluator/evaluator.h"
 #include "frontends/p4/cloner.h"
+#include "ir/pass_manager.h"
+#include "ir/visitor.h"
 #include "midend/validateProperties.h"
 #include "midend/copyStructures.h"
 #include "bf-p4c/arch/arch.h"
@@ -354,6 +356,10 @@ class TransformTnatoT5na : public PassManager {
         auto evaluator = new P4::EvaluatorPass(refMap, typeMap);
 
         addPasses({
+            new VisitFunctor([this]() {
+                if (GetPkgInfo::getArch() != "TNA")
+                    this->early_exit();
+            }),
             new BFN::TypeChecking(refMap, typeMap, true),
             evaluator,
             new VisitFunctor([structure, evaluator]() {
@@ -381,12 +387,14 @@ class TransformTnatoT5na : public PassManager {
 T5naArchTranslation::T5naArchTranslation(P4::ReferenceMap *refMap,
                                          P4::TypeMap *typeMap, BFN_Options &options) {
     addDebugHook(options.getDebugHook());
-    if (options.arch == "tna") {
-        addPasses({new TransformTnatoT5na(refMap, typeMap)});
-    }
     addPasses({
+        new BFN::CollectPkgInfo(refMap, typeMap),
+        new TransformTnatoT5na(refMap, typeMap),
+        new BFN::CollectPkgInfo(refMap, typeMap),
         new RewriteControlAndParserBlocks(refMap, typeMap),
-        new RestoreParams(options),
+        new RestoreParams(options, refMap, typeMap),
+        new P4::ClearTypeMap(typeMap),
+        new BFN::TypeChecking(refMap, typeMap, true),
         new CheckTNAExternInvocation(refMap, typeMap),
         new LoweringType(),
         new P4::ClearTypeMap(typeMap),

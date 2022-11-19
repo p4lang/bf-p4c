@@ -38,13 +38,13 @@ class PacketPathTo8Bits : public P4::ChooseEnumRepresentation {
  * \ingroup PortableSwitchTranslation
  * L-value of MeterColor_t is not deduced during an assignment
  * E.g.:
- * 
+ *
  *     struct metadata_t {
  *         PSA_MeterColor_t color_value;
  *     }
- * 
+ *
  * gets converted to:
- * 
+ *
  *     struct metadata_t {
  *         MeterColor_t color_value;
  *     }
@@ -1094,6 +1094,7 @@ PortableSwitchTranslation::PortableSwitchTranslation(
         new P4::ValidateTableProperties({"psa_implementation", "psa_direct_counter",
                                          "psa_direct_meter", "psa_idle_timeout",
                                          "psa_empty_group_action"}),
+        new BFN::CollectPkgInfo(refMap, typeMap),
         new P4::ConvertEnums(refMap, typeMap, new PSA::PacketPathTo8Bits),
         new P4::CopyStructures(refMap, typeMap),
         new BFN::TypeChecking(refMap, typeMap, true),
@@ -1111,6 +1112,7 @@ PortableSwitchTranslation::PortableSwitchTranslation(
         new PSA::RewriteParserVerify(structure),
         new AddPsaBridgeMetadata(refMap, typeMap, structure),
         new BFN::RewriteActionSelector(refMap, typeMap),
+        new BFN::CollectPkgInfo(refMap, typeMap),
         new TranslationLast(),
         new P4::ClearTypeMap(typeMap),
         new BFN::TypeChecking(refMap, typeMap, true),

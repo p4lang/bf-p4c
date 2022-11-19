@@ -102,7 +102,7 @@ TEST(InitializeMirrorIOSelect, Tofino1ParserBody) {
 TEST(InitializeMirrorIOSelect, Tofino2ParserBody) {
     Match::CheckList expected {
         "state start { ",
-            "__eg_intr_md_for_dprsr.mirror_io_select = 1w1; "
+            "eg_intr_md_for_dprsr.mirror_io_select = 1w1; "
             "transition accept; "
         "}"
     };
@@ -113,7 +113,7 @@ TEST(InitializeMirrorIOSelect, Tofino2ParserBody) {
 TEST(InitializeMirrorIOSelect, Tofino2ParserBodyPartialMeta) {
     Match::CheckList expected {
         "state start { ",
-            "__eg_intr_md_for_dprsr.mirror_io_select = 1w1; "
+            "eg_intr_md_for_dprsr.mirror_io_select = 1w1; "
             "transition accept; "
         "}"
     };
@@ -138,7 +138,7 @@ TEST(InitializeMirrorIOSelect, Tofino2ParserBodyCompleteMeta) {
 TEST(InitializeMirrorIOSelect, Tofino3ParserBody) {
     Match::CheckList expected {
         "state start { ",
-            "__eg_intr_md_for_dprsr.mirror_io_select = 1w1; "
+            "eg_intr_md_for_dprsr.mirror_io_select = 1w1; "
             "transition accept; "
         "}"
     };
@@ -149,7 +149,7 @@ TEST(InitializeMirrorIOSelect, Tofino3ParserBody) {
 TEST(InitializeMirrorIOSelect, Tofino3ParserBodyPartialMeta) {
     Match::CheckList expected {
         "state start { ",
-            "__eg_intr_md_for_dprsr.mirror_io_select = 1w1; "
+            "eg_intr_md_for_dprsr.mirror_io_select = 1w1; "
             "transition accept; "
         "}"
     };
@@ -185,8 +185,8 @@ TEST(InitializeMirrorIOSelect, Tofino2ParserParams) {
     Match::CheckList expected {
         "packet_in packet, out headers_t hdr, out local_metadata_t eg_md, ",
         "out egress_intrinsic_metadata_t eg_intr_md, ",
-        "out egress_intrinsic_metadata_from_parser_t __eg_intr_md_from_prsr, ",
-        "out egress_intrinsic_metadata_for_deparser_t __eg_intr_md_for_dprs"
+        "out egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr, ",
+        "out egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprs"
     };
     RUN_CHECK(TestCode::Hdr::Tofino2arch, " ",
               tofino_shell_egress_parser_params_marker(), expected);
@@ -197,7 +197,7 @@ TEST(InitializeMirrorIOSelect, Tofino2ParserParamsPartialMeta) {
         "packet_in packet, out headers_t hdr, out local_metadata_t eg_md, ",
         "out egress_intrinsic_metadata_t eg_intr_md, ",
         "out egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr, ",
-        "out egress_intrinsic_metadata_for_deparser_t __eg_intr_md_for_dprs"
+        "out egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprs"
     };
     RUN_CHECK(TestCode::Hdr::Tofino2arch,
               ", out egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr",
@@ -221,8 +221,8 @@ TEST(InitializeMirrorIOSelect, Tofino3ParserParams) {
     Match::CheckList expected {
         "packet_in packet, out headers_t hdr, out local_metadata_t eg_md, ",
         "out egress_intrinsic_metadata_t eg_intr_md, ",
-        "out egress_intrinsic_metadata_from_parser_t __eg_intr_md_from_prsr, ",
-        "out egress_intrinsic_metadata_for_deparser_t __eg_intr_md_for_dprs"
+        "out egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr, ",
+        "out egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprs"
     };
     RUN_CHECK(TestCode::Hdr::Tofino3arch, " ",
               tofino_shell_egress_parser_params_marker(), expected);
@@ -233,7 +233,7 @@ TEST(InitializeMirrorIOSelect, Tofino3ParserParamsPartialMeta) {
         "packet_in packet, out headers_t hdr, out local_metadata_t eg_md, ",
         "out egress_intrinsic_metadata_t eg_intr_md, ",
         "out egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr, ",
-        "out egress_intrinsic_metadata_for_deparser_t __eg_intr_md_for_dprs"
+        "out egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprs"
     };
     RUN_CHECK(TestCode::Hdr::Tofino3arch,
               ", out egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr",

@@ -375,6 +375,7 @@ std::string TofinoMin() {
         EgressParserT<EH, EM> egress_parser,
         EgressT<EH, EM> egress,
         EgressDeparserT<EH, EM> egress_deparser);
+    @pkginfo(arch="TNA", version="0.0.0")
     package Switch<IH0, IM0, EH0, EM0>(
         Pipeline<IH0, IM0, EH0, EM0> pipe);
     )";

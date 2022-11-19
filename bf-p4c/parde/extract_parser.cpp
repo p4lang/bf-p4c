@@ -716,8 +716,8 @@ GetBackendParser::createBackendParser() {
             auto bparser = b.first->to<IR::P4Parser>();
             if (bparser && (bparser->name.originalName == parser->name) &&
                 (b.second.gress == parser->thread)) {
-                if (!b.second.arch.isNullOrEmpty())
-                    multiParserName = b.second.arch;
+                if (!b.second.parser_instance_name.isNullOrEmpty())
+                    multiParserName = b.second.parser_instance_name;
                 binfo->erase(bitr);
                 break;
             }
