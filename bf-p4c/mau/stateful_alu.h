@@ -286,7 +286,7 @@ class CreateSaluInstruction : public Inspector {
     bool preorder(const IR::AddSat *) override;
     bool preorder(const IR::Sub *) override;
     bool preorder(const IR::SubSat *) override;
-    bool preorder(const IR::Neg *) override { return true; }
+    bool preorder(const IR::Neg *) override;
     void postorder(const IR::Neg *) override;
     bool preorder(const IR::Cmpl *) override { return true; }
     void postorder(const IR::Cmpl *) override;

@@ -438,6 +438,9 @@ bool CreateSaluInstruction::canBeIXBarExpr(const IR::Expression *e) {
 
 bool CreateSaluInstruction::outputAluHi() {
     if (salu->dual) return false;
+    // Can't output via ALU_HI without writing back the result if the register contains a single
+    // value that uses both lo and hi stateful memory, which is possible on JB / CB / FTR.
+    if (salu->width > Device::statefulAluSpec().MaxDualSize / 2) return false;
     if (locals.empty())
         locals.emplace("--output--", LocalVar("--output--", false, LocalVar::ALUHI));
     return locals.begin()->first == "--output--";
@@ -1424,6 +1427,11 @@ bool CreateSaluInstruction::isComplexInstruction(const IR::Operation_Binary *op)
     return ret;
 }
 
+bool CreateSaluInstruction::preorder(const IR::Neg *) {
+    if (etype == OUTPUT && outputAluHi()) etype = OUTPUT_ALUHI;
+    return true;
+}
+
 bool CreateSaluInstruction::preorder(const IR::BAnd *) {
     if (etype == OUTPUT && outputAluHi()) etype = OUTPUT_ALUHI;
     return true;
@@ -1499,10 +1507,6 @@ void CreateSaluInstruction::postorder(const IR::BXor *e) {
         error("%sexpression too complex for stateful alu", e->srcInfo); }
 }
 void CreateSaluInstruction::postorder(const IR::Neg *e) {
-    if (etype == OUTPUT && outputAluHi()) {
-        etype = OUTPUT_ALUHI;
-    }
-
     // There is no opcode for unary negation, so we use subtraction instead. SUBR performs B - A
     // with A being the value to negate and B = 0.
     opcode = "subr";
@@ -1783,26 +1787,42 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
             // 0 will be output if we don't drive it at all
             output_param_operands.insert({output_index, nullptr});
             break;
-        } else if (canOutputDirectly(operands.at(0))) {
-            if (auto *reg = operands.at(0)->to<IR::MAU::SaluReg>()) {
+        } else if (const bool directly = canOutputDirectly(operands.at(0)), alu_hi = outputAluHi();
+                   directly || alu_hi) {
+            const cstring MEM_PREFIX = "mem_";
+            const auto *reg = operands.at(0)->to<IR::MAU::SaluReg>();
+            const bool is_mem = reg && reg->name.startsWith(MEM_PREFIX);
+
+            // Prefer to output values from stateful memory via ALU_HI, because this way it's
+            // possible for other sources to be assigned to the same output parameter with different
+            // predicates.
+            if (!is_mem && directly) {
                 // explicit output of the predicate comes out shifted, so we need to
                 // let the rest of the compiler know when to unshift it.
-                if (reg->name == "predicate")
-                    action->return_predicate_words |= 1 << output_index; }
-            // output it
-        } else if (outputAluHi()) {
-            // use ALU_HI to drive the output as it is otherwise unused
-            auto *val = operands.at(0);
-            if (predicate)
-                insert_instruction(new IR::MAU::SaluInstruction(
-                        "alu_a", 1, predicate,
-                        new IR::MAU::SaluReg(val->srcInfo, val->type, "hi", true), val));
-            else
-                insert_instruction(new IR::MAU::SaluInstruction(
-                        "alu_a", 0,
-                        new IR::MAU::SaluReg(val->srcInfo, val->type, "hi", true), val));
-            LOG3("  add " << *action->action.back());
-            operands.at(0) = new IR::MAU::SaluReg(val->srcInfo, val->type, "alu_hi", true);
+                if (reg && reg->name == "predicate") {
+                        action->return_predicate_words |= 1 << output_index; }
+                // output it
+            } else if (alu_hi) {
+                // use ALU_HI to drive the output as it is otherwise unused
+                auto *val = operands.at(0);
+                // mem_lo/mem_hi can be used in output ALU instructions but not in state update ALU
+                // instructions such as ALU_A. In state update ALU instructions, lo/hi should be
+                // used instead, so we remove the prefix.
+                if (is_mem) {
+                    const auto trimmed_name = reg->name.substr(MEM_PREFIX.size());
+                    val = new IR::MAU::SaluReg(reg->srcInfo, reg->type, trimmed_name, reg->hi);
+                }
+
+                const auto *dest_op = new IR::MAU::SaluReg(val->srcInfo, val->type, "hi", true);
+                if (predicate) {
+                    insert_instruction(
+                        new IR::MAU::SaluInstruction("alu_a", 1, predicate, dest_op, val));
+                } else {
+                    insert_instruction(new IR::MAU::SaluInstruction("alu_a", 0, dest_op, val));
+                }
+                LOG3("  add " << *action->action.back());
+                operands.at(0) = new IR::MAU::SaluReg(val->srcInfo, val->type, "alu_hi", true);
+            }
         } else if (k && (k->value & (k->value-1)) == 0) {
             // use the predicate output shifted to the appropriate spot for a power of 2 constant
             // no predicate means unconditional, which will output 1 unconditionally
