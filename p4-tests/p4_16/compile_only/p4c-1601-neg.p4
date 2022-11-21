@@ -1877,6 +1877,10 @@ parser FabricParser (packet_in packet,
         packet.extract(hdr.mpls);
         fabric_metadata.mpls_label = hdr.mpls.label;
         fabric_metadata.mpls_ttl = hdr.mpls.ttl;
+        // P4C-4696 this recusive parsing is not supported on Tofino without larger change of the
+        // program and not necessary for this test -> skip it
+        transition reject;
+        /*
         // There is only one MPLS label for this fabric.
         // Assume header after MPLS header is IPv4/IPv6
         // Lookup first 4 bits for version
@@ -1888,6 +1892,7 @@ parser FabricParser (packet_in packet,
 
             default: parse_ethernet;
         }
+        */
     }
 
     state parse_ipv4 {

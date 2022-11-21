@@ -58,7 +58,7 @@ control ingress(
       if (!hdrs.data[1].isValid()) {
         t.apply(); }
       else {
-        set_port(2); }
+        set_port(4); }
     }
 }
 

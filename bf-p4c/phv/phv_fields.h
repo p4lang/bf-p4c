@@ -1744,7 +1744,7 @@ class CollectExtractedTogetherFields : public Inspector {
     explicit CollectExtractedTogetherFields(PhvInfo &p) : phv_i(p) { }
 };
 
-// Map field to the parser states in which they are extracted
+/// Map field to the parser states in which they are extracted or assigned from checksums.
 struct MapFieldToParserStates : public Inspector {
     const PhvInfo& phv_i;
 
@@ -1752,42 +1752,51 @@ struct MapFieldToParserStates : public Inspector {
                 ordered_set<const IR::BFN::ParserState*>> field_to_parser_states;
 
     ordered_map<const PHV::Field*,
-                ordered_set<const IR::BFN::Extract*>> field_to_extracts;
+                ordered_set<const IR::BFN::ParserPrimitive*>> field_to_writes;
 
-    ordered_map<const IR::BFN::Extract*, const IR::BFN::ParserState*> extract_to_state;
+    ordered_map<const IR::BFN::ParserPrimitive*, const IR::BFN::ParserState*> write_to_state;
 
     std::map<const IR::BFN::ParserState*, const IR::BFN::Parser*> state_to_parser;
 
     ordered_map<const IR::BFN::ParserState*,
-                ordered_set<const IR::BFN::Extract*>> state_to_extracts;
+                ordered_set<const IR::BFN::ParserPrimitive*>> state_to_writes;
 
     explicit MapFieldToParserStates(const PhvInfo& phv) : phv_i(phv) { }
 
     profile_t init_apply(const IR::Node* root) override {
         field_to_parser_states.clear();
-        field_to_extracts.clear();
-        extract_to_state.clear();
+        field_to_writes.clear();
+        write_to_state.clear();
         state_to_parser.clear();
+        state_to_writes.clear();
         return Inspector::init_apply(root);
     }
 
-    bool preorder(const IR::BFN::Extract* extract) override {
-        auto lval = extract->dest->to<IR::BFN::FieldLVal>();
-        if (!lval) return true;
+    bool preorder(const IR::BFN::ParserChecksumWritePrimitive* checksum) override {
+        if (auto dest = checksum->getWriteDest())
+            add_field(dest->field, checksum);
+        return true;
+    }
 
-        if (auto* f = phv_i.field(lval->field)) {
+    bool preorder(const IR::BFN::Extract* extract) override {
+        if (auto lval = extract->dest->to<IR::BFN::FieldLVal>())
+            add_field(lval->field, extract);
+        return true;
+    }
+
+ private:
+    void add_field(const IR::Expression* field, const IR::BFN::ParserPrimitive *prim) {
+        if (auto* f = phv_i.field(field)) {
             auto state = findContext<IR::BFN::ParserState>();
             auto parser = findContext<IR::BFN::Parser>();
 
             field_to_parser_states[f].insert(state);
             state_to_parser[state] = parser;
 
-            field_to_extracts[f].insert(extract);
-            extract_to_state[extract] = state;
-            state_to_extracts[state].insert(extract);
+            field_to_writes[f].insert(prim);
+            write_to_state[prim] = state;
+            state_to_writes[state].insert(prim);
         }
-
-        return true;
     }
 };
 

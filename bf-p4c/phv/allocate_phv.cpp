@@ -1425,15 +1425,19 @@ bool CoreAllocation::satisfies_constraints(
             container_size = slice.container().size();
             if (field->padding || field->pov || field->is_solitary())
                 continue;
-            if (!utils_i.field_to_parser_states.field_to_extracts.count(slice.field()))
+            if (!utils_i.field_to_parser_states.field_to_writes.count(slice.field()))
                 continue;
             if (utils_i.strided_headers.get_strided_group(field))
                 continue;
-            for (auto extract : utils_i.field_to_parser_states.field_to_extracts.at(field)) {
-                auto state = utils_i.field_to_parser_states.extract_to_state.at(extract);
-                if ((extract->write_mode) == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE)
+            for (auto write : utils_i.field_to_parser_states.field_to_writes.at(field)) {
+                auto state = utils_i.field_to_parser_states.write_to_state.at(write);
+                if (write->getWriteMode() == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE)
                     continue;
-                if (auto range = extract->source->to<IR::BFN::PacketRVal>()) {
+                auto extract = write->to<IR::BFN::Extract>();
+                auto range = extract ? extract->source->to<IR::BFN::PacketRVal>() : nullptr;
+                /// FIXME(vstill): the mutex check seems to be needed also in cases where the data
+                /// are not comming from the packet
+                if (range) {
                     if (!state_to_vec.count(state) && prev_field != field->name) {
                        auto parser = utils_i.field_to_parser_states.state_to_parser.at(state);
                        for (auto &sv : state_to_vec) {
@@ -1559,9 +1563,10 @@ bool CoreAllocation::satisfies_constraints(
     boost::optional<IR::BFN::ParserWriteMode> write_mode;
 
     if (isExtracted) {
-        if (utils_i.field_to_parser_states.field_to_extracts.count(f)) {
-            for (auto e : utils_i.field_to_parser_states.field_to_extracts.at(f)) {
-                write_mode = e->write_mode;
+        auto it = utils_i.field_to_parser_states.field_to_writes.find(f);
+        if (it != utils_i.field_to_parser_states.field_to_writes.end()) {
+            if (!it->second.empty()) {
+                write_mode = (*it->second.begin())->getWriteMode();
             }
         }
 
@@ -1590,13 +1595,19 @@ bool CoreAllocation::satisfies_constraints(
             if (container_field == f) {
                 continue;
             }
-            if (!utils_i.field_to_parser_states.field_to_extracts.count(container_field))
+            if (!utils_i.field_to_parser_states.field_to_writes.count(container_field))
                 continue;
-            for (auto ef : utils_i.field_to_parser_states.field_to_extracts.at(f)) {
-                auto ef_state = utils_i.field_to_parser_states.extract_to_state.at(ef);
-                for (auto esl :
-                     utils_i.field_to_parser_states.field_to_extracts.at(container_field)) {
-                    auto esl_state = utils_i.field_to_parser_states.extract_to_state.at(esl);
+            for (auto wf : utils_i.field_to_parser_states.field_to_writes.at(f)) {
+                auto ef = wf->to<IR::BFN::Extract>();
+                if (!ef)
+                    continue;
+                auto ef_state = utils_i.field_to_parser_states.write_to_state.at(ef);
+                for (auto wsl :
+                     utils_i.field_to_parser_states.field_to_writes.at(container_field)) {
+                    auto esl = wsl->to<IR::BFN::Extract>();
+                    if (!esl)
+                        continue;
+                    auto esl_state = utils_i.field_to_parser_states.write_to_state.at(esl);
                     // A container cannot have same extract in same state
                     if (esl_state == ef_state && ef->source->equiv(*esl->source) &&
                          ef->source->is<IR::BFN::PacketRVal>()) {
@@ -1619,13 +1630,13 @@ bool CoreAllocation::satisfies_constraints(
             const auto* cs = alloc.getStatus(other);
             if (cs) {
                 for (auto sl : (*cs).slices) {
-                    if (!utils_i.field_to_parser_states.field_to_extracts.count(sl.field()))
+                    if (!utils_i.field_to_parser_states.field_to_writes.count(sl.field()))
                         continue;
 
                     boost::optional<IR::BFN::ParserWriteMode> other_write_mode;
 
-                    for (auto e : utils_i.field_to_parser_states.field_to_extracts.at(sl.field())) {
-                        other_write_mode = e->write_mode;
+                    for (auto e : utils_i.field_to_parser_states.field_to_writes.at(sl.field())) {
+                        other_write_mode = e->getWriteMode();
                         // See P4C-3033 for more details
                         // In tofino2, all extractions happen using 16b extracts.
                         // So a 16-bit parser extractor extracts over a pair of even and
@@ -1735,13 +1746,20 @@ bool CoreAllocation::satisfies_constraints(
     // discount slices that are going to be initialized through metadata initialization from being
     // considered uninitialized reads.
 
+    // TODO(vstill): what about checksums? are they extracted?
     // *TODO* Replacing here is_extracted() with is_extracted_from_packet()
     //        causes table placement fitting regressions. Revisit in the future.
-    bool isThisSliceExtracted = !slice.field()->pov && utils_i.uses.is_extracted(slice.field());
-    bool isThisSliceUninitialized =
-        (slice.field()->pov ||
-         (utils_i.defuse.hasUninitializedRead(slice.field()->id) && !initFields.count(slice) &&
-          !utils_i.pragmas.pa_no_init().getFields().count(slice.field())));
+    auto is_slice_extracted = [this](const PHV::AllocSlice &s) {
+        return !s.field()->pov && utils_i.uses.is_extracted_from_pkt(s.field());
+    };
+    auto is_slice_uninitialized = [this, &initFields](const PHV::AllocSlice &s) {
+        return (s.field()->pov ||
+                 (utils_i.defuse.hasUninitializedRead(s.field()->id) && !initFields.count(s) &&
+                  !utils_i.pragmas.pa_no_init().getFields().count(s.field())));
+    };
+
+    bool isThisSliceExtracted = is_slice_extracted(slice);
+    bool isThisSliceUninitialized = is_slice_uninitialized(slice);
 
     LOG_DEBUG7(TAB1 "  slice: " << slice << std::endl <<
                TAB2 "isThisSliceUninitialized:" << isThisSliceUninitialized << std::endl <<
@@ -1750,10 +1768,8 @@ bool CoreAllocation::satisfies_constraints(
     bool hasOtherUninitializedRead, hasOtherExtracted, hasExtractedTogether;
 
     for (auto slc : liveSlices) {
-        hasOtherUninitializedRead = slc.field()->pov ||
-            (utils_i.defuse.hasUninitializedRead(slc.field()->id) && !slc.is_initialized() &&
-             !initSlices.count(slc));
-        hasOtherExtracted = !slc.field()->pov && utils_i.uses.is_extracted_from_pkt(slc.field());
+        hasOtherUninitializedRead = is_slice_uninitialized(slc);
+        hasOtherExtracted = is_slice_extracted(slc);
         hasExtractedTogether = utils_i.phv.are_bridged_extracted_together(slice.field(),
                                                                           slc.field());
 

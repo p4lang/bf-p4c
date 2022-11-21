@@ -117,7 +117,9 @@ struct CollectParserChecksums : public ParserInspector {
                 else if (is_clot(pd.first, decl))
                     parser_to_clots[pd.first].insert(decl);
                 else
-                    ::error("Inconsistent use of checksum declaration %1%", decl);
+                    ::error("Inconsistent use of checksum declaration %1% (it can be used either "
+                            "to verify checksum or to calculate residual, but not for both)",
+                            decl);  // or for CLOTs but that should not be visible to users
             }
         }
     }

@@ -422,9 +422,9 @@ const AllocError* AllocatorBase::is_container_write_mode_ok(const Allocation& al
 
     // all containers within parser group must have same parser write mode
     boost::optional<IR::BFN::ParserWriteMode> write_mode;
-    if (field_to_states.field_to_extracts.count(f)) {
-        for (auto e : field_to_states.field_to_extracts.at(f)) {
-            write_mode = e->write_mode;
+    if (field_to_states.field_to_writes.count(f)) {
+        for (auto e : field_to_states.field_to_writes.at(f)) {
+            write_mode = e->getWriteMode();
         }
     }
 
@@ -456,10 +456,10 @@ const AllocError* AllocatorBase::is_container_write_mode_ok(const Allocation& al
         const auto* cs = alloc.getStatus(other);
         if (!cs) continue;
         for (auto allocated : (*cs).slices) {
-            if (!field_to_states.field_to_extracts.count(allocated.field())) continue;
+            if (!field_to_states.field_to_writes.count(allocated.field())) continue;
             boost::optional<IR::BFN::ParserWriteMode> other_write_mode;
-            for (auto e : field_to_states.field_to_extracts.at(allocated.field())) {
-                other_write_mode = e->write_mode;
+            for (auto e : field_to_states.field_to_writes.at(allocated.field())) {
+                other_write_mode = e->getWriteMode();
                 // See P4C-3033 for more details
                 // In tofino2, all extractions happen using 16b extracts.
                 // So a 16-bit parser extractor extracts over a pair of even and

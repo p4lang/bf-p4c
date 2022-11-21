@@ -136,10 +136,11 @@ bool RegisterReadWrite::UpdateRegisterActionsAndExecuteCalls::processDeclaration
         IR::Statement *stmt = nullptr;
         if (assign_stmt) {
             if (auto *slice = assign_stmt->right->to<IR::Slice>()) {
-                stmt = new IR::AssignmentStatement(assign_stmt->left,
+                stmt = new IR::AssignmentStatement(assign_stmt->getSourceInfo(), assign_stmt->left,
                     new IR::Slice(reg_exec_call, slice->e1, slice->e2));
             } else {
-                stmt = new IR::AssignmentStatement(assign_stmt->left, reg_exec_call);
+                stmt = new IR::AssignmentStatement(assign_stmt->getSourceInfo(), assign_stmt->left,
+                    reg_exec_call);
             }
         } else {
             stmt = new IR::MethodCallStatement(reg_exec_call);

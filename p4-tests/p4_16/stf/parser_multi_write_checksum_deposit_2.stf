@@ -1,0 +1,13 @@
+packet 0 ffff
+expect 0 ffff
+
+packet 0 0a1affff
+expect 0 0a1affff
+
+# with valid checksum
+packet 0 0a1a e9c9 0c1c
+expect 2 0a1a e9c9 0c1c
+
+# with invalid checksum
+packet 0 0a1a 0b1b 0c1c
+expect 2 0a1a e9c9 0c1c

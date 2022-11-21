@@ -65,6 +65,7 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     parser-inline-opt/testdata/p4_16_samples/parser-inline/parser-inline-test5.p4
     parser-inline-opt/testdata/p4_16_samples/parser-inline/parser-inline-test6.p4
     )
+
   p4c_add_xfail_reason("tofino"
     "expected packet[s]* on port .* not seen"
     testdata/p4_16_samples/parser-inline/parser-inline-test7.p4
@@ -72,8 +73,7 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_16_samples/parser-inline/parser-inline-test8.p4
     testdata/p4_16_samples/parser-inline/parser-inline-test9.p4
     testdata/p4_16_samples/parser-inline/parser-inline-test10.p4
-    )
-
+  )
 endif() # HARLYN_STF_tofino
 
 # Tests that run packets:
@@ -259,7 +259,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful|This program violates action constraints imposed by Tofino"
   extensions/p4_tests/glass/arista/COMPILER-235/case1737_1.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-2200.p4
 )
 
 p4c_add_xfail_reason("tofino"

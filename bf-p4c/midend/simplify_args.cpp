@@ -49,7 +49,8 @@ const IR::Node *InjectTmpVar::DoInject::postorder(IR::AssignmentStatement *as) {
 
     statements.push_back(new IR::Declaration_Variable(tmpVarName, tmpVarType, mce));
     statements.push_back(
-            new IR::AssignmentStatement(as->left, new IR::PathExpression(tmpVarName)));
+            new IR::AssignmentStatement(as->getSourceInfo(), as->left,
+                                        new IR::PathExpression(tmpVarName)));
 
     LOG3("Replacing AssignmentStatement:" << std::endl <<
          "  " << as << std::endl <<
@@ -100,7 +101,8 @@ const IR::Node *InjectTmpVar::DoInject::postorder(IR::MethodCallStatement *mcs) 
             if (param->direction == IR::Direction::InOut ||
                     param->direction == IR::Direction::Out) {
                 auto right = new IR::PathExpression(newName);
-                auto copyout = new IR::AssignmentStatement(arg->expression, right);
+                auto copyout = new IR::AssignmentStatement(mcs->getSourceInfo(),
+                                                           arg->expression, right);
                 after.push_back(copyout);
             }
         } else {

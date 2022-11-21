@@ -66,13 +66,16 @@ p4c_add_xfail_reason("tofino"
 
 # P4C-2293
 p4c_add_xfail_reason("tofino"
-  "error: .* has previous assignment in parser state .*This is an error because the field will"
+  "error: .* is assigned in state .* but has also previous assignment"
   extensions/p4_tests/p4_16/compile_only/p4c-2293-simple-rec.p4
   extensions/p4_tests/p4_16/compile_only/p4c-2293-rec.p4
   extensions/p4_tests/p4_16/compile_only/p4c-2293-no-rec-fail.p4
   extensions/p4_tests/p4_16/stf/parser_multi_write_2.p4
-  extensions/p4_tests/p4_16/stf/parser_multi_write_7.p4
   extensions/p4_tests/p4_16/stf/parser_multi_write_8.p4
+)
+p4c_add_xfail_reason("tofino"
+  "error: Inconsistent parser write semantic for field ingress::meta.m.f in parser state ingress::parse_c."
+  extensions/p4_tests/p4_16/stf/parser_multi_write_7.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -240,4 +243,39 @@ expression. Try simplifying your expression."
 p4c_add_xfail_reason("tofino"
   "error: constant value .* is out of range .* for stateful ALU"
   extensions/p4_tests/p4_16/errors/p4c-4110.p4
+)
+
+# P4C-4689
+# TODO: add tofino 2 version (that passes)
+# all these cases are demoted to warnings
+#p4c_add_xfail_reason("tofino"
+#    "error: (in|e)gress::.* is assigned in state (in|e)gress::.* but has also previous assignment"
+#    testdata/p4_16_samples/parser-inline/parser-inline-test7.p4
+#    parser-inline-opt/testdata/p4_16_samples/parser-inline/parser-inline-test7.p4
+#    testdata/p4_16_samples/parser-inline/parser-inline-test10.p4
+#    testdata/p4_16_samples/parser-inline/parser-inline-test8.p4
+#    testdata/p4_16_samples/parser-inline/parser-inline-test9.p4
+#    testdata/p4_16_samples/issue2314.p4
+#    psa_checksum
+#)
+
+# P4C-4689 tests that should fail on Tofino 1
+p4c_add_xfail_reason("tofino"
+    "error: (in|e)gress::.* is assigned in state (in|e)gress::.* but has also previous assignment"
+    extensions/p4_tests/p4_16/stf/parser_multi_write_checksum_deposit_2.p4
+    extensions/p4_tests/p4_16/stf/parser_multi_write_checksum_verify_3.p4
+    extensions/p4_tests/p4_16/stf/parser_multi_write_checksum_verify_4.p4
+)
+# error demoted to warning :-/
+# Check that there is a warning. However, PASS_REGULAR_EXPRESSION disables exitcode checking so
+# also set FAIL_REGULAR_EXPRESSION to (hopefully) catch cases when the compilation fails.
+set_tests_properties("tofino/extensions/p4_tests/p4_16/stf/parser_multi_write_checksum_verify_2.p4"
+  PROPERTIES
+  PASS_REGULAR_EXPRESSION "warning: (in|e)gress::.* is assigned in state (in|e)gress::.* but has also previous assignment"
+  FAIL_REGULAR_EXPRESSION "p4c FAILED;error:"
+)
+# P4C-4689 tests that should fail on all Tofino versions
+p4c_add_xfail_reason("tofino"
+    "error: It is not possible to deposit multiple checksum residuals into field"
+    extensions/p4_tests/p4_16/compile_only/parser_multi_write_checksum_deposit_3.p4
 )

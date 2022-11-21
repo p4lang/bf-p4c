@@ -1637,7 +1637,7 @@ control Brodnax(inout Mayflower Virgilina, inout Alstown Dwight, in ingress_intr
         Dwight.Almota.Ramos = Ramos;
         Dwight.SanRemo.Broadwell = (bit<16>)Broadwell;
     }
-    @idletime_precision(1) @force_immediate(1) @ways(4) @disable_atomic_modify(1) @pack(2) @stage(2 , 28672) @name(".Skene") table Skene {
+    @idletime_precision(1) @force_immediate(1) @ways(4) @disable_atomic_modify(1) @pack(2) @name(".Skene") table Skene {
         actions = {
             Millikin();
             McIntyre();
@@ -1848,7 +1848,7 @@ control Camargo(inout Mayflower Virgilina, inout Alstown Dwight, in ingress_intr
         default_action = LaPlant(32w0);
         size = 2;
     }
-    @atcam_partition_index("Casnovia.Ramos") @atcam_number_partitions(8192) @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @stage(5 , 16384) @name(".Amalga") table Amalga {
+    @atcam_partition_index("Casnovia.Ramos") @atcam_number_partitions(8192) @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @name(".Amalga") table Amalga {
         actions = {
             @tableonly Pioche();
             @tableonly Newtonia();
@@ -2294,7 +2294,7 @@ control Jemison(inout Mayflower Virgilina, inout Alstown Dwight, in ingress_intr
         Nighthawk();
         Heaton();
     }
-    @disable_atomic_modify(1) @stage(5) @placement_priority(".Rembrandt") @name(".Aptos") table Aptos {
+    @disable_atomic_modify(1) @placement_priority(".Rembrandt") @name(".Aptos") table Aptos {
         actions = {
             Somis();
         }
@@ -3245,7 +3245,7 @@ control Maury(inout Mayflower Virgilina, inout Alstown Dwight, in egress_intrins
     @name(".Luverne") action Luverne() {
         Dwight.Nooksack.Maddock = (bit<2>)2w2;
     }
-    @disable_atomic_modify(1) @stage(8) @name(".Amsterdam") table Amsterdam {
+    @disable_atomic_modify(1) @name(".Amsterdam") table Amsterdam {
         actions = {
             Estrella();
             Luverne();
@@ -4573,7 +4573,7 @@ control Clarinda(inout Mayflower Virgilina, inout Alstown Dwight, in ingress_int
     @name(".Northboro") action Northboro(bit<32> Fairland) {
         Dwight.Bratt.Eolia = max<bit<32>>(Dwight.Bratt.Eolia, Fairland);
     }
-    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @stage(5) @name(".Arion") table Arion {
+    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Arion") table Arion {
         key = {
             Dwight.Tabler.Astor    : exact @name("Tabler.Astor") ;
             Dwight.Hearne.Bicknell : exact @name("Hearne.Bicknell") ;
@@ -5208,7 +5208,7 @@ control Humble(inout Mayflower Virgilina, inout Alstown Dwight, in egress_intrin
         default_action = Nashua();
         size = 1;
     }
-    @disable_atomic_modify(1) @stage(3) @name(".Rawson") table Rawson {
+    @disable_atomic_modify(1) @name(".Rawson") table Rawson {
         key = {
             Wanamassa.egress_port & 9w0x7f: exact @name("Wanamassa.Basic") ;
             Wanamassa.egress_qid & 5w0x7  : exact @name("Wanamassa.Exton") ;
@@ -5251,7 +5251,7 @@ control Alberta(inout Mayflower Virgilina, inout Alstown Dwight, in egress_intri
     @name(".Tolley") action Tolley() {
         Botna.drop_ctl = (bit<3>)Lakefield.execute((bit<32>)Dwight.Biggers.Aguilita);
     }
-    @disable_atomic_modify(1) @stage(5) @name(".Switzer") table Switzer {
+    @disable_atomic_modify(1) @name(".Switzer") table Switzer {
         actions = {
             Tolley();
         }
@@ -5520,7 +5520,7 @@ control Patchogue(inout Mayflower Virgilina, inout Alstown Dwight, in ingress_in
         requires_versioning = false;
         default_action = NoAction();
     }
-    @ternary(1) @stage(0) @disable_atomic_modify(1) @name(".Nuevo") table Nuevo {
+    @ternary(1) @disable_atomic_modify(1) @name(".Nuevo") table Nuevo {
         actions = {
             Burtrum();
             Gonzalez();

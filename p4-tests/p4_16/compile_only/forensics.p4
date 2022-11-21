@@ -2514,8 +2514,11 @@ parser EgressParser( packet_in pkt,
     }
 
     state parse_ipv6 {
-        pkt.extract(hdr.ipv6);
-        transition select(hdr.ipv6.nexthdr) {
+        // P4C-4686: modified this to be lookahead & moved extract hdr.ipv6 to the child states to
+        // allow dead-extract elimination to kick in for parse_ipv6_opt which overwrites
+        // hdr.ipv6.nexthdr. This overwrite cannot be implemented on Tofino 1 without
+        // dead-extract elimination as it has no CLEAR_ON_WRITE modifying writes in parser.
+        transition select(pkt.lookahead<ipv6_h>().nexthdr) {
             0: parse_ipv6_opt;
             60: parse_ipv6_opt;
             43: parse_ipv6_opt;
@@ -2526,6 +2529,13 @@ parser EgressParser( packet_in pkt,
             135: parse_ipv6_opt;
             139: parse_ipv6_opt;
             140: parse_ipv6_opt;
+            default: parse_ipv6_no_opt;
+        }
+    }
+
+    state parse_ipv6_no_opt {
+        pkt.extract(hdr.ipv6);
+        transition select(hdr.ipv6.nexthdr) {
             IPPROTO_ICMP : parse_icmp;
             IPPROTO_ICMP6: parse_icmp;
             IPPROTO_TCP : parse_tcp;
@@ -2535,6 +2545,7 @@ parser EgressParser( packet_in pkt,
     }
 
     state parse_ipv6_opt {
+        pkt.extract(hdr.ipv6);
         pkt.extract(ipv6_opt_hdr);
         hdr.ipv6.nexthdr = ipv6_opt_hdr.nexthdr;
         transition select(ipv6_opt_hdr.opt_len) {

@@ -212,7 +212,12 @@ void IR::BFN::LoweredParserMatch::dbprint(std::ostream &out) const {
 }
 
 void IR::BFN::ParserState::dbprint(std::ostream &out) const {
-    out << gress << " parser state " << name;
+    out << gress << " parser state " << name
+        << " ["
+        << (stride ? "stride" : "")
+        << (stride && dontMerge ? " " : "")
+        << (dontMerge ? "dont_merge" : "")
+        << "]";
     if (dbgetflags(out) & Brief)
         return;
     out << ':' << indent;

@@ -31,16 +31,19 @@ le_bitrange expand_to_byte_range(int cont_idx, int size) {
 ParserPackingValidator::StateExtractMap ParserPackingValidator::get_extracts(
     const Field* f) const {
     StateExtractMap rst;
-    if (!parser_i.field_to_extracts.count(f)) return rst;
-    for (const auto& extract : parser_i.field_to_extracts.at(f)) {
-        rst[parser_i.extract_to_state.at(extract)].push_back(extract);
+    if (!parser_i.field_to_writes.count(f)) return rst;
+    for (const auto& write : parser_i.field_to_writes.at(f)) {
+        auto* extract = write->to<IR::BFN::Extract>();
+        if (!extract)
+            continue;
+        rst[parser_i.write_to_state.at(extract)].push_back(extract);
     }
     return rst;
 }
 
 bool ParserPackingValidator::allow_clobber(const Field* f) const {
     if (f->is_ignore_alloc() || f->is_padding()) return true;
-    const bool parser_def = parser_i.field_to_extracts.count(f) || f->pov || f->isGhostField();
+    const bool parser_def = parser_i.field_to_writes.count(f) || f->pov || f->isGhostField();
     // TODO(yumin): parser_error?
     return !parser_def && !parser_zero_init(f) && !f->is_invalidate_from_arch();
 }

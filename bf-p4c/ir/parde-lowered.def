@@ -125,7 +125,8 @@ class LoweredParserChecksum : LoweredParserPrimitive {
         out << "start = " << start << ", ";
         out << "end = " << end << ", ";
         out << "end_pos = " << end_pos << ", ";
-        out << "type = " << type << ".";
+        out << "type = " << type << ", ";
+        out << "write_mode = " << write_mode << ".";
     }
 
     unsigned unit_id;
@@ -139,6 +140,7 @@ class LoweredParserChecksum : LoweredParserPrimitive {
     NullOK BFN::ContainerBitRef csum_err = nullptr;
     Clot clot_dest = {};
     NullOK BFN::ContainerRef phv_dest = nullptr;
+    ParserWriteMode write_mode;
 }
 
 /// A lowered save operation; represents saving bits from input buffer to match register

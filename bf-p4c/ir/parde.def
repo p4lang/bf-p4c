@@ -131,7 +131,21 @@ class TotalContainerSize : ParserRVal {
 
 /// Supertype for all parser primitives - i.e., actions that can be executed in
 /// parser states.
-abstract ParserPrimitive { }
+abstract ParserPrimitive {
+#emit
+    /// Get destination out of a parser write primitive -- either Emit, or
+    /// ParserChecksumWritePrimitive. Fails if input is not a write primitive.
+    virtual const ParserLVal* getWriteDest() const {
+        BUG("%1%: Write is neither extract nor checksum write", this);
+    }
+
+    /// Get parser write mode out of a parser write primitive -- either Emit, or
+    /// ParserChecksumWritePrimitive. Fails if input is not a write primitive.
+    virtual ParserWriteMode getWriteMode() const {
+        BUG("%1%: Write is neither extract nor checksum write", this);
+    }
+#end
+}
 
 /// A parser extraction operation, representing a write by the parser into some
 /// l-value.
@@ -144,6 +158,9 @@ class Extract : ParserPrimitive {
     dbprint {
         out << "extract " << source << " to " << dest;
     }
+
+    ParserLVal getWriteDest() const override { return dest; }
+    IR::BFN::ParserWriteMode getWriteMode() const override { return write_mode; }
 
     /// The location to be written to.
     ParserLVal dest;
@@ -270,13 +287,30 @@ abstract ParserChecksumPrimitive : ParserPrimitive {
     cstring declName;
 }
 
-class ChecksumVerify : ParserChecksumPrimitive {
+abstract ParserChecksumWritePrimitive : ParserChecksumPrimitive {
+    // this is here to declare that all checksum writes return FieldLVal not just ParserLVal
+    FieldLVal getWriteDest() const override {
+        BUG("calling getWriteDest from abtract base, this should have beed overwritten");
+    }
+
+    IR::BFN::ParserWriteMode getWriteMode() const override { return write_mode; }
+
+    ParserWriteMode write_mode = ParserWriteMode::SINGLE_WRITE;
+}
+
+class ChecksumVerify : ParserChecksumWritePrimitive {
     dbprint { out << "verify checksum " << declName; }
+
+    FieldLVal getWriteDest() const override { return dest; }
+
     optional NullOK FieldLVal dest;
 }
 
-class ChecksumResidualDeposit : ParserChecksumPrimitive {
+class ChecksumResidualDeposit : ParserChecksumWritePrimitive {
     dbprint { out << "subtract and deposit checksum " << declName; }
+
+    FieldLVal getWriteDest() const { return dest; }
+
     FieldLVal dest;
     // header end position relative to current state's input buffer
     PacketRVal header_end_byte;

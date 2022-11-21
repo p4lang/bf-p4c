@@ -1,51 +1,62 @@
+#if __TARGET_TOFINO__ == 2
+#include <t2na.p4>
+#elif __TARGET_TOFINO__ == 3
+#include <t3na.p4>
+#else
 #include <tna.p4>
-
-struct meta_t {
-    PortId_t f;
-}
+#endif
 
 header data_t {
-    bit<8> f;
+    bit<16> f;
 }
 
 struct metadata {
-    meta_t m;
+    data_t m;
 }
 
 struct headers {
     data_t a;
     data_t b;
+    data_t c;
 }
 
 parser ParserImpl(packet_in packet, out headers hdr,
                   out metadata meta,
                   out ingress_intrinsic_metadata_t ig_intr_md) {
+    Checksum() checksum_1;
+    Checksum() checksum_2;
+
+
     state start {
         packet.extract(ig_intr_md);
         packet.advance(PORT_METADATA_SIZE);
         packet.extract(hdr.a);
-
-        meta.m.f = 0x2;
+        checksum_1.subtract(hdr.a);
+        checksum_2.subtract(hdr.a);
 
         transition select(hdr.a.f) {
-            8w0x0a: parse_b0;
-            8w0x1a: parse_b1;
-            default: accept;
+            0xffff:  accept;
+            default: parse_b;
         }
     }
 
-    state parse_b0 {
+    state parse_b {
         packet.extract(hdr.b);
+        checksum_1.subtract(hdr.b);
+        checksum_2.subtract(hdr.b);
 
-        meta.m.f = meta.m.f | 0x4;   // bitwise-or
-
-        transition accept;
+        transition select(hdr.b.f) {
+            0xffff:  accept;
+            default: parse_c;
+        }
     }
 
-    state parse_b1 {
-        packet.extract(hdr.b);
-
-        meta.m.f = 0x8 | meta.m.f;   // bitwise-or
+    state parse_c {
+        packet.extract(hdr.c);
+        meta.m.setValid();
+        checksum_1.subtract_all_and_deposit(meta.m.f);
+        // invalid deposit of two checksums into the same fields
+        checksum_2.subtract_all_and_deposit(meta.m.f);
 
         transition accept;
     }
@@ -57,7 +68,16 @@ control ingress(inout headers hdr, inout metadata meta,
                 inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
     apply {
-        ig_intr_tm_md.ucast_egress_port = meta.m.f;
+        if (hdr.a.isValid() && hdr.b.isValid() && hdr.c.isValid()) {
+            if (meta.m.f == hdr.b.f) {
+                ig_intr_tm_md.ucast_egress_port = 2;
+            } else {
+                hdr.b.f = meta.m.f;
+                ig_intr_tm_md.ucast_egress_port = 4;
+            }
+        } else {
+            ig_intr_tm_md.ucast_egress_port = 0;
+        }
     }
 }
 

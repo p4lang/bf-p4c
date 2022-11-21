@@ -1,0 +1,17 @@
+packet 0 dead
+expect 0 dead
+
+packet 0 0a1a 0b1b dead 0d1d
+expect 0 0a1a 0b1b dead 0d1d
+
+# all parsed & all checksums valid -> output on 2
+packet 0 ffff ffff ffff ffff
+expect 2 ffff ffff ffff ffff
+
+# all parsed & all checksums invalid -> output on 4
+packet 0 0a1a 0b1b 0c1c 0d1d
+expect 4 0a1a 0b1b 0c1c 0d1d
+
+# all parsed & some checksums invalid -> output on 4
+packet 0 0a1a ffff 0c1c ffff
+expect 4 0a1a ffff 0c1c ffff

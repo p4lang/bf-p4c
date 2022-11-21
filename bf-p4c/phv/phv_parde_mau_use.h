@@ -121,6 +121,7 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
     profile_t init_apply(const IR::Node *) override;
     bool preorder(const IR::BFN::Parser *) override;
     bool preorder(const IR::BFN::Extract *) override;
+    bool preorder(const IR::BFN::ParserChecksumWritePrimitive *) override;
     bool preorder(const IR::BFN::Deparser *) override;
     bool preorder(const IR::BFN::Digest *) override;
     bool preorder(const IR::MAU::TableSeq *) override;

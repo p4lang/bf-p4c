@@ -37,7 +37,11 @@ enum class AlwaysRun {
 }  // end namespace MAU
 
 namespace BFN {
+
+/// The mode of operation of parser checksum units.
 enum class ChecksumMode { VERIFY, RESIDUAL, CLOT };
+
+/// The mode of operation of parser writes to PHV
 enum class ParserWriteMode { SINGLE_WRITE, BITWISE_OR, CLEAR_ON_WRITE };
 }  // end namespace BFN
 

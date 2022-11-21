@@ -193,14 +193,6 @@ parser eg_parser(   packet_in packet,
 
     state start {
 
-       // Set metadata header type pushed by mirror.emit() in
-       // case a clone needs to be performed.
-       //
-       // This field needs to be set here, otherwise if set in
-       // egress_control() the number of bytes pushed via
-       // mirror.emit() is incorrect.
-        eg_md.mirrored_meta.hdr_type = INTHDR_TYPE_CLONE_EGRESS;
-
         // Extract egress metadata.
         packet.extract(eg_intr_md);
 
@@ -208,13 +200,27 @@ parser eg_parser(   packet_in packet,
         // mirror_meta_hdr_t followed by bridged_meta_hdr_t.
         inthdr_type_t inthdr_type = packet.lookahead<inthdr_type_t>();
         transition select(inthdr_type) {
-            INTHDR_TYPE_BRIDGE : parse_bridged_metadata;
+            INTHDR_TYPE_BRIDGE : set_hdr_type_then_parse_bridged_metadata;
             default : parse_mirrored_packet;
         }
     }
 
     state parse_mirrored_packet{
         packet.extract(eg_md.mirrored_meta);
+        transition parse_bridged_metadata;
+    }
+
+    // P4C-4689: Moved to a separate state mutually-exclusive with parse_mirrored_packet to avoid
+    // possible overwrite of parser field in parse_mirrored_packet. This overwrite cannot be
+    // implemented on Tofino 1 as it has no CLEAR_ON_WRITE modifying writes in parser.
+    state set_hdr_type_then_parse_bridged_metadata {
+       // Set metadata header type pushed by mirror.emit() in
+       // case a clone needs to be performed.
+       //
+       // This field needs to be set here, otherwise if set in
+       // egress_control() the number of bytes pushed via
+       // mirror.emit() is incorrect.
+        eg_md.mirrored_meta.hdr_type = INTHDR_TYPE_CLONE_EGRESS;
         transition parse_bridged_metadata;
     }
 

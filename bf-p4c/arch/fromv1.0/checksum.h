@@ -99,7 +99,7 @@ static IR::AssignmentStatement*
 createChecksumError(const IR::Declaration* decl, gress_t gress) {
      auto methodCall = new IR::Member(new IR::PathExpression(decl->name), "verify");
      auto verifyCall = new IR::MethodCallExpression(methodCall, {});
-     auto rhs = new IR::Cast(IR::Type::Bits::get(1), verifyCall);
+     auto rhs_val = new IR::Cast(IR::Type::Bits::get(1), verifyCall);
 
      cstring intr_md;
 
@@ -114,6 +114,7 @@ createChecksumError(const IR::Declaration* decl, gress_t gress) {
          new IR::PathExpression(intr_md), "parser_err");
 
      auto lhs = new IR::Slice(parser_err, 12, 12);
+     auto rhs = new IR::BOr(lhs, rhs_val);
      return new IR::AssignmentStatement(lhs, rhs);
 }
 

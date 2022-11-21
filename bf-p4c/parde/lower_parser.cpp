@@ -823,6 +823,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
         // Will be used to compare bitranges for multiply by 2 in jbay
         std::set<nw_bitrange> mask_for_compare;
         std::set<nw_byterange> masked_ranges;
+        IR::BFN::ParserWriteMode write_mode = IR::BFN::ParserWriteMode::SINGLE_WRITE;
         for (auto c : checksums) {
             if (auto add = c->to<IR::BFN::ChecksumAdd>()) {
                 if (auto v = add->source->to<IR::BFN::PacketRVal>()) {
@@ -843,10 +844,9 @@ struct ComputeLoweredParserIR : public ParserInspector {
                     if (sub->swap)
                         swap |= rangeToInt(v);
                 }
-            } else if (auto verify = c->to<IR::BFN::ChecksumVerify>()) {
-                dest = verify->dest;
-            } else if (auto get = c->to<IR::BFN::ChecksumResidualDeposit>()) {
-                dest = get->dest;
+            } else if (auto cwrite = c->to<IR::BFN::ParserChecksumWritePrimitive>()) {
+                dest = cwrite->getWriteDest();
+                write_mode = cwrite->getWriteMode();
             }
             // swap or mul_2 register is 17 bit long
             BUG_CHECK(swap <= ((1 << 17) - 1), "checksum swap byte is out of input buffer");
@@ -862,7 +862,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
         }
 
         auto csum = new IR::BFN::LoweredParserChecksum(
-            id, masked_ranges, swap, start, end, end_pos, type, mul2);
+            id, masked_ranges, swap, start, end, end_pos, type, mul2, write_mode);
         std::vector<PHV::AllocSlice> slices;
 
         // FIXME(zma) this code could use some cleanup, what a mess ...
@@ -4024,8 +4024,19 @@ class ComputeMultiWriteContainers : public ParserModifier {
         }
 
         for (auto csum : match->checksums) {
-            if (csum->csum_err)
-                bitwise_or[csum->csum_err->container->container].insert(orig);
+            PHV::Container container;
+            if (csum->csum_err) {
+                container = csum->csum_err->container->container;
+            } else if (csum->phv_dest) {
+                container = csum->phv_dest->container;
+            }
+            if (container) {
+                if (csum->write_mode == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE) {
+                    clear_on_write[container].insert(orig);
+                } else if (csum->write_mode == IR::BFN::ParserWriteMode::BITWISE_OR) {
+                    bitwise_or[container].insert(orig);
+                }
+            }
         }
 
         return true;

@@ -31,7 +31,7 @@ macro(p4c_add_xfail_reason tag reason)
         set_tests_properties(${__testname} PROPERTIES WILL_FAIL 1)
       else ()
         set_tests_properties(${__testname} PROPERTIES
-          PASS_REGULAR_EXPRESSION ${reason}
+          PASS_REGULAR_EXPRESSION "${reason}"
           WILL_FAIL 0)
       endif()
       p4c_add_test_label(${tag} "XFAIL" ${test})

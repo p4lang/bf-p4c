@@ -72,11 +72,11 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/flatrock/pac_shallow_branch_select_multiple.p4
   )
 
-# Tracked under P4C-4891
-p4c_add_xfail_reason("tofino5"
-  "Compiler Bug: Fields from different headers .* are not supported in the same container"
-  extensions/p4_tests/p4_16/flatrock/pac_extraction_different_fields_same_container.p4
-  )
+# Tracked under P4C-4891 (with P4C-4689 this passes because the PHV alloc was perturbed)
+# p4c_add_xfail_reason("tofino5"
+#   "Compiler Bug: Fields from different headers .* are not supported in the same container"
+#   extensions/p4_tests/p4_16/flatrock/pac_extraction_different_fields_same_container.p4
+#   )
 
 p4c_add_xfail_reason("tofino5"
   "Compiler Bug: Transition cannot have both loop and non-loop next states"
@@ -269,7 +269,7 @@ p4c_add_xfail_reason("tofino5"
 #   )
 
 p4c_add_xfail_reason("tofino5"
-  "expected packet on port .* not seen"
+  "expected packets? on port .* not seen"
   # TNA architecture has different size of PORT_METADATA_SIZE than T5NA architecture.
   # Extraction of ingress intrinsic metadata is currently not correctly supported in TNA programs
   # when those metadata are not used anywhere.
@@ -277,13 +277,13 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/stf/lookahead3.p4
   extensions/p4_tests/p4_16/stf/update_checksum_3.p4
   extensions/p4_tests/p4_16/stf/p4c-2695.p4
+  extensions/p4_tests/p4_16/stf/parser_local_register.p4
+  extensions/p4_tests/p4_16/stf/parser_local_register_2.p4
   )
 
 p4c_add_xfail_reason("tofino5"
   "Could not place table .*: The table .* could not fit within the input crossbar"
   extensions/p4_tests/p4_16/stf/extract_slice_2.p4
-  extensions/p4_tests/p4_16/stf/parser_local_register.p4
-  extensions/p4_tests/p4_16/stf/parser_local_register_2.p4
   extensions/p4_tests/p4_16/stf/parser_multi_write_1.p4
   extensions/p4_tests/p4_16/stf/parser_multi_write_5.p4
   )

@@ -1750,36 +1750,45 @@ class MarkPaddingAsDeparsed : public Inspector {
 class CollectPardeConstraints : public Inspector {
     PhvInfo& phv;
 
-    bool preorder(const IR::BFN::Extract* extract) override {
-        LOG4("\t CollectPardeConstraints: Extract " << *extract);
-        auto lval = extract->dest->to<IR::BFN::FieldLVal>();
-        if (lval) {
-            auto f = phv.field(lval->field);
-            BUG_CHECK(f, "Found extract %1% to a non-field object", lval->field);
-            f->set_parsed(true);
-            LOG3("\tMarking " << f->name << " as parsed");
+    void handle_parser_write(const IR::BFN::ParserPrimitive *prim) {
+        auto lval = prim->getWriteDest();
+        if (!lval)
+            return;
+        auto f = phv.field(lval->field);
+        BUG_CHECK(f, "Found extract %1% to a non-field object", lval->field);
+        f->set_parsed(true);
+        LOG3("\tMarking " << f->name << " as parsed");
 
-            // TODO(zma): this constraint can be refined, if the multi-write
-            // happens before other writes, it can still be packed.
-            if (extract->write_mode == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE) {
-                // Keep POVs as simply solitary - compiler can handle it
-                if (f->pov) {
-                    f->set_solitary(PHV::SolitaryReason::PRAGMA_SOLITARY);
-                    LOG3("Marking parser multi-write field " << f << " as no_pack");
-                // Non POVs can at least be grouped among themselves (ones that
-                // are extracted together)
-                // Otherwise invalid superclusters are created for any field that is not
-                // 8 bit aligned
-                // Essentially this allows something like vlan.pcp (3b), vlan.cfi (1b)
-                // and vlan.vlan_id (12b) to be packed together (since the clear-on-write
-                // rewrites all of the together anyway)
-                } else {
-                    f->set_solitary(PHV::SolitaryReason::CLEAR_ON_WRITE);
-                    LOG3("Marking parser multi-write field " << f << " no_pack(clear_on_write)");
-                }
+        // TODO(zma): this constraint can be refined, if the multi-write
+        // happens before other writes, it can still be packed.
+        if (prim->getWriteMode() == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE) {
+            // Keep POVs as simply solitary - compiler can handle it
+            if (f->pov) {
+                f->set_solitary(PHV::SolitaryReason::PRAGMA_SOLITARY);
+                LOG3("Marking parser multi-write field " << f << " as no_pack");
+            // Non POVs can at least be grouped among themselves (ones that
+            // are extracted together)
+            // Otherwise invalid superclusters are created for any field that is not
+            // 8 bit aligned
+            // Essentially this allows something like vlan.pcp (3b), vlan.cfi (1b)
+            // and vlan.vlan_id (12b) to be packed together (since the clear-on-write
+            // rewrites all of them together anyway)
+            } else {
+                f->set_solitary(PHV::SolitaryReason::CLEAR_ON_WRITE);
+                LOG3("Marking parser multi-write field " << f << " no_pack(clear_on_write)");
             }
         }
+    }
 
+    bool preorder(const IR::BFN::Extract* extract) override {
+        LOG4("\t CollectPardeConstraints: Extract " << *extract);
+        handle_parser_write(extract);
+        return false;
+    }
+
+    bool preorder(const IR::BFN::ParserChecksumWritePrimitive* checksum) override {
+        LOG4("\t CollectPardeConstraints: Checksum " << *checksum);
+        handle_parser_write(checksum);
         return false;
     }
 

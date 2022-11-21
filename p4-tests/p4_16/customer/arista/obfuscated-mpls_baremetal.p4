@@ -3389,7 +3389,7 @@ control Gilman(inout Bernice Crannell, inout Buckhorn Aniak, in egress_intrinsic
     @name(".Maxwelton") action Maxwelton(bit<6> Rains) {
         Aniak.LaMoille.Rocklake = Rains;
     }
-    @ternary(1) @disable_atomic_modify(1) @stage(0) @name(".Faulkton") table Faulkton {
+    @ternary(1) @disable_atomic_modify(1) @name(".Faulkton") table Faulkton {
         actions = {
             Maxwelton();
             @defaultonly NoAction();
@@ -5939,7 +5939,7 @@ control Elliston(inout Bernice Crannell, inout Buckhorn Aniak, in egress_intrins
         Aniak.LaMoille.SoapLake = Woodville;
         Crannell.Mather.SoapLake = SoapLake;
     }
-    @ternary(1) @disable_atomic_modify(1) @stage(0) @name(".Neuse") table Neuse {
+    @ternary(1) @disable_atomic_modify(1) @name(".Neuse") table Neuse {
         actions = {
             Manakin();
             @defaultonly NoAction();

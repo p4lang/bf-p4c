@@ -56,6 +56,18 @@ bool Phv_Parde_Mau_Use::preorder(const IR::BFN::Extract *e) {
     return true;
 }
 
+bool Phv_Parde_Mau_Use::preorder(const IR::BFN::ParserChecksumWritePrimitive *e) {
+    LOG5("PREORDER Checksum " << e);
+    auto lval = e->getWriteDest();
+    if (!lval) return true;
+    auto* f = phv.field(lval->field);
+    BUG_CHECK(f, "Checksum write to non-PHV destination: %1%", e);
+    extracted_i[thread][f->id] = true;
+
+    // TODO(vstill): something like extracted_from_checksum needed?
+    return true;
+}
+
 bool Phv_Parde_Mau_Use::preorder(const IR::BFN::Deparser *d) {
     LOG5("PREORDER Deparser ");
     thread = d->gress;

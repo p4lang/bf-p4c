@@ -331,6 +331,34 @@ struct AncestorStates {
     }
 };
 
+const IR::Expression* stripReinterpret(const IR::Expression* rhs) {
+    while (auto reimp = rhs->to<IR::BFN::ReinterpretCast>())
+        rhs = reimp->expr;
+    return rhs;
+}
+
+struct AssignOr {
+    AssignOr() = default;
+    AssignOr(const IR::Operation_Binary* bin, const IR::Expression* val) : bin(bin), val(val) { }
+    const IR::Operation_Binary* bin = nullptr;
+    const IR::Expression* val = nullptr;
+    explicit operator bool() const { return bool(bin); }
+};
+
+AssignOr getAssignOr(const IR::Expression* lhs, const IR::Expression* rhs) {
+    auto bin = rhs->to<IR::Operation_Binary>();
+    if (bin && (rhs->is<IR::BOr>() || rhs->is<IR::LOr>())) {
+        const IR::Expression *val = nullptr;
+        if (bin->left->equiv(*lhs)) {
+            val = stripReinterpret(bin->right);
+        } else if (bin->right->equiv(*lhs)) {
+            val = stripReinterpret(bin->left);
+        }
+        return AssignOr(bin, val);
+    }
+    return AssignOr();
+}
+
 using ChecksumOffsetMap = std::unordered_map<cstring, std::unordered_map<cstring, int>>;
 using ExtractedFieldsMap = ordered_map<const IR::Member*, const IR::BFN::PacketRVal*>;
 using BitOffsetMap = std::unordered_map<const IR::MethodCallExpression*, unsigned>;
@@ -1234,25 +1262,30 @@ struct RewriteParserStatements : public Transform {
         return e;
     }
 
+    bool processChecksum(const IR::Expression* rhs) const {
+        if (auto mc = rhs->to<IR::MethodCallExpression>()) {
+            if (auto* method = mc->method->to<IR::Member>()) {
+                if (isExtern(method, "Checksum")) {
+                    // we save the bit offset for get that is not preceded by subtract
+                    bitOffsets[mc] = currentBit;
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     const IR::BFN::ParserPrimitive* preorder(IR::AssignmentStatement* s) override {
         if (s->left->type->is<IR::Type::Varbits>())
             BUG("Extraction to varbit field should have been de-sugared in midend.");
 
         auto lhs = s->left;
-        auto rhs = s->right;
         // no bits are lost by throwing away IR::BFN::ReinterpretCast.
-        if (rhs->is<IR::BFN::ReinterpretCast>())
-            rhs = rhs->to<IR::BFN::ReinterpretCast>()->expr;
+        auto rhs = stripReinterpret(s->right);
 
-        if (auto mc = rhs->to<IR::MethodCallExpression>()) {
-            if (auto* method = mc->method->to<IR::Member>()) {
-                if (isExtern(method, "Checksum")) {
-                    // checksums are rewritten in RewriteParserChecksums
-                    // we save the bit offset for get that is not preceded by subtract
-                    bitOffsets[mc] = currentBit;
-                    return nullptr;
-                }
-            }
+        if (processChecksum(rhs)) {
+            // checksums are rewritten in RewriteParserChecksums
+            return nullptr;
         }
 
         if (auto rval = resolveLookahead(typeMap, rhs, currentBit)) {
@@ -1287,17 +1320,16 @@ struct RewriteParserStatements : public Transform {
             }
         }
 
-        // a = a | b
-        if (auto bor = rhs->to<IR::BOr>()) {
-            if (bor->left->equiv(*lhs)) {
-                auto e = createBitwiseOrExtract(lhs, bor->right, s->srcInfo);
-                LOG5("add extract: " << e);
-                return e;
-            } else if (bor->right->equiv(*lhs)) {
-                auto e = createBitwiseOrExtract(lhs, bor->left, s->srcInfo);
+        // a = a | b, a = a || b
+        if (auto aor = getAssignOr(lhs, rhs)) {
+            if (processChecksum(aor.val))
+                return nullptr;
+            if (canEvaluateInParser(aor.val)) {
+                auto e = createBitwiseOrExtract(lhs, aor.val, s->srcInfo);
                 LOG5("add extract: " << e);
                 return e;
             }
+            return nullptr;
         }
 
         if (!canEvaluateInParser(rhs)) {
@@ -1539,7 +1571,7 @@ struct RewriteParserChecksums : public Transform {
         cstring declName = path->name;
 
         auto* rv = new IR::Vector<IR::BFN::ParserPrimitive>;
-        rv->push_back(new IR::BFN::ChecksumVerify(declName));
+        rv->push_back(new IR::BFN::ChecksumVerify(call->getSourceInfo(), declName));
         return rv;
     }
 
@@ -1557,7 +1589,7 @@ struct RewriteParserChecksums : public Transform {
         // should have ended a byte earlier
         // This will be taken care of later by Find/RemoveNegativeDeposits
         auto endByte = new IR::BFN::PacketRVal(StartLen(it->second - 8, 8), false);
-        auto get = new IR::BFN::ChecksumResidualDeposit(declName,
+        auto get = new IR::BFN::ChecksumResidualDeposit(call->getSourceInfo(), declName,
                                               new IR::BFN::FieldLVal(mem), endByte);
         rv->push_back(get);
         return rv;
@@ -1593,50 +1625,74 @@ struct RewriteParserChecksums : public Transform {
         return nullptr;
     }
 
+    IR::BFN::ParserChecksumWritePrimitive*
+    rewriteChecksum(const IR::Expression *lhs, const IR::MethodCallExpression *mc) {
+        auto* method = mc->method->to<IR::Member>();
+        if (!method || !isExtern(method, "Checksum"))
+            return nullptr;
+
+        auto* path = method->expr->to<IR::PathExpression>()->path;
+        cstring declName = path->name;
+
+        if (method->member == "verify") {
+            auto verify = new IR::BFN::ChecksumVerify(mc->getSourceInfo(), declName);
+            verify->dest = new IR::BFN::FieldLVal(lhs->getSourceInfo(), lhs);
+            return verify;
+        } else if (method->member == "get") {
+            ::warning(
+                "checksum.get() will deprecate in future versions. Please use"
+                " void subtract_all_and_deposit(bit<16>) instead");
+            int endPos = 0;
+            // If there was a subtract set the endPos to the last one
+            if (lastChecksumSubtract && lastSubtractField) {
+                endPos = getHeaderEndPos();
+            // Otherwise set it to the last byte given by the bitOffset
+            } else {
+                const auto it = bitOffsets.find(mc);
+                BUG_CHECK(it != bitOffsets.end(),
+                          "Bit offset for %1% not available", mc);
+                // This can create negative endPos, which means that the csum
+                // should have ended a byte earlier
+                // This will be taken care of later by Find/RemoveNegativeDeposits
+                endPos = it->second - 8;
+            }
+            auto endByte = new IR::BFN::PacketRVal(StartLen(endPos, 8), false);
+            auto get = new IR::BFN::ChecksumResidualDeposit(mc->getSourceInfo(),
+                declName, new IR::BFN::FieldLVal(lhs->getSourceInfo(), lhs), endByte);
+            return get;
+        }
+        return nullptr;
+    }
+
     const IR::BFN::ParserPrimitive*
     preorder(IR::AssignmentStatement* s) override {
         if (s->left->type->is<IR::Type::Varbits>())
             BUG("Extraction to varbit field should have been de-sugared in midend.");
 
         auto lhs = s->left;
-        auto rhs = s->right;
         // no bits are lost by throwing away IR::BFN::ReinterpretCast.
-        if (rhs->is<IR::BFN::ReinterpretCast>())
-            rhs = rhs->to<IR::BFN::ReinterpretCast>()->expr;
+        auto rhs = stripReinterpret(s->right);
 
         if (auto mc = rhs->to<IR::MethodCallExpression>()) {
-            if (auto* method = mc->method->to<IR::Member>()) {
-                if (isExtern(method, "Checksum")) {
-                    auto* path = method->expr->to<IR::PathExpression>()->path;
-                    cstring declName = path->name;
+            if (auto* checksum = rewriteChecksum(lhs, mc))
+                return checksum;
+        }
 
-                    if (method->member == "verify") {
-                        auto verify = new IR::BFN::ChecksumVerify(declName);
-                        verify->dest = new IR::BFN::FieldLVal(lhs);
-                        return verify;
-                    } else if (method->member == "get") {
-                        ::warning(
-                            "checksum.get() will deprecate in future versions. Please use"
-                            " void subtract_all_and_deposit(bit<16>) instead");
-                        int endPos = 0;
-                        // If there was a subtract set the endPos to the last one
-                        if (lastChecksumSubtract && lastSubtractField) {
-                            endPos = getHeaderEndPos();
-                        // Otherwise set it to the last byte given by the bitOffset
-                        } else {
-                            const auto it = bitOffsets.find(mc);
-                            BUG_CHECK(it != bitOffsets.end(),
-                                      "Bit offset for %1% not available", mc);
-                            // This can create negative endPos, which means that the csum
-                            // should have ended a byte earlier
-                            // This will be taken care of later by Find/RemoveNegativeDeposits
-                            endPos = it->second - 8;
-                        }
-                        auto endByte = new IR::BFN::PacketRVal(StartLen(endPos, 8), false);
-                        auto get = new IR::BFN::ChecksumResidualDeposit(
-                            declName, new IR::BFN::FieldLVal(lhs), endByte);
-                        return get;
+        // a = a | b, a = a || b
+        if (auto aor = getAssignOr(lhs, rhs)) {
+            if (auto mc = aor.val->to<IR::MethodCallExpression>()) {
+                if (auto checksum = rewriteChecksum(lhs, mc)) {
+                    if (rhs->is<IR::LOr>() && aor.val == stripReinterpret(aor.bin->right)) {
+                        ::warning(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                                  "%1%This logical OR cannot be implemented with short-circuiting "
+                                  "semantics on Tofino. The checksum calculation will be performed "
+                                  "in all cases. You can silence this warning by swapping the "
+                                  "operands.",
+                                  aor.bin->getSourceInfo());
                     }
+                    checksum->write_mode = IR::BFN::ParserWriteMode::BITWISE_OR;
+                    LOG5("add checksum verify: " << checksum);
+                    return checksum;
                 }
             }
         }

@@ -14,3 +14,20 @@ p4c_add_xfail_reason("tofino3"
   "error: Slices assigned to outputs of register actions cannot cross the 32-bit boundary"
   extensions/p4_tests/p4_16/jbay/p4c-4535-invalid-slice.p4
 )
+
+p4c_add_xfail_reason("tofino3"
+  "error: .* is assigned in state .* but has also previous assignment"
+  extensions/p4_tests/p4_16/stf/parser_multi_write_7.p4
+)
+
+# P4C-4689
+p4c_add_xfail_reason("tofino3"
+  "error: Using checksum verify in direct assignment to set ingress::hdr.c.b; is not supported when the left-hand side of the assignment can be written multiple times for one packet."
+  extensions/p4_tests/p4_16/stf/parser_multi_write_checksum_verify_2.p4
+  extensions/p4_tests/p4_16/stf/parser_multi_write_checksum_verify_3.p4
+  extensions/p4_tests/p4_16/stf/parser_multi_write_checksum_verify_4.p4
+)
+p4c_add_xfail_reason("tofino3"
+    "error: It is not possible to deposit multiple checksum residuals into field"
+    extensions/p4_tests/p4_16/compile_only/parser_multi_write_checksum_deposit_3.p4
+)

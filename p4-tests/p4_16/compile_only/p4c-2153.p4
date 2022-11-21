@@ -1215,11 +1215,12 @@ control EmptyEgress(
 
 
 
+// NOTE: values of enum changed in P4C-4689 to allow overwrites in bitwise-or mode
 enum bit<8> tunnelTypes {
     NO_TUN = 8w0,
-    IPVX_IN_IP = 8w1,
-    GTP = 8w2,
-    EOMPLS = 8w3,
+    IPVX_IN_IP = 8w7,
+    GTP = 8w3,
+    EOMPLS = 8w2,
     MPLS_VX = 8w4
 }
 
@@ -1814,8 +1815,9 @@ parser SwitchIngressParser(packet_in packet, out headers hdr,
             (13w0x0, 4w0x5, 8w0x6): parse_inner_tcp;
             (13w0x0, 4w0x5, 8w0x11): parse_inner_udp;
             (13w0x0, 4w0x5, 8w0x84): parse_inner_sctp;
-            (13w0x0, 4w0x5, 8w0x4): parse_ipv4_in_ip;
-            (13w0x0, 4w0x5, 8w0x29): parse_ipv6_in_ip;
+            // P4C-4689 - avoid recursion
+            (13w0x0, 4w0x5, 8w0x4): reject; // parse_ipv4_in_ip;
+            (13w0x0, 4w0x5, 8w0x29): reject; // parse_ipv6_in_ip;
             default: accept;
         }
     }
@@ -1825,8 +1827,9 @@ parser SwitchIngressParser(packet_in packet, out headers hdr,
             8w17: parse_inner_udp;
             8w6: parse_inner_tcp;
             8w132: parse_inner_sctp;
-            8w4: parse_ipv4_in_ip;
-            8w41: parse_ipv6_in_ip;
+            // P4C-4689 - avoid recursion
+            8w4: reject; // parse_ipv4_in_ip;
+            8w41: reject; // parse_ipv6_in_ip;
             default: accept;
         }
     }
@@ -2069,10 +2072,11 @@ control SwitchIngress(inout headers hdr,
         pppoe_strip();
         ppp_strip();
         add_bridged_md();
-        if ((meta.tunnel_metadata.ingress_tunnel_type >=
-     (bit<8>)tunnelTypes.IPVX_IN_IP) &&
-     (meta.tunnel_metadata.ingress_tunnel_type <
-     (bit<8>)tunnelTypes.EOMPLS)) { // IP tunnel
+        // NOTE: condition modified from range to or in P4C-4689
+        if ((meta.tunnel_metadata.ingress_tunnel_type ==
+     (bit<8>)tunnelTypes.IPVX_IN_IP) ||
+     (meta.tunnel_metadata.ingress_tunnel_type ==
+     (bit<8>)tunnelTypes.GTP)) { // IP tunnel
      outer_ipv4_strip();
      outer_ipv6_strip();
             hdr.udp.setInvalid();
@@ -2169,8 +2173,9 @@ parser SwitchEgressParser(
             (13w0x0, 4w0x5, 8w0x6): parse_inner_tcp;
             (13w0x0, 4w0x5, 8w0x11): parse_inner_udp;
             (13w0x0, 4w0x5, 8w0x84): parse_inner_sctp;
-            (13w0x0, 4w0x5, 8w0x4): parse_ipv4_in_ip;
-            (13w0x0, 4w0x5, 8w0x29): parse_ipv6_in_ip;
+            // P4C-4689 - avoid recursion
+            (13w0x0, 4w0x5, 8w0x4): reject; // parse_ipv4_in_ip;
+            (13w0x0, 4w0x5, 8w0x29): reject; // parse_ipv6_in_ip;
             default: accept;
         }
     }
@@ -2180,8 +2185,9 @@ parser SwitchEgressParser(
             8w17: parse_inner_udp;
             8w6: parse_inner_tcp;
             8w132: parse_inner_sctp;
-            8w4: parse_ipv4_in_ip;
-            8w41: parse_ipv6_in_ip;
+            // P4C-4689 - avoid recursion
+            8w4: reject; // parse_ipv4_in_ip;
+            8w41: reject; // parse_ipv6_in_ip;
             default: accept;
         }
     }

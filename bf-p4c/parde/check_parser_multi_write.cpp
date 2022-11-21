@@ -8,6 +8,39 @@
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/phv/phv_fields.h"
 
+const char *CHECKSUM_VERIFY_OR_SUGGESTION = "\n"
+        "If your intention was to accumulate checksum verification errors over multiple checksums, "
+        "write OR explicitly: either like `err = checksum.verify() || err` if `err` is `bool`, or "
+        "like `err = err | (bit<1>)checksum.verify()` if it is an integer (in this case, `err` "
+        "can be a slice).";
+
+inline Util::SourceInfo clear_if_same(Util::SourceInfo info, Util::SourceInfo other) {
+    return info == other ? Util::SourceInfo() : info;
+}
+
+inline Util::SourceInfo first_valid(Util::SourceInfo a, Util::SourceInfo b) {
+    return a.isValid() ? a : b;
+}
+
+inline bool is_constant_extract(const IR::BFN::ParserPrimitive* p) {
+    if (auto e = p->to<IR::BFN::Extract>())
+        return e->source->is<IR::BFN::ConstantRVal>();
+    return false;
+}
+
+inline const nw_bitrange* get_extract_range(const IR::BFN::ParserPrimitive *p) {
+    auto e = p->to<IR::BFN::Extract>();
+    if (!e)
+        return nullptr;
+    auto rval = e->source->to<IR::BFN::InputBufferRVal>();
+    if (!rval)
+        return nullptr;
+
+    return &rval->range;
+}
+
+using WrMode = IR::BFN::ParserWriteMode;
+
 struct InferWriteMode : public ParserTransform {
     const PhvInfo& phv;
     const CollectParserInfo& parser_info;
@@ -17,59 +50,85 @@ struct InferWriteMode : public ParserTransform {
                    const MapFieldToParserStates& fs) :
         phv(ph), parser_info(pi), field_to_states(fs) { }
 
-    std::map<const IR::BFN::Extract*, IR::BFN::ParserWriteMode> extract_to_write_mode;
+    std::map<const IR::BFN::ParserPrimitive*, IR::BFN::ParserWriteMode> write_to_write_mode;
 
-    ordered_set<const IR::BFN::Extract*> zero_inits;
-    ordered_set<const IR::BFN::Extract*> dead_extracts;
+    ordered_set<const IR::BFN::ParserPrimitive*> zero_inits;
+    ordered_set<const IR::BFN::ParserPrimitive*> dead_writes;
 
-    // Find the first writes, i.e. inits, given the set of extracts. The set of extracts
+    /// Check if the effect of @p p is before the effect of @p q in the parser.
+    /// @p writes is the set of writes that belong to the same field and both @p p and @p q must
+    /// be in this set.
+    /// @p ps must be state of @p p or nullptr. @p qs must be state of @p q or nullptr.
+    bool is_before(const ordered_set<const IR::BFN::ParserPrimitive*>& writes,
+                   const IR::BFN::Parser* parser,
+                   const IR::BFN::ParserPrimitive* p, const IR::BFN::ParserState *ps,
+                   const IR::BFN::ParserPrimitive* q, const IR::BFN::ParserState *qs = nullptr) {
+        // case 0. resolve the cases when one of the writes is ChecksumResidualDeposit and
+        // therefore its effect is at the very end of the parser and not at the spot it is
+        // written at
+        // (we don't need to handle both p and q being residuals as there should not be two
+        // residual writes into the same field on the same parser path)
+        if (p->is<IR::BFN::ChecksumResidualDeposit>()) {
+            // checksum residual happens at the very end of the parser, so anything else
+            // happens before it
+            return false;
+        }
+        if (q->is<IR::BFN::ChecksumResidualDeposit>()) {
+            return true;  // q always happens after p
+        }
+
+        if (!ps)
+            ps = field_to_states.write_to_state.at(p);
+        if (!qs)
+            qs = field_to_states.write_to_state.at(q);
+
+        // case 1. p is in a parser state that is an ancestor to q (including loops)
+        if (parser_info.graph(parser).is_reachable(ps, qs)) {
+            return true;
+        }
+
+        // case 2. p and q are in the same parser state but p happens before q
+        if (p != q && ps == qs) {
+            for (auto o : writes) {
+                if (o == p)
+                    return true;
+                if (o == q)
+                    return false;
+            }
+        }
+        return false;
+    }
+
+    // Find the first writes, i.e. inits, given the set of writes. The set of writes
     // belong to the same field. An init is a write that has no prior write in the parser IR.
-    ordered_set<const IR::BFN::Extract*>
-    find_inits(const ordered_set<const IR::BFN::Extract*>& extracts) {
-        ordered_set<const IR::BFN::Extract*> inits;
+    ordered_set<const IR::BFN::ParserPrimitive*>
+    find_inits(const ordered_set<const IR::BFN::ParserPrimitive*>& writes) {
+        ordered_set<const IR::BFN::ParserPrimitive*> inits;
 
-        for (auto p : extracts) {
-            bool is_prev = false;
+        for (auto p : writes) {
+            bool has_predecessor = false;
 
-            auto ps = field_to_states.extract_to_state.at(p);
+            auto ps = field_to_states.write_to_state.at(p);
             auto parser = field_to_states.state_to_parser.at(ps);
 
-            for (auto q : extracts) {
-                if (p == q)
-                    continue;
-
-                auto qs = field_to_states.extract_to_state.at(q);
-
-                // case 1. q is in a parser state that is an ancestor to p
-                if (parser_info.graph(parser).is_ancestor(qs, ps)) {
-                    is_prev = true;
+            for (auto q : writes) {
+                if ((has_predecessor = is_before(writes, parser, q, nullptr, p, ps)))
                     break;
-                } else if (ps == qs) {
-                // case 2. p and q are in the same parser state but q happens before p
-                    for (auto o : extracts) {
-                        if (o == p)
-                            break;
-                        if (o == q) {
-                            is_prev = true;
-                            break;
-                        }
-                    }
-                }
             }
 
-            if (!is_prev)
+            if (!has_predecessor)
                inits.insert(p);
         }
 
         return inits;
     }
 
-    ordered_set<const IR::BFN::Extract*>
-    exclude_zero_inits(const ordered_set<const IR::BFN::Extract*>& extracts) {
-        auto inits = find_inits(extracts);
-        ordered_set<const IR::BFN::Extract*> rv;
+    ordered_set<const IR::BFN::ParserPrimitive*>
+    exclude_zero_inits(const ordered_set<const IR::BFN::ParserPrimitive*>& writes) {
+        auto inits = find_inits(writes);
+        ordered_set<const IR::BFN::ParserPrimitive*> rv;
 
-        for (auto e : extracts) {
+        for (auto e : writes) {
             if (is_zero_extract(e) && inits.count(e)) {
                 zero_inits.insert(e);
                 continue;
@@ -81,7 +140,10 @@ struct InferWriteMode : public ParserTransform {
         return rv;
     }
 
-    bool is_zero_extract(const IR::BFN::Extract* e) {
+    bool is_zero_extract(const IR::BFN::ParserPrimitive* p) {
+        auto *e = p->to<IR::BFN::Extract>();
+        if (!e)
+            return false;
         if (auto src = e->source->to<IR::BFN::ConstantRVal>()) {
             if (src->constant->value == 0)
                 return true;
@@ -90,39 +152,28 @@ struct InferWriteMode : public ParserTransform {
         return false;
     }
 
-    bool same_const_source(const IR::BFN::Extract* p, const IR::BFN::Extract* q) {
-       auto pc = p->source->to<IR::BFN::ConstantRVal>();
-       auto qc = q->source->to<IR::BFN::ConstantRVal>();
+    bool same_const_source(const IR::BFN::ParserPrimitive* pp, const IR::BFN::ParserPrimitive* qp) {
+        auto p = pp->to<IR::BFN::Extract>();
+        auto q = qp->to<IR::BFN::Extract>();
+        if (!p || !q)
+            return false;
+        auto pc = p->source->to<IR::BFN::ConstantRVal>();
+        auto qc = q->source->to<IR::BFN::ConstantRVal>();
 
-       return (pc && qc) ? *(pc->constant) == *(qc->constant) : false;
+        return (pc && qc) ? *(pc->constant) == *(qc->constant) : false;
     }
 
-    ordered_set<const IR::BFN::Extract*>
-    get_previous_writes(const IR::BFN::Extract* p,
-                        const ordered_set<const IR::BFN::Extract*>& extracts) {
-        ordered_set<const IR::BFN::Extract*> rv;
+    ordered_set<const IR::BFN::ParserPrimitive*>
+    get_previous_writes(const IR::BFN::ParserPrimitive* p,
+                        const ordered_set<const IR::BFN::ParserPrimitive*>& writes) {
+        ordered_set<const IR::BFN::ParserPrimitive*> rv;
 
-        auto ps = field_to_states.extract_to_state.at(p);
+        auto ps = field_to_states.write_to_state.at(p);
         auto parser = field_to_states.state_to_parser.at(ps);
 
-        for (auto q : extracts) {
-            auto qs = field_to_states.extract_to_state.at(q);
-
-            if (parser_info.graph(parser).is_reachable(qs, ps)) {
-                if (!same_const_source(p, q))
-                    rv.insert(q);
-            } else if (ps == qs) {
-                bool is_prev = false;
-
-                for (auto o : extracts) {
-                    if (o == p)
-                        break;
-                    if (o == q)
-                        is_prev = true;
-                }
-
-                if (is_prev && !same_const_source(p, q))
-                    rv.insert(q);
+        for (auto q : writes) {
+            if (!same_const_source(p, q) && is_before(writes, parser, q, nullptr, p, ps)) {
+                rv.insert(q);
             }
         }
 
@@ -131,51 +182,70 @@ struct InferWriteMode : public ParserTransform {
 
     void mark_write_mode(IR::BFN::ParserWriteMode mode,
                          const PHV::Field* dest,
-                         const ordered_set<const IR::BFN::Extract*>& extracts) {
+                         const ordered_set<const IR::BFN::ParserPrimitive*>& writes) {
         LOG3("mark " << dest->name << " as " << mode);
 
-        for (auto e : extracts)
-            extract_to_write_mode[e] = mode;
+        for (auto e : writes)
+            write_to_write_mode[e] = mode;
     }
 
     struct CounterExample {
-        ordered_set<const IR::BFN::Extract*> prev;
-        const IR::BFN::Extract* curr = nullptr;
-        const bool is_error = false;
+        ordered_set<const IR::BFN::ParserPrimitive*> prev;
+        const IR::BFN::ParserPrimitive* curr = nullptr;
+        const bool is_rewritten_always = false;
 
-        CounterExample(ordered_set<const IR::BFN::Extract*> prev,
-                       const IR::BFN::Extract* curr)
-            : prev(prev), curr(curr), is_error(false) { }
-        CounterExample(ordered_set<const IR::BFN::Extract*> prev,
-                       const IR::BFN::Extract* curr,
-                       const bool is_error)
-            : prev(prev), curr(curr), is_error(is_error) { }
+        CounterExample(ordered_set<const IR::BFN::ParserPrimitive*> prev,
+                       const IR::BFN::ParserPrimitive* curr,
+                       const bool is_rewritten_always = false)
+            : prev(prev), curr(curr), is_rewritten_always(is_rewritten_always) {
+            BUG_CHECK(curr && prev.size(), "Attempted to create counterexample without specifying "
+                      "rewritten fields");
+        }
     };
 
     void print(CounterExample* example) {
-        bool found_err = false;
+        auto c_field = example->curr->getWriteDest()->field;
+        bool on_loop = std::any_of(example->prev.begin(), example->prev.end(),
+                          [=](const IR::BFN::ParserPrimitive* p) { return p == example->curr; });
+        // On Tofino 1, we emit only warning unless the field is rewritten on all paths, for more
+        // details, see P4C-2293
+        // FIXME: we probably need a better check and pragma-triggered supression
+        auto diagType = Device::currentDevice() != Device::TOFINO || example->is_rewritten_always
+            ? DiagnosticAction::Error : DiagnosticAction::Warn;
+        // FIXME(vstill): use ErrorType directly once the appropriate overload is added to p4c
+        auto errorName = ErrorCatalog::getCatalog().getName(ErrorType::ERR_UNSUPPORTED_ON_TARGET);
+        diagnose(diagType, errorName.c_str(),
+            "%1%%2% is assigned in state %3% but has also previous assignment%4%%5%%6%. %7%"
+            "This re-assignment is not supported by Tofino.%8%%9%", "",
+            /* 1 */ first_valid(c_field->getSourceInfo(), example->curr->getSourceInfo()),
+            /* 2 */ c_field->toString(),
+            /* 3 */ field_to_states.write_to_state.at(example->curr),
+            /* 4 */ example->prev.size() > 1 ? "s" : "",
+            /* 5 */ on_loop && example->prev.size() > 1 ? " including assignment" : "",
+            /* 6 */ on_loop ? " in the same state due to a loop" : "",
+            /* 7 */ example->prev.size() - int(on_loop) > 0 ?
+                    "See the following errors for the list of previous assignments. " : "",
+            /* 8 */ example->is_rewritten_always ?
+                    "\nThe field will either always be assigned multiple times or there is a "
+                    "loopback in the parser that always reassigns the field." : "",
+            /* 9 */ example->curr->is<IR::BFN::ChecksumVerify>() ?
+                    CHECKSUM_VERIFY_OR_SUGGESTION : "");
         for (auto p : example->prev) {
-            auto ps = field_to_states.extract_to_state.at(p);
-
-            // This should be error instead, but downgraded because of P4C-1995
-            if (!example->is_error)
-                ::warning("%1% has previous assignment in parser state %2%.",
-                            example->curr->dest->field, ps->name);
-            else {
-                ::error("%1% has previous assignment in parser state %2%. "
-                        "This is an error because the field will either always be assigned "
-                        "multiple times or there is a loopback in the parser that "
-                        "always reassigns the field. Check previous warnings to see more "
-                        "and remove it.",
-                        example->curr->dest->field, ps->name);
-                found_err = true;
-            }
+            if (p == example->curr)
+                continue;  // skip printing the looped assignment again
+            auto ps = field_to_states.write_to_state.at(p);
+            // FIXME(vstill) we can't use the error type here now as it would
+            // then be possibly ignored if we have reported another error with
+            // the same source location.
+            auto p_field = p->getWriteDest()->field;
+            diagnose(diagType, nullptr,
+                "%1%%2% previously assigned in state %3%.", "",
+                first_valid(p_field->getSourceInfo(), p->getSourceInfo()),
+                p_field->toString(), ps);
         }
-        if (found_err)
-            throw Util::CompilationError("Compilation failed! (multi-assignment in parser)");
     }
 
-    bool is_single_write(const ordered_set<const IR::BFN::Extract*>& writes) {
+    bool is_single_write(const ordered_set<const IR::BFN::ParserPrimitive*>& writes) {
         for (auto x : writes) {
             auto prev = get_previous_writes(x, writes);
 
@@ -186,18 +256,40 @@ struct InferWriteMode : public ParserTransform {
         return true;
     }
 
-    bool can_absorb(const IR::BFN::Extract* prev, const IR::BFN::Extract* curr) {
-       auto pc = prev->source->to<IR::BFN::ConstantRVal>();
-       auto qc = curr->source->to<IR::BFN::ConstantRVal>();
+    /// Check if the current write @p curr_p is safe to be applied BITWISE_OR on the @p prev_p
+    /// write. This can be done if we can guarantee that no bit will need to be set to 0.
+    /// - if both @p prev_p and @p curr_p are constants and their bitwise or is same as @p curr_p
+    /// - if @p curr_p is a constant and sets all bits in the left-hand-side of the assignment to 1
+    /// - if @p prev_p is constant 0
+    bool can_absorb(const IR::BFN::ParserPrimitive* prev_p,
+                    const IR::BFN::ParserPrimitive* curr_p) {
+        auto prev = prev_p->to<IR::BFN::Extract>();
+        auto curr = curr_p->to<IR::BFN::Extract>();
+        // non-extracts cannot absorb each other
+        if (!prev || !curr)
+            return false;
+        auto prev_c = prev->source->to<IR::BFN::ConstantRVal>();
+        auto curr_c = curr->source->to<IR::BFN::ConstantRVal>();
 
-       if (pc && qc) {
-           auto or_prev = *(pc->constant) | *(qc->constant);
-           if (or_prev.fitsUint64() && qc->constant->fitsUint64()) {
-               return or_prev.asUint64() == qc->constant->asUint64();
-           }
-       }
+        // for constants, check absorbtion exactly
+        if (prev_c && curr_c) {
+            // the equality has to be checked on the big-int value, otherwise we could have false
+            // negatives due to constant base mismatch
+            big_int or_prev = prev_c->constant->value | curr_c->constant->value;
+            return or_prev == curr_c->constant->value;
+        }
 
-       return false;
+        // for non-constants, a all-one value can cover anything, so allow it (this mainly covers
+        // cases when bool true is written over a non-constant value)
+        if (curr_c) {
+            auto bit_size = curr->dest->size();
+            BUG_CHECK(bit_size > 0, "Invalid bit size %1% in %2%", bit_size, curr);
+            big_int mask = (big_int(1) << bit_size) - 1;
+            return (curr_c->constant->value & mask) == mask;
+        }
+
+        // also accept or-ing anything to 0
+        return is_zero_extract(prev);
     }
 
     /// Determines whether extract @p write is postdominated by extract of the same
@@ -224,38 +316,53 @@ struct InferWriteMode : public ParserTransform {
     ///         then is_postdominated_by_extract = true
     ///      if A, D does not extract x and only one of B, C extract the field x
     ///         then is_postdominated_by_extract = false
-    bool is_postdominated_by_extract(const IR::BFN::Extract* write,
-                                     const ordered_set<const IR::BFN::Extract*>& writes) {
+    ///
+    /// This is mainly used to detect the cases where we allow unsafe rewrites on Tofino 1
+    /// (see P4C-2293).
+    bool is_postdominated_by_extract(const IR::BFN::ParserPrimitive* write,
+                                     const ordered_set<const IR::BFN::ParserPrimitive*>& writes) {
         // Get states, parser, graph
-        auto state = field_to_states.extract_to_state.at(write);
+        auto state = field_to_states.write_to_state.at(write);
         auto parser = field_to_states.state_to_parser.at(state);
         auto graph = parser_info.graph(parser);
         ordered_set<const IR::BFN::ParserState*> states;
         for (auto w : writes) {
-            auto ws = field_to_states.extract_to_state.at(w);
+            auto ws = field_to_states.write_to_state.at(w);
             states.insert(ws);
         }
 
         // Check if the state is directly postdominated by the extracts
         if (graph.is_postdominated_by_set(state, states)) {
-            ::warning("Extract %1% in state %2% is postdominated by extracts of the same field.",
-                      write->dest->field, state->name);
+            // For Tofino 1 produce a warning as this is not translated correctly, but is still
+            // allowed (see P4C-2293).
+            if (Device::currentDevice() == Device::TOFINO)
+                ::warning(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                          "Extract %1% in state %2% is postdominated by extracts of the same "
+                          "field.", write->getWriteDest()->field, state->name);
             return true;
         }
         // Check all of the loops if they have a postdomination inside
         // and also the "loop from" state is dominated by the same set
         auto lb = graph.is_loopback_reassignment(state, states);
         if (lb.first && lb.second) {
-            ::warning("Extract %1% in state %2% is postdominated by extracts of the same field "
-                      "within a loopback from %3% to %4%.",
-                      write->dest->field, state->name, lb.second->name, lb.first->name);
+            // For Tofino 1 produce a warning as this is not translated correctly, but is still
+            // allowed (see P4C-2293).
+            if (Device::currentDevice() == Device::TOFINO)
+                ::warning(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                          "Extract %1% in state %2% is postdominated by extracts of the same field "
+                          "within a loopback from %3% to %4%.",
+                          write->getWriteDest()->field, state->name, lb.second->name,
+                          lb.first->name);
             return true;
         }
         return false;
     }
 
+    /// @p strict indicates that all ovewrites should be treated as "always overwrites". This
+    /// specifically means that they will always cause error even on Tofino 1.
     CounterExample* is_bitwise_or(const PHV::Field* dest,
-                                  const ordered_set<const IR::BFN::Extract*>& writes) {
+                                  const ordered_set<const IR::BFN::ParserPrimitive*>& writes,
+                                  bool strict = false) {
         if (dest->name.endsWith("$stkvalid"))
             return nullptr;
 
@@ -263,15 +370,18 @@ struct InferWriteMode : public ParserTransform {
 
         for (auto e : writes) {
             auto prev = get_previous_writes(e, writes);
+            auto pwm = e->getWriteMode();
 
             for (auto p : prev) {
-                if (e->write_mode != IR::BFN::ParserWriteMode::BITWISE_OR && !can_absorb(p, e)) {
-                    if (Device::currentDevice() == Device::TOFINO &&
-                        is_postdominated_by_extract(p, writes)) {
-                        return new CounterExample(prev, e, true);
-                    } else {
-                        counter_example = new CounterExample(prev, e, false);
-                    }
+                if (pwm != WrMode::BITWISE_OR && !can_absorb(p, e)) {
+                    auto ce = new CounterExample(prev, e,
+                                      strict || is_postdominated_by_extract(p, writes));
+                    // Always prefer "always rewritten" counterexamples.
+                    // This is especially important on Tofino 1 where other counterexamples
+                    // are not currently considered to be errors, but it also gives better error
+                    // mesage to the user.
+                    if (counter_example == nullptr || ce->is_rewritten_always)
+                        counter_example = ce;
                 }
             }
         }
@@ -279,13 +389,13 @@ struct InferWriteMode : public ParserTransform {
         return counter_example;
     }
 
-    CounterExample* is_clear_on_write(const ordered_set<const IR::BFN::Extract*>& writes) {
+    CounterExample* is_clear_on_write(const ordered_set<const IR::BFN::ParserPrimitive*>& writes) {
         auto inits = find_inits(writes);
 
-        const IR::BFN::Extract* prev = nullptr;
+        const IR::BFN::ParserPrimitive* prev = nullptr;
 
         for (auto e : writes) {
-            if (!inits.count(e) && e->write_mode == IR::BFN::ParserWriteMode::BITWISE_OR)
+            if (!inits.count(e) && e->getWriteMode() == IR::BFN::ParserWriteMode::BITWISE_OR)
                 return new CounterExample({prev}, e);
 
             prev = e;
@@ -294,53 +404,95 @@ struct InferWriteMode : public ParserTransform {
         return nullptr;
     }
 
+    /// Check for all pairs of checksum residual deposits that can conflict with each other.
+    /// This can be a problem as these instructions have affect at the end of the parser, after
+    /// they were called in some previous state.
+    void validate_checksum_residual_deposits(const PHV::Field* field,
+            const ordered_set<const IR::BFN::ParserPrimitive*>& writes) {
+        for (auto p : writes) {
+            auto rp = p->to<IR::BFN::ChecksumResidualDeposit>();
+            if (!rp)
+                continue;
+
+            for (auto q : writes) {
+                if (p == q)
+                    break;
+                auto rq = q->to<IR::BFN::ChecksumResidualDeposit>();
+                if (!rq)
+                    continue;
+
+                auto ps = field_to_states.write_to_state.at(p);
+                auto qs = field_to_states.write_to_state.at(q);
+                auto parser = field_to_states.state_to_parser.at(ps);
+                // if one of the deposits can reach the other, we have a problem
+                if (ps == qs || parser_info.graph(parser).is_reachable(ps, qs)
+                    || parser_info.graph(parser).is_reachable(qs, ps))
+                    ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                            "%1%%2%It is not possible to deposit multiple checksum "
+                            "residuals into field %3% in states %4% and %5%. "
+                            "Either make sure the states in which you deposit cannot reach one "
+                            "another, or save the checksum residuals into separate fields",
+                            p->getSourceInfo(), q->getSourceInfo(),
+                            field->name, ps, qs);
+            }
+        }
+    }
+
     // At this time, a field's write mode is either SINGLE_WRITE or BITWISE_OR (from program
     // directly). We will try to infer the fields with multiple extracts as SINGLE_WRITE,
     // BITWISE_OR or CLEAR_ON_WRITE.
     void infer_write_mode(const PHV::Field* dest,
-                          const ordered_set<const IR::BFN::Extract*>& extracts) {
-        for (auto e : extracts) {
-            BUG_CHECK(e->write_mode != IR::BFN::ParserWriteMode::CLEAR_ON_WRITE,
+                          const ordered_set<const IR::BFN::ParserPrimitive*>& prim_writes) {
+        for (auto e : prim_writes) {
+            BUG_CHECK(e->getWriteMode() != IR::BFN::ParserWriteMode::CLEAR_ON_WRITE,
                       "field already as clear-on-write mode?");
         }
+        validate_checksum_residual_deposits(dest, prim_writes);
 
-        auto writes = exclude_zero_inits(extracts);
+        auto writes = mark_and_exclude_dead_writes(exclude_zero_inits(prim_writes));
 
         if (is_single_write(writes)) {
-            mark_write_mode(IR::BFN::ParserWriteMode::SINGLE_WRITE, dest, extracts);
+            // As a special case, we set checksum verify deposits as BITWISE_OR even if it is
+            // single write so that they can be safely packed together into one PHV.
+            if (std::all_of(writes.begin(), writes.end(),
+                    [](const IR::BFN::ParserPrimitive *pr) {
+                        return pr->is<IR::BFN::ChecksumVerify>(); })
+                    && is_bitwise_or(dest, writes, true) == nullptr)
+                mark_write_mode(IR::BFN::ParserWriteMode::BITWISE_OR, dest, prim_writes);
+            else
+                mark_write_mode(IR::BFN::ParserWriteMode::SINGLE_WRITE, dest, prim_writes);
             return;
         }
 
-        auto counter_example = is_bitwise_or(dest, writes);
+        auto or_counter_example = is_bitwise_or(dest, writes);
 
-        if (!counter_example) {
-            mark_write_mode(IR::BFN::ParserWriteMode::BITWISE_OR, dest, extracts);
-            return;
-        } else if (Device::currentDevice() == Device::TOFINO) {
-            auto ps = field_to_states.extract_to_state.at(counter_example->curr);
-
-            // This should be error instead, but downgraded because of P4C-1995
-            ::warning("Tofino does not support clear-on-write semantic on "
-                    "re-assignment to field %1% in parser state %2%. "
-                    "This may lead to a runtime-error. Try to use advance() to skip "
-                    "over the re-assigned values and only extract them once.",
-                    dest->name, ps->name);
-            print(counter_example);
+        if (!or_counter_example) {
+            mark_write_mode(IR::BFN::ParserWriteMode::BITWISE_OR, dest, prim_writes);
             return;
         }
+        auto clow_counter_example = is_clear_on_write(writes);
 
-        counter_example = is_clear_on_write(writes);
+        if (!clow_counter_example) {
+            if (Device::currentDevice() != Device::TOFINO) {
+                mark_write_mode(IR::BFN::ParserWriteMode::CLEAR_ON_WRITE, dest, prim_writes);
+            } else {
+                auto ps = field_to_states.write_to_state.at(or_counter_example->curr);
 
-        if (!counter_example) {
-            mark_write_mode(IR::BFN::ParserWriteMode::CLEAR_ON_WRITE, dest, extracts);
-            mark_dead_clear_on_writes(extracts);
+                ::warning(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                        "Tofino does not support clear-on-write semantic on re-assignment to "
+                        "field %1% in parser state %2%. Try to use advance() to skip over the"
+                        "re-assigned values and only extract them once.",
+                        dest->name, ps->name);
+                print(or_counter_example);
+                return;
+            }
         } else {
-            auto ps = field_to_states.extract_to_state.at(counter_example->curr);
+            auto ps = field_to_states.write_to_state.at(clow_counter_example->curr);
 
-            // This should be error instead, but downgraded because of P4C-1995
-            ::warning("Inconsistent parser write semantic for field %1% in parser state %2%.",
-                      dest->name, ps->name);
-            print(counter_example);
+            ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                    "Inconsistent parser write semantic for field %1% in parser state %2%.",
+                    dest->name, ps->name);
+            print(clow_counter_example);
         }
     }
 
@@ -354,32 +506,63 @@ struct InferWriteMode : public ParserTransform {
     //
     //    hdr.a.x = hdr.b.y;
     //
-    void mark_dead_clear_on_writes(const ordered_set<const IR::BFN::Extract*>& extracts) {
-        std::map<const IR::BFN::ParserState*,
-                 ordered_set<const IR::BFN::Extract*>> state_to_extracts;
+    ordered_set<const IR::BFN::ParserPrimitive*>
+    mark_and_exclude_dead_writes(const ordered_set<const IR::BFN::ParserPrimitive*>& writes) {
+        // some writes can require bitwise or (for assignments like `x = x | y`), if so, we
+        // can't eliminate dead writes
+        // also, checksum.verify() is always or-ed even when not using `x = x | ch.verify()`
+        bool forced_or = std::any_of(writes.begin(), writes.end(),
+            [this](const IR::BFN::ParserPrimitive* pr) {
+                auto dest = phv.field(pr->getWriteDest()->field);
+                return pr->getWriteMode() == WrMode::BITWISE_OR
+                    || (dest && dest->name.endsWith("$stkvalid"));
+            });
+        // we can't eliminate extracts that extract part of a byte, the extractor has byte
+        // granularity
+        // FIXME: this can be done if all extracts to the given byte are eliminated
+        bool partial = std::any_of(writes.begin(), writes.end(),
+            [this](const IR::BFN::ParserPrimitive* pr) {
+                auto range = get_extract_range(pr);
+                return range && (!range->isLoAligned() || !range->isHiAligned());
+            });
+        if (forced_or || partial)
+            return writes;
 
-        for (auto e : extracts) {
-            auto s = field_to_states.extract_to_state.at(e);
-            state_to_extracts[s].insert(e);
+        ordered_set<const IR::BFN::ParserPrimitive*> non_dead;
+        std::map<const IR::BFN::ParserState*,
+                 ordered_set<const IR::BFN::ParserPrimitive*>> state_to_writes;
+
+        for (auto e : writes) {
+            auto s = field_to_states.write_to_state.at(e);
+            state_to_writes[s].insert(e);
         }
 
-        for (auto& [state, extracts] : state_to_extracts) {
+        for (auto& [state, extracts] : state_to_writes) {
             // If more than one writes exist, the last write wins.
             // Mark all other overlapping writes as dead to be elim'd later.
             auto it = extracts.rbegin();
             auto last = it++;
             le_bitrange last_bitrange;
-            BUG_CHECK(phv.field((*last)->dest->field, &last_bitrange) != nullptr,
+            BUG_CHECK(phv.field((*last)->getWriteDest()->field, &last_bitrange) != nullptr,
                 "No PHV field for the extract");
             while (it != extracts.rend()) {
                 le_bitrange it_bitrange;
-                BUG_CHECK(phv.field((*it)->dest->field, &it_bitrange) != nullptr,
+                BUG_CHECK(phv.field((*it)->getWriteDest()->field, &it_bitrange) != nullptr,
                     "No PHV field for extract");
-                if (last_bitrange.contains(it_bitrange))
-                    dead_extracts.insert(*it);
+                // parser checksums can't be dead-write eliminated because they change also
+                // settings of the checksum unit
+                if (last_bitrange.contains(it_bitrange)
+                        && !(*it)->is<IR::BFN::ParserChecksumWritePrimitive>())
+                    dead_writes.insert(*it);
                 it++;
             }
         }
+
+        for (auto write : writes) {
+            if (dead_writes.count(write) == 0)
+                non_dead.insert(write);
+        }
+        return non_dead;
     }
 
     IR::Node* preorder(IR::BFN::Extract* extract) override {
@@ -402,13 +585,15 @@ struct InferWriteMode : public ParserTransform {
             return new IR::BFN::ParserZeroInit(new IR::BFN::FieldLVal(extract->dest->field));
         }
 
-        if (dead_extracts.count(orig)) {
+        if (dead_writes.count(orig)) {
             LOG3("removed dead extract " << extract);
             return nullptr;
         }
 
-        if (extract_to_write_mode.count(orig))
-            extract->write_mode = extract_to_write_mode.at(orig);
+        if (auto it = write_to_write_mode.find(orig); it != write_to_write_mode.end()) {
+            LOG3("Setting write mode of " << extract << " to " << it->second);
+            extract->write_mode = it->second;
+        }
 
         auto dest = phv.field(extract->dest->field);
 
@@ -418,19 +603,47 @@ struct InferWriteMode : public ParserTransform {
         return extract;
     }
 
-    profile_t init_apply(const IR::Node* root) override {
-        for (auto& kv : field_to_states.field_to_extracts) {
-            bool loop_state = false;
+    IR::Node* preorder(IR::BFN::ParserChecksumWritePrimitive* checksum_write) override {
+        // NOTE: no checksum primitives can be removed, even if they are dead as they change state
+        // of the checksum unit(s).
+        auto it = write_to_write_mode.find(getOriginal<IR::BFN::ParserChecksumWritePrimitive>());
+        if (it != write_to_write_mode.end()) {
+            LOG3("Setting write mode of " << checksum_write << " to " << it->second);
+            auto verify = checksum_write->to<IR::BFN::ChecksumVerify>();
+            if (verify && it->second == WrMode::CLEAR_ON_WRITE) {
+                ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                        "%1%Using checksum verify in direct assignment to set %2% is not "
+                        "supported when the left-hand side of the assignment can be written "
+                        "multiple times for one packet. "
+                        "To avoid silent change of behavior, the result of checksum.verify() can "
+                        "only be written as logical or bitwise OR to accumulate multiple errors."
+                        "%3%",
+                        checksum_write->getSourceInfo(),
+                        cstring::to_cstring(checksum_write->getWriteDest()),
+                        CHECKSUM_VERIFY_OR_SUGGESTION);
+            }
+            checksum_write->write_mode = it->second;
+        }
+        return checksum_write;
+    }
 
-            for (auto s : field_to_states.field_to_parser_states.at(kv.first)) {
+    profile_t init_apply(const IR::Node* root) override {
+        LOG9("Inferring write modes on\n" << root);
+        for (auto& [field, writes] : field_to_states.field_to_writes) {
+            // if state is strided, it will use offset_inc in the BFA and that means it will use
+            // parser counter to place the later writes into following stack position/following
+            // PHV fields
+            bool stride = false;
+
+            for (auto s : field_to_states.field_to_parser_states.at(field)) {
                 if (s->stride) {
-                    loop_state = true;
+                    stride = true;
                     break;
                 }
             }
 
-            if (!loop_state)
-                infer_write_mode(kv.first, kv.second);
+            if (!stride)
+                infer_write_mode(field, writes);
         }
 
         return ParserTransform::init_apply(root);
@@ -443,60 +656,205 @@ struct CheckWriteModeConsistency : public ParserTransform {
     const PhvInfo& phv;
     const MapFieldToParserStates& field_to_states;
 
-    std::map<const IR::BFN::Extract*, IR::BFN::ParserWriteMode> extract_to_write_mode;
+    std::map<int, IR::BFN::ParserWriteMode> field_to_write_mode;
 
     CheckWriteModeConsistency(const PhvInfo& p,
                               const MapFieldToParserStates& fs) :
         phv(p), field_to_states(fs) { }
 
-    void check(const ordered_set<const IR::BFN::Extract*>& extracts) {
-        const IR::BFN::Extract* prev = nullptr;
+    void check(const ordered_set<const IR::BFN::ParserPrimitive*>& state_writes) {
+        // Find all extracts that stard/end in mid byte and add them to a map by the partial byte
+        // they create.
+        // Ideally, we would check together only fields that actually lead to the same PHV. But
+        // this would require doing this analysis only after fields are sliced and PHV allocated.
+        // That currently cannot be done as the PHV allocation uses write modes as input.
+        // A proper solution might be to integrate this check/modification of write modes to PHV
+        // allocation.
+        //
+        // Meanwhile, we approximate by looking for generations of extracted bits -- we go over
+        // the extracts in the order they appear in the state and every time we encounter bit that
+        // is not higher than the last already extracted, we start a new generation of extracts.
+        // Then we only look for conflicts within the same generation. This should resolve code
+        // like pkt.extract(hdrs.a)
+        // meta.x = pkt.hdr.a.x
+        // that does actually generate two extracts of `x` to different fields.
+        // NOTE: the ranges coming from one P4 extract may not be consecutive due to dead-extract
+        // elimination.
+        std::map<int, std::map<int, std::vector<const IR::BFN::Extract*>>> byte_to_extract;
+        int last_bit = -1;
+        int generation = 0;
 
-        for (auto curr : extracts) {
-            if (prev) {
-                auto a = prev->source->to<IR::BFN::InputBufferRVal>();
-                auto b = curr->source->to<IR::BFN::InputBufferRVal>();
+        for (auto curr_w : state_writes) {
+            auto range = get_extract_range(curr_w);
+            if (!range)
+                continue;
+            if (range->lo <= last_bit)
+                ++generation;
+            last_bit = range->hi;
 
-                if (a && b) {
-                    if (prev->write_mode != curr->write_mode) {
-                        if (a->range.hi / 8 == b->range.lo / 8) {
-                            auto curr_dest = phv.field(curr->dest->field);
-                            auto prev_dest = phv.field(prev->dest->field);
+            auto curr = curr_w->to<IR::BFN::Extract>();
+            BUG_CHECK(curr, "Somehow we got range for non-extract");
+            if (!range->isLoAligned())
+                byte_to_extract[range->loByte()][generation].push_back(curr);
+            if (!range->isHiAligned())
+                byte_to_extract[range->hiByte()][generation].push_back(curr);
+        }
 
-                            if (curr_dest->padding || prev_dest->padding) {
-                                if (curr_dest->padding)
-                                    extract_to_write_mode[prev] = curr->write_mode;
-                                else
-                                    extract_to_write_mode[curr] = prev->write_mode;
-                            } else {
-                                ::error("%1% and %2% share the same byte on the wire but"
-                                        " have conflicting parser write semantics.",
-                                         curr_dest->name, prev_dest->name);
-                            }
+        LOG9("CWMC: checking state:");
+        for (auto &by_byte : byte_to_extract) {
+            LOG9("  bit " << by_byte.first);
+            for (auto &by_gen : by_byte.second) {
+                LOG9("    generation " << by_gen.first << ": "
+                     << by_gen.second.size() << " extracts");
+                auto extracts = by_gen.second;
+                if (extracts.size() == 1)
+                    continue;
+
+                WrMode first_mode = extracts[0]->write_mode;
+                bool consistent = std::all_of(extracts.begin(), extracts.end(),
+                        [=](const IR::BFN::Extract* e) {
+                            LOG9("      extract " << e << " " << e->write_mode);
+                            return e->write_mode == first_mode;
+                        });
+
+
+                if (consistent)
+                    continue;
+
+                // not consistent, let's look if this can be fixed
+                // * padding fields don't matter, calculate what mode can be used without them
+                bool bitwise_or = false;
+                bool clear_on_write = false;
+                bool has_non_padding = false;
+                consistent = true;
+                int inconsistent_index = -1;
+
+                for (auto &e : extracts) {
+                    auto dest = phv.field(e->dest->field);
+                    if (dest->padding)
+                        continue;
+                    // it may happen that the first one is a padding
+                    if (!has_non_padding) {
+                        first_mode = e->write_mode;
+                        has_non_padding = true;
+                    }
+
+                    if (consistent && e->write_mode != first_mode) {
+                        inconsistent_index = &e - extracts.data();
+                        consistent = false;
+                    }
+                    bitwise_or |= e->write_mode == WrMode::BITWISE_OR;
+                    clear_on_write |= e->write_mode == WrMode::CLEAR_ON_WRITE;
+                }
+
+                // and set padding mode to match the rest of fields, clearly it is not SINGLE_WRITE,
+                // otherwise we would have no problem
+                LOG3("CWMC: Setting write mode of padding fields extracted together with "
+                     << extracts[inconsistent_index] << ".");
+                for (auto e : extracts) {
+                    auto dest = phv.field(e->dest->field);
+                    LOG9("    - " << e << " -> " << dest);
+                    if (dest->padding)
+                        field_to_write_mode[dest->id] = clear_on_write ? WrMode::CLEAR_ON_WRITE
+                                                                   : WrMode::BITWISE_OR;
+                }
+
+                if (consistent)  // with padding
+                    continue;
+
+                // * if we have no CLEAR_ON_WRITE for non-padding fields, we can maybe set all
+                //   fields to BITWISE_OR mode if
+                //   - all SINGLE_WRITE fields are actually set only once (therefore we are not
+                //     hiding a runtime error)
+                //   - all other writes of the BITWISE_OR fields are either constant, or result of
+                //     checksum.verify() and therefore they can guarantee bytes other than ones
+                //     corresponding to the field in question will not be set
+                if (!clear_on_write) {
+                    auto writes_safe = true;
+                    for (auto e : extracts) {
+                        auto dest = phv.field(e->dest->field);
+                        if (dest->padding)
+                            continue;
+                        // all writes to the same field as extract `e`
+                        auto e_writes = field_to_states.field_to_writes.at(dest);
+                        if (e->write_mode == WrMode::BITWISE_OR) {
+                            // it is safe if all other writes are constant or checksum.verify()
+                            writes_safe &= std::all_of(
+                                e_writes.begin(), e_writes.end(),
+                                [e](const IR::BFN::ParserPrimitive* wr) {
+                                    return wr == e || wr->is<IR::BFN::ChecksumVerify>()
+                                        || is_constant_extract(wr);
+                                });
+                        } else {  // SINGLE_WRITE
+                            // check that there is actually only one write
+                            writes_safe &= e_writes.size() == 1;
                         }
+                        if (!writes_safe)
+                            break;
+                    }
+                    if (writes_safe) {
+                        LOG3("CWMC: Setting all fields extracted together with "
+                             << extracts[inconsistent_index] << " as BITWISE_OR.");
+                        for (auto e : extracts) {
+                            auto dest = phv.field(e->dest->field);
+                            LOG9("    - " << e << " -> " << dest);
+                            field_to_write_mode[dest->id] = WrMode::BITWISE_OR;
+                        }
+                        continue;  // no error
                     }
                 }
-            }
 
-            prev = curr;
+                std::stringstream modes;
+                modes << "The following fields are packed into a single byte: ";
+                const char *sep = "";
+                for (auto e : extracts) {
+                    auto dest = phv.field(e->dest->field);
+                    modes << sep << dest->name << " (" << cstring::to_cstring(e->write_mode)
+                          << (dest->padding ? ", padding" : "") << ")";
+                    sep = ", ";
+                }
+                modes << ".";
+
+                ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                        "%3%%4%%1% and %2% share the same byte on the wire but"
+                        " have conflicting parser write semantics.\n    %5%",
+                        phv.field(extracts[inconsistent_index - 1]->dest->field)->name,
+                        phv.field(extracts[inconsistent_index]->dest->field)->name,
+                        extracts[inconsistent_index - 1]->getSourceInfo(),
+                        clear_if_same(extracts[inconsistent_index]->getSourceInfo(),
+                                      extracts[inconsistent_index - 1]->getSourceInfo()),
+                        modes.str());
+            }
         }
     }
 
     profile_t init_apply(const IR::Node* root) override {
-        for (auto& kv : field_to_states.state_to_extracts) {
-            check(kv.second);
+        for (auto& [state, writes] : field_to_states.state_to_writes) {
+            check(writes);
         }
 
         return ParserTransform::init_apply(root);
     }
 
     IR::Node* preorder(IR::BFN::Extract* extract) override {
-        auto orig = getOriginal<IR::BFN::Extract>();
+        return set_write_mode(extract);
+    }
 
-        if (extract_to_write_mode.count(orig))
-            extract->write_mode = extract_to_write_mode.at(orig);
+    IR::Node* preorder(IR::BFN::ParserChecksumWritePrimitive* pcw) override {
+        return set_write_mode(pcw);
+    }
 
-        return extract;
+    template<typename T>
+    IR::Node* set_write_mode(T *write) {
+        auto dest = phv.field(write->getWriteDest()->field);
+
+        auto it = field_to_write_mode.find(dest->id);
+        if (it != field_to_write_mode.end()) {
+            LOG4("CWMC: Setting write mode of " << write << " to " << it->second);
+            write->write_mode = it->second;
+        }
+
+        return write;
     }
 };
 

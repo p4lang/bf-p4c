@@ -1,0 +1,17 @@
+packet 0 ffff
+expect 0 ffff
+
+packet 0 0a1affff
+expect 0 0a1affff
+
+# the last bit of second word get set to 0 = checksum was valid
+packet 0 0a19 0b1b eacb
+expect 2 0a19 0b1a eacb 0000
+
+# the last bit of second word changed to 1 = checksum was invalid
+packet 0 1a19 0b1a 0c11
+expect 2 1a19 0b1b 0c11 ffff
+
+# the last bit of second word changed to 1 = checksum was invalid
+packet 0 2a19 0b1a 0c31
+expect 2 2a19 0b1b 0c31 ffff

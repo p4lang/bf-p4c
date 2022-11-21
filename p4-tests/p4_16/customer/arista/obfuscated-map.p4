@@ -8,6 +8,7 @@
 
 @pa_auto_init_metadata
 @pa_container_size("ingress" , "Lindy.Monrovia.Tallassee" , 16)
+@pa_container_size("ingress" , "Brady.Humeston.Kalkaska", 8)
 @pa_atomic("ingress" , "Brady.Circle.Onycha")
 @gfm_parity_enable
 @pa_alias("ingress" , "Lindy.Hookdale.Dassel" , "Brady.Lookeba.Linden")

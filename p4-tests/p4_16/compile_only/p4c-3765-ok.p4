@@ -1524,11 +1524,11 @@ parser PacketParser(packet_in pkt,
     }
 
     state parse_ipv6 {
-        pkt.extract(hdr.ipv6);
-
-        parser_md.l4_protocol = hdr.ipv6.next_hdr;
-
-        transition select(hdr.ipv6.next_hdr) {
+        // P4C-4686: modified this to be lookahead & moved extract hdr.ipv6 to the children to
+        // allow assigning parser_md.l4_protocol only once. The overwrite that existed previously
+        // cannot be implemented on Tofino 1 as it has no CLEAR_ON_WRITE modifying writes in
+        // parser.
+        transition select(pkt.lookahead<ipv6_h>().next_hdr) {
             ip_proto_t.HOPOPT : parse_ipv6_ext;
             ip_proto_t.IPV6_OPTS : parse_ipv6_ext;
             ip_proto_t.IPV6_FRAGMENT : parse_ipv6_frag_ext;
@@ -1540,6 +1540,7 @@ parser PacketParser(packet_in pkt,
     }
 
     state parse_ipv6_frag_ext {
+        pkt.extract(hdr.ipv6);
         pkt.extract(hdr.ipv6_ext_hdr);
         parser_md.l4_protocol = hdr.ipv6_ext_hdr.next_hdr;
 
@@ -1551,6 +1552,7 @@ parser PacketParser(packet_in pkt,
     }
 
     state parse_ipv6_ext {
+        pkt.extract(hdr.ipv6);
         pkt.extract(hdr.ipv6_ext_hdr);
         parser_md.l4_protocol = hdr.ipv6_ext_hdr.next_hdr;
 
@@ -1624,6 +1626,8 @@ parser PacketParser(packet_in pkt,
     }
 
     state parse_ipv6_no_ext {
+        pkt.extract(hdr.ipv6);
+        parser_md.l4_protocol = hdr.ipv6.next_hdr;
         transition parse_ipv6_after_ext;
     }
 
