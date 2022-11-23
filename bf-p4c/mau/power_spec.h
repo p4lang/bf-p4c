@@ -135,9 +135,6 @@ class JBayMauPowerSpec : public MauPowerSpec {
  public:
   JBayMauPowerSpec() { }
 
-  /**
-    * FIXME: Scaled Tofino by 1.3, but do not know value yet.
-    */
   double get_max_power() const override { return 52.0; }
   double get_excess_power_threshold() const override { return 10.0; }
   double get_absolute_max_power_threshold() const override { return 10.0; }
@@ -240,15 +237,34 @@ class JBayUMauPowerSpec : public JBayMauPowerSpec {
 
 #if HAVE_CLOUDBREAK
 /**
-  * FIXME: Once library models are available, we can update the Cloudbreak
+  * Power values scaled to 1.26 GHz from Jbay at 1.5 GHz
+  * NOTE: Once library models are available, we can update the Cloudbreak
   * power values.  For now, just have this map to JBay 20-stage device.
   */
 class CloudbreakMauPowerSpec : public JBayMauPowerSpec {
  public:
   CloudbreakMauPowerSpec() { }
-  double get_max_power() const override { return 1e9; }  // essentially unlimited for now
-  double get_excess_power_threshold() const override { return 1e9; }
+
+  // TBD: Could be set to 80W in future.
+  double get_max_power() const override { return 87; }  // P4C-5902
+
+  // Power nos are for 1.26 GHz PPS (Clock freq of MAU)
+  double get_ram_read_power() const override {
+    return (1.26 / 1.5) * 0.0166 * get_ram_scaling_factor(); }
+  double get_ram_write_power() const override {
+    return (1.26 / 1.5) * 0.0176 * get_ram_scaling_factor(); }
+  double get_tcam_search_power() const override {
+    return (1.26 / 1.5) * 0.0185 * get_tcam_scaling_factor(); }
+  double get_map_ram_read_power() const override {
+    return (1.26 / 1.5) * 0.0027 * get_ram_scaling_factor(); }
+  double get_map_ram_write_power() const override {
+    return (1.26 / 1.5) * 0.0030 * get_ram_scaling_factor(); }
+  double get_deferred_ram_read_power() const override {
+    return (1.26 / 1.5) * 0.0025 * get_ram_scaling_factor(); }
+  double get_deferred_ram_write_power() const override {
+    return (1.26 / 1.5) * 0.0024 * get_ram_scaling_factor(); }
 };
+
 #endif  /* HAVE_CLOUDBREAK */
 
 #if HAVE_FLATROCK

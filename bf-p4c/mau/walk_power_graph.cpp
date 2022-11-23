@@ -972,7 +972,10 @@ void WalkPowerGraph::print_worst_power(std::ofstream& out) const {
   double all_power = 0.0;
   for (auto p : gress_powers_) {
     all_power += p.second; }
-  out << "Total worst case power: " << float2str(all_power) << " W" << std::endl;
+  out << "Total worst case power (" << Device::numPipes() << " pipes) : ";
+  out << float2str(all_power) << " W" << std::endl;
+  out << "Total worst case power (per pipe) : ";
+  out << float2str(all_power / (double)Device::numPipes()) << " W" << std::endl;
   out << "Input packets per second load : " << options_.traffic_limit << "%" << std::endl;
 }
 
