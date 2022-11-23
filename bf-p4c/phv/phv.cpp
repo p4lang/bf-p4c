@@ -142,10 +142,16 @@ bool LiveRange::is_disjoint(const LiveRange& other) const {
 
 
 void LiveRange::extend(const StageAndAccess& access) {
-    if (access < start) {
+    if (access.first < start.first) {
         start = access;
-    } else if (end < access) {
+    } else if (end.first < access.first) {
         end = access;
+    }
+    if (access.first == start.first) {
+        start.second |= access.second;
+    }
+    if (access.first == end.first) {
+        end.second |= access.second;
     }
 }
 

@@ -226,7 +226,11 @@ class FieldUse {
     unsigned use_;
 
  public:
-    enum use_t { READ = 1, WRITE = 2, READWRITE = 3, LIVE = 4 };
+    enum use_t {
+        READ = 1,
+        WRITE = 2,
+        READWRITE = READ | WRITE,
+        LIVE = 4 };
 
     // Construct an empty use, which is neither read, write, or live.
     FieldUse() : use_(0) { }
@@ -234,12 +238,14 @@ class FieldUse {
     // Construct a FieldUse object, given a specific kind of use.
     explicit FieldUse(unsigned u) {
         BUG_CHECK(u == READ || u == WRITE || u == READWRITE || u == LIVE,
-                  "Invalid read value %1% used to create a FieldUse object. Valid values are "
+                  "Invalid value %1% used to create a FieldUse object. Valid values are "
                   "1: READ, 2: WRITE, 3: READWRITE, 4: LIVE", u);
         use_ = u;
     }
 
     bool isRead() const { return use_ & READ; }
+    bool isOnlyReadAndNotLive() const { return use_ == READ; }
+    bool isOnlyWriteAndNotLive() const { return use_ == WRITE; }
     bool isWrite() const { return use_ & WRITE; }
     bool isLive() const { return use_ & LIVE; }
     bool isReadWrite() const { return use_ & READWRITE; }
@@ -255,17 +261,20 @@ class FieldUse {
     FieldUse operator|(const FieldUse& u) const {
         FieldUse ru;
         ru.use_ = use_ | u.use_;
+        BUG_CHECK(ru.use_ <= (READWRITE | LIVE), "invalid use of FieldUse %1%", ru.use_);
         return ru;
     }
 
     FieldUse& operator|=(const FieldUse& u) {
         use_ |= u.use_;
+        BUG_CHECK(use_ <= (READWRITE | LIVE), "invalid use of FieldUse%1%", use_);
         return *this;
     }
 
     FieldUse operator&(const FieldUse& u) const {
         FieldUse ru;
         ru.use_ = use_ & u.use_;
+        BUG_CHECK(ru.use_ <= (READWRITE | LIVE), "invalid use of FieldUse%1%", ru.use_);
         return ru;
     }
 

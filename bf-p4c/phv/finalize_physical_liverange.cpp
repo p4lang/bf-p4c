@@ -115,6 +115,43 @@ void FinalizePhysicalLiverange::mark_access(const PHV::Field* f, le_bitrange bit
     }
 }
 
+// The reason to find all of extract 2^n to xxx.$stkvalid is that, in ValidToStkvalid
+// IR::Node* postorder(IR::BFN::Extract* extract), it did an irreversible alias replacement.
+// All of `extract 1 to xxx[n].$valid` is replaced by `extract 2^n to xxx.$stkvalid`. And later on
+// ReinstateAliasSources does not recover this part of replacement. I have tried to replace all
+// `extract 2^n to xxx.$stkvalid` to `extract 1 to xxx[n].$valid` in ReinstateAliasSources, but it
+// breaks parser and causes stf failures. Therefore, I need to recover this part of live range
+// information here. Once I see a `extract 2^n to xxx.$stkvalid`, I construct a `xxx[n].valid` expr
+// and mark field as being written in parser. As for xxx.$stkvalid's live range, it is captured in
+// FinalizePhysicalLiverange::preorder(const IR::Expression* e).
+bool FinalizePhysicalLiverange::preorder(const IR::BFN::Extract* extract) {
+    auto* fieldLVal = extract->dest->to<IR::BFN::FieldLVal>();
+    if (!fieldLVal) return true;
+    auto* member = fieldLVal->field->to<IR::Member>();
+    if (!member) return true;
+    if (member->member.toString() != "$stkvalid") return true;
+    auto* src = extract->source->to<IR::BFN::ConstantRVal>();
+    BUG_CHECK(src, "extract non-constant to validity bit");
+    auto src_value = bitvec(src->constant->asInt());
+    // make sure value is power of 2
+    BUG_CHECK(src_value.popcount() == 1, "extract non power of 2 to $stkvalid");
+    auto valid_bit_index = src_value.max().index();
+    // prepare the valid bit expression as xxx[n].$valid
+    auto valid_bit_expr = new IR::Member(
+        new IR::Type_Bits(1, false),
+        new IR::HeaderStackItemRef(member->expr, new IR::Constant(valid_bit_index)),
+        IR::ID("$valid"));
+    const auto* unit = findContext<IR::BFN::Unit>();
+    le_bitrange bits;
+    auto f = phv_i.field(valid_bit_expr, &bits);
+    if (!f) return true;
+    const bool allow_unallocated = unit->is<IR::BFN::ParserState>()
+        || unit->is<IR::BFN::Parser>()
+        || unit->is<IR::BFN::GhostParser>();
+    mark_access(f, bits, unit, true, allow_unallocated);
+    return true;
+}
+
 bool FinalizePhysicalLiverange::preorder(const IR::Expression* e) {
     LOG5("FinalizePhysicalLiverange preorder : " << e);;
     le_bitrange bits;
@@ -167,6 +204,7 @@ void FinalizePhysicalLiverange::end_apply() {
 
     // update AllocSlices' live range.
     for (auto& f : phv_i) {
+        bool have_read_to_read_live_range = false;
         for (auto& slice : f.get_alloc()) {
             BUG_CHECK(
                 slice.isPhysicalStageBased(),
@@ -180,12 +218,79 @@ void FinalizePhysicalLiverange::end_apply() {
             if (!live_ranges_i.count(slice)) {
                 LOG1("Found allocated but unreferenced AllocSlice: " << slice);
             } else {
+                if (slice.getEarliestLiveness().second.isOnlyReadAndNotLive() &&
+                    slice.getLatestLiveness().second.isOnlyReadAndNotLive()) {
+                    have_read_to_read_live_range = true;
+                }
                 const auto old = LiveRange(slice.getEarliestLiveness(), slice.getLatestLiveness());
                 const auto& updated = live_ranges_i.at(slice);
                 LOG3("Finalizing " << old << " => " << updated << " : " << slice);
                 slice.setLiveness(updated.start, updated.end);
             }
         }
+
+        // A corner case is that table a has a instruction a = a | 1 and a is uninitialized and
+        // deparser reads a. Then there will be two live ranges, first is a read to read live range
+        // (from table a to table a) and second is a normal write to read live range(from table a
+        // to deparser). If table a is allocated to stage 0, 1 and 2, then after finalizing physical
+        // live range, these two live ranges will become [0r, 2r] and [0w, deparser]. And this is
+        // invalid, because AllocSlice should not have overlapping live ranges. To fix it,
+        // the first live range should become [0r, 0r], because it is an invalid live range at first
+        // place and shrinking this live range will cause no damage, because the second will access
+        // stage 1 and 2.
+        if (have_read_to_read_live_range) {
+            bitvec normal_live_range;
+            // It fills the bitvec with all normal live ranges. This bitvec keeps tracks of the
+            // read status of the live range. If stage 1 is marked as occupied, it means that it
+            // is possible that this fieldslice is read on stage 1. For the example I used in
+            // the comment, the normal live range is [0w, deparser], I will fill stage 1 to the
+            // end as occupied. The reason not to fill stage 0 is because in the calculation I
+            // only care about read. [0w, deparser] means that is not read on stage 0, but
+            // possibly being read on stage 1 onwards. And [..., 0r] and [0w, ...] do not count
+            // for overlapping live range, because in tofino, it always reads then writes a
+            // fieldslice.
+            for (auto& slice : f.get_alloc()) {
+                if (!(slice.getEarliestLiveness().second.isOnlyReadAndNotLive() &&
+                    slice.getLatestLiveness().second.isOnlyReadAndNotLive())) {
+                    normal_live_range.setrange(slice.getEarliestLiveness().first + 1,
+                        slice.getLatestLiveness().first - slice.getEarliestLiveness().first);
+                }
+            }
+            // It fills a bitvec for every read to read live range, calculates the live range that
+            // is not overlapping with the normal live range and updates the live range. The reason
+            // that the read to read live range can be shrunk arbitrarily(from [0r, 2r] to [0r, 0r])
+            // is because read to read live range is generated due to uninitialized read and
+            // hardware can have random behavior for uninitialized read. The part that strictly
+            // checks read/write access is in assembler. If assembler sees a field is read on
+            // stage x(even it is an uninitialized read), but phv definition in bfa file does not
+            // correctly define the live range to include stage x, it will complain. Therefore, we
+            // give uninitialized read a seemingly correct live range so that assembler can pass the
+            // check. As long as there is a normal live range reading the value on the stage (in
+            // this case, it is stage 1, 2) that is also included in read to read live range, read
+            // to read live range can remove this stage from its live range, since the read access
+            // will be correctly represented in bfa file by the normal live range.
+            for (auto& slice : f.get_alloc()) {
+                // only consider uninit read on table that is allocated on multiple stages.
+                if (slice.getEarliestLiveness().second.isOnlyReadAndNotLive() &&
+                    slice.getLatestLiveness().second.isOnlyReadAndNotLive() &&
+                    (slice.getEarliestLiveness().first < slice.getLatestLiveness().first)) {
+                    bitvec uninit_read_range(
+                        slice.getEarliestLiveness().first,
+                        slice.getLatestLiveness().first - slice.getEarliestLiveness().first + 1);
+                    if (uninit_read_range.intersects(normal_live_range)) {
+                        uninit_read_range =
+                            (uninit_read_range ^ normal_live_range) & uninit_read_range;
+                    }
+                    BUG_CHECK(uninit_read_range.popcount() > 0,
+                        "uninit read live range should not be totally eliminated");
+                    BUG_CHECK(uninit_read_range.is_contiguous(),
+                        "uninit read live range should be contiguous");
+                    slice.setLiveness({uninit_read_range.min().index(), FieldUse(FieldUse::READ)},
+                        {uninit_read_range.max().index(), FieldUse(FieldUse::READ)});
+                }
+            }
+        }
+
         // sort alloc by MSB and earliest live range.
         f.sort_alloc();
     }

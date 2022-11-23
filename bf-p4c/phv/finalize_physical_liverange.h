@@ -64,6 +64,8 @@ class FinalizePhysicalLiverange : public Inspector, TofinoWriteContext {
         return true;
     }
 
+    bool preorder(const IR::BFN::Extract *extract) override;
+
     /// collect table to stages.
     bool preorder(const IR::MAU::Table* t) override;
 

@@ -240,7 +240,7 @@ bool AllocSlice::isLiveAt(int stage, const FieldUse& use) const {
         // physical live range, all AllocSlice live range starts with read or write
         // and must end with read. Also, no AllocSlice will have overlapped live range.
         const int actual_stage = use.isWrite() ? stage + 1 : stage;
-        const int start = min_stage_i.second.isWrite() ? min_stage_i.first + 1 : min_stage_i.first;
+        const int start = min_stage_i.second.isRead() ? min_stage_i.first : min_stage_i.first + 1;
         // XXX(yumin): Unfortunately we will still have tail-write field slices (liverange ends with
         // a write), until we implement fieldslice-level defuse and deadcode-elim.
         // Example case in P4C-4050:

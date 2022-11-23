@@ -247,12 +247,12 @@ void emit_stage_phv_field(std::ostream& out, PHV::Field* field, const LiveRangeR
                 BFNContext::get().options().alt_phv_alloc) {
                 if (alloc.getEarliestLiveness().first == -1)
                     min_stage = 0;
-                else if (alloc.getEarliestLiveness().second == PHV::FieldUse(PHV::FieldUse::WRITE))
+                else if (alloc.getEarliestLiveness().second.isWrite())
                     min_stage = alloc.getEarliestLiveness().first + 1;
                 else
                     min_stage = alloc.getEarliestLiveness().first;
 
-                if (alloc.getLatestLiveness().second == PHV::FieldUse(PHV::FieldUse::WRITE) &&
+                if (alloc.getLatestLiveness().second.isWrite() &&
                     alloc.getLatestLiveness().first != lr_report->get_max_stages())
                     max_stage = alloc.getLatestLiveness().first + 1;
                 else
