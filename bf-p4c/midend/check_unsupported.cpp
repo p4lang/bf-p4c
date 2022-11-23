@@ -85,7 +85,8 @@ void CheckUnsupported::postorder(const IR::P4Table* const table_ptr) {
                        " entries.  The resulting product (" << table_size_times_total_TCAM_key_bits
                        << ") exceeds the maximum supported size (" << inclusive_max_size_in_bits
                        << ") for tables with ternary keys on the current target.  "
-                       "Largest usable table size: " << max_table_size << " entries.";
+                       "This table cannot possibly fit on the target when configured with "
+                       "more than " << max_table_size << " entries.";
 
                 /* // safe code
                    // ---------

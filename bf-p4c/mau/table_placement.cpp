@@ -2434,10 +2434,11 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
     // attached_entries_t initial_attached_entries = rv->attached_entries;
     int initial_stage_split = rv->stage_split;
 
-    LOG3("  Initial stage is " << rv->stage << ", initial entries is " << rv->entries);
-    LOG4("    furthest stage : " << furthest_stage << ", initial att entires : "
+    LOG3("  Initial # of stages is " << rv->stage << ", initial # of entries is " << rv->entries);
+    LOG4("    furthest stage: " << furthest_stage << ", initial # of attached entries: "
             << initial_attached_entries);
-    BUG_CHECK(rv->stage < 100, "too many stages");
+
+    if (rv->stage >= 100)  ::fatal_error("too many stages: %1", rv->stage);
 
     auto *min_placed = new Placed(*rv);
     if (min_placed->entries > 1)
