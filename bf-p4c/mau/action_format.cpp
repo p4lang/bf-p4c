@@ -2898,7 +2898,8 @@ bool Format::analyze_actions(FormatType_t format_type) {
         // If the split parameters exist within the PHV allocation, then add the objects
         // to the IR action in order to correctly understand the split action
         auto *act_to_analyze = att_info.get_split_action(action, tbl, format_type);
-        act_to_analyze->apply(aa);
+        if (act_to_analyze)
+            act_to_analyze->apply(aa);
         create_alu_ops_for_action(container_actions_map, action->name);
     }
 

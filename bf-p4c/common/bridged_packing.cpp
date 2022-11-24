@@ -289,6 +289,10 @@ bool CollectConstraints::preorder(const IR::HeaderOrMetadata* hdr) {
 }
 
 bool CollectConstraints::preorder(const IR::BFN::DigestFieldList* fl) {
+    /// TODO when does a field list not have a type?
+    if (!fl->type)
+        return false;
+
     ordered_set<const PHV::Field*> flexible_fields;
     auto iter = fl->sources.begin();
     forAllMatchingDoPostOrder<IR::StructField>(fl->type,
