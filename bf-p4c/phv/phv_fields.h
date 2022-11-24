@@ -1356,7 +1356,7 @@ class PhvInfo {
     ordered_map<cstring, StructInfo>               simple_headers;
 
     /// Mapping from containers to the fields using those containers.
-    std::map<PHV::Container, ordered_set<const PHV::Field *>> container_to_fields;
+    assoc::hash_map<PHV::Container, ordered_set<const PHV::Field *>> container_to_fields;
 
     /// the dummy padding field names.
     ordered_set<cstring> dummyPaddingNames;

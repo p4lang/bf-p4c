@@ -156,6 +156,13 @@ class Type {
         return false;
     }
 
+    friend size_t hash_value(const Type& c) {
+        size_t h = 0;
+        boost::hash_combine(h, c.kind_);
+        boost::hash_combine(h, c.size_);
+        return h;
+    }
+
     bool valid() const { return size_ != Size::null; }
 
     /// @return a string representation of this container type.
@@ -210,6 +217,13 @@ class Container {
         if (index_ < c.index_) return true;
         if (c.index_ < index_) return false;
         return false; }
+
+    friend size_t hash_value(const Container& c) {
+        size_t h = 0;
+        boost::hash_combine(h, c.type_);
+        boost::hash_combine(h, c.index_);
+        return h;
+    }
 
     /// JSON serialization/deserialization.
     void toJSON(JSONGenerator& json) const;

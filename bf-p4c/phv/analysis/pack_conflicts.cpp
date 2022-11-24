@@ -221,14 +221,14 @@ unsigned PackConflicts::size() const {
     return phv.sizeFieldNoPack();
 }
 
-void PackConflicts::removePackConflict(const PHV::FieldSlice fs1, const PHV::FieldSlice fs2) {
+void PackConflicts::removePackConflict(const PHV::FieldSlice& fs1, const PHV::FieldSlice& fs2) {
     phv.removeFieldNoPack(fs1.field(), fs2.field());
     if (!fieldslice_to_id.count(fs1)) return;
     if (!fieldslice_to_id.count(fs2)) return;
     fieldslice_no_pack_i(fieldslice_to_id[fs1], fieldslice_to_id[fs2]) = false;
 }
 
-void PackConflicts::addPackConflict(const PHV::FieldSlice fs1, const PHV::FieldSlice fs2) {
+void PackConflicts::addPackConflict(const PHV::FieldSlice& fs1, const PHV::FieldSlice& fs2) {
     LOG6("add Pack Conflict " << fs1 << " and " << fs2);
     phv.addFieldNoPack(fs1.field(), fs2.field());
 
@@ -240,28 +240,20 @@ void PackConflicts::addPackConflict(const PHV::FieldSlice fs1, const PHV::FieldS
     fieldslice_no_pack_i(fieldslice_to_id[fs1], fieldslice_to_id[fs2]) = true;
 }
 
-bool PackConflicts::hasPackConflict(const PHV::FieldSlice fs1, const PHV::FieldSlice fs2) const {
+bool PackConflicts::hasPackConflict(const PHV::FieldSlice& fs1, const PHV::FieldSlice& fs2) const {
     LOG6(this << " PackConflict:" << " - Checking for " << fs1 << " and " << fs2 << " )");
     if (!field_fine_slices.count(fs1.field())) return false;
     if (!field_fine_slices.count(fs2.field())) return false;
-    assoc::hash_set<PHV::FieldSlice> fs1_overlapped_fss;
-    for (auto range : field_fine_slices.at(fs1.field())) {
-        if (range.overlaps(fs1.range()))
-            fs1_overlapped_fss.insert(PHV::FieldSlice(fs1.field(), range));
-    }
 
-    assoc::hash_set<PHV::FieldSlice> fs2_overlapped_fss;
-    for (auto range : field_fine_slices.at(fs2.field())) {
-        if (range.overlaps(fs2.range()))
-            fs2_overlapped_fss.insert(PHV::FieldSlice(fs2.field(), range));
-    }
-
-    // We can iterate fs1/2_overlapped_fss in any order - a pack conflict is
-    // either found or not, regardless of the iteration order.
-    for (auto fs1_overlapped_fs : fs1_overlapped_fss.unstable_iterable()) {
-        for (auto fs2_overlapped_fs : fs2_overlapped_fss.unstable_iterable()) {
-            if (fieldslice_no_pack_i(fieldslice_to_id.at(fs1_overlapped_fs),
-                fieldslice_to_id.at(fs2_overlapped_fs))) {
+    for (auto range1 : field_fine_slices.at(fs1.field())) {
+        if (!range1.overlaps(fs1.range())) continue;
+        auto fs1_overlapped_fs = PHV::FieldSlice(fs1.field(), range1);
+        int fs1_overlapped_id = fieldslice_to_id.at(fs1_overlapped_fs);
+        for (auto range2 : field_fine_slices.at(fs2.field())) {
+            if (!range2.overlaps(fs2.range())) continue;
+            auto fs2_overlapped_fs = PHV::FieldSlice(fs2.field(), range2);
+            int fs2_overlapped_id = fieldslice_to_id.at(fs2_overlapped_fs);
+            if (fieldslice_no_pack_i(fs1_overlapped_id, fs2_overlapped_id)) {
                 LOG6("has pack conflict");
                 return true;
             }

@@ -79,11 +79,11 @@ class PackConflicts : public PassManager {
         });
     }
 
-    void removePackConflict(const PHV::FieldSlice f1, const PHV::FieldSlice f2);
+    void removePackConflict(const PHV::FieldSlice& f1, const PHV::FieldSlice& f2);
 
-    void addPackConflict(const PHV::FieldSlice f1, const PHV::FieldSlice f2);
+    void addPackConflict(const PHV::FieldSlice& f1, const PHV::FieldSlice& f2);
 
-    bool hasPackConflict(const PHV::FieldSlice f1, const PHV::FieldSlice f2) const;
+    bool hasPackConflict(const PHV::FieldSlice& f1, const PHV::FieldSlice& f2) const;
 
     bool writtenInSameStageDifferentTable(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const;
 

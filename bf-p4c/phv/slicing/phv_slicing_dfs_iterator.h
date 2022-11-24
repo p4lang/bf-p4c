@@ -94,7 +94,7 @@ class DfsItrContext : public IteratorInterface {
     // The trick here is what we use a value, FieldSlice, representing that,
     // if a slicelist contains any fieldslice in this set, then the split decision
     // for that slicelist has already been made.
-    SplitDecision split_decisions_i;
+    assoc::hash_map<FieldSlice, AfterSplitConstraint> split_decisions_i;
 
     // slicelist_on_stack stores all slice list that were split during DFS in a stack-style.
     // and the number of choices left for the slice list to try different slicing.
