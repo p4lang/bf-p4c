@@ -321,6 +321,10 @@ class MatcherAllocator : public Visitor {
             }
 
             // check if candidate's rvals are in same byte as all defs in group
+            // Note: They can even be in a following byte, which means that they are still
+            // continuous, or rather any other match register load would start right
+            // after; additionally this takes care of the possibility of using 16b
+            // match registers that already loaded 2 bytes
 
             auto cand_defs = use_def.use_to_defs.at(cand);
             auto last_defs = use_def.use_to_defs.at(members.back());
@@ -337,8 +341,15 @@ class MatcherAllocator : public Visitor {
                 auto lo = cd->rval->range.lo / 8;
                 auto hi = ld->rval->range.hi / 8;
 
-                if (lo != hi)
-                    return false;
+                // Same byte
+                if (lo == hi)
+                    continue;
+                // Following byte
+                if (lo == hi+1)
+                    continue;
+
+                // Not the same or following byte => cannot join
+                return false;
             }
 
             members.push_back(cand);
@@ -800,6 +811,10 @@ class MatcherAllocator : public Visitor {
         else if (Device::currentDevice() == Device::CLOUDBREAK)
             avail << "4x8b.";
 #endif /* HAVE_CLOUDBREAK */
+#if HAVE_FLATROCK
+        else if (Device::currentDevice() == Device::FLATROCK)
+            avail << "2x16b.";
+#endif /* HAVE_FLATROCK */
         else
             BUG("Unknown device");
 

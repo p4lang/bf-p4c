@@ -529,4 +529,194 @@ TEST(FlatrockParser, AnalyzerMultipleTransitions) {
                              << blk.extract_code(TestCode::CodeBlock::ParserIAsm) << "'\n";
 }
 
+/**
+ * Verify that sections for analyzer stages and rules contain correct data when multiple
+ * select fields and fields wider than 16b are used
+ */
+TEST(FlatrockParser, AnalyzerWiderSelects) {
+    std::string test_prog = R"(
+    // This test multiple different uses of wide/multi-field select:
+    // Discontinued 24b+4b separated by 3 bits (= second one not aligned)
+    header hdr_1_h {
+        bit<8>      pad1;
+        bit<24>     f1;
+        bit<3>      sep1;
+        bit<4>      f2;
+        bit<1>      pad2;
+    }
+    // Discontinued 2b+18b+6b separated by 1+2 bits (= second split + 2x merge + unaligned)
+    header hdr_2_h {
+        bit<2>      sep1;
+        bit<2>      f1;
+        bit<1>      sep2;
+        bit<18>     f2;
+        bit<2>      sep3;
+        bit<6>      f3;
+        bit<1>      pad1;
+    }
+    header final_hdr_h {
+        bit<32>     pad1;
+    }
+    struct headers {
+        hdr_1_h     h1;
+        hdr_2_h     h2;
+        final_hdr_h final_h;
+    }
+    struct metadata {
+    }
+
+    parser ingressParser(packet_in packet, out headers hdrs,
+                        out metadata meta, out ingress_intrinsic_metadata_t ig_intr_md) {
+        state start {
+            packet.extract(ig_intr_md);
+            packet.advance(PORT_METADATA_SIZE);
+            packet.extract(hdrs.h1);
+            // Discontinued 24b+4b separated by 3 bits (= second one not aligned)
+            // Additionally swapped fields compared to packet order
+            transition select(hdrs.h1.f2, hdrs.h1.f1) {
+                (0x5, 0x777766) : parse_h2;  // W0=0x7777, W1=0b01100110***0101*
+                default :  accept;
+            }
+        }
+
+        state parse_h2 {
+            packet.extract(hdrs.h2);
+            // Discontinued 2b+18b+6b separated by 1+2 bits (= second split + 2x merge + unaligned)
+            // Additionally swapped fields compared to packet order
+            transition select(hdrs.h2.f3, hdrs.h2.f1, hdrs.h2.f2) {
+                (0x07, 0x2, 0x3abcd) : parse_final_h;   // W0=0b**10*11101010111, W1=0b1001101**000111*
+                default :  accept;
+            }
+        }
+
+        state parse_final_h {
+            packet.extract(hdrs.final_h);
+            transition accept;
+        }
+
+    }
+    control ingress(in headers hdrs, inout metadata meta,
+                    in ingress_intrinsic_metadata_t ig_intr_md,
+                    inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
+        apply {
+            ig_intr_tm_md.ucast_egress_pipe = ig_intr_md.ingress_pipe;
+            ig_intr_tm_md.ucast_egress_port = ig_intr_md.ingress_port;
+        }
+    }
+    control egress(inout headers hdrs, inout metadata meta,
+                in egress_intrinsic_metadata_t eg_intr_md,
+                inout egress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
+                inout egress_intrinsic_metadata_for_output_port_t eg_intr_oport_md) {
+        apply {
+        }
+    }
+    control egressDeparser(packet_out packet, inout headers hdrs, in metadata meta,
+                        in egress_intrinsic_metadata_t eg_intr_md,
+                        in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprs) {
+        apply {
+            packet.emit(hdrs);
+        }
+    }
+
+    Pipeline(ingressParser(), ingress(), egress(), egressDeparser()) pipe;
+    Switch(pipe) main;
+    )";
+
+    auto blk = TestCode(TestCode::Hdr::Tofino5arch, test_prog);
+    blk.flags(TrimWhiteSpace | TrimAnnotations);
+
+    EXPECT_TRUE(blk.CreateBackend());
+    EXPECT_TRUE(blk.apply_pass(TestCode::Pass::FullBackend));
+
+    auto res = blk.match(TestCode::CodeBlock::ParserIAsm, CheckList{
+        "` *`parser ingress:",
+        "` *`states:",
+        "` *`$entry_point: 0x**************00",
+        "` *`$final: 0x**************06",
+        "` *`parse_final_h: 0x**************05",
+        "` *`parse_h2: 0x**************04",
+        "` *`start: 0x**************01",
+        "` *`start.$oob_stall_0: 0x**************02",
+        "` *`start.$split_0: 0x**************03",
+        "` *`profile 0:",
+        "` *`match_port: 0o**",
+        "` *`match_inband_metadata: 0x****************",
+        "` *`initial_pktlen: 0",
+        "` *`initial_seglen: 0",
+        "` *`initial_state: $entry_point",
+        "` *`initial_ptr: 0",
+        "` *`metadata_select: [",
+        "` *`logical_port_number,",
+        "` *`port_metadata 0,",
+        "` *`inband_metadata 2,",
+        "` *`inband_metadata 3,",
+        "` *`inband_metadata 4,",
+        "` *`inband_metadata 5,",
+        "` *`inband_metadata 6,",
+        "` *`inband_metadata 7 ]",
+        "` *`analyzer_stage 0",
+        "` *`$entry_point:",
+        "` *`rule 0:",
+        "` *`match_w0: 0x****",
+        "` *`match_w1: 0x****",
+        "` *`next_state: start",
+        "` *`next_alu0_instruction: { opcode: 0, add: 0 } # ptr += 0",
+        "` *`next_alu1_instruction: { opcode: noop } # noop",
+        "` *`analyzer_stage 1",
+        "` *`start: rule 0:",
+        "` *`match_w0: 0x****",
+        "` *`match_w1: 0x****",
+        "` *`next_state: start.$oob_stall_0",
+        "` *`next_alu0_instruction: { opcode: 0, add: 32 } # ptr += 32",
+        "` *`next_alu1_instruction: { opcode: noop } # noop",
+        "` *`modify_flag0: { set: 3 }",
+        "` *`push_hdr_id: { hdr: 0, offset: 0 }",
+        "` *`analyzer_stage 2",
+        "` *`start.$oob_stall_0:",
+        "` *`rule 0:",
+        "` *`match_w0: 0x****",
+        "` *`match_w1: 0x****",
+        "` *`next_state: start.$split_0",
+        "` *`next_w0_offset: 1",
+        "` *`next_w1_offset: 3",
+        "` *`next_alu0_instruction: { opcode: 0, add: 0 } # ptr += 0",
+        "` *`next_alu1_instruction: { opcode: noop } # noop",
+        "` *`analyzer_stage 3",
+        "` *`start.$split_0:",
+        "` *`rule 0:",
+        "` *`match_w0: 0x****",
+        "` *`match_w1: 0x****",
+        "` *`next_state: $final",
+        "` *`next_alu0_instruction: { opcode: 0, add: 5 } # ptr += 5",
+        "` *`next_alu1_instruction: { opcode: noop } # noop",
+        "` *`modify_flag0: { set: 0 }",
+        "` *`push_hdr_id: { hdr: 1, offset: 0 }",
+        "` *`rule 1:",
+        "` *`match_w0: 0x7777",
+        "` *`match_w1: 0b01100110***0101*",
+        "` *`next_state: parse_h2",
+        "` *`next_w0_offset: 5",
+        "` *`next_w1_offset: 7",
+        "` *`next_alu0_instruction: { opcode: 0, add: 5 } # ptr += 5",
+        "` *`next_alu1_instruction: { opcode: noop } # noop",
+        "` *`modify_flag0: { set: 0 }",
+        "` *`push_hdr_id: { hdr: 1, offset: 0 }",
+        "` *`analyzer_stage 4",
+        "` *`parse_h2:",
+        "` *`rule 0:",
+        "` *`match_w0: 0x****",
+        "` *`match_w1: 0x****",
+        "` *`next_state: $final",
+        "` *`next_alu0_instruction: { opcode: 0, add: 4 } # ptr += 4",
+        "` *`next_alu1_instruction: { opcode: noop } # noop",
+        "` *`modify_flag0: { set: 1 }",
+        "` *`push_hdr_id: { hdr: 2, offset: 0 }",
+        "` *`rule 1:",
+        "` *`match_w0: 0b**10*11101010111",
+        "` *`match_w1: 0b1001101**000111*"
+    });
+    EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count << "\n'"
+                             << blk.extract_code(TestCode::CodeBlock::ParserIAsm) << "'\n";
+}
+
 }  // namespace Test

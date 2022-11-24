@@ -21,6 +21,13 @@ MatchRegister::MatchRegister(cstring n) : name(n), id(s_id++) {
         size = 1;
     else if (name.find("half"))
         size = 2;
+    // TODO(MichalKekely): This should be inside '#if HAVE_FLATROCK'
+    // and the size should be ::Flatrock::PARSER_W_WIDTH
+    // but currently this file does not seem to see the HAVE_FLATROCK definition
+    // The definitions for HAVE_FLATROCK and such should be moved from
+    // 'bf-p4c/CMakeLists.txt' to just 'CMakeLists.txt'
+    else if (name.find("W"))
+        size = 2;
     else
         BUG("Invalid parser match register %s", name);
 }

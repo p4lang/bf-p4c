@@ -419,6 +419,17 @@ class FlatrockPardeSpec : public TofinoPardeSpec {
         }
         return vldVecSet;
     }
+
+    const std::vector<MatchRegister> matchRegisters() const override {
+        static std::vector<MatchRegister> spec;
+
+        if (spec.empty()) {
+            spec = { MatchRegister("W0"),
+                     MatchRegister("W1") };
+        }
+
+        return spec;
+    }
 };
 #endif /* HAVE_FLATROCK */
 

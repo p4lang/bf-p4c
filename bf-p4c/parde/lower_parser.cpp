@@ -1486,6 +1486,8 @@ class ComputeFlatrockParserIR : public ParserInspector {
         transition_info.next_state = t->next;
         transition_info.shift = t->shift;
 
+        /// \pre We assume that t->saves are already correctly assigned to
+        /// W0, W1 by the AllocateParserMatchRegisters
         for (const auto* save : t->saves) {
             const auto* packet_source = save->source->to<IR::BFN::PacketRVal>();
             BUG_CHECK(packet_source, "Unsupported SaveToRegister source: %1%", save->source);
@@ -1493,11 +1495,13 @@ class ComputeFlatrockParserIR : public ParserInspector {
             int offset_in_bits = packet_source->range.lo;
             int size = packet_source->range.size();
             BUG_CHECK(offset_in_bits % 8 == 0, "Unsupported offset of match value (in bits): %1%",
-                    offset_in_bits);
-            BUG_CHECK(size <= 16, "Unsupported size of match value (in bits): %1%", size);
-
-            BUG_CHECK(transition_info.next_w.size() == 0,
-                    "Only 1 16-bit match value is currently supported, can not collect: %1%", save);
+                      offset_in_bits);
+            BUG_CHECK(size <= 16,
+                      "Cannot match on %1%b value; maximum size is %2%b",
+                      size, 16);
+            BUG_CHECK(transition_info.next_w.size() < 2,
+                      "Only %1% 16-bit match values are supported, can not collect: %2%",
+                      2, save);
             transition_info.next_w.push_back({offset_in_bits / 8, size});
         }
 
@@ -1793,8 +1797,10 @@ class ReplaceFlatrockParserIR : public ParserTransform {
 
                 if (transition.next_w.size() > 0)
                     next_w0_offset = transition.next_w[0].offset;
-                BUG_CHECK(transition.next_w.size() <= 1,
-                        "Only 1 next_w offset is currently supported!");
+                if (transition.next_w.size() > 1)
+                    next_w1_offset = transition.next_w[1].offset;
+                BUG_CHECK(transition.next_w.size() <= 2,
+                          "Only 2 next_w offsets are supported for matching!");
 
                 auto* analyzer_rule = new IR::Flatrock::AnalyzerRule(
                     /* id */ rule_id,
@@ -1805,18 +1811,48 @@ class ReplaceFlatrockParserIR : public ParserTransform {
                     /* next_w2_offset */ next_w2_offset);
                 analyzer_rule->push_hdr_id = push_hdr_id;
                 analyzer_rule->match_state = state_match;
-                analyzer_rule->match_w0 = transition.match;
-                // update the valid bit in POV flags
+                 // update the valid bit in POV flags
                 analyzer_rule->modify_flag0 = modify_flag;
-
-                // TODO
-                // Check if the width of transition.match is correct, if not
-                // report error/bug.
-                // Currently a BUG_CHECK in ComputeFlatrockParserIR pass enforces
-                // that at most 16 bit wide match values can be processed.
-                analyzer_rule->match_w0.setwidth(16);
-                // TODO analyzer_rule->match_w1 when supporting more than
-                // just one 16 bit match value
+                // Look into selects to determine the order of selects, or rather the match
+                // registers in the match value
+                // This needs to be done because the P4 order of the select fields
+                // (match value follows the P4 order) might not be the same as their order
+                // within the packet (match registers follow the packet order)
+                bool w0_match_set = false;
+                bool w1_match_set = false;
+                // Store the order of pointers to corresponding match_wX values in a vector
+                std::vector<match_t *> match_reg_vals;
+                for (auto select : state->selects) {
+                    if (auto saved = select->source->to<IR::BFN::SavedRVal>()) {
+                        for (auto rs : saved->reg_slices) {
+                            if (rs.first.name == "W0" && !w0_match_set) {
+                                w0_match_set = true;
+                                match_reg_vals.push_back(&(analyzer_rule->match_w0));
+                            } else if (rs.first.name == "W1" && !w1_match_set) {
+                                w1_match_set = true;
+                                match_reg_vals.push_back(&(analyzer_rule->match_w1));
+                            }
+                        }
+                    }
+                }
+                BUG_CHECK(match_reg_vals.size() <= 2,
+                          "More than 2 match registers encountered!");
+                // Split the actual match value
+                match_t match_val = transition.match;
+                match_t match_vals[2] = {
+                    match_val,
+                    match_val
+                };
+                // If both are used, the first one matches the top 16 bits (= second 16b chunk)
+                if (match_reg_vals.size() > 1) {
+                    match_vals[0] = { match_val.word0 >> ::Flatrock::PARSER_W_WIDTH*8,
+                                      match_val.word1 >> ::Flatrock::PARSER_W_WIDTH*8 };
+                }
+                match_vals[0].setwidth(::Flatrock::PARSER_W_WIDTH*8);
+                match_vals[1].setwidth(::Flatrock::PARSER_W_WIDTH*8);
+                // Fill the match values based on the order stored previously
+                for (unsigned i = 0; i < match_reg_vals.size(); i++)
+                    *(match_reg_vals[i]) = match_vals[i];
                 analyzer_rule->next_alu0_instruction = Flatrock::alu0_instruction(
                         Flatrock::alu0_instruction::OPCODE_0,
                         std::vector<int>{/* add */ transition.shift});

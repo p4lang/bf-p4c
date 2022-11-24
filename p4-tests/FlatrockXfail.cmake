@@ -61,22 +61,21 @@ p4c_add_xfail_reason("tofino5"
   "error: Syntax error, expecting identifier"
   extensions/p4_tests/p4_16/stf/header_stack_next.p4
   extensions/p4_tests/p4_16/stf/header_stack_strided_alloc1.p4
+  extensions/p4_tests/p4_16/stf/header_stack_strided_alloc2.p4
   )
 
 p4c_add_xfail_reason("tofino5"
-  "Compiler Bug: Only 1 16-bit match value is currently supported"
-  extensions/p4_tests/p4_16/stf/header_stack_strided_alloc2.p4
-  extensions/p4_tests/p4_16/stf/lookahead1.p4
-  extensions/p4_tests/p4_16/stf/p4c-3551.p4
+  "error: Ran out of parser match registers"
   extensions/p4_tests/p4_16/stf/simple_l3_acl_disappearing_options.p4
-  extensions/p4_tests/p4_16/flatrock/pac_shallow_branch_select_multiple.p4
   )
 
-# Tracked under P4C-4891 (with P4C-4689 this passes because the PHV alloc was perturbed)
-# p4c_add_xfail_reason("tofino5"
-#   "Compiler Bug: Fields from different headers .* are not supported in the same container"
-#   extensions/p4_tests/p4_16/flatrock/pac_extraction_different_fields_same_container.p4
-#   )
+# Tracked under P4C-4891
+p4c_add_xfail_reason("tofino5"
+  "Compiler Bug: Fields from different headers .* are not supported in the same container"
+  #(with P4C-4689 this passes because the PHV alloc was perturbed)
+  #extensions/p4_tests/p4_16/flatrock/pac_extraction_different_fields_same_container.p4
+  extensions/p4_tests/p4_16/stf/p4c-3551.p4
+  )
 
 p4c_add_xfail_reason("tofino5"
   "Compiler Bug: Transition cannot have both loop and non-loop next states"
@@ -111,6 +110,7 @@ p4c_add_xfail_reason("tofino5"
   # but this is currently not implemented.
   extensions/p4_tests/p4_16/stf/failed_elim_valid_bit.p4
   extensions/p4_tests/p4_16/stf/wide_arith_non_64.p4
+  extensions/p4_tests/p4_16/stf/lookahead1.p4
   )
 
 p4c_add_xfail_reason("tofino5"
