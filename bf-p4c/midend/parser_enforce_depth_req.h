@@ -45,7 +45,6 @@ class ParserEnforceDepthReq : public PassManager {
 
  private:
     P4::ReferenceMap *refMap;
-    P4::TypeMap *typeMap;
 
     BFN::EvaluatorPass  *evaluator;
 
@@ -62,7 +61,7 @@ class ParserEnforceDepthReq : public PassManager {
     int ctrShiftAmt;
 
  public:
-    explicit ParserEnforceDepthReq(P4::ReferenceMap *rm, P4::TypeMap *tm, BFN::EvaluatorPass *ev);
+    explicit ParserEnforceDepthReq(P4::ReferenceMap *rm, BFN::EvaluatorPass *ev);
 };
 
 };  // namespace BFN

@@ -57,8 +57,8 @@ class P4ParserGraphs: public graphs::ParserGraphs {
     }
 
  public:
-    P4ParserGraphs(P4::ReferenceMap *refMap, P4::TypeMap *typeMap, bool dumpDot) :
-        graphs::ParserGraphs(refMap, typeMap, cstring()), dumpDot(dumpDot) { }
+    P4ParserGraphs(P4::ReferenceMap *refMap, bool dumpDot) :
+        graphs::ParserGraphs(refMap, cstring()), dumpDot(dumpDot) { }
 
     /// Is "a" a descendant of "b"?
     bool is_descendant(cstring a, cstring b) const {

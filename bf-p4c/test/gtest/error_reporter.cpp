@@ -122,38 +122,39 @@ TEST_F(ErrorReporterTest, WarningsConformToExpectedFormat) {
 }
 
 TEST_F(ErrorReporterTest, WarningWithSuffixConformToExpectedFormat) {
-    const std::string EXPECTED_WARN_1 = ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(200): [--Werror=type-error] error: return +
+    const std::string EXPECTED_WARN_1 = ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(201): [--Werror=type-error] error: return +
                 return (ix + 1);
                 ^^^^^^
   ---- Actual error:
-  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(199): Cannot cast implicitly type 'bit<16>' to type 'bool'
+  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(200): Cannot cast implicitly type 'bit<16>' to type 'bool'
               bool f(in bit<16> ix) {
               ^^^^
   ---- Originating from:
-  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(200): Source expression '+' produces a result of type 'bit<16>' which cannot be assigned to a left-value with type 'bool'
+  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(201): Source expression '+' produces a result of type 'bit<16>' which cannot be assigned to a left-value with type 'bool'
                   return (ix + 1);
                           ^^^^^^
-  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(199)
+  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(200)
               bool f(in bit<16> ix) {
               ^^^^
-)" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(198): [--Werror=type-error] error: cntr
+)" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(199): [--Werror=type-error] error: cntr
         Virtual() cntr = {
                   ^^^^
   ---- Actual error:
-  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(199): Cannot unify type 'bool' with type 'bit<16>'
+  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(200): Cannot unify type 'bool' with type 'bit<16>'
               bool f(in bit<16> ix) {
               ^^^^
   ---- Originating from:
-  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(199): Method 'f' does not have the expected type 'f'
+  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(200): Method 'f' does not have the expected type 'f'
               bool f(in bit<16> ix) {
                    ^
-  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(194)
+  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(195)
       abstract bit<16> f(in bit<16> ix);
                        ^
 )";
 
     auto CODE = R"(
     extern Virtual {
+    Virtual();
     abstract bit<16> f(in bit<16> ix);
     }
 

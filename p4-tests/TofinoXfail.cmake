@@ -569,7 +569,6 @@ p4c_add_xfail_reason("tofino"
   "table .* Cannot match on multiple fields using the LPM match type"
   extensions/p4_tests/glass/mau/case1770.p4
   testdata/p4_14_samples/issue60.p4
-  testdata/p4_16_samples/psa-dpdk-lpm-match-err1.p4
   )
 
 #END: XFAILS that match glass XFAILS
@@ -730,12 +729,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Number of fields .* in initializer different than number of fields"
   testdata/p4_16_samples/issue2303.p4
-)
-
-# P4C-1499
-p4c_add_xfail_reason("tofino"
-  "Direct Extern .* of type .* is used in action .*"
-  testdata/p4_16_samples/psa-meter6.p4
 )
 
 # This test attempts to match on a field of `error` type.
@@ -1318,7 +1311,6 @@ p4c_add_xfail_reason("tofino"
 # Requires Pipe prefix support to avoid duplicate names
 p4c_add_xfail_reason("tofino"
   "error: Found .* duplicate name.* in the P4Info"
-  testdata/p4_16_samples/psa-counter6.p4
   extensions/p4_tests/p4_16/compile_only/brig-814-2.p4
   extensions/p4_tests/p4_16/compile_only/multiple_apply2.p4
 )
@@ -1757,11 +1749,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-    ".*error: Table .* has more than one extern with type 'ActionProfile' attached to property 'psa_implementation', which is not supported by Tofino"
-  testdata/p4_16_samples/psa-action-profile2.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "partly placed: table .*"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/utes_0.p4
 )
@@ -2129,18 +2116,18 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-dpdk-large-header-fields.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  ".*: must be a compile-time constant"
-  testdata/p4_16_samples/psa-example-mask-range-err.p4
-)
-
 # p4c update 2022-11-07 (new tests)
 p4c_add_xfail_reason("tofino"
   "Cannot extract field .* from PSA_MeterColor_t which has type .*"
-  testdata/p4_16_samples/psa-example-dpdk-directmeter-1.p4
   testdata/p4_16_samples/psa-example-dpdk-directmeter.p4
 )
+
+# p4c update 2022-11-21 (new tests)
 p4c_add_xfail_reason("tofino"
-  "Direct Extern - .* of type .* is used in action .* but not specified as a .* property on the actions table .*"
-  testdata/p4_16_samples/psa-example-dpdk-directmeter-err.p4
+  "error: Verify statement not supported"
+  testdata/p4_16_samples/psa-dpdk-tmp-mask-align.p4
+)
+p4c_add_xfail_reason("tofino"
+  "Cannot extract field .* from PSA_MeterColor_t which has type .*"
+  testdata/p4_16_samples/psa-example-dpdk-meter-execute-err.p4
 )

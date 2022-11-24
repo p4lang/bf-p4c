@@ -15,9 +15,9 @@ using Manifest = Logging::Manifest;
 void Manifest::postorder(const IR::BFN::TnaParser *parser) {
     auto pipeName = _pipes.at(_pipeId);
     if (parser && (_pipes.size() == 1 || parser->pipeName == pipeName) && parser->name) {
-        CHECK_NULL(_refMap); CHECK_NULL(_typeMap);
+        CHECK_NULL(_refMap);
         auto graphsDir = BFNContext::get().getOutputDirectory("graphs", _pipeId);
-        graphs::ParserGraphs pgen(_refMap, _typeMap, graphsDir);
+        graphs::ParserGraphs pgen(_refMap, graphsDir);
         parser->apply(pgen);
         // p4c frontend only saves the parser graphs into parserGraphsArray
         // (and does not output them)

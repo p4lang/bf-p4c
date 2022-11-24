@@ -443,7 +443,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         BackendOptions().disable_parse_min_depth_limit &&
                 BackendOptions().disable_parse_max_depth_limit
             ? nullptr
-            : new BFN::ParserEnforceDepthReq(&refMap, &typeMap, evaluator),
+            : new BFN::ParserEnforceDepthReq(&refMap, evaluator),
 
         // Collects source info for logging. Call this after all transformations are complete.
         sourceInfoLogging,

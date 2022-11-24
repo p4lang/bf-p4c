@@ -153,9 +153,9 @@ struct ParserLoopsInfo {
         }
     };
 
-    ParserLoopsInfo(P4::TypeMap* typeMap, P4::ReferenceMap* refMap,
-                const IR::BFN::TnaParser* parser, const ParserPragmas& pm) : parserPragmas(pm) {
-        P4ParserGraphs pg(refMap, typeMap, false);
+    ParserLoopsInfo(P4::ReferenceMap* refMap, const IR::BFN::TnaParser* parser,
+            const ParserPragmas& pm) : parserPragmas(pm) {
+        P4ParserGraphs pg(refMap, false);
         parser->apply(pg);
 
         loops = pg.compute_loops(parser);
@@ -372,7 +372,7 @@ class GetBackendParser {
                               ParseTna* arch,
                               const IR::BFN::TnaParser* parser) :
             typeMap(typeMap), refMap(refMap), arch(arch), parser(parser),
-            parserLoopsInfo(typeMap, refMap, parser, parserPragmas) {
+            parserLoopsInfo(refMap, parser, parserPragmas) {
         parser->apply(parserPragmas);
     }
 
@@ -682,7 +682,7 @@ GetBackendParser::createBackendParser() {
 
     // 2. resolve header stack indices if graph has no loops
 
-    P4ParserGraphs pg(refMap, typeMap, false);
+    P4ParserGraphs pg(refMap, false);
     parser->apply(pg);
 
     if (!pg.has_loops(parser)) {

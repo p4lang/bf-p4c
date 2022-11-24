@@ -42,7 +42,6 @@ class IdentifyPadRequirements : public Inspector {
  private:
     // Used by P4ParserGraphs
     P4::ReferenceMap *refMap;
-    P4::TypeMap *typeMap;
 
     /// Struct names
     std::set<cstring> &structs;
@@ -139,7 +138,7 @@ class IdentifyPadRequirements : public Inspector {
         // Function visited only if preorder returned true
 
         // Apply P4ParserGraphs to get the predecessors/successors
-        P4ParserGraphs pg(refMap, typeMap, false);
+        P4ParserGraphs pg(refMap, false);
         prsr->apply(pg);
 
         // Calculate minimum depth to each state
@@ -349,13 +348,12 @@ class IdentifyPadRequirements : public Inspector {
 
  public:
     IdentifyPadRequirements(
-        P4::ReferenceMap *refMap, P4::TypeMap *typeMap, std::set<cstring> &structs,
+        P4::ReferenceMap *refMap, std::set<cstring> &structs,
         std::map<const IR::P4Parser *, std::map<cstring, int>> &stateSize,
         std::map<const IR::P4Parser *, ParserEnforceDepthReq::ParserPadReq> &padReq,
         std::map<cstring, int> &headerPadAmt,
         const std::map<const IR::P4Parser *, gress_t> &allParsers, int ctrShiftAmt)
         : refMap(refMap),
-          typeMap(typeMap),
           structs(structs),
           stateSize(stateSize),
           padReq(padReq),
@@ -1181,9 +1179,8 @@ class AddParserPad : public Modifier {
           ctrShiftAmt(ctrShiftAmt) {}
 };
 
-ParserEnforceDepthReq::ParserEnforceDepthReq(P4::ReferenceMap *rm, P4::TypeMap *tm,
-                                             BFN::EvaluatorPass *ev)
-    : refMap(rm), typeMap(tm), evaluator(ev) {
+ParserEnforceDepthReq::ParserEnforceDepthReq(P4::ReferenceMap *rm, BFN::EvaluatorPass *ev)
+    : refMap(rm), evaluator(ev) {
     // Per-cycle shift amount should match line rate to avoid falling behind
     double ctrShiftAmtBits = (double)Device::pardeSpec().lineRate() / Device::pardeSpec().clkFreq();
     ctrShiftAmt = ceil(ctrShiftAmtBits / 8);
@@ -1236,7 +1233,7 @@ ParserEnforceDepthReq::ParserEnforceDepthReq(P4::ReferenceMap *rm, P4::TypeMap *
                 }
             }
         },
-        new IdentifyPadRequirements(refMap, typeMap, structs, stateSize, padReq, headerPadAmt,
+        new IdentifyPadRequirements(refMap, structs, stateSize, padReq, headerPadAmt,
                                     all_parser, ctrShiftAmt),
         new AddParserPad(structs, stateSize, padReq, headerPadAmt, all_parser, all_mau_pipe,
                          all_deparser, deparser_parser, mau_pipe_parser, ctrShiftAmt),

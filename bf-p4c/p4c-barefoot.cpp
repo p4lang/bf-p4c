@@ -521,7 +521,7 @@ int main(int ac, char **av) {
         if (options.create_graphs) {
             auto graphsDir = BFNContext::get().getOutputDirectory("graphs", pipe->id);
             // set the pipe for the visitors to compute the output dir
-            manifest.setRefAndTypeMap(&substitute.refMap, &substitute.typeMap);
+            manifest.setRefMap(&substitute.refMap);
             auto toplevel = substitute.getToplevelBlock();
             if (toplevel != nullptr) {
                 LOG2("Generating control graphs");

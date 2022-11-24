@@ -1001,15 +1001,17 @@ bool CreateSaluInstruction::preorder(const IR::MAU::Primitive *prim) {
                 BUG("Invalid MathUnit ctor arg %s", m); }
         } else {
             BUG("Invalid MathUnit ctor arg %s", mu->arguments->at(0)); }
-        if (auto data = mu->arguments->at(i)->expression->to<IR::ListExpression>()) {
+        if (mu->arguments->at(i)->expression->is<IR::ListExpression>() ||
+                mu->arguments->at(i)->expression->is<IR::StructExpression>()) {
             BUG_CHECK(i >= 2, "typechecking failure");
             if (auto k = mu->arguments->at(i-1)->expression->to<IR::Constant>())
                 math.scale = k->asInt();
             else
                 error("%s is not a constant", mu->arguments->at(i-1)->expression);
-            BUG_CHECK(data->components.size() <= 16, "Wrong number of MathUnit values");
+            auto components = getListExprComponents(*mu->arguments->at(i)->expression);
+            BUG_CHECK(components->size() <= 16, "Wrong number of MathUnit values");
             i = 15;
-            for (auto e : data->components) {
+            for (auto e : *components) {
                 if (auto k = e->to<IR::Constant>())
                     math.table[i] = k->asInt();
                 --i; }

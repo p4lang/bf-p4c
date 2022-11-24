@@ -160,7 +160,6 @@ class Manifest : public Inspector {
     int                        _pipeId = -1;  /// the current pipe id (for the visitor methods)
     /// to generate parser and control graphs
     P4::ReferenceMap *         _refMap = nullptr;
-    P4::TypeMap *              _typeMap = nullptr;
     std::ofstream              _manifestStream;
     /// compilation succeeded or failed
     bool _success = false;
@@ -202,9 +201,8 @@ class Manifest : public Inspector {
     void postorder(const IR::BFN::TnaControl *control) override;
     /// helper methods for the graph generators
     /// one can set any of the maps and invoke the appropriate visitors
-    void setRefAndTypeMap(P4::ReferenceMap *refMap, P4::TypeMap *typeMap) {
+    void setRefMap(P4::ReferenceMap *refMap) {
         _refMap = refMap;
-        _typeMap = typeMap;
     }
 
     void setPipe(int pipe_id, cstring pipe_name) {
