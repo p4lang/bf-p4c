@@ -24,6 +24,7 @@ struct TableResourceAlloc {
     MeterALU::Format::Use               meter_format;
     autoclone_ptr<ActionDataBus::Use>   action_data_xbar, meter_xbar;
     InstructionMemory::Use              instr_mem;
+    LayoutOption                        layout_option;
 
     // only relevant to tofino 1/2/3
     safe_vector<Tofino::IXBar::HashDistUse>     hash_dists;

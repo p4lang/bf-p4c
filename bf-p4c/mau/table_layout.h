@@ -31,6 +31,7 @@ class LayoutOption {
         : layout(l), action_format_index(i) {}
     LayoutOption(const IR::MAU::Table::Layout l, const IR::MAU::Table::Way w, int i)
         : layout(l), way(w), action_format_index(i) {}
+    LayoutOption* clone() const;
     void clear_mems() {
         srams = 0;
         lambs = 0;  // Tofino5 specific

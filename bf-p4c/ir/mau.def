@@ -215,9 +215,7 @@ class Table : BFN::Unit, IAnnotated  {
         Layout &operator+=(const Layout &a);
 #end
     }
-#emit
-    Layout layout;  // need Layout operator<< or dbprint to remove #emit here.
-#end
+    Layout layout;
     class Way {
         /* POD type */
         int             match_groups = 0;
@@ -1143,4 +1141,6 @@ template<class T> inline const T *IR::MAU::Table::get_attached() const {
         if (auto rv = at->attached->to<T>())
             return rv;
     return nullptr; }
+
+std::ostream &operator<<(std::ostream &out, const IR::MAU::Table::Layout &layout); 
 #end

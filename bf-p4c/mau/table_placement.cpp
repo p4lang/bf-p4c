@@ -2631,6 +2631,11 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
             rv->placed[uid(rv->gw)] = true;
         }
     }
+
+    // Update layout option used for this placement
+    if (auto *layout_option = rv->use.preferred())
+        rv->resources.layout_option = *layout_option;
+
     return rv;
 }
 
@@ -4248,7 +4253,7 @@ DecidePlacement::alt_table_placement(const IR::BFN::Pipe *pipe) {
     self.mau_backtracker.printTableAlloc();
     LOG3("Alt Table Final Ordering: ");
     for (auto &pts : self.summary.getPlacedTables()) {
-        LOG3("Global ID : " << pts.first << " " << pts.second->dumpStr());
+        LOG3("Global ID : " << pts.first << " " << *pts.second);
     }
 
     for (auto &pt : self.summary.getPlacedTables()) {

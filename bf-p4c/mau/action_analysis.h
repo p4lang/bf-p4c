@@ -659,7 +659,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     bool get_verbose() const { return verbose; }
     bool get_error_verbose() const { return error_verbose; }
     const IR::MAU::Table* get_table() const { return tbl; }
-    const FieldAction& get_field_action() const { return field_action; }
+    const ContainerActionsMap* get_container_actions_map() const { return container_actions_map; }
 
     ActionAnalysis(const PhvInfo &p, bool pa, bool aa, const IR::MAU::Table *t,
             bool au = false, bool seq = true)

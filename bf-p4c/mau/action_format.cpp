@@ -2024,8 +2024,11 @@ safe_vector<RamSectionPosition> SingleActionPositions::best_inputs_to_move(int b
  * immediate data is represented at bit-granularity.
  */
 void Format::Use::determine_immediate_mask() {
+    Log::TempIndent indent;
+    LOG5("Determing immediate mask" << indent);
     for (auto act_alu_positions : alu_positions) {
         for (auto alu_position : act_alu_positions.second) {
+            LOG7("For action alu position " << alu_position);
             if (alu_position.loc != IMMEDIATE)
                 continue;
             bitvec bv = alu_position.alu_op->slot_bits() << (alu_position.start_byte * 8);
@@ -2041,7 +2044,7 @@ void Format::Use::determine_immediate_mask() {
     // Currently in the table format, it is assumed that the immediate mask is contiguous
     // for simple printing during the assembly mask
     immediate_mask = bitvec(0, immediate_mask.max().index() + 1);
-    LOG2("  Immediate mask 0x" << immediate_mask);
+    LOG2("Immediate mask 0x" << immediate_mask);
     BUG_CHECK(immediate_mask.max().index() < bytes_per_loc[IMMEDIATE] * 8, "Immediate mask has "
         "more bits than the alloted bytes for immediate");
 }
@@ -2289,6 +2292,7 @@ const RamSection *Format::Use::build_locked_in_sect() const {
 void Format::create_argument(ALUOperation &alu,
         ActionAnalysis::ActionParam &read, le_bitrange container_bits,
         const IR::MAU::ConditionalArg *cond_arg) {
+    LOG7("Create argument");
     auto ir_arg = read.unsliced_expr()->to<IR::MAU::ActionArg>();
     BUG_CHECK(ir_arg != nullptr, "Cannot create argument");
     Argument *arg = new Argument(ir_arg->name.name, read.range());
@@ -2306,6 +2310,7 @@ void Format::create_argument(ALUOperation &alu,
 void Format::create_constant(ALUOperation &alu, const IR::Expression *read,
         le_bitrange container_bits, int &constant_alias_index,
         const IR::MAU::ConditionalArg *cond_arg) {
+    LOG7("Create constant");
     auto ir_con = read->to<IR::Constant>();
     BUG_CHECK(ir_con != nullptr, "Cannot create constant");
 
@@ -2330,6 +2335,8 @@ void Format::create_constant(ALUOperation &alu, const IR::Expression *read,
  */
 void Format::create_hash(ALUOperation &alu, ActionAnalysis::ActionParam &read,
        le_bitrange container_bits) {
+    Log::TempIndent indent;
+    LOG7("Create hash for " << read << indent);
     auto ir_hd = read.unsliced_expr()->to<IR::MAU::HashDist>();
     BUG_CHECK(ir_hd != nullptr, "Cannot create a hash argument out of a non-HashDist");
     BuildP4HashFunction builder(phv);
@@ -2342,6 +2349,7 @@ void Format::create_hash(ALUOperation &alu, ActionAnalysis::ActionParam &read,
     Hash *hash = new Hash(*func);
     ALUParameter ap(hash, container_bits);
     alu.add_param(ap);
+    LOG7("Created hash " << *hash);
 }
 
 /**
@@ -2351,6 +2359,8 @@ void Format::create_hash(ALUOperation &alu, ActionAnalysis::ActionParam &read,
  */
 void Format::create_hash_constant(ALUOperation &alu, ActionAnalysis::ActionParam &read,
         le_bitrange container_bits) {
+    Log::TempIndent indent;
+    LOG7("Create hash constant" << indent);
     auto ir_con = read.unsliced_expr()->to<IR::Constant>();
     BUG_CHECK(ir_con != nullptr, "Cannot create constant");
     P4HashFunction func;
@@ -2360,6 +2370,7 @@ void Format::create_hash_constant(ALUOperation &alu, ActionAnalysis::ActionParam
     Hash *hash = new Hash(func);
     ALUParameter ap(hash, container_bits);
     alu.add_param(ap);
+    LOG7("Created hash constant " << *hash);
 }
 
 /**
@@ -2367,12 +2378,15 @@ void Format::create_hash_constant(ALUOperation &alu, ActionAnalysis::ActionParam
  */
 void Format::create_random_number(ALUOperation &alu, ActionAnalysis::ActionParam &read,
         le_bitrange container_bits, cstring action_name) {
+    Log::TempIndent indent;
+    LOG7("Create random number" << indent);
     auto ir_rn = read.unsliced_expr()->to<IR::MAU::RandomNumber>();
     BUG_CHECK(ir_rn != nullptr, "Cannot create random");
     cstring rand_name = ir_rn->name;
     RandomNumber *rn = new RandomNumber(rand_name, action_name, read.range());
     ALUParameter ap(rn, container_bits);
     alu.add_param(ap);
+    LOG7("Created random number " << *rn);
 }
 
 /**
@@ -2380,9 +2394,12 @@ void Format::create_random_number(ALUOperation &alu, ActionAnalysis::ActionParam
  * directly, but cannot be ORed with anything else
  */
 void Format::create_random_padding(ALUOperation &alu, le_bitrange container_bits) {
+    Log::TempIndent indent;
+    LOG7("Create random padding" << indent);
     RandomPadding *rp = new RandomPadding(container_bits.size());
     ALUParameter ap(rp, container_bits);
     alu.add_param(ap);
+    LOG7("Created random padding " << *rp);
 }
 
 /**
@@ -2390,6 +2407,8 @@ void Format::create_random_padding(ALUOperation &alu, le_bitrange container_bits
  */
 void Format::create_meter_color(ALUOperation &alu, ActionAnalysis::ActionParam &read,
         le_bitrange container_bits) {
+    Log::TempIndent indent;
+    LOG7("Create meter color" << indent);
     auto ir_ao = read.unsliced_expr()->to<IR::MAU::AttachedOutput>();
     BUG_CHECK(ir_ao != nullptr, "Cannot create meter color");
     auto meter_name = ir_ao->attached->name;
@@ -2399,6 +2418,7 @@ void Format::create_meter_color(ALUOperation &alu, ActionAnalysis::ActionParam &
     MeterColor *mc = new MeterColor(meter_name, range);
     ALUParameter ap(mc, container_bits);
     alu.add_param(ap);
+    LOG7("Created meter color " << *mc);
 }
 
 /**
@@ -2407,12 +2427,15 @@ void Format::create_meter_color(ALUOperation &alu, ActionAnalysis::ActionParam &
  */
 void Format::create_mask_argument(ALUOperation &alu, ActionAnalysis::ActionParam &read,
         le_bitrange container_bits) {
+    Log::TempIndent indent;
+    LOG7("Create mask argument" << indent);
     auto cond_arg = read.unsliced_expr()->to<IR::MAU::ConditionalArg>();
     BUG_CHECK(cond_arg != nullptr, "Cannot create argument");
     for (int i = container_bits.lo; i <= container_bits.hi; i++) {
         Argument *arg = new Argument(cond_arg->orig_arg->name, {0, 0});
         ALUParameter ap(arg, {i, i});
         alu.add_mask_param(ap);
+        LOG7("Created mask argument " << *arg);
     }
 }
 
@@ -2421,6 +2444,7 @@ void Format::create_mask_argument(ALUOperation &alu, ActionAnalysis::ActionParam
  */
 void Format::create_mask_constant(ALUOperation &alu, bitvec value, le_bitrange container_bits,
         int &constant_alias_index) {
+    LOG7("Create mask constant");
     Constant *con = new Constant(value, container_bits.size());
     con->set_alias("$constant" + std::to_string(constant_alias_index++));
     ALUParameter ap(con, container_bits);
@@ -2497,7 +2521,9 @@ bool Format::fix_bitwise_overwrite(ALUOperation &alu,
  */
 void Format::create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_map,
                                        cstring action_name) {
-    LOG2("  Creating action data alus for " << action_name);
+    Log::TempIndent indent;
+    LOG2("Creating action data alus for " << action_name << indent);
+
     auto &ram_sec_vec = init_ram_sections[action_name];
     int alias_index = 0;
     int mask_alias_index = 0;
@@ -2505,7 +2531,8 @@ void Format::create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_m
     for (auto &container_action_info : ca_map) {
         auto container = container_action_info.first;
         auto &cont_action = container_action_info.second;
-        LOG5("\t    Analyzing action data for " << container.toString() << " " << cont_action);
+        LOG5("Analyzing action data for " << container.toString() << " " << cont_action);
+
         ALUOPConstraint_t alu_cons = DEPOSIT_FIELD;
         if (cont_action.convert_instr_to_byte_rotate_merge)
             alu_cons = BYTE_ROTATE_MERGE;
@@ -2525,6 +2552,7 @@ void Format::create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_m
         bitvec total_write_bits;
 
         for (auto &field_action : cont_action.field_actions) {
+            LOG6("For field action : " << field_action);
             le_bitrange bits;
             auto *write_field = phv.field(field_action.write.expr, &bits);
             le_bitrange container_bits;
@@ -2632,13 +2660,13 @@ void Format::create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_m
             contains_action_data = true;
 
         if (contains_action_data) {
-            LOG5("\t    Created Action Data Packing for container action");
+            LOG5("Created Action Data Packing for container action");
             if (contains_speciality)
                 locked_in_all_actions_sects.push_back(alu->create_RamSection(true));
             else
                 ram_sec_vec.push_back(alu->create_RamSection(true));
         } else {
-            LOG5("\t    No Action Data Packing necessary");
+            LOG5("No Action Data Packing necessary");
         }
     }
 }
@@ -2858,9 +2886,12 @@ void Format::condense_action(cstring action_name, RamSec_vec_t &ram_sects) {
 
 bool Format::analyze_actions(FormatType_t format_type) {
     BUG_CHECK(format_type.valid(), "invalid format in Format::analyze_actions");
+    Log::TempIndent indent;
+    LOG3("Analyzing actions for format type: " << format_type << indent);
 
     ActionAnalysis::ContainerActionsMap container_actions_map;
     for (auto action : Values(tbl->actions)) {
+        LOG5("For action : " << action);
         container_actions_map.clear();
         ActionAnalysis aa(phv, true, false, tbl, /* allow_unalloc = */ !format_type.normal());
         aa.set_container_actions_map(&container_actions_map);
@@ -2871,6 +2902,7 @@ bool Format::analyze_actions(FormatType_t format_type) {
         create_alu_ops_for_action(container_actions_map, action->name);
     }
 
+    LOG5("Condensing actions");
     for (auto &entry : init_ram_sections) {
         condense_action(entry.first, entry.second);
     }
@@ -2906,6 +2938,7 @@ bool Format::analyze_actions(FormatType_t format_type) {
         // flag an error then.
         return false;
     }
+    LOG5("Analyze actions complete");
     return true;
 }
 
@@ -3353,7 +3386,8 @@ void Format::determine_single_action_input(SingleActionAllocation &single_action
  */
 void Format::assign_action_data_table_bytes(AllActionPositions &all_bus_inputs,
         BusInputs &total_inputs) {
-    LOG2("  Assigning Action Data Byte Positions");
+    Log::TempIndent indent;
+    LOG2("Assigning Action Data Byte Positions" << indent);
     std::sort(all_bus_inputs.begin(), all_bus_inputs.end(),
         [](const SingleActionPositions &a, const SingleActionPositions &b) {
         int t;
@@ -3372,7 +3406,7 @@ void Format::assign_action_data_table_bytes(AllActionPositions &all_bus_inputs,
                                       bytes_per_loc[ACTION_DATA_TABLE]);
     }
 
-    LOG2("   Total inputs BYTE: 0x" << total_inputs[BYTE] << " HALF: 0x" << total_inputs[HALF]
+    LOG2("Total inputs BYTE: 0x" << total_inputs[BYTE] << " HALF: 0x" << total_inputs[HALF]
          << " FULL: 0x" << total_inputs[FULL]);
 }
 
@@ -3433,6 +3467,8 @@ void Format::assign_immediate_bytes(AllActionPositions &all_bus_inputs,
 }
 
 void Format::assign_RamSections_to_bytes() {
+    Log::TempIndent indent;
+    LOG5("Assigning Ram Sections to bytes" << indent);
     assign_action_data_table_bytes(action_bus_inputs[ACTION_DATA_TABLE],
                                    action_bus_input_bitvecs[ACTION_DATA_TABLE]);
     assign_immediate_bytes(action_bus_inputs[IMMEDIATE], action_bus_input_bitvecs[IMMEDIATE],
@@ -3551,6 +3587,7 @@ void Format::build_locked_in_format(Use &use) {
  * action data bus inputs.
  */
 void Format::build_potential_format(bool immediate_forced) {
+    LOG5("Build potential format (immediate_forced: " << (immediate_forced ? "Y" : "N") << ")");
     Use use;
     int loc_i = 0;
 
@@ -3567,6 +3604,7 @@ void Format::build_potential_format(bool immediate_forced) {
         Location_t loc = static_cast<Location_t>(loc_i);
         BusInputs verify_inputs = { { bitvec(), bitvec(), bitvec() } };
         for (auto &single_action_input : loc_inputs) {
+            LOG6("For loc_inputs: " << single_action_input);
             int rot_alias_idx = act_to_rot_alias.at(single_action_input.action_name);
             int *rot_alias_idx_p = &rot_alias_idx;
             safe_vector<ALUPosition> alu_positions;
@@ -3635,7 +3673,9 @@ void Format::build_potential_format(bool immediate_forced) {
 void Format::allocate_format(IR::MAU::Table::ImmediateControl_t imm_ctrl,
                              FormatType_t format_type) {
     BUG_CHECK(format_type.valid(), "invalid format in Format::allocate_format");
-    LOG1("Determining Formats for table " << tbl->name << " with immediate ctrl " << imm_ctrl);
+    Log::TempIndent indent;
+    LOG1("Determining Formats for table " << tbl->name
+            << " with immediate ctrl " << imm_ctrl << indent);
     bool possible = analyze_actions(format_type);
     if (!possible)
         return;
@@ -3651,8 +3691,7 @@ void Format::allocate_format(IR::MAU::Table::ImmediateControl_t imm_ctrl,
 
 }  // namespace ActionData
 
-std::ostream &operator<<(std::ostream &out, ActionData::Location_t loc) {
-    switch (loc) {
+std::ostream &operator<<(std::ostream &out, ActionData::Location_t loc) { switch (loc) {
     case ActionData::ACTION_DATA_TABLE: out << "ad_table"; break;
     case ActionData::IMMEDIATE: out << "immed"; break;
     case ActionData::METER_ALU: out << "meter_alu"; break;

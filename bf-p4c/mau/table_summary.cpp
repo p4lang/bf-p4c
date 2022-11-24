@@ -155,7 +155,7 @@ void TableSummary::generateIxbarBytesInfo() {
 
 void TableSummary::printPlacedTables() const {
     for (auto &pt : placedTables)
-        LOG5(pt.second->dumpStr() << "\n");
+        LOG5(*pt.second);
 }
 
 void TableSummary::end_apply() {
@@ -353,6 +353,7 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
         case ALT_INITIAL: {
             // table placement succeeded, backtrack to run actual PHV allocation.
             if (!criticalPlacementFailure && maxStage <= deviceStages) {
+                LOG1("Alt phv alloc: Success after ALT_INITIAL");
                 generateIxbarBytesInfo();
                 LOG1(ixbarUsagesStr());
                 state = ALT_FINALIZE_TABLE_SAME_ORDER;
@@ -376,6 +377,7 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
         case ALT_RETRY_ENHANCED_TP: {
             // table placement succeeded, backtrack to run actual PHV allocation.
             if (!criticalPlacementFailure && maxStage <= deviceStages) {
+                LOG1("Alt phv alloc: Success after ALT_RETRY_ENHANCED_TP");
                 generateIxbarBytesInfo();
                 LOG1(ixbarUsagesStr());
                 state = ALT_FINALIZE_TABLE_SAME_ORDER;
@@ -389,8 +391,10 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
         }
         case ALT_FINALIZE_TABLE_SAME_ORDER: {
             if (!criticalPlacementFailure && maxStage <= deviceStages) {
+                LOG1("Alt phv alloc: Success post ALT_FINALIZE_TABLE_SAME_ORDER");
                 state = SUCCESS;
             } else {
+                LOG1("Alt phv alloc: Failure post ALT_FINALIZE_TABLE_SAME_ORDER");
                 state = ALT_FINALIZE_TABLE;
                 throw RerunTablePlacementTrigger::failure(false);
             }
@@ -713,16 +717,20 @@ TableSummary::PlacedTable::PlacedTable(const IR::MAU::Table *t) {
         // If table is direct same entries as match table
         attached_entries[memName] = attEntries;
     }
+
+    layout = t->resources->layout_option;
 }
 
-cstring TableSummary::PlacedTable::dumpStr() {
-    std::stringstream dumpStr;
-    dumpStr << "Placed Table : " << tableName << "(" << internalTableName << ")\n";
-    dumpStr << "\tstage: " << stage << ", logicalId: " << logicalId;
-    dumpStr << ", entries: " << entries << "\n";
-    if (gatewayName)
-        dumpStr << "\tgateway: " << gatewayName << "(" << gatewayMergeCond << ")";
-    for (auto att : attached_entries)
-        dumpStr << "\tAttached Table : " << att.first << ", entries : " << att.second << "\n";
-    return dumpStr.str();
+std::ostream &operator<<(std::ostream &out, const TableSummary::PlacedTable &pl) {
+    Log::TempIndent indent;
+    out << "Placed Table : " << pl.tableName << "(" << pl.internalTableName << ")";
+    out << indent << Log::endl;
+    out << "stage: " << pl.stage << ", logicalId: " << pl.logicalId;
+    out << ", entries: " << pl.entries << Log::endl;
+    if (pl.gatewayName)
+        out << "gateway: " << pl.gatewayName << "(" << pl.gatewayMergeCond << ")";
+    for (auto att : pl.attached_entries)
+        out << "Attached Table : " << att.first << ", entries : " << att.second << Log::endl;
+    out << pl.layout << Log::endl;
+    return out;
 }

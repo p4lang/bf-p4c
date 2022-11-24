@@ -1,4 +1,5 @@
 #include "resource_estimate.h"
+#include "lib/log.h"
 #include "memories.h"
 #include "table_placement.h"
 #include "lib/bitops.h"
@@ -680,8 +681,11 @@ void StageUseEstimate::calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOpti
 
 /* Convert all possible layout options to the correct way sizes */
 void StageUseEstimate::options_to_ways(const IR::MAU::Table *tbl, int entries) {
+    Log::TempIndent indent;
+    LOG5("Calculating options to ways for " << layout_options.size()
+            << " options in table " << tbl->name << indent);
     for (auto &lo : layout_options) {
-        LOG5("Calculating options to ways for : " << lo);
+        LOG6("Picking layout option : " << lo);
         if (lo.layout.hash_action || lo.way.match_groups == 0 || lo.layout.gateway_match) {
             lo.entries = entries;
             lo.srams = 0;
@@ -700,7 +704,7 @@ void StageUseEstimate::options_to_ways(const IR::MAU::Table *tbl, int entries) {
         else
             lo.srams = calculated_depth * lo.way.width;
         lo.maprams = 0;
-        LOG5("  Updated : " << lo);
+        LOG6("  Updated layout option : " << lo);
     }
 }
 
@@ -833,7 +837,8 @@ void StageUseEstimate::options_to_dleft_entries(const IR::MAU::Table *tbl,
 void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
                                                const attached_entries_t &att_entries,
                                                LayoutOption *lo) {
-    LOG5("Calculating RAMs for layout: " << lo);
+    Log::TempIndent indent;
+    LOG5("Calculating RAMs for layout: " << lo << indent);
     for (auto back_at : tbl->attached) {
         auto at = back_at->attached;
         int per_word = 0;
@@ -885,7 +890,10 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
                 if (need_srams) units++;  // spare bank
                 lo->maprams += units;
             }
-            if (need_srams) lo->srams += units * width;
+            if (need_srams) {
+                lo->srams += units * width;
+                LOG6("Update srams: " << lo->srams << ", units: " << units << ", width: " << width);
+            }
         }
     }
     // Before table placment, tables do not have attached Ternary Indirect or
@@ -922,6 +930,7 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
                     << ", units: " << units);
         }
     }
+    LOG5("Updated layout with attached rams: " << lo);
 }
 
 /* Calculate the number of attached rams for every single potential layout option */
@@ -973,9 +982,9 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
 
     LOG3("table " << tbl->name << " requiring " << table_size << " entries.");
     if (small_table_allocation)
-        LOG3("small table allocation");
+        LOG3("small table allocation with " << layout_options.size() << " layout options");
     else
-        LOG3("large table allocation");
+        LOG3("large table allocation with " << layout_options.size() << " layout options");
     LOG3(layout_options);
 
     preferred_index = 0;

@@ -615,6 +615,7 @@ void DoTableLayout::setup_action_layout(IR::MAU::Table *tbl) {
 
 void LayoutChoices::compute_action_formats(const IR::MAU::Table *tbl,
                                            ActionData::FormatType_t format_type) {
+    LOG5("Computing action formats for table " << tbl->name);
     BUG_CHECK(format_type.valid(), "invalid format type in LayoutChoices::compute_action_formats");
     ActionData::Format af(phv, tbl, att_info);
     af.set_uses(&cache_action_formats[std::make_pair(tbl->name, format_type)]);
@@ -706,6 +707,9 @@ int LayoutChoices::get_pack_pragma_val(const IR::MAU::Table *tbl,
 void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
         const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type,
         int action_data_bytes_in_table, int immediate_bits, int index) {
+    LOG5("Setting up exact match layouts for table " << tbl->name << ", format_type: "
+            << format_type << " ADB: " << action_data_bytes_in_table
+            << ", immediate_bits: " << immediate_bits << ", index: " << index);
     BUG_CHECK(format_type.valid(), "invalid format type in LayoutChoices::setup_exact_match");
     auto MIN_PACK = Device::sramMinPackEntries();
     auto MAX_PACK = Device::sramMaxPackEntries();
@@ -715,6 +719,7 @@ void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
 
     auto lo_key = std::make_pair(tbl->name, format_type);
     for (int entry_count = MIN_PACK; entry_count <= MAX_PACK; entry_count++) {
+        LOG6("For entry count " << entry_count);
         if (pack_val > 0 && entry_count != pack_val)
             continue;
         if (entry_count != 1 && layout_proto.sel_len_bits > 0)
@@ -730,6 +735,9 @@ void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
         int total_bytes = entry_count * layout_proto.match_bytes;
         int total_overhead_bits = entry_count * single_overhead_bits;
 
+        LOG6("\ttotal_bits: " << total_bits << ", total_bytes: " << total_bytes
+                << ", total_overhead_bits: " << total_overhead_bits);
+
         int bit_limit_width = (total_bits + TableFormat::SINGLE_RAM_BITS - 1)
                               / TableFormat::SINGLE_RAM_BITS;
         int byte_limit_width = (total_bytes + TableFormat::SINGLE_RAM_BYTES - 1)
@@ -738,6 +746,9 @@ void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
                              / TableFormat::OVERHEAD_BITS;
         int pack_width = (entry_count + MAX_ENTRIES_PER_ROW - 1)
                           / MAX_ENTRIES_PER_ROW;
+
+        LOG6("\tbit_limit_width: " << bit_limit_width << ", byte_limit_width: " << byte_limit_width
+                << ", overhead_width: " << overhead_width << ", pack_width: " << pack_width);
 
         // ATCAM tables can only have one payload bus, as the priority ranking happens on
         // a single bus
@@ -758,6 +769,8 @@ void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
             min_value = width;
         }
 
+        LOG6("\twidth: " << width << ", mod_value: " << mod_value << ", min_value: " << min_value);
+
         // Skip potential doubling of layouts: i.e. if the layout is 2 entries per RAM row,
         // and 1 RAM wide, then there is no point to adding the double, 4 entries per RAM row,
         // and 2 RAM wide.  This is the same packing, and wider matches are more constrained
@@ -766,7 +779,7 @@ void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
 
         if (width > Memories::SRAM_ROWS) break;
 
-        LOG2("Layout Option: { pack : " << entry_count << ", width : " << width
+        LOG2("\tLayout Option: { pack : " << entry_count << ", width : " << width
              << ", action data table bytes : " << action_data_bytes_in_table
              << ", immediate bits : " << immediate_bits << " }");
         IR::MAU::Table::Layout layout_for_pack = layout_proto;
@@ -1607,31 +1620,12 @@ TableLayout::TableLayout(PhvInfo &p, LayoutChoices &l, SplitAttachedInfo &sia)
     });
 }
 
+LayoutOption* LayoutOption::clone() const {
+    return new LayoutOption(*this);
+}
+
 std::ostream &operator<<(std::ostream &out, const LayoutOption &lo) {
-    auto &layout = lo.layout;
-    out << "layout: " << layout.entries;
-    if (layout.pre_classifier) out << 'c';
-    if (layout.gateway) out << 'g';
-    if (layout.exact) out << 'e';
-    if (layout.ternary) out << 't';
-    if (layout.hash_action) out << 'h';
-    if (layout.gateway_match) out << 'G';
-    if (layout.atcam) out << 'T';
-    if (layout.alpm) out << 'L';
-    if (layout.has_range) out << 'r';
-    if (layout.proxy_hash) out << 'P';
-    if (layout.requires_versioning) out << 'V';
-    out << " ixbar:" << layout.ixbar_bytes << "B/" << layout.ixbar_width_bits << "b";
-    out << " match:" << layout.match_bytes << "B/" << layout.match_width_bits << "b";
-    if (layout.ghost_bytes) out << " gh:" << layout.ghost_bytes;
-    if (layout.action_data_bytes || layout.action_data_bytes_in_table) {
-        out << " adb:" << layout.action_data_bytes;
-        if (layout.action_data_bytes_in_table)
-            out << "/" << layout.action_data_bytes_in_table; }
-    if (layout.overhead_bits) out << " ov:" << layout.overhead_bits;
-    if (layout.immediate_bits) out << " imm:" << layout.immediate_bits;
-    if (layout.partition_bits) out << " part:" << layout.partition_bits;
-    out << IndentCtl::indent << Log::endl;
+    out << lo.layout << Log::endl;
     bool empty = true;
     if (lo.way.match_groups || lo.way.entries || lo.way.width || !lo.way_sizes.empty()) {
         empty = false;
@@ -1655,11 +1649,11 @@ std::ostream &operator<<(std::ostream &out, const LayoutOption &lo) {
             sep = "/"; } }
     if (!empty) out << Log::endl;
     out << "entries:" << lo.entries;
-    if (layout.is_lamb)
+    if (lo.layout.is_lamb)
         out << " lambs: " << lo.lambs;
-    if (layout.is_direct) {
-        out << " (direct - " << layout.entries_per_set
-                      << "/" << layout.sets_per_word;
+    if (lo.layout.is_direct) {
+        out << " (direct - " << lo.layout.entries_per_set
+                      << "/" << lo.layout.sets_per_word;
         out << ")";
     }
     out << " srams:" << lo.srams;
@@ -1669,7 +1663,6 @@ std::ostream &operator<<(std::ostream &out, const LayoutOption &lo) {
     if (lo.action_format_index >= 0) out << " afi:" << lo.action_format_index;
     if (lo.previously_widened) out << " W";
     if (lo.identity) out << " I";
-    out << IndentCtl::unindent;
     return out;
 }
 

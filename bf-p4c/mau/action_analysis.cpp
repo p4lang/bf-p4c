@@ -1237,7 +1237,7 @@ void ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
         }
 
         instr_name = to_bitmasked_set ? "to-bitmasked-set" : cont_action.field_actions[0].name;
-        LOG5("\t Instruction name: " << instr_name);
+        LOG5("Instruction name: " << instr_name << "------");
 
         for (auto &field_action : cont_action.field_actions) {
             if (instr_name == "to-bitmasked-set") {
@@ -2425,7 +2425,7 @@ void ActionAnalysis::check_constant_to_actiondata(ContainerAction &cont_action,
         }
     }
     cont_action.ci.constant_value = constant_value;
-    LOG4("Contant Value: " << cont_action.ci.constant_value);
+    LOG4("Constant Value: " << cont_action.ci.constant_value);
 }
 
 void ActionAnalysis::ContainerAction::move_source_to_bit(safe_vector<int> &bit_uses,
@@ -2925,9 +2925,15 @@ std::ostream &operator<<(std::ostream &out, const ActionAnalysis::TotalAlignment
 }
 
 std::ostream &operator<<(std::ostream &out, const ActionAnalysis &aa) {
+    Log::TempIndent indent;
     out << "Action Analysis: "
-        << " table: " << aa.get_table()->name
-        << " field_action: " << aa.get_field_action() << Log::endl;
+        << " table: " << aa.get_table()->name << indent << Log::endl;
+    if (auto *cam = aa.get_container_actions_map()) {
+        out << "[ ";
+        for (auto [cont, cont_act] : *cam)
+            out << cont << ":" << cont_act;
+        out << " ]";
+    }
     out << " phv_alloc: " << (aa.get_phv_alloc() ? "Y" : "N")
         << " ad_alloc: " << (aa.get_ad_alloc() ? "Y" : "N")
         << " allow_unalloc: " << (aa.get_allow_unalloc() ? "Y" : "N")

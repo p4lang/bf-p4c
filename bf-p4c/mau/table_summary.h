@@ -7,6 +7,7 @@
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/resource_estimate.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
+#include "bf-p4c/mau/table_layout.h"
 #include "bf-p4c/device.h"
 
 namespace Logging {
@@ -118,16 +119,20 @@ class TableSummary: public MauInspector {
         cstring internalTableName;
         cstring gatewayName;
         cstring gatewayMergeCond;
-        int stage;
+
         unsigned logicalId;
+
+        int stage;
         int entries;
+
+        LayoutOption layout;
 
         ordered_map<cstring, int> attached_entries;
 
         explicit PlacedTable(const IR::MAU::Table *t);
         void add(const IR::MAU::Table *t);
-        cstring dumpStr();
     };
+    friend std::ostream &operator<<(std::ostream &out, const PlacedTable &pl);
 
  private:
     static constexpr int CRITICAL_PATH_THRESHOLD = 2;

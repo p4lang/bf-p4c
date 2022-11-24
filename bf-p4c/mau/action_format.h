@@ -671,6 +671,12 @@ class PackingConstraint {
     PackingConstraint() { }
     PackingConstraint(int rg, safe_vector<PackingConstraint> &pc)
         : rotational_granularity(rg), recursive_constraints(pc) {}
+    friend std::ostream &operator<<(std::ostream &out, const PackingConstraint& pc) {
+        out << "Packing Constraing { Rotational Granularity: " << pc.rotational_granularity
+            << ", Recursive Constraint: " << pc.recursive_constraints
+            << " } ";
+        return out;
+    }
 };
 
 enum SlotType_t { BYTE, HALF, FULL, SLOT_TYPES, DOUBLE_FULL = SLOT_TYPES, SECT_TYPES = 4 };
@@ -767,6 +773,13 @@ class RamSection {
     void add_param(int bit, const Parameter *);
     void add_alu_req(const ALUOperation *rv) { alu_requirements.push_back(rv); }
     BusInputs bus_inputs() const;
+    friend std::ostream &operator<<(std::ostream &out, const RamSection& rs) {
+        out << "Ram Section { Action Data Bits: " << rs.action_data_bits
+            << ", pack info: " << rs.pack_info
+            << ", alu req: " << rs.alu_requirements
+            << " } ";
+        return out;
+    }
 };
 
 // Actual locations are ACTION_DATA_TABLE, IMMEDIATE & METER_ALU
@@ -784,6 +797,12 @@ struct RamSectionPosition {
     int byte_offset = -1;
     explicit RamSectionPosition(const RamSection *sect) : section(sect) { }
     size_t total_slots_of_type(SlotType_t slot_type) const;
+    friend std::ostream &operator<<(std::ostream &out, const RamSectionPosition& rsp) {
+        out << "Ram Section Position { " << rsp.section
+            << ", byte_offset: " << rsp.byte_offset
+            << " } ";
+        return out;
+    }
 };
 
 /**
@@ -812,6 +831,12 @@ struct SingleActionPositions {
     void move_other_sections_to_immed(int bits_to_move, SlotType_t minmax_sz,
         safe_vector<RamSectionPosition> &immed_vec);
     safe_vector<RamSectionPosition> best_inputs_to_move(int bits_to_move);
+    friend std::ostream &operator<<(std::ostream &out, const SingleActionPositions& sap) {
+        out << "Single Action Position { name: " << sap.action_name
+            << ", all_inputs: " << sap.all_inputs
+            << " } ";
+        return out;
+    }
 };
 
 using AllActionPositions = safe_vector<SingleActionPositions>;
