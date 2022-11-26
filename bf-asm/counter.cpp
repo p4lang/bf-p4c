@@ -6,12 +6,12 @@
 #include "tables.h"
 
 // target specific template specializations
-#include "tofino/counter.cpp"            // NOLINT(build/include)
+#include "tofino/counter.h"
 #if HAVE_JBAY
-#include "jbay/counter.cpp"              // NOLINT(build/include)
+#include "jbay/counter.h"
 #endif  /* HAVE_JBAY */
 #if HAVE_CLOUDBREAK
-#include "cloudbreak/counter.cpp"        // NOLINT(build/include)
+#include "cloudbreak/counter.h"
 #endif  /* HAVE_CLOUDBREAK */
 
 void CounterTable::setup(VECTOR(pair_t) &data) {

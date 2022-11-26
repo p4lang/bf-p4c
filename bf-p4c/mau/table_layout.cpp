@@ -1329,6 +1329,11 @@ void AssignCounterLRTValues::ComputeLRT::calculate_lrt_threshold_and_interval(
                 } } } }
     }
     if (rams == 0) {
+#if HAVE_FLATROCK
+        // FIXME -- allocation TBD on flatrock -- skip error here for now
+        if (Device::currentDevice() == Device::FLATROCK)
+            return;
+#endif  /* HAVE_FLATROCK */
         ::error(ErrorType::ERR_NOT_FOUND,
                 "Unable to find memory allocation for counter %1% that was "
                 "accessed by %2%", cntr->name, tbl->externalName());

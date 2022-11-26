@@ -35,26 +35,10 @@ set (BFAS_CLOUDBREAK_SRCS
   )
 
 set (BFAS_CLOUDBREAK_HEADERS
+  cloudbreak/counter.h
   cloudbreak/gateway.h
   cloudbreak/input_xbar.h
-  PARENT_SCOPE
-  )
-
-set (BFAS_CLOUDBREAK_HEADERS
-  cloudbreak/gateway.h
-  cloudbreak/input_xbar.h
-  PARENT_SCOPE
-  )
-
-set (BFAS_CLOUDBREAK_HEADERS
-  cloudbreak/gateway.h
-  cloudbreak/input_xbar.h
-  PARENT_SCOPE
-  )
-
-set (BFAS_CLOUDBREAK_HEADERS
-  cloudbreak/gateway.h
-  cloudbreak/input_xbar.h
+  cloudbreak/meter.h
   PARENT_SCOPE
   )
 

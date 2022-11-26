@@ -1,0 +1,10 @@
+add ingress.test1 data.f1:0x01010101 increment(idx:10)
+
+expect 2
+packet 2 01010101 02020202 aaaa bbcc ddee ff00
+packet 2 01010101 02020202 aaaa bbcc ddee ff00
+packet 2 01010101 02020202 aaaa bbcc ddee ff00
+
+wait
+
+check_counter ctr1(10) packets = 3

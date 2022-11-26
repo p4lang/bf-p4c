@@ -488,6 +488,10 @@ class Table {
                     else
                         return 0;
                 }
+                std::string to_string() const {
+                    if (hi >= 0 && lo >= 0)
+                        return name + '(' + std::to_string(lo) + ".." + std::to_string(hi) + ')';
+                    return name; }
             };
             std::string                         name;
             std::string                         rng_param_name = "";

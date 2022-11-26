@@ -257,6 +257,9 @@ bool TableFormat::analyze_layout_option() {
     LOG2("  Layout option { pack : " << layout_option.way.match_groups << ", width : "
          << layout_option.way.width << ", entries: " << layout_option.entries << " }");
 
+    // FIXME -- can't do wide layouts in cuckoo (revisit for BPH)
+    if (layout_option.way.width > 1) return false;
+
     // If table has @dynamic_table_key_masks pragma, the driver expects all bits
     // to be available in the table pack format, so we disable ghosting
     if (!tbl->dynamic_key_masks &&

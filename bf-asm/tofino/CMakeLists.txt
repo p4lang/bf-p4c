@@ -39,9 +39,11 @@ set (BFAS_TOFINO_SRCS
 
 set (BFAS_TOFINO_HEADERS
   tofino/action_table.h
+  tofino/counter.h
   tofino/exact_match.h
   tofino/gateway.h
   tofino/input_xbar.h
+  tofino/meter.h
   tofino/phv.h
   tofino/ternary_match.h
   PARENT_SCOPE

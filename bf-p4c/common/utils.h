@@ -39,6 +39,13 @@ inline void fatal_error(int kind, const char* format, T... args) {
     throw Util::CompilationError("Compilation failed!");
 }
 
+#ifdef BAREFOOT_INTERNAL
+#define INTERNAL_WARNING(...)   warning(ErrorType::WARN_UNSUPPORTED, __VA_ARGS__)
+#else
+#define INTERNAL_WARNING(...)   BUG(__VA_ARGS__)
+#endif
+
+
 /// Check if ghost control is present on any pipes other than current pipe given
 /// by pipe_id argument
 bool ghost_only_on_other_pipes(int pipe_id);

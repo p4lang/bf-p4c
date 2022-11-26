@@ -65,7 +65,10 @@ void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
     BUG_CHECK(format_type.valid(), "invalid format type in LayoutChoices::setup_exact_match");
 
     // TODO: Skip Adding layout with Action Data until support is added
-    if (action_data_bytes_in_table > 0) return;
+    if (action_data_bytes_in_table > 0) {
+        // if action data can't possibly fit in immed, then continue
+        if (immediate_bits + action_data_bytes_in_table*8 <= 32)
+            return; }
 
     auto pack_val = get_pack_pragma_val(tbl, layout_proto);
     // Determine single entry bits first and then the no. of entries possible within a word
@@ -78,7 +81,10 @@ void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
     layout_for_pack.action_data_bytes_in_table = action_data_bytes_in_table;
     layout_for_pack.immediate_bits = immediate_bits;
     layout_for_pack.valid_bits = 1;  // 1 valid bit per entry (set by pragma / table property?)
-    layout_for_pack.overhead_bits = layout_for_pack.immediate_bits + layout_for_pack.valid_bits;
+    // FIXME -- why are we recalculating this rather than using layout_proto.overhead_bits?
+    layout_for_pack.overhead_bits = layout_for_pack.immediate_bits + layout_for_pack.valid_bits
+            + layout_for_pack.meter_addr.total_bits() + layout_for_pack.stats_addr.total_bits()
+            + layout_for_pack.action_addr.total_bits();
     layout_for_pack.action_data_bytes = action_data_bytes_in_table + (immediate_bits + 7) / 8;
     int action_bits = ceil_log2(layout_for_pack.total_actions);
 

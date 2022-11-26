@@ -35,26 +35,10 @@ set (BFAS_JBAY_SRCS
   )
 
 set (BFAS_JBAY_HEADERS
+  jbay/counter.h
   jbay/gateway.h
   jbay/input_xbar.h
-  PARENT_SCOPE
-  )
-
-set (BFAS_JBAY_HEADERS
-  jbay/gateway.h
-  jbay/input_xbar.h
-  PARENT_SCOPE
-  )
-
-set (BFAS_JBAY_HEADERS
-  jbay/gateway.h
-  jbay/input_xbar.h
-  PARENT_SCOPE
-  )
-
-set (BFAS_JBAY_HEADERS
-  jbay/gateway.h
-  jbay/input_xbar.h
+  jbay/meter.h
   PARENT_SCOPE
   )
 

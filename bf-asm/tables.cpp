@@ -1753,8 +1753,8 @@ void Table::Actions::Action::pass1(Table *tbl) {
             // a bit index, which will cause problems if we want to later slice the alias
             // to access only some bits of it.
         } else {
-            error(a.second.lineno, "No field %s(%d:%d) in table %s",
-                    a.second.name.c_str(), a.second.lo, a.second.hi, tbl->name());
+            error(a.second.lineno, "No field %s in table %s", a.second.to_string().c_str(),
+                  tbl->name());
         }
     }
     // Update default value for params if default action parameters present

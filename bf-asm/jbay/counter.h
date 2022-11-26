@@ -1,3 +1,6 @@
+#ifndef BF_ASM_JBAY_COUNTER_H_
+#define BF_ASM_JBAY_COUNTER_H_
+
 // common between jbay and cloudbreak
 template<typename REGS>
 void CounterTable::setup_teop_regs_2(REGS &regs, int stats_group_index) {
@@ -96,3 +99,5 @@ template<> void CounterTable::setup_teop_regs(Target::JBay::mau_regs &regs, int 
 template<> void CounterTable::write_alu_vpn_range(Target::JBay::mau_regs &regs) {
     write_alu_vpn_range_2(regs);
 }
+
+#endif  /* BF_ASM_JBAY_COUNTER_H_ */

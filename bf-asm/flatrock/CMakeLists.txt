@@ -55,6 +55,7 @@ set (BFAS_FLATROCK_HEADERS
   flatrock/hdr.h
   flatrock/input_xbar.h
   flatrock/instruction.h
+  flatrock/meter.h
   flatrock/parser.h
   flatrock/sram_match.h
   flatrock/ternary_match.h

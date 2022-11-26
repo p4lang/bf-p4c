@@ -1,4 +1,5 @@
-
+#ifndef BF_ASM_FLATROCK_METER_H_
+#define BF_ASM_FLATROCK_METER_H_
 
 template<> void MeterTable::write_merge_regs_vt(Target::Flatrock::mau_regs &regs,
             MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args) {
@@ -26,3 +27,5 @@ template<> void MeterTable::setup_tcam_shift(Target::Flatrock::mau_regs &regs,
 template<> void MeterTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
     error(lineno, "%s:%d: Flatrock meter not implemented yet!", SRCFILE, __LINE__);
 }
+
+#endif  /* BF_ASM_FLATROCK_METER_H_ */

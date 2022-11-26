@@ -2648,9 +2648,10 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
     if (!tbl->conditional_gateway_only()) {
         emit_table_context_json(out, indent, tbl);
         if (!tbl->layout.no_match_miss_path()) {
-            BUG_CHECK(tbl->resources->memuse.count(unique_id) > 0,
-                    "No resource named %s found on table %s", unique_id, tbl->name);
-            emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
+            if (tbl->resources->memuse.count(unique_id))
+                emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
+            else
+                INTERNAL_WARNING("No resource named %s found on table %s", unique_id, tbl->name);
             const IXBar::Use *proxy_ixbar = tbl->layout.proxy_hash ?
                                             tbl->resources->proxy_hash_ixbar.get() : nullptr;
             emit_ixbar(out, indent, tbl->resources->match_ixbar.get(), proxy_ixbar,
@@ -3166,7 +3167,10 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Counter *counter) {
     if (counter->direct && tbl->layout.hash_action)
         out << ", how_referenced: direct";
     out << " }" << std::endl;
-    self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
+    if (tbl->resources->memuse.count(unique_id))
+        self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
+    else
+        INTERNAL_WARNING("No resource named %s found on table %s", unique_id, tbl->name);
     cstring count_type;
     switch (counter->type) {
         case IR::MAU::DataAggregation::PACKETS:
@@ -3222,7 +3226,10 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
     if (meter->input)
         self.emit_ixbar(out, indent, tbl->resources->meter_ixbar.get(), nullptr, nullptr, nullptr,
                         nullptr, tbl, false);
-    self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
+    if (tbl->resources->memuse.count(unique_id))
+        self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
+    else
+        INTERNAL_WARNING("No resource named %s found on table %s", unique_id, tbl->name);
     cstring imp_type;
     if (!meter->implementation.name)
         imp_type = "standard";
@@ -3318,7 +3325,10 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Selector *as) {
     if (!as->direct && as->size != 0)
         out << ", size: " << as->size;
     out << " }" << std::endl;
-    self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
+    if (tbl->resources->memuse.count(unique_id))
+        self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
+    else
+        INTERNAL_WARNING("No resource named %s found on table %s", unique_id, tbl->name);
     self.emit_ixbar(out, indent, tbl->resources->selector_ixbar.get(), nullptr,
                     nullptr, nullptr, nullptr, tbl, false);
     out << indent << "mode: ";
@@ -3373,7 +3383,10 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
         indent++;
     } else {
         out << indent++ << "ternary_indirect " << unique_id << ':' << std::endl;
-        self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
+        if (tbl->resources->memuse.count(unique_id))
+            self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
+        else
+            INTERNAL_WARNING("No resource named %s found on table %s", unique_id, tbl->name);
         self.emit_ixbar(out, indent, tbl->resources->match_ixbar.get(), nullptr,
                         &tbl->resources->hash_dists, nullptr, nullptr, tbl, false);
     }
@@ -3399,7 +3412,10 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::ActionData *ad) {
     if (ad->direct && tbl->layout.hash_action)
         out << ", how_referenced: direct";
     out << " }" << std::endl;
-    self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
+    if (tbl->resources->memuse.count(unique_id))
+        self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
+    else
+        INTERNAL_WARNING("No resource named %s found on table %s", unique_id, tbl->name);
     for (auto act : Values(tbl->actions)) {
         // if (act->args.empty()) continue;
         self.emit_action_data_format(out, indent, tbl, act);
@@ -3438,11 +3454,17 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
         BUG_CHECK(self.selector_memory.count(sel_mem_index),
             "Stateful selector %s not found in selector memory map for stage %d on table %s",
             salu->selector->name, tbl->stage(), tbl->unique_id());
-        auto &sel_info = self.selector_memory.at(sel_mem_index);
-        out << indent << "selection_table: " << sel_info.first << std::endl;
-        self.emit_memory(out, indent, *sel_info.second);
+        if (self.selector_memory.count(sel_mem_index)) {
+            auto &sel_info = self.selector_memory.at(sel_mem_index);
+            out << indent << "selection_table: " << sel_info.first << std::endl;
+            self.emit_memory(out, indent, *sel_info.second);
+        } else {
+            INTERNAL_WARNING("No selector memory found on table %s", tbl->name); }
     } else {
-        self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id)); }
+        if (tbl->resources->memuse.count(unique_id))
+            self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
+        else
+            INTERNAL_WARNING("No resource named %s found on table %s", unique_id, tbl->name); }
 
     auto &ixbar = tbl->resources->salu_ixbar;
     BUG_CHECK(ixbar->type == IXBar::Use::STATEFUL_ALU || ixbar->type == IXBar::Use::TYPES,
@@ -3543,7 +3565,10 @@ bool MauAsmOutput::emit_idletime(std::ostream &out, indent_t indent, const IR::M
                                  const IR::MAU::IdleTime *id) const {
     auto unique_id = tbl->unique_id(id);
     out << indent++ << "idletime:" << std::endl;
-    emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
+    if (tbl->resources->memuse.count(unique_id))
+        emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
+    else
+        INTERNAL_WARNING("No resource named %s found on table %s", unique_id, tbl->name);
     out << indent << "precision: " << id->precision << std::endl;
     out << indent << "sweep_interval: " << id->interval << std::endl;
     out << indent << "notification: " << id->two_way_notification << std::endl;

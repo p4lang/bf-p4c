@@ -5,15 +5,15 @@
 #include "tables.h"
 
 // target specific template specializations
-#include "tofino/meter.cpp"            // NOLINT(build/include)
+#include "tofino/meter.h"
 #if HAVE_JBAY
-#include "jbay/meter.cpp"              // NOLINT(build/include)
+#include "jbay/meter.h"
 #endif  /* HAVE_JBAY */
 #if HAVE_CLOUDBREAK
-#include "cloudbreak/meter.cpp"        // NOLINT(build/include)
+#include "cloudbreak/meter.h"
 #endif  /* HAVE_CLOUDBREAK */
 #if HAVE_FLATROCK
-#include "flatrock/meter.cpp"          // NOLINT(build/include)
+#include "flatrock/meter.h"
 #endif  /* HAVE_FLATROCK */
 
 Table::Layout::bus_type_t MeterTable::default_bus_type() const {

@@ -162,6 +162,7 @@ class UniqueId {
 
     UniqueId() {}
     explicit UniqueId(cstring n) : name(n) {}
+    cstring toString() const { return build_name(); }
 };
 
 std::ostream &operator <<(std::ostream &out, const UniqueId &ui);

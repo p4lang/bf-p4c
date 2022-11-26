@@ -36,9 +36,20 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
-  "error: The table table .* cannot find a valid packing, and cannot be placed. Possibly the match key is too wide given the hardware constraints"
+  # "error: The table table .* cannot find a valid packing, and cannot be placed. Possibly the match key is too wide given the hardware constraints"
+  "Error producing mau.json: argument of type 'NoneType' is not iterable"
   extensions/p4_tests/p4_16/flatrock/direct_actiondata1.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  # "error: The table table .* cannot find a valid packing, and cannot be placed. Possibly the match key is too wide given the hardware constraints"
+  "The selected pack format for table .* could not fit given the input xbar allocation"
   extensions/p4_tests/p4_16/stf/p4c-3089.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
+  " error: Index counter_addr for .* cannot be found"
+  extensions/p4_tests/p4_16/flatrock/counter1.p4
   )
 
 #p4c_add_xfail_reason("tofino5"
@@ -132,13 +143,15 @@ p4c_add_xfail_reason("tofino5"
 
 # Unimplemented - support for wide matches
 p4c_add_xfail_reason("tofino5"
-  "Compiler Bug: Cannot allocate wide RAMS in Flatrock. Invalid size 2"
+  # "Compiler Bug: Cannot allocate wide RAMS in Flatrock. Invalid size 2"
+  "The selected pack format for table .* could not fit given the input xbar allocation"
   extensions/p4_tests/p4_16/stf/cond_checksum_update_4.p4
   extensions/p4_tests/p4_16/stf/p4c-1513.p4
   extensions/p4_tests/p4_16/stf/zeros_as_ones.p4
   extensions/p4_tests/p4_16/stf/p4c-2772.p4
   extensions/p4_tests/p4_16/stf/parser_extract_upcast.p4
   extensions/p4_tests/p4_16/stf/p4c-4855.p4
+  extensions/p4_tests/p4_16/stf/p4c-3659.p4
   )
 
 p4c_add_xfail_reason("tofino5"
@@ -193,11 +206,6 @@ p4c_add_xfail_reason("tofino5"
   "expected packets? on port . not seen"
   extensions/p4_tests/p4_16/stf/parser_counter_6.p4
   extensions/p4_tests/p4_16/stf/parser_counter_8.p4
-  )
-
-p4c_add_xfail_reason("tofino5"
-  "Compiler Bug: Cannot allocate wide RAMS in Flatrock"
-  extensions/p4_tests/p4_16/stf/p4c-3659.p4
   )
 
 p4c_add_xfail_reason("tofino5"

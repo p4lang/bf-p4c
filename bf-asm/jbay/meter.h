@@ -1,3 +1,6 @@
+#ifndef BF_ASM_JBAY_METER_H_
+#define BF_ASM_JBAY_METER_H_
+
 // common between jbay and cloudbreak
 template<typename REGS> void MeterTable::setup_teop_regs_2(REGS &regs, int meter_group_index) {
     BUG_CHECK(teop >= 0 && teop < 4);
@@ -113,3 +116,5 @@ template<> void MeterTable::setup_teop_regs(Target::JBay::mau_regs &regs, int me
 template<> void MeterTable::write_alu_vpn_range(Target::JBay::mau_regs &regs) {
     write_alu_vpn_range_2(regs);
 }
+
+#endif  /* BF_ASM_JBAY_METER_H_ */
