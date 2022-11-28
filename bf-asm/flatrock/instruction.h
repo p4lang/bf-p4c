@@ -667,8 +667,8 @@ struct Set : EALUInstruction {
     } const *opc;
     Operand dest;
     Operand src;
-    int priority;
-    bool chain;
+    int priority = -1;
+    bool chain = false;
     Set(const Decode *op, Table *tbl, const Table::Actions::Action *act, const value_t &d,
         const value_t &s1)
         : EALUInstruction(d.lineno), opc(op), dest(tbl, act, d), src(tbl, act, s1) {
@@ -696,8 +696,8 @@ struct BitmaskSet : EALUInstruction {
     Operand dest;
     Operand src1;
     uint32_t mask;
-    int priority;
-    bool chain;
+    int priority = -1;
+    bool chain = false;
     BitmaskSet(const Decode *op, Table *tbl, const Table::Actions::Action *act, const value_t &d,
                const value_t &s1, int mask, int prio = -1, bool chain = false)
         : EALUInstruction(d.lineno), opc(op), dest(tbl, act, d), src1(tbl, act, s1), mask(mask) {
@@ -762,8 +762,8 @@ struct DepositField : EALUInstruction {
     Operand src2;
     int hibit, lobit;
     int rot;
-    int priority;
-    bool chain;
+    int priority = -1;
+    bool chain = false;
     DepositField(const Decode *op, Table *tbl, const Table::Actions::Action *act, const value_t &d,
                  const value_t &s1, const value_t &s2, int hibit = -1, int lobit = -1, int rot = -1,
                  int priority = -1, bool chain = false)

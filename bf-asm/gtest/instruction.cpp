@@ -793,10 +793,10 @@ TEST(ealu, bitmasked_set) {
       # - bitmasked-set B4, A2, B6       # map to phvwr
     )"};
   auto regs = runTest(input);
-  EXPECT_EQ(regs.ppu_phvwr.imem.eaimem8[0].ealu_imem8[0], 0xe00000);
+  EXPECT_EQ(regs.ppu_phvwr.imem.eaimem8[0].ealu_imem8[0], 0xa00000);
   EXPECT_EQ(regs.ppu_phvwr.imem.eaimem8[1].ealu_imem8[0], 0xa7f820);
   EXPECT_EQ(regs.ppu_phvwr.imem.eaimem8[2].ealu_imem8[0], 0xa00840);
-  EXPECT_EQ(regs.ppu_phvwr.imem.eaimem8[3].ealu_imem8[0], 0xe01060);
+  EXPECT_EQ(regs.ppu_phvwr.imem.eaimem8[3].ealu_imem8[0], 0xa01060);
 }
 
 // Test for EALU deposit_field instruction.
