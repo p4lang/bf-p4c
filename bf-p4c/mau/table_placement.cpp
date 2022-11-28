@@ -1417,7 +1417,8 @@ bool TablePlacement::disable_split_layout(const IR::MAU::Table *tbl) {
  *
  */
 bool TablePlacement::pick_layout_option(Placed *next, std::vector<Placed *> allocated_layout) {
-    LOG3("Picking layout option for table : " << next->name);
+    LOG3("Picking layout option for table : " << next->name << " with requested entries : " <<
+         next->entries);
     bool table_format = true;
     int req_entries = next->entries;
 
@@ -2466,6 +2467,9 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
                   "try_place_table(%s) when it is already placed?", rv->name);
     }
 
+    int initial_min_placed_entries = min_placed->entries;
+    attached_entries_t initial_min_placed_attached_entries = min_placed->attached_entries;
+
     StageUseEstimate stage_current = current;
     // According to the driver team, different stage tables can have different action
     // data allocations, so the algorithm doesn't have to prefer this allocation across
@@ -2480,6 +2484,9 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
     do {
         rv->entries = initial_entries;
         rv->attached_entries = initial_attached_entries;
+
+        min_placed->entries = initial_min_placed_entries;
+        min_placed->attached_entries = initial_min_placed_attached_entries;
 
         auto avail = StageUseEstimate::max();
         bool advance_to_next_stage = false;
