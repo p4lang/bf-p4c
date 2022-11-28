@@ -175,6 +175,22 @@ if (ENABLE_WERROR)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wno-error=implicit-fallthrough")
 endif()
 
+if(ENABLE_LTO AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  # On some older systems ar has no support for lto plugin. Use gcc-ar,
+  # a wrapper around ar adding the appropriate --plugin option for GCC.
+  # Note: option ENABLE_LTO is handled in p4c, but p4c does not officially
+  # support systems older then Ubuntu 20, so we need to handle this case here.
+  find_program(GCC_AR gcc-ar-9)
+  # We use gcc/g++ 9, so try to find corresponding gcc-ar-9.
+  if (GCC_AR)
+    set(CMAKE_AR ${GCC_AR})
+    set(CMAKE_C_ARCHIVE_CREATE "<CMAKE_AR> qcs <TARGET> <LINK_FLAGS> <OBJECTS>")
+    set(CMAKE_C_ARCHIVE_FINISH true)
+    set(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> qcs <TARGET> <LINK_FLAGS> <OBJECTS>")
+    set(CMAKE_CXX_ARCHIVE_FINISH true)
+  endif()
+endif()
+
 add_subdirectory(bf-asm)
 
 # Override default settings in p4c.
