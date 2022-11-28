@@ -40,11 +40,16 @@ def runInDocker(Map namedArgs, String cmd) {
         extraArgs: '',
         workingDir: '/bfn/bf-p4c-compilers/build',
         ctestParallelLevel: 1,
+        maxCpu: null,
     ]
 
     assert args.keySet().containsAll(namedArgs.keySet())
     args.putAll(namedArgs)
     cmd = cmd.trim()
+
+    if (args.maxCpu) {
+        args.extraArgs += " --cpus=${args.maxCpu}"
+    }
 
     sh """
         docker run --rm \
@@ -233,6 +238,7 @@ node ('compiler-travis') {
                     'Running Extreme PTF tests': {
                         echo 'Running Extreme PTF tests'
                         runInDocker(
+                            maxCpu: 2,
                             extraArgs: '--privileged -e PKTPY=False',
                             workingDir: '/bfn/bf-p4c-compilers/scripts/run_custom_tests',
                             './run_extreme_tests.sh'
@@ -509,6 +515,7 @@ node ('compiler-travis') {
                     "Installed p4c tests": {
                         echo 'Running driver tests on installed p4c'
                         runInDocker(
+                            maxCpu: 4,
                             extraArgs: '--privileged',
                             workingDir: '/bfn/bf-p4c-compilers/scripts',
                             """
@@ -524,6 +531,7 @@ node ('compiler-travis') {
                     "Documentation": {
                         echo 'Testing Doxygen documentation build'
                         runInDocker(
+                            maxCpu: 1,
                             'make doc'
                         )
                     },
@@ -531,6 +539,7 @@ node ('compiler-travis') {
                     "Check code style": {
                         echo 'Checking code style'
                         runInDocker(
+                            maxCpu: 1,
                             '''
                                 /bin/bash -c "\
                                     ln -s /usr/bin/python3 /usr/bin/python; \
@@ -557,6 +566,7 @@ node ('compiler-travis') {
                         sh """
                             mkdir -p ~/.ccache_bf-p4c-compilers
                             docker run \
+                                --cpus=2 \
                                 -v ~/.ccache_bf-p4c-compilers:/root/.ccache \
                                 -e MAKEFLAGS=j2 \
                                 -e UNIFIED_BUILD=true \
