@@ -29,6 +29,16 @@ OPTION(BUILD_STATIC_BFP4C_LIBS OFF "Build static libs (archives) of bf-p4c compo
                               other projects compiled alongside. Building static libraries slows \
                               down compilation. Using CMake < 3.12 forces this to ON.")
 
+if (ENABLE_JBAY)
+  add_definitions("-DHAVE_JBAY=1")
+endif()
+if (ENABLE_CLOUDBREAK)
+  add_definitions("-DHAVE_CLOUDBREAK=1")
+endif()
+if (ENABLE_FLATROCK)
+  add_definitions("-DHAVE_FLATROCK=1")
+endif()
+
 # CMake < 3.12 will not work with OBJLIBs so we will need to build static libs regardless of the
 # user's intent. However, we want to keep the option set as intended by the user so it will start
 # working with newer cmake (and so that we don't need to override the OPTION).
