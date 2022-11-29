@@ -1097,7 +1097,7 @@ void IXBar::Use::dbprint(std::ostream &out) const {
 /* Determine which bytes of a table's input xbar belong to an individual hash table,
    so that we can output the hash of this individual table. */
 void IXBar::Use::emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &match_data,
-        safe_vector<Slice> &ghost, const TableMatch *fmt,
+        safe_vector<Slice> &ghost, const ::TableMatch *fmt,
         std::map<int, std::map<int, Slice>> &sort) const {
     LOG5("Emitting ixbar hash table");
     if (sort.empty()) return;

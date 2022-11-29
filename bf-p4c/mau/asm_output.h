@@ -20,6 +20,35 @@ namespace MauPower {
 class FinalizeMauPredDepsPower;
 }
 
+struct fmt_state {
+    const char *sep = " ";
+    int next = 0;
+    void emit(std::ostream &out, const char *name, int group, int bit, int width) {
+        if (bit < 0) return;
+        out << sep << name;
+        if (group != -1)
+            out << '(' << group << ")";
+        out << ": ";
+        out << bit << ".." << bit+width-1;
+        next = bit+width;
+        sep = ", "; }
+    void emit(std::ostream &out, const char *name, int group,
+              const safe_vector<std::pair<int, int>> &bits) {
+        if (bits.size() == 1) {
+            emit(out, name, group, bits[0].first, bits[0].second - bits[0].first + 1);
+        } else if (bits.size() > 1) {
+            out << sep << name;
+            if (group != -1)
+                out << '(' << group << ")";
+            out << ": [ ";
+            sep = "";
+            for (auto &p : bits) {
+                out << sep << p.first << ".." << p.second;
+                sep = ", "; }
+            out << " ]"; } }
+};
+cstring format_name(int type);
+
 class memory_vector {
     const safe_vector<int>     &vec;
     Memories::Use::type_t       type;
@@ -82,8 +111,6 @@ class MauAsmOutput : public MauInspector {
     void emit_ixbar(std::ostream &out, indent_t, const IXBar::Use *, const IXBar::Use *,
         const safe_vector<Tofino::IXBar::HashDistUse> *, const Memories::Use *, const TableMatch *,
         const IR::MAU::Table *, bool ternary) const;
-    virtual void emit_ways(std::ostream &out, indent_t indent, const IXBar::Use *use,
-        const Memories::Use *mem) const;
     // FIXME: change API to be target-agnostic
     void emit_hash_dist(std::ostream &out, indent_t indent,
         const safe_vector<Tofino::IXBar::HashDistUse> *hash_dist_use, bool hashmod) const;
@@ -96,9 +123,10 @@ class MauAsmOutput : public MauInspector {
             NextTableSet &next_hit, NextTableSet &gw_miss, bool no_match_hit,
             bool gw_can_miss) const;
 
- public:
+    virtual void emit_ways(std::ostream &out, indent_t indent, const IXBar::Use *use,
+        const Memories::Use *mem) const;
     virtual void emit_table_format(std::ostream &out, indent_t, const TableFormat::Use &use,
-            const TableMatch *tm, bool ternary, bool no_match) const = 0;
+            const TableMatch *tm, bool ternary, bool no_match) const;
     virtual void emit_memory(std::ostream &out, indent_t, const Memories::Use &,
             const IR::MAU::Table::Layout *l = nullptr,
             const TableFormat::Use *f = nullptr) const = 0;
@@ -162,6 +190,9 @@ class MauAsmOutput : public MauInspector {
 
 class TableMatch {
  public:
+    const IR::MAU::Table     *table = nullptr;
+    const PhvInfo            &phv;
+
     // TODO -- a bunch of this is tofino-specific and probably needs to change for flatrock, but
     // something like it might still be needed or at least useful
     // 'match_fields', 'proxy_hash'  and 'proxy_hash_fields' here are used only by
@@ -170,6 +201,8 @@ class TableMatch {
     // could be two independent data structures (or just extra arguments) -- the combo
     // here into a single object is accidental.
     safe_vector<Slice>       match_fields;
+    safe_vector<Slice>       match_fields_word;
+    safe_vector<Slice>       match_fields_byte;
     safe_vector<Slice>       ghost_bits;
 
     struct ProxyHashSlice {
@@ -185,10 +218,13 @@ class TableMatch {
     bool identity_hash = false;
     bool dynamic_key_masks = false;
 
-    const IR::MAU::Table     *table = nullptr;
-    void init_proxy_hash(const IR::MAU::Table *tbl);
+    void init_proxy_hash();
+    virtual void populate_match_fields();
+    void populate_ghost_bits();
 
-    TableMatch(const MauAsmOutput &s, const PhvInfo &phv, const IR::MAU::Table *tbl);
+    TableMatch(const PhvInfo &phv, const IR::MAU::Table *tbl);
+    explicit TableMatch(const PhvInfo &phv) : phv(phv) {}
+    static TableMatch* create(const PhvInfo &phv, const IR::MAU::Table *tbl);
 };
 
 #endif /* BF_P4C_MAU_ASM_OUTPUT_H_ */

@@ -114,6 +114,7 @@ class Slice {
     int bytealign() const { return align(8); }
     Slice fullbyte() const;
     const PHV::Field *get_field() const { return field; }
+    const PHV::Container get_container() const { return reg; }
     int get_lo() const { return lo; }
     int get_hi() const { return hi; }
     void shrink_lo(int shrink) {

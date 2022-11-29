@@ -60,7 +60,7 @@ void IXBar::Use::gather_bytes(const PhvInfo &phv, std::map<int, std::map<int, Sl
 }
 
 void IXBar::Use::emit_ixbar_asm(const PhvInfo &phv, std::ostream &out, indent_t indent,
-                                const TableMatch *fmt, const IR::MAU::Table *tbl) const {
+                                const ::TableMatch *fmt, const IR::MAU::Table *tbl) const {
     typedef std::map<int, std::map<int, Slice>> SortMap;
     SortMap sort_all, sort_word, sort_byte;
     cstring group_type;
@@ -318,9 +318,130 @@ void PpuAsmOutput::emit_ways(std::ostream &out, indent_t indent, const ::IXBar::
 }
 
 void PpuAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
-        const TableFormat::Use &use, const TableMatch *tm, bool ternary,
-        bool no_match) const {
-    MauAsmOutput::emit_table_format(out, indent, use, tm, ternary, no_match);
+        const TableFormat::Use &use, const ::TableMatch *tm, bool ternary,
+        bool gateway) const {
+    fmt_state fmt;
+    out << indent << "format: {";
+    int group = (ternary || gateway) ? -1 : 0;
+
+    for (auto match_group : use.match_groups) {
+        LOG5("For match group: " << match_group);
+        int type;
+        safe_vector<std::pair<int, int>> bits;
+        // For table objects that are not match
+        for (type = TableFormat::NEXT; type < TableFormat::ENTRY_TYPES; type++) {
+            if (match_group.mask[type].popcount() == 0) continue;
+            if (type == TableFormat::VERS && gateway) continue;  // no v/v in gw payload
+            bits.clear();
+            int start = match_group.mask[type].ffs();
+            while (start >= 0) {
+                int end = match_group.mask[type].ffz(start);
+                if (end == -1)
+                    end = match_group.mask[type].max().index();
+                bits.emplace_back(start, end - 1);
+                start = match_group.mask[type].ffs(end);
+            }
+            // Specifically, the immediate information may have to be broken up into mutliple
+            // places
+            if (type == TableFormat::IMMEDIATE) {
+                for (size_t i = 0; i < bits.size(); i++) {
+                    cstring name = format_name(type);
+                    if (bits.size() > 1)
+                        name = name + std::to_string(i);
+                    fmt.emit(out, name, group, bits[i].first, bits[i].second - bits[i].first + 1);
+                }
+            } else {
+                fmt.emit(out, format_name(type), group, bits);
+            }
+        }
+
+        if (ternary || gateway) {
+            if (group >= 0) {
+                ++group;
+                continue;
+            } else {
+                break; } }
+        type = TableFormat::MATCH;
+
+        bits.clear();
+
+        // Generate a bitvec to output the relevant match bit slice(s) in the "match" output of
+        // "format" in the assembly.
+        //
+        // E.g.
+        // format: { action(0): 48..48, immediate(0): 41..47, valid(0): 40..40,
+        //                                                    match(0): [ 0..31, 34..39  ]  }
+        // Here match slices are aligned on bits 0..31 and bits 34..39
+        //
+        // The match match bits on word xbar come first followed by byte xbar. The same ordering
+        // is followed for "match" output.
+        //
+        // match: [ hdrs.data.f1(0..7), hdrs.data.f1(8..15), hdrs.data.f1(16..23),
+        //                                      hdrs.data.f1(24..31), hdrs.data.h1(10..15)  ]
+        // Note, the hole at 32..33 is due to 2 bits being ghosted
+        // from the field hdrs.data.h1(8..15)
+        int start = -1; int end = -1;
+        auto find_start_and_end_bits = [&](int word) {
+            for (const auto &match_byte : match_group.match) {
+                const auto &byte = match_byte.first;
+                if (byte.loc.group != word) continue;
+                const bitvec &byte_layout = match_byte.second;
+                // Byte start and byte end are the bitvec positions for this specific byte
+                BUG_CHECK(!byte_layout.empty(), "Match byte allocated has no match bits");
+                int start_bit = byte_layout.ffs();
+                do {
+                    int end_bit = byte_layout.ffz(start_bit);
+                    if (start == -1) {
+                        start = start_bit;
+                        end = end_bit - 1;
+                    } else if (end == start_bit - 1) {
+                        end = end_bit - 1;
+                    } else {
+                        bits.emplace_back(start, end);
+                        LOG6("Adding match bits slice at (" << start << ", " << end << ")");
+                        start = start_bit;
+                        end = end_bit - 1;
+                    }
+                    start_bit = byte_layout.ffs(end_bit);
+                } while (start_bit != -1);
+            }
+        };
+
+        find_start_and_end_bits(1);
+        find_start_and_end_bits(0);
+        bits.emplace_back(start, end);
+        LOG6("Adding match bits slice at (" << start << ", " << end << ")");
+
+        fmt.emit(out, format_name(type), group, bits);
+        group++;
+    }
+
+    out << (fmt.sep + 1) << "}" << std::endl;
+    if (ternary || gateway)
+        return;
+
+    if (tm->proxy_hash) {
+        out << indent << "match: [ ";
+        std::string sep = "";
+        for (auto slice : tm->proxy_hash_fields) {
+            out << sep << slice;
+            sep = ", ";
+        }
+        out << " ]" << std::endl;
+        out << indent << "proxy_hash_group: " << use.proxy_hash_group << std::endl;
+    }
+
+    // Outputs the match portion
+    bool first = true;
+    for (auto field : tm->match_fields) {
+        if (!field) continue;
+        if (first) {
+            out << indent << "match: [ ";
+            first = false;
+        } else {
+            out << ", "; }
+        out << field; }
+    if (!first) out << " ]" << std::endl;
 }
 
 bool PpuAsmOutput::gateway_uses_inhibit_index(const IR::MAU::Table *tbl) const {
@@ -524,6 +645,84 @@ void PpuAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
 
     if (mem.type == Memories::Use::TERNARY && mem.tind_result_bus >= 0)
         out << indent << "indirect_bus: " << mem.tind_result_bus << std::endl;
+}
+
+void TableMatch::populate_match_fields() {
+    Log::TempIndent indent;
+    LOG5("Populating match fields" << indent);
+    // Determine which fields are part of a table match.  If a field partially ghosted,
+    // then this information is contained within the bitvec and the int of the match_info
+    auto *ixbar_use = table->resources->match_ixbar.get();
+    if (!ixbar_use) return;
+
+    // Sort by match fields by the order oc the byte layout
+    std::map<bitvec, IXBar::Use::Byte> match_info_sorted;
+    auto match_info = table->resources->table_format.match_groups[0].match;
+    for (auto &m : match_info) match_info_sorted.insert({m.second, m.first});
+
+    // Populate slice for each byte into match_fields which will be output to assembly
+    for (auto &m : match_info_sorted) {
+        const IXBar::Use::Byte &byte = m.second;
+        const bitvec &byte_layout = m.first;
+        LOG6("For match info : " << byte << ": " << byte_layout);
+
+        for (auto &fi : byte.field_bytes) {
+            LOG7("\tFor field byte : " << fi);
+            bitvec total_cont_loc = fi.cont_loc();
+            int first_cont_bit = total_cont_loc.min().index();
+            bitvec layout_shifted
+                = byte_layout.getslice(byte_layout.min().index() / 8 * 8, 8);
+
+            auto fieldName = fi.get_use_name();
+            auto field = phv.field(fieldName);
+            le_bitrange field_bits = { fi.lo, fi.hi };
+            int bits_seen = 0;
+            PHV::FieldUse use(PHV::FieldUse::READ);
+            // It is not a guarantee, especially in Tofino2 due to live ranges being different that
+            // a FieldInfo is not corresponding to a single alloc_slice object. Its not clear yet
+            // that this will also apply for Flatrock.
+            field->foreach_alloc(field_bits, table, &use, [&](const PHV::AllocSlice &sl) {
+                int lo = sl.field_slice().lo;
+                int hi = sl.field_slice().hi;
+                bitvec cont_loc = total_cont_loc & bitvec(bits_seen + first_cont_bit, sl.width());
+                bitvec matched_bits = layout_shifted & cont_loc;
+                bits_seen += sl.width();
+                LOG8("\t\tField Slice: " << sl << ", total_cont_loc: " << total_cont_loc
+                        << ", bits_seen: " << bits_seen
+                        << ", first_cont_bit: " << first_cont_bit
+                        << ", layout_shifted: " << layout_shifted
+                        << ", cont_loc: " << cont_loc
+                        << ", matched_bits: " << matched_bits);
+                // If a byte is partially ghosted, then currently the bits from the lsb are
+                // ghosted so the algorithm always shrinks from the bottom
+                if (matched_bits.empty()) {
+                    return;
+                } else if (matched_bits != cont_loc) {
+                    lo += (matched_bits.min().index() - cont_loc.min().index());
+                }
+                Slice asm_sl(phv, fieldName, lo, hi);
+                if (asm_sl.bytealign() != (matched_bits.min().index() % 8))
+                    BUG("Byte alignment for matching does not match up properly");
+                match_fields.push_back(asm_sl);
+                LOG7("\t\tAdding single byte match field: " << asm_sl);
+            });
+        }
+    }
+
+    LOG7("\tMatch fields : " << match_fields);
+}
+
+TableMatch::TableMatch(const PhvInfo &phv, const IR::MAU::Table *tbl) : ::TableMatch(phv) {
+    table = tbl;
+
+    Log::TempIndent indent;
+    LOG5("Create TableMatch for table " << table->name << indent);
+
+    if (tbl->resources->table_format.match_groups.size() == 0)
+        return;
+
+    populate_match_fields();
+    populate_ghost_bits();
 }
 
 }  // end namespace Flatrock

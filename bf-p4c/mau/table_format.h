@@ -71,7 +71,6 @@ struct TableFormat {
                   METER_TYPE, INDIRECT_ACTION, SEL_LEN_MOD, SEL_LEN_SHIFT, VALID, ENTRY_TYPES,
                   INTERLEAVED_MATCH };
 
-
     struct Use {
         struct match_group_use {
             // int is the number of bits in allocation

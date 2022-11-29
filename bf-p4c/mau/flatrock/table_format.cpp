@@ -3,6 +3,25 @@
 
 namespace Flatrock {
 
+/** This fills out the use object, as well as the global structures for keeping track of the
+ *  format.  This does this for both match and version information.
+ */
+void TableFormat::fill_out_use(int group, const safe_vector<ByteInfo> &alloced) {
+    Log::TempIndent indent;
+    LOG5("Filling out match byte and group use for group " << group << indent);
+    auto &group_use = use->match_groups[group];
+    for (const auto& info : alloced) {
+        bitvec match_location = info.bit_use << (8 * info.byte_location);
+        group_use.match[info.byte] = match_location;
+        group_use.mask[MATCH] |= match_location;
+        group_use.match_byte_mask.setbit(info.byte_location);
+        match_byte_use.setbit(info.byte_location);
+        total_use |= match_location;
+        LOG6("Total Use: " << total_use << ", group use: " << group_use
+                << ", match byte use: " << match_byte_use);
+    }
+}
+
 /** Given a number of overhead entries, this algorithm determines how many match groups
  *  can fully fit into that particular RAM line.
  *  TODO: Wide matches
@@ -42,8 +61,7 @@ void TableFormat::allocate_full_fits(int width_sect, int group) {
 
         groups_allocated++;
         full_match_groups_per_RAM[width_sect]++;
-        bitvec empty;
-        fill_out_use(group, alloced, empty);
+        fill_out_use(group, alloced);
         LOG4("Entry usage: " << total_use);
 
         if (allocate_single_group) break;
@@ -239,17 +257,18 @@ void TableFormat::find_bytes_to_allocate(int /* width_sect */, safe_vector<ByteI
     // work for all cases and this code may need to be revised to identify and reorder accordingly.
     // Inefficient ordering will limit packing options while allocating match and overhead.
     for (const auto& info : match_bytes) {
-        if (info.byte.container.size() == 32) {
+        if (info.byte.loc.group == IXBar::Loc::WORD) {
             LOG6("Add to Unalloced Match : " << info);
             unalloced.push_back(info);
         }
     }
     for (const auto& info : match_bytes) {
-        if (info.byte.container.size() < 32) {
+        if (info.byte.loc.group == IXBar::Loc::BYTE) {
             LOG6("Add to Unalloced Match : " << info);
             unalloced.push_back(info);
         }
     }
+    LOG5("Unalloced bytes: " << unalloced);
 }
 
 bool TableFormat::analyze_layout_option() {

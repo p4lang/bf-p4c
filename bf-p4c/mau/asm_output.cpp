@@ -34,6 +34,7 @@
 // FIXME -- temp hack for flatrock specific stuff here -- should be removed once we
 // have Flatrock-specific memory allocation
 #include "bf-p4c/mau/flatrock/input_xbar.h"
+#include "bf-p4c/mau/flatrock/asm_output.h"
 #endif
 
 int DefaultNext::id_counter = 0;
@@ -955,34 +956,6 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
     }
 }
 
-struct fmt_state {
-    const char *sep = " ";
-    int next = 0;
-    void emit(std::ostream &out, const char *name, int group, int bit, int width) {
-        if (bit < 0) return;
-        out << sep << name;
-        if (group != -1)
-            out << '(' << group << ")";
-        out << ": ";
-        out << bit << ".." << bit+width-1;
-        next = bit+width;
-        sep = ", "; }
-    void emit(std::ostream &out, const char *name, int group,
-              const safe_vector<std::pair<int, int>> &bits) {
-        if (bits.size() == 1) {
-            emit(out, name, group, bits[0].first, bits[0].second - bits[0].first + 1);
-        } else if (bits.size() > 1) {
-            out << sep << name;
-            if (group != -1)
-                out << '(' << group << ")";
-            out << ": [";
-            sep = "";
-            for (auto &p : bits) {
-                out << sep << p.first << ".." << p.second;
-                sep = ", "; }
-            out << " ]"; } }
-};
-
 cstring format_name(int type) {
     if (type == TableFormat::MATCH)
         return "match";
@@ -1770,9 +1743,19 @@ class MauAsmOutput::EmitAlwaysRunAction : public MauAsmOutput::EmitAction {
     }
 };
 
-void TableMatch::init_proxy_hash(const IR::MAU::Table *tbl) {
+TableMatch* TableMatch::create(const PhvInfo &phv, const IR::MAU::Table *tbl) {
+#ifdef HAVE_FLATROCK
+    if (Device::currentDevice() == Device::FLATROCK) {
+        LOG5("Creating Flatrock::TableMatch");
+        return new Flatrock::TableMatch(phv, tbl);
+    }
+#endif
+    return new TableMatch(phv, tbl);
+}
+
+void TableMatch::init_proxy_hash() {
     proxy_hash = true;
-    for (auto match_info : tbl->resources->table_format.match_groups[0].match) {
+    for (auto match_info : table->resources->table_format.match_groups[0].match) {
         const IXBar::Use::Byte &byte = match_info.first;
         const bitvec &byte_layout = match_info.second;
 
@@ -1789,74 +1772,11 @@ void TableMatch::init_proxy_hash(const IR::MAU::Table *tbl) {
     }
 }
 
-/* Information on which tables are matched and ghosted.  This is used by the emit table format,
-   and the hashing information.  Comes directly from the table_format object in the resources
-   of a table*/
-TableMatch::TableMatch(const MauAsmOutput &, const PhvInfo &phv,
-        const IR::MAU::Table *tbl) /*: self(s)*/ {
-    if (tbl->resources->table_format.match_groups.size() == 0)
-        return;
-    if (tbl->layout.proxy_hash) {
-        init_proxy_hash(tbl);
-        return;
-    }
-
-    identity_hash = tbl->resources->table_format.identity_hash;
-
-    dynamic_key_masks = tbl->dynamic_key_masks;
-
-    // Determine which fields are part of a table match.  If a field partially ghosted,
-    // then this information is contained within the bitvec and the int of the match_info
-    for (auto match_info : tbl->resources->table_format.match_groups[0].match) {
-        const IXBar::Use::Byte &byte = match_info.first;
-        const bitvec &byte_layout = match_info.second;
-
-        safe_vector<Slice> single_byte_match_fields;
-        for (auto &fi : byte.field_bytes) {
-            bitvec total_cont_loc = fi.cont_loc();
-            int first_cont_bit = total_cont_loc.min().index();
-            bitvec layout_shifted
-                = byte_layout.getslice(byte_layout.min().index() / 8 * 8, 8);
-
-            auto field = phv.field(fi.get_use_name());
-            le_bitrange field_bits = { fi.lo, fi.hi };
-            int bits_seen = 0;
-            PHV::FieldUse use(PHV::FieldUse::READ);
-            // It is not a guarantee, especially in Tofino2 due to live ranges being different
-            // that a FieldInfo is not corresponding to a single alloc_slice object
-            field->foreach_alloc(field_bits, tbl, &use, [&](const PHV::AllocSlice &sl) {
-                int lo = sl.field_slice().lo;
-                int hi = sl.field_slice().hi;
-                bitvec cont_loc = total_cont_loc & bitvec(bits_seen + first_cont_bit, sl.width());
-                bitvec matched_bits = layout_shifted & cont_loc;
-                bits_seen += sl.width();
-                // If a byte is partially ghosted, then currently the bits from the lsb are
-                // ghosted so the algorithm always shrinks from the bottom
-                if (matched_bits.empty()) {
-                    return;
-                } else if (matched_bits != cont_loc) {
-                    lo += (matched_bits.min().index() - cont_loc.min().index());
-                }
-                Slice asm_sl(phv, fi.get_use_name(), lo, hi);
-                if (asm_sl.bytealign() != (matched_bits.min().index() % 8))
-                    BUG("Byte alignment for matching does not match up properly");
-                single_byte_match_fields.push_back(asm_sl);
-            });
-        }
-
-        std::sort(single_byte_match_fields.begin(), single_byte_match_fields.end(),
-            [](const Slice &a, const Slice &b) {
-            return a.bytealign() < b.bytealign();
-        });
-
-        match_fields.insert(match_fields.end(), single_byte_match_fields.begin(),
-                            single_byte_match_fields.end());
-    }
-
+void TableMatch::populate_ghost_bits() {
     // Determine which bytes are part of the ghosting bits.  Again like the match info,
     // whichever bits are ghosted must be handled in a particular way if the byte is partially
     // matched and partially ghosted
-    for (auto ghost_info : tbl->resources->table_format.ghost_bits) {
+    for (auto ghost_info : table->resources->table_format.ghost_bits) {
         const IXBar::Use::Byte &byte = ghost_info.first;
         const bitvec &byte_layout = ghost_info.second;
 
@@ -1872,7 +1792,7 @@ TableMatch::TableMatch(const MauAsmOutput &, const PhvInfo &phv,
             // It is not a guarantee, especially in Tofino2 due to live ranges being different
             // that a FieldInfo is not corresponding to a single alloc_slice object
             PHV::FieldUse use(PHV::FieldUse::READ);
-            field->foreach_alloc(field_bits, tbl, &use, [&](const PHV::AllocSlice &sl) {
+            field->foreach_alloc(field_bits, table, &use, [&](const PHV::AllocSlice &sl) {
                 int lo = sl.field_slice().lo;
                 int hi = sl.field_slice().hi;
                 bitvec cont_loc = total_cont_loc & bitvec(bits_seen + first_cont_bit, sl.width());
@@ -1889,25 +1809,89 @@ TableMatch::TableMatch(const MauAsmOutput &, const PhvInfo &phv,
             });
         }
     }
-    /* Store the table pointer handy in case we need to write the seed */
-    table = tbl;
+}
 
-    // Link match data together for an easier to read asm
-    /*
-    auto it = match_fields.begin();
-    while (it != match_fields.end()) {
-        auto next = it;
-        if (++next != match_fields.end()) {
-            Slice j = it->join(*next);
-            if (j) {
-                *it = j;
-                match_fields.erase(next);
-                continue;
-            }
+void TableMatch::populate_match_fields() {
+    Log::TempIndent indent;
+    LOG5("Populating match fields" << indent);
+    // Determine which fields are part of a table match.  If a field partially ghosted,
+    // then this information is contained within the bitvec and the int of the match_info
+    auto *ixbar_use = table->resources->match_ixbar.get();
+    if (!ixbar_use) return;
+
+    for (auto match_info : table->resources->table_format.match_groups[0].match) {
+        const IXBar::Use::Byte &byte = match_info.first;
+        const bitvec &byte_layout = match_info.second;
+        LOG6("For match info : " << byte << ": " << byte_layout);
+
+        safe_vector<Slice> single_byte_match_fields;
+        for (auto &fi : byte.field_bytes) {
+            LOG7("\tFor field byte : " << fi);
+            bitvec total_cont_loc = fi.cont_loc();
+            int first_cont_bit = total_cont_loc.min().index();
+            bitvec layout_shifted
+                = byte_layout.getslice(byte_layout.min().index() / 8 * 8, 8);
+
+            auto field = phv.field(fi.get_use_name());
+            le_bitrange field_bits = { fi.lo, fi.hi };
+            int bits_seen = 0;
+            PHV::FieldUse use(PHV::FieldUse::READ);
+            // It is not a guarantee, especially in Tofino2 due to live ranges being different
+            // that a FieldInfo is not corresponding to a single alloc_slice object
+            field->foreach_alloc(field_bits, table, &use, [&](const PHV::AllocSlice &sl) {
+                int lo = sl.field_slice().lo;
+                int hi = sl.field_slice().hi;
+                bitvec cont_loc = total_cont_loc & bitvec(bits_seen + first_cont_bit, sl.width());
+                bitvec matched_bits = layout_shifted & cont_loc;
+                bits_seen += sl.width();
+                LOG8("\t\tField Slice: " << sl << ", total_cont_loc: " << total_cont_loc
+                        << ", bits_seen: " << bits_seen
+                        << ", first_cont_bit: " << first_cont_bit
+                        << ", layout_shifted: " << layout_shifted
+                        << ", cont_loc: " << cont_loc
+                        << ", matched_bits: " << matched_bits);
+                // If a byte is partially ghosted, then currently the bits from the lsb are
+                // ghosted so the algorithm always shrinks from the bottom
+                if (matched_bits.empty()) {
+                    return;
+                } else if (matched_bits != cont_loc) {
+                    lo += (matched_bits.min().index() - cont_loc.min().index());
+                }
+                Slice asm_sl(phv, fi.get_use_name(), lo, hi);
+                if (asm_sl.bytealign() != (matched_bits.min().index() % 8))
+                    BUG("Byte alignment for matching does not match up properly");
+                // single_byte_match_fields.push_back(asm_sl);
+                match_fields.push_back(asm_sl);
+                LOG7("\t\tAdding single byte match field: " << asm_sl);
+            });
         }
-        it = next;
     }
-    */
+
+    LOG7("\tMatch fields : " << match_fields);
+}
+
+/* Information on which tables are matched and ghosted.  This is used by the emit table format,
+ * and the hashing information.  Comes directly from the table_format object in the resources
+ * of a table
+ */
+TableMatch::TableMatch(const PhvInfo &phv, const IR::MAU::Table *tbl)
+        : table(tbl), phv(phv) {
+    Log::TempIndent indent;
+    LOG5("Create TableMatch for table " << table->name << indent);
+
+    if (tbl->resources->table_format.match_groups.size() == 0)
+        return;
+
+    if (table->layout.proxy_hash) {
+        init_proxy_hash();
+        return;
+    }
+
+    identity_hash = table->resources->table_format.identity_hash;
+    dynamic_key_masks = table->dynamic_key_masks;
+
+    populate_match_fields();
+    populate_ghost_bits();
 }
 
 /** Gateways in Tofino are 4 44 bit TCAM rows used to compare conditionals.  A comparison will
@@ -2631,9 +2615,12 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
 
     /* FIXME -- some of this should be method(s) in IR::MAU::Table? */
     auto unique_id = tbl->unique_id();
-    LOG1("Emitting table " << unique_id);
+    Log::TempIndent logIndent;
+    LOG1("Emitting table " << unique_id << logIndent);
     bool no_match_hit = tbl->layout.no_match_hit_path() && !tbl->conditional_gateway_only();
-    TableMatch fmt(*this, phv, tbl);
+
+    auto fmt = TableMatch::create(phv, tbl);
+
     indent_t indent(1);
     std::stringstream context_json_entries;
 
@@ -2656,10 +2643,10 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
                                             tbl->resources->proxy_hash_ixbar.get() : nullptr;
             emit_ixbar(out, indent, tbl->resources->match_ixbar.get(), proxy_ixbar,
                          &tbl->resources->hash_dists, &tbl->resources->memuse.at(unique_id),
-                         &fmt, tbl, tbl->layout.ternary);
+                         fmt, tbl, tbl->layout.ternary);
         }
         if (!tbl->layout.ternary && !tbl->layout.no_match_rams()) {
-            emit_table_format(out, indent, tbl->resources->table_format, &fmt, false, false);
+            emit_table_format(out, indent, tbl->resources->table_format, fmt, false, false);
         }
 
         if (tbl->layout.ternary)
@@ -2668,10 +2655,13 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
         if (tbl->layout.atcam)
             emit_atcam_match(out, indent, tbl, context_json_entries);
     }
+
     if (tbl->resources->action_ixbar)
         emit_ixbar(out, indent, tbl->resources->action_ixbar.get(), nullptr, nullptr, nullptr,
                    nullptr, tbl, false);
+
     emit_indirect_res_context_json(out, indent, tbl, context_json_entries);
+
     emit_user_annotation_context_json(indent, tbl->match_table, context_json_entries);
 
     NextTableSet next_hit;

@@ -89,6 +89,7 @@ struct IXBar {
     }
 
     struct Loc {
+        enum type { BYTE = 0, WORD = 1, NONE = 2 };
         int group = -1, byte = -1;
         Loc() = default;
         Loc(int g, int b) : group(g), byte(b) {}
@@ -114,6 +115,12 @@ struct IXBar {
             }
         }
         bool allocated() const { return group >= 0 && byte >= 0; }
+        type group_type() const {
+            if (group == 1) return WORD;
+            else if (group == 0) return BYTE;
+            else
+                return NONE;
+        }
     };
 
     enum byte_speciality_t {

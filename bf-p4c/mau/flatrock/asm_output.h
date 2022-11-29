@@ -5,10 +5,17 @@
 
 namespace Flatrock {
 
+class TableMatch : public ::TableMatch {
+    void populate_match_fields() override;
+
+ public:
+    TableMatch(const PhvInfo &phv, const IR::MAU::Table *tbl);
+};
+
 class PpuAsmOutput : public MauAsmOutput {
  private:
     void emit_table_format(std::ostream &out, indent_t, const TableFormat::Use &use,
-            const TableMatch *tm, bool ternary, bool no_match) const override;
+            const ::TableMatch *tm, bool ternary, bool no_match) const override;
     bool gateway_uses_inhibit_index(const IR::MAU::Table *) const override;
     void emit_memory(std::ostream &out, indent_t, const Memories::Use &,
             const IR::MAU::Table::Layout *l = nullptr,

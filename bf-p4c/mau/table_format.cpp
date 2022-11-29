@@ -1205,7 +1205,7 @@ bool TableFormat::initialize_byte(int byte_offset, int width_sect, const ByteInf
     alloced.back().byte_location = initial_offset;
     LOG6("Initialized byte " << alloced);
     LOG6("Initial offset: " << initial_offset << ", Bit attempt " << bit_attempt
-        << "Byte attempt " << byte_attempt << " Use slice " << use_slice);
+        << " Byte attempt " << byte_attempt << " Use slice " << use_slice);
     return true;
 }
 
@@ -1540,7 +1540,7 @@ int TableFormat::determine_group(int width_sect, int groups_allocated) {
 void TableFormat::fill_out_use(int group, const safe_vector<ByteInfo> &alloced,
                                bitvec &version_loc) {
     Log::TempIndent indent;
-    LOG5("Filling out match byte and group use" << indent);
+    LOG5("Filling out match byte and group use for group " << group << indent);
     auto &group_use = use->match_groups[group];
     for (const auto& info : alloced) {
         bitvec match_location = info.bit_use << (8 * info.byte_location);
@@ -2880,6 +2880,11 @@ std::ostream& operator<<(std::ostream &out, const TableFormat::Use::match_group_
     out << " mask: " << *m.mask;
     out << ", match_byte_mask: " << m.match_byte_mask;
     out << ", allocated_bytes: " << m.allocated_bytes;
-    out << " ]";
+    out << " ]" << Log::endl;
+    out << "\t(";
+    for (auto &byte : m.match) {
+        out << " " << byte.first << " : " << byte.second << " ";
+    }
+    out << " )";
     return out;
 }

@@ -19,6 +19,7 @@ struct TableFormat : ::TableFormat {
     bool analyze_layout_option() override;
     void choose_ghost_bits(safe_vector<IXBar::Use::Byte> &potential_ghost) override;
     void allocate_full_fits(int width_sect, int group) override;
+    void fill_out_use(int group, const safe_vector<ByteInfo> &alloced);
  public:
     TableFormat(const LayoutOption &l, const IXBar::Use *mi, const IXBar::Use *phi,
                 const IR::MAU::Table *t, const bitvec im, bool gl, FindPayloadCandidates &fpc)

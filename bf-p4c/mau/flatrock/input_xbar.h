@@ -68,22 +68,23 @@ class IXBar : public ::IXBar {
         bool emit_gateway_asm(const MauAsmOutput &, std::ostream &, indent_t,
                               const IR::MAU::Table *) const override;
         void emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &match_data,
-                safe_vector<Slice> &ghost, const TableMatch *fmt,
+                safe_vector<Slice> &ghost, const ::TableMatch *fmt,
                 std::map<int, std::map<int, Slice>> &sort) const override;
-        void emit_salu_bytemasks(std::ostream &, indent_t) const { BUG(""); }
+        void emit_salu_bytemasks(std::ostream &, indent_t) const override { BUG(""); }
         void emit_ixbar_asm(const PhvInfo &phv, std::ostream& out, indent_t indent,
-                            const TableMatch *fmt, const IR::MAU::Table *) const;
-        bitvec galois_matrix_bits() const { BUG(""); }
-        const std::map<int, const IR::Expression *> &hash_computed_expressions() const { BUG(""); }
-        int hash_groups() const { BUG(""); return 0; }
-        int hash_dist_hash_group() const { BUG(""); return 0; }
-        std::string hash_dist_used_for() const { BUG(""); return ""; }
-        bool is_parity_enabled() const { return false; }
-        TotalBytes match_hash(safe_vector<int> *hash_groups) const;
-        bitvec meter_bit_mask() const { BUG(""); }
-        int total_input_bits() const { BUG(""); }
-        void update_resources(int, BFN::Resources::StageResources &) const;
-        const char *way_source_kind() const { return "xme"; }
+                            const ::TableMatch *fmt, const IR::MAU::Table *) const override;
+        bitvec galois_matrix_bits() const override { BUG(""); }
+        const std::map<int, const IR::Expression *>&
+            hash_computed_expressions() const override{ BUG(""); }
+        int hash_groups() const override { BUG(""); return 0; }
+        int hash_dist_hash_group() const override { BUG(""); return 0; }
+        std::string hash_dist_used_for() const override { BUG(""); return ""; }
+        bool is_parity_enabled() const override { return false; }
+        TotalBytes match_hash(safe_vector<int> *hash_groups) const override;
+        bitvec meter_bit_mask() const override { BUG(""); }
+        int total_input_bits() const override { BUG(""); }
+        void update_resources(int, BFN::Resources::StageResources &) const override;
+        const char *way_source_kind() const override { return "xme"; }
         bool has_lamb() const { return xme_units & LAMB_XME_UNITS; }
         bool has_stm() const { return xme_units & STM_XME_UNITS; }
 
