@@ -38,6 +38,13 @@ build_p4c() {
     (cd $builddir ; make -j $parallel_make)
 }
 
+install_cmake() {
+  wget https://cmake.org/files/v3.16/cmake-3.16.3-Linux-x86_64.tar.gz -q -O cmake.tar.gz
+  mkdir -p /bfn/cmake
+  tar zxf cmake.tar.gz --strip-components=1 -C /bfn/cmake
+  rm cmake.tar.gz
+}
+
 usage() {
     echo $1
     echo "Usage: ./scripts/package_p4c_for_tofino.sh <optional arguments>"
@@ -96,6 +103,12 @@ while [ $# -gt 0 ]; do
     esac
     shift
 done
+
+# This script is used by SDE CI, which is based on Ubuntu 16.04 and contains quite old version of cmake,
+# unsupported by p4c frontend. Install CMake v3.16.3 (the version used in p4factory builds) to get newer cmake.
+# TODO: Remove this workaround when SDE CI drops Ubuntu 16.04.
+install_cmake
+export CMAKE=/bfn/cmake/bin/cmake
 
 # Add copyright headers to all BFN/Intel source files before building and
 # packaging, so that we can easily avoid touching files from P4.org.

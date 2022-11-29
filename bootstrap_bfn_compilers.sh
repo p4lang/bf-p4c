@@ -166,7 +166,7 @@ pushd ${builddir}
 # CMake reconfiguration script. Run it in the build directory if content of
 # CMakeLists has changed but there is no intention to change configuration.
 
-cmake ${mydir} -DCMAKE_BUILD_TYPE=${buildtype}\
+${CMAKE:-cmake} ${mydir} -DCMAKE_BUILD_TYPE=${buildtype}\
       -G "${cmakeGen}" \
       ${ENABLED_COMPONENTS} \
       -DP4C_DRIVER_NAME='bf-p4c' \
