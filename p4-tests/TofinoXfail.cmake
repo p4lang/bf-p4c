@@ -130,13 +130,6 @@ if (PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_16/ptf/ingress_checksum.p4    #TODO(zma) use @calculated_field_update_location to force ingress update
     )
 
-# BRIG-686
-# NameError: global name 'smoke_large_tbls_idle_stats_tbl_match_spec_t' is not defined
-  p4c_add_xfail_reason("tofino"
-    "NameError: global name"
-    p4testgen_smoke_large_tbls
-    )
-
 endif() # PTF_REQUIREMENTS_MET
 
 
@@ -613,15 +606,9 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/murdoch_0.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/photostats_0.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/sidestepped_0.p4
-  p4testgen_laymen_0
   testdata/p4_14_samples/action_inline.p4
   extensions/p4_tests/glass/microsoft/COMPILER-606/case3259.p4
   extensions/p4_tests/p4_16/compile_only/p4c-2336.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "src2 must be phv register"
-  p4testgen_faecess_0
   )
 
 p4c_add_xfail_reason("tofino"
@@ -629,7 +616,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/licensee_0.p4
 )
 
-# p4smith and p4testgen regression XFAILs
+# p4smith regression XFAILs
 
 # real error. fails because gateway condition too complex and cannot fit in a TCAM.
 p4c_add_xfail_reason("tofino"

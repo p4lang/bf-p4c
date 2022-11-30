@@ -15,6 +15,73 @@ set (P16_V1_EXCLUDE_PATTERNS "tofino\\.h")
 set (P16_V1_FOR_JBAY "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/*.p4")
 p4c_find_tests("${P16_V1_FOR_JBAY}" p16_v1tests INCLUDE "${P16_V1_INCLUDE_PATTERNS}" EXCLUDE "${P16_V1_EXCLUDE_PATTERNS}")
 
+## P4-16 Programs
+set (P4FACTORY_P4_16_PROGRAMS
+  tna_32q_2pipe
+  tna_action_profile
+  tna_action_selector
+  tna_bridged_md
+  tna_counter
+  tna_custom_hash
+  tna_digest
+  tna_dkm
+  tna_dyn_hashing
+  tna_exact_match
+  tna_field_slice
+  tna_idletimeout
+  tna_lpm_match
+  tna_meter_bytecount_adjust
+  tna_meter_lpf_wred
+  tna_mirror
+  tna_multicast
+  tna_operations
+  tna_port_metadata
+  tna_port_metadata_extern
+  tna_proxy_hash
+  tna_pvs
+  tna_random
+  tna_range_match
+  tna_register
+  tna_snapshot
+  tna_symmetric_hash
+  tna_ternary_match
+  tna_timestamp
+  t2na_counter_true_egress_accounting
+  )
+
+p4c_add_ptf_test_with_ptfdir ("tofino2" "t2na_ghost_dod" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod/t2na_ghost_dod.p4" "${testExtraArgs} -target tofino2 -arch t2na -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod")
+bfn_set_ptf_test_spec("tofino2" "t2na_ghost_dod" "test.T2naGhostTestDoD")
+p4c_add_test_label("tofino2" "JENKINS_PART2" "t2na_ghost_dod")
+
+p4c_add_ptf_test_with_ptfdir ("tofino2" "t2na_ghost_dod_simpl" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod_simpl/t2na_ghost_dod_simpl.p4" "${testExtraArgs} -target tofino2 -arch t2na -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod_simpl")
+bfn_set_ptf_test_spec("tofino2" "t2na_ghost_dod_simpl" "test.T2naGhostSimplTestDoD")
+p4c_add_test_label("tofino2" "JENKINS_PART2" "t2na_ghost_dod_simpl")
+
+p4c_add_ptf_test_with_ptfdir ("tofino2" "t2na_ghost_dod_2pipe_simpl" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod_2pipe_simpl/t2na_ghost_dod_2pipe_simpl.p4" "${testExtraArgs} -target tofino2 -arch t2na -bfrt " "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod_2pipe_simpl")
+bfn_set_ptf_test_spec("tofino2" "t2na_ghost_dod_2pipe_simpl" "test.T2naGhost2PipeSimplTestDoD")
+p4c_add_test_label("tofino2" "JENKINS_PART2" "t2na_ghost_dod_2pipe_simpl")
+# uses multiple pipes so we need to specify ports explicitly
+bfn_set_ptf_ports_json_file("tofino2" "t2na_ghost_dod_2pipe_simpl" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod_2pipe_simpl/ports.json")
+
+p4c_add_ptf_test_with_ptfdir ("tofino2" "large_counter_meter" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/large_counter_meter/large_counter_meter.p4"
+  "${testExtraArgs} -target tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16 -bfrt -Xp4c=\"--disable_split_attached\" -Xptf=--test-params=pkt_size=100"
+  "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/large_counter_meter")
+bfn_set_ptf_test_spec("tofino2" "large_counter_meter" "all")
+p4c_add_test_label("tofino2" "JENKINS_PART2" "large_counter_meter")
+set_tests_properties("tofino2/large_counter_meter" PROPERTIES TIMEOUT ${extended_timeout_2times})
+
+# P4-16 Programs with PTF tests
+foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS)
+  p4c_add_ptf_test_with_ptfdir ("tofino2" "p4_16_programs_${t}" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}/${t}.p4"
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}")
+  bfn_set_p4_build_flag("tofino2" "p4_16_programs_${t}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs")
+  set (ports_json ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}/ports_tof2.json)
+  if (EXISTS ${ports_json})
+    bfn_set_ptf_ports_json_file("tofino2" "p4_16_programs_${t}" ${ports_json})
+  endif()
+  p4c_add_test_label("tofino2" "JENKINS_PART2" "p4_16_programs_${t}")
+endforeach()
+
 set (P16_JNA_INCLUDE_PATTERNS "include.*(t2?na|tofino2_arch).p4" "main|common_tna_test|common_t2na_test")
 set (P16_JNA_EXCLUDE_PATTERNS
   "tofino\\.h" "TOFINO1_ONLY" "<built-in>"
@@ -508,40 +575,6 @@ file(RELATIVE_PATH tofino32q-3pipe_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE
 bfn_add_test_with_args ("tofino2" "jbay" "tofino32q-3pipe" ${tofino32q-3pipe_path} "${testExtraArgs} -arch t2na" "")
 p4c_add_test_label("tofino2" "JENKINS_PART2" tofino32q-3pipe)
 
-## P4-16 Programs
-set (P4FACTORY_P4_16_PROGRAMS
-  tna_32q_2pipe
-  tna_action_profile
-  tna_action_selector
-  tna_bridged_md
-  tna_counter
-  tna_custom_hash
-  tna_digest
-  tna_dkm
-  tna_dyn_hashing
-  tna_exact_match
-  tna_field_slice
-  tna_idletimeout
-  tna_lpm_match
-  tna_meter_bytecount_adjust
-  tna_meter_lpf_wred
-  tna_mirror
-  tna_multicast
-  tna_operations
-  tna_port_metadata
-  tna_port_metadata_extern
-  tna_proxy_hash
-  tna_pvs
-  tna_random
-  tna_range_match
-  tna_register
-  tna_snapshot
-  tna_symmetric_hash
-  tna_ternary_match
-  tna_timestamp
-  t2na_counter_true_egress_accounting
-  )
-
 # No ptf, compile-only
 file(RELATIVE_PATH p4_16_programs_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs)
 
@@ -604,39 +637,6 @@ p4c_add_test_label("tofino2" "JENKINS_PART2" "p4_16_internal_p4_16_t2na_ghost")
 bfn_add_test_with_args ("tofino2" "jbay" "p4_16_internal_p4_16_mirror"
     ${p4_16_internal_p4_16_path}/mirror/mirror.p4 "${testExtraArgs} -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
 p4c_add_test_label("tofino2" "JENKINS_PART2" "p4_16_internal_p4_16_mirror")
-
-p4c_add_ptf_test_with_ptfdir ("tofino2" "t2na_ghost_dod" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod/t2na_ghost_dod.p4" "${testExtraArgs} -target tofino2 -arch t2na -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod")
-bfn_set_ptf_test_spec("tofino2" "t2na_ghost_dod" "test.T2naGhostTestDoD")
-p4c_add_test_label("tofino2" "JENKINS_PART2" "t2na_ghost_dod")
-
-p4c_add_ptf_test_with_ptfdir ("tofino2" "t2na_ghost_dod_simpl" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod_simpl/t2na_ghost_dod_simpl.p4" "${testExtraArgs} -target tofino2 -arch t2na -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod_simpl")
-bfn_set_ptf_test_spec("tofino2" "t2na_ghost_dod_simpl" "test.T2naGhostSimplTestDoD")
-p4c_add_test_label("tofino2" "JENKINS_PART2" "t2na_ghost_dod_simpl")
-
-p4c_add_ptf_test_with_ptfdir ("tofino2" "t2na_ghost_dod_2pipe_simpl" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod_2pipe_simpl/t2na_ghost_dod_2pipe_simpl.p4" "${testExtraArgs} -target tofino2 -arch t2na -bfrt " "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod_2pipe_simpl")
-bfn_set_ptf_test_spec("tofino2" "t2na_ghost_dod_2pipe_simpl" "test.T2naGhost2PipeSimplTestDoD")
-p4c_add_test_label("tofino2" "JENKINS_PART2" "t2na_ghost_dod_2pipe_simpl")
-# uses multiple pipes so we need to specify ports explicitly
-bfn_set_ptf_ports_json_file("tofino2" "t2na_ghost_dod_2pipe_simpl" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/t2na_ghost_dod_2pipe_simpl/ports.json")
-
-p4c_add_ptf_test_with_ptfdir ("tofino2" "large_counter_meter" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/large_counter_meter/large_counter_meter.p4"
-  "${testExtraArgs} -target tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16 -bfrt -Xp4c=\"--disable_split_attached\" -Xptf=--test-params=pkt_size=100"
-  "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/large_counter_meter")
-bfn_set_ptf_test_spec("tofino2" "large_counter_meter" "all")
-p4c_add_test_label("tofino2" "JENKINS_PART2" "large_counter_meter")
-set_tests_properties("tofino2/large_counter_meter" PROPERTIES TIMEOUT ${extended_timeout_2times})
-
-# P4-16 Programs with PTF tests
-foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS)
-  p4c_add_ptf_test_with_ptfdir ("tofino2" "p4_16_programs_${t}" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}/${t}.p4"
-    "${testExtraArgs} -target tofino2 -arch t2na -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}")
-  bfn_set_p4_build_flag("tofino2" "p4_16_programs_${t}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs")
-  set (ports_json ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/${t}/ports_tof2.json)
-  if (EXISTS ${ports_json})
-    bfn_set_ptf_ports_json_file("tofino2" "p4_16_programs_${t}" ${ports_json})
-  endif()
-  p4c_add_test_label("tofino2" "JENKINS_PART2" "p4_16_programs_${t}")
-endforeach()
 
 # PTF, disable failing tests
 bfn_add_test_with_args ("tofino2" "jbay" "p4_16_programs_tna_checksum"

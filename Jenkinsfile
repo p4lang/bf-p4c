@@ -163,7 +163,7 @@ node ('compiler-travis') {
                         -f docker/Dockerfile.tofino \
                         -t bf-p4c-compilers_intermediate_${image_tag} \
                         --build-arg DOCKER_PROJECT=${DOCKER_PROJECT} \
-                        --build-arg MAKEFLAGS=j16 \
+                        --build-arg MAKEFLAGS=j20 \
                         --target=environment \
                         .
                 """
@@ -182,7 +182,7 @@ node ('compiler-travis') {
                                     --name bf-p4c-compilers_build_${image_tag} \
                                     -v ~/.ccache_bf-p4c-compilers:/root/.ccache \
                                     -e UNIFIED_BUILD=true \
-                                    -e MAKEFLAGS=j16 \
+                                    -e MAKEFLAGS=j20 \
                                     -e UBSAN=${params.UBSAN} \
                                     -e ASAN=${params.ASAN} \
                                     -e UBSAN_OPTIONS=${params.UBSAN_OPTIONS} \
@@ -258,7 +258,7 @@ node ('compiler-travis') {
 
                         echo 'Running some Arista must-pass tests that are excluded in Travis jobs'
                         runInDocker(
-                            ctestParallelLevel: 8,
+                            ctestParallelLevel: 4,
                             "ctest -R '^tofino/.*arista*' -L 'CUST_MUST_PASS'"
                         )
 
@@ -369,7 +369,10 @@ node ('compiler-travis') {
                             extraArgs: '--privileged',
                             "ctest -R '^tofino2/.*smoketest_switch_16_Tests_y2'"
                         )
+                    },
 
+
+                    "p414 basic IPv4 smoketests": {
                         echo 'Running basic_ipv4 tests'
                         runInDocker(
                             extraArgs: '--privileged',
@@ -377,78 +380,116 @@ node ('compiler-travis') {
                         )
                     },
 
-                    "Travis - Tofino (part 1)": {
+                    "Gtest": {
+                        runInDocker(
+                            "ctest -R gtest"
+                        )
+                    },
+
+                    "Tofino (part 1)": {
                         echo 'Running tofino part 1 tests'
                         runInDocker(
                             extraArgs: '--privileged',
-                            ctestParallelLevel: 8,
+                            ctestParallelLevel: 3,
                             '''
                                 ctest \
                                     -R '^tofino/' \
-                                    -E 'smoketest|/programs|/internal_p4_14|p4testgen|tofino/switch_|c2_COMPILER|c2/COMPILER|p4_16_programs|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|ptf/digest.p4|digest-std-p4runtime' \
-                                    -LE 'UNSTABLE|GTS_WEEKLY|NON_PR_TOFINO|p414_nightly|determinism'
+                                    -E 'smoketest|tofino/switch_|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*' \
+                                    -LE 'UNSTABLE|GTS_WEEKLY|NON_PR_TOFINO|p414_nightly|determinism' \
+                                    -I 0,,3
                             '''
                         )
                     },
 
-                    "Travis - Tofino (part 2)": {
+                    "Tofino (part 2)": {
                         echo 'Running tofino part 2 tests'
                         runInDocker(
                             extraArgs: '--privileged',
-                            ctestParallelLevel: 1,
+                            ctestParallelLevel: 3,
                             '''
                                 ctest \
-                                    -R '^tofino/(.*programs|.*internal_p4_14)' \
-                                    -E 'TestRealData|_basic_ipv4|_stful|_meters|_hash_driven|_dkm|_exm_smoke_test|_exm_direct_|_exm_direct_1_|p4_16_programs_tna_exact_match|p4_16_programs_tna_meter_lpf_wred|perf_test_alpm|entry_read_from_hw' \
-                                    -LE 'UNSTABLE|NON_PR_TOFINO|p414_nightly|determinism'
+                                    -R '^tofino/' \
+                                    -E 'smoketest|tofino/switch_|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*' \
+                                    -LE 'UNSTABLE|GTS_WEEKLY|NON_PR_TOFINO|p414_nightly|determinism' \
+                                    -I 1,,3
                             '''
                         )
                     },
 
-                    "Travis - Tofino 2 (part 1)": {
-                        echo 'Running tofino2 tests'
+                    "Tofino (part 3)": {
+                        echo 'Running tofino part 3 tests'
                         runInDocker(
                             extraArgs: '--privileged',
-                            ctestParallelLevel: 8,
+                            ctestParallelLevel: 3,
                             '''
                                 ctest \
-                                    -R '^tofino2|gtest' \
-                                    -L 'JENKINS_PART1|gtest' \
-                                    -E 'ignore_test_|smoketest|p4_16_programs_tna_exact_match|p4_16_programs_tna_meter_lpf_wred|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|/dkm/|entry_read_from_hw|/p4_14/stf/decaf_9.*|ptf/digest.p4|npb-master-ptf' \
-                                    -LE 'UNSTABLE|determinism'
+                                    -R '^tofino/' \
+                                    -E 'smoketest|tofino/switch_|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*' \
+                                    -LE 'UNSTABLE|GTS_WEEKLY|NON_PR_TOFINO|p414_nightly|determinism' \
+                                    -I 2,,3
                             '''
                         )
                     },
 
-                    "Travis - Tofino 2 (part 2)": {
+                    "Tofino 2 (part 1)": {
                         echo 'Running tofino2 tests'
                         runInDocker(
                             extraArgs: '--privileged',
-                            ctestParallelLevel: 1,
+                            ctestParallelLevel: 3,
                             '''
                                 ctest \
                                     -R '^tofino2' \
-                                    -L 'JENKINS_PART2' \
-                                    -E 'ignore_test_|smoketest|p4_16_programs_tna_exact_match|p4_16_programs_tna_meter_lpf_wred|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|/dkm/|entry_read_from_hw|/p4_14/stf/decaf_9.*|ptf/digest.p4|3174' \
-                                    -LE 'UNSTABLE|determinism'
+                                    -E 'ignore_test_|smoketest|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|npb-master-ptf|npb-folded-pipe|npb-multi-prog' \
+                                    -LE 'UNSTABLE|determinism' \
+                                    -I 0,,3
                             '''
                         )
                     },
 
-                    "Travis - Tofino 3": {
+                    "Tofino 2 (part 2)": {
+                        echo 'Running tofino2 tests'
+                        runInDocker(
+                            extraArgs: '--privileged',
+                            ctestParallelLevel: 3,
+                            '''
+                                ctest \
+                                    -R '^tofino2' \
+                                    -E 'ignore_test_|smoketest|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|npb-master-ptf|npb-folded-pipe|npb-multi-prog' \
+                                    -LE 'UNSTABLE|determinism' \
+                                    -I 1,,3
+                            '''
+                        )
+                    },
+
+                    "Tofino 2 (part 3)": {
+                        echo 'Running tofino2 tests'
+                        runInDocker(
+                            extraArgs: '--privileged',
+                            ctestParallelLevel: 3,
+                            '''
+                                ctest \
+                                    -R '^tofino2' \
+                                    -E 'ignore_test_|smoketest|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|npb-master-ptf|npb-folded-pipe|npb-multi-prog' \
+                                    -LE 'UNSTABLE|determinism' \
+                                    -I 2,,3
+                            '''
+                        )
+                    },
+
+                    "Tofino 3": {
                         echo 'Running tofino3 tests'
                         runInDocker(
                             extraArgs: '--privileged',
-                            ctestParallelLevel: 2,
+                            ctestParallelLevel: 3,
                             "ctest -R '^tofino3' -LE 'determinism'"
                         )
                     },
 
-                    "Travis - Tofino 5": {
+                    "Tofino 5": {
                         echo 'Running tofino5 tests'
                         runInDocker(
                             extraArgs: '--privileged',
-                            ctestParallelLevel: 2,
+                            ctestParallelLevel: 1,
                             "ctest -R '^tofino5' -LE 'ptf|determinism'"
                         )
                     },
@@ -456,6 +497,7 @@ node ('compiler-travis') {
                     "Determinism test - All Tofino versions": {
                         echo 'Running determinism tests for all Tofino versions'
                         runInDocker(
+                            ctestParallelLevel: 2,
                             "ctest -L 'determinism'"
                         )
                     },
@@ -515,13 +557,13 @@ node ('compiler-travis') {
                     "Installed p4c tests": {
                         echo 'Running driver tests on installed p4c'
                         runInDocker(
-                            maxCpu: 4,
+                            maxCpu: 1,
                             extraArgs: '--privileged',
                             workingDir: '/bfn/bf-p4c-compilers/scripts',
                             """
                                 python3.8 \
                                     -u test_p4c_driver.py \
-                                    -j 4 \
+                                    -j 1 \
                                     --print-on-failure \
                                     --compiler '/usr/local/bin/p4c'
                             """
@@ -566,9 +608,9 @@ node ('compiler-travis') {
                         sh """
                             mkdir -p ~/.ccache_bf-p4c-compilers
                             docker run \
-                                --cpus=2 \
+                                --cpus=4 \
                                 -v ~/.ccache_bf-p4c-compilers:/root/.ccache \
-                                -e MAKEFLAGS=j2 \
+                                -e MAKEFLAGS=j4 \
                                 -e UNIFIED_BUILD=true \
                                 bf-p4c-compilers_intermediate_${image_tag} \
                                 scripts/package_p4c_for_tofino.sh --build-dir build --enable-cb
