@@ -141,6 +141,7 @@ struct MemUnit;
     M(int, DEPARSER_MAX_FD_ENTRIES) \
     M(int, DEPARSER_MAX_POV_BYTES) \
     M(int, DEPARSER_MAX_POV_PER_USE) \
+    M(int, DP_UNITS_PER_STAGE) \
     M(int, DYNAMIC_CONFIG) \
     M(int, DYNAMIC_CONFIG_INPUT_BITS) \
     M(bool, EGRESS_SEPARATE) \
@@ -219,6 +220,7 @@ struct MemUnit;
     M(bool, SUPPORT_OVERFLOW_BUS) \
     M(bool, SUPPORT_SALU_FAST_CLEAR) \
     M(bool, SUPPORT_TRUE_EOP) \
+    M(bool, SYNTH2PORT_NEED_MAPRAMS) \
     M(bool, TCAM_EXTRA_NIBBLE) \
     M(bool, TCAM_GLOBAL_ACCESS) \
     M(int, TCAM_MATCH_BUSSES) \
@@ -232,8 +234,11 @@ struct MemUnit;
 
 #define TARGET_CLASS_SPECIFIC_CLASSES   \
     class ActionTable;                  \
+    class CounterTable;                 \
     class ExactMatchTable;              \
     class GatewayTable;                 \
+    class MeterTable;                   \
+    class StatefulTable;                \
     class TernaryMatchTable;
 #define REGISTER_SET_SPECIFIC_CLASSES   /* none */
 #define TARGET_SPECIFIC_CLASSES         /* none */
@@ -353,6 +358,7 @@ class Target::Tofino : public Target {
         DEPARSER_MAX_POV_BYTES = 32,
         DEPARSER_MAX_POV_PER_USE = 1,
         DEPARSER_MAX_FD_ENTRIES = 192,
+        DP_UNITS_PER_STAGE = 0,
         DYNAMIC_CONFIG = 0,
         DYNAMIC_CONFIG_INPUT_BITS = 0,
         EGRESS_SEPARATE = false,
@@ -422,6 +428,7 @@ class Target::Tofino : public Target {
         NUM_PARSERS = 18,
         NUM_PIPES = 4,
         OUTPUT_STAGE_EXTENSION_PRIVATE = 0,
+        SYNTH2PORT_NEED_MAPRAMS = true,
         TCAM_EXTRA_NIBBLE = true,
         TCAM_GLOBAL_ACCESS = false,
         TCAM_MATCH_BUSSES = 2,
@@ -533,6 +540,7 @@ class Target::JBay : public Target {
         DEPARSER_CLOTS_PER_GROUP = 4,
         DEPARSER_TOTAL_CHUNKS = DEPARSER_CHUNK_GROUPS * DEPARSER_CHUNKS_PER_GROUP,
         DEPARSER_MAX_FD_ENTRIES = DEPARSER_TOTAL_CHUNKS,
+        DP_UNITS_PER_STAGE = 0,
         DYNAMIC_CONFIG = 0,
         DYNAMIC_CONFIG_INPUT_BITS = 0,
         EGRESS_SEPARATE = false,
@@ -600,6 +608,7 @@ class Target::JBay : public Target {
         NUM_PARSERS = 36,
         NUM_PIPES = 4,
         TABLES_REQUIRE_ROW = 1,
+        SYNTH2PORT_NEED_MAPRAMS = true,
         TCAM_EXTRA_NIBBLE = true,
         TCAM_GLOBAL_ACCESS = false,
         TCAM_MATCH_BUSSES = 2,
@@ -764,6 +773,7 @@ class Target::Cloudbreak : public Target {
         DEPARSER_CLOTS_PER_GROUP = 4,
         DEPARSER_TOTAL_CHUNKS = DEPARSER_CHUNK_GROUPS * DEPARSER_CHUNKS_PER_GROUP,
         DEPARSER_MAX_FD_ENTRIES = DEPARSER_TOTAL_CHUNKS,
+        DP_UNITS_PER_STAGE = 0,
         DYNAMIC_CONFIG = 0,
         DYNAMIC_CONFIG_INPUT_BITS = 0,
         EGRESS_SEPARATE = false,
@@ -839,6 +849,7 @@ class Target::Cloudbreak : public Target {
          */
         NUM_PIPES = 4,
         TABLES_REQUIRE_ROW = 1,
+        SYNTH2PORT_NEED_MAPRAMS = true,
         TCAM_EXTRA_NIBBLE = true,
         TCAM_GLOBAL_ACCESS = false,
         TCAM_MATCH_BUSSES = 2,
@@ -940,6 +951,7 @@ class Target::Flatrock : public Target {
         DEPARSER_MAX_POV_PER_USE = 2,
         DEPARSER_CLOTS_PER_GROUP = 0,
         DEPARSER_MAX_FD_ENTRIES = 256,  // actuall up to 32 "strings", each up to 16 bytes
+        DP_UNITS_PER_STAGE = 4,
         DYNAMIC_CONFIG = 2,
         DYNAMIC_CONFIG_INPUT_BITS = 8,
         EGRESS_SEPARATE = true,
@@ -1009,6 +1021,7 @@ class Target::Flatrock : public Target {
         NUM_PARSERS = 1,
         NUM_PIPES = 8,  // TODO what is the correct number here?
         TABLES_REQUIRE_ROW = 0,
+        SYNTH2PORT_NEED_MAPRAMS = false,
         TCAM_EXTRA_NIBBLE = false,
         TCAM_GLOBAL_ACCESS = true,
         TCAM_MATCH_BUSSES = 4,  // 2x L2R and 2x R2L
@@ -1184,9 +1197,9 @@ void emit_parser_registers(const Target::Flatrock::top_level_regs *regs, std::os
  */
 #define DECL_OVERLOAD_FUNC(TARGET, RTYPE, NAME, ARGDECL, ARGS)                          \
     RTYPE NAME(Target::TARGET EXPAND_COMMA_CLOSE ARGDECL;
-#define OVERLOAD_FUNC_FOREACH(GROUP, RTYPE, NAME, ARGDECL, ARGS)                        \
+#define OVERLOAD_FUNC_FOREACH(GROUP, RTYPE, NAME, ARGDECL, ARGS, ...)                   \
     FOR_EACH_##GROUP(DECL_OVERLOAD_FUNC, RTYPE, NAME, ARGDECL, ARGS)                    \
-    RTYPE NAME ARGDECL {                                                                \
+    RTYPE NAME ARGDECL __VA_ARGS__ {                                                    \
         SWITCH_FOREACH_##GROUP(options.target, return NAME(TARGET() EXPAND_COMMA ARGS); ) }
 
 #endif /* BF_ASM_TARGET_H_ */

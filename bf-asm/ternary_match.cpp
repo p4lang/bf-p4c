@@ -946,7 +946,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
         tind["size"] = indirect->layout_size()*128/fmt_width * 1024;
         indirect->add_pack_format(tind, indirect->format.get());
         tind["memory_resource_allocation"] =
-            indirect->gen_memory_resource_allocation_tbl_cfg("sram", indirect->layout, true);
+            indirect->gen_memory_resource_allocation_tbl_cfg("sram", indirect->layout);
         // Add action formats for actions present in table or attached action table
         auto *acts = indirect->get_actions();
         if (acts)

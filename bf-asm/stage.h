@@ -37,6 +37,7 @@ class Stage_data {
     BFN::Alloc1Dbase<std::vector<InputXbar *>>               hash_group_use;
     BFN::Alloc1D<std::vector<HashDistribution *>, 6>         hash_dist_use;
     BFN::Alloc1Dbase<ActionTable *>                          action_unit_use;
+    BFN::Alloc1Dbase<Synth2Port *>                           dp_unit_use;
     BFN::Alloc1D<Table *, ACTION_DATA_BUS_SLOTS>             action_bus_use;
     BFN::Alloc1D<Table *, LOGICAL_SRAM_ROWS>                 action_data_use,
                                                              meter_bus_use,
@@ -94,7 +95,8 @@ class Stage_data {
         local_tind_use(Target::LOCAL_TIND_UNITS()),
         hash_table_use(Target::EXACT_HASH_TABLES()),
         hash_group_use(Target::EXACT_HASH_GROUPS()),
-        action_unit_use(Target::ARAM_UNITS_PER_STAGE())
+        action_unit_use(Target::ARAM_UNITS_PER_STAGE()),
+        dp_unit_use(Target::DP_UNITS_PER_STAGE())
         {}
     Stage_data(const Stage_data &) = delete;
     Stage_data(Stage_data &&) = default;
@@ -213,4 +215,4 @@ class AsmStage : public Section {
     }
 };
 
-#endif /* STAGE_H_ */
+#endif  /* BF_ASM_STAGE_H_ */

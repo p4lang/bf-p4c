@@ -6,6 +6,11 @@
 #include "stage.h"
 #include "tables.h"
 
+#include "tofino/stateful.h"
+#include "jbay/stateful.h"
+#include "cloudbreak/stateful.h"
+#include "flatrock/stateful.h"
+
 void StatefulTable::parse_register_params(int idx, const value_t &val) {
     if (idx < 0 || idx > Target::STATEFUL_REGFILE_ROWS())
         error(lineno, "Index out of range of the number of the register file rows (%d). "
@@ -386,35 +391,6 @@ action_for_table_action(const MatchTable *tbl, const Actions::Action *act) const
     return nullptr;
 }
 
-// target specific template specializations
-#include "tofino/stateful.cpp"          // NOLINT(build/include)
-#if HAVE_JBAY || HAVE_CLOUDBREAK
-#include "jbay/stateful.cpp"            // NOLINT(build/include)
-#endif /* HAVE_JBAY */
-#if HAVE_CLOUDBREAK
-#include "cloudbreak/stateful.cpp"      // NOLINT(build/include)
-#endif /* HAVE_CLOUDBREAK */
-#if HAVE_FLATROCK
-#include "flatrock/stateful.cpp"        // NOLINT(build/include)
-#endif /* HAVE_FLATROCK */
-
-#if HAVE_FLATROCK
-template<> void StatefulTable::write_action_regs_vt(Target::Flatrock::mau_regs &regs,
-            const Actions::Action *act) {
-    BUG_CHECK(physical_ids.popcount() == 1, "not exactly one physical id for %s", name());
-    auto &salu = regs.ppu_sful[*physical_ids.begin()].ppu_sful_alu;
-    auto &salu_instr_common = salu.sful_instr_common[act->code];
-    if (act->minmax_use) {
-        salu_instr_common.datasize = 7;
-        salu_instr_common.op_dual = is_dual_mode();
-    } else if (is_dual_mode()) {
-        salu_instr_common.datasize = format->log2size - 1;
-        salu_instr_common.op_dual = 1;
-    } else {
-        salu_instr_common.datasize = format->log2size;
-    }
-}
-#endif  /* HAVE_FLATROCK */
 template<class REGS>
 void StatefulTable::write_action_regs_vt(REGS &regs, const Actions::Action *act) {
     int meter_alu = layout[0].row/4U;
@@ -431,12 +407,6 @@ void StatefulTable::write_action_regs_vt(REGS &regs, const Actions::Action *act)
     }
 }
 
-#if HAVE_FLATROCK
-template<> void StatefulTable::write_merge_regs_vt(Target::Flatrock::mau_regs &regs,
-            MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args) {
-    error(lineno, "%s:%d: Flatrock stateful not implemented yet!", SRCFILE, __LINE__);
-}
-#endif  /* HAVE_FLATROCK */
 template<class REGS> void StatefulTable::write_merge_regs_vt(REGS &regs, MatchTable *match,
             int type, int bus, const std::vector<Call::Arg> &args) {
     auto &merge = regs.rams.match.merge;
@@ -453,40 +423,6 @@ template<class REGS> void StatefulTable::write_merge_regs_vt(REGS &regs, MatchTa
     merge.mau_meter_adr_type_position[type][bus] = meter_type_position;
 }
 
-#if HAVE_FLATROCK
-template<> void StatefulTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
-    LOG1("### Stateful table " << name() << " write_regs " << loc());
-
-    BUG_CHECK(physical_ids.popcount() == 1, "not exactly one physical id for %s", name());
-    auto &salu = regs.ppu_sful[*physical_ids.begin()].ppu_sful_alu;
-    salu.sful_ctl.enable_ = 1;
-    salu.sful_ctl.outp_pred_shift = pred_shift / 4;
-    salu.sful_ctl.out_prd_cmb_shft = pred_comb_shift;
-
-    this->write_logging_regs(regs);
-
-    for (auto &inst : salu.sful_instr_cmp_alu) {
-        for (auto &alu : inst) {
-            if (!alu.cmp_opcode.modified()) {
-                alu.cmp_opcode = 2;
-            }
-        }
-    }
-
-    if (math_table) {
-        for (size_t i = 0; i < math_table.data.size(); ++i) {
-            salu.sful_mathtable[i/4U].mathtable.set_subfield(math_table.data[i], 8*(i%4U), 8);
-        }
-        salu.sful_mathunit_ctl.output_scale = math_table.scale & 0x3fU;
-        salu.sful_mathunit_ctl.exponent_invert = math_table.invert;
-        switch (math_table.shift) {
-        case -1: salu.sful_mathunit_ctl.exponent_shift = 2; break;
-        case  0: salu.sful_mathunit_ctl.exponent_shift = 0; break;
-        case  1: salu.sful_mathunit_ctl.exponent_shift = 1; break;
-        }
-    }
-}
-#endif  /* HAVE_FLATROCK */
 template<class REGS> void StatefulTable::write_regs_vt(REGS &regs) {
     LOG1("### Stateful table " << name() << " write_regs " << loc());
     // FIXME -- factor common AttachedTable::write_regs
@@ -687,7 +623,7 @@ void StatefulTable::gen_tbl_cfg(json::vector &out) const {
         stage_tbl.merge(*context_json);
 }
 
-DEFINE_TABLE_TYPE(StatefulTable)
+DEFINE_TABLE_TYPE_WITH_SPECIALIZATION(StatefulTable, TARGET_CLASS)
 FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
     void StatefulTable::write_action_regs, (mau_regs &regs, const Actions::Action *act), {
         write_action_regs_vt(regs, act); })

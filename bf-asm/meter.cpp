@@ -1011,7 +1011,7 @@ template<> void MeterTable::meter_color_logical_to_phys(Target::Cloudbreak::mau_
 
 void MeterTable::gen_tbl_cfg(json::vector &out) const {
     // FIXME -- factor common Synth2Port stuff
-    auto spare_mems = determine_spare_bank_memory_units(layout);
+    auto spare_mems = determine_spare_bank_memory_units();
     int size = (layout_size() - spare_mems.size()) * SRAM_DEPTH;
     json::map &tbl = *base_tbl_cfg(out, "meter", size);
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "meter", size);
@@ -1044,7 +1044,7 @@ void MeterTable::gen_tbl_cfg(json::vector &out) const {
         stage_tbl.merge(*context_json);
 }
 
-DEFINE_TABLE_TYPE(MeterTable)
+DEFINE_TABLE_TYPE_WITH_SPECIALIZATION(MeterTable, TARGET_CLASS)
 FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
     void MeterTable::write_merge_regs,
     (mau_regs &regs, MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args),

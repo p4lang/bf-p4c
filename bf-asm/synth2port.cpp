@@ -71,6 +71,10 @@ void Synth2Port::pass1() {
     AttachedTable::pass1();
 }
 
+void Synth2Port::alloc_vpns(Target::Tofino) {
+    AttachedTable::alloc_vpns();
+}
+
 void Synth2Port::pass2() {
     LOG1("### Synth2Port table " << name() << " pass2 " << loc());
 }
@@ -108,6 +112,31 @@ void Synth2Port::add_alu_indexes(json::map &stage_tbl, std::string alu_indexes) 
     stage_tbl[alu_indexes] = home_alu.clone();
 }
 
+std::vector<int> Synth2Port::determine_spare_bank_memory_units(Target::Tofino) const {
+    std::vector<int> spare_mem;
+    int vpn_ctr = 0;
+    int minvpn, spare_vpn;
+
+    // Retrieve the Spare VPN
+    layout_vpn_bounds(minvpn, spare_vpn, false);
+    for (auto &row : layout) {
+        auto vpn_itr = row.vpns.begin();
+        for (auto &ram : row.memunits) {
+            BUG_CHECK(ram.stage == -1 && ram.row == row.row,
+                      "bogus %s in row %d", ram.desc(), row.row);
+            if (vpn_itr != row.vpns.end())
+                vpn_ctr = *vpn_itr++;
+            if (spare_vpn == vpn_ctr) {
+                spare_mem.push_back(json_memunit(ram));
+                if (table_type() == SELECTION || table_type() == COUNTER ||
+                    table_type() == METER || table_type() == STATEFUL)
+                    continue;
+            }
+        }
+    }
+    return spare_mem;
+}
+
 int Synth2Port::get_home_row_for_row(int row) const {
     for (int home_row : home_rows) {
         // Tofino1 have an overflow bus in the middle of the SRAM array
@@ -120,3 +149,9 @@ int Synth2Port::get_home_row_for_row(int row) const {
     return -1;
 }
 
+template<class REGS> void Synth2Port::write_regs_vt(REGS &regs) {
+    // FIXME move common Counter/Meter/StatefulTable::write_regs_vt stuff here
+}
+
+REGSETS_IN_CLASS(Tofino, TARGET_OVERLOAD,
+void Synth2Port::write_regs, (mau_regs &regs), { write_regs_vt(regs); })

@@ -417,6 +417,12 @@ template<> void SelectionTable::setup_logical_alu_map(Target::Cloudbreak::mau_re
 }
 #endif  /* HAVE_CLOUDBREAK */
 
+std::vector<int> SelectionTable::determine_spare_bank_memory_units() const {
+    if (bound_stateful)
+        return bound_stateful->determine_spare_bank_memory_units();
+    return {};
+}
+
 void SelectionTable::gen_tbl_cfg(json::vector &out) const {
     // Stage table size reflects how many RAM lines are available for the selector, according
     // to henry wang.
@@ -442,7 +448,7 @@ void SelectionTable::gen_tbl_cfg(json::vector &out) const {
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "selection", size);
     add_pack_format(stage_tbl, 128, 1, 1);
     stage_tbl["memory_resource_allocation"] =
-        gen_memory_resource_allocation_tbl_cfg("sram", layout, true);
+        gen_memory_resource_allocation_tbl_cfg("sram", layout, bound_stateful != nullptr);
     add_alu_index(stage_tbl, "meter_alu_index");
     stage_tbl["sps_scramble_enable"] = non_linear_hash;
     if (context_json)

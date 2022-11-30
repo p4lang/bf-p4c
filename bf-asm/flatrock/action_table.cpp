@@ -151,9 +151,11 @@ void Target::Flatrock::ActionTable::write_regs(Target::Flatrock::mau_regs &regs)
             BUG_CHECK(row.row == ram.row, "ram row mismatch");
             BUG_CHECK(vpn != row.vpns.end(), "not enough vpns on row");
             if (gress != EGRESS)
-                stm_read_config(ppu.istm, stage->stageno, vcol, 4, row.bus, ram, *vpn, maxdelay);
+                stm_bus_rw_config(ppu.istm, stage->stageno, vcol, 4, row.bus, ram,
+                                  false, *vpn, maxdelay);
             else
-                stm_read_config(ppu.estm, stage->stageno, vcol, 4, row.bus, ram, *vpn, maxdelay);
+                stm_bus_rw_config(ppu.estm, stage->stageno, vcol, 4, row.bus, ram,
+                                  false, *vpn, maxdelay);
             ++vpn; }
         BUG_CHECK(vpn == row.vpns.end(), "too many vpns on row"); }
 

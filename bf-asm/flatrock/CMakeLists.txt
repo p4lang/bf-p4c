@@ -32,14 +32,18 @@ set_source_files_properties(
 set (BFAS_FLATROCK_SRCS
   flatrock/action_bus.cpp
   flatrock/action_table.cpp
+  flatrock/counter.cpp
   flatrock/exact_match.cpp
   flatrock/gateway.cpp
   flatrock/hash_action.cpp
   flatrock/hdr.cpp
   flatrock/instruction.cpp
   flatrock/input_xbar.cpp
+  flatrock/meter.cpp
   flatrock/parser.cpp
   flatrock/sram_match.cpp
+  flatrock/stateful.cpp
+  flatrock/synth2port.cpp
   flatrock/tables.cpp
   flatrock/target.cpp
   flatrock/ternary_match.cpp
@@ -49,6 +53,7 @@ set (BFAS_FLATROCK_SRCS
 set (BFAS_FLATROCK_HEADERS
   flatrock/action_bus.h
   flatrock/action_table.h
+  flatrock/counter.h
   flatrock/exact_match.h
   flatrock/gateway.h
   flatrock/hash_action.h
@@ -58,6 +63,7 @@ set (BFAS_FLATROCK_HEADERS
   flatrock/meter.h
   flatrock/parser.h
   flatrock/sram_match.h
+  flatrock/stateful.h
   flatrock/ternary_match.h
   PARENT_SCOPE
   )

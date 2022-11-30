@@ -1,4 +1,23 @@
-/* mau table template specializations for flatrock -- #included directly in stateful.cpp */
+#include "stateful.h"
+#include "jbay/stateful.h"
+
+void Target::Flatrock::StatefulTable::pass1() {
+    ::StatefulTable::pass1();
+    if (match_tables.size() != 1)
+        error(lineno, "Stateful can only be used by a single match table on Flatrock");
+    mark_dual_port_use();
+    if (!physical_ids.empty())
+        alloc_global_busses();
+}
+
+void Target::Flatrock::StatefulTable::pass2() {
+    ::StatefulTable::pass2();
+    if (physical_ids.empty()) {
+        alloc_dual_port(0xf);
+        if (!physical_ids.empty())
+            alloc_global_busses(); }
+    alloc_vpns();
+}
 
 int StatefulTable::parse_counter_mode(Target::Flatrock target, const value_t &v) {
     return parse_jbay_counter_mode(v);
@@ -56,5 +75,81 @@ template<> void StatefulTable::write_logging_regs(Target::Flatrock::mau_regs &re
     if (stage_alu_id >= 0) {
         salu.sful_ctl.stage_id = stage_alu_id;
         salu.sful_ctl.stage_id_enable = 1;
+    }
+}
+
+template<> void StatefulTable::write_action_regs_vt(Target::Flatrock::mau_regs &regs,
+            const Actions::Action *act) {
+    BUG_CHECK(physical_ids.popcount() == 1, "not exactly one physical id for %s", name());
+    auto &salu = regs.ppu_sful[*physical_ids.begin()].ppu_sful_alu;
+    auto &salu_instr_common = salu.sful_instr_common[act->code];
+    if (act->minmax_use) {
+        salu_instr_common.datasize = 7;
+        salu_instr_common.op_dual = is_dual_mode();
+    } else if (is_dual_mode()) {
+        salu_instr_common.datasize = format->log2size - 1;
+        salu_instr_common.op_dual = 1;
+    } else {
+        salu_instr_common.datasize = format->log2size;
+    }
+}
+
+template<> void StatefulTable::write_merge_regs_vt(Target::Flatrock::mau_regs &regs,
+            MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args) {
+    error(lineno, "%s:%d: Flatrock stateful not implemented yet!", SRCFILE, __LINE__);
+}
+
+template<> void StatefulTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
+    LOG1("### Stateful table " << name() << " write_regs " << loc());
+    Synth2Port::write_regs(regs);
+
+    BUG_CHECK(physical_ids.popcount() == 1, "not exactly one physical id for %s", name());
+    int physid = *physical_ids.begin();
+    switch (physid) {
+    case 0:
+        regs.ppu_dpm.module.dpm_cfg.dpu0_sel = 1;
+        regs.ppu_mrd.rf.mrd_cfg.au0_sel = 0;
+        break;
+    case 1:
+        regs.ppu_dpm.module.dpm_cfg.dpu1_sel = 1;
+        regs.ppu_mrd.rf.mrd_cfg.au1_sel = 0;
+        break;
+    case 2:
+        regs.ppu_dpm.module.dpm_cfg.dpu2_sel = 1;
+        regs.ppu_mrd.rf.mrd_cfg.au2_sel = 0;
+        break;
+    case 3:
+        regs.ppu_dpm.module.dpm_cfg.dpu3_sel = 1;
+        regs.ppu_mrd.rf.mrd_cfg.au3_sel = 0;
+        break;
+    default:
+        BUG("invalid physical id %d for stateful", physid); }
+
+    auto &salu = regs.ppu_sful[*physical_ids.begin()].ppu_sful_alu;
+    salu.sful_ctl.enable_ = 1;
+    salu.sful_ctl.outp_pred_shift = pred_shift / 4;
+    salu.sful_ctl.out_prd_cmb_shft = pred_comb_shift;
+
+    this->write_logging_regs(regs);
+
+    for (auto &inst : salu.sful_instr_cmp_alu) {
+        for (auto &alu : inst) {
+            if (!alu.cmp_opcode.modified()) {
+                alu.cmp_opcode = 2;
+            }
+        }
+    }
+
+    if (math_table) {
+        for (size_t i = 0; i < math_table.data.size(); ++i) {
+            salu.sful_mathtable[i/4U].mathtable.set_subfield(math_table.data[i], 8*(i%4U), 8);
+        }
+        salu.sful_mathunit_ctl.output_scale = math_table.scale & 0x3fU;
+        salu.sful_mathunit_ctl.exponent_invert = math_table.invert;
+        switch (math_table.shift) {
+        case -1: salu.sful_mathunit_ctl.exponent_shift = 2; break;
+        case  0: salu.sful_mathunit_ctl.exponent_shift = 0; break;
+        case  1: salu.sful_mathunit_ctl.exponent_shift = 1; break;
+        }
     }
 }

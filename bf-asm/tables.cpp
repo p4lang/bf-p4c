@@ -912,6 +912,7 @@ void Table::alloc_id(const char *idname, int &id, int &next_id, int max_id,
 }
 
 void Table::alloc_maprams() {
+    if (!Target::SYNTH2PORT_NEED_MAPRAMS()) return;
     for (auto &row : layout) {
         int sram_row = row.row/2;
         if ((row.row & 1) == 0) {
@@ -1241,25 +1242,25 @@ void Table::Format::pass1(Table *tbl) {
         if (f.second.bits[0].hi > hi) hi = f.second.bits[0].hi; }
     if (immed_fields.empty()) {
         LOG2("table " << tbl->name() << " has no immediate data");
-        return; }
-    LOG2("table " << tbl->name() << " has " << immed_fields.size() << " immediate data fields "
-         "over " << (hi + 1 - lo) << " bits");
-    if (hi - lo >= Target::MAX_IMMED_ACTION_DATA()) {
-        error(lineno, "Immediate data for table %s spread over more than %d bits",
-              tbl->name(), Target::MAX_IMMED_ACTION_DATA());
-        return; }
-    immed_size = hi + 1 - lo;
-    for (unsigned i = 1; i < fmt.size(); i++) {
-        int delta = static_cast<int>(immed->by_group[i]->bits[0].lo)
-            - static_cast<int>(immed->bits[0].lo);
-        for (auto &f : fmt[0]) {
-            if (!(f.second.flags & Field::USED_IMMED))
-                continue;
-            if (delta != static_cast<int>(f.second.by_group[i]->bits[0].lo)
-                    - static_cast<int>(f.second.bits[0].lo)) {
-                error(lineno, "Immediate data field %s for table %s does not match across "
-                      "ways in a ram", f.first.c_str(), tbl->name());
-                break; } } }
+    } else {
+        LOG2("table " << tbl->name() << " has " << immed_fields.size() << " immediate data fields "
+             "over " << (hi + 1 - lo) << " bits");
+        if (hi - lo >= Target::MAX_IMMED_ACTION_DATA()) {
+            error(lineno, "Immediate data for table %s spread over more than %d bits",
+                  tbl->name(), Target::MAX_IMMED_ACTION_DATA());
+            return; }
+        immed_size = hi + 1 - lo;
+        for (unsigned i = 1; i < fmt.size(); i++) {
+            int delta = static_cast<int>(immed->by_group[i]->bits[0].lo)
+                - static_cast<int>(immed->bits[0].lo);
+            for (auto &f : fmt[0]) {
+                if (!(f.second.flags & Field::USED_IMMED))
+                    continue;
+                if (delta != static_cast<int>(f.second.by_group[i]->bits[0].lo)
+                        - static_cast<int>(f.second.bits[0].lo)) {
+                    error(lineno, "Immediate data field %s for table %s does not match across "
+                          "ways in a ram", f.first.c_str(), tbl->name());
+                    break; } } } }
     lo = INT_MAX, hi = 0;
     for (auto &[name, field] : fmt[0]) {
         // FIXME -- should use a flag rather than names here?  Someone would need to set the flag
@@ -2530,32 +2531,6 @@ int Table::find_on_ixbar(Phv::Slice sl, InputXbar::Group group, InputXbar::Group
     return -1;
 }
 
-std::vector<int>
-Table::determine_spare_bank_memory_units(const std::vector<Layout> &layout) const {
-    std::vector<int> spare_mem;
-    int vpn_ctr = 0;
-    int minvpn, spare_vpn;
-
-    // Retrieve the Spare VPN
-    layout_vpn_bounds(minvpn, spare_vpn, false);
-    for (auto &row : layout) {
-        auto vpn_itr = row.vpns.begin();
-        for (auto &ram : row.memunits) {
-            BUG_CHECK(ram.stage == -1 && ram.row == row.row,
-                      "bogus %s in row %d", ram.desc(), row.row);
-            if (vpn_itr != row.vpns.end())
-                vpn_ctr = *vpn_itr++;
-            if (spare_vpn == vpn_ctr) {
-                spare_mem.push_back(json_memunit(ram));
-                if (table_type() == SELECTION || table_type() == COUNTER ||
-                    table_type() == METER || table_type() == STATEFUL)
-                    continue;
-            }
-        }
-    }
-    return spare_mem;
-}
-
 int Table::json_memunit(const MemUnit &r) const {
     if (r.stage >= 0) {
         return r.stage * Target::SRAM_STRIDE_STAGE() +
@@ -2584,12 +2559,24 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(
     json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"] = json::vector();
     int vpn_ctr = 0;
     bool no_vpns = false;
-    int minvpn, spare_vpn;
-    json::vector spare_mem;
+    int spare_vpn;
+    std::vector<int> spare_mem;
 
-    // Retrieve the Spare VPN
-    if (skip_spare_bank)
-        layout_vpn_bounds(minvpn, spare_vpn, false);
+    // Retrieve the Spare banks
+    // skip_spare_bank is only false on tables don't have spare banks, or when building
+    // memory_units json for map rams
+    if (skip_spare_bank) {
+        BUG_CHECK(&layout == &this->layout, "layout not matching");
+        spare_mem = determine_spare_bank_memory_units();
+        BUG_CHECK(!spare_mem.empty(), "No spare banks in %s?", name());
+        // if all the mems are "spare" this is really a DDP table, so we want to
+        // put the usits/vpns of the spares in the memory_units json
+        if (spare_mem.size() == layout_size())
+            skip_spare_bank = false;
+    } else if (&layout == &this->layout) {
+        BUG_CHECK(determine_spare_bank_memory_units().empty(),
+                  "%s has spare banks, but we're not skipping them?", name());
+    }
 
     for (auto &row : layout) {
         int word = row.word >= 0 ? row.word : 0;
@@ -2610,12 +2597,10 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(
             //  1 -> 0   92
             //       1   93
             //  E.g. VPN 0 has Ram 90 with word 0 and Ram 91 with word 1
-            if (skip_spare_bank && spare_vpn == vpn_ctr) {
-                spare_mem.push_back(json_memunit(ram));
-                if (table_type() == SELECTION || table_type() == COUNTER ||
-                    table_type() == METER || table_type() == STATEFUL)
-                    continue;
-            }
+            int unit = json_memunit(ram);
+            if (skip_spare_bank &&
+                std::find(spare_mem.begin(), spare_mem.end(), unit) != spare_mem.end())
+                continue;
             mem_units[vpn_ctr][word] = json_memunit(ram);
         }
     }
@@ -2647,10 +2632,13 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(
         vpn++;
     }
     if (skip_spare_bank && spare_mem.size() != 0) {
-        if (spare_mem.size() == 1)
-            mra["spare_bank_memory_unit"] = spare_mem[0]->clone();
-        else
-            mra["spare_bank_memory_unit"] = spare_mem.clone();
+        if (spare_mem.size() == 1) {
+            mra["spare_bank_memory_unit"] = spare_mem[0];
+        } else {
+            json::vector &spare = mra["spare_bank_memory_unit"];
+            for (auto u : spare_mem)
+                spare.push_back(u);
+        }
     }
     return json::mkuniq<json::map>(std::move(mra));
 }

@@ -1,4 +1,4 @@
-/* mau table template specializations for tofino -- #included directly in match_tables.cpp */
+#include "stateful.h"
 
 int StatefulTable::parse_counter_mode(Target::Tofino target, const value_t &v) {
     if (v != "counter") return -1;

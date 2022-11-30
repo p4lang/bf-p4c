@@ -629,7 +629,7 @@ class Table {
     virtual json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size) const;
     virtual std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(const char *type,
             const std::vector<Layout> &layout, bool skip_spare_bank = false) const;
-    std::vector<int> determine_spare_bank_memory_units(const std::vector<Layout> &layout) const;
+    virtual std::vector<int> determine_spare_bank_memory_units() const { return {}; }
     virtual void common_tbl_cfg(json::map &tbl) const;
     void add_match_key_cfg(json::map& tbl) const;
     bool add_json_node_to_table(json::map &tbl, const char *name) const;
@@ -1539,7 +1539,10 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
         return match_tables.size() == 1 ? (*match_tables.begin())->action_call() : action; }
     int json_memunit(const MemUnit &u) const override;
     void pass1() override;
-    unsigned get_alu_index() const {
+    virtual unsigned get_alu_index() const {
+#if HAVE_FLATROCK
+        BUG_CHECK(options.target != TOFINO5, "need get_alu_index override for tofino5");
+#endif /* HAVE_FLATROCK */
         if (layout.size() > 0) return layout[0].row/4U;
         error(lineno, "Cannot determine ALU Index for table %s", name());
         return 0; }
@@ -1749,6 +1752,7 @@ DECLARE_TABLE_TYPE(SelectionTable, AttachedTable, "selection",
         void write_merge_regs, (mau_regs &regs, MatchTable *match, int type,
                                 int bus, const std::vector<Call::Arg> &args), override; )
     int address_shift() const override { return 7; }
+    std::vector<int> determine_spare_bank_memory_units() const override;
     unsigned meter_group() const { return layout.at(0).row/4U; }
     int home_row() const override { return layout.at(0).row | 3; }
     int unitram_type() override { return UnitRam::SELECTOR; }
@@ -1818,10 +1822,11 @@ DECLARE_ABSTRACT_TABLE_TYPE(Synth2Port, AttachedTable,
  public:
     int get_home_row_for_row(int row) const;
     void add_alu_indexes(json::map &stage_tbl, std::string alu_indexes) const;
-    template<class REGS> void write_regs_vt(REGS &regs) { }
-    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
-        void write_regs, (mau_regs &regs), override {
-            write_regs_vt<decltype(regs)>(regs); })
+    OVERLOAD_FUNC_FOREACH(TARGET_CLASS, std::vector<int>,
+        determine_spare_bank_memory_units, () const, (), override)
+    OVERLOAD_FUNC_FOREACH(TARGET_CLASS, void, alloc_vpns, (), ())
+    template<class REGS> void write_regs_vt(REGS &regs);
+    FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD, void write_regs, (mau_regs &regs), override)
     FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
         void write_merge_regs, (mau_regs &regs, MatchTable *match, int type, int bus,
                                 const std::vector<Call::Arg> &args), override = 0)
@@ -1830,6 +1835,10 @@ DECLARE_ABSTRACT_TABLE_TYPE(Synth2Port, AttachedTable,
     void pass1() override;
     void pass2() override;
     void pass3() override;
+#if HAVE_FLATROCK
+    void mark_dual_port_use();
+    void alloc_dual_port(unsigned usable);
+#endif
 )
 
 DECLARE_TABLE_TYPE(CounterTable, Synth2Port, "counter",
@@ -2046,9 +2055,9 @@ DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
 
 #if HAVE_FLATROCK
 // defined and instantiated in flatrock/sram_match.cpp
-template <class REGS> void stm_read_config(REGS &stm, int stage, int col, int vbus,
+template <class REGS> void stm_bus_rw_config(REGS &stm, int stage, int col, int vbus,
             const std::map<Table::Layout::bus_type_t, int> &busses,
-            const MemUnit &ram, int vpn, int delay);
-#endif /* HAVE_FLATROCK */
+            const MemUnit &ram, bool write, int vpn, int delay);
+#endif  /* HAVE_FLATROCK */
 
 #endif /* BF_ASM_TABLES_H_ */  // NOLINT(build/header_guard)

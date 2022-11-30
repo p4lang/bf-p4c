@@ -147,16 +147,36 @@ void SRamMatchTable::alloc_global_busses() {
     }
 }
 
-// Configure STM for read of the given ram from the given read port/bus
-// REGS here will be an STM 3-dim array, indexed by [row][stage][col]
-template <class REGS> void stm_read_config(REGS &stm, int stage, int col, int vbus,
+/**
+ * @brief configure the stm busses to access a single RAM from a particuler table
+ *
+ * Configures STM memory registers (controlling how busses and rams are connected) to
+ * allow a single RAM to be accessed by a single table on a particular port/column/vbus
+ * in a particular stage.  This is used by ALL table types that use STM
+ *
+ * @param regs  The estm or istm register array to be programmed.  These are different
+ *              types as ingress and egress have different sizes.  This is a 3D array,
+ *              indexed by [row][stage][column]
+ * @param stage Stage for the table accessing the RAM
+ * @param col   Memory column the table is on (0-4)
+ * @param vbus  Vertical bus in the column the table uses (0-5).  Note that if 'write' is
+ *              true it will also use the write vbus and the spare busses
+ * @param busses Which horizontal busses to use on the ram's row, if needed
+ * @param ram   Which memory unit (ram) to program access for
+ * @param write Program for read-only (false) or read-write (true) access
+ * @param vpn   VPN to program the ram
+ * @param delay Extra delay to program at the ram so access will time-match with more
+ *              distant rams.
+ */
+template <class REGS> void stm_bus_rw_config(REGS &stm, int stage, int col, int vbus,
             const std::map<Table::Layout::bus_type_t, int> &busses,
-            const MemUnit &ram, int vpn, int delay) {
+            const MemUnit &ram, bool write, int vpn, int delay) {
     // enable the vertical bus down to the row
     for (auto r = 0; r < ram.row; ++r) {
         auto &cfg = stm[r][stage][col];
         cfg.ver_bot_cfg.rd_req_en |= 1U << vbus;
         cfg.ver_top_cfg.bot_en[vbus] = 1;
+        if (write) cfg.ver_bot_cfg.wr_req_en = 1;
     }
     stm[ram.row][stage][col].ver_top_cfg.bot_en[vbus] = 1;
 
@@ -166,14 +186,20 @@ template <class REGS> void stm_read_config(REGS &stm, int stage, int col, int vb
     if (ram.stage == stage) {
         if (ram.col/2 == col) {
             // ram in the STM column (no horizontal bus needed)
+            if (write && ram.row == 0) {
+                // spare bank ram
+                cfg.ver_top_cfg.spare_en = 1;
+                cfg.ram_cfg.rd_sel[ram.col&1] = 11;
+                cfg.ram_cfg.wr_sel[ram.col&1] = 6;
+                return; }
             if (ram.col&1)
                 cfg.ver_top_cfg.ram1_en[vbus] = 1;
             else
                 cfg.ver_top_cfg.ram0_en[vbus] = 1;
-            cfg.ram_cfg.delay[ram.col&1] = delay;  // FIXME -- delay config
+            cfg.ram_cfg.delay[ram.col&1] = delay;
             cfg.ram_cfg.rd_sel[ram.col&1] = 1 + vbus;
             cfg.ram_cfg.vpn[ram.col&1] = vpn;
-            cfg.ram_cfg.wr_sel[ram.col&1] = 0;  // no writes
+            if (write) cfg.ram_cfg.wr_sel[ram.col&1] = 1;
             return; }
         if (ram.col/2 < col)
             left = true; }
@@ -187,6 +213,7 @@ template <class REGS> void stm_read_config(REGS &stm, int stage, int col, int vb
             stm[ram.row][stage][col].ver_top_cfg.l2r0_en[vbus] = 1;
         else
             stm[ram.row][stage][col].ver_top_cfg.l2r1_en[vbus] = 1;
+        if (write) stm[ram.row][stage][col].hor_r2l_cfg.wr_req_sel[hbus] = 2;
         if (!col--) {
             col = 4;
             if (--stage & 1) --delay; }
@@ -195,21 +222,24 @@ template <class REGS> void stm_read_config(REGS &stm, int stage, int col, int vb
             stm[ram.row][stage][col].hor_r2l_cfg.rd_req_sel[hbus] = 1;
             // response comes back on the corresponding l2r resp bus
             stm[ram.row][stage][col].hor_l2r_cfg.rd_rsp_hor[hbus] = 1;
+            if (write) stm[ram.row][stage][col].hor_r2l_cfg.wr_req_sel[hbus] = 1;
             if (!col--) {
                 col = 4;
                 if (--stage & 1) --delay; } }
         BUG_CHECK(stage == ram.stage && col == ram.col/2, "failed to reach correct column");
         cfg.hor_r2l_cfg.rd_req_sel[hbus] = 1;
+        if (write) cfg.hor_r2l_cfg.wr_req_sel[hbus] = 1;
         BUG_CHECK(delay >= 0, "negative delay -- initial delay not large enough");
+        BUG_CHECK(!write || delay == 0, "inconsistent delay for dp memory");
         // response goes onto the corresponding l2r response bus
         if (ram.col&1)
             cfg.hor_l2r_cfg.rd_rsp_ram1[hbus] = 1;
         else
             cfg.hor_l2r_cfg.rd_rsp_ram0[hbus] = 1;
-        cfg.ram_cfg.delay[ram.col&1] = delay;  // FIXME -- delay config
+        cfg.ram_cfg.delay[ram.col&1] = delay;
         cfg.ram_cfg.rd_sel[ram.col&1] = 7 + hbus;
         cfg.ram_cfg.vpn[ram.col&1] = vpn;
-        cfg.ram_cfg.wr_sel[ram.col&1] = 0;  // no writes
+        if (write) cfg.ram_cfg.wr_sel[ram.col&1] = 2 + hbus;
     } else {
         int hbus = busses.at(Table::Layout::L2R_BUS);
         // request goes down vbus and on to l2r req bus
@@ -219,6 +249,7 @@ template <class REGS> void stm_read_config(REGS &stm, int stage, int col, int vb
             stm[ram.row][stage][col].ver_top_cfg.r2l0_en[vbus] = 1;
         else
             stm[ram.row][stage][col].ver_top_cfg.r2l1_en[vbus] = 1;
+        if (write) stm[ram.row][stage][col].hor_l2r_cfg.wr_req_sel[hbus] = 2;
         if (++col > 4) {
             col = 0;
             if (stage++ & 1) --delay; }
@@ -227,21 +258,24 @@ template <class REGS> void stm_read_config(REGS &stm, int stage, int col, int vb
             stm[ram.row][stage][col].hor_l2r_cfg.rd_req_sel[hbus] = 1;
             // response comes back on the corresponding r2l resp bus
             stm[ram.row][stage][col].hor_r2l_cfg.rd_rsp_hor[hbus] = 1;
+            if (write) stm[ram.row][stage][col].hor_l2r_cfg.wr_req_sel[hbus] = 1;
             if (++col > 4) {
                 col = 0;
                 if (stage++ & 1) --delay; } }
         BUG_CHECK(stage == ram.stage && col == ram.col/2, "failed to reach correct column");
         cfg.hor_l2r_cfg.rd_req_sel[hbus] = 1;
+        if (write) cfg.hor_l2r_cfg.wr_req_sel[hbus] = 1;
         BUG_CHECK(delay >= 0, "negative delay -- initial delay not large enough");
+        BUG_CHECK(!write || delay == 0, "inconsistent delay for dp memory");
         // response goes onto the corresponding r2l response bus
         if (ram.col&1)
             cfg.hor_r2l_cfg.rd_rsp_ram1[hbus] = 1;
         else
             cfg.hor_r2l_cfg.rd_rsp_ram0[hbus] = 1;
-        cfg.ram_cfg.delay[ram.col&1] = delay;  // FIXME -- delay config
+        cfg.ram_cfg.delay[ram.col&1] = delay;
         cfg.ram_cfg.rd_sel[ram.col&1] = 9 + hbus;
         cfg.ram_cfg.vpn[ram.col&1] = vpn;
-        cfg.ram_cfg.wr_sel[ram.col&1] = 0;  // no writes
+        if (write) cfg.ram_cfg.wr_sel[ram.col&1] = 4 + hbus;
     }
 }
 
@@ -267,11 +301,11 @@ template<> void SRamMatchTable::write_regs_vt(Target::Flatrock::mau_regs &regs) 
             int memcol = (way->group_xme % 8) / 2;
             int vbus = way->group_xme % 2;
             if (gress != EGRESS)
-                stm_read_config(ppu.istm, stage->stageno, memcol, vbus, row.bus,
-                                ram, vpn, maxdelay);
+                stm_bus_rw_config(ppu.istm, stage->stageno, memcol, vbus, row.bus,
+                                  ram, false, vpn, maxdelay);
             else
-                stm_read_config(ppu.estm, stage->stageno, memcol, vbus, row.bus,
-                                ram, vpn, maxdelay);
+                stm_bus_rw_config(ppu.estm, stage->stageno, memcol, vbus, row.bus,
+                                  ram, false, vpn, maxdelay);
         }
     }
 

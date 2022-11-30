@@ -30,6 +30,7 @@ set_source_files_properties(
 set (BFAS_JBAY_SRCS
   jbay/gateway.cpp
   jbay/input_xbar.cpp
+  jbay/stateful.cpp
   jbay/parser.cpp
   PARENT_SCOPE
   )
@@ -39,6 +40,7 @@ set (BFAS_JBAY_HEADERS
   jbay/gateway.h
   jbay/input_xbar.h
   jbay/meter.h
+  jbay/stateful.h
   PARENT_SCOPE
   )
 

@@ -33,6 +33,7 @@ set (BFAS_TOFINO_SRCS
   tofino/input_xbar.cpp
   tofino/parser.cpp
   tofino/sram_match.cpp
+  tofino/stateful.cpp
   tofino/ternary_match.cpp
   PARENT_SCOPE
   )
@@ -45,6 +46,7 @@ set (BFAS_TOFINO_HEADERS
   tofino/input_xbar.h
   tofino/meter.h
   tofino/phv.h
+  tofino/stateful.h
   tofino/ternary_match.h
   PARENT_SCOPE
   )
