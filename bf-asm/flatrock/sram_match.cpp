@@ -316,3 +316,10 @@ template<> void SRamMatchTable::write_regs_vt(Target::Flatrock::mau_regs &regs) 
         hd.write_regs(regs, this);
 }
 
+// DANGER -- these explicit instantiations should not be needed as they are instantiated in
+// in write_regs_vt above, but for some reason, a release, non-unified build makes the
+// instantiations static/private and not accessable in other compilation units without them
+template void stm_bus_rw_config(decltype(Flatrock::regs_pipe::_ppu_pack::istm) &, int, int, int,
+        const std::map<Table::Layout::bus_type_t, int> &, const MemUnit &, bool, int, int);
+template void stm_bus_rw_config(decltype(Flatrock::regs_pipe::_ppu_pack::estm) &, int, int, int,
+        const std::map<Table::Layout::bus_type_t, int> &, const MemUnit &, bool, int, int);
