@@ -235,6 +235,142 @@ node ('compiler-travis') {
             stage ('Test') {
                 parallel (
 
+                    'Short-running jobs': {
+
+                        stage("Check code style") {
+                            // This catchError makes sure the following jobs run even if this one
+                            // fails, but the pipieline overall will fail. We explicitly don't catch
+                            // interrupts (to preserve normal behaviour of job cancellation) and we
+                            // need to explicitly fail the stage, otherwise only the step fails,
+                            // which is not sufficiently visible in the UI.
+                            catchError(catchInterruptions: false, stageResult: 'FAILURE') {
+                                echo 'Checking code style'
+                                runInDocker(
+                                    maxCpu: 1,
+                                    '''
+                                        /bin/bash -c "\
+                                            ln -s /usr/bin/python3 /usr/bin/python; \
+                                            ctest -R 'cpplint' \
+                                        "
+                                    '''
+                                )
+                            }
+                        }
+
+                        stage("Gtest") {
+                            catchError(catchInterruptions: false, stageResult: 'FAILURE') {
+                                runInDocker(
+                                    "ctest -R gtest"
+                                )
+                            }
+                        }
+
+                        stage("Documentation") {
+                            catchError(catchInterruptions: false, stageResult: 'FAILURE') {
+                                echo 'Testing Doxygen documentation build'
+                                runInDocker(
+                                    maxCpu: 1,
+                                    'make doc'
+                                )
+                            }
+                        }
+
+                        // Ideally, keep this in sync with
+                        // https://github.com/intel-restricted/networking.switching.barefoot.sandals/blob/master/jenkins/bf_sde_compilers_package.sh
+                        stage("Packaging") {
+                            catchError(catchInterruptions: false, stageResult: 'FAILURE') {
+                                if (sanitizersEnabled())
+                                    return
+
+                                sh """
+                                    mkdir -p ~/.ccache_bf-p4c-compilers
+                                    docker run \
+                                        --cpus=4 \
+                                        -v ~/.ccache_bf-p4c-compilers:/root/.ccache \
+                                        -e MAKEFLAGS=j4 \
+                                        -e UNIFIED_BUILD=true \
+                                        bf-p4c-compilers_intermediate_${image_tag} \
+                                        scripts/package_p4c_for_tofino.sh --build-dir build --enable-cb
+                                """
+                            }
+                        }
+
+                        stage("Check submodule refpoints") {
+                            catchError(catchInterruptions: false, stageResult: 'FAILURE') {
+                                dir('checkRefpoints') {
+                                    checkout scm
+                                    sh 'git submodule update --init --recursive'
+                                    sh 'scripts/check-git-submodules --skip-fetch'
+                                }
+                            }
+                        }
+
+                        stage("p414 basic IPv4 smoketests") {
+                            catchError(catchInterruptions: false, stageResult: 'FAILURE') {
+                                echo 'Running basic_ipv4 tests'
+                                runInDocker(
+                                    extraArgs: '--privileged',
+                                    "ctest -R 'smoketest_programs_basic_ipv4'"
+                                )
+                            }
+                        }
+
+                        stage("p4o") {
+                            catchError(catchInterruptions: false, stageResult: 'FAILURE') {
+                                echo 'Running p4 obfuscator tests'
+                                def bf_p4c_cid = sh (
+                                    script: """
+                                        docker run \
+                                            --privileged \
+                                            --rm -t -d \
+                                            -w /bfn/bf-p4c-compilers/build/p4c \
+                                            --entrypoint bash \
+                                            ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag}
+                                    """,
+                                    returnStdout: true
+                                ).trim()
+                                echo "bf_p4c_cid: ${bf_p4c_cid}"
+
+                                sh "docker pull ${DOCKER_PROJECT}/p4v:latest"
+                                sh """
+                                    mkdir -p p4o_regression
+                                    docker cp ${bf_p4c_cid}:/bfn/bf-p4c-compilers/build p4o_regression/
+                                    docker tag ${DOCKER_PROJECT}/p4v:latest ${DOCKER_PROJECT}/p4v:p4o_regression
+                                """
+
+                                try {
+                                    def p4o_pwd = pwd()
+                                    def p4v_cid = sh (
+                                        script: """
+                                            docker run \
+                                                --privileged \
+                                                --rm -t -d \
+                                                -v ${p4o_pwd}/p4o_regression/build:/bfn/bf-p4c-compilers/build \
+                                                -w /bfn/p4v/mutine/obfuscator/bin/scripts \
+                                                --entrypoint bash \
+                                                ${DOCKER_PROJECT}/p4v:p4o_regression
+                                        """,
+                                        returnStdout: true
+                                    ).trim()
+                                    echo "p4v_cid: ${p4v_cid}"
+
+                                    sh """
+                                        docker exec ${p4v_cid} \
+                                            python3 -u main.py -t compiler -r serial -f tests.csv
+                                    """
+
+                                    sh """
+                                        docker container stop ${bf_p4c_cid}
+                                        docker container stop ${p4v_cid}
+                                    """
+                                } catch (err) {
+                                    sh "echo 'p4o regression has failed'"
+                                }
+                            }
+                        }
+                    },
+
+
                     'Running Extreme PTF tests': {
                         echo 'Running Extreme PTF tests'
                         runInDocker(
@@ -245,93 +381,113 @@ node ('compiler-travis') {
                         )
                     },
 
-                    'Generate switch compile-only metrics': {
-                        echo 'Running switch profiles compilation for master'
-                        runInDocker(
-                            ctestParallelLevel: 4,
-                            '''
-                                ctest -R '^tofino/.*switch_' \
-                                    -E 'smoketest|p4_14|glass' \
-                                    -LE 'METRICS'
-                            '''
-                        )
+                    'Switch, Arista, Metrics': {
+                        stage("Switch compilation") {
+                            catchError(catchInterruptions: false, stageResult: 'FAILURE') {
+                                echo 'Running switch profiles compilation for master'
+                                runInDocker(
+                                    ctestParallelLevel: 4,
+                                    '''
+                                        ctest -R '^tofino/.*switch_' \
+                                            -E 'smoketest|p4_14|glass' \
+                                            -LE 'METRICS'
+                                    '''
+                                )
+                            }
+                        }
 
-                        echo 'Running some Arista must-pass tests that are excluded in Travis jobs'
-                        runInDocker(
-                            ctestParallelLevel: 4,
-                            "ctest -R '^tofino/.*arista*' -L 'CUST_MUST_PASS'"
-                        )
+                        stage("Arista must-pass") {
+                            catchError(catchInterruptions: false, stageResult: 'FAILURE') {
+                                echo 'Running some Arista must-pass tests that are excluded in Travis jobs'
+                                runInDocker(
+                                    ctestParallelLevel: 4,
+                                    "ctest -R '^tofino/.*arista*' -L 'CUST_MUST_PASS'"
+                                )
+                            }
+                        }
 
                         if (sanitizersEnabled())
                             return
 
-                        echo 'Running switch-14 and switch-16 tests for METRICS'
-                        sh "docker pull ${DOCKER_PROJECT}/compiler_metrics:stage"
-                        sh "mkdir -p metrics_store"
-                        def metrics_cid = sh (
-                            script: """
-                                docker run --rm -t -d \
-                                    -w /bfn/compiler_metrics/database \
-                                    --entrypoint bash \
-                                    ${DOCKER_PROJECT}/compiler_metrics:stage
-                            """,
-                            returnStdout: true
-                        ).trim()
-                        echo "metrics cid: ${metrics_cid}"
-                        sh """
-                            docker cp \
-                                ${metrics_cid}:/bfn/compiler_metrics/database/compiler_metrics.sqlite \
-                                metrics_store/
-                            docker tag \
-                                ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag} \
-                                ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag}_metrics
-                        """
+                        stage("Generate switch compile-only metrics") {
+                            catchError(catchInterruptions: false, stageResult: 'FAILURE') {
+                                echo 'Running switch-14 and switch-16 tests for METRICS'
+                                sh "docker pull ${DOCKER_PROJECT}/compiler_metrics:stage"
+                                sh "mkdir -p metrics_store"
+                                def metrics_cid = sh (
+                                    script: """
+                                        docker run --rm -t -d \
+                                            -w /bfn/compiler_metrics/database \
+                                            --entrypoint bash \
+                                            ${DOCKER_PROJECT}/compiler_metrics:stage
+                                    """,
+                                    returnStdout: true
+                                ).trim()
+                                echo "metrics cid: ${metrics_cid}"
+                                sh """
+                                    docker cp \
+                                        ${metrics_cid}:/bfn/compiler_metrics/database/compiler_metrics.sqlite \
+                                        metrics_store/
+                                    docker tag \
+                                        ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag} \
+                                        ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag}_metrics
+                                """
 
-                        def curr_pwd = pwd()
-                        def p4c_cid = sh (
-                            script: """
-                                docker run --privileged --rm -t -d \
-                                    -v ${curr_pwd}/metrics_store:/mnt \
-                                    -w /bfn/bf-p4c-compilers/scripts/gen_reference_outputs \
-                                    --entrypoint bash \
-                                    ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag}_metrics
-                            """,
-                            returnStdout: true
-                        ).trim()
-                        echo "p4c cid: ${p4c_cid}"
+                                def curr_pwd = pwd()
+                                def p4c_cid = sh (
+                                    script: """
+                                        docker run --privileged --rm -t -d \
+                                            -v ${curr_pwd}/metrics_store:/mnt \
+                                            -w /bfn/bf-p4c-compilers/scripts/gen_reference_outputs \
+                                            --entrypoint bash \
+                                            ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag}_metrics
+                                    """,
+                                    returnStdout: true
+                                ).trim()
+                                echo "p4c cid: ${p4c_cid}"
 
-                        echo "Generating metrics"
-                        sh """
-                            docker exec ${p4c_cid} \
-                                cp /mnt/compiler_metrics.sqlite \
-                                /bfn/bf-p4c-compilers/scripts/gen_reference_outputs/database/
-                            docker exec ${p4c_cid} \
-                                python3 -u gen_ref_outputs.py \
-                                    --tests_csv profiles.csv \
-                                    --out_dir /bfn/bf-p4c-compilers/scripts/gen_reference_outputs/metrics_outputs/ \
-                                    --process_metrics \
-                                    --commit_sha ${bf_p4c_compilers_rev}
-                        """
+                                echo "Generating metrics"
+                                sh """
+                                    docker exec ${p4c_cid} \
+                                        cp /mnt/compiler_metrics.sqlite \
+                                        /bfn/bf-p4c-compilers/scripts/gen_reference_outputs/database/
+                                    docker exec ${p4c_cid} \
+                                        python3 -u gen_ref_outputs.py \
+                                            --tests_csv profiles.csv \
+                                            --out_dir /bfn/bf-p4c-compilers/scripts/gen_reference_outputs/metrics_outputs/ \
+                                            --process_metrics \
+                                            --commit_sha ${bf_p4c_compilers_rev}
+                                """
 
-                        sh """
-                            docker container stop ${metrics_cid}
-                            docker container stop ${p4c_cid}
-                        """
+                                sh """
+                                    docker container stop ${metrics_cid}
+                                    docker container stop ${p4c_cid}
+                                """
+                            }
+                        }
                     },
 
                     'stful, meters, hash-driven, other customer tests': {
-                        echo 'Running stful, meters and hash_driven tests'
-                        // Disable stful test (DRV-4189)
-                        runInDocker(
-                            extraArgs: '--privileged',
-                            "ctest -R 'smoketest_programs_meters|smoketest_programs_hash_driven'"
-                        )
+                        stage("stful, meters, hash_driven tests") {
+                            catchError(catchInterruptions: false, stageResult: 'FAILURE') {
+                                echo 'Running stful, meters and hash_driven tests'
+                                // Disable stful test (DRV-4189)
+                                runInDocker(
+                                    extraArgs: '--privileged',
+                                    "ctest -R 'smoketest_programs_meters|smoketest_programs_hash_driven'"
+                                )
+                            }
+                        }
 
-                        echo 'Running remaining customer must passes that are excluded in Travis jobs'
-                        runInDocker(
-                            ctestParallelLevel: 1,
-                            "ctest -R '^tofino/' -L 'CUST_MUST_PASS' -E 'arista'"
-                        )
+                        stage("Remaining customer tests") {
+                            catchError(catchInterruptions: false, stageResult: 'FAILURE') {
+                                echo 'Running remaining customer must passes that are excluded in Travis jobs'
+                                runInDocker(
+                                    ctestParallelLevel: 1,
+                                    "ctest -R '^tofino/' -L 'CUST_MUST_PASS' -E 'arista'"
+                                )
+                            }
+                        }
                     },
 
                     "switch_16 Tofino tests (part 1)": {
@@ -368,21 +524,6 @@ node ('compiler-travis') {
                         runInDocker(
                             extraArgs: '--privileged',
                             "ctest -R '^tofino2/.*smoketest_switch_16_Tests_y2'"
-                        )
-                    },
-
-
-                    "p414 basic IPv4 smoketests": {
-                        echo 'Running basic_ipv4 tests'
-                        runInDocker(
-                            extraArgs: '--privileged',
-                            "ctest -R 'smoketest_programs_basic_ipv4'"
-                        )
-                    },
-
-                    "Gtest": {
-                        runInDocker(
-                            "ctest -R gtest"
                         )
                     },
 
@@ -501,59 +642,6 @@ node ('compiler-travis') {
                             "ctest -L 'determinism'"
                         )
                     },
-
-                    "p4o": {
-                        echo 'Running p4 obfuscator tests'
-                        def bf_p4c_cid = sh (
-                            script: """
-                                docker run \
-                                    --privileged \
-                                    --rm -t -d \
-                                    -w /bfn/bf-p4c-compilers/build/p4c \
-                                    --entrypoint bash \
-                                    ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag}
-                            """,
-                            returnStdout: true
-                        ).trim()
-                        echo "bf_p4c_cid: ${bf_p4c_cid}"
-
-                        sh "docker pull ${DOCKER_PROJECT}/p4v:latest"
-                        sh """
-                            mkdir -p p4o_regression
-                            docker cp ${bf_p4c_cid}:/bfn/bf-p4c-compilers/build p4o_regression/
-                            docker tag ${DOCKER_PROJECT}/p4v:latest ${DOCKER_PROJECT}/p4v:p4o_regression
-                        """
-
-                        try {
-                            def p4o_pwd = pwd()
-                            def p4v_cid = sh (
-                                script: """
-                                    docker run \
-                                        --privileged \
-                                        --rm -t -d \
-                                        -v ${p4o_pwd}/p4o_regression/build:/bfn/bf-p4c-compilers/build \
-                                        -w /bfn/p4v/mutine/obfuscator/bin/scripts \
-                                        --entrypoint bash \
-                                        ${DOCKER_PROJECT}/p4v:p4o_regression
-                                """,
-                                returnStdout: true
-                            ).trim()
-                            echo "p4v_cid: ${p4v_cid}"
-
-                            sh """
-                                docker exec ${p4v_cid} \
-                                    python3 -u main.py -t compiler -r serial -f tests.csv
-                            """
-
-                            sh """
-                                docker container stop ${bf_p4c_cid}
-                                docker container stop ${p4v_cid}
-                            """
-                        } catch (err) {
-                            sh "echo 'p4o regression has failed'"
-                        }
-                    },
-
                     "Installed p4c tests": {
                         echo 'Running driver tests on installed p4c'
                         runInDocker(
@@ -568,53 +656,6 @@ node ('compiler-travis') {
                                     --compiler '/usr/local/bin/p4c'
                             """
                         )
-                    },
-
-                    "Documentation": {
-                        echo 'Testing Doxygen documentation build'
-                        runInDocker(
-                            maxCpu: 1,
-                            'make doc'
-                        )
-                    },
-
-                    "Check code style": {
-                        echo 'Checking code style'
-                        runInDocker(
-                            maxCpu: 1,
-                            '''
-                                /bin/bash -c "\
-                                    ln -s /usr/bin/python3 /usr/bin/python; \
-                                    ctest -R 'cpplint' \
-                                "
-                            '''
-                        )
-                    },
-
-                    "Check submodule refpoints": {
-                        dir('checkRefpoints') {
-                            checkout scm
-                            sh 'git submodule update --init --recursive'
-                            sh 'scripts/check-git-submodules --skip-fetch'
-                        }
-                    },
-
-                    // Ideally, keep this in sync with
-                    // https://github.com/intel-restricted/networking.switching.barefoot.sandals/blob/master/jenkins/bf_sde_compilers_package.sh
-                    'Packaging' : {
-                        if (sanitizersEnabled())
-                            return
-
-                        sh """
-                            mkdir -p ~/.ccache_bf-p4c-compilers
-                            docker run \
-                                --cpus=4 \
-                                -v ~/.ccache_bf-p4c-compilers:/root/.ccache \
-                                -e MAKEFLAGS=j4 \
-                                -e UNIFIED_BUILD=true \
-                                bf-p4c-compilers_intermediate_${image_tag} \
-                                scripts/package_p4c_for_tofino.sh --build-dir build --enable-cb
-                        """
                     },
 
                     // Benchmarks
