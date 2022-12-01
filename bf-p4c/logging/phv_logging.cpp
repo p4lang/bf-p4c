@@ -166,7 +166,8 @@ void PhvLogging::end_apply(const IR::Node *root) {
 
     logConstraintReasons();
     logger.log();
-    Logging::Manifest::getManifest().addLog(root->to<IR::BFN::Pipe>()->id, "phv", "phv.json");
+    Logging::Manifest::getManifest().addLog(root->to<IR::BFN::Pipe>()->canon_id(),
+                                            "phv", "phv.json");
 }
 
 PHV::Field::AllocState PhvLogging::getAllocatedState(

@@ -636,7 +636,7 @@ const IR::Node *LiveRangeSplitOrFail::apply_visitor(const IR::Node *root, const 
 
     const ConcreteAllocation *alloc = getAllocFn();
 
-    const int pipeId = root->to<IR::BFN::Pipe>()->id;
+    const int pipeId = root->to<IR::BFN::Pipe>()->canon_id();
     auto lrsFilename = Logging::PassManager::getNewLogFileName("live_range_split_");
     auto lrsLogfile = new Logging::FileLog(pipeId, lrsFilename, Logging::Mode::AUTO);
 

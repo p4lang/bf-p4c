@@ -76,7 +76,7 @@ void CollectIXBarInfo::end_apply(const IR::Node *root) {
     sort_ixbar_byte();
     if (Log::verbose()) {
         const IR::BFN::Pipe *pipe = root->to<IR::BFN::Pipe>();
-        Logging::FileLog ixbarLog(pipe->id, "ixbar.log");
+        Logging::FileLog ixbarLog(pipe->canon_id(), "ixbar.log");
         LOG2(print_ixbar_byte());
     }
 }

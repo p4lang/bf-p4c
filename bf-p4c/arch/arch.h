@@ -6,7 +6,6 @@
 #ifndef BF_P4C_ARCH_ARCH_H_
 #define BF_P4C_ARCH_ARCH_H_
 
-#include <set>
 #include <boost/algorithm/string.hpp>
 #include <boost/optional.hpp>
 #include "frontends/common/resolveReferences/referenceMap.h"
@@ -28,6 +27,7 @@
 #include "frontends/p4/methodInstance.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/ir/gress.h"
+#include "bf-p4c/lib/assoc.h"
 #include "bf-p4c/arch/program_structure.h"
 #include "bf-p4c/midend/type_checker.h"
 
@@ -207,8 +207,68 @@ struct BlockInfo {
     }
 };
 
-/** \ingroup ArchTranslation */
-using ProgramThreads = std::map<std::pair<int, gress_t>, const IR::BFN::P4Thread*>;
+struct Pipeline {
+ public:
+    // Name of the pipeline.
+    std::vector<cstring> names;
+
+    // One or more pipe ids. Contains multiple ids in case the top-level switch instance is
+    // instantiated with multiple equivalent pipeline instances.
+    std::vector<int> ids;
+
+    assoc::map<gress_t, const IR::BFN::P4Thread*> threads;
+
+    // Global pragmas applied either for all pragmas or for this pipeline specifically.
+    std::vector<const IR::Annotation*> pragmas;
+
+    // Constructs new pipeline.
+    Pipeline(cstring name,
+             const IR::BFN::P4Thread* ingress,
+             const IR::BFN::P4Thread* egress,
+             const IR::BFN::P4Thread* ghost);
+
+    // Checks if two pipelines are sematically equivalent.
+    bool equiv(const Pipeline& other) const;
+
+ private:
+    // Inserts global pragmas into this instance. Filters out all pragmas which are applied
+    // to a different pipeline.
+    void insertPragmas(const std::vector<const IR::Annotation*>& all_pragmas);
+};
+
+class ProgramPipelines {
+ public:
+    void addPipeline(int pipe_idx, Pipeline pipeline, cstring name)
+    {
+        auto it = std::find_if(pipelines.begin(), pipelines.end(), [&] (const auto& p) {
+            return p.equiv(pipeline);
+        });
+        if (it == pipelines.end()) {
+            it = pipelines.insert(pipelines.end(), pipeline);
+        }
+        pipeIdxToPipeline[pipe_idx] = std::distance(pipelines.begin(), it);
+        it->ids.push_back(pipe_idx);
+        it->names.push_back(name);
+    }
+
+    const Pipeline& getPipeline(size_t pipe_idx) const {
+        return pipelines.at(pipeIdxToPipeline.at(pipe_idx));
+    }
+
+    // Returns list of all unique pipelines in the program.
+    const std::vector<Pipeline>& getPipelines() const {
+        return pipelines;
+    }
+
+    size_t size() const {
+        return pipeIdxToPipeline.size();
+    }
+
+ private:
+    std::vector<Pipeline> pipelines;
+    ordered_map<int, int> pipeIdxToPipeline;
+};
+
 /** \ingroup ArchTranslation */
 using BlockInfoMapping = std::multimap<const IR::Node*, BlockInfo>;
 /** \ingroup ArchTranslation */
@@ -251,9 +311,13 @@ struct CollectPkgInfo : public PassManager {
 /** \ingroup ArchTranslation */
 class ParseTna : public Inspector {
     const IR::PackageBlock*   mainBlock = nullptr;
+    P4::ReferenceMap*         refMap;
+    P4::TypeMap*              typeMap;
 
  public:
-    ParseTna() { setName("ParseTna"); }
+    ParseTna(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) : refMap(refMap), typeMap(typeMap) {
+        setName("ParseTna");
+    }
 
     // parse tna pipeline with single parser.
     void parseSingleParserPipeline(const IR::PackageBlock* block, unsigned index);
@@ -267,7 +331,7 @@ class ParseTna : public Inspector {
     bool preorder(const IR::PackageBlock* block) override;
 
  public:
-    ProgramThreads threads;
+    ProgramPipelines pipelines;
     BlockInfoMapping toBlockInfo;
     bool hasMultiplePipes = false;
     bool hasMultipleParsers = false;
@@ -305,15 +369,21 @@ struct RewriteControlAndParserBlocks : public PassManager {
     RewriteControlAndParserBlocks(P4::ReferenceMap* refMap,
                                   P4::TypeMap* typeMap) {
         auto* evaluator = new P4::EvaluatorPass(refMap, typeMap);
-        auto* parseTna = new ParseTna();
+        auto* parseTna = new ParseTna(refMap, typeMap);
 
-        passes.emplace_back(evaluator);
-        passes.emplace_back(new VisitFunctor([evaluator, parseTna]() {
-            auto toplevel = evaluator->getToplevelBlock();
-            auto main = toplevel->getMain();
+        passes.push_back(evaluator);
+        passes.push_back(new VisitFunctor([evaluator, parseTna](const IR::Node* root) {
+            auto* evaluated_program = root->to<IR::P4Program>();
+            auto* toplevel = evaluator->getToplevelBlock();
+            // setup the context to know which pipes are available in the program: for logging and
+            // other output declarations.
+            BFNContext::get().discoverPipes(evaluated_program, toplevel);
+
+            auto* main = toplevel->getMain();
             ERROR_CHECK(main != nullptr, ErrorType::ERR_INVALID,
                         "program: does not instantiate `main`");
             main->apply(*parseTna);
+            return root;
         }));
         passes.emplace_back(new P4::TypeChecking(refMap, typeMap));
         passes.emplace_back(

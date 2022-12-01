@@ -168,13 +168,17 @@ void Manifest::serializeArchConfig(Writer &writer) {
             writer.String("PISA");
     }
 
-    if (_threads.size() == 0)
+    if (_pipelines.size() == 0)
         return;
 
     writer.Key("architectureConfig");
     writer.StartObject();
     writer.Key("name");
-    auto numPorts = std::to_string(64/_threads.size()*2) + "q";
+    size_t threads = 0;
+    for (unsigned pipe_idx = 0; pipe_idx < _pipelines.size(); ++pipe_idx) {
+        threads += _pipelines.getPipeline(pipe_idx).threads.size();
+    }
+    auto numPorts = std::to_string(64/threads*2) + "q";
     writer.String(numPorts.c_str());
     writer.Key("pipes");
     writer.StartArray();
@@ -183,9 +187,9 @@ void Manifest::serializeArchConfig(Writer &writer) {
         writer.Key("pipe");
         writer.Int(p.first);
         for (auto g : { INGRESS, EGRESS}) {
-            auto t = _threads.find(std::pair<int, gress_t>(p.first, g));
-            if (t != _threads.end()) {
-                writer.Key(t->first.second == INGRESS ? "ingress" : "egress");
+            auto t = _pipelines.getPipeline(p.first).threads.find(g);
+            if (t != _pipelines.getPipeline(p.first).threads.end()) {
+                writer.Key(g == INGRESS ? "ingress" : "egress");
                 writer.StartObject();
                 writer.Key("pipeName");
                 writer.String(t->second->mau->externalName().c_str());
@@ -235,8 +239,8 @@ void Manifest::serializePipes(Writer &writer) {
 }
 
 void Manifest::sendTo(Writer &writer, int pipe, gress_t gress) {
-    auto t = _threads.find(std::pair<int, gress_t>(pipe, gress));
-    if (t != _threads.end()) {
+    auto t = _pipelines.getPipeline(pipe).threads.find(gress);
+    if (t != _pipelines.getPipeline(pipe).threads.end()) {
         writer.StartObject();
         writer.Key("pipe");
         writer.Int(pipe);

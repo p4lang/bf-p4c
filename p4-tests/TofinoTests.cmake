@@ -306,6 +306,12 @@ p4c_add_ptf_test_with_ptfdir(
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/hash_field_expression_sym.ptf")
 bfn_needs_scapy("tofino" "hash_field_expression_sym")
 
+p4c_add_ptf_test_with_ptfdir (
+    "tofino" "p4c-4878" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-4878/p4c-4878.p4"
+    "${testExtraArgs} -target tofino -arch tna -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-4878")
+bfn_set_ptf_ports_json_file("tofino" "p4c-4878"
+                            "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-4878/ports.json")
+
 # 600s is too little for forensics.p4
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/forensics.p4")

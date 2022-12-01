@@ -2384,7 +2384,7 @@ bool ExtractBridgeInfo::preorder(const IR::P4Program* program) {
     BUG_CHECK(toplevel, "toplevel cannot be nullptr");
 
     auto main = toplevel->getMain();
-    auto arch = new BFN::ParseTna();
+    auto arch = new BFN::ParseTna(refMap, typeMap);
     main->apply(*arch);
 
     /// SimplifyReferences passes are fixup passes that modifies the visited IR tree.
@@ -2404,10 +2404,10 @@ bool ExtractBridgeInfo::preorder(const IR::P4Program* program) {
         if (!pkg.second->is<IR::PackageBlock>()) continue;
         std::vector<gress_t> gresses = {INGRESS, EGRESS};
         for (auto gress : gresses) {
-            if (!arch->threads.count(std::make_pair(npipe, gress))) {
+            if (!arch->pipelines.getPipeline(npipe).threads.count(gress)) {
                 ::error("Unable to find thread %1%", npipe);
                 return false; }
-            auto thread = arch->threads.at(std::make_pair(npipe, gress));
+            auto thread = arch->pipelines.getPipeline(npipe).threads.at(gress);
             thread = thread->apply(*simplifyReferences);
             for (auto p : thread->parsers) {
                 if (auto parser = p->to<IR::BFN::TnaParser>()) {
@@ -2489,7 +2489,7 @@ void ExtractBridgeInfo::end_apply(const IR::Node*) {
 
         for (auto p : *bridgePath) {
             LOG6("Collect flexible fields for " << kv.first);
-            pack->set_pipeline_name(p->name);
+            pack->set_pipeline_name(p->canon_name());
             p->apply(*pack);
         }
     }

@@ -310,10 +310,10 @@ class DumpParser : public Visitor, public DotDumper {
             BUG("IR is in an incoherent state");
 
         for (auto g : cg.graphs())
-            dump_graph(*(g.second), (g.first)->gress, root->to<IR::BFN::Pipe>()->id);
+            dump_graph(*(g.second), (g.first)->gress, root->to<IR::BFN::Pipe>()->canon_id());
 
         for (auto g : cgl.graphs())
-            dump_graph(*(g.second), (g.first)->gress, root->to<IR::BFN::Pipe>()->id);
+            dump_graph(*(g.second), (g.first)->gress, root->to<IR::BFN::Pipe>()->canon_id());
 
         if (log) {
             // Use LOG level 1 as to let the caller decide on whether

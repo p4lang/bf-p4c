@@ -1040,7 +1040,7 @@ extractChecksumFromDeparser(const IR::BFN::TnaDeparser* deparser, IR::BFN::Pipe*
     if (!deparser) return pipe;
 
     if (BackendOptions().verbose > 0)
-        Logging::FileLog parserLog(pipe->id, "parser.log");
+        Logging::FileLog parserLog(pipe->canon_id(), "parser.log");
 
     auto gress = deparser->thread;
 

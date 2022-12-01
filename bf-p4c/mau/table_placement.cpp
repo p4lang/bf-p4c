@@ -133,7 +133,7 @@ Visitor::profile_t TablePlacement::init_apply(const IR::Node *root) {
     LOG1("Table Placement ignores container conflicts? " << ignoreContainerConflicts);
     if (BackendOptions().create_graphs) {
         static unsigned invocation = 0;
-        auto pipeId = root->to<IR::BFN::Pipe>()->id;
+        auto pipeId = root->to<IR::BFN::Pipe>()->canon_id();
         auto graphsDir = BFNContext::get().getOutputDirectory("graphs", pipeId);
         cstring fileName = "table_dep_graph_placement_" + std::to_string(invocation++);
         std::ofstream dotStream(graphsDir + "/" + fileName + ".dot", std::ios_base::out);
@@ -3888,7 +3888,8 @@ class DecidePlacement::BacktrackManagement {
 
 const DecidePlacement::Placed*
 DecidePlacement::default_table_placement(const IR::BFN::Pipe *pipe) {
-    LOG1("Table placement starting on " << pipe->name << " with DEFAULT PLACEMENT approach");
+    LOG1("Table placement starting on " << pipe->canon_name()
+         << " with DEFAULT PLACEMENT approach");
 
     LOG3(TableTree("ingress", pipe->thread[INGRESS].mau) <<
          TableTree("egress", pipe->thread[EGRESS].mau) <<
@@ -4242,13 +4243,13 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
             BUG_CHECK(p->need_more || self.table_placed.count(p->gw->name) == 0,
                       "Gateway %s placed more than once?", p->gw->name);
             self.table_placed.emplace_hint(self.table_placed.find(p->gw->name), p->gw->name, p); } }
-    LOG1("Finished table placement decisions " << pipe->name);
+    LOG1("Finished table placement decisions " << pipe->canon_name());
     return false;
 }
 
 const DecidePlacement::Placed*
 DecidePlacement::alt_table_placement(const IR::BFN::Pipe *pipe) {
-    LOG1("Table placement starting on " << pipe->name << " with ALT PLACEMENT approach");
+    LOG1("Table placement starting on " << pipe->canon_name() << " with ALT PLACEMENT approach");
     LOG3(TableTree("ingress", pipe->thread[INGRESS].mau) <<
          TableTree("egress", pipe->thread[EGRESS].mau) <<
          TableTree("ghost", pipe->ghost_thread.ghost_mau) );
@@ -4354,7 +4355,7 @@ DecidePlacement::alt_table_placement(const IR::BFN::Pipe *pipe) {
                     << placed->use.format_type << need_more_match_str);
         }
     }
-    LOG1("Alt placement finished all table placement decisions on pipe " << pipe->name);
+    LOG1("Alt placement finished all table placement decisions on pipe " << pipe->canon_name());
     return placed;
 }
 
@@ -4406,7 +4407,7 @@ IR::Node *TransformTables::postorder(IR::BFN::Pipe *pipe) {
     self.tblByName.clear();
     self.seqInfo.clear();
     self.table_placed.clear();
-    LOG3("table placement completed " << pipe->name);
+    LOG3("table placement completed " << pipe->canon_name());
     LOG3(TableTree("ingress", pipe->thread[INGRESS].mau) <<
          TableTree("egress", pipe->thread[EGRESS].mau) <<
          TableTree("ghost", pipe->ghost_thread.ghost_mau));

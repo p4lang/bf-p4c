@@ -701,7 +701,8 @@ void WalkPowerGraph::create_mau_power_log(const IR::Node *root) const {
   if (!options_.display_power_budget) {
     return; }
   std::ofstream myfile;
-  auto logDir = BFNContext::get().getOutputDirectory("logs", root->to<IR::BFN::Pipe>()->id);
+  auto logDir = BFNContext::get().getOutputDirectory("logs",
+                                                     root->to<IR::BFN::Pipe>()->canon_id());
   if (logDir) {
     myfile.open(Util::PathName(logDir).join("mau.power.log").toString());
     myfile << "+-----------------------------------------------------------+";
@@ -734,7 +735,8 @@ void WalkPowerGraph::create_mau_power_log(const IR::Node *root) const {
 
 // TODO: P4C-3332 Add input pps load % value to json
 void WalkPowerGraph::create_mau_power_json(const IR::Node *root) {
-  auto logDir = BFNContext::get().getOutputDirectory("logs", root->to<IR::BFN::Pipe>()->id);
+  auto logDir = BFNContext::get().getOutputDirectory("logs",
+                                                     root->to<IR::BFN::Pipe>()->canon_id());
   if (!logDir)
     return;
   cstring powerFile = logDir + "/power.json";
@@ -746,15 +748,15 @@ void WalkPowerGraph::create_mau_power_json(const IR::Node *root) {
                              POWER_SCHEMA_VERSION);
 
   produce_json_tables();
-  produce_json_total_power(root->to<IR::BFN::Pipe>()->id);
+  produce_json_total_power(root->to<IR::BFN::Pipe>()->canon_id());
   produce_json_stage_characteristics();
-  produce_json_total_latency(root->to<IR::BFN::Pipe>()->id);
+  produce_json_total_latency(root->to<IR::BFN::Pipe>()->canon_id());
   logger_->log();
   delete logger_;
 
   Logging::Manifest &manifest = Logging::Manifest::getManifest();
   // relative path to the output directory
-  manifest.addLog(root->to<IR::BFN::Pipe>()->id, "power", "power.json");
+  manifest.addLog(root->to<IR::BFN::Pipe>()->canon_id(), "power", "power.json");
 }
 
 void WalkPowerGraph::print_features(std::ofstream& out) const {

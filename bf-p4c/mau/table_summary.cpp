@@ -100,7 +100,7 @@ ordered_map<cstring, std::set<const IR::MAU::Table*>> TableSummary::tblName2IRpt
 Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
     if (BackendOptions().verbose > 0) {
         const IR::BFN::Pipe *pipe = root->to<IR::BFN::Pipe>();
-        tsLog = new Logging::FileLog(pipe->id, "table_summary.log");
+        tsLog = new Logging::FileLog(pipe->canon_id(), "table_summary.log");
     }
 
     auto rv = MauInspector::init_apply(root);

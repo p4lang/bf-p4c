@@ -9,7 +9,6 @@
 #include "frontends/p4/externInstance.h"
 #include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/arch/helpers.h"
-#include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/pragma/collect_global_pragma.h"
 #include "bf-p4c/common/bridged_packing.h"
 #include "bf-p4c/common/utils.h"
@@ -1884,7 +1883,7 @@ cstring BackendConverter::getPipelineName(const IR::P4Program* program, int inde
 // toplevel pipeline structure.
 bool BackendConverter::preorder(const IR::P4Program* program) {
     ApplyEvaluator eval(refMap, typeMap);
-    auto new_program = program->apply(eval);
+    auto* new_program = program->apply(eval);
 
     toplevel = eval.getToplevelBlock();
     BUG_CHECK(toplevel, "toplevel cannot be nullptr");
@@ -1895,6 +1894,7 @@ bool BackendConverter::preorder(const IR::P4Program* program) {
     /// setup the context to know which pipes are available in the program: for logging and
     /// other output declarations.
     BFNContext::get().discoverPipes(new_program, toplevel);
+    BUG_CHECK(toplevel, "toplevel cannot be nullptr");
 
     /// SimplifyReferences passes are fixup passes that modifies the visited IR tree.
     /// Unfortunately, the modifications by simplifyReferences will transform IR tree towards
@@ -1902,7 +1902,7 @@ bool BackendConverter::preorder(const IR::P4Program* program) {
     /// simplifyReferences to the frontend IR.
     auto simplifyReferences = new SimplifyReferences(bindings, refMap, typeMap);
 
-    // collect and set global_pragmas
+    // collect and set global pragmas
     CollectGlobalPragma collect_pragma;
     new_program->apply(collect_pragma);
 
@@ -1917,7 +1917,7 @@ bool BackendConverter::preorder(const IR::P4Program* program) {
 
         options.pipes |= (0x1 << npipe);
 
-        if (arch->threads.count(std::make_pair(npipe, GHOST))) {
+        if (arch->pipelines.getPipeline(npipe).threads.count(GHOST)) {
             options.ghost_pipes |= (0x1 << npipe);
         }
 
@@ -1925,19 +1925,17 @@ bool BackendConverter::preorder(const IR::P4Program* program) {
     }
 
     npipe = 0;
-    for (auto pkg : main->constantValue) {
-        if (!pkg.second) continue;
-        if (!pkg.second->is<IR::PackageBlock>()) continue;
+    for (const auto& arch_pipe : arch->pipelines.getPipelines()) {
         DeclarationConversions converted;
-        auto name = getPipelineName(new_program, npipe);
-        auto rv = new IR::BFN::Pipe(name, npipe);
+        auto rv = new IR::BFN::Pipe(arch_pipe.names, arch_pipe.ids);
+        auto& threads = arch_pipe.threads;
         std::list<gress_t> gresses = {INGRESS, EGRESS};
 
         for (auto gress : gresses) {
-            if (!arch->threads.count(std::make_pair(npipe, gress))) {
-                ::error("Unable to find thread %1%", npipe);
+            if (!threads.count(gress)) {
+                ::error("Unable to find thread %1%", arch_pipe.names.front());
                 return false; }
-            auto thread = arch->threads.at(std::make_pair(npipe, gress));
+            auto thread = threads.at(gress);
             thread = thread->apply(*simplifyReferences);
             if (auto mau = thread->mau->to<IR::BFN::TnaControl>()) {
                 mau->apply(ExtractMetadata(rv, bindings));
@@ -1950,7 +1948,7 @@ bool BackendConverter::preorder(const IR::P4Program* program) {
                 }
             }
             if (auto dprsr = dynamic_cast<const IR::BFN::TnaDeparser *>(thread->deparser)) {
-                dprsr->apply(ExtractDeparser(refMap, typeMap, rv, collect_pragma));
+                dprsr->apply(ExtractDeparser(refMap, typeMap, rv));
                 dprsr->apply(ExtractChecksum(rv));
             } else {
 #if HAVE_FLATROCK
@@ -1978,11 +1976,11 @@ bool BackendConverter::preorder(const IR::P4Program* program) {
             auto ghost_conc_hdr = new IR::ConcreteHeaderRef(ghost_hdr);
             auto ghost_md = new IR::BFN::FieldLVal(ghost_conc_hdr);
             rv->ghost_thread.ghost_parser = new IR::BFN::GhostParser(INGRESS,
-                                ghost_md, IR::ID("ghost_parser"), rv->name);
+                                ghost_md, IR::ID("ghost_parser"), rv->canon_name());
         }
 
-        if (arch->threads.count(std::make_pair(npipe, GHOST))) {
-            auto thread = arch->threads.at(std::make_pair(npipe, GHOST));
+        if (threads.count(GHOST)) {
+            auto thread = threads.at(GHOST);
             thread = thread->apply(*simplifyReferences);
             if (auto mau = thread->mau->to<IR::BFN::TnaControl>()) {
                 mau->apply(ExtractMetadata(rv, bindings));
@@ -1999,9 +1997,9 @@ bool BackendConverter::preorder(const IR::P4Program* program) {
         auto p = rv->apply(processBackendPipe);
 
         pipe.push_back(p);
-        pipes.emplace(npipe, p);
-
-        npipe++;
+        for (size_t npipe : arch_pipe.ids) {
+            pipes.emplace(npipe, p);
+        }
     }
 
     return false;

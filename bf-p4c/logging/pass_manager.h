@@ -45,9 +45,10 @@ class PassManager : public ::PassManager {
             if (_logMode == Logging::Mode::CREATE) {
                 ++invocationCount;
                 auto logFileName = getNewLogFileName(_logFilePrefix);
-                _logFile = new Logging::FileLog(pipe->id, logFileName, _logMode);
+                _logFile = new Logging::FileLog(pipe->canon_id(), logFileName, _logMode);
             } else {
-                _logFile = new Logging::FileLog(pipe->id, _logFilePrefix + ".log", _logMode);
+                auto logFileName = _logFilePrefix + ".log";
+                _logFile = new Logging::FileLog(pipe->canon_id(), logFileName, _logMode);
             }
         }
 

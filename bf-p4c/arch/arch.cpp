@@ -6,6 +6,8 @@
 #include "bf-p4c/arch/v1model.h"
 #include "bf-p4c/arch/psa/psa.h"
 #include "bf-p4c/device.h"
+#include "bf-p4c/common/pragma/collect_global_pragma.h"
+#include "bf-p4c/bf-p4c-options.h"
 #include "ir/declaration.h"
 #include "ir/id.h"
 #include "ir/ir-generated.h"
@@ -13,6 +15,59 @@
 #include "lib/cstring.h"
 
 namespace BFN {
+
+Pipeline::Pipeline(cstring name,
+                   const IR::BFN::P4Thread* ingress,
+                   const IR::BFN::P4Thread* egress,
+                   const IR::BFN::P4Thread* ghost) : names({name})
+{
+    threads[INGRESS] = ingress;
+    threads[EGRESS] = egress;
+    if (ghost)
+        threads[GHOST] = ghost;
+
+    CollectGlobalPragma cgp;
+    for (const auto& [gress, thread] : threads) {
+        thread->apply(cgp);
+    }
+    insertPragmas(cgp.global_pragmas());
+}
+
+bool Pipeline::equiv(const Pipeline& other) const {
+    if (pragmas != other.pragmas) {
+        return false;
+    }
+    if (threads.size() != other.threads.size()) return false;
+    for (const auto& [gress, thread] : threads) {
+        if (other.threads.count(gress) == 0) return false;
+        if (!thread->equiv(*other.threads.at(gress))) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void Pipeline::insertPragmas(const std::vector<const IR::Annotation*>& all_pragmas) {
+    auto applies = [this] (const IR::Annotation* p) {
+        if (p->expr.empty() || p->expr.at(0) == nullptr) {
+            return true;
+        }
+
+        auto arg0 = p->expr.at(0)->to<IR::StringLiteral>();
+
+        // Determine whether the name of a pipe is present as the first argument.
+        // If the pipe name doesn't match, the pragma is to be applied for a different pipe.
+        if (BFNContext::get().isPipeName(arg0->value)) {
+            return arg0->value == names.front();
+        }
+        return true;
+    };
+    for (const auto* pragma : all_pragmas) {
+        if (applies(pragma)) {
+            pragmas.push_back(pragma);
+        }
+    }
+}
 
 ArchTranslation::ArchTranslation(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
                                  BFN_Options& options) {
@@ -90,27 +145,28 @@ bool GetPkgInfo::preorder(const IR::PackageBlock* pkg) {
 void ParseTna::parseSingleParserPipeline(const IR::PackageBlock* block, unsigned index) {
     auto thread_i = new IR::BFN::P4Thread();
     bool isMultiParserProgram = (block->type->name == "MultiParserPipeline");
-    cstring pipe = "";
+    cstring pipeName;
     auto decl = block->node->to<IR::Declaration_Instance>();
     // If no declaration found (anonymous instantiation) get the pipe name from arch definition
     if (decl) {
-        pipe = decl->Name();
+        pipeName = decl->Name();
     } else {
         auto cparams = mainBlock->getConstructorParameters();
         auto idxParam = cparams->getParameter(index);
-        pipe = idxParam->name;
+        pipeName = idxParam->name;
     }
-    BUG_CHECK(!pipe.isNullOrEmpty(),
+    BUG_CHECK(!pipeName.isNullOrEmpty(),
         "Cannot determine pipe name for pipe block at index %d", index);
 
     if (isMultiParserProgram) {
         auto ingress_parsers = block->getParameterValue("ig_prsr");
         BUG_CHECK(ingress_parsers->is<IR::PackageBlock>(), "Expected PackageBlock");
         parseMultipleParserInstances(ingress_parsers->to<IR::PackageBlock>(),
-                                                        pipe, thread_i, INGRESS);
+                                                        pipeName, thread_i, INGRESS);
     } else {
         auto ingress_parser = block->getParameterValue("ingress_parser");
-        BlockInfo ingress_parser_block_info(index, pipe, INGRESS, PARSER, GetPkgInfo::getArch());
+        BlockInfo ingress_parser_block_info(index, pipeName, INGRESS, PARSER,
+                                            GetPkgInfo::getArch());
         BUG_CHECK(ingress_parser->is<IR::ParserBlock>(), "Expected ParserBlock");
         thread_i->parsers.push_back(ingress_parser->to<IR::ParserBlock>()->container);
         toBlockInfo.emplace(ingress_parser->to<IR::ParserBlock>()->container,
@@ -118,29 +174,28 @@ void ParseTna::parseSingleParserPipeline(const IR::PackageBlock* block, unsigned
     }
 
     auto ingress = block->getParameterValue("ingress");
-    BlockInfo ingress_mau_block_info(index, pipe, INGRESS, MAU, GetPkgInfo::getArch());
+    BlockInfo ingress_mau_block_info(index, pipeName, INGRESS, MAU, GetPkgInfo::getArch());
     thread_i->mau = ingress->to<IR::ControlBlock>()->container;
     toBlockInfo.emplace(ingress->to<IR::ControlBlock>()->container, ingress_mau_block_info);
 
     if (auto ingress_deparser = block->findParameterValue("ingress_deparser")) {
-        BlockInfo ingress_deparser_block_info(index, pipe, INGRESS, DEPARSER,
+        BlockInfo ingress_deparser_block_info(index, pipeName, INGRESS, DEPARSER,
                                               GetPkgInfo::getArch());
         thread_i->deparser = ingress_deparser->to<IR::ControlBlock>()->container;
         toBlockInfo.emplace(ingress_deparser->to<IR::ControlBlock>()->container,
                             ingress_deparser_block_info);
     }
 
-    threads.emplace(std::make_pair(index, INGRESS), thread_i);
-
     auto thread_e = new IR::BFN::P4Thread();
     if (isMultiParserProgram) {
         if (auto egress_parser = block->findParameterValue("eg_prsr")) {
             auto parsers = egress_parser->to<IR::PackageBlock>();
-            parseMultipleParserInstances(parsers, pipe, thread_e, EGRESS);
+            parseMultipleParserInstances(parsers, pipeName, thread_e, EGRESS);
         }
     } else {
         if (auto egress_parser = block->findParameterValue("egress_parser")) {
-            BlockInfo egress_parser_block_info(index, pipe, EGRESS, PARSER, GetPkgInfo::getArch());
+            BlockInfo egress_parser_block_info(index, pipeName, EGRESS, PARSER,
+                                               GetPkgInfo::getArch());
             thread_e->parsers.push_back(egress_parser->to<IR::ParserBlock>()->container);
             toBlockInfo.emplace(egress_parser->to<IR::ParserBlock>()->container,
                                 egress_parser_block_info);
@@ -149,24 +204,26 @@ void ParseTna::parseSingleParserPipeline(const IR::PackageBlock* block, unsigned
 
     auto egress = block->getParameterValue("egress");
     thread_e->mau = egress->to<IR::ControlBlock>()->container;
-    BlockInfo egess_mau_block_info(index, pipe, EGRESS, MAU, GetPkgInfo::getArch());
+    BlockInfo egess_mau_block_info(index, pipeName, EGRESS, MAU, GetPkgInfo::getArch());
     toBlockInfo.emplace(egress->to<IR::ControlBlock>()->container, egess_mau_block_info);
 
     auto egress_deparser = block->getParameterValue("egress_deparser");
     thread_e->deparser = egress_deparser->to<IR::ControlBlock>()->container;
-    BlockInfo egress_deparser_block_info(index, pipe, EGRESS, DEPARSER, GetPkgInfo::getArch());
+    BlockInfo egress_deparser_block_info(index, pipeName, EGRESS, DEPARSER, GetPkgInfo::getArch());
     toBlockInfo.emplace(egress_deparser->to<IR::ControlBlock>()->container,
                         egress_deparser_block_info);
 
-    threads.emplace(std::make_pair(index, EGRESS), thread_e);
-
+    IR::BFN::P4Thread* thread_g = nullptr;
     if (auto ghost = block->findParameterValue("ghost")) {
         auto ghost_cb = ghost->to<IR::ControlBlock>()->container;
-        auto thread_g = new IR::BFN::P4Thread();
+        thread_g = new IR::BFN::P4Thread();
         thread_g->mau = ghost_cb;
-        threads.emplace(std::make_pair(index, GHOST), thread_g);
-        toBlockInfo.emplace(ghost_cb, BlockInfo(index, pipe, GHOST, MAU, GetPkgInfo::getArch()));
+        toBlockInfo.emplace(ghost_cb, BlockInfo(index, pipeName, GHOST, MAU,
+                                                GetPkgInfo::getArch()));
     }
+
+    Pipeline pipeline(pipeName, thread_i, thread_e, thread_g);
+    pipelines.addPipeline(index, pipeline, pipeName);
 }
 
 void ParseTna::parsePortMapAnnotation(const IR::PackageBlock* block, DefaultPortMap& map) {

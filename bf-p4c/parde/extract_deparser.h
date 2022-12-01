@@ -39,7 +39,6 @@ class ExtractDeparser : public DeparserInspector {
     IR::BFN::Pipe                               *rv;
     IR::BFN::Deparser                           *dprsr = nullptr;
     ordered_map<cstring, IR::BFN::Digest *>     digests;
-    const CollectGlobalPragma                   &collect_pragma;
 
     ordered_map<cstring, std::vector<const IR::BFN::EmitField*>> headerToEmits;
 
@@ -72,8 +71,8 @@ class ExtractDeparser : public DeparserInspector {
 
  public:
     explicit ExtractDeparser(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
-                            IR::BFN::Pipe *rv, CollectGlobalPragma &collect_pragma) :
-            typeMap(typeMap), refMap(refMap), rv(rv), collect_pragma(collect_pragma) {
+                            IR::BFN::Pipe *rv) :
+            typeMap(typeMap), refMap(refMap), rv(rv) {
         setName("ExtractDeparser");
     }
 

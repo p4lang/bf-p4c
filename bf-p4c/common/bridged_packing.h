@@ -1027,7 +1027,7 @@ class SubstitutePackedHeaders : public PassManager {
  public:
     SubstitutePackedHeaders(BFN_Options& options, const RepackedHeaderTypes& repackedMap,
                             CollectSourceInfoLogging& sourceInfoLogging);
-    const BFN::ProgramThreads &getThreads() const { return conv->getThreads(); }
+    const BFN::ProgramPipelines &getPipelines() const { return conv->getPipelines(); }
     const IR::ToplevelBlock *getToplevelBlock() const { return evaluator->toplevel; }
 };
 

@@ -1802,7 +1802,7 @@ void ControlPathwaysToTable::print_paths(safe_vector<Path> &paths) const {
                 print += " ]";
                 LOG1("\tSeq " << print);
             } else if (auto pipe = (*it)->to<IR::BFN::Pipe>()) {
-                LOG1("\tPipe " << pipe->name);
+                LOG1("\tPipe " << pipe->canon_name());
             } else {
                 LOG1("\tIDK?");
             }
@@ -2397,7 +2397,7 @@ void FindDependencyGraph::end_apply(const IR::Node *root) {
 
     LOG2(dg);
     if (BackendOptions().create_graphs && dotFile != "") {
-        auto pipeId = root->to<IR::BFN::Pipe>()->id;
+        auto pipeId = root->to<IR::BFN::Pipe>()->canon_id();
         auto graphsDir = BFNContext::get().getOutputDirectory("graphs", pipeId);
         std::ofstream dotStream(graphsDir + "/" + dotFile + ".dot", std::ios_base::out);
         DependencyGraph::dump_viz(dotStream, dg);
@@ -2429,7 +2429,7 @@ std::ostream &operator<<(std::ostream &out, DependencyGraph::dependencies_t deps
 
 
 bool PrintDependencyGraph::preorder(const IR::BFN::Pipe *p) {
-    pipe_name = p->name;
+    pipe_name = p->canon_name();
     DependencyGraph::Graph::vertex_iterator vertices, vertices_end;
     for (boost::tie(vertices, vertices_end) = boost::vertices(dg.g);
          vertices != vertices_end; ++vertices) {

@@ -211,11 +211,11 @@ class BackendConverter : public Inspector {
             CollectSourceInfoLogging& sourceInfoLogging)
     : refMap(refMap), typeMap(typeMap), bindings(bindings),
     pipe(pipe), pipes(pipes), sourceInfoLogging(sourceInfoLogging)
-    { arch = new ParseTna(); }
+    { arch = new ParseTna(refMap, typeMap); }
 
     ordered_map<int, const IR::BFN::Pipe*>& getPipes() { return pipes; }
     cstring getPipelineName(const IR::P4Program* program, int index);
-    const ProgramThreads &getThreads() const { return arch->threads; }
+    const ProgramPipelines &getPipelines() const { return arch->pipelines; }
     bool preorder(const IR::P4Program* program) override;
 };
 

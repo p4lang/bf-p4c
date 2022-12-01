@@ -57,7 +57,7 @@ struct TnaArchTranslation : public PassManager {
                        P4::TypeMap* typeMap,
                        BFN_Options& options);
 
-    ProgramThreads threads;
+    ProgramPipelines threads;
 };
 
 

@@ -50,6 +50,7 @@ namespace BFN {
  */
 class AsmOutput : public Inspector {
  private:
+    int pipe_id;
     const PhvInfo     &phv;
     const ClotInfo    &clot;
     const FieldDefUse &defuse;
@@ -89,7 +90,8 @@ class AsmOutput : public Inspector {
         return output; }
 
  public:
-    AsmOutput(const PhvInfo &phv,
+    AsmOutput(int pipe_id,
+              const PhvInfo &phv,
               const ClotInfo &clot,
               const FieldDefUse& defuse,
               const LogRepackedHeaders *flex,
@@ -100,7 +102,7 @@ class AsmOutput : public Inspector {
               const ParserHeaderSequences &prsr_header_seqs,
               const BFN_Options &opts,
               bool success)
-        : phv(phv), clot(clot), defuse(defuse), flex(flex), nxt_tbl(nxts),
+        : pipe_id(pipe_id), phv(phv), clot(clot), defuse(defuse), flex(flex), nxt_tbl(nxts),
           power_and_mpr(pmpr),
           tbl_summary(tbl_summary), live_range_report(live_range_report),
           prsr_header_seqs(prsr_header_seqs),
@@ -110,7 +112,7 @@ class AsmOutput : public Inspector {
         LOG1("ASM generation for successful compile? " << (_successfulCompile ? "true" : "false"));
 
         if (_successfulCompile) {
-            auto outputDir = BFNContext::get().getOutputDirectory("", pipe->id);
+            auto outputDir = BFNContext::get().getOutputDirectory("", pipe_id);
             if (!outputDir) return false;
             cstring outputFile = outputDir + "/" + options.programName + ".bfa";
             std::ofstream out(outputFile, std::ios_base::out);
@@ -142,7 +144,7 @@ class AsmOutput : public Inspector {
                 if (pipe->ghost_thread.ghost_parser != nullptr) {
                     out << "parser ghost: " << std::endl;
                     out << "  ghost_md: " << ghostPhvContainer() << std::endl;
-                    if (ghost_only_on_other_pipes(pipe->id)) {
+                    if (ghost_only_on_other_pipes(pipe_id)) {
                         // Fix for P4C-3925. In future this may be tied to a
                         // command line option which dictates the pipe mask
                         // value

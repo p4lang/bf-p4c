@@ -155,8 +155,8 @@ class Manifest : public Inspector {
     InputFiles                        _programInputs;
     cstring                    _eventLogPath;
     cstring                    _frontendIrLogPath;
-    /// reference to ProgramThreads to generate the architecture configuration
-    BFN::ProgramThreads        _threads;
+    /// reference to ProgramPipelines to generate the architecture configuration
+    BFN::ProgramPipelines      _pipelines;
     int                        _pipeId = -1;  /// the current pipe id (for the visitor methods)
     /// to generate parser and control graphs
     P4::ReferenceMap *         _refMap = nullptr;
@@ -239,8 +239,8 @@ class Manifest : public Inspector {
         auto *files = getPipeOutputs(pipe);
         files->_logs.insert(PathAndType(path, logType));
     }
-    void addArchitecture(const BFN::ProgramThreads &threads) {
-        _threads.insert(threads.cbegin(), threads.cend());
+    void addArchitecture(const BFN::ProgramPipelines &pipelines) {
+        _pipelines = pipelines;
     }
     void setSourceInfo(cstring path) {
         BUG_CHECK(_programInputs._sourceInfo.size() == 0,

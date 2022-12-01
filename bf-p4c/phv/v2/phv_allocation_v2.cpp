@@ -12,7 +12,7 @@ namespace v2 {
 const IR::Node* PhvAllocation::apply_visitor(const IR::Node* root_, const char *) {
     BUG_CHECK(root_->is<IR::BFN::Pipe>(), "IR root is not a BFN::Pipe: %s", root_);
     const auto* root = root_->to<IR::BFN::Pipe>();
-    pipe_id_i = root->id;
+    pipe_id_i = root->canon_id();
 
     // clear allocation result to create an empty concrete allocation.
     PhvKit::clear_slices(phv_i);

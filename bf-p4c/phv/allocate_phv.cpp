@@ -4095,7 +4095,7 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
         core_alloc_i.set_prioritize_ARA_inits();
     }
 
-    int pipeId = root->id;
+    int pipeId = root->canon_id();
 
     // Make sure that fields are not marked as mutex with itself.
     for (const auto& field : phv_i) {
@@ -5702,7 +5702,7 @@ const IR::Node* IncrementalPHVAllocation::apply_visitor(const IR::Node* root, co
     PHV::ConcreteAllocation alloc = make_concrete_allocation(phv_i, utils_i.uses);
     auto container_groups = PHV::AllocUtils::make_device_container_groups();
     std::list<PHV::SuperCluster*> cluster_groups;
-    const int pipeId = root->to<IR::BFN::Pipe>()->id;
+    const int pipeId = root->to<IR::BFN::Pipe>()->canon_id();
     for (const auto& f : temp_vars_i) {
         cluster_groups.push_back(new PHV::SuperCluster(
             {new PHV::RotationalCluster({new PHV::AlignedCluster(

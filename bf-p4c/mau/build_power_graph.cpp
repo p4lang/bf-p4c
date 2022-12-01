@@ -36,7 +36,8 @@ void BuildPowerGraph::end_apply(const IR::Node *root) {
     for (gress_t g : Device::allGresses()) {
       SimplePowerGraph* graph = get_graph(g);
       std::string fname = graph->name_ + ".power.dot";
-      auto logDir = BFNContext::get().getOutputDirectory("graphs", root->to<IR::BFN::Pipe>()->id);
+      auto logDir = BFNContext::get().getOutputDirectory("graphs",
+                                                         root->to<IR::BFN::Pipe>()->canon_id());
       if (logDir)
         fname = logDir + "/" + graph->name_ + ".power.dot";
       graph->to_dot(fname);

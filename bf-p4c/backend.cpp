@@ -136,7 +136,7 @@ static void debug_hook(const char *parent, unsigned idx, const char *pass, const
     using namespace IndentCtl;
 
     if (LOGGING(5)) {
-        const int pipeId = n->to<IR::BFN::Pipe>()->id;
+        const int pipeId = n->to<IR::BFN::Pipe>()->canon_id();
         Logging::FileLog fileLog(pipeId, "backend_passes.log");
         LOG5("PASS: " << pass << " [" << parent << " (" << idx << ")]:");
         ::dump(std::clog, n);

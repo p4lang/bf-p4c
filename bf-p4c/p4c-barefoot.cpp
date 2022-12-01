@@ -234,14 +234,6 @@ class GenerateOutputs : public PassManager {
         // of context.json with real data or if assembler fails or crashes, skeleton
         // of context.json produced here is preserved and can be used by visualization tools.
         outputContext();
-
-        if (!_success) {
-            // Output the manifest if it failed, since we're not going to have the chance
-            // again. However, for successful compilation, GenerateOutputs gets called for every
-            // pipe, and thus we don't want to output the manifest here.
-            manifest.setSuccess(_success);
-            manifest.serialize();
-        }
     }
 
  public:
@@ -258,7 +250,7 @@ class GenerateOutputs : public PassManager {
         std::string resourcesLogFile(logsDir + "/resources.json");
         addPasses({ &_dynhash,  // Verifies that the hash is valid before the dump of
                                 // information in assembly
-                    new BFN::AsmOutput(b.get_phv(), b.get_clot(), b.get_defuse(),
+                    new BFN::AsmOutput(_pipeId, b.get_phv(), b.get_clot(), b.get_defuse(),
                                        b.get_flexible_logging(), b.get_nxt_tbl(),
                                        b.get_power_and_mpr(),
                                        b.get_tbl_summary(), b.get_live_range_report(),
@@ -284,10 +276,9 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
         return;
 
     if (Log::verbose())
-        std::cout << "Compiling " << maupipe->name << std::endl;
+        std::cout << "Compiling " << maupipe->canon_name() << std::endl;
 
-    auto pipeName = maupipe->name;
-    BFN::Backend backend(options, maupipe->id);
+    BFN::Backend backend(options, maupipe->canon_id());
     backend.addDebugHook(EventLogger::getDebugHook(), true);
 #if BFP4C_CATCH_EXCEPTIONS
     struct failure_guard : boost::noncopyable {
@@ -296,10 +287,12 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
         {}
         ~failure_guard() {
             if (std::uncaught_exception()) {
-                GenerateOutputs as(backend, backend.get_options(), maupipe->id,
-                    backend.get_prim_json(), backend.get_json_graph(), false);
-                if (maupipe)
-                    maupipe->apply(as);
+                for (int pipe_id : maupipe->ids) {
+                    GenerateOutputs as(backend, backend.get_options(), pipe_id,
+                        backend.get_prim_json(), backend.get_json_graph(), false);
+                    if (maupipe)
+                        maupipe->apply(as);
+                }
 
                 if (Log::verbose())
                     std::cerr << "Failed." << std::endl;
@@ -313,11 +306,13 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
     maupipe = maupipe->apply(backend);
     bool mau_success = maupipe != nullptr;
     bool comp_success = (::errorCount() > 0) ? false : true;
-    GenerateOutputs as(backend, backend.get_options(), maupipe->id,
-            backend.get_prim_json(), backend.get_json_graph(),
-            mau_success && comp_success);
-    if (maupipe)
-        maupipe->apply(as);
+    for (int pipe_id : maupipe->ids) {
+        GenerateOutputs as(backend, backend.get_options(), pipe_id,
+                backend.get_prim_json(), backend.get_json_graph(),
+                mau_success && comp_success);
+        if (maupipe)
+            maupipe->apply(as);
+    }
 }
 
 
@@ -362,7 +357,7 @@ int main(int ac, char **av) {
     BFN::ErrorType::getErrorTypes();
 
     // define a set of constants to return so we can decide what to do for
-    // context,json generation, as we need to generate as much as we can
+    // context.json generation, as we need to generate as much as we can
     // for failed programs
     constexpr unsigned SUCCESS = 0;
     // PerPipeResourceAllocation error. This can be fitting or other issues in
@@ -502,52 +497,67 @@ int main(int ac, char **av) {
 
     // setup the pipes and the architecture config early, so that the manifest is
     // correct even if there are errors in the backend.
-    for (auto& pipe : substitute.pipe)
-        manifest.setPipe(pipe->id, pipe->name.name);
-    manifest.addArchitecture(substitute.getThreads());
+    for (auto [pipe_idx, pipe] : substitute.pipes) {
+        manifest.setPipe(pipe_idx, pipe->canon_name());
+    }
+    manifest.addArchitecture(substitute.getPipelines());
 
-    for (auto& kv : substitute.pipes) {
-        auto pipe = kv.second;
+    class manifest_generator_guard : boost::noncopyable {
+        Logging::Manifest &manifest;
+     public:
+        explicit manifest_generator_guard(Logging::Manifest& manifest) : manifest(manifest) {};
+        ~manifest_generator_guard() {
+            manifest.setSuccess(::errorCount() == 0);
+            manifest.serialize();
+        }
+    };
+    manifest_generator_guard emit_manifest(manifest);
+
+    for (auto& pipe : substitute.pipe) {
 #if BAREFOOT_INTERNAL
-        if (options.skipped_pipes.count(pipe->name)) continue;
+        if (std::all_of(pipe->names.begin(), pipe->names.end(),
+                        [&] (cstring n) { return options.skipped_pipes.count(n); })) {
+            continue;
+        }
 #endif
-
-        LOG3("Executing backend for pipe : " << pipe->name);
-        manifest.setPipe(pipe->id, pipe->name.name);
-        EventLogger::get().pipeChange(pipe->id);
-
-        // generate graphs
-        // In principle this should not fail, so we call it before the backend
         if (options.create_graphs) {
-            auto graphsDir = BFNContext::get().getOutputDirectory("graphs", pipe->id);
-            // set the pipe for the visitors to compute the output dir
-            manifest.setRefMap(&substitute.refMap);
-            auto toplevel = substitute.getToplevelBlock();
-            if (toplevel != nullptr) {
-                LOG2("Generating control graphs");
-                // FIXME(cc): this should move to the manifest graph generation to work per-pipe
-                graphs::ControlGraphs cgen(&substitute.refMap, &substitute.typeMap, graphsDir);
-                toplevel->getMain()->apply(cgen);
-                // p4c frontend only saves the parser graphs into controlGraphsArray
-                // (and does not output them)
-                // Therefore we just create empty parser graphs
-                std::vector<graphs::Graphs::Graph *> emptyParser;
-                // And call graph visitor that actually outputs the graphs from the arrays
-                cstring filePath("");
-                graphs::Graph_visitor gvs(graphsDir, true, false, false, filePath);
-                gvs.process(cgen.controlGraphsArray, emptyParser);
-                toplevel->getMain()->apply(manifest);  // generate entries for controls in manifest
+            // generate graphs
+            // In principle this should not fail, so we call it before the backend
+            for (size_t pipe_idx = 0; pipe_idx < pipe->ids.size(); ++pipe_idx) {
+                int pipe_id = pipe->ids[pipe_idx];
+                cstring pipe_name = pipe->names[pipe_id];
+                LOG3("Creating graphs for pipe " << pipe_id);
+                EventLogger::get().pipeChange(pipe_id);
+                manifest.setPipe(pipe_id, pipe_name);
+                auto graphsDir = BFNContext::get().getOutputDirectory("graphs", pipe_id);
+                // set the pipe for the visitors to compute the output dir
+                manifest.setRefMap(&substitute.refMap);
+                auto toplevel = substitute.getToplevelBlock();
+                if (toplevel != nullptr) {
+                    LOG2("Generating control graphs");
+                    // FIXME(cc): this should move to the manifest graph generation to work per-pipe
+                    graphs::ControlGraphs cgen(&substitute.refMap, &substitute.typeMap, graphsDir);
+                    toplevel->getMain()->apply(cgen);
+                    // p4c frontend only saves the parser graphs into controlGraphsArray
+                    // (and does not output them)
+                    // Therefore we just create empty parser graphs
+                    std::vector<graphs::Graphs::Graph *> emptyParser;
+                    // And call graph visitor that actually outputs the graphs from the arrays
+                    cstring filePath("");
+                    graphs::Graph_visitor gvs(graphsDir, true, false, false, filePath);
+                    gvs.process(cgen.controlGraphsArray, emptyParser);
+                    // generate entries for controls in manifest
+                    toplevel->getMain()->apply(manifest);
+                }
+                LOG2("Generating parser graphs");
+                program->apply(manifest);  // generate graph entries for parsers in manifest
             }
-            LOG2("Generating parser graphs");
-            program->apply(manifest);  // generate graph entries for parsers in manifest
         }
 
+        LOG3("Executing backend for pipe : " << pipe->canon_name());
+        EventLogger::get().pipeChange(pipe->canon_id());
         execute_backend(pipe, options);
     }
-
-    // and output the manifest. This gets called for successful compilation.
-    manifest.setSuccess(::errorCount() == 0);
-    manifest.serialize();
 
     reportStats_alwaysCallThisONCEshortlyBeforeExiting();
 

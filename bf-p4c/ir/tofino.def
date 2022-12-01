@@ -49,14 +49,18 @@ class BFN::HardwareConstrainedField {
 }
 
 class BFN::Pipe {
-    ID name;   // name specified in P4.
-    int id;  // logical pipe id in a multi-pipe architecture
+    // Name specified in P4. Can hold more than one name if multiple pipelines are equivalent.
+    inline std::vector<cstring> names;
+    // Logical pipe ids in a multi-pipe architecture.
+    inline std::vector<int> ids;
     inline NameMap<HeaderOrMetadata> metadata;  // not visited
     inline std::vector<Annotation> global_pragmas;  // not visited
 #noconstructor
-    Pipe() = default;
-    Pipe(cstring name) : name(name), id(0) {}
-    Pipe(cstring name, int id) : name(name), id(id) {}
+    Pipe() {
+        ids = {0};
+        names = {cstring()};
+    }
+    Pipe(std::vector<cstring> names, std::vector<int> ids) : names(names), ids(ids) {}
     class thread_t {
         // not visible in IR, because some passes checks parent nodes of a IR::Member and
         // HardwareConstrainedField is an unexpected case.
@@ -104,6 +108,13 @@ class BFN::Pipe {
 
 #emit
     bool has_pragma(const char *pragma) const;
+
+    // Returns canonical pipeline id. A single backend pipeline instance can represent
+    // multiple equivalent pipelines in the P4 program, in that case this function
+    // picks consistently one selected pipeline index. Particularly useful for logging,
+    // using the same pipeline id helps to keep all logs attached to a single pipeline.
+    int canon_id() const { return ids.front(); }
+    cstring canon_name() const { return names.front(); }
 #end
 
 #apply

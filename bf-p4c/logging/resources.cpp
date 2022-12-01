@@ -230,7 +230,9 @@ void ResourcesLogging::end_apply(const IR::Node *root) {
         resources);
 
     logger->log();
-    Logging::Manifest::getManifest().addResources(root->to<IR::BFN::Pipe>()->id, manifestPath);
+    for (int pipe_id : root->to<IR::BFN::Pipe>()->ids) {
+        Logging::Manifest::getManifest().addResources(pipe_id, manifestPath);
+    }
 }
 
 void ResourcesLogging::collectTableUsage(cstring name, const IR::MAU::Table *table) {

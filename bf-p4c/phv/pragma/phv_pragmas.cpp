@@ -111,9 +111,9 @@ bool PHV::Pragmas::checkNumberArgs(const IR::Annotation* annotation,
  */
 bool PHV::Pragmas::checkPipeApplication(const IR::Annotation *annotation,
         const IR::BFN::Pipe* pipe, const IR::StringLiteral *pipe_arg) {
-    if (pipe_arg && pipe->name && pipe_arg->value != pipe->name) {
+    if (pipe_arg && pipe->canon_name() && pipe_arg->value != pipe->canon_name()) {
         LOG4("Skipping pragma " << cstring::to_cstring(annotation)
-            << " at the pipe `" << pipe->name.toString() << "'.");
+            << " at the pipe `" << pipe->canon_name() << "'.");
         return false;
     }
     return true;
@@ -134,11 +134,11 @@ void PHV::Pragmas::reportNoMatchingPHV(const IR::BFN::Pipe* pipe,
         if (expr_str.length() > MAX_EXPR_SIZE) {
             expr_str = expr_str.substr(0, 200) + "......";
         }
-        if (pipe && pipe->name) {
+        if (pipe && pipe->canon_name()) {
             // If the pipe is named
             ::warning(ErrorType::WARN_INVALID,
                 "%1%: No matching PHV field in the pipe `%2%'. Ignoring pragma.",
-                      expr_str, pipe->name);
+                      expr_str, pipe->canon_name());
         } else {
             ::warning(ErrorType::WARN_INVALID,
                 "%1%: No matching PHV field. Ignoring pragma.",
@@ -146,11 +146,11 @@ void PHV::Pragmas::reportNoMatchingPHV(const IR::BFN::Pipe* pipe,
         }
     } else {
         // No source info available
-        if (pipe && pipe->name) {
+        if (pipe && pipe->canon_name()) {
             // If the pipe is named
             ::warning(ErrorType::WARN_INVALID,
                 "No matching PHV field `%1' in the pipe `%2%'. Ignoring pragma.",
-                field_name, pipe->name);
+                field_name, pipe->canon_name());
         } else {
             ::warning(ErrorType::WARN_INVALID,
                 "No matching PHV field `%1%'. Ignoring pragma.",

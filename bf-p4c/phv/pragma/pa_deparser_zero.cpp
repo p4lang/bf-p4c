@@ -56,9 +56,9 @@ bool PragmaDeparserZero::preorder(const IR::BFN::Pipe* pipe) {
         }
 
         // Check whether the pragma should be applied for this pipe
-        if (pipe_arg && pipe->name && pipe->name != pipe_arg->value) {
+        if (pipe_arg && pipe->canon_name() && pipe->canon_name() != pipe_arg->value) {
             LOG4("Skipping pragma" << pragma_name << " at the pipe "
-                << pipe->name << " (`" << pipe_arg->value << "' passed as pipe name).");
+                << pipe->canon_name() << " (`" << pipe_arg->value << "' passed as pipe name).");
             continue;
         }
 
