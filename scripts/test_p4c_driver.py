@@ -104,7 +104,7 @@ class Test:
                 return 0
         if p.returncode != 0 and self._print_on_failure:
             print(outlog.decode())
-            print(errlog.decode(), file=sys.stderr)
+            print("ERROR:", ' '.join(args), "\n", errlog.decode(), "\n\n", file=sys.stderr)
         return p.returncode
 
     def defineCompilerArgs(self):

@@ -37,7 +37,7 @@ echo "Running ptf test"
 # happens after a different value is read from a register, so maybe it really is
 # some race-condition during test setup.
 export RERUN_PTF_ON_FAILURE=1
-cd $bfnhome/build/p4c && ctest -V -R "^tofino2/.*(npb-master-ptf|npb-multi-prog|npb-folded-pipe)"
+cd $bfnhome/build/p4c && ctest -R "^tofino2/.*(npb-master-ptf|npb-multi-prog|npb-folded-pipe)"
 
 # If running in jarvis container, reset test.json patch
 if [[ $PWD == *"mnt"* ]]; then
