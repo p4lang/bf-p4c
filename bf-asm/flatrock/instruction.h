@@ -525,8 +525,8 @@ struct LoadConst : PhvWrite {
 namespace EALU {
 
 struct EALUInstruction : InstructionShim {
-    int instr_width;
-    int instr_word;
+    int instr_width = -1;
+    int instr_word = -1;
     explicit EALUInstruction(int l) : InstructionShim(l) {}
     virtual uint32_t encode() = 0;
     bool decode_dest(const value_t &d);
@@ -597,19 +597,19 @@ struct LoadConst : EALUInstruction {
         Instruction::Decode(n, targ), name(n), opcode(opc) {}
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                             const VECTOR(value_t) &op) const override;
-    } const *opc;
+    };
     Operand dest;
     int     src;
     LoadConst(Table *tbl, const Table::Actions::Action *act,
-                  const value_t &d, int s1) : EALUInstruction(d.lineno), dest(tbl, act, d),
-                  src(s1) {
+              const value_t &d, int s1)
+        : EALUInstruction(d.lineno), dest(tbl, act, d), src(s1) {
         decode_dest(d);
     }
     LoadConst(Table *tbl, const Table::Actions::Action *act,
-                  const Operand &d, int s1) : EALUInstruction(d.op->lineno), dest(d),
-                  src(s1) {
+              const Operand &d, int s1)
+        : EALUInstruction(d.op->lineno), dest(d), src(s1) {
     }
-    std::string name() override { return opc->name; }
+    std::string name() override { return ""; }
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
     void pass2(Table *tbl, Table::Actions::Action *) override { }
     uint32_t encode() override;
@@ -670,8 +670,9 @@ struct Set : EALUInstruction {
     int priority = -1;
     bool chain = false;
     Set(const Decode *op, Table *tbl, const Table::Actions::Action *act, const value_t &d,
-        const value_t &s1)
-        : EALUInstruction(d.lineno), opc(op), dest(tbl, act, d), src(tbl, act, s1) {
+        const value_t &s1, int priority = -1, bool chain = false)
+        : EALUInstruction(d.lineno), opc(op), dest(tbl, act, d), src(tbl, act, s1),
+          priority(priority), chain(chain) {
         decode_dest(d); }
     std::string name() override { return "Set"; }
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
@@ -699,8 +700,9 @@ struct BitmaskSet : EALUInstruction {
     int priority = -1;
     bool chain = false;
     BitmaskSet(const Decode *op, Table *tbl, const Table::Actions::Action *act, const value_t &d,
-               const value_t &s1, int mask, int prio = -1, bool chain = false)
-        : EALUInstruction(d.lineno), opc(op), dest(tbl, act, d), src1(tbl, act, s1), mask(mask) {
+               const value_t &s1, int mask, int priority = -1, bool chain = false)
+        : EALUInstruction(d.lineno), opc(op), dest(tbl, act, d), src1(tbl, act, s1), mask(mask),
+          priority(priority), chain(chain) {
         decode_dest(d); }
     std::string name() override { return "bitmasked-set"; }
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
