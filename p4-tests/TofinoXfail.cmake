@@ -1270,6 +1270,8 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Assignment source cannot be evaluated in the parser"
   testdata/p4_16_samples/issue1937-2-bmv2.p4
+  # p4c update 2022-12-01
+  testdata/p4_16_samples/parser-unroll-test9.p4
 )
 
 p4c_add_xfail_reason("tofino"
