@@ -118,11 +118,11 @@ void Target::Flatrock::ActionTable::write_regs(Target::Flatrock::mau_regs &regs)
         // aram.rf.aram_cfg.stm_miss_allow
 
         if (badb_start >= 0) {
-            mrd.mrd_aram_cfg[physid].badb_start = badb_start;
-            mrd.mrd_aram_cfg[physid].badb_size = badb_size; }
+            mrd.mrd_aram_cfg[physid].badb_rot = badb_start;
+            mrd.mrd_aram_cfg[physid].badb_mask = ((1U << badb_size) - 1) << badb_start; }
         if (wadb_start >= 0) {
-            mrd.mrd_aram_cfg[physid].wadb_start = wadb_start;
-            mrd.mrd_aram_cfg[physid].wadb_size = wadb_size; }
+            mrd.mrd_aram_cfg[physid].wadb_rot = wadb_start & 3;
+            mrd.mrd_aram_cfg[physid].wadb_mask = ((1U << wadb_size) - 1) << wadb_start; }
 
         mrd.mrd_p2a_xbar[physid].en[dconfig] = 1;
         BUG_CHECK(mt->physical_ids.popcount() == 1,

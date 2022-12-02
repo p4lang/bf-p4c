@@ -5,12 +5,12 @@
             "references": [
                 {
                     "file": "tna_counter.p4",
-                    "line": 100,
+                    "line": 101,
                     "column": 9
                 },
                 {
                     "file": "tna_counter.p4",
-                    "line": 131,
+                    "line": 132,
                     "column": 20
                 }
             ],
@@ -26,12 +26,12 @@
             "references": [
                 {
                     "file": "tna_counter.p4",
-                    "line": 138,
+                    "line": 139,
                     "column": 9
                 },
                 {
                     "file": "tna_counter.p4",
-                    "line": 155,
+                    "line": 156,
                     "column": 20
                 }
             ],
@@ -47,7 +47,33 @@
             "references": [
                 {
                     "file": "tna_counter.p4",
-                    "line": 107,
+                    "line": 176,
+                    "column": 9
+                },
+                {
+                    "file": "tna_counter.p4",
+                    "line": 181,
+                    "column": 9
+                },
+                {
+                    "file": "tna_counter.p4",
+                    "line": 199,
+                    "column": 20
+                }
+            ],
+            "symbol_name": "SwitchIngress.direct_counter_3",
+            "declaration": {
+                "file": "tna_counter.p4",
+                "line": 95,
+                "column": 61
+            },
+            "symbol_type": "Declaration_Instance_Type_Specialized"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_counter.p4",
+                    "line": 108,
                     "column": 9
                 }
             ],
@@ -63,14 +89,14 @@
             "references": [
                 {
                     "file": "tna_counter.p4",
-                    "line": 190,
+                    "line": 220,
                     "column": 8
                 }
             ],
             "symbol_name": "pipe",
             "declaration": {
                 "file": "tna_counter.p4",
-                "line": 188,
+                "line": 218,
                 "column": 33
             },
             "symbol_type": "Declaration_Instance_Type_Specialized"
@@ -79,46 +105,14 @@
             "references": [
                 {
                     "file": "tna_counter.p4",
-                    "line": 124,
+                    "line": 193,
                     "column": 13
                 }
             ],
-            "symbol_name": "SwitchIngress.hit",
+            "symbol_name": "SwitchIngress.drop",
             "declaration": {
                 "file": "tna_counter.p4",
-                "line": 96,
-                "column": 12
-            },
-            "symbol_type": "P4Action"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_counter.p4",
-                    "line": 164,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress.hit_dst",
-            "declaration": {
-                "file": "tna_counter.p4",
-                "line": 104,
-                "column": 12
-            },
-            "symbol_type": "P4Action"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_counter.p4",
-                    "line": 148,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "SwitchIngress.hit_forward_exact",
-            "declaration": {
-                "file": "tna_counter.p4",
-                "line": 134,
+                "line": 180,
                 "column": 12
             },
             "symbol_type": "P4Action"
@@ -128,38 +122,13 @@
                 {
                     "file": "tna_counter.p4",
                     "line": 125,
-                    "column": 26
-                },
-                {
-                    "file": "tna_counter.p4",
-                    "line": 129,
-                    "column": 32
-                },
-                {
-                    "file": "tna_counter.p4",
-                    "line": 149,
-                    "column": 26
-                },
-                {
-                    "file": "tna_counter.p4",
-                    "line": 153,
-                    "column": 32
-                },
-                {
-                    "file": "tna_counter.p4",
-                    "line": 165,
-                    "column": 26
-                },
-                {
-                    "file": "tna_counter.p4",
-                    "line": 168,
-                    "column": 32
+                    "column": 13
                 }
             ],
-            "symbol_name": "SwitchIngress.nop",
+            "symbol_name": "SwitchIngress.hit",
             "declaration": {
                 "file": "tna_counter.p4",
-                "line": 115,
+                "line": 97,
                 "column": 12
             },
             "symbol_type": "P4Action"
@@ -168,14 +137,113 @@
             "references": [
                 {
                     "file": "tna_counter.p4",
-                    "line": 179,
+                    "line": 165,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hit_dst",
+            "declaration": {
+                "file": "tna_counter.p4",
+                "line": 105,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_counter.p4",
+                    "line": 149,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hit_forward_exact",
+            "declaration": {
+                "file": "tna_counter.p4",
+                "line": 135,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_counter.p4",
+                    "line": 126,
+                    "column": 26
+                },
+                {
+                    "file": "tna_counter.p4",
+                    "line": 130,
+                    "column": 32
+                },
+                {
+                    "file": "tna_counter.p4",
+                    "line": 150,
+                    "column": 26
+                },
+                {
+                    "file": "tna_counter.p4",
+                    "line": 154,
+                    "column": 32
+                },
+                {
+                    "file": "tna_counter.p4",
+                    "line": 166,
+                    "column": 26
+                },
+                {
+                    "file": "tna_counter.p4",
+                    "line": 169,
+                    "column": 32
+                },
+                {
+                    "file": "tna_counter.p4",
+                    "line": 194,
+                    "column": 26
+                },
+                {
+                    "file": "tna_counter.p4",
+                    "line": 197,
+                    "column": 32
+                }
+            ],
+            "symbol_name": "SwitchIngress.nop",
+            "declaration": {
+                "file": "tna_counter.p4",
+                "line": 116,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_counter.p4",
+                    "line": 192,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.set_port",
+            "declaration": {
+                "file": "tna_counter.p4",
+                "line": 175,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_counter.p4",
+                    "line": 209,
                     "column": 37
                 }
             ],
-            "symbol_name": "tna_counter179",
+            "symbol_name": "tna_counter209",
             "declaration": {
                 "file": "tna_counter.p4",
-                "line": 179,
+                "line": 209,
                 "column": 37
             },
             "symbol_type": "P4Action"
@@ -184,14 +252,14 @@
             "references": [
                 {
                     "file": "tna_counter.p4",
-                    "line": 174,
+                    "line": 203,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.forward",
             "declaration": {
                 "file": "tna_counter.p4",
-                "line": 118,
+                "line": 119,
                 "column": 11
             },
             "symbol_type": "P4Table"
@@ -200,14 +268,14 @@
             "references": [
                 {
                     "file": "tna_counter.p4",
-                    "line": 176,
+                    "line": 205,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.forward_dst",
             "declaration": {
                 "file": "tna_counter.p4",
-                "line": 158,
+                "line": 159,
                 "column": 11
             },
             "symbol_type": "P4Table"
@@ -216,24 +284,40 @@
             "references": [
                 {
                     "file": "tna_counter.p4",
-                    "line": 175,
+                    "line": 204,
                     "column": 9
                 }
             ],
             "symbol_name": "SwitchIngress.forward_exact",
             "declaration": {
                 "file": "tna_counter.p4",
-                "line": 142,
+                "line": 143,
+                "column": 11
+            },
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_counter.p4",
+                    "line": 206,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.forward_or_drop",
+            "declaration": {
+                "file": "tna_counter.p4",
+                "line": 186,
                 "column": 11
             },
             "symbol_type": "P4Table"
         },
         {
             "references": [],
-            "symbol_name": "tbl_tna_counter179",
+            "symbol_name": "tbl_tna_counter209",
             "declaration": {
                 "file": "tna_counter.p4",
-                "line": 179,
+                "line": 209,
                 "column": 37
             },
             "symbol_type": "P4Table"
@@ -242,7 +326,12 @@
             "references": [
                 {
                     "file": "tna_counter.p4",
-                    "line": 160,
+                    "line": 161,
+                    "column": 13
+                },
+                {
+                    "file": "tna_counter.p4",
+                    "line": 188,
                     "column": 13
                 }
             ],
@@ -258,12 +347,12 @@
             "references": [
                 {
                     "file": "tna_counter.p4",
-                    "line": 120,
+                    "line": 121,
                     "column": 13
                 },
                 {
                     "file": "tna_counter.p4",
-                    "line": 144,
+                    "line": 145,
                     "column": 13
                 }
             ],
@@ -279,14 +368,14 @@
             "references": [
                 {
                     "file": "tna_counter.p4",
-                    "line": 101,
+                    "line": 102,
                     "column": 43
                 }
             ],
             "symbol_name": "SwitchIngress.hit.port",
             "declaration": {
                 "file": "tna_counter.p4",
-                "line": 96,
+                "line": 97,
                 "column": 25
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -295,19 +384,19 @@
             "references": [
                 {
                     "file": "tna_counter.p4",
-                    "line": 107,
+                    "line": 108,
                     "column": 32
                 },
                 {
                     "file": "tna_counter.p4",
-                    "line": 108,
+                    "line": 109,
                     "column": 43
                 }
             ],
             "symbol_name": "SwitchIngress.hit_dst.port",
             "declaration": {
                 "file": "tna_counter.p4",
-                "line": 104,
+                "line": 105,
                 "column": 29
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -316,14 +405,14 @@
             "references": [
                 {
                     "file": "tna_counter.p4",
-                    "line": 139,
+                    "line": 140,
                     "column": 43
                 }
             ],
             "symbol_name": "SwitchIngress.hit_forward_exact.port",
             "declaration": {
                 "file": "tna_counter.p4",
-                "line": 134,
+                "line": 135,
                 "column": 39
             },
             "symbol_type": "Parameter_Type_Bits"
@@ -332,7 +421,12 @@
             "references": [
                 {
                     "file": "tna_counter.p4",
-                    "line": 109,
+                    "line": 110,
+                    "column": 9
+                },
+                {
+                    "file": "tna_counter.p4",
+                    "line": 182,
                     "column": 9
                 }
             ],
@@ -348,7 +442,7 @@
             "references": [
                 {
                     "file": "tna_counter.p4",
-                    "line": 179,
+                    "line": 209,
                     "column": 9
                 }
             ],
@@ -364,17 +458,22 @@
             "references": [
                 {
                     "file": "tna_counter.p4",
-                    "line": 101,
+                    "line": 102,
                     "column": 9
                 },
                 {
                     "file": "tna_counter.p4",
-                    "line": 108,
+                    "line": 109,
                     "column": 9
                 },
                 {
                     "file": "tna_counter.p4",
-                    "line": 139,
+                    "line": 140,
+                    "column": 9
+                },
+                {
+                    "file": "tna_counter.p4",
+                    "line": 177,
                     "column": 9
                 }
             ],
@@ -385,6 +484,22 @@
                 "column": 51
             },
             "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_counter.p4",
+                    "line": 177,
+                    "column": 43
+                }
+            ],
+            "symbol_name": "SwitchIngress.set_port.port",
+            "declaration": {
+                "file": "tna_counter.p4",
+                "line": 175,
+                "column": 30
+            },
+            "symbol_type": "Parameter_Type_Bits"
         },
         {
             "references": [

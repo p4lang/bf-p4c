@@ -13,6 +13,7 @@ class Target::Flatrock::ActionTable : public ::ActionTable {
     void pass3();
     unsigned determine_shiftcount(Table::Call &call, int, unsigned, int) const override;
 
+    // FIXME -- regs 20221117 have changed these to rot+mask instead of start+size
     int badb_start = -1, badb_size = 0, wadb_start = -1, wadb_size = 0;
 
     void write_regs(Target::Flatrock::mau_regs &regs) override;

@@ -1681,7 +1681,7 @@ bool FlatrockParser::AnalyzerStage::input_push_hdr(
                 return false;
             }
         } else if (kv_hdr.key == "offset") {
-            if (!check_range(kv_hdr.value, 0, 0xfe)) {
+            if (!check_range(kv_hdr.value, 0, 0xff)) {
                 error(kv_hdr.value.lineno,
                     "offset attribute the push_hdr_id must be a numeric offset in the "
                     "interval <0, 0xff>.");

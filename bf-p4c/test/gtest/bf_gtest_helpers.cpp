@@ -114,10 +114,10 @@ Result match(const CheckList& exprs,
 
     // First attempt the whole CheckList.
     for (const auto& expr : exprs) {
-        // Trim single space if present & required.
+        // Trim spaces if present & required.
         std::string e;
         if (flag & TrimWhiteSpace)
-            e += "` ?`";
+            e += "` *`";
         e += expr;
         regex_exprs.emplace_back(convet_to_regex(e));
         regex += regex_exprs.back();

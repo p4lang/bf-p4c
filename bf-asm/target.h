@@ -1029,7 +1029,7 @@ class Target::Flatrock : public Target {
         TCAM_ROWS = 20,
         TCAM_STRIDE_COLUMN = 10,
         TCAM_STRIDE_ROW = 1,
-        TCAM_STRIDE_STAGE = 21,
+        TCAM_STRIDE_STAGE = 32,
         TCAM_UNITS_PER_ROW = 1,
         TCAM_XBAR_GROUPS = 20,
         PAC_HEADER_POINTERS_MAX = 16,  // Maximum number of header pointers output by parser

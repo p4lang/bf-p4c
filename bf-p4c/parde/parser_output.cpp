@@ -236,12 +236,23 @@ struct ParserAsmSerializer : public ParserInspector {
                     << ": " << static_cast<unsigned>(instr->shift)
                     << " }" << std::endl;
         }
-        if (analyzer_rule->push_hdr_id)
+        if (analyzer_rule->push_hdr_id) {
+            // Adjust the offset: when the ALU0 opcode == 0, we need to subtract the constant being
+            // added by ALU0.
+            // (Possibly temporary : see TFC-1610)
+            int offset_adj = analyzer_rule->push_hdr_id->offset;
+            if (analyzer_rule->next_alu0_instruction &&
+                analyzer_rule->next_alu0_instruction->opcode ==
+                    Flatrock::alu0_instruction::OPCODE_0) {
+                offset_adj -= analyzer_rule->next_alu0_instruction->opcode_0_1.add_imm8s;
+                offset_adj &= Flatrock::PARSER_W_OFFSET_MAX;
+            }
             out << indent
                 << "push_hdr_id: "
                 << "{ hdr: "    << static_cast<unsigned>(analyzer_rule->push_hdr_id->hdr_id)
-                << ", offset: " << static_cast<unsigned>(analyzer_rule->push_hdr_id->offset)
+                << ", offset: " << static_cast<unsigned>(offset_adj)
                 << " }" << std::endl;
+        }
         indent--;
         return true;
     }
