@@ -282,8 +282,8 @@ bool FieldDefUse::preorder(const IR::BFN::Parser *p) {
         // for the correctness of overlay analysis.
 
         // In the ingress, bridged_metadata is considered as a header field.
-        // For ingress ,all metadata are initializes in the beginning.
-        // for egress, only none bridged metadata are initializes at the beginning.
+        // For ingress, all metadata are initialized in the beginning.
+        // for egress, only non-bridged metadata are initializes at the beginning.
         if (!alias_destinations.count(&f)) {
             if (p->gress == INGRESS && (!f.metadata && !f.bridged)) continue;
             if (p->gress == EGRESS  && (!f.metadata || f.bridged)) continue;
@@ -572,23 +572,39 @@ bool FieldDefUse::hasDefAt(const PHV::Field* f, const IR::BFN::Unit* u) const {
     return false;
 }
 
-bool FieldDefUse::hasDefInParser(const PHV::Field* f, boost::optional<le_bitrange> bits) const {
+static inline auto
+getParserRangeDefMatcher(const PhvInfo& phv, const PHV::Field* f,
+                         const boost::optional<le_bitrange> &bits) {
     le_bitrange range = bits ? *bits : StartLen(0, f->size);
-    LOG1("\thasDefInParser range: " << range);
-
-    auto parserRangeDef =
-        [&](const locpair& lp) {
+    LOG1("\tDefInParser range: " << range);
+    // note that we need to capture f (pointer) and range by value to avoid dangling reference,
+    // but phv by reference (it is large and we got it by reference)
+    return [&phv, range, f](const FieldDefUse::locpair& lp) {
             le_bitrange rng;
             if (!(lp.first->is<IR::BFN::ParserState>() || lp.first->is<IR::BFN::Parser>()))
                 return false;
 
             // Cannot extract field - e.g. ImplicitParserInit
             if (!phv.field(lp.second, &rng)) return false;
-            LOG1("\t  hasDefInParser rng: " << rng);
-            return (range.overlaps(rng));
+            LOG1("\t  DefInParser rng: " << rng);
+            return range.overlaps(rng);
         };
+}
 
-    return std::any_of(getAllDefs(f->id).begin(), getAllDefs(f->id).end(), parserRangeDef);
+FieldDefUse::LocPairSet
+FieldDefUse::getParserDefs(const PHV::Field* f, boost::optional<le_bitrange> bits) const {
+    LocPairSet out;
+    auto matcher = getParserRangeDefMatcher(phv, f, bits);
+    for (auto &lp : getAllDefs(f->id)) {
+        if (matcher(lp))
+            out.insert(lp);
+    }
+    return out;
+}
+
+bool FieldDefUse::hasDefInParser(const PHV::Field* f, boost::optional<le_bitrange> bits) const {
+    return std::any_of(getAllDefs(f->id).begin(), getAllDefs(f->id).end(),
+                       getParserRangeDefMatcher(phv, f, bits));
 }
 
 

@@ -180,6 +180,11 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
 
     const ordered_map<int, LocPairSet> &getAllDefs() const { return located_defs; }
 
+    LocPairSet getParserDefs(const PHV::Field* f, boost::optional<le_bitrange> bits) const;
+    LocPairSet getParserDefs(const PHV::FieldSlice& fs) const {
+        return getParserDefs(fs.field(), fs.range());
+    }
+
     const LocPairSet &getUses(locpair def) const {
         static const LocPairSet emptyset;
         return uses.count(def) ? uses.at(def) : emptyset; }
@@ -236,6 +241,9 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     bool hasUseAt(const PHV::Field* f, const IR::BFN::Unit* u) const;
     bool hasDefAt(const PHV::Field* f, const IR::BFN::Unit* u) const;
     bool hasDefInParser(const PHV::Field* f, boost::optional<le_bitrange> bits) const;
+    bool hasDefInParser(const PHV::FieldSlice& fs) const {
+        return hasDefInParser(fs.field(), fs.range());
+    }
 };
 
 #endif /* _FIELD_DEFUSE_H_ */

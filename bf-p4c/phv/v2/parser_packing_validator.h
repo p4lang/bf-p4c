@@ -3,6 +3,7 @@
 
 #include "ir/ir.h"
 
+#include "bf-p4c/lib/assoc.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/parde/parser_info.h"
 #include "bf-p4c/phv/parser_packing_validator_interface.h"
@@ -32,8 +33,13 @@ class ParserPackingValidator : public ParserPackingValidatorInterface {
     const FieldDefUse& defuse_i;
     const PragmaNoInit& pa_no_init_i;
 
-    /// @returns all extracts to @p f, grouped by states.
-    StateExtractMap get_extracts(const Field* f) const;
+    // The cache does not affect behaviour, only speed. Therefore we make it mutable to make it
+    // possible to use it from a (semantically) const method.
+    mutable assoc::hash_map<std::pair<const IR::BFN::ParserState*, const IR::Expression*>,
+                            std::vector<const IR::BFN::Extract*>> state_extracts_cache;
+
+    /// @returns all extracts to @p fs, grouped by states.
+    StateExtractMap get_extracts(const FieldSlice& fs) const;
 
     /// @returns true if the field needs to be the default value when it left parser.
     /// The default value is zero and the container validity bit (in Tofino) is zero.

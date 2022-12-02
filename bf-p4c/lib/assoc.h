@@ -290,8 +290,10 @@ class map : public detail::CondIterableAssoc<std::map<Key, T, Compare, Allocator
     // TODO(C++update): C++17 noexcept
     void swap(map &other) { ABase::swap(other); }
 
-
-    // TODO(C++update): C++17 extract, merge, try_emplace
+    using ABase::try_emplace;
+    using ABase::insert_or_assign;
+    using ABase::extract;
+    using ABase::merge;
 
     BFN_ASSOC_OP_DEF(map, ==)
     BFN_ASSOC_OP_DEF(map, !=)
@@ -389,6 +391,11 @@ class hash_map : private std::unordered_map<Key, T, Hash, Equal, Allocator> {
     using ABase::insert;
     using ABase::emplace;
     using ABase::emplace_hint;
+    using ABase::try_emplace;
+    using ABase::insert_or_assign;
+    using ABase::extract;
+    using ABase::merge;
+
     using ABase::erase;
     using ABase::swap;
 
