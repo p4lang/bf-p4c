@@ -558,10 +558,34 @@ if [ -r $manifest ]; then
     remove_old_files $p4_version "$pipes"
 fi
 
+clean_process() {
+    process_name="$1"
+    echo "Checking if $process_name is running..."
+    pids=$(ps -ef | grep $process_name | grep -v grep | awk '{print $2}')
+    for pid in $pids; do
+        echo "Killing $pid..."
+        sudo -n kill -s SIGTERM $pid
+    done
+}
+
+clean_env() {
+    clean_process "$(findbin HARLYN_PTF_DRIVER_WRAPPER)"  # ptf_runner_wrapper
+    clean_process "$(findbin HARLYN_PTF_DRIVER)"          # ptf_runner.py
+    clean_process "$(findbin PTF)"                        # ptf
+    clean_process "$(findbin BF_SWITCHD)"                 # bf_switchd
+    clean_process "$(findbin HARLYN_MODEL)"               # tofino-model
+}
+
 # Run P4C and extract pipes
 native_compile() {
     echo "p4c: $P4C $@"
     run $P4C "$@" || die
+
+    if [[ "$P4C_TEST_COMPILE_ONLY" == true ]] ; then
+        clean_env
+        exit 0
+    fi
+
     # find all pipe names from manifest.json in current compilation
     pipes=$(${MANIFEST_CONFIG} --pipe ${manifest})
 }
@@ -662,16 +686,6 @@ fi
 
 PTF_EXTRA_ARGS="${ptf_cmd_args[@]} $keep_PTF_LOGS --default-negative-timeout=0.2 $PTF_TEST_SPECS"
 
-clean_process() {
-    process_name="$1"
-    echo "Checking if $process_name is running (it should not)..."
-    pids=$(ps -ef | grep $process_name | grep -v grep | awk '{print $2}')
-    for pid in $pids; do
-        echo "Killing $pid..."
-        sudo -n kill -s SIGTERM $pid
-    done
-}
-
 if ${SKIP_PTFPD:=false}; then
     if ${P4TEST_CLEAN_PASSING:-false}; then
         rm -rf $testdir/${name}${out_ext}.out
@@ -757,14 +771,6 @@ set_env() {
     # get the full path for P4C
     p4c=$(realpath $P4C)
     export P4C=$p4c
-}
-
-clean_env() {
-    clean_process "$(findbin HARLYN_PTF_DRIVER_WRAPPER)"  # ptf_runner_wrapper
-    clean_process "$(findbin HARLYN_PTF_DRIVER)"          # ptf_runner.py
-    clean_process "$(findbin PTF)"                        # ptf
-    clean_process "$(findbin BF_SWITCHD)"                 # bf_switchd
-    clean_process "$(findbin HARLYN_MODEL)"               # tofino-model
 }
 
 # For p4_14 programs and switch PTF tests using PD API
