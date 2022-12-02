@@ -98,6 +98,31 @@ int TableResourceAlloc::findBytesOnIxbar(const PHV::FieldSlice& slice) const {
     return bytesOnIxbar;
 }
 
+::IXBar::Use* TableResourceAlloc::find_ixbar(IXBar::Use::type_t type) const {
+    switch (type) {
+        case IXBar::Use::EXACT_MATCH:
+            return match_ixbar.get();
+        case IXBar::Use::TERNARY_MATCH:
+            return match_ixbar.get();
+        case IXBar::Use::GATEWAY:
+            return gateway_ixbar.get();
+        case IXBar::Use::PROXY_HASH:
+            return proxy_hash_ixbar.get();
+        case IXBar::Use::SELECTOR:
+            return selector_ixbar.get();
+        case IXBar::Use::STATEFUL_ALU:
+            return salu_ixbar.get();
+        case IXBar::Use::METER:
+            return meter_ixbar.get();
+        case IXBar::Use::ACTION:
+            return action_ixbar.get();
+        case IXBar::Use::HASH_DIST:
+            return nullptr;  // intentionally not supported, hash_dist IR is different
+        default:
+            BUG("Unknown ixbar type %d", type);
+    }
+}
+
 std::ostream &operator<<(std::ostream &out, const TableResourceAlloc &alloc) {
     // FIXME -- there's a huge amount of data in alloc -- what should we log?
     // this is a prime candidate for structured logging.
@@ -107,4 +132,3 @@ std::ostream &operator<<(std::ostream &out, const TableResourceAlloc &alloc) {
     out << *mem;
     return out;
 }
-

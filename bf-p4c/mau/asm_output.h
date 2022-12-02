@@ -1,6 +1,7 @@
 #ifndef BF_P4C_MAU_ASM_OUTPUT_H_
 #define BF_P4C_MAU_ASM_OUTPUT_H_
 
+#include <initializer_list>
 #include <map>
 #include <set>
 #include <vector>
@@ -108,9 +109,13 @@ class MauAsmOutput : public MauInspector {
     class NextTableSet;
 
  protected:
-    void emit_ixbar(std::ostream &out, indent_t, const IXBar::Use *, const IXBar::Use *,
-        const safe_vector<Tofino::IXBar::HashDistUse> *, const Memories::Use *, const TableMatch *,
-        const IR::MAU::Table *, bool ternary) const;
+    bool require_ixbar(const IR::MAU::Table *tbl, IXBar::Use::type_t) const;
+    bool require_ixbar(const IR::MAU::Table *tbl, std::initializer_list<IXBar::Use::type_t>) const;
+    void emit_ixbar(std::ostream &out, indent_t indent, const IR::MAU::Table *tbl,
+                    IXBar::Use::type_t type) const;
+    void emit_ixbar(std::ostream &out, indent_t indent, const IR::MAU::Table *tbl,
+                    std::initializer_list<IXBar::Use::type_t> types) const;
+    void emit_random_seed(std::ostream &out, indent_t indent, const TableMatch *fmt) const;
     // FIXME: change API to be target-agnostic
     void emit_hash_dist(std::ostream &out, indent_t indent,
         const safe_vector<Tofino::IXBar::HashDistUse> *hash_dist_use, bool hashmod) const;

@@ -60,6 +60,8 @@ struct TableResourceAlloc {
     safe_vector<int> hash_dist_immed_units() const;
     int rng_unit() const;
     int findBytesOnIxbar(const PHV::FieldSlice&) const;
+
+    ::IXBar::Use* find_ixbar(IXBar::Use::type_t type) const;
 };
 
 std::ostream &operator<<(std::ostream &, const TableResourceAlloc &);

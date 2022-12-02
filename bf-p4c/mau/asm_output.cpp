@@ -700,43 +700,61 @@ void MauAsmOutput::emit_hash_dist(std::ostream &out, indent_t indent,
     }
 }
 
-void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const ::IXBar::Use *use,
-        const ::IXBar::Use *proxy_hash_use,
-        const safe_vector<Tofino::IXBar::HashDistUse> *hash_dist_use,
-        const Memories::Use *mem, const TableMatch *fmt, const IR::MAU::Table *tbl,
-        bool ternary) const {
-    if (!ternary) {
-        emit_ways(out, indent, use, mem);
+void MauAsmOutput::emit_random_seed(std::ostream &out, indent_t indent,
+                                    const TableMatch *fmt) const {
+    if (fmt && fmt->table && fmt->table->random_seed != -1) {
+        out << indent++ << "random_seed:" << fmt->table->random_seed << std::endl;
     }
-    emit_hash_dist(out, indent, hash_dist_use, false);
-    if ((use == nullptr || use->use.empty())
-        && (proxy_hash_use == nullptr || proxy_hash_use->use.empty())
-        && (hash_dist_use == nullptr || hash_dist_use->empty())) {
-        return;
-    }
-    if (ternary && use && use->type != IXBar::Use::TERNARY_MATCH) return;
-    out << indent++ << "input_xbar:" << std::endl;
-    if (use) {
-        use->emit_ixbar_asm(phv, out, indent, fmt, tbl);
-    }
+}
 
-    if (proxy_hash_use) {
-        proxy_hash_use->emit_ixbar_asm(phv, out, indent, nullptr, tbl);
-    }
+bool MauAsmOutput::require_ixbar(const IR::MAU::Table *tbl, IXBar::Use::type_t type) const {
+    if (type == IXBar::Use::HASH_DIST) {
+        return tbl->resources->hash_dists.size() > 0; }
+    auto *use = tbl->resources->find_ixbar(type);
+    if (use && !use->use.empty())
+        return true;
+    return false;
+}
 
-    if (hash_dist_use) {
-        for (auto &hash_dist : *hash_dist_use) {
+bool MauAsmOutput::require_ixbar(const IR::MAU::Table *tbl,
+                                 std::initializer_list<IXBar::Use::type_t> types) const {
+    if (tbl == nullptr) return false;
+    for (auto type : types) {
+        if (require_ixbar(tbl, type))
+            return true;
+    }
+    return false;
+}
+
+/* not recommended to use directly, use the one below */
+void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IR::MAU::Table *tbl,
+                              IXBar::Use::type_t type) const {
+    // the IR for hash_dist resource is a bit different from the other resources
+    if (type == IXBar::Use::HASH_DIST) {
+        for (auto &hash_dist : tbl->resources->hash_dists) {
             for (auto &ir_alloc : hash_dist.ir_allocations) {
                 ir_alloc.use->emit_ixbar_asm(phv, out, indent, nullptr, tbl);
             }
         }
+        return;
     }
+    const TableMatch *fmt = nullptr;
+    if (type == IXBar::Use::EXACT_MATCH || type == IXBar::Use::TERNARY_MATCH) {
+        fmt = TableMatch::create(phv, tbl); }
 
-    // FIXME -- this has to do with the table rather than the ixbar, so should be somewhere
-    // else?  Its a messy hack as it is in the assembler ixbar code, reseeding the random
-    // number generator just before evaluting the hash expressions in this ixbar
-    if (fmt && fmt->table && fmt->table->random_seed != -1) {
-        out << indent++ << "random_seed:" << fmt->table->random_seed << std::endl;
+    ::IXBar::Use *use = tbl->resources->find_ixbar(type);
+    if (use && !use->use.empty()) {
+        use->emit_ixbar_asm(phv, out, indent, fmt, tbl);
+    }
+}
+
+/* recommended to use, it handles the print of 'input_xbar:' key and indent properly */
+void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IR::MAU::Table *tbl,
+                              std::initializer_list<IXBar::Use::type_t> types) const {
+    if (require_ixbar(tbl, types))
+        out << indent << "input_xbar:" << std::endl;
+    for (auto type : types) {
+        emit_ixbar(out, indent + 1, tbl, type);
     }
 }
 
@@ -2632,6 +2650,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
         out << indent << "always_run: true" << std::endl;
     }
 
+    bool emitted_action_ixbar = false;
     if (!tbl->conditional_gateway_only()) {
         emit_table_context_json(out, indent, tbl);
         if (!tbl->layout.no_match_miss_path()) {
@@ -2639,11 +2658,22 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
                 emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
             else
                 INTERNAL_WARNING("No resource named %s found on table %s", unique_id, tbl->name);
-            const IXBar::Use *proxy_ixbar = tbl->layout.proxy_hash ?
-                                            tbl->resources->proxy_hash_ixbar.get() : nullptr;
-            emit_ixbar(out, indent, tbl->resources->match_ixbar.get(), proxy_ixbar,
-                         &tbl->resources->hash_dists, &tbl->resources->memuse.at(unique_id),
-                         fmt, tbl, tbl->layout.ternary);
+
+            if (!tbl->layout.ternary) {
+                auto type =
+                    tbl->layout.ternary ? IXBar::Use::TERNARY_MATCH : IXBar::Use::EXACT_MATCH;
+                ::IXBar::Use *use = tbl->resources->find_ixbar(type);
+                auto mem = &tbl->resources->memuse.at(tbl->unique_id());
+                emit_ways(out, indent, use, mem); }
+
+            emit_hash_dist(out, indent, &tbl->resources->hash_dists, false);
+
+            emit_ixbar(out, indent, tbl,
+                       {tbl->layout.ternary ? IXBar::Use::TERNARY_MATCH : IXBar::Use::EXACT_MATCH,
+                        IXBar::Use::PROXY_HASH, IXBar::Use::HASH_DIST, IXBar::Use::ACTION});
+
+            emit_random_seed(out, indent, fmt);
+            emitted_action_ixbar = true;
         }
         if (!tbl->layout.ternary && !tbl->layout.no_match_rams()) {
             emit_table_format(out, indent, tbl->resources->table_format, fmt, false, false);
@@ -2655,10 +2685,9 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
         if (tbl->layout.atcam)
             emit_atcam_match(out, indent, tbl, context_json_entries);
     }
-
-    if (tbl->resources->action_ixbar)
-        emit_ixbar(out, indent, tbl->resources->action_ixbar.get(), nullptr, nullptr, nullptr,
-                   nullptr, tbl, false);
+    if (tbl->resources->action_ixbar && !emitted_action_ixbar) {
+        emit_ixbar(out, indent, tbl, {IXBar::Use::ACTION});
+    }
 
     emit_indirect_res_context_json(out, indent, tbl, context_json_entries);
 
@@ -2697,8 +2726,8 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
         if (!tbl->conditional_gateway_only())
             out << gw_indent++ << "gateway:" << std::endl;
         out << gw_indent << "name: " <<  tbl->build_gateway_name() << std::endl;
+        emit_ixbar(out, gw_indent, tbl, {IXBar::Use::GATEWAY});
         auto *ixb = tbl->resources->gateway_ixbar.get();
-        emit_ixbar(out, gw_indent, ixb, nullptr, nullptr, nullptr, nullptr, tbl, false);
         bool ok = ixb ? ixb->emit_gateway_asm(*this, out, gw_indent, tbl) : false;
         for (auto &use : Values(tbl->resources->memuse)) {
             if (use.type == Memories::Use::GATEWAY) {
@@ -3213,13 +3242,14 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
     if (meter->direct && tbl->layout.hash_action)
         out << ", how_referenced: direct";
     out << " }" << std::endl;
-    if (meter->input)
-        self.emit_ixbar(out, indent, tbl->resources->meter_ixbar.get(), nullptr, nullptr, nullptr,
-                        nullptr, tbl, false);
+    if (meter->input) {
+        self.emit_ixbar(out, indent, tbl, {IXBar::Use::METER}); }
+
     if (tbl->resources->memuse.count(unique_id))
         self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
     else
         INTERNAL_WARNING("No resource named %s found on table %s", unique_id, tbl->name);
+
     cstring imp_type;
     if (!meter->implementation.name)
         imp_type = "standard";
@@ -3319,8 +3349,9 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Selector *as) {
         self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
     else
         INTERNAL_WARNING("No resource named %s found on table %s", unique_id, tbl->name);
-    self.emit_ixbar(out, indent, tbl->resources->selector_ixbar.get(), nullptr,
-                    nullptr, nullptr, nullptr, tbl, false);
+
+    self.emit_ixbar(out, indent, tbl, {IXBar::Use::SELECTOR});
+
     out << indent << "mode: ";
     out << ((as->mode == IR::MAU::SelectorMode::FAIR) ? "fair": "resilient");
     /**
@@ -3377,8 +3408,9 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
             self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
         else
             INTERNAL_WARNING("No resource named %s found on table %s", unique_id, tbl->name);
-        self.emit_ixbar(out, indent, tbl->resources->match_ixbar.get(), nullptr,
-                        &tbl->resources->hash_dists, nullptr, nullptr, tbl, false);
+
+        self.emit_hash_dist(out, indent, &tbl->resources->hash_dists, false);
+        self.emit_ixbar(out, indent, tbl, {IXBar::Use::TERNARY_MATCH, IXBar::Use::HASH_DIST});
     }
     self.emit_table_format(out, indent, tbl->resources->table_format, nullptr, true, false);
     bitvec source;
@@ -3407,19 +3439,11 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::ActionData *ad) {
     else
         INTERNAL_WARNING("No resource named %s found on table %s", unique_id, tbl->name);
     for (auto act : Values(tbl->actions)) {
-        // if (act->args.empty()) continue;
         self.emit_action_data_format(out, indent, tbl, act);
     }
     bitvec source;
     source.setbit(ActionData::ACTION_DATA_TABLE);
     self.emit_action_data_bus(out, indent, tbl, source);
-    /*
-    if (!tbl->actions.empty()) {
-        out << indent++ << "actions:" << std::endl;
-        for (auto act : Values(tbl->actions))
-            act->apply(EmitAction(self, out, tbl, indent));
-        --indent; }
-    */
     return false;
 }
 
@@ -3459,7 +3483,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
     auto &ixbar = tbl->resources->salu_ixbar;
     BUG_CHECK(ixbar->type == IXBar::Use::STATEFUL_ALU || ixbar->type == IXBar::Use::TYPES,
               "incorrect type on %s salu_ixbar", tbl);
-    self.emit_ixbar(out, indent, ixbar.get(), nullptr, nullptr, nullptr, nullptr, tbl, false);
+    self.emit_ixbar(out, indent, tbl, {IXBar::Use::STATEFUL_ALU});
     ixbar->emit_salu_bytemasks(out, indent);
 
     out << indent << "format: { lo: ";

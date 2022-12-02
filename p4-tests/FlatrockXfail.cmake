@@ -304,8 +304,9 @@ p4c_add_xfail_reason("tofino5"
 p4c_add_xfail_reason("tofino5"
   "dest must be action data"
   extensions/p4_tests/p4_16/stf/p4c-1504.p4
+  extensions/p4_tests/p4_16/flatrock/ealu0.p4
   )
-  
+
 p4c_add_xfail_reason("tofino5"
   "Assembler BUG"
   extensions/p4_tests/p4_16/stf/update_checksum_6.p4
