@@ -23,6 +23,7 @@ void Flatrock::ActionBus::write_regs(Target::Flatrock::mau_regs &regs, Table *tb
     auto &ealu = regs.ppu_ealu.rf;
     auto &mrd = regs.ppu_mrd;
     int immed_offset = -1;
+    bitvec immed_use;
     for (auto &el : by_byte) {
         BUG_CHECK(el.second.data.size() >= 1, "No data in Flatrock::ActionBus::write_regs");
         auto &src = el.second.data.begin()->first;
@@ -41,7 +42,12 @@ void Flatrock::ActionBus::write_regs(Target::Flatrock::mau_regs &regs, Table *tb
                         // FIXME -- need dconfig here
                         mrd.rf.mrd_iad_ext[physid].ext_size[0] = tbl->format->immed_size; }
                 } else if (immed_offset != el.first - bit/8U) {
-                    error(lineno, "immediate field misalignment on action bus"); } }
+                    if (immed_use.getrange(src.field->immed_bit(0), src.field->size))
+                        error(lineno, "immediate field can't be in two places on actiom bus");
+                    else
+                        error(lineno, "immediate field misalignment on action bus");
+                }
+                immed_use.setrange(src.field->immed_bit(0), src.field->size); }
             for (auto i = el.first; i < el.first + (el.second.size + 7)/8U; ++i) {
                 if (i < 4) {
                     ealu.ealu_cfg.bypass_ealu |= 1U << i;

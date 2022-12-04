@@ -3690,9 +3690,8 @@ void Format::allocate_format(IR::MAU::Table::ImmediateControl_t imm_ctrl,
     }
 }
 
-}  // namespace ActionData
-
-std::ostream &operator<<(std::ostream &out, ActionData::Location_t loc) { switch (loc) {
+std::ostream &operator<<(std::ostream &out, Location_t loc) {
+    switch (loc) {
     case ActionData::ACTION_DATA_TABLE: out << "ad_table"; break;
     case ActionData::IMMEDIATE: out << "immed"; break;
     case ActionData::METER_ALU: out << "meter_alu"; break;
@@ -3701,7 +3700,7 @@ std::ostream &operator<<(std::ostream &out, ActionData::Location_t loc) { switch
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, const ActionData::Format::Use &use) {
+std::ostream &operator<<(std::ostream &out, const Format::Use &use) {
     using namespace IndentCtl;
     bool first = true;
     for (auto &alupos : use.alu_positions) {
@@ -3714,15 +3713,27 @@ std::ostream &operator<<(std::ostream &out, const ActionData::Format::Use &use) 
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, ActionData::SlotType_t st) {
+std::ostream &operator<<(std::ostream &out, SlotType_t st) {
     switch (st) {
     case ActionData::BYTE:              out << "BYTE";          break;
     case ActionData::HALF:              out << "HALF";          break;
     case ActionData::FULL:              out << "FULL";          break;
     case ActionData::DOUBLE_FULL:       out << "DOUBLE_FULL";   break;
-    default:            out << "SlotType_T(" << int(st) << ")"; }
+    default:            out << "SlotType_t(" << int(st) << ")"; }
     return out;
 }
+
+std::ostream &operator<<(std::ostream &out, ALUOPConstraint_t c) {
+    switch (c) {
+    case ActionData::ISOLATED:          out << "ISOL"; break;
+    case ActionData::BITMASKED_SET:     out << "BMS"; break;
+    case ActionData::DEPOSIT_FIELD:     out << "DPF"; break;
+    case ActionData::BYTE_ROTATE_MERGE: out << "BRM"; break;
+    default:    out << "ALUOPConstraint_t(" << int(c) << ")"; }
+    return out;
+}
+
+}  // namespace ActionData
 
 void dump(const ActionData::Format::Use &u) { std::cout << u << std::endl; }
 void dump(const ActionData::Format::Use *u) { std::cout << *u << std::endl; }

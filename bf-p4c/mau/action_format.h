@@ -17,6 +17,8 @@
 
 namespace ActionData {
 
+using ::operator<<;  // avoid overload hiding issues
+
 // MASK is currently not used, but maybe will be in order to reduce the size of the JSON
 // If MASK is used, then the equiv_cond will have to change
 enum ModConditionally_t { NONE, VALUE, /* MASK */ };
@@ -431,6 +433,7 @@ struct ALUParameter {
 };
 
 enum ALUOPConstraint_t { ISOLATED, BITMASKED_SET, DEPOSIT_FIELD, BYTE_ROTATE_MERGE };
+std::ostream &operator<<(std::ostream &out, ALUOPConstraint_t c);
 
 struct UniqueLocationKey {
     cstring action_name;
@@ -680,6 +683,7 @@ class PackingConstraint {
 };
 
 enum SlotType_t { BYTE, HALF, FULL, SLOT_TYPES, DOUBLE_FULL = SLOT_TYPES, SECT_TYPES = 4 };
+std::ostream &operator<<(std::ostream &, SlotType_t);
 size_t slot_type_to_bits(SlotType_t type);
 SlotType_t bits_to_slot_type(size_t bits);
 
@@ -787,6 +791,7 @@ class RamSection {
 // for (loc = 0; loc < AD_LOCATIONS; ++loc) to iterate over action data locations or
 // for (loc = 0; loc < ALL_LOCATIONS; ++loc) to iterate over all location types
 enum Location_t { ACTION_DATA_TABLE , IMMEDIATE, AD_LOCATIONS, METER_ALU = 2, ALL_LOCATIONS = 3 };
+std::ostream &operator<<(std::ostream &, Location_t);
 
 /**
  * Used to keep track of the coordination of RamSections and the byte offset
@@ -1002,6 +1007,7 @@ class Format {
                 for (auto &pos : act.second)
                     rv.push_back(&pos);
             return rv; }
+        friend std::ostream &operator<<(std::ostream &out, const Use &use);
     };
 
  private:
@@ -1100,13 +1106,5 @@ class Format {
 
 }  // namespace ActionData
 
-// FIXME -- these overloads should be in namespace ActionData, but for some reason doing
-// so causes the operator<<(ostream &, std::vector<T> &) template(s) in log.h to be hidden
-// and not seen (causing overload resolution failures).  This could perhaps be fixed by
-// putting those templates in 'namespace std', but that is technically not allowed by
-// the standard.
-std::ostream &operator<<(std::ostream &, ActionData::Location_t);
-std::ostream &operator<<(std::ostream &out, const ActionData::Format::Use &use);
-std::ostream &operator<<(std::ostream &, ActionData::SlotType_t);
 
 #endif  /* EXTENSIONS_BF_P4C_MAU_ACTION_FORMAT_H_ */
