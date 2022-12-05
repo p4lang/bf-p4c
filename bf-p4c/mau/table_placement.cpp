@@ -213,9 +213,13 @@ class TablePlacement::SetupInfo : public Inspector {
 
     void end_apply() override {
         for (auto &att : self.attached_to) {
+            LOG7("Attached memory:" << att.first->name);
+            for (auto tbl : att.second)
+                LOG7("   --> tbl:" << tbl->name);
             if (att.second.size() == 1) continue;
             if (att.first->direct)
-                self.error("direct %s attached to multiple match tables", att.first); }
+                self.error("direct %s attached to multiple match tables", att.first);
+        }
         for (auto &seq : Values(self.seqInfo))
             for (auto *tbl : seq.refs)
                 seq.parents.setbit(self.tblInfo.at(tbl).uid);
@@ -1032,7 +1036,8 @@ class DecidePlacement::ResourceBasedAlloc {
     // the best solution out of the complete set. This function return true if the best solution
     // is the current one and false otherwise. The idea being that if the best solution is the
     // current one, we can continue the allocation without any backtracking.
-    bool select_best_solution(const Placed *pl, PlacementScore *cur_score) {
+    bool select_best_solution(const Placed *pl, PlacementScore *cur_score,
+                              std::list<BacktrackPlacement *> &initial_stage_options) {
         // Compare the different solution and pick the best
         PlacementScore *best_score = cur_score;
         for (PlacementScore *pl_score : complete) {
@@ -1045,6 +1050,11 @@ class DecidePlacement::ResourceBasedAlloc {
         }
         LOG3("Selected best placement with score:");
         best_score->printScore();
+
+        initial_stage_options.clear();
+        initial_stage_options.push_back(best_score->get_backtrack());
+        for (auto bt : best_score->get_no_best_bt())
+            initial_stage_options.push_back(bt.second);
 
         // Do not backtrack if the current solution is the best or if the solution goes beyond the
         // number of stages of the device and backtracking is still enabled. The idea for this
@@ -2250,6 +2260,10 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
                      << p->table->name << " and table " << rv->table->name
                      << " due to PHV allocation advances stage to " << rv->stage);
                 rv->stage_advance_log = "container conflict with table " + p->table->name;
+            } else if (not_eligible.count(rv->table)) {
+                rv->stage++;
+                LOG2("  - table " << rv->table->name << " not eligible");
+                rv->stage_advance_log = "grouping conflict with table " + rv->table->name;
             } else {
                 for (auto ctbl : tables_with_shared) {
                     // Validate all physical dependency of shared table and make sure they are all
@@ -3686,6 +3700,8 @@ class DecidePlacement::BacktrackManagement {
     // Track the first table allocated as a backtrack point to create multiple complete solutions
     BacktrackPlacement *start_flow = nullptr;
 
+    std::list<BacktrackPlacement *> initial_stage_options;
+
  public:
     BacktrackManagement(DecidePlacement &self, ordered_set<const GroupPlace *> &w,
                         ordered_set<const IR::MAU::Table *> &p, const Placed *&a, Backfill &b) :
@@ -3743,6 +3759,27 @@ class DecidePlacement::BacktrackManagement {
         }
     }
 
+    // Return an attached memory pointer if the actual placement state is invalid. Invalid placement
+    // mean that a shared attach table was placed on a stage before all of the match table that
+    // refer to that memory are placed. This is only a problem if we are moving from one stage to
+    // the next and the previous stage was still invalid.
+    std::optional<const IR::MAU::AttachedMemory*> is_unstable_placement(const Placed *placed) {
+        for (const Placed *p = placed->prev; p; p = p->prev) {
+            for (auto *ba : p->table->attached) {
+                if (ba->attached->direct) continue;
+                if (self.self.can_duplicate(ba->attached)) continue;
+                if (p->attached_entries.at(ba->attached).entries != 0 &&
+                    self.self.attached_to.count(ba->attached)) {
+                    for (auto &tbl : self.self.attached_to.at(ba->attached)) {
+                        if (!placed->is_match_placed(tbl))
+                            return ba->attached;
+                    }
+                }
+            }
+        }
+        return std::nullopt;
+    }
+
     // Save future backtrack position and handle resouce based allocation solution buildup. Return
     // true if a backtracking position was found, false otherwise.
     bool update_bt_point(const Placed *best, safe_vector<const Placed *> &trial) {
@@ -3763,10 +3800,51 @@ class DecidePlacement::BacktrackManagement {
             }
         }
 
+        // Apply that on stage transition
+        if (best->prev && best->prev->stage != best->stage) {
+            std::optional<const IR::MAU::AttachedMemory*> att = is_unstable_placement(best->prev);
+            // Stage was completed and the placement was invalid. We need to fix it or return an
+            // error since the behaviour will be incorrect.
+            if (att) {
+                std::string tbls_name;
+                for (auto &tbl : self.self.attached_to.at(*att)) {
+                    if (!tbls_name.empty())
+                        tbls_name += ", ";
+                    tbls_name += tbl->externalName();
+                    self.self.not_eligible.insert(tbl);
+                }
+                self.error("Table placement was not able to allocate %s in the same "
+                           "stage along with %s", tbls_name, (*att)->toString());
+                // Try to fix it through backtracking by making sure none of these match table
+                // are assigned on this stage.
+                initial_stage_options.remove_if([&](auto btp){
+                    return self.self.not_eligible.count(btp->get_placed()->table);});
+                if (!initial_stage_options.empty()) {
+                    LOG3("Try to fix unstable placement through backtracking");
+                    backtrack_to(initial_stage_options.front());
+                    initial_stage_options.pop_front();
+                    return true;
+                }
+            // Resource mode initial backtracking point are set inside of select_best_solution()
+            } else if (!self.resource_mode) {
+                initial_stage_options.clear();
+                self.self.not_eligible.clear();
+                for (auto t : trial) {
+                    if (t->stage == best->stage) {
+                        LOG3("Adding table:" << t->name << " in the initial stage option");
+                        auto btp = new BacktrackPlacement(self, t, active_work, false);
+                        initial_stage_options.push_back(btp);
+                    }
+                }
+            }
+        }
+
         // Resource mode handling
         if (self.resource_mode && active_placed && best->stage > active_placed->stage) {
-            self.savePlacement(best, active_work, true);
+            if (!is_unstable_placement(best))
+                self.savePlacement(best, active_work, true);
             LOG3("Resource mode and placement completed for stage:" << active_placed->stage);
+            self.self.not_eligible.clear();
             PlacementScore *pl_score = res_based_alloc.add_stage_complete(best, active_work, trial,
                                                                           best_with_pragmas);
             if (res_based_alloc.found_other_placement()) {
@@ -3775,7 +3853,8 @@ class DecidePlacement::BacktrackManagement {
                 return true;
             } else {
                 LOG3("Found NO other incomplete placement");
-                bool cur_is_best = res_based_alloc.select_best_solution(best, pl_score);
+                bool cur_is_best = res_based_alloc.select_best_solution(best, pl_score,
+                                                                        initial_stage_options);
                 backfill.clear();
                 if (!cur_is_best)
                     return true;
@@ -3791,20 +3870,30 @@ class DecidePlacement::BacktrackManagement {
                     if (self.resource_mode)
                         res_based_alloc.add_placed_pos(t, active_work, t == best);
 
-                    self.savePlacement(t, active_work, t == best);
+                    if (!is_unstable_placement(t))
+                        self.savePlacement(t, active_work, t == best);
                 }
             }
         } else {
             if (self.resource_mode)
                 res_based_alloc.add_placed_pos(best, active_work, true);
 
-            self.savePlacement(best, active_work, true);
+            if (!is_unstable_placement(best))
+                self.savePlacement(best, active_work, true);
         }
 
         // Save the first placement position we encounter to use it as baseline for all complete
         // solutions.
-        if (!start_flow)
+        if (!start_flow) {
             start_flow = new BacktrackPlacement(self, best, active_work, true);
+            for (auto t : trial) {
+                if (t->stage == best->stage) {
+                    LOG3("Adding table:" << t->name << " in the initial stage option");
+                    auto btp = new BacktrackPlacement(self, t, active_work, false);
+                    initial_stage_options.push_back(btp);
+                }
+            }
+        }
 
         return false;
     }

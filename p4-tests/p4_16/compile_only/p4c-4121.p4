@@ -1598,10 +1598,8 @@ control RegRw(
                     write_1_two.execute(ig_md.register_position_two);
                 }
                 else if (ig_md.register_write_val == 0) {
-                    @stage(5)
-                    {write_0_one.execute(ig_md.register_position_one);}
-                    @stage(6)
-                    {write_0_two.execute(ig_md.register_position_two);}
+                    write_0_one.execute(ig_md.register_position_one);
+                    write_0_two.execute(ig_md.register_position_two);
                 }
             }
             else if (reg_read_cpu_tbl.apply().hit) {

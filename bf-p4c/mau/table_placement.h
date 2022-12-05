@@ -72,6 +72,7 @@ class TablePlacement : public PassManager {
     std::map<cstring, struct TableInfo *> tblByName;
     std::map<const IR::MAU::TableSeq *, struct TableSeqInfo> seqInfo;
     std::map<const IR::MAU::AttachedMemory *, ordered_set<const IR::MAU::Table *>> attached_to;
+    std::set<const IR::MAU::Table *> not_eligible;
     int uid(const IR::MAU::Table *t) { return tblInfo.at(t).uid; }
     int uid(cstring t) {
         if (tblByName.count(t) == 0) return -1;
