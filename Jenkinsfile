@@ -275,26 +275,6 @@ node ('compiler-travis') {
                             }
                         }
 
-                        // Ideally, keep this in sync with
-                        // https://github.com/intel-restricted/networking.switching.barefoot.sandals/blob/master/jenkins/bf_sde_compilers_package.sh
-                        stage("Packaging") {
-                            catchError(catchInterruptions: false, stageResult: 'FAILURE') {
-                                if (sanitizersEnabled())
-                                    return
-
-                                sh """
-                                    mkdir -p ~/.ccache_bf-p4c-compilers
-                                    docker run \
-                                        --cpus=4 \
-                                        -v ~/.ccache_bf-p4c-compilers:/root/.ccache \
-                                        -e MAKEFLAGS=j4 \
-                                        -e UNIFIED_BUILD=true \
-                                        bf-p4c-compilers_intermediate_${image_tag} \
-                                        scripts/package_p4c_for_tofino.sh --build-dir build --enable-cb
-                                """
-                            }
-                        }
-
                         stage("Check submodule refpoints") {
                             catchError(catchInterruptions: false, stageResult: 'FAILURE') {
                                 dir('checkRefpoints') {
@@ -370,6 +350,23 @@ node ('compiler-travis') {
                         }
                     },
 
+                    // Ideally, keep this in sync with
+                    // https://github.com/intel-restricted/networking.switching.barefoot.sandals/blob/master/jenkins/bf_sde_compilers_package.sh
+                    'Packaging' : {
+                        if (sanitizersEnabled())
+                            return
+
+                        sh """
+                            mkdir -p ~/.ccache_bf-p4c-compilers
+                            docker run \
+                                --cpus=4 \
+                                -v ~/.ccache_bf-p4c-compilers:/root/.ccache \
+                                -e MAKEFLAGS=j4 \
+                                -e UNIFIED_BUILD=true \
+                                bf-p4c-compilers_intermediate_${image_tag} \
+                                scripts/package_p4c_for_tofino.sh --build-dir build --enable-cb
+                        """
+                    },
 
                     'Running Extreme PTF tests': {
                         echo 'Running Extreme PTF tests'
