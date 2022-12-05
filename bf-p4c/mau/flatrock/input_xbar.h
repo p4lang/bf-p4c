@@ -22,6 +22,8 @@ class IXBar : public ::IXBar {
     static constexpr int GATEWAY_VEC_BYTES = 8;
     static constexpr int GATEWAY_XOR_BYTES = GATEWAY_VEC_BYTES/2;
     static constexpr int GATEWAY_ROWS = 24;
+    static constexpr int EXACT_GROUPS = 2;      // "byte" and "word"
+    static constexpr int EXACT_BYTES_PER_GROUP = 20;
     static constexpr int EXACT_BYTES = 20;
     static constexpr int EXACT_WORDS = 5;
     static constexpr int XCMP_BYTES = 16;
@@ -82,6 +84,7 @@ class IXBar : public ::IXBar {
         bool is_parity_enabled() const override { return false; }
         TotalBytes match_hash(safe_vector<int> *hash_groups) const override;
         bitvec meter_bit_mask() const override { BUG(""); }
+        int ternary_align(const Loc &) const override;
         int total_input_bits() const override { BUG(""); }
         void update_resources(int, BFN::Resources::StageResources &) const override;
         const char *way_source_kind() const override { return "xme"; }

@@ -19,11 +19,6 @@
 #include "lib/range.h"
 #include "lib/log.h"
 
-constexpr int IXBar::HASH_INDEX_GROUPS;
-constexpr int IXBar::HASH_SINGLE_BITS;
-constexpr int IXBar::METER_ALU_HASH_BITS;
-constexpr int IXBar::TOFINO_METER_ALU_BYTE_OFFSET;
-
 unsigned IXBarRandom::seed = 0x0572f1fa;
 std::uniform_int_distribution<unsigned> IXBarRandom::distribution10(0, 1023);
 std::uniform_int_distribution<unsigned> IXBarRandom::distribution1(0, 1);
@@ -165,54 +160,13 @@ int IXBar::Use::gateway_group() const {
  *  table uses in order to determine what section is the best candidate to ghost off
  */
 safe_vector<IXBar::Use::TotalInfo> IXBar::Use::bits_per_search_bus() const {
-    safe_vector<TotalInfo> rv;
-    safe_vector<int> hash_groups;
-    auto match_bytes = match_hash(&hash_groups);
-    int hash_index = 0;
-
-    for (auto &single_match : match_bytes) {
-        int bits_per[IXBar::EXACT_GROUPS] = { 0 };
-        int bytes_per[IXBar::EXACT_GROUPS] = { 0 };
-        int group_per[IXBar::EXACT_GROUPS];
-        std::fill(group_per, group_per + IXBar::EXACT_GROUPS, -1);
-
-        for (auto &b : *single_match) {
-            assert(b.loc.group >= 0 && b.loc.group < 8);
-            assert(b.search_bus >= 0 && b.search_bus < 8);
-            bits_per[b.search_bus] += b.bit_use.popcount();
-            bytes_per[b.search_bus]++;
-            if (group_per[b.search_bus] != -1)
-                BUG_CHECK(group_per[b.search_bus] == b.loc.group, "Bytes on same search bus are "
-                          "not contained within the same ixbar group");
-            group_per[b.search_bus] = b.loc.group;
-        }
-
-        safe_vector<GroupInfo> sizes;
-        int search_bus_index = 0;
-        for (int i = 0; i < IXBar::EXACT_GROUPS; i++) {
-             if (bits_per[i] == 0) continue;
-             sizes.emplace_back(search_bus_index, group_per[i], bytes_per[i], bits_per[i]);
-             search_bus_index++;
-        }
-
-        std::sort(sizes.begin(), sizes.end(),
-            [=](const GroupInfo &a, const GroupInfo &b) {
-            return a.search_bus < b.search_bus;
-        });
-        rv.emplace_back(hash_groups[hash_index], sizes);
-        hash_index++;
-    }
-    return rv;
+    BUG("bits_per_search_bus not done for target");
+    return {};
 }
 
 unsigned IXBar::Use::compute_hash_tables() {
-    unsigned hash_table_input = 0;
-    for (auto &b : use) {
-        assert(b.loc.group >= 0 && b.loc.group < HASH_TABLES/2);
-        unsigned grp = 1U << (b.loc.group * 2);
-        if (b.loc.byte >= 8) grp <<= 1;
-        hash_table_input |= grp; }
-    return hash_table_input;
+    BUG("compute_hash_tables not done for target");
+    return 0;
 }
 
 /* Combining the allocation of multiple separately allocated hash groups of the same
@@ -486,7 +440,7 @@ void IXBar::Use::Byte::add_info(const FieldInfo &fi) {
     bit_use |= fi.cont_loc();
 }
 
-static int need_align_flags[4][IXBar::REPEATING_CONSTRAINT_SECT] = {
+static int need_align_flags[4][4] = {
     { 0, 0, 0, 0 },  // 8bit -- no alignment needed
     { IXBar::Use::Align16lo, IXBar::Use::Align16hi, IXBar::Use::Align16lo, IXBar::Use::Align16hi },
     { IXBar::Use::Align16lo | IXBar::Use::Align32lo,

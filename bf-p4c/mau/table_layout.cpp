@@ -283,7 +283,8 @@ void DoTableLayout::check_for_proxy_hash(IR::MAU::Table::Layout &layout,
             ERROR_CHECK(pragma_val != nullptr, ErrorType::ERR_INVALID,
                         "%1%: proxy hash pragma on table %2%. It is not a constant.",
                         s, tbl->externalName());
-            ERROR_CHECK(pragma_val->asInt() > 0 && pragma_val->asInt() <= IXBar::HASH_MATRIX_SIZE,
+            ERROR_CHECK(pragma_val->asInt() > 0 &&
+                        pragma_val->asInt() <= Device::ixbarSpec().hashMatrixSize(),
                         ErrorType::ERR_INVALID,
                         "proxy hash width %2% on table %1%. It does not fit on the "
                         "hash matrix.", tbl, pragma_val->asInt());

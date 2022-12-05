@@ -1129,4 +1129,8 @@ void IXBar::Use::emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &match
     return;
 }
 
+int IXBar::Use::ternary_align(const Loc &loc) const {
+    return (loc.group * IXBar::TERNARY_BYTES_PER_GROUP + loc.byte) % 4;
+}
+
 }  // namespace Flatrock

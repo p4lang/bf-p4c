@@ -196,7 +196,9 @@ bool ActionDataBus::Use::emit_adb_asm(std::ostream &out, const IR::MAU::Table *t
             // from the input xbar and action format allocation
             if (source_is_immed
                 && format.is_byte_offset<ActionData::Hash>(rs.byte_offset)) {
-                // FIXME -- this is probably all wrong for flatrock
+                // FIXME -- this is DEFINITELY all wrong for flatrock
+                BUG("need to implement adb/xcmp hash access for flatrock");
+#if 0
                 safe_vector<int> all_hash_dist_units = tbl->resources->hash_dist_immed_units();
                 bitvec slot_hash_dist_units;
                 le_bitrange immed_range = slot_bits.shiftedByBytes(rs.byte_offset);
@@ -232,6 +234,7 @@ bool ActionDataBus::Use::emit_adb_asm(std::ostream &out, const IR::MAU::Table *t
                     out << ", " << lo_hi;
                 }
                 out << ")";
+#endif
             } else if (source_is_immed
                        && format.is_byte_offset<ActionData::RandomNumber>(rs.byte_offset)) {
                 // FIXME -- this is probably all wrong for flatrock

@@ -47,46 +47,9 @@ struct IXBarRandom {
 };
 
 struct IXBar {
-    // FIXME -- make these per-device params
-    static constexpr int EXACT_GROUPS = 8;
-    static constexpr int EXACT_BYTES_PER_GROUP = 16;
-    static constexpr int HASH_TABLES = 16;
-    static constexpr int HASH_GROUPS = 8;
-    static constexpr int HASH_INDEX_GROUPS = 4;  /* groups of 10 bits for indexing */
-    static constexpr int HASH_SINGLE_BITS = 12;  /* top 12 bits of hash table individually */
-    static constexpr int HASH_PARITY_BIT = 51;  /* If enabled reserved parity bit position */
-    static constexpr int RAM_SELECT_BIT_START = 40;
-    // 64 words in a LAMB - 6 bits
+    // these constants aren't realy target specific, but don't really belong here
     static constexpr int LAMB_LINE_SELECT_BITS = 6;
     static constexpr int RAM_LINE_SELECT_BITS = 10;
-    static constexpr int HASH_MATRIX_SIZE = RAM_SELECT_BIT_START + HASH_SINGLE_BITS;
-    static constexpr int HASH_DIST_SLICES = 3;
-    static constexpr int HASH_DIST_BITS = 16;
-    static constexpr int HASH_DIST_EXPAND_BITS = 7;
-    static constexpr int HASH_DIST_MAX_MASK_BITS = HASH_DIST_BITS + HASH_DIST_EXPAND_BITS;
-    static constexpr int HASH_DIST_UNITS = 2;
-    static constexpr int TOFINO_METER_ALU_BYTE_OFFSET = 8;
-    static constexpr int LPF_INPUT_BYTES = 4;
-    static constexpr int TERNARY_GROUPS = StageUse::MAX_TERNARY_GROUPS;
-    static constexpr int BYTE_GROUPS = StageUse::MAX_TERNARY_GROUPS/2;
-    static constexpr int TERNARY_BYTES_PER_GROUP = 5;
-    static constexpr int TERNARY_BYTES_PER_BIG_GROUP = 11;
-    static constexpr int GATEWAY_SEARCH_BYTES = 4;
-    static constexpr int RESILIENT_MODE_HASH_BITS = 51;
-    static constexpr int FAIR_MODE_HASH_BITS = 14;
-    static constexpr int METER_ALU_HASH_BITS = 52;
-    static constexpr int METER_ALU_HASH_PARITY_BYTE_START = 48;
-    static constexpr int METER_PRECOLOR_SIZE = 2;
-    static constexpr int REPEATING_CONSTRAINT_SECT = 4;
-    static constexpr int MAX_HASH_BITS = 52;
-
-    static int get_hash_single_bits() {
-        static bool disable_gfm_parity = BackendOptions().disable_gfm_parity;
-        // If hash parity is enabled reserve a bit for parity
-        if (!disable_gfm_parity)
-            return HASH_SINGLE_BITS - 1;
-        return HASH_SINGLE_BITS;
-    }
 
     struct Loc {
         enum type { BYTE = 0, WORD = 1, NONE = 2 };
@@ -98,18 +61,14 @@ struct IXBar {
         operator std::pair<int, int>() const { return std::make_pair(group, byte); }
         /// return the byte number in the total order
         bool operator==(const Loc &loc) const {
-            return group == loc.group && byte == loc.byte;
-        }
+            return group == loc.group && byte == loc.byte; }
         bool operator!=(const Loc &loc) const { return !(*this == loc); }
         int getOrd(const bool isTernary = false) const {
-            if ((*this)) {
+            if (*this) {
                 if (isTernary)
-                    return EXACT_GROUPS * EXACT_BYTES_PER_GROUP +
-                        ((group/2) * TERNARY_BYTES_PER_BIG_GROUP) +
-                        (group % 2) * (TERNARY_BYTES_PER_GROUP) +
-                        (group % 2) /* mid byte */ + byte;
+                    return Device::ixbarSpec().getTernaryOrdBase(group) + byte;
                 else
-                    return (group * EXACT_BYTES_PER_GROUP) + byte;
+                    return Device::ixbarSpec().getExactOrdBase(group) + byte;
             } else {
                 return -1;
             }
@@ -394,6 +353,7 @@ struct IXBar {
         virtual TotalBytes match_hash(safe_vector<int> *hash_groups = nullptr) const;
         virtual bitvec meter_bit_mask() const = 0;
         virtual int search_buses_single() const;
+        virtual int ternary_align(const Loc &) const = 0;
         virtual int total_input_bits() const = 0;
         virtual void update_resources(int, BFN::Resources::StageResources &) const;
         virtual const char *way_source_kind() const = 0;

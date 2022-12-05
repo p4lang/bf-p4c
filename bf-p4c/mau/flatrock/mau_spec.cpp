@@ -1,4 +1,5 @@
 #include "bf-p4c/mau/mau_spec.h"
+#include "input_xbar.h"
 
 IR::Node *FlatrockMauSpec::postTransformTables(IR::MAU::Table *tbl) const {
     if (tbl->layout.hash_action) {
@@ -16,4 +17,13 @@ IR::Node *FlatrockMauSpec::postTransformTables(IR::MAU::Table *tbl) const {
         }
     }
     return tbl;
+}
+
+int FlatrockIXBarSpec::getExactOrdBase(int group) const {
+    return group * Flatrock::IXBar::EXACT_BYTES_PER_GROUP;
+}
+
+int FlatrockIXBarSpec::getTernaryOrdBase(int group) const {
+    return Flatrock::IXBar::EXACT_GROUPS * Flatrock::IXBar::EXACT_BYTES_PER_GROUP +
+           group * Flatrock::IXBar::TERNARY_BYTES_PER_GROUP;
 }

@@ -79,10 +79,7 @@ void IXBarVerify::verify_format(const IXBar::Use *use) {
                 throw IXBar::failure(-1, byte.loc.group);
             }
         } else {
-            size_t byte_offset = byte.loc.group * IXBar::TERNARY_BYTES_PER_GROUP;
-            byte_offset += (byte.loc.group + 1) / 2;
-            byte_offset += byte.loc.byte;
-            if ((byte_offset % (container.size() / 8)) != mod_4_offset) {
+            if ((use->ternary_align(byte.loc) % (container.size() / 8)) != mod_4_offset) {
                 throw IXBar::failure(-1, byte.loc.group);
             }
         }

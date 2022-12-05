@@ -43,7 +43,6 @@ struct IXBar : public ::IXBar {
             return le_bitrange(group*RAM_LINE_SELECT_BITS, (group+1)*RAM_LINE_SELECT_BITS - 1); }
     static constexpr int INDEX_RANGE_SUBGROUP(le_bitrange r) { return r.lo / RAM_LINE_SELECT_BITS; }
 
- private:
     static int get_meter_alu_hash_bits() {
         // If hash parity is enabled reserve a bit for parity
         if (!BackendOptions().disable_gfm_parity)
@@ -51,8 +50,15 @@ struct IXBar : public ::IXBar {
         return METER_ALU_HASH_BITS;
     }
 
-    static int get_hash_single_bits() { return ::IXBar::get_hash_single_bits(); }
+    static int get_hash_single_bits() {
+        static bool disable_gfm_parity = BackendOptions().disable_gfm_parity;
+        // If hash parity is enabled reserve a bit for parity
+        if (!disable_gfm_parity)
+            return HASH_SINGLE_BITS - 1;
+        return HASH_SINGLE_BITS;
+    }
 
+ private:
     static int get_hash_matrix_size() {
         return RAM_SELECT_BIT_START + get_hash_single_bits();
     }
@@ -282,6 +288,8 @@ struct IXBar : public ::IXBar {
 
         void add(const Use &alloc);
         safe_vector<Byte> atcam_partition(int *hash_group = nullptr) const override;
+        safe_vector<TotalInfo> bits_per_search_bus() const;
+        unsigned compute_hash_tables();
         bool emit_gateway_asm(const MauAsmOutput &, std::ostream &, indent_t,
                               const IR::MAU::Table *) const override { return false; }
         void emit_ixbar_asm(const PhvInfo &phv, std::ostream& out, indent_t indent,
@@ -294,6 +302,7 @@ struct IXBar : public ::IXBar {
         int hash_groups() const override;
         TotalBytes match_hash(safe_vector<int> *hash_groups = nullptr) const override;
         bitvec meter_bit_mask() const override { return meter_alu_hash.bit_mask; }
+        int ternary_align(const Loc &) const override;
         int total_input_bits() const override {
             int rv = 0;
             for (auto fl : field_list_order) {

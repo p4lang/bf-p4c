@@ -3,6 +3,7 @@
 #include "memories.h"
 #include "table_placement.h"
 #include "lib/bitops.h"
+#include "flatrock/input_xbar.h"
 
 constexpr int RangeEntries::MULTIRANGE_DISTRIBUTION_LIMIT;
 constexpr int RangeEntries::RANGE_ENTRY_PERCENTAGE;
@@ -367,12 +368,12 @@ bool StageUseEstimate::ways_provided(const IR::MAU::Table *tbl, LayoutOption *lo
         lo->way_sizes.push_back(log2_way_size);
     }
 
-    int avail_hash_bits = IXBar::get_hash_single_bits();
+    int avail_hash_bits = Tofino::IXBar::get_hash_single_bits();
     if (independent_hash) {
         int select_upper_bits_required = 0;
         int index = 0;
         for (auto way_size : lo->way_sizes) {
-            if (index == IXBar::HASH_INDEX_GROUPS) {
+            if (index == Device::ixbarSpec().hashIndexGroups()) {
                 lo->select_bus_split = index;
                 break;
             }
@@ -388,7 +389,7 @@ bool StageUseEstimate::ways_provided(const IR::MAU::Table *tbl, LayoutOption *lo
         int select_upper_bits_required = 0;
         int way_index = 0;
         for (auto way_size : lo->way_sizes) {
-            if (way_index == IXBar::HASH_INDEX_GROUPS)
+            if (way_index == Device::ixbarSpec().hashIndexGroups())
                 break;
             select_upper_bits_required += floor_log2(way_size);
             if (select_upper_bits_required > avail_hash_bits) {
@@ -638,7 +639,7 @@ void StageUseEstimate::calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOpti
         int select_bits_added = 0;
         int ways_added = 0;
         int select_ways = 0;
-        int avail_hash_bits = IXBar::get_hash_single_bits();
+        int avail_hash_bits = Tofino::IXBar::get_hash_single_bits();
         while (depth > 0) {
             int max_group_size_bits_reqd = ceil_log2(max_group_size);
             int hash_single_bits_left = avail_hash_bits -
@@ -717,7 +718,8 @@ void StageUseEstimate::options_to_ternary_entries(const IR::MAU::Table *tbl, int
         int width = 0;
 #ifdef HAVE_FLATROCK
         if (Device::currentDevice() == Device::FLATROCK) {
-            width = (bytes + IXBar::TERNARY_BYTES_PER_GROUP - 1) / IXBar::TERNARY_BYTES_PER_GROUP;
+            width = (bytes + Flatrock::IXBar::TERNARY_BYTES_PER_GROUP - 1) /
+                    Flatrock::IXBar::TERNARY_BYTES_PER_GROUP;
             bytes = 0;
         }
 #endif
@@ -1677,9 +1679,10 @@ bool RangeEntries::preorder(const IR::MAU::TableKey *ixbar_read) {
     // individual TCAM.  After looking at the hardware requirements and talking to the driver
     // team, I'm not sure if this constraint actually exists.  Will have to be verified by
     // packet testing.  Currently the input xbar algorithm ignores this constraint
-    ERROR_CHECK(range_nibbles <= IXBar::TERNARY_BYTES_PER_GROUP, "%s: Currently in p4c, the table "
-                "%s cannot perform a range match on key %s as the key does not fit in under 5 "
-                "PHV nibbles", ixbar_read->srcInfo, tbl->name, field->name);
+    ERROR_CHECK(range_nibbles <= Tofino::IXBar::TERNARY_BYTES_PER_GROUP,
+                "%s: Currently in p4c, the table %s cannot perform a range match on key %s "
+                "as the key does not fit in under 5 PHV nibbles",
+                ixbar_read->srcInfo, tbl->name, field->name);
     int range_lines_needed = 2 * range_nibbles - 1;
     range_lines_needed = std::min(MULTIRANGE_DISTRIBUTION_LIMIT, range_lines_needed);
     max_entry_TCAM_lines = std::max(range_lines_needed, max_entry_TCAM_lines);

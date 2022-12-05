@@ -5,6 +5,7 @@
 #include <boost/range/adaptor/reversed.hpp>
 
 #include "bf-p4c/mau/ixbar_expr.h"
+#include "bf-p4c/mau/tofino/input_xbar.h"
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/common/asm_output.h"
@@ -1003,12 +1004,14 @@ const IR::Expression * MergeInstructions::fill_out_hash_operand(PHV::Container c
 
     bitvec op_bits_used_bv = adi.alignment.read_bits();
     bitvec immed_bits_used_bv = op_bits_used_bv << (adi.start * 8);
+    auto &ixbSpec = Device::ixbarSpec();
 
     // Find out which sections of immediate sections and then coordinate to these to the
     // hash dist sections
     bitvec hash_dist_units_used;
     for (int i = 0; i < 2; i++) {
-        if (!immed_bits_used_bv.getslice(i * IXBar::HASH_DIST_BITS, IXBar::HASH_DIST_BITS).empty())
+        if (!immed_bits_used_bv.getslice(i * ixbSpec.hashDistBits(),
+                                         ixbSpec.hashDistBits()).empty())
             hash_dist_units_used.setbit(i);
     }
 
@@ -1024,7 +1027,7 @@ const IR::Expression * MergeInstructions::fill_out_hash_operand(PHV::Container c
     }
 
     IR::ListExpression *le = new IR::ListExpression(hash_dist_parts);
-    auto type = IR::Type::Bits::get(hash_dist_units_used.popcount() * IXBar::HASH_DIST_BITS);
+    auto type = IR::Type::Bits::get(hash_dist_units_used.popcount() * ixbSpec.hashDistBits());
     auto *hd = new IR::MAU::HashDist(tbl->srcInfo, type, le);
 
     auto tbl_hash_dists = tbl->resources->hash_dist_immed_units();
@@ -1044,8 +1047,8 @@ const IR::Expression * MergeInstructions::fill_out_hash_operand(PHV::Container c
     // at the first position
     le_bitrange immed_bits_used = { immed_bits_used_bv.min().index(),
                                     immed_bits_used_bv.max().index() };
-    int hash_dist_bits_shift = (immed_bits_used.lo / IXBar::HASH_DIST_BITS);
-    hash_dist_bits_shift *= IXBar::HASH_DIST_BITS;
+    int hash_dist_bits_shift = (immed_bits_used.lo / ixbSpec.hashDistBits());
+    hash_dist_bits_shift *= ixbSpec.hashDistBits();
     le_bitrange hash_dist_bits_used = immed_bits_used.shiftedByBits(-1 * hash_dist_bits_shift);
     return MakeSlice(hd, hash_dist_bits_used.lo, hash_dist_bits_used.hi);
 }
@@ -1526,7 +1529,7 @@ bool AdjustStatefulInstructions::verify_on_search_bus(const IR::MAU::StatefulAlu
 
     int initial_offset = 0;
     if (Device::currentDevice() == Device::TOFINO)
-        initial_offset = IXBar::TOFINO_METER_ALU_BYTE_OFFSET;
+        initial_offset = Tofino::IXBar::TOFINO_METER_ALU_BYTE_OFFSET;
 
 
     valid_start_positions.insert(initial_offset);

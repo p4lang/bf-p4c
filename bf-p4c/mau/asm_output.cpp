@@ -3301,8 +3301,9 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
                                      "for meter precolor");
         out << indent << "pre_color: hash_dist(";
         auto gm_bits = hd_ir_use->use->galois_matrix_bits();
-        int lo = gm_bits.min().index() % IXBar::HASH_DIST_BITS;
-        int hi = lo + IXBar::METER_PRECOLOR_SIZE - 1;
+        auto &ixbSpec = Device::ixbarSpec();
+        int lo = gm_bits.min().index() % ixbSpec.hashDistBits();
+        int hi = lo + ixbSpec.meterPrecolorSize() - 1;
         out << hd_use->unit << ", " << lo << ".." << hi << ")" << std::endl;
 
         // FIXME: Eventually should not be necessary due to DRV-1856
@@ -3367,11 +3368,13 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Selector *as) {
      */
     if (as->mode == IR::MAU::SelectorMode::FAIR) {
         bitvec galois_bits = tbl->resources->selector_ixbar->meter_bit_mask();
+        auto &ixbSpec = Device::ixbarSpec();
         BUG_CHECK(galois_bits.is_contiguous() &&
-                  galois_bits.popcount() == IXBar::FAIR_MODE_HASH_BITS &&
-                  (galois_bits.min().index() % IXBar::FAIR_MODE_HASH_BITS) == 0 ,
+                  galois_bits.popcount() == ixbSpec.fairModeHashBits() &&
+                  (galois_bits.min().index() % ixbSpec.fairModeHashBits()) == 0,
                   "Selector Bits for fair selector incorrectly programmed");
-        out << " " << (galois_bits.min().index() / IXBar::FAIR_MODE_HASH_BITS) << std::endl;
+        out << " " << (galois_bits.min().index() / ixbSpec.fairModeHashBits())
+            << std::endl;
     } else {
         out << " 7" << std::endl;
     }

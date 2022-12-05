@@ -968,7 +968,7 @@ bool CollectGatewayFields::compute_offsets() {
     LOG6("CollectGatewayFields::compute_offsets finished " << *this << DBPrint::Reset);
     if (bytes > gws.PhvBytes) return false;
     if (bits > gws.HashBits) return false;
-    return bits <= IXBar::get_hash_single_bits();
+    return bits <= Tofino::IXBar::get_hash_single_bits();
 }
 
 
@@ -1104,7 +1104,7 @@ bool CheckGatewayExpr::preorder(const IR::MAU::Table *tbl) {
     if (!collect.compute_offsets()) {
         char tmp[32] = { 0 };
         if (Device::gatewaySpec().HashBits > 0)
-            snprintf(tmp, sizeof tmp, " + %d bits", IXBar::get_hash_single_bits());
+            snprintf(tmp, sizeof tmp, " + %d bits", Tofino::IXBar::get_hash_single_bits());
         error("%s: condition too complex, limit of %d bytes%s of PHV input exceeded",
               tbl->srcInfo, Device::gatewaySpec().PhvBytes, tmp); }
     return true;

@@ -303,8 +303,9 @@ void ResourcesLogging::collectHashDistUsage(unsigned int stage,
         collectXbarBytesUsage(stage, irAlloc.use.get());
     }
 
-    int hashId = hdUse.unit / IXBar::HASH_DIST_SLICES;
-    int unitInHashId = hdUse.unit % IXBar::HASH_DIST_SLICES;
+    auto &ixbSpec = Device::ixbarSpec();
+    int hashId = hdUse.unit / ixbSpec.hashDistSlices();
+    int unitInHashId = hdUse.unit % ixbSpec.hashDistSlices();
     auto key = std::make_pair(hashId, unitInHashId);
 
     LOG2("add_hash_dist_usage (stage=" << stage << "), table: " << hdUse.used_by
@@ -375,8 +376,10 @@ ResourcesLogging::XbarResourceUsage *ResourcesLogging::logXbarBytes(unsigned sta
     using FieldSlice = Resources_Schema_Logger::XbarByteFieldSlice;
     using XbarByteUsage = Resources_Schema_Logger::XbarByteUsage;
 
-    const auto exactSize = IXBar::EXACT_GROUPS * IXBar::EXACT_BYTES_PER_GROUP;
-    const auto ternarySize = IXBar::BYTE_GROUPS * IXBar::TERNARY_BYTES_PER_BIG_GROUP;
+    auto &ixbSpec = Device::ixbarSpec();
+    const auto exactSize = ixbSpec.exactMatchTotalBytes();
+    const auto ternarySize = ixbSpec.ternaryMatchTotalBytes();
+    // const auto xcmpSize = ixbSpec.xcmpMatchTotalBytes();
     const auto size = exactSize + ternarySize;
 
     auto xr = new XbarResourceUsage(exactSize, size, ternarySize);
@@ -411,8 +414,9 @@ ResourcesLogging::HashBitsResourceUsage *ResourcesLogging::logHashBits(unsigned 
     using HashBitUsage = Resources_Schema_Logger::HashBitUsage;
     using ElementUsageHash = Resources_Schema_Logger::ElementUsageHash;
 
-    const auto nBits = 10 * IXBar::HASH_INDEX_GROUPS + IXBar::HASH_SINGLE_BITS;
-    const auto nFunctions = IXBar::HASH_GROUPS;
+    // FIXME -- groups + single bits makes no sense for flatrock
+    const auto nBits = 10 * Tofino::IXBar::HASH_INDEX_GROUPS + Tofino::IXBar::HASH_SINGLE_BITS;
+    const auto nFunctions = Tofino::IXBar::HASH_GROUPS;
 
     auto hbru = new HashBitsResourceUsage(nBits, nFunctions);
 
@@ -438,8 +442,9 @@ ResourcesLogging::HashDistResourceUsage *ResourcesLogging::logHashDist(unsigned 
     using HashDistUnitUsage = Resources_Schema_Logger::HashDistributionUnitUsage;
     using ElementUsageHashDistribution = Resources_Schema_Logger::ElementUsageHashDistribution;
 
-    const auto nHashIds = IXBar::HASH_DIST_UNITS;
-    const auto nUnitIds = IXBar::HASH_DIST_SLICES;
+    // FIXME -- no hashDist on flatrock -- xcmp hash is used directly
+    const auto nHashIds = Tofino::IXBar::HASH_DIST_UNITS;
+    const auto nUnitIds = Tofino::IXBar::HASH_DIST_SLICES;
 
     auto hdru = new HashDistResourceUsage(nHashIds, nUnitIds);
 
@@ -859,8 +864,9 @@ ResourcesLogging::MauStageResourceUsage *ResourcesLogging::logStage(int stageNo)
     auto hashBits = logHashBits(stageNo);
     auto hashDist = logHashDist(stageNo);
 
-    int tcam_rows = Device::ixbarSpec().tcam_rows();
-    int tcam_cols = Device::ixbarSpec().tcam_columns();
+    auto &ixbSpec = Device::ixbarSpec();
+    int tcam_rows = ixbSpec.tcam_rows();
+    int tcam_cols = ixbSpec.tcam_columns();
 
     auto ramsRes = new RamResourceUsage(
         Memories::SRAM_COLUMNS,  // nColums

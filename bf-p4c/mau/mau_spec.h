@@ -77,6 +77,12 @@ class IXBarSpec {
     virtual int gatewayVecBytes()             const { UNSUPPORTED };
     virtual int xcmpBytes()                   const { UNSUPPORTED };
     virtual int xcmpWords()                   const { UNSUPPORTED };
+
+    virtual int getExactOrdBase(int group) const = 0;
+    virtual int getTernaryOrdBase(int group) const = 0;
+    virtual int exactMatchTotalBytes() const = 0;
+    virtual int ternaryMatchTotalBytes() const = 0;
+    virtual int xcmpMatchTotalBytes() const = 0;
 };
 
 // TU-local constants to avoid circular dependencies between IXBarSpec subclasses
@@ -154,6 +160,13 @@ class TofinoIXBarSpec : public IXBarSpec {
     // the next two: support for "legacy code" [as of Nov. 10 2022] that gets these via IXBarSpec
     int tcam_rows()    const override { return Tofino_tcam_rows   ; }
     int tcam_columns() const override { return Tofino_tcam_columns; }
+
+    int getExactOrdBase(int group) const override;
+    int getTernaryOrdBase(int group) const override;
+
+    int exactMatchTotalBytes()          const override { return 8*16; }
+    int ternaryMatchTotalBytes()        const override { return 6*11; }
+    int xcmpMatchTotalBytes()           const override { return 0; }
 };
 
 class FlatrockIXBarSpec : public IXBarSpec {
@@ -168,14 +181,23 @@ class FlatrockIXBarSpec : public IXBarSpec {
     int gatewayFixedBytes()    const override { return   5; }
     int gatewayRows()          const override { return  24; }
     int gatewayVecBytes()      const override { return   8; }
+    int ramSelectBitStart()    const override { return   0; }   // any bits can be ram select
+    int ramLineSelectBits()    const override { return  10; }   // FIXME 6 for lamb, 10 for STM
     int ternaryBytesPerGroup() const override { return   5; }
-    int ternaryGroups()        const override { return  16; }
+    int ternaryGroups()        const override { return  20; }
     int xcmpBytes()            const override { return  16; }
     int xcmpWords()            const override { return  12; }
 
     // the next two: support for "legacy code" [as of Nov. 10 2022] that gets these via IXBarSpec
     int tcam_rows()            const override { return Flatrock_tcam_rows   ; }
     int tcam_columns()         const override { return Flatrock_tcam_columns; }
+
+    int getExactOrdBase(int group) const;
+    int getTernaryOrdBase(int group) const;
+
+    int exactMatchTotalBytes()          const override { return 2*20; }
+    int ternaryMatchTotalBytes()        const override { return 20*5; }
+    int xcmpMatchTotalBytes()           const override { return 4*16; }
 };
 
 class TofinoMauSpec : public MauSpec {

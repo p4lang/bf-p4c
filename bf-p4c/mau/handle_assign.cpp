@@ -1,5 +1,6 @@
 #include "bf-p4c/mau/handle_assign.h"
 #include "bf-p4c/mau/input_xbar.h"
+#include "bf-p4c/mau/tofino/input_xbar.h"
 #include "bf-p4c/mau/resource_estimate.h"
 #include "lib/safe_vector.h"
 
@@ -131,8 +132,10 @@ bool AssignActionHandle::ValidateSelectors::ValidateKey::preorder(const IR::MAU:
                 self.initial_table.at(sel), sel->max_pool_size,
                 StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE);
     }
-    le_bitrange hash_bits = { 0, (sel->mode == IR::MAU::SelectorMode::RESILIENT ?
-                             IXBar::RESILIENT_MODE_HASH_BITS : IXBar::FAIR_MODE_HASH_BITS) - 1};
+    auto &ixbSpec = Device::ixbarSpec();
+    le_bitrange hash_bits = { 0, (sel->mode == IR::MAU::SelectorMode::RESILIENT
+                                  ? ixbSpec.resilientModeHashBits()
+                                  : ixbSpec.fairModeHashBits()) - 1 };
 
     P4HashFunction *sel_func = new P4HashFunction();
     sel_func->inputs = sel_key_vec;

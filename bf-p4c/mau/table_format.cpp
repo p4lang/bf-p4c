@@ -263,7 +263,8 @@ void TableFormat::analyze_proxy_hash_option(int per_RAM) {
               "hash key", tbl->srcInfo, tbl->name);
 
     use->proxy_hash_group = ph.group;
-    for (int i = 0; i < IXBar::HASH_MATRIX_SIZE; i += 8) {
+    int hashMatrixSize = Device::ixbarSpec().hashMatrixSize();
+    for (int i = 0; i < hashMatrixSize; i += 8) {
         auto bv = ph.hash_bits.getslice(i, 8);
         if (bv.empty())
             continue;
@@ -2069,7 +2070,7 @@ void TableFormat::Use::TCAM_use::set_midbyte(int _byte_group, int _byte_config) 
     byte_config = _byte_config;
 
     if (byte_config == MID_BYTE_LO || byte_config == MID_BYTE_HI)
-        dirtcam.setbit(IXBar::TERNARY_BYTES_PER_GROUP * 2);
+        dirtcam.setbit(Tofino::IXBar::TERNARY_BYTES_PER_GROUP * 2);
 }
 
 void TableFormat::ternary_midbyte(int midbyte, size_t &index, bool lo_midbyte) {
@@ -2133,7 +2134,7 @@ bool TableFormat::allocate_all_ternary_match() {
 
     for (auto &byte : match_ixbar->use) {
         LOG5("  Checking match ixbar use byte : " << byte);
-        if (byte.loc.byte == IXBar::TERNARY_BYTES_PER_GROUP) {
+        if (byte.loc.byte == Tofino::IXBar::TERNARY_BYTES_PER_GROUP) {
             // Reserves groups and the mid bytes
             used_midbytes.setbit(byte.loc.group / 2);
             std::pair<bool, bool> lo_hi = { false, false };

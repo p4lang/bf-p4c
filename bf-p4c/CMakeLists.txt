@@ -411,6 +411,7 @@ set (BF_P4C_BACKEND_MAU_TOFINO_SRCS
   mau/tofino/action_data_bus.cpp
   mau/tofino/asm_output.cpp
   mau/tofino/input_xbar.cpp
+  mau/tofino/mau_spec.cpp
   mau/tofino/memories.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_TOFINO_SRCS}")

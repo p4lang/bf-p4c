@@ -160,7 +160,7 @@ void emit_ixbar_hash_atcam(std::ostream &out, indent_t indent,
             le_bitrange sl_overlap = *boost_sl;
             le_bitrange hash_bits = { br.first + sl_overlap.lo - ixbar_bits.lo,
                                       br.second - (ixbar_bits.hi - sl_overlap.hi) };
-            hash_bits = hash_bits.shiftedByBits(IXBar::RAM_SELECT_BIT_START);
+            hash_bits = hash_bits.shiftedByBits(Device::ixbarSpec().ramSelectBitStart());
             Slice adapted_ghost = ghost_slice;
             if (ghost_slice.get_lo() < sl_overlap.lo)
                 adapted_ghost.shrink_lo(sl_overlap.lo - ghost_slice.get_lo());
@@ -197,7 +197,7 @@ void ixbar_hash_exact_info(int &min_way_size, int &min_way_slice,
         if (way.source != hash_group)
             continue;
         bitvec local_select_mask = bitvec(way.select_mask);
-        int curr_way_size = IXBar::RAM_LINE_SELECT_BITS + local_select_mask.popcount();
+        int curr_way_size = Device::ixbarSpec().ramLineSelectBits() + local_select_mask.popcount();
         min_way_size = std::min(min_way_size, curr_way_size);
         min_way_slice = std::min(way.index.lo / 10, min_way_slice);
 
@@ -261,14 +261,15 @@ void emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
         return;
     }
 
-    int min_way_size = IXBar::RAM_LINE_SELECT_BITS + IXBar::HASH_SINGLE_BITS + 1;
-    int min_way_slice = IXBar::HASH_INDEX_GROUPS + 1;
+    int min_way_size = INT_MAX;
+    int min_way_slice = INT_MAX;
     // key is way.slice i.e. RAM line select, value is the RAM select mask.  Due to an optimization
     // multiple IXBar::Use::Way may have the same way.slice, and different way.mask values.
     std::map<int, bitvec> slice_to_select_bits;
+    auto &ixbSpec = Device::ixbarSpec();
 
     ixbar_hash_exact_info(min_way_size, min_way_slice, use, hash_group, slice_to_select_bits);
-    bool select_bits_needed = min_way_size > IXBar::RAM_LINE_SELECT_BITS;
+    bool select_bits_needed = min_way_size > ixbSpec.ramLineSelectBits();
     bitvec ways_done;
 
     for (auto way : use->way_use) {
@@ -289,9 +290,9 @@ void emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
                                               ident_pos_shifted + ghost_slice.width() - 1 };
 
             // The bits in the RAM line select that begin at the ident_pos_shifted bit up to 10
-            bool pre_rotation_line_sel_needed = ident_pos_shifted < IXBar::RAM_LINE_SELECT_BITS;
+            bool pre_rotation_line_sel_needed = ident_pos_shifted < ixbSpec.ramLineSelectBits();
             if (pre_rotation_line_sel_needed) {
-                le_bitrange ident_bits = { ident_pos_shifted, IXBar::RAM_LINE_SELECT_BITS - 1};
+                le_bitrange ident_bits = { ident_pos_shifted, ixbSpec.ramLineSelectBits() - 1};
                 ixbar_hash_exact_bitrange(ghost_slice, min_way_size, non_rotated_slice,
                                           ident_bits, ident_pos_shifted,
                                           ghost_line_select_positions);
@@ -299,7 +300,7 @@ void emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
 
             // The bits in the RAM select, i.e. the upper 12 bits
             if (select_bits_needed) {
-                le_bitrange ident_select_bits = { IXBar::RAM_LINE_SELECT_BITS, min_way_size - 1};
+                le_bitrange ident_select_bits = { ixbSpec.ramLineSelectBits(), min_way_size - 1};
                 ixbar_hash_exact_bitrange(ghost_slice, min_way_size, non_rotated_slice,
                                           ident_select_bits, ident_pos_shifted,
                                           ghost_ram_select_positions);
@@ -324,8 +325,8 @@ void emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
 
         safe_vector<le_bitrange> non_ghosted;
         bitvec no_ghost_line_select_bits
-            = bitvec(0, IXBar::RAM_LINE_SELECT_BITS)
-              - used_line_select_range.getslice(0, IXBar::RAM_LINE_SELECT_BITS);
+            = bitvec(0, ixbSpec.ramLineSelectBits())
+              - used_line_select_range.getslice(0, ixbSpec.ramLineSelectBits());
 
         // Print out the portions that have no ghost impact, but have hash impact due to the
         // random hash on the normal match data (RAM line select)
@@ -347,7 +348,7 @@ void emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
         for (auto ghost_pos : ghost_ram_select_positions) {
             used_ram_select_range.setrange(ghost_pos.first.lo, ghost_pos.first.size());
         }
-        used_ram_select_range >>= IXBar::RAM_LINE_SELECT_BITS;
+        used_ram_select_range >>= ixbSpec.ramLineSelectBits();
 
         bitvec no_ghost_ram_select_bits =
             bitvec(0, ram_select_mask.popcount()) - used_ram_select_range;
@@ -356,7 +357,7 @@ void emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
         for (auto br : bitranges(no_ghost_ram_select_bits)) {
             le_bitrange hash_bits = { br.first, br.second };
             // start at bit 40
-            int shift = IXBar::RAM_SELECT_BIT_START + ram_select_mask.min().index();
+            int shift = ixbSpec.ramSelectBitStart() + ram_select_mask.min().index();
             hash_bits = hash_bits.shiftedByBits(shift);
             emit_ixbar_match_func(out, indent, match_data, nullptr, hash_bits);
         }
@@ -366,8 +367,8 @@ void emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
         // the select bits are contiguous, not a hardware requirement, but a context JSON req.
         for (auto ghost_pos : ghost_ram_select_positions) {
             le_bitrange hash_bits = ghost_pos.first;
-            int shift = IXBar::RAM_SELECT_BIT_START + ram_select_mask.min().index();
-            shift -= IXBar::RAM_LINE_SELECT_BITS;
+            int shift = ixbSpec.ramSelectBitStart() + ram_select_mask.min().index() -
+                        ixbSpec.ramLineSelectBits();
             hash_bits = hash_bits.shiftedByBits(shift);
             emit_ixbar_match_func(out, indent, match_data, &(ghost_pos.second), hash_bits);
         }
@@ -466,7 +467,7 @@ void emit_ixbar_gather_bytes(const PhvInfo &phv,
     PHV::FieldUse f_use(PHV::FieldUse::READ);
     for (auto &b : use) {
         BUG_CHECK(b.loc.allocated(), "Byte not allocated by assembly");
-        int byte_loc = IXBar::TERNARY_BYTES_PER_GROUP;
+        int byte_loc = Device::ixbarSpec().ternaryBytesPerGroup();
         if (atcam && !b.is_spec(::IXBar::ATCAM_INDEX))
             continue;
         for (auto &fi : b.field_bytes) {
