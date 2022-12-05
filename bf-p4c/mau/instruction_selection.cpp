@@ -1305,6 +1305,7 @@ static size_t precolor_operand(const IR::MAU::Primitive *prim) {
 
 bool StatefulAttachmentSetup::Scan::preorder(const IR::MAU::Action *act) {
     self.remove_tempvars.clear();
+    self.copy_propagated_tempvars.clear();
     if (act->stateful_calls.empty())
         return false;
 
@@ -1313,21 +1314,31 @@ bool StatefulAttachmentSetup::Scan::preorder(const IR::MAU::Action *act) {
         BUG_CHECK(prim->operands.size() >= 1, "Invalid primitive %s", prim);
         auto gref = prim->operands[0]->to<IR::GlobalRef>();
         BUG_CHECK(gref, "No object named %s", prim->operands[0]);
-        if (prim->operands.size() >= 2) {
-            if (auto *tv = prim->operands[1]->to<IR::TempVar>()) {
+
+        auto find_and_save_temp_var = [&](const IR::Expression *expr) {
+            if (auto *tv = expr->to<IR::TempVar>()) {
                 self.remove_tempvars.insert(tv->name);
+                self.copy_propagated_tempvars.insert(tv->name);
+            } else {
+                // it is possible to have a slice of TempVar as the operand for a SALU call.
+                if (auto *slice = expr->to<IR::Slice>()) {
+                    if (auto tv = slice->e0->to<IR::TempVar>()) {
+                        self.copy_propagated_tempvars.insert(tv->name);
+                    }
+                }
             }
+        };
+
+        if (prim->operands.size() >= 2) {
+            find_and_save_temp_var(prim->operands[1]);
             if (auto *c = prim->operands[1]->to<IR::BFN::ReinterpretCast>()) {
-                if (auto tv = c->expr->to<IR::TempVar>())
-                    self.remove_tempvars.insert(tv->name);
+                find_and_save_temp_var(c->expr);
             }
             if (auto *cc = prim->operands[1]->to<IR::Concat>()) {
                 std::vector<const IR::Expression *> possible_vars;
                 simpl_concat(possible_vars, cc);
                 for (auto expr : possible_vars) {
-                    auto tv = expr->to<IR::TempVar>();
-                    if (tv)
-                        self.remove_tempvars.insert(tv->name);
+                    find_and_save_temp_var(expr);
                 }
             }
         }
@@ -1342,7 +1353,7 @@ bool StatefulAttachmentSetup::Scan::preorder(const IR::MAU::Instruction *) {
 }
 
 bool StatefulAttachmentSetup::Scan::preorder(const IR::TempVar *tv) {
-    if (self.remove_tempvars.count(tv->name))
+    if (self.copy_propagated_tempvars.count(tv->name))
         self.saved_tempvar = tv;
     return true;
 }
@@ -1354,8 +1365,13 @@ bool StatefulAttachmentSetup::Scan::preorder(const IR::MAU::HashDist *hd) {
 
 void StatefulAttachmentSetup::Scan::postorder(const IR::MAU::Instruction *instr) {
     if (self.saved_tempvar && self.saved_hashdist) {
-        self.stateful_alu_from_hash_dists[self.saved_tempvar->name] = self.saved_hashdist;
-        self.remove_instr.insert(instr); }
+        if (self.copy_propagated_tempvars.count(self.saved_tempvar->name)) {
+            self.stateful_alu_from_hash_dists[self.saved_tempvar->name] = self.saved_hashdist;
+        }
+        if (self.remove_tempvars.count(self.saved_tempvar->name)) {
+            self.remove_instr.insert(instr);
+        }
+    }
 }
 
 void StatefulAttachmentSetup::Scan::postorder(const IR::MAU::Primitive *prim) {
@@ -1468,8 +1484,20 @@ const IR::MAU::HashDist *StatefulAttachmentSetup::find_hash_dist(const IR::Expre
     const IR::MAU::HashDist *hd = expr->to<IR::MAU::HashDist>();
     if (!hd) {
         auto tv = expr->to<IR::TempVar>();
+        const IR::Slice* slice = nullptr;
+
+        if (!tv) {
+            if ((slice = expr->to<IR::Slice>())) {
+                tv = slice->e0->to<IR::TempVar>();
+            }
+        }
         if (tv != nullptr && stateful_alu_from_hash_dists.count(tv->name)) {
             hd = stateful_alu_from_hash_dists.at(tv->name);
+            if (slice) {
+                // If a slice of TempVar is used, then create a slice of HashGenExpression
+                auto *new_slice = MakeSlice(hd->expr, slice->getL(), slice->getH());
+                return new IR::MAU::HashDist(hd->srcInfo, new_slice);
+            }
         } else if (phv.field(expr)) {
             hd = create_hash_dist(expr, prim); } }
     return hd;
@@ -1535,7 +1563,6 @@ void StatefulAttachmentSetup::Scan::setup_index_operand(const IR::Expression *in
 
     bool both_hash_and_index = false;
     auto index_check = std::make_pair(synth2port, tbl);
-
     if (auto hd = self.find_hash_dist(simpl_expr, call->prim)) {
         HashDistKey hdk = std::make_pair(synth2port, tbl);
         if (self.update_hd.count(hdk)) {

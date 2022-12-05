@@ -222,6 +222,7 @@ class StatefulAttachmentSetup : public PassManager {
     typedef std::pair<const IR::MAU::AttachedMemory *, const IR::MAU::Table *> HashDistKey;
     typedef std::pair<const IR::MAU::StatefulCall *, const IR::MAU::Table*> StatefulCallKey;
     ordered_set<cstring> remove_tempvars;
+    ordered_set<cstring> copy_propagated_tempvars;
     ordered_set<const IR::Node *> remove_instr;
     ordered_map<cstring, const IR::MAU::HashDist *> stateful_alu_from_hash_dists;
     ordered_map<HashDistKey, const IR::MAU::HashDist *> update_hd;
@@ -243,6 +244,7 @@ class StatefulAttachmentSetup : public PassManager {
 
     profile_t init_apply(const IR::Node *root) override {
         remove_tempvars.clear();
+        copy_propagated_tempvars.clear();
         remove_instr.clear();
         stateful_alu_from_hash_dists.clear();
         update_hd.clear();
