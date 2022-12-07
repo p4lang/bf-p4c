@@ -349,14 +349,15 @@ BFN_Options::BFN_Options() {
             return true; },
          "DEPRECATED. Use the pa_quick_phv_alloc annotation instead. "
          "Reduce PHV allocation search space for faster compilation");
-#if BAREFOOT_INTERNAL
+#if 1 || BAREFOOT_INTERNAL
     registerOption("--alt-phv-alloc", nullptr,
         [this](const char *) { alt_phv_alloc = true; return true; },
          "Alternate PHV allocation ordering (trivial alloc before table placement, "
-         "real allocation after)");
+         "real allocation after)", OptionFlags::Hide);
     registerOption("--alt-phv-alloc-meta-init", nullptr,
         [this](const char *) { alt_phv_alloc_meta_init = true; return true; },
-         "Enable Metadata Initialization for alternative PHV allocation ordering(--alt-phv-alloc)");
+         "Enable Metadata Initialization for alternative PHV allocation ordering(--alt-phv-alloc)",
+         OptionFlags::Hide);
 #endif
     registerOption("--traffic-limit", "arg",
         [this](const char* arg) {
