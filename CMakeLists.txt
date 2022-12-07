@@ -1,5 +1,5 @@
 ####### Barefoot Compilers Toolchain
-cmake_minimum_required (VERSION 3.0.2 FATAL_ERROR)
+cmake_minimum_required (VERSION 3.16.3 FATAL_ERROR)
 
 find_program(CCACHE_PROGRAM ccache)
 if(CCACHE_PROGRAM)
@@ -21,13 +21,11 @@ OPTION(ENABLE_WERROR "Treat build warnings as errors" ON)
 OPTION(FIXED_LIBDYNHASH "Use future version of the Dynamic hash library" OFF)
 OPTION(INSTALL_LIBDYNHASH "Install the Dynamic hash library" OFF)
 OPTION(ENABLE_ALT_PHV_ALLOC "Enable the alternative PHV allocator" OFF)
-
-# BUILD_STATIC_BFP4C_LIBS should never be used directly, see BUILD_STATIC_BFP4C_LIBS_INTERNAL below
 OPTION(BUILD_STATIC_BFP4C_LIBS OFF "Build static libs (archives) of bf-p4c components \
                               (tofinobackend, bfn_p4runtime) for external usage. If not set, the \
                               libraries are build only as object and cannot be used easily by \
                               other projects compiled alongside. Building static libraries slows \
-                              down compilation. Using CMake < 3.12 forces this to ON.")
+                              down compilation.")
 
 if (ENABLE_JBAY)
   add_definitions("-DHAVE_JBAY=1")
@@ -37,17 +35,6 @@ if (ENABLE_CLOUDBREAK)
 endif()
 if (ENABLE_FLATROCK)
   add_definitions("-DHAVE_FLATROCK=1")
-endif()
-
-# CMake < 3.12 will not work with OBJLIBs so we will need to build static libs regardless of the
-# user's intent. However, we want to keep the option set as intended by the user so it will start
-# working with newer cmake (and so that we don't need to override the OPTION).
-set(BUILD_STATIC_BFP4C_LIBS_INTERNAL ${BUILD_STATIC_BFP4C_LIBS})
-if(NOT BUILD_STATIC_BFP4C_LIBS_INTERNAL AND CMAKE_VERSION VERSION_LESS 3.12)
-    set(BUILD_STATIC_BFP4C_LIBS_INTERNAL ON)
-    message(WARNING "BUILD_STATIC_BFP4C_LIBS=OFF, but CMake ${CMAKE_VERSION} has insufficient support \
-                     for OBJLIB so static libraries will be build anyway (3.12 needed for this to \
-                     work")
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
@@ -64,18 +51,7 @@ if (ENABLE_STATIC_LIBS)
   set(Boost_USE_STATIC_RUNTIME OFF)
 endif()
 
-# We will be enabling C++17, but we need to support CMake 3.5. Luckily, even old
-# CMake can learn how to enable new standard. We assume here that the compiler
-# understands the -std=c++17 option as compilers that do not will not work
-# anyway.
-if (CMAKE_VERSION VERSION_LESS "3.8")
-    message(WARNING "Making old CMake support C++17")
-    set(CMAKE_CXX17_STANDARD_COMPILE_OPTION "-std=c++17")
-    set(CMAKE_CXX17_EXTENSION_COMPILE_OPTION "-std=gnu++17")
-endif()
-
-# enable C++17. Note that, as of now, there is also a hack in
-# bf-p4c/CMakeLists.txt to undo the setting of C++11 in p4c
+# enable C++17
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # set this explicitly for clarity, at this point, bfas uses ##__VA_ARGS__ which

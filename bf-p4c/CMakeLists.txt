@@ -2,19 +2,6 @@
 
 MESSAGE("-- Adding p4c-barefoot")
 
-# enable C++17
-# this is a bit hacky -- for now, p4c sets C++ standard to 11 using the CMake
-# global variable designed for this purpose. This means that C++ standard
-# possibly set in bf-p4c top-level cmake (the one that includes p4c) would be
-# overwritten by p4c's setting. Therefore, we change the value here. But we also
-# need to make sure that p4c (or at least the parts that include bf-p4c
-# components such as frontend and IR) get built with C++17. For this reason, we
-# have to set the standard also in the PARENT_SCOPE, meaning the p4c cmake that
-# included this cmake. Setting in PARENT_SCOPE does not change value here, so we
-# need to do the setting twice.
-set(CMAKE_CXX_STANDARD 17 PARENT_SCOPE)
-set(CMAKE_CXX_STANDARD 17)
-
 # An option to configure the chunk size we use for unified builds in bf-p4c. By
 # default, this is tuned to use smaller chunks than the p4c repo uses. The goal
 # is to gain most of the benefit of unified builds when many files change, while
@@ -1049,7 +1036,7 @@ set (P4C_BAREFOOT_SRCS
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${P4C_BAREFOOT_SRCS}")
 build_unified(P4C_BAREFOOT_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
-if(BUILD_STATIC_BFP4C_LIBS_INTERNAL)
+if(BUILD_STATIC_BFP4C_LIBS)
     add_library(tofinobackend STATIC ${BF_P4C_SOURCES})
 else()
     add_library(tofinobackend OBJECT ${BF_P4C_SOURCES})
@@ -1057,7 +1044,7 @@ endif()
 add_dependencies(tofinobackend genIR genLogging bfn_p4runtime)
 target_include_directories(tofinobackend PRIVATE "${BFN_P4C_SOURCE_DIR}/third_party/spdlog/include")
 
-if(BUILD_STATIC_BFP4C_LIBS_INTERNAL)
+if(BUILD_STATIC_BFP4C_LIBS)
     add_library(bfp4c STATIC ${P4C_BAREFOOT_SRCS})
 else()
     # For objlib there is no way (as far as I know) to encompass smaller libraries (namely adding
@@ -1114,7 +1101,7 @@ target_include_directories(bfp4c
   INTERFACE ${CMAKE_SOURCE_DIR}/third_party/spdlog/include
 )
 
-if(BUILD_STATIC_BFP4C_LIBS_INTERNAL)
+if(BUILD_STATIC_BFP4C_LIBS)
     add_executable(p4c-barefoot p4c-barefoot.cpp)
     # --whole-archive prevents the linker from removing unused symbols
     #
@@ -1447,7 +1434,7 @@ add_custom_command(
   COMMENT "Generating protobuf files for p4info."
   )
 
-if(BUILD_STATIC_BFP4C_LIBS_INTERNAL)
+if(BUILD_STATIC_BFP4C_LIBS)
     add_library(bfn_p4runtime STATIC ${BFN_P4RUNTIME_INFO_GEN_SRCS})
 else()
     add_library(bfn_p4runtime OBJECT ${BFN_P4RUNTIME_INFO_GEN_SRCS})
@@ -1646,7 +1633,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/utils/super_cluster_builder.cpp
     ${BF_P4C_GRAPHS_SRCS}
     )
-  if (NOT BUILD_STATIC_BFP4C_LIBS_INTERNAL)
+  if (NOT BUILD_STATIC_BFP4C_LIBS)
       # objlibs cannot be linked, need to add objects here explicitly
       set (GTEST_BF_P4C_SOURCES ${GTEST_BF_P4C_SOURCES}
                                 $<TARGET_OBJECTS:tofinobackend> $<TARGET_OBJECTS:bfn_p4runtime>)
