@@ -253,6 +253,9 @@ struct Memories : public ::Memories {
         int match_RAMs              = 0;
         int tind_tables             = 0;
         int tind_RAMs               = 0;
+        int action_tables           = 0;
+        int action_bus_min          = 0;
+        int action_RAMs             = 0;
         int ternary_tables          = 0;
         int ternary_TCAMs           = 0;
         int no_match_tables         = 0;
@@ -263,7 +266,7 @@ struct Memories : public ::Memories {
         }
 
         int total_RAMs() const {
-            return match_RAMs + tind_RAMs;
+            return match_RAMs + action_RAMs + tind_RAMs;
         }
 
         int columns(int RAMs) const { return (RAMs + STM_COLS_PER_STAGE - 1) / STM_COLS_PER_STAGE; }
@@ -488,12 +491,12 @@ struct Memories : public ::Memories {
     safe_vector<table_alloc *>       tables;
     safe_vector<table_alloc *>       exact_tables;
     safe_vector<SRAM_group *>        exact_match_ways;
-    safe_vector<table_alloc *>       gw_tables;
     safe_vector<table_alloc *>       no_match_hit_tables;
-    safe_vector<table_alloc *>       no_match_miss_tables;
     safe_vector<table_alloc *>       ternary_tables;
     safe_vector<table_alloc *>       tind_tables;
     safe_vector<SRAM_group *>        tind_groups;
+    safe_vector<table_alloc *>       action_tables;
+    safe_vector<SRAM_group *>        action_groups;
     safe_vector<table_alloc *>       tind_result_bus_tables;
 
     int allocation_count = 0;
@@ -507,7 +510,7 @@ struct Memories : public ::Memories {
     void calculate_entries();
     bool single_allocation_balance(unsigned row);
     bool allocate_all_exact(unsigned column_mask);
-    bool allocate_all_no_match_miss();
+    bool allocate_all_actiondata(unsigned column_mask);
     safe_vector<int> way_size_calculator(int ways, int RAMs_needed);
     safe_vector<std::pair<int, int>> available_SRAMs_per_row(unsigned mask, SRAM_group *group,
                                                              int width_sect);

@@ -75,6 +75,10 @@ bool TableFormat::allocate_match_with_algorithm(int group) {
         allocate_full_fits(width_sect, group);
     }
 
+#if 0
+    // Flatrock search busses are tied to the XMUs, so there's no need to "allocate"
+    // them
+    //
     // Determine if everything is fully allocated
     safe_vector<int> search_bus_alloc(match_ixbar->search_buses_single(), 0);
     for (int width_sect = 0; width_sect < layout_option.way.width; width_sect++) {
@@ -83,6 +87,7 @@ bool TableFormat::allocate_match_with_algorithm(int group) {
             continue;
         search_bus_alloc[search_bus] += full_match_groups_per_RAM[width_sect];
     }
+#endif
     return true;
 }
 

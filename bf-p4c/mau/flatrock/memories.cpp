@@ -39,11 +39,10 @@ UniqueId Memories::table_alloc::build_unique_id(const IR::MAU::AttachedMemory *a
 /**
  * The memuse map holds the allocation of each table that has RAM array requirements.
  * These include:
- *     RAMs/buses dedicated to match data
- *     RAMs/buses dedicated to any of the BackendAttached Objects
+ *     RAMs dedicated to match data
+ *     RAMs dedicated to any of the BackendAttached Objects
  *         - These can exist from the P4 program: (i.e. counter, meter)
  *         - These can be implied by requirements (i.e. direct action data, ternary indirect)
- *     gateways/buses for the gateways
  *
  * The key in the memuse map refers to a unique one of these objects, and the key is then
  * used to build a unique name for the assembly file.
@@ -182,6 +181,8 @@ void Memories::clear_table_vectors() {
     ternary_tables.clear();
     tind_tables.clear();
     tind_groups.clear();
+    action_tables.clear();
+    action_groups.clear();
     tind_result_bus_tables.clear();
 }
 
@@ -226,48 +227,6 @@ void Memories::add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
     }
 }
 
-/** This allocates all tables that currently take the miss path information.  The miss path
- *  is how action data information can be configured by runtime.  This would be necessary
- *  if multiple actions are needed/action data is changeable.  Just reserved a result bus
- *  for the time being.
- */
-bool Memories::allocate_all_no_match_miss() {
-    // FIXME: Currently the assembler supports exact match to make calls to immediate here,
-    // so this is essentially what I'm doing.  More discussion is needed with the driver
-    // team in order to determine if this is correct, or if this has to go through ternary and
-    // tind tables
-    size_t no_match_tables_allocated = 0;
-    for (auto *ta : no_match_miss_tables) {
-        for (auto u_id : ta->allocation_units(nullptr, false, UniqueAttachedId::TIND_PP)) {
-            auto &alloc = (*ta->memuse)[u_id];
-            alloc.type = Use::TIND;
-            alloc.used_by = ta->table->externalName();
-            bool found = false;
-            for (int i = 0; i < SRAM_ROWS; i++) {
-                for (int j = 0; j < BUS_COUNT && j < PAYLOAD_COUNT; j++) {
-                    // if (payload_use[i][j]) continue;
-                    // if (tind_bus[i][j]) continue;
-                    alloc.row.emplace_back(i, j);
-                    alloc.row.back().result_bus = j;
-                    // tind_bus[i][j] = u_id.build_name();
-                    // payload_use[i][j] = u_id.build_name();
-                    found = true;
-                    break;
-                }
-                if (found) break;
-            }
-
-            if (!found) {
-                failure_reason = "failed to place no match miss " + u_id.build_name();
-                LOG5(failure_reason);
-                return false;
-            } else {
-                no_match_tables_allocated++; }
-        }
-    }
-    return true;
-}
-
 /** Due to gateways potentially requiring search buses that could may be used
  *  by exact match tables, the memories allocation can be run multiple times.  The difference
  *  factor would be the total number of RAMs per row exact match tables can be allocated to.
@@ -277,9 +236,13 @@ bool Memories::allocate_all_no_match_miss() {
  *  The algorithm is making a trade-off between search buses, and balance for other tables
  *  such as tind, synth2port, and action tables later.
  */
-bool Memories::single_allocation_balance(unsigned row) {
+bool Memories::single_allocation_balance(unsigned column_mask) {
     LOG3("Allocating all exact tables");
-    if (!allocate_all_exact(row))
+    if (!allocate_all_exact(column_mask))
+        return false;
+
+    LOG3("Allocating all action data tables");
+    if (!allocate_all_actiondata(column_mask))
         return false;
 
     LOG3(" Allocating all ternary tables");
@@ -289,11 +252,6 @@ bool Memories::single_allocation_balance(unsigned row) {
 
     LOG3(" Allocating all ternary indirect tables");
     if (!allocate_all_tind()) {
-        return false;
-    }
-
-    LOG3("Allocate all no match miss");
-    if (!allocate_all_no_match_miss()) {
         return false;
     }
 
@@ -311,20 +269,16 @@ bool Memories::allocate_all() {
         if (!failure_reason) failure_reason = "analyze_tables failed";
         return false;
     }
-    unsigned row = 0x1F;  // Set all 5 columns within a stage
+    unsigned column_mask = 0x1F;  // Set all 5 columns within a stage
+                                  // FIXME -- there's 2 rams per 'unit', so should this be 0x3ff?
     bool finished = false;
     calculate_entries();
 
-    do {
-        clear_uses();
-        clear_allocation();
-        if (single_allocation_balance(row)) {
-            finished = true;
-        }
-
-        if (!finished)
-            LOG2(" Increasing balance");
-    } while (bitcount(row) < SRAM_COLUMNS && !finished);
+    clear_uses();
+    clear_allocation();
+    if (single_allocation_balance(column_mask)) {
+        finished = true;
+    }
 
     LOG3_UNINDENT;
     if (!finished) {
@@ -370,6 +324,23 @@ class SetupAttachedTables : public MauInspector {
             }
         }
 
+        if (ta->layout_option->layout.direct_ad_required()) {
+            for (auto u_id : ta->allocation_units(nullptr, false, UniqueAttachedId::ADATA_PP)) {
+                auto &alloc = (*ta->memuse)[u_id];
+                alloc.type = Memories::Use::ACTIONDATA;
+                alloc.used_by = ta->table->externalName();
+                if (ta->layout_option->layout.pre_classifier)
+                    alloc.used_by += "_preclassifier";
+                alloc.used_by += "$action";
+
+                mi.action_tables++;
+            }
+            mem.action_tables.push_back(ta);
+            int width = 1;
+            int per_row = ActionDataPerWord(&ta->layout_option->layout, &width);
+            int depth = mem.mems_needed(entries, Memories::SRAM_DEPTH, per_row);
+            mi.action_bus_min += width; mi.action_RAMs += depth * width;
+        }
         return rv;
     }
 
@@ -418,7 +389,6 @@ bool Memories::analyze_tables(mem_info &mi) {
                 mi.logical_tables++;
             }
             (*ta->memuse)[unique_id].type = Use::GATEWAY;
-            gw_tables.push_back(ta);
             LOG4("Gateway table for " << ta->table->name);
             if (any_of(Values(ta->attached_entries),
                        [](attached_entries_element_t ent){ return ent.entries > 0; })) {
@@ -445,7 +415,7 @@ bool Memories::analyze_tables(mem_info &mi) {
                 set_logical_memuse_type(ta, Use::TERNARY);
                 // In order to potentially provide potential sizes for attached tables,
                 // must at least have a size of 1
-                no_match_miss_tables.push_back(ta);
+                BUG("flatrock does not support no-match-miss tables");
             }
             mi.no_match_tables++;
         } else if (!table->layout.ternary) {
@@ -464,17 +434,7 @@ bool Memories::analyze_tables(mem_info &mi) {
            mi.ternary_tables += ta->layout_option->logical_tables();
            mi.logical_tables += ta->layout_option->logical_tables();
            int bytes = table->layout.match_bytes;
-           int TCAMs_needed = 0;
-           while (bytes > 11) {
-               bytes -= 11;
-               TCAMs_needed += 2;
-           }
-
-           if (bytes > 6)
-               TCAMs_needed += 2;
-           else
-               TCAMs_needed += 1;
-
+           int TCAMs_needed = (bytes + 4)/5;
            int depth = mems_needed(entries, TCAM_DEPTH, 1);
            mi.ternary_TCAMs += TCAMs_needed * depth;
         }
@@ -528,12 +488,6 @@ void Memories::calculate_entries() {
         BUG_CHECK(ta->allocation_units().size() == size_t(ta->layout_option->logical_tables()),
                   "Logical table mismatch on %s", ta->table->name);
         ta->calc_entries_per_uid.resize(ta->layout_option->logical_tables(), ta->provided_entries);
-    }
-
-    for (auto ta : no_match_miss_tables) {
-        BUG_CHECK(ta->allocation_units().size() == size_t(ta->layout_option->logical_tables()),
-                  "Logical table mismatch on %s", ta->table->name);
-        ta->calc_entries_per_uid.resize(ta->layout_option->logical_tables(), 1);
     }
 }
 
@@ -832,6 +786,20 @@ bool Memories::allocate_all_exact(unsigned column_mask) {
                     LOG4(ram.first << ", " << ram.second);
                 }
                 wayno++;
+            }
+        }
+    }
+    return true;
+}
+
+bool Memories::allocate_all_actiondata(unsigned column_mask) {
+    for (auto *ta : action_tables) {
+        for (auto u_id : ta->allocation_units(nullptr, false, UniqueAttachedId::ADATA_PP)) {
+            LOG4("Action data table for: " << u_id.build_name() << " col=0x" << hex(column_mask));
+            auto alloc = (*ta->memuse)[u_id];
+            for (auto row : alloc.row) {
+                LOG4("Row is " << row.row << " and bus is " << row.bus);
+                LOG4("Col is " << row.col);
             }
         }
     }
@@ -1283,6 +1251,11 @@ void Memories::visitUse(const Use &alloc, std::function<void(cstring &, update_t
         use = &sram_use;
         inuse = sram_inuse;
         bus = &tind_bus;
+        break;
+    case Use::ACTIONDATA:
+        use = &sram_use;
+        inuse = sram_inuse;
+        //  bus = &sram_print_result_bus;
         break;
     default:
         BUG("Unhandled memory use type %d in visit", alloc.type); }
