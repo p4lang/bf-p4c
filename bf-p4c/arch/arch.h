@@ -33,8 +33,70 @@
 
 namespace BFN {
 
-/** \ingroup ArchTranslation */
-enum class ARCH { TNA, T2NA, PSA, V1MODEL };
+// An Inspector pass to extract @pkginfo annotation from the P4 program
+class Architecture : public Inspector {
+ public:
+    enum Arch_t {
+        TNA, T2NA, T3NA,
+#if HAVE_FLATROCK
+        T5NA,
+#endif
+        PSA, V1MODEL,
+        UNKNOWN
+        };
+
+ private:
+    inline static Arch_t architecture = Arch_t::UNKNOWN;
+    inline static cstring version = "UNKNOWN";
+    inline static bool disabled_for_gtest = false;
+    bool found = false;
+
+ public:
+    Architecture() { }
+    profile_t init_apply(const IR::Node* node) override {
+        found = false;
+        return Inspector::init_apply(node); }
+    void end_apply() override {
+        if (disabled_for_gtest) return;
+        BUG_CHECK(found != false, "No @pkginfo annotation found in the program"); }
+    bool preorder(const IR::PackageBlock* pkg) override;
+    static Arch_t toArchEnum(cstring arch) {
+        if (arch == "TNA" || arch == "tna") return Arch_t::TNA;
+        else if (arch == "T2NA" || arch == "t2na") return Arch_t::T2NA;
+        else if (arch == "T3NA" || arch == "t3na") return Arch_t::T3NA;
+#if HAVE_FLATROCK
+        else if (arch == "T5NA" || arch == "t5na") return Arch_t::T5NA;
+#endif
+        else
+            return Arch_t::UNKNOWN;
+    }
+
+    static Arch_t currentArchitecture() { return architecture; }
+    static cstring currentArchitectureVersion() { return version; }
+
+    // for gtest
+    static void init(cstring arch) { architecture = toArchEnum(arch); disabled_for_gtest = true; }
+};
+
+struct FindArchitecture : public PassManager {
+    P4::ReferenceMap    refMap;
+    P4::TypeMap         typeMap;
+
+    FindArchitecture() {
+        refMap.setIsV1(true);
+        auto typeChecking = new P4::TypeChecking(&refMap, &typeMap);
+        auto* evaluator = new P4::EvaluatorPass(&refMap, &typeMap);
+        passes.emplace_back(typeChecking);
+        passes.emplace_back(evaluator);
+        passes.emplace_back(new VisitFunctor([evaluator]() {
+            auto toplevel = evaluator->getToplevelBlock();
+            auto main = toplevel->getMain();
+            ERROR_CHECK(main != nullptr, ErrorType::ERR_INVALID,
+                        "program: does not instantiate `main`");
+            main->apply(*new Architecture());
+        }));
+    }
+};
 
 /**
  * \ingroup ArchTranslation
@@ -121,8 +183,9 @@ enum ArchBlock_t {
     BLOCK_TYPE
 };
 
-static const std::map<cstring, std::map<std::pair<ArchBlock_t, gress_t>, int> > archBlockIndex = {
-    { "TNA", {
+static const std::map<Architecture::Arch_t,
+                      std::map<std::pair<ArchBlock_t, gress_t>, int> > archBlockIndex = {
+    { Architecture::TNA, {
         { { PARSER, INGRESS }, 0 },
         { { MAU, INGRESS }, 1 },
         { { DEPARSER, INGRESS }, 2 },
@@ -130,7 +193,7 @@ static const std::map<cstring, std::map<std::pair<ArchBlock_t, gress_t>, int> > 
         { { MAU, EGRESS }, 4 },
         { { DEPARSER, EGRESS }, 5 }
     } },
-    { "T2NA", {
+    { Architecture::T2NA, {
         { { PARSER, INGRESS }, 0 },
         { { MAU, INGRESS }, 1 },
         { { DEPARSER, INGRESS }, 2 },
@@ -139,7 +202,7 @@ static const std::map<cstring, std::map<std::pair<ArchBlock_t, gress_t>, int> > 
         { { DEPARSER, EGRESS }, 5 },
         { { MAU, GHOST }, 6 }
     } },
-    { "T3NA", {
+    { Architecture::T3NA, {
         { { PARSER, INGRESS }, 0 },
         { { MAU, INGRESS }, 1 },
         { { DEPARSER, INGRESS }, 2 },
@@ -147,14 +210,17 @@ static const std::map<cstring, std::map<std::pair<ArchBlock_t, gress_t>, int> > 
         { { MAU, EGRESS }, 4 },
         { { DEPARSER, EGRESS }, 5 },
         { { MAU, GHOST }, 6 }
-    } },
-    { "T5NA", {
+    } }
+#if HAVE_FLATROCK
+    , { Architecture::T5NA, {
         { { PARSER, INGRESS }, 0 },
         { { MAU, INGRESS }, 1 },
         { { MAU, EGRESS }, 2 },
         { { DEPARSER, EGRESS }, 3 },
         { { MAU, GHOST }, 4 }
-    } } };
+    } }
+#endif
+};
 
 /** \ingroup ArchTranslation */
 struct BlockInfo {
@@ -166,44 +232,42 @@ struct BlockInfo {
     /// which port to configure using this impl.
     std::vector<int> portmap;
     /// A block could be a parser, deparser or a mau.
-    ArchBlock_t      type;
-    /// arch specified name for the block
-    cstring          arch;
+    ArchBlock_t      block_type;
     /// used by multi-parser support
     cstring          parser_instance_name;
+    /// Index of the constructor
     int              block_index;
 
-    BlockInfo(int pi, cstring pn, gress_t gress, ArchBlock_t type, cstring arch,
+    BlockInfo(int pipe_index, cstring pipe_name, gress_t gress, ArchBlock_t block_type,
               cstring parser_inst = "")
-        : pipe_index(pi),
-          pipe_name(pn),
+        : pipe_index(pipe_index),
+          pipe_name(pipe_name),
           gress(gress),
-          type(type),
-          arch(arch),
+          block_type(block_type),
           parser_instance_name(parser_inst) {
-        BUG_CHECK(archBlockIndex.count(arch) != 0,
-                    "Unknown architecture %1%", arch);
-        BUG_CHECK(archBlockIndex.at(arch).find({type, gress}) != archBlockIndex.at(arch).end(),
-                    "Unknown block type %1% for architecture %2%", type, arch);
-        block_index = archBlockIndex.at(arch).at({type, gress});
+        auto p4_arch = Architecture::currentArchitecture();
+        BUG_CHECK(archBlockIndex.count(p4_arch) != 0, "Unknown architecture %1%", p4_arch);
+        BUG_CHECK(archBlockIndex.at(p4_arch).find({block_type, gress}) !=
+                      archBlockIndex.at(p4_arch).end(),
+                  "Unknown block type %1% for architecture %2%", block_type, p4_arch);
+        block_index = archBlockIndex.at(p4_arch).at({block_type, gress});
     }
     void dbprint(std::ostream& out) {
         out << "pipe_index " << pipe_index << " ";
         out << "pipe_name" << pipe_name << " ";
         out << "gress " << gress << " ";
         out << "block_index" << block_index << " ";
-        out << "type " << type << " ";
-        out << "arch" << arch << std::endl;
+        out << "type " << block_type << std::endl;
     }
     bool operator==(const BlockInfo& other) const {
         return pipe_index == other.pipe_index && pipe_name == other.pipe_name &&
                gress == other.gress && block_index == other.block_index &&
-               type == other.type && arch == other.arch;
+               block_type == other.block_type;
     }
     bool operator<(const BlockInfo& other) const {
-        return std::tie(pipe_index, pipe_name, gress, block_index, type, arch) <
+        return std::tie(pipe_index, pipe_name, gress, block_index, block_type) <
                std::tie(other.pipe_index, other.pipe_name, other.gress,
-                        other.block_index, other.type, other.arch);
+                        other.block_index, other.block_type);
     }
 };
 
@@ -273,40 +337,6 @@ class ProgramPipelines {
 using BlockInfoMapping = std::multimap<const IR::Node*, BlockInfo>;
 /** \ingroup ArchTranslation */
 using DefaultPortMap = std::map<int, std::vector<int>>;
-
-// An Inspector pass to extract @pkginfo annotation from the P4 program
-class GetPkgInfo : public Inspector {
-    inline static cstring arch = "UNKNOWN";
-    inline static cstring version = "UNKNOWN";
-
- public:
-    bool found = false;
-    GetPkgInfo() { setName("GetPkgInfo"); }
-    profile_t init_apply(const IR::Node* node) override {
-        found = false;
-        return Inspector::init_apply(node); }
-    void end_apply() override {
-        BUG_CHECK(found != false, "No @pkginfo annotation found in the program"); }
-    bool preorder(const IR::PackageBlock* pkg) override;
-
-    static cstring getArch() { return arch; }
-    static cstring getVersion() { return version; }
-};
-
-struct CollectPkgInfo : public PassManager {
-    CollectPkgInfo(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
-        auto* evaluator = new P4::EvaluatorPass(refMap, typeMap);
-        passes.emplace_back(evaluator);
-        passes.emplace_back(new VisitFunctor([evaluator]() {
-            auto toplevel = evaluator->getToplevelBlock();
-            auto main = toplevel->getMain();
-            ERROR_CHECK(main != nullptr, ErrorType::ERR_INVALID,
-                        "program: does not instantiate `main`");
-            main->apply(*new GetPkgInfo());
-        }));
-        setName("CollectPkgInfo");
-    }
-};
 
 /** \ingroup ArchTranslation */
 class ParseTna : public Inspector {

@@ -337,9 +337,11 @@ static void reportStats_alwaysCallThisONCEshortlyBeforeExiting() {
     }
 
     cerr << endl;
-    cerr << "Number of P4 compiler-proper ERRORs: "   <<   error_count << endl;
-    cerr << "Number of P4 compiler-proper WARNINGs: " << warning_count << endl;
-    cerr << endl;
+    if (error_count > 0 || warning_count > 0) {
+        cerr << error_count << " error" << (error_count == 1 ? "" : "s") << ", " << warning_count
+             << " warning" << (warning_count == 1 ? "" : "s") << " generated." << endl;
+        cerr << endl;
+    }
 }  //  end of reporting procedure
 
 
@@ -402,6 +404,11 @@ int main(int ac, char **av) {
             return return_from_main_politely(INVOCATION_ERROR);
         }
     }
+
+    // Initialize Architecture::currentArchitecture() because this function
+    // maybe used in the runtime library or the constructor of midend passes
+    // it would be too late to run as part of the midend passes
+    program->apply(BFN::FindArchitecture());
 
     // If there was an error in the frontend, we are likely to end up
     // with an invalid program for serialization, so we bail out here.

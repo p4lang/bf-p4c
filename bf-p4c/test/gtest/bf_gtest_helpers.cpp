@@ -13,6 +13,7 @@
 #include "p4headers.h"
 #include "lib/exceptions.h"
 #include "lib/sourceCodeBuilder.h"
+#include "bf-p4c/arch/arch.h"
 #include "bf-p4c/common/bridged_packing.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/parse_annotations.h"
@@ -223,6 +224,45 @@ char marker_last_char(const std::string& blockMarker) {
     return 0;
 }
 
+std::string CoreP4() {
+    return R"(
+error {
+    NoError,           /// No error.
+    PacketTooShort,    /// Not enough bits in packet for 'extract'.
+    NoMatch,           /// 'select' expression has no matches.
+    StackOutOfBounds,  /// Reference to invalid element of a header stack.
+    HeaderTooShort,    /// Extracting too many bits into a varbit field.
+    ParserTimeout,     /// Parser execution time limit exceeded.
+    ParserInvalidArgument  /// Parser operation was called with a value
+                           /// not supported by the implementation.
+}
+
+extern packet_in {
+    void extract<T>(out T hdr);
+    void extract<T>(out T variableSizeHeader,
+                    in bit<32> variableFieldSizeInBits);
+    T lookahead<T>();
+    void advance(in bit<32> sizeInBits);
+    bit<32> length();
+}
+
+extern packet_out {
+    void emit<T>(in T hdr);
+}
+
+extern void verify(in bool check, in error toSignal);
+
+@noWarn("unused")
+action NoAction() {}
+
+match_kind {
+    exact,
+    ternary,
+    lpm
+}
+    )";
+}
+
 std::string TofinoMin() {
     return R"(
     typedef bit<9>  PortId_t;
@@ -423,10 +463,14 @@ TestCode::TestCode(Hdr header, std::string code,
     argv.push_back(nullptr);
     o.process(argv.size() - 1, argv.data());
     Device::init(o.target);
+    BFN::Architecture::init(o.arch);
 
     std::stringstream source;
     switch (header) {
         case Hdr::None:
+            break;
+        case Hdr::CoreP4:
+            source << CoreP4();
             break;
         case Hdr::TofinoMin:
             source << TofinoMin();
@@ -475,9 +519,10 @@ TestCode::TestCode(Hdr header, std::string code,
 std::string TestCode::min_control_shell() {return R"(
     %0%                                                 // Defines 'struct Headers'
     control TestIngress<H>(inout H hdr);
-    package TestPackage<H>(TestIngress<H> ig);
+    @pkginfo(arch="FOO", version="0.0.0")
+    package Switch<H>(TestIngress<H> ig);
     control testingress(inout Headers headers) {%1%}    // The control block
-    TestPackage(testingress()) main;)";}
+    Switch(testingress()) main;)";}
 
 
 std::string TestCode::tofino_shell() {return R"(
@@ -541,6 +586,7 @@ bool TestCode::apply_pass(Pass pass) {
             // The 'frontendPasses' are encapsulated in a run method, so we have to call that.
             program = P4::FrontEnd(BFN::ParseAnnotations())
                 .run(options, program, skip_side_effect_ordering);
+            // program->apply(*new BFN::FindArchitecture());
             return ::errorCount() == before;
         }
 
@@ -549,6 +595,7 @@ bool TestCode::apply_pass(Pass pass) {
             backend = nullptr;
             mauasm = nullptr;
             BFN::MidEnd midend{options};
+            program->apply(*new BFN::FindArchitecture());
             return apply_pass(midend);
         }
 

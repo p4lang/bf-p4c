@@ -185,6 +185,7 @@ class TestCode {
      *  2. Prune the dead code before you finish.
      */
     enum class Hdr {None,       // You need to provide the 'package' - see min_control_shell().
+                    CoreP4,     // The core.p4 package.
                     TofinoMin,  // For building an empty tofino_shell() - add only what you need.
                     Tofino1arch, Tofino2arch, Tofino3arch, Tofino5arch,  // The regular header files
                     V1model_2018, V1model_2020};  // The regular header files.

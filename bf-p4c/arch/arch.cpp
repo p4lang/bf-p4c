@@ -71,27 +71,33 @@ void Pipeline::insertPragmas(const std::vector<const IR::Annotation*>& all_pragm
 
 ArchTranslation::ArchTranslation(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
                                  BFN_Options& options) {
-    if (options.arch == "v1model") {
+    if (Architecture::currentArchitecture() == Architecture::V1MODEL) {
         passes.push_back(new BFN::SimpleSwitchTranslation(refMap, typeMap, options /*map*/));
-    } else if (options.arch == "tna") {
+    } else if (Architecture::currentArchitecture() == Architecture::TNA) {
         if (Device::currentDevice() == Device::TOFINO) {
             passes.push_back(new BFN::TnaArchTranslation(refMap, typeMap, options));
         }
         if (Device::currentDevice() == Device::JBAY) {
             ::warning("TNA architecture is not supported on a Tofino2 device."
                  "The compilation may produce wrong binary."
-                 "Consider invoking the compiler with --arch t2na.");
+                 "Consider adding #include \"t2na.p4\" in your program.");
+            passes.push_back(new BFN::T2naArchTranslation(refMap, typeMap, options));
+        }
+        if (Device::currentDevice() == Device::CLOUDBREAK) {
+            ::warning("TNA architecture is not supported on a Tofino3 device."
+                 "The compilation may produce wrong binary."
+                 "Consider adding #include \"t3na.p4\" in your program.");
             passes.push_back(new BFN::T2naArchTranslation(refMap, typeMap, options));
         }
 #if HAVE_FLATROCK
         if (Device::currentDevice() == Device::FLATROCK) {
             ::warning("TNA architecture is not supported on a Tofino5 device."
                  "The compilation may produce wrong binary."
-                 "Consider invoking the compiler with --arch t5na.");
+                 "Consider adding #include \"t5na.p4\" in your program.");
             passes.push_back(new BFN::T5naArchTranslation(refMap, typeMap, options));
         }
 #endif  /* HAVE_FLATROCK */
-    } else if (options.arch == "t2na") {
+    } else if (Architecture::currentArchitecture() == Architecture::T2NA) {
         if (Device::currentDevice() == Device::JBAY) {
             passes.push_back(new BFN::T2naArchTranslation(refMap, typeMap, options));
         }
@@ -99,38 +105,38 @@ ArchTranslation::ArchTranslation(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
         if (Device::currentDevice() == Device::CLOUDBREAK) {
             passes.push_back(new BFN::T2naArchTranslation(refMap, typeMap, options));
         }
-    } else if (options.arch == "t3na") {
+    } else if (Architecture::currentArchitecture() == Architecture::T3NA) {
         if (Device::currentDevice() == Device::CLOUDBREAK) {
             passes.push_back(new BFN::T2naArchTranslation(refMap, typeMap, options));
         }
 #endif
 #if HAVE_FLATROCK
-    } else if (options.arch == "t5na") {
+    } else if (Architecture::currentArchitecture() == Architecture::T5NA) {
         if (Device::currentDevice() == Device::FLATROCK) {
             passes.push_back(new BFN::T5naArchTranslation(refMap, typeMap, options));
         }
 #endif
-    } else if (options.arch == "psa") {
+    } else if (Architecture::currentArchitecture() == Architecture::PSA) {
         passes.push_back(new BFN::PortableSwitchTranslation(refMap, typeMap, options /*map*/));
     } else {
-        P4C_UNIMPLEMENTED("Cannot handle architecture %1%", options.arch);
+        P4C_UNIMPLEMENTED("Unknown architecture");
     }
 }
 
-bool GetPkgInfo::preorder(const IR::PackageBlock* pkg) {
+bool Architecture::preorder(const IR::PackageBlock* pkg) {
     if (pkg->type->name == "V1Switch") {
-        arch = "V1MODEL";
+        architecture = V1MODEL;
         version = "1.0.0";  // V1model arch does not have a version
         found = true;
     } else if (pkg->type->name == "PSA_Switch") {
-        arch = "PSA";
+        architecture = PSA;
         version = "1.0.0";  // PSA arch does not have versioning
         found = true;
     } else if (pkg->type->name == "Switch" || pkg->type->name == "MultiParserSwitch") {
         if (auto annot = pkg->type->getAnnotation(IR::Annotation::pkginfoAnnotation)) {
             for (auto kv : annot->kv) {
                 if (kv->name == "arch") {
-                    arch = kv->expression->to<IR::StringLiteral>()->value;
+                    architecture = toArchEnum(kv->expression->to<IR::StringLiteral>()->value);
                 } else if (kv->name == "version") {
                     version = kv->expression->to<IR::StringLiteral>()->value;
                 }
@@ -165,8 +171,7 @@ void ParseTna::parseSingleParserPipeline(const IR::PackageBlock* block, unsigned
                                                         pipeName, thread_i, INGRESS);
     } else {
         auto ingress_parser = block->getParameterValue("ingress_parser");
-        BlockInfo ingress_parser_block_info(index, pipeName, INGRESS, PARSER,
-                                            GetPkgInfo::getArch());
+        BlockInfo ingress_parser_block_info(index, pipeName, INGRESS, PARSER);
         BUG_CHECK(ingress_parser->is<IR::ParserBlock>(), "Expected ParserBlock");
         thread_i->parsers.push_back(ingress_parser->to<IR::ParserBlock>()->container);
         toBlockInfo.emplace(ingress_parser->to<IR::ParserBlock>()->container,
@@ -174,13 +179,12 @@ void ParseTna::parseSingleParserPipeline(const IR::PackageBlock* block, unsigned
     }
 
     auto ingress = block->getParameterValue("ingress");
-    BlockInfo ingress_mau_block_info(index, pipeName, INGRESS, MAU, GetPkgInfo::getArch());
+    BlockInfo ingress_mau_block_info(index, pipeName, INGRESS, MAU);
     thread_i->mau = ingress->to<IR::ControlBlock>()->container;
     toBlockInfo.emplace(ingress->to<IR::ControlBlock>()->container, ingress_mau_block_info);
 
     if (auto ingress_deparser = block->findParameterValue("ingress_deparser")) {
-        BlockInfo ingress_deparser_block_info(index, pipeName, INGRESS, DEPARSER,
-                                              GetPkgInfo::getArch());
+        BlockInfo ingress_deparser_block_info(index, pipeName, INGRESS, DEPARSER);
         thread_i->deparser = ingress_deparser->to<IR::ControlBlock>()->container;
         toBlockInfo.emplace(ingress_deparser->to<IR::ControlBlock>()->container,
                             ingress_deparser_block_info);
@@ -194,8 +198,7 @@ void ParseTna::parseSingleParserPipeline(const IR::PackageBlock* block, unsigned
         }
     } else {
         if (auto egress_parser = block->findParameterValue("egress_parser")) {
-            BlockInfo egress_parser_block_info(index, pipeName, EGRESS, PARSER,
-                                               GetPkgInfo::getArch());
+            BlockInfo egress_parser_block_info(index, pipeName, EGRESS, PARSER);
             thread_e->parsers.push_back(egress_parser->to<IR::ParserBlock>()->container);
             toBlockInfo.emplace(egress_parser->to<IR::ParserBlock>()->container,
                                 egress_parser_block_info);
@@ -204,12 +207,12 @@ void ParseTna::parseSingleParserPipeline(const IR::PackageBlock* block, unsigned
 
     auto egress = block->getParameterValue("egress");
     thread_e->mau = egress->to<IR::ControlBlock>()->container;
-    BlockInfo egess_mau_block_info(index, pipeName, EGRESS, MAU, GetPkgInfo::getArch());
+    BlockInfo egess_mau_block_info(index, pipeName, EGRESS, MAU);
     toBlockInfo.emplace(egress->to<IR::ControlBlock>()->container, egess_mau_block_info);
 
     auto egress_deparser = block->getParameterValue("egress_deparser");
     thread_e->deparser = egress_deparser->to<IR::ControlBlock>()->container;
-    BlockInfo egress_deparser_block_info(index, pipeName, EGRESS, DEPARSER, GetPkgInfo::getArch());
+    BlockInfo egress_deparser_block_info(index, pipeName, EGRESS, DEPARSER);
     toBlockInfo.emplace(egress_deparser->to<IR::ControlBlock>()->container,
                         egress_deparser_block_info);
 
@@ -218,8 +221,7 @@ void ParseTna::parseSingleParserPipeline(const IR::PackageBlock* block, unsigned
         auto ghost_cb = ghost->to<IR::ControlBlock>()->container;
         thread_g = new IR::BFN::P4Thread();
         thread_g->mau = ghost_cb;
-        toBlockInfo.emplace(ghost_cb, BlockInfo(index, pipeName, GHOST, MAU,
-                                                GetPkgInfo::getArch()));
+        toBlockInfo.emplace(ghost_cb, BlockInfo(index, pipeName, GHOST, MAU));
     }
 
     Pipeline pipeline(pipeName, thread_i, thread_e, thread_g);
@@ -263,7 +265,7 @@ void ParseTna::parseMultipleParserInstances(const IR::PackageBlock* block,
             archName = decl->controlPlaneName();
         archName = p ? archName + "." + p->name : "";
 
-        BlockInfo block_info(index, pipe, gress, PARSER, GetPkgInfo::getArch(), archName);
+        BlockInfo block_info(index, pipe, gress, PARSER, archName);
         if (map.count(index) != 0)
             block_info.portmap.insert(block_info.portmap.end(),
                     map[index].begin(), map[index].end());
@@ -363,16 +365,16 @@ const IR::Node* DoRewriteControlAndParserBlocks::postorder(IR::P4Control *node) 
         const auto* nType = new IR::Type_Control(type->srcInfo, name, type->annotations,
                                                  type->typeParameters, type->applyParams);
         const IR::Node* tnaBlock = nullptr;
-        if (blockinfo.type == ArchBlock_t::MAU) {
+        if (blockinfo.block_type == ArchBlock_t::MAU) {
             tnaBlock = new IR::BFN::TnaControl(node->srcInfo, name, nType, node->constructorParams,
                                                node->controlLocals, node->body, {}, blockinfo.gress,
                                                blockinfo.pipe_name);
-        } else if (blockinfo.type == ArchBlock_t::DEPARSER) {
+        } else if (blockinfo.block_type == ArchBlock_t::DEPARSER) {
             tnaBlock = new IR::BFN::TnaDeparser(node->srcInfo, name, nType, node->constructorParams,
                                                 node->controlLocals, node->body, {},
                                                 blockinfo.gress, blockinfo.pipe_name);
         } else {
-            BUG("Unexpected block type %1%, should be MAU or DEPARSER", blockinfo.type);
+            BUG("Unexpected block type %1%, should be MAU or DEPARSER", blockinfo.block_type);
         }
         block_name_map.emplace(std::make_pair(blockinfo.pipe_name, blockinfo.block_index), name);
         tnaBlocks->push_back(tnaBlock);
@@ -432,7 +434,7 @@ const IR::Node* RestoreParams::postorder(IR::BFN::TnaControl* control) {
         add_param(tnaParams, params, newParams, "ig_md", 1);
         add_param(tnaParams, params, newParams, "ig_intr_md", 2);
 #if HAVE_FLATROCK
-        if (GetPkgInfo::getArch() == "T5NA") {
+        if (Architecture::currentArchitecture() == Architecture::T5NA) {
             add_param(tnaParams, params, newParams, "ig_intr_md_for_tm", 3,
                      "ingress_intrinsic_metadata_for_tm_t", IR::Direction::InOut);
         } else {
@@ -451,7 +453,8 @@ const IR::Node* RestoreParams::postorder(IR::BFN::TnaControl* control) {
             // with flags such as --target tofino2 --arch t2na.  In this case,
             // the ghost intrinsic metadata should not be present because the
             // program includes 'tna.p4', instead of 't2na.p4'
-            if (GetPkgInfo::getArch() == "T2NA" || GetPkgInfo::getArch() == "T3NA") {
+            if (Architecture::currentArchitecture() == Architecture::T2NA ||
+                Architecture::currentArchitecture() == Architecture::T3NA) {
                 add_param(tnaParams, params, newParams, "gh_intr_md", 6,
                           "ghost_intrinsic_metadata_t", IR::Direction::In);
             }
@@ -463,7 +466,7 @@ const IR::Node* RestoreParams::postorder(IR::BFN::TnaControl* control) {
         add_param(tnaParams, params, newParams, "eg_md", 1);
         add_param(tnaParams, params, newParams, "eg_intr_md", 2);
 #if HAVE_FLATROCK
-        if (GetPkgInfo::getArch() == "T5NA") {
+        if (Architecture::currentArchitecture() == Architecture::T5NA) {
             add_param(tnaParams, params, newParams, "eg_intr_md_for_dprsr", 3,
                       "egress_intrinsic_metadata_for_deparser_t", IR::Direction::InOut);
             add_param(tnaParams, params, newParams, "eg_intr_md_for_oport", 4,
@@ -507,7 +510,7 @@ const IR::Node* RestoreParams::postorder(IR::BFN::TnaParser* parser) {
                   "ingress_intrinsic_metadata_for_tm_t",
                   IR::Direction::Out);
 #if HAVE_FLATROCK
-        if (GetPkgInfo::getArch() != "T5NA") {
+        if (Architecture::currentArchitecture() != Architecture::T5NA) {
 #endif  /* HAVE_FLATROCK */
             add_param(tnaParams, params, newParams, "ig_intr_md_from_prsr", 5,
                       "ingress_intrinsic_metadata_from_parser_t",
@@ -558,7 +561,7 @@ const IR::Node* RestoreParams::postorder(IR::BFN::TnaDeparser* control) {
         add_param(tnaParams, params, newParams, "hdr", 1);
         add_param(tnaParams, params, newParams, "metadata", 2);
 #if HAVE_FLATROCK
-        if (GetPkgInfo::getArch() == "T5NA") {
+        if (Architecture::currentArchitecture() == Architecture::T5NA) {
             add_param(tnaParams, params, newParams, "eg_intr_md", 3,
                       "egress_intrinsic_metadata_t", IR::Direction::In);
             add_param(tnaParams, params, newParams, "eg_intr_md_for_dprsr", 4,

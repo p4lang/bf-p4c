@@ -353,9 +353,8 @@ MidEnd::MidEnd(BFN_Options& options) {
         new BFN::CheckUnsupported(&refMap, &typeMap),
         new P4::OrderArguments(&refMap, &typeMap, typeChecking),
         new BFN::OptionalToTernaryMatchTypeConverter(),
-        new BFN::CollectPkgInfo(&refMap, &typeMap),
         new BFN::ArchTranslation(&refMap, &typeMap, options),
-        new BFN::CollectPkgInfo(&refMap, &typeMap),
+        new BFN::FindArchitecture(),
         new BFN::TypeChecking(&refMap, &typeMap, true),
         new BFN::CheckDesignPattern(&refMap, &typeMap),  // add checks for p4 design pattern here.
         new BFN::SetDefaultSize(false /* warn */),  //  belt and suspenders, in case of IR mutation

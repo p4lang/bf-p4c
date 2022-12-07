@@ -21,7 +21,6 @@ TnaArchTranslation::TnaArchTranslation(P4::ReferenceMap *refMap,
     setName("TnaArchTranslation");
     addDebugHook(options.getDebugHook());
     addPasses({
-        new BFN::CollectPkgInfo(refMap, typeMap),
         new RewriteControlAndParserBlocks(refMap, typeMap),
         new RestoreParams(options, refMap, typeMap),
         new P4::ClearTypeMap(typeMap),

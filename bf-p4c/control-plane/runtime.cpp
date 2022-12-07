@@ -1,3 +1,4 @@
+#include "bf-p4c/arch/arch.h"
 #include "bf-p4c/control-plane/bfruntime_ext.h"
 #include "bf-p4c/control-plane/runtime.h"
 #include "bf-p4c/control-plane/bfruntime_arch_handler.h"

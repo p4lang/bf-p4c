@@ -2,6 +2,7 @@
 #include "gtest/gtest.h"
 #include "lib/error.h"
 #include "frontends/parsers/parserDriver.h"
+#include "bf-p4c/arch/arch.h"
 
 namespace Test {
 class ErrorReporterTest : public ::testing::Test {
@@ -29,27 +30,26 @@ TEST_F(ErrorReporterTest, ErrorHelperPlainFormatsCorrectly) {
 TEST_F(ErrorReporterTest, WarningsConformToExpectedFormat) {
     // NOTE: Warnings are formatted exactly the same as errors
 
-    const std::string EXPECTED_WARN_0 = ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(201): [--Wwarn=unused] warning: 'val_undefined' is unused
+    const std::string EXPECTED_WARN_0 = R"(TestCode(44): [--Wwarn=unused] warning: 'val_undefined' is unused
     action do_global_action(in bool make_zero, out bool val_undefined) {
                                                         ^^^^^^^^^^^^^
 )";
 
-    const std::string EXPECTED_WARN_1 = ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(203): [--Wwarn=uninitialized_use] warning: tmp may be uninitialized
+    const std::string EXPECTED_WARN_1 = R"(TestCode(46): [--Wwarn=uninitialized_use] warning: tmp may be uninitialized
         tmp = tmp * (make_zero ? 16w0 : 16w1);
               ^^^
 )";
 
-    const std::string EXPECTED_WARN_2 = ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(201): [--Wwarn=uninitialized_out_param] warning: out parameter 'val_undefined' may be uninitialized when 'do_global_action' terminates
+    const std::string EXPECTED_WARN_2 = R"(TestCode(44): [--Wwarn=uninitialized_out_param] warning: out parameter 'val_undefined' may be uninitialized when 'do_global_action' terminates
     action do_global_action(in bool make_zero, out bool val_undefined) {
                                                         ^^^^^^^^^^^^^
-)" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(201)
+TestCode(44)
     action do_global_action(in bool make_zero, out bool val_undefined) {
            ^^^^^^^^^^^^^^^^
 )";
 
     const std::string EXPECTED_WARN_3 = R"([--Wwarn=uninitialized_use] warning: val_undefined may be uninitialized
-)" +
-        ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(201): [--Wwarn=uninitialized_use] warning: val_undefined may be uninitialized
+TestCode(44): [--Wwarn=uninitialized_use] warning: val_undefined may be uninitialized
     action do_global_action(in bool make_zero, out bool val_undefined) {
                                                         ^^^^^^^^^^^^^
 )";
@@ -102,12 +102,13 @@ TEST_F(ErrorReporterTest, WarningsConformToExpectedFormat) {
 
     // Compile program so our custom stream is populated with warnings
     // Instantiation of testCode reinstantiates errorReporter instance
-    auto testCode = TestCode(TestCode::Hdr::Tofino1arch, CODE);
+    auto testCode = TestCode(TestCode::Hdr::CoreP4, CODE);
 
     // errorReporter is now stable, redirect to stringstream
     auto backupStream = BaseCompileContext::get().errorReporter().getOutputStream();
     BaseCompileContext::get().errorReporter().setOutputStream(&customStream);
-
+    // Non-standard architecture, default to TNA
+    BFN::Architecture::init("TNA");
     // Compile and emit warnings 1 and 2
     EXPECT_TRUE(testCode.apply_pass(TestCode::Pass::FullFrontend));
 
@@ -122,32 +123,32 @@ TEST_F(ErrorReporterTest, WarningsConformToExpectedFormat) {
 }
 
 TEST_F(ErrorReporterTest, WarningWithSuffixConformToExpectedFormat) {
-    const std::string EXPECTED_WARN_1 = ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(201): [--Werror=type-error] error: return +
+    const std::string EXPECTED_WARN_1 = R"(TestCode(44): [--Werror=type-error] error: return +
                 return (ix + 1);
                 ^^^^^^
   ---- Actual error:
-  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(200): Cannot cast implicitly type 'bit<16>' to type 'bool'
+  TestCode(43): Cannot cast implicitly type 'bit<16>' to type 'bool'
               bool f(in bit<16> ix) {
               ^^^^
   ---- Originating from:
-  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(201): Source expression '+' produces a result of type 'bit<16>' which cannot be assigned to a left-value with type 'bool'
+  TestCode(44): Source expression '+' produces a result of type 'bit<16>' which cannot be assigned to a left-value with type 'bool'
                   return (ix + 1);
                           ^^^^^^
-  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(200)
+  TestCode(43)
               bool f(in bit<16> ix) {
               ^^^^
-)" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(199): [--Werror=type-error] error: cntr
+TestCode(42): [--Werror=type-error] error: cntr
         Virtual() cntr = {
                   ^^^^
   ---- Actual error:
-  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(200): Cannot unify type 'bool' with type 'bit<16>'
+  TestCode(43): Cannot unify type 'bool' with type 'bit<16>'
               bool f(in bit<16> ix) {
               ^^^^
   ---- Originating from:
-  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(200): Method 'f' does not have the expected type 'f'
+  TestCode(43): Method 'f' does not have the expected type 'f'
               bool f(in bit<16> ix) {
                    ^
-  )" + ROOT_DIR + R"(/build/p4c/p4headers_tofino1.p4(195)
+  TestCode(38)
       abstract bit<16> f(in bit<16> ix);
                        ^
 )";
@@ -172,13 +173,12 @@ TEST_F(ErrorReporterTest, WarningWithSuffixConformToExpectedFormat) {
 
     control ctr(inout bit<16> x);
     package top(ctr ctrl);
-
     top(c()) main;
     )";
 
     // Compile program so our custom stream is populated with warnings
     // Instantiation of testCode reinstantiates errorReporter instance
-    auto testCode = TestCode(TestCode::Hdr::Tofino1arch, CODE);
+    auto testCode = TestCode(TestCode::Hdr::CoreP4, CODE);
 
     // errorReporter is now stable, redirect to stringstream
     auto backupStream = BaseCompileContext::get().errorReporter().getOutputStream();

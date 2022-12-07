@@ -12,6 +12,7 @@
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/common/parse_annotations.h"
 #include "bf-p4c/midend.h"
+#include "bf-p4c/arch/arch.h"
 #include "bf-p4c/phv/create_thread_local_instances.h"
 
 namespace Test {
@@ -35,6 +36,7 @@ MidendTestCase::create(const std::string& source) {
 
     auto frontendTestCase = FrontendTestCase::create(source, BFN::ParseAnnotations());
     if (!frontendTestCase) return boost::none;
+    frontendTestCase->program->apply(BFN::FindArchitecture());
 
     BFN::MidEnd midend(options);
     auto* midendProgram = frontendTestCase->program->apply(midend);
@@ -59,6 +61,7 @@ TofinoPipeTestCase::create(const std::string& source) {
     auto frontendTestCase =
         FrontendTestCase::create(source, options.langVersion, BFN::ParseAnnotations());
     if (!frontendTestCase) return boost::none;
+    frontendTestCase->program->apply(BFN::FindArchitecture());
 
     BFN::MidEnd midend(options);
     auto* midendProgram = frontendTestCase->program->apply(midend);

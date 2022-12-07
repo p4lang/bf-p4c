@@ -4,6 +4,7 @@
 #include <string>
 #include <boost/optional.hpp>
 
+#include "bf-p4c/arch/arch.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/device.h"
 #include "gtest/gtest.h"

@@ -357,7 +357,7 @@ class TransformTnatoT5na : public PassManager {
 
         addPasses({
             new VisitFunctor([this]() {
-                if (GetPkgInfo::getArch() != "TNA")
+                if (Architecture::currentArchitecture() != Architecture::TNA)
                     this->early_exit();
             }),
             new BFN::TypeChecking(refMap, typeMap, true),
@@ -388,9 +388,8 @@ T5naArchTranslation::T5naArchTranslation(P4::ReferenceMap *refMap,
                                          P4::TypeMap *typeMap, BFN_Options &options) {
     addDebugHook(options.getDebugHook());
     addPasses({
-        new BFN::CollectPkgInfo(refMap, typeMap),
         new TransformTnatoT5na(refMap, typeMap),
-        new BFN::CollectPkgInfo(refMap, typeMap),
+        new BFN::FindArchitecture(),  // after translation, arch is T5NA
         new RewriteControlAndParserBlocks(refMap, typeMap),
         new RestoreParams(options, refMap, typeMap),
         new P4::ClearTypeMap(typeMap),

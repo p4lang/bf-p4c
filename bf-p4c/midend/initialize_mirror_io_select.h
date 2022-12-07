@@ -2,6 +2,7 @@
 #define INITIALIZE_MIRROR_IO_SELECT_H_
 
 #include "ir/ir.h"
+#include "bf-p4c/arch/arch.h"
 #include "bf-p4c/device.h"
 #include "type_checker.h"
 
@@ -28,7 +29,8 @@ class InitializeMirrorIOSelect : public PassManager {
  public:
     InitializeMirrorIOSelect(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
         addPasses({
-            new PassIf([]() { return Device::hasMirrorIOSelect(); }, {
+            new PassIf([]() {
+                return Device::hasMirrorIOSelect(); }, {
                 new DoInitializeMirrorIOSelect(),
                 new P4::ClearTypeMap(typeMap),
                 new P4::ResolveReferences(refMap),
