@@ -2083,10 +2083,7 @@ void TableFormat::ternary_midbyte(int midbyte, size_t &index, bool lo_midbyte) {
 
     int midbyte_type = lo_midbyte ? MID_BYTE_LO : MID_BYTE_HI;
 
-    if (lo_midbyte)
-        tcam_p->set_midbyte(midbyte, midbyte_type);
-    else
-        tcam_p->set_midbyte(midbyte, midbyte_type);
+    tcam_p->set_midbyte(midbyte, midbyte_type);
 
     if (tcam_p == &tcam)
         use->tcam_use.push_back(tcam);

@@ -224,6 +224,8 @@ int Flatrock::InputXbar::find_offset(const MatchSource *ms, Group group, int off
             in = find(sl, group, &group);
         }
         if (in) {
+            BUG_CHECK(in->lo + sl.lo >= in->what->lo,
+                      "computed invalid offset in InputXbar::find_offset");
             unsigned offset = in->lo + sl.lo - in->what->lo;
             if (group.type == Group::EXACT) {
                 switch (group.index) {
@@ -241,7 +243,6 @@ int Flatrock::InputXbar::find_offset(const MatchSource *ms, Group group, int off
                     break;
                 default:
                     BUG("invalid exact group %d", group.index); } }
-            BUG_CHECK(offset >= 0, "computed invalid offset in InputXbar::find_offset");
             return offset; }
     } else if (auto *hash = dynamic_cast<const HashMatchSource *>(ms)) {
         error(ms->get_lineno(), "HashMatchSource not supported on flatrock");

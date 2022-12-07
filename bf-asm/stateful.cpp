@@ -602,7 +602,7 @@ void StatefulTable::gen_tbl_cfg(json::vector &out) const {
                 if (act_present) continue;
                 json::map instr_slot;
                 instr_slot["action_handle"] = a.handle;
-                instr_slot["instruction_slot"] = stful_action ? stful_action->code : -1;
+                instr_slot["instruction_slot"] = stful_action->code;
                 act_to_sful_instr_slot.push_back(std::move(instr_slot)); } } }
     json::vector &register_file = tbl["register_params"];
     for (size_t i = 0; i < const_vals.size(); i++) {

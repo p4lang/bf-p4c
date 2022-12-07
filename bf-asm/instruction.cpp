@@ -355,17 +355,18 @@ struct Operand {
             if (!hd) error(lineno, "could not find hash dist");
             int byte = table->find_on_actionbus(hd, lo, hi, size);
             if (byte < 0) {
-                error(lineno, "hash dist %d is not on the action bus", hd->id);
+                error(lineno, "hash dist %d is not on the action bus",
+                      (hd ? hd->id : -1));
                 return -1; }
             if (units.size() == 2) {
                 auto hd1 = find_hash_dist(units.at(1));
                 if (!hd1) error(lineno, "could not find hash dist");
                 if (table->find_on_actionbus(ActionBusSource(hd, hd1), lo + 16, hi, size) < 0)
                     error(lineno, "hash dists %d and %d not contiguous on the action bus",
-                          hd->id, hd1->id);
+                          (hd ? hd->id : -1), (hd1 ? hd1->id : -1));
             }
             if (size == 2) byte -= 32;
-            if (byte >= 0 || byte < 32*size)
+            if (byte >= 0 && byte < 32*size)
                 return ACTIONBUS_OPERAND + byte/size;
             error(lineno, "action bus entry %d(hash_dist %d) out of range for %d-bit access",
                   size == 2 ? byte+32 : byte, hd->id, size*8);
@@ -411,7 +412,7 @@ struct Operand {
                 error(lineno, "rng %d is not on the action bus", rng.unit);
                 return -1; }
             if (size == 2) byte -= 32;
-            if (byte >= 0 || byte < 32*size)
+            if (byte >= 0 && byte < 32*size)
                 return ACTIONBUS_OPERAND + byte/size;
             error(lineno, "action bus entry %d(rng %d) out of range for %d-bit access",
                   size == 2 ? byte+32 : byte, rng.unit, size*8);

@@ -54,6 +54,7 @@ void IXBarVerify::verify_format(const IXBar::Use *use) {
                 if (!container_set) {
                     container = alloc.container();
                     mod_4_offset = potential_mod4_offset;
+                    container_set = true;
                 } else if (container != alloc.container()
                            || mod_4_offset != potential_mod4_offset) {
                     single_byte = false;

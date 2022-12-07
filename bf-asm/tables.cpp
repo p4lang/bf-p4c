@@ -1863,7 +1863,6 @@ void Table::Actions::pass2(Table *tbl) {
     /* figure out how many codes we can encode in the match table(s), and if we need a distinct
      * code for every action to handle next_table properly */
     int code_limit = 0x10000;
-    MatchTable *limit_match_table = nullptr;
     bool use_code_for_next = false;  // true iff a table uses the action code for next table
         // selection in addition to using it for the action instruction
 
@@ -1940,7 +1939,7 @@ void Table::Actions::pass2(Table *tbl) {
             code_use[act.code] = true; }
         if (act.code >= code_limit)
             error(act.lineno, "Action code %d for %s too large for action specifier in "
-                  "table %s", act.code, act.name.c_str(), limit_match_table->name());
+                  "table %s", act.code, act.name.c_str(), tbl->name());
         if (act.code > max_code) max_code = act.code; }
     actions.sort([](const value_type &a, const value_type &b) -> bool {
         return a.second.code < b.second.code; });
@@ -2331,7 +2330,7 @@ void Table::Actions::add_action_format(const Table *table, json::map &tbl) const
         action_format_per_action["next_table"] = next_table;
         action_format_per_action["next_table_full"] = next_table_full;
         if (Target::LONG_BRANCH_TAGS() > 0 && !options.disable_long_branch) {
-            if (Target::NEXT_TABLE_EXEC_COMBINED) {
+            if (Target::NEXT_TABLE_EXEC_COMBINED()) {
                 action_format_per_action["next_table_exec"] =
                     ((act.next_table_miss_ref.next_in_stage(table->stage->stageno) & 0xfffe) << 15)
                     + (act.next_table_miss_ref.next_in_stage(table->stage->stageno + 1) & 0xffff);

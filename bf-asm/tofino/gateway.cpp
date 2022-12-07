@@ -101,7 +101,7 @@ void Target::Tofino::GatewayTable::pass1() {
             error(lineno, "No result busses in table %s for gateway payload", match_table->name());
         } else {
             for (auto &r : tbl->layout) {
-                auto match_rbus = r.bus.count(Layout::RESULT_BUS) >= 0
+                auto match_rbus = r.bus.count(Layout::RESULT_BUS)
                         ? r.bus.at(Layout::RESULT_BUS) : r.bus.at(Layout::SEARCH_BUS);
                 if (match_rbus >= 0 && payload_unit != (match_rbus & 1)) continue;
                 if (!stage->gw_payload_use[r.row][payload_unit]) {

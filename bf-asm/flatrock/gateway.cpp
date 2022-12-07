@@ -204,7 +204,7 @@ void Target::Flatrock::GatewayTable::write_next_table_regs(Target::Flatrock::mau
             for (auto &act : inhibit_idx_action) {
                 auto *action = actions->action(act.second);
                 BUG_CHECK(action || act.second == "", "Can't find action %s in table %s",
-                          act.second.c_str(), match_table->name());
+                          act.second.c_str(), (match_table ? match_table->name() : this->name()));
                 // FIXME -- this assumes addr 0 is always a noop.
                 imem_map[act.first].data = action ? action->addr : 0;
             }

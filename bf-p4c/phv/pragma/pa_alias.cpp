@@ -163,13 +163,10 @@ boost::optional<std::pair<const PHV::Field*, const PHV::Field*>> PragmaAlias::ma
             return boost::none;
         }
     }
-    if (aliasDest && aliasSrc) {
-        std::pair<const PHV::Field*, const PHV::Field*> rv;
-        rv.first = aliasDest;
-        rv.second = aliasSrc;
-        return rv;
-    }
-    return boost::none;
+    std::pair<const PHV::Field*, const PHV::Field*> rv;
+    rv.first = aliasDest;
+    rv.second = aliasSrc;
+    return rv;
 }
 
 bool PragmaAlias::addAlias(const PHV::Field* f1, const PHV::Field* f2,

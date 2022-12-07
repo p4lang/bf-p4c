@@ -758,7 +758,7 @@ class AddParserPad : public Modifier {
                         if (pipeIdx < di->arguments->size()) {
                             auto *pipe =
                                 di->arguments->at(pipeIdx)->expression->to<IR::PathExpression>();
-                            cstring pipeName = pipe->path->name;
+                            cstring pipeName = (pipe ? pipe->path->name : "");
                             if (pipe && pipeReplacements.count(pipeName)) {
                                 if (pipeReplacements.at(pipeName).count(paramIdx)) {
                                     tn->path = hdrNameToNewPath.at(tn->path->name);

@@ -32,7 +32,7 @@ void Manifest::postorder(const IR::BFN::TnaParser *parser) {
 }
 
 void Manifest::postorder(const IR::BFN::TnaControl *control) {
-    auto controlName = control->name.name;
+    auto controlName = (control ? control->name.name : "");
     auto pipeName = _pipes.at(_pipeId);
     if (control && control->pipeName == pipeName && controlName) {
         // FIXME(cc): not yet sure why we can't generate control graphs unless invoked at

@@ -453,7 +453,7 @@ struct ResolveHeaderStackIndex : public Transform {
     const std::map<cstring, IR::BFN::ParserState*> backendStates;
     const ordered_map<cstring, const IR::ParserState*>* topoAncestors = nullptr;
     std::set<cstring> stridedStates;
-    P4ParserGraphs* pg;
+    P4ParserGraphs* pg = nullptr;
     AncestorStates* ancestors = nullptr;
 
     /// Local map of header to stack index.
@@ -598,7 +598,7 @@ struct ResolveHeaderStackIndex : public Transform {
             stackOutOfBound = true;
 
         LOG4("resolved " << header << " stack index " << unresolved->index
-                         << " to " << currentIndex << " in state " << state->name);
+                         << " to " << currentIndex << " in state " << (state ? state->name : ""));
 
         resolvedHeaders.insert(header);
 

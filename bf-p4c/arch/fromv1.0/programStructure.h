@@ -1038,7 +1038,6 @@ class ModifyParserForChecksum : public Modifier {
                 auto subtractCall = new IR::MethodCallStatement(mce);
                 statements->push_back(subtractCall);
 
-                IR::Statement* assign = nullptr;
                 if (csum.with_payload) {
                     BUG_CHECK(csum.residulChecksumName != boost::none,
                             "residual checksum field name cannot be empty");
@@ -1053,24 +1052,6 @@ class ModifyParserForChecksum : public Modifier {
                     auto* deposit = new IR::MethodCallStatement(mce);
                     std::cout << member->member << std::endl;
                     structure->checksumDepositToHeader[gress][member->member] = deposit;
-                }
-                if (csum.cond) {
-                    if (auto boolean = csum.cond->to<IR::BoolLiteral>()) {
-                        if (!boolean->value) {
-                            assign = nullptr;
-                        }
-                    }
-                }
-                if (assign) {
-                    statements->push_back(assign);
-
-                    auto payloadFields = collectResidualChecksumPayloadFields();
-                    // add bridged residual_checksum
-                    auto* member = new IR::Member(
-                            new IR::Member(new IR::PathExpression("meta"),
-                                IR::ID("bridged_header")), IR::ID(*csum.residulChecksumName));
-                    payloadFields.insert(member);
-                    residualChecksumPayloadFields[path] = payloadFields;
                 }
             }
         }

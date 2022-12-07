@@ -59,6 +59,7 @@ void SRamMatchTable::setup_word_ixbar_group(Target::Tofino) {
         std::vector<Phv::Ref> phv_ref_match;
         for (auto *source : match) {
             auto phv_ref = *(dynamic_cast<Phv::Ref *>(source));
+            BUG_CHECK(phv_ref);
             phv_ref_match.push_back(phv_ref);
         }
         word_ixbar_group[i++] = phv_ref_match.empty() ? -1 : find_in_ixbar(this, phv_ref_match);

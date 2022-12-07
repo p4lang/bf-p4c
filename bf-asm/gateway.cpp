@@ -452,7 +452,7 @@ static unsigned match_input_use(const std::vector<GatewayTable::MatchKey> &match
 unsigned GatewayTable::input_use() const {
     unsigned rv = match_input_use(match) | match_input_use(xor_match);
     if (!xor_match.empty())
-        rv |= (rv & 0xf) >> 4;
+        rv |= (rv & 0xf) << 4;
     return rv;
 }
 

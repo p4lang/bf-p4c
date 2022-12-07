@@ -29,7 +29,7 @@ const IR::StatOrDecl* SplitAlpm::synth_funnel_shift_ops(
         const IR::P4Table* tbl, const IR::Expression* lpm_key, int shift_amt) {
     int lpm_key_width = lpm_key->type->width_bits();
 
-    if (shift_amt >= 32) {
+    if (shift_amt > 32) {
         shift_amt -= 32;
         return new IR::AssignmentStatement(
                     new IR::PathExpression(IR::ID(tbl->name + "_partition_key")),

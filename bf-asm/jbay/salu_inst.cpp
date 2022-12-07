@@ -88,6 +88,7 @@ Instruction *MinMax::Decode::decode(Table *tbl, const Table::Actions::Action *ac
 }
 Instruction *MinMax::pass1(Table *tbl_, Table::Actions::Action *act) {
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
+    BUG_CHECK(tbl);
     int mask_size = (opc->opcode & 2) ? 8 : 16;
     constval = boost::none;
     mask->pass1(tbl);
@@ -128,6 +129,7 @@ void MinMax::pass2(Table *tbl, Table::Actions::Action *act) {
 }
 void MinMax::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions::Action *act) {
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
+    BUG_CHECK(tbl);
     int logical_home_row = tbl->layout[0].row;
     auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
     auto &salu_instr_common = meter_group.stateful.salu_instr_common[act->code];
@@ -163,6 +165,7 @@ template<>
 void AluOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions::Action *act) {
     LOG2(this);
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
+    BUG_CHECK(tbl);
     int logical_home_row = tbl->layout[0].row;
     auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
     auto &salu = meter_group.stateful.salu_instr_state_alu[act->code][slot - ALU2LO];
@@ -271,6 +274,7 @@ template<>
 void CmpOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions::Action *act) {
     LOG2(this);
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
+    BUG_CHECK(tbl);
     int logical_home_row = tbl->layout[0].row;
     auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
     auto &salu = meter_group.stateful.salu_instr_cmp_alu[act->code][slot];
@@ -363,6 +367,7 @@ template<>
 void TMatchOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions::Action *act) {
     LOG2(this);
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
+    BUG_CHECK(tbl);
     int logical_home_row = tbl->layout[0].row;
     auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
     auto &salu = meter_group.stateful.salu_instr_cmp_alu[act->code][slot];
@@ -431,6 +436,7 @@ template<>
 void OutOP::write_regs(Target::JBay::mau_regs &regs, Table *tbl_, Table::Actions::Action *act) {
     LOG2(this);
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
+    BUG_CHECK(tbl);
     int logical_home_row = tbl->layout[0].row;
     auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
     auto &salu = meter_group.stateful.salu_instr_output_alu[act->code][slot - ALUOUT0];

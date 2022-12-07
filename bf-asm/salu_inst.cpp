@@ -441,6 +441,7 @@ bool AluOP::equiv(Instruction *a_) {
 
 Instruction *AluOP::pass1(Table *tbl_, Table::Actions::Action *act) {
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
+    BUG_CHECK(tbl);
     if (slot < 0 && act->slot_use[slot = (dest ? ALU1HI : ALU1LO)])
         slot = dest ? ALU2HI : ALU2LO;
     auto k1 = srca.to<operand::Const>();
@@ -661,6 +662,7 @@ bool CmpOP::equiv(Instruction *a_) {
 
 Instruction *CmpOP::pass1(Table *tbl_, Table::Actions::Action *act) {
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
+    BUG_CHECK(tbl);
     if (srca) srca->pass1(tbl);
     if (srcb) srcb->pass1(tbl);
     if (srcc) srcc->pass1(tbl);
@@ -766,6 +768,7 @@ bool TMatchOP::equiv(Instruction *a_) {
 
 Instruction *TMatchOP::pass1(Table *tbl_, Table::Actions::Action *act) {
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
+    BUG_CHECK(tbl);
     if (srca) srca->pass1(tbl);
     if (srcb) srcb->pass1(tbl);
     if (tbl->tmatch_use[slot].op) {
@@ -889,6 +892,7 @@ Instruction *OutOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
 
 Instruction *OutOP::pass1(Table *tbl_, Table::Actions::Action *act) {
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
+    BUG_CHECK(tbl);
     if (src)
         src->pass1(tbl);
     if (output_mux == STATEFUL_PREDICATION_OUTPUT) {
@@ -899,6 +903,7 @@ Instruction *OutOP::pass1(Table *tbl_, Table::Actions::Action *act) {
     if (lmatch) {
         if (tbl->output_lmatch) {
             auto *other = dynamic_cast<OutOP *>(tbl->output_lmatch);
+            BUG_CHECK(other);
             if (lmatch_pred != other->lmatch_pred) {
                 error(lineno, "Conflict lmatch output use in stateful %s", tbl->name());
                 error(other->lineno, "conflicting use here"); } }

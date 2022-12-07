@@ -1401,7 +1401,7 @@ class ConstructSymbolTable : public Inspector {
 
     void cvtDropFunction(const IR::MethodCallStatement *node) {
         auto control = findContext<IR::P4Control>();
-        if (control->name == structure->getBlockName(ProgramStructure::INGRESS)) {
+        if (control && control->name == structure->getBlockName(ProgramStructure::INGRESS)) {
             auto path = new IR::Member(
                     new IR::PathExpression("ig_intr_md_for_dprsr"), "drop_ctl");
             auto val = new IR::Constant(IR::Type::Bits::get(3), 1);

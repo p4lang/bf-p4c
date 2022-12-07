@@ -64,6 +64,8 @@ analyzeResubmitStatement(const IR::MethodCallStatement* statement) {
 
 boost::optional<const IR::Constant*>
 checkResubmitIfStatement(const IR::IfStatement* ifStatement) {
+    if (!ifStatement)
+        return boost::none;
     auto* equalExpr = ifStatement->condition->to<IR::Equ>();
     if (!equalExpr) {
         ::warning("Expected comparing resubmit_type with constant: %1%", ifStatement->condition);

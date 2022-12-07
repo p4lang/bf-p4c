@@ -27,10 +27,10 @@ class ErrorType: public ::ErrorType {
     /// Barefoot specific error catalog.
     /// It simply adds all the supported errors and warnings in Barefoot's backend.
     ErrorType() {
-        ::ErrorCatalog::getCatalog().add(WARN_TABLE_PLACEMENT, "table-placement", "");
-        ::ErrorCatalog::getCatalog().add(WARN_PRAGMA_USE, "pragma-use", "");
-        ::ErrorCatalog::getCatalog().add(WARN_SUBSTITUTION, "substitution", "");
-        ::ErrorCatalog::getCatalog().add(WARN_PHV_ALLOCATION, "phv-allocation", "");
+        ::ErrorCatalog::getCatalog().add(WARN_TABLE_PLACEMENT, "table-placement");
+        ::ErrorCatalog::getCatalog().add(WARN_PRAGMA_USE, "pragma-use");
+        ::ErrorCatalog::getCatalog().add(WARN_SUBSTITUTION, "substitution");
+        ::ErrorCatalog::getCatalog().add(WARN_PHV_ALLOCATION, "phv-allocation");
     }
 };
 

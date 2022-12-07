@@ -341,7 +341,7 @@ std::unique_ptr<json::map>
             tmp["memory_units"] = std::move(mem_units);
             mem_units = json::vector();
             json::vector vpns;
-            for (unsigned i = 0; i < format->groups(); i++)
+            for (unsigned i = 0; format && i < format->groups(); i++)
                 vpns.push_back(vpn_ctr++);
             tmp["vpns"] = std::move(vpns);
             mem_units_and_vpns.push_back(std::move(tmp)); } }
@@ -816,6 +816,7 @@ void SRamMatchTable::determine_word_and_result_bus() {
 
 int SRamMatchTable::determine_pre_byteswizzle_loc(MatchSource *ms, int lo, int hi, int word) {
     auto phv_p = dynamic_cast<Phv::Ref *>(ms);
+    BUG_CHECK(phv_p);
     auto phv_ref = *phv_p;
     Phv::Slice sl(*phv_ref, lo, hi);
     BUG_CHECK(word_ixbar_group[word] >= 0);

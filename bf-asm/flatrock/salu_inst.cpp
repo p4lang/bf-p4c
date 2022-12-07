@@ -14,6 +14,7 @@ void DivMod::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl,
 void MinMax::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl_,
         Table::Actions::Action *act) {
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
+    BUG_CHECK(tbl);
     BUG_CHECK(tbl->physical_ids.popcount() == 1, "not exactly one physical id for %s", tbl->name());
     auto &salu = regs.ppu_sful[*tbl->physical_ids.begin()].ppu_sful_alu;
     auto &sful_instr_common = salu.sful_instr_common[act->code];
@@ -54,6 +55,7 @@ void AluOP::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl_,
         Table::Actions::Action *act) {
     LOG2(this);
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
+    BUG_CHECK(tbl);
     BUG_CHECK(tbl->physical_ids.popcount() == 1, "not exactly one physical id for %s", tbl->name());
     auto &salu = regs.ppu_sful[*tbl->physical_ids.begin()].ppu_sful_alu;
     auto &sful_inst_st = salu.sful_instr_state_alu[act->code][slot - ALU2LO];
@@ -160,6 +162,7 @@ void CmpOP::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl_,
         Table::Actions::Action *act) {
     LOG2(this);
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
+    BUG_CHECK(tbl);
     BUG_CHECK(tbl->physical_ids.popcount() == 1, "not exactly one physical id for %s", tbl->name());
     auto &salu = regs.ppu_sful[*tbl->physical_ids.begin()].ppu_sful_alu;
     auto &salu_cmp_alu = salu.sful_instr_cmp_alu[act->code][slot];
@@ -258,6 +261,7 @@ template<>
 void TMatchOP::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl_,
         Table::Actions::Action *act) {
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
+    BUG_CHECK(tbl);
     BUG_CHECK(tbl->physical_ids.popcount() == 1, "not exactly one physical id for %s", tbl->name());
     auto &salu = regs.ppu_sful[*tbl->physical_ids.begin()].ppu_sful_alu;
     auto &salu_cmp_alu = salu.sful_instr_cmp_alu[act->code][slot];
@@ -289,6 +293,7 @@ template<>
 void OutOP::write_regs(Target::Flatrock::mau_regs &regs, Table *tbl_,
         Table::Actions::Action *act) {
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
+    BUG_CHECK(tbl);
     BUG_CHECK(tbl->physical_ids.popcount() == 1, "not exactly one physical id for %s", tbl->name());
     auto &salu = regs.ppu_sful[*tbl->physical_ids.begin()].ppu_sful_alu;
     auto &sful_ioa = salu.sful_instr_outp_alu[act->code][slot - ALUOUT0];

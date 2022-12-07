@@ -148,9 +148,10 @@ int IXBar::Use::gateway_group() const {
     int rv = -1;
     bool unset = true;
     for (auto &b : use) {
-        if (unset)
+        if (unset) {
             rv = b.loc.group;
-        else if (rv != b.loc.group)
+            unset = false;
+        } else if (rv != b.loc.group)
             BUG("Gateway can only currently be allocated to one ixbar group");
     }
     return rv;

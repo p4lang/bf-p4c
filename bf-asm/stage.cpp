@@ -709,7 +709,7 @@ void Stage::gen_gfm_json_info(REGS &regs, std::ostream &out) {
         out << "  Byte 1 :";
         for (auto c = 0; c < GALOIS_FIELD_MATRIX_COLUMNS; c++) {
             out << std::setw(3) << std::hex << gfm[r][c].byte1;
-            byte1_parity ^= gfm[r][c].byte0;
+            byte1_parity ^= gfm[r][c].byte1;
         }
         out << " | " << std::setw(3) << parity(byte1_parity) << "\n";
     }

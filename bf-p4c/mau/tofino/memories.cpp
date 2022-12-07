@@ -1586,7 +1586,7 @@ void Memories::fill_out_match_alloc(SRAM_group *group, match_selection &match_se
             sram_search_bus[row][bus] = group_search_bus;
             sram_print_search_bus[row][bus] = group_search_bus.name;
             LOG7("Setting sram search bus on row " << row << " and bus "
-                    << result_bus << " for " << sram_print_search_bus[row][bus]);
+                    << bus << " for " << sram_print_search_bus[row][bus]);
         }
 
         if (result_bus >= 0) {

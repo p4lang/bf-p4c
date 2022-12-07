@@ -1497,7 +1497,8 @@ bool AdjustStatefulInstructions::verify_on_search_bus(const IR::MAU::StatefulAlu
 
         if (!group_set) {
             group = byte.loc.group;
-        } else if (group == byte.loc.group) {
+            group_set = true;
+        } else if (group != byte.loc.group) {
             ::error("Input %s for a stateful alu %s allocated across multiple groups, and "
                      "cannot be resolved", field->name, salu->name);
              return false;

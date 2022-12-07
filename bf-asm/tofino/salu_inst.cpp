@@ -6,6 +6,7 @@ template<>
 void AluOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl_, Table::Actions::Action *act) {
     LOG2(this);
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
+    BUG_CHECK(tbl);
     int logical_home_row = tbl->layout[0].row;
     auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
     auto &salu = meter_group.stateful.salu_instr_state_alu[act->code][slot - ALU2LO];
@@ -89,6 +90,7 @@ template<>
 void CmpOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl_, Table::Actions::Action *act) {
     LOG2(this);
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
+    BUG_CHECK(tbl);
     int logical_home_row = tbl->layout[0].row;
     auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
     auto &salu = meter_group.stateful.salu_instr_cmp_alu[act->code][slot];
@@ -158,6 +160,7 @@ template<>
 void OutOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl_, Table::Actions::Action *act) {
     LOG2(this);
     auto tbl = dynamic_cast<StatefulTable *>(tbl_);
+    BUG_CHECK(tbl);
     int logical_home_row = tbl->layout[0].row;
     auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
     auto &salu = meter_group.stateful.salu_instr_output_alu[act->code];
