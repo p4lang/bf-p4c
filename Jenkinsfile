@@ -247,12 +247,7 @@ node ('compiler-travis') {
                                 echo 'Checking code style'
                                 runInDocker(
                                     maxCpu: 1,
-                                    '''
-                                        /bin/bash -c "\
-                                            ln -s /usr/bin/python3 /usr/bin/python; \
-                                            ctest -R 'cpplint' \
-                                        "
-                                    '''
+                                    "make cpplint"
                                 )
                             }
                         }
