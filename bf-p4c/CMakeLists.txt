@@ -659,6 +659,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/v2/action_packing_validator.cpp
   phv/v2/greedy_allocator.cpp
   phv/v2/kind_size_indexed_map.cpp
+  phv/v2/table_replay_friendly_constraints.cpp
   phv/v2/trivial_allocator.cpp
   phv/v2/tx_score.cpp
   phv/v2/greedy_tx_score.cpp
@@ -761,6 +762,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/v2/action_packing_validator.h
   phv/v2/greedy_allocator.h
   phv/v2/kind_size_indexed_map.h
+  phv/v2/table_replay_friendly_constraints.cpp
   phv/v2/trivial_allocator.h
   phv/v2/tx_score.h
   phv/v2/greedy_tx_score.h

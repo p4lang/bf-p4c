@@ -241,7 +241,7 @@ class DecidePlacement : public MauInspector {
     const Placed *place_table(ordered_set<const GroupPlace *>&work, const Placed *pl);
     template <class... Args> void error(Args... args) { self.error(args...); }
     int errorCount() const { return self.errorCount(); }
-    const Placed* alt_table_placement(const IR::BFN::Pipe *pipe);
+    std::pair<bool, const Placed*> alt_table_placement(const IR::BFN::Pipe *pipe);
     const Placed* default_table_placement(const IR::BFN::Pipe *pipe);
 };
 

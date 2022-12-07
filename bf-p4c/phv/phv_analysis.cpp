@@ -72,7 +72,9 @@ PHV_AnalysisPass::PHV_AnalysisPass(
       deps_i(deps),
       options_i(options),
       table_alloc(alloc),
-      pragmas(phv),
+      phv_allocation_result(phv),
+      table_replay_phv_constr(alloc, phv, phv_allocation_result.get_allocation_info()),
+      pragmas(phv, table_replay_phv_constr.get_container_size_constr()),
       field_to_parser_states(phv),
       parser_critical_path(phv),
       critical_path_clusters(parser_critical_path),
@@ -103,6 +105,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
         auto* validate_allocation = new PHV::ValidateAllocation(phv, clot, physical_liverange_db,
             settings);
         addPasses({
+            options.alt_phv_alloc ? &table_replay_phv_constr : nullptr,
             // Identify uses of fields in MAU, PARDE
             &uses,
             new PhvInfo::DumpPhvFields(phv, uses),
@@ -195,7 +198,16 @@ PHV_AnalysisPass::PHV_AnalysisPass(
                 validate_allocation->set_physical_liverange_overlay(
                         settings.physical_liverange_overlay);
             }),
-            validate_allocation
+            validate_allocation,
+            options.alt_phv_alloc ? new PassIf (
+            [this]() {
+                auto actualState = table_alloc.get_table_summary()->getActualState();
+                return actualState == TableSummary::ALT_INITIAL;
+            },
+            {
+                // collect trivial phv allocation result.
+                &phv_allocation_result
+            }) : nullptr,
         });
 
     phvLoggingInfo->superclusters = &clustering.cluster_groups();

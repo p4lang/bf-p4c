@@ -38,7 +38,9 @@
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "bf-p4c/phv/collect_strided_headers.h"
 #include "bf-p4c/phv/v2/phv_kit.h"
+#include "bf-p4c/phv/v2/table_replay_friendly_constraints.h"
 #include "bf-p4c/logging/phv_logging.h"
+
 
 /** This is the main PHV allocation pass manager.
   */
@@ -52,6 +54,14 @@ class PHV_AnalysisPass : public Logging::PassManager {
     const BFN_Options &options_i;
     /// Contains information about placement of tables by an earlier table allocation pass.
     MauBacktracker& table_alloc;
+    // alt-phv-alloc ONLY
+    // collect information about which field is allocated to what containers at the end of
+    // phv analysis
+    PHV::v2::CollectPHVAllocationResult phv_allocation_result;
+    // alt-phv-alloc ONLY
+    // Based on the feedback from table summary after table replay failed, it adds phv container
+    // size constraints so that table replay can progress.
+    PHV::v2::TableReplayFriendlyPhvConstraints table_replay_phv_constr;
     /// PHV related pragma information.
     PHV::Pragmas pragmas;
     /// Fields to parser states in which they are extracted

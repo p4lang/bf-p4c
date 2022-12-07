@@ -82,7 +82,7 @@ class Pragmas : public PassManager {
     PragmaBytePack& pa_byte_pack()                { return pa_byte_pack_i; }
 
     explicit Pragmas(PhvInfo& phv)
-        : pa_container_sizes_i(phv),
+        : pa_container_sizes_i(phv, *(new ordered_map<cstring, std::vector<PHV::Size>>)),
           pa_mutually_exclusive_i(phv),
           pa_solitary_i(phv),
           pa_atomic_i(phv),
@@ -92,6 +92,32 @@ class Pragmas : public PassManager {
           pa_deparser_zero_i(phv),
           pa_no_pack_i(phv),
           pa_byte_pack_i(phv) {
+        addPasses({
+            &pa_container_sizes_i,
+            &pa_mutually_exclusive_i,
+            &pa_solitary_i,
+            &pa_atomic_i,
+            &pa_no_overlay_i,
+            &pa_container_type_i,
+            &pa_no_init_i,
+            &pa_deparser_zero_i,
+            &pa_no_pack_i,
+            &pa_byte_pack_i,
+        });
+    }
+    Pragmas(PhvInfo& phv, const ordered_map<cstring, std::vector<PHV::Size>> &container_size_constr)
+        :
+          pa_container_sizes_i(phv, container_size_constr),
+          pa_mutually_exclusive_i(phv),
+          pa_solitary_i(phv),
+          pa_atomic_i(phv),
+          pa_no_overlay_i(phv),
+          pa_container_type_i(phv),
+          pa_no_init_i(phv),
+          pa_deparser_zero_i(phv),
+          pa_no_pack_i(phv),
+          pa_byte_pack_i(phv)
+           {
         addPasses({
             &pa_container_sizes_i,
             &pa_mutually_exclusive_i,

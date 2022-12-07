@@ -18,6 +18,10 @@
 class PragmaContainerSize : public Inspector {
     // This pass may mutate field properties, e.g., add no_split on field.
     PhvInfo& phv_i;
+    // alt-phv-alloc ONLY
+    // this is a set of pa_container_size to fix problematic tables during alt-phv-alloc's table
+    // replay stage.
+    const ordered_map<cstring, std::vector<PHV::Size>> &container_size_constr;
     // pa_container_sizes_i pragmas collected from program.
     ordered_map<const PHV::Field*, std::vector<PHV::Size>> pa_container_sizes_i;
     // field_layouts_i is the expected container layout of the field. It is different
@@ -45,7 +49,11 @@ class PragmaContainerSize : public Inspector {
     void check_and_add_no_split(PHV::Field* field) const;
 
  public:
-    explicit PragmaContainerSize(PhvInfo& phv) : phv_i(phv) { }
+    PragmaContainerSize(PhvInfo& phv,
+      const ordered_map<cstring, std::vector<PHV::Size>> &container_size_constr) :
+      phv_i(phv), container_size_constr(container_size_constr) { }
+    explicit PragmaContainerSize(PhvInfo& phv) :
+      phv_i(phv),container_size_constr(*(new ordered_map<cstring, std::vector<PHV::Size>>)){ }
 
     /// BFN::Pragma interface
     static const char *name;

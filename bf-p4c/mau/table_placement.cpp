@@ -1570,7 +1570,8 @@ bool TablePlacement::shrink_estimate(Placed *next, int &srams_left, int &tcams_l
     // mostly because the phv allocation does not allow fitting the same no. of
     // entries as previous round. For now, we exit and continue with the default
     // placement round.
-    if (summary.getActualState() == summary.ALT_FINALIZE_TABLE_SAME_ORDER)
+    if (summary.getActualState() == summary.ALT_FINALIZE_TABLE_SAME_ORDER ||
+        summary.getActualState() == summary.ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED)
         return false;
 
     LOG2("Shrinking estimate on table " << next->name << " for min entries: " << min_entries);
@@ -2390,7 +2391,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
     attached_entries_t initial_attached_entries = rv->attached_entries;
 
     // Setup stage and entries for Alt Table Placement Round
-    if ((summary.getActualState() == summary.ALT_FINALIZE_TABLE_SAME_ORDER) && pt) {
+    if ((summary.getActualState() == summary.ALT_FINALIZE_TABLE_SAME_ORDER ||
+        summary.getActualState() == summary.ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED) && pt) {
         furthest_stage = pt->stage;
         rv->entries = pt->entries;
         rv->stage = pt->stage;
@@ -3723,6 +3725,7 @@ class DecidePlacement::BacktrackManagement {
                     self.MaxBacktracksPerPipe = 64;
                     break;
                 case TableSummary::ALT_FINALIZE_TABLE_SAME_ORDER:
+                case TableSummary::ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED:
                     self.MaxBacktracksPerPipe = -1;
                     break;
                 case TableSummary::ALT_FINALIZE_TABLE:
@@ -4298,16 +4301,18 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
     LOG_FEATURE("stage_advance", 2, "Stage advance " <<
         (self.ignoreContainerConflicts ? "" : "not ") << "ignoring container conflicts");
     bool alt_finalize_table_same_order =
-        (self.summary.getActualState() == self.summary.ALT_FINALIZE_TABLE_SAME_ORDER);
+        (self.summary.getActualState() == self.summary.ALT_FINALIZE_TABLE_SAME_ORDER ||
+        self.summary.getActualState() == self.summary.ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED);
 
     const Placed *placed = nullptr;
+    bool success = true;
     if (alt_finalize_table_same_order) {
-        placed = alt_table_placement(pipe);
+        std::tie(success, placed) = alt_table_placement(pipe);
     } else {
         placed = default_table_placement(pipe);
     }
 
-    if (placed) {
+    if (success && placed) {
         LOG_FEATURE("stage_advance", 2,
                     "Stage " << placed->stage << IndentCtl::indent << Log::endl <<
                     StageSummary(placed->stage, placed) << IndentCtl::unindent); }
@@ -4336,7 +4341,7 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
     return false;
 }
 
-const DecidePlacement::Placed*
+std::pair<bool, const DecidePlacement::Placed*>
 DecidePlacement::alt_table_placement(const IR::BFN::Pipe *pipe) {
     LOG1("Table placement starting on " << pipe->canon_name() << " with ALT PLACEMENT approach");
     LOG3(TableTree("ingress", pipe->thread[INGRESS].mau) <<
@@ -4406,7 +4411,7 @@ DecidePlacement::alt_table_placement(const IR::BFN::Pipe *pipe) {
         LOG1("    Pl vector: " << pl_vec);
         if (pl_vec.size() == 0) {
             LOG3("Alt placement cannot place table " << alt_try_place_table->name);
-            return nullptr;
+            return std::make_pair(false, placed);
         }
 
         // Update placed object with new placed table
@@ -4445,7 +4450,7 @@ DecidePlacement::alt_table_placement(const IR::BFN::Pipe *pipe) {
         }
     }
     LOG1("Alt placement finished all table placement decisions on pipe " << pipe->canon_name());
-    return placed;
+    return std::make_pair(true, placed);
 }
 
 void TablePlacement::reject_placement(const Placed *of, choice_t reason, const Placed *better) {

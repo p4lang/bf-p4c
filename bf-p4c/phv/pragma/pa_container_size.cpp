@@ -166,6 +166,17 @@ bool PragmaContainerSize::preorder(const IR::BFN::Pipe* pipe) {
 
         check_and_add_no_split(field);
     }
+
+    // alt-phv-alloc ONLY
+    // this adds a set of pa_container_size as indicated by table summary after alt-phv-alloc's
+    // table replay.
+    for (auto it : container_size_constr) {
+        auto field = phv_i.field(it.first);
+        BUG_CHECK(field, "field not found");
+        pa_container_sizes_i[field] = it.second;
+        check_and_add_no_split(field);
+    }
+
     LOG1(*this);
     return true;
 }

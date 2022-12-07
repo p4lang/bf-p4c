@@ -70,14 +70,28 @@ struct RerunTablePlacementTrigger {
  *
  *
  * In the alternative PHV allocation, AKA table placement first allocation, the workflow is
- * different.
- *
- *                  SUCCESS
- * ALT_INITIAL --------------------->  ALT_FINALIZE_TABLE_SAME_ORDER ------------> SUCCESS
- * (Trivial alloc)            ^   (with order suggested by previous round)
- * ( + Default TP)            |                          |
- *    |                       |                          |
- *    |                       |                      (FAILURE)
+ * different. ALT_INITIAL does the trivial phv allocation, this phv allocation assumes there are
+ * infinite numbers of phv containers. And every fieldslice is allocated to the smallest possible
+ * container. And then it runs default table placement. If default table placement fails, it then
+ * runs resource based table placement with backtracking. If table placement succeeds, it goes to
+ * ALT_FINALIZE_TABLE_SAME_ORDER stage. In this stage, phv allocation has the information about
+ * every fieldslice's live range based on previous table placement result. It redoes phv allocation
+ * with liverange information. After phv allocation is finished, compiler will try to replay the
+ * table placement result from the result round. If table replay fails, it goes to
+ * ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED. This stage finds the problematic table during table
+ * replay and tries to fix them by adding pa_container_size pragma. And it can be done iteratively
+ * to make table replay progress. After a finite number of attempts, if it still fails, compiler
+ * goes to ALT_FINALIZE_TABLE with all added pa_container_size removed. During ALT_FINALIZE_TABLE,
+ * it uses resource-based table placement with backtracking.
+ *                                ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED ------------------
+ *                                              ^              |                     |       |
+ *                                              |              |                     |       |
+ *                  SUCCESS                     |              V                     V       |
+ * ALT_INITIAL --------------------->  ALT_FINALIZE_TABLE_SAME_ORDER ------------> SUCCESS   |
+ * (Trivial alloc)            ^   (with order suggested by previous round)                   |
+ * ( + Default TP)            |                          |                                   |
+ *    |                       |                          |                                   |
+ *    |                       |                      (FAILURE) <------------------------------
  * (FAILURE)              (SUCCESS)                      |
  *    |                       |                          V
  *    |                       |                   ALT_FINALIZE_TABLE --> SUCCESS / FAILURE
@@ -105,6 +119,7 @@ class TableSummary: public MauInspector {
         ALT_INITIAL,
         ALT_RETRY_ENHANCED_TP,
         ALT_FINALIZE_TABLE_SAME_ORDER,
+        ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED,
         ALT_FINALIZE_TABLE,
         FINAL,  // always keep as last state for bounds checking
     };
@@ -136,6 +151,7 @@ class TableSummary: public MauInspector {
 
  private:
     static constexpr int CRITICAL_PATH_THRESHOLD = 2;
+    static constexpr int ALT_PHV_ALLOC_TABLE_FIX_THRESHOLD = 1;
     int numInvoked = 0;
     /// true if the first round of table placement resulted in less than Device::numStages() stages.
     bool firstRoundFit = false;
@@ -143,7 +159,6 @@ class TableSummary: public MauInspector {
     state_t state = INITIAL;
     // Save the previous state in case we have to rollback to this one.
     state_t prev_state = INITIAL;
-
     /// The total number of stages allocated by Table Placement
     int maxStage;
     int max_stages[3];
@@ -157,6 +172,8 @@ class TableSummary: public MauInspector {
     ordered_map<cstring, bool> tablePlacementErrors;
     /// flag to prevent any further backtracking after a final RedoTablePlacment.
     bool no_errors_before_summary = true;
+
+    int alt_phv_alloc_table_fixed = 0;
 
     int pipe_id;
     const DependencyGraph& deps;
@@ -180,6 +197,17 @@ class TableSummary: public MauInspector {
 
     // Map of Global ID (Stage + Logical Id) -> Placed Table
     std::map<int, PlacedTable*> placedTables;
+
+    // alt-phv-alloc ONLY
+    // trivial_tableAlloc, trivial_internalTableAlloc, trivial_mergedGateways and
+    // trival_placedTables are copies of tableAlloc, internalTableAlloc, mergedGateways and
+    // placedTables of table placement after trivial phv allocation. We save this information, so
+    // that if the heuristic for fixing problematic tables during table replay does not work, we can
+    // rollback to this checkpoint and table placement will go to ALT_FINALIZE_TABLE as normal.
+    ordered_map<cstring, ordered_set<int>> trivial_tableAlloc;
+    ordered_map<cstring, ordered_set<int>> trivial_internalTableAlloc;
+    ordered_map<cstring, std::pair<cstring, cstring>> trivial_mergedGateways;
+    std::map<int, PlacedTable*> trivial_placedTables;
 
     // Map of Global ID -> Table
     std::map<int, const IR::MAU::Table *> order;
@@ -217,6 +245,10 @@ class TableSummary: public MauInspector {
 
     /// Sum of all resources being used for all stages on last pass
     StageUseEstimate allStages;
+
+    // this is only used for alt-phv-alloc, it indicated a problematic table during table replay
+    // that can be possibly fixed by phv allocation changes.
+    boost::optional<cstring> table_replay_failed_table;
 
     profile_t init_apply(const IR::Node *root) override;
     bool preorder(const IR::MAU::Table* t) override;
@@ -281,6 +313,8 @@ class TableSummary: public MauInspector {
     StageUseEstimate getAllStagesResources() const { return allStages; }
 
     std::map<int, PlacedTable*>& getPlacedTables() { return placedTables; }
+
+    cstring get_table_replay_failed_table() const { return *table_replay_failed_table; }
 
     // Returns a map of stage and bytes used on ixbar in that stage
     // e.g. field f1 -

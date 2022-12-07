@@ -75,6 +75,7 @@ static std::vector<cstring> state_name = {
     "ALT_INITIAL",
     "ALT_RETRY_ENHANCED_TP",
     "ALT_FINALIZE_TABLE_SAME_ORDER",
+    "ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED",
     "ALT_FINALIZE_TABLE",
     "FINAL"  // Should never reach this state
 };
@@ -125,6 +126,7 @@ Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
     ++numInvoked;
     for (auto gress : { INGRESS, EGRESS }) max_stages[gress] = -1;
     placedTables.clear();
+    table_replay_failed_table = boost::none;
     LOG1("Table allocation done " << numInvoked << " time(s), state = " <<
          getActualStateStr());
     return rv;
@@ -357,6 +359,16 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
                 generateIxbarBytesInfo();
                 LOG1(ixbarUsagesStr());
                 state = ALT_FINALIZE_TABLE_SAME_ORDER;
+                // collect table placement result after trivial phv allocation.
+                trivial_tableAlloc.clear();
+                trivial_tableAlloc.insert(tableAlloc.begin(), tableAlloc.end());
+                trivial_internalTableAlloc.clear();
+                trivial_internalTableAlloc.insert(
+                    internalTableAlloc.begin(), internalTableAlloc.end());
+                trivial_mergedGateways.clear();
+                trivial_mergedGateways.insert(mergedGateways.begin(), mergedGateways.end());
+                trivial_placedTables.clear();
+                trivial_placedTables.insert(placedTables.begin(), placedTables.end());
                 throw PHVTrigger::failure(tableAlloc, internalTableAlloc,
                                           mergedGateways, firstRoundFit);
             } else {
@@ -381,8 +393,18 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
                 generateIxbarBytesInfo();
                 LOG1(ixbarUsagesStr());
                 state = ALT_FINALIZE_TABLE_SAME_ORDER;
+                // collect table placement result after trivial phv allocation.
+                trivial_tableAlloc.clear();
+                trivial_tableAlloc.insert(tableAlloc.begin(), tableAlloc.end());
+                trivial_internalTableAlloc.clear();
+                trivial_internalTableAlloc.insert(
+                    internalTableAlloc.begin(), internalTableAlloc.end());
+                trivial_mergedGateways.clear();
+                trivial_mergedGateways.insert(mergedGateways.begin(), mergedGateways.end());
+                trivial_placedTables.clear();
+                trivial_placedTables.insert(placedTables.begin(), placedTables.end());
                 throw PHVTrigger::failure(tableAlloc, internalTableAlloc,
-                                          mergedGateways, firstRoundFit);
+                                              mergedGateways, firstRoundFit);
             } else {
                 LOG1("Alt phv alloc: Failure after ALT_RETRY_ENHANCED_TP");
                 state = FAILURE;
@@ -395,9 +417,64 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
                 state = SUCCESS;
             } else {
                 LOG1("Alt phv alloc: Failure post ALT_FINALIZE_TABLE_SAME_ORDER");
-                state = ALT_FINALIZE_TABLE;
-                throw RerunTablePlacementTrigger::failure(false);
+                // if table replay failed when placing the first table, select the first table to
+                // fix.
+                // TODO(Changhao): this is a very naive selection method. Eventually, we should
+                // select tables that, due to difference between trivial allocation and real phv
+                // allocation, do not fit in ixbar, do not fit on the same stage, or cause other
+                // tables not fit on the same stage. This requires we check the table layout and
+                // ixbar usage information. We need to check more profiles that fail during table
+                // replay stage to find out what is the best heuristic to select these problematic
+                // tables.
+                if (placedTables.size() == 0) {
+                    table_replay_failed_table =
+                        trivial_placedTables.begin()->second->internalTableName;
+                }
+                // if ALT_FINALIZE_TABLE_SAME_ORDER failed, jump to
+                // ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED and also restore the table placement
+                // result after trivial phv allocation.
+                if (table_replay_failed_table != boost::none &&
+                    alt_phv_alloc_table_fixed < ALT_PHV_ALLOC_TABLE_FIX_THRESHOLD){
+                    alt_phv_alloc_table_fixed++;
+                    state = ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED;
+                    placedTables.clear();
+                    placedTables.insert(trivial_placedTables.begin(), trivial_placedTables.end());
+                    // rerun real phv allocation, since some pa_container_size constraints have been
+                    // added.
+                    throw PHVTrigger::failure(trivial_tableAlloc, trivial_internalTableAlloc,
+                                                trivial_mergedGateways, firstRoundFit);
+                } else {
+                    tableAlloc.clear();
+                    internalTableAlloc.clear();
+                    placedTables.clear();
+                    state = ALT_FINALIZE_TABLE;
+                    throw RerunTablePlacementTrigger::failure(false);
+                }
             }
+            break;
+        }
+        case ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED: {
+            if (!criticalPlacementFailure && maxStage <= deviceStages) {
+                state = SUCCESS;
+            } else {
+                if (table_replay_failed_table != boost::none &&
+                    alt_phv_alloc_table_fixed < ALT_PHV_ALLOC_TABLE_FIX_THRESHOLD) {
+                    alt_phv_alloc_table_fixed++;
+                    state = ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED;
+                } else {
+                    // if failed, jump to ALT_FINALIZE_TABLE, and restore the table placement result
+                    // after trivial phv allocation.
+                    state = ALT_FINALIZE_TABLE;
+                }
+
+                placedTables.clear();
+                placedTables.insert(trivial_placedTables.begin(), trivial_placedTables.end());
+                // rerun real phv allocation, since some pa_container_size constraints have been
+                // removed.
+                throw PHVTrigger::failure(trivial_tableAlloc, trivial_internalTableAlloc,
+                                            trivial_mergedGateways, firstRoundFit);
+            }
+            break;
         }
         case ALT_FINALIZE_TABLE: {
             if (!criticalPlacementFailure && maxStage <= deviceStages) {

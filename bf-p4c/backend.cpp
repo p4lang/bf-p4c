@@ -326,7 +326,8 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
             new PassIf(
                 [this]() {
                     auto actualState = table_summary.getActualState();
-                    return actualState == TableSummary::ALT_FINALIZE_TABLE_SAME_ORDER;
+                    return actualState == TableSummary::ALT_FINALIZE_TABLE_SAME_ORDER ||
+                        actualState == TableSummary::ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED;
                 },
                 {
                     [=]() {
