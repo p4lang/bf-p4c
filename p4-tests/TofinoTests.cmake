@@ -256,7 +256,7 @@ p4c_add_ptf_test_with_ptfdir (
     "${testExtraArgs} -target tofino -arch tna -bfrt"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-4341.ptf")
 bfn_set_p4_build_flag("tofino" "p4c_4341" "-Xp4c=\"--set-max-power=65.0\"")
-set_tests_properties("tofino/p4c_3343" PROPERTIES TIMEOUT ${extended_timeout_2times})
+set_tests_properties("tofino/p4c_4341" PROPERTIES TIMEOUT ${extended_timeout_2times})
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c_3926" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/p4c_3926.p4"
