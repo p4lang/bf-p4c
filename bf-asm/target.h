@@ -906,6 +906,7 @@ class Target::Flatrock : public Target {
         ::Flatrock::memories_pipe                       mem_pipe;
         ::Flatrock::regs_top                            reg_top;
         ::Flatrock::regs_pipe                           reg_pipe;
+        top_level_regs();
     };
     struct                              parser_regs : public ParserRegisterSet {
         ::Flatrock::memories_ingress_parser             prsr_mem;

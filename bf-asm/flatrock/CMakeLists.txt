@@ -46,6 +46,7 @@ set (BFAS_FLATROCK_SRCS
   flatrock/synth2port.cpp
   flatrock/tables.cpp
   flatrock/target.cpp
+  flatrock/top_level.cpp
   flatrock/ternary_match.cpp
   PARENT_SCOPE
   )
