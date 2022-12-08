@@ -7,6 +7,8 @@
 #define BF_P4C_ARCH_T2NA_H_
 
 #include "ir/ir.h"
+#include "ir/pass_manager.h"
+
 #include "arch.h"
 
 namespace P4 {

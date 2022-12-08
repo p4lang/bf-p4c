@@ -2,6 +2,7 @@
 #define BF_P4C_PHV_CREATE_THREAD_LOCAL_INSTANCES_H_
 
 #include "ir/ir.h"
+#include "ir/pass_manager.h"
 
 /**
  * This Visitor creates a thread-local instance of every metadata instance,

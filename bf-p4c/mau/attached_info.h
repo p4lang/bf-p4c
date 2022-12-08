@@ -2,9 +2,10 @@
 #define BF_P4C_MAU_ATTACHED_INFO_H_
 
 #include "bf-p4c/mau/mau_visitor.h"
-#include "lib/ordered_set.h"
-#include "lib/ordered_map.h"
 #include "attached_entries.h"
+#include "ir/pass_manager.h"
+#include "lib/ordered_map.h"
+#include "lib/ordered_set.h"
 
 namespace ActionData {
 class FormatType_t {

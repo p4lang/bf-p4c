@@ -2,6 +2,7 @@
 #define BF_P4C_COMMON_HEADER_STACK_H_
 
 #include "ir/ir.h"
+#include "ir/pass_manager.h"
 #include "lib/map.h"
 
 class PhvInfo;

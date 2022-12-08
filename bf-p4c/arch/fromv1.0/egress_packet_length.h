@@ -2,6 +2,7 @@
 #define BF_P4C_ARCH_FROMV1_0_EGRESS_PACKET_LENGTH_H_
 
 #include "ir/ir.h"
+#include "ir/pass_manager.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/typeMap.h"
 

@@ -3,6 +3,8 @@
 #emit
 struct TableResourceAlloc;
 #include <boost/optional.hpp>
+#include "lib/bitvec.h"
+#include "lib/ltbitmatrix.h"
 #include "bf-p4c/ir/ir_enums.h"
 #include "bf-p4c/ir/unique_id.h"
 #include "bf-p4c/mau/hash_function.h"

@@ -1,7 +1,8 @@
-#ifndef BFN_P4C_NORMALIZEHASHLIST_H
-#define BFN_P4C_NORMALIZEHASHLIST_H
+#ifndef BF_P4C_MIDEND_NORMALIZE_HASH_LIST_H_
+#define BF_P4C_MIDEND_NORMALIZE_HASH_LIST_H_
 
 #include "ir/ir.h"
+#include "ir/pass_manager.h"
 
 namespace P4 {
 
@@ -85,4 +86,4 @@ class NormalizeHashList : public PassManager {
     static bool isHasher(const IR::MethodCallExpression* mc);
 };
 
-#endif  // BFN_P4C_NORMALIZEHASHLIST_H
+#endif  // BF_P4C_MIDEND_NORMALIZE_HASH_LIST_H_

@@ -2,6 +2,7 @@
 #define EXTENSIONS_BF_P4C_PARDE_MERGE_PARSER_STATE_H_
 
 #include "ir/ir.h"
+#include "ir/pass_manager.h"
 
 /** Merge a chain of states into a large state.
  * Find the longest chain that:

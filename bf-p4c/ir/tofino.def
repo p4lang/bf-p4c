@@ -1,6 +1,8 @@
 /* -*-C++-*- */
 
 #emit
+
+#include "lib/bitvec.h"
 #include "bf-p4c/common/debug_info.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/ir/gress.h"

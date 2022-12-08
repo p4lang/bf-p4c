@@ -1,5 +1,7 @@
 #include <iostream>
+
 #include "utils.h"
+#include "ir/dump.h"
 #include "lib/gc.h"
 
 #if BAREFOOT_INTERNAL

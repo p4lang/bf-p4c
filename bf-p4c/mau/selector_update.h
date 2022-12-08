@@ -1,6 +1,7 @@
 #ifndef BF_P4C_MAU_SELECTOR_UPDATE_H_
 #define BF_P4C_MAU_SELECTOR_UPDATE_H_
 
+#include "ir/pass_manager.h"
 #include "lib/ordered_map.h"
 #include "mau_visitor.h"
 

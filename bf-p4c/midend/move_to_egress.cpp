@@ -1,5 +1,7 @@
 #include "move_to_egress.h"
 
+#include "ir/dump.h"
+
 class MoveToEgress::FindIngressPacketMods : public Visitor {
     MoveToEgress &self;
 

@@ -3,6 +3,7 @@
 
 #include <boost/optional.hpp>
 #include "ir/ir.h"
+#include "ir/pass_manager.h"
 
 /** Check for the following unimplemented operations:
  *

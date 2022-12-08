@@ -5,7 +5,7 @@
  * The back-end performs a series of passes that can
  * possibly introduce some backtracking - returning to
  * a given point in the sequence of passes to re-run
- * it again, possibly with new information. This ussually
+ * it again, possibly with new information. This usually
  * happens when %PHV or %table allocation fails.
  *
  * The back-end starts with IR that was already transformed from front-end/mid-end IR

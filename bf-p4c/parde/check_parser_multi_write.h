@@ -2,6 +2,7 @@
 #define BF_P4C_PARDE_CHECK_PARSER_MULTI_WRITE_H_
 
 #include <ir/ir.h>
+#include "ir/pass_manager.h"
 
 struct CheckParserMultiWrite : public PassManager {
     const PhvInfo& phv;

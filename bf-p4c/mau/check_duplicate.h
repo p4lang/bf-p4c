@@ -1,6 +1,8 @@
 #ifndef EXTENSIONS_BF_P4C_MAU_CHECK_DUPLICATE_H_
 #define EXTENSIONS_BF_P4C_MAU_CHECK_DUPLICATE_H_
 
+#include "ir/dump.h"
+
 class CheckTableNameDuplicate : public MauInspector {
     std::set<cstring>        names;
     profile_t init_apply(const IR::Node *root) override {

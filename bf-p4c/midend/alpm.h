@@ -7,6 +7,7 @@
 #define BF_P4C_MIDEND_ALPM_H_
 
 #include "ir/ir.h"
+#include "ir/pass_manager.h"
 #include "lib/cstring.h"
 #include "frontends/p4/typeMap.h"
 #include "frontends/p4/externInstance.h"

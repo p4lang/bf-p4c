@@ -2,6 +2,7 @@
 #define BF_P4C_ARCH_FROMV1_0_PHASE0_H_
 
 #include "ir/ir.h"
+#include "ir/pass_manager.h"
 
 namespace P4 {
 class ReferenceMap;

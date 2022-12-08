@@ -1,5 +1,5 @@
-#ifndef EXTENSIONS_BF_P4C_MIDEND_FOLD_CONSTANT_HASHES_H_
-#define EXTENSIONS_BF_P4C_MIDEND_FOLD_CONSTANT_HASHES_H_
+#ifndef BF_P4C_MIDEND_FOLD_CONSTANT_HASHES_H_
+#define BF_P4C_MIDEND_FOLD_CONSTANT_HASHES_H_
 
 #include "ir/ir.h"
 #include "bf-p4c/midend/type_checker.h"
@@ -129,4 +129,4 @@ class FoldConstantHashes : public PassManager {
 
 }  // namespace BFN
 
-#endif  // EXTENSIONS_BF_P4C_MIDEND_FOLD_CONSTANT_HASHES_H_
+#endif  // BF_P4C_MIDEND_FOLD_CONSTANT_HASHES_H_

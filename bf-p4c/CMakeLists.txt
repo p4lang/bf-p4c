@@ -175,7 +175,7 @@ set (BF_P4C_MIDEND_SRCS
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_MIDEND_SRCS}")
 build_unified(BF_P4C_MIDEND_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
-set (BF_P4C_BACKEND_MIDEND_HDRS
+set (BF_P4C_MIDEND_HDRS
   midend/action_synthesis_policy.h
   midend/annotate_with_in_hash.h
   midend/blockmap.h
@@ -553,7 +553,6 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/extract_deparser.h
   parde/field_packing.h
   parde/flatrock.h
-  parde/header_output.h
   parde/infer_payload_offset.h
   parde/lower_parser.h
   parde/marshal.h
@@ -568,7 +567,6 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/resolve_negative_extract.h
   parde/rewrite_parser_locals.h
   parde/split_parser_state.h
-  parde/verify_parse_depth.h
   parde/clot/allocate_clot.h
   parde/clot/clot_candidate.h
   parde/clot/clot_info.h

@@ -1,6 +1,7 @@
 /* -*-C++-*- */
 
 #emit
+#include "lib/match.h"
 #include <boost/optional.hpp>
 #include "bf-p4c/common/debug_info.h"
 #include "bf-p4c/ir/bitrange.h"

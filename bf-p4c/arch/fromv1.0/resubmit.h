@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "ir/ir.h"
+#include "ir/pass_manager.h"
 #include "lib/cstring.h"
 
 namespace P4 {

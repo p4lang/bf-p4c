@@ -3,6 +3,7 @@
 
 #include <vector>
 #include "ir/ir.h"
+#include "ir/pass_manager.h"
 
 namespace P4 {
 class ReferenceMap;
