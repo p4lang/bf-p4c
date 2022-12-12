@@ -13,6 +13,16 @@ WORKDIR /bfn/bf-p4c-compilers
 # Expose port 80 for accessing Doxygen-generated documentation
 EXPOSE 80
 
+ARG GIT_REV
+ARG P4FACTORY_GIT_REV
+LABEL JARVIS_GIT_REV=$GIT_REV
+LABEL BASE_IMAGE=${BASE_IMAGE}
+RUN printf "This is Jarvis from %s\n%s\n%s\n" \
+    $(date +"%Y-%m-%d") \
+    "Based on https://github.com/intel-restricted/networking.switching.barefoot.p4factory/tree/${P4FACTORY_GIT_REV}/submodules" \
+    "Built using https://github.com/intel-restricted/networking.switching.barefoot.bf-p4c-compilers/tree/${GIT_REV}/" \
+    > /etc/motd
+
 CMD ["/bin/bash"]
 ENTRYPOINT ["/bfn/docker_entry_point.sh"]
 

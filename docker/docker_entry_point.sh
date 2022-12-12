@@ -12,5 +12,7 @@ sudo /bfn/veth_setup.sh 34 >&2
 # Start the web server; it is installed only in Jarvis for accessing generated documentation
 sudo test -f /etc/init.d/apache2 && sudo /etc/init.d/apache2 start
 
+[[ -f /etc/motd ]] && cat /etc/motd
+
 # execute docker command
 exec "$@"

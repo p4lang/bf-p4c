@@ -81,6 +81,7 @@ def runInDocker(String cmd) {
 }
 
 node ('compiler-travis') {
+    env.BUILDING_IN_CI = 'true'
     // Clean workspace before doing anything
     sh "sudo chmod -R 777 ."
     deleteDir()
@@ -121,8 +122,8 @@ node ('compiler-travis') {
                 }
                 kind = sanitizersEnabled() ? "sanitizers_" : params.ALT_PHV ? "altphv_" : ""
                 branch = env.BRANCH_NAME ? env.BRANCH_NAME : scm.branches[0].name
-                image_tag_branch = "${kind}${branch.toLowerCase()}"
-                image_tag = "${image_tag_branch}_${bf_p4c_compilers_rev}".replace('/', '--')
+                image_tag_branch = "${kind}${branch.toLowerCase()}".replace('/', '--')
+                image_tag = "${image_tag_branch}_${bf_p4c_compilers_rev}"
                 try {
                     // Try to pull any image of this branch first. The intermediate image build
                     // attempts to reuse docker layers from it, even if the revisions are not
@@ -156,16 +157,7 @@ node ('compiler-travis') {
 
                 echo 'Building intermediate Docker image'
                 sh """
-                    mkdir -p ~/.ccache_bf-p4c-compilers
-                    docker build \
-                        --pull \
-                        --cache-from ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag_branch} \
-                        -f docker/Dockerfile.tofino \
-                        -t bf-p4c-compilers_intermediate_${image_tag} \
-                        --build-arg DOCKER_PROJECT=${DOCKER_PROJECT} \
-                        --build-arg MAKEFLAGS=j20 \
-                        --target=environment \
-                        .
+                    make -Cdocker build-internal-cached
                 """
             }
 
@@ -176,25 +168,18 @@ node ('compiler-travis') {
                             echo 'Building final Docker image to run tests with (unified build)'
                             extra_opts = getBoostrapOpts()
                             sh """
-                                docker rm -f bf-p4c-compilers_build_${image_tag} \
-                                    || true
-                                docker run \
-                                    --name bf-p4c-compilers_build_${image_tag} \
-                                    -v ~/.ccache_bf-p4c-compilers:/root/.ccache \
-                                    -e UNIFIED_BUILD=true \
-                                    -e MAKEFLAGS=j20 \
-                                    -e UBSAN=${params.UBSAN} \
-                                    -e ASAN=${params.ASAN} \
-                                    -e UBSAN_OPTIONS=${params.UBSAN_OPTIONS} \
-                                    -e ASAN_OPTIONS=${params.ASAN_OPTIONS} \
-                                    ${extra_opts} \
-                                    bf-p4c-compilers_intermediate_${image_tag} \
-                                    /bfn/bf-p4c-compilers/docker/docker_build.sh
-                                docker commit \
-                                    --change 'CMD ["/bin/bash"]' \
-                                    bf-p4c-compilers_build_${image_tag} \
-                                    ${DOCKER_PROJECT}/bf-p4c-compilers:${image_tag}
-                                docker rm -f bf-p4c-compilers_build_${image_tag}
+                                make -Cdocker build \
+                                    BUILD_TAG=${image_tag} \
+                                    BUILD_TAG_DEST=${DOCKER_PROJECT}/bf-p4c-compilers \
+                                    BUILD_ARGS="\
+                                        -e UNIFIED_BUILD=true \
+                                        -e UBSAN=${params.UBSAN} \
+                                        -e ASAN=${params.ASAN} \
+                                        -e UBSAN_OPTIONS=${params.UBSAN_OPTIONS} \
+                                        -e ASAN_OPTIONS=${params.ASAN_OPTIONS} \
+                                        ${extra_opts} \
+                                        -e MAKEFLAGS=j20 \
+                                    "
                             """
                         },
 
@@ -202,13 +187,8 @@ node ('compiler-travis') {
                             echo 'Testing non-unified build'
                             extra_opts = getBoostrapOpts()
                             sh """
-                                docker run --rm \
-                                    -v ~/.ccache_bf-p4c-compilers:/root/.ccache \
-                                    -e UNIFIED_BUILD=false \
-                                    -e MAKEFLAGS=j16 \
-                                    ${extra_opts} \
-                                    bf-p4c-compilers_intermediate_${image_tag} \
-                                    /bfn/bf-p4c-compilers/docker/docker_build.sh
+                                make -Cdocker test-build \
+                                    BUILD_ARGS="-e UNIFIED_BUILD=false ${extra_opts} -e MAKEFLAGS=j16"
                             """
                         },
 
@@ -226,7 +206,7 @@ node ('compiler-travis') {
                         echo "Pushing of the built Docker image failed. Notifying the maintainers and continuing."
                         emailext subject: "${env.JOB_NAME} failed to push build Docker image",
                                     body: "Check console output at '${env.RUN_DISPLAY_URL}'",
-                                    to: "vojtech.havel@intel.com,prathima.kotikalapudi@intel.com",
+                                    to: "vojtech.havel@intel.com,vladimir.still@intel.com,prathima.kotikalapudi@intel.com",
                                     attachLog: true
                     }
                 }
@@ -347,19 +327,18 @@ node ('compiler-travis') {
 
                     // Ideally, keep this in sync with
                     // https://github.com/intel-restricted/networking.switching.barefoot.sandals/blob/master/jenkins/bf_sde_compilers_package.sh
-                    'Packaging' : {
+                    'Packaging': {
                         if (sanitizersEnabled())
                             return
 
                         sh """
-                            mkdir -p ~/.ccache_bf-p4c-compilers
-                            docker run \
-                                --cpus=4 \
-                                -v ~/.ccache_bf-p4c-compilers:/root/.ccache \
-                                -e MAKEFLAGS=j4 \
-                                -e UNIFIED_BUILD=true \
-                                bf-p4c-compilers_intermediate_${image_tag} \
-                                scripts/package_p4c_for_tofino.sh --build-dir build --enable-cb
+                            make -Cdocker test-build \
+                                    BUILD_ARGS="
+                                        --cpus=4 \
+                                        -e MAKEFLAGS=j4 \
+                                        -e UNIFIED_BUILD=true \
+                                    " \
+                                    BUILD_SCRIPT="scripts/package_p4c_for_tofino.sh --build-dir build --enable-cb"
                         """
                     },
 

@@ -1,0 +1,7 @@
+ARG BASE_IMAGE
+
+FROM ${BASE_IMAGE}
+
+LABEL BF_P4C_GIT_REV=$GIT_REV
+
+COPY . /bfn/bf-p4c-compilers/
