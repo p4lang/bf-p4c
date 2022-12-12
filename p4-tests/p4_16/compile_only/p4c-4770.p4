@@ -1051,7 +1051,14 @@ const switch_cons_hash_ip_seq_t SWITCH_CONS_HASH_IP_SEQ_DIPSIP = 2;
     switch_cons_hash_ip_seq_t   cons_hash_v6_ip_seq;
 }
 
-@pa_container_size("egress", "eg_md.mirror.src", 8) @pa_container_size("egress", "eg_md.mirror.type", 8) @pa_container_size("egress", "hdr.dtel_drop_report.drop_reason", 8) @pa_mutually_exclusive("egress", "hdr.dtel.timestamp", "hdr.erspan_type3.timestamp") struct switch_egress_metadata_t {
+@pa_container_size("egress", "eg_md.mirror.src", 8)
+@pa_container_size("egress", "eg_md.mirror.type", 8)
+@pa_container_size("egress", "eg_md.qos.qdepth", 8)
+@pa_container_size("egress", "eg_intr_md.deq_qdepth", 32)
+@pa_container_size("egress", "eg_intr_md.egress_qid", 32)
+@pa_container_size("egress", "hdr.dtel_drop_report.drop_reason", 8)
+@pa_mutually_exclusive("egress", "hdr.dtel.timestamp", "hdr.erspan_type3.timestamp")
+struct switch_egress_metadata_t {
     switch_pkt_src_t           pkt_src;
     switch_pkt_length_t        pkt_length;
     switch_pkt_type_t          pkt_type;
