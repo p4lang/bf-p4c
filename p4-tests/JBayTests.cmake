@@ -655,6 +655,7 @@ bfn_set_ptf_ports_json_file("tofino2" "p4_16_programs_tna_idletimeout" "${CMAKE_
 set_tests_properties("tofino2/p4_16_programs_tna_exact_match" PROPERTIES TIMEOUT ${extended_timeout_2times})
 set_tests_properties("tofino2/p4_16_programs_tna_ternary_match" PROPERTIES TIMEOUT ${extended_timeout_4times})
 set_tests_properties("tofino2/p4c_2527" PROPERTIES TIMEOUT ${extended_timeout_2times})
+set_tests_properties("tofino2/p4_16_programs_tna_register" PROPERTIES TIMEOUT ${extended_timeout_2times})
 
 # P4C-4079
 # New HeaderMutex pass increases compilation time a bit over 600s default timeout value (usually 660s to 780s).
