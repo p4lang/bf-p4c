@@ -37,8 +37,7 @@ StageAndAccess to_stage_and_access(const IR::BFN::Unit* unit,
         return {-1, FieldUse(FieldUse::WRITE)};
     } else if (unit->is<IR::BFN::Deparser>()) {
         return {Device::numStages(), FieldUse(FieldUse::READ)};
-    } else if (unit->is<IR::MAU::Table>()) {
-        const auto* t = unit->to<IR::MAU::Table>();
+    } else if (const auto* t = unit->to<IR::MAU::Table>()) {
         return {t->stage(), FieldUse(is_write ? FieldUse::WRITE : FieldUse::READ)};
     } else {
         BUG("unknown unit: %1%, field: %2%", unit, f);
@@ -52,12 +51,20 @@ void FinalizePhysicalLiverange::update_liverange(const safe_vector<AllocSlice>& 
     for (const auto& slice : slices) {
         // update AllocSlice-based live range.
         LOG1("update live range of " << slice << ": " << op);
-        if (live_ranges_i.count(slice)) {
-            live_ranges_i.at(slice).extend(op);
+        if (auto it = live_ranges_i.find(slice); it != live_ranges_i.end()) {
+            it->second.extend(op);
         } else {
             live_ranges_i.emplace(slice, LiveRange(op, op));
         }
     }
+}
+
+
+bool FinalizePhysicalLiverange::preorder(const IR::BFN::Pipe* pipe) {
+    BUG_CHECK(pipe->headerStackInfo != nullptr,
+              "Running FinalizePhysicalLiverange without running CollectHeaderStackInfo first?");
+    headerStacks = pipe->headerStackInfo;
+    return true;
 }
 
 /// collect table to stage.
@@ -107,7 +114,7 @@ void FinalizePhysicalLiverange::mark_access(const PHV::Field* f, le_bitrange bit
 
     // Handle aliased fields
     if (const PHV::Field* alias_dest = phv_i.getAliasDestination(f)) {
-        LOG2("   field " << f->name << " has alias dest :" << alias_dest->name);
+        LOG2("   field " << f->name << " has alias dest: " << alias_dest->name);
         const auto dest_slices =
             find_all_overlapping_alloc_slices(alias_dest, bits, AllocContext::of_unit(unit),
                                               is_write);
@@ -130,25 +137,45 @@ bool FinalizePhysicalLiverange::preorder(const IR::BFN::Extract* extract) {
     auto* member = fieldLVal->field->to<IR::Member>();
     if (!member) return true;
     if (member->member.toString() != "$stkvalid") return true;
+
+    LOG9("$stkvalid extract: " << extract);
     auto* src = extract->source->to<IR::BFN::ConstantRVal>();
     BUG_CHECK(src, "extract non-constant to validity bit");
-    auto src_value = bitvec(src->constant->asInt());
-    // make sure value is power of 2
-    BUG_CHECK(src_value.popcount() == 1, "extract non power of 2 to $stkvalid");
-    auto valid_bit_index = src_value.max().index();
-    // prepare the valid bit expression as xxx[n].$valid
-    auto valid_bit_expr = new IR::Member(
-        new IR::Type_Bits(1, false),
-        new IR::HeaderStackItemRef(member->expr, new IR::Constant(valid_bit_index)),
-        IR::ID("$valid"));
-    const auto* unit = findContext<IR::BFN::Unit>();
-    le_bitrange bits;
-    auto f = phv_i.field(valid_bit_expr, &bits);
-    if (!f) return true;
-    const bool allow_unallocated = unit->is<IR::BFN::ParserState>()
-        || unit->is<IR::BFN::Parser>()
-        || unit->is<IR::BFN::GhostParser>();
-    mark_access(f, bits, unit, true, allow_unallocated);
+    BUG_CHECK(src->constant->fitsUint(), "Constant too big in extract: %1%", extract);
+    const auto src_value = bitvec(src->constant->asUnsigned());
+
+    BUG_CHECK(headerStacks != nullptr, "No HeaderStackInfo; was FinalizePhysicalLiverange "
+              "applied to a non-Pipe node?");
+    auto stack = member->expr->toString();
+    auto* stackInfo = headerStacks->get(stack);
+    BUG_CHECK(stackInfo, "No HeaderStackInfo for %1% which is needed for %2%",
+              stack, extract);
+
+    // Parde/StackPushShims can create writes to $stkvalid which are not power of 2 constant.
+    // These writes are writes of "push_bits" that are used to implement stack push.
+    // @see HeaderPushPop for more details.
+    for (auto stkvalid_bit_index : src_value) {
+        // prepare the valid bit expression as xxx[n].$valid
+        // The layout of $stkvalid is [push_bits . valid_bits . pop_bits] so the index 0 of stack
+        // corresponds to bit position 1 << stackInfo->maxpop.
+        auto stack_index = stkvalid_bit_index - stackInfo->maxpop;
+        if (stack_index < 0 || stack_index > stackInfo->size)
+            continue;  // write to popbits/pushbits -> does not correspond to stack index
+        auto valid_bit_expr = new IR::Member(
+            new IR::Type_Bits(1, false),
+            new IR::HeaderStackItemRef(member->expr, new IR::Constant(stack_index)),
+            IR::ID("$valid"));
+        const auto* unit = findContext<IR::BFN::Unit>();
+        le_bitrange bits;
+        auto f = phv_i.field(valid_bit_expr, &bits);
+        if (!f)
+            continue;
+        const bool allow_unallocated = unit->is<IR::BFN::ParserState>()
+            || unit->is<IR::BFN::Parser>()
+            || unit->is<IR::BFN::GhostParser>();
+        LOG5("$stkvalid to index " << stack_index << " for " << extract);
+        mark_access(f, bits, unit, true, allow_unallocated);
+    }
     return true;
 }
 

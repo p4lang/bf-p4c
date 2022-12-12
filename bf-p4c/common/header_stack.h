@@ -110,6 +110,11 @@ struct HeaderStackInfo {
     auto at(cstring n) const -> decltype(info.at(n)) { return info.at(n); }
     auto at(cstring n) -> decltype(info.at(n)) { return info.at(n); }
     auto count(cstring n) const -> decltype(info.count(n)) { return info.count(n); }
+    const Info* get(cstring n) const {
+        if (auto it = info.find(n); it != info.end())
+            return &it->second;
+        return nullptr;
+    }
 };
 }  // namespace BFN
 

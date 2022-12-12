@@ -26,6 +26,10 @@ class FinalizePhysicalLiverange : public Inspector, TofinoWriteContext {
     // used to verify overlapped live ranges for overlaying but non-mutex fields.
     const TablesMutuallyExclusive& tb_mutex_i;
     const FieldDefUse& defuse_i;
+    /// Keeps metadata about header stacks for the sake of @ref preorder(const IR::BFN::Extract*)
+    /// It is set in @ref preorder(const IR::BFN::Pipe*)
+    /// @see HeaderPushPop for more discussion on layout of $stkvalid.
+    const BFN::HeaderStackInfo* headerStacks = nullptr;
 
     /// AllocSlice to updated live ranges.
     ordered_map<AllocSlice, LiveRange> live_ranges_i;
@@ -57,6 +61,9 @@ class FinalizePhysicalLiverange : public Inspector, TofinoWriteContext {
 
         return Inspector::init_apply(root);
     }
+
+    /// Sets @ref headerStacks
+    bool preorder(const IR::BFN::Pipe* pipe) override;
 
     /// optimization for visitDagOnce = false: we only need to visit parser state once.
     bool preorder(const IR::BFN::ParserState*) override {

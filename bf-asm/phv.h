@@ -136,8 +136,10 @@ class Phv : public Section {
  public:
     static const Slice *get(gress_t gress, int stage, const std::string &name) {
         phv.init_phv(options.target);
-        if (!phv.names[gress].count(name)) return 0;
-        auto &per_stage = phv.names[gress].at(name);
+        auto phvIt = phv.names[gress].find(name);
+        if (phvIt == phv.names[gress].end())
+            return 0;
+        auto &per_stage = phvIt->second;
         auto it = per_stage.upper_bound(stage);
         if (it == per_stage.begin()) {
             if (it == per_stage.end() || stage != -1)
@@ -171,7 +173,9 @@ class Phv : public Section {
                 if (hi >= 0) return Slice(*s, lo, hi);
                 return *s;
             } else {
-                error(lineno, "No phv record %s", name_.c_str());
+                error(lineno, "No phv record %s (%s, stage %d)", name_.c_str(),
+                      gress_ == INGRESS ? "INGRESS" : "EGRESS", stage);
+                phv.get(gress_, stage, name_);
                 return Slice(); } }
         bool operator<(const Ref &r) const {
             return (**this).reg.parser_id() < (*r).reg.parser_id(); }
