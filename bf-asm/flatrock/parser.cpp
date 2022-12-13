@@ -77,8 +77,8 @@ bool check_range_state_subfield(value_t msb, value_t lsb, bool only8b) {
      *    len operand can define subfield widths 2/4/8/16 bits. That means the MSB
      *    can be in the range <min{LSB} + min{len} - 1, max{LSB} + max{len} - 1>,
      *    i.e. <1, 78>. */
-    if (!check_range(msb, 1, Target::Flatrock::PARSER_STATE_WIDTH * 8 - 2)) return false;
-    if (!check_range(lsb, 0, Target::Flatrock::PARSER_STATE_MATCH_WIDTH * 8 - 1)) return false;
+    if (!check_range(msb, 1, Target::Flatrock::PARSER_ANA_STATE_WIDTH * 8 - 2)) return false;
+    if (!check_range(lsb, 0, Target::Flatrock::PARSER_PKT_STATE_WIDTH * 8 - 1)) return false;
     int _width = msb.i - lsb.i + 1;
     if (only8b) {
         if (_width != 8) {
@@ -804,7 +804,7 @@ void FlatrockParser::input_states(VECTOR(value_t) args, value_t key, value_t val
     for (auto &kv : MapIterChecked(value.map, false)) {
         if (!CHECKTYPE2(kv.value, tINT, tMATCH)) return;
         match_t match;
-        input_int_match(kv.value, match, Target::Flatrock::PARSER_STATE_MATCH_WIDTH * 8);
+        input_int_match(kv.value, match, Target::Flatrock::PARSER_PKT_STATE_WIDTH * 8);
         // Inserts if does not exist
         states[kv.key.s] = match;
     }
@@ -1284,7 +1284,7 @@ FlatrockParser::ParserStateVector::ParserStateVector() {
 FlatrockParser::ParserStateVector::ParserStateVector(match_t match) {
     static_assert(sizeof(match.word0) == 8);
     static_assert(sizeof(match.word1) == 8);
-    static_assert(Target::Flatrock::PARSER_STATE_WIDTH == 10);
+    static_assert(Target::Flatrock::PARSER_ANA_STATE_WIDTH == 10);
 
     /* -- the all-match bits are initialized with zeros. We need that for the
      *    initial state value. */
@@ -1319,7 +1319,7 @@ FlatrockParser::ParserStateVector::ParserStateVector(match_t hi, match_t lo)
     : ParserStateVector(lo) {
     static_assert(sizeof(match_t::word0) == 8);
     static_assert(sizeof(match_t::word1) == 8);
-    static_assert(Target::Flatrock::PARSER_STATE_WIDTH == 10);
+    static_assert(Target::Flatrock::PARSER_ANA_STATE_WIDTH == 10);
 
     /* -- the all-match bits are initialized with zeros. We need that for the
      *    initial state value. */
@@ -1333,19 +1333,19 @@ FlatrockParser::ParserStateVector::ParserStateVector(match_t hi, match_t lo)
 }
 
 bool FlatrockParser::ParserStateVector::input_state_value(
-    uint8_t target[Target::Flatrock::PARSER_STATE_WIDTH * 8], const value_t value) {
+    uint8_t target[Target::Flatrock::PARSER_ANA_STATE_WIDTH * 8], const value_t value) {
     static_assert(sizeof(value.i) == 8);
-    static_assert(Target::Flatrock::PARSER_STATE_WIDTH >= 8);
+    static_assert(Target::Flatrock::PARSER_ANA_STATE_WIDTH >= 8);
 
     /* -- small constants are parsed as tINT. Thus we must support both integer types. */
     if (!CHECKTYPE2(value, tINT, tBIGINT)) return false;
 
     if (value.type == tBIGINT) {
-        if (!check_bigint_unsigned(value, Target::Flatrock::PARSER_STATE_WIDTH)) return false;
+        if (!check_bigint_unsigned(value, Target::Flatrock::PARSER_ANA_STATE_WIDTH)) return false;
 
         int dword_index(0);
         int byte_mask(0);
-        for (int i(0); i < Target::Flatrock::PARSER_STATE_WIDTH; ++i) {
+        for (int i(0); i < Target::Flatrock::PARSER_ANA_STATE_WIDTH; ++i) {
             if (dword_index < value.bigi.size) {
                 target[i] = static_cast<uint8_t>(value.bigi.data[dword_index] >> byte_mask);
             } else {
@@ -1371,7 +1371,7 @@ bool FlatrockParser::ParserStateVector::input_state_value(
         target[6] = static_cast<uint8_t>(value.i >> 48);
         target[7] = static_cast<uint8_t>(value.i >> 56);
 
-        for (int i(8); i < Target::Flatrock::PARSER_STATE_WIDTH; ++i) target[i] = 0;
+        for (int i(8); i < Target::Flatrock::PARSER_ANA_STATE_WIDTH; ++i) target[i] = 0;
     }
 
     return true;
@@ -1410,7 +1410,7 @@ bool FlatrockParser::ParserStateVector::parse_state_vector(ParserStateVector &ta
     } else if (value.type == tMATCH) {
         /* -- even though the match value is already parsed in value.m, check the correct range */
         match_t match;
-        if (!input_int_match(value, match, Target::Flatrock::PARSER_STATE_MATCH_WIDTH * 8))
+        if (!input_int_match(value, match, Target::Flatrock::PARSER_PKT_STATE_WIDTH * 8))
             return false;
         tmp = ParserStateVector(match);
     } else if (value.type == tMAP) {
@@ -1420,12 +1420,12 @@ bool FlatrockParser::ParserStateVector::parse_state_vector(ParserStateVector &ta
         std::memset(&lo, 0, sizeof(lo));
         for (const auto &kv : MapIterChecked(value.map, true)) {
             if (kv.key == "lo") {
-                if (!input_int_match(kv.value, lo, Target::Flatrock::PARSER_STATE_MATCH_WIDTH * 8))
+                if (!input_int_match(kv.value, lo, Target::Flatrock::PARSER_PKT_STATE_WIDTH * 8))
                     return false;
             } else if (kv.key == "hi") {
                 if (!input_int_match(kv.value, hi,
-                                     (Target::Flatrock::PARSER_STATE_WIDTH -
-                                      Target::Flatrock::PARSER_STATE_MATCH_WIDTH) *
+                                     (Target::Flatrock::PARSER_ANA_STATE_WIDTH -
+                                      Target::Flatrock::PARSER_PKT_STATE_WIDTH) *
                                          8))
                     return false;
             } else {
@@ -1883,7 +1883,7 @@ void FlatrockParser::AnalyzerStage::input_rule(VECTOR(value_t) args, value_t key
                     continue;
             } else {
                 input_match_constant(
-                    rule.match.state, kv.value, Target::Flatrock::PARSER_STATE_MATCH_WIDTH * 8);
+                    rule.match.state, kv.value, Target::Flatrock::PARSER_PKT_STATE_WIDTH * 8);
             }
         } else if (kv.key == "match_w0") {
             match_w0_present = true;
@@ -2543,6 +2543,10 @@ void FlatrockParser::input(VECTOR(value_t) args, value_t data) {
 
 void FlatrockParser::write_config(RegisterSetBase &regs, json::map &json, bool legacy) {
     auto &_regs = dynamic_cast<Target::Flatrock::parser_regs &>(regs);
+    // 10B ana_state -> 8B pkt_state byte selection
+    // TODO add to assembly
+    for (int i = 0; i < Target::Flatrock::PARSER_PKT_STATE_WIDTH; i++)
+        _regs.prsr.state_sel.state_sel[i].off = i;
     for (unsigned int i = 0; i < Target::Flatrock::PARSER_PORT_METADATA_ITEMS; i++)
         if (port_metadata[i].port)
             // Process only initialized items

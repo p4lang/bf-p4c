@@ -201,8 +201,8 @@ class FlatrockParser : public BaseParser, virtual public Parsable {
      */
     class ParserStateVector {
      private:
-        uint8_t value[Target::Flatrock::PARSER_STATE_WIDTH];
-        uint8_t mask[Target::Flatrock::PARSER_STATE_WIDTH];
+        uint8_t value[Target::Flatrock::PARSER_ANA_STATE_WIDTH];
+        uint8_t mask[Target::Flatrock::PARSER_ANA_STATE_WIDTH];
 
      public:
         /**
@@ -258,7 +258,7 @@ class FlatrockParser : public BaseParser, virtual public Parsable {
         void writeMask(ubits<16> &hi, ubits<32> &mid, ubits<32> &lo) const;
 
      private:
-        static bool input_state_value(uint8_t target[Target::Flatrock::PARSER_STATE_WIDTH * 8],
+        static bool input_state_value(uint8_t target[Target::Flatrock::PARSER_ANA_STATE_WIDTH * 8],
                                       const value_t value);
     };
 

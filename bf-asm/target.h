@@ -1055,8 +1055,9 @@ class Target::Flatrock : public Target {
         PARSER_PORT_METADATA_ITEM_MAX = 255,
         PARSER_INBAND_METADATA_WIDTH = 8,  // MD8
         PARSER_PROFILES = ::Flatrock::PARSER_PROFILES,  // Fpp_params.pm: N_PHV_TCAM_DEPTH
-        PARSER_STATE_WIDTH = ::Flatrock::PARSER_STATE_WIDTH,  // 8 + 2 bytes
-        PARSER_STATE_MATCH_WIDTH = 8,      // only lower 8 bytes participate in TCAM matching
+        PARSER_ANA_STATE_WIDTH = ::Flatrock::PARSER_ANA_STATE_WIDTH,  // 8 + 2 bytes
+        // only lower 8 bytes participate in TCAM matching
+        PARSER_PKT_STATE_WIDTH = ::Flatrock::PARSER_PKT_STATE_WIDTH,
         PARSER_FLAGS_WIDTH = ::Flatrock::PARSER_FLAGS_WIDTH,
         PARSER_PTR_MAX = ::Flatrock::PARSER_PTR_MAX,
         PARSER_W_WIDTH = ::Flatrock::PARSER_W_WIDTH,  // Width of W0, W1, W2 registers

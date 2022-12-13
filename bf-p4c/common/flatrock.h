@@ -22,7 +22,8 @@ enum constants {
     PARSER_PORT_METADATA_WIDTH = 15,  ///< Byte width of per-port metadata
     PARSER_PORT_METADATA_ITEMS = 40,  ///< Fpp_params.pm: N_PORT
     PARSER_PROFILES = 16,  ///< Fpp_params.pm: N_PHV_TCAM_DEPTH
-    PARSER_STATE_WIDTH = 10,  ///< 8 + 2 bytes
+    PARSER_ANA_STATE_WIDTH = 10,  ///< 8 + 2 bytes
+    PARSER_PKT_STATE_WIDTH = 8,  ///< only lower 8 bytes participate in TCAM matching
     PARSER_FLAGS_WIDTH = 8,
     PARSER_PTR_MAX = 255,
     PARSER_W_WIDTH = 2,  ///< Byte width of W0, W1, W2 registers

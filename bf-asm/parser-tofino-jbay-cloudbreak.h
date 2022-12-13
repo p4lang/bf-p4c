@@ -14,7 +14,6 @@
 
 enum {
     /* global constants related to parser */
-    PARSER_STATE_WIDTH = 8,
     PARSER_STATE_MASK = 0xff,
     PARSER_TCAM_DEPTH = 256,
     PARSER_CHECKSUM_ROWS = 32,

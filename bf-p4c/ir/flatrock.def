@@ -140,9 +140,9 @@ class Profile {
         if (initial_state)
             BUG_CHECK(
                 initial_state->size() == 0 ||
-                initial_state->size() == ::Flatrock::PARSER_STATE_WIDTH,
+                initial_state->size() == ::Flatrock::PARSER_ANA_STATE_WIDTH,
                 "invalid width of initial state: %d; expected %d",
-                initial_state->size(), ::Flatrock::PARSER_STATE_WIDTH);
+                initial_state->size(), ::Flatrock::PARSER_ANA_STATE_WIDTH);
         if (initial_flags)
             BUG_CHECK(
                 initial_flags->size() == 0 ||
