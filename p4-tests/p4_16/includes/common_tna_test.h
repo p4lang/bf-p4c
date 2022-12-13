@@ -8,7 +8,7 @@ control ingressDeparser(packet_out packet, inout headers hdr, in metadata meta,
 }
 #endif
 
-#ifndef egress
+#ifndef EGRESS
 parser egressParser(packet_in packet, out headers hdr, out metadata meta,
                     out egress_intrinsic_metadata_t eg_intr_md) {
     state start {

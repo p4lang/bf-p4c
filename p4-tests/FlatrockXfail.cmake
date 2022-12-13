@@ -312,6 +312,11 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/stf/update_checksum_6.p4
   )
 
+p4c_add_xfail_reason("tofino5"
+  "error: cast: values of type 'bit<8>' cannot be implicitly cast to type 'MeterColor_t'"
+  extensions/p4_tests/p4_16/stf/meter_dest_16_32_flexible.p4
+  )
+
 # *********************************************************************************************** #
 # ** \TNA tests that "should" work ************************************************************** #
 # *********************************************************************************************** #

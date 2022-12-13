@@ -1724,6 +1724,15 @@ const IR::MAU::Instruction *StatefulAttachmentSetup::Update::preorder(IR::MAU::I
     return inst;
 }
 
+Visitor::profile_t MeterSetup::Scan::init_apply(const IR::Node* root) {
+    self.update_lpfs.clear();
+    self.update_pre_colors.clear();
+    self.pre_color_types.clear();
+    self.standard_types.clear();
+
+    return MauInspector::init_apply(root);
+}
+
 bool MeterSetup::Scan::preorder(const IR::MAU::Instruction *) {
     return false;
 }

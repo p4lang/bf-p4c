@@ -547,6 +547,7 @@ class MeterSetup : public PassManager {
         void find_input(const IR::MAU::Primitive *);
         void find_pre_color(const IR::MAU::Primitive *);
         const IR::Expression *convert_cast_to_slice(const IR::Expression *);
+        profile_t init_apply(const IR::Node *root) override;
         bool preorder(const IR::MAU::Instruction *) override;
         bool preorder(const IR::MAU::Primitive *) override;
      public:
