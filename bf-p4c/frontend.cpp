@@ -4,6 +4,7 @@
 #include "bf-p4c/common/parse_annotations.h"
 #include "bf-p4c/logging/event_logger.h"
 #include "bf-p4c/lib/error_type.h"
+#include "bf-p4c/midend/desugar_varbit_extract.h"
 #include "frontends/common/applyOptionsPragmas.h"
 #include "frontends/common/options.h"
 #include "frontends/common/parseInput.h"
@@ -95,6 +96,7 @@ const IR::P4Program* run_frontend() {
 
     BFNOptionPragmaParser optionsPragmaParser;
     program->apply(P4::ApplyOptionsPragmas(optionsPragmaParser));
+    program = program->apply(AnnotateVarbitExtractStates());
 
     auto frontend = P4::FrontEnd(BFN::ParseAnnotations());
     frontend.addDebugHook(hook);

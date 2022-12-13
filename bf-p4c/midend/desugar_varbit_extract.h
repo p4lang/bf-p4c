@@ -77,7 +77,7 @@
  *     state parse_48b {
  *         extract<bit<32>>();
  *         extract<bit<16>>(); }
- * 
+ *
  */
 #ifndef BF_P4C_MIDEND_DESUGAR_VARBIT_EXTRACT_H_
 #define BF_P4C_MIDEND_DESUGAR_VARBIT_EXTRACT_H_
@@ -86,6 +86,30 @@
 #include "frontends/p4/cloner.h"
 #include "bf-p4c/midend/type_checker.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
+
+/**
+ * \ingroup DesugarVarbitExtract
+ */
+class AnnotateVarbitExtractStates : public Transform {
+    IR::Node* preorder(IR::ParserState* state) override {
+        for (const auto* component : state->components) {
+            const auto* statement = component->to<IR::MethodCallStatement>();
+            if (!statement) continue;
+            const IR::MethodCallExpression* call = statement->methodCall;
+            if (!call) continue;
+            const auto* method = call->method->to<IR::Member>();
+            if (!method) continue;
+
+            if (method->member == "extract" && call->arguments->size() == 2) {
+                IR::Annotations* annotations = state->annotations->clone();
+                annotations->add(new IR::Annotation(IR::ID("dontmerge"), {}));
+                state->annotations = annotations;
+                break;
+            }
+        }
+        return state;
+    }
+};
 
 /**
  * \ingroup DesugarVarbitExtract
