@@ -174,7 +174,7 @@
             "declaration": {
                 "file": "tna_ports.p4",
                 "line": 94,
-                "column": 39
+                "column": 11
             },
             "symbol_type": "P4Table"
         },

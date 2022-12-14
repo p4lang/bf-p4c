@@ -332,6 +332,7 @@ set (TOFINO_TNA_TEST_SUITES
   ${p16_tna_tests}
   )
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${TOFINO_TNA_TEST_SUITES}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
+set_tests_properties("tofino/extensions/p4_tests/p4_16/ptf/options_invalid.p4" PROPERTIES TIMEOUT ${extended_timeout_2times})
 bfn_needs_scapy("tofino" "extensions/p4_tests/p4_16/ptf/options_invalid.p4")
 bfn_needs_scapy("tofino" "extensions/p4_tests/p4_16/ptf/inner_checksum.p4")
 
@@ -1240,6 +1241,7 @@ bfn_set_p4_build_flag("tofino" "p4_16_programs_internal_misc1"
 
 set_tests_properties("tofino/p4_16_programs_internal_misc1" PROPERTIES TIMEOUT ${extended_timeout_150percent})
 set_tests_properties("tofino/p4_16_programs_internal_tna_pvs_multi_states" PROPERTIES TIMEOUT ${extended_timeout_150percent})
+set_property(TEST "tofino/p4_16_programs_internal_multithread_test" APPEND PROPERTY ENVIRONMENT "RERUN_PTF_ON_FAILURE=1")
 
 # Compile-only internal P4-16 Programs
 foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS_INTERNAL_COMPILE_ONLY)
