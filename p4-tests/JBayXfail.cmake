@@ -30,7 +30,6 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
   p4c_add_xfail_reason("tofino2"
     "mismatch from expected"
     extensions/p4_tests/p4_16/stf/parser_error.p4
-    extensions/p4_tests/p4_16/stf/header_stack_strided_alloc2.p4
   )
 
   # needs strided CLOT alloc

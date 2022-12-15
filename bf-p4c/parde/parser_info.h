@@ -202,6 +202,18 @@ class ParserGraphImpl : public DirectedGraph {
         return {};
     }
 
+    ordered_set<const Transition*> transitions_to(const State* dst) const {
+        ordered_set<const Transition*> transitions;
+        auto has_dst = [dst](const auto& kv) { return kv.first.second == dst; };
+        auto it = std::find_if(_transitions.begin(), _transitions.end(), has_dst);
+        while (it != _transitions.end()) {
+            ordered_set<const Transition*> value = it->second;
+            transitions.insert(value.begin(), value.end());
+            it = std::find_if(++it, _transitions.end(), has_dst);
+        }
+        return transitions;
+    }
+
     ordered_set<const Transition*> to_pipe(const State* src) const {
         if (_to_pipe.count(src))
             return _to_pipe.at(src);
@@ -533,7 +545,7 @@ class ParserGraphImpl : public DirectedGraph {
     }
 
     const State* get_src(const Transition* t) const {
-        for (auto& kv : _transitions.unstable_iterable()) {
+        for (auto& kv : _transitions) {
             if (kv.second.count(t))
                 return kv.first.first;
         }
@@ -552,7 +564,7 @@ class ParserGraphImpl : public DirectedGraph {
     }
 
     const State* get_dst(const Transition* t) const {
-        for (auto& kv : _transitions.unstable_iterable()) {
+        for (auto& kv : _transitions) {
             if (kv.second.count(t))
                 return kv.first.second;
         }
@@ -728,8 +740,8 @@ class ParserGraphImpl : public DirectedGraph {
 
     ParserStateMap<State> _succs, _preds;
 
-    assoc::map<std::pair<const State*, const State*>,
-             ordered_set<const Transition*>> _transitions;
+    ordered_map<std::pair<const State*, const State*>,
+                ordered_set<const Transition*>> _transitions;
 
     // the iteration order is not actually needed to be fixed except for
     // dump_parser

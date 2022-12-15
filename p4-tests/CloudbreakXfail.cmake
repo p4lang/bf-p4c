@@ -38,6 +38,7 @@ if (HARLYN_STF_cb AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_16/stf/parser_loop_3.p4
     #extensions/p4_tests/p4_16/stf/parser_loop_4.p4
     extensions/p4_tests/p4_16/stf/header_stack_strided_alloc1.p4
+    extensions/p4_tests/p4_16/stf/header_stack_strided_alloc2.p4
   )
 
   p4c_add_xfail_reason("tofino3"
@@ -414,19 +415,6 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/stf/parser_loop_2.p4
   extensions/p4_tests/p4_16/stf/parser_counter_12.p4
   extensions/p4_tests/p4_16/stf/parser_loop_1.p4
-  # P4C-3825:
-  #   The new CLOT allocator combines 3 egress, 16B CLOTs into 1 egress, 48B CLOT. This leads to an
-  #   issue where the packet emitted by the ingress deparser in this test is only 36B long. The
-  #   egress parser receives this 36B packet and runs into a PacketTooShort parser error. The CLOT
-  #   is filled as much as it can. On the hardware, the remaining space would be filled with junk
-  #   data, but in the model, the CLOT is left as is. Once the model reaches the egress deparser, it
-  #   attempts to emit the CLOT. Sadly, the model does not know where to fetch the last few bytes of
-  #   the CLOT that are missing, so the model crashes.
-  #
-  #   This test was previously xfailed for the following reason because the compiler does not have
-  #   strided CLOT allocation yet:
-  #     ".* expected packet.* on port .* not seen|shorter than expected"
-  extensions/p4_tests/p4_16/stf/header_stack_strided_alloc2.p4
 )
 
 p4c_add_xfail_reason("tofino3"

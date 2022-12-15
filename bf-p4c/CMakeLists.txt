@@ -529,6 +529,8 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/clot/header_removal_analysis.cpp
   parde/clot/pseudoheader.cpp
   parde/clot/pragma/do_not_use_clot.cpp
+  parde/lowered/helpers.cpp
+  parde/lowered/hoist_common_match_operations.cpp
   parde/mirror/const_mirror_session_opt.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PARDE_SRCS}")
@@ -564,6 +566,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/phase0.h
   parde/parde_utils.h
   parde/parser_info.h
+  parde/reset_invalidated_checksum_headers.h
   parde/resolve_negative_extract.h
   parde/rewrite_parser_locals.h
   parde/split_parser_state.h
@@ -577,8 +580,13 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/clot/header_removal_analysis.h
   parde/clot/pseudoheader.h
   parde/clot/pragma/do_not_use_clot.h
+  parde/common/allocators.h
+  parde/common/match_reducer.h
+  parde/lowered/compute_lowered_parser_ir.h
+  parde/lowered/extract_simplifier.h
+  parde/lowered/helpers.h
+  parde/lowered/hoist_common_match_operations.h
   parde/mirror/const_mirror_session_opt.h
-  parde/reset_invalidated_checksum_headers.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PARDE_HDRS}")
 

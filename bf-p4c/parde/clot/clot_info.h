@@ -129,6 +129,9 @@ class ClotInfo {
         return parser_state_to_clots_.at(gress);
     }
 
+    const std::set<const Clot*> parser_state_to_clots(
+        const IR::BFN::LoweredParserState* state) const;
+
     const Clot* parser_state_to_clot(const IR::BFN::LoweredParserState *state, unsigned tag) const;
 
     const std::vector<Clot*>& clots() { return clots_; }

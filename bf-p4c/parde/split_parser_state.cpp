@@ -1477,7 +1477,7 @@ struct ClipTerminalTransition : ParserModifier {
 struct CheckOutOfBufferExtracts : ParserInspector {
     bool preorder(const IR::BFN::PacketRVal* rval) override {
         if (auto extract = findContext<IR::BFN::Extract>()) {
-            // CLOTs don't need to be enitrely in the buffer to be extracted -- just the
+            // CLOTs don't need to be entirely in the buffer to be extracted -- just the
             // start of the CLOT needs to be in the buffer
             if (rval->range.lo < 0 ||
                 (extract->is<IR::BFN::ExtractClot>()
