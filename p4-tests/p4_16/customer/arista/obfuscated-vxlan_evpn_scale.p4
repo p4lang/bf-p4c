@@ -58,8 +58,6 @@
 @pa_container_size("egress" , "Lindy.Arapahoe.Garcia" , 32)
 @pa_container_size("egress" , "Lindy.Arapahoe.Coalwood" , 32)
 @pa_mutually_exclusive("ingress" , "Brady.Courtdale.Amenia" , "Brady.Covert.Sublett")
-@pa_atomic("ingress" , "Brady.HighRock.Waubun")
-@gfm_parity_enable
 @pa_alias("ingress" , "Lindy.Peoria.Hackett" , "Brady.Ekwok.Helton")
 @pa_alias("ingress" , "Lindy.Peoria.Kaluaaha" , "Brady.Ekwok.FortHunt")
 @pa_alias("ingress" , "Lindy.Peoria.Calcasieu" , "Brady.Ekwok.Findlay")
@@ -108,7 +106,23 @@
 @pa_alias("egress" , "Lindy.Peoria.Mabelle" , "Brady.Lookeba.Rainelle")
 @pa_alias("egress" , "Lindy.Peoria.Lacona" , "Brady.Lookeba.Petrey")
 @pa_alias("egress" , "Lindy.Harding.$valid" , "Brady.Longwood.McBrides")
-@pa_alias("egress" , "Brady.Orting.Candle" , "Brady.Orting.Newfolden") header Anacortes {
+@pa_alias("egress" , "Brady.Orting.Candle" , "Brady.Orting.Newfolden") header Contact {
+    bit<1>  Needham;
+    bit<6>  Kamas;
+    bit<9>  Norco;
+    bit<16> Sandpoint;
+    bit<32> Bassett;
+}
+
+header Perkasie {
+    bit<8>  Bayshore;
+    bit<2>  Grannis;
+    bit<5>  Kamas;
+    bit<9>  Norco;
+    bit<16> Sandpoint;
+}
+
+@pa_atomic("ingress" , "Brady.HighRock.Waubun") @gfm_parity_enable header Anacortes {
     bit<8> Corinth;
 }
 
@@ -989,7 +1003,7 @@ struct Empire {
 }
 
 struct Lindsborg {
-    bit<13> Contact;
+    bit<13> Tusayan;
     bit<1>  Magasco;
     bit<1>  Twain;
     bit<1>  Boonsboro;
@@ -1159,7 +1173,7 @@ parser Lefor(packet_in Starkey, out Wanamassa Lindy, out Talco Brady, out ingres
         Starkey.extract<Glendevey>(Lindy.Recluse);
         transition accept;
     }
-    state Needham {
+    state Nicolaus {
         transition Nucla;
     }
     state Indios {
@@ -1171,8 +1185,8 @@ parser Lefor(packet_in Starkey, out Wanamassa Lindy, out Talco Brady, out ingres
             (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Ackerly;
             (8w0x45 &&& 8w0xff, 16w0x800): Noyack;
             (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Vanoss;
-            (8w0x40 &&& 8w0xfc, 16w0x800 &&& 16w0xffff): Needham;
-            (8w0x44 &&& 8w0xff, 16w0x800 &&& 16w0xffff): Needham;
+            (8w0x40 &&& 8w0xfc, 16w0x800 &&& 16w0xffff): Nicolaus;
+            (8w0x44 &&& 8w0xff, 16w0x800 &&& 16w0xffff): Nicolaus;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Potosi;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Mulvane;
             (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Flippen;
@@ -1197,8 +1211,8 @@ parser Lefor(packet_in Starkey, out Wanamassa Lindy, out Talco Brady, out ingres
             24w0x806 &&& 24w0xffff: Ackerly;
             24w0x450800 &&& 24w0xffffff: Noyack;
             24w0x50800 &&& 24w0xfffff: Vanoss;
-            24w0x400800 &&& 24w0xfcffff: Needham;
-            24w0x440800 &&& 24w0xffffff: Needham;
+            24w0x400800 &&& 24w0xfcffff: Nicolaus;
+            24w0x440800 &&& 24w0xffffff: Nicolaus;
             24w0x800 &&& 24w0xffff: Potosi;
             24w0x6086dd &&& 24w0xf0ffff: Mulvane;
             24w0x86dd &&& 24w0xffff: Flippen;
@@ -1216,8 +1230,8 @@ parser Lefor(packet_in Starkey, out Wanamassa Lindy, out Talco Brady, out ingres
             24w0x806 &&& 24w0xffff: Ackerly;
             24w0x450800 &&& 24w0xffffff: Noyack;
             24w0x50800 &&& 24w0xfffff: Vanoss;
-            24w0x400800 &&& 24w0xfcffff: Needham;
-            24w0x440800 &&& 24w0xffffff: Needham;
+            24w0x400800 &&& 24w0xfcffff: Nicolaus;
+            24w0x440800 &&& 24w0xffffff: Nicolaus;
             24w0x800 &&& 24w0xffff: Potosi;
             24w0x6086dd &&& 24w0xf0ffff: Mulvane;
             24w0x86dd &&& 24w0xffff: Flippen;
@@ -1235,8 +1249,8 @@ parser Lefor(packet_in Starkey, out Wanamassa Lindy, out Talco Brady, out ingres
             24w0x806 &&& 24w0xffff: Ackerly;
             24w0x450800 &&& 24w0xffffff: Noyack;
             24w0x50800 &&& 24w0xfffff: Vanoss;
-            24w0x400800 &&& 24w0xfcffff: Needham;
-            24w0x440800 &&& 24w0xffffff: Needham;
+            24w0x400800 &&& 24w0xfcffff: Nicolaus;
+            24w0x440800 &&& 24w0xffffff: Nicolaus;
             24w0x800 &&& 24w0xffff: Potosi;
             24w0x6086dd &&& 24w0xf0ffff: Mulvane;
             24w0x86dd &&& 24w0xffff: Flippen;
@@ -3736,7 +3750,7 @@ control Gunder(inout Wanamassa Lindy, inout Talco Brady, in ingress_intrinsic_me
     @name(".Brookwood") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Brookwood;
     @name(".Granville.Everton") Hash<bit<51>>(HashAlgorithm_t.CRC16, Brookwood) Granville;
     @name(".Council") ActionProfile(32w32768) Council;
-    @name(".Kamas") ActionSelector(Council, Granville, SelectorMode_t.RESILIENT, 32w120, 32w4) Kamas;
+    @name(".Caborn") ActionSelector(Council, Granville, SelectorMode_t.RESILIENT, 32w120, 32w4) Caborn;
     @disable_atomic_modify(1) @name(".Capitola") table Capitola {
         actions = {
             Ashburn();
@@ -3751,7 +3765,7 @@ control Gunder(inout Wanamassa Lindy, inout Talco Brady, in ingress_intrinsic_me
         }
         const default_action = Gwynn();
         size = 512;
-        implementation = Kamas;
+        implementation = Caborn;
         requires_versioning = false;
     }
     apply {
@@ -3852,7 +3866,7 @@ control Cornish(inout Wanamassa Lindy, inout Talco Brady, in ingress_intrinsic_m
     @name(".Pelican") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Pelican;
     @name(".Unionvale.Waialua") Hash<bit<51>>(HashAlgorithm_t.CRC16, Pelican) Unionvale;
     @name(".Bigspring") ActionProfile(32w1024) Bigspring;
-    @name(".Norco") ActionSelector(Bigspring, Unionvale, SelectorMode_t.RESILIENT, 32w120, 32w4) Norco;
+    @name(".Goodrich") ActionSelector(Bigspring, Unionvale, SelectorMode_t.RESILIENT, 32w120, 32w4) Goodrich;
     @disable_atomic_modify(1) @name(".Advance") table Advance {
         actions = {
             Hatchel();
@@ -3863,7 +3877,7 @@ control Cornish(inout Wanamassa Lindy, inout Talco Brady, in ingress_intrinsic_m
             Brady.Wyndmoor.Hoven              : selector @name("Wyndmoor.Hoven") ;
         }
         size = 128;
-        implementation = Norco;
+        implementation = Goodrich;
         const default_action = NoAction();
     }
     apply {
@@ -3872,7 +3886,7 @@ control Cornish(inout Wanamassa Lindy, inout Talco Brady, in ingress_intrinsic_m
 }
 
 control Rockfield(inout Wanamassa Lindy, inout Talco Brady, in egress_intrinsic_metadata_t Garrison, in egress_intrinsic_metadata_from_parser_t CassCity, inout egress_intrinsic_metadata_for_deparser_t Sanborn, inout egress_intrinsic_metadata_for_output_port_t Kerby) {
-    @name(".Sandpoint") action Sandpoint() {
+    @name(".Laramie") action Laramie() {
         Sanborn.drop_ctl = (bit<3>)3w7;
     }
     @name(".Redfield") action Redfield() {
@@ -3923,14 +3937,14 @@ control Rockfield(inout Wanamassa Lindy, inout Talco Brady, in egress_intrinsic_
             Redfield();
             Baskin();
             Mynard();
-            @defaultonly Sandpoint();
+            @defaultonly Laramie();
         }
         key = {
             Garrison.egress_rid : exact @name("Garrison.egress_rid") ;
             Garrison.egress_port: exact @name("Garrison.Toklat") ;
         }
         size = 1024;
-        const default_action = Sandpoint();
+        const default_action = Laramie();
     }
     apply {
         Devola.apply();
@@ -3963,7 +3977,7 @@ control Mantee(inout Wanamassa Lindy, inout Talco Brady, in egress_intrinsic_met
     @name(".Melrose") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Melrose;
     @name(".Angeles.Wheaton") Hash<bit<51>>(HashAlgorithm_t.CRC16, Melrose) Angeles;
     @name(".Ammon") ActionProfile(32w1024) Ammon;
-    @name(".Bassett") ActionSelector(Ammon, Angeles, SelectorMode_t.RESILIENT, 32w120, 32w4) Bassett;
+    @name(".Pinebluff") ActionSelector(Ammon, Angeles, SelectorMode_t.RESILIENT, 32w120, 32w4) Pinebluff;
     @disable_atomic_modify(1) @name(".Wells") table Wells {
         actions = {
             Walland();
@@ -3974,7 +3988,7 @@ control Mantee(inout Wanamassa Lindy, inout Talco Brady, in egress_intrinsic_met
             Brady.Wyndmoor.Hoven            : selector @name("Wyndmoor.Hoven") ;
         }
         size = 128;
-        implementation = Bassett;
+        implementation = Pinebluff;
         const default_action = NoAction();
     }
     apply {
@@ -4037,7 +4051,10 @@ control Trail(inout Wanamassa Lindy, inout Talco Brady, in ingress_intrinsic_met
     @name(".Chewalla") action McDougal() {
         Brady.HighRock.Minto = (bit<1>)1w0;
     }
-    @disable_atomic_modify(1) @name(".Batchelor") table Batchelor {
+@pa_no_init("ingress" , "Brady.HighRock.Minto")
+@pa_mutually_exclusive("ingress" , "Brady.HighRock.Minto" , "Brady.HighRock.Waubun")
+@disable_atomic_modify(1)
+@name(".Batchelor") table Batchelor {
         actions = {
             Magazine();
             McDougal();
@@ -4518,14 +4535,14 @@ control Sodaville(inout Wanamassa Lindy, inout Talco Brady, in egress_intrinsic_
     @name(".Talkeetna") action Talkeetna(bit<8> Westboro) {
         Lindy.Parkway.Loris = Lindy.Parkway.Loris + Westboro;
     }
-    @name(".Gorum") action Gorum(bit<16> Chugwater, bit<16> Quivero, bit<24> Lathrop, bit<24> Clyde, bit<24> Minetto, bit<24> August, bit<16> Eucha) {
+    @name(".Gorum") action Gorum(bit<16> Chugwater, bit<16> Quivero, bit<24> Lathrop, bit<24> Clyde, bit<24> Minetto, bit<24> August, bit<16> Eucha, bit<16> Fentress) {
         Lindy.Mayflower.Findlay = Brady.Ekwok.Findlay;
         Lindy.Mayflower.Dowell = Brady.Ekwok.Dowell;
         Lindy.Mayflower.Lathrop = Lathrop;
         Lindy.Mayflower.Clyde = Clyde;
         Lindy.Lemont.Chugwater = Chugwater + Quivero;
         Lindy.Almota.Sutherlin = (bit<16>)16w0;
-        Lindy.Sedan.Provo = Brady.Ekwok.SomesBar;
+        Lindy.Sedan.Provo = Fentress;
         Lindy.Sedan.Denhoff = Brady.Wyndmoor.Hoven + Eucha;
         Lindy.Hookdale.Teigen = (bit<8>)8w0x8;
         Lindy.Hookdale.Galloway = (bit<24>)24w0;
@@ -4542,34 +4559,34 @@ control Sodaville(inout Wanamassa Lindy, inout Talco Brady, in egress_intrinsic_
         Lindy.Almota.setValid();
         Lindy.Lemont.setValid();
     }
-    @name(".Holyoke") action Holyoke(bit<24> Minetto, bit<24> August, bit<16> Eucha, bit<32> Crystola) {
-        Gorum(Lindy.Arapahoe.Dunstable, 16w30, Minetto, August, Minetto, August, Eucha);
+    @name(".Holyoke") action Holyoke(bit<24> Minetto, bit<24> August, bit<16> Eucha, bit<32> Crystola, bit<16> Fentress) {
+        Gorum(Lindy.Arapahoe.Dunstable, 16w30, Minetto, August, Minetto, August, Eucha, Brady.Ekwok.SomesBar);
         Stovall(Lindy.Arapahoe.Dunstable, 16w50, Crystola, 8w17);
         Lindy.Arapahoe.Westboro = Lindy.Arapahoe.Westboro - 8w1;
         NewCity();
     }
-    @name(".Skiatook") action Skiatook(bit<24> Minetto, bit<24> August, bit<16> Eucha, bit<32> Crystola) {
-        Gorum(Lindy.Parkway.Bonney, 16w70, Minetto, August, Minetto, August, Eucha);
+    @name(".Skiatook") action Skiatook(bit<24> Minetto, bit<24> August, bit<16> Eucha, bit<32> Crystola, bit<16> Fentress) {
+        Gorum(Lindy.Parkway.Bonney, 16w70, Minetto, August, Minetto, August, Eucha, Brady.Ekwok.SomesBar);
         Stovall(Lindy.Parkway.Bonney, 16w90, Crystola, 8w17);
         Lindy.Parkway.Loris = Lindy.Parkway.Loris - 8w1;
         NewCity();
     }
-    @name(".DuPont") action DuPont(bit<16> Chugwater, bit<16> Shauck, bit<24> Lathrop, bit<24> Clyde, bit<24> Minetto, bit<24> August, bit<16> Eucha) {
+    @name(".DuPont") action DuPont(bit<16> Chugwater, bit<16> Shauck, bit<24> Lathrop, bit<24> Clyde, bit<24> Minetto, bit<24> August, bit<16> Eucha, bit<16> Fentress) {
         Lindy.Saugatuck.setValid();
         Lindy.Flaherty.setValid();
         Lindy.Lemont.setValid();
         Lindy.Almota.setValid();
         Lindy.Sedan.setValid();
         Lindy.Hookdale.setValid();
-        Gorum(Chugwater, Shauck, Lathrop, Clyde, Minetto, August, Eucha);
+        Gorum(Chugwater, Shauck, Lathrop, Clyde, Minetto, August, Eucha, Fentress);
     }
-    @name(".Telegraph") action Telegraph(bit<16> Chugwater, bit<16> Shauck, bit<16> Veradale, bit<24> Lathrop, bit<24> Clyde, bit<24> Minetto, bit<24> August, bit<16> Eucha, bit<32> Crystola) {
-        DuPont(Chugwater, Shauck, Lathrop, Clyde, Minetto, August, Eucha);
+    @name(".Telegraph") action Telegraph(bit<16> Chugwater, bit<16> Shauck, bit<16> Veradale, bit<24> Lathrop, bit<24> Clyde, bit<24> Minetto, bit<24> August, bit<16> Eucha, bit<32> Crystola, bit<16> Fentress) {
+        DuPont(Chugwater, Shauck, Lathrop, Clyde, Minetto, August, Eucha, Fentress);
         Stovall(Chugwater, Veradale, Crystola, 8w17);
     }
-    @name(".Parole") action Parole(bit<24> Minetto, bit<24> August, bit<16> Eucha, bit<32> Crystola) {
+    @name(".Parole") action Parole(bit<24> Minetto, bit<24> August, bit<16> Eucha, bit<32> Crystola, bit<16> Fentress) {
         Lindy.Sunbury.setValid();
-        Telegraph(Brady.Garrison.Bledsoe, 16w12, 16w32, Lindy.Mayflower.Lathrop, Lindy.Mayflower.Clyde, Minetto, August, Eucha, Crystola);
+        Telegraph(Brady.Garrison.Bledsoe, 16w12, 16w32, Lindy.Mayflower.Lathrop, Lindy.Mayflower.Clyde, Minetto, August, Eucha, Crystola, Brady.Ekwok.SomesBar);
     }
     @name(".Picacho") action Picacho(bit<16> Haworth, int<16> BigArm, bit<32> McBride, bit<32> Vinemont, bit<32> Kenbridge, bit<32> Parkville) {
         Lindy.Casnovia.setValid();
@@ -4587,21 +4604,21 @@ control Sodaville(inout Wanamassa Lindy, inout Talco Brady, in egress_intrinsic_
         Lindy.Casnovia.Loris = (bit<8>)8w64;
         Lindy.Flaherty.Connell = 16w0x86dd;
     }
-    @name(".Reading") action Reading(bit<16> Chugwater, bit<16> Shauck, bit<16> Morgana, bit<24> Lathrop, bit<24> Clyde, bit<24> Minetto, bit<24> August, bit<32> McBride, bit<32> Vinemont, bit<32> Kenbridge, bit<32> Parkville, bit<16> Eucha) {
-        DuPont(Chugwater, Shauck, Lathrop, Clyde, Minetto, August, Eucha);
+    @name(".Reading") action Reading(bit<16> Chugwater, bit<16> Shauck, bit<16> Morgana, bit<24> Lathrop, bit<24> Clyde, bit<24> Minetto, bit<24> August, bit<32> McBride, bit<32> Vinemont, bit<32> Kenbridge, bit<32> Parkville, bit<16> Eucha, bit<16> Fentress) {
+        DuPont(Chugwater, Shauck, Lathrop, Clyde, Minetto, August, Eucha, Fentress);
         Picacho(Chugwater, (int<16>)Morgana, McBride, Vinemont, Kenbridge, Parkville);
     }
-    @name(".Aquilla") action Aquilla(bit<24> Minetto, bit<24> August, bit<32> McBride, bit<32> Vinemont, bit<32> Kenbridge, bit<32> Parkville, bit<16> Eucha) {
-        Reading(Brady.Garrison.Bledsoe, 16w12, 16w12, Lindy.Mayflower.Lathrop, Lindy.Mayflower.Clyde, Minetto, August, McBride, Vinemont, Kenbridge, Parkville, Eucha);
+    @name(".Aquilla") action Aquilla(bit<24> Minetto, bit<24> August, bit<32> McBride, bit<32> Vinemont, bit<32> Kenbridge, bit<32> Parkville, bit<16> Eucha, bit<16> Fentress) {
+        Reading(Brady.Garrison.Bledsoe, 16w12, 16w12, Lindy.Mayflower.Lathrop, Lindy.Mayflower.Clyde, Minetto, August, McBride, Vinemont, Kenbridge, Parkville, Eucha, Brady.Ekwok.SomesBar);
     }
-    @name(".Sanatoga") action Sanatoga(bit<24> Minetto, bit<24> August, bit<32> McBride, bit<32> Vinemont, bit<32> Kenbridge, bit<32> Parkville, bit<16> Eucha) {
-        Gorum(Lindy.Arapahoe.Dunstable, 16w30, Minetto, August, Minetto, August, Eucha);
+    @name(".Sanatoga") action Sanatoga(bit<24> Minetto, bit<24> August, bit<32> McBride, bit<32> Vinemont, bit<32> Kenbridge, bit<32> Parkville, bit<16> Eucha, bit<16> Fentress) {
+        Gorum(Lindy.Arapahoe.Dunstable, 16w30, Minetto, August, Minetto, August, Eucha, Brady.Ekwok.SomesBar);
         Picacho(Lindy.Arapahoe.Dunstable, 16s30, McBride, Vinemont, Kenbridge, Parkville);
         Lindy.Arapahoe.Westboro = Lindy.Arapahoe.Westboro - 8w1;
         NewCity();
     }
-    @name(".Tocito") action Tocito(bit<24> Minetto, bit<24> August, bit<32> McBride, bit<32> Vinemont, bit<32> Kenbridge, bit<32> Parkville, bit<16> Eucha) {
-        Gorum(Lindy.Parkway.Bonney, 16w70, Minetto, August, Minetto, August, Eucha);
+    @name(".Tocito") action Tocito(bit<24> Minetto, bit<24> August, bit<32> McBride, bit<32> Vinemont, bit<32> Kenbridge, bit<32> Parkville, bit<16> Eucha, bit<16> Fentress) {
+        Gorum(Lindy.Parkway.Bonney, 16w70, Minetto, August, Minetto, August, Eucha, Brady.Ekwok.SomesBar);
         Picacho(Lindy.Parkway.Bonney, 16s70, McBride, Vinemont, Kenbridge, Parkville);
         Talkeetna(8w255);
         NewCity();
@@ -6178,8 +6195,8 @@ control Richlawn(inout Wanamassa Lindy, inout Talco Brady, in egress_intrinsic_m
     }
     @name(".Cassadaga") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Cassadaga;
     @name(".Chispa.BigRiver") Hash<bit<51>>(HashAlgorithm_t.CRC16, Cassadaga) Chispa;
-    @name(".Perkasie") ActionProfile(32w2048) Perkasie;
-    @name(".Tusayan") ActionSelector(Perkasie, Chispa, SelectorMode_t.RESILIENT, 32w120, 32w4) Tusayan;
+    @name(".Molino") ActionProfile(32w2048) Molino;
+    @name(".Ossineke") ActionSelector(Molino, Chispa, SelectorMode_t.RESILIENT, 32w120, 32w4) Ossineke;
     @disable_atomic_modify(1) @name(".Bridgton") table Bridgton {
         actions = {
             Seaford();
@@ -6190,7 +6207,7 @@ control Richlawn(inout Wanamassa Lindy, inout Talco Brady, in egress_intrinsic_m
             Brady.Wyndmoor.Hoven : selector @name("Wyndmoor.Hoven") ;
         }
         size = 512;
-        implementation = Tusayan;
+        implementation = Ossineke;
         const default_action = NoAction();
     }
     @name(".Doyline") action Doyline() {

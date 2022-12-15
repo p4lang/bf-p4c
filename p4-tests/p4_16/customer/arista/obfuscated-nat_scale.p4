@@ -68,8 +68,6 @@
 @pa_container_size("egress" , "Tenstrike.Saugatuck.Wisdom" , 32)
 @pa_container_size("egress" , "Tenstrike.Saugatuck.Murphy" , 32)
 @pa_container_size("egress" , "Tenstrike.Monrovia.Aniak" , 8)
-@pa_atomic("ingress" , "Tenstrike.Wanamassa.LakeLure")
-@gfm_parity_enable
 @pa_alias("ingress" , "BigPoint.Westoak.Rains" , "Tenstrike.Saugatuck.Darien")
 @pa_alias("ingress" , "BigPoint.Westoak.SoapLake" , "Tenstrike.Saugatuck.Plains")
 @pa_alias("ingress" , "BigPoint.Westoak.Conner" , "Tenstrike.Wanamassa.Dolores")
@@ -150,7 +148,23 @@
 @pa_alias("egress" , "BigPoint.Lefor.Calcasieu" , "Tenstrike.Wanamassa.Clarion")
 @pa_alias("egress" , "BigPoint.Lefor.Cecilton" , "Tenstrike.Casnovia.HillTop")
 @pa_alias("egress" , "BigPoint.Marquand.$valid" , "Tenstrike.Mayflower.Balmorhea")
-@pa_alias("egress" , "Tenstrike.Callao.Calabash" , "Tenstrike.Callao.Hayfield") header Anacortes {
+@pa_alias("egress" , "Tenstrike.Callao.Calabash" , "Tenstrike.Callao.Hayfield") header Thalia {
+    bit<1>  Trammel;
+    bit<6>  Caldwell;
+    bit<9>  Sahuarita;
+    bit<16> Melrude;
+    bit<32> Ikatan;
+}
+
+header Seagrove {
+    bit<8>  Bayshore;
+    bit<2>  LasVegas;
+    bit<5>  Caldwell;
+    bit<9>  Sahuarita;
+    bit<16> Melrude;
+}
+
+@pa_atomic("ingress" , "Tenstrike.Wanamassa.LakeLure") @gfm_parity_enable header Anacortes {
     bit<8> Corinth;
 }
 
@@ -1116,7 +1130,7 @@ struct Milano {
 }
 
 struct Cranbury {
-    bit<13> Thalia;
+    bit<13> Dubuque;
     bit<1>  Neponset;
     bit<1>  Bronwood;
     bit<1>  Cotter;
@@ -2608,7 +2622,7 @@ control Lyman(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intrins
     @name(".Ardsley") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Ardsley;
     @name(".Astatula.Everton") Hash<bit<51>>(HashAlgorithm_t.CRC16, Ardsley) Astatula;
     @name(".Brinson") ActionProfile(32w32768) Brinson;
-    @name(".Trammel") ActionSelector(Brinson, Astatula, SelectorMode_t.RESILIENT, 32w120, 32w4) Trammel;
+    @name(".Senatobia") ActionSelector(Brinson, Astatula, SelectorMode_t.RESILIENT, 32w120, 32w4) Senatobia;
     @disable_atomic_modify(1) @name(".Westend") table Westend {
         actions = {
             Portales();
@@ -2623,7 +2637,7 @@ control Lyman(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intrins
         }
         const default_action = Agawam();
         size = 512;
-        implementation = Trammel;
+        implementation = Senatobia;
         requires_versioning = false;
     }
     apply {
@@ -2803,7 +2817,7 @@ control Snook(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intrins
     @name(".Napanoch") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Napanoch;
     @name(".Pearcy.Waialua") Hash<bit<51>>(HashAlgorithm_t.CRC16, Napanoch) Pearcy;
     @name(".Ghent") ActionProfile(32w1024) Ghent;
-    @name(".Caldwell") ActionSelector(Ghent, Pearcy, SelectorMode_t.RESILIENT, 32w120, 32w4) Caldwell;
+    @name(".Danforth") ActionSelector(Ghent, Pearcy, SelectorMode_t.RESILIENT, 32w120, 32w4) Danforth;
     @disable_atomic_modify(1) @name(".Protivin") table Protivin {
         actions = {
             OjoFeliz();
@@ -2814,7 +2828,7 @@ control Snook(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intrins
             Tenstrike.Sunbury.Bernice         : selector @name("Sunbury.Bernice") ;
         }
         size = 128;
-        implementation = Caldwell;
+        implementation = Danforth;
         const default_action = NoAction();
     }
     apply {
@@ -2823,7 +2837,7 @@ control Snook(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intrins
 }
 
 control Medart(inout Skillman BigPoint, inout Kinde Tenstrike, in egress_intrinsic_metadata_t RichBar, in egress_intrinsic_metadata_from_parser_t Brodnax, inout egress_intrinsic_metadata_for_deparser_t Bowers, inout egress_intrinsic_metadata_for_output_port_t Skene) {
-    @name(".Sahuarita") action Sahuarita() {
+    @name(".Opelika") action Opelika() {
         Bowers.drop_ctl = (bit<3>)3w7;
     }
     @name(".Waseca") action Waseca() {
@@ -2874,14 +2888,14 @@ control Medart(inout Skillman BigPoint, inout Kinde Tenstrike, in egress_intrins
             Waseca();
             Haugen();
             Encinitas();
-            @defaultonly Sahuarita();
+            @defaultonly Opelika();
         }
         key = {
             RichBar.egress_rid : exact @name("RichBar.egress_rid") ;
             RichBar.egress_port: exact @name("RichBar.Toklat") ;
         }
         size = 512;
-        const default_action = Sahuarita();
+        const default_action = Opelika();
     }
     apply {
         DeBeque.apply();
@@ -2914,7 +2928,7 @@ control PawCreek(inout Skillman BigPoint, inout Kinde Tenstrike, in egress_intri
     @name(".Langhorne") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Langhorne;
     @name(".Comobabi.Wheaton") Hash<bit<51>>(HashAlgorithm_t.CRC16, Langhorne) Comobabi;
     @name(".Bovina") ActionProfile(32w1024) Bovina;
-    @name(".Melrude") ActionSelector(Bovina, Comobabi, SelectorMode_t.RESILIENT, 32w120, 32w4) Melrude;
+    @name(".Yemassee") ActionSelector(Bovina, Comobabi, SelectorMode_t.RESILIENT, 32w120, 32w4) Yemassee;
     @disable_atomic_modify(1) @name(".Natalbany") table Natalbany {
         actions = {
             Cornwall();
@@ -2925,7 +2939,7 @@ control PawCreek(inout Skillman BigPoint, inout Kinde Tenstrike, in egress_intri
             Tenstrike.Sunbury.Bernice          : selector @name("Sunbury.Bernice") ;
         }
         size = 128;
-        implementation = Melrude;
+        implementation = Yemassee;
         const default_action = NoAction();
     }
     apply {
@@ -4616,7 +4630,7 @@ control Clarinda(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intr
     @name(".Casselman") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Casselman;
     @name(".Lovett.Waipahu") Hash<bit<51>>(HashAlgorithm_t.CRC16, Casselman) Lovett;
     @name(".Chamois") ActionProfile(32w98) Chamois;
-    @name(".Ikatan") ActionSelector(Chamois, Lovett, SelectorMode_t.FAIR, 32w40, 32w130) Ikatan;
+    @name(".Qulin") ActionSelector(Chamois, Lovett, SelectorMode_t.FAIR, 32w40, 32w130) Qulin;
 @pa_atomic("pipe_a" , "ingress" , "ig_intr_md_for_tm.ucast_egress_port")
 @pa_no_init("ingress" , "ig_intr_md_for_tm.ucast_egress_port")
 @disable_atomic_modify(1)
@@ -4631,7 +4645,7 @@ control Clarinda(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intr
             @defaultonly NoAction();
         }
         size = 1024;
-        implementation = Ikatan;
+        implementation = Qulin;
         default_action = NoAction();
     }
     @name(".Leetsdale") DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) Leetsdale;
@@ -4849,7 +4863,7 @@ control Salamonia(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_int
     }
 @pa_no_init("ingress" , "Tenstrike.Saugatuck.Murphy")
 @pa_no_init("ingress" , "Tenstrike.Saugatuck.Edwards")
-@name(".Seagrove") action Seagrove(bit<1> Raiford, bit<1> Ayden) {
+@name(".Caliente") action Caliente(bit<1> Raiford, bit<1> Ayden) {
         Tenstrike.Saugatuck.Norma = (bit<1>)1w1;
         Tenstrike.Saugatuck.Murphy = Tenstrike.Saugatuck.Sunflower[19:16];
         Tenstrike.Saugatuck.Edwards = Tenstrike.Saugatuck.Sunflower[15:0];
@@ -4858,11 +4872,11 @@ control Salamonia(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_int
         Tenstrike.Saugatuck.Naubinway[0:0] = Ayden;
     }
     @name(".Sargent") action Sargent(bit<1> Raiford, bit<1> Ayden) {
-        Seagrove(Raiford, Ayden);
+        Caliente(Raiford, Ayden);
         Tenstrike.Saugatuck.Woodfield = Tenstrike.Wanamassa.Madera;
     }
-    @name(".Dubuque") action Dubuque(bit<1> Raiford, bit<1> Ayden) {
-        Seagrove(Raiford, Ayden);
+    @name(".Padroni") action Padroni(bit<1> Raiford, bit<1> Ayden) {
+        Caliente(Raiford, Ayden);
         Tenstrike.Saugatuck.Woodfield = Tenstrike.Wanamassa.Madera + 8w56;
     }
     @disable_atomic_modify(1) @name(".Brockton") table Brockton {
@@ -4910,7 +4924,7 @@ control Salamonia(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_int
     @disable_atomic_modify(1) @name(".Emigrant") table Emigrant {
         actions = {
             Sargent();
-            Dubuque();
+            Padroni();
             Crown();
         }
         key = {
@@ -5029,7 +5043,7 @@ parser Pearce(packet_in Belfalls, out Skillman BigPoint, out Kinde Tenstrike, ou
         Belfalls.extract<Irvine>(BigPoint.Philip);
         transition accept;
     }
-    state Senatobia {
+    state Ashley {
         transition Bairoil;
     }
     state Folcroft {
@@ -5041,8 +5055,8 @@ parser Pearce(packet_in Belfalls, out Skillman BigPoint, out Kinde Tenstrike, ou
             (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Neuse;
             (8w0x45 &&& 8w0xff, 16w0x800): Fairchild;
             (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Glouster;
-            (8w0x40 &&& 8w0xfc, 16w0x800 &&& 16w0xffff): Senatobia;
-            (8w0x44 &&& 8w0xff, 16w0x800 &&& 16w0xffff): Senatobia;
+            (8w0x40 &&& 8w0xfc, 16w0x800 &&& 16w0xffff): Ashley;
+            (8w0x44 &&& 8w0xff, 16w0x800 &&& 16w0xffff): Ashley;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Penrose;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Eustis;
             (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): SandCity;
@@ -5067,8 +5081,8 @@ parser Pearce(packet_in Belfalls, out Skillman BigPoint, out Kinde Tenstrike, ou
             24w0x806 &&& 24w0xffff: Neuse;
             24w0x450800 &&& 24w0xffffff: Fairchild;
             24w0x50800 &&& 24w0xfffff: Glouster;
-            24w0x400800 &&& 24w0xfcffff: Senatobia;
-            24w0x440800 &&& 24w0xffffff: Senatobia;
+            24w0x400800 &&& 24w0xfcffff: Ashley;
+            24w0x440800 &&& 24w0xffffff: Ashley;
             24w0x800 &&& 24w0xffff: Penrose;
             24w0x6086dd &&& 24w0xf0ffff: Eustis;
             24w0x86dd &&& 24w0xffff: SandCity;
@@ -5086,8 +5100,8 @@ parser Pearce(packet_in Belfalls, out Skillman BigPoint, out Kinde Tenstrike, ou
             24w0x806 &&& 24w0xffff: Neuse;
             24w0x450800 &&& 24w0xffffff: Fairchild;
             24w0x50800 &&& 24w0xfffff: Glouster;
-            24w0x400800 &&& 24w0xfcffff: Senatobia;
-            24w0x440800 &&& 24w0xffffff: Senatobia;
+            24w0x400800 &&& 24w0xfcffff: Ashley;
+            24w0x440800 &&& 24w0xffffff: Ashley;
             24w0x800 &&& 24w0xffff: Penrose;
             24w0x6086dd &&& 24w0xf0ffff: Eustis;
             24w0x86dd &&& 24w0xffff: SandCity;
@@ -5105,8 +5119,8 @@ parser Pearce(packet_in Belfalls, out Skillman BigPoint, out Kinde Tenstrike, ou
             24w0x806 &&& 24w0xffff: Neuse;
             24w0x450800 &&& 24w0xffffff: Fairchild;
             24w0x50800 &&& 24w0xfffff: Glouster;
-            24w0x400800 &&& 24w0xfcffff: Senatobia;
-            24w0x440800 &&& 24w0xffffff: Senatobia;
+            24w0x400800 &&& 24w0xfcffff: Ashley;
+            24w0x440800 &&& 24w0xffffff: Ashley;
             24w0x800 &&& 24w0xffff: Penrose;
             24w0x6086dd &&& 24w0xf0ffff: Eustis;
             24w0x86dd &&& 24w0xffff: SandCity;
@@ -6629,7 +6643,7 @@ control Cavalier(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intr
     }
 @pa_no_init("ingress" , "Tenstrike.Saugatuck.Murphy")
 @pa_no_init("ingress" , "Tenstrike.Saugatuck.Edwards")
-@name(".Seagrove") action Seagrove(bit<1> Raiford, bit<1> Ayden) {
+@name(".Caliente") action Caliente(bit<1> Raiford, bit<1> Ayden) {
         Tenstrike.Saugatuck.Norma = (bit<1>)1w1;
         Tenstrike.Saugatuck.Murphy = Tenstrike.Saugatuck.Sunflower[19:16];
         Tenstrike.Saugatuck.Edwards = Tenstrike.Saugatuck.Sunflower[15:0];
@@ -6638,11 +6652,11 @@ control Cavalier(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intr
         Tenstrike.Saugatuck.Naubinway[0:0] = Ayden;
     }
     @name(".Sargent") action Sargent(bit<1> Raiford, bit<1> Ayden) {
-        Seagrove(Raiford, Ayden);
+        Caliente(Raiford, Ayden);
         Tenstrike.Saugatuck.Woodfield = Tenstrike.Wanamassa.Madera;
     }
-    @name(".Dubuque") action Dubuque(bit<1> Raiford, bit<1> Ayden) {
-        Seagrove(Raiford, Ayden);
+    @name(".Padroni") action Padroni(bit<1> Raiford, bit<1> Ayden) {
+        Caliente(Raiford, Ayden);
         Tenstrike.Saugatuck.Woodfield = Tenstrike.Wanamassa.Madera + 8w56;
     }
     @name(".LaCenter") action LaCenter(bit<20> Maryville, bit<24> Hampton, bit<24> Tallassee, bit<12> Juneau) {
@@ -6654,6 +6668,7 @@ control Cavalier(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intr
         Tenstrike.Saugatuck.Tallassee = Tallassee;
         Tenstrike.Saugatuck.Juneau = Juneau;
         Tenstrike.Saugatuck.Komatke = (bit<1>)1w1;
+        Tenstrike.Wanamassa.Ayden = (bit<1>)1w0;
     }
     @disable_atomic_modify(1) @name(".Armstrong") table Armstrong {
         actions = {
@@ -6672,7 +6687,7 @@ control Cavalier(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intr
     @disable_atomic_modify(1) @name(".Anaconda") table Anaconda {
         actions = {
             Sargent();
-            Dubuque();
+            Padroni();
             LaCenter();
             Crown();
         }

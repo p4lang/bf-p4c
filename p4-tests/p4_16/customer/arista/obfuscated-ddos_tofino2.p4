@@ -66,13 +66,10 @@
 @pa_mutually_exclusive("egress" , "Virgilina.Arapahoe.Basic" , "Dwight.Lookeba.Corydon")
 @pa_container_size("ingress" , "Dwight.Millstone.Basic" , 32)
 @pa_container_size("ingress" , "Dwight.Millstone.Freeman" , 32)
-@pa_mutually_exclusive("ingress" , "Dwight.Circle.Placedo" , "Dwight.Circle.Onycha")
 @pa_no_init("ingress" , "Dwight.Circle.Placedo")
-@pa_no_init("ingress" , "Dwight.Circle.Onycha")
 @pa_no_init("ingress" , "Dwight.Tabler.Newfolden")
 @pa_no_init("egress" , "Dwight.Hearne.Newfolden")
 @pa_parser_group_monogress
-@pa_no_init("egress" , "Dwight.Lookeba.Hiland")
 @pa_atomic("ingress" , "Virgilina.Baker.Antlers")
 @pa_atomic("ingress" , "Dwight.Dushore.McCracken")
 @pa_no_init("ingress" , "Dwight.Circle.Edgemoor")
@@ -99,8 +96,6 @@
 @pa_no_overlay("ingress" , "Virgilina.Baker.Freeman")
 @pa_no_overlay("ingress" , "Virgilina.Glenoma.Freeman")
 @pa_container_type("pipe_a" , "ingress" , "Dwight.Lookeba.RedElm" , "normal")
-@pa_atomic("ingress" , "Dwight.Circle.Placedo")
-@gfm_parity_enable
 @pa_alias("ingress" , "Virgilina.Lemont.Eldred" , "Dwight.Lookeba.Pettry")
 @pa_alias("ingress" , "Virgilina.Lemont.Chevak" , "Dwight.Basco.Westboro")
 @pa_alias("ingress" , "Virgilina.Lemont.Spearman" , "Dwight.Basco.Pawtucket")
@@ -167,7 +162,23 @@
 @pa_alias("egress" , "Virgilina.Mayflower.SoapLake" , "Dwight.Lookeba.SoapLake")
 @pa_alias("egress" , "Virgilina.Lindy.$valid" , "Dwight.Lookeba.Hueytown")
 @pa_alias("egress" , "Virgilina.Geistown.$valid" , "Dwight.Orting.Belmont")
-@pa_alias("egress" , "Dwight.Hearne.Kalkaska" , "Dwight.Hearne.Arvada") header Anacortes {
+@pa_alias("egress" , "Dwight.Hearne.Kalkaska" , "Dwight.Hearne.Arvada") header Wainaku {
+    bit<1>  Wimbledon;
+    bit<6>  Sagamore;
+    bit<9>  Pinta;
+    bit<16> Needles;
+    bit<32> Boquet;
+}
+
+header Quealy {
+    bit<8>  Bayshore;
+    bit<2>  Steger;
+    bit<5>  Sagamore;
+    bit<9>  Pinta;
+    bit<16> Needles;
+}
+
+@pa_atomic("ingress" , "Dwight.Circle.Placedo") @gfm_parity_enable header Anacortes {
     bit<8> Corinth;
 }
 
@@ -689,6 +700,7 @@ struct Morstein {
     bit<3>    Eastwood;
     bit<24>   Placedo;
     bit<1>    Onycha;
+    bit<1>    Huffman;
     bit<1>    Delavan;
     bit<3>    Bennet;
     bit<1>    Etter;
@@ -773,6 +785,7 @@ struct Goulds {
     bit<24>  Comfrey;
     bit<24>  Placedo;
     bit<1>   Onycha;
+    bit<1>   Huffman;
     bit<1>   Delavan;
     PortId_t LaConner;
     bit<1>   McGrady;
@@ -1094,7 +1107,7 @@ struct Nevis {
 }
 
 struct WebbCity {
-    bit<13> Wainaku;
+    bit<13> Eastover;
     bit<1>  Covert;
     bit<1>  Ekwok;
     bit<1>  Crump;
@@ -2498,7 +2511,7 @@ control Heizer(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrins
     @name(".Kosmos") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Kosmos;
     @name(".Ironia.Everton") Hash<bit<51>>(HashAlgorithm_t.CRC16, Kosmos) Ironia;
     @name(".BigFork") ActionProfile(32w16384) BigFork;
-    @name(".Wimbledon") ActionSelector(BigFork, Ironia, SelectorMode_t.FAIR, 32w120, 32w4) Wimbledon;
+    @name(".Iraan") ActionSelector(BigFork, Ironia, SelectorMode_t.FAIR, 32w120, 32w4) Iraan;
     @disable_atomic_modify(1) @stage(18) @name(".Kenvil") table Kenvil {
         actions = {
             Hector();
@@ -2513,7 +2526,7 @@ control Heizer(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrins
         }
         const default_action = Chilson();
         size = 512;
-        implementation = Wimbledon;
+        implementation = Iraan;
         requires_versioning = false;
     }
     apply {
@@ -2655,7 +2668,7 @@ control Ozark(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrinsi
     @name(".Palco") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Palco;
     @name(".Melder.Waialua") Hash<bit<51>>(HashAlgorithm_t.CRC16, Palco) Melder;
     @name(".FourTown") ActionProfile(32w1024) FourTown;
-    @name(".Sagamore") ActionSelector(FourTown, Melder, SelectorMode_t.RESILIENT, 32w120, 32w4) Sagamore;
+    @name(".Verdigris") ActionSelector(FourTown, Melder, SelectorMode_t.RESILIENT, 32w120, 32w4) Verdigris;
     @disable_atomic_modify(1) @name(".Hyrum") table Hyrum {
         actions = {
             Hagewood();
@@ -2666,7 +2679,7 @@ control Ozark(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrinsi
             Dwight.Longwood.Osyka         : selector @name("Longwood.Osyka") ;
         }
         size = 31;
-        implementation = Sagamore;
+        implementation = Verdigris;
         const default_action = NoAction();
     }
     apply {
@@ -2675,7 +2688,7 @@ control Ozark(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrinsi
 }
 
 control Farner(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrinsic_metadata_t Swifton, in egress_intrinsic_metadata_from_parser_t Neosho, inout egress_intrinsic_metadata_for_deparser_t Islen, inout egress_intrinsic_metadata_for_output_port_t BarNunn) {
-    @name(".Pinta") action Pinta() {
+    @name(".Elihu") action Elihu() {
         Islen.drop_ctl = (bit<3>)3w7;
     }
     @name(".Mondovi") action Mondovi() {
@@ -2726,7 +2739,7 @@ control Farner(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrinsi
             Mondovi();
             Lynne();
             Govan();
-            @defaultonly Pinta();
+            @defaultonly Elihu();
         }
         key = {
             Swifton.egress_rid     : exact @name("Swifton.egress_rid") ;
@@ -2734,7 +2747,7 @@ control Farner(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrinsi
             Dwight.Lookeba.Hueytown: ternary @name("Lookeba.Hueytown") ;
         }
         size = 1024;
-        const default_action = Pinta();
+        const default_action = Elihu();
     }
     apply {
         Bigfork.apply();
@@ -2782,7 +2795,7 @@ control Kelliher(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrin
     @name(".Bernstein") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Bernstein;
     @name(".Kingman.Wheaton") Hash<bit<51>>(HashAlgorithm_t.CRC16, Bernstein) Kingman;
     @name(".Lyman") ActionProfile(32w1024) Lyman;
-    @name(".Needles") ActionSelector(Lyman, Kingman, SelectorMode_t.RESILIENT, 32w120, 32w4) Needles;
+    @name(".Cypress") ActionSelector(Lyman, Kingman, SelectorMode_t.RESILIENT, 32w120, 32w4) Cypress;
     @disable_atomic_modify(1) @name(".BirchRun") table BirchRun {
         actions = {
             Hopeton();
@@ -2793,7 +2806,7 @@ control Kelliher(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrin
             Dwight.Longwood.Osyka         : selector @name("Longwood.Osyka") ;
         }
         size = 31;
-        implementation = Needles;
+        implementation = Cypress;
         const default_action = NoAction();
     }
     apply {
@@ -2864,7 +2877,10 @@ control Westend(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrin
     @name(".Indios") action Addicks() {
         Dwight.Circle.Onycha = (bit<1>)1w0;
     }
-    @disable_atomic_modify(1) @name(".Wyandanch") table Wyandanch {
+@pa_no_init("ingress" , "Dwight.Circle.Onycha")
+@pa_mutually_exclusive("ingress" , "Dwight.Circle.Onycha" , "Dwight.Circle.Placedo")
+@disable_atomic_modify(1)
+@name(".Wyandanch") table Wyandanch {
         actions = {
             Scotland();
             Addicks();
@@ -2873,6 +2889,8 @@ control Westend(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrin
             Dwight.Nooksack.Avondale           : ternary @name("Nooksack.Avondale") ;
             Dwight.Circle.Placedo & 24w0xffffff: ternary @name("Circle.Placedo") ;
             Dwight.Circle.Delavan              : ternary @name("Circle.Delavan") ;
+            Dwight.Circle.Huffman              : exact @name("Circle.Huffman") ;
+            Dwight.Circle.Hematite             : ternary @name("Circle.Hematite") ;
         }
         const default_action = Addicks();
         size = 512;
@@ -2881,10 +2899,7 @@ control Westend(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrin
     @name(".Vananda") action Vananda(bit<1> Yorklyn) {
         Dwight.Circle.Delavan = Yorklyn;
     }
-@pa_no_init("ingress" , "Dwight.Circle.Delavan")
-@pa_mutually_exclusive("ingress" , "Dwight.Circle.Onycha" , "Dwight.Circle.Placedo")
-@disable_atomic_modify(1)
-@name(".Botna") table Botna {
+    @pa_no_init("ingress" , "Dwight.Circle.Delavan") @disable_atomic_modify(1) @name(".Botna") table Botna {
         actions = {
             Vananda();
         }
@@ -2897,6 +2912,7 @@ control Westend(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrin
     @name(".Chappell") DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) Chappell;
     @name(".Estero") action Estero() {
         Chappell.count();
+        Dwight.Circle.Huffman = (bit<1>)1w1;
     }
     @disable_atomic_modify(1) @name(".Inkom") table Inkom {
         actions = {
@@ -2919,6 +2935,7 @@ control Westend(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrin
     @name(".Gowanda") DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) Gowanda;
     @name(".BurrOak") action BurrOak() {
         Gowanda.count();
+        Dwight.Circle.Huffman = (bit<1>)1w1;
     }
     @disable_atomic_modify(1) @name(".Gardena") table Gardena {
         actions = {
@@ -2941,13 +2958,11 @@ control Westend(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrin
     apply {
         Botna.apply();
         if (Dwight.Circle.Minto == 3w0x2) {
-            if (!Gardena.apply().hit) {
-                Wyandanch.apply();
-            }
+            Gardena.apply();
+            Wyandanch.apply();
         } else if (Dwight.Circle.Minto == 3w0x1) {
-            if (!Inkom.apply().hit) {
-                Wyandanch.apply();
-            }
+            Inkom.apply();
+            Wyandanch.apply();
         } else {
             Wyandanch.apply();
         }
@@ -3156,7 +3171,7 @@ control Truro(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrinsic
     @name(".Langhorne") action Langhorne() {
         Dwight.Lookeba.Montague = (bit<1>)1w0x1;
     }
-    @disable_atomic_modify(1) @name(".Comobabi") table Comobabi {
+    @use_hash_action(1) @disable_atomic_modify(1) @name(".Comobabi") table Comobabi {
         actions = {
             Plush();
         }
@@ -3402,14 +3417,14 @@ control Kevil(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrinsic
     @name(".Liberal") action Liberal(bit<8> Dunstable) {
         Virgilina.Glenoma.Vinemont = Virgilina.Glenoma.Vinemont + Dunstable;
     }
-    @name(".Doyline") action Doyline(bit<16> Daphne, bit<16> Belcourt, bit<24> Clyde, bit<24> Clarion, bit<24> Maury, bit<24> Ashburn, bit<16> Moorman) {
+    @name(".Doyline") action Doyline(bit<16> Daphne, bit<16> Belcourt, bit<24> Clyde, bit<24> Clarion, bit<24> Maury, bit<24> Ashburn, bit<16> Moorman, bit<16> Telocaset) {
         Virgilina.Rienzi.Palmhurst = Dwight.Lookeba.Palmhurst;
         Virgilina.Rienzi.Comfrey = Dwight.Lookeba.Comfrey;
         Virgilina.Rienzi.Clyde = Clyde;
         Virgilina.Rienzi.Clarion = Clarion;
         Virgilina.Callao.Daphne = Daphne + Belcourt;
         Virgilina.Sespe.Algoa = (bit<16>)16w0;
-        Virgilina.Palouse.Weyauwega = Dwight.Lookeba.Wauconda;
+        Virgilina.Palouse.Weyauwega = Telocaset;
         Virgilina.Palouse.Joslin = Dwight.Longwood.Osyka + Moorman;
         Virgilina.Wagener.Chugwater = (bit<8>)8w0x8;
         Virgilina.Wagener.Provo = (bit<24>)24w0;
@@ -3426,34 +3441,34 @@ control Kevil(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrinsic
         Virgilina.Sespe.setValid();
         Virgilina.Callao.setValid();
     }
-    @name(".Parmelee") action Parmelee(bit<24> Maury, bit<24> Ashburn, bit<16> Moorman, bit<32> Gladys) {
-        Doyline(Virgilina.Baker.Kendrick, 16w30, Maury, Ashburn, Maury, Ashburn, Moorman);
+    @name(".Parmelee") action Parmelee(bit<24> Maury, bit<24> Ashburn, bit<16> Moorman, bit<32> Gladys, bit<16> Telocaset) {
+        Doyline(Virgilina.Baker.Kendrick, 16w30, Maury, Ashburn, Maury, Ashburn, Moorman, Dwight.Lookeba.Wauconda);
         Granville(Virgilina.Baker.Kendrick, 16w50, Gladys, 8w17);
         Virgilina.Baker.Dunstable = Virgilina.Baker.Dunstable - 8w1;
         Krupp();
     }
-    @name(".Bagwell") action Bagwell(bit<24> Maury, bit<24> Ashburn, bit<16> Moorman, bit<32> Gladys) {
-        Doyline(Virgilina.Glenoma.Mackville, 16w70, Maury, Ashburn, Maury, Ashburn, Moorman);
+    @name(".Bagwell") action Bagwell(bit<24> Maury, bit<24> Ashburn, bit<16> Moorman, bit<32> Gladys, bit<16> Telocaset) {
+        Doyline(Virgilina.Glenoma.Mackville, 16w70, Maury, Ashburn, Maury, Ashburn, Moorman, Dwight.Lookeba.Wauconda);
         Granville(Virgilina.Glenoma.Mackville, 16w90, Gladys, 8w17);
         Virgilina.Glenoma.Vinemont = Virgilina.Glenoma.Vinemont - 8w1;
         Krupp();
     }
-    @name(".Wright") action Wright(bit<16> Daphne, bit<16> Stone, bit<24> Clyde, bit<24> Clarion, bit<24> Maury, bit<24> Ashburn, bit<16> Moorman) {
+    @name(".Wright") action Wright(bit<16> Daphne, bit<16> Stone, bit<24> Clyde, bit<24> Clarion, bit<24> Maury, bit<24> Ashburn, bit<16> Moorman, bit<16> Telocaset) {
         Virgilina.Halltown.setValid();
         Virgilina.Recluse.setValid();
         Virgilina.Callao.setValid();
         Virgilina.Sespe.setValid();
         Virgilina.Palouse.setValid();
         Virgilina.Wagener.setValid();
-        Doyline(Daphne, Stone, Clyde, Clarion, Maury, Ashburn, Moorman);
+        Doyline(Daphne, Stone, Clyde, Clarion, Maury, Ashburn, Moorman, Telocaset);
     }
-    @name(".Milltown") action Milltown(bit<16> Daphne, bit<16> Stone, bit<16> TinCity, bit<24> Clyde, bit<24> Clarion, bit<24> Maury, bit<24> Ashburn, bit<16> Moorman, bit<32> Gladys) {
-        Wright(Daphne, Stone, Clyde, Clarion, Maury, Ashburn, Moorman);
+    @name(".Milltown") action Milltown(bit<16> Daphne, bit<16> Stone, bit<16> TinCity, bit<24> Clyde, bit<24> Clarion, bit<24> Maury, bit<24> Ashburn, bit<16> Moorman, bit<32> Gladys, bit<16> Telocaset) {
+        Wright(Daphne, Stone, Clyde, Clarion, Maury, Ashburn, Moorman, Telocaset);
         Granville(Daphne, TinCity, Gladys, 8w17);
     }
-    @name(".Comunas") action Comunas(bit<24> Maury, bit<24> Ashburn, bit<16> Moorman, bit<32> Gladys) {
+    @name(".Comunas") action Comunas(bit<24> Maury, bit<24> Ashburn, bit<16> Moorman, bit<32> Gladys, bit<16> Telocaset) {
         Virgilina.Arapahoe.setValid();
-        Milltown(Dwight.Swifton.Blencoe, 16w12, 16w32, Virgilina.Rienzi.Clyde, Virgilina.Rienzi.Clarion, Maury, Ashburn, Moorman, Gladys);
+        Milltown(Dwight.Swifton.Blencoe, 16w12, 16w32, Virgilina.Rienzi.Clyde, Virgilina.Rienzi.Clarion, Maury, Ashburn, Moorman, Gladys, Dwight.Lookeba.Wauconda);
     }
     @name(".Alcoma") action Alcoma(bit<16> Council, int<16> Capitola, bit<32> Parkville, bit<32> Mystic, bit<32> Kearns, bit<32> Malinta) {
         Virgilina.Parkway.setValid();
@@ -3471,21 +3486,21 @@ control Kevil(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrinsic
         Virgilina.Parkway.Vinemont = (bit<8>)8w64;
         Virgilina.Recluse.Cisco = 16w0x86dd;
     }
-    @name(".Kilbourne") action Kilbourne(bit<16> Daphne, bit<16> Stone, bit<16> Bluff, bit<24> Clyde, bit<24> Clarion, bit<24> Maury, bit<24> Ashburn, bit<32> Parkville, bit<32> Mystic, bit<32> Kearns, bit<32> Malinta, bit<16> Moorman) {
-        Wright(Daphne, Stone, Clyde, Clarion, Maury, Ashburn, Moorman);
+    @name(".Kilbourne") action Kilbourne(bit<16> Daphne, bit<16> Stone, bit<16> Bluff, bit<24> Clyde, bit<24> Clarion, bit<24> Maury, bit<24> Ashburn, bit<32> Parkville, bit<32> Mystic, bit<32> Kearns, bit<32> Malinta, bit<16> Moorman, bit<16> Telocaset) {
+        Wright(Daphne, Stone, Clyde, Clarion, Maury, Ashburn, Moorman, Telocaset);
         Alcoma(Daphne, (int<16>)Bluff, Parkville, Mystic, Kearns, Malinta);
     }
-    @name(".Bedrock") action Bedrock(bit<24> Maury, bit<24> Ashburn, bit<32> Parkville, bit<32> Mystic, bit<32> Kearns, bit<32> Malinta, bit<16> Moorman) {
-        Kilbourne(Dwight.Swifton.Blencoe, 16w12, 16w12, Virgilina.Rienzi.Clyde, Virgilina.Rienzi.Clarion, Maury, Ashburn, Parkville, Mystic, Kearns, Malinta, Moorman);
+    @name(".Bedrock") action Bedrock(bit<24> Maury, bit<24> Ashburn, bit<32> Parkville, bit<32> Mystic, bit<32> Kearns, bit<32> Malinta, bit<16> Moorman, bit<16> Telocaset) {
+        Kilbourne(Dwight.Swifton.Blencoe, 16w12, 16w12, Virgilina.Rienzi.Clyde, Virgilina.Rienzi.Clarion, Maury, Ashburn, Parkville, Mystic, Kearns, Malinta, Moorman, Dwight.Lookeba.Wauconda);
     }
-    @name(".Silvertip") action Silvertip(bit<24> Maury, bit<24> Ashburn, bit<32> Parkville, bit<32> Mystic, bit<32> Kearns, bit<32> Malinta, bit<16> Moorman) {
-        Doyline(Virgilina.Baker.Kendrick, 16w30, Maury, Ashburn, Maury, Ashburn, Moorman);
+    @name(".Silvertip") action Silvertip(bit<24> Maury, bit<24> Ashburn, bit<32> Parkville, bit<32> Mystic, bit<32> Kearns, bit<32> Malinta, bit<16> Moorman, bit<16> Telocaset) {
+        Doyline(Virgilina.Baker.Kendrick, 16w30, Maury, Ashburn, Maury, Ashburn, Moorman, Dwight.Lookeba.Wauconda);
         Alcoma(Virgilina.Baker.Kendrick, 16s30, Parkville, Mystic, Kearns, Malinta);
         Virgilina.Baker.Dunstable = Virgilina.Baker.Dunstable - 8w1;
         Krupp();
     }
-    @name(".Thatcher") action Thatcher(bit<24> Maury, bit<24> Ashburn, bit<32> Parkville, bit<32> Mystic, bit<32> Kearns, bit<32> Malinta, bit<16> Moorman) {
-        Doyline(Virgilina.Glenoma.Mackville, 16w70, Maury, Ashburn, Maury, Ashburn, Moorman);
+    @name(".Thatcher") action Thatcher(bit<24> Maury, bit<24> Ashburn, bit<32> Parkville, bit<32> Mystic, bit<32> Kearns, bit<32> Malinta, bit<16> Moorman, bit<16> Telocaset) {
+        Doyline(Virgilina.Glenoma.Mackville, 16w70, Maury, Ashburn, Maury, Ashburn, Moorman, Dwight.Lookeba.Wauconda);
         Alcoma(Virgilina.Glenoma.Mackville, 16s70, Parkville, Mystic, Kearns, Malinta);
         Liberal(8w255);
         Krupp();
@@ -4880,8 +4895,8 @@ control Rembrandt(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intri
     }
     @name(".Millican") DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES, true) Millican;
     @name(".Decorah") action Decorah() {
-        Valmont();
         Millican.count();
+        Dwight.Lookeba.Huffman = (bit<1>)1w1;
     }
     @disable_atomic_modify(1) @name(".Waretown") table Waretown {
         actions = {
@@ -4903,8 +4918,8 @@ control Rembrandt(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intri
     }
     @name(".Moxley") DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES, true) Moxley;
     @name(".Stout") action Stout() {
-        Valmont();
         Moxley.count();
+        Dwight.Lookeba.Huffman = (bit<1>)1w1;
     }
     @disable_atomic_modify(1) @name(".Blunt") table Blunt {
         actions = {
@@ -4938,8 +4953,9 @@ control Rembrandt(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intri
         size = 8192;
     }
 @pa_no_init("egress" , "Dwight.Lookeba.Delavan")
-@pa_no_init("egress" , "Dwight.Lookeba.Onycha")
 @pa_no_init("egress" , "Dwight.Lookeba.Placedo")
+@pa_no_init("egress" , "Dwight.Lookeba.Onycha")
+@pa_mutually_exclusive("egress" , "Dwight.Lookeba.Placedo" , "Dwight.Lookeba.Onycha")
 @disable_atomic_modify(1)
 @name(".Calverton") table Calverton {
         actions = {
@@ -4947,9 +4963,11 @@ control Rembrandt(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intri
             Valmont();
         }
         key = {
-            Swifton.egress_port   : ternary @name("Swifton.Bledsoe") ;
-            Dwight.Lookeba.Placedo: ternary @name("Lookeba.Placedo") ;
-            Dwight.Lookeba.Delavan: ternary @name("Lookeba.Delavan") ;
+            Swifton.egress_port    : ternary @name("Swifton.Bledsoe") ;
+            Dwight.Lookeba.Placedo : ternary @name("Lookeba.Placedo") ;
+            Dwight.Lookeba.Delavan : ternary @name("Lookeba.Delavan") ;
+            Dwight.Lookeba.Huffman : exact @name("Lookeba.Huffman") ;
+            Dwight.Lookeba.Hematite: ternary @name("Lookeba.Hematite") ;
         }
         const default_action = Valmont();
         size = 512;
@@ -4958,13 +4976,11 @@ control Rembrandt(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intri
     apply {
         Forbes.apply();
         if (Virgilina.Glenoma.isValid()) {
-            if (!Blunt.apply().hit) {
-                Calverton.apply();
-            }
+            Blunt.apply();
+            Calverton.apply();
         } else if (Virgilina.Baker.isValid()) {
-            if (!Waretown.apply().hit) {
-                Calverton.apply();
-            }
+            Waretown.apply();
+            Calverton.apply();
         } else {
             Calverton.apply();
         }
@@ -5228,7 +5244,7 @@ control Supai(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrinsi
     @name(".Waxhaw") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Waxhaw;
     @name(".Gerster.Waipahu") Hash<bit<51>>(HashAlgorithm_t.CRC16, Waxhaw) Gerster;
     @name(".Rodessa") ActionProfile(32w98) Rodessa;
-    @name(".Boquet") ActionSelector(Rodessa, Gerster, SelectorMode_t.FAIR, 32w40, 32w130) Boquet;
+    @name(".Sabana") ActionSelector(Rodessa, Gerster, SelectorMode_t.FAIR, 32w40, 32w130) Sabana;
 @pa_atomic("pipe_a" , "ingress" , "ig_intr_md_for_tm.ucast_egress_port")
 @pa_no_init("ingress" , "ig_intr_md_for_tm.ucast_egress_port")
 @disable_atomic_modify(1)
@@ -5243,7 +5259,7 @@ control Supai(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrinsi
             @defaultonly NoAction();
         }
         size = 1024;
-        implementation = Boquet;
+        implementation = Sabana;
         default_action = NoAction();
     }
     @name(".LaFayette") DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) LaFayette;
@@ -5725,7 +5741,7 @@ parser Poteet(packet_in Blakeslee, out Almota Virgilina, out Wyndmoor Dwight, ou
         Blakeslee.extract<Kalida>(Virgilina.Olmitz);
         transition accept;
     }
-    state Quealy {
+    state Trego {
         transition Penalosa;
     }
     state Hartwick {
@@ -5737,8 +5753,8 @@ parser Poteet(packet_in Blakeslee, out Almota Virgilina, out Wyndmoor Dwight, ou
             (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Burtrum;
             (8w0x45 &&& 8w0xff, 16w0x800): Blanchard;
             (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Gracewood;
-            (8w0x40 &&& 8w0xfc, 16w0x800 &&& 16w0xffff): Quealy;
-            (8w0x44 &&& 8w0xff, 16w0x800 &&& 16w0xffff): Quealy;
+            (8w0x40 &&& 8w0xfc, 16w0x800 &&& 16w0xffff): Trego;
+            (8w0x44 &&& 8w0xff, 16w0x800 &&& 16w0xffff): Trego;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Beaman;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Challenge;
             (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Craigtown;
@@ -5763,8 +5779,8 @@ parser Poteet(packet_in Blakeslee, out Almota Virgilina, out Wyndmoor Dwight, ou
             24w0x806 &&& 24w0xffff: Burtrum;
             24w0x450800 &&& 24w0xffffff: Blanchard;
             24w0x50800 &&& 24w0xfffff: Gracewood;
-            24w0x400800 &&& 24w0xfcffff: Quealy;
-            24w0x440800 &&& 24w0xffffff: Quealy;
+            24w0x400800 &&& 24w0xfcffff: Trego;
+            24w0x440800 &&& 24w0xffffff: Trego;
             24w0x800 &&& 24w0xffff: Beaman;
             24w0x6086dd &&& 24w0xf0ffff: Challenge;
             24w0x86dd &&& 24w0xffff: Craigtown;
@@ -5782,8 +5798,8 @@ parser Poteet(packet_in Blakeslee, out Almota Virgilina, out Wyndmoor Dwight, ou
             24w0x806 &&& 24w0xffff: Burtrum;
             24w0x450800 &&& 24w0xffffff: Blanchard;
             24w0x50800 &&& 24w0xfffff: Gracewood;
-            24w0x400800 &&& 24w0xfcffff: Quealy;
-            24w0x440800 &&& 24w0xffffff: Quealy;
+            24w0x400800 &&& 24w0xfcffff: Trego;
+            24w0x440800 &&& 24w0xffffff: Trego;
             24w0x800 &&& 24w0xffff: Beaman;
             24w0x6086dd &&& 24w0xf0ffff: Challenge;
             24w0x86dd &&& 24w0xffff: Craigtown;
@@ -5801,8 +5817,8 @@ parser Poteet(packet_in Blakeslee, out Almota Virgilina, out Wyndmoor Dwight, ou
             24w0x806 &&& 24w0xffff: Burtrum;
             24w0x450800 &&& 24w0xffffff: Blanchard;
             24w0x50800 &&& 24w0xfffff: Gracewood;
-            24w0x400800 &&& 24w0xfcffff: Quealy;
-            24w0x440800 &&& 24w0xffffff: Quealy;
+            24w0x400800 &&& 24w0xfcffff: Trego;
+            24w0x440800 &&& 24w0xffffff: Trego;
             24w0x800 &&& 24w0xffff: Beaman;
             24w0x6086dd &&& 24w0xf0ffff: Challenge;
             24w0x86dd &&& 24w0xffff: Craigtown;
@@ -7174,8 +7190,8 @@ control Sidnaw(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrins
     }
     @name(".Eckman") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Eckman;
     @name(".Hiwassee.BigRiver") Hash<bit<51>>(HashAlgorithm_t.CRC16, Eckman) Hiwassee;
-    @name(".Huffman") ActionProfile(32w4096) Huffman;
-    @name(".Eastover") ActionSelector(Huffman, Hiwassee, SelectorMode_t.RESILIENT, 32w120, 32w4) Eastover;
+    @name(".Manistee") ActionProfile(32w4096) Manistee;
+    @name(".Penitas") ActionSelector(Manistee, Hiwassee, SelectorMode_t.RESILIENT, 32w120, 32w4) Penitas;
     @disable_atomic_modify(1) @name(".Kulpmont") table Kulpmont {
         actions = {
             Corry();
@@ -7186,7 +7202,7 @@ control Sidnaw(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrins
             Dwight.Longwood.Osyka  : selector @name("Longwood.Osyka") ;
         }
         size = 512;
-        implementation = Eastover;
+        implementation = Penitas;
         const default_action = NoAction();
     }
     @name(".Shanghai") Lovett() Shanghai;

@@ -22,8 +22,6 @@
 @pa_container_size("ingress" , "Baker.Terral.Naruna" , 16)
 @pa_atomic("ingress" , "Baker.Daisytown.LasVegas")
 @pa_mutually_exclusive("ingress" , "Baker.Thawville.Edwards" , "Baker.Balmorhea.Ackley")
-@pa_atomic("ingress" , "Baker.Empire.Dyess")
-@gfm_parity_enable
 @pa_alias("ingress" , "Olmitz.Dacono.Hackett" , "Baker.Earling.Chloride")
 @pa_alias("ingress" , "Olmitz.Dacono.Kaluaaha" , "Baker.Earling.Goulds")
 @pa_alias("ingress" , "Olmitz.Dacono.Calcasieu" , "Baker.Earling.Linden")
@@ -69,7 +67,23 @@
 @pa_alias("egress" , "Olmitz.Dacono.Mabelle" , "Baker.Twain.Maumee")
 @pa_alias("egress" , "Olmitz.Dacono.Lacona" , "Baker.Twain.LasVegas")
 @pa_alias("egress" , "Olmitz.Recluse.$valid" , "Baker.Talco.Lawai")
-@pa_alias("egress" , "Baker.Wyndmoor.Crestone" , "Baker.Wyndmoor.Kenney") header Anacortes {
+@pa_alias("egress" , "Baker.Wyndmoor.Crestone" , "Baker.Wyndmoor.Kenney") header LaPointe {
+    bit<1>  Eureka;
+    bit<6>  Millett;
+    bit<9>  Thistle;
+    bit<16> Overton;
+    bit<32> Karluk;
+}
+
+header Bothwell {
+    bit<8>  Bayshore;
+    bit<2>  Garibaldi;
+    bit<5>  Millett;
+    bit<9>  Thistle;
+    bit<16> Overton;
+}
+
+@pa_atomic("ingress" , "Baker.Empire.Dyess") @gfm_parity_enable header Anacortes {
     bit<8> Corinth;
 }
 
@@ -934,7 +948,7 @@ struct Martelle {
 }
 
 struct Westville {
-    bit<13> LaPointe;
+    bit<13> Kealia;
     bit<1>  Baudette;
     bit<1>  Ekron;
     bit<1>  Swisshome;
@@ -1100,7 +1114,7 @@ parser Harding(packet_in Nephi, out Milano Olmitz, out Sequim Baker, out ingress
         Nephi.extract<Ledoux>(Olmitz.Hillside);
         transition accept;
     }
-    state Eureka {
+    state BelAir {
         transition Sneads;
     }
     state Emden {
@@ -1112,8 +1126,8 @@ parser Harding(packet_in Nephi, out Milano Olmitz, out Sequim Baker, out ingress
             (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Starkey;
             (8w0x45 &&& 8w0xff, 16w0x800): Volens;
             (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Ossining;
-            (8w0x40 &&& 8w0xfc, 16w0x800 &&& 16w0xffff): Eureka;
-            (8w0x44 &&& 8w0xff, 16w0x800 &&& 16w0xffff): Eureka;
+            (8w0x40 &&& 8w0xfc, 16w0x800 &&& 16w0xffff): BelAir;
+            (8w0x44 &&& 8w0xff, 16w0x800 &&& 16w0xffff): BelAir;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Nason;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Marquand;
             (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Kempton;
@@ -1138,8 +1152,8 @@ parser Harding(packet_in Nephi, out Milano Olmitz, out Sequim Baker, out ingress
             24w0x806 &&& 24w0xffff: Starkey;
             24w0x450800 &&& 24w0xffffff: Volens;
             24w0x50800 &&& 24w0xfffff: Ossining;
-            24w0x400800 &&& 24w0xfcffff: Eureka;
-            24w0x440800 &&& 24w0xffffff: Eureka;
+            24w0x400800 &&& 24w0xfcffff: BelAir;
+            24w0x440800 &&& 24w0xffffff: BelAir;
             24w0x800 &&& 24w0xffff: Nason;
             24w0x6086dd &&& 24w0xf0ffff: Marquand;
             24w0x86dd &&& 24w0xffff: Kempton;
@@ -1157,8 +1171,8 @@ parser Harding(packet_in Nephi, out Milano Olmitz, out Sequim Baker, out ingress
             24w0x806 &&& 24w0xffff: Starkey;
             24w0x450800 &&& 24w0xffffff: Volens;
             24w0x50800 &&& 24w0xfffff: Ossining;
-            24w0x400800 &&& 24w0xfcffff: Eureka;
-            24w0x440800 &&& 24w0xffffff: Eureka;
+            24w0x400800 &&& 24w0xfcffff: BelAir;
+            24w0x440800 &&& 24w0xffffff: BelAir;
             24w0x800 &&& 24w0xffff: Nason;
             24w0x6086dd &&& 24w0xf0ffff: Marquand;
             24w0x86dd &&& 24w0xffff: Kempton;
@@ -1176,8 +1190,8 @@ parser Harding(packet_in Nephi, out Milano Olmitz, out Sequim Baker, out ingress
             24w0x806 &&& 24w0xffff: Starkey;
             24w0x450800 &&& 24w0xffffff: Volens;
             24w0x50800 &&& 24w0xfffff: Ossining;
-            24w0x400800 &&& 24w0xfcffff: Eureka;
-            24w0x440800 &&& 24w0xffffff: Eureka;
+            24w0x400800 &&& 24w0xfcffff: BelAir;
+            24w0x440800 &&& 24w0xffffff: BelAir;
             24w0x800 &&& 24w0xffff: Nason;
             24w0x6086dd &&& 24w0xf0ffff: Marquand;
             24w0x86dd &&& 24w0xffff: Kempton;
@@ -3185,7 +3199,7 @@ control Estero(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_met
     @name(".Durant") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Durant;
     @name(".Kingsdale.Everton") Hash<bit<51>>(HashAlgorithm_t.CRC16, Durant) Kingsdale;
     @name(".Tekonsha") ActionProfile(32w32768) Tekonsha;
-    @name(".Millett") ActionSelector(Tekonsha, Kingsdale, SelectorMode_t.RESILIENT, 32w120, 32w4) Millett;
+    @name(".Newberg") ActionSelector(Tekonsha, Kingsdale, SelectorMode_t.RESILIENT, 32w120, 32w4) Newberg;
     @disable_atomic_modify(1) @name(".Clermont") table Clermont {
         actions = {
             Gowanda();
@@ -3200,7 +3214,7 @@ control Estero(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_met
         }
         const default_action = Onamia();
         size = 512;
-        implementation = Millett;
+        implementation = Newberg;
         requires_versioning = false;
     }
     apply {
@@ -3301,7 +3315,7 @@ control Herring(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_me
     @name(".Truro") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Truro;
     @name(".Plush.Waialua") Hash<bit<51>>(HashAlgorithm_t.CRC16, Truro) Plush;
     @name(".Bethune") ActionProfile(32w512) Bethune;
-    @name(".Thistle") ActionSelector(Bethune, Plush, SelectorMode_t.RESILIENT, 32w120, 32w4) Thistle;
+    @name(".ElMirage") ActionSelector(Bethune, Plush, SelectorMode_t.RESILIENT, 32w120, 32w4) ElMirage;
     @disable_atomic_modify(1) @name(".PawCreek") table PawCreek {
         actions = {
             Wattsburg();
@@ -3312,7 +3326,7 @@ control Herring(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_me
             Baker.Crannell.Freeny       : selector @name("Crannell.Freeny") ;
         }
         size = 128;
-        implementation = Thistle;
+        implementation = ElMirage;
         const default_action = NoAction();
     }
     apply {
@@ -3321,7 +3335,7 @@ control Herring(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_me
 }
 
 control Cornwall(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_metadata_t Humeston, in egress_intrinsic_metadata_from_parser_t Basye, inout egress_intrinsic_metadata_for_deparser_t Woolwine, inout egress_intrinsic_metadata_for_output_port_t Agawam) {
-    @name(".Overton") action Overton() {
+    @name(".Amboy") action Amboy() {
         Woolwine.drop_ctl = (bit<3>)3w7;
     }
     @name(".Langhorne") action Langhorne() {
@@ -3372,14 +3386,14 @@ control Cornwall(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_me
             Langhorne();
             Comobabi();
             Natalbany();
-            @defaultonly Overton();
+            @defaultonly Amboy();
         }
         key = {
             Humeston.egress_rid : exact @name("Humeston.egress_rid") ;
             Humeston.egress_port: exact @name("Humeston.Toklat") ;
         }
         size = 8;
-        const default_action = Overton();
+        const default_action = Amboy();
     }
     apply {
         Brunson.apply();
@@ -3412,7 +3426,7 @@ control Caspian(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_met
     @name(".Lowemont") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Lowemont;
     @name(".Wauregan.Wheaton") Hash<bit<51>>(HashAlgorithm_t.CRC16, Lowemont) Wauregan;
     @name(".CassCity") ActionProfile(32w512) CassCity;
-    @name(".Karluk") ActionSelector(CassCity, Wauregan, SelectorMode_t.RESILIENT, 32w120, 32w4) Karluk;
+    @name(".Wiota") ActionSelector(CassCity, Wauregan, SelectorMode_t.RESILIENT, 32w120, 32w4) Wiota;
     @disable_atomic_modify(1) @name(".Sanborn") table Sanborn {
         actions = {
             Norridge();
@@ -3423,7 +3437,7 @@ control Caspian(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_met
             Baker.Crannell.Freeny          : selector @name("Crannell.Freeny") ;
         }
         size = 128;
-        implementation = Karluk;
+        implementation = Wiota;
         const default_action = NoAction();
     }
     apply {
@@ -3486,7 +3500,10 @@ control Ivanpah(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_me
     @name(".Midas") action Newland() {
         Baker.Empire.Westhoff = (bit<1>)1w0;
     }
-    @disable_atomic_modify(1) @name(".Waumandee") table Waumandee {
+@pa_no_init("ingress" , "Baker.Empire.Westhoff")
+@pa_mutually_exclusive("ingress" , "Baker.Empire.Westhoff" , "Baker.Empire.Dyess")
+@disable_atomic_modify(1)
+@name(".Waumandee") table Waumandee {
         actions = {
             Kevil();
             Newland();
@@ -3707,7 +3724,7 @@ control Bluff(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_metad
     @name(".Virginia") action Virginia() {
         Baker.Earling.Pinole = (bit<1>)1w0x1;
     }
-    @disable_atomic_modify(1) @use_hash_action(1) @name(".Cornish") table Cornish {
+    @use_hash_action(1) @disable_atomic_modify(1) @use_hash_action(1) @name(".Cornish") table Cornish {
         actions = {
             Bedrock();
         }
@@ -3906,14 +3923,14 @@ control Mantee(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_meta
         Olmitz.Courtdale.Irvine = Baker.Earling.Pierceton;
         Olmitz.Nooksack.Connell = 16w0x800;
     }
-    @name(".RedBay") action RedBay(bit<16> Powderly, bit<16> Tunis, bit<24> Lathrop, bit<24> Clyde, bit<24> Twichell, bit<24> Ferndale, bit<16> Pound) {
+    @name(".RedBay") action RedBay(bit<16> Powderly, bit<16> Tunis, bit<24> Lathrop, bit<24> Clyde, bit<24> Twichell, bit<24> Ferndale, bit<16> Pound, bit<16> Minneota) {
         Olmitz.Cotter.Linden = Baker.Earling.Linden;
         Olmitz.Cotter.Conner = Baker.Earling.Conner;
         Olmitz.Cotter.Lathrop = Lathrop;
         Olmitz.Cotter.Clyde = Clyde;
         Olmitz.Cranbury.Powderly = Powderly + Tunis;
         Olmitz.PeaRidge.Teigen = (bit<16>)16w0;
-        Olmitz.Swifton.Naruna = Baker.Earling.Ericsburg;
+        Olmitz.Swifton.Naruna = Minneota;
         Olmitz.Swifton.Bicknell = Baker.Crannell.Freeny + Pound;
         Olmitz.Neponset.Whitten = (bit<8>)8w0x8;
         Olmitz.Neponset.Poulan = (bit<24>)24w0;
@@ -3930,34 +3947,34 @@ control Mantee(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_meta
         Olmitz.PeaRidge.setValid();
         Olmitz.Cranbury.setValid();
     }
-    @name(".Oakley") action Oakley(bit<24> Twichell, bit<24> Ferndale, bit<16> Pound, bit<32> Lignite) {
-        RedBay(Olmitz.Wanamassa.Newfane, 16w30, Twichell, Ferndale, Twichell, Ferndale, Pound);
+    @name(".Oakley") action Oakley(bit<24> Twichell, bit<24> Ferndale, bit<16> Pound, bit<32> Lignite, bit<16> Minneota) {
+        RedBay(Olmitz.Wanamassa.Newfane, 16w30, Twichell, Ferndale, Twichell, Ferndale, Pound, Baker.Earling.Ericsburg);
         McDougal(Olmitz.Wanamassa.Newfane, 16w50, Lignite, 8w17);
         Olmitz.Wanamassa.Wallula = Olmitz.Wanamassa.Wallula - 8w1;
         Herod();
     }
-    @name(".Ontonagon") action Ontonagon(bit<24> Twichell, bit<24> Ferndale, bit<16> Pound, bit<32> Lignite) {
-        RedBay(Olmitz.Peoria.Solomon, 16w70, Twichell, Ferndale, Twichell, Ferndale, Pound);
+    @name(".Ontonagon") action Ontonagon(bit<24> Twichell, bit<24> Ferndale, bit<16> Pound, bit<32> Lignite, bit<16> Minneota) {
+        RedBay(Olmitz.Peoria.Solomon, 16w70, Twichell, Ferndale, Twichell, Ferndale, Pound, Baker.Earling.Ericsburg);
         McDougal(Olmitz.Peoria.Solomon, 16w90, Lignite, 8w17);
         Olmitz.Peoria.Coalwood = Olmitz.Peoria.Coalwood - 8w1;
         Herod();
     }
-    @name(".Ickesburg") action Ickesburg(bit<16> Powderly, bit<16> Tulalip, bit<24> Lathrop, bit<24> Clyde, bit<24> Twichell, bit<24> Ferndale, bit<16> Pound) {
+    @name(".Ickesburg") action Ickesburg(bit<16> Powderly, bit<16> Tulalip, bit<24> Lathrop, bit<24> Clyde, bit<24> Twichell, bit<24> Ferndale, bit<16> Pound, bit<16> Minneota) {
         Olmitz.Pineville.setValid();
         Olmitz.Nooksack.setValid();
         Olmitz.Cranbury.setValid();
         Olmitz.PeaRidge.setValid();
         Olmitz.Swifton.setValid();
         Olmitz.Neponset.setValid();
-        RedBay(Powderly, Tulalip, Lathrop, Clyde, Twichell, Ferndale, Pound);
+        RedBay(Powderly, Tulalip, Lathrop, Clyde, Twichell, Ferndale, Pound, Minneota);
     }
-    @name(".Olivet") action Olivet(bit<16> Powderly, bit<16> Tulalip, bit<16> Nordland, bit<24> Lathrop, bit<24> Clyde, bit<24> Twichell, bit<24> Ferndale, bit<16> Pound, bit<32> Lignite) {
-        Ickesburg(Powderly, Tulalip, Lathrop, Clyde, Twichell, Ferndale, Pound);
+    @name(".Olivet") action Olivet(bit<16> Powderly, bit<16> Tulalip, bit<16> Nordland, bit<24> Lathrop, bit<24> Clyde, bit<24> Twichell, bit<24> Ferndale, bit<16> Pound, bit<32> Lignite, bit<16> Minneota) {
+        Ickesburg(Powderly, Tulalip, Lathrop, Clyde, Twichell, Ferndale, Pound, Minneota);
         McDougal(Powderly, Nordland, Lignite, 8w17);
     }
-    @name(".Upalco") action Upalco(bit<24> Twichell, bit<24> Ferndale, bit<16> Pound, bit<32> Lignite) {
+    @name(".Upalco") action Upalco(bit<24> Twichell, bit<24> Ferndale, bit<16> Pound, bit<32> Lignite, bit<16> Minneota) {
         Olmitz.Courtdale.setValid();
-        Olivet(Baker.Humeston.Bledsoe, 16w12, 16w32, Olmitz.Cotter.Lathrop, Olmitz.Cotter.Clyde, Twichell, Ferndale, Pound, Lignite);
+        Olivet(Baker.Humeston.Bledsoe, 16w12, 16w32, Olmitz.Cotter.Lathrop, Olmitz.Cotter.Clyde, Twichell, Ferndale, Pound, Lignite, Baker.Earling.Ericsburg);
     }
     @name(".Alnwick") action Alnwick() {
         Woolwine.drop_ctl = (bit<3>)3w7;
@@ -5375,8 +5392,8 @@ control Rixford(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_met
     }
     @name(".Eustis") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Eustis;
     @name(".Almont.BigRiver") Hash<bit<51>>(HashAlgorithm_t.CRC16, Eustis) Almont;
-    @name(".Bothwell") ActionProfile(32w8) Bothwell;
-    @name(".Kealia") ActionSelector(Bothwell, Almont, SelectorMode_t.RESILIENT, 32w120, 32w4) Kealia;
+    @name(".Whitetail") ActionProfile(32w8) Whitetail;
+    @name(".Paoli") ActionSelector(Whitetail, Almont, SelectorMode_t.RESILIENT, 32w120, 32w4) Paoli;
     @disable_atomic_modify(1) @name(".Newburgh") table Newburgh {
         actions = {
             Dante();
@@ -5387,7 +5404,7 @@ control Rixford(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_met
             Baker.Crannell.Freeny: selector @name("Crannell.Freeny") ;
         }
         size = 2;
-        implementation = Kealia;
+        implementation = Paoli;
         const default_action = NoAction();
     }
     @use_hash_action(0) @disable_atomic_modify(1) @use_hash_action(0) @name(".Baroda") table Baroda {

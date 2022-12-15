@@ -41,8 +41,6 @@
 @pa_container_size("ingress" , "Hettinger.Bratt.Traverse" , 32)
 @pa_container_size("ingress" , "Hettinger.Bratt.Barrow" , 8)
 @pa_container_size("ingress" , "Hettinger.Bratt.Blairsden" , 8)
-@pa_atomic("ingress" , "Hettinger.Bratt.Delavan")
-@gfm_parity_enable
 @pa_alias("ingress" , "Noyack.Glenoma.Ocoee" , "Hettinger.Moultrie.Rains")
 @pa_alias("ingress" , "Noyack.Glenoma.Hackett" , "Hettinger.Moultrie.Cuprum")
 @pa_alias("ingress" , "Noyack.Glenoma.Kaluaaha" , "Hettinger.Moultrie.Littleton")
@@ -96,7 +94,23 @@
 @pa_alias("egress" , "Noyack.Glenoma.Palatine" , "Hettinger.Nooksack.Hapeville")
 @pa_alias("egress" , "Noyack.Glenoma.Buckeye" , "Hettinger.Nooksack.Madawaska")
 @pa_alias("egress" , "Noyack.Fishers.$valid" , "Hettinger.Swifton.Hillsview")
-@pa_alias("egress" , "Hettinger.Wanamassa.Mausdale" , "Hettinger.Wanamassa.Edwards") header Anacortes {
+@pa_alias("egress" , "Hettinger.Wanamassa.Mausdale" , "Hettinger.Wanamassa.Edwards") header Quealy {
+    bit<1>  Huffman;
+    bit<6>  Eastover;
+    bit<9>  Iraan;
+    bit<16> Verdigris;
+    bit<32> Elihu;
+}
+
+header Cypress {
+    bit<8>  Bayshore;
+    bit<2>  SoapLake;
+    bit<5>  Eastover;
+    bit<9>  Iraan;
+    bit<16> Verdigris;
+}
+
+@pa_atomic("ingress" , "Hettinger.Bratt.Delavan") @gfm_parity_enable header Anacortes {
     bit<8> Corinth;
 }
 
@@ -1007,7 +1021,7 @@ struct Lookeba {
 }
 
 struct Gamaliel {
-    bit<13> Quealy;
+    bit<13> Telocaset;
     bit<1>  Orting;
     bit<1>  SanRemo;
     bit<1>  Thawville;
@@ -1180,7 +1194,7 @@ parser Moosic(packet_in Ossining, out Baker Noyack, out Harriet Hettinger, out i
         Ossining.extract<Turkey>(Noyack.Ruffin);
         transition accept;
     }
-    state Huffman {
+    state Sabana {
         transition Baranof;
     }
     state Castle {
@@ -1192,8 +1206,8 @@ parser Moosic(packet_in Ossining, out Baker Noyack, out Harriet Hettinger, out i
             (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Kapowsin;
             (8w0x45 &&& 8w0xff, 16w0x800): Crown;
             (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Decherd;
-            (8w0x40 &&& 8w0xfc, 16w0x800 &&& 16w0xffff): Huffman;
-            (8w0x44 &&& 8w0xff, 16w0x800 &&& 16w0xffff): Huffman;
+            (8w0x40 &&& 8w0xfc, 16w0x800 &&& 16w0xffff): Sabana;
+            (8w0x44 &&& 8w0xff, 16w0x800 &&& 16w0xffff): Sabana;
             (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Bucklin;
             (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Bernard;
             (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Natalia;
@@ -1220,8 +1234,8 @@ parser Moosic(packet_in Ossining, out Baker Noyack, out Harriet Hettinger, out i
             24w0x806 &&& 24w0xffff: Kapowsin;
             24w0x450800 &&& 24w0xffffff: Crown;
             24w0x50800 &&& 24w0xfffff: Decherd;
-            24w0x400800 &&& 24w0xfcffff: Huffman;
-            24w0x440800 &&& 24w0xffffff: Huffman;
+            24w0x400800 &&& 24w0xfcffff: Sabana;
+            24w0x440800 &&& 24w0xffffff: Sabana;
             24w0x800 &&& 24w0xffff: Bucklin;
             24w0x6086dd &&& 24w0xf0ffff: Bernard;
             24w0x86dd &&& 24w0xffff: Natalia;
@@ -1239,8 +1253,8 @@ parser Moosic(packet_in Ossining, out Baker Noyack, out Harriet Hettinger, out i
             24w0x806 &&& 24w0xffff: Kapowsin;
             24w0x450800 &&& 24w0xffffff: Crown;
             24w0x50800 &&& 24w0xfffff: Decherd;
-            24w0x400800 &&& 24w0xfcffff: Huffman;
-            24w0x440800 &&& 24w0xffffff: Huffman;
+            24w0x400800 &&& 24w0xfcffff: Sabana;
+            24w0x440800 &&& 24w0xffffff: Sabana;
             24w0x800 &&& 24w0xffff: Bucklin;
             24w0x6086dd &&& 24w0xf0ffff: Bernard;
             24w0x86dd &&& 24w0xffff: Natalia;
@@ -1258,8 +1272,8 @@ parser Moosic(packet_in Ossining, out Baker Noyack, out Harriet Hettinger, out i
             24w0x806 &&& 24w0xffff: Kapowsin;
             24w0x450800 &&& 24w0xffffff: Crown;
             24w0x50800 &&& 24w0xfffff: Decherd;
-            24w0x400800 &&& 24w0xfcffff: Huffman;
-            24w0x440800 &&& 24w0xffffff: Huffman;
+            24w0x400800 &&& 24w0xfcffff: Sabana;
+            24w0x440800 &&& 24w0xffffff: Sabana;
             24w0x800 &&& 24w0xffff: Bucklin;
             24w0x6086dd &&& 24w0xf0ffff: Bernard;
             24w0x86dd &&& 24w0xffff: Natalia;
@@ -2249,7 +2263,7 @@ control Danbury(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsi
     }
 @pa_no_init("ingress" , "Hettinger.Moultrie.Candle")
 @pa_no_init("ingress" , "Hettinger.Moultrie.Ackley")
-@name(".Eastover") action Eastover(bit<1> Hiland, bit<1> Manilla) {
+@name(".Trego") action Trego(bit<1> Hiland, bit<1> Manilla) {
         Hettinger.Moultrie.Crestone = (bit<1>)1w1;
         Hettinger.Moultrie.Candle = Hettinger.Moultrie.Montague[19:16];
         Hettinger.Moultrie.Ackley = Hettinger.Moultrie.Montague[15:0];
@@ -2258,11 +2272,11 @@ control Danbury(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsi
         Hettinger.Moultrie.Kalkaska[0:0] = Manilla;
     }
     @name(".Gilman") action Gilman(bit<1> Hiland, bit<1> Manilla) {
-        Eastover(Hiland, Manilla);
+        Trego(Hiland, Manilla);
         Hettinger.Moultrie.Rains = Hettinger.Bratt.Placedo;
     }
-    @name(".Iraan") action Iraan(bit<1> Hiland, bit<1> Manilla) {
-        Eastover(Hiland, Manilla);
+    @name(".Manistee") action Manistee(bit<1> Hiland, bit<1> Manilla) {
+        Trego(Hiland, Manilla);
         Hettinger.Moultrie.Rains = Hettinger.Bratt.Placedo + 8w56;
     }
     @name(".Waukegan") action Waukegan(bit<20> Clintwood, bit<24> Littleton, bit<24> Killen, bit<12> Pettry) {
@@ -2274,6 +2288,7 @@ control Danbury(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsi
         Hettinger.Moultrie.Killen = Killen;
         Hettinger.Moultrie.Pettry = Pettry;
         Hettinger.Moultrie.Basalt = (bit<1>)1w1;
+        Hettinger.Bratt.Manilla = (bit<1>)1w0;
     }
     @name(".Kalaloch") action Kalaloch(bit<8> Rains) {
         Hettinger.Moultrie.Crestone = (bit<1>)1w1;
@@ -2341,7 +2356,7 @@ control Danbury(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsi
     @disable_atomic_modify(1) @name(".Philmont") table Philmont {
         actions = {
             Gilman();
-            Iraan();
+            Manistee();
             Waukegan();
             Millikin();
         }
@@ -2362,7 +2377,7 @@ control Danbury(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsi
     @disable_atomic_modify(1) @name(".ElCentro") table ElCentro {
         actions = {
             Gilman();
-            Iraan();
+            Manistee();
             Millikin();
         }
         key = {
@@ -4445,7 +4460,7 @@ control Elysburg(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrins
     @name(".Manville") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Manville;
     @name(".Bodcaw.Everton") Hash<bit<51>>(HashAlgorithm_t.CRC16, Manville) Bodcaw;
     @name(".Weimar") ActionProfile(32w32768) Weimar;
-    @name(".Verdigris") ActionSelector(Weimar, Bodcaw, SelectorMode_t.RESILIENT, 32w120, 32w4) Verdigris;
+    @name(".Penitas") ActionSelector(Weimar, Bodcaw, SelectorMode_t.RESILIENT, 32w120, 32w4) Penitas;
     @disable_atomic_modify(1) @name(".BigPark") table BigPark {
         actions = {
             LaMarque();
@@ -4460,7 +4475,7 @@ control Elysburg(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrins
         }
         const default_action = Claypool();
         size = 512;
-        implementation = Verdigris;
+        implementation = Penitas;
         requires_versioning = false;
     }
     apply {
@@ -4604,7 +4619,7 @@ control Newcomb(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsi
     @name(".DewyRose") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) DewyRose;
     @name(".Minetto.Waialua") Hash<bit<51>>(HashAlgorithm_t.CRC16, DewyRose) Minetto;
     @name(".August") ActionProfile(32w1024) August;
-    @name(".Elihu") ActionSelector(August, Minetto, SelectorMode_t.RESILIENT, 32w120, 32w4) Elihu;
+    @name(".Leflore") ActionSelector(August, Minetto, SelectorMode_t.RESILIENT, 32w120, 32w4) Leflore;
     @disable_atomic_modify(1) @name(".Kinston") table Kinston {
         actions = {
             Macungie();
@@ -4615,7 +4630,7 @@ control Newcomb(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsi
             Hettinger.Garrison.Mentone          : selector @name("Garrison.Mentone") ;
         }
         size = 128;
-        implementation = Elihu;
+        implementation = Leflore;
         const default_action = NoAction();
     }
     apply {
@@ -4624,7 +4639,7 @@ control Newcomb(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsi
 }
 
 control Chandalar(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic_metadata_t Hookdale, in egress_intrinsic_metadata_from_parser_t Duchesne, inout egress_intrinsic_metadata_for_deparser_t Centre, inout egress_intrinsic_metadata_for_output_port_t Pocopson) {
-    @name(".Cypress") action Cypress() {
+    @name(".Brashear") action Brashear() {
         Centre.drop_ctl = (bit<3>)3w7;
     }
     @name(".Bosco") action Bosco() {
@@ -4675,14 +4690,14 @@ control Chandalar(inout Baker Noyack, inout Harriet Hettinger, in egress_intrins
             Bosco();
             Almeria();
             Idylside();
-            @defaultonly Cypress();
+            @defaultonly Brashear();
         }
         key = {
             Hookdale.egress_rid : exact @name("Hookdale.egress_rid") ;
             Hookdale.egress_port: exact @name("Hookdale.Toklat") ;
         }
         size = 512;
-        const default_action = Cypress();
+        const default_action = Brashear();
     }
     apply {
         Talkeetna.apply();
@@ -4715,7 +4730,7 @@ control Holyoke(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic
     @name(".DuPont") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) DuPont;
     @name(".Shauck.Wheaton") Hash<bit<51>>(HashAlgorithm_t.CRC16, DuPont) Shauck;
     @name(".Telegraph") ActionProfile(32w1024) Telegraph;
-    @name(".Telocaset") ActionSelector(Telegraph, Shauck, SelectorMode_t.RESILIENT, 32w120, 32w4) Telocaset;
+    @name(".Otsego") ActionSelector(Telegraph, Shauck, SelectorMode_t.RESILIENT, 32w120, 32w4) Otsego;
     @disable_atomic_modify(1) @name(".Veradale") table Veradale {
         actions = {
             Skiatook();
@@ -4726,7 +4741,7 @@ control Holyoke(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic
             Hettinger.Garrison.Mentone           : selector @name("Garrison.Mentone") ;
         }
         size = 128;
-        implementation = Telocaset;
+        implementation = Otsego;
         const default_action = NoAction();
     }
     apply {
@@ -6724,7 +6739,7 @@ control Needles(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic
     @name(".Brush") action Brush() {
         Hettinger.Bratt.Quinhagak = (bit<1>)1w1;
     }
-    @ternary(1) @disable_atomic_modify(1) @ternary(1) @name(".Ceiba") table Ceiba {
+    @ternary(1) @disable_atomic_modify(1) @name(".Ceiba") table Ceiba {
         actions = {
             Petrolia();
             Aguada();
