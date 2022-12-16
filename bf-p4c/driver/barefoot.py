@@ -313,6 +313,9 @@ class BarefootBackend(BackendDriver):
         self._no_link = False
         self._multi_parsers = False
 
+    def config_p4c_gen_conf(self, maxPipe):
+        self.add_command_option('p4c-gen-conf', "--max-pipe " + str(maxPipe))
+
     def config_warning_modifiers(self, arguments, option):
         """! Behaviour of warnings emitted by p4c can be modified by two options:
         --Werror which turns all/selected warnings into errors
