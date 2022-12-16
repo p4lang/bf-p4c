@@ -25,15 +25,14 @@ PROJECTS:
     COVERITY_STREAM_NAME: "master__bf-p4c-compilers"                                                                #[Required] Name of the project at Coverity Server
     SCAN_ONLY_CHANGED_FILES: True
     COVERITY_ANALYZE_ARGS:               #[Optional] Additional flags to Coverity cov-run-desktop analyze
+    - --set-new-defect-owner false
     - --concurrency                      #[Recomended] Flags listed in this example are recommended by Intel
     - --security 
     - --rule 
     - --enable-constraint-fpp 
     - --enable-fnptr 
     - --enable-virtual
-    - --webapp-security
-    - --enable-audit-checkers
-    - --enable-default          
+    - --webapp-security       
 
   - NAME: "bf-p4c-compilers python"
     PROJECT_SRC_DIR: ""                                                                                           #[Required] 
@@ -44,6 +43,7 @@ PROJECTS:
     COVERITY_PROJECT_NAME: "Bf-p4c-compilers"
     SCAN_ONLY_CHANGED_FILES: True
     COVERITY_ANALYZE_ARGS:               #[Optional] Additional flags to Coverity cov-run-desktop analyze
+    - --set-new-defect-owner false
     - --concurrency                      #[Recomended] Flags listed in this example are recommended by Intel
     - --security 
     - --rule 
@@ -51,8 +51,6 @@ PROJECTS:
     - --enable-fnptr 
     - --enable-virtual
     - --webapp-security
-    - --enable-audit-checkers
-    - --enable-default
 
 COVERITY:
   SERVER_URL: "https://coverityent.devtools.intel.com/prod8"                                                              #[Required] Address of Coverity Server that contain project reference

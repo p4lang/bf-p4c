@@ -22,7 +22,7 @@ jobs:
     # The tag of runner that the job will run on
     runs-on: kda-compilers
     container:
-      # For branches other than rel_* use master container. Dockerfile for kwserver container is available at: bf-docker/Dockerfile.p4factory.coverity
+      # For branches other than rel_* use master container. Dockerfile for coverity container is available at: bf-docker/Dockerfile.p4factory.coverity
       # Docker container is created in following jenkins job: https://qa-jenkins-01-bxdsw.sc.intel.com/job/coverity_docker_build/
       image: artifacts-bxdsw.sc.intel.com:9444/coverity:${{ startsWith(github.base_ref, 'rel_') && github.base_ref || 'master' }}
       #credentials:
@@ -46,7 +46,7 @@ jobs:
         if: ${{ steps.list.outputs.result != '' }}
         uses: actions/checkout@v3
         
-      - name: Run KDA
+      - name: Run PRDA
         if: ${{ steps.list.outputs.result != '' }}
         run: |
           # Set Coverity stream name according to target branch
