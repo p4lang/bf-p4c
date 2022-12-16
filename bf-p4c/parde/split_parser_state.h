@@ -18,6 +18,7 @@
  *    - Parser counter 
  *    - Checksum calculation
  *    - CLOT issurance (JBAY)
+ *    - Stage rules (FTR)
  */
 struct SplitParserState : public PassManager {
     SplitParserState(const PhvInfo& phv, ClotInfo& clot);

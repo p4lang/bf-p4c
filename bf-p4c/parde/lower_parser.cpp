@@ -610,8 +610,7 @@ class ReplaceFlatrockParserIR : public ParserTransform {
 
                 unsigned int rule_id = analyzer_stage->rules.size();
 
-                // FIXME when stages and rules allocation is optimized, this should
-                // be converted to a proper error message
+                // This should not happen, split states takes care of that
                 BUG_CHECK(rule_id < ::Flatrock::PARSER_ANALYZER_STAGE_RULES,
                         "Maximum number of analyzer rules (%1%) in stage %2% exceeded",
                         ::Flatrock::PARSER_ANALYZER_STAGE_RULES, stage_id);
@@ -666,8 +665,8 @@ class ReplaceFlatrockParserIR : public ParserTransform {
             for (const auto& transition : state_info.transitions) {
                 unsigned int rule_id = analyzer_stage->rules.size();
 
-                // FIXME when stages and rules allocation is optimized, this should
-                // be converted to a proper error message
+                // This is a bug, this should not happen as state splitting should
+                // take care of this
                 BUG_CHECK(rule_id < ::Flatrock::PARSER_ANALYZER_STAGE_RULES,
                         "Maximum number of analyzer rules (%1%) in stage %2% exceeded",
                         ::Flatrock::PARSER_ANALYZER_STAGE_RULES, stage_id);

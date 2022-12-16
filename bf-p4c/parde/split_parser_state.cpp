@@ -988,6 +988,10 @@ struct AllocateParserState : public ParserTransform {
 #endif /* HAVE_CLOUDBREAK */
 #if HAVE_FLATROCK
             } else if (Device::currentDevice() == Device::FLATROCK) {
+                // FIXME: Change the extract allocator to FTR specific,
+                //        also some of the following code might be useless for FTR,
+                //        for example oob_stall splitting is useless
+                //        (tracked under P4C-5071)
                 TofinoExtractAllocator tea(*this);
 #endif /* HAVE_FLATROCK */
             } else {
@@ -1087,6 +1091,21 @@ struct AllocateParserState : public ParserTransform {
                     std::remove(current_statements.begin(), current_statements.end(), s),
                     current_statements.end());
             }
+#if HAVE_FLATROCK
+            // Split transitions
+            if (Device::currentDevice() == Device::FLATROCK &&
+                state->transitions.size() > ::Flatrock::PARSER_ANALYZER_STAGE_RULES) {
+                unsigned i = 0;
+                for (auto t : state->transitions) {
+                    // We have to leave space for 1 transition to the split state => -1
+                    if (i < ::Flatrock::PARSER_ANALYZER_STAGE_RULES-1)
+                        current_transitions.push_back(t);
+                    else
+                        spilled_transitions.push_back(t);
+                    i++;
+                }
+            }
+#endif /* HAVE_FLATROCK */
         }
 
         struct GetExtractBufferPos : Inspector {
@@ -1168,6 +1187,11 @@ struct AllocateParserState : public ParserTransform {
         std::vector<const IR::BFN::ParserPrimitive*> others;
 
         IR::Vector<IR::BFN::ParserPrimitive> current_statements, spilled_statements;
+#if HAVE_FLATROCK
+        // For FTR we need to also spill transitions as only
+        // ::Flatrock::PARSER_ANALYZER_STAGE_RULES are available in each stage
+        IR::Vector<IR::BFN::Transition> current_transitions, spilled_transitions;
+#endif /* HAVE_FLATROCK */
         bool spill_selects = false;
     };
 
@@ -1242,10 +1266,15 @@ struct AllocateParserState : public ParserTransform {
             }
 
             void check_sanity(const IR::BFN::ParserState* o,
-                              const IR::BFN::ParserState* s) {
+                              const IR::BFN::ParserState* s,
+                              bool transition_split) {
                 BUG_CHECK(orig && o && s, "Sanity check on split parser states failed.");
 
-                if (!o->selects.empty() && !s->selects.empty())
+                // If transition split happened then both states should have full selects
+                if (transition_split && (o->selects.empty() || s->selects.empty()))
+                    BUG("Selects not in both states?");
+                // Otherwise only one of them
+                if (!transition_split && !o->selects.empty() && !s->selects.empty())
                     BUG("Selects not in one state?");
 
                 if (!o->selects.empty()) {
@@ -1260,7 +1289,16 @@ struct AllocateParserState : public ParserTransform {
 
                 auto orig_shift = get_state_shift(orig);
 
-                auto o_shift = get_state_shift(o);
+                unsigned o_shift = 0;
+                // If transition split happened the last transition within the state
+                // has a different shift (0), so check only that one
+                if (transition_split) {
+                    auto t = o->transitions.back();
+                    o_shift = t->shift;
+                    BUG_CHECK(t->next == s, "Last transition after split to unexpected state");
+                } else {
+                    o_shift = get_state_shift(o);
+                }
                 auto s_shift = get_state_shift(s);
 
                 int total_shift = 0;
@@ -1311,7 +1349,12 @@ struct AllocateParserState : public ParserTransform {
                  iteration << ")" << IndentCtl::indent);
             ParserStateAllocator alloc(state, phv, clot);
 
-            if (alloc.spilled_statements.empty() && !alloc.spill_selects) {
+            // No more splits = recursion end
+            if (alloc.spilled_statements.empty() && !alloc.spill_selects
+#if HAVE_FLATROCK
+                && alloc.spilled_transitions.empty()
+#endif /* HAVE_FLATROCK */
+                ) {
                 LOG3("no need to split " << state->name << " (nothing spilled)");
 
                 // need to insert stall if next state is not reachable from current state
@@ -1333,50 +1376,88 @@ struct AllocateParserState : public ParserTransform {
 
             auto split = create_split_state(state, prefix, iteration);
 
-            auto max_shift = alloc.compute_max_shift_in_bits();
+            bool transitions_split = false;
+            // Regular select spill or statement split
+            if (!alloc.spilled_statements.empty() || alloc.spill_selects) {
+                auto max_shift = alloc.compute_max_shift_in_bits();
 
-            LOG3("computed max shift = " << max_shift << " for split iteration "
-                  << iteration << " of " << state->name);
-            LOG4(alloc.spilled_statements.size() << " split, " <<
-                 alloc.current_statements.size() << " current");
-            if (max_shift == 0 && alloc.current_statements.empty()) {
-                error(ErrorType::ERR_OVERLIMIT, "lookahead in %s too far", state);
-                LOG3_UNINDENT;
-                return std::vector<IR::BFN::ParserState*>(); }
+                LOG3("computed max shift = " << max_shift << " for split iteration "
+                     << iteration << " of " << state->name);
+                LOG4(alloc.spilled_statements.size() << " split, " <<
+                     alloc.current_statements.size() << " current");
+                if (max_shift == 0 && alloc.current_statements.empty()) {
+                    error(ErrorType::ERR_OVERLIMIT, "lookahead in %s too far", state);
+                    LOG3_UNINDENT;
+                    return std::vector<IR::BFN::ParserState*>(); }
 
-            state->statements = alloc.current_statements;
-            split->statements = *(alloc.spilled_statements.apply(ShiftPacketRVal(max_shift)));
-            split->selects = *(state->selects.apply(ShiftPacketRVal(max_shift, true)));
-            state->selects = {};
-
-            // Determine if the current state and spilled extracts any strided header stacks
-            // Reset the header stack indices and mark the appropriate state as strided.
-            if (state->stride) {
-                ResetHeaderStackExtraction split_rhse;
-                split->statements = *(split->statements.apply(split_rhse));
-                if (split_rhse.header_stack_present) {
-                    split->stride = true;
+                state->statements = alloc.current_statements;
+                split->statements = *(alloc.spilled_statements.apply(ShiftPacketRVal(max_shift)));
+                split->selects = *(state->selects.apply(ShiftPacketRVal(max_shift, true)));
+                state->selects = {};
+                // Determine if the current state and spilled extracts any strided header stacks
+                // Reset the header stack indices and mark the appropriate state as strided.
+                if (state->stride) {
+                    ResetHeaderStackExtraction split_rhse;
+                    split->statements = *(split->statements.apply(split_rhse));
+                    if (split_rhse.header_stack_present) {
+                        split->stride = true;
+                    }
+                    ResetHeaderStackExtraction orig_rhse;
+                    state->statements.apply(orig_rhse);
+                    if (!orig_rhse.header_stack_present) {
+                        state->stride = false;
+                    }
                 }
-                ResetHeaderStackExtraction orig_rhse;
-                state->statements.apply(orig_rhse);
-                if (!orig_rhse.header_stack_present) {
-                    state->stride = false;
+                // move state's transitions to split state
+                for (auto t : state->transitions) {
+                    auto shifted = shift_transition(t, max_shift);
+                    split->transitions.push_back(shifted);
                 }
-            }
-            // move state's transitions to split state
-            for (auto t : state->transitions) {
-                auto shifted = shift_transition(t, max_shift);
-                split->transitions.push_back(shifted);
-            }
 
-            auto to_split = new IR::BFN::Transition(match_t(), max_shift / 8, split);
-            state->transitions = {to_split};
+                auto to_split = new IR::BFN::Transition(match_t(), max_shift / 8, split);
+                state->transitions = {to_split};
+#if HAVE_FLATROCK
+            // Otherwise this is split due to limited transitions (FTR)
+            } else if (!alloc.spilled_transitions.empty()) {
+                // Imagine we want to split Y transitions because a state can only hold X
+                // We do the following:
+                //   - original state stays the same, but would only keep the first X-1 transitions
+                //   - the X-th transition would be a default one with shift 0 to the first split
+                //     state
+                //   - the first split state is empty, has the same selects and another X-1
+                //     transitions and X-th default transition with shift 0 to second split state
+                //   - second split state the same as the first one but with another X-1
+                //     transitions
+                //   - ...
+                //   - the last split state can keep the last X transitions (= don't split a
+                //     single transition)
+                LOG3("split iteration " << iteration << " of " << state->name
+                     << " spills " << alloc.spilled_transitions.size() << " transitions");
+                // Current state statements stay the same, split statements are empty
+                // Current selects stay the same and are copied/cloned for the split state
+                // Note: We have to create a new select and clone its source here,
+                // otherwise the following passes (AllocateMatchRegisters/CollectUseDef) ignore it
+                // in split state
+                for (auto* s : state->selects) {
+                    split->selects.push_back(new IR::BFN::Select(s->srcInfo, s->source->clone()));
+                }
+                // Transitions are split according to allocation
+                state->transitions = alloc.current_transitions;
+                split->transitions = alloc.spilled_transitions;
+                // Create the default (shift 0) transition to split state
+                auto to_split = new IR::BFN::Transition(match_t(), 0, split);
+                state->transitions.push_back(to_split);
+                transitions_split = true;
+#endif /* HAVE_FLATROCK */
+            } else {
+                BUG("Unexpected state splitting spill");
+            }
 
             // add to step dot dump
             dbg.add_cluster({state, split});
 
             // verify this iteration
-            verify.check_sanity(state, split);
+            verify.check_sanity(state, split, transitions_split);
 
             LOG3_UNINDENT;
             // recurse
