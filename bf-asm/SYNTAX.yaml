@@ -31,13 +31,17 @@
 #                  | hash_dist <unit> [ <lo>..<hi> ]
 #                  | rng <unit> [ <lo>..<hi> ]
 #   Specific for Tofino 5:
-#   <metadata-select> ::= <constant> | 'logical_port_number' | 'port_metadata' <constant>
-#                         | 'incoming_metadata' <constant> | 'timestamp' <constant>
+#   <metadata-select> ::= <constant>
+#                         | 'port_metadata' <constant>
+#                         | 'inband_metadata' <constant>
+#                         | 'timestamp' <constant>
 #                         | 'counter' <constant>
 #                         specifies source of a byte of metadata
 #                         'constant' -> 8b
 #                         'port_metadata' -> constant is 4b (index to port_metadata table)
-#                         'incoming_metadata' -> constant is 3b (index to MD8)
+#                          port_metadata[15:14] is reserved for the following information:
+#                          5'h0, logical pipe ID (4b), logical port number (7b)
+#                         'inband_metadata' -> constant is 3b (index to MD8)
 #                         'timestamp' -> constant is 3b
 #                         'counter' -> constant is 3b (index of debug counter)
 #
@@ -376,7 +380,7 @@ parser [<thread>] [<port_use>, ...]:
     port_metadata:
         # specifies port metadata for each logical port number
         <constant>: <vector>
-            # constant is logical port number, vector is port metadata (15B)
+            # constant is logical port number, vector is port metadata (14B)
     profile <constant>:
         # specifies a parser profile, constant represents the TCAM&SRAM index
         match_port: <match-constant>

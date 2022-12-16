@@ -19,7 +19,9 @@
 namespace Flatrock {
 
 enum constants {
-    PARSER_PORT_METADATA_WIDTH = 15,  ///< Byte width of per-port metadata
+    /// Byte width of per-port metadata
+    /// (including bytes with logical pipe ID and logical port number, i.e. bytes 15 and 14)
+    PARSER_PORT_METADATA_WIDTH = 16,
     PARSER_PORT_METADATA_ITEMS = 40,  ///< Fpp_params.pm: N_PORT
     PARSER_PROFILES = 16,  ///< Fpp_params.pm: N_PHV_TCAM_DEPTH
     PARSER_ANA_STATE_WIDTH = 10,  ///< 8 + 2 bytes

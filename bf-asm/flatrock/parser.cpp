@@ -1450,16 +1450,10 @@ void FlatrockParser::Profile::input_metadata_select(VECTOR(value_t) args, value_
     size.i = value.vec.size;
     if (!check_range(size, 0, Target::Flatrock::PARSER_PROFILE_MD_SEL_NUM)) return;
     for (int i = 0; i < value.vec.size; i++) {
-        if (!CHECKTYPE3(value.vec[i], tINT, tSTR, tCMD)) return;
+        if (!CHECKTYPE2(value.vec[i], tINT, tCMD)) return;
         if (value.vec[i].type == tINT) {
             metadata_select[i].type = Flatrock::metadata_select::CONSTANT;
             metadata_select[i].constant.value = value.vec[i].i;
-        } else if (value.vec[i].type == tSTR) {
-            if (value.vec[i] == "logical_port_number") {
-                metadata_select[i].type = Flatrock::metadata_select::LOGICAL_PORT_NUMBER;
-            } else {
-                error(value.vec[i].lineno, "invalid key: %s", value.vec[i].s);
-            }
         } else {
             if (value.vec[i].vec.size < 2) error(value.vec[i].lineno, "missing operand");
             if (value.vec[i] == "port_metadata") {
@@ -1624,11 +1618,6 @@ void FlatrockParser::Profile::write_config(RegisterSetBase &regs, json::map &jso
         case Flatrock::metadata_select::CONSTANT:
             _regs.prsr_mem.md_prof_ram.md_prof[*id].md_sel[i] =
                 metadata_select[i].constant.value;
-            break;
-        case Flatrock::metadata_select::LOGICAL_PORT_NUMBER:
-            _regs.prsr_mem.md_prof_ram.md_prof[*id].md_sel[i] =
-                Target::Flatrock::PARSER_PROFILE_MD_SEL_PORT_METADATA_ENC |
-                Target::Flatrock::PARSER_PROFILE_MD_SEL_LOGICAL_PORT_NUMBER_INDEX;
             break;
         case Flatrock::metadata_select::PORT_METADATA:
             _regs.prsr_mem.md_prof_ram.md_prof[*id].md_sel[i] =

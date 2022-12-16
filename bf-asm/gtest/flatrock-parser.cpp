@@ -142,7 +142,7 @@ parser ingress:
     initial_w2_offset: 2
     initial_alu0_instruction: { opcode: 0, add: -3 }
     initial_alu1_instruction: { opcode: 0, msb: 15, lsb: 8, shift: 7 }
-    metadata_select: [1, logical_port_number, port_metadata 1, inband_metadata 2, timestamp 3, counter 4]
+    metadata_select: [1, port_metadata 0, port_metadata 1, inband_metadata 2, timestamp 3, counter 4]
 )PARSER_CFG";
 
     AsmParserGuard asm_parser;
@@ -201,7 +201,8 @@ parser ingress:
               Flatrock::metadata_select::CONSTANT);
     EXPECT_EQ(asm_parser->parser.profiles[1].metadata_select[0].constant.value, 1);
     EXPECT_EQ(asm_parser->parser.profiles[1].metadata_select[1].type,
-              Flatrock::metadata_select::LOGICAL_PORT_NUMBER);
+              Flatrock::metadata_select::PORT_METADATA);
+    EXPECT_EQ(asm_parser->parser.profiles[1].metadata_select[1].port_metadata.index, 0);
     EXPECT_EQ(asm_parser->parser.profiles[1].metadata_select[2].type,
               Flatrock::metadata_select::PORT_METADATA);
     EXPECT_EQ(asm_parser->parser.profiles[1].metadata_select[2].port_metadata.index, 1);

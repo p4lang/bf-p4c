@@ -951,11 +951,14 @@ class ReplaceFlatrockParserIR : public ParserTransform {
             /* initial_w0_offset */ boost::none,
             /* initial_w1_offset */ boost::none,
             /* initial_w2_offset */ boost::none);
-        // {is_pktgen(1bit),port_id(7bit),8'b0}
+        // Bytes 15 and 14 of port metadata contain logical pipe ID and logical port number
+        // in the following format:
+        // {5'h0, logical pipe ID (4b), port number (7b), port_md_tbl(14B)}
+        // If this changes, update the description of port_metadata in SYNTAX.yaml
         default_profile->metadata_select.push_back(
-            Flatrock::metadata_select(Flatrock::metadata_select::LOGICAL_PORT_NUMBER, {}));
+            Flatrock::metadata_select(Flatrock::metadata_select::PORT_METADATA, {/* index */ 15}));
         default_profile->metadata_select.push_back(
-            Flatrock::metadata_select(Flatrock::metadata_select::PORT_METADATA, {/* index */ 0}));
+            Flatrock::metadata_select(Flatrock::metadata_select::PORT_METADATA, {/* index */ 14}));
         // timestamp
         for (int i = Flatrock::PARSER_PROFILE_MD_SEL_TIMESTAMP_BYTE_OFFSET;
              i < Flatrock::PARSER_PROFILE_MD_SEL_TIMESTAMP_BYTE_OFFSET +
