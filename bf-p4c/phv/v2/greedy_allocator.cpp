@@ -161,15 +161,24 @@ struct ScAllocTracker {
         gress_t gress;
         ordered_set<AllocSlice> slices;
         ordered_set<Container> containers;
+        ordered_set<Container> must_alloc_to_8_bit_container;
         bool has_exact_containers = false;
         bool has_pa_container_size = false;
         bool has_pa_container_type = false;
         bool has_pov = false;
         bool has_learning_bits = false;
 
-        KindSizeIndexedMap containers_solely_occupied(
-            const ConcreteAllocation& curr_alloc) const {
+        // This function returns the number of container of different catagories that will be freed
+        // for phv allocation after this super cluster is deallocated. If this super cluster has
+        // pa_container_size or pa_container_type pragma, then return 0 container to supply. We do
+        // not swap super cluster with pragmas for now. And we do not count some 8-bit containers
+        // that are occupied by a slicelist that is <= 8 bits and has exact_container constraint,
+        // since this slicelist has to be placed in 8-bit container and these containers cannot be
+        // effectively freed and used for allocating other fieldslices.
+        KindSizeIndexedMap containers_can_supply_by_sc(const ConcreteAllocation& curr_alloc) const {
             KindSizeIndexedMap rv;
+            if (has_pa_container_size) return rv;
+            if (has_pa_container_type) return rv;
             for (const auto& c : containers) {
                 const auto& status = curr_alloc.getStatus(c);
                 bool no_other_cluster = true;
@@ -177,16 +186,38 @@ struct ScAllocTracker {
                     no_other_cluster &= slices.count(sl);
                     if (!no_other_cluster) break;
                 }
+                if (must_alloc_to_8_bit_container.count(c)) continue;
                 if (no_other_cluster) {
                     rv[{c.type().kind(), c.type().size()}]++;
                 }
             }
             return rv;
         }
+
+        // is_sc_swap_feasible checks the feasibility of swapping this super cluster out. It means
+        // that excluding all containers with exact_container constraints, does this super cluster
+        // supply enough containers needed by @p required.
+        bool is_sc_swap_feasible(
+            const ConcreteAllocation& curr_alloc, const KindSizeIndexedMap& required) const {
+            auto supply = containers_can_supply_by_sc(curr_alloc);
+            for (const auto& [kind_sz, n_required] : required.m) {
+                const int can_supply_this_ks =
+                    supply.get_or(kind_sz.first, kind_sz.second, 0);
+                if (can_supply_this_ks < n_required) {
+                    LOG5("not a candidate because it cannot supply containers needed");
+                    return false;
+                }
+            }
+            LOG5("this is a possible candidate");
+            return true;
+        }
+
         bool is_better_than(const AllocSummary* other) const {
             IF_NEQ_RETURN_IS_LESS(has_exact_containers, other->has_exact_containers);
             IF_NEQ_RETURN_IS_LESS(has_learning_bits, other->has_learning_bits);
             IF_NEQ_RETURN_IS_LESS(has_pov, other->has_pov);
+            // We want to make changes to fewest containers possible
+            IF_NEQ_RETURN_IS_LESS(containers.size(), other->containers.size());
             return false;
         }
     };
@@ -201,18 +232,34 @@ struct ScAllocTracker {
             summary->gress = sc->slices().front().field()->gress;
             summary->sc = sc;
             for (const auto& container_status : diff) {
-                for (const auto& sl : container_status.second.slices) {
-                    summary->slices.insert(sl);
-                    summary->has_exact_containers |= sl.field()->exact_containers();
-                    summary->has_pov |= sl.field()->pov;
+                auto must_alloc_to_8_bit_container = false;
+                for (const auto& allocslice : container_status.second.slices) {
+                    auto slicelists =
+                        sc->slice_list(FieldSlice(allocslice.field(), allocslice.field_slice()));
+                    // try to find if this container is occupied by a slice list <= 8 bits and has
+                    // exact_container constraint.
+                    for (auto slicelist : slicelists) {
+                        int bits = PHV::SuperCluster::slice_list_total_bits(*slicelist);
+                        if (bits <= 8 && allocslice.field()->exact_containers()) {
+                            BUG_CHECK(container_status.first.size() == 8, "a slice list smaller" \
+                                "than or equal to 8 bits is not allocated to 8-bit container");
+                            must_alloc_to_8_bit_container = true;
+                        }
+                    }
+
+                    summary->slices.insert(allocslice);
+                    summary->has_exact_containers |= allocslice.field()->exact_containers();
+                    summary->has_pov |= allocslice.field()->pov;
                     summary->has_pa_container_size |=
-                        kit_i.pragmas.pa_container_sizes().is_specified(sl.field());
+                        kit_i.pragmas.pa_container_sizes().is_specified(allocslice.field());
                     summary->has_pa_container_type |= kit_i.pragmas.pa_container_type()
-                                                          .required_kind(sl.field())
+                                                          .required_kind(allocslice.field())
                                                           .is_initialized();
-                    summary->has_learning_bits |= kit_i.uses.is_learning(sl.field());
+                    summary->has_learning_bits |= kit_i.uses.is_learning(allocslice.field());
                 }
                 summary->containers.insert(container_status.first);
+                if (must_alloc_to_8_bit_container)
+                    summary->must_alloc_to_8_bit_container.insert(container_status.first);
             }
             sc_alloc[sc] = summary;
         }
@@ -228,38 +275,21 @@ struct ScAllocTracker {
     const AllocSummary* best_swap(const ConcreteAllocation& curr_alloc,
                                   const SuperCluster* sc,
                                   const KindSizeIndexedMap& required) {
+        LOG5("required:" << required);
         const AllocSummary* best = nullptr;
-        int best_n_more_than_needed = 0;
         auto gress = sc->slices().front().field()->gress;
         for (const auto* s : Values(sc_alloc)) {
-            if (s->gress != gress) continue;
-            if (s->has_pa_container_size) continue;
-            if (s->has_pa_container_type) continue;
+            LOG5("searching best swap: " << s->sc);
+            if (s->gress != gress) {
+                LOG5("not a candidate because they are not in the same gress");
+                continue;
+            }
 
-            auto can_supply = s->containers_solely_occupied(curr_alloc);
-            bool can_cover = true;
-            int n_more_than_needed = 0;
-            for (const auto& kind_sz_n : required.m) {
-                const auto& kind_sz = kind_sz_n.first;
-                const int n_required = kind_sz_n.second;
-                const int can_supply_this_ks =
-                    can_supply.get_or(kind_sz.first, kind_sz.second, 0);
-                if (can_supply_this_ks < n_required) {
-                    can_cover = false;
-                    break;
-                }
-                n_more_than_needed += can_supply_this_ks - n_required;
-            }
-            if (!can_cover) continue;
-            for (const auto& kind_sz_n : can_supply.m) {
-                if (!required.get(kind_sz_n.first.first, kind_sz_n.first.second)) {
-                    n_more_than_needed += kind_sz_n.second;
-                }
-            }
-            if (!best || s->is_better_than(best) ||
-                (!best->is_better_than(s) && n_more_than_needed < best_n_more_than_needed)) {
+            bool can_supply = s->is_sc_swap_feasible(curr_alloc, required);
+            if (!can_supply) continue;
+
+            if (!best || s->is_better_than(best)) {
                 best = s;
-                best_n_more_than_needed = n_more_than_needed;
             }
         }
         return best;
@@ -569,6 +599,7 @@ bool GreedyAllocator::allocate(std::list<SuperCluster*> clusters_input) {
                 to_swap = sc_tracker.best_swap(alloc, sc, pre_sliced.baseline_cont_req.at(sc));
             }
             if (!to_swap) {
+                LOG5("cannot find a super cluster to swap");
                 unallocated[sc] = detailed_rst.rst.err;
                 continue;
             } else {
