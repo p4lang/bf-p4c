@@ -2120,3 +2120,9 @@ p4c_add_xfail_reason("tofino"
   "Cannot extract field .* from PSA_MeterColor_t which has type .*"
   testdata/p4_16_samples/psa-example-dpdk-meter-execute-err.p4
 )
+
+# p4c update 2022-12-19 (new tests)
+p4c_add_xfail_reason("tofino"
+  "Not all applies of table .* are mutually exclusive"
+  testdata/p4_16_samples/psa-action-selector6.p4
+)
