@@ -1494,12 +1494,12 @@ struct MergeLoweredParserStates : public ParserTransform {
 
         while (match->next) {
             // Attempt merging states if the next state is not loopback
-            // and not a compiler-generated stall state.
+            // and not a compiler-generated counter stall state.
             std::string next_name(match->next->name.c_str());
             if (!is_loopback_state(match->next->name) &&
                 !((next_name.find("$") != std::string::npos) &&
-                  (next_name.find("stall") != std::string::npos) &&
-                  (next_name.find("$") < next_name.rfind("stall")))) {
+                  (next_name.find("ctr_stall") != std::string::npos) &&
+                  (next_name.find("$") < next_name.rfind("ctr_stall")))) {
                 if (auto next = get_unconditional_match(match->next)) {
                     if (can_merge(match, next)) {
                         LOG3("merge " << match->next->name << " with "
