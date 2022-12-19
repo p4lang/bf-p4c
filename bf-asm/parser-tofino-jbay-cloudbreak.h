@@ -521,8 +521,8 @@ void Parser::State::Match::write_common_row_config(REGS &regs, Parser *pa, State
     }
 
     if (options.target == TOFINO) {
-        write_saves(regs, def, output_map, max_off, used, csum_8b, csum_16b);
         write_sets(regs, def, output_map, used, csum_8b, csum_16b);
+        write_saves(regs, def, output_map, max_off, used, csum_8b, csum_16b);
     } else {
         write_sets(regs, def, output_map, used, 0, 0);
         write_saves(regs, def, output_map, max_off, used, 0, 0);

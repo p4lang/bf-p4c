@@ -53,8 +53,45 @@ enum extractor_slots {
     tofino_phv_output_map_size,
 };
 
+// PHV use slots: ordered list of slots to try
+//
+// For example, when trying to find a 32b slot:
+//  1. First try the 4 x 32b extractors.
+//  2. If that fails, try pairs of 16b extractors.
+//  3. If that still fails, finally try the 8b extractors together.
+//
+// For checksums, allocate in the reverse order as we need to fill
+// from the last container back due to a HW bug (see MODEL-210).
+//
+// FIXME: what does "shift" represent???
 static struct phv_use_slots { int idx; unsigned usemask, shift, size; }
 phv_32b_slots[] = {
+    { phv_32b_0, 1U << phv_32b_0, 0, 32 },
+    { phv_32b_1, 1U << phv_32b_1, 0, 32 },
+    { phv_32b_2, 1U << phv_32b_2, 0, 32 },
+    { phv_32b_3, 1U << phv_32b_3, 0, 32 },
+    { phv_16b_0, 3U << phv_16b_0, 16, 16 },
+    { phv_16b_2, 3U << phv_16b_2, 16, 16 },
+    { phv_8b_0, 0xfU << phv_8b_0, 24, 8 },
+    { 0, 0, 0, 0 }
+},
+phv_16b_slots[] = {
+    { phv_16b_0, 1U << phv_16b_0, 0, 16 },
+    { phv_16b_1, 1U << phv_16b_1, 0, 16 },
+    { phv_16b_2, 1U << phv_16b_2, 0, 16 },
+    { phv_16b_3, 1U << phv_16b_3, 0, 16 },
+    { phv_8b_0, 3U << phv_8b_0, 8, 8 },
+    { phv_8b_2, 3U << phv_8b_2, 8, 8 },
+    { 0, 0, 0, 0 }
+},
+phv_8b_slots[] = {
+    { phv_8b_0, 1U << phv_8b_0, 0, 8 },
+    { phv_8b_1, 1U << phv_8b_1, 0, 8 },
+    { phv_8b_2, 1U << phv_8b_2, 0, 8 },
+    { phv_8b_3, 1U << phv_8b_3, 0, 8 },
+    { 0, 0, 0, 0 }
+},
+phv_32b_csum_slots[] = {
     { phv_32b_3, 1U << phv_32b_3, 0, 32 },
     { phv_32b_2, 1U << phv_32b_2, 0, 32 },
     { phv_32b_1, 1U << phv_32b_1, 0, 32 },
@@ -64,7 +101,7 @@ phv_32b_slots[] = {
     { phv_8b_0, 0xfU << phv_8b_0, 24, 8 },
     { 0, 0, 0, 0 }
 },
-phv_16b_slots[] = {
+phv_16b_csum_slots[] = {
     { phv_16b_3, 1U << phv_16b_3, 0, 16 },
     { phv_16b_2, 1U << phv_16b_2, 0, 16 },
     { phv_16b_1, 1U << phv_16b_1, 0, 16 },
@@ -73,11 +110,11 @@ phv_16b_slots[] = {
     { phv_8b_0, 3U << phv_8b_0, 8, 8 },
     { 0, 0, 0, 0 }
 },
-phv_8b_slots[] = {
-    { phv_8b_0, 1U << phv_8b_0, 0, 8 },
-    { phv_8b_1, 1U << phv_8b_1, 0, 8 },
-    { phv_8b_2, 1U << phv_8b_2, 0, 8 },
+phv_8b_csum_slots[] = {
     { phv_8b_3, 1U << phv_8b_3, 0, 8 },
+    { phv_8b_2, 1U << phv_8b_2, 0, 8 },
+    { phv_8b_1, 1U << phv_8b_1, 0, 8 },
+    { phv_8b_0, 1U << phv_8b_0, 0, 8 },
     { 0, 0, 0, 0 }
 };
 
@@ -90,6 +127,22 @@ static phv_use_slots* get_phv_use_slots(int size) {
         usable_slots = phv_16b_slots;
     else if (size == 8)
         usable_slots = phv_8b_slots;
+    else
+        BUG();
+
+    return usable_slots;
+}
+
+
+static phv_use_slots* get_phv_csum_use_slots(int size) {
+    phv_use_slots *usable_slots = nullptr;
+
+    if (size == 32)
+        usable_slots = phv_32b_csum_slots;
+    else if (size == 16)
+        usable_slots = phv_16b_csum_slots;
+    else if (size == 8)
+        usable_slots = phv_8b_csum_slots;
     else
         BUG();
 
@@ -351,7 +404,7 @@ void Parser::Checksum::write_output_config(Target::Tofino::parser_regs &regs, Pa
 
     tofino_phv_output_map *map = reinterpret_cast<tofino_phv_output_map *>(_map);
 
-    phv_use_slots *usable_slots = get_phv_use_slots(dest->reg.size);
+    phv_use_slots *usable_slots = get_phv_csum_use_slots(dest->reg.size);
 
     auto &slot = usable_slots[0];
 
@@ -396,18 +449,15 @@ int Parser::State::Match::Save::write_output_config(Target::Tofino::parser_regs 
             }
         }
 
-        // special swizzling for 4x8->32, 2x16->32, even-and-odd pair needs to be swapped
-        // see model/src/shared/parser.cpp:621
-        bool swizzle = where->reg.size == 32 &&
-                       (slot.idx == phv_8b_0 || slot.idx == phv_16b_0 || slot.idx == phv_16b_2);
-
-        // also swizzle 2x8->16
-        swizzle |= where->reg.size == 16 && (slot.idx == phv_8b_0 || slot.idx == phv_8b_2);
+        // swizzle upper/lower pairs of extractors for 4x8->32
+        // a 32b value using 8b extractors must use the extractors in this order: [2 3 0 1]
+        bool swizzle_b1 = where->reg.size == 32 &&
+                          slot.idx == phv_8b_0;
 
         int byte = lo;
         for (int i = slot.idx; slot.usemask & (1U << i); i++, byte += slot.size/8U) {
             int x = i;
-            if (swizzle) x ^= 1;
+            if (swizzle_b1) x ^= 2;
 
             *map[x].dst = where->reg.parser_id();
             *map[x].src = byte;
@@ -486,18 +536,16 @@ void Parser::State::Match::Set::write_output_config(Target::Tofino::parser_regs 
             }
         }
 
-        // special swizzling for 4x8->32, 2x16->32, even-and-odd pair needs to be swapped
-        // see model/src/shared/parser.cpp:621
-        bool swizzle = where->reg.size == 32 &&
-                       (slot.idx == phv_8b_0 || slot.idx == phv_16b_0 || slot.idx == phv_16b_2);
+        // swizzle upper/lower pairs of extractors for 4x8->32
+        // a 32b value using 8b extractors must use the extractors in this order: [2 3 0 1]
+        bool swizzle_b1 = where->reg.size == 32 &&
+                          slot.idx == phv_8b_0;
 
-        // also swizzle 2x8->16
-        swizzle |= where->reg.size == 16 && (slot.idx == phv_8b_0 || slot.idx == phv_8b_2);
-
-        shift = 0;
+        // Go from most- to least-significant slice
+        shift = where->reg.size - slot.size;
         for (int i = slot.idx; slot.usemask & (1U << i); i++) {
             int x = i;
-            if (swizzle) x ^= 1;
+            if (swizzle_b1) x ^= 2;
 
             *map[x].dst = where->reg.parser_id();
             *map[x].src_type = 1;
@@ -506,7 +554,7 @@ void Parser::State::Match::Set::write_output_config(Target::Tofino::parser_regs 
             matchSlotTracker.setMap.insert(match, x, this);
             if (flags & OFFSET) *map[x].offset_add = 1;
             if (flags & ROTATE) *map[x].offset_rot = 1;
-            shift += slot.size;
+            shift -= slot.size;
         }
         used |= slot.usemask;
         return;
@@ -998,12 +1046,23 @@ static int pad_to_16b_extracts_to_2n(Parser* parser, Target::Tofino::parser_regs
     unsigned used       = 0;
     unsigned pad_idx    = 0;
     unsigned from_idx   = 0;
+    bool from_idx_is_8b_16b = false;
     for (auto i : phv_16bit_extractors) {
         if (map[i].dst->value == EXTRACT_SLOT_UNUSED) {
             pad_idx = i;
         } else {
-            from_idx = i;
             used++;
+            if (from_idx == -1) from_idx = i;
+            // Try to get an 8b or 16b index.
+            // If we use a single 32b index to pad then we'll hit problems
+            // because we need 2 x 16b to fill a 32b container.
+            if (!from_idx_is_8b_16b) {
+                auto *reg = Phv::reg(map[i].dst->value);
+                if (reg->size == 8 || reg->size == 16) {
+                    from_idx = i;
+                    from_idx_is_8b_16b = true;
+                }
+            }
         }
     }
 
@@ -1031,6 +1090,7 @@ static int pad_to_16b_extracts_to_2n(Parser* parser, Target::Tofino::parser_regs
     // Add fake extractors to reach 2n constraint, we need to copy destination and source from
     // the global version field which is tied to zeros in RTL.
     // We are keeping both indexes in tuples {0,1} or {2,3}.
+    BUG_CHECK(from_idx != -1, "Invalid 16b from_idx");
     do_16b_padding(regs, map, pad_idx, from_idx);
     matchSlotTracker.padMap.insert(match, pad_idx, &map[pad_idx]);
     check_16b_extractor_configuration(pad_idx, from_idx, used, has_csum, map);
@@ -1108,11 +1168,21 @@ static int pad_to_8b_extracts_to_4n(Parser* parser, Target::Tofino::parser_regs 
     // the from_idx variable.
     unsigned used       = 0;
     int from_idx        = -1;
+    bool from_idx_is_8b = false;
     for (auto i : phv_8bit_extractors) {
         if (map[i].dst->value == EXTRACT_SLOT_UNUSED) continue;
         // Update the used counter and remember the used slot
         used++;
         if (from_idx == -1) from_idx = i;
+        // Try to get an 8b index.
+        // If we use a single 16b index to pad then we'll hit problems
+        // because we need 2 x 8b to fill a 16b container.
+        if (!from_idx_is_8b) {
+            if (Phv::reg(map[i].dst->value)->size == 8) {
+                from_idx = i;
+                from_idx_is_8b = true;
+            }
+        }
     }
 
     if (used % 4 == 0) {
@@ -1124,6 +1194,7 @@ static int pad_to_8b_extracts_to_4n(Parser* parser, Target::Tofino::parser_regs 
     }
 
     // Add fake extractions to meet the 4n constraint and setup tracking
+    BUG_CHECK(from_idx != -1, "Invalid 8b from_idx");
     do_8b_padding(regs, map, from_idx);
     for (auto pad_idx : phv_8bit_extractors) {
         matchSlotTracker.padMap.insert(match, pad_idx, &map[pad_idx]);
