@@ -826,16 +826,24 @@ class CollectParserInfoImpl : public PardeInspector {
  public:
     /// @return all possible shift amounts, in bits, for all paths from the start state to @p dst .
     /// If @p dst is the start state, then a singleton 0 is returned.
-    //
-    // DANGER: This method assumes the parser graph is a DAG.
+    ///
+    /// DANGER: This method assumes the parser graph is a DAG.
     const std::set<int>* get_all_shift_amounts(const State* dst) const {
         return get_all_shift_amounts(graph(dst).root, dst);
     }
 
+    /// @return the minimum possible shift amount, in bits, of all paths from the start state to
+    ///    @p dst.
+    ///
+    /// @pre DANGER: This method assumes the parser graph is a DAG.
+    int get_min_shift_amount(const State* dst) const {
+        return *get_all_shift_amounts(dst)->begin();
+    }
+
     /// @return the maximum possible shift amount, in bits, of all paths from the start state to
     ///    @p dst.
-    //
-    // DANGER: This method assumes the parser graph is a DAG.
+    ///
+    /// @pre DANGER: This method assumes the parser graph is a DAG.
     int get_max_shift_amount(const State* dst) const {
         return *get_all_shift_amounts(dst)->rbegin();
     }
@@ -845,8 +853,8 @@ class CollectParserInfoImpl : public PardeInspector {
     ///   exclusive, an empty set is returned. If @p src is an ancestor of @p dst, then the
     ///   shift amounts will be positive; otherwise, if @p src is a descendant of @p dst, then
     ///   the shift amounts will be negative.
-    //
-    // DANGER: This method assumes the parser graph is a DAG.
+    ///
+    /// @pre DANGER: This method assumes the parser graph is a DAG.
     const std::set<int>* get_all_shift_amounts(const State* src,
                                                const State* dst) const {
         bool reverse_path = graphs().at(parser(src))->is_ancestor(dst, src);

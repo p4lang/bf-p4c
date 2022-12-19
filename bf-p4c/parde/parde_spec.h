@@ -4,9 +4,9 @@
 #include <map>
 #include <vector>
 
+#include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/parde/match_register.h"
-#include "bf-p4c/bf-p4c-options.h"
 
 /**
  * \defgroup parde Parser & deparser
@@ -198,14 +198,17 @@ class PardeSpec {
     /// The minimum number of bytes required between consecutive CLOTs.
     virtual unsigned byteInterClotGap() const = 0;
 
+    /// The minimum offset a CLOT can have, in bits.
+    virtual unsigned bitMinClotPos(gress_t) const = 0;
+
     /// The maximum offset+length a CLOT can have, in bits.
     virtual unsigned bitMaxClotPos() const = 0;
 
     /// The minimum parse depth for the given gress
-    virtual size_t minParseDepth(gress_t /*gress*/) const { return 0; }
+    virtual size_t minParseDepth(gress_t) const { return 0; }
 
     /// The maximum parse depth for the given gress
-    virtual size_t maxParseDepth(gress_t /*gress*/) const { return SIZE_MAX; }
+    virtual size_t maxParseDepth(gress_t) const { return SIZE_MAX; }
 
     /// Do all extractors support single-byte extracts?
     virtual bool parserAllExtractorsSupportSingleByte() const = 0;
@@ -275,6 +278,7 @@ class TofinoPardeSpec : public PardeSpec {
 
     unsigned byteInterClotGap() const override { BUG("No CLOTs in Tofino"); }
 
+    unsigned bitMinClotPos(gress_t) const override { BUG("No CLOTs in Tofino"); }
     unsigned bitMaxClotPos() const override { BUG("No CLOTs in Tofino"); }
 
     size_t minParseDepth(gress_t gress) const override { return gress == EGRESS ? 65 : 0; }
@@ -354,6 +358,9 @@ class JBayPardeSpec : public PardeSpec {
     unsigned numClotsPerGress() const override { return 64; }
     unsigned maxClotsLivePerGress() const override { return 16; }
     unsigned byteInterClotGap() const override { return 3; }
+    unsigned bitMinClotPos(gress_t gress) const override {
+        return gress == EGRESS ? 28 * 8 : byteTotalIngressMetadataSize() * 8;
+    }
     unsigned bitMaxClotPos() const override { return 384 * 8; /* 384 bytes */ }
     bool parserAllExtractorsSupportSingleByte() const override { return true; }
 

@@ -52,16 +52,13 @@ class GreedyClotAllocator : public Visitor {
 
         // Find all packet-sourced extracts in the current state.
         if (clotInfo.field_range_.count(state)) {
-            for (auto entry : clotInfo.field_range_.at(state)) {
-                auto field = entry.first;
-                const auto& bitrange = entry.second;
-                auto max_packet_offset = parserInfo.get_max_shift_amount(state) + bitrange.lo;
+            for (const auto& [field, bitrange] : clotInfo.field_range_.at(state)) {
+                int min_packet_offset = parserInfo.get_min_shift_amount(state) + bitrange.lo;
+                int max_packet_offset = parserInfo.get_max_shift_amount(state) + bitrange.lo;
 
                 // Add to result->fieldMap.
-                result->updateFieldMap(field,
-                                       state,
-                                       static_cast<unsigned>(bitrange.lo),
-                                       static_cast<unsigned>(max_packet_offset));
+                result->updateFieldMap(field, state, static_cast<unsigned>(bitrange.lo),
+                                       min_packet_offset, max_packet_offset);
 
                 if (!clotInfo.can_be_in_clot(field)) continue;
 
@@ -72,11 +69,9 @@ class GreedyClotAllocator : public Visitor {
 
                 // Add to result->pseudoheaderMap.
                 for (auto pseudoheader : clotInfo.field_to_pseudoheaders_.at(field)) {
-                    result->updatePseudoheaderMap(pseudoheader,
-                                                  field,
-                                                  state,
+                    result->updatePseudoheaderMap(pseudoheader, field, state,
                                                   static_cast<unsigned>(bitrange.lo),
-                                                  static_cast<unsigned>(max_packet_offset));
+                                                  min_packet_offset, max_packet_offset);
                 }
             }
         }
@@ -101,7 +96,9 @@ class GreedyClotAllocator : public Visitor {
     void try_add_clot_candidate(ClotCandidateSet* candidates,
                                 const Pseudoheader* pseudoheader,
                                 std::vector<const FieldSliceExtractInfo*>& extracts) const {
-        // Trim the first extract so that it is byte-aligned.
+        // Trim the first extract so that it extends past minimum CLOT position
+        // (after port metadata) and is byte-aligned.
+        extracts[0] = extracts.front()->trim_head_to_min_clot_pos();
         extracts[0] = extracts.front()->trim_head_to_byte();
 
         if (pseudoheader) {
@@ -714,23 +711,8 @@ class GreedyClotAllocator : public Visitor {
 
         const auto& extracts = candidate->extracts();
         for (auto start_idx : candidate->can_start_indices()) {
-            auto start = extracts.at(start_idx)->trim_head_to_byte();
-            if (start->slice()->field()->gress == INGRESS &&
-                start->max_packet_bit_offset() <
-                           Device::pardeSpec().byteTotalIngressMetadataSize()*8) {
-                if (start->slice()->size() >
-                    static_cast<int>(Device::pardeSpec().byteTotalIngressMetadataSize()*8 -
-                    start->max_packet_bit_offset())) {
-                    start->trim(0, Device::pardeSpec().byteTotalIngressMetadataSize()*8 -
-                                                      start->max_packet_bit_offset());
-                }
-            } else if (start->slice()->field()->gress == EGRESS &&
-                       start->max_packet_bit_offset() < 28 * 8) {
-                if (start->slice()->size() >
-                    static_cast<int>(28 * 8 - start->max_packet_bit_offset())) {
-                    start->trim(0, 28*8 - start->max_packet_bit_offset());
-                }
-            }
+            auto start = extracts.at(start_idx)->trim_head_to_min_clot_pos();
+            start = start->trim_head_to_byte();
 
             // Find the rightmost end_idx that fits in the maximum CLOT size.
             //

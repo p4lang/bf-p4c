@@ -1,32 +1,26 @@
 #include "field_slice_extract_info.h"
 
-void FieldSliceExtractInfo::update(
-    const IR::BFN::ParserState* state,
-    unsigned state_bit_offset,
-    unsigned max_packet_bit_offset
-) {
+void FieldSliceExtractInfo::update(const IR::BFN::ParserState* state, unsigned state_bit_offset,
+                                   int min_packet_offset, int max_packet_offset) {
     BUG_CHECK(!state_bit_offsets_.count(state),
-              "Field %s is unexpectedly extracted multiple times in %2%",
-              slice_->field()->name, state->name);
+              "Field %s is unexpectedly extracted multiple times in %2%", slice_->field()->name,
+              state->name);
 
     auto& entry = *state_bit_offsets_.begin();
     BUG_CHECK(entry.second % 8 == state_bit_offset % 8,
               "Field %s determined to be CLOT-eligible, but has inconsistent bit-in-byte "
               "offsets in states %s and %s",
-              slice_->field()->name,
-              entry.first->name,
-              state->name);
+              slice_->field()->name, entry.first->name, state->name);
 
     BUG_CHECK(entry.first->thread() == state->thread(),
               "A FieldSliceExtractInfo for an %s extract of field %s is being updated with an "
               "extract in parser state %s, which comes from %s",
-              toString(entry.first->thread()),
-              slice_->field()->name,
-              state->name,
+              toString(entry.first->thread()), slice_->field()->name, state->name,
               toString(state->thread()));
 
     state_bit_offsets_[state] = state_bit_offset;
-    max_packet_bit_offset_ = std::max(max_packet_bit_offset_, max_packet_bit_offset);
+    min_packet_bit_offset_ = std::min(min_packet_bit_offset_, min_packet_offset);
+    max_packet_bit_offset_ = std::max(max_packet_bit_offset_, max_packet_offset);
 }
 
 ordered_set<const IR::BFN::ParserState*> FieldSliceExtractInfo::states() const {
@@ -36,27 +30,34 @@ ordered_set<const IR::BFN::ParserState*> FieldSliceExtractInfo::states() const {
 }
 
 const FieldSliceExtractInfo* FieldSliceExtractInfo::trim_head_to_byte() const {
-    auto trim_amt = (8 - bit_in_byte_offset()) % 8;
-    auto size = slice_->size() - trim_amt;
+    auto trim_amount = (8 - bit_in_byte_offset()) % 8;
+    auto size = slice_->size() - trim_amount;
     BUG_CHECK(size > 0, "Trimmed extract %1% to %2% bits", slice()->shortString(), size);
     return trim(0, size);
 }
 
+const FieldSliceExtractInfo* FieldSliceExtractInfo::trim_head_to_min_clot_pos() const {
+    gress_t gress = slice()->field()->gress;
+    int trim_amount =
+        static_cast<int>(Device::pardeSpec().bitMinClotPos(gress)) - min_packet_bit_offset_;
+    if (trim_amount <= 0) return this;
+    BUG_CHECK(slice()->size() > trim_amount,
+              "Cannot trim field slice by amount greater than the size of the field slice.");
+
+    return trim(0, slice()->size() - trim_amount);
+}
+
 const FieldSliceExtractInfo* FieldSliceExtractInfo::trim_tail_to_byte() const {
-    auto trim_amt = (bit_in_byte_offset() + slice_->size()) % 8;
-    return trim_tail_bits(trim_amt);
+    auto trim_amount = (bit_in_byte_offset() + slice_->size()) % 8;
+    return trim_tail_bits(trim_amount);
 }
 
 const FieldSliceExtractInfo* FieldSliceExtractInfo::trim_tail_to_max_clot_pos() const {
-    auto max_pos = max_packet_bit_offset_ + slice_->size();
-    int trim_amt = max_pos - Device::pardeSpec().bitMaxClotPos();
-    if (trim_amt <= 0) {
-        // No need to trim.
-        return this;
-    }
+    int max_pos = max_packet_bit_offset_ + slice_->size();
+    int trim_amount = max_pos - Device::pardeSpec().bitMaxClotPos();
+    if (trim_amount <= 0) return this;
 
-    auto result = trim_tail_bits(trim_amt);
-    return result;
+    return trim_tail_bits(trim_amount);
 }
 
 const FieldSliceExtractInfo* FieldSliceExtractInfo::trim_tail_bits(int trim_amt) const {
@@ -66,31 +67,32 @@ const FieldSliceExtractInfo* FieldSliceExtractInfo::trim_tail_bits(int trim_amt)
     return trim(start_idx, size);
 }
 
-const FieldSliceExtractInfo* FieldSliceExtractInfo::trim(int start_idx, int size) const {
-    BUG_CHECK(start_idx >= 0,
+const FieldSliceExtractInfo* FieldSliceExtractInfo::trim(int lo_idx, int bits) const {
+    BUG_CHECK(lo_idx >= 0,
               "Attempted to trim an extract of %s to a negative start index: %d",
-              slice_->shortString(), start_idx);
+              slice_->shortString(), lo_idx);
 
     auto cur_size = slice_->size();
-    BUG_CHECK(cur_size >= start_idx + size - 1,
+    BUG_CHECK(cur_size >= lo_idx + bits - 1,
               "Attempted to trim an extract of %s to a sub-slice larger than the original "
-              "(start_idx = %d, size = %d)",
-              slice_->shortString(), start_idx, size);
+              "(lo_idx = %d, bits = %d)",
+              slice_->shortString(), lo_idx, bits);
 
-    if (start_idx == 0 && cur_size == size) return this;
+    if (lo_idx == 0 && cur_size == bits) return this;
 
-    auto max_packet_bit_offset = max_packet_bit_offset_ + (cur_size - start_idx - size);
+    int adjustment = cur_size - lo_idx - bits;
+
+    int min_packet_bit_offset = min_packet_bit_offset_ + adjustment;
+    int max_packet_bit_offset = max_packet_bit_offset_ + adjustment;
+
     ordered_map<const IR::BFN::ParserState*, unsigned> state_bit_offsets;
-    for (auto& entry : state_bit_offsets_) {
-        auto& state = entry.first;
-        auto state_bit_offset = entry.second;
+    for (auto& [state, bit_offset] : state_bit_offsets_)
+        state_bit_offsets[state] = bit_offset + adjustment;
 
-        state_bit_offsets[state] = state_bit_offset + (cur_size - start_idx - size);
-    }
-
-    auto range = slice_->range().shiftedByBits(start_idx).resizedToBits(size);
+    auto range = slice_->range().shiftedByBits(lo_idx).resizedToBits(bits);
     auto slice = new PHV::FieldSlice(slice_->field(), range);
-    return new FieldSliceExtractInfo(state_bit_offsets, max_packet_bit_offset, slice);
+    return new FieldSliceExtractInfo(state_bit_offsets, min_packet_bit_offset,
+                                     max_packet_bit_offset, slice);
 }
 
 std::vector<const FieldSliceExtractInfo*>*
@@ -233,20 +235,24 @@ FieldSliceExtractInfo::bit_gaps(const CollectParserInfo& parserInfo,
 
 bool operator==(const FieldSliceExtractInfo& a, const FieldSliceExtractInfo& b) {
     return a.state_bit_offsets_ == b.state_bit_offsets_ &&
-        a.max_packet_bit_offset_ == b.max_packet_bit_offset_ &&
-        *a.slice_ == *b.slice_;
+           a.min_packet_bit_offset_ == b.min_packet_bit_offset_ &&
+           a.max_packet_bit_offset_ == b.max_packet_bit_offset_ && *a.slice_ == *b.slice_;
 }
 
 std::ostream& operator<<(std::ostream& out, const FieldSliceExtractInfo& field_slice_extract_info) {
     out << "{ Field Slice: " << field_slice_extract_info.slice_->shortString() << ", ";
+
+    out << "Min Packet Bit Offset: " << field_slice_extract_info.min_packet_bit_offset_ << ", ";
     out << "Max Packet Bit Offset: " << field_slice_extract_info.max_packet_bit_offset_ << ", ";
-    out << "State Bit Offsets: [ ";
+
     std::string delimiter = "";
-    for (const auto& kv : field_slice_extract_info.state_bit_offsets_) {
-        out << delimiter << "( " << kv.first->name << ", " << kv.second << " )";
+    out << "State Bit Offsets: [ ";
+    for (const auto& [key, value] : field_slice_extract_info.state_bit_offsets_) {
+        out << delimiter << "( " << key->name << ", " << value << " )";
         delimiter = ", ";
     }
     out << " ] }";
+
     return out;
 }
 

@@ -386,26 +386,13 @@ bool ClotInfo::can_be_in_clot(const PHV::Field* field) const {
 }
 
 bool ClotInfo::is_slice_below_min_offset(const PHV::FieldSlice* slice,
-                                         int max_packet_bit_offset) const {
-    if (slice->field()->gress == INGRESS) {
-        if (max_packet_bit_offset <
-            static_cast<int>(Device::pardeSpec().byteTotalIngressMetadataSize()*8)) {
-            // If the size of the slice is greater than difference between HDR_LEN_ADJ and
-            // max_packet_bit_offset, then the slice can be trimed later
-            if (slice->size() < (static_cast<int>(
-                Device::pardeSpec().byteTotalIngressMetadataSize())*8 - max_packet_bit_offset)) {
-                return true;
-            }
-        }
-    } else {
-        // Hdr_Len_Adj for Egress is 28
-        if (max_packet_bit_offset < 28*8) {
-            // If the size of the slice is greater than difference between HDR_LEN_ADJ and
-            // max_packet_bit_offset, then the slice can be trimed later
-            if (slice->size() < 28*8 - max_packet_bit_offset) {
-                return true;
-            }
-        }
+                                         int min_packet_bit_offset) const {
+    int bit_min_clot_position =
+        static_cast<int>(Device::pardeSpec().bitMinClotPos(slice->field()->gress));
+    if (min_packet_bit_offset < bit_min_clot_position) {
+        // If the size of the slice is greater than difference between bit_min_clot_position and
+        // min_packet_bit_offset, then the slice can be trimed later
+        if (slice->size() <= (bit_min_clot_position - min_packet_bit_offset)) return true;
     }
     return false;
 }
@@ -433,8 +420,8 @@ bool ClotInfo::can_start_clot(const FieldSliceExtractInfo* extract_info) const {
         return false;
     }
 
-    if (is_slice_below_min_offset(slice, extract_info->max_packet_bit_offset())) {
-        LOG6("  Can't start CLOT with " << slice->field()->name << " : max offset"
+    if (is_slice_below_min_offset(slice, extract_info->min_packet_bit_offset())) {
+        LOG6("  Can't start CLOT with " << slice->field()->name << " : min offset"
              " is less than hdr_len_adj");
         return false;
     }
@@ -465,10 +452,11 @@ bool ClotInfo::can_end_clot(const FieldSliceExtractInfo* extract_info) const {
     }
 
     // Slice must start before the maximum CLOT position.
-    if (extract_info->max_packet_bit_offset() >= Device::pardeSpec().bitMaxClotPos()) {
+    if (extract_info->max_packet_bit_offset() >=
+        static_cast<int>(Device::pardeSpec().bitMaxClotPos())) {
         LOG6("  Can't end CLOT with " << slice->field()->name << ": start offset "
-            << extract_info->max_packet_bit_offset() << " not less than "
-            << Device::pardeSpec().bitMaxClotPos());
+                                      << extract_info->max_packet_bit_offset() << " not less than "
+                                      << Device::pardeSpec().bitMaxClotPos());
         return false;
     }
 

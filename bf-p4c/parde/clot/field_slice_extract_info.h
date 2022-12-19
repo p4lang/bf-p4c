@@ -18,21 +18,27 @@ class FieldSliceExtractInfo {
     // Invariant: all offsets here are congruent, modulo 8.
     ordered_map<const IR::BFN::ParserState*, unsigned> state_bit_offsets_;
 
+    /// The field slice's minimum offset, in bits, from the start of the packet.
+    int min_packet_bit_offset_;
+
     /// The field slice's maximum offset, in bits, from the start of the packet.
-    unsigned max_packet_bit_offset_;
+    int max_packet_bit_offset_;
 
     /// The field slice itself.
     const PHV::FieldSlice* slice_;
 
  public:
-    FieldSliceExtractInfo(ordered_map<const IR::BFN::ParserState*, unsigned> state_bit_offsets,
-                          unsigned max_packet_bit_offset, const PHV::Field* field)
-        : FieldSliceExtractInfo(state_bit_offsets, max_packet_bit_offset,
+    FieldSliceExtractInfo(
+        const ordered_map<const IR::BFN::ParserState*, unsigned>& state_bit_offsets,
+        int min_packet_bit_offset, int max_packet_bit_offset, const PHV::Field* field)
+        : FieldSliceExtractInfo(state_bit_offsets, min_packet_bit_offset, max_packet_bit_offset,
                                 new PHV::FieldSlice(field)) {}
 
-    FieldSliceExtractInfo(ordered_map<const IR::BFN::ParserState*, unsigned> state_bit_offsets,
-                          unsigned max_packet_bit_offset, const PHV::FieldSlice* slice)
+    FieldSliceExtractInfo(
+        const ordered_map<const IR::BFN::ParserState*, unsigned>& state_bit_offsets,
+        int min_packet_bit_offset, int max_packet_bit_offset, const PHV::FieldSlice* slice)
         : state_bit_offsets_(state_bit_offsets),
+          min_packet_bit_offset_(min_packet_bit_offset),
           max_packet_bit_offset_(max_packet_bit_offset),
           slice_(slice) {}
 
@@ -42,18 +48,25 @@ class FieldSliceExtractInfo {
     ///             the new parser state
     /// @param state_bit_offset
     ///             the field's bit offset from the beginning of @p state
+    /// @param min_packet_bit_offset
+    ///             the minimum bit offset from the beginning of the packet of the field in the
+    ///             given state
     /// @param max_packet_bit_offset
     ///             the maximum bit offset from the beginning of the packet of the field in the
     ///             given state
-    void update(const IR::BFN::ParserState* state,
-                unsigned state_bit_offset,
-                unsigned max_packet_bit_offset);
+    void update(const IR::BFN::ParserState* state, unsigned state_bit_offset,
+                int min_packet_bit_offset, int max_packet_bit_offset);
 
     /// @return the parser states in which the field slice is extracted.
     ordered_set<const IR::BFN::ParserState*> states() const;
 
-    /// @return the field slice's maximum offset, in bits, from the start of the packet.
-    unsigned max_packet_bit_offset() const { return max_packet_bit_offset_; }
+    /// @return the field slice's minimum offset, in bits, from the start of the packet to the
+    /// start of the field slice.
+    int min_packet_bit_offset() const { return min_packet_bit_offset_; }
+
+    /// @return the field slice's maximum offset, in bits, from the start of the packet to the
+    /// start of the field slice.
+    int max_packet_bit_offset() const { return max_packet_bit_offset_; }
 
     /// @return the field slice's offset, in bits, from the start of each parser state in which the
     /// field is extracted.
@@ -78,6 +91,9 @@ class FieldSliceExtractInfo {
     /// Trims the start of the extract so that it is byte-aligned.
     const FieldSliceExtractInfo* trim_head_to_byte() const;
 
+    /// Trims the start of the extract so that it does not extend past the minimum CLOT position.
+    const FieldSliceExtractInfo* trim_head_to_min_clot_pos() const;
+
     /// Trims the end of the extract so that it is byte-aligned.
     const FieldSliceExtractInfo* trim_tail_to_byte() const;
 
@@ -91,9 +107,13 @@ class FieldSliceExtractInfo {
  public:
     /// Trims the extract to a sub-slice.
     ///
-    /// @param start_idx The start of the new slice, relative to the start of the old slice.
+    /// @param lo_idx The start of the new slice, relative to the start of the old slice.
     /// @param bits The number of bits.
-    const FieldSliceExtractInfo* trim(int start_idx, int bits) const;
+    ///
+    /// Slices are trimmed relative to the least-significant bit (LSB) of the slice. A @p lo_idx
+    /// value of 0 leaves the slice LSB unchanged, while a positive value discards @p lo_idx LSBs
+    /// from the slice.
+    const FieldSliceExtractInfo* trim(int lo_idx, int bits) const;
 
     /// Removes any bytes that conflict with the given @p candidate, returning the resulting list
     /// of FieldSliceExtractInfo instances, in the order in which they appear in the packet. More
@@ -153,37 +173,31 @@ class FieldExtractInfo {
     /// Maps all extracted fields to their FieldSliceExtractInfo instances.
     FieldMap fieldMap;
 
-    void updateFieldMap(const PHV::Field* field,
-                        const IR::BFN::ParserState* state,
-                        unsigned state_bit_offset,
-                        unsigned max_packet_bit_offset) {
+    void updateFieldMap(const PHV::Field* field, const IR::BFN::ParserState* state,
+                        unsigned state_bit_offset, int min_packet_bit_offset,
+                        int max_packet_bit_offset) {
         if (fieldMap.count(field)) {
-            fieldMap.at(field)->update(state, state_bit_offset, max_packet_bit_offset);
+            fieldMap.at(field)->update(state, state_bit_offset, min_packet_bit_offset,
+                                       max_packet_bit_offset);
         } else {
             ordered_map<const IR::BFN::ParserState*, unsigned> state_bit_offsets;
             state_bit_offsets[state] = state_bit_offset;
-            fieldMap[field] =
-                new FieldSliceExtractInfo(state_bit_offsets,
-                                          max_packet_bit_offset,
-                                          field);
+            fieldMap[field] = new FieldSliceExtractInfo(state_bit_offsets, min_packet_bit_offset,
+                                                        max_packet_bit_offset, field);
         }
     }
 
-    void updatePseudoheaderMap(const Pseudoheader* pseudoheader,
-                               const PHV::Field* field,
-                               const IR::BFN::ParserState* state,
-                               unsigned state_bit_offset,
-                               unsigned max_packet_bit_offset) {
+    void updatePseudoheaderMap(const Pseudoheader* pseudoheader, const PHV::Field* field,
+                               const IR::BFN::ParserState* state, unsigned state_bit_offset,
+                               int min_packet_bit_offset, int max_packet_bit_offset) {
         if (pseudoheaderMap.count(pseudoheader) && pseudoheaderMap.at(pseudoheader).count(field)) {
             auto* fei = pseudoheaderMap.at(pseudoheader).at(field);
-            fei->update(state, state_bit_offset, max_packet_bit_offset);
+            fei->update(state, state_bit_offset, min_packet_bit_offset, max_packet_bit_offset);
         } else {
             ordered_map<const IR::BFN::ParserState*, unsigned> state_bit_offsets;
             state_bit_offsets[state] = state_bit_offset;
-            auto fei =
-                new FieldSliceExtractInfo(state_bit_offsets,
-                                          max_packet_bit_offset,
-                                          field);
+            auto fei = new FieldSliceExtractInfo(state_bit_offsets, min_packet_bit_offset,
+                                                 max_packet_bit_offset, field);
 
             pseudoheaderMap[pseudoheader][field] = fei;
         }
