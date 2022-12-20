@@ -25,7 +25,6 @@ p4c_add_test_label("tofino" "p414_nightly" "switch_dc_basic")
 # FIXME: remove disabling of parser min/max depth limits (P4C-4170)
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_ent_fin_postcard" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} -DENT_FIN_POSTCARD_PROFILE -Xp4c=\"--disable-parse-max-depth-limit\"")
-p4c_add_test_label("tofino" "p414_nightly" "switch_ent_fin_postcard")
 
 # FIXME: remove disabling of parser min/max depth limits (P4C-4170)
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
@@ -47,7 +46,6 @@ p4c_add_test_label("tofino" "p414_nightly" "switch_msdc_ipv4")
 # FIXME: remove disabling of parser min/max depth limits (P4C-4170)
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_msdc_l3" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} -DMSDC_L3_PROFILE -Xp4c=\"--disable-parse-depth-limit\"")
-p4c_add_test_label("tofino" "p414_nightly" "switch_msdc_l3")
 
 # FIXME: remove disabling of parser min/max depth limits (P4C-4170)
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
@@ -58,17 +56,14 @@ p4c_add_test_label("tofino" "p414_nightly" "switch_msdc_spine_int")
 # FIXME: remove disabling of parser min/max depth limits (P4C-4170)
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_msdc_leaf_int" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} -DMSDC_LEAF_DTEL_INT_PROFILE -Xp4c=\"--disable-parse-max-depth-limit\"")
-p4c_add_test_label("tofino" "p414_nightly" "switch_msdc_leaf_int")
 
 # FIXME: remove disabling of parser min/max depth limits (P4C-4170)
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_l3_heavy_int_leaf" ${switchtest} "" "-arch ${TOFINO_P414_TEST_ARCH} -DL3_HEAVY_INT_LEAF_PROFILE -Xp4c=\"--disable-power-check --disable-parse-max-depth-limit\"")
-p4c_add_test_label("tofino" "p414_nightly" "switch_l3_heavy_int_leaf")
 
 # FIXME: remove disabling of parser min/max depth limits (P4C-4170)
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_generic_int_leaf" ${switchtest} "" "-arch ${TOFINO_P414_TEST_ARCH} --disable-pragmas=pa_solitary -DGENERIC_INT_LEAF_PROFILE -Xp4c=\"--disable-power-check --disable-parse-max-depth-limit\"")
-p4c_add_test_label("tofino" "p414_nightly" "switch_generic_int_leaf")
 
 # Increase timeout for profiles that do not fit into default
 set_tests_properties("tofino/switch_ent_fin_postcard" PROPERTIES TIMEOUT ${extended_timeout_2times})

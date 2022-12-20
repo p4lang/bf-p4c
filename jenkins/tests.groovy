@@ -39,6 +39,13 @@ def runInDocker(String cmd) {
     runInDocker([:], cmd)
 }
 
+// GTS and p414_nightly only exists for Tofino 1
+CTEST_LABEL_EXCLUDE_ALL = 'UNSTABLE|GTS_WEEKLY|NON_PR_TOFINO|METRICS|p414_nightly|determinism'
+CTEST_LABEL_EXCLUDE_T5 = "${CTEST_LABEL_EXCLUDE_ALL}|ptf"
+
+CTEST_PATH_EXCLUDE_T1 = 'smoketest_switch_'
+CTEST_PATH_EXCLUDE_T2 = 'ignore_test_|smoketest_switch_|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|npb-master-ptf|npb-folded-pipe|npb-multi-prog'
+
 // this Jenkins file is not intended to be executed directly, instead it shold
 // be loaded by a top-level scripted pipeline
 pipeline {
@@ -97,13 +104,21 @@ pipeline {
                             }
                         }
 
-                        stage("p414 basic IPv4 smoketests") {
+                        stage("Installed p4c tests") {
                             steps {
                                 catchError(catchInterruptions: false, stageResult: 'FAILURE') {
-                                    echo 'Running basic_ipv4 tests'
+                                    echo 'Running driver tests on installed p4c'
                                     runInDocker(
+                                        maxCpu: 1,
                                         extraArgs: '--privileged',
-                                        "ctest -R 'smoketest_programs_basic_ipv4'"
+                                        workingDir: '/bfn/bf-p4c-compilers/scripts',
+                                        """
+                                            python3.8 \
+                                                -u test_p4c_driver.py \
+                                                -j 1 \
+                                                --print-on-failure \
+                                                --compiler '/usr/local/bin/p4c'
+                                        """
                                     )
                                 }
                             }
@@ -199,124 +214,64 @@ pipeline {
                     }
                 }
 
-                stage('Switch, Arista, Metrics') {
-                    stages {
-                        stage("Switch compilation") {
-                            steps {
-                                catchError(catchInterruptions: false, stageResult: 'FAILURE') {
-                                    echo 'Running switch profiles compilation for master'
-                                    runInDocker(
-                                        ctestParallelLevel: 4,
-                                        '''
-                                            ctest -R '^tofino/.*switch_' \
-                                                -E 'smoketest|p4_14|glass' \
-                                                -LE 'METRICS'
-                                        '''
-                                    )
-                                }
-                            }
-                        }
 
-                        stage("Arista must-pass") {
-                            steps {
-                                catchError(catchInterruptions: false, stageResult: 'FAILURE') {
-                                    echo 'Running some Arista must-pass tests that are excluded in Travis jobs'
-                                    runInDocker(
-                                        ctestParallelLevel: 4,
-                                        "ctest -R '^tofino/.*arista*' -L 'CUST_MUST_PASS'"
-                                    )
-                                }
-                            }
-                        }
+                stage("Generate switch compile-only metrics") {
+                    when { expression { SANITIZERS_ENABLED != "true" } }
+                    steps {
+                        catchError(catchInterruptions: false, stageResult: 'FAILURE') {
+                            script {
+                                echo 'Running switch-14 and switch-16 tests for METRICS'
+                                sh "docker pull ${DOCKER_PROJECT}/compiler_metrics:stage"
+                                sh "mkdir -p metrics_store"
+                                def metrics_cid = sh (
+                                    script: """
+                                        docker run --rm -t -d \
+                                            -w /bfn/compiler_metrics/database \
+                                            --entrypoint bash \
+                                            ${DOCKER_PROJECT}/compiler_metrics:stage
+                                    """,
+                                    returnStdout: true
+                                ).trim()
+                                echo "metrics cid: ${metrics_cid}"
+                                sh """
+                                    docker cp \
+                                        ${metrics_cid}:/bfn/compiler_metrics/database/compiler_metrics.sqlite \
+                                        metrics_store/
+                                    docker tag \
+                                        ${DOCKER_PROJECT}/bf-p4c-compilers:${IMAGE_TAG} \
+                                        ${DOCKER_PROJECT}/bf-p4c-compilers:${IMAGE_TAG}_metrics
+                                """
 
-                        stage("Generate switch compile-only metrics") {
-                            when { expression { SANITIZERS_ENABLED != "true" } }
-                            steps {
-                                catchError(catchInterruptions: false, stageResult: 'FAILURE') {
-                                    script {
-                                        echo 'Running switch-14 and switch-16 tests for METRICS'
-                                        sh "docker pull ${DOCKER_PROJECT}/compiler_metrics:stage"
-                                        sh "mkdir -p metrics_store"
-                                        def metrics_cid = sh (
-                                            script: """
-                                                docker run --rm -t -d \
-                                                    -w /bfn/compiler_metrics/database \
-                                                    --entrypoint bash \
-                                                    ${DOCKER_PROJECT}/compiler_metrics:stage
-                                            """,
-                                            returnStdout: true
-                                        ).trim()
-                                        echo "metrics cid: ${metrics_cid}"
-                                        sh """
-                                            docker cp \
-                                                ${metrics_cid}:/bfn/compiler_metrics/database/compiler_metrics.sqlite \
-                                                metrics_store/
-                                            docker tag \
-                                                ${DOCKER_PROJECT}/bf-p4c-compilers:${IMAGE_TAG} \
-                                                ${DOCKER_PROJECT}/bf-p4c-compilers:${IMAGE_TAG}_metrics
-                                        """
+                                def curr_pwd = pwd()
+                                def p4c_cid = sh (
+                                    script: """
+                                        docker run --privileged --rm -t -d \
+                                            -v ${curr_pwd}/metrics_store:/mnt \
+                                            -w /bfn/bf-p4c-compilers/scripts/gen_reference_outputs \
+                                            --entrypoint bash \
+                                            ${DOCKER_PROJECT}/bf-p4c-compilers:${IMAGE_TAG}_metrics
+                                    """,
+                                    returnStdout: true
+                                ).trim()
+                                echo "p4c cid: ${p4c_cid}"
 
-                                        def curr_pwd = pwd()
-                                        def p4c_cid = sh (
-                                            script: """
-                                                docker run --privileged --rm -t -d \
-                                                    -v ${curr_pwd}/metrics_store:/mnt \
-                                                    -w /bfn/bf-p4c-compilers/scripts/gen_reference_outputs \
-                                                    --entrypoint bash \
-                                                    ${DOCKER_PROJECT}/bf-p4c-compilers:${IMAGE_TAG}_metrics
-                                            """,
-                                            returnStdout: true
-                                        ).trim()
-                                        echo "p4c cid: ${p4c_cid}"
+                                echo "Generating metrics"
+                                sh """
+                                    docker exec ${p4c_cid} \
+                                        cp /mnt/compiler_metrics.sqlite \
+                                        /bfn/bf-p4c-compilers/scripts/gen_reference_outputs/database/
+                                    docker exec ${p4c_cid} \
+                                        python3 -u gen_ref_outputs.py \
+                                            --tests_csv profiles.csv \
+                                            --out_dir /bfn/bf-p4c-compilers/scripts/gen_reference_outputs/metrics_outputs/ \
+                                            --process_metrics \
+                                            --commit_sha ${BF_P4C_REV}
+                                """
 
-                                        echo "Generating metrics"
-                                        sh """
-                                            docker exec ${p4c_cid} \
-                                                cp /mnt/compiler_metrics.sqlite \
-                                                /bfn/bf-p4c-compilers/scripts/gen_reference_outputs/database/
-                                            docker exec ${p4c_cid} \
-                                                python3 -u gen_ref_outputs.py \
-                                                    --tests_csv profiles.csv \
-                                                    --out_dir /bfn/bf-p4c-compilers/scripts/gen_reference_outputs/metrics_outputs/ \
-                                                    --process_metrics \
-                                                    --commit_sha ${BF_P4C_REV}
-                                        """
-
-                                        sh """
-                                            docker container stop ${metrics_cid}
-                                            docker container stop ${p4c_cid}
-                                        """
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                stage('stful, meters, hash-driven, other customer tests') {
-                    stages {
-                        stage("stful, meters, hash_driven tests") {
-                            steps {
-                                catchError(catchInterruptions: false, stageResult: 'FAILURE') {
-                                    echo 'Running stful, meters and hash_driven tests'
-                                    // Disable stful test (DRV-4189)
-                                    runInDocker(
-                                        extraArgs: '--privileged',
-                                        "ctest -R 'smoketest_programs_meters|smoketest_programs_hash_driven'"
-                                    )
-                                }
-                            }
-                        }
-
-                        stage("Remaining customer tests") {
-                            steps {
-                                catchError(catchInterruptions: false, stageResult: 'FAILURE') {
-                                    echo 'Running remaining customer must passes that are excluded in Travis jobs'
-                                    runInDocker(
-                                        ctestParallelLevel: 1,
-                                        "ctest -R '^tofino/' -L 'CUST_MUST_PASS' -E 'arista'"
-                                    )
-                                }
+                                sh """
+                                    docker container stop ${metrics_cid}
+                                    docker container stop ${p4c_cid}
+                                """
                             }
                         }
                     }
@@ -374,13 +329,13 @@ pipeline {
                         runInDocker(
                             extraArgs: '--privileged',
                             ctestParallelLevel: 3,
-                            '''
+                            """
                                 ctest \
                                     -R '^tofino/' \
-                                    -E 'smoketest|tofino/switch_|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*' \
-                                    -LE 'UNSTABLE|GTS_WEEKLY|NON_PR_TOFINO|p414_nightly|determinism' \
+                                    -E '${CTEST_PATH_EXCLUDE_T1}' \
+                                    -LE '${CTEST_LABEL_EXCLUDE_ALL}' \
                                     -I 0,,3
-                            '''
+                            """
                         )
                     }
                 }
@@ -391,13 +346,13 @@ pipeline {
                         runInDocker(
                             extraArgs: '--privileged',
                             ctestParallelLevel: 3,
-                            '''
+                            """
                                 ctest \
                                     -R '^tofino/' \
-                                    -E 'smoketest|tofino/switch_|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*' \
-                                    -LE 'UNSTABLE|GTS_WEEKLY|NON_PR_TOFINO|p414_nightly|determinism' \
+                                    -E '${CTEST_PATH_EXCLUDE_T1}' \
+                                    -LE '${CTEST_LABEL_EXCLUDE_ALL}' \
                                     -I 1,,3
-                            '''
+                            """
                         )
                     }
                 }
@@ -408,13 +363,13 @@ pipeline {
                         runInDocker(
                             extraArgs: '--privileged',
                             ctestParallelLevel: 3,
-                            '''
+                            """
                                 ctest \
                                     -R '^tofino/' \
-                                    -E 'smoketest|tofino/switch_|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*' \
-                                    -LE 'UNSTABLE|GTS_WEEKLY|NON_PR_TOFINO|p414_nightly|determinism' \
+                                    -E '${CTEST_PATH_EXCLUDE_T1}' \
+                                    -LE '${CTEST_LABEL_EXCLUDE_ALL}' \
                                     -I 2,,3
-                            '''
+                            """
                         )
                     }
                 }
@@ -425,13 +380,13 @@ pipeline {
                         runInDocker(
                             extraArgs: '--privileged',
                             ctestParallelLevel: 3,
-                            '''
+                            """
                                 ctest \
                                     -R '^tofino2' \
-                                    -E 'ignore_test_|smoketest|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|npb-master-ptf|npb-folded-pipe|npb-multi-prog' \
-                                    -LE 'UNSTABLE|determinism' \
+                                    -E '${CTEST_PATH_EXCLUDE_T2}' \
+                                    -LE '${CTEST_LABEL_EXCLUDE_ALL}' \
                                     -I 0,,3
-                            '''
+                            """
                         )
                     }
                 }
@@ -442,13 +397,13 @@ pipeline {
                         runInDocker(
                             extraArgs: '--privileged',
                             ctestParallelLevel: 3,
-                            '''
+                            """
                                 ctest \
                                     -R '^tofino2' \
-                                    -E 'ignore_test_|smoketest|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|npb-master-ptf|npb-folded-pipe|npb-multi-prog' \
-                                    -LE 'UNSTABLE|determinism' \
+                                    -E '${CTEST_PATH_EXCLUDE_T2}' \
+                                    -LE '${CTEST_LABEL_EXCLUDE_ALL}' \
                                     -I 1,,3
-                            '''
+                            """
                         )
                     }
                 }
@@ -459,13 +414,13 @@ pipeline {
                         runInDocker(
                             extraArgs: '--privileged',
                             ctestParallelLevel: 3,
-                            '''
+                            """
                                 ctest \
                                     -R '^tofino2' \
-                                    -E 'ignore_test_|smoketest|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|npb-master-ptf|npb-folded-pipe|npb-multi-prog' \
-                                    -LE 'UNSTABLE|determinism' \
+                                    -E '${CTEST_PATH_EXCLUDE_T2}' \
+                                    -LE '${CTEST_LABEL_EXCLUDE_ALL}' \
                                     -I 2,,3
-                            '''
+                            """
                         )
                     }
                 }
@@ -476,7 +431,7 @@ pipeline {
                         runInDocker(
                             extraArgs: '--privileged',
                             ctestParallelLevel: 3,
-                            "ctest -R '^tofino3' -LE 'determinism'"
+                            "ctest -R '^tofino3' -LE '${CTEST_LABEL_EXCLUDE_ALL}'"
                         )
                     }
                 }
@@ -487,7 +442,7 @@ pipeline {
                         runInDocker(
                             extraArgs: '--privileged',
                             ctestParallelLevel: 1,
-                            "ctest -R '^tofino5' -LE 'ptf|determinism'"
+                            "ctest -R '^tofino5' -LE '${CTEST_LABEL_EXCLUDE_T5}'"
                         )
                     }
                 }
@@ -501,35 +456,6 @@ pipeline {
                         )
                     }
                 }
-
-                stage("Installed p4c tests") {
-                    steps {
-                        echo 'Running driver tests on installed p4c'
-                        runInDocker(
-                            maxCpu: 1,
-                            extraArgs: '--privileged',
-                            workingDir: '/bfn/bf-p4c-compilers/scripts',
-                            """
-                                python3.8 \
-                                    -u test_p4c_driver.py \
-                                    -j 1 \
-                                    --print-on-failure \
-                                    --compiler '/usr/local/bin/p4c'
-                            """
-                        )
-                    }
-                }
-
-                // Benchmarks
-                /* stage('Compile time benchmark') {
-                    steps {
-                        build job: 'bf-p4c-compilers-performance-bench',
-                        parameters: [
-                            string(name: "BFP4C_DOCKER_IMAGE",
-                                   value: "${DOCKER_PROJECT}/bf-p4c-compilers:${IMAGE_TAG}")
-                        ]
-                    }
-                }*/
             }
         }
     }

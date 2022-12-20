@@ -66,7 +66,7 @@ set (P16_TNA_EXCLUDE_FILES "digest_tna\\.p4" "p4c-1323-b\\.p4" "p4c-2143\\.p4"
     "p4c-2534\\.p4" "p4c-3678-leaf\\.p4" "p4c-2722\\.p4" "p4c-3920-b\\.p4" "p4c_3926\\.p4"
     "p4c_4158\\.p4" "p4c-4064\\.p4" "forensics\\.p4" "mirror_constants\\.p4" "p4c_2601\\.p4"
     "hash_extern_xor\\.p4" "hash_field_expression\\.p4" "hash_field_expression_sym\\.p4"
-    "p4c-4770\\.p4")
+    "p4c-4770\\.p4" "p4c-2269\\.p4")
 set (P16_TNA_EXCLUDE_FILES "${P16_TNA_EXCLUDE_FILES}" "${P16_TNA_ARISTA_FILES}")
 set (P16_TNA_FOR_TOFINO
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*/*.p4"
@@ -100,6 +100,8 @@ set (P4_14_EXCLUDE_FILES "parser_dc_full\\.p4" "sai_p4\\.p4"
                             "06-FullTPHV1\\.p4"           # max depth limit
                             "07-FullTPHV2\\.p4"           # max depth limit
                             "mau_test_neg_test\\.p4"      # disable power check
+                            "rdp/case9757\\.p4"           # not to be in p414_nightly
+
                             )
 set (P4_14_SAMPLES "${P4TESTDATA}/p4_14_samples/*.p4")
 bfn_find_tests("${P4_14_SAMPLES}" p4_14_samples EXCLUDE "${P4_14_EXCLUDE_FILES}")
@@ -139,7 +141,9 @@ p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base\;p41
 p4c_add_test_label("tofino" "p414_nightly" "extensions/p4_tests/p4_14/ptf/p4c_1962.p4")
 p4c_add_test_label("tofino" "p414_nightly" "extensions/p4_tests/p4_14/ptf/p4c2662.p4")
 
-p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base\;p414_nightly" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/customer/ruijie/p4c-2250.p4")
+# not in p414_nightly, running in PR
+p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/customer/rdp/case9757.p4")
+p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/customer/ruijie/p4c-2250.p4")
 set_tests_properties("tofino/extensions/p4_tests/p4_14/customer/ruijie/p4c-2250.p4" PROPERTIES TIMEOUT ${extended_timeout_4times})
 
 # P4C-2985
@@ -335,6 +339,8 @@ p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${TOFINO_TNA_TEST_SUITE
 set_tests_properties("tofino/extensions/p4_tests/p4_16/ptf/options_invalid.p4" PROPERTIES TIMEOUT ${extended_timeout_2times})
 bfn_needs_scapy("tofino" "extensions/p4_tests/p4_16/ptf/options_invalid.p4")
 bfn_needs_scapy("tofino" "extensions/p4_tests/p4_16/ptf/inner_checksum.p4")
+
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-2269.p4" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes -Xp4c=--disable-parse-depth-limit")
 
 p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "base\;p414_nightly" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/compile_only/mau_test_neg_test.p4" "-Xp4c=--disable-power-check")
 
@@ -648,7 +654,6 @@ bfn_set_ptf_test_spec("tofino" "smoketest_programs_alpm_test_TestRealData"
 set(_smoketestProgramsArgs "${testExtraArgs} -pd -arch ${TOFINO_P414_TEST_ARCH}")
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_basic_ipv4" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4/basic_ipv4.p4"
     "${_smoketestProgramsArgs}" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4")
-p4c_add_test_label("tofino" "p414_nightly" "smoketest_programs_basic_ipv4")
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_basic_ipv4"
          "test.TestExm6way4Entries
           test.TestDeepADT
@@ -887,7 +892,6 @@ set_tests_properties("tofino/smoketest_programs_stful" PROPERTIES TIMEOUT ${exte
 
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_meters" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/meters/meters.p4"
     "${testExtraArgs} -pd -arch ${TOFINO_P414_TEST_ARCH}" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/meters")
-p4c_add_test_label("tofino" "p414_nightly" "smoketest_programs_meters")
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_meters"
         "^test.TestMeterOmnet
         test.TestTCAMLpfIndirect
@@ -908,7 +912,6 @@ set_tests_properties("tofino/smoketest_programs_meters" PROPERTIES TIMEOUT ${ext
 
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_hash_driven" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/hash_driven/hash_driven.p4"
     "${testExtraArgs} -pd -arch ${TOFINO_P414_TEST_ARCH}" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/hash_driven")
-p4c_add_test_label("tofino" "p414_nightly" "smoketest_programs_hash_driven")
 
 # 500s timeout is too little for compiling and testing the entire test, bumping it up
 set_tests_properties("tofino/smoketest_programs_hash_driven" PROPERTIES TIMEOUT ${extended_timeout_6times})
@@ -1302,13 +1305,6 @@ foreach(t IN LISTS TOFINO_DETERMINISM_TESTS_16)
   bfn_add_determinism_test_with_args("tofino" "tna" ${t} "")
 endforeach()
 
-
-set (NON_PR_ARISTA)
-foreach (t IN LISTS P16_TNA_ARISTA_FILES)
-  list (APPEND NON_PR_ARISTA
-    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/${t}")
-endforeach()
-
 set (NON_PR
   # Long running tests that can be run in nightly
   ${CMAKE_CURRENT_SOURCE_DIR}/glass/phv/COMPILER-128/02-FullPHV1.p4
@@ -1319,25 +1315,6 @@ set (NON_PR
   ${P4TESTDATA}/p4_14_samples/05-FullTPHV.p4
   ${P4TESTDATA}/p4_14_samples/06-FullTPHV1.p4
   ${P4TESTDATA}/p4_14_samples/07-FullTPHV2.p4
-  # CUST_MUSS_PASS (run on Jenkins)
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/customer/rdp/case9757.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/customer/ruijie/p4c-2250.p4
-  # Obfuscated arista p4s
-  "${NON_PR_ARISTA}"
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1562-1.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1572-b1.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1809-1.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1812-1.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-2269.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-2313.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/kaloom/p4c-1832.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/kaloom/p4c-2398.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/kaloom/p4c-2410-leaf.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/kaloom/p4c-2410-spine.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/kaloom/p4c-2573-leaf.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/kaloom/p4c-3678-leaf.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/keysight/keysight-tf1.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/keysight/pktgen9_16.p4
   # Customer Tests to run in nightly
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/kaloom/p4c-2218.p4
   # Other XFails in compilers repo to run in nightly
@@ -1385,6 +1362,66 @@ set (NON_PR
   ${CMAKE_CURRENT_SOURCE_DIR}/glass/arista/COMPILER-868/comp_868.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/glass/arista/COMPILER-1152/case8686.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/glass/arista/MODEL-475/case9192.p4
+  # Old switch tests excluded from PR
+  ${CMAKE_CURRENT_SOURCE_DIR}/glass/mau/COMPILER-770/switch_comp_770.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/glass/mau/DRV-1081/switch_drv_1081.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/glass/phv/COMPILER-546/switch_comp546.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/glass/phv/COMPILER-777/switch_comp_777.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/compile_only/test_config_101_switch_msdc.p4
+  # Old Arista
+  ${CMAKE_CURRENT_SOURCE_DIR}/glass/arista/COMPILER-347/switch_bug.p4
+  # Extreme tests excluded from PR
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1308-a.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1308-b.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1308-c.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1308-d.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1323-a.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1323-c1.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1326.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1492.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1493.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1557.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1559.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1560.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1565-1.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1572-a.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1585-a.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1585-b1.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1586.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1587-a.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1587-b1.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1599.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1672-1.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1680-1.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1797-1.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1815-1.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1824-1.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1852.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1323-b.p4
+)
+
+set(P4TESTS_NON_PR
+  # smoketests not run in PR
+  smoketest_programs_alpm_test
+  smoketest_programs_alpm_test_2
+  smoketest_programs_alpm_test_TestRealData
+  smoketest_programs_basic_ipv4_2
+  smoketest_programs_basic_ipv4_3
+  smoketest_programs_basic_ipv4_4
+  smoketest_programs_basic_ipv4_5
+  smoketest_programs_basic_ipv4_TestLearning
+  smoketest_programs_dkm
+  smoketest_programs_exm_direct
+  smoketest_programs_exm_direct_2
+  smoketest_programs_exm_direct_1
+  smoketest_programs_exm_direct_1_2
+  smoketest_programs_exm_indirect_1
+  smoketest_programs_exm_indirect_1_2
+  smoketest_programs_exm_smoke_test
+  smoketest_programs_exm_smoke_test_2
+  smoketest_programs_stful
+  # Dev-env update 2022-10-21: runs for almost 3 hours, then fails
+  p4_16_programs_internal_tna_alpmV2
 )
 
 foreach(t IN LISTS NON_PR)
@@ -1393,5 +1430,6 @@ foreach(t IN LISTS NON_PR)
 endforeach()
 
 
-# Dev-env update 2022-10-21: runs for almost 3 hours, then fails
-p4c_add_test_label("tofino" "NON_PR_TOFINO" p4_16_programs_internal_tna_alpmV2)
+foreach(t IN LISTS P4TESTS_NON_PR)
+  p4c_add_test_label("tofino" "NON_PR_TOFINO" ${t})
+endforeach()
