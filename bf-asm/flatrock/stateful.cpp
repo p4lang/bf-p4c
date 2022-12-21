@@ -48,13 +48,35 @@ void set_ftr_raw_instr_bits(checked_array<4,
 }
 
 template<> void StatefulTable::write_logging_regs(Target::Flatrock::mau_regs &regs) {
+    // TODO: Handle stack and fifo
     BUG_CHECK(physical_ids.popcount() == 1, "not exactly one physical id for %s", name());
     auto &sful = regs.ppu_sful[*physical_ids.begin()];
     auto &salu = sful.ppu_sful_alu;
+    auto &sfulregs = sful.ppu_sful_reg;
 
+    auto &ctl = sfulregs.sful_counter_ctl;
     if (stateful_counter_mode && (stateful_counter_mode & FUNCTION_MASK) != FUNCTION_FAST_CLEAR) {
-        // TODO:
+        // FTR uses 4 for single-width 8-bit instructions and 0 for
+        // single-width 128-bit/double-width 64-bit instructions.
+        sfulregs.sful_counter_cfg.fifo_ctr_subw_w = 4 - (format->log2size - 3);
+        if (watermark_level) {
+            ctl.log_watermark_en = 1;
+            ctl.log_watermark_th = watermark_level;
+        }
+        if (underflow_action.set()) {
+            auto act = actions->action(underflow_action.name);
+            BUG_CHECK(act);
+            ctl.underflow_instr = act->code;
+            ctl.underflow_enable = 1;
+        }
+        if (overflow_action.set()) {
+            auto act = actions->action(overflow_action.name);
+            BUG_CHECK(act);
+            ctl.overflow_instr = act->code;
+            ctl.overflow_enable = 1;
+        }
     } else {
+        sfulregs.sful_counter_cfg.fifo_ctr_subw_w = 0;  // 128 bits
         if (busy_value) {
             salu.sful_clr_action_outp.action_outp = busy_value;
         }
@@ -62,6 +84,7 @@ template<> void StatefulTable::write_logging_regs(Target::Flatrock::mau_regs &re
             set_ftr_raw_instr_bits(salu.sful_instr_state_alu[3], clear_value);
             salu.sful_ctl.clear_value_ctl = 1;
         }
+        // TODO: Handle sweep
     }
 
     for (size_t i = 0; i < const_vals.size(); ++i) {
