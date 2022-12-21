@@ -265,9 +265,13 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                 for (auto &ent : kv.value.map)
                     dictionary[gress].emplace_back(gress, ent.key, ent.value);
             } else if (kv.key == "pov") {
-                if (!CHECKTYPE(kv.value, tVEC)) continue;
-                for (auto &ent : kv.value.vec)
-                    pov_order[gress].emplace_back(gress, DEPARSER_STAGE, ent);
+                if (kv.value.type != tVEC) {
+                    /// The check for correct type is done in Phv::Ref constructor
+                    pov_order[gress].emplace_back(gress, DEPARSER_STAGE, kv.value);
+                } else {
+                    for (auto &ent : kv.value.vec)
+                        pov_order[gress].emplace_back(gress, DEPARSER_STAGE, ent);
+                }
             } else if (kv.key == "partial_checksum") {
                 if (kv.key.type != tCMD || kv.key.vec.size != 2 || kv.key[1].type != tINT ||
                     kv.key[1].i < 0 || kv.key[1].i >= Target::DEPARSER_CHECKSUM_UNITS()) {

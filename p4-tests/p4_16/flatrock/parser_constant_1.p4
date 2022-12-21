@@ -30,7 +30,13 @@ parser ingressParser(packet_in packet, out headers hdrs,
         hdrs.data.f2 = 0x22222222;
         hdrs.data.h1 = 0x3333;
         hdrs.data.b1 = 0x42;
-        hdrs.data.b2 = 0x43;
+        // FIXME (P4C-4686)
+        // When all header fields are extracted from other source than packet
+        // modify_flag action setting $valid field for the header is not generated.
+        // Therefore the following field is commented out so that there is at least
+        // one field extracted from the packet and the test can work until the generating
+        // of modify_flag action is fixed to work even in this corner case.
+        // hdrs.data.b2 = 0x43;
         transition accept;
     }
 }

@@ -10,39 +10,26 @@ namespace Parde::Lowered {
 /// generated assembly.
 cstring sanitizeName(StringRef name) {
     // Drop any thread-specific prefix from the name.
-    if (auto prefix = name.findstr("::")) name = name.after(prefix) += 2;
+    if (auto prefix = name.findstr("::"))
+        name = name.after(prefix) += 2;
     return name;
 }
 
-/**
- * Construct debugging information describing a slice of a field.
- *
- * @param fieldRef  A reference to a field.
- * @param slice  An `alloc_slice` mapping a range of bits in the field to a
- *               range of bits in a container.
- * @param includeContainerInfo  If true, the result will include information
- *                              about which bits in the container the field
- *                              slice was mapped to.
- * @return a string describing which bits in the field are included in the
- * slice, and describing the corresponding bits in the container.
- */
-cstring debugInfoFor(const IR::BFN::ParserLVal* lval, const PHV::AllocSlice& slice,
+cstring debugInfoFor(const cstring fieldName,
+                     const PHV::AllocSlice& slice,
                      bool includeContainerInfo) {
     std::stringstream info;
-
-    auto fieldRef = lval->to<IR::BFN::FieldLVal>();
-    if (!fieldRef) return info;
-
     // Describe the range of bits assigned to this field slice in the container.
     // (In some cases we break this down in more detail elsewhere, so we don't
     // need to repeat it.)
     if (includeContainerInfo) {
         const le_bitrange sourceBits = slice.container_slice();
-        if (sourceBits.size() != ssize_t(slice.container().size())) info << sourceBits << ": ";
+        if (sourceBits.size() != ssize_t(slice.container().size()))
+            info << sourceBits << ": ";
     }
 
     // Identify the P4 field that we're writing to.
-    info << fieldRef->field->toString();
+    info << fieldName;
 
     // Although it's confusing given that e.g. input buffer ranges are printed
     // in network order, consistency with the rest of the output of the
@@ -53,6 +40,27 @@ cstring debugInfoFor(const IR::BFN::ParserLVal* lval, const PHV::AllocSlice& sli
         info << "." << destFieldBits.lo << "-" << destFieldBits.hi;
 
     return cstring(info);
+}
+
+/**
+ * Construct debugging information describing a slice of a field.
+ *
+ * @param lval  A reference to a field.
+ * @param slice  An `alloc_slice` mapping a range of bits in the field to a
+ *               range of bits in a container.
+ * @param includeContainerInfo  If true, the result will include information
+ *                              about which bits in the container the field
+ *                              slice was mapped to.
+ * @return a string describing which bits in the field are included in the
+ * slice, and describing the corresponding bits in the container.
+ */
+cstring debugInfoFor(const IR::BFN::ParserLVal* lval,
+                     const PHV::AllocSlice& slice,
+                     bool includeContainerInfo) {
+    auto fieldRef = lval->to<IR::BFN::FieldLVal>();
+    if (!fieldRef) return "";
+
+    return debugInfoFor(fieldRef->field->toString(), slice, includeContainerInfo);
 }
 
 /**
@@ -73,15 +81,16 @@ cstring debugInfoFor(const IR::BFN::ParserLVal* lval, const PHV::AllocSlice& sli
  * field, the container, and the constant or input buffer region read by the
  * `Extract`.
  */
-cstring debugInfoFor(const IR::BFN::Extract* extract, const PHV::AllocSlice& slice,
+cstring debugInfoFor(const IR::BFN::Extract* extract,
+                     const PHV::AllocSlice& slice,
                      const nw_bitrange& bufferRange,
                      bool includeRangeInfo) {
     std::stringstream info;
 
     // Describe the value that's being written into the destination container.
     if (auto* constantSource = extract->source->to<IR::BFN::ConstantRVal>()) {
-        info << "value " << constantSource->constant << " -> " << slice.container() << " "
-             << slice.container_slice() << ": ";
+        info << "value " << constantSource->constant << " -> "
+             << slice.container() << " " << slice.container_slice() << ": ";
     } else if (extract->source->is<IR::BFN::PacketRVal>()) {
         // In the interest of brevity, don't print the range of bits being
         // extracted into the destination container if it matches the size of
@@ -89,16 +98,41 @@ cstring debugInfoFor(const IR::BFN::Extract* extract, const PHV::AllocSlice& sli
         // This behaviour can be overridden by explicit true value of
         // includeRangeInfo parameter in case we desire to print the range always.
         if (includeRangeInfo || slice.container().size() != size_t(bufferRange.size()))
-            info << bufferRange << " -> " << slice.container() << " " << slice.container_slice()
-                 << ": ";
+            info << bufferRange << " -> " << slice.container() << " "
+                 << slice.container_slice() << ": ";
     } else if (extract->source->is<IR::BFN::MetadataRVal>()) {
-        info << "buffer mapped I/O: " << bufferRange << " -> " << slice.container() << " "
-             << slice.container_slice() << ": ";
+        info << "buffer mapped I/O: " << bufferRange << " -> "
+             << slice.container() << " " << slice.container_slice() << ": ";
     }
 
     // Describe the field slice that we're writing to.
     info << debugInfoFor(extract->dest, slice, /* includeContainerInfo = */ false);
 
+    return cstring(info);
+}
+
+/**
+ * Construct a string describing how an `Extract` primitive was mapped to a
+ * hardware extract operation (in case of extract from POV (state/flags) bits).
+ *
+ * @param extract  The original `Extract` primitive, with a field as the
+ *                 destination.
+ * @param slice  An `alloc_slice` mapping a range of bits in the field to a
+ *               range of bits in a container.
+ * @param pov_range  The range corresponding to the bits from POV state/flags bits.
+ * @param pov_type_string  Optional string with info about type of POV (state/flags).
+ * @return a string containing debugging info describing the mapping between the
+ * field, the container, and POV state/flags bits read by the `Extract`.
+ */
+cstring debugInfoFor(const IR::BFN::Extract* extract, const PHV::AllocSlice& slice,
+        const le_bitrange& pov_range, const cstring pov_type_string) {
+    std::stringstream info;
+    /// Describe the value that's being written into the destination container.
+    info << "POV " << pov_type_string << ((pov_type_string != "") ? " " : "") <<
+            pov_range << " -> " << slice.container() << " " <<
+            slice.container_slice() << ": " <<
+    /// Describe the field slice that we're writing to.
+            debugInfoFor(extract->dest, slice, /* includeContainerInfo = */ false);
     return cstring(info);
 }
 

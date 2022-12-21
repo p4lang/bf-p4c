@@ -296,7 +296,7 @@ struct ParserAsmSerializer : public ParserInspector {
                     if (size != PHV::Size::b32)
                         out << "[ ";
                     std::string sep = "";
-                    for (auto &offset : phe_source.offsets) {
+                    for (auto &offset : phe_source.values) {
                         out << sep << offset.container;
                         if (size != PHV::Size::b8)
                             out << " msb_offset ";
@@ -313,7 +313,7 @@ struct ParserAsmSerializer : public ParserInspector {
             } else {
                 out << indent << "- { ";
                 std::string sep = "";
-                for (auto &offset : phe_source.offsets) {
+                for (auto &offset : phe_source.values) {
                     out << sep << offset.container;
                     out << ": " << get_subtype_label(offset.subtype) << " ";
                     out << offset.value;

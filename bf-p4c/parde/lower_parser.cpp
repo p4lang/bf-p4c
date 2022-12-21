@@ -49,55 +49,6 @@ namespace Parde::Lowered {
 
 #ifdef HAVE_FLATROCK
 
-/***
- * Intermediate representation of parser extractions.
- * Fed by ComputeFlatrockParserIR, consumed by ReplaceFlatrockParserIR.
- * @pre The slices stored in @a slices should not overlap.
- */
-struct ParserExtract {
-    Flatrock::ExtractType type;
-    Flatrock::ExtractSubtype subtype;
-
-    // size of the PHV container of this extraction
-    PHV::Size size;
-    // slices of the PHV container of this extraction; might not be the whole container if multiple
-    // extractions are packed into one PHV container
-    mutable std::vector<le_bitrange> slices;
-    /**
-     * @brief Container index (starting from 0 in each size category B/H/W)
-     *
-     * B0 -> 0
-     * B1 -> 1
-     * ...
-     * H0 -> 0
-     * H1 -> 1
-     * ...
-     * W0 -> 0
-     * W1 -> 1
-     */
-    unsigned int index;
-
-    cstring hdr;
-    /// In case of a constant, @a offset stores the value of the constant at proper bit position.
-    /// If more constants are mapped to a single container, their values are merged in @a offset.
-    /// Marked mutable since the value is updated for constants when more are mapped to a single
-    /// container.
-    mutable int offset;
-
-    /// Textual information about extracts
-    mutable std::vector<cstring> comments;
-
-    bool operator<(const ParserExtract& e) const {
-        // header name does not affect ordering
-        if (type == Flatrock::ExtractType::Packet)
-            return std::tie(size, index, offset, type, subtype) <
-                std::tie(e.size, e.index, e.offset, e.type, e.subtype);
-        // don't match on offset because it stores the value of the constant
-        return std::tie(size, index, type, subtype) <
-            std::tie(e.size, e.index, e.type, e.subtype);
-    }
-};
-
 /**
  * @brief All information from a parser state needed to create corresponding analyzer rules.
  */
@@ -155,100 +106,210 @@ struct AnalyzerRuleInfo {
     std::vector<Transition> transitions;
 };
 
-class ComputeFlatrockParserIR : public ParserInspector {
-    typedef std::tuple<gress_t, PHV::Size, unsigned int /* index */, le_bitrange /* slice */>
-        ExtractCommentInfo;
+constexpr auto BITS_IN_BYTE = 8;
 
+class ComputeFlatrockParserIR : public ParserInspector {
+    typedef std::tuple<PHV::Size, unsigned int /* container index */,
+            unsigned int /* byte index inside container */> PovFlagsContainerInfo;
+
+    /// Information about PHV allocation of the fields.
     const PhvInfo& phv;
+    /// Information about definitions and uses of fields.
     const FieldDefUse& defuse;
 
+    /// The name of ingress intrinsic metadata structure.
     cstring igMetaName;
-    std::map<const IR::BFN::ParserState*, std::set<cstring>> headers;
-    // Ingress intrinsic metadata has been extracted
+    /// Ingress intrinsic metadata has been extracted.
     bool igMetaExtracted;
+    /// The names of headers extracted in a given state.
+    std::map<const IR::BFN::ParserState*, std::set<cstring>> headers;
+    /**
+     * @brief Maps byte of PHV container containing $valid field to a POV flags byte.
+     *
+     * @note Currently the same PHV allocation is used for both ingress and egress,
+     *       so we have only one map.
+     *       If there will be a different PHV allocation for ingress and egress in the future,
+     *       this has to be changed to have a specific map for ingress and egress.
+     */
+    std::map<const PovFlagsContainerInfo, unsigned int> pov_flags_byte;
+    /**
+     * @brief Container slices (bytes) assigned to POV flags bytes collected during the pass.
+     *
+     * These refs need to be updated during the tree traversal because the debug info messages
+     * are added gradually and IR::Vector keeps pointers to constant objects so they can not
+     * be updated there.
+     */
+    std::vector<std::pair<IR::BFN::ContainerRef*, ordered_set<cstring>>> pov_flags;
+    /// Populated at the end of the pass from pov_flags.
+    IR::Vector<IR::BFN::ContainerRef> pov_flags_refs;
 
     profile_t init_apply(const IR::Node *node) override {
-        headers.clear();
-        rules_info.clear();
-        extracts.clear();
         igMetaExtracted = false;
+        headers.clear();
+        pov_flags_byte.clear();
+        pov_flags.clear();
+        pov_flags_refs.clear();
+        rules_info.clear();
+        extracts_info.clear();
         return Inspector::init_apply(node);
+    }
+
+    /**
+     * @brief Allocates the mapping between a POV field and a byte in POV flags vector.
+     *
+     * This method checks, if there already is a mapping between the container byte
+     * in which the field is allocated and a byte in POV flags vector.
+     * This happens if any POV field which is allocated in the same container byte
+     * has already been processed.
+     * If not, an unused byte from POV flags vector is assigned to the given container
+     * byte in which the field is allocated.
+     *
+     * @param alloc PHV allocation of the given field.
+     * @param field_name Name of the field for which a POV flag byte is allocated
+     *        (header validity bit ($valid)).
+     * @return The byte in POV flags vector that will be extracted to the byte of PHV
+     *         container where the field is allocated.
+     */
+    unsigned int allocate_pov_flags(const PHV::AllocSlice& alloc,
+            const cstring field_name) {
+        auto container_ref = new IR::BFN::ContainerRef(alloc.container());
+        int lo = alloc.container_slice().loByte() * BITS_IN_BYTE;
+        int hi = lo + (BITS_IN_BYTE - 1);
+        le_bitrange slice_range{lo, hi};
+        container_ref->range = slice_range.toOrder<Endian::Network>(alloc.container().size());
+
+        PovFlagsContainerInfo container_info{alloc.container().type().size(),
+                alloc.container().index(), alloc.container_slice().loByte()};
+        unsigned int value;
+        cstring debug_info = debugInfoFor(field_name, alloc);
+
+        if (pov_flags_byte.find(container_info) != pov_flags_byte.end()) {
+            value = pov_flags_byte[container_info];
+            pov_flags[value].second.emplace(debug_info);
+            LOG3("POV flags byte for container slice: " << container_ref << " is: " << value);
+        } else {
+            if (pov_flags_byte.size() == Flatrock::PARSER_FLAGS_WIDTH) {
+                // TODO try to add some source info to this error message
+                ::error(ErrorType::ERR_UNSUPPORTED,
+                        "Compiler could not allocate resources for all headers "
+                        "used in the program");
+            }
+            value = pov_flags_byte.size();
+            pov_flags_byte.emplace(container_info, pov_flags_byte.size());
+            pov_flags.push_back(std::make_pair(container_ref, ordered_set<cstring>{debug_info}));
+            LOG3("Allocated POV flags byte " << value << " for container slice: " << container_ref);
+        }
+        return value;
+    }
+
+    /**
+     * @brief This function allocates and assigns POV flag byte with index 0 to a dummy field
+     *        to work around a problem with clearing POV flags bit 0.
+     *
+     * FIXME
+     * When a modify_flag0|1 action, see:
+     * https://wiki.ith.intel.com/pages/viewpage.action?pageId=1767708926#Parser-Modify_Flag
+     * sets POV flags bit with index 0, then this bit is cleared in the next stage unless both
+     * modify_flag0 and modify_flag1 actions are used in the used rules in the next stages.
+     * If POV flags byte 0 is used for a container byte which uses this bit with index 0, then
+     * the value of this bit set in analyzer is overwritten in following stages.
+     * This workaround assigns the POV flags byte with index 0 to otherwise unused PHV byte
+     * allocated for field ingress_intrinsic_metadata_for_tm.$zero.
+     *
+     * @param pipe Pipe IR node.
+     */
+    void add_zero_pov_flag_byte(const IR::BFN::Pipe* pipe) {
+        auto* tmMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_tm");
+        BUG_CHECK(tmMeta, "Could not find ingress_intrinsic_metadata_for_tm");
+        const cstring zeroFieldName = tmMeta->name + ".$zero";
+        const auto* phv_field = phv.field(zeroFieldName);
+        CHECK_NULL(phv_field);
+        const auto allocs = phv_field->get_alloc();
+        BUG_CHECK(allocs.size() == 1, "Unexpected number of allocations (%1%) for field %2%",
+                allocs.size(), zeroFieldName);
+        const auto& alloc = allocs.front();
+        BUG_CHECK(alloc.container().size() == BITS_IN_BYTE,
+                "Unexpected size %1% of container for field %2% with allocation: %3%",
+                alloc.container().size(), zeroFieldName, alloc);
+
+        unsigned int id = allocate_pov_flags(alloc, phv_field->name);
+        LOG3("Allocated POV flag byte: " << id << " for: " << alloc);
+    }
+
+    /**
+     * @brief Adds information about packet PHE source extract.
+     */
+    void add_packet_extract(const gress_t gress, const PHV::AllocSlice& alloc,
+            const cstring comment, const cstring hdr_name, unsigned int offset) {
+        // TODO check if the layout of slices in the container is the same as the layout
+        // of fields in the header in case of extract from packet
+        Flatrock::ParserExtractContainer container{alloc.container().type().size(),
+                alloc.container().index()};
+        auto it = extracts_info[gress].find(container);
+        if (it != extracts_info[gress].end()) {
+            auto& extract_value = it->second;
+            BUG_CHECK(Flatrock::ExtractType::Packet == extract_value.type,
+                    "Allocation of field: \"%1%\" can not be satisfied as it requires to use"
+                    " extraction from packet and other source to the same container",
+                    alloc);
+            BUG_CHECK(hdr_name == extract_value.get_header_name(),
+                    "Fields from different headers (%1%, %2%)"
+                    " are not supported in the same container: %3%",
+                    hdr_name, extract_value.get_header_name(), alloc);
+            BUG_CHECK(offset == extract_value.get_source_offset(),
+                    "Field offset (%1%) differs from offset (%2%) of other field allocated"
+                    " in the same container: %3%",
+                    offset, extract_value.get_source_offset(), alloc);
+            extract_value.add_comment(comment);
+            LOG3("Extract updated:" << std::endl <<
+                    "  " << container << ": " << extract_value);
+        } else {
+            Flatrock::ParserExtractValue extract_value{Flatrock::ExtractType::Packet, comment,
+                    hdr_name, offset};
+            extracts_info[gress].emplace(container, extract_value);
+            LOG3("Adding new extract:" << std::endl <<
+                    "  " << container << ": " << extract_value);
+        }
+    }
+
+    /**
+     * @brief Adds information about other PHE source extract.
+     */
+    void add_other_extract(const gress_t gress, const PHV::AllocSlice& alloc,
+            const cstring comment, const le_bitrange slice,
+            const Flatrock::ExtractSubtype subtype, const unsigned int constant) {
+        Flatrock::ParserExtractContainer container{alloc.container().type().size(),
+                alloc.container().index()};
+        auto it = extracts_info[gress].find(container);
+        if (it != extracts_info[gress].end()) {
+            auto& extract_value = it->second;
+            BUG_CHECK(Flatrock::ExtractType::Other == extract_value.type,
+                    "Allocation of field: \"%1%\" can not be satisfied as it requires to use"
+                    " extraction from packet and other source to the same container",
+                    alloc);
+            extract_value.add_slice(slice, subtype, constant);
+            extract_value.add_comment(comment);
+            LOG3("Extract updated:" << std::endl <<
+                    "  " << container << ": " << extract_value);
+        } else {
+            Flatrock::ParserExtractValue extract_value{Flatrock::ExtractType::Other, comment,
+                    slice, subtype, constant};
+            extracts_info[gress].emplace(container, extract_value);
+            LOG3("Adding new extract:" << std::endl <<
+                    "  " << container << ": " << extract_value);
+        }
     }
 
     bool preorder(const IR::BFN::Pipe* pipe) override {
         auto *igMeta = getMetadataType(pipe, "ingress_intrinsic_metadata");
         BUG_CHECK(igMeta, "Could not find ingress_intrinsic_metadata");
         igMetaName = igMeta->name;
+        add_zero_pov_flag_byte(pipe);
         return true;
-    }
-
-    void add_extract(const gress_t gress, const PHV::AllocSlice& alloc,
-            const ParserExtract& new_pe) {
-        // TODO check if the layout of slices in the container is the same as the layout
-        // of fields in the header in case of extract from packet
-        // TODO check the container with fields extracted from packet if it does not
-        // contain other types of slices
-        BUG_CHECK(new_pe.slices.size() == 1, "New extract should have exactly 1 slice");
-        auto pe = extracts[gress].find(new_pe);
-        if (pe == extracts[gress].end()) {
-            extracts[gress].insert(new_pe);
-        } else {
-            if (new_pe.type == Flatrock::ExtractType::Packet)
-                BUG_CHECK(new_pe.hdr == pe->hdr,
-                    "Fields from different headers (%1%, %2%)"
-                    " are not supported in the same container: %3%",
-                    new_pe.hdr, pe->hdr, alloc);
-            pe->slices.push_back(new_pe.slices.front());
-            pe->comments.push_back(new_pe.comments.front());
-            // merge constants
-            pe->offset |= new_pe.offset;
-        }
     }
 
     bool preorder(const IR::BFN::ParserZeroInit* zero) override {
         return preorder(new IR::BFN::Extract(zero->field, new IR::BFN::ConstantRVal(0)));
-    }
-
-    ParserExtract extract_packet(const PHV::AllocSlice &alloc,
-            const cstring hdr_name, int container_offset_in_bytes,
-            const cstring comment) {
-        ParserExtract e = {
-            .type = Flatrock::ExtractType::Packet,
-            .subtype = Flatrock::ExtractSubtype::None,
-            .size = alloc.container().type().size(),
-            .slices = std::vector<le_bitrange>{alloc.container_slice()},
-            .index = alloc.container().index(),
-            .hdr = hdr_name,
-            .offset = container_offset_in_bytes,
-            .comments = std::vector<cstring>{comment}
-        };
-
-        return e;
-    }
-
-    ParserExtract extract_constant(const PHV::AllocSlice &alloc,
-            const IR::BFN::ConstantRVal *constant, const cstring hdr_name,
-            const cstring comment, const Flatrock::ExtractSubtype subtype) {
-        auto value = constant->constant->asUnsigned();
-        // Check that the value doesn't overflow
-        const auto max_slice_value = (1ULL << alloc.container_slice().size()) - 1;
-        BUG_CHECK(value <= max_slice_value,
-            "Value %1% too big for the constainer slice %2%%3% %4%", value,
-            alloc.container().type().size(), alloc.container().index(), alloc.container_slice());
-
-        ParserExtract e = {
-            .type = Flatrock::ExtractType::Other,
-            .subtype = subtype,
-            .size = alloc.container().type().size(),
-            .slices = std::vector<le_bitrange>{alloc.container_slice()},
-            .index = alloc.container().index(),
-            .hdr = hdr_name,
-            // Store the value at proper bit position
-            .offset = static_cast<int>(value << alloc.container_slice().lo),
-            .comments = std::vector<cstring>{comment}
-        };
-
-        return e;
     }
 
     int get_hdr_bit_width(const IR::Expression *expr) {
@@ -307,7 +368,6 @@ class ComputeFlatrockParserIR : public ParserInspector {
         if (allocs.size() > 0) {
             const auto& alloc = allocs.front();
 
-            ParserExtract e;
             cstring comment = debugInfoFor(extract, alloc,
                     extract->source->is<IR::BFN::InputBufferRVal>() ?
                         extract->source->to<IR::BFN::InputBufferRVal>()->range :
@@ -316,7 +376,7 @@ class ComputeFlatrockParserIR : public ParserInspector {
 
             if (const auto *pkt_rval = extract->source->to<IR::BFN::PacketRVal>()) {
                 size_t hdr_bit_width = get_hdr_bit_width(lval->field);
-                BUG_CHECK(hdr_bit_width % 8 == 0,
+                BUG_CHECK(hdr_bit_width % BITS_IN_BYTE == 0,
                         "Header %1% is not byte-aligned (%2% bits) during parser lowering",
                         hdr_name, hdr_bit_width);
                 int after_field_bits = phv_field->offset;
@@ -328,7 +388,7 @@ class ComputeFlatrockParserIR : public ParserInspector {
                         " is lower than offset of destination field (%3%)",
                         extract, pkt_rval->range.lo, field_offset_in_bits);
                 int hdr_offset_in_bits = pkt_rval->range.lo - field_offset_in_bits;
-                BUG_CHECK(hdr_offset_in_bits % 8 == 0,
+                BUG_CHECK(hdr_offset_in_bits % BITS_IN_BYTE == 0,
                         "Offset of header %1% is not byte-aligned (%2% bits)"
                         " during parser lowering",
                         hdr_name, hdr_offset_in_bits);
@@ -336,42 +396,64 @@ class ComputeFlatrockParserIR : public ParserInspector {
                         (alloc.container().size() - (alloc.container_slice().hi + 1));
                 LOG5("container_offset_in_bits: " << container_offset_in_bits);
                 BUG_CHECK(container_offset_in_bits >= 0, "Invalid container allocation");
-                BUG_CHECK(container_offset_in_bits % 8 == 0,
+                BUG_CHECK(container_offset_in_bits % BITS_IN_BYTE == 0,
                         "Invalid position of slice in container");
-                int container_offset_in_bytes = container_offset_in_bits / 8;
+                int container_offset_in_bytes = container_offset_in_bits / BITS_IN_BYTE;
                 LOG5("container_offset_in_bytes: " << container_offset_in_bytes);
-                e = extract_packet(alloc, hdr_name, container_offset_in_bytes, comment);
                 const auto *state = findContext<IR::BFN::ParserState>();
                 CHECK_NULL(state);
                 if (headers[state].count(hdr_name) == 0) {
-                    int push_hdr_width = hdr_bit_width / 8;
+                    int push_hdr_width = hdr_bit_width / BITS_IN_BYTE;
                     headers[state].insert(hdr_name);
                     LOG3("Collecting state[" << state->name << "] push_hdr: " << hdr_name <<
                             ", width (in bytes): " << push_hdr_width <<
-                            ", offset (in bytes): " << (hdr_offset_in_bits / 8));
+                            ", offset (in bytes): " << (hdr_offset_in_bits / BITS_IN_BYTE));
                     rules_info[state].push_hdr.push_back({
                         hdr_name,
                         push_hdr_width,
-                        hdr_offset_in_bits / 8
+                        hdr_offset_in_bits / BITS_IN_BYTE
                     });
                 }
+                if (used_in_ingress)
+                    add_packet_extract(INGRESS, alloc, comment, hdr_name,
+                            container_offset_in_bytes);
+                if (used_in_egress)
+                    add_packet_extract(EGRESS, alloc, comment, hdr_name,
+                            container_offset_in_bytes);
             } else if (const auto* const_rval = extract->source->to<IR::BFN::ConstantRVal>()) {
+                le_bitrange slice = alloc.container_slice();
                 auto subtype = Flatrock::ExtractSubtype::Constant;
-                if (auto member = extract->dest->to<IR::Member>()) {
+                unsigned int value = const_rval->constant->asUnsigned();
+                // Check that the value doesn't overflow
+                const auto max_slice_value = (1ULL << alloc.container_slice().size()) - 1;
+                BUG_CHECK(value <= max_slice_value,
+                    "Value %1% too big for the container slice %2%%3% %4%", value,
+                    alloc.container().type().size(), alloc.container().index(),
+                    alloc.container_slice());
+
+                if (auto member = lval->field->to<IR::Member>()) {
                     if (member->member.name == "$valid") {
+                        BUG_CHECK(alloc.container_slice().size() == 1,
+                                "Unexpected $valid flag size");
+                        unsigned int bit_index = alloc.container_slice().lo % BITS_IN_BYTE;
+                        slice.lo = alloc.container_slice().loByte() * BITS_IN_BYTE;
+                        slice.hi = slice.lo + (BITS_IN_BYTE - 1);
                         subtype = Flatrock::ExtractSubtype::PovFlags;
+                        /// Assign a byte from POV flags vector to a PHV container byte
+                        /// which holds the value of the $valid field.
+                        value = allocate_pov_flags(alloc, lval->field->toString());
+                        int pov_flag_index = value * BITS_IN_BYTE + bit_index;
+                        const le_bitrange pov_flags_range{pov_flag_index, pov_flag_index};
+                        comment = debugInfoFor(extract, alloc, pov_flags_range, "flags");
                     }
                 }
-                e = extract_constant(alloc, const_rval, hdr_name, comment, subtype);
-            }
 
-            // FIXME If a header field is modified in ingress and then used in egress,
-            // extracting it again in egress would overwrite the changes from ingress.
-            // The PHEs from ingress should be copied to egress instead.
-            if (used_in_ingress)
-                add_extract(INGRESS, alloc, e);
-            if (used_in_egress)
-                add_extract(EGRESS, alloc, e);
+                if (used_in_ingress ||
+                        (subtype == Flatrock::ExtractSubtype::PovFlags && used_in_egress))
+                    add_other_extract(INGRESS, alloc, comment, slice, subtype, value);
+                if (used_in_egress)
+                    add_other_extract(EGRESS, alloc, comment, slice, subtype, value);
+            }
         };
 
         return true;
@@ -414,7 +496,8 @@ class ComputeFlatrockParserIR : public ParserInspector {
 
             int offset_in_bits = packet_source->range.lo;
             int size = packet_source->range.size();
-            BUG_CHECK(offset_in_bits % 8 == 0, "Unsupported offset of match value (in bits): %1%",
+            BUG_CHECK(offset_in_bits % BITS_IN_BYTE == 0,
+                      "Unsupported offset of match value (in bits): %1%",
                       offset_in_bits);
             BUG_CHECK(size <= 16,
                       "Cannot match on %1%b value; maximum size is %2%b",
@@ -422,7 +505,7 @@ class ComputeFlatrockParserIR : public ParserInspector {
             BUG_CHECK(transition_info.next_w.size() < 2,
                       "Only %1% 16-bit match values are supported, can not collect: %2%",
                       2, save);
-            transition_info.next_w.push_back({offset_in_bits / 8, size});
+            transition_info.next_w.push_back({offset_in_bits / BITS_IN_BYTE, size});
         }
 
         LOG3("Collecting state[" << state->name <<
@@ -468,22 +551,16 @@ class ComputeFlatrockParserIR : public ParserInspector {
             std::reverse(kv.second.transitions.begin(), kv.second.transitions.end());
         }
 
+        for (auto& [container_ref, debug_info_set] : pov_flags) {
+            container_ref->debug.info.insert(container_ref->debug.info.begin(),
+                    debug_info_set.begin(), debug_info_set.end());
+            pov_flags_refs.push_back(container_ref);
+        }
+
         auto log = [this](gress_t gress){
-            if (extracts.count(gress) == 0) return;
-            for (const auto& extract : extracts.at(gress)) {
-                LOG3("  size=" << extract.size
-                  << ", index=" << extract.index
-                  << ", type=" << extract.type
-                  << ", subtype=" << extract.subtype
-                  << ", header=" << extract.hdr
-                  << ", offset=" << extract.offset);
-                unsigned int i = 0;
-                for (const auto& slice : extract.slices) {
-                    LOG3("    slice=" << slice);
-                    if (i < extract.comments.size())
-                        LOG3("      " << extract.comments[i]);
-                    ++i;
-                }
+            if (extracts_info.count(gress) == 0) return;
+            for (const auto& extract : extracts_info.at(gress)) {
+                LOG3("  " << extract.first << ": " << extract.second);
             }
         };
 
@@ -494,6 +571,13 @@ class ComputeFlatrockParserIR : public ParserInspector {
             log(EGRESS);
             LOG3("[ComputeFlatrockParserIR] ingress_intrinsic_metadata has "
                 << (igMetaExtracted ? "" : "not ") << "been extracted");
+            LOG3("[ComputeFlatrockParserIR] POV flags:");
+            int i = 0;
+            for (auto containerRef : pov_flags_refs) {
+                LOG3("  " << i++ << ": " << containerRef);
+                for (auto debug_info : containerRef->debug.info)
+                    LOG3("    comment=\"" << debug_info << "\"");
+            }
         }
 
         // FIXME when ingress intrinsic metadata were not extracted or no field from ingress
@@ -512,7 +596,46 @@ class ComputeFlatrockParserIR : public ParserInspector {
      * @brief Information about extracts performed in parser needed to create
      *        corresponding PHV builder extracts.
      */
-    std::map<gress_t, std::set<ParserExtract>> extracts;
+    std::map<gress_t, std::map<Flatrock::ParserExtractContainer,
+            Flatrock::ParserExtractValue>> extracts_info;
+
+    /**
+     * @brief Get the pointer to the vector of container refs corresponding to
+     *        the containers into which the POV flags bytes are extracted.
+     *
+     * The order in the vector is the order of byte in POV flags vector.
+     */
+    const IR::Vector<IR::BFN::ContainerRef>* get_pov_flags_refs() const {
+        return &pov_flags_refs;
+    }
+
+    /**
+     * @brief Get the POV flags byte index for specified PHV field allocation.
+     *
+     * @param alloc PHV allocation slice.
+     * @return boost::optional<unsigned int> POV flags byte index if POV flags byte
+     *         is assigned to a PHV byte given by alloc slice.
+     */
+    boost::optional<unsigned int> get_pov_flags_byte(const PHV::AllocSlice& alloc) const {
+        PovFlagsContainerInfo container_info{alloc.container().type().size(),
+                alloc.container().index(), alloc.container_slice().loByte()};
+        auto it = pov_flags_byte.find(container_info);
+        if (it != pov_flags_byte.end()) {
+            return it->second;
+        } else {
+            /// FIXME
+            /// Ideally this should be a BUG, but currently this case may happen when
+            /// a $valid field of a header is not used and thus it is optimized out
+            /// and there is no IR::BFN::Extract for that $valid field, but the header
+            /// is still pushed to hdr_ptrs list so we try to set a flag for the $valid
+            /// field and call this function.
+            /// When the logic for generating modify_flag actions will be changed so that
+            /// the modify_flag actions are generated based on the extracts and not for
+            /// each pushed header, this will be removed anyway.
+            LOG1("Unknown POV flags byte for PHV field allocation: " << alloc);
+            return boost::none;
+        }
+    }
 
     ComputeFlatrockParserIR(const PhvInfo& phv, const FieldDefUse& defuse) :
         phv(phv), defuse(defuse) {}
@@ -535,6 +658,124 @@ class ReplaceFlatrockParserIR : public ParserTransform {
     typedef IR::Vector<IR::Flatrock::PhvBuilderGroup> PhvBuilder;
 
     mutable cstring initial_state_name;
+
+    /**
+     * @brief Creates a modify_flag action for a specified header.
+     *
+     * FIXME
+     * Currently we use a modify_flag action to set a $valid field for each
+     * header we are pushing to hdr_ptrs list.
+     * This approach does not work if there is a header which is not pushed
+     * to the hdr_ptrs list (f.e. when all header fields are extracted from
+     * constants or anything else than packet) or if there is an explicit
+     * invalidation of a header (which may happen in case setInvalid() is
+     * called in the source program or when a subparser with out headers is
+     * used).
+     *
+     * @param hdr_name Name of a header for which we create a modify_flag action.
+     * @return boost::optional<::Flatrock::ModifyFlag> modify_flag action.
+     */
+    boost::optional<::Flatrock::ModifyFlag> create_modify_flag(const cstring hdr_name) const {
+        if (hdr_name == payloadHeaderName)
+            return boost::none;
+
+        ::Flatrock::ModifyFlag modify_flag{};
+        modify_flag.imm = true;
+
+        const PHV::Field* valid_field = nullptr;
+        for (const auto& kv : phv.get_all_fields()) {
+            if (kv.second.pov && hdr_name == kv.second.header()) {
+                valid_field = &kv.second;
+            }
+        }
+
+        if (!valid_field) {
+            BUG("Could not find $valid field for header %1%", hdr_name);
+        } else {
+            auto allocs = phv.get_alloc(valid_field, nullptr, PHV::AllocContext::PARSER);
+            if (allocs.empty()) {
+                /// FIXME
+                /// This case may also happen when $valid field of a header is not
+                /// used and thus optimized out.
+                /// This is just temporary until the logic for generating modify_flag
+                /// actions is changed to generate those actions based on the extracts
+                /// and not for each pushed header.
+                LOG1("Could not find the alloc slice for " << valid_field);
+                return boost::none;
+            }
+            PHV::AllocSlice alloc = allocs.front();
+            unsigned int bit_index = alloc.container_slice().lo % BITS_IN_BYTE;
+            auto byte_index = computed.get_pov_flags_byte(alloc);
+            if (!byte_index)
+                return boost::none;
+            modify_flag.shift = (*byte_index) * BITS_IN_BYTE + bit_index;
+        }
+
+        return modify_flag;
+    }
+
+    /**
+     * @brief Get the analyzer stage with given index.
+     *
+     * @param stage_id Index of analyzer stage to get.
+     * @param analyzer_stages Vector of analyzer stages.
+     * @return IR::Flatrock::AnalyzerStage* Either a newly created analyzer stage or
+     *         an existing analyzer stage already stored in the vector.
+     */
+    IR::Flatrock::AnalyzerStage* get_analyzer_stage(unsigned int stage_id,
+            std::vector<IR::Flatrock::AnalyzerStage*>& analyzer_stages) const {
+        // FIXME when stages and rules allocation is optimized, this should
+        // be converted to a proper error message
+        BUG_CHECK(stage_id < ::Flatrock::PARSER_ANALYZER_STAGES,
+                "Maximum number of analyzer stages (%1%) exceeded",
+                ::Flatrock::PARSER_ANALYZER_STAGES);
+
+        IR::Flatrock::AnalyzerStage* analyzer_stage;
+        if (stage_id >= analyzer_stages.size()) {
+            analyzer_stage = new IR::Flatrock::AnalyzerStage(stage_id);
+            analyzer_stages.push_back(analyzer_stage);
+            LOG3("Added AnalyzerStage: " << stage_id);
+        } else {
+            analyzer_stage = analyzer_stages[stage_id];
+        }
+        return analyzer_stage;
+    }
+
+    /**
+     * @brief Sets values for push_hdr_id and modify_flag actions.
+     *
+     * @param push_hdr_id push_hdr_id action to set.
+     * @param modify_flag modify_flag action to set.
+     * @param analyzer_stage Current analyzer stage.
+     * @param hdr_id Header ID of pushed header.
+     * @param state_info Information about currently processed state.
+     * @return unsigned int Rule ID of rule in which we push the header.
+     */
+    unsigned int prepare_push_hdr(boost::optional<::Flatrock::PushHdrId>& push_hdr_id,
+            boost::optional<::Flatrock::ModifyFlag>& modify_flag,
+            IR::Flatrock::AnalyzerStage* analyzer_stage,
+            unsigned int hdr_id, AnalyzerRuleInfo& state_info) const {
+        unsigned int rule_id = analyzer_stage->rules.size();
+        // This is a bug, this should not happen as state splitting should take care of this
+        BUG_CHECK(rule_id < ::Flatrock::PARSER_ANALYZER_STAGE_RULES,
+                "Maximum number of analyzer rules (%1%) in stage %2% exceeded",
+                ::Flatrock::PARSER_ANALYZER_STAGE_RULES, analyzer_stage->stage);
+
+        if (hdr_id < state_info.push_hdr.size()) {
+            const auto hdr_id_map = parserHeaderSeqs.header_ids.find(
+                    {INGRESS, state_info.push_hdr[hdr_id].name});
+            BUG_CHECK(hdr_id_map != parserHeaderSeqs.header_ids.end(),
+                    "Could not find hdr_id for ingress header: %1%",
+                    state_info.push_hdr[hdr_id].name);
+            push_hdr_id = ::Flatrock::PushHdrId {
+                static_cast<uint8_t>(hdr_id_map->second),
+                static_cast<uint8_t>(state_info.push_hdr[hdr_id].offset)
+            };
+            // update the valid bit in POV flags
+            modify_flag = create_modify_flag(state_info.push_hdr[hdr_id].name);
+        }
+        return rule_id;
+    }
 
     void make_analyzer_rules(IR::Flatrock::Parser* lowered_parser,
             const IR::BFN::Parser* parser) const {
@@ -593,33 +834,11 @@ class ReplaceFlatrockParserIR : public ParserTransform {
                     state_info.push_hdr.size(); ++hdr_id, ++stage_id) {
                 // For each header extraction, there is a separate stage
                 // Create rule only with push_hdr_id
-
-                // FIXME when stages and rules allocation is optimized, this should
-                // be converted to a proper error message
-                BUG_CHECK(stage_id < ::Flatrock::PARSER_ANALYZER_STAGES,
-                        "Maximum number of analyzer stages (%1%) exceeded",
-                        ::Flatrock::PARSER_ANALYZER_STAGES);
-
-                if (stage_id >= analyzer_stages.size()) {
-                    analyzer_stage = new IR::Flatrock::AnalyzerStage(stage_id);
-                    analyzer_stages.push_back(analyzer_stage);
-                    LOG3("Added AnalyzerStage: " << stage_id);
-                } else {
-                    analyzer_stage = analyzer_stages[stage_id];
-                }
-
-                unsigned int rule_id = analyzer_stage->rules.size();
-
-                // This should not happen, split states takes care of that
-                BUG_CHECK(rule_id < ::Flatrock::PARSER_ANALYZER_STAGE_RULES,
-                        "Maximum number of analyzer rules (%1%) in stage %2% exceeded",
-                        ::Flatrock::PARSER_ANALYZER_STAGE_RULES, stage_id);
-
-                const auto hdr_id_map = parserHeaderSeqs.header_ids.find(
-                        {INGRESS, state_info.push_hdr[hdr_id].name});
-                BUG_CHECK(hdr_id_map != parserHeaderSeqs.header_ids.end(),
-                        "Could not find hdr_id for ingress header: %1%",
-                        state_info.push_hdr[hdr_id].name);
+                analyzer_stage = get_analyzer_stage(stage_id, analyzer_stages);
+                boost::optional<::Flatrock::PushHdrId> push_hdr_id{boost::none};
+                boost::optional<::Flatrock::ModifyFlag> modify_flag{boost::none};
+                unsigned int rule_id = prepare_push_hdr(push_hdr_id, modify_flag,
+                        analyzer_stage, hdr_id, state_info);
 
                 boost::optional<cstring> next_state_name{boost::none};
                 if (state_info.transitions.size() > 0)
@@ -632,12 +851,9 @@ class ReplaceFlatrockParserIR : public ParserTransform {
                     /* next_w0_offset */ boost::none,
                     /* next_w1_offset */ boost::none,
                     /* next_w2_offset */ boost::none);
-                analyzer_rule->push_hdr_id = ::Flatrock::PushHdrId {
-                    static_cast<uint8_t>(hdr_id_map->second),
-                    static_cast<uint8_t>(state_info.push_hdr[hdr_id].offset)
-                };
-
+                analyzer_rule->push_hdr_id = push_hdr_id;
                 analyzer_rule->match_state = state_match;
+                analyzer_rule->modify_flag0 = modify_flag;
                 analyzer_rule->next_alu0_instruction = Flatrock::alu0_instruction(
                     Flatrock::alu0_instruction::OPCODE_NOOP);
                 analyzer_rule->next_alu1_instruction = Flatrock::alu1_instruction(
@@ -647,66 +863,14 @@ class ReplaceFlatrockParserIR : public ParserTransform {
             }
 
             if (state_info.transitions.size() > 0) {
-                // FIXME when stages and rules allocation is optimized, this should
-                // be converted to a proper error message
-                BUG_CHECK(stage_id < ::Flatrock::PARSER_ANALYZER_STAGES,
-                        "Maximum number of analyzer stages (%1%) exceeded",
-                        ::Flatrock::PARSER_ANALYZER_STAGES);
-
-                if (stage_id >= analyzer_stages.size()) {
-                    analyzer_stage = new IR::Flatrock::AnalyzerStage(stage_id);
-                    analyzer_stages.push_back(analyzer_stage);
-                    LOG3("Added AnalyzerStage: " << stage_id);
-                } else {
-                    analyzer_stage = analyzer_stages[stage_id];
-                }
+                analyzer_stage = get_analyzer_stage(stage_id, analyzer_stages);
             }
 
             for (const auto& transition : state_info.transitions) {
-                unsigned int rule_id = analyzer_stage->rules.size();
-
-                // This is a bug, this should not happen as state splitting should
-                // take care of this
-                BUG_CHECK(rule_id < ::Flatrock::PARSER_ANALYZER_STAGE_RULES,
-                        "Maximum number of analyzer rules (%1%) in stage %2% exceeded",
-                        ::Flatrock::PARSER_ANALYZER_STAGE_RULES, stage_id);
-
                 boost::optional<::Flatrock::PushHdrId> push_hdr_id{boost::none};
                 boost::optional<::Flatrock::ModifyFlag> modify_flag{boost::none};
-                if (hdr_id < state_info.push_hdr.size()) {
-                    const auto hdr_id_map = parserHeaderSeqs.header_ids.find(
-                            {INGRESS, state_info.push_hdr[hdr_id].name});
-                    BUG_CHECK(hdr_id_map != parserHeaderSeqs.header_ids.end(),
-                            "Could not find hdr_id for ingress header: %1%",
-                            state_info.push_hdr[hdr_id].name);
-                    push_hdr_id = ::Flatrock::PushHdrId {
-                        static_cast<uint8_t>(hdr_id_map->second),
-                        static_cast<uint8_t>(state_info.push_hdr[hdr_id].offset)
-                    };
-                    modify_flag = ::Flatrock::ModifyFlag();
-                    modify_flag->imm = true;
-
-                    auto hdr_name = state_info.push_hdr[hdr_id].name;
-                    const PHV::Field* valid_field = nullptr;
-                    for (const auto& kv : phv.get_all_fields()) {
-                        if (kv.second.pov && hdr_name == kv.second.header()) {
-                            valid_field = &kv.second;
-                        }
-                    }
-
-                    if (!valid_field) {
-                        LOG1("Could not find $valid for " << hdr_name);
-                    } else {
-                        auto allocs = phv.get_alloc(valid_field);
-                        BUG_CHECK(!allocs.empty(), "Could not find the alloc slice for $valid");
-                        PHV::AllocSlice alloc_info = allocs.front();
-                        // FIXME: needs to sync with preorder(const IR::BFN::Extract*),
-                        //        see the todo there.
-                        //        If the number of headers exceeds the width of a single container
-                        //        then the pov_flags assignment must match PHV allocation.
-                        modify_flag->shift = alloc_info.container_slice().lo;
-                    }
-                }
+                unsigned int rule_id = prepare_push_hdr(push_hdr_id, modify_flag,
+                        analyzer_stage, hdr_id, state_info);
 
                 cstring next_state_name = sanitizeName(transition.next_state->name);
 
@@ -730,7 +894,6 @@ class ReplaceFlatrockParserIR : public ParserTransform {
                     /* next_w2_offset */ next_w2_offset);
                 analyzer_rule->push_hdr_id = push_hdr_id;
                 analyzer_rule->match_state = state_match;
-                 // update the valid bit in POV flags
                 analyzer_rule->modify_flag0 = modify_flag;
                 // Look into selects to determine the order of selects, or rather the match
                 // registers in the match value
@@ -828,100 +991,143 @@ class ReplaceFlatrockParserIR : public ParserTransform {
         size_t phe_sources;
     };
 
-    PheInfo get_phe_info(const ParserExtract& extract) const {
+    /**
+     * @brief Packs the info about PHV container into the structure suitable for creating
+     *        PHV builder extracts.
+     */
+    PheInfo get_phe_info(const Flatrock::ParserExtractContainer& extract_container) const {
         size_t phe_sources = 0;
-        size_t base_group_index = 0;  // index within PHE8/16/32 groups
-        std::string container_name;
+        size_t base_group_index = 0;  /// index within PHE8/16/32 groups
+        std::stringstream container_name;
 
-        if (extract.size == PHV::Size::b8) {
+        if (extract_container.size == PHV::Size::b8) {
             phe_sources = Flatrock::PARSER_PHV_BUILDER_PACKET_PHE8_SOURCES;
             base_group_index = 0;
-            container_name = "B";
-        } else if (extract.size == PHV::Size::b16) {
+        } else if (extract_container.size == PHV::Size::b16) {
             phe_sources = Flatrock::PARSER_PHV_BUILDER_PACKET_PHE16_SOURCES;
             base_group_index = Flatrock::PARSER_PHV_BUILDER_GROUP_PHE8_NUM;
-            container_name = "H";
-        } else if (extract.size == PHV::Size::b32) {
+        } else if (extract_container.size == PHV::Size::b32) {
             phe_sources = Flatrock::PARSER_PHV_BUILDER_PACKET_PHE32_SOURCES;
             base_group_index = Flatrock::PARSER_PHV_BUILDER_GROUP_PHE8_NUM +
                                Flatrock::PARSER_PHV_BUILDER_GROUP_PHE16_NUM;
-            container_name = "W";
         } else {
             BUG("Invalid container size in PHV builder extractor");
         }
 
-        const auto sub_group_offset =
-            extract.index / phe_sources / Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES;
+        container_name << extract_container;
+
+        const auto sub_group_offset = extract_container.index / phe_sources /
+                Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES;
         const auto group_index = base_group_index + sub_group_offset;
-        container_name += std::to_string(extract.index);
 
-        return PheInfo{container_name, group_index, phe_sources};
+        return PheInfo{container_name.str(), group_index, phe_sources};
     }
 
-    void add_offsets(std::vector<Flatrock::ExtractInfo>& offsets, const std::string container_name,
-                     const ParserExtract& extract) const {
-        constexpr auto BITS_IN_BYTE = 8;
-        const auto size = static_cast<int>(extract.size);
-
-        // Large constants need to be split into 1-byte slices. Slice suffix is also added to 1-byte
-        // constants placed in larger containers.
-        if (extract.subtype == Flatrock::ExtractSubtype::Constant && size > BITS_IN_BYTE) {
-            const auto constant = static_cast<unsigned int>(extract.offset);
-            for (const auto &slice : extract.slices) {
-                for (auto i_lo = slice.hi + 1 - BITS_IN_BYTE; i_lo >= slice.lo;
-                        i_lo -= BITS_IN_BYTE) {
-                    const auto offset = (constant >> i_lo) & 0xff;
-
-                    const auto i_hi = i_lo + BITS_IN_BYTE - 1;
-                    const auto suffix =
-                        '(' + std::to_string(i_lo) + ".." + std::to_string(i_hi) + ')';
-
-                    offsets.push_back(
-                        {container_name + suffix, static_cast<int>(offset), extract.subtype});
-                }
-            }
-        } else {
-            offsets.push_back({container_name, extract.offset, extract.subtype});
-        }
-    }
-
+    /**
+     * @brief Converts the collected information about extracts to the new lowered IR nodes
+     *        representing PHV builder extracts.
+     */
     ExtractArray make_builder_extracts(gress_t gress) const {
-        // Array of extracts with index 0 for all PHV builder groups
-        // Index to this array is in fact PHV builder group index
-        ExtractArray extracts {};
-        if (computed.extracts.count(gress) == 0) return extracts;
-        for (const auto& extract : computed.extracts.at(gress)) {
-            const auto phe_info = get_phe_info(extract);
+        /// Array of extracts with index 0 for all PHV builder groups.
+        /// Index to this array is in fact PHV builder group index.
+        ExtractArray phv_builder_extracts{};
+        if (computed.extracts_info.count(gress) != 0) {
+            for (const auto& [container, extract_value] : computed.extracts_info.at(gress)) {
+                const auto phe_info = get_phe_info(container);
 
-            // Get extract with index 0 for a given PHV builder group
-            auto& phv_builder_extract = extracts[phe_info.phv_builder_group_index];
-            if (phv_builder_extract == nullptr)
-                phv_builder_extract = new IR::Flatrock::PhvBuilderExtract(extract.size);
+                /// Get extract with index 0 for a given PHV builder group
+                auto& phv_builder_extract = phv_builder_extracts[phe_info.phv_builder_group_index];
+                if (phv_builder_extract == nullptr)
+                    phv_builder_extract = new IR::Flatrock::PhvBuilderExtract(container.size);
 
-            /**
-             * Each PHV builder group extract specifies a pair of PHE sources.
-             * Each PHE source specifies:
-             * - 4 PHE8 sources or
-             * - 2 PHE16 sources or
-             * - 1 PHE32 source
-             * Values for each PHE source (4xPHE8 / 2xPHE16 / 1xPHE32) in the pair are
-             * stored in one element of 'source' array
-             */
-            phv_builder_extract->index = 0;
-            const auto index = extract.index;
-            const auto phe_sources = phe_info.phe_sources;
-            const auto phe_source_index =
-                    (index / phe_sources) % Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES;
-            phv_builder_extract->source[phe_source_index].type = extract.type;
-            phv_builder_extract->source[phe_source_index].hdr_name = extract.hdr;
-            add_offsets(phv_builder_extract->source[phe_source_index].offsets,
-                    phe_info.container_name, extract);
-            phv_builder_extract->source[phe_source_index].debug.info.insert(
-                    phv_builder_extract->source[phe_source_index].debug.info.end(),
-                    extract.comments.begin(), extract.comments.end());
+                /**
+                 * Each PHV builder group extract specifies a pair of PHE sources.
+                 * Each PHE source specifies:
+                 * - 4 PHE8 sources or
+                 * - 2 PHE16 sources or
+                 * - 1 PHE32 source
+                 * Values for each PHE source (4xPHE8 / 2xPHE16 / 1xPHE32) in the pair are
+                 * stored in one element of 'source' array
+                 */
+                phv_builder_extract->index = 0;
+                const auto phe_source_index = (container.index / phe_info.phe_sources) %
+                        Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES;
+
+                if (phv_builder_extract->source[phe_source_index].type !=
+                        Flatrock::ExtractType::None) {
+                    BUG_CHECK(phv_builder_extract->source[phe_source_index].type ==
+                            extract_value.type,
+                            "Values of different types allocated into the same PHE source of "
+                            "PHV builder group %1% %2%",
+                            phe_info.phv_builder_group_index, phv_builder_extract);
+                }
+
+                phv_builder_extract->source[phe_source_index].type = extract_value.type;
+                phv_builder_extract->source[phe_source_index].debug.info.insert(
+                        phv_builder_extract->source[phe_source_index].debug.info.end(),
+                        extract_value.comments.begin(), extract_value.comments.end());
+
+                if (extract_value.type == Flatrock::ExtractType::Packet) {
+                    if (phv_builder_extract->source[phe_source_index].hdr_name) {
+                        /* FIXME uncomment this when PHV allocation is fixed to not break this constraint
+                        BUG_CHECK(*phv_builder_extract->source[phe_source_index].hdr_name ==
+                            extract_value.get_header_name(),
+                            "Values from different headers %1% and %2% allocated into the same "
+                            "PHE source of PHV builder group %3% %4%",
+                            *phv_builder_extract->source[phe_source_index].hdr_name,
+                            extract_value.get_header_name(), phe_info.phv_builder_group_index,
+                            phv_builder_extract);
+                        */
+                    }
+                    phv_builder_extract->source[phe_source_index].hdr_name =
+                            extract_value.get_header_name();
+                    phv_builder_extract->source[phe_source_index].values.push_back(
+                            {phe_info.container_name,
+                            static_cast<int>(extract_value.get_source_offset()),
+                            Flatrock::ExtractSubtype::None});
+                } else if (extract_value.type == Flatrock::ExtractType::Other) {
+                    unsigned int constant = 0;
+                    for (const auto& slice : extract_value.get_slices()) {
+                        if (slice.subtype == Flatrock::ExtractSubtype::Constant) {
+                            constant |= slice.value << slice.slice.lo;
+                        }
+                    }
+                    for (int i = 0; i < Flatrock::PARSER_PHV_BUILDER_OTHER_PHE_SOURCES; ++i) {
+                        int lo = i * BITS_IN_BYTE;
+                        int hi = lo + (BITS_IN_BYTE - 1);
+                        const auto suffix = (phe_info.phe_sources ==
+                                Flatrock::PARSER_PHV_BUILDER_PACKET_PHE8_SOURCES) ? "" :
+                                '(' + std::to_string(lo) + ".." + std::to_string(hi) + ')';
+                        for (const auto& slice : extract_value.get_slices()) {
+                            if (slice.slice.loByte() <= i && i <= slice.slice.hiByte()) {
+                                int value;
+                                if (slice.subtype == Flatrock::ExtractSubtype::Constant) {
+                                    unsigned int bit_offset = i * BITS_IN_BYTE;
+                                    unsigned int mask = ((1U << BITS_IN_BYTE) - 1) << bit_offset;
+                                    value = static_cast<int>((constant & mask) >> bit_offset);
+                                } else if (slice.subtype == Flatrock::ExtractSubtype::PovFlags) {
+                                    value = static_cast<int>(slice.value);
+                                } else {
+                                    std::stringstream ss;
+                                    ss << slice.subtype;
+                                    BUG("Extract subtype %1% is currently not supported", ss.str());
+                                }
+                                phv_builder_extract->source[phe_source_index].values.
+                                        push_back({phe_info.container_name + suffix,
+                                        value, slice.subtype});
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    BUG("Missing extract type!");
+                }
+                LOG3("Update PHV builder group " << phe_info.phv_builder_group_index <<
+                        " " << phv_builder_extract);
+            }
         }
 
-        return extracts;
+        return phv_builder_extracts;
     }
 
     void build_phv_builder(PhvBuilder& phv_builder, gress_t gress) const {
@@ -1933,6 +2139,14 @@ struct SplitGreedyParserStates : public Transform {
 /// for the existing representation.
 struct LowerParserIR : public PassManager {
     std::map<gress_t, std::set<PHV::Container>>& origParserZeroInitContainers;
+#ifdef HAVE_FLATROCK
+    ComputeFlatrockParserIR* computeFlatrockParserIR = nullptr;
+
+    const IR::Vector<IR::BFN::ContainerRef>* get_pov_flags_refs() const {
+        CHECK_NULL(computeFlatrockParserIR);
+        return computeFlatrockParserIR->get_pov_flags_refs();
+    }
+#endif
 
     LowerParserIR(const PhvInfo& phv,
                   BFN_MAYBE_UNUSED const FieldDefUse& defuse,
@@ -1948,7 +2162,7 @@ struct LowerParserIR : public PassManager {
         auto* computeLoweredParserIR = new ComputeLoweredParserIR(
             phv, clotInfo, *allocateParserChecksums, origParserZeroInitContainers);
 #ifdef HAVE_FLATROCK
-        auto* computeFlatrockParserIR = new ComputeFlatrockParserIR(phv, defuse);
+        computeFlatrockParserIR = new ComputeFlatrockParserIR(phv, defuse);
 #endif  // HAVE_FLATROCK
         auto* replaceLoweredParserIR = new ReplaceParserIR(*computeLoweredParserIR);
 #ifdef HAVE_FLATROCK
@@ -2413,10 +2627,18 @@ std::map<PHV::Container, unsigned> getChecksumPhvSwap(const PhvInfo& phv,
 /// Generate the lowered deparser IR by splitting references to fields in the
 /// high-level deparser IR into references to containers.
 struct ComputeLoweredDeparserIR : public DeparserInspector {
-    ComputeLoweredDeparserIR(const PhvInfo& phv, const ClotInfo& clotInfo)
+    ComputeLoweredDeparserIR(const PhvInfo& phv, const ClotInfo& clotInfo
+#ifdef HAVE_FLATROCK
+        , const IR::Vector<IR::BFN::ContainerRef>* pov_flags_refs = nullptr
+#endif
+    )
         : phv(phv), clotInfo(clotInfo), nextChecksumUnit(0), lastSharedUnit(0),
           nested_unit(0),
-          normal_unit(4) {
+          normal_unit(4)
+#ifdef HAVE_FLATROCK
+          , pov_flags_refs(pov_flags_refs)
+#endif
+            {
         igLoweredDeparser = new IR::BFN::LoweredDeparser(INGRESS);
         egLoweredDeparser = new IR::BFN::LoweredDeparser(EGRESS);
     }
@@ -2833,6 +3055,13 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
             std::tie(containers, std::ignore) = lowerFields(phv, clotInfo, mdp_vld_vec_fields);
             loweredDeparser->params.push_back(
                 new IR::BFN::LoweredDeparserParameter("valid_vec", containers));
+
+            // Calculate the containers for POV bits (states/flags)
+            // TODO POV state bits containers to be added here
+            CHECK_NULL(pov_flags_refs);
+            if (pov_flags_refs->size() > 0)
+                loweredDeparser->params.push_back(
+                    new IR::BFN::LoweredDeparserParameter("pov", *pov_flags_refs));
         }
 #endif /* HAVE_FLATROCK */
 
@@ -2913,6 +3142,9 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
     unsigned lastSharedUnit;
     unsigned nested_unit;
     unsigned normal_unit;
+#ifdef HAVE_FLATROCK
+    const IR::Vector<IR::BFN::ContainerRef>* pov_flags_refs;
+#endif
 };
 
 /// \ingroup LowerDeparserIR
@@ -2959,9 +3191,17 @@ struct ReplaceDeparserIR : public DeparserTransform {
  *  3. Coalescing the learning digest to remove consecutive uses of the same container.
  */
 struct LowerDeparserIR : public PassManager {
-    LowerDeparserIR(const PhvInfo& phv, ClotInfo& clot) {
+    LowerDeparserIR(const PhvInfo& phv, ClotInfo& clot
+#ifdef HAVE_FLATROCK
+            , const IR::Vector<IR::BFN::ContainerRef>* pov_flags_refs = nullptr
+#endif
+    ) {
         auto* rewriteEmitClot = new RewriteEmitClot(phv, clot);
-        auto* computeLoweredDeparserIR = new ComputeLoweredDeparserIR(phv, clot);
+        auto* computeLoweredDeparserIR = new ComputeLoweredDeparserIR(phv, clot
+#ifdef HAVE_FLATROCK
+            , pov_flags_refs
+#endif
+        );  // NOLINT(whitespace/parens)
         addPasses({
             rewriteEmitClot,
             computeLoweredDeparserIR,
@@ -3317,11 +3557,16 @@ LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &
     auto compute_init_valid = new ComputeInitZeroContainers(
         phv, defuse, pragma_no_init->getFields(), origParserZeroInitContainers);
     auto parser_info = new CollectLoweredParserInfo;
+    auto lower_parser_ir = new LowerParserIR(phv, defuse, clot, parserHeaderSeqs,
+            origParserZeroInitContainers, defuseInfo);
 
     addPasses({
         pragma_no_init,
-        new LowerParserIR(phv, defuse, clot, parserHeaderSeqs, origParserZeroInitContainers,
-            defuseInfo),
+        lower_parser_ir,
+#ifdef HAVE_FLATROCK
+        Device::currentDevice() == Device::FLATROCK ?
+            new LowerDeparserIR(phv, clot, lower_parser_ir->get_pov_flags_refs()) :
+#endif
         new LowerDeparserIR(phv, clot),
         new WarnTernaryMatchFields(phv),
         Device::currentDevice() == Device::TOFINO ? compute_init_valid : nullptr,

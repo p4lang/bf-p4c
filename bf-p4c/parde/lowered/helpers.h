@@ -17,7 +17,22 @@ cstring sanitizeName(StringRef name);
 /**
  * Construct debugging information describing a slice of a field.
  *
- * @param fieldRef  A reference to a field.
+ * @param fieldName  Field name.
+ * @param slice  An `alloc_slice` mapping a range of bits in the field to a
+ *               range of bits in a container.
+ * @param includeContainerInfo  If true, the result will include information
+ *                              about which bits in the container the field
+ *                              slice was mapped to.
+ * @return a string describing which bits in the field are included in the
+ * slice, and describing the corresponding bits in the container.
+ */
+cstring debugInfoFor(const cstring fieldName, const PHV::AllocSlice& slice,
+                     bool includeContainerInfo = true);
+
+/**
+ * Construct debugging information describing a slice of a field.
+ *
+ * @param lval  A reference to a field.
  * @param slice  An `alloc_slice` mapping a range of bits in the field to a
  *               range of bits in a container.
  * @param includeContainerInfo  If true, the result will include information
@@ -49,6 +64,22 @@ cstring debugInfoFor(const IR::BFN::ParserLVal* lval, const PHV::AllocSlice& sli
  */
 cstring debugInfoFor(const IR::BFN::Extract* extract, const PHV::AllocSlice& slice,
                      const nw_bitrange& bufferRange = nw_bitrange(), bool includeRangeInfo = false);
+
+/**
+ * Construct a string describing how an `Extract` primitive was mapped to a
+ * hardware extract operation (in case of extract from POV (state/flags) bits).
+ *
+ * @param extract  The original `Extract` primitive, with a field as the
+ *                 destination.
+ * @param slice  An `alloc_slice` mapping a range of bits in the field to a
+ *               range of bits in a container.
+ * @param pov_range  The range corresponding to the bits from POV state/flags bits.
+ * @param pov_type_string  Optional string with info about type of POV (state/flags).
+ * @return a string containing debugging info describing the mapping between the
+ * field, the container, and POV state/flags bits read by the `Extract`.
+ */
+cstring debugInfoFor(const IR::BFN::Extract* extract, const PHV::AllocSlice& slice,
+        const le_bitrange& pov_range, const cstring pov_type_string = "");
 
 /// Maps a POV bit field to a single bit within a container, represented as a
 /// ContainerBitRef. Checks that the allocation for the POV bit field is sane.

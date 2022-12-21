@@ -198,7 +198,7 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
-  "Compiler Bug: Could not find hdr_id"
+  "Compiler Bug: Allocation of field: .* can not be satisfied as it requires to use extraction from packet and other source to the same container"
   extensions/p4_tests/p4_16/stf/parser_multi_write_8.p4
   )
 
