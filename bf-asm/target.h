@@ -1,5 +1,5 @@
-#ifndef BF_ASM_TARGET_H_
-#define BF_ASM_TARGET_H_
+#ifndef TARGET_H_
+#define TARGET_H_
 
 #include <config.h>
 #include "bfas.h"
@@ -1040,7 +1040,10 @@ class Target::Flatrock : public Target {
         PARSER_CSUM_MASK_REG_WIDTH = 32,  // Each checksum mask is written into 7 32b wide registers
         PARSER_CSUM_MASK_BITS = PARSER_CSUM_MASK_WIDTH * PARSER_CSUM_MASK_REG_WIDTH,
         PARSER_CSUM_MATCH_WIDTH = 32,
-        PARSER_BRIDGE_MD_WIDTH = 64,
+        PARSER_BRIDGE_MD_CONFIGS = 16,
+        PARSER_BRIDGE_MD_WIDTH = ::Flatrock::PARSER_BRIDGE_MD_WIDTH,
+        // See mdp_mem.rem_brm_ext_ram.rem_brm_ext[*].rem_brm_ext.b*_phv_sel
+        PARSER_REMAINING_BRIDGE_MD_MAX_WIDTH = ::Flatrock::PARSER_REMAINING_BRIDGE_MD_MAX_WIDTH,
         // Max value of header sequence ID
         // ::Flatrock::MDP_HDR_ID_COMP_ROWS value reserved for escape value
         PARSER_SEQ_ID_MAX = ::Flatrock::MDP_HDR_ID_COMP_ROWS - 1,
@@ -1123,6 +1126,7 @@ class Target::Flatrock : public Target {
                                                     // in the config register must be in the range
                                                     // [0, DEPARSER_PBO_VAR_OFFSET_LEN_MAX].
         MDP_HDR_ID_COMP_ROWS = ::Flatrock::MDP_HDR_ID_COMP_ROWS,
+        PPARSER_BRIDGE_MD_POV_OFFSET_MAX = 63
     };
     static int encodeConst(int src) {
         return ((src & ~0x7ff) << 5) | (0x8 << 11) | (src & 0x7ff);
@@ -1204,4 +1208,4 @@ void emit_parser_registers(const Target::Flatrock::top_level_regs *regs, std::os
     RTYPE NAME ARGDECL __VA_ARGS__ {                                                    \
         SWITCH_FOREACH_##GROUP(options.target, return NAME(TARGET() EXPAND_COMMA ARGS); ) }
 
-#endif /* BF_ASM_TARGET_H_ */
+#endif /* TARGET_H_ */

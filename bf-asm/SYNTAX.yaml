@@ -1408,6 +1408,25 @@ deparser <thread>:
             # Default: 0
     zero: <phv_location>,
         # list of phv slots that should be initialized to (valid) zero
+    remaining_bridge_metadata:
+        # packing of remaining bridge metadata
+        pov_select: <pov-select>
+            # POV bytes used to address the TCAM & SRAM
+        config <constant>:
+            # TCAM & SRAM configuration
+            match: <match-constant>
+                # POV match (4B)
+            start: <constant>
+                # start position of the remaining bridge metadata in bridge metadata (6b)
+                # register: rem_brm_ext_ram.rem_brm_ext[*].rem_brm_start
+            bytes: '[' <constant> | <phv-location>, ... ']' | '{' <constant> ':' <constant> | <phv-location>, ... '}'
+                # source PHEs of the remaining bridge metadata
+                # if a list is used, the items are implicitly addressed (from 0 up) bytes of remaining bridge metadata
+                # if a map is used, the items are explicitly addressed bytes of remaining bridge metadata
+                # up to 62 items depending on the remaining bridge metadata start position and the number of POV bytes (8B flags + 8B state)
+                # if an 8b constant is used as the PHE byte source, its value is directly written to the configuration registers
+                # if a PHE (slice) name is used as the PHE byte source, it is first mapped to the PHE byte number
+                # registers: rem_brm_ext_ram.rem_brm_ext[*].b*_phv_sel
 flexible_headers:
     # Lists the headers that were re-packed by the compiler because
     # they were marked flexible. See context.json schema 'flexible_headers' node

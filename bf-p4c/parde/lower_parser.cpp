@@ -994,6 +994,16 @@ class ReplaceFlatrockParserIR : public ParserTransform {
 
         // Create a pseudo parser
         auto *pseudo_parser = new IR::Flatrock::PseudoParser;
+        // POVs are placed at the end of the bridge metadata
+        // See https://wiki.ith.intel.com/pages/viewpage.action?
+        //     pageId=1581874739#FrameProcessingPipeline(FPP)-POVFormat
+        // The values need to be in sync with the code in assembler
+        // that stores POVs into the remaining bridge metadata.
+        // See Deparser::write_config(Target::Flatrock::deparser_regs &).
+        pseudo_parser->pov_state_pos = Flatrock::PARSER_BRIDGE_MD_WIDTH
+            - Flatrock::PARSER_PKT_STATE_WIDTH;
+        pseudo_parser->pov_flags_pos = Flatrock::PARSER_BRIDGE_MD_WIDTH
+            - Flatrock::PARSER_PKT_STATE_WIDTH - Flatrock::PARSER_FLAGS_WIDTH;
         build_phv_builder(pseudo_parser->phv_builder, EGRESS);
         pipe->thread[EGRESS].parsers.push_back(pseudo_parser);
 

@@ -1,5 +1,6 @@
 /* deparser template specializations for flatrock -- #included directly in top-level deparser.cpp */
 
+#include "flatrock/deparser.h"
 #include "ubits.h"
 
 #define YES(X)  X
@@ -304,10 +305,41 @@ template<> void Deparser::write_config(Target::Flatrock::deparser_regs &regs) {
     //   - Byte 1: 0xFF (not compressed)
     //   - Byte 2-17: header ids
     //   - Byte 18-33: compressed header lengths (if using -- not in use yet)
+    //     See https://wiki.ith.intel.com/pages/viewpage.action?
+    //         pageId=1581874739#FrameProcessingPipeline(FPP)-POVFormat
+    //   - Byte 48-55: POV flags
+    //   - Byte 56-63: POV state
     regs.mdp.br_meta_cfg_tcam.tcam[0].key_wh = 0xFFFFFFFFUL;
     regs.mdp.br_meta_cfg_tcam.tcam[0].key_wl = 0xFFFFFFFFUL;
-    regs.mdp_mem.rem_brm_ext_ram.rem_brm_ext[0].rem_brm_start =
-        1 + 1 + Target::Flatrock::PAC_HEADER_POINTERS_MAX;
+
+    int rem_brm_start = 1 + 1 + Target::Flatrock::PAC_HEADER_POINTERS_MAX;
+    regs.mdp_mem.rem_brm_ext_ram.rem_brm_ext[0].rem_brm_start = rem_brm_start;
+
+    auto &rem_brm_ext = regs.mdp_mem.rem_brm_ext_ram.rem_brm_ext[0];
+    ubits<8>* rem_brm_ext_bytes[Target::Flatrock::PARSER_REMAINING_BRIDGE_MD_MAX_WIDTH] = {
+#define RBE(i) &rem_brm_ext.b##i##_phv_sel
+        RBE(0), RBE(1), RBE(2), RBE(3), RBE(4), RBE(5), RBE(6), RBE(7),
+        RBE(8), RBE(9), RBE(10), RBE(11), RBE(12), RBE(13), RBE(14), RBE(15),
+        RBE(16), RBE(17), RBE(18), RBE(19), RBE(20), RBE(21), RBE(22), RBE(23),
+        RBE(24), RBE(25), RBE(26), RBE(27), RBE(28), RBE(29), RBE(30), RBE(31),
+        RBE(32), RBE(33), RBE(34), RBE(35), RBE(36), RBE(37), RBE(38), RBE(39),
+        RBE(40), RBE(41), RBE(42), RBE(43), RBE(44), RBE(45), RBE(46), RBE(47),
+        RBE(48), RBE(49), RBE(50), RBE(51), RBE(52), RBE(53), RBE(54), RBE(55),
+        RBE(56), RBE(57), RBE(58), RBE(59), RBE(60), RBE(61)
+#undef RBE
+    };
+
+    // TODO Optimize to not place unused zero bytes?
+    const int rem_brm_width = Target::Flatrock::PARSER_BRIDGE_MD_WIDTH - rem_brm_start;
+    // This value needs to be in sync with the value of the pseudo parser > pov_flags_pos
+    // and pov_state_pos registers. See ReplaceFlatrockParserIR::postorder(IR::BFN::Pipe *).
+    const int rem_brm_pov_start = rem_brm_width - Target::Flatrock::POV_WIDTH / 8;
+    for (int i = 0; i < Target::Flatrock::POV_WIDTH / 8; i++) {
+        BUG_CHECK(!remaining_bridge_md.configs[0].bytes[rem_brm_pov_start + i],
+            "overwriting remaining bridge metadata (byte %d) with POV byte (byte %d)",
+            rem_brm_pov_start + i, i);
+        *rem_brm_ext_bytes[rem_brm_pov_start + i] = *mdp_pov_ext_bytes[i];
+    }
 
     // TM metadata
     // TODO: regs.mdp.tmm_ext
@@ -346,6 +378,7 @@ template<> void Deparser::write_config(Target::Flatrock::deparser_regs &regs) {
     // Header len compression
     // TODO: regs.mdp.hdr_len_comr_tab (asked to rename to hdr_len_compr_tab)
 
+    remaining_bridge_md.write_config(regs);
 
     // Egress deparser
     // ---------------
@@ -469,4 +502,176 @@ template<> void Deparser::write_config(Target::Flatrock::deparser_regs &regs) {
 
 template<> void Deparser::gen_learn_quanta(Target::Flatrock::deparser_regs&,
                                            json::vector &) {
+}
+
+void PacketBodyOffset::input(value_t data) {
+    if (!CHECKTYPE(data, tMAP)) return;
+    for (auto &kv : MapIterChecked(data.map, true)) {
+        if (kv.key == "hdr") {
+            if (CHECKTYPE2(kv.value, tINT, tSTR)) {
+                if (kv.value.type == tINT) {
+                    check_range(kv.value, 0, Target::Flatrock::PARSER_HDR_ID_MAX);
+                    hdr = kv.value.i;
+                } else {
+                    hdr = Hdr::id(data.lineno, kv.value.s);
+                }
+            }
+        } else if (kv.key == "offset") {
+            if (CHECKTYPE(kv.value, tINT)) {
+                check_range(kv.value,
+                            -Target::Flatrock::PARSER_BASE_LEN_MAX,
+                            Target::Flatrock::PARSER_BASE_LEN_MAX);
+                offset = kv.value.i;
+            }
+        } else if (kv.key == "var_off_pos") {
+            if (CHECKTYPE(kv.value, tINT)) {
+                check_range(kv.value, 0, Target::Flatrock::POV_WIDTH - 1);
+                var_start = kv.value.i;
+            }
+        } else if (kv.key == "var_off_len") {
+            if (CHECKTYPE(kv.value, tINT)) {
+                check_range(kv.value, 0, Target::Flatrock::DEPARSER_PBO_VAR_OFFSET_LEN_WIDTH_MAX);
+                var_len = kv.value.i;
+            }
+        } else {
+            error(kv.key.lineno, "unknown item %s in packet_body_offset",
+                    value_desc(kv.key));
+        }
+    }
+}
+
+static int phv_ref_to_phe_byte_number(const Phv::Ref &phv_ref) {
+    return phv_ref->reg.deparser_id() + phv_ref.lobit() / 8;
+}
+
+void RemainingBridgeMetadataConfig::input_item(
+        VECTOR(value_t) args, value_t data, int &bytes_index) {
+    if (!CHECKTYPE3(data, tINT, tSTR, tCMD)) return;
+    if (data.type == tINT) {
+        if (!check_range(data, 0, 255 /* W15(24..31) byte number */)) return;
+        bytes[bytes_index++] = data.i;
+    } else if (data.type == tSTR) {
+        Phv::Ref ref(INGRESS, DEPARSER_STAGE, data);
+        auto phe_byte_number = phv_ref_to_phe_byte_number(ref);
+        auto size = ref->reg.size / 8;
+        for (int i_slice = phe_byte_number; i_slice < phe_byte_number + size; i_slice++)
+            bytes[bytes_index++] = i_slice;
+    } else if (data.type == tCMD) {
+        Phv::Ref ref(INGRESS, DEPARSER_STAGE, data);
+        auto phe_byte_number = phv_ref_to_phe_byte_number(ref);
+        auto size = (ref.hibit() - ref.lobit() + 1) / 8;
+        for (int i_slice = phe_byte_number; i_slice < phe_byte_number + size; i_slice++)
+            bytes[bytes_index++] = i_slice;
+    }
+}
+
+void RemainingBridgeMetadataConfig::input_bytes(
+        VECTOR(value_t) args, value_t key, value_t value) {
+    if (!CHECKTYPE2(value, tVEC, tMAP)) return;
+    if (value.type == tVEC) {
+        value_t size = {.type = tINT, .lineno = value.lineno};
+        size.i = value.vec.size;
+        if (!check_range(size, 0, Target::Flatrock::PARSER_REMAINING_BRIDGE_MD_MAX_WIDTH)) return;
+        int i_bytes = 0;
+        for (int i_vec = 0; i_vec < value.vec.size; i_vec++)
+            input_item(args, value.vec[i_vec], i_bytes);
+    } else {
+        // value.type == tMAP
+        for (auto &kv : MapIterChecked(value.map, true)) {
+            if (!CHECKTYPE(kv.key, tINT)) return;
+            if (!check_range(kv.key, 0, Target::Flatrock::PARSER_REMAINING_BRIDGE_MD_MAX_WIDTH))
+                return;
+            int i_bytes = kv.key.i;
+            input_item(args, kv.value, i_bytes);
+        }
+    }
+}
+
+void RemainingBridgeMetadataConfig::write_config(Target::Flatrock::deparser_regs &regs) {
+    auto &tcam = regs.mdp.br_meta_cfg_tcam.tcam[*id];
+    tcam.key_wh = match.word0;
+    tcam.key_wl = match.word1;
+    auto &rem_brm_ext = regs.mdp_mem.rem_brm_ext_ram.rem_brm_ext[*id];
+    rem_brm_ext.rem_brm_start = start;
+    ubits<8>* rem_brm_ext_bytes[Target::Flatrock::PARSER_REMAINING_BRIDGE_MD_MAX_WIDTH] = {
+#define RBE(i) &rem_brm_ext.b##i##_phv_sel
+        RBE(0), RBE(1), RBE(2), RBE(3), RBE(4), RBE(5), RBE(6), RBE(7),
+        RBE(8), RBE(9), RBE(10), RBE(11), RBE(12), RBE(13), RBE(14), RBE(15),
+        RBE(16), RBE(17), RBE(18), RBE(19), RBE(20), RBE(21), RBE(22), RBE(23),
+        RBE(24), RBE(25), RBE(26), RBE(27), RBE(28), RBE(29), RBE(30), RBE(31),
+        RBE(32), RBE(33), RBE(34), RBE(35), RBE(36), RBE(37), RBE(38), RBE(39),
+        RBE(40), RBE(41), RBE(42), RBE(43), RBE(44), RBE(45), RBE(46), RBE(47),
+        RBE(48), RBE(49), RBE(50), RBE(51), RBE(52), RBE(53), RBE(54), RBE(55),
+        RBE(56), RBE(57), RBE(58), RBE(59), RBE(60), RBE(61)
+#undef RBE
+    };
+    for (int i = 0; i < Target::Flatrock::PARSER_BRIDGE_MD_WIDTH - start; i++)
+        if (bytes[i])
+            *rem_brm_ext_bytes[i] = *bytes[i];
+}
+
+void RemainingBridgeMetadataConfig::input(VECTOR(value_t) args, value_t data) {
+    if (!CHECKTYPE(data, tMAP)) return;
+    auto match_present = false;
+    auto start_present = false;
+
+    for (auto &kv : MapIterChecked(data.map, false)) {
+        if (kv.key == "match") {
+            match_present = true;
+            input_int_match(kv.value, match, Target::Flatrock::PARSER_POV_SELECT_NUM * 8);
+        } else if (kv.key == "start") {
+            start_present = true;
+            check_range(kv.value, 0, Target::Flatrock::PPARSER_BRIDGE_MD_POV_OFFSET_MAX);
+            start = kv.value.i;
+        } else if (kv.key == "bytes") {
+            input_bytes(args, kv.key, kv.value);
+        } else {
+            report_invalid_directive("invalid key", kv.key);
+        }
+    }
+
+    if (!match_present) {
+        error(data.lineno,
+            "mandatory attribute `match' of `remanining_bridge_metadata' is missing");
+    }
+    if (!start_present) {
+        error(data.lineno,
+            "mandatory attribute `start' of `remanining_bridge_metadata' is missing");
+    }
+}
+
+void RemainingBridgeMetadata::input_config(
+        VECTOR(value_t) args, value_t key, value_t value) {
+    if (!CHECKTYPE(key, tCMD)) return;
+    if (key.vec.size < 2) error(key.lineno, "config ID missing");
+    if (key.vec.size > 2) error(key.lineno, "too many parameters");
+    if (!check_range(key[1], 0, Target::Flatrock::PARSER_BRIDGE_MD_CONFIGS - 1)) return;
+    int id = key[1].i;
+    configs[id].id = id;
+    configs[id].input(args, value);
+}
+
+void RemainingBridgeMetadata::input(VECTOR(value_t) args, value_t data) {
+    if (!CHECKTYPE(data, tMAP)) return;
+    for (auto &kv : MapIterChecked(data.map, true)) {
+        if (kv.key == "pov_select") {
+            pov_select.input(kv.value);
+        } else if (kv.key == "config") {
+            input_config(args, kv.key, kv.value);
+        } else {
+            report_invalid_directive("invalid key", kv.key);
+        }
+    }
+}
+
+void RemainingBridgeMetadata::write_config(Target::Flatrock::deparser_regs &regs) {
+    auto &brm_ext = regs.mdp.brm_ext;
+    // TODO there are also regs.mdp.brm_ext.start_[0123] registers
+    for (int i = 0; i < Target::Flatrock::PARSER_POV_SELECT_NUM; i++)
+        if (pov_select.key[i].used)
+            // TODO is this correct?
+            brm_ext.start[i] = (pov_select.key[i].src << 3) | (pov_select.key[i].start & 7);
+    for (int i = 0; i < Target::Flatrock::PARSER_BRIDGE_MD_CONFIGS; i++)
+        if (configs[i].id)
+            configs[i].write_config(regs);
 }

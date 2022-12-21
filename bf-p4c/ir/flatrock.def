@@ -503,6 +503,8 @@ class Parser : BFN::BaseLoweredParser {
  * The corresponding class in assembler is FlatrockPseudoParser.
  */
  class PseudoParser : BFN::BaseLoweredParser {
+    int pov_flags_pos;  //< Position of the POV flags in the bridge metadata
+    int pov_state_pos;  //< Position of the POV state in the bridge metadata
     inline Vector<PhvBuilderGroup> phv_builder;
  #noconstructor
     PseudoParser() : BaseLoweredParser(EGRESS) {}
@@ -510,6 +512,12 @@ class Parser : BFN::BaseLoweredParser {
         v.visit(phv_builder, "pseudo_parser");
     }
     validate {
+        BUG_CHECK(pov_flags_pos < ::Flatrock::PARSER_BRIDGE_MD_WIDTH,
+            "POV flags position (%1%) out of range of the bridge metadata (%2%B)",
+            pov_flags_pos, ::Flatrock::PARSER_BRIDGE_MD_WIDTH);
+        BUG_CHECK(pov_state_pos < ::Flatrock::PARSER_BRIDGE_MD_WIDTH,
+            "POV state position (%1%) out of range of the bridge metadata (%2%B)",
+            pov_state_pos, ::Flatrock::PARSER_BRIDGE_MD_WIDTH);
         BUG_CHECK(phv_builder.size() <= ::Flatrock::PARSER_PHV_BUILDER_GROUPS,
             "too many PHV groups: %d, allowed at most %d",
             phv_builder.size(), ::Flatrock::PARSER_PHV_BUILDER_GROUPS);
@@ -517,6 +525,8 @@ class Parser : BFN::BaseLoweredParser {
     toString { return "pseudo parser"; }
     dbprint {
         out << toString() << IndentCtl::indent;
+        out << IndentCtl::endl << "pov_flags_pos: " << pov_flags_pos << IndentCtl::indent;
+        out << IndentCtl::endl << "pov_state_pos: " << pov_state_pos << IndentCtl::indent;
         for (auto &phv_builder_group : phv_builder)
             out << IndentCtl::endl << phv_builder_group;
         out << IndentCtl::unindent;

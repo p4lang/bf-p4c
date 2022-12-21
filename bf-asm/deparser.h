@@ -1,5 +1,5 @@
-#ifndef BF_ASM_DEPARSER_H_
-#define BF_ASM_DEPARSER_H_
+#ifndef DEPARSER_H_
+#define DEPARSER_H_
 
 #include <vector>
 #include "ordered_set.h"
@@ -7,6 +7,11 @@
 #include "sections.h"
 #include "phv.h"
 #include "constants.h"
+#ifdef HAVE_FLATROCK
+#include "flatrock/parde.h"
+#include "flatrock/deparser.h"
+#endif  /* HAVE_FLATROCK */
+#include <boost/optional.hpp>
 
 enum {
     // limits over all targets
@@ -101,21 +106,6 @@ class Deparser : public Section {
         bool zeros_as_ones_en = false;
     };
 
-    /**
-     * Packet body offset
-     *
-     * Indicates where the payload starts within a packet relative to a given header
-     */
-    struct PacketBodyOffset {
-        int lineno;
-        int hdr;
-        int offset;
-        int var_start;
-        int var_len;
-
-        void input(value_t data);
-    };
-
     struct FDEntry;
     std::vector<ChecksumVal>            checksum_entries[2][MAX_DEPARSER_CHECKSUM_UNITS];
     FullChecksumUnit                    full_checksum_unit[2][MAX_DEPARSER_CHECKSUM_UNITS];
@@ -126,13 +116,16 @@ class Deparser : public Section {
                  unsigned>              pov[2];
     bitvec                              phv_use[2];
     std::set<int>                       constants[2];
+#ifdef HAVE_FLATROCK
     PacketBodyOffset                    pbo[2];  // Flatrock only uses the egress element
                                                  // (elemnent 1). Element 0 is always unused.
                                                  // The 2-element array is present for
                                                  // consistency with other fields.
+    RemainingBridgeMetadata             remaining_bridge_md;  // Flatrock only
     /// Container guaranteed to be zero
     /// Used in Flatrock for POV bytes that must be zero
     Phv::Ref                            zero_container[2];
+#endif  /* HAVE_FLATROCK */
 
     struct Intrinsic {
         struct Type;
@@ -254,4 +247,4 @@ class Deparser : public Section {
     void report_resources_deparser_json(json::vector& fde_entries_i, json::vector& fde_entries_e);
 };
 
-#endif /* BF_ASM_DEPARSER_H_ */
+#endif /* DEPARSER_H_ */

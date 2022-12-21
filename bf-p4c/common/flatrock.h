@@ -19,6 +19,9 @@
 namespace Flatrock {
 
 enum constants {
+    PARSER_BRIDGE_MD_WIDTH = 64,
+    // See mdp_mem.rem_brm_ext_ram.rem_brm_ext[*].rem_brm_ext.b*_phv_sel
+    PARSER_REMAINING_BRIDGE_MD_MAX_WIDTH = 62,
     /// Byte width of per-port metadata
     /// (including bytes with logical pipe ID and logical port number, i.e. bytes 15 and 14)
     PARSER_PORT_METADATA_WIDTH = 16,

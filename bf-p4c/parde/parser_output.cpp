@@ -369,8 +369,13 @@ struct ParserAsmSerializer : public ParserInspector {
         }
     }
 
-    bool preorder(const IR::Flatrock::PseudoParser* /*pparser*/) override {
-        out << "parser egress:" << std::endl;
+    bool preorder(const IR::Flatrock::PseudoParser* pparser) override {
+        AutoIndent indentParser(indent, 0);
+        out << indent << "parser egress:" << std::endl;
+        indent++;
+        out << indent << "pov_flags_pos: " << pparser->pov_flags_pos << std::endl;
+        out << indent << "pov_state_pos: " << pparser->pov_state_pos << std::endl;
+        indent--;
         return true;
     }
 

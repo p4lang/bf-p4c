@@ -413,6 +413,37 @@ struct OutputPacketBodyOffset : public Inspector {
     indent_t indent;
 };
 
+/// Generate the assembly for remaining bridge metadata
+struct OutputRemainingBridgeMetadata : public Inspector {
+    explicit OutputRemainingBridgeMetadata(std::ostream& out) : out(out), indent(1) {}
+
+    bool preorder(BFN_MAYBE_UNUSED const IR::BFN::LoweredDeparser* deparser) override {
+#if HAVE_FLATROCK
+#if 0
+        // The following is a skeleton for Flatrock bridge metadata
+        // transferred through the remaining bridge metadata
+        if (Device::currentDevice() == Device::FLATROCK && deparser->gress == INGRESS) {
+            out << indent << "remaining_bridge_metadata:" << std::endl;
+            AutoIndent rbmIndent(indent);
+
+            out << indent << "config 0:" << std::endl;
+            AutoIndent rbmConfigIndent(indent);
+
+            out << indent << "match: *" << std::endl;
+            out << indent << "start: " << 0 << std::endl;
+            out << indent << "bytes: [ ]" << std::endl;
+        }
+#endif  /* 0 */
+#endif  /* HAVE_FLATROCK */
+
+        return false;
+    }
+
+ private:
+    std::ostream& out;
+    indent_t indent;
+};
+
 /// @}
 
 }  // namespace
@@ -436,6 +467,7 @@ operator<<(std::ostream& out, const DeparserAsmOutput& deparserOut) {
     deparserOut.deparser->apply(OutputParameters(out));
     deparserOut.deparser->apply(OutputDigests(out, deparserOut.phv));
     deparserOut.deparser->apply(OutputPacketBodyOffset(out));
+    deparserOut.deparser->apply(OutputRemainingBridgeMetadata(out));
 
     return out;
 }
