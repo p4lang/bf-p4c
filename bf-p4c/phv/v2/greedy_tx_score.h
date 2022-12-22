@@ -77,6 +77,7 @@ class GreedyTxScoreMaker : public TxScoreMaker {
     const PhvKit& kit_i;
 
     Vision vision_i;
+    std::set<const Field *> table_key_with_ranges;
 
     friend class GreedyTxScore;
     friend std::ostream& operator<<(std::ostream&, const Vision&);
@@ -200,6 +201,10 @@ class GreedyTxScore : public TxScore {
     // for all stages that are (1) involved in this tx and (2) the remaining bytes of the stage
     // are less than threshold.
     int n_overloaded_stage_ixbar_imbalanced_alignments = 0;
+
+    // For TCAM table match keys, amount of nibbles occupied, i.e. the width of the span
+    // between first and last nibble occupied.
+    int n_range_match_nibbles_occupied = 0;
 
  public:
     explicit GreedyTxScore(const Vision* vision) : vision_i(vision) {}

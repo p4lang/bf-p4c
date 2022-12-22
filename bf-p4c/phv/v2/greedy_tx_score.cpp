@@ -181,6 +181,15 @@ GreedyTxScoreMaker::GreedyTxScoreMaker(
             vision_i.cont_available[device_gress(c)].m[kind_sz]++;
         }
     }
+
+    // Record all fields that are TCAM table keys
+    for (const auto& [table, prop] : kit_i.tb_keys.props()) {
+        if (prop.is_tcam && prop.is_range) {
+            for (const FieldSlice &fs : prop.keys) {
+                table_key_with_ranges.insert(fs.field());
+            }
+        }
+    }
 }
 
 void GreedyTxScoreMaker::record_commit(const Transaction& tx, const SuperCluster* sc) {
@@ -270,6 +279,14 @@ TxScore* GreedyTxScoreMaker::make(const Transaction& tx) const {
         if (slices.size() == 0) continue;
         tx_gress = slices.front().field()->gress;
 
+        for (const auto &slice : slices) {
+            if (!table_key_with_ranges.count(slice.field())) continue;
+            // Slices less than 4 bits should ideally not cross nibble boundaries
+            const le_bitrange &range = slice.container_slice();
+            int lo_nibble = range.lo / 4;
+            int hi_nibble = range.hi / 4;
+            rv->n_range_match_nibbles_occupied = hi_nibble - lo_nibble + 1;
+        }
         const auto c_kind = c.type().kind();
         const auto c_size = c.type().size();
         const auto c_kind_size = std::make_pair(c_kind, c_size);
@@ -597,6 +614,9 @@ bool GreedyTxScore::better_than(const TxScore* other_score) const {
 
     // less tphv collection use (same as gress setting).
     IF_NEQ_RETURN_IS_LESS(n_inc_used_tphv_collection, other->n_inc_used_tphv_collection);
+
+    IF_NEQ_RETURN_IS_LESS(n_range_match_nibbles_occupied,
+                          other->n_range_match_nibbles_occupied);
 
     return false;
 }

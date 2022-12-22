@@ -10,8 +10,9 @@ class CollectTableKeys : public MauInspector {
  public:
     struct TableProp {
         ordered_set<PHV::FieldSlice> keys;
-        int n_entries;
-        bool is_tcam;
+        int n_entries = -1;
+        bool is_tcam = false;
+        bool is_range = false;
     };
 
  private:

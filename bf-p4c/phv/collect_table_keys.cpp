@@ -21,6 +21,7 @@ bool CollectTableKeys::preorder(const IR::MAU::Table *tbl) {
         const PHV::Field *f = phv.field(matchKey->expr, &bits);
         CHECK_NULL(f);
         table_props[tbl].keys.emplace(f, bits);
+        table_props[tbl].is_range |= matchKey->for_range();
     }
     table_props[tbl].n_entries = get_n_entries(tbl);
     table_props[tbl].is_tcam = get_n_entries(tbl);
