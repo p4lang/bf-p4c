@@ -307,7 +307,7 @@ std::unique_ptr<json::map>
         mra["hash_function_id"] = hash_fn_ids.at(way.group_xme);
     mra["hash_entry_bit_lo"] = way.index;
     mra["hash_entry_bit_hi"] = way.index + ramdepth + way.subword_bits - 1;
-    mra["number_entry_bits"] = ramdepth + way.subword_bits;
+    mra["number_entry_bits"] = ramdepth;
     mra["number_subword_bits"] = way.subword_bits;
     if (way.select) {
         int lo = way.select.min().index(), hi = way.select.max().index();
@@ -537,6 +537,7 @@ bool SRamMatchTable::parse_way(const value_t &v) {
                     way.index = kv.value.i;
                 } else {
                     way.index = kv.value.lo;
+                    way.index_hi = kv.value.hi;
                     index_size = kv.value.hi - kv.value.lo + 1; }
                 if (way.index > Target::IXBAR_HASH_INDEX_MAX() ||
                     way.index % Target::IXBAR_HASH_INDEX_STRIDE() != 0)
@@ -563,6 +564,11 @@ bool SRamMatchTable::parse_way(const value_t &v) {
             }
         }
         if (index_size) {
+            // FIXME -- currently this code is assuming the index bits cover just the ram index
+            // bits and the subword bits, and not any select bits.  Perhaps that is wrong an it
+            // should include the select bits.  Perhaps this code should just be deleted and this
+            // all dealt with in (Flatrock::)SRamMatchTable::verify_format.  subword_bits will
+            // be reset these anyways.
             if (way.rams.empty()) {
                 error(v.lineno, "no rams in way");
             } else {

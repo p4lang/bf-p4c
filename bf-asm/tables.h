@@ -1073,6 +1073,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam,
         int                             lineno;
         int                             group_xme;      // hash group or xme
         int                             index;          // first bit of index
+        int                             index_hi = -1;  // top bit (if set) for sanity checking
         int                             subword_bits;
         bitvec                          select;
         std::vector<Ram>                rams;

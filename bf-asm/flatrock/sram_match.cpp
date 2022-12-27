@@ -60,15 +60,30 @@ void SRamMatchTable::verify_format(Target::Flatrock) {
         }
     }
     verify_match(fmt_width);
+    int subword_bits = std::max(0, 7 - static_cast<int>(format->log2size));
+    int paddable_bits = format->groups() == 1 ? subword_bits : 0;
+    if (format->field("match")) {
+        // cuckoo hash (or BPH?) (or atcam?)
+        int set_size = format->groups();
+        while (set_size > 4) {
+            set_size >>= 1;
+            ++subword_bits; }
+    } else {
+        // direct match
+        subword_bits += ceil_log2(format->groups()); }
     for (auto &way : ways) {
-        if (way.subword_bits != ways.front().subword_bits) {
-            error(way.lineno, "incompatible way indexes");
-            break; }
-        if (way.subword_bits + format->log2size < 7) {
-            // make the format compatible with the way by padding it out.  Is there
-            // a better way of doing this?  Or perhaps it should be an error
-            format->log2size = 7 - way.subword_bits;
-        }
+        if (way.index_hi >= 0 && way.subword_bits != subword_bits) {
+            // FIXME -- perhaps these should be errors?
+            if (way.subword_bits > subword_bits) {
+                warning(way.lineno, "Too many index bits in way");
+            } else {
+                warning(way.lineno, "Not enough index bits in way");
+                if (&way == &ways[0] && subword_bits - way.subword_bits <= paddable_bits) {
+                    // HACK -- if this is the first way, try padding out the format to match
+                    // should fix the compiler to not produce this.
+                    format->log2size = 7 - way.subword_bits;
+                    subword_bits = way.subword_bits; } } }
+        way.subword_bits = subword_bits;
     }
 }
 
