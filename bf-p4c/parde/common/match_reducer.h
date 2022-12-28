@@ -20,7 +20,7 @@ class HasFullMatchCoverage {
         }
     };
 
-    bool is_power_of_2(uintmax_t value) { return value && !(value & (value - 1)); }
+    bool is_power_of_2(big_int value) { return value && !(value & (value - 1)); }
 
     /**
      * @brief Given a set of @p matches, combine all pairs of matches that only differ by a single
@@ -36,8 +36,8 @@ class HasFullMatchCoverage {
         for (const auto match1 : matches) {
             bool combined_matches = false;
             for (const auto match2 : matches) {
-                uintmax_t xor0 = match1.word0 ^ match2.word0,
-                          xor1 = match1.word1 ^ match2.word1;
+                big_int xor0 = match1.word0 ^ match2.word0,
+                        xor1 = match1.word1 ^ match2.word1;
 
                 if (xor0 == 0 && xor1 == 0) continue;
                 if (xor0 != xor1) continue;

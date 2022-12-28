@@ -161,12 +161,9 @@ class BuildGatewayMatch : public Inspector {
     bool preorder(const IR::LNot *) override { return true; }
     bool preorder(const IR::BAnd *) override { return true; }
     bool preorder(const IR::BOr *) override { return true; }
-    void constant(uint64_t val);
+    void constant(big_int val);
     bool preorder(const IR::Constant *c) override {
-        if (c->value < 0)
-            constant(~static_cast<uint64_t>(-c->value - 1));  // 2s complement
-        else
-            constant(static_cast<uint64_t>(c->value));
+        constant(c->value);
         return true; }
     bool preorder(const IR::BoolLiteral *c) override { constant(c->value); return true; }
     bool preorder(const IR::Equ *) override;
@@ -174,10 +171,10 @@ class BuildGatewayMatch : public Inspector {
     bool preorder(const IR::RangeMatch *) override;
     friend std::ostream &operator<<(std::ostream &, const BuildGatewayMatch &);
     PHV::FieldSlice             match_field;
-    uint64_t                    andmask = 0, ormask = 0, cmplmask = 0;
+    big_int                     andmask = 0, ormask = 0, cmplmask = 0;
     int                         shift = 0, maxbit = 0;
     bool check_per_byte_match(const std::pair<int, le_bitrange> &byte,
-                              uint64_t mask, uint64_t val);
+                              big_int mask, big_int val);
 
  public:
     BuildGatewayMatch(const PhvInfo &phv, CollectGatewayFields &f);

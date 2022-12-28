@@ -898,7 +898,12 @@ bool CollectGatewayFields::compute_offsets() {
                     if (f.bit + b.hi - f.lo >= bits)
                         bits = f.bit + b.hi - f.lo + 1; } }
             if (field_bits.empty()) continue; }
-        if ((bytes+size > gws.PhvBytes && size == 1) || info.need_range) {
+        bool alloc_in_bits = info.need_range;
+        if (!alloc_in_bits && size == 1) {
+            if (bytes+size > gws.PhvBytes && bits+field.size() <= gws.HashBits) {
+                // if we've run out of bytes and there are available hash bits, try using them
+                alloc_in_bits = true; } }
+        if (alloc_in_bits) {
             BUG_CHECK(field_bits.ffz(field.range().lo) == size_t(field.range().hi + 1),
                       "field only partly in hash needed all in hash");
             info.offsets.emplace_back(bits + 32, field.range());
@@ -1181,8 +1186,8 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
         // FIXME -- could/should call `constant(0)` here to do a compare with 0 for the xor?
         // avoid duplicating all this code;
         size_t size = std::max(static_cast<int>(bits.size()), match_field.size());
-        uint64_t mask = bitMask(size), donemask = 0;
-        uint64_t val = cmplmask & mask;
+        big_int mask = bitMask(size), donemask = 0;
+        big_int val = cmplmask & mask;
         mask &= andmask & ~ormask;
         mask <<= match_field.range().lo;
         val <<= match_field.range().lo;
@@ -1190,24 +1195,28 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
         auto *match_info = &fields.info.at(match_field);
         if (match_info->offsets.empty() && !match_info->xor_offsets.empty())
             std::swap(field_info, match_info);
-        LOG4("  match_info = " << *match_info << ", mask=0x" << hex(mask) << " shift=" << shift);
+        LOG4("  match_info = " << *match_info << ", mask=0x" << std::hex << mask << std::dec <<
+             " shift=" << shift);
         LOG4("  xor_match_info = " << *field_info);
         auto it = field_info->xor_offsets.begin();
         auto end = field_info->xor_offsets.end();
         auto orig_mask = mask;
+        big_int upper_bit_mask = 0;
         for (auto &off : match_info->offsets) {
             while (it != end && it->first < off.first) ++it;
             if (it == end) break;
             if (off.first < it->first) continue;
             if (it->first != off.first || it->second.size() != off.second.size()) {
                 BUG("field equality comparison misaligned in gateway"); }
-            uint64_t elmask = bitMask(off.second.size()) << off.second.lo;
+            big_int elmask = bitMask(off.second.size()) << off.second.lo;
             if ((elmask &= mask) == 0) continue;
             if (off.first/8 < gws.PerByteMatch) {
                 if (!check_per_byte_match(off, mask, val)) continue;
-                mask &= ~elmask; }
+                mask &= ~elmask;
+            } else {
+                upper_bit_mask |= elmask; }
             int shft = off.first - off.second.lo - shift;
-            LOG6("    elmask=0x" << hex(elmask) << " shft=" << shft);
+            LOG6("    elmask=0x" << std::hex << elmask << std::dec << " shft=" << shft);
             if (shft >= 0) {
                 match.word0 &= ~(val << shft) | ~(elmask << shft);
                 match.word1 &= (val << shft) | ~(elmask << shft);
@@ -1220,8 +1229,7 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
         const IR::Expression *tmp;
         BUG_CHECK(orig_mask == donemask, "failed to match all bits of %s",
                   (tmp = findContext<IR::Operation::Relation>()) ? tmp : e);
-        BUG_CHECK(shift >= gws.PerByteMatch*8 || mask << (64 - gws.PerByteMatch*8 + shift) == 0,
-                  "Didn't cover all bytes");
+        BUG_CHECK((mask ^ upper_bit_mask) << shift == 0, "Didn't cover all bytes");
         match_field = {}; }
     return false;
 }
@@ -1256,12 +1264,12 @@ bool BuildGatewayMatch::preorder(const IR::MAU::TypedPrimitive *prim) {
  *  the same field byte in different bytes of the gateway will be don't care)
  */
 bool BuildGatewayMatch::check_per_byte_match(const std::pair<int, le_bitrange> &byte,
-                                             uint64_t mask, uint64_t val) {
+                                             big_int mask, big_int val) {
     BUG_CHECK((byte.first % 8) + byte.second.size() <= 8, "match crosses byte boundary");
     int byte_idx = byte.first / 8;
     int shft = (byte.second.lo & -8) + (byte.first % 8);
-    unsigned bmask = (mask >> shft) & 0xff;
-    unsigned bval = (val >> shft) & bmask;
+    unsigned bmask = unsigned(mask >> shft) & 0xff;
+    unsigned bval = unsigned(val >> shft) & bmask;
     BUG_CHECK(bmask != 0, "no bits in the identified byte?");
     match_t &bmatch = byte_matches.emplace(byte_idx, match_t::dont_care(8)).first->second;
     if ((~bval & bmask & ~bmatch.word0) || (bval & bmask & ~bmatch.word1)) {
@@ -1272,34 +1280,37 @@ bool BuildGatewayMatch::check_per_byte_match(const std::pair<int, le_bitrange> &
     return true;
 }
 
-void BuildGatewayMatch::constant(uint64_t c) {
+void BuildGatewayMatch::constant(big_int c) {
     auto ctxt = getContext();
     auto &gws = Device::gatewaySpec();
     if (ctxt->node->is<IR::BAnd>()) {
         andmask = c;
-        LOG4("  andmask = 0x" << hex(andmask));
+        LOG4("  andmask = 0x" << std::hex << andmask << std::dec);
     } else if (ctxt->node->is<IR::BOr>()) {
         ormask = c;
-        LOG4("  ormask = 0x" << hex(ormask));
+        LOG4("  ormask = 0x" << std::hex << ormask << std::dec);
     } else if (match_field) {
-        uint64_t mask = bitMask(match_field.size());
-        uint64_t val = (c ^ cmplmask) & mask;
+        big_int mask = bitMask(match_field.size());
+        big_int val = (c ^ cmplmask) & mask;
         if ((val & mask & ~andmask) || (~val & mask & ormask))
             warning("%smasked comparison in gateway can never match", ctxt->node->srcInfo);
         mask &= andmask & ~ormask;
         mask <<= match_field.range().lo;
         val <<= match_field.range().lo;
         auto &match_info = fields.info.at(match_field);
-        LOG4("  match_info = " << match_info << ", val=" << val << " mask=0x" << hex(mask) <<
-             " shift=" << shift);
+        LOG4("  match_info = " << match_info << ", val=" << val << " mask=0x" << std::hex <<
+             mask << std::dec << " shift=" << shift);
+        big_int upper_bits_mask = 0;   // bits being matched that don't require per-bye sharing
         for (auto &off : match_info.offsets) {
-            uint64_t elmask = bitMask(off.second.size()) << off.second.lo;
+            big_int elmask = bitMask(off.second.size()) << off.second.lo;
             if ((elmask &= mask) == 0) continue;
             int shft = off.first - off.second.lo - shift;
             if (off.first/8 < gws.PerByteMatch) {
                 if (!check_per_byte_match(off, mask, val)) continue;
-                mask &= ~elmask; }
-            LOG6("    elmask=0x" << hex(elmask) << " shft=" << shft);
+                mask &= ~elmask;
+            } else {
+                upper_bits_mask |= elmask; }
+            LOG6("    elmask=0x" << std::hex << elmask << std::dec << " shft=" << shft);
             if (shft >= 0) {
                 match.word0 &= ~(val << shft) | ~(elmask << shft);
                 match.word1 &= (val << shft) | ~(elmask << shft);
@@ -1307,9 +1318,7 @@ void BuildGatewayMatch::constant(uint64_t c) {
                 match.word0 &= ~(val >> -shft) | ~(elmask >> -shft);
                 match.word1 &= (val >> -shft) | ~(elmask >> -shft); }
             LOG6("    match now " << match); }
-        // DANGER -- will require more than 64 bits if PerByteMatch > 8 (it is 8 on tofino5)
-        BUG_CHECK(shift >= gws.PerByteMatch*8 || mask << (64 - gws.PerByteMatch*8 + shift) == 0,
-                  "Didn't cover all bytes");
+        BUG_CHECK((mask ^ upper_bits_mask) << shift == 0, "Didn't cover all bytes");
         match_field = {};
     } else {
         BUG("Invalid context for constant in BuildGatewayMatch"); }

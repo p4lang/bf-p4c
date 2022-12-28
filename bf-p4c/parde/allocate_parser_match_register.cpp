@@ -1200,12 +1200,12 @@ class MatchLayout {
 
         // Pop out value for each select.
         auto const_val = transition->value->to<IR::BFN::ParserConstMatchValue>()->value;
-        uintmax_t word0 = const_val.word0;
-        uintmax_t word1 = const_val.word1;
+        big_int word0 = const_val.word0;
+        big_int word1 = const_val.word1;
         auto shiftOut = [&word0, &word1] (int sz) {
-            uintmax_t mask = ~(~uintmax_t(0) << sz);
-            uintmax_t sub0 = (word0 & mask);
-            uintmax_t sub1 = (word1 & mask);
+            big_int mask = (big_int(1) << sz) - 1;
+            big_int sub0 = (word0 & mask);
+            big_int sub1 = (word1 & mask);
             word0 >>= sz;
             word1 >>= sz;
             return match_t(sub0, sub1); };

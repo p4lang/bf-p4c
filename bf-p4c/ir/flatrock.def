@@ -103,7 +103,7 @@ class PortMetadata {
 class Profile {
     int index;
 #emit
-    static constexpr decltype(match_t::word0) match_port_all =
+    static constexpr uintmax_t match_port_all =
         (1 << ::Flatrock::PARSER_PROFILE_PORT_BIT_WIDTH) - 1;  // all-match by default
 #end
     match_t match_port = {match_port_all, match_port_all};
@@ -243,7 +243,7 @@ class AnalyzerRule {
     int index;
     match_t match_state = {~0ULL, ~0ULL};  // all-match by default
 #emit
-    static constexpr decltype(match_t::word0) match_w_all =
+    static constexpr uintmax_t match_w_all =
         (1ULL << (::Flatrock::PARSER_W_WIDTH * 8)) - 1;  // all-match by default
 #end
     match_t match_w0 = {match_w_all, match_w_all};  // all-match by default
@@ -352,7 +352,7 @@ class AnalyzerStage {
 class PhvBuilderExtract {
     int index = -1;
 #emit
-    static constexpr decltype(match_t::word0) match_all =
+    static constexpr uintmax_t match_all =
         (1ULL << (::Flatrock::PARSER_POV_SELECT_NUM * 8)) - 1;  // all-match by default
 #end
     match_t match = {match_all, match_all};

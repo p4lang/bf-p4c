@@ -63,10 +63,10 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/flatrock/pac_unbal_reconverge.p4
   )
 
-p4c_add_xfail_reason("tofino5"
-  "The table tbl_pac_wide_branch.* could not fit within .* input crossbar"
-  extensions/p4_tests/p4_16/flatrock/pac_wide_branch.p4
-  )
+#p4c_add_xfail_reason("tofino5"
+#  "error: same register/slice can not be used multiple times"
+#  extensions/p4_tests/p4_16/flatrock/pac_wide_branch.p4
+#  )
 
 p4c_add_xfail_reason("tofino5"
   "error: Syntax error, expecting identifier"
@@ -86,6 +86,7 @@ p4c_add_xfail_reason("tofino5"
   #(with P4C-4689 this passes because the PHV alloc was perturbed)
   #extensions/p4_tests/p4_16/flatrock/pac_extraction_different_fields_same_container.p4
   extensions/p4_tests/p4_16/stf/p4c-3551.p4
+  extensions/p4_tests/p4_16/flatrock/pac_wide_branch.p4
   )
 
 p4c_add_xfail_reason("tofino5"
@@ -198,7 +199,13 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
+ "Compiler Bug: Could not find hdr_id"
+  extensions/p4_tests/p4_16/stf/extract_slice_2.p4
+  )
+
+p4c_add_xfail_reason("tofino5"
   "Compiler Bug: Allocation of field: .* can not be satisfied as it requires to use extraction from packet and other source to the same container"
+  extensions/p4_tests/p4_16/stf/parser_multi_write_5.p4
   extensions/p4_tests/p4_16/stf/parser_multi_write_8.p4
   )
 
@@ -206,6 +213,7 @@ p4c_add_xfail_reason("tofino5"
   "expected packets? on port . not seen"
   extensions/p4_tests/p4_16/stf/parser_counter_6.p4
   extensions/p4_tests/p4_16/stf/parser_counter_8.p4
+  extensions/p4_tests/p4_16/stf/parser_multi_write_1.p4
   )
 
 p4c_add_xfail_reason("tofino5"
@@ -287,13 +295,6 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/stf/p4c-2695.p4
   extensions/p4_tests/p4_16/stf/parser_local_register.p4
   extensions/p4_tests/p4_16/stf/parser_local_register_2.p4
-  )
-
-p4c_add_xfail_reason("tofino5"
-  "Could not place table .*: The table .* could not fit within the input crossbar"
-  extensions/p4_tests/p4_16/stf/extract_slice_2.p4
-  extensions/p4_tests/p4_16/stf/parser_multi_write_1.p4
-  extensions/p4_tests/p4_16/stf/parser_multi_write_5.p4
   )
 
 p4c_add_xfail_reason("tofino5"
