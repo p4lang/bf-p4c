@@ -239,6 +239,7 @@ struct MemUnit;
     class GatewayTable;                 \
     class MeterTable;                   \
     class StatefulTable;                \
+    class TernaryIndirectTable;         \
     class TernaryMatchTable;
 #define REGISTER_SET_SPECIFIC_CLASSES   /* none */
 #define TARGET_SPECIFIC_CLASSES         /* none */

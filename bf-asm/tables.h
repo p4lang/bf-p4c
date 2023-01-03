@@ -1460,6 +1460,7 @@ DECLARE_TABLE_TYPE(HashActionTable, MatchTable, "hash_action",
 )
 
 DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
+ protected:
     TernaryMatchTable           *match_table = nullptr;
     AttachedTables              attached;
     table_type_t table_type() const override { return TERNARY_INDIRECT; }

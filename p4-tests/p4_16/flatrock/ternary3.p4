@@ -46,7 +46,7 @@ control egress(inout headers hdrs, inout metadata meta,
             // setb1;  // uncommenting this causes incorrect action bus alloc
             setb2;
         }
-        size = 4*1024;  // 10*1024 should fit but loops in tind alloc
+        size = 10*1024;
         const default_action = noop();
     }
 

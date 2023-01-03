@@ -49,15 +49,18 @@ void TernaryMatchTable::alloc_vpns() {
     vpn_params(width, depth, period, period_name);
     if (width == 0) return;
     std::vector<Layout *> rows;
+    std::set<std::pair<int, int>> stage_cols;
     for (auto &r : layout) {
+        for (auto &mem : r.memunits)
+            stage_cols.emplace(mem.stage, mem.col);
         rows.push_back(&r);
         r.vpns.resize(r.memunits.size()); }
     std::sort(rows.begin(), rows.end(), [](Layout *const&a, Layout *const&b)->bool {
                 return a->row < b->row; });
     int vpn = 0;
-    for (int col = 0; col <= 1; ++col) {
+    for (auto [stage, col] : stage_cols) {
         for (auto *r : rows) {
-            unsigned idx = find(r->memunits, MemUnit(r->row, col)) - r->memunits.begin();
+            unsigned idx = find(r->memunits, MemUnit(stage, r->row, col)) - r->memunits.begin();
             if (idx < r->vpns.size())
                 r->vpns[idx] = vpn++/width; }
         if (vpn%width != 0)
@@ -1073,10 +1076,6 @@ void TernaryIndirectTable::pass1() {
     LOG1("### Ternary indirect table " << name() << " pass1");
     determine_word_and_result_bus();
     Table::pass1();
-    if (Target::SRAM_GLOBAL_ACCESS())
-        alloc_global_busses();
-    else
-        alloc_busses(stage->tcam_indirect_bus_use, Layout::TIND_BUS);
     if (action_enable >= 0)
         if (action.args.size() < 1 || action.args[0].size() <= (unsigned)action_enable)
             error(lineno, "Action enable bit %d out of range for action selector", action_enable);
@@ -1205,10 +1204,11 @@ void TernaryMatchTable::add_result_physical_buses(json::map &stage_tbl) const {
     json::vector &result_physical_buses = stage_tbl["result_physical_buses"] = json::vector();
     if (indirect) {
         for (auto l : indirect->layout) {
-            result_physical_buses.push_back(l.row * 2 + l.bus.at(Layout::TIND_BUS)); } }
-    else
-        result_physical_buses.push_back(indirect_bus);
+            if (l.bus.count(Layout::TIND_BUS)) {
+                result_physical_buses.push_back(l.row * 2 + l.bus.at(Layout::TIND_BUS)); } }
+    } else {
+        result_physical_buses.push_back(indirect_bus); }
 }
 
 DEFINE_TABLE_TYPE_WITH_SPECIALIZATION(TernaryMatchTable, TARGET_CLASS)
-DEFINE_TABLE_TYPE(TernaryIndirectTable)
+DEFINE_TABLE_TYPE_WITH_SPECIALIZATION(TernaryIndirectTable, TARGET_CLASS)

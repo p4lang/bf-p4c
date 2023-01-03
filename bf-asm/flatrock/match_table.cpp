@@ -36,7 +36,7 @@ template<> void MatchTable::write_regs(Target::Flatrock::mau_regs &regs, int typ
     /* DANGER -- you might think we should call write_regs on other related things here
      * (actions, hash_dist, idletime, gateway) rather than just input_xbar, but those are
      * all called by the various callers of this method.  Not clear why input_xbar is
-     * different */
+     * different.  action_bus->write_regs is also called here and not by callers. */
 
     int dconfig = 0;  // FIXME -- some parts of this support selecting config based on
     // dconfig bits -- for now we just use config 0

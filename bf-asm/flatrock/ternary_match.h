@@ -29,6 +29,22 @@ class Target::Flatrock::TernaryMatchTable : public ::TernaryMatchTable {
         void write_regs, (mau_regs &), override; )
 };
 
+class Target::Flatrock::TernaryIndirectTable : public ::TernaryIndirectTable {
+    friend class ::TernaryIndirectTable;
+    TernaryIndirectTable(int line, const char *n, gress_t gr, Stage *s, int lid) :
+        ::TernaryIndirectTable(line, n, gr, s, lid) { }
+    int stm_vbus_column() const override {
+        BUG_CHECK(physical_ids.popcount() == 1, "not exactly one physical id in %s", name());
+        int id = *physical_ids.begin();
+        BUG_CHECK(id >= 0 && id <= 3, "invalid tcam id for tind in %s", name());
+        return id == 3 ? 4 : id; }
+
+    void pass1() override;
+    void pass2() override;
+    REGSETS_IN_CLASS(Flatrock, TARGET_OVERLOAD,
+        void write_regs, (mau_regs &), override; )
+};
+
 template<> void TernaryMatchTable::write_regs_vt(Target::Flatrock::mau_regs &regs);
 template<> void TernaryIndirectTable::write_regs_vt(Target::Flatrock::mau_regs &regs);
 

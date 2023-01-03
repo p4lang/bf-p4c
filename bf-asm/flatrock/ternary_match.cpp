@@ -1,4 +1,5 @@
 #include "ternary_match.h"
+#include "action_bus.h"
 #include "stage.h"
 #include "top_level.h"
 
@@ -57,6 +58,14 @@ void Target::Flatrock::TernaryMatchTable::pass1() {
              TCAM_TABLES_WITH_INDIRECT_STM, false, stage->tcam_id_use);
         physical_ids[tcam_id] = 1; }
     for (auto tind : local_tind_units) {
+        if (gress == EGRESS) {
+            if (tind < 7 - tcam_id)
+                error(lineno, "local tind unit %d not usable by egress logical tcam %d",
+                      tind, tcam_id);
+        } else {
+            if (tind > 8 + tcam_id)
+                error(lineno, "local tind unit %d not usable by ingress logical tcam %d",
+                      tind, tcam_id); }
         if (stage->local_tind_use[tind]) {
             if (stage->local_tind_use[tind] == this)
                 error(lineno, "local tind %d used multiple times by %s", tind, name());
@@ -100,6 +109,14 @@ void Target::Flatrock::TernaryMatchTable::pass1() {
                   indirect ? " indirect" : ""); } }
 }
 
+void Target::Flatrock::TernaryIndirectTable::pass1() {
+    ::TernaryIndirectTable::pass1();
+    if (match_table->tcam_id >= 0)
+        physical_ids |= 1 << match_table->tcam_id;
+    if (!physical_ids.empty())
+        alloc_global_busses();
+}
+
 void Target::Flatrock::TernaryMatchTable::pass2() {
     ::TernaryMatchTable::pass2();
     if (tcam_id < 0) {
@@ -134,6 +151,16 @@ void Target::Flatrock::TernaryMatchTable::pass2() {
                     for (int st = tbl_stage; st <= maxstage; ++st)
                         Stage::stage(INGRESS, st)->tcam_match_bus_use[row.row][hbus] = this;
                     break; } } } }
+}
+
+void Target::Flatrock::TernaryIndirectTable::pass2() {
+    ::TernaryIndirectTable::pass2();
+    if (physical_ids.empty()) {
+        if (match_table->tcam_id >= 0)
+            physical_ids |= 1 << match_table->tcam_id;
+        if (!physical_ids.empty())
+            alloc_global_busses();
+    }
 }
 
 static auto &scm_regs(gress_t gress, int stageno) {
@@ -314,12 +341,46 @@ void Target::Flatrock::TernaryMatchTable::write_regs(Target::Flatrock::mau_regs 
         hd.write_regs(regs, this);
 }
 
-template<> void TernaryMatchTable::write_regs_vt(Target::Flatrock::mau_regs &regs) { BUG(); }
-template<> void TernaryIndirectTable::write_regs_vt(Target::Flatrock::mau_regs &regs) {
+void Target::Flatrock::TernaryIndirectTable::write_regs(Target::Flatrock::mau_regs &regs) {
     LOG1("### Ternary indirect table " << name() << " write_regs");
-    error(lineno, "%s:%d: Flatrock ternary indirect not implemented yet!", SRCFILE, __LINE__);
+    int dconfig = 0;  // FIXME -- some parts of this support selecting config based on
+    // dconfig bits -- for now we just use config 0
+
+    BUG_CHECK(physical_ids.popcount() == 1, "not exactly one physical id in %s", name());
+    for (auto physid : physical_ids) {
+        auto &cfg = regs.ppu_tind[physid].rf.tind_cfg;
+        cfg.dconfig_delay = 7;   // min value
+        cfg.delay = 4;  // min value
+        cfg.sub_addr_size[dconfig] = 7 - format->log2size;
+        cfg.tind_sel[dconfig] = 2;
+    }
+
+    auto &ppu = TopLevel::regs<Target::Flatrock>()->reg_pipe.ppu_pack;
+    int maxdelay = 0;
+    for (auto &row : layout)
+        for (auto &ram : row.memunits)
+            maxdelay = std::max(maxdelay, std::abs(ram.stage/2 - stage->stageno/2));
+    BUG_CHECK(physical_ids.popcount() == 1, "not exactly one physical id in %s", name());
+    int vcol = stm_vbus_column();
+    for (auto &row : layout) {
+        auto vpn = row.vpns.begin();
+        for (auto &ram : row.memunits) {
+            BUG_CHECK(row.row == ram.row, "ram row mismatch");
+            BUG_CHECK(vpn != row.vpns.end(), "not enough vpns on row");
+            if (gress != EGRESS)
+                stm_bus_rw_config(ppu.istm, stage->stageno, vcol, 2, row.bus, ram,
+                                  false, *vpn, maxdelay);
+            else
+                stm_bus_rw_config(ppu.estm, stage->stageno, vcol, 2, row.bus, ram,
+                                  false, *vpn, maxdelay);
+            ++vpn; }
+        BUG_CHECK(vpn == row.vpns.end(), "too many vpns on row"); }
+
+    if (action_bus) action_bus->write_regs(regs, this);
     if (actions) actions->write_regs(regs, this);
     for (auto &hd : hash_dist)
         hd.write_regs(regs, this);
 }
 
+template<> void TernaryMatchTable::write_regs_vt(Target::Flatrock::mau_regs &regs) { BUG(); }
+template<> void TernaryIndirectTable::write_regs_vt(Target::Flatrock::mau_regs &regs) { BUG(); }

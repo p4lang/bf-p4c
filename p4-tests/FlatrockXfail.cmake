@@ -37,12 +37,6 @@ p4c_add_xfail_reason("tofino5"
 
 p4c_add_xfail_reason("tofino5"
   # "error: The table table .* cannot find a valid packing, and cannot be placed. Possibly the match key is too wide given the hardware constraints"
-  "Error producing mau.json: argument of type 'NoneType' is not iterable"
-  extensions/p4_tests/p4_16/flatrock/direct_actiondata1.p4
-  )
-
-p4c_add_xfail_reason("tofino5"
-  # "error: The table table .* cannot find a valid packing, and cannot be placed. Possibly the match key is too wide given the hardware constraints"
   "The selected pack format for table .* could not fit given the input xbar allocation"
   extensions/p4_tests/p4_16/stf/p4c-3089.p4
   )

@@ -19,3 +19,8 @@ void Target::Tofino::TernaryMatchTable::pass1() {
         physical_ids[tcam_id] = 1; }
     // alloc_busses(stage->tcam_match_bus_use); -- now hardwired
 }
+
+void Target::Tofino::TernaryIndirectTable::pass1() {
+    ::TernaryIndirectTable::pass1();
+    alloc_busses(stage->tcam_indirect_bus_use, Layout::TIND_BUS);
+}

@@ -815,14 +815,16 @@ ResourcesLogging::logTindResultBuses(unsigned int stageNo) const {
                 auto row = memuse.row[0].row;
                 auto bus = memuse.row[0].bus;
 
-                int id = 2 * row + bus;
-                if (idToUsages.count(id) == 0) {
-                    idToUsages[id] = new TindResultBusUsage(id);
-                }
+                if (bus >= 0) {
+                    int id = 2 * row + bus;
+                    if (idToUsages.count(id) == 0) {
+                        idToUsages[id] = new TindResultBusUsage(id);
+                    }
 
-                auto usedBy = res.tableName.substr(res.tableName[0] == '.' ? 1 : 0);
-                auto eu = new ElementUsage(usedBy, usedFor);
-                idToUsages[id]->append(eu);
+                    auto usedBy = res.tableName.substr(res.tableName[0] == '.' ? 1 : 0);
+                    auto eu = new ElementUsage(usedBy, usedFor);
+                    idToUsages[id]->append(eu);
+                }
                 break;
             }
             case Memories::Use::GATEWAY: {
