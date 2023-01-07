@@ -50,6 +50,11 @@ void FinalizePhysicalLiverange::update_liverange(const safe_vector<AllocSlice>& 
                                                  const StageAndAccess& op) {
     for (const auto& slice : slices) {
         // update AllocSlice-based live range.
+        if (slice.field()->pov) {
+            // POV fields are marked as live through the whole pipeline, do not adjust based on
+            // usage.
+            continue;
+        }
         LOG1("update live range of " << slice << ": " << op);
         if (auto it = live_ranges_i.find(slice); it != live_ranges_i.end()) {
             it->second.extend(op);

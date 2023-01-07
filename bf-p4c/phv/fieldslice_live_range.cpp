@@ -472,6 +472,13 @@ void FieldSliceLiveRangeDB::DBSetter::end_apply() {
             LOG5("found tailing write: " << def.first);
             update_live_status(liverange, *def_loc, false);
         }
+        if (fs.field()->pov) {
+            // POV fields should be live throughout the whole pipeline
+            update_live_range_info(fs,
+                                   Location{Location::DEPARSER, {}},
+                                   Location{Location::PARSER, {}},
+                                   liverange);
+        }
     }
 
     LOG3("LiveRange Result:");
