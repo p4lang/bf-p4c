@@ -20,6 +20,7 @@ class Target::Flatrock::TernaryMatchTable : public ::TernaryMatchTable {
     int json_memunit(const MemUnit &) const override;
     void pass1() override;
     void pass2() override;
+    void check_tcam_match_bus(const std::vector<Table::Layout> &) {}
     int ram_word_width() const override { return LOCAL_TIND_WIDTH; }
     void setup_indirect(const value_t &v) override;
     void gen_match_fields_pvp(json::vector &, unsigned, bool, unsigned, bitvec &) const override;

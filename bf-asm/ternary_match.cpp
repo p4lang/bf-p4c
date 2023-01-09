@@ -113,15 +113,6 @@ TernaryMatchTable::Match::Match(const value_t &v) : lineno(v.lineno) {
                       value_desc(kv.key)); } } }
 }
 
-static void check_tcam_match_bus(const std::vector<Table::Layout> &layout) {
-    for (auto &row : layout) {
-        if (row.bus.empty()) continue;
-        for (auto &tcam : row.memunits)
-            if (row.bus.at(Table::Layout::SEARCH_BUS) != tcam.col)
-                error(row.lineno, "Tcam match bus hardwired to tcam column");
-    }
-}
-
 void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
     tcam_id = -1;
     indirect_bus = -1;
@@ -416,7 +407,7 @@ template<class REGS> void TernaryMatchTable::write_regs_vt(REGS &regs) {
     for (Layout &row : layout) {
         auto vpn = row.vpns.begin();
         for (auto tcam : row.memunits) {
-            BUG_CHECK(tcam.stage == -1 && tcam.row == row.row,
+            BUG_CHECK(tcam.stage == INT_MIN && tcam.row == row.row,
                       "bogus tcam %s in row %d", tcam.desc(), row.row);
             auto &tcam_mode = regs.tcams.col[tcam.col].tcam_mode[row.row];
             // tcam_mode.tcam_data1_select = row.bus; -- no longer used
@@ -1123,7 +1114,7 @@ template<class REGS> void TernaryIndirectTable::write_regs_vt(REGS &regs) {
         auto &ram_row = regs.rams.array.row[row.row];
         for (auto &memunit : row.memunits) {
             int col = memunit.col;
-            BUG_CHECK(memunit.stage == -1 && memunit.row == row.row,
+            BUG_CHECK(memunit.stage == INT_MIN && memunit.row == row.row,
                       "bogus %s in row %d", memunit.desc(), row.row);
             auto &unit_ram_ctl = ram_row.ram[col].unit_ram_ctl;
             unit_ram_ctl.match_ram_write_data_mux_select = 7; /* disable */

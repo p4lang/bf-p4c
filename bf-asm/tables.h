@@ -53,7 +53,8 @@ std::ostream &operator<<(std::ostream &, TableOutputModifier);
 
 /* a memory storage 'unit' somewhere on the chip */
 struct MemUnit {
-    int                             stage = -1;  // current stage (only) for tofino1/2/3
+    int                             stage = INT_MIN;  // current stage (only) for tofino1/2/3
+                // can have negative stage numbers for tcams in egress
     int                             row = -1;
     int                             col;    // (lamb) unit when row == -1
     MemUnit() = delete;
@@ -1066,7 +1067,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam,
         using MemUnit::MemUnit;
         Ram(const MemUnit &m) : MemUnit(m) {}
         Ram(MemUnit &&m) : MemUnit(std::move(m)) {}
-        bool isLamb() const { return stage == -1 && row == -1; }
+        bool isLamb() const { return stage == INT_MIN && row == -1; }
         const char *desc() const;  // Short lived temp for messages
     };
     struct Way {
@@ -1313,6 +1314,8 @@ DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
     unsigned            chain_rows[TCAM_UNITS_PER_ROW]; /* bitvector per column */
     enum { ALWAYS_ENABLE_ROW = (1<<2) | (1<<5) | (1<<9) };
     friend class TernaryIndirectTable;
+
+    virtual void check_tcam_match_bus(const std::vector<Table::Layout> &) = 0;
  public:
     void pass0() override;
     int tcam_id = -1;

@@ -122,7 +122,7 @@ std::vector<int> Synth2Port::determine_spare_bank_memory_units(Target::Tofino) c
     for (auto &row : layout) {
         auto vpn_itr = row.vpns.begin();
         for (auto &ram : row.memunits) {
-            BUG_CHECK(ram.stage == -1 && ram.row == row.row,
+            BUG_CHECK(ram.stage == INT_MIN && ram.row == row.row,
                       "bogus %s in row %d", ram.desc(), row.row);
             if (vpn_itr != row.vpns.end())
                 vpn_ctr = *vpn_itr++;

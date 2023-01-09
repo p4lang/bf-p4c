@@ -9,6 +9,7 @@ class Target::Tofino::TernaryMatchTable : public ::TernaryMatchTable {
         ::TernaryMatchTable(line, n, gr, s, lid) { }
 
     void pass1() override;
+    void check_tcam_match_bus(const std::vector<Table::Layout> &);
 };
 
 class Target::Tofino::TernaryIndirectTable : public ::TernaryIndirectTable {

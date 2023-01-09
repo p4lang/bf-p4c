@@ -72,17 +72,6 @@ void AsmStage::start(int lineno, VECTOR(value_t) args) {
         while ((unsigned)args[0].i >= pipe.size())
             pipe.emplace_back(pipe.size(), false);
     }
-#if HAVE_FLATROCK
-    if (Target::EGRESS_SEPARATE() && Target::TCAM_GLOBAL_ACCESS()) {
-        // ingress and egress pipes are laid out in reverse order, with the first
-        // egress stage next to (sharing with) the last but 2 ingress stage.
-        int i = pipe.size() - 3;
-        for (auto &estage : epipe) {
-            estage.shared_tcam_stage = &pipe[i];
-            pipe[i].all_refs.insert(&estage.shared_tcam_stage);
-            if (--i < 0) break; }
-    }
-#endif
 }
 
 void AsmStage::input(VECTOR(value_t) args, value_t data) {
@@ -479,9 +468,6 @@ Stage::Stage(int stage, bool egress_only) : Stage_data(stage, egress_only) {
 Stage::~Stage() {
     for (auto ref : all_refs)
         *ref = nullptr;
-    if (shared_tcam_stage) {
-        shared_tcam_stage->all_refs.erase(&shared_tcam_stage);
-        shared_tcam_stage = nullptr; }
 }
 
 int Stage::first_table(gress_t gress) {
@@ -507,10 +493,6 @@ Stage *Stage::stage(gress_t gress, int stageno) {
 Stage::Stage(Stage &&a) : Stage_data(std::move(a)) {
     for (auto ref : all_refs)
         *ref = this;
-    if (shared_tcam_stage) {
-        shared_tcam_stage->all_refs.insert(&shared_tcam_stage);
-        shared_tcam_stage->all_refs.erase(&a.shared_tcam_stage);
-        a.shared_tcam_stage = nullptr; }
 }
 
 bitvec Stage::imem_use_all() const {

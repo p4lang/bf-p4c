@@ -147,7 +147,7 @@ void Target::Flatrock::TernaryMatchTable::pass2() {
                         ok = false;
                         break; } }
                 if (ok) {
-                    row.bus[Layout::R2L_BUS] = hbus;
+                    row.bus[Layout::L2R_BUS] = hbus;
                     for (int st = tbl_stage; st <= maxstage; ++st)
                         Stage::stage(INGRESS, st)->tcam_match_bus_use[row.row][hbus] = this;
                     break; } } } }
@@ -161,14 +161,6 @@ void Target::Flatrock::TernaryIndirectTable::pass2() {
         if (!physical_ids.empty())
             alloc_global_busses();
     }
-}
-
-static auto &scm_regs(gress_t gress, int stageno) {
-    auto &ppu = TopLevel::regs<Target::Flatrock>()->reg_pipe.ppu_pack;
-    Stage *stage = Stage::stage(gress, stageno);
-    BUG_CHECK(stage, "invalid stage %s:%d", to_string(gress).c_str(), stageno);
-    if (stage->shared_tcam_stage) stage = stage->shared_tcam_stage;
-    return ppu.scm[stage->stageno].stage_addrmap;
 }
 
 void Target::Flatrock::TernaryMatchTable::gen_match_fields_pvp(json::vector &match_field_list,
@@ -300,7 +292,8 @@ void Target::Flatrock::TernaryMatchTable::write_regs(Target::Flatrock::mau_regs 
 
         for (auto &ram : row.memunits) {
             BUG_CHECK(row.row == ram.row, "ram row mismatch");
-            auto &scm = scm_regs(gress, ram.stage);
+            int istage = gress != EGRESS ? ram.stage : EGRESS_STAGE0_INGRESS_STAGE - ram.stage;
+            auto &scm = ppu.scm[istage].stage_addrmap;
             int unit = phys_row + TCAM_ROWS * ram.col;
             for (auto d : dconfig)
                 scm.chunk_mask[unit].chunk_mask[d] = 0xff;  // FIXME -- for now use whole tcam

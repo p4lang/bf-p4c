@@ -715,7 +715,7 @@ void MeterTable::write_mapram_color_regs(REGS &regs, bool &push_on_overflow) {
 
         for (auto &memunit : row.memunits) {
             int col = memunit.col;
-            BUG_CHECK(memunit.stage == -1 && memunit.row == row.row,
+            BUG_CHECK(memunit.stage == INT_MIN && memunit.row == row.row,
                       "bogus %s in row %d", memunit.desc(), row.row);
             auto &mapram_config = map_alu_row.adrmux.mapram_config[col];
             if (row.row == curr_home_row/2)
@@ -827,7 +827,7 @@ void MeterTable::write_regs_vt(REGS &regs) {
         swbox->setup_row(row);
         for (auto &memunit : logical_row.memunits) {
             int logical_col = memunit.col;
-            BUG_CHECK(memunit.stage == -1 && memunit.row == logical_row.row,
+            BUG_CHECK(memunit.stage == INT_MIN && memunit.row == logical_row.row,
                       "bogus %s in logical row %d", memunit.desc(), logical_row.row);
             unsigned col = logical_col + 6*side;
             LOG2("# DataSwitchbox.setup_row_col(" << row << ", " << col << ", vpn=" << *vpn <<

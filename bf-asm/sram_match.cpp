@@ -899,7 +899,7 @@ template<class REGS> void SRamMatchTable::write_regs_vt(REGS &regs) {
         auto vpn_iter = row.vpns.begin();
         for (auto &memunit : row.memunits) {
             int col = memunit.col;
-            BUG_CHECK(memunit.stage == -1 && memunit.row == row.row,
+            BUG_CHECK(memunit.stage == INT_MIN && memunit.row == row.row,
                       "bogus %s in row %d", memunit.desc(), row.row);
             auto &way = way_map.at(memunit);
             if (first) {

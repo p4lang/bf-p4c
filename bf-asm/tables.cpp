@@ -19,7 +19,7 @@ const char *MemUnit::desc() const {
     do {
         if (end - p < 7) p = buffer;
         rv = p;
-        if (stage >= 0)
+        if (stage != INT_MIN)
             p += snprintf(p, end-p, "Mem %d,%d,%d", stage, row, col);
         else if (row >= 0)
             p += snprintf(p, end-p, "Mem %d,%d", row, col);
@@ -413,7 +413,7 @@ void Table::setup_layout(std::vector<Layout> &layout, const VECTOR(pair_t) &data
             for (auto &lrow : layout)
                 err |= add_col(lineno, this->stage->stageno, lrow, 0); }
     } else if (auto *col = get(data, "column")) {
-        int stage = global_access ? this->stage->stageno : -1;
+        int stage = global_access ? this->stage->stageno : INT_MIN;
         if (col->type == tMAP && global_access) {
             bitvec      stages_seen;
             for (auto &kv : col->map) {
@@ -659,7 +659,7 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
                                                    : Target::SRAM_GLOBAL_ACCESS();
     if (kv.key == "format" || kv.key == "row" || kv.key == "column" || kv.key == "bus") {
         /* done in Table::common_init_setup */
-    } else if (global_access && (kv.key == "stage" || kv.key == "lhbus" || kv.key == "rhbus")) {
+    } else if (global_access && (kv.key == "stages" || kv.key == "lhbus" || kv.key == "rhbus")) {
         /* done in Table::common_init_setup */
     } else if (kv.key == "action") {
         action.setup(kv.value, this);
@@ -835,7 +835,7 @@ void Table::alloc_rams(bool logical, BFN::Alloc2Dbase<Table *> &use,
                        BFN::Alloc2Dbase<Table *> *bus_use, Layout::bus_type_t bus_type) {
     for (auto &row : layout) {
         for (auto &memunit : row.memunits) {
-            BUG_CHECK(memunit.stage == -1 && memunit.row == row.row, "memunit fail");
+            BUG_CHECK(memunit.stage == INT_MIN && memunit.row == row.row, "memunit fail");
             int r = row.row, c = memunit.col;
             if (logical) {
                 c += 6 * (r&1);

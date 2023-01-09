@@ -330,7 +330,7 @@ template<class REGS> void AlgTcamMatchTable::write_regs_vt(REGS &regs) {
         auto &rams_row = regs.rams.array.row[row.row];
         for (auto &ram : row.memunits) {
             auto &way = way_map[ram];
-            BUG_CHECK(ram.stage == -1 && ram.row == row.row,
+            BUG_CHECK(ram.stage == INT_MIN && ram.row == row.row,
                       "bogus %s in row %d", ram.desc(), row.row);
             auto &ram_cfg = rams_row.ram[ram.col];
             ram_cfg.match_nibble_s0q1_enable =

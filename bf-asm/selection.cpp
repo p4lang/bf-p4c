@@ -304,7 +304,7 @@ void SelectionTable::write_regs_vt(REGS &regs) {
         LOG2("# DataSwitchbox.setup(" << row << ") home=" << home->row/2U);
         swbox.setup_row(row);
         for (auto &memunit : logical_row.memunits) {
-            BUG_CHECK(memunit.stage == -1 && memunit.row == logical_row.row,
+            BUG_CHECK(memunit.stage == INT_MIN && memunit.row == logical_row.row,
                       "bogus %s in logical row %d", memunit.desc(), logical_row.row);
             unsigned col = memunit.col + 6*side;
             swbox.setup_row_col(row, col, *vpn);

@@ -76,10 +76,6 @@ class Stage_data {
     // per long branch tag
     BFN::Alloc1D<int, MAX_LONGBRANCH_TAGS> mpr_long_brch_lut;
 
-    // When TCAMs are shared between separate ingress and egress Stage objects, this points
-    // at the ingress stage that shares with a given egress stage
-    Stage *shared_tcam_stage = nullptr;
-
     int pass1_logical_id = -1, pass1_tcam_id = -1;
 
     // True egress accounting (4 buses) Tofino2/3 ONLY

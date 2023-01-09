@@ -339,7 +339,7 @@ class Mem_Printer:
         self.big = big
         self.small = small
     def to_string(self):
-        if self.val['stage'] >= 0:
+        if self.val['stage'] > -32768:
             return "%s(%d,%d,%d)" % (self.big, self.val['stage'], self.val['row'], self.val['col'])
         if self.val['row'] >= 0:
             return "%s(%d,%d)" % (self.big, self.val['row'], self.val['col'])

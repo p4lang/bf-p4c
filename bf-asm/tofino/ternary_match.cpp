@@ -24,3 +24,14 @@ void Target::Tofino::TernaryIndirectTable::pass1() {
     ::TernaryIndirectTable::pass1();
     alloc_busses(stage->tcam_indirect_bus_use, Layout::TIND_BUS);
 }
+
+void Target::Tofino::TernaryMatchTable::check_tcam_match_bus(
+        const std::vector<Table::Layout> &layout)
+{
+    for (auto &row : layout) {
+        if (row.bus.empty()) continue;
+        for (auto &tcam : row.memunits)
+            if (row.bus.at(Table::Layout::SEARCH_BUS) != tcam.col)
+                error(row.lineno, "Tcam match bus hardwired to tcam column");
+    }
+}
