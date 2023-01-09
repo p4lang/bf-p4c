@@ -1186,7 +1186,7 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
         // FIXME -- could/should call `constant(0)` here to do a compare with 0 for the xor?
         // avoid duplicating all this code;
         size_t size = std::max(static_cast<int>(bits.size()), match_field.size());
-        big_int mask = bitMask(size), donemask = 0;
+        big_int mask = ~(~big_int(0) << size), donemask = 0;
         big_int val = cmplmask & mask;
         mask &= andmask & ~ormask;
         mask <<= match_field.range().lo;
@@ -1208,7 +1208,7 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
             if (off.first < it->first) continue;
             if (it->first != off.first || it->second.size() != off.second.size()) {
                 BUG("field equality comparison misaligned in gateway"); }
-            big_int elmask = bitMask(off.second.size()) << off.second.lo;
+            big_int elmask = ~(~big_int(0) << off.second.size()) << off.second.lo;
             if ((elmask &= mask) == 0) continue;
             if (off.first/8 < gws.PerByteMatch) {
                 if (!check_per_byte_match(off, mask, val)) continue;
@@ -1290,7 +1290,7 @@ void BuildGatewayMatch::constant(big_int c) {
         ormask = c;
         LOG4("  ormask = 0x" << std::hex << ormask << std::dec);
     } else if (match_field) {
-        big_int mask = bitMask(match_field.size());
+        big_int mask = ~(~big_int(0) << match_field.size());
         big_int val = (c ^ cmplmask) & mask;
         if ((val & mask & ~andmask) || (~val & mask & ormask))
             warning("%smasked comparison in gateway can never match", ctxt->node->srcInfo);
@@ -1302,7 +1302,7 @@ void BuildGatewayMatch::constant(big_int c) {
              mask << std::dec << " shift=" << shift);
         big_int upper_bits_mask = 0;   // bits being matched that don't require per-bye sharing
         for (auto &off : match_info.offsets) {
-            big_int elmask = bitMask(off.second.size()) << off.second.lo;
+            big_int elmask = ~(~big_int(0) << off.second.size()) << off.second.lo;
             if ((elmask &= mask) == 0) continue;
             int shft = off.first - off.second.lo - shift;
             if (off.first/8 < gws.PerByteMatch) {
