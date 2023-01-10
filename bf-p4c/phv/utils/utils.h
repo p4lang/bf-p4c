@@ -190,7 +190,10 @@ class Allocation {
     mutable ordered_map<gress_t, ordered_map<const IR::MAU::Table*,
                                              std::set<const IR::MAU::Table*>>> ara_edges;
 
-    Allocation(const PhvInfo& phv, const PhvUse& uses) : phv_i(&phv), uses_i(&uses) { }
+    bool isTrivial;
+
+    Allocation(const PhvInfo& phv, const PhvUse& uses, bool isTrivial = false)
+        : phv_i(&phv), uses_i(&uses), isTrivial(isTrivial) { }
 
     /// @returns the meta_init_points_i map for the current allocation object.
     ordered_map<AllocSlice, ActionSet>& get_meta_init_points() const { return meta_init_points_i; }
@@ -488,11 +491,13 @@ class Allocation {
 };
 
 class ConcreteAllocation : public Allocation {
+    static ContainerStatus emptyContainerStatus;
+
     /** Create an allocation from a vector of container IDs.  Physical
      * containers that the Device pins to a particular gress are
      * initialized to that gress.
      */
-    ConcreteAllocation(const PhvInfo& phv, const PhvUse&, bitvec containers);
+    ConcreteAllocation(const PhvInfo& phv, const PhvUse&, bitvec containers, bool trivial);
 
  public:
     /// Uniform abstraction for accessing a container state.
@@ -511,7 +516,7 @@ class ConcreteAllocation : public Allocation {
      * Device::phvSpec, with the gress set for any hard-wired containers, but
      * no slices allocated.
      */
-    explicit ConcreteAllocation(const PhvInfo&, const PhvUse&);
+    explicit ConcreteAllocation(const PhvInfo&, const PhvUse&, bool trivial = false);
 
     /// Iterate through container-->allocation slices.
     const_iterator begin() const override { return container_status_i.begin(); }

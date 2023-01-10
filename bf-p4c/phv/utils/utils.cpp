@@ -18,6 +18,8 @@ static int cluster_id_g = 0;                // global counter for assigning clus
 
 int PHV::ClusterStats::nextId = 0;
 
+PHV::Allocation::ContainerStatus PHV::ConcreteAllocation::emptyContainerStatus;
+
 PHV::ContainerGroup::ContainerGroup(PHV::Size sz, const std::vector<PHV::Container> containers)
 : size_i(sz), containers_i(containers) {
     // Check that all containers are the right size.
@@ -404,7 +406,7 @@ void PHV::Allocation::allocate(
     // If the container has been pinned to a gress, check that the gress
     // matches that of the slice.  Otherwise, pin it.
     if (containerGress) {
-        BUG_CHECK(*containerGress == slice.field()->gress,
+        BUG_CHECK(isTrivial || *containerGress == slice.field()->gress,
             "Trying to allocate field %1% with gress %2% to container %3% with gress %4%",
             slice.field()->name, slice.field()->gress, slice.container(),
             this->gress(slice.container()));
@@ -416,7 +418,7 @@ void PHV::Allocation::allocate(
     if (uses_i->is_extracted(slice.field()) ||
         (uses_i->is_used_mau(slice.field()) && singleGressParserGroup)) {
         if (parserGroupGress) {
-            BUG_CHECK(*parserGroupGress == slice.field()->gress,
+            BUG_CHECK(isTrivial || *parserGroupGress == slice.field()->gress,
                 "Trying to allocate field %1% with gress %2% to container %3% with "
                 "parser group gress %4%", slice.field()->name, slice.field()->gress,
                 slice.container(), *parserGroupGress);
@@ -424,7 +426,7 @@ void PHV::Allocation::allocate(
             for (unsigned cid : phvSpec.parserGroup(slice_cid)) {
                 auto c = phvSpec.idToContainer(cid);
                 auto cGress = this->parserGroupGress(c);
-                BUG_CHECK(!cGress || *cGress == slice.field()->gress,
+                BUG_CHECK(isTrivial || !cGress || *cGress == slice.field()->gress,
                         "Container %1% already has parser group gress set to %2%",
                         c, *this->parserGroupGress(c));
                 this->setParserGroupGress(c, slice.field()->gress);
@@ -470,7 +472,7 @@ void PHV::Allocation::allocate(
     } else if (isDeparsed) {
         // Otherwise, check that the slice gress (which is equal to the
         // container's gress at this point) matches the deparser group gress.
-        BUG_CHECK(slice.field()->gress == *deparserGroupGress,
+        BUG_CHECK(isTrivial || slice.field()->gress == *deparserGroupGress,
                 "Cannot allocate %1%, because container is already assigned to %2% but has a "
                 "deparser group assigned to %3%", slice, slice.field()->gress, *deparserGroupGress);
     }
@@ -724,8 +726,8 @@ PHV::Allocation::available_spots() const {
  * initialized to that gress.
  */
 PHV::ConcreteAllocation::ConcreteAllocation(const PhvInfo& phv, const PhvUse& uses,
-                                            bitvec containers)
-    : PHV::Allocation(phv, uses) {
+                                            bitvec containers, bool isTrivial)
+    : PHV::Allocation(phv, uses, isTrivial) {
     auto& phvSpec = Device::phvSpec();
     for (auto cid : containers) {
         PHV::Container c = phvSpec.idToContainer(cid);
@@ -759,8 +761,9 @@ PHV::ConcreteAllocation::ConcreteAllocation(const PhvInfo& phv, const PhvUse& us
     }
 }
 
-PHV::ConcreteAllocation::ConcreteAllocation(const PhvInfo& phv, const PhvUse& uses)
-: PHV::ConcreteAllocation::ConcreteAllocation(phv, uses, Device::phvSpec().physicalContainers())
+PHV::ConcreteAllocation::ConcreteAllocation(const PhvInfo& phv, const PhvUse& uses, bool isTrivial)
+    : PHV::ConcreteAllocation::ConcreteAllocation(phv, uses,
+                                                  Device::phvSpec().physicalContainers(), isTrivial)
 { }
 
 /// @returns true if this allocation owns @p c.
@@ -798,6 +801,8 @@ PHV::ConcreteAllocation::getStatus(const PHV::Container& c) const {
     auto it = container_status_i.find(c);
     if (it != container_status_i.end())
         return &it->second;
+    if (isTrivial)
+        return &emptyContainerStatus;
     return nullptr;
 }
 

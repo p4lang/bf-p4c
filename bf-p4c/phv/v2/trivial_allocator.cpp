@@ -15,9 +15,9 @@ namespace v2 {
 
 namespace {
 
-Logging::FileLog* trivial_allocator_file_log(int pipeId, int loglevel) {
+Logging::FileLog* trivial_allocator_file_log(int pipeId, int loglevel, cstring type) {
     if (!LOGGING(loglevel)) return nullptr;
-    auto filename = Logging::PassManager::getNewLogFileName("phv_trivial_allocation_history_");
+    auto filename = Logging::PassManager::getNewLogFileName("phv_trivial_allocation_" + type + "_");
     return new Logging::FileLog(pipeId, filename, Logging::Mode::AUTO);
 }
 
@@ -377,10 +377,17 @@ bool TrivialAllocator::allocate(const std::list<PHV::SuperCluster*>& clusters) {
         phv_i.set_done(true);
     }
 
-    auto logfile = trivial_allocator_file_log(pipe_id_i, 1);
+    auto logfile = trivial_allocator_file_log(pipe_id_i, 1, "history");
     LOG1("Trivial Allocation history");
     LOG1(history.str());
     Logging::FileLog::close(logfile);
+
+    auto summary_logfile = trivial_allocator_file_log(pipe_id_i, 1, "summary");
+    LOG1("Trivial Allocation summary");
+    ConcreteAllocation alloc(phv_i, kit_i.uses, /* trivial */ true);
+    LOG1(alloc);
+    Logging::FileLog::close(summary_logfile);
+
     return ok;
 }
 
