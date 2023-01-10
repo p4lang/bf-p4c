@@ -1407,7 +1407,7 @@ class ConstructSymbolTable : public Inspector {
             auto val = new IR::Constant(IR::Type::Bits::get(3), 1);
             auto stmt = new IR::AssignmentStatement(path, val);
             structure->_map.emplace(node, stmt);
-        } else if (control->name == structure->getBlockName(ProgramStructure::EGRESS)) {
+        } else if (control && control->name == structure->getBlockName(ProgramStructure::EGRESS)) {
             auto path = new IR::Member(
                     new IR::PathExpression("eg_intr_md_for_dprsr"), "drop_ctl");
             auto val = new IR::Constant(IR::Type::Bits::get(3), 1);
