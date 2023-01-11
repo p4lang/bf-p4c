@@ -164,7 +164,7 @@ p4c_add_xfail_reason("tofino3"
 )
 
 p4c_add_xfail_reason("tofino3"
-  "error: This program violates action constraints imposed by Tofino3"
+  "error: This program violates action constraints imposed by Tofino3|error: Trivial allocator has found unsatisfiable constraints."
   extensions/p4_tests/p4_16/customer/kaloom/p4c-2573-spine.p4
   extensions/p4_tests/p4_16/customer/kaloom/p4c-2410-spine.p4
   extensions/p4_tests/p4_16/customer/kaloom/spine-app.p4
@@ -252,7 +252,7 @@ p4c_add_xfail_reason("tofino3"
 # P4C-2091
 # Expected failure (negative test)
 p4c_add_xfail_reason("tofino3"
-  "error.*PHV allocation was not successful"
+  "error.*PHV allocation was not successful|error: Trivial allocator has found unsatisfiable constraints."
   extensions/p4_tests/p4_16/compile_only/p4c-2091.p4
 )
 
@@ -262,11 +262,13 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/compile_only/p4c-1892.p4
 )
 
-# action synthesis can't figure out it can use an OR to set a single bit.
-p4c_add_xfail_reason("tofino3"
-  "the program requires an action impossible to synthesize for Tofino3 ALU"
-  extensions/p4_tests/p4_14/stf/stateful4.p4
-)
+if (NOT ENABLE_ALT_PHV_ALLOC)
+    # action synthesis can't figure out it can use an OR to set a single bit.
+    p4c_add_xfail_reason("tofino3"
+      "the program requires an action impossible to synthesize for Tofino3 ALU"
+      extensions/p4_tests/p4_14/stf/stateful4.p4
+    )
+endif()
 
 p4c_add_xfail_reason("tofino3"
   "All fields within the same byte-size chunk of the header must have the same 2 byte-alignment in the checksum list. Checksum engine is unable to read .* for .* checksum update"
@@ -479,13 +481,15 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/stf/p4c-3761.p4
 )
 
-# P4C-3914
-p4c_add_xfail_reason("tofino3"
-  "error: Size of learning quanta is [0-9]+ bytes, greater than the maximum allowed 48 bytes.
+if (NOT ENABLE_ALT_PHV_ALLOC)
+    # P4C-3914
+    p4c_add_xfail_reason("tofino3"
+      "error: Size of learning quanta is [0-9]+ bytes, greater than the maximum allowed 48 bytes.
 Compiler will improve allocation of learning fields in future releases.
 Temporary fix: try to apply @pa_container_size pragma to small fields allocated to large container in. Here are possible useful progmas you can try: .*"
-  extensions/p4_tests/p4_16/compile_only/p4c-3914.p4
-)
+      extensions/p4_tests/p4_16/compile_only/p4c-3914.p4
+    )
+endif()
 
 p4c_add_xfail_reason("tofino3"
   "cb_test_harness: .*/queueing.cpp:.* cb::Queueing::enqueue_die.*: Assertion .* failed."
@@ -547,7 +551,6 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/ptf/clone_v1model.p4
   extensions/p4_tests/p4_16/ptf/ingress_checksum.p4
   extensions/p4_tests/p4_16/ptf/inner_checksum.p4
-  extensions/p4_tests/p4_16/ptf/inner_checksum_payload_offset.p4
   extensions/p4_tests/p4_16/ptf/ipv4_checksum.p4
   extensions/p4_tests/p4_16/ptf/ipv6_checksum.p4
   extensions/p4_tests/p4_16/ptf/large_action_data_constant.p4
@@ -563,3 +566,43 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/ptf/various_indirect_meters.p4
   extensions/p4_tests/p4_16/ptf/verify_checksum.p4
 )
+if (NOT ENABLE_ALT_PHV_ALLOC)
+    p4c_add_xfail_reason("tofino3"
+      "\"grpc_message\":\"Error in second phase of device update\""
+      extensions/p4_tests/p4_16/ptf/inner_checksum_payload_offset.p4
+    )
+endif()
+
+# ALT-PHV: tests that do not work yet with the alternative allocator.
+# If you make an ALT-PHV test pass (or get close to it but if fails on later
+# error), please update the xfails accordingly.
+if (ENABLE_ALT_PHV_ALLOC)
+    # PHV errors
+    p4c_add_xfail_reason("tofino3"
+        "error: invalid SuperCluster was formed:"
+        extensions/p4_tests/p4_16/ptf/inner_checksum_payload_offset.p4
+    )
+
+    p4c_add_xfail_reason("tofino3"
+        "error: PHV allocation creates an invalid container action within a Tofino ALU"
+        extensions/p4_tests/p4_16/stf/meter_dest_16_32_flexible.p4
+    )
+
+    # PTF and STF test errors
+    p4c_add_xfail_reason("tofino3"
+        "cb_test_harness FAILED"
+        extensions/p4_tests/p4_16/stf/stage_layout1.p4
+    )
+
+    p4c_add_xfail_reason("tofino3"
+        "ERROR:PTF runner:Error when running PTF tests"
+        p4_16_programs_tna_action_selector
+        p4_16_programs_tna_snapshot
+    )
+
+    # Tests that take way too long with ALT-PHV
+    p4c_add_xfail_reason("tofino3"
+        "TIMEOUT"
+        extensions/p4_tests/p4_16/stf/p4c-4535.p4
+    )
+endif (ENABLE_ALT_PHV_ALLOC)

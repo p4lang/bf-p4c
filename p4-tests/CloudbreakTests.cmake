@@ -20,6 +20,7 @@ set (P16_JNA_EXCLUDE_PATTERNS "tofino\\.h" "TOFINO1_ONLY" "TOFINO2_ONLY" "<built
                               "mirror_constants\\.p4"
                               "p4c-2740\\.p4"
                               "p4c_2601\\.p4"
+                              "p4c-4535\\.p4"
                               "hash_extern_xor\\.p4"
                               "hash_field_expression\\.p4"
                               "hash_field_expression_sym\\.p4"
@@ -125,6 +126,9 @@ p4c_add_bf_backend_tests("tofino3" "cb" "t3na" "base" "${CMAKE_CURRENT_SOURCE_DI
 set_tests_properties("tofino3/extensions/p4_tests/p4_16/customer/keysight/keysight-eagle-tf2.p4" PROPERTIES TIMEOUT 1200)
 p4c_add_bf_backend_tests("tofino3" "cb" "t3na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/p4c-4055.p4" "-to 1200")
 set_tests_properties("tofino3/extensions/p4_tests/p4_16/stf/p4c-4055.p4" PROPERTIES TIMEOUT 1200)
+
+p4c_add_bf_backend_tests("tofino3" "jbay" "t3na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/p4c-4535.p4" "-to ${extended_timeout_3times} -I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
+set_tests_properties("tofino3/extensions/p4_tests/p4_16/stf/p4c-4535.p4" PROPERTIES TIMEOUT ${extended_timeout_4times})
 
 ## P4-16 Programs
 set (P4FACTORY_P4_16_PROGRAMS

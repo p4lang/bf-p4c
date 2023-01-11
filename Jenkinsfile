@@ -14,7 +14,6 @@ properties([
      ]
      ])),
      parameters([
-        booleanParam( name: 'ALT_PHV',                    defaultValue: (boolean)(env.JOB_NAME =~ /alt-phv/),                                                                       description: "Internal: use ALT PHV pass"),
         booleanParam( name: 'UBSAN',                      defaultValue: (boolean)(env.JOB_NAME =~ /sanitizers/),                                                                    description: 'Choose whether to use Undefined Behavior Sanitizer.', ),
         booleanParam( name: 'ASAN',                       defaultValue: (boolean)(env.JOB_NAME =~ /sanitizers/),                                                                    description: 'Choose whether to use Address Sanitizer.', ),
 
@@ -33,12 +32,6 @@ node {
 DOCKER_CREDENTIALS = "bfndocker-caas"
 DOCKER_REGISTRY = "amr-registry.caas.intel.com"
 DOCKER_PROJECT = "${DOCKER_REGISTRY}/bxd-sw"
-
-def getBoostrapOpts() {
-    if (params.ALT_PHV)
-        return "-e BOOTSTRAP_EXTRA_OPTS=-DENABLE_ALT_PHV_ALLOC=ON"
-    return ""
-}
 
 def sanitizersEnabled() {
     return params.UBSAN || params.ASAN
@@ -67,6 +60,33 @@ node ('compiler-travis') {
                 echo "Using bf-p4c-compilers:${bf_p4c_compilers_rev}"
                 sh 'git log -1 --stat'
 
+                // if this is a PR, check if it is ALT-PHV related
+                if (env.BRANCH_NAME && env.BRANCH_NAME.startsWith('PR-')) {
+                    prNum = env.BRANCH_NAME.replace('PR-', '')
+                    // get the future merge commit that would merge this branch
+                    // to its source to obtain the source info
+                    mergeCommit = sh (
+                        script: "git ls-remote git@github.com:intel-restricted/networking.switching.barefoot.bf-p4c-compilers.git refs/pull/${prNum}/merge | cut -f1",
+                        returnStdout: true
+                    ).trim()
+                    // check if commit resides in some ALT-PHV relate branch
+                    isAltPHVBranch = sh(
+                        script: 'git log -n1 --format="%D" | grep -i "alt.phv|alt.pass|table.first"',
+                        returnStatus: true
+                    )
+                    // check if history of this commit (from the point it
+                    // diverged from source) contains mentions of alt-phv in
+                    // either subject or long description of commit messages
+                    isAltPHVCommit = sh(
+                        script: "git log `git log -1 ${mergeCommit} --format='%P' | sed 's/ /../'` --format='%s%n%b' | grep -i 'alt.phv\\|alt.pass\\|table.first'",
+                        returnStatus: true
+                    )
+                    IS_ALT_PHV = isAltPHVBranch == 0 || isAltPHVCommit == 0
+                    echo "isAltPHVCommit: ${isAltPHVCommit == 0}, isAltPHVBranch: ${isAltPHVBranch == 0}, IS_ALT_PHV: ${IS_ALT_PHV}"
+                } else {
+                    IS_ALT_PHV = false
+                }
+
                 echo "Initializing bf-p4c-compilers submodules"
                 sh "git submodule update --init --recursive -j 16"
             }
@@ -84,7 +104,7 @@ node ('compiler-travis') {
                             ${DOCKER_REGISTRY}
                     """
                 }
-                kind = sanitizersEnabled() ? "sanitizers_" : params.ALT_PHV ? "altphv_" : ""
+                kind = sanitizersEnabled() ? "sanitizers_" : ""
                 branch = env.BRANCH_NAME ? env.BRANCH_NAME : scm.branches[0].name
                 image_tag_branch = "${kind}${branch.toLowerCase()}".replace('/', '--')
                 image_tag = "${image_tag_branch}_${bf_p4c_compilers_rev}"
@@ -130,7 +150,6 @@ node ('compiler-travis') {
                     parallel (
                         'Unified': {
                             echo 'Building final Docker image to run tests with (unified build)'
-                            extra_opts = getBoostrapOpts()
                             sh """
                                 make -Cdocker build \
                                     BUILD_TAG=${image_tag} \
@@ -141,7 +160,6 @@ node ('compiler-travis') {
                                         -e ASAN=${params.ASAN} \
                                         -e UBSAN_OPTIONS=${params.UBSAN_OPTIONS} \
                                         -e ASAN_OPTIONS=${params.ASAN_OPTIONS} \
-                                        ${extra_opts} \
                                         -e MAKEFLAGS=j20 \
                                     "
                             """
@@ -149,10 +167,9 @@ node ('compiler-travis') {
 
                         'Non-unified': {
                             echo 'Testing non-unified build'
-                            extra_opts = getBoostrapOpts()
                             sh """
                                 make -Cdocker test-build \
-                                    BUILD_ARGS="-e UNIFIED_BUILD=false ${extra_opts} -e MAKEFLAGS=j16"
+                                    BUILD_ARGS="-e UNIFIED_BUILD=false -e MAKEFLAGS=j16"
                             """
                         },
 
@@ -176,10 +193,14 @@ node ('compiler-travis') {
                 }
             }
 
+            // TODO: Enable Flatrock testing when ALT-PHV and/or Flatrock is more mature
+            MAX_ALT_PHV = IS_ALT_PHV ? 3 : 1
+            echo "testing ALT PHV for Tofino 1..${MAX_ALT_PHV}"
             // run tests from a file
             withEnv(["SANITIZERS_ENABLED=${sanitizersEnabled()}",
                      "BF_P4C_REV=${bf_p4c_compilers_rev}",
-                     "IMAGE_TAG=${image_tag}"]) {
+                     "IMAGE_TAG=${image_tag}",
+                     "ALT_PHV_TOFINO_MAX_VERSION=${MAX_ALT_PHV}"]) {
                 load 'jenkins/tests.groovy';
             }
         }

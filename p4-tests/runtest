@@ -962,12 +962,18 @@ if $run_bfrt; then
             mkdir -p $switchBuild
         fi
 
-        cmakeConfigure="cmake .. -DCMAKE_MODULE_PATH=/p4factory/cmake -DCMAKE_INSTALL_PREFIX=$switchBuild -DSTANDALONE=on"
+        P4FLAGS=()
+        for arg in "${P4C_ARGS[@]}"; do
+            if [[ $arg = "-Xp4c=--alt-phv-alloc" ]]; then
+                P4FLAGS+="-Xp4c=--alt-phv-alloc"
+            fi
+        done
+        cmakeConfigure="cmake .. -DCMAKE_MODULE_PATH=/p4factory/cmake -DCMAKE_INSTALL_PREFIX=$switchBuild -DSTANDALONE=on -DP4FLAGS='${P4FLAGS[@]}'"
         echo "Configure command: $cmakeConfigure"
         pushd $switchBuild > /dev/null
         # cmake looks for ${CMAKE_INSTALL_PREFIX}/bin/bf-p4c, i.e. ${switchBuild}/bin/bf-p4c
         rm -rf "bin/bf-p4c" && mkdir -p "bin" && ln -s "$P4C" "bin/bf-p4c"
-        run $cmakeConfigure
+        run $cmakeConfigure || die
         popd > /dev/null  # $switchBuild
 
         makeCmd="make -j $nproc $profile"

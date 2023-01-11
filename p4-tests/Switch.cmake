@@ -20,7 +20,6 @@ file (RELATIVE_PATH switchtest ${P4C_SOURCE_DIR} ${SWITCH_P4})
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_dc_basic" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} --disable-pragmas=pa_solitary -DDC_BASIC_PROFILE -Xp4c=\"--disable-parse-max-depth-limit\"")
 p4c_add_test_label("tofino" "METRICS" "switch_dc_basic")
-p4c_add_test_label("tofino" "p414_nightly" "switch_dc_basic")
 
 # FIXME: remove disabling of parser min/max depth limits (P4C-4170)
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
@@ -30,18 +29,15 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_ent_dc_general" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} -DENT_DC_GENERAL_PROFILE -Xp4c=\"--disable-parse-max-depth-limit\"")
 p4c_add_test_label("tofino" "METRICS" "switch_ent_dc_general")
-p4c_add_test_label("tofino" "p414_nightly" "switch_ent_dc_general")
 
 # FIXME: remove disabling of parser min/max depth limits (P4C-4170)
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_msdc" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} --disable-pragmas=pa_solitary -DMSDC_PROFILE -DP4_WRED_DEBUG -Xp4c=\"--disable-parse-max-depth-limit\"")
 p4c_add_test_label("tofino" "METRICS" "switch_msdc")
-p4c_add_test_label("tofino" "p414_nightly" "switch_msdc")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE}
     "switch_msdc_ipv4" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} --disable-pragmas=pa_solitary -DMSDC_IPV4_PROFILE")
 p4c_add_test_label("tofino" "METRICS" "switch_msdc_ipv4")
-p4c_add_test_label("tofino" "p414_nightly" "switch_msdc_ipv4")
 
 # FIXME: remove disabling of parser min/max depth limits (P4C-4170)
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
@@ -51,7 +47,6 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_msdc_spine_int" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} --disable-pragmas=pa_solitary -DMSDC_SPINE_DTEL_INT_PROFILE -Xp4c=\"--disable-parse-depth-limit\"")
 p4c_add_test_label("tofino" "METRICS" "switch_msdc_spine_int")
-p4c_add_test_label("tofino" "p414_nightly" "switch_msdc_spine_int")
 
 # FIXME: remove disabling of parser min/max depth limits (P4C-4170)
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
@@ -75,62 +70,19 @@ set_tests_properties("tofino/switch_generic_int_leaf" PROPERTIES TIMEOUT ${exten
 set (SWITCH_P4_16_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/switch_16)
 set (SWITCH_P4_16_INC ${SWITCH_P4_16_ROOT}/p4src/shared)
 set (SWITCH_P4_16_PTF ${SWITCH_P4_16_ROOT}/ptf/api)
+set (SWITCH_PATH_PREFIX ${SWITCH_P4_16_ROOT}/p4src/switch-tofino/switch_tofino_)
 
-set (SWITCH_P4_16_X1 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino/switch_tofino_x1.p4)
-file (RELATIVE_PATH switch_p4_16_x1 ${P4C_SOURCE_DIR} ${SWITCH_P4_16_X1})
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile_x1_profile" ${switch_p4_16_x1} "" "-DX1_PROFILE -I${SWITCH_P4_16_INC} -Xp4c=\"--auto-init-metadata --disable-power-check\" -arch tna")
-p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_x1_profile")
-
-set (SWITCH_P4_16_X2 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino/switch_tofino_x2.p4)
-file (RELATIVE_PATH switch_p4_16_x2 ${P4C_SOURCE_DIR} ${SWITCH_P4_16_X2})
-p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile_x2_profile" ${switch_p4_16_x2} "" "-DX2_PROFILE -I${SWITCH_P4_16_INC} -Xp4c=\"--auto-init-metadata --set-max-power 50\" -arch tna")
-p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_x2_profile")
-
-set (SWITCH_P4_16_X3 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino/switch_tofino_x3.p4)
-file (RELATIVE_PATH switch_p4_16_x3 ${P4C_SOURCE_DIR} ${SWITCH_P4_16_X3})
-p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile_x3_profile" ${switch_p4_16_x3} "" "-DX3_PROFILE -I${SWITCH_P4_16_INC} -Xp4c=\"--auto-init-metadata\" -arch tna")
-p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_x3_profile")
-
-# We cannot run some tests in our environment as some interfaces referenced in the port
-# mapping file specified for bf-switch don't exist.
-  p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests_x1" ${SWITCH_P4_16_X1}
-    "${testExtraArgs} -arch tna -bfrt -profile x1_tofino" ${SWITCH_P4_16_PTF})
-  bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests_x1"
-         "all
-	 ^acl2
-         ^hash
-         ^switch_l3.L3SVITest
-         ^switch_l2.L2LagTest")
-# FIXME: remove disabling of parser min/max depth limits (P4C-4170)
-  p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests_x2" ${SWITCH_P4_16_X2}
-    "${testExtraArgs} -arch tna -bfrt -profile x2_tofino -Xp4c=\"--set-max-power 50 --disable-parse-depth-limit\"" ${SWITCH_P4_16_PTF})
-  bfn_set_p4_build_flag("tofino" "smoketest_switch_16_Tests_x2" "-Xp4c=\"--disable-parse-depth-limit\"")
-  bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests_x2"
-         "all
-	 ^acl2
-         ^hash
-         ^switch_l3.L3SVITest
-         ^switch_l2.L2LagTest")
-# All switch_16 tests should depend on the test being compiled, rather than
-# relying on the first one to compile the test.
-set_tests_properties(
-  "tofino/smoketest_switch_16_Tests_x1"
-  PROPERTIES DEPENDS "tofino/smoketest_switch_16_compile_x1_profile"
-  )
-set_tests_properties(
-  "tofino/smoketest_switch_16_Tests_x2"
-  PROPERTIES DEPENDS "tofino/smoketest_switch_16_compile_x2_profile"
-  )
-
-# 500s timeout is too little for compiling and testing the entire switch, bumping it up
-set_tests_properties("tofino/smoketest_switch_16_compile_x1_profile" PROPERTIES TIMEOUT ${extended_timeout_2times})
-set_tests_properties("tofino/smoketest_switch_16_compile_x2_profile" PROPERTIES TIMEOUT ${extended_timeout_2times})
-set_tests_properties("tofino/smoketest_switch_16_compile_x3_profile" PROPERTIES TIMEOUT ${extended_timeout_2times})
-set_tests_properties("tofino/smoketest_switch_16_Tests_x1" PROPERTIES TIMEOUT ${extended_timeout_12times})
-set_tests_properties("tofino/smoketest_switch_16_Tests_x2" PROPERTIES TIMEOUT ${extended_timeout_12times})
+set(SWITCH_T1_PTF_SPEC
+    "all
+    ^acl2
+    ^hash
+    ^switch_l3.L3SVITest
+    ^switch_l2.L2LagTest")
+bfn_add_switch_test("" "x1" "--set-max-power 51" "METRICS" ON "${SWITCH_T1_PTF_SPEC}")
+bfn_add_switch_test("" "x2" "--disable-parse-depth-limit --set-max-power 50" "METRICS" ON "${SWITCH_T1_PTF_SPEC}")
+bfn_add_switch_test("" "x4" "" "METRICS" OFF)
+bfn_add_switch_test("" "x5" "--disable-parse-depth-limit" "METRICS" OFF)
+bfn_add_switch_test("" "x6" "--disable-parse-depth-limit" "METRICS" OFF)
 
 # Switch master MSDC_PROFILE tests
 # FIXME: remove disabling of parser min/max depth limits (P4C-4170)

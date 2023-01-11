@@ -4,48 +4,19 @@ include (ExternalProject)
 set (SWITCH_P4_16_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/switch_16)
 set (SWITCH_P4_16_INC ${SWITCH_P4_16_ROOT}/p4src/shared)
 set (SWITCH_P4_16_PTF ${SWITCH_P4_16_ROOT}/ptf/api)
+set (SWITCH_PATH_PREFIX ${SWITCH_P4_16_ROOT}/p4src/switch-tofino2/switch_tofino2_)
 
-set (SWITCH_P4_16_Y1 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino2/switch_tofino2_y1.p4)
-file (RELATIVE_PATH switch_p4_16_y1 ${P4C_SOURCE_DIR} ${SWITCH_P4_16_Y1})
-p4c_add_test_with_args("tofino2" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile_y1_profile" ${switch_p4_16_y1} "${testExtraArgs}" "-DY1_PROFILE
-  -I${SWITCH_P4_16_INC} -tofino2 -Xp4c=\"--auto-init-metadata\" -arch t2na")
-p4c_add_test_label("tofino2" "PR_REG_PTF" "smoketest_switch_16_compile_y1_profile")
+set(SWITCH_T2_PTF_SPEC
+    "all
+    ^acl2
+    ^hash
+    ^switch_l3.L3SVITest
+    ^switch_l2.L2LagTest
+    ^switch_l3.L3ECMPTest
+    ^switch_l3.L3MulticastTest")
 
-set (SWITCH_P4_16_Y2 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino2/switch_tofino2_y2.p4)
-file (RELATIVE_PATH switch_p4_16_y2 ${P4C_SOURCE_DIR} ${SWITCH_P4_16_Y2})
-p4c_add_test_with_args("tofino2" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile_y2_profile" ${switch_p4_16_y2} "${testExtraArgs}" "-DY2_PROFILE
-  -I${SWITCH_P4_16_INC} -tofino2 -Xp4c=\"--auto-init-metadata\" -arch t2na")
-p4c_add_test_label("tofino2" "PR_REG_PTF" "smoketest_switch_16_compile_y2_profile")
-
-# Running switch-16 PTF tests on default profile
-p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_16_Tests_y1" ${SWITCH_P4_16_Y1}
-  "${testExtraArgs} -tofino2 -arch t2na -bfrt -profile y1_tofino2" ${SWITCH_P4_16_PTF})
-# Cannot run some of the tests as they access ports outside the range of the set ports using veth_setup.sh
-# ^switch_l2.StatsTest and ^switch_l2.L2FloodTest fails due to P4C-2766
-bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests_y1"
-        "all
-	^acl2
-        ^hash
-        ^switch_l3.L3SVITest
-        ^switch_l2.L2LagTest
-        ^switch_l3.L3ECMPTest
-        ^switch_l3.L3MulticastTest")
-p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_16_Tests_y2" ${SWITCH_P4_16_Y2}
-  "${testExtraArgs} -tofino2 -arch t2na -bfrt -profile y2_tofino2" ${SWITCH_P4_16_PTF})
-# Cannot run some of the tests as they access ports outside the range of the set ports using veth_setup.sh
-bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests_y2"
-        "all
-	^acl2
-        ^hash
-        ^switch_l3.L3SVITest
-        ^switch_l2.L2LagTest
-        ^switch_l3.L3ECMPTest
-        ^switch_l3.L3MulticastTest")
-
-# 500s timeout is too little for compiling and testing the entire switch, bumping it up
-set_tests_properties("tofino2/smoketest_switch_16_compile_y1_profile" PROPERTIES TIMEOUT ${extended_timeout_2times})
-set_tests_properties("tofino2/smoketest_switch_16_compile_y2_profile" PROPERTIES TIMEOUT ${extended_timeout_4times})
-set_tests_properties("tofino2/smoketest_switch_16_Tests_y1" PROPERTIES TIMEOUT ${extended_timeout_12times})
-set_tests_properties("tofino2/smoketest_switch_16_Tests_y2" PROPERTIES TIMEOUT ${extended_timeout_12times})
+bfn_add_switch_test("2" "y1" "" "METRICS" ON "${SWITCH_T2_PTF_SPEC}")
+bfn_add_switch_test("2" "y2" "" "METRICS" ON "${SWITCH_T2_PTF_SPEC}")
+bfn_add_switch_test("2" "y4" "" "METRICS" OFF)
+bfn_add_switch_test("2" "y7" "" "METRICS" OFF)
+bfn_add_switch_test("2" "y8" "--set-max-power 62" "METRICS" OFF)

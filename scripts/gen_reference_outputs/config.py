@@ -19,9 +19,9 @@ P4C_TEST_MATRIX = 'test_matrix_P4C.py'
 GLASS_TEST_MATRIX = 'test_matrix_Glass.py'
 
 TEST_DRIVER_PATH = os.path.join(BF_P4C_PATH, "scripts/test_p4c_driver.py")
-P4C_TEST_CMD = TEST_DRIVER_PATH + " -j 16 --print-on-failure --compiler " + \
+P4C_TEST_CMD = TEST_DRIVER_PATH + " -j 4 --print-on-failure --compiler " + \
     P4C + " --keep-output --testfile " + P4C_TEST_MATRIX
-GLASS_TEST_CMD = TEST_DRIVER_PATH + " -j 16 --print-on-failure --compiler " + \
+GLASS_TEST_CMD = TEST_DRIVER_PATH + " -j 4 --print-on-failure --compiler " + \
     GLASS + " --keep-output --testfile " + GLASS_TEST_MATRIX
 
 REF_OUTPUTS_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), \

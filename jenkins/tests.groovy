@@ -14,7 +14,7 @@ def runInDocker(Map namedArgs, String cmd) {
 
     assert args.keySet().containsAll(namedArgs.keySet())
     args.putAll(namedArgs)
-    cmd = cmd.trim()
+    cmd = cmd.trim().replace('"', '\"')
 
     if (args.maxCpu) {
         args.extraArgs += " --cpus=${args.maxCpu}"
@@ -31,7 +31,7 @@ def runInDocker(Map namedArgs, String cmd) {
             -e ASAN_OPTIONS=${params.ASAN_OPTIONS} \
             ${args.extraArgs} \
             ${DOCKER_PROJECT}/bf-p4c-compilers:${IMAGE_TAG} \
-            ${cmd}
+            bash -c "${cmd}"
     """
 }
 
@@ -39,8 +39,28 @@ def runInDocker(String cmd) {
     runInDocker([:], cmd)
 }
 
+def ifAltPhvForTofino(int num, true_, false_) {
+    if (env.ALT_PHV_TOFINO_MAX_VERSION) {
+        def vers = env.ALT_PHV_TOFINO_MAX_VERSION as int
+        return num <= vers ? true_ : false_
+    }
+    return false_
+}
+
+def runAltPhvForTofino(int num) {
+    return ifAltPhvForTofino(num, true, false)
+}
+
+// HACK: to not duplicate all the tests into ALT-PHV mode, we run the tests the
+// same and add --alt-phv-alloc option to them. But we also need to change the
+// xfails which reflect different failures in different modes. We do this by
+// reruning cmake, but not compilation (the compiler is already built and the
+// ALT-PHV is being enabled by option).
+ALT_PHV_ENV = "(cd /bfn/bf-p4c-compilers/build && cmake . -DENABLE_ALT_PHV_ALLOC=ON) && P4C_ARGS=-Xp4c=--alt-phv-alloc"
+
 // GTS and p414_nightly only exists for Tofino 1
-CTEST_LABEL_EXCLUDE_ALL = 'UNSTABLE|GTS_WEEKLY|NON_PR_TOFINO|METRICS|p414_nightly|determinism'
+CTEST_LABEL_EXCLUDE_ALT_PASS = 'UNSTABLE|GTS_WEEKLY|NON_PR_TOFINO|SWITCH16_PTF|p414_nightly'
+CTEST_LABEL_EXCLUDE_ALL = "${CTEST_LABEL_EXCLUDE_ALT_PASS}|METRICS|determinism"
 CTEST_LABEL_EXCLUDE_T5 = "${CTEST_LABEL_EXCLUDE_ALL}|ptf"
 
 CTEST_PATH_EXCLUDE_T1 = 'smoketest_switch_'
@@ -78,6 +98,7 @@ pipeline {
                             steps {
                                 catchError(catchInterruptions: false, stageResult: 'FAILURE') {
                                     runInDocker(
+                                        maxCpu: 1,
                                         "ctest -R gtest"
                                     )
                                 }
@@ -214,6 +235,18 @@ pipeline {
                     }
                 }
 
+                stage('Running Extreme ALT-PASS PTF tests') {
+                    when { expression { runAltPhvForTofino(2) } }
+                    steps {
+                        echo 'Running Extreme PTF tests'
+                        runInDocker(
+                            maxCpu: 2,
+                            extraArgs: '--privileged -e PKTPY=False',
+                            workingDir: '/bfn/bf-p4c-compilers/scripts/run_custom_tests',
+                            "${ALT_PHV_ENV} ./run_extreme_tests.sh"
+                        )
+                    }
+                }
 
                 stage("Generate switch compile-only metrics") {
                     when { expression { SANITIZERS_ENABLED != "true" } }
@@ -245,7 +278,7 @@ pipeline {
                                 def curr_pwd = pwd()
                                 def p4c_cid = sh (
                                     script: """
-                                        docker run --privileged --rm -t -d \
+                                        docker run --privileged --rm -t -d --cpus=4 \
                                             -v ${curr_pwd}/metrics_store:/mnt \
                                             -w /bfn/bf-p4c-compilers/scripts/gen_reference_outputs \
                                             --entrypoint bash \
@@ -277,23 +310,23 @@ pipeline {
                     }
                 }
 
-                stage("switch_16 Tofino tests (part 1)") {
+                stage("switch 16 Tofino 1 tests (part 1)") {
                     steps {
                         echo 'Running bf-switch bfrt tests for Tofino for X1 Profile'
                         runInDocker(
                             extraArgs: '--privileged',
-                            "ctest -R '^tofino/.*smoketest_switch_16_Tests_x1'"
+                            "ctest -R '^tofino/.*smoketest_switch_16_x1'"
                         )
                     }
                 }
 
 
-                stage("switch_16 Tofino tests (part 2)") {
+                stage("switch 16 Tofino 1 tests (part 2)") {
                     steps {
                         echo 'Running bf-switch bfrt tests for Tofino for X2 Profile'
                         runInDocker(
                             extraArgs: '--privileged',
-                            "ctest -R '^tofino/.*smoketest_switch_16_Tests_x2'"
+                            "ctest -R '^tofino/.*smoketest_switch_16_x2'"
                         )
                     }
                 }
@@ -303,32 +336,72 @@ pipeline {
                         echo 'Running bf-switch bfrt tests for Tofino2 for Y1 Profile'
                         runInDocker(
                             extraArgs: '--privileged',
-                            "ctest -R '^tofino2/.*smoketest_switch_16_Tests_y1'"
+                            "ctest -R '^tofino2/.*smoketest_switch_16_y1'"
                         )
-
-                        echo 'Running bf-switch compile-only for Tofino2 not covered in PTF'
-                        runInDocker '''
-                            ctest -R '^tofino2/.*smoketest_switch_16_compile' -LE 'PR_REG_PTF'
-                        '''
                     }
                 }
 
-                stage("switch_16 Tofino 2 tests (part 2) and basic_ipv4") {
+                stage("switch_16 Tofino 2 tests (part 2)") {
                     steps {
                         echo 'Running bf-switch bfrt tests for Tofino2 for Y2 Profile'
                         runInDocker(
                             extraArgs: '--privileged',
-                            "ctest -R '^tofino2/.*smoketest_switch_16_Tests_y2'"
+                            "ctest -R '^tofino2/.*smoketest_switch_16_y2'"
                         )
                     }
                 }
 
-                stage("Tofino (part 1)") {
+                stage("switch 16 Tofino 1 ALT-PHV tests (part 1)") {
+                    when { expression { runAltPhvForTofino(1) } }
+                    steps {
+                        echo 'Running bf-switch bfrt tests for Tofino for X1 Profile'
+                        runInDocker(
+                            extraArgs: '--privileged',
+                            "${ALT_PHV_ENV} ctest -R '^tofino/.*smoketest_switch_16_x1'"
+                        )
+                    }
+                }
+
+                stage("switch 16 Tofino 2 ALT-PHV tests (part 1)") {
+                    when { expression { runAltPhvForTofino(2) } }
+                    steps {
+                        echo 'Running bf-switch bfrt tests for Tofino2 for Y1 Profile'
+                        runInDocker(
+                            extraArgs: '--privileged',
+                            "${ALT_PHV_ENV} ctest -V -R '^tofino2/.*smoketest_switch_16_y1'"
+                        )
+                    }
+                }
+
+                stage("switch_16 Tofino 2 ALT-PHV tests (part 2)") {
+                    when { expression { runAltPhvForTofino(2) } }
+                    steps {
+                        echo 'Running bf-switch bfrt tests for Tofino2 for Y2 Profile'
+                        runInDocker(
+                            extraArgs: '--privileged',
+                            "${ALT_PHV_ENV} ctest -V -R '^tofino2/.*smoketest_switch_16_y2'"
+                        )
+                    }
+                }
+
+
+                stage("switch 16 Tofino 1 ALT-PHV tests (part 2)") {
+                    when { expression { runAltPhvForTofino(1) } }
+                    steps {
+                        echo 'Running bf-switch bfrt tests for Tofino for X2 Profile'
+                        runInDocker(
+                            extraArgs: '--privileged',
+                            "${ALT_PHV_ENV} ctest -R '^tofino/.*smoketest_switch_16_x2'"
+                        )
+                    }
+                }
+
+                stage("Tofino 1 (part 1)") {
                     steps {
                         echo 'Running tofino part 1 tests'
                         runInDocker(
                             extraArgs: '--privileged',
-                            ctestParallelLevel: 3,
+                            ctestParallelLevel: ifAltPhvForTofino(2, 2, 3),
                             """
                                 ctest \
                                     -R '^tofino/' \
@@ -340,12 +413,12 @@ pipeline {
                     }
                 }
 
-                stage("Tofino (part 2)") {
+                stage("Tofino 1 (part 2)") {
                     steps {
                         echo 'Running tofino part 2 tests'
                         runInDocker(
                             extraArgs: '--privileged',
-                            ctestParallelLevel: 3,
+                            ctestParallelLevel: ifAltPhvForTofino(2, 2, 3),
                             """
                                 ctest \
                                     -R '^tofino/' \
@@ -357,12 +430,12 @@ pipeline {
                     }
                 }
 
-                stage("Tofino (part 3)") {
+                stage("Tofino 1 (part 3)") {
                     steps {
                         echo 'Running tofino part 3 tests'
                         runInDocker(
                             extraArgs: '--privileged',
-                            ctestParallelLevel: 3,
+                            ctestParallelLevel: ifAltPhvForTofino(2, 2, 3),
                             """
                                 ctest \
                                     -R '^tofino/' \
@@ -374,12 +447,66 @@ pipeline {
                     }
                 }
 
+                stage("Tofino 1 ALT-PHV (part 1)") {
+                    when { expression { runAltPhvForTofino(1) } }
+                    steps {
+                        echo 'Running ALT-PHV tofino part 1 tests'
+                        runInDocker(
+                            extraArgs: '--privileged',
+                            ctestParallelLevel: ifAltPhvForTofino(2, 2, 3),
+                            """
+                                ${ALT_PHV_ENV} ctest \
+                                    -R '^tofino/' \
+                                    -E '${CTEST_PATH_EXCLUDE_T1}' \
+                                    -LE '${CTEST_LABEL_EXCLUDE_ALT_PASS}' \
+                                    -I 0,,3
+                            """
+                        )
+                    }
+                }
+
+                stage("Tofino 1 ALT-PHV (part 2)") {
+                    when { expression { runAltPhvForTofino(1) } }
+                    steps {
+                        echo 'Running ALT-PHV tofino part 2 tests'
+                        runInDocker(
+                            extraArgs: '--privileged',
+                            ctestParallelLevel: ifAltPhvForTofino(2, 2, 3),
+                            """
+                                ${ALT_PHV_ENV} ctest \
+                                    -R '^tofino/' \
+                                    -E '${CTEST_PATH_EXCLUDE_T1}' \
+                                    -LE '${CTEST_LABEL_EXCLUDE_ALT_PASS}' \
+                                    -I 1,,3
+                            """
+                        )
+                    }
+                }
+
+                stage("Tofino 1 ALT-PHV (part 3)") {
+                    when { expression { runAltPhvForTofino(1) } }
+                    steps {
+                        echo 'Running ALT-PHV tofino part 3 tests'
+                        runInDocker(
+                            extraArgs: '--privileged',
+                            ctestParallelLevel: ifAltPhvForTofino(2, 2, 3),
+                            """
+                                ${ALT_PHV_ENV} ctest \
+                                    -R '^tofino/' \
+                                    -E '${CTEST_PATH_EXCLUDE_T1}' \
+                                    -LE '${CTEST_LABEL_EXCLUDE_ALT_PASS}' \
+                                    -I 2,,3
+                            """
+                        )
+                    }
+                }
+
                 stage("Tofino 2 (part 1)") {
                     steps {
                         echo 'Running tofino2 tests'
                         runInDocker(
                             extraArgs: '--privileged',
-                            ctestParallelLevel: 3,
+                            ctestParallelLevel: ifAltPhvForTofino(2, 2, 3),
                             """
                                 ctest \
                                     -R '^tofino2' \
@@ -396,7 +523,7 @@ pipeline {
                         echo 'Running tofino2 tests'
                         runInDocker(
                             extraArgs: '--privileged',
-                            ctestParallelLevel: 3,
+                            ctestParallelLevel: ifAltPhvForTofino(2, 2, 3),
                             """
                                 ctest \
                                     -R '^tofino2' \
@@ -413,7 +540,7 @@ pipeline {
                         echo 'Running tofino2 tests'
                         runInDocker(
                             extraArgs: '--privileged',
-                            ctestParallelLevel: 3,
+                            ctestParallelLevel: ifAltPhvForTofino(2, 2, 3),
                             """
                                 ctest \
                                     -R '^tofino2' \
@@ -425,13 +552,79 @@ pipeline {
                     }
                 }
 
+                stage("Tofino 2 ALT-PHV (part 1)") {
+                    when { expression { runAltPhvForTofino(2) } }
+                    steps {
+                        echo 'Running tofino2 tests'
+                        runInDocker(
+                            extraArgs: '--privileged',
+                            ctestParallelLevel: 2,
+                            """
+                                ${ALT_PHV_ENV} ctest \
+                                    -R '^tofino2' \
+                                    -E '${CTEST_PATH_EXCLUDE_T2}' \
+                                    -LE '${CTEST_LABEL_EXCLUDE_ALT_PASS}' \
+                                    -I 0,,3
+                            """
+                        )
+                    }
+                }
+
+                stage("Tofino 2 ALT-PHV (part 2)") {
+                    when { expression { runAltPhvForTofino(2) } }
+                    steps {
+                        echo 'Running tofino2 tests'
+                        runInDocker(
+                            extraArgs: '--privileged',
+                            ctestParallelLevel: 2,
+                            """
+                                ${ALT_PHV_ENV} ctest \
+                                    -R '^tofino2' \
+                                    -E '${CTEST_PATH_EXCLUDE_T2}' \
+                                    -LE '${CTEST_LABEL_EXCLUDE_ALT_PASS}' \
+                                    -I 1,,3
+                            """
+                        )
+                    }
+                }
+
+                stage("Tofino 2 ALT-PHV (part 3)") {
+                    when { expression { runAltPhvForTofino(2) } }
+                    steps {
+                        echo 'Running tofino2 tests'
+                        runInDocker(
+                            extraArgs: '--privileged',
+                            ctestParallelLevel: 2,
+                            """
+                                ${ALT_PHV_ENV} ctest \
+                                    -R '^tofino2' \
+                                    -E '${CTEST_PATH_EXCLUDE_T2}' \
+                                    -LE '${CTEST_LABEL_EXCLUDE_ALT_PASS}' \
+                                    -I 2,,3
+                            """
+                        )
+                    }
+                }
+
                 stage("Tofino 3") {
                     steps {
                         echo 'Running tofino3 tests'
                         runInDocker(
                             extraArgs: '--privileged',
-                            ctestParallelLevel: 3,
+                            ctestParallelLevel: ifAltPhvForTofino(2, 2, 3),
                             "ctest -R '^tofino3' -LE '${CTEST_LABEL_EXCLUDE_ALL}'"
+                        )
+                    }
+                }
+
+                stage("Tofino 3 ALT-PHV") {
+                    when { expression { runAltPhvForTofino(3) } }
+                    steps {
+                        echo 'Running tofino3 tests'
+                        runInDocker(
+                            extraArgs: '--privileged',
+                            ctestParallelLevel: 2,
+                            "${ALT_PHV_ENV} ctest -R '^tofino3' -LE '${CTEST_LABEL_EXCLUDE_ALT_PASS}'"
                         )
                     }
                 }
@@ -447,11 +640,23 @@ pipeline {
                     }
                 }
 
+                stage("Tofino 5 ALT-PHV") {
+                    when { expression { runAltPhvForTofino(5) } }
+                    steps {
+                        echo 'Running tofino5 tests'
+                        runInDocker(
+                            extraArgs: '--privileged',
+                            ctestParallelLevel: 1,
+                            "${ALT_PHV_ENV} ctest -R '^tofino5' -LE '${CTEST_LABEL_EXCLUDE_T5}'"
+                        )
+                    }
+                }
+
                 stage("Determinism test - All Tofino versions") {
                     steps {
                         echo 'Running determinism tests for all Tofino versions'
                         runInDocker(
-                            ctestParallelLevel: 2,
+                            ctestParallelLevel: 1,
                             "ctest -L 'determinism'"
                         )
                     }

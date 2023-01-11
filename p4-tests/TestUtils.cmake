@@ -3,6 +3,7 @@ set(default_test_timeout 900)
 # A set of extended timeouts that should be used for larger tests
 math(EXPR extended_timeout_150percent "(${default_test_timeout} * 15) / 10")
 math(EXPR extended_timeout_2times "${default_test_timeout} * 2")
+math(EXPR extended_timeout_3times "${default_test_timeout} * 3")
 math(EXPR extended_timeout_4times "${default_test_timeout} * 4")
 math(EXPR extended_timeout_6times "${default_test_timeout} * 6")
 math(EXPR extended_timeout_8times "${default_test_timeout} * 8")
@@ -16,7 +17,9 @@ macro(p4c_add_xfail_reason tag reason)
   string (TOUPPER ${tag} __upperTag)
   foreach (test IN LISTS __tests)
     list (FIND ${__upperTag}_MUST_PASS_TESTS ${test} __isMustPass)
-    if (${__isMustPass} EQUAL -1) # not a mandatory pass test
+    # not a mandatory pass test
+    # FIXME: even mandatory tests can be switched off for ALT-PHV for now
+    if (${__isMustPass} EQUAL -1 OR ENABLE_ALT_PHV_ALLOC)
       p4c_test_set_name(__testname ${tag} ${test})
 
       # Verify that we haven't already set WILL_FAIL or PASS_REGULAR_EXPRESSION properties
@@ -325,3 +328,32 @@ macro(p4c_add_bf_backend_tests device toolsdevice arch label tests)
     endforeach() # __p4file
   endforeach()
 endmacro(p4c_add_bf_backend_tests)
+
+function(bfn_add_switch_test tofver flv extra_opts extra_labels run_ptf)
+    set(path ${SWITCH_PATH_PREFIX}${flv}.p4)
+    set(tofino "tofino${tofver}")
+    file(RELATIVE_PATH relpath ${P4C_SOURCE_DIR} ${path})
+    string(TOUPPER ${flv} FLV_UPPER)
+    p4c_add_test_with_args("${tofino}" ${P4C_RUNTEST} FALSE "switch_16_${flv}" "${relpath}" ""
+        "-D${FLV_UPPER}_PROFILE -I${SWITCH_P4_16_INC} -Xp4c=\"--auto-init-metadata ${extra_opts}\" -arch t${tofver}na -${tofino}")
+    foreach (extra_label ${extra_labels})
+        p4c_add_test_label("${tofino}" "${extra_label}" "switch_16_${flv}")
+    endforeach()
+    p4c_add_test_label("${tofino}" "SWITCH16" "switch_16_${flv}")
+    set_tests_properties("${tofino}/switch_16_${flv}" PROPERTIES TIMEOUT ${extended_timeout_2times})
+    if (run_ptf)
+        p4c_add_ptf_test_with_ptfdir("${tofino}" "smoketest_switch_16_${flv}" ${path}
+          "${testExtraArgs} -arch t${tofver}na -bfrt -profile ${flv}_${tofino} -Xp4c=\"--auto-init-metadata ${extra_opts}\"" ${SWITCH_P4_16_PTF})
+        bfn_set_ptf_test_spec("${tofino}" "smoketest_switch_16_${flv}" "${ARGN}")
+        # All switch_16 tests should depend on the test being compiled, rather than
+        # relying on the first one to compile the test.
+        # TODO(vstill): I don't think this actually works, the two compilations are done very
+        # differently, I don't think the PTF one can pick results from the non-PTF one.
+        set_tests_properties(
+          "${tofino}/smoketest_switch_16_${flv}"
+          PROPERTIES DEPENDS "${tofino}/switch_16_${flv}"
+        )
+        set_tests_properties("${tofino}/smoketest_switch_16_${flv}" PROPERTIES TIMEOUT ${extended_timeout_12times})
+        p4c_add_test_label("${tofino}" "SWITCH16_PTF" "smoketest_switch_16_${flv}")
+    endif()
+endfunction()

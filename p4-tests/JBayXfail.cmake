@@ -75,10 +75,12 @@ p4c_add_xfail_reason("tofino2"
 if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
 endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
 
-p4c_add_xfail_reason("tofino2"
-  "address too large for table"
-  testdata/p4_14_samples/saturated-bmv2.p4
-)
+if (NOT ENABLE_ALT_PHV_ALLOC)
+    p4c_add_xfail_reason("tofino2"
+      "address too large for table"
+      testdata/p4_14_samples/saturated-bmv2.p4
+    )
+endif()
 
 p4c_add_xfail_reason("tofino2"
   "Field clone_spec is not a member of structure struct standard_metadata"
@@ -242,13 +244,11 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/issue894.p4
 )
 
-if (NOT ENABLE_ALT_PHV_ALLOC)
-    # Failed after P4C-4507
-    p4c_add_xfail_reason("tofino2"
-      "tofino2 supports up to 20 stages, using"
-      extensions/p4_tests/p4_16/compile_only/p4c-3175.p4
-    )
-endif()
+# Failed after P4C-4507
+p4c_add_xfail_reason("tofino2"
+  "tofino2 supports up to 20 stages, using|error: table allocation .* 20 stages. Allocation state: ALT_FINALIZE_TABLE"
+  extensions/p4_tests/p4_16/compile_only/p4c-3175.p4
+)
 
 # Not being tracked by JBay regression yet
 p4c_add_xfail_reason("tofino2"
@@ -291,11 +291,13 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/compile_only/p4c-1892.p4
 )
 
-# action synthesis can't figure out it can use an OR to set a single bit.
-p4c_add_xfail_reason("tofino2"
-  "the program requires an action impossible to synthesize for Tofino2 ALU"
-  extensions/p4_tests/p4_14/stf/stateful4.p4
-)
+if (NOT ENABLE_ALT_PHV_ALLOC)
+    # action synthesis can't figure out it can use an OR to set a single bit.
+    p4c_add_xfail_reason("tofino2"
+      "the program requires an action impossible to synthesize for Tofino2 ALU"
+      extensions/p4_tests/p4_14/stf/stateful4.p4
+    )
+endif()
 
 p4c_add_xfail_reason("tofino2"
   "unexpected packet output on port 0"
@@ -443,11 +445,13 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/ptf/ONLab_packetio.p4  # WORKS WITH TOFINO1 !!!
 )
 
-# P4C-3876 / P4C-3999
-p4c_add_xfail_reason("tofino2"
-  "AssertionError: Expected packet was not received"
-  extensions/p4_tests/p4_14/ptf/inner_checksum_l4.p4
-)
+if (NOT ENABLE_ALT_PHV_ALLOC)
+    # P4C-3876 / P4C-3999
+    p4c_add_xfail_reason("tofino2"
+      "AssertionError: Expected packet was not received"
+      extensions/p4_tests/p4_14/ptf/inner_checksum_l4.p4
+    )
+endif()
 
 # Tracked in P4C-3328
 p4c_add_xfail_reason("tofino2"
@@ -466,3 +470,100 @@ p4c_add_xfail_reason("tofino2"
   "error: table .* should not have empty const entries list."
   extensions/p4_tests/p4_16/compile_only/p4c-4498.p4
 )
+
+# ALT-PHV: tests that do not work yet with the alternative allocator.
+# If you make an ALT-PHV test pass (or get close to it but if fails on later
+# error), please update the xfails accordingly.
+if (ENABLE_ALT_PHV_ALLOC)
+    # Bugs
+    p4c_add_xfail_reason("tofino2"
+        "Compiler Bug: Inconsistent parser write semantic on"
+        extensions/p4_tests/p4_16/compile_only/p4c-4154.p4
+        switch_16_y7
+    )
+
+    p4c_add_xfail_reason("tofino2"
+        "Compiler Bug: Constant lookup does not match the ActionFormat"
+        extensions/p4_tests/p4_16/customer/extreme/p4c-2794.p4
+    )
+
+    p4c_add_xfail_reason("tofino2"
+        "Compiler Bug:  - can't place .* it's already done"
+        extensions/p4_tests/p4_16/customer/arista/obfuscated-ddos_tofino2.p4
+    )
+
+    p4c_add_xfail_reason("tofino2"
+        "error: No phv record"  # bfas
+        extensions/p4_tests/p4_16/customer/extreme/p4c-2918-2.p4
+        extensions/p4_tests/p4_16/customer/extreme/p4c-3001.p4
+        extensions/p4_tests/p4_16/stf/MODEL-1095.p4
+    )
+
+    p4c_add_xfail_reason("tofino2"
+        "Unimplemented compiler support: In the ALU operation over container .* in action .*, the packing is too complicated due to a too complex container instruction with a speciality action data combined with other action data"
+        extensions/p4_tests/p4_16/jbay/p4c-3288.p4
+    )
+
+    # PHV errors
+    p4c_add_xfail_reason("tofino2"
+        "error: PHV fitting failed, [0-9]+ clusters cannot be allocated."
+        testdata/p4_14_samples/02-FullPHV1.p4
+    )
+
+    p4c_add_xfail_reason("tofino2"
+        "error: invalid SuperCluster was formed:"
+        extensions/p4_tests/p4_16/ptf/inner_checksum_payload_offset.p4
+    )
+
+    # Actions and constraints errors
+    p4c_add_xfail_reason("tofino2"
+        "error: PHV allocation creates an invalid container action within a Tofino ALU"
+        extensions/p4_tests/p4_16/customer/extreme/p4c-2641.p4
+        extensions/p4_tests/p4_16/stf/meter_dest_16_32_flexible.p4
+    )
+
+    p4c_add_xfail_reason("tofino2"
+        "error: The table .* with no key cannot have the action .*"
+        p4_16_internal_p4_16_hwlrn
+    )
+
+    # Table fitting errors
+    p4c_add_xfail_reason("tofino2"
+        "error: table allocation .* Allocation state: ALT_FINALIZE_TABLE"
+        switch_16_y2
+        smoketest_switch_16_y2
+        extensions/p4_tests/p4_16/customer/arista/obfuscated-p416_baremetal_tofino2-2022-09-15.p4
+        extensions/p4_tests/p4_16/customer/arista/obfuscated-p416_baremetal_tofino2.p4
+        switch_16_y8
+        npb-master-ptf
+    )
+
+    p4c_add_xfail_reason("tofino2"
+        "error: table allocation .* Allocation state: ALT_RETRY_ENHANCED_TP"
+        extensions/p4_tests/p4_16/customer/arista/obfuscated-l2_dci.p4
+        extensions/p4_tests/p4_16/customer/arista/obfuscated-msee_tofino2.p4
+    )
+
+    # PTF and STF errors
+    p4c_add_xfail_reason("tofino2"
+        "jbay_test_harness FAILED"  # STF
+        extensions/p4_tests/p4_16/stf/stage_layout1.p4
+        testdata/p4_14_samples/saturated-bmv2.p4
+    )
+
+    p4c_add_xfail_reason("tofino2"
+        "ERROR:PTF runner:Error when running PTF tests"
+        npb-folded-pipe
+        p4c-3876
+        p4_16_programs_tna_action_selector
+        p4c_1587
+    )
+
+    # Tests that take way too long with ALT-PHV
+    p4c_add_xfail_reason("tofino2"
+        "TIMEOUT"
+        extensions/p4_tests/p4_16/customer/extreme/npb-97-ga.p4
+        extensions/p4_tests/p4_16/customer/extreme/p4c-2649.p4
+        extensions/p4_tests/p4_16/stf/p4c-4535.p4
+    )
+endif (ENABLE_ALT_PHV_ALLOC)

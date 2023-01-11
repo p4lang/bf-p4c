@@ -2126,3 +2126,58 @@ p4c_add_xfail_reason("tofino"
   "Not all applies of table .* are mutually exclusive"
   testdata/p4_16_samples/psa-action-selector6.p4
 )
+
+# ALT-PHV: tests that do not work yet with the alternative allocator.
+# If you make an ALT-PHV test pass (or get close to it but if fails on later
+# error), please update the xfails accordingly.
+if (ENABLE_ALT_PHV_ALLOC)
+    # BUGs
+    p4c_add_xfail_reason("tofino"
+      "Compiler Bug: Byte rotate merge implicit bits incorrectly done"
+      extensions/p4_tests/p4_16/customer/arista/obfuscated-nat.p4
+    )
+
+    p4c_add_xfail_reason("tofino"
+      "Compiler Bug: Converting a bitvec to a bitrange requires the bitrange to be continuous"
+      extensions/p4_tests/p4_16/customer/arista/obfuscated-small_scale_test.p4
+    )
+
+    p4c_add_xfail_reason("tofino"
+      "bfa:[0-9]*: error: No phv record"  # assembler
+      extensions/p4_tests/p4_16/customer/arista/obfuscated-low_latency.p4
+    )
+
+    # PHV fitting
+    p4c_add_xfail_reason("tofino"
+      "error: PHV fitting failed, [0-9]* clusters cannot be allocated."
+      extensions/p4_tests/p4_14/customer/ruijie/p4c-2250.p4
+      switch_msdc_ipv4
+    )
+
+    # errors in constraints
+    p4c_add_xfail_reason("tofino"
+      "Error code: CONTAINER_PARSER_PACKING_INVALID"
+      extensions/p4_tests/p4_16/customer/arista/obfuscated-map.p4
+    )
+
+    p4c_add_xfail_reason("tofino"
+      "error: Fields involved in the same MAU operations have conflicting PARDE alignment requirements: alignment = .* and alignment ="
+      extensions/p4_tests/p4_16/customer/arista/obfuscated-nat_static.p4
+      switch_dc_basic
+    )
+
+    # Table fitting
+    p4c_add_xfail_reason("tofino"
+      "error: table allocation [(]alt-phv-alloc enabled[)] failed to allocate tables within 12 stages. Allocation state: ALT_RETRY_ENHANCED_TP, stage used: 13"
+      switch_16_x1  # compile-only
+      switch_16_x2  # compile-only
+      smoketest_switch_16_x1  # PTF
+      smoketest_switch_16_x2  # PTF
+      extensions/p4_tests/p4_16/customer/arista/obfuscated-stateless_load_balance_v4v6.p4
+    )
+
+    p4c_add_xfail_reason("tofino"
+      "error: table allocation [(]alt-phv-alloc enabled[)] failed to allocate tables within 12 stages. Allocation state: ALT_FINALIZE_TABLE, stage used: 13"
+      extensions/p4_tests/p4_16/customer/arista/obfuscated-routescale.p4
+    )
+endif (ENABLE_ALT_PHV_ALLOC)
