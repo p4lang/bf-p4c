@@ -267,6 +267,8 @@ struct ParserAsmSerializer : public ParserInspector {
             out << sep << p;
             sep = ", ";
         }
+        if (phv_builder_group->pov_select.size() > 0)
+            out << " ";
         out << "]" << std::endl;
         indent--;
         return true;

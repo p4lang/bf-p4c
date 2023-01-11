@@ -53,14 +53,9 @@ p4c_add_xfail_reason("tofino5"
 
 p4c_add_xfail_reason("tofino5"
   "error: No format field or table named immediate"
-  extensions/p4_tests/p4_16/flatrock/pac_shallow_branch.p4
-  extensions/p4_tests/p4_16/flatrock/pac_unbal_reconverge.p4
+  extensions/p4_tests/p4_16/flatrock/pac_shallow_branch_egress_const.p4
+  extensions/p4_tests/p4_16/flatrock/pac_unbal_reconverge_egress_const.p4
   )
-
-#p4c_add_xfail_reason("tofino5"
-#  "error: same register/slice can not be used multiple times"
-#  extensions/p4_tests/p4_16/flatrock/pac_wide_branch.p4
-#  )
 
 p4c_add_xfail_reason("tofino5"
   "error: Syntax error, expecting identifier"
@@ -74,13 +69,9 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/stf/simple_l3_acl_disappearing_options.p4
   )
 
-# Tracked under P4C-4891
 p4c_add_xfail_reason("tofino5"
-  "Compiler Bug: Fields from different headers .* are not supported in the same container"
-  #(with P4C-4689 this passes because the PHV alloc was perturbed)
-  #extensions/p4_tests/p4_16/flatrock/pac_extraction_different_fields_same_container.p4
-  extensions/p4_tests/p4_16/stf/p4c-3551.p4
-  extensions/p4_tests/p4_16/flatrock/pac_wide_branch.p4
+  "error: .* too large for operand"
+  extensions/p4_tests/p4_16/flatrock/pac_wide_branch_egress_const.p4
   )
 
 p4c_add_xfail_reason("tofino5"
@@ -128,6 +119,7 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/stf/parse_depth_1.p4
   extensions/p4_tests/p4_16/stf/update_checksum_4.p4
   extensions/p4_tests/p4_16/stf/p4c-3055-2.p4
+  extensions/p4_tests/p4_16/stf/p4c-3551.p4
   )
 
 p4c_add_xfail_reason("tofino5"
@@ -316,7 +308,16 @@ p4c_add_xfail_reason("tofino5"
 p4c_add_xfail_reason("tofino5"
   "mismatch from expected"
   extensions/p4_tests/p4_16/flatrock/parser_swap_headers.p4
+  extensions/p4_tests/p4_16/flatrock/pac_shallow_branch_parser_const.p4
   )
+
+# Some conditions in egress are not correctly evaluated
+p4c_add_xfail_reason("tofino5"
+  "mismatch from expected"
+  extensions/p4_tests/p4_16/flatrock/pac_shallow_branch_egress_hdrs.p4
+  extensions/p4_tests/p4_16/flatrock/pac_unbal_reconverge_egress_hdrs.p4
+  )
+
 
 # *********************************************************************************************** #
 # ** \TNA tests that "should" work ************************************************************** #

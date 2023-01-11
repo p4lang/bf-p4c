@@ -1,12 +1,12 @@
 #command port main     b1 h1   w1       payload
-#             ctrl     f1 f1   f1     
+#             ctrl     f1 f1   f1
 
 #only hdrs.main
 packet   5    00000000                  0123456789abcdef
 expect   5    00000000                  0123456789abcdef
 
 #hdrs.main and hdrs.b1
-packet   5    00000001 01               0123456789abcdef
+packet   5    00000001 11               0123456789abcdef
 expect   5    00000001 ff               0123456789abcdef
 
 packet   5    00000002 02               0123456789abcdef

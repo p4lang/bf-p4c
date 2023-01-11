@@ -237,66 +237,45 @@ class ComputeFlatrockParserIR : public ParserInspector {
     }
 
     /**
-     * @brief Adds information about packet PHE source extract.
+     * @brief Adds information about packet/other PHE source extract.
+     *
+     * @param gress Gress (ingress or egress) where the value is extraced.
+     * @param alloc Info about PHV allocation of the field to which the value is extracted.
+     * @param comment Comment with debug info about the extract.
+     * @param hdr_name Name of the header of the field to which the value is extracted.
+     * @param match Match of the extract.
+     * @param value_info Value of the extract (for packet or other PHE source.).
      */
-    void add_packet_extract(const gress_t gress, const PHV::AllocSlice& alloc,
-            const cstring comment, const cstring hdr_name, unsigned int offset) {
-        // TODO check if the layout of slices in the container is the same as the layout
-        // of fields in the header in case of extract from packet
+    void add_extract(const gress_t gress, const PHV::AllocSlice& alloc,
+            const cstring comment, const Flatrock::ParserExtractMatch match,
+            Flatrock::ParserExtractValue::ValueInfo value_info) {
         Flatrock::ParserExtractContainer container{alloc.container().type().size(),
                 alloc.container().index()};
-        auto it = extracts_info[gress].find(container);
-        if (it != extracts_info[gress].end()) {
-            auto& extract_value = it->second;
-            BUG_CHECK(Flatrock::ExtractType::Packet == extract_value.type,
-                    "Allocation of field: \"%1%\" can not be satisfied as it requires to use"
-                    " extraction from packet and other source to the same container",
-                    alloc);
-            BUG_CHECK(hdr_name == extract_value.get_header_name(),
-                    "Fields from different headers (%1%, %2%)"
-                    " are not supported in the same container: %3%",
-                    hdr_name, extract_value.get_header_name(), alloc);
-            BUG_CHECK(offset == extract_value.get_source_offset(),
-                    "Field offset (%1%) differs from offset (%2%) of other field allocated"
-                    " in the same container: %3%",
-                    offset, extract_value.get_source_offset(), alloc);
-            extract_value.add_comment(comment);
-            LOG3("Extract updated:" << std::endl <<
-                    "  " << container << ": " << extract_value);
-        } else {
-            Flatrock::ParserExtractValue extract_value{Flatrock::ExtractType::Packet, comment,
-                    hdr_name, offset};
-            extracts_info[gress].emplace(container, extract_value);
-            LOG3("Adding new extract:" << std::endl <<
-                    "  " << container << ": " << extract_value);
-        }
-    }
+        Flatrock::ParserExtractValue new_extract_value{value_info, comment};
 
-    /**
-     * @brief Adds information about other PHE source extract.
-     */
-    void add_other_extract(const gress_t gress, const PHV::AllocSlice& alloc,
-            const cstring comment, const le_bitrange slice,
-            const Flatrock::ExtractSubtype subtype, const unsigned int constant) {
-        Flatrock::ParserExtractContainer container{alloc.container().type().size(),
-                alloc.container().index()};
-        auto it = extracts_info[gress].find(container);
-        if (it != extracts_info[gress].end()) {
-            auto& extract_value = it->second;
-            BUG_CHECK(Flatrock::ExtractType::Other == extract_value.type,
-                    "Allocation of field: \"%1%\" can not be satisfied as it requires to use"
-                    " extraction from packet and other source to the same container",
-                    alloc);
-            extract_value.add_slice(slice, subtype, constant);
-            extract_value.add_comment(comment);
-            LOG3("Extract updated:" << std::endl <<
-                    "  " << container << ": " << extract_value);
+        if (auto it = extracts_info[gress].find(container); it != extracts_info[gress].end()) {
+            auto& match_extract_map = it->second;
+            if (auto it2 = match_extract_map.find(match); it2 == match_extract_map.end()) {
+                match_extract_map.emplace(match, new_extract_value);
+                LOG3("Adding new " << gress << " extract:" << std::endl <<
+                        "  " << container << ":" << std::endl <<
+                        "  - " << match << ": " << new_extract_value);
+            } else {
+                auto& extract_value = it2->second;
+                extract_value.add_value(value_info, alloc);
+                extract_value.add_comment(comment);
+                LOG3(gress << " extract updated:" << std::endl <<
+                        "  " << container << ":" << std::endl <<
+                        "  - " << match << ": " << extract_value);
+            }
         } else {
-            Flatrock::ParserExtractValue extract_value{Flatrock::ExtractType::Other, comment,
-                    slice, subtype, constant};
-            extracts_info[gress].emplace(container, extract_value);
-            LOG3("Adding new extract:" << std::endl <<
-                    "  " << container << ": " << extract_value);
+            ordered_map<Flatrock::ParserExtractMatch, Flatrock::ParserExtractValue>
+                    match_extract_map;
+            match_extract_map.emplace(match, new_extract_value);
+            extracts_info[gress].emplace(container, match_extract_map);
+            LOG3("Adding new " << gress << " extract:" << std::endl <<
+                    "  " << container << ":" << std::endl <<
+                    "  - " << match << ": " << new_extract_value);
         }
     }
 
@@ -374,6 +353,29 @@ class ComputeFlatrockParserIR : public ParserInspector {
                         nw_bitrange{},
                     true);
 
+            Flatrock::ParserExtractMatch match{nullptr};
+
+            const auto* valid_field = phv.field(hdr_name + ".$valid");
+            if (valid_field) {
+                LOG3("Found valid field: " << valid_field);
+
+                const auto vf_allocs = phv.get_alloc(valid_field, nullptr,
+                        PHV::AllocContext::PARSER);
+                if (vf_allocs.empty()) {
+                    // FIXME
+                    // This should not happen but currently it happens for example
+                    // if ig_intr_md fields are used in control block but
+                    // validity of ig_intr_md is not checked in the program and
+                    // ig_intr_md.$valid does not have a PHV allocation.
+                    // In this case we just do not match on the $valid field.
+                    LOG1("Could not find the alloc slice for " << valid_field);
+                } else {
+                    match.header_valid_field = valid_field;
+                }
+            } else {
+                LOG1("Field " << hdr_name << ".$valid not found");
+            }
+
             if (const auto *pkt_rval = extract->source->to<IR::BFN::PacketRVal>()) {
                 size_t hdr_bit_width = get_hdr_bit_width(lval->field);
                 BUG_CHECK(hdr_bit_width % BITS_IN_BYTE == 0,
@@ -414,12 +416,13 @@ class ComputeFlatrockParserIR : public ParserInspector {
                         hdr_offset_in_bits / BITS_IN_BYTE
                     });
                 }
+                Flatrock::ParserExtractValue::ValueInfo value_info{
+                    Flatrock::ParserExtractValue::HeaderInfo{hdr_name,
+                        static_cast<unsigned int>(container_offset_in_bytes)}};
                 if (used_in_ingress)
-                    add_packet_extract(INGRESS, alloc, comment, hdr_name,
-                            container_offset_in_bytes);
+                    add_extract(INGRESS, alloc, comment, match, value_info);
                 if (used_in_egress)
-                    add_packet_extract(EGRESS, alloc, comment, hdr_name,
-                            container_offset_in_bytes);
+                    add_extract(EGRESS, alloc, comment, match, value_info);
             } else if (const auto* const_rval = extract->source->to<IR::BFN::ConstantRVal>()) {
                 le_bitrange slice = alloc.container_slice();
                 auto subtype = Flatrock::ExtractSubtype::Constant;
@@ -439,20 +442,24 @@ class ComputeFlatrockParserIR : public ParserInspector {
                         slice.lo = alloc.container_slice().loByte() * BITS_IN_BYTE;
                         slice.hi = slice.lo + (BITS_IN_BYTE - 1);
                         subtype = Flatrock::ExtractSubtype::PovFlags;
-                        /// Assign a byte from POV flags vector to a PHV container byte
-                        /// which holds the value of the $valid field.
+                        // Assign a byte from POV flags vector to a PHV container byte
+                        // which holds the value of the $valid field.
                         value = allocate_pov_flags(alloc, lval->field->toString());
                         int pov_flag_index = value * BITS_IN_BYTE + bit_index;
                         const le_bitrange pov_flags_range{pov_flag_index, pov_flag_index};
                         comment = debugInfoFor(extract, alloc, pov_flags_range, "flags");
+                        match.header_valid_field = nullptr;
                     }
                 }
 
+                Flatrock::ParserExtractValue::ValueInfo value_info{
+                    Flatrock::ParserExtractValue::SliceInfoSet{
+                        Flatrock::ParserExtractValue::SliceInfo{slice, subtype, value}}};
                 if (used_in_ingress ||
                         (subtype == Flatrock::ExtractSubtype::PovFlags && used_in_egress))
-                    add_other_extract(INGRESS, alloc, comment, slice, subtype, value);
+                    add_extract(INGRESS, alloc, comment, match, value_info);
                 if (used_in_egress)
-                    add_other_extract(EGRESS, alloc, comment, slice, subtype, value);
+                    add_extract(EGRESS, alloc, comment, match, value_info);
             }
         };
 
@@ -559,8 +566,11 @@ class ComputeFlatrockParserIR : public ParserInspector {
 
         auto log = [this](gress_t gress){
             if (extracts_info.count(gress) == 0) return;
-            for (const auto& extract : extracts_info.at(gress)) {
-                LOG3("  " << extract.first << ": " << extract.second);
+            for (const auto& [container, extract] : extracts_info.at(gress)) {
+                LOG3("  " << container << ":");
+                for (const auto& [match, extract_value] : extract) {
+                    LOG3("  - " << match << ": " << extract_value);
+                }
             }
         };
 
@@ -593,11 +603,12 @@ class ComputeFlatrockParserIR : public ParserInspector {
      */
     std::map<const IR::BFN::ParserState*, AnalyzerRuleInfo> rules_info;
     /**
-     * @brief Information about extracts performed in parser needed to create
-     *        corresponding PHV builder extracts.
+     * @brief Information about extracts performed in parser needed to create corresponding
+     *        PHV builder extracts.
      */
-    std::map<gress_t, std::map<Flatrock::ParserExtractContainer,
-            Flatrock::ParserExtractValue>> extracts_info;
+    std::map<gress_t, ordered_map<Flatrock::ParserExtractContainer,
+            ordered_map<Flatrock::ParserExtractMatch,
+                Flatrock::ParserExtractValue>>> extracts_info;
 
     /**
      * @brief Get the pointer to the vector of container refs corresponding to
@@ -623,15 +634,15 @@ class ComputeFlatrockParserIR : public ParserInspector {
         if (it != pov_flags_byte.end()) {
             return it->second;
         } else {
-            /// FIXME
-            /// Ideally this should be a BUG, but currently this case may happen when
-            /// a $valid field of a header is not used and thus it is optimized out
-            /// and there is no IR::BFN::Extract for that $valid field, but the header
-            /// is still pushed to hdr_ptrs list so we try to set a flag for the $valid
-            /// field and call this function.
-            /// When the logic for generating modify_flag actions will be changed so that
-            /// the modify_flag actions are generated based on the extracts and not for
-            /// each pushed header, this will be removed anyway.
+            // FIXME
+            // Ideally this should be a BUG, but currently this case may happen when
+            // a $valid field of a header is not used and thus it is optimized out
+            // and there is no IR::BFN::Extract for that $valid field, but the header
+            // is still pushed to hdr_ptrs list so we try to set a flag for the $valid
+            // field and call this function.
+            // When the logic for generating modify_flag actions will be changed so that
+            // the modify_flag actions are generated based on the extracts and not for
+            // each pushed header, this will be removed anyway.
             LOG1("Unknown POV flags byte for PHV field allocation: " << alloc);
             return boost::none;
         }
@@ -653,9 +664,26 @@ class ReplaceFlatrockParserIR : public ParserTransform {
     static constexpr size_t PARSER_PHV_BUILDER_GROUP_PHES_TOTAL =
         Flatrock::PARSER_PHV_BUILDER_GROUP_PHE8_NUM + Flatrock::PARSER_PHV_BUILDER_GROUP_PHE16_NUM +
         Flatrock::PARSER_PHV_BUILDER_GROUP_PHE32_NUM;
-    typedef std::array<IR::Flatrock::PhvBuilderExtract*, PARSER_PHV_BUILDER_GROUP_PHES_TOTAL>
+    typedef std::array<std::pair<
+            ordered_set<::Flatrock::PovSelectKey>,
+            std::vector<IR::Flatrock::PhvBuilderExtract*>>, PARSER_PHV_BUILDER_GROUP_PHES_TOTAL>
         ExtractArray;
     typedef IR::Vector<IR::Flatrock::PhvBuilderGroup> PhvBuilder;
+    typedef ordered_set<const PHV::Field*> MatchFieldSet;
+    /**
+     * @brief Each element in the array represents set of fields which need to be included
+     *        in the selected POV bytes for the PHV builder group with the index equal
+     *        to the index of the element in the array.
+     */
+    typedef std::array<MatchFieldSet, PARSER_PHV_BUILDER_GROUP_PHES_TOTAL> PovSelectMatchFieldArray;
+    /**
+     * @brief Each element in the set (which is an element of the array) represents match value
+     *        for one extract in the PHV builder group given by the index in the array.
+     */
+    typedef std::array<ordered_set<MatchFieldSet>, PARSER_PHV_BUILDER_GROUP_PHES_TOTAL>
+            ExtractMatchFieldArray;
+    typedef std::pair<Flatrock::ParserExtractContainer, Flatrock::ParserExtractValue>
+            ParserExtract;
 
     mutable cstring initial_state_name;
 
@@ -694,12 +722,12 @@ class ReplaceFlatrockParserIR : public ParserTransform {
         } else {
             auto allocs = phv.get_alloc(valid_field, nullptr, PHV::AllocContext::PARSER);
             if (allocs.empty()) {
-                /// FIXME
-                /// This case may also happen when $valid field of a header is not
-                /// used and thus optimized out.
-                /// This is just temporary until the logic for generating modify_flag
-                /// actions is changed to generate those actions based on the extracts
-                /// and not for each pushed header.
+                // FIXME
+                // This case may also happen when $valid field of a header is not
+                // used and thus optimized out.
+                // This is just temporary until the logic for generating modify_flag
+                // actions is changed to generate those actions based on the extracts
+                // and not for each pushed header.
                 LOG1("Could not find the alloc slice for " << valid_field);
                 return boost::none;
             }
@@ -1024,120 +1052,431 @@ class ReplaceFlatrockParserIR : public ParserTransform {
     }
 
     /**
-     * @brief Converts the collected information about extracts to the new lowered IR nodes
-     *        representing PHV builder extracts.
+     * @brief Fills array of POV select fields.
+     *
+     * @param pov_select_match_fields Array of POV select fields to fill.
+     * @param phv_builder_extracts Array of extracts for PHV builder groups which contains
+     *        also POV select keys which are also filled by this method.
+     * @param gress Gress (ingress or egress) for which we generate the extracts.
      */
-    ExtractArray make_builder_extracts(gress_t gress) const {
-        /// Array of extracts with index 0 for all PHV builder groups.
-        /// Index to this array is in fact PHV builder group index.
-        ExtractArray phv_builder_extracts{};
-        if (computed.extracts_info.count(gress) != 0) {
-            for (const auto& [container, extract_value] : computed.extracts_info.at(gress)) {
+    void prepare_pov_select(PovSelectMatchFieldArray& pov_select_match_fields,
+            ExtractArray& phv_builder_extracts, const gress_t gress) const {
+        for (const auto& [container, match_extract_map] : computed.extracts_info.at(gress)) {
+            for (const auto& [match, extract_value] : match_extract_map) {
+                if (match.is_match_all())
+                    continue;
                 const auto phe_info = get_phe_info(container);
-
-                /// Get extract with index 0 for a given PHV builder group
-                auto& phv_builder_extract = phv_builder_extracts[phe_info.phv_builder_group_index];
-                if (phv_builder_extract == nullptr)
-                    phv_builder_extract = new IR::Flatrock::PhvBuilderExtract(container.size);
-
-                /**
-                 * Each PHV builder group extract specifies a pair of PHE sources.
-                 * Each PHE source specifies:
-                 * - 4 PHE8 sources or
-                 * - 2 PHE16 sources or
-                 * - 1 PHE32 source
-                 * Values for each PHE source (4xPHE8 / 2xPHE16 / 1xPHE32) in the pair are
-                 * stored in one element of 'source' array
-                 */
-                phv_builder_extract->index = 0;
-                const auto phe_source_index = (container.index / phe_info.phe_sources) %
-                        Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES;
-
-                if (phv_builder_extract->source[phe_source_index].type !=
-                        Flatrock::ExtractType::None) {
-                    BUG_CHECK(phv_builder_extract->source[phe_source_index].type ==
-                            extract_value.type,
-                            "Values of different types allocated into the same PHE source of "
-                            "PHV builder group %1% %2%",
-                            phe_info.phv_builder_group_index, phv_builder_extract);
+                auto& pov_select_set =
+                        phv_builder_extracts[phe_info.phv_builder_group_index].first;
+                const auto allocs = phv.get_alloc(
+                        match.header_valid_field, nullptr, PHV::AllocContext::PARSER);
+                BUG_CHECK(!allocs.empty(), "Could not find the alloc slice for %1%",
+                        match.header_valid_field);
+                const auto& alloc = allocs.front();
+                auto byte_index = computed.get_pov_flags_byte(alloc);
+                if (!byte_index) {
+                    // FIXME
+                    // Replace this with the following BUG_CHECK when this is fixed for
+                    // ig_intr_md.$valid:
+                    // BUG_CHECK(byte_index, "POV flag byte not allocated for alloc %1%", alloc);
+                    continue;
                 }
-
-                phv_builder_extract->source[phe_source_index].type = extract_value.type;
-                phv_builder_extract->source[phe_source_index].debug.info.insert(
-                        phv_builder_extract->source[phe_source_index].debug.info.end(),
-                        extract_value.comments.begin(), extract_value.comments.end());
-
-                if (extract_value.type == Flatrock::ExtractType::Packet) {
-                    if (phv_builder_extract->source[phe_source_index].hdr_name) {
-                        /* FIXME uncomment this when PHV allocation is fixed to not break this constraint
-                        BUG_CHECK(*phv_builder_extract->source[phe_source_index].hdr_name ==
-                            extract_value.get_header_name(),
-                            "Values from different headers %1% and %2% allocated into the same "
-                            "PHE source of PHV builder group %3% %4%",
-                            *phv_builder_extract->source[phe_source_index].hdr_name,
-                            extract_value.get_header_name(), phe_info.phv_builder_group_index,
-                            phv_builder_extract);
-                        */
-                    }
-                    phv_builder_extract->source[phe_source_index].hdr_name =
-                            extract_value.get_header_name();
-                    phv_builder_extract->source[phe_source_index].values.push_back(
-                            {phe_info.container_name,
-                            static_cast<int>(extract_value.get_source_offset()),
-                            Flatrock::ExtractSubtype::None});
-                } else if (extract_value.type == Flatrock::ExtractType::Other) {
-                    unsigned int constant = 0;
-                    for (const auto& slice : extract_value.get_slices()) {
-                        if (slice.subtype == Flatrock::ExtractSubtype::Constant) {
-                            constant |= slice.value << slice.slice.lo;
-                        }
-                    }
-                    for (int i = 0; i < Flatrock::PARSER_PHV_BUILDER_OTHER_PHE_SOURCES; ++i) {
-                        int lo = i * BITS_IN_BYTE;
-                        int hi = lo + (BITS_IN_BYTE - 1);
-                        const auto suffix = (phe_info.phe_sources ==
-                                Flatrock::PARSER_PHV_BUILDER_PACKET_PHE8_SOURCES) ? "" :
-                                '(' + std::to_string(lo) + ".." + std::to_string(hi) + ')';
-                        for (const auto& slice : extract_value.get_slices()) {
-                            if (slice.slice.loByte() <= i && i <= slice.slice.hiByte()) {
-                                int value;
-                                if (slice.subtype == Flatrock::ExtractSubtype::Constant) {
-                                    unsigned int bit_offset = i * BITS_IN_BYTE;
-                                    unsigned int mask = ((1U << BITS_IN_BYTE) - 1) << bit_offset;
-                                    value = static_cast<int>((constant & mask) >> bit_offset);
-                                } else if (slice.subtype == Flatrock::ExtractSubtype::PovFlags) {
-                                    value = static_cast<int>(slice.value);
-                                } else {
-                                    std::stringstream ss;
-                                    ss << slice.subtype;
-                                    BUG("Extract subtype %1% is currently not supported", ss.str());
-                                }
-                                phv_builder_extract->source[phe_source_index].values.
-                                        push_back({phe_info.container_name + suffix,
-                                        value, slice.subtype});
-                                break;
-                            }
-                        }
-                    }
-                } else {
-                    BUG("Missing extract type!");
-                }
-                LOG3("Update PHV builder group " << phe_info.phv_builder_group_index <<
-                        " " << phv_builder_extract);
+                ::Flatrock::PovSelectKey key{::Flatrock::PovSelectKey::FLAGS,
+                        static_cast<uint8_t>(*byte_index)};
+                pov_select_set.emplace(key);
+                pov_select_match_fields[phe_info.phv_builder_group_index].emplace(
+                        match.header_valid_field);
             }
         }
 
+        if (LOGGING(3)) {
+            LOG3(gress << " PHV builder group POV select match fields:");
+            unsigned int i = 0;
+            for (const auto& field_set : pov_select_match_fields) {
+                std::stringstream ss;
+                ss << "  " << i++ << ":" << std::endl;
+                for (const auto* field : field_set) {
+                    ss << "    " << *field << std::endl;
+                }
+                LOG3(ss);
+            }
+        }
+    }
+
+    /**
+     * @brief Fills array of extract match fields.
+     *
+     * @param extract_match_fields Array of extract match fields to fill.
+     * @param pov_select_match_fields Array of POV select fields which is used to collect
+     *        extract match fields.
+     * @param gress Gress (ingress or egress) for which we generate the extracts.
+     */
+    void prepare_extract_match(ExtractMatchFieldArray& extract_match_fields,
+            const PovSelectMatchFieldArray& pov_select_match_fields, const gress_t gress) const {
+        unsigned i = 0;
+        for (const auto& field_set : pov_select_match_fields) {
+            for (const auto& seq : parserHeaderSeqs.sequences.at(INGRESS)) {
+                ordered_set<const PHV::Field*> match_set;
+                std::for_each(field_set.begin(), field_set.end(),
+                        [&](const PHV::Field* f){
+                    if (seq.find(f->header()) != seq.end()) match_set.emplace(f);
+                });
+                if (!match_set.empty())
+                    extract_match_fields[i].emplace(match_set);
+            }
+            i++;
+        }
+
+        if (LOGGING(3)) {
+            LOG3(gress << " PHV builder group extract matches:");
+            i = 0;
+            for (const auto& match_vec : extract_match_fields) {
+                std::stringstream ss;
+                ss << "  " << i++ << ":" << std::endl;
+                int j = 0;
+                for (const auto& field_set : match_vec) {
+                    ss << "    " << j++ << ":" << std::endl;
+                    for (const auto* field : field_set) {
+                        ss << "      " << *field << std::endl;
+                    }
+                }
+                LOG3(ss);
+            }
+        }
+    }
+
+    /**
+     * @brief Finds existing or constructs new PHV builder extract based on given info.
+     *
+     * @param extract_id Id of extract in the PHV builder group.
+     * @param phv_builder_extracts Array of extracts for PHV builder groups.
+     * @param container Info about PHV container corresponding to the extract.
+     * @param phv_builder_group_index Id of the PHV builder group.
+     * @param pov_select_match_field_set Set of fields that need to be included in selected
+     *        POV bytes for PHV builder group given by phv_builder_group_index.
+     * @param extract_match_field_set Set of fields that represent match value of the PHV
+     *        builder extract given by extract_id.
+     * @return IR::Flatrock::PhvBuilderExtract* IR node representing PHV builder extract.
+     */
+    IR::Flatrock::PhvBuilderExtract* get_phv_builder_extract(const unsigned int extract_id,
+            ExtractArray& phv_builder_extracts,
+            const Flatrock::ParserExtractContainer& container,
+            const size_t phv_builder_group_index, const MatchFieldSet& pov_select_match_field_set,
+            const MatchFieldSet& extract_match_field_set) const {
+        // Get vector of extracts for a given PHV builder group
+        auto& phv_builder_extract_vec =
+                phv_builder_extracts[phv_builder_group_index].second;
+        if (extract_id < phv_builder_extract_vec.size())
+            return phv_builder_extract_vec[extract_id];
+        else {
+            IR::Flatrock::PhvBuilderExtract* phv_builder_extract =
+                    new IR::Flatrock::PhvBuilderExtract(container.size);
+            phv_builder_extract->index = extract_id;
+            // Compute phv_builder_extract->match from pov_select_match_field_set
+            // and extract_match_field_set.
+            // The principle:
+            // For each field in pov_select_match_field_set, set the corresponding
+            // bit position in phv_builder_extract->match:
+            // - 1 if the field is present in extract_match_field_set
+            // - 0 if the field is not present in extract_match_field_set
+            // Set * for other bits.
+            // The bit position needs to be calculated based on the bit index of the fields
+            // inside a POV flags byte and position of the byte in
+            // phv_builder_extracts[phv_builder_group_index].first set.
+
+            // Set all bits to don't care
+            phv_builder_extract->match.setwidth(
+                ::Flatrock::PARSER_POV_SELECT_NUM * BITS_IN_BYTE);
+            // Check all POV bits used in the PHE extraction group
+            for (const auto &match_field : pov_select_match_field_set) {
+                const auto allocs = phv.get_alloc(match_field, nullptr,
+                    PHV::AllocContext::PARSER);
+                BUG_CHECK(!allocs.empty(), "Could not find the alloc slice for %1%", match_field);
+                const auto& alloc = allocs.front();
+                // Construct POV match key byte the POV bit lies in
+                auto byte_index = computed.get_pov_flags_byte(alloc);
+                BUG_CHECK(byte_index, "POV flag byte not allocated for alloc %1%", alloc);
+                ::Flatrock::PovSelectKey key{::Flatrock::PovSelectKey::FLAGS,
+                    static_cast<uint8_t>(*byte_index)};
+                // Find the position in the POV match key
+                const auto &pov_select_key =
+                    phv_builder_extracts[phv_builder_group_index].first;
+                int pov_start_bit = 0;
+                for (const auto &pov_select : pov_select_key) {
+                    if (pov_select == key)
+                        break;
+                    pov_start_bit += BITS_IN_BYTE;
+                }
+                // POV bit position in the POV match key
+                auto bit_pos = pov_start_bit + alloc.container_slice().lo % BITS_IN_BYTE;
+                // Set corresponding bit of the POV match key
+                if (extract_match_field_set.find(match_field) != extract_match_field_set.end()) {
+                    phv_builder_extract->match.word0 ^= 1ULL << bit_pos;
+                } else {
+                    phv_builder_extract->match.word1 ^= 1ULL << bit_pos;
+                }
+            }
+            phv_builder_extract_vec.push_back(phv_builder_extract);
+            return phv_builder_extract;
+        }
+    }
+
+    /**
+     * @brief Adds extract as a PHE source to PHV builder extract.
+     *
+     * @param phv_builder_extract PHV builder extract to which a PHE source is added.
+     * @param container Info about PHV container corresponding to the extract.
+     * @param extract_value Info about extract value.
+     */
+    void add_extract_source(IR::Flatrock::PhvBuilderExtract* phv_builder_extract,
+            const Flatrock::ParserExtractContainer& container,
+            const Flatrock::ParserExtractValue& extract_value) const {
+        const auto phe_info = get_phe_info(container);
+        /**
+         * Each PHV builder group extract specifies a pair of PHE sources.
+         * Each PHE source specifies:
+         * - 4 PHE8 sources or
+         * - 2 PHE16 sources or
+         * - 1 PHE32 source
+         * Values for each PHE source (4xPHE8 / 2xPHE16 / 1xPHE32) in the pair are
+         * stored in one element of 'source' array
+         */
+        const auto phe_source_index = (container.index / phe_info.phe_sources) %
+                Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES;
+
+        if (phv_builder_extract->source[phe_source_index].type != Flatrock::ExtractType::None) {
+            BUG_CHECK(phv_builder_extract->source[phe_source_index].type == extract_value.type,
+                    "Values of different types allocated into the same PHE "
+                    "source of PHV builder group %1% %2%",
+                    phe_info.phv_builder_group_index, phv_builder_extract);
+        }
+
+        phv_builder_extract->source[phe_source_index].type = extract_value.type;
+        phv_builder_extract->source[phe_source_index].debug.info.insert(
+                phv_builder_extract->source[phe_source_index].debug.info.end(),
+                extract_value.comments.begin(), extract_value.comments.end());
+
+        if (extract_value.type == Flatrock::ExtractType::Packet) {
+            if (phv_builder_extract->source[phe_source_index].hdr_name) {
+                // FIXME uncomment this when PHV allocation is fixed to not break this constraint
+                // P4C-5084
+                /*
+                BUG_CHECK(*phv_builder_extract->source[phe_source_index].hdr_name ==
+                    extract_value.get_header_name(),
+                    "Values from different headers %1% and %2% allocated into the same "
+                    "PHE source of PHV builder group %3% %4%",
+                    *phv_builder_extract->source[phe_source_index].hdr_name,
+                    extract_value.get_header_name(), phe_info.phv_builder_group_index,
+                    phv_builder_extract);
+                */
+            }
+            phv_builder_extract->source[phe_source_index].hdr_name =
+                    extract_value.get_header_name();
+            phv_builder_extract->source[phe_source_index].values.push_back(
+                    {phe_info.container_name,
+                    static_cast<int>(extract_value.get_source_offset()),
+                    Flatrock::ExtractSubtype::None});
+        } else if (extract_value.type == Flatrock::ExtractType::Other) {
+            unsigned int constant = 0;
+            for (const auto& slice : extract_value.get_slices()) {
+                if (slice.subtype == Flatrock::ExtractSubtype::Constant) {
+                    constant |= slice.value << slice.slice.lo;
+                }
+            }
+            for (int i = 0; i < Flatrock::PARSER_PHV_BUILDER_OTHER_PHE_SOURCES; ++i) {
+                int lo = i * BITS_IN_BYTE;
+                int hi = lo + (BITS_IN_BYTE - 1);
+                const auto suffix = (phe_info.phe_sources ==
+                        Flatrock::PARSER_PHV_BUILDER_PACKET_PHE8_SOURCES) ? "" :
+                        '(' + std::to_string(lo) + ".." + std::to_string(hi) + ')';
+                for (const auto& slice : extract_value.get_slices()) {
+                    if (slice.slice.loByte() <= i && i <= slice.slice.hiByte()) {
+                        int value;
+                        if (slice.subtype == Flatrock::ExtractSubtype::Constant) {
+                            unsigned int bit_offset = i * BITS_IN_BYTE;
+                            unsigned int mask = ((1U << BITS_IN_BYTE) - 1) << bit_offset;
+                            value = static_cast<int>((constant & mask) >> bit_offset);
+                        } else if (slice.subtype == Flatrock::ExtractSubtype::PovFlags) {
+                            value = static_cast<int>(slice.value);
+                        } else {
+                            std::stringstream ss;
+                            ss << slice.subtype;
+                            BUG("Extract subtype %1% is currently not supported",
+                                    ss.str());
+                        }
+                        phv_builder_extract->source[phe_source_index].values.
+                                push_back({phe_info.container_name + suffix,
+                                value, slice.subtype});
+                        break;
+                    }
+                }
+            }
+        } else {
+            BUG("Missing extract type!");
+        }
+        LOG3("Update PHV builder group " << phe_info.phv_builder_group_index <<
+                " " << phv_builder_extract);
+    }
+
+    /**
+     * @brief Creates PHV builder extract IR nodes for extracts with match-all match pattern.
+     *
+     * Some extracts (f.e. extracts from POV) need to be added to each extract regardless
+     * the match pattern.
+     * They are collected in a vector and then added to each created extract in corresponding
+     * PHV builder group.
+     * They also need to be added to an extract with match-all match pattern (which should not
+     * exist before calling this method).
+     *
+     * @param phv_builder_extracts Array of extracts for PHV builder groups.
+     * @param gress Gress (ingress or egress) for which we generate the extracts.
+     * @param parser_extracts Vector of extracts with match-all match pattern.
+     */
+    void create_match_all_extracts(ExtractArray& phv_builder_extracts, const gress_t gress,
+            const std::vector<ParserExtract>& parser_extracts) const {
+        auto log_phv_builder_extracts = [&phv_builder_extracts]() {
+            if (LOGGING(4)) {
+                unsigned int i = 0;
+                for (auto& [pov_select_set, extracts] : phv_builder_extracts) {
+                    std::stringstream ss;
+                    ss << i << ":" << std::endl;
+                    ss << " pov_select:" << std::endl;
+                    for (const auto& pov_select : pov_select_set) {
+                        ss << " - " << pov_select << std::endl;
+                    }
+                    ss << " extracts:" << std::endl;
+                    for (const auto& extract : extracts) {
+                        ss << " - " << extract << std::endl;
+                    }
+                    LOG4(ss);
+                    i++;
+                }
+            }
+        };
+
+        LOG4(gress << " PHV builder groups:");
+        log_phv_builder_extracts();
+
+        for (const auto& [container, extract_value] : parser_extracts) {
+            const auto phe_info = get_phe_info(container);
+            auto& phv_builder_extract_vec =
+                    phv_builder_extracts[phe_info.phv_builder_group_index].second;
+            const match_t match_all = match_t::dont_care(
+                    ::Flatrock::PARSER_POV_SELECT_NUM * BITS_IN_BYTE);
+            bool match_all_found = false;
+
+            for (auto& phv_builder_extract : phv_builder_extract_vec) {
+                if (phv_builder_extract->match == match_all)
+                    match_all_found = true;
+                add_extract_source(phv_builder_extract, container, extract_value);
+            }
+
+            if (match_all_found == false) {
+                auto phv_builder_extract = new IR::Flatrock::PhvBuilderExtract(container.size);
+                phv_builder_extract->index = phv_builder_extract_vec.size();
+                add_extract_source(phv_builder_extract, container, extract_value);
+                phv_builder_extract_vec.push_back(phv_builder_extract);
+            }
+        }
+
+        LOG4(gress << " PHV builder groups with POV extracts:");
+        log_phv_builder_extracts();
+    }
+
+    /**
+     * @brief Converts the collected information about extracts to the new lowered IR nodes
+     *        representing PHV builder extracts.
+     */
+    ExtractArray make_builder_extracts(const gress_t gress) const {
+        ExtractArray phv_builder_extracts{};
+        std::vector<ParserExtract> match_all_extracts;
+        if (computed.extracts_info.count(gress) != 0) {
+            PovSelectMatchFieldArray pov_select_match_fields{};
+            ExtractMatchFieldArray extract_match_fields{};
+
+            prepare_pov_select(pov_select_match_fields, phv_builder_extracts, gress);
+            prepare_extract_match(extract_match_fields, pov_select_match_fields, gress);
+
+            for (const auto& [container, match_extract_map] : computed.extracts_info.at(gress)) {
+                for (const auto& [match, extract_value] : match_extract_map) {
+                    if (match.is_match_all()) {
+                        match_all_extracts.push_back(std::make_pair(container, extract_value));
+                        continue;
+                    }
+                    const auto phe_info = get_phe_info(container);
+                    unsigned int extract_id = 0;
+                    bool source_added = false;
+                    for (const auto& extract_match_field_set :
+                            extract_match_fields[phe_info.phv_builder_group_index]) {
+                        IR::Flatrock::PhvBuilderExtract* phv_builder_extract =
+                                get_phv_builder_extract(extract_id++, phv_builder_extracts,
+                                container, phe_info.phv_builder_group_index,
+                                pov_select_match_fields[phe_info.phv_builder_group_index],
+                                extract_match_field_set);
+
+                        if (extract_match_field_set.find(match.header_valid_field) ==
+                                extract_match_field_set.end())
+                            continue;
+
+                        add_extract_source(phv_builder_extract, container, extract_value);
+                        source_added = true;
+                    }
+
+                    if (source_added == false) {
+                        match_all_extracts.push_back(std::make_pair(container, extract_value));
+                        // FIXME
+                        // When extract value is not added to any extract, it means there is
+                        // something wrong in the overall logic.
+                        // Currently it can happen for ig_intr_md fields when there is no extract
+                        // for ig_intr_md.$valid field (if the extract is optimized out when
+                        // $valid field is not used in the program).
+                        // Replace this with the BUG_CHECK when this is fixed for ig_intr_md.$valid
+                    }
+                }
+            }
+        }
+
+        create_match_all_extracts(phv_builder_extracts, gress, match_all_extracts);
         return phv_builder_extracts;
+    }
+
+    /**
+     * @brief Sorts PHV builder group extracts.
+     *
+     * Extracts in one PHV builder group need to be ordered based on the match value
+     * from the most generic to the most specific match value.
+     *
+     * FIXME
+     * Currently we only reverse the order of extracts as the extract with match-all
+     * pattern is originally added to the end, but ideally all extracts should be sorted.
+     *
+     * @param extracts Vector of extracts to sort.
+     * @return std::vector<IR::Flatrock::PhvBuilderExtract*> Sorted vector of extracts.
+     */
+    std::vector<IR::Flatrock::PhvBuilderExtract*> sort_extracts(
+            const std::vector<IR::Flatrock::PhvBuilderExtract*>& extracts) const {
+        std::vector<IR::Flatrock::PhvBuilderExtract*> result{};
+
+        unsigned int id = 0;
+        for (auto rit = extracts.rbegin(); rit != extracts.rend(); ++rit, ++id) {
+            (*rit)->index = id;
+            result.push_back(*rit);
+        }
+
+        return result;
     }
 
     void build_phv_builder(PhvBuilder& phv_builder, gress_t gress) const {
         const auto extracts = make_builder_extracts(gress);
         int id = 0;
-        for (const auto* extract : extracts) {
-            if (extract != nullptr) {
-                auto* phv_builder_group = new IR::Flatrock::PhvBuilderGroup(
-                    /* id */ id, /* pov_select */ {});
-                phv_builder_group->extracts.push_back(extract);
+        for (const auto& [pov_select_set, extract_vec] : extracts) {
+            if (extract_vec.size() > 0) {
+                auto* phv_builder_group = new IR::Flatrock::PhvBuilderGroup(id);
+                for (const auto& pov_select : pov_select_set)
+                    phv_builder_group->pov_select.push_back(pov_select);
+                auto sorted_extracts = sort_extracts(extract_vec);
+                phv_builder_group->extracts.insert(phv_builder_group->extracts.begin(),
+                        sorted_extracts.begin(), sorted_extracts.end());
                 phv_builder.push_back(phv_builder_group);
             }
             ++id;
@@ -3532,6 +3871,13 @@ class ComputeBufferRequirements : public ParserModifier {
 
 }  // namespace Parde::Lowered
 
+std::ostream& operator<<(std::ostream& os, const Flatrock::ParserExtractMatch& m) {
+    if (m.header_valid_field)
+        os << *m.header_valid_field;
+    else
+        os << "nullptr";
+    return os;
+}
 
 /**
  * \class LowerParser

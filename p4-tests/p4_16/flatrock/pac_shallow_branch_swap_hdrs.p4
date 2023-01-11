@@ -1,18 +1,16 @@
-// PAC (parde): branching with unbalanced reconvergence
-// ----------------------------------------------------
+// PAC (parde): shallow branching
+// ------------------------------
 //
 // Summary:
-//  - Branching with unbalanced reconvergence
+//  - Multiple headers with shallow branching in parser
+//  - No reconvergence in parse graph
 //  - Multiple analyzer stages
 //  - Parser matching required to identify headers
 //  - Minimal PPU processing to use header
 //
 // Goals:
-//  - Verify that reconvergence points are correctly placed after all
-//    dependencies.
-//
-// This test mimics something like Ethernet, VLAN, and IPv4 where a VLAN header
-// may optionally be placed between Ethernet and IPv4.
+//  - Verify simple partitioning across stages
+//  - Verify matching.
 
 #include <t5na.p4>
 
@@ -36,11 +34,17 @@ header hdr_3_h {
     bit<16>     h2;
 }
 
+header hdr_4_h {
+    bit<32>     f1;
+    bit<32>     f2;
+}
+
 
 struct headers {
     hdr_1_h     h1;
     hdr_2_h     h2;
     hdr_3_h     h3;
+    hdr_4_h     h4;
 }
 
 struct metadata {
@@ -63,11 +67,19 @@ parser ingressParser(packet_in packet, out headers hdrs,
 
     state parse_h2 {
         packet.extract(hdrs.h2);
-        transition parse_h3;
+        transition accept;
     }
 
     state parse_h3 {
         packet.extract(hdrs.h3);
+        transition select(hdrs.h3.h1) {
+            16w0x0001 : parse_h4;
+            default :  accept;
+        }
+    }
+
+    state parse_h4 {
+        packet.extract(hdrs.h4);
         transition accept;
     }
 }
@@ -77,7 +89,18 @@ control egress(inout headers hdrs, inout metadata meta,
                inout egress_intrinsic_metadata_for_output_port_t eg_intr_oport_md)
 {
     apply {
-        hdrs.h3.h2 = 16w0x1234;
+    }
+}
+
+#define DPRSR_OVERRIDE
+control egressDeparser(packet_out packet, inout headers hdrs, in metadata meta,
+                       in egress_intrinsic_metadata_t eg_intr_md,
+                       in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprs) {
+    apply {
+        packet.emit(hdrs.h4);
+        packet.emit(hdrs.h3);
+        packet.emit(hdrs.h2);
+        packet.emit(hdrs.h1);
     }
 }
 

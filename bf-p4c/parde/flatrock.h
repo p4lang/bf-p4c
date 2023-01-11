@@ -3,16 +3,18 @@
 
 #include <iostream>
 #include <set>
+#include <string>
 #include <utility>
+#include <variant>
 #include <vector>
-
-#include <boost/variant.hpp>
 
 #include "bf-p4c/common/flatrock.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/phv/phv.h"
+#include "bf-p4c/phv/utils/slice_alloc.h"
 #include "lib/cstring.h"
 #include "lib/exceptions.h"
+#include "lib/ordered_set.h"
 
 /*
  * Output ALU0 instruction in the form e.g. { opcode: 2, msb: 5, lsb: 2 }.
@@ -308,6 +310,19 @@ enum class ExtractSubtype {
     Bridge,
 };
 
+/// Information about one POV select value.
+struct PovSelectKey {
+    enum {FLAGS = 0, STATE = 1} type = FLAGS;
+    /// Extraction byte start position (valid value is in range <0,7>)
+    uint8_t start = 0;
+    bool operator==(const PovSelectKey &r) const {
+        return std::tie(type, start) == std::tie(r.type, r.start);
+    }
+    bool operator<(const PovSelectKey& r) const {
+        return std::tie(type, start) < std::tie(r.type, r.start);
+    }
+};
+
 /// Information about value of one part of the PHE source.
 struct ExtractInfo {
     /**
@@ -381,10 +396,33 @@ struct ParserExtractContainer {
 };
 
 /**
+ * @brief Information about PHV builder extract match value used to index extract values
+ *        in the map.
+ */
+struct ParserExtractMatch {
+    /// Valid field of a header related to the extract.
+    const PHV::Field* header_valid_field = nullptr;
+
+    bool operator<(const ParserExtractMatch& r) const {
+        return header_valid_field < r.header_valid_field;
+    }
+
+    /**
+     * @brief Returns information whether the object represents match-all pattern or not.
+     *
+     * @return true If the object represents match-all pattern.
+     * @return false If the object does not represent match-all pattern.
+     */
+    bool is_match_all(void) const {
+        return header_valid_field == nullptr;
+    }
+};
+
+/**
  * @brief Intermediate representation of values for parser extractions.
  *
  * Fed by ComputeFlatrockParserIR, consumed by ReplaceFlatrockParserIR.
- * @pre The slices stored in @a slices should not overlap.
+ * @pre The slices stored in @a SliceInfoSet should not overlap.
  */
 struct ParserExtractValue {
     /// Information needed for the packet PHE source.
@@ -427,28 +465,23 @@ struct ParserExtractValue {
      */
     typedef std::set<SliceInfo> SliceInfoSet;
 
+    /// Type for PHE source values
+    typedef std::variant<HeaderInfo, SliceInfoSet> ValueInfo;
+
     /// PHE source type (packet/other)
     ExtractType type;
     /// Textual information about extracts used as comments in the resulting bfa file
-    std::vector<cstring> comments;
+    ordered_set<cstring> comments;
 
  private:
-     /// Values for the PHE source (HeaderInfo for packet, SliceInfoSet for other source).
-    boost::variant<HeaderInfo, SliceInfoSet> source_value_info;
+    /// Values for the PHE source (HeaderInfo for packet, SliceInfoSet for other source).
+    ValueInfo source_value_info;
 
  public:
     ParserExtractValue() = delete;
-    /// Constructor for packet PHE source extract value.
-    ParserExtractValue(const ExtractType type, const cstring comment,
-            const cstring hdr_name, const unsigned int offset) :
-        type{type}, comments{comment},
-        source_value_info{HeaderInfo{hdr_name, offset}} {}
-    /// Constructor for other PHE source extract value
-    ParserExtractValue(const ExtractType type, const cstring comment,
-            const le_bitrange slice, const ExtractSubtype subtype,
-            const unsigned int value) :
-        type{type}, comments{comment},
-        source_value_info{SliceInfoSet{{slice, subtype, value}}} {}
+    ParserExtractValue(const ValueInfo info, const cstring comment) :
+            type{std::get_if<HeaderInfo>(&info) ? ExtractType::Packet : ExtractType::Other},
+            comments{comment}, source_value_info{info} {}
 
     /**
      * @brief Adds one comment to the PHE source extract.
@@ -456,23 +489,44 @@ struct ParserExtractValue {
      * @param c The comment to add.
      */
     void add_comment(const cstring c) {
-        comments.push_back(c);
+        comments.emplace(c);
     }
 
     /**
-     * @brief Adds one slice to the other PHE source extract.
+     * @brief Performs checks and adds information about PHE source extract.
      *
-     * When used with extract which already contains packet value, reports a bug.
-     *
-     * @param sl PHV container slice.
-     * @param st Subtype of the value in given slice.
-     * @param val Value in the given slice.
+     * @param value Information about packet or other PHE source.
+     * @param alloc PHV allocation information about the field for which we add extract info.
      */
-    void add_slice(const le_bitrange sl, const ExtractSubtype st, const unsigned int val) {
-        if (SliceInfoSet* slices = boost::get<SliceInfoSet>(&source_value_info))
-            slices->emplace(SliceInfo{sl, st, val});
-        else
-            BUG("Unexpectedly adding info about slices to a packet PHE source.");
+    void add_value(const ValueInfo& value, const PHV::AllocSlice& alloc) {
+        if (const HeaderInfo* new_hdr = std::get_if<HeaderInfo>(&value)) {
+            // Packet type
+            // TODO check if the layout of slices in the container is the same as the layout
+            // of fields in the header in case of extract from packet
+            BUG_CHECK(Flatrock::ExtractType::Packet == type,
+                    "Allocation of field: \"%1%\" can not be satisfied as it requires to use"
+                    " extraction from packet and other source to the same container",
+                    alloc);
+            BUG_CHECK(new_hdr->name == get_header_name(),
+                    "Fields from different headers (%1%, %2%)"
+                    " are not supported in the same container: %3%",
+                    new_hdr->name, get_header_name(), alloc);
+            BUG_CHECK(new_hdr->offset == get_source_offset(),
+                    "Field offset (%1%) differs from offset (%2%) of other field allocated"
+                    " in the same container: %3%",
+                    new_hdr->offset, get_source_offset(), alloc);
+        } else if (const SliceInfoSet* new_slices = std::get_if<SliceInfoSet>(&value)) {
+            // Other type
+            BUG_CHECK(Flatrock::ExtractType::Other == type,
+                    "Allocation of field: \"%1%\" can not be satisfied as it requires to use"
+                    " extraction from packet and other source to the same container",
+                    alloc);
+            SliceInfoSet* slices = std::get_if<SliceInfoSet>(&source_value_info);
+            CHECK_NULL(slices);
+            slices->insert(new_slices->begin(), new_slices->end());
+        } else {
+            BUG("Unexpected extract type");
+        }
     }
 
     /**
@@ -483,7 +537,7 @@ struct ParserExtractValue {
      * @return const cstring& Header name.
      */
     const cstring& get_header_name(void) const {
-        if (const HeaderInfo* hdr = boost::get<HeaderInfo>(&source_value_info))
+        if (const HeaderInfo* hdr = std::get_if<HeaderInfo>(&source_value_info))
             return hdr->name;
         else
             BUG("Unexpectedly getting info about header from an other PHE source.");
@@ -497,7 +551,7 @@ struct ParserExtractValue {
      * @return const unsigned& Offset.
      */
     const unsigned int& get_source_offset(void) const {
-        if (const HeaderInfo* hdr = boost::get<HeaderInfo>(&source_value_info))
+        if (const HeaderInfo* hdr = std::get_if<HeaderInfo>(&source_value_info))
             return hdr->offset;
         else
             BUG("Unexpectedly getting info about offset from an other PHE source.");
@@ -511,7 +565,7 @@ struct ParserExtractValue {
      * @return const SliceInfoSet& The set of slices.
      */
     const SliceInfoSet& get_slices(void) const {
-        if (const SliceInfoSet* slices = boost::get<SliceInfoSet>(&source_value_info))
+        if (const SliceInfoSet* slices = std::get_if<SliceInfoSet>(&source_value_info))
             return *slices;
         else
             BUG("Unexpectedly getting info about slices from a packet PHE source.");
@@ -565,6 +619,8 @@ inline std::ostream& operator<<(std::ostream& os, const Flatrock::ParserExtractC
     return os << c.size << c.index;
 }
 
+std::ostream& operator<<(std::ostream& os, const Flatrock::ParserExtractMatch& m);
+
 inline std::ostream& operator<<(std::ostream& os, const Flatrock::ParserExtractValue& v) {
     os << "type=" << v.type << std::endl;
     if (v.type == Flatrock::ExtractType::Packet) {
@@ -581,6 +637,16 @@ inline std::ostream& operator<<(std::ostream& os, const Flatrock::ParserExtractV
         os << "    comment=\"" << c << "\"" << std::endl;
     }
     return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const Flatrock::PovSelectKey& p) {
+    if (p.type == Flatrock::PovSelectKey::FLAGS) {
+        os << "flags ";
+    } else {
+        // p.type == Flatrock::PovSelectKey::STATE
+        os << "state ";
+    }
+    return os << std::to_string(p.start);
 }
 
 #endif  /* BF_P4C_PARDE_FLATROCK_H_ */

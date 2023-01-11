@@ -1,0 +1,18 @@
+#command port h1                           h2    h3        payload
+#             f1       f2       h1   b1 b2 b1 b2 h1   h2
+
+#swapped headers
+#             h3        h2    h1                           payload
+#             h1   h2   b1 b2 f1       f2       h1   b1 b2
+
+#only hdrs.h1
+packet   4    12345678 12345678 0000 12 34                 0123456789abcdef
+expect   4    12345678 12345678 0000 12 34                 0123456789abcdef
+
+#hdrs.h1, hdrs.h2, hdrs.h3
+packet   4    12345678 12345678 0001 12 34 ab cd 0123 abcd 0123456789abcdef
+expect   4    0123 abcd ab cd 12345678 12345678 0001 12 34 0123456789abcdef
+
+#hdrs.h1 and hdrs.h3
+packet   4    12345678 12345678 0002 12 34       abcd a1b2 0123456789abcdef
+expect   4    abcd a1b2       12345678 12345678 0002 12 34 0123456789abcdef

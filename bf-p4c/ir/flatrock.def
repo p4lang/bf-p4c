@@ -411,7 +411,9 @@ class PhvBuilderExtract {
 
 class PhvBuilderGroup {
     int index;
-    std::vector<uint8_t> pov_select;
+#emit
+    std::vector<::Flatrock::PovSelectKey> pov_select;
+#end
     optional inline Vector<PhvBuilderExtract> extracts;
 
     visit_children {
