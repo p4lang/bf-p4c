@@ -233,10 +233,18 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         void determine_brm_implicit_bits(PHV::Container container, bitvec src1_mask);
         void implicit_bits_full(PHV::Container container);
 
-        int bitrange_size() const {
-            BUG_CHECK(write_bits().is_contiguous(), "Converting a bitvec to a bitrange requires "
-                      "the bitrange to be continuous");
+        /// Returns a size that fits all the non-zero bits of writes. The writes need not be
+        /// contiguous.
+        int bitrange_cover_size() const {
             return write_bits().max().index() - write_bits().min().index() + 1;
+        }
+
+        bool bitrange_contiguous() const { return write_bits().is_contiguous(); }
+
+        /// A size that fits all the write bits provided they are continuous, or -1 if they are
+        /// not. Value -1 therefore indicates that deposit-field instruction cannot be used.
+        int bitrange_contiguous_size() const {
+            return bitrange_contiguous() ? bitrange_cover_size() : -1;
         }
 
         TotalAlignment operator |(const TotalAlignment &ta) {

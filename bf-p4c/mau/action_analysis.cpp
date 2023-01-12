@@ -53,7 +53,8 @@ EncodeConstant canRotateConstant(unsigned value, int max_bits, int min_bits,
 }
 
 /** A verification of the constant used in a ContainerAction to make sure that it can
- *  be used without being converted to action data
+ *  be used without being converted to action data. \p constant_size = -1 means
+ *  the constant is non-contiguous.
  */
 EncodeConstant valid_instruction_constant(unsigned value, int max_bits, int min_bits,
                                             int container_size, int constant_size = -1) {
@@ -197,7 +198,9 @@ unsigned ActionAnalysis::ConstantInfo::build_shiftable_constant() {
     if (rv_bv.empty())
         return rv;
 
-    return rv_bv.getrange(alignment.write_bits().min().index(), alignment.bitrange_size());
+    return alignment.bitrange_contiguous()
+        ? rv_bv.getrange(alignment.write_bits().min().index(), alignment.bitrange_contiguous_size())
+        : rv;
 }
 
 /** Because the assembly only recognizes constants between -8..7 or their corresponding
@@ -211,7 +214,7 @@ unsigned ActionAnalysis::ConstantInfo::build_shiftable_constant() {
 unsigned ActionAnalysis::ConstantInfo::valid_instruction_constant(int container_size) const {
     if (signExtend) {
         unsigned container_mask = makeMask(container_size);
-        int constant_size = alignment.bitrange_size();
+        int constant_size = alignment.bitrange_cover_size();
         unsigned constant_mask = makeMask(constant_size);
         return container_mask & (~constant_mask | constant_value);
     }
@@ -2410,9 +2413,9 @@ void ActionAnalysis::check_constant_to_actiondata(ContainerAction &cont_action,
     } else {
         // Set or deposit-field
         constant_value = cont_action.ci.build_shiftable_constant();
-        int constant_size = cont_action.ci.alignment.bitrange_size();
+        int constant_size = cont_action.ci.alignment.bitrange_contiguous_size();
         auto valid = valid_instruction_constant(constant_value, CONST_SRC_MAX, const_src_min,
-                                                    container.size(), constant_size);
+                                                container.size(), constant_size);
         if (valid == EncodeConstant::NotPossible) {
             cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
             LOG4("F. Error Code Update: CONSTANT_TO_ACTION_DATA");

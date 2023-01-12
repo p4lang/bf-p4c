@@ -1345,13 +1345,13 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
             int width_bits;
             if ((cont_action.error_code & ActionAnalysis::ContainerAction::REFORMAT_CONSTANT) == 0
               && (cont_action.error_code & ActionAnalysis::ContainerAction::PARTIAL_OVERWRITE) == 0)
-                width_bits = cont_action.ci.alignment.bitrange_size();
+                width_bits = cont_action.ci.alignment.bitrange_cover_size();
             else
                 width_bits = container.size();
             *src = new IR::Constant(IR::Type::Bits::get(width_bits), constant_value);
             src_writebits = cont_action.ci.alignment.write_bits();
             LOG5("CONSTANT SOURCE for " << cont_action.name
-                    << " : " << src1_writebits << ", value: " << src1);
+                    << " : " << src_writebits << ", value: " << *src);
         }
     };
 

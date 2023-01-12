@@ -2138,11 +2138,6 @@ if (ENABLE_ALT_PHV_ALLOC)
     )
 
     p4c_add_xfail_reason("tofino"
-      "Compiler Bug: Converting a bitvec to a bitrange requires the bitrange to be continuous"
-      extensions/p4_tests/p4_16/customer/arista/obfuscated-small_scale_test.p4
-    )
-
-    p4c_add_xfail_reason("tofino"
       "bfa:[0-9]*: error: No phv record"  # assembler
       extensions/p4_tests/p4_16/customer/arista/obfuscated-low_latency.p4
     )
