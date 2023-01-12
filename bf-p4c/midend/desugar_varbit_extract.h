@@ -85,7 +85,10 @@
 #include "ir/ir.h"
 #include "frontends/p4/cloner.h"
 #include "bf-p4c/midend/type_checker.h"
+#include "bf-p4c/common/utils.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
+
+namespace BFN {
 
 /**
  * \ingroup DesugarVarbitExtract
@@ -112,225 +115,16 @@ class AnnotateVarbitExtractStates : public Transform {
 };
 
 /**
- * \ingroup DesugarVarbitExtract
+ * Checks that varbit accesses in pipeline are valid and optimizes them. In particular, this
+ * checks that there are no unsupported varbit accesses (basically anything except for extract and
+ * emit currently).
+ * Furthermore, it eliminates emits of unused headers with varbit extracts -- i.e. emits of
+ * headers that are never extracted.
+ * This should run rather early in midend.
  */
-struct CheckMauUse : public Inspector {
-    // We limit the use of varbit field to parser and deparser, which is
-    // sufficient for skipping through header options.
-    // To support the use of varbit field in the MAU add a few twists to
-    // the problem (TODO).
-
-    bool preorder(const IR::Expression* expr) override {
-        if (expr->type->is<IR::Type_Varbits>()) {
-            auto control = findContext<IR::BFN::TnaControl>();
-            if (control) {
-                P4C_UNIMPLEMENTED("%1%: use of varbit field is only supported"
-                                  " in parser and deparser currently", expr);
-            }
-        }
-
-        return true;
-    }
-};
-
-/**
- * \ingroup DesugarVarbitExtract
- */
-class CollectVarbitExtract : public Inspector {
-    P4::ReferenceMap *refMap;
-    P4::TypeMap *typeMap;
-
+class OptimizeAndCheckVarbitAccess : public PassManager {
  public:
-    std::map<const IR::ParserState*, const IR::BFN::TnaParser*> state_to_parser;
-
-    std::map<const IR::ParserState*, const IR::Type_Header*> state_to_varbit_header;
-    // Map to store if the varbit extract length is dynamic
-    std::map<cstring, ordered_set<const IR::ParserState*>> varbit_hdr_instance_to_variable_state;
-
-    std::map<const IR::ParserState*, const IR::Expression*> state_to_encode_var;
-
-    std::map<const IR::ParserState*, const IR::AssignmentStatement*> state_to_csum_verify;
-    // Map to store if the varbit extract length is constant
-    std::map<cstring, std::map<unsigned,
-             ordered_set<const IR::ParserState*>>> varbit_hdr_instance_to_constant_state;
-    std::map<cstring, const IR::StructField*> varbit_hdr_instance_to_varbit_field;
-
-    std::map<const IR::ParserState*,
-             std::set<const IR::Expression*>> state_to_verify_exprs;
-
-    std::map<const IR::ParserState*, cstring> state_to_header_instance;
-
-    std::map<const IR::ParserState*,
-             std::set<const IR::MethodCallExpression*>> state_to_csum_add;
-
-    std::map<const IR::ParserState*,
-             std::map<unsigned, unsigned>> state_to_match_to_length;
-
-    // reverse map of above
-    std::map<const IR::ParserState*,
-             std::map<unsigned, std::set<unsigned>>> state_to_length_to_match;
-
-    std::map<const IR::ParserState*, std::set<unsigned>> state_to_reject_matches;
-
-    std::map<const IR::Type_Header*, const IR::StructField*> header_type_to_varbit_field;
-    std::map<const IR::StructField*,
-             const IR::Expression*> varbit_field_to_extract_call_path;
-
- private:
-    bool is_legal_runtime_value(const IR::Expression* verify,
-                                const IR::Expression* encode_var, unsigned val);
-
-    bool is_legal_runtime_value(const IR::ParserState* state,
-                                const IR::Expression* encode_var, unsigned val);
-
-    const IR::Constant* evaluate(const IR::Expression* varsize_expr,
-                                 const IR::Expression* encode_var, unsigned val);
-
-    bool enumerate_varbit_field_values(
-        const IR::MethodCallExpression* call,
-        const IR::ParserState* state,
-        const IR::StructField* varbit_field,
-        const IR::Expression* varsize_expr,
-        const IR::Expression*& encode_var,
-        std::map<unsigned, unsigned>& match_to_length,
-        std::map<unsigned, std::set<unsigned>>& length_to_match,
-        std::set<unsigned>& reject_matches,
-        cstring header_name);
-
-    void enumerate_varbit_field_values(
-        const IR::MethodCallExpression* call,
-        const IR::ParserState* state,
-        const IR::Expression* varsize_expr,
-        const IR::Type_Header* hdr_type,
-        cstring headerName);
-
-    bool preorder(const IR::MethodCallExpression*) override;
-    bool preorder(const IR::AssignmentStatement*) override;
-
- public:
-    CollectVarbitExtract(P4::ReferenceMap *refMap, P4::TypeMap *typeMap) :
-        refMap(refMap), typeMap(typeMap) { }
-};
-
-/**
- * \ingroup DesugarVarbitExtract
- */
-class RewriteVarbitUses : public Modifier {
-    const CollectVarbitExtract& cve;
-    int tcam_row_usage_estimation = 0;
-
-    std::map<const IR::ParserState*,
-             ordered_map<unsigned, const IR::ParserState*>> state_to_branch_states;
-
-    std::map<const IR::ParserState*, const IR::ParserState*> state_to_end_state;
-
- public:
-    // To get all the headers associated with length L, find all the header types with
-    // length <= L
-    ordered_map<cstring,
-             ordered_map<unsigned, IR::Type_Header*>> varbit_hdr_instance_to_header_types;
-
-    std::map<const IR::StructField*, IR::Type_Header*> varbit_field_to_post_header_type;
-
-    std::map<cstring, IR::Vector<IR::StructField>> tuple_types_to_rewrite;
-
- private:
-    profile_t init_apply(const IR::Node* root) override;
-
-    const IR::ParserState*
-    create_branch_state(const IR::BFN::TnaParser* parser,
-                        const IR::ParserState* state,
-                        const IR::Expression* select,
-                        const IR::StructField* varbit_field, unsigned length, cstring name);
-
-    void create_branches(const IR::ParserState* state, const IR::StructField* varbit_field,
-                         unsigned prev_length);
-
-    void find_and_replace_setinvalid(const IR::AssignmentStatement* assign,
-                                    IR::IndexedVector<IR::StatOrDecl>& comp);
-    const IR::ParserState*
-    create_end_state(const IR::BFN::TnaParser* parser,
-                     const IR::ParserState* state, cstring name,
-                     const IR::StructField* varbit_field,
-                     const IR::Type_Header* orig_header,
-                     cstring orig_hdr_name);
-
-    bool preorder(IR::BFN::TnaParser*) override;
-    void postorder(IR::BFN::TnaParser*) override;
-    bool preorder(IR::ParserState*) override;
-
-    bool preorder(IR::MethodCallExpression*) override;
-    bool preorder(IR::BlockStatement*) override;
-
-    IR::IndexedVector<IR::NamedExpression>
-    filter_post_header_fields(const IR::IndexedVector<IR::NamedExpression>& components);
-
-    bool preorder(IR::StructExpression* list) override;
-    bool preorder(IR::Member* member) override;
-
- public:
-    explicit RewriteVarbitUses(const CollectVarbitExtract& cve) : cve(cve) {}
-};
-
-/**
- * \ingroup DesugarVarbitExtract
- */
-struct RemoveZeroVarbitExtract : public Modifier {
-    bool preorder(IR::ParserState* state) override {
-        IR::IndexedVector<IR::StatOrDecl> rv;
-
-        for (auto stmt : state->components) {
-            if (auto mc = stmt->to<IR::MethodCallStatement>()) {
-                auto call = mc->methodCall;
-                if (auto method = call->method->to<IR::Member>()) {
-                    if (method->member == "extract") {
-                        if (call->arguments->size() == 2) {
-                            auto varsize_expr = (*call->arguments)[1]->expression;
-                            if (auto c = varsize_expr->to<IR::Constant>()) {
-                                if (c->asInt() == 0)
-                                    continue;
-                            }
-                        }
-                    }
-                }
-            }
-
-            rv.push_back(stmt);
-        }
-
-        state->components = rv;
-        return false;
-    }
-};
-
-/**
- * \ingroup DesugarVarbitExtract
- */
-class RewriteVarbitTypes : public Modifier {
-    const CollectVarbitExtract& cve;
-    const RewriteVarbitUses& rvu;
-
-    bool contains_varbit_header(IR::Type_StructLike*);
-
-    bool preorder(IR::P4Program*) override;
-    bool preorder(IR::Type_StructLike*) override;
-    bool preorder(IR::Type_Header*) override;
-
- public:
-    RewriteVarbitTypes(const CollectVarbitExtract& c,
-                       const RewriteVarbitUses& r) : cve(c), rvu(r) { }
-};
-
-/**
- * \ingroup DesugarVarbitExtract
- */
-class RewriteParserVerify : public Transform {
-    const CollectVarbitExtract& cve;
-
-    IR::Node* preorder(IR::MethodCallStatement*) override;
-
- public:
-    explicit RewriteParserVerify(const CollectVarbitExtract& cve) : cve(cve) {}
+    explicit OptimizeAndCheckVarbitAccess(P4::ReferenceMap* refMap, P4::TypeMap* typeMap);
 };
 
 /**
@@ -339,26 +133,9 @@ class RewriteParserVerify : public Transform {
  */
 class DesugarVarbitExtract : public PassManager {
  public:
-    explicit DesugarVarbitExtract(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
-        auto remove_zero_varbit = new RemoveZeroVarbitExtract;
-        auto collect_varbit_extract = new CollectVarbitExtract(refMap, typeMap);
-        auto rewrite_varbit_uses = new RewriteVarbitUses(*collect_varbit_extract);
-        auto rewrite_parser_verify = new RewriteParserVerify(*collect_varbit_extract);
-        auto rewrite_varbit_types = new RewriteVarbitTypes(*collect_varbit_extract,
-                                                           *rewrite_varbit_uses);
-
-        addPasses({
-            new CheckMauUse,
-            remove_zero_varbit,
-            collect_varbit_extract,
-            rewrite_varbit_uses,
-            rewrite_parser_verify,
-            rewrite_varbit_types,
-            new P4::ClonePathExpressions,
-            new P4::ClearTypeMap(typeMap),
-            new BFN::TypeChecking(refMap, typeMap, true)
-        });
-    }
+    explicit DesugarVarbitExtract(P4::ReferenceMap* refMap, P4::TypeMap* typeMap);
 };
+
+}  // namespace BFN
 
 #endif /* BF_P4C_MIDEND_DESUGAR_VARBIT_EXTRACT_H_ */

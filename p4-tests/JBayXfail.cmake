@@ -158,7 +158,7 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "multiple varbit fields in a parser state is currently unsupported"
+  "multiple varbit fields in a parser state are currently unsupported"
   testdata/p4_14_samples/issue576.p4
 )
 

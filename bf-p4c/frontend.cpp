@@ -96,7 +96,7 @@ const IR::P4Program* run_frontend() {
 
     BFNOptionPragmaParser optionsPragmaParser;
     program->apply(P4::ApplyOptionsPragmas(optionsPragmaParser));
-    program = program->apply(AnnotateVarbitExtractStates());
+    program = program->apply(BFN::AnnotateVarbitExtractStates());
 
     auto frontend = P4::FrontEnd(BFN::ParseAnnotations());
     frontend.addDebugHook(hook);

@@ -384,6 +384,8 @@ MidEnd::MidEnd(BFN_Options& options) {
         // Therefore we use our own
         new BFN::EliminateTuples(&refMap, &typeMap, typeChecking, typeInference),
         new P4::SimplifyComparisons(&refMap, &typeMap, typeChecking),
+        // has to be early enough for setValid to still not be lowered
+        new BFN::OptimizeAndCheckVarbitAccess(&refMap, &typeMap),
         new BFN::CopyHeaders(&refMap, &typeMap, typeChecking),
         // must run after copy structure
         new P4::SimplifyIfStatement(&refMap, &typeMap),

@@ -1193,7 +1193,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "multiple varbit fields in a parser state is currently unsupported"
+  "multiple varbit fields in a parser state are currently unsupported"
   testdata/p4_16_samples/issue447-1-bmv2.p4
   testdata/p4_14_samples/issue576.p4
 )
@@ -2085,7 +2085,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Unimplemented compiler support: Unsupported type"
+  "error: Unsupported type"
   testdata/p4_16_samples/parser-unroll-test8.p4
 )
 
