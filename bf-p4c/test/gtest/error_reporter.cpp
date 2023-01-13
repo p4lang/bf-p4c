@@ -1,7 +1,10 @@
+#include <fstream>
+
 #include "bf_gtest_helpers.h"
 #include "gtest/gtest.h"
 #include "lib/error.h"
 #include "frontends/parsers/parserDriver.h"
+#include "bf-p4c/logging/collect_diagnostic_checks.h"
 #include "bf-p4c/arch/arch.h"
 
 namespace Test {
@@ -17,6 +20,41 @@ class ErrorReporterTest : public ::testing::Test {
     }
 
     void TearDown() {}
+
+    std::ostream* DiagnosticTestSetup(BfErrorReporter& reporter, std::string code) {
+        auto testCode = TestCode(TestCode::Hdr::CoreP4, code);
+
+        auto *backup_stream = reporter.getOutputStream();
+        reporter.setOutputStream(&customStream);
+
+        const std::string FILE_NAME = "/tmp/preprocessor_input.p4";
+        {
+            std::ofstream fs(FILE_NAME);
+            fs << code;
+        }
+
+        auto &opts = BFNContext::get().options();
+        opts.file = FILE_NAME;
+        BFN::collect_diagnostic_checks(reporter, opts);
+
+        return backup_stream;
+    }
+
+    IR::Node* GetMockNode(const std::string &code, int line, int column = 1) {
+        Util::SourcePosition pos(line, column);
+        auto* sources = new Util::InputSources();
+        sources->appendText(code.c_str());
+
+        return new IR::StringLiteral(Util::SourceInfo(sources, pos), "");
+    }
+
+    void ReportError(const std::string& code, std::string msg, int line, int column = 1) {
+        ::error(ErrorType::ERR_EXPECTED, (msg + "%1%").c_str(), GetMockNode(code, line, column));
+    }
+
+    void ReportWarning(const std::string& code, std::string msg, int line, int column = 1) {
+        ::warning(ErrorType::ERR_EXPECTED, (msg + "%1%").c_str(), GetMockNode(code, line, column));
+    }
 };
 
 TEST_F(ErrorReporterTest, ErrorHelperPlainFormatsCorrectly) {
@@ -209,6 +247,153 @@ header hdr bug
 
     // Restore error stream to original
     BaseCompileContext::get().errorReporter().setOutputStream(backupStream);
+}
+
+TEST_F(ErrorReporterTest, NoAssertions) {
+    AutoCompileContext ctx(new BFNContext());
+    auto& reporter = BFNContext::get().errorReporter();
+    const std::string CODE = R"(
+        control c(inout bit<16> p) {
+            action noop() {}
+            table test1 {
+                actions = {
+                    noop;
+                }
+                default_action = noop;
+            }
+            apply {
+                test1.apply();
+            }
+        }
+    )";
+
+    auto* backup = DiagnosticTestSetup(reporter, CODE);
+
+    EXPECT_EQ(reporter.verify_checks(), BfErrorReporter::CheckResult::NO_TESTS);
+
+    reporter.setOutputStream(backup);
+}
+
+TEST_F(ErrorReporterTest, ErrorAssertionSuccess) {
+    AutoCompileContext ctx(new BFNContext());
+    auto& reporter = BFNContext::get().errorReporter();
+    const std::string CODE = R"(
+        control c(inout bit<16> p) { // expect error: "Example error message"
+            action noop() {}
+            table test1 {
+                actions = {
+                    noop;
+                }
+                default_action = noop;
+            }
+            apply {
+                test1.apply();
+            }
+        }
+    )";
+
+    auto* backup = DiagnosticTestSetup(reporter, CODE);
+
+    ReportError(CODE, "Example error message", 2);
+
+    EXPECT_EQ(reporter.verify_checks(), BfErrorReporter::CheckResult::SUCCESS);
+
+    reporter.setOutputStream(backup);
+}
+
+TEST_F(ErrorReporterTest, ErrorCheckNotMatched) {
+    AutoCompileContext ctx(new BFNContext());
+    auto& reporter = BFNContext::get().errorReporter();
+    const std::string CODE = R"(
+        control c(inout bit<16> p) { /* expect error: "Example multi
+line \"error\" message" */
+            action noop() {}
+            table test1 {
+                actions = {
+                    noop;
+                }
+                default_action = noop;
+            }
+            apply {
+                test1.apply();
+            }
+        }
+    )";
+    const std::string ERROR =
+        "[--Werror=not-found] error: Unmatched check: Expected error message \"Example multi\n"
+        "line \\\"error\\\" message\" at line 2 not reported.\n";
+
+    auto* backup = DiagnosticTestSetup(reporter, CODE);
+
+    // No errors.
+
+    EXPECT_EQ(reporter.verify_checks(), BfErrorReporter::CheckResult::FAILURE);
+    EXPECT_EQ(customStream.str(), ERROR);
+
+    reporter.setOutputStream(backup);
+}
+
+TEST_F(ErrorReporterTest, UnexpectedError) {
+    AutoCompileContext ctx(new BFNContext());
+    auto& reporter = BFNContext::get().errorReporter();
+    const std::string CODE = R"(
+        control c(inout bit<16> p) { /* expect error@+5: "Example multi
+line error message" */
+            action noop() {}
+            table test1 {
+                actions = {
+                    noop;
+                }
+                default_action = noop;
+            }
+            apply {
+                test1.apply();
+            }
+        }
+    )";
+    const std::string ERROR =
+        "[--Werror=unexpected] error: The following errors were not expected:\n"
+        "(null)(5): [--Werror=expected] error: Unexpected error!";
+
+    auto* backup = DiagnosticTestSetup(reporter, CODE);
+
+    ReportError(CODE, "Example multi\nline error message", 7);
+    ReportError(CODE, "Unexpected error!", 5);
+
+    EXPECT_EQ(reporter.verify_checks(), BfErrorReporter::CheckResult::FAILURE);
+    EXPECT_NE(customStream.str().find(ERROR), std::string::npos);
+
+    reporter.setOutputStream(backup);
+}
+
+TEST_F(ErrorReporterTest, ErrorAndWarningSameLine) {
+    AutoCompileContext ctx(new BFNContext());
+    auto& reporter = BFNContext::get().errorReporter();
+    const std::string CODE = R"(
+        control c(inout bit<16> p) { // expect error: "Error message"
+        // expect warning@-1: "Warning message"
+            action noop() {}
+            table test1 {
+                actions = {
+                    noop;
+                }
+                default_action = noop;
+            }
+            apply {
+                test1.apply();
+            }
+        }
+    )";
+    auto* backup = DiagnosticTestSetup(reporter, CODE);
+
+    // Once an error has been reported, warnings are silenced, so the warning has to be reported
+    // first.
+    ReportWarning(CODE, "Warning message", 2);
+    ReportError(CODE, "Error message", 2);
+
+    EXPECT_EQ(reporter.verify_checks(), BfErrorReporter::CheckResult::SUCCESS);
+
+    reporter.setOutputStream(backup);
 }
 
 }  // namespace Test

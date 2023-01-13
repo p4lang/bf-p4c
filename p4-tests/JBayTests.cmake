@@ -128,14 +128,17 @@ set (P16_JNA_EXCLUDE_PATTERNS
   "p4c-4072\\.p4"
   "p4c-4943\\.p4"
 )
+
+include(JBayErrors.cmake)
+
+set (P16_JNA_EXCLUDE_FILES ${DIAGNOSTIC_TESTS_JBAY})
 set (P16_JNA_FOR_JBAY "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*/*.p4"
                       "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4"
                       "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/*.p4"
                       "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/*.p4"
                       "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/jbay/*.p4")
 p4c_find_tests("${P16_JNA_FOR_JBAY}" P16_JNA_TESTS INCLUDE "${P16_JNA_INCLUDE_PATTERNS}" EXCLUDE "${P16_JNA_EXCLUDE_PATTERNS}")
-bfn_find_tests("${P16_JNA_TESTS}" p16_jna_tests EXCLUDE "${P16_JNA_EXCLUDE_PATTERNS}")
-
+bfn_find_tests("${P16_JNA_TESTS}" p16_jna_tests EXCLUDE "${P16_JNA_EXCLUDE_PATTERNS};${P16_JNA_EXCLUDE_FILES}")
 file (GLOB STF_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/stf/*.stf")
 string (REGEX REPLACE "\\.stf;" ".p4;" STF_P4_TESTS "${STF_TESTS};")
 
@@ -157,6 +160,7 @@ set (JBAY_JNA_TEST_SUITES
   )
 
 p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base\;JENKINS_PART1" "${JBAY_JNA_TEST_SUITES}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
+p4c_add_bf_diagnostic_tests("tofino2" "jbay" "t2na" "base\;JENKINS_PART1" "${P16_JNA_INCLUDE_PATTERNS}" "${P16_JNA_EXCLUDE_PATTERNS}")
 p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base\;JENKINS_PART1" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/jbay/p4c-3288.p4")
 set_tests_properties("tofino2/extensions/p4_tests/p4_16/jbay/p4c-3288.p4" PROPERTIES TIMEOUT ${extended_timeout_2times})
 set_tests_properties("tofino2/extensions/p4_tests/p4_16/ptf/options_invalid.p4" PROPERTIES TIMEOUT ${extended_timeout_2times})
@@ -697,4 +701,3 @@ endforeach()
 
 include(SwitchJBay.cmake)
 include(JBayXfail.cmake)
-include(JBayErrors.cmake)

@@ -42,7 +42,7 @@ parser ingressParser(packet_in packet, out headers hdr,
 
     state increment_h3 {
         packet.extract(hdr.h3);
-        pctr.increment(hdr.h2.f);
+        pctr.increment(hdr.h2.f); // expect error: "Parser counter increment argument is not a constant integer"
         transition is_negative_h3;
     }
 

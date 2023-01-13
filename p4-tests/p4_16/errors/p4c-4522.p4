@@ -48,7 +48,7 @@ control Ingress(
     };
     RegisterAction<bit<1>, bit<8>, bit<1>>(reg1) ract3 = {
       void apply(inout bit<1> reg, out bit<1> val) {
-        reg = reg ^ 1;    // not ok
+        reg = reg ^ 1;    // expect error: "Only simple assignments are supported for one-bit registers\."
       }
     };
 

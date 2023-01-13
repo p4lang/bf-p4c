@@ -189,3 +189,85 @@ Updating the P4 sample outputs:
 You need to set the `P4TEST_REPLACE` environment variable:
 
     P4TEST_REPLACE=1 make check-p4
+
+Adding diagnostic tests:
+=========================
+
+Diagnostic tests, which verify that the compiler reports correct warnings and errors, should include
+the expected warning/error messages in checks inside comments in the P4 source code.
+
+Checks have the following form:
+```
+expect TYPE@OFFSET: "REGEXP"
+```
+where:
+- TYPE is "error" or "warning", which selects whether an error or a warning is expected in this check.
+- OFFSET is a (possibly negative) number or the text "NO SOURCE". 
+    - If the "@OFFSET" part is omittied, the check will be matched only if any location of a reported 
+    error/warning match the source code line that the check is on. 
+    - If OFFSET is a number, the required source code line is offset by the number.
+    - If OFFSET is "NO SOURCE", the check will not require any source code lines to be included in the
+    message.
+- REGEXP is a regular expression to match reported error/warnings to.
+
+Checks should be included in comments, with one check per comment. Both line and block comments work,
+but keep in mind that a newline inside a block comment will be kept in the expected message regex, unless
+it is escaped with `\` at the end of the line.
+
+Some example checks:
+
+- Check that an error will be reported on the same line that `increment` is defined:
+```
+action increment(bit<12> idx1, bit<12> idx2) { /* expect error: "The action increment indexes \
+Counter ingress\.ctr2 with idx2 but it also indexes Counter ingress\.ctr1 with idx1\." */
+```
+- Check that an error will be reported, but don't require any source location:
+```
+// expect error@NO SOURCE: "Value used in select statement needs to be set from input packet"
+parser SkipData(packet_in pkt, out SkipHeaders hdr, in bit<8> skipLength) {
+```
+- Check that an error will be reported on the preceding line:
+```
+value.qdepth_drain_cells = (bit<32>)(qos.qdepth |-| (bit<19>)value.target_qdepth)[18:6];
+// expect error@-1: "expression too complex for RegisterAction"
+```
+- Checks can be enabled/disabled based on compiler definitions (for more information about them see `add_test_compiler_definition` in `TestUtils.cmake`):
+```
+        //==== int<8> register ====
+        Register<paired_8int,_>(1024) my_reg;
+#if TEST == 1
+        /* expect error@-2: "Register actions associated with .* do not fit on the device\. \
+Actions use 5 large constants but the device has only 4 register action parameter slots\. \
+To make the actions fit, reduce the number of large constants\." */
+#elif TEST == 2
+        /* expect error@-6: "Register actions associated with .* do not fit on the device\. \
+Actions use 2 large constants and 3 register parameters for a total of 5 register \
+action parameter slots but the device has only 4 register action parameter slots\. \
+To make the actions fit, reduce the number of large constants or register parameters\." */
+#elif TEST == 3
+        /* expect error@-11: "Register actions associated with .* do not fit on the device\. \
+Actions use 5 register parameters but the device has only 4 register action parameter slots\. \
+To make the actions fit, reduce the number of register parameters\." */
+#endif
+```
+
+If there is at least one error check in the program, the compiler will return a success
+return code (0) if each reported error has been matched with one error check and there are no
+unmatched error checks left at the end of the compilation, otherwise the compiler will report
+a failure. Warnings are less strict and will cause a failure only if there are unmatched warning
+checks left at the end of the compilation, but there can be other warnings that are not
+listed in checks.
+
+If the above behavior doesn't work, make sure the compiler is built with `-DBAREFOOT_INTERNAL=1`.
+Debugging messages regarding checks can be enabled with `-Tbf_error_reporter:1`.
+
+Tests that include warning checks are run exactly like normal compilation tests, except they
+will fail if the expected warning isn't reported.
+
+Tests that include error checks (negative tests) have to be registered a little differently in 
+`ctest` because we only want to run the compiler, without the assembler or further steps. Tests
+put in `p4_16/errors` will be automatically registered for all devices. Tests put in a subdirectory
+with the name corresponding to a given device will be registered for that device, for example tests
+in `p4_16/errors/tofino` will be registered only for Tofino, while tests in `p4_16/errors/jbay` will
+be registered only for Jbay. To register a negative test from another directory, see the 
+`set_negative_tests` macro in `TestUtils.cmake`.

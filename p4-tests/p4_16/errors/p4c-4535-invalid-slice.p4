@@ -55,7 +55,8 @@ control ingress(
 
     RegisterAction<pair, bit<32>, bit<32>>(test_reg) test_reg_read = {
         void apply(inout pair value, out bit<32> rv1){
-            rv1 = value.second[47:16];
+            rv1 = value.second[47:16]; /* expect error: "Slices assigned to outputs of register actions \
+cannot cross the 32-bit boundary" */
         }
     };
 

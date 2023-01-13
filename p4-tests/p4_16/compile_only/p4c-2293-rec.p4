@@ -51,11 +51,19 @@ parser SwitchIngressParser(
 
     state parse_hdr1_1 {
         pkt.extract(hdr.hdr1);
+#if __TARGET_TOFINO__ == 1
+        // expect error@-2: "data previously assigned in state .*"
+        // expect error@-3: "data2 previously assigned in state .*"
+#endif
         transition loopback_hdr1;
     }
 
     state parse_hdr1_2 {
         pkt.extract(hdr.hdr1);
+#if __TARGET_TOFINO__ == 1
+        // expect error@-2: "data is assigned in state .* but has also previous assignment"
+        // expect error@-3: "data2 is assigned in state .* but has also previous assignment"
+#endif
         transition loopback_hdr1;
     }
 

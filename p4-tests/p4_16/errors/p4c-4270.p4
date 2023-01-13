@@ -203,7 +203,8 @@ control SwitchIngress(
 
         //=====bugreport: 1-bit register=====
         Register<bit<1>, bit<1>>(1) onebit_reg;
-        RegisterAction<bit<8>, bit<1>, bit<8>>(onebit_reg) do_sth = {
+        RegisterAction<bit<8>, bit<1>, bit<8>>(onebit_reg) do_sth = { /* expect error: "RegisterAction \
+do_sth does not match the type of register it uses" */
             void apply(inout bit<8> stored, out bit<8> returned) {
                 stored = 1;
                 returned = 0;

@@ -869,6 +869,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_ARCH_HDRS}")
 
 set (BF_P4C_BACKEND_LOGGING_HDRS
   logging/bf_error_reporter.h
+  logging/collect_diagnostic_checks.h
   logging/constrained_fields.h
   logging/container_size_extractor.h
   logging/event_logger.h
@@ -886,6 +887,7 @@ set (BF_P4C_BACKEND_LOGGING_HDRS
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_LOGGING_HDRS}")
 set (BF_P4C_BACKEND_LOGGING_SRCS
   logging/bf_error_reporter.cpp
+  logging/collect_diagnostic_checks.cpp
   logging/constrained_fields.cpp
   logging/container_size_extractor.cpp
   logging/event_logger.cpp

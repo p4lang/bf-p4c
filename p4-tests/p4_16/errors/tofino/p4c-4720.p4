@@ -164,4 +164,5 @@ Pipeline(
 	EgressDeparser()
 ) pipe;
 
+// expect error@NO SOURCE: "invalid SuperCluster was formed"
 Switch(pipe) main;

@@ -245,6 +245,7 @@ control EmptyEgress(
     apply {}
 }
 
+// expect error@NO SOURCE: "Wrong port metadata field packing size, should be exactly 64 bits, is .* bits"
 struct my_port_metadata_t {
     bit<4> field1;
     bit<12> field2;

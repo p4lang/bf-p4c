@@ -288,10 +288,10 @@ control EmptyEgress(
 #endif /* _UTIL */
 
 
-typedef bit<9>  egressSpec_t;
+typedef PortId_t egressSpec_t;
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
-typedef bit<9> port_id_t;
+typedef PortId_t port_id_t;
 typedef bit<16> port_id_t_chgd;
 typedef bit<8> util_t;
 typedef bit<24> tor_id_t;
@@ -449,6 +449,7 @@ control Ingress(inout headers_t                                  hdr,
         }
     };
     RegisterAction<time_t_chgd, bit<32>, time_t_chgd>(update_time) update_time_action = {
+    // expect error@-1: ".* uses of all registers within a single action have to use the same addressing"
 	void apply (inout time_t_chgd up_time) {
 	     time_t_chgd curr_time = (time_t_chgd) ig_prsr_md.global_tstamp; //64bit=48bit
 	     bit<32> dst_tor = (bit<32>) hdr.hula.dst_tor;
@@ -474,6 +475,7 @@ control Ingress(inout headers_t                                  hdr,
 	}
     };
     RegisterAction<util_t, bit<32>, util_t>(min_path_util) min_path_util_action = {
+    // expect error@-1: ".* uses of all registers within a single action have to use the same addressing"
 	void apply (inout util_t mpu) {
 	     time_t_chgd curr_time = (time_t_chgd) ig_prsr_md.global_tstamp;
 	     util_t tx_util;
@@ -497,6 +499,7 @@ control Ingress(inout headers_t                                  hdr,
 	}
     };
     RegisterAction<time_t_chgd, bit<32>, time_t_chgd>(flowlet_time) flowlet_time_action = {
+    // expect error@-1: ".* uses of all registers within a single action have to use the same addressing"
 	void apply (inout time_t_chgd curr_time) {
 	     curr_time =(time_t_chgd) ig_prsr_md.global_tstamp;
 	     bit<32> dst_tor = (bit<32>) hdr.hula.dst_tor;
@@ -521,6 +524,7 @@ control Ingress(inout headers_t                                  hdr,
 	}
 };
     RegisterAction<port_id_t_chgd, bit<32>, port_id_t_chgd>(flowlet_hop) flowlet_hop_action = {
+    // expect error@-1: ".* uses of all registers within a single action have to use the same addressing"
 	void apply (inout port_id_t_chgd tmp) {
 	     time_t_chgd curr_time = (time_t_chgd)hdr.hula.dst_tor;
 	     bit<32> dst_tor = (bit<32>) hdr.hula.dst_tor;

@@ -42,6 +42,9 @@ parser ParserImpl(packet_in packet, out headers hdr,
 
     state parse_b {
         packet.extract(hdr.b);
+#if __TARGET_TOFINO__ == 1
+        // expect error@-2: ".* previously assigned in state .*"
+#endif
 
         transition select(hdr.b.f) {
             0xffff:  accept;
@@ -56,6 +59,9 @@ parser ParserImpl(packet_in packet, out headers hdr,
         // overwrite header written in previous state that is not always overwritten here (it can
         // go to accept instead) -> error on TF1
         checksum_1.subtract_all_and_deposit(hdr.b.f);
+#if __TARGET_TOFINO__ == 1
+        // expect error@-2: "(in|e)gress::.* is assigned in state (in|e)gress::.* but has also previous assignment"
+#endif
         meta.m.setValid();
         checksum_2.subtract_all_and_deposit(meta.m.f);
 

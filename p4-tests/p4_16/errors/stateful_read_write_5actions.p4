@@ -31,7 +31,7 @@ control ingress(
     inout ingress_intrinsic_metadata_for_deparser_t  ig_dprsr_md,
     inout ingress_intrinsic_metadata_for_tm_t        ig_tm_md)
 {
-    Register<reg_value_t, index_t>(256, 0) reg;
+    Register<reg_value_t, index_t>(256, 0) reg; // expect error: "too many actions access the Register"
 
     action write_action1() {
         reg.write(hdr.data.index, hdr.data.write_value);

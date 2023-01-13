@@ -121,7 +121,8 @@ control Ingress(
     RegisterAction<data_t, flow_num_t, data_t>(regTest) addFlowTraffic = {
         void apply(inout data_t register_data)
         {
-            register_data = register_data + (data_t)hdr.ipv4.total_len;
+            register_data = register_data + (data_t)hdr.ipv4.total_len; /* expect error: "Wide \
+operations not supported in stateful alu, will only operate on bottom 32 bits" */
         }
     };
 

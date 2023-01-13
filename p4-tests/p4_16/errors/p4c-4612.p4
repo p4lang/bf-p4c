@@ -673,6 +673,10 @@ inout metadata_t meta, in ingress_intrinsic_metadata_from_parser_t ig_prsr_md)
 
     // pull_flow
     Register<bit<PULL_FLOW_WIDTH>, bit<32>>(REGISTER_LENGTH, 0) pull_flow;
+    /* expect error@-1: "Because you declared the register SwitchIngress\.time_feats\.pull_flow to store the type bit<8>.*\
+\n.*meta\.inactive_duration > 5000" */
+    /* expect error@-3: "Because you declared the register SwitchIngress\.time_feats\.pull_flow to store the type bit<8>.*\
+\n.*meta\.active_duration > 300000" */
 
     RegisterAction<bit<PULL_FLOW_WIDTH>, bit<32>, bit<PULL_FLOW_WIDTH>>(pull_flow) pull_flow_register_action = {
         void apply(inout bit<PULL_FLOW_WIDTH> pf) {

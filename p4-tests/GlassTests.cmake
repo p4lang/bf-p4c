@@ -358,3 +358,18 @@ foreach(t IN LISTS GTS_OTHER)
   p4c_add_test_label("tofino" "GTS_WEEKLY" ${test_path})
   p4c_add_test_label("tofino" "GTS_OTHER" ${test_path})
 endforeach()
+
+# tests which aren't supported by bf-p4c
+# =======================================
+
+# P4C-1390 - sample_e2e is not supported by the TNA
+p4c_add_xfail_reason("tofino"
+  "error: (Primitive sample[34] is not supported by the backend)|(sample_e2e primitive is not currently supported by the TNA architecture)"
+  extensions/p4_tests/glass/parde/test_start_coalesced_state.p4
+  extensions/p4_tests/glass/mau/test_config_183_sample_e2e.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: .*: unsupported 64-bit select"
+  extensions/p4_tests/glass/parde/COMPILER-368/out.p4
+)

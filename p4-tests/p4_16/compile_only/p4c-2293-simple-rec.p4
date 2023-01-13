@@ -43,6 +43,9 @@ parser SwitchIngressParser(
 
     state parse_hdr1 {
         pkt.extract(hdr.hdr1);
+#if __TARGET_TOFINO__ == 1
+        // expect error@-2: ".* is assigned in state .* but has also previous assignment"
+#endif
         transition select(hdr.hdr1.data) {
             0       : parse_hdr1; // Recurse, not allowed
             default : parse_hdr2;

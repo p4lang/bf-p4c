@@ -213,7 +213,7 @@ control SwitchIngress(
     }
     action nop() {
     }
-    action route_to(bit<9> port){
+    action route_to(PortId_t port){
         ig_intr_tm_md.ucast_egress_port=port;
     }
 
@@ -275,3 +275,8 @@ Pipeline(SwitchIngressParser(),
 
 Switch(pipe) main;
 
+// expect error@NO SOURCE: "Unable to slice the following group of fields due to unsatisfiable constraints: .*|NO_SLICING_FOUND"
+#ifndef ALT_PHV_ALLOC
+// expect error@NO SOURCE: "PHV allocation was not successful"
+// expect error@NO SOURCE: "Some fields cannot be allocated because of unsatisfiable constraints\."
+#endif

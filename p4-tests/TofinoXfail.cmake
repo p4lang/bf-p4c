@@ -2176,3 +2176,9 @@ if (ENABLE_ALT_PHV_ALLOC)
       extensions/p4_tests/p4_16/customer/arista/obfuscated-routescale.p4
     )
 endif (ENABLE_ALT_PHV_ALLOC)
+
+# P4C-4689: On Tofino1, this test compiles incorrectly but we only report a warning
+p4c_add_xfail_reason("tofino"
+  "mismatch from expected"
+  extensions/p4_tests/p4_16/stf/parser_multi_write_checksum_verify_2.p4
+)

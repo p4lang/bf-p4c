@@ -206,10 +206,13 @@ control EgressSfc(in egress_intrinsic_metadata_t eg_intr_md,
             if (value.qdepth_drain_cells < 32w0x80000000) {
                 if (value.target_qdepth < 0x80000000) {
                     value.qdepth_drain_cells = (bit<32>)(qos.qdepth |-| (bit<19>)value.target_qdepth)[18:6];
+                    // expect error@-1: "expression too complex for RegisterAction"
                 } else if (value.target_qdepth < 0x40000000) {
                     value.qdepth_drain_cells = (bit<32>)(qos.qdepth |-| (bit<19>)value.target_qdepth)[18:5];
+                    // expect error@-1: "expression too complex for RegisterAction"
                 } else if (value.target_qdepth < 0x20000000) {
                     value.qdepth_drain_cells = (bit<32>)(qos.qdepth |-| (bit<19>)value.target_qdepth)[18:4];
+                    // expect error@-1: "expression too complex for RegisterAction"
                 }
             }
         }
@@ -422,14 +425,14 @@ control EgressSfc(in egress_intrinsic_metadata_t eg_intr_md,
         hdr.tcp.seq_no = (bit<32>)sfc.pause_duration_us;
     }
 
-    Register<bit<32>, bit<9>>(512,0) sfc_count;
-    RegisterAction<bit<32>, bit<9>, bit<32>>(sfc_count) sfc_count_increase = {
+    Register<bit<32>, PortId_t>(512,0) sfc_count;
+    RegisterAction<bit<32>, PortId_t, bit<32>>(sfc_count) sfc_count_increase = {
         void apply(inout bit<32> value, out bit<32> read_value) {
             value = value + 1;
         }
     };
-    Register<bit<32>, bit<9>>(512,0) recirculation_port_pkt_count;
-    RegisterAction<bit<32>, bit<9>, bit<32>>(recirculation_port_pkt_count) recirculation_port_pkt_count_increase = {
+    Register<bit<32>, PortId_t>(512,0) recirculation_port_pkt_count;
+    RegisterAction<bit<32>, PortId_t, bit<32>>(recirculation_port_pkt_count) recirculation_port_pkt_count_increase = {
         void apply(inout bit<32> value, out bit<32> read_value) {
             value = value + 1;
         }

@@ -17,7 +17,7 @@ control ingress(
     inout ingress_intrinsic_metadata_for_deparser_t  ig_dprsr_md,
     inout ingress_intrinsic_metadata_for_tm_t        ig_tm_md)
 {
-    Register<bit<32>, bit<10>>(1024) reg;
+    Register<bit<32>, bit<10>>(1024) reg; // expect error: "too many RegisterActions attached to the Register"
 
     RegisterAction<bit<32>, bit<10>, bit<32>>(reg) reg_act_1 = {
         void apply(inout bit<32> reg_data) {

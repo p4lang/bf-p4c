@@ -61,6 +61,12 @@ parser ParserImpl(packet_in packet, out headers hdr,
         // the previous assignment in extract cannot be dead-code eliminated because it is
         // sub-byte
         hdr.c.b = checksum_1.verify(); // verify overwrite -> error
+#if __TARGET_TOFINO__ == 1
+        // expect warning@-2: "(in|e)gress::.* is assigned in state (in|e)gress::.* but has also previous assignment"
+#else
+        /* expect error@-4: "Using checksum verify in direct assignment to set .*; is not supported \
+when the left-hand side of the assignment can be written multiple times for one packet\." */
+#endif
         meta.m.setValid();
         meta.m.b = checksum_2.verify();
 

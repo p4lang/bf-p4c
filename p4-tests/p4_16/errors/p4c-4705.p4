@@ -135,7 +135,7 @@ control Ingress(
 			rv = max_sn;
 
 			bit<8> delta = (hdr.vconn.sn - max_sn) | 0xE0;
-			if(delta < 0xfc) {
+			if(delta < 0xfc) { // expect error: "too complex bitwise operation used in comparison"
 				max_sn = hdr.vconn.sn;
 			}
 		}

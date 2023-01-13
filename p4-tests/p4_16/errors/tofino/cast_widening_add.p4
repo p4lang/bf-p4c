@@ -92,4 +92,11 @@ control DeparserE(packet_out b,
 }
 
 Pipeline(ParserI(), IngressP(), DeparserI(), ParserE(), EgressP(), DeparserE()) pipe0;
+
 Switch(pipe0) main;
+
+// expect error@NO SOURCE: "Unable to slice the following group of fields due to unsatisfiable constraints: .*|NO_SLICING_FOUND"
+#ifndef ALT_PHV_ALLOC
+// expect error@NO SOURCE: "PHV allocation was not successful"
+// expect error@NO SOURCE: "Some fields cannot be allocated because of unsatisfiable constraints\."
+#endif

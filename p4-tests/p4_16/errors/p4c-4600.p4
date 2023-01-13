@@ -177,6 +177,7 @@ control Ingress(/* User */
 
     bit<16> result_16;
     Register<bit<16>, bit<15>>(0x8000) layer_16bit;
+    // expect error@NO SOURCE: "Two or more assignments of .* inside the register action .* are not mutually exclusive"
     RegisterAction<bit<16>, bit<15>, bit<16>>(layer_16bit) insert_16bit=
     {
         void apply(inout bit<16> register_data, out bit<16> result)

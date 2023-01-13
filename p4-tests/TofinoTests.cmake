@@ -58,6 +58,8 @@ set (P16_TNA_ARISTA_FILES
   "obfuscated-vxlan_evpn_scale.p4"
 )
 
+include(TofinoErrors.cmake)
+
 # digest_tna.p4 is used for another test (digest-std-p4runtime) with different args
 set (P16_TNA_EXCLUDE_FILES "digest_tna\\.p4" "p4c-1323-b\\.p4" "p4c-2143\\.p4"
     "p4c-2191\\.p4" "p4c-2398\\.p4" "p4c-2032\\.p4" "p4c-2030\\.p4"
@@ -67,11 +69,12 @@ set (P16_TNA_EXCLUDE_FILES "digest_tna\\.p4" "p4c-1323-b\\.p4" "p4c-2143\\.p4"
     "p4c_4158\\.p4" "p4c-4064\\.p4" "forensics\\.p4" "mirror_constants\\.p4" "p4c_2601\\.p4"
     "hash_extern_xor\\.p4" "hash_field_expression\\.p4" "hash_field_expression_sym\\.p4"
     "p4c-4770\\.p4" "p4c-2269\\.p4")
-set (P16_TNA_EXCLUDE_FILES "${P16_TNA_EXCLUDE_FILES}" "${P16_TNA_ARISTA_FILES}")
+set (P16_TNA_EXCLUDE_FILES "${P16_TNA_EXCLUDE_FILES}" 
+                           "${P16_TNA_ARISTA_FILES}" 
+                           "${DIAGNOSTIC_TESTS_TOFINO}")
 set (P16_TNA_FOR_TOFINO
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*/*.p4"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4"
-    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/errors/*.p4"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/*.p4"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/*.p4")
 p4c_find_tests("${P16_TNA_FOR_TOFINO}" P4_16_TNA_TESTS INCLUDE "${P16_TNA_INCLUDE_PATTERNS}" EXCLUDE "${P16_TNA_EXCLUDE_PATTERNS}")
@@ -336,6 +339,7 @@ set (TOFINO_TNA_TEST_SUITES
   ${p16_tna_tests}
   )
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${TOFINO_TNA_TEST_SUITES}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
+p4c_add_bf_diagnostic_tests("tofino" "tofino" "tna" "base" "${P16_TNA_INCLUDE_PATTERNS}" "${P16_TNA_EXCLUDE_PATTERNS}")
 set_tests_properties("tofino/extensions/p4_tests/p4_16/ptf/options_invalid.p4" PROPERTIES TIMEOUT ${extended_timeout_2times})
 bfn_needs_scapy("tofino" "extensions/p4_tests/p4_16/ptf/options_invalid.p4")
 bfn_needs_scapy("tofino" "extensions/p4_tests/p4_16/ptf/inner_checksum.p4")
@@ -1278,7 +1282,6 @@ include(GlassTests.cmake)
 
 include(TofinoMustPass.cmake)
 include(TofinoXfail.cmake)
-include(TofinoErrors.cmake)
 
 set  (PHASE0_PRAGMA_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/compile_only/phase0_pragma.p4)
 file (RELATIVE_PATH phase0test ${P4C_SOURCE_DIR} ${PHASE0_PRAGMA_P4})

@@ -61,6 +61,8 @@ control c1(
     action a1() {
         f1 = hdr.ipv4.src_addr;
     }
+    // expect error@NO SOURCE: "Name 'pipe.abc' is used for multiple table objects in the P4Info message"
+    // expect error@NO SOURCE: "Found 1 duplicate name\(s\) in the P4Info"
     @name(".abc")
     table t1 {
         actions = { a1 ; }

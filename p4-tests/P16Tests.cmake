@@ -65,6 +65,7 @@ set (P4TEST_DRIVER ${P4C_SOURCE_DIR}/backends/p4test/run-p4-sample.py)
 p4c_add_tests("p4" ${P4TEST_DRIVER} "${P16_TEST_SUITES}" "${P4_XFAIL_TESTS}"
   "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
 
+# tests created automatically for the "p4" target which doesn't support TNA
 p4c_add_xfail_reason("p4"
   "error: #error Target does not support tofino.* native architecture"
   extensions/p4_tests/p4_16/compile_only/tagalong_mdinit_switch.p4
@@ -228,7 +229,6 @@ p4c_add_xfail_reason("p4"
   extensions/p4_tests/p4_16/stf/math_unit4.p4
   extensions/p4_tests/p4_16/stf/brig-1218.p4
   extensions/p4_tests/p4_16/stf/parser_multi_write_4.p4
-  extensions/p4_tests/p4_16/stf/cast_widening_add.p4
   extensions/p4_tests/p4_16/stf/cast_narrowing_set.p4
   extensions/p4_tests/p4_16/stf/p4c-1620.p4
   extensions/p4_tests/p4_16/stf/parser_counter_10.p4
@@ -255,7 +255,6 @@ p4c_add_xfail_reason("p4"
   extensions/p4_tests/p4_16/stf/parser_multi_write_3.p4
   extensions/p4_tests/p4_16/stf/parser_loop_4.p4
   extensions/p4_tests/p4_16/stf/sful_enum_out1.p4
-  extensions/p4_tests/p4_16/stf/parser_multi_write_7.p4
   extensions/p4_tests/p4_16/stf/match_key_slices.p4
   extensions/p4_tests/p4_16/stf/parser_scratch_reg_1.p4
   extensions/p4_tests/p4_16/stf/p4c-1515.p4
@@ -316,3 +315,52 @@ p4c_add_xfail_reason("p4"
   extensions/p4_tests/p4_16/stf/meter_dest_16_32.p4
   extensions/p4_tests/p4_16/stf/meter_dest_16_32_flexible.p4
 )
+
+# tests which aren't supported by bf-p4c
+# =======================================
+
+p4c_add_xfail_reason("tofino"
+  "error: Wide operations not supported in stateful alu, will only operate on bottom 32 bits"
+  testdata/p4_16_samples/psa-register-read-write-bmv2.p4
+  testdata/p4_16_samples/psa-example-register2-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: The slice list below contains .* bits, the no_split attribute prevents it from being split any further, and it is too large to fit in the largest PHV containers.|NO_SLICING_FOUND"
+  testdata/p4_16_samples/issue1607-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Conditions in an action must be simple comparisons of an action data parameter"
+  testdata/p4_16_samples/psa-conditional_operator.p4
+)
+# Fail on purpose due to indirect tables not being mutually exclusive
+p4c_add_xfail_reason("tofino"
+  "table .* and table .* cannot share .*"
+  testdata/p4_16_samples/issue2844-enum.p4
+  )
+
+# Headers that are not byte aligned
+p4c_add_xfail_reason("tofino"
+  "error: Tofino requires byte-aligned headers, but header .* is not byte-aligned"
+  testdata/p4_16_samples/custom-type-restricted-fields.p4
+  testdata/p4_16_samples/parser-unroll-test3.p4
+  testdata/p4_16_samples/parser-unroll-test4.p4
+  testdata/p4_16_samples/parser-unroll-test5.p4
+  # p4c update 2022-04-25
+  testdata/p4_16_samples/issue3225.p4
+)
+
+# P4C-4689
+# TODO: add tofino 2 version (that passes)
+# all these cases are demoted to warnings
+#p4c_add_xfail_reason("tofino"
+#    "error: (in|e)gress::.* is assigned in state (in|e)gress::.* but has also previous assignment"
+#    testdata/p4_16_samples/parser-inline/parser-inline-test7.p4
+#    parser-inline-opt/testdata/p4_16_samples/parser-inline/parser-inline-test7.p4
+#    testdata/p4_16_samples/parser-inline/parser-inline-test10.p4
+#    testdata/p4_16_samples/parser-inline/parser-inline-test8.p4
+#    testdata/p4_16_samples/parser-inline/parser-inline-test9.p4
+#    testdata/p4_16_samples/issue2314.p4
+#    psa_checksum
+#)

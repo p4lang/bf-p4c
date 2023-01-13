@@ -83,6 +83,7 @@ target="tofino"
 p4info=true
 stf_bin=false
 ptf_cmd_args=()
+error_test=false
 
 force_link=false
 reverse_pipe_scopes=false
@@ -176,6 +177,7 @@ findbin() {
 
 # Set P4C to ./p4c by default unless set by the environment
 P4C="${P4C:-./p4c}"
+P4C_BAREFOOT="${P4C_BAREFOOT:-./p4c-barefoot}"
 P4C_pd=""
 testdir=tofino
 filter_P4C_ARGS=()
@@ -225,6 +227,7 @@ while [ $# -gt 1 ]; do
         echo >&2 "   -bfrt          generate the BF-RT JSON"
         echo >&2 "   -profile       switch-16 profile"
         echo >&2 "   -norun         don't run tests, just the compiler"
+        echo >&2 "   -error-test    check for errors in the compiler, skip rest"
         echo >&2 "   -force-link    force linking a binary even if no tests specified"
         echo >&2 "   -pd            run PTF PD tests if available"
         echo >&2 "   -ptf           run PTF tests if available"
@@ -260,6 +263,10 @@ while [ $# -gt 1 ]; do
         TIME_COMMAND="time"
         ;;
     -norun)
+        run_stf=false
+        ;;
+    -error-test)
+        error_test=true
         run_stf=false
         ;;
     -force-link)
@@ -481,7 +488,7 @@ fi
 
 # if we don't have PTF or STF tests to run, we can skip the linking step
 # to save time
-if ! $run_ptf && ! $has_stf && ! $force_link; then
+if ! $error_test && ! $run_ptf && ! $has_stf && ! $force_link; then
     P4C_ARGS+=(--no-link)
 fi
 
@@ -578,11 +585,34 @@ clean_env() {
 
 # Run P4C and extract pipes
 native_compile() {
-    echo "p4c: $P4C $@"
-    run $P4C "$@" || die
+    opts=""
+    xp4c_opts=""
+    for opt in "$@"; do
+        if [[ $opt == *"-Xp4c"* ]]; then
+            # Extract Xp4c options.
+            opt=`echo "$opt" | sed --regexp-extended --expression="s/-Xp4c=(.*)/\1/"`
+
+            if [[ $opt == *"--alt-phv-alloc"* ]]; then
+                # Add a compiler definition for alt-phv-specific diagnostics.
+                opts+="-DALT_PHV_ALLOC "
+            fi
+            xp4c_opts+="$opt "
+        else
+            opts+="$opt "
+        fi
+    done
+
+    if $error_test ; then
+        echo "p4c-barefoot: $P4C_BAREFOOT $opts $xp4c_opts"
+        P4C_TEST_COMPILE_ONLY=true
+
+        run $P4C_BAREFOOT $opts $xp4c_opts || die
+    else
+        echo "p4c: $P4C $opts -Xp4c="$xp4c_opts""
+        run $P4C $opts -Xp4c="$xp4c_opts" || die
+    fi
 
     if [[ "$P4C_TEST_COMPILE_ONLY" == true ]] ; then
-        clean_env
         exit 0
     fi
 

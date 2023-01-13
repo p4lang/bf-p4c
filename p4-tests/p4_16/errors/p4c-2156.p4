@@ -85,7 +85,7 @@ parser IngressParser(packet_in      pkt,
         pkt.extract(hdr.ethernet);
         transition select(hdr.ethernet.fake_ether_type)
         {
-            0x1020304050607080: parse_ipv4;
+            0x1020304050607080: parse_ipv4; // expect error: "unsupported 64-bit select"
             default: accept;
         }
     }

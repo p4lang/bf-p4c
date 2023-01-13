@@ -28,9 +28,13 @@ set (P16_JNA_EXCLUDE_PATTERNS "tofino\\.h" "TOFINO1_ONLY" "TOFINO2_ONLY" "<built
                               "p4c-4055\\.p4"
                               "p4c-4943\\.p4"
 )
+
+include(CloudbreakErrors.cmake)
+set(P16_CB_EXCLUDE_FILES ${DIAGNOSTIC_TESTS_CB})
+
 set (P16_JNA_FOR_CLOUDBREAK "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/*.p4")
 p4c_find_tests("${P16_JNA_FOR_CLOUDBREAK}" P16_JNA_TESTS INCLUDE "${P16_JNA_INCLUDE_PATTERNS}" EXCLUDE "${P16_JNA_EXCLUDE_PATTERNS}")
-bfn_find_tests("${P16_JNA_TESTS}" p16_jna_tests EXCLUDE "${P16_JNA_EXCLUDE_PATTERNS}")
+bfn_find_tests("${P16_JNA_TESTS}" p16_jna_tests EXCLUDE "${P16_JNA_EXCLUDE_PATTERNS};${P16_CB_EXCLUDE_FILES}")
 
 file (GLOB STF_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/stf/*.stf")
 string (REGEX REPLACE "\\.stf;" ".p4;" STF_P4_TESTS "${STF_TESTS};")
@@ -111,6 +115,7 @@ set (CLOUDBREAK_JNA_TEST_SUITES
 p4c_find_tests("${CLOUDBREAK_JNA_TEST_SUITES}" cloudbreak_jna_tests INCLUDE "${P16_JNA_INCLUDE_PATTERNS}" EXCLUDE "${P16_JNA_EXCLUDE_PATTERNS}")
 set (cloudbreak_jna_tests ${cloudbreak_jna_tests} ${p16_jna_tests})
 p4c_add_bf_backend_tests("tofino3" "cb" "t3na" "base" "${cloudbreak_jna_tests}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
+p4c_add_bf_diagnostic_tests("tofino3" "cb" "t3na" "base" "${P16_JNA_INCLUDE_PATTERNS}" "${P16_JNA_EXCLUDE_PATTERNS}")
 set_tests_properties("tofino3/extensions/p4_tests/p4_16/ptf/options_invalid.p4" PROPERTIES TIMEOUT ${extended_timeout_2times})
 bfn_needs_scapy("tofino3" "extensions/p4_tests/p4_16/ptf/inner_checksum.p4")
 bfn_needs_scapy("tofino3" "extensions/p4_tests/p4_16/ptf/inner_checksum_payload_offset.p4")
@@ -228,4 +233,3 @@ endforeach()
 
 include(SwitchCloudbreak.cmake)
 include(CloudbreakXfail.cmake)
-include(CloudbreakErrors.cmake)

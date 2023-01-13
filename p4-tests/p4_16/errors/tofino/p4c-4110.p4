@@ -123,7 +123,7 @@ control SwitchIngress(
         void apply(inout bit<32> value, out bit<32> read_value){
             read_value = value;
             //if (value  < 2147483648) {
-            if (value - 2147483648 < 0) {           
+            if (value - 2147483648 < 0) { // expect error: "constant value .* is out of range .* for stateful ALU"       
                 value = value + 1;
             }
         }

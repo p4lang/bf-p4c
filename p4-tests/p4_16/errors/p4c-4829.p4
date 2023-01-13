@@ -75,8 +75,46 @@ control SwitchIngress(
             meta_int8_a=45;
         }
 
+#define CONST_1 81
+#define CONST_2 82
+#define CONST_3 83
+#define CONST_4 84
+#define CONST_5 85
+
+#if TEST == 2 || TEST == 3
+        RegisterParam<int<8>>(81) param1;
+        RegisterParam<int<8>>(82) param2;
+        RegisterParam<int<8>>(83) param3;
+
+#define CONST_1 param1.read()
+#define CONST_2 param2.read()
+#define CONST_3 param3.read()
+#endif
+#if TEST == 3
+        RegisterParam<int<8>>(84) param4;
+        RegisterParam<int<8>>(85) param5;
+
+#define CONST_4 param4.read()
+#define CONST_5 param5.read()
+#endif
+
+
         //==== int<8> register ====
         Register<paired_8int,_>(1024) my_reg;
+#if TEST == 1
+        /* expect error@-2: "Register actions associated with .* do not fit on the device\. \
+Actions use 5 large constants but the device has only 4 register action parameter slots\. \
+To make the actions fit, reduce the number of large constants\." */
+#elif TEST == 2
+        /* expect error@-6: "Register actions associated with .* do not fit on the device\. \
+Actions use 2 large constants and 3 register parameters for a total of 5 register \
+action parameter slots but the device has only 4 register action parameter slots\. \
+To make the actions fit, reduce the number of large constants or register parameters\." */
+#elif TEST == 3
+        /* expect error@-11: "Register actions associated with .* do not fit on the device\. \
+Actions use 5 register parameters but the device has only 4 register action parameter slots\. \
+To make the actions fit, reduce the number of register parameters\." */
+#endif
 
         RegisterAction<paired_8int, _, int<8>>(my_reg) my_regact_a= {
             void apply(inout paired_8int value, out int<8> rv) {
@@ -84,37 +122,13 @@ control SwitchIngress(
                 paired_8int in_value;
                 in_value = value;
 
-                bool pred_0=(in_value.hi + meta_int8_a == 81);
-                bool pred_1=(in_value.lo + meta_int8_b >= 82);
-
-                if(pred_0 || pred_1){
-                    value.lo=(meta_int8_b + 83);
-                    value.hi=(84 + 85);
+                if(in_value.hi + meta_int8_a == CONST_1 ||
+                    in_value.lo + meta_int8_b >= CONST_2){
+                    value.lo=(meta_int8_b + CONST_3);
+                    value.hi=(CONST_4 + 3);
                 }else{
-                    value.lo=(meta_int8_b + 86);
-                    value.hi=(meta_int8_b + 87);
-                }
-
-                rv=value.lo;
-            }
-        };
-
-
-        RegisterAction<paired_8int, _, int<8>>(my_reg) my_regact_b= {
-            void apply(inout paired_8int value, out int<8> rv) {
-                rv = 0;
-                paired_8int in_value;
-                in_value = value;
-
-                bool pred_0=(in_value.hi + meta_int8_a >= 91);
-                bool pred_1=(0 + meta_int8_a != 92);
-
-                if(pred_0){
-                    value.lo=(meta_int8_a + 93);
-                    value.hi=(meta_int8_a + in_value.hi);
-                }else{
-                    value.lo=(94 + in_value.hi);
-                    value.hi=(meta_int8_a + in_value.hi);
+                    value.lo=(meta_int8_b + CONST_5);
+                    value.hi=meta_int8_b;
                 }
 
                 rv=value.lo;
@@ -124,18 +138,12 @@ control SwitchIngress(
         action exec_a(){
             my_regact_a.execute(0);
         }
-        action exec_b(){
-            my_regact_b.execute(0);
-        }
-
 
         apply {
             set_meta();
 
             if(ig_intr_md.ingress_port!=0){
                 exec_a();
-            }else{
-                exec_b();
             }
 
             reflect();

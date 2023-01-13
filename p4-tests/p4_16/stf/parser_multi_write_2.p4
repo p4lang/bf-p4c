@@ -27,6 +27,9 @@ parser ParserImpl(packet_in packet, out headers hdr,
         packet.extract(hdr.a);
 
         meta.m.f = 0x1;
+#if __TARGET_TOFINO__ == 1
+        // expect error@-2: ".* previously assigned in state .*"
+#endif
 
         transition select(hdr.a.f) {
             8w0xa: parse_b;
@@ -38,6 +41,9 @@ parser ParserImpl(packet_in packet, out headers hdr,
         packet.extract(hdr.b);
 
         meta.m.f = 0x2;  // clear-on-write
+#if __TARGET_TOFINO__ == 1
+        // expect error@-2: ".* previously assigned in state .*"
+#endif
 
         transition select(hdr.b.f) {
             8w0xb: parse_c;
@@ -49,6 +55,9 @@ parser ParserImpl(packet_in packet, out headers hdr,
         packet.extract(hdr.c);
 
         meta.m.f = 0x4;  // clear-on-write
+#if __TARGET_TOFINO__ == 1
+        // expect error@-2: ".* is assigned in state .* but has also previous assignment"
+#endif
 
         transition accept;
     }

@@ -12,7 +12,7 @@ header data_t {
 }
 
 struct metadata {
-    bool err;
+    data_t m;
 }
 
 struct headers {
@@ -34,6 +34,7 @@ parser ParserImpl(packet_in packet, out headers hdr,
         packet.advance(PORT_METADATA_SIZE);
         packet.extract(hdr.a);
         checksum_1.add(hdr.a);
+        checksum_2.add(hdr.a);
 
         transition select(hdr.a.f) {
             0x7fff:  accept;
@@ -43,8 +44,11 @@ parser ParserImpl(packet_in packet, out headers hdr,
 
     state parse_b {
         packet.extract(hdr.b);
+#if __TARGET_TOFINO__ == 1
+        // expect error@-2: ".* previously assigned in state .*"
+#endif
         checksum_1.add(hdr.b);
-        meta.err = checksum_1.verify();
+        checksum_2.add(hdr.b);
 
         transition select(hdr.b.f) {
             0x7fff:  accept;
@@ -54,19 +58,23 @@ parser ParserImpl(packet_in packet, out headers hdr,
 
     state parse_c {
         packet.extract(hdr.c);
+        checksum_1.add(hdr.c);
         checksum_2.add(hdr.c);
+        // there is an overwrite, of part of the byte set in a previous state that cannot be
+        // dead-code-eliminated because the parser can go into a different branchy that does not
+        // end here
+        // This is a problem for all tofino version as we can't do sub-byte overwrite, only
+        // bitwise or.
+        hdr.b.b = checksum_1.verify(); // overwrite -> error
+#if __TARGET_TOFINO__ == 1
+        // expect error@-2: "(in|e)gress::.* is assigned in state (in|e)gress::.* but has also previous assignment"
+#else
+        /* expect error@-4: "Using checksum verify in direct assignment to set .*; is not supported \
+when the left-hand side of the assignment can be written multiple times for one packet\." */
+#endif
+        meta.m.setValid();
+        meta.m.b = checksum_2.verify();
 
-        transition select(hdr.c.f) {
-            0x7fff:  accept;
-            default: parse_d;
-        }
-    }
-
-    state parse_d {
-        packet.extract(hdr.d);
-        checksum_2.add(hdr.d);
-        // overwrite with verify is always an error
-        meta.err = checksum_2.verify(); // overwrite -> error
         transition accept;
     }
 }
@@ -77,11 +85,19 @@ control ingress(inout headers hdr, inout metadata meta,
                 inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
     apply {
-        if (hdr.a.isValid() && hdr.b.isValid() && hdr.c.isValid() && hdr.d.isValid()) {
-            if (meta.err) {
-                ig_intr_tm_md.ucast_egress_port = 4;
+        if (hdr.a.isValid() && hdr.b.isValid() && hdr.c.isValid()) {
+            hdr.d.setValid();
+            if (meta.m.b) {
+                hdr.d.f = 0x7fff;
             } else {
+                hdr.d.f = 0;
+            }
+            hdr.d.b = hdr.b.b;
+
+            if (meta.m.b == hdr.b.b) {
                 ig_intr_tm_md.ucast_egress_port = 2;
+            } else {
+                ig_intr_tm_md.ucast_egress_port = 4;
             }
         } else {
             ig_intr_tm_md.ucast_egress_port = 0;

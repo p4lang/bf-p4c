@@ -96,6 +96,8 @@ parser IngressParser(
     }
 }
 
+/* expect error@NO SOURCE: "Can't enforce minimum parse depth for parser EgressParser because parser \
+counter is already used" */
 parser EgressParser(
     packet_in pkt,
     out headers_t hdr,

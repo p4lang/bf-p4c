@@ -80,6 +80,7 @@
 #include "bf-p4c/control-plane/runtime.h"
 #include "bf-p4c/frontend.h"
 #include "bf-p4c/lib/error_type.h"
+#include "bf-p4c/logging/collect_diagnostic_checks.h"
 #include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/logging/phv_logging.h"
 #include "bf-p4c/logging/source_info_logging.h"
@@ -317,7 +318,9 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
 
 
 
-static void reportStats_alwaysCallThisONCEshortlyBeforeExiting() {
+// Reports warning and error counts.
+// Always call this function shortly before exiting.
+static void report_stats() {
     // Han indicated ≤1 ‘_’ per identifier is a required rule.
     auto& myErrorReporter { BFNContext::get().errorReporter() };
     //  The next 2 lines: creating variables just for readability of code.
@@ -344,13 +347,32 @@ static void reportStats_alwaysCallThisONCEshortlyBeforeExiting() {
     }
 }  //  end of reporting procedure
 
+// define a set of constants to return so we can decide what to do for
+// context.json generation, as we need to generate as much as we can
+// for failed programs
+constexpr unsigned SUCCESS = 0;
+// PerPipeResourceAllocation error. This can be fitting or other issues in
+// the backend, where we may have hope to generate partial context and
+// visualizations.
+constexpr unsigned COMPILER_ERROR = 1;
+// Program or programmer errors. Nothing to do until the program is fixed
+constexpr unsigned INVOCATION_ERROR = 2;
+constexpr unsigned PROGRAM_ERROR = 3;
+#if BFP4C_CATCH_EXCEPTIONS
+// Internal compiler error
+constexpr unsigned INTERNAL_COMPILER_ERROR = 4;
+#endif  // BFP4C_CATCH_EXCEPTIONS
 
-
-int return_from_main_politely(const int foo) {
-    reportStats_alwaysCallThisONCEshortlyBeforeExiting();
-    return foo;
+int handle_return(const int error_code, [[maybe_unused]] const BFN_Options &options) {
+    report_stats();
+#if BAREFOOT_INTERNAL
+    if (BFNContext::get().errorReporter().verify_checks() ==
+        BfErrorReporter::CheckResult::SUCCESS) {
+        return SUCCESS;
+    }
+#endif  /* BAREFOOT_INTERNAL */
+    return error_code;
 }
-
 
 int main(int ac, char **av) {
     setup_gc_logging();
@@ -358,27 +380,11 @@ int main(int ac, char **av) {
     // initialize the Barefoot specific error types
     BFN::ErrorType::getErrorTypes();
 
-    // define a set of constants to return so we can decide what to do for
-    // context.json generation, as we need to generate as much as we can
-    // for failed programs
-    constexpr unsigned SUCCESS = 0;
-    // PerPipeResourceAllocation error. This can be fitting or other issues in
-    // the backend, where we may have hope to generate partial context and
-    // visualizations.
-    constexpr unsigned COMPILER_ERROR = 1;
-    // Program or programmer errors. Nothing to do until the program is fixed
-    constexpr unsigned INVOCATION_ERROR = 2;
-    constexpr unsigned PROGRAM_ERROR = 3;
-#if BFP4C_CATCH_EXCEPTIONS
-    // Internal compiler error
-    constexpr unsigned INTERNAL_COMPILER_ERROR = 4;
-#endif  // BFP4C_CATCH_EXCEPTIONS
-
     AutoCompileContext autoBFNContext(new BFNContext);
     auto& options = BackendOptions();
 
     if (!options.process(ac, av) || ::errorCount() > 0)
-        return return_from_main_politely(INVOCATION_ERROR);
+        return handle_return(INVOCATION_ERROR, options);
 
     options.setInputFile();
     Device::init(options.target);
@@ -401,7 +407,7 @@ int main(int ac, char **av) {
     if (options.num_stages_override) {
         Device::overrideNumStages(options.num_stages_override);
         if (::errorCount() > 0) {
-            return return_from_main_politely(INVOCATION_ERROR);
+            return handle_return(INVOCATION_ERROR, options);
         }
     }
 
@@ -413,11 +419,11 @@ int main(int ac, char **av) {
     // If there was an error in the frontend, we are likely to end up
     // with an invalid program for serialization, so we bail out here.
     if (!program || ::errorCount() > 0)
-        return return_from_main_politely(PROGRAM_ERROR);
+        return handle_return(PROGRAM_ERROR, options);
 
     // If we just want to prettyprint to p4_16, running the frontend is sufficient.
     if (!options.prettyPrintFile.isNullOrEmpty())
-        return return_from_main_politely(::errorCount() > 0 ? PROGRAM_ERROR : SUCCESS);
+        return handle_return(::errorCount() > 0 ? PROGRAM_ERROR : SUCCESS, options);
 
     log_dump(program, "Initial program");
 
@@ -436,9 +442,12 @@ int main(int ac, char **av) {
         JSONGenerator(irFile, true) << program << std::endl;
     }
 
+#if BAREFOOT_INTERNAL
+    BFN::collect_diagnostic_checks(BFNContext::get().errorReporter(), options);
+#endif  /* BAREFOOT_INTERNAL */
     BFN::generateRuntime(program, options);
     if (::errorCount() > 0)
-        return return_from_main_politely(PROGRAM_ERROR);
+        return handle_return(PROGRAM_ERROR, options);
 
     auto hook = options.getDebugHook();
     BFN::MidEnd midend(options);
@@ -449,13 +458,10 @@ int main(int ac, char **av) {
     program = program->apply(midend);
     if (!program)
         // still did not reach the backend for fitting issues
-        return return_from_main_politely(PROGRAM_ERROR);
+        return handle_return(PROGRAM_ERROR, options);
     log_dump(program, "After midend");
     if (::errorCount() > 0)
-        return return_from_main_politely(PROGRAM_ERROR);
-
-    if (::errorCount() > 0)
-        return return_from_main_politely(PROGRAM_ERROR);
+        return handle_return(PROGRAM_ERROR, options);
 
     /* save the pre-packing p4 program */
     // return IR::P4Program with @flexible header packed
@@ -465,8 +471,8 @@ int main(int ac, char **av) {
     bridgePacking.addDebugHook(EventLogger::getDebugHook(), true);
 
     program->apply(bridgePacking);
-    if (!program)
-        return return_from_main_politely(PROGRAM_ERROR);
+    if (!program || ::errorCount() > 0)
+        return handle_return(PROGRAM_ERROR, options);
         // still did not reach the backend for fitting issues
 
     SubstitutePackedHeaders substitute(options, *map, *midend.sourceInfoLogging);
@@ -477,10 +483,10 @@ int main(int ac, char **av) {
     log_dump(program, "After flexiblePacking");
     if (!program)
         // still did not reach the backend for fitting issues
-        return return_from_main_politely(PROGRAM_ERROR);
+        return handle_return(PROGRAM_ERROR, options);
 
     if (!substitute.getToplevelBlock())
-        return return_from_main_politely(PROGRAM_ERROR);
+        return handle_return(PROGRAM_ERROR, options);
 
     if (options.debugInfo) {
         program->apply(SourceInfoLogging(BFNContext::get().getOutputDirectory().c_str(),
@@ -566,10 +572,16 @@ int main(int ac, char **av) {
         execute_backend(pipe, options);
     }
 
-    reportStats_alwaysCallThisONCEshortlyBeforeExiting();
+    report_stats();
 
     if (Log::verbose())
         std::cout << "Done." << std::endl;
+#if BAREFOOT_INTERNAL
+    if (BFNContext::get().errorReporter().verify_checks() ==
+        BfErrorReporter::CheckResult::SUCCESS) {
+        return SUCCESS;
+    }
+#endif
     return ::errorCount() > 0 ? COMPILER_ERROR : SUCCESS;
     //     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     // _intentionally_ not "return_from_main_politely"
@@ -579,7 +591,7 @@ int main(int ac, char **av) {
     // catch all exceptions here
     } catch (const Util::CompilerBug &e) {
         BFNContext::get().errorReporter().increment_the_error_count();
-        reportStats_alwaysCallThisONCEshortlyBeforeExiting();
+        report_stats();
 
 #ifdef BAREFOOT_INTERNAL
         bool barefootInternal = true;
@@ -594,27 +606,24 @@ int main(int ac, char **av) {
         return INTERNAL_COMPILER_ERROR;
     } catch (const Util::CompilerUnimplemented &e) {
         BFNContext::get().errorReporter().increment_the_error_count();
-        reportStats_alwaysCallThisONCEshortlyBeforeExiting();
+        report_stats();
 
         std::cerr << e.what() << std::endl;
         return COMPILER_ERROR;
     } catch (const Util::CompilationError &e) {
-        BFNContext::get().errorReporter().increment_the_error_count();
-        reportStats_alwaysCallThisONCEshortlyBeforeExiting();
-
         std::cerr << e.what() << std::endl;
-        return PROGRAM_ERROR;
+        return handle_return(PROGRAM_ERROR, options);
 #if BAREFOOT_INTERNAL
     } catch (const std::exception &e) {
         BFNContext::get().errorReporter().increment_the_error_count();
-        reportStats_alwaysCallThisONCEshortlyBeforeExiting();
+        report_stats();
 
         std::cerr << "Internal compiler error: " << e.what() << std::endl;
         return INTERNAL_COMPILER_ERROR;
 #endif
     } catch (...) {
         BFNContext::get().errorReporter().increment_the_error_count();
-        reportStats_alwaysCallThisONCEshortlyBeforeExiting();
+        report_stats();
 
         std::cerr << "Internal compiler error. Please submit a bug report with your code."
                   << std::endl;

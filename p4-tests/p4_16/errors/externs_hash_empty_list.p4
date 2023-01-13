@@ -19,7 +19,7 @@ control ingress(inout headers hdr, inout metadata meta,
     Hash<PortId_t>(HashAlgorithm_t.IDENTITY) hash;
 
     apply {
-        ig_intr_tm_md.ucast_egress_port = hash.get({});
+        ig_intr_tm_md.ucast_egress_port = hash.get({}); // expect error: "field list cannot be empty"
     }
 }
 

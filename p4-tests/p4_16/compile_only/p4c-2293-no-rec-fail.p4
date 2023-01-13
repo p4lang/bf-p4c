@@ -71,6 +71,9 @@ parser ig_prs(packet_in pkt,
     
     state meta_init {
         ig_md.protocol = ip_proto_t.NONE;
+#if __TARGET_TOFINO__ == 1
+        // expect error@-2:".* previously assigned in state .*"
+#endif
         
         transition prs_ethernet;
     }
@@ -91,10 +94,13 @@ parser ig_prs(packet_in pkt,
 #endif            
         }
     }
-    
+
     state prs_ipv4 {
         pkt.extract(hdr.ipv4);
         ig_md.protocol = hdr.ipv4.protocol;
+#if __TARGET_TOFINO__ == 1
+        // expect error@-2:".* is assigned in state .* but has also previous assignment"
+#endif
         
         transition accept;
     }

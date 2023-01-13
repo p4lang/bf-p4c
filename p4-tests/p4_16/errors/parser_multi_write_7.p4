@@ -38,6 +38,9 @@ parser ParserImpl(packet_in packet, out headers hdr,
         packet.extract(hdr.b);
 
         meta.m.f = 0x2;
+#if __TARGET_TOFINO__ > 1
+        // expect error@-2: ".* previously assigned in state .*"
+#endif
 
         transition select(hdr.b.f) {
             8w0xb: parse_c;
@@ -45,9 +48,14 @@ parser ParserImpl(packet_in packet, out headers hdr,
         }
     }
 
+    /* expect error@NO SOURCE: "Inconsistent parser write semantic for field ingress::meta\.m\.f in \
+parser state ingress::parse_c\." */
     state parse_c {
         packet.extract(hdr.c);
         meta.m.f = meta.m.f | 0x3;   // inconsistent semantic
+#if __TARGET_TOFINO__ > 1
+        // expect error@-2: ".* is assigned in state .* but has also previous assignment\."
+#endif
 
         transition accept;
     }

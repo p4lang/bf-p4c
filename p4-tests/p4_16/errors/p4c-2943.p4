@@ -88,6 +88,7 @@ struct metadata {
 
 struct emetadata {}
 
+// expect error@NO SOURCE: "Value used in select statement needs to be set from input packet"
 parser SkipData(packet_in pkt, out SkipHeaders hdr, in bit<8> skipLength) {
     state start {
         transition select(skipLength) {

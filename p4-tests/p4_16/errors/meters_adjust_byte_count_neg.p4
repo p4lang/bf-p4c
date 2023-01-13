@@ -88,7 +88,8 @@ control IngressP(
     Meter<bit<10>>(1024, MeterType_t.BYTES) IMeter;
 
     action update2(bit<10> idx, bit<32> abc) {
-        IMeter.execute(index = idx, adjust_byte_count = abc);
+        IMeter.execute(index = idx, adjust_byte_count = abc); /* expect error: "Adjust byte count \
+operand on primitive .* does not resolve to a constant value" */
     }
 
     table update_ingress_meter2 {

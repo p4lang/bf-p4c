@@ -104,6 +104,7 @@ parser IngressParser(
     }
 }
 
+// expect error@NO SOURCE: "Parser EgressParser: longest path through parser .* exceeds maximum parse depth"
 parser EgressParser(
     packet_in pkt,
     out headers_t hdr,

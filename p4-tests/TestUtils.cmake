@@ -87,10 +87,12 @@ function(bfn_find_tests input_files test_list exclude patterns)
   # remove the tests that match one of the regexes in BFN_EXCLUDE_PATTERNS
   foreach (f IN LISTS inputList)
     foreach (pattern IN LISTS patterns)
-      string (REGEX MATCH ${pattern} __found ${f})
-      if (NOT ${__found})
-        list (REMOVE_ITEM inputList ${f})
-        break()
+      if(NOT "${pattern}" STREQUAL "")
+        string (REGEX MATCH ${pattern} __found ${f})
+        if (NOT ${__found})
+          list (REMOVE_ITEM inputList ${f})
+          break()
+        endif()
       endif()
     endforeach()
   endforeach()
@@ -297,6 +299,43 @@ function(bfn_add_determinism_test_with_args device arch p4file test_args) # + re
     set_tests_properties("${tag}/${_relpath}" PROPERTIES TIMEOUT ${extended_timeout_2times})
 endfunction()
 
+macro(add_backend_test_and_label device toolsdevice alias p4file label test_args cmake_args)
+  bfn_add_test_with_args(${device} ${toolsdevice} ${alias} ${p4file} "${test_args}" "${cmake_args}")
+  p4c_add_test_label(${device} "${label}" ${alias})
+endmacro()
+
+# Uses DFS to find all possible combinations of compiler definitions for given test.
+function(add_test_with_compiler_definitions device toolsdevice arch alias p4file label definitions len index str)
+  if(${index} GREATER_EQUAL ${len})
+    add_backend_test_and_label(${device} ${toolsdevice} ${alias} ${p4file} "${label}"
+      "-target ${device} -arch ${arch}" "${str}")
+    return()
+  endif()
+
+  list(GET ${definitions} ${index} definition)
+  set(values ${definitions}_${definition})
+  math(EXPR next_idx "${index} + 1")
+
+  if(DEFINED ${values})
+    foreach(value ${${values}})
+      set(next_alias ${alias}_${definition}_${value})
+      set(next_str "${str} -D${definition}=${value}")
+
+      add_test_with_compiler_definitions(${device} ${toolsdevice} ${arch} ${next_alias} ${p4file} 
+        "${label}" ${definitions} ${len} ${next_idx} "${next_str}")
+    endforeach()  # value
+  else()
+    set(str_undef "${str} -U${definition}")
+    add_test_with_compiler_definitions(${device} ${toolsdevice} ${arch} ${alias} ${p4file} 
+      "${label}" ${definitions} ${len} ${next_idx} "${str_undef}")
+    
+    set(str_def "${str} -D${definition}")
+    set(next_alias ${alias}_${definition})
+    add_test_with_compiler_definitions(${device} ${toolsdevice} ${arch} ${next_alias} ${p4file} 
+      "${label}" ${definitions} ${len} ${next_idx} "${str_def}")
+  endif()
+endfunction(add_test_with_compiler_definitions)
+
 # extra test args can be passed as unamed arguments
 macro(p4c_add_bf_backend_tests device toolsdevice arch label tests)
   set (_testExtraArgs "${ARGN}")
@@ -322,9 +361,15 @@ macro(p4c_add_bf_backend_tests device toolsdevice arch label tests)
   foreach (ts "${tests}")
     file (GLOB __testfiles RELATIVE ${P4C_SOURCE_DIR} ${ts})
     foreach (__p4file ${__testfiles})
-      bfn_add_test_with_args(${device} ${toolsdevice} ${__p4file} ${__p4file}
-          "-target ${device} -arch ${arch} ${_testExtraArgs}" "")
-      p4c_add_test_label(${device} ${label} ${__p4file})
+      set(__definitions ${__p4file}_COMPILER_DEFINITIONS)
+      if(DEFINED ${__definitions})
+        list(LENGTH ${__definitions} __count)
+        add_test_with_compiler_definitions(${device} ${toolsdevice} ${arch} ${__p4file} ${__p4file} "${label}"
+          ${__definitions} ${__count} 0 "${_testExtraArgs}")
+      else()
+        add_backend_test_and_label(${device} ${toolsdevice} ${__p4file} ${__p4file} "${label}"
+        "-target ${device} -arch ${arch} ${_testExtraArgs}" "")
+      endif()
     endforeach() # __p4file
   endforeach()
 endmacro(p4c_add_bf_backend_tests)
@@ -357,3 +402,86 @@ function(bfn_add_switch_test tofver flv extra_opts extra_labels run_ptf)
         p4c_add_test_label("${tofino}" "SWITCH16_PTF" "smoketest_switch_16_${flv}")
     endif()
 endfunction()
+
+# Specify tests which verify that the compiler reports correct errors.
+# The tests will be marked to be added by the p4c_add_bf_diagnostic_tests macro.
+# This will disable compilation/packet tests for the specified programs and only test that the
+# error messages reported by the compiler match checks.
+#
+# "toolsdevice" is "tofino", "jbay", "cb", or "ftr"
+# Additional arguments are paths to the p4 programs in the source directory to add as tests.
+macro(set_negative_tests toolsdevice)
+  set(__files ${ARGN})
+  string(TOUPPER ${toolsdevice} __name)
+  set(__tests DIAGNOSTIC_TESTS_${__name})
+
+  list(APPEND ${__tests} ${__files})
+  list(REMOVE_DUPLICATES ${__tests})
+endmacro(set_negative_tests)
+
+# Add tests which verify that the compiler reports correct errors/warnings.
+#
+# Tests in the following directories are added automatically:
+# p4_16/warnings
+# p4_16/warnings/${device}
+# p4_16/errors
+# p4_16/errors/${device}
+# where ${device} is any of: tofino, jbay, cb, ftr
+#
+# Tests from other directories can be added by the set_negative_tests macro.
+macro(p4c_add_bf_diagnostic_tests device toolsdevice arch label include_patterns exclude_patterns)
+  set(__opts_errors "-error-test")
+  set(__opts_warnings "")
+
+  foreach(__type errors warnings)
+    set(__glob "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/${__type}/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/${__type}/${toolsdevice}/*.p4")
+    if(${__type} STREQUAL errors)
+      string(TOUPPER ${toolsdevice} __name)
+      list(APPEND __glob ${DIAGNOSTIC_TESTS_${__name}})
+    endif()
+    p4c_find_tests("${__glob}" __tests INCLUDE "${include_patterns}" EXCLUDE "${exclude_patterns}")
+    bfn_find_tests("${__tests}" __bfn_tests EXCLUDE "")
+    if(NOT "${__bfn_tests}" STREQUAL "")
+      p4c_add_bf_backend_tests(${device} ${toolsdevice} ${arch} "${label};diagnostic" "${__bfn_tests}" 
+        "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes ${__opts_${__type}}")
+    endif()
+  endforeach()  # __type
+endmacro(p4c_add_bf_diagnostic_tests)
+
+# Register a compiler definition to create multiple tests from a single p4 program.
+# 
+# "test" is path to the test file relative to build directory, eg. "extensions/p4_tests/p4_16/errors/p4c-4771.p4"
+# "definition" is the name of the compiler definition
+#
+# Any other arguments will be treated as possible values for the definition and the tests will 
+# declare them with -D${DEFINTION}=${VALUE}.
+# If there are no more arguments, the definition will be registered as ON/OFF and the tests will 
+# declare/undeclare it with -D${DEFINITION} and -U${DEFINITION}.
+#
+# If there are multiple definitions registered for a single program, tests will all possible combinations will be created, eg.:
+#
+# add_test_compiler_definition(${TEST} SWITCH)
+# add_test_compiler_definition(${TEST} VARIABLE 1 2 3)
+# 
+# will create tests with the following definitions:
+# - -USWITCH -DVARIABLE=1
+# - -USWITCH -DVARIABLE=2
+# - -USWITCH -DVARIABLE=3
+# - -DSWITCH -DVARIABLE=1
+# - -DSWITCH -DVARIABLE=2
+# - -DSWITCH -DVARIABLE=3
+macro(add_test_compiler_definition test definition)
+  set(__values ${ARGN})
+  list(LENGTH __values __count)
+
+  set(__definitions ${test}_COMPILER_DEFINITIONS)
+  list(APPEND ${__definitions} ${definition})
+  list(REMOVE_DUPLICATES ${__definitions})
+
+  if(${__count} GREATER 0)
+    set(__definition_values ${__definitions}_${definition})
+    list(APPEND ${__definition_values} ${__values})
+    list(REMOVE_DUPLICATES ${__definition_values})
+  endif()
+endmacro()

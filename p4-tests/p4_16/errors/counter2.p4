@@ -17,7 +17,7 @@ control ingress(inout headers hdr, inout metadata meta,
     action incr1(bit<12> idx) { ctr1.count(idx); }
     action incr2(bit<12> idx) { ctr2.count(idx); }
     action noop() {}
-    table test1 {
+    table test1 { // expect error: "There are issues with the following indirect externs:"
         actions = {
             incr1; incr2; noop;
         }

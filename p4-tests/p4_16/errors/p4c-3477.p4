@@ -63,7 +63,7 @@ control SwitchIngressDeparser(packet_out packet,
     bit<16> local_var;
 
     apply {
-        hdr.hdr1.csum = csum.update({
+        hdr.hdr1.csum = csum.update({ // expect error: "Invalid local variable entry in checksum calculation"
             local_var
         });
 

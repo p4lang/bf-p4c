@@ -56,7 +56,8 @@ parser ParserImpl(packet_in packet, out headers hdr,
         meta.m.setValid();
         checksum_1.subtract_all_and_deposit(meta.m.f);
         // invalid deposit of two checksums into the same fields
-        checksum_2.subtract_all_and_deposit(meta.m.f);
+        checksum_2.subtract_all_and_deposit(meta.m.f); /* expect error: "It is not possible to deposit \
+multiple checksum residuals into field" */
 
         transition accept;
     }

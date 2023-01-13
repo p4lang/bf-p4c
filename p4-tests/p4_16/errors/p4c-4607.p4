@@ -67,7 +67,8 @@ control SwitchIngress(
     Register<register_data_t,bit<16>>(size=32w2, initial_value={0,0}) Tower;
     RegisterAction<register_data_t, bit<16>, bit<8>>(Tower) Branch1 = {
         void apply(inout register_data_t register_data, out bit<8> result) {
-            if (register_data.data[3:0] < (bit<4>)ig_md.value) {
+            if (register_data.data[3:0] < (bit<4>)ig_md.value) { /* expect error: "slice of register \
+value in condition is not supported" */
                 register_data.data = register_data.data + 32;
                 register_data.range = (bit<8>)register_data.data[3:0];
                 result=8w0;

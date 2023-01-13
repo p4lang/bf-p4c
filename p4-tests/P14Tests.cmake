@@ -190,3 +190,25 @@ set (P14_TEST_SUITES
 
 set (V12_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/test-v12-sample.sh)
  p4c_add_tests("p14_to_16" ${V12_DRIVER} "${P14_TEST_SUITES}" "${P14_XFAIL_TESTS}")
+
+# tests which aren't supported by bf-p4c
+# =======================================
+
+p4c_add_xfail_reason("tofino"
+  "There are issues with the following indirect externs"
+  testdata/p4_14_samples/counter.p4
+)
+
+# assembler error
+p4c_add_xfail_reason("tofino"
+  "error: constant value .* too large for stateful alu"
+  extensions/p4_tests/p4_14/compile_only/mau_test_neg_test.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: .*: unsupported 64-bit select"
+  testdata/p4_14_samples/simple_nat.p4
+  testdata/p4_14_samples/copy_to_cpu.p4
+  testdata/p4_14_samples/axon.p4
+  testdata/p4_14_samples/source_routing.p4
+)
