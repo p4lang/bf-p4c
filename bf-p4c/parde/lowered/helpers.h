@@ -100,6 +100,20 @@ std::pair<IR::Vector<IR::BFN::ContainerRef>, std::vector<Clot*>> lowerFields(
 const IR::BFN::ContainerRef* lowerUnsplittableField(const PhvInfo& phv, const ClotInfo& clotInfo,
                                                     const IR::BFN::FieldLVal* fieldRef,
                                                     const char* unsplittableReason);
+
+// Deparser checksum engine exposes input entries as 16-bit.
+// PHV container entry needs a swap if the field's 2-byte alignment
+// in the container is not same as the alignment in the packet layout
+// i.e. off by 1 byte. For example, this could happen if "ipv4.ttl" is
+// allocated to a 8-bit container.
+std::map<PHV::Container, unsigned> getChecksumPhvSwap(const PhvInfo& phv,
+                                                      const IR::BFN::EmitChecksum* emitChecksum);
+
+/// Given a sequence of fields, construct a packing format describing how the
+/// fields will be laid out once they're lowered to containers.
+const safe_vector<IR::BFN::DigestField>* computeControlPlaneFormat(
+    const PhvInfo& phv, const IR::Vector<IR::BFN::FieldLVal>& fields);
+
 }  // namespace Parde::Lowered
 
 #endif /* EXTENSIONS_BF_P4C_PARDE_LOWERED_HELPERS_H_ */

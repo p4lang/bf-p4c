@@ -4,10 +4,10 @@
 
 #include <boost/range/adaptor/reversed.hpp>
 
+#include "bf-p4c/arch/bridge_metadata.h"
+
 namespace Parde::Lowered {
 
-/// @return a version of the provided state name which is safe to use in the
-/// generated assembly.
 cstring sanitizeName(StringRef name) {
     // Drop any thread-specific prefix from the name.
     if (auto prefix = name.findstr("::"))
@@ -15,8 +15,7 @@ cstring sanitizeName(StringRef name) {
     return name;
 }
 
-cstring debugInfoFor(const cstring fieldName,
-                     const PHV::AllocSlice& slice,
+cstring debugInfoFor(const cstring fieldName, const PHV::AllocSlice& slice,
                      bool includeContainerInfo) {
     std::stringstream info;
     // Describe the range of bits assigned to this field slice in the container.
@@ -165,9 +164,6 @@ const IR::BFN::ContainerBitRef* lowerSingleBit(const PhvInfo& phv,
     return bit;
 }
 
-/// Maps a sequence of fields to a sequence of PHV containers. The sequence of
-/// fields is treated as ordered and non-overlapping; the resulting container
-/// sequence is the shortest one which maintains these properties.
 std::pair<IR::Vector<IR::BFN::ContainerRef>, std::vector<Clot*>> lowerFields(
     const PhvInfo& phv, const ClotInfo& clotInfo, const IR::Vector<IR::BFN::FieldLVal>& fields,
     bool is_checksum) {
@@ -245,9 +241,6 @@ std::pair<IR::Vector<IR::BFN::ContainerRef>, std::vector<Clot*>> lowerFields(
     return {containers, clots};
 }
 
-/// Maps a field which cannot be split between multiple containers to a single
-/// container, represented as a ContainerRef. Checks that the allocation for the
-/// field is sane.
 const IR::BFN::ContainerRef* lowerUnsplittableField(const PhvInfo& phv, const ClotInfo& clotInfo,
                                                     const IR::BFN::FieldLVal* fieldRef,
                                                     const char* unsplittableReason) {
@@ -259,6 +252,128 @@ const IR::BFN::ContainerRef* lowerUnsplittableField(const PhvInfo& phv, const Cl
               "containers",
               fieldRef->field, unsplittableReason, containers.size());
     return containers.back();
+}
+
+std::map<PHV::Container, unsigned> getChecksumPhvSwap(const PhvInfo& phv,
+                                                      const IR::BFN::EmitChecksum* emitChecksum) {
+    std::map<PHV::Container, unsigned> containerToSwap;
+    for (auto source : emitChecksum->sources) {
+        auto* phv_field = phv.field(source->field->field);
+        PHV::FieldUse use(PHV::FieldUse::READ);
+        std::vector<PHV::AllocSlice> slices = phv.get_alloc(phv_field, nullptr,
+                PHV::AllocContext::DEPARSER, &use);
+        int offset = source->offset;
+        for (auto& slice : boost::adaptors::reverse(slices)) {
+            unsigned swap = 0;
+            bool isResidualChecksum = false;
+            std::string f_name(phv_field->name.c_str());
+            if (f_name.find(BFN::COMPILER_META) != std::string::npos
+             && f_name.find("residual_checksum_") != std::string::npos)
+                isResidualChecksum = true;
+            // If a field slice is on an even byte in the checksum operation field list
+            // and even byte in the container and vice-versa then swap is true
+            // Offset : offset of the field slice is offset of the field + difference between
+            // field.hi and slice.hi
+            if (!isResidualChecksum &&
+                ((offset + phv_field->size - slice.field_slice().hi -1)/8) % 2 ==
+                 (slice.container_slice().hi/8) % 2) {
+                swap = (1 << slice.container_slice().hi/16U) |
+                             (1 << slice.container_slice().lo/16U);
+            }
+            containerToSwap[slice.container()] |= swap;
+        }
+    }
+    return containerToSwap;
+}
+
+/// Given a sequence of fields, construct a packing format describing how the
+/// fields will be laid out once they're lowered to containers.
+const safe_vector<IR::BFN::DigestField>*
+computeControlPlaneFormat(const PhvInfo& phv,
+                          const IR::Vector<IR::BFN::FieldLVal>& fields) {
+    struct LastContainerInfo {
+        /// The container into which the last field was placed.
+        PHV::Container container;
+        /// The number of unused bits which remain on the LSB side of the
+        /// container after the last field was placed.
+        int remainingBitsInContainer;
+    };
+
+    boost::optional<LastContainerInfo> last = boost::make_optional(false, LastContainerInfo());
+    unsigned totalWidth = 0;
+    auto *packing = new safe_vector<IR::BFN::DigestField>();
+
+    // Walk over the field sequence in network order and construct a
+    // FieldPacking that reflects its structure, with padding added where
+    // necessary to reflect gaps between the fields.
+    for (auto* fieldRef : fields) {
+        LOG5("Computing digest packing for field : " << fieldRef);
+        PHV::FieldUse use(PHV::FieldUse::READ);
+        std::vector<PHV::AllocSlice> slices = phv.get_alloc(fieldRef->field,
+                PHV::AllocContext::DEPARSER, &use);
+
+        // padding in digest list does not need phv allocation
+        auto field = phv.field(fieldRef->field);
+        if (field->is_ignore_alloc())
+            continue;
+
+        BUG_CHECK(!slices.empty(),
+                  "Emitted field didn't receive a PHV allocation: %1%",
+                  fieldRef->field);
+
+        // Confusingly, the first slice in network order is the *last* one in
+        // `slices` because `foreach_alloc()` (and hence `get_alloc()`)
+        // enumerates the slices in increasing order of their little endian
+        // offset, which means that in terms of network order it walks the
+        // slices backwards.
+        for (std::vector<PHV::AllocSlice>::reverse_iterator slice = slices.rbegin();
+                slice != slices.rend(); slice++) {
+            const nw_bitrange sliceContainerRange = slice->container_slice()
+                        .toOrder<Endian::Network>(slice->container().size());
+
+            unsigned packStartByte = 0;
+
+            // If we switched containers (or if this is the very first field),
+            // appending padding equivalent to the bits at the end of the previous
+            // container and the beginning of the new container that aren't
+            // occupied.
+            if (last && last->container != slice->container()) {
+                totalWidth += last->remainingBitsInContainer;
+                totalWidth += sliceContainerRange.lo;
+            } else if (!last) {
+                totalWidth += sliceContainerRange.lo;
+            }
+            // The actual start byte on all packings are incremented by 1 during
+            // assembly generation to factor in the select byte
+            packStartByte = totalWidth / 8;
+            totalWidth += slice->width();
+
+            // Place the field slice in the packing format. The field name is
+            // used in assembly generation; hence, we use its external name.
+            auto packFieldName = slice->field()->externalName();
+            // The pack start bit refers to the start bit within the container
+            // in network order. This is the hi bit in byte of the container slice
+            //  e.g.
+            //  - W3(0..3)  # bit[3..0]: ingress::md.y2
+            // The start bit in this example is bit 3
+            auto packStartBit = slice->container_slice().hi % 8;
+            auto packWidth = slice->width();
+            auto packFieldStartBit = slice->field_slice().lo;
+            packing->emplace_back(packFieldName, packStartByte, packStartBit,
+                                                    packWidth, packFieldStartBit);
+            LOG5("  Packing digest field slice : " << *slice
+                    << " with startByte : " << packStartByte
+                    << ", startBit: " << packStartBit << ", width: " << packWidth
+                    << ", fields start bit (phv_offset) : " << packFieldStartBit);
+
+            // Remember information about the container placement of the last slice
+            // in network order (the first one in `slices`) so we can add any
+            // necessary padding on the next pass around the loop.
+            last = LastContainerInfo{ slice->container(), slice->container_slice().lo };
+        }
+    }
+
+    return packing;
 }
 
 }  // namespace Parde::Lowered

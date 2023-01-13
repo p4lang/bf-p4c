@@ -529,8 +529,18 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/clot/header_removal_analysis.cpp
   parde/clot/pseudoheader.cpp
   parde/clot/pragma/do_not_use_clot.cpp
+  parde/lowered/compute_buffer_requirements.cpp
+  parde/lowered/compute_init_zero_containers.cpp
+  parde/lowered/compute_lowered_deparser_ir.cpp
+  parde/lowered/compute_lowered_parser_ir.cpp
+  parde/lowered/compute_multi_write_containers.cpp
+  parde/lowered/eliminate_empty_states.cpp
+  parde/lowered/extract_simplifier.cpp
   parde/lowered/helpers.cpp
   parde/lowered/hoist_common_match_operations.cpp
+  parde/lowered/merge_lowered_parser_states.cpp
+  parde/lowered/rewrite_emit_clot.cpp
+  parde/lowered/split_greedy_parser_states.cpp
   parde/mirror/const_mirror_session_opt.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PARDE_SRCS}")
@@ -582,10 +592,19 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/clot/pragma/do_not_use_clot.h
   parde/common/allocators.h
   parde/common/match_reducer.h
+  parde/lowered/compute_buffer_requirements.h
+  parde/lowered/compute_init_zero_containers.h
+  parde/lowered/compute_lowered_deparser_ir.h
   parde/lowered/compute_lowered_parser_ir.h
+  parde/lowered/compute_multi_write_containers.h
+  parde/lowered/eliminate_empty_states.h
   parde/lowered/extract_simplifier.h
   parde/lowered/helpers.h
   parde/lowered/hoist_common_match_operations.h
+  parde/lowered/lower_flatrock.h
+  parde/lowered/merge_lowered_parser_states.h
+  parde/lowered/rewrite_emit_clot.h
+  parde/lowered/split_greedy_parser_states.h
   parde/mirror/const_mirror_session_opt.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PARDE_HDRS}")
