@@ -1100,16 +1100,44 @@ const char *PragmaSeparateGateway::help = "@pragma separate_gateway \n"
     "extend dependency chain leading to potential fitting issues.";
 
 const char *PragmaRed::name = "red";
-const char *PragmaRed::description = "To be documented";  // FIXME
-const char *PragmaRed::help = "To be documented";
+const char *PragmaRed::description =
+    "Specifies alternative encoding for 'red' color";
+const char *PragmaRed::help =
+    "@pragma red\n"
+    "+ attached to a meter.\n"
+    "\n"
+    "Specifies the encoding for 'red' color in meter. Supported values are in the range [0:255].";
 
 const char *PragmaYellow::name = "yellow";
-const char *PragmaYellow::description = "To be documented";  // FIXME
-const char *PragmaYellow::help = "";
+const char *PragmaYellow::description =
+    "Specifies alternative encoding for 'yellow' color";
+const char *PragmaYellow::help =
+    "@pragma yellow\n"
+    "+ attached to a meter.\n"
+    "\n"
+    "Specifies the encoding for 'yellow' color in meter. Supported values are in the range "
+    "[0:255].";
 
 const char *PragmaGreen::name = "green";
-const char *PragmaGreen::description = "To be documented";  // FIXME
-const char *PragmaGreen::help = "To be documented";
+const char *PragmaGreen::description =
+    "Specifies alternative encoding for 'green' color";
+const char *PragmaGreen::help =
+    "@pragma green\n"
+    "+ attached to a meter.\n"
+    "\n"
+    "Specifies the encoding for 'green' color in meter. Supported values are in the range [0:255].";
+
+const char *PragmaMeterProfile::name = "meter_profile";
+const char *PragmaMeterProfile::description =
+    "Specifies the range of rates supported by a color-based meter.";
+const char *PragmaMeterProfile::help = "@pragma meter_profile\n"
+    "+ attached to a meter.\n"
+    "\n"
+    "@meter_profile can be used to adjust the time scale of a meter that is measuring either bytes"
+    "or packets. By right-shifting the free-running 43-bit time counter, the meter_time_scale can "
+    "be set to measure rates in units of bytes/packets per 2^N clock cycles, where N can be "
+    "between 0 and 15. This allows for a lower minimum representable rate and more granular "
+    "control over the rates being measured.\n";
 
 const char *PragmaTrueEgressAccounting::name = "true_egress_accounting";
 const char *PragmaTrueEgressAccounting::description =

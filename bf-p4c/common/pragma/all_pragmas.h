@@ -95,6 +95,7 @@ DEFINE_PRAGMA_CLASS(PragmaBackwardCompatible);
 DEFINE_PRAGMA_CLASS(PragmaRed);
 DEFINE_PRAGMA_CLASS(PragmaYellow);
 DEFINE_PRAGMA_CLASS(PragmaGreen);
+DEFINE_PRAGMA_CLASS(PragmaMeterProfile);
 DEFINE_PRAGMA_CLASS(PragmaTrueEgressAccounting);
 // p4testgen
 DEFINE_PRAGMA_CLASS(PragmaHeaderChecksum);

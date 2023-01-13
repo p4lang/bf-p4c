@@ -120,9 +120,11 @@ class ParseAnnotations : public P4::ParseAnnotations {
         BFN_PARSE_EMPTY(PragmaUserAnnotation, PARSE_STRING_LITERAL_LIST, extPragma);
         BFN_PARSE(PragmaWays, PARSE, Expression, extPragma);
 
+        // Meter pragmas
         BFN_PARSE(PragmaRed, PARSE, Expression, intPragma);
         BFN_PARSE(PragmaYellow, PARSE, Expression, intPragma);
         BFN_PARSE(PragmaGreen, PARSE, Expression, intPragma);
+        BFN_PARSE(PragmaMeterProfile, PARSE, Expression, extPragma);
         BFN_PARSE_EMPTY(PragmaTrueEgressAccounting,  PARSE_EMPTY, extPragma);
 
         BFN_PARSE_EMPTY(PragmaHeaderChecksum,  PARSE_EMPTY, intPragma);
