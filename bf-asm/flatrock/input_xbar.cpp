@@ -689,10 +689,10 @@ void Flatrock::InputXbar::write_global_regs(Target::Flatrock::mau_regs &regs, gr
     auto &minput = regs.ppu_minput;
     for (auto reg : Phv::use(gress)) {
         unsigned bit = minput_byte_pwr_transpose[reg];
-        minput.minput_dpreg_pwr_erf.minput_dpreg_pwr[bit/4].data_chain0 |= 1U << (bit%4); }
+        minput.minput_dpreg_pwr_erf.minput_dpreg_pwr[bit/4] |= 1U << (bit%4); }
     // need all of bytes 0-4 to make gateways work, if if they are unusued
     for (unsigned i = 0; i < 5; ++i) {
         unsigned bit = minput_byte_pwr_transpose[i];
-        minput.minput_dpreg_pwr_erf.minput_dpreg_pwr[bit/4].data_chain0 |= 1U << (bit%4);
+        minput.minput_dpreg_pwr_erf.minput_dpreg_pwr[bit/4] |= 1U << (bit%4);
         minput.minput_byte_pwr_erf.minput_byte_pwr[bit/4].data_chain0 |= 1U << (bit%4); }
 }

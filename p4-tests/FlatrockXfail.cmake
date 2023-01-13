@@ -93,7 +93,7 @@ p4c_add_xfail_reason("tofino5"
   #"expected packet on port .* not seen"
   #"Requested byte is out of bounds"
   "BUG:.*eMac don't correctly handle PGR pkts yet!" # in model
-  extensions/p4_tests/p4_16/flatrock/mirror_simple.p4
+#  extensions/p4_tests/p4_16/flatrock/mirror_simple.p4  # see 2023-01-12 dev-env update
   )
 
 # *********************************************************************************************** #
@@ -307,18 +307,56 @@ p4c_add_xfail_reason("tofino5"
 # P4C-5084
 p4c_add_xfail_reason("tofino5"
   "mismatch from expected"
-  extensions/p4_tests/p4_16/flatrock/parser_swap_headers.p4
-  extensions/p4_tests/p4_16/flatrock/pac_shallow_branch_parser_const.p4
+#  extensions/p4_tests/p4_16/flatrock/parser_swap_headers.p4  # see 2023-01-12 dev-env update
+#  extensions/p4_tests/p4_16/flatrock/pac_shallow_branch_parser_const.p4  # see 2023-01-12 dev-env update
   )
 
 # Some conditions in egress are not correctly evaluated
 p4c_add_xfail_reason("tofino5"
   "mismatch from expected"
-  extensions/p4_tests/p4_16/flatrock/pac_shallow_branch_egress_hdrs.p4
-  extensions/p4_tests/p4_16/flatrock/pac_unbal_reconverge_egress_hdrs.p4
+#  extensions/p4_tests/p4_16/flatrock/pac_shallow_branch_egress_hdrs.p4  # see 2023-01-12 dev-env update
+#  extensions/p4_tests/p4_16/flatrock/pac_unbal_reconverge_egress_hdrs.p4  # see 2023-01-12 dev-env update
   )
 
 
 # *********************************************************************************************** #
 # ** \TNA tests that "should" work ************************************************************** #
 # *********************************************************************************************** #
+
+# 2023-01-12 dev-env update
+p4c_add_xfail_reason("tofino5"
+  "Deparser-.* bad configuration.  PBO TCAM match but header 0x[0-9a-f]* NOT present in HdrPtrs. Will drop"
+  extensions/p4_tests/p4_16/flatrock/cuckoo-lamb-default1.p4
+  extensions/p4_tests/p4_16/flatrock/direct0.p4
+  extensions/p4_tests/p4_16/flatrock/direct1.p4
+  extensions/p4_tests/p4_16/flatrock/direct_actiondata1.p4
+  extensions/p4_tests/p4_16/flatrock/exact0.p4
+  extensions/p4_tests/p4_16/flatrock/exact1.p4
+  extensions/p4_tests/p4_16/flatrock/exact3.p4
+  extensions/p4_tests/p4_16/flatrock/gateway1.p4
+  extensions/p4_tests/p4_16/flatrock/gateway1i.p4
+  extensions/p4_tests/p4_16/flatrock/gateway2.p4
+  extensions/p4_tests/p4_16/flatrock/gateway2i.p4
+  extensions/p4_tests/p4_16/flatrock/gateway3.p4
+  extensions/p4_tests/p4_16/flatrock/gateway4.p4
+  extensions/p4_tests/p4_16/flatrock/mcast_simple.p4
+  extensions/p4_tests/p4_16/flatrock/mirror_simple.p4
+  extensions/p4_tests/p4_16/flatrock/pac_shallow_branch_egress_hdrs.p4
+  extensions/p4_tests/p4_16/flatrock/pac_shallow_branch_parser_const.p4
+  extensions/p4_tests/p4_16/flatrock/pac_shallow_branch_swap_hdrs.p4
+  extensions/p4_tests/p4_16/flatrock/pac_unbal_reconverge_egress_hdrs.p4
+  extensions/p4_tests/p4_16/flatrock/pac_unbal_reconverge_swap_hdrs.p4
+  extensions/p4_tests/p4_16/flatrock/pac_wide_branch_swap_hdrs.p4
+  extensions/p4_tests/p4_16/flatrock/pac_single_hdr.p4
+  extensions/p4_tests/p4_16/flatrock/pac_trivial.p4
+  extensions/p4_tests/p4_16/flatrock/parser_constant_1.p4
+  extensions/p4_tests/p4_16/flatrock/parser_swap_headers.p4
+  extensions/p4_tests/p4_16/flatrock/passthrough.p4
+  extensions/p4_tests/p4_16/flatrock/ternary1.p4
+  extensions/p4_tests/p4_16/flatrock/ternary2.p4
+  extensions/p4_tests/p4_16/flatrock/ternary3.p4
+)
+p4c_add_xfail_reason("tofino5"
+  "Dropping packet=0x[0-9a-f]* at iTM. [(]does NOT output anywhere[)]"
+  extensions/p4_tests/p4_16/flatrock/exact4.p4
+)
