@@ -62,23 +62,24 @@ node ('compiler-travis') {
 
                 // if this is a PR, check if it is ALT-PHV related
                 if (env.BRANCH_NAME && env.BRANCH_NAME.startsWith('PR-')) {
-                    prNum = env.BRANCH_NAME.replace('PR-', '')
-                    // get the future merge commit that would merge this branch
-                    // to its source to obtain the source info
-                    mergeCommit = sh (
-                        script: "git ls-remote git@github.com:intel-restricted/networking.switching.barefoot.bf-p4c-compilers.git refs/pull/${prNum}/merge | cut -f1",
-                        returnStdout: true
-                    ).trim()
                     // check if commit resides in some ALT-PHV relate branch
                     isAltPHVBranch = sh(
                         script: 'git log -n1 --format="%D" | grep -i "alt.phv|alt.pass|table.first"',
                         returnStatus: true
                     )
+
+                    prNum = env.BRANCH_NAME.replace('PR-', '')
+                    mergeName = "merge-${prNum}-${BUILD_NUMBER}"
+
+                    // fetch the future merge commit that would merge this branch
+                    // to its source to obtain the source info
+                    sh "git fetch --no-tags git@github.com:intel-restricted/networking.switching.barefoot.bf-p4c-compilers.git refs/pull/${prNum}/merge:${mergeName}"
+
                     // check if history of this commit (from the point it
                     // diverged from source) contains mentions of alt-phv in
                     // either subject or long description of commit messages
                     isAltPHVCommit = sh(
-                        script: "git log `git log -1 ${mergeCommit} --format='%P' | sed 's/ /../'` --format='%s%n%b' | grep -i 'alt.phv\\|alt.pass\\|table.first'",
+                        script: "git log `git log -1 ${mergeName} --format='%P' | sed 's/ /../'` --format='%s%n%b' | tee /dev/stderr | grep -i 'alt.phv\\|alt.pass\\|table.first'",
                         returnStatus: true
                     )
                     IS_ALT_PHV = isAltPHVBranch == 0 || isAltPHVCommit == 0
