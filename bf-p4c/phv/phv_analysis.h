@@ -142,6 +142,7 @@ class PHV_AnalysisPass : public Logging::PassManager {
     void set_physical_liverange_overlay(bool enable) {
         settings.physical_liverange_overlay = enable;
     }
+    void set_physical_stage_trivial(bool enable) { settings.physical_stage_trivial = enable; }
     const bool& get_limit_tmp_creation() { return settings.limit_tmp_creation; }
     const PHV::Pragmas& get_pragmas() {
         return pragmas;

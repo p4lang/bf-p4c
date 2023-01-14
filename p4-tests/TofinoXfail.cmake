@@ -2163,17 +2163,9 @@ if (ENABLE_ALT_PHV_ALLOC)
 
     # Table fitting
     p4c_add_xfail_reason("tofino"
-      "error: table allocation [(]alt-phv-alloc enabled[)] failed to allocate tables within 12 stages. Allocation state: ALT_RETRY_ENHANCED_TP, stage used: 13"
-      switch_16_x1  # compile-only
-      switch_16_x2  # compile-only
-      smoketest_switch_16_x1  # PTF
-      smoketest_switch_16_x2  # PTF
-      extensions/p4_tests/p4_16/customer/arista/obfuscated-stateless_load_balance_v4v6.p4
-    )
-
-    p4c_add_xfail_reason("tofino"
       "error: table allocation [(]alt-phv-alloc enabled[)] failed to allocate tables within 12 stages. Allocation state: ALT_FINALIZE_TABLE, stage used: 13"
       extensions/p4_tests/p4_16/customer/arista/obfuscated-routescale.p4
+      extensions/p4_tests/p4_16/customer/arista/obfuscated-stateless_load_balance_v4v6.p4
     )
 endif (ENABLE_ALT_PHV_ALLOC)
 

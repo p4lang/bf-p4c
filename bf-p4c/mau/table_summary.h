@@ -100,13 +100,16 @@ struct RerunTablePlacementTrigger {
  *                     ( + resource-based)         + resource-based)
  *                            |
  *                            |
- *                            .--> FAILURE
+ *                            .--> Go back to ALT_INITIAL and use physical stage instead of
+ *                                 minstage in the smart packer. If that still end up in this
+ *                                 state after that -> FAILURE
  *
  ******************************************************************************************/
 
 class TableSummary: public MauInspector {
  public:
     static constexpr int NUM_LOGICAL_TABLES_PER_STAGE = 16;
+    static constexpr int FIRST_ALT_RETRY_ENHANCED_TP_INVOCATION = 2;
     enum state_t {
         INITIAL,
         NOCC_TRY1,
@@ -315,6 +318,7 @@ class TableSummary: public MauInspector {
     std::map<int, PlacedTable*>& getPlacedTables() { return placedTables; }
 
     cstring get_table_replay_failed_table() const { return *table_replay_failed_table; }
+    int getNumInvoked() const { return numInvoked; }
 
     // Returns a map of stage and bytes used on ixbar in that stage
     // e.g. field f1 -

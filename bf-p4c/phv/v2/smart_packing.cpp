@@ -12,10 +12,13 @@ namespace v2 {
 
 /// @returns true if stages of writes to a overlapped with @p b's writing stages.
 /// When @p n_stages is not zero, they are considered as overlapped if
-/// there is a write within @p n_stages stages of a write to the other.
+/// there is a write within @p n_stages stages of a write to the other. This behavior
+/// can be overiden if the mau argument is set to non nullptr. In this case, the container
+/// conflict evaluation will look at the last table allocation instead.
 bool IxbarFriendlyPacking::may_create_container_conflict(
     const FieldSlice& a, const FieldSlice& b, const FieldDefUse& defuse,
-    const DependencyGraph& deps, const TablesMutuallyExclusive& table_mutex, int n_stages) {
+    const DependencyGraph& deps, const TablesMutuallyExclusive& table_mutex, int n_stages,
+    const MauBacktracker* mau) {
     // TODO(yumin): change to field-slice level check when we support it in defuse.
     if (a.field() == b.field()) return false;
     for (const auto& a_def : defuse.getAllDefs(a.field()->id)) {
@@ -30,12 +33,20 @@ bool IxbarFriendlyPacking::may_create_container_conflict(
             if (deps.happens_phys_before(a_t, b_t) || deps.happens_phys_before(b_t, a_t)) continue;
             // mutex tables.
             if (table_mutex(a_t, b_t)) continue;
-            const int a_st = deps.min_stage(a_t);
-            const int b_st = deps.min_stage(b_t);
-            // won't be in a same stage.
-            if (std::abs(a_st - b_st) > n_stages) continue;
-            LOG6("possible write conflict: " <<
-                 a_t->name << "@" << a_st <<", " << b_t->name << "@" << b_st);
+            // use physical stage if available
+            if (mau != nullptr) {
+                ordered_set<int> sameStage = mau->inSameStage(a_t, b_t);
+                if (sameStage.size() == 0) continue;
+                LOG6("possible write conflict based on last table allocation: " <<
+                     a_t->name << ", " << b_t->name << "@" << *sameStage.begin());
+            } else {
+                const int a_st = deps.min_stage(a_t);
+                const int b_st = deps.min_stage(b_t);
+                // won't be in a same stage.
+                if (std::abs(a_st - b_st) > n_stages) continue;
+                LOG6("possible write conflict: " <<
+                     a_t->name << "@" << a_st <<", " << b_t->name << "@" << b_st);
+            }
             return true;
         }
     }
@@ -132,9 +143,9 @@ bool IxbarFriendlyPacking::can_pack(const std::vector<FieldSlice>& slices,
         LOG3("Found parser packing conflict: " << err->str());
         return false;
     }
-    // min-stage-based heuristics
+    // min-stage-based heuristics if mau_i == nullptr
     for (const auto& packed : slices) {
-        if (may_create_container_conflict(packed, fs, defuse_i, deps_i, table_mutex_i, 1)) {
+        if (may_create_container_conflict(packed, fs, defuse_i, deps_i, table_mutex_i, 1, mau_i)) {
             LOG3("may_create_container_conflict: " << packed << " v.s. " << fs);
             return false;
         }

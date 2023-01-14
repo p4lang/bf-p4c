@@ -406,8 +406,18 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
                 throw PHVTrigger::failure(tableAlloc, internalTableAlloc,
                                               mergedGateways, firstRoundFit);
             } else {
-                LOG1("Alt phv alloc: Failure after ALT_RETRY_ENHANCED_TP");
-                state = FAILURE;
+                // Use real physical stage for smart packer instead of minstage. This should get
+                // better packing result that can ultimately make it fit. Only going back to the
+                // initial stage once. The resource based allocation physical placement will be
+                // the one used to decide if two fields can be pack on the same container or not.
+                if (numInvoked == FIRST_ALT_RETRY_ENHANCED_TP_INVOCATION) {
+                    state = ALT_INITIAL;
+                    throw PHVTrigger::failure(tableAlloc, internalTableAlloc,
+                                              mergedGateways, firstRoundFit);
+                } else {
+                    LOG1("Alt phv alloc: Failure after ALT_RETRY_ENHANCED_TP");
+                    state = FAILURE;
+                }
             }
             break;
         }

@@ -23,6 +23,7 @@ const IR::Node* PhvAllocation::apply_visitor(const IR::Node* root_, const char *
     clusters = PhvKit::remove_clot_allocated_clusters(kit_i.clot, clusters);
     clusters = PhvKit::remove_singleton_metadata_slicelist(clusters);
 
+    const MauBacktracker* mau = kit_i.settings.physical_stage_trivial ? &kit_i.mau : nullptr;
     // apply table-layout-friendly packing on super clusters.
     auto trivial_allocator = new PHV::v2::TrivialAllocator(kit_i, phv_i, pipe_id_i);
     const auto alloc_verifier = [&](const PHV::SuperCluster* sc) {
@@ -30,7 +31,7 @@ const IR::Node* PhvAllocation::apply_visitor(const IR::Node* root_, const char *
     };
     IxbarFriendlyPacking packing(phv_i, kit_i.tb_keys, kit_i.table_mutex, kit_i.defuse, kit_i.deps,
                                  kit_i.get_has_pack_conflict(), kit_i.parser_packing_validator,
-                                 alloc_verifier);
+                                 alloc_verifier, mau);
     clusters = packing.pack(clusters);
     // clusters = get_packed_cluster_group(clusters, kit_i.table_pack_opt, alloc_verifier, phv_i);
 

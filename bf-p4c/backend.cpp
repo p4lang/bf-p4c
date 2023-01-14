@@ -313,13 +313,30 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
             new PassIf(
                 [this]() {
                     auto actualState = table_summary.getActualState();
-                    return actualState == TableSummary::ALT_INITIAL;
+                    return actualState == TableSummary::ALT_INITIAL &&
+                           table_summary.getNumInvoked() == 0;
                 },
                 {
                     [=]() {
                         PHV_Analysis->set_trivial_alloc(true);
                         PHV_Analysis->set_no_code_change(true);
                         PHV_Analysis->set_physical_liverange_overlay(false);
+                        PHV_Analysis->set_physical_stage_trivial(false);
+                    },
+                }),
+            // run trivial alloc for the second time
+            new PassIf(
+                [this]() {
+                    auto actualState = table_summary.getActualState();
+                    return actualState == TableSummary::ALT_INITIAL &&
+                           table_summary.getNumInvoked() != 0;
+                },
+                {
+                    [=]() {
+                        PHV_Analysis->set_trivial_alloc(true);
+                        PHV_Analysis->set_no_code_change(true);
+                        PHV_Analysis->set_physical_liverange_overlay(false);
+                        PHV_Analysis->set_physical_stage_trivial(true);
                     },
                 }),
             // run actual PHV allocation
@@ -336,7 +353,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
                         PHV_Analysis->set_physical_liverange_overlay(true);
                     },
                 }),
-            // ^^ two PassIf are mutex.
+            // ^^ three PassIf are mutex.
         }) : new PassManager({
             // Do PHV allocation.  Cannot run CollectPhvInfo afterwards, as that
             // will clear the allocation.

@@ -15,6 +15,7 @@ struct AllocSetting {
     bool limit_tmp_creation = false;          // true if intermediate tmp value are limited.
     bool single_gress_parser_group = false;   // true if PragmaParserGroupMonogress enabled.
     bool prioritize_ara_inits = false;        // true if PragmaPrioritizeARAinits enabled.
+    bool physical_stage_trivial = false;      // true if minstage based trivial alloc failed.
 };
 
 }  // namespace PHV

@@ -730,7 +730,7 @@ void Clustering::CollectPlaceTogetherConstraints::pack_pov_bits() {
                 // allow definition of these bits withing 1 minstage.
                 if (self.settings_i.trivial_alloc) {
                     if (PHV::v2::IxbarFriendlyPacking::may_create_container_conflict(slice1,
-                        slice2, self.defuse_i, self.deps_i, self.table_mutex_i, 1))
+                        slice2, self.defuse_i, self.deps_i, self.table_mutex_i, 1, nullptr))
                         any_pack_conflicts = true;
                 }
             }
