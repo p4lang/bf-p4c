@@ -24,19 +24,25 @@ struct DumpPipe : public Inspector {
 #endif  // BAREFOOT_INTERNAL
 };
 
+/// Used to end the compiler after a fatal error is raised. Usually, this just trows an exception
+/// \ref Util::CompilationError. In internal builds when a program contains "expect error" and all
+/// the errors are expected (including the fatal one) then this function just exits (calls
+/// std::exit(0)). This is to allow for expected errors even in builds that do not catch exceptions
+/// in \ref p4c-barefoot.cpp (internal debug builds, etc.).
+void end_fatal_error();
 
 /// Report an error with the given message and exit.
 template <typename... T>
 inline void fatal_error(const char* format, T... args) {
     ::error(format, args...);
-    throw Util::CompilationError("Compilation failed!");
+    end_fatal_error();
 }
 
 /// Report an error with the error type and given message and exit.
 template <typename... T>
 inline void fatal_error(int kind, const char* format, T... args) {
     ::error(kind, format, args...);
-    throw Util::CompilationError("Compilation failed!");
+    end_fatal_error();
 }
 
 #ifdef BAREFOOT_INTERNAL

@@ -59,7 +59,6 @@ void BfErrorReporter::emit_message(const ErrorMessage &msg) {
     ErrorReporter::emit_message(msg);
 
 #if BAREFOOT_INTERNAL
-    check_the_error_count_and_act_accordingly(*this);
     bool match = match_checks(msg);
     if (has_error_checks && msg.type == ErrorMessage::MessageType::Error && !match) {
         unexpected_errors.push_back(msg.toString());
@@ -124,6 +123,8 @@ bool BfErrorReporter::match_check(ErrorMessage::MessageType type, int line,
                                        const std::string &msg) {
     if (const auto it = checks.find(line); it != checks.end()) {
         for (auto &check : it->second) {
+            LOG5("Matching check on line " << line << ": " << check.msg
+                 << " (" << check.matched << ")");
             if (check.type == type && !check.matched) {
                 std::regex expected(check.msg);
                 if (std::regex_search(msg, expected)) {

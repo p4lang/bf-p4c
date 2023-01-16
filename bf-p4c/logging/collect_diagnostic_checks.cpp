@@ -86,7 +86,7 @@ void collect_diagnostic_checks(BfErrorReporter &reporter, BFN_Options &options) 
      * Allows for any whitespace on both side of '@' and ':', including none.
      */
     const std::regex check_regex(
-        "expect (error|warning)(\\s*@\\s*(?:[-+]?\\d+|NO SOURCE))?\\s*:\\s*\"((?:.|\\n)*)\"",
+        "expect (error|warning)(?:\\s*@\\s*([-+]?\\d+|NO SOURCE))?\\s*:\\s*\"((?:.|\\n)*)\"",
         std::regex_constants::icase);
 
     for (const auto &[line, comment] : comments) {
@@ -109,7 +109,7 @@ void collect_diagnostic_checks(BfErrorReporter &reporter, BFN_Options &options) 
                 if (to_lower(offset_match).find("no source") != std::string::npos) {
                     requires_source_location = false;
                 } else {
-                    offset = std::stoi(offset_match.str().substr(1));  // skip '@'
+                    offset = std::stoi(offset_match.str());
                 }
             }
 

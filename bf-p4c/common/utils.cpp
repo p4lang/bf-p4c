@@ -51,3 +51,15 @@ const IR::Vector<IR::Expression>* getListExprComponents(const IR::Node& node) {
 
     return components;
 }
+void end_fatal_error() {
+#if BAREFOOT_INTERNAL
+    if (auto res = BFNContext::get().errorReporter().verify_checks();
+            res ==  BfErrorReporter::CheckResult::SUCCESS) {
+        std::clog << "An expected fatal error was raised, exiting.\n";
+        std::exit(0);
+    } else if (res == BfErrorReporter::CheckResult::FAILURE) {
+        std::clog << "A diagnostic check failed in fatal error processing\n";
+    }
+#endif  /* BAREFOOT_INTERNAL */
+    throw Util::CompilationError("Compilation failed!");
+}
