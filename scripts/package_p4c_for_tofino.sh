@@ -33,6 +33,7 @@ build_p4c() {
                                 $barefoot_internal \
                                 -DENABLE_GTESTS=OFF \
                                 -DENABLE_WERROR=OFF \
+                                -DENABLE_ASSERTIONS=OFF \
                                 -DENABLE_LTO=$lto
 
     (cd $builddir ; make -j $parallel_make)

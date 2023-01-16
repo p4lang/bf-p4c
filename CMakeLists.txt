@@ -21,11 +21,18 @@ OPTION(ENABLE_WERROR "Treat build warnings as errors" ON)
 OPTION(FIXED_LIBDYNHASH "Use future version of the Dynamic hash library" OFF)
 OPTION(INSTALL_LIBDYNHASH "Install the Dynamic hash library" OFF)
 OPTION(ENABLE_ALT_PHV_ALLOC "Enable the alternative PHV allocator" OFF)
+OPTION(ENABLE_ASSERTIONS "Enable assertions" ON)
+
+# BUILD_STATIC_BFP4C_LIBS should never be used directly, see BUILD_STATIC_BFP4C_LIBS_INTERNAL below
 OPTION(BUILD_STATIC_BFP4C_LIBS OFF "Build static libs (archives) of bf-p4c components \
                               (tofinobackend, bfn_p4runtime) for external usage. If not set, the \
                               libraries are build only as object and cannot be used easily by \
                               other projects compiled alongside. Building static libraries slows \
                               down compilation.")
+
+if (CMAKE_BUILD_TYPE STREQUAL Release OR CMAKE_BUILD_TYPE STREQUAL RelWithDebInfo)
+  add_definitions("-DRELEASE_BUILD=1")
+endif()
 
 if (ENABLE_JBAY)
   add_definitions("-DHAVE_JBAY=1")
@@ -57,6 +64,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # set this explicitly for clarity, at this point, bfas uses ##__VA_ARGS__ which
 # is an extension
 set(CMAKE_CXX_EXTENSIONS ON)
+
+if (ENABLE_ASSERTIONS)
+  # NDEBUG is automatically defined on non-Debug builds by CMake.
+  # To enable assertions, we need to explicitly undefine NDEBUG.
+  if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_definitions( -UNDEBUG )
+  endif()
+endif()
 
 if (ENABLE_TESTING)
   enable_testing()

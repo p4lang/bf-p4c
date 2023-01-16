@@ -208,6 +208,7 @@ const char *value_desc(const value_t *p) {
     case tBIGINT: return "<bigint>";
     case tRANGE: snprintf(buffer, sizeof(buffer), "%d..%d", p->lo, p->hi); return buffer;
     case tMATCH: return "<pattern>";
+    case tBIGMATCH: return "<bigmatch>";
     case tSTR: return p->s;
     case tVEC: return "<list>";
     case tMAP: return "<map>";
@@ -215,7 +216,7 @@ const char *value_desc(const value_t *p) {
         if (p->vec.size > 0 && p->vec.data[0].type == tSTR)
             return p->vec.data[0].s;
         return "<cmd>"; }
-    assert(0);
+    assert(false && "unknown value type");
     return "";
 }
 
@@ -273,7 +274,7 @@ bool operator==(const struct value_t &a, const struct value_t &b) {
             if (a.map.data[i].key != b.map.data[i].key) return false;
             if (a.map.data[i].value != b.map.data[i].value) return false; }
         return true; }
-    assert(0);
+    assert(false && "unknown value type");
     return "";
 }
 #pragma GCC diagnostic pop

@@ -109,7 +109,7 @@
 #include "midend.h"
 #include "version.h"
 
-#if !defined(BAREFOOT_INTERNAL) || defined(NDEBUG)
+#if !defined(BAREFOOT_INTERNAL) || defined(RELEASE_BUILD)
 // Catch all exceptions in production or release environment
 #define BFP4C_CATCH_EXCEPTIONS 1
 #endif
