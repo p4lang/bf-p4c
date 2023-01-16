@@ -13,18 +13,24 @@ class IMemSpec {
     virtual int rows()       const = 0;  //  pure virtual
     virtual int colors()     const = 0;  //  pure virtual
     virtual int color_bits() const = 0;  //  pure virtual
+    virtual int address_bits() const = 0;
+    virtual int map_table_entries() const = 0;
 };
 
 class TofinoIMemSpec : public IMemSpec {
     int rows()       const override { return 32; };
     int colors()     const override { return  2; };
     int color_bits() const override { return  1; };
+    int address_bits() const override { return 6; }
+    int map_table_entries() const override { return 8; }
 };
 
 class FlatrockIMemSpec : public IMemSpec {
     int rows()       const override { return 8; };
     int colors()     const override { return 4; };
     int color_bits() const override { return 2; };
+    int address_bits() const override { return 5; }
+    int map_table_entries() const override { return 16; }
 };
 
 class IXBarSpec {

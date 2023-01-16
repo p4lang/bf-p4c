@@ -10,6 +10,11 @@
 #include "stage.h"
 #include "tables.h"
 
+Table::Format *MatchTable::get_format() const {
+    if (!format && gateway) return gateway->get_format();
+    return format.get();
+}
+
 Table::Format::Field *MatchTable::lookup_field(const std::string &n, const std::string &act) const {
     auto *rv = format ? format->field(n) : nullptr;
     if (!rv && gateway)

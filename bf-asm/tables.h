@@ -680,7 +680,7 @@ class Table {
         BUG(); return -1; }
     virtual bool adr_mux_select_stats() { return false; }
     virtual bool run_at_eop() { return false; }
-    virtual Format* get_format() { return format.get(); }
+    virtual Format* get_format() const { return format.get(); }
     virtual unsigned determine_shiftcount(Table::Call &call, int group, unsigned word,
            int tcam_shift) const { assert(0); return -1; }
     template<class REGS> void write_mapram_regs(REGS &regs, int row, int col, int vpn, int type);
@@ -983,6 +983,7 @@ public:
     const AttachedTables *get_attached() const override { return &attached; }
     std::vector<Call> get_calls() const override;
     AttachedTables *get_attached() override { return &attached; }
+    Format* get_format() const override;
     const GatewayTable *get_gateway() const override { return gateway; }
     const MatchTable *get_match_table() const override { return this; }
     MatchTable *get_match_table() override { return this; }
@@ -1414,7 +1415,8 @@ DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
     std::string get_default_action() override {
         std::string def_act = Table::get_default_action();
         return !def_act.empty() ? def_act : indirect ? indirect->default_action : ""; }
-    Format* get_format() override { return indirect ? indirect->format.get() : format.get(); }
+    Format* get_format() const override {
+        return indirect ? indirect->get_format() : MatchTable::get_format(); }
     template<class REGS> void write_merge_regs_vt(REGS &regs, int type, int bus) {
         attached.write_merge_regs(regs, this, type, bus); }
     FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,

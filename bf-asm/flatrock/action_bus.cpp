@@ -40,7 +40,7 @@ void Flatrock::ActionBus::write_regs(Target::Flatrock::mau_regs &regs, Table *tb
                     for (auto physid : tbl->physical_ids) {
                         mrd.rf.mrd_iad_cfg[physid].badb_start = immed_offset;
                         // FIXME -- need dconfig here
-                        mrd.rf.mrd_iad_ext[physid].ext_size[0] = tbl->format->immed_size; }
+                        mrd.rf.mrd_iad_ext[physid].ext_size[0] = tbl->get_format()->immed_size; }
                 } else if (immed_offset != el.first - bit/8U) {
                     if (immed_use.getrange(src.field->immed_bit(0), src.field->size))
                         error(lineno, "immediate field can't be in two places on actiom bus");

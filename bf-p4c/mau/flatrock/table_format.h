@@ -15,7 +15,8 @@ struct TableFormat : ::TableFormat {
     bool allocate_match_with_algorithm(int group);
     void find_bytes_to_allocate(int width_sect, safe_vector<ByteInfo> &unalloced) override;
     bool requires_versioning() const override { return false; }
-    bool requires_valid_oh() const override { return !layout_option.layout.ternary; }
+    bool requires_valid_bit() const override {
+        return !layout_option.layout.ternary && !layout_option.layout.hash_action; }
     bool analyze_layout_option() override;
     void choose_ghost_bits(safe_vector<IXBar::Use::Byte> &potential_ghost) override;
     void allocate_full_fits(int width_sect, int group) override;

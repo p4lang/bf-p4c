@@ -130,13 +130,16 @@ class MauAsmOutput : public MauInspector {
 
     virtual void emit_ways(std::ostream &out, indent_t indent, const IXBar::Use *use,
         const Memories::Use *mem) const;
+
+ public:
     virtual void emit_table_format(std::ostream &out, indent_t, const TableFormat::Use &use,
             const TableMatch *tm, bool ternary, bool no_match) const;
+
+ protected:
     virtual void emit_memory(std::ostream &out, indent_t, const Memories::Use &,
             const IR::MAU::Table::Layout *l = nullptr,
             const TableFormat::Use *f = nullptr) const = 0;
 
- protected:
     void emit_table_context_json(std::ostream &out, indent_t, const IR::MAU::Table *tbl) const;
     void emit_ternary_match(std::ostream &out, indent_t, const TableFormat::Use &use) const;
     void emit_atcam_match(std::ostream &out, indent_t, const IR::MAU::Table *tbl,

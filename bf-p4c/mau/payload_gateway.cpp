@@ -367,15 +367,16 @@ bitvec FindPayloadCandidates::determine_immediate_payload(const IR::MAU::Action 
         PayloadArguments &payload_args, const TableResourceAlloc *alloc) {
     auto &af = alloc->action_format;
     auto &alu_positions = af.alu_positions.at(act->name);
-    BUG_CHECK(act->args.size() == payload_args.size(), "Must have a payload arguments if you have "
-        "immediate arguments");
-    int param_index = 0;
+    if (act->args.size() != payload_args.size())
+        warning("using gateway payload for %s, which driver can't currently reprogram", act);
+    unsigned param_index = 0;
     bitvec payload;
     for (auto param : act->args) {
         bitvec param_value;
         ActionData::Argument ad_arg(param->name, { 0, param->type->width_bits() - 1});
-        auto constant = payload_args.at(param_index);
-        param_value = bitvec(constant->asUnsigned());
+        if (param_index < payload_args.size()) {
+            auto constant = payload_args.at(param_index);
+            param_value = bitvec(constant->asUnsigned()); }
 
         for (auto &alu_pos : alu_positions) {
             BUG_CHECK(alu_pos.loc == ActionData::IMMEDIATE, "Only can have immediate values "
@@ -523,6 +524,9 @@ bitvec FindPayloadCandidates::determine_match_group_payload(const IR::MAU::Table
                           "address");
                 current_value = determine_meter_type_payload(act, meter_alu_user);
                 break;
+            case TableFormat::VALID:
+                current_value = bitvec(1);
+                break;
             default:
                 BUG("No way that this can be a gateway payload");
         }
@@ -560,9 +564,8 @@ bitvec FindPayloadCandidates::determine_payload(const IR::MAU::Table *tbl,
             entry_idx++;
         }
         return payload;
-    } else if (!tbl->gateway_payload.empty()) {
-        BUG_CHECK(tbl->gateway_payload.size() == tf.match_groups.size(), "Not every payload is "
-                  "accounted for");
+    } else if (!tbl->gateway_payload.empty() &&
+               tbl->gateway_payload.size() == tf.match_groups.size()) {
         int entry_idx = 0;
         for (auto entry : tbl->gateway_rows) {
             if (!entry.second) continue;
@@ -586,6 +589,9 @@ bitvec FindPayloadCandidates::determine_payload(const IR::MAU::Table *tbl,
     } else if (tbl->entries_list) {
         BUG_CHECK(tbl->entries_list->entries.size() == tf.match_groups.size(), "Not every payload "
                   "is accounted for");
+    } else if (!tbl->gateway_payload.empty()) {
+        BUG_CHECK(tbl->gateway_payload.size() == tf.match_groups.size(), "Not every payload is "
+                  "accounted for");
     }
     BUG("Unreachable");
     return bitvec();

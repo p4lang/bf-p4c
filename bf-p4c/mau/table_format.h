@@ -326,7 +326,7 @@ struct TableFormat {
     virtual bool allocate_match_byte(const ByteInfo &info, safe_vector<ByteInfo> &alloced,
             int width_sect, bitvec &byte_attempt, bitvec &bit_attempt);
     virtual bool requires_versioning() const { return layout_option.layout.requires_versioning; }
-    virtual bool requires_valid_oh() const { return false; }
+    virtual bool requires_valid_bit() const { return false; }
     virtual void find_bytes_to_allocate(int width_sect, safe_vector<ByteInfo> &unalloced);
 
  protected:

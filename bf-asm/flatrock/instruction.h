@@ -57,14 +57,16 @@ struct Operand {
         int bit_offset(int) override { return 0; }
         void pass1(Table *tbl, int slot) override {
             int min, max;
+            int64_t v = value;  // compute proper sign-extened value for constant
             switch (::Phv::reg(slot)->size) {
-            case 8:  min = -128; max = 255; break;
-            case 16: min =  -16; max =  15; break;
-            case 32: min =   -8; max =   7; break;
+            case 8:  min = -128; max = 255; v = (v << 56) >> 56; break;
+            case 16: min =  -16; max =  15; v = (v << 48) >> 48; break;
+            case 32: min =   -8; max =   7; v = (v << 32) >> 32; break;
             default: BUG("invalid register size %d", ::Phv::reg(slot)->size); }
-            if (value > max || value < min)
+            if (v > max || v < min)
                 error(lineno, "Constant value %" PRId64 " out of range for PHE%d",
-                      value, ::Phv::reg(slot)->size); }
+                      value, ::Phv::reg(slot)->size);
+            value = v; }
         void dbprint(std::ostream &out) const override { out << value; }
     };
     struct Phv : Base {

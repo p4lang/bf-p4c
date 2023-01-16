@@ -646,10 +646,10 @@ bitvec TableFormat::bitvec_necessary(type_t type) const {
         int instr_select = 0;
         if (hit_actions() == 0) {
             instr_select = 0;
-        } else if (hit_actions() > 0 && hit_actions() <= IMEM_MAP_TABLE_ENTRIES) {
+        } else if (hit_actions() > 0 && hit_actions() <= Device::imemSpec().map_table_entries()) {
             instr_select = ceil_log2(hit_actions());
         } else {
-            instr_select = FULL_IMEM_ADDRESS_BITS;
+            instr_select = Device::imemSpec().address_bits();
         }
 
         // For no match miss path specifically a format is required, as a ternary indirect is how
@@ -753,7 +753,7 @@ bitvec TableFormat::bitvec_necessary(type_t type) const {
             rv.setrange(0, SelectorLengthShiftBits(sel));
         else
             BUG("Unreachable");
-    } else if ((type == VALID) && requires_valid_oh()) {
+    } else if ((type == VALID) && requires_valid_bit()) {
         // Flatrock check required as the overhead_bits_necessary() call will otherwise allocate
         // bits for valid in non flatrock backends
         rv.setrange(0, 1);  // Single valid bit

@@ -51,11 +51,10 @@ p4c_add_xfail_reason("tofino5"
 #  extensions/p4_tests/p4_16/flatrock/pac_single_hdr.p4
 #  )
 
-p4c_add_xfail_reason("tofino5"
-  "error: No format field or table named immediate"
-  extensions/p4_tests/p4_16/flatrock/pac_shallow_branch_egress_const.p4
-  extensions/p4_tests/p4_16/flatrock/pac_unbal_reconverge_egress_const.p4
-  )
+#p4c_add_xfail_reason("tofino5"
+#  "mismatch from expected"
+#  extensions/p4_tests/p4_16/flatrock/pac_wide_branch_egress_const.p4
+#  )
 
 p4c_add_xfail_reason("tofino5"
   "error: Syntax error, expecting identifier"
@@ -67,11 +66,6 @@ p4c_add_xfail_reason("tofino5"
 p4c_add_xfail_reason("tofino5"
   "error: Ran out of parser match registers"
   extensions/p4_tests/p4_16/stf/simple_l3_acl_disappearing_options.p4
-  )
-
-p4c_add_xfail_reason("tofino5"
-  "error: .* too large for operand"
-  extensions/p4_tests/p4_16/flatrock/pac_wide_branch_egress_const.p4
   )
 
 p4c_add_xfail_reason("tofino5"
@@ -163,7 +157,7 @@ p4c_add_xfail_reason("tofino5"
   )
 
 p4c_add_xfail_reason("tofino5"
-  "error: No format field or table named immediate"
+  "warning: VLIW ops in adjacent slots deprecated"
   extensions/p4_tests/p4_16/stf/p4c-4107.p4
   )
 
@@ -311,14 +305,6 @@ p4c_add_xfail_reason("tofino5"
 #  extensions/p4_tests/p4_16/flatrock/pac_shallow_branch_parser_const.p4  # see 2023-01-12 dev-env update
   )
 
-# Some conditions in egress are not correctly evaluated
-p4c_add_xfail_reason("tofino5"
-  "mismatch from expected"
-#  extensions/p4_tests/p4_16/flatrock/pac_shallow_branch_egress_hdrs.p4  # see 2023-01-12 dev-env update
-#  extensions/p4_tests/p4_16/flatrock/pac_unbal_reconverge_egress_hdrs.p4  # see 2023-01-12 dev-env update
-  )
-
-
 # *********************************************************************************************** #
 # ** \TNA tests that "should" work ************************************************************** #
 # *********************************************************************************************** #
@@ -341,11 +327,14 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/flatrock/gateway4.p4
   extensions/p4_tests/p4_16/flatrock/mcast_simple.p4
   extensions/p4_tests/p4_16/flatrock/mirror_simple.p4
+  extensions/p4_tests/p4_16/flatrock/pac_shallow_branch_egress_const.p4
   extensions/p4_tests/p4_16/flatrock/pac_shallow_branch_egress_hdrs.p4
   extensions/p4_tests/p4_16/flatrock/pac_shallow_branch_parser_const.p4
   extensions/p4_tests/p4_16/flatrock/pac_shallow_branch_swap_hdrs.p4
+  extensions/p4_tests/p4_16/flatrock/pac_unbal_reconverge_egress_const.p4
   extensions/p4_tests/p4_16/flatrock/pac_unbal_reconverge_egress_hdrs.p4
   extensions/p4_tests/p4_16/flatrock/pac_unbal_reconverge_swap_hdrs.p4
+  extensions/p4_tests/p4_16/flatrock/pac_wide_branch_egress_const.p4
   extensions/p4_tests/p4_16/flatrock/pac_wide_branch_swap_hdrs.p4
   extensions/p4_tests/p4_16/flatrock/pac_single_hdr.p4
   extensions/p4_tests/p4_16/flatrock/pac_trivial.p4

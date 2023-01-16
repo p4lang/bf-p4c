@@ -98,10 +98,12 @@ Instruction *PhvWrite::Decode::decode(Table *tbl, const Table::Actions::Action *
     if (Operand::isActionData(op[1]))
         return nullptr;
     PhvWrite *rv = alloc(tbl, act, op);
-    if (op.size == 3)
+    if (op.size == 3) {
         rv->alu_slot = rv->dest;
-    else
+    } else {
+        warning(op[0].lineno, "VLIW ops in adjacent slots deprecated");
         rv->alu_slot = Phv::Ref(tbl->gress, tbl->stage->stageno + 1, op[1]);
+    }
     if (!rv->src.valid()) {
         error(op[2].lineno, "invalid src");
         delete rv;
@@ -134,10 +136,12 @@ Instruction *BitmaskSet::Decode::decode(Table *tbl, const Table::Actions::Action
         error(op[op.size-1].lineno, "%s mask must be a constant", op[0].s);
         return nullptr; }
     auto *rv = new BitmaskSet(this, tbl, act, op[op.size-3], op[op.size-2], op[op.size-1].i);
-    if (op.size == 4)
+    if (op.size == 4) {
         rv->alu_slot = rv->dest;
-    else
+    } else {
+        warning(op[0].lineno, "VLIW ops in adjacent slots deprecated");
         rv->alu_slot = Phv::Ref(tbl->gress, tbl->stage->stageno + 1, op[1]);
+    }
     if (!rv->src.valid()) {
         error(op[2].lineno, "invalid src");
         delete rv;
@@ -175,8 +179,6 @@ Instruction *PhvWrite::pass1(Table *tbl, Table::Actions::Action *act) {
     }
     if (opc->opcode < 4 && (dest->lo != 0 || dest->hi != hi))
         error(dest.lineno, "%s can't write to slice of destination", opc->name.c_str());
-    if (k && opc->opcode != Decode::LDC && (k->value >= maxconst || k->value < -maxconst))
-        error(k->lineno, "%" PRId64 " too large for operand of %s", k->value, opc->name.c_str());
     tbl->stage->action_set[tbl->gress][dest->reg.uid] = true;
     if (opc->opcode != Decode::LDC) {
         // loadconst has different limits on the size of the constant, checked below

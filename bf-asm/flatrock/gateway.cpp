@@ -229,7 +229,7 @@ void Target::Flatrock::GatewayTable::write_regs(Target::Flatrock::mau_regs &regs
             mrd.mrd_pred_cfg.main_tables |= 1 << logical_id;
             minput.minput_mpr.main_tables |= 1 << logical_id; }
         if (always_run || pred.empty()) {
-            minput.minput_mpr.always_run = 1 << logical_id;
+            minput.minput_mpr.always_run |= 1 << logical_id;
             minput.minput_mpr_act[logical_id].activate |= physical_ids;
         } else {
             for (auto tbl : Keys(find_pred_in_stage(stage->stageno)))
