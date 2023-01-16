@@ -6,7 +6,7 @@ ENV CC "distcc gcc"
 ENV CXX "distcc g++"
 
 COPY --from=amr-registry.caas.intel.com/bxd-sw/bf-p4c-tools:bfp4c_static \
-     /usr/local/bin/p4check /p4factory/install/bin/p4check
+     /usr/local/bin/p4testgen /p4factory/install/bin/p4testgen
 
 WORKDIR /bfn/bf-p4c-compilers
 
