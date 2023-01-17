@@ -15,6 +15,11 @@ rm -rf /usr/local/lib/python3.8/site-packages/scapy*
 # Install scapy v2.4.0 for python2
 git clone --recursive -b v2.4.0 https://github.com/secdev/scapy.git
 cd scapy
+# Somehow the pkg_resources module used in scapy's install cannot handle versions like 0.23ubuntu1
+# of dist_info. I did not manage to find a way to reliably and nice replace either of these modules,
+# so just spoof the version so that pkg_resources does not fail. We don't care if this does not
+# pass, as that would suggest the version on this OS.
+sed -i 's/ubuntu/./' /usr/lib/python3/dist-packages/distro_info-*.egg-info/PKG-INFO || true
 python3 setup.py install
 cd ..
 rm -rf scapy
