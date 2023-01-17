@@ -39,7 +39,7 @@ std::istream &operator>>(std::istream &in, std::unique_ptr<obj> &json) {
             int64_t l = 0;
             while (in && (digit = digit_value(ch)) < base)  {
                 if ((INT64_MAX - digit)/base < l) {
-                    /* FIXME -- deal with overflow */ }
+                    std::cerr << "overflow detected" << std::endl; }
                 l = l * base + digit;
                 in >> ch; }
             if (in) in.unget();

@@ -70,33 +70,21 @@ endif()
 
 # json_diff
 set (JSONDIFF_SOURCES json_diff.cpp json.cpp fdstream.cpp)
-build_unified(JSONDIFF_SOURCES ALL)
-add_executable (json_diff ${JSONDIFF_SOURCES})
 
 # bfdumpbin
 set (BFDUMPBIN_SOURCES bfdumpbin.cpp fdstream.cpp json.cpp bson.cpp)
-build_unified(BFDUMPBIN_SOURCES ALL)
-add_executable (bfdumpbin ${BFDUMPBIN_SOURCES})
 
 # reflow
 set (REFLOW_SOURCES reflow.cpp)
-build_unified(REFLOW_SOURCES ALL)
-add_executable (reflow ${REFLOW_SOURCES})
 
 # b2j
 set (B2J_SOURCES b2j.cpp json.cpp bson.cpp)
-build_unified(B2J_SOURCES ALL)
-add_executable (b2j ${B2J_SOURCES})
 
 # j2b
 set (J2B_SOURCES j2b.cpp json.cpp bson.cpp)
-build_unified(J2B_SOURCES ALL)
-add_executable (j2b ${J2B_SOURCES})
 
 # mksizes
 set (MKSIZES_SOURCES mksizes.cpp)
-build_unified(MKSIZES ALL)
-add_executable (mksizes ${MKSIZES_SOURCES})
 
 set (BFAS_COMMON_SOURCES
   action_bus.cpp
@@ -199,27 +187,6 @@ set (BFAS_GEN_SOURCES
 
 BISON_TARGET (asm-parse asm-parse.ypp ${CMAKE_CURRENT_BINARY_DIR}/asm-parse.cpp VERBOSE)
 
-set (CPPLINT_FILES
-  ${JSON2CPP_SOURCES}
-  ${REFLOW_SOURCES}
-  ${MKSIZE_SOURCES}
-  ${BFAS_COMMON_SOURCES}
-  ${BFAS_TOFINO_SRCS}
-  ${BFAS_JBAY_SRCS}
-  ${BFAS_CLOUDBREAK_SRCS}
-  ${BFAS_FLATROCK_SRCS}
-  ${BFAS_UTIL_HEADERS}
-  ${BFAS_COMMON_HEADERS}
-  ${BFAS_TOFINO_HEADERS}
-  ${BFAS_JBAY_HEADERS}
-  ${BFAS_CLOUDBREAK_HEADERS}
-  ${BFAS_FLATROCK_HEADERS}
-  )
-list(REMOVE_ITEM CPPLINT_FILES vector.c)
-# FIXME -- somehow unified generated files end up in the list.  This FILTER should remove
-# them but requires cmake 3.6 or later  !?#!cmake
-#list(FILTER CPPLINT_FILES EXCLUDE REGEX /unified_)
-
 add_custom_command(OUTPUT lex-yaml.c
   COMMAND ${FLEX_EXECUTABLE} -t ${CMAKE_CURRENT_SOURCE_DIR}/lex-yaml.l > lex-yaml.c
   DEPENDS ${BFASM_SOURCE_DIR}/lex-yaml.l
@@ -266,6 +233,52 @@ set (BFAS_SOURCES ${BFAS_COMMON_SOURCES} ${BFAS_GEN_SOURCES}
   ${BFAS_CLOUDBREAK_SRCS}
   ${BFAS_FLATROCK_SRCS}
 )
+
+set (CPPLINT_FILES
+  ${JSONDIFF_SOURCES}
+  ${BFDUMPBIN_SOURCES}
+  ${REFLOW_SOURCES}
+  ${B2J_SOURCES}
+  ${J2B_SOURCES}
+  ${MKSIZE_SOURCES}
+  ${BFAS_COMMON_SOURCES}
+  ${BFAS_TOFINO_SRCS}
+  ${BFAS_JBAY_SRCS}
+  ${BFAS_CLOUDBREAK_SRCS}
+  ${BFAS_FLATROCK_SRCS}
+  ${BFAS_UTIL_HEADERS}
+  ${BFAS_COMMON_HEADERS}
+  ${BFAS_TOFINO_HEADERS}
+  ${BFAS_JBAY_HEADERS}
+  ${BFAS_CLOUDBREAK_HEADERS}
+  ${BFAS_FLATROCK_HEADERS}
+  )
+list(REMOVE_ITEM CPPLINT_FILES vector.c)
+list(REMOVE_DUPLICATES CPPLINT_FILES)
+
+# json_diff
+build_unified(JSONDIFF_SOURCES ALL)
+add_executable (json_diff ${JSONDIFF_SOURCES})
+
+# bfdumpbin
+build_unified(BFDUMPBIN_SOURCES ALL)
+add_executable (bfdumpbin ${BFDUMPBIN_SOURCES})
+
+# reflow
+build_unified(REFLOW_SOURCES ALL)
+add_executable (reflow ${REFLOW_SOURCES})
+
+# b2j
+build_unified(B2J_SOURCES ALL)
+add_executable (b2j ${B2J_SOURCES})
+
+# j2b
+build_unified(J2B_SOURCES ALL)
+add_executable (j2b ${J2B_SOURCES})
+
+# mksizes
+build_unified(MKSIZES ALL)
+add_executable (mksizes ${MKSIZES_SOURCES})
 
 build_unified(BFAS_SOURCES ${BF_ASM_UNIFIED_SOURCE_CHUNK_SIZE})
 set_source_files_properties(${BFAS_SOURCES} PROPERTIES COMPILE_FLAGS ${BFASM_CXX_FLAGS})

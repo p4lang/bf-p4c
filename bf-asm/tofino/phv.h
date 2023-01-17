@@ -1,5 +1,5 @@
-#ifndef _tofino_phv_h_
-#define _tofino_phv_h_
+#ifndef BF_ASM_TOFINO_PHV_H_
+#define BF_ASM_TOFINO_PHV_H_
 
 #include "../phv.h"
 
@@ -35,4 +35,4 @@ class Target::Tofino::Phv : public Target::Phv {
     static const bitvec tagalong_groups[8];
 };
 
-#endif /* _tofino_phv_h_ */
+#endif  /* BF_ASM_TOFINO_PHV_H_ */

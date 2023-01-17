@@ -1,6 +1,6 @@
-#include "bson.h"
 #include <iostream>
 #include <fstream>
+#include "bson.h"
 
 int main(int ac, char **av) {
     if (ac != 3) {

@@ -1,9 +1,9 @@
 #include <fstream>
-#include "fdstream.h"
 #include <iomanip>
-#include "json.h"
 #include <set>
-#include <string.h>
+#include <cstring>
+#include "fdstream.h"
+#include "json.h"
 
 static bool show_deletion = true;
 static bool show_addition = true;
@@ -76,13 +76,15 @@ const std::set<int64_t> &ignore_indexes_for_key(json::obj *key) {
     return empty;
 }
 
-std::map<json::obj *, json::map *, json::obj::ptrless> build_list_map(json::vector *v, const char *key) {
+std::map<json::obj *, json::map *, json::obj::ptrless> build_list_map(json::vector *v,
+                                                                      const char *key) {
     std::map<json::obj *, json::map *, json::obj::ptrless> rv;
     assert(key);
     for (auto &e : *v) {
         json::map *m = dynamic_cast<json::map *>(e.get());
         assert(m);
-        rv[(*m)[key].get()] = m; }
+        rv[(*m)[key].get()] = m;
+    }
     return rv;
 }
 
@@ -119,22 +121,24 @@ void do_output(json::map::iterator p, int indent, const char *prefix) {
         std::cout << "null";
 }
 
-void do_output(std::map<json::obj *, json::map *, json::obj::ptrless>::iterator p, int indent, const char *prefix) {
+void do_output(std::map<json::obj *, json::map *, json::obj::ptrless>::iterator p, int indent,
+               const char *prefix) {
     do_prefix(indent, prefix);
-    p->first->print_on(std::cout, indent, 80-indent, prefix);
+    p->first->print_on(std::cout, indent, 80 - indent, prefix);
     std::cout << ": ";
     if (p->second)
-        p->second->print_on(std::cout, indent, 80-indent, prefix);
+        p->second->print_on(std::cout, indent, 80 - indent, prefix);
     else
         std::cout << "null";
 }
 
-void do_output(std::map<json::obj *, json::obj *, json::obj::ptrless>::iterator p, int indent, const char *prefix) {
+void do_output(std::map<json::obj *, json::obj *, json::obj::ptrless>::iterator p, int indent,
+               const char *prefix) {
     do_prefix(indent, prefix);
-    p->first->print_on(std::cout, indent, 80-indent, prefix);
+    p->first->print_on(std::cout, indent, 80 - indent, prefix);
     std::cout << ": ";
     if (p->second)
-        p->second->print_on(std::cout, indent, 80-indent, prefix);
+        p->second->print_on(std::cout, indent, 80 - indent, prefix);
     else
         std::cout << "null";
 }
@@ -329,17 +333,18 @@ void sort_map_print_diff(json::map *a, json::map *b, int indent) {
             p2++;
             continue; }
         if (!ignore(p1->first) && !equiv(p1->second, p2->second, p1->first)) {
-            int width = 80-indent, copy;
+            int width = 80 - indent, copy;
             if (p1->first->test_width(width) && (copy = width) && p1->second &&
-		p1->second->test_width(width) && p2->second && p2->second->test_width(copy)
-            ) {
+                p1->second->test_width(width) && p2->second && p2->second->test_width(copy)) {
                 do_output(p1->first, indent, "-", ": ");
                 std::cout << p1->second;
                 do_output(p2->first, indent, "+", ": ");
                 std::cout << p2->second;
             } else {
                 do_output(p1->first, indent, " ", ":");
-                print_diff(p1->second, p2->second, indent, p1->first); } }
+                print_diff(p1->second, p2->second, indent, p1->first);
+            }
+        }
         p1++;
         p2++; }
     if (show_deletion) while (p1 != amap.end()) {
@@ -425,12 +430,15 @@ void print_diff(json::map *a, json::map *b, int indent) {
 
 bool equiv(json::obj *a, json::obj *b, json::obj *key) {
     if (a == b) return true;
-    //Check true for map/vector with nullptr v/s with no elements "{}"
+    // Check true for map/vector with nullptr v/s with no elements "{}"
     if (!a) {
         if (auto m = b->as_map()) {
-                if (m->empty()) return true; }
+            if (m->empty()) return true;
+        }
         if (auto v = b->as_vector()) {
-                if (v->empty()) return true; } }
+            if (v->empty()) return true;
+        }
+    }
     if (!b) {
         if (auto m = a->as_map()) {
                 if (m->empty()) return true; }
@@ -473,8 +481,10 @@ int do_diff(const char *a_name, json::obj *a, const char *b_name, json::obj *b) 
     std::cout << std::endl;
     return 1;
 }
-int do_diff(const char *a_name, std::unique_ptr<json::obj> &a, const char *b_name, std::unique_ptr<json::obj> &b) {
-    return do_diff(a_name, a.get(), b_name, b.get()); }
+int do_diff(const char *a_name, std::unique_ptr<json::obj> &a, const char *b_name,
+            std::unique_ptr<json::obj> &b) {
+    return do_diff(a_name, a.get(), b_name, b.get());
+}
 
 int main(int ac, char **av) {
     int error = 0;
@@ -492,28 +502,39 @@ int main(int ac, char **av) {
             } else if (!(std::cin >> file1) || !file1) {
                 std::cerr << "Failed reading json from stdin" << std::endl;
                 error = 2;
-            } else file1_name = "<stdin>";
+            } else
+                file1_name = "<stdin>";
         } else if (av[i][0] == '-' || av[i][0] == '+') {
             bool flag = av[i][0] == '+';
-            for (char *arg = av[i]+1; *arg;)
-                switch(*arg++) {
-                case 'a': show_addition = flag; break;
-                case 'd': show_deletion = flag; break;
-                case 'i':
-                    if (*av[++i] == '@') {
-                        std::ifstream file(av[i]+1);
-                        std::string str;
-                        if (!file) std::cerr << "Can't read " << av[i]+1 << std::endl;
-                        else while (getline(file, str))
-                            add_ignore(str.c_str());
-                    } else
-                        add_ignore(av[i]);
-                    break;
-                case 'l': list_map_keys.push_back(av[++i]); break;
-                case 's': sort_map = flag; break;
-                default:
-                    std::cerr << "Unknown option " << (flag ? '+' : '-') << arg[-1] << std::endl;
-                    error = 2; }
+            for (char *arg = av[i] + 1; *arg;) switch (*arg++) {
+                    case 'a':
+                        show_addition = flag;
+                        break;
+                    case 'd':
+                        show_deletion = flag;
+                        break;
+                    case 'i':
+                        if (*av[++i] == '@') {
+                            std::ifstream file(av[i] + 1);
+                            std::string str;
+                            if (!file)
+                                std::cerr << "Can't read " << av[i] + 1 << std::endl;
+                            else
+                                while (getline(file, str)) add_ignore(str.c_str());
+                        } else
+                            add_ignore(av[i]);
+                        break;
+                    case 'l':
+                        list_map_keys.push_back(av[++i]);
+                        break;
+                    case 's':
+                        sort_map = flag;
+                        break;
+                    default:
+                        std::cerr << "Unknown option " << (flag ? '+' : '-') << arg[-1]
+                                  << std::endl;
+                        error = 2;
+                }
         } else {
             std::istream *in = nullptr;
             if (auto ext = strrchr(av[i], '.')) {
@@ -527,11 +548,13 @@ int main(int ac, char **av) {
                     cmd = "2>/dev/null; " + cmd;  // ignore errors (Broken Pipe in particular)
                     auto *pipe = popen(cmd.c_str(), "r");
                     if (pipe) {
-                    auto *pstream = new fdstream(fileno(pipe));
-                    pstream->setclose([pipe]() { pclose(pipe); });
-                    in = pstream; } } }
-            if (!in)
-                in = new std::ifstream(av[i]);
+                        auto *pstream = new fdstream(fileno(pipe));
+                        pstream->setclose([pipe]() { pclose(pipe); });
+                        in = pstream;
+                    }
+                }
+            }
+            if (!in) in = new std::ifstream(av[i]);
             if (!in || !*in) {
                 std::cerr << "Can't open " << av[i] << " for reading" << std::endl;
                 error = 2;
@@ -545,8 +568,10 @@ int main(int ac, char **av) {
             } else if (!(*in >> file1) || !file1) {
                 std::cerr << "Failed reading json from " << av[i] << std::endl;
                 error = 2;
-            } else file1_name = av[i];
-            delete in; }
+            } else
+                file1_name = av[i];
+            delete in;
+        }
     if (error & 2)
         std::cerr << "usage: " << av[0] << " [-adi:l:] file1 file2" << std::endl;
     return error;

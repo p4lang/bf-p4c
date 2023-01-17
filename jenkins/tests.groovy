@@ -85,10 +85,15 @@ pipeline {
                                 // need to explicitly fail the stage, otherwise only the step fails,
                                 // which is not sufficiently visible in the UI.
                                 catchError(catchInterruptions: false, stageResult: 'FAILURE') {
-                                    echo 'Checking code style'
+                                    echo 'Checking bf-p4c code style'
                                     runInDocker(
                                         maxCpu: 1,
                                         "make cpplint"
+                                    )
+                                    echo 'Checking bf-asm code style'
+                                    runInDocker(
+                                        maxCpu: 1,
+                                        "make cpplint-asm"
                                     )
                                 }
                             }
