@@ -2146,11 +2146,6 @@ if (ENABLE_ALT_PHV_ALLOC)
       extensions/p4_tests/p4_16/customer/arista/obfuscated-nat.p4
     )
 
-    p4c_add_xfail_reason("tofino"
-      "bfa:[0-9]*: error: No phv record"  # assembler
-      extensions/p4_tests/p4_16/customer/arista/obfuscated-low_latency.p4
-    )
-
     # PHV fitting
     p4c_add_xfail_reason("tofino"
       "error: PHV fitting failed, [0-9]* clusters cannot be allocated."
