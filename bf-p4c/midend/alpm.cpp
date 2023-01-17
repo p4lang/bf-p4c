@@ -29,13 +29,14 @@ const IR::StatOrDecl* SplitAlpm::synth_funnel_shift_ops(
         const IR::P4Table* tbl, const IR::Expression* lpm_key, int shift_amt) {
     int lpm_key_width = lpm_key->type->width_bits();
 
+    auto* shift_amt_const = new IR::Constant(IR::Type_Bits::get(lpm_key_width, true), shift_amt);
     if (shift_amt > 32) {
         shift_amt -= 32;
         return new IR::AssignmentStatement(
                     new IR::PathExpression(IR::ID(tbl->name + "_partition_key")),
                         new IR::Shr(
                             new IR::Slice(lpm_key, lpm_key_width - 1, 32),
-                            new IR::Constant(shift_amt)));
+                            shift_amt_const));
     } else if (shift_amt == 32) {
         return new IR::AssignmentStatement(
                     new IR::PathExpression(IR::ID(tbl->name + "_partition_key")),
@@ -52,7 +53,7 @@ const IR::StatOrDecl* SplitAlpm::synth_funnel_shift_ops(
             upper = new IR::Cast(new IR::Type_Bits(32), upper);
         arguments->push_back(new IR::Argument(upper));
         arguments->push_back(new IR::Argument(new IR::Slice(lpm_key, 31, 0)));
-        arguments->push_back(new IR::Argument(new IR::Constant(shift_amt)));
+        arguments->push_back(new IR::Argument(shift_amt_const));
         return new IR::MethodCallStatement(new IR::MethodCallExpression(
                     new IR::PathExpression(new IR::Path(IR::ID("funnel_shift_right"))),
                     typeArguments, arguments));
@@ -156,7 +157,8 @@ const IR::IndexedVector<IR::Declaration>* SplitAlpm::create_preclassifer_actions
                             new IR::PathExpression(IR::ID(tbl->name + "_partition_key")),
                             new IR::Slice(
                                 new IR::Shr(lpm_key,
-                                    new IR::Constant(lpm_key->type->width_bits() -
+                                    new IR::Constant(lpm_key->type,
+                                        lpm_key->type->width_bits() -
                                         atcam_subset_width - n * shift_granularity)),
                                 atcam_subset_width-1, 0)));
             }

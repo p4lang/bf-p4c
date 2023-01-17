@@ -1667,6 +1667,7 @@ p4c_add_xfail_reason("tofino"
   # p4c update 2022-04-25
   testdata/p4_16_samples/psa-dpdk-struct-field.p4
   testdata/p4_16_samples/psa-dpdk-token-too-big.p4
+  testdata/p4_16_samples/psa-dpdk-checksum-arg-header.p4
 )
 
 # digest fields related failures or expected to fail.
