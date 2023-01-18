@@ -18,7 +18,9 @@ void ComputeBufferRequirements::postorder(IR::BFN::LoweredParserMatch* match) {
         });
 
     forAllMatching<IR::BFN::LoweredSave>(&match->saves, [&](const IR::BFN::LoweredSave* save) {
-        bytesRead = bytesRead.unionWith(save->source->byteInterval());
+        if (save->source->byteInterval().hiByte() <
+            Device::pardeSpec().byteInputBufferSize())
+            bytesRead = bytesRead.unionWith(save->source->byteInterval());
     });
 
     forAllMatching<IR::BFN::LoweredParserChecksum>(

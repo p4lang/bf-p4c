@@ -229,7 +229,10 @@ template <> int Parser::State::write_lookup_config(Target::Cloudbreak::parser_re
                           p->name.c_str(), state->name.c_str()); } }
         if (set && key.data[i].byte != MatchKey::USE_SAVED) {
             int off = key.data[i].byte + ea_row.shift_amt;
-            if (off < 0 || off >= 32) {
+            // Valid offset ranges:
+            //   0..31  : Input packet
+            //   60..63 : Scratch registers
+            if ((off < 0) || ((off > 31) && (off < 60)) || (off > 63)) {
                 error(key.lineno, "Match offset of %d in state %s out of range "
                       "for previous state %s", key.data[i].byte, name.c_str(),
                       state->name.c_str()); }
@@ -247,7 +250,10 @@ template <> int Parser::State::Match::write_load_config(Target::Cloudbreak::pars
         if (load.data[i].bit < 0) continue;
         if (load.data[i].byte != MatchKey::USE_SAVED) {
             int off = load.data[i].byte;
-            if (off < 0 || off >= 32) {
+            // Valid offset ranges:
+            //   0..31  : Input packet
+            //   60..63 : Scratch registers
+            if ((off < 0) || ((off > 31) && (off < 60)) || (off > 63)) {
                 error(load.lineno, "Load offset of %d in state %s out of range",
                       load.data[i].byte, state->name.c_str()); }
             ea_row.lookup_offset_8[i] = off;
@@ -257,10 +263,6 @@ template <> int Parser::State::Match::write_load_config(Target::Cloudbreak::pars
         ea_row.sv_lookup_8[i] = (load.save >> i) & 1;
     }
 
-    for (int i = 0; i < 4; i++) {
-        if ((load.save >> i) & 1)
-            ea_row.lookup_offset_8[i] = 60 + i;
-    }
     return max_off;
 }
 

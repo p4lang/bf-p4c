@@ -1,3 +1,5 @@
+#include <iterator>
+#include <string>
 #include <boost/range/adaptors.hpp>
 
 #include "bf-p4c/common/asm_output.h"
@@ -7,7 +9,9 @@
 #include "bf-p4c/parde/collect_parser_usedef.h"
 #include "bf-p4c/parde/dump_parser.h"
 #include "bf-p4c/parde/parser_info.h"
+#include "clot/clot.h"
 #include "device.h"
+#include "match_register.h"
 
 using namespace Parser;
 
@@ -160,13 +164,14 @@ struct AllocationResult {
 /// graph coloring algorthim where two select's interfere if their
 /// live range overlap.
 class MatcherAllocator : public Visitor {
+    const PhvInfo& phv;
     const CollectParserInfo& parser_info;
     const ParserUseDef& parser_use_def;
 
  public:
-    MatcherAllocator(const CollectParserInfo& pi,
+    MatcherAllocator(const PhvInfo& phv, const CollectParserInfo& pi,
                          const ParserUseDef& parser_use_def) :
-        parser_info(pi), parser_use_def(parser_use_def) { }
+        phv(phv), parser_info(pi), parser_use_def(parser_use_def) { }
 
  public:
     AllocationResult result;
@@ -207,16 +212,6 @@ class MatcherAllocator : public Visitor {
         get_def(const IR::BFN::ParserState* def_state) const {
             auto leader = members.front();
             return use_def.get_def(leader, def_state);
-        }
-
-        const IR::BFN::ParserState*
-        get_def_state(const IR::BFN::Transition* def_transition) const {
-            for (auto& def_set : def_transition_sets) {
-                if (def_set.count(def_transition))
-                    return def_set.at(def_transition);
-            }
-
-            return nullptr;
         }
 
         DefSet get_pred_def_set(const IR::BFN::ParserGraph& graph,
@@ -289,6 +284,7 @@ class MatcherAllocator : public Visitor {
                     for (auto& kv : def_set) {
                         std::clog << graph.get_src(kv.first)->name << " -> "
                                   << (kv.first->next ? kv.first->next->name : kv.first->loop)
+                                  << " -- def state: " << kv.second->name
                                   << std::endl;
                     }
                 }
@@ -385,6 +381,8 @@ class MatcherAllocator : public Visitor {
 
         // a's defs are subset of b's defs
         bool have_subset_defs(const Use* a, const Use* b) const {
+            if (!use_def.use_to_defs.count(a)) return false;
+            if (!use_def.use_to_defs.count(b)) return false;
             auto a_defs = use_def.use_to_defs.at(a);
             auto b_defs = use_def.use_to_defs.at(b);
 
@@ -411,7 +409,6 @@ class MatcherAllocator : public Visitor {
         }
 
         bool have_subset_defs(const UseGroup* other) const {
-            if (members.size() != other->members.size()) return false;
             return have_subset_defs(members.at(0), other->members.at(0));
         }
 
@@ -469,7 +466,6 @@ class MatcherAllocator : public Visitor {
     const IR::Node *apply_visitor(const IR::Node *root, const char *) override {
         for (auto& kv : parser_use_def)
             allocate_all(kv.first, kv.second);
-
         return root;
     }
 
@@ -657,39 +653,263 @@ class MatcherAllocator : public Visitor {
         return false;
     }
 
+    /// Checks if Defset "a" and DefSet "b" have a common transition.
+    /// Returns true if "a" and "b" have at least one transition
+    /// in common.  Returns false otherwise.
+    bool have_common_transition(const DefSet &a, const DefSet &b) {
+        for (auto &x : a) {
+            if (b.count(x.first))
+                return true;
+        }
+        return false;
+    }
+
     struct Allocation {
         std::map<const UseGroup*, std::vector<MatchRegister>> group_to_alloc_regs;
         std::map<const UseGroup*, DefSet> group_to_def_set;
+        std::map<const UseGroup*, std::map<cstring, MatchRegister>> group_to_scratch_reg_map;
     };
 
+    /// Contains the match and scratch registers available for a given UseGroup DefSet,
+    /// classified as constrained or unconstrained.
+    ///
+    /// Available "regular" match registers are never constrained, since they need to be unused
+    /// in the specified DefSet to be considered available.
+    ///
+    /// Available scratch registers can be constrained or unconstrained:
+    ///     - The constraint referred here appears when a scratch register is being
+    ///       allocated in a DefSet that already has some registers allocated by
+    ///       another UseGroup.  In that case:
+    ///         - If the same scratch register is already allocated by the other UseGroup,
+    ///           the scratch register can allocated but it has to deal with the same byte
+    ///           in the header as the scratch register in the other UseGroup.
+    ///         - If the associated "regular" match register (i.e. byte0 in the case of
+    ///           save_byte0) is allocated by the other UseGroup, the scratch register
+    ///           can also be allocated, but it has to deal with the same byte in the
+    ///           header as the associated match register in the other UseGroup.
+    ///     - A scratch register is unconstrained if it is not used by another UseGroup
+    ///       in the DefSet and its associated match register is not used either.
+    ///
+    class AvailableRegisters {
+     public:
+        std::vector<MatchRegister>  match_regs;
+        std::vector<MatchRegister>  unconstrained_scratch_regs;
+        std::vector<MatchRegister>  constrained_scratch_regs;
+
+        /// The constrained_layout vector contains the match register layout of the UseGroup
+        /// which has the most scratch register constraints with the current UseGroup DefSet.
+        /// It used when placing constrained scratch registers during allocation.
+        ///
+        /// The ranges are byte-aligned in order to include all bits actually
+        /// loaded in the registers.
+        std::vector<std::pair<MatchRegister, nw_bitrange>> constraint_layout;
+
+        unsigned get_total_size_byte() const {
+            unsigned total_reg_bytes = 0;
+            for (auto &reg : match_regs)
+                total_reg_bytes += reg.size;
+            for (auto &reg : unconstrained_scratch_regs)
+                total_reg_bytes += reg.size;
+            for (auto &reg : constrained_scratch_regs)
+                total_reg_bytes += reg.size;
+            return total_reg_bytes;
+        }
+
+        /// Adds the specified scratch registers to the AvailableRegisters object.
+        /// The scratch registers are also classified as either constrained or
+        /// unconstrained.  Information about the associated group constraints
+        /// is set up.
+        void add_scratch_regs(const Allocation& allocation,
+                              const std::vector<MatchRegister>& scratch_regs,
+                              const ordered_set<const UseGroup*>& subset_defs_groups) {
+            const UseGroup *constraint_group = nullptr;
+            int max_regs = 0;
+            for (auto& group : subset_defs_groups) {
+                int group_regs_num = allocation.group_to_alloc_regs.at(group).size();
+                if (group_regs_num > max_regs) {
+                    constraint_group = group;
+                    max_regs = group_regs_num;
+                }
+            }
+
+            if (constraint_group)
+                setup_constraint_layout(constraint_group, allocation);
+
+            for (auto& scratch : scratch_regs) {
+                bool constrained = false;
+                if (constraint_group) {
+                    for (auto& constrained_reg :
+                         allocation.group_to_alloc_regs.at(constraint_group)) {
+                        if ((scratch == constrained_reg) ||
+                            (MatcherAllocator::get_match_register(scratch) == constrained_reg)) {
+                            constrained = true;
+                            break;
+                        }
+                    }
+                }
+                if (constrained)
+                    constrained_scratch_regs.push_back(scratch);
+                else
+                    unconstrained_scratch_regs.push_back(scratch);
+            }
+        };
+
+        /// Looks for a constrained scratch register at bit_range_offset.
+        bool get_constrained_scratch_reg(int bit_range_offset, MatchRegister &reg) const {
+            for (auto &l : constraint_layout) {
+                if (l.second.contains(bit_range_offset)) {
+                    MatchRegister constraint_reg = l.first;
+
+                    cstring name;
+                    if (MatcherAllocator::is_scratch_register(constraint_reg))
+                        name = constraint_reg.name;
+                    else
+                        name = "save_" + constraint_reg.name;
+
+                    for (auto &scratch_reg : constrained_scratch_regs) {
+                        if (scratch_reg.name == name) {
+                            reg = scratch_reg;
+                            return true;
+                        }
+                    }
+
+                    return false;
+                }
+            }
+            return false;
+        }
+
+        std::string print_constraint_layout() const {
+            std::stringstream ss;
+            for (auto &l : constraint_layout)
+                ss << "    " << l.first.name << ": [" << l.second.lo << ".." << l.second.hi << "]"
+                   << std::endl;
+            return ss.str();
+        }
+
+     private:
+        void setup_constraint_layout(const UseGroup* group, const Allocation& allocation ) {
+            std::vector<const IR::BFN::ParserState*> def_states = group->get_def_states();
+            const IR::BFN::ParserState* state = def_states.at(0);  // first state as representative
+            nw_bitrange group_range = group->get_range(state);
+
+            int bit_offset = group_range.lo;
+            for (auto &reg : allocation.group_to_alloc_regs.at(group)) {
+                int reg_size_bit = reg.size * 8;
+                int reg_lo = (bit_offset/reg_size_bit) * reg_size_bit;
+                int reg_hi = reg_lo + reg_size_bit - 1;
+                bit_offset = reg_hi + 1;
+                constraint_layout.push_back(std::make_pair(reg, nw_bitrange(reg_lo, reg_hi)));
+            }
+        }
+    };
+
+    /// Match register allocation function that supports scratch registers.
+    std::vector<MatchRegister> alloc_ascend_with_scratch(const UseGroup* group,
+                                                         const AvailableRegisters avail_regs) {
+        LOG3("match register allocation with scratch");
+        std::vector<MatchRegister> allocated_regs;
+        std::vector<MatchRegister> unconstraint_regs;
+
+        // Create vector for all unconstrained registers.
+        for (auto &reg : avail_regs.match_regs)
+            unconstraint_regs.push_back(reg);
+        for (auto &reg : avail_regs.unconstrained_scratch_regs)
+            unconstraint_regs.push_back(reg);
+
+        // Get constraint group register range layout.
+        LOG3("  constraint group registers layout:" << std::endl
+             << avail_regs.print_constraint_layout());
+
+        // Get the range of the group to allocate.
+        std::vector<const IR::BFN::ParserState*> def_states = group->get_def_states();
+        const IR::BFN::ParserState* state = def_states.at(0);  // first state as representative
+        nw_bitrange group_range = group->get_range(state);
+        LOG3("  group to allocate range: [" << group_range.lo << ".." << group_range.hi << "]");
+
+        // Loop through the group range and allocate registers favoring constrained
+        // scratch registers.  If this is not possible, then allocate an unconstrained
+        // match or scratch register.
+        int bit_offset_in_range = group_range.lo;
+        std::vector<MatchRegister>::iterator unconstraint_regs_it = unconstraint_regs.begin();
+
+        while (bit_offset_in_range <= group_range.hi) {
+            MatchRegister allocated_reg;
+            MatchRegister constraint_group_reg;
+            if (avail_regs.get_constrained_scratch_reg(bit_offset_in_range, allocated_reg)) {
+                // Here, offset bit_offset_in_range falls into the constrained
+                // group register range, while the associated constrained
+                // scratch register is available.
+                LOG3("  allocated: " << allocated_reg.name << " (constrained)");
+            } else {
+                // Here, a constrained scratch register could not be allocated.
+                // Allocate the next unconstrained register.
+
+                // Make sure there are still unconstrained registers available.
+                if (unconstraint_regs_it == unconstraint_regs.end()) {
+                    LOG3("reached end of unconstrained register list");
+                    return {};
+                }
+
+                allocated_reg = *unconstraint_regs_it++;
+                LOG3("  allocated: " << allocated_reg.name);
+            }
+
+            allocated_regs.push_back(allocated_reg);
+
+            // Advance bit_offset_in_range.
+            int reg_size_bit = allocated_reg.size * 8;
+            int reg_lo = (bit_offset_in_range/reg_size_bit) * reg_size_bit;
+            int reg_hi = reg_lo + reg_size_bit - 1;
+            bit_offset_in_range = reg_hi + 1;
+        }
+
+        return allocated_regs;
+    }
+
+    /// Returns true when the specified scratch register can be used
+    /// in the specified DefSet.  Return false otherwise.
+    ///
+    /// When the returned value is true, subset_defs_groups contains
+    /// a list of groups that have Defs that are either subsets or supersets
+    /// of the ones in group.
     bool can_scratch(const UseGroup* group,
                      MatchRegister scratch,
                      const Allocation& allocation,
-                     const DefSet& def_set) {
+                     const DefSet& def_set,
+                     ordered_set<const UseGroup*>& subset_defs_groups) {
         for (auto& kv : def_set) {
             auto transition = kv.first;
 
             for (auto& gr : allocation.group_to_def_set) {
-                if (gr.second.count(transition)) {
-                    for (auto reg : allocation.group_to_alloc_regs.at(gr.first)) {
-                        if (group->have_subset_defs(gr.first) || gr.first->have_subset_defs(group))
-                            continue;
+                const UseGroup* other_group = gr.first;
+                const DefSet& other_def_set = gr.second;
+                if (other_def_set.count(transition)) {
+                    if (group->have_subset_defs(other_group) ||
+                                                  other_group->have_subset_defs(group)) {
+                        if (!subset_defs_groups.count(other_group))
+                            subset_defs_groups.push_back(other_group);
+                        continue;
+                    }
 
-                        if (reg.name == scratch.name.substr(5))
+                    for (auto reg : allocation.group_to_alloc_regs.at(other_group)) {
+                        if (reg == get_match_register(scratch)) {
                             return false;
+                        }
                     }
                 }
             }
         }
-
         return true;
     }
 
-    std::vector<MatchRegister>
+    AvailableRegisters
     get_available_regs(const IR::BFN::Parser* parser,
                        const UseGroup* group,
                        const Allocation& allocation,
-                       const DefSet& def_set) {
+                       const DefSet& def_set,
+                       bool allow_scratch_regs) {
+        AvailableRegisters avail_regs;
         auto& graph = parser_info.graph(parser);
 
         ordered_set<MatchRegister> used_regs;
@@ -705,40 +925,89 @@ class MatcherAllocator : public Visitor {
 
                 LOG3("group " << group->print() << " interferes with "
                               << they->print());
-            }
-        }
 
-        std::vector<MatchRegister> avail;
-
-        for (auto reg : Device::pardeSpec().matchRegisters()) {
-            if (!used_regs.count(reg))
-                avail.push_back(reg);
-        }
-
-        for (auto reg : Device::pardeSpec().scratchRegisters()) {
-            if (!used_regs.count(reg)) {
-                if (can_scratch(group, reg, allocation, def_set)) {
-                    avail.push_back(reg);
+                if (have_common_transition(def_set, their_defs)) {
+                    // If def_set and their_defs share a transition, if "their" uses
+                    // a scratch register, mark the associated match register as
+                    // unavailable, because both are tightly coupled and can't be
+                    // used independently.
+                    for (auto& reg : their_regs) {
+                        if (is_scratch_register(reg)) {
+                            for (auto& match_reg : Device::pardeSpec().matchRegisters()) {
+                                if (match_reg == get_match_register(reg)) {
+                                    if (!used_regs.count(match_reg)) {
+                                        LOG3("  scratch register " << reg.name
+                                             << " used in common transition, marking "
+                                             << match_reg.name << " as used.");
+                                        used_regs.insert(match_reg);
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
 
-        LOG3("available regs are:");
-        for (auto reg : avail)
-            LOG3(reg.name);
+        for (auto& reg : Device::pardeSpec().matchRegisters()) {
+            if (!used_regs.count(reg))
+                avail_regs.match_regs.push_back(reg);
+        }
 
-        return avail;
+        if (allow_scratch_regs) {
+            ordered_set<const UseGroup*> subset_defs_groups;
+            std::vector<MatchRegister> scratch_regs;
+
+            for (auto& reg : Device::pardeSpec().scratchRegisters()) {
+                if (!used_regs.count(reg)) {
+                    // If the scratch's associated match register is
+                    // available, then the scratch register can't be
+                    // considered as available also, because they are
+                    // tightly coupled.
+                    //
+                    // (Same situation as above, but from the point of view
+                    //  of the scratch register.)
+                    bool found = false;
+                    for (auto& r : avail_regs.match_regs) {
+                        if (r == get_match_register(reg)) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (found) continue;
+
+                    // Check if scratch register can be used based on
+                    // current allocation and if so, if there are
+                    // any constraints associated to it.
+                    if (can_scratch(group, reg, allocation, def_set, subset_defs_groups)) {
+                        scratch_regs.push_back(reg);
+                    }
+                }
+            }
+
+            // Store the available scratch registers in avail_regs and
+            // classify as either constrained or unconstrained.
+            avail_regs.add_scratch_regs(allocation, scratch_regs, subset_defs_groups);
+        }
+
+        LOG3("available regs are:");
+        for (auto& reg : avail_regs.match_regs)
+            LOG3(reg.name);
+        for (auto& reg : avail_regs.unconstrained_scratch_regs)
+            LOG3(reg.name);
+        for (auto& reg : avail_regs.constrained_scratch_regs)
+            LOG3(reg.name << " (constrained)");
+
+        return avail_regs;
     }
 
     /// Given a set of available registers to the group, choose a
     /// set of registers that will cover all select fields.
     std::vector<MatchRegister>
-    allocate(const UseGroup* group, std::vector<MatchRegister> avail_regs) {
+    allocate(const UseGroup* group, AvailableRegisters avail_regs) {
         auto select_bytes = group->bytes_in_group();
 
-        unsigned total_reg_bytes = 0;
-        for (auto reg : avail_regs)
-            total_reg_bytes += reg.size;
+        unsigned total_reg_bytes = avail_regs.get_total_size_byte();
 
         if (select_bytes > total_reg_bytes)  // not enough registers, bail
             return {};
@@ -747,7 +1016,7 @@ class MatcherAllocator : public Visitor {
         std::vector<MatchRegister> alloc_ascend;
         unsigned reg_bytes_ascend = 0;
 
-        for (auto reg : avail_regs) {
+        for (auto& reg : avail_regs.match_regs) {
             if (reg_bytes_ascend >= select_bytes)
                 break;
 
@@ -755,16 +1024,27 @@ class MatcherAllocator : public Visitor {
             reg_bytes_ascend += reg.size;
         }
 
-        if (Device::currentDevice() == Device::JBAY)  // all register of equal size in jbay
-            return alloc_ascend;
+        // All registers are the same size in JBAY and CLOUDBREAK so only
+        // ascending allocation needs to be performed.  If this allocation
+        // fails, these targets support scratch registers, so try the
+        // scratch-enabled allocation.
+        if ((Device::currentDevice() == Device::JBAY) ||
+            (Device::currentDevice() == Device::CLOUDBREAK)) {
+            if (reg_bytes_ascend >= select_bytes)
+                return alloc_ascend;
+            if (!avail_regs.unconstrained_scratch_regs.empty() ||
+                !avail_regs.constrained_scratch_regs.empty())
+                return alloc_ascend_with_scratch(group, avail_regs);
+            return {};
+        }
 
         // now try allocating in descending order of container size
-        std::reverse(avail_regs.begin(), avail_regs.end());
+        std::reverse(avail_regs.match_regs.begin(), avail_regs.match_regs.end());
 
         std::vector<MatchRegister> alloc_descend;
         unsigned reg_bytes_descend = 0;
 
-        for (auto reg : avail_regs) {
+        for (auto& reg : avail_regs.match_regs) {
             if (reg_bytes_descend >= select_bytes)
                 break;
 
@@ -788,6 +1068,7 @@ class MatcherAllocator : public Visitor {
         return alloc_ascend;
     }
 
+    static
     MatchRegister get_match_register(MatchRegister scratch) {
         for (auto reg : Device::pardeSpec().matchRegisters()) {
             if (reg.name == scratch.name.substr(5))
@@ -795,6 +1076,11 @@ class MatcherAllocator : public Visitor {
         }
 
         BUG("Match register does not exist for %1%", scratch);
+    }
+
+    static
+    bool is_scratch_register(const MatchRegister reg) {
+        return reg.name.startsWith("save_");
     }
 
     /// Success is not final, failure is fatal.
@@ -830,9 +1116,13 @@ class MatcherAllocator : public Visitor {
     /// Bind the allocation results to the group. Also create the
     /// match register read and write intructions which will be
     /// inserted into the IR by the subsequent InsertSaveAndSelect pass.
+    ///
+    /// Set do_not_shift to true when dealing with scratch registers that
+    /// are located at a fixed position in the input buffer.
     void bind_def(const IR::BFN::Parser* parser, const UseGroup* group,
                   const std::vector<MatchRegister>& alloc_regs,
-                  const DefSet& def_set) {
+                  const DefSet& def_set,
+                  bool do_not_shift) {
         auto& graph = parser_info.graph(parser);
 
         // def
@@ -840,16 +1130,14 @@ class MatcherAllocator : public Visitor {
             auto transition = kv.first;
 
             auto src_state = graph.get_src(transition);
-            auto def_state = group->get_def_state(transition);
+            auto def_state = kv.second;
 
             nw_byterange group_range = group->get_range(def_state).toUnit<RangeUnit::Byte>();
 
-            if (src_state != def_state) {
+            if (!do_not_shift && (src_state != def_state)) {
                 auto shift = transition->shift;
                 group_range = group_range.shiftedByBytes(shift);
             }
-
-            unsigned bytes = 0;
 
             bool partial_hdr_err_proc = false;
             const IR::BFN::ParserState *state_next = transition->next;
@@ -875,6 +1163,8 @@ class MatcherAllocator : public Visitor {
                     break;
             }
 
+            unsigned bytes = 0;
+
             for (auto reg : alloc_regs) {
                 unsigned lo = group_range.lo + bytes;
                 nw_byterange reg_range(lo, lo + reg.size - 1);
@@ -884,13 +1174,14 @@ class MatcherAllocator : public Visitor {
 
                 // The state splitter should have split the states such that the branch
                 // word is withtin current state. This is the pre-condition of this pass.
-                BUG_CHECK(reg_range.lo >= 0 &&
-                          reg_range.hi <= Device::pardeSpec().byteInputBufferSize(),
+                BUG_CHECK((reg_range.lo >= 0 &&
+                           reg_range.hi <= Device::pardeSpec().byteInputBufferSize()) ||
+                           Device::pardeSpec().byteScratchRegisterRangeValid(reg_range),
                           "branch word out of current input buffer!");
 
                 bool scratch = false;
 
-                if (reg.name.startsWith("save_")) {
+                if (is_scratch_register(reg)) {
                     reg = get_match_register(reg);
                     scratch = true;
                 }
@@ -919,10 +1210,30 @@ class MatcherAllocator : public Visitor {
     }
 
     void bind_use(const UseGroup* group,
-                  const std::vector<MatchRegister>& alloc_regs) {
+                  const std::vector<MatchRegister>& alloc_regs, const Allocation& allocation) {
         // use
-        for (auto use : group->members) {
+        for (auto& use : group->members) {
             auto reg_slices = group->calc_reg_slices_for_use(use, alloc_regs);
+
+            // Map scratch register with match register allocated by scratch groups.
+            for (auto& reg_slice : reg_slices) {
+                if (!is_scratch_register(reg_slice.first)) continue;
+
+                cstring name = reg_slice.first.name;
+
+                BUG_CHECK(allocation.group_to_scratch_reg_map.count(group),
+                          "scratch register group not found in allocation: %1%", group->print());
+
+                BUG_CHECK(allocation.group_to_scratch_reg_map.at(group).count(name),
+                          "scratch register %1% not found in allocation", name);
+
+                MatchRegister reg =
+                            allocation.group_to_scratch_reg_map.at(group).at(name);
+                reg_slice.first.name = reg.name;
+
+                LOG3("update slice: " << name << " --> " << reg.name
+                     << " [" << reg_slice.second.lo << ".." << reg_slice.second.hi << "]");
+            }
 
             if (result.save_reg_slices.count(use)) {
                 bool eq = equiv(result.save_reg_slices.at(use), reg_slices);
@@ -935,27 +1246,33 @@ class MatcherAllocator : public Visitor {
         }
     }
 
-    void bind_alloc(const IR::BFN::Parser* parser, const UseGroup* group,
-                    Allocation& allocation,
-                    const std::vector<MatchRegister>& alloc_regs,
-                    const DefSet& def_set) {
-        allocation.group_to_alloc_regs[group] = alloc_regs;
+    void bind_allocation(const IR::BFN::Parser* parser, const Allocation& allocation,
+                         const UseGroup* group,
+                         const std::vector<const UseGroup*> scratch_groups) {
+        bind_def(parser, group, allocation.group_to_alloc_regs.at(group),
+                 allocation.group_to_def_set.at(group), false);
 
-        allocation.group_to_def_set[group] = def_set;
+        bind_use(group, allocation.group_to_alloc_regs.at(group), allocation);
 
-        bind_def(parser, group, alloc_regs, def_set);
-
-        bind_use(group, alloc_regs);
-
-        if (LOGGING(1)) {
-            std::clog << "allocated { ";
-            for (auto& reg : alloc_regs) std::clog << "$" << reg.name << " ";
-            std::clog << "} to " << group->print() << std::endl;
+        for (auto &scratch_group : scratch_groups) {
+            bind_def(parser, scratch_group, allocation.group_to_alloc_regs.at(scratch_group),
+                     allocation.group_to_def_set.at(scratch_group), true);
         }
     }
 
+    /// Allocates match registers for the group specified.
+    /// Optionally allocates scratch registers and creates the
+    /// UseGroups to allow matching on them.
     bool allocate_group(const IR::BFN::Parser* parser, const UseGroup* group,
-                        Allocation& allocation) {
+                        Allocation& allocation, bool do_bind_allocation,
+                        bool allow_scratch_regs) {
+        // Run the group allocation in struct "allocation_tmp" in case scratch registers
+        // are required: scratch register allocation requires two allocations and the second
+        // allocation must take into account the updates from the first.  Structure
+        // "allocation" is updated only when both allocations are successful in order
+        // to allow to rolling back when the second allocation fails.
+        Allocation allocation_tmp = allocation;
+        std::vector<MatchRegister> scratch_regs;
         bool success = false;
 
         LOG3(">>>>>>>>>>>>>>>>");
@@ -967,22 +1284,52 @@ class MatcherAllocator : public Visitor {
         for (auto& def_set : group->def_transition_sets) {
             LOG3("try def set " << id++);
 
-            auto avail_regs = get_available_regs(parser, group, allocation, def_set);
+            auto avail_regs = get_available_regs(parser, group, allocation_tmp, def_set,
+                                                 allow_scratch_regs);
 
             auto alloc_regs = allocate(group, avail_regs);
 
             if (!alloc_regs.empty()) {
                 success = true;
-                bind_alloc(parser, group, allocation, alloc_regs, def_set);
-                LOG3("success");
+
+                allocation_tmp.group_to_alloc_regs[group] = alloc_regs;
+                allocation_tmp.group_to_def_set[group] = def_set;
+
+                // Extract scratch registers from allocated registers.
+                for (auto& reg : alloc_regs) {
+                    if (is_scratch_register(reg))
+                        scratch_regs.push_back(reg);
+                }
+
+                if (LOGGING(1)) {
+                    std::clog << "allocated { ";
+                    for (auto& reg : alloc_regs) std::clog << "$" << reg.name << " ";
+                    std::clog << "} to " << group->print() << std::endl;
+                }
                 break;
             } else {
                 LOG3("not ok");
             }
         }
 
-        LOG3("<<<<<<<<<<<<<<<<");
+        // When using scratch registers, create the UseGroup(s) necessary to load
+        // the scratch register into an actual match register before the match.
+        std::vector<const UseGroup*> scratch_groups;
+        if (success && allow_scratch_regs && scratch_regs.size()) {
+            scratch_groups = allocate_scratch_groups(parser, group, scratch_regs, allocation_tmp);
+            if (scratch_groups.empty())
+                success = false;
+        }
 
+        if (success) {
+            if (do_bind_allocation)
+                bind_allocation(parser, allocation_tmp, group, scratch_groups);
+
+            allocation = allocation_tmp;
+            LOG3("success");
+        }
+
+        LOG3("<<<<<<<<<<<<<<<<");
         return success;
     }
 
@@ -1016,6 +1363,71 @@ class MatcherAllocator : public Visitor {
         fail(top_down_unalloc);
     }
 
+    std::vector<const UseGroup*> allocate_scratch_groups(const IR::BFN::Parser* parser,
+                                            const UseGroup*group,
+                                            const std::vector<MatchRegister> &scratch_regs,
+                                            Allocation& allocation) {
+        const IR::BFN::ParserState *state = group->get_use_state();
+        std::vector<const UseGroup*> scratch_groups;
+        UseDef *use_def = new UseDef();
+        std::map<const Use *, cstring> use_to_scratch_reg;
+
+        if (LOGGING(3)) {
+            LOG3("alocating scratch group for scratch registers:");
+            for (auto& reg : scratch_regs) {
+                LOG3("  " << reg.name);
+            }
+        }
+
+        for (auto& reg : scratch_regs) {
+            nw_bitrange range = Device::pardeSpec().bitScratchRegisterRange(reg);
+            BUG_CHECK(range.size()>=8, "Unsupported scratch register.");
+
+            const IR::BFN::PacketRVal *inbuf_rval = new IR::BFN::PacketRVal(range, false);
+            const IR::BFN::PacketRVal *pkt_rval = new IR::BFN::PacketRVal(range, false);
+            const IR::BFN::SavedRVal *saved_rval = new IR::BFN::SavedRVal(pkt_rval);
+
+            const Def *def = new Def(state, inbuf_rval);
+            const Use *use = new Use(state, saved_rval);
+
+            use_to_scratch_reg[use] = reg.name;
+
+            use_def->add_def(phv, use, def);
+        }
+
+        LOG3("scratch UseDef for matching:");
+        LOG3(use_def->print());
+
+        LOG3("creating scratch group");
+        scratch_groups = coalesce_uses(parser, *use_def);
+        LOG3("---");
+
+        for (auto& scratch_group : scratch_groups) {
+            LOG3("allocating match registers for scratch group " << scratch_group->print());
+            if (!allocate_group(parser, scratch_group, allocation, false, false))
+                return {};
+
+            // Match registers allocated to handle matching of scratch register.
+            std::vector<MatchRegister> alloc_regs =
+                                            allocation.group_to_alloc_regs.at(scratch_group);
+
+            // Associate the scratch register to the match register allocated.
+            LOG3("match registers to store scratch registers for matching:");
+            int i = 0;
+            for (auto& member : scratch_group->members) {
+                BUG_CHECK(use_to_scratch_reg.count(member), "Member (use) not found.");
+
+                cstring name = use_to_scratch_reg[member];
+                MatchRegister alloc_reg = alloc_regs.at(i++);
+
+                LOG3("  " << name << " --> " << alloc_reg.name);
+                allocation.group_to_scratch_reg_map[group][name] = alloc_reg;
+            }
+        }
+
+        return scratch_groups;
+    }
+
     const UseGroup* try_allocate_all(const IR::BFN::Parser* parser,
                                      const std::vector<const UseGroup*>& coalesced_groups) {
         Allocation allocation;
@@ -1025,7 +1437,8 @@ class MatcherAllocator : public Visitor {
                 if (allocation.group_to_alloc_regs.count(group))
                     continue;
 
-                if (!allocate_group(parser, group, allocation))
+                if (!allocate_group(parser, group, allocation, true,
+                                    !Device::pardeSpec().scratchRegisters().empty()))
                     return group;
 
                 if (Device::pardeSpec().scratchRegisters().empty()) {
@@ -1033,7 +1446,7 @@ class MatcherAllocator : public Visitor {
                         if (!allocation.group_to_alloc_regs.count(other)) {
                             if (group->have_subset_defs(other) ||
                                 other->have_subset_defs(group)) {
-                                if (!allocate_group(parser, other, allocation))
+                                if (!allocate_group(parser, other, allocation, true, false))
                                     return other;
                             }
                         }
@@ -1366,7 +1779,7 @@ AllocateParserMatchRegisters::AllocateParserMatchRegisters(const PhvInfo& phv) {
     auto* parserInfo = new CollectParserInfo;
     auto* collectUseDef = new CollectParserUseDef(phv, *parserInfo);
     auto* resolveOobDefs = new ResolveOutOfBufferSaves(collectUseDef->parser_use_def);
-    auto* allocator = new MatcherAllocator(*parserInfo, collectUseDef->parser_use_def);
+    auto* allocator = new MatcherAllocator(phv, *parserInfo, collectUseDef->parser_use_def);
 
     addPasses({
         LOGGING(4) ? new DumpParser("before_parser_match_alloc") : nullptr,

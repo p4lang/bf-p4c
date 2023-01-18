@@ -1,4 +1,4 @@
-#ifndef BF_ASM_UBITS_H_
+#ifndef BF_ASM_UBITS_H_  //  NOLINT(build/header_guard)
 #define BF_ASM_UBITS_H_
 
 #include <limits.h>

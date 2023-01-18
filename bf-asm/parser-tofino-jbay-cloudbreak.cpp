@@ -1030,9 +1030,26 @@ int Parser::State::MatchKey::move_down(int loc) {
 }
 
 int Parser::State::MatchKey::add_byte(int loc, int byte, bool use_saved) {
-    if (byte <= -64 || byte >= 32) {
-        error(lineno, "Match key index out of range");
-        return -1; }
+    // FIXME: Parameter "byte" is an offset in the input packet buffer.
+    //        It seems strange to specify a negative value when checking
+    //        for the lower range (i.e. -64): when bytes are shifted
+    //        out of the input buffer, they can't be read anymore.
+    //        Should the lower range value be 0 instead?
+    if (options.target == TOFINO) {
+        if (byte <= -64 || byte >= 32) {
+            error(lineno, "Match key index out of range");
+            return -1;
+        }
+    } else {
+        // Valid offset ranges:
+        //   -63..31 : Input packet
+        //   60..63  : Scratch registers
+        if ((byte <= -64) || ((byte > 31) && (byte < 60)) || (byte > 63)) {
+            error(lineno, "Match key index out of range");
+            return -1;
+        }
+    }
+
     if (loc >= 0) {
         if ((specified >> loc) & 1)
             error(lineno, "Multiple matches in %s matcher", Parser::match_key_loc_name(loc));

@@ -1,4 +1,16 @@
+/*******************************************************************************
+ *
+ *  parser_scratch_reg_2.p4
+ *
+ *  Targets: tofino2, tofino3
+ *
+ ******************************************************************************/
+#include <core.p4>
+#if __TARGET_TOFINO__ == 3
+#include <t3na.p4>
+#else
 #include <t2na.p4>
+#endif
 
 header a_t {
     bit<8> x;
@@ -21,6 +33,10 @@ header d_t {
     bit<16> f;
 }
 
+header e_t {
+    bit<16> f;
+}
+
 struct metadata {
 }
 
@@ -29,6 +45,7 @@ struct headers {
     b_t b;
     c_t c;
     d_t d;
+    e_t e;
 }
 
 parser ParserI(packet_in b,
@@ -56,6 +73,7 @@ parser ParserI(packet_in b,
     state parse_c {
         b.extract(hdr.c);
         transition select(hdr.a.y) {
+            0xe : parse_e;
             0xd : parse_d;
             default : accept;
         }
@@ -65,6 +83,12 @@ parser ParserI(packet_in b,
         b.extract(hdr.d);
         transition accept;
     }
+
+    state parse_e {
+        b.extract(hdr.e);
+        transition accept;
+    }
+
 }
 
 control IngressP(
@@ -75,7 +99,9 @@ control IngressP(
         inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
         inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
     apply {
-        ig_intr_tm_md.ucast_egress_port = 2;
+        if (hdr.d.isValid()) {
+            ig_intr_tm_md.ucast_egress_port = 2;
+        }
     }
 }
 

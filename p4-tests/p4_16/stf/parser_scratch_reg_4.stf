@@ -1,0 +1,13 @@
+#
+#   Packet hits ethernet_parsed()
+#
+#        |fbr_bse|qos|     fabric_ig_fpga3_t     |    ig_fpga4    |                         ethernet                                           |
+expect 4 20020304 00 2800000000000000000000000000 0000000000000000 ffffffffffffffffffffffffaabb789abcde789abcde789abcde789abcde789abcde789abcde
+packet 4 20020304 00 2800000000000000000000000000 0000000000000000 ffffffffffffffffffffffffaabb789abcde789abcde789abcde789abcde789abcde789abcde
+
+#
+#   Packet hits ethernet_parsed_with_fpga3a()
+#
+#        |fbr_bse|qos|     fabric_ig_fpga3_t     |fga3a|   ig_fpga4    |                         ethernet                                           |
+expect 8 20020304 00 27c0000000000000000000000000 bb11 0000000000000000 ffffffffffffffffffffffffaabb789abcde789abcde789abcde789abcde789abcde789abcde
+packet 4 20020304 00 27c0000000000000000000000000 bb11 0000000000000000 ffffffffffffffffffffffffaabb789abcde789abcde789abcde789abcde789abcde789abcde

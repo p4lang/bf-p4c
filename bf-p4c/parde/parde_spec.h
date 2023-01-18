@@ -177,6 +177,12 @@ class PardeSpec {
     /// Specifies the available scracth registers
     virtual const std::vector<MatchRegister> scratchRegisters() const = 0;
 
+    // Region in the input buffer where the specified scratch register is located.
+    virtual const nw_bitrange bitScratchRegisterRange(const MatchRegister &reg) const = 0;
+
+    // Verifies if the provided range is a valid scratch register location.
+    virtual bool byteScratchRegisterRangeValid(nw_byterange range) const = 0;
+
     /// Total parsers supported ingress/egress
     virtual int numParsers() const = 0;
 
@@ -265,6 +271,16 @@ class TofinoPardeSpec : public PardeSpec {
         return { };
     }
 
+    const nw_bitrange bitScratchRegisterRange(const MatchRegister &reg) const override {
+        // Bug check while silencing unused variable warning.
+        BUG("Scratch registers not available in Tofino. Register: %1%", reg.name);
+        return nw_bitrange();
+    }
+
+    bool byteScratchRegisterRangeValid(nw_byterange) const override {
+        return false;
+    }
+
     int numParsers() const override { return 18; }
     int numTcamRows() const override { return 256; }
 
@@ -343,6 +359,24 @@ class JBayPardeSpec : public PardeSpec {
         }
 
         return spec;
+    }
+
+    const nw_bitrange bitScratchRegisterRange(const MatchRegister &reg) const override {
+        if (reg.name == "save_byte0")
+            return nw_bitrange(504,511);
+        else if (reg.name == "save_byte1")
+            return nw_bitrange(496,503);
+        else if (reg.name == "save_byte2")
+            return nw_bitrange(488,495);
+        else if (reg.name == "save_byte3")
+            return nw_bitrange(480,487);
+        else
+            BUG("Invalid scratch register %1%", reg.name);
+        return nw_bitrange();
+    }
+
+    bool byteScratchRegisterRangeValid(nw_byterange range) const override {
+        return (range.lo >= 60) && (range.hi <= 63);
     }
 
     // TBD
