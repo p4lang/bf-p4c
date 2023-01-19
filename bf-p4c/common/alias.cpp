@@ -107,6 +107,10 @@ IR::Node* ReplaceAllAliases::preorder(IR::Expression* expr) {
     auto destInfo = aliasMap.at(f->name);
     const PHV::Field* replacementField = phv.field(destInfo.field);
     CHECK_NULL(replacementField);
+    // If this is a HardwareConstraintField and the target doesn't exist; don't make any change.
+    if (getParent<IR::BFN::HardwareConstrainedField>() &&
+        !fieldExpressions.count(replacementField->name))
+        return expr;
     BUG_CHECK(fieldExpressions.count(replacementField->name),
             "Expression not found %1%", replacementField->name);
 

@@ -130,7 +130,6 @@ void PhvInfo::add_struct(
             bool meta = !struct_type->is<IR::Type_Header>();
             // Add fields inside nested structs and headers.
             add_struct(f_name, struct_type, gress, meta, bridged, offset);
-            continue;
         }
         // path-expression may point to an empty header, which require no phv.
         // path-expression can also point to an error field, which is invalid on Tofino
