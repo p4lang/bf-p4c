@@ -577,6 +577,12 @@ endif()
 # If you make an ALT-PHV test pass (or get close to it but if fails on later
 # error), please update the xfails accordingly.
 if (ENABLE_ALT_PHV_ALLOC)
+    # bugs
+    p4c_add_xfail_reason("tofino3"
+      "bfa:.*: error: forward_if_ethernet_parsed_0 gateway sharing search bus 4.0 with table1_0, but wants a different match group"
+      extensions/p4_tests/p4_16/stf/parser_scratch_reg_3.p4
+    )
+
     # PHV errors
     p4c_add_xfail_reason("tofino3"
         "error: invalid SuperCluster was formed:"

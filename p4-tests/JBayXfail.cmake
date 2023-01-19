@@ -504,6 +504,11 @@ if (ENABLE_ALT_PHV_ALLOC)
         extensions/p4_tests/p4_16/jbay/p4c-3288.p4
     )
 
+    p4c_add_xfail_reason("tofino2"
+      "bfa:.*: error: forward_if_ethernet_parsed_0 gateway sharing search bus 4.0 with table1_0, but wants a different match group"
+      extensions/p4_tests/p4_16/stf/parser_scratch_reg_3.p4
+    )
+
     # PHV errors
     p4c_add_xfail_reason("tofino2"
         "error: PHV fitting failed, [0-9]+ clusters cannot be allocated."

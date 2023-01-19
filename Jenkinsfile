@@ -64,26 +64,33 @@ node ('compiler-travis') {
                 if (env.BRANCH_NAME && env.BRANCH_NAME.startsWith('PR-')) {
                     // check if commit resides in some ALT-PHV relate branch
                     isAltPHVBranch = sh(
-                        script: 'git log -n1 --format="%D" | grep -i "alt.phv|alt.pass|table.first"',
+                        script: "echo ${env.CHANGE_BRANCH} | grep -i 'alt.phv\\|alt.pass\\|table.first'",
                         returnStatus: true
                     )
 
-                    prNum = env.BRANCH_NAME.replace('PR-', '')
-                    mergeName = "merge-${prNum}-${BUILD_NUMBER}"
-
-                    // fetch the future merge commit that would merge this branch
-                    // to its source to obtain the source info
-                    sh "git fetch --no-tags git@github.com:intel-restricted/networking.switching.barefoot.bf-p4c-compilers.git refs/pull/${prNum}/merge:${mergeName}"
+                    // This is somewhat contrived, but there are several problems created by Jenkins:
+                    // - the other branches are not fetched by default, but we need CHANGE_TARGET to be
+                    //   avalable so that git merge-base works
+                    // - for some reason, the branch is not actually available unless the part after : is also
+                    //   provided
+                    // - Jenkins sets url to http, but then it is unable to load private repos, so replace
+                    //   that with ssh (for which there are keys)
+                    sh "git -c url.\"git@github.com:\".insteadOf=\"https://github.com/\" fetch -n origin ${env.CHANGE_TARGET}:${env.CHANGE_TARGET}"
+                    mergeBase = sh(
+                        script: "git merge-base ${bf_p4c_compilers_rev} ${env.CHANGE_TARGET}",
+                        returnStdout: true
+                    ).trim();
+                    sh "echo 'Last common commit is:'; git log -1 ${mergeBase}"
 
                     // check if history of this commit (from the point it
                     // diverged from source) contains mentions of alt-phv in
                     // either subject or long description of commit messages
                     isAltPHVCommit = sh(
-                        script: "git log `git log -1 ${mergeName} --format='%P' | sed 's/ /../'` --format='%s%n%b' | tee /dev/stderr | grep -i 'alt.phv\\|alt.pass\\|table.first'",
+                        script: "git log ${mergeBase}..${bf_p4c_compilers_rev} --format='%s%n%b' | tee /dev/stderr | grep -iq 'alt.phv\\|alt.pass\\|table.first'",
                         returnStatus: true
                     )
                     IS_ALT_PHV = isAltPHVBranch == 0 || isAltPHVCommit == 0
-                    echo "isAltPHVCommit: ${isAltPHVCommit == 0}, isAltPHVBranch: ${isAltPHVBranch == 0}, IS_ALT_PHV: ${IS_ALT_PHV}"
+                    echo "branch ${env.CHANGE_BRANCH} [split of ${env.CHANGE_TARGET}]: isAltPHVCommit: ${isAltPHVCommit == 0}, isAltPHVBranch: ${isAltPHVBranch == 0}, IS_ALT_PHV: ${IS_ALT_PHV}"
                 } else {
                     IS_ALT_PHV = false
                 }
