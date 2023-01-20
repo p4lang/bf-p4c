@@ -94,8 +94,12 @@ class EventLoggerTest : public ::testing::Test {
         EventLogger::get2().deinit();
     }
 
-    void compareFileWithExpected(std::ifstream &file,
-                                 const std::vector<std::string> &expectedLines) {
+    void compareFileWithExpected(std::ifstream& file,
+                                 const std::vector<std::string>& expectedLines) {
+        {  // unpredicated inner scope for controlling the lifetime of the temporary
+            std::string dev_null;
+            std::getline(file, dev_null);  // throw away the first line [the one with the metadata]
+        }
         for (auto &expectedLine : expectedLines) {
             std::string actualLine;
             std::getline(file, actualLine);

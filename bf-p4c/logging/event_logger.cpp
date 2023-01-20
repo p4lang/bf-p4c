@@ -134,12 +134,31 @@ void EventLogger::nullInit() {
 }
 
 void EventLogger::init(const std::string &OUTDIR, const std::string &FILENAME) {
-    constexpr bool TRUNCATE = true;
+    // DO NOT change the following back to "true" until/unless updating our copy of
+    //   "spdlog" _and_ replacing the current implementation with one based on "handlers"
+    constexpr bool TRUNCATE_FILE_IF_IT_ALREADY_EXISTS = false;
 
-    /* NOTE: spdlog supports asynchronous loggers, but garbage collection somehow
-       frees some resources prematurely, causing it to SIGSEGV. Thus, for now, we
-       only use synchronous logger with multithread safety. */
-    auto logger = spdlog::basic_logger_mt("logger", OUTDIR + "/" + FILENAME, TRUNCATE);
+    // NOTE: spdlog supports asynchronous loggers, but garbage collection
+    //       somehow frees some resources prematurely, causing it to SIGSEGV.
+    //       Thus, for now, we only use a synchronous logger with multithreading safety.
+
+    const std::string pathname{OUTDIR + "/" + FILENAME};
+    {  // unpredicated inner scope so the stream will be destroyed when I want it to be
+        std::ofstream stream_for_writing_header(pathname, std::ofstream::trunc);
+                // "| std::ofstream::out" is implied here ^^^^^^^^^^^^^^^^^^^^
+
+        stream_for_writing_header << "{\"event_log_schema_version\": \""
+                                  << EVENT_LOG_SCHEMA_VERSION << "\", \"schema_version\": \""
+                                  << EVENT_LOG_SCHEMA_VERSION << "\"}\n";
+        // the redundant copy with the less-specific key was requested by Andrew Benjamin
+
+        stream_for_writing_header.flush();  // belt and suspenders
+        stream_for_writing_header.close();  // belt and suspenders
+    }  // end of unpredicated inner scope
+
+    auto logger = spdlog::basic_logger_mt("logger",
+                                          pathname,
+                                          TRUNCATE_FILE_IF_IT_ALREADY_EXISTS);
 
     spdlog::set_default_logger(logger);
     spdlog::set_pattern("%v");  // print just the message, no decorations
