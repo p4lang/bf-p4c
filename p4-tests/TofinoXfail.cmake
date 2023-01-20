@@ -1188,8 +1188,16 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "use of varbit field is only supported in parser and deparser currently"
   testdata/p4_16_samples/equality-bmv2.p4
-  testdata/p4_16_samples/equality-varbit-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: .*: cannot assign varbit field."
   testdata/p4_16_samples/issue447-5-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: .*: cannot assign header that contains a varbit field."
+  testdata/p4_16_samples/equality-varbit-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"

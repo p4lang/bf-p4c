@@ -7,6 +7,13 @@
 
 namespace BFN {
 
+/// Does the header type contain any varbit field?
+static bool has_varbit(const IR::Type_Header* hdr) {
+    CHECK_NULL(hdr);
+    return std::any_of(hdr->fields.begin(), hdr->fields.end(),
+                [](const IR::StructField *fld) { return fld->type->is<IR::Type_Varbits>(); });
+}
+
 /**
  * \ingroup OptimizeAndCheckVarbitAccess
  */
@@ -29,15 +36,15 @@ struct ErrorOnUnsupportedVarbitUse : public Inspector {
         return true;
     }
 
-    bool preorder(const IR::MethodCallExpression *mc) override {
+    // TODO: When we enable assignment of varbits, we need to make sure the dead emit elimination
+    // works correctly even with assignment.
+    bool preorder(const IR::MethodCallExpression* mc) override {
         if (auto mem = mc->method->to<IR::Member>();
                 mem && mem->member == IR::Type_Header::setValid) {
             auto hdr = mem->expr->type->to<IR::Type_Header>();
             BUG_CHECK(hdr, "setValid is called on non-header type %1%", mem->expr);
-            bool has_varbit = std::any_of(hdr->fields.begin(), hdr->fields.end(),
-                    [](const IR::StructField *fld) { return fld->type->is<IR::Type_Varbits>(); });
 
-            if (has_varbit) {
+            if (has_varbit(hdr)) {
                 fatal_error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
                             "%1%: cannot set header that contains a varbit field as valid. The "
                             "compiler currently does not support assigning values to varbit "
@@ -47,6 +54,25 @@ struct ErrorOnUnsupportedVarbitUse : public Inspector {
                             "Suggestion: if you need to set only non-varbit parts of the header, "
                             "please split the header.", mc);
             }
+        }
+        return true;
+    }
+
+    // TODO: When we enable assignment of varbits, we need to make sure the dead emit elimination
+    // works correctly even with assignment.
+    bool preorder(const IR::AssignmentStatement* asgn) override {
+        if (asgn->right->type->is<IR::Type_Varbits>()) {
+            fatal_error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                        "%1%: cannot assign varbit field. The compiler currently does not "
+                        "support assigning values to varbit fields.", asgn->right);
+        }
+        if (auto hdr = asgn->right->type->to<IR::Type_Header>(); hdr && has_varbit(hdr)) {
+            fatal_error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                        "%1%: cannot assign header that contains a varbit field. The "
+                        "compiler currently does not support assigning values to varbit "
+                        "fields. Therefore, a header that contains varbit cannot be assigned.\n"
+                        "Suggestion: if you need to set only non-varbit parts of the header, "
+                        "please split the header.", asgn->right);
         }
         return true;
     }
@@ -1051,6 +1077,7 @@ void RewriteVarbitUses::find_and_replace_setinvalid(const IR::AssignmentStatemen
 bool RewriteVarbitUses::preorder(IR::BlockStatement* block) {
     auto deparser = findContext<IR::BFN::TnaDeparser>();
     IR::IndexedVector<IR::StatOrDecl> components;
+    bool dirty = false;
     for (auto stmt : block->components) {
         components.push_back(stmt);
         if (deparser) {
@@ -1062,24 +1089,34 @@ bool RewriteVarbitUses::preorder(IR::BlockStatement* block) {
                         auto arg = (*mce->arguments)[0];
                         auto type = arg->expression->type->to<IR::Type_Header>();
 
-                        if (cve.header_type_to_varbit_field.count(type)) {
-                            auto varbit_field = cve.header_type_to_varbit_field.at(type);
+                        if (auto *varbit_field = get(cve.header_type_to_varbit_field, type)) {
                             auto path = arg->expression->to<IR::Member>()->expr;
                             auto instance =  arg->expression->to<IR::Member>()->member;
-                            if (varbit_hdr_instance_to_header_types.count(instance)) {
-                                for (auto& kv : varbit_hdr_instance_to_header_types.at(instance)) {
-                                    auto emit = create_emit_statement(method, kv.second, path,
-                                                       create_instance_name(kv.second->name));
-                                    components.push_back(emit);
-                                }
+                            for (auto [_, header_type] :
+                                    get(varbit_hdr_instance_to_header_types, instance)) {
+                                auto emit = create_emit_statement(method, header_type, path,
+                                                   create_instance_name(header_type->name));
+                                components.push_back(emit);
                             }
 
-                            if (varbit_field_to_post_header_type.count(varbit_field)) {
-                                auto type = varbit_field_to_post_header_type.at(varbit_field);
+                            if (auto *type = get(varbit_field_to_post_header_type, varbit_field)) {
                                 auto emit = create_emit_statement(method, type, path,
                                                    create_instance_name(type->name));
                                 components.push_back(emit);
                             }
+                        // has varbit, but we did not find any rewritten field
+                        } else if (type && has_varbit(type)) {
+                            warning(ErrorType::WARN_UNUSED,
+                                        "%1%: emitting a header %2% (type %3%) with varbit field "
+                                        "that is never parsed in %4%. The header will never be "
+                                        "emitted. Consider not emitting this header, or parse it "
+                                        "in the corresponding parser. You can also silence the"
+                                        "warning by @noWarn(\"unused\") pragma in the header "
+                                        "instance declaration.",
+                                        arg->expression, arg->expression->toString(), type,
+                                        deparser->toString());
+                            components.pop_back();
+                            dirty = true;
                         }
                     }
                 }
@@ -1091,7 +1128,7 @@ bool RewriteVarbitUses::preorder(IR::BlockStatement* block) {
             }
         }
     }
-    if (components.size())
+    if (components.size() || dirty)
         block->components = components;
 
     return true;
@@ -1448,11 +1485,8 @@ bool RewriteVarbitTypes::preorder(IR::Type_Header* header) {
 }
 
 
-OptimizeAndCheckVarbitAccess::OptimizeAndCheckVarbitAccess(P4::ReferenceMap* refMap,
-    P4::TypeMap* typeMap) {
+CheckVarbitAccess::CheckVarbitAccess() {
     addPasses({
-        new P4::ClearTypeMap(typeMap),
-        new BFN::TypeChecking(refMap, typeMap, true),
         new ErrorOnUnsupportedVarbitUse
     });
 }

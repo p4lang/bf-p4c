@@ -566,6 +566,7 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/ptf/various_indirect_meters.p4
   extensions/p4_tests/p4_16/ptf/verify_checksum.p4
 )
+
 if (NOT ENABLE_ALT_PHV_ALLOC)
     p4c_add_xfail_reason("tofino3"
       "\"grpc_message\":\"Error in second phase of device update\""

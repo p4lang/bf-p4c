@@ -115,16 +115,14 @@ class AnnotateVarbitExtractStates : public Transform {
 };
 
 /**
- * Checks that varbit accesses in pipeline are valid and optimizes them. In particular, this
+ * Checks that varbit accesses in pipeline are valid. In particular, this
  * checks that there are no unsupported varbit accesses (basically anything except for extract and
  * emit currently).
- * Furthermore, it eliminates emits of unused headers with varbit extracts -- i.e. emits of
- * headers that are never extracted.
  * This should run rather early in midend.
  */
-class OptimizeAndCheckVarbitAccess : public PassManager {
+class CheckVarbitAccess : public PassManager {
  public:
-    explicit OptimizeAndCheckVarbitAccess(P4::ReferenceMap* refMap, P4::TypeMap* typeMap);
+    CheckVarbitAccess();
 };
 
 /**

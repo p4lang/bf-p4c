@@ -373,6 +373,8 @@ MidEnd::MidEnd(BFN_Options& options) {
         new BFN::ElimCasts(&refMap, &typeMap),
         new BFN::AlpmImplementation(&refMap, &typeMap),
         new BFN::TypeChecking(&refMap, &typeMap, true),
+        // has to be early enough for setValid to still not be lowered
+        new BFN::CheckVarbitAccess(),
         new P4::StrengthReduction(&refMap, &typeMap, typeChecking),
         new P4::SimplifySelectCases(&refMap, &typeMap, true, typeChecking),  // constant keysets
         new P4::ExpandLookahead(&refMap, &typeMap, typeChecking),
@@ -384,8 +386,6 @@ MidEnd::MidEnd(BFN_Options& options) {
         // Therefore we use our own
         new BFN::EliminateTuples(&refMap, &typeMap, typeChecking, typeInference),
         new P4::SimplifyComparisons(&refMap, &typeMap, typeChecking),
-        // has to be early enough for setValid to still not be lowered
-        new BFN::OptimizeAndCheckVarbitAccess(&refMap, &typeMap),
         new BFN::CopyHeaders(&refMap, &typeMap, typeChecking),
         // must run after copy structure
         new P4::SimplifyIfStatement(&refMap, &typeMap),

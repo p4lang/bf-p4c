@@ -26,6 +26,14 @@ add_test_compiler_definition(
   1 2 3
 )
 
+# P4C-4226 -- these in fact should pass, but right now the features (varbit assignemnt, etc.) are
+# not supported.
+add_test_compiler_definition(
+  extensions/p4_tests/p4_16/errors/p4c-4226.p4
+  TEST
+  0 1 2 3 4
+)
+
 set_negative_tests("tofino"
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/p4c-2293-no-rec-fail.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/p4c-2293-rec.p4
