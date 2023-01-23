@@ -491,6 +491,22 @@ class CoreAllocation {
     /// @look for ARA inits in set of slices
     bool hasARAinits(ordered_set<PHV::AllocSlice> slices) const;
 
+#ifdef HAVE_FLATROCK
+    /**
+     * Flatrock-specific constraint:
+     * All extractions within parser extract group must be into fields of a single header.
+     * E.g. B0, B1, B2, and B3 need to extract fields of a single header. So do H0 and H1;
+     * H2 and H3, etc.
+     * @param alloc Information about per-container allocation. Used to look at the other
+     *              containers in the same parser extract group.
+     * @param slice Slice to check the constraints against.
+     * @returns constraints check status
+     */
+    bool satisfies_parser_extract_group_constraints(
+        const PHV::Allocation& alloc,
+        const PHV::AllocSlice& slice) const;
+#endif  // HAVE_FLATROCK
+
     /// @returns true if slice list<-->container constraints are satisfied.
     bool satisfies_constraints(std::vector<PHV::AllocSlice> slices,
                                const PHV::Allocation& alloc) const;

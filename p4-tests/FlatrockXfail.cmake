@@ -298,13 +298,6 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/stf/meter_dest_16_32_flexible.p4
   )
 
-# P4C-5084
-p4c_add_xfail_reason("tofino5"
-  "mismatch from expected"
-#  extensions/p4_tests/p4_16/flatrock/parser_swap_headers.p4  # see 2023-01-12 dev-env update
-#  extensions/p4_tests/p4_16/flatrock/pac_shallow_branch_parser_const.p4  # see 2023-01-12 dev-env update
-  )
-
 # *********************************************************************************************** #
 # ** \TNA tests that "should" work ************************************************************** #
 # *********************************************************************************************** #
@@ -340,6 +333,7 @@ p4c_add_xfail_reason("tofino5"
   extensions/p4_tests/p4_16/flatrock/pac_trivial.p4
   extensions/p4_tests/p4_16/flatrock/parser_constant_1.p4
   extensions/p4_tests/p4_16/flatrock/parser_swap_headers.p4
+  extensions/p4_tests/p4_16/flatrock/parser_many_small_headers.p4
   extensions/p4_tests/p4_16/flatrock/passthrough.p4
   extensions/p4_tests/p4_16/flatrock/ternary1.p4
   extensions/p4_tests/p4_16/flatrock/ternary2.p4

@@ -1192,9 +1192,6 @@ class ReplaceFlatrockParserIR : public ParserTransform {
 
         if (extract_value.type == Flatrock::ExtractType::Packet) {
             if (phv_builder_extract->source[phe_source_index].hdr_name) {
-                // FIXME uncomment this when PHV allocation is fixed to not break this constraint
-                // P4C-5084
-                /*
                 BUG_CHECK(*phv_builder_extract->source[phe_source_index].hdr_name ==
                     extract_value.get_header_name(),
                     "Values from different headers %1% and %2% allocated into the same "
@@ -1202,7 +1199,6 @@ class ReplaceFlatrockParserIR : public ParserTransform {
                     *phv_builder_extract->source[phe_source_index].hdr_name,
                     extract_value.get_header_name(), phe_info.phv_builder_group_index,
                     phv_builder_extract);
-                */
             }
             phv_builder_extract->source[phe_source_index].hdr_name =
                 extract_value.get_header_name();

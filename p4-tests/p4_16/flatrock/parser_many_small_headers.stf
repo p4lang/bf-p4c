@@ -1,0 +1,5 @@
+#command port h1 h2 h3 h4 h5 payload
+#             b1 b1 b1 b1 b1
+
+packet   1    11 22 00 bb aa 0123456789abcdef
+expect   1    aa bb 00 22 11 0123456789abcdef

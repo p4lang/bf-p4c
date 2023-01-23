@@ -1515,6 +1515,35 @@ bool CoreAllocation::satisfies_constraints(
     return true;
 }
 
+#ifdef HAVE_FLATROCK
+bool CoreAllocation::satisfies_parser_extract_group_constraints(
+        const PHV::Allocation& alloc,
+        const PHV::AllocSlice& slice) const {
+    unsigned slice_cid = Device::phvSpec().containerToId(slice.container());
+    bool slice_from_pkt = utils_i.uses.is_extracted_from_pkt(slice.field());
+    for (unsigned other_cid : Device::phvSpec().parserExtractGroup(slice_cid)) {
+        auto other_container = Device::phvSpec().idToContainer(other_cid);
+        if (slice.container() == other_container)
+            continue;
+        if (const auto &cs = alloc.getStatus(other_container)) {
+            for (const auto &other_slice : cs->slices) {
+                bool other_from_pkt = utils_i.uses.is_extracted_from_pkt(other_slice.field());
+                if (!slice_from_pkt || !other_from_pkt)
+                    continue;
+                if (other_slice.field()->header() != slice.field()->header()) {
+                    LOG_DEBUG5(TAB1 "Constraint violation: "
+                        << "Field slices of different headers ("
+                        << other_slice.field() << " and " << slice.field()
+                        << ") are extracted in the same extract group");
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+#endif  // HAVE_FLATROCK
+
 // NB: action-induced PHV constraints are checked separately as part of
 // `can_pack` on slice lists.
 bool CoreAllocation::satisfies_constraints(
@@ -1676,6 +1705,14 @@ bool CoreAllocation::satisfies_constraints(
             return false;
         }
     }
+
+#ifdef HAVE_FLATROCK
+    // Check 4: all extractions within parser extract group must be into fields of a single header
+    if (Device::phvSpec().hasParserExtractGroups()) {
+        if (!satisfies_parser_extract_group_constraints(alloc, slice))
+            return false;
+    }
+#endif  // HAVE_FLATROCK
 
     // Check deparser group gress.
     auto deparserGroupGress = alloc.deparserGroupGress(c);
@@ -2925,7 +2962,33 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
             // allocate them
             if (!check(candidate_slices))
                 continue;
-        }
+
+#ifdef HAVE_FLATROCK
+            // Find the first candidate slice extracted from packet
+            // and check that the others belong to the same header
+            const PHV::AllocSlice *reference_slice = nullptr;
+            for (const auto &candidate_slice : candidate_slices) {
+                bool candidate_slice_from_pkt
+                    = utils_i.uses.is_extracted_from_pkt(candidate_slice.field());
+                if (reference_slice == nullptr && candidate_slice_from_pkt) {
+                    reference_slice = &candidate_slice;
+                    continue;
+                }
+                if (candidate_slice_from_pkt) {
+                    if (reference_slice->field()->header() != candidate_slice.field()->header())
+                        BUG_CHECK(consistent,
+                            "There is inconsistent parser extract group header in already "
+                            "allocated slices in %1%", c);
+                }
+            }
+            if (reference_slice == nullptr)
+                reference_slice = &(*candidate_slices.begin());
+
+            if (!satisfies_parser_extract_group_constraints(
+                    perContainerAlloc, *reference_slice))
+                continue;
+#endif  // HAVE_FLATROCK
+        }  // if (Device::phvSpec().hasParserExtractGroups())
 
         // check pa_container_type constraints for candidates after dark overlay.
         bool pa_container_type_ok = true;
