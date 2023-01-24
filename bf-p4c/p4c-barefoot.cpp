@@ -411,14 +411,17 @@ int main(int ac, char **av) {
         }
     }
 
+    // If there was an error in the frontend, we are likely to end up
+    // with an invalid program for serialization, so we bail out here.
+    if (!program || ::errorCount() > 0)
+        return handle_return(PROGRAM_ERROR, options);
+
     // Initialize Architecture::currentArchitecture() because this function
     // maybe used in the runtime library or the constructor of midend passes
     // it would be too late to run as part of the midend passes
     program->apply(BFN::FindArchitecture());
 
-    // If there was an error in the frontend, we are likely to end up
-    // with an invalid program for serialization, so we bail out here.
-    if (!program || ::errorCount() > 0)
+    if (::errorCount() > 0)
         return handle_return(PROGRAM_ERROR, options);
 
     // If we just want to prettyprint to p4_16, running the frontend is sufficient.
