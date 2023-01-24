@@ -62,13 +62,13 @@ class BenchmarkTest:
         """
         self.name = name
         self.compiler_path = Path(compiler_path)
-        self.dir_path = dir_path
+        self.dir_path = Path(dir_path)
         self.path = Path(params["path"])
         self.args = params["args"]
         # Go though args and those starting with "./" change to path to this folder
         for i in range(len(self.args)):
             if len(self.args[i]) > 1 and self.args[i][0:2] == "./":
-                self.args[i] = self.dir_path / Path(self.args[i][1:])
+                self.args[i] = self.dir_path / Path(self.args[i][2:])
         self.core_number = core_number
 
     def run(self):
