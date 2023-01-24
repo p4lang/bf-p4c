@@ -95,6 +95,9 @@ class Device {
     static int metaGlobalTimestampLen() { return Device::get().getMetaGlobalTimestampLen(); }
     static int metaGlobalVersionStart() { return Device::get().getMetaGlobalVersionStart(); }
     static int metaGlobalVersionLen() { return Device::get().getMetaGlobalVersionLen(); }
+    static unsigned int egressIntrinsicMetadataMinLen() {
+        return Device::get().getEgressIntrinsicMetadataMinLen();
+    }
 
  protected:
     explicit Device(cstring name) : name_(name) {}
@@ -143,6 +146,7 @@ class Device {
     virtual int getMetaGlobalTimestampLen() const = 0;
     virtual int getMetaGlobalVersionStart() const = 0;
     virtual int getMetaGlobalVersionLen() const = 0;
+    virtual unsigned int getEgressIntrinsicMetadataMinLen() const = 0;
 
  private:
     static Device* instance_;
@@ -211,6 +215,7 @@ class TofinoDevice : public Device {
     int getMetaGlobalVersionStart() const override { return 480; }
     int getMetaGlobalVersionLen() const override { return 32; }
     int getSramColumnAdjust() const override { return 2; }
+    unsigned int getEgressIntrinsicMetadataMinLen() const override { return 2; }
 };
 
 class JBayDevice : public Device {
@@ -274,6 +279,7 @@ class JBayDevice : public Device {
     int getMetaGlobalVersionStart() const override { return 448; }
     int getMetaGlobalVersionLen() const override { return 32; }
     int getSramColumnAdjust() const override { return 2; }
+    unsigned int getEgressIntrinsicMetadataMinLen() const override { return 8; }
 };
 
 /// Tofino2 variants. The only difference between them is the number of
@@ -367,6 +373,7 @@ class CloudbreakDevice : public Device {
     int getMetaGlobalVersionStart() const override { return 448; }
     int getMetaGlobalVersionLen() const override { return 32; }
     int getSramColumnAdjust() const override { return 2; }
+    unsigned int getEgressIntrinsicMetadataMinLen() const override { return 8; }
 };
 #endif /* HAVE_CLOUDBREAK */
 
@@ -435,6 +442,7 @@ class FlatrockDevice : public Device {
     int getMetaGlobalVersionStart() const override { return 448; }
     int getMetaGlobalVersionLen() const override { return 32; }
     int getSramColumnAdjust() const override { return 0; }
+    unsigned int getEgressIntrinsicMetadataMinLen() const override { return 0; }
 };
 #endif /* HAVE_FLATROCK */
 

@@ -1,0 +1,16 @@
+# Length should be: packet data length + 4 (FCS)
+add egress.te eg_intr_md.egress_port:0x1 eg_intr_md.pkt_length:16 hdr.eth.dmacOui:0x555555 hdr.eth.dmacStation:0x666666 hdr.eth.smacOui:0x777777 hdr.eth.smacStation:0x888888 te_action();
+
+#        dmac     dmac     smac    smac
+#        oui      station  oui     station
+
+# Packet should be forwarded
+packet 0 111111   222222   333333  444444
+expect 0 111111   222222   333333  444444
+
+# Packet should be dropped -- matches table entry above
+packet 1 555555   666666   777777  888888
+
+# Packet should be forwarded
+packet 1 555555   666666   777777  888888 00
+expect 1 555555   666666   777777  888888 00
