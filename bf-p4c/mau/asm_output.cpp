@@ -2210,7 +2210,18 @@ void MauAsmOutput::emit_static_entries(std::ostream &, indent_t indent,
     }
 
     context_json_entries << ++indent << "static_entries:" << std::endl;
-    int priority = 0;  // The order of entries in p4 program determine priority
+
+    // The order of entries in the P4 program determines the priorities.
+    // The first entry's priority is set to 0 and priority is increased by 1
+    // for each subsequent entry.
+    //
+    // Tables that span across multiple stages follow the same numbering:
+    // the first entry of the first stage has priority 0, the priority
+    // is increased by 1 for each subsequent entry, and the priority
+    // continues to increase across stages.  This means that first entry
+    // of a table in given stage is 1 higher than the priority of the
+    // last entry in the preceding stage.
+    int priority = tbl->first_entry_list_priority;
     for (auto entry : tbl->entries_list->entries) {
         auto method_call = entry->action->to<IR::MethodCallExpression>();
         BUG_CHECK(method_call, "Action is not specified for a static entry");

@@ -194,6 +194,7 @@ p4c_add_xfail_reason("p4"
   extensions/p4_tests/p4_16/compile_only/p4c-2450-b.p4
   extensions/p4_tests/p4_16/compile_only/p4c-2450-c.p4
   extensions/p4_tests/p4_16/compile_only/atcam_match4.p4
+  extensions/p4_tests/p4_16/compile_only/static_entries_over_multiple_stages.p4
   extensions/p4_tests/p4_16/stf/parser_multi_write_2.p4
   extensions/p4_tests/p4_16/stf/parser_extract_upcast.p4
   extensions/p4_tests/p4_16/stf/extract_const.p4

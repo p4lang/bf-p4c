@@ -3083,7 +3083,12 @@ json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
 bool Table::add_json_node_to_table(json::map &tbl, const char *name) const {
     if (context_json) {
         if (context_json->count(name)) {
-            tbl[name] = context_json->remove(name);
+            std::unique_ptr<json::obj> new_obj = context_json->remove(name);
+            if (auto add_vect = dynamic_cast<json::vector *>(new_obj.get())) {
+                json::vector &new_vect = tbl[name];
+                std::move(add_vect->begin(), add_vect->end(), std::back_inserter(new_vect));
+            } else
+                tbl[name] = std::move(new_obj);
             return true;
         }
     }

@@ -86,6 +86,7 @@ class Table : BFN::Unit, IAnnotated  {
     int                                         random_seed = -1;
     bool                                        dynamic_key_masks = false;
     NullOK EntriesList                          entries_list;
+    int                                         first_entry_list_priority = 0;
     // Indicates whether this is a "starter pistol" table generated during table placement.
     bool                                        created_during_tp = false;
     // Flag to indicate the table is compiler generated. This flag is passed on

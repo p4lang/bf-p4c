@@ -5071,12 +5071,18 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
         P4C_UNIMPLEMENTED("Splitting %s with multiple indirect attachements not supported",
                           tbl->match_table->name);
 
+    int priority = 0;
     auto tbl_entries_list = SplitEntriesList{tbl->entries_list};
     for (const TablePlacement::Placed *pl : ValuesForKey(self.table_placed, tbl->name)) {
         auto *table_part = tbl->clone();
 
         // Divide the entries amongst the table_parts.
         table_part->entries_list = tbl_entries_list.split_off(pl->entries);
+
+        // Set the value of the first entry's priority field in case
+        // this table_part has some static entries.
+        table_part->first_entry_list_priority = priority;
+        priority += pl->entries;
 
         // When a gateway is merged against a split table, only the first table part created
         // from the split has the merged gateway.

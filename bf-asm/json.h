@@ -1,4 +1,4 @@
-#ifndef BF_ASM_JSON_H_
+#ifndef BF_ASM_JSON_H_  //  NOLINT(build/header_guard)
 #define BF_ASM_JSON_H_
 
 #include <assert.h>
