@@ -39,9 +39,9 @@ class LiveRangeInfo {
     };
 
  private:
-    // 0 = parser
-    // 1..Device::numStages() = physical MAU stages
-    // Device::numStages() + 1 = deparser
+    // -1 = parser
+    // 0..Device::numStages() - 1 = physical MAU stages
+    // Device::numStages() = deparser
     // we merge all together because we need to uniformly iterate
     // parser + mau + deparser.
     safe_vector<OpInfo> lives_i;
