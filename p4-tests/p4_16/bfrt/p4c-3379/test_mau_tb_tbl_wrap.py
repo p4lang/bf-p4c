@@ -12,6 +12,7 @@ from ptf import config
 from ptf.thriftutils import *
 import ptf.testutils as testutils
 import bfrt_grpc.client as gc
+import google.rpc.code_pb2 as code_pb2
 
 from enum import Enum
 
@@ -188,7 +189,7 @@ def cpu_port_del(self, target):
 # rmac (npb vs bridge)
 
 def npb_tunnel_rmac_add(self, target, dst_addr):
-#	try:
+	try:
 		if(BRIDGING_ENABLE == True):
 #			table = self.bfrt_info.table_get('SwitchIngress.rmac.rmac')
 #			table.entry_add(
@@ -217,7 +218,11 @@ def npb_tunnel_rmac_add(self, target, dst_addr):
 					[gc.KeyTuple('f1', gc.mac_to_bytes(dst_addr)[0:2], 0xffff)]
 				)]
 			)
-
+	except gc.BfruntimeReadWriteRpcException as ex:
+		if not all(map(lambda err: err[1].canonical_code == code_pb2.ALREADY_EXISTS, ex.errors)):
+			raise
+		# otherwise ignore
+		print("A table operation failed due to adding or removing a duplicate, this can be ignored.")
 #	except:
 #		print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored.")
 
