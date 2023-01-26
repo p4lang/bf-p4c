@@ -471,16 +471,29 @@ int Parser::State::Match::Save::write_output_config(Target::Tofino::parser_regs 
     return -1;
 }
 
+bool can_slot_extract_constant(int slot) {
+    return slot != phv_16b_2 && slot != phv_16b_3 && slot != phv_32b_2 && slot != phv_32b_3;
+}
+
+/**
+ * @brief Encode constant @p val for use with extractor slot @p slot.
+ *
+ * @param slot Valid value of enum extractor_slot
+ * @param val Constant to encode
+ * @return int The encoded constant, or -1 if given @p slot cannot extract a constant or is not a
+ * valid value of enum extractor_slot
+ */
 static int encode_constant_for_slot(int slot, unsigned val) {
+    if (!can_slot_extract_constant(slot)) return -1;
     if (val == 0) return val;
     switch (slot) {
-    case phv_32b_0: case phv_32b_1: case phv_32b_2: case phv_32b_3:
+    case phv_32b_0: case phv_32b_1:
         for (int i = 0; i < 32; i++) {
             if ((val & 1) && (0x7 & val) == val)
                 return (i << 3) | val;
             val = ((val >> 1) | (val << 31)) & 0xffffffffU; }
         return -1;
-    case phv_16b_0: case phv_16b_1: case phv_16b_2: case phv_16b_3:
+    case phv_16b_0: case phv_16b_1:
         if ((val >> 16) && encode_constant_for_slot(slot, val >> 16) < 0)
             return -1;
         val &= 0xffff;
