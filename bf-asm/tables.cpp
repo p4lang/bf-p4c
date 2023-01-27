@@ -3080,11 +3080,16 @@ json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
 
 // Check if node exists in context_json entry in bfa, add entry to the input
 // json node and remove the entry from context_json.
-bool Table::add_json_node_to_table(json::map &tbl, const char *name) const {
+//
+// Set parameter "append" to true in order to append to existing entries in
+// specified section of context_json.  Set to false to overwrite.  Applies
+// only to json::vector containers.
+bool Table::add_json_node_to_table(json::map &tbl, const char *name, bool append) const {
     if (context_json) {
         if (context_json->count(name)) {
             std::unique_ptr<json::obj> new_obj = context_json->remove(name);
-            if (auto add_vect = dynamic_cast<json::vector *>(new_obj.get())) {
+            json::vector *add_vect = nullptr;
+            if (append && (add_vect = dynamic_cast<json::vector *>(new_obj.get()))) {
                 json::vector &new_vect = tbl[name];
                 std::move(add_vect->begin(), add_vect->end(), std::back_inserter(new_vect));
             } else
@@ -3186,7 +3191,7 @@ void Table::add_result_physical_buses(json::map &stage_tbl) const {
 
 void Table::merge_context_json(json::map &tbl, json::map&stage_tbl) const {
     if (context_json) {
-        add_json_node_to_table(tbl, "static_entries");
+        add_json_node_to_table(tbl, "static_entries", true);
         stage_tbl.merge(*context_json);
     }
 }

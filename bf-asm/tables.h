@@ -633,7 +633,7 @@ class Table {
     virtual std::vector<int> determine_spare_bank_memory_units() const { return {}; }
     virtual void common_tbl_cfg(json::map &tbl) const;
     void add_match_key_cfg(json::map& tbl) const;
-    bool add_json_node_to_table(json::map &tbl, const char *name) const;
+    bool add_json_node_to_table(json::map &tbl, const char *name, bool append = false) const;
     void allocate_physical_ids(unsigned usable = ~0U);
     template<typename T> void init_json_node(json::map &tbl, const char *name) const;
     enum table_type_t { OTHER = 0, TERNARY_INDIRECT, GATEWAY, ACTION, SELECTION, COUNTER,
