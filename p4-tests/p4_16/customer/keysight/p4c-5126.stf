@@ -1,0 +1,25 @@
+# UDP packet
+add SxIngParser.$PORT_METADATA ig_intr_md.ingress_port:8 set_port_metadata(port_type:2, capture_group:0)
+
+add SxIngPipeline.presetOutboundTbl 0 \
+        hdr.vlan_tag_0.pcp_cfi:0x0 \
+	hdr.vlan_tag_0.$valid:0x0 \
+	hdr.vlan_tag_1.$valid:0x0 \
+	meta.port_properties.port_type:0x2 \
+	meta.engine_id:0x0 \
+	hdr.first_payload.signature_top:0xc0deface \
+	hdr.first_payload.signature_bot:0xca000000 \
+	ig_intr_md.ingress_port:0x8 \
+	setL23OutboundInsertEgPort(egPort:0xB, queue:0x0)
+
+packet 8 \
+  ff ff ff ff ff ff 00 00  00 00 00 00 08 00 45 00 \
+  00 2e 00 01 00 00 40 11  7c bc 7f 00 00 01 7f 00 \
+  00 01 00 35 00 35 00 1a  7b 9f c0 de fa ce ca 00 \
+  00 00 00 00 00 00 00 00  00 00 00 00
+
+expect 11 \
+  ff ff ff ff ff ff 00 00  00 00 00 00 08 00 45 00 \
+  00 2e 00 01 00 00 40 11  7c bc 7f 00 00 01 7f 00 \
+  00 01 00 35 00 35 00 1a  7b 97 c0 de fa ce ca 00 \
+  00 00 00 00 00 00 00 00  00 00 00 08

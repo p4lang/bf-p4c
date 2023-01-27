@@ -620,9 +620,36 @@ void ClotInfo::adjust_clots(const PhvInfo& phv) {
 
 bool ClotInfo::adjust(const PhvInfo& phv, Clot* clot) {
     unsigned length_in_bytes = 0;
-    for (const auto& kv : clot->parser_state_to_slices()) {
-        cstring parser_state = kv.first;
-        std::vector<const PHV::FieldSlice*> slices = kv.second;
+
+    // Step 1: Identify states which are "non-terminal" CLOT states.
+    // Non-terminal CLOT states are defined as follows:
+    //  - We have two states: A and B.
+    //  - State A's CLOT ends with header field f1.
+    //  - State B's CLOT contains header field f1, but it is not the final field.
+    //  - In this case, A is a non-terminal state.
+    std::set<cstring> non_terminal_states;
+    std::set<const PHV::FieldSlice*> non_final_slices;
+
+    // Step 1a: identify the non-final field slices
+    for (const auto& [_, slices] : clot->parser_state_to_slices()) {
+        if (slices.empty()) continue;
+        for (auto it = slices.begin(); it != std::prev(slices.end()); ++it) {
+            non_final_slices.emplace(*it);
+        }
+    }
+
+    // Step 1b: identify the states that are non-terminal
+    for (const auto& [parser_state, slices] : clot->parser_state_to_slices()) {
+        if (!slices.empty() && non_final_slices.count(slices.back())) {
+            LOG4("State " << parser_state << " is non-terminal for CLOT tag " << clot->tag);
+            non_terminal_states.emplace(parser_state);
+        }
+    }
+
+    // Step 2: Do the trimming
+    for (const auto& [parser_state, slices] : clot->parser_state_to_slices()) {
+        if (non_terminal_states.count(parser_state)) continue;
+
         // Figure out how many bits are overwritten at the start of the CLOT.
         unsigned num_start_bits_overwritten = 0;
         for (auto slice : slices) {
@@ -793,10 +820,11 @@ bitvec ClotInfo::bits_overwritten_by_phv(const PhvInfo& phv,
                 if (field != other_field && !(occupied_bits & other_occupied).empty()) continue;
 
                 // Container overwrites the CLOT if the CLOT doesn't completely cover the allocated
-                // slice.
+                // slice or if the other slice is modified.
                 const auto* other_slice = new PHV::FieldSlice(other_field,
                                                               alloc_slice.field_slice());
-                container_overwrites = !clot_covers_slice(clot, other_slice);
+                container_overwrites =
+                    !clot_covers_slice(clot, other_slice) || is_modified(other_field);
                 if (container_overwrites) break;
             }
         }
