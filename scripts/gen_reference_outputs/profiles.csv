@@ -15,5 +15,3 @@ switch_16_y2,p4-tests/p4_16/switch_16/p4src/switch-tofino2/switch_tofino2_y2.p4,
 switch_16_y4,p4-tests/p4_16/switch_16/p4src/switch-tofino2/switch_tofino2_y4.p4,p4-tests/p4_16/switch_16/p4src/shared,-DY4_PROFILE -Xp4c=\"--auto-init-metadata\",tofino2,p4-16,t2na,skip_Glass
 switch_16_y7,p4-tests/p4_16/switch_16/p4src/switch-tofino2/switch_tofino2_y7.p4,p4-tests/p4_16/switch_16/p4src/shared,-DY7_PROFILE -Xp4c=\"--auto-init-metadata\",tofino2,p4-16,t2na,skip_Glass
 switch_16_y8,p4-tests/p4_16/switch_16/p4src/switch-tofino2/switch_tofino2_y8.p4,p4-tests/p4_16/switch_16/p4src/shared,-DY8_PROFILE -Xp4c=\"--auto-init-metadata --set-max-power 62\",tofino2,p4-16,t2na,skip_Glass
-switch_16_y2_tofino3,p4-tests/p4_16/switch_16/p4src/switch-tofino2/switch_tofino2_y2.p4,p4-tests/p4_16/switch_16/p4src/shared,-DY2_PROFILE -Xp4c=\"--auto-init-metadata\",tofino3,p4-16,t3na,skip_Glass
-
