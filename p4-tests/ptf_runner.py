@@ -623,7 +623,7 @@ def main():
             sys.exit(1)
         sys.exit(0)
 
-    dirname = tempfile.mkdtemp(prefix=args.name)
+    dirname = tempfile.mkdtemp(prefix=f"{args.name}.ptf.")
     os.chmod(dirname, 0o777)
     model_log_path = os.path.join(dirname, 'model.log')
     switchd_log_path = os.path.join(dirname, 'switchd.log')

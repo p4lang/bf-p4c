@@ -15,7 +15,11 @@
 MESSAGE("-- Adding BFN Compiler test suite")
 OPTION(ENABLE_STF2PTF "Run STF tests as PTF" OFF)
 
-set (P4C_RUNTEST ${CMAKE_CURRENT_SOURCE_DIR}/runtest)
+if (ENABLE_TEST_ISOLATION)
+    set (P4C_RUNTEST ${CMAKE_CURRENT_SOURCE_DIR}/runtest-isolated)
+else()
+    set (P4C_RUNTEST ${CMAKE_CURRENT_SOURCE_DIR}/runtest)
+endif()
 
 set (HARLYN_PTF_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/ptf_runner.py
   CACHE FILEPATH "Path to PTF Harlyn runner")

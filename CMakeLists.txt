@@ -23,6 +23,13 @@ OPTION(INSTALL_LIBDYNHASH "Install the Dynamic hash library" OFF)
 OPTION(ENABLE_ALT_PHV_ALLOC "Enable the alternative PHV allocator" OFF)
 OPTION(ENABLE_ASSERTIONS "Enable assertions" ON)
 
+OPTION(ENABLE_TEST_ISOLATION "Run tests in isolated network using Linux network namespaces. \
+                              This allows running multiple PTF tests in parallel, but it makes \
+                              then isolated from the normal network so it can make debugging \
+                              harder (e.g. it is not possible to inspect PTF-set packets using \
+                              packet sniffers). Requires running tests using user who has \
+                              privileges to unshare namespaces (usually just root)" OFF)
+
 # BUILD_STATIC_BFP4C_LIBS should never be used directly, see BUILD_STATIC_BFP4C_LIBS_INTERNAL below
 OPTION(BUILD_STATIC_BFP4C_LIBS OFF "Build static libs (archives) of bf-p4c components \
                               (tofinobackend, bfn_p4runtime) for external usage. If not set, the \

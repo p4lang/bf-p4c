@@ -1,0 +1,12 @@
+#!/usr/bin/bash
+
+# This is a small wrapper over `runtest` (which must be located in the same
+# directory). It simply runs `runtest` isolated using various Linux namespace.
+# Please see `run-isolated` script (in this directory) for more details on which
+# namespaces are used.
+
+set -eEuo pipefail
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+${SCRIPT_DIR}/run-isolated ${SCRIPT_DIR}/runtest "$@"  # no exec so that trap fires

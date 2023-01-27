@@ -1,0 +1,35 @@
+#!/usr/bin/bash
+
+# This is a small wrapper for running (mostly tests) isolated using Linux
+# namespaces. It isolates network, PID, IPC and cgroup namespaces so that
+# different invocations are not affecting each other (at least with regards to
+# these resources). This is mainly useful for running multiple PTF tests in
+# parallel.
+# Please note we need to bing the network namespace up manually in order to
+# properly initialize it. For PID & IPC `unshare` is sufficient.
+# * the network namespace is used to allow using the same ports in multiple tests
+# * the PID namespace makes sure one test does not kill other test's processes
+# * the IPC & Cgroup namespaces are probably not necessary, but we enable it to
+#   avoid possible interference
+#
+# Please note that the filesystem is still shared.
+
+if [[ -z $1 ]] || [[ $1 = -h ]]; then
+    echo "usage $0 COMMAND [ARGS...]"
+    echo
+    echo 'runs COMMAND in an isolated network, IPC, PID and cgroup namespaces'
+    if [[ $1 = -h ]]; then exit 0; else exit 1; fi
+fi
+
+set -eEuo pipefail
+
+# create a unique network namespace and bring its interfaces up
+TEST_NETNS=test-nets-$$
+ip netns add $TEST_NETNS
+ip netns exec $TEST_NETNS ip link set dev lo up
+VETH_SETUP=/bfn/veth_setup.sh
+[[ -x $VETH_SETUP ]] && ip netns exec $TEST_NETNS $VETH_SETUP
+
+trap "ip netns del $TEST_NETNS" EXIT
+# run the command in PID namespace and in the newly-created network namespace
+unshare -piCf --kill-child --mount-proc ip netns exec $TEST_NETNS "$@"  # no exec so that trap fires

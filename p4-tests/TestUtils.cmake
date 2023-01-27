@@ -165,7 +165,7 @@ macro(p4c_add_ptf_test_with_ptfdir device alias ts args ptfdir)
   if (PTF_REQUIREMENTS_MET)
     p4c_add_test_with_args (${device} ${P4C_RUNTEST} FALSE ${alias}
       ${p4test} "" "${args} -${device} -ptf -ptfdir ${ptfdir}")
-    set_property(TEST ${__testname} APPEND PROPERTY RESOURCE_LOCK ptf_test_environment)
+    set_ptf_test_locks(${__testname})
     p4c_add_test_label(${device} "ptf" ${alias})
   else()
     p4c_add_test_with_args (${device} ${P4C_RUNTEST} FALSE ${alias}
@@ -248,6 +248,16 @@ macro(packet_test_setup_check device)
   endif()
 endmacro(packet_test_setup_check)
 
+function(set_ptf_test_locks testname)
+  if (NOT ENABLE_TEST_ISOLATION)
+    set_tests_properties(${testname} PROPERTIES RESOURCE_LOCK ptf_test_environment)
+  elseif(${testname} MATCHES "p4_14")
+    message("Enabling lock for legacy test ${testname}")
+    # -pd tests potentially share build directory
+    set_tests_properties(${testname} PROPERTIES RESOURCE_LOCK ptf_legacy_test_environment)
+  endif()
+endfunction()
+
 # extra test args can be passed as unamed arguments
 function(bfn_add_test_with_args device toolsdevice alias p4file test_args cmake_args)
   # create the test
@@ -269,7 +279,7 @@ function(bfn_add_test_with_args device toolsdevice alias p4file test_args cmake_
     endif()
     if (${__havePTF})
       p4c_test_set_name(__testname ${device} ${alias})
-      set_tests_properties(${__testname} PROPERTIES RESOURCE_LOCK ptf_test_environment)
+      set_ptf_test_locks(${__testname})
       p4c_add_test_label(${device} "ptf" ${alias})
     endif()
   endif() # PTF_REQUIREMENTS_MET
