@@ -1,3 +1,4 @@
+#ifdef HAVE_FLATROCK
 #include <initializer_list>
 #include "bf-asm/bfas.h"
 #include "bf-asm/tables.h"
@@ -835,4 +836,5 @@ TEST(ealu, chained_operations) {
 TEST(ealu, priority_set) {
 }
 
-}  // namespace FLATROCK
+}  // namespace Flatrock
+#endif  // HAVE_FLATROCK

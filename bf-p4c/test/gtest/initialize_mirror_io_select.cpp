@@ -135,6 +135,7 @@ TEST(InitializeMirrorIOSelect, Tofino2ParserBodyCompleteMeta) {
               tofino_shell_egress_parser_body_marker(), expected);
 }
 
+#if HAVE_CLOUDBREAK
 TEST(InitializeMirrorIOSelect, Tofino3ParserBody) {
     Match::CheckList expected {
         "state start { ",
@@ -170,7 +171,7 @@ TEST(InitializeMirrorIOSelect, Tofino3ParserBodyCompleteMeta) {
               out egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr",
               tofino_shell_egress_parser_body_marker(), expected);
 }
-
+#endif  // HAVE_CLOUDBREAK
 
 TEST(InitializeMirrorIOSelect, Tofino1ParserParams) {
     Match::CheckList expected {
@@ -217,6 +218,7 @@ TEST(InitializeMirrorIOSelect, Tofino2ParserParamsCompleteMeta) {
               tofino_shell_egress_parser_params_marker(), expected);
 }
 
+#if HAVE_CLOUDBREAK
 TEST(InitializeMirrorIOSelect, Tofino3ParserParams) {
     Match::CheckList expected {
         "packet_in packet, out headers_t hdr, out local_metadata_t eg_md, ",
@@ -252,5 +254,6 @@ TEST(InitializeMirrorIOSelect, Tofino3ParserParamsCompleteMeta) {
               out egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr",
               tofino_shell_egress_parser_params_marker(), expected);
 }
+#endif  // HAVE_CLOUDBREAK
 
 }  // namespace Test

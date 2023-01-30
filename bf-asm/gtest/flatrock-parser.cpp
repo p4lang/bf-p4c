@@ -1,3 +1,4 @@
+#ifdef HAVE_FLATROCK
 #include <boost/algorithm/string/replace.hpp>
 #include "flatrock/hdr.h"
 #include "flatrock/parser.h"
@@ -4949,3 +4950,4 @@ parser ingress:
 } /* -- namespace Test */
 
 } /* -- namespace BfAsm */
+#endif  // HAVE_FLATROCK

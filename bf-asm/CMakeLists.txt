@@ -206,11 +206,9 @@ set (WALLE_SOURCES
 add_subdirectory (tofino)
 set (HAVE_TOFINO 1)
 set (BFASM_LIBS regs_tofino)
-if (ENABLE_JBAY)
-  add_subdirectory (jbay)
-  set (HAVE_JBAY 1)
-  set (BFASM_LIBS ${BFASM_LIBS} regs_jbay)
-endif()
+add_subdirectory (jbay)
+set (HAVE_JBAY 1)
+set (BFASM_LIBS ${BFASM_LIBS} regs_jbay)
 if (ENABLE_CLOUDBREAK)
   add_subdirectory (cloudbreak)
   set (HAVE_CLOUDBREAK 1)
@@ -340,18 +338,22 @@ if (ENABLE_GTESTS)
   set(BFAS_GTEST_SOURCES
     gtest/gtestasm.cpp
     gtest/asm-types.cpp
-    gtest/deparser.cpp
     gtest/depositfield.cpp
-    gtest/flatrock-parser.cpp
     gtest/gateway.cpp
     gtest/hashexpr.cpp
-    gtest/instruction.cpp
-    gtest/metadata_packer.cpp
     gtest/mirror.cpp
     gtest/parser-test.cpp
     gtest/register-matcher.h
     gtest/register-matcher.cpp
     )
+  if (ENABLE_FLATROCK)
+    list(APPEND BFAS_GTEST_SOURCES
+      gtest/flatrock-deparser.cpp
+      gtest/flatrock-parser.cpp
+      gtest/flatrock-instruction.cpp
+      gtest/flatrock-metadata-packer.cpp
+      )
+  endif()
 
   set(BFP4C_SOURCES
   ${BFN_P4C_LIB_DIR}/bitvec.cpp

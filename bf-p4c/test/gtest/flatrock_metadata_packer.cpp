@@ -1,3 +1,4 @@
+#if HAVE_FLATROCK
 /*
  * Verify assembler generation for metadata packer
  */
@@ -117,3 +118,4 @@ TEST(MetadataPacker, ValidVectorPresent) {
 }
 
 }  // namespace Test
+#endif  // HAVE_FLATROCK

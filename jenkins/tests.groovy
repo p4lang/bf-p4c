@@ -223,7 +223,7 @@ pipeline {
                                         -e MAKEFLAGS=j4 \
                                         -e UNIFIED_BUILD=true \
                                     " \
-                                    BUILD_SCRIPT="scripts/package_p4c_for_tofino.sh --build-dir build --enable-cb"
+                                    BUILD_SCRIPT="scripts/package_p4c_for_tofino.sh --build-dir build"
                         """
                     }
                 }

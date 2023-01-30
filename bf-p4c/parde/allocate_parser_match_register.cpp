@@ -1028,8 +1028,11 @@ class MatcherAllocator : public Visitor {
         // ascending allocation needs to be performed.  If this allocation
         // fails, these targets support scratch registers, so try the
         // scratch-enabled allocation.
-        if ((Device::currentDevice() == Device::JBAY) ||
-            (Device::currentDevice() == Device::CLOUDBREAK)) {
+        if ((Device::currentDevice() == Device::JBAY)
+#ifdef HAVE_CLOUDBREAK
+            || (Device::currentDevice() == Device::CLOUDBREAK)
+#endif
+            ) {
             if (reg_bytes_ascend >= select_bytes)
                 return alloc_ascend;
             if (!avail_regs.unconstrained_scratch_regs.empty() ||

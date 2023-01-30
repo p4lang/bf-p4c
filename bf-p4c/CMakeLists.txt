@@ -650,6 +650,9 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/analysis/live_range_shrinking.cpp
   phv/analysis/pack_conflicts.cpp
   phv/analysis/parser_critical_path.cpp
+  phv/analysis/dark.cpp
+  phv/analysis/jbay_phv_analysis.cpp
+  phv/analysis/mocha.cpp
   phv/pragma/phv_pragmas.cpp
   phv/pragma/pa_alias.cpp
   phv/pragma/pa_atomic.cpp
@@ -693,12 +696,6 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/v2/smart_packing.cpp
   phv/v2/types.cpp
   )
-if (ENABLE_JBAY)
-  list (APPEND BF_P4C_BACKEND_PHV_SRCS
-    phv/analysis/dark.cpp
-    phv/analysis/jbay_phv_analysis.cpp
-    phv/analysis/mocha.cpp)
-endif()
 
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PHV_SRCS}")
 build_unified(BF_P4C_BACKEND_PHV_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
@@ -750,6 +747,9 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/analysis/live_range_shrinking.h
   phv/analysis/pack_conflicts.h
   phv/analysis/parser_critical_path.h
+  phv/analysis/dark.h
+  phv/analysis/jbay_phv_analysis.h
+  phv/analysis/mocha.h
   phv/pragma/pa_alias.h
   phv/pragma/pa_atomic.h
   phv/pragma/pa_byte_pack.h
@@ -797,12 +797,6 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/v2/smart_packing.h
   phv/v2/types.h
   )
-if (ENABLE_JBAY)
-  list (APPEND BF_P4C_BACKEND_PHV_HDRS
-    phv/analysis/dark.h
-    phv/analysis/jbay_phv_analysis.h
-    phv/analysis/mocha.h)
-endif ()
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PHV_HDRS}")
 
 set (BF_P4C_BACKEND_ARCH_SRCS
@@ -825,6 +819,7 @@ set (BF_P4C_BACKEND_ARCH_SRCS
   arch/remove_set_metadata.cpp
   arch/rewrite_action_selector.cpp
   arch/tna.cpp
+  arch/t2na.cpp
   arch/v1model.cpp
   arch/fromv1.0/add_metadata_parser_states.cpp
   arch/fromv1.0/egress_packet_length.cpp
@@ -837,10 +832,6 @@ set (BF_P4C_BACKEND_ARCH_SRCS
   arch/fromv1.0/v1_program_structure.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_ARCH_SRCS}")
-if (ENABLE_JBAY)
-  list (APPEND BF_P4C_BACKEND_ARCH_SRCS
-  arch/t2na.cpp)
-endif ()
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "arch/t2na.cpp")
 if (ENABLE_FLATROCK)
   list (APPEND BF_P4C_BACKEND_ARCH_SRCS
@@ -976,20 +967,14 @@ set (p4include_HEADERS
   p4include/tofino/p4_14_prim.p4
   p4include/tofino/stateful_alu.p4
   p4include/tofino/wred.p4
-  p4include/psa.p4
-  p4include/bmv2/psa.p4
-  p4include/dpdk/psa.p4
-  )
-
-if (ENABLE_JBAY)
-set (p4include_HEADERS
-  ${p4include_HEADERS}
   p4include/tofino2_specs.p4
   p4include/tofino2_base.p4
   p4include/tofino2_arch.p4
   p4include/t2na.p4
+  p4include/psa.p4
+  p4include/bmv2/psa.p4
+  p4include/dpdk/psa.p4
   )
-endif (ENABLE_JBAY)
 
 if (ENABLE_CLOUDBREAK)
 set (p4include_HEADERS
@@ -1023,11 +1008,9 @@ set (p4_14include_HEADERS
 
 # hack to support jbay clone metadata in p4-14.
 # used by mirror_test.p4 which should be rewritten to p4-16.
-if (ENABLE_JBAY)
 set (hack_p4_14include_HEADERS
   p4_14include/tofino2/intrinsic_metadata.p4
   )
-endif (ENABLE_JBAY)
 
 if (ENABLE_CLOUDBREAK)
 set (p4_14include_HEADERS
@@ -1093,11 +1076,9 @@ target_compile_definitions(bfp4c
   INTERFACE "-DCONFIG_PREFIX=\"${CMAKE_INSTALL_PREFIX}\""
   INTERFACE "-DCONFIG_PKGDATADIR=\"${CMAKE_INSTALL_PREFIX}/${P4C_ARTIFACTS_OUTPUT_DIRECTORY}\""
 )
-if (ENABLE_JBAY)
-  target_compile_definitions(bfp4c
-    INTERFACE "-DHAVE_JBAY=1"
-  )
-endif()
+target_compile_definitions(bfp4c
+  INTERFACE "-DHAVE_JBAY=1"
+)
 if (ENABLE_CLOUDBREAK)
   target_compile_definitions(bfp4c
     INTERFACE "-DHAVE_CLOUDBREAK=1"
@@ -1156,10 +1137,6 @@ else()
     target_link_libraries(p4c-barefoot ${P4C_LIBRARIES} ${P4C_LIB_DEPS} ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
-
-if (NOT ENABLE_JBAY)
-set (EXCLUDE_HEADERS "tofino2|t2na")
-endif (NOT ENABLE_JBAY)
 
 if (NOT ENABLE_CLOUDBREAK)
   if (NOT DEFINED EXCLUDE_HEADERS)
@@ -1241,35 +1218,33 @@ set (DRIVER_FILES
   ${TOFINO_TARGET_CFG_FILE}
   )
 
-if (ENABLE_JBAY)
-  set (JBAY_TARGET_CFG_FILE ${P4C_BINARY_DIR}/p4c_src/p4c.tofino2.cfg)
-  set_source_files_properties (${JBAY_TARGET_CFG_FILE} PROPERTIES GENERATED TRUE)
-  # hack used to compile p4-14 program to JBay, we should not develop anything
-  # significant with P4-14, it is only used to support existing programs.
-  add_custom_target(jbay_hack
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4_14include/tofino2
-    COMMAND for h in ${hack_p4_14include_HEADERS} \; do
-      ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/\$$h ${P4C_BINARY_DIR}/\$$h \;
-    done
+set (JBAY_TARGET_CFG_FILE ${P4C_BINARY_DIR}/p4c_src/p4c.tofino2.cfg)
+set_source_files_properties (${JBAY_TARGET_CFG_FILE} PROPERTIES GENERATED TRUE)
+# hack used to compile p4-14 program to JBay, we should not develop anything
+# significant with P4-14, it is only used to support existing programs.
+add_custom_target(jbay_hack
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4_14include/tofino2
+  COMMAND for h in ${hack_p4_14include_HEADERS} \; do
+    ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/\$$h ${P4C_BINARY_DIR}/\$$h \;
+  done
+  )
+add_dependencies(p4c_driver jbay_hack)
+if (NOT ENABLE_BAREFOOT_INTERNAL)
+  # Remove the P4-14 support for JBay
+  add_custom_command(OUTPUT ${JBAY_TARGET_CFG_FILE}
+    COMMAND sed -e '/v1model/d' -e '/tofino2h/d' -e '/psa_target/d' ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino2.cfg > ${JBAY_TARGET_CFG_FILE}
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino2.cfg
+    COMMENT "Removing P4-14, Tofino2h, and PSA support for Tofino2"
     )
-  add_dependencies(p4c_driver jbay_hack)
-  if (NOT ENABLE_BAREFOOT_INTERNAL)
-    # Remove the P4-14 support for JBay
-    add_custom_command(OUTPUT ${JBAY_TARGET_CFG_FILE}
-      COMMAND sed -e '/v1model/d' -e '/tofino2h/d' -e '/psa_target/d' ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino2.cfg > ${JBAY_TARGET_CFG_FILE}
-      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino2.cfg
-      COMMENT "Removing P4-14, Tofino2h, and PSA support for Tofino2"
-      )
-  else()
-    add_custom_command(OUTPUT ${JBAY_TARGET_CFG_FILE}
-      COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino2.cfg ${JBAY_TARGET_CFG_FILE}
-      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino2.cfg
-      COMMENT "Copying Tofino2 config"
-      )
-  endif()
-  add_custom_target(remove_p4_14_for_jbay ALL DEPENDS ${JBAY_TARGET_CFG_FILE})
-  add_dependencies(p4c_driver remove_p4_14_for_jbay)
-endif (ENABLE_JBAY)
+else()
+  add_custom_command(OUTPUT ${JBAY_TARGET_CFG_FILE}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino2.cfg ${JBAY_TARGET_CFG_FILE}
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino2.cfg
+    COMMENT "Copying Tofino2 config"
+    )
+endif()
+add_custom_target(remove_p4_14_for_jbay ALL DEPENDS ${JBAY_TARGET_CFG_FILE})
+add_dependencies(p4c_driver remove_p4_14_for_jbay)
 
 if (ENABLE_CLOUDBREAK)
   set (CLOUDBREAK_TARGET_CFG_FILE ${P4C_BINARY_DIR}/p4c_src/p4c.tofino3.cfg)
@@ -1594,10 +1569,8 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_alignment.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_defuse.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_packing.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/flatrock_parser.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/fold_constant_hashes.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/gateway_control_flow.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/hdr_asm.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/hidden_merged.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/input_xbar.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/instruction_selection.cpp
@@ -1608,7 +1581,6 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mau_group_extractor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mau_indirect_externs_single_action.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/meta_live_range.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/metadata_packer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mocha_dark.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/multipipe_bf_runtime.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/multiple_apply.cpp
@@ -1662,6 +1634,13 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/utils/super_cluster_builder.cpp
     ${BF_P4C_GRAPHS_SRCS}
     )
+  if (ENABLE_FLATROCK)
+    list(APPEND GTEST_BF_P4C_SOURCES
+      ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/flatrock_parser.cpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/flatrock_hdr_asm.cpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/flatrock_metadata_packer.cpp
+    )
+  endif()
   if (NOT BUILD_STATIC_BFP4C_LIBS)
       # objlibs cannot be linked, need to add objects here explicitly
       set (GTEST_BF_P4C_SOURCES ${GTEST_BF_P4C_SOURCES}

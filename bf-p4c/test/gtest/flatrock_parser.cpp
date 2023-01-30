@@ -1,3 +1,4 @@
+#if HAVE_FLATROCK
 #include <boost/algorithm/string/replace.hpp>
 
 #include "gtest/gtest.h"
@@ -966,3 +967,4 @@ TEST(FlatrockParser, PovFlagsExtraction) {
 }
 
 }  // namespace Test
+#endif  // HAVE_FLATROCK

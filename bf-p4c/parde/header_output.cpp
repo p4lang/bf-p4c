@@ -1,8 +1,8 @@
+#if HAVE_FLATROCK
+
 #include "bf-p4c/common/flatrock.h"
 #include "bf-p4c/parde/asm_output.h"
 #include "bf-p4c/parde/parser_header_sequences.h"
-
-#if HAVE_FLATROCK
 
 HeaderAsmOutput::HeaderAsmOutput(const ParserHeaderSequences& seqs) : seqs(seqs) {}
 

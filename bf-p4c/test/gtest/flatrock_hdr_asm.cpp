@@ -1,3 +1,4 @@
+#if HAVE_FLATROCK
 /*
  * Verify assembler generation for hdr section.
  */
@@ -187,3 +188,4 @@ TEST(AsmHdrSectionTest, HeaderStack) {
 }
 
 }  // namespace Test
+#endif  // HAVE_FLATROCK

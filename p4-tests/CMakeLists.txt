@@ -57,12 +57,10 @@ if (ENABLE_TESTING)
   # add tofino tests and xfails with reasons
   include(TofinoTests.cmake)
 
-  if (ENABLE_JBAY)
-    # tofino2 variants -- to be enabled when support is added in the model and p4-build
-    # include(Tofino2Tests.cmake)
-    # add jbay tests and xfails with reasons
-    include(JBayTests.cmake)
-  endif()
+  # tofino2 variants -- to be enabled when support is added in the model and p4-build
+  # include(Tofino2Tests.cmake)
+  # add jbay tests and xfails with reasons
+  include(JBayTests.cmake)
   if (ENABLE_CLOUDBREAK)
     include(CloudbreakTests.cmake)
   endif()

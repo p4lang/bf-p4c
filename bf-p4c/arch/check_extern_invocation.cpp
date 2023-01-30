@@ -125,6 +125,7 @@ void CheckT2NAExternInvocation::initPipeConstraints() {
     validInIngressDeparser.setbit(genIndex(INGRESS, DEPARSER));
     setPipeConstraints("Pktgen", validInIngressDeparser);
 
+#ifdef HAVE_CLOUDBREAK
     if (Device::currentDevice() == Device::CLOUDBREAK) {
         bitvec validInParsers;
         validInParsers.setbit(genIndex(INGRESS, PARSER));
@@ -132,6 +133,7 @@ void CheckT2NAExternInvocation::initPipeConstraints() {
         setPipeConstraints("extract_greedy", validInParsers);
         setPipeConstraints("lookahead_greedy", validInParsers);
     }
+#endif
 }
 
 }  // namespace BFN

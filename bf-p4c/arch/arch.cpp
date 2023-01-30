@@ -80,9 +80,11 @@ ArchTranslation::ArchTranslation(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
         if (Device::currentDevice() == Device::JBAY) {
             passes.push_back(new BFN::T2naArchTranslation(refMap, typeMap, options));
         }
+#if HAVE_CLOUDBREAK
         if (Device::currentDevice() == Device::CLOUDBREAK) {
             passes.push_back(new BFN::T2naArchTranslation(refMap, typeMap, options));
         }
+#endif
 #if HAVE_FLATROCK
         if (Device::currentDevice() == Device::FLATROCK) {
             ::warning("TNA architecture is not supported on a Tofino5 device."

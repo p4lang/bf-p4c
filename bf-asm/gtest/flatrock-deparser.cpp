@@ -1,3 +1,4 @@
+#ifdef HAVE_FLATROCK
 #include "deparser.h"
 #include "bfas.h"
 #include "gtest/gtest.h"
@@ -181,4 +182,4 @@ deparser ingress:
 }
 
 }  // namespace
-
+#endif  // HAVE_FLATROCK

@@ -52,6 +52,7 @@ struct DeparserAsmOutput {
     const IR::BFN::LoweredDeparser* deparser;
 };
 
+#if HAVE_FLATROCK
 /// \ingroup AsmOutput parde
 ///
 /// Helper that can generate header assembly and write it to an output stream.
@@ -63,5 +64,6 @@ struct HeaderAsmOutput {
 
     const ParserHeaderSequences &seqs;
 };
+#endif  // HAVE_FLATROCK
 
 #endif /* BF_P4C_PARDE_ASM_OUTPUT_H_ */

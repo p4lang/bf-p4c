@@ -698,7 +698,11 @@ std::string TestCode::extract_asm(CodeBlock blk_type) const {
             oss << *mauasm << "\n";
             break;
         case CodeBlock::HdrAsm:
+#if HAVE_FLATROCK
             oss << HeaderAsmOutput(backend->get_parser_hdr_seqs());
+#else
+            BUG("CodeBlock::HdrAsm should only occur on Flatrock, which is disabled");
+#endif  // HAVE_FLATROCK
             break;
         case CodeBlock::ParserIAsm:
             oss << ParserAsmOutput(pipe, backend->get_phv(), backend->get_clot(), INGRESS);

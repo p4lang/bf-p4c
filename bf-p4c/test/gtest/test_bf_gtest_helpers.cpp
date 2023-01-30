@@ -194,7 +194,9 @@ TEST(testBfGtestHelper, TestCodeTestCodeGood) {
     TestCode(TestCode::Hdr::None, "");
     TestCode(TestCode::Hdr::Tofino1arch, "");
     TestCode(TestCode::Hdr::Tofino2arch, "");
+#if HAVE_CLOUDBREAK
     TestCode(TestCode::Hdr::Tofino3arch, "");
+#endif
     auto blk2018 = TestCode(TestCode::Hdr::V1model_2018, "");
     auto blk2020 = TestCode(TestCode::Hdr::V1model_2020, "");
     EXPECT_NE(blk2018.extract_code().compare(blk2020.extract_code()), 0);
