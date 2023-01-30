@@ -439,13 +439,14 @@ endmacro(set_negative_tests)
 # where ${device} is any of: tofino, jbay, cb, ftr
 #
 # Tests from other directories can be added by the set_negative_tests macro.
-macro(p4c_add_bf_diagnostic_tests device toolsdevice arch label include_patterns exclude_patterns)
+macro(p4c_add_bf_diagnostic_tests device toolsdevice arch label include_patterns exclude_patterns std)
   set(__opts_errors "-error-test")
   set(__opts_warnings "")
+  unset(__glob)
 
   foreach(__type errors warnings)
-    set(__glob "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/${__type}/*.p4"
-               "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/${__type}/${toolsdevice}/*.p4")
+    set(__glob "${CMAKE_CURRENT_SOURCE_DIR}/${std}/${__type}/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/${std}/${__type}/${toolsdevice}/*.p4")
     if(${__type} STREQUAL errors)
       string(TOUPPER ${toolsdevice} __name)
       list(APPEND __glob ${DIAGNOSTIC_TESTS_${__name}})
@@ -454,7 +455,7 @@ macro(p4c_add_bf_diagnostic_tests device toolsdevice arch label include_patterns
     bfn_find_tests("${__tests}" __bfn_tests EXCLUDE "")
     if(NOT "${__bfn_tests}" STREQUAL "")
       p4c_add_bf_backend_tests(${device} ${toolsdevice} ${arch} "${label};diagnostic" "${__bfn_tests}" 
-        "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes ${__opts_${__type}}")
+        "-I${CMAKE_CURRENT_SOURCE_DIR}/${std}/includes ${__opts_${__type}}")
     endif()
   endforeach()  # __type
 endmacro(p4c_add_bf_diagnostic_tests)

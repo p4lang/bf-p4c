@@ -1535,6 +1535,8 @@ bool MeterColorMapramAddress::FindBusUsers::preorder(const IR::MAU::Counter *) {
 }
 
 bool MeterColorMapramAddress::DetermineMeterReqs::preorder(const IR::MAU::Meter *mtr) {
+    Log::TempIndent indent;
+    LOG1("DetermineMeterReqs preorder meter :" << mtr->name << indent);
     if (!mtr->color_output())
         return false;
     visitAgain();
@@ -1547,14 +1549,21 @@ bool MeterColorMapramAddress::DetermineMeterReqs::preorder(const IR::MAU::Meter 
     // In uArch section 6.4.3.5.3 Hash Distribution, the hash distribution unit can create
     // stats and meter addresses, but not idletime address.  Thus if the meter is accessed
     // by hash distribution, then the color mapram must be addressed by stats
-    if (ba && ba->addr_location != IR::MAU::AddrLocation::HASH)
+    if (ba && ba->addr_location != IR::MAU::AddrLocation::HASH) {
         possible.setbit(static_cast<int>(IR::MAU::ColorMapramAddress::IDLETIME));
+        LOG3("Setting Idletime as not a Hash");
+    }
 
     // Can't use idletime if the meter is shared as only one logical table can write
     // to an idletime bus
-    if (!mtr->direct && self.att_info.tables_from_attached(mtr).size() > 1) {
+    // For an atcam table a stage can have multiple partition tables of the same table
+    // which effectively makes the meter shared across these partition tables.
+    if (!mtr->direct && ((self.att_info.tables_from_attached(mtr).size() > 1)
+                        || tbl->layout.atcam)) {
         need_stats = true;
-        possible.clrbit(static_cast<int>(IR::MAU::ColorMapramAddress::IDLETIME)); }
+        possible.clrbit(static_cast<int>(IR::MAU::ColorMapramAddress::IDLETIME));
+        LOG3("Clearing Idletime as not direct meter and is shared across tables");
+    }
 
     auto pos = self.possible_addresses.find(mtr);
     if (pos != self.possible_addresses.end())
@@ -1567,9 +1576,10 @@ bool MeterColorMapramAddress::DetermineMeterReqs::preorder(const IR::MAU::Meter 
 
     if (possible.empty()) {
         ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
-                "The meter %1% requires %2% stats address bus to return a color value, and no "
+                "The meter '%1%' requires %2% stats address bus to return a color value, and no "
                 "bus is available.", mtr, need_stats ? "a" : "either an idletime or"); }
     self.possible_addresses[mtr] = possible;
+    LOG2("Possible meter addresses: " << possible);
     return false;
 }
 

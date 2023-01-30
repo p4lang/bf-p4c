@@ -247,6 +247,7 @@ control ingress {
         (cheetah_md.equality_check_lo  &  1 == 0)) {
 #else
     if (cheetah_md.equality_check_hi & cheetah_md.equality_check_lo & 0x1 == 0) {
+// expect error@-1 : "condition too complex, one operand of & must be constant"
 #endif
         apply(prune_check);
     }
