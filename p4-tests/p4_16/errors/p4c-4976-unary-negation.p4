@@ -77,8 +77,8 @@ control ingress(
     Register<bit<8>, bit<8>>(256, 0) reg1;
     RegisterAction<bit<8>, bit<8>, bit<8>>(reg1) reg1_action_1 = {
         void apply(inout bit<8> value, out bit<8> ret) {
-            value = -value | hdr.test.input_field_1; /* expect error: "Unary negation \(-\) in Stateful \
-ALU is only possible if it is the only operation in an expression\. Try simplifying your expression\." */
+            value = -value | hdr.test.input_field_1; /* expect error: "In Stateful ALU, negation can \
+only be used if it is the only operation in a control flow\." */
             ret = 0;
         }
     };

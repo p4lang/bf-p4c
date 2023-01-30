@@ -394,28 +394,33 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
             captureAssigstateProps();
             etype = OUTPUT;
         } else {
-            error("Reading out param %s in %s not supported", pe, action_type_name);
+            error(ErrorType::ERR_UNSUPPORTED, "Reading out param %s in %s not supported", pe,
+                  action_type_name);
         }
         if (output_index > Device::statefulAluSpec().OutputWords)
-            error("Only %d stateful output%s supported", Device::statefulAluSpec().OutputWords,
+            error(ErrorType::ERR_UNSUPPORTED, "Only %d stateful output%s supported",
+                  Device::statefulAluSpec().OutputWords,
                   Device::statefulAluSpec().OutputWords > 1 ? "s" : "");
         if (!opcode) opcode = "output";
         break;
     case param_t::HASH:         /* in digest */
         if (islvalue(etype)) {
-            error("Writing in param %s in %s not supported", pe, action_type_name);
+            error(ErrorType::ERR_UNSUPPORTED, "Writing in param %s in %s not supported", pe,
+                  action_type_name);
             return false; }
         e = new IR::MAU::SaluReg(pe->srcInfo, argType, "phv_" + name, field_idx > 0);
         break;
     case param_t::LEARN:        /* in learn */
         if (islvalue(etype)) {
-            error("Writing in param %s in %s not supported", pe, action_type_name);
+            error(ErrorType::ERR_UNSUPPORTED, "Writing in param %s in %s not supported", pe,
+                  action_type_name);
             return false; }
         e = new IR::MAU::SaluReg(pe->srcInfo, argType, "learn", false);
         break;
     case param_t::MATCH:        /* out match */
         if (!islvalue(etype)) {
-            error("Reading out param %s in %s not supported", pe, action_type_name);
+            error(ErrorType::ERR_UNSUPPORTED, "Reading out param %s in %s not supported", pe,
+                  action_type_name);
             return false; }
         etype = MATCH;
         if (!opcode) opcode = "#match";
@@ -485,12 +490,14 @@ bool CreateSaluInstruction::preorder(const IR::Function *func) {
         name.name += "$" + func->name;
         if (func->name == "overflow") {
             if (salu->overflow)
-                error("%s: Conflicting overflow function for Register", func->srcInfo);
+                error(ErrorType::ERR_UNEXPECTED, "%s: Conflicting overflow function for Register",
+                      func->srcInfo);
             else
                 salu->overflow = name.name; }
         if (func->name == "underflow") {
             if (salu->underflow)
-                error("%s: Conflicting underflow function for Register", func->srcInfo);
+                error(ErrorType::ERR_UNEXPECTED, "%s: Conflicting underflow function for Register",
+                      func->srcInfo);
             else
                 salu->underflow = name.name; } }
     const char *tail = action_type_name.c_str() + action_type_name.size();
@@ -512,7 +519,8 @@ bool CreateSaluInstruction::preorder(const IR::Function *func) {
     for (auto i = 1U; i < params->parameters.size(); ++i) {
         if (auto rt = params->parameters.at(i)->type->to<IR::Type_Enum>()) {
             if (return_encoding)
-                error(ErrorType::ERR_UNSUPPORTED, "%1%: Multiple enum return values", func);
+                error(ErrorType::ERR_UNSUPPORTED,
+                      "%1%: Multiple enum return values are not supported", func);
             action->return_encoding = return_encoding =
                 new IR::MAU::SaluAction::ReturnEnumEncoding(rt);
             return_enum_word = out_word; }
@@ -524,8 +532,10 @@ bool CreateSaluInstruction::preorder(const IR::Function *func) {
 void CreateSaluInstruction::postorder(const IR::Function *func) {
     BUG_CHECK(params == func->type->parameters, "%1%: recursion failure", func);
     if (cmp_instr.size() > Device::statefulAluSpec().CmpUnits.size())
-        error("%s: %s %s.%s needs %d comparisons; only %d possible", func->srcInfo,
-              action_type_name, reg_action->name, func->name, cmp_instr.size(),
+        error(ErrorType::ERR_OVERLIMIT,
+              "%s: %s %s.%s needs %d comparisons but the device only has %d comparison units. To "
+              "make the action compile, reduce the number of comparisons.",
+              func->srcInfo, action_type_name, reg_action->name, func->name, cmp_instr.size(),
               Device::statefulAluSpec().CmpUnits.size());
     if (onebit) {
         insert_instruction(onebit);
@@ -553,17 +563,20 @@ void CreateSaluInstruction::postorder(const IR::Function *func) {
             LOG3("  add " << *action->action.back()); } }
     if (math.valid) {
         if (salu->math.valid && !(math == salu->math))
-            error("%s: math unit incompatible with %s", reg_action->srcInfo, salu);
+            error(ErrorType::ERR_UNSUPPORTED, "%s: math unit incompatible with %s",
+                  reg_action->srcInfo, salu);
         else
             salu->math = math; }
     if (math_function && !math_function->expr)
-        error("%s: math unit requires math_input", reg_action->srcInfo);
+        error(ErrorType::ERR_NOT_FOUND, "%s: math unit requires an input expression",
+              reg_action->srcInfo);
     int alu_hi_use = salu->dual || salu->width > 64 ? 1 : 0;
     for (auto &local : Values(locals))
         if (local.use == LocalVar::ALUHI)
             alu_hi_use++;
     if (alu_hi_use > 1)
-        error("%s: too many locals in RegisterAction", func->srcInfo);
+        error(ErrorType::ERR_OVERLIMIT, "%s: too many local variables in RegisterAction",
+              func->srcInfo);
     if (return_encoding) {
         BUG_CHECK(action->return_predicate_words & (1 << return_enum_word),
                   "%s salu return type mismatch", func->name);
@@ -577,8 +590,11 @@ void CreateSaluInstruction::postorder(const IR::Function *func) {
         // Action body is empty, insert the nop instruction directly - we don't need
         // to merge any instructions.
         action->action.push_back(new IR::MAU::Instruction("nop"));
-        warning(ErrorType::ERR_EXPECTED, "%1%: stateful action '%2%' to have instructions "
-            "assigned. Please verify the action is valid.", salu, action->name); }
+        warning(ErrorType::ERR_EXPECTED,
+                "%1%: Expected stateful action '%2%' to have instructions "
+                "assigned. Please verify the action is valid.",
+                salu, action->name);
+    }
     clearFuncState();
 }
 
@@ -594,7 +610,7 @@ void CreateSaluInstruction::doAssignment(const Util::SourceInfo &srcInfo) {
     BUG_CHECK(operands.size() > (etype < OUTPUT_ALUHI), "%1%: recursion failure", srcInfo);
     if (operands.front()->type->width_bits() > Device::statefulAluSpec().MaxSize)
         error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1%Wide operations not supported in "
-                "stateful alu, will only operate on bottom %2% bits", srcInfo,
+                "Stateful ALU, will only operate on bottom %2% bits", srcInfo,
                 Device::statefulAluSpec().MaxSize);
     if (dest && dest->use != LocalVar::ALUHI) {
         BUG_CHECK(etype == VALUE, "assert failure");
@@ -611,7 +627,7 @@ void CreateSaluInstruction::doAssignment(const Util::SourceInfo &srcInfo) {
         } else {
             use = LocalVar::ALUHI; }
         if (use == LocalVar::NONE || (dest->use != LocalVar::NONE && dest->use != use))
-            error("%s%s %s too complex", srcInfo, action_type_name, reg_action->name);
+            error("%s: Expression is too complex for Stateful ALU", srcInfo);
         dest->use = use;
         LOG3("local " << dest->name << " use " << dest->use); }
     if (!dest) {
@@ -707,7 +723,7 @@ void CreateSaluInstruction::checkWriteAfterWrite() {
                 << assig_st->srcInfo.toSourceFragment()
                 << "Please, rewrite your code to make sure the value is assigned no more than"
                 << " once in all cases.";
-            error("%s", err.str());
+            error(ErrorType::ERR_UNSUPPORTED, "%s", err.str());
         }
     }
 
@@ -731,7 +747,7 @@ bool CreateSaluInstruction::preorder(const IR::AssignmentStatement *as) {
               as->left);
     assignDone = false;
     if (islvalue(etype))
-        error("Can't assign to %s in RegisterAction", as->left);
+        error(ErrorType::ERR_UNSUPPORTED, "Can't assign to %s in RegisterAction", as->left);
     else
         visit(as->right);
     if (::errorCount() == 0 && !assignDone)
@@ -888,12 +904,13 @@ bool CreateSaluInstruction::preorder(const IR::Slice *sl) {
     bool save_negate = negate;
     if (etype == NONE) {
         if (!checkSlice(sl, salu->alu_width()))
-            error("%scan only output entire %d-bit ALU output from %s", sl->srcInfo,
-                  salu->alu_width(), reg_action->toString());
+            error(ErrorType::ERR_UNSUPPORTED, "%scan only output entire %d-bit ALU output from %s",
+                  sl->srcInfo, salu->alu_width(), reg_action->toString());
     } else if (etype == MINMAX_IDX) {
         // Magic constant 4 is log_2(memory word size in bytes)
         if (!checkSlice(sl, 4 - minmax_width))
-            error("%s%s index output can only write to bottom %d bits of output", sl->srcInfo,
+            error(ErrorType::ERR_UNSUPPORTED,
+                  "%s%s index output can only write to bottom %d bits of output", sl->srcInfo,
                   minmax_instr->name, 4 - minmax_width);
     } else {
         negate = false;
@@ -920,7 +937,10 @@ bool CreateSaluInstruction::preorder(const IR::Slice *sl) {
     if (keep_slice) {
         if (num_ops + 1 != operands.size()) {
             // slice on top of an instruction -- can't mask the output
-            error("%sexpression too complex for RegisterAction", sl->srcInfo);
+            error(ErrorType::ERR_UNSUPPORTED,
+                  "%sExpression too complex for RegisterAction - result of an instruction cannot "
+                  "be sliced",
+                  sl->srcInfo);
             return false;
         } else if (operands.back() == sl->e0) {
             operands.back() = sl;
@@ -955,7 +975,8 @@ bool CreateSaluInstruction::preorder(const IR::MAU::Primitive *prim) {
             opcode = prim->name + (isSigned(prim->type) ? "s" : "u");
             if (etype == OUTPUT) etype = OUTPUT_ALUHI;
             return true; }
-        error("%s%s must write back to memory", prim->srcInfo, prim->name);
+        error(ErrorType::ERR_UNSUPPORTED, "%s%s must write back to memory", prim->srcInfo,
+              prim->name);
     } else if (prim->name == "math_unit.execute" || prim->name == "MathUnit.execute") {
         BUG_CHECK(prim->operands.size() == 2, "typechecking failure");
         if (operands.size() > 0) {
@@ -1007,7 +1028,8 @@ bool CreateSaluInstruction::preorder(const IR::MAU::Primitive *prim) {
             if (auto k = mu->arguments->at(i-1)->expression->to<IR::Constant>())
                 math.scale = k->asInt();
             else
-                error("%s is not a constant", mu->arguments->at(i-1)->expression);
+                error(ErrorType::ERR_UNEXPECTED, "Expected %s to be a constant scale",
+                      mu->arguments->at(i - 1)->expression);
             auto components = getListExprComponents(*mu->arguments->at(i)->expression);
             BUG_CHECK(components->size() <= 16, "Wrong number of MathUnit values");
             i = 15;
@@ -1022,15 +1044,19 @@ bool CreateSaluInstruction::preorder(const IR::MAU::Primitive *prim) {
                 if ((k = mu->arguments->at(i-1)->expression->to<IR::Constant>()))
                     val = k->asUint64() / val;
                 else
-                    error("%s is not a constant", mu->arguments->at(i-1)->expression); }
+                    error(ErrorType::ERR_UNEXPECTED, "Expected %s to be a constant value",
+                          mu->arguments->at(i - 1)->expression);
+            }
             double max = val * fn_max[math.exp_invert][math.exp_shift + 1];
             // choose the largest possible scale such that all table entries will be < 256
             math.scale = floor(log2(max)) - 7;
             if (math.scale > 31) {
-                warning("%sMathUnit scale overflow %d, capping at 31", mu->srcInfo, math.scale);
+                warning(ErrorType::ERR_OVERLIMIT, "%sMathUnit scale overflow %d, capping at 31",
+                        mu->srcInfo, math.scale);
                 math.scale = 31; }
             if (math.scale < -32) {
-                warning("%sMathUnit scale underflow %d, capping at -32", mu->srcInfo, math.scale);
+                warning(ErrorType::ERR_OVERLIMIT, "%sMathUnit scale underflow %d, capping at -32",
+                        mu->srcInfo, math.scale);
                 math.scale = -32; }
             val *= pow(2.0, -math.scale);
             for (i = math.exp_shift >= 0 ? 8 : 4; i < 16; ++i) {
@@ -1040,15 +1066,16 @@ bool CreateSaluInstruction::preorder(const IR::MAU::Primitive *prim) {
                 else if (math.table[i] > 255)
                     math.table[i] = 255; }
         } else {
-            error("%s is not a %s", mu->arguments->at(i)->expression,
-                  i > 1 ? "list expression" : "constant"); }
+            error(ErrorType::ERR_UNEXPECTED, "Expected %s to be a %s",
+                  mu->arguments->at(i)->expression, i > 1 ? "list expression" : "constant");
+        }
     } else if (method == "address") {
         operands.push_back(new IR::MAU::SaluReg(prim->srcInfo, prim->type, "address", false));
         address_subword = 0;
         if (prim->operands.size() == 2) {
             auto k = prim->operands.at(1)->to<IR::Constant>();
             if (!k || (k->value != 0 && k->value != 1))
-                error("%s argument must be 0 or 1", prim);
+                error(ErrorType::ERR_UNEXPECTED, "%s argument must be 0 or 1", prim);
             else
                 address_subword = k->asInt(); }
     } else if (method == "predicate") {
@@ -1074,7 +1101,7 @@ bool CreateSaluInstruction::preorder(const IR::MAU::Primitive *prim) {
                 problem = "can only compare one metadata field, one memory field and one constant";
             }
             if (problem)
-                error("%spredicate too complex for stateful alu: %s",
+                error(ErrorType::ERR_UNSUPPORTED, "%spredicate too complex for stateful alu: %s",
                       prim->operands.at(i)->srcInfo, problem);
             pred_operands.clear(); }
         operands.clear();
@@ -1086,11 +1113,11 @@ bool CreateSaluInstruction::preorder(const IR::MAU::Primitive *prim) {
         salu->pred_shift = 0;   // = 28 - psize;
         if (salu->pred_comb_shift >= 0) {
             if (comb_pred_width > salu->pred_shift + 4)
-                error("conflicting predicate output use in %s", salu); }
+                error(ErrorType::ERR_UNSUPPORTED, "conflicting predicate output use in %s", salu); }
     } else if (method == "min8" || method == "max8" || method == "min16" || method == "max16") {
         minmax_width = (method == "min16" || method == "max16") ? 1 : 0;
         if (etype != OUTPUT) {
-            error("%s can only write to an ouput", prim);
+            error(ErrorType::ERR_UNSUPPORTED, "%s can only write to an output", prim);
             return false; }
         auto *saved_predicate = predicate;
         auto saved_output_index = output_index;
@@ -1105,7 +1132,8 @@ bool CreateSaluInstruction::preorder(const IR::MAU::Primitive *prim) {
             visit(prim->operands[4], "postmod");
         if (minmax_instr) {
             if (!equiv(&operands, &minmax_instr->operands))
-                error("%s: only one min/max operation possible in a stateful alu", prim);
+                error(ErrorType::ERR_OVERLIMIT,
+                      "%s: only one min/max operation possible in a stateful alu", prim);
         } else {
             minmax_instr = createInstruction(); }
         operands.clear();
@@ -1146,7 +1174,9 @@ bool CreateSaluInstruction::preorder(const IR::MAU::Primitive *prim) {
             dest->regfile = regfile;
         }
     } else {
-        error("%sexpression too complex for RegisterAction", prim->srcInfo); }
+        error(ErrorType::ERR_UNSUPPORTED, "%sUnsupported method used in Stateful ALU",
+              prim->srcInfo);
+    }
     return false;
 }
 
@@ -1251,7 +1281,11 @@ bool CreateSaluInstruction::preorder(const IR::Operation::Relation *rel, cstring
         BUG_CHECK(etype == IF, "etype changed?");
         setupCmp(opcode);
     } else {
-        error("%sexpression in stateful alu too complex", rel->srcInfo); }
+        error(ErrorType::ERR_UNSUPPORTED,
+              "%sIn Stateful ALU, a comparison can only be used in a condition or in an assignment "
+              "to an output parameter.",
+              rel->srcInfo);
+    }
     return false;
 }
 
@@ -1283,6 +1317,16 @@ void CreateSaluInstruction::postorder(const IR::BFN::ReinterpretCast *c) {
         setupCmp("neq");
 }
 
+inline void condition_error(const IR::Node *node, const char *operation) {
+    error(ErrorType::ERR_UNSUPPORTED, "%sIn Stateful ALU, %s can only be used in a condition.",
+          node->srcInfo, operation);
+}
+inline void only_operation_error(const IR::Node *node, const char *operation) {
+    error(ErrorType::ERR_UNSUPPORTED,
+          "%sIn Stateful ALU, %s can only be used if it is the only operation in a control flow.",
+          node->srcInfo, operation);
+}
+
 void CreateSaluInstruction::postorder(const IR::LNot *e) {
     if (etype == IF) {
         if (operands.size() == 1 && is_learn(operands.back())) {
@@ -1293,8 +1337,10 @@ void CreateSaluInstruction::postorder(const IR::LNot *e) {
         pred_operands.back() = negatePred(pred_operands.back());
         LOG4("LNot rewrite pred_opeands: " << pred_operands.back());
     } else {
-        error("%sexpression too complex for stateful alu", e->srcInfo); }
+        condition_error(e, "logical negation");
+    }
 }
+
 void CreateSaluInstruction::postorder(const IR::LAnd *e) {
     if (etype == IF) {
         if (pred_operands.size() == 1) return;  // to deal with learn -- not always correct
@@ -1305,7 +1351,8 @@ void CreateSaluInstruction::postorder(const IR::LAnd *e) {
         pred_operands.back() = new IR::LAnd(e->srcInfo, pred_operands.back(), r);
         LOG4("LAnd rewrite pred_opeands: " << pred_operands.back());
     } else {
-        error("%sexpression too complex for stateful alu", e->srcInfo); }
+        condition_error(e, "logical conjunction");
+    }
 }
 void CreateSaluInstruction::postorder(const IR::LOr *e) {
     if (etype == IF) {
@@ -1317,7 +1364,8 @@ void CreateSaluInstruction::postorder(const IR::LOr *e) {
         pred_operands.back() = new IR::LOr(e->srcInfo, pred_operands.back(), r);
         LOG4("LOr rewrite pred_opeands: " << pred_operands.back());
     } else {
-        error("%sexpression too complex for stateful alu", e->srcInfo); }
+        condition_error(e, "logical disjunction");
+    }
 }
 
 bool CreateSaluInstruction::preorder(const IR::Add *e) {
@@ -1328,7 +1376,7 @@ bool CreateSaluInstruction::preorder(const IR::Add *e) {
         opcode = "add";
         if (etype == OUTPUT) etype = OUTPUT_ALUHI;
         return true; }
-    error("%sexpression too complex for stateful alu", e->srcInfo);
+    only_operation_error(e, "addition");
     return false;
 }
 bool CreateSaluInstruction::preorder(const IR::AddSat *e) {
@@ -1338,7 +1386,7 @@ bool CreateSaluInstruction::preorder(const IR::AddSat *e) {
         if (etype == OUTPUT) etype = OUTPUT_ALUHI;
         return true;
     } else {
-        error("%sexpression too complex for stateful alu", e->srcInfo);
+        only_operation_error(e, "saturating addition");
         return false; }
 }
 
@@ -1354,7 +1402,7 @@ bool CreateSaluInstruction::preorder(const IR::Sub *e) {
         opcode = "sub";
         if (etype == OUTPUT) etype = OUTPUT_ALUHI;
         return true; }
-    error("%sexpression too complex for stateful alu", e->srcInfo);
+    only_operation_error(e, "subtraction");
     return false;
 }
 bool CreateSaluInstruction::preorder(const IR::SubSat *e) {
@@ -1364,7 +1412,7 @@ bool CreateSaluInstruction::preorder(const IR::SubSat *e) {
         if (etype == OUTPUT) etype = OUTPUT_ALUHI;
         return true;
     } else {
-        error("%sexpression too complex for stateful alu", e->srcInfo);
+        only_operation_error(e, "saturating subtraction");
         return false; }
 }
 
@@ -1389,19 +1437,22 @@ void CreateSaluInstruction::postorder(const IR::BAnd *e) {
         operands.back() = new IR::BAnd(e->srcInfo, operands.back(), r);
         LOG4("BAnd rewrite opeands: " << operands.back());
     } else {
-        error("%sexpression too complex for stateful alu", e->srcInfo); }
+        only_operation_error(e, "conjunction"); }
 }
 
 void CreateSaluInstruction::checkAndReportComplexInstruction(const IR::Operation_Binary* op) const {
     if (regtype->width_bits() == 1) {
-        error("%sOnly simple assignments are supported for one-bit registers.", op->srcInfo);
+        error(ErrorType::ERR_UNSUPPORTED,
+              "%sOnly simple assignments are supported for one-bit registers.", op->srcInfo);
         return;
     }
 
     if (!isComplexInstruction(op)) return;
 
-    error("You can only have more than one binary operator in a statement if "
-         "the outer one is |%1%", op->srcInfo);
+    error(ErrorType::ERR_UNSUPPORTED,
+          "You can only have more than one binary operator in a statement if "
+          "the outer one is |%1%",
+          op->srcInfo);
 }
 bool CreateSaluInstruction::isComplexInstruction(const IR::Operation_Binary *op) const {
     // The code checks if the passed binary operation is in the simple form: left <op> right
@@ -1460,7 +1511,8 @@ bool CreateSaluInstruction::preorder(const IR::BOr *e) {
             visit(e->right);
             doAssignment(e->right->srcInfo);
         } else if (etype == IF) {
-            error("%stoo complex bitwise operation used in comparison", e->srcInfo);
+            error(ErrorType::ERR_UNSUPPORTED, "%stoo complex bitwise operation used in a condition",
+                  e->srcInfo);
         } else {
             // All other cases are too complex
             checkAndReportComplexInstruction(e);
@@ -1483,7 +1535,7 @@ void CreateSaluInstruction::postorder(const IR::BOr *e) {
         else
             opcode = "or";
     } else {
-        error("%sexpression too complex for stateful alu", e->srcInfo); }
+        only_operation_error(e, "disjunction"); }
 }
 bool CreateSaluInstruction::preorder(const IR::Concat *e) {
     if (Pattern(0).match(e->left)) {
@@ -1495,7 +1547,8 @@ bool CreateSaluInstruction::preorder(const IR::Concat *e) {
         if (negate)
             operands.back() = new IR::Neg(operands.back());
         return false; }
-    error("%sexpression too complex for stateful alu", e->srcInfo);
+    error(ErrorType::ERR_UNSUPPORTED,
+          "%sBit concatenation result cannot be assigned to an output parameter", e->srcInfo);
     return false;
 }
 void CreateSaluInstruction::postorder(const IR::BXor *e) {
@@ -1506,7 +1559,7 @@ void CreateSaluInstruction::postorder(const IR::BXor *e) {
         else
             opcode = "xor";
     } else {
-        error("%sexpression too complex for stateful alu", e->srcInfo); }
+        only_operation_error(e, "xor"); }
 }
 void CreateSaluInstruction::postorder(const IR::Neg *e) {
     // There is no opcode for unary negation, so we use subtraction instead. SUBR performs B - A
@@ -1517,10 +1570,7 @@ void CreateSaluInstruction::postorder(const IR::Neg *e) {
         const auto *negated = operands.back();
         operands.push_back(new IR::Constant(negated->srcInfo, negated->type, 0));
     } else {
-        error(ErrorType::ERR_UNSUPPORTED,
-              "Unary negation (%1%) in Stateful ALU is only possible if it is the only operation "
-              "in an expression. Try simplifying your expression.",
-              e);
+        only_operation_error(e, "negation");
     }
 }
 void CreateSaluInstruction::postorder(const IR::Cmpl *e) {
@@ -1543,7 +1593,7 @@ void CreateSaluInstruction::postorder(const IR::Cmpl *e) {
         // postorder method for the binary operation.
         opcode = "nota";
     } else if (etype != VALUE)
-        error("%sexpression too complex for stateful alu", e->srcInfo);
+        only_operation_error(e, "bit complement");
 }
 void CreateSaluInstruction::postorder(const IR::Concat *e) {
     if (operands.size() < 2) return;  // can only happen if there has been an error
@@ -1560,7 +1610,7 @@ void CreateSaluInstruction::postorder(const IR::Concat *e) {
             LOG4("concant dropping high bit constant " << operands.back());
             operands.back() = r;
             return; } }
-    error("%sexpression too complex for stateful alu", e->srcInfo);
+    only_operation_error(e, "bit concatenation");
 }
 
 bool CreateSaluInstruction::divmod(const IR::Operation::Binary *e, cstring op) {
@@ -1573,7 +1623,8 @@ bool CreateSaluInstruction::divmod(const IR::Operation::Binary *e, cstring op) {
         visit(e->right, "right");
         if (divmod_instr) {
             if (!equiv(&operands, &divmod_instr->operands))
-                error("%s: only one div/mod operation possible in a stateful alu", e);
+                error(ErrorType::ERR_UNSUPPORTED,
+                      "%s: only one div/mod operation possible in a Stateful ALU", e);
         } else {
             divmod_instr = createInstruction(); }
         operands.clear();
@@ -1581,7 +1632,7 @@ bool CreateSaluInstruction::divmod(const IR::Operation::Binary *e, cstring op) {
         etype = OUTPUT;
         operands.push_back(new IR::MAU::SaluReg(e->type, op, false));
     } else {
-        error("%sexpression too complex for stateful alu", e->srcInfo); }
+        only_operation_error(e, "div/mod operation"); }
     return false;
 }
 
@@ -1719,7 +1770,7 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::setup_output() {
             output_address_subword_predicate[output_index] = predicate; } }
     if (output) {
         if (!equiv(operands.back(), output->operands.back())) {
-            error("Incompatible outputs in RegisterAction: %s and %s\n",
+            error(ErrorType::ERR_UNSUPPORTED, "Incompatible outputs in RegisterAction: %s and %s\n",
                   output->operands.back(), operands.back());
             return nullptr; }
         if (output->operands.size() == operands.size()) {
@@ -1735,6 +1786,13 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::setup_output() {
 const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
     const IR::MAU::SaluInstruction *rv = nullptr;
     auto k = operands.back()->to<IR::Constant>();
+    const auto predicate_error =
+        [&](const char *type) {
+            error(ErrorType::ERR_UNSUPPORTED,
+                  "cannot output %2% from %1% because the predicate is output in another control "
+                  "flow",
+                  salu, type);
+        };
     switch (etype) {
     case IF:
         insert_instruction(rv = new IR::MAU::SaluInstruction(opcode, 0, &operands));
@@ -1748,9 +1806,11 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
                                             " operands only (output and a constant)");
             opcode = "clr_bit";
             if (predicate)
-                error("%scan't have condition in a RegisterAction<bit<1>>", predicate->srcInfo);
+                error(ErrorType::ERR_UNSUPPORTED,
+                      "%scan't have condition in a RegisterAction<bit<1>>", predicate->srcInfo);
             else if (!k)
-                error("%scan't write non-constant value to Register<bit<1>>",
+                error(ErrorType::ERR_UNSUPPORTED,
+                      "%scan't write non-constant value to Register<bit<1>>",
                       operands.back()->srcInfo);
             else if (k->value)
                 opcode = "set_bit";
@@ -1778,7 +1838,8 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
             BUG_CHECK(operands.size() == 1, "one-bit register OUTPUT instruction should have one"
                                             " operand only (the output)");
             if (predicate) {
-                error("%scan't have predicate on 1-bit instruction", predicate->srcInfo);
+                error(ErrorType::ERR_UNSUPPORTED, "%scan't have predicate on 1-bit instruction",
+                      predicate->srcInfo);
             }
             opcode = onebit ? onebit->name : "read_bit";
             if (onebit_cmpl) opcode += "c";
@@ -1831,12 +1892,12 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
             comb_pred_width = std::max(comb_pred_width, k->type->width_bits());
             int shift = floor_log2(k->value);
             if (salu->pred_comb_shift >= 0 && salu->pred_comb_shift != shift)
-                error("conflicting predicate output use in %s", salu);
+                predicate_error("constant");
             else
                 salu->pred_comb_shift = shift;
             if (salu->pred_shift >= 0) {
                 if (comb_pred_width > salu->pred_shift + 4)
-                    error("conflicting predicate output use in %s", salu);
+                    predicate_error("constant");
             } else {
                 salu->pred_shift = 28; }
             operands.at(0) = new IR::MAU::SaluReg(k->srcInfo, k->type, "predicate", false);
@@ -1847,12 +1908,14 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
             salu->pred_shift = 0;   // = 28 - psize;
             if (salu->pred_comb_shift >= 0) {
                 if (comb_pred_width > salu->pred_shift + 4)
-                    error("conflicting predicate output use in %s", salu); }
+                    predicate_error("enum"); }
             operands.at(0) = new IR::MAU::SaluReg(operands.at(0)->srcInfo,
                                                   IR::Type::Bits::get(psize), "predicate", false);
             action->return_predicate_words |= 1 << output_index;
         } else {
-            error("can't output %1% from a RegisterAction", operands.at(0)); }
+            error(ErrorType::ERR_UNSUPPORTED, "can't output %1% from a RegisterAction",
+                  operands.at(0));
+        }
         rv = setup_output();
         break;
     default:
@@ -1931,7 +1994,7 @@ bool CreateSaluInstruction::preorder(const IR::Declaration_Variable *v) {
     } else if (v->type == regtype) {
         locals.emplace(v->name, LocalVar(v->name, true));
     } else {
-        error("RegisterAction can't support local var %s", v); }
+        error(ErrorType::ERR_UNSUPPORTED, "RegisterAction can't support local var %s", v); }
     return false;
 }
 
@@ -2030,8 +2093,8 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
             detail << " bit<" << sz << "> int<" << sz << ">";
         detail << "\n        structs containing one or two fields of one of the above types";
         detail << "\n        bit<1> bit<" << device.MaxDualSize << ">\n";
-        error("Unsupported Register element type %s for %s\n%s", regtype, salu->reg,
-              detail.str());
+        error(ErrorType::ERR_UNSUPPORTED, "Unsupported Register element type %s for %s\n%s",
+              regtype, salu->reg, detail.str());
         return false; }
 
     // For a 1bit SALU, the driver expects a set and clr instr. Check if these
@@ -2071,7 +2134,8 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
         auto chain = salu_action->annotations->getSingle("chain_address");
         if (first) {
             if (salu->chain_vpn != (chain != nullptr))
-                error("Inconsistent chaining for %s and %s", first, salu_action);
+                error(ErrorType::ERR_UNSUPPORTED, "Inconsistent chaining for %s and %s", first,
+                      salu_action);
         } else {
             salu->chain_vpn = chain != nullptr;
             first = salu_action;
@@ -2089,7 +2153,8 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
                 if (salu_size < 8)
                     salu_size = 8;
                 if (op->type->width_bits() > salu_size)
-                    error("%sBecause you declared the register %s to store the type %s, the SALU "
+                    error(ErrorType::ERR_UNSUPPORTED,
+                          "%sBecause you declared the register %s to store the type %s, the SALU "
                           "for the associated RegisterAction()s is configured in %d-bit mode. As a "
                           "result, it can only access header/metadata fields of the type bit<%d>",
                           op->srcInfo, salu->reg, regtype, salu_size, salu_size);
@@ -2111,7 +2176,8 @@ void CheckStatefulAlu::postorder(IR::MAU::SaluInstruction *si) {
         for (const auto *op : si->operands) {
             const auto *constant = op->to<IR::Constant>();
             if (constant && (constant->value > INT_MAX || constant->value < INT_MIN))
-                error("%sconstant value %s is out of range [%d; %d] for stateful ALU", op->srcInfo,
+                error(ErrorType::ERR_UNSUPPORTED,
+                      "%sconstant value %s is out of range [%d; %d] for stateful ALU", op->srcInfo,
                       constant->value.str(), INT_MIN, INT_MAX);
         }
     }
@@ -2223,7 +2289,8 @@ bool CheckStatefulAlu::AddressLmatchUsage::preorder(const IR::MAU::SaluFunction 
             lmatch_operand = fn->expr;
             lmatch_inuse_mask = inuse_mask;
         } else {
-            error("Conflicting address calls in RegisterActions on %s", salu->reg);
+            error(ErrorType::ERR_UNSUPPORTED, "Conflicting address calls in RegisterActions on %s",
+                  salu->reg);
         }
     } else {
         lmatch_operand = fn->expr;
@@ -2318,7 +2385,7 @@ const IR::Expression *FixupStatefulAlu::UpdateEncodings::preorder(IR::Member *ex
     } else if ((prim = getParent<IR::MAU::Primitive>()) && prim->name == "modify_field") {
         // ok
     } else {
-        error(ErrorType::ERR_UNSUPPORTED, "%1%: enum reference", exp);
+        error(ErrorType::ERR_UNSUPPORTED, "%1%: unexpected enum reference", exp);
         return exp;
     }
     unsigned val = encoding->tag_used.at(exp->member.name);

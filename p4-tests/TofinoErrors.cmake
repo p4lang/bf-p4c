@@ -34,6 +34,12 @@ add_test_compiler_definition(
   0 1 2 3 4
 )
 
+add_test_compiler_definition(
+  extensions/p4_tests/p4_16/errors/register_action_errors.p4
+  TEST
+  1 2 3 4 5 6 7 8 9 10 11 12
+)
+
 set_negative_tests("tofino"
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/p4c-2293-no-rec-fail.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/p4c-2293-rec.p4

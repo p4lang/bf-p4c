@@ -206,13 +206,13 @@ control EgressSfc(in egress_intrinsic_metadata_t eg_intr_md,
             if (value.qdepth_drain_cells < 32w0x80000000) {
                 if (value.target_qdepth < 0x80000000) {
                     value.qdepth_drain_cells = (bit<32>)(qos.qdepth |-| (bit<19>)value.target_qdepth)[18:6];
-                    // expect error@-1: "expression too complex for RegisterAction"
+                    // expect error@-1: "Expression too complex for RegisterAction - result of an instruction cannot be sliced"
                 } else if (value.target_qdepth < 0x40000000) {
                     value.qdepth_drain_cells = (bit<32>)(qos.qdepth |-| (bit<19>)value.target_qdepth)[18:5];
-                    // expect error@-1: "expression too complex for RegisterAction"
+                    // expect error@-1: "Expression too complex for RegisterAction - result of an instruction cannot be sliced"
                 } else if (value.target_qdepth < 0x20000000) {
                     value.qdepth_drain_cells = (bit<32>)(qos.qdepth |-| (bit<19>)value.target_qdepth)[18:4];
-                    // expect error@-1: "expression too complex for RegisterAction"
+                    // expect error@-1: "Expression too complex for RegisterAction - result of an instruction cannot be sliced"
                 }
             }
         }
