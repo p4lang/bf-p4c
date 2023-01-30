@@ -483,19 +483,12 @@ if (ENABLE_ALT_PHV_ALLOC)
     )
 
     p4c_add_xfail_reason("tofino2"
-        "Compiler Bug: Constant lookup does not match the ActionFormat"
-        extensions/p4_tests/p4_16/customer/extreme/p4c-2794.p4
-    )
-
-    p4c_add_xfail_reason("tofino2"
         "Compiler Bug:  - can't place .* it's already done"
         extensions/p4_tests/p4_16/customer/arista/obfuscated-ddos_tofino2.p4
     )
 
     p4c_add_xfail_reason("tofino2"
         "error: No phv record"  # bfas
-        extensions/p4_tests/p4_16/customer/extreme/p4c-2918-2.p4
-        extensions/p4_tests/p4_16/customer/extreme/p4c-3001.p4
         extensions/p4_tests/p4_16/stf/MODEL-1095.p4
     )
 

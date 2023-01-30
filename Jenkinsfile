@@ -60,41 +60,6 @@ node ('compiler-travis') {
                 echo "Using bf-p4c-compilers:${bf_p4c_compilers_rev}"
                 sh 'git log -1 --stat'
 
-                // if this is a PR, check if it is ALT-PHV related
-                if (env.BRANCH_NAME && env.BRANCH_NAME.startsWith('PR-')) {
-                    // check if commit resides in some ALT-PHV relate branch
-                    isAltPHVBranch = sh(
-                        script: "echo ${env.CHANGE_BRANCH} | grep -i 'alt.phv\\|alt.pass\\|table.first'",
-                        returnStatus: true
-                    )
-
-                    // This is somewhat contrived, but there are several problems created by Jenkins:
-                    // - the other branches are not fetched by default, but we need CHANGE_TARGET to be
-                    //   avalable so that git merge-base works
-                    // - for some reason, the branch is not actually available unless the part after : is also
-                    //   provided
-                    // - Jenkins sets url to http, but then it is unable to load private repos, so replace
-                    //   that with ssh (for which there are keys)
-                    sh "git -c url.\"git@github.com:\".insteadOf=\"https://github.com/\" fetch -n origin ${env.CHANGE_TARGET}:${env.CHANGE_TARGET}"
-                    mergeBase = sh(
-                        script: "git merge-base ${bf_p4c_compilers_rev} ${env.CHANGE_TARGET}",
-                        returnStdout: true
-                    ).trim();
-                    sh "echo 'Last common commit is:'; git log -1 ${mergeBase}"
-
-                    // check if history of this commit (from the point it
-                    // diverged from source) contains mentions of alt-phv in
-                    // either subject or long description of commit messages
-                    isAltPHVCommit = sh(
-                        script: "git log ${mergeBase}..${bf_p4c_compilers_rev} --format='%s%n%b' | tee /dev/stderr | grep -iq 'alt.phv\\|alt.pass\\|table.first'",
-                        returnStatus: true
-                    )
-                    IS_ALT_PHV = isAltPHVBranch == 0 || isAltPHVCommit == 0
-                    echo "branch ${env.CHANGE_BRANCH} [split of ${env.CHANGE_TARGET}]: isAltPHVCommit: ${isAltPHVCommit == 0}, isAltPHVBranch: ${isAltPHVBranch == 0}, IS_ALT_PHV: ${IS_ALT_PHV}"
-                } else {
-                    IS_ALT_PHV = false
-                }
-
                 echo "Initializing bf-p4c-compilers submodules"
                 sh "git submodule update --init --recursive -j 16"
             }
@@ -201,14 +166,10 @@ node ('compiler-travis') {
                 }
             }
 
-            // TODO: Enable Flatrock testing when ALT-PHV and/or Flatrock is more mature
-            MAX_ALT_PHV = IS_ALT_PHV ? 3 : 1
-            echo "testing ALT PHV for Tofino 1..${MAX_ALT_PHV}"
             // run tests from a file
             withEnv(["SANITIZERS_ENABLED=${sanitizersEnabled()}",
                      "BF_P4C_REV=${bf_p4c_compilers_rev}",
-                     "IMAGE_TAG=${image_tag}",
-                     "ALT_PHV_TOFINO_MAX_VERSION=${MAX_ALT_PHV}"]) {
+                     "IMAGE_TAG=${image_tag}"]) {
                 load 'jenkins/tests.groovy';
             }
         }
