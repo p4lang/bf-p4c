@@ -545,7 +545,6 @@ if (ENABLE_ALT_PHV_ALLOC)
     # PTF and STF errors
     p4c_add_xfail_reason("tofino2"
         "jbay_test_harness FAILED"  # STF
-        extensions/p4_tests/p4_16/stf/stage_layout1.p4
         testdata/p4_14_samples/saturated-bmv2.p4
     )
 

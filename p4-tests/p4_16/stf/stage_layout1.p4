@@ -20,6 +20,7 @@ control ingress(inout headers hdr, inout metadata meta,
     @stage(1, 4096, "noimmediate")
     @stage(2, 4096, "immediate")
     @stage(3, 4096, "noimmediate")
+    @pack(1)
     table t1 {
         actions = { noop; act1; }
         key = { hdr.data.f1: exact; }
