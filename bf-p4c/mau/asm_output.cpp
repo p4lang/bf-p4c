@@ -2176,9 +2176,9 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
         match_key.append(tbl->gateway_constant_entries_key);
     }
     for (const auto& key_info : ExtractKeyDetails(match_key, phv, tbl->externalName())) {
+        out << indent++ << canon_name(key_info.name()) << ":";
         Item_Format format(key_info.table_keys(), indent);
-        out << indent++ << canon_name(key_info.name()) << ":" << format.open;
-        out << "type: " << key_info.match_type();
+        out << format.open << "type: " << key_info.match_type();
         out << format.separator << "size: " << key_info.width();
         out << format.separator << "full_size: " << key_info.full_size();
         auto key_name = key_info.key_name(false);
