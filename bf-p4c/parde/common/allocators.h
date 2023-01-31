@@ -143,9 +143,12 @@ class LoweredParserMatchAllocator {
             // reserve extractor for checksum verification
             for (auto c : lpm_allocator.current_statements) {
                 if (auto lpc = c->to<IR::BFN::LoweredParserChecksum>()) {
-                    if (!lpc->phv_dest) continue;
-                    auto container = lpc->phv_dest->container;
+                    const IR::BFN::ContainerRef* dest = lpc->phv_dest;
+                    if (lpc->type == IR::BFN::ChecksumMode::VERIFY && lpc->csum_err)
+                        dest = lpc->csum_err->container;
+                    if (!dest) continue;
 
+                    auto container = dest->container;
                     BUG_CHECK(container.size() != 32,
                               "checksum verification cannot be 32-bit container");
 
@@ -395,6 +398,8 @@ class LoweredParserMatchAllocator {
 
     void allocate() {
         sort_state_primitives();
+        for (const auto& checksum : checksums)
+            current_statements.push_back(checksum);
 
         if (Device::currentDevice() == Device::TOFINO) {
             TofinoExtractAllocator tea(*this);
