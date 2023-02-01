@@ -759,7 +759,7 @@ class BarefootBackend(BackendDriver):
                 jsonTree['programs'][0]['source_files']['src_root'] = \
                         os.path.dirname(os.path.abspath(self._source_filename))
                 if self.conf_file is not None:
-                    jsonTree['conf_file'] = self.conf_file
+                    jsonTree["target_data"]['conf_file'] = self.conf_file
                 for pipe in self.mau_json:
                     mau_json = { 'path' : self.mau_json[pipe], 'log_type' : 'mau' }
                     jsonTree['programs'][0]['pipes'][pipe]['files']['logs'].append(mau_json)

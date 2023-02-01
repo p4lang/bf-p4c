@@ -30,49 +30,35 @@ class Manifest : public Inspector {
 
     // to use PathAndType as std::set
     struct PathCmp {
-        bool operator()(const PathAndType& lhs, const PathAndType& rhs) const {
-            auto l = std::string(lhs.first) + std::string(lhs.second);
-            auto r = std::string(rhs.first) + std::string(rhs.second);
-            return std::less<std::string>()(l, r);
-        }
+        bool operator()(const PathAndType& lhs, const PathAndType& rhs) const;
     };
 
  private:
     /// the collection of inputs for the program
     struct InputFiles {
-        cstring           _rootPath;
-        cstring           _sourceInfo;  // path to source.json relative to manifest.json
-        std::set<cstring> _includePaths;
-        std::set<cstring> _defines;
+        cstring           m_rootPath;
+        cstring           m_sourceInfo;  // path to source.json relative to manifest.json
+        std::set<cstring> m_includePaths;
+        std::set<cstring> m_defines;
 
-        explicit InputFiles(const BFN_Options &options);
-        void serialize(Writer &writer);
+        explicit InputFiles(const BFN_Options&);
+        void serialize(Writer&);
     };
 
     /// represents a graph file
     struct GraphOutput {
-        cstring _path;
-        gress_t _gress;
-        cstring _type;
-        cstring _format;
-        GraphOutput(cstring path, gress_t gress, cstring type, cstring format = ".dot") :
-            _path(path), _gress(gress), _type(type), _format(format) {}
+        cstring m_path;
+        gress_t m_gress;
+        cstring m_type;
+        cstring m_format;
+        GraphOutput(const cstring path_in, const gress_t gress_in, const cstring type_in,
+            const cstring format_in = ".dot") :
+            m_path(path_in), m_gress(gress_in), m_type(type_in), m_format(format_in) { }
 
-        void serialize(Writer &writer) {
-            writer.StartObject();
-            writer.Key("path");
-            writer.String(_path.c_str());
-            writer.Key("gress");
-            writer.String(toString(_gress).c_str());
-            writer.Key("graph_type");
-            writer.String(_type.c_str());
-            writer.Key("graph_format");
-            writer.String(_format.c_str());
-            writer.EndObject();
-        }
+        void serialize(Writer&);
 
         cstring getHash() const {
-            return _path + toString(_gress) + _type + _format;
+            return m_path + toString(m_gress) + m_type + m_format;
         }
     };
 
@@ -84,190 +70,91 @@ class Manifest : public Inspector {
 
     /// the collection of outputs for each pipe
     struct OutputFiles {
-        cstring                               _context;  // path to the context file
-        cstring                               _binary;   // path to the binary file
+        cstring m_context;  // path to the context file
+        cstring m_binary;   // path to the binary file
         // pairs of path and resource type
-        std::set<PathAndType, PathCmp>        _resources;
+        std::set<PathAndType, PathCmp>        m_resources;
         // pairs of path and log type
-        std::set<PathAndType, PathCmp>        _logs;
-        std::set<GraphOutput, GraphOutputCmp> _graphs;
+        std::set<PathAndType, PathCmp>        m_logs;
+        std::set<GraphOutput, GraphOutputCmp> m_graphs;
 
-        void serialize(Writer &writer) {
-            writer.Key("files");
-            writer.StartObject();
-            // Should be overwritten by assembler or driver on successful compile
-            writer.Key("context");
-            writer.StartObject();
-            writer.Key("path");
-            if (_context)
-                writer.String(_context);
-            else
-                writer.String("");
-            writer.EndObject();
-
-            // Should be written by assembler or driver on successful compile
-            if (_binary) {
-                writer.Key("binary");
-                writer.StartObject();
-                writer.Key("path");
-                writer.String(_context);
-                writer.EndObject();
-            }
-
-            writer.Key("resources");
-            writer.StartArray();
-            for (auto r : _resources) {
-                writer.StartObject();
-                writer.Key("path");
-                writer.String(r.first.c_str());
-                writer.Key("type");
-                writer.String(r.second.c_str());
-                writer.EndObject();
-            }
-            writer.EndArray();
-
-            writer.Key("graphs");
-            writer.StartArray();
-            for (auto c : _graphs)
-                c.serialize(writer);
-            writer.EndArray();
-
-            writer.Key("logs");
-            writer.StartArray();
-            for (auto l : _logs) {
-                writer.StartObject();
-                writer.Key("path");
-                writer.String(l.first.c_str());
-                writer.Key("log_type");
-                writer.String(l.second.c_str());
-                writer.EndObject();
-            }
-            writer.EndArray();
-            writer.EndObject();  // files
-        }
+        void serialize(Writer&);
     };
 
-    const BFN_Options &        _options;
+    const BFN_Options& m_options;
     // pairs of <pipe_id, pipe_name>
-    std::map<unsigned, cstring> _pipes;
+    std::map<unsigned int, cstring> m_pipes;
     /// map of pipe-id to OutputFiles
-    std::map<unsigned, OutputFiles *> _pipeOutputs;
-    InputFiles                        _programInputs;
-    cstring                    _eventLogPath;
-    cstring                    _frontendIrLogPath;
+    std::map<unsigned int, OutputFiles*> m_pipeOutputs;
+    InputFiles m_programInputs;
+    cstring m_eventLogPath, m_frontendIrLogPath;
     /// reference to ProgramPipelines to generate the architecture configuration
-    BFN::ProgramPipelines      _pipelines;
-    int                        _pipeId = -1;  /// the current pipe id (for the visitor methods)
+    BFN::ProgramPipelines m_pipelines;
+    int m_pipeId = -1;  /// the current pipe id (for the visitor methods)
     /// to generate parser and control graphs
-    P4::ReferenceMap *         _refMap = nullptr;
-    std::ofstream              _manifestStream;
+    P4::ReferenceMap* m_refMap = nullptr;
+    std::ofstream m_manifestStream;
     /// compilation succeeded or failed
-    bool _success = false;
+    bool m_success = false;
 
  private:
-    Manifest() : _options(BackendOptions()), _programInputs(BackendOptions()) {
-        auto path = Util::PathName(_options.outputDir).join("manifest.json");
-        _manifestStream.open(path.toString().c_str(), std::ofstream::out);
-        if (!_manifestStream)
-            std::cerr << "Failed to open manifest file " << path.toString() << std::endl;
-    }
+    Manifest();
+    ~Manifest();
 
-    ~Manifest() {
-        for (auto p : _pipeOutputs) {
-            delete p.second;
-        }
-
-        _manifestStream.flush();
-        _manifestStream.close();
-    }
-
-    OutputFiles *getPipeOutputs(unsigned pipe) {
-        auto it = _pipeOutputs.find(pipe);
-        if (it != _pipeOutputs.end())
-            return it->second;
-        auto p = _pipeOutputs.emplace(pipe, new OutputFiles());
-        return p.first->second;
-    }
+    OutputFiles* getPipeOutputs(unsigned int pipe);
 
  public:
-    /// Return the singleton object
-    static Manifest &getManifest() {
-        static Manifest instance;
-        return instance;
-    }
+    static Manifest& getManifest();  //  singleton
 
     /// Visitor methods to generate graphs
-    void postorder(const IR::BFN::TnaParser *parser) override;
-    void postorder(const IR::BFN::TnaControl *control) override;
+    void postorder(const IR::BFN::TnaParser* parser)   override;
+    void postorder(const IR::BFN::TnaControl* control) override;
     /// helper methods for the graph generators
     /// one can set any of the maps and invoke the appropriate visitors
-    void setRefMap(P4::ReferenceMap *refMap) {
-        _refMap = refMap;
+    void setRefMap(/* intentionally no "const" here */ P4::ReferenceMap* const refMap_in) {
+        m_refMap = refMap_in;
     }
 
-    void setPipe(int pipe_id, cstring pipe_name) {
-#if BAREFOOT_INTERNAL
-        if (_options.skipped_pipes.count(pipe_name)) return;
-#endif
-        _pipeId = pipe_id;
-        _pipes.emplace(_pipeId, pipe_name);
-        // and add implicitly add the pipe outputs so that even if there are no
-        // files produced by the compiler, we get the pipe structure. P4C-2160
-        getPipeOutputs(pipe_id);
-    }
+    void setPipe(int pipe_ID, const cstring pipe_name);
 
-    void setSuccess(bool success) { _success = success; }
+    void setSuccess(const bool success) { m_success = success; }
 
-    void addContext(int pipe, cstring path) {
-        auto *files = getPipeOutputs(pipe);
-        files->_context = path;
+    void addContext(const int pipe, const cstring path) {
+        getPipeOutputs(pipe) -> m_context = path;
     }
-    void addResources(int pipe, cstring path, cstring type = "resources") {
-        auto *files = getPipeOutputs(pipe);
-        files->_resources.insert(PathAndType(path, type));
+    void addResources(const int pipe, const cstring path, const cstring type = "resources") {
+        getPipeOutputs(pipe) -> m_resources.insert(PathAndType(path, type));
     }
-    void addGraph(int pipe, cstring graphType,
-            cstring graphName, gress_t gress, cstring ext = ".dot") {
-        auto path = BFNContext::get().getOutputDirectory("graphs", pipe)
-            .substr(_options.outputDir.size()+1) + "/" + graphName + ext;
-        auto *files = getPipeOutputs(pipe);
-        files->_graphs.insert(GraphOutput(path, gress, graphType, ext));
+    void addGraph(int pipe, const cstring graphType, const cstring graphName, const gress_t gress,
+                  const cstring extension_including_the_leading_period = ".dot");
+    void addLog(int pipe, const cstring logType, const cstring logName);
+    void addArchitecture(const BFN::ProgramPipelines& pipelines_in) {
+        m_pipelines = pipelines_in;
     }
-    void addLog(int pipe, cstring logType, cstring logName) {
-        auto path = BFNContext::get().getOutputDirectory("logs", pipe)
-            .substr(_options.outputDir.size()+1) + "/" + logName;
-        auto *files = getPipeOutputs(pipe);
-        files->_logs.insert(PathAndType(path, logType));
-    }
-    void addArchitecture(const BFN::ProgramPipelines &pipelines) {
-        _pipelines = pipelines;
-    }
-    void setSourceInfo(cstring path) {
-        BUG_CHECK(_programInputs._sourceInfo.size() == 0,
+    void setSourceInfo(const cstring sourceInfo_in) {
+        BUG_CHECK(m_programInputs.m_sourceInfo.size() == 0,
             "Trying to redefine path to source info!");
-        _programInputs._sourceInfo = path;
+        m_programInputs.m_sourceInfo = sourceInfo_in;
     }
-    void setEventLog(cstring path) {
-        BUG_CHECK(_eventLogPath.size() == 0,
-            "Trying to redefine path to source info!");
-        _eventLogPath = path;
+    void setEventLog(const cstring eventLogPath_in) {
+        BUG_CHECK(m_eventLogPath.size() == 0, "Trying to redefine path to source info!");
+        m_eventLogPath = eventLogPath_in;
     }
-    void setFrontendIrLog(cstring path) {
-        BUG_CHECK(_frontendIrLogPath.size() == 0,
-            "Trying to redefine path to frontend IR!");
-        _frontendIrLogPath = path;
+    void setFrontendIrLog(const cstring frontendIrLogPath_in) {
+        BUG_CHECK(m_frontendIrLogPath.size() == 0, "Trying to redefine path to frontend IR!");
+        m_frontendIrLogPath = frontendIrLogPath_in;
     }
 
     /// serialize the entire manifest
     virtual void serialize();
 
  private:
-    void serializeArchConfig(Writer &writer);
+    void serialize_target_data(Writer&);
 
     /// serialize all the output in an array of pipes ("pipes" : [ OutputFiles ])
-    void serializePipes(Writer &writer);
+    void serializePipes(Writer&);
 
-    void sendTo(Writer &writer, int pipe, gress_t gress);
+    void sendTo(Writer&, int pipe, gress_t);
 };
 }  // end namespace Logging
 
