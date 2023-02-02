@@ -1,4 +1,5 @@
 #include "field_defuse.h"
+#include <regex>
 #include "lib/hex.h"
 #include "lib/log.h"
 #include "lib/map.h"
@@ -54,7 +55,8 @@ class FieldDefUse::CollectAliasDestinations : public Inspector {
 
 Visitor::profile_t FieldDefUse::init_apply(const IR::Node *root) {
     auto rv = Inspector::init_apply(root);
-    LOG2("FieldDefUse starting" << IndentCtl::indent);
+    static int callctr;
+    LOG2("FieldDefUse starting #" << ++callctr << IndentCtl::indent);
     conflict.clear();
     defs.clear();
     uses.clear();
@@ -263,7 +265,7 @@ bool FieldDefUse::preorder(const IR::BFN::Pipe *p) {
 }
 
 bool FieldDefUse::preorder(const IR::BFN::Parser *p) {
-    LOG6("FieldDefUse preorder " << p->gress << " Parser" << IndentCtl::indent);
+    LOG6("FieldDefUse " << p->gress << " Parser" << IndentCtl::indent);
     if (p->gress == EGRESS) {
         /* after processing the ingress pipe, before proceeding to the egress pipe, we
          * clear everything mentioned in the egress parser.  We want to ensure that nothing
@@ -314,14 +316,32 @@ bool FieldDefUse::preorder(const IR::BFN::Parser *p) {
             located_defs[f.id].emplace(parser_begin, dummy_expr);
         }
     }
-    LOG6_UNINDENT;
     return true;
+}
+void FieldDefUse::postorder(const IR::BFN::Parser *) {
+    LOG6_UNINDENT;
+}
+
+bool FieldDefUse::preorder(const IR::BFN::ParserState *ps) {
+    LOG6("FieldDefUse " << ps->gress << " ParserState " << ps->name << IndentCtl::indent);
+    return true;
+}
+void FieldDefUse::postorder(const IR::BFN::ParserState *) {
+    LOG6_UNINDENT;
 }
 
 bool FieldDefUse::preorder(const IR::BFN::LoweredParser*) {
     BUG("Running FieldDefUse after the parser IR has been lowered; "
         "this will produce invalid results.");
     return false;
+}
+
+bool FieldDefUse::preorder(const IR::MAU::Table *t) {
+    LOG6("FieldDefUse " << t->gress << " table " << t->name << IndentCtl::indent);
+    return true;
+}
+void FieldDefUse::postorder(const IR::MAU::Table *) {
+    LOG6_UNINDENT;
 }
 
 bool FieldDefUse::preorder(const IR::MAU::Action *act) {
@@ -444,6 +464,14 @@ bool FieldDefUse::preorder(const IR::Expression *e) {
         assert(0); }
     LOG6_UNINDENT;
     return false;
+}
+
+bool FieldDefUse::preorder(const IR::BFN::AbstractDeparser *d) {
+    LOG6("FieldDefUse " << d->gress << " Deparser" << IndentCtl::indent);
+    return true;
+}
+void FieldDefUse::postorder(const IR::BFN::AbstractDeparser *) {
+    LOG6_UNINDENT;
 }
 
 void FieldDefUse::flow_merge(Visitor &a_) {
@@ -619,6 +647,8 @@ void FieldDefUse::end_apply(const IR::Node *) {
         }
     }
 
+    LOG_FEATURE("defuse_graph", 3, std::bind(&FieldDefUse::dotgraph, this, std::placeholders::_1));
+
     if (!LOGGING(2)) return;
     LOG2("FieldDefUse conflicts result:" << IndentCtl::indent);
     int count = phv.num_fields();
@@ -669,4 +699,68 @@ void FieldDefUse::end_apply(const IR::Node *) {
 
 void FieldDefUse::end_apply() {
     LOG2_UNINDENT;  // indent from init_apply
+}
+
+std::ostream &FieldDefUse::dotgraph(std::ostream &out) const {
+    struct graph {
+        struct node {
+            cstring unit, expr, line;
+            node() = delete;
+            node(cstring u, cstring e, cstring l) : unit(u), expr(e), line(l) {}
+            bool operator<(const node &a) const {
+                return std::tie(unit, expr, line) < std::tie(a.unit, a.expr, a.line); }
+        };
+        std::map<node, int> nodes;
+        std::map<locpair, const node *> by_loc;
+        std::regex *filter = nullptr;
+        bool filter_cmpl = false;
+
+        int get(locpair loc, std::ostream &out) {
+            if (!by_loc.count(loc))
+                by_loc.emplace(loc, find(loc, out));
+            auto *p = by_loc.at(loc);
+            return p ? nodes.at(*p) : -1; }
+        const node *find(locpair loc, std::ostream &out) {
+            std::stringstream unit, expr;
+            cstring line;
+            unit << DBPrint::Brief << *loc.first;
+            expr << DBPrint::Brief << *loc.second;
+            if (filter && (regex_search(expr.str(), *filter) ^ filter_cmpl))
+                return nullptr;
+            if (loc.second->srcInfo)
+                line = loc.second->srcInfo.toPositionString();
+            node tmp(unit.str(), expr.str(), line);
+            if (!nodes.count(tmp)) {
+                int id = nodes.size() + 1;
+                nodes[tmp] = id;
+                out << "n" << id << " [label=\"" << tmp.unit << "\\n" << tmp.expr;
+                if (tmp.line) out << "\\n" << tmp.line;
+                out << "\"]\n"; }
+            return &nodes.find(tmp)->first; }
+        ~graph() {
+            nodes.clear();
+            by_loc.clear();
+            delete filter;
+        }
+    } dot;
+    static int ctr = 0;
+    if (auto *filt = getenv("GRAPH_IGNORE")) {
+        if (*filt == '!') {
+            ++filt;
+            dot.filter_cmpl = true; }
+        dot.filter = new std::regex(filt); }
+    out << "digraph defuse_" << ++ctr << " {\n";
+    out << "rankdir=LR\n";
+    for (auto &du : uses) {
+        int def = dot.get(du.first, out);
+        if (def < 0) continue;
+        for (auto &use : du.second) {
+            int u = dot.get(use, out);
+            if (u < 0) continue;
+            out << "n" << def << " -> n" << u << "\n";
+        }
+    }
+    out << "}\n";
+    out << "// -- END --" << std::endl;
+    return out;
 }

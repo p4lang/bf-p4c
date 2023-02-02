@@ -121,11 +121,18 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     void access_field(const PHV::Field *);
     bool preorder(const IR::BFN::Pipe *p) override;
     bool preorder(const IR::BFN::Parser *p) override;
+    void postorder(const IR::BFN::Parser *p) override;
+    bool preorder(const IR::BFN::ParserState *ps) override;
+    void postorder(const IR::BFN::ParserState *ps) override;
     bool preorder(const IR::BFN::LoweredParser *p) override;
+    bool preorder(const IR::MAU::Table *t) override;
+    void postorder(const IR::MAU::Table *t) override;
     bool preorder(const IR::MAU::Primitive* prim) override;
     bool preorder(const IR::MAU::Action *p) override;
     bool preorder(const IR::MAU::StatefulAlu* prim) override;
     bool preorder(const IR::Expression *e) override;
+    bool preorder(const IR::BFN::AbstractDeparser *d) override;
+    void postorder(const IR::BFN::AbstractDeparser *d) override;
     FieldDefUse *clone() const override { return new FieldDefUse(*this); }
     void flow_merge(Visitor &) override;
     FieldDefUse(const FieldDefUse &) = default;
@@ -134,6 +141,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     friend std::ostream &operator<<(std::ostream &, const FieldDefUse::info &);
     friend void dump(const FieldDefUse::info &);
     friend std::ostream &operator<<(std::ostream &, const FieldDefUse &);
+    std::ostream &dotgraph(std::ostream &) const;
 
  public:
     explicit FieldDefUse(const PhvInfo &p)

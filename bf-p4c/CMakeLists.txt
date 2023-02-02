@@ -101,6 +101,7 @@ set (BF_P4C_IR_SRCS
   midend/path_linearizer.cpp
   ir/dbprint-tofino.cpp
   ir/bitrange.cpp
+  ir/control_flow_visitor.cpp
   ir/ir_enums.cpp
   ir/gateway_control_flow.cpp
   ir/gress.cpp

@@ -51,7 +51,7 @@ struct CollectSpecialPrimitives : public Inspector {
 };
 
 struct BridgeIngressToEgress : public Transform {
-    BridgeIngressToEgress(const ordered_set<FieldRef>& fieldsToBridge,
+    BridgeIngressToEgress(const std::set<FieldRef>& fieldsToBridge,
                           const ordered_map<FieldRef, BridgedFieldInfo>& fieldInfo,
                           CollectSpecialPrimitives* prim,
                           P4::ReferenceMap* refMap,
@@ -360,7 +360,7 @@ struct BridgeIngressToEgress : public Transform {
     P4::ReferenceMap* refMap;
     P4::TypeMap* typeMap;
 
-    const ordered_set<FieldRef>& fieldsToBridge;
+    const std::set<FieldRef>& fieldsToBridge;
     const ordered_map<FieldRef, BridgedFieldInfo>& fieldInfo;
 
     CollectSpecialPrimitives* special_primitives;

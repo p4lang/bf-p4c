@@ -9,6 +9,9 @@
 #include "ir/ir.h"
 
 namespace BFN {
+
+int CollectBridgedFields::uid_counter = 0;
+
 namespace {
 
 using TnaParams = CollectBridgedFields::TnaParams;
@@ -100,35 +103,35 @@ void forAllTouchedFields(const LinearPath& linearPath, P4::TypeMap* typeMap,
 CollectBridgedFields::CollectBridgedFields(P4::ReferenceMap* refMap,
                                            P4::TypeMap* typeMap)
   : refMap(refMap), typeMap(typeMap) {
+    uid = ++uid_counter;
     joinFlows = true;
     visitDagOnce = false;
 }
 
 CollectBridgedFields* CollectBridgedFields::clone() const {
     auto* rv = new CollectBridgedFields(*this);
-    LOG4("[==CLONE==] old: " << static_cast<const void*>(this)
-         << " new: " << static_cast<const void*>(rv));
+    rv->uid = ++uid_counter;
+    LOG7("[==CLONE==] old: " << uid << " new: " << rv->uid);
     for (auto fieldRef : mustWrite[EGRESS]) {
-        LOG4("[==CLONE old==] " << static_cast<const void*>(this)
-             << " mustWrite[EGRESS] :: " << fieldRef.first << fieldRef.second);
+        LOG7("[==CLONE old==] " << uid << " mustWrite[EGRESS] :: " <<
+             fieldRef.first << fieldRef.second);
     }
     for (auto fieldRef : rv->mustWrite[EGRESS]) {
-        LOG4("[==CLONE new==] " << static_cast<void*>(rv) << " mustWrite[EGRESS] :: "
-             << fieldRef.first << fieldRef.second);
+        LOG7("[==CLONE new==] " << rv->uid << " mustWrite[EGRESS] :: " <<
+             fieldRef.first << fieldRef.second);
     }
     return rv;
 }
 
 void CollectBridgedFields::flow_merge(Visitor& otherVisitor) {
     auto& other = dynamic_cast<CollectBridgedFields&>(otherVisitor);
-    LOG4("[==MERGE==] left: " << static_cast<const void*>(this) << " right: "
-         << static_cast<const void*>(&other));
+    LOG7("[==MERGE==] left: " << uid << " right: " << other.uid);
     for (auto fieldRef : mustWrite[EGRESS]) {
-        LOG4("[==MERGE left==] " << static_cast<void*>(this) << " mustWrite[EGRESS] :: "
+        LOG7("[==MERGE left==] " << uid << " mustWrite[EGRESS] :: "
              << fieldRef.first << fieldRef.second);
     }
     for (auto fieldRef : other.mustWrite[EGRESS]) {
-        LOG4("[==MERGE right==] " << static_cast<void*>(&other) << " mustWrite[EGRESS] :: "
+        LOG7("[==MERGE right==] " << other.uid << " mustWrite[EGRESS] :: "
              << fieldRef.first << fieldRef.second);
     }
     for (auto thread : { INGRESS, EGRESS }) {
@@ -138,7 +141,7 @@ void CollectBridgedFields::flow_merge(Visitor& otherVisitor) {
         fieldInfo.insert(other.fieldInfo.begin(), other.fieldInfo.end());
     }
     for (auto fieldRef : mustWrite[EGRESS]) {
-        LOG4("[==MERGE final==] " << static_cast<void*>(this) << " mustWrite[EGRESS] :: "
+        LOG7("[==MERGE final==] " << uid << " mustWrite[EGRESS] :: "
              << fieldRef.first << fieldRef.second);
     }
 }
@@ -179,7 +182,7 @@ bool CollectBridgedFields::analyzePathlikeExpression(const IR::Expression* expr)
     expr->apply(linearizer);
     if (!linearizer.linearPath) {
         LOG2("Won't bridge complex or invalid expression: " << expr);
-        return false;
+        return true;
     }
     auto& linearPath = *linearizer.linearPath;
     if (!isMetadata(linearPath, typeMap)) {
@@ -203,6 +206,10 @@ bool CollectBridgedFields::analyzePathlikeExpression(const IR::Expression* expr)
             LOG2("Found possibly-uninitialized read for " << fieldRef.first
                  << fieldRef.second);
             mayReadUninitialized[currentThread].emplace(fieldRef);
+        } else if (exprIsRead) {
+            LOG6("read for " << fieldRef.first << fieldRef.second << " not uninitialzed");
+        } else if (!exprIsWrite) {
+            LOG6("access to" << fieldRef.first << fieldRef.second << " neither read nor write");
         }
         if (exprIsWrite) {
             LOG2("Found write for " << fieldRef.first << fieldRef.second);
@@ -210,6 +217,31 @@ bool CollectBridgedFields::analyzePathlikeExpression(const IR::Expression* expr)
             mustWrite[currentThread].emplace(fieldRef);
         }
     });
+    return false;
+}
+
+bool CollectBridgedFields::preorder(const IR::BFN::TnaControl *c) {
+    visit(c->body, "body");  // just visit the body; tables/actions will be visited when applied
+    return false;
+}
+bool CollectBridgedFields::preorder(const IR::BFN::TnaParser *p) {
+    if (auto start = p->states.getDeclaration<IR::ParserState>("start")) {
+        visit(start, "start");
+    } else {
+        BUG("No start state in %s", p); }
+    return false;
+}
+bool CollectBridgedFields::preorder(const IR::BFN::TnaDeparser *d) {
+    visit(d->body, "body");
+    return false;
+}
+bool CollectBridgedFields::preorder(const IR::P4Table *tbl) {
+    if (auto *key = tbl->getKey())
+        visit(key, "key");
+    if (auto *actions = tbl->getActionList()) {
+        parallel_visit(actions->actionList, "actions");
+    } else {
+        BUG("No actions in %s", tbl); }
     return false;
 }
 
@@ -263,7 +295,13 @@ bool CollectBridgedFields::preorder(const IR::Member* member) {
 }
 
 bool CollectBridgedFields::preorder(const IR::PathExpression* path) {
+    visit_def(path);
     return analyzePathlikeExpression(path);
+}
+
+bool CollectBridgedFields::preorder(const IR::MethodCallExpression* mc) {
+    visit_def(mc);
+    return true;
 }
 
 void CollectBridgedFields::end_apply() {
@@ -288,6 +326,5 @@ void CollectBridgedFields::end_apply() {
         }
     }
 }
-
 
 }  // namespace BFN

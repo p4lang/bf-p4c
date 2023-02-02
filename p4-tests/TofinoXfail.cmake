@@ -2162,6 +2162,10 @@ if (ENABLE_ALT_PHV_ALLOC)
     p4c_add_xfail_reason("tofino"
       "error: Fields involved in the same MAU operations have conflicting PARDE alignment requirements: alignment = .* and alignment ="
       extensions/p4_tests/p4_16/customer/arista/obfuscated-nat_static.p4
+    )
+
+    p4c_add_xfail_reason("tofino"
+      "error: Cannot allocated SUPERCLUSTER"
       switch_dc_basic
     )
 
