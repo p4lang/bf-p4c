@@ -530,13 +530,19 @@ struct TablePlacement::Placed {
 };
 
 // Retrieve the stage resources for a given placement
-static StageUseEstimate get_current_stage_use(const TablePlacement::Placed *pl) {
+// Optional argument accumulate_low_pri that can be set to false to avoid accumulating low
+// priority table for the returned status. This is mainly used in resource based allocation
+// to make sure the compared solution does not account low priority table as part of their
+// resource consumption.
+static StageUseEstimate get_current_stage_use(const TablePlacement::Placed *pl,
+                                              bool accumulate_low_pri = true) {
     StageUseEstimate    rv;
     if (pl) {
         int stage = pl->stage;
         gress_t gress = pl->table->gress;
         for (; pl && pl->stage == stage; pl = pl->prev) {
             if (!Device::threadsSharePipe(pl->table->gress, gress)) continue;
+            if (!accumulate_low_pri && pl->table->get_placement_priority_int() < 0) continue;
             rv += pl->use; } }
     return rv;
 }
@@ -807,7 +813,11 @@ class DecidePlacement::PlacementScore {
         const Placed *pl = bt->get_placed();
         if (pl->prev) {
             pl = pl->prev;
-            stage_use = get_current_stage_use(pl);
+            // Get the current stage uses without low priority table. This is to make sure that
+            // if we have a solution with a large low priority table it would not be selected
+            // vs another solution without low priority table but consuming a little less
+            // resources.
+            stage_use = get_current_stage_use(pl, false);
             int init_stage = pl->stage;
 
             StageUseEstimate total_res = self.self.summary.getAllStagesResources();

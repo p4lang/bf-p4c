@@ -176,7 +176,9 @@
 @pa_alias("egress" , "Westoak.Wabbaseka.$valid" , "Lefor.Ekwok.Townville")
 @pa_alias("egress" , "Westoak.Lemont.Welcome" , "Lefor.Ekwok.SomesBar")
 @pa_alias("egress" , "Westoak.Jerico.$valid" , "Lefor.Longwood.McBrides")
-@pa_alias("egress" , "Lefor.Orting.Candle" , "Lefor.Orting.Newfolden") header Reubens {
+@pa_alias("egress" , "Lefor.Orting.Candle" , "Lefor.Orting.Newfolden")
+@pa_no_pack("ingress", "Lefor.Lookeba.HillTop", "Lefor.Neponset.RockPort")
+header Reubens {
     bit<1>  Wheeling;
     bit<6>  Harmony;
     bit<9>  Boistfort;
