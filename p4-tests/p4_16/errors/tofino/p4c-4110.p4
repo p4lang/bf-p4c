@@ -122,6 +122,11 @@ control SwitchIngress(
     DirectRegisterAction<bit<32>, bit<32>>(test_reg_dir) test_reg_dir_action = {
         void apply(inout bit<32> value, out bit<32> read_value){
             read_value = value;
+            // FIXME -- this test case is wrong.  The code as is *should* be constant folding
+            // the test to `if (false)` (possibly giving a warning) and NOT give an error.
+            // The commented-out if is ok (should not give any error or warning and does not),
+            // but something like "if (value < 2200000000)" should give the error (which it
+            // does but without the correct lineno info).
             //if (value  < 2147483648) {
             if (value - 2147483648 < 0) { // expect error: "constant value .* is out of range .* for stateful ALU"       
                 value = value + 1;

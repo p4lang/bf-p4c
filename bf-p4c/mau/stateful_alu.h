@@ -109,9 +109,9 @@ struct Device::StatefulAluSpec {
  * or whatever else is needed.
  *
  * The pass is designed to be applied to a subtree of IR containing a single
- * Declaration_Instance object of type RegisterAction or SelectorAction,
- * and creates an SaluAction for it, adding it to the StatefulAlu passed to
- * the pass constructor.  We arrange for exactly one instance of this pass
+ * Declaration_Instance object of type RegisterAction, LearnAction, MinMaxAction
+ * or SelectorAction, and creates an SaluAction for it, adding it to the StatefulAlu
+ * passed to the pass constructor.  We arrange for exactly one instance of this pass
  * to be created for each SALU, and reuse it to create all the individual
  * instructions in that SALU, so we can accumulate information about things
  * that need to be shared between instructions here.

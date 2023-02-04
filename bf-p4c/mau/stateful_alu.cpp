@@ -578,7 +578,7 @@ void CreateSaluInstruction::postorder(const IR::Function *func) {
         error(ErrorType::ERR_OVERLIMIT, "%s: too many local variables in RegisterAction",
               func->srcInfo);
     if (return_encoding) {
-        BUG_CHECK(action->return_predicate_words & (1 << return_enum_word),
+        BUG_CHECK(::errorCount() > 0 || action->return_predicate_words & (1 << return_enum_word),
                   "%s salu return type mismatch", func->name);
         unsigned idx = 0;
         return_encoding->cmp_used = 0xffff;
@@ -1192,10 +1192,10 @@ bool CreateSaluInstruction::preorder(const IR::MAU::SaluRegfileRow *regfile) {
 
 static std::map<cstring, cstring> negate_op = {
     { "equ", "neq" }, { "neq", "equ" },
-    { "geq.s", "lss.s" }, { "geq.u", "lss.u" },
-    { "grt.s", "leq.s" }, { "grt.u", "leq.u" },
-    { "leq.s", "grt.s" }, { "leq.u", "grt.u" },
-    { "lss.s", "geq.s" }, { "lss.u", "geq.u" },
+    { "geq.s", "lss.s" }, { "geq.u", "lss.u" }, { "geq.uus", "lss.uus" },
+    { "grt.s", "leq.s" }, { "grt.u", "leq.u" }, { "grt.uus", "leq.uus" },
+    { "leq.s", "grt.s" }, { "leq.u", "grt.u" }, { "leq.uus", "grt.uus" },
+    { "lss.s", "geq.s" }, { "lss.u", "geq.u" }, { "lss.uus", "geq.uus" },
 };
 
 const IR::Expression *CreateSaluInstruction::reuseCmp(const IR::MAU::SaluInstruction *cmp,
@@ -1232,10 +1232,10 @@ void CreateSaluInstruction::setupCmp(cstring op) {
 }
 
 static std::map<cstring, cstring> negate_rel_op = {
-    { "geq.s", "leq.s" }, { "geq.u", "leq.u" },
-    { "grt.s", "lss.s" }, { "grt.u", "lss.u" },
-    { "leq.s", "geq.s" }, { "leq.u", "geq.u" },
-    { "lss.s", "grt.s" }, { "lss.u", "grt.u" },
+    { "geq.s", "leq.s" }, { "geq.u", "leq.u" }, { "geq.uus", "leq.uus" },
+    { "grt.s", "lss.s" }, { "grt.u", "lss.u" }, { "grt.uus", "lss.uus" },
+    { "leq.s", "geq.s" }, { "leq.u", "geq.u" }, { "leq.uus", "geq.uus" },
+    { "lss.s", "grt.s" }, { "lss.u", "grt.u" }, { "lss.uus", "grt.uus" },
 };
 
 bool CreateSaluInstruction::preorder(const IR::Operation::Relation *rel, cstring op, bool eq) {
@@ -1254,8 +1254,18 @@ bool CreateSaluInstruction::preorder(const IR::Operation::Relation *rel, cstring
         } else {
             opcode = op;
             if (!eq) {
-                auto t = rel->left->type->to<IR::Type::Bits>();
-                opcode += (t && t->isSigned) ? ".s" : ".u"; }
+                const char *type_suffix = ".u";
+                if (auto t = rel->left->type->to<IR::Type::Bits>()) {
+                    type_suffix = t->isSigned ? ".s" : ".u";
+                    if (rel->left->is<IR::Operation_Binary>() ||
+                        rel->right->is<IR::Operation_Binary>()) {
+                        if (t->size < salu->source_width()) {
+                            error(ErrorType::ERR_UNSUPPORTED,
+                                  "%sCan't do %d-bit comparison in a %d-bit SALU",
+                                  rel->srcInfo, t->size, salu->source_width());
+                        } else if (t->size == salu->source_width()) {
+                            type_suffix = ".uus"; } } }
+                opcode += type_suffix; }
 
             // Keep track of negated register file reference
             negate_regfile = false;
@@ -2169,7 +2179,8 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
 }
 
 void CheckStatefulAlu::postorder(IR::MAU::SaluInstruction *si) {
-    if (Device::currentDevice() == Device::TOFINO && si->name.endsWith(".u")) {
+    if (Device::currentDevice() == Device::TOFINO &&
+        (si->name.endsWith(".u") || si->name.endsWith(".uus"))) {
         // For the unsigned compare, the inputs from memory and phv are treated as unsigned
         // and are zero-extended to 34b, but the constant input is always treated as a signed
         // number and is sign-extended. On Tofino 1, the constant regfile is only 32 bits wide.
