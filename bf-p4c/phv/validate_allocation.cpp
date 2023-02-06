@@ -413,12 +413,9 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         for (auto* f1 : left) {
             for (auto* f2 : right) {
                 if (f1 == f2) continue;
-                if (!mutually_exclusive_field_ids(f1->id, f2->id))
-                    return false; } }
-        return true; };
-    auto allDeparsedZero = [&](const ordered_set<const PHV::Field*> fieldSet) {
-        for (auto* f : fieldSet)
-            if (!f->is_deparser_zero_candidate()) return false;
+                if (!mutually_exclusive_field_ids(f1->id, f2->id)) {
+                    if (!f1->is_deparser_zero_candidate() || !f2->is_deparser_zero_candidate())
+                        return false; } } }
         return true; };
     auto atMostOneNonePadding = [&](const ordered_set<const PHV::Field*> fieldSet) {
         int count = 0;
@@ -566,7 +563,6 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         if (!physical_liverange_overlay) {
             for (auto& kv : bits_to_fields) {
                 ERROR_CHECK(allMutex(kv.second, kv.second) ||
-                            allDeparsedZero(kv.second) ||
                             atMostOneNonePadding(kv.second) ||
                             allDarkOverlayMutex(kv.second, kv.second),
                             "Container %1% contains fields which overlap:\n%2%", container,
