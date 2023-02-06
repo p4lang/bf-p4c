@@ -37,6 +37,8 @@ class DisableAutoInitMetadata : public Transform {
 ///   - The assignment only overwrites ImplicitParserInit, according to def-use.
 class RemoveMetadataInits : public AbstractElimUnusedInstructions {
     const PhvInfo& phv;
+    const FieldDefUse& defuse;
+    std::set<cstring> &zeroInitFields;
 
     /// The set of fields with a \@pa_no_init annotation. Each field is represented by
     /// \a gress::hdr.field.
@@ -48,14 +50,19 @@ class RemoveMetadataInits : public AbstractElimUnusedInstructions {
                      const IR::Expression* left,
                      const IR::Expression* right);
 
+    profile_t init_apply(const IR::Node* root) override;
+    void end_apply() override;
+
  public:
     bool elim_extract(const IR::BFN::Unit* unit, const IR::BFN::Extract* extract) override;
 
     const IR::BFN::Pipe* preorder(IR::BFN::Pipe* pipe) override;
     const IR::MAU::Instruction* preorder(IR::MAU::Instruction* instr) override;
 
-    explicit RemoveMetadataInits(const PhvInfo& phv, const FieldDefUse& defuse)
-      : AbstractElimUnusedInstructions(defuse), phv(phv) { }
+    explicit RemoveMetadataInits(const PhvInfo& phv, const FieldDefUse& defuse,
+            std::set<cstring> &zeroInitFields)
+      : AbstractElimUnusedInstructions(defuse), phv(phv), defuse(defuse),
+        zeroInitFields(zeroInitFields) { }
 };
 
 #endif  /* BF_P4C_PHV_AUTO_INIT_METADATA_H_ */

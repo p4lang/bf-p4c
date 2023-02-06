@@ -59,6 +59,9 @@ class Backend : public PassManager {
     ParserHeaderSequences parserHeaderSeqs;
     // Disable long branches
     bool longBranchDisabled;
+    // Fields which are zero initialized in the program and have assignments being eliminated. These
+    // fields should have the POV bit set and therefore need to be tracked.
+    std::set<cstring> zeroInitFields;
 
  protected:
     profile_t init_apply(const IR::Node *root) override {

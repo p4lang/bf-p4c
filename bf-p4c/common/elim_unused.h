@@ -13,6 +13,7 @@ class ReplaceMember : public Transform {
 class ElimUnused : public PassManager {
     const PhvInfo       &phv;
     FieldDefUse         &defuse;
+    std::set<cstring> &zeroInitFields;
 
     class Instructions;
     class CollectEmptyTables;
@@ -20,7 +21,8 @@ class ElimUnused : public PassManager {
     class Headers;
 
  public:
-    ElimUnused(const PhvInfo &phv, FieldDefUse &defuse);
+    ElimUnused(const PhvInfo &phv, FieldDefUse &defuse,
+                std::set<cstring> &zeroInitFields);
 };
 
 class AbstractElimUnusedInstructions : public Transform {

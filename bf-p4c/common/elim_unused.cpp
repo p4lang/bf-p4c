@@ -70,6 +70,7 @@ class ElimUnused::Instructions : public AbstractElimUnusedInstructions {
     }
 
     const IR::MAU::Instruction *preorder(IR::MAU::Instruction *i) override {
+        LOG5("ElimUnused Instruction " << i);
         auto unit = findOrigCtxt<IR::BFN::Unit>();
         if (!unit) return i;
         if (!i->operands[0]) return i;
@@ -195,16 +196,32 @@ class ElimUnused::Headers : public PardeTransform {
         auto* field = self.phv.field(fieldRef);
         if (!field) return true;
         for (const auto& def : self.defuse.getAllDefs(field->id)) {
-            if (!def.second->is<ImplicitParserInit>()) {
-                return true; } }
+            if (!def.second->is<ImplicitParserInit>())
+                return true;
+
+            // If field has an implicit parser init but is zero initialized and eliminated
+            // previously its pov bit assignment is not eliminated
+            // It is necessary to preserve the pov bit assignment for the field since otherwise it
+            // will not be deparsed (as zero) and possibly cause incorrect behavior
+            if (self.zeroInitFields.count(field->name)) {
+                LOG1("Skipping pov elimination for zero init field " << field
+                        << " in expression " << fieldRef);
+                return true;
+            }
+        }
+        LOG6("No defuse found for expr: " << fieldRef);
         return false;
     }
 
     const IR::BFN::EmitField* preorder(IR::BFN::EmitField* emit) override {
         prune();
+        bool hasdefs = hasDefs(emit->povBit->field);
+        LOG5("ElimUnused preorder emit field : " << emit
+                << ", pov field : " << emit->povBit->field
+                << ", hasdefs: " << (hasdefs ? "Y" : "N"));
 
         // The emit primitive is used if the POV bit being set somewhere.
-        if (hasDefs(emit->povBit->field)) return emit;
+        if (hasdefs) return emit;
 
         LOG1("ELIM UNUSED emit " << emit << " IN UNIT " <<
              DBPrint::Brief << findContext<IR::BFN::Unit>());
@@ -214,8 +231,12 @@ class ElimUnused::Headers : public PardeTransform {
     const IR::BFN::EmitChecksum* preorder(IR::BFN::EmitChecksum* emit) override {
         prune();
 
+        bool hasdefs = hasDefs(emit->povBit->field);
+        LOG5("ElimUnused preorder emit checksum field : " << emit
+                << ", pov field : " << emit->povBit->field
+                << ", hasdefs: " << (hasdefs ? "Y" : "N"));
         // The emit checksum primitive is used if the POV bit being set somewhere.
-        if (hasDefs(emit->povBit->field)) return emit;
+        if (hasdefs) return emit;
 
         LOG1("ELIM UNUSED emit checksum " << emit << " IN UNIT " <<
              DBPrint::Brief << findContext<IR::BFN::Unit>());
@@ -230,10 +251,13 @@ class ElimUnused::Headers : public PardeTransform {
     const IR::BFN::DeparserParameter*
     preorder(IR::BFN::DeparserParameter* param) override {
         prune();
+        bool hasdefs = hasDefs(param->source->field);
+        LOG5("ElimUnused preorder deparser parameter: " << param
+                << ", source: " << param->source << ", hasdefs: " << (hasdefs ? "Y" : "N"));
 
         // We don't need to set a deparser parameter if the field it gets its
         // value from is never set.
-        if (param->source && hasDefs(param->source->field)) return param;
+        if (param->source && hasdefs) return param;
 #if HAVE_FLATROCK
         // Keep Flatrock $zero fields -- these are fields that should be zero
         if (Device::currentDevice() == Device::FLATROCK && param->source) {
@@ -273,7 +297,9 @@ class ElimUnused::Headers : public PardeTransform {
     explicit Headers(ElimUnused &self) : self(self) { }
 };
 
-ElimUnused::ElimUnused(const PhvInfo &phv, FieldDefUse &defuse) : phv(phv), defuse(defuse) {
+ElimUnused::ElimUnused(const PhvInfo &phv, FieldDefUse &defuse,
+                        std::set<cstring> &zeroInitFields)
+    : phv(phv), defuse(defuse), zeroInitFields(zeroInitFields) {
     static int counter;
     addPasses({
         LOGGING(4) ? new DumpParser("before_elim_unused") : nullptr,

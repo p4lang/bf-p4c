@@ -55,6 +55,7 @@ IR::BFN::DeparserParameter *AddMetadataPOV::postorder(IR::BFN::DeparserParameter
     if (Device::currentDevice() == Device::FLATROCK && !is_deparser_parameter_with_pov(param))
         return param;
 #endif  /* HAVE_FLATROCK */
+    LOG5("Adding Metadata POV for deparser param: " << param);
     param->povBit = new IR::BFN::FieldLVal(new IR::TempVar(
         IR::Type::Bits::get(1), true, param->source->field->toString() + ".$valid"));
 #if HAVE_FLATROCK
@@ -79,6 +80,9 @@ IR::MAU::Primitive *AddMetadataPOV::create_pov_write(const IR::Expression *povBi
 
 IR::Node *AddMetadataPOV::insert_deparser_param_pov_write(const IR::MAU::Primitive *p,
                                                           bool validate) {
+    Log::TempIndent indent;
+    LOG5("Insert deparser param for pov write : " << p
+            << ", validate: " << (validate ? "Y" : "N") << indent);
     auto *dest = p->operands.at(0);
     for (auto *param : dp->params) {
 #if HAVE_FLATROCK
@@ -87,12 +91,14 @@ IR::Node *AddMetadataPOV::insert_deparser_param_pov_write(const IR::MAU::Primiti
 #endif
         if (equiv(dest, param->source->field)) {
             auto pov_write = create_pov_write(param->povBit->field, validate);
+            LOG5("Inserting param for pov write: " << pov_write);
             if (validate)
                 return new IR::Vector<IR::MAU::Primitive>({p, pov_write});
             else
                 return pov_write;
         }
     }
+    LOG5("No parameter inserted");
     return nullptr;
 }
 

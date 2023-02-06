@@ -276,11 +276,26 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         new ConstMirrorSessionOpt(phv),
         new CollectPhvInfo(phv),
         &defuse,
-        (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
+        (options.no_deadcode_elimination == false) ?
+            new ElimUnused(phv, defuse, zeroInitFields) : nullptr,
         (options.no_deadcode_elimination == false) ? new ElimUnusedHeaderStackInfo : nullptr,
         (options.disable_parser_state_merging == false) ? new MergeParserStates : nullptr,
         options.auto_init_metadata ? nullptr : new DisableAutoInitMetadata(defuse, phv),
-        new RemoveMetadataInits(phv, defuse),
+        // RemoveMetadataInits pass eliminates metadata field assignments which are set to zero as
+        // hardware supports implicit zero initializations.
+        //
+        // While this is a good optimization strategy, in Tofino2 the initializations also come with
+        // a separate assignment to set POV bit ($valid) for the field. This ensures the field is
+        // deparsed. These POV bit assignments should not be eliminated (by ElimUnused) as that
+        // would lead to the field not being deparsed and potentially incorrect program behavior.
+        //
+        // In order to track these fields whose POV bit assignments should not be
+        // eliminated, we populate them in zeroInitFields within the pass.
+        //
+        // The zeroInitFields are then used to skip eliminating the POV assignments in ElimUnused
+        // pass later on. The implicit zero initializations on these fields will ensure they are
+        // deparsed as zero.
+        new RemoveMetadataInits(phv, defuse, zeroInitFields),
         new CollectPhvInfo(phv),
         &defuse,
         options.alt_phv_alloc_meta_init ?
@@ -292,7 +307,12 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         allocateClot,
         // Can't (re)run CollectPhvInfo after this point as it will corrupt clot allocation
         &defuse,
-        (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
+        // zeroInitFields populated in RemoveMetadataInits pass earlier will be used to skip
+        // eliminating POV bit assignments associated with the fields within zeroInitFields.
+        // Metadata POV bits are only added on Tofino2 hence this will not affect any Tofino1
+        // programs
+        (options.no_deadcode_elimination == false) ?
+            new ElimUnused(phv, defuse, zeroInitFields) : nullptr,
 
 #ifdef HAVE_FLATROCK
         // ParserHeaderSequences must be run before the IR is lowered

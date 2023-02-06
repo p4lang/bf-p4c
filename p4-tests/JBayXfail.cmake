@@ -75,13 +75,6 @@ p4c_add_xfail_reason("tofino2"
 if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
 endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
 
-if (NOT ENABLE_ALT_PHV_ALLOC)
-    p4c_add_xfail_reason("tofino2"
-      "address too large for table"
-      testdata/p4_14_samples/saturated-bmv2.p4
-    )
-endif()
-
 p4c_add_xfail_reason("tofino2"
   "Field clone_spec is not a member of structure struct standard_metadata"
   extensions/p4_tests/p4_16/compile_only/clone-bmv2.p4
@@ -384,12 +377,6 @@ p4c_add_xfail_reason("tofino2"
 #  extensions/p4_tests/p4_16/customer/keysight/keysight-tf2.p4
 #)
 
-# P4C-3435
-p4c_add_xfail_reason("tofino2"
-   "1 expected packet on port 0 not seen"
-   extensions/p4_tests/p4_16/stf/failed_elim_valid_bit.p4
-)
-
 p4c_add_xfail_reason("tofino2"
   "warning: AssignmentStatement: Padding fields do not need to be explicitly set.* Tofino2 does not support action data/constant with rotated PHV source at the same time|Trivial allocator has found unsatisfiable constraints|PHV allocation creates an invalid container action within a Tofino ALU"
   extensions/p4_tests/p4_16/compile_only/p4c-3453.p4
@@ -498,8 +485,13 @@ if (ENABLE_ALT_PHV_ALLOC)
     )
 
     p4c_add_xfail_reason("tofino2"
-      "bfa:.*: error: forward_if_ethernet_parsed_0 gateway sharing search bus 4.0 with table1_0, but wants a different match group"
-      extensions/p4_tests/p4_16/stf/parser_scratch_reg_3.p4
+        "bfa:.*: error: forward_if_ethernet_parsed_0 gateway sharing search bus 4.0 with table1_0, but wants a different match group"
+        extensions/p4_tests/p4_16/stf/parser_scratch_reg_3.p4
+    )
+
+    p4c_add_xfail_reason("tofino2"
+        "error: .* appears multiple times in checksum .*"
+        extensions/p4_tests/p4_16/customer/extreme/p4c-2358-2.p4
     )
 
     # PHV errors
@@ -539,11 +531,6 @@ if (ENABLE_ALT_PHV_ALLOC)
     )
 
     # PTF and STF errors
-    p4c_add_xfail_reason("tofino2"
-        "jbay_test_harness FAILED"  # STF
-        testdata/p4_14_samples/saturated-bmv2.p4
-    )
-
     p4c_add_xfail_reason("tofino2"
         "ERROR:PTF runner:Error when running PTF tests"
         npb-folded-pipe

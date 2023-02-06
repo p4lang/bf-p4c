@@ -113,12 +113,13 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
                                    ActionPhvConstraints& actions,
                                    CalcParserCriticalPath& parser_critical_path,
                                    PHV::Pragmas& pragmas) {
+    std::set<cstring> zeroInitFields;
     PassManager quick_backend = {
         new CollectHeaderStackInfo,
         new CollectPhvInfo(phv),
         new DoInstructionSelection(phv),
         &defuse,
-        new ElimUnused(phv, defuse),
+        new ElimUnused(phv, defuse, zeroInitFields),
         &table_alloc,
         &uses,
         &pragmas,

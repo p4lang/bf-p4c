@@ -187,9 +187,47 @@ const IR::BFN::Pipe* RemoveMetadataInits::preorder(IR::BFN::Pipe* pipe) {
 const IR::MAU::Instruction* RemoveMetadataInits::preorder(IR::MAU::Instruction* instr) {
     if (auto unit = findOrigCtxt<IR::BFN::Unit>()) {
         if (instr->name == "set" && elim_assign(unit, instr->operands[0], instr->operands[1])) {
-            LOG1("Eliminated assignment " << instr);
+            Log::TempIndent indent;
+            LOG1("Eliminated assignment " << instr << indent);
+
+            // Gather zero init fields to track them to skip eliminating their POV bit assignments
+            // Only applicable to Tofino2
+            if (!Device::hasMetadataPOV()) return nullptr;
+
+            auto f = phv.field(instr->operands[0]);
+            if (!f) return nullptr;
+
+            // In order to skip elimination field must be deparsed.
+            // NOTE: f->deparsed() does not work here
+            bool is_deparsed = false;
+            for (const auto& use : defuse.getAllUses(f->id)) {
+                if (use.first->to<IR::BFN::Deparser>())
+                    is_deparsed = true;
+            }
+            if (is_deparsed) {
+                LOG5("Added to zeroInitFields : " << *f);
+                zeroInitFields.insert(f->name);
+            }
+
             return nullptr;
         }
     }
     return instr;
 }
+
+Visitor::profile_t RemoveMetadataInits::init_apply(const IR::Node* root) {
+    Log::TempIndent indent;
+    LOG3("RemoveMetadataInits init_apply" << indent);
+    // Clear zeroInitFields
+    zeroInitFields.clear();
+    return Transform::init_apply(root);
+}
+
+void RemoveMetadataInits::end_apply() {
+    Log::TempIndent indent;
+    LOG3("RemoveMetadataInits end_apply" << indent);
+    for (auto z : zeroInitFields) {
+        LOG4("ZeroInitField : " << z);
+    }
+}
+
