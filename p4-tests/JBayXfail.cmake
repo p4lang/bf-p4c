@@ -470,11 +470,6 @@ if (ENABLE_ALT_PHV_ALLOC)
     )
 
     p4c_add_xfail_reason("tofino2"
-        "Compiler Bug:  - can't place .* it's already done"
-        extensions/p4_tests/p4_16/customer/arista/obfuscated-ddos_tofino2.p4
-    )
-
-    p4c_add_xfail_reason("tofino2"
         "error: No phv record"  # bfas
         extensions/p4_tests/p4_16/stf/MODEL-1095.p4
     )
@@ -525,9 +520,13 @@ if (ENABLE_ALT_PHV_ALLOC)
         extensions/p4_tests/p4_16/customer/arista/obfuscated-p416_baremetal_tofino2-2022-09-15.p4
         extensions/p4_tests/p4_16/customer/arista/obfuscated-p416_baremetal_tofino2.p4
         extensions/p4_tests/p4_16/customer/arista/obfuscated-l2_dci.p4
-        extensions/p4_tests/p4_16/customer/arista/obfuscated-msee_tofino2.p4
         switch_16_y8
         npb-master-ptf
+    )
+
+    p4c_add_xfail_reason("tofino2"
+        "Two conditional parameters set the same bits"
+        extensions/p4_tests/p4_16/customer/arista/obfuscated-msee_tofino2.p4
     )
 
     # PTF and STF errors

@@ -315,13 +315,16 @@ std::pair<int, int> FieldSliceLiveRangeDB::DBSetter::update_live_status(
     if (loc.u == Location::PARSER) {
         liverange.parser() |= op;
         updated_range = std::make_pair(-1, -1);
+        LOG5(op << " on parser");
     } else if (loc.u == Location::DEPARSER) {
         liverange.deparser() |= op;
         updated_range = std::make_pair(Device::numStages(), Device::numStages());
+        LOG5(op << " on deparser");
     } else if (loc.u == Location::TABLE) {
         BUG_CHECK(loc.stages.size() > 0, "table not allocated");
         const auto min_max = std::minmax_element(loc.stages.begin(), loc.stages.end());
         for (int i = *min_max.first; i <= *min_max.second; i++) {
+            LOG5(op << " on stage " << i);
             liverange.stage(i) |= op;
         }
         updated_range = std::make_pair(*min_max.first, *min_max.second);
@@ -400,7 +403,7 @@ void FieldSliceLiveRangeDB::DBSetter::end_apply() {
 
         // set (W..L...R) for all paired defuses.
         for (const FieldDefUse::locpair& use : defuse->getAllUses(fs.field()->id)) {
-            LOG5("found use: " << use.second);
+            LOG5("found use: " << use.second << " in " << DBPrint::Brief << use.first);
             const auto use_loc = to_location(field, use, true);
             BUG_CHECK(use_loc, "use cannot be ignored");
 
@@ -430,7 +433,7 @@ void FieldSliceLiveRangeDB::DBSetter::end_apply() {
             // mark(or) W and R and all stages in between to LIVE.
             const auto& defs_of_use = defuse->getDefs(use);
             for (const auto& def : defs_of_use) {
-                LOG5("found paired def: " << def.second);
+                LOG5("found paired def: " << def.second << " in " << DBPrint::Brief << def.first);
                 const auto* field = fs.field();
                 const auto def_loc = to_location(field, def, false);
                 if (def_loc) {

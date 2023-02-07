@@ -65,7 +65,7 @@ struct FsPacker {
     bool is_alignment_compatible(const FieldSlice& fs,
                                  boost::optional<int> unmaterialized_field_align,
                                  const AlignedCluster& aligned) const {
-        const int field_align_if_packed_here = ((1 << 10) + fs.range().lo - n_bits) % 8;
+        const int field_align_if_packed_here = ((1 << 10) + n_bits - fs.range().lo) % 8;
         // aligned cluster has alignment constraint, and when field is packed, it will also
         // have an alignment constraint, they needs to be the same.
         if (aligned.alignment()) {
@@ -230,13 +230,19 @@ std::vector<std::pair<const IR::MAU::Table*, std::vector<FieldSlice>>>
 IxbarFriendlyPacking::make_table_key_candidates(const std::list<SuperCluster*>& clusters) const {
     ordered_map<const Field*, ordered_set<FieldSlice>> f_fs;
     ordered_map<FieldSlice, SuperCluster::SliceList*> fs_sl;
+    ordered_set<FieldSlice> constrained_by_aligned_cluster;
     for (const auto& sc : clusters) {
         for (const auto& sl : sc->slice_lists()) {
             for (const auto& fs : *sl) {
                 fs_sl[fs] = sl;
             }
         }
-        sc->forall_fieldslices([&](const FieldSlice& fs) { f_fs[fs.field()].insert(fs); });
+        sc->forall_fieldslices([&](const FieldSlice& fs) {
+            f_fs[fs.field()].insert(fs);
+            auto aligned_cluster = sc->aligned_cluster(fs);
+            // collect all fieldslices that are in AlignedCluster.
+            if (aligned_cluster.slices().size() > 1) constrained_by_aligned_cluster.insert(fs);
+        });
     }
 
     const auto get_fined_sliced_fs = [&](const FieldSlice& fs) {
@@ -267,6 +273,9 @@ IxbarFriendlyPacking::make_table_key_candidates(const std::list<SuperCluster*>& 
                 if (fs.size() % 8 == 0) continue;
                 // skip field with alignment for now: they will be in a slice list..
                 if (fs.field()->alignment) continue;
+                // skip fieldslices that are in AlignedCluster, since these fieldslices have
+                // implicit alignment constraints.
+                if (constrained_by_aligned_cluster.count(fs)) continue;
                 slices.insert(fs);
                 if (!field_indexes.count(fs.field())) {
                     field_indexes[fs.field()] = field_indexes.size();

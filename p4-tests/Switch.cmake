@@ -17,8 +17,15 @@ set  (isXFail TRUE)
 
 file (RELATIVE_PATH switchtest ${P4C_SOURCE_DIR} ${SWITCH_P4})
 # FIXME: remove disabling of parser min/max depth limits (P4C-4170)
+if (ENABLE_ALT_PHV_ALLOC)
+# enable --alt-phv-alloc-meta-init in alternative pass for switch_dc_basic
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
+    "switch_dc_basic" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} --disable-pragmas=pa_solitary -DDC_BASIC_PROFILE -Xp4c=\"--disable-parse-max-depth-limit --alt-phv-alloc-meta-init\"")
+else ()
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_dc_basic" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} --disable-pragmas=pa_solitary -DDC_BASIC_PROFILE -Xp4c=\"--disable-parse-max-depth-limit\"")
+endif (ENABLE_ALT_PHV_ALLOC)
+
 p4c_add_test_label("tofino" "METRICS" "switch_dc_basic")
 
 # FIXME: remove disabling of parser min/max depth limits (P4C-4170)

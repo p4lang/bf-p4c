@@ -402,7 +402,7 @@ class GreedyMetaInit : public TableFlowGraphSearchBase {
 
         auto& written_in_tables = table_write_info.get_written_in_tables(field);
         for (auto written_in_table : written_in_tables) {
-            if (written_in_table == table) break;
+            if (written_in_table == table) continue;
             if (mutex(table, written_in_table)) continue;
             auto written_in_table_stages = backtracker.stage(written_in_table, true);
             BUG_CHECK(written_in_table_stages.size() > 0, "table %1% should be placed",
