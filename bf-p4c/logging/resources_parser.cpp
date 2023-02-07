@@ -49,9 +49,9 @@ bool ParserResourcesLogging::preorder(const IR::BFN::LoweredParserState* state) 
 }
 
 std::vector<ParserResourcesLogging::ParserStateTransition*>
-ParserResourcesLogging::logStateTransitionsByMatch(const std::string &nextStateName,
-                        const IR::BFN::LoweredParserState* prevState,
-                        const IR::BFN::LoweredParserMatch* match) {
+ParserResourcesLogging::logStateTransitionsByMatch(const std::string& nextStateName,
+                                                   const IR::BFN::LoweredParserState* prevState,
+                                                   const IR::BFN::LoweredParserMatch* match) {
     auto tcamRow = getTcamId(match, prevState->gress);
     const auto shifts = match->shift;
     const auto hasCounter = !match->counters.empty();
@@ -62,8 +62,26 @@ ParserResourcesLogging::logStateTransitionsByMatch(const std::string &nextStateN
     std::vector<ParserResourcesLogging::ParserStateTransition*> result;
 
     auto addStateTransition = [&] () {
-        result.push_back(new ParserStateTransition(hasCounter, nextStateId, nextStateName,
-            prevStateId, shifts, tcamRow, prevStateName));
+        ParserStateTransition* const parser_state_transition = new ParserStateTransition(
+            hasCounter, nextStateId, nextStateName, prevStateId, shifts, tcamRow, prevStateName);
+
+        CHECK_NULL(match);
+        for (auto* stmt : match->extracts) {
+          CHECK_NULL(stmt);
+
+            if (auto* extract = stmt->to<IR::BFN::LoweredExtractClot>()) {
+                if (extract->dest) {
+                    parser_state_transition->append_clot_extracts(
+                        new ClotExtracts(
+                            extract->source->to<IR::BFN::LoweredPacketRVal>()->range.lo,
+                            extract->source->to<IR::BFN::LoweredPacketRVal>()->range.size(),
+                            extract->dest->tag) );
+                }
+            }
+        }
+
+        result.push_back(parser_state_transition);
+
         logStateExtracts(match, result.back()->get_extracts());
         logStateMatches(prevState, match, result.back()->get_matchesOn());
         logStateSaves(match, result.back()->get_savesTo());
@@ -72,13 +90,13 @@ ParserResourcesLogging::logStateTransitionsByMatch(const std::string &nextStateN
     // Add always present state
     addStateTransition();
 
-    // Duplicate the node iff we are working with parser set values, this is important
-    // due to the right count of the used TCAM values.
+    // Duplicate the node iff we are working with parser set values;
+    //   this is important due to the right count of the used TCAM values.
     auto pvs = match->value->to<IR::BFN::ParserPvsMatchValue>();
     if (pvs) {
         const int duplicateCount = pvs->size - 1;
-        for (int i = 0; i < duplicateCount; i++) {
-            tcamRow--;
+        for (int count = 0; count < duplicateCount; ++count) {
+            --tcamRow;
             addStateTransition();
         }
     }

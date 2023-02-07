@@ -15,14 +15,17 @@ namespace BFN {
  */
 class ParserResourcesLogging : public ParserInspector {
  public:
-    using ElementUsage = Resources_Schema_Logger::ElementUsage;
-    using ParserResources = Resources_Schema_Logger::ParserResources;
-    using ParserResourceUsage = Resources_Schema_Logger::ParserResourceUsage;
+    using ElementUsage          = Resources_Schema_Logger::ElementUsage;
+    using ParserResources       = Resources_Schema_Logger::ParserResources;
+    using ParserResourceUsage   = Resources_Schema_Logger::ParserResourceUsage;
+    using Phase0ResourceUsage   = Resources_Schema_Logger::Phase0ResourceUsage;
+
     using ParserStateTransition = Resources_Schema_Logger::ParserStateTransitionResourceUsage;
-    using Phase0ResourceUsage = Resources_Schema_Logger::Phase0ResourceUsage;
-    using StateExtracts = ParserStateTransition::Extracts;
+
+    using ClotExtracts   = ParserStateTransition::Clot_Extracts;
+    using StateExtracts  = ParserStateTransition::Extracts;
     using StateMatchesOn = ParserStateTransition::MatchesOn;
-    using StateSavesTo = ParserStateTransition::SavesTo;
+    using StateSavesTo   = ParserStateTransition::SavesTo;
 
  private:
     struct ParserLogData {
