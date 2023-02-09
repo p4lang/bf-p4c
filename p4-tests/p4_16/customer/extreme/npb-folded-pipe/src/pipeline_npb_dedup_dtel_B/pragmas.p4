@@ -18,6 +18,7 @@
 @pa_no_init("ingress", "ig_md.tunnel_2.terminate")         // reset in npb_ing_parser.p4
 //@pa_no_init("ingress", "ig_md.mirror.src")                 // reset in this file (below) NOT NEEDED
 #endif // PA_NO_INIT
+@pa_no_init("ingress", "ig_intr_md_for_tm.ucast_egress_port") // added per case 00779712 patch
 
 
 // These pragmas are needed to fit design
@@ -32,7 +33,7 @@
 @pa_container_size("egress", "eg_md.flags.bypass_egress", 8)
 @pa_solitary("egress" , "eg_md.lkp_1.ip_flags")
 
-// comment these to get uni-dir p4-program to compile w/ SDE v9.9.0-pr10985 (see case 00678071)
+
 @pa_container_size("egress" , "protocol_outer_0" , 8)
 @pa_container_size("egress" , "protocol_inner_0" , 8)
 @pa_container_size("egress" , "eg_md.lkp_1.tcp_flags", 8)
@@ -44,6 +45,23 @@
 @pa_container_size("ingress", "ig_intr_md_for_dprsr.mtu_trunc_len", 16)
 @pa_container_size("egress", "eg_intr_md_for_dprsr.mtu_trunc_len", 16)
 
+
+// These pragmas are need to fit design (v6 encap)
+// -----------------------------------------------------------------------------
+
+// remove following pragmas:
+// -----------------------
+@pa_container_size("ingress", "ig_md.mirror.src", 8)
+@pa_container_size("ingress", "ig_md.mirror.type", 8)
+@pa_alias("ingress", "ig_md.qos.qid", "ig_intr_md_for_tm.qid")
+@pa_container_size("egress", "eg_md.mirror.src", 8)
+@pa_container_size("egress", "eg_md.mirror.type", 8)
+
+// Add the following pragmas:
+// -----------------------
 //@pa_prioritize_ara_inits
+//@pa_no_overlay("ingress", "hdr.bridged_md.base_qid", "ig_md.qos.qid")
+//@pa_no_overlay("ingress", "ig_intr_md_for_tm.qid", "ig_md.qos.qid")
+//@pa_no_overlay("ingress", "ig_md.lkp_1.ip_type", "hdr.transport.ethernet.ether_type") // added per case 00776085 patch
 
 #endif // _P4_PRAGMAS_

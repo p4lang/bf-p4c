@@ -521,7 +521,6 @@ if (ENABLE_ALT_PHV_ALLOC)
         extensions/p4_tests/p4_16/customer/arista/obfuscated-p416_baremetal_tofino2.p4
         extensions/p4_tests/p4_16/customer/arista/obfuscated-l2_dci.p4
         switch_16_y8
-        npb-master-ptf
     )
 
     p4c_add_xfail_reason("tofino2"

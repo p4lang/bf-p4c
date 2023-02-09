@@ -36,7 +36,8 @@ control Npb_Ing_Sff_Top (
 		switch_port_lag_index_t port_lag_index,
 
 //		bool end_of_chain,
-		bit<9> lag_hash_mask_en
+		bit<9> lag_hash_mask_en,
+		bool   lag_hash_non_symmetric_en
 	) {
 		stats.count();
 
@@ -44,6 +45,7 @@ control Npb_Ing_Sff_Top (
 
 		ig_md.nsh_md.end_of_path = true; // since we're bypassing nexthop and so can't put a tunnel on, we don't want an nsh header either.
 		ig_md.nsh_md.lag_hash_mask_en = lag_hash_mask_en;
+		ig_md.nsh_md.lag_hash_non_symmetric_en = lag_hash_non_symmetric_en;
 	}
 
 	// =====================================
@@ -53,7 +55,8 @@ control Npb_Ing_Sff_Top (
 //		switch_mgid_t mgid,
 
 //		bool end_of_chain,
-		bit<9> lag_hash_mask_en
+		bit<9> lag_hash_mask_en,
+		bool   lag_hash_non_symmetric_en
 	) {
 		stats.count();
 
@@ -61,6 +64,7 @@ control Npb_Ing_Sff_Top (
 
 		ig_md.nsh_md.end_of_path = true; // since we're bypassing nexthop and so can't put a tunnel on, we don't want an nsh header either.
 		ig_md.nsh_md.lag_hash_mask_en = lag_hash_mask_en;
+		ig_md.nsh_md.lag_hash_non_symmetric_en = lag_hash_non_symmetric_en;
 	}
 
 	// =====================================
@@ -70,7 +74,8 @@ control Npb_Ing_Sff_Top (
 		switch_nexthop_t nexthop_index,
 
 		bool end_of_chain,
-		bit<9> lag_hash_mask_en
+		bit<9> lag_hash_mask_en,
+		bool   lag_hash_non_symmetric_en
 	) {
 		stats.count();
 
@@ -78,6 +83,7 @@ control Npb_Ing_Sff_Top (
 
 		ig_md.nsh_md.end_of_path = end_of_chain;
 		ig_md.nsh_md.lag_hash_mask_en = lag_hash_mask_en;
+		ig_md.nsh_md.lag_hash_non_symmetric_en = lag_hash_non_symmetric_en;
 	}
 
 	// =====================================

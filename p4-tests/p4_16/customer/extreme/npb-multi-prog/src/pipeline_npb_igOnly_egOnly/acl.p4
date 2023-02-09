@@ -1513,6 +1513,7 @@ control EgressIpv6Acl(
 
 		const default_action = no_action;
 		counters = stats;
+		requires_versioning = false; // added per case 00776085 patch
 		size = table_size;
 	}
 

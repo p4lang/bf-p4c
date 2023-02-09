@@ -59,9 +59,10 @@ cfg = json.load(open(f))
 p4_program = cfg['p4_devices'][0]['p4_programs'][0]
 p4_name  = p4_program['p4_name']
 test_pipe_of_interest = int(p4_program['test_pipe_of_interest'])
+skip_duplicate_pipe_flag = p4_program['skip_duplicate_pipe_flag']
 
 program_level_test_flag = test_pipe_of_interest == 99
-pipeline_level_test_flag = 0 <= int(test_pipe_of_interest) <= 3                       
+pipeline_level_test_flag = 0 <= int(test_pipe_of_interest) <= 3
 assert program_level_test_flag or pipeline_level_test_flag, \
         logger.error("Illegal value for test_pipe_of_interest in test.json")
 
@@ -85,12 +86,21 @@ eg_only_flag_s      = ["","","",""]
 ig_pipes = []
 eg_pipes = []
 
+previous_pipes = []
+
 # loop through each pipeline present in test.json
 for i, pip in enumerate(p4_program['p4_pipelines']):
-        
+
     # populate per-pipe arrays (based on pipe-scope)
     logger.info("Configuration (test.json) pipeline loop iteration %d"
                 " (pipe_scope=%s)" %(i, pip['pipe_scope']))
+    pipe_name_and_deploy = pip['name'] + '_' + pip['deploy_name']
+    if skip_duplicate_pipe_flag and (i>0):
+        if pipe_name_and_deploy in previous_pipes:
+            logger.info("Skipping duplicate pipe[%d]: %s"
+                        %(i, pipe_name_and_deploy))
+            continue
+    previous_pipes.append(pipe_name_and_deploy)
     logger.info("  populating pipe array location %s (pipe_scope[0])"
                 %pip['pipe_scope'][0])
     pipe = pip['pipe_scope'][0]
@@ -163,6 +173,7 @@ logger.info("-----------------------------------------------------")
 if program_level_test_flag:
 
     logger.info("Test-Type: Program-level")
+    logger.info("Skip Duplicate Pipe Flag: %s" %skip_duplicate_pipe_flag)
     logger.info("Deployment Profile: %s" %deploy_name_s)
     logger.info("Top-Level Instance Name: %s" %p4_pipeline_name_s)
     logger.info("Top-Level Instance Index: %s" %inst_idx_s)

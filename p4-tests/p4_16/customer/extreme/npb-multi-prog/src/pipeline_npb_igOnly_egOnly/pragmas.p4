@@ -18,6 +18,7 @@
 @pa_no_init("ingress", "ig_md.tunnel_2.terminate")         // reset in npb_ing_parser.p4
 //@pa_no_init("ingress", "ig_md.mirror.src")                 // reset in this file (below) NOT NEEDED
 #endif // PA_NO_INIT
+@pa_no_init("ingress", "ig_intr_md_for_tm.ucast_egress_port") // added per case 00779712 patch
 
 
 // These pragmas are needed to fit design
@@ -61,5 +62,6 @@
 //@pa_prioritize_ara_inits
 //@pa_no_overlay("ingress", "hdr.bridged_md.base_qid", "ig_md.qos.qid")
 //@pa_no_overlay("ingress", "ig_intr_md_for_tm.qid", "ig_md.qos.qid")
+//@pa_no_overlay("ingress", "ig_md.lkp_1.ip_type", "hdr.transport.ethernet.ether_type") // added per case 00776085 patch
 
 #endif // _P4_PRAGMAS_

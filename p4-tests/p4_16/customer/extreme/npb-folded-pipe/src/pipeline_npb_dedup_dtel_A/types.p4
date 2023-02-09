@@ -653,6 +653,7 @@ struct nsh_metadata_t {
     bool                            l2_fwd_en;              // ingress only
 	bit<32>                         hash_2;                 // ingress only (for dedup)
 	bit<9>                          lag_hash_mask_en;       // ingress only
+	bool                            lag_hash_non_symmetric_en; // ingress only
 
     bit<DSAP_ID_WIDTH>              dsap;                   // egress only (for egress sf)
     bool                            strip_tag_e;            // egress only
@@ -970,14 +971,14 @@ struct switch_port_metadata_t {
 // Ingress Metadata
 // --------------------------------------------------------------------------------
 
-@pa_container_size("ingress", "ig_md.mirror.src", 8)
-@pa_container_size("ingress", "ig_md.mirror.type", 8)
+//@pa_container_size("ingress", "ig_md.mirror.src", 8)
+//@pa_container_size("ingress", "ig_md.mirror.type", 8)
 //@pa_container_size("ingress", "smac_src_move", 16)
 @pa_alias("ingress", "ig_md.egress_port", "ig_intr_md_for_tm.ucast_egress_port")
 #if !defined(DTEL_DROP_REPORT_ENABLE) && !defined(DTEL_QUEUE_REPORT_ENABLE)
 @pa_alias("ingress", "ig_md.multicast.id", "ig_intr_md_for_tm.mcast_grp_b")
 #endif
-@pa_alias("ingress", "ig_md.qos.qid", "ig_intr_md_for_tm.qid")
+//@pa_alias("ingress", "ig_md.qos.qid", "ig_intr_md_for_tm.qid")
 //@pa_alias("ingress", "ig_md.qos.icos", "ig_intr_md_for_tm.ingress_cos")
 #ifdef MIRROR_INGRESS_ENABLE
 @pa_alias("ingress", "ig_intr_md_for_dprsr.mirror_type", "ig_md.mirror.type")
@@ -1032,8 +1033,8 @@ struct switch_ingress_metadata_t {
 // Egress Metadata
 // --------------------------------------------------------------------------------
 
-@pa_container_size("egress", "eg_md.mirror.src", 8)
-@pa_container_size("egress", "eg_md.mirror.type", 8)
+//@pa_container_size("egress", "eg_md.mirror.src", 8)
+//@pa_container_size("egress", "eg_md.mirror.type", 8)
 #ifdef DTEL_ENABLE
 @pa_container_size("egress", "hdr.dtel_drop_report.drop_reason", 8)
 @pa_mutually_exclusive("egress", "hdr.dtel.timestamp", "hdr.erspan_type3.timestamp")

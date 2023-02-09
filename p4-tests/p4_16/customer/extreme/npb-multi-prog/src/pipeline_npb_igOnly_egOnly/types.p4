@@ -653,6 +653,7 @@ struct nsh_metadata_t {
     bool                            l2_fwd_en;              // ingress only
 	bit<32>                         hash_2;                 // ingress only (for dedup)
 	bit<9>                          lag_hash_mask_en;       // ingress only
+	bool                            lag_hash_non_symmetric_en; // ingress only
 
     bit<DSAP_ID_WIDTH>              dsap;                   // egress only (for egress sf)
     bool                            strip_tag_e;            // egress only

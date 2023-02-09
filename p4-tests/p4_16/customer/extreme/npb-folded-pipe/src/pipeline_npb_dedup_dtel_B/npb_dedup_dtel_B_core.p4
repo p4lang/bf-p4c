@@ -59,7 +59,6 @@ control IngressControl_B(
 		ig_md.ingress_port                  = hdr.bridged_md_folded.base.ingress_port; // set ingress port to original ingress port
 
 		ig_md.qos.qid              = hdr.bridged_md_folded.base.qid; // can't be done in parser, for some reason
-//		ig_md.qos.qid = 0x8;
 		ig_md.nsh_md.dedup_en      = hdr.bridged_md_folded.base.nsh_md_dedup_en; // can't be done in parser, for some reason
 
 		// -----------------------------------------------------

@@ -37,6 +37,9 @@ control IngressControl(
 #endif
 //	IngressBd(BD_TABLE_SIZE) bd_stats;
 //	IngressUnicast(RMAC_TABLE_SIZE) unicast;
+	Ipv4Hash() ipv4_hash_non_symmetric;
+	Ipv6Hash() ipv6_hash_non_symmetric;
+	NonIpHash() non_ip_hash_non_symmetric;
 	Ipv4HashSymmetric() ipv4_hash_symmetric;
 	Ipv6HashSymmetric() ipv6_hash_symmetric;
 	NonIpHashSymmetric() non_ip_hash_symmetric;
@@ -146,28 +149,56 @@ control IngressControl(
 		HashMask.apply(ig_md.lkp_1, ig_md.nsh_md.lag_hash_mask_en);
 
 #ifdef RESILIENT_ECMP_HASH_ENABLE
-		if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_NONE) {
-			compute_non_ip_hash0_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
-		} else if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_IPV4) {
-			compute_ipv4_hash0_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
-		} else {
-			compute_ipv6_hash0_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
-		}
+		if(ig_md.nsh_md.lag_hash_non_symmetric_en == true) {
+			if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_NONE) {
+				compute_non_ip_hash0_non_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
+			} else if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_IPV4) {
+				compute_ipv4_hash0_non_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
+			} else {
+				compute_ipv6_hash0_non_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
+			}
 
-		if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_NONE) {
-			compute_non_ip_hash1_symmetric.apply(ig_md.lkp_1, ig_md.hash[63:32]);
-		} else if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_IPV4) {
-			compute_ipv4_hash1_symmetric.apply(ig_md.lkp_1, ig_md.hash[63:32]);
+			if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_NONE) {
+				compute_non_ip_hash1_non_symmetric.apply(ig_md.lkp_1, ig_md.hash[63:32]);
+			} else if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_IPV4) {
+				compute_ipv4_hash1_non_symmetric.apply(ig_md.lkp_1, ig_md.hash[63:32]);
+			} else {
+				compute_ipv6_hash1_non_symmetric.apply(ig_md.lkp_1, ig_md.hash[63:32]);
+			}
 		} else {
-			compute_ipv6_hash1_symmetric.apply(ig_md.lkp_1, ig_md.hash[63:32]);
+			if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_NONE) {
+				compute_non_ip_hash0_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
+			} else if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_IPV4) {
+				compute_ipv4_hash0_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
+			} else {
+				compute_ipv6_hash0_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
+			}
+
+			if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_NONE) {
+				compute_non_ip_hash1_symmetric.apply(ig_md.lkp_1, ig_md.hash[63:32]);
+			} else if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_IPV4) {
+				compute_ipv4_hash1_symmetric.apply(ig_md.lkp_1, ig_md.hash[63:32]);
+			} else {
+				compute_ipv6_hash1_symmetric.apply(ig_md.lkp_1, ig_md.hash[63:32]);
+			}
 		}
 #else
-		if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_NONE) {
-			non_ip_hash_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
-		} else if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_IPV4) {
-			ipv4_hash_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
+		if(ig_md.nsh_md.lag_hash_non_symmetric_en == true) {
+			if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_NONE) {
+				non_ip_hash_non_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
+			} else if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_IPV4) {
+				ipv4_hash_non_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
+			} else {
+				ipv6_hash_non_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
+			}
 		} else {
-			ipv6_hash_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
+			if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_NONE) {
+				non_ip_hash_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
+			} else if (ig_md.lkp_1.ip_type == SWITCH_IP_TYPE_IPV4) {
+				ipv4_hash_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
+			} else {
+				ipv6_hash_symmetric.apply(ig_md.lkp_1, ig_md.hash[31:0]);
+			}
 		}
 #endif
 

@@ -142,6 +142,7 @@ control IngressPortMapping(
 #ifdef PA_NO_INIT
 		ig_intr_md_for_tm.bypass_egress = 0;
 #endif
+		ig_intr_md_for_tm.ucast_egress_port = 0; // added per case 00779712 patch
 	}
 
 	// --------------------------
