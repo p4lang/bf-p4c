@@ -51,10 +51,19 @@
 #define LOGGING_FEATURE(TAG, N) ((N) <= MAX_LOGGING_LEVEL && ::Log::fileLogLevelIsAtLeast(TAG, N))
 #endif
 
-/********************************************************************************************
- ** Table placement is done with a fairly simple greedy allocator in a single Transform pass
- ** organized so as to allow backtracking within the greedy allocation, though we do not
- ** currently do any backtracking here.
+/*! \file table_placement.cpp
+ **
+ ** Table placement is done using different heuristics to optimize MAU usage under different
+ ** use cases. The two main heuristics used are:
+ **
+ ** 1. Always prioritize dependencies chain.
+ ** 2. Balance between dependencies and resource usage.
+ **
+ ** These heuristics also support backtracking to try to fix a given solution when during the
+ ** placement an impossible dependency chain is discovered. Table placement can also be
+ ** initiated from the traditional compilation steps (PHV First) or with the alternative
+ ** mode which use table placement as the first step. Both compilation mode use table
+ ** placement algorithm in a similar way with some exceptions described below.
  **
  ** All of the decisions for placement are done in the preorder(IR::BFN::Pipe *) method --
  ** in this method we go over all the tables in the pipe (directly, not using the visitor
@@ -66,7 +75,7 @@
  **
  ** After preorder(Pipe) method completes, the transform visits all of the tables in the
  ** pipeline, rewriting them to match the placement decisions made in the Placed list.  This
- ** involves actually combining gateways intopo match tables and splitting tables across
+ ** involves actually combining gateways into match tables and splitting tables across
  ** multiple logical tables as decided in the information recorded in the Placed list.
  **
  ** The placement process itself is a fairly standard greedy allocator -- we maintain a
@@ -92,6 +101,208 @@
  ** For Tofino2, we don't have the above restriction, so we don't remove the parent
  ** GroupPlace from the worklist, but we still maintain the parent/child info even though it
  ** isn't really needed (minimizing the difference between Tofino1 and Tofino2 here).
+ **
+ ** Traditional compilation mode
+ ** ============================
+ **
+ ** In traditional compilation mode, steps are normally looking like:
+ **
+ ** 1. PHV Allocation based on parser/deparser/pragmas/actions constraints.
+ **
+ ** 2. Table Placement using this latest PHV Allocation that typically does not fit since
+ **    PHV Allocation was not taking care of any potential container conflicts.
+ **
+ ** 3. Table Placement using this latest PHV Allocation that ignore container conflict
+ **    which ultimately gives an idea of an ideal placement.
+ **
+ ** 4. PHV Allocation based on parser/deparser/pragmas/actions constraints plus the step 3
+ **    placement to avoid future container conflict by not sharing containers for fields
+ **    written by two different tables on the same stage.
+ **
+ ** 5. Table Placement using this latest PHV Allocation that ideally result in a similar
+ **    placement as in step 3. This is typically where most program find a solution. In some
+ **    cases it requires another iteration of steps 3,4,5. In this case, the PHV Allocation
+ **    for the next iteration will uses the first and the second table placement that ignore
+ **    the container conflict to relaxes constraint for the final table placement step.
+ **
+ ** Alternative PHV Allocation compilation mode
+ ** ===========================================
+ **
+ ** With the alternative PHV allocation compilation mode, steps are a bit different and look like
+ ** this from high level perspective:
+ **
+ ** 1. Trivial PHV Allocation based on parser/deparser/pragmas/actions constraints using an
+ **    infinite number of containers of all types. Most of the fields are carried through
+ **    individual containers. The only case where fields packing is involved is when it would
+ **    benefit table matching by reducing IxBar and SRAMs/TCAMs consumption. This PHV Allocation
+ **    can not be synthesize.
+ **
+ ** 2. Table Placement using this latest PHV Allocation should converge with a solution in this
+ **    early stage since the PHV constraints are minimal. Unfortunately, even if table placement
+ **    find a solution, this latter one cannot be used as a final solution since it involve
+ **    a PHV allocation that can not be synthesize.
+ **
+ ** 3. PHV Allocation based on parser/deparser/pragmas/actions constraints plus the previous
+ **    table placement run to avoid container conflict and also have a better understanding of the
+ **    physical live range of every field slices.
+ **
+ ** 4. Table Placement using basic replay that assume it can allocate the same table as in step
+ **    2 with the same ordering and the same number of entries per table parts (for large table
+ **    that spans on multiple stages). The only difference is that it now uses the real PHV
+ **    allocation of step 3 which make this placement a final one if it successful. Unfortunately
+ **    it is possible that it fails to replay the placement because of added IxBar/Match/Actions
+ **    constraints caused by different container size allocated vs the trivial PHV allocation
+ **    step.
+ **
+ ** 5. Table Placement is involved in case it fails to do the replay (step 4) by trying a normal
+ **    allocation using various heuristics. Dependencies are injected before this allocation can
+ **    take place to account for the various fields/containers overlay introduced by the latest
+ **    PHV allocation.
+ **
+ ** Table Placement heuristics details
+ ** ==================================
+ **
+ ** Two main heuristics are used for table placement. Originally only the one that always
+ ** prioritize dependencies chain was in place but that heuristic was not good for program that
+ ** uses resources heavily. Only looking for downward dependencies make sure that your critical
+ ** path is covered but this can be at the expense of low MAU resource utilization. P4 developers
+ ** had to uses multiple pragmas to steer the table placement in some direction and have a better
+ ** resources utilization. This was annoying for the developers but also for the compiler engineer
+ ** that was always trying to modify current P4 program every time basic heuristics changed. After
+ ** some P4 programs example from various customer we were able to find two main types of programs
+ ** that have different characteristic and would be better managed by two different types of
+ ** placement heuristics.
+ **
+ ** 1. Programs with multiple conditions but with modest table size. These programs require lots
+ **    of table ids, have big dependency chains but does not consume many SRAMs, TCAMs and map
+ **    resources. These kind of programs was well handled by the original heuristic that always
+ **    favors the longest downward dependencies.
+ **
+ ** 2. Programs with lots of big tables that consume up to 80% of the total MAU resources for
+ **    the whole pipeline. These programs can also have deep dependencies but typically they
+ **    are smaller because chains of conditions are translated into single table lookup most
+ **    of the time.
+ **
+ ** The first type of program was better handled by the original heuristic but for the second one
+ ** every modification in the compiler heuristics regarding PHVs, table layout, initialization,
+ ** placement optimization, ... resulted in multiple fitting issues.
+ **
+ ** Always prioritize dependencies chain
+ ** ------------------------------------
+ **
+ ** This was the original approach which basically look at the downward dependencies of all
+ ** the eligible tables to be placed and select the one with the longest. This behavior can
+ ** be steered by using pragmas to force table in specific stages. Other pragmas can also be
+ ** used to increase or reduce the priority of tables to force a selection even if this table
+ ** is not the one with the longest downward dependencies at a given moment. This basic heuristic
+ ** look at all eligible table, try to add each of them one by one and compare the result through
+ ** the 'is_better' function (which basically only look at downward dependencies)
+ **
+ ** Balance between dependencies and resource usage
+ ** -----------------------------------------------
+ **
+ ** This heuristic was added as a second strategy to try when the original heuristic fails to
+ ** find a solution. This strategy is really good at finding solution for the program that
+ ** require lots of resources. This strategy is always run after the original approach because
+ ** it uses the result of that first allocation to build the total program resource usage.
+ ** As of now this heuristic tracks TCAMs, SRAMs, Table Logical Ids and Map RAM. The first step
+ ** is to compute the total number of resource element required for the entire program to be used
+ ** in the decision process for priorization of the most heavily resources required. The second
+ ** step is to proceed with a similar table placement heuristic as the original one but with the
+ ** exception that the idea is to build multiple solutions for a given MAU stage that can be
+ ** compared and selected based on a combination of resource and dependencies criteria.
+ ** Unfortunately, it is not efficient to build all the possible solutions for every stages since
+ ** the number of solutions will increase exponentially based on the number of eligible
+ ** tables. The trade-off used in this situation is to make sure the algorithm has at least one
+ ** solution that includes every table that got eligible at any given point. e.g.:
+ **
+ ** Stage **X** have eligible Table *A*, *B*, *C*, *D* when empty.
+ **
+ ** 1. Place Table *A* based on heuristic.
+ ** 2. *B*, *D*, *E* are now eligible (**-C**, **+E**).
+ ** 3. Place Table D based on heuristic.
+ ** 4. No Other table Fit on Stage **X** (Solution include Table *A* and *D*).
+ ** 5. Found that Table *B*, *C*, *E* was eligible at some point but not included in any solution.
+ ** 6. Go Back and build a new solution by selecting Table *B* Originally.
+ ** 7. *C*, *D*, *F* are now eligible (**-A**, **+F**).
+ ** 8. Place Table *D* based on heuristic.
+ ** 9. *F* is now eligible (**-C**).
+ ** 10. Place Table *F*.
+ ** 11. No Other table Fit on Stage **X** (Solution include Table *B*, *D* and *F*).
+ ** 12. Continue until it finds at least one solution that includes Table *C* and *E* and possibly
+ **     other since new table can become eligible after being unblocked by another one.
+ ** 13. Compare the solutions and select the best one based on resource and dependency metrics.
+ ** 14. Move to the next stage and proceed with the same steps.
+ **
+ ** Selecting the best solution
+ ** ---------------------------
+ **
+ ** The second heuristic must select one of the solutions for a given stage before moving to the
+ ** next one. This selection is driven by a combination of dependencies and resources. It first
+ ** scans all the solutions to find the longest downward dependency than exclude all of the
+ ** solutions that does not include the maximum number of tables with this longest downward
+ ** dependency value. The remaining solutions will be evaluated from resource perspective by
+ ** giving a score to each of them. The score is based on the program resource requirement to
+ ** select the best solution. For example, a program that require lots of SRAM resource but not
+ ** many TCAM resources will give better score to solutions with high SRAM vs TCAM usage. The
+ ** resource is also dynamically track during the placement, so it is possible that at some point
+ ** a resource become more critical if previous stages did not consume enough of it.
+ **
+ ** Backtracking
+ ** ------------
+ **
+ ** Backtracking mechanism was added in table placement as another strategy to find solutions and
+ ** effectively move out from low minima. Backtracking is supported on both table placement
+ ** heuristics and is cap to a maximum number of attempts. That maximum number is different between
+ ** the steps to balance the compilation time with the usefulness of backtracking. For example,
+ ** that limit is significantly lower on no container conflict because at this stage we know that
+ ** another table placement step will be required. The backtracking mechanism kicks in when the
+ ** remaining downward dependencies lead to impossible placement from a mathematical perspective.
+ ** This is computed after each table selection and compared to the number of stages remaining in
+ ** the target. In this case, the backtracking mechanism try to find a way to move that
+ ** problematic table in a stage that would cover for the computed downward dependency. Most of
+ ** the time that is not possible because a whole dependency chain needs to be moved. Therefore
+ ** the backtracking mechanism will try to move back in earlier stages to try to move a table of
+ ** that dependency chain to ultimately move the entire chain at least one stage earlier.
+ **
+ ** Backtrack Placement
+ ** -------------------
+ **
+ ** The backtracking mechanism require specific saved position to go back into that state. Every
+ ** eligible table that was tried during table placement can be saved as a potential backtracking
+ ** position. Unfortunately doing that would require an excessive amount of memory and the
+ ** backtracking mechanism would not be able to visit all of them. The backtracking mechanism
+ ** currently only saves two positions for each table and stage tuple. These two positions are
+ ** named local and global. The global position refer to the earliest backtracking point of a
+ ** table on each stages it was eligible across all backtracking attempts. The local position
+ ** refers to the earliest backtracking point of a table on each stage it was eligible since the
+ ** last backtracking attempt. The backtracking mechanism will always try to relax the actual
+ ** constraint using local position to try to increase the solution as much as possible instead
+ ** of jumping to potentially a really different solution from the global point. Backtrack point
+ ** will not be saved if the selected table have high priority or stage pragma to make sure
+ ** backtracking does not override such customer request.
+ **
+ ** Table Placement Heuristics Navigation
+ ** -------------------------------------
+ **
+ ** The previously described heuristics are not always tried on all steps because in some cases
+ ** it is not required. Table Placement currently only care about being able to fit all of the
+ ** tables in the required number of stages. Multiple heuristics can be tried to achieve this
+ ** goal but when a solution is found, the algorithm will accept that solution and stop looking
+ ** for alternative way. The typical sequence being evaluated by the table placement is:
+ **
+ ** 1. Table selected by dependency only.
+ ** 2. Table selected by dependency only with backtracking.
+ ** 3. Table selected by a combination of resources tracking + dependency.
+ ** 4. Table selected by a combination of resources tracking + dependency with backtracking.
+ **
+ ** The table placement for each strategy will stop and be saved as an incomplete placement if at
+ ** some point, the algorithm detect that downward dependency requirement is impossible to reach.
+ ** When such incomplete placement is saved, the next strategy is selected. If none of these
+ ** strategies is found to produce a placement that fit the target, all of the incomplete
+ ** placement will be finalized and compared. The one that require the least stages will be
+ ** selected as the final one. The first strategy are prioritize over the last if multiple
+ ** strategy require the same number of stages.
  */
 
 int TablePlacement::placement_round = 1;
