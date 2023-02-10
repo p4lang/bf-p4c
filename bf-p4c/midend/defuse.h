@@ -22,6 +22,7 @@ class ComputeDefUse : public Inspector, public ControlFlowVisitor, public P4Writ
                       public P4::ResolutionContext {
     ComputeDefUse *clone() const { return new ComputeDefUse(*this); }
     void flow_merge(Visitor &) override;
+    void flow_copy(ControlFlowVisitor &) override;
     enum { SKIPPING, NORMAL, READ_ONLY, WRITE_ONLY } state = SKIPPING;
 
  public:
@@ -94,6 +95,7 @@ class ComputeDefUse : public Inspector, public ControlFlowVisitor, public P4Writ
     bool preorder(const IR::P4Action *) override;
     bool preorder(const IR::P4Parser *) override;
     bool preorder(const IR::ParserState *) override;
+    void revisit(const IR::ParserState *) override;
     void loop_revisit(const IR::ParserState *) override;
     void postorder(const IR::ParserState *) override;
     bool preorder(const IR::Type *) override { return false; }
@@ -101,12 +103,14 @@ class ComputeDefUse : public Inspector, public ControlFlowVisitor, public P4Writ
     bool preorder(const IR::KeyElement *) override;
     const IR::Expression *do_read(def_info_t &, const IR::Expression *, const Context *);
     const IR::Expression *do_write(def_info_t &, const IR::Expression *, const Context *);
-    bool preorder(const IR::PathExpression *e) override;
+    bool preorder(const IR::PathExpression *) override;
+    void loop_revisit(const IR::PathExpression *) override;
     bool preorder(const IR::MethodCallExpression *) override;
     void end_apply() override;
 
     class SetupJoinPoints;
-    void init_join_flows(const IR::Node *root) override;
+    void applySetupJoinPoints(const IR::Node *root) override;
+    bool filter_join_point(const IR::Node *) override;
  public:
     ComputeDefUse() : ResolutionContext(true),
                       cached_locs(*new std::set<loc_t>), defuse(*new defuse_t) {

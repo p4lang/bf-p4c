@@ -84,3 +84,10 @@ void HeaderRemovalAnalysis::flow_merge(Visitor& v) {
         resultMap.at(kv.first).insert(kv.second.begin(), kv.second.end());
     }
 }
+
+#if 0
+void HeaderRemovalAnalysis::flow_copy(::ControlFlowVisitor& v) {
+    HeaderRemovalAnalysis& other = dynamic_cast<HeaderRemovalAnalysis&>(v);
+    resultMap = other.resultMap;
+}
+#endif

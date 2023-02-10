@@ -507,6 +507,11 @@ void FieldDefUse::flow_merge(Visitor &a_) {
         ixbar_refs[ndr.first] |= a.ixbar_refs[ndr.first];
     }
 }
+void FieldDefUse::flow_copy(::ControlFlowVisitor &a_) {
+    FieldDefUse &a = dynamic_cast<FieldDefUse &>(a_);
+    BUG_CHECK(mode == a.mode, "Inconsitent mode in FieldDefUse::flow_copy");
+    defuse = a.defuse;
+}
 
 std::ostream &operator<<(std::ostream &out, const FieldDefUse::info &i) {
     out << DBPrint::Brief;

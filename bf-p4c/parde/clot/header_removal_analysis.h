@@ -84,6 +84,8 @@ class HeaderRemovalAnalysis : public MauInspector {
     HeaderRemovalAnalysis* clone() const override;
     HeaderRemovalAnalysis& flow_clone() override;
     void flow_merge(Visitor& v) override;
+    // FIXME -- not a ControlFlowVisitor, so there will never be any clones to merge...
+    // void flow_copy(::ControlFlowVisitor& v) override;
 };
 
 #endif /* EXTENSIONS_BF_P4C_PARDE_CLOT_HEADER_REMOVAL_ANALYSIS_H_ */

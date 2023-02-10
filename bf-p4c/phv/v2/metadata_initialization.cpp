@@ -139,13 +139,21 @@ class WriteTableInfo : public BFN::ControlFlowVisitor, public MauInspector, Tofi
         for (const auto& kv : v.written_in_tables) {
             written_in_tables[kv.first].insert(kv.second.begin(), kv.second.end());
         }
-    };
+    }
+    void flow_copy(::ControlFlowVisitor& other) override {
+        WriteTableInfo& v = dynamic_cast<WriteTableInfo&>(other);
+        been_written = v.been_written;
+        table_write_info = v.table_write_info;
+        written_in_actions = v.written_in_actions;
+        written_in_tables = v.written_in_tables;
+    }
 
  public:
     explicit WriteTableInfo(const PhvInfo &p)
         : phv(p) {
         joinFlows = true;
         visitDagOnce = false;
+        BackwardsCompatibleBroken = true;
     }
 
     bool is_after_write(const PHV::Field* f, const IR::MAU::Table* table) const {

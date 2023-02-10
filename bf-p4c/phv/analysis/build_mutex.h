@@ -71,6 +71,7 @@ class BuildMutex : public BFN::ControlFlowVisitor, public Inspector {
     bool preorder(const IR::Expression*) override;
     bool preorder(const IR::MAU::Action *act) override;
     void flow_merge(Visitor &) override;
+    void flow_copy(::ControlFlowVisitor &) override;
     void end_apply() override;
 
  public:
@@ -83,6 +84,7 @@ class BuildMutex : public BFN::ControlFlowVisitor, public Inspector {
           IgnoreField(ignore_field) {
         joinFlows = true;
         visitDagOnce = false;
+        BackwardsCompatibleBroken = true;
     }
 
     BuildMutex *clone() const override { return new BuildMutex(*this); }

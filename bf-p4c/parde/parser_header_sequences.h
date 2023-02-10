@@ -48,6 +48,7 @@ class ParserHeaderSequences : public BFN::ControlFlowVisitor, public PardeInspec
     bool preorder(const IR::BFN::Extract*) override;
 
     void flow_merge(Visitor&) override;
+    void flow_copy(::ControlFlowVisitor&) override;
 
     void end_apply() override;
 

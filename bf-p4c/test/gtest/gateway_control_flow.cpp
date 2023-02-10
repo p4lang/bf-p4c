@@ -144,6 +144,11 @@ class GCFTVisitor : public Inspector, public BFN::GatewayControlFlow, public Tof
         BUG_CHECK(glob == a.glob, "flow_merge of non-cloned GCFTVisitor");
         live |= a.live;
     }
+    void flow_copy(::ControlFlowVisitor &a_) override {
+        auto &a = dynamic_cast<GCFTVisitor &>(a_);
+        BUG_CHECK(glob == a.glob, "flow_copy of non-cloned GCFTVisitor");
+        live = a.live;
+    }
 
     bool preorder(const IR::MAU::Primitive *prim) {
         if (prim->name == "probe") {

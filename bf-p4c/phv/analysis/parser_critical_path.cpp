@@ -82,6 +82,11 @@ void ParserCriticalPath::flow_merge(Visitor &other_) {
         result = other.result; }
 }
 
+void ParserCriticalPath::flow_copy(::ControlFlowVisitor &other_) {
+    auto other = dynamic_cast<ParserCriticalPath&>(other_);
+    result = other.result;
+}
+
 void ParserCriticalPath::end_apply() {
     if (LOGGING(4)) {
         LOG4("Critical Path Result of " << gress_);

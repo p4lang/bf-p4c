@@ -909,6 +909,7 @@ class FindDataDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
 
     std::set<cstring> getFieldNameSlice(const PHV::Field *field, le_bitrange range) const;
     void flow_merge(Visitor &v) override;
+    void flow_copy(::ControlFlowVisitor &v) override;
     // Filter out the table sequence and revisit them again.
     bool filter_join_point(const IR::Node *n) override { return !n->is<IR::BFN::ParserState>(); }
 
@@ -924,6 +925,7 @@ class FindDataDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
         const TablesMutuallyExclusive &m, const IgnoreTableDeps &ig)
     : phv(phv), dg(out), red_info(ri), mutex(m), ignore(ig) {
         joinFlows = true;
+        BackwardsCompatibleBroken = true;
     }
 };
 

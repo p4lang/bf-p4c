@@ -135,6 +135,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     void postorder(const IR::BFN::AbstractDeparser *d) override;
     FieldDefUse *clone() const override { return new FieldDefUse(*this); }
     void flow_merge(Visitor &) override;
+    void flow_copy(::ControlFlowVisitor &) override;
     FieldDefUse(const FieldDefUse &) = default;
     FieldDefUse(FieldDefUse &&) = default;
     void shadow_previous_ranges(FieldDefUse::info &, le_bitrange &);
@@ -154,7 +155,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
       output_deps(*new std::remove_reference<decltype(output_deps)>::type),
       parser_zero_inits(*new std::remove_reference<decltype(parser_zero_inits)>::type),
       uninitialized_fields(*new std::remove_reference<decltype(uninitialized_fields)>::type)
-      { joinFlows = true; visitDagOnce = false; }
+      { joinFlows = true; visitDagOnce = false; BackwardsCompatibleBroken = true; }
 
     // TODO: unused?
     // const SymBitMatrix &conflicts() { return conflict; }

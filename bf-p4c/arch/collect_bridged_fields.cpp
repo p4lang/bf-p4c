@@ -106,6 +106,7 @@ CollectBridgedFields::CollectBridgedFields(P4::ReferenceMap* refMap,
     uid = ++uid_counter;
     joinFlows = true;
     visitDagOnce = false;
+    BackwardsCompatibleBroken = true;
 }
 
 CollectBridgedFields* CollectBridgedFields::clone() const {
@@ -144,6 +145,18 @@ void CollectBridgedFields::flow_merge(Visitor& otherVisitor) {
         LOG7("[==MERGE final==] " << uid << " mustWrite[EGRESS] :: "
              << fieldRef.first << fieldRef.second);
     }
+}
+
+void CollectBridgedFields::flow_copy(::ControlFlowVisitor& otherVisitor) {
+    auto& other = dynamic_cast<CollectBridgedFields&>(otherVisitor);
+    LOG7("[==COPY==] left: " << uid << " right: " << other.uid);
+    for (auto thread : { INGRESS, EGRESS }) {
+        mayReadUninitialized[thread] = other.mayReadUninitialized[thread];
+        mayWrite[thread] = other.mayWrite[thread];
+        mustWrite[thread] = other.mustWrite[thread]; }
+    fieldInfo = other.fieldInfo;
+    fieldsToBridge = other.fieldsToBridge;
+    doNotBridge = other.doNotBridge;
 }
 
 boost::optional<CollectBridgedFields::TnaContext>

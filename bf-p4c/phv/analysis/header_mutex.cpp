@@ -130,6 +130,15 @@ void AddParserHeadersToHeaderMutexMatrix::flow_merge(Visitor& other_) {
     mutually_inclusive_headers |= other.mutually_inclusive_headers;
 }
 
+void AddParserHeadersToHeaderMutexMatrix::flow_copy(::ControlFlowVisitor& other_) {
+    AddParserHeadersToHeaderMutexMatrix& other =
+        dynamic_cast<AddParserHeadersToHeaderMutexMatrix&>(other_);
+    fields_encountered = other.fields_encountered;
+    mutually_inclusive = other.mutually_inclusive;
+    headers_encountered = other.headers_encountered;
+    mutually_inclusive_headers = other.mutually_inclusive_headers;
+}
+
 void AddParserHeadersToHeaderMutexMatrix::end_apply() {
     LOG4("mutually exclusive headers:");
     for (auto it1 = headers_encountered.begin(); it1 != headers_encountered.end(); ++it1) {
@@ -1242,6 +1251,15 @@ void ExcludeMAUNotMutexHeaders::flow_merge(Visitor& other_) {
     bitwise_and_bit_matrices(not_extracted_headers, other.not_extracted_headers);
     parser_mutex_headers |= other.parser_mutex_headers;
     mutex_headers_modified |= other.mutex_headers_modified;
+}
+
+void ExcludeMAUNotMutexHeaders::flow_copy(::ControlFlowVisitor& other_) {
+    ExcludeMAUNotMutexHeaders &other = dynamic_cast<ExcludeMAUNotMutexHeaders &>(other_);
+    active_headers = other.active_headers;
+    extracted_headers = other.extracted_headers;
+    not_extracted_headers = other.not_extracted_headers;
+    parser_mutex_headers = other.parser_mutex_headers;
+    mutex_headers_modified = other.mutex_headers_modified;
 }
 
 /**

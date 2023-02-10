@@ -261,6 +261,12 @@ void AddAlwaysRun::AddTables::flow_merge(Visitor& v_) {
     BUG_CHECK(tablesToAdd == v.tablesToAdd, "Inconsistent tables added on merging program paths");
 }
 
+void AddAlwaysRun::AddTables::flow_copy(::ControlFlowVisitor& v_) {
+    // Check that the other visitor agrees with this one on the tables that need to be added.
+    AddTables& v = dynamic_cast<AddTables&>(v_);
+    BUG_CHECK(tablesToAdd == v.tablesToAdd, "Inconsistent tables added on merging program paths");
+}
+
 AddAlwaysRun::AddAlwaysRun(const ordered_map<gress_t, ConstraintMap>& tablesToAdd) :
 allTablesToAdd(tablesToAdd) {
     addPasses({

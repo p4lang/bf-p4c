@@ -1235,6 +1235,12 @@ void FindDataDependencyGraph::flow_merge(Visitor &v) {
         }
     }
 }
+void FindDataDependencyGraph::flow_copy(::ControlFlowVisitor &v_) {
+    auto &v = dynamic_cast<FindDataDependencyGraph &>(v_);
+    access = v.access;
+    red_or_use = v.red_or_use;
+    cont_write = v.cont_write;
+}
 
 void DependencyGraph::fill_dep_stages_from_topo(
         const std::vector<ordered_set<DependencyGraph::Graph::vertex_descriptor>> &topo,

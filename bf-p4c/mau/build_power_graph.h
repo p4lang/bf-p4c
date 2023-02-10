@@ -28,6 +28,7 @@ class BuildPowerGraph : public MauInspector, BFN::ControlFlowVisitor {
 
     BuildPowerGraph *clone() const override;
     void flow_merge(Visitor &v) override;
+    void flow_copy(::ControlFlowVisitor &v) override;
 
     SimplePowerGraph *get_graph(gress_t g);
     BuildPowerGraph(const NextTable *next_table_properties, const BFN_Options &options);

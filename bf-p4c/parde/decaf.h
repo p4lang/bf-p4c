@@ -312,6 +312,7 @@ class CollectWeakFields : public MauInspector, BFN::ControlFlowVisitor {
             phv(phv), uses(uses), defuse(defuse), dg(dg) {
         joinFlows = true;
         visitDagOnce = false;
+        BackwardsCompatibleBroken = true;
     }
 
     const IR::MAU::Action* get_action(const Assign* assign) const {
@@ -372,6 +373,16 @@ class CollectWeakFields : public MauInspector, BFN::ControlFlowVisitor {
 
         for (auto& kv : other.action_to_table)
             action_to_table[kv.first] = kv.second;
+    }
+
+    void flow_copy(::ControlFlowVisitor &other_) override {
+        CollectWeakFields &other = dynamic_cast<CollectWeakFields &>(other_);
+        field_to_weak_assigns = other.field_to_weak_assigns;
+        strong_fields = other.strong_fields;
+        instr_to_action = other.instr_to_action;
+        action_to_table = other.action_to_table;
+        // FIXME what about read_only_weak_fields and all_constants?  They're not merged
+        // in flow_merge, so perhaps don't need to be copied?
     }
 
     CollectWeakFields *clone() const override {

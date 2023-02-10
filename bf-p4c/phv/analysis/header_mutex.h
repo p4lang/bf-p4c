@@ -77,6 +77,7 @@ class AddParserHeadersToHeaderMutexMatrix : public BuildMutex {
     bool preorder(const IR::MAU::TableSeq*) override { return false; }
     bool preorder(const IR::BFN::Deparser*) override { return false; }
     void flow_merge(Visitor& other_) override;
+    void flow_copy(::ControlFlowVisitor& other_) override;
     void end_apply() override;
 
  public:
@@ -346,6 +347,7 @@ class ExcludeMAUNotMutexHeaders : public MauInspector,
                                   const ordered_map<cstring, bitvec>& other_bit_matrix);
     void merge_active_headers(bitvec other_active_headers);
     void flow_merge(Visitor &other_) override;
+    void flow_copy(::ControlFlowVisitor &other_) override;
 
     bool can_preserve_field_mutex(
         const PHV::Field* field1,
@@ -365,7 +367,8 @@ class ExcludeMAUNotMutexHeaders : public MauInspector,
           mau_handles_parser_error(mau_handles_parser_error),
           pa_mutex(pa_mutex),
           modified_where(modified_where),
-          field_level_optimisation(field_level_optimisation) { }
+          field_level_optimisation(field_level_optimisation) {
+              BackwardsCompatibleBroken = true; }
 };
 
 /**

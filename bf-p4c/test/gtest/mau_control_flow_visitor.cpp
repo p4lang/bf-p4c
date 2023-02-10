@@ -44,6 +44,11 @@ struct CollectCFGPaths : public ControlFlowVisitor, public Inspector {
         }
     }
 
+    void flow_copy(ControlFlowVisitor& v) override {
+        CollectCFGPaths& o = dynamic_cast<CollectCFGPaths&>(v);
+        visited_paths = o.visited_paths;
+    }
+
     std::set<ActionSeq> visited_paths = {ActionSeq()};
 };
 
@@ -86,7 +91,7 @@ TEST(MauControlFlowVisit, GatewayRunTableAndFallthrough) {
     t2->actions["a2"] = a2;
 
     t1->gateway_rows.emplace_back(new IR::Constant(0), /* run table */ nullptr);
-    t1->gateway_rows.emplace_back(/* miss */ nullptr, "$false"); // falls through
+    t1->gateway_rows.emplace_back(/* miss */ nullptr, "$false");  // falls through
 
     t1->match_key.push_back(new IR::MAU::TableKey(
                                 new IR::Constant(0),

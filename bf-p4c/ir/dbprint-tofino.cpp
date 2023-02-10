@@ -467,7 +467,7 @@ std::ostream &operator<<(std::ostream &out,
     bool first = true;
     for (auto &jp : fjp) {
         if (!first) out << "\n";
-        out << "[" << jp.first->id << "] " << *jp.first << ": " << jp.second.second;
+        out << "[" << jp.first->id << "] " << *jp.first << ": " << jp.second.count;
         first = false; }
     dbsetflags(out, flags);
     return out;

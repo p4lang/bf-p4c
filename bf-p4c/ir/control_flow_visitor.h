@@ -28,6 +28,12 @@ class ControlFlowVisitor : public ::ControlFlowVisitor, virtual public P4::Resol
      * noted above.
      */
     bool filter_join_point(const IR::Node *n) override {
+        // FIXME -- we generally should NOT be filtering out Tables or TableSeqs, BUT currently
+        // the joinFlows stuff doesn't work properly, as Table::visit_children does not use
+        // a SplitFlowVisit to visit next fields, so it has trouble when a TableSeq is used in
+        // more than one place.  It also depends on the visitor as to whether it makes more
+        // sense to always revisit tables/seqs that are referenced more than once, as that
+        // cam give a more accurate flow analysis (though it is more expensive)
         return !n->is<IR::BFN::ParserState>() &&
                // !n->is<IR::MAU::Table>() &&
                !n->is<IR::MAU::TableSeq>();

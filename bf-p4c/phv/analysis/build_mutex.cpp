@@ -42,6 +42,12 @@ void BuildMutex::flow_merge(Visitor& other_) {
     mutually_inclusive |= other.mutually_inclusive;
 }
 
+void BuildMutex::flow_copy(::ControlFlowVisitor& other_) {
+    BuildMutex &other = dynamic_cast<BuildMutex &>(other_);
+    fields_encountered = other.fields_encountered;
+    mutually_inclusive = other.mutually_inclusive;
+}
+
 void BuildMutex::end_apply() {
     LOG4("mutually exclusive fields:");
     for (auto it1 = fields_encountered.begin(); it1 != fields_encountered.end(); ++it1) {

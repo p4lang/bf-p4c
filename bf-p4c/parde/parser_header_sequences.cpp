@@ -27,6 +27,14 @@ void ParserHeaderSequences::flow_merge(Visitor& other_) {
     header_sizes.insert(other.header_sizes.begin(), other.header_sizes.end());
 }
 
+void ParserHeaderSequences::flow_copy(::ControlFlowVisitor& other_) {
+    auto& other = dynamic_cast<ParserHeaderSequences&>(other_);
+    headers = other.headers;
+    header_ids = other.header_ids;  // should always be empty/a noop?
+    sequences = other.sequences;
+    header_sizes = other.header_sizes;
+}
+
 /** @brief Create an empty set of sequences for each parser */
 bool ParserHeaderSequences::preorder(const IR::BFN::Parser* parser) {
     sequences[parser->gress] = {{}};

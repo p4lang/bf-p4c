@@ -24,7 +24,7 @@ struct BridgedFieldInfo {
 };
 
 struct CollectBridgedFields : public Inspector,
-                              protected ControlFlowVisitor,
+                              protected BFN::ControlFlowVisitor,
                               protected P4WriteContext {
     using TnaParams = ordered_map<cstring, cstring>;
     using TnaContext = std::pair<gress_t, const TnaParams&>;
@@ -43,6 +43,7 @@ struct CollectBridgedFields : public Inspector,
  private:
     CollectBridgedFields* clone() const override;
     void flow_merge(Visitor& otherVisitor) override;
+    void flow_copy(::ControlFlowVisitor& otherVisitor) override;
 
     boost::optional<TnaContext> findTnaContext() const;
     bool analyzePathlikeExpression(const IR::Expression* expr);

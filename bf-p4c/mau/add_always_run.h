@@ -96,6 +96,7 @@ class AddAlwaysRun : public PassManager {
         AddTables* clone() const override;
         AddTables& flow_clone() override;
         void flow_merge(Visitor& v) override;
+        void flow_copy(::ControlFlowVisitor& v) override;
 
         AddTables(const AddTables&) = default;
         AddTables(AddTables&&) = default;

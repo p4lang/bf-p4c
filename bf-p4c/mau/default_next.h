@@ -56,6 +56,10 @@ class DefaultNext : public MauInspector, public NextTable, BFN::ControlFlowVisit
         auto &a = dynamic_cast<DefaultNext &>(a_);
         LOG3(id << ": DefaultNext::flow_merge <- " << a.id);
         prev_tbls.insert(a.prev_tbls.begin(), a.prev_tbls.end()); }
+    void flow_copy(::ControlFlowVisitor &a_) override {
+        auto &a = dynamic_cast<DefaultNext &>(a_);
+        prev_tbls = a.prev_tbls;
+        run_before_exit_tables = a.run_before_exit_tables; }
 
     DefaultNext(const DefaultNext &a) = default;
 
@@ -89,7 +93,7 @@ class DefaultNext : public MauInspector, public NextTable, BFN::ControlFlowVisit
     explicit DefaultNext(const bool& lbd, std::set<cstring> *errs = nullptr)
     : long_branch_disabled(lbd), errors(errs),
       possible_nexts(* new std::remove_reference<decltype(possible_nexts)>::type) {
-        joinFlows = false; visitDagOnce = false; }
+        joinFlows = false; visitDagOnce = false; BackwardsCompatibleBroken = true; }
 
     const IR::MAU::Table *next(const IR::MAU::Table *t) const {
         if (possible_nexts.count(t)) {

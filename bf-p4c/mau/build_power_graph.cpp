@@ -123,6 +123,8 @@ void BuildPowerGraph::flow_merge(Visitor & /* v */) {
     LOG5(" ------ merge ----- ");
     // nothing to do yet.
 }
+void BuildPowerGraph::flow_copy(::ControlFlowVisitor& /* v */) {
+}
 
 ordered_set<UniqueId> BuildPowerGraph::next_for(const IR::MAU::Table *tbl, cstring what) const {
     return next_table_properties_->next_for(tbl, what);
