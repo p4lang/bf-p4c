@@ -1065,16 +1065,13 @@ static int pad_to_16b_extracts_to_2n(Parser* parser, Target::Tofino::parser_regs
             pad_idx = i;
         } else {
             used++;
-            if (from_idx == -1) from_idx = i;
             // Try to get an 8b or 16b index.
             // If we use a single 32b index to pad then we'll hit problems
             // because we need 2 x 16b to fill a 32b container.
             if (!from_idx_is_8b_16b) {
+                from_idx = i;
                 auto *reg = Phv::reg(map[i].dst->value);
-                if (reg->size == 8 || reg->size == 16) {
-                    from_idx = i;
-                    from_idx_is_8b_16b = true;
-                }
+                from_idx_is_8b_16b = reg->size == 8 || reg->size == 16;
             }
         }
     }
@@ -1103,7 +1100,6 @@ static int pad_to_16b_extracts_to_2n(Parser* parser, Target::Tofino::parser_regs
     // Add fake extractors to reach 2n constraint, we need to copy destination and source from
     // the global version field which is tied to zeros in RTL.
     // We are keeping both indexes in tuples {0,1} or {2,3}.
-    BUG_CHECK(from_idx != -1, "Invalid 16b from_idx");
     do_16b_padding(regs, map, pad_idx, from_idx);
     matchSlotTracker.padMap.insert(match, pad_idx, &map[pad_idx]);
     check_16b_extractor_configuration(pad_idx, from_idx, used, has_csum, map);
@@ -1180,21 +1176,18 @@ static int pad_to_8b_extracts_to_4n(Parser* parser, Target::Tofino::parser_regs 
     // checksums should be padded to 4n. The source of the added padding will be stored in
     // the from_idx variable.
     unsigned used       = 0;
-    int from_idx        = -1;
+    unsigned from_idx   = 0;
     bool from_idx_is_8b = false;
     for (auto i : phv_8bit_extractors) {
         if (map[i].dst->value == EXTRACT_SLOT_UNUSED) continue;
         // Update the used counter and remember the used slot
         used++;
-        if (from_idx == -1) from_idx = i;
         // Try to get an 8b index.
         // If we use a single 16b index to pad then we'll hit problems
         // because we need 2 x 8b to fill a 16b container.
         if (!from_idx_is_8b) {
-            if (Phv::reg(map[i].dst->value)->size == 8) {
-                from_idx = i;
-                from_idx_is_8b = true;
-            }
+            from_idx = i;
+            from_idx_is_8b = Phv::reg(map[i].dst->value)->size == 8;
         }
     }
 
@@ -1207,7 +1200,6 @@ static int pad_to_8b_extracts_to_4n(Parser* parser, Target::Tofino::parser_regs 
     }
 
     // Add fake extractions to meet the 4n constraint and setup tracking
-    BUG_CHECK(from_idx != -1, "Invalid 8b from_idx");
     do_8b_padding(regs, map, from_idx);
     for (auto pad_idx : phv_8bit_extractors) {
         matchSlotTracker.padMap.insert(match, pad_idx, &map[pad_idx]);
