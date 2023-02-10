@@ -19,7 +19,7 @@ macro(p4c_add_xfail_reason tag reason)
     list (FIND ${__upperTag}_MUST_PASS_TESTS ${test} __isMustPass)
     # not a mandatory pass test
     # FIXME: even mandatory tests can be switched off for ALT-PHV for now
-    if (${__isMustPass} EQUAL -1 OR ENABLE_ALT_PHV_ALLOC)
+    if (${__isMustPass} EQUAL -1 OR TEST_ALT_PHV_ALLOC)
       p4c_test_set_name(__testname ${tag} ${test})
 
       # Verify that we haven't already set WILL_FAIL or PASS_REGULAR_EXPRESSION properties

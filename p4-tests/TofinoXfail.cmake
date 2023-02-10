@@ -1356,7 +1356,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/glass/embedway/COMPILER-765/parser_tcp_ip_option_mul.p4
 )
 
-if (NOT ENABLE_ALT_PHV_ALLOC)
+if (NOT TEST_ALT_PHV_ALLOC)
     p4c_add_xfail_reason("tofino"
       "error: Ran out of tcam space in ingress parser"
       extensions/p4_tests/p4_16/compile_only/simple_l3_nexthop_ipv6_options.p4
@@ -1819,7 +1819,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 
-if (NOT ENABLE_ALT_PHV_ALLOC)
+if (NOT TEST_ALT_PHV_ALLOC)
     # P4C-3914
     p4c_add_xfail_reason("tofino"
       "error: Size of learning quanta is [0-9]+ bytes, greater than the maximum allowed 48 bytes.
@@ -1995,7 +1995,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-dpdk-errorcode-2.p4
 )
 
-if (NOT ENABLE_ALT_PHV_ALLOC)
+if (NOT TEST_ALT_PHV_ALLOC)
   # p4c update 03/03/2022 (new test)
   p4c_add_xfail_reason("tofino"
     "error: PHV allocation was not successful"
@@ -2139,7 +2139,7 @@ p4c_add_xfail_reason("tofino"
 # ALT-PHV: tests that do not work yet with the alternative allocator.
 # If you make an ALT-PHV test pass (or get close to it but if fails on later
 # error), please update the xfails accordingly.
-if (ENABLE_ALT_PHV_ALLOC)
+if (TEST_ALT_PHV_ALLOC)
     # BUGs
     p4c_add_xfail_reason("tofino"
       "Compiler Bug: Byte rotate merge implicit bits incorrectly done"
@@ -2170,7 +2170,7 @@ if (ENABLE_ALT_PHV_ALLOC)
       "error: table allocation [(]alt-phv-alloc enabled[)] failed to allocate tables within 12 stages. Allocation state: ALT_FINALIZE_TABLE, stage used: 14"
       extensions/p4_tests/p4_16/customer/arista/obfuscated-routescale.p4
     )
-endif (ENABLE_ALT_PHV_ALLOC)
+endif (TEST_ALT_PHV_ALLOC)
 
 # P4C-4689: On Tofino1, this test compiles incorrectly but we only report a warning
 p4c_add_xfail_reason("tofino"

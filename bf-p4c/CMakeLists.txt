@@ -21,10 +21,6 @@ if (ENABLE_MULTITHREAD)
   add_definitions("-DGC_NO_THREAD_REDIRECTS=1")
 endif()
 
-if (ENABLE_ALT_PHV_ALLOC)
-  add_definitions("-DALT_PHV_ALLOC_DEFAULT=true")
-endif()
-
 # We need to abstract away the targets enumerated in the schema files,
 # so that we do not tip our hand on future targets.
 # The design is to create a file compiler-interfaces/schemas/targets.py

@@ -19,7 +19,6 @@ OPTION(ENABLE_DOXYGEN "Build Doxygen-based developer documentation" ON)
 OPTION(ENABLE_WERROR "Treat build warnings as errors" ON)
 OPTION(FIXED_LIBDYNHASH "Use future version of the Dynamic hash library" OFF)
 OPTION(INSTALL_LIBDYNHASH "Install the Dynamic hash library" OFF)
-OPTION(ENABLE_ALT_PHV_ALLOC "Enable the alternative PHV allocator" OFF)
 OPTION(ENABLE_ASSERTIONS "Enable assertions" ON)
 
 OPTION(ENABLE_TEST_ISOLATION "Run tests in isolated network using Linux network namespaces. \

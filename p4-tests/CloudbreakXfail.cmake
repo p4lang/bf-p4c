@@ -262,7 +262,7 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/compile_only/p4c-1892.p4
 )
 
-if (NOT ENABLE_ALT_PHV_ALLOC)
+if (NOT TEST_ALT_PHV_ALLOC)
     # action synthesis can't figure out it can use an OR to set a single bit.
     p4c_add_xfail_reason("tofino3"
       "the program requires an action impossible to synthesize for Tofino3 ALU"
@@ -481,7 +481,7 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/stf/p4c-3761.p4
 )
 
-if (NOT ENABLE_ALT_PHV_ALLOC)
+if (NOT TEST_ALT_PHV_ALLOC)
     # P4C-3914
     p4c_add_xfail_reason("tofino3"
       "error: Size of learning quanta is [0-9]+ bytes, greater than the maximum allowed 48 bytes.
@@ -567,7 +567,7 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/ptf/verify_checksum.p4
 )
 
-if (NOT ENABLE_ALT_PHV_ALLOC)
+if (NOT TEST_ALT_PHV_ALLOC)
     p4c_add_xfail_reason("tofino3"
       "\"grpc_message\":\"Error in second phase of device update\""
       extensions/p4_tests/p4_16/ptf/inner_checksum_payload_offset.p4
@@ -577,7 +577,7 @@ endif()
 # ALT-PHV: tests that do not work yet with the alternative allocator.
 # If you make an ALT-PHV test pass (or get close to it but if fails on later
 # error), please update the xfails accordingly.
-if (ENABLE_ALT_PHV_ALLOC)
+if (TEST_ALT_PHV_ALLOC)
     # bugs
     p4c_add_xfail_reason("tofino3"
       "bfa:.*: error: forward_if_ethernet_parsed_0 gateway sharing search bus 4.0 with table1_0, but wants a different match group"
@@ -612,4 +612,4 @@ if (ENABLE_ALT_PHV_ALLOC)
         "TIMEOUT"
         extensions/p4_tests/p4_16/stf/p4c-4535.p4
     )
-endif (ENABLE_ALT_PHV_ALLOC)
+endif (TEST_ALT_PHV_ALLOC)

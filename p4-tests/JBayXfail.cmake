@@ -284,7 +284,7 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/compile_only/p4c-1892.p4
 )
 
-if (NOT ENABLE_ALT_PHV_ALLOC)
+if (NOT TEST_ALT_PHV_ALLOC)
     # action synthesis can't figure out it can use an OR to set a single bit.
     p4c_add_xfail_reason("tofino2"
       "the program requires an action impossible to synthesize for Tofino2 ALU"
@@ -416,7 +416,7 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_14/ptf/sful_split1.p4
 )
 
-if (NOT ENABLE_ALT_PHV_ALLOC)
+if (NOT TEST_ALT_PHV_ALLOC)
     # P4C-3914
     p4c_add_xfail_reason("tofino2"
       "error: Size of learning quanta is [0-9]+ bytes, greater than the maximum allowed 48 bytes.
@@ -432,7 +432,7 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/ptf/ONLab_packetio.p4  # WORKS WITH TOFINO1 !!!
 )
 
-if (NOT ENABLE_ALT_PHV_ALLOC)
+if (NOT TEST_ALT_PHV_ALLOC)
     # P4C-3876 / P4C-3999
     p4c_add_xfail_reason("tofino2"
       "AssertionError: Expected packet was not received"
@@ -461,7 +461,7 @@ p4c_add_xfail_reason("tofino2"
 # ALT-PHV: tests that do not work yet with the alternative allocator.
 # If you make an ALT-PHV test pass (or get close to it but if fails on later
 # error), please update the xfails accordingly.
-if (ENABLE_ALT_PHV_ALLOC)
+if (TEST_ALT_PHV_ALLOC)
     # Bugs
     p4c_add_xfail_reason("tofino2"
         "Compiler Bug: Inconsistent parser write semantic on"
@@ -544,4 +544,4 @@ if (ENABLE_ALT_PHV_ALLOC)
         extensions/p4_tests/p4_16/customer/extreme/p4c-2649.p4
         extensions/p4_tests/p4_16/stf/p4c-4535.p4
     )
-endif (ENABLE_ALT_PHV_ALLOC)
+endif (TEST_ALT_PHV_ALLOC)

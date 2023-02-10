@@ -39,12 +39,11 @@ def runInDocker(String cmd) {
     runInDocker([:], cmd)
 }
 
-// HACK: to not duplicate all the tests into ALT-PHV mode, we run the tests the
-// same and add --alt-phv-alloc option to them. But we also need to change the
-// xfails which reflect different failures in different modes. We do this by
-// reruning cmake, but not compilation (the compiler is already built and the
-// ALT-PHV is being enabled by option).
-ALT_PHV_ENV = "(cd /bfn/bf-p4c-compilers/build && cmake . -DENABLE_ALT_PHV_ALLOC=ON) && P4C_ARGS=-Xp4c=--alt-phv-alloc"
+// To not duplicate all the tests into ALT-PHV mode, we run the same tests again with reconfigured
+// cmake. This changes the xfails which reflect different failures in different modes and sets
+// runtest so that it enables ALT-PHV allocator. We rerun cmake, but not rebuild as the flag only
+// affects testing.
+ALT_PHV_ENV = "(cd /bfn/bf-p4c-compilers/build && cmake . -DTEST_ALT_PHV_ALLOC=ON) && "
 
 // GTS and p414_nightly only exists for Tofino 1
 CTEST_LABEL_EXCLUDE_ALT_PASS = 'UNSTABLE|GTS_WEEKLY|NON_PR_TOFINO|SWITCH16_PTF|p414_nightly'
