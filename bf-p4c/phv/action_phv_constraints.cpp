@@ -2641,6 +2641,17 @@ CanPackReturnType ActionPhvConstraints::can_pack(
         if (!move_err.ok()) {
             return std::make_tuple(move_err.code, boost::none);
         }
+        if (!mocha_or_dark && move_err.remove_align_req) {
+            auto& prop = action_props.at(action);
+            if ((prop.sources.num_allocated == 2) ||
+                (prop.sources.double_unallocated && prop.sources.num_unallocated == 2)) {
+                prop.must_be_aligned = false;
+                LOG5("REMOVING must_be_aligned for action " << action->name);
+                LOG5("\tnum_alloc: " << prop.sources.num_allocated << " double_unalloc: " <<
+                     prop.sources.double_unallocated << " num_unalloc: " <<
+                     prop.sources.num_unallocated);
+            }
+        }
     }
     // check from source side.
     auto read_move_err = check_move_constraints_from_read(alloc, slices, initActions);
@@ -4335,6 +4346,7 @@ CanPackErrorV2 ActionPhvConstraints::check_move_constraints(
         }
     };
 
+    bool clear_align = false;
     const auto action_stages = stages(action, slices.front().isPhysicalStageBased());
     for (const auto& stage : action_stages) {
         solver->clear();
@@ -4392,15 +4404,15 @@ CanPackErrorV2 ActionPhvConstraints::check_move_constraints(
             }
             return {CanPackErrorCode::CONSTRAINT_CHECKER_FALIED, rst.err->msg, invalid_packing};
         }
-        if (LOGGING(4)) {
-            LOG4("instructions: ");
-            for (const auto* inst : rst.instructions) {
-                LOG4(inst->to_cstring());
-            }
+        int num_instrs = rst.instructions.size();
+        LOG4("instructions: ");
+        for (const auto* inst : rst.instructions) {
+            clear_align = (num_instrs == 1) && (inst->name() == "byte-rotate-merge");
+            LOG4(inst->to_cstring());
         }
     }
 
-    return CanPackErrorV2{CanPackErrorCode::NO_ERROR};
+    return CanPackErrorV2{CanPackErrorCode::NO_ERROR, clear_align};
 }
 
 std::ostream &operator<<(std::ostream &out, const ActionPhvConstraints::ClassifiedSource& src) {

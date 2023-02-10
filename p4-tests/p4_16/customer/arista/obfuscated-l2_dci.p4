@@ -2732,6 +2732,10 @@ control Siloam(inout Frederika Olcott, inout HighRock Westoak, in egress_intrins
     }
 }
 
+// Jenners is defined from 24bits of RNG and table placement has a hard time
+// fitting the immediate path if we do not constrain the type of containers
+@pa_container_size("egress" , "Westoak.Wyndmoor.Jenners" , 8 , 16)
+
 control Mondovi(inout Frederika Olcott, inout HighRock Westoak, in egress_intrinsic_metadata_t Dacono, in egress_intrinsic_metadata_from_parser_t Twinsburg, inout egress_intrinsic_metadata_for_deparser_t Redvale, inout egress_intrinsic_metadata_for_output_port_t Macon) {
     @name(".Lynne") Random<bit<24>>() Lynne;
     @name(".OldTown") action OldTown(bit<10> Westville) {

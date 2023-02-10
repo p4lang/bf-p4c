@@ -140,7 +140,7 @@ control Ingress(
         actions = {
             byte_swap1;
             byte_swap2;
-            // byte_swap3;
+            byte_swap3;
             adata1;
             adata2;
             // adata3;

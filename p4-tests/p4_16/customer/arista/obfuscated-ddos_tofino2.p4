@@ -2754,6 +2754,10 @@ control Farner(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrinsi
     }
 }
 
+// Placedo is defined from 24bits of RNG and table placement has a hard time
+// fitting the immediate path if we do not constrain the type of containers
+@pa_container_size("egress" , "Dwight.Lookeba.Placedo" , 8 , 8, 8)
+
 control Jauca(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrinsic_metadata_t Swifton, in egress_intrinsic_metadata_from_parser_t Neosho, inout egress_intrinsic_metadata_for_deparser_t Islen, inout egress_intrinsic_metadata_for_output_port_t BarNunn) {
     @name(".Brownson") Random<bit<24>>() Brownson;
     @name(".Punaluu") action Punaluu(bit<10> Yerington) {

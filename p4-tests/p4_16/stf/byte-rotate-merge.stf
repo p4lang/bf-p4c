@@ -4,6 +4,7 @@ add change_port data.read:0x03030303 send(port:0x2)
 add change_port data.read:0x13131313 send(port:0x2)
 add change_port data.read:0x33333333 send(port:0x2)
 add change_port data.read:0x43434343 send(port:0x2)
+add change_port data.read:0x83838383 send(port:0x2)
 
 add test1 data.read:0x01010101 byte_swap1()
 add test1 data.read:0x02020202 byte_swap2()
@@ -11,6 +12,7 @@ add test1 data.read:0x03030303 adata1(param1:0x53, param2:0xa4)
 add test1 data.read:0x13131313 adata2(param1:0x67, param2:0xf1)
 add test1 data.read:0x33333333 adata4(param1:0x98, param2:0x76)
 add test1 data.read:0x43434343 adata5(param1:0x64, param2:0x5a, param3:0xf5, param4:0x88)
+add test1 data.read:0x83838383 byte_swap3()
 
 
 expect 2 01010101 78563412 93fa0124 affaabba 86753099
@@ -30,3 +32,6 @@ packet 0 33333333 57320f3d 53a3b099 ba021dce ee53233f
 
 expect 2 43434343 ba5a1d64 8853f53f ba021dce ee53233f
 packet 0 43434343 57320f3d 53a3b099 ba021dce ee53233f
+
+expect 2 83838383 24abfaaf 93fa0124 affaabba 86753099
+packet 0 83838383 12345678 93fa0124 affaabba 86753099
