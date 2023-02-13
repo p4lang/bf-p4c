@@ -1075,7 +1075,7 @@ std::vector<std::pair<cstring, HeaderState>>
  * headers' states.
  */
 bool ExcludeMAUNotMutexHeaders::preorder(const IR::Expression*) {
-    boost::optional<std::pair<const IR::Expression*, cstring>> gateway_row = get_gateway_row();
+    auto gateway_row = get_gateway_row();
     if (!gateway_row) return true;
 
     visiting_gateway_row = *gateway_row;
@@ -1087,10 +1087,11 @@ void ExcludeMAUNotMutexHeaders::pre_visit_table_next(const IR::MAU::Table *tbl, 
         visiting = nullptr;
         visiting_gateway_row = std::make_pair(nullptr, nullptr);
     } else {
+        const auto& [gateway_row_expression, gateway_row_tag] = visiting_gateway_row;
         LOG_DEBUG7("Looking for header POV bits in expression:");
-        LOG_DEBUG7(TAB1 << visiting_gateway_row.first << " " << tag);
+        LOG_DEBUG7(TAB1 << gateway_row_expression << " " << tag);
         auto pairs = get_all_header_to_state_pairs_from_gateway_row_expression(
-            visiting_gateway_row.first);
+            gateway_row_expression);
         if (pairs.empty())
             LOG_DEBUG7("None found.");
         // Ordering matters here. All INACTIVE headers must be processed before ACTIVE ones, or
@@ -1100,15 +1101,25 @@ void ExcludeMAUNotMutexHeaders::pre_visit_table_next(const IR::MAU::Table *tbl, 
                                             return a.second < b.second;
                                         };
         std::sort(pairs.begin(), pairs.end(), compare_header_states);
-        for (const auto& pair : pairs) {
-            if ((pair.second == INACTIVE && tag == "$true") ||
-                (pair.second == ACTIVE && tag == "$false")) {
-                LOG_DEBUG7(pair.first << ": " << get_header_state_as_cstring(INACTIVE));
-                process_is_invalid(pair.first);
-            } else if ((pair.second == ACTIVE && tag == "$true") ||
-                       (pair.second == INACTIVE && tag == "$false")) {
-                LOG_DEBUG7(pair.first << ": " << get_header_state_as_cstring(ACTIVE));
-                process_is_valid(pair.first);
+        for (const auto& [header, state] : pairs) {
+            if (gateway_row_tag == tag) {
+                if (state == INACTIVE) {
+                    LOG_DEBUG7(header << ": " << get_header_state_as_cstring(INACTIVE));
+                    process_is_invalid(header);
+                } else if (state == ACTIVE) {
+                    LOG_DEBUG7(header << ": " << get_header_state_as_cstring(ACTIVE));
+                    process_is_valid(header);
+                }
+            } else if (pairs.size() == 1) {
+                if (state == ACTIVE) {
+                    LOG_DEBUG7(header << ": " << get_header_state_as_cstring(INACTIVE));
+                    process_is_invalid(header);
+                } else if (state == INACTIVE) {
+                    LOG_DEBUG7(header << ": " << get_header_state_as_cstring(ACTIVE));
+                    process_is_valid(header);
+                }
+            } else {
+                set_header_state(header, UNKNOWN);
             }
         }
     }
