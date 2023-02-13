@@ -108,8 +108,8 @@ static std::list<PHV::SuperCluster*> merge_same_container_group(
 
     std::list<PHV::SuperCluster*> rst;
     for (auto& clusters : cluster_uf) {
-        PHV::SuperCluster* merged = clusters->front();
-        for (auto itr = std::next(clusters->begin()); itr != clusters->end(); itr++) {
+        PHV::SuperCluster* merged = clusters.front();
+        for (auto itr = std::next(clusters.begin()); itr != clusters.end(); itr++) {
             merged = merged->merge(*itr);
         }
         rst.push_back(merged);
@@ -394,10 +394,10 @@ boost::optional<std::list<SuperCluster*>> split(const SuperCluster* sc,
     }
 
     std::list<PHV::SuperCluster*> rv;
-    for (auto* pairs : uf) {
+    for (auto& pairs : uf) {
         ordered_set<const PHV::RotationalCluster*> clusters;
         ordered_set<PHV::SuperCluster::SliceList*> slice_lists;
-        for (auto& pair : *pairs) {
+        for (auto& pair : pairs) {
             if (pair.first->size()) slice_lists.insert(pair.first);
             clusters.insert(pair.second);
         }

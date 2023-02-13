@@ -1,6 +1,9 @@
 #ifndef EXTENSIONS_BF_P4C_LIB_UNION_FIND_HPP_
 #define EXTENSIONS_BF_P4C_LIB_UNION_FIND_HPP_
 
+#include <initializer_list>
+#include <boost/iterator/indirect_iterator.hpp>
+
 #include "bf-p4c/lib/assoc.h"
 #include "lib/cstring.h"
 #include "lib/exceptions.h"
@@ -45,16 +48,49 @@ class UnionFind {
  public:
     /// Creates an empty UnionFind.  Elements can be added with UnionFind::insert.
     UnionFind() { }
+    /// Copy union find. The resulting struture is independent of the original, it does not share
+    /// the sets of elements.
+    UnionFind(const UnionFind& other) {
+        // The order is important here as it gives iteration order of the UnionFind. We keep the
+        // order from the original instance to keep the compiler deterministic.
+        for (auto* src : other.sets_i) {
+            Set* tgt = new Set(*src);
+            sets_i.insert(tgt);
+            for (auto& val : *src) {
+                element_map_i[val] = tgt;
+            }
+        }
+    }
+    UnionFind(UnionFind&&) = default;
 
+    UnionFind& operator=(UnionFind&&) = default;
+    UnionFind& operator=(const UnionFind& other) {
+        UnionFind copy(other);
+        *this = std::move(copy);
+        return *this;
+    }
+
+    /// we expose iterator to constant sets of elements that are equivalent
+    /// Note that the value type given to indirect_iterator must be const so that reference and
+    /// pointer typedefs are const-qualified (pointer cannot be specified explicitly).
+    using const_iterator = boost::indirect_iterator<typename ordered_set<Set*>::const_iterator,
+                                                    const Set>;
+    using iterator = const_iterator;
     /// Iterates through the sets in this data structure.
-    using const_iterator = typename ordered_set<Set*>::const_iterator;
-    const_iterator begin() const { return sets_i.begin(); }
-    const_iterator end()   const { return sets_i.end(); }
+    const_iterator begin() const { return const_iterator(sets_i.begin()); }
+    const_iterator end()   const { return const_iterator(sets_i.end()); }
 
-    /// Creates a UnionFind initialized with \p all_elements.
+    /// Creates a UnionFind initialized with \p elements.
     template <typename ContainerOfT>
-    explicit UnionFind(ContainerOfT all_elements) {
-        for (auto& elt : all_elements)
+    explicit UnionFind(ContainerOfT elements) {
+        for (auto& elt : elements)
+            insert(elt);
+    }
+
+    /// Creates a UnionFind initialized with \p elements.
+    /// Has to be overloaded extra to allow construction like UnionFind uf{1, 2, 3} to work
+    explicit UnionFind(std::initializer_list<T> elements) {
+        for (auto& elt : elements)
             insert(elt);
     }
 
@@ -76,6 +112,7 @@ class UnionFind {
     }
 
     /// Unions the sets containing \p x and \p y.
+    /// Fails (triggers BUG_CHECK) if \p x or \p y are not present.
     void makeUnion(const T x, const T y) {
         Set* xs = internalFind(x);
         Set* ys = internalFind(y);
@@ -96,35 +133,22 @@ class UnionFind {
     }
 
     /// @returns a canonical element of the set containing @p x.
-    /// @exception if @p x is not present.
+    /// Fails (triggers BUG_CHECK) if @p x is not present.
     const T find(const T x) const {
         Set* internal = internalFind(x);
         return *internal->begin();
     }
 
     /// @returns the size of the set containing @p x.
-    /// @exception if @p x is not present.
-    size_t sizeOf(const T x) {
-        const Set* internal = internalFind(x);
-        return internal->size();
+    /// Fails (triggers BUG_CHECK) if @p x is not present.
+    size_t sizeOf(const T x) const {
+        return internalFind(x)->size();
     }
 
     /// @returns a copy of the set containing @p x.
-    /// @exception if @p x is not present.
-    Set* setOf(const T x) {
-        const Set* internal = internalFind(x);
-        auto* rv = new Set();
-        rv->insert(internal->begin(), internal->end());
-        return rv;
-    }
-
-    /// @returns a copy of the set containing @p x.
-    /// @exception if @p x is not present.
-    Set* setOf(const T x) const {
-        const Set* internal = internalFind(x);
-        auto* rv = new Set();
-        rv->insert(internal->begin(), internal->end());
-        return rv;
+    /// Fails (triggers BUG_CHECK) if @p x is not present.
+    const Set& setOf(const T x) const {
+        return *internalFind(x);
     }
 
     /// @returns true if element@e is present in the UnionFind struct.
@@ -150,10 +174,11 @@ class UnionFind {
 
 template<typename T>
 std::ostream &operator<<(std::ostream &out, const UnionFind<T>& uf) {
-    for (auto* set : uf) {
-        for (auto& x : *set)
+    for (auto& set : uf) {
+        for (auto& x : set)
             out << x << " ";
-        out << std::endl; }
+        out << std::endl;
+    }
     return out;
 }
 

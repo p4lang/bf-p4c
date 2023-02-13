@@ -177,10 +177,10 @@ void TofinoParserConstantExtract::end_apply() {
     LOG2("\tPrinting sets of fields extracted in the same state");
     UnionFind<PHV::Field*>& extracts = phv.getSameSetConstantExtraction();
     int i = 0;
-    for (auto* set : extracts) {
-        if (set->size() < 2) continue;
+    for (auto& set : extracts) {
+        if (set.size() < 2) continue;
         LOG2("\t  Set " << i++);
-        for (auto* f : *set)
+        for (auto* f : set)
             LOG2("\t\t" << f->name);
     }
 }

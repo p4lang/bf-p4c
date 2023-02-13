@@ -1642,7 +1642,7 @@ bool ActionPhvConstraints::parser_constant_extract_satisfied(
         // For each slice, if it is not marked as parser constant extract, do nothing.
         if (!phv.hasParserConstantExtract(slice.field())) continue;
         bitvec range(slice.container_slice().lo, slice.width());
-        const auto* sliceSet = unionFind.setOf(const_cast<PHV::Field*>(slice.field()));
+        const auto& sliceSet = unionFind.setOf(const_cast<PHV::Field*>(slice.field()));
         for (auto& slice1 : container_state) {
             if (slice == slice1) continue;
             // If these are different slices of the same field, then don't do anything.
@@ -1652,7 +1652,7 @@ bool ActionPhvConstraints::parser_constant_extract_satisfied(
             if (!phv.hasParserConstantExtract(slice1.field())) continue;
             // If the field is not in the same set as the parser constant extract field, then we are
             // good.
-            if (sliceSet->find(const_cast<PHV::Field*>(slice1.field())) == sliceSet->end())
+            if (sliceSet.find(const_cast<PHV::Field*>(slice1.field())) == sliceSet.end())
                 continue;
             // Both slice and slice1's fields are in the same set. Now we need to make sure they can
             // be allocated into the same container.
@@ -2367,10 +2367,10 @@ CanPackErrorCode ActionPhvConstraints::check_and_generate_copack_set(
     for (const auto& kv : copack_constraints) {
         LOG5("\t\t\t  Enforcing copacking constraint for action " << kv.first->name);
         const auto& prop = action_props.at(kv.first);
-        for (auto* set : kv.second) {
+        for (auto& set : kv.second) {
             // Need to enforce alignment constraints when we have one unallocated PHV source and
             // action data writing to the container in the same action.
-            if (set->size() < 2 && (prop.num_sources == 2 || !prop.aligned_one_unallocated))
+            if (set.size() < 2 && (prop.num_sources == 2 || !prop.aligned_one_unallocated))
                 continue;
             // If some sources in the same set in copacking_constraints are already allocated, set
             // the container requirement for the unallocated sources in that set.
@@ -2381,7 +2381,7 @@ CanPackErrorCode ActionPhvConstraints::check_and_generate_copack_set(
                 return CanPackErrorCode::COPACK_UNSATISFIED;
             }
             ordered_set<PHV::FieldSlice> setFieldSlices;
-            setFieldSlices.insert(set->begin(), set->end());
+            setFieldSlices.insert(set.begin(), set.end());
             (*copacking_set)[setIndex++] = setFieldSlices;
         }
     }
@@ -2402,8 +2402,8 @@ CanPackErrorCode ActionPhvConstraints::check_and_generate_copack_set(
                 get_smaller_source_slice(alloc, kv.second, field_slices_in_current_container);
             if (alignedSlice) {
                 bool foundAlignmentConstraint = false;
-                for (auto* set : kv.second) {
-                    if (set->size() > 1 && set->count(*alignedSlice)) {
+                for (auto& set : kv.second) {
+                    if (set.size() > 1 && set.count(*alignedSlice)) {
                         foundAlignmentConstraint = true;
                         LOG5("\t\t\t\t  Alignment constraint already found on smaller slice: "
                              << *alignedSlice);
@@ -2860,8 +2860,8 @@ boost::optional<PHV::FieldSlice> ActionPhvConstraints::get_unallocated_slice(
     // assumed to be allocated already.
     ordered_set<PHV::FieldSlice> unallocatedSlices;
     LOG5("\t\t\t\tGathering unallocated source for this container:");
-    for (auto* set : copacking_constraints) {
-        for (auto& sl : *set) {
+    for (auto& set : copacking_constraints) {
+        for (auto& sl : set) {
             if (!container_state.count(sl) && alloc.slices(sl.field(), sl.range()).size() == 0) {
                 LOG5("\t\t\t\t\tAdding " << sl);
                 unallocatedSlices.insert(sl);
@@ -2885,8 +2885,8 @@ boost::optional<PHV::FieldSlice> ActionPhvConstraints::get_smaller_source_slice(
     // are assumed to be allocated already.
     ordered_set<PHV::FieldSlice> twoUnallocatedSlices;
     LOG5("\t\t\t\tGathering unallocated sources for this container:");
-    for (auto* set : copacking_constraints) {
-        for (auto& sl : *set) {
+    for (auto& set : copacking_constraints) {
+        for (auto& sl : set) {
             if (!container_state.count(sl) && alloc.slices(sl.field(), sl.range()).size() == 0) {
                 LOG5("\t\t\t\t\tAdding " << sl);
                 twoUnallocatedSlices.insert(sl);
@@ -3194,11 +3194,11 @@ bool ActionPhvConstraints::assign_containers_to_unallocated_sources(
         ordered_map<PHV::FieldSlice, PHV::Container>& req_container) const {
     // For each set in copacking_constraints, check if any sources are allocated and if yes, all
     // unallocated sources in that set have to have the same container number
-    for (auto* set : copacking_constraints) {
+    for (auto& set : copacking_constraints) {
         PHV::Container c;
         ordered_set<PHV::FieldSlice> unallocated_slices;
         // Find all allocated slices in each set
-        for (auto& slice : *set) {
+        for (auto& slice : set) {
             ordered_set<PHV::AllocSlice> per_source_slices = alloc.slices(slice.field(),
                     slice.range());
             // If this is an unallocated source slice, then examine the next slice after adding it
@@ -3627,11 +3627,11 @@ void ActionPhvConstraints::throw_too_many_sources_error(
         for (auto& slice : notWrittenSlices)
             ss << std::endl << "\t  " << slice.shortString();
     }
-    for (const auto* set : phvSources) {
+    for (const auto& set : phvSources) {
         bool allSlicesUnwritten = true;
         // Ignore the slices in the UnionFind struct that are sources because they are not written
         // in this action. The not-written case has already been handled by the above if-condition.
-        for (auto& slice : *set)
+        for (auto& slice : set)
             if (!notWrittenSlices.count(slice))
                 allSlicesUnwritten = false;
         if (allSlicesUnwritten) continue;
@@ -3639,7 +3639,7 @@ void ActionPhvConstraints::throw_too_many_sources_error(
         boost::optional<int> offset = boost::make_optional(false, int());
         bool unaligned = false;
         ordered_set<PHV::FieldSlice> printedFields;
-        for (auto& slice : *set) {
+        for (auto& slice : set) {
             if (printedFields.count(slice)) continue;
             ss << std::endl << "\t  " << slice.shortString();
             printedFields.insert(slice);

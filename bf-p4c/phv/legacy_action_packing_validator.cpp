@@ -282,13 +282,13 @@ Result make_slicelist_group_prop(
     // speculate container size for settled slicelists
     for (const auto& group : prop->same_container_size_group) {
         std::set<int> valid_sizes = container_sizes;
-        for (const auto* sl : *group) {
+        for (const auto* sl : group) {
             valid_sizes = intersect(valid_sizes, sl_valid_cont_sizes.at(sl));
         }
         if (valid_sizes.size() > 1) {
             // cannot decide container slices for this group.
             if (LOGGING(3)) {
-                for (const auto* sl : *group) {
+                for (const auto* sl : group) {
                     LOG3("skip " << sl << " because of too many valid container sizes: "
                          << valid_sizes.size());
                 }
@@ -298,7 +298,7 @@ Result make_slicelist_group_prop(
             return Result(Code::BAD, "container size conflicts");
         }
         const int cont_size = *valid_sizes.begin();
-        for (const auto* sl : *group) {
+        for (const auto* sl : group) {
             prop->sl_cont_size[sl] = cont_size;
         }
     }

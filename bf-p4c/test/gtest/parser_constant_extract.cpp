@@ -176,34 +176,34 @@ state parse6 {
     EXPECT_FALSE(phv.hasParserConstantExtract(v10));
 
     // Check set membership for each of the fields.
-    const auto* s1 = unionFind.setOf(v1);
-    const auto* s2 = unionFind.setOf(v2);
-    EXPECT_EQ(1U, s1->count(v2));
-    EXPECT_EQ(1U, s2->count(v1));
-    EXPECT_EQ(0U, s1->count(v3));
-    EXPECT_EQ(0U, s1->count(v5));
-    EXPECT_EQ(0U, s1->count(v7));
-    EXPECT_EQ(0U, s1->count(v9));
-    EXPECT_EQ(0U, s2->count(v4));
-    EXPECT_EQ(0U, s2->count(v6));
-    EXPECT_EQ(0U, s2->count(v8));
-    EXPECT_EQ(0U, s2->count(v10));
-    const auto* s3 = unionFind.setOf(v3);
-    const auto* s4 = unionFind.setOf(v4);
-    const auto* s5 = unionFind.setOf(v5);
-    const auto* s6 = unionFind.setOf(v6);
-    const auto* s7 = unionFind.setOf(v7);
-    const auto* s8 = unionFind.setOf(v8);
-    const auto* s9 = unionFind.setOf(v9);
-    const auto* s10 = unionFind.setOf(v10);
-    EXPECT_EQ(1U, s3->count(v4));
-    EXPECT_EQ(1U, s4->count(v3));
-    EXPECT_EQ(1U, s5->count(v6));
-    EXPECT_EQ(1U, s6->count(v5));
-    EXPECT_EQ(0U, s7->count(v8));
-    EXPECT_EQ(0U, s8->count(v7));
-    EXPECT_EQ(0U, s9->count(v10));
-    EXPECT_EQ(0U, s10->count(v9));
+    const auto& s1 = unionFind.setOf(v1);
+    const auto& s2 = unionFind.setOf(v2);
+    EXPECT_EQ(1U, s1.count(v2));
+    EXPECT_EQ(1U, s2.count(v1));
+    EXPECT_EQ(0U, s1.count(v3));
+    EXPECT_EQ(0U, s1.count(v5));
+    EXPECT_EQ(0U, s1.count(v7));
+    EXPECT_EQ(0U, s1.count(v9));
+    EXPECT_EQ(0U, s2.count(v4));
+    EXPECT_EQ(0U, s2.count(v6));
+    EXPECT_EQ(0U, s2.count(v8));
+    EXPECT_EQ(0U, s2.count(v10));
+    const auto& s3 = unionFind.setOf(v3);
+    const auto& s4 = unionFind.setOf(v4);
+    const auto& s5 = unionFind.setOf(v5);
+    const auto& s6 = unionFind.setOf(v6);
+    const auto& s7 = unionFind.setOf(v7);
+    const auto& s8 = unionFind.setOf(v8);
+    const auto& s9 = unionFind.setOf(v9);
+    const auto& s10 = unionFind.setOf(v10);
+    EXPECT_EQ(1U, s3.count(v4));
+    EXPECT_EQ(1U, s4.count(v3));
+    EXPECT_EQ(1U, s5.count(v6));
+    EXPECT_EQ(1U, s6.count(v5));
+    EXPECT_EQ(0U, s7.count(v8));
+    EXPECT_EQ(0U, s8.count(v7));
+    EXPECT_EQ(0U, s9.count(v10));
+    EXPECT_EQ(0U, s10.count(v9));
 }
 
 }  // namespace Test

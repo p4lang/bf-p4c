@@ -342,14 +342,14 @@ bool Clustering::MakeAlignedClusters::preorder(const IR::MAU::Table* tbl) {
 
 void Clustering::MakeAlignedClusters::end_apply() {
     // Create AlignedClusters from sets.
-    for (auto* cluster_set : union_find_i) {
+    for (auto& cluster_set : union_find_i) {
         // Create AlignedClusters, distinguishing between PHV/TPHV requirements.
         // XXX(cole): Need to account for all kinds of PHV for JBay.
         bool tphv_candidate = std::all_of(
-            cluster_set->begin(), cluster_set->end(),
+            cluster_set.begin(), cluster_set.end(),
             [&](const PHV::FieldSlice& slice) { return slice.is_tphv_candidate(uses_i); });
         PHV::Kind kind = tphv_candidate ? PHV::Kind::tagalong : PHV::Kind::normal;
-        self.aligned_clusters_i.emplace_back(new PHV::AlignedCluster(kind, *cluster_set));
+        self.aligned_clusters_i.emplace_back(new PHV::AlignedCluster(kind, cluster_set));
     }
 }
 
@@ -414,8 +414,8 @@ bool Clustering::MakeRotationalClusters::preorder(const IR::MAU::Instruction* in
 }
 
 void Clustering::MakeRotationalClusters::end_apply() {
-    for (auto* cluster_set : union_find_i)
-        self.rotational_clusters_i.emplace_back(new PHV::RotationalCluster(*cluster_set));
+    for (auto& cluster_set : union_find_i)
+        self.rotational_clusters_i.emplace_back(new PHV::RotationalCluster(cluster_set));
 }
 
 bool Clustering::CollectInconsistentFlexibleFieldExtract::preorder(
@@ -669,11 +669,11 @@ void Clustering::CollectPlaceTogetherConstraints::pack_pov_bits() {
     const auto& unionFind = phv_i.getSameSetConstantExtraction();
     for (auto* f : pov_bits) {
         if (!phv_i.hasParserConstantExtract(f)) continue;
-        const auto* fSet = unionFind.setOf(f);
+        const auto& fSet = unionFind.setOf(f);
         for (auto* f1 : pov_bits) {
             if (f == f1) continue;
             if (!phv_i.hasParserConstantExtract(f1)) continue;
-            if (fSet->find(f1) == fSet->end()) continue;
+            if (fSet.find(f1) == fSet.end()) continue;
             extractedTogetherBits[f].insert(f1);
         }
     }
@@ -1260,12 +1260,13 @@ void Clustering::MakeSuperClusters::end_apply() {
     }
 
     // Build SuperClusters.
-    for (auto* cluster_set : cluster_union_find) {
+    // copy cluster_set, we add to it
+    for (auto cluster_set : cluster_union_find) {
         // Collect slice lists that induced this grouping.
         // XXX(cole): Caching would be much more efficient.
         ordered_set<PHV::SuperCluster::SliceList*> these_lists;
         ordered_set<PHV::FieldSlice> slices_in_these_lists;
-        for (auto* rotational_cluster : *cluster_set)
+        for (auto* rotational_cluster : cluster_set)
             for (auto* aligned_cluster : rotational_cluster->clusters())
                 for (const PHV::FieldSlice& slice : *aligned_cluster)
                     for (auto* slist : slice_lists)
@@ -1276,7 +1277,7 @@ void Clustering::MakeSuperClusters::end_apply() {
         // field list into a singelton field list.
         for (auto* slice_list : these_lists)
             for (auto& slice_in_list : *slice_list) slices_in_these_lists.insert(slice_in_list);
-        for (auto* rotational_cluster : *cluster_set)
+        for (auto* rotational_cluster : cluster_set)
             for (auto* aligned_cluster : rotational_cluster->clusters())
                 for (auto& slice : *aligned_cluster)
                     if (slice.field()->exact_containers() &&
@@ -1292,11 +1293,11 @@ void Clustering::MakeSuperClusters::end_apply() {
         // They will not be deleted unless rerun collect fields. So if this pass will be
         // run multiple times, e.g., in table placement first alloc, we need to ignore
         // dummy fields added in all previous runs.
-        addPaddingForMarshaledFields(*cluster_set, these_lists);
+        addPaddingForMarshaledFields(cluster_set, these_lists);
 
         // filter out unreferenced cluster.
         // This will also allow us to ignore dummy padding fields added in previous runs.
-        auto* sc = new PHV::SuperCluster(*cluster_set, these_lists);
+        auto* sc = new PHV::SuperCluster(cluster_set, these_lists);
         if (sc->all_of_fieldslices([&](const PHV::FieldSlice& fs) {
                 return !self.uses_i.is_allocation_required(fs.field());
             })) {

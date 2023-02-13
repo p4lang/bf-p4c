@@ -2388,7 +2388,7 @@ std::ostream &operator<<(std::ostream& out, const PhvInfo::SameContainerAllocCon
     for (const auto& set : c.same_byte_bits) {
         out << "{";
         cstring sep = "";
-        for (const auto& e : *set) {
+        for (const auto& e : set) {
             out << sep << e;
             sep = ", ";
         }
