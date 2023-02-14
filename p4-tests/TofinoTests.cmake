@@ -1086,6 +1086,7 @@ p4c_add_bf_backend_tests("tofino" "tofino" "${TOFINO_P414_TEST_ARCH}" "smoketest
 
 ## P4-16 Programs
 set (P4FACTORY_P4_16_PROGRAMS
+  selector_resize
   tna_32q_2pipe
   tna_action_profile
   tna_action_selector
@@ -1173,7 +1174,6 @@ set (P4FACTORY_P4_16_PROGRAMS_INTERNAL_COMPILE_ONLY
   multithread_perf
   # p4program.am
   selector_dist
-  selector_resize
   tna_ambiguities
   tna_counter_extended
   tna_ipv4_alpm
@@ -1222,6 +1222,7 @@ endforeach()
 set_tests_properties("tofino/p4_16_programs_tna_exact_match" PROPERTIES TIMEOUT ${extended_timeout_2times})
 set_tests_properties("tofino/p4_16_programs_tna_ternary_match" PROPERTIES TIMEOUT ${extended_timeout_4times})
 set_tests_properties("tofino/p4_16_programs_tna_register" PROPERTIES TIMEOUT ${extended_timeout_2times})
+set_tests_properties("tofino/p4_16_programs_selector_resize" PROPERTIES TIMEOUT ${extended_timeout_4times})
 
 # Compile-only P4-16 Programs
 foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS_COMPILE_ONLY)
@@ -1426,6 +1427,8 @@ set(P4TESTS_NON_PR
   smoketest_programs_stful
   # Dev-env update 2022-10-21: runs for almost 3 hours, then fails
   p4_16_programs_internal_tna_alpmV2
+  # Dev-env update 2023-02-13: this internal_p4_16 test is moved into p4_16_programs.
+  p4_16_programs_selector_resize
 )
 
 foreach(t IN LISTS NON_PR)
