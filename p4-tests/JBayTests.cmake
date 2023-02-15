@@ -122,6 +122,7 @@ set (P16_JNA_EXCLUDE_PATTERNS
   "MODEL-1095\\.p4"
   "p4c-4072\\.p4"
   "p4c-4943\\.p4"
+  "p4c-3582\\.p4"
 )
 
 include(JBayErrors.cmake)
