@@ -754,4 +754,150 @@ Switch(pipe) main;
     ASSERT_TRUE(res == std::string::npos);
 }
 
+TEST_F(CheckUninitializedReadTest, TestTempVar) {
+    auto program = R"(
+#include <core.p4>
+#include <tna.p4>
+
+struct header_t {}
+struct ig_metadata_t {}
+struct eg_metadata_t {}
+
+parser SwitchIngressParser(
+    packet_in pkt,
+    out header_t hdr,
+    out ig_metadata_t ig_md,
+    out ingress_intrinsic_metadata_t ig_intr_md)
+{
+    state start {
+        pkt.extract(ig_intr_md);
+        pkt.advance(64);
+        transition accept;
+    }
+}
+
+control SwitchIngressDeparser(
+    packet_out pkt,
+    inout header_t hdr,
+    in ig_metadata_t ig_md,
+    in ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md)
+{
+    apply {
+    }
+}
+
+parser SwitchEgressParser(
+    packet_in pkt,
+    out header_t hdr,
+    out eg_metadata_t eg_md,
+    out egress_intrinsic_metadata_t eg_intr_md)
+{
+    state start {
+        pkt.extract(eg_intr_md);
+        transition accept;
+    }
+}
+
+control SwitchEgressDeparser(
+    packet_out pkt,
+    inout header_t hdr,
+    in eg_metadata_t eg_md,
+    in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr)
+{
+    apply {
+    }
+}
+
+control SwitchIngress(
+    inout header_t hdr,
+    inout ig_metadata_t ig_md,
+    in ingress_intrinsic_metadata_t ig_intr_md,
+    in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md,
+    inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md,
+    inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md)
+{
+    action reflect(){
+        ig_intr_tm_md.ucast_egress_port=ig_intr_md.ingress_port;
+    }
+
+    int<8> meta_int8;
+    bit<8> meta_bit8;
+
+    action set_meta(){
+        meta_int8=23;
+        meta_bit8=23;
+    }
+
+    //==== int<8> register ====
+    Register<int<8>,_>(1024) reg_int8;
+    RegisterAction<int<8>, _, int<8>>(reg_int8) regact_int8 = {
+        void apply(inout int<8> val, out int<8> rv) {
+            val = 1 - meta_int8;
+            rv = val;
+        }
+    };
+
+    action exec_int8(){
+        regact_int8.execute(0);
+    }
+
+
+    Register<bit<8>,_>(1024) reg_bit8;
+    RegisterAction<bit<8>, _, bit<8>>(reg_bit8) regact_bit8 = {
+        void apply(inout bit<8> val, out bit<8> rv) {
+            val = 1 - meta_bit8;
+            rv = val;
+        }
+    };
+
+    action exec_bit8(){
+        regact_bit8.execute(0);
+    }
+
+    apply {
+        set_meta();
+
+        exec_int8();
+        exec_bit8();
+
+        reflect();
+    }
+}
+
+control SwitchEgress(
+    inout header_t hdr,
+    inout eg_metadata_t eg_md,
+    in egress_intrinsic_metadata_t eg_intr_md,
+    in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
+    inout egress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
+    inout egress_intrinsic_metadata_for_output_port_t eg_intr_oport_md)
+{
+    apply {
+    }
+}
+
+Pipeline(
+    SwitchIngressParser(),
+    SwitchIngress(),
+    SwitchIngressDeparser(),
+    SwitchEgressParser(),
+    SwitchEgress(),
+    SwitchEgressDeparser()
+) pipe;
+
+Switch(pipe) main;
+)";
+    auto blk = TestCode(TestCode::Hdr::Tofino1arch, program);
+    ASSERT_TRUE(blk.apply_pass(TestCode::Pass::FullFrontend));
+    ASSERT_TRUE(blk.apply_pass(TestCode::Pass::FullMidend));
+    ASSERT_TRUE(blk.apply_pass(TestCode::Pass::ConverterToBackend));
+    CheckUninitializedRead::unset_printed();
+    testing::internal::CaptureStderr();
+    EXPECT_TRUE(blk.apply_pass(TestCode::Pass::FullBackend));
+    std::string output = testing::internal::GetCapturedStderr();
+
+    // Ignore partially uninitialized compiler generated temp fields.
+    ASSERT_TRUE(output.find("$tmp") == std::string::npos);
+}
+
 }  // namespace Test

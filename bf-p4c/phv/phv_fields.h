@@ -1479,7 +1479,7 @@ class PhvInfo {
  public:  // class PhvInfo
     PhvInfo() { }
     void addTempVar(const IR::TempVar* tempVar, gress_t gress);
-    bool isTempVar(const PHV::Field* f) { return fields_to_tempvars_i.count(f) > 0;}
+    bool isTempVar(const PHV::Field* f) const { return fields_to_tempvars_i.count(f) > 0;}
     const PHV::Field *field(int idx) const {
         return size_t(idx) < by_id.size() ? by_id.at(idx) : 0; }
     const PHV::Field *field(const cstring&) const;
