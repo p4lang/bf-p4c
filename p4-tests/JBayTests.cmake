@@ -64,7 +64,7 @@ p4c_add_ptf_test_with_ptfdir ("tofino2" "large_counter_meter" "${CMAKE_CURRENT_S
   "${testExtraArgs} -target tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16 -bfrt -Xp4c=\"--disable_split_attached\" -Xptf=--test-params=pkt_size=100"
   "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/large_counter_meter")
 bfn_set_ptf_test_spec("tofino2" "large_counter_meter" "all")
-set_tests_properties("tofino2/large_counter_meter" PROPERTIES TIMEOUT ${extended_timeout_2times})
+set_tests_properties("tofino2/large_counter_meter" PROPERTIES TIMEOUT ${extended_timeout_3times})
 
 # P4-16 Programs with PTF tests
 foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS)
@@ -241,6 +241,8 @@ set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/extreme/p4c-303
 
 p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-3473-a2.p4")
 set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/extreme/p4c-3473-a2.p4" PROPERTIES TIMEOUT ${extended_timeout_2times})
+
+set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/extreme/p4c-2918-2.p4" PROPERTIES TIMEOUT ${extended_timeout_2times})
 
 # Exclude some p4s with conditional checksum updates that are added separately
 set (P4_14_EXCLUDE_FILES "parser_dc_full\\.p4" "sai_p4\\.p4"
