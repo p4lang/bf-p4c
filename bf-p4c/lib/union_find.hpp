@@ -113,7 +113,7 @@ class UnionFind {
 
     /// Unions the sets containing \p x and \p y.
     /// Fails (triggers BUG_CHECK) if \p x or \p y are not present.
-    void makeUnion(const T x, const T y) {
+    void makeUnion(const T& x, const T& y) {
         Set* xs = internalFind(x);
         Set* ys = internalFind(y);
 
@@ -132,28 +132,43 @@ class UnionFind {
         sets_i.erase(sets_i.find(smaller));
     }
 
+    /// Unions the sets containing \p x and \p y.
+    /// Inserts the elements if they are not present
+    void insertUnion(const T& x, const T& y) {
+        insert(x);
+        insert(y);
+        makeUnion(x, y);
+    }
+
     /// @returns a canonical element of the set containing @p x.
     /// Fails (triggers BUG_CHECK) if @p x is not present.
-    const T find(const T x) const {
+    const T find(const T& x) const {
         Set* internal = internalFind(x);
         return *internal->begin();
     }
 
     /// @returns the size of the set containing @p x.
     /// Fails (triggers BUG_CHECK) if @p x is not present.
-    size_t sizeOf(const T x) const {
+    size_t sizeOf(const T& x) const {
         return internalFind(x)->size();
     }
 
     /// @returns a copy of the set containing @p x.
     /// Fails (triggers BUG_CHECK) if @p x is not present.
-    const Set& setOf(const T x) const {
+    const Set& setOf(const T& x) const {
         return *internalFind(x);
+    }
+
+    /// Indexing behaves similarly to \ref setOf, but when the element \p x is not present, it is
+    /// inserted (as a singleton element) -- therefore it works similarly as std::map::operator[].
+    const Set& operator[](const T&x) {
+        insert(x);
+        return setOf(x);
     }
 
     /// @returns true if element@e is present in the UnionFind struct.
     /// @returns false otherwise.
-    bool contains(const T x) const {
+    bool contains(const T& x) const {
         return element_map_i.count(x);
     }
 
@@ -166,8 +181,15 @@ class UnionFind {
         return rv;
     }
 
+    /// The number of distinct sets of equivalent elements. This can be 0 if and only if the
+    /// UnionFind is empty.
     size_t numSets() const {
         return sets_i.size();
+    }
+
+    /// The number of elements in the UnionFind.
+    size_t size() const {
+        return element_map_i.size();
     }
 };
 

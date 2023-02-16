@@ -4,6 +4,7 @@
 #include <lib/map.h>
 #include <lib/ordered_map.h>
 #include <lib/ordered_set.h>
+#include <lib/log.h>
 #include <map>
 #include <set>
 #include <unordered_map>
@@ -519,6 +520,16 @@ inline V *getref(map<K, V, Comp, Alloc, It> *m, T key) {
 template<class K, class T, class V, class Comp, class Alloc, Iterable It>
 inline const V *getref(const map<K, V, Comp, Alloc, It> *m, T key) {
     return m ? getref(*m, key) : 0;
+}
+
+template<typename T>
+std::ostream &operator<<(std::ostream &out, const assoc::set<T> &set) {
+    return format_container(out, set, '(', ')');
+}
+
+template<typename T>
+std::ostream &operator<<(std::ostream &out, const assoc::hash_set<T> &set) {
+    return format_container(out, set, '(', ')');
 }
 
 }  // namespace assoc

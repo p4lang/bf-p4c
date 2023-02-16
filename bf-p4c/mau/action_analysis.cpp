@@ -1181,7 +1181,7 @@ void ActionAnalysis::determine_unused_bits(PHV::Container container,
     bitvec container_occupancy = phv.bits_allocated(container, fieldsWritten,
                                                     cont_action.table_context, &use);
     bitvec unused_bits = bitvec(0, container.size()) - container_occupancy;
-    LOG5("\t Unused bits for container " << container << " : " << unused_bits);
+    LOG5("\tUnused bits for container " << container << " : " << unused_bits);
 
     if (cont_action.adi.initialized) {
         cont_action.adi.alignment.unused_container_bits = unused_bits;

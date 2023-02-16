@@ -5,6 +5,8 @@
 #include "lib/map.h"
 #include "lib/range.h"
 
+const FieldDefUse::LocPairSet FieldDefUse::emptyset;
+
 const std::unordered_set<cstring> FieldDefUse::write_by_parser = {
     "ingress::ig_intr_md_from_prsr.parser_err",
     "egress::eg_intr_md_from_prsr.parser_err"
@@ -640,8 +642,7 @@ bool FieldDefUse::hasDefInParser(const PHV::Field* f, boost::optional<le_bitrang
                        getParserRangeDefMatcher(phv, f, bits));
 }
 
-
-void FieldDefUse::end_apply(const IR::Node *) {
+void FieldDefUse::collect_uninitalized() {
     // Get all uninitialized fields
     for (const auto& def : parser_zero_inits) {
         auto uses = getUses(def);
@@ -651,6 +652,10 @@ void FieldDefUse::end_apply(const IR::Node *) {
             uninitialized_fields.insert(init->field);
         }
     }
+}
+
+void FieldDefUse::end_apply(const IR::Node *) {
+    collect_uninitalized();
 
     LOG_FEATURE("defuse_graph", 3, std::bind(&FieldDefUse::dotgraph, this, std::placeholders::_1));
 

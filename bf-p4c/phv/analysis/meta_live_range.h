@@ -34,16 +34,16 @@ class MetadataLiveRange : public Inspector {
     static constexpr char const *EGRESS_PARSER_ENTRY =
         "$entry_point.$egress_tna_entry_point";
 
-    /// @returns true if the live range indicated by [@p minStage1, @p maxStage1]
-    /// either overlaps with or differs from [@p minStage2, @p maxStage2]
-    /// by less than \a DEP_DIST stages.
-    static bool overlaps(int minStage1, int maxStage1, int minStage2, int maxStage2, int depDist =
-            DEP_DIST);
+    /// @returns true if the live ranges indicated by [@p minStage1, @p maxStage1]
+    /// and [@p minStage2, @p maxStage2] are not-overlapping with clearance of at least @p depDist
+    /// stages.
+    static bool notOverlapping(int minStage1, int maxStage1, int minStage2, int maxStage2,
+                               int depDist = DEP_DIST);
 
-    /// @returns true if the live range indicated by @p range1 either overlaps with or differs from
-    /// @p range2 by less than \a DEP_DIST stages.
-    static bool overlaps(std::pair<int, int>& range1, std::pair<int, int>& range2, int depDist =
-            DEP_DIST);
+    /// @returns true if the live ranges indicated by @p range1 @p range2 are not-overlapping with
+    /// clearance of at least @p depDist stages.
+    static bool notOverlapping(std::pair<int, int>& range1, std::pair<int, int>& range2,
+                               int depDist = DEP_DIST);
 
     /// Set of intrinsic metadata fields that must not be initialized.
     static const ordered_set<cstring> noInitIntrinsicFields;

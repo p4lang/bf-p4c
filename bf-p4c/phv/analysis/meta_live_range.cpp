@@ -9,17 +9,20 @@ cstring MetadataLiveRange::printAccess(int access) {
     }
 }
 
-bool MetadataLiveRange::overlaps(std::pair<int, int>& range1, std::pair<int, int>& range2, int
+bool MetadataLiveRange::notOverlapping(std::pair<int, int>& range1, std::pair<int, int>& range2, int
         depDist) {
-    return overlaps(range1.first, range1.second, range2.first, range2.second, depDist);
+    return notOverlapping(range1.first, range1.second, range2.first, range2.second, depDist);
 }
 
-bool MetadataLiveRange::overlaps(int minStage1, int maxStage1, int minStage2, int
+bool MetadataLiveRange::notOverlapping(int minStage1, int maxStage1, int minStage2, int
         maxStage2, int depDist) {
     bool range1LTrange2 = ((minStage1 + depDist) < minStage2) && ((maxStage1 + depDist) <
             minStage2);
     bool range2LTrange1 = ((minStage2 + depDist) < minStage1) && ((maxStage2 + depDist) <
             minStage1);
+    LOG9("\tnotOverlapping [" << minStage1 << ", " << maxStage1
+         << "] <> [" << minStage2 << " , " << maxStage2
+         << "]: range1 < range2 " << range1LTrange2 << ", range2 < range1 " << range2LTrange1);
     return (range1LTrange2 || range2LTrange1);
 }
 
@@ -40,13 +43,15 @@ bool MetadataLiveRange::preorder(const IR::MAU::Table* t) {
 }
 
 void MetadataLiveRange::setFieldLiveMap(const PHV::Field* f) {
-    LOG2("    Setting live range for field " << f);
+    Log::TempIndent indent;
+    LOG2("Setting live range for field " << f << indent);
     // minUse = earliest stage for uses of the field.
     // maxUse = latest stage for uses of the field.
     // minDef = earliest stage for defs of the field.
     // maxDef = latest stage for defs of the field.
     // Set the min values initially to the deparser, and the max values to the parser initially.
     const int DEPARSER = dg.max_min_stage + 1;
+    LOG9("DEPARSER = " << DEPARSER);
     int minUse = DEPARSER;
     int minDef = DEPARSER;
     int maxUse = -1;
@@ -56,101 +61,75 @@ void MetadataLiveRange::setFieldLiveMap(const PHV::Field* f) {
     int minDefAccess = 0;
     int maxDefAccess = 0;
 
-    // For each use of the field, parser imply stage -1, deparser imply stage `Devices::numStages`
-    // (12 for Tofino), and a table implies the corresponding dg.min_stage.
-    for (const FieldDefUse::locpair use : defuse.getAllUses(f->id)) {
-        const IR::BFN::Unit* use_unit = use.first;
-        if (use_unit->is<IR::BFN::ParserState>() || use_unit->is<IR::BFN::Parser>() ||
-            use_unit->to<IR::BFN::GhostParser>()) {
-            // Ignore parser use if field is marked as not parsed.
-            if (notParsedFields.count(f)) continue;
-            // There is no need to set the maxUse here, because maxUse is either -1 (if there is no
-            // other use) or a non-negative value (which does not need to be updated).
-            LOG4("\t  Used in parser.");
-            minUse = -1;
-            minUseAccess = READ;
-        } else if (use_unit->is<IR::BFN::Deparser>()) {
-            // Ignore deparser use if field is marked as not deparsed.
-            if (notDeparsedFields.count(f)) continue;
-            // There is no need to set the minUse here, because minUse is either DEPARSER (if there
-            // is no other use) or a between [-1, dg.max_min_stage] (which does not need to be
-            // updated).
-            LOG4("\t  Used in deparser.");
-            maxUse = DEPARSER;
-            maxUseAccess = READ;
-        } else if (use_unit->is<IR::MAU::Table>()) {
-            const auto* t = use_unit->to<IR::MAU::Table>();
-            int use_stage = dg.min_stage(t);
-            LOG4("\t  Used in stage " << use_stage << " in table " << t->name);
-            // Update minUse and maxUse based on the min_stage of the table.
-            // If the minUse and maxUse are encountered for the first time, overwrite the earlier
-            // access information. If another use with the same minUse/maxUse is encountered, then
-            // append the access information with the access information for this unit.
-            if (use_stage < minUse) {
-                minUse = use_stage;
-                minUseAccess = READ;
-            } else if (use_stage == minUse) {
-                minUseAccess |= READ;
+    // For each use/def of the field, parser imply stage -1, deparser imply stage
+    // `Devices::numStages` (12 for Tofino), and a table implies the corresponding dg.min_stage.
+    auto set_access = [this, f, DEPARSER](const FieldDefUse::LocPairSet &accessSet,
+                                          int& min, int& max, int& minAccess, int& maxAccess,
+                                          int accessMode) {
+        Log::TempIndent indent;
+        LOG4("Looking for " << (accessMode == READ ? "uses" : "definitions") << indent);
+        const auto kind = accessMode == READ ? "Used" : "Defined";
+        if (accessSet.empty())
+            LOG5(kind << " accessSet empty");
+        for (const auto [unit, expr] : accessSet) {
+            if (unit->is<IR::BFN::ParserState>() || unit->is<IR::BFN::Parser>() ||
+                unit->to<IR::BFN::GhostParser>()) {
+                // If the def is an implicit read inserted only for metadata fields to account for
+                // uninitialized reads, then ignore that initialization.
+                // A use can never be ImplicitParserInit as ImplicitParserInit does not use
+                // anything.
+                if (expr->is<ImplicitParserInit>()) {
+                    LOG4("Ignoring implicit parser init.");
+                    continue;
+                }
+                // Ignore parser use if field is marked as not parsed.
+                if (notParsedFields.count(f)) continue;
+                // There is no need to set the maxUse here, because maxUse is either -1 (if there
+                // is no other use) or a non-negative value (which does not need to be updated).
+                LOG4(kind << " in parser.");
+                min = -1;
+                minAccess = accessMode;
+            } else if (unit->is<IR::BFN::Deparser>()) {
+                // Ignore deparser use if field is marked as not deparsed.
+                if (notDeparsedFields.count(f)) continue;
+                // There is no need to set the min here, because min is either DEPARSER (if there
+                // is no other use) or a between [-1, dg.max_min_stage] (which does not need to be
+                // updated).
+                LOG4(kind << " in deparser.");
+                max = DEPARSER;
+                maxAccess = accessMode;
+            } else if (unit->is<IR::MAU::Table>()) {
+                const auto* t = unit->to<IR::MAU::Table>();
+                int stage = dg.min_stage(t);
+                LOG4(kind << " in stage " << stage << " in table " << t->name);
+                // Update min and max based on the min_stage of the table.
+                // If the min and max are encountered for the first time, overwrite the earlier
+                // accessMode information. If another use with the same min/max is encountered,
+                // then append the accessMode information with the accessMode information for this
+                // unit.
+                if (stage < min) {
+                    min = stage;
+                    minAccess = accessMode;
+                } else if (stage == min) {
+                    minAccess |= accessMode;
+                }
+                if (stage > max) {
+                    max = stage;
+                    maxAccess = accessMode;
+                } else if (stage == max) {
+                    maxAccess |= accessMode;
+                }
+            } else {
+                BUG("Unknown unit encountered %1%", unit->toString());
             }
-            if (use_stage > maxUse) {
-                maxUse = use_stage;
-                maxUseAccess = READ;
-            } else if (use_stage == maxUse) {
-                maxUseAccess |= READ;
-            }
-        } else {
-            BUG("Unknown unit encountered %1%", use_unit->toString());
         }
-    }
+    };
+    set_access(defuse.getAllUses(f->id), minUse, maxUse, minUseAccess, maxUseAccess, READ);
+    set_access(defuse.getAllDefs(f->id), minDef, maxDef, minDefAccess, maxDefAccess, WRITE);
 
-    // Set live range for every def of the field.
-    for (const FieldDefUse::locpair def : defuse.getAllDefs(f->id)) {
-        const IR::BFN::Unit* def_unit = def.first;
-        // If the definition is of type ImplicitParserInit, then it was added to account for
-        // uninitialized reads, and can be safely ignored. Account for all other parser
-        // initializations, as long as the field is not marked notParsed.
-        if (def_unit->is<IR::BFN::ParserState>() || def_unit->is<IR::BFN::Parser>() ||
-            def_unit->to<IR::BFN::GhostParser>()) {
-            // If the def is an implicit read inserted only for metadata fields to account for
-            // uninitialized reads, then ignore that initialization.
-            if (def.second->is<ImplicitParserInit>()) {
-                LOG4("\t\tIgnoring implicit parser init.");
-                continue;
-            }
-            if (!notParsedFields.count(f)) {
-                LOG4("\t  Field defined in parser.");
-                minDef = -1;
-                minDefAccess = WRITE;
-                continue;
-            }
-        } else if (def_unit->is<IR::BFN::Deparser>()) {
-            if (notDeparsedFields.count(f)) continue;
-            maxDef = DEPARSER;
-            maxDefAccess = WRITE;
-            LOG4("\t  Defined in deparser.");
-        } else if (def_unit->is<IR::MAU::Table>()) {
-            const auto* t = def_unit->to<IR::MAU::Table>();
-            int def_stage = dg.min_stage(t);
-            LOG4("\t  Defined in stage " << def_stage << " in table " << t->name);
-            if (def_stage < minDef) {
-                minDef = def_stage;
-                minDefAccess = WRITE;
-            } else if (def_stage == minDef) {
-                minDefAccess |= WRITE;
-            }
-            if (def_stage > maxDef) {
-                maxDef = def_stage;
-                maxDefAccess = WRITE;
-            } else if (def_stage == maxDef) {
-                maxDefAccess |= WRITE;
-            }
-        } else {
-            BUG("Unknown unit encountered %1%", def_unit->toString());
-        }
-    }
-    LOG2("\t  minUse: " << minUse << " (" << printAccess(minUseAccess) << "), minDef: " << minDef <<
+    LOG2("minUse: " << minUse << " (" << printAccess(minUseAccess) << "), minDef: " << minDef <<
          " (" << printAccess(minDefAccess) << ")");
-    LOG2("\t  maxUse: " << maxUse << " (" << printAccess(maxUseAccess) << "), maxDef: " << maxDef <<
+    LOG2("maxUse: " << maxUse << " (" << printAccess(maxUseAccess) << "), maxDef: " << maxDef <<
          " (" << printAccess(maxDefAccess) << ")");
     livemap[f->id] = std::make_pair(std::min(minUse, minDef), std::max(maxUse, maxDef));
 
@@ -168,7 +147,7 @@ void MetadataLiveRange::setFieldLiveMap(const PHV::Field* f) {
     } else {
         livemapUsage[f->id] = std::make_pair(minStageAccess, maxStageAccess);
     }
-    LOG2("\tLive range for " << f->name << " is [" << livemap[f->id].first << ", " <<
+    LOG2("Live range for " << f->name << " is [" << livemap[f->id].first << ", " <<
          livemap[f->id].second << "]. Access is [" << printAccess(livemapUsage[f->id].first) << ", "
          << printAccess(livemapUsage[f->id].second) << "].");
 }
@@ -232,14 +211,14 @@ void MetadataLiveRange::end_apply() {
             }
             // If the live ranges of fields differ by more than DEP_DIST stages, then overlay due to
             // live range shrinking is possible.
-            if (overlaps(range1, range2)) {
+            if (notOverlapping(range1, range2)) {
                 overlay(f1->id, f2->id) = true;
                 LOG3("    overlay(" << f1->name << ", " << f2->name << ")");
             }
             // For pa_no_init fields, dependence distance is of little less consideration.
             if (!overlay(f1->id, f2->id)) {
                 if (noInitFields.count(f1) && noInitFields.count(f2)) {
-                    if (overlaps(range1, range2, 0)) {
+                    if (notOverlapping(range1, range2, 0)) {
                         overlay(f1->id, f2->id) = true;
                         LOG1("    overlay noInit(" << f1->name << ", " << f2->name << ")");
                     }

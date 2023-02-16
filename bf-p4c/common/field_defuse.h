@@ -26,7 +26,7 @@ class ImplicitParserInit : public IR::Expression {
         : field(f) { }
     const PHV::Field* field;
     void dbprint(std::ostream & out) const override {
-        out << "ImplicitParserInit"; }
+        out << "ImplicitParserInit of " << field->id << ":" << field->name; }
 };
 
 /** Represent a parser error write. TODO(yumin): move to actual IR.
@@ -88,6 +88,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
 
     // All fields used as alias destinations.
     ordered_set<const PHV::Field*>    alias_destinations;
+    static const LocPairSet emptyset;
 
     /// Intermediate data structure for computing def/use sets.
     struct info {
@@ -109,6 +110,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     profile_t init_apply(const IR::Node *root) override;
     void end_apply(const IR::Node *root) override;
     void end_apply() override;
+    void collect_uninitalized();
     void check_conflicts(const info &read, int when);
     void read(const PHV::Field *, boost::optional<le_bitrange>, const IR::BFN::Unit *,
               const IR::Expression *, bool);
@@ -161,7 +163,6 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     // const SymBitMatrix &conflicts() { return conflict; }
 
     const LocPairSet &getDefs(locpair use) const {
-        static const LocPairSet emptyset;
         return defs.count(use) ? defs.at(use) : emptyset; }
     const LocPairSet &getDefs(const IR::BFN::Unit *u, const IR::Expression *e) const {
         return getDefs(locpair(u, e)); }
@@ -184,7 +185,6 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
 
     /** Get all defs of the PHV::Field with ID @p fid. */
     const LocPairSet &getAllDefs(int fid) const {
-        static const LocPairSet emptyset;
         return located_defs.count(fid) ? located_defs.at(fid) : emptyset; }
 
     const ordered_map<int, LocPairSet> &getAllDefs() const { return located_defs; }
@@ -195,7 +195,6 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     }
 
     const LocPairSet &getUses(locpair def) const {
-        static const LocPairSet emptyset;
         return uses.count(def) ? uses.at(def) : emptyset; }
     const LocPairSet &getUses(const IR::BFN::Unit *u, const IR::Expression *e) const {
         return getUses(locpair(u, e)); }
@@ -203,13 +202,11 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
         return getUses(locpair(v->findOrigCtxt<IR::BFN::Unit>(), e)); }
     /** Get all uses of the PHV::Field with ID @p fid. */
     const LocPairSet &getAllUses(int fid) const {
-        static const LocPairSet emptyset;
         return located_uses.count(fid) ? located_uses.at(fid) : emptyset; }
     const ordered_map<int, LocPairSet> &getAllUses() const { return located_uses; }
 
     /// @return all defs that the given def may overwrite.
     const LocPairSet &getOutputDeps(locpair def) const {
-        static const LocPairSet emptyset;
         return output_deps.count(def) ? output_deps.at(def) : emptyset;
     }
     const LocPairSet &getOutputDeps(const IR::BFN::Unit *u, const IR::Expression *e) const {

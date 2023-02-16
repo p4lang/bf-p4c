@@ -581,6 +581,7 @@ bitvec PhvInfo::bits_allocated(
     auto& fields = fields_in_container(c);
 
     if (fields.size() == 0) return ret_bitvec;
+    LOG3("Fields: " << fields);
 
     // Gather all the slices of written fields allocated to container c
     std::vector<PHV::AllocSlice> write_slices_in_container;
@@ -593,7 +594,8 @@ bitvec PhvInfo::bits_allocated(
     LOG5("Write slices in container: " << write_slices_in_container);
     for (auto* field : fields) {
         if (field->padding) continue;
-        LOG3("Container field: " << field->name);
+        Log::TempIndent loopIndent;
+        LOG3("Container field: " << field->name << loopIndent);
 
         field->foreach_alloc(ctxt, use, [&](const PHV::AllocSlice &alloc) {
             LOG3("Alloc Container: " << alloc.container()
@@ -622,6 +624,8 @@ bitvec PhvInfo::bits_allocated(
             bool meta_overlay = std::any_of(
                 write_slices_in_container.begin(), write_slices_in_container.end(),
                 [&](const PHV::AllocSlice& slice) {
+                    LOG5("Meta mutex with " << slice.field()->name << " is " <<
+                        metadata_mutex_i(slice.field()->id, alloc.field()->id));
                     return metadata_mutex_i(slice.field()->id, alloc.field()->id);
             });
             bool dark_overlay = std::any_of(
