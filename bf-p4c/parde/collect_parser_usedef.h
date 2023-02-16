@@ -7,6 +7,10 @@
 #include "bf-p4c/parde/parser_info.h"
 #include "bf-p4c/phv/phv_fields.h"
 
+/** @addtogroup ParserCopyProp
+ *  @{
+ */
+
 namespace Parser {
 
 struct Def {
@@ -689,6 +693,14 @@ struct CheckUnresolvedExtractSource : public ParserInspector {
     }
 };
 
+/** @} */  // end of group ParserCopyProp
+
+/**
+ * @defgroup ParserCopyProp ParserCopyProp
+ * @ingroup parde
+ * @ingroup LowerParserIR
+ * @brief PassManager that governs parser copy propagation.
+ */
 struct ParserCopyProp : public PassManager {
     explicit ParserCopyProp(const PhvInfo& phv) {
         auto* parserInfo = new CollectParserInfo;

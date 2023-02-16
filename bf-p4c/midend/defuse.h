@@ -4,7 +4,11 @@
 #include "ir/ir.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
 
-/** Compute defuse info within P4Parser and P4Control blocks in the midend.
+/**
+ * @ingroup midend
+ * @ingroup parde
+ * @brief Compute defuse info within P4Parser and P4Control blocks in the midend.
+ *
  * This pass finds all uses and definitions of field/slice values in all controls
  * and parsers in the program and stores maps of which defs reach which uses.
  * After the pass runs, getDefs(use) will return all the definitions in the program
@@ -14,9 +18,9 @@
  * of the IR to that node -- actions that are used by mulitple tables or parser states
  * reachable via multiple paths may have mulitple entries as a result
  *
- * Currently the code does not consider calls between controls or parsers, as it is
- * expected to run after inlining when all such calls have been flattened.  It could
- * be extended to deal with the before inlining case.
+ * @pre Currently the code does not consider calls between controls or parsers, as it is
+ * expected to run after inlining when all such calls have been flattened.
+ * It could be extended to deal with the before inlining case.
  */
 class ComputeDefUse : public Inspector, public ControlFlowVisitor, public P4WriteContext,
                       public P4::ResolutionContext {

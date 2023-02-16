@@ -6,6 +6,10 @@
 #include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/parde/parser_info.h"
 
+/**
+ * @ingroup LowerParser
+ * @brief Prints various info about parser to the log file.
+ */
 class CharacterizeParser : public Inspector {
     // Configurable parameters
 

@@ -6,6 +6,9 @@
 #include "p4c/lib/match.h"
 #include "p4c/lib/ordered_set.h"
 
+/**
+ * @ingroup parde
+ */
 class HasFullMatchCoverage {
     const std::vector<match_t> matches_;
 

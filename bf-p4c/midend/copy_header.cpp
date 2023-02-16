@@ -7,7 +7,8 @@ namespace {
 
 /**
  * \ingroup midend
- * \brief Pass that converts header assignmnets into field assignmnets.
+ * \ingroup parde
+ * \brief Pass that converts header assignments into field assignments.
  * 
  * This class converts header assignment into assignment of individual
  * fields of the header and the validity bits. The purpose is to enable

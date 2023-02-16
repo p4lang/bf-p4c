@@ -7,7 +7,10 @@
 
 namespace Parde::Lowered {
 
-/// Collect all containers that are written more than once by the parser.
+/**
+ * @ingroup LowerParser
+ * @brief Collects all containers that are written more than once by the parser.
+ */
 class ComputeMultiWriteContainers : public ParserModifier {
     const PhvInfo& phv;
     const CollectLoweredParserInfo& parser_info;

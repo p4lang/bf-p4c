@@ -5,10 +5,14 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/parde/parde_visitor.h"
 
-/// Adjust extractions that extract from fields that is serialized from phv container,
-/// i.e. marshaled, because there might be some junk bits before and after the field.
-/// This is used for mirror/resubmit engine that directly pull data from phv container
-/// and then send to ingress/egress parser.
+/**
+ * @ingroup parde
+ * @brief Adjusts extractions that extract from fields that are serialized from phv container,
+ *        i.e. marshaled, because there might be some junk bits before and after the field.
+ *
+ * This is used for mirror/resubmit engine that directly pull data from phv container
+ * and then send to ingress/egress parser.
+ */
 class AdjustExtract : public PardeModifier {
     const PhvInfo& phv;
 

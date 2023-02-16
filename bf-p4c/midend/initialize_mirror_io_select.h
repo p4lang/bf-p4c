@@ -24,7 +24,11 @@ class DoInitializeMirrorIOSelect: public Transform {
     const IR::Node* preorder(IR::BFN::TnaDeparser* deparser) override { prune(); return deparser; };
 };
 
-// Initialize eg_intr_md_for_dprsr.mirror_io_select on devices except Tofino1
+/**
+ * @ingroup midend
+ * @ingroup parde
+ * @brief Initializes eg_intr_md_for_dprsr.mirror_io_select on devices except Tofino1
+ */
 class InitializeMirrorIOSelect : public PassManager {
  public:
     InitializeMirrorIOSelect(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {

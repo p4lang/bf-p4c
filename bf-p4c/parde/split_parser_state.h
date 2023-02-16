@@ -5,7 +5,11 @@
 #include "bf-p4c/parde/clot/clot_info.h"
 #include "bf-p4c/ir/bitrange.h"
 
-/*
+/**
+ * @ingroup LowerParserIR
+ * @brief Splits parser states into multiple states to account for HW resource constraints
+ *        of a single parser state.
+ *
  * After PHV allocation, we have the concrete view of what size of
  * PHV container each field is allocated in. We can then finalize
  * the parser IR. Specifically, parser states may need to split into

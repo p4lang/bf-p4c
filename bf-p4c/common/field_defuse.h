@@ -10,6 +10,10 @@
 #include "bf-p4c/ir/control_flow_visitor.h"
 #include "bf-p4c/ir/tofino_write_context.h"
 
+/** @addtogroup parde
+ *  @{
+ */
+
 /** Represent the parser initialization that sets all fields to zero.
  *  This is actually a dummy subclass of IR::Expression to work with
  *  the locpair setup. NEVER insert this class to IR, because it is not
@@ -251,5 +255,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
         return hasDefInParser(fs.field(), fs.range());
     }
 };
+
+/** @} */  // end of group parde
 
 #endif /* _FIELD_DEFUSE_H_ */

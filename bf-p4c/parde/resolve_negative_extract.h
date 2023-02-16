@@ -10,8 +10,11 @@
 #include "bf-p4c/parde/parser_info.h"
 #include "bf-p4c/device.h"
 
-/// For extracts with negative source, i.e. source is in an earlier state, adjust
-/// the state's shift amount so that the source is within current state's input buffer.
+/**
+ * @ingroup parde
+ * @brief For extracts with negative source, i.e. source is in an earlier state, adjust
+ *        the state's shift amount so that the source is within current state's input buffer.
+ */
 struct ResolveNegativeExtract : public PassManager {
     /// Colect all negative extract states and compute corresponding shift values
     /// for transitions and states

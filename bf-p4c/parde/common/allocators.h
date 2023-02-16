@@ -6,6 +6,9 @@
 #include "bf-p4c/parde/clot/clot_info.h"
 #include "ir/ir.h"
 
+/**
+ * @ingroup parde
+ */
 class LoweredParserMatchAllocator {
     void sort_state_primitives() {
         for (auto p : state->extracts) {

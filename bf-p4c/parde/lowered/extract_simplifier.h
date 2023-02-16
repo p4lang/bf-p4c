@@ -9,8 +9,11 @@
 
 namespace Parde::Lowered {
 
-/// Helper class that splits extract operations into multiple smaller extracts,
-/// such that each extract writes to exactly one PHV container.
+/**
+ * @ingroup LowerParserIR
+ * @brief Helper class that splits extract operations into multiple smaller extracts,
+ *        such that each extract writes to exactly one PHV container.
+ */
 struct ExtractSimplifier {
     const PhvInfo& phv;
     const ClotInfo& clot;

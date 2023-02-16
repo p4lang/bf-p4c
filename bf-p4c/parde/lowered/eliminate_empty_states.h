@@ -6,8 +6,13 @@
 
 namespace Parde::Lowered {
 
-/// If before parser lowering, a state is empty and has unconditional transition
-/// leaving the state, we can safely eliminate this state.
+/**
+ * @ingroup LowerParserIR
+ * @brief Eliminates empty states.
+ *
+ * If before parser lowering, a state is empty and has unconditional transition
+ * leaving the state, we can safely eliminate this state.
+ */
 struct EliminateEmptyStates : public ParserTransform {
     const CollectParserInfo& parser_info;
 

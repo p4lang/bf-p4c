@@ -6,7 +6,10 @@
 #include "backends/graphs/controls.h"
 #include "backends/graphs/graph_visitor.h"
 
-/// Extends p4c's parser graph with various algorithms
+/**
+ * @ingroup parde
+ * @brief Extends p4c's parser graph with various algorithms
+ */
 class P4ParserGraphs: public graphs::ParserGraphs {
     void postorder(const IR::P4Parser* parser) override {
         if (dumpDot) {

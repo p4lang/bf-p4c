@@ -4,11 +4,14 @@
 #include "ir/ir.h"
 #include "bf-p4c/phv/phv_fields.h"
 
-/** Adds the no_init pragma to the specified fields with the specified gress.
-  * Specifies that the indicated metadata field does not require initialization to 0 before its
-  * first use because the control plane guarantees that, in cases where this field's value is
-  * needed, it will always be written before it is read.
-  */
+/**
+ * @ingroup LowerParser
+ * @brief Adds the no_init pragma to the specified fields with the specified gress.
+ *
+ * Specifies that the indicated metadata field does not require initialization to 0 before its
+ * first use because the control plane guarantees that, in cases where this field's value is
+ * needed, it will always be written before it is read.
+ */
 class PragmaNoInit : public Inspector {
     const PhvInfo& phv_i;
 

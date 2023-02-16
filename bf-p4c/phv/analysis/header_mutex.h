@@ -170,6 +170,7 @@ class RemoveHeaderMutexesIfAllFieldsNotMutex : public Inspector {
 };
 
 /**
+ * @ingroup parde
  * @brief Based on dominators and post-dominators of parser states, determines which other headers
  * have also surely been encountered if a given header has been encountered and which other headers
  * have not been encountered if a given header has not been encountered.

@@ -12,6 +12,7 @@
 #include "ir/visitor.h"
 
 /**
+ * @ingroup parde
  * @brief Builds parser graphs and determines the dominators and post-dominators of all parser
  * states. Using this information, you can infer many things. For example:
  *

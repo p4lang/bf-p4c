@@ -16,23 +16,26 @@
 
 namespace {
 
-// Generates parser assembly by walking the IR and writes the result to an
-// output stream. The parser IR must be in lowered form - i.e., the root must
-// a LoweredParser rather than a Parser.
-//
-// PVS Handle Generation
-// TNA instantiates different parsers for ingress and egress and therefore
-// expects a unique pvs handle for each gress.
-// However this is not the case with V1Model as it always instantiates the same parser
-//
-//                  P4-14                      P4-16
-//
-// TNA          Share PVS Handle           Share PVS Handle
-//              across and                 only within ig/eg
-//              within ig/eg               Don't share across ig/eg
-//
 static int pvs_handle = 512;
 static std::map<cstring, int> pvs_handles;
+
+/**
+ * @ingroup parde
+ * @brief Generates parser assembly by walking the IR and writes the result to an output stream.
+ *
+ * The parser IR must be in lowered form - i.e., the root must
+ * a IR::BFN::LoweredParser rather than a IR::BFN::Parser.
+ *
+ * ### PVS Handle Generation
+ *
+ * TNA instantiates different parsers for ingress and egress and therefore
+ * expects a unique PVS handle for each gress.
+ * However this is not the case with V1Model as it always instantiates the same parser.
+ *
+ * In TNA:
+ * - P4-14: Share PVS Handle across and within ig/eg
+ * - P4-16: Share PVS Handle only within ig/eg, don't share across ig/eg
+ */
 struct ParserAsmSerializer : public ParserInspector {
     explicit ParserAsmSerializer(std::ostream& out, const PhvInfo& phv, const ClotInfo& clot_info)
        : out(out), phv(phv), clot_info(clot_info) {

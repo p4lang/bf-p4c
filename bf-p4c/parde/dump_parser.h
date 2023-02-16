@@ -286,7 +286,10 @@ class DotDumper {
     }
 };
 
-// Dumps the entire parser graphs
+/**
+ * @ingroup parde
+ * @brief Dumps the entire parser graphs (can be used before and also after parser lowering).
+ */
 class DumpParser : public Visitor, public DotDumper {
  public:
     explicit DumpParser(cstring filename, bool detail = false, bool to_log = false)

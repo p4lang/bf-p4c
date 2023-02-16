@@ -8,6 +8,10 @@
 #include "bf-p4c/parde/dump_parser.h"
 #include "device.h"
 
+/** @addtogroup AllocateParserChecksums
+ *  @{
+ */
+
 static ordered_set<const IR::BFN::ParserState*>
 compute_end_states(const IR::BFN::Parser* parser, const CollectParserInfo& parser_info,
                    const ordered_set<const IR::BFN::ParserState*>& calc_states) {
@@ -510,8 +514,6 @@ struct ParserChecksumAllocator : public Visitor {
 };
 
 /**
- * \ingroup parde
- *
  * For CLOTs that contribute to checksum update at the deparser,
  * we need to compute the CLOT's portion of checksum in the parser
  * when we issue the CLOTs. So after CLOT allocation, we know which
@@ -852,6 +854,7 @@ struct DuplicateStates : public ParserTransform {
     }
 };
 
+/** @} */  // end of group AllocateParserChecksums
 
 AllocateParserChecksums::AllocateParserChecksums(const PhvInfo& phv, const ClotInfo& clot)
         : Logging::PassManager("parser", Logging::Mode::AUTO),

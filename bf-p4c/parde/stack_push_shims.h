@@ -5,8 +5,9 @@
 #include "bf-p4c/common/header_stack.h"
 
 /**
- * Adds parser states to initialize the `$stkvalid` fields that are used to
- * handle the `push_front` and `pop_front` primitives for header stacks.
+ * @ingroup parde
+ * @brief Adds parser states to initialize the `$stkvalid` fields that are used to
+ *        handle the `push_front` and `pop_front` primitives for header stacks.
  *
  * @see HeaderPushPop for more discussion.
  */

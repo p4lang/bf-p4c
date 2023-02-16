@@ -7,6 +7,7 @@
 namespace Parde::Lowered {
 
 /**
+ * @ingroup LowerParserIR
  * @brief This pass is used to ensure that there will be no conflicting partial_hdr_err_proc
  *        at the time the LoweredParserMatch is created.
  *

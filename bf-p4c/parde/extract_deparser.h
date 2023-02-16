@@ -28,7 +28,8 @@ class P4Control;
 namespace BFN {
 
 /**
- * \ingroup parde
+ * @ingroup parde
+ * @brief Transforms midend deparser IR::BFN::TnaDeparser into backend deparser IR::BFN::Deparser
  *
  * @pre Assume the nested if statements are already canonicalized to a
  *      single if statement enclosing any emit/pack method calls.

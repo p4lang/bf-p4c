@@ -9,9 +9,12 @@
 
 namespace Parde::Lowered {
 
-/// After parser lowering, we have converted the parser IR from P4 semantic (action->match)
-/// to HW semantic (match->action), there may still be opportunities where we can merge states
-/// where we couldn't before lowering (without breaking the P4 semantic).
+/**
+ * @ingroup LowerParserIR
+ * @brief After parser lowering, we have converted the parser IR from P4 semantic (action->match)
+ *        to HW semantic (match->action), there may still be opportunities where we can merge
+ *        states where we couldn't before lowering (without breaking the P4 semantic).
+ */
 struct MergeLoweredParserStates : public ParserTransform {
     const CollectLoweredParserInfo& parser_info;
     const ComputeLoweredParserIR& computed;

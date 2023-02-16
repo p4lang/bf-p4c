@@ -4,7 +4,9 @@
 #include "ir/ir.h"
 #include "ir/pass_manager.h"
 
-/** Merge a chain of states into a large state.
+/**
+ * @ingroup parde
+ * @brief Merges a chain of states into a large state (before parser lowering).
  * Find the longest chain that:
  * Forall states expect for the last tail state:
  *   1. Only has one default branch.

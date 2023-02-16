@@ -23,6 +23,10 @@ namespace boost {
     BOOST_INSTALL_PROPERTY(edge, transition);
 }
 
+/** @addtogroup parde
+ *  @{
+ */
+
 /**
  * This data structure uses different template parameters of boost::adjacency_list than the ones
  * used by the ParserGraphImpl class in order to be able to build a graph who's edges can be
@@ -928,5 +932,7 @@ using CollectParserInfo = CollectParserInfoImpl<IR::BFN::Parser,
 using CollectLoweredParserInfo = CollectParserInfoImpl<IR::BFN::LoweredParser,
                                                        IR::BFN::LoweredParserState,
                                                        IR::BFN::LoweredParserMatch>;
+
+/** @} */  // end of group parde
 
 #endif  /* EXTENSIONS_BF_P4C_PARDE_PARSER_INFO_H_ */

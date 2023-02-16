@@ -26,7 +26,10 @@ class P4Parser;
 
 namespace BFN {
 
-/// Transform frontend parser and deparser into IR::BFN::Parser and IR::BFN::Deparser
+/**
+ * @ingroup parde
+ * @brief Transforms midend parser IR::BFN::TnaParser into backend parser IR::BFN::Parser
+ */
 class ExtractParser : public ParserInspector {
     Logging::FileLog *parserLog = nullptr;
 

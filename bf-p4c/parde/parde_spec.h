@@ -48,6 +48,175 @@
  * while %Flatrock is represented with the FlatrockParser class.
  * Specific differences of Tofino 1 vs 2 vs 3 are implemented using template specialization.
  *
+ * ## Frontend passes
+ *
+ * Frontend passes operate on IR::P4Parser nodes representing parsers and IR::ParserState nodes
+ * representing parser states.
+ *
+ * Frontend passes related to parser:
+ * - P4V1::Converter - Converts P4-14 program to an equivalent P4-16 program in v1model
+ *   architecture.
+ * - P4::ValidateParsedProgram - Performs simple semantic checks on the program.
+ * - P4::EvaluatorPass - Creates blocks for all high-level constructs.
+ * - P4::CreateBuiltins - Creates accept and reject states.
+ * - P4::InstantiateDirectCalls - Replaces direct invocations of parsers with an instantiation
+ *   followed by an invocation.
+ * - P4::CheckNamedArgs - Checks that parsers cannot have optional parameters.
+ * - P4::BindTypeVariables - Inserts explicit type specializations where they are missing.
+ * - P4::SpecializeGenericFunctions - Specializes generic functions by substituting type
+ *   parameters.
+ * - P4::SpecializeGenericTypes - Specializes generic types by substituting type
+ *   parameters.
+ * - P4::RemoveParserIfs
+ *   - P4::RemoveParserControlFlow
+ *     - P4::DoRemoveParserControlFlow - Converts if statements in parsers into transitions.
+ *     - P4::SimplifyControlFlow - Simplifies control flow.
+ * - P4::SimplifyParsers - Removes unreachable states and collapses simple chains of states.
+ * - P4::ResetHeaders - Explicitly invalidates uninitialized header variables.
+ * - P4::UniqueNames - Gives unique names to various declarations.
+ * - P4::MoveDeclarations - Moves local declarations to the "top".
+ * - P4::MoveInitializers - Moves initializers into a new start state.
+ * - P4::SideEffectOrdering
+ *   - P4::DoSimplifyExpressions - Converts expressions so that each expression contains
+ *     at most one side effect.
+ * - P4::SimplifyDefUse
+ *   - P4::DoSimplifyDefUse
+ *     - P4::ProcessDefUse
+ *       - P4::ComputeWriteSet - Computes the write set for each expression and statement.
+ * - P4::SpecializeAll - Specializes parsers by substituting type arguments and constructor
+ *   parameters.
+ * - P4::RemoveDontcareArgs - Replaces don't care arguments with an unused temporary.
+ * - P4::FunctionsInliner - Inlines functions.
+ * - P4::MoveConstructors - Converts constructor call expressions that appear within
+ *   the bodies of IR::P4Parser blocks into IR::Declaration_Instance.
+ * - P4::RemoveRedundantParsers - Removes redundant parsers.
+ * - P4::Inline - Performs inlining of parsers.
+ * - P4::RemoveAllUnusedDeclarations - Removes unused declarations.
+ * - P4::HierarchicalNames - Adjusts the \@name annotations on objects to reflect their position
+ *   in the hierarchy.
+ * - P4::ComputeParserCG - Builds a CallGraph of IR::ParserState nodes.
+ *
+ * ## Midend passes
+ *
+ * After midend pass BFN::ArchTranslation, the parser becomes represented with
+ * the IR::BFN::TnaParser node which inherits from IR::P4Parser and contains some additional
+ * useful metadata.
+ * The parser states are still represented with IR::ParserState nodes.
+ *
+ * Generic midend passes related to parser (p4c):
+ * - P4::CopyStructures
+ *   - P4::RemoveAliases - Analyzes assignments between structures and introduces additional
+ *     copy operations.
+ * - P4::EliminateTuples - Converts tuples into structs.
+ * - P4::ExpandLookahead - Expands lookahead calls.
+ * - P4::LocalCopyPropagation - Does local copy propagation and dead code elimination.
+ *
+ * Tofino-specific midend passes related to parser (bf-p4c):
+ *
+ * - BFN::CopyHeaders - Converts header assignments into field assignments.
+ * - ComputeDefUse - Computes defuse info in the midend.
+ * - BFN::CheckVarbitAccess - Checks that varbit accesses are valid.
+ * - BFN::DesugarVarbitExtract - Rewrites varbit usages to usages of multiple small headers.
+ * - BFN::InitializeMirrorIOSelect - Adds mirror_io_select initialization to egress parser.
+ * - BFN::ParserEnforceDepthReq - Enforces parser min/max depth requirements.
+ * - P4ParserGraphs - Extends p4c's parser graph with various algorithms.
+ *
+ * ## Post-midend passes
+ *
+ * Post-midend passes convert midend representation of parser (IR::BFN::TnaParser) into
+ * backend representation (IR::BFN::Parser).
+ *
+ * Post-midend passes related to parser:
+ * - BridgedPacking and SubstitutePackedHeaders
+ *   - RenameArchParams - Replaces the user-supplied parameter names with the corresponding
+ *     parameter names defined in the architecture.
+ *   - BFN::BackendConverter - Converts mid-end IR into back-end IR.
+ *     - BFN::ExtractParser - Transforms midend parser IR::BFN::TnaParser into backend
+ *       parser IR::BFN::Parser.
+ *     - BFN::ProcessBackendPipe
+ *       - BFN::ProcessParde - Resolves header stacks and adds shim for intrinsic metadata.
+ *         - AddParserMetadata - Extends parsers to extract standard metadata.
+ * - BridgedPacking
+ *   - ExtractBridgeInfo
+ *     - CollectBridgedFieldsUse - Finds usages (extract calls) of bridged headers.
+ *
+ * ## Backend passes
+ *
+ * In backend, the parser is represented with IR::BFN::Parser node and the parser states with
+ * IR::BFN::ParserState nodes.
+ * Within LowerParser pass, the parser is transformed to its lowered form represented with
+ * IR::BFN::LoweredParser node and the parser states are represented with
+ * IR::BFN::LoweredParserState nodes.
+ * Both parser representations, before and after parser lowering, can be dumped to the dot files
+ * using DumpParser pass, which is often called between the individual steps during parser
+ * transformations so that these dumps can be used for debugging.
+ *
+ * Backend passes related to parser before parser lowering:
+ * - FieldDefUse - Collects fields defuse info in backend.
+ * - StackPushShims - Adds parser states to initialize the `$stkvalid` fields that are used
+ *   to handle the `push_front` and `pop_front` primitives for header stacks.
+ * - ParserCopyProp - Does parser copy propagation.
+ * - RewriteParserMatchDefs - Looks for extracts into temporary local variables used
+ *   in select statements.
+ * - ResolveNegativeExtract - For extracts with negative source, i.e. source is in an earlier
+ *   state, adjusts the state's shift amount so that the source is within current state's
+ *   input buffer.
+ * - InferPayloadOffset - Applies Tofino 2 feature of stopping the header length counter
+ *   in any state.
+ * - MergeParserStates - Merges a chain of states into a large state before parser lowering.
+ * - CheckParserMultiWrite - Checks multiple writes to the same field on non-mutually exclusive
+ *   paths.
+ * - PHV_AnalysisPass
+ *   - MutexOverlay
+ *     - HeaderMutex
+ *       - FindParserHeaderEncounterInfo - Based on dominators and post-dominators of parser
+ *         states, determines which other headers have also surely been encountered if a given
+ *         header has been encountered and which other headers have not been encountered if
+ *         a given header has not been encountered.
+ * - CheckFieldCorruption - Checks field corruption after PHV allocation is done.
+ * - AdjustExtract - Adjusts extractions that extract from fields that are serialized
+ *   from phv container.
+ *
+ * Backend passes responsible for parser lowering within LowerParser:
+ * - PragmaNoInit - Adds no_init pragma to the specified fields.
+ * - Parde::Lowered::LowerParserIR - Generates the lowered version of the parser IR
+ *   (IR::BFN::LoweredParser) and swaps it in for the existing representation (IR::BFN::Parser).
+ *   - Parde::Lowered::SplitGreedyParserStates - Checks constraints related to partial_hdr_err_proc
+ *     and eventually splits the states.
+ *   - Parde::Lowered::ResolveParserConstants - Resolves constants in parser.
+ *   - ParserCopyProp - Does parser copy propagation.
+ *   - SplitParserState - Splits parser states into multiple states to account for HW resource
+ *     constraints of a single parser state.
+ *   - Parde::Lowered::FindNegativeDeposits - Finds all of the states that do a checksum deposit
+ *     but also do not extract/shift before doing it.
+ *   - Parde::Lowered::RemoveNegativeDeposits - Updates the IR so that every checksum deposit
+ *     can also shift by at least one.
+ *   - AllocateParserMatchRegisters - Performs the parser match register allocation.
+ *   - CollectParserInfo - Collects info about parser graph useful for graph algorithms.
+ *   - Parde::Lowered::EliminateEmptyStates - Eliminates empty states.
+ *   - AllocateParserChecksums - Allocates parser checksums.
+ *   - Parde::Lowered::ComputeLoweredParserIR - Produces low-level, target-specific representation
+ *     of the parser program.
+ *   - Parde::Lowered::ReplaceParserIR - Replaces the IR::BFN::Parser node with a lowered
+ *     representation produced by Parde::Lowered::ComputeLoweredParserIR pass.
+ *   - Parde::Lowered::HoistCommonMatchOperations - Merges matches which can be merged after
+ *     lowering but could not be before lowering.
+ *   - Parde::Lowered::MergeLoweredParserStates - Merges states which can be merged after
+ *     lowering but could not be before lowering.
+ * - Parde::Lowered::LowerDeparserIR - Generates the lowered version of the deparser IR
+ *   (for more info see sections bellow).
+ * - Parde::Lowered::WarnTernaryMatchFields - Checks invalid containers participating
+ *   in ternary matches.
+ * - Parde::Lowered::ComputeInitZeroContainers - Computes containers that have fields relying
+ *   on parser zero initialization.
+ * - CollectLoweredParserInfo - Collects info about lowered parser graph useful
+ *   for graph algorithms.
+ * - Parde::Lowered::ComputeMultiWriteContainers - Collects all containers that are written
+ *   more than once by the parser.
+ * - Parde::Lowered::ComputeBufferRequirements - Computes the number of bytes which must be
+ *   available for each parser match to avoid a stall.
+ * - CharacterizeParser - Prints various info about parser to the log file.
+ *
  * # Deparser
  *
  * The deparser reassembles packets prior to storage in TM (Tofino 1-3) and prior to transmission

@@ -7,7 +7,9 @@
 namespace BFN {
 
 /**
- * Enforce parser min/max depth requirements
+ * @ingroup midend
+ * @ingroup parde
+ * @brief Enforce parser min/max depth requirements
  *
  * Programs that exceed the maximum parse depth are rejected.
  * Programs that fall below the minimum parse depth have additional "pad" states added to enforce a

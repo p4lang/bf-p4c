@@ -4,6 +4,10 @@
 #include <ir/ir.h>
 #include "ir/pass_manager.h"
 
+/**
+ * @ingroup parde
+ * @brief Checks multiple writes to the same field on non-mutually exclusive paths.
+ */
 struct CheckParserMultiWrite : public PassManager {
     const PhvInfo& phv;
 

@@ -6,6 +6,9 @@
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "ir/ir.h"
 
+/**
+ * @ingroup parde
+ */
 class CheckFieldCorruption : public Inspector, TofinoWriteContext {
  private:
     const FieldDefUse &defuse;

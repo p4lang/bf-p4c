@@ -8,6 +8,9 @@
 #include "bf-p4c/logging/pass_manager.h"
 #include "parde_visitor.h"
 
+/**
+ * @ingroup AllocateParserChecksums
+ */
 struct CollectParserChecksums : public ParserInspector {
     explicit CollectParserChecksums(const CollectParserInfo& parser_info) :
         parser_info(parser_info) { }
@@ -125,6 +128,11 @@ struct CollectParserChecksums : public ParserInspector {
     }
 };
 
+/**
+ * @defgroup AllocateParserChecksums AllocateParserChecksums
+ * @ingroup LowerParserIR
+ * @brief Allocates parser checksums.
+ */
 class AllocateParserChecksums : public Logging::PassManager {
     CollectParserInfo      parser_info;
     CollectParserChecksums checksum_info;

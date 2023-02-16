@@ -32,10 +32,15 @@ class AddParserMatchDefs : public Modifier {
     parserInfo(parserInfo), getSelectField(getSelectField), uses(uses) { }
 };
 
-/// A parser can extract fields into temporary local variables and use it in select statements.
-/// This pass looks for such extracts and changes the type of its destination to
-/// IR::BFN::MatchLVal.
-/// The main purpose of this is to avoid phv allocation of such local fields.
+/**
+ * @ingroup parde
+ * @brief Looks for extracts into temporary local variables used in select statements.
+ *
+ * A parser can extract fields into temporary local variables and use it in select statements.
+ * This pass looks for such extracts and changes the type of its destination to
+ * IR::BFN::MatchLVal.
+ * The main purpose of this is to avoid phv allocation of such local fields.
+ */
 
 class RewriteParserMatchDefs : public PassManager {
  public:

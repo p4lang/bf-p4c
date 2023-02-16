@@ -60,6 +60,12 @@ class NormalizeParams : public Modifier {
     explicit NormalizeParams(const IR::ToplevelBlock*) {}
 };
 
+/**
+ * @ingroup bridged_packing
+ * @ingroup parde
+ * @brief Pass that governs replacement of the user-supplied parameter names
+ *        with the corresponding parameter names defined in the architecture.
+ */
 class RenameArchParams : public PassManager {
     const IR::ToplevelBlock*   toplevel;
  public:

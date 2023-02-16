@@ -7,10 +7,14 @@
 
 namespace Parde::Lowered {
 
-/// Combine the high-level parser IR and the results of PHV allocation to
-/// produce a low-level, target-specific representation of the parser program.
-/// Note that the new IR is just constructed here; ReplaceParserIR is what
-/// actually replaces the high-level IR with the lowered version.
+/**
+ * @ingroup LowerParserIR
+ * @brief Combines the high-level parser IR and the results of PHV allocation to
+ *        produce a low-level, target-specific representation of the parser program.
+ *
+ * Note that the new IR is just constructed here.
+ * ReplaceParserIR is what actually replaces the high-level IR with the lowered version.
+ */
 struct ComputeLoweredParserIR : public ParserInspector {
     ComputeLoweredParserIR(
         const PhvInfo& phv, ClotInfo& clotInfo, const AllocateParserChecksums& checksumAlloc,

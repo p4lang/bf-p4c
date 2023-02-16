@@ -11,6 +11,7 @@
 namespace Parde::Lowered {
 
 /**
+ * @ingroup LowerParserIR
  * @brief After parser lowering, we have converted the parser IR from P4 semantic (action->match)
  * to hardware semantic (match->action), there may still be opportunities where we can merge
  * matches where we could not before lowering (without breaking the P4 semantic).

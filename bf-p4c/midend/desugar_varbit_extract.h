@@ -115,9 +115,11 @@ class AnnotateVarbitExtractStates : public Transform {
 };
 
 /**
- * Checks that varbit accesses in pipeline are valid. In particular, this
- * checks that there are no unsupported varbit accesses (basically anything except for extract and
- * emit currently).
+ * \ingroup DesugarVarbitExtract
+ * \brief Checks that varbit accesses in pipeline are valid.
+ *
+ * In particular, this checks that there are no unsupported varbit accesses
+ * (basically anything except for extract and emit currently).
  * This should run rather early in midend.
  */
 class CheckVarbitAccess : public PassManager {

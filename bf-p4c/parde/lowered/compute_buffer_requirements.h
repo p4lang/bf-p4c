@@ -5,8 +5,11 @@
 
 namespace Parde::Lowered {
 
-/// Compute the number of bytes which must be available for each parser match to
-/// avoid a stall.
+/**
+ * @ingroup LowerParser
+ * @brief Computes the number of bytes which must be available for each parser match
+ *        to avoid a stall.
+ */
 class ComputeBufferRequirements : public ParserModifier {
     void postorder(IR::BFN::LoweredParserMatch* match) override;
 };

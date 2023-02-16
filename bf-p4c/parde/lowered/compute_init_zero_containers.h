@@ -6,9 +6,13 @@
 
 namespace Parde::Lowered {
 
-/// Compute containers that have fields relying on parser zero initialization, these containers
-/// will be marked as valid coming out of the parser (Tofino only). In Tofino2, all containers
-/// are valid coming out of the parser.
+/**
+ * @ingroup LowerParser
+ * @brief Computes containers that have fields relying on parser zero initialization.
+ *
+ * These containers will be marked as valid coming out of the parser (Tofino only).
+ * In Tofino2, all containers are valid coming out of the parser.
+ */
 class ComputeInitZeroContainers : public ParserModifier {
     void postorder(IR::BFN::LoweredParser* parser) override;
 
