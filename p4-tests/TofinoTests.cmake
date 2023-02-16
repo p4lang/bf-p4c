@@ -252,6 +252,10 @@ p4c_add_ptf_test_with_ptfdir (
     "${testExtraArgs} -target tofino -arch tna -bfrt -Xp4c=--disable-parse-min-depth-limit" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_4366")
 
 p4c_add_ptf_test_with_ptfdir (
+    "tofino" "p4c_5043" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_5043/p4c_5043.p4"
+    "${testExtraArgs} -target tofino -arch tna -bfrt -Xp4c=\"--disable-parse-depth-limit --traffic-limit 75\"" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_5043")
+
+p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c_3343" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-3343.ptf/p4c_3343.p4"
     "${testExtraArgs} -target tofino -arch tna -bfrt"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-3343.ptf")

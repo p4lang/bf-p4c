@@ -640,21 +640,20 @@ BFRuntimeGenerator::addActionProfCommon(Util::JsonArray* tablesJson,
                 true /* mandatory */, "Exact", makeTypeInt("uint32"));
     tableJson->emplace("key", keyJson);
 
-    if (actionProf.tableIds.empty()) {
-        ::warning("Action profile '%1%' is not used by any table, skipping it", actionProf.name);
-        return;
+    if (!actionProf.tableIds.empty()) {
+        auto oneTableId = actionProf.tableIds.at(0);
+        auto* oneTable = Standard::findTable(p4info, oneTableId);
+        CHECK_NULL(oneTable);
+
+        // Add action profile to match table depends on
+        auto oneTableJson = findJsonTable(tablesJson,
+        oneTable->preamble().name());
+        addToDependsOn(oneTableJson, actionProf.id);
+
+        tableJson->emplace("action_specs", makeActionSpecs(*oneTable));
+    } else {
+        tableJson->emplace("action_specs", new Util::JsonArray());
     }
-    auto oneTableId = actionProf.tableIds.at(0);
-    auto* oneTable = Standard::findTable(p4info, oneTableId);
-    CHECK_NULL(oneTable);
-
-
-    // Add action profile to match table depends on
-    auto oneTableJson = findJsonTable(tablesJson,
-    oneTable->preamble().name());
-    addToDependsOn(oneTableJson, actionProf.id);
-
-    tableJson->emplace("action_specs", makeActionSpecs(*oneTable));
 
     tableJson->emplace("data", new Util::JsonArray());
 
