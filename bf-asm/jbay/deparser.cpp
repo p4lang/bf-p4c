@@ -624,10 +624,15 @@ void write_jbay_checksum_entry(ENTRIES &entry, unsigned mask, int swap, int pov,
     entry.pov = pov;
 }
 
+// Populates pov_map which maps the bit in the main POV array [127:0]
+// to bit in the checksum pov array [32:0]
+// The checksum pov array is 32 bits / 4 bytes - pov_cfg.byte_set[4].
+// Each element of the pov_cfg.byte_sel array maps to the byte in the main POV array
 template<class POV>
 void jbay_csum_pov_config(Phv::Ref povRef, POV &pov_cfg,
                          ordered_map<const Phv::Register *, unsigned> &pov,
-                         std::map<unsigned, unsigned> &pov_map, unsigned *prev_byte) {
+                         std::map<unsigned, unsigned> &pov_map, unsigned *prev_byte,
+                         int csum_unit) {
     unsigned bit = pov.at(&povRef->reg) + povRef->lo;
     if (pov_map.count(bit)) return;
     for (unsigned i = 0; i < (*prev_byte); ++i) {
@@ -635,6 +640,11 @@ void jbay_csum_pov_config(Phv::Ref povRef, POV &pov_cfg,
             pov_map[bit] = i*8U + bit%8U;
             break; } }
     if (pov_map.count(bit)) return;
+    if (*prev_byte >= (int)pov_cfg.byte_sel.size()) {
+        error(povRef.lineno, "Checksum unit %d exceeds %d bytes of POV",
+                csum_unit, (int)pov_cfg.byte_sel.size());
+        return;
+    }
     pov_map[bit] = (*prev_byte)*8U + bit%8U;
     pov_cfg.byte_sel[(*prev_byte)++] = bit/8U;
     return;
@@ -651,7 +661,7 @@ void set_jbay_pov_cfg(POV &pov_cfg, std::map<unsigned, unsigned> &pov_map,
                 error(val.val.lineno, "one POV bit required for Tofino2");
                 continue;
             }
-            jbay_csum_pov_config(val.pov.front(), pov_cfg, pov, pov_map, prev_byte);
+            jbay_csum_pov_config(val.pov.front(), pov_cfg, pov, pov_map, prev_byte, csum_unit);
         }
     }
     for (auto &val : full_csum.clot_entries) {
@@ -659,10 +669,10 @@ void set_jbay_pov_cfg(POV &pov_cfg, std::map<unsigned, unsigned> &pov_map,
             error(val.val.lineno, "one POV bit required for Tofino2");
             continue;
         }
-        jbay_csum_pov_config(val.pov.front(), pov_cfg, pov, pov_map, prev_byte);
+        jbay_csum_pov_config(val.pov.front(), pov_cfg, pov, pov_map, prev_byte, csum_unit);
     }
     for (auto &checksum_pov : full_csum.pov) {
-        jbay_csum_pov_config(checksum_pov.second, pov_cfg, pov, pov_map, prev_byte);
+        jbay_csum_pov_config(checksum_pov.second, pov_cfg, pov, pov_map, prev_byte, csum_unit);
     }
     return;
 }
@@ -804,6 +814,7 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
         set_jbay_pov_cfg(regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.csum_pov_cfg[csum_unit],
                          pov_map, full_checksum_unit[INGRESS][csum_unit], pov[INGRESS],
                          csum_unit, &prev_byte);
+        if (error_count > 0) break;
         regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.thread.thread[csum_unit] = INGRESS;
         write_jbay_full_checksum_config(regs.dprsrreg.inp.icr.csum_engine[csum_unit],
                                         regs.dprsrreg.inp.ipp_m.i_csum.engine,
@@ -825,6 +836,7 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
          set_jbay_pov_cfg(regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.csum_pov_cfg[csum_unit],
                           pov_map, full_checksum_unit[EGRESS][csum_unit], pov[EGRESS],
                           csum_unit, &prev_byte);
+          if (error_count > 0) break;
           regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.thread.thread[csum_unit] = EGRESS;
           write_jbay_full_checksum_config(regs.dprsrreg.inp.icr.csum_engine[csum_unit],
                                         regs.dprsrreg.inp.ipp_m.i_csum.engine,
