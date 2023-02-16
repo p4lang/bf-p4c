@@ -120,6 +120,7 @@ p4c_add_xfail_reason("tofino5"
   # "Compiler Bug: Cannot process pipelines with 6 arguments on Tofino 5"
   "Compiler Bug: Exiting with SIGSEGV"
   extensions/p4_tests/p4_16/stf/auto_init_meta2.p4
+  extensions/p4_tests/p4_16/stf/p4c-4958.p4
   )
 
 # Unimplemented - support for wide matches

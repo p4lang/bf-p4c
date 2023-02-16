@@ -229,6 +229,8 @@ class TableMatch {
     void init_proxy_hash();
     virtual void populate_match_fields();
     void populate_ghost_bits();
+    void populate_slices(safe_vector<Slice> &slices,
+                         const std::map<IXBar::Use::Byte, bitvec> &byte_infos);
 
     TableMatch(const PhvInfo &phv, const IR::MAU::Table *tbl);
     explicit TableMatch(const PhvInfo &phv) : phv(phv) {}

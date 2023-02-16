@@ -1,4 +1,5 @@
 #include "resource_estimate.h"
+#include "hash_mask_annotations.h"
 #include "lib/log.h"
 #include "memories.h"
 #include "table_placement.h"
@@ -472,8 +473,9 @@ bool StageUseEstimate::can_be_identity_hash(const IR::MAU::Table *tbl, LayoutOpt
     if (default_action_has_attached_resource)
         return false;
 
-    int extra_identity_bits = lo->layout.ixbar_width_bits
+    int extra_identity_bits = lo->layout.ixbar_width_bits - hash_bits_masked
                                 - ceil_log2(lo->layout.get_sram_depth());
+
     // Generally the limit becomes around 18 bits: 4 way pack plus 64 bits of entries
     if (extra_identity_bits <= 8) {
         int entries_needed = (1 << extra_identity_bits);
@@ -581,7 +583,7 @@ void StageUseEstimate::calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOpti
 #endif
 
     // This indicates that we are using identity function.
-    if (lo->layout.ixbar_width_bits < ceil_log2(lo->layout.get_sram_depth())
+    if ((lo->layout.ixbar_width_bits - hash_bits_masked) < ceil_log2(lo->layout.get_sram_depth())
         && !lo->layout.proxy_hash) {
         if (calculated_depth == 1) {
             lo->way_sizes = {1};
@@ -1063,7 +1065,9 @@ void StageUseEstimate::determine_initial_layout_option(const IR::MAU::Table *tbl
 /* Constructor to estimate the number of srams, tcams, and maprams a table will require*/
 StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
         attached_entries_t &attached_entries, LayoutChoices *lc, bool prev_placed,
-        bool gateway_attached, bool disable_split) {
+        bool gateway_attached, bool disable_split, PhvInfo &phv) {
+    HashMaskAnnotations hash_mask_annotations(tbl, phv);
+    hash_bits_masked = hash_mask_annotations.hash_bits_masked();
     // Because the table is const, the layout options must be copied into the Object
     layout_options.clear();
     int initial_entries = entries;

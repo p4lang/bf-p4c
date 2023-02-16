@@ -227,6 +227,8 @@ p4c_add_xfail_reason("p4"
   extensions/p4_tests/p4_16/stf/parser_scratch_reg_6.p4
   extensions/p4_tests/p4_16/stf/parser_scratch_reg_7.p4
   extensions/p4_tests/p4_16/stf/parser_scratch_reg_8.p4
+  extensions/p4_tests/p4_16/stf/p4c-4958.p4
+  extensions/p4_tests/p4_16/stf/p4c-4958_2.p4
   extensions/p4_tests/p4_16/stf/cond_checksum_update_4.p4
   extensions/p4_tests/p4_16/stf/p4c-2738.p4
   extensions/p4_tests/p4_16/stf/parser_multi_write_6.p4

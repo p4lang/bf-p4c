@@ -1226,6 +1226,38 @@ const char *PragmaNotParsed::help = "@pragma not_parsed [pipe] [ingress/egress]\
     "to the corresponding pipeline. If not provided, it is applied to"
     "all pipelines.";
 
+const char *PragmaHashMask::name = "hash_mask";
+const char *PragmaHashMask::description =
+    "Excludes field bits from the exact match key hash calculation.";
+const char *PragmaHashMask::help =
+    "+attached to P4 table match keys\n"
+    "\n"
+    "Specifies the field bits to be excluded from the exact match hash "
+    "calculation.  Bits excluded from hash calculation are included "
+    "in match bits.\n"
+    "\n"
+    "This is typically used with exact match tables to reduce the "
+    "number of exact match key bits enough to fall back to the "
+    "Identity hash algorithm.\n"
+    "\n"
+    "When this annotation is not specified, all field bits are potential "
+    "candidates to be included in hash calculations.\n"
+    "\n"
+    "Syntax:  @hash_mask(mask_value)\n"
+    "\n"
+    "         Where mask_value can be specified in decimal,\n"
+    "         hexadecimal (0x prefix) or binary (0b prefix).\n"
+    "\n"
+    "Examples:\n"
+    "\n"
+    "         1- Exclude field hdr.h1.f2 completely from hash:\n"
+    "\n"
+    "            hdr.h1.f2 : exact @hash_mask(0);\n"
+    "\n"
+    "        2-  Exclude bits 0, 5, 6 and 7 from hash calculation:\n"
+    "\n"
+    "            hdr.h1.f1 : exact  @hash_mask(0b1100011110);\n";
+
 // internal annotations to be removed
 const char *PragmaActionSelectorHashFieldCalcName::name = "action_selector_hash_field_calc_name";
 const char *PragmaActionSelectorHashFieldCalcName::description = "internal";

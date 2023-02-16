@@ -91,6 +91,7 @@ DEFINE_PRAGMA_CLASS(PragmaWays);
 DEFINE_PRAGMA_CLASS(PragmaNoFieldInits);
 DEFINE_PRAGMA_CLASS(PragmaSeparateGateway);
 DEFINE_PRAGMA_CLASS(PragmaBackwardCompatible);
+DEFINE_PRAGMA_CLASS(PragmaHashMask);
 // meter
 DEFINE_PRAGMA_CLASS(PragmaRed);
 DEFINE_PRAGMA_CLASS(PragmaYellow);

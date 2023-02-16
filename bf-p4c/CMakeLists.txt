@@ -1574,6 +1574,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/ir_utils.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/initialize_mirror_io_select.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/jbay_next_table.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mask_exact_match_hash_bits.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mau_control_flow_visitor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mau_group_extractor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mau_indirect_externs_single_action.cpp

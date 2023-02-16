@@ -111,10 +111,17 @@ bool TableFormat::allocate_match_byte(const ByteInfo &info, safe_vector<ByteInfo
 void TableFormat::classify_match_bits() {
     Log::TempIndent indent;
     LOG5("Classifying match bits" << indent);
-    safe_vector<IXBar::Use::Byte> potential_ghost;
+    // The pair below consists of the IXBar byte and its associated
+    // mask extracted from the @hash_mask() annotation.  When the
+    // annotation is not specified, all bits are considered by
+    // setting the mask to byte.bit_use.
+    //
+    // Masking with @hash_mask() is currently unimplemented for Flatrock.
+    // The byte.bit_use is always used for the mask.
+    safe_vector<std::pair<IXBar::Use::Byte, bitvec>> potential_ghost;
 
     for (const auto& byte : single_match) {
-        potential_ghost.push_back(byte);
+        potential_ghost.push_back({byte, byte.bit_use});
     }
 
     if (ghost_bits_count > 0)
@@ -122,7 +129,7 @@ void TableFormat::classify_match_bits() {
 
     std::set<int> search_buses;
 
-    for (const auto& byte : potential_ghost) {
+    for (const auto& [byte, hash_mask] : potential_ghost) {
         search_buses.insert(byte.search_bus);
         match_bytes.emplace_back(byte, byte.bit_use);
     }
@@ -320,36 +327,43 @@ bool TableFormat::analyze_layout_option() {
     return true;
 }
 
-void TableFormat::choose_ghost_bits(safe_vector<IXBar::Use::Byte> &potential_ghost) {
+void TableFormat::choose_ghost_bits(
+            safe_vector<std::pair<IXBar::Use::Byte, bitvec>> &potential_ghost) {
     int ghost_bits_allocated = 0;
     while (ghost_bits_allocated < ghost_bits_count) {
         int diff = ghost_bits_count - ghost_bits_allocated;
         auto it = potential_ghost.begin();
         if (it == potential_ghost.end())
             break;
-        if (diff >= it->bit_use.popcount()) {
-            ghost_bytes.emplace_back(*it, it->bit_use);
-            ghost_bits_allocated += it->bit_use.popcount();
+        bitvec masked_bit_use = it->first.bit_use & it->second;
+        if (diff >= masked_bit_use.popcount()) {
+            if (masked_bit_use.popcount())
+                ghost_bytes.emplace_back(it->first, masked_bit_use);
+            ghost_bits_allocated += masked_bit_use.popcount();
+            bitvec match_bits = it->first.bit_use - masked_bit_use;
+            if (match_bits.popcount())
+                match_bytes.emplace_back(it->first, match_bits);
         } else {
             bitvec ghosted_bits;
-            int start = it->bit_use.ffs();
+            int start = masked_bit_use.ffs();
             int split_bit = -1;
             do {
-                int end = it->bit_use.ffz(start);
+                int end = masked_bit_use.ffz(start);
                 if (end - start + ghosted_bits.popcount() < diff) {
                     ghosted_bits.setrange(start, end - start);
                 } else {
                     split_bit = start + (diff - ghosted_bits.popcount()) - 1;
                     ghosted_bits.setrange(start, split_bit - start + 1);
                 }
-                start = it->bit_use.ffs(end);
+                start = masked_bit_use.ffs(end);
             } while (start >= 0);
             BUG_CHECK(split_bit >= 0, "Could not correctly split a byte into a ghosted and "
                       "match section");
-            bitvec match_bits = it->bit_use - ghosted_bits;
-            ghost_bytes.emplace_back(*it, ghosted_bits);
+            bitvec match_bits = masked_bit_use - ghosted_bits;
+            if (ghosted_bits.popcount())
+                ghost_bytes.emplace_back(it->first, ghosted_bits);
             ghost_bits_allocated += ghosted_bits.popcount();
-            match_bytes.emplace_back(*it, match_bits);
+            match_bytes.emplace_back(it->first, match_bits);
         }
         it = potential_ghost.erase(it);
     }

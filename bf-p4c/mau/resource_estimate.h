@@ -30,6 +30,8 @@ struct StageUseEstimate {
     int ternary_ixbar_groups = 0;
     int meter_alus = 0;
     int stats_alus = 0;
+    // Number of hash bits masked out by the @hash_mask() annotation.
+    int hash_bits_masked = 0;
 
     // This struct is a confusing mix.  The fields above the comment are the real
     // "stage use estimate"; the estimate of resources needed for one or more table in
@@ -58,7 +60,7 @@ struct StageUseEstimate {
         stats_alus += a.stats_alus;
         return *this; }
     StageUseEstimate(const IR::MAU::Table *, int &, attached_entries_t &, LayoutChoices *lc,
-                     bool prev_placed, bool gateway_attached, bool disable_split);
+                     bool prev_placed, bool gateway_attached, bool disable_split, PhvInfo &phv);
 
     StageUseEstimate operator+(const StageUseEstimate &a) const {
         StageUseEstimate rv = *this; rv += a; return rv; }

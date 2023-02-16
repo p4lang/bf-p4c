@@ -1,0 +1,8 @@
+
+add Ingress.table1 hdr.h1.f1:0x240 hdr.h1.f2:0x1 hit5()
+
+packet 0 ffffffffffff 010203040506 cdef 9010 00000000
+expect 2 ffffffffffff 010203040506 cdef 9010 00000000
+
+
+

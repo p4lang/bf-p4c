@@ -18,13 +18,16 @@ struct TableFormat : ::TableFormat {
     bool requires_valid_bit() const override {
         return !layout_option.layout.ternary && !layout_option.layout.hash_action; }
     bool analyze_layout_option() override;
-    void choose_ghost_bits(safe_vector<IXBar::Use::Byte> &potential_ghost) override;
+    void choose_ghost_bits(
+        safe_vector<std::pair<IXBar::Use::Byte, bitvec>> &potential_ghost) override;
+
     void allocate_full_fits(int width_sect, int group) override;
     void fill_out_use(int group, const safe_vector<ByteInfo> &alloced);
  public:
     TableFormat(const LayoutOption &l, const IXBar::Use *mi, const IXBar::Use *phi,
-                const IR::MAU::Table *t, const bitvec im, bool gl, FindPayloadCandidates &fpc)
-        : ::TableFormat(l, mi, phi, t, im, gl, fpc) {}
+                const IR::MAU::Table *t, const bitvec im, bool gl, FindPayloadCandidates &fpc,
+                const PhvInfo &phv)
+        : ::TableFormat(l, mi, phi, t, im, gl, fpc, phv) {}
 };
 
 }  // namespace Flatrock

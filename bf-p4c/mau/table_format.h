@@ -273,6 +273,8 @@ struct TableFormat {
     bool gw_linked;
     FindPayloadCandidates &fpc;
 
+    const PhvInfo &phv;
+
     bool skinny = false;
     void clear_match_state();
     void clear_pre_allocation_state();
@@ -331,7 +333,11 @@ struct TableFormat {
 
  protected:
     virtual bool allocate_overhead(bool alloc_match = false);
-    virtual void choose_ghost_bits(safe_vector<IXBar::Use::Byte> &potential_ghost);
+    virtual void get_potential_ghost_byte(const IXBar::Use::Byte byte,
+        const std::map<cstring, bitvec> &hash_masks,
+        safe_vector<std::pair<IXBar::Use::Byte, bitvec>> &potential_ghost);
+    virtual void choose_ghost_bits(
+        safe_vector<std::pair<IXBar::Use::Byte, bitvec>> &potential_ghost);
     int bits_necessary(type_t type) const;
     bool initialize_byte(int byte_offset, int width_sect, const ByteInfo &info,
         safe_vector<ByteInfo> &alloced, bitvec &byte_attempt, bitvec &bit_attempted);
@@ -341,13 +347,15 @@ struct TableFormat {
 
  public:
     TableFormat(const LayoutOption &l, const IXBar::Use *mi, const IXBar::Use *phi,
-                const IR::MAU::Table *t, const bitvec im, bool gl, FindPayloadCandidates &fpc)
+                const IR::MAU::Table *t, const bitvec im, bool gl, FindPayloadCandidates &fpc,
+                const PhvInfo &phv)
         : layout_option(l), match_ixbar(mi), tbl(t), proxy_hash_ixbar(phi), immediate_mask(im),
-          gw_linked(gl), fpc(fpc) {}
+          gw_linked(gl), fpc(fpc), phv(phv) {}
     bool find_format(Use *u);
     void verify();
     static TableFormat* create(const LayoutOption &l, const IXBar::Use *mi, const IXBar::Use *phi,
-                const IR::MAU::Table *t, const bitvec im, bool gl, FindPayloadCandidates &fpc);
+                const IR::MAU::Table *t, const bitvec im, bool gl, FindPayloadCandidates &fpc,
+                const PhvInfo &phv);
 };
 
 std::ostream& operator<<(std::ostream &out, const TableFormat::Use::match_group_use &m);

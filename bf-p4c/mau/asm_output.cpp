@@ -1790,15 +1790,13 @@ void TableMatch::init_proxy_hash() {
     }
 }
 
-void TableMatch::populate_ghost_bits() {
-    // Determine which bytes are part of the ghosting bits.  Again like the match info,
-    // whichever bits are ghosted must be handled in a particular way if the byte is partially
-    // matched and partially ghosted
-    for (auto ghost_info : table->resources->table_format.ghost_bits) {
-        const IXBar::Use::Byte &byte = ghost_info.first;
-        const bitvec &byte_layout = ghost_info.second;
+void TableMatch::populate_slices(safe_vector<Slice> &slices,
+                                 const std::map<IXBar::Use::Byte, bitvec> &byte_infos) {
+    for (auto &[byte, byte_layout] : byte_infos) {
+        LOG6("For byte info : " << byte << ": " << byte_layout);
 
         for (auto &fi : byte.field_bytes) {
+            LOG7("\tFor field byte : " << fi);
             bitvec cont_loc = fi.cont_loc();
             bitvec layout_shifted
                 = byte_layout.getslice(byte_layout.min().index() / 8 * 8, 8);
@@ -1812,21 +1810,54 @@ void TableMatch::populate_ghost_bits() {
             PHV::FieldUse use(PHV::FieldUse::READ);
             field->foreach_alloc(field_bits, table, &use, [&](const PHV::AllocSlice &sl) {
                 int lo = sl.field_slice().lo;
-                int hi = sl.field_slice().hi;
                 bitvec cont_loc = total_cont_loc & bitvec(bits_seen + first_cont_bit, sl.width());
-                bitvec ghosted_bits = layout_shifted & cont_loc;
+                bitvec set_bits = layout_shifted & cont_loc;
                 bits_seen += sl.width();
-                if (ghosted_bits.empty())
+                LOG8("\t\tField Slice: " << sl << ", total_cont_loc: " << total_cont_loc
+                        << ", bits_seen: " << bits_seen
+                        << ", first_cont_bit: " << first_cont_bit
+                        << ", layout_shifted: " << layout_shifted
+                        << ", cont_loc: " << cont_loc
+                        << ", set_bits: " << set_bits);
+                if (set_bits.empty())
                     return;
-                else if (ghosted_bits != cont_loc)
-                    hi -= (cont_loc.max().index() - ghosted_bits.max().index());
-                Slice asm_sl(phv, fi.get_use_name(), lo, hi);
-                if (asm_sl.bytealign() != (ghosted_bits.min().index() % 8))
-                    BUG("Byte alignment for ghosting does not match up properly");
-                ghost_bits.push_back(asm_sl);
+
+                // The @hash_mask() annotation can create sub-slices within "sl" that need
+                // to be taken into account here.  These sub-slices exist when bits in
+                // set_bits (either ghosted_bits or matched_bits) are not all consecutive
+                // to one another (i.e. bits set to 0 surrounded by bits set to 1).
+                //
+                // For example, when ghosted_bits is set to 0b00110111 there are two
+                // sub-slices: [0..2] and [4..5].
+                auto it = set_bits.min();
+                int hi_index = 0;
+                do {
+                    int lo_index = it.index();
+                    hi_index = lo_index;
+                    ++it;
+                    while ((it.index() == hi_index+1) && (it != set_bits.end())) {
+                        hi_index = it.index();
+                        ++it;
+                    }
+
+                    // Create ghost sub-slice.
+                    int lo_slice = lo + (lo_index - cont_loc.min().index());
+                    int hi_slice = lo + (hi_index - cont_loc.min().index());
+                    Slice asm_sl(phv, fi.get_use_name(), lo_slice, hi_slice);
+                    LOG8("\t\tCreated slice: " << asm_sl);
+                    slices.push_back(asm_sl);
+                } while ((hi_index < set_bits.max().index()) && (it != set_bits.end()));
             });
         }
     }
+}
+
+void TableMatch::populate_ghost_bits() {
+    // Determine which bytes are part of the ghosting bits.  Again like the match info,
+    // whichever bits are ghosted must be handled in a particular way if the byte is partially
+    // matched and partially ghosted
+    populate_slices(ghost_bits, table->resources->table_format.ghost_bits);
+    LOG7("\tGhost bits : " << ghost_bits);
 }
 
 void TableMatch::populate_match_fields() {
@@ -1837,54 +1868,7 @@ void TableMatch::populate_match_fields() {
     auto *ixbar_use = table->resources->match_ixbar.get();
     if (!ixbar_use) return;
 
-    for (auto match_info : table->resources->table_format.match_groups[0].match) {
-        const IXBar::Use::Byte &byte = match_info.first;
-        const bitvec &byte_layout = match_info.second;
-        LOG6("For match info : " << byte << ": " << byte_layout);
-
-        safe_vector<Slice> single_byte_match_fields;
-        for (auto &fi : byte.field_bytes) {
-            LOG7("\tFor field byte : " << fi);
-            bitvec total_cont_loc = fi.cont_loc();
-            int first_cont_bit = total_cont_loc.min().index();
-            bitvec layout_shifted
-                = byte_layout.getslice(byte_layout.min().index() / 8 * 8, 8);
-
-            auto field = phv.field(fi.get_use_name());
-            le_bitrange field_bits = { fi.lo, fi.hi };
-            int bits_seen = 0;
-            PHV::FieldUse use(PHV::FieldUse::READ);
-            // It is not a guarantee, especially in Tofino2 due to live ranges being different
-            // that a FieldInfo is not corresponding to a single alloc_slice object
-            field->foreach_alloc(field_bits, table, &use, [&](const PHV::AllocSlice &sl) {
-                int lo = sl.field_slice().lo;
-                int hi = sl.field_slice().hi;
-                bitvec cont_loc = total_cont_loc & bitvec(bits_seen + first_cont_bit, sl.width());
-                bitvec matched_bits = layout_shifted & cont_loc;
-                bits_seen += sl.width();
-                LOG8("\t\tField Slice: " << sl << ", total_cont_loc: " << total_cont_loc
-                        << ", bits_seen: " << bits_seen
-                        << ", first_cont_bit: " << first_cont_bit
-                        << ", layout_shifted: " << layout_shifted
-                        << ", cont_loc: " << cont_loc
-                        << ", matched_bits: " << matched_bits);
-                // If a byte is partially ghosted, then currently the bits from the lsb are
-                // ghosted so the algorithm always shrinks from the bottom
-                if (matched_bits.empty()) {
-                    return;
-                } else if (matched_bits != cont_loc) {
-                    lo += (matched_bits.min().index() - cont_loc.min().index());
-                }
-                Slice asm_sl(phv, fi.get_use_name(), lo, hi);
-                if (asm_sl.bytealign() != (matched_bits.min().index() % 8))
-                    BUG("Byte alignment for matching does not match up properly");
-                // single_byte_match_fields.push_back(asm_sl);
-                match_fields.push_back(asm_sl);
-                LOG7("\t\tAdding single byte match field: " << asm_sl);
-            });
-        }
-    }
-
+    populate_slices(match_fields, table->resources->table_format.match_groups[0].match);
     LOG7("\tMatch fields : " << match_fields);
 }
 

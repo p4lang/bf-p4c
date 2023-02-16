@@ -1,5 +1,6 @@
 #include "table_format.h"
 #include "gateway.h"
+#include "hash_mask_annotations.h"
 #include "lib/dyn_vector.h"
 #include "memories.h"
 #include "tofino/input_xbar.h"
@@ -1382,7 +1383,42 @@ bool TableFormat::allocate_version(int width_sect, const safe_vector<ByteInfo> &
     return false;
 }
 
+/// Adds the specified byte along with its mask to vector potential_ghost.
+///
+/// The mask originates from the @hash_mask() annotation specified with the
+/// match key in the P4 code.  Bits that are masked off by @hash_mask() are
+/// excluded from the list of ghost bits candidates.
+///
+/// When @hash_mask() is not specified, the mask is set to byte.bit_use,
+/// allowing all bits to be candidates for ghost bits selection.
+///
+void TableFormat::get_potential_ghost_byte(const IXBar::Use::Byte byte,
+                            const std::map<cstring, bitvec> &hash_masks,
+                            safe_vector<std::pair<IXBar::Use::Byte, bitvec>> &potential_ghost) {
+    bitvec hash_mask = byte.bit_use;
+    if (!hash_masks.empty()) {
+        for (auto &field_byte : byte.field_bytes) {
+            if (hash_masks.count(field_byte.field)) {
+                // Get the section of annotation that's in this slice.
+                bitvec annot_slice = hash_masks.at(field_byte.field).getslice(
+                                                                field_byte.lo,
+                                                                field_byte.hi-field_byte.lo+1);
+
+                // Shift annotation slice to align with container position.
+                annot_slice <<= field_byte.cont_lo;
+
+                // Update associated hash mask slice
+                hash_mask.clrrange(field_byte.cont_lo, field_byte.hi-field_byte.lo+1);
+                hash_mask |= annot_slice;
+            }
+        }
+    }
+    potential_ghost.push_back({byte, hash_mask});
+}
+
 void TableFormat::classify_match_bits() {
+    HashMaskAnnotations hash_mask_annotations(tbl, phv);
+
     if (layout_option.layout.atcam) {
         auto partition = match_ixbar->atcam_partition();
         for (auto byte : partition) {
@@ -1390,10 +1426,20 @@ void TableFormat::classify_match_bits() {
         }
     }
 
-    safe_vector<IXBar::Use::Byte> potential_ghost;
+    // The pair below consists of the IXBar byte and its associated
+    // mask extracted from the @hash_mask() annotation.  When the
+    // annotation is not specified, all bits are considered by
+    // setting the mask to byte.bit_use.
+    safe_vector<std::pair<IXBar::Use::Byte, bitvec>> potential_ghost;
 
-    for (const auto& byte : single_match) {
-        potential_ghost.push_back(byte);
+    for (const auto& byte : single_match)
+        get_potential_ghost_byte(byte, hash_mask_annotations.hash_masks(),
+                                 potential_ghost);
+
+    if (LOGGING(5)) {
+        LOG5("Potential ghost bytes:");
+        for (auto &g : potential_ghost)
+            LOG5("  byte: " << g.first << "  hash mask: " << g.second);
     }
 
     if (ghost_bits_count > 0)
@@ -1401,11 +1447,10 @@ void TableFormat::classify_match_bits() {
 
     std::set<int> search_buses;
 
-    for (const auto& byte : potential_ghost) {
+    for (const auto& [byte, hash_mask] : potential_ghost) {
         search_buses.insert(byte.search_bus);
         match_bytes.emplace_back(byte, byte.bit_use);
     }
-
 
     for (auto sb : search_buses) {
         BUG_CHECK(std::count(search_bus_per_width.begin(), search_bus_per_width.end(), sb) > 0,
@@ -1413,10 +1458,14 @@ void TableFormat::classify_match_bits() {
                   "provided on match", sb);
     }
 
-
     for (const auto& info : ghost_bytes) {
-        LOG6("\t\tGhost " << info.byte);
+        LOG5("\t\tGhost " << info.byte << " bit_use: 0x" << info.bit_use);
         use->ghost_bits[info.byte] = info.bit_use;
+    }
+
+    if (LOGGING(5)) {
+        for (const auto& info : match_bytes)
+            LOG5("\t\tMatch " << info.byte << " bit_use: 0x" << info.bit_use);
     }
 }
 
@@ -1439,21 +1488,35 @@ void TableFormat::classify_match_bits() {
  *
  *  It would be optimal to ghost off the 3 3 bit fields, and the 1 bit fields, as it would remove
  *  4 total PHV bytes to match on.
+ *
+ *  P4C-4958: Ghost bits selection now considers the mask specified with the @hash_mask
+ *            annotation: bits that are masked off through the annotation are not selected
+ *            to be part of ghost bits.
  */
-void TableFormat::choose_ghost_bits(safe_vector<IXBar::Use::Byte> &potential_ghost) {
+void TableFormat::choose_ghost_bits(
+                            safe_vector<std::pair<IXBar::Use::Byte, bitvec>> &potential_ghost) {
     std::sort(potential_ghost.begin(), potential_ghost.end(),
-              [=](const IXBar::Use::Byte &a, const IXBar::Use::Byte &b){
+              [=](const std::pair<IXBar::Use::Byte, bitvec> &a,
+                  const std::pair<IXBar::Use::Byte, bitvec> &b){
         int t = 0;
 
-        auto a_loc = std::find(ghost_bit_buses.begin(), ghost_bit_buses.end(), a.search_bus);
-        auto b_loc = std::find(ghost_bit_buses.begin(), ghost_bit_buses.end(), b.search_bus);
+        IXBar::Use::Byte a_byte = a.first;
+        IXBar::Use::Byte b_byte = b.first;
+
+        auto a_loc = std::find(ghost_bit_buses.begin(), ghost_bit_buses.end(), a_byte.search_bus);
+        auto b_loc = std::find(ghost_bit_buses.begin(), ghost_bit_buses.end(), b_byte.search_bus);
 
         BUG_CHECK(a_loc != ghost_bit_buses.end() && b_loc != ghost_bit_buses.end(),
                   "Search bus must be found within possible ghost bit candidates");
 
         if (a_loc != b_loc)
             return a_loc < b_loc;
-        if ((t = a.bit_use.popcount() - b.bit_use.popcount()) != 0)
+
+        bitvec a_mask = a.second;
+        bitvec b_mask = b.second;
+        bitvec a_masked_bit_use = a_byte.bit_use & a_mask;
+        bitvec b_masked_bit_use = b_byte.bit_use & b_mask;
+        if ((t = a_masked_bit_use.popcount() - b_masked_bit_use.popcount()) != 0)
             return t < 0;
         return a < b;
     });
@@ -1464,29 +1527,35 @@ void TableFormat::choose_ghost_bits(safe_vector<IXBar::Use::Byte> &potential_gho
         auto it = potential_ghost.begin();
         if (it == potential_ghost.end())
             break;
-        if (diff >= it->bit_use.popcount()) {
-            ghost_bytes.emplace_back(*it, it->bit_use);
-            ghost_bits_allocated += it->bit_use.popcount();
+        bitvec masked_bit_use = it->first.bit_use & it->second;
+        if (diff >= masked_bit_use.popcount()) {
+            if (masked_bit_use.popcount())
+                ghost_bytes.emplace_back(it->first, masked_bit_use);
+            ghost_bits_allocated += masked_bit_use.popcount();
+            bitvec match_bits = it->first.bit_use - masked_bit_use;
+            if (match_bits.popcount())
+                match_bytes.emplace_back(it->first, match_bits);
         } else {
             bitvec ghosted_bits;
-            int start = it->bit_use.ffs();
+            int start = masked_bit_use.ffs();
             int split_bit = -1;
             do {
-                int end = it->bit_use.ffz(start);
+                int end = masked_bit_use.ffz(start);
                 if (end - start + ghosted_bits.popcount() < diff) {
                     ghosted_bits.setrange(start, end - start);
                 } else {
                     split_bit = start + (diff - ghosted_bits.popcount()) - 1;
                     ghosted_bits.setrange(start, split_bit - start + 1);
                 }
-                start = it->bit_use.ffs(end);
+                start = masked_bit_use.ffs(end);
             } while (start >= 0);
             BUG_CHECK(split_bit >= 0, "Could not correctly split a byte into a ghosted and "
                       "match section");
-            bitvec match_bits = it->bit_use - ghosted_bits;
-            ghost_bytes.emplace_back(*it, ghosted_bits);
+            bitvec match_bits = masked_bit_use - ghosted_bits;
+            if (ghosted_bits.popcount())
+                ghost_bytes.emplace_back(it->first, ghosted_bits);
             ghost_bits_allocated += ghosted_bits.popcount();
-            match_bytes.emplace_back(*it, match_bits);
+            match_bytes.emplace_back(it->first, match_bits);
         }
         it = potential_ghost.erase(it);
     }
@@ -2864,13 +2933,14 @@ void TableFormat::verify() {
 }
 
 TableFormat* TableFormat::create(const LayoutOption &l, const IXBar::Use *mi, const IXBar::Use *phi,
-        const IR::MAU::Table *t, const bitvec im, bool gl, FindPayloadCandidates &fpc) {
+        const IR::MAU::Table *t, const bitvec im, bool gl, FindPayloadCandidates &fpc,
+        const PhvInfo &phv) {
 #ifdef HAVE_FLATROCK
     if (Device::currentDevice() == Device::FLATROCK) {
-        return new Flatrock::TableFormat(l, mi, phi, t, im, gl, fpc);
+        return new Flatrock::TableFormat(l, mi, phi, t, im, gl, fpc, phv);
     }
 #endif
-    return new TableFormat(l, mi, phi, t, im, gl, fpc);
+    return new TableFormat(l, mi, phi, t, im, gl, fpc, phv);
 }
 
 std::ostream& operator<<(std::ostream &out, const TableFormat::Use::match_group_use &m) {

@@ -1656,7 +1656,8 @@ bool TablePlacement::pick_layout_option(Placed *next, std::vector<Placed *> allo
     if (!next->use.format_type.valid()) {
         bool disable_split = disable_split_layout(next->table);
         next->use = StageUseEstimate(next->table, next->entries, next->attached_entries, &lc,
-                                     next->stage_split > 0, next->gw != nullptr, disable_split);
+                                     next->stage_split > 0, next->gw != nullptr, disable_split,
+                                     phv);
         if (next->stage_flags) filter_layout_options(next); }
 
     LOG5("Layout options: " << next->use.layout_options);
@@ -2069,7 +2070,7 @@ bool TablePlacement::try_alloc_format(Placed *next, bool gw_linked) {
 
     auto* current_format = TableFormat::create(*next->use.preferred(),
             next->resources.match_ixbar.get(), next->resources.proxy_hash_ixbar.get(),
-            tbl, immediate_mask, gw_linked, lc.fpc);
+            tbl, immediate_mask, gw_linked, lc.fpc, phv);
 
     if (!current_format->find_format(&next->resources.table_format)) {
         next->resources.table_format.clear();
