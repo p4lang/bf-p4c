@@ -167,7 +167,7 @@ const AllocError* ParserPackingValidator::will_buf_extract_clobber_the_other(
         }
     }
     return (AllocError*)nullptr;
-};
+}
 
 const AllocError* ParserPackingValidator::will_a_extracts_clobber_b(
     const FieldSliceStart& a, const FieldSliceStart& b, const boost::optional<Container>& c) const {

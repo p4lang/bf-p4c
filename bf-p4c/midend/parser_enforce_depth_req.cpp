@@ -1240,4 +1240,4 @@ ParserEnforceDepthReq::ParserEnforceDepthReq(P4::ReferenceMap *rm, BFN::Evaluato
     });
 }
 
-};  // namespace BFN
+}  // namespace BFN

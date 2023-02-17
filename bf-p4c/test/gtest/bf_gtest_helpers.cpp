@@ -104,7 +104,7 @@ Result match(const CheckList& exprs,
     if (n_pos > strLen)
         n_pos = strLen;
     if (pos > strLen || pos > n_pos)
-        return Result{.success = false, .pos = failed, .count = 0};  // Handle bad 'pos'.
+        return Result(/* success */ false, /* pos */ failed, /* count */0);  // Handle bad 'pos'.
 
     auto from = str.cbegin() + pos;
     auto to = str.cbegin() + n_pos;
@@ -125,11 +125,11 @@ Result match(const CheckList& exprs,
     }
     if (std::regex_search(from, to, sm, std::regex(regex))
         && !sm.prefix().length())
-        return Result{
-            .success = true, .pos = pos + sm[0].length(), .count = exprs.size(), .match = sm};
+        return Result(/* success */ true, /* pos */ pos + sm[0].length(),
+                      /* count */ exprs.size(), /* match */ sm);
 
     // Re-run to find out where we failed. Linear search is good enough.
-    Result res = {.success = false, .pos = pos, .count = 0};
+    Result res(/* success */ false, pos, /* count */ 0);
     regex = "";
     for (const auto& r_e : regex_exprs) {
         regex += r_e;  // Reuse the saved 'convet_to_regex()' value.

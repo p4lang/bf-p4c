@@ -56,4 +56,4 @@ bool FinalizeMauPredDepsPower::requires_stage_asm(gress_t g, int stage) const {
 }
 
 
-};  // end namespace MauPower
+}  // end namespace MauPower

@@ -47,6 +47,6 @@ class BuildPowerGraph : public MauInspector, BFN::ControlFlowVisitor {
     ordered_set<UniqueId> next_for(const IR::MAU::Table *tbl, cstring what) const;
 };
 
-};  // end namespace MauPower
+}  // end namespace MauPower
 
 #endif /* BF_P4C_MAU_BUILD_POWER_GRAPH_H_ */

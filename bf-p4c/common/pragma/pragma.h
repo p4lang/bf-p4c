@@ -95,6 +95,6 @@ class Pragma {
     static std::set<const Pragma *, PragmaCmp> _internal_pragmas;
 };
 
-};  // end namespace BFN
+}  // end namespace BFN
 
 #endif  // EXTENSIONS_BF_P4C_COMMON_PRAGMA_PRAGMA_H_

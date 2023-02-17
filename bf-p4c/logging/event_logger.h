@@ -15,7 +15,7 @@ class Node;  // Forward declare IR::Node for debug hook
 
 namespace Util {
 class SourceInfo;  // Forward declare Util::SourceInfo for errors/warnings
-};
+}
 
 // Copy typedef of DebugHook so we don't have to depend on ir/ir.h
 typedef std::function<void(const char*, unsigned, const char*, const IR::Node*)> DebugHook;

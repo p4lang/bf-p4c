@@ -376,7 +376,7 @@ const AllocError* AllocatorBase::is_container_type_ok(const AllocSlice& sl,
         return err;
     }
     return nullptr;
-};
+}
 
 const AllocError* AllocatorBase::is_container_gress_ok(const Allocation& alloc,
                                                        const AllocSlice& sl,

@@ -11,7 +11,7 @@
      static const char *name;           \
      static const char *description;    \
      static const char *help;           \
-  };
+  }
 
 DEFINE_PRAGMA_CLASS(PragmaAdjustByteCount);
 DEFINE_PRAGMA_CLASS(PragmaAlpm);

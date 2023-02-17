@@ -769,8 +769,8 @@ class ReplaceFlatrockParserIR : public ParserTransform {
             unsigned int state_path_len = graph.longest_path_states_to(state).size();
             cstring state_name = sanitizeName(state->name);
             // 0 -> 0x**************00, 1 -> 0x**************01, etc.
-            const match_t state_match = {.word0 = ~0ULL & ~(state_id & 0xffULL),
-                                         .word1 = ~0xffULL | state_id};
+            const match_t state_match{~0ULL & ~(state_id & 0xffULL),
+                                      ~0xffULL | state_id};
             // Store mapping into the parser state map
             lowered_parser->states[state_name] = state_match;
             if (initial_state_name.isNullOrEmpty()) initial_state_name = state_name;

@@ -479,4 +479,4 @@ void DeterminePowerUsage::update_stage_dependencies_for_min_latency() {
     LOG4("  ghost: " << mau_features_->compute_pipe_latency(GHOST));
 }
 
-};  // end namespace MauPower
+}  // end namespace MauPower

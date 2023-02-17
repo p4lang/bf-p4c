@@ -66,6 +66,6 @@ class ParserEnforceDepthReq : public PassManager {
     explicit ParserEnforceDepthReq(P4::ReferenceMap *rm, BFN::EvaluatorPass *ev);
 };
 
-};  // namespace BFN
+}  // namespace BFN
 
 #endif /* BF_P4C_MIDEND_PARSER_ENFORCE_DEPTH_REQ_H_ */

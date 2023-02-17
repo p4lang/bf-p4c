@@ -130,4 +130,4 @@ ordered_set<UniqueId> BuildPowerGraph::next_for(const IR::MAU::Table *tbl, cstri
     return next_table_properties_->next_for(tbl, what);
 }
 
-};  // end namespace MauPower
+}  // end namespace MauPower

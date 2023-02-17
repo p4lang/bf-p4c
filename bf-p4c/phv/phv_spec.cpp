@@ -355,12 +355,13 @@ unsigned PhvSpec::physicalAddress(const PHV::Container &c, ArchBlockType_t inter
 }
 
 PhvSpec::AddressSpec TofinoPhvSpec::_physicalAddresses = {
-    { PHV::Type::W,   { .start = 0,   .blocks = 1, .blockSize = 64 , .incr = 0 } },
-    { PHV::Type::B,   { .start = 64,  .blocks = 1, .blockSize = 64,  .incr = 0 } },
-    { PHV::Type::H,   { .start = 128, .blocks = 1, .blockSize = 128, .incr = 0 } },
-    { PHV::Type::TW,  { .start = 256, .blocks = 1, .blockSize = 32,  .incr = 0 } },
-    { PHV::Type::TB,  { .start = 288, .blocks = 1, .blockSize = 32,  .incr = 0 } },
-    { PHV::Type::TH,  { .start = 320, .blocks = 1, .blockSize = 48,  .incr = 0 } }
+    /*                  start, blocks, blockSize, incr */
+    { PHV::Type::W,   {     0,      1,        64,    0 } },
+    { PHV::Type::B,   {    64,      1,        64,    0 } },
+    { PHV::Type::H,   {   128,      1,       128,    0 } },
+    { PHV::Type::TW,  {   256,      1,        32,    0 } },
+    { PHV::Type::TB,  {   288,      1,        32,    0 } },
+    { PHV::Type::TH,  {   320,      1,        48,    0 } }
 };
 
 TofinoPhvSpec::TofinoPhvSpec() {
@@ -522,23 +523,25 @@ unsigned TofinoPhvSpec::physicalAddress(unsigned id, ArchBlockType_t /* interfac
 
 // Static data member intializers for phv grouping on JBay
 PhvSpec::AddressSpec JBayPhvSpec::_physicalMauAddresses = {
-    {PHV::Type::W,  { .start = 0,   .blocks = 4, .blockSize = 12, .incr = 20 }},
-    {PHV::Type::MW, { .start = 12,  .blocks = 4, .blockSize = 4,  .incr = 20 }},
-    {PHV::Type::DW, { .start = 16,  .blocks = 4, .blockSize = 4,  .incr = 20 }},
-    {PHV::Type::B,  { .start = 80,  .blocks = 4, .blockSize = 12, .incr = 20 }},
-    {PHV::Type::MB, { .start = 92,  .blocks = 4, .blockSize = 4,  .incr = 20 }},
-    {PHV::Type::DB, { .start = 96,  .blocks = 4, .blockSize = 4,  .incr = 20 }},
-    {PHV::Type::H,  { .start = 160, .blocks = 6, .blockSize = 12, .incr = 20 }},
-    {PHV::Type::MH, { .start = 172, .blocks = 6, .blockSize = 4,  .incr = 20 }},
-    {PHV::Type::DH, { .start = 176, .blocks = 6, .blockSize = 4,  .incr = 20 }}
+    /*                  start, blocks, blockSize, incr */
+    {PHV::Type::W,  {       0,      4,        12,   20 }},
+    {PHV::Type::MW, {      12,      4,         4,   20 }},
+    {PHV::Type::DW, {      16,      4,         4,   20 }},
+    {PHV::Type::B,  {      80,      4,        12,   20 }},
+    {PHV::Type::MB, {      92,      4,         4,   20 }},
+    {PHV::Type::DB, {      96,      4,         4,   20 }},
+    {PHV::Type::H,  {     160,      6,        12,   20 }},
+    {PHV::Type::MH, {     172,      6,         4,   20 }},
+    {PHV::Type::DH, {     176,      6,         4,   20 }}
 };
 PhvSpec::AddressSpec JBayPhvSpec::_physicalParserAddresses = {
-    {PHV::Type::W,  { .start = 0,   .blocks = 4, .blockSize = 12, .incr = 16 }},
-    {PHV::Type::MW, { .start = 12,  .blocks = 4, .blockSize = 4,  .incr = 16 }},
-    {PHV::Type::B,  { .start = 64,  .blocks = 4, .blockSize = 12, .incr = 16 }},
-    {PHV::Type::MB, { .start = 76,  .blocks = 4, .blockSize = 4,  .incr = 16 }},
-    {PHV::Type::H,  { .start = 128, .blocks = 6, .blockSize = 12, .incr = 16 }},
-    {PHV::Type::MH, { .start = 140, .blocks = 6, .blockSize = 4,  .incr = 16 }},
+    /*                  start, blocks, blockSize, incr */
+    {PHV::Type::W,  {       0,      4,        12,   20 }},
+    {PHV::Type::MW, {      12,      4,         4,   16 }},
+    {PHV::Type::B,  {      64,      4,        12,   16 }},
+    {PHV::Type::MB, {      76,      4,         4,   16 }},
+    {PHV::Type::H,  {     128,      6,        12,   16 }},
+    {PHV::Type::MH, {     140,      6,         4,   16 }},
 };
 
 JBayPhvSpec::JBayPhvSpec() {
@@ -744,9 +747,10 @@ unsigned JBayPhvSpec::physicalAddress(unsigned id, ArchBlockType_t interface) co
 #if HAVE_FLATROCK
 // Static data member intializers for phv grouping on Flatrock
 PhvSpec::AddressSpec FlatrockPhvSpec::_physicalAddresses = {
-    {PHV::Type::B,  { .start = 0,   .blocks = 1, .blockSize = 128, .incr = 0 }},
-    {PHV::Type::H,  { .start = 128, .blocks = 1, .blockSize = 32,  .incr = 0 }},
-    {PHV::Type::W,  { .start = 160, .blocks = 1, .blockSize = 16,  .incr = 0 }},
+    /*                  start, blocks, blockSize, incr */
+    {PHV::Type::B,  {       0,      1,       128,    0 }},
+    {PHV::Type::H,  {     128,      1,        32,    0 }},
+    {PHV::Type::W,  {     160,      1,        16,    0 }},
 };
 
 FlatrockPhvSpec::FlatrockPhvSpec() {

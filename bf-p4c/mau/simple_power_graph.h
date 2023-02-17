@@ -211,6 +211,6 @@ class SimplePowerGraph {
                             std::set<UniqueId> &worst_path);
 };
 
-};  // end namespace MauPower
+}  // end namespace MauPower
 
 #endif /* BF_P4C_MAU_SIMPLE_POWER_GRAPH_H_ */

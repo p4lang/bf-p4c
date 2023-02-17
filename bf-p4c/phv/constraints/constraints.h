@@ -13,7 +13,7 @@ namespace PHV {
 
 class Field;
 
-};
+}
 
 namespace Constraints {
 

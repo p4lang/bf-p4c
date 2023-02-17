@@ -66,7 +66,7 @@ class PingPongGeneration : public PassManager {
     using TnaControlMap = std::map<const IR::BFN::TnaControl *, Value, TnaControlLess>;
 
     using RegisterToRegisterActionMap = TnaControlPairMap<const IR::Declaration_Instance *,
-                                                          RegisterSet>;;
+                                                          RegisterSet>;
     using RegisterToP4ActionMap = TnaControlPairMap<const IR::Declaration_Instance *,
                                                     std::set<const IR::P4Action *>>;
     using P4ActionToRegisterMap = TnaControlPairMap<const IR::P4Action *,

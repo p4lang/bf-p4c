@@ -265,6 +265,6 @@ int get_score(const StateExtractUsage& use) {
     return -dis;
 }
 
-};  // namespace ParserExtractScore
+}  // namespace ParserExtractScore
 
 #endif /* BF_P4C_PHV_PARSER_EXTRACT_BALANCE_SCORE_H_ */

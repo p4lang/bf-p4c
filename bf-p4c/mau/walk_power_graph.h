@@ -159,6 +159,6 @@ class WalkPowerGraph : public MauInspector {
     void print_worst_power(std::ofstream &out) const;
 };
 
-};  // end namespace MauPower
+}  // end namespace MauPower
 
 #endif /* BF_P4C_MAU_WALK_POWER_GRAPH_H_ */

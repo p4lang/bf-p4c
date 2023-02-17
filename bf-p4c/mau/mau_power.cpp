@@ -749,4 +749,4 @@ void PowerMemoryAccess::log_json_memories(PowerLogging::StageDetails* sd) const 
     sd->append(new Memories("write", "deferred_ram", deferred_ram_write));
 }
 
-};  // end namespace MauPower
+}  // end namespace MauPower

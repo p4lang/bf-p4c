@@ -162,7 +162,7 @@ hash_seed_t FoldConstantHashes::DoFoldConstantHashes::computeHash(
         hash_inputs.push_back(hash_input);
     }
 
-    hash_seed_t hash_seed = { .hash_seed_value = 0ULL, .hash_seed_used = 0ULL };
+    hash_seed_t hash_seed{/* hash_seed_value */ 0ULL, /* hash_seed_used */ 0ULL};
 
     determine_seed(hash_outputs.data(), hash_outputs.size(),
         hash_inputs.data(), hash_inputs.size(), total_input_bits,
@@ -210,7 +210,7 @@ hash_seed_t FoldConstantHashes::DoFoldConstantHashes::computeHash(
         hash_inputs.push_back(hash_input);
     }
 
-    hash_seed_t hash_seed = { .hash_seed_value = 0ULL, .hash_seed_used = 0ULL };
+    hash_seed_t hash_seed{/* hash_seed_value */ 0ULL, /* hash_seed_used */ 0ULL};
 
     determine_seed(hash_outputs.data(), hash_outputs.size(),
         hash_inputs.data(), hash_inputs.size(), total_input_bits,

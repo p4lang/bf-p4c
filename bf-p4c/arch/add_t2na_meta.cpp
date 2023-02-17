@@ -58,6 +58,6 @@ void AddT2naMeta::postorder(IR::Type_StructLike* typeStructLike) {
                                 new IR::Annotations({ new IR::Annotation("padding", { }) }),
                                 IR::Type::Bits::get(8)));
     }
-};
+}
 
 }  // namespace BFN

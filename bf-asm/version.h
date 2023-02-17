@@ -1,6 +1,4 @@
-#ifndef _BFASM_VERSION_H_
-#define _BFASM_VERSION_H_
-
+#pragma once
 #include <string>
 
 namespace BFASM {
@@ -25,5 +23,4 @@ class Version {
     void operator=(Version const&)  = delete;
 };
 
-};  // end namespace BFAS
-#endif  /* _BFASM_VERSION_H_ */
+}  // end namespace BFAS

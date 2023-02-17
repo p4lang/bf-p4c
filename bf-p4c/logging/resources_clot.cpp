@@ -1,4 +1,5 @@
 #include <numeric>
+#include <initializer_list>
 #include "bf-p4c/common/asm_output.h"  // canon_name
 #include "bf-p4c/parde/clot/clot_info.h"  // ClotInfo
 #include "bf-p4c/device.h"
@@ -141,7 +142,7 @@ void ClotResourcesLogging::collectExtractClotInfo(const IR::BFN::LoweredExtractC
 }
 
 void ClotResourcesLogging::logClotUsages() {
-    for (auto gress : (gress_t[2]) {INGRESS, EGRESS}) {
+    for (auto gress : {INGRESS, EGRESS}) {
         for (auto &kv : usageData[gress]) {
             for (auto &usageData : kv.second) {
                 clotUsages[gress]->append_clots(usageData);
@@ -182,7 +183,7 @@ ClotResourcesLogging::ClotResourcesLogging(const ClotInfo& clotInfo) : clotInfo(
     // of clots per parser similar to P4iParser. Currently this assumes a
     // single parser scenario
     // Initialize clot structures for ingress & egress
-    for (auto gress : (gress_t[2]) {INGRESS, EGRESS}) {
+    for (auto gress : {INGRESS, EGRESS}) {
         clotUsages[gress] = new ClotResourceUsage(::toString(gress).c_str(),  Device::numClots());
     }
     usageData.resize(2);

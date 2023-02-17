@@ -468,6 +468,6 @@ struct PowerMemoryAccess {
   void log_json_memories(PowerLogging::StageDetails*) const;
 };
 
-};  // end namespace MauPower
+}  // end namespace MauPower
 
 #endif /* BF_P4C_MAU_MAU_POWER_H_ */

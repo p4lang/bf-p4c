@@ -1,4 +1,5 @@
 #include "bf-p4c/phv/check_unallocated.h"
+#include <initializer_list>
 
 CheckForUnallocatedTemps::CheckForUnallocatedTemps(const PhvInfo& phv, PhvUse& uses,
                                                    const ClotInfo& clot,
@@ -46,7 +47,7 @@ void CheckForUnallocatedTemps::collect_unallocated_fields() {
         });
 
         // Account for bits allocated to CLOTs, both for this field and for its alias (if any).
-        for (auto f : (const PHV::Field* [2]){&field, aliasDest}) {
+        for (auto f : {(const PHV::Field*)&field, aliasDest}) {
             if (!f) continue;
             for (auto entry : *clot.slice_clots(f)) {
                 auto slice = entry.first;

@@ -18,8 +18,7 @@ struct ChecksumInfo {
     boost::optional<cstring> residulChecksumName;
 };
 
-namespace BFN {
-namespace V1 {
+namespace BFN::V1 {
 
 class TranslateParserChecksums : public PassManager {
  public:
@@ -750,7 +749,6 @@ class InsertChecksumError : public PassManager {
     const V1::TranslateParserChecksums* translate;
 };
 
-};  // namespace V1
-};  // namespace BFN
+}  // namespace BFN::V1
 
 #endif /* EXTENSIONS_BF_P4C_ARCH_FROMV1_0_CHECKSUM_H_ */

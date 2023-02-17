@@ -2,6 +2,7 @@
 
 #include <array>
 #include <vector>
+#include <initializer_list>
 
 #include <boost/range/adaptor/reversed.hpp>
 
@@ -886,7 +887,7 @@ std::string ClotInfo::print(const PhvInfo* phvInfo) const {
     std::set<int> unaligned_clots;
 
     out << std::endl;
-    for (auto gress : (gress_t[2]) {INGRESS, EGRESS}) {
+    for (auto gress : {INGRESS, EGRESS}) {
         unsigned total_bits = 0;
         out << "CLOT Allocation (" << toString(gress) << "):" << std::endl;
         TablePrinter tp(out, {"CLOT", "Fields", "Bits", "Property"},

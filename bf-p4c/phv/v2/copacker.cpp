@@ -22,7 +22,7 @@ boost::optional<AllocSlice> find_allocated(const Allocation& tx, const FieldSlic
         }
     }
     return boost::none;
-};
+}
 
 int n_wrap_around_right_shift_bits(const int from, const int to, const int size) {
     const int offset = from - to;

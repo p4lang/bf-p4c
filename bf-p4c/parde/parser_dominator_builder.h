@@ -86,7 +86,7 @@ class ParserDominatorBuilder : public PardeInspector {
             }
         }
         return idom;
-    };
+    }
 
     /**
      * @brief Using the Boost Graph Library, get a vertex index (int) to vertex index (int)

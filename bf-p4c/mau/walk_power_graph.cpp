@@ -1132,4 +1132,4 @@ void WalkPowerGraph::produce_json_stage_characteristics() {
     }
 }
 
-};  // end namespace MauPower
+}  // end namespace MauPower

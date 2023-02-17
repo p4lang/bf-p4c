@@ -52,6 +52,6 @@ class ControlFlowVisitor : public ::ControlFlowVisitor, virtual public P4::Resol
     friend void dump(const flow_join_points_t *);
 };
 
-};  // end namespace BFN
+}  // end namespace BFN
 
 #endif /* EXTENSIONS_BF_P4C_IR_CONTROL_FLOW_VISITOR_H_ */

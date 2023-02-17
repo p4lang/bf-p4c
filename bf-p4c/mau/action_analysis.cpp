@@ -2857,7 +2857,7 @@ void ActionAnalysis::ContainerAction::set_mismatch(ActionParam::type_t type) {
         error_code |= CONSTANT_MISMATCH;
         LOG4("Error Code Update: CONSTANT_MISMATCH");
     }
-};
+}
 
 std::ostream &operator<<(std::ostream &out, const ActionAnalysis::ContainerAction &ca) {
     Log::TempIndent indent;

@@ -49,6 +49,6 @@ class Logger : public rapidjson::Document {
       return bdate;
     }
 };
-};  // end namespace Logging
+}  // end namespace Logging
 
 #endif  /* _EXTENSIONS_BF_P4C_LOGGING_LOGGING_H_ */

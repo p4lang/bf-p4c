@@ -12,7 +12,7 @@
 
 namespace Logging {
 class FileLog;
-};
+}
 
 struct PHVTrigger {
     struct failure : public Backtrack::trigger {

@@ -267,8 +267,8 @@ SlicePair slice_value(const IR::Expression* value, const IR::Concat* concatOp) {
     // BUG_CHECK(!nested_nonsliceable(value), "value expression not sliceable");
     int lsize = concatOp->left->type->width_bits();
     int rsize = concatOp->right->type->width_bits();
-    return SlicePair{.hi = MakeSlice(value, rsize, rsize + lsize - 1),
-                     .lo = MakeSlice(value, 0, rsize - 1)};
+    return SlicePair{/* hi */ MakeSlice(value, rsize, rsize + lsize - 1),
+                     /* lo */ MakeSlice(value, 0, rsize - 1)};
 }
 
 const IR::Expression* temp_var(const IR::Type* type, Statements& stmts) {

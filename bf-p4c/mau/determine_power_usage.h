@@ -122,6 +122,6 @@ class DeterminePowerUsage: public MauInspector {
   bool force_match_dependency_ = false;
 };
 
-};  // end namespace MauPower
+}  // end namespace MauPower
 
 #endif /* BF_P4C_MAU_DETERMINE_POWER_USAGE_H_ */

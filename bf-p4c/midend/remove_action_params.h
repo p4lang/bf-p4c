@@ -176,6 +176,6 @@ class RemoveActionParameters : public PassManager {
     }
 };
 
-};  // end namespace BFN
+}  // end namespace BFN
 
 #endif  /* BF_P4C_MIDEND_REMOVE_ACTION_PARAMS_H_ */

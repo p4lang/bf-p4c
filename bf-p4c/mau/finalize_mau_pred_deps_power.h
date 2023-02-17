@@ -55,6 +55,6 @@ class FinalizeMauPredDepsPower : public PassManager {
   std::map<gress_t, MprSettings*> mpr_settings_ = {};
 };
 
-};  // end namespace MauPower
+}  // end namespace MauPower
 
 #endif /* BF_P4C_MAU_FINALIZE_MAU_PRED_DEPS_POWER_H_ */

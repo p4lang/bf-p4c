@@ -397,4 +397,4 @@ void SimplePowerGraph::dbprint(std::ostream &out, NodeAndEdgeSet *seen) const {
     out << Log::unindent;
 }
 
-};  // end namespace MauPower
+}  // end namespace MauPower
