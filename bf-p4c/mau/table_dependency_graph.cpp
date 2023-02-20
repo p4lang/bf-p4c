@@ -2543,18 +2543,14 @@ std::stringstream PrintDependencyGraph::print_graph(const DependencyGraph& dg) {
         ss << std::endl;
     }
 
+    // print dependencies encoded with ASCII chars
+    ss << "#dependencies" << std::endl;
+    for (auto& kv : char_to_bitvec)
+        ss << kv.first << " : " << print_dependencies(kv.second) << std::endl;
+
     return ss;
 }
 
 void PrintDependencyGraph::end_apply(const IR::Node *) {
-    std::stringstream ss;
-    ss = print_graph(dg);
-    LOG_FEATURE("table_dependency_summary", 3, ss);
-
-    // print dependencies encoded with ASCII chars
-    LOG_FEATURE("table_dependency_summary", 3, "#dependencies");
-    for (auto& kv : char_to_bitvec) {
-        LOG_FEATURE("table_dependency_summary", 3, kv.first << " : " <<
-                    print_dependencies(kv.second));
-    }
+    LOG_FEATURE("table_dependency_summary", 3, print_graph(dg));
 }

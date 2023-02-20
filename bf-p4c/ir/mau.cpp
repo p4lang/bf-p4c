@@ -203,6 +203,59 @@ void Table::visit_gateway_inhibited(THIS* self, Visitor& v, payload_info_t &payl
     BUG_CHECK(current == nullptr, "gateway visitor state has not be consumed");
 }
 
+/** Custom SplitFlowVisit subclass to visit the next chains in parallel.
+ * We compute the initial state (after actions) for each next chain and insert
+ * them in the SplitFlowVisitor_base, so it is set up to run each of them as a
+ * "coroutine", so the Visitor infra can visit the later ones if needed to get
+ * all the parents of some subsequent table that is mulitply applied */
+template<class THIS> class SplitFlowVisitTableNext : public SplitFlowVisit_base {
+    THIS *table;
+    Visitor *saved;
+    ordered_map<cstring, int> visitor_for_tag;
+    std::vector<cstring> tag_for_visitor;
+
+    void do_visit() override {
+        if (!finished()) {
+            int idx = visit_next++;
+            auto next_action_key = tag_for_visitor.at(idx);
+            auto &next_visitor = visitors.at(idx);
+
+            if (table->next.count(next_action_key)) {
+                if (!next_visitor) next_visitor = &saved->flow_clone();
+                next_visitor->visit(table->next.at(next_action_key), next_action_key,
+                                    start_index + idx);
+            }
+        }
+    }
+
+ public:
+    // FIXME -- update SplitFlowVisit_base::run_visit to match this, then delete it.
+    void run_visit() override {
+        BUG_CHECK(visit_next == -1, "started SplitFlowVisit more than once");
+        visit_next = 0;
+        auto *ctxt = v.getChildContext();
+        start_index = ctxt ? ctxt->child_index : 0;
+        while (!finished()) do_visit();
+        for (auto *cl : visitors) {
+            if (cl && cl != &v)
+                v.flow_merge(*cl);
+        }
+    }
+
+    SplitFlowVisitTableNext(THIS *t, Visitor &v, Visitor *s)
+        : SplitFlowVisit_base(v), table(t), saved(s) { visit_next = -1; }
+    int count(cstring act) { return visitor_for_tag.count(act); }
+    Visitor *&at(cstring act) { return visitors.at(visitor_for_tag.at(act)); }
+    Visitor *&operator[](cstring act) {
+        if (count(act)) return at(act);
+        visitor_for_tag[act] = visitors.size();
+        visitors.push_back(nullptr);
+        tag_for_visitor.push_back(act);
+        BUG_CHECK(visitors.size() == tag_for_visitor.size(), "size mismatch");
+        return visitors.back(); }
+};
+
+
 template<class THIS>
 void Table::visit_match_table(THIS* self, Visitor& v, payload_info_t &payload_info) {
     // Visit match keys.
@@ -234,8 +287,7 @@ void Table::visit_match_table(THIS* self, Visitor& v, payload_info_t &payload_in
     // Handle non-exiting actions, while being careful to avoid visiting "next" entries multiple
     // times.
 
-    // This map ensures that we visit the "next" entries in a specific order later on.
-    ordered_map<cstring, Visitor*> next_visitors;
+    SplitFlowVisitTableNext<THIS> next_visitors(self, v, saved);
     bool have_hit_miss = self->next.count("$hit") || self->next.count("$miss");
     if (have_hit_miss) {
         next_visitors["$hit"] = nullptr;
@@ -243,9 +295,6 @@ void Table::visit_match_table(THIS* self, Visitor& v, payload_info_t &payload_in
     } else {
         next_visitors["$default"] = nullptr;
     }
-
-    // These visitors that will need to be merged back into v once we're done handling "next".
-    std::vector<Visitor*> unmerged_table_chain_visitors;
 
     // Visit all actions to populate next_visitors with visitors to visit "next".
     for (auto& kv : self->actions) {
@@ -287,20 +336,13 @@ void Table::visit_match_table(THIS* self, Visitor& v, payload_info_t &payload_in
         } else {
             // Table uses action chaining.
             if (self->next.count(action_name)) {
-                // Action has a "next" entry. Handle it here directly; some visitors apparently
-                // expect the chained table sequence to be visited immediately after the action.
-                current->visit(self->next.at(action_name), action_name);
-
-                // At this point, v may have already been used to visit a sibling action and may be
-                // waiting to visit the "$default" entry in "next". So, we defer merging into v
-                // until we are done visiting "next".
-                if (current != &v) unmerged_table_chain_visitors.push_back(current);
-                current = nullptr;
-                continue;
+                keys.push_back(action_name);
+                BUG_CHECK(next_visitors.count(action_name) == 0, "duplicate action name");
+                next_visitors[action_name] = nullptr;
+            } else {
+                // The action has no "next" entry. It chains to the entry for "$default".
+                keys.push_back("$default");
             }
-
-            // The action has no "next" entry. It chains to the entry for "$default".
-            keys.push_back("$default");
         }
 
         // Merge the current visitor into the next_visitors table.
@@ -321,35 +363,19 @@ void Table::visit_match_table(THIS* self, Visitor& v, payload_info_t &payload_in
         current = nullptr;
     }
 
-    // Now visit "next".
-    for (auto kv : next_visitors) {
-        auto next_action_key = kv.first;
-        auto next_visitor = kv.second;
-
-        if (self->next.count(next_action_key)) {
-            if (!next_visitor) next_visitor = &saved->flow_clone();
-            next_visitor->visit(self->next.at(next_action_key), next_action_key);
-        }
-
-        // At this point, v may not have visited its entry in "next" yet. Defer merging into v
-        // until we are done visiting "next".
-        if (next_visitor && next_visitor != &v)
-            unmerged_table_chain_visitors.push_back(next_visitor);
-    }
-
-    // Handle any deferred merges.
-    for (auto to_merge : unmerged_table_chain_visitors)
-        v.flow_merge(*to_merge);
-    if (payload_info.post_payload && payload_info.post_payload != &v)
-        v.flow_merge(*payload_info.post_payload);
-
     // Visit $try_next_stage, if it exists.
     if (self->next.count("$try_next_stage")) {
+        BUG_CHECK(next_visitors.count("$try_next_stage") == 0, "invalid");
         if (!current) current = &saved->flow_clone();
-        current->visit(self->next.at("$try_next_stage"), "$try_next_stage");
-        if (current != &v) v.flow_merge(*current);
+        next_visitors["$try_next_stage"] = current;
         current = nullptr;
     }
+
+    // Now visit "next".
+    next_visitors.run_visit();
+
+    if (payload_info.post_payload && payload_info.post_payload != &v)
+        v.flow_merge(*payload_info.post_payload);
 }
 
 }  // namespace MAU

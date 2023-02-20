@@ -249,10 +249,15 @@ TEST_F(TableDependencyGraphTest, GraphInjectedControl) {
     "#stage 0\n",
     "#stage -1\n",
     " ^---- t1_0(0,11)\n",
-    " A^--A t4_0(0,11)\n",
-    " B-^-- cond-`(\\d+)`(0,11)\n",
-    " --C^- t2_0(0,11)\n",
-    " --CD^ t3_0(0,11)\n",
+    " A^--- cond-`(\\d+)`(0,11)\n",
+    " -B^-- t2_0(0,11)\n",
+    " -BC^- t3_0(0,11)\n",
+    " D--D^ t4_0.0(0,11)\n",
+    "#dependencies\n",
+    "A :  CONTROL_DEFAULT_NEXT_TABLE\n",
+    "B :  CONTROL_COND_TRUE\n",
+    "C :  ANTI_NEXT_TABLE_DATA ANTI_NEXT_TABLE_CONTROL\n",
+    "D :  CONTROL_ACTION\n",
     };
     check_dependency_graph_summary(test, dg, expected);
 }
