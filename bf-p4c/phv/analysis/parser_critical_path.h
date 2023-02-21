@@ -57,12 +57,9 @@ class ParserCriticalPath : public BFN::ControlFlowVisitor,
     ParserCriticalPathResult& final_result;
 
  public:
-    ParserCriticalPath(gress_t gress,
-                       ParserCriticalPathResult& rst)
+    ParserCriticalPath(gress_t gress, ParserCriticalPathResult& rst)
         : gress_(gress), final_result(rst)
-    {   joinFlows = true;
-        visitDagOnce = false;
-        BackwardsCompatibleBroken = true; }
+    { joinFlows = true; visitDagOnce = false; }
 
     ParserCriticalPath *clone() const override { return new ParserCriticalPath(*this); }
 

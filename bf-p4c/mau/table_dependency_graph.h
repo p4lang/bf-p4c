@@ -925,7 +925,6 @@ class FindDataDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
         const TablesMutuallyExclusive &m, const IgnoreTableDeps &ig)
     : phv(phv), dg(out), red_info(ri), mutex(m), ignore(ig) {
         joinFlows = true;
-        BackwardsCompatibleBroken = true;
     }
 };
 

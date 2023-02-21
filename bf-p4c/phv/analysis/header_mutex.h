@@ -368,8 +368,7 @@ class ExcludeMAUNotMutexHeaders : public MauInspector,
           mau_handles_parser_error(mau_handles_parser_error),
           pa_mutex(pa_mutex),
           modified_where(modified_where),
-          field_level_optimisation(field_level_optimisation) {
-              BackwardsCompatibleBroken = true; }
+          field_level_optimisation(field_level_optimisation) {}
 };
 
 /**

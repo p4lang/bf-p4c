@@ -106,7 +106,6 @@ CollectBridgedFields::CollectBridgedFields(P4::ReferenceMap* refMap,
     uid = ++uid_counter;
     joinFlows = true;
     visitDagOnce = false;
-    BackwardsCompatibleBroken = true;
 }
 
 CollectBridgedFields* CollectBridgedFields::clone() const {

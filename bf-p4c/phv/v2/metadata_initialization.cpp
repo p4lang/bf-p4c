@@ -154,6 +154,10 @@ class WriteTableInfo : public BFN::ControlFlowVisitor, public MauInspector, Tofi
         joinFlows = true;
         visitDagOnce = false;
         BackwardsCompatibleBroken = true;
+        // FIXME -- setting this false breaks tofino/switch_dc_basic with --alt-phv-alloc
+        // possible just something due to an empty TableSeq being used in multiple places
+        // (which could be fixed by filtering it out in filter_join_points), possibly
+        // something more serious.
     }
 
     bool is_after_write(const PHV::Field* f, const IR::MAU::Table* table) const {
