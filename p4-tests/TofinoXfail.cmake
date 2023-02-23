@@ -2140,12 +2140,6 @@ p4c_add_xfail_reason("tofino"
 # If you make an ALT-PHV test pass (or get close to it but if fails on later
 # error), please update the xfails accordingly.
 if (TEST_ALT_PHV_ALLOC)
-    # BUGs
-    p4c_add_xfail_reason("tofino"
-      "Compiler Bug: Byte rotate merge implicit bits incorrectly done"
-      extensions/p4_tests/p4_16/customer/arista/obfuscated-nat.p4
-    )
-
     # PHV fitting
     p4c_add_xfail_reason("tofino"
       "error: PHV fitting failed, [0-9]* clusters cannot be allocated."

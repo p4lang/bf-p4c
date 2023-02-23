@@ -586,6 +586,14 @@ bitvec PhvInfo::bits_allocated(
     // Gather all the slices of written fields allocated to container c
     std::vector<PHV::AllocSlice> write_slices_in_container;
     for (auto* field : writes) {
+        // use canonical alias set representant, the other once can have wrong
+        // defuse/mutex/meta-mutex
+        // FIXME: this should be fixed by calcualting information for all aliases correctly
+        auto aliasDest = getAliasDestination(field);
+        if (aliasDest) {
+            LOG6("  using alias dest " << aliasDest << " instead of " << field);
+            field = aliasDest;
+        }
         field->foreach_alloc(ctxt, use, [&](const PHV::AllocSlice &alloc) {
             if (alloc.container() != c) return;
             write_slices_in_container.push_back(alloc);
@@ -614,13 +622,6 @@ bitvec PhvInfo::bits_allocated(
                 [&](const PHV::AllocSlice& slice) {
                     return field_mutex_i(slice.field()->id, alloc.field()->id);
             });
-            bool is_alias = std::any_of(
-                write_slices_in_container.begin(), write_slices_in_container.end(),
-                [&](const PHV::AllocSlice& slice) {
-                    auto* f1 = slice.field();
-                    auto* f2 = alloc.field();
-                    return getAliasDestination(f1) == f2 || getAliasDestination(f2) == f1;
-            });
             bool meta_overlay = std::any_of(
                 write_slices_in_container.begin(), write_slices_in_container.end(),
                 [&](const PHV::AllocSlice& slice) {
@@ -636,14 +637,14 @@ bitvec PhvInfo::bits_allocated(
                     return bits.overlaps(slice.container_slice()) &&
                         dark_mutex_i(slice.field()->id, alloc.field()->id);
             });
-            bool noMutex = !is_alias && !mutually_exclusive && !meta_overlay;
+            bool noMutex = !mutually_exclusive && !meta_overlay;
 
             // In case of a dark container do not consider dark overlay feasibility
             if (Device::phvSpec().hasContainerKind(PHV::Kind::dark) && !c.is(PHV::Kind::dark))
                 noMutex = noMutex && !dark_overlay;
 
             LOG3("For field " << field->name << "  mutex control:" << mutually_exclusive <<
-                 " meta:" << meta_overlay << " dark:" << dark_overlay << " is_alias:" << is_alias
+                 " meta:" << meta_overlay << " dark:" << dark_overlay
                  << " noMutex: " << noMutex << " bits: " << bits);
 
             if (noMutex) {
