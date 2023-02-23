@@ -104,7 +104,10 @@ def gen_bfrt_conf(args):
     base_conf = json.loads(bfrt_template)
     # assume one chip
     chip = base_conf["chip_list"][0]
-    chip["chip_family"] = args.device
+    if args.device == 'tofino2m' or args.device == 'tofino2u':
+        chip["chip_family"] = 'tofino2'
+    else:
+        chip["chip_family"] = args.device
     if 'tofino3' == args.device:
         chip["subdev_list"] = get_tofino3_subdev_list()
     # only support one device
