@@ -13,7 +13,7 @@ const char* PragmaBytePack::name = "pa_byte_pack";
 const char* PragmaBytePack::description =
     "Force PHV allocation to allocate metadata fields in the specified layout.";
 const char* PragmaBytePack::help = R"(@pragma pa_byte_pack [pipe] gress ["field_name"|integer]+,
-where field names refer to metadata fields, and integers represent the number of bits as padding.
+where field names refer to metadata or pov fields, and integers represent the number of bits as padding.
 + attached to P4 header instances.
 
 For example, assume that f1 is 4-bit, f2 is 6-bit and f3 is 3-bit, and we have
@@ -33,7 +33,7 @@ optimal packing layouts of metadata fields which are used as match keys.
 1. The total number of bits in all fields and padding must be divisible by 8.
 2. Each padding element must be greater than 0 and less than 8 bits.
 3. Fields used in this pragma must be metadata fields.
-4. If a metadata field is written in the parser, then the parser will also write to other
+4. If a metadata or pov field is written in the parser, then the parser will also write to other
    fields packed in the same byte as the target field. Users of this pragma must either:
      <1> Never pack two parsed fields in the same byte.
      <2> Explicitly initialize non-parsed fields after the parser,
@@ -85,9 +85,9 @@ bool PragmaBytePack::preorder(const IR::BFN::Pipe* pipe) {
                     ignore = true;
                     break;
                 }
-                if (!field->metadata) {
+                if (!field->metadata && !field->pov) {
                     ::error(
-                        "@pa_byte_pack pragma can only be applied on metadata fields, "
+                        "@pa_byte_pack pragma can only be applied on metadata or pov fields, "
                         "but %1% is not.",
                         field->name);
                     ignore = true;

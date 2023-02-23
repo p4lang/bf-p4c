@@ -206,8 +206,8 @@ TEST_F(PaBytePackPragmaTest, ErrorHeaderField) {
     ASSERT_TRUE(packings.empty());
     // check error
     EXPECT_THAT(err_stream.str(),
-                testing::HasSubstr("@pa_byte_pack pragma can only be applied on metadata fields, "
-                                   "but ingress::headers.h1.op is not"));
+                testing::HasSubstr("@pa_byte_pack pragma can only be applied on metadata or pov"
+                                   " fields, but ingress::headers.h1.op is not"));
 }
 
 TEST_F(PaBytePackPragmaTest, ErrorInvalidTotalSize) {
