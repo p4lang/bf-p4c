@@ -507,6 +507,7 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/parser_dominator_builder.cpp
   parde/parser_header_sequences.cpp
   parde/parser_output.cpp
+  parde/parser_query.cpp
   parde/phase0.cpp
   parde/rewrite_parser_locals.cpp
   parde/split_parser_state.cpp
@@ -565,10 +566,12 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/phase0.h
   parde/parde_utils.h
   parde/parser_info.h
+  parde/parser_query.h
   parde/reset_invalidated_checksum_headers.h
   parde/resolve_negative_extract.h
   parde/rewrite_parser_locals.h
   parde/split_parser_state.h
+  parde/update_parser_write_mode.h
   parde/clot/allocate_clot.h
   parde/clot/clot_candidate.h
   parde/clot/clot_info.h

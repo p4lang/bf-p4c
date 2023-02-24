@@ -464,12 +464,6 @@ p4c_add_xfail_reason("tofino2"
 if (TEST_ALT_PHV_ALLOC)
     # Bugs
     p4c_add_xfail_reason("tofino2"
-        "Compiler Bug: Inconsistent parser write semantic on"
-        extensions/p4_tests/p4_16/compile_only/p4c-4154.p4
-        switch_16_y7
-    )
-
-    p4c_add_xfail_reason("tofino2"
         "error: No phv record"  # bfas
         extensions/p4_tests/p4_16/stf/MODEL-1095.p4
     )

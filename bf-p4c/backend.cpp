@@ -95,6 +95,7 @@
 #include "bf-p4c/parde/resolve_negative_extract.h"
 #include "bf-p4c/parde/rewrite_parser_locals.h"
 #include "bf-p4c/parde/stack_push_shims.h"
+#include "bf-p4c/parde/update_parser_write_mode.h"
 #include "bf-p4c/phv/analysis/dark.h"
 #include "bf-p4c/phv/pragma/pa_no_overlay.h"
 #include "bf-p4c/phv/add_alias_allocation.h"
@@ -422,6 +423,8 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         new CheckFieldCorruption(defuse, phv, PHV_Analysis->get_pragmas()),
         new AdjustExtract(phv),
         phvLoggingDefUseInfo,
+        // Update parser write modes to reflect SINGLE_WRITE + BITWISE_OR field merges
+        new UpdateParserWriteMode(phv),
         // Rewrite parser and deparser IR to reflect the PHV allocation such that field operations
         // are converted into container operations.
         new LowerParser(phv, clot, defuse, parserHeaderSeqs, phvLoggingDefUseInfo),
