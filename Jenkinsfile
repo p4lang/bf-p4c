@@ -160,7 +160,7 @@ node ('compiler-travis') {
                         echo "Pushing of the built Docker image failed. Notifying the maintainers and continuing."
                         emailext subject: "${env.JOB_NAME} failed to push build Docker image",
                                     body: "Check console output at '${env.RUN_DISPLAY_URL}'",
-                                    to: "vojtech.havel@intel.com,vladimir.still@intel.com,prathima.kotikalapudi@intel.com",
+                                    to: "prathima.kotikalapudi@intel.com",
                                     attachLog: true
                     }
                 }
