@@ -11,10 +11,10 @@
 
 namespace Test {
 
-class InstructionSelection : public TofinoBackendTest {};
+class InstructionSelectionTest : public TofinoBackendTest {};
 
 // This test is to see if ssub operation is properly replaced. See p4c-1819.
-TEST_F(InstructionSelection, TestForSaturatingSubReplacement) {
+TEST_F(InstructionSelectionTest, TestForSaturatingSubReplacement) {
     auto program = R"(
 /* -*- P4_16 -*- */
 

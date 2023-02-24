@@ -4,27 +4,28 @@
 
 namespace Test {
 
-namespace {
+namespace SliceComparisonTest {
 
-auto defs = R"(
+inline auto defs = R"(
     match_kind {exact}
     header H { bit<4> pad1; bit<4> pri1; bit<4> pad2; bit<4> pri2; }
     struct headers_t { H h; }
     struct local_metadata_t {} )";
 
-#define RUN_CHECK(input, expected) do { \
-    auto blk = TestCode(TestCode::Hdr::TofinoMin, TestCode::tofino_shell(), \
-                        {defs, TestCode::empty_state(), input, TestCode::empty_appy()}, \
-                        TestCode::tofino_shell_control_marker(), \
-                        {"--no-dead-code-elimination"}); \
-    EXPECT_TRUE(blk.CreateBackend()); \
-    EXPECT_TRUE(blk.apply_pass(TestCode::Pass::FullBackend)); \
-    auto res = blk.match(TestCode::CodeBlock::MauAsm, expected); \
-    EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count \
-                             << "\n'" << blk.extract_code(TestCode::CodeBlock::MauAsm) << "'\n"; \
-} while (0)
+#define RUN_CHECK(input, expected)                                                               \
+    do {                                                                                         \
+        auto blk = TestCode(                                                                     \
+            TestCode::Hdr::TofinoMin, TestCode::tofino_shell(),                                  \
+            {SliceComparisonTest::defs, TestCode::empty_state(), input, TestCode::empty_appy()}, \
+            TestCode::tofino_shell_control_marker(), {"--no-dead-code-elimination"});            \
+        EXPECT_TRUE(blk.CreateBackend());                                                        \
+        EXPECT_TRUE(blk.apply_pass(TestCode::Pass::FullBackend));                                \
+        auto res = blk.match(TestCode::CodeBlock::MauAsm, expected);                             \
+        EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count << "\n'"        \
+                                 << blk.extract_code(TestCode::CodeBlock::MauAsm) << "'\n";      \
+    } while (0)
 
-}  // namespace
+}  // namespace SliceComparisonTest
 
 TEST(SliceComparison, SliceComparison1) {
     auto input = R"(
@@ -37,7 +38,7 @@ TEST(SliceComparison, SliceComparison1) {
             }
         )";
 
-    Match::CheckList expected {
+    Match::CheckList expected{
         "`.*`",
         "gateway`.*`:",
         "`.*`",
@@ -60,7 +61,7 @@ TEST(SliceComparison, SliceComparison2) {
             }
         )";
 
-    Match::CheckList expected {
+    Match::CheckList expected{
         "`.*`",
         "gateway`.*`:",
         "`.*`",
@@ -71,5 +72,8 @@ TEST(SliceComparison, SliceComparison2) {
     };
     RUN_CHECK(input, expected);
 }
+
+// Keep definition of RUN_CHECK local for unity builds.
+#undef RUN_CHECK
 
 }  // namespace Test

@@ -231,7 +231,7 @@ class AddMetadataFields : public Transform {
     cstring p4c_start = nullptr;
 
  public:
-    AddMetadataFields() { setName("AddIntrinsicMetadata"); }
+    AddMetadataFields() { setName("AddMetadataFields"); }
 
     IR::ParserState* preorder(IR::ParserState* state) override {
         auto anno = state->getAnnotation("packet_entry");
@@ -311,10 +311,11 @@ class AddMetadataFields : public Transform {
 class AddIntrinsicMetadata : public PassManager {
  public:
      AddIntrinsicMetadata(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
+        setName("AddIntrinsicMetadata");
          addPasses({
-             new RenameP4StartState,
-             new AddMetadataFields,
-             new P4::ClonePathExpressions,
+             new RenameP4StartState(),
+             new AddMetadataFields(),
+             new P4::ClonePathExpressions(),
              new P4::ClearTypeMap(typeMap),
              new BFN::TypeChecking(refMap, typeMap, true),
              });

@@ -15,7 +15,7 @@
 
 namespace Test {
 
-namespace {
+namespace ActionSourceTrackerTestNs {
 
 boost::optional<TofinoPipeTestCase>
 createActionTest(const std::string& ingressPipeline,
@@ -86,7 +86,7 @@ const IR::BFN::Pipe *runInitialPassManager(const IR::BFN::Pipe* pipe, PhvInfo *p
 class ActionSourceTrackerTest : public TofinoBackendTest { };
 
 TEST_F(ActionSourceTrackerTest, basic) {
-    auto test = createActionTest(P4_SOURCE(P4Headers::NONE, R"(
+    auto test = ActionSourceTrackerTestNs::createActionTest(P4_SOURCE(P4Headers::NONE, R"(
     action a1(bit<8> f1_src) {
         headers.h1.f1 = f1_src;
         headers.h2.f1 = f1_src;
@@ -145,7 +145,7 @@ ingress::headers.h1.f7 [28:31] { ingress.a7: (move AD_OR_CONST) }
 
     ASSERT_TRUE(test);
     PhvInfo phv;
-    auto *post_pm_pipe = runInitialPassManager(test->pipe, &phv);
+    auto *post_pm_pipe = ActionSourceTrackerTestNs::runInitialPassManager(test->pipe, &phv);
     PHV::ActionSourceTracker tracker(phv);
     post_pm_pipe = post_pm_pipe->apply(tracker);
     std::stringstream ss;

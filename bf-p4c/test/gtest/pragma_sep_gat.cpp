@@ -3,9 +3,9 @@
 
 namespace Test {
 
-namespace {
+namespace PragmaSepGatTest {
 
-auto defs = R"(
+inline auto defs = R"(
     match_kind {exact}
     header H { bit<16> f1; bit<16> f2; bit<16> f3;}
     struct headers_t { H h; }
@@ -13,20 +13,20 @@ auto defs = R"(
 
 // We only need to run TableAllocPass (viz DecidePlacement & TransformTables)
 // But we will run the FullBackend and verify the ASM generated.
-#define RUN_CHECK(input, expected) do { \
-    auto blk = TestCode(TestCode::Hdr::TofinoMin, TestCode::tofino_shell(), \
-                        {defs, TestCode::empty_state(), input, TestCode::empty_appy()}, \
-                        TestCode::tofino_shell_control_marker(), \
-                        {"--no-dead-code-elimination"}); \
-    EXPECT_TRUE(blk.CreateBackend()); \
-    EXPECT_TRUE(blk.apply_pass(TestCode::Pass::FullBackend)); \
-    auto res = blk.match(TestCode::CodeBlock::MauAsm, expected); \
-    EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count \
-                             << "\n'" << blk.extract_code(TestCode::CodeBlock::MauAsm) << "'\n"; \
-} while (0)
+#define RUN_CHECK(input, expected)                                                            \
+    do {                                                                                      \
+        auto blk = TestCode(                                                                  \
+            TestCode::Hdr::TofinoMin, TestCode::tofino_shell(),                               \
+            {PragmaSepGatTest::defs, TestCode::empty_state(), input, TestCode::empty_appy()}, \
+            TestCode::tofino_shell_control_marker(), {"--no-dead-code-elimination"});         \
+        EXPECT_TRUE(blk.CreateBackend());                                                     \
+        EXPECT_TRUE(blk.apply_pass(TestCode::Pass::FullBackend));                             \
+        auto res = blk.match(TestCode::CodeBlock::MauAsm, expected);                          \
+        EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count << "\n'"     \
+                                 << blk.extract_code(TestCode::CodeBlock::MauAsm) << "'\n";   \
+    } while (0)
 
-}  // namespace
-
+}  // namespace PragmaSepGatTest
 
 // N.B. The placement runs faster when there is only one table.
 
@@ -68,22 +68,11 @@ TEST(PragmaSepGat, PragmaSepGat) {
             }
         )";
 
-    Match::CheckList expected {
-        "`.*`",
-        "stage 0 ingress:",
-        "`.*`",
-        "exact_match t2_`\\d+``.*`:",
-        "`.*`",
-        "stage 1 ingress:",
-        "`.*`",
-        "dependency: match",
-        "`.*`",
-        "exact_match t1_`\\d+``.*`:",
-        "`.*`",
-        "stage 2 ingress:",
-        "`.*`",
-        "exact_match t3_`\\d+``.*`:",
-        "`.*`",
+    Match::CheckList expected{
+        "`.*`", "stage 0 ingress:",           "`.*`", "exact_match t2_`\\d+``.*`:",
+        "`.*`", "stage 1 ingress:",           "`.*`", "dependency: match",
+        "`.*`", "exact_match t1_`\\d+``.*`:", "`.*`", "stage 2 ingress:",
+        "`.*`", "exact_match t3_`\\d+``.*`:", "`.*`",
     };
     RUN_CHECK(input, expected);
 }
@@ -128,22 +117,19 @@ TEST(PragmaSepGat, PragmaSepGat2) {
             }
         )";
 
-    Match::CheckList expected {
-        "`.*`",
-        "stage 1 ingress:",
-        "`.*`",
-        "dependency: match",
-        "`.*`",
-        "exact_match t`[1|2]`_`\\d+``.*`:",
-        "`.*`",
-        "exact_match t`[1|2]`_`\\d+``.*`:",
-        "`.*`",
-        "stage 2 ingress:",
-        "`.*`",
-        "exact_match t3_`\\d+``.*`:",
+    Match::CheckList expected{
+        "`.*`", "stage 1 ingress:",
+        "`.*`", "dependency: match",
+        "`.*`", "exact_match t`[1|2]`_`\\d+``.*`:",
+        "`.*`", "exact_match t`[1|2]`_`\\d+``.*`:",
+        "`.*`", "stage 2 ingress:",
+        "`.*`", "exact_match t3_`\\d+``.*`:",
         "`.*`",
     };
     RUN_CHECK(input, expected);
 }
+
+// Keep definition of RUN_CHECK local for unity builds.
+#undef RUN_CHECK
 
 }  // namespace Test

@@ -4,33 +4,35 @@
 
 #include "bf-p4c/midend/fold_constant_hashes.h"
 
-#include "gtest/gtest.h"
 #include "bf_gtest_helpers.h"
+#include "gtest/gtest.h"
 
+#include "bf-p4c/midend/type_checker.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/typeMap.h"
-#include "bf-p4c/midend/type_checker.h"
 
 namespace Test {
 
-namespace {
+namespace FoldConstantHashesTest {
 
-auto defs = R"(
+inline auto defs = R"(
     struct headers_t { }
     struct local_metadata_t { bit<16> hash_16b; bit<32> hash_32b; })";
 
-#define RUN_CHECK(pass, input, expected) do { \
-    auto blk = TestCode(TestCode::Hdr::Tofino1arch, \
-        TestCode::tofino_shell(), \
-        {defs, TestCode::empty_state(), input, TestCode::empty_appy()}, \
-        TestCode::tofino_shell_control_marker()); \
-    blk.flags(Match::TrimWhiteSpace | Match::TrimAnnotations); \
-    EXPECT_TRUE(blk.apply_pass(TestCode::Pass::FullFrontend)); \
-    EXPECT_TRUE(blk.apply_pass(pass)); \
-    auto res = blk.match(expected); \
-    EXPECT_TRUE(res.success) << "    @ expected[" << res.count<< "], char pos=" << res.pos << "\n" \
-                             << "    '" << expected[res.count] << "'\n" \
-                             << "    '" << blk.extract_code(res.pos) << "'\n"; \
+#define RUN_CHECK(pass, input, expected)                                                        \
+    do {                                                                                        \
+        auto blk = TestCode(TestCode::Hdr::Tofino1arch, TestCode::tofino_shell(),               \
+                            {FoldConstantHashesTest::defs, TestCode::empty_state(), input,      \
+                             TestCode::empty_appy()},                                           \
+                            TestCode::tofino_shell_control_marker());                           \
+        blk.flags(Match::TrimWhiteSpace | Match::TrimAnnotations);                              \
+        EXPECT_TRUE(blk.apply_pass(TestCode::Pass::FullFrontend));                              \
+        EXPECT_TRUE(blk.apply_pass(pass));                                                      \
+        auto res = blk.match(expected);                                                         \
+        EXPECT_TRUE(res.success) << "    @ expected[" << res.count << "], char pos=" << res.pos \
+                                 << "\n"                                                        \
+                                 << "    '" << expected[res.count] << "'\n"                     \
+                                 << "    '" << blk.extract_code(res.pos) << "'\n";              \
     } while (0)
 
 Visitor *setup_passes() {
@@ -40,7 +42,7 @@ Visitor *setup_passes() {
     return new BFN::FoldConstantHashes(refMap, typeMap, typeChecking);
 }
 
-}  // namespace
+}  // namespace FoldConstantHashesTest
 
 TEST(FoldConstantHashes, Identity16bConstant) {
     auto input = R"(
@@ -51,15 +53,13 @@ TEST(FoldConstantHashes, Identity16bConstant) {
         apply {
             hash_action();
         })";
-    Match::CheckList expected {
-        "action hash_action() {",
-            "ig_md.hash_16b = 16w43981;",
-        "}",
-        "apply {",
-            "hash_action();",
-        "}"
-    };
-    RUN_CHECK(setup_passes(), input, expected);
+    Match::CheckList expected{"action hash_action() {",
+                              "ig_md.hash_16b = 16w43981;",
+                              "}",
+                              "apply {",
+                              "hash_action();",
+                              "}"};
+    RUN_CHECK(FoldConstantHashesTest::setup_passes(), input, expected);
 }
 
 TEST(FoldConstantHashes, Identity16bTuple) {
@@ -71,15 +71,13 @@ TEST(FoldConstantHashes, Identity16bTuple) {
         apply {
             hash_action();
         })";
-    Match::CheckList expected {
-        "action hash_action() {",
-            "ig_md.hash_16b = 16w772;",
-        "}",
-        "apply {",
-            "hash_action();",
-        "}"
-    };
-    RUN_CHECK(setup_passes(), input, expected);
+    Match::CheckList expected{"action hash_action() {",
+                              "ig_md.hash_16b = 16w772;",
+                              "}",
+                              "apply {",
+                              "hash_action();",
+                              "}"};
+    RUN_CHECK(FoldConstantHashesTest::setup_passes(), input, expected);
 }
 
 TEST(FoldConstantHashes, Identity16bTupleTupleTuple) {
@@ -93,15 +91,13 @@ TEST(FoldConstantHashes, Identity16bTupleTupleTuple) {
         apply {
             hash_action();
         })";
-    Match::CheckList expected {
-        "action hash_action() {",
-            "ig_md.hash_16b = 16w772;",
-        "}",
-        "apply {",
-            "hash_action();",
-        "}"
-    };
-    RUN_CHECK(setup_passes(), input, expected);
+    Match::CheckList expected{"action hash_action() {",
+                              "ig_md.hash_16b = 16w772;",
+                              "}",
+                              "apply {",
+                              "hash_action();",
+                              "}"};
+    RUN_CHECK(FoldConstantHashesTest::setup_passes(), input, expected);
 }
 
 TEST(FoldConstantHashes, CRC32) {
@@ -113,15 +109,13 @@ TEST(FoldConstantHashes, CRC32) {
         apply {
             hash_action();
         })";
-    Match::CheckList expected {
-        "action hash_action() {",
-            "ig_md.hash_32b = 32w2360908734;",
-        "}",
-        "apply {",
-            "hash_action();",
-        "}"
-    };
-    RUN_CHECK(setup_passes(), input, expected);
+    Match::CheckList expected{"action hash_action() {",
+                              "ig_md.hash_32b = 32w2360908734;",
+                              "}",
+                              "apply {",
+                              "hash_action();",
+                              "}"};
+    RUN_CHECK(FoldConstantHashesTest::setup_passes(), input, expected);
 }
 
 TEST(FoldConstantHashes, Custom) {  // Parameters of CRC32
@@ -140,15 +134,13 @@ TEST(FoldConstantHashes, Custom) {  // Parameters of CRC32
         apply {
             hash_action();
         })";
-    Match::CheckList expected {
-        "action hash_action() {",
-            "ig_md.hash_32b = 32w4247457659;",
-        "}",
-        "apply {",
-            "hash_action();",
-        "}"
-    };
-    RUN_CHECK(setup_passes(), input, expected);
+    Match::CheckList expected{"action hash_action() {",
+                              "ig_md.hash_32b = 32w4247457659;",
+                              "}",
+                              "apply {",
+                              "hash_action();",
+                              "}"};
+    RUN_CHECK(FoldConstantHashesTest::setup_passes(), input, expected);
 }
 
 TEST(FoldConstantHashes, UnusedResult) {
@@ -167,14 +159,11 @@ TEST(FoldConstantHashes, UnusedResult) {
         apply {
             hash_action();
         })";
-    Match::CheckList expected {
-        "action hash_action() {",
-        "}",
-        "apply {",
-            "hash_action();",
-        "}"
-    };
-    RUN_CHECK(setup_passes(), input, expected);
+    Match::CheckList expected{"action hash_action() {", "}", "apply {", "hash_action();", "}"};
+    RUN_CHECK(FoldConstantHashesTest::setup_passes(), input, expected);
 }
+
+// Keep definition of RUN_CHECK local for unity builds.
+#undef RUN_CHECK
 
 }  // namespace Test

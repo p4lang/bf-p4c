@@ -11,18 +11,9 @@ project (BFASM)
 
 set (CMAKE_MODULE_PATH ${BFN_P4C_SOURCE_DIR}/p4c/cmake)
 
-include(UnifiedBuild)
-
 MESSAGE("-- Adding bf-asm")
 
 OPTION(ASAN_ENABLED "Enable ASAN checks" OFF)
-
-# An option to configure the chunk size we use for unified builds in bf-asm. By
-# default, this is tuned to use smaller chunks than the p4c repo uses. The goal
-# is to gain most of the benefit of unified builds when many files change, while
-# keeping the impact on recompilation time for individual files to a minimum.
-set(BF_ASM_UNIFIED_SOURCE_CHUNK_SIZE "5" CACHE STRING
-    "Target unified compilation chunk size for bf-asm (an integer or ALL)")
 
 set (BFASM_LIB_DEPS "${LIBDYNHASH_LIBRARY}")
 include_directories("${LIBDYNHASH_INCLUDE_DIR}")
@@ -225,6 +216,7 @@ configure_file ("${BFASM_SOURCE_DIR}/cmake/config.h.in" "${BFASM_BINARY_DIR}/con
 
 set_source_files_properties (${BFAS_GEN_SOURCES} ${BFASM_BINARY_DIR}/lex-yaml.c
   PROPERTIES GENERATED TRUE)
+
 set (BFAS_SOURCES ${BFAS_COMMON_SOURCES} ${BFAS_GEN_SOURCES}
   ${BFAS_TOFINO_SRCS}
   ${BFAS_JBAY_SRCS}
@@ -255,30 +247,23 @@ list(REMOVE_ITEM CPPLINT_FILES vector.c)
 list(REMOVE_DUPLICATES CPPLINT_FILES)
 
 # json_diff
-build_unified(JSONDIFF_SOURCES ALL)
 add_executable (json_diff ${JSONDIFF_SOURCES})
 
 # bfdumpbin
-build_unified(BFDUMPBIN_SOURCES ALL)
 add_executable (bfdumpbin ${BFDUMPBIN_SOURCES})
 
 # reflow
-build_unified(REFLOW_SOURCES ALL)
 add_executable (reflow ${REFLOW_SOURCES})
 
 # b2j
-build_unified(B2J_SOURCES ALL)
 add_executable (b2j ${B2J_SOURCES})
 
 # j2b
-build_unified(J2B_SOURCES ALL)
 add_executable (j2b ${J2B_SOURCES})
 
 # mksizes
-build_unified(MKSIZES ALL)
 add_executable (mksizes ${MKSIZES_SOURCES})
 
-build_unified(BFAS_SOURCES ${BF_ASM_UNIFIED_SOURCE_CHUNK_SIZE})
 set_source_files_properties(${BFAS_SOURCES} PROPERTIES COMPILE_FLAGS ${BFASM_CXX_FLAGS})
 # Remove compiler flag that is C++ only for vector.c
 string(REPLACE "-Wno-overloaded-virtual" "" vector_c_flags ${BFASM_CXX_FLAGS})
@@ -367,6 +352,9 @@ if (ENABLE_GTESTS)
   ${BFN_P4C_LIB_DIR}/source_file.cpp
   ${BFN_P4C_LIB_DIR}/stringify.cpp
   )
+
+  # Do not use a unity build for gtestasm (for now).
+  set_source_files_properties (${BFAS_GTEST_SOURCES} PROPERTIES SKIP_UNITY_BUILD_INCLUSION TRUE)
 
   add_executable (gtestasm ${BFAS_GTEST_SOURCES} ${BFP4C_SOURCES})
   include_directories(

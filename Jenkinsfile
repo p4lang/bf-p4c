@@ -121,14 +121,14 @@ node ('compiler-travis') {
             if (image_pulled != 'true') {
                 stage ('Build final') {
                     parallel (
-                        'Unified': {
-                            echo 'Building final Docker image to run tests with (unified build)'
+                        'Unity': {
+                            echo 'Building final Docker image to run tests with (unity build)'
                             sh """
                                 make -Cdocker build \
                                     BUILD_TAG=${image_tag} \
                                     BUILD_TAG_DEST=${DOCKER_PROJECT}/bf-p4c-compilers \
                                     BUILD_ARGS="\
-                                        -e UNIFIED_BUILD=true \
+                                        -e UNITY_BUILD=true \
                                         -e UBSAN=${params.UBSAN} \
                                         -e ASAN=${params.ASAN} \
                                         -e UBSAN_OPTIONS=${params.UBSAN_OPTIONS} \
@@ -138,11 +138,11 @@ node ('compiler-travis') {
                             """
                         },
 
-                        'Non-unified': {
-                            echo 'Testing non-unified build'
+                        'Non-unity': {
+                            echo 'Testing non-unity build'
                             sh """
                                 make -Cdocker test-build \
-                                    BUILD_ARGS="-e UNIFIED_BUILD=false -e MAKEFLAGS=j16"
+                                    BUILD_ARGS="-e UNITY_BUILD=false -e MAKEFLAGS=j16"
                             """
                         },
 

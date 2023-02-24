@@ -13,14 +13,12 @@
 
 namespace Test {
 
-class TofinoPhvContainer : public TofinoBackendTest {};
-
 namespace {
 
 // Test that each type of PHV::Container has the expected properties.
-void CheckPhvContainerTypes() {
+void CheckTofinoPhvContainerTypes() {
     using Type = PHV::Type;
-    const auto& phvSpec = Device::phvSpec();
+    const auto &phvSpec = Device::phvSpec();
 
     auto checkRange = [&](PHV::Container c) {
         SCOPED_TRACE(c);
@@ -114,38 +112,47 @@ void CheckPhvContainerTypes() {
 // XXX(cole): This test is specific to Tofino, but a similar test should be
 // added once more JBay resources are defined.
 void CheckTofinoPhvContainerResources(int scale_factor = 1) {
-    const auto& phvSpec = Device::phvSpec();
+    const auto &phvSpec = Device::phvSpec();
 
     // MAU and Tagalong containers should be subsets of the physical
     // containers.
     for (auto s : phvSpec.containerSizes()) {
         for (auto mau_group : phvSpec.mauGroups(s)) {
-            EXPECT_NE(bitvec(), mau_group & phvSpec.physicalContainers()); } }
+            EXPECT_NE(bitvec(), mau_group & phvSpec.physicalContainers());
+        }
+    }
     for (auto tagalong_group : phvSpec.tagalongCollections()) {
-        EXPECT_NE(bitvec(), tagalong_group & phvSpec.physicalContainers()); }
+        EXPECT_NE(bitvec(), tagalong_group & phvSpec.physicalContainers());
+    }
 
     // MAU groups should have the size used to retrieve them.
     for (auto s : phvSpec.containerSizes()) {
         for (auto mau_group : phvSpec.mauGroups(s)) {
             for (auto cid : mau_group) {
-                EXPECT_EQ(s, phvSpec.idToContainer(cid).type().size()); } } }
+                EXPECT_EQ(s, phvSpec.idToContainer(cid).type().size());
+            }
+        }
+    }
 
     // They should also be disjoint.
     for (auto s : phvSpec.containerSizes()) {
         for (auto mau_group : phvSpec.mauGroups(s)) {
             for (auto tagalong_group : phvSpec.tagalongCollections()) {
-                EXPECT_EQ(bitvec(), mau_group & tagalong_group); } } }
+                EXPECT_EQ(bitvec(), mau_group & tagalong_group);
+            }
+        }
+    }
 
     // There should be eight tagalong groups of 4x8b containers, 6x16b
     // containers, and 4x32b containers.
     ordered_map<PHV::Size, int> collection_sizes;
     for (auto collection : phvSpec.tagalongCollections()) {
-        for (auto cid : collection)
-            collection_sizes[phvSpec.idToContainer(cid).type().size()]++;
+        for (auto cid : collection) collection_sizes[phvSpec.idToContainer(cid).type().size()]++;
         EXPECT_EQ(4 * scale_factor, collection_sizes[PHV::Size::b8]);
         EXPECT_EQ(6 * scale_factor, collection_sizes[PHV::Size::b16]);
         EXPECT_EQ(4 * scale_factor, collection_sizes[PHV::Size::b32]);
-        collection_sizes.clear(); }
+        collection_sizes.clear();
+    }
     EXPECT_EQ(unsigned(8 * scale_factor), phvSpec.tagalongCollections().size());
 
     // There should be 4 MAU groups of size b8, 6 of b16, and 4 of b32.
@@ -162,10 +169,11 @@ void CheckTofinoPhvContainerResources(int scale_factor = 1) {
             auto t = *(groupsToTypes.at(s).begin());
 
             // Containers in each group should have the same type.
-            for (auto cid : containers)
-                EXPECT_EQ(t, phvSpec.idToContainer(cid).type());
+            for (auto cid : containers) EXPECT_EQ(t, phvSpec.idToContainer(cid).type());
 
-            mau_group_sizes[s]++; } }
+            mau_group_sizes[s]++;
+        }
+    }
 
     EXPECT_EQ(4 * scale_factor, mau_group_sizes[PHV::Size::b8]);
     EXPECT_EQ(6 * scale_factor, mau_group_sizes[PHV::Size::b16]);
@@ -173,14 +181,10 @@ void CheckTofinoPhvContainerResources(int scale_factor = 1) {
 }
 
 // Test that we can serialize PHV::Container objects to JSON.
-void CheckPhvContainerJSON() {
+void CheckTofinoPhvContainerJSON() {
     std::vector<PHV::Container> inputs = {
-        PHV::Container("B0"),
-        PHV::Container("H33"),
-        PHV::Container("W55"),
-        PHV::Container("TB10"),
-        PHV::Container("TH2"),
-        PHV::Container("TW90"),
+        PHV::Container("B0"),   PHV::Container("H33"), PHV::Container("W55"),
+        PHV::Container("TB10"), PHV::Container("TH2"), PHV::Container("TW90"),
     };
 
     for (PHV::Container inputContainer : inputs) {
@@ -200,22 +204,24 @@ void CheckPhvContainerJSON() {
 }
 
 void enable_virtual_phv() {
-    auto& options = BackendOptions();
+    auto &options = BackendOptions();
     options.phv_scale_factor = 2;
     Device::init("Tofino");
 }
 
 }  // namespace
 
+class TofinoPhvContainer : public TofinoBackendTest {};
+
 TEST_F(TofinoPhvContainer, Types) {
     EXPECT_EQ(Device::TOFINO, Device::currentDevice());
-    CheckPhvContainerTypes();
+    CheckTofinoPhvContainerTypes();
 }
 
 TEST_F(TofinoPhvContainer, TypesWithVirtualPhv) {
     enable_virtual_phv();
     EXPECT_EQ(Device::TOFINO, Device::currentDevice());
-    CheckPhvContainerTypes();
+    CheckTofinoPhvContainerTypes();
 }
 
 TEST_F(TofinoPhvContainer, Resources) {
@@ -231,13 +237,13 @@ TEST_F(TofinoPhvContainer, ResourcesWithVirtualPhv) {
 
 TEST_F(TofinoPhvContainer, JSON) {
     EXPECT_EQ(Device::TOFINO, Device::currentDevice());
-    CheckPhvContainerJSON();
+    CheckTofinoPhvContainerJSON();
 }
 
 TEST_F(TofinoPhvContainer, JSONWithVirtualPhv) {
     enable_virtual_phv();
     EXPECT_EQ(Device::TOFINO, Device::currentDevice());
-    CheckPhvContainerJSON();
+    CheckTofinoPhvContainerJSON();
 }
 
 }  // namespace Test

@@ -4,9 +4,9 @@
 
 namespace Test {
 
-namespace {
+namespace PostMidendConstantFoldingTest {
 
-auto defs = R"(
+inline auto defs = R"(
     match_kind {exact}
     header H { bit<32> f1; }
     struct headers_t { H h; }
@@ -14,19 +14,22 @@ auto defs = R"(
 
 // We only need to run TableAllocPass (viz DecidePlacement & TransformTables)
 // But we will run the FullBackend and verify the ASM generated.
-#define RUN_CHECK(input, expected) do { \
-    auto blk = TestCode(TestCode::Hdr::Tofino1arch, TestCode::tofino_shell(), \
-                        {defs, TestCode::empty_state(), input, TestCode::empty_appy()}, \
-                        TestCode::tofino_shell_control_marker()); \
-    blk.flags(Match::TrimWhiteSpace | Match::TrimAnnotations); \
-    EXPECT_TRUE(blk.CreateBackend()); \
-    auto res = blk.match(expected); \
-    EXPECT_TRUE(res.success) << "    @ expected[" << res.count<< "], char pos=" << res.pos << "\n" \
-                             << "    '" << expected[res.count] << "'\n" \
-                             << "    '" << blk.extract_code(res.pos) << "'\n"; \
-} while (0)
+#define RUN_CHECK(input, expected)                                                                \
+    do {                                                                                          \
+        auto blk = TestCode(TestCode::Hdr::Tofino1arch, TestCode::tofino_shell(),                 \
+                            {PostMidendConstantFoldingTest::defs, TestCode::empty_state(), input, \
+                             TestCode::empty_appy()},                                             \
+                            TestCode::tofino_shell_control_marker());                             \
+        blk.flags(Match::TrimWhiteSpace | Match::TrimAnnotations);                                \
+        EXPECT_TRUE(blk.CreateBackend());                                                         \
+        auto res = blk.match(expected);                                                           \
+        EXPECT_TRUE(res.success) << "    @ expected[" << res.count << "], char pos=" << res.pos   \
+                                 << "\n"                                                          \
+                                 << "    '" << expected[res.count] << "'\n"                       \
+                                 << "    '" << blk.extract_code(res.pos) << "'\n";                \
+    } while (0)
 
-}  // namespace
+}  // namespace PostMidendConstantFoldingTest
 
 TEST(PostMidendConstantFolding, SizeInBytesConstConst) {
     auto input = R"(
@@ -34,20 +37,18 @@ TEST(PostMidendConstantFolding, SizeInBytesConstConst) {
                 hdr.h.f1 = sizeInBytes(hdr.h.f1) + 10 + 20;
             }
         )";
-    Match::CheckList expected {
-        "action p4headers_tofino1l`(\\d+)`() {",
-            "hdr.h.f1 = 32w34;",
-        "}",
-        "table tbl_p4headers_tofino1l`\\1` {",
-            "actions = {",
-                "p4headers_tofino1l`\\1`();",
-            "}",
-            "const default_action = p4headers_tofino1l`\\1`();",
-        "}",
-        "apply {",
-            "tbl_p4headers_tofino1l`\\1`.apply();",
-        "}"
-    };
+    Match::CheckList expected{"action p4headers_tofino1l`(\\d+)`() {",
+                              "hdr.h.f1 = 32w34;",
+                              "}",
+                              "table tbl_p4headers_tofino1l`\\1` {",
+                              "actions = {",
+                              "p4headers_tofino1l`\\1`();",
+                              "}",
+                              "const default_action = p4headers_tofino1l`\\1`();",
+                              "}",
+                              "apply {",
+                              "tbl_p4headers_tofino1l`\\1`.apply();",
+                              "}"};
     RUN_CHECK(input, expected);
 }
 
@@ -57,20 +58,18 @@ TEST(PostMidendConstantFolding, ConstSizeInBytesConst) {
                 hdr.h.f1 = 10 + sizeInBytes(hdr.h.f1) + 20;
             }
         )";
-    Match::CheckList expected {
-        "action p4headers_tofino1l`(\\d+)`() {",
-            "hdr.h.f1 = 32w34;",
-        "}",
-        "table tbl_p4headers_tofino1l`\\1` {",
-            "actions = {",
-                "p4headers_tofino1l`\\1`();",
-            "}",
-            "const default_action = p4headers_tofino1l`\\1`();",
-        "}",
-        "apply {",
-            "tbl_p4headers_tofino1l`\\1`.apply();",
-        "}"
-    };
+    Match::CheckList expected{"action p4headers_tofino1l`(\\d+)`() {",
+                              "hdr.h.f1 = 32w34;",
+                              "}",
+                              "table tbl_p4headers_tofino1l`\\1` {",
+                              "actions = {",
+                              "p4headers_tofino1l`\\1`();",
+                              "}",
+                              "const default_action = p4headers_tofino1l`\\1`();",
+                              "}",
+                              "apply {",
+                              "tbl_p4headers_tofino1l`\\1`.apply();",
+                              "}"};
     RUN_CHECK(input, expected);
 }
 
@@ -80,20 +79,18 @@ TEST(PostMidendConstantFolding, ConstConstSizeInBytes) {
                 hdr.h.f1 = 10 + 20 + sizeInBytes(hdr.h.f1);
             }
         )";
-    Match::CheckList expected {
-        "action p4headers_tofino1l`(\\d+)`() {",
-            "hdr.h.f1 = 32w34;",
-        "}",
-        "table tbl_p4headers_tofino1l`\\1` {",
-            "actions = {",
-                "p4headers_tofino1l`\\1`();",
-            "}",
-            "const default_action = p4headers_tofino1l`\\1`();",
-        "}",
-        "apply {",
-            "tbl_p4headers_tofino1l`\\1`.apply();",
-        "}"
-    };
+    Match::CheckList expected{"action p4headers_tofino1l`(\\d+)`() {",
+                              "hdr.h.f1 = 32w34;",
+                              "}",
+                              "table tbl_p4headers_tofino1l`\\1` {",
+                              "actions = {",
+                              "p4headers_tofino1l`\\1`();",
+                              "}",
+                              "const default_action = p4headers_tofino1l`\\1`();",
+                              "}",
+                              "apply {",
+                              "tbl_p4headers_tofino1l`\\1`.apply();",
+                              "}"};
     RUN_CHECK(input, expected);
 }
 
@@ -103,21 +100,22 @@ TEST(PostMidendConstantFolding, SizeInBytesConstConstExplicitParentheses) {
                 hdr.h.f1 = (sizeInBytes(hdr.h.f1) + 10) + 20;
             }
         )";
-    Match::CheckList expected {
-        "action p4headers_tofino1l`(\\d+)`() {",
-            "hdr.h.f1 = 32w34;",
-        "}",
-        "table tbl_p4headers_tofino1l`\\1` {",
-            "actions = {",
-                "p4headers_tofino1l`\\1`();",
-            "}",
-            "const default_action = p4headers_tofino1l`\\1`();",
-        "}",
-        "apply {",
-            "tbl_p4headers_tofino1l`\\1`.apply();",
-        "}"
-    };
+    Match::CheckList expected{"action p4headers_tofino1l`(\\d+)`() {",
+                              "hdr.h.f1 = 32w34;",
+                              "}",
+                              "table tbl_p4headers_tofino1l`\\1` {",
+                              "actions = {",
+                              "p4headers_tofino1l`\\1`();",
+                              "}",
+                              "const default_action = p4headers_tofino1l`\\1`();",
+                              "}",
+                              "apply {",
+                              "tbl_p4headers_tofino1l`\\1`.apply();",
+                              "}"};
     RUN_CHECK(input, expected);
 }
+
+// Keep definition of RUN_CHECK local for unity builds.
+#undef RUN_CHECK
 
 }  // namespace Test

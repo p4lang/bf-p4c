@@ -1,8 +1,8 @@
 #include "event_logger.h"
-#include <spdlog/spdlog.h>
+#include <rapidjson/prettywriter.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/null_sink.h>
-#include <rapidjson/prettywriter.h>
+#include <spdlog/spdlog.h>
 #include <ctime>
 
 #include "event_log_schema.h"
@@ -16,8 +16,15 @@
  *  Enum for logging type of each event.
  */
 enum class EventType : int {
-    Properties = 0, PassChange, ParseError, Error, Warning,
-    Debug, Decision, PipeChange, IterationChange,
+    Properties = 0,
+    PassChange,
+    ParseError,
+    Error,
+    Warning,
+    Debug,
+    Decision,
+    PipeChange,
+    IterationChange,
 };
 
 /**
@@ -26,41 +33,38 @@ enum class EventType : int {
  *  This map is emmited as a part of EventType::Start
  */
 static const std::map<EventType, std::string> EVENT_ENUM_MAP = {
-    { EventType::Properties, "Properties" },
-    { EventType::ParseError, "Parse Error" },
-    { EventType::Error, "Compilation Error" },
-    { EventType::Warning, "Compilation Warning" },
-    { EventType::PassChange, "Pass Changed" },
-    { EventType::PipeChange, "Pipe Changed" },
-    { EventType::IterationChange, "Iteration Changed" },
-    { EventType::Debug, "Debug" },
-    { EventType::Decision, "Decision"}
-};
+    {EventType::Properties, "Properties"},
+    {EventType::ParseError, "Parse Error"},
+    {EventType::Error, "Compilation Error"},
+    {EventType::Warning, "Compilation Warning"},
+    {EventType::PassChange, "Pass Changed"},
+    {EventType::PipeChange, "Pipe Changed"},
+    {EventType::IterationChange, "Iteration Changed"},
+    {EventType::Debug, "Debug"},
+    {EventType::Decision, "Decision"}};
 
 namespace std {
-    string to_string(EventLogger::AllocPhase phase) {
-        if (phase == EventLogger::AllocPhase::PhvAllocation) return "phv_allocation";
-        else if (phase == EventLogger::AllocPhase::TablePlacement) return "table_placement";
-        return "error";
-    }
+string to_string(EventLogger::AllocPhase phase) {
+    if (phase == EventLogger::AllocPhase::PhvAllocation)
+        return "phv_allocation";
+    else if (phase == EventLogger::AllocPhase::TablePlacement)
+        return "table_placement";
+    return "error";
 }
+}  // namespace std
 
 using Schema = Logging::Event_Log_Schema_Logger;
-using namespace std::placeholders;
 typedef std::function<int(const std::string &)> IdGenerator;
 
-static Schema::SourceInfo *
-getSourceInfo(IdGenerator getId, const Util::SourceInfo &info) {
-    return new Schema::SourceInfo(
-        info.getStart().getColumnNumber(),
-        getId(info.getSourceFile().c_str()),
-        info.toPosition().sourceLine,
-        info.toSourceFragment().c_str());
+static Schema::SourceInfo *getSourceInfo(IdGenerator getId, const Util::SourceInfo &info) {
+    return new Schema::SourceInfo(info.getStart().getColumnNumber(),
+                                  getId(info.getSourceFile().c_str()), info.toPosition().sourceLine,
+                                  info.toSourceFragment().c_str());
 }
 
-static std::vector<Schema::SourceInfo*>
-getSourceInfos(IdGenerator getId, const std::vector<Util::SourceInfo> &locs) {
-    std::vector<Schema::SourceInfo*> result;
+static std::vector<Schema::SourceInfo *> getSourceInfos(IdGenerator getId,
+                                                        const std::vector<Util::SourceInfo> &locs) {
+    std::vector<Schema::SourceInfo *> result;
 
     for (auto &loc : locs) {
         result.push_back(getSourceInfo(getId, loc));
@@ -69,16 +73,11 @@ getSourceInfos(IdGenerator getId, const std::vector<Util::SourceInfo> &locs) {
     return result;
 }
 
-
 /* (de)construction */
 
-EventLogger::EventLogger() {
-    nullInit();
-}
+EventLogger::EventLogger() { nullInit(); }
 
-EventLogger::~EventLogger() {
-    deinit();
-}
+EventLogger::~EventLogger() { deinit(); }
 
 EventLogger &EventLogger::get() {
     static EventLogger instance;
@@ -103,20 +102,16 @@ int EventLogger::getFileNameId(const std::string &name) {
     return getId(name, fileId, fileNameToIds, fileNames);
 }
 
-int EventLogger::getTimeDifference() const {
-    return int(std::time(nullptr) - BEGIN_TIME);
-}
+int EventLogger::getTimeDifference() const { return int(std::time(nullptr) - BEGIN_TIME); }
 
-std::string EventLogger::getStartTimestamp() const {
-    return std::to_string(BEGIN_TIME);
-}
+std::string EventLogger::getStartTimestamp() const { return std::to_string(BEGIN_TIME); }
 
 std::ostream &EventLogger::getDebugStream(unsigned level, const std::string &file) const {
     return ::Log::Detail::fileLogOutput(file.c_str())
-            << ::Log::Detail::OutputLogPrefix(file.c_str(), level);
+           << ::Log::Detail::OutputLogPrefix(file.c_str(), level);
 }
 
-template<typename T>
+template <typename T>
 inline void EventLogger::logSink(const T *obj) {
     rapidjson::StringBuffer sb;
     Logging::PlainWriterAdapter writerAdapter(sb);
@@ -145,20 +140,18 @@ void EventLogger::init(const std::string &OUTDIR, const std::string &FILENAME) {
     const std::string pathname{OUTDIR + "/" + FILENAME};
     {  // unpredicated inner scope so the stream will be destroyed when I want it to be
         std::ofstream stream_for_writing_header(pathname, std::ofstream::trunc);
-                // "| std::ofstream::out" is implied here ^^^^^^^^^^^^^^^^^^^^
+        // "| std::ofstream::out" is implied here ^^^^^^^^^^^^^^^^^^^^
 
-        stream_for_writing_header << "{\"event_log_schema_version\": \""
-                                  << EVENT_LOG_SCHEMA_VERSION << "\", \"schema_version\": \""
-                                  << EVENT_LOG_SCHEMA_VERSION << "\"}\n";
+        stream_for_writing_header << "{\"event_log_schema_version\": \"" << EVENT_LOG_SCHEMA_VERSION
+                                  << "\", \"schema_version\": \"" << EVENT_LOG_SCHEMA_VERSION
+                                  << "\"}\n";
         // the redundant copy with the less-specific key was requested by Andrew Benjamin
 
         stream_for_writing_header.flush();  // belt and suspenders
         stream_for_writing_header.close();  // belt and suspenders
-    }  // end of unpredicated inner scope
+    }                                       // end of unpredicated inner scope
 
-    auto logger = spdlog::basic_logger_mt("logger",
-                                          pathname,
-                                          TRUNCATE_FILE_IF_IT_ALREADY_EXISTS);
+    auto logger = spdlog::basic_logger_mt("logger", pathname, TRUNCATE_FILE_IF_IT_ALREADY_EXISTS);
 
     spdlog::set_default_logger(logger);
     spdlog::set_pattern("%v");  // print just the message, no decorations
@@ -173,8 +166,8 @@ void EventLogger::logProperties() {
     std::vector<std::string> eventNames;
     for (auto &kv : EVENT_ENUM_MAP) eventNames.push_back(kv.second);
 
-    auto ls = new Schema::EventLoggerProperties(
-        enabled, eventNames, fileNames, id, managerNames, EVENT_LOG_SCHEMA_VERSION, timestamp);
+    auto ls = new Schema::EventLoggerProperties(enabled, eventNames, fileNames, id, managerNames,
+                                                EVENT_LOG_SCHEMA_VERSION, timestamp);
     logSink(ls);  // emit properties
 }
 
@@ -200,8 +193,6 @@ void EventLogger::deinit() {
     enabled = false;
 }
 
-
-
 /* Event serializations */
 
 void EventLogger::passChange(const std::string &manager, const std::string &pass, unsigned seq) {
@@ -222,7 +213,8 @@ void EventLogger::passChange(const std::string &manager, const std::string &pass
 void EventLogger::parserError(const ParserErrorMessage &msg) {
     if (!enabled) return;
     const int id = int(EventType::ParseError);
-    auto src = getSourceInfo(std::bind(&EventLogger::getFileNameId, this, _1), msg.location);
+    auto src = getSourceInfo(std::bind(&EventLogger::getFileNameId, this, std::placeholders::_1),
+                             msg.location);
     auto pe = new Schema::EventParserError(id, msg.message.c_str(), src, getTimeDifference());
     logSink(pe);
     delete pe;  // GC seems to fail to collect on this pointer
@@ -231,9 +223,10 @@ void EventLogger::parserError(const ParserErrorMessage &msg) {
 void EventLogger::error(const ErrorMessage &msg) {
     if (!enabled) return;
     const int id = int(EventType::Error);
-    auto locs = getSourceInfos(std::bind(&EventLogger::getFileNameId, this, _1), msg.locations);
-    auto ce = new Schema::EventCompilationError(id, msg.message, getTimeDifference(),
-                                                msg.suffix, msg.prefix, locs);
+    auto locs = getSourceInfos(std::bind(&EventLogger::getFileNameId, this, std::placeholders::_1),
+                               msg.locations);
+    auto ce = new Schema::EventCompilationError(id, msg.message, getTimeDifference(), msg.suffix,
+                                                msg.prefix, locs);
     logSink(ce);
     delete ce;  // GC seems to fail to collect on this pointer
 }
@@ -241,9 +234,10 @@ void EventLogger::error(const ErrorMessage &msg) {
 void EventLogger::warning(const ErrorMessage &msg) {
     if (!enabled) return;
     const int id = int(EventType::Warning);
-    auto locs = getSourceInfos(std::bind(&EventLogger::getFileNameId, this, _1), msg.locations);
-    auto cw = new Schema::EventCompilationWarning(id, msg.message, getTimeDifference(),
-                                                  msg.suffix, msg.prefix, locs);
+    auto locs = getSourceInfos(std::bind(&EventLogger::getFileNameId, this, std::placeholders::_1),
+                               msg.locations);
+    auto cw = new Schema::EventCompilationWarning(id, msg.message, getTimeDifference(), msg.suffix,
+                                                  msg.prefix, locs);
     logSink(cw);
     delete cw;  // GC seems to fail to collect on this pointer
 }
@@ -268,8 +262,8 @@ void EventLogger::decision(unsigned verbosity, const std::string &file,
     if (!enabled) return;
     const int id = int(EventType::Decision);
     const int fileId = getFileNameId(file);
-    auto d = new Schema::EventDecision(what, fileId, id, description, why,
-                                       getTimeDifference(), verbosity);
+    auto d = new Schema::EventDecision(what, fileId, id, description, why, getTimeDifference(),
+                                       verbosity);
     logSink(d);
     delete d;  // GC seems to fail to collect on this pointer
 }

@@ -64,7 +64,7 @@ add_definitions("-DPOWER_SCHEMA_VERSION=\"${POWER_SCHEMA_VERSION}\"")
 
 get_schema_version(context_schema CONTEXT_SCHEMA_VERSION)
 MESSAGE(STATUS "Found context schema version ${CONTEXT_SCHEMA_VERSION}")
-if (ENABLE_UNIFIED_COMPILATION)
+if (CMAKE_UNITY_BUILD)
   add_definitions("-DCONTEXT_SCHEMA_VERSION=\"${CONTEXT_SCHEMA_VERSION}\"")
 else()
   set_source_files_properties(p4c-barefoot.cpp PROPERTIES
@@ -170,7 +170,6 @@ set (BF_P4C_MIDEND_SRCS
   midend/type_checker.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_MIDEND_SRCS}")
-build_unified(BF_P4C_MIDEND_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_MIDEND_HDRS
   midend/action_synthesis_policy.h
@@ -265,7 +264,6 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/utils.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_COMMON_SRCS}")
-build_unified(BF_P4C_BACKEND_COMMON_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_COMMON_HDRS
   common/alias.h
@@ -304,7 +302,6 @@ set (BF_P4C_BACKEND_CONTROL_PLANE_SRCS
   control-plane/runtime.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_CONTROL_PLANE_SRCS}")
-build_unified(BF_P4C_BACKEND_CONTROL_PLANE_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_CONTROL_PLANE_HDRS
   control-plane/bfruntime_arch_handler.h
@@ -319,7 +316,6 @@ set (BF_P4C_BACKEND_LIB_SRCS
   lib/error_type.cpp
 )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_LIB_SRCS}")
-build_unified(BF_P4C_BACKEND_LIB_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_LIB_HDRS
   lib/autoclone.h
@@ -389,7 +385,6 @@ set (BF_P4C_BACKEND_MAU_SRCS
   mau/walk_power_graph.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_SRCS}")
-build_unified(BF_P4C_BACKEND_MAU_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_MAU_TOFINO_SRCS
   mau/tofino/action_data_bus.cpp
@@ -399,7 +394,6 @@ set (BF_P4C_BACKEND_MAU_TOFINO_SRCS
   mau/tofino/memories.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_TOFINO_SRCS}")
-build_unified(BF_P4C_BACKEND_MAU_TOFINO_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_MAU_FLATROCK_SRCS
   mau/flatrock/action_data_bus.cpp
@@ -411,7 +405,6 @@ set (BF_P4C_BACKEND_MAU_FLATROCK_SRCS
   mau/flatrock/table_layout.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_FLATROCK_SRCS}")
-build_unified(BF_P4C_BACKEND_MAU_FLATROCK_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_MAU_HDRS
   mau/action_analysis.h
@@ -541,7 +534,6 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/mirror/const_mirror_session_opt.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PARDE_SRCS}")
-build_unified(BF_P4C_BACKEND_PARDE_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_PARDE_HDRS
   parde/add_metadata_pov.h
@@ -695,7 +687,6 @@ set (BF_P4C_BACKEND_PHV_SRCS
   )
 
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PHV_SRCS}")
-build_unified(BF_P4C_BACKEND_PHV_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_PHV_HDRS
   phv/dump_table_flow_graph.h
@@ -836,7 +827,6 @@ if (ENABLE_FLATROCK)
   arch/tna/t5na_program_structure.cpp)
 endif ()
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "arch/t5na.cpp")
-build_unified(BF_P4C_BACKEND_ARCH_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_ARCH_HDRS
   arch/arch.h
@@ -917,7 +907,6 @@ set (BF_P4C_BACKEND_MAIN_SRCS
   midend.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAIN_SRCS}")
-build_unified(BF_P4C_BACKEND_MAIN_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_MAIN_HDRS
   asm.h
@@ -1043,7 +1032,6 @@ set (P4C_BAREFOOT_SRCS
   ${BF_P4C_GRAPHS_SRCS}
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${P4C_BAREFOOT_SRCS}")
-build_unified(P4C_BAREFOOT_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 if(BUILD_STATIC_BFP4C_LIBS)
     add_library(tofinobackend STATIC ${BF_P4C_SOURCES})
@@ -1644,6 +1632,9 @@ if (ENABLE_TESTING)
       set (GTEST_BF_P4C_SOURCES ${GTEST_BF_P4C_SOURCES}
                                 $<TARGET_OBJECTS:tofinobackend> $<TARGET_OBJECTS:bfn_p4runtime>)
   endif()
+
+  # Do not use a unity build for bf-p4c gtest (for now).
+  set_source_files_properties (${GTEST_BF_P4C_SOURCES} TARGET_DIRECTORY gtestp4c PROPERTIES SKIP_UNITY_BUILD_INCLUSION TRUE)
 
   set (GTEST_SOURCES ${GTEST_SOURCES} ${GTEST_BF_P4C_SOURCES} PARENT_SCOPE)
   set (GTEST_LDADD ${GTEST_LDADD}

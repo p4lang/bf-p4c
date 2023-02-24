@@ -13,14 +13,12 @@
 
 namespace Test {
 
-class TofinoPhvContainer : public TofinoBackendTest {};
-
 namespace {
 
 // Test that each type of PHV::Container has the expected properties.
-void CheckPhvContainerTypes() {
+void CheckJBayPhvContainerTypes() {
     using Type = PHV::Type;
-    const auto& phvSpec = Device::phvSpec();
+    const auto &phvSpec = Device::phvSpec();
 
     auto checkRange = [&](PHV::Container c) {
         SCOPED_TRACE(c);
@@ -104,12 +102,14 @@ void CheckPhvContainerTypes() {
 }
 
 void CheckJBayPhvContainerResources() {
-    const auto& phvSpec = Device::phvSpec();
+    const auto &phvSpec = Device::phvSpec();
 
     // MAU containers should be subsets of the physical containers.
     for (auto s : phvSpec.containerSizes()) {
         for (auto mau_group : phvSpec.mauGroups(s)) {
-            EXPECT_NE(bitvec(), mau_group & phvSpec.physicalContainers()); } }
+            EXPECT_NE(bitvec(), mau_group & phvSpec.physicalContainers());
+        }
+    }
 
     // There should be 4 MAU groups of size b8, 6 of b16, and 4 of b32.
     // Each group has 20 containers: 12 normal, 4 dark, and 4 mocha.
@@ -127,12 +127,15 @@ void CheckJBayPhvContainerResources() {
             std::map<PHV::Kind, int> typeNum;
             for (auto cid : containers) {
                 auto t = phvSpec.idToContainer(cid).type();
-                typeNum[t.kind()]++; }
+                typeNum[t.kind()]++;
+            }
             // Check the number of containers of each type in each MAU group.
             EXPECT_EQ(12, typeNum[PHV::Kind::normal]);
             EXPECT_EQ(4, typeNum[PHV::Kind::mocha]);
             EXPECT_EQ(4, typeNum[PHV::Kind::dark]);
-            mau_group_sizes[s]++; } }
+            mau_group_sizes[s]++;
+        }
+    }
 
     EXPECT_EQ(4, mau_group_sizes[PHV::Size::b8]);
     EXPECT_EQ(6, mau_group_sizes[PHV::Size::b16]);
@@ -140,13 +143,10 @@ void CheckJBayPhvContainerResources() {
 }
 
 // Test that we can serialize PHV::Container objects to JSON.
-void CheckPhvContainerJSON() {
+void CheckJBayPhvContainerJSON() {
     std::vector<PHV::Container> inputs = {
-        PHV::Container("B0"),
-        PHV::Container("H33"),
-        PHV::Container("W55"),
-        PHV::Container("MW5"),
-        PHV::Container("DB6"),
+        PHV::Container("B0"),  PHV::Container("H33"), PHV::Container("W55"),
+        PHV::Container("MW5"), PHV::Container("DB6"),
     };
 
     for (PHV::Container inputContainer : inputs) {
@@ -171,7 +171,7 @@ class JBayPhvContainer : public JBayBackendTest {};
 
 TEST_F(JBayPhvContainer, Types) {
     EXPECT_EQ(Device::JBAY, Device::currentDevice());
-    CheckPhvContainerTypes();
+    CheckJBayPhvContainerTypes();
 }
 
 TEST_F(JBayPhvContainer, Resources) {
@@ -181,7 +181,7 @@ TEST_F(JBayPhvContainer, Resources) {
 
 TEST_F(JBayPhvContainer, JSON) {
     EXPECT_EQ(Device::JBAY, Device::currentDevice());
-    CheckPhvContainerJSON();
+    CheckJBayPhvContainerJSON();
 }
 
 }  // namespace Test

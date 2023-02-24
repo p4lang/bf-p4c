@@ -1106,7 +1106,7 @@ PortableSwitchTranslation::PortableSwitchTranslation(
         new PSA::TranslateProgram(structure, refMap, typeMap),
         new GenerateTofinoProgram(structure),
         new PSA::ConvertNames(structure, refMap, typeMap),
-        new AddIntrinsicMetadata(refMap, typeMap),
+        new BFN::AddIntrinsicMetadata(refMap, typeMap),
         new PSA::RewritePacketPath(refMap, typeMap, structure),
         new PSA::RewriteParserVerify(structure),
         new AddPsaBridgeMetadata(refMap, typeMap, structure),

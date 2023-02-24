@@ -1,28 +1,30 @@
 #include "bf-p4c/midend/elim_cast.h"
 
-#include "gtest/gtest.h"
 #include "bf_gtest_helpers.h"
+#include "gtest/gtest.h"
 
 namespace Test {
 
-namespace {
+namespace ElimCastTest {
 
-auto defs = R"(
+inline auto defs = R"(
     header Hdr { bit<8> field1; bit<8> field2; bit<16> field3; bit<32> field4;}
     struct Headers { Hdr h; })";
 
-#define RUN_CHECK(pass, input, expected) do { \
-    auto blk = TestCode::TestControlBlock(defs, input); \
-    blk.flags(Match::TrimWhiteSpace | Match::TrimAnnotations); \
-    EXPECT_TRUE(blk.apply_pass(TestCode::Pass::FullFrontend)); \
-    EXPECT_TRUE(blk.apply_pass(pass)); \
-    auto res = blk.match(expected); \
-    EXPECT_TRUE(res.success) << "    @ expected[" << res.count<< "], char pos=" << res.pos << "\n" \
-                             << "    '" << expected[res.count] << "'\n" \
-                             << "    '" << blk.extract_code(res.pos) << "'\n"; \
+#define RUN_CHECK(pass, input, expected)                                                        \
+    do {                                                                                        \
+        auto blk = TestCode::TestControlBlock(ElimCastTest::defs, input);                       \
+        blk.flags(Match::TrimWhiteSpace | Match::TrimAnnotations);                              \
+        EXPECT_TRUE(blk.apply_pass(TestCode::Pass::FullFrontend));                              \
+        EXPECT_TRUE(blk.apply_pass(pass));                                                      \
+        auto res = blk.match(expected);                                                         \
+        EXPECT_TRUE(res.success) << "    @ expected[" << res.count << "], char pos=" << res.pos \
+                                 << "\n"                                                        \
+                                 << "    '" << expected[res.count] << "'\n"                     \
+                                 << "    '" << blk.extract_code(res.pos) << "'\n";              \
     } while (0)
 
-}  // namespace
+}  // namespace ElimCastTest
 
 ////// Equ ///////////////////////////////////////////////////
 
@@ -33,13 +35,8 @@ TEST(ElimCast, EquNone) {
                 headers.h.field4 = 32w0;
             }
         })";
-    Match::CheckList expected {
-        "apply {",
-            "if (headers.h.field1 == headers.h.field2) {",
-                "headers.h.field4 = 32w0;",
-            "}",
-        "}"
-    };
+    Match::CheckList expected{"apply {", "if (headers.h.field1 == headers.h.field2) {",
+                              "headers.h.field4 = 32w0;", "}", "}"};
 
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
@@ -51,13 +48,9 @@ TEST(ElimCast, EquLeft) {
                 headers.h.field4 = 32w0;
             }
         })";
-    Match::CheckList expected {
-        "apply {",
-            "if (headers.h.field1 == 8w1 && headers.h.field2 == 8w2) {",
-                "headers.h.field4 = 32w0;",
-            "}",
-        "}"
-    };
+    Match::CheckList expected{"apply {",
+                              "if (headers.h.field1 == 8w1 && headers.h.field2 == 8w2) {",
+                              "headers.h.field4 = 32w0;", "}", "}"};
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
 
@@ -68,13 +61,9 @@ TEST(ElimCast, EquRight) {
                 headers.h.field4 = 32w0;
             }
         })";
-    Match::CheckList expected {
-        "apply {",
-            "if (8w1 == headers.h.field1 && 8w2 == headers.h.field2) {",
-                "headers.h.field4 = 32w0;",
-             "}",
-        "}"
-    };
+    Match::CheckList expected{"apply {",
+                              "if (8w1 == headers.h.field1 && 8w2 == headers.h.field2) {",
+                              "headers.h.field4 = 32w0;", "}", "}"};
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
 
@@ -85,13 +74,9 @@ TEST(ElimCast, EquLeftRightSymmetric) {
                 headers.h.field4 = 32w0;
             }
         })";
-    Match::CheckList expected {
-        "apply {",
-            "if (8w1 == headers.h.field1 && headers.h.field2 == 8w2) {",
-                "headers.h.field4 = 32w0;",
-             "}",
-        "}"
-    };
+    Match::CheckList expected{"apply {",
+                              "if (8w1 == headers.h.field1 && headers.h.field2 == 8w2) {",
+                              "headers.h.field4 = 32w0;", "}", "}"};
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
 
@@ -102,13 +87,9 @@ TEST(ElimCast, EquLeftRightAsymmetric) {
                 headers.h.field4 = 32w0;
             }
         })";
-    Match::CheckList expected {
-        "apply {",
-            "if (8w1 == headers.h.field1 && 8w0 == 8w0 && headers.h.field2 == 8w2) {",
-                "headers.h.field4 = 32w0;",
-             "}",
-        "}"
-    };
+    Match::CheckList expected{
+        "apply {", "if (8w1 == headers.h.field1 && 8w0 == 8w0 && headers.h.field2 == 8w2) {",
+        "headers.h.field4 = 32w0;", "}", "}"};
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
 
@@ -120,14 +101,12 @@ TEST(ElimCast, EquSubExpression) {
                 headers.h.field4 = 32w0;
             }
         })";
-    Match::CheckList expected {
-        "apply {",
-            "if (8w3 & (8w5 & headers.h.field1) & 8w2 == 8w1 && ",
-                "8w3 & headers.h.field2 & 8w2 == 8w2) {",
-                "headers.h.field4 = 32w0;",
-             "}",
-        "}"
-    };
+    Match::CheckList expected{"apply {",
+                              "if (8w3 & (8w5 & headers.h.field1) & 8w2 == 8w1 && ",
+                              "8w3 & headers.h.field2 & 8w2 == 8w2) {",
+                              "headers.h.field4 = 32w0;",
+                              "}",
+                              "}"};
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
 
@@ -139,16 +118,14 @@ TEST(ElimCast, EquSubExpressionPlus) {
                 headers.h.field4 = 32w0;
             }
         })";
-    Match::CheckList expected {
-        "apply { {",
-           "bit<16> $concat_to_slice`(\\d+)`;",
-            "$concat_to_slice`\\1`[15:8] = 8w5 & headers.h.field1;",
-            "$concat_to_slice`\\1`[7:0] = headers.h.field2;",
-            "if (16w0x303 + $concat_to_slice`\\1` & 16w0x202 == 16w0x102) {",
-                "headers.h.field4 = 32w0;",
-            " }",
-        "} }"
-    };
+    Match::CheckList expected{"apply { {",
+                              "bit<16> $concat_to_slice`(\\d+)`;",
+                              "$concat_to_slice`\\1`[15:8] = 8w5 & headers.h.field1;",
+                              "$concat_to_slice`\\1`[7:0] = headers.h.field2;",
+                              "if (16w0x303 + $concat_to_slice`\\1` & 16w0x202 == 16w0x102) {",
+                              "headers.h.field4 = 32w0;",
+                              " }",
+                              "} }"};
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
 
@@ -161,13 +138,8 @@ TEST(ElimCast, NeqNone) {
                 headers.h.field4 = 32w0;
             }
         })";
-    Match::CheckList expected {
-        "apply {",
-            "if (headers.h.field1 != headers.h.field2) {",
-                "headers.h.field4 = 32w0;",
-             "}",
-        "}"
-    };
+    Match::CheckList expected{"apply {", "if (headers.h.field1 != headers.h.field2) {",
+                              "headers.h.field4 = 32w0;", "}", "}"};
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
 
@@ -178,13 +150,9 @@ TEST(ElimCast, NeqLeft) {
                 headers.h.field4 = 32w0;
             }
         })";
-    Match::CheckList expected {
-        "apply {",
-            "if (headers.h.field1 != 8w1 || headers.h.field2 != 8w2) {",
-                "headers.h.field4 = 32w0;",
-             "}",
-        "}"
-    };
+    Match::CheckList expected{"apply {",
+                              "if (headers.h.field1 != 8w1 || headers.h.field2 != 8w2) {",
+                              "headers.h.field4 = 32w0;", "}", "}"};
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
 
@@ -195,13 +163,9 @@ TEST(ElimCast, NeqRight) {
                 headers.h.field4 = 32w0;
             }
         })";
-    Match::CheckList expected {
-        "apply {",
-            "if (8w1 != headers.h.field1 || 8w2 != headers.h.field2) {",
-                "headers.h.field4 = 32w0;",
-             "}",
-        "}"
-    };
+    Match::CheckList expected{"apply {",
+                              "if (8w1 != headers.h.field1 || 8w2 != headers.h.field2) {",
+                              "headers.h.field4 = 32w0;", "}", "}"};
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
 
@@ -212,13 +176,9 @@ TEST(ElimCast, NeqLeftRightSymmetric) {
                 headers.h.field4 = 32w0;
             }
         })";
-    Match::CheckList expected {
-        "apply {",
-            "if (8w1 != headers.h.field1 || headers.h.field2 != 8w2) {",
-                "headers.h.field4 = 32w0;",
-             "}",
-        "}"
-    };
+    Match::CheckList expected{"apply {",
+                              "if (8w1 != headers.h.field1 || headers.h.field2 != 8w2) {",
+                              "headers.h.field4 = 32w0;", "}", "}"};
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
 
@@ -229,13 +189,9 @@ TEST(ElimCast, NeqLeftRightAsymmetric) {
                 headers.h.field4 = 32w0;
             }
         })";
-    Match::CheckList expected {
-        "apply {",
-            "if (8w1 != headers.h.field1 || 8w0 != 8w0 || headers.h.field2 != 8w2) {",
-                "headers.h.field4 = 32w0;",
-             "}",
-        "}"
-    };
+    Match::CheckList expected{
+        "apply {", "if (8w1 != headers.h.field1 || 8w0 != 8w0 || headers.h.field2 != 8w2) {",
+        "headers.h.field4 = 32w0;", "}", "}"};
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
 
@@ -246,13 +202,9 @@ TEST(ElimCast, NeqSubExpression) {
                 headers.h.field4 = 32w0;
             }
         })";
-    Match::CheckList expected {
-        "apply {",
-            "if (8w0 != 8w0 & 8w0 || headers.h.field1 != 8w3 & headers.h.field2) {",
-                "headers.h.field4 = 32w0;",
-             "}",
-        "}"
-    };
+    Match::CheckList expected{
+        "apply {", "if (8w0 != 8w0 & 8w0 || headers.h.field1 != 8w3 & headers.h.field2) {",
+        "headers.h.field4 = 32w0;", "}", "}"};
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
 
@@ -263,11 +215,7 @@ TEST(ElimCast, AssignNone) {
         apply {
             headers.h.field1 = headers.h.field2;
         })";
-    Match::CheckList expected {
-        "apply {",
-            "headers.h.field1 = headers.h.field2;",
-        "}"
-    };
+    Match::CheckList expected{"apply {", "headers.h.field1 = headers.h.field2;", "}"};
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
 
@@ -276,16 +224,14 @@ TEST(ElimCast, AssignConcat) {
         apply {
             headers.h.field3 = headers.h.field1 ++ headers.h.field2;
         })";
-    Match::CheckList expected = {
-        "apply { {",
-            "bit<8> $concat_to_slice`(\\d+)`;",
-            "bit<8> $concat_to_slice`(\\d+)`;",
-            "$concat_to_slice`\\1` = headers.h.field1;",
-            "$concat_to_slice`\\2` = headers.h.field2;",
-            "headers.h.field3[15:8] = $concat_to_slice`\\1`;",
-            "headers.h.field3[7:0] = $concat_to_slice`\\2`;",
-        "} }"
-    };
+    Match::CheckList expected = {"apply { {",
+                                 "bit<8> $concat_to_slice`(\\d+)`;",
+                                 "bit<8> $concat_to_slice`(\\d+)`;",
+                                 "$concat_to_slice`\\1` = headers.h.field1;",
+                                 "$concat_to_slice`\\2` = headers.h.field2;",
+                                 "headers.h.field3[15:8] = $concat_to_slice`\\1`;",
+                                 "headers.h.field3[7:0] = $concat_to_slice`\\2`;",
+                                 "} }"};
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
 
@@ -295,16 +241,14 @@ TEST(ElimCast, AssignZeroExtSliceable) {
             headers.h.field3 = 16w3 & (8w0 ++ headers.h.field2);
         })";
     // No change...
-    Match::CheckList expected = {
-        "apply { {",
-            "bit<8> $concat_to_slice`(\\d+)`;",
-            "bit<8> $concat_to_slice`(\\d+)`;",
-            "$concat_to_slice`\\1` = 8w0 & 8w0;",
-            "$concat_to_slice`\\2` = 8w3 & headers.h.field2;",
-            "headers.h.field3[15:8] = $concat_to_slice`\\1`;",
-            "headers.h.field3[7:0] = $concat_to_slice`\\2`;",
-        "} }"
-    };
+    Match::CheckList expected = {"apply { {",
+                                 "bit<8> $concat_to_slice`(\\d+)`;",
+                                 "bit<8> $concat_to_slice`(\\d+)`;",
+                                 "$concat_to_slice`\\1` = 8w0 & 8w0;",
+                                 "$concat_to_slice`\\2` = 8w3 & headers.h.field2;",
+                                 "headers.h.field3[15:8] = $concat_to_slice`\\1`;",
+                                 "headers.h.field3[7:0] = $concat_to_slice`\\2`;",
+                                 "} }"};
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
 
@@ -315,11 +259,8 @@ TEST(ElimCast, AssignZeroExtNonSliceable) {
         })";
     // No change.
     // Is this correct? It seems it is what is expected in the backend.
-    Match::CheckList expected = {
-        "apply {",
-            "headers.h.field3 = 16w3 + (8w0 ++ headers.h.field2);",
-      "}"
-    };
+    Match::CheckList expected = {"apply {", "headers.h.field3 = 16w3 + (8w0 ++ headers.h.field2);",
+                                 "}"};
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
 
@@ -329,22 +270,20 @@ TEST(ElimCast, AssignMultiple) {
             headers.h.field3 = (headers.h.field1[7:4] ++ headers.h.field1[3:0]) ++
                                (headers.h.field2[7:4] ++ headers.h.field2[3:0]);
         })";
-    Match::CheckList expected = {
-        "apply { {",
-            "bit<4> $concat_to_slice`(\\d+)`;",
-            "bit<4> $concat_to_slice`(\\d+)`;",
-            "bit<4> $concat_to_slice`(\\d+)`;",
-            "bit<4> $concat_to_slice`(\\d+)`;",
-            "$concat_to_slice`\\1` = headers.h.field1[7:4];",
-            "$concat_to_slice`\\2` = headers.h.field1[3:0];",
-            "$concat_to_slice`\\3` = headers.h.field2[7:4];",
-            "$concat_to_slice`\\4` = headers.h.field2[3:0];",
-            "headers.h.field3[15:12] = $concat_to_slice`\\1`;",
-            "headers.h.field3[11:8] = $concat_to_slice`\\2`;",
-            "headers.h.field3[7:4] = $concat_to_slice`\\3`;",
-            "headers.h.field3[3:0] = $concat_to_slice`\\4`;",
-      "} }"
-    };
+    Match::CheckList expected = {"apply { {",
+                                 "bit<4> $concat_to_slice`(\\d+)`;",
+                                 "bit<4> $concat_to_slice`(\\d+)`;",
+                                 "bit<4> $concat_to_slice`(\\d+)`;",
+                                 "bit<4> $concat_to_slice`(\\d+)`;",
+                                 "$concat_to_slice`\\1` = headers.h.field1[7:4];",
+                                 "$concat_to_slice`\\2` = headers.h.field1[3:0];",
+                                 "$concat_to_slice`\\3` = headers.h.field2[7:4];",
+                                 "$concat_to_slice`\\4` = headers.h.field2[3:0];",
+                                 "headers.h.field3[15:12] = $concat_to_slice`\\1`;",
+                                 "headers.h.field3[11:8] = $concat_to_slice`\\2`;",
+                                 "headers.h.field3[7:4] = $concat_to_slice`\\3`;",
+                                 "headers.h.field3[3:0] = $concat_to_slice`\\4`;",
+                                 "} }"};
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
 
@@ -356,14 +295,13 @@ TEST(ElimCast, AssignSubexpr) {
         })";
     Match::CheckList expected = {
         "apply { {",
-            "bit<8> $concat_to_slice`(\\d+)`;",
-            "bit<8> $concat_to_slice`(\\d+)`;",
-            "$concat_to_slice`\\1` = 8w1 & (8w3 | headers.h.field1);",
-            "$concat_to_slice`\\2` = 8w2 & (8w4 | 8w3 & (8w2 | headers.h.field2));",
-            "headers.h.field3[15:8] = $concat_to_slice`\\1`;",
-            "headers.h.field3[7:0] = $concat_to_slice`\\2`;",
-        "} }"
-    };
+        "bit<8> $concat_to_slice`(\\d+)`;",
+        "bit<8> $concat_to_slice`(\\d+)`;",
+        "$concat_to_slice`\\1` = 8w1 & (8w3 | headers.h.field1);",
+        "$concat_to_slice`\\2` = 8w2 & (8w4 | 8w3 & (8w2 | headers.h.field2));",
+        "headers.h.field3[15:8] = $concat_to_slice`\\1`;",
+        "headers.h.field3[7:0] = $concat_to_slice`\\2`;",
+        "} }"};
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
 
@@ -375,17 +313,16 @@ TEST(ElimCast, AssignSubexprPlus) {
         })";
     Match::CheckList expected = {
         "apply { {",
-            "bit<16> $concat_to_slice`(\\d+)`;",
-            "bit<8> $concat_to_slice`(\\d+)`;",
-            "bit<8> $concat_to_slice`(\\d+)`;",
-            "$concat_to_slice`\\1` = 16w0;",
-            "$concat_to_slice`\\2` = 8w1 & (8w3 | headers.h.field1);",
-            "$concat_to_slice`\\3` = 8w2 & (8w4 | 8w3 & (8w2 | headers.h.field2));",
-            "headers.h.field4[31:16] = $concat_to_slice`\\1`;",
-            "headers.h.field4[15:8] = $concat_to_slice`\\2`;",
-            "headers.h.field4[7:0] = $concat_to_slice`\\3`;",
-        "} }"
-    };
+        "bit<16> $concat_to_slice`(\\d+)`;",
+        "bit<8> $concat_to_slice`(\\d+)`;",
+        "bit<8> $concat_to_slice`(\\d+)`;",
+        "$concat_to_slice`\\1` = 16w0;",
+        "$concat_to_slice`\\2` = 8w1 & (8w3 | headers.h.field1);",
+        "$concat_to_slice`\\3` = 8w2 & (8w4 | 8w3 & (8w2 | headers.h.field2));",
+        "headers.h.field4[31:16] = $concat_to_slice`\\1`;",
+        "headers.h.field4[15:8] = $concat_to_slice`\\2`;",
+        "headers.h.field4[7:0] = $concat_to_slice`\\3`;",
+        "} }"};
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
 
@@ -396,18 +333,16 @@ TEST(ElimCast, AssignSubexprNonLogical) {
                 ((headers.h.field1 ++ headers.h.field2) << 8 +
                 (headers.h.field1 ++ headers.h.field2) >> headers.h.field3);
         })";
-    Match::CheckList expected = {
-        "apply { {",
-            "bit<16> $concat_to_slice`(\\d+)`;",
-            "bit<16> $concat_to_slice`(\\d+)`;",
-            "$concat_to_slice`\\1`[15:8] = headers.h.field1;",
-            "$concat_to_slice`\\1`[7:0] = headers.h.field2;",
-            "$concat_to_slice`\\2`[15:8] = headers.h.field1;",
-            "$concat_to_slice`\\2`[7:0] = headers.h.field2;",
-            "headers.h.field3 = $concat_to_slice`\\1` << 16w8 +",
-                               "$concat_to_slice`\\2` >> headers.h.field3;",
-        "} }"
-    };
+    Match::CheckList expected = {"apply { {",
+                                 "bit<16> $concat_to_slice`(\\d+)`;",
+                                 "bit<16> $concat_to_slice`(\\d+)`;",
+                                 "$concat_to_slice`\\1`[15:8] = headers.h.field1;",
+                                 "$concat_to_slice`\\1`[7:0] = headers.h.field2;",
+                                 "$concat_to_slice`\\2`[15:8] = headers.h.field1;",
+                                 "$concat_to_slice`\\2`[7:0] = headers.h.field2;",
+                                 "headers.h.field3 = $concat_to_slice`\\1` << 16w8 +",
+                                 "$concat_to_slice`\\2` >> headers.h.field3;",
+                                 "} }"};
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
 
@@ -418,29 +353,27 @@ TEST(ElimCast, AssignSubexprNonLogicalPlus) {
                     ((headers.h.field1 ++ headers.h.field2) << 8 +
                     (headers.h.field1 ++ headers.h.field2) >> headers.h.field3);
         })";
-    Match::CheckList expected = {
-        "apply { {",
-            "bit<16> $concat_to_slice`(\\d+)`;",
-            "bit<16> $concat_to_slice`(\\d+)`;",
-            "$concat_to_slice`\\1`[15:8] = headers.h.field1;",
-            "$concat_to_slice`\\1`[7:0] = headers.h.field2;",
-            "$concat_to_slice`\\2`[15:8] = headers.h.field1;",
-            "$concat_to_slice`\\2`[7:0] = headers.h.field2;",
-             "{",
-                "bit<16> $concat_to_slice`(\\d+)`;",
-                "$concat_to_slice`\\3` = $concat_to_slice`\\1` << 16w8 +",
-                                        "$concat_to_slice`\\2` >> headers.h.field3;",
-                "{",
-                    "bit<16> $concat_to_slice`(\\d+)`;",
-                    "bit<16> $concat_to_slice`(\\d+)`;",
-                    "$concat_to_slice`\\4` = 16w0;",
-                    "$concat_to_slice`\\5` = $concat_to_slice`\\3`;",
-                    "headers.h.field4[31:16] = $concat_to_slice`\\4`;",
-                    "headers.h.field4[15:0] = $concat_to_slice`\\5`;",
-                "}",
-            "}",
-        "} }"
-    };
+    Match::CheckList expected = {"apply { {",
+                                 "bit<16> $concat_to_slice`(\\d+)`;",
+                                 "bit<16> $concat_to_slice`(\\d+)`;",
+                                 "$concat_to_slice`\\1`[15:8] = headers.h.field1;",
+                                 "$concat_to_slice`\\1`[7:0] = headers.h.field2;",
+                                 "$concat_to_slice`\\2`[15:8] = headers.h.field1;",
+                                 "$concat_to_slice`\\2`[7:0] = headers.h.field2;",
+                                 "{",
+                                 "bit<16> $concat_to_slice`(\\d+)`;",
+                                 "$concat_to_slice`\\3` = $concat_to_slice`\\1` << 16w8 +",
+                                 "$concat_to_slice`\\2` >> headers.h.field3;",
+                                 "{",
+                                 "bit<16> $concat_to_slice`(\\d+)`;",
+                                 "bit<16> $concat_to_slice`(\\d+)`;",
+                                 "$concat_to_slice`\\4` = 16w0;",
+                                 "$concat_to_slice`\\5` = $concat_to_slice`\\3`;",
+                                 "headers.h.field4[31:16] = $concat_to_slice`\\4`;",
+                                 "headers.h.field4[15:0] = $concat_to_slice`\\5`;",
+                                 "}",
+                                 "}",
+                                 "} }"};
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
 
@@ -450,22 +383,20 @@ TEST(ElimCast, AssignSwap) {
             headers.h.field3 = headers.h.field3[3:0] ++ headers.h.field3[7:4] ++
                            headers.h.field3[11:8] ++ headers.h.field3[15:12];
         })";
-    Match::CheckList expected = {
-        "apply { {",
-            "bit<4> $concat_to_slice`(\\d+)`;",
-            "bit<4> $concat_to_slice`(\\d+)`;",
-            "bit<4> $concat_to_slice`(\\d+)`;",
-            "bit<4> $concat_to_slice`(\\d+)`;",
-            "$concat_to_slice`\\1` = headers.h.field3[3:0];",
-            "$concat_to_slice`\\2` = headers.h.field3[7:4];",
-            "$concat_to_slice`\\3` = headers.h.field3[11:8];",
-            "$concat_to_slice`\\4` = headers.h.field3[15:12];",
-            "headers.h.field3[15:12] = $concat_to_slice`\\1`;",
-            "headers.h.field3[11:8] = $concat_to_slice`\\2`;",
-            "headers.h.field3[7:4] = $concat_to_slice`\\3`;",
-            "headers.h.field3[3:0] = $concat_to_slice`\\4`;",
-        "} }"
-    };
+    Match::CheckList expected = {"apply { {",
+                                 "bit<4> $concat_to_slice`(\\d+)`;",
+                                 "bit<4> $concat_to_slice`(\\d+)`;",
+                                 "bit<4> $concat_to_slice`(\\d+)`;",
+                                 "bit<4> $concat_to_slice`(\\d+)`;",
+                                 "$concat_to_slice`\\1` = headers.h.field3[3:0];",
+                                 "$concat_to_slice`\\2` = headers.h.field3[7:4];",
+                                 "$concat_to_slice`\\3` = headers.h.field3[11:8];",
+                                 "$concat_to_slice`\\4` = headers.h.field3[15:12];",
+                                 "headers.h.field3[15:12] = $concat_to_slice`\\1`;",
+                                 "headers.h.field3[11:8] = $concat_to_slice`\\2`;",
+                                 "headers.h.field3[7:4] = $concat_to_slice`\\3`;",
+                                 "headers.h.field3[3:0] = $concat_to_slice`\\4`;",
+                                 "} }"};
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
 
@@ -474,20 +405,16 @@ TEST(ElimCast, AssignCast) {
         apply {
             headers.h.field3 = (bit<16>)(8w3 & headers.h.field1);
         })";
-    Match::CheckList expected = {
-        "apply { {",
-            "bit<8> $concat_to_slice`(\\d+)`;",
-            "bit<8> $concat_to_slice`(\\d+)`;",
-            "$concat_to_slice`\\1` = 8w0;",
-            "$concat_to_slice`\\2` = 8w3 & headers.h.field1;",
-            "headers.h.field3[15:8] = $concat_to_slice`\\1`;",
-            "headers.h.field3[7:0] = $concat_to_slice`\\2`;",
-        "} }"
-    };
-    auto pass = PassManager {
-        new BFN::EliminateWidthCasts(),  // First add the concat.
-        new BFN::RewriteConcatToSlices()
-    };
+    Match::CheckList expected = {"apply { {",
+                                 "bit<8> $concat_to_slice`(\\d+)`;",
+                                 "bit<8> $concat_to_slice`(\\d+)`;",
+                                 "$concat_to_slice`\\1` = 8w0;",
+                                 "$concat_to_slice`\\2` = 8w3 & headers.h.field1;",
+                                 "headers.h.field3[15:8] = $concat_to_slice`\\1`;",
+                                 "headers.h.field3[7:0] = $concat_to_slice`\\2`;",
+                                 "} }"};
+    auto pass = PassManager{new BFN::EliminateWidthCasts(),  // First add the concat.
+                            new BFN::RewriteConcatToSlices()};
     RUN_CHECK(&pass, input, expected);
 }
 
@@ -500,22 +427,19 @@ TEST(ElimCast, AssignCastSubexpression) {
     // TODO How should this expression be sliced & diced?
     Match::CheckList expected = {
         "apply { {",
-            "bit<16> $concat_to_slice`(\\d+)`;",
-            "$concat_to_slice`\\1` = 8w0 ++ headers.h.field2 << 4;",   // dice nonsliceable.
-            "{",
-                "bit<8> $concat_to_slice`(\\d+)`;",
-                "bit<8> $concat_to_slice`(\\d+)`;",
-                "$concat_to_slice`\\2` = 8w0 & $concat_to_slice`\\1`[15:8];",
-                "$concat_to_slice`\\3` = 8w3 & headers.h.field1 & $concat_to_slice`\\1`[7:0];",
-                "headers.h.field3[15:8] = $concat_to_slice`\\2`;",
-                "headers.h.field3[7:0] = $concat_to_slice`\\3`;",
-            "}",
-        "} }"
-    };
-    auto pass = PassManager {
-        new BFN::EliminateWidthCasts(),  // First add the concat.
-        new BFN::RewriteConcatToSlices()
-    };
+        "bit<16> $concat_to_slice`(\\d+)`;",
+        "$concat_to_slice`\\1` = 8w0 ++ headers.h.field2 << 4;",  // dice nonsliceable.
+        "{",
+        "bit<8> $concat_to_slice`(\\d+)`;",
+        "bit<8> $concat_to_slice`(\\d+)`;",
+        "$concat_to_slice`\\2` = 8w0 & $concat_to_slice`\\1`[15:8];",
+        "$concat_to_slice`\\3` = 8w3 & headers.h.field1 & $concat_to_slice`\\1`[7:0];",
+        "headers.h.field3[15:8] = $concat_to_slice`\\2`;",
+        "headers.h.field3[7:0] = $concat_to_slice`\\3`;",
+        "}",
+        "} }"};
+    auto pass = PassManager{new BFN::EliminateWidthCasts(),  // First add the concat.
+                            new BFN::RewriteConcatToSlices()};
     RUN_CHECK(&pass, input, expected);
 }
 
@@ -525,14 +449,12 @@ TEST(ElimCast, AssignFunnelShift) {
         apply {
             headers.h.field3 = (headers.h.field1 ++ headers.h.field2) << 8;
         })";
-    Match::CheckList expected = {
-        "apply { {",
-            "bit<16> $concat_to_slice`(\\d+)`;",
-            "$concat_to_slice`\\1`[15:8] = headers.h.field1;",
-            "$concat_to_slice`\\1`[7:0] = headers.h.field2;",
-            "headers.h.field3 = $concat_to_slice`\\1` << 8;",
-        "} }"
-    };
+    Match::CheckList expected = {"apply { {",
+                                 "bit<16> $concat_to_slice`(\\d+)`;",
+                                 "$concat_to_slice`\\1`[15:8] = headers.h.field1;",
+                                 "$concat_to_slice`\\1`[7:0] = headers.h.field2;",
+                                 "headers.h.field3 = $concat_to_slice`\\1` << 8;",
+                                 "} }"};
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
 
@@ -541,16 +463,14 @@ TEST(ElimCast, AssignExplicitSlice) {
         apply {
             headers.h.field1 = (headers.h.field1 ++ headers.h.field2)[11:4];
         })";
-    Match::CheckList expected = {
-        "apply { {",
-            "bit<4> $concat_to_slice`(\\d+)`;",
-            "bit<4> $concat_to_slice`(\\d+)`;",
-            "$concat_to_slice`\\1` = headers.h.field1[3:0];",
-            "$concat_to_slice`\\2` = headers.h.field2[7:4];",
-            "headers.h.field1[7:4] = $concat_to_slice`\\1`;",
-            "headers.h.field1[3:0] = $concat_to_slice`\\2`;",
-        "} }"
-    };
+    Match::CheckList expected = {"apply { {",
+                                 "bit<4> $concat_to_slice`(\\d+)`;",
+                                 "bit<4> $concat_to_slice`(\\d+)`;",
+                                 "$concat_to_slice`\\1` = headers.h.field1[3:0];",
+                                 "$concat_to_slice`\\2` = headers.h.field2[7:4];",
+                                 "headers.h.field1[7:4] = $concat_to_slice`\\1`;",
+                                 "headers.h.field1[3:0] = $concat_to_slice`\\2`;",
+                                 "} }"};
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
 
@@ -559,14 +479,12 @@ TEST(ElimCast, AssignExplicitSlicePlus) {
         apply {
             headers.h.field1 = (headers.h.field1 ++ headers.h.field2 + 16w3)[11:4];
         })";
-    Match::CheckList expected = {
-        "apply { {",
-            "bit<16> $concat_to_slice`(\\d+)`;",
-            "$concat_to_slice`\\1`[15:8] = headers.h.field1;",
-            "$concat_to_slice`\\1`[7:0] = headers.h.field2;",
-            "headers.h.field1 = ($concat_to_slice`\\1` + 16w3)[11:4];",
-        "} }"
-    };
+    Match::CheckList expected = {"apply { {",
+                                 "bit<16> $concat_to_slice`(\\d+)`;",
+                                 "$concat_to_slice`\\1`[15:8] = headers.h.field1;",
+                                 "$concat_to_slice`\\1`[7:0] = headers.h.field2;",
+                                 "headers.h.field1 = ($concat_to_slice`\\1` + 16w3)[11:4];",
+                                 "} }"};
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
 
@@ -578,16 +496,14 @@ TEST(ElimCast, AssignBooleanExpr) {
                 headers.h.field4 = 32w0;
             }
         })";
-    Match::CheckList expected = {
-        "bool b_0;",
-        "apply {",
-            "b_0 = headers.h.field1 == headers.h.field3[15:8] &&",
-                  "headers.h.field2 == headers.h.field3[7:0];",
-            "if (b_0) {",
-                "headers.h.field4 = 32w0;",
-            "}",
-        "}"
-    };
+    Match::CheckList expected = {"bool b_0;",
+                                 "apply {",
+                                 "b_0 = headers.h.field1 == headers.h.field3[15:8] &&",
+                                 "headers.h.field2 == headers.h.field3[7:0];",
+                                 "if (b_0) {",
+                                 "headers.h.field4 = 32w0;",
+                                 "}",
+                                 "}"};
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
 
@@ -599,17 +515,18 @@ TEST(ElimCast, AssignBooleanExpr2) {
                 headers.h.field4 = 32w0;
             }
         })";
-    Match::CheckList expected = {
-        "bit<8> v_0;",
-        "apply {",
-            "v_0 = (headers.h.field1 == headers.h.field3[15:8] &&",
-                   "headers.h.field2 == headers.h.field3[7:0] ? 8w1 : 8w2);",
-            "if (v_0 == 8w1) {",
-                "headers.h.field4 = 32w0;",
-            "}",
-        "}"
-    };
+    Match::CheckList expected = {"bit<8> v_0;",
+                                 "apply {",
+                                 "v_0 = (headers.h.field1 == headers.h.field3[15:8] &&",
+                                 "headers.h.field2 == headers.h.field3[7:0] ? 8w1 : 8w2);",
+                                 "if (v_0 == 8w1) {",
+                                 "headers.h.field4 = 32w0;",
+                                 "}",
+                                 "}"};
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
+
+// Keep definition of RUN_CHECK local for unity builds.
+#undef RUN_CHECK
 
 }  // namespace Test

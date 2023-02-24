@@ -74,6 +74,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # is an extension
 set(CMAKE_CXX_EXTENSIONS ON)
 
+# If unity builds are enabled, choose an aggressive batch size.
+if (CMAKE_UNITY_BUILD)
+  set(CMAKE_UNITY_BUILD_BATCH_SIZE 16 CACHE UNINITIALIZED "Set the unity build batch size.")
+endif ()
+
 if (ENABLE_ASSERTIONS)
   # NDEBUG is automatically defined on non-Debug builds by CMake.
   # To enable assertions, we need to explicitly undefine NDEBUG.

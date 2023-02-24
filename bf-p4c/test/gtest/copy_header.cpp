@@ -11,7 +11,7 @@ namespace Test {
 
 namespace {
 
-auto defs = R"(
+inline auto defs = R"(
     struct local_metadata_t {}
     header Hdr {
         bit<8> data;

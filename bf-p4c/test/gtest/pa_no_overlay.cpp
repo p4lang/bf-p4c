@@ -83,7 +83,7 @@ createPaNoOverlayPragmaTestCase() {
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
 }
 
-const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
+const IR::BFN::Pipe *runMockPassesPaNoOverlay(const IR::BFN::Pipe* pipe,
                                    PhvInfo& phv) {
     PHV::Pragmas* pragmas = new PHV::Pragmas(phv);
     PhvUse* uses = new PhvUse(phv);
@@ -105,7 +105,7 @@ TEST_F(PaNoOverlayPragmaTest, P4_16) {
 
     PhvInfo phv;
 
-    runMockPasses(test->pipe, phv);
+    runMockPassesPaNoOverlay(test->pipe, phv);
 
     EXPECT_EQ(phv.field_mutex()(phv.field("ingress::h2.f2")->id,
                                  phv.field("ingress::h3.f2")->id), true);

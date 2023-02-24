@@ -14,8 +14,8 @@ if [[ "${CC}" == "gcc-6" || "${CXX}" == "g++-6" ]] ; then
     apt clean -y
 fi
 
-if [[ "${UNIFIED_BUILD}" != true ]] ; then
-    BOOTSTRAP_EXTRA_OPTS+=("--disable-unified")
+if [[ "${UNITY_BUILD}" != true ]] ; then
+    BOOTSTRAP_EXTRA_OPTS+=("--disable-unity-build")
 fi
 
 if [[ "${UBSAN}" == "true" ]] ; then

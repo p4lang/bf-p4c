@@ -133,7 +133,7 @@ std::ostream& operator<<(std::ostream& out, const SliceSpec& sliceSpec) {
 using ExpectedClot = std::vector<SliceSpec>;
 using ExpectedAllocation = std::set<ExpectedClot>;
 
-void runTest(boost::optional<TofinoPipeTestCase> test,
+void runClotTest(boost::optional<TofinoPipeTestCase> test,
              ExpectedAllocation expectedAlloc) {
     PhvInfo phvInfo;
     PhvUse phvUse(phvInfo);
@@ -235,7 +235,7 @@ TEST_F(ClotTest, Basic1) {
     // h.f1  CLOT
     // h.f2  written
     // -----
-    runTest(test, {{"h.f1"}});
+    runClotTest(test, {{"h.f1"}});
 }
 
 TEST_F(ClotTest, AdjacentHeaders1) {
@@ -278,7 +278,7 @@ TEST_F(ClotTest, AdjacentHeaders1) {
     // -----
     // h2.f2  written
     // -----
-    runTest(test, {
+    runClotTest(test, {
         {"h1.f1", "h1.f2", "h2.f1"}
     });
 }
@@ -339,7 +339,7 @@ TEST_F(ClotTest, HeaderRemoval1) {
     // h3.f1        CLOT
     // h3.f2        written
     // -----------
-    runTest(test, {
+    runClotTest(test, {
         {"h1.f"},
         {{"h2.f", FromTo(24, 63)}},
         {"h3.f1"},
@@ -401,7 +401,7 @@ TEST_F(ClotTest, HeaderRemoval2) {
     // h3.f1  CLOT
     // h3.f2  CLOT
     // -----
-    runTest(test, {
+    runClotTest(test, {
         {"h1.f"},
         {"h2.f"},
         {"h3.f1", "h3.f2"},
@@ -483,7 +483,7 @@ TEST_F(ClotTest, MutualExclusion1) {
     //           h3.f1  CLOT
     //           h3.f2  written
     //           -----
-    runTest(test, {
+    runClotTest(test, {
         {"h1.f1", "h1.f2"},
         {"h2a.f"},
         {"h2b.f"},
@@ -567,7 +567,7 @@ TEST_F(ClotTest, Insertion1) {
     //           h3.f1         CLOT
     //           h3.f2         written
     //           -----
-    runTest(test, {
+    runClotTest(test, {
         {{"h1.f1", FromTo(16, 31)}},
         {"h2a.f"},
         {"h3.f1"},
@@ -652,7 +652,7 @@ TEST_F(ClotTest, Insertion2) {
     // h3.f1         CLOT
     // h3.f2         written
     // -----
-    runTest(test, {
+    runClotTest(test, {
         {"h1.f1", "h1.f2"},
         {{"h2b.f", FromTo(24, 63)}},
         {"h3.f1"},
@@ -725,7 +725,7 @@ TEST_F(ClotTest, Reorder1) {
     // h4.f1        CLOT
     // h4.f2        written
     // -----
-    runTest(test, {
+    runClotTest(test, {
         {{"h1.f", FromTo(24, 31)}},
         {{"h2.f", FromTo(24, 63)}},
         {{"h3.f", FromTo(24, 95)}},
@@ -798,7 +798,7 @@ TEST_F(ClotTest, Reorder2) {
     // h4.f1        CLOT
     // h4.f2        written
     // -----
-    runTest(test, {
+    runClotTest(test, {
         {"h1.f"},
         {{"h3.f", FromTo(24, 63)}},
         {"h4.f1"},
@@ -901,7 +901,7 @@ TEST_F(ClotTest, AdjacentHeaders2) {
     // -----
     // h4.f1        CLOT 2
     // h4.f2        written
-    runTest(test, {
+    runClotTest(test, {
         {"h1.f1", "h1.f2"},
         {"h2.f", "h3.f"},
         {"h4.f1"}
@@ -946,7 +946,7 @@ TEST_F(ClotTest, FieldPragma) {
     // h.f2  CLOT
     // h.f3  written
     // -----
-    runTest(test, {{"h.f2"}});
+    runClotTest(test, {{"h.f2"}});
 }
 
 TEST_F(ClotTest, HeaderPragma) {
@@ -987,7 +987,7 @@ TEST_F(ClotTest, HeaderPragma) {
     // h.f2  @pragma do_not_use_clot
     // h.f3  written, @pragma do_not_use_clot
     // -----
-    runTest(test, {});
+    runClotTest(test, {});
 }
 
 TEST_F(ClotTest, AdjacentMultiheaderVariableSize) {
@@ -1091,7 +1091,7 @@ TEST_F(ClotTest, AdjacentMultiheaderVariableSize) {
     // e.f1        CLOT 2
     // e.f2        written
 
-    runTest(test, {
+    runClotTest(test, {
         {"b.f", "c.f", "d.f1", "d.f2"},
         {"a.f1", "a.f2"},
         {"e.f1"}
@@ -1200,7 +1200,7 @@ TEST_F(ClotTest, NotAdjacentMultiheaderVariableSize) {
     // e.f1[15:0]   CLOT 2
     // e.f2         CLOT 2
 
-    runTest(test, {
+    runClotTest(test, {
         {"b.f", "c.f", "d.f1"},
         {"a.f1", "a.f2"},
         {{"e.f1", FromTo(0, 15)}, "e.f2"}
@@ -1284,7 +1284,7 @@ TEST_F(ClotTest, AdjacentMultiheaderVariableSizeHeaderStack) {
     // stack[4].f1        CLOT 2
     // stack[4].f2        written
 
-    runTest(test, {{"stack[1].f1", "stack[1].f2", "stack[2].f1", "stack[2].f2", "stack[3].f1",
+    runClotTest(test, {{"stack[1].f1", "stack[1].f2", "stack[2].f1", "stack[2].f2", "stack[3].f1",
                     "stack[3].f2"},
                    {"stack[0].f1", "stack[0].f2"},
                    {"stack[4].f1"}});
@@ -1368,7 +1368,7 @@ TEST_F(ClotTest, NotAdjacentMultiheaderVariableSizeHeaderStack) {
     // stack[4].f1[7..0]  CLOT 2
     // stack[4].f2        CLOT 2
 
-    runTest(test, {{"stack[1].f1", "stack[1].f2", "stack[2].f1", "stack[2].f2", "stack[3].f1"},
+    runClotTest(test, {{"stack[1].f1", "stack[1].f2", "stack[2].f1", "stack[2].f2", "stack[3].f1"},
                    {"stack[0].f1", "stack[0].f2"},
                    {{"stack[4].f1", FromTo(0, 7)}, "stack[4].f2"}});
 }
@@ -1442,7 +1442,8 @@ TEST_F(ClotTest, ZeroInitsBetweenTwoClots) {
             pkt.emit(hdr);
         )"));
 
-    runTest(test, {{"a.f1", "a.f2", "b.f1", "b.f2"}, {"d.f1", "d.f2"}, {{"e.f1", FromTo(0, 7)}}});
+    runClotTest(test,
+                    {{"a.f1", "a.f2", "b.f1", "b.f2"}, {"d.f1", "d.f2"}, {{"e.f1", FromTo(0, 7)}}});
 }
 
 TEST_F(ClotTest, ExtractConstantsBetweenTwoClots) {
@@ -1510,7 +1511,8 @@ TEST_F(ClotTest, ExtractConstantsBetweenTwoClots) {
             pkt.emit(hdr);
         )"));
 
-    runTest(test, {{"a.f1", "a.f2", "b.f1", "b.f2"}, {"d.f1", "d.f2"}, {{"e.f1", FromTo(0, 7)}}});
+    runClotTest(test,
+                    {{"a.f1", "a.f2", "b.f1", "b.f2"}, {"d.f1", "d.f2"}, {{"e.f1", FromTo(0, 7)}}});
 }
 
 TEST_F(ClotTest, ZeroInitAndExtractConstantBetweenTwoClots) {
@@ -1578,7 +1580,8 @@ TEST_F(ClotTest, ZeroInitAndExtractConstantBetweenTwoClots) {
             pkt.emit(hdr);
         )"));
 
-    runTest(test, {{"a.f1", "a.f2", "b.f1", "b.f2"}, {"d.f1", "d.f2"}, {{"e.f1", FromTo(0, 7)}}});
+    runClotTest(test,
+                    {{"a.f1", "a.f2", "b.f1", "b.f2"}, {"d.f1", "d.f2"}, {{"e.f1", FromTo(0, 7)}}});
 }
 
 }  // namespace Test

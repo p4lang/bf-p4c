@@ -21,7 +21,7 @@ show_help () {
     echo >&2 "   --enable-asan          build with address sanitizer"
     echo >&2 "   --small-config         only builds: (1) the compiler, (2) testing EXCEPT for the gtest-based tests"
     echo >&2 "   --minimal-config       disable most build targets other than the compiler"
-    echo >&2 "   --disable-unified      disable unified build"
+    echo >&2 "   --disable-unity-build  disable unity build"
     echo >&2 "   --disable-werror       do not treat build warnings as errors"
     echo >&2 "   --cmake-gen <gen>      see 'cmake -h' for list of generators"
     echo >&2 "   --disable-preconfig    disable local pre-configured defaults even if they are present"
@@ -36,7 +36,7 @@ enableUBSan=false
 enableASan=false
 smallConfig=false
 minimalConfig=false
-disableUnified=false
+disableUnityBuild=false
 disableWerror=false
 disablePreconfig=false
 preconfigPath=/bfn/bf-p4c-preconfig.cmake
@@ -72,8 +72,8 @@ while [ $# -gt 0 ]; do
     --minimal-config)
         minimalConfig=true
         ;;
-    --disable-unified)
-        disableUnified=true
+    --disable-unity-build)
+        disableUnityBuild=true
         ;;
     --disable-werror)
         disableWerror=true
@@ -138,8 +138,10 @@ if $minimalConfig ; then
     ENABLED_COMPONENTS="$ENABLED_COMPONENTS -DENABLE_TESTING=OFF -DENABLE_GTESTS=OFF"
     ENABLED_COMPONENTS="$ENABLED_COMPONENTS -DENABLE_DOXYGEN=OFF"
 fi
-if $disableUnified ; then
-    ENABLED_COMPONENTS+=" -DENABLE_UNIFIED_COMPILATION=OFF"
+if $disableUnityBuild ; then
+    ENABLED_COMPONENTS+=" -DCMAKE_UNITY_BUILD=OFF"
+else
+    ENABLED_COMPONENTS+=" -DCMAKE_UNITY_BUILD=ON"
 fi
 
 if $disableWerror ; then

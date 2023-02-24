@@ -1,6 +1,3 @@
-#ifndef BF_P4C_ARCH_INTRINSIC_METADATA_H_
-#define BF_P4C_ARCH_INTRINSIC_METADATA_H_
-
 #include "ir/ir.h"
 #include "bf-p4c/arch/intrinsic_metadata.h"
 
@@ -188,5 +185,3 @@ const IR::Expression* createLookaheadExpr(cstring pkt, int bits) {
 }
 
 }  // namespace BFN
-
-#endif /* BF_P4C_ARCH_INTRINSIC_METADATA_H_ */

@@ -3,9 +3,9 @@
 
 namespace Test {
 
-namespace {
+namespace PragmaStageTest {
 
-auto defs = R"(
+inline auto defs = R"(
     match_kind {exact}
     header H { bit<16> f1; bit<16> f2; bit<16> f3;}
     struct headers_t { H h; }
@@ -15,7 +15,7 @@ auto defs = R"(
 // But we will run the FullBackend and verify the ASM generated.
 #define RUN_CHECK(input, expected) do { \
     auto blk = TestCode(TestCode::Hdr::TofinoMin, TestCode::tofino_shell(), \
-                        {defs, TestCode::empty_state(), input, TestCode::empty_appy()}, \
+                        {PragmaStageTest::defs, TestCode::empty_state(), input, TestCode::empty_appy()}, \
                         TestCode::tofino_shell_control_marker(), \
                         {"--no-dead-code-elimination"}); \
     EXPECT_TRUE(blk.CreateBackend()); \
@@ -74,5 +74,8 @@ TEST(PragmaStage, PragmaStage) {
     };
     RUN_CHECK(input, expected);
 }
+
+// Keep definition of RUN_CHECK local for unity builds.
+#undef RUN_CHECK
 
 }  // namespace Test

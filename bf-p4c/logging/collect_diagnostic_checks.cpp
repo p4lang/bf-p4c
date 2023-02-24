@@ -68,7 +68,8 @@ static std::unordered_map<int, std::string> get_comments(const std::string conte
 
 inline std::string to_lower(std::smatch::const_reference it) {
     std::string str = it.str();
-    std::transform(str.begin(), str.end(), str.begin(), tolower);
+    std::transform(str.begin(), str.end(), str.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
     return str;
 }
 
@@ -92,8 +93,8 @@ void collect_diagnostic_checks(BfErrorReporter &reporter, BFN_Options &options) 
     for (const auto &[line, comment] : comments) {
         if (std::regex_search(comment, match, check_regex)) {
             const int groups = match.size();
-            BUG_CHECK(groups == 4,
-                      "Invalid check regex match results: %1% groups instead of 4.", groups);
+            BUG_CHECK(groups == 4, "Invalid check regex match results: %1% groups instead of 4.",
+                      groups);
 
             // match[0] is the whole line.
 

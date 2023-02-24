@@ -13,7 +13,7 @@
 
 namespace Test {
 
-namespace {
+namespace NoCoPackTest {
 
 boost::optional<TofinoPipeTestCase>
 createActionTest() {
@@ -93,12 +93,12 @@ const IR::BFN::Pipe *runInitialPassManager(const IR::BFN::Pipe* pipe, PhvInfo *p
 class NoCoPack : public TofinoBackendTest { };
 
 TEST_F(NoCoPack, Sanity) {
-    auto test = createActionTest();
+    auto test = NoCoPackTest::createActionTest();
 
     ASSERT_TRUE(test);
     PhvInfo phv;
 
-    runInitialPassManager(test->pipe, &phv);
+    NoCoPackTest::runInitialPassManager(test->pipe, &phv);
 
     auto h1_f1 = phv.field("ingress::h1.f1");
     auto h1_f2 = phv.field("ingress::h1.f2");
