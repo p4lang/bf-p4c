@@ -33,11 +33,11 @@ TEST(testBfGtestHelper, MatchTrimAnnotations) {
 }
 
 TEST(testBfGtestHelper, MatchConvetToRegex) {
-    EXPECT_EQ(convet_to_regex("").compare(""), 0);
-    EXPECT_EQ(convet_to_regex("a b").compare("a b"), 0);
-    EXPECT_EQ(convet_to_regex("a `b` c").compare("a b c"), 0);
-    EXPECT_EQ(convet_to_regex("^$.|?*+(){[\\").compare(R"(\^\$\.\|\?\*\+\(\)\{\[\\)"), 0);
-    EXPECT_EQ(convet_to_regex("`^$.|?*+(){[\\`").compare("^$.|?*+(){[\\"), 0);  // Don't convert.
+    EXPECT_EQ(convert_to_regex("").compare(""), 0);
+    EXPECT_EQ(convert_to_regex("a b").compare("a b"), 0);
+    EXPECT_EQ(convert_to_regex("a `b` c").compare("a b c"), 0);
+    EXPECT_EQ(convert_to_regex("^$.|?*+(){[\\").compare(R"(\^\$\.\|\?\*\+\(\)\{\[\\)"), 0);
+    EXPECT_EQ(convert_to_regex("`^$.|?*+(){[\\`").compare("^$.|?*+(){[\\"), 0);  // Don't convert.
 }
 
 TEST(testBfGtestHelper, MatchMatchBasic) {

@@ -584,6 +584,14 @@ class CoreAllocation {
     bool checkDarkOverlay(const std::vector<PHV::AllocSlice>& candidate_slices,
                           const PHV::Transaction& alloc) const;
 
+    /// Do the @p slice and @p prim have overlapping field ranges
+    bool rangesOverlap(const PHV::AllocSlice slice, const IR::BFN::ParserPrimitive* prim) const;
+
+    /** Verify whether the @p candidate_slices will produce parser extractions
+      * that will lead to data corruption
+      */
+    bool checkParserExtractions(const std::vector<PHV::AllocSlice> &candidate_slices,
+                                const PHV::Transaction &alloc) const;
 
     /** Helper function for tryAlloc that tries to allocate all fields in
      * @p start_positions simultaneously. Deparsed fields in particular need to be

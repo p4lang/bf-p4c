@@ -42,7 +42,7 @@ inline Flag operator|(Flag a, Flag b) {
     return static_cast<Flag>(static_cast<int>(a) | static_cast<int>(b));
 }
 
-/** 'convet_to_regex()' allows user to write plain string embedded with chunks of regex.
+/** 'convert_to_regex()' allows user to write plain string embedded with chunks of regex.
  *  See std::ECMAScript for details on regex format.
  *  You do not have to escape your regex chunks, but it makes things much cleaner!
  *  Regex chucks placed within `` (back quotes) are not converted, everything else is.
@@ -60,7 +60,7 @@ inline Flag operator|(Flag a, Flag b) {
  *  Thus will match code such as:
  *           $slice42[7:0] ++ $slice42[7:0]
 */
-std::string convet_to_regex(const std::string& expr);
+std::string convert_to_regex(const std::string& expr);
 
 /** 'match_basic()' compares 'expr' with 'str', staring at 'str[pos]'.
  *  The search will not include the 'str[n_pos]'character.
@@ -74,7 +74,7 @@ size_t match_basic(const std::string& expr,
 
 
 /** A 'CheckList' is a series of expressions to match.
- *  The expressions may optionally contain regex expressions - see 'convet_to_regex()'.
+ *  The expressions may optionally contain regex expressions - see 'convert_to_regex()'.
  *  When 'TrimWhiteSpace' is used, entries may be separated by zero or more white-space.
  */
 typedef std::vector<std::string> CheckList;
@@ -100,8 +100,8 @@ struct Result : boost::equality_comparable<Result> {
 
 /** 'match()' is similar to 'match_basic()'.
  *  However it allows a match to be made up of a 'Checklist' of expressions.
- *  It calls 'convet_to_regex()' on the expressions, allowing regex expressions to be used.
- *  See comments regarding 'convet_to_regex()' for more details.
+ *  It calls 'convert_to_regex()' on the expressions, allowing regex expressions to be used.
+ *  See comments regarding 'convert_to_regex()' for more details.
  */
 Result match(const CheckList& exprs,
              const std::string& str, size_t pos = 0, size_t n_pos = std::string::npos,
@@ -282,6 +282,17 @@ class TestCode {
     std::string extract_code(size_t pos = 0) const {
         return extract_code(CodeBlock::P4Code, pos);
     }
+
+    /** Get the container for given field
+      *
+      * @param field  The field to search for
+      * @param str    The string in which to search for the field (most likely returned by
+      *               `extract_code(CodeBlock::PhvAsm)`
+      * @param idx    The index of the (stage X, container) pair to return the conntainer for. This
+      *               is _not_ the stage number.
+      */
+    std::string get_field_container(const std::string &field, const std::string &str,
+                                    int idx = 0) const;
 
     friend std::ostream &operator<<(std::ostream &out, const TestCode &tc) {
         return out << tc.extract_code(CodeBlock::P4Code, 0);

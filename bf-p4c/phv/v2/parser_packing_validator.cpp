@@ -28,9 +28,9 @@ le_bitrange expand_to_byte_range(int cont_idx, int size) {
 
 }  // namespace
 
-ParserPackingValidator::StateExtractMap
-ParserPackingValidator::get_extracts(const FieldSlice& fs) const {
-    StateExtractMap rst;
+ParserPackingValidator::StatePrimitiveMap
+ParserPackingValidator::get_primitives(const FieldSlice& fs) const {
+    StatePrimitiveMap rst;
     for (const auto &[loc, expr] : defuse_i.getParserDefs(fs)) {
         auto state = loc->to<IR::BFN::ParserState>();
         if (!state)
@@ -40,10 +40,13 @@ ParserPackingValidator::get_extracts(const FieldSlice& fs) const {
         if (inserted) {  // not cached, need to calculate
             // defuse does not track extracts directly so we need to find it in the state
             for (auto* stmt : state->statements) {
-                if (auto extract = stmt->to<IR::BFN::Extract>()) {
+                if (auto* extract = stmt->to<IR::BFN::Extract>()) {
                     state_extracts_cache[{state, extract->dest->field}].push_back(extract);
+                } else if (auto* checksum = stmt->to<IR::BFN::ParserChecksumWritePrimitive>()) {
+                    if (auto* dest = checksum->getWriteDest())
+                        state_extracts_cache[{state, dest->field}].push_back(checksum);
                 }
-                // TODO(vstill): P4C-4689: revisit checksums, zeroinit
+                // TODO(vstill): P4C-4689: revisit zeroinit
             }
         }
 
@@ -68,7 +71,7 @@ bool ParserPackingValidator::allow_clobber(const Field* f) const {
 // a is extracted by clear-on-write and b is okay to be 0 after the state.
 const AllocError* ParserPackingValidator::will_buf_extract_clobber_the_other(
     const FieldSlice& fs, const StateExtract& state_extract, const int cont_idx,
-    const FieldSlice& other_fs, const StateExtractMap& other_extracts,
+    const FieldSlice& other_fs, const StatePrimitiveMap& other_prims,
     const int other_cont_idx, const boost::optional<Container>&) const {
     auto* err = new AllocError(ErrorCode::CONTAINER_PARSER_PACKING_INVALID);
     const auto [state, extract] = state_extract;
@@ -95,20 +98,25 @@ const AllocError* ParserPackingValidator::will_buf_extract_clobber_the_other(
 
     // For extracts in the same state, other input buffer offsets need to be the same as their
     // PHV container offset: must be extracted together in the same state.
-    if (auto extracts_it = other_extracts.find(state); extracts_it != other_extracts.end()) {
-        for (auto* other_extract : extracts_it->second) {
-            if (other_extract->source->is<IR::BFN::PacketRVal>()) {
-                const auto other_buf_range = slice_extract_range(other_fs, other_extract);
-                if (!(other_buf_range.hi - buf_range.hi == cont_idx - other_cont_idx)) {
-                    *err << "cannot pack " << fs << " with " << other_fs << " because in state "
-                         << state->name << " the former " << "slice is extracted from "
-                         << ": " << buf_range << ", but " << "the latter is "
-                         << other_buf_range << ", which is not consistent with "
-                         << "their allocation: former@" << cont_idx
-                         << ", other@" << other_cont_idx;
-                    return err;
+    if (auto prims_it = other_prims.find(state); prims_it != other_prims.end()) {
+        for (auto* other_prim : prims_it->second) {
+            bool other_prim_has_packet_rval = false;
+            if (auto* other_extract = other_prim->to<IR::BFN::Extract>()) {
+                if (other_extract->source->is<IR::BFN::PacketRVal>()) {
+                    other_prim_has_packet_rval = true;
+                    const auto other_buf_range = slice_extract_range(other_fs, other_extract);
+                    if (!(other_buf_range.hi - buf_range.hi == cont_idx - other_cont_idx)) {
+                        *err << "cannot pack " << fs << " with " << other_fs << " because in state "
+                             << state->name << " the former " << "slice is extracted from "
+                             << ": " << buf_range << ", but " << "the latter is "
+                             << other_buf_range << ", which is not consistent with "
+                             << "their allocation: former@" << cont_idx
+                             << ", other@" << other_cont_idx;
+                        return err;
+                    }
                 }
-            } else {
+            }
+            if (!other_prim_has_packet_rval) {
                 // XXX(yumin): This if check is not required! Remove to always return an error
                 // when we transition to strict mode.
                 if (!phv_i.must_alloc_same_container(fs, other_fs)) {
@@ -116,7 +124,7 @@ const AllocError* ParserPackingValidator::will_buf_extract_clobber_the_other(
                          << state->name << " the former "
                          << "slice is extracted from "
                          << ": " << buf_range << ", but "
-                         << "the latter has " << other_extract;
+                         << "the latter has " << other_prim;
                     return err;
                 }
             }
@@ -143,22 +151,22 @@ const AllocError* ParserPackingValidator::will_buf_extract_clobber_the_other(
     //    a. the other field cannot be parser zero initialized, unless
     //       this extract is clear-on-write extract.
     //    b. all other extracts are mutex.
-    if (!other_extracts.count(state) &&
+    if (!other_prims.count(state) &&
         (!is_clear_on_write && parser_zero_init(other_fs.field()))) {
         *err << "cannot pack " << fs << " with " << other_fs << " because the former "
              << "slice is extracted in " << state->name << ": " << extract << ", but "
              << "the latter field requires parser zero initialization.";
         return err;
     }
-    for (const auto& other_state_extract : other_extracts) {
-        const auto* other_state = other_state_extract.first;
-        const auto& other_extracts = other_state_extract.second;
+    for (const auto& other_state_prim : other_prims) {
+        const auto* other_state = other_state_prim.first;
+        const auto& other_prims = other_state_prim.second;
         if (other_state == state) continue;
         const auto* other_parser = parser_i.state_to_parser.at(other_state);
         if (other_parser != parser) {
             continue;
         }
-        LOG5("Check extract: " << other_state->name << ": " << other_extracts);
+        LOG5("Check extract: " << other_state->name << ": " << other_prims);
         if (write_overlap && !parser_info_i.graph(parser).is_mutex(state, other_state)) {
             *err << "cannot pack " << fs << " with " << other_fs << " because the former "
                  << "slice is extracted in " << state->name << ": " << extract << ", but "
@@ -173,8 +181,8 @@ const AllocError* ParserPackingValidator::will_a_extracts_clobber_b(
     const FieldSliceStart& a, const FieldSliceStart& b, const boost::optional<Container>& c) const {
     const auto& [a_fs, a_idx] = a;
     const auto& [b_fs, b_idx] = b;
-    const auto a_extracts = get_extracts(a_fs);
-    const auto b_extracts = get_extracts(b_fs);
+    const auto a_extracts = get_primitives(a_fs);
+    const auto b_extracts = get_primitives(b_fs);
     // because a is fine-sliced, each parser state will have at most 1 extract to the slice,
     // we do not need to check extract within the a_extracts,
     for (const auto& [state, state_extracts] : a_extracts) {
@@ -186,19 +194,21 @@ const AllocError* ParserPackingValidator::will_a_extracts_clobber_b(
             return err;
         }
         if (allow_clobber(b_fs.field())) break;
-        for (const auto& extract : state_extracts) {
-            StateExtract state_extract{state, extract};
-            // only extract from input buffer will clobber bits.
-            // TODO(vstill): what about checksum-residual-deposit? what about
-            // clean-on-write from constant / checksums?
-            if (!extract->source->is<IR::BFN::PacketRVal>()) {
-                continue;
-            }
-            auto* err =
-                will_buf_extract_clobber_the_other(
-                        a_fs, state_extract, a_idx, b_fs, b_extracts, b_idx, c);
-            if (err) {
-                return err;
+        for (const auto& prim : state_extracts) {
+            if (auto* extract = prim->to<IR::BFN::Extract>()) {
+                StateExtract state_extract{state, extract};
+                // only extract from input buffer will clobber bits.
+                // TODO(vstill): what about checksum-residual-deposit? what about
+                // clean-on-write from constant / checksums?
+                if (!extract->source->is<IR::BFN::PacketRVal>()) {
+                    continue;
+                }
+                auto* err =
+                    will_buf_extract_clobber_the_other(
+                            a_fs, state_extract, a_idx, b_fs, b_extracts, b_idx, c);
+                if (err) {
+                    return err;
+                }
             }
         }
     }

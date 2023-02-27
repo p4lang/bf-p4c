@@ -46,7 +46,7 @@ std::string trimAnnotations(const std::string& str) {
     return std::regex_replace(str, std::regex(annotation), "");
 }
 
-std::string convet_to_regex(const std::string& expr) {
+std::string convert_to_regex(const std::string& expr) {
     auto exprLen = expr.length();
     auto stepOverChar = [exprLen](size_t pos) {
         ++pos;
@@ -120,7 +120,7 @@ Result match(const CheckList& exprs,
         if (flag & TrimWhiteSpace)
             e += "` *`";
         e += expr;
-        regex_exprs.emplace_back(convet_to_regex(e));
+        regex_exprs.emplace_back(convert_to_regex(e));
         regex += regex_exprs.back();
     }
     if (std::regex_search(from, to, sm, std::regex(regex))
@@ -132,7 +132,7 @@ Result match(const CheckList& exprs,
     Result res(/* success */ false, pos, /* count */ 0);
     regex = "";
     for (const auto& r_e : regex_exprs) {
-        regex += r_e;  // Reuse the saved 'convet_to_regex()' value.
+        regex += r_e;  // Reuse the saved 'convert_to_regex()' value.
         if (!std::regex_search(from, to, sm, std::regex(regex)) ||
             sm.prefix().length())  // Once we have a prefix, it wont go away.
             return res;     // Found the fail point.
@@ -509,7 +509,7 @@ TestCode::TestCode(Hdr header, std::string code,
         throw std::invalid_argument("TestCode built a bad program.");
 
     if (!blockMarker.empty()) {
-        marker = std::regex(Match::convet_to_regex(blockMarker));
+        marker = std::regex(Match::convert_to_regex(blockMarker));
         ends = Match::get_ends(marker_last_char(blockMarker));
         if (ends.empty())
             throw std::invalid_argument("blockMarker's last char is not a Match::get_ends()");
@@ -729,6 +729,41 @@ std::string TestCode::extract_code(CodeBlock blk_type, size_t pos) const {
     if (flag & Match::TrimWhiteSpace)
         blk = Match::trimWhiteSpace(blk);
     return blk.substr(pos);
+}
+
+std::string TestCode::get_field_container(const std::string &field, const std::string &str,
+                                          int idx) const {
+    std::smatch sm;
+
+    if (idx < 0) return "";
+
+    // Try simple "field: container" format first
+    if (idx == 0) {
+        std::string regex_str = R"(\b)" + Match::convert_to_regex(field) + R"(: (\w+))";
+        std::regex field_regex = std::regex(regex_str);
+        if (std::regex_search(str, sm, field_regex)) {
+            return *std::next(sm.begin());
+        }
+    }
+
+    // Format: "stage STAGE_NUM: CONTAINER" / "stage STAGE_LO..STAGE_HI: CONTAINER"
+    // Step 1: match on the field plus all of its stages
+    std::string regex_str =
+        R"(\b)" + Match::convert_to_regex(field) +
+        R"(: \{\s*((stage \d+(\.\.\d+)?: (\w+)(\(\d+(\.\.\d+)?\))?(,\s*)?)+)\s*\})";
+    std::regex field_regex = std::regex(regex_str);
+    if (std::regex_search(str, sm, field_regex)) {
+        // Step 2: iterate over the individual stage pairs until we find the indicated index
+        std::string stage_str = *std::next(sm.begin());
+        std::string regex_str = R"(stage \d+(\.\.\d+)?: (\w+)(\(\d+(\.\.\d+)?\))?)";
+        std::regex field_regex = std::regex(regex_str);
+        while (std::regex_search(stage_str, sm, field_regex)) {
+            if (idx-- == 0) return sm[2];
+            stage_str = sm.suffix();
+        }
+    }
+
+    return "";
 }
 
 }  // namespace Test

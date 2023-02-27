@@ -25,8 +25,8 @@ namespace v2 {
 class ParserPackingValidator : public ParserPackingValidatorInterface {
  private:
     using StateExtract = std::pair<const IR::BFN::ParserState*, const IR::BFN::Extract*>;
-    using StateExtractMap =
-        ordered_map<const IR::BFN::ParserState*, std::vector<const IR::BFN::Extract*>>;
+    using StatePrimitiveMap =
+        ordered_map<const IR::BFN::ParserState*, std::vector<const IR::BFN::ParserPrimitive*>>;
     const PhvInfo& phv_i;
     const MapFieldToParserStates& parser_i;
     const CollectParserInfo& parser_info_i;
@@ -36,10 +36,10 @@ class ParserPackingValidator : public ParserPackingValidatorInterface {
     // The cache does not affect behaviour, only speed. Therefore we make it mutable to make it
     // possible to use it from a (semantically) const method.
     mutable assoc::hash_map<std::pair<const IR::BFN::ParserState*, const IR::Expression*>,
-                            std::vector<const IR::BFN::Extract*>> state_extracts_cache;
+                            std::vector<const IR::BFN::ParserPrimitive*>> state_extracts_cache;
 
-    /// @returns all extracts to @p fs, grouped by states.
-    StateExtractMap get_extracts(const FieldSlice& fs) const;
+    /// @returns all primitives to @p fs, grouped by states.
+    StatePrimitiveMap get_primitives(const FieldSlice& fs) const;
 
     /// @returns true if the field needs to be the default value when it left parser.
     /// The default value is zero and the container validity bit (in Tofino) is zero.
@@ -56,7 +56,7 @@ class ParserPackingValidator : public ParserPackingValidatorInterface {
     /// @returns an error if @p state_extract will clobber value of other_fs in parser.
     const AllocError* will_buf_extract_clobber_the_other(
             const FieldSlice& fs, const StateExtract& state_extract, const int cont_idx,
-            const FieldSlice& other_fs, const StateExtractMap& other_extracts,
+            const FieldSlice& other_fs, const StatePrimitiveMap& other_extracts,
             const int other_cont_idx, const boost::optional<Container>& c) const;
 
     /// @returns an error if there is an extract from a that will clobber b's bits.

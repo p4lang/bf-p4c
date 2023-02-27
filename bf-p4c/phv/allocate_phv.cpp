@@ -1997,6 +1997,91 @@ bool CoreAllocation::checkDarkOverlay(const std::vector<PHV::AllocSlice>& candid
     return canUseARA;
 }
 
+bool CoreAllocation::rangesOverlap(const PHV::AllocSlice slice,
+                                const IR::BFN::ParserPrimitive *prim) const {
+    const IR::Expression *expr = nullptr;
+    if (auto* extract = prim->to<IR::BFN::Extract>()) {
+        expr = extract->dest->field;
+    } else if (auto* csum_verify = prim->to<IR::BFN::ChecksumVerify>()) {
+        expr = csum_verify->dest->field;
+    }
+    if (!expr) return false;
+
+    int lo = 0;
+    int hi = slice.field()->size - 1;
+    if (auto* expr_slice = expr->to<IR::Slice>()) {
+        hi = expr_slice->e1->to<IR::Constant>()->asInt();
+        lo = expr_slice->e2->to<IR::Constant>()->asInt();
+    }
+
+    auto slice_range = slice.field_slice();
+    le_bitrange prim_range(lo, hi);
+    return slice_range.overlaps(prim_range);
+}
+
+// Check whether the candidate slices produce parser extractions that cause data corruption
+bool CoreAllocation::checkParserExtractions(const std::vector<PHV::AllocSlice> &candidate_slices,
+                                            const PHV::Transaction &alloc) const {
+    if (!candidate_slices.size()) return true;
+
+    // All candidate slices should be to the same container
+    PHV::Container c = candidate_slices.front().container();
+    const PHV::Allocation::ContainerStatus* status = alloc.getStatus(c);
+
+    auto& field_to_writes = utils_i.field_to_parser_states.field_to_writes;
+    auto& write_to_state = utils_i.field_to_parser_states.write_to_state;
+    auto& state_to_parser = utils_i.field_to_parser_states.state_to_parser;
+
+    for (auto& slice : candidate_slices) {
+        const auto* f = slice.field();
+        if (!f) continue;
+        if (!field_to_writes.count(f)) continue;
+
+        for (const auto* prim : field_to_writes.at(f)) {
+            if (!rangesOverlap(slice, prim)) continue;
+
+            bool prim_is_pkt_extract =
+                prim->is<IR::BFN::Extract>() &&
+                prim->to<IR::BFN::Extract>()->source->is<IR::BFN::InputBufferRVal>();
+
+            for (auto& other_slice : status->slices) {
+                const auto* other_f = other_slice.field();
+                if (f == other_f) continue;
+                if (!field_to_writes.count(other_f)) continue;
+                if (utils_i.mutex()(f->id, other_f->id)) continue;
+
+                for (const auto* other_prim : field_to_writes.at(other_f)) {
+                    if (!rangesOverlap(other_slice, other_prim)) continue;
+
+                    bool other_prim_is_pkt_extract =
+                        other_prim->is<IR::BFN::Extract>() &&
+                        other_prim->to<IR::BFN::Extract>()->source->is<IR::BFN::InputBufferRVal>();
+
+                    if (prim_is_pkt_extract || other_prim_is_pkt_extract) {
+                        auto* state = write_to_state.at(prim);
+                        auto* other_state = write_to_state.at(other_prim);
+                        auto* parser = state_to_parser.at(state);
+
+                        if (state == other_state) continue;
+
+                        if (utils_i.parser_info.graph(parser).is_reachable(state, other_state) ||
+                            utils_i.parser_info.graph(parser).is_reachable(other_state, state)) {
+                            LOG_DEBUG6(TAB1 "Conflicting extracts for "
+                                       << slice << " and " << other_slice << std::endl
+                                       << TAB1 "  state " << state->name << ": " << prim
+                                       << std::endl
+                                       << TAB1 "  state " << other_state->name << ": "
+                                       << other_prim);
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return true;
+}
+
 bool CoreAllocation::try_pack_slice_list(
     std::vector<PHV::AllocSlice> &candidate_slices,
     PHV::Transaction &perContainerAlloc,
@@ -2929,6 +3014,9 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
             LOG_DEBUG6(TAB1 "Existing slices in container: " << c);
             for (auto& slice : perContainerAlloc.slices(c)) LOG_DEBUG6(TAB2 << slice);
         }
+
+        // Check that all parser extractions are compatible
+        if (!checkParserExtractions(candidate_slices, perContainerAlloc)) continue;
 
         // Check that we don't get parser extract group source conflict between slices (existing
         // and to-be-allocated)
