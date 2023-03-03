@@ -527,7 +527,6 @@ if (TEST_ALT_PHV_ALLOC)
         "ERROR:PTF runner:Error when running PTF tests"
         p4c-3876
         p4_16_programs_tna_action_selector
-        p4c_1587
     )
 
     # Tests that take way too long with ALT-PHV

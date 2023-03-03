@@ -5627,6 +5627,7 @@ control npb_egr_sff_top (
    hdr.nsh_extr.type = 0x0;
    hdr.nsh_extr.reserved3 = 0x0;
    hdr.nsh_extr.md_len = 0x14;
+   hdr.nsh_extr.md_extr = 0x0;
   }
   if(eg_md.nsh_extr_valid == 1) {
    if(hdr.nsh_extr.extr_srvc_func_bitmask[2:2] == 1) {
