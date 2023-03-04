@@ -27,9 +27,14 @@ class TableTree {
         if (done.count(s)) {
             out << "..." << std::endl;
         } else {
+            // for large seqs, output depmatrix as a LT matrix with lables
+            bool big = (s->tables.size() > 5);
+            if (big) out << std::endl << indent << "  +--" << s->tables[0]->name;
             for (unsigned i = 1; i < s->tables.size(); ++i) {
+                if (big) out << std::endl << indent << " ";
                 out << ' ';
-                for (unsigned j = 0; j < i; ++j) out << (s->deps(i, j) ? '1' : '0'); }
+                for (unsigned j = 0; j < i; ++j) out << (s->deps(i, j) ? '1' : '0');
+                if (big) out << "+--" << s->tables[i]->name; }
             out << std::endl;
             done.insert(s);
             for (auto tbl : s->tables) print(out, tbl); }

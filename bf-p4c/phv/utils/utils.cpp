@@ -72,10 +72,28 @@ bool PHV::Allocation::addStatus(PHV::Container c, const ContainerStatus& status)
     return new_slice;
 }
 
+static const char *fieldName(const PHV::AllocSlice &slice) {
+    if (!slice.field()) return "no_name";
+    if (auto *t = slice.field()->name.findlast('.')) return t+1;
+    if (auto *t = slice.field()->name.findlast(':')) return t+1;
+    return slice.field()->name;
+}
+
+std::ostream &operator<<(std::ostream &out, const PHV::ActionSet &actions) {
+    const char *sep = " ";
+    out << "{";
+    for (auto *act : actions) {
+        out << sep << act->name;
+        sep = ", "; }
+    out << (sep+1) << "}";
+    return out;
+}
+
 void PHV::Allocation::addMetaInitPoints(
         PHV::AllocSlice slice,
         const ActionSet& actions) {
     meta_init_points_i[slice] = actions;
+    LOG_FEATURE(fieldName(slice), 5, "Setting init points for " << slice << ": " << actions);
     LOG5("Adding init points for " << slice);
     LOG5("Number of entries in meta_init_points_i: " << meta_init_points_i.size());
     if (meta_init_points_i.size() > 0)

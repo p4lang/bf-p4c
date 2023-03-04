@@ -99,6 +99,7 @@ void IR::MAU::StatefulAlu::dbprint(std::ostream &out) const {
         out << width/2 << "x2";
     else
         out << width;
+    if (dbgetflags(out) & Brief) return;
     if (!(dbgetflags(out) & TableNoActions)) {
         out << indent;
         for (auto salu : Values(instruction))
@@ -107,10 +108,17 @@ void IR::MAU::StatefulAlu::dbprint(std::ostream &out) const {
 }
 
 void IR::MAU::TableSeq::dbprint(std::ostream &out) const {
-    out << "seq" << tables.size() << "[" << seq_uid << "]:";
+    out << "seq" << tables.size() << "[" << seq_uid << "]";
+    if (dbgetflags(out) & Brief) return;
+    out << ':';
+    // for large seqs, output depmatrix as a LT matrix with lables
+    bool big = (tables.size() > 5);
+    if (big) out << endl << "    +--" << tables[0]->name;
     for (unsigned i = 1; i < tables.size(); i++) {
+        if (big) out << endl << "   ";
         out << ' ';
-        for (unsigned j = 0; j < i; j++) out << (deps(i, j) ? '1' : '0'); }
+        for (unsigned j = 0; j < i; j++) out << (deps(i, j) ? '1' : '0');
+        if (big) out << "+--" << tables[i]->name; }
     out << indent;
     for (auto &t : tables)
         out << endl << t;
@@ -171,12 +179,16 @@ void IR::BFN::Transition::dbprint(std::ostream &out) const {
     else
         out << "default: ";
 
-    out << "(shift=" << shift << ')';
+    if (!(dbgetflags(out) & Brief)) {
+        out << "(shift=" << shift << ')';
 
-    for (const auto& save : saves) {
-        out << endl << save; }
+        for (const auto& save : saves) {
+            out << endl << save; }
 
-    out << endl << "goto " << (next ? next->name : "(end)");
+        out << endl;
+    }
+
+    out << "goto " << (next ? next->name : "(end)");
 }
 
 void IR::BFN::Select::dbprint(std::ostream &out) const {
@@ -189,21 +201,25 @@ void IR::BFN::LoweredParserMatch::dbprint(std::ostream &out) const {
     else
         out << "default: ";
 
-    out << "(shift=" << shift << ')';
+    if (!(dbgetflags(out) & Brief)) {
+        out << "(shift=" << shift << ')';
 
-    out << indent;
-    for (auto *st : extracts)
-        out << endl << *st;
-    for (auto *save : saves)
-        out << endl << *save;
-    for (auto *chk : checksums)
-        out << endl << *chk;
-    for (auto *ctr : counters)
-        out << endl << *ctr;
+        out << indent;
+        for (auto *st : extracts)
+            out << endl << *st;
+        for (auto *save : saves)
+            out << endl << *save;
+        for (auto *chk : checksums)
+            out << endl << *chk;
+        for (auto *ctr : counters)
+            out << endl << *ctr;
 
-    out << unindent;
+        out << unindent;
 
-    out << endl << "goto ";
+        out << endl;
+    }
+
+    out << "goto ";
     if (next)
         out << next->name;
     else if (loop)

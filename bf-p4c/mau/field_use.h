@@ -20,6 +20,12 @@ class FieldUse : public MauInspector, TofinoWriteContext {
     bool preorder(const IR::HeaderStackItemRef *f) override;
     bool preorder(const IR::TempVar *t) override;
     friend std::ostream &operator<<(std::ostream &, const FieldUse &);
+    profile_t init_apply(const IR::Node *root) override {
+        static int counter;
+        auto rv = MauInspector::init_apply(root);
+        LOG1("Field Use call #" << ++counter);
+        return rv; }
+    void end_apply() override { LOG3(*this); }
 
  public:
     explicit FieldUse(const PhvInfo& p) : phv(p) { visitDagOnce = false; }
