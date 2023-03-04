@@ -43,13 +43,6 @@ class ControlFlowVisitor : public ::ControlFlowVisitor, virtual public P4::Resol
     // or reference to a ParserState, an Action, or a Table and visit that object.
     void visit_def(const IR::PathExpression *);
     void visit_def(const IR::MethodCallExpression *);
-
-    // debugging help
- public:
-    typedef ::ControlFlowVisitor::flow_join_points_t flow_join_points_t;
-    friend std::ostream &operator<<(std::ostream &, const flow_join_points_t &);
-    friend void dump(const flow_join_points_t &);
-    friend void dump(const flow_join_points_t *);
 };
 
 }  // end namespace BFN

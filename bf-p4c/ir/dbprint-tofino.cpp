@@ -459,21 +459,3 @@ void IR::BFN::GhostParser::dbprint(std::ostream &out) const {
     out << "parser ghost : " << name << " pipe : " << pipeName << indent << std::endl;
     out << "ghost_md: " << ghost_md << unindent << std::endl;
 }
-
-std::ostream &operator<<(std::ostream &out,
-                         const BFN::ControlFlowVisitor::flow_join_points_t &fjp) {
-    auto flags = dbgetflags(out);
-    out << Brief;
-    bool first = true;
-    for (auto &jp : fjp) {
-        if (!first) out << "\n";
-        out << "[" << jp.first->id << "] " << *jp.first << ": " << jp.second.count;
-        first = false; }
-    dbsetflags(out, flags);
-    return out;
-}
-
-void dump(const BFN::ControlFlowVisitor::flow_join_points_t &fjp) {
-    std::cout << fjp << std::endl; }
-void dump(const BFN::ControlFlowVisitor::flow_join_points_t *fjp) {
-    std::cout << *fjp << std::endl; }

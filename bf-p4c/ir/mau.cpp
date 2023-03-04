@@ -253,6 +253,10 @@ template<class THIS> class SplitFlowVisitTableNext : public SplitFlowVisit_base 
         tag_for_visitor.push_back(act);
         BUG_CHECK(visitors.size() == tag_for_visitor.size(), "size mismatch");
         return visitors.back(); }
+
+    void dbprint(std::ostream &out) const override {
+        out << "SplitFlowVisitTableNext(" << table->name << ") " << (void *)table
+            << " processed " << visit_next << " of " << visitors.size(); }
 };
 
 
