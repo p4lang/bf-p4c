@@ -28,9 +28,9 @@ SELF = $(lastword $(MAKEFILE_LIST))
 
 # these variables are set by dev-env update script
 # p4factory git commit to use
-P4FACTORY_GIT_REV ?= 838fc726e2a6907178fb87c8aa681d7cccd27e73
+P4FACTORY_GIT_REV ?= 3681c1a4129cf190bbaadd76ce46bbd55304275b
 # builder image to use
-BUILDER_IMAGE ?= bf-p4c-builder@sha256:d477db052790cb5a16c40809c29fb2ea260a4998d394e26a1c9a2e6bbee22f9c
+BUILDER_IMAGE ?= bf-p4c-builder@sha256:33d26305a24b2fcf179b7515b419418e5b683bf27ee44f700571b50d550cd400
 # end of update variables
 
 
