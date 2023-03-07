@@ -172,6 +172,16 @@ cstring HeaderNameMauInspector::header_name(const IR::Member* member) {
     return hdr_name;
 }
 
+const PHV::Field* HeaderNameMauInspector::get_phv_field(const IR::Expression* expression) {
+    const PHV::Field* field = phv.field(expression);
+    // Special case for header stacks
+    if (const IR::BFN::AliasSlice* alias_slice = expression->to<IR::BFN::AliasSlice>()) {
+        const IR::Expression* source = alias_slice->source;
+        field = phv.field(source);
+    }
+    return field;
+}
+
 Visitor::profile_t FindPovAndParserErrorInMau::init_apply(const IR::Node* root) {
     auto rv = Inspector::init_apply(root);
     mau_handles_parser_error = false;
@@ -180,45 +190,6 @@ Visitor::profile_t FindPovAndParserErrorInMau::init_apply(const IR::Node* root) 
     return rv;
 }
 
-/**
- * @brief Returns true if a header stack push or pop operation is being visited; otherwise returns
- * false.
- */
-bool FindPovAndParserErrorInMau::is_header_stack_push_or_pop() {
-    auto* primitive = findContext<IR::MAU::Primitive>();
-    if (!primitive) return false;
-
-    auto operand0 = primitive->operands[0]->to<IR::Slice>();
-    auto operand1 = primitive->operands[1]->to<IR::Slice>();
-    if (!operand0 || !operand1) return false;
-
-    auto op0 = operand0->e0->to<IR::Member>();
-    auto op1 = operand1->e0->to<IR::Member>();
-    if (!op0 || !op1) return false;
-
-    return true;
-}
-
-/**
- * @brief Returns true if member is a POV bit being read or written; otherwise returns false.
- */
-bool FindPovAndParserErrorInMau::is_pov_read_write(const IR::Member* member) {
-    if (member->member != "$valid" && member->member != "$stkvalid") return false;
-    if (is_header_stack_push_or_pop()) return false;
-
-    cstring header = header_name(member);
-    auto ret = header_info.all_headers.insert(header);
-    if (ret.second) {
-        LOG4("Found header added in MAU: " << header);
-        header_info.mau_headers.insert(header);
-    }
-    return true;
-}
-
-/**
- * @brief Returns true if field name contains "parser_err" (standard name of a field found in the
- * intrinsic metadata from the parser); otherwise returns false.
- */
 bool FindPovAndParserErrorInMau::is_original_parser_err_field(const PHV::Field* field) {
     const char* str = nullptr;
     StringRef name = field->name;
@@ -226,15 +197,16 @@ bool FindPovAndParserErrorInMau::is_original_parser_err_field(const PHV::Field* 
     return str;
 }
 
-/**
- * @brief Returns true if this member is a field which is either the original parser error field
- * found in intrinsic metadata from the parser or a another field it was assigned to; otherwise
- * returns false.
- */
-bool FindPovAndParserErrorInMau::is_parser_err(const IR::Member* member) {
-    const PHV::Field* field = phv.field(member->to<IR::Expression>());
-    if (!field) return false;
+const PHV::Field* FindPovAndParserErrorInMau::get_assigned_field() {
+    const auto* primitive = findContext<IR::MAU::Primitive>();
+    if (!primitive) return nullptr;
 
+    const PHV::Field* field = get_phv_field(primitive->operands[0]);
+    return field;
+}
+
+
+bool FindPovAndParserErrorInMau::is_parser_err(const PHV::Field* field) {
     if (is_original_parser_err_field(field)) {
         parser_err_fields.insert(field);
         if (const PHV::Field* assigned_field_parser_err = get_assigned_field())
@@ -244,45 +216,38 @@ bool FindPovAndParserErrorInMau::is_parser_err(const IR::Member* member) {
     return parser_err_fields.count(field);
 }
 
-/**
- * @brief Returns destination field of an assignment if one is being visited.
- */
-const PHV::Field* FindPovAndParserErrorInMau::get_assigned_field() {
-    const auto* primitive = findContext<IR::MAU::Primitive>();
-    if (!primitive) return nullptr;
+bool FindPovAndParserErrorInMau::preorder(const IR::Expression* expression) {
+    const PHV::Field* field = get_phv_field(expression);
+    if (!field) return true;
 
-    const PHV::Field* field = phv.field(primitive->operands[0]);
-
-    return field;
-}
-
-/**
- * @brief Returns true if a field that stores parser error is used by a conditional or a table key;
- * otherwise returns false.
- */
-bool FindPovAndParserErrorInMau::is_parser_err_in_operation_relation_or_table_key(
-        const IR::Member* member) {
-    if (!is_parser_err(member)) return false;
+    // This is before field->metadata guard clause because of header stacks:
+    //      expression = hdr.mpls.$stkvalid[A:A] --> field = hdr.mpls[A].$valid pov
+    //      expression = hdr.mpls.$stkvalid[A:B] --> field = hdr.mpls.$stkvalid **meta** pov
+    if (field->pov && (isRead() || isWrite())) mau_contains_pov_read_write = true;
 
     const auto* operation_relation = findContext<IR::Operation_Relation>();
     const auto* table_key = findContext<IR::MAU::TableKey>();
-
-    bool ret = operation_relation || table_key;
-
-    if (ret)
-        LOG4("Found parser error handled by conditional or table key in MAU.");
-
-    return ret;
-}
-
-bool FindPovAndParserErrorInMau::preorder(const IR::Member* member) {
-    if (is_pov_read_write(member))
-        mau_contains_pov_read_write = true;
-
-    if (is_parser_err_in_operation_relation_or_table_key(member))
+    if (is_parser_err(field) && (table_key || operation_relation))
         mau_handles_parser_error = true;
 
+    if (field->metadata) return true;
+
+    if (cstring header = field->header()) {
+        const auto& [_, new_header] = header_info.all_headers.insert(header);
+        if (new_header) {
+            LOG4("Found header added in MAU: " << header);
+            header_info.mau_headers.insert(header);
+        }
+    }
+
     return true;
+}
+
+void FindPovAndParserErrorInMau::end_apply() {
+    if (mau_contains_pov_read_write)
+        LOG4("MAU contains at least 1 read or write to a $valid or $stkvalid bit.");
+    if (mau_handles_parser_error)
+        LOG4("Found parser error handled by conditional or table key in MAU.");
 }
 
 /**

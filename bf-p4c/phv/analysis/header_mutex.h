@@ -98,6 +98,7 @@ class HeaderNameMauInspector : public MauInspector, public TofinoWriteContext {
  protected:
     PhvInfo& phv;
     cstring header_name(const IR::Member* member);
+    const PHV::Field* get_phv_field(const IR::Expression* expression);
 
  public:
     explicit HeaderNameMauInspector(PhvInfo& phv) : phv(phv) { }
@@ -105,8 +106,8 @@ class HeaderNameMauInspector : public MauInspector, public TofinoWriteContext {
 
 /**
  * @brief Find if any header $valid bits are read/written to and if parser errors are handled in
- * MAU. Additionally, if a header $valid bit belongs to a header not encountered in the parser,
- * insert it into HeaderInfo.
+ * MAU. Additionally, if a field is found that belongs to a header not encountered in the parser,
+ * insert that header into HeaderInfo.
  */
 class FindPovAndParserErrorInMau : public HeaderNameMauInspector {
     HeaderInfo& header_info;
@@ -116,14 +117,31 @@ class FindPovAndParserErrorInMau : public HeaderNameMauInspector {
     ordered_set<const PHV::Field*> parser_err_fields;
 
     profile_t init_apply(const IR::Node* root) override;
-
+    /**
+     * @brief Returns true if field name contains "parser_err" (standard name of a field found in
+     * the intrinsic metadata from the parser); otherwise returns false.
+     */
     bool is_original_parser_err_field(const PHV::Field* field);
-    bool is_parser_err(const IR::Member* member);
+    /**
+     * @brief Returns destination field of an assignment if one is being visited.
+     */
     const PHV::Field* get_assigned_field();
-    bool is_header_stack_push_or_pop();
-    bool is_pov_read_write(const IR::Member* member);
-    bool is_parser_err_in_operation_relation_or_table_key(const IR::Member* member);
-    bool preorder(const IR::Member* member) override;
+    /**
+     * @brief Returns true if this member is a field which is either the original parser error field
+     * found in intrinsic metadata from the parser or a another field it was assigned to; otherwise
+     * returns false.
+     */
+    bool is_parser_err(const PHV::Field* field);
+    /**
+     * @brief From @p expression, get a PHV field and use it to find "parser_err", read/writes to
+     * POV bits, and new MAU headers (headers that are not parsed and that are added in MAU by using
+     * setValid()).
+     */
+    bool preorder(const IR::Expression* expression) override;
+    /**
+     * @brief Output log messages if pass found "parser_err" or read/writes to POV bits.
+     */
+    void end_apply() override;
 
  public:
     FindPovAndParserErrorInMau(PhvInfo& phv, HeaderInfo& headers,
