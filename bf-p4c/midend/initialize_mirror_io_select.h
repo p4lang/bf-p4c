@@ -1,8 +1,10 @@
 #ifndef INITIALIZE_MIRROR_IO_SELECT_H_
 #define INITIALIZE_MIRROR_IO_SELECT_H_
 
+#include "bf-p4c/common/pragma/all_pragmas.h"
 #include "ir/ir.h"
 #include "bf-p4c/arch/arch.h"
+#include "bf-p4c/common/pragma/collect_global_pragma.h"
 #include "bf-p4c/device.h"
 #include "type_checker.h"
 
@@ -14,6 +16,18 @@ class DoInitializeMirrorIOSelect: public Transform {
 
  public:
     DoInitializeMirrorIOSelect() {};
+
+    // disable this pass if the @disable_egress_mirror_io_select_initialization pragma is used
+    const IR::Node* preorder(IR::P4Program* p) override {
+        // collect and set global_pragmas
+        CollectGlobalPragma collect_pragma;
+        p->apply(collect_pragma);
+        // Workaround can be disabled by pragma
+        if (collect_pragma.exists(PragmaDisableEgressMirrorIOSelectInitialization::name)) {
+            prune();
+        }
+        return p;
+    }
 
     // Add mirror_io_select initialization to egress parser
     const IR::Node* preorder(IR::BFN::TnaParser* parser) override;

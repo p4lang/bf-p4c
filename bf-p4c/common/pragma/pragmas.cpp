@@ -302,7 +302,19 @@ const char *PragmaDisableI2EReservedDropImplementation::help =
     "@disable_reserved_i2e_drop_implementation\n"
     "By default, id 0 is reserved during clone in Tofino. Valid ids are 1 to 7. "
     "This is applicable only to ingress. Egress has all ids from 0 to 7 as valid. "
-    "Using pragma will overridde this behavior and allow id 0 to be used";
+    "Using pragma will override this behavior and allow id 0 to be used";
+
+const char *PragmaDisableEgressMirrorIOSelectInitialization::name =
+    "disable_egress_mirror_io_select_initialization";
+const char *PragmaDisableEgressMirrorIOSelectInitialization::description =
+    "Disabling mirror_io_select initialization in egress parser.";
+const char *PragmaDisableEgressMirrorIOSelectInitialization::help =
+    "@disable_egress_mirror_io_select_initialization\n"
+    "By default, compiler automatically initialize mirror_io_select to 1 in \n"
+    "egress parser to match the egress mirror functionality in tofino1.\n"
+    "This pragma is applicable only to tofino2.\n"
+    "Using pragma overrides the default behavior and programmer assumes the \n"
+    "responsibility to initialize mirror_io_select\n";
 
 const char *PragmaDontTranslateExternMethod::name = "dont_translate_extern_method";  // FIXME
 const char *PragmaDontTranslateExternMethod::description = "To be documented";

@@ -14,6 +14,7 @@ CollectGlobalPragma::g_global_pragma_names = new std::vector<cstring>{
     PragmaContainerSize::name,
     PragmaContainerType::name,
     PragmaDisableI2EReservedDropImplementation::name,
+    PragmaDisableEgressMirrorIOSelectInitialization::name,
     PragmaDoNotUseClot::name,
     PragmaEgressIntrinsicMetadataOpt::name,
     PragmaGFMParityEnable::name,

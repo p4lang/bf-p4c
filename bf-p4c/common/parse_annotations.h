@@ -62,6 +62,7 @@ class ParseAnnotations : public P4::ParseAnnotations {
         BFN_PARSE_EMPTY(PragmaDefaultPortmap, PARSE_EXPRESSION_LIST, intPragma);
         BFN_PARSE(PragmaDisableAtomicModify, PARSE, Expression, extPragma);
         BFN_PARSE_EMPTY(PragmaDisableI2EReservedDropImplementation, PARSE_EMPTY, extPragma);
+        BFN_PARSE_EMPTY(PragmaDisableEgressMirrorIOSelectInitialization, PARSE_EMPTY, extPragma);
         BFN_PARSE(PragmaDoNotBridge, PARSE_PAIR, StringLiteral, extPragma);
         BFN_PARSE_EMPTY(PragmaDoNotUseClot, PARSE_STRING_LITERAL_LIST, extPragma);
         BFN_PARSE(PragmaDontTranslateExternMethod, PARSE, StringLiteral, intPragma);

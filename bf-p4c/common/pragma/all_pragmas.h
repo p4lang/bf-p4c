@@ -33,6 +33,7 @@ DEFINE_PRAGMA_CLASS(PragmaCritical);
 DEFINE_PRAGMA_CLASS(PragmaDefaultPortmap);
 DEFINE_PRAGMA_CLASS(PragmaDisableAtomicModify);
 DEFINE_PRAGMA_CLASS(PragmaDisableI2EReservedDropImplementation);
+DEFINE_PRAGMA_CLASS(PragmaDisableEgressMirrorIOSelectInitialization);
 DEFINE_PRAGMA_CLASS(PragmaDontTranslateExternMethod);
 DEFINE_PRAGMA_CLASS(PragmaDoNotBridge);
 DEFINE_PRAGMA_CLASS(PragmaDynamicTableKeyMasks);
