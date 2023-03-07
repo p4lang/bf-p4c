@@ -2153,11 +2153,6 @@ if (TEST_ALT_PHV_ALLOC)
       extensions/p4_tests/p4_16/customer/arista/obfuscated-map.p4
     )
 
-    p4c_add_xfail_reason("tofino"
-      "W10 appears multiple times in checksum"
-      extensions/p4_tests/p4_16/compile_only/p4c-5109.p4
-    )
-
     # Table fitting
     p4c_add_xfail_reason("tofino"
       "error: table allocation [(]alt-phv-alloc enabled[)] failed to allocate tables within 12 stages. Allocation state: ALT_FINALIZE_TABLE, stage used: 13"

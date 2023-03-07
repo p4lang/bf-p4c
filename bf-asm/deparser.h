@@ -85,6 +85,7 @@ class Deparser : public Section {
         ChecksumVal(gress_t gr, int tag, const value_t &p) : Val(gr, tag, p) {}
         ChecksumVal &operator=(const ChecksumVal &a) {
             Val::operator=(a); mask = a.mask; swap = a.swap; return *this; }
+        ChecksumVal() : Val() {}
 
         bool check() const override {
             if (is_phv()) {
@@ -171,6 +172,7 @@ class Deparser : public Section {
     void start(int lineno, VECTOR(value_t) args);
     void input(VECTOR(value_t) args, value_t data);
     void process();
+    std::vector<ChecksumVal> merge_csum_entries(const std::vector<ChecksumVal>&, int);
     template<class TARGET> void process(TARGET*);
     void output(json::map &);
     template<class REGS> void gen_learn_quanta(REGS &, json::vector&);

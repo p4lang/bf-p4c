@@ -598,6 +598,54 @@ void Deparser::report_resources_deparser_json(json::vector& fde_entries_i,
 #include "flatrock/deparser.cpp"                // NOLINT(build/include)
 #endif  /* HAVE_FLATROCK */
 
+std::vector<Deparser::ChecksumVal> Deparser::merge_csum_entries(
+    const std::vector<Deparser::ChecksumVal> &entries, int id) {
+    std::vector<Deparser::ChecksumVal> rv;
+    ordered_map<std::string, Deparser::ChecksumVal> merged_entries;
+
+    for (auto& entry : entries) {
+        if (entry.is_clot()) {
+            rv.push_back(entry);
+            continue;
+        }
+        auto name = entry.val.name();
+        int hi = entry.val.hibit();
+        int lo = entry.val.lobit();
+        bool is_hi = hi >= 16;
+        bool is_lo = lo < 16;
+
+        if (!merged_entries.count(name)) {
+            auto reg = Phv::reg(name);
+            auto new_entry(entry);
+            if (lo != 0 && hi != reg->size - 1) {
+                new_entry.val = Phv::Ref(*reg, entry.val.gress(), 0, reg->size - 1);
+            }
+            merged_entries.emplace(name, new_entry);
+        } else {
+            auto& rv_entry = merged_entries[name];
+            if (rv_entry.mask & entry.mask)
+                error(entry.lineno, "bytes within %s appear multiple times in checksum %d",
+                      name, id);
+            if (is_hi) {
+                if ((rv_entry.mask & 0xc) && (rv_entry.swap & 2) != (entry.swap & 2))
+                    error(entry.lineno, "incompatible swap values for %s in checksum %d", name, id);
+                rv_entry.mask |= entry.mask & 0xc;
+                rv_entry.swap |= entry.swap & 2;
+            }
+            if (is_lo) {
+                if ((rv_entry.mask & 0x3) && (rv_entry.swap & 1) != (entry.swap & 1))
+                    error(entry.lineno, "incompatible swap values for %s in checksum %d", name, id);
+                rv_entry.mask |= entry.mask & 0x3;
+                rv_entry.swap |= entry.swap & 1;
+            }
+        }
+    }
+
+    for (auto& [_, entry] : merged_entries) rv.push_back(entry);
+
+    return rv;
+}
+
 /* The following uses of specialized templates must be after the specialization... */
 void Deparser::process() {
     bitvec pov_use[2];
@@ -620,7 +668,9 @@ void Deparser::process() {
             for (auto &ent : full_checksum_unit[gress][i].entries) {
                 for (auto entry : ent.second) {
                     if (!entry.check())
-                        error(entry.lineno, "Invalid checksum entry"); }}
+                        error(entry.lineno, "Invalid checksum entry"); }
+                ent.second = merge_csum_entries(ent.second, i);
+            }
     }
     for (auto &intrin : intrinsics) {
         for (auto &el : intrin.vals) {

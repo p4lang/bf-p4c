@@ -478,11 +478,6 @@ if (TEST_ALT_PHV_ALLOC)
         extensions/p4_tests/p4_16/stf/parser_scratch_reg_3.p4
     )
 
-    p4c_add_xfail_reason("tofino2"
-        "error: .* appears multiple times in checksum .*"
-        extensions/p4_tests/p4_16/customer/extreme/p4c-2358-2.p4
-    )
-
     # PHV errors
     p4c_add_xfail_reason("tofino2"
         "error: PHV fitting failed, [0-9]+ clusters cannot be allocated."
