@@ -25,7 +25,7 @@
  *    - Stage rules (FTR)
  */
 struct SplitParserState : public PassManager {
-    SplitParserState(const PhvInfo& phv, ClotInfo& clot);
+    SplitParserState(const PhvInfo &phv, ClotInfo &clot, const CollectParserInfo &parser_info);
 };
 
 #endif /* EXTENSIONS_BF_P4C_PARDE_SPLIT_PARSER_STATE_H_ */

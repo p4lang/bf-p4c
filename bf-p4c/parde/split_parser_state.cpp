@@ -1,5 +1,6 @@
 #include "split_parser_state.h"
 #include "bf-p4c/common/utils.h"
+#include "bf-p4c/parde/parser_query.h"
 #include "bf-p4c/parde/parde_utils.h"
 
 class DumpSplitStates : public DotDumper {
@@ -74,10 +75,13 @@ class DumpSplitStates : public DotDumper {
 struct SliceExtracts : public ParserModifier {
     const PhvInfo& phv;
     const ClotInfo& clot;
+    const ParserQuery pq;
 
     const IR::BFN::ParserState* state = nullptr;
 
-    SliceExtracts(const PhvInfo& phv, const ClotInfo& clot) : phv(phv), clot(clot) { }
+    SliceExtracts(const PhvInfo &phv, const ClotInfo &clot, const CollectParserInfo &parser_info,
+                  const MapFieldToParserStates &field_to_states)
+        : phv(phv), clot(clot), pq(parser_info, field_to_states) {}
 
     /// Rewrites an extract so that it extracts exactly the slice specified by @p le_low_idx and
     /// @p width, and marks the extract with the given extract type.
@@ -92,7 +96,7 @@ struct SliceExtracts : public ParserModifier {
     /// make_slice, le_low_idx is 64, width is 32 and extract_base is 32.
     template <class Extract>
     const Extract* make_slice(const IR::BFN::Extract* extract, int le_low_idx, int width,
-                              int extract_base) {
+                              int extract_base, std::optional<PHV::Container> cont = std::nullopt) {
         auto slice_lo = le_low_idx;
         auto slice_hi = slice_lo + width - 1;
 
@@ -123,10 +127,13 @@ struct SliceExtracts : public ParserModifier {
             BUG_CHECK(const_slice.fitsUint(), "Constant slice larger than 32-bit?");
 
             if (const_slice.asUnsigned() ||
-                extract->write_mode == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE) {
+                (extract->write_mode == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE &&
+                 !(cont && pq.find_inits(*cont).count(extract) &&
+                   width == static_cast<int>(cont->size())))) {
                 src_slice = new IR::BFN::ConstantRVal(IR::Type::Bits::get(width),
                                                   const_slice.asUnsigned());
             } else {
+                LOG4("Skipping extract of " << extract << " to " << const_slice);
                 return nullptr;
             }
         } else {
@@ -165,8 +172,10 @@ struct SliceExtracts : public ParserModifier {
         for (auto slice : phv.get_alloc(extract->dest->field, PHV::AllocContext::PARSER, &use)) {
             auto lo = slice.field_slice().lo;
             auto size = slice.width();
+            auto cont = slice.container();
 
-            if (auto sliced = make_slice<IR::BFN::ExtractPhv>(extract, lo, size, extract_base)) {
+            if (auto sliced =
+                    make_slice<IR::BFN::ExtractPhv>(extract, lo, size, extract_base, cont)) {
                 rv.push_back(sliced);
                 LOG4("  PHV: " << sliced);
             }
@@ -1578,10 +1587,13 @@ struct CheckOutOfBufferExtracts : ParserInspector {
     }
 };
 
-SplitParserState::SplitParserState(const PhvInfo& phv, ClotInfo& clot) {
+SplitParserState::SplitParserState(const PhvInfo &phv, ClotInfo &clot,
+                                   const CollectParserInfo &parser_info) {
+    auto* field_to_states = new MapFieldToParserStates(phv);
     addPasses({
+        field_to_states,
         LOGGING(4) ? new DumpParser("before_split_parser_states") : nullptr,
-        new SliceExtracts(phv, clot),
+        new SliceExtracts(phv, clot, parser_info, *field_to_states),
         LOGGING(4) ? new DumpParser("after_slice_extracts") : nullptr,
         new AllocateParserState(phv, clot),
         LOGGING(4) ? new DumpParser("after_alloc_state_prims") : nullptr,

@@ -1754,6 +1754,12 @@ struct MapFieldToParserStates : public Inspector {
     ordered_map<const PHV::Field*,
                 ordered_set<const IR::BFN::ParserPrimitive*>> field_to_writes;
 
+    ordered_map<PHV::Container,
+                ordered_set<const IR::BFN::ParserState*>> container_to_parser_states;
+
+    ordered_map<PHV::Container,
+                ordered_set<const IR::BFN::ParserPrimitive*>> container_to_writes;
+
     ordered_map<const IR::BFN::ParserPrimitive*, const IR::BFN::ParserState*> write_to_state;
 
     std::map<const IR::BFN::ParserState*, const IR::BFN::Parser*> state_to_parser;
@@ -1766,6 +1772,8 @@ struct MapFieldToParserStates : public Inspector {
     profile_t init_apply(const IR::Node* root) override {
         field_to_parser_states.clear();
         field_to_writes.clear();
+        container_to_parser_states.clear();
+        container_to_writes.clear();
         write_to_state.clear();
         state_to_parser.clear();
         state_to_writes.clear();
@@ -1796,6 +1804,15 @@ struct MapFieldToParserStates : public Inspector {
             field_to_writes[f].insert(prim);
             write_to_state[prim] = state;
             state_to_writes[state].insert(prim);
+
+            if (phv_i.alloc_done()) {
+                PHV::FieldUse use(PHV::FieldUse::WRITE);
+                for (auto alloc : phv_i.get_alloc(field, PHV::AllocContext::PARSER, &use)) {
+                    auto cont = alloc.container();
+                    container_to_parser_states[cont].insert(state);
+                    container_to_writes[cont].insert(prim);
+                }
+            }
         }
     }
 };

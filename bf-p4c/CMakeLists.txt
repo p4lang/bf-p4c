@@ -1583,6 +1583,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_container_valid.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_constant_extract.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_critical_path.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_elim_lowered_zero_extracts.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_enforce_depth_req.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_extract_overlay.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_state_merge.cpp

@@ -85,3 +85,32 @@ bool ParserQuery::is_single_write(
     return true;
 }
 
+ordered_set<const IR::BFN::ParserPrimitive*>
+ParserQuery::find_inits(const ordered_set<const IR::BFN::ParserPrimitive*>& writes) const {
+    ordered_set<const IR::BFN::ParserPrimitive*> inits;
+
+    for (auto p : writes) {
+        bool has_predecessor = false;
+
+        auto ps = field_to_states.write_to_state.at(p);
+        auto parser = field_to_states.state_to_parser.at(ps);
+
+        for (auto q : writes) {
+            if ((has_predecessor = is_before(writes, parser, q, nullptr, p, ps)))
+                break;
+        }
+
+        if (!has_predecessor)
+           inits.insert(p);
+    }
+
+    return inits;
+}
+
+ordered_set<const IR::BFN::ParserPrimitive*> ParserQuery::find_inits(PHV::Container c) const {
+    if (!field_to_states.container_to_writes.count(c))
+        return ordered_set<const IR::BFN::ParserPrimitive *>();
+
+    return find_inits(field_to_states.container_to_writes.at(c));
+}
+

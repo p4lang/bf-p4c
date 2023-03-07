@@ -47,6 +47,15 @@ struct ParserQuery {
     /// parse graph executes more than one write).
     bool is_single_write(const ordered_set<const IR::BFN::ParserPrimitive *> &writes) const;
 
+    /// Find the first writes, i.e. inits, given the set of @p writes. The set of writes
+    /// belong to the same field. An init is a write that has no prior write in the parser IR.
+    ordered_set<const IR::BFN::ParserPrimitive*>
+    find_inits(const ordered_set<const IR::BFN::ParserPrimitive*>& writes) const;
+
+    /// Find the first writes, i.e. inits, corresponding to the container @p c.  An init is a write
+    /// that has no prior write in the parser IR.
+    ordered_set<const IR::BFN::ParserPrimitive*> find_inits(PHV::Container c) const;
+
     ParserQuery(const CollectParserInfo &pi, const MapFieldToParserStates &fs)
         : parser_info(pi), field_to_states(fs) {}
 };
