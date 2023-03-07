@@ -580,46 +580,6 @@ void print_or_throw_slicing_error(const PHV::AllocUtils& utils, const PHV::Super
     }
 }
 
-// make_alloc_slices_with_physical_liverange returns a new vector of AllocSlices
-// that each slice will have physical liverange. For fieldslices with multiple
-// disjoint liveranges, copies for each live range will be add.
-// this function also handles the clot-adjustment issue that when there is a modified
-// field in slices, all physical live ranges will be extend to from parser to deparser.
-std::vector<PHV::AllocSlice> make_alloc_slices_with_physical_liverange(
-    const ClotInfo& clot, const PHV::FieldSliceLiveRangeDB& liverange_db,
-    const std::vector<PHV::AllocSlice>& slices) {
-    const bool deparsed_cannot_read_clot =
-        std::any_of(slices.begin(), slices.end(), [&](const PHV::AllocSlice& slice) {
-            const auto* f = slice.field();
-            return f->deparsed() && (!clot.whole_field_clot(f) || clot.is_modified(f));
-        });
-
-    std::vector<PHV::AllocSlice> rst;
-    for (auto& slice : slices) {
-        const auto* info = liverange_db.get_liverange(PHV::FieldSlice(slice.field()));
-        if (!info) {
-            if (slice.field()->is_ignore_alloc()) {
-                continue;  // skip dummy padding slices.
-            }
-            BUG("missing physical liverange info: %1%", slice);
-        }
-
-        const auto* field = slice.field();
-        // overwrite live range to whole pipe when there is a deparsed and modified field
-        // packed in this slice list.
-        if (deparsed_cannot_read_clot && clot.allocated_unmodified_undigested(field)) {
-            info = liverange_db.default_liverange();
-        }
-        for (const auto& r : PHV::LiveRangeInfo::merge_invalid_ranges(info->disjoint_ranges())) {
-            PHV::AllocSlice clone = slice;
-            clone.setIsPhysicalStageBased(true);
-            clone.setLiveness(r.start, r.end);
-            rst.emplace_back(clone);
-        }
-    }
-    return rst;
-}
-
 const auto slicing_config =
     PHV::Slicing::IteratorConfig{false, true, false, false, (1 << 25), (1 << 19)};
 
@@ -2914,18 +2874,6 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
         // Check slice list<-->container constraints.
         if (!satisfies_constraints(candidate_slices, alloc_attempt)) continue;
 
-        // set live range info for all candidate slices.
-        if (utils_i.settings.physical_liverange_overlay && utils_i.settings.no_code_change) {
-            candidate_slices = make_alloc_slices_with_physical_liverange(
-                utils_i.clot, utils_i.physical_liverange_db, candidate_slices);
-            if (LOGGING(5)) {
-                LOG_DEBUG5("updated physical live range: ");
-                for (const auto& slice : candidate_slices) {
-                    LOG5(slice);
-                }
-            }
-        }
-
         // Check that there's space.
         // Results of metadata initialization. This is a map of field to the initialization actions
         // determined by FindInitializationNode methods.
@@ -4705,23 +4653,6 @@ boost::optional<PHV::Transaction> CoreAllocation::try_deparser_zero_alloc(
                 candidate_slices.push_back(alloc_slice);
                 phv.addZeroContainer(slice.gress(), zero[slice.gress()]);
                 slice_list_offset += alloc_slice_width;
-            }
-            if (utils_i.settings.physical_liverange_overlay) {
-                candidate_slices = make_alloc_slices_with_physical_liverange(
-                    utils_i.clot, utils_i.physical_liverange_db, candidate_slices);
-                // XXX(yumin): do not overlay with deparser-zero optimization slices, because
-                // they rely on parser to init the container to zero and use them in deparser
-                // for emitting zeros.
-                // TODO(yumin): we can overlay them on Tofino2+ if we support the feature:
-                // deparser output any one of 8 constant bytes in any slot of a field
-                // dictionary (the 8 constants can be programmed to any 8 8bit values).
-                const auto default_lr =
-                    utils_i.physical_liverange_db.default_liverange()->disjoint_ranges().front();
-                for (auto& slice : candidate_slices) {
-                    slice.setLiveness(default_lr.start, default_lr.end);
-                    LOG6("update deparser-zero slice physical liverange to full pipeline: "
-                         << slice);
-                }
             }
             for (auto& alloc_slice : candidate_slices)
                 alloc_attempt.allocate(alloc_slice, nullptr, singleGressParserGroups);

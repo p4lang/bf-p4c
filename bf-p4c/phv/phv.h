@@ -263,6 +263,7 @@ class FieldUse {
     bool isWrite() const { return use_ & WRITE; }
     bool isLive() const { return use_ & LIVE; }
     bool isReadWrite() const { return use_ & READWRITE; }
+    bool isReadAndWrite() const { return use_ == READWRITE; }
 
     bool operator==(FieldUse u) const { return use_ == u.use_; }
     bool operator!=(FieldUse u) const { return !(*this == u); }

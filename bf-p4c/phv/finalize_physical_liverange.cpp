@@ -237,6 +237,8 @@ void FinalizePhysicalLiverange::end_apply() {
     // update AllocSlices' live range.
     for (auto& f : phv_i) {
         bool have_read_to_read_live_range = false;
+        std::vector<std::pair<AllocSlice, bool>> live_start_rw;
+        std::set<AllocSlice> uninit_read_allocs;
         for (auto& slice : f.get_alloc()) {
             BUG_CHECK(
                 slice.isPhysicalStageBased(),
@@ -258,7 +260,50 @@ void FinalizePhysicalLiverange::end_apply() {
                 const auto& updated = live_ranges_i.at(slice);
                 LOG3("Finalizing " << old << " => " << updated << " : " << slice);
                 slice.setLiveness(updated.start, updated.end);
+
+                if (slice.getEarliestLiveness().second.isReadAndWrite()) {
+                    LOG5("Found RW start of liverange for" << slice);
+                    live_start_rw.push_back(std::make_pair(slice, false));
+                    int stg = slice.getEarliestLiveness().first;
+                    slice.setEarliestLiveness(std::make_pair(stg, FieldUse(FieldUse::WRITE)));
+                }
             }
+        }
+
+        // For the liveranges starting with RW determine if other liveranges cover the R part
+        // - If not then create read-only slice for the uninitialized R liverange
+        for (auto& [sl, covered] : live_start_rw) {
+            LOG5("\t live_start_rw: " << sl << " --> " << covered);
+            auto rng = sl.field_slice();
+            int stg = sl.getEarliestLiveness(). first;
+
+            for (auto& slice : f.get_alloc()) {
+                if (sl == slice) continue;
+                if (!rng.overlaps(slice.field_slice())) continue;
+
+                // Check if slice's liverange covers stage stg
+                if ((slice.getEarliestLiveness().first < stg ||
+                    (slice.getEarliestLiveness().first == stg &&
+                     slice.getEarliestLiveness().second.isRead())) &&
+                    slice.getLatestLiveness().first >= stg) {
+                    covered = true;
+                    break;
+                }
+            }
+
+            if (!covered) {
+                PHV::AllocSlice uninit_alloc(sl);
+                uninit_alloc.setIsPhysicalStageBased(true);
+                StageAndAccess singleRd = std::make_pair(stg, FieldUse(FieldUse::READ));
+                uninit_alloc.setLiveness(singleRd, singleRd);
+                LOG4("\t  creating slice: " << uninit_alloc);
+                uninit_read_allocs.insert(uninit_alloc);\
+            }
+        }
+
+        // Add the uninitialized read-only AllocSlice's to the respective field
+        for (auto uninit_sl : uninit_read_allocs) {
+            f.add_alloc(uninit_sl);
         }
 
         // A corner case is that table a has a instruction a = a | 1 and a is uninitialized and
