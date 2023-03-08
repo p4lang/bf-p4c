@@ -24,6 +24,7 @@ CollectGlobalPragma::g_global_pragma_names = new std::vector<cstring>{
     PragmaNoPack::name,
     PragmaParserBandwidthOpt::name,
     PragmaParserGroupMonogress::name,
+    PragmaAllowPOVonMocha::name,
     PragmaPhvLimit::name,
     PragmaPrioritizeARAinits::name,
     PragmaQuickPhvAlloc::name,

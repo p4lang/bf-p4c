@@ -1,9 +1,22 @@
+#include "bf-p4c/common/pragma/all_pragmas.h"
 #include "bf-p4c/phv/analysis/mocha.h"
 
 Visitor::profile_t CollectMochaCandidates::init_apply(const IR::Node* root) {
     profile_t rv = Inspector::init_apply(root);
     mochaCount = 0;
     mochaSize = 0;
+    pov_on_mocha = false;
+
+    BUG_CHECK(root->is<IR::BFN::Pipe>(), "IR root is not a BFN::Pipe: %s", root);
+    const auto *root_ = root->to<IR::BFN::Pipe>();
+    Device::phvSpec().applyGlobalPragmas(root_->global_pragmas);
+
+    for (auto *anno : root_->global_pragmas) {
+        if (anno->name.name == PragmaAllowPOVonMocha::name) {
+            pov_on_mocha = true;
+            LOG1(" ---  ALLOWING POV ON MOCHA  ---");
+        }
+    }
     return rv;
 }
 
@@ -35,6 +48,7 @@ void CollectMochaCandidates::end_apply() {
         if (f.is_padding()) {
             f.set_mocha_candidate(true);
             ss << "    ...mark padding as mocha candidate.";
+            LOG5(ss.str());
             continue;
         }
         if (!uses.is_referenced(&f)) {
@@ -76,9 +90,12 @@ void CollectMochaCandidates::end_apply() {
         // }
         if (f.pov) {
             ss << "    ...pov field.";
-            LOG5(ss.str());
-            continue;
+            if (!pov_on_mocha) {
+                LOG5(ss.str());
+                continue;
+            }
         }
+
         ss << "    ...mocha candidate found.";
         LOG5(ss.str());
         ++mochaCount;

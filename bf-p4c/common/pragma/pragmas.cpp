@@ -156,6 +156,20 @@ const char *PragmaParserGroupMonogress::help =
     "The pa_parser_group_monogress pragma prevents extracted and non-extracted "
     "fields of different gresses to be allocated into the same parser-group containers.";
 
+const char *PragmaAllowPOVonMocha::name = "pa_allow_pov_on_mocha";
+const char *PragmaAllowPOVonMocha::description =
+    "Allow allocation of POV bits on mocha containers in Tofino2.";
+const char *PragmaAllowPOVonMocha::help =
+    "@pragma pa_allow_pov_on_mocha\n"
+    "+ at the beginning of the P4 source file"
+    "\n"
+    "In Tofino2 POV fields are not allocated by the compiler in mocha containers due "
+    "to the limitation of mocha container not providing partial modification logic. "
+    "POV fields are single bit fields that need to be updated individually and "
+    "allocating them onto mocha containers would limit packing options on these containers. "
+    "This pragma provides a way to bypass this compiler restriction and allow allocation of POV "
+    "fields on mocha containers.";
+
 const char *PragmaPrioritizeARAinits::name = "pa_prioritize_ara_inits";
 const char *PragmaPrioritizeARAinits::description =
     "Use AlwaysRunActions (ARAs) more aggressively for overlay initializations";

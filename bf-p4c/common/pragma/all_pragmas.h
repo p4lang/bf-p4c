@@ -24,6 +24,7 @@ DEFINE_PRAGMA_CLASS(PragmaAutoInitMetadata);
 DEFINE_PRAGMA_CLASS(PragmaQuickPhvAlloc);
 DEFINE_PRAGMA_CLASS(PragmaParserBandwidthOpt);
 DEFINE_PRAGMA_CLASS(PragmaParserGroupMonogress);
+DEFINE_PRAGMA_CLASS(PragmaAllowPOVonMocha);
 DEFINE_PRAGMA_CLASS(PragmaPrioritizeARAinits);
 DEFINE_PRAGMA_CLASS(PragmaCalculatedFieldUpdateLocation);
 DEFINE_PRAGMA_CLASS(PragmaChainAddress);

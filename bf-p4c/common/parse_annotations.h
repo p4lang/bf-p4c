@@ -149,6 +149,7 @@ class ParseAnnotations : public P4::ParseAnnotations {
         BFN_PARSE_EMPTY(PragmaNotParsed, PARSE_STRING_LITERAL_LIST, extPragma);
         BFN_PARSE_EMPTY(PragmaParserBandwidthOpt, PARSE_EMPTY, extPragma);
         BFN_PARSE_EMPTY(PragmaParserGroupMonogress, PARSE_EMPTY, extPragma);
+        BFN_PARSE_EMPTY(PragmaAllowPOVonMocha, PARSE_EMPTY, extPragma);
         BFN_PARSE_EMPTY(PragmaPrioritizeARAinits, PARSE_EMPTY, extPragma);
         BFN_PARSE_EMPTY(PragmaQuickPhvAlloc, PARSE_EMPTY, extPragma);
         BFN_PARSE_EMPTY(PragmaSolitary, PARSE_STRING_LITERAL_LIST, extPragma);
