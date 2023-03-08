@@ -237,7 +237,7 @@ void FinalizePhysicalLiverange::end_apply() {
     // update AllocSlices' live range.
     for (auto& f : phv_i) {
         bool have_read_to_read_live_range = false;
-        std::vector<std::pair<AllocSlice, bool>> live_start_rw;
+        std::vector<AllocSlice> live_start_rw;
         std::set<AllocSlice> uninit_read_allocs;
         for (auto& slice : f.get_alloc()) {
             BUG_CHECK(
@@ -263,7 +263,7 @@ void FinalizePhysicalLiverange::end_apply() {
 
                 if (slice.getEarliestLiveness().second.isReadAndWrite()) {
                     LOG5("Found RW start of liverange for" << slice);
-                    live_start_rw.push_back(std::make_pair(slice, false));
+                    live_start_rw.push_back(slice);
                     int stg = slice.getEarliestLiveness().first;
                     slice.setEarliestLiveness(std::make_pair(stg, FieldUse(FieldUse::WRITE)));
                 }
@@ -272,10 +272,10 @@ void FinalizePhysicalLiverange::end_apply() {
 
         // For the liveranges starting with RW determine if other liveranges cover the R part
         // - If not then create read-only slice for the uninitialized R liverange
-        for (auto& [sl, covered] : live_start_rw) {
-            LOG5("\t live_start_rw: " << sl << " --> " << covered);
+        for (auto& sl : live_start_rw) {
             auto rng = sl.field_slice();
             int stg = sl.getEarliestLiveness(). first;
+            bool covered = false;
 
             for (auto& slice : f.get_alloc()) {
                 if (sl == slice) continue;
@@ -287,6 +287,8 @@ void FinalizePhysicalLiverange::end_apply() {
                      slice.getEarliestLiveness().second.isRead())) &&
                     slice.getLatestLiveness().first >= stg) {
                     covered = true;
+                    BUG_CHECK(sl.field_slice() == slice.field_slice(),
+                              "Partial range coverage of %1% by %2% in stage %3%", sl, slice, stg);
                     break;
                 }
             }
