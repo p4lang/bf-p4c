@@ -1586,6 +1586,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_elim_lowered_zero_extracts.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_enforce_depth_req.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_extract_overlay.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_extract_reorder.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_state_merge.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_solitary.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/path_linearizer.cpp

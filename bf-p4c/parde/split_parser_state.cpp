@@ -266,6 +266,50 @@ struct AllocateParserState : public ParserTransform {
                     others.push_back(p);
                 }
             }
+            reorderExtracts();
+        }
+
+        /// @brief reorder extracts by container start offset within the buffer + container
+        ///
+        /// ExtractAllocator looks at only the previous extract when considering whether to start a
+        /// new group. By ordering by container, we keeps extracts together as much as possible.
+        void reorderExtracts() {
+            std::vector<const IR::BFN::ExtractPhv*> const_extracts;
+            std::map<int, std::map<PHV::Container, std::vector<const IR::BFN::ExtractPhv *>>>
+                extracts_by_offset;
+
+            PHV::FieldUse use(PHV::FieldUse::WRITE);
+            for (auto* extract : phv_extracts) {
+                if (auto* source = extract->source->to<IR::BFN::InputBufferRVal>()) {
+                    auto slices =
+                        phv.get_alloc(extract->dest->field, PHV::AllocContext::PARSER, &use);
+
+                    // Extracts should have been split so that there is exactly one slice per
+                    // extract at this point in the compiler.
+                    BUG_CHECK(slices.size() == 1,
+                              "Expected extract %1% to correspond with 1 slice but saw %2% slices",
+                              extract, slices.size());
+
+                    auto& slice = slices.front();
+                    auto buffer_range = source->interval();
+                    auto container = slice.container();
+                    unsigned int start_byte =
+                        (buffer_range.lo - (container.size() - slice.container_slice().hi - 1)) / 8;
+                    extracts_by_offset[start_byte][container].push_back(extract);
+
+                } else {
+                    const_extracts.push_back(extract);
+                }
+            }
+
+            // Build the sorted phv_extracts vector
+            phv_extracts.clear();
+            for (auto &[offset, extracts_by_container] : extracts_by_offset) {
+                for (auto &[container, extracts] : extracts_by_container) {
+                    for (auto *extract : extracts) phv_extracts.push_back(extract);
+                }
+            }
+            for (auto *extract : const_extracts) phv_extracts.push_back(extract);
         }
 
         struct OutOfBuffer : Inspector {
@@ -321,6 +365,14 @@ struct AllocateParserState : public ParserTransform {
             std::list<std::pair<PHV::Container,
                                 ordered_set<const IR::BFN::ExtractPhv*>>> container_to_extracts;
 
+            // FIXME: Should look at the actual extractions (could extract to half a 32b
+            // container for JBay), but requires consistent and accurate analysis across all passes
+            // and assembler.  Changing here only causes a failure in P4C-2490 (failure
+            // introduced by HoistCommonMatchOperations).
+            //
+            // Problem is that code currently calculates a constant number of extracts per
+            // container, but JBay can extract only half of a 32b container if only some bits are
+            // being written.
             virtual
             std::pair<size_t, unsigned>
             inbuf_extractor_use(size_t container_size) = 0;
