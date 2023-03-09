@@ -217,6 +217,82 @@
  *   available for each parser match to avoid a stall.
  * - CharacterizeParser - Prints various info about parser to the log file.
  *
+ * ## Parser write modes
+ *
+ * The parser supports several container extraction write modes. Tofino 1 provide a single
+ * configuration bit per container that enables or disables multiple writes. Containers with
+ * multi-writes disabled permit only one write per packet: any attempt to write multiple times
+ * causes a parser error and aborts parsing. Containers with multi-write enabled are in bitwise-OR
+ * mode: repeated writes to the container OR the new data with the existing container content.
+ * Tofino 2 adds a second configuration bit per container that chooses between bitwise-OR and
+ * clear-on-write (new data replaces existing data) when mutli-writes are enabled.
+ *
+ * Bitwise-or and clear-on-write only make sense in the context of multiple writes. If a container
+ * only allows a single write, then there is never any existing content to OR/clear prior to a
+ * write. (All containers are zeroed at the start-of-packet.)
+ *
+ * The compiler calculates write modes to determine how to configure each container. The three write
+ * modes are:
+ *
+ *  - SINGLE_WRITE - Allow only a single write to the container for any given packet. The parser
+ *    will produce a runtime error and will abort parsing if an attempt is made to write to this
+ *    container multiple times. The P4 code can match on the multi-write error in case the user
+ *    wishes to handle the error (e.g., forwarding the packet to CPU), otherwise it is dropped by
+ *    the ingress parser/forwarded by the egress parser.
+ *
+ *  - BITWISE_OR - Allow multiple writes to the container, using bitwise-OR semantics (new data is
+ *    ORed with existing data).
+ *
+ *  - CLEAR_ON_WRITE - Allow multiple writes to the container, using clear-on-write semantics
+ *    (new data replaces existing data in the container). This is not supported on Tofino 1.
+ *
+ * Containers should be marked as SINGLE_WRITE whenever possible because the hardware can detect and
+ * flag attempts to write to the container multiple times. This could indicate a compiler error or a
+ * packet with unexpected repeated headers/more repeated headers than supported by a header stack.
+ *
+ * Write modes apply to containers. The compiler associates a write mode with each extract (via the
+ * @p write_mode attribute) rather than each container, so the compiler must verify that all
+ * extracts to the same container have the same write mode (or can be downgraded to be compatible).
+ *
+ * ### Choosing write modes
+ *
+ * Most header field extracts should be marked as SINGLE_WRITE or CLEAR_ON_WRITE.  They should be
+ * marked as SINGLE_WRITE if the field is extracted no more than once on every path through the
+ * parse graph, otherwise they should be marked as CLEAR_ON_WRITE if multiple extractions can occur
+ * on a single path and the later extraction replaces the earlier extraction.
+ *
+ * BITWISE_OR should typically only be used for metadata field extracts representing state, such as
+ * validity or error flags, that are written by constants. This includes narrow multi-bit fields
+ * (narrower than container size) that are written by constants. Setting state fields to BITWISE_OR
+ * allows multiple of them to be packed together in a single container, with different fields (bit
+ * ranges) within the container being written in different states.
+ *
+ * ### Write mode downgrading          {#write_mode_downgrading}
+ *
+ * SINGLE_WRITE fields can be downgraded to BITWISE_OR to improve container packing. If a
+ * SINGLE_WRITE field is written at most once in any parser path, and only written by constants,
+ * then it can be downgraded to BITWISE_OR.
+ *
+ * The downside of downgrading the write mode is that we lose the ability to check whether the
+ * field is written multiple times by any given packet.
+ *
+ * ### Tofino 2 considerations
+ *
+ * All containers within the parser are 16b. %Parser containers are combined or split to form 32b
+ * and 8b MAU containers. Different write modes _can_ be used for the two adjacent 16b parser
+ * containers that form a 32b MAU container. A single write most applies to the 16b parser container
+ * that is split to form two 8b MAU containers, so both 8b containers must have the same write mode.
+ *
+ * Tofino 2 extractors can write a full 16b to a parser container, or they can write 8b to either
+ * the upper or lower half of a container. The container write mode is applied to any write to the
+ * container. An 8b extract to a SINGLE_WRITE marks the whole container as having been written, so a
+ * subsequent extract to the other 8b half will trigger a container multi-write error. Similarly, an
+ * 8b extract to a CLEAR_ON_WRITE container clears the whole container before writing the new data:
+ * an 8b extract to one half followed by an 8b extract to the other half of a CLEAR_ON_WRITE
+ * container results in only the second write being present. Except for very rare circumstances,
+ * containers should be set to BITWISE_OR if the upper and lower halves are expected to be written
+ * independently for any packet.
+ *
  * # Deparser
  *
  * The deparser reassembles packets prior to storage in TM (Tofino 1-3) and prior to transmission
