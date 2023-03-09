@@ -745,7 +745,8 @@ Visitor::profile_t ExcludeMAUNotMutexHeaders::init_apply(const IR::Node* root) {
     init_not_extracted_headers();
     parser_mutex_headers = header_info.mutually_exclusive_headers;
     mutex_headers_modified.clear();
-    visiting_gateway_row = std::make_pair(nullptr, nullptr);
+    visiting_gateway_row_tag = nullptr;
+    visiting_gateway_rows.clear();
     return rv;
 }
 
@@ -976,8 +977,10 @@ boost::optional<std::pair<const IR::Expression*, cstring>>
         ExcludeMAUNotMutexHeaders::get_gateway_row() {
     int index;
     if (const auto* table = gateway_context(index)) {
-        if (visiting != table)
+        if (visiting != table) {
             visiting = table;
+            visiting_gateway_rows.clear();
+        }
 
         const auto gateway_row = table->gateway_rows[index];
         LOG_DEBUG9("Currently visiting gateway expression of " << table->name << ":");
@@ -1030,6 +1033,8 @@ std::vector<std::pair<cstring, HeaderState>>
         auto pair = get_header_to_state_pair_from_operation_relation(op_rel);
         if (pair)
             header_to_state_pairs.push_back(*pair);
+        else
+            header_to_state_pairs.emplace_back(nullptr, UNKNOWN);
     }
     return header_to_state_pairs;
 }
@@ -1043,48 +1048,68 @@ bool ExcludeMAUNotMutexHeaders::preorder(const IR::Expression*) {
     auto gateway_row = get_gateway_row();
     if (!gateway_row) return true;
 
-    visiting_gateway_row = *gateway_row;
+    visiting_gateway_row_tag = gateway_row->second;
+    visiting_gateway_rows[gateway_row->second].insert(gateway_row->first);
     return true;
 }
 
-void ExcludeMAUNotMutexHeaders::pre_visit_table_next(const IR::MAU::Table *tbl, cstring tag) {
+void ExcludeMAUNotMutexHeaders::pre_visit_table_next(const IR::MAU::Table* tbl, cstring tag) {
     if (tbl != visiting) {
         visiting = nullptr;
-        visiting_gateway_row = std::make_pair(nullptr, nullptr);
+        visiting_gateway_row_tag = nullptr;
+        visiting_gateway_rows.clear();
     } else {
-        const auto& [gateway_row_expression, gateway_row_tag] = visiting_gateway_row;
+        std::map<const IR::Expression*, std::vector<std::pair<cstring, HeaderState>>>
+            gateway_row_expression_to_header_to_state_pairs;
+        LOG_DEBUG7("About to visit children of gateway " << tbl->name << " through tag " << tag);
         LOG_DEBUG7("Looking for header POV bits in expression:");
-        LOG_DEBUG7(TAB1 << gateway_row_expression << " " << tag);
-        auto pairs = get_all_header_to_state_pairs_from_gateway_row_expression(
-            gateway_row_expression);
-        if (pairs.empty())
-            LOG_DEBUG7("None found.");
+        for (const auto& expression : visiting_gateway_rows[visiting_gateway_row_tag]) {
+            LOG_DEBUG7(TAB1 << expression << ": " << visiting_gateway_row_tag);
+            auto pairs = get_all_header_to_state_pairs_from_gateway_row_expression(expression);
+            gateway_row_expression_to_header_to_state_pairs.emplace(expression, pairs);
+        }
         // Ordering matters here. All INACTIVE headers must be processed before ACTIVE ones, or
         // else active_headers will not end up with the correct values.
         auto compare_header_states = [](const std::pair<cstring, HeaderState>& a,
                                         const std::pair<cstring, HeaderState>& b) {
                                             return a.second < b.second;
                                         };
-        std::sort(pairs.begin(), pairs.end(), compare_header_states);
-        for (const auto& [header, state] : pairs) {
-            if (gateway_row_tag == tag) {
-                if (state == INACTIVE) {
-                    LOG_DEBUG7(header << ": " << get_header_state_as_cstring(INACTIVE));
-                    process_is_invalid(header);
-                } else if (state == ACTIVE) {
-                    LOG_DEBUG7(header << ": " << get_header_state_as_cstring(ACTIVE));
-                    process_is_valid(header);
+        for (auto& [_, pairs] : gateway_row_expression_to_header_to_state_pairs) {
+            std::sort(pairs.begin(), pairs.end(), compare_header_states);
+            if (visiting_gateway_row_tag != tag)
+                std::reverse(pairs.begin(), pairs.end());
+        }
+        for (const auto& [_, pairs] : gateway_row_expression_to_header_to_state_pairs) {
+            if (visiting_gateway_row_tag == tag) {
+                for (const auto& [header, state] : pairs) {
+                    if (!header && state == UNKNOWN) continue;
+                    if (gateway_row_expression_to_header_to_state_pairs.size() > 1) {
+                        set_header_state(header, UNKNOWN);
+                        continue;
+                    }
+                    if (state == INACTIVE) {
+                        LOG_DEBUG7(header << ": " << get_header_state_as_cstring(INACTIVE));
+                        process_is_invalid(header);
+                    } else if (state == ACTIVE) {
+                        LOG_DEBUG7(header << ": " << get_header_state_as_cstring(ACTIVE));
+                        process_is_valid(header);
+                    }
                 }
-            } else if (pairs.size() == 1) {
-                if (state == ACTIVE) {
-                    LOG_DEBUG7(header << ": " << get_header_state_as_cstring(INACTIVE));
-                    process_is_invalid(header);
-                } else if (state == INACTIVE) {
-                    LOG_DEBUG7(header << ": " << get_header_state_as_cstring(ACTIVE));
-                    process_is_valid(header);
+            } else if (visiting_gateway_row_tag != tag) {
+                for (const auto& [header, state] : pairs) {
+                    if (!header && state == UNKNOWN) continue;
+                    if (pairs.size() > 1) {
+                        set_header_state(header, UNKNOWN);
+                        continue;
+                    }
+                    if (state == ACTIVE) {
+                        LOG_DEBUG7(header << ": " << get_header_state_as_cstring(INACTIVE));
+                        process_is_invalid(header);
+                    } else if (state == INACTIVE) {
+                        LOG_DEBUG7(header << ": " << get_header_state_as_cstring(ACTIVE));
+                        process_is_valid(header);
+                    }
                 }
-            } else {
-                set_header_state(header, UNKNOWN);
             }
         }
     }

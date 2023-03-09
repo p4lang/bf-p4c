@@ -301,7 +301,8 @@ class ExcludeMAUNotMutexHeaders : public MauInspector,
     ordered_map<cstring, bitvec> not_extracted_headers;
     SymBitMatrix parser_mutex_headers;
     SymBitMatrix mutex_headers_modified;
-    std::pair<const IR::Expression*, cstring> visiting_gateway_row;
+    cstring visiting_gateway_row_tag;
+    std::map<cstring, std::set<const IR::Expression*>> visiting_gateway_rows;
     const IR::MAU::Table* visiting = nullptr;
     cstring gress;
 
