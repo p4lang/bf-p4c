@@ -42,9 +42,10 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_msdc" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} --disable-pragmas=pa_solitary -DMSDC_PROFILE -DP4_WRED_DEBUG -Xp4c=\"--disable-parse-max-depth-limit\"")
 p4c_add_test_label("tofino" "METRICS" "switch_msdc")
 
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE}
-    "switch_msdc_ipv4" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} --disable-pragmas=pa_solitary -DMSDC_IPV4_PROFILE")
-p4c_add_test_label("tofino" "METRICS" "switch_msdc_ipv4")
+# Disabling P4-14 profile that has not worked since 2019 (see commit 0ff868b3)
+#p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE}
+#    "switch_msdc_ipv4" ${switchtest} "${testExtraArgs}" "-arch ${TOFINO_P414_TEST_ARCH} --disable-pragmas=pa_solitary -DMSDC_IPV4_PROFILE")
+#p4c_add_test_label("tofino" "METRICS" "switch_msdc_ipv4")
 
 # FIXME: remove disabling of parser min/max depth limits (P4C-4170)
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
