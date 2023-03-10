@@ -38,7 +38,8 @@ class CollectMochaCandidates : public Inspector {
 
     /// @returns true when @p f is a field from a packet (not metadata, pov, or bridged field).
     static bool isPacketField(const PHV::Field* f) {
-        return (f && !f->metadata && !f->pov && !f->bridged && !f->overlayable);
+        return (f && !f->metadata && !f->pov && !f->bridged && !f->overlayable &&
+                !f->is_intrinsic());
     }
 };
 

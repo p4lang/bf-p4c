@@ -51,11 +51,7 @@ void CollectMochaCandidates::end_apply() {
             LOG5(ss.str());
             continue;
         }
-        if (!uses.is_referenced(&f)) {
-            ss << "    ...unreferenced field";
-            LOG5(ss.str());
-            continue;
-        }
+
         ss << " ... isNotMocha: " << nonMochaDark.isNotMocha(&f, nullptr);
         if (nonMochaDark.isNotMocha(&f, nullptr).isReadWrite()) {
             ss << "    ...write by action data/constant/speciality operation/nonset operation";
@@ -90,7 +86,7 @@ void CollectMochaCandidates::end_apply() {
         // }
         if (f.pov) {
             ss << "    ...pov field.";
-            if (!pov_on_mocha) {
+            if (!pov_on_mocha || uses.is_written_mau(phv.field(f.id))) {
                 LOG5(ss.str());
                 continue;
             }
