@@ -523,6 +523,18 @@ int Stage::adr_dist_delay(gress_t gress) {
         return 0;
 }
 
+/* Calculate the meter_alu delay for a meter/stateful ALU based on both things
+ * used globally in the current stage group, and whether this ALU uses a divmod
+ * (in which case it will already have an extra 2-cycle delay */
+int Stage::meter_alu_delay(gress_t gress, bool uses_divmod) {
+    if (group_table_use[timing_thread(gress)] & Stage::USE_SELECTOR)
+        return uses_divmod ? 2 : 4;
+    else if (group_table_use[timing_thread(gress)] & Stage::USE_STATEFUL_DIVIDE)
+        return uses_divmod ? 0 : 2;
+    else
+        return 0;
+}
+
 int Stage::cycles_contribute_to_latency(gress_t gress) {
     if (stage_dep[gress] == MATCH_DEP || stageno == 0)
         return pipelength(gress);

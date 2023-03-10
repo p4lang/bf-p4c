@@ -18,6 +18,8 @@ struct DivMod : public AluOP {
 
     Instruction *pass1(Table *tbl, Table::Actions::Action *act) override {
         tbl->stage->table_use[timing_thread(tbl->gress)] |= Stage::USE_STATEFUL_DIVIDE;
+        BUG_CHECK(tbl->to<StatefulTable>(), "stateful instruction on non-stateful table?");
+        tbl->to<StatefulTable>()->divmod_used = true;
         return AluOP::pass1(tbl, act); }
     FOR_ALL_REGISTER_SETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
 };

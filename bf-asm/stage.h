@@ -124,6 +124,7 @@ class Stage : public Stage_data {
     template<class TARGET> void write_common_regs(typename TARGET::mau_regs &regs);
     template<class REGS> void write_teop_regs(REGS &regs);
     int adr_dist_delay(gress_t gress);
+    int meter_alu_delay(gress_t gress, bool uses_divmod);
     int pipelength(gress_t gress);
     int pred_cycle(gress_t gress);
     int tcam_delay(gress_t gress);

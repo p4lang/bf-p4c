@@ -2033,6 +2033,7 @@ DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
     Instruction         *output_lmatch = nullptr;  // output instruction using lmatch
     bitvec              clear_value;
     uint32_t            busy_value = 0;
+    bool                divmod_used = false;
     int instruction_set() override { return 1; /* STATEFUL_ALU */ }
     int direct_shiftcount() const override;
     int indirect_shiftcount() const override;
