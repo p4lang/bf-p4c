@@ -696,6 +696,7 @@ control Egress(
         CPU_PAD( 7, hdr.to_cpu.deq_congest_stat)      = 0;
                     hdr.to_cpu.app_pool_congest_stat  = 0;
                     hdr.to_cpu.egress_qid             = 0;
+        CPU_PAD( 8, hdr.to_cpu.deq_timedelta)         = 0;
         CPU_PAD(10, hdr.to_cpu.egress_cos)            = 0;
         CPU_PAD(11, hdr.to_cpu.deflection_flag)       = 0;
     }

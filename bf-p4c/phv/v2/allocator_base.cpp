@@ -1489,8 +1489,11 @@ PHV::Transaction AllocatorBase::alloc_deparser_zero_cluster(
             std::vector<PHV::AllocSlice> candidate_slices;
             const int slice_width = slice.size();
             // Allocate bytewise chunks of this field to B0 and B16.
-            for (int i = 0; i < slice_width; i += 8) {
-                int alloc_slice_width = std::min(8, slice_width - i);
+            int alloc_slice_width = 8;
+            for (int i = 0; i < slice_width; i += alloc_slice_width) {
+                int slice_bits_to_next_byte = ((offset / 7) + 1) * 8 - offset;
+                int slice_bits_remaining = slice_width - i;
+                alloc_slice_width = std::min(slice_bits_to_next_byte, slice_bits_remaining);
                 le_bitrange container_slice = StartLen(offset % 8, alloc_slice_width);
                 le_bitrange field_slice = StartLen(i + slice.range().lo, alloc_slice_width);
                 BUG_CHECK(slice.gress() == INGRESS || slice.gress() == EGRESS,

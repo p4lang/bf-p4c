@@ -515,7 +515,6 @@ if (TEST_ALT_PHV_ALLOC)
     # PTF and STF errors
     p4c_add_xfail_reason("tofino2"
         "ERROR:PTF runner:Error when running PTF tests"
-        p4c-3876
         p4_16_programs_tna_action_selector
     )
 

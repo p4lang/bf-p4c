@@ -4635,9 +4635,11 @@ boost::optional<PHV::Transaction> CoreAllocation::try_deparser_zero_alloc(
                                                        { EGRESS, PHV::Container("B16") }};
             std::vector<PHV::AllocSlice> candidate_slices;
             int slice_width = slice.size();
-            // Allocate bytewise chunks of this field to B0 and B16.
-            for (int i = 0; i < slice_width; i += 8) {
-                int alloc_slice_width = std::min(8, slice_width - i);
+            int alloc_slice_width = 8;
+            for (int i = 0; i < slice_width; i += alloc_slice_width) {
+                int slice_bits_to_next_byte = ((slice_list_offset / 7) + 1) * 8 - slice_list_offset;
+                int slice_bits_remaining = slice_width - i;
+                alloc_slice_width = std::min(slice_bits_to_next_byte, slice_bits_remaining);
                 LOG_DEBUG5(TAB3 "Alloc slice width: " << alloc_slice_width);
                 LOG_DEBUG5(TAB3 "Slice list offset: " << slice_list_offset);
                 le_bitrange container_slice = StartLen(slice_list_offset % 8, alloc_slice_width);

@@ -115,7 +115,9 @@ int Phv::addreg(gress_t gress, const char *name, const value_t &what, int stage,
             reg[stage].slice = Slice(*sl, what[1].lo, what[1].hi); }
         reg[stage].max_stage = max_stage;
         if (!reg[stage].slice.valid) {
-            error(what.lineno, "Invalid register slice");
+            auto slice = reg[stage].slice;
+            error(what.lineno, "Invalid register slice - %s[%d:%d]",
+                    slice.reg.name, slice.hi, slice.lo);
             return -1; }
         if (stage == -1) {
             add_phv_field_sizes(gress, phv_name, reg[stage].slice->size());
