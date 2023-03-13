@@ -1238,6 +1238,17 @@ static std::map<cstring, cstring> negate_rel_op = {
     { "lss.s", "grt.s" }, { "lss.u", "grt.u" }, { "lss.uus", "grt.uus" },
 };
 
+static bool can_be_uus_cmp(const IR::Operation::Relation *rel, const IR::Type::Bits *type) {
+    if (!type->isSigned) return false;
+    if (rel->left->is<IR::Add>() || rel->right->is<IR::Add>() ||
+        rel->left->is<IR::Sub>() || rel->right->is<IR::Sub>()) {
+        /* Should also check that the operand is constant 0?  If it is not, then there is no
+         * totally correct instruction */
+        return true;
+    }
+    return false;
+}
+
 bool CreateSaluInstruction::preorder(const IR::Operation::Relation *rel, cstring op, bool eq) {
     if (etype == OUTPUT && operands.empty()) {
         // output a boolean condition directly -- change it into IF setting value to 1
@@ -1257,8 +1268,7 @@ bool CreateSaluInstruction::preorder(const IR::Operation::Relation *rel, cstring
                 const char *type_suffix = ".u";
                 if (auto t = rel->left->type->to<IR::Type::Bits>()) {
                     type_suffix = t->isSigned ? ".s" : ".u";
-                    if (rel->left->is<IR::Operation_Binary>() ||
-                        rel->right->is<IR::Operation_Binary>()) {
+                    if (can_be_uus_cmp(rel, t)) {
                         if (t->size < salu->source_width()) {
                             error(ErrorType::ERR_UNSUPPORTED,
                                   "%sCan't do %d-bit comparison in a %d-bit SALU",
