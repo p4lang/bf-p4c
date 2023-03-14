@@ -25,6 +25,7 @@
 #include "ir/ir.h"
 #include "ir/visitor.h"
 #include "lib/cstring.h"
+#include "lib/log.h"
 #include "version.h"
 
 static bool check_exclusive(bool option1, std::string option1Arg,
@@ -170,6 +171,11 @@ BFN_Options::BFN_Options() {
     registerOption("--long-branch-backtrack", nullptr,
         [this](const char *) { table_placement_long_branch_backtrack = true; return true; },
         "backtrack in table placement when long branch pressure seems too high",
+        OptionFlags::Hide);
+    registerOption("--disable-logging", nullptr,
+        [](const char *) { ::Log::Detail::enableLoggingGlobally = false; return true; },
+        "disable LOGN() statement globally, only enable logging for IR "
+        "classes annotated with @__debug",
         OptionFlags::Hide);
 #endif
     registerOption("-g", nullptr,

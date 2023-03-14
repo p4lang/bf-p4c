@@ -1302,6 +1302,12 @@ const char *PragmaAlgorithm::name = "algorithm";
 const char *PragmaAlgorithm::description = "internal";
 const char *PragmaAlgorithm::help = "internal";
 
+// internal annotation used by the compiler to filter logging
+// this is a compiler internal pragma, used for debugging
+const char *PragmaIRContextBasedDebugLogging::name = "__debug";
+const char *PragmaIRContextBasedDebugLogging::description = "internal";
+const char *PragmaIRContextBasedDebugLogging::help = "internal";
+
 /*
 
 const char *Pragma::name = "";

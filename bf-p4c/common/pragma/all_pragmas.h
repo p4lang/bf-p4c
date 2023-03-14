@@ -53,6 +53,7 @@ DEFINE_PRAGMA_CLASS(PragmaIdletimeTwoWayNotification);
 DEFINE_PRAGMA_CLASS(PragmaImmediate);
 DEFINE_PRAGMA_CLASS(PragmaInHash);
 DEFINE_PRAGMA_CLASS(PragmaIntrinsicMetadata);
+DEFINE_PRAGMA_CLASS(PragmaIRContextBasedDebugLogging);
 DEFINE_PRAGMA_CLASS(PragmaIgnoreTableDependency);
 DEFINE_PRAGMA_CLASS(PragmaLrtEnable);
 DEFINE_PRAGMA_CLASS(PragmaLrtScale);
