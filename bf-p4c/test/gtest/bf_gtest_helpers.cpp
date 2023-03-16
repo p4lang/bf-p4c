@@ -739,22 +739,22 @@ std::string TestCode::get_field_container(const std::string &field, const std::s
 
     // Try simple "field: container" format first
     if (idx == 0) {
-        std::string regex_str = R"(\b)" + Match::convert_to_regex(field) + R"(: (\w+))";
+        std::string regex_str = R"((\b|\s))" + Match::convert_to_regex(field) + R"(: (\w+))";
         std::regex field_regex = std::regex(regex_str);
         if (std::regex_search(str, sm, field_regex)) {
-            return *std::next(sm.begin());
+            return *std::next(sm.begin(), 2);
         }
     }
 
     // Format: "stage STAGE_NUM: CONTAINER" / "stage STAGE_LO..STAGE_HI: CONTAINER"
     // Step 1: match on the field plus all of its stages
     std::string regex_str =
-        R"(\b)" + Match::convert_to_regex(field) +
+        R"((\b|\s))" + Match::convert_to_regex(field) +
         R"(: \{\s*((stage \d+(\.\.\d+)?: (\w+)(\(\d+(\.\.\d+)?\))?(,\s*)?)+)\s*\})";
     std::regex field_regex = std::regex(regex_str);
     if (std::regex_search(str, sm, field_regex)) {
         // Step 2: iterate over the individual stage pairs until we find the indicated index
-        std::string stage_str = *std::next(sm.begin());
+        std::string stage_str = *std::next(sm.begin(), 2);
         std::string regex_str = R"(stage \d+(\.\.\d+)?: (\w+)(\(\d+(\.\.\d+)?\))?)";
         std::regex field_regex = std::regex(regex_str);
         while (std::regex_search(stage_str, sm, field_regex)) {

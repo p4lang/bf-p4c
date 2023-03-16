@@ -55,6 +55,8 @@ class TemporaryVariableInserter {
         /* -- visitor interface */
         const IR::Node* preorder(IR::MethodCallStatement* stmt_) override;
         const IR::Node* preorder(IR::BlockStatement* stmt_) override;
+        const IR::Node* preorder(IR::IfStatement* stmt_) override;
+        const IR::Node* preorder(IR::SwitchStatement* stmt_) override;
         const IR::Node* preorder(IR::Statement* stmt_) override;
 
      private:
@@ -181,6 +183,16 @@ const IR::Node* TemporaryVariableInserter::InjectInitializations::preorder(
 
 const IR::Node*
 TemporaryVariableInserter::InjectInitializations::preorder(IR::BlockStatement* stmt_) {
+    return stmt_;
+}
+
+const IR::Node*
+TemporaryVariableInserter::InjectInitializations::preorder(IR::IfStatement* stmt_) {
+    return stmt_;
+}
+
+const IR::Node*
+TemporaryVariableInserter::InjectInitializations::preorder(IR::SwitchStatement* stmt_) {
     return stmt_;
 }
 

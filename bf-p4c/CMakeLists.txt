@@ -1559,6 +1559,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_packing.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/fold_constant_hashes.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/gateway_control_flow.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/normalize_hash_list.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/hidden_merged.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/input_xbar.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/instruction_selection.cpp
