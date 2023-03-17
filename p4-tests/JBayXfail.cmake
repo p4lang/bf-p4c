@@ -512,12 +512,6 @@ if (TEST_ALT_PHV_ALLOC)
         extensions/p4_tests/p4_16/customer/arista/obfuscated-msee_tofino2.p4
     )
 
-    # PTF and STF errors
-    p4c_add_xfail_reason("tofino2"
-        "ERROR:PTF runner:Error when running PTF tests"
-        p4_16_programs_tna_action_selector
-    )
-
     # Tests that take way too long with ALT-PHV
     p4c_add_xfail_reason("tofino2"
         "TIMEOUT"
