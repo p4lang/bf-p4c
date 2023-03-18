@@ -195,16 +195,8 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
         } else if (kv.key == "error_mode") {
             if (gress == GHOST)
                 error(kv.key.lineno, "Can't specify error mode in ghost thread");
-            else if (kv.value == "no_config")
-                stage[stageno].error_mode[gress] = Stage::NO_CONFIG;
-            else if (kv.value == "propagate")
-                stage[stageno].error_mode[gress] = Stage::PROPAGATE;
-            else if (kv.value == "map_to_immediate")
-                stage[stageno].error_mode[gress] = Stage::MAP_TO_IMMEDIATE;
-            else if (kv.value == "disable")
-                stage[stageno].error_mode[gress] = Stage::DISABLE_ALL_TABLES;
             else
-                error(kv.value.lineno, "Unknown error mode %s", value_desc(kv.value));
+                stage[stageno].error_mode[gress].input(kv.value);
             continue;
         } else if (Target::SUPPORT_ALWAYS_RUN() && kv.key == "always_run_action") {
             if (gress == GHOST)
@@ -459,7 +451,7 @@ Stage::Stage(int stage, bool egress_only) : Stage_data(stage, egress_only) {
                   "All non-static Stage fields must be in Stage_data");
     table_use[0] = table_use[1] = NONE;
     stage_dep[0] = stage_dep[1] = NONE;
-    error_mode[0] = error_mode[1] = PROPAGATE;
+    error_mode[0] = error_mode[1] = DefaultErrorMode::get();
     for (int i = 0; i < Target::SRAM_ROWS(egress_only ? EGRESS : INGRESS); i++)
         for (int j = 0; j < Target::SRAM_REMOVED_COLUMNS(); j++)
             sram_use[i][j] = &invalid_rams;
@@ -502,7 +494,7 @@ bitvec Stage::imem_use_all() const {
     return rv;
 }
 
-int Stage::tcam_delay(gress_t gress) {
+int Stage::tcam_delay(gress_t gress) const {
     if (group_table_use[timing_thread(gress)] & Stage::USE_TCAM)
         return 2;
     if (group_table_use[timing_thread(gress)] & Stage::USE_WIDE_SELECTOR)
@@ -510,7 +502,7 @@ int Stage::tcam_delay(gress_t gress) {
     return 0;
 }
 
-int Stage::adr_dist_delay(gress_t gress) {
+int Stage::adr_dist_delay(gress_t gress) const {
     if (group_table_use[timing_thread(gress)] & Stage::USE_SELECTOR)
         return 8;
     else if (group_table_use[timing_thread(gress)] & Stage::USE_STATEFUL_DIVIDE)
@@ -526,7 +518,7 @@ int Stage::adr_dist_delay(gress_t gress) {
 /* Calculate the meter_alu delay for a meter/stateful ALU based on both things
  * used globally in the current stage group, and whether this ALU uses a divmod
  * (in which case it will already have an extra 2-cycle delay */
-int Stage::meter_alu_delay(gress_t gress, bool uses_divmod) {
+int Stage::meter_alu_delay(gress_t gress, bool uses_divmod) const {
     if (group_table_use[timing_thread(gress)] & Stage::USE_SELECTOR)
         return uses_divmod ? 2 : 4;
     else if (group_table_use[timing_thread(gress)] & Stage::USE_STATEFUL_DIVIDE)
@@ -544,11 +536,11 @@ int Stage::cycles_contribute_to_latency(gress_t gress) {
         return 2;  // action dependency
 }
 
-int Stage::pipelength(gress_t gress) {
+int Stage::pipelength(gress_t gress) const {
     return Target::MAU_BASE_DELAY() + tcam_delay(gress) + adr_dist_delay(gress);
 }
 
-int Stage::pred_cycle(gress_t gress) {
+int Stage::pred_cycle(gress_t gress) const {
     return Target::MAU_BASE_PREDICATION_DELAY() + tcam_delay(gress);
 }
 
@@ -603,37 +595,8 @@ template<class TARGET> void Stage::write_common_regs(typename TARGET::mau_regs &
             this[1].stage_dep[EGRESS] == ACTION_DEP; }
 
     /* Error handling related */
-    for (gress_t gress : Range(INGRESS, EGRESS)) {
-        int err_delay = tcam_delay(gress) ? 1 : 0;
-        switch (error_mode[gress]) {
-        case NO_CONFIG:
-            break;
-        case PROPAGATE:
-            merge.tcam_match_error_ctl[gress].tcam_match_error_ctl_o_err_en = 1;
-            merge.tind_ecc_error_ctl[gress].tind_ecc_error_ctl_o_err_en = 1;
-            merge.gfm_parity_error_ctl[gress].gfm_parity_error_ctl_o_err_en = 1;
-            merge.emm_ecc_error_ctl[gress].emm_ecc_error_ctl_o_err_en = 1;
-            merge.gfm_parity_error_ctl[gress].gfm_parity_error_ctl_delay = err_delay;
-            merge.emm_ecc_error_ctl[gress].emm_ecc_error_ctl_delay = err_delay;
-            break;
-        case MAP_TO_IMMEDIATE:
-            merge.tcam_match_error_ctl[gress].tcam_match_error_ctl_idata_ovr = 1;
-            merge.tind_ecc_error_ctl[gress].tind_ecc_error_ctl_idata_ovr = 1;
-            merge.gfm_parity_error_ctl[gress].gfm_parity_error_ctl_idata_ovr = 1;
-            merge.emm_ecc_error_ctl[gress].emm_ecc_error_ctl_idata_ovr = 1;
-            merge.gfm_parity_error_ctl[gress].gfm_parity_error_ctl_delay = err_delay;
-            merge.emm_ecc_error_ctl[gress].emm_ecc_error_ctl_delay = err_delay;
-            break;
-        case DISABLE_ALL_TABLES:
-            merge.tcam_match_error_ctl[gress].tcam_match_error_ctl_dis_pred = 1;
-            merge.tind_ecc_error_ctl[gress].tind_ecc_error_ctl_dis_pred = 1;
-            merge.gfm_parity_error_ctl[gress].gfm_parity_error_ctl_dis_pred = 1;
-            merge.emm_ecc_error_ctl[gress].emm_ecc_error_ctl_dis_pred = 1;
-            merge.gfm_parity_error_ctl[gress].gfm_parity_error_ctl_delay = err_delay;
-            merge.emm_ecc_error_ctl[gress].emm_ecc_error_ctl_delay = err_delay;
-            break;
-        default:
-            BUG(); } }
+    for (gress_t gress : Range(INGRESS, EGRESS))
+        error_mode[gress].write_regs(regs, this, gress);
 
     /*--------------------
     * Since a stats ALU enable bit is missing from mau_cfg_stats_alu_lt, need to make sure that for

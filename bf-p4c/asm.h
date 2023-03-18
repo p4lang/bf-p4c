@@ -131,6 +131,9 @@ class AsmOutput : public Inspector {
                 << "  version: " << BFASM::Version::getVersion() << std::endl
                 << "  run_id: \"" << RunId::getId() << "\"" << std::endl
                 << "  target: " << Device::name() << std::endl;
+            // set the default error mode used by all stages
+            // FIXME should have a way to control this from the P4 source
+            out << "error_mode: propagate_and_disable" << std::endl;
             if (::errorCount() == 0) {
                 out << PhvAsmOutput(phv, defuse, tbl_summary, live_range_report,
                         pipe->ghost_thread.ghost_parser != nullptr);

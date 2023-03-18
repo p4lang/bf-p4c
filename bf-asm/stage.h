@@ -6,6 +6,7 @@
 
 #include "tables.h"
 #include "bitvec.h"
+#include "error_mode.h"
 #include "input_xbar.h"
 #include "bf-p4c/common/alloc.h"
 
@@ -61,8 +62,7 @@ class Stage_data {
     bitvec              match_use[3], action_use[3], action_set[3];
 
     // there's no error mode registers for ghost thread, so we don't allow it to be set
-    enum { NO_CONFIG = 0, PROPAGATE, MAP_TO_IMMEDIATE, DISABLE_ALL_TABLES }
-                        error_mode[2];
+    ErrorMode error_mode[2];
 
     // MPR stage config
     int mpr_stage_id[3] = { 0 };  // per-gress
@@ -123,11 +123,11 @@ class Stage : public Stage_data {
     template<class REGS> void write_regs(REGS &regs, bool egress_only);
     template<class TARGET> void write_common_regs(typename TARGET::mau_regs &regs);
     template<class REGS> void write_teop_regs(REGS &regs);
-    int adr_dist_delay(gress_t gress);
-    int meter_alu_delay(gress_t gress, bool uses_divmod);
-    int pipelength(gress_t gress);
-    int pred_cycle(gress_t gress);
-    int tcam_delay(gress_t gress);
+    int adr_dist_delay(gress_t gress) const;
+    int meter_alu_delay(gress_t gress, bool uses_divmod) const;
+    int pipelength(gress_t gress) const;
+    int pred_cycle(gress_t gress) const;
+    int tcam_delay(gress_t gress) const;
     int cycles_contribute_to_latency(gress_t gress);
     void verify_have_mpr(std::string key, int line_number);
     static int first_table(gress_t gress);

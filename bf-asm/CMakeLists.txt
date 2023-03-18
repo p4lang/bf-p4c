@@ -90,6 +90,7 @@ set (BFAS_COMMON_SOURCES
   deparser.cpp
   depositfield.cpp
   dynhash.cpp
+  error_mode.cpp
   exact_match.cpp
   exename.cpp
   flexible_headers.cpp
@@ -138,6 +139,7 @@ SET (BFAS_COMMON_HEADERS
   data_switchbox.h
   deparser.h
   depositfield.h
+  error_mode.h
   escape.h
   exename.h
   fdstream.h

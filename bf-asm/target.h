@@ -172,6 +172,7 @@ struct MemUnit;
     M(int, MATCH_REQUIRES_PHYSID) \
     M(int, MAU_BASE_DELAY) \
     M(int, MAU_BASE_PREDICATION_DELAY) \
+    M(int, MAU_ERROR_DELAY_ADJUST) \
     M(int, METER_ALU_GROUP_DATA_DELAY) \
     M(int, MINIMUM_INSTR_CONSTANT) \
     M(bool, NEXT_TABLE_EXEC_COMBINED) \
@@ -385,6 +386,7 @@ class Target::Tofino : public Target {
         LONG_BRANCH_TAGS = 0,
         MAU_BASE_DELAY = 20,
         MAU_BASE_PREDICATION_DELAY = 11,
+        MAU_ERROR_DELAY_ADJUST = 2,
         METER_ALU_GROUP_DATA_DELAY = 13,
         // To avoid under run scenarios, there is a minimum egress pipeline latency required
         MINIMUM_REQUIRED_EGRESS_PIPELINE_LATENCY = 160,
@@ -567,6 +569,7 @@ class Target::JBay : public Target {
         LONG_BRANCH_TAGS = 8,
         MAU_BASE_DELAY = 23,
         MAU_BASE_PREDICATION_DELAY = 13,
+        MAU_ERROR_DELAY_ADJUST = 3,
         METER_ALU_GROUP_DATA_DELAY = 15,
         NEXT_TABLE_EXEC_COMBINED = true,
         NEXT_TABLE_SUCCESSOR_TABLE_DEPTH = 8,
@@ -799,6 +802,7 @@ class Target::Cloudbreak : public Target {
         LONG_BRANCH_TAGS = 8,
         MAU_BASE_DELAY = 23,
         MAU_BASE_PREDICATION_DELAY = 13,
+        MAU_ERROR_DELAY_ADJUST = 3,
         METER_ALU_GROUP_DATA_DELAY = 15,
         NEXT_TABLE_EXEC_COMBINED = true,
         NEXT_TABLE_SUCCESSOR_TABLE_DEPTH = 8,
@@ -978,6 +982,7 @@ class Target::Flatrock : public Target {
         LONG_BRANCH_TAGS = 32,
         MAU_BASE_DELAY = 23,
         MAU_BASE_PREDICATION_DELAY = 13,
+        MAU_ERROR_DELAY_ADJUST = 3,
         MAX_IMMED_ACTION_DATA = 64,
         MAX_OVERHEAD_OFFSET = 128,
         MAX_OVERHEAD_OFFSET_NEXT = 128,
