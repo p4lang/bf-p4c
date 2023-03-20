@@ -126,6 +126,13 @@ int TableResourceAlloc::findBytesOnIxbar(const PHV::FieldSlice& slice) const {
 std::ostream &operator<<(std::ostream &out, const TableResourceAlloc &alloc) {
     // FIXME -- there's a huge amount of data in alloc -- what should we log?
     // this is a prime candidate for structured logging.
+    if (alloc.match_ixbar) out << "match_ixbar: " << *alloc.match_ixbar << Log::endl;
+    if (alloc.gateway_ixbar) out << "gateway_ixbar: " << *alloc.gateway_ixbar << Log::endl;
+    if (alloc.proxy_hash_ixbar) out << "proxy_hash_ixbar: " << *alloc.proxy_hash_ixbar << Log::endl;
+    if (alloc.action_ixbar) out << "action_ixbar: " << *alloc.action_ixbar << Log::endl;
+    if (alloc.selector_ixbar) out << "selector_ixbar: " << *alloc.selector_ixbar << Log::endl;
+    if (alloc.salu_ixbar) out << "salu_ixbar: " << *alloc.salu_ixbar << Log::endl;
+    if (alloc.salu_ixbar) out << "meter_ixbar: " << *alloc.meter_ixbar << Log::endl;
     std::unique_ptr<Memories> mem(Memories::create());
     for (auto &mu : alloc.memuse)
         mem->update(mu.first.build_name(), mu.second);

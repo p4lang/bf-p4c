@@ -341,7 +341,8 @@ Visitor::profile_t TablePlacement::init_apply(const IR::Node *root) {
     auto rv = PassManager::init_apply(root);
     alloc_done = phv.alloc_done();
     summary.clearPlacementErrors();
-    LOG1("Table Placement ignores container conflicts? " << ignoreContainerConflicts);
+    LOG1("Table Placement " << summary.getActualStateStr() <<
+         (ignoreContainerConflicts ? "," : ", not") << " ignoring container conflicts");
     if (BackendOptions().create_graphs) {
         static unsigned invocation = 0;
         auto pipeId = root->to<IR::BFN::Pipe>()->canon_id();

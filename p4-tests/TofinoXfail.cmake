@@ -2154,13 +2154,9 @@ if (TEST_ALT_PHV_ALLOC)
 
     # Table fitting
     p4c_add_xfail_reason("tofino"
-      "error: table allocation [(]alt-phv-alloc enabled[)] failed to allocate tables within 12 stages. Allocation state: ALT_FINALIZE_TABLE, stage used: 13"
+      "error: table allocation [(]alt-phv-alloc enabled[)] failed to allocate tables for pipe .* within 12 stages. Allocation state: ALT_FINALIZE_TABLE, stage used:"
       extensions/p4_tests/p4_16/customer/arista/obfuscated-stateless_load_balance_v4v6.p4
       extensions/p4_tests/p4_16/customer/arista/obfuscated-nat_static.p4
-    )
-
-    p4c_add_xfail_reason("tofino"
-      "error: table allocation [(]alt-phv-alloc enabled[)] failed to allocate tables within 12 stages. Allocation state: ALT_FINALIZE_TABLE, stage used: 14"
       extensions/p4_tests/p4_16/customer/arista/obfuscated-routescale.p4
     )
 endif (TEST_ALT_PHV_ALLOC)

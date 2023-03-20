@@ -504,9 +504,10 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
             if (maxStage > deviceStages || criticalPlacementFailure) {
                 ::fatal_error(
                     "table allocation (alt-phv-alloc enabled) failed to allocate tables "
-                    "within %1% stages. Allocation state: %2%, "
-                    "stage used: %3%, table placement warnings and errors seen: %4%",
-                    deviceStages, state_name[prev_state], maxStage, tablePlacementErrors.size());
+                    "for pipe %1% within %2% stages. Allocation state: %3%, "
+                    "stage used: %4%, table placement warnings and errors seen: %5%",
+                    pipe->canon_name(), deviceStages, state_name[prev_state], maxStage,
+                    tablePlacementErrors.size());
             }
         } else if (state == SUCCESS) {
             // only warnings will be printed.

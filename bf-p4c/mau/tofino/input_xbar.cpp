@@ -3571,6 +3571,7 @@ bool IXBar::allocHashDist(safe_vector<HashDistAllocPostExpand> &alloc_reqs, Hash
     }
 
     if (!can_allocate_hash) {
+        LOG5("failed to allocate hash for hash dist");
         use.clear();
         return false;
     }
@@ -4039,6 +4040,7 @@ bool IXBar::XBarHashDist::allocate_hash_dist() {
         hd_alloc.used_by = tbl->name;
         if (!self.allocHashDist(dest_reqs, hd_alloc, phv, tbl->name + "$hash_dist", tbl, false) &&
             !self.allocHashDist(dest_reqs, hd_alloc, phv, tbl->name + "$hash_dist", tbl, true)) {
+            LOG5("failed to allocate hash dist for " << hash_dist_name(HashDistDest_t(i)));
             return false;
         }
         // Save source data for reuse by other table of the same stage.
@@ -4104,6 +4106,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
                 && allocAllHashWays(ternary, tbl, next_alloc, lo, start, last, max_hm_reqs))) {
                 next_alloc.clear();
                 alloc.match_ixbar.reset();
+                LOG5("failed to allocate " << (ternary ? "ternary" : "exact") << " match");
                 return false;
             } else {
                fill_out_use(alloced, ternary);
@@ -4142,6 +4145,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
         safe_vector<IXBar::Use::Byte *> alloced;
         hash_matrix_reqs hm_reqs;
         if (!allocMatch(false, tbl, phv, getUse(alloc.match_ixbar), alloced, hm_reqs)) {
+            LOG5("failed to allocate atcam match");
             alloc.match_ixbar.reset();
             alloced.clear();
             return false;
@@ -4152,12 +4156,14 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
 
         if (!allocPartition(tbl, phv, getUse(alloc.match_ixbar), false)
             && !allocPartition(tbl, phv, getUse(alloc.match_ixbar), true)) {
+            LOG5("failed to allocate atcam partition");
             alloc.match_ixbar.reset();
             return false;
         }
     } else if (tbl->layout.proxy_hash) {
         if (!allocProxyHash(tbl, phv, lo, getUse(alloc.match_ixbar),
                             getUse(alloc.proxy_hash_ixbar))) {
+            LOG5("failed to allocate proxy hash");
             alloc.clear_ixbar();
             return false;
         }
@@ -4168,21 +4174,25 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
         if (attached_entries.at(at_mem).entries <= 0) continue;
         if (auto as = at_mem->to<IR::MAU::Selector>()) {
             if (!allocSelector(as, tbl, phv, getUse(alloc.selector_ixbar), tbl->name)) {
+                LOG5("failed to allocate selector");
                 alloc.clear_ixbar();
                 return false; }
         } else if (auto mtr = at_mem->to<IR::MAU::Meter>()) {
             if (!allocMeter(mtr, tbl, phv, getUse(alloc.meter_ixbar), true) &&
                 !allocMeter(mtr, tbl, phv, getUse(alloc.meter_ixbar), false)) {
+                LOG5("failed to allocate meter");
                 alloc.clear_ixbar();
                 return false; }
         } else if (auto salu = at_mem->to<IR::MAU::StatefulAlu>()) {
             if (!allocStateful(salu, tbl, phv, getUse(alloc.salu_ixbar), true) &&
                 !allocStateful(salu, tbl, phv, getUse(alloc.salu_ixbar), false)) {
+                LOG5("failed to allocate stateful");
                 alloc.clear_ixbar();
                 return false; } } }
 
     if (!allocGateway(tbl, phv, getUse(alloc.gateway_ixbar), lo, false) &&
         !allocGateway(tbl, phv, getUse(alloc.gateway_ixbar), lo, true)) {
+        LOG5("failed to allocate gateway");
         alloc.clear_ixbar();
         return false; }
 
@@ -4207,6 +4217,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const IR::MAU::Table *gw, cons
                        TableResourceAlloc &alloc, const LayoutOption *lo,
                        const ActionData::Format::Use *af,
                        const attached_entries_t &attached_entries) {
+    LOG7(*this);
     return allocTable(tbl, phv, alloc, lo, af, attached_entries) &&
            allocTable(gw, phv, alloc, lo, nullptr, attached_entries);
 }
@@ -4304,6 +4315,12 @@ void IXBar::update(cstring name, const ::IXBar::Use &alloc_) {
                     BUG("Conflicting hash distribution bit allocation %s and %s",
                         local_name, hash_dist_bit_use[i][bit]);
                 }
+#if 0
+                // FIXME -- should update this here, but doing so causes a BUG_CHECK
+                // with arista/obfuscated-l2_dci.p4 and --alt-phv-alloc
+                hash_dist_use[i][bit/HASH_DIST_BITS] = local_name;
+                hash_dist_inuse[i] |= 1 << bit/HASH_DIST_BITS;
+#endif
             }
             hash_dist_bit_inuse[i] |= hdh.galois_matrix_bits;
         }
@@ -4476,7 +4493,7 @@ void IXBar::dbprint(std::ostream &out) const {
     add_names(ternary_use, fields);
     add_names(byte_group_use, fields);
     sort_names(fields);
-    out << "Input Xbar:" << Log::endl;
+    out << "exact ixbar groups                  ternary ixbar groups" << Log::endl;
     for (int r = 0; r < IXBar::EXACT_GROUPS; r++) {
         write_group(out, exact_use[r], fields);
         if (r < IXBar::BYTE_GROUPS) {
@@ -4500,15 +4517,25 @@ void IXBar::dbprint(std::ostream &out) const {
     add_names(hash_index_use, tables);
     add_names(hash_single_bit_use, tables);
     add_names(hash_group_print_use, tables);
+    add_names(hash_dist_use, tables);
+    add_names(hash_dist_bit_use, tables);
     sort_names(tables);
-    out << "Hash:" << Log::endl;
+    out << "hash select bits  Groups  hd  /- hash dist bits --- (Groups: "
+        << hash_dist_groups[0] << " " << hash_dist_groups[1] << ")" << Log::endl;
     for (int h = 0; h < IXBar::HASH_TABLES; ++h) {
         write_group(out, hash_index_use[h], tables);
         out << " ";
         write_group(out, hash_single_bit_use[h], tables);
+        out << "  ";
         if (h < IXBar::HASH_GROUPS) {
-            out << "   ";
-            write_one(out, hash_group_print_use[h], tables); }
+            write_one(out, hash_group_print_use[h], tables);
+            out << hex(hash_group_use[h], 4, '0');
+        } else {
+            out << "     "; }
+        out << "  ";
+        write_group(out, hash_dist_use[h], tables);
+        out << " ";
+        write_group(out, hash_dist_bit_use[h], tables);
         out << Log::endl; }
     for (auto &t : tables)
         out << "   " << t.second << " " << t.first << Log::endl;
