@@ -760,9 +760,8 @@ void TableSummary::PlacedTable::add(const IR::MAU::Table *t) {
         }
     }
     for (auto &ba : t->attached) {
-        auto att = ba->attached;
-        auto memName = att->name;
-        auto attEntries = att->size;
+        auto memName = ba->attached->name;
+        auto attEntries = ba->entries;
         // If table is direct same entries as match table
         attached_entries[memName] += attEntries;
     }
@@ -770,7 +769,8 @@ void TableSummary::PlacedTable::add(const IR::MAU::Table *t) {
 
 TableSummary::PlacedTable::PlacedTable(const IR::MAU::Table *t) {
     BUG_CHECK(t, "PlacedTable called with no valid table");
-    LOG5("Populating PlacedTable for Table : " << t->name);
+    Log::TempIndent indent;
+    LOG5("Populating PlacedTable for Table : " << t->name << indent);
 
     tableName = getTableName(t);
     internalTableName = t->is_a_gateway_table_only() ? t->name : getTableIName(t);
@@ -783,6 +783,7 @@ TableSummary::PlacedTable::PlacedTable(const IR::MAU::Table *t) {
     stage = t->stage();
     logicalId = *t->logical_id;
     entries = t->layout.entries;
+    LOG3("Adding " << entries << " entries to table");
     // TBD: Fix layout to have the correct entries and ways for all table types
     // This should ideally happen in TP possibly during TransformTables pass
     // Do we need to do anything different for DLEFT for entries calculation
@@ -793,17 +794,18 @@ TableSummary::PlacedTable::PlacedTable(const IR::MAU::Table *t) {
         auto match_groups = t->ways[0].match_groups;
         for (auto mem_way : mem.ways) {
             entries += match_groups * mem_way.size * Memories::SRAM_DEPTH;
-            LOG3("Adding entries to table : " << t->name << ", match_groups: " << match_groups
-                    << ", mem.ways: " << mem.ways);
+            LOG3("Adding " << entries << " entries to atcam table with match_groups: "
+                    << match_groups << ", mem.ways: " << mem.ways);
         }
     }
 
     for (auto &ba : t->attached) {
-        auto att = ba->attached;
-        auto memName = att->name;
-        auto attEntries = att->size;
+        auto memName = ba->attached->name;
+        auto attEntries = ba->entries;
         // If table is direct same entries as match table
         attached_entries[memName] = attEntries;
+        LOG3("Adding " << attEntries << " attached entries to table for attached memory "
+                << memName);
     }
 
     layout = t->resources->layout_option;
@@ -812,11 +814,11 @@ TableSummary::PlacedTable::PlacedTable(const IR::MAU::Table *t) {
 std::ostream &operator<<(std::ostream &out, const TableSummary::PlacedTable &pl) {
     Log::TempIndent indent;
     out << "Placed Table : " << pl.tableName << "(" << pl.internalTableName << ")";
+    if (pl.gatewayName)
+        out << " gateway: " << pl.gatewayName << "(" << pl.gatewayMergeCond << ")";
     out << indent << Log::endl;
     out << "stage: " << pl.stage << ", logicalId: " << pl.logicalId;
     out << ", entries: " << pl.entries << Log::endl;
-    if (pl.gatewayName)
-        out << "gateway: " << pl.gatewayName << "(" << pl.gatewayMergeCond << ")";
     for (auto att : pl.attached_entries)
         out << "Attached Table : " << att.first << ", entries : " << att.second << Log::endl;
     out << pl.layout << Log::endl;

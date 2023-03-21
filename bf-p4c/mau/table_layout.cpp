@@ -103,6 +103,7 @@ void LayoutChoices::add_payload_gw_layout(const IR::MAU::Table *tbl,
     lo.layout.overhead_bits = base_option.layout.overhead_bits * lo.way.match_groups;
     auto ft = ActionData::FormatType_t::default_for_table(tbl);
     cache_layout_options[std::make_pair(tbl->name, ft)].push_back(lo);
+    LOG5("Caching layout option: [" << tbl->name << ", " << ft << "] = " << lo);
 }
 
 /** Check to see if a table needs a meter format for a stage with the given format_type
@@ -529,7 +530,7 @@ void DoTableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR:
             byte_sizes.push_back(bv.popcount());
         }
     }
-    LOG4("\tIXBar Bytes : " << layout.ixbar_bytes << " Match Bytes : " << layout.match_bytes
+    LOG4("IXBar Bytes : " << layout.ixbar_bytes << " Match Bytes : " << layout.match_bytes
          << " IXBar Width Bits : " << layout.ixbar_width_bits << " Match Width Bits : "
          << layout.match_width_bits);
 
@@ -557,6 +558,7 @@ void DoTableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR:
     } else if (layout.proxy_hash) {
         layout.match_width_bits = layout.proxy_hash_width;
     }
+    LOG3("Setting up match layout : " << layout);
 }
 
 
@@ -628,21 +630,27 @@ void LayoutChoices::compute_action_formats(const IR::MAU::Table *tbl,
 void LayoutChoices::setup_ternary_layout(const IR::MAU::Table *tbl,
         const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type,
         int action_data_bytes_in_table, int immediate_bits, int index) {
+    Log::TempIndent indent;
+    LOG4("Setting up ternary layout : " << layout_proto << ", format_type: " << format_type
+         << ", action_data_bytes_in_table: " << action_data_bytes_in_table
+         << ", immediate_bits: " << immediate_bits << ", index: " << index << indent);
     IR::MAU::Table::Layout layout = layout_proto;
     layout.action_data_bytes_in_table = action_data_bytes_in_table;
     layout.immediate_bits = immediate_bits;
     layout.overhead_bits += immediate_bits;
     LayoutOption lo(layout, index);
     cache_layout_options[std::make_pair(tbl->name, format_type)].push_back(lo);
+    LOG5("Caching layout option: [" << tbl->name << ", " << format_type << "] = " << lo);
 }
 
 /* Setting up the potential layouts for ternary, either with or without immediate
    data if immediate is possible */
 void LayoutChoices::setup_ternary_layout_options(const IR::MAU::Table *tbl,
         const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type) {
+    Log::TempIndent indent;
     BUG_CHECK(format_type.valid(),
               "invalid format type in LayoutChoices::setup_ternary_layout_options");
-    LOG2("Setup TCAM match layouts " << tbl->name << ":" << format_type);
+    LOG2("Setup TCAM match layouts " << tbl->name << ":" << format_type << indent);
     int index = 0;
     for (auto &use : get_action_formats(tbl, format_type)) {
         setup_ternary_layout(tbl, layout_proto, format_type,
@@ -852,6 +860,7 @@ void LayoutChoices::setup_layout_option_no_match(const IR::MAU::Table *tbl,
         lo.way.width = 1;
     }
     cache_layout_options[std::make_pair(tbl->name, format_type)].push_back(lo);
+    LOG5("Caching layout option: [" << tbl->name << ", " << format_type << "] = " << lo);
 }
 
 /**
@@ -989,6 +998,7 @@ void LayoutChoices::add_hash_action_option(const IR::MAU::Table *tbl,
     lo.way.match_groups = 1;
     lo.way.width = 1;
     cache_layout_options[std::make_pair(tbl->name, format_type)].push_back(lo);
+    LOG5("Caching layout option: [" << tbl->name << ", " << format_type << "] = " << lo);
 }
 
 namespace {
@@ -1037,7 +1047,8 @@ void DoTableLayout::setup_instr_and_next(IR::MAU::Table::Layout &layout,
 }
 
 bool DoTableLayout::preorder(IR::MAU::Table *tbl) {
-    LOG1("## layout table " << tbl->name);
+    Log::TempIndent indent;
+    LOG1("## layout table " << tbl->name << indent);
     tbl->layout.ixbar_bytes = tbl->layout.match_bytes = tbl->layout.match_width_bits =
     tbl->layout.action_data_bytes = tbl->layout.overhead_bits = 0;
     setup_instr_and_next(tbl->layout, tbl);
@@ -1082,6 +1093,7 @@ bool DoTableLayout::preorder(IR::MAU::Table *tbl) {
         ERROR_CHECK(possible_pack_formats > 0, ErrorType::ERR_UNSUPPORTED_ON_TARGET,
                     "The table %1% cannot find a valid packing, and cannot be placed. "
                     "Possibly the match key is too wide given the hardware constraints", tbl); }
+
     return true;
 }
 
@@ -1641,6 +1653,7 @@ LayoutOption* LayoutOption::clone() const {
 }
 
 std::ostream &operator<<(std::ostream &out, const LayoutOption &lo) {
+    Log::TempIndent indent;
     out << lo.layout << Log::endl;
     bool empty = true;
     if (lo.way.match_groups || lo.way.entries || lo.way.width || !lo.way_sizes.empty()) {
@@ -1664,7 +1677,7 @@ std::ostream &operator<<(std::ostream &out, const LayoutOption &lo) {
             out << sep << s;
             sep = "/"; } }
     if (!empty) out << Log::endl;
-    out << "entries:" << lo.entries;
+    out << indent << "entries:" << lo.entries;
     if (lo.layout.is_lamb)
         out << " lambs: " << lo.lambs;
     if (lo.layout.is_direct) {

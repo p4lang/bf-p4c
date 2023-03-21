@@ -6,6 +6,7 @@
 #include <map>
 #include "lib/bitops.h"
 #include "lib/bitvec.h"
+#include "lib/log.h"
 #include "lib/ordered_set.h"
 #include "lib/safe_vector.h"
 #include "ir/ir.h"
@@ -427,8 +428,8 @@ struct ALUParameter {
         : param(p), phv_bits(pb), right_shift(0) {}
 
     friend std::ostream &operator<<(std::ostream &out, const ALUParameter& p) {
-        return out << "ALU Param : { " << p.param << ", phv bits : "
-                   << p.phv_bits << ", right_shift : " << p.right_shift << " } ";
+        return out << "ALU Param : { " << p.param << ", phv bits : 0x"
+                   << p.phv_bits << ", rotate_right_shift : " << p.right_shift << " } ";
     }
 };
 
@@ -572,19 +573,27 @@ class ALUOperation {
     bool right_shift_set() const { return _right_shift_set; }
 
     friend std::ostream &operator<<(std::ostream &out, const ALUOperation& op) {
-        out << " ALU Operation { "
-            << " params: " << op._params
-            << " phv bits: " << op._phv_bits
-            << " right_shif : " << op._right_shift
+        Log::TempIndent indent;
+        out << " ALU Operation { "  << Log::endl << indent;
+        out << " params: "          << op._params << Log::endl;
+        out << " phv bits: "        << op._phv_bits
+            << " right_shift : "    << op._right_shift
             << " right_shift_set: " << op._right_shift_set
-            << " container: " << op._container
-            << " op constraint: " << op._constraint;
-        if (op._alias) out << " alias: " << op._alias;
-        if (op._mask_alias) out << " mask alias: " << op._mask_alias;
-        out << " mask params: " << op._mask_params
-            << " mask bits: " << op._mask_bits
-            << " action name: " << op._action_name;
+            << " container: "       << op._container
+            << " op constraint: "   << op._constraint;
+        if (op._alias)
+            out << " alias: "       << op._alias;
+        if (op._mask_alias)
+            out << " mask alias: "  << op._mask_alias;
+        if (op._mask_params.size() > 0)
+            out << " mask params: " << op._mask_params;
+        out << " mask bits: "       << op._mask_bits
+            << " action name: "     << op._action_name;
         out << " }";
+        return out;
+    }
+    friend std::ostream &operator<<(std::ostream &out, const ALUOperation* op) {
+        if (op) out << *op;
         return out;
     }
 };
@@ -596,6 +605,10 @@ struct SharedParameter {
 
     SharedParameter(const Parameter *p, int a, int b)
         : param(p), a_start_bit(a), b_start_bit(b) { }
+    friend std::ostream &operator<<(std::ostream &out, const SharedParameter& op) {
+        out << "Param: " << *op.param << "A :" << op.a_start_bit << " B:" << op.b_start_bit;
+        return out;
+    }
 };
 
 using bits_iter_t = safe_vector<const Parameter *>::iterator;
@@ -675,8 +688,9 @@ class PackingConstraint {
     PackingConstraint(int rg, safe_vector<PackingConstraint> &pc)
         : rotational_granularity(rg), recursive_constraints(pc) {}
     friend std::ostream &operator<<(std::ostream &out, const PackingConstraint& pc) {
-        out << "Packing Constraing { Rotational Granularity: " << pc.rotational_granularity
-            << ", Recursive Constraint: " << pc.recursive_constraints
+        out << "Packing Constraint {"
+            << " Rotational Granularity: " << pc.rotational_granularity
+            << " Recursive Constraint (size): " << pc.recursive_constraints.size()
             << " } ";
         return out;
     }
@@ -777,11 +791,37 @@ class RamSection {
     void add_param(int bit, const Parameter *);
     void add_alu_req(const ALUOperation *rv) { alu_requirements.push_back(rv); }
     BusInputs bus_inputs() const;
+    std::string get_action_data_bits_str() const {
+        std::stringstream rv;
+        // Merge action data bits to a slice if possible
+        std::vector<std::pair<cstring, le_bitrange>> adb_params;
+        for (auto *adb_param : action_data_bits) {
+            if (!adb_param) continue;
+            if (auto *arg_param = adb_param->to<Argument>()) {
+                if (adb_params.size() != 0) {
+                    auto &last_param = adb_params.back();
+                    if (last_param.first == adb_param->name()) {
+                        last_param.second |= arg_param->param_field();
+                        continue;
+                    }
+                }
+                adb_params.push_back(std::make_pair(adb_param->name(), arg_param->param_field()));
+            }
+        }
+        rv << " Action Data : " << size() << "'b{";
+        for (auto a : adb_params)
+            rv << " " << a.first << " : " << a.second;
+        rv << " }";
+        return rv.str();
+    }
+
     friend std::ostream &operator<<(std::ostream &out, const RamSection& rs) {
-        out << "Ram Section { Action Data Bits: " << rs.action_data_bits
-            << ", pack info: " << rs.pack_info
-            << ", alu req: " << rs.alu_requirements
-            << " } ";
+        out                                             << Log::endl;
+        out << "Ram Section { "                         << Log::endl;
+        out << rs.get_action_data_bits_str()            << Log::endl;
+        out << " Pack Info: "    << rs.pack_info        << Log::endl;
+        out << " Alu Req: "      << rs.alu_requirements;
+        out << " } ";
         return out;
     }
 };
@@ -803,9 +843,10 @@ struct RamSectionPosition {
     explicit RamSectionPosition(const RamSection *sect) : section(sect) { }
     size_t total_slots_of_type(SlotType_t slot_type) const;
     friend std::ostream &operator<<(std::ostream &out, const RamSectionPosition& rsp) {
-        out << "Ram Section Position { " << rsp.section
-            << ", byte_offset: " << rsp.byte_offset
-            << " } ";
+        if (rsp.section)
+            out << "Ram Section Position { " << *rsp.section
+                << ", byte_offset: "         << rsp.byte_offset
+                << " } ";
         return out;
     }
 };

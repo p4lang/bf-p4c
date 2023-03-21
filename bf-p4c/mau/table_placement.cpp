@@ -4546,7 +4546,7 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
     self.table_placed.clear();
     for (auto p = self.placement; p; p = p->prev) {
         LOG2("  Table " << p->name << " logical id 0x" << hex(p->logical_id) <<
-             " entries=" << p->entries);
+             " entries=" << p->entries << " stage=" << p->stage);
         for (auto &att : p->attached_entries)
             LOG3("    attached table " << att.first->name << " entries=" << att.second.entries <<
                  (att.second.need_more ? " (need_more)" : ""));
@@ -4733,7 +4733,7 @@ IR::Node *TransformTables::postorder(IR::BFN::Pipe *pipe) {
 }
 
 void TransformTables::table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *resources,
-                                int entries) {
+                                const int entries) {
     tbl->resources = resources;
     tbl->layout.entries = entries;
     if (!tbl->ways.empty()) {
@@ -4788,10 +4788,12 @@ static void add_attached_tables(IR::MAU::Table *tbl, const LayoutOption *layout_
             ad_name = ad_name + "_preclassifier";
         ad_name = ad_name + "$action";
         auto *act_data = new IR::MAU::ActionData(IR::ID(ad_name));
+        act_data->size = layout_option->entries;
         act_data->direct = true;
         auto *ba = new IR::MAU::BackendAttached(act_data->srcInfo, act_data);
         ba->addr_location = IR::MAU::AddrLocation::DIRECT;
         ba->pfe_location = IR::MAU::PfeLocation::DEFAULT;
+        ba->entries = act_data->size;
         tbl->attached.push_back(ba);
     }
 }
@@ -5466,6 +5468,7 @@ IR::Node *TransformTables::postorder(IR::MAU::Table *tbl) {
 }
 
 IR::Node *TransformTables::preorder(IR::MAU::BackendAttached *ba) {
+    LOG5("TransformTables::preorder BackendAttached " << ba->attached->name);
     visitAgain();  // clone these for any table that has been cloned
     auto tbl = findContext<IR::MAU::Table>();
     if (!tbl || !tbl->resources) {
@@ -5513,6 +5516,19 @@ IR::Node *TransformTables::preorder(IR::MAU::BackendAttached *ba) {
                     "HashDist object during allocation");
                 ba->hash_dist = ir_alloc.created_hd;
                 ba->addr_location = IR::MAU::AddrLocation::HASH;
+            }
+        }
+    }
+
+    // Update entries value on BackendAttached table
+    auto it = self.table_placed.find(tbl->name);
+    if (it != self.table_placed.end()) {
+        const auto* pl = it->second;
+
+        LOG6("Placed attached_entries " << pl->attached_entries);
+        if (pl->attached_entries.size() > 0) {
+            if (pl->attached_entries.count(ba->attached) > 0) {
+                ba->entries = pl->attached_entries.at(ba->attached).entries;
             }
         }
     }

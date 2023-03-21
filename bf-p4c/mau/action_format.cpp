@@ -3,6 +3,7 @@
 #include "bf-p4c/mau/action_format.h"
 #include "lib/bitrange.h"  // DANGER -- two (very) different bitrange.h source files...
 #include "bf-p4c/phv/phv_fields.h"
+#include "lib/indent.h"
 
 namespace ActionData {
 
@@ -1423,6 +1424,7 @@ bitvec RamSection::bits_in_use() const {
  * Return the open ranges of data within an RamSection
  */
 safe_vector<le_bitrange> RamSection::open_holes() const {
+    Log::TempIndent indent;
     safe_vector<le_bitrange> rv;
     bitvec bits_inuse = bits_in_use();
     int start_bit = bits_inuse.ffz();
@@ -1507,23 +1509,33 @@ const RamSection *RamSection::rotate_in_range(le_bitrange hole) const {
  * For a constraint explanation, please look at PackingConstraint::merge
  */
 const RamSection *RamSection::no_overlap_merge(const RamSection *ad) const {
+    if (!ad) return nullptr;
+
+    Log::TempIndent indent;
+    LOG6("Checking no overlap merge" << indent);
+
     safe_vector<le_bitrange> holes = open_holes();
     bitvec ad_bits_in_use = ad->bits_in_use();
     le_bitrange max_bit_diff = { ad_bits_in_use.min().index(), ad_bits_in_use.max().index() };
+    LOG6("Action Data Bits in use 0x" << ad_bits_in_use << ", max_bit_diff: " << max_bit_diff);
     for (auto hole : holes) {
+        LOG7("For hole found: " << hole);
         if (hole.size() < max_bit_diff.size())
             continue;
         auto rotated_ad = ad->rotate_in_range(hole);
 
         if (rotated_ad != nullptr) {
             auto merged_ad = merge(rotated_ad);
+            LOG7("\tRotated and Merged AD: " << merged_ad->get_action_data_bits_str());
             delete rotated_ad;
             if (merged_ad)
                 return merged_ad;
             else
                 BUG("The bits should not overlap after the rotate in range function call");
         }
+        LOG7("No merge possible for hole");
     }
+
     return nullptr;
 }
 
@@ -1542,7 +1554,6 @@ bool RamSection::is_better_merge_than(const RamSection *compare) const {
     auto holes = open_holes();
     if ((t = holes.size() - comp_holes.size()) != 0)
         return t < 0;
-
 
     if (pack_info.is_rotational() && !compare->pack_info.is_rotational())
         return true;
@@ -1564,41 +1575,61 @@ bool RamSection::is_better_merge_than(const RamSection *compare) const {
  */
 const RamSection *RamSection::condense(const RamSection *ad) const {
     if (ad == nullptr) return nullptr;
+    Log::TempIndent indent;
+    LOG5("Condense ram section A -->" << indent << *this);
+    LOG5("----with ram section B----" << *ad);
+    LOG5("--------------------------|");
     size_t max_size = std::max(size(), ad->size());
+    if (size() != ad->size())
+        LOG6("Expanded Ram Sections of size " << size() << " and "
+            << ad->size() << " to size " << max_size);
+    else
+        LOG6("No expansion required for Ram Sections of size " << size());
     const RamSection *a = expand_to_size(max_size);
     const RamSection *b = ad->expand_to_size(max_size);
 
     safe_vector<const RamSection *> possible_rvs;
     safe_vector<SharedParameter> shared_params;
     gather_shared_params(ad, shared_params, false);
+    LOG6("Gather shared params: " << shared_params);
 
     // Overlap equivalent Parameters
     for (auto shared_param : shared_params) {
+        LOG7("For shared param: " << shared_param);
         auto *a_rotated = a->can_rotate(shared_param.a_start_bit, shared_param.b_start_bit);
         if (a_rotated) {
             auto *merged_ad = b->merge(a_rotated);
-            if (merged_ad)
+            if (merged_ad) {
                 possible_rvs.push_back(merged_ad);
+                LOG7("Can rotate and merge A: " << merged_ad->get_action_data_bits_str());
+            }
             delete a_rotated;
         }
 
         auto *b_rotated = b->can_rotate(shared_param.b_start_bit, shared_param.a_start_bit);
         if (b_rotated) {
             auto merged_ad = a->merge(b_rotated);
-            if (merged_ad)
+            if (merged_ad) {
                 possible_rvs.push_back(merged_ad);
+                LOG7("Can rotate and merge B: " << merged_ad->get_action_data_bits_str());
+            }
             delete b_rotated;
         }
     }
 
     // Have no data overlap and just merge
     auto no_overlap_b_in_a = a->no_overlap_merge(b);
-    if (no_overlap_b_in_a)
+    LOG7("No overlap B in A: " << (no_overlap_b_in_a? "Y" : "N"));
+    if (no_overlap_b_in_a) {
         possible_rvs.push_back(no_overlap_b_in_a);
+        LOG7(no_overlap_b_in_a->get_action_data_bits_str());
+    }
     auto no_overlap_a_in_b = b->no_overlap_merge(a);
-    if (no_overlap_a_in_b)
+    LOG7("No overlap A in B: " << (no_overlap_a_in_b? "Y" : "N"));
+    if (no_overlap_a_in_b) {
         possible_rvs.push_back(no_overlap_a_in_b);
-
+        LOG7(no_overlap_a_in_b->get_action_data_bits_str());
+    }
 
     // Pick the best choice
     const RamSection *best = nullptr;
@@ -1606,12 +1637,15 @@ const RamSection *RamSection::condense(const RamSection *ad) const {
         if (best == nullptr || !best->is_better_merge_than(choice))
             best = choice;
     }
+    if (best) LOG7("Picking best : " << best->get_action_data_bits_str());
+
     // cleanup
     for (auto choice : possible_rvs)
         if (best != choice) delete choice;
     delete a;
     delete b;
 
+    LOG5("------End of condense------");
     return best;
 }
 
@@ -2292,14 +2326,15 @@ const RamSection *Format::Use::build_locked_in_sect() const {
 void Format::create_argument(ALUOperation &alu,
         ActionAnalysis::ActionParam &read, le_bitrange container_bits,
         const IR::MAU::ConditionalArg *cond_arg) {
-    LOG7("Create argument");
+    Log::TempIndent indent;
+    LOG7("Create argument" << indent);
     auto ir_arg = read.unsliced_expr()->to<IR::MAU::ActionArg>();
     BUG_CHECK(ir_arg != nullptr, "Cannot create argument");
     Argument *arg = new Argument(ir_arg->name.name, read.range());
     if (cond_arg)
         arg->set_cond(VALUE, cond_arg->orig_arg->name.toString());
     ALUParameter ap(arg, container_bits);
-    LOG6("\t\tCreating Argument " << arg << " at container bits " << container_bits);
+    LOG6("Creating Argument " << arg << " at container bits " << container_bits);
     alu.add_param(ap);
 }
 
@@ -2531,7 +2566,9 @@ void Format::create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_m
     for (auto &container_action_info : ca_map) {
         auto container = container_action_info.first;
         auto &cont_action = container_action_info.second;
-        LOG5("Analyzing action data for " << container.toString() << " " << cont_action);
+        LOG5("Analyzing action data for " << container << " ----->" << IndentCtl::indent);
+        LOG5(cont_action);
+        LOG5("----------------------------|" << IndentCtl::unindent);
 
         ALUOPConstraint_t alu_cons = DEPOSIT_FIELD;
         if (cont_action.convert_instr_to_byte_rotate_merge)
@@ -2682,6 +2719,8 @@ void Format::create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_m
  */
 void Format::initial_possible_condenses(PossibleCondenses &condenses,
         const RamSec_vec_t &ram_sects) {
+    Log::TempIndent indent;
+    LOG5("Setting initial_possible_condenses" << indent);
     for (size_t i = 0; i < ram_sects.size(); i++) {
         for (size_t j = i+1; j < ram_sects.size(); j++) {
             condenses[i][j] = ram_sects[i]->condense(ram_sects[j]);
@@ -2691,7 +2730,9 @@ void Format::initial_possible_condenses(PossibleCondenses &condenses,
 
 void Format::incremental_possible_condenses(PossibleCondenses &condenses,
         const RamSec_vec_t &ram_sects) {
+    Log::TempIndent indent;
     size_t last_index = ram_sects.size() - 1;
+    LOG5("Setting incremental_possible_condenses : last_index " << last_index << indent);
     for (size_t i = 0; i < last_index; i++) {
         condenses[i][last_index] = ram_sects[i]->condense(ram_sects[last_index]);
     }
@@ -2781,11 +2822,13 @@ void Format::shrink_possible_condenses(PossibleCondenses &pc, RamSec_vec_t &ram_
     size_t larger_pos = i_pos > j_pos ? i_pos : j_pos;
     size_t smaller_pos = larger_pos == i_pos ? j_pos : i_pos;
 
+    Log::TempIndent indent;
+    LOG6("Shrinking possible condeses for ram section " << *ad << indent);
     if (ram_sects.at(i_pos)->size() < ad->size())
-        LOG7("       Expanding a RAM Section from " << ram_sects.at(i_pos)->size() << " to "
+        LOG7("Expanding a RAM Section from " << ram_sects.at(i_pos)->size() << " to "
              << ad->size());
     if (ram_sects.at(j_pos)->size() < ad->size())
-        LOG7("       Expanding a RAM Section from " << ram_sects.at(j_pos)->size() << " to "
+        LOG7("Expanding a RAM Section from " << ram_sects.at(j_pos)->size() << " to "
              << ad->size());
 
     for (auto &pc_vec : pc) {
@@ -2827,7 +2870,9 @@ void Format::condense_action(cstring action_name, RamSec_vec_t &ram_sects) {
     PossibleCondenses condenses(ram_sects.size(), RamSec_vec_t(ram_sects.size(), nullptr));
     size_t init_ram_sects_size = ram_sects.size();
 
-    LOG2("  Condensing action " << action_name << " with " << init_ram_sects_size);
+    Log::TempIndent indent;
+    LOG2("Condensing action " << action_name << " with " << init_ram_sects_size
+            << " initial RAM sections" << indent);
 
     bool initial = true;
 
@@ -2852,6 +2897,7 @@ void Format::condense_action(cstring action_name, RamSec_vec_t &ram_sects) {
                     best = condenses[i][j];
                     i_pos = i;
                     j_pos = j;
+                    LOG5("Found best condenses: " << best->get_action_data_bits_str());
                 }
             }
         }
@@ -2875,11 +2921,13 @@ void Format::condense_action(cstring action_name, RamSec_vec_t &ram_sects) {
             total_alus++;
         }
         total_bits += sect->size();
+        LOG5("\t Ram Section " << sect->get_action_data_bits_str()
+                << ", total_alus: " << total_alus << ", total bits: " << total_bits);
         size_counts[ceil_log2(sect->size()) - 3]++;
     }
     BUG_CHECK(init_ram_sects_size == total_alus, "Somehow the ALUs are not kept during "
               "condense_action");
-    LOG2("   After condense total bits : " << total_bits << ", size_counts : " << size_counts
+    LOG2("After condense total bits : " << total_bits << ", size_counts : " << size_counts
           << ", total_alus : " << total_alus << ", total_sections : " << ram_sects.size());
     calc_max_size = std::max(calc_max_size, total_bits < 8 ? 0 : 1 << ceil_log2(total_bits / 8));
 }
@@ -2903,7 +2951,6 @@ bool Format::analyze_actions(FormatType_t format_type) {
         create_alu_ops_for_action(container_actions_map, action->name);
     }
 
-    LOG5("Condensing actions");
     for (auto &entry : init_ram_sections) {
         condense_action(entry.first, entry.second);
     }

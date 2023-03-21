@@ -436,6 +436,7 @@ class Table : BFN::Unit, IAnnotated  {
 // the match tables are mutually exclusive
 class BackendAttached {
     NullOK HashDist hash_dist = nullptr;
+    int entries = -1;
     StatefulUse use = StatefulUse::NO_USE;
     AddrLocation addr_location = AddrLocation::NOT_SET;
     PfeLocation pfe_location = PfeLocation::NOT_SET;

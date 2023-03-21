@@ -267,7 +267,7 @@ class TransformTables : public MauTransform {
         int stage_table = -1, IR::MAU::Table **last = nullptr);
     IR::Vector<IR::MAU::Table> *break_up_dleft(IR::MAU::Table *tbl,
         const TablePlacement::Placed *placed, int stage_table = -1);
-    void table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *res, int entries);
+    void table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *res, const int entries);
     template <class... Args> void error(Args... args) { self.error(args...); }
     int errorCount() const { return self.errorCount(); }
 };
