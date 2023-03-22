@@ -161,8 +161,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/const_default_action.p4
   testdata/p4_14_samples/selector0.p4
   testdata/p4_16_samples/action_selector_shared-bmv2.p4
-  extensions/p4_tests/glass/tudarmstadt/COMPILER-743/case4181.p4
-  extensions/p4_tests/glass/tudarmstadt/COMPILER-743/case4181_fix.p4
   )
 
 
@@ -202,71 +200,11 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1797-1.p4
-  # extensions/p4_tests/p4-programs/internal_p4_14/netcache/netcache.p4
-  extensions/p4_tests/glass/arista/COMPILER-282/case1864.p4
-  extensions/p4_tests/glass/arista/COMPILER-347/switch_bug.p4
-  extensions/p4_tests/glass/arista/COMPILER-351/case2079.p4
-  extensions/p4_tests/glass/arista/COMPILER-353/case2088.p4
-  extensions/p4_tests/glass/arista/COMPILER-357/case2100.p4
-  extensions/p4_tests/glass/arista/COMPILER-358/case2110.p4
-  extensions/p4_tests/glass/arista/COMPILER-364/case2115.p4
-  extensions/p4_tests/glass/arista/COMPILER-414/case2387_1.p4
-  extensions/p4_tests/glass/arista/COMPILER-414/case2387.p4
-  extensions/p4_tests/glass/arista/COMPILER-415/case2386.p4
-  extensions/p4_tests/glass/arista/COMPILER-447/case2527.p4
-  extensions/p4_tests/glass/arista/COMPILER-448/case2526.p4
-  extensions/p4_tests/glass/arista/COMPILER-451/case2537.p4
-  extensions/p4_tests/glass/arista/COMPILER-477/case2602.p4
-  extensions/p4_tests/glass/arista/COMPILER-483/case2619.p4
-  extensions/p4_tests/glass/arista/COMPILER-503/case2678.p4
-  extensions/p4_tests/glass/arista/COMPILER-505/case2690.p4
-  extensions/p4_tests/glass/arista/COMPILER-548/case2895.p4
-  extensions/p4_tests/glass/arista/COMPILER-650/case3597.p4
-  extensions/p4_tests/glass/arista/COMPILER-666/case3696.p4
-  extensions/p4_tests/glass/arista/COMPILER-725/comp_725.p4
-  extensions/p4_tests/glass/arista/DRV-543/case2499.p4
-  extensions/p4_tests/glass/netscout/P4C-1605/filter_bf_p414.p4
-  extensions/p4_tests/glass/ucloud/COMPILER-1042/uxr.p4
-  extensions/p4_tests/glass/ucloud/COMPILER-1045/case6975.p4
-  extensions/p4_tests/glass/zte/COMPILER-594/comp594.p4
-  extensions/p4_tests/glass/parde/COMPILER-612/leaf.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "error.*tofino supports up to 12 stages"
-  extensions/p4_tests/glass/mau/COMPILER-362/icmp_typecode.p4
-  extensions/p4_tests/glass/phv/COMPILER-243/comp243.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "Internal compiler error"
-  extensions/p4_tests/glass/ixia/COMPILER-549/case2898.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*: Metadata initialization analysis incorrect.  Live ranges .* overlap"
-  extensions/p4_tests/glass/phv/COMPILER-706/terminate_parsing.p4
-)
-
-# timeout
-p4c_add_xfail_reason("tofino"
-  "PHV allocation was not successful|This program violates action constraints imposed by Tofino"
-  extensions/p4_tests/glass/arista/COMPILER-235/case1737_1.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "Unimplemented .*: Split attached table with some match and some attached in the same stage, but not all in one stage"
-  extensions/p4_tests/glass/fox/COMPILER-957/case6123.p4
 )
 
 p4c_add_xfail_reason("tofino"
   "error.*Ran out of parser match registers for"
   extensions/p4_tests/p4_16/compile_only/missing_checksumID.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "error.*Power worst case estimated budget.*exceeded by.*"
-  extensions/p4_tests/glass/mau/COMPILER-1068/comp_1068.p4
 )
 
 # P4C-1400, P4C-1123
@@ -278,8 +216,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Tofino requires byte-aligned headers"
   extensions/p4_tests/p4_16/compile_only/tagalong_mdinit_switch.p4
-  # Brig failure: No byte multiple requirement for a metadata header
-  extensions/p4_tests/glass/arista/COMPILER-1181/case8969.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -307,7 +243,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/action_profile_not_shared.p4
   testdata/p4_14_samples/12-Counters.p4
   testdata/p4_14_samples/13-Counters1and2.p4
-  extensions/p4_tests/glass/arista/COMPILER-235/vag1662.p4
   testdata/p4_16_samples/psa-action-profile3.p4
   )
 
@@ -318,8 +253,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/kindlings_0.p4
   testdata/p4_16_samples/issue1544-bmv2.p4
   testdata/p4_16_samples/issue2148.p4
-  extensions/p4_tests/glass/arista/COMPILER-588/comp588dce.p4
-  extensions/p4_tests/glass/arista/COMPILER-818/case4954_new_fail.p4
   )
 
 # BRIG_132
@@ -472,11 +405,6 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "The input .* cannot be found on the hash input"
-  extensions/p4_tests/glass/phv/COMPILER-724/comp_724.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "In checksum update list, fields before .* do not add up to a multiple of 8 bits. Total bits until .* : .*"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/but_0.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/mariano_0.p4
@@ -497,30 +425,6 @@ p4c_add_xfail_reason("tofino"
 
   # p4smith mask issues - P4C-2093
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/mask_slices_2.p4
-
-  # P4C-1778
-  # fit if
-  extensions/p4_tests/glass/arista/COMPILER-1168/comp_1168.p4
-  extensions/p4_tests/glass/arista/COMPILER-1169/case8847.p4
-  extensions/p4_tests/glass/arista/COMPILER-1189/case9294.p4
-  extensions/p4_tests/glass/arista/COMPILER-264/case1822.p4
-  extensions/p4_tests/glass/arista/COMPILER-276/case1844.p4
-  extensions/p4_tests/glass/arista/COMPILER-326/case2035.p4
-  extensions/p4_tests/glass/arista/COMPILER-437/case2387_1.p4
-  extensions/p4_tests/glass/arista/COMPILER-674/case3730.p4
-  extensions/p4_tests/glass/arista/COMPILER-721/case4015.p4
-  extensions/p4_tests/glass/arista/COMPILER-752/test_config_372_init_issue.p4
-  extensions/p4_tests/glass/arista/COMPILER-786/comp_786.p4
-  extensions/p4_tests/glass/arista/COMPILER-799/case4571.p4
-  extensions/p4_tests/glass/arista/COMPILER-818/case4954.p4
-  extensions/p4_tests/glass/arista/COMPILER-823/pipeline2-failing.p4
-  extensions/p4_tests/glass/arista/COMPILER-883/case5521.p4
-  extensions/p4_tests/glass/kpn/COMPILER-896/case5546.p4
-  extensions/p4_tests/glass/mau/COMPILER-1160/comp_1160.p4
-  extensions/p4_tests/glass/phv/COMPILER-1094/comp_1094.p4
-
-  extensions/p4_tests/glass/arista/COMPILER-1152/case8686.p4
-  extensions/p4_tests/glass/arista/MODEL-475/case9192.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -545,26 +449,15 @@ p4c_add_xfail_reason("tofino"
   )
 
 
-# BEGIN: XFAILS that match glass XFAILS
-
 p4c_add_xfail_reason("tofino"
   "[Tt]able .* is applied in multiple places, and the next-table information cannot correctly propagate"
   testdata/p4_16_samples/issue986-bmv2.p4
-  extensions/p4_tests/glass/arista/COMPILER-100/exclusive_cf_fail_next_ptr.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Table .* has incompatible next-table chains"
-  extensions/p4_tests/glass/arista/COMPILER-100/exclusive_cf_multiple_actions.p4
   )
 
 p4c_add_xfail_reason("tofino"
   "table .* Cannot match on multiple fields using the LPM match type"
-  extensions/p4_tests/glass/mau/case1770.p4
   testdata/p4_14_samples/issue60.p4
   )
-
-#END: XFAILS that match glass XFAILS
 
 # START: XFAILs with translation
 # invalid tests, issue604.p4 is a v1.1 testcase
@@ -607,7 +500,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/photostats_0.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/sidestepped_0.p4
   testdata/p4_14_samples/action_inline.p4
-  extensions/p4_tests/glass/microsoft/COMPILER-606/case3259.p4
   extensions/p4_tests/p4_16/compile_only/p4c-2336.p4
   )
 
@@ -681,31 +573,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Operand field bit .* of wide arithmetic operation cannot have even and odd container placement constraints"
   extensions/p4_tests/p4_16/customer/jeju/p4c-1067-neg2.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "Currently in p4c, the table .* cannot perform a range match on key .* as the key does not fit in under 5 PHV nibbles"
-  extensions/p4_tests/glass/kaust/COMPILER-1077/countmin.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "p4c TIMEOUT"
-  extensions/p4_tests/glass/kaloom/COMPILER-839/leaf.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "Could not place table .* The table .* could not fit within a single input crossbar in an MAU stage"
-  extensions/p4_tests/glass/phv/COMPILER-423/diag_power.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "error: Field is extracted in the parser.*incompatible alignment"
-  extensions/p4_tests/glass/mau/COMPILER-702/comp_702.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "error: Field is extracted in the parser into multiple containers, but the container slices after the first aren't byte aligned"
-  extensions/p4_tests/glass/mau/COMPILER-710/comp_710.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -792,10 +659,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/action_conflict_3.p4
   extensions/p4_tests/p4_14/compile_only/action_conflict_7.p4
   extensions/p4_tests/p4_16/customer/noviflow/p4c-1288.p4
-  extensions/p4_tests/glass/fujitsu/COMPILER-1141/static_acl_tun_tel.p4
-  extensions/p4_tests/glass/mau/COMPILER-968/comp_968.p4
-  extensions/p4_tests/glass/rdp/COMPILER-466/case2563_with_nop.p4
-  extensions/p4_tests/glass/rdp/COMPILER-466/case2563_without_nop.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -811,11 +674,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "The table .* with no key cannot have the action .*"
-  extensions/p4_tests/glass/phv/COMPILER-961/jk_msdc.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "Unsupported type header_union U"
   testdata/p4_16_samples/header-bool-bmv2.p4
 )
@@ -826,147 +684,24 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/customer/barefoot_academy/p4c-1451.p4
 )
 
-# Glass test suite bugs
-
 # P4C-1371
 # Errors because pa_container_size pragmas used in these tests cannot be satisfy all constraints.
 p4c_add_xfail_reason("tofino"
   "Cannot find a slicing to satisfy @pa_container_size|NO_SLICING_FOUND"
-  extensions/p4_tests/glass/arista/COMPILER-1114/case8156.p4
-  extensions/p4_tests/glass/phv/test_config_593_reduce_extraction_bandwidth_32.p4
   extensions/p4_tests/p4_16/compile_only/ssub_illegal_pack.p4
-  )
-
-# Valid XFAIL
-# Fails due to complex expressions in the parser that our hardware can't support.
-p4c_add_xfail_reason("tofino"
-  "error: Assignment source cannot be evaluated in the parser"
-  extensions/p4_tests/glass/phv/test_config_402_parser_sub.p4
-  )
-
-# P4C-1299
-p4c_add_xfail_reason("tofino"
-    # Depending on VM Load these tests may timeout before displaying the PHV
-    # alloc unsuccessful message and fail travis, we use both messages to check
-    # xfails
-    "PHV allocation was not successful"
-  extensions/p4_tests/glass/phv/COMPILER-136/06-FullTPHV1.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Action .* must be rewritten.This program violates action constraints imposed by Tofino"
-  extensions/p4_tests/glass/mau/COMPILER-630/case3431b.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "PHV allocation was not successful"
-  extensions/p4_tests/glass/rdp/COMPILER-443/case2514.p4
-  extensions/p4_tests/glass/rdp/COMPILER-502/case2675.p4
-  # funnel shift not supported
-  extensions/p4_tests/glass/rdp/COMPILER-533/case2736.p4
-  )
-
-# P4C-1375
-p4c_add_xfail_reason("tofino"
-  "Field .* written to more than once in action .*"
-  extensions/p4_tests/glass/phv/COMPILER-761/simple_l3_mirror.p4
-  )
-
-# Valid XFAIL
-p4c_add_xfail_reason("tofino"
-  "Currently in p4c, the table .* cannot perform a range match on key .* as the key does not fit in under 5 PHV nibbles"
-  extensions/p4_tests/glass/mau/test_config_324_tcam_range_11.p4
   )
 
 # P4C-1376
 p4c_add_xfail_reason("tofino"
   "Currently in p4c, any table using an action profile is required to use the same actions, and the following actions don't appear in all table using the action profile"
-  extensions/p4_tests/glass/mau/COMPILER-445/comp_445.p4
   testdata/p4_16_samples/psa-action-profile4.p4
   testdata/p4_16_samples/psa-example-dpdk-varbit-bmv2.p4
-  )
-
-# P4C-1165
-p4c_add_xfail_reason("tofino"
-  "Cannot unify type"
-  extensions/p4_tests/glass/nus/COMPILER-858/comp_858.p4
-  extensions/p4_tests/glass/parde/COMPILER-350/ipv4_issue.p4
-  extensions/p4_tests/glass/phv/COMPILER-394/comp394.p4
-  extensions/p4_tests/glass/ucsd/COMPILER-1022/comp_1022.p4
-  )
-
-# Valid XFAIL
-p4c_add_xfail_reason("tofino"
-  "error: calling indirect .* with no index"
-  extensions/p4_tests/glass/mau/test_config_410_neg_stateful_no_idx.p4
-  )
-
-# P4C-1379
-p4c_add_xfail_reason("tofino"
-  "Unsupported primitive invalidate_clone"
-  extensions/p4_tests/glass/mau/test_config_396_invalidate_clone.p4
-  extensions/p4_tests/glass/mau/test_config_400_disable_reserved_i2e.p4
-  )
-
-# P4C-2134
-p4c_add_xfail_reason("tofino"
-  "Unsupported primitive modify_field_with_hash_based_offset"
-  extensions/p4_tests/glass/arista/COMPILER-635/case3468.p4
-  extensions/p4_tests/glass/arista/COMPILER-637/case3478.p4
-  extensions/p4_tests/glass/arista/COMPILER-648/comp648.p4
-  )
-
-# Valid XFAIL
-p4c_add_xfail_reason("tofino"
-  "Expected 2 operands for execute"
-  extensions/p4_tests/glass/mau/test_config_411_neg_meter_no_idx.p4
-  )
-
-# Valid XFAIL
-p4c_add_xfail_reason("tofino"
-  "The attached .* is addressed by both hash and index in table"
-  extensions/p4_tests/glass/arista/COMPILER-482/case2622.p4
-  extensions/p4_tests/glass/mau/test_config_313_neg_test_addr_modes.p4
-  )
-
-# Existing p4lang/p4c issue
-# Need to update test case in glass
-p4c_add_xfail_reason("tofino"
-  "Tofino requires byte-aligned headers, but header .* is not byte-aligned"
-  extensions/p4_tests/glass/mau/test_config_160_stateful_single_bit_mode.p4
-  )
-
-# P4C-1382
-p4c_add_xfail_reason("tofino"
-  "invalid operand"
-  extensions/p4_tests/glass/mau/test_config_191_invalidate.p4
   )
 
 # Valid XFAIL
 p4c_add_xfail_reason("tofino"
   "extern .* does not have method matching this call"
-  extensions/p4_tests/glass/mau/test_config_412_neg_lpf_no_idx.p4
-  extensions/p4_tests/glass/mau/test_config_413_neg_wred_no_idx.p4
   testdata/p4_16_samples/psa-example-dpdk-counter.p4
-  )
-
-# P4C-1323
-# Could not place table capture_timestamp_1_0: The table capture_timestamp_1_1 could not fit within a single input crossbar in an MAU stage
-p4c_add_xfail_reason("tofino"
-  "Could not place table"
-  extensions/p4_tests/glass/noviflow/COMPILER-1175/comp_1175.p4
-  )
-
-# P4C-1386
-p4c_add_xfail_reason("tofino"
-  "The initial offset for a hash calculation function has to be zero"
-  extensions/p4_tests/glass/mau/test_config_345_hash_with_base.p4
-  )
-
-# P4C-1387
-p4c_add_xfail_reason("tofino"
-  "Unrecognized algorithm for a hash expression:"
-  extensions/p4_tests/glass/mau/test_config_408_xor_hashes.p4
   )
 
 # BRIG-604
@@ -974,26 +709,6 @@ p4c_add_xfail_reason("tofino"
   "Compiler Bug.*Operand.*of instruction.*operating on container.*must be a PHV"
   extensions/p4_tests/p4_16/compile_only/deparse-zero-clustering.p4
   testdata/p4_16_samples/issue983-bmv2.p4
-  extensions/p4_tests/glass/arista/COMPILER-548/case3011.p4
-  )
-
-# Valid XFAIL
-p4c_add_xfail_reason("tofino"
-  "Attached object .* in table .* is executed in some actions and not executed in others"
-  extensions/p4_tests/glass/mau/COMPILER-478/test_config_310_hash_write_issue.p4
-  )
-
-# Valid XFAIL
-p4c_add_xfail_reason("tofino"
-  "Maximum width for byte counter .* is 64 bits"
-  extensions/p4_tests/glass/arista/COMPILER-532/case2807.p4
-  extensions/p4_tests/glass/mau/COMPILER-1108/comp_1108.p4
-  )
-
-# Valid XFAIL
-p4c_add_xfail_reason("tofino"
-  "Unexpected type for constant"
-  extensions/p4_tests/glass/mau/COMPILER-556/variable.p4
   )
 
 # P4C-539
@@ -1028,96 +743,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/logging-bmv2.p4
   # new tests added to p4c
   testdata/p4_16_samples/test-parserinvalidargument-error-bmv2.p4
-  # glass testsuite failures
-  extensions/p4_tests/glass/arista/BRIG-5/case1715.p4
-  extensions/p4_tests/glass/arista/COMPILER-242/case1679.p4
-  extensions/p4_tests/glass/harveymudd/COMPILER-900/case4813.p4
-  extensions/p4_tests/glass/keysight/COMPILER-996/pktgen8.p4
-  extensions/p4_tests/glass/mau/COMPILER-837/comp_837_2.p4
-  extensions/p4_tests/glass/parde/COMPILER-319/mirror-eg_intr_md_from_parser_aux.p4
-  extensions/p4_tests/glass/parde/COMPILER-319/mirror-eg_intr_md-all.p4
-  extensions/p4_tests/glass/parde/COMPILER-675/select_on_egress_port.p4
-  )
-
-# Symmetric Hash Negative Tests
-p4c_add_xfail_reason("tofino"
-  "The two symmetric fields are not the same size"
-  extensions/p4_tests/glass/mau/test_config_315_sym_hash_neg_test_1.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "A field .* cannot be symmetric to itself"
-  extensions/p4_tests/glass/mau/test_config_316_sym_hash_neg_test_2.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "symmetric hash is only supported to work with CRC algorithms"
-  extensions/p4_tests/glass/mau/test_config_317_sym_hash_neg_test_3.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "The key .* in the symmetric annotation does not appear within the field list"
-  extensions/p4_tests/glass/mau/test_config_318_sym_hash_neg_test_4.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "The key .* in the symmetric annotation has already been declared symmetric with another field"
-  extensions/p4_tests/glass/mau/test_config_319_sym_hash_neg_test_5.p4
-)
-
-# P4C-1393
-p4c_add_xfail_reason("tofino"
-  "error.*This program violates action constraints imposed by Tofino."
-  extensions/p4_tests/glass/mau/COMPILER-728/ipu.p4
-  extensions/p4_tests/glass/rdp/COMPILER-475/case2600.p4
-  extensions/p4_tests/glass/mau/COMPILER-970/comp_970.p4
-  )
-
-# P4C-1396
-p4c_add_xfail_reason("tofino"
-  "Incompatible types bit<1> and bool"
-  extensions/p4_tests/glass/noviflow/case9296.p4
-  extensions/p4_tests/glass/noviflow/COMPILER-687/case3769.p4
-  extensions/p4_tests/glass/noviflow/COMPILER-842/comp_842.p4
-  extensions/p4_tests/glass/noviflow/DRV-1092/drv_1092.p4
-  extensions/p4_tests/glass/noviflow/P4C-1984/p4c_1984_1.p4
-  extensions/p4_tests/glass/noviflow/P4C-1984/p4c_1984_2.p4
-  extensions/p4_tests/glass/noviflow/P4C-1984/p4c_1984_3.p4
-  extensions/p4_tests/glass/noviflow/P4C-1984/p4c_1984_4.p4
-  )
-
-# Valid XFAIL
-p4c_add_xfail_reason("tofino"
-  "Phase0 pragma set but table - .* is not a valid Phase0"
-  extensions/p4_tests/glass/arista/COMPILER-632/case3459.p4
-  extensions/p4_tests/glass/mau/test_config_330_phase0_pragma_neg.p4
-  )
-
-# P4C-1401
-p4c_add_xfail_reason("tofino"
-  "Expression cast.* cannot be the target of an assignment"
-  extensions/p4_tests/glass/mau/COMPILER-770/switch_comp_770.p4
-  extensions/p4_tests/glass/mau/COMPILER-814/comp_814.p4
-  extensions/p4_tests/glass/mau/DRV-1081/switch_drv_1081.p4
-  extensions/p4_tests/glass/phv/COMPILER-777/switch_comp_777.p4
-  )
-
-# P4C doesn't support use_container_valid pragma?
-p4c_add_xfail_reason("tofino"
-  "error: Field isValid is not a member of structure struct ingress_intrinsic_metadata_for_tm_t"
-  extensions/p4_tests/glass/mau/test_config_420_intr_md_tcam_valid.p4
-  )
-
-# P4C-1522, previously P4C-1374
-p4c_add_xfail_reason("tofino"
-  "Miscoordination of what hash groups are on the search bus vs. what hash groups are in the table format"
-  extensions/p4_tests/glass/phv/COMPILER-587/l4l.p4
-  )
-
-# P4C-1577
-p4c_add_xfail_reason("tofino"
-  "Table .* .* invoked from two different controls: Apply and Apply"
-  extensions/p4_tests/glass/phv/COMPILER-1134/comp_1134.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1125,15 +750,9 @@ p4c_add_xfail_reason("tofino"
    testdata/p4_16_samples/issue1001-bmv2.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "The following operation is not yet supported"
-  extensions/p4_tests/glass/mau/COMPILER-815/int_heavy.p4
-)
-
 # checksum only support bit<16> output
 p4c_add_xfail_reason("tofino"
   "Cannot unify type"
-  extensions/p4_tests/glass/mau/galaxy_0.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/gradations_0.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/soured_0.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/tofino-bug-1.p4
@@ -1221,12 +840,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue447-4-bmv2.p4
 )
 
-# P4C-2133
-p4c_add_xfail_reason("tofino"
-  "Varbit extract requires too many parser branches to implement"
-  extensions/p4_tests/glass/rdp/COMPILER-379/case2210.p4
-)
-
 # varbit related ends
 
 # Expected failure
@@ -1234,13 +847,6 @@ p4c_add_xfail_reason("tofino"
   "error: standard_metadata.packet_length is not accessible in the ingress pipe"
   testdata/p4_14_samples/p414-special-ops-2-bmv2.p4
   testdata/p4_14_samples/p414-special-ops-3-bmv2.p4
-)
-
-# funnel-shift not supported
-p4c_add_xfail_reason("tofino"
-  "PHV allocation was not successful"
-  extensions/p4_tests/glass/arista/COMPILER-1105/case8039.p4
-  extensions/p4_tests/glass/arista/COMPILER-1113/case8138.p4
 )
 
 # negative test.
@@ -1286,22 +892,8 @@ p4c_add_xfail_reason("tofino"
   "error: Tofino does not support nested checksum updates"
   extensions/p4_tests/p4_14/stf/update_checksum_7.p4
   extensions/p4_tests/p4_14/stf/update_checksum_12.p4
-  extensions/p4_tests/glass/alibaba/COMPILER-1039/comp_1039.p4
-  extensions/p4_tests/glass/alibaba/COMPILER-1129/comp_1129.p4
-  extensions/p4_tests/glass/alibaba/COMPILER-1129b/comp_1129b.p4
-  extensions/p4_tests/glass/alibaba/COMPILER-1130/comp_1130b.p4
-  extensions/p4_tests/glass/cisco/COMPILER-393/case2277.p4
-  extensions/p4_tests/glass/parde/test_checksum.p4
   extensions/p4_tests/p4_14/ptf/inner_checksum_l4.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/shillings_0.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*Slicing the following supercluster is taking too long..."
-  extensions/p4_tests/glass/arista/COMPILER-568/case3026.p4
-  extensions/p4_tests/glass/arista/COMPILER-568/case3026dce.p4
-  extensions/p4_tests/glass/arista/COMPILER-575/case3041.p4
-  extensions/p4_tests/glass/arista/COMPILER-577/comp577.p4
 )
 
 # P4C-1445, DRV-2667
@@ -1353,7 +945,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Exceeded hardware limit for deparser field dictionary entries"
   extensions/p4_tests/p4_16/compile_only/p4c-1757-neg.p4
-  extensions/p4_tests/glass/embedway/COMPILER-765/parser_tcp_ip_option_mul.p4
 )
 
 if (NOT TEST_ALT_PHV_ALLOC)
@@ -1381,64 +972,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4-programs/internal_p4_14/ecc/ecc.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "Unsupported on target"
-  # Unsupported on target Action profile .* on table .* does not have any action data
-  extensions/p4_tests/glass/arista/COMPILER-559/case2987.p4
-  extensions/p4_tests/glass/arista/COMPILER-593/case3011.p4
-  extensions/p4_tests/glass/keysight/COMPILER-1049/case7268.p4
-)
-
-# P4C-2132
-p4c_add_xfail_reason("tofino"
-  "deparser checksum unit 2 used in both ingress and egress"
-  extensions/p4_tests/glass/cisco/COMPILER-1140/comp_1140.p4
-)
-
-# P4C-2131
-p4c_add_xfail_reason("tofino"
-  "CalculatedField: same name as CalculatedField"
-  extensions/p4_tests/glass/cisco/COMPILER-1147/comp_1147.p4
-)
-
-# XFAIL_NEG_TEST
-p4c_add_xfail_reason("tofino"
-  "syntax error, unexpected"
-  extensions/p4_tests/glass/stordis/COMPILER-1095/case7871.p4
-)
-
-# P4C-2129
-p4c_add_xfail_reason("tofino"
-  "condition_lo used and not specified"
-  extensions/p4_tests/glass/medialinks/COMPILER-1000/clone_field_list_bug.p4
-)
-
-# P4C-2128
-p4c_add_xfail_reason("tofino"
-  "Failed to place tables that Register .* is attached to in the same stage"
-  extensions/p4_tests/glass/medialinks/COMPILER-682/case3764.p4
-)
-
-# P4C-2126
-p4c_add_xfail_reason("tofino"
-  "Value too large for unsigned int"
-  extensions/p4_tests/glass/microsoft/COMPILER-713/case3975.p4
-)
-
-# P4C-2126
-p4c_add_xfail_reason("tofino"
-  "Value too large for int"
-  extensions/p4_tests/glass/microsoft/COMPILER-983/case6463.p4
-  extensions/p4_tests/glass/princeton/COMPILER-676/case3736.p4
-)
-
-# P4C-2125
-p4c_add_xfail_reason("tofino"
-  "Invalid Width cannot be negative or zero"
-  extensions/p4_tests/glass/arista/COMPILER-1200/case9376.p4
-  extensions/p4_tests/glass/microsoft/COMPILER-991/vag6589.p4
-)
-
 # P4C-2091
 # Expected failure (negative test)
 p4c_add_xfail_reason("tofino"
@@ -1446,62 +979,14 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/p4c-2091.p4
 )
 
-# P4C-2127
-p4c_add_xfail_reason("tofino"
-  "PHV allocation was not successful"
-  extensions/p4_tests/glass/arista/COMPILER-1170/case8862.p4
-)
-
 # P4C-2123
 p4c_add_xfail_reason("tofino"
   "Not all applies of table .* are mutually exclusive"
-  extensions/p4_tests/glass/arista/COMPILER-100/exclusive_cf_one_action_fail_after.p4
-  extensions/p4_tests/glass/arista/COMPILER-100/exclusive_cf_one_action_fail_before.p4
   testdata/p4_16_samples/psa-table-hit-miss.p4
   testdata/p4_16_samples/issue2344.p4
   testdata/p4_16_samples/psa-action-selector4.p4
   testdata/p4_16_samples/psa-dpdk-table-key-consolidation-if.p4
   testdata/p4_16_samples/psa-dpdk-table-key-consolidation-if-1.p4
-)
-
-# P4C-2115
-p4c_add_xfail_reason("tofino"
-  "ATCAM tables can at most have only one overhead word"
-  extensions/p4_tests/glass/arista/COMPILER-209/sizing.p4
-)
-
-# P4C-923
-p4c_add_xfail_reason("tofino"
-  "ALU ops cannot operate on slices"
-  extensions/p4_tests/glass/arista/COMPILER-228/case1644.p4
-  extensions/p4_tests/glass/arista/COMPILER-562/case3005.p4
-  extensions/p4_tests/glass/arista/COMPILER-567/case2807.p4
-  extensions/p4_tests/glass/arista/COMPILER-576/case3042.p4
-  extensions/p4_tests/glass/arista/COMPILER-579/case3085.p4
-  extensions/p4_tests/glass/arista/COMPILER-585/comp585.p4
-  extensions/p4_tests/glass/arista/COMPILER-588/comp588.p4
-  extensions/p4_tests/glass/arista/COMPILER-589/comp589.p4
-  extensions/p4_tests/glass/arista/COMPILER-608/case3263.p4
-)
-
-# P4C-1957
-# Compiler Bug: Extracted range byte[4..24) with size 160 doesn't match destination container TH7 with size 16
-p4c_add_xfail_reason("tofino"
-  "doesn't match destination container .* with size .*"
-  extensions/p4_tests/glass/arista/COMPILER-744/comp_744.p4
-  extensions/p4_tests/glass/arista/COMPILER-751/case4256.p4
-)
-
-# P4C-1948
-p4c_add_xfail_reason("tofino"
-  "At this point in the compilation typechecking should not infer new types anymore, but it did"
-  extensions/p4_tests/glass/keysight/COMPILER-924/case5801.p4
-)
-
-# P4C-1906
-p4c_add_xfail_reason("tofino"
-  "Depth of way doesn't match number of rams in table"
-  extensions/p4_tests/glass/arista/COMPILER-868/comp_868.p4
 )
 
 # Negative tests to test slice list creation
@@ -1621,14 +1106,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1879-bmv2.p4
 )
 
-# Test that fails due to extra sanity checking in fronend def_use pass
-# P4C-2612
-p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*: Overwriting definitions"
-  extensions/p4_tests/glass/mimetrix/COMPILER-1058/comp_1058.p4
-  extensions/p4_tests/glass/mau/test_config_163_stateful_table_math_unit.p4
-)
-
 # P4C-2694 - saturating arithmetic exceeding container width
 p4c_add_xfail_reason("tofino"
   "Saturating arithmetic operators may not exceed maximum PHV container width"
@@ -1651,19 +1128,6 @@ p4c_add_xfail_reason("tofino"
   "error: table .*: Number of partitions are specified for table .* but the partition index .* is not found"
   extensions/p4_tests/p4_16/compile_only/p4c-2035-name-neg.p4
   extensions/p4_tests/p4_16/compile_only/atcam_match_wide1-neg.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "actions cannot have parameters with type int"
-  extensions/p4_tests/glass/microsoft/COMPILER-623/case3375.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "Unable to pack bridged header"
-  extensions/p4_tests/glass/rdp/COMPILER-510/case2682.p4
-  extensions/p4_tests/glass/rdp/COMPILER-514/balancer_one.p4
-  extensions/p4_tests/glass/rdp/COMPILER-537/case2834.p4
-  extensions/p4_tests/glass/phv/COMPILER-908/compiler-908.p4
 )
 
 # PSA on tofino new failures
@@ -1926,21 +1390,11 @@ p4c_add_xfail_reason("tofino"
   "mismatch from expected"
   extensions/p4_tests/p4_14/stf/stateful6.p4
 )
-p4c_add_xfail_reason("tofino"
-  "error.*tofino supports up to 12 stages"
-  extensions/p4_tests/glass/phv/COMPILER-733/ipu_ingress.p4
-)
 # P4C-4140
 p4c_add_xfail_reason("tofino"
   "Compiler Bug: invalid SuperCluster was formed"
-  extensions/p4_tests/glass/mau/test_config_235_funnel_shift.p4
   extensions/p4_tests/p4_14/compile_only/cylinder_0.p4
   extensions/p4_tests/p4_14/compile_only/action_conflict_2.p4
-)
-# P4C-4140
-p4c_add_xfail_reason("tofino"
-  "Error producing mau.resources.log"
-  extensions/p4_tests/glass/phv/COMPILER-546/switch_comp546.p4
 )
 
 # p4factory update
@@ -1981,7 +1435,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "multi-assignment in parser"
-  extensions/p4_tests/glass/phv/COMPILER-737/classifier.p4
   testdata/p4_14_samples/11-MultiTags.p4
 )
 

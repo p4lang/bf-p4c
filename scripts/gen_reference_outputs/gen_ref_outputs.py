@@ -20,8 +20,8 @@ def get_test_list(tests_csv, out_dir, ts):
     errorCount = 0
     try:
         tests = []
-        # p4,p4_path,include_path,p4_opts,target,language,arch,skip_opt
-        field_names=['p4', 'p4_path', 'include_path', 'p4_opts', 'target', 'language', 'arch', 'skip_opt']
+        # p4,p4_path,include_path,p4_opts,target,language,arch
+        field_names=['p4', 'p4_path', 'include_path', 'p4_opts', 'target', 'language', 'arch']
         with open(tests_csv, 'r') as csvfile:
             test_reader = csv.DictReader(csvfile, fieldnames=field_names)
             for row in test_reader:
@@ -38,7 +38,6 @@ def get_test_list(tests_csv, out_dir, ts):
                     mTest.target = row['target']
                     mTest.language = row['language']
                     mTest.arch = row['arch']
-                    mTest.skip_opt = row['skip_opt']
                     mTest.timestamp = ts
                     mTest.out_path =  os.path.join(out_dir, mTest.p4, mTest.timestamp)
                     tests.append(mTest)
@@ -54,9 +53,6 @@ def prep_test_line(mTest, p4c):
     if p4c.name == 'Glass':
         if 'tofino2' in mTest.target or 'tofino3' in mTest.target or 'p4-16' in mTest.language or 'tna' in mTest.arch:
             return p4c
-    # Check skip_opt - generate test_line only if not skipped
-    if mTest.skip_opt and p4c.name in mTest.skip_opt:
-        return p4c
     # Add compiler options
     test_line = "\t'" + mTest.p4 + "': ([" + ', '.join(p4c.args)
     if len(p4c.args) > 0:
@@ -146,8 +142,6 @@ def remove_empty_directories(tests):
     mP4C = config.P4C()
     for mTest in tests:
         for p4c in [mGlass, mP4C]:
-            if mTest.skip_opt and p4c.name in mTest.skip_opt:
-                continue
             # Check for manifest.json if out_dir exists:
             out_dir = os.path.join(mTest.out_path, p4c.name)
             if os.path.isdir(out_dir):

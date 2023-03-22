@@ -1164,7 +1164,7 @@ install (PROGRAMS ${BFN_P4C_SOURCE_DIR}/scripts/p4_14-to-p4_16
 
 # 9.1.1 hack, we still need to release primitives.json to keep p4-graphs tool
 # usable. To be removed when we stop shipping p4-hlir in release
-install (FILES ${BFN_P4C_SOURCE_DIR}/glass/p4c_tofino/target/tofino/p4_lib/primitives.json
+install (FILES ${BFN_P4C_SOURCE_DIR}/scripts/primitives.json
     DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY}/p4_14include/tofino/)
 
 set (MANIFEST_CONFIG ${BFN_P4C_SOURCE_DIR}/scripts/p4c-manifest-config

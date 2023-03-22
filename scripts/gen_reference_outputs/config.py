@@ -65,6 +65,5 @@ class Test(object):
         self.target = 'tofino'
         self.std = 'p4-14'
         self.arch = 'v1model'
-        self.skip_opt = '' # choices: '', skip_Glass, skip_P4C, skip_Glass_P4C
         self.out_path = ''
         self.timestamp = ''

@@ -1,9 +1,6 @@
 [submodule "p4c"]
 	path = p4c
 	url = git@github.com:p4lang/p4c.git
-[submodule "glass"]
-	path = glass
-	url = git@github.com:barefootnetworks/p4c-tofino.git
 [submodule "p4-tests/p4_16/google-tor"]
 	path = p4-tests/p4_16/google-tor
 	url = git@github.com:barefootnetworks/google-internal.git
