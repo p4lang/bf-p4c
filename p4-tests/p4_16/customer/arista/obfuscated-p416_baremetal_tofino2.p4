@@ -10,13 +10,13 @@
 @pa_parser_group_monogress
 @pa_mutually_exclusive("egress" , "Starkey.Wyndmoor.Ledoux" , "Lefor.Casnovia.Ledoux")
 @pa_mutually_exclusive("egress" , "Lefor.Casnovia.Ledoux" , "Starkey.Wyndmoor.Ledoux")
-@pa_container_size("ingress" , "Starkey.Covert.Lapoint" , 32)
-@pa_container_size("ingress" , "Starkey.Wyndmoor.Richvale" , 32)
-@pa_container_size("ingress" , "Starkey.Wyndmoor.Hueytown" , 32)
-@pa_container_size("egress" , "Lefor.Tofte.Loris" , 32)
-@pa_container_size("egress" , "Lefor.Tofte.Mackville" , 32)
-@pa_container_size("ingress" , "Lefor.Tofte.Loris" , 32)
-@pa_container_size("ingress" , "Lefor.Tofte.Mackville" , 32)
+// @pa_container_size("ingress" , "Starkey.Covert.Lapoint" , 32)
+// @pa_container_size("ingress" , "Starkey.Wyndmoor.Richvale" , 32)
+// @pa_container_size("ingress" , "Starkey.Wyndmoor.Hueytown" , 32)
+// @pa_container_size("egress" , "Lefor.Tofte.Loris" , 32)
+// @pa_container_size("egress" , "Lefor.Tofte.Mackville" , 32)
+// @pa_container_size("ingress" , "Lefor.Tofte.Loris" , 32)
+// @pa_container_size("ingress" , "Lefor.Tofte.Mackville" , 32)
 @pa_atomic("ingress" , "Starkey.Covert.Onycha")
 @pa_atomic("ingress" , "Starkey.WebbCity.Billings")
 @pa_mutually_exclusive("ingress" , "Starkey.Covert.Delavan" , "Starkey.WebbCity.Dyess")
@@ -51,10 +51,10 @@
 @pa_atomic("ingress" , "Starkey.Humeston.Knierim")
 @pa_atomic("ingress" , "Starkey.Covert.Cisco")
 @pa_atomic("ingress" , "Starkey.Ekwok.Sublett")
-@pa_container_size("egress" , "Lefor.Monrovia.Mackville" , 32)
-@pa_container_size("egress" , "Lefor.Monrovia.Loris" , 32)
-@pa_container_size("ingress" , "Lefor.Monrovia.Mackville" , 32)
-@pa_container_size("ingress" , "Lefor.Monrovia.Loris" , 32)
+// @pa_container_size("egress" , "Lefor.Monrovia.Mackville" , 32)
+// @pa_container_size("egress" , "Lefor.Monrovia.Loris" , 32)
+// @pa_container_size("ingress" , "Lefor.Monrovia.Mackville" , 32)
+// @pa_container_size("ingress" , "Lefor.Monrovia.Loris" , 32)
 @pa_mutually_exclusive("egress" , "Lefor.Lemont.Mackville" , "Starkey.Wyndmoor.Buncombe")
 @pa_mutually_exclusive("egress" , "Lefor.Hookdale.Bicknell" , "Starkey.Wyndmoor.Buncombe")
 @pa_mutually_exclusive("egress" , "Lefor.Hookdale.Naruna" , "Starkey.Wyndmoor.Pettry")
@@ -62,19 +62,19 @@
 @pa_mutually_exclusive("egress" , "Lefor.Sedan.Palmhurst" , "Starkey.Wyndmoor.Rocklake")
 @pa_atomic("ingress" , "Starkey.Wyndmoor.Richvale")
 @pa_atomic("ingress" , "ig_intr_md_for_dprsr.drop_ctl")
-@pa_container_size("ingress" , "Lefor.Casnovia.Helton" , 32)
+// @pa_container_size("ingress" , "Lefor.Casnovia.Helton" , 32)
 @pa_mutually_exclusive("egress" , "Starkey.Wyndmoor.Pierceton" , "Lefor.Funston.Teigen")
 @pa_mutually_exclusive("egress" , "Lefor.Lemont.Loris" , "Starkey.Wyndmoor.Peebles")
-@pa_container_size("ingress" , "Starkey.Crump.Loris" , 32)
-@pa_container_size("ingress" , "Starkey.Crump.Mackville" , 32)
+// @pa_container_size("ingress" , "Starkey.Crump.Loris" , 32)
+// @pa_container_size("ingress" , "Starkey.Crump.Mackville" , 32)
 @pa_no_init("ingress" , "Starkey.Covert.Bennet")
 @pa_no_init("ingress" , "Starkey.SanRemo.McAllen")
 @pa_no_init("egress" , "Starkey.Thawville.McAllen")
 @pa_no_init("ingress" , "Starkey.Covert.Atoka")
-@pa_container_size("pipe_b" , "ingress" , "Starkey.Lookeba.Sunflower" , 8)
-@pa_container_size("pipe_b" , "ingress" , "Lefor.Sunbury.Bushland" , 8)
-@pa_container_size("pipe_b" , "ingress" , "Lefor.Flaherty.Algodones" , 8)
-@pa_container_size("pipe_b" , "ingress" , "Lefor.Flaherty.Horton" , 16)
+// @pa_container_size("pipe_b" , "ingress" , "Starkey.Lookeba.Sunflower" , 8)
+// @pa_container_size("pipe_b" , "ingress" , "Lefor.Sunbury.Bushland" , 8)
+// @pa_container_size("pipe_b" , "ingress" , "Lefor.Flaherty.Algodones" , 8)
+// @pa_container_size("pipe_b" , "ingress" , "Lefor.Flaherty.Horton" , 16)
 @pa_atomic("pipe_b" , "ingress" , "Lefor.Flaherty.Topanga")
 @pa_atomic("egress" , "Lefor.Flaherty.Topanga")
 @pa_solitary("pipe_b" , "ingress" , "Lefor.Flaherty.$valid")
@@ -291,7 +291,8 @@ struct AquaPark {
     bit<21> Basic;
 }
 
-@pa_container_size("ingress" , "Lefor.Flaherty.Osterdock" , 8) header Freeman {
+// @pa_container_size("ingress" , "Lefor.Flaherty.Osterdock" , 8)
+header Freeman {
     @flexible 
     bit<8>  Exton;
     @flexible 
@@ -346,11 +347,11 @@ struct AquaPark {
     bit<7>  Ronda;
 }
 
-@pa_container_size("egress" , "Lefor.Flaherty.Exton" , 8)
-@pa_container_size("ingress" , "Lefor.Flaherty.Exton" , 8)
+// @pa_container_size("egress" , "Lefor.Flaherty.Exton" , 8)
+// @pa_container_size("ingress" , "Lefor.Flaherty.Exton" , 8)
 @pa_atomic("ingress" , "Lefor.Flaherty.Quinwood")
-@pa_container_size("ingress" , "Lefor.Flaherty.Quinwood" , 16)
-@pa_container_size("ingress" , "Lefor.Flaherty.Floyd" , 8)
+// @pa_container_size("ingress" , "Lefor.Flaherty.Quinwood" , 16)
+// @pa_container_size("ingress" , "Lefor.Flaherty.Floyd" , 8)
 @pa_atomic("egress" , "Lefor.Flaherty.Quinwood") header LaPalma {
     @flexible 
     bit<8>  Exton;
@@ -3495,8 +3496,8 @@ control Maury(inout Frederika Lefor, inout HighRock Starkey, in egress_intrinsic
         ;
     }
 @pa_mutually_exclusive("egress" , "Lefor.Hookdale.Galloway" , "Starkey.Wyndmoor.Pettry")
-@pa_container_size("egress" , "Starkey.Wyndmoor.Buncombe" , 32)
-@pa_container_size("egress" , "Starkey.Wyndmoor.Pettry" , 32)
+// @pa_container_size("egress" , "Starkey.Wyndmoor.Buncombe" , 32)
+// @pa_container_size("egress" , "Starkey.Wyndmoor.Pettry" , 32)
 @pa_atomic("egress" , "Starkey.Wyndmoor.Buncombe")
 @pa_atomic("egress" , "Starkey.Wyndmoor.Pettry")
 @name(".Ashburn") action Ashburn(bit<32> Estrella, bit<32> Luverne) {
@@ -5358,9 +5359,9 @@ control Unity(inout Frederika Lefor, inout HighRock Starkey, in ingress_intrinsi
     }
 @pa_no_init("ingress" , "Starkey.Covert.Standish")
 @pa_atomic("ingress" , "Starkey.Covert.Standish")
-@pa_container_size("ingress" , "Starkey.Covert.Standish" , 8)
+// @pa_container_size("ingress" , "Starkey.Covert.Standish" , 8)
 @pa_solitary("ingress" , "ig_intr_md_for_dprsr.drop_ctl")
-@pa_container_size("ingress" , "ig_intr_md_for_dprsr.drop_ctl" , 8)
+// @pa_container_size("ingress" , "ig_intr_md_for_dprsr.drop_ctl" , 8)
 @disable_atomic_modify(1)
 @name(".Carrizozo") table Carrizozo {
         actions = {
@@ -6208,10 +6209,11 @@ control Powhatan(inout Frederika Lefor, inout HighRock Starkey, in ingress_intri
 
 @pa_solitary("ingress" , "Starkey.PeaRidge.Freeny")
 @pa_solitary("ingress" , "Starkey.Cranbury.Freeny")
-@pa_container_size("ingress" , "Starkey.PeaRidge.Freeny" , 16)
-@pa_container_size("ingress" , "Starkey.Millstone.Stennett" , 8)
-@pa_container_size("ingress" , "Starkey.Millstone.McCaskill" , 16)
-@pa_container_size("ingress" , "Starkey.Millstone.Minturn" , 8) control Snowflake(inout Frederika Lefor, inout HighRock Starkey, in ingress_intrinsic_metadata_t Garrison, in ingress_intrinsic_metadata_from_parser_t Volens, inout ingress_intrinsic_metadata_for_deparser_t Ravinia, inout ingress_intrinsic_metadata_for_tm_t Milano) {
+// @pa_container_size("ingress" , "Starkey.PeaRidge.Freeny" , 16)
+// @pa_container_size("ingress" , "Starkey.Millstone.Stennett" , 8)
+// @pa_container_size("ingress" , "Starkey.Millstone.McCaskill" , 16)
+// @pa_container_size("ingress" , "Starkey.Millstone.Minturn" , 8)
+control Snowflake(inout Frederika Lefor, inout HighRock Starkey, in ingress_intrinsic_metadata_t Garrison, in ingress_intrinsic_metadata_from_parser_t Volens, inout ingress_intrinsic_metadata_for_deparser_t Ravinia, inout ingress_intrinsic_metadata_for_tm_t Milano) {
     @name(".Ponder") action Ponder() {
     }
     @name(".McDaniels") action McDaniels(bit<32> McCaskill) {

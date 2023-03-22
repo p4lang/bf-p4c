@@ -10,13 +10,13 @@
 @pa_parser_group_monogress
 @pa_mutually_exclusive("egress" , "Hester.PeaRidge.Quogue" , "Mabana.Swanlake.Quogue")
 @pa_mutually_exclusive("egress" , "Mabana.Swanlake.Quogue" , "Hester.PeaRidge.Quogue")
-@pa_container_size("ingress" , "Hester.Nooksack.Whitefish" , 32)
-@pa_container_size("ingress" , "Hester.PeaRidge.LaLuz" , 32)
-@pa_container_size("ingress" , "Hester.PeaRidge.Corydon" , 32)
-@pa_container_size("egress" , "Mabana.Noyack.McBride" , 32)
-@pa_container_size("egress" , "Mabana.Noyack.Vinemont" , 32)
-@pa_container_size("ingress" , "Mabana.Noyack.McBride" , 32)
-@pa_container_size("ingress" , "Mabana.Noyack.Vinemont" , 32)
+// @pa_container_size("ingress" , "Hester.Nooksack.Whitefish" , 32)
+// @pa_container_size("ingress" , "Hester.PeaRidge.LaLuz" , 32)
+// @pa_container_size("ingress" , "Hester.PeaRidge.Corydon" , 32)
+// @pa_container_size("egress" , "Mabana.Noyack.McBride" , 32)
+// @pa_container_size("egress" , "Mabana.Noyack.Vinemont" , 32)
+// @pa_container_size("ingress" , "Mabana.Noyack.McBride" , 32)
+// @pa_container_size("ingress" , "Mabana.Noyack.Vinemont" , 32)
 @pa_atomic("ingress" , "Hester.Nooksack.Piqua")
 @pa_atomic("ingress" , "Hester.Pineville.Waubun")
 @pa_mutually_exclusive("ingress" , "Hester.Nooksack.Stratford" , "Hester.Pineville.Minto")
@@ -51,10 +51,10 @@
 @pa_atomic("ingress" , "Hester.Saugatuck.Glenmora")
 @pa_atomic("ingress" , "Hester.Nooksack.Cisco")
 @pa_atomic("ingress" , "Hester.Courtdale.Ovett")
-@pa_container_size("egress" , "Mabana.Robstown.Vinemont" , 32)
-@pa_container_size("egress" , "Mabana.Robstown.McBride" , 32)
-@pa_container_size("ingress" , "Mabana.Robstown.Vinemont" , 32)
-@pa_container_size("ingress" , "Mabana.Robstown.McBride" , 32)
+// @pa_container_size("egress" , "Mabana.Robstown.Vinemont" , 32)
+// @pa_container_size("egress" , "Mabana.Robstown.McBride" , 32)
+// @pa_container_size("ingress" , "Mabana.Robstown.Vinemont" , 32)
+// @pa_container_size("ingress" , "Mabana.Robstown.McBride" , 32)
 @pa_mutually_exclusive("egress" , "Mabana.Brady.Vinemont" , "Hester.PeaRidge.LaUnion")
 @pa_mutually_exclusive("egress" , "Mabana.Emden.Suttle" , "Hester.PeaRidge.LaUnion")
 @pa_mutually_exclusive("egress" , "Mabana.Emden.Galloway" , "Hester.PeaRidge.Cuprum")
@@ -62,21 +62,21 @@
 @pa_mutually_exclusive("egress" , "Mabana.Geistown.Kalida" , "Hester.PeaRidge.Broussard")
 @pa_atomic("ingress" , "Hester.PeaRidge.LaLuz")
 @pa_atomic("ingress" , "ig_intr_md_for_dprsr.drop_ctl")
-@pa_container_size("ingress" , "Mabana.Swanlake.StarLake" , 32)
+// @pa_container_size("ingress" , "Mabana.Swanlake.StarLake" , 32)
 @pa_mutually_exclusive("egress" , "Hester.PeaRidge.Pinole" , "Mabana.Skillman.Almedia")
 @pa_mutually_exclusive("egress" , "Mabana.Brady.McBride" , "Hester.PeaRidge.Montague")
-@pa_container_size("ingress" , "Hester.Swifton.McBride" , 32)
-@pa_container_size("ingress" , "Hester.Swifton.Vinemont" , 32)
+// @pa_container_size("ingress" , "Hester.Swifton.McBride" , 32)
+// @pa_container_size("ingress" , "Hester.Swifton.Vinemont" , 32)
 @pa_no_init("ingress" , "Hester.Nooksack.RioPecos")
 @pa_no_init("ingress" , "Hester.Nooksack.Weatherby")
 @pa_no_init("ingress" , "Hester.Almota.SourLake")
 @pa_no_init("egress" , "Hester.Lemont.SourLake")
 @pa_no_init("egress" , "Hester.PeaRidge.Brainard")
 @pa_no_init("ingress" , "Hester.Nooksack.Whitewood")
-@pa_container_size("pipe_b" , "ingress" , "Hester.Kinde.Cutten" , 8)
-@pa_container_size("pipe_b" , "ingress" , "Mabana.Rochert.Bushland" , 8)
-@pa_container_size("pipe_b" , "ingress" , "Mabana.Ruffin.Algodones" , 8)
-@pa_container_size("pipe_b" , "ingress" , "Mabana.Ruffin.Horton" , 16)
+// @pa_container_size("pipe_b" , "ingress" , "Hester.Kinde.Cutten" , 8)
+// @pa_container_size("pipe_b" , "ingress" , "Mabana.Rochert.Bushland" , 8)
+// @pa_container_size("pipe_b" , "ingress" , "Mabana.Ruffin.Algodones" , 8)
+// @pa_container_size("pipe_b" , "ingress" , "Mabana.Ruffin.Horton" , 16)
 @pa_atomic("pipe_b" , "ingress" , "Mabana.Ruffin.Topanga")
 @pa_atomic("egress" , "Mabana.Ruffin.Topanga")
 @pa_solitary("pipe_b" , "ingress" , "Mabana.Ruffin.$valid")
@@ -281,7 +281,8 @@ struct AquaPark {
     bit<21> Basic;
 }
 
-@pa_container_size("ingress" , "Mabana.Ruffin.Osterdock" , 8) header Freeman {
+// @pa_container_size("ingress" , "Mabana.Ruffin.Osterdock" , 8)
+header Freeman {
     @flexible
     bit<8>  Exton;
     @flexible
@@ -336,7 +337,13 @@ struct AquaPark {
     bit<7>  Ronda;
 }
 
-@pa_container_size("egress" , "Mabana.Ruffin.Exton" , 8) @pa_container_size("ingress" , "Mabana.Ruffin.Exton" , 8) @pa_atomic("ingress" , "Mabana.Ruffin.Quinwood") @pa_container_size("ingress" , "Mabana.Ruffin.Quinwood" , 16) @pa_container_size("ingress" , "Mabana.Ruffin.Floyd" , 8) @pa_atomic("egress" , "Mabana.Ruffin.Quinwood") header LaPalma {
+// @pa_container_size("egress" , "Mabana.Ruffin.Exton" , 8)
+// @pa_container_size("ingress" , "Mabana.Ruffin.Exton" , 8)
+@pa_atomic("ingress" , "Mabana.Ruffin.Quinwood")
+// @pa_container_size("ingress" , "Mabana.Ruffin.Quinwood" , 16)
+// @pa_container_size("ingress" , "Mabana.Ruffin.Floyd" , 8)
+@pa_atomic("egress" , "Mabana.Ruffin.Quinwood")
+header LaPalma {
     @flexible
     bit<8>  Exton;
     @flexible
@@ -3461,7 +3468,12 @@ control Rockfield(inout Wabbaseka Mabana, inout Biggers Hester, in egress_intrin
     @name(".Mattapex") action Mattapex() {
         ;
     }
-    @pa_mutually_exclusive("egress" , "Mabana.Emden.Denhoff" , "Hester.PeaRidge.Cuprum") @pa_container_size("egress" , "Hester.PeaRidge.LaUnion" , 32) @pa_container_size("egress" , "Hester.PeaRidge.Cuprum" , 32) @pa_atomic("egress" , "Hester.PeaRidge.LaUnion") @pa_atomic("egress" , "Hester.PeaRidge.Cuprum") @name(".Redfield") action Redfield(bit<32> Baskin, bit<32> Wakenda) {
+    @pa_mutually_exclusive("egress" , "Mabana.Emden.Denhoff" , "Hester.PeaRidge.Cuprum")
+    // @pa_container_size("egress" , "Hester.PeaRidge.LaUnion" , 32)
+    // @pa_container_size("egress" , "Hester.PeaRidge.Cuprum" , 32)
+    @pa_atomic("egress" , "Hester.PeaRidge.LaUnion")
+    @pa_atomic("egress" , "Hester.PeaRidge.Cuprum")
+    @name(".Redfield") action Redfield(bit<32> Baskin, bit<32> Wakenda) {
         Mabana.Emden.Suttle = Baskin;
         Mabana.Emden.Galloway[31:16] = Wakenda[31:16];
         Mabana.Emden.Galloway[15:0] = Hester.PeaRidge.LaUnion[15:0];
@@ -5300,7 +5312,12 @@ control Slick(inout Wabbaseka Mabana, inout Biggers Hester, in ingress_intrinsic
     @name(".Lansdale") action Lansdale(bit<8> Froid) {
         Hester.Nooksack.Ayden = (QueueId_t)Froid;
     }
-    @pa_no_init("ingress" , "Hester.Nooksack.Ayden") @pa_atomic("ingress" , "Hester.Nooksack.Ayden") @pa_container_size("ingress" , "Hester.Nooksack.Ayden" , 8) @pa_solitary("ingress" , "ig_intr_md_for_dprsr.drop_ctl") @pa_container_size("ingress" , "ig_intr_md_for_dprsr.drop_ctl" , 8) @disable_atomic_modify(1) @name(".Rardin") table Rardin {
+    @pa_no_init("ingress" , "Hester.Nooksack.Ayden")
+    @pa_atomic("ingress" , "Hester.Nooksack.Ayden")
+    // @pa_container_size("ingress" , "Hester.Nooksack.Ayden" , 8)
+    @pa_solitary("ingress" , "ig_intr_md_for_dprsr.drop_ctl")
+    // @pa_container_size("ingress" , "ig_intr_md_for_dprsr.drop_ctl" , 8)
+    @disable_atomic_modify(1) @name(".Rardin") table Rardin {
         actions = {
             @tableonly Lansdale();
             @defaultonly NoAction();
@@ -6141,7 +6158,13 @@ control Panola(inout Wabbaseka Mabana, inout Biggers Hester, in ingress_intrinsi
     }
 }
 
-@pa_solitary("ingress" , "Hester.Baker.Wondervu") @pa_solitary("ingress" , "Hester.Glenoma.Wondervu") @pa_container_size("ingress" , "Hester.Baker.Wondervu" , 16) @pa_container_size("ingress" , "Hester.Cotter.Freeny" , 8) @pa_container_size("ingress" , "Hester.Cotter.Tiburon" , 16) @pa_container_size("ingress" , "Hester.Cotter.Amenia" , 8) control GlenRock(inout Wabbaseka Mabana, inout Biggers Hester, in ingress_intrinsic_metadata_t Palouse, in ingress_intrinsic_metadata_from_parser_t Goodlett, inout ingress_intrinsic_metadata_for_deparser_t BigPoint, inout ingress_intrinsic_metadata_for_tm_t Sespe) {
+@pa_solitary("ingress" , "Hester.Baker.Wondervu")
+@pa_solitary("ingress" , "Hester.Glenoma.Wondervu")
+// @pa_container_size("ingress" , "Hester.Baker.Wondervu" , 16)
+// @pa_container_size("ingress" , "Hester.Cotter.Freeny" , 8)
+// @pa_container_size("ingress" , "Hester.Cotter.Tiburon" , 16)
+// @pa_container_size("ingress" , "Hester.Cotter.Amenia" , 8)
+control GlenRock(inout Wabbaseka Mabana, inout Biggers Hester, in ingress_intrinsic_metadata_t Palouse, in ingress_intrinsic_metadata_from_parser_t Goodlett, inout ingress_intrinsic_metadata_for_deparser_t BigPoint, inout ingress_intrinsic_metadata_for_tm_t Sespe) {
     @name(".Mattapex") action Mattapex() {
     }
     @name(".Compton") action Compton(bit<32> Tiburon) {

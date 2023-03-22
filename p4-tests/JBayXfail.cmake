@@ -501,8 +501,6 @@ if (TEST_ALT_PHV_ALLOC)
         "error: table allocation .* Allocation state: ALT_FINALIZE_TABLE"
         switch_16_y2
         smoketest_switch_16_y2
-        extensions/p4_tests/p4_16/customer/arista/obfuscated-p416_baremetal_tofino2-2022-09-15.p4
-        extensions/p4_tests/p4_16/customer/arista/obfuscated-p416_baremetal_tofino2.p4
         extensions/p4_tests/p4_16/customer/arista/obfuscated-l2_dci.p4
         switch_16_y8
     )
