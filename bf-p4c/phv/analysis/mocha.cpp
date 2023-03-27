@@ -85,10 +85,14 @@ void CollectMochaCandidates::end_apply() {
         //     continue;
         // }
         if (f.pov) {
-            ss << "    ...pov field.";
-            if (!pov_on_mocha || uses.is_written_mau(phv.field(f.id))) {
-                LOG5(ss.str());
-                continue;
+            ss << "    ...pov field ";
+            if (uses.is_written_mau(phv.field(f.id)))
+                ss << "(written in MAU)";
+            if (!pov_on_mocha) {
+                if (uses.is_written_mau(phv.field(f.id))) {
+                    LOG5(ss.str());
+                    continue;
+                }
             }
         }
 
