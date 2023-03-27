@@ -1222,11 +1222,34 @@ bool DoTableLayout::preorder(IR::MAU::Selector *sel) {
     }
 
     IR::Vector<IR::Expression> components;
+    int inputBits = 0;
+    int hashModBits = SelectorHashModBits(sel);
     for (auto ixbar_read : tbl->match_key) {
         if (!ixbar_read->for_selection())
             continue;
         components.push_back(ixbar_read->expr);
+        inputBits += ixbar_read->expr->type->width_bits();
     }
+    if (sel->algorithm.type == IR::MAU::HashFunction::IDENTITY && inputBits > hashModBits) {
+        // We have more input bits than output bits and we're using an identity hash.
+        // This would just result in using the initial/low_order bits from the selector
+        // key, but that will reuse the same bits for both the word mod (here), and bit
+        // choice in the selectorALU, which results in correlations and the selector
+        // being less fair than it should be.  So instead we only use the tail of the
+        // selector key
+        // FIXME -- it would be better to coordinate this with the allocation of the
+        // selectorALU hash in IXBar::allocSelector.  For some non-identity hashes it would
+        // be good to use disjoint output bits as well, but how to tell which bits
+        // have more/less entropy so as to get enough in all the hashes?
+        while (inputBits - components.front()->type->width_bits() > hashModBits) {
+            inputBits -= components.front()->type->width_bits();
+            components.erase(components.begin()); }
+        if (inputBits > hashModBits) {
+            components.front() = MakeSlice(components.front(), inputBits - hashModBits,
+                                           components.front()->type->width_bits() - 1);
+        }
+    }
+
     IR::ListExpression *field_list = new IR::ListExpression(components);
 
     auto hge = new IR::MAU::HashGenExpression(sel->srcInfo,
