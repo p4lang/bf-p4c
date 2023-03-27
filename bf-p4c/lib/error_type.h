@@ -12,6 +12,7 @@ class ErrorType: public ::ErrorType {
     static const int WARN_PRAGMA_USE      = 1502;
     static const int WARN_SUBSTITUTION    = 1503;
     static const int WARN_PHV_ALLOCATION  = 1504;
+    static const int WARN_UNINIT_OVERLAY  = 1505;
 
     static const int FIRST_BACKEND_WARNING = WARN_TABLE_PLACEMENT;
 
@@ -31,6 +32,7 @@ class ErrorType: public ::ErrorType {
         ::ErrorCatalog::getCatalog().add(WARN_PRAGMA_USE, "pragma-use");
         ::ErrorCatalog::getCatalog().add(WARN_SUBSTITUTION, "substitution");
         ::ErrorCatalog::getCatalog().add(WARN_PHV_ALLOCATION, "phv-allocation");
+        ::ErrorCatalog::getCatalog().add(WARN_UNINIT_OVERLAY, "uninitialized-overlay");
     }
 };
 

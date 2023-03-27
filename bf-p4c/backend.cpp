@@ -44,6 +44,8 @@
 #include "backend.h"
 #include <fstream>
 #include <set>
+#include "bf-p4c/phv/utils/slice_alloc.h"
+#include "ir/ir-generated.h"
 #include "ir/pass_manager.h"
 #include "lib/indent.h"
 
@@ -314,7 +316,6 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         // programs
         (options.no_deadcode_elimination == false) ?
             new ElimUnused(phv, defuse, zeroInitFields) : nullptr,
-
 #ifdef HAVE_FLATROCK
         // ParserHeaderSequences must be run before the IR is lowered
         Device::currentDevice() == Device::FLATROCK ? &parserHeaderSeqs : nullptr,
@@ -386,13 +387,26 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         }),
         PHV_Analysis,
 
-        // Not Putting CheckUninitializedRead at the end of backend is because there is a pass named
-        // ReinstateAliasSources will break the program's semantic correctness. Namely, some uses
-        // will lose track of their defs, because variable names have been changed by some passes,
-        // e.g., ReinstateAliasSources. So CheckUninitializedRead should be put at a place that is
-        // most correct semantically. In addition, this pass has to be placed after PHV_Analysis,
-        // since pragmas information in PHV_Analysis is needed.
-        new CheckUninitializedRead(defuse, phv, PHV_Analysis->get_pragmas()),
+        // P4C-5147
+        // CheckUninitializedReadAndOverlayedReads Pass checks all allocation slices for overlays
+        // which can corrupt uninitialized read values and potentially cause fatal errors
+        // while running tests.
+        //
+        // This pass cannot be called at the end of backend as there is a pass named
+        // ReinstateAliasSources which will break the program's semantic correctness. Namely, some
+        // uses will lose track of their defs, because variable names have been changed by some
+        // passes e.g. ReinstateAliasSources. So this pass should be put at a place that is most
+        // correct semantically.
+        //
+        // In addition, this pass has to be placed after PHV_Analysis, since pragmas information in
+        // PHV_Analysis is needed.
+        //
+        // NOTE: This pass is an updated version of an older pass called
+        // CheckUninitializedRead which did not check for overlays and reported all uninitialized
+        // reads on fields as warnings. Uninitialized reads by themselves are not an issue unless
+        // they are overlayed. Hence the older pass was modified to add the overlay check and only
+        // report those reads.
+        new CheckUninitializedAndOverlayedReads(defuse, phv, PHV_Analysis->get_pragmas(), options),
 
         allocateClot == nullptr ? nullptr : new ClotAdjuster(clot, phv),
         new ValidateActions(phv, false, true, false),

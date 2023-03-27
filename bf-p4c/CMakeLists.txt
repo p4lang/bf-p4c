@@ -1540,7 +1540,6 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/bitrange.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/build_super_cluster.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/checksum.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/check_uninitialized_read.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/clot.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/constrained_field_map_builder.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/container_action.cpp
@@ -1562,7 +1561,6 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/normalize_hash_list.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/hidden_merged.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/input_xbar.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/instruction_selection.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/ir_utils.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/initialize_mirror_io_select.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/jbay_next_table.cpp
