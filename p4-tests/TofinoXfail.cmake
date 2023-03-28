@@ -913,6 +913,12 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
+  # 2023-03-17 update
+  " Header fields cannot be used in wide arithmetic ops"
+  testdata/p4_16_samples/nonstandard_table_names-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
   #"header fields cannot be used in wide arithmetic ops"
   "error: Expression cast is too complex to handle, consider simplifying the nested casts"
   testdata/p4_16_samples/psa-recirculate-no-meta-bmv2.p4

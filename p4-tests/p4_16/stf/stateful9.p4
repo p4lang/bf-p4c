@@ -10,8 +10,8 @@ control ingress(inout headers hdr, inout metadata meta,
                 inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
 
-    Register<bit<32>, _>(512) reg1;
-    Register<bit<32>, _>(512) reg2;
+    Register<bit<32>,PortId_t>(512) reg1;
+    Register<bit<32>,PortId_t>(512) reg2;
 
     action a1() {
         reg1.write(ig_intr_md.ingress_port, hdr.data.f1);

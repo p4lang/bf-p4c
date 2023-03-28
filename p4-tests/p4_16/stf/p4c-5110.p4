@@ -12,8 +12,8 @@ control ingress(inout headers hdr, inout metadata m,
 
     bit<32> meta = 0;
 
-    Register<bit<32>, _>(1) test_register;
-    RegisterAction<bit<32>, _, bit<32>>(test_register) test_register_action = {
+    Register<bit<32>, bit<1>>(1) test_register;
+    RegisterAction<bit<32>, bit<1>, bit<32>>(test_register) test_register_action = {
         void apply(inout bit<32>  store_valid_data, out bit<32> read_valid_data) {
             read_valid_data = store_valid_data;
             if ((int<32>)(hdr.data.f1 - store_valid_data) > 0) {

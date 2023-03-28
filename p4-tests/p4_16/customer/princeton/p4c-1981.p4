@@ -387,10 +387,10 @@ control SwitchIngress(
         #define TS_LEGITIMATE_THRESHOLD (200*1000*1000)
         
         
-        Register<paired_32bit,_>(32w65536) reg_table_1;
+        Register<paired_32bit, bit<16>>(32w65536) reg_table_1;
         //lo:signature, hi:timestamp
         
-        RegisterAction<paired_32bit, _, bit<32>>(reg_table_1) table_1_insert= {  
+        RegisterAction<paired_32bit, bit<16>, bit<32>>(reg_table_1) table_1_insert= {
             void apply(inout paired_32bit value, out bit<32> rv) {          
                 rv = 0;                                                    
                 paired_32bit in_value;                                          
@@ -412,7 +412,7 @@ control SwitchIngress(
             ig_md.table_1_read=table_1_insert.execute(ig_md.hashed_location_1);
         }
         
-        RegisterAction<paired_32bit, _, bit<32>>(reg_table_1) table_1_tryRead= {  
+        RegisterAction<paired_32bit, bit<16>, bit<32>>(reg_table_1) table_1_tryRead= {
             void apply(inout paired_32bit value, out bit<32> rv) {    
                 rv=0;
                 paired_32bit in_value;                                          

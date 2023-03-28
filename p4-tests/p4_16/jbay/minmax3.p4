@@ -11,13 +11,13 @@ control ingress(inout headers hdr, inout metadata meta,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
 
     Register<bit<16>, bit<13>>(8192) accum;
-    MinMaxAction2<_, _, bit<16>, bit<3>>(accum) rmax = {
+    MinMaxAction2<bit<16>, bit<10>, bit<16>, bit<3>>(accum) rmax = {
         void apply(inout bit<128> value, out bit<16> rv, out bit<3> idx) {
             idx = 0;
             rv = this.max16(value, 0xff, idx, -8);
         }
     };
-    RegisterAction<bit<16>, _, void>(accum) load = {
+    RegisterAction<bit<16>, bit<13>, void>(accum) load = {
         void apply(inout bit<16> value) {
             value = hdr.data.h1;
         }

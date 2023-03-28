@@ -11,7 +11,7 @@ control ingress(inout headers hdr, inout metadata meta,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
 
     Register<bit<16>, bit<16>>(65536) accum;
-    RegisterAction<bit<16>, _, bit<16>>(accum) add = {
+    RegisterAction<bit<16>, bit<16>, bit<16>>(accum) add = {
         void apply(inout bit<16> value, out bit<16> rv) {
             value = value + (bit<16>)hdr.data.b1;
             rv = value;

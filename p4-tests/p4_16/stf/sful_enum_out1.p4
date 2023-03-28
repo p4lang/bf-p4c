@@ -19,8 +19,8 @@ control ingress(inout headers hdr, inout metadata meta,
                 inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
 
-    Register<burst_data,_>(8192) reg;
-    RegisterAction<burst_data,_,burst_state>(reg) bursts = {
+    Register<burst_data, bit<13>>(8192) reg;
+    RegisterAction<burst_data, bit<13>, burst_state>(reg) bursts = {
         void apply(inout burst_data data, out burst_state burst) {
             if (hdr.data.f2 - data.timestamp <= BURST_INTERPACKET_DELAY) {
                 if (data.count >= BURST_SIZE)

@@ -15,7 +15,7 @@ control ingress(inout headers hdr, inout metadata meta,
                 inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
     Register<pair, bit<16>>(65536) accum;
-    RegisterAction<pair, _, bit<16>>(accum) ra_load = {
+    RegisterAction<pair, bit<16>, bit<16>>(accum) ra_load = {
         void apply(inout pair value) {
             value.lo = hdr.data.f2[15:0];
 #if __TARGET_TOFINO__ >= 3
@@ -24,10 +24,10 @@ control ingress(inout headers hdr, inout metadata meta,
             value.hi = hdr.data.f2[19:16] ++ 3w0 ++ ig_intr_md.ingress_port;
 #endif
         } };
-    RegisterAction<pair, _, bit<16>>(accum) ra1 = {
+    RegisterAction<pair, bit<16>, bit<16>>(accum) ra1 = {
         void apply(inout pair value, out bit<16> rv) {
             rv = value.hi; } };
-    RegisterAction<pair, _, bit<16>>(accum) ra2 = {
+    RegisterAction<pair, bit<16>, bit<16>>(accum) ra2 = {
         void apply(inout pair value, out bit<16> rv) {
             rv = value.lo; } };
     action load() { ra_load.execute(hdr.data.h1); }

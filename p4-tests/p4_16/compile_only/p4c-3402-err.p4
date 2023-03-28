@@ -93,8 +93,8 @@ control Ingress(
     bit<16> hold0 = 0;
     bit<16> hold1 = 0;
 
-    Register<reg_pair,_>(1) reg0;
-    RegisterAction<reg_pair, _, bit<16>> (reg0) reg0_update = {
+    Register<reg_pair,bit<1>>(1) reg0;
+    RegisterAction<reg_pair, bit<1>, bit<16>> (reg0) reg0_update = {
         void apply(inout reg_pair val, out bit<16> rv) {
             if(curr != val.y) { // whenever the timestamp advances by 4.3s, then we reset val.x, then add 1
                 val.x = 1;
@@ -106,8 +106,8 @@ control Ingress(
         }
     };
 
-    Register<reg_pair,_>(1) reg1;
-    RegisterAction<reg_pair, _, bit<16>> (reg1) reg1_update = {
+    Register<reg_pair,bit<1>>(1) reg1;
+    RegisterAction<reg_pair, bit<1>, bit<16>> (reg1) reg1_update = {
         void apply(inout reg_pair val, out bit<16> rv) {
             if(curr != val.y) { // whenever the timestamp advances by 4.3s, then we reset val.x, then add 1
                 val.x = 0;

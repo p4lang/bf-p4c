@@ -100,7 +100,7 @@ control SwitchIngress(
 
 
         //==== int<8> register ====
-        Register<paired_8int,_>(1024) my_reg;
+        Register<paired_8int, bit<1>>(1024) my_reg;
 #if TEST == 1
         /* expect error@-2: "Register actions associated with .* do not fit on the device\. \
 Actions use 5 large constants but the device has only 4 register action parameter slots\. \
@@ -116,7 +116,7 @@ Actions use 5 register parameters but the device has only 4 register action para
 To make the actions fit, reduce the number of register parameters\." */
 #endif
 
-        RegisterAction<paired_8int, _, int<8>>(my_reg) my_regact_a= {
+        RegisterAction<paired_8int, bit<1>, int<8>>(my_reg) my_regact_a= {
             void apply(inout paired_8int value, out int<8> rv) {
                 rv = 0;
                 paired_8int in_value;

@@ -9,8 +9,8 @@ control ingress(inout headers hdr, inout metadata meta,
                 in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md,
                 inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-    Register<bit<16>, _>(4096) accum;
-    RegisterAction<_, _, bit<16>>(accum) regact = {
+    Register<bit<16>, bit<12>>(4096) accum;
+    RegisterAction<bit<16>, bit<12>, bit<16>>(accum) regact = {
         void apply(inout bit<16> value, out bit<16> res) {
             if (hdr.data.b1 == 0) {
                 value = hdr.data.h1;

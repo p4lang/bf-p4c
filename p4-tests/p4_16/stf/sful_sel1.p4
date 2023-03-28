@@ -23,17 +23,17 @@ control ingress(inout headers hdr, inout metadata meta,
                 inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
     Hash<bit<16>>(HashAlgorithm_t.CRC16) hash_fn;
-    Register<bit<1>, _>(1024) sel_register;
+    Register<bit<1>, bit<8>>(1024) sel_register;
     ActionProfile(1024) ap;
     ActionSelector(ap, hash_fn, SelectorMode_t.FAIR, sel_register, 120, 1) sel_profile;
-    RegisterAction<bit<1>,_,bit<1>>(sel_register) port_down = {
+    RegisterAction<bit<1>, bit<8>, bit<1>>(sel_register) port_down = {
         void apply(inout bit<1> value) {
             bit<1> in_value;
             in_value = value;
             value = 1w0;
         }
     };
-    RegisterAction<bit<1>,_,bit<1>>(sel_register) port_up = {
+    RegisterAction<bit<1>, bit<8>, bit<1>>(sel_register) port_up = {
         void apply(inout bit<1> value) {
             bit<1> in_value;
             in_value = value;

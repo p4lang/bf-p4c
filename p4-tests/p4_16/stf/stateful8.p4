@@ -9,17 +9,17 @@ control ingress(inout headers hdr, inout metadata meta,
                 in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md,
                 inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-    Register<bit<16>, _>(65536) accum;
-    RegisterAction<_, _, bit<16>>(accum) ra_load = {
+    Register<bit<16>, bit<16>>(65536) accum;
+    RegisterAction<bit<16>, bit<16>, bit<16>>(accum) ra_load = {
         void apply(inout bit<16> value) {
             value = hdr.data.h1; } };
-    RegisterAction<_, _, bit<16>>(accum) ra1 = {
+    RegisterAction<bit<16>, bit<16>, bit<16>>(accum) ra1 = {
         void apply(inout bit<16> value, out bit<16> rv) {
             if (hdr.data.b1 == 0)
                 rv = min(hdr.data.h1, value);
             else
                 rv = max(hdr.data.h1, value); } };
-    RegisterAction<_, _, bit<16>>(accum) ra2 = {
+    RegisterAction<bit<16>, bit<16>, bit<16>>(accum) ra2 = {
         void apply(inout bit<16> value, out bit<16> rv) {
             if (hdr.data.b1 == 0)
                 rv = hdr.data.h1 + value;

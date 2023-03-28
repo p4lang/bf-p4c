@@ -2691,13 +2691,13 @@ control Egress(inout egress_headers_t hdr,
         }
         result = register;
     } };
-    Register<bit<32>, _>(1, 0) reg_ipfix_seq; RegisterAction<bit<32>, _, bit<32>>(reg_ipfix_seq) ipfix_seq = { void apply(inout bit<32> register, out bit<32> result) {
+    Register<bit<32>, bit<1>>(1, 0) reg_ipfix_seq; RegisterAction<bit<32>, bit<1>, bit<32>>(reg_ipfix_seq) ipfix_seq = { void apply(inout bit<32> register, out bit<32> result) {
         result = register;
         if (hdr.template.template_id == 0) {
             register = register + 1;
         }
     } };
-    Register<bit<32>, _>(1, 0) reg_tstamp_base; RegisterAction<bit<32>, _, bit<32>>(reg_tstamp_base) tstamp_base = { void apply(inout bit<32> register, out bit<32> result) {
+    Register<bit<32>, bit<1>>(1, 0) reg_tstamp_base; RegisterAction<bit<32>, bit<1>, bit<32>>(reg_tstamp_base) tstamp_base = { void apply(inout bit<32> register, out bit<32> result) {
         if (hdr.ipfix.tstamp == 0) {
             result = (14w0 ++ eg_prsr_md.global_tstamp[47:30]) - register;
         } else {
@@ -2705,7 +2705,7 @@ control Egress(inout egress_headers_t hdr,
             result = 32w0;
         }
     } };
-    Register<bit<32>, _>(1, 0) reg_tstamp_offset; RegisterAction<bit<32>, _, bit<32>>(reg_tstamp_offset) tstamp_offset = { void apply(inout bit<32> register, out bit<32> result) {
+    Register<bit<32>, bit<1>>(1, 0) reg_tstamp_offset; RegisterAction<bit<32>, bit<1>, bit<32>>(reg_tstamp_offset) tstamp_offset = { void apply(inout bit<32> register, out bit<32> result) {
         if (hdr.ipfix.tstamp != 0) {
             register = hdr.ipfix.tstamp;
         }

@@ -14,15 +14,15 @@ control ingress(inout headers hdr, inout metadata meta,
                 in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md,
                 inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-    Register<pair, _>(65536) accum;
-    RegisterAction<_, _, bit<8>>(accum) ra_load = {
+    Register<pair, bit<16>>(65536) accum;
+    RegisterAction<pair, bit<16>, bit<8>>(accum) ra_load = {
         void apply(inout pair value) {
             value.lo = hdr.data.b1;
             value.hi = hdr.data.b2; } };
-    RegisterAction<_, _, bit<8>>(accum) ra1 = {
+    RegisterAction<pair, bit<16>, bit<8>>(accum) ra1 = {
         void apply(inout pair value, out bit<8> rv) {
             rv = (bit<8>)(bit<1>)(hdr.data.b1 > value.lo && hdr.data.b1 < value.hi); } };
-    RegisterAction<_, _, bit<8>>(accum) ra2 = {
+    RegisterAction<pair, bit<16>, bit<8>>(accum) ra2 = {
         void apply(inout pair value, out bit<8> rv) {
             rv = hdr.data.b2 > value.lo && hdr.data.b2 < value.hi ? 8w1 : 8w0; } };
     action load() { ra_load.execute(hdr.data.h1); }
