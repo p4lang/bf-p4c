@@ -1603,6 +1603,7 @@ if (TEST_ALT_PHV_ALLOC)
     p4c_add_xfail_reason("tofino"
       "error: PHV fitting failed, [0-9]* clusters cannot be allocated."
       extensions/p4_tests/p4_14/customer/ruijie/p4c-2250.p4
+      switch_ent_dc_general # To be removed when switch-14 profiles are removed
     )
 
     # errors in constraints

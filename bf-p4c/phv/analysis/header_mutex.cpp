@@ -756,22 +756,27 @@ bool ExcludeMAUNotMutexHeaders::is_set(const IR::MAU::Primitive* primitive) {
 
 bool ExcludeMAUNotMutexHeaders::is_set_header_pov(const IR::MAU::Primitive* primitive) {
     if (!is_set(primitive)) return false;
-
-    auto* field = phv.field(primitive->operands[0]);
-    auto* constant = primitive->operands[1]->to<IR::Constant>();
-    return (field && is_header(field) && field->pov && constant);
+    const PHV::Field* field = get_phv_field(primitive->operands[0]);
+    return (field && field->header() && field->pov);
 }
 
 bool ExcludeMAUNotMutexHeaders::is_set_header_valid(const IR::MAU::Primitive* primitive) {
-    auto* constant =
+    const IR::Constant* constant =
         (is_set_header_pov(primitive)) ? primitive->operands[1]->to<IR::Constant>() : nullptr;
     return (constant && constant->value == 1);
 }
 
 bool ExcludeMAUNotMutexHeaders::is_set_header_invalid(const IR::MAU::Primitive* primitive) {
-    auto* constant =
+    const IR::Constant* constant =
         (is_set_header_pov(primitive)) ? primitive->operands[1]->to<IR::Constant>() : nullptr;
     return (constant && constant->value == 0);
+}
+
+bool ExcludeMAUNotMutexHeaders::is_set_header_pov_to_other_header_pov(
+        const IR::MAU::Primitive *primitive) {
+    const PHV::Field* field =
+        (is_set_header_pov(primitive)) ? get_phv_field(primitive->operands[1]) : nullptr;
+    return (field && field->header() && field->pov);
 }
 
 /**
@@ -786,24 +791,111 @@ bool ExcludeMAUNotMutexHeaders::is_set_header_invalid(const IR::MAU::Primitive* 
  */
 ordered_set<std::pair<cstring, cstring>> ExcludeMAUNotMutexHeaders::process_set_header_povs(
         const IR::MAU::Action* action) {
-    std::set<cstring> set_valids;
+    std::map<cstring, HeaderState> set_valids;
     std::set<cstring> set_invalids;
     for (const auto& primitive : action->action) {
         if (!is_set_header_pov(primitive)) continue;
 
-        cstring header = phv.field(primitive->operands[0])->header();
+        cstring lhs_header = get_phv_field(primitive->operands[0])->header();
+        if (!header_info.all_headers.count(lhs_header)) continue;
+
         if (is_set_header_valid(primitive))
-            set_valids.insert(header);
-        else
-            set_invalids.insert(header);
+            set_valids.emplace(lhs_header, ACTIVE);
+        else if (is_set_header_invalid(primitive))
+            set_invalids.insert(lhs_header);
+        else if (is_set_header_pov_to_other_header_pov(primitive)) {
+            cstring rhs_header = get_phv_field(primitive->operands[1])->header();
+            if (!header_info.all_headers.count(rhs_header)) continue;
+
+            // Edge case: Header_Stack.(pop|push)_front(); LHS_Header_Stack = RHS_Header_Stack;
+            const PHV::Field* lhs_field = get_phv_field(primitive->operands[0]);
+            const PHV::Field* rhs_field = get_phv_field(primitive->operands[1]);
+            if (lhs_field->metadata && lhs_field->pov && rhs_field->metadata && rhs_field->pov) {
+                std::map<int, cstring> lhs_index_to_header_stack_element;
+                std::map<int, cstring> rhs_index_to_header_stack_element;
+                auto if_header_contains_substring_emplace_in_map = [](const cstring& header,
+                                                                      const cstring& substring,
+                                                                      std::map<int, cstring>& map) {
+                    std::string tmp{header.c_str()};
+                    unsigned begin = tmp.find("[");
+                    unsigned end = tmp.find("]");
+                    if (!header.find(substring) || begin == std::string::npos ||
+                        end == std::string::npos)
+                        return;
+                    int index = std::stoi(tmp.substr(begin + 1, end - (begin + 1)));
+                    map.emplace(index, header);
+                };
+                for (const cstring &header : header_info.all_headers) {
+                    if_header_contains_substring_emplace_in_map(header, lhs_header,
+                                                                lhs_index_to_header_stack_element);
+                    if_header_contains_substring_emplace_in_map(header, rhs_header,
+                                                                rhs_index_to_header_stack_element);
+                }
+                auto lhs_slice = primitive->operands[0]->to<IR::Slice>();
+                auto rhs_slice = primitive->operands[1]->to<IR::Slice>();
+                int shift_amount = rhs_slice->getH() - lhs_slice->getH();
+                auto is_push_front = [&shift_amount]() { return shift_amount > 0; };
+                auto is_pop_front = [&shift_amount]() { return shift_amount < 0; };
+                auto is_assignment = [&shift_amount]() { return shift_amount == 0; };
+                if (is_push_front()) {
+                    for (const auto& [index, element] : lhs_index_to_header_stack_element) {
+                        if (index < shift_amount) {
+                            set_valids.emplace(element, ACTIVE);
+                        } else if (rhs_index_to_header_stack_element.count(index - shift_amount)) {
+                            const cstring &rhs_element =
+                                rhs_index_to_header_stack_element.at(index - shift_amount);
+                            auto rhs_state = get_header_state(rhs_element);
+                            if (rhs_state == INACTIVE)
+                                set_invalids.insert(element);
+                            else
+                                set_valids.emplace(element, rhs_state);
+                        }
+                    }
+                } else if (is_pop_front()) {
+                    for (const auto& [index, element] : lhs_index_to_header_stack_element) {
+                        int size = lhs_index_to_header_stack_element.size();
+                        if (index > (size - 1) + shift_amount) {
+                            set_invalids.emplace(element);
+                        } else if (rhs_index_to_header_stack_element.count(index - shift_amount)) {
+                            const cstring &rhs_element =
+                                rhs_index_to_header_stack_element.at(index - shift_amount);
+                            auto rhs_state = get_header_state(rhs_element);
+                            if (rhs_state == INACTIVE)
+                                set_invalids.insert(element);
+                            else
+                                set_valids.emplace(element, rhs_state);
+                        }
+                    }
+                } else if (is_assignment()) {
+                    for (const auto& [index, element] : lhs_index_to_header_stack_element) {
+                        if (rhs_index_to_header_stack_element.count(index)) {
+                            const cstring &rhs_element =
+                                rhs_index_to_header_stack_element.at(index);
+                            auto rhs_state = get_header_state(rhs_element);
+                            if (rhs_state == INACTIVE)
+                                set_invalids.insert(element);
+                            else
+                                set_valids.emplace(element, rhs_state);
+                        }
+                    }
+                }
+                continue;
+            }
+
+            auto rhs_state = get_header_state(rhs_header);
+            if (rhs_state == INACTIVE)
+                set_invalids.insert(lhs_header);
+            else
+                set_valids.emplace(lhs_header, rhs_state);
+        }
     }
 
     for (const auto& header : set_invalids)
         process_set_invalid(header);
 
     ordered_set<std::pair<cstring, cstring>> mutexes_removed;
-    for (const auto& header : set_valids) {
-        auto removals = process_set_valid(header);
+    for (const auto& [header, state] : set_valids) {
+        auto removals = process_set_valid(header, state);
         mutexes_removed.insert(removals.begin(), removals.end());
     }
 
@@ -930,7 +1022,7 @@ bool ExcludeMAUNotMutexHeaders::is_header_pov_lhs_constant_rhs_operation_relatio
         const IR::Operation_Relation* op_rel) {
     BUG_CHECK(op_rel, "Parameter passed to function was not an operation relation.");
 
-    const auto* field = phv.field(op_rel->left);
+    const PHV::Field* field = get_phv_field(op_rel->left);
     const auto* constant = op_rel->right->to<IR::Constant>();
     return field && field->pov && constant && (constant->value == 1 || constant->value == 0);
 }
@@ -946,15 +1038,9 @@ boost::optional<std::pair<cstring, HeaderState>>
     if (!op_rel || !is_header_pov_lhs_constant_rhs_operation_relation(op_rel))
         return boost::optional<std::pair<cstring, HeaderState>>();
 
-    const auto* field = phv.field(op_rel->left);
+    const PHV::Field* field = get_phv_field(op_rel->left);
     const auto* constant = op_rel->right->to<IR::Constant>();
-    cstring header = get_header_name(field);
-    // Special case for header stack POV
-    if (auto* alias_slice = op_rel->left->to<IR::BFN::AliasSlice>()) {
-        auto source = alias_slice->source;
-        field = phv.field(source);
-        header = get_header_name(field);
-    }
+    cstring header = field->header();
 
     const auto* neq = op_rel->to<IR::Neq>();
     const auto* equ = op_rel->to<IR::Equ>();
@@ -1143,8 +1229,9 @@ void ExcludeMAUNotMutexHeaders::record_modified_where(int i, int j) {
 }
 
 ordered_set<std::pair<cstring, cstring>> ExcludeMAUNotMutexHeaders::process_set_valid(
-        cstring header) {
-    LOG_DEBUG7("process_set_valid(" << header << ")");
+        cstring header, HeaderState state) {
+    LOG_DEBUG7("process_set_valid(" << header << ", "
+               << get_header_state_as_cstring(state) << ")");
     auto i = header_info.get_header_index(header);
     bitvec mutex_headers = parser_mutex_headers[i];
 
@@ -1159,8 +1246,8 @@ ordered_set<std::pair<cstring, cstring>> ExcludeMAUNotMutexHeaders::process_set_
 
     ordered_set<std::pair<cstring, cstring>> mutexes_removed;
     for (const auto& j : mutex_headers) {
-        auto state = get_header_state(j);
-        if (state == ACTIVE || state == UNKNOWN) {
+        auto mutex_header_state = get_header_state(j);
+        if (mutex_header_state == ACTIVE || mutex_header_state == UNKNOWN) {
             mutex_headers_modified(i, j) = true;
             record_modified_where(i, j);
             cstring mutex_header = header_info.get_header_name(j);
@@ -1169,7 +1256,7 @@ ordered_set<std::pair<cstring, cstring>> ExcludeMAUNotMutexHeaders::process_set_
     }
     clear_row(header, extracted_headers);
     clear_column(header, not_extracted_headers);
-    set_header_state(header, ACTIVE);
+    set_header_state(header, state);
 
     return mutexes_removed;
 }
@@ -1196,6 +1283,16 @@ void ExcludeMAUNotMutexHeaders::process_is_valid(cstring header) {
         set_header_state(j, INACTIVE);
     }
     set_header_state(header, ACTIVE);
+}
+
+const PHV::Field* ExcludeMAUNotMutexHeaders::get_phv_field(const IR::Expression* expression) {
+    const PHV::Field* field = phv.field(expression);
+    // Special case for header stacks
+    if (const IR::BFN::AliasSlice* alias_slice = expression->to<IR::BFN::AliasSlice>()) {
+        const IR::Expression* source = alias_slice->source;
+        field = phv.field(source);
+    }
+    return field;
 }
 
 HeaderState ExcludeMAUNotMutexHeaders::get_header_state(size_t header_index) {

@@ -306,7 +306,7 @@ class ExcludeMAUNotMutexHeaders : public MauInspector,
     const IR::MAU::Table* visiting = nullptr;
     cstring gress;
 
-    cstring get_header_name(const PHV::Field* field) { return field->header(); }
+    const PHV::Field* get_phv_field(const IR::Expression* expression);
     HeaderState get_header_state(size_t header_index);
     HeaderState get_header_state(cstring header_name);
     void print_active_headers();
@@ -332,7 +332,7 @@ class ExcludeMAUNotMutexHeaders : public MauInspector,
     bool is_set_header_pov(const IR::MAU::Primitive* primitive);
     bool is_set_header_valid(const IR::MAU::Primitive* primitive);
     bool is_set_header_invalid(const IR::MAU::Primitive* primitive);
-
+    bool is_set_header_pov_to_other_header_pov(const IR::MAU::Primitive *primitive);
     void init_active_headers();
     void init_extracted_headers();
     void init_not_extracted_headers();
@@ -350,7 +350,8 @@ class ExcludeMAUNotMutexHeaders : public MauInspector,
     void clear_column(cstring header, ordered_map<cstring, bitvec>& bit_matrix);
     void process_set_invalid(cstring header);
     void record_modified_where(int i, int j);
-    ordered_set<std::pair<cstring, cstring>> process_set_valid(cstring header);
+    ordered_set<std::pair<cstring, cstring>> process_set_valid(cstring header,
+                                                               HeaderState state = ACTIVE);
     void process_is_invalid(cstring header);
     void process_is_valid(cstring header);
 
