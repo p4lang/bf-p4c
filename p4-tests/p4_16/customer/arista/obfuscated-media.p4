@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MEDIA=1 -Ibf_arista_switch_media/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_media --bf-rt-schema bf_arista_switch_media/context/bf-rt.json
-// p4c 9.7.4 (SHA: 8e6e85a)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MEDIA=1 -Ibf_arista_switch_media/includes -I/usr/share/p4c-bleeding/p4include  --skip-precleaner -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_media --bf-rt-schema bf_arista_switch_media/context/bf-rt.json
+// p4c 9.11.2 (SHA: 4328321)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -359,6 +359,9 @@ header Wallula {
 
 header Fairhaven {
     bit<8> Woodfield;
+}
+
+header Clintwood {
 }
 
 header LasVegas {
@@ -1184,6 +1187,7 @@ struct Sunbury {
     Jenners     BigPoint;
     Jenners     Tenstrike;
     McFaddin    Vinita;
+    Clintwood   Thalia;
 }
 
 struct Castle {
@@ -1426,8 +1430,16 @@ parser Boring(packet_in Nucla, out Fishers Vanoss, out Sunbury Potosi, out ingre
             Pacifica: Bernard;
             19w2552 &&& 19w0x7fff8: Owanka;
             19w2560 &&& 19w0x7fff8: Owanka;
+            19w30272 &&& 19w0x7fff8: Trammel;
+            19w38272 &&& 19w0x7fff8: Trammel;
             default: accept;
         }
+    }
+    state Trammel {
+        {
+            Vanoss.Thalia.setValid();
+        }
+        transition accept;
     }
     state Bernard {
         Nucla.extract<Laxon>(Vanoss.Sneads);
@@ -4098,6 +4110,7 @@ control Lorane(inout Fishers Vanoss, inout Sunbury Potosi, in ingress_intrinsic_
             Potosi.Hookdale.Ledoux       : ternary @name("Hookdale.Ledoux") ;
             Potosi.Sedan.Raiford         : ternary @name("Sedan.Raiford") ;
             Vanoss.Coryville[0].isValid(): ternary @name("Coryville[0]") ;
+            Vanoss.Thalia.isValid()      : ternary @name("Thalia") ;
         }
         default_action = Terry(5w0);
         size = 512;

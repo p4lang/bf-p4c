@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT=1 -Ibf_arista_switch_nat/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'   -Xp4c='--traffic-limit 95 --excludeBackendPasses=ResetInvalidatedChecksumHeaders' --target tofino-tna --o bf_arista_switch_nat --bf-rt-schema bf_arista_switch_nat/context/bf-rt.json
-// p4c 9.7.4 (SHA: 8e6e85a)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT=1 -Ibf_arista_switch_nat/includes -I/usr/share/p4c-bleeding/p4include  --skip-precleaner -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'   -Xp4c='--traffic-limit 95 --excludeBackendPasses=ResetInvalidatedChecksumHeaders' --target tofino-tna --o bf_arista_switch_nat --bf-rt-schema bf_arista_switch_nat/context/bf-rt.json
+// p4c 9.11.2 (SHA: 4328321)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -342,6 +342,9 @@ header Turkey {
 
 header Palmhurst {
     bit<8> Comfrey;
+}
+
+header Shanghai {
 }
 
 header Kalida {
@@ -1095,6 +1098,7 @@ struct Orting {
     Sheldahl  Starkey;
     Sheldahl  Volens;
     Armstrong China;
+    Shanghai  Iroquois;
 }
 
 struct Ravinia {
@@ -1352,8 +1356,16 @@ parser Boyle(packet_in Ackerly, out Monrovia Philip, out Orting Levasy, out ingr
         transition select(Philip.Wabbaseka.Joslin ++ Flaherty.ingress_port[2:0]) {
             Ossining: Luning;
             Moosic: Tillson;
+            19w30272 &&& 19w0x7fff8: Milnor;
+            19w38272 &&& 19w0x7fff8: Milnor;
             default: accept;
         }
+    }
+    state Milnor {
+        {
+            Philip.Iroquois.setValid();
+        }
+        transition accept;
     }
     state Potosi {
         Ackerly.extract<Provo>(Philip.Wabbaseka);
@@ -2135,9 +2147,15 @@ control Luttrell(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsi
         Sedona(Kotzebue);
         Levasy.Thawville.Rockham = (bit<1>)1w1;
     }
+    @name(".Ogunquit") action Ogunquit(bit<32> Beasley, bit<32> Kotzebue) {
+        Burmah(Beasley, Kotzebue);
+    }
     @name(".Leacock") action Leacock(bit<32> Beasley, bit<16> Garibaldi, bit<32> Kotzebue) {
         Levasy.Thawville.Ipava = Garibaldi;
         Burmah(Beasley, Kotzebue);
+    }
+    @name(".Wahoo") action Wahoo(bit<32> Beasley, bit<16> Garibaldi, bit<32> Kotzebue) {
+        Leacock(Beasley, Garibaldi, Kotzebue);
     }
     @name(".Plano") action Plano(bit<32> Beasley, bit<32> Commack, bit<32> Leoma) {
         Levasy.Harriet.Beasley = Beasley;
@@ -2213,9 +2231,9 @@ control Luttrell(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsi
     }
     @disable_atomic_modify(1) @name(".Standard") table Standard {
         actions = {
-            Burmah();
-            Leacock();
-            Exeter();
+            Ogunquit();
+            Wahoo();
+            @defaultonly Exeter();
         }
         key = {
             Levasy.Thawville.Orrick : exact @name("Thawville.Orrick") ;
@@ -2496,18 +2514,30 @@ control Faulkton(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsi
         Levasy.Pinetop.Gotham = (bit<2>)2w0;
         Levasy.Pinetop.Osyka = (bit<14>)Osyka;
     }
+    @name(".Tennessee") action Tennessee(bit<32> Commack, bit<32> Kotzebue, bit<32> Osyka) {
+        Gilman(Commack, Kotzebue, Osyka);
+    }
     @name(".Kalaloch") action Kalaloch(bit<32> Commack, bit<32> Kotzebue, bit<32> Penzance) {
         Frontenac(Commack, Kotzebue);
         Levasy.Pinetop.Gotham = (bit<2>)2w1;
         Levasy.Pinetop.Osyka = (bit<14>)Penzance;
     }
+    @name(".Brazil") action Brazil(bit<32> Commack, bit<32> Kotzebue, bit<32> Penzance) {
+        Kalaloch(Commack, Kotzebue, Penzance);
+    }
     @name(".Papeton") action Papeton(bit<32> Commack, bit<16> Garibaldi, bit<32> Kotzebue, bit<32> Osyka) {
         Levasy.Thawville.McCammon = Garibaldi;
         Gilman(Commack, Kotzebue, Osyka);
     }
+    @name(".Cistern") action Cistern(bit<32> Commack, bit<16> Garibaldi, bit<32> Kotzebue, bit<32> Osyka) {
+        Papeton(Commack, Garibaldi, Kotzebue, Osyka);
+    }
     @name(".Yatesboro") action Yatesboro(bit<32> Commack, bit<16> Garibaldi, bit<32> Kotzebue, bit<32> Penzance) {
         Levasy.Thawville.McCammon = Garibaldi;
         Kalaloch(Commack, Kotzebue, Penzance);
+    }
+    @name(".Newkirk") action Newkirk(bit<32> Commack, bit<16> Garibaldi, bit<32> Kotzebue, bit<32> Penzance) {
+        Yatesboro(Commack, Garibaldi, Kotzebue, Penzance);
     }
     @name(".Philmont") action Philmont() {
         Levasy.Thawville.Rockham = (bit<1>)1w0;
@@ -2582,11 +2612,11 @@ control Faulkton(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsi
     }
     @disable_atomic_modify(1) @name(".Jemison") table Jemison {
         actions = {
-            Gilman();
-            Papeton();
-            Kalaloch();
-            Yatesboro();
-            Exeter();
+            Tennessee();
+            Cistern();
+            Brazil();
+            Newkirk();
+            @defaultonly Exeter();
         }
         key = {
             Levasy.Thawville.Hematite: exact @name("Thawville.Hematite") ;
@@ -4363,6 +4393,7 @@ control Bodcaw(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsic_
             Levasy.Bratt.StarLake      : ternary @name("Bratt.StarLake") ;
             Levasy.Thawville.Rudolph   : ternary @name("Thawville.Rudolph") ;
             Philip.RichBar[0].isValid(): ternary @name("RichBar[0]") ;
+            Philip.Iroquois.isValid()  : ternary @name("Iroquois") ;
         }
         default_action = Dresden(5w0);
         size = 512;

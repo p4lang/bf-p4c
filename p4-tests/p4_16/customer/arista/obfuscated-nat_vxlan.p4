@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_VXLAN=1 -Ibf_arista_switch_nat_vxlan/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_nat_vxlan --bf-rt-schema bf_arista_switch_nat_vxlan/context/bf-rt.json
-// p4c 9.7.4 (SHA: 8e6e85a)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_VXLAN=1 -Ibf_arista_switch_nat_vxlan/includes -I/usr/share/p4c-bleeding/p4include  --skip-precleaner -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_nat_vxlan --bf-rt-schema bf_arista_switch_nat_vxlan/context/bf-rt.json
+// p4c 9.11.2 (SHA: 4328321)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -459,6 +459,9 @@ header Antlers {
 
 header Solomon {
     bit<8> Garcia;
+}
+
+header Laramie {
 }
 
 header Coalwood {
@@ -1223,6 +1226,7 @@ struct Wanamassa {
     Delavan     GunnCity;
     Delavan     Oneonta;
     Kingsgate   Medulla;
+    Laramie     Pinebluff;
 }
 
 struct Sneads {
@@ -1721,6 +1725,7 @@ control Algonquin(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intri
     }
     @name(".Beatrice") action Beatrice(bit<32> Morrow) {
     }
+    @name(".Fentress") DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) Fentress;
     @name(".Elkton") action Elkton(bit<12> Penzance) {
         Aguila.Frederika.Kaaawa = Penzance;
     }
@@ -1740,16 +1745,32 @@ control Algonquin(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intri
     @name(".Laclede") action Laclede(bit<32> Provo, bit<32> Morrow, bit<32> Mickleton) {
         Weathers(Provo, Morrow);
     }
+    @name(".Molino") action Molino(bit<32> Provo, bit<32> Morrow, bit<32> Mickleton) {
+        Laclede(Provo, Morrow, Mickleton);
+        Fentress.count();
+    }
     @name(".RedLake") action RedLake(bit<32> Provo, bit<32> Morrow, bit<32> Earlham) {
         Weathers(Provo, Morrow);
+    }
+    @name(".Ossineke") action Ossineke(bit<32> Provo, bit<32> Morrow, bit<32> Earlham) {
+        RedLake(Provo, Morrow, Earlham);
+        Fentress.count();
     }
     @name(".Ruston") action Ruston(bit<32> Provo, bit<16> Palmhurst, bit<32> Morrow, bit<32> Mickleton) {
         Aguila.Frederika.Pathfork = Palmhurst;
         Laclede(Provo, Morrow, Mickleton);
     }
+    @name(".Meridean") action Meridean(bit<32> Provo, bit<16> Palmhurst, bit<32> Morrow, bit<32> Mickleton) {
+        Ruston(Provo, Palmhurst, Morrow, Mickleton);
+        Fentress.count();
+    }
     @name(".LaPlant") action LaPlant(bit<32> Provo, bit<16> Palmhurst, bit<32> Morrow, bit<32> Earlham) {
         Aguila.Frederika.Pathfork = Palmhurst;
         RedLake(Provo, Morrow, Earlham);
+    }
+    @name(".Tinaja") action Tinaja(bit<32> Provo, bit<16> Palmhurst, bit<32> Morrow, bit<32> Earlham) {
+        LaPlant(Provo, Palmhurst, Morrow, Earlham);
+        Fentress.count();
     }
     @disable_atomic_modify(1) @name(".DeepGap") table DeepGap {
         actions = {
@@ -1781,11 +1802,11 @@ control Algonquin(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intri
     }
     @disable_atomic_modify(1) @name(".Rives") table Rives {
         actions = {
-            Laclede();
-            Ruston();
-            RedLake();
-            LaPlant();
-            Potosi();
+            Molino();
+            Meridean();
+            Ossineke();
+            Tinaja();
+            @defaultonly Potosi();
         }
         key = {
             Aguila.Frederika.Kaaawa  : exact @name("Frederika.Kaaawa") ;
@@ -1794,6 +1815,7 @@ control Algonquin(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intri
             Aguila.Frederika.SomesBar: exact @name("Frederika.SomesBar") ;
         }
         const default_action = Potosi();
+        counters = Fentress;
         size = 12288;
     }
     @idletime_precision(1) @disable_atomic_modify(1) @name(".Sedona") table Sedona {
@@ -3235,6 +3257,7 @@ control Nowlin(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrinsi
             Aguila.Sunbury.Woodfield  : ternary @name("Sunbury.Woodfield") ;
             Aguila.Frederika.Barrow   : ternary @name("Frederika.Barrow") ;
             Castle.Levasy[0].isValid(): ternary @name("Levasy[0]") ;
+            Castle.Pinebluff.isValid(): ternary @name("Pinebluff") ;
         }
         default_action = Amsterdam(5w0);
         size = 512;
@@ -4717,14 +4740,23 @@ control Valmont(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrins
     }
     @name(".Beatrice") action Beatrice(bit<32> Morrow) {
     }
+    @name(".Dovray") DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) Dovray;
     @name(".Millican") action Millican(bit<32> Denhoff, bit<32> Morrow) {
         Aguila.Saugatuck.Denhoff = Denhoff;
         Beatrice(Morrow);
         Aguila.Frederika.Raiford = (bit<1>)1w1;
     }
+    @name(".Ellinger") action Ellinger(bit<32> Denhoff, bit<32> Morrow) {
+        Millican(Denhoff, Morrow);
+        Dovray.count();
+    }
     @name(".Decorah") action Decorah(bit<32> Denhoff, bit<16> Palmhurst, bit<32> Morrow) {
         Aguila.Frederika.Norland = Palmhurst;
         Millican(Denhoff, Morrow);
+    }
+    @name(".BoyRiver") action BoyRiver(bit<32> Denhoff, bit<16> Palmhurst, bit<32> Morrow) {
+        Decorah(Denhoff, Palmhurst, Morrow);
+        Dovray.count();
     }
     @name(".Waretown") action Waretown() {
         Aguila.Frederika.Richvale = Aguila.Saugatuck.Provo;
@@ -4750,9 +4782,9 @@ control Valmont(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrins
     }
     @disable_atomic_modify(1) @name(".Blunt") table Blunt {
         actions = {
-            Millican();
-            Decorah();
-            Potosi();
+            Ellinger();
+            BoyRiver();
+            @defaultonly Potosi();
         }
         key = {
             Aguila.Frederika.Gause    : exact @name("Frederika.Gause") ;
@@ -4761,6 +4793,7 @@ control Valmont(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrins
             Aguila.Frederika.Vergennes: exact @name("Frederika.Vergennes") ;
         }
         const default_action = Potosi();
+        counters = Dovray;
         size = 12288;
     }
     @disable_atomic_modify(1) @name(".Ludowici") table Ludowici {
@@ -5045,8 +5078,13 @@ parser Calverton(packet_in Longport, out Westoak Castle, out Wanamassa Aguila, o
         transition select(Castle.Boyle.Fairland ++ RichBar.ingress_port[2:0]) {
             Sargent: Neuse;
             Salamonia: Separ;
+            19w30272 &&& 19w0x7fff8: Waukegan;
+            19w38272 &&& 19w0x7fff8: Waukegan;
             default: accept;
         }
+    }
+    state Waukegan {
+        transition accept;
     }
     state Manakin {
         Longport.extract<Tenino>(Castle.Boyle);
@@ -6271,6 +6309,8 @@ parser Reidville(packet_in Longport, out Westoak Castle, out Wanamassa Aguila, o
         Aguila.Frederika.Fairland = Castle.Boyle.Fairland;
         Aguila.Frederika.Pridgen = Castle.Boyle.Pridgen;
         transition select(Castle.Boyle.Fairland) {
+            16w3784: Waukegan;
+            16w4784: Waukegan;
             default: accept;
         }
     }
@@ -6285,8 +6325,14 @@ parser Reidville(packet_in Longport, out Westoak Castle, out Wanamassa Aguila, o
         Aguila.Frederika.Fairland = Castle.Boyle.Fairland;
         Aguila.Frederika.Pridgen = Castle.Boyle.Pridgen;
         transition select(Castle.Boyle.Fairland) {
+            16w3784: Waukegan;
+            16w4784: Waukegan;
             default: accept;
         }
+    }
+    state Waukegan {
+        Castle.Pinebluff.setValid();
+        transition accept;
     }
     state Roxobel {
         Aguila.Peoria.Weatherby = (bit<3>)3w6;

@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_SMALL_SCALE_TEST=1 -Ibf_arista_switch_small_scale_test/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_small_scale_test --bf-rt-schema bf_arista_switch_small_scale_test/context/bf-rt.json
-// p4c 9.7.4 (SHA: 8e6e85a)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_SMALL_SCALE_TEST=1 -Ibf_arista_switch_small_scale_test/includes -I/usr/share/p4c-bleeding/p4include  --skip-precleaner -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_small_scale_test --bf-rt-schema bf_arista_switch_small_scale_test/context/bf-rt.json
+// p4c 9.11.2 (SHA: 4328321)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -311,6 +311,9 @@ header Steger {
 
 header Findlay {
     bit<8> Dowell;
+}
+
+header Tatum {
 }
 
 header Glendevey {
@@ -1044,6 +1047,7 @@ struct Sequim {
     Fairmount    Arapahoe;
     Fairmount    Parkway;
     Geismar      Saltair;
+    Tatum        Croft;
 }
 
 struct Palouse {
@@ -1268,8 +1272,16 @@ parser Harding(packet_in Nephi, out Milano Olmitz, out Sequim Baker, out ingress
         transition select(Olmitz.Saugatuck.Naruna ++ Yorkshire.ingress_port[2:0]) {
             Swanlake: Dwight;
             Rochert: Noyack;
+            19w30272 &&& 19w0x7fff8: Oxnard;
+            19w38272 &&& 19w0x7fff8: Oxnard;
             default: accept;
         }
+    }
+    state Oxnard {
+        {
+            Olmitz.Croft.setValid();
+        }
+        transition accept;
     }
     state Ravinia {
         Nephi.extract<Ramapo>(Olmitz.Saugatuck);
@@ -3690,6 +3702,7 @@ control Capitola(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_m
             Baker.Earling.Chloride   : ternary @name("Earling.Chloride") ;
             Baker.Empire.LakeLure    : ternary @name("Empire.LakeLure") ;
             Olmitz.Kinde[0].isValid(): ternary @name("Kinde[0]") ;
+            Olmitz.Croft.isValid()   : ternary @name("Croft") ;
         }
         default_action = Milltown(5w0);
         size = 512;
@@ -4038,6 +4051,11 @@ control Mantee(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_meta
             Hartwell.apply();
         }
         Ranier.apply();
+    }
+}
+
+control McKibben(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_metadata_t Humeston, in egress_intrinsic_metadata_from_parser_t Basye, inout egress_intrinsic_metadata_for_deparser_t Woolwine, inout egress_intrinsic_metadata_for_output_port_t Agawam) {
+    apply {
     }
 }
 
@@ -5682,6 +5700,7 @@ control Powhatan(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_me
     @name(".Seaford") Bluff() Seaford;
     @name(".Craigtown") Dougherty() Craigtown;
     @name(".Panola") Devola() Panola;
+    @name(".Murdock") McKibben() Murdock;
     apply {
         Denning.apply(Olmitz, Baker, Humeston, Basye, Woolwine, Agawam);
         if (!Olmitz.Biggers.isValid() && Olmitz.Dacono.isValid()) {
@@ -5721,6 +5740,7 @@ control Powhatan(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_me
             if (Baker.Earling.Goulds != 3w2) {
                 Panola.apply(Olmitz, Baker, Humeston, Basye, Woolwine, Agawam);
             }
+            Murdock.apply(Olmitz, Baker, Humeston, Basye, Woolwine, Agawam);
         } else {
             if (Olmitz.Dacono.isValid() == false) {
                 Stratton.apply(Olmitz, Baker, Humeston, Basye, Woolwine, Agawam);

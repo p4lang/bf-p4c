@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_BAREMETAL=1 -Ibf_arista_switch_baremetal/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_baremetal --bf-rt-schema bf_arista_switch_baremetal/context/bf-rt.json
-// p4c 9.7.4 (SHA: 8e6e85a)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_BAREMETAL=1 -Ibf_arista_switch_baremetal/includes -I/usr/share/p4c-bleeding/p4include  --skip-precleaner -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_baremetal --bf-rt-schema bf_arista_switch_baremetal/context/bf-rt.json
+// p4c 9.11.2 (SHA: 4328321)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -369,6 +369,9 @@ header Turkey {
 
 header Palmhurst {
     bit<8> Comfrey;
+}
+
+header Senatobia {
 }
 
 header Kalida {
@@ -1119,6 +1122,7 @@ struct WebbCity {
     Sheldahl  Ruffin;
     Sheldahl  Rochert;
     Pelland   Carlsbad;
+    Senatobia Danforth;
 }
 
 struct Swanlake {
@@ -1409,8 +1413,16 @@ parser Dwight(packet_in RockHill, out Frederika Westoak, out WebbCity Lefor, out
         transition select(Westoak.Olmitz.Joslin ++ Milano.ingress_port[2:0]) {
             Larwill: Tenstrike;
             Indios: Crown;
+            19w30272 &&& 19w0x7fff8: Opelika;
+            19w38272 &&& 19w0x7fff8: Opelika;
             default: accept;
         }
+    }
+    state Opelika {
+        {
+            Westoak.Danforth.setValid();
+        }
+        transition accept;
     }
     state Goodlett {
         RockHill.extract<Provo>(Westoak.Olmitz);
@@ -4334,6 +4346,7 @@ control Charters(inout Frederika Westoak, inout WebbCity Lefor, in ingress_intri
             Lefor.Picabo.StarLake       : ternary @name("Picabo.StarLake") ;
             Lefor.Ekwok.Rockham         : ternary @name("Ekwok.Rockham") ;
             Westoak.Parkway[0].isValid(): ternary @name("Parkway[0]") ;
+            Westoak.Danforth.isValid()  : ternary @name("Danforth") ;
         }
         default_action = Weimar(5w0);
         size = 512;
@@ -4780,6 +4793,11 @@ control Almeria(inout Frederika Westoak, inout WebbCity Lefor, in egress_intrins
             DeKalb.apply();
         }
         Sultana.apply();
+    }
+}
+
+control Yemassee(inout Frederika Westoak, inout WebbCity Lefor, in egress_intrinsic_metadata_t Biggers, in egress_intrinsic_metadata_from_parser_t Waumandee, inout egress_intrinsic_metadata_for_deparser_t Nowlin, inout egress_intrinsic_metadata_for_output_port_t Sully) {
+    apply {
     }
 }
 
@@ -6587,6 +6605,7 @@ control Whitetail(inout Frederika Westoak, inout WebbCity Lefor, in egress_intri
     @name(".Kingsgate") Renfroe() Kingsgate;
     @name(".Hillister") Fittstown() Hillister;
     @name(".Camden") August() Camden;
+    @name(".Qulin") Yemassee() Qulin;
     apply {
         Pettigrew.apply(Westoak, Lefor, Biggers, Waumandee, Nowlin, Sully);
         if (!Westoak.Flaherty.isValid() && Westoak.Saugatuck.isValid()) {
@@ -6627,6 +6646,7 @@ control Whitetail(inout Frederika Westoak, inout WebbCity Lefor, in egress_intri
             if (Lefor.Picabo.Townville != 3w2) {
                 Camden.apply(Westoak, Lefor, Biggers, Waumandee, Nowlin, Sully);
             }
+            Qulin.apply(Westoak, Lefor, Biggers, Waumandee, Nowlin, Sully);
         } else {
             if (Westoak.Saugatuck.isValid() == false) {
                 Spindale.apply(Westoak, Lefor, Biggers, Waumandee, Nowlin, Sully);

@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_ROUTESCALE=1 -Ibf_arista_switch_routescale/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_routescale --bf-rt-schema bf_arista_switch_routescale/context/bf-rt.json
-// p4c 9.7.4 (SHA: 8e6e85a)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_ROUTESCALE=1 -Ibf_arista_switch_routescale/includes -I/usr/share/p4c-bleeding/p4include  --skip-precleaner -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_routescale --bf-rt-schema bf_arista_switch_routescale/context/bf-rt.json
+// p4c 9.11.2 (SHA: 4328321)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -359,6 +359,9 @@ header Comfrey {
 
 header Kalida {
     bit<8> Wallula;
+}
+
+header Gomez {
 }
 
 header Dennison {
@@ -1100,6 +1103,7 @@ struct Bratt {
     Wartburg    Larwill;
     Wartburg    Rhinebeck;
     Chloride    Chatanika;
+    Gomez       Placida;
 }
 
 struct Boyle {
@@ -1390,8 +1394,16 @@ parser GunnCity(packet_in Oneonta, out Baker Uniopolis, out Bratt Moosic, out in
         transition select(Uniopolis.Starkey.Powderly ++ Lemont.ingress_port[2:0]) {
             Tenstrike: Pimento;
             BigPoint: Hagaman;
+            19w30272 &&& 19w0x7fff8: Oketo;
+            19w38272 &&& 19w0x7fff8: Oketo;
             default: accept;
         }
+    }
+    state Oketo {
+        {
+            Uniopolis.Placida.setValid();
+        }
+        transition accept;
     }
     state Mogadore {
         Oneonta.extract<Joslin>(Uniopolis.Starkey);
@@ -4008,6 +4020,7 @@ control Elysburg(inout Baker Uniopolis, inout Bratt Moosic, in ingress_intrinsic
             Moosic.Garrison.Conner         : ternary @name("Garrison.Conner") ;
             Moosic.Hearne.Ipava            : ternary @name("Hearne.Ipava") ;
             Uniopolis.Geistown[0].isValid(): ternary @name("Geistown[0]") ;
+            Uniopolis.Placida.isValid()    : ternary @name("Placida") ;
         }
         default_action = Bodcaw(5w0);
         size = 512;
@@ -4379,7 +4392,7 @@ control Bosco(inout Baker Uniopolis, inout Bratt Moosic, in egress_intrinsic_met
     @name(".Hughson") action Hughson() {
         Sully.drop_ctl = (bit<3>)3w7;
     }
-    @disable_atomic_modify(1) @name(".Sultana") table Sultana {
+    @disable_atomic_modify(1) @stage(8) @name(".Sultana") table Sultana {
         actions = {
             Stovall();
             BigArm();
@@ -4440,6 +4453,11 @@ control Bosco(inout Baker Uniopolis, inout Bratt Moosic, in egress_intrinsic_met
             Anthony.apply();
         }
         DeKalb.apply();
+    }
+}
+
+control Lovilia(inout Baker Uniopolis, inout Bratt Moosic, in egress_intrinsic_metadata_t Funston, in egress_intrinsic_metadata_from_parser_t Nowlin, inout egress_intrinsic_metadata_for_deparser_t Sully, inout egress_intrinsic_metadata_for_output_port_t Ragley) {
+    apply {
     }
 }
 
@@ -6254,6 +6272,7 @@ control Oxnard(inout Baker Uniopolis, inout Bratt Moosic, in egress_intrinsic_me
     @name(".Seabrook") DeerPark() Seabrook;
     @name(".Devore") Sodaville() Devore;
     @name(".Melvina") Minetto() Melvina;
+    @name(".Simla") Lovilia() Simla;
     apply {
         Alderson.apply(Uniopolis, Moosic, Funston, Nowlin, Sully, Ragley);
         if (!Uniopolis.Thurmond.isValid() && Uniopolis.Glenoma.isValid()) {
@@ -6294,6 +6313,7 @@ control Oxnard(inout Baker Uniopolis, inout Bratt Moosic, in egress_intrinsic_me
             if (Moosic.Garrison.FortHunt != 3w2) {
                 Melvina.apply(Uniopolis, Moosic, Funston, Nowlin, Sully, Ragley);
             }
+            Simla.apply(Uniopolis, Moosic, Funston, Nowlin, Sully, Ragley);
         } else {
             if (Uniopolis.Glenoma.isValid() == false) {
                 Hartford.apply(Uniopolis, Moosic, Funston, Nowlin, Sully, Ragley);

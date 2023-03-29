@@ -179,12 +179,6 @@ def main():
 
     tests = prep_test_matrix(args.tests_csv, args.out_dir, ts)
     print('='*120)
-    print('Running Glass tests: ')
-    print('='*120)
-    glass_res, glass_failed = run_test_matrix('Glass', config.GLASS_TEST_CMD)
-    print('Completed Glass tests: ' + str(glass_res))
-    print('='*120 + '\n\n')
-    print('='*120)
     print('Running P4C tests: ')
     print('='*120)
     p4c_res, p4c_failed = run_test_matrix('P4C', config.P4C_TEST_CMD)

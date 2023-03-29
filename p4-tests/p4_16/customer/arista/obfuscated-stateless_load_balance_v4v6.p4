@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_STATELESS_LOAD_BALANCE_V4V6=1 -Ibf_arista_switch_stateless_load_balance_v4v6/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_stateless_load_balance_v4v6 --bf-rt-schema bf_arista_switch_stateless_load_balance_v4v6/context/bf-rt.json
-// p4c 9.7.4 (SHA: 8e6e85a)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_STATELESS_LOAD_BALANCE_V4V6=1 -Ibf_arista_switch_stateless_load_balance_v4v6/includes -I/usr/share/p4c-bleeding/p4include  --skip-precleaner -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_stateless_load_balance_v4v6 --bf-rt-schema bf_arista_switch_stateless_load_balance_v4v6/context/bf-rt.json
+// p4c 9.11.2 (SHA: 4328321)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -344,6 +344,9 @@ header Dowell {
 
 header Littleton {
     bit<8> Killen;
+}
+
+header Perkasie {
 }
 
 header Turkey {
@@ -1139,6 +1142,7 @@ struct Jayton {
     RockPort  Volens;
     RockPort  Ravinia;
     Alderson  Grovetown;
+    Perkasie  Tusayan;
 }
 
 struct Virgilina {
@@ -1407,8 +1411,16 @@ parser Ackerly(packet_in Noyack, out Hookdale Levasy, out Jayton Indios, out ing
         transition select(Levasy.Jerico.Ankeny ++ PeaRidge.ingress_port[2:0]) {
             Nason: Crown;
             Ossining: Pimento;
+            19w30272 &&& 19w0x7fff8: Nicolaus;
+            19w38272 &&& 19w0x7fff8: Nicolaus;
             default: accept;
         }
+    }
+    state Nicolaus {
+        {
+            Levasy.Tusayan.setValid();
+        }
+        transition accept;
     }
     state Mattapex {
         Indios.Cotter.Galloway = (Noyack.lookahead<bit<192>>())[15:0];
@@ -4038,6 +4050,7 @@ control Ranier(inout Hookdale Levasy, inout Jayton Indios, in ingress_intrinsic_
             Indios.Yorkshire.Cornell  : ternary @name("Yorkshire.Cornell") ;
             Indios.Lookeba.Ayden      : ternary @name("Lookeba.Ayden") ;
             Levasy.Olmitz[0].isValid(): ternary @name("Olmitz[0]") ;
+            Levasy.Tusayan.isValid()  : ternary @name("Tusayan") ;
         }
         default_action = Cidra(5w0);
         size = 512;

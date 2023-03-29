@@ -1,5 +1,5 @@
-// /usr/bin/p4c-stable/bin/p4c-bfn  -DPROFILE_HYBRID_DEFAULT_TOFINO2=1 -Ibf_arista_switch_hybrid_default_tofino2/includes -I/usr/share/p4c-stable/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino2-t2na --o bf_arista_switch_hybrid_default_tofino2 --bf-rt-schema bf_arista_switch_hybrid_default_tofino2/context/bf-rt.json
-// p4c 9.7.3 (SHA: dc177f3)
+// /usr/bin/p4c-stable/bin/p4c-bfn  -DPROFILE_HYBRID_DEFAULT_TOFINO2=1 -Ibf_arista_switch_hybrid_default_tofino2/includes -I/usr/share/p4c-stable/p4include -DTOFINO2=1 --skip-precleaner -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino2-t2na --o bf_arista_switch_hybrid_default_tofino2 --bf-rt-schema bf_arista_switch_hybrid_default_tofino2/context/bf-rt.json
+// p4c 9.7.4 (SHA: 8e6e85a)
 
 #include <core.p4>
 #include <tofino2_specs.p4>
@@ -370,6 +370,9 @@ header Palmhurst {
 
 header Comfrey {
     bit<8> Kalida;
+}
+
+header Gomez {
 }
 
 header Wallula {
@@ -1111,6 +1114,7 @@ struct Harriet {
     Heppner    Larwill;
     Palmhurst  Rhinebeck;
     Chloride   Chatanika;
+    Gomez      Placida;
 }
 
 struct Boyle {
@@ -1357,8 +1361,16 @@ parser GunnCity(packet_in Oneonta, out Olmitz Uniopolis, out Harriet Moosic, out
         transition select(Uniopolis.Lefor.Weyauwega ++ Sedan.ingress_port[2:0]) {
             Castle: Boring;
             Tenstrike: Forepaugh;
+            19w30272 &&& 19w0x7fff8: Oketo;
+            19w38272 &&& 19w0x7fff8: Oketo;
             default: accept;
         }
+    }
+    state Oketo {
+        {
+            Uniopolis.Placida.setValid();
+        }
+        transition accept;
     }
     state Flippen {
         Oneonta.extract<Whitten>(Uniopolis.Lefor);
@@ -3870,6 +3882,7 @@ control Fosston(inout Olmitz Uniopolis, inout Harriet Moosic, in ingress_intrins
             Moosic.Moultrie.Linden      : ternary @name("Moultrie.Linden") ;
             Moosic.Bratt.Hematite       : ternary @name("Bratt.Hematite") ;
             Uniopolis.Lindy[0].isValid(): ternary @name("Lindy[0]") ;
+            Uniopolis.Placida.isValid() : ternary @name("Placida") ;
         }
         default_action = Keller(7w0);
         size = 512;
@@ -4317,6 +4330,11 @@ control Rotonda(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrinsi
             Perryton.apply();
         }
         Cisne.apply();
+    }
+}
+
+control Lovilia(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrinsic_metadata_t Lemont, in egress_intrinsic_metadata_from_parser_t Langford, inout egress_intrinsic_metadata_for_deparser_t Cowley, inout egress_intrinsic_metadata_for_output_port_t Lackey) {
+    apply {
     }
 }
 
@@ -6093,6 +6111,11 @@ control Tatum(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrinsic_
         Uniopolis.Lauada.Glendevey = (bit<16>)16w0;
         Uniopolis.Lauada.Exton = (bit<16>)16w0xc000;
     }
+    @name(".Simla") action Simla(bit<2> StarLake) {
+        Croft(StarLake);
+        Uniopolis.Geistown.Killen = (bit<24>)24w0xbfbfbf;
+        Uniopolis.Geistown.Turkey = (bit<24>)24w0xbfbfbf;
+    }
     @name(".Oxnard") action Oxnard(bit<24> Aguada, bit<24> Brush) {
         Uniopolis.Harding.Higginson = Aguada;
         Uniopolis.Harding.Oriskany = Brush;
@@ -6106,6 +6129,7 @@ control Tatum(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrinsic_
     @disable_atomic_modify(1) @name(".Kinsley") table Kinsley {
         actions = {
             @tableonly Croft();
+            @tableonly Simla();
             @defaultonly Oxnard();
             @defaultonly NoAction();
         }
@@ -6196,6 +6220,7 @@ control Tatum(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrinsic_
     @name(".Seabrook") Burmester() Seabrook;
     @name(".Devore") McCallum() Devore;
     @name(".Melvina") Turney() Melvina;
+    @name(".LaCenter") Lovilia() LaCenter;
     apply {
         Alderson.apply(Uniopolis, Moosic, Lemont, Langford, Cowley, Lackey);
         if (!Uniopolis.Lauada.isValid() && Uniopolis.Thurmond.isValid()) {
@@ -6236,6 +6261,7 @@ control Tatum(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrinsic_
             if (Moosic.Moultrie.Vergennes != 3w2) {
                 Melvina.apply(Uniopolis, Moosic, Lemont, Langford, Cowley, Lackey);
             }
+            LaCenter.apply(Uniopolis, Moosic, Lemont, Langford, Cowley, Lackey);
         } else {
             if (Uniopolis.Thurmond.isValid() == false) {
                 Hartford.apply(Uniopolis, Moosic, Lemont, Langford, Cowley, Lackey);

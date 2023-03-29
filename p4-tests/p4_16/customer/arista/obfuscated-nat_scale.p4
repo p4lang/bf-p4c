@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_SCALE=1 -Ibf_arista_switch_nat_scale/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_nat_scale --bf-rt-schema bf_arista_switch_nat_scale/context/bf-rt.json
-// p4c 9.7.4 (SHA: 8e6e85a)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_SCALE=1 -Ibf_arista_switch_nat_scale/includes -I/usr/share/p4c-bleeding/p4include  --skip-precleaner -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_nat_scale --bf-rt-schema bf_arista_switch_nat_scale/context/bf-rt.json
+// p4c 9.11.2 (SHA: 4328321)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -460,6 +460,9 @@ header Antlers {
 
 header Solomon {
     bit<8> Garcia;
+}
+
+header Grottoes {
 }
 
 header Coalwood {
@@ -1221,6 +1224,7 @@ struct Kinde {
     Delavan     Marquand;
     Delavan     Kempton;
     Sidnaw      Nicolaus;
+    Grottoes    Dresser;
 }
 
 struct GunnCity {
@@ -3162,6 +3166,7 @@ control Newland(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intri
             Tenstrike.Saugatuck.Woodfield: ternary @name("Saugatuck.Woodfield") ;
             Tenstrike.Wanamassa.Barrow   : ternary @name("Wanamassa.Barrow") ;
             BigPoint.Fishers[0].isValid(): ternary @name("Fishers[0]") ;
+            BigPoint.Dresser.isValid()   : ternary @name("Dresser") ;
         }
         default_action = Estrella(5w0);
         size = 512;
@@ -4857,9 +4862,15 @@ control Salamonia(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_int
         Waretown(Moxley);
         Tenstrike.Wanamassa.Raiford = (bit<1>)1w1;
     }
+    @name(".Dalton") action Dalton(bit<32> Denhoff, bit<32> Moxley) {
+        Deferiet(Denhoff, Moxley);
+    }
     @name(".Wrens") action Wrens(bit<32> Denhoff, bit<16> Palmhurst, bit<32> Moxley) {
         Tenstrike.Wanamassa.Norland = Palmhurst;
         Deferiet(Denhoff, Moxley);
+    }
+    @name(".Hatteras") action Hatteras(bit<32> Denhoff, bit<16> Palmhurst, bit<32> Moxley) {
+        Wrens(Denhoff, Palmhurst, Moxley);
     }
 @pa_no_init("ingress" , "Tenstrike.Saugatuck.Murphy")
 @pa_no_init("ingress" , "Tenstrike.Saugatuck.Edwards")
@@ -4894,9 +4905,9 @@ control Salamonia(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_int
     }
     @disable_atomic_modify(1) @name(".Wibaux") table Wibaux {
         actions = {
-            Deferiet();
-            Wrens();
-            Crown();
+            Dalton();
+            Hatteras();
+            @defaultonly Crown();
         }
         key = {
             Tenstrike.Wanamassa.Gause   : exact @name("Wanamassa.Gause") ;
@@ -5219,8 +5230,13 @@ parser Pearce(packet_in Belfalls, out Skillman BigPoint, out Kinde Tenstrike, ou
         transition select(BigPoint.Rhinebeck.Fairland ++ Thurmond.ingress_port[2:0]) {
             Corder: Carrizozo;
             Statham: Dante;
+            19w30272 &&& 19w0x7fff8: LaCueva;
+            19w38272 &&& 19w0x7fff8: LaCueva;
             default: accept;
         }
+    }
+    state LaCueva {
+        transition accept;
     }
     state Unity {
         Belfalls.extract<Tenino>(BigPoint.Rhinebeck);
@@ -5587,16 +5603,28 @@ control Lenox(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intrins
     @name(".Kenyon") action Kenyon(bit<32> Provo, bit<32> Moxley, bit<32> ElkNeck) {
         Stout(Provo, Moxley);
     }
+    @name(".Bonner") action Bonner(bit<32> Provo, bit<32> Moxley, bit<32> ElkNeck) {
+        Kenyon(Provo, Moxley, ElkNeck);
+    }
     @name(".Sigsbee") action Sigsbee(bit<32> Provo, bit<32> Moxley, bit<32> FairOaks) {
         Stout(Provo, Moxley);
+    }
+    @name(".Belfast") action Belfast(bit<32> Provo, bit<32> Moxley, bit<32> FairOaks) {
+        Sigsbee(Provo, Moxley, FairOaks);
     }
     @name(".Hawthorne") action Hawthorne(bit<32> Provo, bit<16> Palmhurst, bit<32> Moxley, bit<32> ElkNeck) {
         Tenstrike.Wanamassa.Pathfork = Palmhurst;
         Kenyon(Provo, Moxley, ElkNeck);
     }
+    @name(".SwissAlp") action SwissAlp(bit<32> Provo, bit<16> Palmhurst, bit<32> Moxley, bit<32> ElkNeck) {
+        Hawthorne(Provo, Palmhurst, Moxley, ElkNeck);
+    }
     @name(".Sturgeon") action Sturgeon(bit<32> Provo, bit<16> Palmhurst, bit<32> Moxley, bit<32> FairOaks) {
         Tenstrike.Wanamassa.Pathfork = Palmhurst;
         Sigsbee(Provo, Moxley, FairOaks);
+    }
+    @name(".Woodland") action Woodland(bit<32> Provo, bit<16> Palmhurst, bit<32> Moxley, bit<32> FairOaks) {
+        Sturgeon(Provo, Palmhurst, Moxley, FairOaks);
     }
     @name(".Deferiet") action Deferiet(bit<32> Denhoff, bit<32> Moxley) {
         Tenstrike.Peoria.Denhoff = Denhoff;
@@ -5692,11 +5720,11 @@ control Lenox(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intrins
     }
     @disable_atomic_modify(1) @name(".Alvwood") table Alvwood {
         actions = {
-            Kenyon();
-            Hawthorne();
-            Sigsbee();
-            Sturgeon();
-            Crown();
+            Bonner();
+            SwissAlp();
+            Belfast();
+            Woodland();
+            @defaultonly Crown();
         }
         key = {
             Tenstrike.Wanamassa.Kaaawa  : exact @name("Wanamassa.Kaaawa") ;
@@ -6577,6 +6605,8 @@ parser ElMirage(packet_in Belfalls, out Skillman BigPoint, out Kinde Tenstrike, 
         Tenstrike.Wanamassa.Fairland = BigPoint.Rhinebeck.Fairland;
         Tenstrike.Wanamassa.Pridgen = BigPoint.Rhinebeck.Pridgen;
         transition select(BigPoint.Rhinebeck.Fairland) {
+            16w3784: LaCueva;
+            16w4784: LaCueva;
             default: accept;
         }
     }
@@ -6591,8 +6621,14 @@ parser ElMirage(packet_in Belfalls, out Skillman BigPoint, out Kinde Tenstrike, 
         Tenstrike.Wanamassa.Fairland = BigPoint.Rhinebeck.Fairland;
         Tenstrike.Wanamassa.Pridgen = BigPoint.Rhinebeck.Pridgen;
         transition select(BigPoint.Rhinebeck.Fairland) {
+            16w3784: LaCueva;
+            16w4784: LaCueva;
             default: accept;
         }
+    }
+    state LaCueva {
+        BigPoint.Dresser.setValid();
+        transition accept;
     }
     state McKibben {
         Tenstrike.Hillside.Weatherby = (bit<3>)3w6;

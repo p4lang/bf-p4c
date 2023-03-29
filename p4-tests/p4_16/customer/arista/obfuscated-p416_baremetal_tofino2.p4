@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_BAREMETAL_TOFINO2=1 -Ibf_arista_switch_baremetal_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino2-t2na --o bf_arista_switch_baremetal_tofino2 --bf-rt-schema bf_arista_switch_baremetal_tofino2/context/bf-rt.json
-// p4c 9.7.4 (SHA: 8e6e85a)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_BAREMETAL_TOFINO2=1 -Ibf_arista_switch_baremetal_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 --skip-precleaner -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino2-t2na --o bf_arista_switch_baremetal_tofino2 --bf-rt-schema bf_arista_switch_baremetal_tofino2/context/bf-rt.json
+// p4c 9.11.2 (SHA: 4328321)
 
 #include <core.p4>
 #include <tofino2_specs.p4>
@@ -443,6 +443,9 @@ header Wallula {
 
 header Dennison {
     bit<8> Fairhaven;
+}
+
+header Falmouth {
 }
 
 header Woodfield {
@@ -1194,6 +1197,7 @@ struct HighRock {
     NewMelle     Rochert;
     Wallula      Swanlake;
     Coconino     Tahlequah;
+    Falmouth     Viroqua;
 }
 
 struct Geistown {
@@ -3114,6 +3118,7 @@ control Ardenvoir(inout Frederika Lefor, inout HighRock Starkey, in ingress_intr
             Starkey.Wyndmoor.Ledoux   : ternary @name("Wyndmoor.Ledoux") ;
             Starkey.Covert.Hematite   : ternary @name("Covert.Hematite") ;
             Lefor.Palouse[0].isValid(): ternary @name("Palouse[0]") ;
+            Lefor.Viroqua.isValid()   : ternary @name("Viroqua") ;
         }
         default_action = Medart(7w0);
         size = 512;
@@ -3799,6 +3804,11 @@ control Doyline(inout Frederika Lefor, inout HighRock Starkey, in egress_intrins
             Melrose.apply();
         }
         Walland.apply();
+    }
+}
+
+control Monico(inout Frederika Lefor, inout HighRock Starkey, in egress_intrinsic_metadata_t Dacono, in egress_intrinsic_metadata_from_parser_t Franktown, inout egress_intrinsic_metadata_for_deparser_t Willette, inout egress_intrinsic_metadata_for_output_port_t Mayview) {
+    apply {
     }
 }
 
@@ -9114,8 +9124,13 @@ parser Millett(packet_in Thistle, out Frederika Lefor, out HighRock Starkey, out
         transition select(Lefor.Olmitz.Teigen ++ Garrison.ingress_port[2:0]) {
             ElMirage: Shivwits;
             Newberg: Valier;
+            19w30272 &&& 19w0x7fff8: Lantana;
+            19w38272 &&& 19w0x7fff8: Lantana;
             default: accept;
         }
+    }
+    state Lantana {
+        transition accept;
     }
     state Herald {
         Thistle.extract<Powderly>(Lefor.Olmitz);
@@ -9986,6 +10001,11 @@ control Ashley(inout Frederika Lefor, inout HighRock Starkey, in egress_intrinsi
         Lefor.Casnovia.Turkey = (bit<16>)16w0;
         Lefor.Casnovia.Cisco = (bit<16>)16w0xc000;
     }
+    @name(".Indrio") action Indrio(bit<2> SoapLake) {
+        Grottoes(SoapLake);
+        Lefor.Parkway.Palmhurst = (bit<24>)24w0xbfbfbf;
+        Lefor.Parkway.Comfrey = (bit<24>)24w0xbfbfbf;
+    }
     @name(".Dresser") action Dresser(bit<24> Ivanpah, bit<24> Kevil) {
         Lefor.Sedan.Clyde = Ivanpah;
         Lefor.Sedan.Clarion = Kevil;
@@ -9999,6 +10019,7 @@ control Ashley(inout Frederika Lefor, inout HighRock Starkey, in egress_intrinsi
     @disable_atomic_modify(1) @name(".SwissAlp") table SwissAlp {
         actions = {
             @tableonly Grottoes();
+            @tableonly Indrio();
             @defaultonly Dresser();
             @defaultonly NoAction();
         }
@@ -10164,6 +10185,7 @@ control Ashley(inout Frederika Lefor, inout HighRock Starkey, in egress_intrinsi
     @name(".Elihu") Baldridge() Elihu;
     @name(".Cypress") Maury() Cypress;
     @name(".Telocaset") Granville() Telocaset;
+    @name(".Yantis") Monico() Yantis;
     @name(".Sabana") Stout() Sabana;
     @name(".Trego") Calverton() Trego;
     apply {
@@ -10213,6 +10235,7 @@ control Ashley(inout Frederika Lefor, inout HighRock Starkey, in egress_intrinsi
             if (Starkey.Wyndmoor.LaLuz != 3w2) {
                 Telocaset.apply(Lefor, Starkey, Dacono, Franktown, Willette, Mayview);
             }
+            Yantis.apply(Lefor, Starkey, Dacono, Franktown, Willette, Mayview);
         } else {
             if (Lefor.Saugatuck.isValid() == false) {
                 Powelton.apply(Lefor, Starkey, Dacono, Franktown, Willette, Mayview);
@@ -10383,6 +10406,8 @@ parser Otsego(packet_in Thistle, out Frederika Lefor, out HighRock Starkey, out 
         Starkey.Covert.Teigen = Lefor.Olmitz.Teigen;
         Starkey.Covert.Welcome = Lefor.Olmitz.Welcome;
         transition select(Lefor.Olmitz.Teigen) {
+            16w3784: Lantana;
+            16w4784: Lantana;
             default: accept;
         }
     }
@@ -10393,8 +10418,14 @@ parser Otsego(packet_in Thistle, out Frederika Lefor, out HighRock Starkey, out 
         Starkey.Covert.Teigen = Lefor.Olmitz.Teigen;
         Starkey.Covert.Welcome = Lefor.Olmitz.Welcome;
         transition select(Lefor.Olmitz.Teigen) {
+            16w3784: Lantana;
+            16w4784: Lantana;
             default: accept;
         }
+    }
+    state Lantana {
+        Lefor.Viroqua.setValid();
+        transition accept;
     }
     state Rippon {
         Starkey.WebbCity.Westhoff = (bit<3>)3w6;

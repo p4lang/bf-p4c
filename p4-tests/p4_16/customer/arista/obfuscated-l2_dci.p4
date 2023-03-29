@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_L2_DCI=1 -Ibf_arista_switch_l2_dci/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino2-t2na --o bf_arista_switch_l2_dci --bf-rt-schema bf_arista_switch_l2_dci/context/bf-rt.json
-// p4c 9.7.4 (SHA: 8e6e85a)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_L2_DCI=1 -Ibf_arista_switch_l2_dci/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 --skip-precleaner -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino2-t2na --o bf_arista_switch_l2_dci --bf-rt-schema bf_arista_switch_l2_dci/context/bf-rt.json
+// p4c 9.11.2 (SHA: 4328321)
 
 #include <core.p4>
 #include <tofino2_specs.p4>
@@ -17,6 +17,7 @@
 @pa_container_size("egress" , "Olcott.Harding.McBride" , 32)
 @pa_container_size("ingress" , "Olcott.Harding.Mackville" , 32)
 @pa_container_size("ingress" , "Olcott.Harding.McBride" , 32)
+@pa_container_size("egress" , "Westoak.Wyndmoor.Jenners" , 8 , 16)
 @pa_atomic("ingress" , "Westoak.Covert.Bennet")
 @pa_atomic("ingress" , "Westoak.WebbCity.Dyess")
 @pa_mutually_exclusive("ingress" , "Westoak.Covert.Etter" , "Westoak.WebbCity.Westhoff")
@@ -453,6 +454,9 @@ header Dennison {
 
 header Fairhaven {
     bit<8> Woodfield;
+}
+
+header Kisatchie {
 }
 
 header LasVegas {
@@ -1203,6 +1207,7 @@ struct HighRock {
     Heppner     Clearmont;
     Dennison    Ruffin;
     CatCreek    Brashear;
+    Kisatchie   Coconut;
 }
 
 struct Rochert {
@@ -2732,10 +2737,6 @@ control Siloam(inout Frederika Olcott, inout HighRock Westoak, in egress_intrins
     }
 }
 
-// Jenners is defined from 24bits of RNG and table placement has a hard time
-// fitting the immediate path if we do not constrain the type of containers
-@pa_container_size("egress" , "Westoak.Wyndmoor.Jenners" , 8 , 16)
-
 control Mondovi(inout Frederika Olcott, inout HighRock Westoak, in egress_intrinsic_metadata_t Dacono, in egress_intrinsic_metadata_from_parser_t Twinsburg, inout egress_intrinsic_metadata_for_deparser_t Redvale, inout egress_intrinsic_metadata_for_output_port_t Macon) {
     @name(".Lynne") Random<bit<24>>() Lynne;
     @name(".OldTown") action OldTown(bit<10> Westville) {
@@ -3118,6 +3119,7 @@ control Blanding(inout Frederika Olcott, inout HighRock Westoak, in ingress_intr
             Westoak.Wyndmoor.Steger    : ternary @name("Wyndmoor.Steger") ;
             Westoak.Covert.Ipava       : ternary @name("Covert.Ipava") ;
             Olcott.Palouse[0].isValid(): ternary @name("Palouse[0]") ;
+            Olcott.Coconut.isValid()   : ternary @name("Coconut") ;
         }
         default_action = Napanoch(7w0);
         size = 512;
@@ -3553,6 +3555,11 @@ control Saxis(inout Frederika Olcott, inout HighRock Westoak, in egress_intrinsi
             Kilbourne.apply();
         }
         Alcoma.apply();
+    }
+}
+
+control Urbanette(inout Frederika Olcott, inout HighRock Westoak, in egress_intrinsic_metadata_t Dacono, in egress_intrinsic_metadata_from_parser_t Twinsburg, inout egress_intrinsic_metadata_for_deparser_t Redvale, inout egress_intrinsic_metadata_for_output_port_t Macon) {
+    apply {
     }
 }
 
@@ -13380,8 +13387,13 @@ parser Vincent(packet_in Cowan, out Frederika Olcott, out HighRock Westoak, out 
         transition select(Olcott.Rienzi.Lowes ++ Garrison.ingress_port[2:0]) {
             Gracewood: Lasara;
             Berwyn: Woodston;
+            19w30272 &&& 19w0x7fff8: Temelec;
+            19w38272 &&& 19w0x7fff8: Temelec;
             default: accept;
         }
+    }
+    state Temelec {
+        transition accept;
     }
     state Loyalton {
         Cowan.extract<Welcome>(Olcott.Rienzi);
@@ -14227,6 +14239,11 @@ control Seabrook(inout Frederika Olcott, inout HighRock Westoak, in egress_intri
         Olcott.Casnovia.Riner = (bit<16>)16w0;
         Olcott.Casnovia.Higginson = (bit<16>)16w0xc000;
     }
+    @name(".Denby") action Denby(bit<2> Linden) {
+        Devore(Linden);
+        Olcott.Parkway.Comfrey = (bit<24>)24w0xbfbfbf;
+        Olcott.Parkway.Kalida = (bit<24>)24w0xbfbfbf;
+    }
     @name(".Melvina") action Melvina(bit<24> Bethune, bit<24> PawCreek) {
         Olcott.Sedan.Clyde = Bethune;
         Olcott.Sedan.Clarion = PawCreek;
@@ -14240,6 +14257,7 @@ control Seabrook(inout Frederika Olcott, inout HighRock Westoak, in egress_intri
     @disable_atomic_modify(1) @name(".Shorter") table Shorter {
         actions = {
             @tableonly Devore();
+            @tableonly Denby();
             @defaultonly Melvina();
             @defaultonly NoAction();
         }
@@ -14405,6 +14423,7 @@ control Seabrook(inout Frederika Olcott, inout HighRock Westoak, in egress_intri
     @name(".Wahoo") Truro() Wahoo;
     @name(".Tennessee") Talbert() Tennessee;
     @name(".Brazil") Wauregan() Brazil;
+    @name(".Veguita") Urbanette() Veguita;
     @name(".Cistern") Camino() Cistern;
     @name(".Newkirk") Marvin() Newkirk;
     apply {
@@ -14456,6 +14475,7 @@ control Seabrook(inout Frederika Olcott, inout HighRock Westoak, in egress_intri
             if (Westoak.Wyndmoor.LaLuz != 3w2) {
                 Brazil.apply(Olcott, Westoak, Dacono, Twinsburg, Redvale, Macon);
             }
+            Veguita.apply(Olcott, Westoak, Dacono, Twinsburg, Redvale, Macon);
         } else {
             if (Olcott.Saugatuck.isValid() == false) {
                 Suwanee.apply(Olcott, Westoak, Dacono, Twinsburg, Redvale, Macon);
@@ -14626,6 +14646,8 @@ parser Richlawn(packet_in Cowan, out Frederika Olcott, out HighRock Westoak, out
         Westoak.Covert.Lowes = Olcott.Rienzi.Lowes;
         Westoak.Covert.Teigen = Olcott.Rienzi.Teigen;
         transition select(Olcott.Rienzi.Lowes) {
+            16w3784: Temelec;
+            16w4784: Temelec;
             default: accept;
         }
     }
@@ -14636,8 +14658,14 @@ parser Richlawn(packet_in Cowan, out Frederika Olcott, out HighRock Westoak, out
         Westoak.Covert.Lowes = Olcott.Rienzi.Lowes;
         Westoak.Covert.Teigen = Olcott.Rienzi.Teigen;
         transition select(Olcott.Rienzi.Lowes) {
+            16w3784: Temelec;
+            16w4784: Temelec;
             default: accept;
         }
+    }
+    state Temelec {
+        Olcott.Coconut.setValid();
+        transition accept;
     }
     state Bassett {
         Westoak.WebbCity.Havana = (bit<3>)3w6;

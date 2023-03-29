@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MSEE_TOFINO2=1 -Ibf_arista_switch_msee_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino2-t2na --o bf_arista_switch_msee_tofino2 --bf-rt-schema bf_arista_switch_msee_tofino2/context/bf-rt.json
-// p4c 9.7.4 (SHA: 8e6e85a)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MSEE_TOFINO2=1 -Ibf_arista_switch_msee_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 --skip-precleaner -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino2-t2na --o bf_arista_switch_msee_tofino2 --bf-rt-schema bf_arista_switch_msee_tofino2/context/bf-rt.json
+// p4c 9.11.2 (SHA: 4328321)
 
 #include <core.p4>
 #include <tofino2_specs.p4>
@@ -8,7 +8,6 @@
 
 @pa_auto_init_metadata
 @pa_parser_group_monogress
-@pa_container_size("egress", "eg_intr_md.egress_rid", 16)
 @pa_mutually_exclusive("egress" , "Lefor.Ekwok.Conner" , "Westoak.Flaherty.Conner")
 @pa_mutually_exclusive("egress" , "Westoak.Flaherty.Conner" , "Lefor.Ekwok.Conner")
 @pa_container_size("ingress" , "Lefor.HighRock.McCammon" , 32)
@@ -176,9 +175,7 @@
 @pa_alias("egress" , "Westoak.Wabbaseka.$valid" , "Lefor.Ekwok.Townville")
 @pa_alias("egress" , "Westoak.Lemont.Welcome" , "Lefor.Ekwok.SomesBar")
 @pa_alias("egress" , "Westoak.Jerico.$valid" , "Lefor.Longwood.McBrides")
-@pa_alias("egress" , "Lefor.Orting.Candle" , "Lefor.Orting.Newfolden")
-@pa_no_pack("ingress", "Lefor.Lookeba.HillTop", "Lefor.Neponset.RockPort")
-header Reubens {
+@pa_alias("egress" , "Lefor.Orting.Candle" , "Lefor.Orting.Newfolden") header Reubens {
     bit<1>  Wheeling;
     bit<6>  Harmony;
     bit<9>  Boistfort;
@@ -462,6 +459,9 @@ header Kalida {
 
 header Wallula {
     bit<8> Dennison;
+}
+
+header Newcastle {
 }
 
 header Fairhaven {
@@ -1227,6 +1227,7 @@ struct Talco {
     pktgen_timer_header_t Volcano;
     Boutte                Farson;
     Garlin                EastLake;
+    Newcastle             Sparr;
 }
 
 struct Swanlake {
@@ -3069,7 +3070,6 @@ control Inkom(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_m
             Lefor.Covert.Loris & 128w0xffff0000000000000000000000000000: ternary @name("Covert.Loris") ;
             Lefor.HighRock.Grassflat                                   : ternary @name("HighRock.Grassflat") ;
             Lefor.Ekwok.Conner                                         : ternary @name("Ekwok.Conner") ;
-            Westoak.Eunice.isValid()                                   : ternary @name("Eunice") ;
         }
         size = 512;
         counters = Gowanda;
@@ -3221,6 +3221,7 @@ control Pearcy(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_
             Lefor.Ekwok.Conner          : ternary @name("Ekwok.Conner") ;
             Lefor.HighRock.Hammond      : ternary @name("HighRock.Hammond") ;
             Westoak.Parkway[0].isValid(): ternary @name("Parkway[0]") ;
+            Westoak.Sparr.isValid()     : ternary @name("Sparr") ;
         }
         default_action = Herring(7w0);
         size = 512;
@@ -3927,6 +3928,30 @@ control Stone(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic_me
             Ferndale.apply();
         }
         Twichell.apply();
+    }
+}
+
+control Stewart(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic_metadata_t Garrison, in egress_intrinsic_metadata_from_parser_t Franktown, inout egress_intrinsic_metadata_for_deparser_t Willette, inout egress_intrinsic_metadata_for_output_port_t Mayview) {
+    @name(".Bavaria") Counter<bit<32>, bit<32>>(32w16384, CounterType_t.PACKETS) Bavaria;
+    @name(".Annandale") action Annandale(bit<32> Slade) {
+        Bavaria.count(Slade);
+    }
+    @disable_atomic_modify(1) @stage(19) @name(".ElmPoint") table ElmPoint {
+        key = {
+            Westoak.Mayflower.DonaAna         : exact @name("Mayflower.DonaAna") ;
+            Lefor.Ekwok.Monahans & 32w0x3fffff: exact @name("Ekwok.Monahans") ;
+        }
+        actions = {
+            Annandale();
+            @defaultonly NoAction();
+        }
+        const default_action = NoAction();
+        size = 16384;
+    }
+    apply {
+        if (Lefor.Ekwok.Monahans & 32w0x3fffff != 32w0) {
+            ElmPoint.apply();
+        }
     }
 }
 
@@ -5252,30 +5277,6 @@ control Ancho(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_m
     @name(".Biloxi") action Biloxi() {
         Maceo(32w0, 32w0, 32w0, 32w0, 32w0, 32w0, 32w0, 32w0, 32w0, 32w0, 32w0, 32w0);
     }
-    @disable_atomic_modify(1) @name(".Edinburg") table Edinburg {
-        actions = {
-            Pearce();
-            Belfalls();
-            @defaultonly NoAction();
-        }
-        key = {
-            Lefor.Neponset.Hadley: exact @name("Neponset.Hadley") ;
-        }
-        size = 2048;
-        const default_action = NoAction();
-    }
-    @disable_atomic_modify(1) @name(".Kempner") table Kempner {
-        actions = {
-            Pearce();
-            Belfalls();
-            @defaultonly NoAction();
-        }
-        key = {
-            Lefor.Neponset.Hadley: exact @name("Neponset.Hadley") ;
-        }
-        size = 2048;
-        const default_action = NoAction();
-    }
     @name(".Romero") action Romero(bit<16> KawCity) {
         Lefor.Neponset.Neubert = (AppFilterResId_t)KawCity;
     }
@@ -5323,32 +5324,6 @@ control Ancho(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_m
     @name(".Lamar") action Lamar(bit<32> Wynnewood, bit<32> Venice, bit<32> JimFalls, bit<32> Tahlequah, bit<32> Swansboro, bit<32> Wanilla, bit<32> Gilmanton, bit<32> Allegan, bit<32> Ouachita, bit<32> Gorman, bit<32> Hayfield, bit<32> Belgrade) {
         Edmeston(Wynnewood, Venice, JimFalls, Tahlequah, Swansboro, Wanilla, Gilmanton, Allegan, Ouachita, Gorman, Hayfield, Belgrade);
         Lefor.Neponset.Sonoma = (bit<1>)1w1;
-    }
-    @disable_atomic_modify(1) @ways(1) @ternary(1) @name(".Viroqua") table Viroqua {
-        actions = {
-            Edmeston();
-            Lamar();
-            @defaultonly Biloxi();
-        }
-        key = {
-            Lefor.Neponset.Sonoma : exact @name("Neponset.Sonoma") ;
-            Lefor.Neponset.Neubert: exact @name("Neponset.Neubert") ;
-        }
-        size = 2048;
-        const default_action = Biloxi();
-    }
-    @disable_atomic_modify(1) @ways(1) @ternary(1) @name(".Monico") table Monico {
-        actions = {
-            Edmeston();
-            Lamar();
-            @defaultonly Biloxi();
-        }
-        key = {
-            Lefor.Neponset.Sonoma : exact @name("Neponset.Sonoma") ;
-            Lefor.Neponset.Neubert: exact @name("Neponset.Neubert") ;
-        }
-        size = 2048;
-        const default_action = Biloxi();
     }
     @disable_atomic_modify(1) @name(".Doral") table Doral {
         actions = {
@@ -5484,17 +5459,42 @@ control Ancho(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_m
         counters = Tontogany;
         size = 8192;
     }
+    @disable_atomic_modify(1) @ternary(1) @name(".Ivydale") table Ivydale {
+        actions = {
+            Edmeston();
+            Lamar();
+            @defaultonly Biloxi();
+        }
+        key = {
+            Lefor.Neponset.Sonoma : exact @name("Neponset.Sonoma") ;
+            Lefor.Neponset.Neubert: exact @name("Neponset.Neubert") ;
+        }
+        size = 2048;
+        const default_action = Biloxi();
+    }
+    @disable_atomic_modify(1) @name(".Titonka") table Titonka {
+        actions = {
+            Pearce();
+            Belfalls();
+            @defaultonly NoAction();
+        }
+        key = {
+            Lefor.Neponset.Hadley: exact @name("Neponset.Hadley") ;
+        }
+        size = 2048;
+        const default_action = NoAction();
+    }
     apply {
         if (Lefor.HighRock.Placedo == 3w0x1 && Lefor.Jayton.SourLake == 10w0) {
             Clarendon.apply();
             Doral.apply();
-            Kempner.apply();
-            Monico.apply();
+            Titonka.apply();
+            Ivydale.apply();
         } else if (Lefor.HighRock.Placedo == 3w0x2 && Lefor.Jayton.SourLake == 10w0) {
             Slayden.apply();
             Statham.apply();
-            Edinburg.apply();
-            Viroqua.apply();
+            Titonka.apply();
+            Ivydale.apply();
         }
         Moapa.apply();
         if (Lefor.Ekwok.Miranda == 1w1 && Lefor.Jayton.SourLake == 10w0 && Lefor.Picabo.Ovett == 2w1) {
@@ -5821,7 +5821,7 @@ control Almont(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_
         Lefor.Hillside.Boonsboro = (bit<1>)(Mayday == Westoak.Rochert.Mayday);
         Lefor.Hillside.Heron = Millhaven;
     }
-    @idletime_precision(6) @disable_atomic_modify(1) @ternary(1) @stage(17 , 6144) @name(".Newburgh") table Newburgh {
+    @idletime_precision(3) @disable_atomic_modify(1) @ternary(1) @stage(17 , 6144) @name(".Newburgh") table Newburgh {
         actions = {
             SandCity();
             @defaultonly NoAction();
@@ -14764,8 +14764,13 @@ parser Shawville(packet_in Kinsley, out Wanamassa Westoak, out Talco Lefor, out 
         transition select(Westoak.Rienzi.Welcome ++ Moultrie.ingress_port[2:0]) {
             Herald: Camden;
             Zeeland: Melvina;
+            19w30272 &&& 19w0x7fff8: Huxley;
+            19w38272 &&& 19w0x7fff8: Huxley;
             default: accept;
         }
+    }
+    state Huxley {
+        transition accept;
     }
     state Kingsgate {
         Kinsley.extract<Weyauwega>(Westoak.Rienzi);
@@ -14947,6 +14952,7 @@ parser Shawville(packet_in Kinsley, out Wanamassa Westoak, out Talco Lefor, out 
         }
     }
     state Deering {
+        Lefor.Picabo.Lewiston = (bit<14>)14w509;
         Kinsley.advance(32w192);
         transition select((Kinsley.lookahead<pktgen_timer_header_t>()).app_id) {
             4w5 &&& 4w0x7: Southdown;
@@ -15732,6 +15738,11 @@ control Geeville(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic
         Westoak.Flaherty.Killen = (bit<16>)16w0;
         Westoak.Flaherty.Cisco = (bit<16>)16w0xc000;
     }
+    @name(".Escondido") action Escondido(bit<2> Rains) {
+        Fowlkes(Rains);
+        Westoak.Arapahoe.Riner = (bit<24>)24w0xbfbfbf;
+        Westoak.Arapahoe.Palmhurst = (bit<24>)24w0xbfbfbf;
+    }
     @name(".Seguin") action Seguin(bit<24> Ragley, bit<24> Dunkerton) {
         Westoak.Sunbury.Clyde = Ragley;
         Westoak.Sunbury.Clarion = Dunkerton;
@@ -15745,6 +15756,7 @@ control Geeville(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic
     @disable_atomic_modify(1) @name(".Tolono") table Tolono {
         actions = {
             @tableonly Fowlkes();
+            @tableonly Escondido();
             @defaultonly Seguin();
             @defaultonly NoAction();
         }
@@ -15910,6 +15922,7 @@ control Geeville(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic
     @name(".Sawpit") Nowlin() Sawpit;
     @name(".Hercules") Rolla() Hercules;
     @name(".Hanamaulu") Moorman() Hanamaulu;
+    @name(".Slocum") Stewart() Slocum;
     @name(".Donna") Ludowici() Donna;
     @name(".Westland") Deferiet() Westland;
     apply {
@@ -15960,6 +15973,7 @@ control Geeville(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic
             if (Lefor.Ekwok.FortHunt != 3w2) {
                 Hanamaulu.apply(Westoak, Lefor, Garrison, Franktown, Willette, Mayview);
             }
+            Slocum.apply(Westoak, Lefor, Garrison, Franktown, Willette, Mayview);
         } else {
             if (Westoak.Peoria.isValid() == false) {
                 Manistee.apply(Westoak, Lefor, Garrison, Franktown, Willette, Mayview);
@@ -16152,6 +16166,7 @@ parser Moreland(packet_in Kinsley, out Wanamassa Westoak, out Talco Lefor, out i
     }
     state Huxley {
         Kinsley.extract<Piperton>(Westoak.Rochert);
+        Westoak.Sparr.setValid();
         transition accept;
     }
     state Taiban {

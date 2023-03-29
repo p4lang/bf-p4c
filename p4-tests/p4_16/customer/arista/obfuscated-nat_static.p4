@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_STATIC=1 -Ibf_arista_switch_nat_static/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'   -Xp4c='--traffic-limit 95 --excludeBackendPasses=ResetInvalidatedChecksumHeaders' --target tofino-tna --o bf_arista_switch_nat_static --bf-rt-schema bf_arista_switch_nat_static/context/bf-rt.json
-// p4c 9.7.4 (SHA: 8e6e85a)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_STATIC=1 -Ibf_arista_switch_nat_static/includes -I/usr/share/p4c-bleeding/p4include  --skip-precleaner -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'   -Xp4c='--traffic-limit 95 --excludeBackendPasses=ResetInvalidatedChecksumHeaders' --target tofino-tna --o bf_arista_switch_nat_static --bf-rt-schema bf_arista_switch_nat_static/context/bf-rt.json
+// p4c 9.11.2 (SHA: 4328321)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -351,6 +351,9 @@ header Riner {
 
 header Comfrey {
     bit<8> Kalida;
+}
+
+header Ewing {
 }
 
 header Wallula {
@@ -1112,6 +1115,7 @@ struct Harriet {
     Soledad    Fishers;
     Soledad    Philip;
     Thalia     Cloverly;
+    Ewing      Helen;
 }
 
 struct Levasy {
@@ -1384,8 +1388,16 @@ parser Moosic(packet_in Ossining, out Baker Noyack, out Harriet Hettinger, out i
             Mabana: Campo;
             19w2552 &&& 19w0x7fff8: SanPablo;
             19w2560 &&& 19w0x7fff8: SanPablo;
+            19w30272 &&& 19w0x7fff8: Alamance;
+            19w38272 &&& 19w0x7fff8: Alamance;
             default: accept;
         }
+    }
+    state Alamance {
+        {
+            Noyack.Helen.setValid();
+        }
+        transition accept;
     }
     state Lattimore {
         Ossining.extract<Whitten>(Noyack.Lindy);
@@ -2237,9 +2249,15 @@ control Danbury(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsi
         Burmah(Leacock);
         Hettinger.Bratt.Hiland = (bit<1>)1w1;
     }
+    @name(".Abbyville") action Abbyville(bit<32> Commack, bit<32> Leacock) {
+        Willey(Commack, Leacock);
+    }
     @name(".Endicott") action Endicott(bit<32> Commack, bit<16> Weinert, bit<32> Leacock) {
         Hettinger.Bratt.McCammon = Weinert;
         Willey(Commack, Leacock);
+    }
+    @name(".Cantwell") action Cantwell(bit<32> Commack, bit<16> Weinert, bit<32> Leacock) {
+        Endicott(Commack, Weinert, Leacock);
     }
     @name(".Monse") action Monse(bit<32> Commack, bit<32> Bonney, bit<32> Chatom) {
         Hettinger.Tabler.Commack = Commack;
@@ -2311,9 +2329,9 @@ control Danbury(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsi
     }
     @disable_atomic_modify(1) @name(".Maxwelton") table Maxwelton {
         actions = {
-            Willey();
-            Endicott();
-            Millikin();
+            Abbyville();
+            Cantwell();
+            @defaultonly Millikin();
         }
         key = {
             Hettinger.Bratt.Ipava : exact @name("Bratt.Ipava") ;
@@ -2720,18 +2738,30 @@ control Ugashik(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsi
         Hettinger.Dacono.Hoven = (bit<2>)2w0;
         Hettinger.Dacono.Shirley = (bit<14>)Shirley;
     }
+    @name(".Rossburg") action Rossburg(bit<32> Bonney, bit<32> Leacock, bit<32> Shirley) {
+        Neosho(Bonney, Leacock, Shirley);
+    }
     @name(".Islen") action Islen(bit<32> Bonney, bit<32> Leacock, bit<32> Felton) {
         Swandale(Bonney, Leacock);
         Hettinger.Dacono.Hoven = (bit<2>)2w1;
         Hettinger.Dacono.Shirley = (bit<14>)Felton;
     }
+    @name(".Rippon") action Rippon(bit<32> Bonney, bit<32> Leacock, bit<32> Felton) {
+        Islen(Bonney, Leacock, Felton);
+    }
     @name(".BarNunn") action BarNunn(bit<32> Bonney, bit<16> Weinert, bit<32> Leacock, bit<32> Shirley) {
         Hettinger.Bratt.Lapoint = Weinert;
         Neosho(Bonney, Leacock, Shirley);
     }
+    @name(".Bruce") action Bruce(bit<32> Bonney, bit<16> Weinert, bit<32> Leacock, bit<32> Shirley) {
+        BarNunn(Bonney, Weinert, Leacock, Shirley);
+    }
     @name(".Jemison") action Jemison(bit<32> Bonney, bit<16> Weinert, bit<32> Leacock, bit<32> Felton) {
         Hettinger.Bratt.Lapoint = Weinert;
         Islen(Bonney, Leacock, Felton);
+    }
+    @name(".Sawpit") action Sawpit(bit<32> Bonney, bit<16> Weinert, bit<32> Leacock, bit<32> Felton) {
+        Jemison(Bonney, Weinert, Leacock, Felton);
     }
     @name(".Rhodell") action Rhodell() {
         Hettinger.Bratt.Hiland = (bit<1>)1w0;
@@ -2790,11 +2820,11 @@ control Ugashik(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsi
     }
     @disable_atomic_modify(1) @name(".Reynolds") table Reynolds {
         actions = {
-            Neosho();
-            BarNunn();
-            Islen();
-            Jemison();
-            Millikin();
+            Rossburg();
+            Bruce();
+            Rippon();
+            Sawpit();
+            @defaultonly Millikin();
         }
         key = {
             Hettinger.Bratt.Orrick: exact @name("Bratt.Orrick") ;
@@ -4991,6 +5021,7 @@ control Tampa(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsic_
             Hettinger.Moultrie.Rains     : ternary @name("Moultrie.Rains") ;
             Hettinger.Bratt.Bufalo       : ternary @name("Bratt.Bufalo") ;
             Noyack.Clearmont[0].isValid(): ternary @name("Clearmont[0]") ;
+            Noyack.Helen.isValid()       : ternary @name("Helen") ;
         }
         default_action = Ripley(5w0);
         size = 512;

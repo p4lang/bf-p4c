@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MAP=1 -Ibf_arista_switch_map/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_map --bf-rt-schema bf_arista_switch_map/context/bf-rt.json
-// p4c 9.7.4 (SHA: 8e6e85a)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MAP=1 -Ibf_arista_switch_map/includes -I/usr/share/p4c-bleeding/p4include  --skip-precleaner -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_map --bf-rt-schema bf_arista_switch_map/context/bf-rt.json
+// p4c 9.11.2 (SHA: 4328321)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -317,6 +317,9 @@ header Comfrey {
 
 header Wallula {
     bit<8> Dennison;
+}
+
+header Higgston {
 }
 
 header Fairhaven {
@@ -1064,6 +1067,7 @@ struct Wyndmoor {
     Gasport      Nephi;
     Gasport      Tofte;
     Snowflake    Donnelly;
+    Higgston     Arredondo;
 }
 
 struct Jerico {
@@ -1306,8 +1310,16 @@ parser Lefor(packet_in Starkey, out Lemont Lindy, out Wyndmoor Brady, out ingres
         Virgilina.subtract<tuple<bit<16>>>({ Lindy.Glenoma.Parkland });
         Virgilina.subtract_all_and_deposit<bit<16>>(Brady.Neponset.Udall);
         transition select(Lindy.Ambler.Welcome ++ Courtdale.ingress_port[2:0]) {
+            19w30272 &&& 19w0x7fff8: Trotwood;
+            19w38272 &&& 19w0x7fff8: Trotwood;
             default: accept;
         }
+    }
+    state Trotwood {
+        {
+            Lindy.Arredondo.setValid();
+        }
+        transition accept;
     }
     state Hettinger {
         Starkey.extract<Weyauwega>(Lindy.Ambler);
@@ -3265,12 +3277,13 @@ control Clarkdale(inout Lemont Lindy, inout Wyndmoor Brady, in ingress_intrinsic
             Sanborn();
         }
         key = {
-            Brady.Lookeba.Marcus    : exact @name("Lookeba.Marcus") ;
-            Brady.Circle.Lenexa     : exact @name("Circle.Lenexa") ;
-            Brady.Yorkshire.SourLake: ternary @name("Yorkshire.SourLake") ;
-            Brady.Lookeba.Linden    : ternary @name("Lookeba.Linden") ;
-            Brady.Circle.Rudolph    : ternary @name("Circle.Rudolph") ;
-            Lindy.Sespe[0].isValid(): ternary @name("Sespe[0]") ;
+            Brady.Lookeba.Marcus     : exact @name("Lookeba.Marcus") ;
+            Brady.Circle.Lenexa      : exact @name("Circle.Lenexa") ;
+            Brady.Yorkshire.SourLake : ternary @name("Yorkshire.SourLake") ;
+            Brady.Lookeba.Linden     : ternary @name("Lookeba.Linden") ;
+            Brady.Circle.Rudolph     : ternary @name("Circle.Rudolph") ;
+            Lindy.Sespe[0].isValid() : ternary @name("Sespe[0]") ;
+            Lindy.Arredondo.isValid(): ternary @name("Arredondo") ;
         }
         default_action = Wauregan(5w0);
         size = 512;

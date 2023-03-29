@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_DDOS_TOFINO2=1 -Ibf_arista_switch_ddos_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino2-t2na --o bf_arista_switch_ddos_tofino2 --bf-rt-schema bf_arista_switch_ddos_tofino2/context/bf-rt.json
-// p4c 9.7.4 (SHA: 8e6e85a)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_DDOS_TOFINO2=1 -Ibf_arista_switch_ddos_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 --skip-precleaner -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino2-t2na --o bf_arista_switch_ddos_tofino2 --bf-rt-schema bf_arista_switch_ddos_tofino2/context/bf-rt.json
+// p4c 9.11.2 (SHA: 4328321)
 
 #include <core.p4>
 #include <tofino2_specs.p4>
@@ -19,6 +19,7 @@
 @pa_container_size("ingress" , "Virgilina.Ruffin.Freeman" , 32)
 @pa_container_size("ingress" , "Dwight.Circle.Dunstable" , 8)
 @pa_container_size("ingress" , "Virgilina.Swanlake.Uvalde" , 8)
+@pa_container_size("egress" , "Dwight.Lookeba.Placedo" , 8 , 8 , 8)
 @pa_atomic("ingress" , "Dwight.Circle.Minto")
 @pa_atomic("ingress" , "Dwight.Picabo.Lakehills")
 @pa_mutually_exclusive("ingress" , "Dwight.Circle.Eastwood" , "Dwight.Picabo.Sledge")
@@ -449,6 +450,9 @@ header Wallula {
 
 header Dennison {
     bit<8> Fairhaven;
+}
+
+header Leflore {
 }
 
 header Woodfield {
@@ -1214,6 +1218,7 @@ struct Wyndmoor {
     Soledad      Brady;
     Wallula      Emden;
     Meridean     Aguilar;
+    Leflore      Brashear;
 }
 
 struct Skillman {
@@ -2754,10 +2759,6 @@ control Farner(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrinsi
     }
 }
 
-// Placedo is defined from 24bits of RNG and table placement has a hard time
-// fitting the immediate path if we do not constrain the type of containers
-@pa_container_size("egress" , "Dwight.Lookeba.Placedo" , 8 , 8, 8)
-
 control Jauca(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrinsic_metadata_t Swifton, in egress_intrinsic_metadata_from_parser_t Neosho, inout egress_intrinsic_metadata_for_deparser_t Islen, inout egress_intrinsic_metadata_for_output_port_t BarNunn) {
     @name(".Brownson") Random<bit<24>>() Brownson;
     @name(".Punaluu") action Punaluu(bit<10> Yerington) {
@@ -3140,6 +3141,7 @@ control Havertown(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intr
             Dwight.Lookeba.Ledoux        : ternary @name("Lookeba.Ledoux") ;
             Dwight.Circle.Hiland         : ternary @name("Circle.Hiland") ;
             Virgilina.Ambler[0].isValid(): ternary @name("Ambler[0]") ;
+            Virgilina.Brashear.isValid() : ternary @name("Brashear") ;
         }
         default_action = Encinitas(7w0);
         size = 512;
@@ -3575,6 +3577,11 @@ control Kevil(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrinsic
             Hatchel.apply();
         }
         Cornish.apply();
+    }
+}
+
+control Otsego(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrinsic_metadata_t Swifton, in egress_intrinsic_metadata_from_parser_t Neosho, inout egress_intrinsic_metadata_for_deparser_t Islen, inout egress_intrinsic_metadata_for_output_port_t BarNunn) {
+    apply {
     }
 }
 
@@ -5921,8 +5928,13 @@ parser Poteet(packet_in Blakeslee, out Almota Virgilina, out Wyndmoor Dwight, ou
         transition select(Virgilina.Lauada.Weyauwega ++ Nooksack.ingress_port[2:0]) {
             McKenna: Nuevo;
             Kaplan: Cowan;
+            19w30272 &&& 19w0x7fff8: Ewing;
+            19w38272 &&& 19w0x7fff8: Ewing;
             default: accept;
         }
+    }
+    state Ewing {
+        transition accept;
     }
     state Kirkwood {
         Blakeslee.extract<Whitten>(Virgilina.Lauada);
@@ -6707,6 +6719,11 @@ control Coalton(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrins
         Virgilina.Mayflower.Turkey = (bit<16>)16w0;
         Virgilina.Mayflower.Cisco = (bit<16>)16w0xc000;
     }
+    @name(".Helen") action Helen(bit<2> SoapLake) {
+        Cavalier(SoapLake);
+        Virgilina.Rienzi.Palmhurst = (bit<24>)24w0xbfbfbf;
+        Virgilina.Rienzi.Comfrey = (bit<24>)24w0xbfbfbf;
+    }
     @name(".Shawville") action Shawville(bit<24> Clarkdale, bit<24> Talbert) {
         Virgilina.Halltown.Clyde = Clarkdale;
         Virgilina.Halltown.Clarion = Talbert;
@@ -6720,6 +6737,7 @@ control Coalton(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrins
     @disable_atomic_modify(1) @name(".Anaconda") table Anaconda {
         actions = {
             @tableonly Cavalier();
+            @tableonly Helen();
             @defaultonly Shawville();
             @defaultonly NoAction();
         }
@@ -6885,6 +6903,7 @@ control Coalton(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrins
     @name(".Tryon") Natalbany() Tryon;
     @name(".Fairborn") Wauregan() Fairborn;
     @name(".China") Trion() China;
+    @name(".Alamance") Otsego() Alamance;
     @name(".Shorter") Nordheim() Shorter;
     @name(".Point") Northboro() Point;
     apply {
@@ -6936,6 +6955,7 @@ control Coalton(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrins
             if (Dwight.Lookeba.Vergennes != 3w2) {
                 China.apply(Virgilina, Dwight, Swifton, Neosho, Islen, BarNunn);
             }
+            Alamance.apply(Virgilina, Dwight, Swifton, Neosho, Islen, BarNunn);
         } else {
             if (Virgilina.Lemont.isValid() == false) {
                 Mellott.apply(Virgilina, Dwight, Swifton, Neosho, Islen, BarNunn);
@@ -7106,6 +7126,8 @@ parser Hillcrest(packet_in Blakeslee, out Almota Virgilina, out Wyndmoor Dwight,
         Dwight.Circle.Weyauwega = Virgilina.Lauada.Weyauwega;
         Dwight.Circle.Joslin = Virgilina.Lauada.Joslin;
         transition select(Virgilina.Lauada.Weyauwega) {
+            16w3784: Ewing;
+            16w4784: Ewing;
             default: accept;
         }
     }
@@ -7116,8 +7138,14 @@ parser Hillcrest(packet_in Blakeslee, out Almota Virgilina, out Wyndmoor Dwight,
         Dwight.Circle.Weyauwega = Virgilina.Lauada.Weyauwega;
         Dwight.Circle.Joslin = Virgilina.Lauada.Joslin;
         transition select(Virgilina.Lauada.Weyauwega) {
+            16w3784: Ewing;
+            16w4784: Ewing;
             default: accept;
         }
+    }
+    state Ewing {
+        Virgilina.Brashear.setValid();
+        transition accept;
     }
     state Simla {
         Dwight.Picabo.Ambrose = (bit<3>)3w6;
