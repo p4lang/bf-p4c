@@ -571,7 +571,7 @@ struct InferWriteMode : public ParserTransform {
 };
 
 void CheckWriteModeConsistency::check(const std::vector<const IR::BFN::Extract*> extracts) {
-    if (extracts.size() == 1) return;
+    if (extracts.size() <= 1) return;
 
     WrMode first_mode = extracts[0]->write_mode;
     bool consistent = std::all_of(extracts.begin(), extracts.end(),
@@ -590,6 +590,7 @@ void CheckWriteModeConsistency::check(const std::vector<const IR::BFN::Extract*>
     bool has_non_padding = false;
     consistent = true;
     int inconsistent_index = -1;
+    int first_non_padding_index = -1;
 
     for (auto &e : extracts) {
         auto dest = phv.field(e->dest->field);
@@ -599,6 +600,7 @@ void CheckWriteModeConsistency::check(const std::vector<const IR::BFN::Extract*>
         if (!has_non_padding) {
             first_mode = e->write_mode;
             has_non_padding = true;
+            first_non_padding_index = &e - extracts.data();
         }
 
         if (consistent && e->write_mode != first_mode) {
@@ -611,8 +613,9 @@ void CheckWriteModeConsistency::check(const std::vector<const IR::BFN::Extract*>
 
     // and set padding mode to match the rest of fields, clearly it is not SINGLE_WRITE,
     // otherwise we would have no problem
+    BUG_CHECK(has_non_padding, "non non-padding extracts found");
     LOG3("CWMC: Setting write mode of padding fields extracted together with "
-         << extracts[inconsistent_index] << ".");
+         << extracts[first_non_padding_index] << ".");
     for (auto e : extracts) {
         auto dest = phv.field(e->dest->field);
         LOG9("    - " << e << " -> " << dest);
@@ -656,7 +659,7 @@ void CheckWriteModeConsistency::check(const std::vector<const IR::BFN::Extract*>
         }
         if (writes_safe) {
             LOG3("CWMC: Setting all fields extracted together with "
-                 << extracts[inconsistent_index] << " as BITWISE_OR.");
+                 << extracts[first_non_padding_index] << " as BITWISE_OR.");
             for (auto e : extracts) {
                 auto dest = phv.field(e->dest->field);
                 LOG9("    - " << e << " -> " << dest);
@@ -677,6 +680,7 @@ void CheckWriteModeConsistency::check(const std::vector<const IR::BFN::Extract*>
     }
     modes << ".";
 
+    BUG_CHECK(inconsistent_index >= 1, "Inconsistent index should never be < 1");
     ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
             "%3%%4%%1% and %2% share the same byte on the wire but"
             " have conflicting parser write semantics.\n    %5%",
