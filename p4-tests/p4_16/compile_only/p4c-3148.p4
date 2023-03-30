@@ -1029,17 +1029,20 @@ extern DirectRegisterAction4<T, U1, U2, U3, U4> {
     bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
 }
 
+@noWarn("unused")
 extern RegisterAction<T, H, U> {
-    RegisterAction(Register<T, H> reg);
+    RegisterAction(Register<_, _> reg);
     U execute(@optional in H index, @optional out U rv2,
               @optional out U rv3, @optional out U rv4);
 
     U execute_log(@optional out U rv2, @optional out U rv3, @optional out U rv4);
-    U enqueue(@optional out U rv2, @optional out U rv3, @optional out U rv4); /* fifo push */
-    U dequeue(@optional out U rv2, @optional out U rv3, @optional out U rv4); /* fifo pop */
-    U push(@optional out U rv2, @optional out U rv3, @optional out U rv4); /* stack push */
-    U pop(@optional out U rv2, @optional out U rv3, @optional out U rv4); /* stack pop */
-    @synchronous(execute, execute_log, enqueue, dequeue, push, pop)
+    U enqueue(@optional out U rv2, @optional out U rv3, @optional out U rv4);  /* fifo push */
+    U dequeue(@optional out U rv2, @optional out U rv3, @optional out U rv4);  /* fifo pop */
+    U push(@optional out U rv2, @optional out U rv3, @optional out U rv4);  /* stack push */
+    U pop(@optional out U rv2, @optional out U rv3, @optional out U rv4);  /* stack pop */
+    /// execute the action on every entry in the register
+    void sweep(@optional in U busy);
+    @synchronous(execute, execute_log, enqueue, dequeue, push, pop, sweep)
     abstract void apply(inout T value, @optional out U rv1, @optional out U rv2,
                                        @optional out U rv3, @optional out U rv4);
 
@@ -1063,14 +1066,14 @@ extern RegisterAction<T, H, U> {
     bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
 }
 extern RegisterAction2<T, H, U1, U2> {
-    RegisterAction2(Register<T, H> reg);
+    RegisterAction2(Register<_, _> reg);
     U1 execute(in H index, out U2 rv2);
 
     U1 execute_log(out U2 rv2);
-    U1 enqueue(out U2 rv2); /* fifo push */
-    U1 dequeue(out U2 rv2); /* fifo pop */
-    U1 push(out U2 rv2); /* stack push */
-    U1 pop(out U2 rv2); /* stack pop */
+    U1 enqueue(out U2 rv2);  /* fifo push */
+    U1 dequeue(out U2 rv2);  /* fifo pop */
+    U1 push(out U2 rv2);  /* stack push */
+    U1 pop(out U2 rv2);  /* stack pop */
     @synchronous(execute, execute_log, enqueue, dequeue, push, pop)
     abstract void apply(inout T value, out U1 rv1, out U2 rv2);
 
@@ -1090,14 +1093,14 @@ extern RegisterAction2<T, H, U1, U2> {
     bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
 }
 extern RegisterAction3<T, H, U1, U2, U3> {
-    RegisterAction3(Register<T, H> reg);
+    RegisterAction3(Register<_, _> reg);
     U1 execute(in H index, out U2 rv2, out U3 rv3);
 
     U1 execute_log(out U2 rv2, out U3 rv3);
-    U1 enqueue(out U2 rv2, out U3 rv3); /* fifo push */
-    U1 dequeue(out U2 rv2, out U3 rv3); /* fifo pop */
-    U1 push(out U2 rv2, out U3 rv3); /* stack push */
-    U1 pop(out U2 rv2, out U3 rv3); /* stack pop */
+    U1 enqueue(out U2 rv2, out U3 rv3);  /* fifo push */
+    U1 dequeue(out U2 rv2, out U3 rv3);  /* fifo pop */
+    U1 push(out U2 rv2, out U3 rv3);  /* stack push */
+    U1 pop(out U2 rv2, out U3 rv3);  /* stack pop */
     @synchronous(execute, execute_log, enqueue, dequeue, push, pop)
     abstract void apply(inout T value, out U1 rv1, out U2 rv2, out U3 rv3);
 
@@ -1117,14 +1120,14 @@ extern RegisterAction3<T, H, U1, U2, U3> {
     bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
 }
 extern RegisterAction4<T, H, U1, U2, U3, U4> {
-    RegisterAction4(Register<T, H> reg);
+    RegisterAction4(Register<_, _> reg);
     U1 execute(in H index, out U2 rv2, out U3 rv3, out U4 rv4);
 
     U1 execute_log(out U2 rv2, out U3 rv3, out U4 rv4);
-    U1 enqueue(out U2 rv2, out U3 rv3, out U4 rv4); /* fifo push */
-    U1 dequeue(out U2 rv2, out U3 rv3, out U4 rv4); /* fifo pop */
-    U1 push(out U2 rv2, out U3 rv3, out U4 rv4); /* stack push */
-    U1 pop(out U2 rv2, out U3 rv3, out U4 rv4); /* stack pop */
+    U1 enqueue(out U2 rv2, out U3 rv3, out U4 rv4);  /* fifo push */
+    U1 dequeue(out U2 rv2, out U3 rv3, out U4 rv4);  /* fifo pop */
+    U1 push(out U2 rv2, out U3 rv3, out U4 rv4);  /* stack push */
+    U1 pop(out U2 rv2, out U3 rv3, out U4 rv4);  /* stack pop */
     @synchronous(execute, execute_log, enqueue, dequeue, push, pop)
     abstract void apply(inout T value, out U1 rv1, out U2 rv2, out U3 rv3, out U4 rv4);
 
