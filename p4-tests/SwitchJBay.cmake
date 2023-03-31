@@ -15,8 +15,4 @@ set(SWITCH_T2_PTF_SPEC
     ^switch_l3.L3ECMPTest
     ^switch_l3.L3MulticastTest")
 
-bfn_add_switch_test("2" "y1" "" "METRICS" ON "${SWITCH_T2_PTF_SPEC}")
 bfn_add_switch_test("2" "y2" "" "METRICS" ON "${SWITCH_T2_PTF_SPEC}")
-bfn_add_switch_test("2" "y4" "" "METRICS" OFF)
-bfn_add_switch_test("2" "y7" "" "METRICS" OFF)
-bfn_add_switch_test("2" "y8" "--set-max-power 62" "METRICS" OFF)

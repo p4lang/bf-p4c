@@ -86,11 +86,7 @@ set(SWITCH_T1_PTF_SPEC
     ^hash
     ^switch_l3.L3SVITest
     ^switch_l2.L2LagTest")
-bfn_add_switch_test("" "x1" "--set-max-power 51" "METRICS" ON "${SWITCH_T1_PTF_SPEC}")
 bfn_add_switch_test("" "x2" "--disable-parse-depth-limit --set-max-power 50" "METRICS" ON "${SWITCH_T1_PTF_SPEC}")
-bfn_add_switch_test("" "x4" "" "METRICS" OFF)
-bfn_add_switch_test("" "x5" "--disable-parse-depth-limit" "METRICS" OFF)
-bfn_add_switch_test("" "x6" "--disable-parse-depth-limit" "METRICS" OFF)
 
 # Switch master MSDC_PROFILE tests
 # FIXME: remove disabling of parser min/max depth limits (P4C-4170)

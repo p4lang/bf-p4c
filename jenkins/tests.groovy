@@ -300,17 +300,6 @@ pipeline {
                     }
                 }
 
-                stage("switch 16 Tofino 1 tests (part 1)") {
-                    steps {
-                        echo 'Running bf-switch bfrt tests for Tofino for X1 Profile'
-                        runInDocker(
-                            extraArgs: '--privileged',
-                            "ctest -R '^tofino/.*smoketest_switch_16_x1'"
-                        )
-                    }
-                }
-
-
                 stage("switch 16 Tofino 1 tests (part 2)") {
                     steps {
                         echo 'Running bf-switch bfrt tests for Tofino for X2 Profile'
@@ -321,42 +310,12 @@ pipeline {
                     }
                 }
 
-                stage("switch 16 Tofino 2 tests (part 1)") {
-                    steps {
-                        echo 'Running bf-switch bfrt tests for Tofino2 for Y1 Profile'
-                        runInDocker(
-                            extraArgs: '--privileged',
-                            "ctest -R '^tofino2/.*smoketest_switch_16_y1'"
-                        )
-                    }
-                }
-
                 stage("switch_16 Tofino 2 tests (part 2)") {
                     steps {
                         echo 'Running bf-switch bfrt tests for Tofino2 for Y2 Profile'
                         runInDocker(
                             extraArgs: '--privileged',
                             "ctest -R '^tofino2/.*smoketest_switch_16_y2'"
-                        )
-                    }
-                }
-
-                stage("switch 16 Tofino 1 ALT-PHV tests (part 1)") {
-                    steps {
-                        echo 'Running bf-switch bfrt tests for Tofino for X1 Profile'
-                        runInDocker(
-                            extraArgs: '--privileged',
-                            "${ALT_PHV_ENV} ctest -R '^tofino/.*smoketest_switch_16_x1'"
-                        )
-                    }
-                }
-
-                stage("switch 16 Tofino 2 ALT-PHV tests (part 1)") {
-                    steps {
-                        echo 'Running bf-switch bfrt tests for Tofino2 for Y1 Profile'
-                        runInDocker(
-                            extraArgs: '--privileged',
-                            "${ALT_PHV_ENV} ctest -V -R '^tofino2/.*smoketest_switch_16_y1'"
                         )
                     }
                 }

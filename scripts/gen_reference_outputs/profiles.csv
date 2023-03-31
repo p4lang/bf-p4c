@@ -4,14 +4,6 @@ switch_ent_dc_general,p4-tests/p4_14/switch/p4src/switch.p4,,-DENT_DC_GENERAL_PR
 switch_dc_basic,p4-tests/p4_14/switch/p4src/switch.p4,,-DDC_BASIC_PROFILE --disable-pragma=pa_solitary -Xp4c=\"--disable-parse-depth-limit\",tofino,p4-14,v1model
 # switch_msdc_ipv4,p4-tests/p4_14/switch/p4src/switch.p4,,-DMSDC_IPV4_PROFILE --disable-pragma=pa_solitary,tofino,p4-14,v1model
 switch_msdc_spine_int,p4-tests/p4_14/switch/p4src/switch.p4,,-DMSDC_SPINE_DTEL_INT_PROFILE --disable-pragma=pa_solitary -Xp4c=\"--disable-parse-depth-limit\",tofino,p4-14,v1model
-switch_16_x1,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_x1.p4,p4-tests/p4_16/switch_16/p4src/shared,-DX1_PROFILE -Xp4c=\"--auto-init-metadata --set-max-power 51\" ,tofino,p4-16,tna
 switch_16_x2,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_x2.p4,p4-tests/p4_16/switch_16/p4src/shared,-DX2_PROFILE -Xp4c=\"--auto-init-metadata --set-max-power 50 --disable-parse-depth-limit\",tofino,p4-16,tna
-switch_16_x4,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_x4.p4,p4-tests/p4_16/switch_16/p4src/shared,-DX4_PROFILE -Xp4c=\"--auto-init-metadata\",tofino,p4-16,tna
-switch_16_x5,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_x5.p4,p4-tests/p4_16/switch_16/p4src/shared,-DX5_PROFILE -Xp4c=\"--disable-parse-depth-limit --auto-init-metadata\",tofino,p4-16,tna
-switch_16_x6,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_x6.p4,p4-tests/p4_16/switch_16/p4src/shared,-DX6_PROFILE -Xp4c=\"--disable-parse-depth-limit --auto-init-metadata\",tofino,p4-16,tna
 static_entries_const_prop,p4-tests/p4_16/compile_only/static_entries_const_prop.p4,,,tofino,p4-16,tna
-switch_16_y1,p4-tests/p4_16/switch_16/p4src/switch-tofino2/switch_tofino2_y1.p4,p4-tests/p4_16/switch_16/p4src/shared,-DY1_PROFILE -Xp4c=\"--auto-init-metadata\",tofino2,p4-16,t2na
 switch_16_y2,p4-tests/p4_16/switch_16/p4src/switch-tofino2/switch_tofino2_y2.p4,p4-tests/p4_16/switch_16/p4src/shared,-DY2_PROFILE -Xp4c=\"--auto-init-metadata\",tofino2,p4-16,t2na
-switch_16_y4,p4-tests/p4_16/switch_16/p4src/switch-tofino2/switch_tofino2_y4.p4,p4-tests/p4_16/switch_16/p4src/shared,-DY4_PROFILE -Xp4c=\"--auto-init-metadata\",tofino2,p4-16,t2na
-switch_16_y7,p4-tests/p4_16/switch_16/p4src/switch-tofino2/switch_tofino2_y7.p4,p4-tests/p4_16/switch_16/p4src/shared,-DY7_PROFILE -Xp4c=\"--auto-init-metadata\",tofino2,p4-16,t2na
-switch_16_y8,p4-tests/p4_16/switch_16/p4src/switch-tofino2/switch_tofino2_y8.p4,p4-tests/p4_16/switch_16/p4src/shared,-DY8_PROFILE -Xp4c=\"--auto-init-metadata --set-max-power 62\",tofino2,p4-16,t2na

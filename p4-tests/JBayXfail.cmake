@@ -500,7 +500,6 @@ if (TEST_ALT_PHV_ALLOC)
     p4c_add_xfail_reason("tofino2"
         "error: table allocation .* Allocation state: ALT_FINALIZE_TABLE"
         extensions/p4_tests/p4_16/customer/arista/obfuscated-l2_dci.p4
-        switch_16_y8
     )
 
     p4c_add_xfail_reason("tofino2"

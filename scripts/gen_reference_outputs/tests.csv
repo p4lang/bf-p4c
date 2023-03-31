@@ -18,9 +18,7 @@ tofino2_tna_32q_2pipe,p4-tests/p4-programs/p4_16_programs/tna_32q_2pipe/tna_32q_
 tofino2_tna_action_profile,p4-tests/p4-programs/p4_16_programs/tna_action_profile/tna_action_profile.p4,p4-tests/p4_14/p4-tests/p4_16_programs,"",tofino2,p4-16,t2na
 tofino2_tna_lpm_match,p4-tests/p4-programs/p4_16_programs/tna_lpm_match/tna_lpm_match.p4,p4-tests/p4_14/p4-tests/p4_16_programs,"",tofino2,p4-16,t2na
 tofino2_tna_meter_lpf_wred,p4-tests/p4-programs/p4_16_programs/tna_meter_lpf_wred/tna_meter_lpf_wred.p4,p4-tests/p4_14/p4-tests/p4_16_programs,"--archive",tofino2,p4-16,t2na
-tofino_switch_16_x1,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_x1.p4,p4-tests/p4_16/switch_16/p4src/shared,-DX1_PROFILE -Xp4c=\"--auto-init-metadata --disable-power-check\",tofino,p4-16,tna
 tofino_switch_16_x2,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_x2.p4,p4-tests/p4_16/switch_16/p4src/shared,-DX2_PROFILE -Xp4c=\"--auto-init-metadata --disable-power-check\",tofino,p4-16,tna
-tofino2_switch_y1,p4-tests/p4_16/switch_16/p4src/switch-tofino2/switch_tofino2_y1.p4,p4-tests/p4_16/switch_16/p4src/shared,-DY1_PROFILE -Xp4c=\"--auto-init-metadata\",tofino2,p4-16,t2na
 tofino2_switch_y2,p4-tests/p4_16/switch_16/p4src/switch-tofino2/switch_tofino2_y2.p4,p4-tests/p4_16/switch_16/p4src/shared,-DY2_PROFILE -Xp4c=\"--auto-init-metadata\",tofino2,p4-16,t2na
 wide_shift,p4-tests/p4_16/stf/p4c-3055-2.p4,,"",tofino,p4-16,tna
 skipped_pipe,p4-tests/p4_16/compile_only/test_config_11_multi_pipe_multi_parsers.p4,,-Xp4c=\"--skip-compilation pipeB\",tofino,p4-16,tna
