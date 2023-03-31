@@ -680,7 +680,9 @@ bitvec TableFormat::bitvec_necessary(type_t type) const {
         bool move_to_overhead = gw_linked && !stats_addr_user->direct;
 
         if (type == COUNTER) {
-            rv.setrange(0, layout_option.layout.stats_addr.address_bits);
+            if (!stats_addr_user->direct) {
+                rv.setrange(0, layout_option.layout.stats_addr.address_bits);
+            }
         } else if (type == COUNTER_PFE) {
             if (layout_option.layout.stats_addr.per_flow_enable || move_to_overhead)
                 rv.setrange(0, 1);

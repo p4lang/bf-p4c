@@ -499,8 +499,6 @@ if (TEST_ALT_PHV_ALLOC)
     # Table fitting errors
     p4c_add_xfail_reason("tofino2"
         "error: table allocation .* Allocation state: ALT_FINALIZE_TABLE"
-        switch_16_y2
-        smoketest_switch_16_y2
         extensions/p4_tests/p4_16/customer/arista/obfuscated-l2_dci.p4
         switch_16_y8
     )
@@ -517,4 +515,11 @@ if (TEST_ALT_PHV_ALLOC)
         extensions/p4_tests/p4_16/customer/extreme/p4c-2649.p4
         extensions/p4_tests/p4_16/stf/p4c-4535.p4
     )
+
+   # 
+   p4c_add_xfail_reason("tofino2"
+	"ACLTest"
+        smoketest_switch_16_y2
+   )
+
 endif (TEST_ALT_PHV_ALLOC)
