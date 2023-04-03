@@ -191,6 +191,11 @@ foreach (test ${P4TESTS_FOR_TOFINO_NO_DEPTH})
 endforeach()
 
 p4c_add_ptf_test_with_ptfdir (
+    "tofino" "p4c-1970" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-1970/p4c-1970.p4"
+    "${testExtraArgs} -target tofino -arch tna -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-1970")
+set_tests_properties("tofino/p4c-1970" PROPERTIES TIMEOUT ${extended_timeout_4times})
+
+p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c_1585_a" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585_a/p4c_1585_a.p4"
     "${testExtraArgs} -target tofino -arch tna -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585_a")
 

@@ -3,12 +3,17 @@
 
 #include <map>
 #include <sstream>
+#include <utility>
 
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/parde/dump_parser.h"
 #include "bf-p4c/parde/parde_visitor.h"
+#include "bf-p4c/parde/parser_dominator_builder.h"
 #include "bf-p4c/parde/parser_info.h"
 #include "bf-p4c/device.h"
+#include "ir/ir-generated.h"
+#include "lib/indent.h"
+#include "lib/ordered_map.h"
 
 /**
  * @ingroup parde
@@ -39,6 +44,43 @@ struct ResolveNegativeExtract : public PassManager {
          */
         std::map<const IR::BFN::Transition*, unsigned> remainder_before_exit;
 
+        /**
+         * @brief Duplicate the given node and set the shift value
+         *
+         * The state_to_duplicate variable is used to store the states that need to be
+         * duplicated. The key is the transition that needs to be duplicated and the
+         * value is a pair of the state to be duplicated and the shift value.
+         *
+         * For example, the following parser:
+         *
+         * A(shift = 36) ----> B(shift = 2)
+         *   |                      ^
+         *   |                      |
+         *   |----> C(shift = 0) ---|
+         *
+         * is transformed to
+         *
+         * A(shift = 31) ----> B'(shift = 5)
+         *   |
+         *   |----> C(shift = 5) -----> B(shift = 2)
+         *
+         * We need to duplicate state B and set its shift value to 5. The transition
+         * from A to B is the key and the value is a pair of B and 5.
+         *
+         * Before this fix, the parser graph is transformed into:
+         *
+         * A(shift = 31) ----> B(shift = 7)
+         *   |                      ^
+         *   |                      |
+         *   |---> C(shift = 5) ----|
+         *
+         * This would be wrong, as the total shift amount on the packet that goes
+         * though A -> C -> B is 31 + 5 + 7 = 43, which is 5 bytes more than the
+         * the correct shift value 38.
+         */
+        std::map<const IR::BFN::Transition *, std::pair<const IR::BFN::ParserState *, int>>
+            state_to_duplicate;
+
         explicit CollectNegativeExtractStates(const CollectParserInfo& pi) : parserInfo(pi) { }
 
         bool preorder(const IR::BFN::PacketRVal* rval) override {
@@ -47,6 +89,7 @@ struct ResolveNegativeExtract : public PassManager {
                 auto state = findContext<IR::BFN::ParserState>();
                 unsigned shift = (-rval->range.lo + 7) / 8;
                 // state_to_shift[state->name] = std::max(state_to_shift[state->name], shift);
+                LOG1("State " << state->name << " requires " << shift << " B shift");
                 historic_states[state] = std::max(historic_states[state], shift);
                 parsers[state] = findContext<IR::BFN::Parser>();
             }
@@ -60,6 +103,7 @@ struct ResolveNegativeExtract : public PassManager {
             transition_shift.clear();
             state_to_shift.clear();
             historic_states.clear();
+            state_to_duplicate.clear();
             parsers.clear();
             return rv;
         }
@@ -80,11 +124,13 @@ struct ResolveNegativeExtract : public PassManager {
                     state->name, max_idx_value, max_buff_size);
 
                 distribute_shift_to_node(state, nullptr, parsers[state], max_idx_value);
+
                 // 2] Add the fix amount of shift data (it should be the same value from nodes)
                 //
                 // It is not a problem if the SHIFT value will not cover the whole state because
                 // the future pass will split the state to get more data to parse data.
                 for (auto trans : state->transitions) {
+                    LOG1("  state has transitions " << trans);
                     unsigned shift_value = trans->shift + max_idx_value;
                     transition_shift[state->name][trans->value] = shift_value;
                 }
@@ -142,7 +188,7 @@ struct ResolveNegativeExtract : public PassManager {
          * @brief Adjust all transitions/state shifts for the given state
          *
          * Do the following for each state:
-         * 1] Set the computed transition shift which is affected byt he historic data path
+         * 1] Set the computed transition shift which is affected by the historic data path
          *   (value needs to be same for all transitions due to the state spliting)
          * 2] Set the corresponding state shift value for the successor node
          * 3] Correct all transitions from the successors by the state shift value
@@ -155,12 +201,15 @@ struct ResolveNegativeExtract : public PassManager {
          */
         void adjust_shift_buffer(const IR::BFN::ParserState *state,
             const IR::BFN::ParserState *state_child,
+            const IR::BFN::Parser* parser,
             unsigned tr_shift, unsigned state_shift) {
+            auto graph = parserInfo.graph(parser);
             for (auto state_trans : state->transitions) {
                 auto state_succ = state_trans->next;
                 transition_shift[state->name][state_trans->value] = tr_shift;
-                LOG4("Adding transition { " << state_trans->value << " } shift value " <<
-                    tr_shift << " B from state " << state->name);
+                LOG4("Adding transition { " << state_trans->value << " } shift value "
+                            << tr_shift << " B from state " << state->name << " to state "
+                            << state_succ->name);
 
                 if (!state_succ) {
                     // This transition exits parser, but we need to shift `state_shift` bytes
@@ -169,8 +218,12 @@ struct ResolveNegativeExtract : public PassManager {
                     remainder_before_exit[state_trans] = state_shift;
                     continue;
                 };
-                state_to_shift[state_succ->name] = state_shift;
-                LOG4("Setting shift value " << state_shift << " B for state " << state_succ->name);
+
+                if (graph.predecessors().at(state_succ).size() <= 1) {
+                    state_to_shift[state_succ->name] = state_shift;
+                    LOG4("Setting shift value " << state_shift << " B for state "
+                                << state_succ->name);
+                }
 
                 // Don't process the subtree if we reached from that part of the tree
                 // because it will be analyzed later
@@ -180,13 +233,25 @@ struct ResolveNegativeExtract : public PassManager {
                     continue;
                 }
 
+                // if after adjusting successors we violate the invariant that
+                // all shift values from the outgoing transitions of the successors
+                // to the dominator should remain the same. We need to duplicate the successor
+                // state, and adjust the shift values of the transitions to the duplicated state
+                if (graph.predecessors().at(state_succ).size() > 1) {
+                    state_to_duplicate.emplace(state_trans,
+                                               std::make_pair(state_succ, state_shift));
+                    continue;
+                }
+
                 for (auto succ_tr : state_succ->transitions) {
                     if (transition_shift[state_succ->name].count(succ_tr->value) > 0) continue;
 
                     unsigned new_shift = get_transition_shift(state_succ, succ_tr) + state_shift;
                     transition_shift[state_succ->name][succ_tr->value] = new_shift;
-                    LOG4("Adding transition { " << succ_tr->value << " } shift value " <<
-                        new_shift << " B from state " << state_succ->name);
+                    LOG4("Adding transition { "
+                         << succ_tr->value << " } shift value " << new_shift << " B from state "
+                         << state_succ->name << " to state "
+                         << (succ_tr->next != nullptr ? succ_tr->next->name : "EXIT"));
                 }
             }
         }
@@ -213,6 +278,11 @@ struct ResolveNegativeExtract : public PassManager {
             int deficit = required_history;
             auto graph = parserInfo.graph(parser);
             auto transitions = graph.transitions(state, succ);
+
+            if (succ != nullptr)
+                LOG5("Transitions size from state " << state->name << " to state " << succ->name
+                                                    << " is " << transitions.size());
+
             if (transitions.size() > 0 && required_history > 0) {
                 // All transitions should have the same shift value - we will take the first
                 // one
@@ -220,8 +290,9 @@ struct ResolveNegativeExtract : public PassManager {
                 deficit = required_history - shift_value;
             }
 
-            LOG4("Shift distribution for node " << state->name <<", to distribute = "
-                << required_history << " (deficit = " << deficit << " B)");
+            LOG4("Shift distribution for node " << state->name
+                                                << ", to distribute = " << required_history
+                                                << " (deficit = " << deficit << " B)");
 
             // 2] Call recursively to all predecessors to distribute the remaining history
             // shift - we need to make a call iff we can distribute the value to successors.
@@ -257,7 +328,10 @@ struct ResolveNegativeExtract : public PassManager {
                 // (we can shift them out)
                 new_tr_shift = -deficit;
             }
-            adjust_shift_buffer(state, succ, new_tr_shift, new_state_shift);
+            LOG4("Adjusting shift for state "
+                 << state->name << " and transition to state " << succ->name
+                 << " (new transition shift = " << new_tr_shift << " B)" << IndentCtl::indent);
+            adjust_shift_buffer(state, succ, parser, new_tr_shift, new_state_shift);
         }
     };
 
@@ -292,9 +366,27 @@ struct ResolveNegativeExtract : public PassManager {
                 transition->next = remainder_state;
                 auto end_transition = new IR::BFN::Transition(match_t(), state_shift);
                 remainder_state->transitions.push_back(end_transition);
-                LOG5("Transition from state " << state->name << " with match value "
-                     << orig_transition->value << " leads to exit, adding new state "
-                     << remainder_state->name << " to consume " << state_shift << " bytes.");
+                LOG5("Transition from state "
+                     << state->name << " with match value " << orig_transition->value
+                     << " leads to exit, adding new state " << remainder_state->name
+                     << " to consume " << state_shift << " bytes.");
+            }
+
+            if (collectNegative.state_to_duplicate.count(orig_transition)) {
+                auto [orig_state, state_shift] =
+                    collectNegative.state_to_duplicate.at(orig_transition);
+                LOG5("Duplicating transition from state " << state->name << " with match value "
+                                                          << orig_transition->value << " to state "
+                                                          << orig_state->name);
+                auto duplicated_state = new IR::BFN::ParserState(
+                    orig_state->p4State, orig_state->name + "$dup", orig_state->gress);
+                transition->next = duplicated_state;
+                for (auto tr : orig_state->transitions) {
+                    auto new_trans = new IR::BFN::Transition(tr->srcInfo,
+                        tr->value, tr->shift + state_shift, tr->next);
+                    duplicated_state->transitions.push_back(new_trans);
+                }
+                duplicated_state->statements = orig_state->statements;
             }
 
             return true;
