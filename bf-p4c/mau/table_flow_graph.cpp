@@ -69,7 +69,7 @@ FlowGraph::get_dominators(const IR::MAU::Table* table) const {
         // Compute dominator sets. Taken from the Wikipedia article on dominators.
         using TableSet = std::set<const IR::MAU::Table*>;
         using DominatorMap = std::map<const IR::MAU::Table*, TableSet>;
-        dominators = boost::optional<DominatorMap>(DominatorMap());
+        dominators = std::optional<DominatorMap>(DominatorMap());
         auto& dominators = *this->dominators;
 
         // The start node dominates itself. For all other nodes, set all nodes as the

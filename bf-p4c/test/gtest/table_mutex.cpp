@@ -1,5 +1,5 @@
+#include <optional>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/optional.hpp>
 
 #include "gtest/gtest.h"
 
@@ -19,7 +19,7 @@ class TableMutexTest : public TofinoBackendTest {};
 
 namespace {
 
-boost::optional<TofinoPipeTestCase>
+std::optional<TofinoPipeTestCase>
 createTableMutexTestCase(const std::string &ingress_source) {
     auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
 

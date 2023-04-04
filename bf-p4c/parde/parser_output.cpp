@@ -129,13 +129,13 @@ struct ParserAsmSerializer : public ParserInspector {
             out.flags(original_flags);
         }
         if (profile->initial_ptr)
-            out << indent << "initial_ptr: " << profile->initial_ptr << std::endl;
+            out << indent << "initial_ptr: " << *profile->initial_ptr << std::endl;
         if (profile->initial_w0_offset)
-            out << indent << "initial_w0_offset: " << profile->initial_w0_offset << std::endl;
+            out << indent << "initial_w0_offset: " << *profile->initial_w0_offset << std::endl;
         if (profile->initial_w1_offset)
-            out << indent << "initial_w1_offset: " << profile->initial_w1_offset << std::endl;
+            out << indent << "initial_w1_offset: " << *profile->initial_w1_offset << std::endl;
         if (profile->initial_w2_offset)
-            out << indent << "initial_w2_offset: " << profile->initial_w2_offset << std::endl;
+            out << indent << "initial_w2_offset: " << *profile->initial_w2_offset << std::endl;
         if (profile->initial_alu0_instruction) {
             out << indent << "initial_alu0_instruction: ";
             print_params(out, *profile->initial_alu0_instruction);
@@ -680,7 +680,7 @@ struct ParserAsmSerializer : public ParserInspector {
             out << indent << "length: " << extract->dest->length_in_bytes(name) << std::endl;
 
             if (extract->dest->csum_unit) {
-                out << indent << "checksum: " << extract->dest->csum_unit << std::endl;
+                out << indent << "checksum: " << *extract->dest->csum_unit << std::endl;
             }
         } else {
             out << indent << "# clot " << extract->dest->tag << " (spilled)" << std::endl;

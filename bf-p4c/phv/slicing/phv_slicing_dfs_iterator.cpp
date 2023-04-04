@@ -185,13 +185,13 @@ struct ScSubRangeFsFinder {
     }
 
     /// @returns the field slice in @a sc that covers @p fs.
-    boost::optional<FieldSlice> get_enclosing_fs(const FieldSlice& fs) {
+    std::optional<FieldSlice> get_enclosing_fs(const FieldSlice& fs) {
         for (const auto& enclosing_fs : field_slices.at(fs.field())) {
             if (enclosing_fs.range().contains(fs.range())) {
                 return enclosing_fs;
             }
         }
-        return boost::none;
+        return std::nullopt;
     }
 
     /// @returns rotational slices of @p fs in @a sc.
@@ -271,19 +271,19 @@ bool can_satisfy_valid_container_range(const SuperCluster::SliceList* sl) {
 }
 
 /// PreSplitFunc is a function type that split a supercluter into a set of clusters if possible,
-/// otherwise, it will return boost::none.
+/// otherwise, it will return std::nullopt.
 using PreSplitFunc = std::function<
-    boost::optional<std::list<SuperCluster*>>(SuperCluster*)>;
+    std::optional<std::list<SuperCluster*>>(SuperCluster*)>;
 
 /// helper function to presplit clusters.
-boost::optional<ordered_set<SuperCluster*>> presplit_by(const ordered_set<SuperCluster*>& clusters,
+std::optional<ordered_set<SuperCluster*>> presplit_by(const ordered_set<SuperCluster*>& clusters,
                                                         PreSplitFunc split_func,
                                                         cstring split_name) {
     ordered_set<SuperCluster*> rst;
     for (auto* sc : clusters) {
         const auto after = split_func(sc);
         if (!after) {
-            return boost::none;
+            return std::nullopt;
         }
         rst.insert(after->begin(), after->end());
     }
@@ -334,11 +334,11 @@ AfterSplitConstraint::ConstraintType AfterSplitConstraint::type() const {
     }
 }
 
-boost::optional<AfterSplitConstraint> AfterSplitConstraint::intersect(
+std::optional<AfterSplitConstraint> AfterSplitConstraint::intersect(
     const AfterSplitConstraint& other) const {
     bitvec rv = sizes & other.sizes;
     if (rv.empty()) {
-        return boost::none;
+        return std::nullopt;
     }
     return AfterSplitConstraint(rv);
 }
@@ -549,9 +549,9 @@ struct NextSplitTargetMetrics {
     }
 };
 
-boost::optional<SliceListLoc> DfsItrContext::dfs_pick_next() const {
+std::optional<SliceListLoc> DfsItrContext::dfs_pick_next() const {
     using ctype = AfterSplitConstraint::ConstraintType;
-    auto rst = boost::make_optional(false, SliceListLoc());
+    std::optional<SliceListLoc> rst = std::nullopt;
     NextSplitTargetMetrics best;
 
     for (auto* sc : to_be_split_i) {
@@ -561,7 +561,7 @@ boost::optional<SliceListLoc> DfsItrContext::dfs_pick_next() const {
         // on slicing and allocation in some cases.
         auto after_split_constraints = collect_aftersplit_constraints(sc);
         if (!after_split_constraints) {
-            return boost::none;
+            return std::nullopt;
         }
         const auto next_decided_byte = [&](const SuperCluster::SliceList* sl) {
             int offset = 0;
@@ -691,8 +691,8 @@ bool DfsItrContext::propagate_tail_split(
     SplitSchema* schema) const {
     /// returns decision of @p fs made by this round and all previous rounds.
     const auto get_decision = [&](const FieldSlice& fs, bool& found_conflict) {
-        boost::optional<AfterSplitConstraint> rst =
-            !constraints.count(fs) ? boost::none : boost::make_optional(constraints.at(fs));
+        std::optional<AfterSplitConstraint> rst =
+            !constraints.count(fs) ? std::nullopt : std::make_optional(constraints.at(fs));
         // only new decisions will have immaterial changes that we need to do range match.
         for (const auto& new_decision : *decisions) {
             const auto& decided_fs = new_decision.first;
@@ -717,7 +717,7 @@ bool DfsItrContext::propagate_tail_split(
     using ctype = AfterSplitConstraint::ConstraintType;
     Internal::ScSubRangeFsFinder fs_finder(sc);
     const auto get_decision_based_on_rot = [&](const FieldSlice& fs, bool& found_conflict) {
-        boost::optional<AfterSplitConstraint> rst = boost::none;
+        std::optional<AfterSplitConstraint> rst = std::nullopt;
         for (const auto& rot_fs : fs_finder.get_rotational_slices(fs)) {
             auto rot_decided_sz = get_decision(rot_fs, found_conflict);
             if (found_conflict) {
@@ -781,7 +781,7 @@ bool DfsItrContext::propagate_tail_split(
     return true;
 }
 
-boost::optional<std::pair<SplitSchema, SplitDecision>> DfsItrContext::make_split_meta(
+std::optional<std::pair<SplitSchema, SplitDecision>> DfsItrContext::make_split_meta(
     SuperCluster* sc, SuperCluster::SliceList* target, int first_n_bits) const {
     using ctype = AfterSplitConstraint::ConstraintType;
     auto after_split_constraints = collect_aftersplit_constraints(sc);
@@ -823,7 +823,7 @@ boost::optional<std::pair<SplitSchema, SplitDecision>> DfsItrContext::make_split
                 !after_split_constraints->at(fs).intersect(container_size_constraint)) {
                 LOG5("cannot split " << fs << " to " << container_size_constraint
                      << ", because it must be " << after_split_constraints->at(fs));
-                return boost::none;
+                return std::nullopt;
             }
             if (offset + fs.size() <= first_n_bits) {
                 decisions[fs] = container_size_constraint;
@@ -854,13 +854,13 @@ boost::optional<std::pair<SplitSchema, SplitDecision>> DfsItrContext::make_split
     if (config_i.smart_slicing) {
         if (!propagate_tail_split(
                     sc, *after_split_constraints, &decisions, target, first_n_bits, &schema)) {
-            return boost::none;
+            return std::nullopt;
         }
     }
     return std::make_pair(schema, decisions);
 }
 
-boost::optional<std::list<SuperCluster*>> DfsItrContext::split_by_adjacent_no_pack(
+std::optional<std::list<SuperCluster*>> DfsItrContext::split_by_adjacent_no_pack(
     SuperCluster* sc) const {
     // group fieldslices by the byte it locates, and then check no_pack constraint
     // between adjacent byte groups. If there are no_pack constraints, mark split
@@ -902,7 +902,7 @@ boost::optional<std::list<SuperCluster*>> DfsItrContext::split_by_adjacent_no_pa
     return PHV::Slicing::split(sc, schema);
 }
 
-boost::optional<std::list<SuperCluster*>>
+std::optional<std::list<SuperCluster*>>
 DfsItrContext::split_by_adjacent_deparsed_and_non_deparsed(SuperCluster* sc) const {
     const auto is_deparsed_or_digest = [](const FieldSlice& fs) {
         return (fs.field()->deparsed() || fs.field()->exact_containers() ||
@@ -930,7 +930,7 @@ DfsItrContext::split_by_adjacent_deparsed_and_non_deparsed(SuperCluster* sc) con
     return PHV::Slicing::split(sc, schema);
 }
 
-boost::optional<std::list<SuperCluster*>>
+std::optional<std::list<SuperCluster*>>
 DfsItrContext::split_by_deparsed_bottom_bits(SuperCluster* sc) const {
     SplitSchema schema;
     for (auto* sl : sc->slice_lists()) {
@@ -953,7 +953,7 @@ DfsItrContext::split_by_deparsed_bottom_bits(SuperCluster* sc) const {
     return PHV::Slicing::split(sc, schema);
 }
 
-boost::optional<std::list<SuperCluster*>>
+std::optional<std::list<SuperCluster*>>
 DfsItrContext::split_by_valid_container_range(SuperCluster* sc) const {
     SplitSchema schema;
     for (auto* sl : sc->slice_lists()) {
@@ -975,7 +975,7 @@ DfsItrContext::split_by_valid_container_range(SuperCluster* sc) const {
     return PHV::Slicing::split(sc, schema);
 }
 
-boost::optional<std::list<SuperCluster*>>
+std::optional<std::list<SuperCluster*>>
 DfsItrContext::split_by_long_fieldslices(SuperCluster* sc) const {
     SplitSchema schema;
     for (auto* sl : sc->slice_lists()) {
@@ -1007,7 +1007,7 @@ DfsItrContext::split_by_long_fieldslices(SuperCluster* sc) const {
 // split by pa_container_size for those pragmas that are not up-casting,
 // i.e. ignore cases like pa_container_sz(f1<8>, 32); Those will be left
 // to be iterated by the allocation algorithm to figure out the best way.
-boost::optional<std::list<SuperCluster*>> DfsItrContext::split_by_pa_container_size(
+std::optional<std::list<SuperCluster*>> DfsItrContext::split_by_pa_container_size(
     const SuperCluster* sc, const PHVContainerSizeLayout& pa_sz_layout) {
     // add wide_arith fields to pa_container_size requirements.
     PHVContainerSizeLayout pa = pa_sz_layout;
@@ -1036,7 +1036,7 @@ boost::optional<std::list<SuperCluster*>> DfsItrContext::split_by_pa_container_s
         if (total_sz < field->size) {
             LOG6("Invalid pragma found on: " << field <<
                  ", with total @pa_container_size pragma sizes: " << total_sz);
-            return boost::none;
+            return std::nullopt;
         } else if (total_sz == field->size) {
             LOG6("Found pa_container_size with same-size: " << field);
             exact_size_pragmas.insert(field);
@@ -1291,7 +1291,7 @@ bool DfsItrContext::need_further_split(const SuperCluster::SliceList* sl) const 
     // It marks bits of no_split point to 1 on the no_split bitvec.
     bitvec no_split;
     int offset = sl->front().field()->exact_containers() ? 0 : head_offset;
-    boost::optional<FieldSlice> prev = boost::none;
+    std::optional<FieldSlice> prev = std::nullopt;
     for (const auto& fs : *sl) {
         if (fs.field()->no_split()) {
             if (prev && fs.field() == (*prev).field()) {
@@ -1416,7 +1416,7 @@ bool DfsItrContext::dfs_prune_invalid_parser_packing(const SuperCluster* sc) con
             fs_starts[fs] = offset;
             offset += fs.size();
         }
-        if (auto err = parser_packing_validator_i.can_pack(fs_starts, boost::none)) {
+        if (auto err = parser_packing_validator_i.can_pack(fs_starts, std::nullopt)) {
             LOG5("DFS pruned: invalid parser packing found in " << *sl << ", because "
                  << err->str());
             return true;
@@ -1425,7 +1425,7 @@ bool DfsItrContext::dfs_prune_invalid_parser_packing(const SuperCluster* sc) con
     return false;
 }
 
-boost::optional<SplitDecision>
+std::optional<SplitDecision>
 DfsItrContext::collect_aftersplit_constraints(const SuperCluster* sc) const {
     using ctype = AfterSplitConstraint::ConstraintType;
     // sz decided by other fieldslice in the super cluster.
@@ -1447,7 +1447,7 @@ DfsItrContext::collect_aftersplit_constraints(const SuperCluster* sc) const {
 
     // collect implicit container sz constraints.
     if (!collect_implicit_container_sz_constraint(&decided_sz, sc)) {
-        return boost::none;
+        return std::nullopt;
     }
 
     // record AfterSplitConstraint from slice list that does not need any further
@@ -1469,7 +1469,7 @@ DfsItrContext::collect_aftersplit_constraints(const SuperCluster* sc) const {
                         LOG5("DFS pruned(conflicted decisions with pragma): "
                              << "pragma constraint must " << decided_sz.at(fs) << ", but " << fs
                              << " must " << constraint);
-                        return boost::none;
+                        return std::nullopt;
                     } else {
                         decided_sz[fs] = *intersection;
                     }
@@ -1544,7 +1544,7 @@ DfsItrContext::collect_aftersplit_constraints(const SuperCluster* sc) const {
         }
     });
     if (has_conflicting_decisions) {
-        return boost::none;
+        return std::nullopt;
     }
     return decided_sz;
 }
@@ -1771,16 +1771,16 @@ struct RangeLookupableConstraints {
         }
     }
 
-    boost::optional<AfterSplitConstraint> lookup(const FieldSlice& fs) const {
+    std::optional<AfterSplitConstraint> lookup(const FieldSlice& fs) const {
         if (!constraints.count(fs.field())) {
-            return boost::none;
+            return std::nullopt;
         }
         for (const auto& c : constraints.at(fs.field())) {
             if (c.first.contains(fs.range())) {
                 return c.second;
             }
         }
-        return boost::none;
+        return std::nullopt;
     }
 };
 

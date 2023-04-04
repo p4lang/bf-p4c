@@ -1,8 +1,8 @@
 #include <array>
 #include <initializer_list>
+#include <optional>
 
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/optional.hpp>
 
 #include "bf-p4c/test/gtest/bf_gtest_helpers.h"
 #include "gtest/gtest.h"
@@ -29,7 +29,7 @@ class TableDependencyGraphTestForTofino2 : public JBayBackendTest {};
 
 namespace {
 
-boost::optional<TofinoPipeTestCase>
+std::optional<TofinoPipeTestCase>
 createTableDependencyGraphTestCase(const std::string& parserSource,
         const std::string target = "tofino") {
     auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
@@ -116,7 +116,7 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe, PhvInfo& phv, Fiel
     return pipe->apply(quick_backend);
 }
 
-void check_dependency_graph_summary(boost::optional<TofinoPipeTestCase>& test,
+void check_dependency_graph_summary(std::optional<TofinoPipeTestCase>& test,
                                     const DependencyGraph& dg, Match::CheckList& expected) {
     auto *print_dg = new PrintDependencyGraph(dg);
     test->pipe->apply(*print_dg);
@@ -387,11 +387,11 @@ TEST_F(TableDependencyGraphTest, GraphEdgeAnnotations) {
 
     DependencyGraph::dump_viz(std::cout, dg);
     auto not_found = dg.get_data_dependency_info(t1, t2);
-    EXPECT_EQ(not_found, boost::none);
+    EXPECT_EQ(not_found, std::nullopt);
 
     auto dep_info_opt = dg.get_data_dependency_info(t11, t12);
-    EXPECT_NE(dep_info_opt, boost::none);
-    auto dep_info = dep_info_opt.get();
+    EXPECT_NE(dep_info_opt, std::nullopt);
+    auto dep_info = *dep_info_opt;
 
     ordered_set<cstring> field_names;
     ordered_set<DependencyGraph::dependencies_t> dep_types;

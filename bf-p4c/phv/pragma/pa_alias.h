@@ -2,7 +2,7 @@
 #define EXTENSIONS_BF_P4C_PHV_PRAGMA_PA_ALIAS_H_
 
 #include <map>
-#include <boost/optional.hpp>
+#include <optional>
 #include "ir/ir.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/utils/utils.h"
@@ -26,9 +26,9 @@ class PragmaAlias : public Inspector, public Pragma::PrettyPrint {
         /// The alias destination field.
         cstring field;
 
-        /// The range of the field being aliased, or boost::none when the
+        /// The range of the field being aliased, or std::nullopt when the
         /// entire field is aliased.
-        boost::optional<le_bitrange> range;
+        std::optional<le_bitrange> range;
 
         /// Who created the pragma?
         CreatedBy who;
@@ -66,10 +66,10 @@ class PragmaAlias : public Inspector, public Pragma::PrettyPrint {
     static const char *description;
     static const char *help;
 
-    /// Checks if alias is possible between @p f1 and @p f2. If not, returns boost::none.
+    /// Checks if alias is possible between @p f1 and @p f2. If not, returns std::nullopt.
     /// If yes, it returns a pair of fields, the first being the alias destination and the
     /// second is the alias source (field being replaced).
-    boost::optional<std::pair<const PHV::Field*, const PHV::Field*>> mayAddAlias(
+    std::optional<std::pair<const PHV::Field*, const PHV::Field*>> mayAddAlias(
             const PHV::Field* f1,
             const PHV::Field* f2,
             bool suppressWarning = false);

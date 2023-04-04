@@ -56,7 +56,7 @@ class SuperClusterMetrics {
             insert_if_any_of(sc, has_exact_containers,
                              [](const FieldSlice& fs) { return fs.field()->exact_containers(); });
             insert_if_any_of(sc, has_constraint_of_starting_index, [](const FieldSlice& fs) {
-                return fs.alignment().is_initialized() || fs.field()->deparsed_bottom_bits() ||
+                return fs.alignment().has_value() || fs.field()->deparsed_bottom_bits() ||
                        fs.field()->deparsed_to_tm();
             });
 
@@ -252,9 +252,9 @@ struct ScAllocTracker {
                     summary->has_pov |= allocslice.field()->pov;
                     summary->has_pa_container_size |=
                         kit_i.pragmas.pa_container_sizes().is_specified(allocslice.field());
-                    summary->has_pa_container_type |= kit_i.pragmas.pa_container_type()
+                    summary->has_pa_container_type |= !!kit_i.pragmas.pa_container_type()
                                                           .required_kind(allocslice.field())
-                                                          .is_initialized();
+                                                          .has_value();
                     summary->has_learning_bits |= kit_i.uses.is_learning(allocslice.field());
                 }
                 summary->containers.insert(container_status.first);
@@ -394,9 +394,9 @@ GreedyAllocator::AllocResultWithSlicingDetails GreedyAllocator::slice_and_alloca
     slicing_ctx->set_config(
         Slicing::IteratorConfig{false, false, true, true, (1 << 25), (1 << 16)});
     int n_tried = 0;
-    boost::optional<Transaction> best_tx;
-    boost::optional<TxScore*> best_score;
-    boost::optional<std::list<PHV::SuperCluster*>> best_slicing;
+    std::optional<Transaction> best_tx;
+    std::optional<TxScore*> best_score;
+    std::optional<std::list<PHV::SuperCluster*>> best_slicing;
     ordered_map<const PHV::SuperCluster*, TxContStatus>* best_sliced_tx = nullptr;
     int best_slicing_idx = 0;
     AllocError* last_err = new AllocError(ErrorCode::NO_SLICING_FOUND);

@@ -122,7 +122,7 @@ class MultipleApply : public PassManager {
         /// Provided to the constructor when the visitor is intended to be invoked on a subtree,
         /// rather than the entire IR. If not present, the gress is derived from the visitor's
         /// context. This never changes after construction.
-        boost::optional<gress_t> gress;
+        std::optional<gress_t> gress;
 
         /// Gives the replacement Table object for each representative table
         /// in \p duplicate_tables.
@@ -141,7 +141,7 @@ class MultipleApply : public PassManager {
         const IR::Node* postorder(IR::MAU::TableSeq* seq) override;
 
      public:
-        explicit DeduplicateTables(MultipleApply &s, boost::optional<gress_t> gress = boost::none):
+        explicit DeduplicateTables(MultipleApply &s, std::optional<gress_t> gress = std::nullopt):
         self(s), gress(gress) { }
     };
 
@@ -187,7 +187,7 @@ class MultipleApply : public PassManager {
     // gress is being visited.
     MultipleApply(
         const BFN_Options& options,
-        boost::optional<gress_t> gress = boost::none,
+        std::optional<gress_t> gress = std::nullopt,
         bool dedup_only = false,
         bool run_default_next = true);
 };

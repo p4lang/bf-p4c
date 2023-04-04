@@ -159,8 +159,8 @@ BruteForceOptimizationStrategy BruteForceOptimizationStrategy::playSeq(
  */
 std::list<PHV::SuperCluster*> BruteForceOptimizationStrategy::optimize(
                             std::list<PHV::SuperCluster*>& unallocated_sc, PHV::Transaction& rst) {
-    boost::optional<PHV::Transaction> best_alloc = boost::none;
-    boost::optional<PHV::Transaction> best_partial = boost::none;
+    std::optional<PHV::Transaction> best_alloc = std::nullopt;
+    std::optional<PHV::Transaction> best_partial = std::nullopt;
     std::list<PHV::SuperCluster*> allocated_sc;
     std::stringstream opt_history;
     int max_opt_pass;

@@ -2,7 +2,7 @@
 #define BF_P4C_PHV_ALLOCATE_PHV_H_
 
 #include <sstream>
-#include <boost/optional.hpp>
+#include <optional>
 
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/ir/bitrange.h"
@@ -369,7 +369,7 @@ class CoreAllocation {
     // Prioritize use of ARA for overlay inits
     bool prioritizeARAinits;
 
-    boost::optional<PHV::Transaction> alloc_super_cluster_with_alignment(
+    std::optional<PHV::Transaction> alloc_super_cluster_with_alignment(
         const PHV::Allocation& alloc,
         const PHV::ContainerGroup& container_group,
         PHV::SuperCluster& super_cluster,
@@ -397,8 +397,8 @@ class CoreAllocation {
         ordered_set<PHV::AllocSlice> &new_candidate_slices,
         PHV::Transaction &perContainerAlloc,
         ordered_map<const PHV::AllocSlice, OverlayInfo> &overlay_info,
-        boost::optional<PHV::Allocation::LiveRangeShrinkingMap> &initNodes,
-        boost::optional<ordered_set<PHV::AllocSlice>> &allocedSlices,
+        std::optional<PHV::Allocation::LiveRangeShrinkingMap> &initNodes,
+        std::optional<ordered_set<PHV::AllocSlice>> &allocedSlices,
         ordered_set<PHV::AllocSlice> &metaInitSlices,
         PHV::Allocation::LiveRangeShrinkingMap &initActions,
         bool &new_overlay_container,
@@ -408,16 +408,16 @@ class CoreAllocation {
     bool update_new_prim(const PHV::AllocSlice &existingSl, PHV::AllocSlice &newSl,
                          ordered_set<PHV::AllocSlice> &toBeRemovedFromAlloc) const;
 
-    boost::optional<std::vector<PHV::AllocSlice>> prepare_candidate_slices(
+    std::optional<std::vector<PHV::AllocSlice>> prepare_candidate_slices(
             PHV::SuperCluster::SliceList & slices,
             const PHV::Container& c,
             const PHV::Allocation::ConditionalConstraint& start_positions) const;
 
     bool try_metadata_overlay(
         const PHV::Container& c,
-        boost::optional<ordered_set<PHV::AllocSlice>> &allocedSlices,
+        std::optional<ordered_set<PHV::AllocSlice>> &allocedSlices,
         const PHV::AllocSlice &slice,
-        boost::optional<PHV::Allocation::LiveRangeShrinkingMap> &initNodes,
+        std::optional<PHV::Allocation::LiveRangeShrinkingMap> &initNodes,
         ordered_set<PHV::AllocSlice> &new_candidate_slices,
         ordered_set<PHV::AllocSlice> &metaInitSlices,
         PHV::Allocation::LiveRangeShrinkingMap &initActions,
@@ -440,10 +440,10 @@ class CoreAllocation {
         std::vector<PHV::AllocSlice> &candidate_slices,
         PHV::Transaction &perContainerAlloc,
         PHV::Allocation::LiveRangeShrinkingMap &initActions,
-        boost::optional<PHV::Allocation::LiveRangeShrinkingMap> &initNodes,
+        std::optional<PHV::Allocation::LiveRangeShrinkingMap> &initNodes,
         const PHV::Container& c,
         const PHV::SuperCluster& super_cluster,
-        boost::optional<PHV::Allocation::ConditionalConstraints> &action_constraints,
+        std::optional<PHV::Allocation::ConditionalConstraints> &action_constraints,
         int &num_bitmasks) const;
 
     bool try_place_wide_arith_hi(
@@ -550,7 +550,7 @@ class CoreAllocation {
      *   - packing different fields (or field slices) into the same container
      *   - overlaying fields
      *
-     * @returns an allocation of @p cluster to @p group or boost::none if no allocation
+     * @returns an allocation of @p cluster to @p group or std::nullopt if no allocation
      * could be found.
      *
      * Caveats and TODOs:
@@ -562,14 +562,14 @@ class CoreAllocation {
      *
      * Uses mutex_i and uses_i.
      */
-    boost::optional<PHV::Transaction> try_alloc(
+    std::optional<PHV::Transaction> try_alloc(
         const PHV::Allocation& alloc,
         const PHV::ContainerGroup& group,
         PHV::SuperCluster& cluster,
         int max_alignment_tries,
         const ScoreContext& score_ctx) const;
 
-    boost::optional<const PHV::SuperCluster::SliceList*> find_first_unallocated_slicelist(
+    std::optional<const PHV::SuperCluster::SliceList*> find_first_unallocated_slicelist(
         const PHV::Allocation& alloc, const std::list<PHV::ContainerGroup*>& container_groups,
         const PHV::SuperCluster& cluster) const;
 
@@ -578,7 +578,7 @@ class CoreAllocation {
       * earlier in PHV allocation already ensures that these fields can be safely allocated to the
       * zero-ed containers.
       */
-    boost::optional<PHV::Transaction> try_deparser_zero_alloc(
+    std::optional<PHV::Transaction> try_deparser_zero_alloc(
         const PHV::Allocation& alloc, PHV::SuperCluster& cluster, PhvInfo& phv) const;
 
     bool checkDarkOverlay(const std::vector<PHV::AllocSlice>& candidate_slices,
@@ -624,7 +624,7 @@ class CoreAllocation {
     /// XXX(yumin): there is an assumption that only fieldslice of the slice list, shows up
     /// in the @p start_positions map (as there is no slice list passed as args).
     /// Better to remove this.
-    boost::optional<PHV::Transaction> tryAllocSliceList(
+    std::optional<PHV::Transaction> tryAllocSliceList(
         const PHV::Allocation& alloc,
         const PHV::ContainerGroup& group,
         const PHV::SuperCluster& super_cluster,
@@ -633,7 +633,7 @@ class CoreAllocation {
 
     /// Convenience method that transforms @p start_positions map into a map
     /// of ConditionalConstraint, which is passed to `tryAllocSliceList` above.
-    boost::optional<PHV::Transaction> tryAllocSliceList(
+    std::optional<PHV::Transaction> tryAllocSliceList(
         const PHV::Allocation& alloc,
         const PHV::ContainerGroup& group,
         const PHV::SuperCluster& super_cluster,
@@ -734,7 +734,7 @@ struct BruteForceStrategyConfig {
     // XXX(yumin): currently stopped at the first alloc-able alignment.
     int max_sl_alignment;
     // unsupported devices for this config.
-    boost::optional<std::unordered_set<Device::Device_t>> unsupported_devices;
+    std::optional<std::unordered_set<Device::Device_t>> unsupported_devices;
     // enable validation on pre-sliced super clusters to avoid creating unallocatable
     // clusters at preslicing.
     bool pre_slicing_validation;
@@ -746,7 +746,7 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
  private:
     const PHV::Allocation& empty_alloc_i;
     const BruteForceStrategyConfig& config_i;
-    boost::optional<const PHV::SuperCluster::SliceList*> unallocatable_list_i;
+    std::optional<const PHV::SuperCluster::SliceList*> unallocatable_list_i;
     int pipe_id_i;  /// used for logging purposes
     PhvInfo& phv_i;  // mutable because of deparsed zero allocation.
 
@@ -761,7 +761,7 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
                   const std::list<PHV::SuperCluster*>& cluster_groups_input,
                   const std::list<PHV::ContainerGroup *>& container_groups) override;
 
-    boost::optional<const PHV::SuperCluster::SliceList*> get_unallocatable_list() const {
+    std::optional<const PHV::SuperCluster::SliceList*> get_unallocatable_list() const {
         return unallocatable_list_i;
     }
 
@@ -807,7 +807,7 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
                                 PHV::Transaction& slicing_alloc,
                                 const ScoreContext& score_ctx);
 
-    boost::optional<PHV::Transaction>
+    std::optional<PHV::Transaction>
     tryVariousSlicing(PHV::Transaction& rst,
                       PHV::SuperCluster* cluster_group,
                       const std::list<PHV::ContainerGroup *>& container_groups,
@@ -852,7 +852,7 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
             const std::list<PHV::ContainerGroup *>& container_groups);
 
     // return unallocatable slice list by allocating superclusters to an empty PHV.
-    boost::optional<const PHV::SuperCluster::SliceList*> diagnose_slicing(
+    std::optional<const PHV::SuperCluster::SliceList*> diagnose_slicing(
         const std::list<PHV::SuperCluster*>& slicing,
         const std::list<PHV::ContainerGroup*>& container_groups) const;
 
@@ -860,7 +860,7 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
     // It will try to slice @p sliced further and allocate to an empty PHV.
     // The reason why this function will try to split further is because that
     // there can be valid presliced cluster that is too large for a single container group.
-    boost::optional<const PHV::SuperCluster::SliceList*> preslice_validation(
+    std::optional<const PHV::SuperCluster::SliceList*> preslice_validation(
         const std::list<PHV::SuperCluster*>& sliced,
         const std::list<PHV::ContainerGroup*>& container_groups) const;
 

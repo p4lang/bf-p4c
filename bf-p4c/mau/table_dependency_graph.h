@@ -2,10 +2,10 @@
 #define BF_P4C_MAU_TABLE_DEPENDENCY_GRAPH_H_
 
 #include <map>
+#include <optional>
 #include <set>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/transitive_closure.hpp>
-#include <boost/optional.hpp>
 #include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/ir/control_flow_visitor.h"
 #include "bf-p4c/logging/pass_manager.h"
@@ -483,21 +483,21 @@ struct DependencyGraph {
             return false;
     }
 
-    boost::optional<ordered_map<const PHV::Field*, std::pair<ordered_set<const IR::MAU::Action*>,
+    std::optional<ordered_map<const PHV::Field*, std::pair<ordered_set<const IR::MAU::Action*>,
                                                           ordered_set<const IR::MAU::Action*>>>>
     get_data_dependency_info(typename Graph::edge_descriptor edge) const {
         if (!data_annotations.count(edge)) {
             LOG4("Data dependency edge not found");
-            return boost::none;
+            return std::nullopt;
         }
         return data_annotations.at(edge);
     }
 
-    boost::optional<std::string>
+    std::optional<std::string>
     get_ctrl_dependency_info(typename Graph::edge_descriptor edge) const {
         if (!ctrl_annotations.count(edge)) {
             LOG4("Control dependency edge not found");
-            return boost::none;
+            return std::nullopt;
         }
         return ctrl_annotations.at(edge);
     }
@@ -513,7 +513,7 @@ struct DependencyGraph {
                 element is not accessed in any actions (i.e. an input crossbar read),
                 that particular ActionSet will be empty.
     */
-    boost::optional<ordered_map<std::pair<const PHV::Field*, DependencyGraph::dependencies_t>,
+    std::optional<ordered_map<std::pair<const PHV::Field*, DependencyGraph::dependencies_t>,
                              std::pair<ordered_set<const IR::MAU::Action*>,
                                        ordered_set<const IR::MAU::Action*>>>>
              get_data_dependency_info(const IR::MAU::Table* upstream,

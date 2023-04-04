@@ -155,7 +155,7 @@ void emit_ixbar_hash_atcam(std::ostream &out, indent_t indent,
             bits_seen += ixbar_bits.size();
             auto boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
                             (ixbar_bits.intersectWith(ghost_bits));
-            if (boost_sl == boost::none)
+            if (boost_sl == std::nullopt)
                 continue;
             le_bitrange sl_overlap = *boost_sl;
             le_bitrange hash_bits = { br.first + sl_overlap.lo - ixbar_bits.lo,
@@ -176,7 +176,7 @@ void ixbar_hash_exact_bitrange(Slice ghost_slice, int min_way_size,
         safe_vector<std::pair<le_bitrange, Slice>> &ghost_positions) {
     auto boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
                         (non_rotated_slice.intersectWith(comp_slice));
-    if (boost_sl == boost::none)
+    if (boost_sl == std::nullopt)
         return;
     le_bitrange overlap = *boost_sl;
     int lo = overlap.lo - initial_lo_bit;

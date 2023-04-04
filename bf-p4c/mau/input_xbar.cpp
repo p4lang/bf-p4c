@@ -346,7 +346,7 @@ std::vector<IXBar::FieldInfo> IXBar::Use::Byte::get_slices_for_visualization() c
         int used_end_bit = bit_use.ffz(used_start_bit);
         if (unused_start_bit < unused_end_bit) {
             int lo = 0; int hi = (unused_end_bit - unused_start_bit) - 1;
-            result.push_back(FieldInfo("unused", lo, hi, 0, boost::none));
+            result.push_back(FieldInfo("unused", lo, hi, 0, std::nullopt));
         }
 
         BUG_CHECK(used_start_bit != used_end_bit, "The bit_use object in %s is incorrectly "
@@ -368,7 +368,7 @@ std::vector<IXBar::FieldInfo> IXBar::Use::Byte::get_slices_for_visualization() c
         BUG_CHECK(!first_time, "Byte %s has no field slices", *this);
 
         int lo = 0; int hi = 7 - unused_start_bit;
-        result.push_back(FieldInfo("unused", lo, hi, 0, boost::none));
+        result.push_back(FieldInfo("unused", lo, hi, 0, std::nullopt));
     }
 
     return result;
@@ -454,7 +454,7 @@ static int need_align_flags[4][4] = {
 /* Add the pre-allocated bytes to the Use structure */
 void IXBar::add_use(ContByteConversion &map_alloc, const PHV::Field *field,
                     const PhvInfo &phv, const IR::MAU::Table *ctxt,
-                    boost::optional<cstring> aliasSourceName, const le_bitrange *bits,
+                    std::optional<cstring> aliasSourceName, const le_bitrange *bits,
                     int flags, byte_type_t byte_type, unsigned extra_align, int range_index) {
     LOG5("Adding IXBar Use for field - " << field << Log::endl << "  on table : " << ctxt->name
             << ", flags : " << flags << ", byte_type: " << byte_type
@@ -691,7 +691,7 @@ bool IXBar::FieldManagement::preorder(const IR::Expression *e) {
         (*fields_needed)[finfo->name] = field_bits;
     }
 
-    boost::optional<cstring> aliasSourceName = phv.get_alias_name(e);
+    std::optional<cstring> aliasSourceName = phv.get_alias_name(e);
     add_use(*map_alloc, finfo, phv, tbl, aliasSourceName, &bits, 0, byte_type, 0,
             ki.range_index);
     if (byte_type == RANGE) {

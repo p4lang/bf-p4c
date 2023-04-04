@@ -1,7 +1,7 @@
 #ifndef BF_P4C_PHV_UTILS_SLICE_ALLOC_H_
 #define BF_P4C_PHV_UTILS_SLICE_ALLOC_H_
 
-#include <boost/optional.hpp>
+#include <optional>
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/lib/small_set.h"
 #include "bf-p4c/phv/phv.h"
@@ -166,7 +166,7 @@ class AllocSlice {
     // alloc_slice: container[5:28] <= f1[0:23]
     // ^^^.sub_alloc_by_field(3,6) returns
     // alloc_slice: container[8:13] <= f1[3:8]
-    boost::optional<AllocSlice> sub_alloc_by_field(int start, int len) const;
+    std::optional<AllocSlice> sub_alloc_by_field(int start, int len) const;
 
     const Field* field() const              { return field_i; }
     Container container() const             { return container_i; }

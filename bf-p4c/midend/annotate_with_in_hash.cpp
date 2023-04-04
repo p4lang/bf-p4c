@@ -144,7 +144,7 @@ bool DoAnnotateWithInHash::checkAluSuitability(const IR::Expression &op) const {
 bool DoAnnotateWithInHash::checkHeaderMetadataReference(const IR::Expression &op) const {
     BFN::PathLinearizer path;
     op.apply(path);
-    BUG_CHECK(path.linearPath != boost::none, "Missing linear path expression");
+    BUG_CHECK(path.linearPath != std::nullopt, "Missing linear path expression");
     return isHeaderReference(*path.linearPath, typeMap)
         || isMetadataReference(*path.linearPath, typeMap);
 }

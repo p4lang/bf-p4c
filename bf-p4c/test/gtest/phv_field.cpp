@@ -37,7 +37,7 @@ TEST_F(TofinoField, foreach_byte) {
     f->name = ss.str();
     f->gress = INGRESS;
     f->validContainerRange_i = ZeroToMax();
-    f->alignment = boost::none;
+    f->alignment = std::nullopt;
     f->set_exact_containers(true);
 
     // Simple allocation to one container.

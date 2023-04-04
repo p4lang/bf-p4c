@@ -9,7 +9,7 @@
 #include "ir/json_loader.h"
 
 // disable these tests for gcc-4.9, which for some reason
-// do not link with boost::optional
+// do not link with std::optional
 #if (__GNUC__ > 4) || defined(__clang__)
 namespace Test {
 
@@ -980,7 +980,7 @@ TYPED_TEST(TofinoHalfOpenRange, ToClosedRange) {
     struct ExpectedClosedRange {
         int index;
         const HalfOpenRangeType from;
-        const boost::optional<ClosedRangeType> to;
+        const std::optional<ClosedRangeType> to;
     };
 
     const std::vector<ExpectedClosedRange> closedRangeMappings = {
@@ -988,9 +988,9 @@ TYPED_TEST(TofinoHalfOpenRange, ToClosedRange) {
         { 1, HalfOpenRangeType(15, 36), ClosedRangeType(15, 35) },
         { 2, HalfOpenRangeType(-1, 0), ClosedRangeType(-1, -1) },
         { 3, HalfOpenRangeType(-21, -8), ClosedRangeType(-21, -9) },
-        { 4, HalfOpenRangeType(0, 0), boost::none },
-        { 5, HalfOpenRangeType(-9, -9), boost::none },
-        { 6, HalfOpenRangeType(17, 17), boost::none },
+        { 4, HalfOpenRangeType(0, 0), std::nullopt },
+        { 5, HalfOpenRangeType(-9, -9), std::nullopt },
+        { 6, HalfOpenRangeType(17, 17), std::nullopt },
     };
 
     // Check that converting from a half-open range to a closed range yields the
@@ -1032,7 +1032,7 @@ TYPED_TEST(TofinoClosedRange, ToHalfOpenRange) {
         EXPECT_EQ(mapping.to, toHalfOpenRange(mapping.from));
 
         auto backToClosedRange = toClosedRange(toHalfOpenRange(mapping.from));
-        EXPECT_TRUE(backToClosedRange != boost::none);
+        EXPECT_TRUE(backToClosedRange != std::nullopt);
         EXPECT_EQ(mapping.from, *backToClosedRange);
     }
 }
@@ -1446,7 +1446,7 @@ TYPED_TEST(TofinoBitRange, Subtract) {
         { StartLen(0, 8), StartLen(0, 8), empty,          empty }
     };
 
-    for (auto test : testCases ) {
+    for (auto test : testCases) {
         EXPECT_EQ(std::make_pair(test.lower, test.upper), test.minuend - test.subtrahend);
     }
 }

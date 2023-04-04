@@ -220,7 +220,7 @@ class PhvSpec {
     const std::map<PHV::Size, std::vector<bitvec>>& mauGroups() const;
 
     /// @return the ids of every container in the MAU group of @p container_id, or
-    /// boost::none if @p container_id is not part of any MAU group.
+    /// std::nullopt if @p container_id is not part of any MAU group.
     bitvec mauGroup(unsigned container_id) const;
 
     /// @return the MAU group id for the container
@@ -247,7 +247,7 @@ class PhvSpec {
     const std::vector<bitvec>& tagalongCollections() const;
 
     /// @return the ids of every container in the tagalong collection of @p container_id, or
-    /// boost::none if @p container_id is not part of any collection.
+    /// std::nullopt if @p container_id is not part of any collection.
     bitvec tagalongCollection(unsigned container_id) const;
 
     /// @return the number of POV bits available

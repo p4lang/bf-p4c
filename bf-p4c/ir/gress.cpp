@@ -34,7 +34,7 @@ std::ostream& operator<<(std::ostream& out, gress_t gress) {
     return out << toString(gress);
 }
 
-std::ostream& operator<<(std::ostream& out, boost::optional<gress_t> gress) {
+std::ostream& operator<<(std::ostream& out, std::optional<gress_t> gress) {
     if (gress)
         out << *gress;
     else

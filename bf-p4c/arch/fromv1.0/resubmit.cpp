@@ -16,22 +16,22 @@ namespace {
  *
  * @param statement  The `emit` method to analyze
  * @return a ResubmitSource vector containing the source fields used in the resubmit,
- * or boost::none if the resubmit code was invalid.
+ * or std::nullopt if the resubmit code was invalid.
  */
 
-boost::optional<std::pair<cstring, ResubmitSources*>>
+std::optional<std::pair<cstring, ResubmitSources*>>
 analyzeResubmitStatement(const IR::MethodCallStatement* statement) {
     auto methodCall = statement->methodCall->to<IR::MethodCallExpression>();
     if (!methodCall) {
-        return boost::none;
+        return std::nullopt;
     }
     auto member = methodCall->method->to<IR::Member>();
     if (!member || member->member != "emit") {
-        return boost::none;
+        return std::nullopt;
     }
     if (methodCall->arguments->size() != 1) {
         ::warning("Expected 1 arguments for resubmit.%1% statement: %1%", member->member);
-        return boost::none;
+        return std::nullopt;
     }
     const IR::Expression* expression = methodCall->arguments->at(0)->expression;
     if (expression->is<IR::StructExpression>()) {
@@ -41,7 +41,7 @@ analyzeResubmitStatement(const IR::MethodCallStatement* statement) {
             fieldList = expression->to<IR::StructExpression>();
             if (!fieldList) {
                 ::warning("Expected field list: %1%", methodCall);
-                return boost::none;
+                return std::nullopt;
             }
         }
         auto type = methodCall->typeArguments->at(0);
@@ -54,42 +54,42 @@ analyzeResubmitStatement(const IR::MethodCallStatement* statement) {
                 !field->expression->is<IR::Constant>() &&
                 !field->expression->is<IR::Member>()) {
                 ::warning("Unexpected field: %1%", field);
-                return boost::none; }
+                return std::nullopt; }
             sources->push_back(field->expression);
         }
         return std::make_pair(typeName->path->name.name, sources);
     }
-    return boost::none;
+    return std::nullopt;
 }
 
-boost::optional<const IR::Constant*>
+std::optional<const IR::Constant*>
 checkResubmitIfStatement(const IR::IfStatement* ifStatement) {
     if (!ifStatement)
-        return boost::none;
+        return std::nullopt;
     auto* equalExpr = ifStatement->condition->to<IR::Equ>();
     if (!equalExpr) {
         ::warning("Expected comparing resubmit_type with constant: %1%", ifStatement->condition);
-        return boost::none;
+        return std::nullopt;
     }
     auto* constant = equalExpr->right->to<IR::Constant>();
     if (!constant) {
         ::warning("Expected comparing resubmit_type with constant: %1%", equalExpr->right);
-        return boost::none;
+        return std::nullopt;
     }
 
     auto* member = equalExpr->left->to<IR::Member>();
     if (!member || member->member != "resubmit_type") {
         ::warning("Expected comparing resubmit_type with constant: %1%", ifStatement->condition);
-        return boost::none;
+        return std::nullopt;
     }
     if (!ifStatement->ifTrue || ifStatement->ifFalse) {
         ::warning("Expected an `if` with no `else`: %1%", ifStatement);
-        return boost::none;
+        return std::nullopt;
     }
     auto* method = ifStatement->ifTrue->to<IR::MethodCallStatement>();
     if (!method) {
         ::warning("Expected a single method call statement: %1%", method);
-        return boost::none;
+        return std::nullopt;
     }
     return constant;
 }

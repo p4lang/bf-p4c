@@ -62,17 +62,17 @@ class BuildDominatorTree : public MauInspector {
     void setupDomTree();
 
     /** @returns the immediate dominator table for @p t with @p gress.
-     * @returns boost::none if there is no immediate dominator. If @p t is nullptr,
+     * @returns std::nullopt if there is no immediate dominator. If @p t is nullptr,
      * then it indicates the deparser, in which case the @p gress needs to be specified.
      */
-    boost::optional<const IR::MAU::Table*>
+    std::optional<const IR::MAU::Table*>
         getImmediateDominator(const IR::MAU::Table* t, gress_t gress) const;
 
     /** @returns the non gateway immediate dominator for @p t belonging to @p gress. @returns
-      * boost::none if there is no non-gateway immediate dominator. If @p t is nullptr, then it
+      * std::nullopt if there is no non-gateway immediate dominator. If @p t is nullptr, then it
       * indicates the deparser, in which case the @p gress needs to be specified.
       */
-    boost::optional<const IR::MAU::Table*>
+    std::optional<const IR::MAU::Table*>
         getNonGatewayImmediateDominator(const IR::MAU::Table* t, gress_t gress) const;
 
     /** @returns true if the unit @p u1 strictly dominates unit @p u2.

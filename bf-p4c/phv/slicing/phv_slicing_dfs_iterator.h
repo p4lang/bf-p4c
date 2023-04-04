@@ -48,8 +48,8 @@ struct AfterSplitConstraint {
     // returns the intersection of two AfterSplitConstraint.
     // e.g. MIN(8)   ^ EXACT(32) = EXACT(32)
     //      MIN(8)   ^ MIN(16)   = MIN(16)
-    //      EXACT(8) ^ EXACT(16) = boost::none
-    boost::optional<AfterSplitConstraint> intersect(const AfterSplitConstraint& other) const;
+    //      EXACT(8) ^ EXACT(16) = std::nullopt
+    std::optional<AfterSplitConstraint> intersect(const AfterSplitConstraint& other) const;
 
     // return true if field with this AfterSplitConstraint can
     // be placed in a container of size @p n bits.
@@ -174,31 +174,31 @@ class DfsItrContext : public IteratorInterface {
     bool dfs(const IterateCb& yield, const ordered_set<SuperCluster*>& unchecked);
 
     /// split_by_pa_container_size will split @p sc by @p pa container size.
-    boost::optional<std::list<SuperCluster*>> split_by_pa_container_size(
+    std::optional<std::list<SuperCluster*>> split_by_pa_container_size(
         const SuperCluster* sc, const PHVContainerSizeLayout& pa);
 
     /// split_by_adjacent_no_pack will split @p sc at byte boundary if two adjacent fields
     /// cannot be packed into one container.
-    boost::optional<std::list<SuperCluster*>> split_by_adjacent_no_pack(SuperCluster* sc) const;
+    std::optional<std::list<SuperCluster*>> split_by_adjacent_no_pack(SuperCluster* sc) const;
 
     /// split_by_deparsed_bottom_bits will split at the beginning of deparsed_bottom_bits field.
-    boost::optional<std::list<SuperCluster*>> split_by_deparsed_bottom_bits(
+    std::optional<std::list<SuperCluster*>> split_by_deparsed_bottom_bits(
         SuperCluster* sc) const;
 
     /// split_by_adjacent_deparsed_and_non_deparsed will split @p sc between deparsed and
     /// non-deparsed field.
-    boost::optional<std::list<SuperCluster*>> split_by_adjacent_deparsed_and_non_deparsed(
+    std::optional<std::list<SuperCluster*>> split_by_adjacent_deparsed_and_non_deparsed(
         SuperCluster* sc) const;
 
     /// split_by_valid_container_range will split based on valid container range constraint
     /// that a field cannot be packed fields after it, when its valid container range
     /// is equal to the size of the field.
-    boost::optional<std::list<SuperCluster*>> split_by_valid_container_range(
+    std::optional<std::list<SuperCluster*>> split_by_valid_container_range(
         SuperCluster* sc) const;
 
     /// split_by_long_fieldslices will split fieldslices that its length is greater or equal to
     /// 64 bits, using 32-bit container if possible.
-    boost::optional<std::list<SuperCluster*>> split_by_long_fieldslices(SuperCluster* sc) const;
+    std::optional<std::list<SuperCluster*>> split_by_long_fieldslices(SuperCluster* sc) const;
 
     /// return possible SplitChoice on @p target.
     /// When minimal_packing_mode is false, results are sorted with a set of heuristics
@@ -259,7 +259,7 @@ class DfsItrContext : public IteratorInterface {
 
     /// collect_aftersplit_constraints returns AfterSplitConstraints on the fieldslice
     /// of @p sc based on split_decisions_i and pa_container_size_upcastings_i.
-    boost::optional<SplitDecision>
+    std::optional<SplitDecision>
     collect_aftersplit_constraints(
         const SuperCluster* sc) const;
 
@@ -277,7 +277,7 @@ class DfsItrContext : public IteratorInterface {
 
     /// dfs_pick_next return the next slice list to be split.
     /// There are some heuristics for returning the slicelist that has most constraints.
-    boost::optional<SliceListLoc> dfs_pick_next() const;
+    std::optional<SliceListLoc> dfs_pick_next() const;
 
     /// propagate_8bit_exact_container_split propagates the 8bit split decision on @p target
     /// to other slice lists in @p sc, as long as there is one exact_containers field slices
@@ -299,8 +299,8 @@ class DfsItrContext : public IteratorInterface {
                               SplitSchema* schema) const;
 
     /// make_split_meta will generate schema and decision to split out first @p first_n_bits
-    /// of @p sl under @p sc.When a conflicting split decision is found, @returns boost::none.
-    boost::optional<std::pair<SplitSchema, SplitDecision>> make_split_meta(
+    /// of @p sl under @p sc.When a conflicting split decision is found, @returns std::nullopt.
+    std::optional<std::pair<SplitSchema, SplitDecision>> make_split_meta(
         SuperCluster* sc, SuperCluster::SliceList* sl, int first_n_bits) const;
 
     /// return true if the slicelist needs to be further split.

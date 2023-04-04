@@ -16,8 +16,8 @@ getDeclInst(const P4::ReferenceMap *refMap, const IR::PathExpression *path) {
     return decl_inst;
 }
 
-boost::optional<cstring> getExternTypeName(const P4::ExternMethod* extMethod) {
-    boost::optional<cstring> name = boost::none;
+std::optional<cstring> getExternTypeName(const P4::ExternMethod* extMethod) {
+    std::optional<cstring> name = std::nullopt;
     if (auto inst = extMethod->object->to<IR::Declaration_Instance>()) {
         if (auto tn = inst->type->to<IR::Type_Name>()) {
             name = tn->path->name;
@@ -37,7 +37,7 @@ boost::optional<cstring> getExternTypeName(const P4::ExternMethod* extMethod) {
 /**
  * Helper functions to handle list of extern instances from table properties.
  */
-boost::optional<P4::ExternInstance>
+std::optional<P4::ExternInstance>
 getExternInstanceFromPropertyByTypeName(const IR::P4Table* table,
                                         cstring propertyName,
                                         cstring externTypeName,
@@ -45,12 +45,12 @@ getExternInstanceFromPropertyByTypeName(const IR::P4Table* table,
                                         P4::TypeMap* typeMap,
                                         bool *isConstructedInPlace) {
     auto property = table->properties->getProperty(propertyName);
-    if (property == nullptr) return boost::none;
+    if (property == nullptr) return std::nullopt;
     if (!property->value->is<IR::ExpressionValue>()) {
         ::error(ErrorType::ERR_EXPECTED,
                 "Expected %1% property value for table %2% to be an expression: %3%",
                 propertyName, table->controlPlaneName(), property);
-        return boost::none;
+        return std::nullopt;
     }
     auto expr = property->value->to<IR::ExpressionValue>()->expression;
 
@@ -85,7 +85,7 @@ getExternInstanceFromPropertyByTypeName(const IR::P4Table* table,
         process_extern_instance(expr); }
 
     if (rv.empty())
-        return boost::none;
+        return std::nullopt;
 
     if (rv.size() > 1) {
         ::error(ErrorType::ERR_UNSUPPORTED,
@@ -100,17 +100,17 @@ getExternInstanceFromPropertyByTypeName(const IR::P4Table* table,
  * Helper functions to extract extern instance from table properties.
  * Originally implemented in as part of the control-plane repo.
  */
-boost::optional<P4::ExternInstance>
+std::optional<P4::ExternInstance>
 getExternInstanceFromProperty(const IR::P4Table* table,
                               cstring propertyName,
                               P4::ReferenceMap* refMap,
                               P4::TypeMap* typeMap) {
     auto property = table->properties->getProperty(propertyName);
-    if (property == nullptr) return boost::none;
+    if (property == nullptr) return std::nullopt;
     if (!property->value->is<IR::ExpressionValue>()) {
         ::error("Expected %1% property value for table %2% to be an expression: %3%",
                 propertyName, table->controlPlaneName(), property);
-        return boost::none;
+        return std::nullopt;
     }
 
     auto expr = property->value->to<IR::ExpressionValue>()->expression;
@@ -120,20 +120,20 @@ getExternInstanceFromProperty(const IR::P4Table* table,
         ::error("Expected %1% property value for table %2% to resolve to an "
                 "extern instance: %3%", propertyName, table->controlPlaneName(),
                 property);
-        return boost::none; }
+        return std::nullopt; }
 
     return externInstance;
 }
 
-boost::optional<const IR::ExpressionValue*>
+std::optional<const IR::ExpressionValue*>
 getExpressionFromProperty(const IR::P4Table* table,
                           const cstring& propertyName) {
     auto property = table->properties->getProperty(propertyName);
-    if (property == nullptr) return boost::none;
+    if (property == nullptr) return std::nullopt;
     if (!property->value->is<IR::ExpressionValue>()) {
         ::error("Expected %1% property value for table %2% to be an expression: %3%",
                 propertyName, table->controlPlaneName(), property);
-        return boost::none;
+        return std::nullopt;
     }
 
     auto expr = property->value->to<IR::ExpressionValue>();

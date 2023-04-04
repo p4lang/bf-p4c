@@ -4,7 +4,7 @@
 #include <tuple>
 #include <unordered_map>
 
-#include <boost/optional/optional.hpp>
+#include <optional>
 #include <boost/range/join.hpp>
 
 #include "bf-p4c/device.h"
@@ -310,7 +310,7 @@ const AllocError* AllocatorBase::verify_can_pack(const ScoreContext& ctx,
                                                  const std::vector<AllocSlice>& candidates,
                                                  const Container& c,
                                                  ActionSourceCoPackMap& action_copack_hints) const {
-    boost::optional<CanPackErrorV2> err;
+    std::optional<CanPackErrorV2> err;
     if (c.type().kind() == Kind::mocha || c.type().kind() == Kind::dark) {
         // materialize slice lists allocation into alloc when dark/mocha.
         // Materializing unallocated but fixed alignment slices will help
@@ -421,7 +421,7 @@ const AllocError* AllocatorBase::is_container_write_mode_ok(const Allocation& al
     }
 
     // all containers within parser group must have same parser write mode
-    boost::optional<IR::BFN::ParserWriteMode> write_mode;
+    std::optional<IR::BFN::ParserWriteMode> write_mode;
     if (field_to_states.field_to_writes.count(f)) {
         for (auto e : field_to_states.field_to_writes.at(f)) {
             write_mode = e->getWriteMode();
@@ -457,7 +457,7 @@ const AllocError* AllocatorBase::is_container_write_mode_ok(const Allocation& al
         if (!cs) continue;
         for (auto allocated : (*cs).slices) {
             if (!field_to_states.field_to_writes.count(allocated.field())) continue;
-            boost::optional<IR::BFN::ParserWriteMode> other_write_mode;
+            std::optional<IR::BFN::ParserWriteMode> other_write_mode;
             for (auto e : field_to_states.field_to_writes.at(allocated.field())) {
                 other_write_mode = e->getWriteMode();
                 // See P4C-3033 for more details
@@ -686,7 +686,7 @@ SomeContScopeAllocResult AllocatorBase::try_slices_to_container_group(
     const ContainerGroup& group) const {
     const auto new_ctx = ctx.with_t(ctx.t() + 1);
     /// pretty-print error messages that aggregates the same failures.
-    boost::optional<cstring> last_err_str = boost::none;
+    std::optional<cstring> last_err_str = std::nullopt;
     std::vector<Container> same_err_conts;
     const auto flush_aggregated_errs = [&]() {
         if (last_err_str) {
@@ -698,7 +698,7 @@ SomeContScopeAllocResult AllocatorBase::try_slices_to_container_group(
             LOG3(ctx.t_tabs() << ss.str());
             LOG3(new_ctx.t_tabs() << "Failed, " << *last_err_str);
         }
-        last_err_str = boost::none;
+        last_err_str = std::nullopt;
         same_err_conts.clear();
     };
     const auto pretty_print_errs = [&](const Container& c, const ContScopeAllocResult& r) {
@@ -755,7 +755,7 @@ SomeContScopeAllocResult AllocatorBase::try_slices_adapter(const ScoreContext& c
                                                            const Allocation& alloc,
                                                            const FieldSliceAllocStartMap& fs_starts,
                                                            const ContainerGroup& group,
-                                                           boost::optional<Container> c) const {
+                                                           std::optional<Container> c) const {
     if (c) {
         auto rst = try_slices_to_container(ctx, alloc, fs_starts, *c);
         if (rst.ok()) {
@@ -769,7 +769,7 @@ SomeContScopeAllocResult AllocatorBase::try_slices_adapter(const ScoreContext& c
     }
 }
 
-boost::optional<Transaction> AllocatorBase::try_hints(
+std::optional<Transaction> AllocatorBase::try_hints(
     const ScoreContext& ctx,
     const Allocation& alloc,
     const ContainerGroup& group,
@@ -813,7 +813,7 @@ boost::optional<Transaction> AllocatorBase::try_hints(
                     LOG3("Failed to allocate by hints.");
                     hint_ok = false;
                     if (required) {
-                        return boost::none;
+                        return std::nullopt;
                     } else {
                         break;
                     }
@@ -849,7 +849,7 @@ AllocResult AllocatorBase::try_wide_arith_slices_to_container_group(
     const SuperCluster::SliceList* hi,
     const ContainerGroup& group) const {
     const TxScore* rst_score = nullptr;
-    boost::optional<AllocResult> rst;
+    std::optional<AllocResult> rst;
     const auto lo_starts = make_start_map(ctx.sc(), alignment, lo);
     const auto hi_starts = make_start_map(ctx.sc(), alignment, hi);
     for (auto itr = group.begin(); itr != group.end(); ++itr) {
@@ -911,7 +911,7 @@ std::string AllocatorBase::DfsListsAllocator::depth_prefix(const int depth) cons
     return prefix_ss.str();
 }
 
-boost::optional<ScAllocAlignment> AllocatorBase::DfsListsAllocator::new_alignment_with_start(
+std::optional<ScAllocAlignment> AllocatorBase::DfsListsAllocator::new_alignment_with_start(
     const ScoreContext& ctx, const SuperCluster::SliceList* target, const int sl_start,
     const PHV::Size& width, const ScAllocAlignment& alignment) const {
     auto this_start_alignment = alignment;
@@ -919,12 +919,12 @@ boost::optional<ScAllocAlignment> AllocatorBase::DfsListsAllocator::new_alignmen
     for (const auto& fs : *target) {
         // if the slice 's cluster cannot be placed at the current offset.
         if (!ctx.sc()->aligned_cluster(fs).validContainerStart(width).getbit(offset)) {
-            return boost::none;
+            return std::nullopt;
         }
         if (this_start_alignment.ok(&ctx.sc()->aligned_cluster(fs), offset)) {
             this_start_alignment.cluster_starts[&ctx.sc()->aligned_cluster(fs)] = offset;
         } else {
-            return boost::none;
+            return std::nullopt;
         }
         offset += fs.size();
     }
@@ -1173,7 +1173,7 @@ AllocResult AllocatorBase::try_super_cluster_to_container_group(
         }
         to_allocate.push_back(sl);
     }
-    boost::optional<Transaction> best_tx;
+    std::optional<Transaction> best_tx;
     const TxScore* best_score = nullptr;
     DfsListsAllocator dfs_alloc(*this, ctx.search_config()->n_dfs_steps_sc_alloc);
     int n_found = 0;
@@ -1384,13 +1384,12 @@ AllocResult AllocatorBase::try_sliced_super_cluster(const ScoreContext& ctx,
     const bool not_all_tphv_candidates = sc->any_of_fieldslices(
         [&](const FieldSlice& fs) { return !fs.field()->is_tphv_candidate(kit_i.uses); });
     const TxScore* rst_score = nullptr;
-    boost::optional<AllocResult> rst;  // save the last succeed transaction only.
+    std::optional<AllocResult> rst;  // save the last succeed transaction only.
     // slice lists that allocator has returned an error of cannot_pack.
     // stores only critical error message that might help caller to better slice the cluster.
     auto* reslice_required = new ordered_set<const SuperCluster::SliceList*>();
     cstring reslice_required_reason = "";
-    boost::optional<const AllocError*> other_err =
-        boost::make_optional(false, (const AllocError*)nullptr);
+    std::optional<const AllocError*> other_err = std::nullopt;
     bool has_any_valid_alignment = false;
     // find the best score, forall (container group) of @p sc.
     for (const PHV::Size& sz : ok_sizes) {
@@ -1548,7 +1547,7 @@ AllocResult AllocatorBase::alloc_stride(const ScoreContext& ctx,
         }
     }
 
-    boost::optional<AllocResult> best_rst;
+    std::optional<AllocResult> best_rst;
     const TxScore* best_score = nullptr;
     // find the best container group for this stride.
     for (const auto& group : groups_by_sizes.at(PHV::Size(leader.size()))) {
@@ -1620,7 +1619,7 @@ AllocResult AllocatorBase::alloc_strided_super_clusters(const ScoreContext& ctx,
     for (const auto* f : *stride_group) {
         stride_group_index[f] = idx++;
     }
-    boost::optional<Transaction> best_rst;
+    std::optional<Transaction> best_rst;
     const TxScore* best_score = nullptr;
     int n_tried = 0;
     auto itr_ctx = kit_i.make_slicing_ctx(sc);  // do not need to set config, strided mode.

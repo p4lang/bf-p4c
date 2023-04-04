@@ -3516,12 +3516,12 @@ void DecidePlacement::recomputePartlyPlaced(const Placed *done,
     }
 }
 
-boost::optional<DecidePlacement::BacktrackPlacement&>
+std::optional<DecidePlacement::BacktrackPlacement*>
 DecidePlacement::find_previous_placement(const Placed *best, int offset, bool local_bt,
                                          int process_stage) {
     auto &info = saved_placements.at(best->name);
     auto &bt = local_bt ? info.last_pass : info.early;
-    boost::optional<DecidePlacement::BacktrackPlacement&> rv = boost::none;
+    std::optional<DecidePlacement::BacktrackPlacement*> rv = std::nullopt;
     int best_init_stage = best->init_stage();
     for (auto it = bt.rbegin(); it != bt.rend(); ++it) {
         int stage = it->first;
@@ -3535,35 +3535,35 @@ DecidePlacement::find_previous_placement(const Placed *best, int offset, bool lo
                 if (bt_attempts.at(best->name).count(stage)) {
                     LOG3("Found other placement for table:" << best->name << " at stage:" <<
                          stage << " but a variant of it was already tried");
-                    rv = placement;
+                    rv = &placement;
                     continue;
                 }
             }
             LOG3("Found other placement for table:" << best->name << " at stage:" << stage);
             bt_attempts[best->name].insert(stage);
-            return placement;
+            return &placement;
         } else if ((plac_init_stage + offset) <= best_init_stage &&
                    (stage + offset) < process_stage) {
             if (bt_attempts.count(best->name)) {
                 if (bt_attempts.at(best->name).count(stage)) {
                     LOG3("Found other placement for split table:" << best->name << " at stage:" <<
                          stage << " but a variant of it was already tried");
-                    rv = placement;
+                    rv = &placement;
                     continue;
                 }
             }
             LOG3("Found other initial placement for split table:" << best->name <<
                  " at stage:" << stage);
             bt_attempts[best->name].insert(stage);
-            return placement;
+            return &placement;
         }
     }
     return rv;
 }
 
-boost::optional<DecidePlacement::BacktrackPlacement&>
+std::optional<DecidePlacement::BacktrackPlacement*>
 DecidePlacement::find_backtrack_point(const Placed *best, int offset, bool local_bt) {
-    boost::optional<DecidePlacement::BacktrackPlacement&> cc = boost::none;
+    std::optional<DecidePlacement::BacktrackPlacement*> cc = std::nullopt;
     ordered_set<const IR::MAU::Table*> to_be_analyzed;
     std::map<const IR::MAU::Table*, const Placed*> same_stage;
     int process_stage = best->stage;
@@ -3634,7 +3634,7 @@ DecidePlacement::find_backtrack_point(const Placed *best, int offset, bool local
         }
         // Do not analyse stage 0 since we can't move these table in a previous stage.
         if (!process_stage)
-            return boost::none;
+            return std::nullopt;
 
         // It is possible that a table can't be placed into a given stage because of container
         // conflict with another table in the same stage.
@@ -3693,7 +3693,7 @@ DecidePlacement::find_backtrack_point(const Placed *best, int offset, bool local
             LOG3("Analyzing previous stage next");
     }
 
-    return boost::none;
+    return std::nullopt;
 }
 
 #ifdef MULTITHREAD
@@ -4151,17 +4151,17 @@ class DecidePlacement::BacktrackManagement {
         // move to the "global" backtracking point which can go back anywhere in the past.
         if (self.backtrack_count < self.MaxBacktracksPerPipe) {
             int offset = best->stage + dep_chain - (Device::numStages() - 1);
-            boost::optional<BacktrackPlacement&> bt = self.find_backtrack_point(best, offset, true);
+            std::optional<BacktrackPlacement*> bt = self.find_backtrack_point(best, offset, true);
             if (bt) {
                 LOG3("Found local backtracking point");
-                backtrack_to(&(*bt));
+                backtrack_to(*bt);
                 return true;
             } else {
-                boost::optional<BacktrackPlacement&> bt = self.find_backtrack_point(best, offset,
+                std::optional<BacktrackPlacement*> bt = self.find_backtrack_point(best, offset,
                                                                                     false);
                 if (bt) {
                     LOG3("Found global backtracking point");
-                    backtrack_to(&(*bt));
+                    backtrack_to(*bt);
                     return true;
                 }
             }

@@ -1,7 +1,7 @@
 #ifndef BF_P4C_PHV_ACTION_PHV_CONSTRAINTS_H_
 #define BF_P4C_PHV_ACTION_PHV_CONSTRAINTS_H_
 
-#include <boost/optional.hpp>
+#include <optional>
 #include "ir/ir.h"
 #include "lib/safe_vector.h"
 #include "bf-p4c/common/map_tables_to_actions.h"
@@ -23,8 +23,8 @@ struct ActionPhvConstraintLogging {
  * during debugging. The 'can_pack' function returns
  */
 struct ActionPhvConstraintCanPack {
-    boost::optional<ActionPhvConstraintLogging> logging;
-    boost::optional<PHV::Allocation::ConditionalConstraint> conditional_constraints;
+    std::optional<ActionPhvConstraintLogging> logging;
+    std::optional<PHV::Allocation::ConditionalConstraint> conditional_constraints;
 };
 
 enum class CanPackErrorCode : unsigned {
@@ -57,7 +57,7 @@ enum class CanPackErrorCode : unsigned {
 std::ostream &operator<<(std::ostream &out, const CanPackErrorCode& info);
 
 using CanPackReturnType = std::tuple<CanPackErrorCode,
-      boost::optional<PHV::Allocation::ConditionalConstraints>>;
+      std::optional<PHV::Allocation::ConditionalConstraints>>;
 
 /// CanPackErrorV2 has
 /// (1) an error code for classification.
@@ -147,7 +147,7 @@ class ActionPhvConstraints : public Inspector {
         unsigned special_ad = ActionAnalysis::ActionParam::NO_SPECIAL;
         bool constant = false;
         int64_t const_value = 0;
-        boost::optional<PHV::FieldSlice> phv_used = boost::none;
+        std::optional<PHV::FieldSlice> phv_used = std::nullopt;
         cstring action_name;
         cstring operation;
 
@@ -261,14 +261,14 @@ class ActionPhvConstraints : public Inspector {
 
         /// @returns true if @p field is written in @p act only using a PHV source.
         /// If an action data or constant source is used, then @returns false.
-        /// @returns boost::none if the field is not written in this action.
-        boost::optional<bool>
+        /// @returns std::nullopt if the field is not written in this action.
+        std::optional<bool>
         hasPHVSource(const PHV::Field* field, const IR::MAU::Action* act) const;
 
         /// @returns false if @p field is written in @p act using a PHV source.
         /// If an action data or constant source is used, then @returns true.
-        /// @returns boost::none if the field is not written in this action.
-        boost::optional<bool>
+        /// @returns std::nullopt if the field is not written in this action.
+        std::optional<bool>
         hasActionDataOrConstantSource(const PHV::Field* field, const IR::MAU::Action* act) const;
 
         /** If @p dst is a slice of the destination operand of an instruction
@@ -329,14 +329,14 @@ class ActionPhvConstraints : public Inspector {
         /// @returns a OperandInfo structure if @p slice is written in @p act.
         /// XXX(yumin): The OperandInfo returned in this function is NOT COMPLETE!
         /// phv_used, ad, constant is uninitialized!
-        boost::optional<OperandInfo>
+        std::optional<OperandInfo>
         is_written(PHV::FieldSlice slice, const IR::MAU::Action *act) const;
 
         /// AVOID USING this function.
         /// Convenience method that translates @p slice to a FieldSlice and passes
         /// it to `is_written` above.
         /// XXX(yumin): The OperandInfo returned in this function is NOT COMPLETE!
-        boost::optional<OperandInfo>
+        std::optional<OperandInfo>
         is_written(PHV::AllocSlice slice, const IR::MAU::Action *act) const {
             return is_written(PHV::FieldSlice(slice.field(), slice.field_slice()), act);
         }
@@ -363,7 +363,7 @@ class ActionPhvConstraints : public Inspector {
          */
         ordered_set<int> source_alignment(PHV::AllocSlice dst, PHV::FieldSlice src) const;
 
-        boost::optional<int> can_be_both_sources(const std::vector<PHV::AllocSlice> &slices,
+        std::optional<int> can_be_both_sources(const std::vector<PHV::AllocSlice> &slices,
             ordered_set<PHV::FieldSlice> &packing_slices, PHV::FieldSlice src) const;
 
         /** Print the state of the maps */
@@ -490,7 +490,7 @@ class ActionPhvConstraints : public Inspector {
      * be up to two PHV sources per destination in any action, as each
      * destination may only be written to once.
      */
-    boost::optional<PHV::AllocSlice> getSourcePHVSlice(
+    std::optional<PHV::AllocSlice> getSourcePHVSlice(
         const PHV::Allocation& alloc,
         const std::vector<PHV::AllocSlice>& slices,
         const PHV::AllocSlice& dst,
@@ -574,7 +574,7 @@ class ActionPhvConstraints : public Inspector {
     /** Check that at least one container in a two source PHV instruction is aligned with the
       * destination
       */
-    boost::optional<ClassifiedSources> verify_two_container_alignment(
+    std::optional<ClassifiedSources> verify_two_container_alignment(
             const PHV::Allocation& alloc,
             const PHV::Allocation::MutuallyLiveSlices& container_state,
             const IR::MAU::Action* action,
@@ -637,15 +637,15 @@ class ActionPhvConstraints : public Inspector {
       * within a container). This function returns the smaller of two unallocated slices found in
       * @p copacking_constraints. It also uses @p alloc to check that the two slices present are
       * indeed, unallocated.
-      * @returns boost::none, if there are more than two unallocated source slices in
+      * @returns std::nullopt, if there are more than two unallocated source slices in
       * @p copacking_constraints.
       */
-    boost::optional<PHV::FieldSlice> get_smaller_source_slice(
+    std::optional<PHV::FieldSlice> get_smaller_source_slice(
             const PHV::Allocation& alloc,
             const UnionFind<PHV::FieldSlice>& copacking_constraints,
             const ordered_set<PHV::FieldSlice>& container_state) const;
 
-    boost::optional<PHV::FieldSlice> get_unallocated_slice(
+    std::optional<PHV::FieldSlice> get_unallocated_slice(
             const PHV::Allocation& alloc,
             const UnionFind<PHV::FieldSlice>& copacking_constraints,
             const ordered_set<PHV::FieldSlice>& container_state) const;
@@ -890,8 +890,8 @@ class ActionPhvConstraints : public Inspector {
         const PHV::Field* src, const std::vector<PHV::FieldSlice>& slices) const;
 
     /// @returns the destination of field @p f in action @p action.
-    /// @returns boost::none if @p f is not written in @p action.
-    boost::optional<const PHV::Field*> field_destination(
+    /// @returns std::nullopt if @p f is not written in @p action.
+    std::optional<const PHV::Field*> field_destination(
             const PHV::Field* f,
             const IR::MAU::Action* action) const;
 
@@ -927,7 +927,7 @@ class ActionPhvConstraints : public Inspector {
      * fields must be initialized to enable metadata overlay.
      *
      * @returns bit positions at which unallocated slices must be allocated for
-     * the proposed packing to be valid, or boost::none if no packing is
+     * the proposed packing to be valid, or std::nullopt if no packing is
      * possible.  An empty map indicates the proposed packing is
      * unconditionally valid.
      *
@@ -1017,7 +1017,7 @@ class ActionPhvConstraints : public Inspector {
         ordered_set<PHV::FieldSlice> rs;
         auto& writtenSlices = constraint_tracker.writes(act);
         for (auto& info : writtenSlices)
-            if (info.phv_used != boost::none)
+            if (info.phv_used != std::nullopt)
                 rs.insert(*(info.phv_used));
         return rs;
     }

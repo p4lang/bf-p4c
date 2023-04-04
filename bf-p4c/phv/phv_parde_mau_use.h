@@ -84,15 +84,15 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
     bool is_used_parde(const PHV::Field *f) const;
 
     /// @returns true if @p f is extracted in the (ingress or egress) parser.
-    bool is_extracted(const PHV::Field *f, boost::optional<gress_t> gress = boost::none) const;
+    bool is_extracted(const PHV::Field *f, std::optional<gress_t> gress = std::nullopt) const;
 
     /// @returns true if @p f is extracted in the (ingress or egress) parser from packet data.
     bool is_extracted_from_pkt(const PHV::Field *f,
-            boost::optional<gress_t> gress = boost::none) const;
+            std::optional<gress_t> gress = std::nullopt) const;
 
     /// @returns true if @p f is extracted in the (ingress or egress) parser from a constant.
     bool is_extracted_from_constant(const PHV::Field *f,
-            boost::optional<gress_t> gress = boost::none) const;
+            std::optional<gress_t> gress = std::nullopt) const;
 
     /// @returns true if @p f needs to be allocated for PHV.
     /// A field must be allocated to a PHV if is_ignore_alloc() is false and

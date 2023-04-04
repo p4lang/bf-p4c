@@ -1,6 +1,6 @@
+#include <optional>
 #include <type_traits>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/optional.hpp>
 #include "gtest/gtest.h"
 
 #include "ir/ir.h"
@@ -18,7 +18,7 @@ class TofinoFieldAlignment : public TofinoBackendTest {};
 
 namespace {
 
-boost::optional<TofinoPipeTestCase>
+std::optional<TofinoPipeTestCase>
 createFieldAlignmentTestCase(const std::string& headerSource) {
     auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
         header H {
@@ -64,10 +64,10 @@ createFieldAlignmentTestCase(const std::string& headerSource) {
 }
 
 /// A map from field names to expected alignment values. The expected alignment
-/// is optional; if it's boost::none, then the field's alignment value must also
-/// be boost::none - in other words, no particular alignment constraint should
+/// is optional; if it's std::nullopt, then the field's alignment value must also
+/// be std::nullopt - in other words, no particular alignment constraint should
 /// have been inferred.
-using ExpectedAlignmentMap = std::map<cstring, boost::optional<unsigned>>;
+using ExpectedAlignmentMap = std::map<cstring, std::optional<unsigned>>;
 
 
 /// Given a Tofino program, infer alignments for its fields and check that they
@@ -216,8 +216,8 @@ TEST_F(TofinoFieldAlignment, NonPardeFieldsDoNotForceAlignment) {
 
     checkFieldAlignment(test->pipe, {
         { "usedInParser.field", 0 },
-        { "usedOnlyInMAU.field", boost::none },
-        { "meta.metadataField", boost::none },
+        { "usedOnlyInMAU.field", std::nullopt },
+        { "meta.metadataField", std::nullopt },
     });
 }
 

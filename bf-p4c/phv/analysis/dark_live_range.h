@@ -44,9 +44,9 @@ class DarkLiveRangeMap {
 
     int getDeparserStageValue() const { return DEPARSER; }
 
-    boost::optional<Entry> getDarkLiveRange(const PHV::Field* f) const {
+    std::optional<Entry> getDarkLiveRange(const PHV::Field* f) const {
         if (livemap.count(f)) return livemap.at(f);
-        return boost::none;
+        return std::nullopt;
     }
 
     void addAccess(const PHV::Field* f,
@@ -93,8 +93,8 @@ class DarkLiveRangeMap {
         return hasAccess(f, std::make_pair(stage, PHV::FieldUse(access)));
     }
 
-    boost::optional<StageAndAccess> getEarliestAccess(const PHV::Field *f) const;
-    boost::optional<StageAndAccess> getLatestAccess(const PHV::Field *f) const;
+    std::optional<StageAndAccess> getEarliestAccess(const PHV::Field *f) const;
+    std::optional<StageAndAccess> getLatestAccess(const PHV::Field *f) const;
 };
 
 /** This class calculates the live range of fields to determine potential for overlay due to
@@ -258,11 +258,11 @@ class DarkLiveRange : public Inspector {
     /// Calculate and set the live range for field @p f.
     void setFieldLiveMap(const PHV::Field* f);
 
-    boost::optional<OrderedFieldSummary> produceFieldsInOrder(
+    std::optional<OrderedFieldSummary> produceFieldsInOrder(
         const ordered_set<PHV::AllocSlice>& fields,
         bool &onlyReadRefs) const;
 
-    boost::optional<ReadWritePair> getFieldsLiveAtStage(
+    std::optional<ReadWritePair> getFieldsLiveAtStage(
             const ordered_set<PHV::AllocSlice>& fields,
             const int stage) const;
 
@@ -277,13 +277,13 @@ class DarkLiveRange : public Inspector {
             const IR::MAU::Table* use,
             const IR::MAU::Table* init) const;
 
-    boost::optional<PHV::ActionSet> getInitActions(
+    std::optional<PHV::ActionSet> getInitActions(
             const PHV::Container& c,
             const OrderedFieldInfo& field,
             const IR::MAU::Table* t,
             const PHV::Transaction& alloc) const;
 
-    boost::optional<PHV::DarkInitMap> getInitPointsForTable(
+    std::optional<PHV::DarkInitMap> getInitPointsForTable(
             const PHV::ContainerGroup& group,
             const PHV::Container& c,
             const IR::MAU::Table* t,
@@ -320,7 +320,7 @@ class DarkLiveRange : public Inspector {
             const IR::MAU::Action* action,
             const PHV::Transaction& alloc) const;
 
-    boost::optional<PHV::DarkInitEntry*> getInitForLastFieldToDark(
+    std::optional<PHV::DarkInitEntry*> getInitForLastFieldToDark(
             const PHV::Container& c,
             const PHV::ContainerGroup& group,
             const IR::MAU::Table* t,
@@ -329,19 +329,19 @@ class DarkLiveRange : public Inspector {
             const OrderedFieldInfo& nxtField,
             bool useARA) const;
 
-    boost::optional<PHV::DarkInitEntry*> getInitForCurrentFieldFromDark(
+    std::optional<PHV::DarkInitEntry*> getInitForCurrentFieldFromDark(
             const PHV::Container& c,
             const IR::MAU::Table* t,
             const OrderedFieldInfo& field,
             PHV::DarkInitMap& initMap,
             const PHV::Transaction& alloc) const;
 
-    boost::optional<PHV::DarkInitEntry*> getInitForCurrentFieldWithZero(
+    std::optional<PHV::DarkInitEntry*> getInitForCurrentFieldWithZero(
             const PHV::Container& c,
             const IR::MAU::Table* t,
             const OrderedFieldInfo& field,
             const PHV::Transaction& alloc,
-            boost::optional<PHV::DarkInitEntry*>,
+            std::optional<PHV::DarkInitEntry*>,
             bool useARA) const;
 
     bool ignoreReachCondition(
@@ -361,12 +361,12 @@ class DarkLiveRange : public Inspector {
         const PHV::Container c,
         bool onlyReadCandidates) const;
 
-    boost::optional<PHV::DarkInitEntry> generateInitForLastStageAlwaysInit(
+    std::optional<PHV::DarkInitEntry> generateInitForLastStageAlwaysInit(
             const OrderedFieldInfo& field,
             const OrderedFieldInfo* previousField,
             PHV::DarkInitMap& darkInitMap) const;
 
-     boost::optional<PHV::DarkInitEntry> generateARAzeroInit(
+     std::optional<PHV::DarkInitEntry> generateARAzeroInit(
          const OrderedFieldInfo& field,
          const OrderedFieldInfo* previousField,
          const PHV::Transaction& alloc,
@@ -374,7 +374,7 @@ class DarkLiveRange : public Inspector {
          bool onlyReadCandidates) const;
 
  public:
-    boost::optional<PHV::DarkInitMap> findInitializationNodes(
+    std::optional<PHV::DarkInitMap> findInitializationNodes(
             const PHV::ContainerGroup& group,
             const PHV::Container& c,
             const ordered_set<PHV::AllocSlice>& fields,
@@ -429,7 +429,7 @@ class DarkOverlay : public PassManager {
  public:
     bool suitableForDarkOverlay(const PHV::AllocSlice& slice) const;
 
-    boost::optional<PHV::DarkInitMap> findInitializationNodes(
+    std::optional<PHV::DarkInitMap> findInitializationNodes(
             const PHV::ContainerGroup& group,
             const ordered_set<PHV::AllocSlice>& alloced,
             const PHV::AllocSlice& slice,
@@ -439,7 +439,7 @@ class DarkOverlay : public PassManager {
         if (!suitableForDarkOverlay(slice)) {
             LOG_FEATURE("alloc_progress", 5, TAB2 "Dark overlay candidate " << slice <<
                         " not a good fit for container " << slice.container());
-            return boost::none;
+            return std::nullopt;
         }
 
         ordered_set<PHV::AllocSlice> fields;

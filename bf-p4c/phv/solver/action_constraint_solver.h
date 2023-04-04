@@ -2,7 +2,7 @@
 #define BF_P4C_PHV_SOLVER_ACTION_CONSTRAINT_SOLVER_H_
 
 #include <vector>
-#include <boost/optional/optional.hpp>
+#include <optional>
 #include "bf-p4c/ir/bitrange.h"
 #include "lib/bitvec.h"
 #include "lib/cstring.h"
@@ -118,7 +118,7 @@ struct ContainerSpec {
 
 /// Result contains either an error or all instructions for an action.
 struct Result {
-    boost::optional<Error> err;
+    std::optional<Error> err;
     std::vector<const Instruction*> instructions;
     Result(){}
     explicit Result(const Error& err): err(err) {}
@@ -168,7 +168,7 @@ class ActionSolverBase {
  protected:
     /// validate_input run misc basic checks on input, see comments in
     /// function body for details.
-    boost::optional<Error> validate_input() const;
+    std::optional<Error> validate_input() const;
 
     /// try to use container set to synthesize all assignments to @p dest, either
     /// (1) sources are all constants: can be merge into one constant or action data, or
@@ -182,7 +182,7 @@ class ActionSolverBase {
     /// For all destination container c in @a src_unallocated_bits, that if dest_assigns_i
     /// do not have records of c, i.e., none of the sources have been allocated, check
     /// if whole container set will corrupt other live bits.
-    boost::optional<Error> check_whole_container_set_with_none_source_allocated() const;
+    std::optional<Error> check_whole_container_set_with_none_source_allocated() const;
 
  public:
     /// set true to enable bitmasked_set set, otherwise disable. default: enable.
@@ -241,7 +241,7 @@ class ActionSolverBase {
 class ActionMoveSolver : public ActionSolverBase {
  private:
     // check whether @p bv_dest satifies all assignments.
-    boost::optional<Error> dest_meet_expectation(const ContainerID dest,
+    std::optional<Error> dest_meet_expectation(const ContainerID dest,
                                                  const std::vector<Assign>& src1,
                                                  const std::vector<Assign>& src2,
                                                  const symbolic_bitvec::BitVec& bv_dest,

@@ -16,7 +16,7 @@
 #include "clot_candidate.h"
 #include "field_slice_extract_info.h"
 
-boost::optional<nw_bitrange> ClotInfo::field_range(const IR::BFN::ParserState* state,
+std::optional<nw_bitrange> ClotInfo::field_range(const IR::BFN::ParserState* state,
                                                    const PHV::Field* field) const {
     BUG_CHECK(field_to_parser_states_.count(field),
               "Field %1% is never extracted from the packet",
@@ -28,15 +28,15 @@ boost::optional<nw_bitrange> ClotInfo::field_range(const IR::BFN::ParserState* s
     if (field_range_.count(state) && field_range_.at(state).count(field))
         return field_range_.at(state).at(field);
 
-    return boost::optional<nw_bitrange>{};
+    return std::optional<nw_bitrange>{};
 }
 
-boost::optional<unsigned> ClotInfo::offset(const IR::BFN::ParserState* state,
+std::optional<unsigned> ClotInfo::offset(const IR::BFN::ParserState* state,
                                            const PHV::Field* field) const {
     if (auto range = field_range(state, field))
         return range->lo;
 
-    return boost::optional<unsigned>{};
+    return std::optional<unsigned>{};
 }
 
 cstring ClotInfo::sanitize_state_name(cstring state_name, gress_t gress) const {
@@ -994,7 +994,7 @@ std::string ClotInfo::print(const PhvInfo* phvInfo) const {
         bool pkt_src = true;
         for (auto& kv2 : states_to_extracts) {
             auto& state = kv2.first;
-            pkt_src = field_range(state, field) != boost::none;
+            pkt_src = field_range(state, field) != std::nullopt;
             if (!pkt_src) break;
         }
         if (!pkt_src) continue;
@@ -1220,8 +1220,7 @@ void CollectClotInfo::postorder(const IR::BFN::Deparser* deparser) {
 
     // Tracks the graph node corresponding to the field or constant that was previously emitted by
     // the deparser.
-    boost::optional<DeparseGraph::Node> prev_node =  // boost::none;  Compiler incorrectly warns.
-                        boost::make_optional(false, DeparseGraph::Node{});  // Compiler is happy!
+    std::optional<DeparseGraph::Node> prev_node = std::nullopt;
 
     // The deparse graph for the current gress.
     auto& deparse_graph = clotInfo.deparse_graph_[deparser->gress];

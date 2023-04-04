@@ -12,7 +12,7 @@ bool CoalesceLearning::preorder(IR::BFN::LearningTableEntry *lte) {
                 if (lte->sources[i+1]->range) {
                     combine->range = combine->range->unionWith(*lte->sources[i+1]->range);
                 } else {
-                    combine->range = boost::none; } }
+                    combine->range = std::nullopt; } }
             combine->debug.mergeWith(lte->sources[i+1]->debug);
             lte->sources[i] = combine;
             adjust[orig_offset] = orig_offset - new_offset;

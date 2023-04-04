@@ -63,7 +63,7 @@ struct FsPacker {
     }
     bool is_byte_sized() const { return n_bits > 0 && n_bits % 8 == 0; }
     bool is_alignment_compatible(const FieldSlice& fs,
-                                 boost::optional<int> unmaterialized_field_align,
+                                 std::optional<int> unmaterialized_field_align,
                                  const AlignedCluster& aligned) const {
         const int field_align_if_packed_here = ((1 << 10) + n_bits - fs.range().lo) % 8;
         // aligned cluster has alignment constraint, and when field is packed, it will also
@@ -91,7 +91,7 @@ struct FsPacker {
         if (curr.empty()) return "";
         std::stringstream ss;
         cstring sep = "";
-        boost::optional<FieldSlice> last;
+        std::optional<FieldSlice> last;
         ss << "@pa_byte_pack(\"" << curr.front().field()->gress << "\", ";
         for (const auto& fs : curr) {
             if (last && fs.field() == last->field()) {
@@ -138,7 +138,7 @@ bool IxbarFriendlyPacking::can_pack(const std::vector<FieldSlice>& slices,
         offset += fs.size();
     }
     fs_starts[fs] = offset;
-    auto* err = parser_packing_validator_i->can_pack(fs_starts, boost::none);
+    auto* err = parser_packing_validator_i->can_pack(fs_starts, std::nullopt);
     if (err != nullptr) {
         LOG3("Found parser packing conflict: " << err->str());
         return false;
@@ -370,7 +370,7 @@ std::list<SuperCluster*> IxbarFriendlyPacking::pack(const std::list<SuperCluster
         const auto& slices = tb_slices.second;
         LOG3("Construct packing for table: " << tb->name);
         // fieldslice may not have been packed yet: it is in the list by itself.
-        ordered_map<const Field*, boost::optional<int>> unmaterialized_alignments;
+        ordered_map<const Field*, std::optional<int>> unmaterialized_alignments;
         std::vector<FsPacker> workers;
         for (const auto& fs : slices) {
             if (packed.count(fs)) {

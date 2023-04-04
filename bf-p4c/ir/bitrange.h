@@ -6,7 +6,7 @@
 #include <limits>
 #include <utility>
 
-#include <boost/optional.hpp>
+#include <optional>
 
 #include "lib/exceptions.h"
 
@@ -701,11 +701,11 @@ toHalfOpenRange(ClosedRange<Unit, Order> closedRange) {
 }
 
 /// @return a closed range denoting the same elements as the provided half-open
-/// range, or boost::none if the provided range is empty.
+/// range, or std::nullopt if the provided range is empty.
 template <RangeUnit Unit, Endian Order>
-boost::optional<ClosedRange<Unit, Order>>
+std::optional<ClosedRange<Unit, Order>>
 toClosedRange(HalfOpenRange<Unit, Order> halfOpenRange) {
-    if (halfOpenRange.empty()) return boost::none;
+    if (halfOpenRange.empty()) return std::nullopt;
     return ClosedRange<Unit, Order>(halfOpenRange.lo, halfOpenRange.hi - 1);
 }
 

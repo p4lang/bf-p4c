@@ -10,7 +10,7 @@ class AllocationReport {
     const Allocation& alloc;
     bool printMetricsOnly = false;
 
-    ordered_map<boost::optional<gress_t>,
+    ordered_map<std::optional<gress_t>,
         ordered_map<PHV::Type,
           ordered_map<Allocation::ContainerAllocStatus, int>>> alloc_status;
 
@@ -20,7 +20,7 @@ class AllocationReport {
 
     ordered_map<PHV::Container, int> container_to_bits_allocated;
 
-    ordered_map<PHV::Container, boost::optional<gress_t>> container_to_gress;
+    ordered_map<PHV::Container, std::optional<gress_t>> container_to_gress;
 
     ordered_set<AllocSlice> alloc_slices;
 
@@ -99,14 +99,14 @@ class AllocationReport {
 
         /// Initializes a new MauGroupInfo with usage information from a single container.
         explicit MauGroupInfo(size_t sz, int i, PHV::Kind containerKind, bool cont, size_t used,
-                              size_t allocated, boost::optional<gress_t> gr)
+                              size_t allocated, std::optional<gress_t> gr)
             : size(sz), groupID(i) {
             update(containerKind, cont, used, allocated, gr);
         }
 
         /// Adds usage information from a single container
         void update(PHV::Kind containerKind, bool cont, size_t used, size_t allocated,
-                boost::optional<gress_t> gr) {
+                std::optional<gress_t> gr) {
             auto& kindStats = statsByContainerKind[containerKind];
 
             // Update total stats
@@ -150,7 +150,7 @@ class AllocationReport {
         std::map<PHV::Type, size_t> bitsAllocated;
         std::map<PHV::Type, size_t> totalContainers;
 
-        boost::optional<gress_t> gress;
+        std::optional<gress_t> gress;
 
         size_t getTotalUsedBits() {
             size_t rv = 0;

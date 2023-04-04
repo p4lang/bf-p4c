@@ -11,14 +11,14 @@ ContainerEquivalenceTracker::ContainerEquivalenceTracker(const PHV::Allocation& 
     )
 { }
 
-boost::optional<PHV::Container>
+std::optional<PHV::Container>
 ContainerEquivalenceTracker::find_equivalent_tried_container(PHV::Container c) {
     if (!isTofino2Or3) {
         return find_single(c);
     } else {
         // W0 is special on Tofino 2 & 3 (due to a hardware bug) (P4C-4589)
         if (c == PHV::Container({PHV::Kind::normal, PHV::Size::b32}, 0))
-            return boost::none;
+            return std::nullopt;
         if (!c.is(PHV::Size::b8))
             return find_single(c);
 
@@ -29,13 +29,13 @@ ContainerEquivalenceTracker::find_equivalent_tried_container(PHV::Container c) {
         // as that only means that there are more constrains on c, not less). (P4C-3033)
         auto equiv = find_single(c);
         if (!equiv)
-            return boost::none;
+            return std::nullopt;
         unsigned idx = equiv->index() & 1u ? equiv->index() & ~1u : equiv->index() | 1u;
         PHV::Container pair_equiv(equiv->type(), idx);
         auto pair_stat = alloc.getStatus(pair_equiv);
         if (pair_stat && pair_stat->alloc_status == ContainerAllocStatus::EMPTY)
             return equiv;
-        return boost::none;
+        return std::nullopt;
     }
 }
 
@@ -43,14 +43,14 @@ void ContainerEquivalenceTracker::invalidate(PHV::Container c) {
     equivalenceClasses.erase(get_class(c));
 }
 
-boost::optional<PHV::Container>
+std::optional<PHV::Container>
 ContainerEquivalenceTracker::find_single(PHV::Container c) {
     if (wideArithLow || excluded.count(c))
-        return boost::none;
+        return std::nullopt;
 
     auto cls = get_class(c);
     if (!cls.is_empty)
-        return boost::none;
+        return std::nullopt;
 
     auto ins = equivalenceClasses.emplace(cls, c);
     if (!ins.second) {  // not inserted, found
@@ -64,7 +64,7 @@ ContainerEquivalenceTracker::find_single(PHV::Container c) {
              << " parity = " << int(cls.parity));
         return ins.first->second;
     }
-    return boost::none;
+    return std::nullopt;
 }
 
 }  // namespace PHV

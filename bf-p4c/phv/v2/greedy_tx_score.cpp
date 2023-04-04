@@ -4,7 +4,7 @@
 #include <sstream>
 #include <utility>
 
-#include <boost/optional/optional.hpp>
+#include <optional>
 
 #include "bf-p4c/common/table_printer.h"
 #include "bf-p4c/device.h"
@@ -270,7 +270,7 @@ KindSizeIndexedMap GreedyTxScoreMaker::record_deallocation(const SuperCluster* s
 TxScore* GreedyTxScoreMaker::make(const Transaction& tx) const {
     auto* rv = new GreedyTxScore(&vision_i);
     const auto* parent = tx.getParent();
-    boost::optional<gress_t> tx_gress = boost::make_optional(false, INGRESS);
+    std::optional<gress_t> tx_gress = std::nullopt;
     ordered_map<Vision::ContGress, KindSizeIndexedMap> newly_used;
     for (const auto& kv : tx.get_actual_diff()) {
         const auto& c = kv.first;

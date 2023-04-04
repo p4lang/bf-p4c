@@ -1,7 +1,7 @@
 #include <deque>
 #include <iostream>
 #include <numeric>
-#include <boost/optional/optional.hpp>
+#include <optional>
 #include <boost/optional/optional_io.hpp>
 #include "bf-p4c/common/table_printer.h"
 #include "bf-p4c/ir/bitrange.h"
@@ -752,9 +752,9 @@ PHV::ConcreteAllocation::ConcreteAllocation(const PhvInfo& phv, const PhvUse& us
 
         // Initialize container status with hard-wired gress info and
         // an empty alloc slice list.
-        boost::optional<gress_t> gress = boost::none;
-        boost::optional<gress_t> parserGroupGress = boost::none;
-        boost::optional<gress_t> deparserGroupGress = boost::none;
+        std::optional<gress_t> gress = std::nullopt;
+        std::optional<gress_t> parserGroupGress = std::nullopt;
+        std::optional<gress_t> deparserGroupGress = std::nullopt;
         if (phvSpec.ingressOnly()[phvSpec.containerToId(c)]) {
             gress = INGRESS;
             parserGroupGress = INGRESS;
@@ -789,12 +789,12 @@ bool PHV::ConcreteAllocation::contains(PHV::Container c) const {
     return container_status_i.find(c) != container_status_i.end();
 }
 
-boost::optional<PHV::ActionSet> PHV::Allocation::getInitPoints(const PHV::AllocSlice& slice) const {
-    if (!meta_init_points_i.count(slice)) return boost::none;
+std::optional<PHV::ActionSet> PHV::Allocation::getInitPoints(const PHV::AllocSlice& slice) const {
+    if (!meta_init_points_i.count(slice)) return std::nullopt;
     return meta_init_points_i.at(slice);
 }
 
-boost::optional<PHV::ActionSet>
+std::optional<PHV::ActionSet>
 PHV::Transaction::getInitPoints(const PHV::AllocSlice& slice) const {
     if (meta_init_points_i.count(slice))
         return meta_init_points_i.at(slice);
@@ -860,9 +860,9 @@ void PHV::ConcreteAllocation::deallocate(const ordered_set<PHV::AllocSlice>& sli
         const unsigned cid = phv_spec.containerToId(c);
         container_status_i[c].alloc_status = ContainerAllocStatus::EMPTY;
         if (!phv_spec.ingressOnly()[cid] && !phv_spec.egressOnly()[cid]) {
-            container_status_i[c].gress = boost::none;
+            container_status_i[c].gress = std::nullopt;
             // reset parser group gress.
-            container_status_i[c].parserGroupGress = boost::none;
+            container_status_i[c].parserGroupGress = std::nullopt;
             for (const unsigned other_cid : phv_spec.parserGroup(cid)) {
                 if (other_cid == cid) continue;
                 const auto other = phv_spec.idToContainer(other_cid);
@@ -871,7 +871,7 @@ void PHV::ConcreteAllocation::deallocate(const ordered_set<PHV::AllocSlice>& sli
                 break;
             }
             // reset deparser group gress.
-            container_status_i[c].deparserGroupGress = boost::none;
+            container_status_i[c].deparserGroupGress = std::nullopt;
             for (const unsigned other_cid : phv_spec.deparserGroup(cid)) {
                 if (other_cid == cid) continue;
                 const auto other = phv_spec.idToContainer(other_cid);
@@ -1177,7 +1177,7 @@ cstring PHV::Transaction::getTransactionDiff() const {
 }
 
 cstring PHV::Transaction::getTransactionSummary() const {
-    ordered_map<boost::optional<gress_t>,
+    ordered_map<std::optional<gress_t>,
         ordered_map<PHV::Type,
             ordered_map<ContainerAllocStatus,
                 int>>> alloc_status;
@@ -1203,7 +1203,7 @@ cstring PHV::Transaction::getTransactionSummary() const {
         % "GRESS" % "TYPE" % "STATUS" % "COUNT";
 
     bool first_by_gress = true;
-    auto gresses = std::vector<boost::optional<gress_t>>({INGRESS, EGRESS, boost::none});
+    auto gresses = std::vector<std::optional<gress_t>>({INGRESS, EGRESS, std::nullopt});
     auto statuses = {ContainerAllocStatus::EMPTY,
                      ContainerAllocStatus::PARTIAL,
                      ContainerAllocStatus::FULL};
@@ -1243,7 +1243,7 @@ void PHV::AlignedCluster::initialize_constraints() {
     max_width_i = 0;
     num_constraints_i = 0;
     aggregate_size_i = 0;
-    alignment_i = boost::none;
+    alignment_i = std::nullopt;
     hasDeparsedFields_i = false;
 
     for (auto& slice : slices_i) {
@@ -1278,7 +1278,7 @@ void PHV::AlignedCluster::initialize_constraints() {
         if (slice.field()->exact_containers())      num_constraints_i++; }
 }
 
-boost::optional<le_bitrange>
+std::optional<le_bitrange>
 PHV::AlignedCluster::validContainerStartRange(PHV::Size container_size) const {
     le_bitrange container_slice = StartLen(0, int(container_size));
     LOG5("Computing valid container start range for cluster " <<
@@ -1292,7 +1292,7 @@ PHV::AlignedCluster::validContainerStartRange(PHV::Size container_size) const {
     for (auto& slice : slices_i) {
         auto this_valid_start_range = validContainerStartRange(slice, container_size);
         if (!this_valid_start_range)
-            return boost::none;
+            return std::nullopt;
 
         LOG5("\tField slice " << slice << " has valid start interval of " <<
              *this_valid_start_range);
@@ -1304,7 +1304,7 @@ PHV::AlignedCluster::validContainerStartRange(PHV::Size container_size) const {
 }
 
 /* static */
-boost::optional<le_bitrange> PHV::AlignedCluster::validContainerStartRange(
+std::optional<le_bitrange> PHV::AlignedCluster::validContainerStartRange(
         const PHV::FieldSlice& slice,
         PHV::Size container_size) {
     le_bitrange container_slice = StartLen(0, int(container_size));
@@ -1378,7 +1378,7 @@ boost::optional<le_bitrange> PHV::AlignedCluster::validContainerStartRange(
     if (has_deparsed_bottom_bits && valid_start_interval.contains(0))
         return le_bitrange(StartLen(0, 1));
     else if (has_deparsed_bottom_bits)
-        return boost::none;
+        return std::nullopt;
     else
         return toClosedRange(valid_start_interval);
 }
@@ -1388,7 +1388,7 @@ bool PHV::AlignedCluster::okIn(PHV::Kind kind) const {
 }
 
 bitvec PHV::AlignedCluster::validContainerStart(PHV::Size container_size) const {
-    boost::optional<le_bitrange> opt_valid_start_range = validContainerStartRange(container_size);
+    std::optional<le_bitrange> opt_valid_start_range = validContainerStartRange(container_size);
     if (!opt_valid_start_range)
         return bitvec();
     auto valid_start_range = *opt_valid_start_range;
@@ -1411,7 +1411,7 @@ bitvec PHV::AlignedCluster::validContainerStart(PHV::Size container_size) const 
 
 /* static */
 bitvec PHV::AlignedCluster::validContainerStart(PHV::FieldSlice slice, PHV::Size container_size) {
-    boost::optional<le_bitrange> opt_valid_start_range =
+    std::optional<le_bitrange> opt_valid_start_range =
         validContainerStartRange(slice, container_size);
     if (!opt_valid_start_range)
         return bitvec();
@@ -1448,7 +1448,7 @@ bool PHV::AlignedCluster::contains(const PHV::FieldSlice& s1) const {
     return false;
 }
 
-boost::optional<PHV::SliceResult<PHV::AlignedCluster>> PHV::AlignedCluster::slice(int pos) const {
+std::optional<PHV::SliceResult<PHV::AlignedCluster>> PHV::AlignedCluster::slice(int pos) const {
     BUG_CHECK(pos >= 0, "Trying to slice cluster at negative position");
     PHV::SliceResult<PHV::AlignedCluster> rv;
     std::vector<PHV::FieldSlice> lo_slices;
@@ -1457,11 +1457,11 @@ boost::optional<PHV::SliceResult<PHV::AlignedCluster>> PHV::AlignedCluster::slic
         // Put slice in lo if pos is larger than the slice.
         if (slice.range().size() <= pos) {
             lo_slices.push_back(slice);
-            rv.slice_map.emplace(PHV::FieldSlice(slice), std::make_pair(slice, boost::none));
+            rv.slice_map.emplace(PHV::FieldSlice(slice), std::make_pair(slice, std::nullopt));
             continue; }
         // Check whether the field in `slice` can be sliced.
         if (slice.field()->no_split_at(pos + slice.range().lo)) {
-            return boost::none; }
+            return std::nullopt; }
         // Create new slices.
         le_bitrange lo_range = StartLen(slice.range().lo, pos);
         le_bitrange hi_range = StartLen(slice.range().lo + pos,
@@ -1532,7 +1532,7 @@ bool PHV::RotationalCluster::contains(const PHV::FieldSlice& slice) const {
     return slices_to_clusters_i.find(slice) != slices_to_clusters_i.end();
 }
 
-boost::optional<PHV::SliceResult<PHV::RotationalCluster>>
+std::optional<PHV::SliceResult<PHV::RotationalCluster>>
 PHV::RotationalCluster::slice(int pos) const {
     BUG_CHECK(pos >= 0, "Trying to slice cluster at negative position");
     PHV::SliceResult<PHV::RotationalCluster> rv;
@@ -1541,7 +1541,7 @@ PHV::RotationalCluster::slice(int pos) const {
     for (auto* aligned_cluster : clusters_i) {
         auto new_clusters = aligned_cluster->slice(pos);
         if (!new_clusters)
-            return boost::none;
+            return std::nullopt;
         // Filter empty clusters, as some clusters may only have fields smaller
         // than pos.
         if (new_clusters->lo->slices().size())
@@ -1791,7 +1791,7 @@ bool PHV::SuperCluster::is_well_formed(const SuperCluster* sc, PHV::Error* err) 
         // // is the hack we use today. Seeing different fields with solitary constraints,
         // // in one slice list is pretty weird. Here we hack it to allow this case.
         // // check solitary constraints for all slice list.
-        // auto solitary_field = boost::make_optional<const PHV::Field*>(false, nullptr);
+        // auto solitary_field = std::make_optional<const PHV::Field*>(false, nullptr);
         // bool all_clear_on_write_solitary = true;
         // for (const auto& sl : *list) {
         //     if (sl.field()->is_solitary()) {

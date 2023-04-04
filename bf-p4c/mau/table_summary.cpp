@@ -126,7 +126,7 @@ Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
     ++numInvoked;
     for (auto gress : { INGRESS, EGRESS }) max_stages[gress] = -1;
     placedTables.clear();
-    table_replay_failed_table = boost::none;
+    table_replay_failed_table = std::nullopt;
     LOG1("Table allocation done " << numInvoked << " time(s), state = " <<
          getActualStateStr());
     return rv;
@@ -194,7 +194,7 @@ bool TableSummary::preorder(const IR::MAU::Table *t) {
     order[gid] = t;
     logical_ids[t->name] = *t->logical_id;
     LOG3("Table " << t->name << ", id: " << logical_ids[t->name]
-            << ", global id : " << t->global_id() << " stage: " << t->stage());
+            << ", global id : " << *t->global_id() << " stage: " << t->stage());
     tableNames[t->name] = getTableName(t);
     tableINames[t->name] = getTableIName(t);
     if (t->gateway_name) {
@@ -443,7 +443,7 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
                 // if ALT_FINALIZE_TABLE_SAME_ORDER failed, jump to
                 // ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED and also restore the table placement
                 // result after trivial phv allocation.
-                if (table_replay_failed_table != boost::none &&
+                if (table_replay_failed_table != std::nullopt &&
                     alt_phv_alloc_table_fixed < ALT_PHV_ALLOC_TABLE_FIX_THRESHOLD){
                     alt_phv_alloc_table_fixed++;
                     state = ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED;
@@ -467,7 +467,7 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
             if (!criticalPlacementFailure && maxStage <= deviceStages) {
                 state = SUCCESS;
             } else {
-                if (table_replay_failed_table != boost::none &&
+                if (table_replay_failed_table != std::nullopt &&
                     alt_phv_alloc_table_fixed < ALT_PHV_ALLOC_TABLE_FIX_THRESHOLD) {
                     alt_phv_alloc_table_fixed++;
                     state = ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED;

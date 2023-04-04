@@ -374,7 +374,7 @@ class BFN::ContainerRef : BFN::Reference {
 
     PHV::Container container;
 
-    boost::optional<nw_bitrange> range;
+    std::optional<nw_bitrange> range;
 
     size_t id;
 

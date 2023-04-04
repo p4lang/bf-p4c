@@ -1,7 +1,7 @@
 #ifndef BF_P4C_MAU_ADD_ALWAYS_RUN_H_
 #define BF_P4C_MAU_ADD_ALWAYS_RUN_H_
 
-#include <boost/optional.hpp>
+#include <optional>
 #include "bf-p4c/logging/pass_manager.h"
 #include "bf-p4c/mau/table_flow_graph.h"
 #include "bf-p4c/phv/phv_fields.h"
@@ -47,14 +47,14 @@ class AddAlwaysRun : public PassManager {
      *
      * This map omits tables in gresses in which no tables will be added.
      */
-    std::map<const UniqueId, boost::optional<UniqueId>> subsequentTables;
+    std::map<const UniqueId, std::optional<UniqueId>> subsequentTables;
 
     /// Comparison for Tables according to globalOrderings. The result is less than 0 if t1 comes
     /// before t2, equal to 0 if t1 is the same as t2, and greater than 0 otherwise. Think of this
     /// as returning something like "t1 - t2". Tables that are nullptr are considered to come after
     /// all other tables.
     int compare(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const;
-    int compare(const IR::MAU::Table* t1, boost::optional<UniqueId> t2) const;
+    int compare(const IR::MAU::Table* t1, std::optional<UniqueId> t2) const;
 
     /// Prepares for insertion by doing some precomputation to populate globalOrderings and
     /// subsequentTables.
@@ -88,7 +88,7 @@ class AddAlwaysRun : public PassManager {
         std::list<const IR::MAU::Table*> tablesToAdd;
 
         /// A lower bound for the subsequent table for the current program point being visited.
-        boost::optional<UniqueId> subsequentTable;
+        std::optional<UniqueId> subsequentTable;
 
         const IR::BFN::Pipe* preorder(IR::BFN::Pipe*) override;
         const IR::Node* preorder(IR::MAU::TableSeq*) override;

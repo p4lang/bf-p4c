@@ -1,5 +1,5 @@
+#include <optional>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/optional.hpp>
 #include "gtest/gtest.h"
 
 #include "ir/ir.h"
@@ -17,7 +17,7 @@ class PaNoOverlayPragmaTest : public TofinoBackendTest {};
 
 namespace {
 
-boost::optional<TofinoPipeTestCase>
+std::optional<TofinoPipeTestCase>
 createPaNoOverlayPragmaTestCase() {
     auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
         @pa_no_overlay("ingress", "h2.f1")

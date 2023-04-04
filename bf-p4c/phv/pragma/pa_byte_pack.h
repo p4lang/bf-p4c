@@ -22,14 +22,14 @@ class PragmaBytePack : public Inspector {
     /// @a compiler_added will be false and will have a non-null @a src_info.
     struct PackConstraint {
         bool compiler_added;
-        boost::optional<Util::SourceInfo> src_info;
+        std::optional<Util::SourceInfo> src_info;
         PHV::PackingLayout packing;
     };
 
     struct AddConstraintResult {
         /// the set of fields which new alignment constraints were added on.
         ordered_set<const PHV::Field*> alignment_added;
-        boost::optional<cstring> error;
+        std::optional<cstring> error;
         bool ok() const { return !error; }
     };
 
@@ -38,7 +38,7 @@ class PragmaBytePack : public Inspector {
     safe_vector<PackConstraint> packing_layouts_i;
 
     /// update alignment Fields in @p packing based on the layout.
-    /// if alignment conflict was found, @returns boost::none,
+    /// if alignment conflict was found, @returns std::nullopt,
     /// otherwise, @returns a set of fields with updated additional alignment constraint.
     AddConstraintResult add_packing_constraint(const PackConstraint& packing);
 
@@ -60,7 +60,7 @@ class PragmaBytePack : public Inspector {
 
     /// add additional pack constraints. NOTE: this function must be called before
     /// creating any PHV::FieldSlices because it might change alignment of PHV::Field.
-    /// If alignment conflict was found, @returns boost::none,
+    /// If alignment conflict was found, @returns std::nullopt,
     /// otherwise, @returns a set of fields with updated additional alignment constraint.
     /// NOTE: the order of @p packing (also for all PHV::PackingLayout instances) needs to be
     /// MSB to LSB.

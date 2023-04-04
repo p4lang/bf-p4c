@@ -1,9 +1,9 @@
+#include <optional>
 #include <ostream>
 #include <sstream>
 #include <exception>
 
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/optional.hpp>
 
 #include "gmock/gmock-matchers.h"
 #include "gmock/gmock.h"
@@ -43,7 +43,7 @@ class PaBytePackPragmaTest : public TofinoBackendTest {
 
 namespace {
 
-boost::optional<TofinoPipeTestCase>
+std::optional<TofinoPipeTestCase>
 createPaBytePackPragmaTestCase(const std::string& pragmas) {
     auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
         %PRAGMAS%
@@ -158,7 +158,7 @@ TEST_F(PaBytePackPragmaTest, BasicCase) {
     std::stringstream layout_ss;
     for (const auto& pack : packings) {
         EXPECT_FALSE(pack.compiler_added);
-        EXPECT_TRUE(pack.src_info.is_initialized());
+        EXPECT_TRUE(pack.src_info.has_value());
         layout_ss << pack.packing;
     }
     EXPECT_EQ(
@@ -181,7 +181,7 @@ TEST_F(PaBytePackPragmaTest, WarnParsedField) {
     ASSERT_EQ(size_t(1), packings.size());
     const auto& pack = packings.front();
     EXPECT_FALSE(pack.compiler_added);
-    EXPECT_TRUE(pack.src_info.is_initialized());
+    EXPECT_TRUE(pack.src_info.has_value());
     std::stringstream layout_ss;
     layout_ss << pack.packing;
     EXPECT_EQ("[ingress::md.m1 bit[3..0], ingress::md.m2 bit[5..0], ingress::md.m3 bit[2..0], 3]",

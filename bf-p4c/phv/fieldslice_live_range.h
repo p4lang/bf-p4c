@@ -155,11 +155,11 @@ class FieldSliceLiveRangeDB : public IFieldSliceLiveRangeDB, public PassManager 
 
         /// @returns the Location of @p unit.
         /// When is_read is true, then for fields marked as non_deparsed,
-        /// locations of deparser units will be boost::none;
+        /// locations of deparser units will be std::nullopt;
         /// When is_read is false, then for fields marked as no_implicit_init,
-        /// locations of parser implicit init unit will be boost::none,
+        /// locations of parser implicit init unit will be std::nullopt,
         /// and for fields marked as not_parsed_fields(), locations of parser unit will be none.
-        boost::optional<Location> to_location(
+        std::optional<Location> to_location(
                 const PHV::Field *field, const FieldDefUse::locpair& loc, bool is_read) const;
 
         /// update @p liverange based on @p loc and @p is_read.

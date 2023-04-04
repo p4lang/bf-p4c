@@ -1,7 +1,7 @@
 #ifndef BF_P4C_ARCH_HELPERS_H_
 #define BF_P4C_ARCH_HELPERS_H_
 
-#include <boost/optional.hpp>
+#include <optional>
 
 #include "ir/ir.h"
 #include "frontends/p4/typeMap.h"
@@ -14,9 +14,9 @@ namespace BFN {
 const IR::Declaration_Instance *
 getDeclInst(const P4::ReferenceMap *refMap, const IR::PathExpression *path);
 
-boost::optional<cstring> getExternTypeName(const P4::ExternMethod* extMethod);
+std::optional<cstring> getExternTypeName(const P4::ExternMethod* extMethod);
 
-boost::optional<P4::ExternInstance>
+std::optional<P4::ExternInstance>
 getExternInstanceFromPropertyByTypeName(const IR::P4Table* table,
                                         cstring propertyName,
                                         cstring typeName,
@@ -25,14 +25,14 @@ getExternInstanceFromPropertyByTypeName(const IR::P4Table* table,
                                         bool *isConstructedInPlace = nullptr);
 
 /// @return an extern instance defined or referenced by the value of @p table's
-/// @p propertyName property, or boost::none if no extern was referenced.
-boost::optional<P4::ExternInstance>
+/// @p propertyName property, or std::nullopt if no extern was referenced.
+std::optional<P4::ExternInstance>
 getExternInstanceFromProperty(const IR::P4Table* table,
                               cstring propertyName,
                               P4::ReferenceMap* refMap,
                               P4::TypeMap* typeMap);
 
-boost::optional<const IR::ExpressionValue*>
+std::optional<const IR::ExpressionValue*>
 getExpressionFromProperty(const IR::P4Table* table,
                           const cstring& propertyName);
 

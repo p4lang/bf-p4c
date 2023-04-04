@@ -57,12 +57,12 @@ class ParserPackingValidator : public ParserPackingValidatorInterface {
     const AllocError* will_buf_extract_clobber_the_other(
             const FieldSlice& fs, const StateExtract& state_extract, const int cont_idx,
             const FieldSlice& other_fs, const StatePrimitiveMap& other_extracts,
-            const int other_cont_idx, const boost::optional<Container>& c) const;
+            const int other_cont_idx, const std::optional<Container>& c) const;
 
     /// @returns an error if there is an extract from a that will clobber b's bits.
     const AllocError* will_a_extracts_clobber_b(const FieldSliceStart& a,
                                                 const FieldSliceStart& b,
-                                                const boost::optional<Container>& c) const;
+                                                const std::optional<Container>& c) const;
 
  public:
     explicit ParserPackingValidator(const PhvInfo& phv,
@@ -80,12 +80,12 @@ class ParserPackingValidator : public ParserPackingValidatorInterface {
     /// @p c is optional for 32-bit container half-word extract optimization.
     const AllocError* can_pack(const FieldSliceStart& a,
                                const FieldSliceStart& b,
-                               const boost::optional<Container>& c) const;
+                               const std::optional<Container>& c) const;
 
     /// @returns an error if we allocated slices in the format of @p alloc.
     /// @p c is optional for 32-bit container half-word extract optimization.
     const AllocError* can_pack(const FieldSliceAllocStartMap& alloc,
-                               const boost::optional<Container>& c) const override;
+                               const std::optional<Container>& c) const override;
 };
 
 }  // namespace v2

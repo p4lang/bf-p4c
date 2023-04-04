@@ -827,7 +827,7 @@ void GetBackendParser::addTransition(IR::BFN::ParserState* state, match_t matchV
 /// expression, corresponding range of bits to be extracted from packet).
 /// If the input is not such an expression the result will contain nullptr as
 /// the first member of the tuple.
-boost::optional<nw_bitrange>
+std::optional<nw_bitrange>
 lookaheadToExtractRange(P4::TypeMap* typeMap, const IR::Expression* expr, int currentBit,
                         bool *partial_hdr_err_proc) {
     *partial_hdr_err_proc = false;
@@ -864,7 +864,7 @@ lookaheadToExtractRange(P4::TypeMap* typeMap, const IR::Expression* expr, int cu
         auto range = lookaheadToExtractRange(typeMap, slice->e0, currentBit,
                                              partial_hdr_err_proc);
         if (!range)
-            return boost::none;
+            return std::nullopt;
 
         BUG_CHECK(slice->e0->type->is<IR::Type_Bits>(), "%1%: Cannot slice non-bit type %2%",
                   slice, slice->e0->type);
@@ -881,7 +881,7 @@ lookaheadToExtractRange(P4::TypeMap* typeMap, const IR::Expression* expr, int cu
         auto range = lookaheadToExtractRange(typeMap, member->expr, currentBit,
                                              partial_hdr_err_proc);
         if (!range)
-            return boost::none;
+            return std::nullopt;
 
         auto type = member->expr->type;
         auto composite = type->to<IR::Type_StructLike>();
@@ -899,13 +899,13 @@ lookaheadToExtractRange(P4::TypeMap* typeMap, const IR::Expression* expr, int cu
         auto range = lookaheadToExtractRange(typeMap, stack->base(), currentBit,
                                              partial_hdr_err_proc);
         if (!range)
-            return boost::none;
+            return std::nullopt;
 
         auto index = stack->index()->to<IR::Constant>();
         if (!index) {
             ::error(ErrorType::ERR_UNSUPPORTED,
                     "%1%: header stack index must be constant in lookahead", expr);
-            return boost::none;
+            return std::nullopt;
         }
         BUG_CHECK(index->fitsUint64(), "%1%: Invalid index for header stack lookahead", expr);
         auto index_val = index->asUint64();
@@ -918,13 +918,13 @@ lookaheadToExtractRange(P4::TypeMap* typeMap, const IR::Expression* expr, int cu
         if (index_val >= stack_type->getSize()) {
             ::error(ErrorType::ERR_EXPRESSION, "%1%: Index ouf of bounds for stack size %2%",
                     index, stack_type->getSize());
-            return boost::none;
+            return std::nullopt;
         }
 
         range = range->shiftedByBits(index_val * elem_size);
         return range->resizedToBits(elem_size);
     }
-    return boost::none;
+    return std::nullopt;
 }
 
 const IR::BFN::PacketRVal*

@@ -1,6 +1,6 @@
+#include <optional>
 #include <type_traits>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/optional.hpp>
 #include "gtest/gtest.h"
 
 #include "ir/ir.h"
@@ -16,7 +16,7 @@ namespace Test {
 
 namespace {
 
-boost::optional<TofinoPipeTestCase>
+std::optional<TofinoPipeTestCase>
 createComputedChecksumTestCase(const std::string& computeChecksumSource,
                                const std::string& deparserSource) {
     auto source = P4_SOURCE(P4Headers::V1MODEL, R"(

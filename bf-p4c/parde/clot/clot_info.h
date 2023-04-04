@@ -89,11 +89,11 @@ class ClotInfo {
     unsigned num_clots_allocated(gress_t gress) const { return Clot::tag_count.at(gress); }
 
     /// The extracted packet range of a given field for a given parser state.
-    boost::optional<nw_bitrange> field_range(const IR::BFN::ParserState* state,
+    std::optional<nw_bitrange> field_range(const IR::BFN::ParserState* state,
                                              const PHV::Field* field) const;
 
     /// The bit offset of a given field for a given parser state.
-    boost::optional<unsigned> offset(const IR::BFN::ParserState* state,
+    std::optional<unsigned> offset(const IR::BFN::ParserState* state,
                                      const PHV::Field* field) const;
 
  public:

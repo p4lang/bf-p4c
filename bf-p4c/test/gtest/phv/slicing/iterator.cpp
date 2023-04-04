@@ -1,7 +1,6 @@
-#include "gtest/gtest.h"
-
 #include <sstream>
 
+#include "gtest/gtest.h"
 #include "bf-p4c/device.h"
 #include "lib/bitvec.h"
 #include "test/gtest/helpers.h"
@@ -39,7 +38,7 @@ TEST_F(TofinoPhvSlicingIterator, make_split_meta) {
     f->name = ss.str();
     f->gress = INGRESS;
     f->validContainerRange_i = ZeroToMax();
-    f->alignment = boost::none;
+    f->alignment = std::nullopt;
     f->set_exact_containers(true);
 
     // Simple allocation to one container.

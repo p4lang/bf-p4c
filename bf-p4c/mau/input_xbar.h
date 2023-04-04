@@ -109,19 +109,19 @@ struct IXBar {
         int lo;         ///> lo field bit in that byte
         int hi;         ///> hi field bit in that byte
         int cont_lo;    ///> mod 8 location in the container that the bitrange of field begins
-        boost::optional<cstring> aliasSource;
+        std::optional<cstring> aliasSource;
                         ///> name of alias source field, if present
 
-        FieldInfo(cstring n, int l, int h, int cl, boost::optional<cstring> a)
+        FieldInfo(cstring n, int l, int h, int cl, std::optional<cstring> a)
             : field(n), lo(l), hi(h), cont_lo(cl) {
             if (a)
                 aliasSource = *a;
             else
-                aliasSource = boost::none;
+                aliasSource = std::nullopt;
         }
 
         cstring get_use_name() const {
-            if (aliasSource == boost::none)
+            if (aliasSource == std::nullopt)
                 return field;
             else
                 return *aliasSource;
@@ -393,7 +393,7 @@ struct IXBar {
     typedef std::map<Use::Byte, safe_vector<FieldInfo>> ContByteConversion;
     static void add_use(ContByteConversion &map_alloc, const PHV::Field *field,
                         const PhvInfo &phv, const IR::MAU::Table *ctxt,
-                        boost::optional<cstring> aliasSourceName,
+                        std::optional<cstring> aliasSourceName,
                         const le_bitrange *bits = nullptr, int flags = 0,
                         byte_type_t byte_type = NO_BYTE_TYPE,
                         unsigned extra_align = 0, int range_index = 0);

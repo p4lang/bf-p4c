@@ -60,7 +60,7 @@ TEST_F(BuildSuperCluster, basic) {
  )");
 
     // Build the supercluster
-    boost::optional<PHV::SuperCluster*> sc = scb.build_super_cluster(input_super_cluster);
+    std::optional<PHV::SuperCluster*> sc = scb.build_super_cluster(input_super_cluster);
 
     // Check for errors
     if (!sc) {

@@ -44,7 +44,7 @@ bool isMetadata(const LinearPath& path, P4::TypeMap* typeMap) {
     });
 }
 
-boost::optional<cstring>
+std::optional<cstring>
 containingTnaParam(const LinearPath& linearPath, const TnaParams& tnaParams,
                    P4::ReferenceMap* refMap) {
     auto* topLevelPath = linearPath.components[0]->to<IR::PathExpression>();
@@ -54,13 +54,13 @@ containingTnaParam(const LinearPath& linearPath, const TnaParams& tnaParams,
     BUG_CHECK(decl, "No declaration for top level path in path-like "
               "expression: %1%", topLevelPath);
     auto* param = decl->to<IR::Parameter>();
-    if (!param) return boost::none;
+    if (!param) return std::nullopt;
     for (auto& item : tnaParams) {
         cstring tnaParam = item.first;
         cstring p4Param = item.second;
         if (param->name == p4Param) return tnaParam;
     }
-    return boost::none;
+    return std::nullopt;
 }
 
 template <typename Func>
@@ -158,7 +158,7 @@ void CollectBridgedFields::flow_copy(::ControlFlowVisitor& otherVisitor) {
     doNotBridge = other.doNotBridge;
 }
 
-boost::optional<CollectBridgedFields::TnaContext>
+std::optional<CollectBridgedFields::TnaContext>
 CollectBridgedFields::findTnaContext() const {
     if (auto* control = findContext<IR::BFN::TnaControl>())
         return TnaContext(control->thread, control->tnaParams);
@@ -167,7 +167,7 @@ CollectBridgedFields::findTnaContext() const {
     else if (auto* deparser = findContext<IR::BFN::TnaDeparser>())
         return TnaContext(deparser->thread, deparser->tnaParams);
     else
-        return boost::none;
+        return std::nullopt;
     // FIXME(zma) the code above could use better abstraction?
 }
 

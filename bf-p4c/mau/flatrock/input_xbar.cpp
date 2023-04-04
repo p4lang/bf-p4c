@@ -554,7 +554,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
                 add_use(map_alloc, info.first.field(), phv, tbl, aliasSourceName,
                         &info.first.range(), flags);
             else
-                add_use(map_alloc, info.first.field(), phv, tbl, boost::none,
+                add_use(map_alloc, info.first.field(), phv, tbl, std::nullopt,
                         &info.first.range(), flags);
         }
         safe_vector<IXBar::Use::Byte *> xbar_alloced;  // FIXME -- not needed?

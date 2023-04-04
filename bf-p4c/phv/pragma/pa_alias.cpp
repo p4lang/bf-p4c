@@ -54,7 +54,7 @@ bool PragmaAlias::preorder(const IR::Expression* expr) {
     return true;
 }
 
-boost::optional<std::pair<const PHV::Field*, const PHV::Field*>> PragmaAlias::mayAddAlias(
+std::optional<std::pair<const PHV::Field*, const PHV::Field*>> PragmaAlias::mayAddAlias(
         const PHV::Field* field1,
         const PHV::Field* field2,
         bool suppressWarning) {
@@ -64,7 +64,7 @@ boost::optional<std::pair<const PHV::Field*, const PHV::Field*>> PragmaAlias::ma
                 "field %1% already aliases with a different field %3%",
                 field1->name, field2->name,
                 (aliasMap.count(field1->name) ? aliasMap[field1->name].field : ""));
-        return boost::none; }
+        return std::nullopt; }
 
     if (fieldsWithAliasing[field2->id]) {
         WARN_CHECK(suppressWarning,
@@ -72,14 +72,14 @@ boost::optional<std::pair<const PHV::Field*, const PHV::Field*>> PragmaAlias::ma
                 "field %2% already aliases with a different field %3%",
                 field1->name, field2->name,
                 (aliasMap.count(field2->name) ? aliasMap[field2->name].field : ""));
-        return boost::none; }
+        return std::nullopt; }
 
     if (field1->isPacketField() && field2->isPacketField()) {
         WARN_CHECK(suppressWarning,
                 "@pragma pa_alias does not support aliasing of two packet header fields "
                 "%1% and %2%",
                 field1->name, field2->name);
-        return boost::none;
+        return std::nullopt;
     }
 
     if (no_overlay.get_no_overlay_fields().count(field1)) {
@@ -128,13 +128,13 @@ boost::optional<std::pair<const PHV::Field*, const PHV::Field*>> PragmaAlias::ma
             if (field1->size != field2->size)
                 aliasSrc = (field1->size < field2->size) ? field1 : field2;
             else
-                aliasSrc = (field1->alignment == boost::none) ? field1 : field2;
+                aliasSrc = (field1->alignment == std::nullopt) ? field1 : field2;
             aliasDest = (aliasSrc == field1) ? field2 : field1;
         } else {
             WARN_CHECK(suppressWarning,
                     "@pragma pa_alias ignored because no uses found for fields %1% and %2%",
                     field1->name, field2->name);
-            return boost::none;
+            return std::nullopt;
         }
     }
     BUG_CHECK(aliasDest && aliasSrc, "Internal compiler error: Did not calculate aliasDest and "
@@ -144,23 +144,23 @@ boost::optional<std::pair<const PHV::Field*, const PHV::Field*>> PragmaAlias::ma
                 "@pragma pa_alias ignored because metadata field %1%<%2%> is larger than the "
                 "packet field %3%<%4%>",
                    aliasSrc->name, aliasSrc->size, aliasDest->name, aliasDest->size);
-        return boost::none;
+        return std::nullopt;
     }
     // If the field to be replaced has an alignment that is different from the field replacing it,
     // then do not do that alias (might create conflicting alignment requirements).
-    if (aliasSrc->alignment != boost::none) {
-        if (aliasDest->alignment == boost::none) {
+    if (aliasSrc->alignment != std::nullopt) {
+        if (aliasDest->alignment == std::nullopt) {
             WARN_CHECK(suppressWarning,
                     "@pragma pa_alias ignored because metadata field %1% has alignment %2%, "
                     "while packet field %3% has no alignment requirement",
                     aliasSrc->name, aliasSrc->alignment->align, aliasDest->name);
-            return boost::none;
+            return std::nullopt;
         } else if (*(aliasDest->alignment) != *(aliasSrc->alignment)) {
             WARN_CHECK(suppressWarning,
                     "@pragma pa_alias ignored because metadata field %1% has alignment %2%, "
                     "while packet field %3% has alignment %4%", aliasSrc->name,
                     aliasSrc->alignment->align, aliasDest->name, aliasDest->alignment->align);
-            return boost::none;
+            return std::nullopt;
         }
     }
     std::pair<const PHV::Field*, const PHV::Field*> rv;
@@ -173,7 +173,7 @@ bool PragmaAlias::addAlias(const PHV::Field* f1, const PHV::Field* f2,
         bool suppressWarning, PragmaAlias::CreatedBy who) {
     auto mayAlias = mayAddAlias(f1, f2, suppressWarning);
     if (!mayAlias) return false;
-    aliasMap[mayAlias->second->name] = { mayAlias->first->name, boost::none, who };
+    aliasMap[mayAlias->second->name] = { mayAlias->first->name, std::nullopt, who };
     fieldsWithAliasing[mayAlias->second->id] = true;
     fieldsWithAliasing[mayAlias->first->id] = true;
     LOG1("\t Alias (src-->dst): " << mayAlias->second->name << " --> " << mayAlias->first->name);
@@ -258,7 +258,7 @@ void PragmaAlias::postorder(const IR::BFN::Pipe* pipe) {
         for (const auto* field : fields) {
             if (field == aliasDest)
                 continue;
-            aliasMap[field->name] = { aliasDest->name, boost::none, PragmaAlias::PRAGMA };
+            aliasMap[field->name] = { aliasDest->name, std::nullopt, PragmaAlias::PRAGMA };
             fieldsWithAliasing[field->id] = true;
             fieldsWithAliasing[aliasDest->id] = true;
             LOG1("\t  " << field->name << " --> " << aliasDest->name);

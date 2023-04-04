@@ -432,7 +432,7 @@ bool SplitAlpm::values_through_impl(const IR::P4Table *tbl,
     bool found_in_implementation = false;
 
     auto extract_alpm_config_from_property =
-        [&](boost::optional<P4::ExternInstance>& instance) {
+        [&](std::optional<P4::ExternInstance>& instance) {
         bool argHasName = false;
         for (auto arg : *instance->arguments) {
             cstring argName = arg->name.name;
@@ -483,7 +483,7 @@ bool SplitAlpm::values_through_impl(const IR::P4Table *tbl,
 
     // for backward compatibility, also check the 'alpm' table property
     auto alpm = getExternInstanceFromProperty(tbl, "alpm", refMap, typeMap);
-    if (alpm == boost::none)
+    if (alpm == std::nullopt)
         return false;
     if (alpm->type->name != "Alpm") {
         ::error("Unexpected extern %1% on 'alpm' property, only ALPM is allowed",
@@ -764,7 +764,7 @@ void CollectAlpmInfo::postorder(const IR::P4Table* tbl) {
 
     // for backward compatibility, also check the 'alpm' property
     auto alpm = getExternInstanceFromProperty(tbl, "alpm", refMap, typeMap);
-    if (alpm != boost::none) {
+    if (alpm != std::nullopt) {
         ::warning(ErrorType::WARN_DEPRECATED, "table property 'alpm' is deprecated,"
                 " use 'implementation' instead.");
         alpm_table.insert(tbl->name); }

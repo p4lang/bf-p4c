@@ -2,7 +2,7 @@
 
 #emit
 struct TableResourceAlloc;
-#include <boost/optional.hpp>
+#include <optional>
 #include "lib/bitvec.h"
 #include "lib/ltbitmatrix.h"
 #include "bf-p4c/ir/ir_enums.h"
@@ -33,9 +33,9 @@ class Table : BFN::Unit, IAnnotated  {
     // merged with the match table
     cstring                                     gateway_result_tag;
     /// The stage to which this table is assigned, if any.
-    boost::optional<unsigned>                   stage_ = boost::none;
+    std::optional<unsigned>                     stage_ = std::nullopt;
     /// The logical ID within the stage to which this table is assigned.
-    boost::optional<unsigned>                   logical_id = boost::none;
+    std::optional<unsigned>                     logical_id = std::nullopt;
     // The split within the stage for an atcam/dleft table
     int                                         stage_split = -1;
     int                                         logical_split = -1;
@@ -296,9 +296,9 @@ class Table : BFN::Unit, IAnnotated  {
      * for tables.  Global logical IDs are numbered from 0 (Stage 0, Slot 0) to
      * N * 16 + 15 (Stage N, Slot 15).
      */
-    boost::optional<int> global_id() const {
+    std::optional<int> global_id() const {
         if (stage_ && logical_id) return *stage_ * StageUse::MAX_LOGICAL_IDS + *logical_id;
-        return boost::none;
+        return std::nullopt;
     }
     void set_global_id(int id) {
         stage_ = id / StageUse::MAX_LOGICAL_IDS;

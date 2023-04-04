@@ -706,7 +706,7 @@ bool BFNContext::isRecognizedDiagnostic(cstring diagnostic) {
     return P4CContext::isRecognizedDiagnostic(diagnostic);
 }
 
-boost::optional<P4::IOptionPragmaParser::CommandLineOptions>
+std::optional<P4::IOptionPragmaParser::CommandLineOptions>
 BFNOptionPragmaParser::tryToParse(const IR::Annotation* annotation) {
     auto pragmaName = annotation->name.name;
     if (pragmaName == "command_line")
@@ -724,7 +724,7 @@ BFNOptionPragmaParser::tryToParse(const IR::Annotation* annotation) {
     return P4COptionPragmaParser::tryToParse(annotation);
 }
 
-boost::optional<P4::IOptionPragmaParser::CommandLineOptions>
+std::optional<P4::IOptionPragmaParser::CommandLineOptions>
 BFNOptionPragmaParser::parseCompilerOption(const IR::Annotation* annotation) {
     // See `supported_cmd_line_pragmas` in glass/p4c_tofino/target/tofino/compile.py:205
     static const std::map<cstring, bool> cmdLinePragmas = {
@@ -744,7 +744,7 @@ BFNOptionPragmaParser::parseCompilerOption(const IR::Annotation* annotation) {
         { "--num-stages-override", true },  // brig only
     };
 
-    boost::optional<CommandLineOptions> newOptions;
+    std::optional<CommandLineOptions> newOptions;
     newOptions.emplace();
 
     // Parsing of option pragmas is done early in the compiler, before P4₁₆
@@ -774,18 +774,18 @@ BFNOptionPragmaParser::parseCompilerOption(const IR::Annotation* annotation) {
                 // The expression is neither a IR::StringLiteral or IR::Constant and so is invalid
                 ::warning("@pragma command_line arguments must be strings or integers: %1%",
                         annotation);
-                return boost::none;
+                return std::nullopt;
             }
         }
 
         if (first && !cmdLinePragmas.count(optionString)) {
             ::warning("Unknown @pragma command_line %1%", annotation);
-            return boost::none;
+            return std::nullopt;
         }
         if (first && !cmdLinePragmas.at(optionString)) {
             ::warning("@pragma command_line %1% is disabled in this "
                       "compiler version", annotation);
-            return boost::none;
+            return std::nullopt;
         }
         // trim the options off --placement
         if (first && optionString == "--placement") {

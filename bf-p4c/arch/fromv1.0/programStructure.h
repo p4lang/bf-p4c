@@ -47,7 +47,7 @@ class TNA_ProgramStructure : public ProgramStructure {
 using StateToExtracts = assoc::map<const IR::ParserState*, std::vector<const IR::Member*> >;
 using ExtractToState = assoc::map<const IR::Member*, const IR::ParserState*>;
 using DigestFieldList = std::map<cstring,
-      std::map<unsigned, std::pair<boost::optional<cstring>, const IR::Expression*>>>;
+      std::map<unsigned, std::pair<std::optional<cstring>, const IR::Expression*>>>;
 /**
  * Convert ingress_intrinsic_metadata_from_parser_aux_t to
  *         ingress_intrinsic_metadata_from_parser_t
@@ -168,9 +168,9 @@ class TnaProgramStructure : public ProgramStructure {
     void getStructFieldsFromFieldList(IR::IndexedVector<IR::StructField>*,
                                       const IR::ListExpression*);
     void createDigestHeaderTypeAndInstance(unsigned index, const IR::Expression* expr,
-            cstring name, boost::optional<IR::IndexedVector<IR::StructField>>);
+            cstring name, std::optional<IR::IndexedVector<IR::StructField>>);
     const IR::StatOrDecl* createDigestEmit(cstring, unsigned,
-            std::pair<boost::optional<cstring>, const IR::Expression*>, cstring, cstring, cstring);
+            std::pair<std::optional<cstring>, const IR::Expression*>, cstring, cstring, cstring);
     const IR::StatOrDecl* createBridgeEmit();
     using ChecksumUpdateInfo = std::pair<IR::StatOrDecl*, ChecksumInfo>;
     void createChecksumUpdateStatements(
@@ -205,7 +205,7 @@ class TnaProgramStructure : public ProgramStructure {
     //       map { field_list_index :
     //             pair(field_list_name, field_list_expr) } }
     std::map<cstring, std::map<unsigned,
-        std::pair<boost::optional<cstring>, const IR::Expression*>>> digestFieldLists;
+        std::pair<std::optional<cstring>, const IR::Expression*>>> digestFieldLists;
     ordered_set<cstring> bridgedFields;
     std::map<cstring, BFN::LinearPath> bridgedFieldInfo;
     std::map<cstring, const IR::Type_StructLike*> tna_intr_md_types;
@@ -1039,7 +1039,7 @@ class ModifyParserForChecksum : public Modifier {
                 statements->push_back(subtractCall);
 
                 if (csum.with_payload) {
-                    BUG_CHECK(csum.residulChecksumName != boost::none,
+                    BUG_CHECK(csum.residulChecksumName != std::nullopt,
                             "residual checksum field name cannot be empty");
                     auto* rmember = new IR::Member(IR::Type::Bits::get(16),
                             new IR::Member(new IR::PathExpression("meta"),

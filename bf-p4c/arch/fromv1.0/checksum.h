@@ -15,7 +15,7 @@ struct ChecksumInfo {
     const IR::Expression* destField;
     std::set<gress_t> parserUpdateLocations;
     std::set<gress_t> deparserUpdateLocations;
-    boost::optional<cstring> residulChecksumName;
+    std::optional<cstring> residulChecksumName;
 };
 
 namespace BFN::V1 {

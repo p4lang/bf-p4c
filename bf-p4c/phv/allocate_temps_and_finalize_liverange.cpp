@@ -40,7 +40,7 @@ struct MiniAlloc {
     }
 
     /// @returns gress assignment for @p c.
-    boost::optional<gress_t> get_gress(const Container& c) const {
+    std::optional<gress_t> get_gress(const Container& c) const {
         const PhvSpec& phv_spec = Device::phvSpec();
         if (phv_spec.ingressOnly()[phv_spec.containerToId(c)]) {
             return INGRESS;
@@ -50,7 +50,7 @@ struct MiniAlloc {
         if (cont_gress.count(c)) {
             return cont_gress.at(c);
         }
-        return boost::none;
+        return std::nullopt;
     }
 
     /// @returns true if @p f of @p lr can be allocated to @p c.
@@ -61,7 +61,7 @@ struct MiniAlloc {
         if (c.type().kind() != PHV::Kind::normal) return false;
         if (int(c.size()) < f->size) return false;
         auto gress = get_gress(c);
-        if (gress.is_initialized() && *gress != f->gress) return false;
+        if (gress.has_value() && *gress != f->gress) return false;
         if (!is_empty_at(c, lr)) return false;
         return true;
     }

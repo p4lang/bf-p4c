@@ -1,7 +1,7 @@
 #ifndef BF_P4C_PHV_OPTIMIZE_PHV_H_
 #define BF_P4C_PHV_OPTIMIZE_PHV_H_
 
-#include <boost/optional.hpp>
+#include <optional>
 
 #include "bf-p4c/phv/allocate_phv.h"
 #include "bf-p4c/phv/phv_fields.h"

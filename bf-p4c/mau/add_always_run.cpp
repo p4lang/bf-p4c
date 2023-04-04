@@ -3,10 +3,10 @@
 #include "bf-p4c/ir/table_tree.h"
 
 int AddAlwaysRun::compare(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
-    return compare(t1, t2 ? boost::optional<UniqueId>(t2->get_uid()) : boost::none);
+    return compare(t1, t2 ? std::optional<UniqueId>(t2->get_uid()) : std::nullopt);
 }
 
-int AddAlwaysRun::compare(const IR::MAU::Table* t1, boost::optional<UniqueId> t2) const {
+int AddAlwaysRun::compare(const IR::MAU::Table* t1, std::optional<UniqueId> t2) const {
     if (t1 == nullptr) return t2 ? 1 : 0;
     if (!t2) return -1;
 
@@ -139,8 +139,8 @@ void AddAlwaysRun::PrepareToAdd::end_apply(const IR::Node* root) {
         auto* subsequentTable = entry.second;
 
         self.subsequentTables[table->get_uid()] =
-            subsequentTable ? boost::optional<UniqueId>(subsequentTable->get_uid())
-                            : boost::none;
+            subsequentTable ? std::optional<UniqueId>(subsequentTable->get_uid())
+                            : std::nullopt;
     }
 }
 

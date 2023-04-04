@@ -1,6 +1,6 @@
+#include <optional>
 #include <type_traits>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/optional.hpp>
 #include "gtest/gtest.h"
 
 #include "ir/ir.h"
@@ -15,7 +15,7 @@ namespace Test {
 
 namespace NoCoPackTest {
 
-boost::optional<TofinoPipeTestCase>
+std::optional<TofinoPipeTestCase>
 createActionTest() {
     auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
         header H1 { bit<8> f1; bit<8> f2; bit<8> f3; bit<8> f4; }

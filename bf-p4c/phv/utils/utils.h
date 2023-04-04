@@ -1,7 +1,7 @@
 #ifndef BF_P4C_PHV_UTILS_UTILS_H_
 #define BF_P4C_PHV_UTILS_UTILS_H_
 
-#include <boost/optional.hpp>
+#include <optional>
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/phv/error.h"
@@ -100,7 +100,7 @@ class Allocation {
  public:
     friend class AllocationReport;
 
-    using GressAssignment = boost::optional<gress_t>;
+    using GressAssignment = std::optional<gress_t>;
     using MutuallyLiveSlices = ordered_set<AllocSlice>;
     using LiveRangeShrinkingMap = ordered_map<const PHV::Field*, ActionSet>;
     enum class ContainerAllocStatus { EMPTY, PARTIAL, FULL };
@@ -131,16 +131,16 @@ class Allocation {
         /// Boolean set to true if AllocatePHV can use rotationally equivalent bitPosition.
         bool rotationAllowed;
         /// Specific container to which the slice must be allocated.
-        boost::optional<PHV::Container> container;
+        std::optional<PHV::Container> container;
 
         explicit ConditionalConstraintData(int bit, PHV::Container c, bool rotate = false) :
             bitPosition(bit), rotationAllowed(rotate), container(c) { }
 
         explicit ConditionalConstraintData(int bit, bool rotate = false) :
-            bitPosition(bit), rotationAllowed(rotate), container(boost::none) { }
+            bitPosition(bit), rotationAllowed(rotate), container(std::nullopt) { }
 
         ConditionalConstraintData() :
-            bitPosition(-1), rotationAllowed(false), container(boost::none) { }
+            bitPosition(-1), rotationAllowed(false), container(std::nullopt) { }
 
         bool operator == (ConditionalConstraintData& other) const {
             return bitPosition == other.bitPosition &&
@@ -247,7 +247,7 @@ class Allocation {
 
     /// @returns the set of actions where @p slice must be initialized for overlay enabled by live
     /// range shrinking.
-    virtual boost::optional<ActionSet> getInitPoints(const AllocSlice& slice) const;
+    virtual std::optional<ActionSet> getInitPoints(const AllocSlice& slice) const;
 
     /// @returns number of containers owned by this allocation.
     virtual size_t size() const = 0;
@@ -610,7 +610,7 @@ class Transaction : public Allocation {
     cstring getTransactionSummary() const;
 
     /// @returns the set of actions in which @p slice must be initialized for live range shrinking.
-    boost::optional<ActionSet> getInitPoints(const AllocSlice& slice) const override;
+    std::optional<ActionSet> getInitPoints(const AllocSlice& slice) const override;
 
     /// Returns the outstanding writes in this view.
     const ordered_map<PHV::Container, ContainerStatus>& getTransactionStatus() const {
@@ -747,7 +747,7 @@ class ClusterStats {
 /// The result of slicing a cluster.
 template<typename Cluster>
 struct SliceResult {
-    using OptFieldSlice = boost::optional<PHV::FieldSlice>;
+    using OptFieldSlice = std::optional<PHV::FieldSlice>;
     /// Associate original field slices with new field slices.  Fields that
     /// are smaller than the slice point do not generate a hi slice.
     ordered_map<PHV::FieldSlice, std::pair<PHV::FieldSlice, OptFieldSlice>> slice_map;
@@ -791,24 +791,24 @@ class AlignedCluster : public ClusterStats {
 
     /// If any slice in the cluster needs its alignment adjusted to satisfy a
     /// PARDE constraint, then all slices do.
-    boost::optional<FieldAlignment> alignment_i;
+    std::optional<FieldAlignment> alignment_i;
 
     /** Computes the range of valid lo bit positions where slices of this
      * cluster can be placed in containers of size @p container_size, or
-     * boost::none if no valid start positions exist or if any slice is too
+     * std::nullopt if no valid start positions exist or if any slice is too
      * large to fit in containers of @p container_size.
      *
      * If any slice in this cluster has the `deparsed_bottom_bits` constraint,
-     * then the bitrange will be [0, 0], or `boost::none` if any slice cannot
+     * then the bitrange will be [0, 0], or `std::nullopt` if any slice cannot
      * be started at container bit 0.
      *
      * @returns the absolute alignment constraint (if any) for all slices
-     * in this cluster, or boost::none if no valid alignment exists.
+     * in this cluster, or std::nullopt if no valid alignment exists.
      */
-    boost::optional<le_bitrange> validContainerStartRange(PHV::Size container_size) const;
+    std::optional<le_bitrange> validContainerStartRange(PHV::Size container_size) const;
 
     /// Find valid container start range for @p slice in @p container_size containers.
-    static boost::optional<le_bitrange> validContainerStartRange(
+    static std::optional<le_bitrange> validContainerStartRange(
         const PHV::FieldSlice& slice,
         PHV::Size container_size);
 
@@ -842,16 +842,16 @@ class AlignedCluster : public ClusterStats {
     /** @returns the (little Endian) byte-relative alignment constraint (if
      * any) for all slices in this cluster.
      */
-    boost::optional<unsigned> alignment() const {
+    std::optional<unsigned> alignment() const {
         if (alignment_i)
             return alignment_i->align;
-        return boost::none;
+        return std::nullopt;
     }
 
     /** Combines AlignedCluster::alignment() and
      * AlignedCluster::validContainerStartRange(@p container_size) to compute the
      * valid lo bit positions where slices of this cluster can be placed in
-     * containers of size @p container_size, or boost::none if no valid start
+     * containers of size @p container_size, or std::nullopt if no valid start
      * positions exist or if any slice is too large to fit in containers of
      * @p container_size.
      *
@@ -914,9 +914,9 @@ class AlignedCluster : public ClusterStats {
      * @param pos the position to split, i.e. the first bit of the upper slice.
                   pos must be non-negative.
      * @returns a pair of (lo, hi) clusters if the cluster can be split at @p pos
-     *          or boost::none otherwise.
+     *          or std::nullopt otherwise.
      */
-    boost::optional<SliceResult<AlignedCluster>> slice(int pos) const;
+    std::optional<SliceResult<AlignedCluster>> slice(int pos) const;
 
     /// @returns The kind of PHV container representing the minimum requirements for all
     /// slices in this container.
@@ -1007,9 +1007,9 @@ class RotationalCluster : public ClusterStats {
      * @param pos the position to split, i.e. the first bit of the upper slice.
      *            pos must be non-negative.
      * @returns a pair of (lo, hi) clusters if the cluster can be split at @p pos
-     *          or boost::none otherwise.
+     *          or std::nullopt otherwise.
      */
-    boost::optional<SliceResult<RotationalCluster>> slice(int pos) const;
+    std::optional<SliceResult<RotationalCluster>> slice(int pos) const;
 };
 
 

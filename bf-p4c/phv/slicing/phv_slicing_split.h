@@ -3,7 +3,7 @@
 
 #include <utility>
 
-#include <boost/optional.hpp>
+#include <optional>
 
 #include "lib/bitvec.h"
 #include "lib/ordered_map.h"
@@ -23,13 +23,13 @@ using SplitSchema = ordered_map<SuperCluster::SliceList*, bitvec>;
 
 /// Split a SuperCluster with slice lists according to @split_schema. Apply this function
 /// on SuperCluster with slice_lists only. The @p schema maps slice lists to the split point.
-boost::optional<std::list<SuperCluster*>> split(const SuperCluster* sc, const SplitSchema& schema);
+std::optional<std::list<SuperCluster*>> split(const SuperCluster* sc, const SplitSchema& schema);
 
 /// Split the RotationalCluster in a SuperCluster without a slice list
 /// according to @split_schema. Because there is no slice lists in the super cluster
 /// the @p split_schema is a bitvec that a `1` on n-th bit means to split before the
 /// the n-th bit.
-boost::optional<std::list<PHV::SuperCluster*>> split_rotational_cluster(
+std::optional<std::list<PHV::SuperCluster*>> split_rotational_cluster(
     const PHV::SuperCluster* sc, bitvec split_schema, int max_aligment = 0);
 
 }  // namespace Slicing

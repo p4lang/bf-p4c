@@ -147,7 +147,7 @@ bool AllocSlice::isEarlierFieldslice(const AllocSlice& other) const {
     return true;
 }
 
-boost::optional<AllocSlice> AllocSlice::sub_alloc_by_field(int start, int len) const {
+std::optional<AllocSlice> AllocSlice::sub_alloc_by_field(int start, int len) const {
     BUG_CHECK(start >= 0 && len > 0,
               "sub_alloc slice with invalid start or len arguments: [%1%:%2%]", start, len);
 
@@ -155,7 +155,7 @@ boost::optional<AllocSlice> AllocSlice::sub_alloc_by_field(int start, int len) c
     auto overlap = sub_slice.intersectWith(this->field_slice());
 
     if (overlap.empty() || overlap.size() != len)
-        return boost::none;
+        return std::nullopt;
 
     AllocSlice clone = *this;
     clone.container_bit_lo_i += (start - field_bit_lo_i);

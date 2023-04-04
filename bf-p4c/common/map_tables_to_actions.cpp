@@ -21,7 +21,7 @@ const PHV::ActionSet& MapTablesToActions::getDefaultActionsForTable(const IR::MA
     return defaultActions.at(t);
 }
 
-boost::optional<const IR::MAU::Table*>
+std::optional<const IR::MAU::Table*>
 MapTablesToActions::getTableForAction(const IR::MAU::Action* act) const {
     BUG_CHECK(act, "Null action encountered.");
     if (actionMap.count(act)) {
@@ -35,7 +35,7 @@ MapTablesToActions::getTableForAction(const IR::MAU::Action* act) const {
                 return kv.second;
         }
     }
-    return boost::none;
+    return std::nullopt;
 }
 
 bool MapTablesToActions::preorder(const IR::MAU::Table* t) {

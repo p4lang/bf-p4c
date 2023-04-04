@@ -111,8 +111,8 @@ cstring PhvSpec::containerSetToString(const bitvec& set) const {
     };
 
     for (auto& kv : containersByType) {
-        auto curRangeStart = boost::make_optional(false, unsigned());
-        auto curRangeEnd = boost::make_optional(false, unsigned());
+        std::optional<unsigned> curRangeStart = std::nullopt;
+        std::optional<unsigned> curRangeEnd = std::nullopt;
         for (auto idx : kv.second) {
             if (!curRangeStart) {
                 curRangeStart = idx;
@@ -478,7 +478,7 @@ unsigned TofinoPhvSpec::mauGroupId(const PHV::Container &c) const {
     std::pair<int, int> numWords = mauGroupNumAndSize(PHV::Type::W);
 
     int groupID = -1;
-    if (boost::optional<bitvec> mg = mauGroup(c.index())) {
+    if (std::optional<bitvec> mg = mauGroup(c.index())) {
         // groupID represents the unique string that identifies an MAU group
         if (c.type() == PHV::Type::B) {
             groupID = (c.index() / numBytes.second) + numWords.first;
@@ -647,7 +647,7 @@ unsigned JBayPhvSpec::parserGroupId(const PHV::Container &c) const {
     std::pair<int, int> numMochaWords = deparserGroupNumAndSize(PHV::Type::MW);
 
     int groupID = -1;
-    if (boost::optional<bitvec> mg = parserGroup(c.index())) {
+    if (std::optional<bitvec> mg = parserGroup(c.index())) {
         // groupID represents the unique string that identifies an MAU group
         if (c.type() == PHV::Type::B) {
             groupID = (c.index() / numBytes.second) + numWords.first;
@@ -680,7 +680,7 @@ unsigned JBayPhvSpec::mauGroupId(const PHV::Container &c) const {
     std::pair<int, int> numDarkWords = mauGroupNumAndSize(PHV::Type::DW);
 
     int groupID = -1;
-    if (boost::optional<bitvec> mg = mauGroup(c.index())) {
+    if (std::optional<bitvec> mg = mauGroup(c.index())) {
         // groupID represents the unique string that identifies an MAU group
         if (c.type() == PHV::Type::B) {
             groupID = (c.index() / numBytes.second) + numWords.first;

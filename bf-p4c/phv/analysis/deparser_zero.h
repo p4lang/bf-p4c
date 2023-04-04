@@ -1,7 +1,7 @@
 #ifndef BF_P4C_PHV_ANALYSIS_DEPARSER_ZERO_H_
 #define BF_P4C_PHV_ANALYSIS_DEPARSER_ZERO_H_
 
-#include <boost/optional.hpp>
+#include <optional>
 #include "ir/ir.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/mau/action_analysis.h"

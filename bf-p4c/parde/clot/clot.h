@@ -94,7 +94,7 @@ class Clot final : public LiftCompare<Clot> {
     bool is_first_field_in_clot(const PHV::Field* field) const;
 
     /// Indicates the checksum engine (if any) that will deposit in this CLOT
-    boost::optional<unsigned> csum_unit;
+    std::optional<unsigned> csum_unit;
 
  private:
     void set_slices(cstring parser_state,

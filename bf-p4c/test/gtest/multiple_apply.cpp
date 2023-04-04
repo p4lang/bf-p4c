@@ -1,6 +1,6 @@
+#include <optional>
 #include <type_traits>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/optional.hpp>
 #include "gtest/gtest.h"
 
 #include "ir/ir.h"
@@ -14,7 +14,7 @@ namespace Test {
 
 class MultipleApplyTest : public TofinoBackendTest {};
 
-boost::optional<TofinoPipeTestCase> createMultipleApplyTest(const std::string& ingressApply) {
+std::optional<TofinoPipeTestCase> createMultipleApplyTest(const std::string& ingressApply) {
     auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
         header data_t {
             bit<16> h1;
@@ -285,7 +285,7 @@ TEST_F(MultipleApplyTest, CommonTail2) {
     EXPECT_FALSE(ma.topological_error("ingress.t3"));
 }
 
-boost::optional<TofinoPipeTestCase> createMultipleApplyFullIngTest(const std::string& ingress) {
+std::optional<TofinoPipeTestCase> createMultipleApplyFullIngTest(const std::string& ingress) {
     auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
         header data_t {
             bit<16> h1;

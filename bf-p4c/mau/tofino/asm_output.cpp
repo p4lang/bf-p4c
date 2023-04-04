@@ -76,7 +76,7 @@ void emit_ixbar_hash_dist_ident(const PhvInfo &phv, std::ostream &out,
                 continue;
             auto boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
                                   (fs->range().intersectWith(sl.range()));
-            if (boost_sl == boost::none)
+            if (boost_sl == std::nullopt)
                 continue;
             // Which slice bits of this field are overlapping
             le_bitrange field_overlap = *boost_sl;
@@ -87,7 +87,7 @@ void emit_ixbar_hash_dist_ident(const PhvInfo &phv, std::ostream &out,
                 // Portion of the p4_output_hash that overlaps with the identity range
                 auto boost_sl2 = toClosedRange<RangeUnit::Bit, Endian::Little>
                                  (identity_range.intersectWith(bit_pos.second));
-                if (boost_sl2 == boost::none)
+                if (boost_sl2 == std::nullopt)
                     continue;
                 le_bitrange ident_overlap = *boost_sl2;
                 int hash_lo = bit_pos.first + (ident_overlap.lo - bit_pos.second.lo);

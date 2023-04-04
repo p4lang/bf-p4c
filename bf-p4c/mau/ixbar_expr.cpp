@@ -67,7 +67,7 @@ bool P4HashFunction::overlap(const P4HashFunction *func, le_bitrange *my_overlap
     auto boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
                         (hash_bits.intersectWith(func->hash_bits));
 
-    if (boost_sl == boost::none)
+    if (boost_sl == std::nullopt)
         return false;
     le_bitrange overlap = *boost_sl;
 

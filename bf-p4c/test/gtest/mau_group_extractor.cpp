@@ -69,9 +69,9 @@ TEST_F(MauGroupExtractorTest, GetGroupThrowsOnEmpty) {
 
 TEST_F(MauGroupExtractorTest, IgnoresSuperClustersWithSingleField) {
     // Build all superclusters
-    boost::optional<PHV::SuperCluster*> sc1 = scb.build_super_cluster(CLUSTER_WITH_SINGLE_SLICE);
+    std::optional<PHV::SuperCluster*> sc1 = scb.build_super_cluster(CLUSTER_WITH_SINGLE_SLICE);
     if (!sc1) FAIL() << "Failed to build the cluster!";
-    groups.push_back(sc1.get());
+    groups.push_back(*sc1);
 
     // Add required fields
     info.add("egress::eg_intr_md.$valid", EGRESS, 1, 0, false, true);
@@ -86,9 +86,9 @@ TEST_F(MauGroupExtractorTest, IgnoresSuperClustersWithSingleField) {
 
 TEST_F(MauGroupExtractorTest, ExtractsWholeSlices) {
     // Build all superclusters
-    boost::optional<PHV::SuperCluster*> sc1 = scb.build_super_cluster(CLUSTER_WITH_WHOLE_SLICES);
+    std::optional<PHV::SuperCluster*> sc1 = scb.build_super_cluster(CLUSTER_WITH_WHOLE_SLICES);
     if (!sc1) FAIL() << "Failed to build the cluster!";
-    groups.push_back(sc1.get());
+    groups.push_back(*sc1);
 
     // Add required fields
     info.add("ingress::hdr.arp.$valid", INGRESS, 1, 0, false, true);
@@ -122,9 +122,9 @@ TEST_F(MauGroupExtractorTest, ExtractsWholeSlices) {
 
 TEST_F(MauGroupExtractorTest, ExtractsPartialSlices) {
     // Build all superclusters
-    boost::optional<PHV::SuperCluster*> sc1 = scb.build_super_cluster(CLUSTER_WITH_PARTIAL_SLICES);
+    std::optional<PHV::SuperCluster*> sc1 = scb.build_super_cluster(CLUSTER_WITH_PARTIAL_SLICES);
     if (!sc1) FAIL() << "Failed to build the cluster!";
-    groups.push_back(sc1.get());
+    groups.push_back(*sc1);
 
     // Add required fields
     info.add("ingress::hdr.vlan_tag.$stkvalid", INGRESS, 2, 0, true, true);
@@ -153,13 +153,13 @@ TEST_F(MauGroupExtractorTest, ExtractsPartialSlices) {
 
 TEST_F(MauGroupExtractorTest, ExtractFieldInMultipleGroups) {
     // Build all superclusters
-    boost::optional<PHV::SuperCluster*> sc1 = scb.build_super_cluster(CLUSTER_MULTI_A);
+    std::optional<PHV::SuperCluster*> sc1 = scb.build_super_cluster(CLUSTER_MULTI_A);
     if (!sc1) FAIL() << "Failed to build the cluster!";
-    groups.push_back(sc1.get());
+    groups.push_back(*sc1);
 
-    boost::optional<PHV::SuperCluster*> sc2 = scb.build_super_cluster(CLUSTER_MULTI_B);
+    std::optional<PHV::SuperCluster*> sc2 = scb.build_super_cluster(CLUSTER_MULTI_B);
     if (!sc2) FAIL() << "Failed to build the cluster!";
-    groups.push_back(sc2.get());
+    groups.push_back(*sc2);
 
     // Add required fields
     info.add("ingress::Millstone.Guion.Wilmore", INGRESS, 3, 0, true, false);

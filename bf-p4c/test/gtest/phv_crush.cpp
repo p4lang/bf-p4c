@@ -58,7 +58,7 @@ TEST_F(TofinoPhvCrush, sliceSuperCluster) {
         f->bridged = false;
         f->pov = false;
         f->validContainerRange_i = ZeroToMax();
-        f->alignment = boost::none;
+        f->alignment = std::nullopt;
         f->set_exact_containers(true);
         slices_by_size[i] = new PHV::FieldSlice(f, StartLen(0, f->size)); }
     auto* f16 = slices_by_size.at(16)->field();
@@ -75,9 +75,9 @@ TEST_F(TofinoPhvCrush, sliceSuperCluster) {
     schemas[list] = bitvec(8, 1);
     auto res = PHV::Slicing::split(make_sc(list), schemas);
 #if !(__GNUC__ == 4 && __GNUC_MINOR__ == 9)
-    // Comparison with boost::optional triggers an undefined reference
+    // Comparison with std::optional triggers an undefined reference
     // for basic_stream with GCC 4.9 !!!
-    EXPECT_NE(boost::none, res);
+    EXPECT_NE(std::nullopt, res);
 #endif
     EXPECT_EQ(2U, res->size());
     EXPECT_EQ(*res->front(), *make_sc(PHV::FieldSlice(f16, StartLen(0, 8))));
@@ -89,9 +89,9 @@ TEST_F(TofinoPhvCrush, sliceSuperCluster) {
     schemas[list] = bitvec(16, 1);
     res = PHV::Slicing::split(make_sc(list), schemas);
 #if !(__GNUC__ == 4 && __GNUC_MINOR__ == 9)
-    // Comparison with boost::optional triggers an undefined reference
+    // Comparison with std::optional triggers an undefined reference
     // for basic_stream with GCC 4.9 !!!
-    EXPECT_NE(boost::none, res);
+    EXPECT_NE(std::nullopt, res);
 #endif
     EXPECT_EQ(2U, res->size());
     EXPECT_EQ(*res->front(), *make_sc(PHV::FieldSlice(f24, StartLen(0, 16))));
@@ -105,9 +105,9 @@ TEST_F(TofinoPhvCrush, sliceSuperCluster) {
     schemas[list2] = bitvec(8, 1);
     res = PHV::Slicing::split(make_sc({ list, list2 }), schemas);
 #if !(__GNUC__ == 4 && __GNUC_MINOR__ == 9)
-    // Comparison with boost::optional triggers an undefined reference
+    // Comparison with std::optional triggers an undefined reference
     // for basic_stream with GCC 4.9 !!!
-    EXPECT_NE(boost::none, res);
+    EXPECT_NE(std::nullopt, res);
 #endif
     EXPECT_EQ(5U, res->size());
     EXPECT_EQ(*res->front(), *make_sc(PHV::FieldSlice(f24, StartLen(0, 8))));
@@ -119,21 +119,21 @@ TEST_F(TofinoPhvCrush, clusterAlignment) {
     // valid bits.
     using FieldData = struct {
         int field_size;
-        boost::optional<int> relativeAlignment;     // little Endian
+        std::optional<int> relativeAlignment;     // little Endian
         nw_bitrange validContainerRange;
     };
     using TestData = struct {
-        // boost::none implies result is an empty bitvec
-        boost::optional<int> result;
+        // std::nullopt implies result is an empty bitvec
+        std::optional<int> result;
         PHV::Size container_size;
         std::vector<FieldData> fields;
     };
 
     std::vector<TestData> tests = {
         // No constraints
-        { 0, PHV::Size::b8, { { 8, boost::none, ZeroToMax() } } },
-        { 0, PHV::Size::b8, { { 8, boost::none, ZeroToMax() },
-                              { 8, boost::none, ZeroToMax() } } },
+        { 0, PHV::Size::b8, { { 8, std::nullopt, ZeroToMax() } } },
+        { 0, PHV::Size::b8, { { 8, std::nullopt, ZeroToMax() },
+                              { 8, std::nullopt, ZeroToMax() } } },
 
         // Relative alignment only
         { 0, PHV::Size::b8,  { { 8, 0, ZeroToMax() } } },
@@ -142,19 +142,19 @@ TEST_F(TofinoPhvCrush, clusterAlignment) {
         { 4, PHV::Size::b16, { { 8, 4, ZeroToMax() } } },
         { 4, PHV::Size::b16, { { 8, 4, ZeroToMax() },
                                { 8, 4, ZeroToMax() } } },
-        { 4, PHV::Size::b16, { { 8, boost::none, ZeroToMax() },
+        { 4, PHV::Size::b16, { { 8, std::nullopt, ZeroToMax() },
                                { 8, 4, ZeroToMax() } } },
 
         // validContainerStartRange only
-        { 0, PHV::Size::b16, { { 8, boost::none, StartLen(0, 16) } } },
-        { 0, PHV::Size::b16, { { 8, boost::none, StartLen(0, 16) },
-                               { 8, boost::none, StartLen(0, 16) } } },
-        { 0, PHV::Size::b16, { { 8, boost::none, StartLen(0, 32) } } },
-        { 0, PHV::Size::b16, { { 8, boost::none, StartLen(0, 32) },
-                               { 8, boost::none, StartLen(0, 32) } } },
-        { 4, PHV::Size::b16, { { 8, boost::none, StartLen(0, 12) } } },
-        { 4, PHV::Size::b16, { { 8, boost::none, StartLen(0, 12) },
-                               { 8, boost::none, StartLen(0, 13) } } },
+        { 0, PHV::Size::b16, { { 8, std::nullopt, StartLen(0, 16) } } },
+        { 0, PHV::Size::b16, { { 8, std::nullopt, StartLen(0, 16) },
+                               { 8, std::nullopt, StartLen(0, 16) } } },
+        { 0, PHV::Size::b16, { { 8, std::nullopt, StartLen(0, 32) } } },
+        { 0, PHV::Size::b16, { { 8, std::nullopt, StartLen(0, 32) },
+                               { 8, std::nullopt, StartLen(0, 32) } } },
+        { 4, PHV::Size::b16, { { 8, std::nullopt, StartLen(0, 12) } } },
+        { 4, PHV::Size::b16, { { 8, std::nullopt, StartLen(0, 12) },
+                               { 8, std::nullopt, StartLen(0, 13) } } },
 
         // Both relative alignment and validContainerStartRange
         { 0, PHV::Size::b16, { { 8, 0, StartLen(0, 16) } } },
@@ -186,7 +186,7 @@ TEST_F(TofinoPhvCrush, clusterAlignment) {
                     FieldAlignment(le_bitrange(StartLen(*fdata.relativeAlignment,
                                                         int(test.container_size))));
             else
-                f->alignment = boost::none;
+                f->alignment = std::nullopt;
             slices.push_back(PHV::FieldSlice(f));
         }
 
@@ -281,7 +281,7 @@ TEST_F(TofinoPhvCrush, Transaction) {
     uses.deparser_i[INGRESS][f1.id] = true;
 
     // Allocation is empty.
-    EXPECT_EQ(boost::none, alloc.gress(c3));
+    EXPECT_EQ(std::nullopt, alloc.gress(c3));
     EXPECT_EQ(0U, alloc.slices(c3).size());
     EXPECT_EQ(0U, alloc.slicesByLiveness(c3).size());
 
@@ -289,11 +289,11 @@ TEST_F(TofinoPhvCrush, Transaction) {
     alloc.allocate(s1);
 
     EXPECT_EQ(INGRESS, alloc.gress(c1));
-    EXPECT_EQ(boost::none, alloc.gress(c2));
+    EXPECT_EQ(std::nullopt, alloc.gress(c2));
     EXPECT_EQ(INGRESS, alloc.deparserGroupGress(c1));
     EXPECT_EQ(INGRESS, alloc.deparserGroupGress(c2));
-    EXPECT_EQ(boost::none, alloc.gress(c3));
-    EXPECT_EQ(boost::none, alloc.deparserGroupGress(c3));
+    EXPECT_EQ(std::nullopt, alloc.gress(c3));
+    EXPECT_EQ(std::nullopt, alloc.deparserGroupGress(c3));
     EXPECT_EQ(ordered_set<PHV::AllocSlice>({s1}), alloc.slices(c1));
     EXPECT_EQ(1U, alloc.slicesByLiveness(c1).size());
     EXPECT_EQ(ordered_set<PHV::AllocSlice>({s1}), alloc.slicesByLiveness(c1).back());
@@ -304,7 +304,7 @@ TEST_F(TofinoPhvCrush, Transaction) {
 
     EXPECT_EQ(INGRESS, alloc.gress(c1));
     EXPECT_EQ(INGRESS, alloc_attempt.gress(c1));
-    EXPECT_EQ(boost::none, alloc_attempt.gress(c2));
+    EXPECT_EQ(std::nullopt, alloc_attempt.gress(c2));
     EXPECT_EQ(INGRESS, alloc.deparserGroupGress(c1));
     EXPECT_EQ(INGRESS, alloc_attempt.deparserGroupGress(c1));
     EXPECT_EQ(INGRESS, alloc_attempt.deparserGroupGress(c2));
@@ -312,8 +312,8 @@ TEST_F(TofinoPhvCrush, Transaction) {
     EXPECT_EQ(ordered_set<PHV::AllocSlice>({s1}), alloc_attempt.slices(c1));
 
     // Other containers (out of deparser group range) don't change.
-    EXPECT_EQ(boost::none, alloc.gress(c3));
-    EXPECT_EQ(boost::none, alloc_attempt.gress(c3));
+    EXPECT_EQ(std::nullopt, alloc.gress(c3));
+    EXPECT_EQ(std::nullopt, alloc_attempt.gress(c3));
     EXPECT_EQ(0U, alloc.slices(c3).size());
     EXPECT_EQ(0U, alloc_attempt.slices(c3).size());
 
@@ -323,7 +323,7 @@ TEST_F(TofinoPhvCrush, Transaction) {
 
     EXPECT_EQ(EGRESS, alloc_attempt.gress(c0));
     EXPECT_EQ(INGRESS, alloc_attempt.gress(c1));
-    EXPECT_EQ(boost::none, alloc_attempt.gress(c2));
+    EXPECT_EQ(std::nullopt, alloc_attempt.gress(c2));
     EXPECT_EQ(INGRESS, alloc_attempt.deparserGroupGress(c0));
     EXPECT_EQ(INGRESS, alloc_attempt.deparserGroupGress(c1));
     EXPECT_EQ(INGRESS, alloc_attempt.deparserGroupGress(c2));
@@ -348,14 +348,14 @@ TEST_F(TofinoPhvCrush, Transaction) {
     EXPECT_EQ(ordered_set<PHV::AllocSlice>({s1}), alloc.slices(c1));
     EXPECT_EQ(ordered_set<PHV::AllocSlice>({s1}), alloc_attempt.slices(c1));
 
-    EXPECT_EQ(boost::none, alloc.gress(c2));
+    EXPECT_EQ(std::nullopt, alloc.gress(c2));
     EXPECT_EQ(INGRESS, alloc_attempt.gress(c2));
     EXPECT_EQ(ordered_set<PHV::AllocSlice>({ }), alloc.slices(c2));
     EXPECT_EQ(ordered_set<PHV::AllocSlice>({s3}), alloc_attempt.slices(c2));
 
     // Other containers (out of deparser group range) don't change.
-    EXPECT_EQ(boost::none, alloc.gress(c3));
-    EXPECT_EQ(boost::none, alloc_attempt.gress(c3));
+    EXPECT_EQ(std::nullopt, alloc.gress(c3));
+    EXPECT_EQ(std::nullopt, alloc_attempt.gress(c3));
     EXPECT_EQ(0U, alloc.slices(c3).size());
     EXPECT_EQ(0U, alloc_attempt.slices(c3).size());
 
@@ -367,14 +367,14 @@ TEST_F(TofinoPhvCrush, Transaction) {
     EXPECT_EQ(ordered_set<PHV::AllocSlice>({s1}), alloc.slices(c1));
     EXPECT_EQ(ordered_set<PHV::AllocSlice>({s1, s2}), alloc_attempt.slices(c1));
 
-    EXPECT_EQ(boost::none, alloc.gress(c2));
+    EXPECT_EQ(std::nullopt, alloc.gress(c2));
     EXPECT_EQ(INGRESS, alloc_attempt.gress(c2));
     EXPECT_EQ(ordered_set<PHV::AllocSlice>({ }), alloc.slices(c2));
     EXPECT_EQ(ordered_set<PHV::AllocSlice>({s3}), alloc_attempt.slices(c2));
 
     // Other containers (out of deparser group range) don't change.
-    EXPECT_EQ(boost::none, alloc.gress(c3));
-    EXPECT_EQ(boost::none, alloc_attempt.gress(c3));
+    EXPECT_EQ(std::nullopt, alloc.gress(c3));
+    EXPECT_EQ(std::nullopt, alloc_attempt.gress(c3));
     EXPECT_EQ(0U, alloc.slices(c3).size());
     EXPECT_EQ(0U, alloc_attempt.slices(c3).size());
 
@@ -396,8 +396,8 @@ TEST_F(TofinoPhvCrush, Transaction) {
     EXPECT_EQ(ordered_set<PHV::AllocSlice>({s3}), alloc_attempt.slices(c2));
 
     // Other containers (out of deparser group range) don't change.
-    EXPECT_EQ(boost::none, alloc.gress(c3));
-    EXPECT_EQ(boost::none, alloc_attempt.gress(c3));
+    EXPECT_EQ(std::nullopt, alloc.gress(c3));
+    EXPECT_EQ(std::nullopt, alloc_attempt.gress(c3));
     EXPECT_EQ(0U, alloc.slices(c3).size());
     EXPECT_EQ(0U, alloc_attempt.slices(c3).size());
 }

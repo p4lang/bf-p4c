@@ -110,16 +110,16 @@ class Profile {
     match_t match_inband_metadata = {~0ULL, ~0ULL};  // all-match by default
     int initial_pktlen;
     int initial_seglen;
-    boost::optional<std::vector<uint8_t>> initial_state;
-    boost::optional<cstring> initial_state_name;
-    boost::optional<std::vector<uint8_t>> initial_flags;
-    boost::optional<int> initial_ptr;
-    boost::optional<int> initial_w0_offset;
-    boost::optional<int> initial_w1_offset;
-    boost::optional<int> initial_w2_offset;
+    std::optional<std::vector<uint8_t>> initial_state;
+    std::optional<cstring> initial_state_name;
+    std::optional<std::vector<uint8_t>> initial_flags;
+    std::optional<int> initial_ptr;
+    std::optional<int> initial_w0_offset;
+    std::optional<int> initial_w1_offset;
+    std::optional<int> initial_w2_offset;
 #emit
-    boost::optional<::Flatrock::alu0_instruction> initial_alu0_instruction;
-    boost::optional<::Flatrock::alu1_instruction> initial_alu1_instruction;
+    std::optional<::Flatrock::alu0_instruction> initial_alu0_instruction;
+    std::optional<::Flatrock::alu1_instruction> initial_alu1_instruction;
     std::vector<::Flatrock::metadata_select> metadata_select;
 #end
     validate {
@@ -248,20 +248,20 @@ class AnalyzerRule {
 #end
     match_t match_w0 = {match_w_all, match_w_all};  // all-match by default
     match_t match_w1 = {match_w_all, match_w_all};  // all-match by default
-    boost::optional<match_t> next_state;
-    boost::optional<cstring> next_state_name;
-    boost::optional<int> next_w0_offset;
-    boost::optional<int> next_w1_offset;
-    boost::optional<int> next_w2_offset;
+    std::optional<match_t> next_state;
+    std::optional<cstring> next_state_name;
+    std::optional<int> next_w0_offset;
+    std::optional<int> next_w1_offset;
+    std::optional<int> next_w2_offset;
 #emit
-    boost::optional<::Flatrock::alu0_instruction> next_alu0_instruction;
-    boost::optional<::Flatrock::alu1_instruction> next_alu1_instruction;
-    boost::optional<::Flatrock::ModifyChecksum> modify_checksum;
-    boost::optional<::Flatrock::ModifyFlags<16>> modify_flags16;
-    boost::optional<::Flatrock::ModifyFlags<4>> modify_flags4;
-    boost::optional<::Flatrock::ModifyFlag> modify_flag0;
-    boost::optional<::Flatrock::ModifyFlag> modify_flag1;
-    boost::optional<::Flatrock::PushHdrId> push_hdr_id;
+    std::optional<::Flatrock::alu0_instruction> next_alu0_instruction;
+    std::optional<::Flatrock::alu1_instruction> next_alu1_instruction;
+    std::optional<::Flatrock::ModifyChecksum> modify_checksum;
+    std::optional<::Flatrock::ModifyFlags<16>> modify_flags16;
+    std::optional<::Flatrock::ModifyFlags<4>> modify_flags4;
+    std::optional<::Flatrock::ModifyFlag> modify_flag0;
+    std::optional<::Flatrock::ModifyFlag> modify_flag1;
+    std::optional<::Flatrock::PushHdrId> push_hdr_id;
 #end
 
     toString { return "rule id=" + cstring::to_cstring(index); }

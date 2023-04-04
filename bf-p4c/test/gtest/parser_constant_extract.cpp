@@ -1,5 +1,5 @@
+#include <optional>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/optional.hpp>
 #include "gtest/gtest.h"
 
 #include "ir/ir.h"
@@ -22,7 +22,7 @@ class ParserConstantExtractTest : public TofinoBackendTest {};
 
 namespace {
 
-boost::optional<TofinoPipeTestCase>
+std::optional<TofinoPipeTestCase>
 createParserConstantExtractTestCase(const std::string& parserSource) {
     auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
         header H1

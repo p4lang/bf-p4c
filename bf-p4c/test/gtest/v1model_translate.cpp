@@ -1,9 +1,9 @@
 #include <iosfwd>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <tuple>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/optional.hpp>
 #include "gtest/gtest.h"
 
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
@@ -14,7 +14,7 @@
 namespace Test {
 
 /// Generates a test P4 program for the specified standard metadata field.
-static boost::optional<TofinoPipeTestCase> makeTestCase(
+static std::optional<TofinoPipeTestCase> makeTestCase(
     const std::string& field, int bitwidth, const std::string& gress) {
     SCOPED_TRACE("V1ModelStdMetaTranslateTest");
 
@@ -139,7 +139,7 @@ TEST_F(V1ModelStdMetaTranslateNegativeTest, DeqTimedelta) {
         "standard_metadata field standard_metadata.deq_timedelta cannot be translated"));
 }
 
-static boost::optional<TofinoPipeTestCase> makeTestCaseIngress(
+static std::optional<TofinoPipeTestCase> makeTestCaseIngress(
         const std::string& ingress_apply_block) {
     SCOPED_TRACE("V1ModelStdMetaTranslateIngressExitTest");
 

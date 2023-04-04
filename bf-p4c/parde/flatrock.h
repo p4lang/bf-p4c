@@ -367,7 +367,7 @@ struct PheSource {
      */
     std::vector<ExtractInfo> values = {};
     /// Header name of the header used for packet PHE sources.
-    boost::optional<cstring> hdr_name = boost::none;
+    std::optional<cstring> hdr_name = std::nullopt;
     /// Comments with information about all extractions for this PHE source
     ::BFN::DebugInfo debug = {};
 };

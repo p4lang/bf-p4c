@@ -1,7 +1,7 @@
 #ifndef BF_P4C_COMMON_EXTRACT_MAUPIPE_H_
 #define BF_P4C_COMMON_EXTRACT_MAUPIPE_H_
 
-#include <boost/optional.hpp>
+#include <optional>
 
 #include "ir/ir.h"
 #include "frontends/common/options.h"

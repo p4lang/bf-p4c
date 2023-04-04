@@ -34,7 +34,7 @@ class IxbarFriendlyPacking {
     struct MergedCluster {
         SuperCluster* merged;
         ordered_set<SuperCluster*> from;
-        ordered_map<const Field*, boost::optional<FieldAlignment>> original_alignments;
+        ordered_map<const Field*, std::optional<FieldAlignment>> original_alignments;
     };
     MergedCluster merge_by_packing(const std::vector<FieldSlice>& packing,
                                    const ordered_map<FieldSlice, SuperCluster*>& fs_sc);

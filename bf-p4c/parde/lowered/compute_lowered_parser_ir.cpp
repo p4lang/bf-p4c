@@ -216,7 +216,7 @@ void ComputeLoweredParserIR::postorder(const IR::BFN::ParserState* state) {
 
     const IR::BFN::ParserPrioritySet* priority = nullptr;
     const IR::BFN::HdrLenIncStop* stopper = nullptr;
-    boost::optional<bool> partial_hdr_err_proc_extract = boost::make_optional<bool>(false, bool());
+    std::optional<bool> partial_hdr_err_proc_extract = std::nullopt;
 
     // Collect all the extract operations; we'll lower them as a group so we
     // can merge extracts that write to the same PHV containers.
@@ -279,8 +279,7 @@ void ComputeLoweredParserIR::postorder(const IR::BFN::ParserState* state) {
                   "Didn't already lower state %1%?",
                   transition->next ? transition->next->name : cstring("(null)"));
 
-        boost::optional<bool> partial_hdr_err_proc_saves =
-            boost::make_optional<bool>(false, bool());
+        std::optional<bool> partial_hdr_err_proc_saves = std::nullopt;
         IR::Vector<IR::BFN::LoweredSave> saves;
 
         for (const auto* save : transition->saves) {
@@ -311,8 +310,8 @@ void ComputeLoweredParserIR::postorder(const IR::BFN::ParserState* state) {
                   "Parser state %1% has conflicting partial_hdr_err_proc", state->name);
 
         // At this point, both partial_hdr_err_proc_extract and
-        // partial_hdr_err_proc_saves are either set to boost::none
-        // or set to something other than boost::none, but equal to
+        // partial_hdr_err_proc_saves are either set to std::nullopt
+        // or set to something other than std::nullopt, but equal to
         // each other.
         // Set partialHdrErrProc accordingly.
         //

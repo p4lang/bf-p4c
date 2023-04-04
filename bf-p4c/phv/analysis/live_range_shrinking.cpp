@@ -319,7 +319,7 @@ bool FindInitializationNode::mayViolatePackConflict(
     return false;
 }
 
-boost::optional<const PHV::ActionSet> FindInitializationNode::getInitPointsForTable(
+std::optional<const PHV::ActionSet> FindInitializationNode::getInitPointsForTable(
         const PHV::Container& c,
         const IR::MAU::Table* t,
         const PHV::Field* f,
@@ -338,19 +338,19 @@ boost::optional<const PHV::ActionSet> FindInitializationNode::getInitPointsForTa
     if (!canFUsesReachInitTable(t, prevUseUnits)) {
         LOG_FEATURE("alloc_progress", 5, TAB3 "Ignoring table " << t->name <<
                     " because uses of previous field do not reach it.");
-        return boost::none;
+        return std::nullopt;
     }
 
     if (mayViolatePackConflict(t, f, container_state, alloc))
-        return boost::none;
+        return std::nullopt;
 
     // Initializing at table t requires that there is a dependence now from the previous uses of
-    // table to table t. Return boost::none if this initialization would result in an increase in
+    // table to table t. Return std::nullopt if this initialization would result in an increase in
     // the maximum number of stages in the dependence graph.
     for (const auto* prevUse : prevUses) {
         LOG_DEBUG6(TAB2 "Previous use: " << prevUse->name << ", init table: " << t->name);
         if (increasesDependenceCriticalPath(prevUse, t))
-            return boost::none;
+            return std::nullopt;
     }
     PHV::ActionSet actions;
     // If the table t is mutually exclusive with any of the tables that are the uses of field f,
@@ -362,7 +362,7 @@ boost::optional<const PHV::ActionSet> FindInitializationNode::getInitPointsForTa
                 LOG_FEATURE("alloc_progress", 5, TAB3 "Ignoring table " << t->name <<
                             " because it is mutually exclusive with use " << tbl->name <<
                             " of field " << f->name);
-                return boost::none;
+                return std::nullopt;
             }
         }
     }
@@ -371,7 +371,7 @@ boost::optional<const PHV::ActionSet> FindInitializationNode::getInitPointsForTa
         if (cannotInitInAction(c, act, alloc)) {
             LOG_FEATURE("alloc_progress", 5, TAB3 "Failed: Cannot init " << f->name <<
                         " in do not init " << act);
-            return boost::none;
+            return std::nullopt;
         }
         // If field is already written in this action, then do not initialize here.
         if (actionConstraints.written_in(f, act)) continue;
@@ -390,7 +390,7 @@ boost::optional<const PHV::ActionSet> FindInitializationNode::getInitPointsForTa
                             " for initialization of "
                            << t->name << " because action " << act->name << " reads field "
                            << g->name << " which is mutually exclusive with field " << f->name);
-                return boost::none;
+                return std::nullopt;
             }
         }
         for (const auto* g : actionWrites) {
@@ -399,7 +399,7 @@ boost::optional<const PHV::ActionSet> FindInitializationNode::getInitPointsForTa
                             " for initialization of "<< t->name << " because action " << act->name
                             << " writes field " << g->name <<
                             " which is mutually exclusive with field " << f->name);
-                return boost::none;
+                return std::nullopt;
             }
         }
         actions.insert(act);
@@ -407,7 +407,7 @@ boost::optional<const PHV::ActionSet> FindInitializationNode::getInitPointsForTa
     return actions;
 }
 
-boost::optional<const PHV::ActionSet>
+std::optional<const PHV::ActionSet>
 FindInitializationNode::getInitializationCandidates(
         const PHV::Container& c,
         const PHV::Field* f,
@@ -423,7 +423,7 @@ FindInitializationNode::getInitializationCandidates(
     // At this point, the group dominator could be a unit that writes to the field, or a unit that
     // strictly dominates a read to the field. It can never be a unit that reads the field.
     const IR::BFN::Unit* unit = groupDominator->to<IR::BFN::Unit>();
-    if (!unit) return boost::none;
+    if (!unit) return std::nullopt;
     LOG_DEBUG4(TAB2 "Group dominator: " << DBPrint::Brief << *unit);
 
     // Collect the uses for the previous field so that we may check if initialization increases the
@@ -439,7 +439,7 @@ FindInitializationNode::getInitializationCandidates(
             BUG("Group dominator cannot be a node that reads the field.");
         auto initPoints = getInitPointsForTable(c, groupDominator, f, prevUses, container_state,
                 alloc);
-        if (!initPoints) return boost::none;
+        if (!initPoints) return std::nullopt;
         return initPoints;
     }
 
@@ -456,7 +456,7 @@ FindInitializationNode::getInitializationCandidates(
         LOG_DEBUG4(TAB2 "Group dominator at an earlier stage (" << allowedStage << ") than "
                    "allowed stage (" << lastAllowedStage << ")");
         // *ALEX* What is it about having more than 3 strict dominators?
-        if (fStrictDominators.size() > 3) return boost::none;
+        if (fStrictDominators.size() > 3) return std::nullopt;
         auto all_f_table_uses = getTableUsesForField(f, true /* uses */, true /* defs */);
         bool dominatorsIncreaseCriticalPath = std::any_of(
                 fStrictDominators.begin(), fStrictDominators.end(), [&](const IR::MAU::Table* t) {
@@ -474,7 +474,7 @@ FindInitializationNode::getInitializationCandidates(
             LOG_FEATURE("alloc_progress", 5, TAB2
                         "Failed: Initialization at one of the strict dominators would result "
                        "in the lengthening of the critical path");
-            return boost::none;
+            return std::nullopt;
         }
         for (const auto* t : fStrictDominators) {
             // Relying on initialization at strict dominators instead of group dominator only work
@@ -487,7 +487,7 @@ FindInitializationNode::getInitializationCandidates(
                 if (!tableMutex(t, t2)) {
                     LOG_DEBUG4(TAB3 "Table:" << t->name << " and " << t2->name <<
                                " are not mutually exclusive");
-                    return boost::none;
+                    return std::nullopt;
                 }
             }
 
@@ -497,7 +497,7 @@ FindInitializationNode::getInitializationCandidates(
             if (!initPoints) {
                 LOG_FEATURE("alloc_progress", 5, TAB2 "Failed: Could not initialize at table " <<
                             t->name);
-                return boost::none;
+                return std::nullopt;
             }
             rv.insert(initPoints->begin(), initPoints->end());
         }
@@ -546,8 +546,8 @@ FindInitializationNode::getInitializationCandidates(
         return candidateActions;
     }
     // If initialization is not possible at any candidate table, then we reach here. So, return
-    // boost::none.
-    return boost::none;
+    // std::nullopt.
+    return std::nullopt;
 }
 
 inline bool liveRangesOverlap(
@@ -592,7 +592,7 @@ bool FindInitializationNode::filterOutMutexFields(
     return true;
 }
 
-boost::optional<PHV::Allocation::LiveRangeShrinkingMap>
+std::optional<PHV::Allocation::LiveRangeShrinkingMap>
 FindInitializationNode::findInitializationNodes(
         const PHV::Container c,
         const ordered_set<PHV::AllocSlice>& alloced,
@@ -600,7 +600,7 @@ FindInitializationNode::findInitializationNodes(
         const PHV::Allocation::MutuallyLiveSlices& container_state) const {
     // Metadata initialization that enables live range shrinking cannot occur for tagalong
     // containers as we cannot reset the container to 0 (container not accessible in the MAU).
-    if (c.is(PHV::Kind::tagalong)) return boost::none;
+    if (c.is(PHV::Kind::tagalong)) return std::nullopt;
 
     ordered_map<const PHV::Field*, ordered_set<PHV::AllocSlice>> field_to_slices;
     ordered_set<const PHV::Field*> fields;
@@ -731,7 +731,7 @@ FindInitializationNode::findInitializationNodes(
             LOG_FEATURE("alloc_progress", 5, TAB2 "Failed: Uses of field " << f->name <<
                         " contains a unit (deparser/table) whose non gateway dominator is the "
                         "parser. Therefore, cannot initialize metadata.");
-            return boost::none;
+            return std::nullopt;
         }
 
         // No initialization required for the field with the earliest live range (will be implicitly
@@ -786,7 +786,7 @@ FindInitializationNode::findInitializationNodes(
             if (reach_condition.size() > 0) {
                 LOG_FEATURE("alloc_progress", 5, TAB2
                             "Yes. Therefore, metadata initialization not possible.");
-                return boost::none;
+                return std::nullopt;
             }
             LOG_DEBUG3(TAB2 "No.");
         }
@@ -803,7 +803,7 @@ FindInitializationNode::findInitializationNodes(
         if (hasParserUse(f_dominators)) {
             LOG_FEATURE("alloc_progress", 5, TAB2 "Failed: Defuse units of field " << f->name
                         << " includes the parser. Cannot initialize metadata.");
-            return boost::none;
+            return std::nullopt;
         }
         if (LOGGING(3)) {
             for (const auto* u : f_dominators) {
@@ -821,7 +821,7 @@ FindInitializationNode::findInitializationNodes(
             if (!u->is<IR::MAU::Table>()) {
                 LOG_FEATURE("alloc_progress", 5, TAB2 "Failed: Dominators of field " << f->name
                             << " includes the ingress deparser. Cannot initialize metadata.");
-                return boost::none;
+                return std::nullopt;
             }
             f_table_uses.insert(u->to<IR::MAU::Table>());
         }
@@ -887,7 +887,7 @@ FindInitializationNode::findInitializationNodes(
             } else if (noInit.count(f)) {
                 // If initialization not required but overlay will increase dependency length, then
                 // disallow this overlay.
-                return boost::none;
+                return std::nullopt;
             }
             // In case all strict dominators write but the overlay will increase dependency length,
             // we may still try to initialize at the group dominator for the field.
@@ -907,7 +907,7 @@ FindInitializationNode::findInitializationNodes(
                            dark_init_stage << ") overlaps with liverange of previous field " <<
                            lastField->name << " (" << livemap.at(lastField->id).first << "-" <<
                            livemap.at(lastField->id).second << ")");
-                return boost::none;
+                return std::nullopt;
             }
 
             LOG_DEBUG3(TAB1 "No need to initialize dark-initialized field: " << f);
@@ -959,7 +959,7 @@ FindInitializationNode::findInitializationNodes(
         if (groupDominator == nullptr) {
             LOG_FEATURE("alloc_progress", 5, TAB2
                         "Failed: Could not find group dominator for initialization.");
-            return boost::none;
+            return std::nullopt;
         }
         LOG_DEBUG3(TAB2 "Group dominator found: " << groupDominator->name << " (stage " <<
                    dg.min_stage(groupDominator) << ")");
@@ -1002,13 +1002,13 @@ FindInitializationNode::findInitializationNodes(
                                << groupDominator->name);
                     LOG_FEATURE("alloc_progress", 5, TAB3 "Choose not to initialize at " <<
                                groupDominator->name << " to avoid increasing critical path length");
-                    return boost::none;
+                    return std::nullopt;
                 }
 
                 if (groupDominator == *newDominator) {
                     LOG_FEATURE("alloc_progress", 5, TAB3
                                 "Failed: Reached the source node in the table flow graph");
-                    return boost::none;
+                    return std::nullopt;
                 }
                 groupDominator = *newDominator;
                 LOG_DEBUG3(TAB2 "Setting group dominator to: " << groupDominator->name
@@ -1023,7 +1023,7 @@ FindInitializationNode::findInitializationNodes(
         if (!initializationCandidates) {
             LOG_FEATURE("alloc_progress", 5, TAB2 "Failed: Could not find any actions to"
                         " initialize field in the group dominator.");
-            return boost::none;
+            return std::nullopt;
         }
         for (const auto* act : *initializationCandidates)
             LOG_DEBUG3(TAB2 "Initialization action: " << act->name);

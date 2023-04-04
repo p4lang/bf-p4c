@@ -105,7 +105,7 @@ const IR::Node* RewriteActionSelector::postorder(IR::ExpressionValue* ev) {
 
 const IR::Node* RewriteActionSelector::postorder(IR::ConstructorCallExpression *cce) {
     auto inst = P4::ExternInstance::resolve(cce, refMap, typeMap);
-    if (inst == boost::none)
+    if (inst == std::nullopt)
         return cce;
     if (inst->type->name == "ActionSelector") {
         if (inst->substitution.lookupByName("size")) {

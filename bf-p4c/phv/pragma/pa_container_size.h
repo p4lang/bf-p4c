@@ -2,7 +2,7 @@
 #define EXTENSIONS_BF_P4C_PHV_PRAGMA_PA_CONTAINER_SIZE_H_
 
 #include <map>
-#include <boost/optional.hpp>
+#include <optional>
 #include "ir/ir.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/utils/utils.h"
@@ -71,9 +71,9 @@ class PragmaContainerSize : public Inspector {
     field_to_layout() const { return field_layouts_i; }
 
     // expected_container_size returns the expected container size for this fs.
-    // if not specified, return boost::none, and
+    // if not specified, return std::nullopt, and
     // if @p fs spans over more than one container, return PHV::Size::null
-    boost::optional<PHV::Size> expected_container_size(const PHV::FieldSlice& fs) const;
+    std::optional<PHV::Size> expected_container_size(const PHV::FieldSlice& fs) const;
 
     bool is_specified(const PHV::Field* field) const { return pa_container_sizes_i.count(field); }
 

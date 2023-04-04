@@ -55,10 +55,10 @@ class ContainerEquivalenceTracker {
     explicit ContainerEquivalenceTracker(const PHV::Allocation& alloc);
 
     /// When called with a container c, this will return either:
-    /// - boost::none if the container is first of its class and should be checked for allocation
+    /// - std::nullopt if the container is first of its class and should be checked for allocation
     /// - or a PHV::Container of a container used in some previous call of this function on this
     ///   instance that is equivalent to c.
-    boost::optional<PHV::Container> find_equivalent_tried_container(PHV::Container c);
+    std::optional<PHV::Container> find_equivalent_tried_container(PHV::Container c);
 
     /// Never consider this container to be equivalent to any other. Useful to mark containers
     /// appearing in exact container constraints
@@ -83,7 +83,7 @@ class ContainerEquivalenceTracker {
     void set_is_wide_arith_low() { wideArithLow = true; }
 
  private:
-    boost::optional<PHV::Container> find_single(PHV::Container);
+    std::optional<PHV::Container> find_single(PHV::Container);
     ContainerClass get_class(PHV::Container c) {
         return ContainerClass(alloc, c, wideArith || (isTofino2Or3 && c.is(PHV::Size::b8)));
     }

@@ -1,6 +1,6 @@
 #include <initializer_list>
+#include <optional>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/optional.hpp>
 
 #include "gtest/gtest.h"
 
@@ -17,7 +17,7 @@ class AddAlwaysRunTest : public JBayBackendTest {};
 
 namespace {
 
-boost::optional<TofinoPipeTestCase>
+std::optional<TofinoPipeTestCase>
 createAddAlwaysRunTestCase(const std::string& parserSource) {
     auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
 header H1
@@ -87,7 +87,7 @@ V1Switch(parse(), verifyChecksum(), mau(), mau(),
     auto result = TofinoPipeTestCase::createWithThreadLocalInstances(source);
     if (result) {
         // Apply MultipleApply to de-duplicate table nodes.
-        result->pipe = result->pipe->apply(MultipleApply(BackendOptions(), boost::none, true));
+        result->pipe = result->pipe->apply(MultipleApply(BackendOptions(), std::nullopt, true));
     }
 
     return result;
@@ -97,7 +97,7 @@ V1Switch(parse(), verifyChecksum(), mau(), mau(),
 
 /// @returns a map for each gress from external table names to their unique IDs.
 std::map<gress_t, std::map<cstring, UniqueId>>
-getTables(boost::optional<TofinoPipeTestCase> test) {
+getTables(std::optional<TofinoPipeTestCase> test) {
     std::map<gress_t, std::map<cstring, UniqueId>> result;
 
     // Kludge: to avoid writing our own visitor, build a flow graph and get the tables from there.
@@ -117,7 +117,7 @@ getTables(boost::optional<TofinoPipeTestCase> test) {
 
 /// Common test functionality.
 void runTest(
-    boost::optional<TofinoPipeTestCase> test,
+    std::optional<TofinoPipeTestCase> test,
     ordered_map<gress_t, ConstraintMap> tablesToAdd
 ) {
     // Insert tables.

@@ -728,7 +728,7 @@ bool ActionAnalysis::initialize_alignment(const ActionParam &write, const Action
     auto *field = phv.field(write.expr, &range);
     BUG_CHECK(field, "Write in an instruction has no PHV location");
 
-    boost::optional<PHV::AllocSlice> write_slice;
+    std::optional<PHV::AllocSlice> write_slice;
     const PHV::FieldUse use(PHV::FieldUse::WRITE);
     field->foreach_alloc(range, cont_action.table_context, &use, [&](const PHV::AllocSlice &alloc) {
         BUG_CHECK(alloc.container_slice().lo >= 0, "Invalid negative container bit");

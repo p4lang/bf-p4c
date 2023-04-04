@@ -9,9 +9,9 @@ namespace {
 
 void merge_slices(safe_vector<PHV::AllocSlice>& slices,
                   safe_vector<PHV::AllocSlice>& merged_alloc) {
-    boost::optional<PHV::AllocSlice> last = boost::none;
+    std::optional<PHV::AllocSlice> last = std::nullopt;
     for (auto& slice : slices) {
-        if (last == boost::none) {
+        if (last == std::nullopt) {
             last = slice;
             continue;
         }

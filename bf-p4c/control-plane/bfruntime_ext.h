@@ -173,22 +173,22 @@ class BFRuntimeSchemaGenerator : public BFRuntimeGenerator {
     bool addActionProfIds(const p4configv1::Table& table,
                             Util::JsonObject* tableJson) const override;
 
-    boost::optional<bool> actProfHasSelector(P4Id actProfId) const override;
+    std::optional<bool> actProfHasSelector(P4Id actProfId) const override;
 
-    boost::optional<Lpf> getDirectLpf(P4Id lpfId) const;
-    boost::optional<Wred> getDirectWred(P4Id wredId) const;
-    boost::optional<Counter> getDirectCounter(P4Id counterId) const override;
-    boost::optional<Meter> getDirectMeter(P4Id meterId) const override;
-    boost::optional<Register> getDirectRegister(P4Id registerId) const;
+    std::optional<Lpf> getDirectLpf(P4Id lpfId) const;
+    std::optional<Wred> getDirectWred(P4Id wredId) const;
+    std::optional<Counter> getDirectCounter(P4Id counterId) const override;
+    std::optional<Meter> getDirectMeter(P4Id meterId) const override;
+    std::optional<Register> getDirectRegister(P4Id registerId) const;
 
-    static boost::optional<ActionProf>
+    static std::optional<ActionProf>
     fromTNAActionProfile(const p4configv1::P4Info& p4info,
             const p4configv1::ExternInstance& externInstance) {
         const auto& pre = externInstance.preamble();
         ::barefoot::ActionProfile actionProfile;
         if (!externInstance.info().UnpackTo(&actionProfile)) {
             ::error("Extern instance %1% does not pack an ActionProfile object", pre.name());
-            return boost::none;
+            return std::nullopt;
         }
         auto tableIds = collectTableIds(
             p4info, actionProfile.table_ids().begin(), actionProfile.table_ids().end());
@@ -196,86 +196,86 @@ class BFRuntimeSchemaGenerator : public BFRuntimeGenerator {
                           transformAnnotations(pre)};
     };
 
-    static boost::optional<Counter>
+    static std::optional<Counter>
     fromTNACounter(const p4configv1::ExternInstance& externInstance) {
         const auto& pre = externInstance.preamble();
         ::barefoot::Counter counter;
         if (!externInstance.info().UnpackTo(&counter)) {
             ::error("Extern instance %1% does not pack a Counter object", pre.name());
-            return boost::none;
+            return std::nullopt;
         }
         auto unit = static_cast<Counter::Unit>(counter.spec().unit());
         return Counter{pre.name(), pre.id(), counter.size(), unit, transformAnnotations(pre)};
     }
 
-    static boost::optional<Counter>
+    static std::optional<Counter>
     fromTNADirectCounter(const p4configv1::ExternInstance& externInstance) {
         const auto& pre = externInstance.preamble();
         ::barefoot::DirectCounter counter;
         if (!externInstance.info().UnpackTo(&counter)) {
             ::error("Extern instance %1% does not pack a DirectCounter object", pre.name());
-            return boost::none;
+            return std::nullopt;
         }
         auto unit = static_cast<Counter::Unit>(counter.spec().unit());
         return Counter{pre.name(), pre.id(), 0, unit, transformAnnotations(pre)};
     }
 
-    static boost::optional<Meter>
+    static std::optional<Meter>
     fromTNAMeter(const p4configv1::ExternInstance& externInstance) {
         const auto& pre = externInstance.preamble();
         ::barefoot::Meter meter;
         if (!externInstance.info().UnpackTo(&meter)) {
             ::error("Extern instance %1% does not pack a Meter object", pre.name());
-            return boost::none;
+            return std::nullopt;
         }
         auto unit = static_cast<Meter::Unit>(meter.spec().unit());
         auto type = static_cast<Meter::Type>(meter.spec().type());
         return Meter{pre.name(), pre.id(), meter.size(), unit, type, transformAnnotations(pre)};
     }
 
-    static boost::optional<Meter>
+    static std::optional<Meter>
     fromTNADirectMeter(const p4configv1::ExternInstance& externInstance) {
         const auto& pre = externInstance.preamble();
         ::barefoot::DirectMeter meter;
         if (!externInstance.info().UnpackTo(&meter)) {
             ::error("Extern instance %1% does not pack a Meter object", pre.name());
-            return boost::none;
+            return std::nullopt;
         }
         auto unit = static_cast<Meter::Unit>(meter.spec().unit());
         auto type = static_cast<Meter::Type>(meter.spec().type());
         return Meter{pre.name(), pre.id(), 0, unit, type, transformAnnotations(pre)};
     }
 
-    static boost::optional<Digest>
+    static std::optional<Digest>
     fromTNADigest(const p4configv1::ExternInstance& externInstance) {
         const auto& pre = externInstance.preamble();
         ::barefoot::Digest digest;
         if (!externInstance.info().UnpackTo(&digest)) {
             ::error("Extern instance %1% does not pack a Digest object", pre.name());
-            return boost::none;
+            return std::nullopt;
         }
         return Digest{pre.name(), pre.id(), digest.type_spec(), transformAnnotations(pre)};
     }
 
-    static boost::optional<Register>
+    static std::optional<Register>
     fromTNARegister(const p4configv1::ExternInstance& externInstance) {
         const auto& pre = externInstance.preamble();
         ::barefoot::Register register_;
         if (!externInstance.info().UnpackTo(&register_)) {
             ::error("Extern instance %1% does not pack a Register object", pre.name());
-            return boost::none;
+            return std::nullopt;
         }
         return Register{pre.name(), register_.data_field_name(), pre.id(),
                 register_.size(), register_.type_spec(), transformAnnotations(pre)};
     }
 
-    static boost::optional<Register>
+    static std::optional<Register>
     fromTNADirectRegister(const p4configv1::ExternInstance& externInstance) {
         const auto& pre = externInstance.preamble();
         ::barefoot::DirectRegister register_;
         if (!externInstance.info().UnpackTo(&register_)) {
             ::error("Extern instance %1% does not pack a Register object", pre.name());
-            return boost::none;
+            return std::nullopt;
         }
         return Register{pre.name(), register_.data_field_name(), pre.id(), 0,
                 register_.type_spec(), transformAnnotations(pre)};

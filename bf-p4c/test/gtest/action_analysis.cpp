@@ -1,6 +1,6 @@
 #include "bf-p4c/mau/action_analysis.h"
+#include <optional>
 
-#include <boost/optional.hpp>
 #include <boost/algorithm/string/replace.hpp>
 
 #include "gtest/gtest.h"
@@ -347,7 +347,7 @@ namespace Test {
 // ActionAnalysisTest unit-tests
 
 namespace {
-boost::optional<TofinoPipeTestCase> createTest(const std::string& ingressPipeline) {
+std::optional<TofinoPipeTestCase> createTest(const std::string& ingressPipeline) {
     auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
         header H { bit<8> field1; bit<8> field2;}
         struct Headers { H h;}

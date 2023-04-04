@@ -2,7 +2,7 @@
 
 #emit
 #include "lib/match.h"
-#include <boost/optional.hpp>
+#include <optional>
 #include "bf-p4c/common/debug_info.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/parde/marshal.h"
@@ -177,7 +177,7 @@ class Extract : ParserPrimitive {
     const ParserState* original_state = nullptr;
 
     /// This extract expects that data on the wire is marshaled from a `field`.
-    optional boost::optional<MarshaledFrom> marshaled_from;  // not visited
+    optional std::optional<MarshaledFrom> marshaled_from;  // not visited
 }
 
 /// An Extract node that is destined to become a LoweredExtractPhv. This is a
@@ -246,10 +246,10 @@ class ParserCounterLoadPkt : ParserCounterPrimitive {
 
     SavedRVal source;
 
-    boost::optional<int> max;
-    boost::optional<int> rotate;
-    boost::optional<int> mask;
-    boost::optional<int> add;
+    std::optional<int> max;
+    std::optional<int> rotate;
+    std::optional<int> mask;
+    std::optional<int> add;
 
     bool push = false;
     bool update_with_top = false;

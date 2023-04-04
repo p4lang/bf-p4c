@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <boost/optional.hpp>
+#include <optional>
 
 #include "barefoot/p4info.pb.h"
 
@@ -86,7 +86,7 @@ struct CounterlikeTraits<::BFN::CounterExtern<BFN::Arch::TNA>> {
             return CounterSpec::PACKETS_AND_BYTES;
         return CounterSpec::UNSPECIFIED;
     }
-    static boost::optional<size_t> indexTypeParamIdx() { return 1; }
+    static std::optional<size_t> indexTypeParamIdx() { return 1; }
 };
 
 /// CounterlikeTraits specialization for BFN::CounterExtern for PSA
@@ -109,7 +109,7 @@ struct CounterlikeTraits<::BFN::CounterExtern<BFN::Arch::PSA>> {
     }
     // the index of the type parameter for the counter index, in the type
     // parameter list of the extern type declaration.
-    static boost::optional<size_t> indexTypeParamIdx() { return 1; }
+    static std::optional<size_t> indexTypeParamIdx() { return 1; }
 };
 
 /// CounterlikeTraits<> specialization for MeterExtern
@@ -128,7 +128,7 @@ struct CounterlikeTraits<::BFN::MeterExtern<BFN::Arch::TNA>> {
             return MeterSpec::BYTES;
         return MeterSpec::UNSPECIFIED;
     }
-    static boost::optional<size_t> indexTypeParamIdx() { return 0; }
+    static std::optional<size_t> indexTypeParamIdx() { return 0; }
 };
 
 /// CounterlikeTraits specialization for BFN::MeterExtern for PSA
@@ -149,7 +149,7 @@ struct CounterlikeTraits<::BFN::MeterExtern<BFN::Arch::PSA>> {
     }
     // the index of the type parameter for the meter index, in the type
     // parameter list of the extern type declaration.
-    static boost::optional<size_t> indexTypeParamIdx() { return 0; }
+    static std::optional<size_t> indexTypeParamIdx() { return 0; }
 };
 }  // namespace Helpers
 
@@ -246,7 +246,7 @@ struct ActionProfile {
 /// serialized representation.
 struct ActionSelector {
     const cstring name;  // The fully qualified external name of this action selector.
-    const boost::optional<cstring> actionProfileName;  // If not known, we will generate
+    const std::optional<cstring> actionProfileName;  // If not known, we will generate
                                                        // an action profile instance.
     const int64_t size;  // TODO(hanw): size does not make sense with new ActionSelector P4 extern
     const int64_t maxGroupSize;
@@ -297,7 +297,7 @@ struct ValueSet {
     const IR::IAnnotated *annotations;  // If non-null, any annotations applied to this value set
                                         // declaration.
 
-    static boost::optional<ValueSet> from(const cstring name, const IR::P4ValueSet *instance,
+    static std::optional<ValueSet> from(const cstring name, const IR::P4ValueSet *instance,
                                           const ReferenceMap *refMap, TypeMap *typeMap,
                                           p4configv1::P4TypeInfo *p4RtTypeInfo) {
         CHECK_NULL(instance);
@@ -305,11 +305,11 @@ struct ValueSet {
         auto sizeConstant = instance->size->to<IR::Constant>();
         if (sizeConstant == nullptr || !sizeConstant->fitsInt()) {
             ::error("@size should be an integer for declaration %1%", instance);
-            return boost::none;
+            return std::nullopt;
         }
         if (sizeConstant->value < 0) {
             ::error("@size should be a positive integer for declaration %1%", instance);
-            return boost::none;
+            return std::nullopt;
         }
         size = static_cast<int64_t>(sizeConstant->value);
         auto typeSpec = P4::ControlPlaneAPI::TypeSpecConverter::convert(
@@ -328,8 +328,8 @@ struct Register {
                                         // declaration.
 
     /// @return the information required to serialize an @p instance of register
-    /// or boost::none in case of error.
-    static boost::optional<Register> from(const IR::ExternBlock *instance,
+    /// or std::nullopt in case of error.
+    static std::optional<Register> from(const IR::ExternBlock *instance,
                                           const ReferenceMap *refMap, TypeMap *typeMap,
                                           p4configv1::P4TypeInfo *p4RtTypeInfo) {
         CHECK_NULL(instance);
@@ -353,17 +353,17 @@ struct Register {
     }
 
     /// @return the information required to serialize an @p instance of a direct
-    /// register or boost::none in case of error.
-    static boost::optional<Register> fromDirect(const P4::ExternInstance &instance,
+    /// register or std::nullopt in case of error.
+    static std::optional<Register> fromDirect(const P4::ExternInstance &instance,
                                                 const IR::P4Table *table,
                                                 const ReferenceMap *refMap, TypeMap *typeMap,
                                                 p4configv1::P4TypeInfo *p4RtTypeInfo) {
         CHECK_NULL(table);
-        BUG_CHECK(instance.name != boost::none, "Caller should've ensured we have a name");
+        BUG_CHECK(instance.name != std::nullopt, "Caller should've ensured we have a name");
 
         // retrieve type parameter for the register instance and convert it to P4DataTypeSpec
         if (!instance.expression->is<IR::PathExpression>()) {
-            return boost::none;
+            return std::nullopt;
         }
         auto path = instance.expression->to<IR::PathExpression>()->path;
         auto decl = refMap->getDeclaration(path, true);
@@ -391,8 +391,8 @@ struct RegisterParam {
                                         // declaration.
 
     /// @return the information required to serialize an @p instance of register parameter
-    /// or boost::none in case of error.
-    static boost::optional<RegisterParam> from(const IR::ExternBlock *instance,
+    /// or std::nullopt in case of error.
+    static std::optional<RegisterParam> from(const IR::ExternBlock *instance,
                                                const ReferenceMap *refMap, TypeMap *typeMap,
                                                p4configv1::P4TypeInfo *p4RtTypeInfo) {
         CHECK_NULL(instance);
@@ -423,26 +423,26 @@ struct Lpf {
     const cstring name;  // The fully qualified external name of the filter
     int64_t size;
     /// If not none, the instance is a direct resource associated with \p table.
-    const boost::optional<cstring> table;
+    const std::optional<cstring> table;
     const IR::IAnnotated *annotations;  // If non-null, any annotations applied to this Lpf
                                         // declaration.
 
     /// @return the information required to serialize an @p instance of Lpf or
-    /// boost::none in case of error.
-    static boost::optional<Lpf> from(const IR::ExternBlock *instance) {
+    /// std::nullopt in case of error.
+    static std::optional<Lpf> from(const IR::ExternBlock *instance) {
         CHECK_NULL(instance);
         auto declaration = instance->node->to<IR::Declaration_Instance>();
         auto size = instance->getParameterValue("size");
-        return Lpf{declaration->controlPlaneName(), size->to<IR::Constant>()->asInt(), boost::none,
+        return Lpf{declaration->controlPlaneName(), size->to<IR::Constant>()->asInt(), std::nullopt,
                    declaration->to<IR::IAnnotated>()};
     }
 
     /// @return the information required to serialize an @p instance of a direct
-    /// Lpf or boost::none in case of error.
-    static boost::optional<Lpf> fromDirect(const P4::ExternInstance &instance,
+    /// Lpf or std::nullopt in case of error.
+    static std::optional<Lpf> fromDirect(const P4::ExternInstance &instance,
                                            const IR::P4Table *table) {
         CHECK_NULL(table);
-        BUG_CHECK(instance.name != boost::none, "Caller should've ensured we have a name");
+        BUG_CHECK(instance.name != std::nullopt, "Caller should've ensured we have a name");
         return Lpf{*instance.name, 0, table->controlPlaneName(), instance.annotations};
     }
 };
@@ -454,13 +454,13 @@ struct Wred {
     uint8_t noDropValue;
     int64_t size;
     /// If not none, the instance is a direct resource associated with \p table.
-    const boost::optional<cstring> table;
+    const std::optional<cstring> table;
     const IR::IAnnotated *annotations;  // If non-null, any annotations applied to this wred
                                         // declaration.
 
     /// @return the information required to serialize an @p instance of Wred or
-    /// boost::none in case of error.
-    static boost::optional<Wred> from(const IR::ExternBlock *instance) {
+    /// std::nullopt in case of error.
+    static std::optional<Wred> from(const IR::ExternBlock *instance) {
         CHECK_NULL(instance);
         auto declaration = instance->node->to<IR::Declaration_Instance>();
 
@@ -472,16 +472,16 @@ struct Wred {
                     static_cast<uint8_t>(dropValue->to<IR::Constant>()->asUnsigned()),
                     static_cast<uint8_t>(noDropValue->to<IR::Constant>()->asUnsigned()),
                     size->to<IR::Constant>()->asInt(),
-                    boost::none,
+                    std::nullopt,
                     declaration->to<IR::IAnnotated>()};
     }
 
     /// @return the information required to serialize an @p instance of a direct
-    /// Wred or boost::none in case of error.
-    static boost::optional<Wred> fromDirect(const P4::ExternInstance &instance,
+    /// Wred or std::nullopt in case of error.
+    static std::optional<Wred> fromDirect(const P4::ExternInstance &instance,
                                             const IR::P4Table *table) {
         CHECK_NULL(table);
-        BUG_CHECK(instance.name != boost::none, "Caller should've ensured we have a name");
+        BUG_CHECK(instance.name != std::nullopt, "Caller should've ensured we have a name");
 
         auto dropValue = instance.substitution.lookupByName("drop_value")->expression;
         BUG_CHECK(dropValue->to<IR::Constant>(), "Non-constant drop_value");
@@ -916,13 +916,13 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
     }
 
     /// @return the direct register associated with @p table, if it has one, or
-    /// boost::none otherwise.
-    static boost::optional<Register> getDirectRegister(const IR::P4Table *table,
+    /// std::nullopt otherwise.
+    static std::optional<Register> getDirectRegister(const IR::P4Table *table,
                                                        ReferenceMap *refMap, TypeMap *typeMap,
                                                        p4configv1::P4TypeInfo *p4RtTypeInfo) {
         auto directRegisterInstance =
             Helpers::getExternInstanceFromProperty(table, "registers", refMap, typeMap);
-        if (!directRegisterInstance) return boost::none;
+        if (!directRegisterInstance) return std::nullopt;
         return Register::fromDirect(*directRegisterInstance, table, refMap, typeMap, p4RtTypeInfo);
     }
 
@@ -1007,7 +1007,7 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
         });
     }
 
-    boost::optional<Digest> getDigest(const IR::Declaration_Instance *decl,
+    std::optional<Digest> getDigest(const IR::Declaration_Instance *decl,
                                       p4configv1::P4TypeInfo *p4RtTypeInfo) {
         std::vector<const P4::ExternMethod *> packCalls;
         // Check that the pack method is called exactly once on the digest
@@ -1018,10 +1018,10 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
         // no longer the case but we keep this code as a sanity check.
         forAllExternMethodCalls(
             decl, [&](const P4::ExternMethod *method) { packCalls.push_back(method); });
-        if (packCalls.size() == 0) return boost::none;
+        if (packCalls.size() == 0) return std::nullopt;
         if (packCalls.size() > 1) {
             ::error("Expected single call to pack for digest instance '%1%'", decl);
-            return boost::none;
+            return std::nullopt;
         }
         LOG4("Found 'pack' method call for digest instance " << decl->controlPlaneName());
 
@@ -1037,19 +1037,19 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
         return Digest{decl->controlPlaneName(), typeSpec, decl->to<IR::IAnnotated>()};
     }
 
-    boost::optional<DynHash> getDynHash(const IR::Declaration_Instance *decl,
+    std::optional<DynHash> getDynHash(const IR::Declaration_Instance *decl,
                                         p4configv1::P4TypeInfo *p4RtTypeInfo) {
         std::vector<const P4::ExternMethod *> hashCalls;
         // Get Hash Calls in the program for the declaration.
         forAllExternMethodCalls(
             decl, [&](const P4::ExternMethod *method) { hashCalls.push_back(method); });
-        if (hashCalls.size() == 0) return boost::none;
+        if (hashCalls.size() == 0) return std::nullopt;
         if (hashCalls.size() > 1) {
             ::warning(
                 "Expected single call to get for hash instance '%1%'."
                 "Control plane API is not generated for this hash call",
                 decl);
-            return boost::none;
+            return std::nullopt;
         }
         LOG4("Found 'get' method call for hash instance " << decl->controlPlaneName());
 
@@ -1089,17 +1089,17 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
             return DynHash{decl->controlPlaneName(), typeSpec, decl->to<IR::IAnnotated>(),
                            hashFieldInfo, hashWidth};
         }
-        return boost::none;
+        return std::nullopt;
     }
 
     /// @return the action profile referenced in the implementation property of @p table,
-    /// if it has one, or @c boost::none otherwise.
-    boost::optional<ActionProfile> getActionProfile(const IR::P4Table *table, ReferenceMap *refMap,
+    /// if it has one, or @c std::nullopt otherwise.
+    std::optional<ActionProfile> getActionProfile(const IR::P4Table *table, ReferenceMap *refMap,
                                                     TypeMap *typeMap) {
         using Helpers::getExternInstanceFromProperty;
         auto instance = getExternInstanceFromProperty(table, implementationString, refMap, typeMap);
-        if (!instance) return boost::none;
-        if (instance->type->name != "ActionProfile") return boost::none;
+        if (!instance) return std::nullopt;
+        if (instance->type->name != "ActionProfile") return std::nullopt;
         auto size = instance->substitution.lookupByName("size")->expression;
         // size is a bit<32> compile-time value
         BUG_CHECK(size->template is<IR::Constant>(), "Non-constant size");
@@ -1108,7 +1108,7 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
     }
 
     /// @return the action profile corresponding to @p instance.
-    static boost::optional<ActionProfile> getActionProfile(const IR::ExternBlock *instance) {
+    static std::optional<ActionProfile> getActionProfile(const IR::ExternBlock *instance) {
         auto decl = instance->node->to<IR::IDeclaration>();
         auto size = instance->getParameterValue("size");
         BUG_CHECK(size->is<IR::Constant>(), "Non-constant size");
@@ -1117,20 +1117,20 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
     }
 
     /// @return the action profile referenced in @p table's implementation
-    /// property, if it has one, or boost::none otherwise.
-    boost::optional<ActionSelector> getActionSelector(const IR::P4Table *table,
+    /// property, if it has one, or std::nullopt otherwise.
+    std::optional<ActionSelector> getActionSelector(const IR::P4Table *table,
                                                       ReferenceMap *refMap, TypeMap *typeMap) {
         using BFN::getExternInstanceFromPropertyByTypeName;
         auto action_selector = getExternInstanceFromPropertyByTypeName(
             table, implementationString, "ActionSelector", refMap, typeMap);
-        if (!action_selector) return boost::none;
+        if (!action_selector) return std::nullopt;
         // TODO(hanw): remove legacy code
         // used to support deprecated ActionSelector constructor.
         if (action_selector->substitution.lookupByName("size")) {
             auto size = action_selector->substitution.lookupByName("size")->expression;
             BUG_CHECK(size->template is<IR::Constant>(), "Non-constant size");
             return ActionSelector{*action_selector->name,
-                                  boost::none,
+                                  std::nullopt,
                                   size->template to<IR::Constant>()->asInt(),
                                   defaultMaxGroupSize,
                                   size->template to<IR::Constant>()->asInt(),
@@ -1152,14 +1152,14 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
                               false /* _sel suffix */};
     }
 
-    boost::optional<ActionSelector> getActionSelector(const IR::ExternBlock *instance) {
+    std::optional<ActionSelector> getActionSelector(const IR::ExternBlock *instance) {
         auto actionSelDecl = instance->node->to<IR::IDeclaration>();
         // to be deleted, used to support deprecated ActionSelector constructor.
         if (instance->findParameterValue("size")) {
             auto size = instance->getParameterValue("size");
             BUG_CHECK(size->is<IR::Constant>(), "Non-constant size");
             return ActionSelector{actionSelDecl->controlPlaneName(),
-                                  boost::none,
+                                  std::nullopt,
                                   size->to<IR::Constant>()->asInt(),
                                   defaultMaxGroupSize,
                                   size->to<IR::Constant>()->asInt(),
@@ -1429,14 +1429,14 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
         return nullptr;
     }
 
-    boost::optional<cstring> getTableImplementationName(const IR::P4Table *table,
+    std::optional<cstring> getTableImplementationName(const IR::P4Table *table,
                                                         ReferenceMap *refMap) {
         auto impl = getTableImplementationProperty(table);
-        if (impl == nullptr) return boost::none;
+        if (impl == nullptr) return std::nullopt;
         if (!impl->value->template is<IR::ExpressionValue>()) {
             ::error("Expected %1% property value for table %2% to be an expression: %2%",
                     implementationString, table->controlPlaneName(), impl);
-            return boost::none;
+            return std::nullopt;
         }
         auto expr = impl->value->template to<IR::ExpressionValue>()->expression;
         if (expr->template is<IR::ConstructorCallExpression>()) return impl->controlPlaneName();
@@ -1444,7 +1444,7 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
             auto decl = refMap->getDeclaration(expr->template to<IR::PathExpression>()->path, true);
             return decl->controlPlaneName();
         }
-        return boost::none;
+        return std::nullopt;
     }
 
     ReferenceMap *refMap;
@@ -1985,29 +1985,29 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
     }
 
     /// @return the direct filter instance associated with @p table, if it has
-    /// one, or boost::none otherwise. Used as a helper for getDirectLpf and
+    /// one, or std::nullopt otherwise. Used as a helper for getDirectLpf and
     /// getDirectWred.
     template <typename T>
-    static boost::optional<T> getDirectFilter(const IR::P4Table *table, ReferenceMap *refMap,
+    static std::optional<T> getDirectFilter(const IR::P4Table *table, ReferenceMap *refMap,
                                               TypeMap *typeMap, cstring filterType) {
         auto directFilterInstance =
             Helpers::getExternInstanceFromProperty(table, "filters", refMap, typeMap);
-        if (!directFilterInstance) return boost::none;
+        if (!directFilterInstance) return std::nullopt;
         CHECK_NULL(directFilterInstance->type);
-        if (directFilterInstance->type->name != filterType) return boost::none;
+        if (directFilterInstance->type->name != filterType) return std::nullopt;
         return T::fromDirect(*directFilterInstance, table);
     }
 
     /// @return the direct Lpf instance associated with @p table, if it has one,
-    /// or boost::none otherwise.
-    static boost::optional<Lpf> getDirectLpf(const IR::P4Table *table, ReferenceMap *refMap,
+    /// or std::nullopt otherwise.
+    static std::optional<Lpf> getDirectLpf(const IR::P4Table *table, ReferenceMap *refMap,
                                              TypeMap *typeMap) {
         return getDirectFilter<Lpf>(table, refMap, typeMap, "DirectLpf");
     }
 
     /// @return the direct Wred instance associated with @p table, if it has one,
-    /// or boost::none otherwise.
-    static boost::optional<Wred> getDirectWred(const IR::P4Table *table, ReferenceMap *refMap,
+    /// or std::nullopt otherwise.
+    static std::optional<Wred> getDirectWred(const IR::P4Table *table, ReferenceMap *refMap,
                                                TypeMap *typeMap) {
         return getDirectFilter<Wred>(table, refMap, typeMap, "DirectWred");
     }
@@ -2116,11 +2116,11 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
     }
 
     /// @return serialization information for the port_metadata_extract() call represented by
-    /// @a call, or boost::none if @a call is not a port_metadata_extract() call or is invalid.
-    static boost::optional<PortMetadata> getPortMetadataExtract(
+    /// @a call, or std::nullopt if @a call is not a port_metadata_extract() call or is invalid.
+    static std::optional<PortMetadata> getPortMetadataExtract(
         const P4::ExternFunction *function, ReferenceMap *refMap, TypeMap *typeMap,
         p4configv1::P4TypeInfo *p4RtTypeInfo) {
-        if (function->method->name != BFN::ExternPortMetadataUnpackString) return boost::none;
+        if (function->method->name != BFN::ExternPortMetadataUnpackString) return std::nullopt;
 
         if (auto *call = function->expr->to<IR::MethodCallExpression>()) {
             auto *typeArg = call->typeArguments->at(0);
@@ -2128,7 +2128,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
                                                                             typeArg, p4RtTypeInfo);
             return PortMetadata{typeSpec};
         }
-        return boost::none;
+        return std::nullopt;
     }
 
     void addPortMetadata(const P4RuntimeSymbolTableIface &symbols, p4configv1::P4Info *p4Info,

@@ -7,7 +7,7 @@
 #include <string>
 #include <istream>
 #include <sstream>
-#include <boost/optional.hpp>
+#include <optional>
 
 #include "bf-p4c/phv/utils/utils.h"
 #include "bf-p4c/phv/allocate_phv.h"
@@ -48,7 +48,7 @@ class SuperClusterBuilder {
     // <field range> ::= [<number>:<number>]
     // For possible optional field attributes see phv/phv_fields.cpp
     //   method std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice& fs)
-    boost::optional<PHV::SuperCluster*> build_super_cluster(std::istream &scs);
+    std::optional<PHV::SuperCluster*> build_super_cluster(std::istream &scs);
 
  private:
     /// Map of fields
@@ -66,7 +66,7 @@ class SuperClusterBuilder {
     /// Analysis of the whole SuperCluster
     /// @param scs Stream representation of the SuperCluster
     /// @returns NULL in case of error, extracted SuperCluster otherwise
-    boost::optional<PHV::SuperCluster*> analyze_super_cluster(std::istream &scs);
+    std::optional<PHV::SuperCluster*> analyze_super_cluster(std::istream &scs);
     /// Analysis of a single SliceList
     /// @param scs Stream representation of the SuperCluster
     /// @returns NULL in case of error, extracted FieldSlice otherwise

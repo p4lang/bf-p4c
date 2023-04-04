@@ -3,7 +3,7 @@
 
 #include <limits>
 #include <functional>
-#include <boost/optional.hpp>
+#include <optional>
 #include <boost/range/irange.hpp>
 
 #include "bf-p4c/bf-p4c-options.h"
@@ -171,9 +171,9 @@ class Field : public LiftLess<Field> {
     /// Total size of Field in bits.
     int             size = 0;
 
-    /// The alignment requirement of this field. If boost::none, there is no
+    /// The alignment requirement of this field. If std::nullopt, there is no
     /// particular alignment requirement.
-    boost::optional<FieldAlignment> alignment;
+    std::optional<FieldAlignment> alignment;
     /// List of alignment sources for this field (mainly for error printing)
     std::list<std::pair<FieldAlignment, Util::SourceInfo>> alignmentSources;
 
@@ -250,7 +250,7 @@ class Field : public LiftLess<Field> {
     const PHV::Field* aliasSource = nullptr;
 
     /// Associate source info to each field
-    boost::optional<Util::SourceInfo> srcInfo;
+    std::optional<Util::SourceInfo> srcInfo;
 
     /// Sets the valid starting bit positions (little Endian) for this field.
     /// For example, setStartBits(PHV::Size::b8, bitvec(0,1)) means that the least
@@ -267,7 +267,7 @@ class Field : public LiftLess<Field> {
  private:
     /// When set, use this name rather than PHV::Field::name when generating
     /// assembly.
-    boost::optional<cstring> externalName_i;
+    std::optional<cstring> externalName_i;
 
     // constraints on this field
     //
@@ -362,9 +362,9 @@ class Field : public LiftLess<Field> {
      **/
     bool            is_marshaled_i = false;
 
-    /// If boost::none, then the field does not have container id limitation. Otherwise, if not
-    /// boost::none, this field can only allocated to container that their ids are true in bitvec.
-    boost::optional<bitvec> limited_container_ids_i = boost::none;
+    /// If std::nullopt, then the field does not have container id limitation. Otherwise, if not
+    /// std::nullopt, this field can only allocated to container that their ids are true in bitvec.
+    std::optional<bitvec> limited_container_ids_i = std::nullopt;
 
     // Maximum field size in the same SuperCluster with no_split constraint.
     // Used by bridged metadata packing to insert padding after the 'no_split'
@@ -515,10 +515,10 @@ class Field : public LiftLess<Field> {
     bool is_invalidate_from_arch() const                   { return invalidate_from_arch_i; }
     void set_invalidate_from_arch(bool b)                  { invalidate_from_arch_i = b; }
 
-    void set_limited_container_ids(const boost::optional<bitvec>& ids) {
+    void set_limited_container_ids(const std::optional<bitvec>& ids) {
         limited_container_ids_i = ids;
     }
-    const boost::optional<bitvec>& limited_container_ids() const {
+    const std::optional<bitvec>& limited_container_ids() const {
         return limited_container_ids_i;
     }
 
@@ -680,7 +680,7 @@ class Field : public LiftLess<Field> {
 
     /// @returns the number of distinct container bytes that contain slices of
     /// the @p bits of this field.
-    int container_bytes(boost::optional<le_bitrange> bits = boost::none) const;
+    int container_bytes(std::optional<le_bitrange> bits = std::nullopt) const;
 
     /// Clear any PHV allocation for this field.
     void clear_alloc() { alloc_slice_i.clear(); }
@@ -747,15 +747,15 @@ class Field : public LiftLess<Field> {
     void updateValidContainerRange(nw_bitrange newValidRange);
 
     /// Get the external name of this field.  If PHV::Field::externalName is
-    /// not boost::none, use that; otherwise, use PHV::Field::name.
+    /// not std::nullopt, use that; otherwise, use PHV::Field::name.
     cstring externalName() const {
-        return boost::get_optional_value_or(externalName_i, name);
+        return externalName_i ? *externalName_i : name;
     }
 
     /// @returns true if this field as an external name set independently of
     /// its name.
     bool hasExternalName() const {
-        return externalName_i != boost::none;
+        return externalName_i != std::nullopt;
     }
 
     /// Set the external name of this field, which will be used in place of
@@ -766,7 +766,7 @@ class Field : public LiftLess<Field> {
 
     /// Clear the external name, if any has been set.
     void clearExternalName() {
-        externalName_i = boost::none;
+        externalName_i = std::nullopt;
     }
 
     /** The range of possible bit positions at which this field can be placed
@@ -894,7 +894,7 @@ class FieldSlice : public AbstractField, public LiftCompare<FieldSlice> {
     // const (also used in ActionPhvConstraints)
     const PHV::Field* field_i;
     le_bitrange range_i;
-    boost::optional<FieldAlignment> alignment_i = boost::none;
+    std::optional<FieldAlignment> alignment_i = std::nullopt;
     nw_bitrange validContainerRange_i = ZeroToMax();
 
  public:
@@ -950,9 +950,9 @@ class FieldSlice : public AbstractField, public LiftCompare<FieldSlice> {
     /// Total size of FieldSlice in bits.
     int size() const override { return range_i.size(); }
 
-    /// The alignment requirement of this field slice. If boost::none, there is
+    /// The alignment requirement of this field slice. If std::nullopt, there is
     /// no particular alignment requirement.
-    boost::optional<FieldAlignment> alignment() const { return alignment_i; }
+    std::optional<FieldAlignment> alignment() const { return alignment_i; }
 
     /// See documentation for `Field::validContainerRange()`.
     nw_bitrange validContainerRange() const { return validContainerRange_i; }
@@ -1012,13 +1012,13 @@ struct PackingLayout {
     /// FieldRangeOrPadding is a helper class to store either
     /// a slice of field or an integer representing the number of padding bits.
     class FieldRangeOrPadding {
-        boost::optional<FieldRange> slice;
+        std::optional<FieldRange> slice;
         int padding = 0;
 
      public:
         explicit FieldRangeOrPadding(const FieldRange& fs) : slice(fs) {}
         explicit FieldRangeOrPadding(int n_padding_bits) : padding(n_padding_bits) {}
-        bool is_fs() const { return slice.is_initialized(); }
+        bool is_fs() const { return slice.has_value(); }
         const FieldRange& fs() const { return *slice; }
         int size() const {
             if (is_fs())
@@ -1510,7 +1510,7 @@ class PhvInfo {
     PHV::Field* add(cstring fieldName, gress_t gress, int size, int offset,
              bool isMetadata, bool isPOV, bool bridged = false, bool isPad = false,
              bool isOverlayable = false, bool isFlexible = false, bool isFixedSizeHeader = false,
-             boost::optional<Util::SourceInfo> srcInfo = boost::none);
+             std::optional<Util::SourceInfo> srcInfo = std::nullopt);
 
     PHV::Field* create_dummy_padding(size_t sz, gress_t gress, bool overlayable = true);
 
@@ -1619,9 +1619,9 @@ class PhvInfo {
 
     /** @returns the alias source name, if the given expression is either a IR::BFN::AliasMember type
       * or is a slice with a IR::BFN::AliasMember object as the underlying base expression.
-      * @returns boost::none otherwise.
+      * @returns std::nullopt otherwise.
       */
-    boost::optional<cstring> get_alias_name(const IR::Expression* expr) const;
+    std::optional<cstring> get_alias_name(const IR::Expression* expr) const;
 
     /// Adds an entry to the aliasMap.
     void addAliasMapEntry(const PHV::Field* f1, const PHV::Field* f2) {

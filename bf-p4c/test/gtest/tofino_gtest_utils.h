@@ -1,8 +1,8 @@
 #ifndef EXTENSIONS_BF_P4C_TEST_GTEST_TOFINO_GTEST_UTILS_H_
 #define EXTENSIONS_BF_P4C_TEST_GTEST_TOFINO_GTEST_UTILS_H_
 
+#include <optional>
 #include <string>
-#include <boost/optional.hpp>
 
 #include "bf-p4c/arch/arch.h"
 #include "bf-p4c/bf-p4c-options.h"
@@ -24,7 +24,7 @@ const char *t2na_header();
 
 struct MidendTestCase {
     /// Create a test case that requires the frontend and the midend to run.
-    static boost::optional<MidendTestCase>
+    static std::optional<MidendTestCase>
     create(const std::string& source);
 
     /// The output of the midend.
@@ -36,12 +36,12 @@ struct MidendTestCase {
 
 struct TofinoPipeTestCase {
     /// Create a test case that requires extract_maupipe() to run.
-    static boost::optional<TofinoPipeTestCase>
+    static std::optional<TofinoPipeTestCase>
     create(const std::string& source);
 
     /// Create a test case that requires extract_maupipe() to run, and apply
     /// CreateThreadLocalInstances.
-    static boost::optional<TofinoPipeTestCase>
+    static std::optional<TofinoPipeTestCase>
     createWithThreadLocalInstances(const std::string& source);
 
     /// The output of extract_maupipe().

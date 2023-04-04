@@ -196,11 +196,11 @@ inline BFN_Options& BackendOptions() { return BFNContext::get().options(); }
  */
 class BFNOptionPragmaParser : public P4::P4COptionPragmaParser {
  public:
-    boost::optional<CommandLineOptions>
+    std::optional<CommandLineOptions>
     tryToParse(const IR::Annotation* annotation) override;
 
  private:
-    boost::optional<CommandLineOptions>
+    std::optional<CommandLineOptions>
     parseCompilerOption(const IR::Annotation* annotation);
 };
 

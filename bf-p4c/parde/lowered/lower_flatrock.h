@@ -570,10 +570,10 @@ class ComputeFlatrockParserIR : public ParserInspector {
      * @brief Get the POV flags byte index for specified PHV field allocation.
      *
      * @param alloc PHV allocation slice.
-     * @return boost::optional<unsigned int> POV flags byte index if POV flags byte
+     * @return std::optional<unsigned int> POV flags byte index if POV flags byte
      *         is assigned to a PHV byte given by alloc slice.
      */
-    boost::optional<unsigned int> get_pov_flags_byte(const PHV::AllocSlice& alloc) const {
+    std::optional<unsigned int> get_pov_flags_byte(const PHV::AllocSlice& alloc) const {
         PovFlagsContainerInfo container_info{alloc.container().type().size(),
                                              alloc.container().index(),
                                              alloc.container_slice().loByte()};
@@ -591,7 +591,7 @@ class ComputeFlatrockParserIR : public ParserInspector {
             // the modify_flag actions are generated based on the extracts and not for
             // each pushed header, this will be removed anyway.
             LOG1("Unknown POV flags byte for PHV field allocation: " << alloc);
-            return boost::none;
+            return std::nullopt;
         }
     }
 
@@ -647,10 +647,10 @@ class ReplaceFlatrockParserIR : public ParserTransform {
      * used).
      *
      * @param hdr_name Name of a header for which we create a modify_flag action.
-     * @return boost::optional<::Flatrock::ModifyFlag> modify_flag action.
+     * @return std::optional<::Flatrock::ModifyFlag> modify_flag action.
      */
-    boost::optional<::Flatrock::ModifyFlag> create_modify_flag(const cstring hdr_name) const {
-        if (hdr_name == payloadHeaderName) return boost::none;
+    std::optional<::Flatrock::ModifyFlag> create_modify_flag(const cstring hdr_name) const {
+        if (hdr_name == payloadHeaderName) return std::nullopt;
 
         ::Flatrock::ModifyFlag modify_flag{};
         modify_flag.imm = true;
@@ -674,12 +674,12 @@ class ReplaceFlatrockParserIR : public ParserTransform {
                 // actions is changed to generate those actions based on the extracts
                 // and not for each pushed header.
                 LOG1("Could not find the alloc slice for " << valid_field);
-                return boost::none;
+                return std::nullopt;
             }
             PHV::AllocSlice alloc = allocs.front();
             unsigned int bit_index = alloc.container_slice().lo % BITS_IN_BYTE;
             auto byte_index = computed.get_pov_flags_byte(alloc);
-            if (!byte_index) return boost::none;
+            if (!byte_index) return std::nullopt;
             modify_flag.shift = (*byte_index) * BITS_IN_BYTE + bit_index;
         }
 
@@ -723,8 +723,8 @@ class ReplaceFlatrockParserIR : public ParserTransform {
      * @param state_info Information about currently processed state.
      * @return unsigned int Rule ID of rule in which we push the header.
      */
-    unsigned int prepare_push_hdr(boost::optional<::Flatrock::PushHdrId>& push_hdr_id,
-                                  boost::optional<::Flatrock::ModifyFlag>& modify_flag,
+    unsigned int prepare_push_hdr(std::optional<::Flatrock::PushHdrId>& push_hdr_id,
+                                  std::optional<::Flatrock::ModifyFlag>& modify_flag,
                                   IR::Flatrock::AnalyzerStage* analyzer_stage, unsigned int hdr_id,
                                   AnalyzerRuleInfo& state_info) const {
         unsigned int rule_id = analyzer_stage->rules.size();
@@ -806,21 +806,21 @@ class ReplaceFlatrockParserIR : public ParserTransform {
                 // For each header extraction, there is a separate stage
                 // Create rule only with push_hdr_id
                 analyzer_stage = get_analyzer_stage(stage_id, analyzer_stages);
-                boost::optional<::Flatrock::PushHdrId> push_hdr_id{boost::none};
-                boost::optional<::Flatrock::ModifyFlag> modify_flag{boost::none};
+                std::optional<::Flatrock::PushHdrId> push_hdr_id{std::nullopt};
+                std::optional<::Flatrock::ModifyFlag> modify_flag{std::nullopt};
                 unsigned int rule_id =
                     prepare_push_hdr(push_hdr_id, modify_flag, analyzer_stage, hdr_id, state_info);
 
-                boost::optional<cstring> next_state_name{boost::none};
+                std::optional<cstring> next_state_name{std::nullopt};
                 if (state_info.transitions.size() > 0) next_state_name = state_name;
 
                 auto* analyzer_rule = new IR::Flatrock::AnalyzerRule(
                     /* id */ rule_id,
-                    /* next_state */ boost::none,
+                    /* next_state */ std::nullopt,
                     /* next_state_name */ next_state_name,
-                    /* next_w0_offset */ boost::none,
-                    /* next_w1_offset */ boost::none,
-                    /* next_w2_offset */ boost::none);
+                    /* next_w0_offset */ std::nullopt,
+                    /* next_w1_offset */ std::nullopt,
+                    /* next_w2_offset */ std::nullopt);
                 analyzer_rule->push_hdr_id = push_hdr_id;
                 analyzer_rule->match_state = state_match;
                 analyzer_rule->modify_flag0 = modify_flag;
@@ -837,16 +837,16 @@ class ReplaceFlatrockParserIR : public ParserTransform {
             }
 
             for (const auto& transition : state_info.transitions) {
-                boost::optional<::Flatrock::PushHdrId> push_hdr_id{boost::none};
-                boost::optional<::Flatrock::ModifyFlag> modify_flag{boost::none};
+                std::optional<::Flatrock::PushHdrId> push_hdr_id{std::nullopt};
+                std::optional<::Flatrock::ModifyFlag> modify_flag{std::nullopt};
                 unsigned int rule_id =
                     prepare_push_hdr(push_hdr_id, modify_flag, analyzer_stage, hdr_id, state_info);
 
                 cstring next_state_name = sanitizeName(transition.next_state->name);
 
-                boost::optional<int> next_w0_offset{boost::none};
-                boost::optional<int> next_w1_offset{boost::none};
-                boost::optional<int> next_w2_offset{boost::none};
+                std::optional<int> next_w0_offset{std::nullopt};
+                std::optional<int> next_w1_offset{std::nullopt};
+                std::optional<int> next_w2_offset{std::nullopt};
 
                 if (transition.next_w.size() > 0) next_w0_offset = transition.next_w[0].offset;
                 if (transition.next_w.size() > 1) next_w1_offset = transition.next_w[1].offset;
@@ -855,7 +855,7 @@ class ReplaceFlatrockParserIR : public ParserTransform {
 
                 auto* analyzer_rule = new IR::Flatrock::AnalyzerRule(
                     /* id */ rule_id,
-                    /* next_state */ boost::none,
+                    /* next_state */ std::nullopt,
                     /* next_state_name */ next_state_name,
                     /* next_w0_offset */ next_w0_offset,
                     /* next_w1_offset */ next_w1_offset,
@@ -1415,13 +1415,13 @@ class ReplaceFlatrockParserIR : public ParserTransform {
             /* index */ 0,
             /* initial_pktlen */ 0,
             /* initial_seglen */ 0,
-            /* initial_state */ boost::none,
+            /* initial_state */ std::nullopt,
             /* initial_state_name */ initial_state_name,
-            /* initial_flags */ boost::none,
+            /* initial_flags */ std::nullopt,
             /* initial_ptr */ 0,  // Extraction of ingress intrinsic metadata is always expected
-            /* initial_w0_offset */ boost::none,
-            /* initial_w1_offset */ boost::none,
-            /* initial_w2_offset */ boost::none);
+            /* initial_w0_offset */ std::nullopt,
+            /* initial_w1_offset */ std::nullopt,
+            /* initial_w2_offset */ std::nullopt);
         // Bytes 15 and 14 of port metadata contain logical pipe ID and logical port number
         // in the following format:
         // {5'h0, logical pipe ID (4b), port number (7b), port_md_tbl(14B)}

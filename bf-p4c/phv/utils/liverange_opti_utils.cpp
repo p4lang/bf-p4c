@@ -17,7 +17,7 @@ ordered_set<std::pair<const IR::BFN::Unit*, const IR::BFN::Unit*>> canFUnitsReac
     const PHV::UnitSet& g_units,
     const ordered_map<gress_t, FlowGraph>& flowGraph) {
     ordered_set<std::pair<const IR::BFN::Unit*, const IR::BFN::Unit*>> rv;
-    auto gress = boost::make_optional(false, gress_t());
+    std::optional<gress_t> gress = std::nullopt;
     for (const auto* u1 : f_units) {
         bool deparser1 = u1->is<IR::BFN::Deparser>();
         bool table1 = u1->is<IR::MAU::Table>();

@@ -342,7 +342,7 @@ class GreedyMetaInit : public TableFlowGraphSearchBase {
     struct InitTableResult {
         TableList init_list;
         bool need_init;
-        boost::optional<int> used_stage_number;
+        std::optional<int> used_stage_number;
     };
 
     // using InitTableResult = std::pair<TableList, bool>;
@@ -368,7 +368,7 @@ class GreedyMetaInit : public TableFlowGraphSearchBase {
     InitTableResult greedy_allocate(VertexId v, const TableList& inited) {
         if (visited(v)) {
             LOG1("Found a loop in data dependency table");
-            return { { }, false, boost::none }; }
+            return { { }, false, std::nullopt }; }
 
         Visiting visiting(*this, v);
         auto* table = graph.get_table(v);
@@ -385,7 +385,7 @@ class GreedyMetaInit : public TableFlowGraphSearchBase {
         // Already in initialization plans.
         if (inited.count(table)) {
             LOG5("already in initialization plan");
-            return {{ }, false, boost::none };
+            return {{ }, false, std::nullopt };
         }
 
 
@@ -458,7 +458,7 @@ class GreedyMetaInit : public TableFlowGraphSearchBase {
         }
 
         LOG5("return with need_init as false");
-        return {init_rst, false, boost::none};
+        return {init_rst, false, std::nullopt};
     }
 
  public:
@@ -650,10 +650,8 @@ class TableFlowGraphBuilder : public Inspector {
         }
         if (placed_tables_in_table_seq == 0) return true;
 
-        boost::optional<const IR::MAU::Table*> leading_table =
-            boost::make_optional(false, (const IR::MAU::Table*)nullptr);
-        boost::optional<const IR::MAU::Table*> trailing_table =
-            boost::make_optional(false, (const IR::MAU::Table*)nullptr);
+        std::optional<const IR::MAU::Table*> leading_table = std::nullopt;
+        std::optional<const IR::MAU::Table*> trailing_table = std::nullopt;
 
         for (int i = 0; i < Device::numStages(); i++) {
             for (auto table : earliest_stage_to_tables[i]) {

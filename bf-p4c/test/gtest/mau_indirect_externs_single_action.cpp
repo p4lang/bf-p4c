@@ -1,4 +1,4 @@
-#include <boost/optional.hpp>
+#include <optional>
 
 #include "gtest/gtest.h"
 

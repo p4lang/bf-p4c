@@ -1,5 +1,5 @@
+#include <optional>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/optional.hpp>
 
 #include "gtest/gtest.h"
 
@@ -17,7 +17,7 @@ class ActionMutexTest : public TofinoBackendTest {};
 
 namespace {
 
-boost::optional<TofinoPipeTestCase>
+std::optional<TofinoPipeTestCase>
 createActionMutexTestCase(const std::string& mau, const std::string *tables_p = nullptr) {
     auto tables = P4_SOURCE(P4Headers::NONE, R"(
     action noop() {}

@@ -1,7 +1,7 @@
 #ifndef BF_P4C_PHV_ACTION_SOURCE_TRACKER_H_
 #define BF_P4C_PHV_ACTION_SOURCE_TRACKER_H_
 
-#include <boost/optional.hpp>
+#include <optional>
 
 #include "ir/ir.h"
 #include "bf-p4c/phv/phv_fields.h"
@@ -18,7 +18,7 @@ struct SourceOp {
     };
     OpType t = OpType::move;
     bool ad_or_const = false;
-    boost::optional<PHV::FieldSlice> phv_src = boost::none;
+    std::optional<PHV::FieldSlice> phv_src = std::nullopt;
 
     /// @returns a slice of SourceOp that when ad_or_const is true
     /// a clone will be returned. Otherwise, return a a slice of

@@ -1,5 +1,5 @@
+#include <optional>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/optional.hpp>
 #include <boost/make_unique.hpp>
 
 #include "gtest/gtest.h"

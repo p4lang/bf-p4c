@@ -1,7 +1,7 @@
 #ifndef EXTENSIONS_BF_P4C_PHV_PRAGMA_PA_CONTAINER_TYPE_H_
 #define EXTENSIONS_BF_P4C_PHV_PRAGMA_PA_CONTAINER_TYPE_H_
 
-#include <boost/optional/optional.hpp>
+#include <optional>
 #include "bf-p4c/phv/phv.h"
 #include "ir/ir.h"
 #include "bf-p4c/phv/phv_fields.h"
@@ -40,7 +40,7 @@ class PragmaContainerType : public Inspector {
         return fields;
     }
 
-    boost::optional<PHV::Kind> required_kind(const PHV::Field* f) const;
+    std::optional<PHV::Kind> required_kind(const PHV::Field* f) const;
 
     /// BFN::Pragma interface
     static const char *name;

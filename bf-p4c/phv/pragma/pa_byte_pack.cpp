@@ -175,5 +175,5 @@ PragmaBytePack::AddConstraintResult PragmaBytePack::add_packing_constraint(
 
 PragmaBytePack::AddConstraintResult PragmaBytePack::add_compiler_added_packing(
     const PHV::PackingLayout& packing) {
-    return add_packing_constraint(PackConstraint{true, boost::none, packing});
+    return add_packing_constraint(PackConstraint{true, std::nullopt, packing});
 }

@@ -72,7 +72,7 @@ bool ParserPackingValidator::allow_clobber(const Field* f) const {
 const AllocError* ParserPackingValidator::will_buf_extract_clobber_the_other(
     const FieldSlice& fs, const StateExtract& state_extract, const int cont_idx,
     const FieldSlice& other_fs, const StatePrimitiveMap& other_prims,
-    const int other_cont_idx, const boost::optional<Container>&) const {
+    const int other_cont_idx, const std::optional<Container>&) const {
     auto* err = new AllocError(ErrorCode::CONTAINER_PARSER_PACKING_INVALID);
     const auto [state, extract] = state_extract;
     const auto* parser = parser_i.state_to_parser.at(state);
@@ -178,7 +178,7 @@ const AllocError* ParserPackingValidator::will_buf_extract_clobber_the_other(
 }
 
 const AllocError* ParserPackingValidator::will_a_extracts_clobber_b(
-    const FieldSliceStart& a, const FieldSliceStart& b, const boost::optional<Container>& c) const {
+    const FieldSliceStart& a, const FieldSliceStart& b, const std::optional<Container>& c) const {
     const auto& [a_fs, a_idx] = a;
     const auto& [b_fs, b_idx] = b;
     const auto a_extracts = get_primitives(a_fs);
@@ -227,7 +227,7 @@ bool ParserPackingValidator::is_parser_error(const Field* f) const {
 
 const AllocError* ParserPackingValidator::can_pack(const FieldSliceStart& a,
                                                    const FieldSliceStart& b,
-                                                   const boost::optional<Container>& c) const {
+                                                   const std::optional<Container>& c) const {
     const auto* f_a = a.first.field();
     const auto* f_b = b.first.field();
     if (f_a != f_b && (is_parser_error(f_a) || is_parser_error(f_b))) {
@@ -249,7 +249,7 @@ const AllocError* ParserPackingValidator::can_pack(const FieldSliceStart& a,
 }
 
 const AllocError* ParserPackingValidator::can_pack(const FieldSliceAllocStartMap& alloc,
-                                                   const boost::optional<Container>& c) const {
+                                                   const std::optional<Container>& c) const {
     /// make sure that every pair of field slices can be packed.
     for (auto i = alloc.begin(); i != alloc.end(); ++i) {
         for (auto j = std::next(i); j != alloc.end(); ++j) {

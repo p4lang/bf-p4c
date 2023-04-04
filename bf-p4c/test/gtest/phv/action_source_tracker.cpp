@@ -1,6 +1,6 @@
+#include <optional>
 #include <type_traits>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/optional.hpp>
 #include "gtest/gtest.h"
 
 #include "ir/ir.h"
@@ -17,7 +17,7 @@ namespace Test {
 
 namespace ActionSourceTrackerTestNs {
 
-boost::optional<TofinoPipeTestCase>
+std::optional<TofinoPipeTestCase>
 createActionTest(const std::string& ingressPipeline,
                  const std::string& egressPipeline) {
     auto source = P4_SOURCE(P4Headers::V1MODEL, R"(

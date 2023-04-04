@@ -7,7 +7,7 @@ IR::BFN::ParserState* SplitGreedyParserStates::split_state(IR::BFN::ParserState*
     LOG4("  Greedy split for state " << state->name << " --> " << new_state_name);
     IR::Vector<IR::BFN::ParserPrimitive> first_statements;
     IR::Vector<IR::BFN::ParserPrimitive> last_statements;
-    boost::optional<bool> last_statements_partial_proc = boost::none;
+    std::optional<bool> last_statements_partial_proc = std::nullopt;
     int last_statements_shift_bits = 0;
 
     // Create "first" and "last" vectors and retrieve the last_statements_partial_proc
@@ -19,7 +19,7 @@ IR::BFN::ParserState* SplitGreedyParserStates::split_state(IR::BFN::ParserState*
     // Check if transitions refer to states that all have compatible
     // partial_hdr_err_proc values.
     //
-    boost::optional<bool> transitions_partial_proc = boost::none;
+    std::optional<bool> transitions_partial_proc = std::nullopt;
     auto transitions_verify = partial_hdr_err_proc_verify(nullptr, nullptr, &state->transitions,
                                                           &transitions_partial_proc);
 
@@ -127,14 +127,14 @@ IR::BFN::ParserState* SplitGreedyParserStates::split_state(IR::BFN::ParserState*
 void SplitGreedyParserStates::split_statements(
     const IR::Vector<IR::BFN::ParserPrimitive> in, IR::Vector<IR::BFN::ParserPrimitive>& first,
     IR::Vector<IR::BFN::ParserPrimitive>& last, int& last_statements_shift_bit,
-    boost::optional<bool>& last_statements_partial_proc) {
-    boost::optional<bool> curr_partial_proc = boost::none;
+    std::optional<bool>& last_statements_partial_proc) {
+    std::optional<bool> curr_partial_proc = std::nullopt;
     int curr_statements_shift_bit = 0;
 
     first.clear();
     last.clear();
     last_statements_shift_bit = 0;
-    last_statements_partial_proc = boost::none;
+    last_statements_partial_proc = std::nullopt;
 
     for (auto statement : in) {
         if (auto* extract = statement->to<IR::BFN::Extract>()) {
@@ -176,9 +176,9 @@ void SplitGreedyParserStates::split_statements(
 bool SplitGreedyParserStates::partial_hdr_err_proc_verify(
     const IR::Vector<IR::BFN::ParserPrimitive>* statements,
     const IR::Vector<IR::BFN::Select>* selects, const IR::Vector<IR::BFN::Transition>* transitions,
-    boost::optional<bool>* partial_proc_value = nullptr) {
-    boost::optional<bool> value = boost::none;
-    if (partial_proc_value) *partial_proc_value = boost::none;
+    std::optional<bool>* partial_proc_value = nullptr) {
+    std::optional<bool> value = std::nullopt;
+    if (partial_proc_value) *partial_proc_value = std::nullopt;
 
     if (statements) {
         for (auto statement : *statements) {
@@ -205,7 +205,7 @@ bool SplitGreedyParserStates::partial_hdr_err_proc_verify(
     if (transitions) {
         for (auto transition : *transitions) {
             if (auto next_state = transition->next) {
-                boost::optional<bool> v = boost::none;
+                std::optional<bool> v = std::nullopt;
                 if (partial_hdr_err_proc_verify(nullptr, &next_state->selects, nullptr, &v)) {
                     if (v) {
                         if (value && *value != *v) return false;

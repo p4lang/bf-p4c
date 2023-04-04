@@ -133,7 +133,7 @@ std::vector<ScAllocAlignment> make_slicelist_alignment(const SuperCluster* sc,
 
 }  // namespace
 
-boost::optional<ScAllocAlignment> ScAllocAlignment::merge(const ScAllocAlignment& other) const {
+std::optional<ScAllocAlignment> ScAllocAlignment::merge(const ScAllocAlignment& other) const {
     ScAllocAlignment rst;
     for (auto& alignment : std::vector<const ScAllocAlignment*>{this, &other}) {
         // may conflict
@@ -142,7 +142,7 @@ boost::optional<ScAllocAlignment> ScAllocAlignment::merge(const ScAllocAlignment
             const int start = cluster_start.second;
             if (rst.cluster_starts.count(cluster) &&
                 rst.cluster_starts[cluster] != start) {
-                return boost::none;
+                return std::nullopt;
             }
             rst.cluster_starts[cluster] = start;
         }

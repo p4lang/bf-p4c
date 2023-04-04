@@ -97,7 +97,7 @@ ConstrainedFieldMap ConstrainedFieldMapBuilder::buildMap(
             // so information about original reason can be lost
             Constraints::AlignmentConstraint alignment;
             alignment.addConstraint(
-                f.getAlignmentConstraint().getReason(), f.alignment.get().align);
+                f.getAlignmentConstraint().getReason(), f.alignment->align);
             result[f.name].setAlignment(alignment);
         }
 
@@ -122,7 +122,7 @@ ConstrainedFieldMap ConstrainedFieldMapBuilder::buildMap(
                 Constraints::AlignmentConstraint alignment;
                 alignment.addConstraint(
                     field.getAlignment().getReason(),
-                    slice.alignment().get().align);
+                    slice.alignment()->align);
                 csl.setAlignment(alignment);
             }
 

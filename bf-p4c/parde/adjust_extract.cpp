@@ -92,7 +92,7 @@ void AdjustExtract::postorder(IR::BFN::ParserState* state) {
                       aggregated[old_source_range.lo], aggregated[old_source_range.hi]);
             size_t n_paddings = aggregated[old_source_range.lo];
             auto* adjusted_extract = extract->clone();
-            adjusted_extract->marshaled_from = boost::none;
+            adjusted_extract->marshaled_from = std::nullopt;
             adjusted_extract->source =
                 new IR::BFN::PacketRVal(nw_bitrange(old_source_range.lo + n_paddings,
                                                     old_source_range.hi + n_paddings),
@@ -138,8 +138,8 @@ void AdjustExtract::postorder(IR::BFN::ParserState* state) {
 
 std::pair<size_t, size_t>
 AdjustExtract::calcPrePadding(const PHV::Field* field) {
-    auto post_padding = boost::make_optional<size_t>(false, 0);
-    auto pre_padding = boost::make_optional<size_t>(false, 0);
+    std::optional<size_t> post_padding = std::nullopt;
+    std::optional<size_t> pre_padding = std::nullopt;
     auto alloc = phv.get_alloc(field);
     for (auto& slice : alloc) {
         if (slice.width() != int(slice.container().size())) {

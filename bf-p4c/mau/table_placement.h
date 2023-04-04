@@ -219,9 +219,9 @@ class DecidePlacement : public MauInspector {
     std::map<cstring, std::set<int>> bt_attempts;
     void savePlacement(const Placed *, ordered_set<const GroupPlace *> &, bool);
     void recomputePartlyPlaced(const Placed *, ordered_set<const IR::MAU::Table *> &);
-    boost::optional<BacktrackPlacement&> find_previous_placement(const Placed *best, int offset,
-                                                                 bool local_bt, int process_stage);
-    boost::optional<BacktrackPlacement&> find_backtrack_point(const Placed *, int, bool);
+    std::optional<BacktrackPlacement*> find_previous_placement(const Placed *best, int offset,
+                                                               bool local_bt, int process_stage);
+    std::optional<BacktrackPlacement*> find_backtrack_point(const Placed *, int, bool);
     bool is_better(const Placed *, const Placed *, TablePlacement::choice_t &);
     int get_control_anti_split_adj_score(const Placed *) const;
     int longBranchTagsNeeded(const Placed *, const ordered_set<const GroupPlace *> &,

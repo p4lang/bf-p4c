@@ -211,7 +211,7 @@ bool Phv_Parde_Mau_Use::is_used_parde(const PHV::Field *f) const {    // use in 
     return use_pd;
 }
 
-bool Phv_Parde_Mau_Use::is_extracted(const PHV::Field *f, boost::optional<gress_t> gress) const {
+bool Phv_Parde_Mau_Use::is_extracted(const PHV::Field *f, std::optional<gress_t> gress) const {
     BUG_CHECK(f, "Null field");
     if (!gress)
         return extracted_i[INGRESS][f->id] || extracted_i[EGRESS][f->id];
@@ -220,7 +220,7 @@ bool Phv_Parde_Mau_Use::is_extracted(const PHV::Field *f, boost::optional<gress_
 }
 
 bool Phv_Parde_Mau_Use::is_extracted_from_pkt(const PHV::Field *f,
-        boost::optional<gress_t> gress) const {
+        std::optional<gress_t> gress) const {
     BUG_CHECK(f, "Null field");
     if (!gress)
         return extracted_from_pkt_i[INGRESS][f->id] || extracted_from_pkt_i[EGRESS][f->id];
@@ -229,7 +229,7 @@ bool Phv_Parde_Mau_Use::is_extracted_from_pkt(const PHV::Field *f,
 }
 
 bool Phv_Parde_Mau_Use::is_extracted_from_constant(const PHV::Field *f,
-        boost::optional<gress_t> gress) const {
+        std::optional<gress_t> gress) const {
     BUG_CHECK(f, "Null field");
     if (!gress)
         return extracted_from_const_i[INGRESS][f->id] || extracted_from_const_i[EGRESS][f->id];

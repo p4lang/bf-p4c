@@ -234,7 +234,7 @@ std::set<FreeSlice> LiveRangeSplit::buildContainerOccupancy(StageAndAccess begin
             containerEndStage = std::min(containerEndStage, PhvInfo::getDeparserStage() - 1);
         }
         ContainerOccupancy occupancy(containerStartStage, containerEndStage, container.size());
-        boost::optional<gress_t> containerGress;
+        std::optional<gress_t> containerGress;
         const Field *solitaryField = nullptr;
 
         // For each allocated slice in the container, find what stages
@@ -567,8 +567,8 @@ LiveRangeSplit::ContainerSequences LiveRangeSplit::findLiveRangeSplits(StageAndA
 LiveRangeSplit::ContainerSequences LiveRangeSplit::findLiveRangeSplits(const LiveRangeInfo &lri,
                                                                        const FieldSlice &fs) const {
     // Get StageAndAccess for live range start and end.
-    boost::optional<int> startStage = boost::none;
-    boost::optional<int> endStage = boost::none;
+    std::optional<int> startStage = std::nullopt;
+    std::optional<int> endStage = std::nullopt;
     LiveRangeInfo::OpInfo startOp = LiveRangeInfo::OpInfo::DEAD;
     LiveRangeInfo::OpInfo endOp = LiveRangeInfo::OpInfo::DEAD;
 

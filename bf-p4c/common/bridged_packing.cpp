@@ -2220,7 +2220,7 @@ PackFlexibleHeaders::PackFlexibleHeaders(const BFN_Options& options,
         new BFN::CollectHardwareConstrainedFields,
         new CheckForUnimplementedFeatures(),
         new RemoveEmptyControls,
-        // new MultipleApply(options, boost::none, false, false),
+        // new MultipleApply(options, std::nullopt, false, false),
         new AddSelectorSalu,
         new FixupStatefulAlu,
         new CollectHeaderStackInfo,  // Needed by CollectPhvInfo.
@@ -2313,7 +2313,7 @@ void CollectBridgedFieldsUse::postorder(const IR::MethodCallExpression* expr) {
         type_name != "Mirror")
         return;
 
-    boost::optional<gress_t> thread = boost::make_optional(false, gress_t());
+    std::optional<gress_t> thread = std::nullopt;
     auto parser = findContext<IR::BFN::TnaParser>();
     if (parser)
         thread = parser->thread;
@@ -2323,7 +2323,7 @@ void CollectBridgedFieldsUse::postorder(const IR::MethodCallExpression* expr) {
         thread = deparser->thread;
 
     // neither parser or deparser
-    if (thread == boost::none)
+    if (thread == std::nullopt)
         return;
 
     // expected number of argument

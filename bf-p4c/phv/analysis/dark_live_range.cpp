@@ -253,9 +253,9 @@ void DarkLiveRange::end_apply() {
 
 // Returns pair of {READ, WRITE} accesses per stage for the slices in @fields
 // If more than one slice have the same access in the same stage, return
-// boost::none
+// std::nullopt
 // ---
-boost::optional<DarkLiveRange::ReadWritePair> DarkLiveRange::getFieldsLiveAtStage(
+std::optional<DarkLiveRange::ReadWritePair> DarkLiveRange::getFieldsLiveAtStage(
         const ordered_set<PHV::AllocSlice>& fields,
         const int stage) const {
     const PHV::AllocSlice* readField = nullptr;
@@ -268,7 +268,7 @@ boost::optional<DarkLiveRange::ReadWritePair> DarkLiveRange::getFieldsLiveAtStag
         if (sl.container().is(PHV::Kind::dark)) {
             if (found_dark_slice) {
                 LOG_DEBUG4("Warning: Found more than one dark slices");
-                return boost::none;
+                return std::nullopt;
             }
 
             found_dark_slice = true;
@@ -283,7 +283,7 @@ boost::optional<DarkLiveRange::ReadWritePair> DarkLiveRange::getFieldsLiveAtStag
                 // to overlay with packed fields that have smae-stage READs
                 LOG_DEBUG4("Slices " << readField << " and " << sl << " both read in stage "
                            << ((stage == DEPARSER) ? "deparser" : std::to_string(stage)));
-                return boost::none;
+                return std::nullopt;
             }
             readField = &sl;
         }
@@ -291,7 +291,7 @@ boost::optional<DarkLiveRange::ReadWritePair> DarkLiveRange::getFieldsLiveAtStag
             if (writtenField != nullptr) {
                 LOG_DEBUG4("Slices " << writtenField << " and " << sl << " both written in stage "
                            << stage);
-                return boost::none;
+                return std::nullopt;
             }
             writtenField = &sl;
         }
@@ -335,7 +335,7 @@ bool DarkLiveRange::validateLiveness(const OrderedFieldSummary& rv) const {
     return true;
 }
 
-boost::optional<DarkLiveRange::OrderedFieldSummary> DarkLiveRange::produceFieldsInOrder(
+std::optional<DarkLiveRange::OrderedFieldSummary> DarkLiveRange::produceFieldsInOrder(
     const ordered_set<PHV::AllocSlice>& slices, bool &onlyReadRefs) const {
     LOG_DEBUG5("Producing slices in order : " << slices);
     OrderedFieldSummary rv;
@@ -344,7 +344,7 @@ boost::optional<DarkLiveRange::OrderedFieldSummary> DarkLiveRange::produceFields
     const PHV::AllocSlice* lastField = nullptr;
     for (int i = -1; i <= DEPARSER; i++) {
         auto fieldsLiveAtStage = getFieldsLiveAtStage(slices, i);
-        if (!fieldsLiveAtStage) return boost::none;
+        if (!fieldsLiveAtStage) return std::nullopt;
         if (fieldsLiveAtStage->first != nullptr) {
             // Update ParsedOnlySlices
             for (auto itr = ParsedOnlySlices.begin(); itr != ParsedOnlySlices.end();) {
@@ -402,7 +402,7 @@ boost::optional<DarkLiveRange::OrderedFieldSummary> DarkLiveRange::produceFields
         LOG_DEBUG5(ss.str());
     }
 
-    if (!validateLiveness(rv)) return boost::none;
+    if (!validateLiveness(rv)) return std::nullopt;
     if (ParsedOnlySlices.size() == 0) {
         return rv;
     }
@@ -414,7 +414,7 @@ boost::optional<DarkLiveRange::OrderedFieldSummary> DarkLiveRange::produceFields
     OrderedFieldSummary rv2;
 
     auto fieldsLiveAtStage = getFieldsLiveAtStage(ParsedOnlySlices, -1);
-    if (!fieldsLiveAtStage) return boost::none;
+    if (!fieldsLiveAtStage) return std::nullopt;
 
     if (fieldsLiveAtStage) {
         if (fieldsLiveAtStage->first != nullptr) {
@@ -539,7 +539,7 @@ bool DarkLiveRange::nonOverlaidWrites(
     const PHV::Container c,
     bool onlyReadCandidates) const {
     bool rv = false;
-    auto overlay_range = boost::make_optional(false, le_bitrange());
+    std::optional<le_bitrange> overlay_range = std::nullopt;
 
     // if the AllocSlices in @fields are taking the entire container then
     // there are no non-overlaid writes, i.e. all slices should be
@@ -576,7 +576,7 @@ bool DarkLiveRange::nonOverlaidWrites(
     return rv;
 }
 
-boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
+std::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
         const PHV::ContainerGroup& group,
         const PHV::Container& c,
         const ordered_set<PHV::AllocSlice>& fields,
@@ -587,7 +587,7 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
     // find dominator nodes for use nodes of those fields), then return false early.
     for (const auto& sl : fields)
         if (doNotInitToDark.count(sl.field()))
-            return boost::none;
+            return std::nullopt;
     // iterate over stages. gather the stages where each of the slices are alive
     // for initialization, we move pairwise between fields in the container (in increasing order of
     // liveness, where increasing means use in larger stage numbers). find the initialization point
@@ -597,14 +597,14 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
     // overlay mixes with parser overlay and metadata overlay due to live range shrinking.
     bool onlyReadCandidates = true;
     auto fieldsInOrder = produceFieldsInOrder(fields, onlyReadCandidates);
-    if (!fieldsInOrder) return boost::none;
+    if (!fieldsInOrder) return std::nullopt;
 
     // For mocha containers check whether there are writes in
     // non-overlaid container slices; We should not allow overlays then
     if (c.is(PHV::Kind::mocha) && nonOverlaidWrites(fields, alloc, c, onlyReadCandidates)) {
         LOG_FEATURE("alloc_progress", 5, TAB2 "Cannot overlay because container is mocha "
             " and there are writes in non-overlaid container slices");
-        return boost::none;
+        return std::nullopt;
     }
 
     const OrderedFieldInfo* lastField = nullptr;
@@ -671,7 +671,7 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
                 if (!ignoreReach) {
                     LOG_FEATURE("alloc_progress", 6, TAB3
                                 "Yes. Therefore, move to dark not possible.");
-                    return boost::none;
+                    return std::nullopt;
                 }
             }
             LOG_DEBUG2(TAB3 "No. Trying to find an initialization node.");
@@ -733,7 +733,7 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
             if (hasParserUse(f_nodes)) {
                 LOG_FEATURE("alloc_progress", 5, TAB2 "Defuse units of field " << info.field <<
                             " includes the parser. Cannot find initialization point.");
-                return boost::none;
+                return std::nullopt;
             }
             // Check if any of the units referencing the current
             // candidate field are part of the trimmed dominator nodes
@@ -795,7 +795,7 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
             if (onlyDeparserUse && initializeFromDark) {
                 LOG_DEBUG4(TAB2 "   Trying to initialize from dark for deparser-only use");
                 auto init = generateInitForLastStageAlwaysInit(info, lastField, rv);
-                if (!init) return boost::none;
+                if (!init) return std::nullopt;
                 rv.push_back(*init);
                 continue;
             } else if ((fieldsInOrder->size() == 2) && (idx == 1) && canUseARA) {
@@ -818,7 +818,7 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
                 if (onlyDeparserUse) {
                     LOG_FEATURE("alloc_progress", 5, TAB2 "Currently doesn't support"
                                 " initialization from 0 in always init block.");
-                    return boost::none;
+                    return std::nullopt;
                 }
                 LOG_DEBUG4(TAB3 "Did not generate ARA for zero Init, will try using dominator"
                            " table ...");
@@ -834,7 +834,7 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
         if (!ARAspill && groupDominator == nullptr) {
             LOG_FEATURE("alloc_progress", 5, TAB2 "Cannot find group dominator to write " <<
                         lastField->field << " into a dark container.");
-            return boost::none;
+            return std::nullopt;
         }
 
         // ALEX:
@@ -856,7 +856,7 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
                             " stage ("<< dg.min_stage(groupDominator) << ") is before the last "
                            "use of the previous field (" << lastField->maxStage.first
                            << lastField->maxStage.second << ")");
-                return boost::none;
+                return std::nullopt;
             }
 
             // Check that the initialization point cannot reach the units using the last field.
@@ -871,7 +871,7 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
                         LOG_FEATURE("alloc_progress", 5, TAB2 "Cannot find initialization point"
                                     " because group dominator can reach one of the uses of the "
                                     "last field " << lastField->field);
-                        return boost::none;
+                        return std::nullopt;
                     }
                 }
 
@@ -945,7 +945,7 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
                     if (ARAspill) {
                         LOG_FEATURE("alloc_progress", 5, "Did not find any initialization points"
                             " using ARA.");
-                        return boost::none;
+                        return std::nullopt;
                     } else {
                         LOG_FEATURE("alloc_progress", 5, TAB2 "Did not get an initialization "
                                     "dominator; need to move up in the flow graph.");
@@ -967,11 +967,11 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
             if (!newGroupDominator) {
                 LOG_FEATURE("alloc_progress", 5, TAB2 "Could not find an initialization points "
                             "for previous field " << lastField->field);
-                return boost::none;
+                return std::nullopt;
             } else if (*newGroupDominator == groupDominator) {
                 LOG_FEATURE("alloc_progress", 5, TAB2 "Reached the beginning of the flow graph."
                             " Cannot initialize previous field " << lastField->field);
-                return boost::none;
+                return std::nullopt;
             } else {
                 groupDominator = *newGroupDominator;
                 LOG_DEBUG2(TAB2 "Setting new group dominator to " << DBPrint::Brief
@@ -1013,7 +1013,7 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
 // Difference between LiveRangeShrinking and DarkOverlay is that live range shrinking initializes
 // the current field, whereas DarkOverlay moves the previous field to dark and brings the current
 // field into a normal container (2 initializations potentially).
-boost::optional<PHV::DarkInitMap> DarkLiveRange::getInitPointsForTable(
+std::optional<PHV::DarkInitMap> DarkLiveRange::getInitPointsForTable(
         const PHV::ContainerGroup& group,
         const PHV::Container& c,
         const IR::MAU::Table* t,
@@ -1043,7 +1043,7 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::getInitPointsForTable(
         if (initializeCurrentField)
             currentMutexSatisfied = mutexSatisfied(currentField, t);
 
-        if (!lastMutexSatisfied || !currentMutexSatisfied) return boost::none;
+        if (!lastMutexSatisfied || !currentMutexSatisfied) return std::nullopt;
     }
 
     PHV::DarkInitEntry* prevSlice = nullptr;
@@ -1053,14 +1053,14 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::getInitPointsForTable(
     // ALEX: In the future we may want to use regular actions for spills to dark
     //       So we will need to add logic to determine useARA
 
-    boost::optional<PHV::DarkInitEntry*> darkFieldInit = boost::none;
-    boost::optional<PHV::DarkInitEntry*> currentFieldInit = boost::none;
+    std::optional<PHV::DarkInitEntry*> darkFieldInit = std::nullopt;
+    std::optional<PHV::DarkInitEntry*> currentFieldInit = std::nullopt;
 
     // Check if moving lastField to dark container (if required) is possible.
     if (moveLastFieldToDark) {
         darkFieldInit = getInitForLastFieldToDark(c, group, t, lastField, alloc,
                                                   currentField, useARA);
-        if (!darkFieldInit) return boost::none;
+        if (!darkFieldInit) return std::nullopt;
         LOG_DEBUG3(TAB3 "A. Creating" << (useARA ? " ARA " : " non-ARA ") << " dark init "
                    "primitive for moving last field to dark : " << **darkFieldInit);
 
@@ -1151,7 +1151,7 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::getInitPointsForTable(
         }
     }
 
-    if (!currentFieldInit) return boost::none;
+    if (!currentFieldInit) return std::nullopt;
 
     if (darkFieldInit) {
         if (useARA) {
@@ -1175,7 +1175,7 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::getInitPointsForTable(
     return rv;
 }
 
-boost::optional<PHV::ActionSet> DarkLiveRange::getInitActions(
+std::optional<PHV::ActionSet> DarkLiveRange::getInitActions(
         const PHV::Container& c,
         const OrderedFieldInfo& field,
         const IR::MAU::Table* t,
@@ -1193,7 +1193,7 @@ boost::optional<PHV::ActionSet> DarkLiveRange::getInitActions(
         if (cannotInitInAction(c, act, alloc)) {
             LOG_FEATURE("alloc_progress", 5, TAB3 "Cannot init " << field.field <<
                         " in do not init action " << act->name);
-            return boost::none;
+            return std::nullopt;
         }
         if (actionConstraints.written_in(field.field, act)) {
             LOG5("\tB. Field " << field.field << " already written in action " << act->name <<
@@ -1216,7 +1216,7 @@ boost::optional<PHV::ActionSet> DarkLiveRange::getInitActions(
                             " as a node for moving "
                             << field.field << " because it is mutually exclusive with slice "
                            << g << " read by action " << act->name);
-                return boost::none;
+                return std::nullopt;
             }
         }
         for (const auto& g : actionWrites) {
@@ -1225,7 +1225,7 @@ boost::optional<PHV::ActionSet> DarkLiveRange::getInitActions(
                             " as a node for moving " << field.field <<
                             " because it is mutually exclusive with slice "
                            << g << " written by action " << act->name);
-                return boost::none;
+                return std::nullopt;
             }
         }
         moveActions.insert(act);
@@ -1238,7 +1238,7 @@ boost::optional<PHV::ActionSet> DarkLiveRange::getInitActions(
     return moveActions;
 }
 
-boost::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForLastFieldToDark(
+std::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForLastFieldToDark(
         const PHV::Container& c,
         const PHV::ContainerGroup& group,
         const IR::MAU::Table* t,
@@ -1249,10 +1249,10 @@ boost::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForLastFieldToDark(
     // Find out all the actions in table t, where we need to insert moves into the dark container.
     // DXm[a...b] = Xn[a...b]
     // ALEX: Only need to do this for non ARA move-to-dark inits
-    boost::optional<PHV::ActionSet> moveActions;
+    std::optional<PHV::ActionSet> moveActions;
     if (!useARA) {
         moveActions = getInitActions(c, prvField, t, alloc);
-        if (!moveActions) return boost::none;
+        if (!moveActions) return std::nullopt;
     } else {
         if ((prvField.maxStage.first >= (curField.minStage.first)) ||
             ((prvField.maxStage.first == (curField.minStage.first - 1)) &&
@@ -1260,7 +1260,7 @@ boost::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForLastFieldToDark(
             LOG_FEATURE("alloc_progress", 5, TAB3 "Cannot do ARA spill due to slice liveranges: "
                     "previousMax(" << prvField.maxStage << ") currentMin(" << curField.minStage
                     << ")");
-            return boost::none;
+            return std::nullopt;
         }
     }
 
@@ -1274,7 +1274,7 @@ boost::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForLastFieldToDark(
     if (darkCandidate == PHV::Container()) {
         LOG_FEATURE("alloc_progress", 5, TAB3 "Could not find a dark container to move field "
                    << prvField.field << " into");
-        return boost::none;
+        return std::nullopt;
     }
     LOG_DEBUG5(TAB3 "Best container for dark: " << darkCandidate);
 
@@ -1310,12 +1310,12 @@ boost::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForLastFieldToDark(
     }
 }
 
-boost::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForCurrentFieldWithZero(
+std::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForCurrentFieldWithZero(
         const PHV::Container& c,
         const IR::MAU::Table* t,
         const OrderedFieldInfo& field,
         const PHV::Transaction& alloc,
-        boost::optional<PHV::DarkInitEntry*> drkInit,
+        std::optional<PHV::DarkInitEntry*> drkInit,
         bool useARA) const {
     // TODO:
     // Check if any pack conflicts are violated.
@@ -1327,10 +1327,10 @@ boost::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForCurrentFieldWithZe
     // Find out all actions in table t, where we need to initialize @field to 0 in container @c.
     // c[a...b] = 0
     // ALEX: Use initAction for non-ARA primitives
-    boost::optional<PHV::ActionSet> initActions;
+    std::optional<PHV::ActionSet> initActions;
     if (!useARA) {
         initActions = getInitActions(c, field, t, alloc);
-        if (!initActions) return boost::none;
+        if (!initActions) return std::nullopt;
     }
 
     PHV::AllocSlice dstSlice(field.field);
@@ -1363,7 +1363,7 @@ boost::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForCurrentFieldWithZe
     }
 }
 
-boost::optional<PHV::DarkInitEntry>
+std::optional<PHV::DarkInitEntry>
 DarkLiveRange::generateInitForLastStageAlwaysInit(
         const OrderedFieldInfo& field,
         const OrderedFieldInfo* prvField,
@@ -1397,10 +1397,10 @@ DarkLiveRange::generateInitForLastStageAlwaysInit(
         }
     }
     BUG("Did not find allocation for slice %1% in a dark container", field.field);
-    return boost::none;
+    return std::nullopt;
 }
 
-boost::optional<PHV::DarkInitEntry>
+std::optional<PHV::DarkInitEntry>
 DarkLiveRange::generateARAzeroInit(
         const OrderedFieldInfo& field,
         const OrderedFieldInfo* prvField,
@@ -1440,7 +1440,7 @@ DarkLiveRange::generateARAzeroInit(
     if ((field.minStage.first - initStage) < 1) {
         LOG_FEATURE("alloc_progress", 5, TAB2 "No stage for ARA zero-init. Prev maxStage:" <<
                     prvField->maxStage << "  Cur minStage:" << field.minStage);
-        return boost::none;
+        return std::nullopt;
     }
 
     if (onlyDeparserUse) {
@@ -1455,14 +1455,14 @@ DarkLiveRange::generateARAzeroInit(
     return rv;
 }
 
-boost::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForCurrentFieldFromDark(
+std::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForCurrentFieldFromDark(
         const PHV::Container& c,
         const IR::MAU::Table* t,
         const OrderedFieldInfo& field,
         PHV::DarkInitMap& initMap,
         const PHV::Transaction& alloc) const {
     auto initActions = getInitActions(c, field, t, alloc);
-    if (!initActions) return boost::none;
+    if (!initActions) return std::nullopt;
     // Start from the last element in the initMap vector, and find the latest AllocSlice that
     // matches the field slice for the current field.
     PHV::AllocSlice dstSlice(field.field);
@@ -1501,7 +1501,7 @@ boost::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForCurrentFieldFromDa
         }
     }
     BUG("Did not find allocation for slice %1% in a dark container", field.field);
-    return boost::none;
+    return std::nullopt;
 }
 
 const PHV::Container DarkLiveRange::getBestDarkContainer(
@@ -1701,24 +1701,24 @@ cstring DarkLiveRangeMap::printDarkLiveRanges() const {
     return ss.str();
 }
 
-boost::optional<PHV::StageAndAccess>
+std::optional<PHV::StageAndAccess>
 DarkLiveRangeMap::getEarliestAccess(const PHV::Field *f) const {
     if (!count(f)) {
-        return boost::none;
+        return std::nullopt;
     }
     const auto &keys = Keys(at(f));
     auto min = std::min_element(keys.begin(), keys.end());
-    return min == keys.end() ? boost::none : boost::optional<PHV::StageAndAccess>(*min);
+    return min == keys.end() ? std::nullopt : std::optional<PHV::StageAndAccess>(*min);
 }
 
-boost::optional<PHV::StageAndAccess>
+std::optional<PHV::StageAndAccess>
 DarkLiveRangeMap::getLatestAccess(const PHV::Field *f) const {
     if (!count(f)) {
-        return boost::none;
+        return std::nullopt;
     }
     const auto &keys = Keys(at(f));
     auto max = std::max_element(keys.begin(), keys.end());
-    return max == keys.end() ? boost::none : boost::optional<PHV::StageAndAccess>(*max);
+    return max == keys.end() ? std::nullopt : std::optional<PHV::StageAndAccess>(*max);
 }
 
 bool DarkOverlay::suitableForDarkOverlay(const PHV::AllocSlice& slice) const {

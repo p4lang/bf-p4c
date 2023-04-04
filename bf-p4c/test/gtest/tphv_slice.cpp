@@ -1,5 +1,5 @@
+#include <optional>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/optional.hpp>
 #include "gtest/gtest.h"
 
 #include "ir/ir.h"
@@ -16,7 +16,7 @@ class TPHVSliceTest : public TofinoBackendTest {};
 
 namespace {
 
-boost::optional<TofinoPipeTestCase> createTPHVSliceTestCase() {
+std::optional<TofinoPipeTestCase> createTPHVSliceTestCase() {
     auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
         header H1 {
             bit<16> f1;

@@ -1,5 +1,5 @@
+#include <optional>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/optional.hpp>
 
 #include "gtest/gtest.h"
 
@@ -25,7 +25,7 @@ namespace {
 #define  FABRIC_PKT_TYPE_IP   (0x05)
 
 
-boost::optional<TofinoPipeTestCase>
+std::optional<TofinoPipeTestCase>
 createStaticEntriesConstPropTestCase(const std::string &ingress_source) {
     auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
         header ipv4_t {

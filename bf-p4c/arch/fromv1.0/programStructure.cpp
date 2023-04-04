@@ -374,7 +374,7 @@ generate_tna_hash_block_statement(P4V1::TnaProgramStructure* structure,
     // the same name with the field-list-calculation, typeChecker incorrect infers
     // the primitive parameter with the type of the table, instead of the type
     // of the field-list-calculation.
-    boost::optional<cstring> name = boost::none;
+    std::optional<cstring> name = std::nullopt;
     if (auto pe = prim->operands.at(flc_offset)->to<IR::PathExpression>()) {
         name = pe->path->name;
     } else if (auto tbl = prim->operands.at(flc_offset)->to<IR::V1Table>()) {
@@ -384,7 +384,7 @@ generate_tna_hash_block_statement(P4V1::TnaProgramStructure* structure,
             name = tbl->name;
         }
     }
-    auto flc = (name != boost::none)? structure->field_list_calculations.get(*name) : nullptr;
+    auto flc = (name != std::nullopt)? structure->field_list_calculations.get(*name) : nullptr;
     if (!flc) {
         error("%s: Expected a field_list_calculation", prim->operands.at(flc_offset));
         return nullptr; }
@@ -1661,7 +1661,7 @@ void TnaProgramStructure::createParser() {
 // add 'mirror_source' to the beginning of the field list
 const IR::StatOrDecl*
 TnaProgramStructure::createDigestEmit(cstring headerType, unsigned index,
-        std::pair<boost::optional<cstring>, const IR::Expression*> field_list,
+        std::pair<std::optional<cstring>, const IR::Expression*> field_list,
         cstring intr_md, cstring ext_name, cstring selector) {
     const IR::Member* member;
     auto typeArgs = new IR::Vector<IR::Type>();
@@ -1767,7 +1767,7 @@ void TnaProgramStructure::createIngressDeparser() {
         auto typeArgs = new IR::Vector<IR::Type>();
         typeArgs->push_back(new IR::Type_Name(IR::ID(typeName)));
         auto declType = new IR::Type_Specialized(new IR::Type_Name("Digest"), typeArgs);
-        BUG_CHECK(digest.second.first != boost::none, "digest field list name cannot be empty");
+        BUG_CHECK(digest.second.first != std::nullopt, "digest field list name cannot be empty");
         auto fl_name = *digest.second.first;
         auto annot = new IR::Annotations();
         auto annos = addGlobalNameAnnotation(fl_name, annot);
@@ -2256,9 +2256,9 @@ void TnaProgramStructure::getStructFieldsFromFieldList(
 
 void TnaProgramStructure::createDigestHeaderTypeAndInstance(unsigned index,
         const IR::Expression* expr, cstring name,
-        boost::optional<IR::IndexedVector<IR::StructField>> tagFields) {
+        std::optional<IR::IndexedVector<IR::StructField>> tagFields) {
     auto fields = new IR::IndexedVector<IR::StructField>();
-    if (tagFields != boost::none)
+    if (tagFields != std::nullopt)
         fields->append(*tagFields);
     auto list = expr->to<IR::ListExpression>();
     BUG_CHECK(list != nullptr, "expected list for digest field list, not %1%", expr);
@@ -2328,7 +2328,7 @@ void TnaProgramStructure::collectDigestFields() {
 
     for (auto d : digestFieldLists["generate_digest"]) {
         LOG3("generate digest " << d.first << " " << d.second.second);
-        createDigestHeaderTypeAndInstance(d.first, d.second.second, "digest_header_", boost::none);
+        createDigestHeaderTypeAndInstance(d.first, d.second.second, "digest_header_", std::nullopt);
     }
 }
 
@@ -2635,7 +2635,7 @@ IR::Expression* CollectDigestFields::flatten(const IR::ListExpression* args) {
 void CollectDigestFields::convertFieldList(const IR::Primitive* prim, size_t fieldListIndex,
         std::map<unsigned long, unsigned>& indexHashes, bool reserve_entry_zero = false) {
     const IR::Expression* list;
-    boost::optional<cstring> name = boost::make_optional(false, cstring());
+    std::optional<cstring> name = std::nullopt;
     BUG_CHECK(prim->operands.size() <= fieldListIndex,
             "Unexpected number of operands for %1%", prim);
     if (prim->operands.size() == fieldListIndex) {
@@ -2649,7 +2649,7 @@ void CollectDigestFields::convertFieldList(const IR::Primitive* prim, size_t fie
         }
     } else {
         list = new IR::ListExpression({});
-        name = boost::none;
+        name = std::nullopt;
     }
 
     LOG3("Assigned " << prim->name << " field list " << list);

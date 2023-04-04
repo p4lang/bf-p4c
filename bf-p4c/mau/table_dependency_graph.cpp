@@ -251,8 +251,8 @@ void DependencyGraph::dump_viz(std::ostream &out, const DependencyGraph &dg) {
     auto edgeName = [dg](const IR::MAU::Table *source, const IR::MAU::Table *dest) {
         auto depInfo = dg.get_data_dependency_info(source, dest);
         cstring res("");
-        if (depInfo == boost::none) return res;
-        for (auto d : depInfo.get()) {
+        if (depInfo == std::nullopt) return res;
+        for (auto d : depInfo.value()) {
             // the PHV field name
             res += d.first.first->name + "\n";
         }
@@ -622,7 +622,7 @@ void DependencyGraph::to_json(Util::JsonObject* dgsJson, const FlowGraph &fg,
                 || is_anti_edge(edge.label)) {
             auto deps = get_data_dependency_info(*edges);
             if (deps) {
-                auto local_data = deps.get();
+                auto local_data = deps.value();
                 for (const auto& kv : local_data) {
                     edge.add_dep_field(kv.first);
                 }
@@ -630,7 +630,7 @@ void DependencyGraph::to_json(Util::JsonObject* dgsJson, const FlowGraph &fg,
         } else if (is_ctrl_edge(edge.label)) {
             if (edge.label == DependencyGraph::CONTROL_ACTION) {
                 auto edge_data = get_ctrl_dependency_info(*edges);
-                   edge.action_name = edge_data.get();
+                   edge.action_name = edge_data.value();
             }
         }
 
@@ -1319,18 +1319,18 @@ bool DependencyGraph::is_edge_critical(typename Graph::edge_descriptor e) const 
     return false;
 }
 
-boost::optional<ordered_map<
+std::optional<ordered_map<
     std::pair<const PHV::Field *, DependencyGraph::dependencies_t>,
     std::pair<ordered_set<const IR::MAU::Action *>, ordered_set<const IR::MAU::Action *>>>>
 DependencyGraph::get_data_dependency_info(const IR::MAU::Table *upstream,
                                           const IR::MAU::Table *downstream) const {
     if (!labelToVertex.count(upstream)) {
         LOG4("Upstream vertex " << upstream->name << " not found in graph");
-        return boost::none;
+        return std::nullopt;
     }
     if (!labelToVertex.count(downstream)) {
         LOG4("Downstream vertex " << downstream->name << "not found in graph");
-        return boost::none;
+        return std::nullopt;
     }
     auto upstream_v = labelToVertex.at(upstream);
     typename Graph::out_edge_iterator out, end;
@@ -1345,8 +1345,8 @@ DependencyGraph::get_data_dependency_info(const IR::MAU::Table *upstream,
             found_downstream = true;
             auto edge_type = g[*out];
             auto local_data_opt = get_data_dependency_info(*out);
-            if (!local_data_opt) return boost::none;
-            auto local_data = local_data_opt.get();
+            if (!local_data_opt) return std::nullopt;
+            auto local_data = local_data_opt.value();
             for (const auto &kv : local_data) {
                 gathered_data[{kv.first, edge_type}].first |= local_data[kv.first].first;
                 gathered_data[{kv.first, edge_type}].second |= local_data[kv.first].second;
@@ -1355,7 +1355,7 @@ DependencyGraph::get_data_dependency_info(const IR::MAU::Table *upstream,
     }
     if (!found_downstream) {
         LOG4("Edge not found between tables " << upstream->name << ", " << downstream->name);
-        return boost::none;
+        return std::nullopt;
     }
     return gathered_data;
 }

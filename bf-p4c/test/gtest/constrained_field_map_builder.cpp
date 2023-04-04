@@ -45,9 +45,9 @@ TEST_F(ConstrainedFieldMapBuilderTest, ShouldInitializeFields) {
 
 TEST_F(ConstrainedFieldMapBuilderTest, ShouldInitializeSlices) {
     // Setup superclusters
-    boost::optional<PHV::SuperCluster*> sc1 = scb.build_super_cluster(SUPERCLUSTER);
+    std::optional<PHV::SuperCluster*> sc1 = scb.build_super_cluster(SUPERCLUSTER);
     if (!sc1) FAIL() << "Failed to build the supercluster!";
-    superclusters.push_back(sc1.get());
+    superclusters.push_back(*sc1);
 
     // Compute map
     fields = ConstrainedFieldMapBuilder::buildMap(phv, superclusters);
@@ -92,9 +92,9 @@ TEST_F(ConstrainedFieldMapBuilderTest, ShouldInitializeFieldConstraints) {
 
 TEST_F(ConstrainedFieldMapBuilderTest, ShouldInitializeSliceConstraints) {
     // Setup superclusters
-    boost::optional<PHV::SuperCluster*> sc1 = scb.build_super_cluster(SUPERCLUSTER);
+    std::optional<PHV::SuperCluster*> sc1 = scb.build_super_cluster(SUPERCLUSTER);
     if (!sc1) FAIL() << "Failed to build the supercluster!";
-    superclusters.push_back(sc1.get());
+    superclusters.push_back(*sc1);
 
     // Additional setup
     auto field = phv.field("ingress::hdr.test");

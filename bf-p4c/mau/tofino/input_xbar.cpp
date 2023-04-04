@@ -1505,7 +1505,6 @@ bool IXBar::FindSaluSources::preorder(const IR::MAU::SaluAction *a) {
 }
 
 bool IXBar::FindSaluSources::preorder(const IR::Expression *e) {
-    boost::optional<cstring> aliasSourceName = phv.get_alias_name(e);
     le_bitrange bits;
     KeyInfo ki;
     if (auto *finfo = phv.field(e, &bits)) {
@@ -2367,7 +2366,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
             add_use(map_alloc, info.first.field(), phv, tbl, aliasSourceName,
                     &info.first.range(), flags, NO_BYTE_TYPE);
         else
-            add_use(map_alloc, info.first.field(), phv, tbl, boost::none,
+            add_use(map_alloc, info.first.field(), phv, tbl, std::nullopt,
                     &info.first.range(), flags, NO_BYTE_TYPE);
     }
     safe_vector<IXBar::Use::Byte *> xbar_alloced;
@@ -2703,7 +2702,7 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const IR::MAU::Table *tbl, con
     ContByteConversion map_alloc;
     safe_vector<IXBar::Use::Byte *> alloced;
     std::set<cstring> fields_needed;
-    boost::optional<cstring> aliasSourceName = phv.get_alias_name(mtr->input);
+    std::optional<cstring> aliasSourceName = phv.get_alias_name(mtr->input);
     le_bitrange bits;
 
     auto *finfo = phv.field(mtr->input, &bits);
@@ -3356,7 +3355,7 @@ void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &
             = { post_expand_sect_bv.min().index(), post_expand_sect_bv.max().index() };
         auto boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
                             (alloc_req.bits_in_use.intersectWith(post_expand_sect));
-        if (boost_sl == boost::none)
+        if (boost_sl == std::nullopt)
             continue;
         le_bitrange overlap = *boost_sl;
 
@@ -3718,7 +3717,7 @@ IXBar::P4HashFunction IXBar::P4HashFunction::split(le_bitrange split) const {
             le_bitrange current_bits = { bits_seen, bits_seen + expr->type->width_bits() - 1 };
             auto boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
                                  (split.intersectWith(split));
-            if (boost_sl == boost::none) {
+            if (boost_sl == std::nullopt) {
                 bits_seen += expr->type->width_bits();
                 continue;
             }
@@ -3849,7 +3848,7 @@ void IXBar::XBarHashDist::immediate_inputs() {
             le_bitrange immed_impact = { i * HASH_DIST_BITS, (i+1) * HASH_DIST_BITS - 1 };
             auto boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
                                 (immed_range.intersectWith(immed_impact));
-            if (boost_sl == boost::none)
+            if (boost_sl == std::nullopt)
                 continue;
             le_bitrange overlap = *boost_sl;
             int hash_bits_shift = (-1 * pos.first);

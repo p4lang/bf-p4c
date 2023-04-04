@@ -24,7 +24,7 @@ bool Parameter::can_overlap_ranges(le_bitrange my_range, le_bitrange ad_range,
         le_bitrange &overlap, le_bitrange *my_overlap, le_bitrange *ad_overlap) const {
     auto boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
                         (my_range.intersectWith(ad_range));
-    if (boost_sl == boost::none) return false;
+    if (boost_sl == std::nullopt) return false;
     overlap = *boost_sl;
     if (my_overlap) {
         auto ov_boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
@@ -61,7 +61,7 @@ const Parameter *Argument::overlap(const Parameter *ad, bool,
     if (!equiv_cond(ad)) return nullptr;
     auto boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
                         (_param_field.intersectWith(arg->_param_field));
-    if (boost_sl == boost::none) return nullptr;
+    if (boost_sl == std::nullopt) return nullptr;
     le_bitrange overlap = *boost_sl;
     auto rv = new Argument(_name, overlap);
     if (my_overlap) {

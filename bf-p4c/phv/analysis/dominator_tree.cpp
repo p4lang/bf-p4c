@@ -141,26 +141,26 @@ void BuildDominatorTree::printDominatorTree(const ImmediateDominatorMap& idom) c
     }
 }
 
-boost::optional<const IR::MAU::Table*>
+std::optional<const IR::MAU::Table*>
 BuildDominatorTree::getImmediateDominator(const IR::MAU::Table* t, gress_t gress) const {
     cstring tableName = (t == NULL) ? "deparser" : t->name;
     BUG_CHECK(iDominator.count(gress) > 0, "Invalid gress %1% for table %2%", gress, tableName);
     const ImmediateDominatorMap* iDom = iDominator.at(gress);
-    if (!iDom->count(t)) return boost::none;
+    if (!iDom->count(t)) return std::nullopt;
     return iDom->at(t);
 }
 
-boost::optional<const IR::MAU::Table*>
+std::optional<const IR::MAU::Table*>
 BuildDominatorTree::getNonGatewayImmediateDominator(const IR::MAU::Table* t, gress_t gress) const {
     cstring tableName = (t == NULL) ? "deparser" : t->name;
     BUG_CHECK(iDominator.count(gress) > 0, "Invalid gress %1% for table %2%", gress, tableName);
     auto dom = getImmediateDominator(t, gress);
-    if (!dom) return boost::none;
+    if (!dom) return std::nullopt;
     // If the table is not a gateway, then return the immediate dominator itself.
     if (!((*dom)->conditional_gateway_only())) return (*dom);
     // If the table is the same as its dominator then we are at the source node and if the source
-    // node is a gateway, then return boost::none.
-    if ((*dom)->conditional_gateway_only() && t == *dom) return boost::none;
+    // node is a gateway, then return std::nullopt.
+    if ((*dom)->conditional_gateway_only() && t == *dom) return std::nullopt;
     return getNonGatewayImmediateDominator(*dom, gress);
 }
 
@@ -220,7 +220,7 @@ BuildDominatorTree::getAllDominators(const IR::MAU::Table* t, gress_t gress) con
 const IR::MAU::Table*
 BuildDominatorTree::getNonGatewayGroupDominator(ordered_set<const IR::MAU::Table*>& tables) const {
     // Validate that all tables are of the same gress.
-    boost::optional<gress_t> gress = boost::make_optional(false, gress_t());
+    std::optional<gress_t> gress = std::nullopt;
     for (const auto* t : tables) {
         if (!gress) {
             gress = t->gress;
@@ -233,18 +233,18 @@ BuildDominatorTree::getNonGatewayGroupDominator(ordered_set<const IR::MAU::Table
 
     // Find all the nodes from the given table to the source.
     ordered_map<const IR::MAU::Table*, std::vector<const IR::MAU::Table*>> pathsToSource;
-    boost::optional<unsigned> minDepth = boost::make_optional(false, 0U);
+    std::optional<unsigned> minDepth = std::nullopt;
     for (const auto* t : tables) {
-        pathsToSource[t] = getAllDominators(t, gress.get());
+        pathsToSource[t] = getAllDominators(t, gress.value());
         LOG3("\t\t\tTable " << t->name << " is at depth " << pathsToSource[t].size() << " in the "
              "dominator tree.");
-        if (minDepth == boost::none || pathsToSource[t].size() < *minDepth) {
+        if (minDepth == std::nullopt || pathsToSource[t].size() < *minDepth) {
             minDepth = pathsToSource[t].size();
             LOG4("\t\t\t  Setting minDepth to " << *minDepth);
         }
     }
     if (minDepth)
-        LOG3("\t\t  Min depth: " << minDepth.get());
+        LOG3("\t\t  Min depth: " << minDepth.value());
 
     // Trim all the nodes that are greater in depth than the minimum depth. Note that the position
     // of table pointers in the vector are reversed; i.e. the 0th position in the vector is
@@ -253,7 +253,7 @@ BuildDominatorTree::getNonGatewayGroupDominator(ordered_set<const IR::MAU::Table
     for (const auto* t : tables) {
         LOG4("\t\t\tReducing the size paths for table " << t->name);
         unsigned tableDepth = pathsToSource[t].size();
-        while (tableDepth > minDepth.get()) {
+        while (tableDepth > minDepth.value()) {
             std::stringstream ss;
             ss << "\t\t\t\tErasing " << pathsToSource[t].at(0)->name << "; new table depth: ";
             pathsToSource[t].erase(pathsToSource[t].begin());
@@ -262,18 +262,18 @@ BuildDominatorTree::getNonGatewayGroupDominator(ordered_set<const IR::MAU::Table
             LOG4(ss.str());
         }
         if (minDepth)
-            LOG4("\t\t\t  minDepth: " << minDepth.get() << ", new  depth: " <<
+            LOG4("\t\t\t  minDepth: " << minDepth.value() << ", new  depth: " <<
                     pathsToSource[t].size());
-        BUG_CHECK(minDepth && pathsToSource[t].size() == minDepth.get(), "Paths for table %1% (%2%)"
+        BUG_CHECK(minDepth && pathsToSource[t].size() == *minDepth, "Paths for table %1% (%2%)"
                   " not reduced" " to the min depth %3%", t->name, pathsToSource[t].size(),
-                  minDepth.get());
+                  *minDepth);
     }
 
     // Starting from the minDepth level, keep going up one level at a time and see if we encounter
     // the same table. If we do encounter the same table, then that table is the group dominator.
     // Return the non gateway dominator for that group dominator.
-    for (unsigned i = 0; minDepth && i < minDepth.get(); ++i) {
-        auto dom = boost::make_optional<const IR::MAU::Table*>(false, nullptr);
+    for (unsigned i = 0; minDepth && i < *minDepth; ++i) {
+        std::optional<const IR::MAU::Table*> dom = std::nullopt;
         bool foundCommonAncestor = true;
         LOG4("\t\t\t  i = " << i);
         for (const auto* t : tables) {
@@ -282,7 +282,7 @@ BuildDominatorTree::getNonGatewayGroupDominator(ordered_set<const IR::MAU::Table
                 LOG4("\t\t\t\tNew table encountered: " << (*dom)->name);
                 continue;
             }
-            if (dom && dom.get() != pathsToSource[t].at(i)) {
+            if (dom && *dom != pathsToSource[t].at(i)) {
                 LOG4("\t\t\t\t  Found a different table: " << pathsToSource[t].at(i)->name);
                 foundCommonAncestor = false;
                 break;

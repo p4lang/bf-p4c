@@ -12,7 +12,7 @@ namespace v2 {
 /// to a source container.
 struct SrcPackVec {
     /// pack to this container.
-    boost::optional<PHV::Container> container = boost::none;
+    std::optional<PHV::Container> container = std::nullopt;
 
     /// field slices and their starting indexes.
     FieldSliceAllocStartMap fs_starts = {};
@@ -79,7 +79,7 @@ class CoPacker {
     };
 
     /// @returns the container starting index if already decided.
-    boost::optional<int> get_decided_start_index(const FieldSlice& fs) const;
+    std::optional<int> get_decided_start_index(const FieldSlice& fs) const;
 
     /// @returns false if new_fs cannot be packed with @p existing slices.
     bool ok_to_pack(const FieldSliceAllocStartMap& existing,

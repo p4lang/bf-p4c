@@ -116,10 +116,10 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     void end_apply() override;
     void collect_uninitalized();
     void check_conflicts(const info &read, int when);
-    void read(const PHV::Field *, boost::optional<le_bitrange>, const IR::BFN::Unit *,
+    void read(const PHV::Field *, std::optional<le_bitrange>, const IR::BFN::Unit *,
               const IR::Expression *, bool);
     void read(const IR::HeaderRef *, const IR::BFN::Unit *, const IR::Expression *, bool);
-    void write(const PHV::Field *, boost::optional<le_bitrange>, const IR::BFN::Unit *,
+    void write(const PHV::Field *, std::optional<le_bitrange>, const IR::BFN::Unit *,
                const IR::Expression *, bool);
     void write(const IR::HeaderRef *, const IR::BFN::Unit *, const IR::Expression *, bool);
     info &field(const PHV::Field *);
@@ -193,7 +193,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
 
     const ordered_map<int, LocPairSet> &getAllDefs() const { return located_defs; }
 
-    LocPairSet getParserDefs(const PHV::Field* f, boost::optional<le_bitrange> bits) const;
+    LocPairSet getParserDefs(const PHV::Field* f, std::optional<le_bitrange> bits) const;
     LocPairSet getParserDefs(const PHV::FieldSlice& fs) const {
         return getParserDefs(fs.field(), fs.range());
     }
@@ -250,7 +250,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     bool isUsedInParser(const PHV::Field* f) const;
     bool hasUseAt(const PHV::Field* f, const IR::BFN::Unit* u) const;
     bool hasDefAt(const PHV::Field* f, const IR::BFN::Unit* u) const;
-    bool hasDefInParser(const PHV::Field* f, boost::optional<le_bitrange> bits) const;
+    bool hasDefInParser(const PHV::Field* f, std::optional<le_bitrange> bits) const;
     bool hasDefInParser(const PHV::FieldSlice& fs) const {
         return hasDefInParser(fs.field(), fs.range());
     }

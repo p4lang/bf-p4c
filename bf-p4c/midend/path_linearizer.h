@@ -2,7 +2,7 @@
 #define BF_P4C_MIDEND_PATH_LINEARIZER_H_
 
 #include <vector>
-#include <boost/optional.hpp>
+#include <optional>
 #include "ir/ir.h"
 
 namespace BFN {
@@ -49,12 +49,12 @@ struct LinearPath {
  *
  * If the expression being visited is a valid path-like expression,
  * `PathLinearizer::linearPath` will contain the linearized version of the path.
- * If the expression is not path-like, `linearPath` will contain `boost::none`.
+ * If the expression is not path-like, `linearPath` will contain `std::nullopt`.
  *
  * XXX(hanw): this class is known to not work for header stacks.
  */
 struct PathLinearizer : public Inspector {
-    boost::optional<LinearPath> linearPath;
+    std::optional<LinearPath> linearPath;
 
  private:
     profile_t init_apply(const IR::Node* root) override;

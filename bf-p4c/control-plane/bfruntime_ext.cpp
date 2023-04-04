@@ -33,10 +33,10 @@ static Util::JsonObject* makeTypeFloat(cstring type) {
     return typeObj;
 }
 
-static Util::JsonObject* makeTypeString(boost::optional<cstring> defaultValue = boost::none) {
+static Util::JsonObject* makeTypeString(std::optional<cstring> defaultValue = std::nullopt) {
     auto* typeObj = new Util::JsonObject();
     typeObj->emplace("type", "string");
-    if (defaultValue != boost::none)
+    if (defaultValue != std::nullopt)
         typeObj->emplace("default_value", *defaultValue);
     return typeObj;
 }
@@ -60,11 +60,11 @@ struct BFRuntimeSchemaGenerator::ActionSelector {
     std::vector<P4Id> tableIds;
     Util::JsonArray* annotations;
 
-    static boost::optional<ActionSelector>
+    static std::optional<ActionSelector>
     from(const p4configv1::P4Info& p4info, const p4configv1::ActionProfile& actionProfile) {
         const auto& pre = actionProfile.preamble();
         if (!actionProfile.with_selector())
-            return boost::none;
+            return std::nullopt;
         auto selectorId = makeBFRuntimeId(pre.id(), ::barefoot::P4Ids::ACTION_SELECTOR);
         auto selectorGetMemId = makeBFRuntimeId(pre.id(),
                 ::barefoot::P4Ids::ACTION_SELECTOR_GET_MEMBER);
@@ -76,13 +76,13 @@ struct BFRuntimeSchemaGenerator::ActionSelector {
             transformAnnotations(pre)};
     }
 
-    static boost::optional<ActionSelector>
+    static std::optional<ActionSelector>
     fromTNA(const p4configv1::P4Info& p4info, const p4configv1::ExternInstance& externInstance) {
         const auto& pre = externInstance.preamble();
         ::barefoot::ActionSelector actionSelector;
         if (!externInstance.info().UnpackTo(&actionSelector)) {
             ::error("Extern instance %1% does not pack an ActionSelector object", pre.name());
-            return boost::none;
+            return std::nullopt;
         }
         auto selectorId = makeBFRuntimeId(pre.id(), ::barefoot::P4Ids::ACTION_SELECTOR);
         auto selectorGetMemId = makeBFRuntimeId(pre.id(),
@@ -106,12 +106,12 @@ struct BFRuntimeSchemaGenerator::ValueSet {
     const int64_t size;
     Util::JsonArray* annotations;
 
-    static boost::optional<ValueSet> fromTNA(const p4configv1::ExternInstance& externInstance) {
+    static std::optional<ValueSet> fromTNA(const p4configv1::ExternInstance& externInstance) {
         const auto& pre = externInstance.preamble();
         ::barefoot::ValueSet valueSet;
         if (!externInstance.info().UnpackTo(&valueSet)) {
             ::error("Extern instance %1% does not pack a value set object", pre.name());
-            return boost::none;
+            return std::nullopt;
         }
         return ValueSet{pre.name(), pre.id(), valueSet.type_spec(), valueSet.size(),
                         transformAnnotations(pre)};
@@ -127,24 +127,24 @@ struct BFRuntimeSchemaGenerator::Lpf {
     int64_t size;
     Util::JsonArray* annotations;
 
-    static boost::optional<Lpf> fromTNA(
+    static std::optional<Lpf> fromTNA(
         const p4configv1::ExternInstance& externInstance) {
         const auto& pre = externInstance.preamble();
         ::barefoot::Lpf lpf;
         if (!externInstance.info().UnpackTo(&lpf)) {
             ::error("Extern instance %1% does not pack a Lpf object", pre.name());
-            return boost::none;
+            return std::nullopt;
         }
         return Lpf{pre.name(), pre.id(), lpf.size(), transformAnnotations(pre)};
     }
 
-    static boost::optional<Lpf> fromTNADirect(
+    static std::optional<Lpf> fromTNADirect(
         const p4configv1::ExternInstance& externInstance) {
         const auto& pre = externInstance.preamble();
         ::barefoot::DirectLpf lpf;
         if (!externInstance.info().UnpackTo(&lpf)) {
             ::error("Extern instance %1% does not pack a Lpf object", pre.name());
-            return boost::none;
+            return std::nullopt;
         }
         return Lpf{pre.name(), pre.id(), 0, transformAnnotations(pre)};
     }
@@ -159,13 +159,13 @@ struct BFRuntimeSchemaGenerator::RegisterParam {
     p4configv1::P4DataTypeSpec typeSpec;
     Util::JsonArray* annotations;
 
-    static boost::optional<RegisterParam>
+    static std::optional<RegisterParam>
     fromTNA(const p4configv1::ExternInstance& externInstance) {
         const auto& pre = externInstance.preamble();
         ::barefoot::RegisterParam register_param_;
         if (!externInstance.info().UnpackTo(&register_param_)) {
             ::error("Extern instance %1% does not pack a RegisterParam object", pre.name());
-            return boost::none;
+            return std::nullopt;
         }
         return RegisterParam{pre.name(),
                              register_param_.data_field_name(),
@@ -184,13 +184,13 @@ struct BFRuntimeSchemaGenerator::PortMetadata {
     p4configv1::P4DataTypeSpec typeSpec;
     Util::JsonArray* annotations;
 
-    static boost::optional<PortMetadata> fromTNA(
+    static std::optional<PortMetadata> fromTNA(
         const p4configv1::ExternInstance& externInstance) {
         const auto& pre = externInstance.preamble();
         ::barefoot::PortMetadata portMetadata;
         if (!externInstance.info().UnpackTo(&portMetadata)) {
             ::error("Extern instance %1% does not pack a PortMetadata object", pre.name());
-            return boost::none;
+            return std::nullopt;
         }
         return PortMetadata{pre.id(), pre.name(),
                             portMetadata.key_name(), portMetadata.type_spec(),
@@ -233,13 +233,13 @@ struct BFRuntimeSchemaGenerator::DynHash {
         return false;
     }
 
-    static boost::optional<DynHash> fromTNA(
+    static std::optional<DynHash> fromTNA(
         const p4configv1::ExternInstance& externInstance) {
         const auto& pre = externInstance.preamble();
         ::barefoot::DynHash dynHash;
         if (!externInstance.info().UnpackTo(&dynHash)) {
             ::error("Extern instance %1% does not pack a PortMetadata object", pre.name());
-            return boost::none;
+            return std::nullopt;
         }
         std::vector<hashField> hfInfo;
         for (auto f : dynHash.field_infos()) {
@@ -272,13 +272,13 @@ struct BFRuntimeSchemaGenerator::Snapshot {
 
     std::string getLivTblName() const { return name + "." + gress + "_liveness"; }
 
-    static boost::optional<Snapshot> fromTNA(
+    static std::optional<Snapshot> fromTNA(
         const p4configv1::ExternInstance& externInstance) {
         const auto& pre = externInstance.preamble();
         ::barefoot::Snapshot snapshot;
         if (!externInstance.info().UnpackTo(&snapshot)) {
             ::error("Extern instance %1% does not pack a Snapshot object", pre.name());
-            return boost::none;
+            return std::nullopt;
         }
         std::string name = snapshot.pipe() + ".snapshot";
         std::string gress;
@@ -300,13 +300,13 @@ struct BFRuntimeSchemaGenerator::ParserChoices {
     P4Id id;
     std::vector<cstring> choices;
 
-    static boost::optional<ParserChoices> fromTNA(
+    static std::optional<ParserChoices> fromTNA(
         const p4configv1::ExternInstance& externInstance) {
         const auto& pre = externInstance.preamble();
         ::barefoot::ParserChoices parserChoices;
         if (!externInstance.info().UnpackTo(&parserChoices)) {
             ::error("Extern instance %1% does not pack a ParserChoices object", pre.name());
-            return boost::none;
+            return std::nullopt;
         }
         std::string name;
         // The name is "<pipe>.<gress>.$PARSER_CONFIGURE".
@@ -332,82 +332,82 @@ struct BFRuntimeSchemaGenerator::Wred {
     int64_t size;
     Util::JsonArray* annotations;
 
-    static boost::optional<Wred> fromTNA(
+    static std::optional<Wred> fromTNA(
         const p4configv1::ExternInstance& externInstance) {
         const auto& pre = externInstance.preamble();
         ::barefoot::Wred wred;
         if (!externInstance.info().UnpackTo(&wred)) {
             ::error("Extern instance %1% does not pack a Wred object", pre.name());
-            return boost::none;
+            return std::nullopt;
         }
         return Wred{pre.name(), pre.id(), wred.size(), transformAnnotations(pre)};
     }
 
-    static boost::optional<Wred> fromTNADirect(
+    static std::optional<Wred> fromTNADirect(
         const p4configv1::ExternInstance& externInstance) {
         const auto& pre = externInstance.preamble();
         ::barefoot::DirectWred wred;
         if (!externInstance.info().UnpackTo(&wred)) {
             ::error("Extern instance %1% does not pack a Wred object", pre.name());
-            return boost::none;
+            return std::nullopt;
         }
         return Wred{pre.name(), pre.id(), 0, transformAnnotations(pre)};
     }
 };
 
-boost::optional<BFRuntimeSchemaGenerator::Lpf>
+std::optional<BFRuntimeSchemaGenerator::Lpf>
 BFRuntimeSchemaGenerator::getDirectLpf(P4Id lpfId) const {
     if (isOfType(lpfId, ::barefoot::P4Ids::DIRECT_LPF)) {
         auto* externInstance = findExternInstance(p4info, lpfId);
-        if (externInstance == nullptr) return boost::none;
+        if (externInstance == nullptr) return std::nullopt;
         return Lpf::fromTNADirect(*externInstance);
     }
-    return boost::none;
+    return std::nullopt;
 }
 
-boost::optional<BFRuntimeSchemaGenerator::Wred>
+std::optional<BFRuntimeSchemaGenerator::Wred>
 BFRuntimeSchemaGenerator::getDirectWred(P4Id wredId) const {
     if (isOfType(wredId, ::barefoot::P4Ids::DIRECT_WRED)) {
         auto* externInstance = findExternInstance(p4info, wredId);
-        if (externInstance == nullptr) return boost::none;
+        if (externInstance == nullptr) return std::nullopt;
         return Wred::fromTNADirect(*externInstance);
     }
-    return boost::none;
+    return std::nullopt;
 }
 
-boost::optional<BFRuntimeSchemaGenerator::Counter>
+std::optional<BFRuntimeSchemaGenerator::Counter>
 BFRuntimeSchemaGenerator::getDirectCounter(P4Id counterId) const {
     if (isOfType(counterId, p4configv1::P4Ids::DIRECT_COUNTER)) {
         auto* counter = Standard::findDirectCounter(p4info, counterId);
-        if (counter == nullptr) return boost::none;
+        if (counter == nullptr) return std::nullopt;
         return Counter::fromDirect(*counter);
     } else if (isOfType(counterId, ::barefoot::P4Ids::DIRECT_COUNTER)) {
         auto* externInstance = findExternInstance(p4info, counterId);
-        if (externInstance == nullptr) return boost::none;
+        if (externInstance == nullptr) return std::nullopt;
         return fromTNADirectCounter(*externInstance);
     }
-    return boost::none;
+    return std::nullopt;
 }
 
-boost::optional<BFRuntimeSchemaGenerator::Meter>
+std::optional<BFRuntimeSchemaGenerator::Meter>
 BFRuntimeSchemaGenerator::getDirectMeter(P4Id meterId) const {
     if (isOfType(meterId, p4configv1::P4Ids::DIRECT_METER)) {
         auto* meter = Standard::findDirectMeter(p4info, meterId);
-        if (meter == nullptr) return boost::none;
+        if (meter == nullptr) return std::nullopt;
         return Meter::fromDirect(*meter);
     } else if (isOfType(meterId, ::barefoot::P4Ids::DIRECT_METER)) {
         auto* externInstance = findExternInstance(p4info, meterId);
-        if (externInstance == nullptr) return boost::none;
+        if (externInstance == nullptr) return std::nullopt;
         return fromTNADirectMeter(*externInstance);
     }
-    return boost::none;
+    return std::nullopt;
 }
 
-boost::optional<BFRuntimeSchemaGenerator::Register>
+std::optional<BFRuntimeSchemaGenerator::Register>
 BFRuntimeSchemaGenerator::getDirectRegister(P4Id registerId) const {
-    if (!isOfType(registerId, ::barefoot::P4Ids::DIRECT_REGISTER)) return boost::none;
+    if (!isOfType(registerId, ::barefoot::P4Ids::DIRECT_REGISTER)) return std::nullopt;
     auto* externInstance = findExternInstance(p4info, registerId);
-    if (externInstance == nullptr) return boost::none;
+    if (externInstance == nullptr) return std::nullopt;
     return fromTNADirectRegister(*externInstance);
 }
 
@@ -491,7 +491,7 @@ BFRuntimeSchemaGenerator::addActionProfIds(const p4configv1::Table& table,
     auto actSelectorId = static_cast<P4Id>(0);
     if (implementationId > 0) {
         auto hasSelector = actProfHasSelector(implementationId);
-        if (hasSelector == boost::none) {
+        if (hasSelector == std::nullopt) {
             ::error("Invalid implementation id in p4info: %1%", implementationId);
             return false;
         }
@@ -517,11 +517,11 @@ void
 BFRuntimeSchemaGenerator::addActionProfs(Util::JsonArray* tablesJson) const {
     for (const auto& actionProf : p4info.action_profiles()) {
         auto actionProfInstance = ActionProf::from(p4info, actionProf);
-        if (actionProfInstance == boost::none) continue;
+        if (actionProfInstance == std::nullopt) continue;
         addActionProfCommon(tablesJson, *actionProfInstance);
 
         auto actionSelectorInstance = ActionSelector::from(p4info, actionProf);
-        if (actionSelectorInstance == boost::none) continue;
+        if (actionSelectorInstance == std::nullopt) continue;
         addActionSelectorCommon(tablesJson, *actionSelectorInstance);
     }
 }
@@ -575,18 +575,18 @@ void BFRuntimeSchemaGenerator::addDirectResources(const p4configv1::Table& table
     }
 }
 
-boost::optional<bool>
+std::optional<bool>
 BFRuntimeSchemaGenerator::actProfHasSelector(P4Id actProfId) const {
     if (isOfType(actProfId, p4configv1::P4Ids::ACTION_PROFILE)) {
         auto* actionProf = Standard::findActionProf(p4info, actProfId);
-        if (actionProf == nullptr) return boost::none;
+        if (actionProf == nullptr) return std::nullopt;
         return actionProf->with_selector();
     } else if (isOfType(actProfId, ::barefoot::P4Ids::ACTION_PROFILE)) {
         return false;
     } else if (isOfType(actProfId, ::barefoot::P4Ids::ACTION_SELECTOR)) {
         return true;
     }
-    return boost::none;
+    return std::nullopt;
 }
 
 const Util::JsonObject*
@@ -623,13 +623,13 @@ BFRuntimeSchemaGenerator::addTNAExterns(Util::JsonArray* tablesJson,
         if (externTypeId == ::barefoot::P4Ids::ACTION_PROFILE) {
             for (const auto& externInstance : externType.instances()) {
                 auto actionProf = fromTNAActionProfile(p4info, externInstance);
-                if (actionProf != boost::none) addActionProfCommon(tablesJson, *actionProf);
+                if (actionProf != std::nullopt) addActionProfCommon(tablesJson, *actionProf);
             }
         } else if (externTypeId == ::barefoot::P4Ids::ACTION_SELECTOR) {
             for (const auto& externInstance : externType.instances()) {
                 auto actionSelector =
                     ActionSelector::fromTNA(p4info, externInstance);
-                if (actionSelector != boost::none) {
+                if (actionSelector != std::nullopt) {
                     addActionSelectorCommon(tablesJson, *actionSelector);
                     addActionSelectorGetMemberCommon(tablesJson, *actionSelector);
                 }
@@ -637,49 +637,49 @@ BFRuntimeSchemaGenerator::addTNAExterns(Util::JsonArray* tablesJson,
         } else if (externTypeId == ::barefoot::P4Ids::COUNTER) {
             for (const auto& externInstance : externType.instances()) {
                 auto counter = fromTNACounter(externInstance);
-                if (counter != boost::none) addCounterCommon(tablesJson, *counter);
+                if (counter != std::nullopt) addCounterCommon(tablesJson, *counter);
             }
         } else if (externTypeId == ::barefoot::P4Ids::METER) {
             for (const auto& externInstance : externType.instances()) {
                 auto meter = fromTNAMeter(externInstance);
-                if (meter != boost::none) addMeterCommon(tablesJson, *meter);
+                if (meter != std::nullopt) addMeterCommon(tablesJson, *meter);
             }
         } else if (externTypeId == ::barefoot::P4Ids::DIGEST) {
             for (const auto& externInstance : externType.instances()) {
                 auto digest = fromTNADigest(externInstance);
-                if (digest != boost::none) addLearnFilterCommon(learnFiltersJson, *digest);
+                if (digest != std::nullopt) addLearnFilterCommon(learnFiltersJson, *digest);
             }
         } else if (externTypeId == ::barefoot::P4Ids::REGISTER) {
             for (const auto& externInstance : externType.instances()) {
                 auto register_ = fromTNARegister(externInstance);
-                if (register_ != boost::none)
+                if (register_ != std::nullopt)
                     addRegisterCommon(tablesJson, *register_);
             }
         } else if (externTypeId == ::barefoot::P4Ids::REGISTER_PARAM) {
             for (const auto& externInstance : externType.instances()) {
                 auto register_param_ = RegisterParam::fromTNA(externInstance);
-                if (register_param_ != boost::none)
+                if (register_param_ != std::nullopt)
                     addRegisterParam(tablesJson, *register_param_);
             }
         } else if (externTypeId == ::barefoot::P4Ids::LPF) {
             for (const auto& externInstance : externType.instances()) {
                 auto lpf = Lpf::fromTNA(externInstance);
-                if (lpf != boost::none) addLpf(tablesJson, *lpf);
+                if (lpf != std::nullopt) addLpf(tablesJson, *lpf);
             }
         } else if (externTypeId == ::barefoot::P4Ids::WRED) {
             for (const auto& externInstance : externType.instances()) {
                 auto wred = Wred::fromTNA(externInstance);
-                if (wred != boost::none) addWred(tablesJson, *wred);
+                if (wred != std::nullopt) addWred(tablesJson, *wred);
             }
         } else if (externTypeId == ::barefoot::P4Ids::VALUE_SET) {
             for (const auto& externInstance : externType.instances()) {
                 auto valueSet = ValueSet::fromTNA(externInstance);
-                if (valueSet != boost::none) addValueSet(tablesJson, *valueSet);
+                if (valueSet != std::nullopt) addValueSet(tablesJson, *valueSet);
             }
         } else if (externTypeId == ::barefoot::P4Ids::SNAPSHOT) {
             for (const auto& externInstance : externType.instances()) {
                 auto snapshot = Snapshot::fromTNA(externInstance);
-                if (snapshot != boost::none) {
+                if (snapshot != std::nullopt) {
                     addSnapshot(tablesJson, *snapshot);
                     addSnapshotLiveness(tablesJson, *snapshot);
                 }
@@ -687,14 +687,14 @@ BFRuntimeSchemaGenerator::addTNAExterns(Util::JsonArray* tablesJson,
         } else if (externTypeId == ::barefoot::P4Ids::HASH) {
             for (const auto& externInstance : externType.instances()) {
                 auto dynHash = DynHash::fromTNA(externInstance);
-                if (dynHash != boost::none) {
+                if (dynHash != std::nullopt) {
                     addDynHash(tablesJson, *dynHash);
                 }
             }
         } else if (externTypeId == ::barefoot::P4Ids::PARSER_CHOICES) {
             for (const auto& externInstance : externType.instances()) {
                 auto parserChoices = ParserChoices::fromTNA(externInstance);
-                if (parserChoices != boost::none) {
+                if (parserChoices != std::nullopt) {
                     // Disabled unless driver adds BF-RT support for dynamically
                     // changing parser configurations
                     // addParserChoices(tablesJson, *parserChoices);
@@ -717,7 +717,7 @@ BFRuntimeSchemaGenerator::addPortMetadataExtern(Util::JsonArray* tablesJson) con
             // add all instances collected in the program
             for (const auto& externInstance : externType.instances()) {
                 auto portMetadata = PortMetadata::fromTNA(externInstance);
-                if (portMetadata != boost::none) addPortMetadata(tablesJson, *portMetadata);
+                if (portMetadata != std::nullopt) addPortMetadata(tablesJson, *portMetadata);
             }
         }
     }
@@ -1207,18 +1207,18 @@ BFRuntimeSchemaGenerator::addSnapshot(Util::JsonArray* tablesJson,
         }
         {
             auto* f = makeCommonDataField(BF_RT_DATA_SNAPSHOT_TRIGGER_STATE, "trigger_state",
-                makeTypeEnum({"PASSIVE", "ARMED", "FULL"}, boost::none), true /* repeated */);
+                makeTypeEnum({"PASSIVE", "ARMED", "FULL"}, std::nullopt), true /* repeated */);
             addROSingleton(dataJson, f);
         }
         for (const auto& sF : snapshot.fields) {
             {
                 auto* f = makeCommonDataField(sF.id, "trig." + sF.name,
-                    makeTypeBytes(sF.bitwidth, boost::none), false /* repeated */);
+                    makeTypeBytes(sF.bitwidth, std::nullopt), false /* repeated */);
                 addSingleton(dataJson, f, false, false);
             }
             {
                 auto *f = makeCommonDataField(sF.id + 0x8000, "trig." + sF.name + "_mask",
-                    makeTypeBytes(sF.bitwidth, boost::none), false /* repeated */);
+                    makeTypeBytes(sF.bitwidth, std::nullopt), false /* repeated */);
                 addSingleton(dataJson, f, false, false);
             }
         }
@@ -1376,7 +1376,7 @@ BFRuntimeSchemaGenerator::addSnapshot(Util::JsonArray* tablesJson,
 
         for (const auto& sF : snapshot.fields) {
             auto* f = makeCommonDataField(
-                sF.id, sF.name, makeTypeBytes(sF.bitwidth, boost::none),
+                sF.id, sF.name, makeTypeBytes(sF.bitwidth, std::nullopt),
                 false /* repeated */);
             addROSingleton(dataJson, f);
         }

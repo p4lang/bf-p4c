@@ -1,5 +1,5 @@
+#include <optional>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/optional.hpp>
 #include "gtest/gtest.h"
 
 #include "ir/ir.h"
@@ -16,7 +16,7 @@ class PaContainerSizePragmaTest : public TofinoBackendTest {};
 
 namespace {
 
-boost::optional<TofinoPipeTestCase>
+std::optional<TofinoPipeTestCase>
 createPaContainerSizePragmaTestCase(const std::string& pragmas) {
     auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
         %PRAGMAS%

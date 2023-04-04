@@ -639,14 +639,14 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
                         sel->srcInfo, sel->name);
             } else if (p->name == "hash") {
                 auto inst = P4::ExternInstance::resolve(arg->expression, refMap, typeMap);
-                if (inst != boost::none) {
+                if (inst != std::nullopt) {
                     if (inst->arguments->size() == 1) {
                         if (!sel->algorithm.setup(inst->arguments->at(0)->expression))
                             BUG("invalid algorithm %s", inst->arguments->at(0)->expression);
                     } else if (inst->arguments->size() == 2) {
                         auto crc_poly = P4::ExternInstance::resolve(
                                 inst->arguments->at(1)->expression, refMap, typeMap);
-                        if (crc_poly == boost::none)
+                        if (crc_poly == std::nullopt)
                             continue;
                         getCRCPolynomialFromExtern(*crc_poly, sel->algorithm);
                     }
@@ -671,7 +671,7 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
             } else if (p->name == "action_profile") {
                 if (auto path = arg->expression->to<IR::PathExpression>()) {
                     auto af = P4::ExternInstance::resolve(path, refMap, typeMap);
-                    if (af == boost::none) {
+                    if (af == std::nullopt) {
                         ::error("Expected %1% for ActionSelector %2% to resolve to an "
                                 "ActionProfile extern instance", arg, name); }
                     auto ap = new IR::MAU::ActionData(srcInfo, IR::ID(*af->name));
@@ -911,7 +911,7 @@ class FixP4Table : public Inspector {
 
     bool preorder(const IR::P4Table *tc) override {
         auto impl = getExternInstanceFromProperty(tc, "implementation", refMap, typeMap);
-        if (impl != boost::none) {
+        if (impl != std::nullopt) {
             if (impl->type->name == "ActionProfile") {
                 createAttachedTableFromTableProperty(*impl, refMap, typeMap);
             } else if (impl->type->name == "ActionSelector") {
@@ -920,21 +920,21 @@ class FixP4Table : public Inspector {
         }
 
         auto counters = getExternInstanceFromProperty(tc, "counters", refMap, typeMap);
-        if (counters != boost::none) {
+        if (counters != std::nullopt) {
             if (counters->type->name == "DirectCounter") {
                 createAttachedTableFromTableProperty(*counters, refMap, typeMap);
             }
         }
 
         auto meters = getExternInstanceFromProperty(tc, "meters", refMap, typeMap);
-        if (meters != boost::none) {
+        if (meters != std::nullopt) {
             if (meters->type->name == "DirectMeter") {
                 createAttachedTableFromTableProperty(*meters, refMap, typeMap);
             }
         }
 
         auto timeout = getExpressionFromProperty(tc, "idle_timeout");
-        if (timeout != boost::none) {
+        if (timeout != std::nullopt) {
             auto bool_lit = (*timeout)->expression->to<IR::BoolLiteral>();
             if (bool_lit == nullptr || bool_lit->value == false)
                 return false;
@@ -944,7 +944,7 @@ class FixP4Table : public Inspector {
         }
 
         auto atcam = getExternInstanceFromProperty(tc, "atcam", refMap, typeMap);
-        if (atcam != boost::none) {
+        if (atcam != std::nullopt) {
             if (atcam->type->name == "Atcam") {
                 tt->layout.partition_count =
                     atcam->arguments->at(0)->expression->to<IR::Constant>()->asInt();
@@ -958,50 +958,50 @@ class FixP4Table : public Inspector {
         // extern definition in TNA is a library extern, not a primitive
         // extern.
         auto as_atcam = getExpressionFromProperty(tc, "as_atcam");
-        if (as_atcam != boost::none) {
+        if (as_atcam != std::nullopt) {
             auto bool_lit = (*as_atcam)->expression->to<IR::BoolLiteral>();
             tt->layout.atcam = bool_lit->value;
         }
 
         auto as_alpm = getExpressionFromProperty(tc, "as_alpm");
-        if (as_alpm != boost::none) {
+        if (as_alpm != std::nullopt) {
             auto bool_lit = (*as_alpm)->expression->to<IR::BoolLiteral>();
             tt->layout.alpm = bool_lit->value;
         }
 
         auto alpm_preclassifier = getExpressionFromProperty(tc, "alpm_preclassifier");
-        if (alpm_preclassifier != boost::none) {
+        if (alpm_preclassifier != std::nullopt) {
             auto bool_lit = (*alpm_preclassifier)->expression->to<IR::BoolLiteral>();
             tt->layout.pre_classifier = bool_lit->value;
         }
 
 
         auto partition_count = getExpressionFromProperty(tc, "atcam_partition_count");
-        if (partition_count != boost::none) {
+        if (partition_count != std::nullopt) {
             auto int_lit = (*partition_count)->expression->to<IR::Constant>()->asInt();
             tt->layout.partition_count = int_lit;
         }
 
         auto subtrees_per_partition = getExpressionFromProperty(tc, "atcam_subtrees_per_partition");
-        if (subtrees_per_partition != boost::none) {
+        if (subtrees_per_partition != std::nullopt) {
             auto int_lit = (*subtrees_per_partition)->expression->to<IR::Constant>()->asInt();
             tt->layout.subtrees_per_partition = int_lit;
         }
 
         auto number_entries = getExpressionFromProperty(tc, "alpm_preclassifier_number_entries");
-        if (number_entries != boost::none) {
+        if (number_entries != std::nullopt) {
             auto int_lit = (*number_entries)->expression->to<IR::Constant>()->asInt();
             tt->layout.pre_classifer_number_entries = int_lit;
         }
 
         auto atcam_subset_width = getExpressionFromProperty(tc, "atcam_subset_width");
-        if (atcam_subset_width != boost::none) {
+        if (atcam_subset_width != std::nullopt) {
             auto int_lit = (*atcam_subset_width)->expression->to<IR::Constant>()->asInt();
             tt->layout.atcam_subset_width = int_lit;
         }
 
         auto shift_granularity = getExpressionFromProperty(tc, "shift_granularity");
-        if (shift_granularity != boost::none) {
+        if (shift_granularity != std::nullopt) {
             auto int_lit = (*shift_granularity)->expression->to<IR::Constant>()->asInt();
             tt->layout.shift_granularity = int_lit;
         }
@@ -1009,7 +1009,7 @@ class FixP4Table : public Inspector {
         // table property to pass the excluded_field_msb_bits pragma info to backend
         // the syntax is excluded_field_msb = { {name, msb}, {name, msb} };
         auto exclude_field_msb = getExpressionFromProperty(tc, "excluded_field_msb_bits");
-        if (exclude_field_msb != boost::none) {
+        if (exclude_field_msb != std::nullopt) {
             if (auto all_excluded_fields =
                     (*exclude_field_msb)->expression->to<IR::ListExpression>()) {
                 for (auto excluded_field : all_excluded_fields->components) {
@@ -1024,7 +1024,7 @@ class FixP4Table : public Inspector {
         // END:: ALPM_OPT
 
         auto hash = getExternInstanceFromProperty(tc, "proxy_hash", refMap, typeMap);
-        if (hash != boost::none) {
+        if (hash != std::nullopt) {
             if (hash->type->name == "Hash") {
                 tt->layout.proxy_hash = true;
 
@@ -1038,7 +1038,7 @@ class FixP4Table : public Inspector {
                 } else if (hash->arguments->size() == 2) {
                     auto crc_poly = P4::ExternInstance::resolve(
                             hash->arguments->at(1)->expression, refMap, typeMap);
-                    if (crc_poly == boost::none)
+                    if (crc_poly == std::nullopt)
                         return false;
                     getCRCPolynomialFromExtern(*crc_poly, tt->layout.proxy_hash_algorithm);
                 }
@@ -1518,8 +1518,8 @@ class GetBackendTables : public MauInspector {
  private:
     void setup_match_mask(IR::MAU::Table *tt, const IR::Mask *mask, IR::ID match_id,
                           int p4_param_order, const IR::Annotations *annotations,
-                          boost::optional<cstring> partition_index) {
-        boost::optional<cstring> name_annotation = boost::make_optional(false, cstring());
+                          std::optional<cstring> partition_index) {
+        std::optional<cstring> name_annotation = std::nullopt;
         if (auto nameAnn = annotations->getSingle(IR::Annotation::nameAnnotation))
             name_annotation = nameAnn->getName();
 
@@ -1564,7 +1564,7 @@ class GetBackendTables : public MauInspector {
             return;
         int p4_param_order = 0;
 
-        boost::optional<cstring> partition_index = boost::make_optional(false, cstring());
+        std::optional<cstring> partition_index = std::nullopt;
         // Fold 'atcam_partition_index' annotation into InputXbarRead IR node.
         auto s = annot->getSingle("atcam_partition_index");
         if (s)
@@ -1600,7 +1600,7 @@ class GetBackendTables : public MauInspector {
                 // does not need to be emitted as p4 param in assembly and
                 // context.json.
                 auto as_alpm = getExpressionFromProperty(table, "as_alpm");
-                if (as_alpm != boost::none) {
+                if (as_alpm != std::nullopt) {
                     ixbar_read->used_in_alpm = true; }
                 tt->match_key.push_back(ixbar_read);
             } else {
@@ -1609,7 +1609,7 @@ class GetBackendTables : public MauInspector {
                     ixbar_read->p4_param_order = p4_param_order;
                 ixbar_read->annotations = key_elem->getAnnotations();
 
-                boost::optional<cstring> name_annotation = boost::make_optional(false, cstring());
+                std::optional<cstring> name_annotation = std::nullopt;
                 if (auto nameAnn = key_elem->getAnnotation(IR::Annotation::nameAnnotation))
                     name_annotation = nameAnn->getName();
 

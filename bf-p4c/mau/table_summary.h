@@ -251,7 +251,7 @@ class TableSummary: public MauInspector {
 
     // this is only used for alt-phv-alloc, it indicated a problematic table during table replay
     // that can be possibly fixed by phv allocation changes.
-    boost::optional<cstring> table_replay_failed_table;
+    std::optional<cstring> table_replay_failed_table;
 
     profile_t init_apply(const IR::Node *root) override;
     bool preorder(const IR::MAU::Table* t) override;

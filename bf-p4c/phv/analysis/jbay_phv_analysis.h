@@ -1,7 +1,7 @@
 #ifndef EXTENSIONS_BF_P4C_PHV_ANALYSIS_JBAY_PHV_ANALYSIS_H_
 #define EXTENSIONS_BF_P4C_PHV_ANALYSIS_JBAY_PHV_ANALYSIS_H_
 
-#include <boost/optional.hpp>
+#include <optional>
 #include "ir/ir.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/mau/table_dependency_graph.h"

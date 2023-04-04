@@ -2,7 +2,7 @@
 #define EXTENSIONS_BF_P4C_PHV_PRAGMA_PA_MUTUALLY_EXCLUSIVE_H_
 
 #include <map>
-#include <boost/optional.hpp>
+#include <optional>
 #include "ir/ir.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/utils/utils.h"

@@ -339,9 +339,9 @@ class ExcludeMAUNotMutexHeaders : public MauInspector,
     profile_t init_apply(const IR::Node* root) override;
 
     bool is_header_pov_lhs_constant_rhs_operation_relation(const IR::Operation_Relation* op_rel);
-    boost::optional<std::pair<cstring, HeaderState>>
+    std::optional<std::pair<cstring, HeaderState>>
         get_header_to_state_pair_from_operation_relation(const IR::Operation_Relation* op_rel);
-    boost::optional<std::pair<const IR::Expression*, cstring>> get_gateway_row();
+    std::optional<std::pair<const IR::Expression*, cstring>> get_gateway_row();
     std::vector<std::pair<cstring, HeaderState>>
         get_all_header_to_state_pairs_from_gateway_row_expression(const IR::Expression* gre);
     bool preorder(const IR::Expression*) override;

@@ -6,7 +6,7 @@
 #include <sstream>
 #include <vector>
 
-#include <boost/optional/optional.hpp>
+#include <optional>
 
 #include "lib/cstring.h"
 #include "lib/exceptions.h"
@@ -102,7 +102,7 @@ AllocError& operator<<(AllocError& e, const T& v) {
 /// or a PHV::Transaction if succeeded.
 struct AllocResult {
     const AllocError* err = nullptr;
-    boost::optional<PHV::Transaction> tx;
+    std::optional<PHV::Transaction> tx;
     explicit AllocResult(const AllocError* err): err(err) {}
     explicit AllocResult(const Transaction& tx): tx(tx) {}
     bool ok() const { return err == nullptr; }
@@ -117,7 +117,7 @@ struct ScAllocAlignment {
     /// a cluster_alignment maps aligned cluster to start bit location in a container.
     ordered_map<const AlignedCluster*, int> cluster_starts;
     /// @returns merged alignment constraint if no conflict was found.
-    boost::optional<ScAllocAlignment> merge(const ScAllocAlignment& other) const;
+    std::optional<ScAllocAlignment> merge(const ScAllocAlignment& other) const;
     /// @returns pretty print string for the alignment of @p sc.
     cstring pretty_print(cstring prefix, const SuperCluster* sc) const;
     /// @returns true if it is okay to place field slices in @p aligned to @p start index of

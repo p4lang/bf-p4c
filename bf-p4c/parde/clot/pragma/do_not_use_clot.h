@@ -2,7 +2,7 @@
 #define EXTENSIONS_BF_P4C_PARDE_CLOT_PRAGMA_DO_NOT_USE_CLOT_H_
 
 #include <map>
-#include <boost/optional.hpp>
+#include <optional>
 #include "ir/ir.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/utils/utils.h"

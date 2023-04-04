@@ -1,7 +1,7 @@
 #ifndef BF_P4C_PHV_V2_ACTION_PACKING_VALIDATOR_H_
 #define BF_P4C_PHV_V2_ACTION_PACKING_VALIDATOR_H_
 
-#include <boost/optional.hpp>
+#include <optional>
 
 #include "bf-p4c/phv/action_packing_validator_interface.h"
 #include "lib/ordered_set.h"

@@ -69,7 +69,7 @@ const IR::Node* ControlConverter::postorder(IR::StatOrDecl* node) {
     return substitute<IR::StatOrDecl>(node); }
 
 const IR::Node* ControlConverter::postorder(IR::Property* p) {
-    boost::optional<cstring> newName = boost::none;
+    std::optional<cstring> newName = std::nullopt;
     auto value = p->value;
     if (p->name.name == "psa_implementation") {
         newName = "implementation";
@@ -99,7 +99,7 @@ const IR::Node* ControlConverter::postorder(IR::Property* p) {
     } else if (p->name.name == "psa_empty_group_action") {
         LOG1("ERROR: psa_empty_group_action is not supported");
     }
-    if (newName != boost::none)
+    if (newName != std::nullopt)
         return new IR::Property(p->srcInfo, *newName, p->annotations, value, p->isConstant);
     return p;
 }

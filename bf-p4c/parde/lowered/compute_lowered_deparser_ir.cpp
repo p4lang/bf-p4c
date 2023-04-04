@@ -189,7 +189,7 @@ bool ComputeLoweredDeparserIR::preorder(const IR::BFN::Deparser* deparser) {
         le_bitrange povFieldBits;
     };
 
-    auto lastSimpleEmit = boost::make_optional(false, LastSimpleEmitInfo());
+    std::optional<LastSimpleEmitInfo> lastSimpleEmit = std::nullopt;
     std::vector<std::vector<const IR::BFN::DeparserPrimitive*>> groupedEmits;
 
     // The deparser contains a sequence of emit-like primitives which we'd
@@ -205,7 +205,7 @@ bool ComputeLoweredDeparserIR::preorder(const IR::BFN::Deparser* deparser) {
     for (auto* prim : deparser->emits) {
         if (!prim->is<IR::BFN::EmitField>()) {
             groupedEmits.emplace_back(1, prim);
-            lastSimpleEmit = boost::none;
+            lastSimpleEmit = std::nullopt;
             continue;
         }
 

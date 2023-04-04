@@ -78,7 +78,7 @@ void PhvInfo::clear() {
 PHV::Field* PhvInfo::add(
         cstring name, gress_t gress, int size, int offset, bool meta, bool pov,
         bool bridged, bool pad, bool overlay, bool flex, bool fixed_size,
-        boost::optional<Util::SourceInfo> srcInfo) {
+        std::optional<Util::SourceInfo> srcInfo) {
     // Set the egress version of bridged fields to metadata
     if (gress == EGRESS && bridged)
         meta = true;
@@ -142,7 +142,7 @@ void PhvInfo::add_struct(
         // "flexible" annotation indicates flexible fields
         bool isFlexible = f->getAnnotations()->getSingle("flexible") != nullptr;
         bool isFixedSizeHeader = type->is<IR::BFN::Type_FixedSizeHeader>();
-        boost::optional<Util::SourceInfo> srcInfo = boost::none;
+        std::optional<Util::SourceInfo> srcInfo = std::nullopt;
         if (f->srcInfo.isValid())
             srcInfo = f->srcInfo;
         add(f_name, gress, size, offset -= size, meta, false, bridged, isPad, isOverlayable,
@@ -655,7 +655,7 @@ bitvec PhvInfo::bits_allocated(
     return ret_bitvec;
 }
 
-boost::optional<cstring> PhvInfo::get_alias_name(const IR::Expression* expr) const {
+std::optional<cstring> PhvInfo::get_alias_name(const IR::Expression* expr) const {
     if (auto* alias = expr->to<IR::BFN::AliasMember>()) {
         const PHV::Field* aliasSourceField = field(alias->source);
         BUG_CHECK(aliasSourceField, "Alias source field %s not found", alias->source);
@@ -667,7 +667,7 @@ boost::optional<cstring> PhvInfo::get_alias_name(const IR::Expression* expr) con
     } else if (auto sl = expr->to<IR::Slice>()) {
         get_alias_name(sl->e0);
     }
-    return boost::none;
+    return std::nullopt;
 }
 
 std::set<int> PhvInfo::minStages(const IR::MAU::Table *table) {
@@ -782,10 +782,10 @@ std::vector<PHV::AllocSlice> PhvInfo::get_alloc(const PHV::Field* phv_field, le_
 
 // figure out how many disinct container bytes contain info from a le_bitrange of a particular field
 //
-int PHV::Field::container_bytes(boost::optional<le_bitrange> optBits) const {
+int PHV::Field::container_bytes(std::optional<le_bitrange> optBits) const {
     BUG_CHECK(!alloc_slice_i.empty(), "Trying to get PHV container bytes for unallocated field %1%",
               this);
-    le_bitrange bits = optBits.get_value_or(StartLen(0, size));
+    le_bitrange bits = optBits.value_or(StartLen(0, size));
     int rv = 0, w;
     for (int bit = bits.lo; bit <= bits.hi; bit += w) {
         auto &sl = for_bit(bit);
@@ -1091,7 +1091,7 @@ void PHV::Field::updateAlignment(PHV::AlignmentReason reason, const FieldAlignme
 void PHV::Field::eraseAlignment() {
     LOG3("Clear alignment for field " << name);
     // used by phv allocation
-    alignment = boost::none;
+    alignment = std::nullopt;
     // used by bridged packing
     alignment_i.eraseConstraint();
 }
@@ -1310,7 +1310,7 @@ class CollectPhvFields : public Inspector {
     /// a subtree, rather than the entire IR.  If not present, the gress is
     /// acquired from VisitingThread(this), which looks up the gress from the
     /// enclosing IR::BFN::Pipe.  This never changes after construction.
-    boost::optional<gress_t> gress;
+    std::optional<gress_t> gress;
 
     /// Tracks the header/metadata instances that have been added, to avoid
     /// duplication.
@@ -1327,7 +1327,7 @@ class CollectPhvFields : public Inspector {
     Visitor::profile_t init_apply(const IR::Node* root) override {
         auto rv = Inspector::init_apply(root);
 
-        // Only clear if this is a new pass, i.e. gress == boost::none.
+        // Only clear if this is a new pass, i.e. gress == std::nullopt.
         if (!gress) {
             seen.clear();
             LOG3("Begin CollectPhvFields");
@@ -1456,7 +1456,7 @@ class CollectPhvFields : public Inspector {
     }
 
  public:
-    explicit CollectPhvFields(PhvInfo& phv, boost::optional<gress_t> gress = boost::none)
+    explicit CollectPhvFields(PhvInfo& phv, std::optional<gress_t> gress = std::nullopt)
     : phv(phv), gress(gress) { }
 };
 

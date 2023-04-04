@@ -1,6 +1,5 @@
+#include <optional>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/optional.hpp>
-#include <boost/optional/optional_io.hpp>
 
 #include "bf-p4c/mau/instruction_selection.h"
 #include "bf-p4c/parde/clot/allocate_clot.h"
@@ -18,7 +17,7 @@ class ClotTest : public JBayBackendTest {};
 
 namespace {
 
-boost::optional<TofinoPipeTestCase>
+std::optional<TofinoPipeTestCase>
 createClotTest(const std::string& doNotUseClotPragmas,
                const std::string& headerTypes,
                const std::string& headerInstances,
@@ -83,12 +82,12 @@ V1Switch(parse(), verifyChecksum(), mau(), mau(), computeChecksum(), deparse()) 
 
 struct SliceSpec {
     std::string fieldName;
-    boost::optional<le_bitrange> slice;
+    std::optional<le_bitrange> slice;
 
     SliceSpec(const char* fieldName) : fieldName(fieldName),  // NOLINT(runtime/explicit)
-                                       slice(boost::none) {}
+                                       slice(std::nullopt) {}
     SliceSpec(const cstring fieldName) : fieldName(fieldName),  // NOLINT(runtime/explicit)
-                                         slice(boost::none) {}
+                                         slice(std::nullopt) {}
 
     SliceSpec(const char* fieldName, le_bitrange slice) : fieldName(fieldName), slice(slice) {}
     SliceSpec(const cstring fieldName, le_bitrange slice) : fieldName(fieldName), slice(slice) {}
@@ -104,7 +103,7 @@ struct SliceSpec {
 
     bool operator>(const SliceSpec other) const {
         if (fieldName != other.fieldName) return fieldName > other.fieldName;
-        return slice > other.slice;
+        return other.slice < slice;
     }
 
     bool operator<=(const SliceSpec other) const {
@@ -133,7 +132,7 @@ std::ostream& operator<<(std::ostream& out, const SliceSpec& sliceSpec) {
 using ExpectedClot = std::vector<SliceSpec>;
 using ExpectedAllocation = std::set<ExpectedClot>;
 
-void runClotTest(boost::optional<TofinoPipeTestCase> test,
+void runClotTest(std::optional<TofinoPipeTestCase> test,
              ExpectedAllocation expectedAlloc) {
     PhvInfo phvInfo;
     PhvUse phvUse(phvInfo);

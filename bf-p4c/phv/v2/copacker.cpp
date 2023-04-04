@@ -1,6 +1,6 @@
 #include "bf-p4c/phv/v2/copacker.h"
 
-#include <boost/optional/optional.hpp>
+#include <optional>
 
 #include "bf-p4c/phv/action_source_tracker.h"
 #include "bf-p4c/phv/phv_fields.h"
@@ -13,7 +13,7 @@ namespace v2 {
 namespace {
 
 /// @returns the AllocSlice of @p fs in @p tx.
-boost::optional<AllocSlice> find_allocated(const Allocation& tx, const FieldSlice& fs) {
+std::optional<AllocSlice> find_allocated(const Allocation& tx, const FieldSlice& fs) {
     for (const auto& sl : tx.getStatus(fs.field())) {
         if (sl.field_slice() == fs.range()) {
             return sl;
@@ -21,7 +21,7 @@ boost::optional<AllocSlice> find_allocated(const Allocation& tx, const FieldSlic
             BUG_CHECK(!sl.field_slice().overlaps(fs.range()), "not fine sliced: %1%", fs);
         }
     }
-    return boost::none;
+    return std::nullopt;
 }
 
 int n_wrap_around_right_shift_bits(const int from, const int to, const int size) {
@@ -97,12 +97,12 @@ CoPacker::CoPacker(const ActionSourceTracker& sources,
     }
 }
 
-boost::optional<int> CoPacker::get_decided_start_index(const FieldSlice& fs) const {
+std::optional<int> CoPacker::get_decided_start_index(const FieldSlice& fs) const {
     const auto* aligned = &sc_i->aligned_cluster(fs);
     if (alignment_i->cluster_starts.count(aligned)) {
         return alignment_i->cluster_starts.at(aligned);
     }
-    return boost::none;
+    return std::nullopt;
 }
 
 bool CoPacker::skip_source_packing(const FieldSlice& fs) const {
@@ -237,7 +237,7 @@ CoPacker::CoPackHintOrErr CoPacker::gen_whole_container_set_copack(const Allocat
         const auto& src_op = dest_src.second.front();
         if (!src_op.phv_src) continue;
         const auto& src_fs = *src_op.phv_src;
-        boost::optional<AllocSlice> src_alloc = find_allocated(allocated_tx, src_fs);
+        std::optional<AllocSlice> src_alloc = find_allocated(allocated_tx, src_fs);
         if (!src_alloc) {
             if (skip_source_packing(src_fs)) continue;
             auto* err = new AllocError(ErrorCode::INVALID_ALLOC_FOUND_BY_COPACKER);
@@ -295,7 +295,7 @@ CoPacker::CoPackHintOrErr CoPacker::gen_move_copack(const Allocation& allocated_
     });
     SrcPackVec* const aligned_src_pack = new SrcPackVec();
     SrcPackVec* const shiftable_src_pack = has_adc ? nullptr : new SrcPackVec();
-    boost::optional<int> shiftable_src_shift_bits = boost::make_optional(false, 0);
+    std::optional<int> shiftable_src_shift_bits = std::nullopt;
     // Go through all allocated sources to set container and the number of bits to shift.
     for (const auto& dest_sources : writes) {
         const auto& dest = dest_sources.first;
@@ -303,7 +303,7 @@ CoPacker::CoPackHintOrErr CoPacker::gen_move_copack(const Allocation& allocated_
         if (!src.phv_src) continue;
         const auto& src_fs = *src.phv_src;
         int src_start_idx;
-        boost::optional<Container> src_container = boost::make_optional(false, Container());
+        std::optional<Container> src_container = std::nullopt;
         if (const auto src_alloc = find_allocated(allocated_tx, src_fs)) {
             src_container = src_alloc->container();
             src_start_idx = src_alloc->container_slice().lo;

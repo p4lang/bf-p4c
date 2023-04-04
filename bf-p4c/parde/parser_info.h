@@ -2,11 +2,11 @@
 #define EXTENSIONS_BF_P4C_PARDE_PARSER_INFO_H_
 
 #include <numeric>
+#include <optional>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/copy.hpp>
 #include <boost/graph/topological_sort.hpp>
 #include <boost/graph/graphviz.hpp>
-#include <boost/optional.hpp>
 
 #include "ir/ir.h"
 #include "lib/cstring.h"
@@ -46,7 +46,7 @@ class ReversibleParserGraph {
 
     Graph graph;
     const IR::BFN::Parser* parser = nullptr;
-    boost::optional<gress_t> gress;
+    std::optional<gress_t> gress;
 
     typename Graph::vertex_descriptor get_entry_point() {
         if (entry_point) return *entry_point;
@@ -58,10 +58,10 @@ class ReversibleParserGraph {
     }
 
  private:
-    boost::optional<typename Graph::vertex_descriptor> entry_point;
+    std::optional<typename Graph::vertex_descriptor> entry_point;
 
  public:
-    boost::optional<typename Graph::vertex_descriptor> end;
+    std::optional<typename Graph::vertex_descriptor> end;
 
     ordered_map<const IR::BFN::ParserState*, typename Graph::vertex_descriptor> state_to_vertex;
     ordered_map<typename Graph::vertex_descriptor, const IR::BFN::ParserState*> vertex_to_state;

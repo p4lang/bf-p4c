@@ -1,7 +1,7 @@
 #include "bf-p4c/phv/v2/action_packing_validator.h"
 
 #include <algorithm>
-#include <boost/optional/optional.hpp>
+#include <optional>
 #include <boost/range/adaptor/reversed.hpp>
 #include <boost/range/join.hpp>
 
@@ -37,12 +37,12 @@ std::set<int> intersect(const std::set<int>& a, const std::set<int>& b) {
     return rv;
 }
 
-boost::optional<unsigned int> slice_list_alignment(const SuperCluster::SliceList* sl) {
+std::optional<unsigned int> slice_list_alignment(const SuperCluster::SliceList* sl) {
     const auto& head = sl->front();
     if (head.alignment()) {
         return head.alignment()->align;
     }
-    return boost::none;
+    return std::nullopt;
 }
 
 // assuming we allocate sl to the container size.
@@ -62,13 +62,13 @@ int max_slice_list_packable_bits(const SuperCluster::SliceList* sl) {
 }
 
 /// @returns if @p sources has only one phv source of move-based instruction, return that slice.
-boost::optional<FieldSlice> get_phv_move_src(const safe_vector<SourceOp>& sources) {
+std::optional<FieldSlice> get_phv_move_src(const safe_vector<SourceOp>& sources) {
     if (sources.size() != 1 || sources.front().t != SourceOp::OpType::move) {
-        return boost::none;
+        return std::nullopt;
     }
     const auto& src = sources.front();
     if (src.ad_or_const) {
-        return boost::none;
+        return std::nullopt;
     }
     return *src.phv_src;
 }
@@ -126,35 +126,35 @@ struct SliceListGroupProp {
     ordered_map<const SuperCluster::SliceList*, ordered_set<const IR::MAU::Action*>> sl_actions;
 
     /// return decided container of @p sl.
-    boost::optional<solver::ContainerID> container(const SuperCluster::SliceList* sl) const {
+    std::optional<solver::ContainerID> container(const SuperCluster::SliceList* sl) const {
         if (sl_container.count(sl)) {
             return sl_container.at(sl);
         }
-        return boost::none;
+        return std::nullopt;
     }
 
     /// return decided container of @p fs.
-    boost::optional<solver::ContainerID> container(const FieldSlice& fs) const {
+    std::optional<solver::ContainerID> container(const FieldSlice& fs) const {
         if (fs_sl.count(fs)) {
             return container(fs_sl.at(fs));
         }
-        return boost::none;
+        return std::nullopt;
     }
 
     /// return decided container size of @p sl.
-    boost::optional<int> container_size(const SuperCluster::SliceList* sl) const {
+    std::optional<int> container_size(const SuperCluster::SliceList* sl) const {
         if (sl_cont_size.count(sl)) {
             return sl_cont_size.at(sl);
         }
-        return boost::none;
+        return std::nullopt;
     }
 
     /// return decided container size of @p fs.
-    boost::optional<int> container_size(const FieldSlice& fs) const {
+    std::optional<int> container_size(const FieldSlice& fs) const {
         if (fs_sl.count(fs)) {
             return container_size(fs_sl.at(fs));
         }
-        return boost::none;
+        return std::nullopt;
     }
 
     /// return the offset (the index of starting bit, including prepending alignment)
@@ -179,9 +179,9 @@ struct SliceListGroupProp {
 
     /// returns a fieldslice which contains the @p fs.
     /// The returned slice is used as key for properties in this class.
-    boost::optional<PHV::FieldSlice> find_enclosing_settled_fs(const FieldSlice& fs) const {
+    std::optional<PHV::FieldSlice> find_enclosing_settled_fs(const FieldSlice& fs) const {
         if (!field_settled_slices.count(fs.field())) {
-            return boost::none;
+            return std::nullopt;
         }
         for (const auto& enclosing_fs : field_settled_slices.at(fs.field())) {
             if (enclosing_fs.range().overlaps(fs.range())) {
@@ -189,22 +189,22 @@ struct SliceListGroupProp {
                 return enclosing_fs;
             }
         }
-        return boost::none;
+        return std::nullopt;
     }
 
     /// return the container ID and the offset of the starting bit of @p fs, if
     /// the enclosing slice list will be allocated at 0th bit of container.
-    boost::optional<std::pair<solver::ContainerID, int>> find_allocation(
+    std::optional<std::pair<solver::ContainerID, int>> find_allocation(
         const FieldSlice& fs,
         const SliceListAssignedStarts& sl_assigned_start = {}) const {
         auto enclosing_fs = find_enclosing_settled_fs(fs);
         if (!enclosing_fs) {
-            return boost::none;
+            return std::nullopt;
         }
         auto* enclosing_sl = fs_sl.at(*enclosing_fs);
         const auto alloc_container = container(*enclosing_fs);
         if (!alloc_container) {
-            return boost::none;
+            return std::nullopt;
         }
         const int alloc_offset = offset(*enclosing_fs);
         if (floating_range(enclosing_sl) > 0) {
@@ -214,7 +214,7 @@ struct SliceListGroupProp {
                     *alloc_container,
                     fixed_start + alloc_offset + fs.range().lo - enclosing_fs->range().lo};
             }
-            return boost::none;
+            return std::nullopt;
         }
         return std::pair<solver::ContainerID, int>{
             *alloc_container, alloc_offset + fs.range().lo - enclosing_fs->range().lo};
@@ -244,7 +244,7 @@ Result make_slicelist_group_prop(
 
     // compute and save misc properties.
     for (const auto* sl : boost::range::join(prop->settled_sl, prop->unsettled_byte_sl)) {
-        int offset = slice_list_alignment(sl).get_value_or(0);
+        int offset = slice_list_alignment(sl).value_or(0);
         for (const auto& fs : *sl) {
             prop->fs_sl[fs] = sl;
             prop->fs_offset[fs] = offset;
@@ -609,7 +609,7 @@ Result validate_slicelist_for_action(const PhvUse& uses,
     return Result(Code::OK);
 }
 
-boost::optional<const SuperCluster::SliceList*> find_the_only_floating_src_sl(
+std::optional<const SuperCluster::SliceList*> find_the_only_floating_src_sl(
     const SliceListGroupProp& prop,
     const SuperCluster::SliceList* sl,
     const IR::MAU::Action* action) {
@@ -648,11 +648,11 @@ boost::optional<const SuperCluster::SliceList*> find_the_only_floating_src_sl(
     }
     if (floating_src_slice_lists.empty()) {
         LOG3("no floating source slice list.");
-        return boost::none;
+        return std::nullopt;
     }
     if (floating_src_slice_lists.size() > 1) {
         LOG3("found too many floating slice lists: " << floating_src_slice_lists.size());
-        return boost::none;
+        return std::nullopt;
     }
     // if this floating_sl might be packed with other source slice lists, we do not
     // check further, because the number of packing combinations can be huge.
@@ -662,7 +662,7 @@ boost::optional<const SuperCluster::SliceList*> find_the_only_floating_src_sl(
     for (const auto* fixed_src : fixed_src_slice_lists) {
         if (max_slice_list_packable_bits(fixed_src) >= floating_sl_bits) {
             LOG3("not sure whether we should we pack " << fixed_src << " with above floating sl");
-            return boost::none;
+            return std::nullopt;
         }
     }
     return floating_sl;
@@ -697,7 +697,7 @@ Result validate_one_byte_slice_list(const PhvUse& uses,
                                     const SliceListGroupProp& prop,
                                     const SuperCluster::SliceList* byte_list) {
     // find the cont size for this byte.
-    boost::optional<int> cont_size = boost::make_optional(false, int());
+    std::optional<int> cont_size = std::nullopt;
     for (const auto& fs : *byte_list) {
         const auto& action_sources = prop.fs_sources.at(fs);
         for (const auto& sources : Values(action_sources)) {

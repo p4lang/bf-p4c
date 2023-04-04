@@ -1,8 +1,8 @@
 #include <array>
 #include <initializer_list>
+#include <optional>
 
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/optional.hpp>
 
 #include "gtest/gtest.h"
 
@@ -25,7 +25,7 @@ class DynamicDepTest : public TofinoBackendTest {};
 
 namespace {
 
-boost::optional<TofinoPipeTestCase> createDynamicDepMetricsCase(const std::string& ingressSource,
+std::optional<TofinoPipeTestCase> createDynamicDepMetricsCase(const std::string& ingressSource,
         const std::string& egressSource) {
     auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
 header H1

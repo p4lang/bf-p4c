@@ -299,7 +299,7 @@ computeControlPlaneFormat(const PhvInfo& phv,
         int remainingBitsInContainer;
     };
 
-    boost::optional<LastContainerInfo> last = boost::make_optional(false, LastContainerInfo());
+    std::optional<LastContainerInfo> last = std::nullopt;
     unsigned totalWidth = 0;
     auto *packing = new safe_vector<IR::BFN::DigestField>();
 

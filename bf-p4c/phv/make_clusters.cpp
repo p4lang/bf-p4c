@@ -960,8 +960,8 @@ struct BreakSliceListCtx {
     using Itr = PHV::SuperCluster::SliceList::const_iterator;
     int offset;
     Itr curr;
-    boost::optional<Itr> prev;
-    boost::optional<Itr> next;
+    std::optional<Itr> prev;
+    std::optional<Itr> next;
     const SliceListAccumulator* accumulator;
 };
 
@@ -981,9 +981,9 @@ std::vector<PHV::SuperCluster::SliceList*> break_slicelist_by(
             auto ctx = BreakSliceListCtx();
             ctx.offset = offset;
             ctx.curr = itr;
-            ctx.prev = (itr == sl->begin() ? boost::none : boost::make_optional(std::prev(itr)));
+            ctx.prev = (itr == sl->begin() ? std::nullopt : std::make_optional(std::prev(itr)));
             ctx.next =
-                (std::next(itr) == sl->end() ? boost::none : boost::make_optional(std::next(itr)));
+                (std::next(itr) == sl->end() ? std::nullopt : std::make_optional(std::next(itr)));
             ctx.accumulator = &accumulator;
             if (cond(ctx)) {
                 auto* last = accumulator.start_new();
@@ -1005,7 +1005,7 @@ std::vector<PHV::SuperCluster::SliceList*> break_slicelist_by(
 bool break_cond_clear_on_write(const BreakSliceListCtx& ctx) {
     if (!ctx.next)
         return false;
-    auto next = ctx.next.get();
+    auto next = *ctx.next;
     // pre-break
     bool next_is_clear_on_write = next->field()->is_solitary() &&
         (next->field()->getSolitaryConstraint().isClearOnWrite());
@@ -1021,9 +1021,9 @@ bool break_cond_clear_on_write(const BreakSliceListCtx& ctx) {
             return true;
     }
     // post-break with padding
-    if (ctx.prev && ctx.prev.get()->field() != ctx.curr->field()) {
-        bool prev_is_clear_on_write = ctx.prev.get()->field()->is_solitary() &&
-            (ctx.prev.get()->field()->getSolitaryConstraint().isClearOnWrite());
+    if (ctx.prev && ctx.prev.value()->field() != ctx.curr->field()) {
+        bool prev_is_clear_on_write = ctx.prev.value()->field()->is_solitary() &&
+            (ctx.prev.value()->field()->getSolitaryConstraint().isClearOnWrite());
         // if current field is the padding of the prev clear-on-write field
         if (prev_is_clear_on_write &&
             ctx.curr->field()->padding &&
@@ -1038,8 +1038,8 @@ bool break_cond_clear_on_write(const BreakSliceListCtx& ctx) {
 // pre-break: [][solitary]
 // post-break: [solitary][padding*][other]
 bool break_cond_solitary(const BreakSliceListCtx& ctx) {
-    if (ctx.next && ctx.next.get()->field() != ctx.curr->field()) {
-        auto next = ctx.next.get();
+    if (ctx.next && ctx.next.value()->field() != ctx.curr->field()) {
+        auto next = *ctx.next;
         if (next->field()->is_solitary() &&
             !next->field()->getSolitaryConstraint().isOnlyClearOnWrite()) {
             return true;
@@ -1052,10 +1052,10 @@ bool break_cond_solitary(const BreakSliceListCtx& ctx) {
         }
     }
     // post-break with padding
-    if (ctx.prev && ctx.prev.get()->field() != ctx.curr->field()) {
+    if (ctx.prev && ctx.prev.value()->field() != ctx.curr->field()) {
         // if current field is the padding of the prev solitary field, break.
-        if (ctx.prev.get()->field()->is_solitary() &&
-            !ctx.prev.get()->field()->getSolitaryConstraint().isOnlyClearOnWrite() &&
+        if (ctx.prev.value()->field()->is_solitary() &&
+            !ctx.prev.value()->field()->getSolitaryConstraint().isOnlyClearOnWrite() &&
             ctx.curr->size() % 8 != 0 && ctx.offset % 8 == 0) {
             return true;
         }
@@ -1067,7 +1067,7 @@ bool break_cond_solitary(const BreakSliceListCtx& ctx) {
 // aligment constraints are conflicting.
 bool break_cond_alignment_conflict(const BreakSliceListCtx& ctx) {
     if (ctx.next) {
-        auto next = ctx.next.get();
+        auto next = *ctx.next;
         const auto& next_alignment = next->alignment();
         if (next_alignment && int((*next_alignment).align) != ctx.offset % 8) {
             LOG5("break between " << *ctx.curr << " and " << *next << "because aligment "
@@ -1102,8 +1102,8 @@ bool break_cond_deparsed_zero(const BreakSliceListCtx& ctx) {
 bool break_cond_digest_field(const BreakSliceListCtx& ctx,
                              const ordered_set<PHV::FieldSlice>& digest_fields) {
     // if next or current field is digest field and it's byte-aligned, break.
-    if (ctx.next && ctx.next.get()->field() != ctx.curr->field()) {
-        auto next = ctx.next.get();
+    if (ctx.next && ctx.next.value()->field() != ctx.curr->field()) {
+        auto next = *ctx.next;
         if (ctx.offset % 8 == 0) {
             if (digest_fields.count(*next) || digest_fields.count(*ctx.curr)) {
                 LOG5("break at " << *ctx.curr << " because it byte boundary of a digest field");
@@ -1114,8 +1114,8 @@ bool break_cond_digest_field(const BreakSliceListCtx& ctx,
 
     // if prev field is digest field, and curr is padding or
     // the current field can be a padding to make the list byte-sized.
-    if (ctx.prev && ctx.prev.get()->field() != ctx.curr->field()) {
-        auto prev = ctx.prev.get();
+    if (ctx.prev && ctx.prev.value()->field() != ctx.curr->field()) {
+        auto prev = *ctx.prev;
         if (digest_fields.count(*prev) && ctx.curr->size() % 8 != 0 && ctx.offset % 8 == 0) {
             LOG5("break at " << *ctx.curr << " because reaches digest field padding end");
             return true;
@@ -1581,8 +1581,8 @@ Visitor::profile_t Clustering::UpdateSameContainerAllocConstraint::init_apply(
 
         for (const auto* sl : sc->slice_lists()) {
             int offset = 0;
-            boost::optional<FieldBit> prev = boost::make_optional(false, FieldBit());
-            boost::optional<PHV::FieldSlice> prev_fs = boost::none;
+            std::optional<FieldBit> prev = std::nullopt;
+            std::optional<PHV::FieldSlice> prev_fs = std::nullopt;
             for (const auto& fs : *sl) {
                 const auto* field = fs.field();
                 for (int i = 0; i < fs.size(); i++, offset++) {

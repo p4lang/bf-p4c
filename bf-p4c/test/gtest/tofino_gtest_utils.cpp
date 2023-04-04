@@ -29,50 +29,50 @@ const char *t2na_header() {
     return t2na.c_str();
 }
 
-/* static */ boost::optional<MidendTestCase>
+/* static */ std::optional<MidendTestCase>
 MidendTestCase::create(const std::string& source) {
     AutoCompileContext autoBFNContext(new BFNContext(BFNContext::get()));
     auto& options = BackendOptions();
 
     auto frontendTestCase = FrontendTestCase::create(source, BFN::ParseAnnotations());
-    if (!frontendTestCase) return boost::none;
+    if (!frontendTestCase) return std::nullopt;
     frontendTestCase->program->apply(BFN::FindArchitecture());
 
     BFN::MidEnd midend(options);
     auto* midendProgram = frontendTestCase->program->apply(midend);
     if (midendProgram == nullptr) {
         std::cerr << "Midend failed" << std::endl;
-        return boost::none;
+        return std::nullopt;
     }
     if (::diagnosticCount() > 0) {
         std::cerr << "Encountered " << ::diagnosticCount()
                   << " errors while executing midend" << std::endl;
-        return boost::none;
+        return std::nullopt;
     }
 
     return MidendTestCase{midendProgram, frontendTestCase->program};
 }
 
-/* static */ boost::optional<TofinoPipeTestCase>
+/* static */ std::optional<TofinoPipeTestCase>
 TofinoPipeTestCase::create(const std::string& source) {
     AutoCompileContext autoBFNContext(new BFNContext(BFNContext::get()));
     auto& options = BackendOptions();
 
     auto frontendTestCase =
         FrontendTestCase::create(source, options.langVersion, BFN::ParseAnnotations());
-    if (!frontendTestCase) return boost::none;
+    if (!frontendTestCase) return std::nullopt;
     frontendTestCase->program->apply(BFN::FindArchitecture());
 
     BFN::MidEnd midend(options);
     auto* midendProgram = frontendTestCase->program->apply(midend);
     if (midendProgram == nullptr) {
         std::cerr << "Midend failed" << std::endl;
-        return boost::none;
+        return std::nullopt;
     }
     if (::errorCount() > 0) {
         std::cerr << "Encountered " << ::errorCount()
                   << " errors while executing midend" << std::endl;
-        return boost::none;
+        return std::nullopt;
     }
     // no-op
     ordered_map<cstring, const IR::Type_StructLike*> empty;
@@ -80,36 +80,36 @@ TofinoPipeTestCase::create(const std::string& source) {
     midendProgram->apply(postmid);
     if (postmid.pipe.size() == 0) {
         std::cerr << "backend converter failed" << std::endl;
-        return boost::none;
+        return std::nullopt;
     }
     auto* pipe = postmid.pipe[0];
     if (pipe == nullptr) {
         std::cerr << "extract_maupipe failed" << std::endl;
-        return boost::none;
+        return std::nullopt;
     }
     if (::errorCount() > 0) {
         std::cerr << "Encountered " << ::errorCount()
                   << " errors while executing extract_maupipe" << std::endl;
-        return boost::none;
+        return std::nullopt;
     }
 
     return TofinoPipeTestCase{pipe, midendProgram};
 }
 
-/* static */ boost::optional<TofinoPipeTestCase>
+/* static */ std::optional<TofinoPipeTestCase>
 TofinoPipeTestCase::createWithThreadLocalInstances(const std::string& source) {
     auto pipeTestCase = TofinoPipeTestCase::create(source);
-    if (!pipeTestCase) return boost::none;
+    if (!pipeTestCase) return std::nullopt;
 
     pipeTestCase->pipe = pipeTestCase->pipe->apply(CreateThreadLocalInstances());
     if (pipeTestCase->pipe == nullptr) {
         std::cerr << "Inserting thread local instances failed" << std::endl;
-        return boost::none;
+        return std::nullopt;
     }
     if (::diagnosticCount() > 0) {
         std::cerr << "Encountered " << ::diagnosticCount()
                   << " errors while executing CreateThreadLocalInstances" << std::endl;
-        return boost::none;
+        return std::nullopt;
     }
 
     return pipeTestCase;

@@ -80,7 +80,7 @@ format_alloc_slice(const PHV::AllocSlice& slice) {
 }
 
 std::vector<std::string> getPrinterSliceRow(const PHV::AllocSlice &slice,
-    const boost::optional<gress_t> &gress, bool first, bool hardwired = false) {
+    const std::optional<gress_t> &gress, bool first, bool hardwired = false) {
     auto formatted = format_alloc_slice(slice);
     std::string is_ara("");
     if (slice.getInitPrimitive().isAlwaysRunActionPrim()) is_ara += " ARA";
@@ -329,7 +329,7 @@ PHV::AllocationReport::printContainerStatus() {
             % "GRESS" % "TYPE" % "STATUS" % "COUNT";
 
         bool first_by_gress = true;
-        auto gresses = std::vector<boost::optional<gress_t>>({INGRESS, EGRESS, boost::none});
+        auto gresses = std::vector<std::optional<gress_t>>({INGRESS, EGRESS, std::nullopt});
         auto statuses = {ContainerAllocStatus::EMPTY,
                          ContainerAllocStatus::PARTIAL,
                          ContainerAllocStatus::FULL};
@@ -366,7 +366,7 @@ PHV::AllocationReport::printMauGroupsOccupancyMetrics() const {
 
     for (auto cid : phvSpec.physicalContainers()) {
         PHV::Container c = phvSpec.idToContainer(cid);
-        if (boost::optional<bitvec> mauGroup = phvSpec.mauGroup(cid)) {
+        if (std::optional<bitvec> mauGroup = phvSpec.mauGroup(cid)) {
             // groupID represents the unique string that identifies an MAU group
             int groupID = phvSpec.mauGroupId(c);
             bool containerUsed = (container_to_bits_used.at(c) != 0);
@@ -374,11 +374,11 @@ PHV::AllocationReport::printMauGroupsOccupancyMetrics() const {
             auto bits_allocated = container_to_bits_allocated.at(c);
             auto gress = container_to_gress.at(c);
 
-            if (mauGroupInfos.count(mauGroup.get())) {
-                mauGroupInfos[mauGroup.get()].update(c.type().kind(), containerUsed,
+            if (mauGroupInfos.count(*mauGroup)) {
+                mauGroupInfos[*mauGroup].update(c.type().kind(), containerUsed,
                         bits_used, bits_allocated, gress);
             } else {
-                mauGroupInfos[mauGroup.get()] = MauGroupInfo(c.size(), groupID,
+                mauGroupInfos[*mauGroup] = MauGroupInfo(c.size(), groupID,
                         c.type().kind(), containerUsed, bits_used, bits_allocated, gress);
             }
         }

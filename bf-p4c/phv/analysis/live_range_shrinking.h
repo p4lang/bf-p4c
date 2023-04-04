@@ -76,7 +76,7 @@ class FindInitializationNode : public Inspector {
     /// dominator @p t for the defuse units of @p f and a stage @p lastAllowedStage, after which the
     /// initialization should be performed. @p prevField is the overlapping field that has the
     /// adjacent earlier live range to @p f.
-    boost::optional<const PHV::ActionSet> getInitializationCandidates(
+    std::optional<const PHV::ActionSet> getInitializationCandidates(
             const PHV::Container& c,
             const PHV::Field* f,
             const IR::MAU::Table* t,
@@ -103,7 +103,7 @@ class FindInitializationNode : public Inspector {
             const PHV::Transaction& alloc) const;
 
     /// @returns a set of actions where field @p f must be initialized in @p tbl.
-    boost::optional<const PHV::ActionSet> getInitPointsForTable(
+    std::optional<const PHV::ActionSet> getInitPointsForTable(
             const PHV::Container& c,
             const IR::MAU::Table* t,
             const PHV::Field* f,
@@ -147,9 +147,9 @@ class FindInitializationNode : public Inspector {
 
  public:
     /// @returns a map of field to the actions in which initialization must be done for the set of
-    /// fields in @p fields to be overlayed in the same container. @returns boost::none if metadata
+    /// fields in @p fields to be overlayed in the same container. @returns std::nullopt if metadata
     /// initialization cannot be realized.
-    boost::optional<PHV::Allocation::LiveRangeShrinkingMap>
+    std::optional<PHV::Allocation::LiveRangeShrinkingMap>
     findInitializationNodes(
         const PHV::Container c,
         const ordered_set<PHV::AllocSlice>& alloced,
@@ -195,7 +195,7 @@ class LiveRangeShrinking : public PassManager {
         return tableActionsMap;
     }
 
-    boost::optional<PHV::Allocation::LiveRangeShrinkingMap> findInitializationNodes(
+    std::optional<PHV::Allocation::LiveRangeShrinkingMap> findInitializationNodes(
             const ordered_set<PHV::AllocSlice>& alloced,
             const PHV::Transaction& alloc,
             const PHV::Allocation::MutuallyLiveSlices& container_state) const {
@@ -213,7 +213,7 @@ class LiveRangeShrinking : public PassManager {
         return initNode.findInitializationNodes(c, alloced, alloc, container_state);
     }
 
-    boost::optional<PHV::Allocation::LiveRangeShrinkingMap> findInitializationNodes(
+    std::optional<PHV::Allocation::LiveRangeShrinkingMap> findInitializationNodes(
             const ordered_set<PHV::AllocSlice>& alloced,
             const PHV::AllocSlice& slice,
             const PHV::Transaction& alloc,

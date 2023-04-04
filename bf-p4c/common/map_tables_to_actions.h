@@ -36,7 +36,7 @@ class MapTablesToActions : public Inspector {
     const PHV::ActionSet& getDefaultActionsForTable(const IR::MAU::Table* t) const;
 
     /// @return the table from which @p act is invoked.
-    boost::optional<const IR::MAU::Table*> getTableForAction(const IR::MAU::Action* act) const;
+    std::optional<const IR::MAU::Table*> getTableForAction(const IR::MAU::Action* act) const;
 };
 
 #endif  /*  EXTENSIONS_BF_P4C_COMMON_MAP_TABLES_TO_ACTIONS_H_  */

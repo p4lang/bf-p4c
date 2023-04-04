@@ -2,7 +2,7 @@
 #define BF_P4C_ARCH_COLLECT_BRIDGED_FIELDS_H_
 
 #include <utility>
-#include <boost/optional.hpp>
+#include <optional>
 #include "ir/ir.h"
 #include "ir/control_flow_visitor.h"
 #include "lib/cstring.h"
@@ -45,7 +45,7 @@ struct CollectBridgedFields : public Inspector,
     void flow_merge(Visitor& otherVisitor) override;
     void flow_copy(::ControlFlowVisitor& otherVisitor) override;
 
-    boost::optional<TnaContext> findTnaContext() const;
+    std::optional<TnaContext> findTnaContext() const;
     bool analyzePathlikeExpression(const IR::Expression* expr);
 
     // skip non-TNA controls/parsers

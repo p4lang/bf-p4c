@@ -10,7 +10,7 @@
 
 namespace {
 
-boost::optional<PHV::Kind> str_to_kind(cstring str) {
+std::optional<PHV::Kind> str_to_kind(cstring str) {
     if (str == "tagalong") {
         return PHV::Kind::tagalong;
     } else if (str == "normal") {
@@ -20,7 +20,7 @@ boost::optional<PHV::Kind> str_to_kind(cstring str) {
     } else if (str == "dark") {
         return PHV::Kind::dark;
     }
-    return boost::none;
+    return std::nullopt;
 }
 
 }  // namespace
@@ -123,11 +123,11 @@ bool PragmaContainerType::preorder(const IR::BFN::Pipe* pipe) {
     return true;
 }
 
-boost::optional<PHV::Kind> PragmaContainerType::required_kind(const PHV::Field* f) const {
+std::optional<PHV::Kind> PragmaContainerType::required_kind(const PHV::Field* f) const {
     if (fields.count(f)) {
         return fields.at(f);
     }
-    return boost::none;
+    return std::nullopt;
 }
 
 std::ostream& operator<<(std::ostream& out, const PragmaContainerType& pa_ct) {

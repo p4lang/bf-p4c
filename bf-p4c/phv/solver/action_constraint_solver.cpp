@@ -119,7 +119,7 @@ void assign_input_bug_check(const ordered_map<ContainerID, ContainerSpec>& specs
 
 /// return the first container bit that are live but not set for by assigns. A non-none return
 /// value means that the bit@i is corrupted because of the whole container set instruction.
-boost::optional<int> invalid_whole_container_set(const std::vector<Assign>& assigns,
+std::optional<int> invalid_whole_container_set(const std::vector<Assign>& assigns,
                                                  const ContainerSpec& c,
                                                  const bitvec& src_unallocated_bits) {
     bitvec set_bits;
@@ -131,7 +131,7 @@ boost::optional<int> invalid_whole_container_set(const std::vector<Assign>& assi
             return i;
         }
     }
-    return boost::none;
+    return std::nullopt;
 }
 
 // convert empty container id to readable format.
@@ -195,7 +195,7 @@ Result ActionSolverBase::try_container_set(const ContainerID dest,
     return Result(new ContainerSet(dest, assigns.front().src.container));
 }
 
-boost::optional<Error> ActionSolverBase::check_whole_container_set_with_none_source_allocated()
+std::optional<Error> ActionSolverBase::check_whole_container_set_with_none_source_allocated()
     const {
     // check partial write for destinations when none of their sources has been allocated.
     for (const auto& dest_unallocated_bv : src_unallocated_bits) {
@@ -212,7 +212,7 @@ boost::optional<Error> ActionSolverBase::check_whole_container_set_with_none_sou
             return Error(ErrorCode::invalid_whole_container_write, ss.str());
         }
     }
-    return boost::none;
+    return std::nullopt;
 }
 
 void ActionSolverBase::add_assign(const Operand& dst, Operand src) {
@@ -253,7 +253,7 @@ void ActionSolverBase::set_container_spec(ContainerID id, int size, bitvec live)
     }
 }
 
-boost::optional<Error> ActionSolverBase::validate_input() const {
+std::optional<Error> ActionSolverBase::validate_input() const {
     std::stringstream err_msg;
     for (const auto& dest_assigns : dest_assigns_i) {
         bitvec assigned;
@@ -272,10 +272,10 @@ boost::optional<Error> ActionSolverBase::validate_input() const {
             }
         }
     }
-    return boost::none;
+    return std::nullopt;
 }
 
-boost::optional<Error> ActionMoveSolver::dest_meet_expectation(
+std::optional<Error> ActionMoveSolver::dest_meet_expectation(
     const ContainerID dest, const std::vector<Assign>& src1, const std::vector<Assign>& src2,
     const symbolic_bitvec::BitVec& bv_dest, const symbolic_bitvec::BitVec& bv_src1,
     const symbolic_bitvec::BitVec& bv_src2) const {
@@ -327,7 +327,7 @@ boost::optional<Error> ActionMoveSolver::dest_meet_expectation(
            << src2.front().src.container << " is not equal to dest";
         return Error(ErrorCode::deposit_src2_must_be_dest, ss.str());
     }
-    return boost::none;
+    return std::nullopt;
 }
 
 Result ActionMoveSolver::run_deposit_field_symbolic_bitvec_solver(
@@ -619,7 +619,7 @@ const RotateClassifiedAssigns* ActionMoveSolver::apply_unallocated_src_optimizat
     }
     // decide offset and container.
     int offset = 0;
-    boost::optional<ContainerID> c = boost::none;
+    std::optional<ContainerID> c = std::nullopt;
     if (!aligned_assigns.containers.empty()) {
         offset = 0;
         c = aligned_assigns.containers.begin()->first;
@@ -629,7 +629,7 @@ const RotateClassifiedAssigns* ActionMoveSolver::apply_unallocated_src_optimizat
         c = next->second.front().src.container;
     }
     const int dest_sz = specs_i.at(dest).size;
-    if (!c.is_initialized()) {
+    if (!c.has_value()) {
         c = ContainerID("$unallocated");
         specs_i[*c] = ContainerSpec{dest_sz, bitvec()};
     }

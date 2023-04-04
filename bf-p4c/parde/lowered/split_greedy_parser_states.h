@@ -77,7 +77,7 @@ struct SplitGreedyParserStates : public Transform {
      *                                 in vector "last".
      *
      *      last_statements_partial_proc: the setting of partial_hdr_err_proc of the statements
-     *                                    included in vector "last".  Set to boost::none if
+     *                                    included in vector "last".  Set to std::nullopt if
      *                                    no extract with partial_hdr_err_proc were found
      *                                    in vector "in".
      *
@@ -86,7 +86,7 @@ struct SplitGreedyParserStates : public Transform {
                           IR::Vector<IR::BFN::ParserPrimitive> &first,
                           IR::Vector<IR::BFN::ParserPrimitive> &last,
                           int &last_statements_shift_bit,
-                          boost::optional<bool> &last_statements_partial_proc);
+                          std::optional<bool> &last_statements_partial_proc);
 
     /**
      * @brief Checks that the partial_hdr_err_proc setting is the
@@ -99,14 +99,14 @@ struct SplitGreedyParserStates : public Transform {
      *
      *      partial_proc_value:  when returned value is true (i.e. all partial_hdr_err_proc are
      *                           non-conflicting), contains the value of those
-     *                           partial_hdr_err_proc.  Returns boost::none if none of the
+     *                           partial_hdr_err_proc.  Returns std::nullopt if none of the
      *                           statements contained any partial_hdr_err_proc field.
      *
      */
     bool partial_hdr_err_proc_verify(const IR::Vector<IR::BFN::ParserPrimitive> *statements,
                                      const IR::Vector<IR::BFN::Select> *selects,
                                      const IR::Vector<IR::BFN::Transition> *transitions,
-                                     boost::optional<bool> *partial_proc_value);
+                                     std::optional<bool> *partial_proc_value);
 
     /**
      * @brief Checks if the state's statement, selects and transitions

@@ -1,8 +1,7 @@
-#include <boost/algorithm/string/replace.hpp>
-#include <boost/optional.hpp>
-
 #include <array>
 #include <initializer_list>
+#include <optional>
+#include <boost/algorithm/string/replace.hpp>
 
 #include "gtest/gtest.h"
 
@@ -136,7 +135,7 @@ class NextTablePropTest  : public JBayBackendTest {};
 
 namespace {
 
-boost::optional<TofinoPipeTestCase>
+std::optional<TofinoPipeTestCase>
     createNextTableCase(const std::string& ig_source, const std::string& eg_source = "apply {} ") {
     auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
 header H1

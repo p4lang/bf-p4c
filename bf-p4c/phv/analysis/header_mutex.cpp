@@ -1,8 +1,8 @@
+#include <optional>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/reverse_graph.hpp>
 #include <boost/graph/graph_utility.hpp>
 #include <boost/graph/dominator_tree.hpp>
-#include <boost/optional.hpp>
 #include "bf-p4c/common/table_printer.h"
 #include "bf-p4c/logging/event_logger.h"
 #include "bf-p4c/phv/analysis/header_mutex.h"
@@ -1032,11 +1032,11 @@ bool ExcludeMAUNotMutexHeaders::is_header_pov_lhs_constant_rhs_operation_relatio
  * is a constant 0 or 1, return a pair containing the header's name and the header state derived
  * from the constant's value; return nothing otherwise.
  */
-boost::optional<std::pair<cstring, HeaderState>>
+std::optional<std::pair<cstring, HeaderState>>
     ExcludeMAUNotMutexHeaders::get_header_to_state_pair_from_operation_relation(
         const IR::Operation_Relation* op_rel) {
     if (!op_rel || !is_header_pov_lhs_constant_rhs_operation_relation(op_rel))
-        return boost::optional<std::pair<cstring, HeaderState>>();
+        return std::optional<std::pair<cstring, HeaderState>>();
 
     const PHV::Field* field = get_phv_field(op_rel->left);
     const auto* constant = op_rel->right->to<IR::Constant>();
@@ -1045,21 +1045,21 @@ boost::optional<std::pair<cstring, HeaderState>>
     const auto* neq = op_rel->to<IR::Neq>();
     const auto* equ = op_rel->to<IR::Equ>();
     if (neq && constant->value == 0)
-        return boost::optional<std::pair<cstring, HeaderState>>(std::make_pair(header, ACTIVE));
+        return std::optional<std::pair<cstring, HeaderState>>(std::make_pair(header, ACTIVE));
     else if (neq && constant->value == 1)
-        return boost::optional<std::pair<cstring, HeaderState>>(std::make_pair(header, INACTIVE));
+        return std::optional<std::pair<cstring, HeaderState>>(std::make_pair(header, INACTIVE));
     else if (equ && constant->value == 0)
-        return boost::optional<std::pair<cstring, HeaderState>>(std::make_pair(header, INACTIVE));
+        return std::optional<std::pair<cstring, HeaderState>>(std::make_pair(header, INACTIVE));
     else if (equ && constant->value == 1)
-        return boost::optional<std::pair<cstring, HeaderState>>(std::make_pair(header, ACTIVE));
+        return std::optional<std::pair<cstring, HeaderState>>(std::make_pair(header, ACTIVE));
 
-    return boost::optional<std::pair<cstring, HeaderState>>();
+    return std::optional<std::pair<cstring, HeaderState>>();
 }
 
 /**
  * @brief If the visitor is visiting a gateway, return the gateway row being visited.
  */
-boost::optional<std::pair<const IR::Expression*, cstring>>
+std::optional<std::pair<const IR::Expression*, cstring>>
         ExcludeMAUNotMutexHeaders::get_gateway_row() {
     int index;
     if (const auto* table = gateway_context(index)) {
@@ -1071,9 +1071,9 @@ boost::optional<std::pair<const IR::Expression*, cstring>>
         const auto gateway_row = table->gateway_rows[index];
         LOG_DEBUG9("Currently visiting gateway expression of " << table->name << ":");
         LOG_DEBUG9(TAB1 << gateway_row.first << " " << gateway_row.second);
-        return boost::optional<std::pair<const IR::Expression*, cstring>>(gateway_row);
+        return std::optional<std::pair<const IR::Expression*, cstring>>(gateway_row);
     }
-    return boost::optional<std::pair<const IR::Expression*, cstring>>();
+    return std::optional<std::pair<const IR::Expression*, cstring>>();
 }
 
 /**

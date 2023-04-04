@@ -94,9 +94,9 @@ FieldDefUse::info &FieldDefUse::field(const PHV::Field *f) {
     return info;
 }
 
-void FieldDefUse::read(const PHV::Field *f, boost::optional<le_bitrange> range,
+void FieldDefUse::read(const PHV::Field *f, std::optional<le_bitrange> range,
     const IR::BFN::Unit *unit, const IR::Expression *e, bool needsIXBar) {
-    // If range is boost::none, then it means the whole field is read.
+    // If range is std::nullopt, then it means the whole field is read.
     if (!f) return;
     auto &info = field(f);
     LOG3("defuse: " << DBPrint::Brief << *unit << " reading " << f->name);
@@ -131,9 +131,9 @@ void FieldDefUse::read(const IR::HeaderRef *hr, const IR::BFN::Unit *unit,
     if (!hr) return;
     PhvInfo::StructInfo info = phv.struct_info(hr);
     for (int id : info.field_ids())
-        read(phv.field(id),boost::none, unit, e, needsIXBar);
+        read(phv.field(id),std::nullopt, unit, e, needsIXBar);
     if (!info.metadata)
-        read(phv.field(hr->toString() + ".$valid"), boost::none, unit, e, needsIXBar);
+        read(phv.field(hr->toString() + ".$valid"), std::nullopt, unit, e, needsIXBar);
 }
 
 void FieldDefUse::shadow_previous_ranges(FieldDefUse::info &info, le_bitrange &bit_range) {
@@ -187,9 +187,9 @@ void FieldDefUse::shadow_previous_ranges(FieldDefUse::info &info, le_bitrange &b
     }
 }
 
-void FieldDefUse::write(const PHV::Field *f, boost::optional<le_bitrange> range,
+void FieldDefUse::write(const PHV::Field *f, std::optional<le_bitrange> range,
                         const IR::BFN::Unit *unit, const IR::Expression *e, bool needsIXBar) {
-    // If range is boost::none, then it means that the whole field is written.
+    // If range is std::nullopt, then it means that the whole field is written.
     if (!f) return;
     auto &info = field(f);
     LOG3("defuse: " << DBPrint::Brief << *unit <<
@@ -256,9 +256,9 @@ void FieldDefUse::write(const IR::HeaderRef *hr, const IR::BFN::Unit *unit,
     if (!hr) return;
     PhvInfo::StructInfo info = phv.struct_info(hr);
     for (int id : info.field_ids())
-        write(phv.field(id), boost::none, unit, e, needsIXBar);
+        write(phv.field(id), std::nullopt, unit, e, needsIXBar);
     if (!info.metadata)
-        write(phv.field(hr->toString() + ".$valid"), boost::none, unit, e, needsIXBar);
+        write(phv.field(hr->toString() + ".$valid"), std::nullopt, unit, e, needsIXBar);
 }
 
 bool FieldDefUse::preorder(const IR::BFN::Pipe *p) {
@@ -449,7 +449,7 @@ bool FieldDefUse::preorder(const IR::Expression *e) {
             if (partial) {
                 write(f, bits, unit, e, needsIXBar);
             } else {
-                write(f, boost::none, unit, e, needsIXBar);
+                write(f, std::nullopt, unit, e, needsIXBar);
             }
             write(hr, unit, e, needsIXBar);
             LOG3("  write at unit : " << unit);
@@ -457,7 +457,7 @@ bool FieldDefUse::preorder(const IR::Expression *e) {
             if (partial) {
                 read(f, bits, unit, e, needsIXBar);
             } else {
-                read(f, boost::none, unit, e, needsIXBar);
+                read(f, std::nullopt, unit, e, needsIXBar);
             }
             read(hr, unit, e, needsIXBar);
             LOG3("  read at unit : " << unit);
@@ -609,7 +609,7 @@ bool FieldDefUse::hasDefAt(const PHV::Field* f, const IR::BFN::Unit* u) const {
 
 static inline auto
 getParserRangeDefMatcher(const PhvInfo& phv, const PHV::Field* f,
-                         const boost::optional<le_bitrange> &bits) {
+                         const std::optional<le_bitrange> &bits) {
     le_bitrange range = bits ? *bits : StartLen(0, f->size);
     LOG1("\tDefInParser range: " << range);
     // note that we need to capture f (pointer) and range by value to avoid dangling reference,
@@ -627,7 +627,7 @@ getParserRangeDefMatcher(const PhvInfo& phv, const PHV::Field* f,
 }
 
 FieldDefUse::LocPairSet
-FieldDefUse::getParserDefs(const PHV::Field* f, boost::optional<le_bitrange> bits) const {
+FieldDefUse::getParserDefs(const PHV::Field* f, std::optional<le_bitrange> bits) const {
     LocPairSet out;
     auto matcher = getParserRangeDefMatcher(phv, f, bits);
     for (auto &lp : getAllDefs(f->id)) {
@@ -637,7 +637,7 @@ FieldDefUse::getParserDefs(const PHV::Field* f, boost::optional<le_bitrange> bit
     return out;
 }
 
-bool FieldDefUse::hasDefInParser(const PHV::Field* f, boost::optional<le_bitrange> bits) const {
+bool FieldDefUse::hasDefInParser(const PHV::Field* f, std::optional<le_bitrange> bits) const {
     return std::any_of(getAllDefs(f->id).begin(), getAllDefs(f->id).end(),
                        getParserRangeDefMatcher(phv, f, bits));
 }

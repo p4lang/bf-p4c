@@ -2,10 +2,10 @@
 #define BF_P4C_MAU_TABLE_FLOW_GRAPH_H_
 
 #include <map>
+#include <optional>
 #include <set>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/transitive_closure.hpp>
-#include <boost/optional.hpp>
 #include "bf-p4c/ir/control_flow_visitor.h"
 #include "bf-p4c/lib/boost_graph.h"
 #include "bf-p4c/mau/mau_visitor.h"
@@ -100,7 +100,7 @@ struct FlowGraph {
     /// The sink node, representing the exit point (i.e., entry to the deparser).
     typename Graph::vertex_descriptor v_sink;
 
-    boost::optional<gress_t> gress;
+    std::optional<gress_t> gress;
 
     mutable Reachability<Graph> reachability;
 
@@ -111,7 +111,7 @@ struct FlowGraph {
     std::set<const IR::MAU::Table*> tables;
 
     /// The dominator set for each table in the graph. Lazily computed.
-    mutable boost::optional<std::map<const IR::MAU::Table*,
+    mutable std::optional<std::map<const IR::MAU::Table*,
                                      std::set<const IR::MAU::Table*>>> dominators;
 
     // By default, emptyFlowGraph is set to true to indicate that there are no vertices in the
@@ -126,8 +126,8 @@ struct FlowGraph {
     }
 
     FlowGraph(void) : reachability(g), path_finder(g) {
-        gress = boost::none;
-        dominators = boost::none;
+        gress = std::nullopt;
+        dominators = std::nullopt;
     }
 
     FlowGraph(FlowGraph&& other)
@@ -172,7 +172,7 @@ struct FlowGraph {
     /// Clears the state in this FlowGraph.
     void clear() {
         g.clear();
-        gress = boost::none;
+        gress = std::nullopt;
         reachability.clear();
         tableToVertexIndex.clear();
         tableToVertex.clear();
@@ -244,7 +244,7 @@ struct FlowGraph {
     /// already exist.
     typename Graph::vertex_descriptor add_vertex(const IR::MAU::Table* table) {
         // Initialize gress if needed.
-        if (table != nullptr && gress == boost::none)
+        if (table != nullptr && gress == std::nullopt)
             gress = table->gress;
 
         if (tableToVertex.count(table)) {

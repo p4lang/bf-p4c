@@ -100,7 +100,7 @@ struct FindPhase0Table : public Inspector {
             P4V1::TnaProgramStructure* structure)
         : refMap(refMap), typeMap(typeMap), structure(structure) { }
 
-    boost::optional<Phase0TableMetadata> phase0;
+    std::optional<Phase0TableMetadata> phase0;
 
     // Helper pass to check for stateful calls
     struct CheckStateful : public Inspector {
@@ -127,7 +127,7 @@ struct FindPhase0Table : public Inspector {
         ERROR_CHECK(!phase0PragmaSet,
             "Phase0 pragma set but table - %s is not a valid Phase0. Reason - %s",
                                                                 table->name, errStr);
-        phase0 = boost::none;
+        phase0 = std::nullopt;
         return false;
     }
 
@@ -155,7 +155,7 @@ struct FindPhase0Table : public Inspector {
                     table->name);
                 if (pragma_val->value == 0) {
                     LOG3(" - Phase0 pragma set to 0 on table");
-                    phase0 = boost::none;
+                    phase0 = std::nullopt;
                     return false;
                 } else if (pragma_val->value == 1) {
                     LOG3(" - Phase0 pragma set to 1 on table");
@@ -538,7 +538,7 @@ struct FindPhase0Table : public Inspector {
 /// produced by FindPhase0Table. If no Phase0TableMetadata is provided (i.e.,
 /// no phase 0 table was found) then no changes are made.
 struct RewritePhase0IfPresent : public Transform {
-    explicit RewritePhase0IfPresent(const boost::optional<Phase0TableMetadata>& phase0)
+    explicit RewritePhase0IfPresent(const std::optional<Phase0TableMetadata>& phase0)
         : phase0(phase0) { }
 
     profile_t init_apply(const IR::Node* root) override {
@@ -688,7 +688,7 @@ struct RewritePhase0IfPresent : public Transform {
     }
 
  private:
-    const boost::optional<Phase0TableMetadata>& phase0;
+    const std::optional<Phase0TableMetadata>& phase0;
 };
 
 }  // namespace

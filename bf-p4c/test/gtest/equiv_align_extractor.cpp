@@ -35,9 +35,9 @@ class EquivalentAlignExtractorTest : public TofinoBackendTest {
 
 TEST_F(EquivalentAlignExtractorTest, IgnoresAlignedClusterWithSingleItem) {
     // Build supercluster
-    boost::optional<PHV::SuperCluster*> sc1 = scb.build_super_cluster(CLUSTER_WITHOUT_EQUIV_ALIGN);
+    std::optional<PHV::SuperCluster*> sc1 = scb.build_super_cluster(CLUSTER_WITHOUT_EQUIV_ALIGN);
     if (!sc1) FAIL() << "Failed to build the cluster!";
-    groups.push_back(sc1.get());
+    groups.push_back(*sc1);
 
     // Add required fields
     info.add("egress::eg_md.flags.pfc_wd_drop", EGRESS, 1, 0, true, false);
@@ -52,9 +52,9 @@ TEST_F(EquivalentAlignExtractorTest, IgnoresAlignedClusterWithSingleItem) {
 
 TEST_F(EquivalentAlignExtractorTest, ExtractsAlignedClusterWithMoreItems) {
     // Build supercluster
-    boost::optional<PHV::SuperCluster*> sc1 = scb.build_super_cluster(CLUSTER_WITH_EQUIV_ALIGN);
+    std::optional<PHV::SuperCluster*> sc1 = scb.build_super_cluster(CLUSTER_WITH_EQUIV_ALIGN);
     if (!sc1) FAIL() << "Failed to build the cluster!";
-    groups.push_back(sc1.get());
+    groups.push_back(*sc1);
 
     // Add required fields
     info.add("egress::eg_md.checks.mtu", EGRESS, 16, 0, false, false);

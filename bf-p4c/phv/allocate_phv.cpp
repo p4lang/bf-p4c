@@ -119,7 +119,7 @@ std::string str_supercluster_alignments(PHV::SuperCluster& sc, const AllocAlignm
 }
 
 // alloc_alignment_merge return merged alloc alignment if no conflict.
-boost::optional<AllocAlignment> alloc_alignment_merge(
+std::optional<AllocAlignment> alloc_alignment_merge(
     const AllocAlignment& a, const AllocAlignment& b) {
     AllocAlignment rst;
     for (auto& alignment : std::vector<const AllocAlignment*>{&a, &b}) {
@@ -133,7 +133,7 @@ boost::optional<AllocAlignment> alloc_alignment_merge(
             auto align = cluster_int.second;
             if (rst.cluster_alignment.count(cluster) &&
                 rst.cluster_alignment[cluster] != align) {
-                return boost::none;
+                return std::nullopt;
             }
             rst.cluster_alignment[cluster] = align;
         }
@@ -531,7 +531,7 @@ void print_or_throw_slicing_error(const PHV::AllocUtils& utils, const PHV::Super
                 for (const auto& list : sc->slice_lists()) {
                     int no_split_size = 0;
                     int alignment_bits = 0;
-                    boost::optional<PHV::FieldSlice> prev_slice = boost::none;
+                    std::optional<PHV::FieldSlice> prev_slice = std::nullopt;
 
                     for (const auto& slice : *list) {
                         if (!prev_slice || (prev_slice->field() != slice.field())) {
@@ -599,7 +599,7 @@ class DummyParserPackingValidator : public PHV::ParserPackingValidatorInterface 
  public:
     const PHV::v2::AllocError* can_pack(
         const PHV::v2::FieldSliceAllocStartMap&,
-        const boost::optional<PHV::Container>&) const override {
+        const std::optional<PHV::Container>&) const override {
         return nullptr;
     }
 };
@@ -798,7 +798,7 @@ AllocScore AllocScore::operator-(const AllocScore& right) const {
  * + is_tphv: type of @p group.
  * + n_set_gress:
  *     number of containers which set their gress
- *     to ingress/egress from boost::none.
+ *     to ingress/egress from std::nullopt.
  * + n_overlay_bits: container bits already used in parent alloc get overlaid.
  * + n_field_packing_score: container bits that share the same byte for two or
  *     more slices used as a condition in a match table.
@@ -1549,7 +1549,7 @@ bool CoreAllocation::satisfies_constraints(
         }
     }
 
-    boost::optional<IR::BFN::ParserWriteMode> write_mode;
+    std::optional<IR::BFN::ParserWriteMode> write_mode;
 
     if (isExtracted) {
         auto it = utils_i.field_to_parser_states.field_to_writes.find(f);
@@ -1622,7 +1622,7 @@ bool CoreAllocation::satisfies_constraints(
                     if (!utils_i.field_to_parser_states.field_to_writes.count(sl.field()))
                         continue;
 
-                    boost::optional<IR::BFN::ParserWriteMode> other_write_mode;
+                    std::optional<IR::BFN::ParserWriteMode> other_write_mode;
 
                     for (auto e : utils_i.field_to_parser_states.field_to_writes.at(sl.field())) {
                         other_write_mode = e->getWriteMode();
@@ -2046,10 +2046,10 @@ bool CoreAllocation::try_pack_slice_list(
     std::vector<PHV::AllocSlice> &candidate_slices,
     PHV::Transaction &perContainerAlloc,
     PHV::Allocation::LiveRangeShrinkingMap &initActions,
-    boost::optional<PHV::Allocation::LiveRangeShrinkingMap> &initNodes,
+    std::optional<PHV::Allocation::LiveRangeShrinkingMap> &initNodes,
     const PHV::Container& c,
     const PHV::SuperCluster& super_cluster,
-    boost::optional<PHV::Allocation::ConditionalConstraints> &action_constraints,
+    std::optional<PHV::Allocation::ConditionalConstraints> &action_constraints,
     int &num_bitmasks) const {
     // Maintain a list of conditional constraints that are already a part of a slice list that
     // follows the required alignment. Therefore, we do not need to recursively call
@@ -2151,8 +2151,7 @@ bool CoreAllocation::try_pack_slice_list(
 
         // Find slice lists that contain slices in action_constraints.
         for (auto kv_source : *action_constraints) {
-            auto slice_list =
-                boost::make_optional<const PHV::SuperCluster::SliceList *>(false, 0);
+            std::optional<const PHV::SuperCluster::SliceList *> slice_list = std::nullopt;
             for (auto& slice_and_pos : kv_source.second) {
                 const auto& slice_lists = super_cluster.slice_list(slice_and_pos.first);
                 if (slice_lists.size() > 1) {
@@ -2177,7 +2176,7 @@ bool CoreAllocation::try_pack_slice_list(
 
                 auto* candidate = slice_lists.front();
                 if (slice_list) {
-                    auto& fs1 = slice_list.get()->front();
+                    auto& fs1 = slice_list.value()->front();
                     auto& fs2 = candidate->front();
                     if (fs1.field()->exact_containers() != fs2.field()->exact_containers()) {
                         LOG_DEBUG5(TAB1 "Failed: Two slice cannot be placed in one container "
@@ -2205,7 +2204,7 @@ bool CoreAllocation::try_pack_slice_list(
                 int offset = 0;
                 bool absolute = false;
                 int size = 0;
-                auto requiredContainer = boost::make_optional(false, PHV::Container());
+                std::optional<PHV::Container> requiredContainer = std::nullopt;
                 std::map<PHV::FieldSlice, int> bitPositions;
                 for (auto& slice : **slice_list) {
                     size += slice.range().size();
@@ -2219,7 +2218,7 @@ bool CoreAllocation::try_pack_slice_list(
                             kv_source.second.at(slice).container)
                         BUG("Error setting up conditional constraints: Multiple containers "
                             "%1% and %2% found", *requiredContainer,
-                            kv_source.second.at(slice).container);
+                            *kv_source.second.at(slice).container);
                     requiredContainer = kv_source.second.at(slice).container;
                     if (!absolute && required_pos < offset) {
                         // This is the first slice with an action alignment constraint.  Check
@@ -2283,7 +2282,7 @@ bool CoreAllocation::try_pack_slice_list(
     return true;
 }
 
-boost::optional<std::vector<PHV::AllocSlice>>
+std::optional<std::vector<PHV::AllocSlice>>
 CoreAllocation::prepare_candidate_slices(
     PHV::SuperCluster::SliceList & slices,
     const PHV::Container& c,
@@ -2293,12 +2292,12 @@ CoreAllocation::prepare_candidate_slices(
         if (c.is(PHV::Kind::mocha) && !field_slice.field()->is_mocha_candidate()) {
             LOG_FEATURE("alloc_progress", 5, TAB1 "Failed: " << c <<
                         " cannot contain the non-mocha field slice " << field_slice);
-            return boost::none;
+            return std::nullopt;
         }
         if (c.is(PHV::Kind::dark) && !field_slice.field()->is_dark_candidate()) {
             LOG_FEATURE("alloc_progress", 5, TAB1 "Failed: " << c <<
                         " cannot contain the non-dark field slice " << field_slice);
-            return boost::none;
+            return std::nullopt;
         }
         le_bitrange container_slice =
             StartLen(start_positions.at(field_slice).bitPosition, field_slice.size());
@@ -2311,9 +2310,9 @@ CoreAllocation::prepare_candidate_slices(
 
 bool CoreAllocation::try_metadata_overlay(
     const PHV::Container& c,
-    boost::optional<ordered_set<PHV::AllocSlice>> &allocedSlices,
+    std::optional<ordered_set<PHV::AllocSlice>> &allocedSlices,
     const PHV::AllocSlice &slice,
-    boost::optional<PHV::Allocation::LiveRangeShrinkingMap> &initNodes,
+    std::optional<PHV::Allocation::LiveRangeShrinkingMap> &initNodes,
     ordered_set<PHV::AllocSlice> &new_candidate_slices,
     ordered_set<PHV::AllocSlice> &metaInitSlices,
     PHV::Allocation::LiveRangeShrinkingMap &initActions,
@@ -2487,8 +2486,8 @@ bool CoreAllocation::check_metadata_and_dark_overlay(
     ordered_set<PHV::AllocSlice> &new_candidate_slices,
     PHV::Transaction &perContainerAlloc,
     ordered_map<const PHV::AllocSlice, OverlayInfo> &overlay_info,
-    boost::optional<PHV::Allocation::LiveRangeShrinkingMap> &initNodes,
-    boost::optional<ordered_set<PHV::AllocSlice>> &allocedSlices,
+    std::optional<PHV::Allocation::LiveRangeShrinkingMap> &initNodes,
+    std::optional<ordered_set<PHV::AllocSlice>> &allocedSlices,
     ordered_set<PHV::AllocSlice> &metaInitSlices,
     PHV::Allocation::LiveRangeShrinkingMap &initActions,
     bool &new_overlay_container,
@@ -2652,7 +2651,7 @@ bool CoreAllocation::try_place_wide_arith_hi(
             auto try_hi = tryAllocSliceList(
                     this_alloc, small_grp, super_cluster, *hi_slice,
                     alloc_align.slice_alignment, score_ctx);
-            if (try_hi != boost::none) {
+            if (try_hi != std::nullopt) {
                 LOG_DEBUG5(TAB1 "Wide arith hi slice could be allocated in "
                             << next_container);
                 LOG_DEBUG5(TAB1 << hi_slice);
@@ -2743,7 +2742,7 @@ bool CoreAllocation::find_previous_allocation(
     return true;
 }
 
-boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
+std::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
     const PHV::Allocation& alloc,
     const PHV::ContainerGroup& group,
     const PHV::SuperCluster& super_cluster,
@@ -2769,7 +2768,7 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
 // 2. Try to maximize overlays. (in terms of the number of overlays).
 // 3. If same n_overlay, try to maximize packing,
 //    in terms of choosing the container with least free room).
-boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
+std::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
     const PHV::Allocation& alloc,
     const PHV::ContainerGroup& group,
     const PHV::SuperCluster& super_cluster,
@@ -2794,7 +2793,7 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
 
     if (!find_previous_allocation(
         previous_container, previous_allocations, start_positions, slices, group, alloc)) {
-        return boost::none;
+        return std::nullopt;
     }
     // If we have already allocated some fields of our slices to previous_container, we need to
     // consider it non-equivalent to all other containers. The same holds if the container is
@@ -2809,7 +2808,7 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
         if (!satisfies_constraints(group, slice)) {
             LOG_FEATURE("alloc_progress", 5, TAB1 "Failed: Slice " << slice <<
                         " doesn't satisfy slice<-->group constraints");
-            return boost::none; } }
+            return std::nullopt; } }
 
     // figure out whether we have a wide arithmetic lo operation and find the
     // associated hi field slice.
@@ -2842,16 +2841,16 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
     if (container_size < aggregate_size) {
         LOG_FEATURE("alloc_progress", 5, TAB1 "Failed: Slices are " << aggregate_size <<
                     "b in total and cannot fit in a " << container_size << "b container");
-        return boost::none; }
+        return std::nullopt; }
 
     // Look for a container to allocate all slices in.
     AllocScore best_score = AllocScore::make_lowest();
-    boost::optional<PHV::Transaction> best_candidate = boost::none;
+    std::optional<PHV::Transaction> best_candidate = std::nullopt;
     for (const PHV::Container& c : group) {
         LOG_FEATURE("alloc_progress", 5, "Trying to allocate to " << c);
         if (auto equivalent_c = cet.find_equivalent_tried_container(c)) {
             LOG_FEATURE("alloc_progress", 5, TAB1 "Container " << c << " is indistinguishible "
-                        "from an already tried container " << equivalent_c << ", skipping");
+                        "from an already tried container " << *equivalent_c << ", skipping");
             continue;
         }
 
@@ -2878,8 +2877,8 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
         // Results of metadata initialization. This is a map of field to the initialization actions
         // determined by FindInitializationNode methods.
         ordered_set<PHV::AllocSlice> new_candidate_slices;
-        boost::optional<PHV::Allocation::LiveRangeShrinkingMap> initNodes = boost::none;
-        boost::optional<ordered_set<PHV::AllocSlice>> allocedSlices = boost::none;
+        std::optional<PHV::Allocation::LiveRangeShrinkingMap> initNodes = std::nullopt;
+        std::optional<ordered_set<PHV::AllocSlice>> allocedSlices = std::nullopt;
         // The metadata slices that require initialization after live range shrinking.
         ordered_set<PHV::AllocSlice> metaInitSlices;
         PHV::Transaction perContainerAlloc = alloc_attempt.makeTransaction();
@@ -3063,10 +3062,10 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
                                                                   metaInitSlices,
                                                                   candidate_slices); });
         if (!constraints_ok) {
-            initNodes = boost::none;
-            allocedSlices = boost::none;
+            initNodes = std::nullopt;
+            allocedSlices = std::nullopt;
             continue; }
-        boost::optional<PHV::Allocation::ConditionalConstraints> action_constraints;
+        std::optional<PHV::Allocation::ConditionalConstraints> action_constraints;
         int num_bitmasks = 0;
         if (!try_pack_slice_list(candidate_slices, perContainerAlloc, initActions, initNodes, c,
                 super_cluster, action_constraints, num_bitmasks)) {
@@ -3167,7 +3166,7 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
     if (!best_candidate) {
         LOG_FEATURE("alloc_progress", 5, TAB2 "Failed: There is no suitable candidate for slices"
                     << slices);
-        return boost::none; }
+        return std::nullopt; }
 
     alloc_attempt.commit(*best_candidate);
     return alloc_attempt;
@@ -3553,7 +3552,7 @@ std::vector<AllocAlignment> CoreAllocation::build_slicelist_alignment(
 }
 
 
-boost::optional<PHV::Transaction> CoreAllocation::alloc_super_cluster_with_alignment(
+std::optional<PHV::Transaction> CoreAllocation::alloc_super_cluster_with_alignment(
     const PHV::Allocation& alloc,
     const PHV::ContainerGroup& container_group,
     PHV::SuperCluster& super_cluster,
@@ -3571,7 +3570,7 @@ boost::optional<PHV::Transaction> CoreAllocation::alloc_super_cluster_with_align
             alignment.slice_alignment, score_ctx);
         if (!partial_alloc_result) {
             LOG_FEATURE("alloc_progress", 5, "Failed to allocate slice list " << *slice_list);
-            return boost::none;
+            return std::nullopt;
         }
         alloc_attempt.commit(*partial_alloc_result);
 
@@ -3607,7 +3606,7 @@ boost::optional<PHV::Transaction> CoreAllocation::alloc_super_cluster_with_align
                     LOG_FEATURE("alloc_progress",6, TAB1
                                 "Failed: Alignment constraint violation: No valid start positions "
                                 "for aligned cluster " << slice_list);
-                    return boost::none;
+                    return std::nullopt;
                 }
                 // Constraints satisfied so long as aligned_cluster is placed
                 // starting at a bit position in `starts`.
@@ -3615,7 +3614,7 @@ boost::optional<PHV::Transaction> CoreAllocation::alloc_super_cluster_with_align
             }
 
             // Compute all possible alignments
-            boost::optional<PHV::Transaction> best_alloc = boost::none;
+            std::optional<PHV::Transaction> best_alloc = std::nullopt;
             AllocScore best_score = AllocScore::make_lowest();
             for (auto start : starts) {
                 bool failed = false;
@@ -3655,7 +3654,7 @@ boost::optional<PHV::Transaction> CoreAllocation::alloc_super_cluster_with_align
 
             if (!best_alloc) {
                 LOG_FEATURE("alloc_progress", 5, TAB1 "Failed to allocate rotational cluster");
-                return boost::none;
+                return std::nullopt;
             }
             alloc_attempt.commit(*best_alloc);
             LOG_FEATURE("alloc_progress", 5, TAB1 "Allocated rotational cluster!");
@@ -3664,7 +3663,7 @@ boost::optional<PHV::Transaction> CoreAllocation::alloc_super_cluster_with_align
     return alloc_attempt;
 }
 
-boost::optional<const PHV::SuperCluster::SliceList*>
+std::optional<const PHV::SuperCluster::SliceList*>
 CoreAllocation::find_first_unallocated_slicelist(
     const PHV::Allocation& alloc, const std::list<PHV::ContainerGroup*>& container_groups,
     const PHV::SuperCluster& sc) const {
@@ -3712,11 +3711,11 @@ CoreAllocation::find_first_unallocated_slicelist(
             }
         }
     }
-    return boost::none;
+    return std::nullopt;
 }
 
 // SUPERCLUSTER <--> CONTAINER GROUP allocation.
-boost::optional<PHV::Transaction> CoreAllocation::try_alloc(
+std::optional<PHV::Transaction> CoreAllocation::try_alloc(
         const PHV::Allocation& alloc,
         const PHV::ContainerGroup& container_group,
         PHV::SuperCluster& super_cluster,
@@ -3728,7 +3727,7 @@ boost::optional<PHV::Transaction> CoreAllocation::try_alloc(
 
     // Check container group/cluster group constraints.
     if (!satisfies_constraints(container_group, super_cluster))
-        return boost::none;
+        return std::nullopt;
 
     LOG_DEBUG5("\nBuild alignments");
     std::vector<AllocAlignment> alignments = build_alignments(
@@ -3737,7 +3736,7 @@ boost::optional<PHV::Transaction> CoreAllocation::try_alloc(
     if (alignments.empty()) {
         LOG_FEATURE("alloc_progress", 5, "Failed: SuperCluster is not allocable due to alignment:\n"
                     << super_cluster);
-        return boost::none;
+        return std::nullopt;
     }
 
     // Sort slice lists according to the number of times they
@@ -3752,7 +3751,7 @@ boost::optional<PHV::Transaction> CoreAllocation::try_alloc(
             LOG_FEATURE("alloc_progress", 5, TAB1 << fsl); } }
 
     // try different alignments.
-    boost::optional<PHV::Transaction> best_alloc = boost::none;
+    std::optional<PHV::Transaction> best_alloc = std::nullopt;
     AllocScore best_score = AllocScore::make_lowest();
     for (const auto& alignment : alignments) {
         LOG_FEATURE("alloc_progress", 6, "Try allocate with " <<
@@ -3954,9 +3953,9 @@ std::list<PHV::SuperCluster*> PHV::AllocUtils::create_strided_clusters(
 
 void merge_slices(
     safe_vector<PHV::AllocSlice> &slices, safe_vector<PHV::AllocSlice> &merged_alloc) {
-    boost::optional<PHV::AllocSlice> last = boost::none;
+    std::optional<PHV::AllocSlice> last = std::nullopt;
     for (auto& slice : slices) {
-        if (last == boost::none) {
+        if (last == std::nullopt) {
             last = slice;
             continue;
         }
@@ -4074,7 +4073,7 @@ AllocResult AllocatePHV::brute_force_alloc(
         /*.max_failure_retry:*/      0,
         /*.max_slicing:*/            128,
         /*.max_sl_alignment_try:*/   1,
-        /*.unsupported_devices:*/    boost::none,
+        /*.unsupported_devices:*/    std::nullopt,
         /*.pre_slicing_validation:*/ false,
         /*.enable_ara_in_overlays:*/ PhvInfo::darkSpillARA
     };
@@ -4084,7 +4083,7 @@ AllocResult AllocatePHV::brute_force_alloc(
         /*.max_failure_retry:*/      0,
         /*.max_slicing:*/            256,
         /*.max_sl_alignment_try:*/   5,
-        /*.unsupported_devices:*/    boost::none,
+        /*.unsupported_devices:*/    std::nullopt,
         /*.pre_slicing_validation:*/ false,
         /*.enable_ara_in_overlays:*/ PhvInfo::darkSpillARA
     };
@@ -4111,7 +4110,7 @@ AllocResult AllocatePHV::brute_force_alloc(
         AllocResultCode::UNKNOWN, alloc.makeTransaction(), {});
     for (const auto& config : configs) {
         if (config.unsupported_devices &&
-            config.unsupported_devices.get().count(Device::currentDevice())) {
+            config.unsupported_devices->count(Device::currentDevice())) {
             continue;
         }
         PhvInfo::darkSpillARA = PhvInfo::darkSpillARA && config.enable_ara_in_overlays;
@@ -4157,7 +4156,7 @@ AllocResult AllocatePHV::brute_force_alloc(
                 /*.max_failure_retry:*/      0,
                 /*.max_slicing:*/            256,
                 /*.max_sl_alignment_try:*/   5,
-                /*.tofino_only:*/            boost::none,
+                /*.tofino_only:*/            std::nullopt,
                 /*.pre_slicing_validation:*/ true,
                 /*.enable_ara_in_overlays:*/ false
             };
@@ -4621,7 +4620,7 @@ BruteForceAllocationStrategy::allocDeparserZeroSuperclusters(
     return cluster_groups;
 }
 
-boost::optional<PHV::Transaction> CoreAllocation::try_deparser_zero_alloc(
+std::optional<PHV::Transaction> CoreAllocation::try_deparser_zero_alloc(
         const PHV::Allocation& alloc, PHV::SuperCluster& cluster, PhvInfo& phv) const {
     auto alloc_attempt = alloc.makeTransaction();
     if (PHV::AllocUtils::is_clot_allocated(utils_i.clot, cluster)) {
@@ -4718,7 +4717,7 @@ BruteForceAllocationStrategy::pounderRoundAllocLoop(
     return allocated_sc;
 }
 
-boost::optional<const PHV::SuperCluster::SliceList*>
+std::optional<const PHV::SuperCluster::SliceList*>
 BruteForceAllocationStrategy::preslice_validation(
     const std::list<PHV::SuperCluster*>& clusters,
     const std::list<PHV::ContainerGroup*>& container_groups) const {
@@ -4727,7 +4726,7 @@ BruteForceAllocationStrategy::preslice_validation(
         bool succ = false;
         auto itr_ctx = utils_i.make_slicing_ctx(cluster);
         itr_ctx->set_config(slicing_config);
-        boost::optional<const PHV::SuperCluster::SliceList*> last_invald;
+        std::optional<const PHV::SuperCluster::SliceList*> last_invald;
         itr_ctx->iterate([&](const std::list<PHV::SuperCluster*>& sliced) {
             ++n_tried;
             for (auto* sc : sliced) {
@@ -4750,11 +4749,11 @@ BruteForceAllocationStrategy::preslice_validation(
             } else {
                 LOG_DEBUG1("preslice_validation cannot allocate " << cluster
                            << "but no unallocatable slice list was found");
-                return boost::none;
+                return std::nullopt;
             }
         }
     }
-    return boost::none;
+    return std::nullopt;
 }
 
 std::list<PHV::SuperCluster*>
@@ -5248,7 +5247,7 @@ bool is_valid_stride_slicing(std::list<PHV::SuperCluster*>& slicing) {
     return true;
 }
 
-boost::optional<const PHV::SuperCluster::SliceList*> BruteForceAllocationStrategy::diagnose_slicing(
+std::optional<const PHV::SuperCluster::SliceList*> BruteForceAllocationStrategy::diagnose_slicing(
     const std::list<PHV::SuperCluster*>& slicing,
     const std::list<PHV::ContainerGroup*>& container_groups) const {
     ScoreContext score_ctx(
@@ -5281,7 +5280,7 @@ boost::optional<const PHV::SuperCluster::SliceList*> BruteForceAllocationStrateg
             return failing_sl;
         }
     }
-    return boost::none;
+    return std::nullopt;
 }
 
 bool
@@ -5296,7 +5295,7 @@ BruteForceAllocationStrategy::tryAllocSlicing(
     for (auto* sc : slicing) {
         // Find best container group for this slice.
         auto best_slice_score = AllocScore::make_lowest();
-        boost::optional<PHV::Transaction> best_slice_alloc = boost::none;
+        std::optional<PHV::Transaction> best_slice_alloc = std::nullopt;
         LOG_DEBUG4("Searching for container group to allocate supercluster with Uid "
                    << sc->uid << " into");
 
@@ -5328,7 +5327,7 @@ BruteForceAllocationStrategy::tryAllocSlicing(
         }
 
         // Break if this slice couldn't be placed.
-        if (best_slice_alloc == boost::none) {
+        if (best_slice_alloc == std::nullopt) {
             LOG_FEATURE("alloc_progress", 5,
                         "Failed: Cannot find placing for slices in supercluster " << sc->uid);
             return false;
@@ -5380,7 +5379,7 @@ BruteForceAllocationStrategy::tryAllocStride(
     LOG_DEBUG4("Try alloc slicing stride");
 
     auto best_score = AllocScore::make_lowest();
-    boost::optional<PHV::Transaction> best_alloc = boost::none;
+    std::optional<PHV::Transaction> best_alloc = std::nullopt;
 
     auto leader = stride.front();
 
@@ -5411,7 +5410,7 @@ BruteForceAllocationStrategy::tryAllocStride(
         }
     }
 
-    if (best_alloc == boost::none) {
+    if (best_alloc == std::nullopt) {
         LOG_FEATURE("alloc_progress", 5, "Failed to allocate slicing stride");
         return false;
     }
@@ -5505,7 +5504,7 @@ BruteForceAllocationStrategy::tryAllocSlicingStrided(
     return true;
 }
 
-boost::optional<PHV::Transaction>
+std::optional<PHV::Transaction>
 BruteForceAllocationStrategy::tryVariousSlicing(
     PHV::Transaction& rst,
     PHV::SuperCluster* cluster_group,
@@ -5513,8 +5512,8 @@ BruteForceAllocationStrategy::tryVariousSlicing(
     const ScoreContext& score_ctx,
     std::stringstream& alloc_history) {
     auto best_score = AllocScore::make_lowest();
-    boost::optional<PHV::Transaction> best_alloc = boost::none;
-    boost::optional<std::list<PHV::SuperCluster*>> best_slicing = boost::none;
+    std::optional<PHV::Transaction> best_alloc = std::nullopt;
+    std::optional<std::list<PHV::SuperCluster*>> best_slicing = std::nullopt;
     std::vector<const PHV::SuperCluster::SliceList*> diagnosed_unallocatables;
     int MAX_SLICING_TRY = config_i.max_slicing;
 
@@ -5666,7 +5665,7 @@ BruteForceAllocationStrategy::allocLoop(
         alloc_history << n << ": " << "TRYING to allocate " << cluster_group;
         LOG_FEATURE("alloc_progress", 4, "TRYING to allocate " << cluster_group);
 
-        boost::optional<PHV::Transaction> best_alloc = tryVariousSlicing(try_alloc,
+        std::optional<PHV::Transaction> best_alloc = tryVariousSlicing(try_alloc,
                                                                          cluster_group,
                                                                          container_groups,
                                                                          score_ctx,
@@ -5799,7 +5798,7 @@ const IR::Node* IncrementalPHVAllocation::apply_visitor(const IR::Node* root, co
         /*.max_failure_retry:*/      0,
         /*.max_slicing:*/            1,
         /*.max_sl_alignment_try:*/   1,
-        /*.tofino_only:*/            boost::none,
+        /*.tofino_only:*/            std::nullopt,
         /*.pre_slicing_validation:*/ false,
         /*.enable_ara_in_overlays:*/ false,
     };

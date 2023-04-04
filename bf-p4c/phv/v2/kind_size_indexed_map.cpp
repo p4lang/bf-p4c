@@ -23,9 +23,9 @@ int KindSizeIndexedMap::sum(const PHV::Size& s) const {
     return rv;
 }
 
-boost::optional<int> KindSizeIndexedMap::get(const PHV::Kind& k, const PHV::Size& s) const {
+std::optional<int> KindSizeIndexedMap::get(const PHV::Kind& k, const PHV::Size& s) const {
     if (m.count({k, s})) return m.at({k, s});
-    return boost::none;
+    return std::nullopt;
 }
 
 int KindSizeIndexedMap::get_or(const PHV::Kind& k, const PHV::Size& s, int default_v) const {

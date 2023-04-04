@@ -4,8 +4,8 @@
 #define BF_P4C_LIB_BOOST_GRAPH_H_
 
 #include <map>
+#include <optional>
 #include <boost/graph/adjacency_list.hpp>
-#include <boost/optional.hpp>
 #include <boost/tuple/tuple.hpp>
 
 #include "lib/bitvec.h"
@@ -45,7 +45,7 @@ class Reachability {
     }
 
     /// Sets the sink node; no nodes will be considered reachable from this node.
-    void setSink(boost::optional<Vertex> sink) {
+    void setSink(std::optional<Vertex> sink) {
         this->sink = sink;
         clear();
     }
@@ -114,7 +114,7 @@ class Reachability {
     const Graph& g;
 
     /// Sink node. If provided, no nodes will be considered reachable from this node.
-    boost::optional<Vertex> sink = boost::none;
+    std::optional<Vertex> sink = std::nullopt;
 
     /// Maps each vertex v to the set of vertices reachable from v. Vertices are not considered
     /// reachable from themselves unless the graph has cycles.

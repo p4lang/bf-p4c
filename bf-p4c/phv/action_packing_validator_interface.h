@@ -1,7 +1,7 @@
 #ifndef BF_P4C_PHV_ACTION_PACKING_VALIDATOR_INTERFACE_H_
 #define BF_P4C_PHV_ACTION_PACKING_VALIDATOR_INTERFACE_H_
 
-#include <boost/optional.hpp>
+#include <optional>
 
 #include "bf-p4c/phv/action_source_tracker.h"
 #include "bf-p4c/phv/utils/utils.h"
@@ -25,7 +25,7 @@ class ActionPackingValidatorInterface {
         /// less to be packed together.
         ordered_set<const SuperCluster::SliceList*>* invalid_packing =
             new ordered_set<const SuperCluster::SliceList*>();
-        boost::optional<const IR::MAU::Action*> invalid_action = boost::none;
+        std::optional<const IR::MAU::Action*> invalid_action = std::nullopt;
         Result() = default;
         explicit Result(Code code, cstring err = "") : code(code), err(err) {}
     };

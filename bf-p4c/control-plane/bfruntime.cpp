@@ -51,21 +51,21 @@ Util::JsonObject* makeTypeInt(cstring type, cstring mask) {
     return typeObj;
 }
 
-Util::JsonObject* makeTypeBool(boost::optional<bool> defaultValue) {
+Util::JsonObject* makeTypeBool(std::optional<bool> defaultValue) {
     auto* typeObj = new Util::JsonObject();
     typeObj->emplace("type", "bool");
-    if (defaultValue != boost::none)
+    if (defaultValue != std::nullopt)
         typeObj->emplace("default_value", *defaultValue);
     return typeObj;
 }
 
 Util::JsonObject* makeTypeBytes(int width,
-                                boost::optional<int64_t> defaultValue,
+                                std::optional<int64_t> defaultValue,
                                 cstring mask) {
     auto* typeObj = new Util::JsonObject();
     typeObj->emplace("type", "bytes");
     typeObj->emplace("width", width);
-    if (defaultValue != boost::none)
+    if (defaultValue != std::nullopt)
         typeObj->emplace("default_value", *defaultValue);
     if (!mask.isNullOrEmpty())
         typeObj->emplace("mask", mask);
@@ -73,14 +73,14 @@ Util::JsonObject* makeTypeBytes(int width,
 }
 
 Util::JsonObject* makeTypeEnum(const std::vector<cstring>& choices,
-                               boost::optional<cstring> defaultValue) {
+                               std::optional<cstring> defaultValue) {
     auto* typeObj = new Util::JsonObject();
     typeObj->emplace("type", "string");
     auto* choicesArray = new Util::JsonArray();
     for (auto choice : choices)
         choicesArray->append(choice);
     typeObj->emplace("choices", choicesArray);
-    if (defaultValue != boost::none)
+    if (defaultValue != std::nullopt)
         typeObj->emplace("default_value", *defaultValue);
     return typeObj;
 }
@@ -103,10 +103,10 @@ static void addOneOf(Util::JsonArray* dataJson,
     dataJson->append(oneOfJson);
 }
 
-static boost::optional<cstring> transformMatchType(p4configv1::MatchField_MatchType matchType) {
+static std::optional<cstring> transformMatchType(p4configv1::MatchField_MatchType matchType) {
     switch (matchType) {
         case p4configv1::MatchField_MatchType_UNSPECIFIED:
-            return boost::none;
+            return std::nullopt;
         case p4configv1::MatchField_MatchType_EXACT:
             return cstring("Exact");
         case p4configv1::MatchField_MatchType_LPM:
@@ -118,17 +118,17 @@ static boost::optional<cstring> transformMatchType(p4configv1::MatchField_MatchT
         case p4configv1::MatchField_MatchType_OPTIONAL:
             return cstring("Optional");
         default:
-            return boost::none;
+            return std::nullopt;
     }
 }
 
-static boost::optional<cstring> transformOtherMatchType(std::string matchType) {
+static std::optional<cstring> transformOtherMatchType(std::string matchType) {
     if (matchType == "atcam_partition_index")
         return cstring("ATCAM");
     else if (matchType == "dleft_hash")
         return cstring("DLEFT_HASH");
     else
-        return boost::none;
+        return std::nullopt;
 }
 
 using BFN::BFRT::P4Id;
@@ -237,7 +237,7 @@ TypeSpecParser TypeSpecParser::make(const p4configv1::P4Info& p4info,
 }
 
 // Counter
-boost::optional<BFRuntimeGenerator::Counter>
+std::optional<BFRuntimeGenerator::Counter>
 BFRuntimeGenerator::Counter::from(const p4configv1::Counter& counterInstance) {
     const auto& pre = counterInstance.preamble();
     auto id = makeBFRuntimeId(pre.id(), p4configv1::P4Ids::COUNTER);
@@ -248,7 +248,7 @@ BFRuntimeGenerator::Counter::from(const p4configv1::Counter& counterInstance) {
     return Counter{pre.name(), id, counterInstance.size(), unit, transformAnnotations(pre)};
 }
 
-boost::optional<BFRuntimeGenerator::Counter>
+std::optional<BFRuntimeGenerator::Counter>
 BFRuntimeGenerator::Counter::fromDirect(const p4configv1::DirectCounter& counterInstance) {
     const auto& pre = counterInstance.preamble();
     auto id = makeBFRuntimeId(pre.id(), p4configv1::P4Ids::DIRECT_COUNTER);
@@ -257,7 +257,7 @@ BFRuntimeGenerator::Counter::fromDirect(const p4configv1::DirectCounter& counter
 }
 
 // Meter
-boost::optional<BFRuntimeGenerator::Meter>
+std::optional<BFRuntimeGenerator::Meter>
 BFRuntimeGenerator::Meter::from(const p4configv1::Meter& meterInstance) {
     const auto& pre = meterInstance.preamble();
     auto id = makeBFRuntimeId(pre.id(), p4configv1::P4Ids::METER);
@@ -276,7 +276,7 @@ BFRuntimeGenerator::Meter::from(const p4configv1::Meter& meterInstance) {
     return Meter{pre.name(), id, meterInstance.size(), unit, type, transformAnnotations(pre)};
 }
 
-boost::optional<BFRuntimeGenerator::Meter>
+std::optional<BFRuntimeGenerator::Meter>
 BFRuntimeGenerator::Meter::fromDirect(const p4configv1::DirectMeter& meterInstance) {
     const auto& pre = meterInstance.preamble();
     auto id = makeBFRuntimeId(pre.id(), p4configv1::P4Ids::DIRECT_METER);
@@ -290,7 +290,7 @@ P4Id BFRuntimeGenerator::ActionProf::makeActProfId(P4Id implementationId) {
   return makeBFRuntimeId(implementationId, p4configv1::P4Ids::ACTION_PROFILE);
 }
 
-boost::optional<BFRuntimeGenerator::ActionProf>
+std::optional<BFRuntimeGenerator::ActionProf>
 BFRuntimeGenerator::ActionProf::from(const p4configv1::P4Info& p4info,
                                         const p4configv1::ActionProfile& actionProfile) {
     const auto& pre = actionProfile.preamble();
@@ -302,39 +302,39 @@ BFRuntimeGenerator::ActionProf::from(const p4configv1::P4Info& p4info,
 }
 
 // Digest
-boost::optional<BFRuntimeGenerator::Digest>
+std::optional<BFRuntimeGenerator::Digest>
 BFRuntimeGenerator::Digest::from(const p4configv1::Digest& digest) {
     const auto& pre = digest.preamble();
     auto id = makeBFRuntimeId(pre.id(), p4configv1::P4Ids::DIGEST);
     return Digest{pre.name(), id, digest.type_spec(), transformAnnotations(pre)};
 }
 
-boost::optional<BFRuntimeGenerator::Counter>
+std::optional<BFRuntimeGenerator::Counter>
 BFRuntimeGenerator::getDirectCounter(P4Id counterId) const {
     if (isOfType(counterId, p4configv1::P4Ids::DIRECT_COUNTER)) {
         auto* counter = Standard::findDirectCounter(p4info, counterId);
-        if (counter == nullptr) return boost::none;
+        if (counter == nullptr) return std::nullopt;
         return Counter::fromDirect(*counter);
     }
-    return boost::none;
+    return std::nullopt;
 }
 
-boost::optional<BFRuntimeGenerator::Meter>
+std::optional<BFRuntimeGenerator::Meter>
 BFRuntimeGenerator::getDirectMeter(P4Id meterId) const {
     if (isOfType(meterId, p4configv1::P4Ids::DIRECT_METER)) {
         auto* meter = Standard::findDirectMeter(p4info, meterId);
-        if (meter == nullptr) return boost::none;
+        if (meter == nullptr) return std::nullopt;
         return Meter::fromDirect(*meter);
     }
-    return boost::none;
+    return std::nullopt;
 }
 
 // TBD
-// boost::optional<BFRuntimeGenerator::Register>
+// std::optional<BFRuntimeGenerator::Register>
 // BFRuntimeGenerator::getRegister(P4Id registerId) const {
-//     if (!isOfType(registerId, p4configv1::P4Ids::DIRECT_REGISTER)) return boost::none;
+//     if (!isOfType(registerId, p4configv1::P4Ids::DIRECT_REGISTER)) return std::nullopt;
 //     auto* externInstance = findExternInstance(p4info, registerId);
-//     if (externInstance == nullptr) return boost::none;
+//     if (externInstance == nullptr) return std::nullopt;
 //     return Register::from(*externInstance);
 // }
 
@@ -664,14 +664,14 @@ BFRuntimeGenerator::addActionProfCommon(Util::JsonArray* tablesJson,
 }
 
 
-boost::optional<bool>
+std::optional<bool>
 BFRuntimeGenerator::actProfHasSelector(P4Id actProfId) const {
     if (isOfType(actProfId, p4configv1::P4Ids::ACTION_PROFILE)) {
         auto* actionProf = Standard::findActionProf(p4info, actProfId);
-        if (actionProf == nullptr) return boost::none;
+        if (actionProf == nullptr) return std::nullopt;
         return actionProf->with_selector();
     }
-    return boost::none;
+    return std::nullopt;
 }
 
 Util::JsonArray*
@@ -742,7 +742,7 @@ void
 BFRuntimeGenerator::addLearnFilters(Util::JsonArray* learnFiltersJson) const {
     for (const auto& digest : p4info.digests()) {
         auto digestInstance = Digest::from(digest);
-        if (digestInstance == boost::none) continue;
+        if (digestInstance == std::nullopt) continue;
         addLearnFilterCommon(learnFiltersJson, *digestInstance);
     }
 }
@@ -797,7 +797,7 @@ BFRuntimeGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
         bool needsPriority = false;
         auto* keyJson = new Util::JsonArray();
         for (const auto& mf : table.match_fields()) {
-            boost::optional<cstring> matchType = boost::none;
+            std::optional<cstring> matchType = std::nullopt;
             switch (mf.match_case()) {
                 case p4configv1::MatchField::kMatchType:
                     matchType = transformMatchType(mf.match_type());
@@ -809,7 +809,7 @@ BFRuntimeGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
                     BUG("Invalid oneof case for the match type of table '%1%'", pre.name());
                     break;
             }
-            if (matchType == boost::none) {
+            if (matchType == std::nullopt) {
                 ::error("Unsupported match type for BF-RT: %1%", int(mf.match_type()));
                 continue;
             }
@@ -866,7 +866,7 @@ BFRuntimeGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
             // driver initialized default value (0).
             addKeyField(keyJson, mf.id(), keyName,
                         false /* mandatory */, *matchType,
-                        makeTypeBytes(mf.bitwidth(), boost::none, keyMask),
+                        makeTypeBytes(mf.bitwidth(), std::nullopt, keyMask),
                         annotations);
         }
         if (needsPriority) {
@@ -958,7 +958,7 @@ void
 BFRuntimeGenerator::addActionProfs(Util::JsonArray* tablesJson) const {
     for (const auto& actionProf : p4info.action_profiles()) {
         auto actionProfInstance = ActionProf::from(p4info, actionProf);
-        if (actionProfInstance == boost::none) continue;
+        if (actionProfInstance == std::nullopt) continue;
         addActionProfCommon(tablesJson, *actionProfInstance);
     }
 }
@@ -967,7 +967,7 @@ void
 BFRuntimeGenerator::addCounters(Util::JsonArray* tablesJson) const {
     for (const auto& counter : p4info.counters()) {
         auto counterInstance = Counter::from(counter);
-        if (counterInstance == boost::none) continue;
+        if (counterInstance == std::nullopt) continue;
         addCounterCommon(tablesJson, *counterInstance);
     }
 }
@@ -976,7 +976,7 @@ void
 BFRuntimeGenerator::addMeters(Util::JsonArray* tablesJson) const {
     for (const auto& meter : p4info.meters()) {
         auto meterInstance = Meter::from(meter);
-        if (meterInstance == boost::none) continue;
+        if (meterInstance == std::nullopt) continue;
         addMeterCommon(tablesJson, *meterInstance);
     }
 }

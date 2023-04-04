@@ -10,13 +10,13 @@
 
 namespace {
 
-boost::optional<PHV::Size> convert_to_phv_size(const IR::Constant* ir) {
+std::optional<PHV::Size> convert_to_phv_size(const IR::Constant* ir) {
     int rst = ir->asInt();
     if (rst != 8 && rst != 16 && rst != 32) {
         ::warning("@pragma pa_container_size's third argument "
                   "must be one of {8, 16, 32}, but  %1% is not, skipped", rst);
-        return boost::none; }
-    return boost::make_optional(static_cast<PHV::Size>(rst));
+        return std::nullopt; }
+    return std::make_optional(static_cast<PHV::Size>(rst));
 }
 
 ordered_map<const PHV::Field*, std::vector<int>> compute_field_layouts(
@@ -185,10 +185,10 @@ void PragmaContainerSize::end_apply() {
     field_layouts_i = compute_field_layouts(pa_container_sizes_i);
 }
 
-boost::optional<PHV::Size> PragmaContainerSize::expected_container_size(
+std::optional<PHV::Size> PragmaContainerSize::expected_container_size(
     const PHV::FieldSlice& fs) const {
     if (!field_layouts_i.count(fs.field())) {
-        return boost::none;
+        return std::nullopt;
     }
     int offset = 0;
     for (const auto& v : field_layouts_i.at(fs.field())) {

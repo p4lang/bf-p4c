@@ -1,7 +1,7 @@
 #include <initializer_list>
+#include <optional>
 #include <vector>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/optional.hpp>
 
 #include "gtest/gtest.h"
 
@@ -26,7 +26,7 @@ class MetadataLiveRangeTest : public TofinoBackendTest {};
 
 namespace {
 
-boost::optional<TofinoPipeTestCase>
+std::optional<TofinoPipeTestCase>
 createMetadataLiveRangeTestCase(const std::string& mauSource) {
     auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
 header H1

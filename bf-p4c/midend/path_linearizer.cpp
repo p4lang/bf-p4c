@@ -78,20 +78,20 @@ bool PathLinearizer::preorder(const IR::Constant *) {
 
 void PathLinearizer::postorder(const IR::Node* node) {
     LOG2("Marking path-like expression invalid due to component: " << node);
-    linearPath = boost::none;
+    linearPath = std::nullopt;
 }
 
 void PathLinearizer::end_apply() {
     if (!linearPath) return;
     if (linearPath->components.empty()) {
-        linearPath = boost::none;
+        linearPath = std::nullopt;
         return;
     }
     if (!linearPath->components[0]->is<IR::PathExpression>() &&
         !linearPath->components[0]->is<IR::ConcreteHeaderRef>()) {
         LOG2("Marking path-like expression invalid due to first component: "
              << linearPath->components[0]);
-        linearPath = boost::none;
+        linearPath = std::nullopt;
         return;
     }
 }

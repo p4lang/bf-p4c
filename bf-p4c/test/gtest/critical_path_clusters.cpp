@@ -1,5 +1,5 @@
+#include <optional>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/optional.hpp>
 #include "gtest/gtest.h"
 
 #include "ir/ir.h"
@@ -30,7 +30,7 @@ class CriticalPathClustersTest : public TofinoBackendTest {};
 
 namespace {
 
-boost::optional<TofinoPipeTestCase>
+std::optional<TofinoPipeTestCase>
 createCriticalPathClustersTestCase(const std::string& ingressPipeline,
                                    const std::string& egressPipeline) {
     auto source = P4_SOURCE(P4Headers::V1MODEL, R"(

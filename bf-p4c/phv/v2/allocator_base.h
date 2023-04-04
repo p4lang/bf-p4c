@@ -194,16 +194,16 @@ class AllocatorBase {
         const ContainerGroup& group) const;
 
     /// A helper function that will call try_slices_to_container if @p c is specified (not
-    /// boost::none). Otherwise, it will call try_slices_to_container_group with @p group.
+    /// std::nullopt). Otherwise, it will call try_slices_to_container_group with @p group.
     SomeContScopeAllocResult try_slices_adapter(const ScoreContext& ctx,
                                                 const Allocation& alloc,
                                                 const FieldSliceAllocStartMap& fs_starts,
                                                 const ContainerGroup& group,
-                                                boost::optional<Container> c) const;
+                                                std::optional<Container> c) const;
 
     /// Try to allocate by @p action_hints to @p group. This function will add allocated field
     /// slices to @p allocated.
-    boost::optional<Transaction> try_hints(const ScoreContext& ctx,
+    std::optional<Transaction> try_hints(const ScoreContext& ctx,
                                            const Allocation& alloc,
                                            const ContainerGroup& group,
                                            const ActionSourceCoPackMap& action_hints_map,
@@ -254,7 +254,7 @@ class AllocatorBase {
         int deepest_depth = -1;
         bool pruned() const { return caller_pruned || n_steps > n_step_limit; }
         std::string depth_prefix(const int depth) const;
-        boost::optional<ScAllocAlignment> new_alignment_with_start(
+        std::optional<ScAllocAlignment> new_alignment_with_start(
             const ScoreContext& ctx, const SuperCluster::SliceList* target, const int sl_start,
             const PHV::Size& width, const ScAllocAlignment& alignment) const;
         bool allocate(const ScoreContext& ctx, const Transaction& tx, const DfsState& state,

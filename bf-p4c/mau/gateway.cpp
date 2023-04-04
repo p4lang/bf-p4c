@@ -764,7 +764,7 @@ bool CollectGatewayFields::preorder(const IR::MAU::TypedPrimitive *prim) {
     return false;
 }
 bool CollectGatewayFields::preorder(const IR::Expression *e) {
-    boost::optional<cstring> aliasSourceName = phv.get_alias_name(e);
+    std::optional<cstring> aliasSourceName = phv.get_alias_name(e);
     le_bitrange bits;
     auto finfo = phv.field(e, &bits);
     if (!finfo) return true;
@@ -784,7 +784,7 @@ bool CollectGatewayFields::preorder(const IR::Expression *e) {
             xor_match = PHV::FieldSlice(finfo, bits); }
     } else {
         info.const_eq = true; }
-    if (aliasSourceName != boost::none) {
+    if (aliasSourceName != std::nullopt) {
         info_to_uses[&info] = *aliasSourceName;
         LOG5("Adding entry to info_to_uses: " << &info << " : " << *aliasSourceName); }
     return false;
@@ -889,7 +889,7 @@ bool CollectGatewayFields::compute_offsets() {
                     // this is only for the hash
                     auto boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
                                         (field.range().intersectWith(f.lo, f.hi()));
-                    BUG_CHECK(boost_sl != boost::none, "Gateway field cannot find correct "
+                    BUG_CHECK(boost_sl != std::nullopt, "Gateway field cannot find correct "
                               "overlap in input xbar");
                     le_bitrange b = *boost_sl;
                     info.offsets.emplace_back(f.bit + b.lo - f.lo + 32, b);

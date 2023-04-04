@@ -6,8 +6,8 @@
 #ifndef EXTENSIONS_BF_P4C_ARCH_PSA_PSA_H_
 #define EXTENSIONS_BF_P4C_ARCH_PSA_PSA_H_
 
+#include <optional>
 #include <boost/algorithm/string.hpp>
-#include <boost/optional.hpp>
 #include "ir/ir.h"
 #include "ir/namemap.h"
 #include "ir/pattern.h"

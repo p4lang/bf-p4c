@@ -6,8 +6,8 @@
 #ifndef BF_P4C_ARCH_ARCH_H_
 #define BF_P4C_ARCH_ARCH_H_
 
+#include <optional>
 #include <boost/algorithm/string.hpp>
-#include <boost/optional.hpp>
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "ir/ir-generated.h"
 #include "ir/ir.h"

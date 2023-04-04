@@ -143,7 +143,7 @@ bool LiveRangeInfo::can_overlay(const LiveRangeInfo& other) const {
 
 std::vector<LiveRange> LiveRangeInfo::disjoint_ranges() const {
     std::vector<LiveRange> rst;
-    boost::optional<int> last_defined_read;
+    std::optional<int> last_defined_read;
     for (int i = 0; i < int(lives_i.size()); i++) {
         if (lives_i[i] == OpInfo::DEAD) {
             continue;
@@ -280,7 +280,7 @@ bool FieldSliceLiveRangeDB::MapFieldSliceToAction::preorder(const IR::MAU::Actio
     return false;
 }
 
-boost::optional<FieldSliceLiveRangeDB::DBSetter::Location>
+std::optional<FieldSliceLiveRangeDB::DBSetter::Location>
 FieldSliceLiveRangeDB::DBSetter::to_location(const PHV::Field* field,
                                              const FieldDefUse::locpair& unit_expr,
                                              bool is_read) const {
@@ -292,7 +292,7 @@ FieldSliceLiveRangeDB::DBSetter::to_location(const PHV::Field* field,
         if (!is_read) {
             // Ignore implicit parser init when the field is marked as no_init.
             if (expr->is<ImplicitParserInit>() && not_implicit_init_fields().count(field))
-                return boost::none;
+                return std::nullopt;
         }
         loc.u = Location::PARSER;
     } else if (unit->is<IR::BFN::Deparser>()) {

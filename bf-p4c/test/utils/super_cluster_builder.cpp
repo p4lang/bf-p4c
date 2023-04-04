@@ -64,10 +64,10 @@ int get_whole_parentheses(std::string &s, unsigned int start_from,
 ////////////////////////////////////////////////////////////////////////////////
 // Class functions
 ////////////////////////////////////////////////////////////////////////////////
-boost::optional<PHV::SuperCluster*> SuperClusterBuilder::build_super_cluster(std::istream &scs) {
+std::optional<PHV::SuperCluster*> SuperClusterBuilder::build_super_cluster(std::istream &scs) {
     // Set the member variable
 
-    boost::optional<PHV::SuperCluster*> sc = analyze_super_cluster(scs);
+    std::optional<PHV::SuperCluster*> sc = analyze_super_cluster(scs);
 
     // Return the SuperCluster
     return sc;
@@ -75,12 +75,12 @@ boost::optional<PHV::SuperCluster*> SuperClusterBuilder::build_super_cluster(std
 
 // Parses the input of the whole SuperCluster in format produced by the
 // << operator on PHV::SuperCluster (can be found in phv/utils/utils.cpp)
-boost::optional<PHV::SuperCluster*> SuperClusterBuilder::analyze_super_cluster(std::istream &scs) {
+std::optional<PHV::SuperCluster*> SuperClusterBuilder::analyze_super_cluster(std::istream &scs) {
     int ret = 0;            // Return value
     std::string t;          // Next token
     std::streampos pos;     // Keeping track of positions for returning
 
-    boost::optional<PHV::SuperCluster*> sc;
+    std::optional<PHV::SuperCluster*> sc;
     /// Set of rotational clusters extracted
     ordered_set<const PHV::RotationalCluster*> clusters;
     /// Set of slice lists extracted

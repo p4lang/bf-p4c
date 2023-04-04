@@ -18,22 +18,22 @@ namespace {
  *
  * @param statement  The `emit()` method call to analyze.
  * @return a MirroredFieldList vector containing the mirrored fields, or
- * boost::none if the `emit()` call was invalid.
+ * std::nullopt if the `emit()` call was invalid.
  */
-boost::optional<MirroredFieldList*>
+std::optional<MirroredFieldList*>
 analyzeMirrorStatement(const IR::MethodCallStatement* statement) {
     auto methodCall = statement->methodCall->to<IR::MethodCallExpression>();
     if (!methodCall) {
-        return boost::none;
+        return std::nullopt;
     }
     auto member = methodCall->method->to<IR::Member>();
     if (!member || member->member != "emit") {
-        return boost::none;
+        return std::nullopt;
     }
     if (methodCall->arguments->size() != 2) {
         ::warning("Expected 2 arguments for mirror.%1% statement: %1%",
                   member->member);
-        return boost::none;
+        return std::nullopt;
     }
     const IR::Expression* expression = methodCall->arguments->at(1)->expression;
     if (expression->is<IR::StructExpression>()) {
@@ -42,7 +42,7 @@ analyzeMirrorStatement(const IR::MethodCallStatement* statement) {
             fieldList = expression->to<IR::StructExpression>();
             if (!fieldList) {
                 ::warning("Expected field list: %1%", methodCall);
-                return boost::none;
+                return std::nullopt;
             }
         }
         auto* finalFieldList = new MirroredFieldList;
@@ -53,44 +53,44 @@ analyzeMirrorStatement(const IR::MethodCallStatement* statement) {
                 !field->expression->is<IR::Constant>() &&
                 !field->expression->is<IR::Member>()) {
                 ::warning("Unexpected field: %1% ", field);
-                return boost::none; }
+                return std::nullopt; }
             finalFieldList->push_back(field->expression);
         }
         LOG3("found fieldList " << finalFieldList);
         return finalFieldList;
     }
-    return boost::none;
+    return std::nullopt;
 }
 
-boost::optional<const IR::Constant*>
+std::optional<const IR::Constant*>
 checkMirrorIfStatement(const IR::IfStatement* ifStatement) {
     auto* equalExpr = ifStatement->condition->to<IR::Equ>();
     if (!equalExpr) {
         ::warning("Expected comparison of mirror_type with constant: "
                   "%1%", ifStatement->condition);
-        return boost::none;
+        return std::nullopt;
     }
     auto* constant = equalExpr->right->to<IR::Constant>();
     if (!constant) {
         ::warning("Expected comparison of mirror_type with constant: "
                   "%1%", equalExpr->right);
-        return boost::none;
+        return std::nullopt;
     }
 
     auto* member = equalExpr->left->to<IR::Member>();
     if (!member || member->member != "mirror_type") {
         ::warning("Expected comparison of mirror_type with constant: "
                   "%1%", ifStatement->condition);
-        return boost::none;
+        return std::nullopt;
     }
     if (!ifStatement->ifTrue || ifStatement->ifFalse) {
         ::warning("Expected an `if` with no `else`: %1%", ifStatement);
-        return boost::none;
+        return std::nullopt;
     }
     auto* method = ifStatement->ifTrue->to<IR::MethodCallStatement>();
     if (!method) {
         ::warning("Expected a single method call statement: %1%", method);
-        return boost::none;
+        return std::nullopt;
     }
     LOG3("found constant " << constant);
     return constant;

@@ -341,7 +341,7 @@ Visitor::profile_t MultipleApply::init_apply(const IR::Node *root) {
 
 MultipleApply::MultipleApply(
     const BFN_Options& options,
-    boost::optional<gress_t> gress,
+    std::optional<gress_t> gress,
     bool dedup_only,
     bool run_default_next
 ) : options(options) {

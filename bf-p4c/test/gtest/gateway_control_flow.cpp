@@ -1,4 +1,4 @@
-#include <boost/optional.hpp>
+#include <optional>
 
 #include "gtest/gtest.h"
 
@@ -15,7 +15,7 @@ class GatewayControlFlowTest : public TofinoBackendTest {};
 
 namespace {
 
-boost::optional<TofinoPipeTestCase>
+std::optional<TofinoPipeTestCase>
 createGatewayControlFlowTestCase(const std::string &ingress_source) {
     auto pre_ingress = P4_SOURCE(tna_header(), R"(
 

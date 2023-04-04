@@ -251,7 +251,7 @@ Phv_Schema_Logger::FieldInfo* PhvLogging::getFieldInfo(const PHV::Field *f) cons
 
 Phv_Schema_Logger::SourceLocation* PhvLogging::getSourceLoc(const PHV::Field *f) const {
     BUG_CHECK(f, "field cannot be null");
-    if (f->srcInfo == boost::none)
+    if (f->srcInfo == std::nullopt)
         return new SourceLocation("DummyFile", -1);
     return new SourceLocation(std::string(f->srcInfo->toPosition().fileName),
                                 f->srcInfo->toPosition().sourceLine);

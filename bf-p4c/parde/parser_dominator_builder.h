@@ -1,11 +1,11 @@
 #ifndef EXTENSIONS_BF_P4C_PARDE_PARSER_DOMINATOR_BUILDER_H_
 #define EXTENSIONS_BF_P4C_PARDE_PARSER_DOMINATOR_BUILDER_H_
 
+#include <optional>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/dominator_tree.hpp>
 #include <boost/graph/graph_utility.hpp>
 #include <boost/graph/reverse_graph.hpp>
-#include <boost/optional.hpp>
 #include "bf-p4c/logging/event_logger.h"
 #include "bf-p4c/parde/parser_info.h"
 #include "ir/ir.h"
