@@ -374,6 +374,8 @@ class Table : BFN::Unit, IAnnotated  {
         std::set<cstring> payload_act;
         for (auto &payload : gateway_payload) {
             BUG_CHECK(gw_next.count(payload.first), "payload tag %s not in gateway", payload.first);
+            BUG_CHECK(actions.count(payload.second.first), "payload action %s not in table",
+                      payload.second.first);
             payload_act.insert(payload.second.first); }
         if (!gw_next.count(cstring()) && 0) {
             // FIXME -- we currently sometimes get dead actions in tables.  They should
@@ -389,7 +391,7 @@ class Table : BFN::Unit, IAnnotated  {
             } else if (!gw_next.count(nxt.first) && !actions.count(nxt.first)) {
                 BUG("%s next on table with no such action or gw result", nxt.first);
             }
-            if (!conditional_gateway_only()) {
+            if (!conditional_gateway_only() && !layout.gateway_match) {
                 if (next.count("$hit") || next.count("$miss")) {
                     BUG_CHECK(!action_chain() && !has_default_path(),
                               "Somehow have a hit/miss table combined with an action chain");

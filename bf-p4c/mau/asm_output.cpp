@@ -2027,9 +2027,12 @@ bool MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
                 if (!tbl->gateway_payload.empty()) {
                     if (tbl->gateway_payload.count(line.second)) {
                         nxt_tbl = next_for(tbl, line.second);
-                        out << gw_indent << "  next: " << next_for(tbl, line.second) << std::endl;
-                        if (auto act = tbl->gateway_payload.at(line.second).first)
+                        if (auto act = tbl->gateway_payload.at(line.second).first) {
                             out << gw_indent << "  action: " << act << std::endl;
+                            if (tbl->actions.at(act)->exitAction)
+                                nxt_tbl = UniqueId("END");
+                        }
+                        out << gw_indent << "  next: " << nxt_tbl << std::endl;
                     } else {
                         out << gw_indent << "  run_table: true" << std::endl;
                         gw_miss = nxt_tbl = next_for(tbl, line.second);
