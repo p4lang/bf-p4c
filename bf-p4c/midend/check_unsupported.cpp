@@ -1,6 +1,5 @@
 #include "bf-p4c/device.h"
 #include "bf-p4c/midend/check_unsupported.h"
-#include "frontends/p4/methodInstance.h"
 
 namespace BFN {
 
@@ -14,6 +13,25 @@ bool CheckUnsupported::preorder(const IR::PathExpression* path_expression) {
             "Primitive %1% is not supported by the backend",
             path_expression->path);
         return false;
+    }
+    return true;
+}
+
+bool CheckUnsupported::preorder(const IR::Declaration_Instance *instance) {
+    if (instance->annotations->getSingle("symmetric") != nullptr) {
+        cstring type_name;
+        if (auto type = instance->type->to<IR::Type_Specialized>()) {
+            type_name = type->baseType->path->name;
+        } else if (auto type = instance->type->to<IR::Type_Name>()) {
+            type_name = type->path->name;
+        } else {
+            ::error("%s: Unexpected type for instance %s", instance->srcInfo, instance->name);
+        }
+        if (type_name != "Hash") {
+            ::error(ErrorType::ERR_UNSUPPORTED,
+                    "%s: @symmetric is only supported by the Hash extern", instance->srcInfo);
+            return false;
+        }
     }
     return true;
 }
