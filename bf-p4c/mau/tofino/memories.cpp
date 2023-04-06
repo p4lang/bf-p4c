@@ -292,50 +292,15 @@ void Memories::add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
  *  such as tind, synth2port, and action tables later.
  */
 bool Memories::single_allocation_balance(mem_info &mi, unsigned row) {
-    Log::TempIndent indent;
-    LOG3(" Allocating all ATCAM partitions" << indent);
-    if (!allocate_all_atcam(mi))
-        return false;
-
-    LOG3(" Allocating all exact tables" << indent);
-    if (!allocate_all_exact(row))
-        return false;
-
-    LOG3(" Allocating all ternary tables" << indent);
-    if (!allocate_all_ternary()) {
-        return false;
-    }
-
-    LOG3(" Allocating all ternary indirect tables" << indent);
-    if (!allocate_all_tind()) {
-        return false;
-    }
-
-    LOG3(" Allocating all action tables" << indent);
-    if (!allocate_all_swbox_users()) {
-        return false;
-    }
-
-    LOG3(" Allocating all idletime tables" << indent);
-    if (!allocate_all_idletime()) {
-        return false;
-    }
-
-    LOG3(" Allocating all gateway tables" << indent);
-    if (!allocate_all_gw()) {
-        return false;
-    }
-
-    LOG3(" Allocate all tind result bus tables" << indent);
-    if (!allocate_all_tind_result_bus_tables()) {
-        return false;
-    }
-
-    LOG3(" Allocate all no match miss" << indent);
-    if (!allocate_all_no_match_miss()) {
-        return false;
-    }
-
+    if (!allocate_all_atcam(mi)) return false;
+    if (!allocate_all_exact(row)) return false;
+    if (!allocate_all_ternary()) return false;
+    if (!allocate_all_tind()) return false;
+    if (!allocate_all_swbox_users()) return false;
+    if (!allocate_all_idletime()) return false;
+    if (!allocate_all_gw()) return false;
+    if (!allocate_all_tind_result_bus_tables()) return false;
+    if (!allocate_all_no_match_miss()) return false;
     return true;
 }
 
@@ -1204,9 +1169,12 @@ void Memories::calculate_column_balance(const mem_info &mi, unsigned &row,
 /* Allocates all of the ways */
 bool Memories::allocate_all_exact(unsigned column_mask) {
     allocation_count = 0;
+    Log::TempIndent indent;
+    LOG3("Allocating all exact tables" << indent);  // FIXME -- suppress log if there are none
     break_exact_tables_into_ways();
     while (exact_match_ways.size() > 0) {
         if (find_best_row_and_fill_out(column_mask) == false) {
+            LOG4("failed to find best row");
             return false;
         }
     }
@@ -1748,23 +1716,29 @@ unsigned Memories::best_partition_side(mem_info &mi) {
 bool Memories::allocate_all_atcam(mem_info &mi) {
     allocation_count = 0;
     break_atcams_into_partitions();
-    while (!atcam_partitions.empty()) {
-        auto partition_mask = best_partition_side(mi);
-        bool found = false;
-        for (int iteration = 0; iteration < RAM_SIDES; iteration++) {
-            // If the partition does not fit on what is classified as the better side, due
-            // to wide width requirements, to allocate on the worse side
-            if (iteration == 1)
-                partition_mask = side_mask(RAM_SIDES) & ~partition_mask;
-            if (find_best_partition_for_atcam(partition_mask)) {
-                found = true;
-                break;
+    if (!atcam_partitions.empty()) {
+        Log::TempIndent indent;
+        LOG3("Allocating all ATCAM partitions" << indent);
+        while (!atcam_partitions.empty()) {
+            auto partition_mask = best_partition_side(mi);
+            bool found = false;
+            for (int iteration = 0; iteration < RAM_SIDES; iteration++) {
+                // If the partition does not fit on what is classified as the better side, due
+                // to wide width requirements, to allocate on the worse side
+                if (iteration == 1)
+                    partition_mask = side_mask(RAM_SIDES) & ~partition_mask;
+                if (find_best_partition_for_atcam(partition_mask)) {
+                    found = true;
+                    break;
+                }
             }
+            if (!found) {
+                failure_reason = "atcam partition failure";
+                LOG3(failure_reason);
+                return false; }
         }
-        if (!found) {
-            failure_reason = "atcam partition failure";
-            return false; }
     }
+
     compress_ways(true);
     return true;
 }
@@ -1826,6 +1800,9 @@ bool Memories::allocate_all_ternary() {
         if ((t = a->table->layout.match_bytes - b->table->layout.match_bytes) != 0) return t > 0;
         return a->total_entries() > b->total_entries();
     });
+    Log::TempIndent indent;
+    if (!ternary_tables.empty())
+        LOG3("Allocating all ternary tables" << indent);
 
     // FIXME: All of this needs to be changed on this to match up with xbar
     for (auto *ta : ternary_tables) {
@@ -1841,8 +1818,9 @@ bool Memories::allocate_all_ternary() {
             Memories::Use &alloc = (*ta->memuse)[u_id];
             for (int i = 0; i < ta->calc_entries_per_uid[lt_entry] / 512; i++) {
                 bool split_midbyte = false;
-                if (!find_ternary_stretch(TCAMs_necessary, row, col, midbyte, split_midbyte))
-                    return false;
+                if (!find_ternary_stretch(TCAMs_necessary, row, col, midbyte, split_midbyte)) {
+                    LOG4("failed find_ternary_stretch for " << ta->table->name);
+                    return false; }
                 int word = 0;
                 bool increment = true;
                 if (split_midbyte) {
@@ -1998,12 +1976,16 @@ void Memories::compress_tind_groups() {
    FIXME: This is obviously a punt and needs to be adjusted. */
 bool Memories::allocate_all_tind() {
     find_tind_groups();
+    Log::TempIndent indent;
+    if (!tind_groups.empty())
+        LOG3("Allocating all ternary indirect tables" << indent);
     while (!tind_groups.empty()) {
         auto *tg = tind_groups[0];
         int best_bus = 0;
         int best_row = find_best_tind_row(tg, best_bus);
         if (best_row == -1) {
             failure_reason = "no tind row available";
+            LOG4("no tind row available for " << tg->ta->table->name);
             return false; }
         for (int i = 0; i < LEFT_SIDE_COLUMNS; i++) {
             if (~sram_inuse[best_row] & (1 << i)) {
@@ -3520,6 +3502,8 @@ void Memories::action_bus_users_log() {
  *  (i.e. the selector oflow is a constraint related to address buses).
  */
 bool Memories::allocate_all_swbox_users() {
+    Log::TempIndent indent;
+    LOG3("Allocating all swbox users" << indent);
     find_swbox_bus_users();
     safe_vector<LogicalRowUser> lrus;
     SRAM_group *curr_oflow = nullptr, *sel_oflow = nullptr, *synth_oflow = nullptr;
@@ -3583,6 +3567,7 @@ bool Memories::allocate_all_swbox_users() {
                     // P4C-3205 has both a selector and a register in the stage.
                     // As a stopgap, we just fail memory allocation instead of aborting
                     failure_reason = "syth2port failed over center on jbay";
+                    LOG4(failure_reason);
                     return false;
                 }
             }
@@ -3602,6 +3587,7 @@ bool Memories::allocate_all_swbox_users() {
             sup_unused += sbu->left_to_place();
 
         failure_reason = "allocate_all_swbox_users failed";
+        LOG4(failure_reason);
         return false;
     }
     action_bus_users_log();
@@ -4026,6 +4012,9 @@ bool Memories::allocate_all_gw() {
     normal_gws.clear();
     no_match_gws.clear();
 
+    Log::TempIndent indent;
+    if (!gw_tables.empty() && !no_match_hit_tables.empty())
+        LOG3("Allocating all gateway tables" << indent);
     for (auto *ta_gw : gw_tables) {
         bool pushed_back = false;
         for (auto *ta_nm : no_match_hit_tables) {
@@ -4101,6 +4090,9 @@ bool Memories::allocate_all_gw() {
  *  for the time being.
  */
 bool Memories::allocate_all_no_match_miss() {
+    Log::TempIndent indent;
+    if (!no_match_miss_tables.empty())
+        LOG3("Allocate all no match miss" << indent);
     // FIXME: Currently the assembler supports exact match to make calls to immediate here,
     // so this is essentially what I'm doing.  More discussion is needed with the driver
     // team in order to determine if this is correct, or if this has to go through ternary and
@@ -4128,6 +4120,7 @@ bool Memories::allocate_all_no_match_miss() {
 
             if (!found) {
                 failure_reason = "failed to place no match miss " + u_id.build_name();
+                LOG4(failure_reason);
                 return false;
             } else {
                 no_match_tables_allocated++; }
@@ -4148,6 +4141,9 @@ bool Memories::allocate_all_no_match_miss() {
  * same table result, but have to be output in different ways in order to pass the assembler
  */
 bool Memories::allocate_all_tind_result_bus_tables() {
+    Log::TempIndent indent;
+    if (!tind_result_bus_tables.empty())
+        LOG3("Allocate all tind result bus tables" << indent);
     for (auto *ta : tind_result_bus_tables) {
         for (auto u_id : ta->allocation_units()) {
             auto &alloc = (*ta->memuse).at(u_id);
@@ -4169,6 +4165,7 @@ bool Memories::allocate_all_tind_result_bus_tables() {
 
             if (!found) {
                 failure_reason = "failed to place tind result bus " + u_id.build_name();
+                LOG4(failure_reason);
                 return false; }
         }
     }
@@ -4274,6 +4271,9 @@ bool Memories::allocate_idletime(SRAM_group* idletime_group) {
 
 bool Memories::allocate_all_idletime() {
     idletime_groups.clear();
+    Log::TempIndent indent;
+    if (!idletime_tables.empty())
+        LOG3("Allocating all idletime tables" << indent);
     for (auto *ta : idletime_tables) {
         for (auto back_at : ta->table->attached) {
             auto at = back_at->attached;
@@ -4300,8 +4300,10 @@ bool Memories::allocate_all_idletime() {
     });
 
     for (auto* idletime_group : idletime_groups) {
-        if (!allocate_idletime(idletime_group))
+        if (!allocate_idletime(idletime_group)) {
+            LOG4("failed to allocation idletime group " << idletime_group->ta->table->name);
             return false;
+        }
     }
 
     return true;

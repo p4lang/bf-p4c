@@ -5,7 +5,7 @@
 #include "control_flow_visitor.h"
 
 using namespace DBPrint;
-using namespace IndentCtl;
+using namespace Log;
 
 void IR::MAU::Table::dbprint(std::ostream &out) const {
     out << "table " << name;

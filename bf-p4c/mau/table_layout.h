@@ -53,6 +53,7 @@ class LayoutOption {
         return 1;
     }
     friend std::ostream &operator<<(std::ostream &, const LayoutOption &);
+    void dbprint_multiline() const {}
 };
 inline std::ostream &operator<<(std::ostream &out, const LayoutOption *lo) {
     if (lo) return out << *lo;

@@ -950,7 +950,7 @@ safe_vector<le_bitrange> ALUParameter::slot_bits_brs(PHV::Container cont) const 
     } else {
         bitvec slot_bits = bitvec(phv_bits.lo, phv_bits.size());
         slot_bits.rotate_right(0, right_shift, cont.size());
-        LOG6("\t\tslot_bits_brs: " << slot_bits);
+        LOG6("    slot_bits_brs: " << slot_bits);
         for (auto br : bitranges(slot_bits)) {
             rv.push_back({br.first, br.second});
         }
@@ -1071,20 +1071,20 @@ const ALUOperation *ALUOperation::add_right_shift(int right_shift, int *rot_alia
     rv->_right_shift_set = true;
     if (!valid()) return rv;
     bool rotational_alias = false;
-    LOG6("\tadd_right_shift: params size = " << rv->_params.size());
+    LOG6("  add_right_shift: params size = " << rv->_params.size());
     for (auto &param : rv->_params) {
-        LOG6("\t\tadd_right_shift: param (" << std::hex << param.param << ","
+        LOG6("    add_right_shift: param (" << std::hex << param.param << ","
              << param.phv_bits << "," << right_shift << ")");
         param.right_shift = right_shift;
         if (param.is_wrapped(_container))
             rotational_alias = true;
     }
-    LOG6("\tadd_right_shift: done with params");
+    LOG6("  add_right_shift: done with params");
     if (rotational_alias && rv->_alias.isNull() && rot_alias_idx) {
         rv->_alias = "$rot_data" + std::to_string(*rot_alias_idx);
         *rot_alias_idx = *rot_alias_idx + 1;
     }
-    LOG6("\tadd_right_shift: return");
+    LOG6("  add_right_shift: return");
     return rv;
 }
 
@@ -1526,7 +1526,7 @@ const RamSection *RamSection::no_overlap_merge(const RamSection *ad) const {
 
         if (rotated_ad != nullptr) {
             auto merged_ad = merge(rotated_ad);
-            LOG7("\tRotated and Merged AD: " << merged_ad->get_action_data_bits_str());
+            LOG7("  Rotated and Merged AD: " << merged_ad->get_action_data_bits_str());
             delete rotated_ad;
             if (merged_ad)
                 return merged_ad;
@@ -2173,11 +2173,12 @@ const ALUParameter *Format::Use::find_param_alloc(UniqueLocationKey &key,
 
     auto action_alu_positions = alu_positions.at(key.action_name);
     const ALUParameter *rv = nullptr;
-    LOG3("  Finding ALU Param with container "
+    Log::TempIndent indent;
+    LOG3("  Finding ALU Param with container " << indent << indent
             << key.container << " for action " << key.action_name);
     bool container_match = false;
     for (auto alu_position : action_alu_positions) {
-        LOG3("    " << alu_position);
+        LOG3(alu_position);
         if (rv && alu_position.alu_op->container() != key.container)
             continue;
         if (alu_position.alu_op->container().size() != key.container.size())
@@ -2193,9 +2194,9 @@ const ALUParameter *Format::Use::find_param_alloc(UniqueLocationKey &key,
             *alu_pos_p = new ALUPosition(alu_position);
     }
     if (!rv) {
-        LOG3("    No ALU Param Found");
+        LOG3("No ALU Param Found");
     } else {
-        LOG3("    ALU Param Found : " << *rv);
+        LOG3("ALU Param Found : " << *rv);
     }
     return rv;
 }
@@ -2361,7 +2362,7 @@ void Format::create_constant(ALUOperation &alu, const IR::Expression *read,
         con->set_cond(VALUE, cond_arg->orig_arg->name.toString());
     con->set_alias("$constant" + std::to_string(constant_alias_index++));
     ALUParameter ap(con, container_bits);
-    LOG6("\t\tCreating Constant " << con << " at container bits " << container_bits);
+    LOG6("    Creating Constant " << con << " at container bits " << container_bits);
     alu.add_param(ap);
 }
 
@@ -2566,9 +2567,8 @@ void Format::create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_m
     for (auto &container_action_info : ca_map) {
         auto container = container_action_info.first;
         auto &cont_action = container_action_info.second;
-        LOG5("Analyzing action data for " << container << " ----->" << IndentCtl::indent);
-        LOG5(cont_action);
-        LOG5("----------------------------|" << IndentCtl::unindent);
+        LOG5("Analyzing action data for " << container << " ----->" << Log::TempIndent() <<
+             Log::endl << cont_action << Log::endl << "----------------------------|");
 
         ALUOPConstraint_t alu_cons = DEPOSIT_FIELD;
         if (cont_action.convert_instr_to_byte_rotate_merge)
@@ -2921,7 +2921,7 @@ void Format::condense_action(cstring action_name, RamSec_vec_t &ram_sects) {
             total_alus++;
         }
         total_bits += sect->size();
-        LOG5("\t Ram Section " << sect->get_action_data_bits_str()
+        LOG5("   Ram Section " << sect->get_action_data_bits_str()
                 << ", total_alus: " << total_alus << ", total bits: " << total_bits);
         size_counts[ceil_log2(sect->size()) - 3]++;
     }
@@ -3595,7 +3595,7 @@ void Format::build_single_ram_sect(RamSectionPosition &ram_sect, Location_t loc,
                                                             : ad_alu->size();
         byte_sz /= 8;
         alu_positions.emplace_back(ad_alu, loc, start_byte);
-        LOG5("  Adding " << alu_positions.back());
+        LOG5("  Adding " << Log::TempIndent() << Log::TempIndent() << alu_positions.back());
         // Validation on the BusInputs
 
         if (ad_alu->valid()) {
@@ -3748,14 +3748,14 @@ std::ostream &operator<<(std::ostream &out, Location_t loc) {
 }
 
 std::ostream &operator<<(std::ostream &out, const Format::Use &use) {
-    using namespace IndentCtl;
+    using namespace Log;
     bool first = true;
     for (auto &alupos : use.alu_positions) {
         if (!first) out << endl;
+        TempIndent indent;
         out << alupos.first << ":" << indent;
         for (auto &pos : alupos.second)
             out << endl << pos;
-        out << unindent;
         first = false; }
     return out;
 }

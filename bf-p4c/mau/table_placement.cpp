@@ -1663,8 +1663,8 @@ bool TablePlacement::pick_layout_option(Placed *next, std::vector<Placed *> allo
 
     LOG5("Layout options: " << next->use.layout_options);
     do {
-        LOG5("Layout options (preferred): " << next->use.preferred());
-        LOG5("Trying table format : " << table_format);
+        LOG5("preferred " << Log::indent << next->use.preferred() << Log::unindent);
+        LOG5("Trying table format : " << std::boolalpha << table_format);
         bool ixbar_fit = try_alloc_ixbar(next, allocated_layout);
         if (!ixbar_fit) {
             next->stage_advance_log = "ran out of ixbar";
@@ -2055,7 +2055,8 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
 }
 
 bool TablePlacement::try_alloc_format(Placed *next, bool gw_linked) {
-    LOG6("try_alloc_format(" << next->name << "): " << *next->use.preferred());
+    LOG6("try_alloc_format(" << next->name << "): [" << next->use.preferred_index << "] " <<
+         Log::indent << *next->use.preferred() << Log::unindent);
     const bitvec immediate_mask = next->use.preferred_action_format()->immediate_mask;
     next->resources.table_format.clear();
     gw_linked |= next->use.preferred()->layout.gateway_match;
@@ -4521,8 +4522,9 @@ DecidePlacement::default_table_placement(const IR::BFN::Pipe *pipe) {
 }
 
 bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
-    LOG_FEATURE("stage_advance", 2, "Stage advance " <<
-        (self.ignoreContainerConflicts ? "" : "not ") << "ignoring container conflicts");
+    LOG_FEATURE("stage_advance", 2, "Stage advance for pipe " << pipe->canon_name() << " " <<
+                self.summary.getActualStateStr() <<
+                (self.ignoreContainerConflicts ? " " : " not ") << "ignoring container conflicts");
     bool alt_finalize_table_same_order =
         (self.summary.getActualState() == self.summary.ALT_FINALIZE_TABLE_SAME_ORDER ||
         self.summary.getActualState() == self.summary.ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED);

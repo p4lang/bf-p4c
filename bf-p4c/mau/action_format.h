@@ -574,9 +574,9 @@ class ALUOperation {
 
     friend std::ostream &operator<<(std::ostream &out, const ALUOperation& op) {
         Log::TempIndent indent;
-        out << " ALU Operation { "  << Log::endl << indent;
-        out << " params: "          << op._params << Log::endl;
-        out << " phv bits: "        << op._phv_bits
+        out << "ALU Operation { "  << Log::endl << indent;
+        out << "params: "          << op._params << Log::endl;
+        out << "phv bits: "        << op._phv_bits
             << " right_shift : "    << op._right_shift
             << " right_shift_set: " << op._right_shift_set
             << " container: "       << op._container
@@ -596,6 +596,7 @@ class ALUOperation {
         if (op) out << *op;
         return out;
     }
+    void dbprint_multiline() const {}
 };
 
 struct SharedParameter {
@@ -808,7 +809,7 @@ class RamSection {
                 adb_params.push_back(std::make_pair(adb_param->name(), arg_param->param_field()));
             }
         }
-        rv << " Action Data : " << size() << "'b{";
+        rv << "Action Data : " << size() << "'b{";
         for (auto a : adb_params)
             rv << " " << a.first << " : " << a.second;
         rv << " }";
@@ -816,14 +817,16 @@ class RamSection {
     }
 
     friend std::ostream &operator<<(std::ostream &out, const RamSection& rs) {
+        Log::TempIndent indent;
         out                                             << Log::endl;
-        out << "Ram Section { "                         << Log::endl;
+        out << "Ram Section {" << indent                << Log::endl;
         out << rs.get_action_data_bits_str()            << Log::endl;
-        out << " Pack Info: "    << rs.pack_info        << Log::endl;
-        out << " Alu Req: "      << rs.alu_requirements;
-        out << " } ";
+        out << "Pack Info: " << indent << rs.pack_info << indent.pop_back() << Log::endl;
+        out << "Alu Req: "   << indent << rs.alu_requirements;
+        out << " }";
         return out;
     }
+    void dbprint_multiline() const {}
 };
 
 // Actual locations are ACTION_DATA_TABLE, IMMEDIATE & METER_ALU
@@ -849,6 +852,7 @@ struct RamSectionPosition {
                 << " } ";
         return out;
     }
+    void dbprint_multiline() const {}
 };
 
 /**
@@ -879,7 +883,7 @@ struct SingleActionPositions {
     safe_vector<RamSectionPosition> best_inputs_to_move(int bits_to_move);
     friend std::ostream &operator<<(std::ostream &out, const SingleActionPositions& sap) {
         out << "Single Action Position { name: " << sap.action_name
-            << ", all_inputs: " << sap.all_inputs
+            << ", all_inputs: " << Log::TempIndent() << sap.all_inputs
             << " } ";
         return out;
     }
