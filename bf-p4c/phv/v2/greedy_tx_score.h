@@ -118,7 +118,7 @@ class GreedyTxScoreMaker : public TxScoreMaker {
 /// GreedyTxScore is the default allocation heuristics.
 class GreedyTxScore : public TxScore {
  private:
-    const GreedyTxScoreMaker* maker_i;
+    const GreedyTxScoreMaker* maker_i = nullptr;
     const Vision* vision_i;
 
     /// the most precious container bits: normal container and potentially mocha bits

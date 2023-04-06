@@ -57,18 +57,18 @@ struct CollectPhvLoggingInfo : public MauInspector {
     ConstrainedFieldMap fieldConstraints;
 
     /// Superclusters used to extract certain group constraints (MAU groups, equivalent alignment)
-    const std::list<PHV::SuperCluster*> *superclusters;
+    const std::list<PHV::SuperCluster*> *superclusters = nullptr;
 
     /// Pointer to pragma object computed during PHV Analysis
-    const PHV::Pragmas *pragmas;
+    const PHV::Pragmas *pragmas = nullptr;
 
     /// Extracted no pack (different container) constraints
     ordered_map<cstring, ordered_map<cstring, bool>> noPackConstraints;
 
     /// Extracted MAU group constraints
-    MauGroupExtractor *mauGroupConstraints;
+    MauGroupExtractor *mauGroupConstraints = nullptr;
 
-    EquivalentAlignExtractor *equivAlignConstraints;
+    EquivalentAlignExtractor *equivAlignConstraints = nullptr;
 
     void collectConstraints();
 

@@ -21,7 +21,7 @@ class CollectMochaCandidates : public Inspector {
     PhvInfo                  &phv;
     const PhvUse             &uses;
     const NonMochaDarkFields &nonMochaDark;
-    bool                      pov_on_mocha;
+    bool                      pov_on_mocha = false;
 
     /// Number of mocha candidates detected.
     size_t          mochaCount;

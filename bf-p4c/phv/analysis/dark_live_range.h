@@ -242,7 +242,7 @@ class DarkLiveRange : public Inspector {
     const MapTablesToActions                &tablesToActions;
     const NonMochaDarkFields                &nonMochaDark;
 
-    int DEPARSER;
+    int DEPARSER = -1;
 
     /// Map of field ID to the live range for each field.
     DarkLiveRangeMap livemap;

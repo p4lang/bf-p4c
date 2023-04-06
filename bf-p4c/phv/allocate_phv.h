@@ -365,9 +365,9 @@ class CoreAllocation {
     // initialized in value instead of references.
     const bool disableMetadataInit;
     // Enforce single gress parser groups
-    bool singleGressParserGroups;
+    bool singleGressParserGroups = false;
     // Prioritize use of ARA for overlay inits
-    bool prioritizeARAinits;
+    bool prioritizeARAinits = false;
 
     std::optional<PHV::Transaction> alloc_super_cluster_with_alignment(
         const PHV::Allocation& alloc,
@@ -883,9 +883,9 @@ class AllocatePHV : public Visitor {
     const MauBacktracker& mau_i;
     CoreAllocation core_alloc_i;
     PhvInfo& phv_i;
-    const IR::BFN::Pipe *root;
+    const IR::BFN::Pipe *root = nullptr;
     // const DependencyGraph &deps_i;
-    PHV::ConcreteAllocation *alloc;
+    PHV::ConcreteAllocation *alloc = nullptr;
     std::list<const PHV::SuperCluster*> &unallocated_i;
     /** The entry point.  This "pass" doesn't actually traverse the IR, but it
      * marks the place in the back end where PHV allocation does its work.

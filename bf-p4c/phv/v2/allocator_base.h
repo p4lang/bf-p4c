@@ -19,7 +19,7 @@ namespace v2 {
 struct ContScopeAllocResult : public AllocResult {
     ActionSourceCoPackMap action_hints;
     Container c;
-    bool is_packing;
+    bool is_packing = false;
     ContScopeAllocResult(): AllocResult(new AllocError(ErrorCode::NOT_ENOUGH_SPACE, "")) {}
     explicit ContScopeAllocResult(const AllocError* err)
         : AllocResult(err) {}
