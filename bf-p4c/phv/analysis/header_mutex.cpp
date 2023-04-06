@@ -817,8 +817,8 @@ ordered_set<std::pair<cstring, cstring>> ExcludeMAUNotMutexHeaders::process_set_
                                                                       const cstring& substring,
                                                                       std::map<int, cstring>& map) {
                     std::string tmp{header.c_str()};
-                    unsigned begin = tmp.find("[");
-                    unsigned end = tmp.find("]");
+                    auto begin = tmp.find("[");
+                    auto end = tmp.find("]");
                     if (!header.find(substring) || begin == std::string::npos ||
                         end == std::string::npos)
                         return;

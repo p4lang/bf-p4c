@@ -2272,7 +2272,6 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
                     min_stage_from_src = src_vertex_stage;
                 } else {
                     BUG("Unhandled dependency");
-                    min_stage_from_src = src_vertex_stage;
                 }
                 true_min_stage = std::max(true_min_stage, min_stage_from_src);
                 min_edges_of_table[min_stage_from_src].emplace_back(src_table, dep);

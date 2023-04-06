@@ -181,6 +181,7 @@ void Manifest::serialize_target_data(Writer& writer) {
     for (unsigned int pipe_idx = 0; pipe_idx < m_pipelines.size(); ++pipe_idx) {
         threads += m_pipelines.getPipeline(pipe_idx).threads.size();
     }
+    BUG_CHECK(threads > 0, "No pipes found!");
     const auto numPorts = std::to_string(64/threads*2) + "q";
     writer.String(numPorts.c_str());
     writer.Key("pipes");

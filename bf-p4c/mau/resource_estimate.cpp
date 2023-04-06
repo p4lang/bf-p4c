@@ -799,6 +799,8 @@ void StageUseEstimate::options_to_dleft_entries(const IR::MAU::Table *tbl,
         if (salu != nullptr)
             break;
     }
+    BUG_CHECK(salu, "No salu found associated with the attached table, %1%", tbl->name);
+
     if (!attached_entries.count(salu))
         return;
     auto entries = attached_entries.at(salu).entries;
@@ -878,7 +880,6 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
             // TODO(cdodd)
         } else if (at->is<IR::MAU::TernaryIndirect>()) {
             BUG("Ternary Indirect Data table exists before table placement occurs");
-            per_word = TernaryIndirectPerWord(&lo->layout, tbl);
         } else if (auto *idle = at->to<IR::MAU::IdleTime>()) {
             need_srams = false;
             need_maprams = true;

@@ -314,7 +314,7 @@ bool TablePlacement::backtrack(trigger &trig) {
     // then used by PHV allocation to minimize the number of container conflicts seen in the final
     // allocation.
     if (trig.is<RerunTablePlacementTrigger::failure>()) {
-        auto t = dynamic_cast<RerunTablePlacementTrigger::failure *>(&trig);
+        auto t = static_cast<RerunTablePlacementTrigger::failure *>(&trig);
         ignoreContainerConflicts = t->ignoreContainerConflicts;
         return true; }
     ignoreContainerConflicts = false;
@@ -4870,6 +4870,8 @@ IR::Vector<IR::MAU::Table> *TransformTables::break_up_dleft(IR::MAU::Table *tbl,
             if (salu != nullptr)
                 break;
         }
+        BUG_CHECK(salu, "No salu found associated with the attached table, %1%", tbl->name);
+
         auto rsrcs = placed->resources.clone()->rename(tbl, stage_table, lt);
         int per_row = RegisterPerWord(salu);
         int entries = placed->use.preferred()->dleft_hash_sizes[lt] * Memories::SRAM_DEPTH

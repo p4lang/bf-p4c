@@ -132,7 +132,7 @@ std::ostream &operator<<(std::ostream &out, const TableResourceAlloc &alloc) {
     if (alloc.action_ixbar) out << "action_ixbar: " << *alloc.action_ixbar << Log::endl;
     if (alloc.selector_ixbar) out << "selector_ixbar: " << *alloc.selector_ixbar << Log::endl;
     if (alloc.salu_ixbar) out << "salu_ixbar: " << *alloc.salu_ixbar << Log::endl;
-    if (alloc.salu_ixbar) out << "meter_ixbar: " << *alloc.meter_ixbar << Log::endl;
+    if (alloc.meter_ixbar) out << "meter_ixbar: " << *alloc.meter_ixbar << Log::endl;
     std::unique_ptr<Memories> mem(Memories::create());
     for (auto &mu : alloc.memuse)
         mem->update(mu.first.build_name(), mu.second);

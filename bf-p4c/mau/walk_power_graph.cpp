@@ -861,7 +861,6 @@ void WalkPowerGraph::print_worst_power(std::ofstream &out) const {
         // FIXME -- these checks should not be needed
         if (!on_path) {
             BUG("should not happen");
-            continue;
         }
         if (stages_.find(id) == stages_.end()) {
             // BUG("should not happen"); -- but does
@@ -869,7 +868,6 @@ void WalkPowerGraph::print_worst_power(std::ofstream &out) const {
         }
         if (gress_map_.find(id) == gress_map_.end()) {
             BUG("should not happen");
-            continue;
         }
         int stage_in = stages_.at(id);
         gress_t gr = gress_map_.at(id);
@@ -879,15 +877,12 @@ void WalkPowerGraph::print_worst_power(std::ofstream &out) const {
         // FIXME -- these checks should not be needed
         if (!on_path) {
             BUG("should not happen");
-            continue;
         }
         if (stages_.find(id) == stages_.end()) {
             BUG("should not happen");
-            continue;
         }
         if (gress_map_.find(id) == gress_map_.end()) {
             BUG("should not happen");
-            continue;
         }
         int stage_in = stages_.at(id);
         gress_t gr = gress_map_.at(id);

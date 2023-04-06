@@ -219,7 +219,11 @@ bool TableSummary::preorder(const IR::MAU::Table *t) {
         if (!imems[gress][t->stage()])
             imems[gress][t->stage()].reset(InstructionMemory::create());
         imems[gress][t->stage()]->update(t);
-        tables[t->stage()].insert(t); }
+        tables[t->stage()].insert(t);
+    } else {
+        LOG1(t->name << " doesn't have resources!");
+        return true;
+    }
     auto stage_pragma = t->get_provided_stage();
     if (t->match_table && t->stage_split <= 0 && stage_pragma >= 0 && t->stage() != stage_pragma) {
         // FIXME -- move to TablePlacement

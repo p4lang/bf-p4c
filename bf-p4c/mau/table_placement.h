@@ -75,7 +75,6 @@ class TablePlacement : public PassManager {
     std::set<const IR::MAU::Table *> not_eligible;
     int uid(const IR::MAU::Table *t) { return tblInfo.at(t).uid; }
     int uid(cstring t) {
-        if (tblByName.count(t) == 0) return -1;
         return tblByName.at(t)->uid; }
     int uid(const IR::MAU::TableSeq *t) {
         if (seqInfo.count(t) == 0) return -1;

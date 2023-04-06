@@ -38,6 +38,7 @@ void ValidateAttachedOfSingleTable::free_address(const IR::MAU::AttachedMemory *
         addr_type_t type) {
     IR::MAU::Table::IndirectAddress ia;
     auto ba = findContext<IR::MAU::BackendAttached>();
+    BUG_CHECK(ba, "Attached backend not found, for %1% table.", tbl->name);
     LOG3("Free address for attached " << am->name << " with size " << am->size
         << " and location " << ba->addr_location << " on table " << tbl->name);
     if (users[type] != nullptr) {
@@ -279,7 +280,7 @@ const IR::MAU::Instruction *SplitAttachedInfo::pre_split_enable_instr(const IR::
     // in the same imem word.)
     if (!enabled) return nullptr;
     return new IR::MAU::Instruction(act->srcInfo, "set", split_enable(at, tbl),
-                                    new IR::Constant(IR::Type::Bits::get(1), enabled ? 1 : 0));
+                                    new IR::Constant(IR::Type::Bits::get(1), 1));
 }
 
 /**

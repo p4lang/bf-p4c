@@ -251,7 +251,7 @@ class ElimUnused::Headers : public PardeTransform {
     const IR::BFN::DeparserParameter*
     preorder(IR::BFN::DeparserParameter* param) override {
         prune();
-        bool hasdefs = hasDefs(param->source->field);
+        bool hasdefs = param->source ? hasDefs(param->source->field) : false;
         LOG5("ElimUnused preorder deparser parameter: " << param
                 << ", source: " << param->source << ", hasdefs: " << (hasdefs ? "Y" : "N"));
 
