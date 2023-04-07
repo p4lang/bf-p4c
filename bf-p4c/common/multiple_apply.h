@@ -54,7 +54,7 @@ class MultipleApply : public PassManager {
     const BFN_Options& options;
 
     /// Disable long branches
-    bool longBranchDisabled;
+    bool longBranchDisabled = false;
 
     /// Pass for computing the mutual-exclusion matrix for tables.
     TablesMutuallyExclusive mutex;

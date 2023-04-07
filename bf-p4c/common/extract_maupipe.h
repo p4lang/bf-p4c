@@ -198,7 +198,7 @@ class BackendConverter : public Inspector {
     P4::TypeMap *typeMap;
     ParamBinding *bindings;
     ParseTna *arch;
-    const IR::ToplevelBlock* toplevel;
+    const IR::ToplevelBlock* toplevel = nullptr;
     StatefulSelectors stateful_selectors;
     IR::Vector<IR::BFN::Pipe>& pipe;
     ordered_map<int, const IR::BFN::Pipe*>& pipes;

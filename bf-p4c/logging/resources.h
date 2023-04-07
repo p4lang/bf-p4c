@@ -164,7 +164,7 @@ class ResourcesLogging : public Inspector {
     std::string filePath;  // path to logged file
     std::string manifestPath;  // path from manifest to logged file
     std::vector<Resources::StageResources> stageResources;  // Data for logging are collected here
-    const ParserResources *parserResources;  // Logged data for parser
+    const ParserResources *parserResources = nullptr;  // Logged data for parser
     std::vector<ClotResourceUsage*> clotResources;  // Logged data for clots
 
     /**

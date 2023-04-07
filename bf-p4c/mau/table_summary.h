@@ -163,11 +163,11 @@ class TableSummary: public MauInspector {
     // Save the previous state in case we have to rollback to this one.
     state_t prev_state = INITIAL;
     /// The total number of stages allocated by Table Placement
-    int maxStage;
+    int maxStage = -1;
     int max_stages[3];
     /// Booleans indicating whether traversal over ingress and egress pipes has happened
-    bool ingressDone;
-    bool egressDone;
+    bool ingressDone = false;
+    bool egressDone = false;
     /// Flag if we've found a placement problem that will require retrying.  Strings are
     // error messages to output if we can't backtrack, stored in an ordered_map to suppress
     // duplicates.  Flag is true if the error should be output as an error and false if it

@@ -79,7 +79,7 @@ class ComputeFlatrockParserIR : public ParserInspector {
     /// The name of ingress intrinsic metadata structure.
     cstring igMetaName;
     /// Ingress intrinsic metadata has been extracted.
-    bool igMetaExtracted;
+    bool igMetaExtracted = false;
     /// The names of headers extracted in a given state.
     std::map<const IR::BFN::ParserState*, std::set<cstring>> headers;
     /**

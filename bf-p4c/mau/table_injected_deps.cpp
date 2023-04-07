@@ -312,6 +312,7 @@ void InjectActionExitAntiDependencies::postorder(const IR::MAU::Table* table) {
 
             if (processed.count(curTable)) continue;
 
+            CHECK_NULL(curTable);
             bool predecessor = true;  // Tracks whether "sibling" is a predecessor of "curTable".
             for (auto sibling : tableSeq->tables) {
                 if (sibling == curTable) {

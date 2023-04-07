@@ -246,7 +246,7 @@ struct RemoveNegativeDeposits : public ParserTransform {
  * \ingroup LowerParserIR
  */
 class InsertPayloadPseudoHeaderState : public ParserTransform {
-    const IR::BFN::ParserState *payload_header_state;
+    const IR::BFN::ParserState *payload_header_state = nullptr;
 
     profile_t init_apply(const IR::Node *node) override {
         payload_header_state = new IR::BFN::ParserState(

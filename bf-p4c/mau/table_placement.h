@@ -44,7 +44,7 @@ class TablePlacement : public PassManager {
 
     struct Placed;
     struct RewriteForSplitAttached;
-    const TablePlacement::Placed *placement;
+    const TablePlacement::Placed *placement = nullptr;
 
     struct TableInfo {
         int uid = -1;

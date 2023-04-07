@@ -1449,7 +1449,7 @@ class DecidePlacement::Backfill {
      * We could try backfilling multiple tables but that is less likely to be possible or
      * useful; it is more likely that a general backtracking scheme would be a better approach.
      */
-    int                         stage;
+    int                         stage = -1;
     struct table_t {
         const IR::MAU::Table    *table;
         cstring                 before;
@@ -3008,11 +3008,11 @@ DecidePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed 
                 << pl->use.format_type << need_more_match_str);
     }
 
-    if (pl->table) {
-        int dep_chain = self.deps.stage_info[pl->table].dep_stages_control_anti;
-        if (pl->stage + dep_chain >= Device::numStages())
-            LOG1(" Dependence chain longer than available stages");
-    }
+    CHECK_NULL(pl->table);
+
+    int dep_chain = self.deps.stage_info[pl->table].dep_stages_control_anti;
+    if (pl->stage + dep_chain >= Device::numStages())
+        LOG1(" Dependence chain longer than available stages");
     int stage_pragma = pl->table->get_provided_stage(pl->stage);
     if (stage_pragma >= 0 && stage_pragma != pl->stage)
         LOG1("  placing in stage " << pl->stage << " despite @stage(" << stage_pragma << ")");

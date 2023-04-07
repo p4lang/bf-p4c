@@ -589,10 +589,11 @@ void DependencyGraph::to_json(Util::JsonObject* dgsJson, const FlowGraph &fg,
         edge.target = boost::target(*edges, g);
         const IR::MAU::Table* source = get_vertex(edge.source);
         const IR::MAU::Table* target = get_vertex(edge.target);
-        if (source->gress != target->gress)
+        BUG_CHECK(source || target, "Edge has no source and no destination table");
+        if (source && target && source->gress != target->gress)
             BUG("Invalid dependency graph edge from %1% (gress = %2%) --> %3% (gress = %4%) ",
                 source->name, source->gress, target->name, target->gress);
-        auto gress = static_cast<int>(source->gress);
+        auto gress = source ? static_cast<int>(source->gress) : static_cast<int>(target->gress);
         std::string src_name = std::string(source ? source->name : "SOURCE");
         std::string dst_name = std::string(target ? target->name : "SINK");
 

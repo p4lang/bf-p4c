@@ -21,7 +21,7 @@ class NextTable : public virtual Visitor {
 };
 
 class DynamicNextTable : public DynamicVisitor, public NextTable {
-    NextTable   *pass;
+    NextTable   *pass = nullptr;
 
  public:
     ordered_set<UniqueId> next_for(const IR::MAU::Table *tbl, cstring what) const override {

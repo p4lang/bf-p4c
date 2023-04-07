@@ -143,7 +143,7 @@ class RemovePushInitialization : public Transform {
  * @pre Must happen after ResolveComputedParserExpressions.
  */
 class ValidToStkvalid : public Transform {
-    struct BFN::HeaderStackInfo* stack_info_;
+    struct BFN::HeaderStackInfo* stack_info_ = nullptr;
 
     // Populate stack_info_.
     IR::Node* preorder(IR::BFN::Pipe* pipe) override;

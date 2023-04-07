@@ -296,7 +296,7 @@ computeControlPlaneFormat(const PhvInfo& phv,
         PHV::Container container;
         /// The number of unused bits which remain on the LSB side of the
         /// container after the last field was placed.
-        int remainingBitsInContainer;
+        int remainingBitsInContainer = 0;
     };
 
     std::optional<LastContainerInfo> last = std::nullopt;
