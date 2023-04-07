@@ -536,6 +536,7 @@ control DtelConfig(inout switch_header_transport_t hdr,
         hdr.dtel.hw_id = hw_id;
         hdr.dtel.switch_id = switch_id;
         hdr.dtel.d_q_f = (bit<3>) report_type;
+        hdr.dtel.reserved = 0;
 #ifdef INT_V2
         hdr.dtel.version = 2;
         hdr.dtel.seq_number =
@@ -546,10 +547,12 @@ control DtelConfig(inout switch_header_transport_t hdr,
         hdr.dtel.md_length = md_length;
         hdr.dtel.rep_md_bits = rep_md_bits;
 		eg_md.payload_len = eg_md.payload_len + 16w44; // derek added
+        hdr.dtel.ds_md_bits = 0;
+        hdr.dtel.ds_md_status = 0;
+        hdr.dtel.domain_specific_id = 0;
 #else
         hdr.dtel.version = 0;
         hdr.dtel.next_proto = next_proto;
-        hdr.dtel.reserved = 0;
         hdr.dtel.seq_number = get_seq_number.execute(eg_md.mirror.session_id);
         hdr.dtel.timestamp = (bit<32>) eg_md.ingress_timestamp;
 #endif
