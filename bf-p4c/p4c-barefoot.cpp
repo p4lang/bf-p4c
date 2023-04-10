@@ -524,7 +524,11 @@ int main(int ac, char **av) {
      public:
         explicit manifest_generator_guard(Logging::Manifest& manifest) : manifest(manifest) {};
         ~manifest_generator_guard() {
-            manifest.setSuccess(::errorCount() == 0);
+            try {
+                manifest.setSuccess(::errorCount() == 0);
+            } catch (...) {
+                manifest.setSuccess(false);
+            }
             manifest.serialize();
         }
     };
