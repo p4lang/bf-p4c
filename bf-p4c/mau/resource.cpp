@@ -139,3 +139,6 @@ std::ostream &operator<<(std::ostream &out, const TableResourceAlloc &alloc) {
     out << *mem;
     return out;
 }
+
+void dump(const TableResourceAlloc &ra) { std::cout << ra << std::endl; }
+void dump(const TableResourceAlloc *ra) { std::cout << *ra << std::endl; }

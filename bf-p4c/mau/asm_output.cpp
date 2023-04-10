@@ -1197,6 +1197,8 @@ class MauAsmOutput::NextTableSet {
             sep = ", "; }
         if (nxt.tables.size() != 1) out << (sep+1) << ']';
         return out; }
+    bool isEND() const {
+        return tables.size() == 0 || (tables.size() == 1 && tables.front() == UniqueId("END")); }
 };
 
 MauAsmOutput::NextTableSet MauAsmOutput::next_for(const IR::MAU::Table *tbl, cstring what) const {
@@ -2586,17 +2588,27 @@ void MauAsmOutput::emit_table_hitmap(std::ostream &out, indent_t indent, const I
     if (!no_match_hit) {
         if (Device::numLongBranchTags() > 0 && !options.disable_long_branch) {
             ordered_set<NextTableSet> unique_gw_next_tables;
+            bool need_gw_lut = false;
+            for (auto entry : gw_next_tables) {
+                if (entry.isEND()) continue;  // END does not require the lut
+                need_gw_lut = true;
+                break; }
             // Guaranteeing that the next table for the match and gateway can fit in the same
             // space.  Entry 0 can potentially be used
-            for (auto entry : gw_next_tables) {
-                auto begin = reserved_entry_0 ? next_table_map.begin() + 1 : next_table_map.begin();
-                if (std::find(begin, next_table_map.end(), entry) == next_table_map.end())
-                    unique_gw_next_tables.insert(entry);
+            if (need_gw_lut) {
+                for (auto entry : gw_next_tables) {
+                    auto begin = next_table_map.begin() + reserved_entry_0;
+                    if (std::find(begin, next_table_map.end(), entry) == next_table_map.end())
+                        unique_gw_next_tables.insert(entry);
+                }
             }
 
-            BUG_CHECK(unique_gw_next_tables.size() + next_table_map.size() - reserved_entry_0
-                <= TableFormat::NEXT_MAP_TABLE_ENTRIES, "Table %1% combined with a gateway "
-                "cannot correctly allocate its next tables", tbl->externalName());
+            // FIXME -- table placement should avoid combining this table with this gateway to
+            // avoid getting into this situation
+            ERROR_CHECK(unique_gw_next_tables.size() + next_table_map.size() - reserved_entry_0
+                <= TableFormat::NEXT_MAP_TABLE_ENTRIES, ErrorType::ERR_OVERLIMIT,
+                "%sTable % combined with a gateway has too many next tables",
+                tbl->srcInfo, tbl->externalName());
 
             ///> Specifically currently for P4C-2405
             if (reserved_entry_0 && unique_gw_next_tables.size() > 0)
