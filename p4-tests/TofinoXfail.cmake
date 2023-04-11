@@ -1222,7 +1222,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  ".*error: Table placement cannot make any more progress.*"
+  ".*error: Non-mutualy exclusive actions .* and .* both trying to use MyIC.reg"
   testdata/p4_16_samples/psa-register-read-write-2-bmv2.p4
 )
 

@@ -531,6 +531,14 @@ void RegisterReadWrite::CollectRegisterReadsWrites::collectRegReadWrite(
     if (em->method->name == "read" || em->method->name == "write") {
         self.action_register_calls[act][reg].insert(stmt);
     }
+    if (act->is<IR::P4Action>() && !self.actions_using_register[reg].count(act)) {
+        for (auto *other : self.actions_using_register[reg]) {
+            if (!self.table_mutex(act, other))
+                error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                      "Non-mutualy exclusive actions %1% and %2% both trying to use %3%",
+                      act, other, reg); }
+        self.actions_using_register[reg].insert(act);
+    }
 }
 
 bool RegisterReadWrite::CollectRegisterReadsWrites::preorder(
@@ -544,6 +552,15 @@ bool RegisterReadWrite::CollectRegisterReadsWrites::preorder(
     } else {
         auto regAct = findContext<IR::Declaration_Instance>();
         if (regAct) {
+            // FIXME -- this code triggers on non-actions that contain calls.  Why do
+            // we care about any of these?  Calls to Register methods not in an action
+            // can't be supported on tofino, so should trigger an a error later.
+            // Turns out that calling a Register directly in a RegisterAction (not implementable)
+            // will crash in extract_maupipe if we don't catch it earlier, so we tag such
+            // things here as errors.  We should fix extract_maupipe to not craah (and flag
+            // the error), or have an earlier pass check and give the error.  Maybe
+            // CheckRegisterActions in this file (which is what ends up flagging an error
+            // in the test we have (p4c-4525) but might not cover all cases)
             LOG1("no P4Action context, but there is a Declaration_Instance: " << regAct);
             collectRegReadWrite(call, regAct);
         }
@@ -561,10 +578,9 @@ void RegisterReadWrite::CollectRegisterReadsWrites::end_apply() {
     if (Device::currentDevice() == Device::FLATROCK) return;
 #endif  // HAVE_FLATROCK
 
-    for (auto act_map : self.action_register_calls) {
-        auto act = act_map.first;
+    for (auto &[action, regs_in_action] : self.action_register_calls) {
         const IR::Expression *first_addr = nullptr;
-        auto first_reg = act_map.second.begin()->first;
+        auto first_reg = regs_in_action.begin()->first;
         auto first_reg_type_spec = first_reg->type->to<IR::Type_Specialized>();
         // When compiling for the v1model, type information seems to be a bit different than
         // for PSA and T*NA architectures. With v1model, the template parameters are of the
@@ -573,8 +589,7 @@ void RegisterReadWrite::CollectRegisterReadsWrites::end_apply() {
         auto first_reg_type_type = self.typeMap->getTypeType(
             first_reg_type_spec->arguments->at(0)->getNode(), true);
         auto first_width = first_reg_type_type->width_bits();
-        for (auto reg_map : act_map.second) {
-            auto reg = reg_map.first;
+        for (auto &[reg, calls] : regs_in_action) {
             auto reg_type_spec = first_reg->type->to<IR::Type_Specialized>();
             // See above.
             auto reg_type_type = self.typeMap->getTypeType(
@@ -584,8 +599,8 @@ void RegisterReadWrite::CollectRegisterReadsWrites::end_apply() {
                 ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
                     "%1%: widths of all registers used within a single action have to "
                     "be the same. Widths of the following registers differ:\n%2%%3%",
-                    act, first_reg, reg);
-            for (auto reg_set : reg_map.second) {
+                    action, first_reg, reg);
+            for (auto *reg_set : calls) {
                 auto mce = RegisterReadWrite::extractRegisterReadWrite(reg_set).first;
                 if (!mce) {
                     ::fatal_error(ErrorType::ERR_UNSUPPORTED,
@@ -605,7 +620,7 @@ void RegisterReadWrite::CollectRegisterReadsWrites::end_apply() {
                         ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
                             "%1%: uses of all registers within a single action have to "
                             "use the same addressing. The following uses differ:\n%2%%3%",
-                            act, first_addr, addr);
+                            action, first_addr, addr);
                 }
             }
         }

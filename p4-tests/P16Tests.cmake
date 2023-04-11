@@ -329,7 +329,8 @@ p4c_add_xfail_reason("p4"
 # =======================================
 
 p4c_add_xfail_reason("tofino"
-  "error: Wide operations not supported in Stateful ALU, will only operate on bottom 32 bits"
+  #"error: Wide operations not supported in Stateful ALU, will only operate on bottom 32 bits"
+  "error: Non-mutualy exclusive actions .* trying to use "
   testdata/p4_16_samples/psa-register-read-write-bmv2.p4
   testdata/p4_16_samples/psa-example-register2-bmv2.p4
 )

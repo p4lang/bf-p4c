@@ -166,6 +166,7 @@ set (BF_P4C_MIDEND_SRCS
   midend/simplify_nested_if.cpp
   midend/simplify_references.cpp
   midend/alpm.cpp
+  midend/table_mutex.cpp
   midend/type_categories.cpp
   midend/type_checker.cpp
   )
@@ -204,6 +205,7 @@ set (BF_P4C_MIDEND_HDRS
   midend/simplify_nested_if.h
   midend/simplify_references.h
   midend/alpm.h
+  midend/table_mutex.h
   midend/type_categories.h
   midend/type_checker.h
   )

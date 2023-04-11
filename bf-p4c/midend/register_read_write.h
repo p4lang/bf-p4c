@@ -6,6 +6,7 @@
 #include "bf-p4c/midend/copy_header.h"
 #include "bf-p4c/midend/type_checker.h"
 #include "ir/ir.h"
+#include "table_mutex.h"
 
 namespace BFN {
 
@@ -55,6 +56,8 @@ class RegisterReadWrite : public PassManager {
     RegisterExecuteCallByAction action_register_exec_calls;
     RegisterActionsByControl control_register_actions;
     ActionsByRegister generated_register_actions;
+    ActionsByRegister actions_using_register;
+    TableMutex table_mutex;
 
     /**
      * \ingroup stateful_alu
@@ -177,6 +180,7 @@ class RegisterReadWrite : public PassManager {
             typeChecking = new BFN::TypeChecking(refMap, typeMap);
         addPasses({
             typeChecking,
+            &table_mutex,
             new MoveRegisterParameters(*this),
             new CollectRegisterReadsWrites(*this),
             new AnalyzeActionWithRegisterCalls(*this),
