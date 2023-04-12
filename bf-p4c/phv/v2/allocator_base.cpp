@@ -630,25 +630,28 @@ ContScopeAllocResult AllocatorBase::try_slices_to_container(
     }
 
     // check overlay
-    LOG4(ctx.t_tabs() << "Overlay status:");
+    LOG5(ctx.t_tabs() << "Overlay status:");
     for (const auto& slice : candidates) {
         const auto& overlapped = alloc.slices(slice.container(), slice.container_slice());
         const cstring short_name =
             slice.field()->name + " " + cstring::to_cstring(slice.field_slice());
         if (overlapped.empty()) {
-            LOG4(ctx.t_tabs() << " " << short_name << ": "
+            LOG5(ctx.t_tabs() << " " << short_name << ": "
                               << "no overlapped slices.");
         } else if (can_control_flow_overlay(kit_i.mutex(), slice.field(), overlapped)) {
-            LOG4(ctx.t_tabs() << short_name << ": " << "control flow overlaid.");
+            LOG5(ctx.t_tabs() << short_name << ": " << "control flow overlaid.");
         } else if (kit_i.settings.physical_liverange_overlay &&
                    can_physical_liverange_overlay(kit_i, slice, overlapped)) {
-            LOG4(ctx.t_tabs() << short_name << ": "
+            LOG5(ctx.t_tabs() << short_name << ": "
                               << "physical liverange overlaid.");
         } else {
             auto err = new AllocError(ErrorCode::NOT_ENOUGH_SPACE);
             *err << "overlapped with allocated slices";
             // detailed error message only for high log level.
             if (LOGGING(6)) {
+                LOG6(ctx.t_tabs() << " is overlapping with: ");
+                for (auto &sl : overlapped)
+                    LOG6(ctx.t_tabs() << "  " << sl);
                 *err << ": " << short_name << " is overlapped with: " << overlapped.front();
             }
             return ContScopeAllocResult(err);
@@ -687,30 +690,33 @@ SomeContScopeAllocResult AllocatorBase::try_slices_to_container_group(
     const auto new_ctx = ctx.with_t(ctx.t() + 1);
     /// pretty-print error messages that aggregates the same failures.
     std::optional<cstring> last_err_str = std::nullopt;
+    std::optional<ContScopeAllocResult> last_rslt = std::nullopt;
     std::vector<Container> same_err_conts;
     const auto flush_aggregated_errs = [&]() {
         if (last_err_str) {
             std::stringstream ss;
-            ss << "Try container";
+            ss << "Failed container(s)";
             for (const auto& c : same_err_conts) {
                 ss << " " << c;
             }
-            LOG3(ctx.t_tabs() << ss.str());
-            LOG3(new_ctx.t_tabs() << "Failed, " << *last_err_str);
+            LOG6(ctx.t_tabs() << ss.str());
+            LOG6(new_ctx.t_tabs() << "Fail " << *last_err_str);
         }
         last_err_str = std::nullopt;
         same_err_conts.clear();
+        last_rslt = std::nullopt;
     };
     const auto pretty_print_errs = [&](const Container& c, const ContScopeAllocResult& r) {
         if (r.ok()) {
             flush_aggregated_errs();
         } else {
             cstring err_str = r.err_str();
-            if (last_err_str && *last_err_str != err_str) {
-                flush_aggregated_errs();
-            }
+            auto rslt = r;
+            LOG4(ctx.t_tabs() << " Failed :" << to_str(r.err->code));
+            if (last_rslt && !(*last_rslt == r)) flush_aggregated_errs();
             last_err_str = err_str;
             same_err_conts.push_back(c);
+            last_rslt = rslt;
         }
     };
 

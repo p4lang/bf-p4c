@@ -109,6 +109,7 @@ struct AllocResult {
     std::string err_str() const;
     std::string tx_str(cstring prefix = "") const;
     static std::string pretty_print_tx(const PHV::Transaction& tx, cstring prefix = "");
+    bool operator==(const AllocResult& other) const;
 };
 
 /// ScAllocAlignment is the alignment arrangement for a super cluster based on its alignment

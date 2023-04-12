@@ -69,6 +69,16 @@ std::string AllocResult::err_str() const {
     return err->str();
 }
 
+bool AllocResult::operator==(const AllocResult& other) const {
+    if (err == nullptr)
+        return (other.err == nullptr);
+
+    if (other.err == nullptr)
+        return false;
+
+    return (err->code == other.err->code);
+}
+
 std::string AllocResult::pretty_print_tx(const PHV::Transaction& tx, cstring prefix) {
     std::stringstream ss;
     cstring new_line = "";
