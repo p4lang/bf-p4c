@@ -6,6 +6,7 @@
 #include "lib/ordered_set.h"
 
 #include "bf-p4c/lib/assoc.h"
+#include "bf-p4c/parde/check_parser_multi_write.h"
 #include "bf-p4c/phv/slicing/phv_slicing_iterator.h"
 #include "bf-p4c/phv/slicing/phv_slicing_split.h"
 #include "bf-p4c/phv/slicing/types.h"
@@ -82,6 +83,7 @@ class DfsItrContext : public IteratorInterface {
     const PackConflictChecker has_pack_conflict_i;
     const IsReferencedChecker is_used_i;
     IteratorConfig config_i;
+    CheckWriteModeConsistency check_write_mode_consistency_i;
 
     // if a pa_container_size asks a field to be allocated to containers larger than it's
     // size, it's recorded here and will be used during pruning. Note that for one field,
@@ -141,7 +143,10 @@ class DfsItrContext : public IteratorInterface {
     ordered_map<const SuperCluster::SliceList*, int> to_invalidate_sl_counter;
 
  public:
-    DfsItrContext(const PhvInfo& phv, const SuperCluster* sc, const PHVContainerSizeLayout& pa,
+    DfsItrContext(const PhvInfo& phv,
+                  const MapFieldToParserStates& field_to_states,
+                  const CollectParserInfo& parser_info,
+                  const SuperCluster* sc, const PHVContainerSizeLayout& pa,
                   const ActionPackingValidatorInterface& action_packing_validator,
                   const ParserPackingValidatorInterface& parser_packing_validator,
                   const PackConflictChecker& pack_conflict,
@@ -153,7 +158,8 @@ class DfsItrContext : public IteratorInterface {
           parser_packing_validator_i(parser_packing_validator),
           has_pack_conflict_i(pack_conflict),
           is_used_i(is_used),
-          config_i(false, false, true, true, (1 << 25), (1 << 19)) {}
+          config_i(false, false, true, true, (1 << 25), (1 << 19)),
+          check_write_mode_consistency_i(phv, field_to_states, parser_info) {}
 
     /// iterate will pass valid slicing results to cb. Stop when cb returns false.
     void iterate(const IterateCb& cb) override;
@@ -199,6 +205,9 @@ class DfsItrContext : public IteratorInterface {
     /// split_by_long_fieldslices will split fieldslices that its length is greater or equal to
     /// 64 bits, using 32-bit container if possible.
     std::optional<std::list<SuperCluster*>> split_by_long_fieldslices(SuperCluster* sc) const;
+
+    /// split_by_parser_write_mode will split based on incompatible parser write modes
+    std::optional<std::list<SuperCluster*>> split_by_parser_write_mode(SuperCluster* sc);
 
     /// return possible SplitChoice on @p target.
     /// When minimal_packing_mode is false, results are sorted with a set of heuristics

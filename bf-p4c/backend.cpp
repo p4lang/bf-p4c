@@ -108,6 +108,7 @@
 #include "bf-p4c/phv/dump_table_flow_graph.h"
 #include "bf-p4c/phv/finalize_stage_allocation.h"
 #include "bf-p4c/phv/phv_analysis.h"
+#include "bf-p4c/phv/split_padding.h"
 #include "bf-p4c/phv/v2/metadata_initialization.h"
 
 namespace BFN {
@@ -408,6 +409,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         // report those reads.
         new CheckUninitializedAndOverlayedReads(defuse, phv, PHV_Analysis->get_pragmas(), options),
 
+        new SplitPadding(phv),
         allocateClot == nullptr ? nullptr : new ClotAdjuster(clot, phv),
         new ValidateActions(phv, false, true, false),
         new PHV::AddAliasAllocation(phv),

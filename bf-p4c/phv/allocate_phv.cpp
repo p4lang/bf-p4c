@@ -10,6 +10,7 @@
 #include "bf-p4c/device.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/ir/gress.h"
+#include "bf-p4c/parde/parser_query.h"
 #include "bf-p4c/parde/clot/clot_info.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/phv/live_range_split.h"
@@ -610,7 +611,9 @@ PHV::Slicing::IteratorInterface* PHV::AllocUtils::make_slicing_ctx(
     const PHV::SuperCluster* sc) const {
     auto* packing_validator = new PHV::legacy::ActionPackingValidator(source_tracker, uses);
     auto* parser_packing_validator = new DummyParserPackingValidator();
-    return new PHV::Slicing::ItrContext(phv, sc, pragmas.pa_container_sizes().field_to_layout(),
+    return new PHV::Slicing::ItrContext(phv,
+                                        field_to_parser_states, parser_info,
+                                        sc, pragmas.pa_container_sizes().field_to_layout(),
                                         *packing_validator,
                                         *parser_packing_validator,
                                         boost::bind(&AllocUtils::has_pack_conflict, this, _1, _2),

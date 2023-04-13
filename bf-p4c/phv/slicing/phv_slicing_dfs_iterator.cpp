@@ -1003,6 +1003,40 @@ DfsItrContext::split_by_long_fieldslices(SuperCluster* sc) const {
     return PHV::Slicing::split(sc, schema);
 }
 
+// Split by parser write mode compatibility
+std::optional<std::list<SuperCluster*>>
+DfsItrContext::split_by_parser_write_mode(SuperCluster* sc) {
+    SplitSchema schema;
+    for (auto* sl : sc->slice_lists()) {
+        schema[sl] = bitvec();
+        int offset = 0;
+        int min_split_offset = 0;
+        const FieldSlice* prev_non_pad = nullptr;
+        for (auto itr = sl->begin(); itr != sl->end();
+             offset += itr->size(), itr = std::next(itr)) {
+            const auto& fs = *itr;
+            if (!fs.field()->padding) {
+                if (prev_non_pad &&
+                    !check_write_mode_consistency_i.check_compatability(*prev_non_pad, fs)) {
+                    // Attempt to split on a container boundary
+                    int split_offset = offset;
+                    for (auto size : {PHV::Size::b32, PHV::Size::b16, PHV::Size::b8}) {
+                        int new_split = offset & ~(int(size) - 1);
+                        if (new_split >= min_split_offset) {
+                            split_offset = new_split;
+                            break;
+                        }
+                    }
+                    schema[sl].setbit(split_offset);
+                }
+                prev_non_pad = &fs;
+                min_split_offset = offset + itr->size();
+            }
+        }
+    }
+    LOG1("split_parser_write_mode schema: " << schema);
+    return PHV::Slicing::split(sc, schema);
+}
 
 // split by pa_container_size for those pragmas that are not up-casting,
 // i.e. ignore cases like pa_container_sz(f1<8>, 32); Those will be left
@@ -1207,6 +1241,17 @@ void DfsItrContext::iterate(const IterateCb& cb) {
         "adjacent_deparsed_and_non_deparsed");
     if (!after_pre_split) {
         LOG1("split by adjacent_deparsed_and_non_deparsed fields failed, iteration stopped.");
+        return;
+    }
+    to_be_split_i = *after_pre_split;
+
+    // presplit by parser write mode compatibility
+    after_pre_split = presplit_by(
+        to_be_split_i,
+        [&](SuperCluster* sc) { return split_by_parser_write_mode(sc); },
+        "parser_write_mode");
+    if (!after_pre_split) {
+        LOG1("split by parser_write_mode fields failed, iteration stopped.");
         return;
     }
     to_be_split_i = *after_pre_split;

@@ -29,13 +29,21 @@ struct CheckWriteModeConsistency : public ParserTransform {
     const MapFieldToParserStates& field_to_states;
     const ParserQuery pq;
 
-    std::map<int, IR::BFN::ParserWriteMode> field_to_write_mode;
+    std::map<const IR::BFN::ParserPrimitive*, IR::BFN::ParserWriteMode> extract_to_write_mode;
+    std::map<std::pair<PHV::FieldSlice, PHV::FieldSlice>, bool> compatability;
 
     /**
-     * @brief Check that the write modes of all extracts are consistent. Attempt to
-     * make them consistent if they aren't already consistent.
+     * @brief Check that the write modes of all extracts are consistent.
      */
-    void check(const std::vector<const IR::BFN::Extract*> extracts);
+    bool check(const std::vector<const IR::BFN::Extract*> extracts) const;
+
+    /**
+     * @brief Check and adjust the write modes of all extracts to be consistent.
+     *
+     * Checks whether the write modes of all extracts are consistent. If not, record the adjustments
+     * necessary to make them consistent, or produce an error if they can't be made consistent.
+     */
+    void check_and_adjust(const std::vector<const IR::BFN::Extract*> extracts);
 
     /**
      * Find all extracts that stard/end in mid byte and add them to a map by the partial byte
@@ -78,6 +86,11 @@ struct CheckWriteModeConsistency : public ParserTransform {
                               const MapFieldToParserStates& fs,
                               const CollectParserInfo& pi) :
         phv(p), field_to_states(fs), pq(pi, fs) { }
+
+    /**
+     * Check if the extracts for two slices can be made compatible
+     */
+    bool check_compatability(const PHV::FieldSlice& slice_a, const PHV::FieldSlice& slice_b);
 };
 
 #endif /*BF_P4C_PARDE_CHECK_PARSER_MULTI_WRITE_H_*/

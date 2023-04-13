@@ -225,6 +225,21 @@ Visitor::profile_t MarkMutexPragmaFields::init_apply(const IR::Node* root) {
                  << " to be mutually_exclusive because of pragma @pa_mutually_exclusive");
         }
     }
+
+    if (LOGGING(1)) {
+        LOG1("Final field mutexes:");
+        for (const auto& f1 : phv) {
+            if (f1.is_padding()) continue;
+            for (const auto& f2 : phv) {
+                if (f2.is_padding()) continue;
+                if (f1 == f2) continue;
+                if (phv.isFieldMutex(&f1, &f2))
+                    LOG1("(" << f1.name << ", " << f2.name << ")");
+            }
+        }
+        LOG1("");
+    }
+
     return Inspector::init_apply(root);
 }
 

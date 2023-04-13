@@ -1,6 +1,7 @@
 #ifndef BF_P4C_PHV_SLICING_PHV_SLICING_ITERATOR_H_
 #define BF_P4C_PHV_SLICING_PHV_SLICING_ITERATOR_H_
 
+#include "bf-p4c/parde/parser_info.h"
 #include "bf-p4c/phv/action_packing_validator_interface.h"
 #include "bf-p4c/phv/parser_packing_validator_interface.h"
 #include "bf-p4c/phv/phv_fields.h"
@@ -22,7 +23,10 @@ class ItrContext : public IteratorInterface {
     IteratorInterface* pImpl;
 
  public:
-    ItrContext(const PhvInfo& phv, const SuperCluster* sc, const PHVContainerSizeLayout& pa,
+    ItrContext(const PhvInfo& phv,
+               const MapFieldToParserStates& fs,
+               const CollectParserInfo& pi,
+               const SuperCluster* sc, const PHVContainerSizeLayout& pa,
                const ActionPackingValidatorInterface& action_packing_validator,
                const ParserPackingValidatorInterface& parser_packing_validator,
                const PackConflictChecker pack_conflict,

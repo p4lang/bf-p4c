@@ -166,8 +166,10 @@ struct SliceExtracts : public ParserModifier {
         // ig_md.ip_dst_addr[95:64] should be 64, since any other slices in ig_md.ip_dst_addr are
         // not extracted.
         int extract_base = range.lo;
-        if (!field->metadata) {
-            BUG_CHECK(extract_base == 0, "header field slice does not start from 0");
+        if (!field->metadata && !field->padding) {
+            BUG_CHECK(extract_base == 0,
+                      "header field slice does not start from 0; instead %1% for %2%", extract_base,
+                      extract);
         }
         for (auto slice : phv.get_alloc(extract->dest->field, PHV::AllocContext::PARSER, &use)) {
             auto lo = slice.field_slice().lo;

@@ -570,7 +570,89 @@ struct InferWriteMode : public ParserTransform {
     }
 };
 
-void CheckWriteModeConsistency::check(const std::vector<const IR::BFN::Extract*> extracts) {
+bool CheckWriteModeConsistency::check(const std::vector<const IR::BFN::Extract*> extracts) const {
+    if (extracts.size() <= 1) return true;
+
+    WrMode first_mode = extracts[0]->write_mode;
+    bool consistent = std::all_of(extracts.begin(), extracts.end(),
+            [=](const IR::BFN::Extract* e) {
+                LOG9("      extract " << e << " " << e->write_mode);
+                return e->write_mode == first_mode;
+            });
+
+
+    if (consistent) return true;
+
+    // not consistent, let's look if this can be fixed
+    // * padding fields don't matter, calculate what mode can be used without them
+    bool bitwise_or = false;
+    bool clear_on_write = false;
+    bool has_non_padding = false;
+    consistent = true;
+
+    for (auto &e : extracts) {
+        auto dest = phv.field(e->dest->field);
+        if (dest->padding)
+            continue;
+        // it may happen that the first one is a padding
+        if (!has_non_padding) {
+            first_mode = e->write_mode;
+            has_non_padding = true;
+        }
+
+        if (consistent && e->write_mode != first_mode) {
+            consistent = false;
+        }
+        bitwise_or |= e->write_mode == WrMode::BITWISE_OR;
+        clear_on_write |= e->write_mode == WrMode::CLEAR_ON_WRITE;
+    }
+
+    // and set padding mode to match the rest of fields, clearly it is not SINGLE_WRITE,
+    // otherwise we would have no problem
+    BUG_CHECK(has_non_padding, "non non-padding extracts found");
+
+    if (consistent)  // with padding
+        return true;
+
+    // * if we have no CLEAR_ON_WRITE for non-padding fields, we can maybe set all
+    //   fields to BITWISE_OR mode if
+    //   - all SINGLE_WRITE fields are actually set only once (therefore we are not
+    //     hiding a runtime error)
+    //   - all other writes of the BITWISE_OR fields are either constant, or result of
+    //     checksum.verify() and therefore they can guarantee bytes other than ones
+    //     corresponding to the field in question will not be set
+    if (!clear_on_write) {
+        auto writes_safe = true;
+        for (auto e : extracts) {
+            auto dest = phv.field(e->dest->field);
+            if (dest->padding)
+                continue;
+            // all writes to the same field as extract `e`
+            auto e_writes = field_to_states.field_to_writes.at(dest);
+            if (e->write_mode == WrMode::BITWISE_OR) {
+                // it is safe if all other writes are constant or checksum.verify()
+                writes_safe &= std::all_of(
+                    e_writes.begin(), e_writes.end(),
+                    [e](const IR::BFN::ParserPrimitive* wr) {
+                        return wr == e || wr->is<IR::BFN::ChecksumVerify>()
+                            || is_constant_extract(wr);
+                    });
+            } else {  // SINGLE_WRITE
+                // check that there is actually only one write
+                writes_safe &= e_writes.size() == 1 || pq.is_single_write(e_writes);
+            }
+            if (!writes_safe)
+                break;
+        }
+        if (writes_safe)
+            return true;  // no error
+    }
+
+    return false;
+}
+
+void CheckWriteModeConsistency::check_and_adjust(
+    const std::vector<const IR::BFN::Extract *> extracts) {
     if (extracts.size() <= 1) return;
 
     WrMode first_mode = extracts[0]->write_mode;
@@ -620,8 +702,9 @@ void CheckWriteModeConsistency::check(const std::vector<const IR::BFN::Extract*>
         auto dest = phv.field(e->dest->field);
         LOG9("    - " << e << " -> " << dest);
         if (dest->padding)
-            field_to_write_mode[dest->id] =
-                clear_on_write ? WrMode::CLEAR_ON_WRITE : WrMode::BITWISE_OR;
+            extract_to_write_mode[e] = clear_on_write ? WrMode::CLEAR_ON_WRITE
+                                       : bitwise_or   ? WrMode::BITWISE_OR
+                                                      : WrMode::SINGLE_WRITE;
     }
 
     if (consistent)  // with padding
@@ -663,7 +746,7 @@ void CheckWriteModeConsistency::check(const std::vector<const IR::BFN::Extract*>
             for (auto e : extracts) {
                 auto dest = phv.field(e->dest->field);
                 LOG9("    - " << e << " -> " << dest);
-                field_to_write_mode[dest->id] = WrMode::BITWISE_OR;
+                extract_to_write_mode[e] = WrMode::BITWISE_OR;
             }
             return;  // no error
         }
@@ -721,7 +804,7 @@ void CheckWriteModeConsistency::check_pre_alloc(
             LOG9("    generation " << by_gen.first << ": "
                  << by_gen.second.size() << " extracts");
             auto extracts = by_gen.second;
-            check(extracts);
+            check_and_adjust(extracts);
         }
     }
 }
@@ -748,8 +831,18 @@ void CheckWriteModeConsistency::check_post_alloc() {
                 if (auto* ext = write->to<IR::BFN::Extract>()) {
                     // Ignore constant extracts
                     if (!get_extract_range(ext)) continue;
+
                     auto* state = field_to_states.write_to_state.at(write);
-                    extracts_by_state[state].emplace(ext);
+
+                    PHV::FieldUse use(PHV::FieldUse::WRITE);
+                    auto slices =
+                        phv.get_alloc(ext->dest->field, PHV::AllocContext::PARSER, &use);
+                    for (auto& slice : slices) {
+                        if (slice.container() == c) {
+                            LOG3("  Extract in " << state->name << ": " << ext);
+                            extracts_by_state[state].emplace(ext);
+                        }
+                    }
                 }
             }
         }
@@ -758,7 +851,7 @@ void CheckWriteModeConsistency::check_post_alloc() {
             std::vector<const IR::BFN::Extract*> extracts_vec;
             extracts_vec.reserve(extracts.size());
             extracts_vec.insert(extracts_vec.begin(), extracts.begin(), extracts.end());
-            check(extracts_vec);
+            check_and_adjust(extracts_vec);
         }
     }
 }
@@ -785,15 +878,70 @@ IR::Node* CheckWriteModeConsistency::preorder(IR::BFN::ParserChecksumWritePrimit
 
 template<typename T>
 IR::Node* CheckWriteModeConsistency::set_write_mode(T *write) {
-    auto dest = phv.field(write->getWriteDest()->field);
-
-    auto it = field_to_write_mode.find(dest->id);
-    if (it != field_to_write_mode.end()) {
+    auto it = extract_to_write_mode.find(getOriginal<T>());
+    if (it != extract_to_write_mode.end()) {
         LOG4("CWMC: Setting write mode of " << write << " to " << it->second);
         write->write_mode = it->second;
     }
 
     return write;
+}
+
+bool CheckWriteModeConsistency::check_compatability(const PHV::FieldSlice& slice_a,
+                                                    const PHV::FieldSlice& slice_b) {
+    // Cheap checks to establish compatability
+    const auto *f_a = slice_a.field();
+    const auto* f_b = slice_b.field();
+    if (f_a->padding || f_b->padding) return true;
+    if (phv.field_mutex()(f_a->id, f_b->id)) return true;
+    if (!field_to_states.field_to_writes.count(f_a) || !field_to_states.field_to_writes.count(f_b))
+        return true;
+
+    // Have we seen this pair of slices before?
+    auto slices_a_b = std::make_pair(slice_a, slice_b);
+    if (compatability.count(slices_a_b))
+        return compatability.at(slices_a_b);
+    else {
+        auto slices_b_a = std::make_pair(slice_b, slice_a);
+        if (compatability.count(slices_b_a))
+            return compatability.at(slices_b_a);
+    }
+
+    // Identify the extracts of the two fields
+    ordered_map<const IR::BFN::ParserState *, ordered_set<const IR::BFN::Extract *>>
+        extracts_by_state;
+    for (auto& slice : {slice_a, slice_b}) {
+        le_bitrange f_range;
+        const auto* f = slice.field();
+        auto& writes = field_to_states.field_to_writes.at(f);
+        for (auto* write : writes) {
+            if (auto* ext = write->to<IR::BFN::Extract>()) {
+                // Ignore constant extracts
+                if (!get_extract_range(ext)) continue;
+
+                le_bitrange range;
+                phv.field(ext->dest->field, &range);
+                if (slice.range().overlaps(range)) {
+                    auto *state = field_to_states.write_to_state.at(write);
+                    extracts_by_state[state].emplace(ext);
+                }
+            }
+        }
+    }
+
+    // Check the compatibility of extracts in each state
+    for (auto& [_, extracts] : extracts_by_state) {
+        std::vector<const IR::BFN::Extract*> extracts_vec;
+        extracts_vec.reserve(extracts.size());
+        extracts_vec.insert(extracts_vec.begin(), extracts.begin(), extracts.end());
+        if (!check(extracts_vec)) {
+            compatability.emplace(slices_a_b, false);
+            return false;
+        }
+    }
+
+    compatability.emplace(slices_a_b, true);
+    return true;
 }
 
 // If any egress intrinsic metadata, e.g. "eg_intr_md.egress_port" is mirrored,

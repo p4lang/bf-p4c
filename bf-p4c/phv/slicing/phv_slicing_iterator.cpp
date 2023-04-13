@@ -7,6 +7,8 @@ namespace PHV {
 namespace Slicing {
 
 ItrContext::ItrContext(const PhvInfo& phv,
+                       const MapFieldToParserStates& fs,
+                       const CollectParserInfo& pi,
                        const SuperCluster* sc,
                        const PHVContainerSizeLayout& pa,
                        const ActionPackingValidatorInterface& action_packing_validator,
@@ -14,6 +16,8 @@ ItrContext::ItrContext(const PhvInfo& phv,
                        const PackConflictChecker pack_conflict,
                        const IsReferencedChecker is_referenced)
     : pImpl(new DfsItrContext(phv,
+                              fs,
+                              pi,
                               sc,
                               pa,
                               action_packing_validator,

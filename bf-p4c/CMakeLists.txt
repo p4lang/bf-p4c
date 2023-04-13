@@ -629,6 +629,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/phv_fields.cpp
   phv/phv_parde_mau_use.cpp
   phv/phv_spec.cpp
+  phv/split_padding.cpp
   phv/table_phv_constraints.cpp
   phv/validate_allocation.cpp
   phv/analysis/build_mutex.cpp
@@ -725,6 +726,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/phv_fields.h
   phv/phv_parde_mau_use.h
   phv/phv_spec.h
+  phv/split_padding.h
   phv/table_phv_constraints.h
   phv/validate_allocation.h
   phv/analysis/build_mutex.h

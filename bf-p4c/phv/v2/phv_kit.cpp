@@ -52,7 +52,8 @@ bool PhvKit::has_pack_conflict(const PHV::FieldSlice& fs1, const PHV::FieldSlice
 }
 
 PHV::Slicing::IteratorInterface* PhvKit::make_slicing_ctx(const PHV::SuperCluster* sc) const {
-    return new PHV::Slicing::ItrContext(phv, sc, pragmas.pa_container_sizes().field_to_layout(),
+    return new PHV::Slicing::ItrContext(phv, field_to_parser_states, parser_info,
+                                        sc, pragmas.pa_container_sizes().field_to_layout(),
                                         *packing_validator,
                                         *parser_packing_validator,
                                         boost::bind(&PhvKit::has_pack_conflict, this, _1, _2),
