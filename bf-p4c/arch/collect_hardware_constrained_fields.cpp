@@ -133,6 +133,17 @@ void AddHardwareConstrainedFields::postorder(IR::BFN::Pipe *pipe) {
             IR::BFN::HardwareConstrainedField::INIT_BY_ARCH);
     }
 
+    // Treat ig_intr_md_for_dprsr.mirror_type the same way in Tofino2
+    if (Device::currentDevice() == Device::JBAY) {
+        if (disable_reserved_i2e_drop_implementation) {
+            name_to_field["ig_mirror_type"]->constraint_type.setbit(
+                IR::BFN::HardwareConstrainedField::INVALIDATE_FROM_ARCH);
+        }
+
+        name_to_field["ig_mirror_type"]->constraint_type.setbit(
+            IR::BFN::HardwareConstrainedField::INIT_BY_ARCH);
+    }
+
     ordered_set<cstring> ingress_fields = {
         "mcast_grp_a", "mcast_grp_b", "ucast_egress_port", "level1_mcast_hash", "level2_mcast_hash",
         "level1_exclusion_id", "level2_exclusion_id", "rid"};

@@ -25,6 +25,7 @@ const IR::Node* DisableAutoInitMetadata::preorder(IR::BFN::Pipe* pipe) {
                 continue;
             auto f = phv.field(field->expr);
             if (!f) continue;
+            LOG3("hw_constrained_field : " << f->name);
             init_by_arch_fields.insert(f->name);
             if (auto alias_member = field->expr->to<IR::BFN::AliasMember>()) {
                 auto alias_f = phv.field(alias_member->source);
