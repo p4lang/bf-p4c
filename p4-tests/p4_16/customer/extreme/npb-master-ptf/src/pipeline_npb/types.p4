@@ -1036,7 +1036,7 @@ struct switch_ingress_metadata_t {
 //@pa_container_size("egress", "eg_md.mirror.src", 8)
 //@pa_container_size("egress", "eg_md.mirror.type", 8)
 #ifdef DTEL_ENABLE
-@pa_container_size("egress", "hdr.dtel_drop_report.drop_reason", 8)
+// @pa_container_size("egress", "hdr.dtel_drop_report.drop_reason", 8)
 @pa_mutually_exclusive("egress", "hdr.dtel.timestamp", "hdr.erspan_type3.timestamp")
 #endif
 
