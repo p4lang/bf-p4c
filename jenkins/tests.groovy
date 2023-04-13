@@ -451,7 +451,7 @@ pipeline {
                             ctestParallelLevel: 3,
                             """
                                 ctest \
-                                    -R '^tofino2' \
+                                    -R '^tofino2/' \
                                     -E '${CTEST_PATH_EXCLUDE_T2}' \
                                     -LE '${CTEST_LABEL_EXCLUDE_ALL}' \
                                     -I 0,,3
@@ -468,7 +468,7 @@ pipeline {
                             ctestParallelLevel: 3,
                             """
                                 ctest \
-                                    -R '^tofino2' \
+                                    -R '^tofino2/' \
                                     -E '${CTEST_PATH_EXCLUDE_T2}' \
                                     -LE '${CTEST_LABEL_EXCLUDE_ALL}' \
                                     -I 1,,3
@@ -485,7 +485,7 @@ pipeline {
                             ctestParallelLevel: 3,
                             """
                                 ctest \
-                                    -R '^tofino2' \
+                                    -R '^tofino2/' \
                                     -E '${CTEST_PATH_EXCLUDE_T2}' \
                                     -LE '${CTEST_LABEL_EXCLUDE_ALL}' \
                                     -I 2,,3
@@ -502,7 +502,7 @@ pipeline {
                             ctestParallelLevel: 3,
                             """
                                 ${ALT_PHV_ENV} ctest \
-                                    -R '^tofino2' \
+                                    -R '^tofino2/' \
                                     -E '${CTEST_PATH_EXCLUDE_T2}' \
                                     -LE '${CTEST_LABEL_EXCLUDE_ALT_PASS}' \
                                     -I 0,,3
@@ -519,7 +519,7 @@ pipeline {
                             ctestParallelLevel: 3,
                             """
                                 ${ALT_PHV_ENV} ctest \
-                                    -R '^tofino2' \
+                                    -R '^tofino2/' \
                                     -E '${CTEST_PATH_EXCLUDE_T2}' \
                                     -LE '${CTEST_LABEL_EXCLUDE_ALT_PASS}' \
                                     -I 1,,3
@@ -536,10 +536,24 @@ pipeline {
                             ctestParallelLevel: 3,
                             """
                                 ${ALT_PHV_ENV} ctest \
-                                    -R '^tofino2' \
+                                    -R '^tofino2/' \
                                     -E '${CTEST_PATH_EXCLUDE_T2}' \
                                     -LE '${CTEST_LABEL_EXCLUDE_ALT_PASS}' \
                                     -I 2,,3
+                            """
+                        )
+                    }
+                }
+
+                stage("Assembler") {
+                    steps {
+                        echo 'Running assembler tests'
+                        runInDocker(
+                            extraArgs: '--privileged',
+                            """
+                                ctest \
+                                    -R '^tofino.?_asm/' \
+                                    -LE '${CTEST_LABEL_EXCLUDE_ALL}'
                             """
                         )
                     }

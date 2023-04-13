@@ -346,7 +346,7 @@ void Parser::write_config(Target::JBay::parser_regs &regs, json::map &ctxt_json,
             if (csum) {
                 csum->write_config(regs, this);
                 if (csum->dest)
-                    phv_use[csum->gress].setbit(csum->dest->reg.parser_id());
+                    phv_use[csum->gress].setbit(csum->dest->reg.uid);
             }
         }
     }

@@ -182,6 +182,7 @@ findbin() {
 P4C="${P4C:-./p4c}"
 P4C_BAREFOOT="${P4C_BAREFOOT:-./p4c-barefoot}"
 P4C_pd=""
+BFAS="${BFAS:-./bfas}"
 testdir=tofino
 filter_P4C_ARGS=()
 keep_PTF_LOGS=""
@@ -405,43 +406,70 @@ else
     die "$file is not under $srcdir"
 fi
 
+
 # Set environment variable to provide a link to the test source directory
 # This is useful in searching for test related artifacts e.g. pcap files for stf run
 export TESTSOURCEDIR=$(dirname $file)
-name=$(basename $file .p4)
 
-if [[ ! -x $P4C  &&  ! -x $P4C_pd ]]; then
-    die "Can't find $P4C"
-fi
-
-# turn on compiler debug info and context json validation, regardless
-P4C_ARGS+=("-g")
-
-p4_version=""
-p4c_args_concat="${P4C_ARGS[@]}"
-if [ $(expr "$p4c_args_concat" : ".*--std") -gt 0 ]; then
-    offset=$(expr "$p4c_args_concat" : ".*--std ")
-    p4_version=${p4c_args_concat:$offset:5}
+# Identify whether we're running a P4 or BFA test
+has_p4=false
+has_bfa=false
+if echo $file | grep -q '.bfa$' ; then
+    has_bfa=true
+    name=$(basename $file .bfa)
+    stf_file=${file%.bfa}.stf
 else
-    # guess the version based on the file name
-    if [ $(expr "$file" : ".*v1_2") -gt 0 -o $(expr "$file" : ".*p4_16") -gt 0 ]; then
-        p4_version="p4-16"
-    else
-        p4_version="p4-14"
+    has_p4=true
+    name=$(basename $file .p4)
+    stf_file=${file%.p4}.stf
+fi
+
+# Identify whether we're running a P4 or BFA test
+if $has_p4 ; then
+    if [[ ! -x $P4C  &&  ! -x $P4C_pd ]]; then
+        die "Can't find $P4C"
     fi
-    P4C_ARGS+=(--std $p4_version)
-fi
 
-if [ $(expr "$p4c_args_concat" : ".*--arch") -eq 0 ]; then
-    P4C_ARGS+=(--arch ${arch})
-fi
+    # turn on compiler debug info and context json validation, regardless
+    P4C_ARGS+=("-g")
 
-if [ $(expr "$p4c_args_concat" : ".*--target") -eq 0 ]; then
-    P4C_ARGS+=(--target ${target})
+    p4_version=""
+    p4c_args_concat="${P4C_ARGS[@]}"
+    if [ $(expr "$p4c_args_concat" : ".*--std") -gt 0 ]; then
+        offset=$(expr "$p4c_args_concat" : ".*--std ")
+        p4_version=${p4c_args_concat:$offset:5}
+    else
+        # guess the version based on the file name
+        if [ $(expr "$file" : ".*v1_2") -gt 0 -o $(expr "$file" : ".*p4_16") -gt 0 ]; then
+            p4_version="p4-16"
+        else
+            p4_version="p4-14"
+        fi
+        P4C_ARGS+=(--std $p4_version)
+    fi
+
+    if [ $(expr "$p4c_args_concat" : ".*--arch") -eq 0 ]; then
+        P4C_ARGS+=(--arch ${arch})
+    fi
+
+    if [ $(expr "$p4c_args_concat" : ".*--target") -eq 0 ]; then
+        P4C_ARGS+=(--target ${target})
+    fi
+else
+    if [[ ! -x $BFAS ]]; then
+        die "Can't find $BFAS"
+    fi
+
+    # bfas config
+
+    # Set version to "unknown" to avoid additional expectations for P4-16 STF
+    # tests. (P4-16 tests currently expect a .conf file to be generated that
+    # specify things like the .bin file, the pipes, and more.)
+    p4_version="unknown"
 fi
 
 has_stf=false
-if $run_stf && [ -r ${file%.p4}.stf ]; then
+if $run_stf && [ -r $stf_file ]; then
     has_stf=true
 fi
 
@@ -496,30 +524,34 @@ if ! $error_test && ! $run_ptf && ! $has_stf && ! $force_link; then
 fi
 
 if $debug; then
-    if $verbose; then
-        echo $P4C -# "${P4C_ARGS[@]}" $file -o $testdir/${name}${out_ext}.out
-    fi
-    $P4C -# "${P4C_ARGS[@]}" $file -o $testdir/${name}${out_ext}.out | while read cmd rest; do
-        if [[ -z $rest && $cmd =~ :$ ]]; then
-            continue # skip the label
-        elif [[ $cmd = parse ]]; then
-            continue # skip the parse manifest: message
-        elif $debug_p4c && [[ $cmd =~ p4c-barefoot ]]; then
-            db="$DEBUGGER_COMMAND"
-        elif $debug_bfas && [[ $cmd =~ bfas ]]; then
-            db="$DEBUGGER_COMMAND"
-        else
-            db=""
-        fi
-        set -o noglob
-        # don't try to expand wildcards in -T as files...
+    if $has_p4 ; then
         if $verbose; then
-            echo $db $cmd $rest
+            echo $P4C -# "${P4C_ARGS[@]}" $file -o $testdir/${name}${out_ext}.out
         fi
-        </dev/tty $db $cmd $rest
-        set +o noglob
-    done
-    exit
+        $P4C -# "${P4C_ARGS[@]}" $file -o $testdir/${name}${out_ext}.out | while read cmd rest; do
+            if [[ -z $rest && $cmd =~ :$ ]]; then
+                continue # skip the label
+            elif [[ $cmd = parse ]]; then
+                continue # skip the parse manifest: message
+            elif $debug_p4c && [[ $cmd =~ p4c-barefoot ]]; then
+                db="$DEBUGGER_COMMAND"
+            elif $debug_bfas && [[ $cmd =~ bfas ]]; then
+                db="$DEBUGGER_COMMAND"
+            else
+                db=""
+            fi
+            set -o noglob
+            # don't try to expand wildcards in -T as files...
+            if $verbose; then
+                echo $db $cmd $rest
+            fi
+            </dev/tty $db $cmd $rest
+            set +o noglob
+        done
+        exit
+    else
+        die "Currently unable to debug $BFAS"
+    fi
 fi
 
 # Not sure why the below lines are required, commenting for now.
@@ -623,6 +655,14 @@ native_compile() {
     pipes=$(${MANIFEST_CONFIG} --pipe ${manifest})
 }
 
+# Run BFAS
+native_bfas() {
+    opts=$@
+
+    echo "bfas: $BFAS $opts"
+    run $BFAS $opts || die
+}
+
 compress_cfg_json() {
     local pipes=( $2 )
     for p in "${pipes[@]}"; do
@@ -671,16 +711,21 @@ check_bfa() {
 # PD or BFRT runs the compiler as part of the p4-build make, so we skip running it here
 # However, BFRT tests are PTF tests, and bfrt is used to generate the API.
 if ! $run_pd && ! $run_ptf && ! $run_bfrt ; then
-    native_compile "${P4C_ARGS[@]}" $file -o $testdir/${name}${out_ext}.out
+    if $has_p4 ; then
+        native_compile "${P4C_ARGS[@]}" $file -o $testdir/${name}${out_ext}.out
 
-    # compress cfg.json files if they exist
-    compress_cfg_json $p4_version "$pipes"
+        # compress cfg.json files if they exist
+        compress_cfg_json $p4_version "$pipes"
 
-    # sanity check
-    check_bfa $p4_version "$pipes"
+        # sanity check
+        check_bfa $p4_version "$pipes"
+    else
+        mkdir -p $testdir/${name}${out_ext}.out/logs
+        native_bfas $file -o $testdir/${name}${out_ext}.out
+    fi
 fi
 
-if $run_stf && [ -r ${file%.p4}.stf ]; then
+if $run_stf && [ -r $stf_file ]; then
     STF=$(findbin HARLYN_STF_${toolsdevice})
 
     testout=$(realpath $testdir/$name${out_ext}.out)
@@ -689,9 +734,9 @@ if $run_stf && [ -r ${file%.p4}.stf ]; then
     fi
 
     if [[ "$file" =~ ^/ ]]; then
-        test=${file%.p4}.stf
+        test=$stf_file
     else
-        test=`pwd`/${file%.p4}.stf
+        test=`pwd`/$stf_file
     fi
 
     #obsLog=$name.p4.obs
@@ -699,8 +744,10 @@ if $run_stf && [ -r ${file%.p4}.stf ]; then
     if $stf_bin ; then
         output_dir=$testout/${pipes[0]}/${device}.bin.gz
     else
-        conf_args="--name $name --device $device --testdir $testout --pipe ${pipes}"
-        run ./p4c-gen-bfrt-conf $conf_args
+        if $has_p4 ; then
+            conf_args="--name $name --device $device --testdir $testout --pipe ${pipes}"
+            run ./p4c-gen-bfrt-conf $conf_args
+        fi
 
         output_dir=$testout
         if [ $p4_version == "p4-16" ]; then
@@ -904,13 +951,13 @@ if $run_ptf && ! $run_bfrt ; then
                 --device ${device} \
                 $ports_json_file \
                 $PTF_EXTRA_ARGS"
-    elif $run_stf2ptf && [ -r ${file%.p4}.stf ]; then
+    elif $run_stf2ptf && [ -r $stf_file ]; then
         mydir=$(dirname $0)
         export PYTHONPATH=${PYTHONPATH}:${mydir}/tools/stf
         if [[ "$file" =~ ^/ ]]; then
-            stftest=${file%.p4}.stf
+            stftest=$stf_file
         else
-            stftest=`pwd`/${file%.p4}.stf
+            stftest=`pwd`/$stf_file
         fi
         PTF_CMD="$PTF_RUNNER --testdir $testout --name $name \
                 --stftest ${stftest} \

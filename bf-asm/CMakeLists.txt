@@ -308,6 +308,9 @@ add_custom_target(ctags-asm
               "--regex-C++=${CTAGS_CXX_REGEXP}"
   COMMENT "Generating ctags")
 
+# Build the bf-asm test suite
+add_subdirectory(test)
+
 if (ENABLE_GTESTS)
   # TODO Components need to be built, once, into intermediate libraries.
   # These lib would then be linked to unit-tests and also linked into larger components/executable.
