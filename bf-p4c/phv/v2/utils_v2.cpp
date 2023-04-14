@@ -237,6 +237,11 @@ cstring ScAllocAlignment::pretty_print(cstring prefix, const SuperCluster* sc) c
     return ss.str();
 }
 
+std::ostream& operator<<(std::ostream& out, const AllocError& e) {
+    out << e.str();
+    return out;
+}
+
 }  // namespace v2
 }  // namespace PHV
 

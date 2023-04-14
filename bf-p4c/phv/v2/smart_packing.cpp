@@ -346,7 +346,8 @@ IxbarFriendlyPacking::make_table_key_candidates(const std::list<SuperCluster*>& 
 
 std::list<SuperCluster*> IxbarFriendlyPacking::pack(const std::list<SuperCluster*>& clusters) {
     const auto to_be_packed = make_table_key_candidates(clusters);
-    LOG3("Sorted smarting packing table order and slices:");
+    Log::TempIndent indent;
+    LOG3("Sorted smarting packing table order and slices:" << indent);
     for (const auto& tb_slices : to_be_packed) {
         LOG3("For Table :" << tb_slices.first->name);
         LOG3("Slices: " << tb_slices.second);
@@ -374,10 +375,10 @@ std::list<SuperCluster*> IxbarFriendlyPacking::pack(const std::list<SuperCluster
         std::vector<FsPacker> workers;
         for (const auto& fs : slices) {
             if (packed.count(fs)) {
-                LOG3("Skip already packed: " << fs);
+                LOG3("\tSkip already packed: " << fs);
                 continue;
             }
-            LOG3("Try to pack: " << fs);
+            LOG3("\tTry to pack: " << fs);
             int packer_idx = workers.size();
             const auto& fs_sc = get_fs_sc_map();
             for (size_t i = 0; i < workers.size(); i++) {
@@ -385,28 +386,28 @@ std::list<SuperCluster*> IxbarFriendlyPacking::pack(const std::list<SuperCluster
                 if (!workers[i].is_alignment_compatible(fs,
                                                         unmaterialized_alignments[fs.field()],
                                                         fs_sc.at(fs)->aligned_cluster(fs))) {
-                    LOG3("incompatible alignment, cannot pack with worker " << i);
+                    LOG3("\t\tincompatible alignment, cannot pack with worker " << i);
                     continue;
                 }
                 if (!can_pack(workers[i].curr, fs)) continue;
-                LOG3("Try allocation with worker: " << i);
+                LOG3("\t\tTry allocation with worker: " << i);
                 /// verify by trying to allocate the proposed super cluster.
                 std::vector<FieldSlice> packing = workers[i].curr;
                 packing.push_back(fs);
                 auto merge_rst = merge_by_packing(packing, fs_sc);
                 const bool can_be_allocated = can_alloc_i(merge_rst.merged);
                 if (can_be_allocated) {
-                    LOG3("Allocation is OK. We will merge:");
+                    LOG3("\t\tAllocation is OK. We will merge:");
                     for (auto* to_remove : merge_rst.from) {
                         LOG3(to_remove);
                         updated_clusters.erase(to_remove);
                     }
-                    LOG3("====> into " << merge_rst.merged);
+                    LOG3("\t\t====> into " << merge_rst.merged);
                     updated_clusters.insert(merge_rst.merged);
                     packer_idx = i;
                     break;
                 } else {
-                    LOG3("Cannot be allocated, try next worker");
+                    LOG3("\t\tCannot be allocated, try next worker");
                     // restore alignment constraints on fields.
                     for (const auto& kv : merge_rst.original_alignments) {
                         auto* f = phv_i.field(kv.first->id);
@@ -424,12 +425,12 @@ std::list<SuperCluster*> IxbarFriendlyPacking::pack(const std::list<SuperCluster
                 auto new_packer = FsPacker();
                 if (new_packer.is_alignment_compatible(fs, unmaterialized_alignments[fs.field()],
                                                        fs_sc.at(fs)->aligned_cluster(fs))) {
-                    LOG3("Pack into a new worker: " << packer_idx);
+                    LOG3("\t\tPack into a new worker: " << packer_idx);
                     workers.push_back(FsPacker());
                     unmaterialized_alignments[fs.field()] = ((1 << 10) - fs.range().lo) % 8;
                 } else {
-                    LOG3("skip this slice because its alignment is incompatible with an empty list "
-                         << fs);
+                    LOG3("\t\tskip this slice because its alignment is"
+                            " incompatible with an empty list " << fs);
                     continue;
                 }
             }
@@ -446,9 +447,9 @@ std::list<SuperCluster*> IxbarFriendlyPacking::pack(const std::list<SuperCluster
                 BUG_CHECK(merge_rst.from.size() == 1, "not merged yet?");
                 updated_clusters.erase(merge_rst.from.front());
                 updated_clusters.insert(merge_rst.merged);
-                LOG1("Decided packing: " << pack.curr);
-                LOG1("Decided packing in pragma: " << pack.to_pa_byte_pack_pragma());
-                LOG1("Packed cluster: " << merge_rst.merged);
+                LOG1("\t\tDecided packing: " << pack.curr);
+                LOG1("\t\tDecided packing in pragma: " << pack.to_pa_byte_pack_pragma());
+                LOG1("\t\tPacked cluster: " << merge_rst.merged);
             }
         }
     }

@@ -1272,7 +1272,10 @@ void DfsItrContext::iterate(const IterateCb& cb) {
     // to_be_split_i = *after_pre_split;
 
     // start searching.
-    dfs(cb, to_be_split_i);
+    auto res = dfs(cb, to_be_split_i);
+    LOG1("DFS Result: " << res
+            << ", n_steps_since_last_solution: " << n_steps_since_last_solution
+            << ", max_search_steps_per_solution: " << config_i.max_search_steps_per_solution);
 
     // true indicates that we had troubles in finding a solution. Try aggressively presplit
     // large fieldslice to 32-bit chunks first and then rerun dfs.
@@ -2061,6 +2064,7 @@ bool DfsItrContext::dfs(const IterateCb& yield, const ordered_set<SuperCluster*>
             ordered_set<SuperCluster*> newly_created;
             newly_created.insert(rst->begin(), rst->end());
             if (!dfs(yield, newly_created)) {
+                LOG5("cannot find a solution");
                 return false;
             }
             if (to_invalidate != nullptr) {

@@ -620,6 +620,8 @@ void ClotInfo::adjust_clots(const PhvInfo& phv) {
 }
 
 bool ClotInfo::adjust(const PhvInfo& phv, Clot* clot) {
+    Log::TempIndent indent;
+    LOG3("Adjusting clot " << *clot << indent);
     unsigned length_in_bytes = 0;
 
     // Step 1: Identify states which are "non-terminal" CLOT states.
@@ -632,33 +634,43 @@ bool ClotInfo::adjust(const PhvInfo& phv, Clot* clot) {
     std::set<const PHV::FieldSlice*> non_final_slices;
 
     // Step 1a: identify the non-final field slices
-    for (const auto& [_, slices] : clot->parser_state_to_slices()) {
+    for (const auto& [parser_state, slices] : clot->parser_state_to_slices()) {
+        LOG5("  Parser state to slices: " << parser_state << " : " << slices);
         if (slices.empty()) continue;
         for (auto it = slices.begin(); it != std::prev(slices.end()); ++it) {
+            LOG5("    Parser state to non final slices: " << *it);
             non_final_slices.emplace(*it);
         }
     }
+    LOG4("Non Final Slices:" << non_final_slices);
 
     // Step 1b: identify the states that are non-terminal
     for (const auto& [parser_state, slices] : clot->parser_state_to_slices()) {
         if (!slices.empty() && non_final_slices.count(slices.back())) {
-            LOG4("State " << parser_state << " is non-terminal for CLOT tag " << clot->tag);
+            LOG4("  State " << parser_state << " is non-terminal for CLOT tag " << clot->tag);
             non_terminal_states.emplace(parser_state);
         }
     }
+    LOG4("Non Terminal States:" << non_terminal_states);
 
     // Step 2: Do the trimming
     for (const auto& [parser_state, slices] : clot->parser_state_to_slices()) {
+        LOG5("  Parser State: " << parser_state << ", slices: " << slices);
         if (non_terminal_states.count(parser_state)) continue;
 
         // Figure out how many bits are overwritten at the start of the CLOT.
         unsigned num_start_bits_overwritten = 0;
         for (auto slice : slices) {
+            LOG5("    Computing start bits overwritten For slice: " << slice);
             auto overwrite_mask = bits_overwritten(phv, clot, slice);
             int first_zero_idx = overwrite_mask.ffz(0);
             num_start_bits_overwritten += first_zero_idx;
+            LOG5("      overwrite_mask: " << overwrite_mask
+                    << ", first_zero_idx: " << first_zero_idx
+                    << ", num_start_bits_overwritten: " << num_start_bits_overwritten);
             if (first_zero_idx < slice->size()) break;
         }
+        LOG5("  num_start_bits_overwritten:" << num_start_bits_overwritten);
 
         BUG_CHECK(num_start_bits_overwritten % 8 == 0,
                   "CLOT %d starts with %d overwritten bits, which is not byte-aligned", clot->tag,
@@ -668,15 +680,21 @@ bool ClotInfo::adjust(const PhvInfo& phv, Clot* clot) {
         unsigned num_end_bits_overwritten = 0;
         if (num_start_bits_overwritten < clot->length_in_bytes(parser_state) * 8) {
             for (auto slice : boost::adaptors::reverse(slices)) {
+                LOG5("    Computing end bits overwritten For slice: " << slice);
                 auto overwrite_mask = bits_overwritten<Endian::Little>(phv, clot, slice);
                 int last_zero_idx = overwrite_mask.ffz(0);
                 num_end_bits_overwritten += last_zero_idx;
+                LOG5("      overwrite_mask: " << overwrite_mask
+                        << ", last_zero_idx: " << last_zero_idx
+                        << ", num_end_bits_overwritten: " << num_end_bits_overwritten);
                 if (last_zero_idx < slice->size()) break;
             }
         }
+        LOG5("  num_end_bits_overwritten:" << num_end_bits_overwritten
+                << ", clot length_in_bytes: " << clot->length_in_bytes(parser_state));
 
         BUG_CHECK(num_end_bits_overwritten % 8 == 0,
-                "CLOT %d ends with %d overwritten bits, which is not byte-aligned",
+                "CLOT %d ends with %d overwritten bits, which are not byte-aligned",
                 clot->tag, num_end_bits_overwritten);
 
         crop(clot, parser_state, num_start_bits_overwritten, num_end_bits_overwritten);
@@ -689,6 +707,9 @@ bool ClotInfo::adjust(const PhvInfo& phv, Clot* clot) {
 
 void ClotInfo::crop(Clot* clot, cstring parser_state, unsigned num_bits,
                     bool from_start) {
+    Log::TempIndent indent;
+    LOG3("Cropping clot for parser state " << parser_state << ", num_bits: " << num_bits
+                                           << indent);
     if (num_bits == 0) return;
 
     unsigned num_bits_skipped = 0;
@@ -732,6 +753,7 @@ void ClotInfo::crop(Clot* clot, cstring parser_state, unsigned num_bits,
     }
 
     if (!from_start) std::reverse(new_slices.begin(), new_slices.end());
+    LOG4("New slices: " << new_slices);
     clot->set_slices(parser_state, new_slices);
 }
 
@@ -761,11 +783,13 @@ bitvec ClotInfo::bits_overwritten(const PhvInfo& phv,
                                   const Clot* clot,
                                   const PHV::FieldSlice* slice) const {
     if (is_checksum(slice->field())) {
+        LOG5("Field " << slice->field() << " is checksum");
         bitvec result;
         result.setrange(0, slice->size());
         return result;
     }
 
+    LOG5("Field " << slice->field() << " is not checksum");
     return bits_overwritten_by_phv<Order>(phv, clot, slice);
 }
 
@@ -775,6 +799,8 @@ bitvec ClotInfo::bits_overwritten_by_phv(const PhvInfo& phv,
                                          const PHV::FieldSlice* slice) const {
     bitvec result;
     if (is_checksum(slice->field())) return result;
+    Log::TempIndent indent;
+    LOG5("Computing bits overwritten by PHV" << indent);
 
     const auto* field = slice->field();
     const auto& slice_range = slice->range();
@@ -782,6 +808,7 @@ bitvec ClotInfo::bits_overwritten_by_phv(const PhvInfo& phv,
             [&](const PHV::AllocSlice& alloc) {
         // The container overwrites the CLOT if we were given a slice of a modified field.
         bool container_overwrites = is_modified(field);
+        LOG6("Container overwrites: " << container_overwrites);
 
         // Handle other cases in which the container overwrites the CLOT.
         //
@@ -804,21 +831,26 @@ bitvec ClotInfo::bits_overwritten_by_phv(const PhvInfo& phv,
             auto container = alloc.container();
             auto occupied_bits =
                 phv.bits_allocated(container, field, PHV::AllocContext::DEPARSER);
+            LOG6("Container occupied_bits: " << occupied_bits);
 
             // Go through the analysis described above.
             PHV::FieldUse use(PHV::FieldUse::READ);
             for (const auto& alloc_slice :
                  phv.get_slices_in_container(container, PHV::AllocContext::DEPARSER, &use)) {
                 const auto* other_field = alloc_slice.field();
+                LOG7("  Container read slice: " << alloc_slice << ", other field: " << other_field);
 
                 // Ignore if field and other_field are mutually exclusive.
                 if (phv.isFieldMutex(field, other_field)) continue;
+                LOG7("    Fields are not mutex");
 
                 // Ignore if field and other_field are different, and alloc_slice overlaps with
                 // occupied_bits in the container.
                 auto other_occupied =
                     phv.bits_allocated(container, other_field, PHV::AllocContext::DEPARSER);
+                LOG7("    Other field occupied bits: " << other_occupied);
                 if (field != other_field && !(occupied_bits & other_occupied).empty()) continue;
+                LOG7("    Different fields and no overlap");
 
                 // Container overwrites the CLOT if the CLOT doesn't completely cover the allocated
                 // slice or if the other slice is modified.
@@ -826,6 +858,10 @@ bitvec ClotInfo::bits_overwritten_by_phv(const PhvInfo& phv,
                                                               alloc_slice.field_slice());
                 container_overwrites =
                     !clot_covers_slice(clot, other_slice) || is_modified(other_field);
+                LOG7("    other slice: " << other_slice
+                        << ", container_overwrites: " << container_overwrites
+                        << ", is_modified: " << is_modified(other_field)
+                        << ", clot_covers_slice: " << clot_covers_slice(clot, other_slice));
                 if (container_overwrites) break;
             }
         }
@@ -833,6 +869,7 @@ bitvec ClotInfo::bits_overwritten_by_phv(const PhvInfo& phv,
         if (!container_overwrites) return;
 
         auto overwrite_range = alloc.field_slice().intersectWith(slice_range);
+
         overwrite_range = overwrite_range.shiftedByBits(-slice_range.lo);
         auto normalized_overwrite_range = overwrite_range.toOrder<Order>(slice_range.size());
 
@@ -872,9 +909,13 @@ Clot* ClotInfo::whole_field_clot(const PHV::Field* field) const {
 bool ClotInfo::clot_covers_slice(const Clot* clot, const PHV::FieldSlice* slice) const {
     const auto& fields_to_slices = clot->fields_to_slices();
     auto field = slice->field();
+    for (auto fs : fields_to_slices) {
+        LOG5("Fields to slices " << fs.first << " : " << fs.second);
+    }
     if (!fields_to_slices.count(field)) return false;
 
     auto clot_slice = fields_to_slices.at(field);
+    LOG5("Clot slice " << clot_slice << ", slice: " << slice);
     return clot_slice->range().contains(slice->range());
 }
 

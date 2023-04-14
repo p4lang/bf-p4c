@@ -51,8 +51,9 @@ enum class CanPackErrorCode : unsigned {
     COPACK_UNSATISFIED = 20,
     MULTIPLE_ALIGNMENTS = 21,
     OVERLAPPING_SLICES = 22,
-    CONSTRAINT_CHECKER_FALIED = 23,
+    CONSTRAINT_CHECKER_FAILED = 23,
 };
+
 
 std::ostream &operator<<(std::ostream &out, const CanPackErrorCode& info);
 
@@ -75,7 +76,7 @@ struct CanPackErrorV2 {
     CanPackErrorV2(CanPackErrorCode code, cstring msg,
                    const std::vector<PHV::AllocSlice>* dest_cont)
         : code(code), msg(msg), invalid_dest_packing(dest_cont) {}
-    bool ok() const { return code == CanPackErrorCode::NO_ERROR; };
+    bool ok() const { return code == CanPackErrorCode::NO_ERROR; }
 };
 
 /** This class is meant to gather action information as well as provide information to PHV analysis

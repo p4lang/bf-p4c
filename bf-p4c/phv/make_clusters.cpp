@@ -1311,16 +1311,30 @@ void Clustering::MakeSuperClusters::end_apply() {
         LOG1("--- CLUSTERING RESULTS --------------------------------------------------------");
         LOG1("All fields are assigned to exactly one cluster.  Fields that are not read or");
         LOG1("written in any MAU instruction form singleton clusters.");
-        LOG1("");
+        LOG1("Total SuperClusters : " << self.super_clusters_i.size());
 
         LOG1("PHV CANDIDATES:");
         LOG1("");
-        for (auto& g : self.super_clusters_i)
-            if (!g->okIn(PHV::Kind::tagalong)) LOG1(g);
+        int phv_candidates = 0;
+        for (auto& g : self.super_clusters_i) {
+            if (!g->okIn(PHV::Kind::tagalong)) {
+                phv_candidates++;
+                LOG1(g);
+            }
+        }
 
         LOG1("TPHV CANDIDATES:");
-        for (auto& g : self.super_clusters_i)
-            if (g->okIn(PHV::Kind::tagalong)) LOG1(g);
+        int tphv_candidates = 0;
+        for (auto& g : self.super_clusters_i) {
+            if (g->okIn(PHV::Kind::tagalong)) {
+                tphv_candidates++;
+                LOG1(g);
+            }
+        }
+
+        LOG1("TOTAL  PHV CANDIDATES:" << phv_candidates);
+        LOG1("TOTAL TPHV CANDIDATES:" << tphv_candidates);
+        LOG1("--- CLUSTERING RESULTS END ----------------------------------------------------");
     }
 }
 

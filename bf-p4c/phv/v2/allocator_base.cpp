@@ -12,9 +12,11 @@
 #include "bf-p4c/phv/action_source_tracker.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/phv/utils/container_equivalence.h"
 #include "bf-p4c/phv/utils/slice_alloc.h"
 #include "bf-p4c/phv/utils/utils.h"
 #include "bf-p4c/phv/v2/copacker.h"
+#include "bf-p4c/phv/v2/greedy_tx_score.h"
 #include "bf-p4c/phv/v2/phv_kit.h"
 #include "bf-p4c/phv/v2/tx_score.h"
 #include "bf-p4c/phv/v2/utils_v2.h"
@@ -299,7 +301,7 @@ Transaction AllocatorBase::make_speculated_alloc(const ScoreContext& ctx,
         }
     }
     if (pseudo_slice_added) {
-        LOG5(ctx.t_tabs() << "CanPack validation pseudo alloc:" << ss.str());
+        LOG5(ctx.t_tabs() << "CanPack validation pseudo alloc: " << ss.str());
     }
     return speculated_tx;
 }
@@ -311,6 +313,8 @@ const AllocError* AllocatorBase::verify_can_pack(const ScoreContext& ctx,
                                                  const Container& c,
                                                  ActionSourceCoPackMap& action_copack_hints) const {
     std::optional<CanPackErrorV2> err;
+    Log::TempIndent indent;
+    LOG5("Verify can pack " << c << indent);
     if (c.type().kind() == Kind::mocha || c.type().kind() == Kind::dark) {
         // materialize slice lists allocation into alloc when dark/mocha.
         // Materializing unallocated but fixed alignment slices will help
@@ -623,14 +627,14 @@ ContScopeAllocResult AllocatorBase::try_slices_to_container(
     }
     LOG4(ctx.t_tabs() << "@" << c);
     if (LOGGING(5)) {
-        LOG5(ctx.t_tabs() << "AllocSlices:");
+        LOG5(ctx.t_tabs() << "AllocSlices: ");
         for (const auto& slice : candidates) {
             LOG5(ctx.t_tabs() << " " << slice);
         }
     }
 
     // check overlay
-    LOG5(ctx.t_tabs() << "Overlay status:");
+    LOG5(ctx.t_tabs() << "Overlay status: ");
     for (const auto& slice : candidates) {
         const auto& overlapped = alloc.slices(slice.container(), slice.container_slice());
         const cstring short_name =
@@ -703,8 +707,8 @@ SomeContScopeAllocResult AllocatorBase::try_slices_to_container_group(
             LOG6(new_ctx.t_tabs() << "Fail " << *last_err_str);
         }
         last_err_str = std::nullopt;
-        same_err_conts.clear();
         last_rslt = std::nullopt;
+        same_err_conts.clear();
     };
     const auto pretty_print_errs = [&](const Container& c, const ContScopeAllocResult& r) {
         if (r.ok()) {
@@ -712,7 +716,7 @@ SomeContScopeAllocResult AllocatorBase::try_slices_to_container_group(
         } else {
             cstring err_str = r.err_str();
             auto rslt = r;
-            LOG4(ctx.t_tabs() << " Failed :" << to_str(r.err->code));
+            LOG4(ctx.t_tabs() << " Failed: " << to_str(r.err->code));
             if (last_rslt && !(*last_rslt == r)) flush_aggregated_errs();
             last_err_str = err_str;
             same_err_conts.push_back(c);
@@ -723,36 +727,86 @@ SomeContScopeAllocResult AllocatorBase::try_slices_to_container_group(
     // try all containers.
     SomeContScopeAllocResult some(
         new AllocError(ErrorCode::NOT_ENOUGH_SPACE, "no container have enough space"));
-    for (const Container& c : group) {
-        auto c_rst = try_slices_to_container(new_ctx, alloc, fs_starts, c);
-        pretty_print_errs(c, c_rst);
-        if (c_rst.ok()) {
-            // pick this container if higher score.
-            const auto* c_rst_score = ctx.score()->make(*c_rst.tx);
-            LOG3(ctx.t_tabs() << "Try container " << c);
-            LOG3(new_ctx.t_tabs() << "Succeeded, score: " << c_rst_score->str());
-            some.collect(c_rst, c_rst_score);
-            // XXX(yumin): we do not use is_packing in c_rst because only strict empty is allowed,
-            // for this container-level search optimization parameter.
-            if (ctx.search_config()->stop_first_succ_empty_normal_container) {
-                const auto container_status = alloc.getStatus(c);
-                if (c.type().kind() == PHV::Kind::normal &&
-                    (!container_status || container_status->slices.empty())) {
-                    LOG3(new_ctx.t_tabs()
-                         << "Stop early because first_succ_empty_normal_container.");
-                    break;
+
+    // Get containers by PHV:Kind
+    auto container_kind_order = { PHV::Kind::dark, PHV::Kind::mocha,
+                                  PHV::Kind::normal, PHV::Kind::tagalong };
+    for (const auto &k : container_kind_order) {
+        PHV::Type t(k, group.width());
+        if (!group.hasType(t)) continue;
+
+        // Check if an empty container of the type can be allocated
+        // Using index 9999 as it is unlikely to be used in actual allocation attempt and also
+        // easeir to identify in logs as a test container.
+        PHV::Container testCont(t, PHV::TEST_CONTAINER_INDEX);
+        LOG3(ctx.t_tabs() << "Try container " << testCont);
+        auto test_rst = try_slices_to_container(new_ctx, alloc, fs_starts, testCont);
+        if (test_rst.ok()
+            || (test_rst.err && test_rst.err->code == ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED)) {
+            PHV::ContainerEquivalenceTracker cet(alloc);
+            // Try all containers of the type
+            for (const Container &c : group.getAllContainersOfKind(t.kind())) {
+                // If an equivalent container has been tried then skip it
+                if (auto equivalent_c = cet.find_equivalent_tried_container(c)) {
+                    LOG6(new_ctx.t_tabs() << "Container " << c << " is indistinguishible "
+                            "from an already tried container " << *equivalent_c << ", skipping");
+                    continue;
+                }
+                auto c_rst = try_slices_to_container(new_ctx, alloc, fs_starts, c);
+                pretty_print_errs(c, c_rst);
+                if (c_rst.ok()) {
+                    // pick this container if higher score.
+                    const auto* c_rst_score = ctx.score()->make(*c_rst.tx);
+                    LOG3(ctx.t_tabs() << "Try container " << c);
+                    LOG3(new_ctx.t_tabs() << "Succeeded, score: " << c_rst_score->str());
+                    some.collect(c_rst, c_rst_score);
+
+                    // If score indicates a mismatch_gress there is a possiblity of a better score
+                    // for an equivalent container. Hence we remove the container from equivalence
+                    // tracker. This is necessary as the equivalence tracker does not check
+                    // container gress
+                    if (auto *c_rst_greedy_score = dynamic_cast<const GreedyTxScore*>(c_rst_score)){
+                        if (c_rst_greedy_score->has_mismatch_gress()) {
+                            LOG6(new_ctx.t_tabs() << "Invalidating Container " << c
+                                    << " from equivalence tracker as it has a mismatch gress");
+                            cet.invalidate(c);
+                        }
+                    }
+
+                    // XXX(yumin): we do not use is_packing in c_rst because only strict empty is
+                    // allowed, for this container-level search optimization parameter.
+                    if (ctx.search_config()->stop_first_succ_empty_normal_container) {
+                        const auto container_status = alloc.getStatus(c);
+                        if (c.type().kind() == PHV::Kind::normal &&
+                            (!container_status || container_status->slices.empty())) {
+                            LOG3(new_ctx.t_tabs()
+                                 << "Stop early because first_succ_empty_normal_container.");
+                            break;
+                        }
+                    }
+                } else {
+                    // prefer to return the most informative error message.
+                    if (c_rst.err->code == ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED) {
+                        some.err = c_rst.err;
+                    } else if (some.err->code != ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED &&
+                               c_rst.err->code == ErrorCode::CONTAINER_PARSER_PACKING_INVALID) {
+                        some.err = c_rst.err;
+                    }
                 }
             }
         } else {
+            LOG6(new_ctx.t_tabs() << "Skipping all containers of type " << t
+                    << " as an empty container cannot be allocated");
             // prefer to return the most informative error message.
-            if (c_rst.err->code == ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED) {
-                some.err = c_rst.err;
+            if (test_rst.err->code == ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED) {
+                some.err = test_rst.err;
             } else if (some.err->code != ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED &&
-                       c_rst.err->code == ErrorCode::CONTAINER_PARSER_PACKING_INVALID) {
-                some.err = c_rst.err;
+                       test_rst.err->code == ErrorCode::CONTAINER_PARSER_PACKING_INVALID) {
+                some.err = test_rst.err;
             }
         }
     }
+
     flush_aggregated_errs();
     return some;
 }
@@ -1032,9 +1086,9 @@ bool AllocatorBase::DfsListsAllocator::allocate(const ScoreContext& ctx,
                 }
             }
             if (!required_hints.empty())
-                LOG3(log_prefix << "Required CoPack hint(s):" << required_hints);
+                LOG3(log_prefix << "Required CoPack hint(s): " << required_hints);
             if (!optional_hints.empty())
-                LOG3(log_prefix << "Optional CoPack hint(s) found:" << optional_hints);
+                LOG3(log_prefix << "Optional CoPack hint(s) found: " << optional_hints);
 
             /// When a hint is allocated, the alignment is then fixed for all the slice
             /// in the aligned cluster, so we clone a mutable updated_alignment.
@@ -1092,7 +1146,7 @@ bool AllocatorBase::DfsListsAllocator::allocate(const ScoreContext& ctx,
             err->reslice_required = invalid_action_lists;
         }
         if (depth > deepest_depth) {
-            LOG3(log_prefix << "Current Tx status:");
+            LOG3(log_prefix << "Current Tx status: ");
             LOG3(AllocResult::pretty_print_tx(tx, log_prefix));
             *err << ";\nWhen some slices have been allocated:\n";
             *err << AllocResult::pretty_print_tx(tx, "\t");
@@ -1150,7 +1204,7 @@ AllocResult AllocatorBase::try_super_cluster_to_container_group(
                 offset += fs.size();
             }
         }
-        static const cstring prefix = "> trying to allocate wide_arith slice list:";
+        static const cstring prefix = "> trying to allocate wide_arith slice list: ";
         LOG3(ctx.t_tabs() <<  prefix << "START to allocate the pair: " << lo_sl << ", " << hi_sl);
         auto sl_alloc_rst =
             try_wide_arith_slices_to_container_group(
@@ -1380,7 +1434,7 @@ AllocResult AllocatorBase::try_sliced_super_cluster(const ScoreContext& ctx,
                   sc, err.str());
     }
 
-    LOG3(ctx.t_tabs() << "Trying to allocate super cluster Uid: " << sc->uid);
+    LOG1(ctx.t_tabs() << "Trying to allocate super cluster Uid: " << sc->uid);
 
     const auto ok_sizes = compute_valid_container_sizes(sc);
     if (ok_sizes.empty()) {
@@ -1403,7 +1457,7 @@ AllocResult AllocatorBase::try_sliced_super_cluster(const ScoreContext& ctx,
         // for all field slices in this cluster.
         auto* alloc_order = make_alloc_order(ctx, sc, sz);
         const auto new_ctx = ctx.with_sc(sc).with_alloc_order(alloc_order).with_t(ctx.t() + 1);
-        LOG3(new_ctx.t_tabs() << "Trying to allocate SC-" << sc->uid << " to " << sz
+        LOG2(new_ctx.t_tabs() << "Trying to allocate SC-" << sc->uid << " to " << sz
                               << " container groups");
         // pre-screening for alignment issue.
         if (make_sc_alloc_alignment(sc, sz, 1).empty()) {
@@ -1426,7 +1480,7 @@ AllocResult AllocatorBase::try_sliced_super_cluster(const ScoreContext& ctx,
             LOG3(grp_ctx.t_tabs()
                  << "(End) Try container group: " << group);
             if (!group_rst.ok()) {
-                LOG3(grp_ctx.t_tabs()
+                LOG2(grp_ctx.t_tabs()
                      << "Failed to find valid allocation because: " << group_rst.err_str());
                 if (group_rst.err->code == ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED &&
                     group_rst.err->reslice_required) {
@@ -1547,7 +1601,7 @@ AllocResult AllocatorBase::alloc_stride(const ScoreContext& ctx,
               "non-container-sized stride not supported: %1%", leader);
 
     if (LOGGING(3)) {
-        LOG3(ctx.t_tabs() << "Trying to allocate stride:");
+        LOG3(ctx.t_tabs() << "Trying to allocate stride: ");
         for (const auto& fs : stride) {
             LOG3(ctx.t_tabs() << "\t" << fs);
         }
@@ -1616,7 +1670,7 @@ AllocResult AllocatorBase::alloc_strided_super_clusters(const ScoreContext& ctx,
                                                         const SuperCluster* sc,
                                                         const ContainerGroupsBySize& groups,
                                                         const int max_n_slicings) const {
-    BUG_CHECK(sc->needsStridedAlloc(), "invalid argument: a non-strided cluster : %1%", sc);
+    BUG_CHECK(sc->needsStridedAlloc(), "invalid argument: a non-strided cluster: %1%", sc);
     LOG3(ctx.t_tabs() << "Trying to stride-allocate " << sc);
     const auto* stride_group =
         kit_i.strided_headers.get_strided_group(sc->slices().front().field());
@@ -1634,7 +1688,7 @@ AllocResult AllocatorBase::alloc_strided_super_clusters(const ScoreContext& ctx,
     itr_ctx->iterate([&](std::list<SuperCluster*> clusters) {
         n_tried++;
         if (LOGGING(3)) {
-            LOG3(ctx.t_tabs() << "Clusters of (strided) slicing-attempt-" << n_tried << ":");
+            LOG3(ctx.t_tabs() << "Clusters of (strided) slicing-attempt-" << n_tried << ": ");
             for (auto* sc : clusters) LOG3(ctx.t_tabs() << sc);
         }
         // group stride cluster by their ranges, where each range is a group.

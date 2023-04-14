@@ -819,7 +819,8 @@ PHV::ConcreteAllocation::getStatus(const PHV::Container& c) const {
     auto it = container_status_i.find(c);
     if (it != container_status_i.end())
         return &it->second;
-    if (isTrivial)
+    // TEST_CONTAINER_INDEX is a test container used to check allocation.
+    if (isTrivial || c.index() == PHV::TEST_CONTAINER_INDEX)
         return &emptyContainerStatus;
     return nullptr;
 }

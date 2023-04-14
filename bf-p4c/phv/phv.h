@@ -13,6 +13,8 @@ class JSONLoader;
 
 namespace PHV {
 
+constexpr unsigned TEST_CONTAINER_INDEX = 9999;
+
 /// all possible PHV container kinds in BFN devices
 /// The values here are used to define operator< on Kinds.
 enum class Kind : unsigned short {

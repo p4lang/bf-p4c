@@ -98,6 +98,8 @@ AllocError& operator<<(AllocError& e, const T& v) {
     return e;
 }
 
+std::ostream& operator<<(std::ostream& out, const AllocError& e);
+
 /// AllocResult is the most common return type of an allocation function. It is either an error
 /// or a PHV::Transaction if succeeded.
 struct AllocResult {

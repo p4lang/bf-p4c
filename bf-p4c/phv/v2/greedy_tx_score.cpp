@@ -621,6 +621,10 @@ bool GreedyTxScore::better_than(const TxScore* other_score) const {
     return false;
 }
 
+bool GreedyTxScore::has_mismatch_gress() const {
+    return (n_mismatched_deparser_gress.sum(Kind::normal) > 0);
+}
+
 std::string GreedyTxScore::str() const {
     std::stringstream ss;
     ss << "greedy{ ";

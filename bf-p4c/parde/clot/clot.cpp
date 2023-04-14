@@ -74,6 +74,7 @@ void Clot::add_slice(cstring parser_state, FieldKind kind, const PHV::FieldSlice
 
     parser_state_to_slices_[parser_state].push_back(slice);
     fields_to_slices_[field] = slice;
+    LOG5("Adding slice " << slice->shortString() << " to parser state " << parser_state);
 }
 
 unsigned Clot::length_in_bytes(cstring parser_state) const {

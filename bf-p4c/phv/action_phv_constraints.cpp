@@ -2711,6 +2711,9 @@ CanPackReturnType ActionPhvConstraints::can_pack(
 CanPackErrorV2 ActionPhvConstraints::can_pack_v2(
         const PHV::Allocation& alloc,
         const std::vector<PHV::AllocSlice>& candidates) const {
+    Log::TempIndent indent;
+    LOG5("Can pack v2 with " << candidates.size() << " candidates " << indent);
+
     // Allocating zero slices always succeeds...
     if (candidates.size() == 0) return {CanPackErrorCode::NO_ERROR, ""};
 
@@ -2732,6 +2735,7 @@ CanPackErrorV2 ActionPhvConstraints::can_pack_v2(
     // packing. If yes, packing not possible.
     if (pack_conflicts_present(container_state, candidates))
         return {CanPackErrorCode::PACK_CONSTRAINT_PRESENT, ""};
+    LOG6("No pack conflicts present");
 
     // Create after-allocation container state.
     for (const auto& sl : candidates) {
@@ -2742,6 +2746,7 @@ CanPackErrorV2 ActionPhvConstraints::can_pack_v2(
     // constraints.
     if (stateful_destinations_constraints_violated(container_state))
         return {CanPackErrorCode::STATEFUL_DEST_CONSTRAINT, ""};
+    LOG6("No stateful destinations constraints violated");
 
     // TODO(yumin): we should be able to remove this part by simply disable bit-masked-set
     // instruction if slice has speciality read.
@@ -2752,11 +2757,13 @@ CanPackErrorV2 ActionPhvConstraints::can_pack_v2(
             "special action data. Therefore, this packing is not possible.");
         return {CanPackErrorCode::BITMASK_CONSTRAINT, ""};
     }
+    LOG6("No packing violated for bitmask-set");
 
     // xxx(Deep): This function checks if any field that gets its value from METER_ALU, HASH_DIST,
     // RANDOM, or METER_COLOR is being packed with other fields written in the same action.
     if (!check_speciality_packing(container_state))
         return {CanPackErrorCode::SPECIALTY_DATA, ""};
+    LOG6("No packing violated for speciality data");
 
     const bool mocha_or_dark = c.is(PHV::Kind::dark) || c.is(PHV::Kind::mocha);
     const auto actions = make_writing_action_set(alloc, container_state, {});
@@ -2770,6 +2777,7 @@ CanPackErrorV2 ActionPhvConstraints::can_pack_v2(
     if (!err.ok()) {
         return err;
     }
+    LOG6("No packing violated for bitwise move constraints");
 
     // we use solver to check move-based actions as a safe net to ensure
     // we don't create invalid packing.
@@ -2789,11 +2797,14 @@ CanPackErrorV2 ActionPhvConstraints::can_pack_v2(
             return move_err;
         }
     }
+    LOG6("No packing violated for action move constraints");
+
     // check from source side.
     auto read_move_err = check_move_constraints_from_read(alloc, candidates, {});
     if (!read_move_err.ok()) {
         return read_move_err;
     }
+    LOG6("No packing violated for read move constraints");
 
     return CanPackErrorV2{CanPackErrorCode::NO_ERROR};
 }
@@ -4233,7 +4244,7 @@ CanPackErrorCode ActionPhvConstraints::check_ara_move_constraints(
         auto rst = solver->solve();
         if (!rst.ok()) {
             LOG2("ARA Solver Error Reason: " << rst.err->msg);
-            return CanPackErrorCode::CONSTRAINT_CHECKER_FALIED;
+            return CanPackErrorCode::CONSTRAINT_CHECKER_FAILED;
         }
         if (LOGGING(4)) {
             LOG4("ARA instructions: ");
@@ -4402,7 +4413,7 @@ CanPackErrorV2 ActionPhvConstraints::check_move_constraints(
                 }
                 invalid_packing->push_back(sl);
             }
-            return {CanPackErrorCode::CONSTRAINT_CHECKER_FALIED, rst.err->msg, invalid_packing};
+            return {CanPackErrorCode::CONSTRAINT_CHECKER_FAILED, rst.err->msg, invalid_packing};
         }
         int num_instrs = rst.instructions.size();
         LOG4("instructions: ");
@@ -4462,8 +4473,63 @@ operator<<(std::ostream &out, const safe_vector<ActionPhvConstraints::OperandInf
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, const CanPackErrorCode& ec) {
+cstring can_pack_error_code_str(const CanPackErrorCode &code) {
+    switch (code) {
+        case CanPackErrorCode::NO_ERROR:
+            return "NO_ERROR";
+        case CanPackErrorCode::SLICE_EMPTY:
+            return "SLICE_EMPTY";
+        case CanPackErrorCode::PACK_CONSTRAINT_PRESENT:
+            return "PACK_CONSTRAINT_PRESENT";
+        case CanPackErrorCode::STATEFUL_DEST_CONSTRAINT:
+            return "STATEFUL_DEST_CONSTRAINT";
+        case CanPackErrorCode::BITMASK_CONSTRAINT:
+            return "BITMASK_CONSTRAINT";
+        case CanPackErrorCode::SPECIALTY_DATA:
+            return "SPECIALTY_DATA";
+        case CanPackErrorCode::MIXED_OPERAND:
+            return "MIXED_OPERAND";
+        case CanPackErrorCode::NONE_ADJACENT_FIELD:
+            return "NONE_ADJACENT_FIELD";
+        case CanPackErrorCode::COMPLEX_AD_PACKING:
+            return "COMPLEX_AD_PACKING";
+        case CanPackErrorCode::BITWISE_MIXED_AD:
+            return "BITWISE_MIXED_AD";
+        case CanPackErrorCode::TF2_MORE_THAN_ONE_SOURCE:
+            return "TF2_MORE_THAN_ONE_SOURCE";
+        case CanPackErrorCode::TF2_ALL_WRITTEN_TOGETHER:
+            return "TF2_ALL_WRITTEN_TOGETHER";
+        case CanPackErrorCode::MORE_THAN_TWO_SOURCES:
+            return "MORE_THAN_TWO_SOURCES";
+        case CanPackErrorCode::TWO_SOURCES_AND_CONSTANT:
+            return "TWO_SOURCES_AND_CONSTANT";
+        case CanPackErrorCode::MOVE_AND_UNALLOCATED_SOURCE:
+            return "MOVE_AND_UNALLOCATED_SOURCE";
+        case CanPackErrorCode::BITWISE_AND_UNALLOCATED_SOURCE:
+            return "BITWISE_AND_UNALLOCATED_SOURCE";
+        case CanPackErrorCode::SLICE_ALIGNMENT:
+            return "SLICE_ALIGNMENT";
+        case CanPackErrorCode::PACK_AND_ALIGNED:
+            return "PACK_AND_ALIGNED";
+        case CanPackErrorCode::INVALID_MASK:
+            return "INVALID_MASK";
+        case CanPackErrorCode::SLICE_DIFF_OFFSET:
+            return "SLICE_DIFF_OFFSET";
+        case CanPackErrorCode::COPACK_UNSATISFIED:
+            return "COPACK_UNSATISFIED";
+        case CanPackErrorCode::MULTIPLE_ALIGNMENTS:
+            return "MULTIPLE_ALIGNMENTS";
+        case CanPackErrorCode::OVERLAPPING_SLICES:
+            return "OVERLAPPING_SLICES";
+        case CanPackErrorCode::CONSTRAINT_CHECKER_FAILED:
+            return "CONSTRAINT_CHECKER_FAILED";
+        default:
+            BUG("Invalid packing error code");
+    }
+}
+
+std::ostream &operator<<(std::ostream &out, const CanPackErrorCode &ec) {
     out << " CanPackErrorCode: ";
-    out << (unsigned) ec;
+    out << can_pack_error_code_str(ec);
     return out;
 }

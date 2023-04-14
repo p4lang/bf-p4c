@@ -214,6 +214,9 @@ class GreedyTxScore : public TxScore {
 
     /// @returns string representation.
     std::string str() const override;
+
+    /// @returns true if deparser gress mismatch present
+    bool has_mismatch_gress() const;
 };
 
 }  // namespace v2
