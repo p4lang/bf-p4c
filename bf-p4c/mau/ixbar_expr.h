@@ -109,6 +109,7 @@ class IXBarExprSeed : public Inspector {
 
     bool preorder(const IR::Annotation *) { return false; }
     bool preorder(const IR::Type *) { return false; }
+    bool preorder(const IR::Member *) { return false; }
     bool preorder(const IR::Constant *k) {
         if (getParent<IR::BAnd>()) return false;
         rv ^= to_bitvec((k->value >> slice.lo) & ((big_int(1) << slice.size()) - 1)) << shift;
