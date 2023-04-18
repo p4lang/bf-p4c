@@ -47,11 +47,12 @@ bool hasAtcamPragma(const IR::P4Table* const table_ptr) {
 
 void CheckUnsupported::postorder(const IR::P4Table* const table_ptr) {
     if (const auto* const key_ptr = table_ptr->getKey()) {
-        int LPM_count = 0, ternary_key_count = 0;
+        int lpm_key_count = 0, ternary_key_count = 0, range_key_count = 0;
         size_t total_TCAM_key_bits = 0u;
 
         for (const auto* const key_element_ptr : key_ptr->keyElements) {
-            if (    "lpm" == key_element_ptr->matchType->path->name) { ++LPM_count; }
+            if (    "lpm" == key_element_ptr->matchType->path->name) { ++lpm_key_count; }
+            if (  "range" == key_element_ptr->matchType->path->name) { ++range_key_count; }
             if ("ternary" == key_element_ptr->matchType->path->name) {
                 ++ternary_key_count;
                 const size_t size = table_ptr->getSizeProperty()->asUint64(),
@@ -65,9 +66,19 @@ void CheckUnsupported::postorder(const IR::P4Table* const table_ptr) {
             }
         }
 
-        if (LPM_count > 1) {
-            error(ErrorType::ERR_UNSUPPORTED, "%1%table %2% Cannot match on multiple fields using"
-                  " the LPM match type.", table_ptr->srcInfo, table_ptr->name.originalName);
+        if (lpm_key_count > 1) {
+            error(ErrorType::ERR_UNSUPPORTED, "%1%table %2% Cannot match on more than one LPM"
+                  " field.", table_ptr->srcInfo, table_ptr->name.originalName);
+        }
+
+        if (lpm_key_count != 0 && ternary_key_count != 0) {
+            error(ErrorType::ERR_UNSUPPORTED, "%1%table %2% Cannot match on both ternary and LPM"
+                  " fields.", table_ptr->srcInfo, table_ptr->name.originalName);
+        }
+
+        if (lpm_key_count != 0 && range_key_count != 0) {
+            error(ErrorType::ERR_UNSUPPORTED, "%1%table %2% Cannot match on both range and LPM"
+                  " fields.", table_ptr->srcInfo, table_ptr->name.originalName);
         }
 
         if (ternary_key_count > 0) {

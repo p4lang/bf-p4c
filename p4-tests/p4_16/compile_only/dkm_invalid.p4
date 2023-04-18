@@ -38,7 +38,7 @@ control ingress(
         key = {
             hdr.data.f1 : exact;
             hdr.data.f2 : ternary; //////////////////// Error, must be 'exact'.
-            hdr.data.h1 : lpm;     //////////////////// Error, must be 'exact'.
+            hdr.data.h1 : ternary; //////////////////// Error, must be 'exact'.
         }
         actions = {}
     }

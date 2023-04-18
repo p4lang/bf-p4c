@@ -176,6 +176,12 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-example-select_tuple-mask.p4
   )
 
+# unsupported match type combination on tofino
+p4c_add_xfail_reason("tofino"
+  "table ipv4_lpm Cannot match on both ternary and LPM fields"
+  testdata/p4_16_samples/basic2-bmv2.p4
+  )
+
 p4c_add_xfail_reason("tofino"
   "Unsupported type argument for Value Set"
   testdata/p4_14_samples/parser_value_set2.p4

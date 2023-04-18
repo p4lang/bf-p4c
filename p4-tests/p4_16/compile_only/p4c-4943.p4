@@ -360,7 +360,7 @@ control IngressProcessing(
     table ipv4_src_filter {
         key = {
             hdr.vlan.vid: exact;
-            hdr.ipv4.src_addr: lpm;
+            hdr.ipv4.src_addr: ternary;
             meta.src_port: range;
         }
 
@@ -376,7 +376,7 @@ control IngressProcessing(
     table ipv4_dst_filter {
         key = {
             id: exact;
-            hdr.ipv4.dst_addr: lpm;
+            hdr.ipv4.dst_addr: ternary;
             meta.dst_port: range;
         }
 
@@ -400,7 +400,7 @@ control IngressProcessing(
     table ipv6_src_filter {
         key = {
             hdr.vlan.vid: exact;
-            hdr.ipv6.src_addr: lpm;
+            hdr.ipv6.src_addr: ternary;
             meta.src_port: range;
         }
 
@@ -416,7 +416,7 @@ control IngressProcessing(
     table ipv6_dst_filter {
         key = {
             id: exact;
-            hdr.ipv6.dst_addr: lpm;
+            hdr.ipv6.dst_addr: ternary;
             meta.dst_port: range;
         }
 

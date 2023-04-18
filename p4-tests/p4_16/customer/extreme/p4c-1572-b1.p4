@@ -6059,7 +6059,7 @@ control npb_ing_sf_npb_basic_adv_top (
   key = {
             ig_md.lkp_nsh.ip_type : exact;
    ig_md.lkp_nsh.ip_proto : exact;
-   ig_md.lkp_nsh.ipv4_src_addr : lpm;
+   ig_md.lkp_nsh.ipv4_src_addr : ternary;
    ig_md.lkp_nsh.ipv4_dst_addr : ternary;
    ig_md.lkp_nsh.l4_src_port : exact;
    ig_md.lkp_nsh.l4_dst_port : exact;
@@ -6093,7 +6093,7 @@ control npb_ing_sf_npb_basic_adv_top (
   key = {
             ig_md.lkp_nsh.ip_type : exact;
    ig_md.lkp_nsh.ip_proto : exact;
-   ig_md.lkp_nsh.ipv6_src_addr : lpm;
+   ig_md.lkp_nsh.ipv6_src_addr : ternary;
    ig_md.lkp_nsh.ipv6_dst_addr : ternary;
    ig_md.lkp_nsh.l4_src_port : exact;
    ig_md.lkp_nsh.l4_dst_port : exact;
