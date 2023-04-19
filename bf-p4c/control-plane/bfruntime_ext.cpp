@@ -481,6 +481,7 @@ BFRuntimeSchemaGenerator::addActionSelectorCommon(Util::JsonArray* tablesJson,
     addToDependsOn(tableJson, actionSelector.action_profile_id);
 
     tablesJson->append(tableJson);
+    LOG1("Added Action Selector " << actionSelector.name);
 }
 
 bool
@@ -591,6 +592,8 @@ BFRuntimeSchemaGenerator::actProfHasSelector(P4Id actProfId) const {
 
 const Util::JsonObject*
 BFRuntimeSchemaGenerator::genSchema() const {
+    Log::TempIndent indent;
+    LOG1("Generating BFRT schema" << indent);
     auto* json = new Util::JsonObject();
 
     json->emplace("schema_version", cstring("1.0.0"));
@@ -618,6 +621,8 @@ BFRuntimeSchemaGenerator::genSchema() const {
 void
 BFRuntimeSchemaGenerator::addTNAExterns(Util::JsonArray* tablesJson,
                                       Util::JsonArray* learnFiltersJson) const {
+    Log::TempIndent indent;
+    LOG1("Adding TNA Externs" << indent);
     for (const auto& externType : p4info.externs()) {
         auto externTypeId = static_cast<::barefoot::P4Ids::Prefix>(externType.extern_type_id());
         if (externTypeId == ::barefoot::P4Ids::ACTION_PROFILE) {
@@ -709,6 +714,8 @@ BFRuntimeSchemaGenerator::addTNAExterns(Util::JsonArray* tablesJson,
 // default one.
 void
 BFRuntimeSchemaGenerator::addPortMetadataExtern(Util::JsonArray* tablesJson) const {
+    Log::TempIndent indent;
+    LOG1("Adding PortMetadata Extern" << indent);
     for (const auto& externType : p4info.externs()) {
         auto externTypeId = static_cast<::barefoot::P4Ids::Prefix>(externType.extern_type_id());
         if (externTypeId == ::barefoot::P4Ids::PORT_METADATA) {
@@ -764,6 +771,7 @@ BFRuntimeSchemaGenerator::addRegisterParam(Util::JsonArray* tablesJson,
     tableJson->emplace("supported_operations", new Util::JsonArray());
 
     tablesJson->append(tableJson);
+    LOG2("Added Register Param " << register_param_.name);
 }
 
 void
@@ -801,6 +809,7 @@ BFRuntimeSchemaGenerator::addPortMetadata(Util::JsonArray* tablesJson,
     tableJson->emplace("attributes", new Util::JsonArray());
 
     tablesJson->append(tableJson);
+    LOG2("Added PortMetadata " << portMetadata.name);
 }
 
 void
@@ -866,6 +875,7 @@ BFRuntimeSchemaGenerator::addDynHashConfig(Util::JsonArray* tablesJson,
     tableJson->emplace("attributes", new Util::JsonArray());
 
     tablesJson->append(tableJson);
+    LOG2("Added DynHashConfigure " << dynHash.getConfigTableName());
 }
 
 void
@@ -984,6 +994,7 @@ BFRuntimeSchemaGenerator::addDynHashAlgorithm(Util::JsonArray* tablesJson,
     tableJson->emplace("attributes", new Util::JsonArray());
 
     tablesJson->append(tableJson);
+    LOG2("Added DynHashAlgorithm " << dynHash.getAlgorithmTableName());
 }
 
 void
@@ -1023,6 +1034,7 @@ BFRuntimeSchemaGenerator::addDynHashCompute(Util::JsonArray* tablesJson,
     addToDependsOn(tableJson, dynHash.cfgId);
 
     tablesJson->append(tableJson);
+    LOG2("Added DynHashCompute " << dynHash.getComputeTableName());
 }
 
 void
@@ -1185,6 +1197,7 @@ BFRuntimeSchemaGenerator::addSnapshot(Util::JsonArray* tablesJson,
             tableJson->emplace("attributes", new Util::JsonArray());
 
             tablesJson->append(tableJson);
+            LOG2("Added SnapshotCfg " << tblName);
         }
     }
 
@@ -1228,6 +1241,7 @@ BFRuntimeSchemaGenerator::addSnapshot(Util::JsonArray* tablesJson,
         tableJson->emplace("attributes", new Util::JsonArray());
 
         tablesJson->append(tableJson);
+        LOG2("Added SnapshotTrigger " << tblName);
 
         // Add trigger table id to config table
         if (auto *snapCfgTable = findJsonTable(tablesJson, snapshot.getCfgTblName())) {
@@ -1387,6 +1401,7 @@ BFRuntimeSchemaGenerator::addSnapshot(Util::JsonArray* tablesJson,
         tableJson->emplace("attributes", new Util::JsonArray());
 
         tablesJson->append(tableJson);
+        LOG2("Added SnapshotData " << tblName);
     }
 }
 
@@ -1418,6 +1433,7 @@ BFRuntimeSchemaGenerator::addSnapshotLiveness(Util::JsonArray* tablesJson,
     tableJson->emplace("attributes", new Util::JsonArray());
 
     tablesJson->append(tableJson);
+    LOG2("Added SnapshotLiveness " << tblName);
   }
 }
 
@@ -1446,6 +1462,7 @@ BFRuntimeSchemaGenerator::addParserChoices(Util::JsonArray* tablesJson,
     tableJson->emplace("attributes", new Util::JsonArray());
 
     tablesJson->append(tableJson);
+    LOG2("Added ParserChoices " << parserChoices.name);
 }
 
 // Debug counter table is functionally dependent on P4 program and should
@@ -1453,8 +1470,11 @@ BFRuntimeSchemaGenerator::addParserChoices(Util::JsonArray* tablesJson,
 // p4info data directly.
 void
 BFRuntimeSchemaGenerator::addDebugCounterTable(Util::JsonArray* tablesJson) const {
+    Log::TempIndent indent;
+    LOG1("Adding Debug Counter Table" << indent);
     P4Id id = makeBFRuntimeId(0, barefoot::P4Ids::DEBUG_COUNTER);
-    auto* tableJson = initTableJson("tbl_dbg_counter", id, "TblDbgCnt",
+    auto tblName = "tbl_dbg_counter";
+    auto* tableJson = initTableJson(tblName, id, "TblDbgCnt",
         Device::numStages() * Device::numLogTablesPerStage() /* size */);
 
     auto* keyJson = new Util::JsonArray();
@@ -1483,6 +1503,7 @@ BFRuntimeSchemaGenerator::addDebugCounterTable(Util::JsonArray* tablesJson) cons
     tableJson->emplace("attributes", new Util::JsonArray());
 
     tablesJson->append(tableJson);
+    LOG2("Added Debug Counter " << tblName);
 }
 
 

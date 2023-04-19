@@ -456,6 +456,7 @@ BFRuntimeGenerator::addCounterCommon(Util::JsonArray* tablesJson,
     tableJson->emplace("attributes", new Util::JsonArray());
 
     tablesJson->append(tableJson);
+    LOG1("Added Counter " << counter.name);
 }
 
 void
@@ -499,6 +500,7 @@ BFRuntimeGenerator::addMeterCommon(Util::JsonArray* tablesJson,
     tableJson->emplace("attributes", attributesJson);
 
     tablesJson->append(tableJson);
+    LOG1("Added Meter " << meter.name);
 }
 
 void
@@ -661,6 +663,7 @@ BFRuntimeGenerator::addActionProfCommon(Util::JsonArray* tablesJson,
     tableJson->emplace("attributes", new Util::JsonArray());
 
     tablesJson->append(tableJson);
+    LOG1("Added Action Profile " << actionProf.name);
 }
 
 
@@ -736,10 +739,13 @@ BFRuntimeGenerator::addLearnFilterCommon(Util::JsonArray* learnFiltersJson,
     learnFilterJson->emplace("fields", fieldsJson);
 
     learnFiltersJson->append(learnFilterJson);
+    LOG2("Added Digest" << digest.name);
 }
 
 void
 BFRuntimeGenerator::addLearnFilters(Util::JsonArray* learnFiltersJson) const {
+    Log::TempIndent indent;
+    LOG1("Adding Learn Filters" << indent);
     for (const auto& digest : p4info.digests()) {
         auto digestInstance = Digest::from(digest);
         if (digestInstance == std::nullopt) continue;
@@ -750,6 +756,8 @@ BFRuntimeGenerator::addLearnFilters(Util::JsonArray* learnFiltersJson) const {
 void BFRuntimeGenerator::addDirectResources(const p4configv1::Table& table,
         Util::JsonArray* dataJson, Util::JsonArray* operationsJson,
         Util::JsonArray* attributesJson, P4Id) const {
+    Log::TempIndent indent;
+    LOG2("Adding Direct Resources" << indent);
     // direct resources
     for (auto directResId : table.direct_resource_ids()) {
         if (auto counter = getDirectCounter(directResId)) {
@@ -778,6 +786,8 @@ BFRuntimeGenerator::addActionProfIds(const p4configv1::Table& table,
 
 void
 BFRuntimeGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
+    Log::TempIndent indent;
+    LOG1("Adding Match Tables" << indent);
     for (const auto& table : p4info.tables()) {
         const auto& pre = table.preamble();
         std::set<std::string> dupKey;
@@ -951,11 +961,14 @@ BFRuntimeGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
         tableJson->emplace("attributes", attributesJson);
 
         tablesJson->append(tableJson);
+        LOG2("Added Match Table " << pre.name());
     }
 }
 
 void
 BFRuntimeGenerator::addActionProfs(Util::JsonArray* tablesJson) const {
+    Log::TempIndent indent;
+    LOG1("Adding Action Profiles" << indent);
     for (const auto& actionProf : p4info.action_profiles()) {
         auto actionProfInstance = ActionProf::from(p4info, actionProf);
         if (actionProfInstance == std::nullopt) continue;
@@ -965,6 +978,8 @@ BFRuntimeGenerator::addActionProfs(Util::JsonArray* tablesJson) const {
 
 void
 BFRuntimeGenerator::addCounters(Util::JsonArray* tablesJson) const {
+    Log::TempIndent indent;
+    LOG1("Adding Counters" << indent);
     for (const auto& counter : p4info.counters()) {
         auto counterInstance = Counter::from(counter);
         if (counterInstance == std::nullopt) continue;
@@ -974,6 +989,8 @@ BFRuntimeGenerator::addCounters(Util::JsonArray* tablesJson) const {
 
 void
 BFRuntimeGenerator::addMeters(Util::JsonArray* tablesJson) const {
+    Log::TempIndent indent;
+    LOG1("Adding Meters" << indent);
     for (const auto& meter : p4info.meters()) {
         auto meterInstance = Meter::from(meter);
         if (meterInstance == std::nullopt) continue;

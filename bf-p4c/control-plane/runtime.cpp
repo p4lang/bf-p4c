@@ -9,6 +9,7 @@
 
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/typeMap.h"
+#include "lib/log.h"
 #include "midend/eliminateNewtype.h"
 #include "lib/nullstream.h"
 
@@ -76,9 +77,6 @@ void generateRuntime(const IR::P4Program* program,
 
     auto arch = P4::P4RuntimeSerializer::resolveArch(options);
 
-    if (Log::verbose())
-        std::cout << "Generating P4Runtime output for architecture " << arch << std::endl;
-
     // Typedefs in P4 source are replaced in the midend. However since bf
     // runtime runs before midend, we run the pass to eliminate typedefs here to
     // facilitate bf-rt json generation.
@@ -95,18 +93,26 @@ void generateRuntime(const IR::P4Program* program,
         // ActionSelector(bit<32> size, Hash<_> hash, SelectorMode_t mode);
         // ActionSelector(bit<32> size, Hash<_> hash, SelectorMode_t mode, Register<bit<1>, _> reg);
         // NOTE: this can be removed when we remove old syntax from tofino.p4.
+        LOG1("Rewriting Action Selector for non PSA architectures" << Log::indent);
         program = program->apply(RewriteActionSelector(&refMap, &typeMap));
+        LOG1_UNINDENT;
     }
 
     // Generate P4Info o/p
     if (generateP4Info) {
+        LOG1("Populating P4Runtime Info for architecture " << arch);
         auto p4Runtime = p4RuntimeSerializer->generateP4Runtime(program, arch);
 
         if (options.p4RuntimeForceStdExterns) {
             auto p4RuntimeStd = convertToStdP4Runtime(p4Runtime);
+            LOG1("Generating P4Runtime Output with standardized externs for architecture "
+                 << arch << Log::indent);
             p4RuntimeSerializer->serializeP4RuntimeIfRequired(p4RuntimeStd, options);
+            LOG1_UNINDENT;
         } else {
+            LOG1("Generating P4Runtime Output for architecture " << arch << Log::indent);
             p4RuntimeSerializer->serializeP4RuntimeIfRequired(p4Runtime, options);
+            LOG1_UNINDENT;
         }
         if (::errorCount() > 0) return;
     }
@@ -125,9 +131,15 @@ void generateRuntime(const IR::P4Program* program,
         program = program->apply(P4::EliminateNewtype(&refMap, &typeMap, typeChecking));
         program->apply(CheckReservedNames());
 
+        LOG1("Populating BFRuntime Info for architecture " << arch << Log::indent);
         auto p4Runtime = p4RuntimeSerializer->generateP4Runtime(program, arch);
+        LOG1_UNINDENT;
+
+        LOG1("Generating BFRuntime JSON for architecture " << arch << Log::indent);
         auto *bfrt = new BFRT::BFRuntimeSchemaGenerator(*p4Runtime.p4Info);
         bfrt->serializeBFRuntimeSchema(out);
+        LOG1_UNINDENT;
+
         if (::errorCount() > 0) return;
     }
 }
