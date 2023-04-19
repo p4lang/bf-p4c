@@ -14,6 +14,7 @@ const Device::StatefulAluSpec &TofinoDevice::getStatefulAluSpec() const {
         /* .CmpUnits = */ { "lo", "hi" },
         /* .MaxSize = */ 32,
         /* .MaxDualSize = */ 64,
+        /* .MaxPhvInputWidth = */ 32,
         /* .MaxInstructions = */ 4,
         /* .MaxInstructionConstWidth = */ 4,
         /* .MinInstructionConstValue = */ -8,
@@ -33,6 +34,7 @@ const Device::StatefulAluSpec &JBayDevice::getStatefulAluSpec() const {
         /* .CmpUnits = */ { "cmp0", "cmp1", "cmp2", "cmp3" },
         /* .MaxSize = */ 128,
         /* .MaxDualSize = */ 128,
+        /* .MaxPhvInputWidth = */ 64,
         /* .MaxInstructions = */ 4,
         /* .MaxInstructionConstWidth = */ 4,
         /* .MinInstructionConstValue = */ -8,
@@ -53,6 +55,7 @@ const Device::StatefulAluSpec &CloudbreakDevice::getStatefulAluSpec() const {
         /* .CmpUnits = */ { "cmp0", "cmp1", "cmp2", "cmp3" },
         /* .MaxSize = */ 128,
         /* .MaxDualSize = */ 128,
+        /* .MaxPhvInputWidth = */ 64,
         /* .MaxInstructions = */ 4,
         /* .MaxInstructionConstWidth = */ 4,
         /* .MinInstructionConstValue = */ -8,
@@ -73,6 +76,7 @@ const Device::StatefulAluSpec &FlatrockDevice::getStatefulAluSpec() const {
         /* .CmpUnits = */ { "cmp0", "cmp1", "cmp2", "cmp3" },
         /* .MaxSize = */ 128,
         /* .MaxDualSize = */ 128,
+        /* .MaxPhvInputWidth = */ 64,
         /* .MaxInstructions = */ 4,
         /* .MaxInstructionConstWidth = */ 4,
         /* .MinInstructionConstValue = */ -8,
@@ -311,7 +315,8 @@ static bool is_learn(const IR::Expression *e) {
 /// or a reference to a copy of an in argument
 /// If so, process it as an operand and return true
 bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field) {
-    LOG4("applyArg(" << pe << ", " << field << ") etype = " << etype);
+    Log::TempIndent indent;
+    LOG4("applyArg(" << pe << ", " << field << ") etype = " << etype << indent);
     assert(dest == nullptr || !islvalue(etype));
     const IR::Expression *e = nullptr;
     auto argType = pe->type;
@@ -504,7 +509,8 @@ bool CreateSaluInstruction::preorder(const IR::Function *func) {
     while (std::isdigit(tail[-1])) --tail;
     param_types = &function_param_types.at(std::make_pair(action_type_name.before(tail),
                                                           func->name));
-    LOG3("Creating action " << name << "[" << func->id << "] for stateful table " << salu->name);
+    LOG3("Creating action " << name << "[" << func->id << "] for stateful table " <<
+         salu->name << Log::indent);
     LOG5(func);
     action = new IR::MAU::SaluAction(func->srcInfo, name, func);
     action->annotations = reg_action->annotations;
@@ -546,6 +552,7 @@ void CreateSaluInstruction::postorder(const IR::Function *func) {
         auto &output = outputs[kv.first];
         BUG_CHECK(is_address_output(output->operands.back()), "not address output?");
         output->operands.push_back(new IR::MAU::SaluFunction(kv.second, "lmatch")); }
+    splitWideInstructions();
     assignOutputAlus();
     for (std::size_t i = 0; i < outputs.size(); ++i) {
         auto *instr = outputs[i];
@@ -589,12 +596,13 @@ void CreateSaluInstruction::postorder(const IR::Function *func) {
     if (action->action.empty()) {
         // Action body is empty, insert the nop instruction directly - we don't need
         // to merge any instructions.
-        action->action.push_back(new IR::MAU::Instruction("nop"));
+        action->action.push_back(new IR::MAU::SaluInstruction("nop"));
         warning(ErrorType::ERR_EXPECTED,
                 "%1%: Expected stateful action '%2%' to have instructions "
                 "assigned. Please verify the action is valid.",
                 salu, action->name);
     }
+    LOG3_UNINDENT;
     clearFuncState();
 }
 
@@ -1676,6 +1684,81 @@ bool CreateSaluInstruction::outputEnumAsPredicate(const IR::Member *mem) {
     return_encoding->tag_used[mem->member.name] |= mask;
     LOG3("  output " << mem << " in predicate 0x" << hex(mask));
     return true;
+}
+
+// The alus and outputs only operate on 32 bits at a time, but we allow wider operands for
+// simple copies.  Those need to be split into multiple instructions operating 32 bits at
+// a time;
+void CreateSaluInstruction::splitWideInstructions() {
+    IR::Vector<IR::MAU::SaluInstruction> code;
+    std::array<const IR::Expression *, 4> words = { nullptr };
+    for (auto *inst : action->action) {
+        if (auto *dest = inst->getOutput()) {
+            if (dest->type->width_bits() > 32) {
+                if (inst->name == "max8" || inst->name == "max16" ||
+                    inst->name == "min8" || inst->name == "min16") {
+                    // leave these alone
+                } else if (inst->name == "add" || inst->name == "or" ||
+                           inst->name == "sub" || inst->name == "xor") {
+                    // FIXME --- these only work if the operation only affects the bottom 32
+                    // bits of a larger value -- so when the second operand is a constant with
+                    // the upper bits all 0s and can't over/underflow in the case of an add/sub
+                    // We should probably check that and give an error, but for now we leave
+                    // it alone
+                } else if (inst->name == "alu_a") {
+                    Log::TempIndent indent;
+                    LOG4("split wide instruction " << *inst << indent);
+                    unsigned i = dest->to<IR::MAU::SaluReg>()->hi ? 2 : 0;
+                    auto *src = inst->operands.back();
+                    for (int bit = 0; bit < dest->type->width_bits(); bit += 32, ++i) {
+                        if (words[i]) {
+                            error("%s%sConflicting wide operations in SALU",
+                                  words[i]->srcInfo, src->srcInfo); }
+                        words[i] = MakeSlice(src, bit, bit+31);
+                        if ((i&1) == 0) {
+                            // only need actual instructions for non-flyover, as the
+                            // flyover is implicit
+                            auto *n = inst->clone();
+                            if (i > 1)
+                                n->operands.at(n->output_operand) =
+                                    new IR::MAU::SaluReg(dest->srcInfo, words[i]->type, "hi", true);
+                            n->operands.back() = MakeSlice(src, bit, bit+63);
+                            LOG4("add " << *n);
+                            code.push_back(n); } }
+                    continue;
+                } else {
+                    error("%sCan't do %s operation wider than 32 bits in SALU",
+                          inst->srcInfo, inst->name);
+                }
+            }
+        }
+        code.push_back(inst);
+    }
+    action->action = code;
+    constexpr std::array<int, 4> output_transpose = { 0, 2, 1, 3 };
+    for (int i = outputs.size()-1; i >= 0; --i) {
+        if (!outputs[i]) continue;
+        auto *src = outputs[i]->operands.back();
+        if (src->type->width_bits() <= 32) continue;
+        LOG4("split wide output " << *outputs[i]);
+        auto *reg = src->to<IR::MAU::SaluReg>();
+        int j = output_transpose.at(i);
+        if (reg && (reg->name == "alu_lo" || reg->name == "alu_hi")) {
+            for (int bit = 0; bit < src->type->width_bits(); bit += 32, ++j) {
+                int k = output_transpose.at(j);
+                if (size_t(k) >= outputs.size()) outputs.resize(k+1);
+                if (k != i) {
+                    if (outputs[k]) {
+                        error("%s%sSALU wide output conflicts with other output",
+                              src->srcInfo, outputs[k]->srcInfo); }
+                    auto *n = outputs[i]->clone();
+                    n->operands.back() = words[j];
+                    outputs[k] = n; }
+            }
+        } else {
+            BUG("TBD");
+        }
+    }
 }
 
 void CreateSaluInstruction::assignOutputAlus() {

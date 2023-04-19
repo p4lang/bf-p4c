@@ -108,7 +108,7 @@ struct operand {
             if (v.type == tCMD && PCHECKTYPE(v.vec.size == 2, v[1], tRANGE)) {
                 if ((v[1].lo & 7) || ((v[1].hi + 1) & 7))
                     error(lineno, "only byte slices allowed on %s", v[0].s);
-                mask = ((1U << (v[1].hi + 1)/8U) - 1) << (v[1].lo/8U); } }
+                mask = (1U << (v[1].hi + 1)/8U) - (1U << (v[1].lo/8U)); } }
         void dbprint(std::ostream &out) const override { out << (pi ? "phv_hi" : "phv_lo"); }
         bool equiv(const Base *a_) const override {
             if (auto *a = dynamic_cast<const PhvRaw *>(a_)) {
@@ -923,3 +923,22 @@ Instruction *OutOP::pass1(Table *tbl_, Table::Actions::Action *act) {
 #endif  /* HAVE_FLATROCK */
 
 }  // end namespace StatefulAlu
+
+bool StatefulTable::p4c_5192_workaround(const Actions::Action *act) const {
+    // model problem identified in P4C-5192 -- when trying to output bits 96..127
+    // of either memory or phv input in an SALU in 128-bit mode, the model asserts
+    // Not clear if this is a hardware limitation or a model bug.
+    // RMT_ASSERTS on lines 547 and 565 of model/src/shared/mau-stateful-alu.cpp
+    // Workaround is to use 64x2 mode instead which is otherwise equivalent, except
+    // for possible problems if minmax is used
+    using namespace StatefulAlu;
+    if (format->log2size != 7 || is_dual_mode()) return false;  // only apply in 128-bit mode
+    for (auto &inst : act->instr) {
+        if (auto *out = dynamic_cast<const OutOP *>(inst.get())) {
+            if (out->slot > ALUOUT1 && (out->output_mux == 1 || out->output_mux == 3)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}

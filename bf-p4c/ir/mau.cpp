@@ -3,6 +3,7 @@
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/mau/instruction_memory.h"
 #include "bf-p4c/mau/table_layout.h"
+#include "bf-p4c/mau/stateful_alu.h"
 #include "ir/ir.h"
 #include "gateway_control_flow.h"
 
@@ -989,4 +990,8 @@ const IR::MAU::SaluAction *IR::MAU::StatefulAlu::calledAction(
     auto *rv = instruction.get<SaluAction>(action_map.at(ta_pair));
     BUG_CHECK(rv, "No action %s in %s", action_map.at(ta_pair), this);
     return rv;
+}
+
+int IR::MAU::StatefulAlu::source_width() const {
+    return std::min(Device::statefulAluSpec().MaxPhvInputWidth, width / (dual + 1));
 }

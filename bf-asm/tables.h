@@ -2061,6 +2061,8 @@ DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
 #if HAVE_JBAY
     BFN::Alloc1D<StatefulAlu::TMatchInfo, Target::JBay::STATEFUL_TMATCH_UNITS>       tmatch_use;
 #endif  /* HAVE_JBAY */
+
+    bool p4c_5192_workaround(const Actions::Action *) const;
 )
 
 #if HAVE_FLATROCK

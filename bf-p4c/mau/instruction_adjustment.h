@@ -256,10 +256,10 @@ class AdjustStatefulInstructions : public MauTransform {
     // FIXME -- these need to be folded into a virtual function on IXBar::Use to support
     // both tofino and flatrock
     bool verify_on_search_bus(const IR::MAU::StatefulAlu *, const Tofino::IXBar::Use &salu_ixbar,
-        const PHV::Field *field, le_bitrange bits, bool &is_hi);
+        const PHV::Field *field, le_bitrange &bits, bool &is_hi);
     bool verify_on_hash_bus(const IR::MAU::StatefulAlu *salu,
          const Tofino::IXBar::Use::MeterAluHash &mah, const IR::Expression *expr,
-         bool &is_hi);
+         le_bitrange &bits, bool &is_hi);
 
  public:
     explicit AdjustStatefulInstructions(const PhvInfo &p) : phv(p) {}

@@ -399,7 +399,7 @@ void StatefulTable::write_action_regs_vt(REGS &regs, const Actions::Action *act)
     if (act->minmax_use) {
         salu_instr_common.salu_datasize = 7;
         salu_instr_common.salu_op_dual = is_dual_mode();
-    } else if (is_dual_mode()) {
+    } else if (is_dual_mode() || p4c_5192_workaround(act)) {
         salu_instr_common.salu_datasize = format->log2size - 1;
         salu_instr_common.salu_op_dual = 1;
     } else {

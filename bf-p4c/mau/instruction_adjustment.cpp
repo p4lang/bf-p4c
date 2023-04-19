@@ -1478,7 +1478,7 @@ bool AdjustStatefulInstructions::check_bit_positions(std::map<int, le_bitrange> 
 }
 
 bool AdjustStatefulInstructions::verify_on_search_bus(const IR::MAU::StatefulAlu *salu,
-        const Tofino::IXBar::Use &salu_ixbar, const PHV::Field *field, le_bitrange bits,
+        const Tofino::IXBar::Use &salu_ixbar, const PHV::Field *field, le_bitrange &bits,
         bool &is_hi) {
     std::map<int, le_bitrange> salu_inputs;
     bitvec salu_bytes;
@@ -1535,6 +1535,10 @@ bool AdjustStatefulInstructions::verify_on_search_bus(const IR::MAU::StatefulAlu
 
     valid_start_positions.insert(initial_offset);
     valid_start_positions.insert(initial_offset + (phv_width / 8));
+    if (phv_width >= 64) {
+        // HACK -- tofino2 flyovers for outputs allow for 4 byte chunks when in 64+ bit mode
+        valid_start_positions.insert(initial_offset + 4);
+        valid_start_positions.insert(initial_offset + 12); }
 
     if (valid_start_positions.count(salu_bytes.min().index()) == 0) {
         ::error("The input %s to stateful alu %s is not allocated in a valid region on the input "
@@ -1548,12 +1552,13 @@ bool AdjustStatefulInstructions::verify_on_search_bus(const IR::MAU::StatefulAlu
         return false;
     }
 
-    is_hi = salu_bytes.min().index() != initial_offset;
+    is_hi = salu_bytes.min().index() >= initial_offset + phv_width/8;
+    bits = bits.shiftedByBits((salu_bytes.min().index() - initial_offset) * 8 - bits.lo);
     return true;
 }
 
 bool AdjustStatefulInstructions::verify_on_hash_bus(const IR::MAU::StatefulAlu *salu,
-        const Tofino::IXBar::Use::MeterAluHash &mah, const IR::Expression *expr,
+        const Tofino::IXBar::Use::MeterAluHash &mah, const IR::Expression *expr, le_bitrange &bits,
         bool &is_hi) {
     for (auto &exp : mah.computed_expressions) {
         const IR::Expression *pos_expr;
@@ -1563,6 +1568,7 @@ bool AdjustStatefulInstructions::verify_on_hash_bus(const IR::MAU::StatefulAlu *
             pos_expr = exp.second;
         if (pos_expr->equiv(*expr)) {
             is_hi = exp.first != 0;
+            bits = bits.shiftedByBits(exp.first - bits.lo);
             return true; } }
 
     BUG("The input %s to the stateful alu %s cannot be found on the hash input",
@@ -1613,11 +1619,13 @@ const IR::Expression *AdjustStatefulInstructions::preorder(IR::Expression *expr)
             return expr;
         }
     } else {
-        if (!verify_on_hash_bus(salu, salu_ixbar->meter_alu_hash, pos_expr, is_hi)) {
+        if (!verify_on_hash_bus(salu, salu_ixbar->meter_alu_hash, pos_expr, bits, is_hi)) {
             prune();
             return expr;
         }
     }
+    BUG_CHECK(is_hi == (bits.lo >= salu->source_width()), "inconsistent hi/bits result from "
+              "verify_on_hash/search_bus");
 
     if (is_hi)
         name += "_hi";
@@ -1632,7 +1640,8 @@ const IR::Expression *AdjustStatefulInstructions::preorder(IR::Expression *expr)
     const IR::Expression *rv = salu_reg;
     // Sets the byte_mask for the input for the stateful alu
     if (phv_width < salu->source_width()) {
-        rv = MakeSlice(rv, 0, phv_width - 1);
+        unsigned lo = bits.lo % salu->source_width();
+        rv = MakeSlice(rv, lo, lo + phv_width - 1);
     }
     prune();
     return rv;

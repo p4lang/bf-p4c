@@ -2653,14 +2653,17 @@ bool IXBar::can_allocate_on_search_bus(IXBar::Use &alloc, const PHV::Field *fiel
     bitvec seen_bits;
 
     for (auto &byte : alloc.use) {
+        // FIXME -- should be iterating over field_bytes here rather than just looking at [0]
+        auto &fi = byte.field_bytes[0];
+        if (fi.field != field->name)
+            continue;
+        if (!fi.range().overlaps(range))
+            continue;
         // Because the mask is per byte rather than per bit, the rest of the bit needs to be empty
         if (byte.bit_use != byte.non_zero_bits)
             return false;
         if (byte.field_bytes.size() > 1)
             return false;
-        auto &fi = byte.field_bytes[0];
-        if (fi.field != field->name)
-            continue;
         if (fi.width() != 8 && fi.hi != range.hi) {
             LOG4("  not byte aligned: " << fi);
             return false; }

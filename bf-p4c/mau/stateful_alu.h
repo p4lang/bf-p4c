@@ -88,6 +88,7 @@ struct Device::StatefulAluSpec {
     std::vector<cstring>        CmpUnits;
     int                         MaxSize;
     int                         MaxDualSize;
+    int                         MaxPhvInputWidth;
     int                         MaxInstructions;
     int                         MaxInstructionConstWidth;
     int                         MinInstructionConstValue;
@@ -230,6 +231,7 @@ class CreateSaluInstruction : public Inspector {
     bool applyArg(const IR::PathExpression *, cstring);
     const IR::Expression *reuseCmp(const IR::MAU::SaluInstruction *cmp, int idx);
     void setupCmp(cstring op);
+    void splitWideInstructions();
     void assignOutputAlus();
     const IR::MAU::SaluInstruction *setup_output();
     bool outputEnumAsPredicate(const IR::Member *);
