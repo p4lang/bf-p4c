@@ -148,6 +148,12 @@ endif()
 set (ENV{P4C_VERSION} "${BFN_P4C_VERSION} (SHA: ${BFN_P4C_GIT_SHA})")
 MESSAGE(STATUS "p4c-barefoot version: $ENV{P4C_VERSION}")
 
+# Generate the sha specific version file. It includes the GIT SHA.
+# Because this version changes frequently, we include it separately from the normal version files.
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/git_sha_version.h.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/git_sha_version.h" @ONLY)
+
+
 macro(get_schema_version schema_file schema_var)
   execute_process(
     COMMAND python3 -c "from ${schema_file} import get_schema_version;print(get_schema_version(), end='', flush=True)"

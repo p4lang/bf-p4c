@@ -14,7 +14,6 @@ add_definitions("-DBOOST_NO_ARGUMENT_DEPENDENT_LOOKUP")
 if (ENABLE_BAREFOOT_INTERNAL)
   add_definitions("-DBAREFOOT_INTERNAL=1")
 endif()
-add_definitions("-DBF_P4C_GIT_SHA=\"${BFN_P4C_GIT_SHA}\"")
 
 if (ENABLE_MULTITHREAD)
   add_definitions("-DGC_THREADS=1")
@@ -908,6 +907,7 @@ set (BF_P4C_BACKEND_LOGGING_SRCS
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_LOGGING_SRCS}")
 
 set (BF_P4C_BACKEND_MAIN_SRCS
+  asm.cpp
   backend.cpp
   bf-p4c-options.cpp
   device.cpp

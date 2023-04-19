@@ -20,7 +20,6 @@
 #include "bf-p4c/logging/constrained_fields.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "bf-p4c/logging/group_constraint_extractor.h"
-#include "bf-p4c/version.h"
 #include "ir/ir.h"
 #include "phv_schema.h"
 
@@ -327,22 +326,9 @@ class PhvLogging : public MauInspector {
     int getDatabaseIndex(std::vector<T> &db, T item);
 
  public:
-    explicit PhvLogging(const char *filename,
-                        const PhvInfo &p,
-                        const ClotInfo &ci,
-                        const CollectPhvLoggingInfo& c,
-                        const CollectDefUseInfo &cdu,
-                        const ordered_map<cstring, ordered_set<int>>& t,
-                        const TableSummary &ts)
-        : phv(p), clot(ci), info(c), defuseInfo(cdu), tableAlloc(t), tableSummary(ts),
-      logger(filename,
-             Logging::Logger::buildDate(),
-             BF_P4C_VERSION,
-             Device::numStages(),
-             BackendOptions().programName + ".p4",
-             RunId::getId(),
-             PHV_SCHEMA_VERSION,  // phv_schema version
-             BackendOptions().target.c_str()) {}
+    explicit PhvLogging(const char *filename, const PhvInfo &p, const ClotInfo &ci,
+                        const CollectPhvLoggingInfo &c, const CollectDefUseInfo &cdu,
+                        const ordered_map<cstring, ordered_set<int>> &t, const TableSummary &ts);
 };
 
 #endif  /* BF_P4C_LOGGING_PHV_LOGGING_H_ */

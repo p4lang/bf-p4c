@@ -11,8 +11,8 @@
 #include "indent.h"
 #include "constants.h"
 #include "../bf-p4c/version.h"  // for BF_P4C_VERSION
+#include "../git_sha_version.h"  // for BF_P4C_GIT_SHA
 #include "misc.h"
-#include "version.h"
 #include "parser-tofino-jbay-cloudbreak.h"
 #ifdef HAVE_FLATROCK
 #include "flatrock/parser.h"
