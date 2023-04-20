@@ -5430,8 +5430,9 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
             }
             // Since the gateway is handled by the first table part, all subsequent parts
             // should use a deepcopy of the original match table's next sequences.
-            if (gw_layout_used && Device::currentDevice() != Device::TOFINO)
-                table_part->next = match_table_next;
+            if (gw_layout_used && !table_part->layout.atcam &&
+                Device::currentDevice() != Device::TOFINO) {
+                table_part->next = match_table_next; }
             prev->next["$try_next_stage"] = try_next_stage_seq;
             prev->next.erase("$miss");
         }
