@@ -688,10 +688,10 @@ struct switch_ingress_flags_t {
 //  bool rmac_hit;
 //	bool dmac_miss;
 //  bool glean;
-	bool bypass_egress;
+    bool bypass_egress;
     // Add more flags here.
     bool transport_valid;
-	bool outer_enet_in_transport;
+    bool outer_enet_in_transport;
 }
 
 struct switch_egress_flags_t {

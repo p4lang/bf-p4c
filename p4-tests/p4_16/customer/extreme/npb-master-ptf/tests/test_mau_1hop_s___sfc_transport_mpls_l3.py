@@ -130,6 +130,19 @@ class test(BfRuntimeTest):
 				tun_id=(mpls_label_bottom[0]<<12)|(0x1<<8)|(0xff<<0), tun_id_mask=0xffffffff,
 				sap=sap, vpn=vpn+1, port_lag_ptr=ig_lag_ptr, drop=0)
 
+			# -----------------------------------------------------------
+			# Set MPLS Mode (l2 vs l3)
+			# -----------------------------------------------------------
+
+			npb_ing_port_metadata_add(self, self.target,ig_pipe,
+				#ingress
+				[ig_port], 0 # 0 = l3, 1 = l2
+			)
+
+			# add an inner sap value to look for l3 type, to make sure parser is doing the right thing
+			npb_tunnel_inner_sap_add(self, self.target, ig_pipe, sap=sap, tun_type=IngressTunnelType.NONE.value, tun_type_mask=0xf,
+				l3_type=0x1, l3_type_mask=0x3, l3_proto=0x6, l3_proto_mask=0xff, sap_new=sap, vpn=vpn+2)
+
 			# -----------------
 
 #			time.sleep(1)
@@ -138,13 +151,13 @@ class test(BfRuntimeTest):
 			# Create / Send / Verify the packet (MPLS SR) 1 Label
 			# -----------------------------------------------------------
 
-			mpls_label = [0x6789a, mpls_label_bottom]
+			mpls_label = [mpls_label_bottom]
 
-			src_pkt, exp_pkt = npb_simple_2lyr_mpls_sr_udp(
+			src_pkt, exp_pkt = npb_simple_2lyr_mpls_l3_udp(
 				dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 				dmac=dmac, smac=smac, mpls_label=mpls_label, #mpls_tags=[mpls_tags],
 				transport_decap=True, sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
-				spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
+				spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+2
 			)
 
 			# -----------------------------------------------------------
@@ -163,11 +176,11 @@ class test(BfRuntimeTest):
 
 			mpls_label = [0x6789a, mpls_label_bottom]
 
-			src_pkt, exp_pkt = npb_simple_2lyr_mpls_sr_udp(
+			src_pkt, exp_pkt = npb_simple_2lyr_mpls_l3_udp(
 				dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 				dmac=dmac, smac=smac, mpls_label=mpls_label, #mpls_tags=[mpls_tags],
 				transport_decap=True, sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
-				spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
+				spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+2
 			)
 
 			# -----------------------------------------------------------
@@ -186,11 +199,11 @@ class test(BfRuntimeTest):
 
 			mpls_label = [0xbcdef, 0x6789a, mpls_label_bottom]
 
-			src_pkt, exp_pkt = npb_simple_2lyr_mpls_sr_udp(
+			src_pkt, exp_pkt = npb_simple_2lyr_mpls_l3_udp(
 				dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 				dmac=dmac, smac=smac, mpls_label=mpls_label, #mpls_tags=[mpls_tags],
 				transport_decap=True, sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
-				spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
+				spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+2
 			)
 
 			# -----------------------------------------------------------
@@ -209,11 +222,11 @@ class test(BfRuntimeTest):
 
 			mpls_label = [0x11223, 0xbcdef, 0x6789a, mpls_label_bottom]
 
-			src_pkt, exp_pkt = npb_simple_2lyr_mpls_sr_udp(
+			src_pkt, exp_pkt = npb_simple_2lyr_mpls_l3_udp(
 				dmac_nsh=dmac, smac_nsh=smac, spi=spi, si=si, sap=sap, vpn=vpn, ttl=63, scope=1,
 				dmac=dmac, smac=smac, mpls_label=mpls_label, #mpls_tags=[mpls_tags],
 				transport_decap=True, sf_bitmask=sf_bitmask, start_of_chain=True, end_of_chain=False, scope_term_list=[],
-				spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+1
+				spi_exp=spi, si_exp=si, sap_exp=sap, vpn_exp=vpn+2
 			)
 
 			# -----------------------------------------------------------

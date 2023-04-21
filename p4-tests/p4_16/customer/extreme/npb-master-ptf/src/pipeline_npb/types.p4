@@ -688,10 +688,10 @@ struct switch_ingress_flags_t {
 //  bool rmac_hit;
 //	bool dmac_miss;
 //  bool glean;
-	bool bypass_egress;
+    bool bypass_egress;
     // Add more flags here.
     bool transport_valid;
-	bool outer_enet_in_transport;
+    bool outer_enet_in_transport;
 }
 
 struct switch_egress_flags_t {
@@ -1036,7 +1036,7 @@ struct switch_ingress_metadata_t {
 //@pa_container_size("egress", "eg_md.mirror.src", 8)
 //@pa_container_size("egress", "eg_md.mirror.type", 8)
 #ifdef DTEL_ENABLE
-// @pa_container_size("egress", "hdr.dtel_drop_report.drop_reason", 8)
+//@pa_container_size("egress", "hdr.dtel_drop_report.drop_reason", 8)
 @pa_mutually_exclusive("egress", "hdr.dtel.timestamp", "hdr.erspan_type3.timestamp")
 #endif
 

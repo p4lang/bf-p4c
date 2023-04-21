@@ -306,6 +306,36 @@ def npb_tunnel_rmac_del(self, target, ig_pipe, dst_addr):
 
 ########################################
 
+def npb_ing_port_metadata_add(self, target, ig_pipe, port, mpls_mode):
+	# for our all-to-one program, need to edit the path to this table
+	if((p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top') or (p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top')):
+		ig_pipes2 = ig_pipes.copy()
+		ig_pipes2.insert(0, 0)
+	else:
+		ig_pipes2 = ig_pipes.copy()
+
+	for i in range(len(port)):
+
+		try:
+			for ig_pipe2 in ig_pipes2:
+
+				table = self.bfrt_info.table_get('%s.$PORT_METADATA' % iprsr_s[ig_pipe2])
+				table.entry_add(
+					target,
+					[table.make_key(
+					[gc.KeyTuple('ig_intr_md.ingress_port',                   port[i])],
+					)],
+					[table.make_data(
+						[gc.DataTuple('transport_eompls_enable',                  mpls_mode)],
+						None
+					)]
+				)
+
+		except:
+			print("A table operation failed. This is typically due to adding or removing a duplicate, and can be ignored 2a.")
+
+########################################
+
 def npb_ing_port_add(self, target, ig_pipe, port, port_lag_ptr, bridging_enable, sap, vpn, spi, si, si_predec):
 	# for our all-to-one program, need to edit the path to this table
 	if((p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top') or (p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top')):

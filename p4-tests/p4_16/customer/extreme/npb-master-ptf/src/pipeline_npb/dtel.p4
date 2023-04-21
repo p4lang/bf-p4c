@@ -546,10 +546,10 @@ control DtelConfig(inout switch_header_transport_t hdr,
         hdr.dtel.report_length[15:8] = 0x13;
         hdr.dtel.md_length = md_length;
         hdr.dtel.rep_md_bits = rep_md_bits;
-		eg_md.payload_len = eg_md.payload_len + 16w44; // derek added
         hdr.dtel.ds_md_bits = 0;
         hdr.dtel.ds_md_status = 0;
         hdr.dtel.domain_specific_id = 0;
+		eg_md.payload_len = eg_md.payload_len + 16w44; // derek added
 #else
         hdr.dtel.version = 0;
         hdr.dtel.next_proto = next_proto;

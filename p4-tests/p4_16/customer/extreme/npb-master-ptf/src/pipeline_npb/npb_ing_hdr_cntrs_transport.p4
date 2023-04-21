@@ -10,6 +10,7 @@ control IngressHdrCntrsTransport(
 	MODULE_DEPLOYMENT_PARAMS
 ) {
 
+    
     DirectCounter<bit<32>>(CounterType_t.PACKETS) hdr_cntrs_L2;
     DirectCounter<bit<32>>(CounterType_t.PACKETS) hdr_cntrs_L3;
     DirectCounter<bit<32>>(CounterType_t.PACKETS) hdr_cntrs_TNL;
@@ -325,7 +326,8 @@ control IngressHdrCntrsTransport(
             // table (L2) ------------------------------------------------------
             // -----------------------------------------------------------------
 
-            if(TRANSPORT_EoMPLS_INGRESS_ENABLE) {
+            //if(TRANSPORT_MPLS_INGRESS_ENABLE) {
+            if(TRANSPORT_EoMPLS_INGRESS_ENABLE || TRANSPORT_IPoMPLS_INGRESS_ENABLE) {
                 if(MPLS_DEPTH_TRANSPORT == 6) {
                     hdr_cntr_L2_mpls_6_tbl.apply();
                 } else if(MPLS_DEPTH_TRANSPORT == 4) {
