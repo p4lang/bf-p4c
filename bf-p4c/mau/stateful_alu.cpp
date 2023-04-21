@@ -160,7 +160,7 @@ class  SaluOredIf : public Inspector {
             LOG3("Trying to analyze: " << if_node);
             top_if = if_node->condition;
             top_st = if_node->ifTrue->to<IR::AssignmentStatement>();
-            LOG4("top_if -> " << top_if << std::endl << "top_st -> " << top_st);
+            LOG4("top_if -> " << top_if << Log::endl << "top_st -> " << top_st);
             if (!if_node->ifFalse) {
                 return false;
             }
@@ -173,7 +173,7 @@ class  SaluOredIf : public Inspector {
              */
             second_if = if_node->condition;
             second_st = if_node->ifTrue->to<IR::AssignmentStatement>();
-            LOG4("second_if -> " << second_if << std::endl << "second_st -> " << second_st);
+            LOG4("second_if -> " << second_if << Log::endl << "second_st -> " << second_st);
             if (!if_node->ifFalse) {
                 return false;
             }
@@ -188,7 +188,7 @@ class  SaluOredIf : public Inspector {
              */
             third_if = if_node->condition;
             third_st = if_node->ifTrue->to<IR::AssignmentStatement>();
-            LOG4("third_if -> " << third_if << std::endl << "third_st -> " << third_st);
+            LOG4("third_if -> " << third_if << Log::endl << "third_st -> " << third_st);
             if (if_node->ifFalse) {
                 // Not allowed shape, end the traversing
                 return false;
@@ -1360,7 +1360,7 @@ void CreateSaluInstruction::postorder(const IR::LNot *e) {
         if (operands.size() == 1 && is_learn(operands.back())) {
             operands.back() = new IR::LNot(e->srcInfo, operands.back());
             return; }
-        BUG_CHECK(pred_operands.size() == 1 || ::errorCount() > 0, "%1%: recursion failure", e);
+        BUG_CHECK(pred_operands.size() >= 1 || ::errorCount() > 0, "%1%: recursion failure", e);
         if (pred_operands.size() < 1) return;  // can only happen if there has been an error
         pred_operands.back() = negatePred(pred_operands.back());
         LOG4("LNot rewrite pred_opeands: " << pred_operands.back());
@@ -1372,7 +1372,7 @@ void CreateSaluInstruction::postorder(const IR::LNot *e) {
 void CreateSaluInstruction::postorder(const IR::LAnd *e) {
     if (etype == IF) {
         if (pred_operands.size() == 1) return;  // to deal with learn -- not always correct
-        BUG_CHECK(pred_operands.size() == 2 || ::errorCount() > 0, "%1%: recursion failure", e);
+        BUG_CHECK(pred_operands.size() >= 2 || ::errorCount() > 0, "%1%: recursion failure", e);
         if (pred_operands.size() < 2) return;  // can only happen if there has been an error
         auto r = pred_operands.back();
         pred_operands.pop_back();
@@ -1385,7 +1385,7 @@ void CreateSaluInstruction::postorder(const IR::LAnd *e) {
 void CreateSaluInstruction::postorder(const IR::LOr *e) {
     if (etype == IF) {
         if (pred_operands.size() == 1) return;  // to deal with learn -- not always correct
-        BUG_CHECK(pred_operands.size() == 2 || ::errorCount() > 0, "%1%: recursion failure", e);
+        BUG_CHECK(pred_operands.size() >= 2 || ::errorCount() > 0, "%1%: recursion failure", e);
         if (pred_operands.size() < 2) return;  // can only happen if there has been an error
         auto r = pred_operands.back();
         pred_operands.pop_back();
