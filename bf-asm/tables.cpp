@@ -637,8 +637,10 @@ void Table::setup_vpns(std::vector<Layout> &layout, VECTOR(value_t) *vpn, bool a
                 // If there is no word information provided in assembly (Ternary
                 // Indirect/Stats) tables, the allocation is always a single
                 // word.
-                // FIXME -- this is wrong for cuckoo match tables, but the compiler provides
-                // vpns on tofino1/2/3 and on tofino5 we ignore this and set vpns in write_regs_vt
+                // For SRamMatchTables, this should be handled by SRamMatchTable::alloc_vpns(),
+                // so this code will never be hit
+                // FIXME -- move this to Table::alloc_vpns and only call setup_vpns when
+                // there's a vpn specified in the bfa?
                 if (row.word < 0) row.word = word;
                 el = vpn_ctr[row.word];
                 if ((vpn_ctr[row.word] += period) == depth) vpn_ctr[row.word] = 0; } } }

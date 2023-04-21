@@ -146,8 +146,11 @@ void SRamMatchTable::verify_format(Target::Tofino) {
                 error(format->lineno, "Match overhead field %s(%d) not in bottom %d bits",
                       it->first.c_str(), i, limit);
             }
+            if (!info.match_group.count(word))
+                error(format->lineno, "Match overhead in group %d in word with no match?", i);
             if ((unsigned)info.overhead_bit > f.bit(0)%128)
-                info.overhead_bit = f.bit(0)%128; } }
+                info.overhead_bit = f.bit(0)%128; }
+        info.vpn_offset = i; }
     if (word_info.empty()) {
         word_info.resize(fmt_width);
         if (format->field("next")) {
@@ -341,7 +344,10 @@ std::unique_ptr<json::map>
             tmp["memory_units"] = std::move(mem_units);
             mem_units = json::vector();
             json::vector vpns;
-            for (unsigned i = 0; format && i < format->groups(); i++)
+            for (auto &grp : group_info)
+                vpns.push_back(vpn_ctr + grp.vpn_offset);
+            vpn_ctr += group_info.size();
+            if (group_info.empty())  // FIXME -- can this happen?
                 vpns.push_back(vpn_ctr++);
             tmp["vpns"] = std::move(vpns);
             mem_units_and_vpns.push_back(std::move(tmp)); } }
@@ -962,11 +968,39 @@ template<class REGS> void SRamMatchTable::write_regs_vt(REGS &regs) {
 
             int vpn = *vpn_iter++;
             std::vector<int> vpn01;
-            for (unsigned group = 0; group < word_info[way.word].size(); group++) {
-                int overhead_word = group_info[word_info[way.word][group]].overhead_word;
-                if (overhead_word >= 0 && overhead_word != way.word)
-                    continue;  // skip if the overhead is not in this word
-                int group_vpn = vpn + word_info[way.word][group];
+            auto groups_in_word = word_info[way.word];
+            // Action format is made up of multiple groups (groups_in_format) which can be spread
+            // across multiple words. The match_group_map specifies which groups are within each
+            // word. For an N pack across M words if N > M, we have one or more words with multiple
+            // groups.
+            // Below code assigns VPN for each group(groups_in_word) within a word which are indexed
+            // separately from groups_in_format.
+            // E.g.
+            // format: {
+            //   action(0): 0..0, immediate(0): 2..9,   version(0): 112..115, match(0): 18..71,
+            //   action(1): 1..1, immediate(1): 10..17, version(1): 116..119,
+            //         match(1): [ 194..199, 72..111, 120..127  ],
+            //   action(2): 128..128, immediate(2): 129..136, version(2): 240..243,
+            //         match(2): 138..191,
+            //   action(3): 256..256, immediate(3): 257..264, version(3): 368..371,
+            //          match(3): 266..319,
+            //   action(4): 384..384, immediate(4): 385..392, version(4): 496..499,
+            //      match(4): 394..447 }
+            //   match_group_map: [ [ 1, 0 ], [ 1, 2], [ 3 ], [ 4 ]  ]
+            //                        ^         ^
+            // }
+            // In the above example the "format" specifies the 5 groups packed across 4 RAMs.These
+            // are the groups_in_format
+            // The "match_group_map" specifies the groups within each word.
+            // Group 1 is spread across word 0 & word 1.
+            // Within word 0 - group 1 is group_in_word 0 and group 0 is group_in_word 1
+            // Within word 1 - group 1 is group_in_word 0 and group 2 is group_in_word 1
+            // This distinction is used while specifying the config register in setting the subfield
+            // on match_ram_vpn_lsbs.
+            for (auto group_in_word = 0; group_in_word < groups_in_word.size(); group_in_word++) {
+                auto group_in_format = groups_in_word[group_in_word];
+                int overhead_word = group_info[group_in_format].overhead_word;
+                int group_vpn = vpn + group_info[group_in_format].vpn_offset;
                 bool ok = false;
                 for (unsigned i = 0; i < vpn01.size(); ++i) {
                     if (vpn01[i] == group_vpn >> 2) {
@@ -975,7 +1009,8 @@ template<class REGS> void SRamMatchTable::write_regs_vt(REGS &regs) {
                         break; } }
                 if (!ok) {
                     if (vpn01.size() >= 2) {
-                        error(lineno, "Too many diverse vpns in table layout");
+                        error(mgm_lineno > 0 ? mgm_lineno : lineno,
+                              "Too many diverse vpns in table layout for %s", name());
                         break; }
                     vpn01.push_back(group_vpn >> 2);
                     group_vpn &= 3;
@@ -984,7 +1019,8 @@ template<class REGS> void SRamMatchTable::write_regs_vt(REGS &regs) {
                     } else {
                         ram.match_ram_vpn.match_ram_vpn1 = vpn01.back();
                         group_vpn |= 4; } }
-                ram.match_ram_vpn.match_ram_vpn_lsbs.set_subfield(group_vpn, group*3, 3); }
+                ram.match_ram_vpn.match_ram_vpn_lsbs.set_subfield(group_vpn, group_in_word*3, 3);
+            }
 
             int word_group = 0;
             for (int group : word_info[way.word]) {
@@ -1292,6 +1328,37 @@ json::map* SRamMatchTable::add_common_sram_tbl_cfgs(json::map &tbl,
     return stage_tbl_ptr;
 }
 
+int SRamMatchTable::find_problematic_vpn_offset() const {
+    // Any single word of a match that contains 3 or more groups whose min and max vpn_offset
+    // differs by more than 5 is going to be a problem.  We need to permute the offsets so that
+    // does not happen
+    if (group_info.size() <= 6) return -1;  // can't differ by more than 5
+    for (auto &word : word_info) {
+        if (word.size() <= 2) continue;  // can't be a problem
+        int minvpn = -1, maxvpn = -1, avg = 0;
+        for (auto group : word) {
+            int vpn_offset = group_info[group].vpn_offset;
+            if (minvpn < 0)
+                minvpn = maxvpn = vpn_offset;
+            else if (minvpn > vpn_offset)
+                minvpn = vpn_offset;
+            else if (maxvpn < vpn_offset)
+                maxvpn = vpn_offset;
+            avg += vpn_offset;
+        }
+        if (maxvpn - minvpn > 5) {
+            if (minvpn + maxvpn > (2*avg)/word.size())
+                minvpn = maxvpn;  // look for the max to move, instead of min
+            for (auto group : word) {
+                if (group_info[group].vpn_offset == minvpn)
+                    return group; }
+            BUG("failed to find the group vpn we just saw");
+        }
+    }
+    return -1;  // no problem found
+}
+
+
 void SRamMatchTable::alloc_vpns() {
     if (error_count > 0 || no_vpns || layout_size() == 0 || layout[0].vpns.size() > 0) return;
     int period, width, depth;
@@ -1310,4 +1377,12 @@ void SRamMatchTable::alloc_vpns() {
             if (++word == width) {
                 word = 0;
                 vpn += period; } } }
+
+    int fix = find_problematic_vpn_offset();
+    if (fix >= 0) {
+        // Swap it with the middle one.  That should fix all the cases we've seen
+        int middle = group_info.size()/2;
+        BUG_CHECK(middle != fix, "vpn_offset fix doesn't work");
+        std::swap(group_info[fix].vpn_offset, group_info[middle].vpn_offset);
+        BUG_CHECK(find_problematic_vpn_offset() < 0, "vpn_offset fix did not work"); }
 }

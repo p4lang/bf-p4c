@@ -1106,7 +1106,8 @@ DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam,
         int                     result_bus_word;
         std::map<int, int>      match_group;    /* which match group for each word with match */
         std::vector<unsigned>   tofino_mask;    /* 14-bit tofino byte/nibble mask for each word */
-        GroupInfo() : overhead_word(-1), overhead_bit(-1), result_bus_word(-1) {}
+        int                     vpn_offset;     /* which vpn to use for this group */
+        GroupInfo() : overhead_word(-1), overhead_bit(-1), result_bus_word(-1), vpn_offset(-1) {}
         // important function in order to determine shiftcount for exact match entries
         int result_bus_word_group() const { return match_group.at(result_bus_word); }
     };  // NOLINT
@@ -1131,6 +1132,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam,
     void common_sram_checks();
     void alloc_global_busses() override;
     void alloc_vpns() override;
+    int find_problematic_vpn_offset() const;
     virtual void setup_ways();
     void setup_hash_function_ids();
     void pass1() override;
