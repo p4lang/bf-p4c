@@ -454,12 +454,16 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/compile_only/p4c-4498.p4
 )
 
-# TEMP FAILURE -- require model STF fix.  Once that is merged and docker image updated,
-# this failure should go away
-p4c_add_xfail_reason("tofino2"
-  "register rac128.*value is 0, expected 4822678189205111"
-  extensions/p4_tests/p4_16/stf/p4c-5192.p4
-)
+# dev env update 2023-04-20 (counter STF failures) 
+p4c_add_xfail_reason("tofino2"                
+   "bytes value is .*, expected .*"           
+   extensions/p4_tests/p4_14/stf/p4c-2911-2.p4
+)                                             
+
+p4c_add_xfail_reason("tofino2"                      
+   "bytes value is .*, expected .*" 
+   extensions/p4_tests/p4_16/stf/p4c-2911-2.p4     
+)                                                  
 
 # ALT-PHV: tests that do not work yet with the alternative allocator.
 # If you make an ALT-PHV test pass (or get close to it but if fails on later
