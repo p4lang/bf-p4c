@@ -486,11 +486,6 @@ if (TEST_ALT_PHV_ALLOC)
         testdata/p4_14_samples/02-FullPHV1.p4
     )
 
-    p4c_add_xfail_reason("tofino2"
-        "error: invalid SuperCluster was formed:"
-        extensions/p4_tests/p4_16/ptf/inner_checksum_payload_offset.p4
-    )
-
     # Actions and constraints errors
     p4c_add_xfail_reason("tofino2"
         "error: PHV allocation creates an invalid container action within a Tofino ALU"

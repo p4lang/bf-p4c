@@ -317,7 +317,8 @@ class FindParsingFrontier : public ParserInspector {
 
     profile_t init_apply(const IR::Node *node) override {
         mutable_field_states.clear();
-        return Inspector::init_apply(node);
+        parser_to_frontier.clear();
+        return ParserInspector::init_apply(node);
     }
 
     void end_apply() override {
@@ -385,10 +386,10 @@ class InsertFrontierStates : public ParserTransform {
         if (!need_to_insert)
             return transition;
 
-        static int id = 0;
+        int id = parser_to_frontier_state_names[parser->gress].size();
 
         auto to_state = new IR::BFN::Transition(match_t(), 0, transition->next);
-        cstring stopper_name = "$hdr_len_inc_stop_" + cstring::to_cstring(id++);
+        cstring stopper_name = "$hdr_len_inc_stop_" + cstring::to_cstring(id);
         auto stopper = new IR::BFN::ParserState(stopper_name, parser->gress, {}, {}, {to_state});
 
         LOG3("insert parser state " << stopper->name << " on "
@@ -400,6 +401,11 @@ class InsertFrontierStates : public ParserTransform {
         parser_to_frontier_state_names[parser->gress].insert(stopper->name);
 
         return transition;
+    }
+
+    profile_t init_apply(const IR::Node *root) override {
+        parser_to_frontier_state_names.clear();
+        return ParserTransform::init_apply(root);
     }
 
     const FindParsingFrontier& frontier;
@@ -646,6 +652,10 @@ class RewriteParde : public PardeTransform {
     profile_t init_apply(const IR::Node* root) override {
         state_to_hdr_len_inc_stop.clear();
         orig_state_to_new_state_stmts.clear();
+        parser_to_frontier_states.clear();
+        name_to_state.clear();
+        fields_above_frontier.clear();
+        fields_below_frontier.clear();
         root->apply(MapNameToState(name_to_state));
 
         for (auto& kv : frontier.parser_to_frontier_state_names) {
