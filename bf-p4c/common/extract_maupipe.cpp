@@ -36,6 +36,19 @@ static int getConstant(const IR::Argument* arg) {
     return arg->expression->to<IR::Constant>()->asInt();
 }
 
+static big_int getBigConstant(const IR::Annotation* annotation) {
+    if (annotation->expr.size() != 1) {
+        ::error("%1% should contain a constant", annotation);
+        return 0;
+    }
+    auto constant = annotation->expr[0]->to<IR::Constant>();
+    if (constant == nullptr) {
+        ::error("%1% should contain a constant", annotation);
+        return 0;
+    }
+    return constant->value;
+}
+
 static int64_t getConstant(const IR::Annotation* annotation,
                            int64_t min = INT_MIN, uint64_t max = INT_MAX) {
     if (annotation->expr.size() != 1) {
@@ -1136,12 +1149,12 @@ void AttachTables::InitializeStatefulAlus
         // p4_16 programs, these are passed in as optional stateful params
         for (auto annot : ext->annotations->annotations) {
             if (annot->name == "initial_register_lo_value") {
-                salu->init_reg_lo = getConstant(annot, INT_MIN, UINT_MAX);
+                salu->init_reg_lo = getBigConstant(annot);
                 warning(ErrorType::WARN_DEPRECATED, "%s is deprecated, use the initial_value "
                         "argument of the Register constructor instead", annot);
                 LOG4("Reg initial lo value: " << salu->init_reg_lo); }
             if (annot->name == "initial_register_hi_value") {
-                salu->init_reg_hi = getConstant(annot, INT_MIN, UINT_MAX);
+                salu->init_reg_hi = getBigConstant(annot);
                 warning(ErrorType::WARN_DEPRECATED, "%s is deprecated, use the initial_value "
                         "argument of the Register constructor instead", annot);
                 LOG4("Reg initial hi value: " << salu->init_reg_hi); } }
@@ -1173,24 +1186,15 @@ void AttachTables::InitializeStatefulAlus
                 // any malformed initial value should have been diagnosed already, so no need
                 // for error messages here
                 if (auto *k = init->to<IR::Constant>()) {
-                    auto tb = k->type->to<IR::Type_Bits>();
-                    if (tb == nullptr || !tb->isSigned) {
-                        // The value was checked for size and type in the frontend.
-                        // It should fit into 32 bits.
-                        BUG_CHECK(k->value <= 0xFFFF'FFFF,
-                            "Value does not fit into 32 bit register init_reg_lo.");
-                        salu->init_reg_lo = k->asUnsigned();
-                    } else {
-                        salu->init_reg_lo = k->asInt();
-                    }
+                    salu->init_reg_lo = k->value;
                 } else if (init->is<IR::ListExpression>() || init->is<IR::StructExpression>()) {
                     auto components = *getListExprComponents(*init);
                     if (components.size() >= 1) {
                         if (auto *k = components.at(0)->to<IR::Constant>())
-                            salu->init_reg_lo = k->asInt(); }
+                            salu->init_reg_lo = k->value; }
                     if (components.size() >= 2) {
                         if (auto *k = components.at(1)->to<IR::Constant>())
-                            salu->init_reg_hi = k->asInt(); } } }
+                            salu->init_reg_hi = k->value; } } }
         } else {
             salu->width = 1; }
         if (auto cts = reg->annotations->getSingle("chain_total_size"))

@@ -91,7 +91,7 @@ TEST(RegisterAction, SignedNegative) {
 
     Match::CheckList expected {
         "`.*`",
-        "initial_value: { lo: -42 , hi: 0 }"
+        "initial_value: { lo: -42 }"
     };
     auto res = testCode.match(TestCode::CodeBlock::MauAsm, expected); \
     EXPECT_TRUE(res.success) << "Mismatch in the generated assembly. "
@@ -147,7 +147,7 @@ TEST(RegisterAction, UnsignedBitInt) {
 
     Match::CheckList expected {
         "`.*`",
-        "initial_value: { lo: 2147483648 , hi: 0 }"
+        "initial_value: { lo: 2147483648 }"
     };
     auto res = testCode.match(TestCode::CodeBlock::MauAsm, expected); \
     EXPECT_TRUE(res.success) << "Mismatch in the generated assembly. "

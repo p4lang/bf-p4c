@@ -559,9 +559,8 @@ class StatefulAlu : MeterBus2Port {
     // the address?  Or perhaps put this in Synth2Port if other such tables can also chain
     bool                                                chain_vpn = false;
     int                                                 chain_total_size = size;
-    // These registers are 32 bit, but larger int has to be used in case of saving unsigned value.
-    int64_t                                             init_reg_lo = 0;
-    int64_t                                             init_reg_hi = 0;
+    big_int                                             init_reg_lo = 0;
+    big_int                                             init_reg_hi = 0;
     cstring                                             reduction_or_group = {};
     bool        learn_action = false;  // if any action is a LearnAction
     bool        synthetic_for_selector = false;  // created for the driver to set selector

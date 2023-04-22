@@ -34,9 +34,14 @@ void StatefulTable::setup(VECTOR(pair_t) &data) {
             if (CHECKTYPE(kv.value, tMAP)) {
                 for (auto &v : kv.value.map) {
                     if (v.key == "lo") {
-                        if (CHECKTYPE(v.value, tINT))
-                                initial_value_lo = v.value.i; }
-                    if (v.key == "hi") {
+                        if (CHECKTYPE2(v.value, tINT, tBIGINT)) {
+                            if (v.value.type == tINT) {
+                                initial_value_lo = v.value.i;
+                            } else {
+                                initial_value_lo = v.value.bigi.data[0];
+                                if (v.value.bigi.size > 1)
+                                    initial_value_hi = v.value.bigi.data[1]; } }
+                    } else if (v.key == "hi") {
                         if (CHECKTYPE(v.value, tINT))
                                 initial_value_hi = v.value.i; } } }
         } else if (kv.key == "input_xbar") {

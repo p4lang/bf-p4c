@@ -2016,8 +2016,8 @@ DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
     int stateful_counter_mode = 0;
     int watermark_level = 0;
     int watermark_pop_not_push = 0;
-    unsigned initial_value_lo = 0;
-    unsigned initial_value_hi = 0;
+    uint64_t initial_value_lo = 0;
+    uint64_t initial_value_hi = 0;
     unsigned data_bytemask = 0;
     unsigned hash_bytemask = 0;
     int logvpn_lineno = -1;
