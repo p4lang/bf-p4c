@@ -373,6 +373,7 @@ struct IXBar {
     static HashDistDest_t dest_location(const IR::Node *node, bool precolor = false);
     static std::string hash_dist_name(HashDistDest_t dest);
 
+    cstring failure_reason;
 
     /* A problem occurred with the way the IXBar was allocated that requires backtracking
      * and trying something else */

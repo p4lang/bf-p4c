@@ -1953,6 +1953,8 @@ bool TablePlacement::try_alloc_ixbar(Placed *next, std::vector<Placed *> allocat
             error_message += " with " + std::to_string(tables_already_in_stage) + " other tables";
         else
             error_message += " by itself";
+        if (current_ixbar->failure_reason)
+            error_message += ": " + current_ixbar->failure_reason;
         LOG3("    " << error_message);
         return false;
     }
@@ -2789,10 +2791,10 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
             int srams_left = avail.srams;
             int tcams_left = avail.tcams;
             if (!shrink_estimate(rv, srams_left, tcams_left, min_placed->entries)) {
-                error_message = "Can't split this table across stages and it's "
-                                "too big for one stage";
-                advance_to_next_stage = true;
-            }
+                if (!error_message)
+                    error_message = "Can't split this table across stages and it's "
+                                    "too big for one stage";
+                advance_to_next_stage = true; }
             while (!advance_to_next_stage) {
                 rv->update_need_more(needed_entries);
                 // If the table is split for the first time, then the stage_split is set to 0

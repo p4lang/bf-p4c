@@ -2660,8 +2660,9 @@ bool IXBar::can_allocate_on_search_bus(IXBar::Use &alloc, const PHV::Field *fiel
         if (!fi.range().overlaps(range))
             continue;
         // Because the mask is per byte rather than per bit, the rest of the bit needs to be empty
-        if (byte.bit_use != byte.non_zero_bits)
-            return false;
+        if (byte.bit_use != byte.non_zero_bits) {
+            LOG4("  other data packed in byte: " << byte);
+            return false; }
         if (byte.field_bytes.size() > 1)
             return false;
         if (fi.width() != 8 && fi.hi != range.hi) {
@@ -2799,6 +2800,8 @@ bool IXBar::setup_stateful_search_bus(const IR::MAU::StatefulAlu *salu, Use &all
     bool phv_src_reserved[2] = { false, false };
     bool reversed = false;
     int total_sources = 2;
+    if (sources.phv_sources.size() > 2)
+        failure_reason = salu->name.toString() + " requires more than 2 PHV inputs";
 
     int source_index = 0;
     // Check to see which input xbar positions the sources can be allocated to
@@ -2970,8 +2973,9 @@ bool IXBar::setup_stateful_hash_bus(const PhvInfo &, const IR::MAU::StatefulAlu 
         //  NOTE: In this scenario the slices can never fit in either sorted or unsorted cases
         for (auto &slice : slices) {
             int alu_slot_index = phv_src_inuse.ffz();
-            if (alu_slot_index > 1)
-                return false;
+            if (alu_slot_index > 1) {
+                failure_reason = salu->name.toString() + " requires more than 2 PHV inputs";
+                return false; }
             int start_bit = alu_slot_index * salu->source_width();
             int end_bit = start_bit + slice->type->width_bits();
             // If parity is enabled on the hash group stateful hash cannot use
