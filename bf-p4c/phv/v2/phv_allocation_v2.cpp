@@ -2,6 +2,7 @@
 
 #include "lib/error.h"
 
+#include "bf-p4c/phv/v2/allocator_base.h"
 #include "bf-p4c/phv/v2/greedy_allocator.h"
 #include "bf-p4c/phv/v2/trivial_allocator.h"
 #include "bf-p4c/phv/v2/smart_packing.h"
@@ -31,6 +32,9 @@ const IR::Node* PhvAllocation::apply_visitor(const IR::Node* root_, const char *
     LOG2("Removed unreferenced, clot allocated and singleton metadata clusters");
 
     const MauBacktracker* mau = kit_i.settings.physical_stage_trivial ? &kit_i.mau : nullptr;
+
+    AllocatorMetrics trivial_alloc_metrics, greedy_alloc_metrics;
+
     // apply table-layout-friendly packing on super clusters.
     auto trivial_allocator = new PHV::v2::TrivialAllocator(kit_i, phv_i, pipe_id_i);
     const auto alloc_verifier = [&](const PHV::SuperCluster* sc) {
@@ -44,12 +48,12 @@ const IR::Node* PhvAllocation::apply_visitor(const IR::Node* root_, const char *
     // clusters = get_packed_cluster_group(clusters, kit_i.table_pack_opt, alloc_verifier, phv_i);
 
     if (kit_i.settings.trivial_alloc) {
-        if (!trivial_allocator->allocate(clusters)) {
+        if (!trivial_allocator->allocate(clusters, trivial_alloc_metrics)) {
             LOG1("Trivial allocation failed.");
         }
     } else {
         GreedyAllocator greedy_allocator(kit_i, phv_i, pipe_id_i);
-        if (!greedy_allocator.allocate(clusters)) {
+        if (!greedy_allocator.allocate(clusters, greedy_alloc_metrics)) {
             LOG1("Greedy allocation failed.");
         }
     }

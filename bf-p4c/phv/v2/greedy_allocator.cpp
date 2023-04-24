@@ -321,12 +321,14 @@ ContainerGroupsBySize GreedyAllocator::make_container_groups_by_size() const {
 GreedyAllocator::PreSliceResult GreedyAllocator::pre_slice_all(
     const Allocation& empty_alloc,
     const std::list<SuperCluster*>& clusters,
-    ordered_set<const SuperCluster*>& invalid_clusters) const {
+    ordered_set<const SuperCluster*>& invalid_clusters,
+    AllocatorMetrics& alloc_metrics) const {
     // use trivial allocator to pre-slice and validate super clusters.
     const auto trivial_allocator = new v2::TrivialAllocator(kit_i, phv_i, pipe_id_i);
     PreSliceResult rst;
     for (const auto sc : clusters) {
-        auto pre_sliced = trivial_allocator->pre_slice(empty_alloc, sc, max_slicing_tries_i);
+        auto pre_sliced =
+            trivial_allocator->pre_slice(empty_alloc, sc, alloc_metrics, max_slicing_tries_i);
         LOG3("Pre-slice: " << sc);
         if (pre_sliced.invalid) {
             LOG3("Found unallocatable sliced cluster:" << pre_sliced.invalid);
@@ -386,9 +388,9 @@ void GreedyAllocator::sort_normal_clusters(std::list<PHV::SuperCluster*>& cluste
 }
 
 GreedyAllocator::AllocResultWithSlicingDetails GreedyAllocator::slice_and_allocate_sc(
-    const ScoreContext& ctx, const Allocation& alloc, const PHV::SuperCluster* sc,
-    const ContainerGroupsBySize& container_groups, const int max_slicings) const {
-    const auto base = AllocatorBase(kit_i);
+    const ScoreContext &ctx, const Allocation &alloc, const PHV::SuperCluster *sc,
+    const ContainerGroupsBySize &container_groups, AllocatorMetrics &alloc_metrics,
+    const int max_slicings) const {
     auto slicing_ctx = kit_i.make_slicing_ctx(sc);
     // max packing and strict mode.
     slicing_ctx->set_config(
@@ -416,11 +418,12 @@ GreedyAllocator::AllocResultWithSlicingDetails GreedyAllocator::slice_and_alloca
             }
             if (sc->is_deparser_zero_candidate()) {
                 LOG3("Found another deparser-zero cluster: " << sc);
-                auto tx = base.alloc_deparser_zero_cluster(ctx, this_slicing_tx, sc, phv_i);
+                auto tx = alloc_deparser_zero_cluster(ctx, this_slicing_tx, sc, phv_i);
                 this_slicing_tx.commit(tx);
                 continue;
             }
-            auto rst = base.try_sliced_super_cluster(ctx, this_slicing_tx, sc, container_groups);
+            auto rst =
+                try_sliced_super_cluster(ctx, this_slicing_tx, sc, container_groups, alloc_metrics);
             if (rst.ok()) {
                 sliced_tx->emplace(sc, rst.tx->get_actual_diff());  // copy before commit.
                 this_slicing_tx.commit(*rst.tx);
@@ -474,7 +477,8 @@ GreedyAllocator::AllocResultWithSlicingDetails GreedyAllocator::slice_and_alloca
     return rst;
 }
 
-bool GreedyAllocator::allocate(std::list<SuperCluster*> clusters_input) {
+bool GreedyAllocator::allocate(std::list<SuperCluster *> clusters_input,
+                               AllocatorMetrics &alloc_metrics) {
     LOG1("Run GreedyAllocator.");
     // print table ixbar usage
     LOG3(kit_i.mau.get_table_summary()->ixbarUsagesStr(&phv_i));
@@ -482,8 +486,8 @@ bool GreedyAllocator::allocate(std::list<SuperCluster*> clusters_input) {
     // pre-slicing
     LOG1("GreedyAllocator: start pre-slicing");
     ordered_set<const SuperCluster*> invalid_clusters;
-    auto pre_sliced =
-        pre_slice_all(ConcreteAllocation(phv_i, kit_i.uses), clusters_input, invalid_clusters);
+    auto pre_sliced = pre_slice_all(ConcreteAllocation(phv_i, kit_i.uses), clusters_input,
+                                    invalid_clusters, alloc_metrics);
     if (!invalid_clusters.empty()) {
         ::error("GreedyAllocation failed because these clusters have unsatisfiable constraints.");
         for (const auto& sc : invalid_clusters) {
@@ -522,7 +526,6 @@ bool GreedyAllocator::allocate(std::list<SuperCluster*> clusters_input) {
     }
 
     // actual allocation starts here.
-    const auto base = AllocatorBase(kit_i);
     const auto container_groups = make_container_groups_by_size();
     ConcreteAllocation alloc(phv_i, kit_i.uses);
     auto* score_maker = new GreedyTxScoreMaker(kit_i,
@@ -543,8 +546,7 @@ bool GreedyAllocator::allocate(std::list<SuperCluster*> clusters_input) {
     // allocate deparser zero clusters
     std::stringstream history;
     for (const auto* sc : refined_cluster_set.deparser_zero) {
-        auto tx =
-            base.alloc_deparser_zero_cluster(v2::ScoreContext().with_t(1), alloc, sc, phv_i);
+        auto tx = alloc_deparser_zero_cluster(v2::ScoreContext().with_t(1), alloc, sc, phv_i);
         score_maker->record_commit(tx, sc);
         history << "Allocating deparser-zero cluster "<< sc;
         history << "Allocation Decisions: \n";
@@ -555,8 +557,8 @@ bool GreedyAllocator::allocate(std::list<SuperCluster*> clusters_input) {
 
     // allocate strided clusters
     for (const auto* sc : refined_cluster_set.strided) {
-        auto rst = base.alloc_strided_super_clusters(ctx, alloc, sc, container_groups,
-                                                     max_slicing_tries_i);
+        auto rst = alloc_strided_super_clusters(ctx, alloc, sc, container_groups,
+                                                alloc_metrics, max_slicing_tries_i);
         if (!rst.ok()) {
             ::error("Failed to allocate stride cluster: %1%, because %2%",
                     cstring::to_cstring(sc),
@@ -588,8 +590,8 @@ bool GreedyAllocator::allocate(std::list<SuperCluster*> clusters_input) {
         LOG3(score_maker->status());
         LOG3("Allocating a normal cluster of index " << idx << ":\n " << sc);
         history << "Allocating a normal cluster of index " << idx << ":\n " << sc;
-        auto detailed_rst =
-            slice_and_allocate_sc(ctx, alloc, sc, container_groups, max_slicing_tries_i);
+        auto detailed_rst = slice_and_allocate_sc(ctx, alloc, sc, container_groups, alloc_metrics,
+                                                  max_slicing_tries_i);
         if (!detailed_rst.rst.ok()) {
             LOG3("Failed to allocate: SC-" << sc->uid);
             history << detailed_rst;
@@ -658,6 +660,8 @@ bool GreedyAllocator::allocate(std::list<SuperCluster*> clusters_input) {
     LOG1(alloc);
     Logging::FileLog::close(summary_logfile);
 
+    // Log Allocation Metrics
+    LOG1(alloc_metrics);
     return unallocated.empty();
 }
 

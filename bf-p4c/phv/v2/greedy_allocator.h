@@ -1,16 +1,17 @@
 #ifndef BF_P4C_PHV_V2_GREEDY_ALLOCATOR_H_
 #define BF_P4C_PHV_V2_GREEDY_ALLOCATOR_H_
 
-#include "bf-p4c/phv/v2/phv_kit.h"
 #include "bf-p4c/phv/utils/utils.h"
+#include "bf-p4c/phv/v2/allocator_base.h"
 #include "bf-p4c/phv/v2/kind_size_indexed_map.h"
+#include "bf-p4c/phv/v2/phv_kit.h"
 #include "bf-p4c/phv/v2/utils_v2.h"
 
 namespace PHV {
 namespace v2 {
 
-class GreedyAllocator {
-    const PhvKit& kit_i;
+class GreedyAllocator : public AllocatorBase {
+    // const PhvKit& kit_i;
     PhvInfo& phv_i;
     /// current pipe, used for logging.
     const int pipe_id_i;
@@ -32,7 +33,8 @@ class GreedyAllocator {
     PreSliceResult pre_slice_all(
             const Allocation& empty_alloc,
             const std::list<SuperCluster*>& clusters,
-            ordered_set<const SuperCluster*>& invalid_clusters) const;
+            ordered_set<const SuperCluster*>& invalid_clusters,
+            AllocatorMetrics& alloc_metrics) const;
 
     /// RefinedSuperClusterSet classifies clusters to
     /// (1) normal pre-sliced and sorted cluster
@@ -76,16 +78,17 @@ class GreedyAllocator {
             const Allocation& alloc,
             const PHV::SuperCluster* sc,
             const ContainerGroupsBySize& container_groups,
+            AllocatorMetrics& alloc_metrics,
             const int max_slicings = 128) const;
 
  public:
     GreedyAllocator(const PhvKit& kit, PhvInfo& phv, int pipe_id)
-        : kit_i(kit), phv_i(phv), pipe_id_i(pipe_id){};
+        : AllocatorBase(kit), phv_i(phv), pipe_id_i(pipe_id){};
 
     /// @returns false if allocation failed.
     /// allocate all @p clusters to phv_i. This function will directly print out errors
     /// when allocation failed.
-    bool allocate(std::list<SuperCluster*> clusters);
+    bool allocate(std::list<SuperCluster*> clusters, AllocatorMetrics& alloc_metrics);
 };
 
 std::ostream& operator<<(std::ostream&, const GreedyAllocator::AllocResultWithSlicingDetails&);
